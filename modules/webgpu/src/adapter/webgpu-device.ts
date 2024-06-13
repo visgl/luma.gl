@@ -6,7 +6,6 @@
 // / <reference types="@webgpu/types" />
 
 import type {
-  DeviceProps,
   DeviceInfo,
   DeviceLimits,
   DeviceFeature,
@@ -28,7 +27,8 @@ import type {
   TransformFeedback,
   TransformFeedbackProps,
   QuerySet,
-  QuerySetProps
+  QuerySetProps,
+  WebGPUDeviceProps
 } from '@luma.gl/core';
 import {Device, DeviceFeatures} from '@luma.gl/core';
 import {WebGPUBuffer} from './resources/webgpu-buffer';
@@ -71,7 +71,7 @@ export class WebGPUDevice extends Device {
   renderPass: WebGPURenderPass | null = null;
 
   constructor(
-    props: DeviceProps,
+    props: WebGPUDeviceProps,
     device: GPUDevice,
     adapter: GPUAdapter,
     adapterInfo: GPUAdapterInfo

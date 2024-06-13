@@ -90,7 +90,7 @@ const webgpuDevice = luma.createDevice({type: 'best-available', canvas: ...});
 
 ### `CreateDeviceProps`
 
-Properties for creating a new device
+Properties for creating a new device.
 
 ```ts
 type CreateDeviceProps = DeviceProps & {
@@ -137,7 +137,7 @@ Note: A specific device type is available and supported if both of the following
 ### `luma.attachDevice()`
 
 ```ts
-luma.attachDevice({handle: WebGL2RenderingContext | GPUDevice, adapters, ...}: AttachDeviceProps);
+luma.attachDevice({handle: WebGL2RenderingContext | GPUDevice, adapters, ...deviceProps}: AttachDeviceProps);
 ```
 
 A luma.gl Device can be attached to an externally created `WebGL2RenderingContext` or `GPUDevice`.

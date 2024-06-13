@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {Log} from '@probe.gl/log';
-import type {DeviceProps} from './device';
+import type {DeviceProps, WebGLDeviceProps, WebGPUDeviceProps} from './device';
 import {Device} from './device';
 import {Adapter} from './adapter';
 import {StatsManager} from '../utils/stats-manager';
@@ -21,19 +21,26 @@ const ERROR_MESSAGE =
   'No matching device found. Ensure `@luma.gl/webgl` and/or `@luma.gl/webgpu` modules are imported.';
 
 /** Properties for creating a new device */
-export type CreateDeviceProps = DeviceProps & {
-  /** Selects the type of device. `best-available` uses webgpu if available, then webgl. */
-  type?: 'webgl' | 'webgpu' | 'unknown' | 'best-available';
+export type CreateDeviceProps = {
+  /** List of adapters. Will also search any pre-registered adapterss */
   adapters?: Adapter[];
-};
+} /** Selects the type of device. `best-available` uses webgpu if available, then webgl. */ & (
+  | ({type: 'webgl'} & WebGLDeviceProps)
+  | ({type: 'webgpu'} & WebGPUDeviceProps)
+  | ({type?: 'unknown' | 'best-available'} & DeviceProps)
+);
 
 /** Properties for attaching an existing WebGL context or WebGPU device to a new luma Device */
-export type AttachDeviceProps = DeviceProps & {
+export type AttachDeviceProps = {
   /** Externally created WebGL context or WebGPU device */
   handle: unknown; // WebGL2RenderingContext | GPUDevice | null;
   /** List of adapters. Will also search any pre-registered adapterss */
   adapters?: Adapter[];
-};
+} & (
+  | ({type: 'webgl'} & WebGLDeviceProps)
+  | ({type: 'webgpu'} & WebGPUDeviceProps)
+  | ({type?: 'unknown' | 'best-available'} & DeviceProps)
+);
 
 /**
  * Entry point to the luma.gl GPU abstraction

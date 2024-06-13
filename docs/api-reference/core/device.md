@@ -54,18 +54,44 @@ console.error(message);
 
 | Parameter                       | Default            | Description                                                                                                               |
 | ------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------- |
-| `type`                          | `'best-available'` | `'webgpu'`, `'webgl'`, `'best-available'`                                                                                 |
-| `canvas`                        | N/A                | A _string_ `id` of an existing HTML element or a _DOMElement_. If not provided, a new canvas will be created.             |
-| priority.                       |
-| `debug?: boolean`               | `false`            | WebGL API calls will be logged to the console and WebGL errors will generate JavaScript exceptions.                       |
-| `break?: string[]`              | `[]`               | Insert a break point (`debugger`) if one of the listed gl functions is called.                                            |
+| `id?: string`                   | `null`             |                                                                                                                           |
+| `canvas?: HTMLCanvasElement | OffscreenCanvas | string` | N/A           | A _string_ `id` or object of an existing canvas element. If not provided, a new canvas will be created.|
+| `container?: HTMLElement | string` | N/A             | If new canvas is created, it will be created in the specified container, otherwise appended to body.                      |
+| `width?: number`                | `800`              | Sets the canvas width. Only used when creating a new canvas internally.                                                   |
+| `height?: number`               | `600`              | Sets the canvas height. Only used when creating a new canvas internally.                                                  |
+| `onError?: (error: Error) => unknown` | `log.error`  | Error handling.                                                                                                           |
+| `initalizeFeatures?: boolean`   | `true`             | Initialize all features on startup.                                                                                       |
+| `disabledFeatures?: Partial<Record<DeviceFeature, boolean>>` | `{ 'compilation-status-async-webgl': true }` | Disable specific features.                                         |
+| `_factoryDestroyPolicy?: 'unused' | 'never'` | `true` | Never destroy cached shaders and pipelines.                                                                              |
+
+### WebGLDeviceProps
+
+Extends `DeviceProps`.
+
+| WebGL Parameter                 | Default            | Description                                                                                                               |
+| ------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------- |
 | `alpha?: boolean`               | `true`             | Default render target has an alpha buffer.                                                                                |
 | `depth?: boolean`               | `true`             | Default render target has a depth buffer of at least `16` bits.                                                           |
-| `stencil?`                      | `false`            | Default render target has a stencil buffer of at least `8` bits.                                                          |
+| `stencil?: boolean`             | `false`            | Default render target has a stencil buffer of at least `8` bits.                                                          |
+| `desynchronized?: boolean`      | `false`            | Hints the user agent to reduce the latency by desynchronizing the canvas paint cycle from the event loop.                 |
 | `antialias?`                    | `true`             | Boolean that indicates whether or not to perform anti-aliasing.                                                           |
+| `failIfMajorPerformanceCaveat?` | `false`            | Do not create if the system performance is low.                                                                           |
+| `powerPreference`               | `'high-performance'`| `'default'`, `'high-performance'`, `'low-power'`                                                                         |
 | `premultipliedAlpha?`           | `true`             | Boolean that indicates that the page compositor will assume the drawing buffer contains colors with pre-multiplied alpha. |
 | `preserveDrawingBuffer?`        | `false`            | Default render target buffers will preserve their values until cleared or overwritten. Useful for screen capture.         |
-| `failIfMajorPerformanceCaveat?` | `false`            | Do not create if the system performance is low.                                                                           |
+| `onContextLost`                 | `(event: Event) => void` | `webglcontextlost` event.                                                                                           |
+| `onContextRestored`             | `(event: Event) => void` | `webglcontextrestored` event.                                                                                       |
+| `debug?: boolean`               | `false`            | WebGL API calls will be logged to the console and WebGL errors will generate JavaScript exceptions.                       |
+| `break?: string[]`              | `[]`               | Insert a break point (`debugger`) if one of the listed gl functions is called.                                            |
+| `manageState?: boolean`         | `true`             | Set to false to disable WebGL state management instrumentation.                                                           |
+
+### WebGPUDeviceProps
+
+Extends `DeviceProps`.
+
+| WebGPU Parameter                | Default            | Description                                                                                                               |
+| ------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| `requestMaxLimits`              | `true`             | Request a Device with the highest limits supported by platform. WebGPU: devices can be created with minimal limits.       |
 
 ## Fields
 

@@ -5,7 +5,7 @@
 This module contains the WebGPU adapter for the "abstract" luma.gl API (`@luma.gl/core`).
 
 Simply importing `@luma.gl/webgpu` installs the adapter and enables WebGPU devices to
-be created using `luma.createDevice(...)`:
+be created using `luma.createDevice(props)`: See [`WebGPUDeviceProps`](../core/device#webgpudeviceprops) for prop options.
 
 ```typescript
 import {luma} from '@luma.gl/core';

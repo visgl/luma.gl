@@ -3,12 +3,12 @@
 // Copyright (c) vis.gl contributors
 
 import type {TypedArray} from '@math.gl/types';
-import type {DeviceProps, DeviceInfo, CanvasContextProps, TextureFormat} from '@luma.gl/core';
+import type {WebGLDeviceProps, DeviceInfo, CanvasContextProps, TextureFormat} from '@luma.gl/core';
 import type {Buffer, Texture, Framebuffer, VertexArray, VertexArrayProps} from '@luma.gl/core';
 import {Device, CanvasContext, log} from '@luma.gl/core';
 import type {GLExtensions} from '@luma.gl/constants';
 import {WebGLStateTracker} from '../context/state-tracker/webgl-state-tracker';
-import {createBrowserContext} from '../context/helpers/create-browser-context';
+import {createBrowserContext, ContextProps} from '../context/helpers/create-browser-context';
 import {getDeviceInfo} from './device-helpers/webgl-device-info';
 import {WebGLDeviceFeatures} from './device-helpers/webgl-device-features';
 import {WebGLDeviceLimits} from './device-helpers/webgl-device-limits';
@@ -108,7 +108,7 @@ export class WebGLDevice extends Device {
   // Public API
   //
 
-  constructor(props: DeviceProps) {
+  constructor(props: WebGLDeviceProps) {
     super({...props, id: props.id || uid('webgl-device')});
 
     // If attaching to an already attached context, return the attached device
@@ -128,11 +128,13 @@ export class WebGLDevice extends Device {
 
     this.handle = createBrowserContext(this.canvasContext.canvas, {
       ...props,
-      onContextLost: (event: Event) =>
+      onContextLost: (event: Event) => {
         this._resolveContextLost?.({
           reason: 'destroyed',
           message: 'Entered sleep mode, or too many apps or browser tabs are using the GPU.'
-        })
+        });
+        props.onContextLost?.(event);
+      }
     });
     this.gl = this.handle;
 
