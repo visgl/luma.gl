@@ -6,7 +6,7 @@
   import {makeAnimationLoop} from '@luma.gl/engine';
   import AnimationLoopTemplate from './app.ts';
 
-  luma.registerAdapters([we, webglDevice]);
+  luma.registerAdapters([webgpuAdapter, webgl2Adapter]);
   makeAnimationLoop(AnimationLoopTemplate).start({canvas: 'canvas'});
 </script>
 <body style=" margin: 0px;">
