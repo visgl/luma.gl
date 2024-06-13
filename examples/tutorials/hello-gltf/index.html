@@ -26,8 +26,8 @@
   import {makeAnimationLoop} from '@luma.gl/engine';
   import AnimationLoopTemplate from './app.ts';
 
-  luma.reagisterAdapters([webgl2Adapter]);
-  // luma.reagisterAdapters([webglDevice, webgpuDevice]);
+  luma.registerAdapters([webgl2Adapter]);
+  // luma.registerAdapters([webglDevice, webgpuDevice]);
 
   const resolution = 2;
   const device = luma.createDevice({width: resolution * window.innerWidth, height: resolution * window.innerHeight});

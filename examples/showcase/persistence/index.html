@@ -4,7 +4,7 @@
   import {webgl2Adapter} from '@luma.gl/webgl';
   import {makeAnimationLoop} from '@luma.gl/engine';
   import AppAnimationLoop from './app.ts';
-  luma.reagisterAdapters([webgl2Adapter]);
+  luma.registerAdapters([webgl2Adapter]);
   const animationLoop = makeAnimationLoop(AppAnimationLoop);
   animationLoop.start();
 </script>
