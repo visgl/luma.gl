@@ -8,7 +8,7 @@ import type {Buffer, Texture, Framebuffer, VertexArray, VertexArrayProps} from '
 import {Device, CanvasContext, log} from '@luma.gl/core';
 import type {GLExtensions} from '@luma.gl/constants';
 import {WebGLStateTracker} from '../context/state-tracker/webgl-state-tracker';
-import {createBrowserContext, ContextProps} from '../context/helpers/create-browser-context';
+import {createBrowserContext} from '../context/helpers/create-browser-context';
 import {getDeviceInfo} from './device-helpers/webgl-device-info';
 import {WebGLDeviceFeatures} from './device-helpers/webgl-device-features';
 import {WebGLDeviceLimits} from './device-helpers/webgl-device-limits';
