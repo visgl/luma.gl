@@ -5,6 +5,7 @@
 import {NumberArray} from '@math.gl/types';
 import {UniformFormat} from '../../types';
 import {PropType} from '../filters/prop-types';
+import {Sampler, Texture} from '@luma.gl/core';
 
 export type UniformValue = number | boolean | Readonly<NumberArray>; // Float32Array> | Readonly<Int32Array> | Readonly<Uint32Array> | Readonly<number[]>;
 
@@ -19,7 +20,7 @@ export type UniformInfo = {
 export type ShaderModule<
   PropsT extends Record<string, unknown> = Record<string, unknown>,
   UniformsT extends Record<string, UniformValue> = Record<string, UniformValue>,
-  BindingsT extends Record<string, unknown> = {}
+  BindingsT extends Record<string, Texture | Sampler> = {}
 > = {
   /** Used for type inference not for values */
   props?: Required<PropsT>;
@@ -43,6 +44,7 @@ export type ShaderModule<
 
   /** uniform buffers, textures, samplers, storage, ... */
   bindings?: Record<keyof BindingsT, {location: number; type: 'texture' | 'sampler' | 'uniforms'}>;
+  getBindings?: (settings?: any, prevBindings?: any) => Record<string, Texture | Sampler>;
 
   defines?: Record<string, string | number>;
   /** Injections */
