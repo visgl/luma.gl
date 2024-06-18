@@ -26,6 +26,7 @@ export type ShaderModuleInputs<
       type: 'texture' | 'sampler' | 'uniforms';
     }
   >;
+  getBindings?: (settings: Partial<PropsT>, prevBindings?: BindingsT) => BindingsT;
 
   uniformTypes?: any;
 };
@@ -111,9 +112,10 @@ export class ShaderInputs<
 
       // console.log(`setProps(${String(moduleName)}`, moduleName, this.moduleUniforms[moduleName])
 
-      // TODO - Get Module bindings
-      // const bindings = module.getBindings?.(moduleProps);
-      // this.moduleUniforms[moduleName] = bindings;
+      if (module.getBindings) {
+        const bindings = module.getBindings(moduleProps);
+        this.moduleBindings[moduleName] = bindings;
+      }
     }
   }
 
