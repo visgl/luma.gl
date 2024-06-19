@@ -27,7 +27,6 @@ export type ShaderModuleInputs<
       type: 'texture' | 'sampler' | 'uniforms';
     }
   >;
-  getBindings?: (settings: Partial<PropsT>, prevBindings?: BindingsT) => BindingsT;
 
   uniformTypes?: any;
 };

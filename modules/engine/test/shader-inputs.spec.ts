@@ -65,7 +65,7 @@ test('ShaderInputs#picking prop merge', t => {
 });
 
 [true, false].map(callback =>
-  test(`ShaderInputs#bindings${callback ? ' (getUniforms}' : ''}`, t => {
+  test(`ShaderInputs#bindings${callback ? ' (getUniforms)' : ''}`, t => {
     type CustomProps = {color: number[]; colorTexture: Texture};
     const custom: ShaderModule<CustomProps> = {
       name: 'custom',
