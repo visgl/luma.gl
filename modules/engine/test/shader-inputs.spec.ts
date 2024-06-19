@@ -64,8 +64,9 @@ test('ShaderInputs#picking prop merge', t => {
   t.end();
 });
 
-[true, false].map(callback =>
-  test(`ShaderInputs#bindings${callback ? ' (getUniforms)' : ''}`, t => {
+test('ShaderInputs#bindings', t => {
+  [true, false].map(callback => {
+    t.comment(`custom module created ${callback ? 'with' : 'without'} getUniforms()`);
     type CustomProps = {color: number[]; colorTexture: Texture};
     const custom: ShaderModule<CustomProps> = {
       name: 'custom',
@@ -93,5 +94,5 @@ test('ShaderInputs#picking prop merge', t => {
     t.deepEqual(bindings, {colorTexture: 'MOCK_TEXTURE'}, 'bindings correct');
 
     t.end();
-  })
-);
+  });
+});
