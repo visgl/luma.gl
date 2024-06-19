@@ -6,6 +6,7 @@ import type {UniformValue, Texture, Sampler} from '@luma.gl/core';
 import {log} from '@luma.gl/core';
 // import type {ShaderUniformType, UniformValue, UniformFormat, UniformInfoDevice, Texture, Sampler} from '@luma.gl/core';
 import {getShaderModuleDependencies, ShaderModule} from '@luma.gl/shadertools';
+import {splitUniformsAndBindings} from './model/split-uniforms-and-bindings';
 
 /** Minimal ShaderModule subset, we don't need shader code etc */
 export type ShaderModuleInputs<
@@ -104,18 +105,16 @@ export class ShaderInputs<
       }
 
       const oldUniforms = this.moduleUniforms[moduleName];
-      const uniforms =
+      const oldBindings = this.moduleBindings[moduleName];
+      const uniformsAndBindings =
         module.getUniforms?.(moduleProps, this.moduleUniforms[moduleName]) || (moduleProps as any);
-      // console.error(uniforms)
+
+      const {uniforms, bindings} = splitUniformsAndBindings(uniformsAndBindings);
       this.moduleUniforms[moduleName] = {...oldUniforms, ...uniforms};
+      this.moduleBindings[moduleName] = {...oldBindings, ...bindings};
       // // this.moduleUniformsChanged ||= moduleName;
 
       // console.log(`setProps(${String(moduleName)}`, moduleName, this.moduleUniforms[moduleName])
-
-      if (module.getBindings) {
-        const bindings = module.getBindings(moduleProps);
-        this.moduleBindings[moduleName] = bindings;
-      }
     }
   }
 
