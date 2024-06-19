@@ -18,6 +18,7 @@ export type UniformInfo = {
 
 /**
  * A shader module definition object
+ *
  * @note Needs to be initialized with `initializeShaderModules`
  */
 export type ShaderModule<
@@ -46,9 +47,8 @@ export type ShaderModule<
   /** Default uniform values */
   defaultUniforms?: Required<UniformsT>; // Record<keyof UniformsT, UniformValue>;
 
-  /** Function that maps settings to uniforms & bindings */
-  // getUniforms?: (settings?: Partial<SettingsT>, prevUniforms?: any /* UniformsT */) => UniformsT;
-  getUniforms?: (settings?: any, prevUniforms?: any) => Record<string, UniformValue>;
+  /** Function that maps props to uniforms & bindings */
+  getUniforms?: (props?: any, oldProps?: any) => Record<string, UniformValue>;
 
   /** uniform buffers, textures, samplers, storage, ... */
   bindings?: Record<keyof BindingsT, {location: number; type: 'texture' | 'sampler' | 'uniforms'}>;
