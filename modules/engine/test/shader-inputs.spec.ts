@@ -100,8 +100,7 @@ test('ShaderInputs#bindings', t => {
     name: 'custom',
     uniformTypes: {color: 'vec3<f32>'},
     uniformPropTypes: {color: {value: [0, 0, 0]}},
-    getUniforms: ({color}) => ({color}),
-    getBindings: ({colorTexture}) => ({colorTexture})
+    getUniforms: ({color, colorTexture}) => ({color, colorTexture})
   };
 
   const shaderInputs = new ShaderInputs<{

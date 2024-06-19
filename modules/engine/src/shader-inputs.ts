@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {UniformValue, Texture, Sampler} from '@luma.gl/core';
-import {log} from '@luma.gl/core';
+import {log, splitUniformsAndBindings} from '@luma.gl/core';
 // import type {ShaderUniformType, UniformValue, UniformFormat, UniformInfoDevice, Texture, Sampler} from '@luma.gl/core';
 import {_resolveModules, ShaderModuleInstance} from '@luma.gl/shadertools';
 
@@ -26,7 +26,6 @@ export type ShaderModuleInputs<
       type: 'texture' | 'sampler' | 'uniforms';
     }
   >;
-  getBindings?: (settings: Partial<PropsT>, prevBindings?: BindingsT) => BindingsT;
 
   uniformTypes?: any;
 };
@@ -105,16 +104,17 @@ export class ShaderInputs<
       }
 
       const oldUniforms = this.moduleUniforms[moduleName];
-      const uniforms =
+      const oldBindings = this.moduleBindings[moduleName];
+      const uniformsAndBindings =
         module.getUniforms?.(moduleProps, this.moduleUniforms[moduleName]) || (moduleProps as any);
+
+      const {uniforms, bindings} = splitUniformsAndBindings(uniformsAndBindings);
       // console.error(uniforms)
       this.moduleUniforms[moduleName] = {...oldUniforms, ...uniforms};
+      this.moduleBindings[moduleName] = {...oldBindings, ...bindings};
       // this.moduleUniformsChanged ||= moduleName;
 
       // console.log(`setProps(${String(moduleName)}`, moduleName, this.moduleUniforms[moduleName])
-
-      const bindings = module.getBindings?.(moduleProps);
-      this.moduleBindings[moduleName] = bindings;
     }
   }
 
