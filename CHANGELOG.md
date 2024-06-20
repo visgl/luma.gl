@@ -4,7 +4,7 @@
 
 Major new release that includes WebGPU support
 
-### 9.0.15 - Jun 20, 2024
+### 9.0.16 - Jun 20, 2024
 
 - feat(engine): ShaderInputs bindings (#2099)
 
