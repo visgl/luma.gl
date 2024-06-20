@@ -505,6 +505,7 @@ export class Model {
   /** Update uniform buffers from the model's shader inputs */
   updateShaderInputs(): void {
     this._uniformStore.setUniforms(this.shaderInputs.getUniformValues());
+    this.setBindings(this.shaderInputs.getBindings());
     // TODO - this is already tracked through buffer/texture update times?
     this.setNeedsRedraw('shaderInputs');
   }

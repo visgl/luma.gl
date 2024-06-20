@@ -5,6 +5,7 @@
 import {NumberArray} from '@math.gl/types';
 import {UniformFormat} from '../../types';
 import {PropType} from '../filters/prop-types';
+import {Sampler, Texture} from '@luma.gl/core';
 
 export type UniformValue = number | boolean | Readonly<NumberArray>; // Float32Array> | Readonly<Int32Array> | Readonly<Uint32Array> | Readonly<number[]>;
 
@@ -19,7 +20,7 @@ export type UniformInfo = {
 export type ShaderModule<
   PropsT extends Record<string, unknown> = Record<string, unknown>,
   UniformsT extends Record<string, UniformValue> = Record<string, UniformValue>,
-  BindingsT extends Record<string, unknown> = {}
+  BindingsT extends Record<string, Buffer | Texture | Sampler> = {}
 > = {
   /** Used for type inference not for values */
   props?: Required<PropsT>;
@@ -37,9 +38,8 @@ export type ShaderModule<
   /** Default uniform values */
   defaultUniforms?: Required<UniformsT>; // Record<keyof UniformsT, UniformValue>;
 
-  /** Function that maps settings to uniforms */
-  // getUniforms?: (settings?: Partial<SettingsT>, prevUniforms?: any /* UniformsT */) => UniformsT;
-  getUniforms?: (settings?: any, prevUniforms?: any) => Record<string, UniformValue>;
+  /** Function that maps props to uniforms & bindings */
+  getUniforms?: (props?: any, oldProps?: any) => Record<string, UniformValue>;
 
   /** uniform buffers, textures, samplers, storage, ... */
   bindings?: Record<keyof BindingsT, {location: number; type: 'texture' | 'sampler' | 'uniforms'}>;
