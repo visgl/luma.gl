@@ -4,10 +4,6 @@
 
 Major new release that includes WebGPU support
 
-### 9.0.16 - Jun 20, 2024
-
-- feat(engine): ShaderInputs bindings (#2099)
-
 ### 9.0.14 - May 10, 2024
 
 - fix(webgl): reset buffer binding in WEBGLVertexArray.setBuffer (#2075)
