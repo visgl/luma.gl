@@ -73,6 +73,7 @@ function getTestCases(): SnapshotTestRunnerTestCase[] {
       // @ts-ignore
       onInitialize: (props: AnimationProps) => {
         setPathPrefix(`${RESOURCE_PATH}/examples/lessons/${name.slice(-2)}/`);
+        // @ts-ignore
         animationLoopTemplate = new ExampleAnimationLoopTemplate(props);
       },
 
