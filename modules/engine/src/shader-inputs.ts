@@ -109,7 +109,6 @@ export class ShaderInputs<
         module.getUniforms?.(moduleProps, this.moduleUniforms[moduleName]) || (moduleProps as any);
 
       const {uniforms, bindings} = splitUniformsAndBindings(uniformsAndBindings);
-      // console.error(uniforms)
       this.moduleUniforms[moduleName] = {...oldUniforms, ...uniforms};
       this.moduleBindings[moduleName] = {...oldBindings, ...bindings};
       // this.moduleUniformsChanged ||= moduleName;
