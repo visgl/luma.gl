@@ -79,8 +79,6 @@ Extends `DeviceProps`.
 | `powerPreference`               | `'high-performance'`| `'default'`, `'high-performance'`, `'low-power'`                                                                         |
 | `premultipliedAlpha?`           | `true`             | Boolean that indicates that the page compositor will assume the drawing buffer contains colors with pre-multiplied alpha. |
 | `preserveDrawingBuffer?`        | `false`            | Default render target buffers will preserve their values until cleared or overwritten. Useful for screen capture.         |
-| `onContextLost`                 | `(event: Event) => void` | `webglcontextlost` event.                                                                                           |
-| `onContextRestored`             | `(event: Event) => void` | `webglcontextrestored` event.                                                                                       |
 | `debug?: boolean`               | `false`            | WebGL API calls will be logged to the console and WebGL errors will generate JavaScript exceptions.                       |
 | `break?: string[]`              | `[]`               | Insert a break point (`debugger`) if one of the listed gl functions is called.                                            |
 | `manageState?: boolean`         | `true`             | Set to false to disable WebGL state management instrumentation.                                                           |

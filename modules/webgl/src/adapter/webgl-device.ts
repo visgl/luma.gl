@@ -128,13 +128,11 @@ export class WebGLDevice extends Device {
 
     this.handle = createBrowserContext(this.canvasContext.canvas, {
       ...props,
-      onContextLost: (event: Event) => {
+      onContextLost: (event: Event) =>
         this._resolveContextLost?.({
           reason: 'destroyed',
           message: 'Entered sleep mode, or too many apps or browser tabs are using the GPU.'
-        });
-        props.onContextLost?.(event);
-      }
+        })
     });
     this.gl = this.handle;
 

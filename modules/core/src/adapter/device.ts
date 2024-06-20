@@ -231,8 +231,6 @@ export type WebGLDeviceProps = _DeviceProps & {
   spectorUrl?: string;
 
   // ContextProps
-  onContextLost?: (event: Event) => void;
-  onContextRestored?: (event: Event) => void;
   alpha?: boolean; // indicates if the canvas contains an alpha buffer.
   depth?: boolean; // indicates that the drawing buffer has a depth buffer of at least 16 bits.
   stencil?: boolean; // Default render target has a stencil buffer of at least `8` bits.
@@ -303,9 +301,6 @@ export abstract class Device {
     powerPreference: 'high-performance',
     premultipliedAlpha: true,
     preserveDrawingBuffer: false,
-
-    onContextLost: undefined!,
-    onContextRestored: undefined!,
 
     debug: Boolean(log.get('debug')), // Instrument context (at the expense of performance)
     break: (log.get('break') as string[]) || [],
