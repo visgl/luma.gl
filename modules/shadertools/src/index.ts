@@ -16,6 +16,7 @@ export type {ShaderModule} from './lib/shader-module/shader-module';
 export type {ShaderPass} from './lib/shader-module/shader-pass';
 export type {ShaderHook} from './lib/shader-assembly/shader-hooks';
 export type {ShaderInjection} from './lib/shader-assembly/shader-injections';
+export type {UniformDataType, UniformFormat} from './types';
 export {ShaderModuleInstance} from './lib/shader-module/shader-module-instance';
 
 // ShaderAssembler
