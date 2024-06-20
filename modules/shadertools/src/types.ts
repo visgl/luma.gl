@@ -8,6 +8,8 @@ export {TypedArray, NumberArray, NumericArray} from '@math.gl/types';
 // export type BigIntOrNumberArray = NumberArray | BigIntTypedArray;
 
 // UNIFORM TYPES
+// These are "duplicated" from core module to avoid cross-dependencies
+
 export type UniformDataType = 'uint32' | 'sint32' | 'float32';
 
 export type UniformFormat =
