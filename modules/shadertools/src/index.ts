@@ -14,6 +14,7 @@ export type {PlatformInfo} from './lib/shader-assembly/platform-info';
 
 export type {ShaderModule} from './lib/shader-module/shader-module';
 export type {ShaderPass} from './lib/shader-module/shader-pass';
+export type {UniformDataType, UniformFormat} from './types';
 
 export {initializeShaderModule, initializeShaderModules} from './lib/shader-module/shader-module';
 export {getShaderModuleUniforms} from './lib/shader-module/shader-module';
