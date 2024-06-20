@@ -3,6 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {NumberArray} from '@math.gl/types';
+import {Sampler, Texture} from '@luma.gl/core';
 import type {UniformFormat} from '../../types';
 import {PropType, PropValidator} from '../filters/prop-types';
 import {ShaderInjection} from '../shader-assembly/shader-injections';
@@ -17,12 +18,13 @@ export type UniformInfo = {
 
 /**
  * A shader module definition object
+ *
  * @note Needs to be initialized with `initializeShaderModules`
  */
 export type ShaderModule<
   PropsT extends Record<string, unknown> = Record<string, unknown>,
   UniformsT extends Record<string, UniformValue> = Record<string, UniformValue>,
-  BindingsT extends Record<string, unknown> = {}
+  BindingsT extends Record<string, Buffer | Texture | Sampler> = {}
 > = {
   /** Used for type inference not for values */
   props?: PropsT;
@@ -45,9 +47,8 @@ export type ShaderModule<
   /** Default uniform values */
   defaultUniforms?: Required<UniformsT>; // Record<keyof UniformsT, UniformValue>;
 
-  /** Function that maps settings to uniforms */
-  // getUniforms?: (settings?: Partial<SettingsT>, prevUniforms?: any /* UniformsT */) => UniformsT;
-  getUniforms?: (settings?: any, prevUniforms?: any) => Record<string, UniformValue>;
+  /** Function that maps props to uniforms & bindings */
+  getUniforms?: (props?: any, oldProps?: any) => Record<string, UniformValue>;
 
   /** uniform buffers, textures, samplers, storage, ... */
   bindings?: Record<keyof BindingsT, {location: number; type: 'texture' | 'sampler' | 'uniforms'}>;
