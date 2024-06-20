@@ -5,13 +5,13 @@
 This module contains the WebGL adapter for the "abstract" luma.gl API (`@luma.gl/core`).
 
 Simply importing `@luma.gl/webgl` installs the adapter and enables WebGL devices to
-be created using `luma.createDevice(props)`. See [`WebGLDeviceProps`](../core/device#webgldeviceprops) for prop options.
+be created using `luma.createDevice(props)`. See [`DeviceProps`](../core/device#deviceprops) for WebGL prop options.
 
 ```typescript
 import {luma} from '@luma.gl/core';
 import '@luma.gl/webgl'; // Installs the WebGLDevice adapter
 
-const device = await luma.createDevice({type: 'webgl', canvas: ...});
+const device = await luma.createDevice({type: 'webgl', canvas: ..., webgl: {...}});
 
 // Resources can now be created
 const buffer = device.createBuffer(...);

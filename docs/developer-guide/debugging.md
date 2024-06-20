@@ -105,7 +105,7 @@ While usually not recommended, it is also possible to activate the developer too
 
 ```ts
 import {luma} from '@luma.gl/core';
-const device = luma.createDevice({type: 'webgl', debug: true});
+const device = luma.createDevice({type: 'webgl', {webgl: {debug: true}});
 ```
 
 > Warning: WebGL debug contexts impose a significant performance penalty (luma waits for the GPU after each WebGL call to check error codes) and should not be activated in production code.

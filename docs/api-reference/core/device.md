@@ -18,20 +18,20 @@ with changes to enable a WebGL2 implementation.
 
 ## Usage
 
-Create a new Device, auto creating a canvas and a new WebGL 2 context
+Create a new `Device`, auto creating a canvas and a new WebGL 2 context. See [`luma.createDevice()`](./luma.md#lumacreatedevice).
 
 ```typescript
 import {Device} from '@luma.gl/core';
-const device = new luma.createDevice({type: 'webgl2'}); 
+const device = new luma.createDevice({type: 'webgl2', ...}); 
 ```
 
-Attaching a Device to an externally created `WebGL2RenderingContext`.
+Attaching a `Device` to an externally created `WebGL2RenderingContext`.
 
 ```typescript
 import {Device} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
 
-const gl = canvas.createContext('webgl2');
+const gl = canvas.getContext('webgl2', ...);
 const device = Device.attach(gl);
 
 const model = new Model(device, options);
@@ -52,44 +52,86 @@ console.error(message);
 
 ### `DeviceProps`
 
+```ts
+{
+  // common options
+  webgl: {
+    // webgl specific options
+  },
+  webgpu: {
+    // webgpu specific options
+  }
+}
+```
+:::tip
+This object can also include all [`CanvasContextProps`](./canvas-context.md#canvascontextprops) properties to configure how a new canvas is created. If a canvas is provided, these are ignored.
+:::
+
+#### Common Options
+
+Specify common props to use when luma creates the device.
+
 | Parameter                       | Default            | Description                                                                                                               |
 | ------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------- |
 | `id?: string`                   | `null`             |                                                                                                                           |
-| `canvas?: HTMLCanvasElement | OffscreenCanvas | string` | N/A           | A _string_ `id` or object of an existing canvas element. If not provided, a new canvas will be created.|
-| `container?: HTMLElement | string` | N/A             | If new canvas is created, it will be created in the specified container, otherwise appended to body.                      |
-| `width?: number`                | `800`              | Sets the canvas width. Only used when creating a new canvas internally.                                                   |
-| `height?: number`               | `600`              | Sets the canvas height. Only used when creating a new canvas internally.                                                  |
+| `canvas?: HTMLCanvasElement \| OffscreenCanvas \| string` | N/A           | A _string_ `id` or object of an existing canvas element. If not provided, a new canvas will be created.|
 | `onError?: (error: Error) => unknown` | `log.error`  | Error handling.                                                                                                           |
-| `initalizeFeatures?: boolean`   | `true`             | Initialize all features on startup.                                                                                       |
-| `disabledFeatures?: Partial<Record<DeviceFeature, boolean>>` | `{ 'compilation-status-async-webgl': true }` | Disable specific features.                                         |
-| `_factoryDestroyPolicy?: 'unused' | 'never'` | `true` | Never destroy cached shaders and pipelines.                                                                              |
+| `initalizeFeatures?: boolean`   | `true`             | Initialize all features on startup. 🧪                                                                                    |
+| `disabledFeatures?: Partial<Record<DeviceFeature, boolean>>` | `{ 'compilation-status-async-webgl': true }` | Disable specific features. 🧪                                      |
+| `_factoryDestroyPolicy?: string`| `'unused'`         | `'unused' \| 'never'` Never destroy cached shaders and pipelines. 🧪                                                      |
+| `container?: HTMLElement \| string` | N/A            | If new canvas is created, it will be created in the specified container, otherwise appended to body.                      |
+| `width?: number`                | `800`              | If new canvas is created, sets the canvas width.                                                                          |
+| `height?: number`               | `600`              | If new canvas is created, sets the canvas height.                                                                         |
+| `useDevicePixels?: boolean \| number` | `true`       | If new canvas is created, sets device pixels scale factor (`true` uses browser DPI).                                      |
+| `autoResize?: boolean`          | `true`             | If new canvas is created, sets whether to track resizes.                                                                  |
+| `visible?: boolean`             | `true`             | If new canvas is created, sets visibility.                                                                                |
 
-### WebGLDeviceProps
+:::caution
+🧪 denotes experimental feature. Expect API to change.
+:::
 
-Extends `DeviceProps`.
+#### WebGL Specific Options
 
-| WebGL Parameter                 | Default            | Description                                                                                                               |
+Specify WebGL context attributes to use if luma creates the WebGL context.
+
+| WebGL Context Attributes        | Default            | Description                                                                                                               |
 | ------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| `gl?: WebGL2RenderingContext`   | N/A                | An existing WebGL context. If not provided, a new context will be created with the attributes provided below.             |
 | `alpha?: boolean`               | `true`             | Default render target has an alpha buffer.                                                                                |
-| `depth?: boolean`               | `true`             | Default render target has a depth buffer of at least `16` bits.                                                           |
-| `stencil?: boolean`             | `false`            | Default render target has a stencil buffer of at least `8` bits.                                                          |
-| `desynchronized?: boolean`      | `false`            | Hints the user agent to reduce the latency by desynchronizing the canvas paint cycle from the event loop.                 |
 | `antialias?`                    | `true`             | Boolean that indicates whether or not to perform anti-aliasing.                                                           |
+| `depth?: boolean`               | `true`             | Default render target has a depth buffer of at least `16` bits.                                                           |
+| `desynchronized?: boolean`      | `false`            | Hints the user agent to reduce the latency by desynchronizing the canvas paint cycle from the event loop.                 |
 | `failIfMajorPerformanceCaveat?` | `false`            | Do not create if the system performance is low.                                                                           |
-| `powerPreference`               | `'high-performance'`| `'default'`, `'high-performance'`, `'low-power'`                                                                         |
+| `manageState?: boolean`         | `true`             | Set to false to disable WebGL state management instrumentation. *_Experimental._                                          |
+| `powerPreference?: string`      | `'high-performance'` | `'default' \| 'high-performance' \| 'low-power'`                                                                        |
 | `premultipliedAlpha?`           | `true`             | Boolean that indicates that the page compositor will assume the drawing buffer contains colors with pre-multiplied alpha. |
 | `preserveDrawingBuffer?`        | `false`            | Default render target buffers will preserve their values until cleared or overwritten. Useful for screen capture.         |
-| `debug?: boolean`               | `false`            | WebGL API calls will be logged to the console and WebGL errors will generate JavaScript exceptions.                       |
+| `stencil?: boolean`             | `false`            | Default render target has a stencil buffer of at least `8` bits.                                                          |
+
+:::tip
+See [MDN WebGL context attributes](https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/getContext#contextattributes) guide for more information.
+:::
+
+Specify WebGL debugging options to use when luma creates the WebGL context.
+
+| WebGL Debugging                 | Default            | Description                                                                                                               |
+| ------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| `debug?: boolean`               | `false`            | Initialize Khronos WebGLDeveloperTools. WebGL API calls will be logged to the console and WebGL errors will generate JavaScript exceptions. |
 | `break?: string[]`              | `[]`               | Insert a break point (`debugger`) if one of the listed gl functions is called.                                            |
-| `manageState?: boolean`         | `true`             | Set to false to disable WebGL state management instrumentation.                                                           |
+| `debugWithSpectorJS?: boolean`  | `false`            | Initialize the SpectorJS WebGL debugger.                                                                                  |
+| `spectorUrl?: string`           | N/A                | SpectorJS URL. Override if CDN is down or different SpectorJS version is desired.                                         |
 
-### WebGPUDeviceProps
+:::tip
+Learn more about WebGL debugging in our [Debugging](../../developer-guide/debugging.md) guide.
+:::
 
-Extends `DeviceProps`.
+#### WebGPU Specific Options
 
 | WebGPU Parameter                | Default            | Description                                                                                                               |
 | ------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------- |
 | `requestMaxLimits`              | `true`             | Request a Device with the highest limits supported by platform. WebGPU: devices can be created with minimal limits.       |
+| `alphaMode?: string`            | `'opaque'`         | `'opaque' \| 'premultiplied'`. Sets the initial [alphaMode](https://developer.mozilla.org/en-US/docs/Web/API/GPUCanvasContext/configure#alphamode) on the internal context. |
+| `colorSpace?: 'string`          | `'srgb'`           | `'srgb' \| 'display-p3'`. Sets the initial [colorSpace](https://developer.mozilla.org/en-US/docs/Web/API/GPUCanvasContext/configure#colorspace) on the internal context. |
 
 ## Fields
 

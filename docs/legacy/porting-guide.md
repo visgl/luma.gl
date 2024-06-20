@@ -185,9 +185,9 @@ The debug module has been removed. Debug functionality is now built-in (and dyna
 | ------------------------------- | ---------------------------------- | ------------------------------------------------ |
 | Properties                      |
 | `props.gl`                      | `props.device`                     | Now accepts a `Promise<Device>`.                 |
-| `props.glOptions`               | `luma.createDevice(<options>)`     |
+| `props.glOptions`               | `luma.createDevice(<options>)`     | See [CreateDeviceProps](../api-reference/core/luma.md#createdeviceprops) |
 | `props.createFramebuffer`       | N/A                                | You will need to create framebuffers explicitly. |
-| `props.debug`                   | `luma.createDevice({debug: true})` | Device debug functionality is improved.          |
+| `props.debug`                   | `luma.createDevice({webgl: {debug: true}, type: 'webgl'})` | Device debug functionality is improved. |
 | Methods                         |
 | `animationLoop.isContextLost()` | `device.lost`, `device.isLost()`   |                                                  |
 
@@ -246,8 +246,8 @@ The v8 luma.gl API was designed to allow apps to work directly with the `WebGLRe
 
 | v8 Prop or Method    | v9 Replacement                                      | Comment                                                                                                                             |
 | -------------------- | --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `makeDebugContext()` | `luma.createDevice({debug: true, type: 'webgl'})`   | [Khronos WebGL developer tools][khronos_dev_tools] are dynamically loaded when needed.                                              |
-| Spector.js           | `luma.createDevice({spector: true, type: 'webgl'})` | [Spector.js][spector] is pre-integrated. Te Spector.js library will be dynamically loaded when needed and the canvas is "captured". |
+| `makeDebugContext()` | `luma.createDevice({webgl: {debug: true}, type: 'webgl'})` | [Khronos WebGL developer tools][khronos_dev_tools] are dynamically loaded when needed.                                              |
+| Spector.js           | `luma.createDevice({webgl: {debugWithSpectorJS: true}, type: 'webgl'})` | [Spector.js][spector] is pre-integrated. The Spector.js library will be dynamically loaded when needed and the canvas is "captured". |
 
 [khronos_dev_tools]: https://github.com/KhronosGroup/WebGLDeveloperTools
 [spector]: https://spector.babylonjs.com/
