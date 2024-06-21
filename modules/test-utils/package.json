@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/test-utils",
-  "version": "9.0.14",
+  "version": "9.0.15",
   "description": "Automated WebGL testing utilities with Puppeteer and image diffing",
   "type": "module",
   "license": "MIT",
