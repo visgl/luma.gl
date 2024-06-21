@@ -9,13 +9,7 @@ export {luma} from './adapter/luma';
 // ADAPTER (DEVICE AND GPU RESOURCE INTERFACES)
 export {Adapter} from './adapter/adapter';
 
-export type {
-  DeviceProps,
-  DeviceInfo,
-  DeviceFeature,
-  WebGLDeviceProps,
-  WebGPUDeviceProps
-} from './adapter/device';
+export type {DeviceProps, DeviceInfo, DeviceFeature} from './adapter/device';
 export {Device, DeviceFeatures, DeviceLimits} from './adapter/device';
 
 export type {CanvasContextProps} from './adapter/canvas-context';

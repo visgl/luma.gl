@@ -28,7 +28,7 @@ import type {
   TransformFeedbackProps,
   QuerySet,
   QuerySetProps,
-  WebGPUDeviceProps
+  DeviceProps
 } from '@luma.gl/core';
 import {Device, DeviceFeatures} from '@luma.gl/core';
 import {WebGPUBuffer} from './resources/webgpu-buffer';
@@ -71,7 +71,7 @@ export class WebGPUDevice extends Device {
   renderPass: WebGPURenderPass | null = null;
 
   constructor(
-    props: WebGPUDeviceProps,
+    props: DeviceProps,
     device: GPUDevice,
     adapter: GPUAdapter,
     adapterInfo: GPUAdapterInfo
@@ -102,12 +102,7 @@ export class WebGPUDevice extends Device {
 
     // Note: WebGPU devices can be created without a canvas, for compute shader purposes
     // if (props.canvas) {
-    this.canvasContext = new WebGPUCanvasContext(this, this.adapter, {
-      canvas: props.canvas,
-      height: props.height,
-      width: props.width,
-      container: props.container
-    });
+    this.canvasContext = new WebGPUCanvasContext(this, this.adapter, props);
     // }
   }
 
