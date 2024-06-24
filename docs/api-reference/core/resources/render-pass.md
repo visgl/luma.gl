@@ -45,6 +45,14 @@ Depth and stencil buffers are also cleared to default values:
   device.submit();
 ```
 
+## Viewport size
+
+`RenderPassProps.parameters.viewport` controls how the rendered graphics is mapped to window pixels / texels (more precisely, the affine transformation of x and y from normalized device coordinates to window coordinates).
+
+If no value for the `viewport` parameter is provided, the following defaults will be applied.
+- If no `framebuffer` is specified, the size of the canvas drawing buffer will be used (`[gl.canvas.drawingBufferWidth, gl.canvas.drawingBufferHeight]`)
+- If a framebuffer is specified, the `width` and `height` of the framebuffer will be used.
+
 ## Types
 
 ### `RenderPassProps`

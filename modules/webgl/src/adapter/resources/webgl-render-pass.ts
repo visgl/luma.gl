@@ -28,9 +28,20 @@ export class WEBGLRenderPass extends RenderPass {
     super(device, props);
     this.device = device;
 
+    // If no viewport is provided, apply reasonably defaults
+    let viewport;
+    if (!props.parameters?.viewport) {
+      if (!props.framebuffer) {
+        viewport = [0, 0, device.gl.drawingBufferWidth, device.gl.drawingBufferHeight];
+      } else {
+        const {width, height} = props.framebuffer;
+        viewport = [0, 0, width, height];
+      }
+    }
+
     // TODO - do parameters (scissorRect) affect the clear operation?
     this.device.pushState();
-    this.setParameters(this.props.parameters);
+    this.setParameters({viewport, ...this.props.parameters});
 
     // Hack - for now WebGL draws in "immediate mode" (instead of queueing the operations)...
     this.clear();
