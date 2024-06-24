@@ -30,8 +30,8 @@ export class WEBGLRenderPass extends RenderPass {
 
     // If no viewport is provided, apply reasonably defaults
     let viewport;
-    if (!props.parameters?.viewport) {
-      if (!props.framebuffer) {
+    if (!props?.parameters?.viewport) {
+      if (!props?.framebuffer) {
         viewport = [0, 0, device.gl.drawingBufferWidth, device.gl.drawingBufferHeight];
       } else {
         const {width, height} = props.framebuffer;
