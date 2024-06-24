@@ -155,7 +155,7 @@ export class WEBGLFramebuffer extends Framebuffer {
     switch (texture.glTarget) {
       case GL.TEXTURE_2D_ARRAY:
       case GL.TEXTURE_3D:
-        gl.framebufferTextureLayer(GL.FRAMEBUFFER, attachment, texture.glTarget, level, layer);
+        gl.framebufferTextureLayer(GL.FRAMEBUFFER, attachment, texture.handle, level, layer);
         break;
 
       case GL.TEXTURE_CUBE_MAP:

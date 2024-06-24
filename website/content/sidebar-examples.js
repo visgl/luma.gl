@@ -18,9 +18,8 @@ const sidebars = {
       label: 'API',
       items: [
         'api/animation',
-        'api/cubemap'
-        // Broken pending texture refactor
-        // 'api/texture-3d'
+        'api/cubemap',
+        'api/texture-3d'
       ]
     },
     {
