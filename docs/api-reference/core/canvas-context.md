@@ -57,13 +57,12 @@ const renderPass = device.beginRenderPass({
 | `useDevicePixels?`      | `boolean` \| `number`                                | Device pixels scale factor (`true` uses browser DPI)                          |
 | `autoResize?`           | `boolean`                                            | Whether to track resizes                                                      |
 | `visible?`              | `boolean`                                            | Visibility (only used if new canvas is created).                              |
-
-#### WebGPU Specific Props
-
-| Property                | Type                                                 |                                                                               |
-| ----------------------- | ---------------------------------------------------- | ----------------------------------------------------------------------------- |
 | `alphaMode?: string`    | `'opaque'`         | `'opaque' \| 'premultiplied'`. See [alphaMode](https://developer.mozilla.org/en-US/docs/Web/API/GPUCanvasContext/configure#alphamode). |
 | `colorSpace?: 'string`  | `'srgb'`           | `'srgb' \| 'display-p3'`. See [colorSpace](https://developer.mozilla.org/en-US/docs/Web/API/GPUCanvasContext/configure#colorspace). |
+
+:::tip
+See [MDN WebGL context attributes](https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/getContext#contextattributes) guide for more information.
+:::
 
 ## Static Fields
 

@@ -113,37 +113,47 @@ export class WebGLDevice extends Device {
 
     // If attaching to an already attached context, return the attached device
     // @ts-expect-error device is attached to context
-    const device: WebGLDevice | undefined = props.webgl?.gl?.device;
+    let device: WebGLDevice | undefined = props.canvasContext?.canvas?.gl?.device;
     if (device) {
       throw new Error(`WebGL context already attached to device ${device.id}`);
     }
 
     // Create and instrument context
-    const canvas = props.webgl?.gl?.canvas || props.canvas;
+    const canvas = props.canvas;
     this.canvasContext = new WebGLCanvasContext(this, {...props, canvas});
 
     this.lost = new Promise<{reason: 'destroyed'; message: string}>(resolve => {
       this._resolveContextLost = resolve;
     });
 
-    this.handle = createBrowserContext(this.canvasContext.canvas, {
-      ...props.webgl,
+    const webglContextAttributes = getWebGLContextAttributes(props);
+
+    const gl = createBrowserContext(this.canvasContext.canvas, {
+      ...webglContextAttributes,
       onContextLost: (event: Event) =>
         this._resolveContextLost?.({
           reason: 'destroyed',
           message: 'Entered sleep mode, or too many apps or browser tabs are using the GPU.'
         })
     });
-    this.gl = this.handle;
 
-    if (!this.handle) {
+    if (!gl) {
       throw new Error('WebGL context creation failed');
     }
+
+    // @ts-expect-error device is attached to context
+    device = gl.device;
+    if (device) {
+      throw new Error(`WebGL context already attached to device ${device.id}`);
+    }
+
+    this.handle = gl;
+    this.gl = gl;
 
     // Add spector debug instrumentation to context
     // We need to trust spector integration to decide if spector should be initialized
     // We also run spector instrumentation first, otherwise spector can clobber luma instrumentation.
-    this.spectorJS = initializeSpectorJS({...this.props.webgl, gl: this.handle});
+    this.spectorJS = initializeSpectorJS({...this.props, gl: this.handle});
 
     // Instrument context
     (this.gl as any).device = this; // Update GL context: Link webgl context back to device
@@ -166,8 +176,8 @@ export class WebGLDevice extends Device {
     glState.trackState(this.gl, {copyState: false});
 
     // DEBUG contexts: Add luma debug instrumentation to the context, force log level to at least 1
-    if (props.webgl?.debug) {
-      this.gl = makeDebugContext(this.gl, {...props.webgl, throwOnError: true});
+    if (props.debug) {
+      this.gl = makeDebugContext(this.gl, {...props, throwOnError: true});
       this.debug = true;
       log.level = Math.max(log.level, 1);
       log.warn('WebGL debug mode activated. Performance reduced.')();
@@ -449,6 +459,38 @@ export class WebGLDevice extends Device {
     getWebGLExtension(this.gl, name, this._extensions);
     return this._extensions;
   }
+}
+
+function getWebGLContextAttributes(props: DeviceProps): WebGLContextAttributes {
+  const attributes: WebGLContextAttributes = {...props.webgl};
+
+  // Copy in deprecated props
+  for (const key in ['alpha', 'antialias', 'depth', 'premultipliedAlpha', 'preserveDrawingBuffer', 'stencil']) {  
+    if (props[key] === undefined) {
+      attributes[key] = true;
+    } 
+  }
+
+  // Copy props from device props
+  if (props.powerPreference !== undefined) {
+    attributes.powerPreference = props.powerPreference;
+  }
+  if (props.desynchronized !== undefined) {
+    attributes.desynchronized = props.desynchronized;
+  }
+  if (props.failIfMajorPerformanceCaveat !== undefined) {
+    attributes.failIfMajorPerformanceCaveat = props.failIfMajorPerformanceCaveat;
+  }
+  if (props.desynchronized !== undefined) {
+    attributes.desynchronized = props.desynchronized;
+  }
+
+  // Copy props from CanvasContextProps
+  if (props.canvasContext?.alphaMode === 'premultiplied') {
+    attributes.premultipliedAlpha = true;
+  }
+
+  return attributes;
 }
 
 /** Set constant float array attribute */

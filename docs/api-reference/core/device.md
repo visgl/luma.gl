@@ -52,86 +52,64 @@ console.error(message);
 
 ### `DeviceProps`
 
-```ts
-{
-  // common options
-  webgl: {
-    // webgl specific options
-  },
-  webgpu: {
-    // webgpu specific options
-  }
-}
-```
 :::tip
-This object can also include all [`CanvasContextProps`](./canvas-context.md#canvascontextprops) properties to configure how a new canvas is created. If a canvas is provided, these are ignored.
+This object can also include all [`CanvasContextProps`][canvas-context-props] properties to configure how a new canvas is created. If a canvas is provided, these are ignored.
 :::
+
+[canvas-context-props]: ./canvas-context.md#canvascontextprops
+[webgl-attributes]: https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/getContext#contextattributes
 
 #### Common Options
 
 Specify common props to use when luma creates the device.
 
-| Parameter                       | Default            | Description                                                                                                               |
-| ------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------- |
-| `id?: string`                   | `null`             |                                                                                                                           |
-| `canvas?: HTMLCanvasElement \| OffscreenCanvas \| string` | N/A           | A _string_ `id` or object of an existing canvas element. If not provided, a new canvas will be created.|
-| `onError?: (error: Error) => unknown` | `log.error`  | Error handling.                                                                                                           |
-| `initalizeFeatures?: boolean`   | `true`             | Initialize all features on startup. 🧪                                                                                    |
-| `disabledFeatures?: Partial<Record<DeviceFeature, boolean>>` | `{ 'compilation-status-async-webgl': true }` | Disable specific features. 🧪                                      |
-| `_factoryDestroyPolicy?: string`| `'unused'`         | `'unused' \| 'never'` Never destroy cached shaders and pipelines. 🧪                                                      |
-| `container?: HTMLElement \| string` | N/A            | If new canvas is created, it will be created in the specified container, otherwise appended to body.                      |
-| `width?: number`                | `800`              | If new canvas is created, sets the canvas width.                                                                          |
-| `height?: number`               | `600`              | If new canvas is created, sets the canvas height.                                                                         |
-| `useDevicePixels?: boolean \| number` | `true`       | If new canvas is created, sets device pixels scale factor (`true` uses browser DPI).                                      |
-| `autoResize?: boolean`          | `true`             | If new canvas is created, sets whether to track resizes.                                                                  |
-| `visible?: boolean`             | `true`             | If new canvas is created, sets visibility.                                                                                |
+| Parameter                                           | Default                                      | Description                                                                                   |
+| --------------------------------------------------- | -------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `id?: string`                                       | `null`                                       | Optional string id, mainly intended for debugging.                                            |
+| `canvasContext?: CanvasContextProps`                | [CanvasContexProps][canvas_context_props]    | Props used to create the default `CanvasContext` for the new `Device`.                        |
+| `onError?: (error: Error) => unknown`               | `log.error`                                  | Error handling.                                                                               |
+| `powerPreference?: string`                          | `'high-performance'`                         | `'default' \| 'high-performance' \| 'low-power'` (WebGL).                                     |
+| `desynchronized?: boolean`                          | `false`                                      | Hint to reduce latency by desynchronizing the canvas paint cycle from the event loop (WebGL). |
+| `failIfMajorPerformanceCaveat?`                     | `false`                                      | Do not create a Device if the system performance is low (WebGL).                              |
+| `requestMaxLimits?: boolean`                        | `true`                                       | Ensures that the Device exposes the highest `DeviceLimits` supported by platform (WebGPU).    |
+| `webgl?: WebGLContextAttributes`                    | [`WebGLContextAttributes`][webgl-attributes] | Attributes passed on to WebGL (`canvas.getContext('webgl2', props.webgl)`                     |
+| `initializeFeatures?: boolean`                      | `true`                                       | Initialize all `DeviceFeatures` on startup. 🧪                                                 |
+| `disabledFeatures?: Record<DeviceFeature, boolean>` | `{ 'compilation-status-async-webgl': true }` | Disable specific `DeviceFeatures`. 🧪                                                          |
+| `_factoryDestroyPolicy?: string`                    | `'unused'`                                   | `'unused' \| 'never'` Never destroy cached shaders and pipelines. 🧪                           |
 
 :::caution
 🧪 denotes experimental feature. Expect API to change.
 :::
 
-#### WebGL Specific Options
-
-Specify WebGL context attributes to use if luma creates the WebGL context.
-
-| WebGL Context Attributes        | Default            | Description                                                                                                               |
-| ------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------- |
-| `gl?: WebGL2RenderingContext`   | N/A                | An existing WebGL context. If not provided, a new context will be created with the attributes provided below.             |
-| `alpha?: boolean`               | `true`             | Default render target has an alpha buffer.                                                                                |
-| `antialias?`                    | `true`             | Boolean that indicates whether or not to perform anti-aliasing.                                                           |
-| `depth?: boolean`               | `true`             | Default render target has a depth buffer of at least `16` bits.                                                           |
-| `desynchronized?: boolean`      | `false`            | Hints the user agent to reduce the latency by desynchronizing the canvas paint cycle from the event loop.                 |
-| `failIfMajorPerformanceCaveat?` | `false`            | Do not create if the system performance is low.                                                                           |
-| `manageState?: boolean`         | `true`             | Set to false to disable WebGL state management instrumentation. *_Experimental._                                          |
-| `powerPreference?: string`      | `'high-performance'` | `'default' \| 'high-performance' \| 'low-power'`                                                                        |
-| `premultipliedAlpha?`           | `true`             | Boolean that indicates that the page compositor will assume the drawing buffer contains colors with pre-multiplied alpha. |
-| `preserveDrawingBuffer?`        | `false`            | Default render target buffers will preserve their values until cleared or overwritten. Useful for screen capture.         |
-| `stencil?: boolean`             | `false`            | Default render target has a stencil buffer of at least `8` bits.                                                          |
-
-:::tip
-See [MDN WebGL context attributes](https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/getContext#contextattributes) guide for more information.
-:::
+#### Debug Options
 
 Specify WebGL debugging options to use when luma creates the WebGL context.
 
-| WebGL Debugging                 | Default            | Description                                                                                                               |
-| ------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------- |
-| `debug?: boolean`               | `false`            | Initialize Khronos WebGLDeveloperTools. WebGL API calls will be logged to the console and WebGL errors will generate JavaScript exceptions. |
-| `break?: string[]`              | `[]`               | Insert a break point (`debugger`) if one of the listed gl functions is called.                                            |
-| `debugWithSpectorJS?: boolean`  | `false`            | Initialize the SpectorJS WebGL debugger.                                                                                  |
-| `spectorUrl?: string`           | N/A                | SpectorJS URL. Override if CDN is down or different SpectorJS version is desired.                                         |
+| WebGL Debugging                | Default | Description                                                                                                                                 |
+| ------------------------------ | ------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `debug?: boolean`              | `false` | Initialize Khronos WebGLDeveloperTools. WebGL API calls will be logged to the console and WebGL errors will generate JavaScript exceptions. |
+| `break?: string[]`             | `[]`    | Insert a break point (`debugger`) if one of the listed gl functions is called.                                                              |
+| `debugWithSpectorJS?: boolean` | `false` | Initialize the SpectorJS WebGL debugger.                                                                                                    |
+| `spectorUrl?: string`          | N/A     | SpectorJS URL. Override if CDN is down or different SpectorJS version is desired.                                                           |
 
 :::tip
 Learn more about WebGL debugging in our [Debugging](../../developer-guide/debugging.md) guide.
 :::
 
-#### WebGPU Specific Options
+#### WebGLContextAttributes
 
-| WebGPU Parameter                | Default            | Description                                                                                                               |
-| ------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------- |
-| `requestMaxLimits`              | `true`             | Request a Device with the highest limits supported by platform. WebGPU: devices can be created with minimal limits.       |
-| `alphaMode?: string`            | `'opaque'`         | `'opaque' \| 'premultiplied'`. Sets the initial [alphaMode](https://developer.mozilla.org/en-US/docs/Web/API/GPUCanvasContext/configure#alphamode) on the internal context. |
-| `colorSpace?: 'string`          | `'srgb'`           | `'srgb' \| 'display-p3'`. Sets the initial [colorSpace](https://developer.mozilla.org/en-US/docs/Web/API/GPUCanvasContext/configure#colorspace) on the internal context. |
+You can specify what [`WebGLContextAttributes`](webgl-attributes) to use if luma creates the WebGL context. 
+For instance, applications often want toset `props.webgl.preserveDrawingBuffer` to ensure that the screen can be "grabbed" with `canvas.toDataURL()`
+
+| `WebGLContextAttributes`                | Default | Description                                                                                            |
+| --------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------ |
+| `webgl.alpha?: boolean`                 | `true`  | Default render target has an alpha buffer.                                                             |
+| `webgl.antialias?: boolean`             | `true`  | Boolean that indicates whether or not to perform anti-aliasing.                                        |
+| `webgl.depth?: boolean`                 | `true`  | Default render target has a depth buffer of at least `16` bits.                                        |
+| `webgl.premultipliedAlpha?: boolean`    | `true`  | The page compositor will assume the drawing buffer contains colors with pre-multiplied alpha.          |
+| `webgl.preserveDrawingBuffer?: boolean` | `false` | Default render target buffers will preserve their values until overwritten. Useful for screen capture. |
+| `webgl.stencil?: boolean`               | `false` | Default render target has a stencil buffer of at least `8` bits.                                       |
+
 
 ## Fields
 

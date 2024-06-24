@@ -27,13 +27,10 @@ export type CanvasContextProps = {
   autoResize?: boolean;
   /** Visibility (only used if new canvas is created). */
   visible?: boolean;
-  /** WebGPU only https://www.w3.org/TR/webgpu/#canvas-configuration */
-  webgpu?: {
-    /** https://developer.mozilla.org/en-US/docs/Web/API/GPUCanvasContext/configure#colorspace */
-    colorSpace?: 'srgb'; // GPUPredefinedColorSpace
-    /** https://developer.mozilla.org/en-US/docs/Web/API/GPUCanvasContext/configure#alphamode */
-    alphaMode?: 'opaque' | 'premultiplied';
-  };
+  /** https://developer.mozilla.org/en-US/docs/Web/API/GPUCanvasContext/configure#alphamode */
+  alphaMode?: 'opaque' | 'premultiplied';
+  /** https://developer.mozilla.org/en-US/docs/Web/API/GPUCanvasContext/configure#colorspace */
+  colorSpace?: 'srgb'; // GPUPredefinedColorSpace
 };
 
 const DEFAULT_CANVAS_CONTEXT_PROPS: Required<CanvasContextProps> = {
@@ -44,10 +41,8 @@ const DEFAULT_CANVAS_CONTEXT_PROPS: Required<CanvasContextProps> = {
   autoResize: true,
   container: null,
   visible: true,
-  webgpu: {
-    colorSpace: 'srgb',
-    alphaMode: 'opaque'
-  }
+  alphaMode: 'opaque',
+  colorSpace: 'srgb'
 };
 
 /**

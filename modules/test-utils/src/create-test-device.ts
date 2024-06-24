@@ -28,6 +28,7 @@ export function createTestDevice(props: DeviceProps = {}): WebGLDevice | null {
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error(`Failed to created device '${props.id}': ${(error as Error).message}`);
+    debugger
     return null;
   }
 }
