@@ -574,7 +574,12 @@ export class WEBGLTexture extends Texture {
    * Copy a region of data from a CPU memory buffer into this texture.
    * @todo -   GLUnpackParameters parameters
    */
-  protected _setMipLevel(depth: number, level: number, textureData: Texture2DData, glTarget: GL = this.glTarget) {
+  protected _setMipLevel(
+    depth: number,
+    level: number,
+    textureData: Texture2DData,
+    glTarget: GL = this.glTarget
+  ) {
     // if (!textureData) {
     //   clearMipLevel(this.device.gl, {...this, depth, level});
     //   return;
