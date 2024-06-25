@@ -509,7 +509,7 @@ export function getTextureFormatSupport(
 
   // Support Check that we have a GL constant
   let supported = info.gl === undefined;
-  supported = supported && checkTextureFeature(gl, info.f, extensions);
+  supported = supported && checkTextureFeature(gl, info.f as DeviceFeature, extensions);
 
   // Filtering
   // const filterable = info.filter
@@ -521,8 +521,8 @@ export function getTextureFormatSupport(
 
   return {
     supported,
-    renderable: supported && checkTextureFeature(gl, info.render, extensions),
-    filterable: supported && checkTextureFeature(gl, info.filter, extensions),
+    renderable: supported && checkTextureFeature(gl, info.render as DeviceFeature, extensions),
+    filterable: supported && checkTextureFeature(gl, info.filter as DeviceFeature, extensions),
     blendable: false, // tod,
     storable: false
   };
