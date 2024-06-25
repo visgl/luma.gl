@@ -76,10 +76,6 @@ export class NullDevice extends Device {
     return false;
   }
 
-  getSize(): [number, number] {
-    return [this.canvasContext.width, this.canvasContext.height];
-  }
-
   isTextureFormatSupported(format: TextureFormat): boolean {
     return true;
   }

@@ -37,7 +37,8 @@ export class WEBGLRenderPass extends RenderPass {
         viewport = [0, 0, width, height];
       } else {
         // Instead of using our own book-keeping, we can just read the values from the WebGL context
-        viewport = [0, 0, device.gl.drawingBufferWidth, device.gl.drawingBufferHeight];
+        const [width, height] = device.getCanvasContext().getDrawingBufferSize();
+        viewport = [0, 0, width, height];
       }
     }
 
