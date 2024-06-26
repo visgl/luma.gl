@@ -184,10 +184,6 @@ export class WebGLDevice extends Device {
     return this.gl.isContextLost();
   }
 
-  getSize(): [number, number] {
-    return [this.gl.drawingBufferWidth, this.gl.drawingBufferHeight];
-  }
-
   isTextureFormatSupported(format: TextureFormat): boolean {
     return isTextureFormatSupported(this.gl, format, this._extensions);
   }
