@@ -37,6 +37,17 @@ const renderPass = device.beginRenderPass({
 
 ### `CanvasContextProps`
 
+```ts
+{
+  // common options
+  webgpu: {
+    // webgpu specific options
+  }
+}
+```
+
+### Common Props
+
 | Property                | Type                                                 |                                                                               |
 | ----------------------- | ---------------------------------------------------- | ----------------------------------------------------------------------------- |
 | `canvas?`               | `HTMLCanvasElement` \| `OffscreenCanvas` \| `string` | A new canvas will be created if not supplied.                                 |
@@ -46,8 +57,13 @@ const renderPass = device.beginRenderPass({
 | `useDevicePixels?`      | `boolean` \| `number`                                | Device pixels scale factor (`true` uses browser DPI)                          |
 | `autoResize?`           | `boolean`                                            | Whether to track resizes                                                      |
 | `visible?`              | `boolean`                                            | Visibility (only used if new canvas is created).                              |
-| `colorSpace?`           | `'srgb'`                                             | WebGPU only https://www.w3.org/TR/webgpu/#canvas-configuration                |
-| `compositingAlphaMode?` | `'opaque'` \| `'premultiplied'`                      | WebGPU only https://www.w3.org/TR/webgpu/#canvas-configuration                |
+
+#### WebGPU Specific Props
+
+| Property                | Type                                                 |                                                                               |
+| ----------------------- | ---------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `alphaMode?: string`    | `'opaque'`         | `'opaque' \| 'premultiplied'`. See [alphaMode](https://developer.mozilla.org/en-US/docs/Web/API/GPUCanvasContext/configure#alphamode). |
+| `colorSpace?: 'string`  | `'srgb'`           | `'srgb' \| 'display-p3'`. See [colorSpace](https://developer.mozilla.org/en-US/docs/Web/API/GPUCanvasContext/configure#colorspace). |
 
 ## Static Fields
 

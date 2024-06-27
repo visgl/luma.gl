@@ -194,53 +194,65 @@ type WebGLCompressedTextureFeatures =
   | 'texture-compression-atc-webgl';
 
 /** Device properties */
-export type DeviceProps = {
+export type DeviceProps = CanvasContextProps & {
   id?: string;
 
-  // Common parameters
-  canvas?: HTMLCanvasElement | OffscreenCanvas | string | null; // A canvas element or a canvas string id
-  container?: HTMLElement | string | null;
-  width?: number /** width is only used when creating a new canvas */;
-  height?: number /** height is only used when creating a new canvas */;
-
-  /** Request a Device with the highest limits supported by platform. WebGPU: devices can be created with minimal limits. */
-  requestMaxLimits?: boolean;
-
-  // WebGLContext PARAMETERS - Can only be set on context creation...
-  // alpha?: boolean; // Default render target has an alpha buffer.
-  // depth?: boolean; // Default render target has a depth buffer of at least 16 bits.
-  // stencil?: boolean; // Default render target has a stencil buffer of at least 8 bits.
-  // antialias?: boolean; // Boolean that indicates whether or not to perform anti-aliasing.
-  // premultipliedAlpha?: boolean; // Boolean that indicates that the page compositor will assume the drawing buffer contains colors with pre-multiplied alpha.
-  // preserveDrawingBuffer?: boolean; // Default render target buffers will not be automatically cleared and will preserve their values until cleared or overwritten
-  // failIfMajorPerformanceCaveat?: boolean; // Do not create if the system performance is low.
+  // // Common parameters
+  // canvas?: HTMLCanvasElement | OffscreenCanvas | string | null; // A canvas element or a canvas string id
+  // container?: HTMLElement | string | null;
+  // width?: number /** width is only used when creating a new canvas */;
+  // height?: number /** height is only used when creating a new canvas */;
 
   /** Error handling */
   onError?: (error: Error) => unknown;
 
-  // @deprecated Attach to existing context. Rename to handle? Use Device.attach?
-  gl?: WebGL2RenderingContext | null;
-
-  // DEBUG SETTINGS
-  /** WebGL: Instrument WebGL2RenderingContext (at the expense of performance) */
-  debug?: boolean;
-  /** Break on WebGL functions matching these strings */
-  break?: string[];
-
-  /** WebGL: Initialize the SpectorJS WebGL debugger */
-  debugWithSpectorJS?: boolean;
-  /** SpectorJS URL. Override if CDN is down or different SpectorJS version is desired */
-  spectorUrl?: string;
-
   // EXPERIMENTAL SETTINGS
-  /** Set to false to disable WebGL state management instrumentation: TODO- Unclear if still supported / useful */
-  manageState?: boolean;
   /** Initialize all features on startup */
   initalizeFeatures?: boolean;
   /** Disable specific features */
   disabledFeatures?: Partial<Record<DeviceFeature, boolean>>;
   /** Never destroy cached shaders and pipelines */
   _factoryDestroyPolicy?: 'unused' | 'never';
+
+  webgl?: {
+    // @deprecated Attach to existing context. Rename to handle? Use Device.attach?
+    gl?: WebGL2RenderingContext | null;
+
+    // DEBUG SETTINGS
+    /** WebGL: Instrument WebGL2RenderingContext (at the expense of performance) */
+    debug?: boolean;
+    /** Break on WebGL functions matching these strings */
+    break?: string[];
+
+    /** WebGL: Initialize the SpectorJS WebGL debugger */
+    debugWithSpectorJS?: boolean;
+    /** SpectorJS URL. Override if CDN is down or different SpectorJS version is desired */
+    spectorUrl?: string;
+
+    // ContextProps
+    alpha?: boolean; // indicates if the canvas contains an alpha buffer.
+    depth?: boolean; // indicates that the drawing buffer has a depth buffer of at least 16 bits.
+    stencil?: boolean; // Default render target has a stencil buffer of at least `8` bits.
+    desynchronized?: boolean; // hints the user agent to reduce the latency by desynchronizing the canvas paint cycle from the event loop
+    antialias?: boolean; // indicates whether or not to perform anti-aliasing.
+    failIfMajorPerformanceCaveat?: boolean; // indicates if a context will be created if the system performance is low or if no hardware GPU is available.
+    powerPreference?: 'default' | 'high-performance' | 'low-power';
+    premultipliedAlpha?: boolean; // page compositor will assume the drawing buffer contains colors with pre-multiplied alpha.
+    preserveDrawingBuffer?: boolean; // buffers will not be cleared and will preserve their values until cleared or overwritten by the author.
+
+    // EXPERIMENTAL SETTINGS
+    /** Set to false to disable WebGL state management instrumentation: TODO- Unclear if still supported / useful */
+    manageState?: boolean;
+  };
+
+  webgpu?: {
+    /** Request a Device with the highest limits supported by platform. WebGPU: devices can be created with minimal limits. */
+    requestMaxLimits?: boolean;
+    /** Only applies to default canvas context */
+    colorSpace?: 'srgb'; // GPUPredefinedColorSpace
+    /** Only applies to default canvas context */
+    alphaMode?: 'opaque' | 'premultiplied';
+  };
 };
 
 /**
@@ -262,37 +274,55 @@ export abstract class Device {
     id: null!,
     canvas: null,
     container: null,
-    manageState: true,
     width: 800, // width are height are only used by headless gl
     height: 600,
-    requestMaxLimits: true,
+    useDevicePixels: true,
+    autoResize: true,
+    visible: true,
 
     // Callbacks
     onError: (error: Error) => log.error(error.message),
-
-    gl: null,
-
-    // alpha: undefined,
-    // depth: undefined,
-    // stencil: undefined,
-    // antialias: undefined,
-    // premultipliedAlpha: undefined,
-    // preserveDrawingBuffer: undefined,
-    // failIfMajorPerformanceCaveat: undefined
-
-    debug: Boolean(log.get('debug')), // Instrument context (at the expense of performance)
-    break: (log.get('break') as string[]) || [],
-
-    // WebGL specific debugging
-    debugWithSpectorJS: undefined!,
-    spectorUrl: undefined!,
 
     // TODO - Change these after confirming things work as expected
     initalizeFeatures: true,
     disabledFeatures: {
       'compilation-status-async-webgl': true
     },
-    _factoryDestroyPolicy: 'unused'
+    _factoryDestroyPolicy: 'unused',
+
+    /**
+     * WebGL
+     */
+    webgl: {
+      gl: null,
+
+      // WebGL context aattributes
+      alpha: true,
+      depth: true,
+      stencil: false,
+      desynchronized: false,
+      antialias: true,
+      failIfMajorPerformanceCaveat: false,
+      powerPreference: 'high-performance',
+      premultipliedAlpha: true,
+      preserveDrawingBuffer: false,
+
+      debug: Boolean(log.get('debug')), // Instrument context (at the expense of performance)
+      break: (log.get('break') as string[]) || [],
+
+      // WebGL specific debugging
+      debugWithSpectorJS: undefined!,
+      spectorUrl: undefined!,
+
+      // Experimental WebGL
+      manageState: true
+    },
+    /**
+     * WebGPU
+     */
+    webgpu: {
+      requestMaxLimits: true
+    }
   };
 
   get [Symbol.toStringTag](): string {

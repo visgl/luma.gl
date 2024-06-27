@@ -3,6 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 // MAIN API ACCESS POINT
+export type {CreateDeviceProps} from './adapter/luma';
 export {luma} from './adapter/luma';
 
 // ADAPTER (DEVICE AND GPU RESOURCE INTERFACES)
