@@ -21,7 +21,6 @@ const WEBGL_FEATURES: Partial<Record<DeviceFeature, boolean | string>> = {
   // 'timestamp-query' // GPUQueryType "timestamp-query"
   // "indirect-first-instance"
   // Textures are handled by getTextureFeatures()
-  // 'depth24unorm-stencil8' // GPUTextureFormat 'depth24unorm-stencil8'
   // 'depth32float-stencil8' // GPUTextureFormat 'depth32float-stencil8'
 
   // optional WebGL features

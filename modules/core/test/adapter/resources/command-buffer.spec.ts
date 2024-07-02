@@ -200,8 +200,6 @@ type WebGLTextureInfo = {
 };
 
 const WEBGL_TEXTURE_FORMATS: Record<TextureFormat, WebGLTextureInfo> = {
-  // Unsized texture format - more performance
-  'rgb8unorm-unsized': {dataFormat: GL.RGB, types: [GL.UNSIGNED_BYTE, GL.UNSIGNED_SHORT_5_6_5]},
   // TODO: format: GL.RGBA type: GL.FLOAT is supported in WebGL1 when 'OES_texure_float' is suported
   // we need to update this table structure to specify extensions (gl1ext: 'OES_texure_float', gl2ext: false) for each type.
   rgba8unorm: {

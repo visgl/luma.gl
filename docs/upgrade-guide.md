@@ -16,24 +16,29 @@ Some deprectations and minor breaking changes are necessary as WebGPU support is
 
 **@luma.gl/core**
 
-| Updated API                    | Status     | Replacement                                                                                  |
-| ------------------------------ | ---------- | -------------------------------------------------------------------------------------------- |
-| `luma.registerDevices()`       | Deprecated | Use [`luma.registerAdapters()`](/docs/api-reference/core/luma#lumaregisteradapters) instead. |
-| `Texture.props.data` (Promise) | Changed    | Textures no longer accept promises, use `AsyncTexture` class instead.                        |
-| `triangle-fan-webgl`           | Removed    | Rebuild your geometries using `triangle-strip`.                                              |
-| `line-loop-webgl`              | Removed    | Rebuild your geometries`line-list`.                                                          |
-| `glsl` template string         | Removed    | Enable syntax highlighting in vscode using `/* glsl */` comment instead                      |
-| `Parameters.blend`             | New        | Explicit control over color blending                                                         |
+| Updated API                    | Status     | Replacement                            | Comment                                                         |
+| ------------------------------ | ---------- | -------------------------------------- | --------------------------------------------------------------- |
+| `Parameters.blend`             | New        |                                        | Explicit activation of color blending                           |
+| `luma.registerDevices()`       | Deprecated | [`luma.registerAdapters()`][adapters]. | Adapters provide a cleaner way to work with GPU backends.       |
+| `Texture.props.data` (Promise) | Changed    | `AsyncTexture` class                   | Textures no longer accept promises.                             |
+| `triangle-fan-webgl`           | Removed    | `triangle-strip`.                      | Reorganize your geometries                                      |
+| `line-loop-webgl`              | Removed    | `line-list`.                           | Reorganize your geometries                                      |
+| `glsl` shader template string  | Removed    | `/* glsl */` comment                   | Enable syntax highlighting in vscode using before shader string |
+| `depth24unorm-stencil8`        | Removed    | `depth24plus-stencil8`                 | The `TextureFormat` was removed from the WebGPU spec            |
+| `rgb8unorm-unsized`            | Removed    | `rgb8unorm`                            | No longer support unsized WebGL1 `TextureFormat`                |
+| `rgba8unorm-unsized`           | Removed    | `rgb8aunorm`                           | No longer support unsized WebGL1 `TextureFormat`                |
+
+[adapters]: /docs/api-reference/core/luma#lumaregisteradapters
 
 **@luma.gl/shadertools**
 
-| Updated API                          | Status  | Replacement                                                             |
-| ------------------------------------ | ------- | ----------------------------------------------------------------------- |
-| `ShaderModuleInstance`               | Removed | Type has been removed. Use `ShaderModule` instead.                      |
-| `initializeShaderModule()`           | Changed | Stores initialized information on the original shader module object.    |
-| `ShaderModuleInstance.getUniforms()` | Removed | Use `getShaderModuleUniforms(module, ...)` instead.                     |
-| `getDependencyGraph()`               | Removed | Use `getShaderModuleDependencies(module)` instead.                      |
-| `glsl` template string               | Removed | Enable syntax highlighting in vscode using `/* glsl */` comment instead |
+| Updated API                          | Status  | Replacement                             | Comment                                            |
+| ------------------------------------ | ------- | --------------------------------------- | -------------------------------------------------- |
+| `ShaderModuleInstance`               | Removed | Use `ShaderModule` instead.             | Type has been removed.                             |
+| `initializeShaderModule()`           | Changed |                                         | Initializes the original shader module object      |
+| `ShaderModuleInstance.getUniforms()` | Removed | `getShaderModuleUniforms(module, ...)`. | Interact directly with the shader module           |
+| `getDependencyGraph()`               | Removed | `getShaderModuleDependencies(module)` . | Interact directly with the shader module           |
+| `glsl` template string               | Removed | `/* glsl */` comment                    | Enable syntax highlighting in vscode using comment |
 
 ## Upgrading to v9.0
 

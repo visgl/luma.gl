@@ -11,19 +11,21 @@ const COMPRESSED_TEXTURE_FORMAT_PREFIXES = [
   'bc1', 'bc2', 'bc3', 'bc4', 'bc5', 'bc6', 'bc7', 'etc1', 'etc2', 'eac', 'atc', 'astc', 'pvrtc'
 ];
 
-const REGEX = /^(rg?b?a?)([0-9]*)([a-z]*)(-srgb)?(-webgl|-unsized)?$/;
+const REGEX = /^(rg?b?a?)([0-9]*)([a-z]*)(-srgb)?(-webgl)?$/;
 
 export type DecodedTextureFormat = {
-  format: 'r' | 'rg' | 'rgb' | 'rgba';
+  channels: 'r' | 'rg' | 'rgb' | 'rgba';
   components: 1 | 2 | 3 | 4;
   dataType?: VertexType;
+  bpp?: number;
+  a?: 'depth' | 'stencil' | 'depth-stencil';
   srgb: boolean;
   webgl: boolean;
-  unsized: boolean;
   byteLength: number;
   integer: boolean;
   signed: boolean;
   normalized: boolean;
+  compressed?: boolean;
 };
 
 /**
@@ -39,16 +41,15 @@ export function isTextureFormatCompressed(textureFormat: TextureFormat): boolean
 export function decodeTextureFormat(format: TextureFormat): DecodedTextureFormat {
   const matches = REGEX.exec(format as string);
   if (matches) {
-    const [, format, length, type, srgb, suffix] = matches;
+    const [, channels, length, type, srgb, suffix] = matches;
     if (format) {
       const dataType = `${type}${length}` as VertexType;
       const decodedType = decodeVertexType(dataType);
       return {
-        format: format as 'r' | 'rg' | 'rgb' | 'rgba',
+        channels: channels as 'r' | 'rg' | 'rgb' | 'rgba',
         components: format.length as 1 | 2 | 3 | 4,
         // dataType - overwritten by decodedType
         srgb: srgb === '-srgb',
-        unsized: suffix === '-unsized',
         webgl: suffix === '-webgl',
         ...decodedType
       };
@@ -60,39 +61,45 @@ export function decodeTextureFormat(format: TextureFormat): DecodedTextureFormat
 
 // https://www.w3.org/TR/webgpu/#texture-format-caps
 
-const EXCEPTIONS: Partial<Record<TextureFormat, any>> = {
+const EXCEPTIONS: Partial<Record<TextureFormat, Partial<DecodedTextureFormat>>> = {
   // Packed 16 bit formats
-  'rgba4unorm-webgl': {format: 'rgba', bpp: 2},
-  'rgb565unorm-webgl': {format: 'rgb', bpp: 2},
-  'rgb5a1unorm-webgl': {format: 'rgba', bbp: 2},
+  'rgba4unorm-webgl': {channels: 'rgba', bpp: 2},
+  'rgb565unorm-webgl': {channels: 'rgb', bpp: 2},
+  'rgb5a1unorm-webgl': {channels: 'rgba', bpp: 2},
   // Packed 32 bit formats
-  rgb9e5ufloat: {format: 'rgb', bbp: 4},
-  rg11b10ufloat: {format: 'rgb', bbp: 4},
-  rgb10a2unorm: {format: 'rgba', bbp: 4},
-  'rgb10a2uint-webgl': {format: 'rgba', bbp: 4},
+  rgb9e5ufloat: {channels: 'rgb', bpp: 4},
+  rg11b10ufloat: {channels: 'rgb', bpp: 4},
+  rgb10a2unorm: {channels: 'rgba', bpp: 4},
+  'rgb10a2uint-webgl': {channels: 'rgba', bpp: 4},
   // Depth/stencil
   stencil8: {components: 1, bpp: 1, a: 'stencil'},
   depth16unorm: {components: 1, bpp: 2, a: 'depth'},
   depth24plus: {components: 1, bpp: 3, a: 'depth'},
   depth32float: {components: 1, bpp: 4, a: 'depth'},
   'depth24plus-stencil8': {components: 2, bpp: 4, a: 'depth-stencil'},
-  // "depth24unorm-stencil8" feature
-  'depth24unorm-stencil8': {components: 2, bpp: 4, a: 'depth-stencil'},
   // "depth32float-stencil8" feature
   'depth32float-stencil8': {components: 2, bpp: 4, a: 'depth-stencil'}
 };
 
 function decodeNonStandardFormat(format: TextureFormat): DecodedTextureFormat {
+  if (isTextureFormatCompressed(format)) {
+    return {
+      channels: 'rgb',
+      components: 3,
+      byteLength: 1,
+      srgb: false,
+      compressed: true
+    } as DecodedTextureFormat;
+  }
   const data = EXCEPTIONS[format];
   if (!data) {
     throw new Error(`Unknown format ${format}`);
   }
   return {
-    format: data.format || '',
-    components: data.components || data.format?.length || 1,
+    channels: data.channels || '',
+    components: data.components || data.channels?.length || 1,
     byteLength: data.bpp || 1,
-    srgb: false,
-    unsized: false
+    srgb: false
   } as DecodedTextureFormat;
 }
 
