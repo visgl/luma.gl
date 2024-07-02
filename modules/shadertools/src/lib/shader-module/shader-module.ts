@@ -121,7 +121,7 @@ export function getShaderModuleUniforms<
   module: ShaderModuleT,
   props: ShaderModuleT['props'],
   oldUniforms?: ShaderModuleT['uniforms']
-): ShaderModuleT['uniforms'] {
+): Record<string, BindingValue | UniformValue> {
   initializeShaderModule(module);
 
   const uniforms = oldUniforms || {...module.defaultUniforms};
