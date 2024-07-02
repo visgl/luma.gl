@@ -89,9 +89,7 @@ const TEXTURE_DATA = {
 //   [GL.UNSIGNED_SHORT_5_6_5]: v => [v >> 11 / 32, v >> 6 % 64 / 64, v % 32 * 32]
 // };
 
-function testFormatDeduction(t, device: Device) {}
-
-test.only('Texture#format simple creation', async t => {
+test('Texture#format simple creation', async t => {
   for (const device of await getTestDevices()) {
     for (const [formatName, formatInfo] of Object.entries(TEXTURE_FORMATS)) {
       if (['stencil8'].includes(formatName)) {
