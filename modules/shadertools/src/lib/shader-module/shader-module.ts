@@ -10,6 +10,7 @@ import {ShaderInjection} from '../shader-assembly/shader-injections';
 import {makePropValidators, getValidatedProperties} from '../filters/prop-types';
 import {normalizeInjections} from '../shader-assembly/shader-injections';
 
+export type BindingValue = Buffer | Texture | Sampler;
 export type UniformValue = number | boolean | Readonly<NumberArray>; // Float32Array> | Readonly<Int32Array> | Readonly<Uint32Array> | Readonly<number[]>;
 
 export type UniformInfo = {
@@ -24,7 +25,7 @@ export type UniformInfo = {
 export type ShaderModule<
   PropsT extends Record<string, unknown> = Record<string, unknown>,
   UniformsT extends Record<string, UniformValue> = Record<string, UniformValue>,
-  BindingsT extends Record<string, Buffer | Texture | Sampler> = {}
+  BindingsT extends Record<string, BindingValue> = Record<string, BindingValue>
 > = {
   /** Used for type inference not for values */
   props?: PropsT;
@@ -48,7 +49,7 @@ export type ShaderModule<
   defaultUniforms?: Required<UniformsT>; // Record<keyof UniformsT, UniformValue>;
 
   /** Function that maps props to uniforms & bindings */
-  getUniforms?: (props?: any, oldProps?: any) => Record<string, UniformValue>;
+  getUniforms?: (props?: any, oldProps?: any) => Record<string, BindingValue | UniformValue>;
 
   /** uniform buffers, textures, samplers, storage, ... */
   bindings?: Record<keyof BindingsT, {location: number; type: 'texture' | 'sampler' | 'uniforms'}>;

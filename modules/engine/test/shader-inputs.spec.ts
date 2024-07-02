@@ -74,7 +74,9 @@ test('ShaderInputs#bindings', t => {
       uniformPropTypes: {color: {value: [0, 0, 0]}}
     };
     if (callback) {
-      custom.getUniforms = ({color, colorTexture}) => ({color, colorTexture});
+      custom.getUniforms = ({color, colorTexture}: CustomProps): CustomProps => {
+        return {color, colorTexture};
+      };
     }
 
     const shaderInputs = new ShaderInputs<{
