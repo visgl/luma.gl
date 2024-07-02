@@ -8,14 +8,16 @@ import {log} from '@luma.gl/core';
 import {getShaderModuleDependencies, ShaderModule} from '@luma.gl/shadertools';
 import {splitUniformsAndBindings} from './model/split-uniforms-and-bindings';
 
+type BindingValue = Buffer | Texture | Sampler;
+
 /** Minimal ShaderModule subset, we don't need shader code etc */
 export type ShaderModuleInputs<
   PropsT extends Record<string, unknown> = Record<string, unknown>,
   UniformsT extends Record<string, UniformValue> = Record<string, UniformValue>,
-  BindingsT extends Record<string, Texture | Sampler> = Record<string, Texture | Sampler>
+  BindingsT extends Record<string, BindingValue> = Record<string, BindingValue>
 > = {
   defaultUniforms?: UniformsT;
-  getUniforms?: (settings: Partial<PropsT>, prevUniforms?: UniformsT) => UniformsT;
+  getUniforms?: (props?: any, oldProps?: any) => Record<string, BindingValue | UniformValue>;
 
   /** Not used. Used to access props type */
   props?: PropsT;

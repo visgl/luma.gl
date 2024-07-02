@@ -213,7 +213,6 @@ export class Model {
     const moduleMap = Object.fromEntries(
       this.props.modules?.map(module => [module.name, module]) || []
     );
-    // @ts-expect-error Fix typings
     this.setShaderInputs(props.shaderInputs || new ShaderInputs(moduleMap));
 
     // Setup shader assembler
