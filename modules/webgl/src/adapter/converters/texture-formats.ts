@@ -610,7 +610,7 @@ export function getTextureFormatBytesPerPixel(format: TextureFormat): number {
 // DATA TYPE HELPERS
 
 export function getWebGLPixelDataFormat(
-  channels: 'r' | 'rg' | 'rgb' | 'rgba',
+  channels: 'r' | 'rg' | 'rgb' | 'rgba' | 'bgra',
   integer: boolean,
   normalized: boolean,
   format: GL
@@ -625,6 +625,7 @@ export function getWebGLPixelDataFormat(
     case 'rg': return integer && !normalized ? GL.RG_INTEGER : GL.RG;
     case 'rgb': return integer && !normalized ? GL.RGB_INTEGER : GL.RGB;
     case 'rgba': return integer && !normalized ? GL.RGBA_INTEGER : GL.RGBA;
+    case 'bgra': throw new Error('bgra pixels not supported by WebGL');
     default: return GL.RGBA;
   }
 }
