@@ -19,8 +19,8 @@ export type DecodedTextureFormat = {
   dataType?: VertexType;
   bpp?: number;
   a?: 'depth' | 'stencil' | 'depth-stencil';
-  srgb: boolean;
-  webgl: boolean;
+  srgb?: boolean;
+  webgl?: boolean;
   byteLength: number;
   integer: boolean;
   signed: boolean;
@@ -45,14 +45,19 @@ export function decodeTextureFormat(format: TextureFormat): DecodedTextureFormat
     if (format) {
       const dataType = `${type}${length}` as VertexType;
       const decodedType = decodeVertexType(dataType);
-      return {
+      const info: DecodedTextureFormat = {
         channels: channels as 'r' | 'rg' | 'rgb' | 'rgba',
-        components: format.length as 1 | 2 | 3 | 4,
-        // dataType - overwritten by decodedType
-        srgb: srgb === '-srgb',
-        webgl: suffix === '-webgl',
+        components: channels.length as 1 | 2 | 3 | 4,
         ...decodedType
       };
+      if (suffix === '-webgl') {
+        info.webgl = true;
+      }
+      // dataType - overwritten by decodedType
+      if (srgb === '-srgb') {
+        info.srgb = true;
+      }
+      return info;
     }
   }
 
