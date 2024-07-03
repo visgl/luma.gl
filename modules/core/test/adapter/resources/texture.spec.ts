@@ -5,11 +5,14 @@
 import test from 'tape-promise/tape';
 import {webglDevice, getTestDevices} from '@luma.gl/test-utils';
 
-import {Device, Texture, TextureFormat} from '@luma.gl/core';
+import {Device, Texture, TextureFormat, decodeTextureFormat} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 
 // TODO(v9): Avoid import from `@luma.gl/webgl` in core tests.
-import {TEXTURE_FORMATS} from '@luma.gl/webgl/adapter/converters/texture-formats';
+import {
+  TEXTURE_FORMATS,
+  getTextureFormatWebGL
+} from '../../../../webgl/src/adapter/converters/texture-formats';
 import {SAMPLER_PARAMETERS} from './sampler.spec';
 
 import {WEBGLTexture} from '@luma.gl/webgl/adapter/resources/webgl-texture';
@@ -63,13 +66,6 @@ test('Texture#depth/stencil formats', async t => {
   t.end();
 });
 
-test.skip('Texture#format deduction', async t => {
-  for (const device of await getTestDevices()) {
-    testFormatDeduction(t, device);
-  }
-  t.end();
-});
-
 const DEFAULT_TEXTURE_DATA = new Uint8Array([
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 ]);
@@ -92,6 +88,49 @@ const TEXTURE_DATA = {
 //   [GL.UNSIGNED_BYTE]: v => [v[0] / 256, v[1] / 256, v[2] / 256],
 //   [GL.UNSIGNED_SHORT_5_6_5]: v => [v >> 11 / 32, v >> 6 % 64 / 64, v % 32 * 32]
 // };
+
+test('Texture#format simple creation', async t => {
+  for (const device of await getTestDevices()) {
+    for (const [formatName, formatInfo] of Object.entries(TEXTURE_FORMATS)) {
+      if (['stencil8'].includes(formatName)) {
+        continue;
+      }
+
+      if (device.isTextureFormatSupported(formatName)) {
+        // For compressed textures there may be a block size that we need to be a multiple of
+        const decodedFormat = decodeTextureFormat(formatName);
+        const width = decodedFormat.blockWidth ?? 4;
+        const height = decodedFormat.blockHeight ?? 4;
+
+        let texture: Texture;
+        t.doesNotThrow(() => {
+          texture = device.createTexture({
+            format: formatName,
+            height,
+            width
+          });
+        }, `Texture(${device.type},${formatName}) creation OK`);
+
+        t.equals(texture.format, formatName, `Texture(${device.type},${formatName}).format OK`);
+        if (device.type === 'webgl') {
+          // const formatInfo = getTextureFormatWebGL(forma)
+          const expectedInternalFormat = formatInfo.gl;
+          t.equals(
+            texture.glInternalFormat,
+            expectedInternalFormat,
+            `Texture(${device.type},${formatName}).glInternal OK`
+          );
+          // const expectedType = formatInfo.types?.[0];
+          // const expectedDataFormat = formatInfo.dataFormat;
+          // t.equals(texture.glType, expectedType, `Texture(${formatName}).type OK`);
+          // t.equals(texture.glFormat, expectedDataFormat, `Texture(${formatName}).glFormat OK`);
+        }
+        texture.destroy();
+      }
+    }
+  }
+  t.end();
+});
 
 function testFormatCreation(t, device: Device, withData: boolean = false) {
   for (const [textureFormat, formatInfo] of Object.entries(TEXTURE_FORMATS)) {
@@ -134,33 +173,6 @@ function testFormatCreation(t, device: Device, withData: boolean = false) {
   }
 }
 
-function testFormatDeduction(t, device: Device) {
-  for (const [formatName, formatInfo] of Object.entries(TEXTURE_FORMATS)) {
-    const expectedType = formatInfo.types[0];
-    const expectedDataFormat = formatInfo.dataFormat;
-    const options = {
-      format: Number(format),
-      height: 1,
-      width: 1
-    };
-    if (device.isTextureFormatSupported({format})) {
-      const texture = device.createTexture(options);
-      const msg = `Texture({format: ${device.getGLKey(format)}}) created`;
-      t.equals(texture.format, Number(format), msg);
-      t.equals(texture.type, expectedType, msg);
-      t.equals(texture.dataFormat, expectedDataFormat, msg);
-      texture.destroy();
-    }
-  }
-}
-
-test.skip('Texture#format deduction', async t => {
-  for (const device of await getTestDevices()) {
-    testFormatDeduction(t, device);
-  }
-  t.end();
-});
-
 test.skip('Texture#format creation', async t => {
   for (const device of await getTestDevices()) {
     testFormatCreation(t, device);
@@ -174,21 +186,6 @@ test.skip('Texture#format creation with data', async t => {
   }
   t.end();
 });
-
-/*
-test.skip('Texture#WebGL2 format creation', t => {
-
-  for (const format in TEXTURE_FORMATS) {
-  }
-  let texture = webglDevice.createTexture({});
-  t.ok(texture instanceof Texture, 'Texture construction successful');
-
-  texture = texture.destroy();
-  t.ok(texture instanceof Texture, 'Texture delete successful');
-
-  t.end();
-});
-*/
 
 test.skip('Texture#setParameters', t => {
   const texture = webglDevice.createTexture({});

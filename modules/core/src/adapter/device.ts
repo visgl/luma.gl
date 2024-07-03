@@ -145,7 +145,6 @@ export type WebGPUDeviceFeature =
   | 'indirect-first-instance'
   | 'timestamp-query'
   | 'shader-f16'
-  | 'depth24unorm-stencil8'
   | 'depth32float-stencil8'
   | 'rg11b10ufloat-renderable' // Is the rg11b10ufloat texture format renderable?
   | 'float32-filterable' // Is the float32 format filterable?

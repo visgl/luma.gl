@@ -141,15 +141,6 @@ type Format = {
  */
 // prettier-ignore
 export const TEXTURE_FORMATS: Record<TextureFormat, Format> = {
-  // Unsized formats that leave the precision up to the driver. TODO - Fix bpp constants
-  'rgb8unorm-unsized': {gl: GL.RGB, b: 4, c: 2, bpp: 4,
-    dataFormat: GL.RGB, types: [GL.UNSIGNED_BYTE, GL.UNSIGNED_SHORT_5_6_5]},
-  'rgba8unorm-unsized': {gl: GL.RGBA, b: 4, c: 2, bpp: 4,
-    dataFormat: GL.RGBA, types: [GL.UNSIGNED_BYTE, GL.UNSIGNED_SHORT_4_4_4_4, GL.UNSIGNED_SHORT_5_5_5_1]},
-  // 'r8unorm-unsized': {gl: GL.LUMINANCE, b: 4, c: 2, bpp: 4},
-  // 'rgb8unorm-srgb-unsized': {gl: GL.SRGB_EXT, b: 4, c: 2, bpp: 4, gl1Ext: SRGB},
-  // 'rgba8unorm-srgb-unsized': {gl: GL.SRGB_ALPHA_EXT, b: 4, c: 2, bpp: 4, gl1Ext: SRGB},
-
   // 8-bit formats
   'r8unorm': {gl: GL.R8, b: 1, c: 1, rb: true},
   'r8snorm': {gl: GL.R8_SNORM, b: 1, c: 1, render: snorm8_renderable},
@@ -239,9 +230,6 @@ export const TEXTURE_FORMATS: Record<TextureFormat, Format> = {
   // The depth component of the "depth24plus" and "depth24plus-stencil8" formats may be implemented as either a 24-bit depth value or a "depth32float" value.
   'depth24plus-stencil8': {gl: GL.DEPTH24_STENCIL8, b: 4, c: 2, p: 1, attachment: GL.DEPTH_STENCIL_ATTACHMENT, rb: true, depthTexture: true,
     dataFormat: GL.DEPTH_STENCIL, types: [GL.UNSIGNED_INT_24_8]},
-  // "depth24unorm-stencil8" feature
-  'depth24unorm-stencil8': {gl: GL.DEPTH24_STENCIL8, b: 4, c: 2, p: 1, attachment: GL.DEPTH_STENCIL_ATTACHMENT, 
-    dataFormat: GL.DEPTH_STENCIL, types: [GL.UNSIGNED_INT_24_8], rb: true},
   // "depth32float-stencil8" feature - TODO below is render buffer only?
   'depth32float-stencil8': {gl: GL.DEPTH32F_STENCIL8, b: 5, c: 2, p: 1, attachment: GL.DEPTH_STENCIL_ATTACHMENT, 
     dataFormat: GL.DEPTH_STENCIL, types: [GL.FLOAT_32_UNSIGNED_INT_24_8_REV], rb: true},
@@ -469,6 +457,10 @@ export function isTextureFormatSupported(
   if (info.gl === undefined) {
     return false;
   }
+  const feature = info.f;
+  if (feature) {
+    return checkTextureFeature(gl, feature, extensions);
+  }
   // Check extensions
   const extension = info.x || info.gl2ext;
   if (extension) {
@@ -586,13 +578,12 @@ export function getTextureFormatWebGL(format: TextureFormat): {
     internalFormat: webglFormat,
     format:
       formatData?.dataFormat ||
-      getWebGLPixelDataFormat(decoded.format, decoded.integer, decoded.normalized, webglFormat),
+      getWebGLPixelDataFormat(decoded.channels, decoded.integer, decoded.normalized, webglFormat),
     // depth formats don't have a type
     type: decoded.dataType
       ? getGLFromVertexType(decoded.dataType)
       : formatData?.types?.[0] || GL.UNSIGNED_BYTE,
-    // @ts-expect-error
-    compressed: decoded.compressed
+    compressed: decoded.compressed || false
   };
 }
 
@@ -619,7 +610,7 @@ export function getTextureFormatBytesPerPixel(format: TextureFormat): number {
 // DATA TYPE HELPERS
 
 export function getWebGLPixelDataFormat(
-  dataFormat: string,
+  channels: 'r' | 'rg' | 'rgb' | 'rgba' | 'bgra',
   integer: boolean,
   normalized: boolean,
   format: GL
@@ -629,11 +620,12 @@ export function getWebGLPixelDataFormat(
     return format;
   }
   // prettier-ignore
-  switch (dataFormat) {
+  switch (channels) {
     case 'r': return integer && !normalized ? GL.RED_INTEGER : GL.RED;
     case 'rg': return integer && !normalized ? GL.RG_INTEGER : GL.RG;
     case 'rgb': return integer && !normalized ? GL.RGB_INTEGER : GL.RGB;
     case 'rgba': return integer && !normalized ? GL.RGBA_INTEGER : GL.RGBA;
+    case 'bgra': throw new Error('bgra pixels not supported by WebGL');
     default: return GL.RGBA;
   }
 }

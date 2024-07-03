@@ -22,7 +22,7 @@ const framebuffer = device.createFramebuffer({
   width: window.innerWidth,
   height: window.innerHeight,
   colorAttachments: [{format: 'rgb8unorm'}],
-  depthStencilAttachment: {format: 'depth24unorm-stencil8'}
+  depthStencilAttachment: {format: 'depth24plus-stencil8'}
 });
 ```
 
@@ -36,7 +36,7 @@ const size = {
 const framebuffer = device.createFramebuffer({
   ...size,
   colorAttachments: [device.createTexture({format: 'rgb8unorm', ...size})],
-  depthStencilAttachment: device.createTexture({format: 'depth24unorm-stencil8', ...size})
+  depthStencilAttachment: device.createTexture({format: 'depth24plus-stencil8', ...size})
 });
 ```
 
