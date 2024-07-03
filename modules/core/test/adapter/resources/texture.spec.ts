@@ -106,8 +106,8 @@ test('Texture#format simple creation', async t => {
         t.doesNotThrow(() => {
           texture = device.createTexture({
             format: formatName,
-            height: 4,
-            width: 4
+            height,
+            width
           });
         }, `Texture(${device.type},${formatName}) creation OK`);
 
