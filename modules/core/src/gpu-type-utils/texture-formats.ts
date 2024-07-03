@@ -98,6 +98,7 @@ export type WebGPUColorTextureFormat =
 
   // ASTC compressed formats usable if "texture-compression-astc" is both
   // supported by the device/user agent and enabled in requestDevice.
+  // Textures must be multiple of block size (encoded in format string).
   | 'astc-4x4-unorm'
   | 'astc-4x4-unorm-srgb'
   | 'astc-5x4-unorm'

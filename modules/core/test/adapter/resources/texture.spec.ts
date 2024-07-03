@@ -5,7 +5,7 @@
 import test from 'tape-promise/tape';
 import {webglDevice, getTestDevices} from '@luma.gl/test-utils';
 
-import {Device, Texture, TextureFormat} from '@luma.gl/core';
+import {Device, Texture, TextureFormat, decodeTextureFormat} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 
 // TODO(v9): Avoid import from `@luma.gl/webgl` in core tests.
@@ -97,6 +97,11 @@ test('Texture#format simple creation', async t => {
       }
 
       if (device.isTextureFormatSupported(formatName)) {
+        // For compressed textures there may be a block size that we need to be a multiple of
+        const decodedFormat = decodeTextureFormat(formatName);
+        const width = decodedFormat.blockWidth ?? 4;
+        const height = decodedFormat.blockHeight ?? 4;
+
         let texture: Texture;
         t.doesNotThrow(() => {
           texture = device.createTexture({

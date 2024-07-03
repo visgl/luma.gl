@@ -11,21 +11,37 @@ const COMPRESSED_TEXTURE_FORMAT_PREFIXES = [
   'bc1', 'bc2', 'bc3', 'bc4', 'bc5', 'bc6', 'bc7', 'etc1', 'etc2', 'eac', 'atc', 'astc', 'pvrtc'
 ];
 
-const REGEX = /^(rg?b?a?)([0-9]*)([a-z]*)(-srgb)?(-webgl)?$/;
+const REGEX = /^(r|rg|rgb|rgba|bgra)([0-9]*)([a-z]*)(-srgb)?(-webgl)?$/;
 
 export type DecodedTextureFormat = {
-  channels: 'r' | 'rg' | 'rgb' | 'rgba';
+  /** String describing which channels this texture has */
+  channels: 'r' | 'rg' | 'rgb' | 'rgba' | 'bgra';
+  /** Number of components (corresponds to channels string) */
   components: 1 | 2 | 3 | 4;
+  /** What is the data type of each component */
   dataType?: VertexType;
+  /** Number of bytes per pixel */
   bpp?: number;
+  /** Depth stencil formats */
   a?: 'depth' | 'stencil' | 'depth-stencil';
+  /** SRGB texture format? */
   srgb?: boolean;
+  /** WebGL specific texture format? */
   webgl?: boolean;
+  /** byteLength */
   byteLength: number;
+  /** Is this an integer or floating point format? */
   integer: boolean;
+  /** Is this a signed or unsigned format? */
   signed: boolean;
+  /** Is this a normalized integer format? */
   normalized: boolean;
+  /** Is this a compressed texture format */
   compressed?: boolean;
+  /** Block size for ASTC formats (texture must be a multiple) */
+  blockWidth?: number;
+  /** Block size for ASTC formats (texture must be a multiple) */
+  blockHeight?: number;
 };
 
 /**
@@ -88,13 +104,19 @@ const EXCEPTIONS: Partial<Record<TextureFormat, Partial<DecodedTextureFormat>>> 
 
 function decodeNonStandardFormat(format: TextureFormat): DecodedTextureFormat {
   if (isTextureFormatCompressed(format)) {
-    return {
+    const info: DecodedTextureFormat = {
       channels: 'rgb',
       components: 3,
       byteLength: 1,
       srgb: false,
       compressed: true
     } as DecodedTextureFormat;
+    const blockSize = getCompressedTextureBlockSize(format);
+    if (blockSize) {
+      info.blockWidth = blockSize.blockWidth;
+      info.blockHeight = blockSize.blockHeight;
+    }
+    return info;
   }
   const data = EXCEPTIONS[format];
   if (!data) {
@@ -106,6 +128,19 @@ function decodeNonStandardFormat(format: TextureFormat): DecodedTextureFormat {
     byteLength: data.bpp || 1,
     srgb: false
   } as DecodedTextureFormat;
+}
+
+/** Parses ASTC block widths from format string */
+function getCompressedTextureBlockSize(
+  format: string
+): {blockWidth: number; blockHeight: number} | null {
+  const REGEX = /.*-(\d+)x(\d+)-.*/;
+  const matches = REGEX.exec(format);
+  if (matches) {
+    const [, blockWidth, blockHeight] = matches;
+    return {blockWidth: Number(blockWidth), blockHeight: Number(blockHeight)};
+  }
+  return null;
 }
 
 /*
