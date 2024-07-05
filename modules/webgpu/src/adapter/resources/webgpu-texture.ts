@@ -14,7 +14,8 @@ import type {
   Texture3DData,
   TextureCubeData,
   TextureArrayData,
-  TextureCubeArrayData
+  TextureCubeArrayData,
+  ExternalImage
 } from '@luma.gl/core';
 import {Texture} from '@luma.gl/core';
 
@@ -82,7 +83,11 @@ export class WebGPUTexture extends Texture {
     this.handle.label ||= this.id;
 
     if (this.props.data) {
-      this.setData({data: this.props.data});
+      if (Texture.isExternalImage(this.props.data)) {
+        this.setImage({source: this.props.data});
+      } else {
+        this.setData({data: this.props.data});
+      }
     }
 
     this.width = this.handle.width;
@@ -177,13 +182,36 @@ export class WebGPUTexture extends Texture {
     throw new Error('not implemented');
   }
 
-  setData(options: {data: any}) {
-    return this.setImage({source: options.data});
+  setData(options: {data: any}): {width: number; height: number} {
+    let source = options.data;
+
+    if (ArrayBuffer.isView(options.data)) {
+      const clampedArray = new Uint8ClampedArray(options.data.buffer);
+      // TODO - pass through src data color space as ImageData Options?
+      source = new ImageData(clampedArray, this.width, this.height);
+    }
+
+    return this.setImage({source});
   }
+
+  // setDataFromTypedArray(data): this {
+  //   const textureDataBuffer = this.device.handle.createBuffer({
+  //     size: data.byteLength,
+  //     usage: Buffer.COPY_DST | Buffer.COPY_SRC,
+  //     mappedAtCreation: true
+  //   });
+  //   new Uint8Array(textureDataBuffer.getMappedRange()).set(data);
+  //   textureDataBuffer.unmap();
+
+  //   this.setBuffer(textureDataBuffer);
+
+  //   textureDataBuffer.destroy();
+  //   return this;
+  // }
 
   /** Set image */
   setImage(options: {
-    source: ImageBitmap | HTMLCanvasElement | OffscreenCanvas;
+    source: ExternalImage;
     width?: number;
     height?: number;
     depth?: number;
@@ -197,10 +225,11 @@ export class WebGPUTexture extends Texture {
     colorSpace?: 'srgb';
     premultipliedAlpha?: boolean;
   }): {width: number; height: number} {
+    const size = Texture.getExternalImageSize(options.source);
     const {
       source,
-      width = options.source.width,
-      height = options.source.height,
+      width = size.width,
+      height = size.height,
       depth = 1,
       sourceX = 0,
       sourceY = 0,
@@ -280,21 +309,6 @@ export class WebGPUTexture extends Texture {
         }
       }
     }
-    return this;
-  }
-
-  setData(data): this {
-    const textureDataBuffer = this.device.handle.createBuffer({
-      size: data.byteLength,
-      usage: Buffer.COPY_DST | Buffer.COPY_SRC,
-      mappedAtCreation: true
-    });
-    new Uint8Array(textureDataBuffer.getMappedRange()).set(data);
-    textureDataBuffer.unmap();
-
-    this.setBuffer(textureDataBuffer);
-
-    textureDataBuffer.destroy();
     return this;
   }
 

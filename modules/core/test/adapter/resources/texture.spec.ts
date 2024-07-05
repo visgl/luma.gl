@@ -5,7 +5,7 @@
 import test from 'tape-promise/tape';
 import {webglDevice, getTestDevices} from '@luma.gl/test-utils';
 
-import {Device, Texture, TextureFormat, decodeTextureFormat} from '@luma.gl/core';
+import {Device, Texture, TextureFormat, decodeTextureFormat, VertexType} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 
 // TODO(v9): Avoid import from `@luma.gl/webgl` in core tests.
@@ -66,29 +66,6 @@ test('Texture#depth/stencil formats', async t => {
   t.end();
 });
 
-const DEFAULT_TEXTURE_DATA = new Uint8Array([
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-]);
-const DATA = [1, 0.5, 0.25, 0.125];
-const UINT8_DATA = new Uint8Array(DATA);
-const UINT16_DATA = new Uint16Array(DATA);
-const FLOAT_DATA = new Float32Array(DATA);
-const TEXTURE_DATA = {
-  [GL.UNSIGNED_BYTE]: UINT8_DATA, // RGB_TO[GL.UNSIGNED_BYTE](DATA)),
-  [GL.UNSIGNED_SHORT_5_6_5]: UINT16_DATA, // RGB_TO[GL.UNSIGNED_SHORT_5_6_5](DATA))
-  [GL.UNSIGNED_SHORT_4_4_4_4]: UINT16_DATA, // RGB_TO[GL.UNSIGNED_SHORT_5_6_5](DATA))
-  [GL.UNSIGNED_SHORT_5_5_5_1]: UINT16_DATA, // RGB_TO[GL.UNSIGNED_SHORT_5_6_5](DATA))
-  [GL.FLOAT]: FLOAT_DATA
-};
-// const RGB_TO = {
-//   [GL.UNSIGNED_BYTE]: (r, g, b) => [r * 256, g * 256, b * 256],
-//   [GL.UNSIGNED_SHORT_5_6_5]: (r, g, b) => r * 32 << 11 + g * 64 << 6 + b * 32
-// };
-// const RGB_FROM = {
-//   [GL.UNSIGNED_BYTE]: v => [v[0] / 256, v[1] / 256, v[2] / 256],
-//   [GL.UNSIGNED_SHORT_5_6_5]: v => [v >> 11 / 32, v >> 6 % 64 / 64, v % 32 * 32]
-// };
-
 test('Texture#format simple creation', async t => {
   for (const device of await getTestDevices()) {
     for (const [formatName, formatInfo] of Object.entries(TEXTURE_FORMATS)) {
@@ -132,15 +109,56 @@ test('Texture#format simple creation', async t => {
   t.end();
 });
 
+const DEFAULT_TEXTURE_DATA = new Uint8Array([
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+]);
+const DATA = [1, 0.5, 0.25, 0.125];
+const TEXTURE_DATA: Record<VertexType, any> = {
+  uint8: new Uint8Array(DATA),
+  sint8: new Int8Array(DATA),
+  uint16: new Uint16Array(DATA),
+  sint16: new Int16Array(DATA),
+  uint32: new Uint32Array(DATA),
+  sint32: new Int32Array(DATA),
+  // [GL.UNSIGNED_SHORT_5_6_5]: UINT16_DATA, // RGB_TO[GL.UNSIGNED_SHORT_5_6_5](DATA))
+  // [GL.UNSIGNED_SHORT_4_4_4_4]: UINT16_DATA, // RGB_TO[GL.UNSIGNED_SHORT_5_6_5](DATA))
+  // [GL.UNSIGNED_SHORT_5_5_5_1]: UINT16_DATA, // RGB_TO[GL.UNSIGNED_SHORT_5_6_5](DATA))
+  float16: new Uint16Array(DATA),
+  float32: new Float32Array(DATA)
+};
+// const RGB_TO = {
+//   [GL.UNSIGNED_BYTE]: (r, g, b) => [r * 256, g * 256, b * 256],
+//   [GL.UNSIGNED_SHORT_5_6_5]: (r, g, b) => r * 32 << 11 + g * 64 << 6 + b * 32
+// };
+// const RGB_FROM = {
+//   [GL.UNSIGNED_BYTE]: v => [v[0] / 256, v[1] / 256, v[2] / 256],
+//   [GL.UNSIGNED_SHORT_5_6_5]: v => [v >> 11 / 32, v >> 6 % 64 / 64, v % 32 * 32]
+// };
+
 function testFormatCreation(t, device: Device, withData: boolean = false) {
-  for (const [textureFormat, formatInfo] of Object.entries(TEXTURE_FORMATS)) {
-    const format = textureFormat as TextureFormat;
+  for (const [formatName, formatInfo] of Object.entries(TEXTURE_FORMATS)) {
+    const format = formatName as TextureFormat;
+
+    const decodedFormat = decodeTextureFormat(formatName);
+    const {dataType, packed, bitsPerChannel} = decodedFormat;
+
+    debugger;
+
+    // WebGPU texture can currently only be set from 8 bit data
+    const notImplemented = device.type === 'webgpu' && bitsPerChannel !== 8;
+    console.log(formatName, bitsPerChannel);
+
+    if (['stencil8'].includes(formatName) || notImplemented) {
+      continue;
+    }
+
     if (device.isTextureFormatSupported(format)) {
       try {
-        const data = withData ? TEXTURE_DATA[type] || DEFAULT_TEXTURE_DATA : null;
+        const data = withData && !packed ? TEXTURE_DATA[dataType] || DEFAULT_TEXTURE_DATA : null;
         // TODO: for some reason mipmap generation failing for RGB32F format
         const mipmaps =
           device.isTextureFormatRenderable(format) && device.isTextureFormatFilterable(format);
+
         const sampler = mipmaps
           ? {
               magFilter: 'linear',
@@ -161,26 +179,26 @@ function testFormatCreation(t, device: Device, withData: boolean = false) {
         t.equals(
           texture.props.format,
           format,
-          `Texture(${format}) created with mipmaps=${mipmaps}`
+          `Texture(${device.type},${format}) created with mipmaps=${mipmaps}`
         );
         texture.destroy();
       } catch (error) {
-        t.comment(`Texture(${format}) creation FAILED ${error}`);
+        t.comment(`Texture(${device.type},${format}) creation FAILED ${error}`);
       }
     } else {
-      t.comment(`Texture(${format}) not supported in ${device.type}`);
+      t.comment(`Texture(${device.type},${format}) not supported in ${device.type}`);
     }
   }
 }
 
-test.skip('Texture#format creation', async t => {
-  for (const device of await getTestDevices()) {
-    testFormatCreation(t, device);
-  }
-  t.end();
-});
+// test.skip('Texture#format creation', async t => {
+//   for (const device of await getTestDevices()) {
+//     testFormatCreation(t, device);
+//   }
+//   t.end();
+// });
 
-test.skip('Texture#format creation with data', async t => {
+test.only('Texture#format creation with data', async t => {
   for (const device of await getTestDevices()) {
     testFormatCreation(t, device, true);
   }
