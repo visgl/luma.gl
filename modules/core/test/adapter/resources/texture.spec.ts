@@ -142,8 +142,6 @@ function testFormatCreation(t, device: Device, withData: boolean = false) {
     const decodedFormat = decodeTextureFormat(formatName);
     const {dataType, packed, bitsPerChannel} = decodedFormat;
 
-    debugger;
-
     // WebGPU texture can currently only be set from 8 bit data
     const notImplemented = device.type === 'webgpu' && bitsPerChannel !== 8;
     console.log(formatName, bitsPerChannel);
@@ -198,7 +196,7 @@ function testFormatCreation(t, device: Device, withData: boolean = false) {
 //   t.end();
 // });
 
-test.only('Texture#format creation with data', async t => {
+test('Texture#format creation with data', async t => {
   for (const device of await getTestDevices()) {
     testFormatCreation(t, device, true);
   }

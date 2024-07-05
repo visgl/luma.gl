@@ -69,7 +69,10 @@ export function decodeTextureFormat(format: TextureFormat): DecodedTextureFormat
         components: channels.length as 1 | 2 | 3 | 4,
         bitsPerChannel: decodedType.byteLength * 8,
         bytesPerPixel: decodedType.byteLength * channels.length,
-        ...decodedType
+        dataType: decodedType.dataType,
+        integer: decodedType.integer,
+        signed: decodedType.signed,
+        normalized: decodedType.normalized
       };
       if (suffix === '-webgl') {
         info.webgl = true;
