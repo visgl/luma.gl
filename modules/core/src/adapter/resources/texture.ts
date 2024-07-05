@@ -45,14 +45,16 @@ export type TextureLevelData = {
 
 /**
  * Built-in data types that can be used to initialize textures
- * @note WebGL supports OffscreenCanvas but seems WebGPU does not?
+ * @note ImageData can be used for 8 bit data via Uint8ClampedArray
  */
 export type ExternalImage =
-  | ImageData
   | ImageBitmap
+  | ImageData
   | HTMLImageElement
   | HTMLVideoElement
-  | HTMLCanvasElement;
+  | VideoFrame
+  | HTMLCanvasElement
+  | OffscreenCanvas;
 
 export type TextureLevelSource = TextureLevelData | ExternalImage;
 
@@ -184,17 +186,20 @@ export abstract class Texture extends Resource<TextureProps> {
       (typeof ImageData !== 'undefined' && data instanceof ImageData) ||
       (typeof ImageBitmap !== 'undefined' && data instanceof ImageBitmap) ||
       (typeof HTMLImageElement !== 'undefined' && data instanceof HTMLImageElement) ||
+      (typeof HTMLVideoElement !== 'undefined' && data instanceof HTMLVideoElement) ||
+      (typeof VideoFrame !== 'undefined' && data instanceof VideoFrame) ||
       (typeof HTMLCanvasElement !== 'undefined' && data instanceof HTMLCanvasElement) ||
-      (typeof HTMLVideoElement !== 'undefined' && data instanceof HTMLVideoElement)
+      (typeof OffscreenCanvas !== 'undefined' && data instanceof OffscreenCanvas)
     );
   }
 
   /** Determine size (width and height) of provided image data */
-  static getExternalImageSize(data: ExternalImage): {width: number; height: number} | null {
+  static getExternalImageSize(data: ExternalImage): {width: number; height: number} {
     if (
       (typeof ImageData !== 'undefined' && data instanceof ImageData) ||
       (typeof ImageBitmap !== 'undefined' && data instanceof ImageBitmap) ||
-      (typeof HTMLCanvasElement !== 'undefined' && data instanceof HTMLCanvasElement)
+      (typeof HTMLCanvasElement !== 'undefined' && data instanceof HTMLCanvasElement) ||
+      (typeof OffscreenCanvas !== 'undefined' && data instanceof OffscreenCanvas)
     ) {
       return {width: data.width, height: data.height};
     }
@@ -204,7 +209,11 @@ export abstract class Texture extends Resource<TextureProps> {
     if (typeof HTMLVideoElement !== 'undefined' && data instanceof HTMLVideoElement) {
       return {width: data.videoWidth, height: data.videoHeight};
     }
-    return null;
+    if (typeof VideoFrame !== 'undefined' && data instanceof VideoFrame) {
+      // TODO: is this the right choice for width and height?
+      return {width: data.displayWidth, height: data.displayHeight};
+    }
+    throw new Error('Unknown image type');
   }
 
   /** Check if texture data is a typed array */

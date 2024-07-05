@@ -20,16 +20,18 @@ export type DecodedTextureFormat = {
   components: 1 | 2 | 3 | 4;
   /** What is the data type of each component */
   dataType?: VertexType;
+  /** If this is a packed data type */
+  packed?: boolean;
   /** Number of bytes per pixel */
-  bpp?: number;
+  bytesPerPixel?: number;
+  /** Number of bits per channel (may be unreliable for packed formats) */
+  bitsPerChannel: number;
   /** Depth stencil formats */
   a?: 'depth' | 'stencil' | 'depth-stencil';
   /** SRGB texture format? */
   srgb?: boolean;
   /** WebGL specific texture format? */
   webgl?: boolean;
-  /** byteLength */
-  byteLength: number;
   /** Is this an integer or floating point format? */
   integer: boolean;
   /** Is this a signed or unsigned format? */
@@ -42,6 +44,7 @@ export type DecodedTextureFormat = {
   blockWidth?: number;
   /** Block size for ASTC formats (texture must be a multiple) */
   blockHeight?: number;
+  /** */
 };
 
 /**
@@ -64,7 +67,12 @@ export function decodeTextureFormat(format: TextureFormat): DecodedTextureFormat
       const info: DecodedTextureFormat = {
         channels: channels as 'r' | 'rg' | 'rgb' | 'rgba',
         components: channels.length as 1 | 2 | 3 | 4,
-        ...decodedType
+        bitsPerChannel: decodedType.byteLength * 8,
+        bytesPerPixel: decodedType.byteLength * channels.length,
+        dataType: decodedType.dataType,
+        integer: decodedType.integer,
+        signed: decodedType.signed,
+        normalized: decodedType.normalized
       };
       if (suffix === '-webgl') {
         info.webgl = true;
@@ -84,22 +92,22 @@ export function decodeTextureFormat(format: TextureFormat): DecodedTextureFormat
 
 const EXCEPTIONS: Partial<Record<TextureFormat, Partial<DecodedTextureFormat>>> = {
   // Packed 16 bit formats
-  'rgba4unorm-webgl': {channels: 'rgba', bpp: 2},
-  'rgb565unorm-webgl': {channels: 'rgb', bpp: 2},
-  'rgb5a1unorm-webgl': {channels: 'rgba', bpp: 2},
+  'rgba4unorm-webgl': {channels: 'rgba', bytesPerPixel: 2, packed: true},
+  'rgb565unorm-webgl': {channels: 'rgb', bytesPerPixel: 2, packed: true},
+  'rgb5a1unorm-webgl': {channels: 'rgba', bytesPerPixel: 2, packed: true},
   // Packed 32 bit formats
-  rgb9e5ufloat: {channels: 'rgb', bpp: 4},
-  rg11b10ufloat: {channels: 'rgb', bpp: 4},
-  rgb10a2unorm: {channels: 'rgba', bpp: 4},
-  'rgb10a2uint-webgl': {channels: 'rgba', bpp: 4},
+  rgb9e5ufloat: {channels: 'rgb', bytesPerPixel: 4, packed: true},
+  rg11b10ufloat: {channels: 'rgb', bytesPerPixel: 4, packed: true},
+  rgb10a2unorm: {channels: 'rgba', bytesPerPixel: 4, packed: true},
+  'rgb10a2uint-webgl': {channels: 'rgba', bytesPerPixel: 4, packed: true},
   // Depth/stencil
-  stencil8: {components: 1, bpp: 1, a: 'stencil'},
-  depth16unorm: {components: 1, bpp: 2, a: 'depth'},
-  depth24plus: {components: 1, bpp: 3, a: 'depth'},
-  depth32float: {components: 1, bpp: 4, a: 'depth'},
-  'depth24plus-stencil8': {components: 2, bpp: 4, a: 'depth-stencil'},
+  stencil8: {components: 1, bytesPerPixel: 1, a: 'stencil', dataType: 'uint8'},
+  depth16unorm: {components: 1, bytesPerPixel: 2, a: 'depth', dataType: 'uint16'},
+  depth24plus: {components: 1, bytesPerPixel: 3, a: 'depth', dataType: 'uint32'},
+  depth32float: {components: 1, bytesPerPixel: 4, a: 'depth', dataType: 'float32'},
+  'depth24plus-stencil8': {components: 2, bytesPerPixel: 4, a: 'depth-stencil', packed: true},
   // "depth32float-stencil8" feature
-  'depth32float-stencil8': {components: 2, bpp: 4, a: 'depth-stencil'}
+  'depth32float-stencil8': {components: 2, bytesPerPixel: 4, a: 'depth-stencil', packed: true}
 };
 
 function decodeNonStandardFormat(format: TextureFormat): DecodedTextureFormat {
@@ -107,7 +115,7 @@ function decodeNonStandardFormat(format: TextureFormat): DecodedTextureFormat {
     const info: DecodedTextureFormat = {
       channels: 'rgb',
       components: 3,
-      byteLength: 1,
+      bytesPerPixel: 1,
       srgb: false,
       compressed: true
     } as DecodedTextureFormat;
@@ -122,12 +130,17 @@ function decodeNonStandardFormat(format: TextureFormat): DecodedTextureFormat {
   if (!data) {
     throw new Error(`Unknown format ${format}`);
   }
-  return {
+  const info: DecodedTextureFormat = {
+    ...data,
     channels: data.channels || '',
     components: data.components || data.channels?.length || 1,
-    byteLength: data.bpp || 1,
+    bytesPerPixel: data.bytesPerPixel || 1,
     srgb: false
   } as DecodedTextureFormat;
+  if (data.packed) {
+    info.packed = data.packed;
+  }
+  return info;
 }
 
 /** Parses ASTC block widths from format string */
