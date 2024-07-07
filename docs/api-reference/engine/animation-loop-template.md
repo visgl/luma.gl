@@ -19,10 +19,10 @@ import {AnimationLoopTemplate, ClipSpace} from '@luma.gl/engine';
 
 class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   // This resource is always a valid instance since it is initialized in constructor
-  // i.e. no need to type it as `clipSpaceQuad: ClipSpace | null = null;`` 
-  clipSpaceQuad: ClipSpace; 
+  // i.e. no need to type it as `clipSpaceQuad: ClipSpace | null = null;``
+  clipSpaceQuad: ClipSpace;
 
-  constructor({device) {
+  constructor({device}) {
     // Keys in the object returned here will be available in onRender
     this.clipSpaceQuad = new ClipSpace({gl, fs: FRAGMENT_SHADER});
   }
@@ -36,7 +36,7 @@ class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.clipSpaceQuad.setUniforms({uTime: tick * 0.01});
     this.clipSpaceQuad.draw();
   }
-});
+};
 
 const animationLoop = makeAppAnimationLoop(AppAnimationLoopTemplate).start();
 ```
