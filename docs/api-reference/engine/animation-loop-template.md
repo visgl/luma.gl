@@ -38,7 +38,7 @@ class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 };
 
-const animationLoop = makeAppAnimationLoop(AppAnimationLoopTemplate).start();
+const animationLoop = makeAnimationLoop(AppAnimationLoopTemplate).start();
 ```
 
 ## Types
