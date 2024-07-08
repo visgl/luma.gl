@@ -354,7 +354,6 @@ ${getApplicationDefines(allDefines)}
   const mainInjections: Record<string, ShaderInjection[]> = {};
 
   for (const key in inject) {
-    // @ts-expect-error
     const injection: ShaderInjection =
       typeof inject[key] === 'string' ? {injection: inject[key], order: 0} : inject[key];
     const match = /^(v|f)s:(#)?([\w-]+)$/.exec(key);

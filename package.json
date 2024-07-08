@@ -62,8 +62,9 @@
     "tap-spec": "^5.0.0"
   },
   "resolutions": {
-    "typescript": "^5.3.0",
-    "tsconfig-paths": "^3.9.0"
+    "typescript": "^5.5.0",
+    "tsconfig-paths": "^3.9.0",
+    "ts-patch": "^3.2.1"
   },
   "pre-commit": [
     "test-fast"
