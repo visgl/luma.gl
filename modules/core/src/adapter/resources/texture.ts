@@ -240,7 +240,8 @@ export abstract class Texture extends Resource<TextureProps> {
       return Texture.getExternalImageSize(data);
     }
     if (data && typeof data === 'object' && data.constructor === Object) {
-      const untypedData = data as unknown as Record<string, number>;
+      const textureDataArray = Object.values(data) as Texture2DData[];
+      const untypedData = textureDataArray[0] as any;
       return {width: untypedData.width, height: untypedData.height};
     }
     throw new Error('texture size deduction failed');

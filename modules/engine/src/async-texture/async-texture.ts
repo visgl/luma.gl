@@ -144,3 +144,13 @@ async function awaitAllPromises(x: any): Promise<any> {
   }
   return x;
 }
+
+// async function awaitObject(object: Record<string, Promise<any>>): Promise<Record<string, any>> {
+//   const values = await Promise.all(Object.values(object));
+//   const keys = Object.keys(object);
+//   const resolvedObject: Record<string, any> = {};
+//   for (let i = 0; i < keys.length; i++) {
+//     resolvedObject[keys[i]] = values[i];
+//   }
+//   return resolvedObject;
+// } 

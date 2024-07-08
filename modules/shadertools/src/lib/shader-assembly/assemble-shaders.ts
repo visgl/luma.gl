@@ -333,6 +333,7 @@ ${sourceVersionDirective}
 // ----- PROLOGUE -------------------------
 ${getShaderNameDefine({id, source, stage})}
 ${`#define SHADER_TYPE_${stage.toUpperCase()}`}
+
 ${getPlatformShaderDefines(platformInfo)}
 ${stage === 'fragment' ? FRAGMENT_SHADER_PROLOGUE : ''}
 
@@ -456,9 +457,7 @@ function getShaderNameDefine(options: {
   const injectShaderName = id && source.indexOf('SHADER_NAME') === -1;
   return injectShaderName
     ? `
-#define SHADER_NAME ${id}_${stage}
-
-`
+#define SHADER_NAME ${id}_${stage}`
     : '';
 }
 
