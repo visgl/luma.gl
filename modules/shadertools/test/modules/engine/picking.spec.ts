@@ -7,6 +7,7 @@ import {webglDevice} from '@luma.gl/test-utils';
 
 import {BufferTransform} from '@luma.gl/engine';
 import {picking, getShaderModuleUniforms} from '@luma.gl/shadertools';
+import {UniformValue} from '@luma.gl/core';
 
 /* eslint-disable camelcase */
 
@@ -222,7 +223,7 @@ test.skip('picking#picking_setPickingColor', async t => {
           pickingThreshold: testCase.pickingThreshold
         },
         {}
-      );
+      ) as Record<string, UniformValue>;
 
       transform.model.setUniforms(uniforms);
       transform.run();
