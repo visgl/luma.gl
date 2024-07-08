@@ -44,7 +44,13 @@ const app: ShaderModule<AppUniforms, AppUniforms> = {
 
 class RoomCube extends Model {
   constructor(device: Device, props: Omit<ModelProps, 'vs' | 'fs'>) {
-    super(device, {...props, id: 'room-cube', geometry: new CubeGeometry(), vs: RoomCube.vs, fs: RoomCube.fs});
+    super(device, {
+      ...props,
+      id: 'room-cube',
+      geometry: new CubeGeometry(),
+      vs: RoomCube.vs,
+      fs: RoomCube.fs
+    });
   }
 
   static vs = /* glsl */ `\
@@ -64,7 +70,7 @@ void main(void) {
   vPosition = positions;
 }
   `;
-  
+
   static fs = /* glsl */ `\
 #version 300 es
 precision highp float;
@@ -89,7 +95,13 @@ void main(void) {
 
 class Prism extends Model {
   constructor(device: Device, props: Omit<ModelProps, 'vs' | 'fs'>) {
-    super(device, {...props, id: 'prism', geometry: new CubeGeometry({indices: true}), vs: Prism.vs, fs: Prism.fs});
+    super(device, {
+      ...props,
+      id: 'prism',
+      geometry: new CubeGeometry({indices: true}),
+      vs: Prism.vs,
+      fs: Prism.fs
+    });
   }
 
   static vs = /* glsl */ `\
@@ -223,9 +235,14 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   onRender({device, aspect, tick}: AnimationProps): void {
-    const eyePosition = [0, -5, 5]; // [5, -3, 5];
+    const eyePosition = [5, -3, 5];
     const view = new Matrix4().lookAt({eye: eyePosition});
-    const projection = new Matrix4().perspective({fovy: radians(45), aspect, near: 0.001, far: 1000});
+    const projection = new Matrix4().perspective({
+      fovy: radians(45),
+      aspect,
+      near: 0.001,
+      far: 1000
+    });
 
     const renderPass = device.beginRenderPass({
       clearColor: [0, 0, 0, 1],
@@ -243,7 +260,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     this.prismShaderInputs.setProps({
       app: {
-        eyePosition: eyePosition,
+        eyePosition,
         viewMatrix: view,
         projectionMatrix: projection,
         modelMatrix: new Matrix4().rotateX(tick * 0.01).rotateY(tick * 0.013)
