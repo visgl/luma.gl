@@ -10,10 +10,16 @@ const sidebars = {
       label: 'Showcase',
       items: [
         'showcase/instancing',
-        'showcase/persistence',
-        'api/animation'
+        'showcase/persistence'
+      ]
+    },
+    {
+      type: 'category',
+      label: 'API',
+      items: [
+        'api/animation',
+        'api/cubemap'
         // Broken pending texture refactor
-        // 'api/cubemap',
         // 'api/texture-3d'
       ]
     },

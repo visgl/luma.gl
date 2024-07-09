@@ -111,13 +111,13 @@ export class ShaderInputs<
 
       const oldUniforms = this.moduleUniforms[moduleName];
       const oldBindings = this.moduleBindings[moduleName];
-      const uniformsAndBindings =
-        module.getUniforms?.(moduleProps, this.moduleUniforms[moduleName]) || (moduleProps as any);
+      let uniformsAndBindings = module.getUniforms?.(moduleProps, this.moduleUniforms[moduleName]);
+      uniformsAndBindings ||= {...this.moduleUniforms[moduleName], ...moduleProps};
 
       const {uniforms, bindings} = splitUniformsAndBindings(uniformsAndBindings);
       this.moduleUniforms[moduleName] = {...oldUniforms, ...uniforms};
       this.moduleBindings[moduleName] = {...oldBindings, ...bindings};
-      // // this.moduleUniformsChanged ||= moduleName;
+      // this.moduleUniformsChanged ||= moduleName;
 
       // console.log(`setProps(${String(moduleName)}`, moduleName, this.moduleUniforms[moduleName])
     }
