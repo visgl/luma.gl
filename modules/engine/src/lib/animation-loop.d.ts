@@ -5,6 +5,7 @@ import { Timeline } from '../animation/timeline'
 
 import {CreateGLContextOptions} from '@luma.gl/gltools'
 import {StatsManager} from '@luma.gl/webgl/src/init';
+import '@types/offscreencanvas';
 
 interface AnimationProps {
   gl: WebGLRenderingContext
