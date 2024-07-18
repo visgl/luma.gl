@@ -7,6 +7,11 @@ on:
       - master
   pull_request:
 
+# Old webpack requries old Node.js SSL, but Node.js v16 no longer
+# runs in Github Actions. See https://stackoverflow.com/a/76009125.
+env:
+  NODE_OPTIONS: --openssl-legacy-provider
+
 jobs:
   test-node:
     runs-on: ubuntu-latest
@@ -19,12 +24,9 @@ jobs:
         with:
           node-version: '20.x'
 
-      # Old webpack requries old Node.js SSL, but Node.js v16 no longer
-      # runs in Github Actions. See https://stackoverflow.com/a/76009125.
       - name: Install dependencies
         run: |
           sudo apt-get install -y mesa-utils xvfb libgl1-mesa-dri libglapi-mesa libosmesa6
-          echo "NODE_OPTIONS=--openssl-legacy-provider" >> $GITHUB_ENV
           yarn bootstrap
 
       - name: Run tests
