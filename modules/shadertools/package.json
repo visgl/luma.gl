@@ -50,7 +50,8 @@
   },
   "dependencies": {
     "@math.gl/core": "^4.0.0",
-    "@math.gl/types": "^4.0.0"
+    "@math.gl/types": "^4.0.0",
+    "wgsl_reflect": "^1.0.1"
   },
   "gitHead": "e6ff30f654d907e93a0754e82b2e430ea98db033"
 }
