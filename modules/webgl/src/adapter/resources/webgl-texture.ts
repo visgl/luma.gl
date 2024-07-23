@@ -367,7 +367,9 @@ export class WEBGLTexture extends Texture {
       throw new Error(this.id);
     }
     if (ArrayBuffer.isView(data)) {
+      this.bind();
       copyCPUDataToMipLevel(this.device.gl, data, this);
+      this.unbind();
     }
   }
 

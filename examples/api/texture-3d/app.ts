@@ -1,8 +1,10 @@
 // Ported from PicoGL.js example: https://tsherif.github.io/picogl.js/examples/3Dtexture.html
 
 import type {AnimationProps} from '@luma.gl/engine';
-import {AnimationLoopTemplate, Model, makeRandomGenerator} from '@luma.gl/engine';
-import {Matrix4, radians} from '@math.gl/core';
+import {Texture} from '@luma.gl/core';
+import {AnimationLoopTemplate, Model, _ShaderInputs, makeRandomGenerator} from '@luma.gl/engine';
+import {ShaderModule} from '@luma.gl/shadertools';
+import {Matrix4, radians, NumericArray} from '@math.gl/core';
 import {perlin, lerp, shuffle, range} from './perlin';
 
 const random = makeRandomGenerator();
@@ -18,12 +20,15 @@ const vs = /* glsl */ `\
 #version 300 es
 in vec3 position;
 
-uniform mat4 uMVP;
+uniform appUniforms {
+  mat4 mvpMatrix;
+  float time;
+} app;
 
 out vec3 vUV;
 void main() {
   vUV = position.xyz + 0.5;
-  gl_Position = uMVP * vec4(position, 1.0);
+  gl_Position = app.mvpMatrix * vec4(position, 1.0);
   gl_PointSize = 2.0;
 }`;
 
@@ -32,18 +37,38 @@ const fs = /* glsl */ `\
 precision highp float;
 precision lowp sampler3D;
 
+uniform appUniforms {
+  mat4 mvpMatrix;
+  float time;
+} app;
+
 uniform sampler3D uTexture;
-uniform float uTime;
 
 in vec3 vUV;
 out vec4 fragColor;
 
 void main() {
-  vec4 sampleColor = texture(uTexture, vUV + vec3(0.0, 0.0, uTime));
-  float alpha = sampleColor.r * 0.01;
-  fragColor = vec4(fract(vUV) * alpha, alpha * 0.3);
-  // fragColor = vec4(fract(uTime), 0., 0., 1.);
+  vec4 sampleColor = texture(uTexture, vUV + vec3(0.0, 0.0, app.time));
+  float alpha = sampleColor.r * 0.1;
+  fragColor = vec4(fract(vUV) * alpha, alpha);
+  // fragColor = vec4(fract(app.time), 0., 0., 1.);
+  fragColor *= 256.;
 }`;
+
+type AppUniforms = {
+  mvpMatrix: NumericArray;
+  time: number;
+};
+
+const app: ShaderModule<AppUniforms> = {
+  name: 'app',
+  uniformTypes: {
+    mvpMatrix: 'mat4x4<f32>',
+    time: 'f32'
+  }
+};
+
+// APPLICATION
 
 const NEAR = 0.1;
 const FAR = 10.0;
@@ -52,9 +77,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = INFO_HTML;
   static props = {useDevicePixels: true};
 
-  mvpMat = new Matrix4();
+  mvpMatrix = new Matrix4();
   viewMat = new Matrix4().lookAt({eye: [1, 1, 1]});
+  texture3d: Texture;
   cloud: Model;
+
+  shaderInputs = new _ShaderInputs<{app: typeof app.props}>({app});
 
   constructor({device}: AnimationProps) {
     super();
@@ -105,21 +133,25 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         }
       }
     }
+    // console.log('SETTING DATA', textureData);
 
-    const texture = device.createTexture({
+    this.texture3d = device.createTexture({
       dimension: '3d',
       data: textureData,
       width: TEXTURE_DIMENSIONS,
       height: TEXTURE_DIMENSIONS,
       depth: TEXTURE_DIMENSIONS,
       format: 'r8unorm',
-      // mipmaps: true,
+      mipmaps: true,
       sampler: {
         magFilter: 'nearest',
         minFilter: 'nearest',
         mipmapFilter: 'nearest'
       }
     });
+
+    // const pixels = device.readPixelsToArrayWebGL(this.texture3d);
+    // console.log('GETTING DATA', pixels);
 
     this.cloud = new Model(device, {
       vs,
@@ -131,17 +163,19 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         position: positionBuffer
       },
       bindings: {
-        uTexture: texture
+        uTexture: this.texture3d
       },
-      uniforms: {
-        uView: this.viewMat
-      },
+      shaderInputs: this.shaderInputs,
       parameters: {
         depthWriteEnabled: true,
         depthCompare: 'less-equal',
+        blend: true,
         blendColorOperation: 'add',
+        blendAlphaOperation: 'add',
         blendColorSrcFactor: 'one',
-        blendColorDstFactor: 'one-minus-src-alpha'
+        blendColorDstFactor: 'one-minus-src-alpha',
+        blendAlphaSrcFactor: 'one',
+        blendAlphaDstFactor: 'one-minus-src-alpha'
         //   // TODO these should be set on the model, but doesn't work...
         //   blend: true,
         //   blendFunc: [GL.ONE, GL.ONE_MINUS_SRC_ALPHA]
@@ -154,9 +188,18 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   onRender({device, tick, aspect}: AnimationProps) {
-    this.mvpMat
+    this.mvpMatrix
       .perspective({fovy: radians(75), aspect, near: NEAR, far: FAR})
       .multiplyRight(this.viewMat);
+
+    // This updates the "app" uniform buffer, which is already bound
+    this.shaderInputs.setProps({
+      app: {
+        time: tick / 100,
+        mvpMatrix: this.mvpMatrix
+      }
+    });
+    this.cloud.updateShaderInputs();
 
     // Draw the cubes
     const renderPass = device.beginRenderPass({
@@ -164,10 +207,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       // clearDepth: true
     });
 
-    this.cloud.setUniforms({
-      uTime: tick / 100,
-      uMVP: this.mvpMat
-    });
     this.cloud.draw(renderPass);
     renderPass.end();
   }
