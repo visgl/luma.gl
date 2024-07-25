@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {NumberArray} from '@math.gl/types';
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
 import {lightingUniforms} from './lighting-uniforms-glsl';
+import type {NumArray3} from '../../../lib/utils/uniform-types';
 
 /** Max number of supported lights (in addition to ambient light */
 const MAX_LIGHTS = 5;
@@ -24,23 +24,23 @@ export type Light = AmbientLight | PointLight | DirectionalLight;
 
 export type AmbientLight = {
   type: 'ambient';
-  color?: Readonly<NumberArray>;
+  color?: Readonly<NumArray3>;
   intensity?: number;
 };
 
 export type PointLight = {
   type: 'point';
-  position: Readonly<NumberArray>;
-  color?: Readonly<NumberArray>;
+  position: Readonly<NumArray3>;
+  color?: Readonly<NumArray3>;
   intensity?: number;
   attenuation?: number;
 };
 
 export type DirectionalLight = {
   type: 'directional';
-  position: Readonly<NumberArray>;
-  direction: Readonly<NumberArray>;
-  color?: Readonly<NumberArray>;
+  position: Readonly<NumArray3>;
+  direction: Readonly<NumArray3>;
+  color?: Readonly<NumArray3>;
   intensity?: number;
 };
 
@@ -57,13 +57,13 @@ export type LightingProps = {
 
 export type LightingUniforms = {
   enabled: number;
-  ambientLightColor: Readonly<NumberArray>;
+  ambientLightColor: Readonly<NumArray3>;
   numberOfLights: number;
   lightType: number; // [];
-  lightColor: Readonly<NumberArray>; // [];
-  lightPosition: Readonly<NumberArray>; // [];
-  lightDirection: Readonly<NumberArray>; // [];
-  lightAttenuation: Readonly<NumberArray>; // [];
+  lightColor: Readonly<NumArray3>; // [];
+  lightPosition: Readonly<NumArray3>; // [];
+  lightDirection: Readonly<NumArray3>; // [];
+  lightAttenuation: Readonly<NumArray3>; // [];
 };
 
 /** UBO ready lighting module */
@@ -216,9 +216,7 @@ function extractLightTypes(lights: Light[]): LightingProps {
 }
 
 /** Take color 0-255 and intensity as input and output 0.0-1.0 range */
-function convertColor(
-  colorDef: {color?: Readonly<NumberArray>; intensity?: number} = {}
-): NumberArray {
+function convertColor(colorDef: {color?: Readonly<NumArray3>; intensity?: number} = {}): NumArray3 {
   const {color = [0, 0, 0], intensity = 1.0} = colorDef;
-  return color.map(component => (component * intensity) / COLOR_FACTOR);
+  return color.map(component => (component * intensity) / COLOR_FACTOR) as NumArray3;
 }

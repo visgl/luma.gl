@@ -2,16 +2,18 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {ShaderModule, UniformValue} from './shader-module';
+import type {BindingsOnly, BindingValue, ShaderModule, UniformsOnly} from './shader-module';
+import type {UniformValue} from '../utils/uniform-types';
 
 /**
  * A shaderpass is a shader module with additional information
  * on how to run
  */
 export type ShaderPass<
-  PropsT extends Record<string, unknown> = Record<string, unknown>,
-  UniformsT extends Record<string, UniformValue> = Record<string, UniformValue>
-> = ShaderModule<PropsT, UniformsT> & {
+  PropsT extends Record<string, any> = Record<string, any>,
+  UniformsT extends Record<string, UniformValue> = UniformsOnly<PropsT>,
+  BindingsT extends Record<string, BindingValue> = BindingsOnly<PropsT>
+> = ShaderModule<PropsT, UniformsT, BindingsT> & {
   passes: ShaderPassData[];
 };
 

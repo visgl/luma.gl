@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {NumberArray} from '../../../types';
 import {glsl} from '../../../lib/glsl-utils/highlight';
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
+import type {NumArray3, NumArray4} from '../../../lib/utils/uniform-types';
 
 // cyan color
-const DEFAULT_HIGHLIGHT_COLOR = new Float32Array([0, 1, 1, 1]);
+const DEFAULT_HIGHLIGHT_COLOR: NumArray4 = [0, 1, 1, 1];
 
 /**
  * Props for the picking module, which depending on mode renders picking colors or highlighted item.
@@ -20,9 +20,9 @@ export type PickingProps = {
   /** Set to true when picking an attribute value instead of object index */
   isAttribute?: boolean;
   /** Set to a picking color to visually highlight that item, or `null` to explicitly clear **/
-  highlightedObjectColor?: NumberArray | null;
+  highlightedObjectColor?: NumArray3 | null;
   /** Color of visual highlight of "selected" item */
-  highlightColor?: NumberArray;
+  highlightColor?: NumArray3 | NumArray4;
   /** Color range 0-1 or 0-255 */
   useFloatColors?: boolean;
 };
@@ -45,9 +45,9 @@ export type PickingUniforms = {
   /** Do we have a highlighted item? */
   isHighlightActive?: boolean;
   /** Set to a picking color to visually highlight that item */
-  highlightedObjectColor?: NumberArray;
+  highlightedObjectColor?: NumArray3;
   /** Color of visual highlight of "selected" item */
-  highlightColor?: NumberArray;
+  highlightColor?: NumArray4;
 };
 
 const vs = glsl`\
@@ -207,7 +207,7 @@ export const picking: ShaderModule<PickingProps, PickingUniforms> = {
     isAttribute: false,
     isHighlightActive: false,
     useFloatColors: true,
-    highlightedObjectColor: new Float32Array([0, 0, 0]),
+    highlightedObjectColor: [0, 0, 0],
     highlightColor: DEFAULT_HIGHLIGHT_COLOR
   },
   getUniforms
@@ -222,7 +222,7 @@ function getUniforms(opts: PickingProps = {}, prevUniforms?: PickingUniforms): P
     uniforms.isHighlightActive = false;
   } else {
     uniforms.isHighlightActive = true;
-    const highlightedObjectColor = opts.highlightedObjectColor.slice(0, 3);
+    const highlightedObjectColor = opts.highlightedObjectColor.slice(0, 3) as NumArray3;
     uniforms.highlightedObjectColor = highlightedObjectColor;
   }
 
@@ -231,7 +231,7 @@ function getUniforms(opts: PickingProps = {}, prevUniforms?: PickingUniforms): P
     if (!Number.isFinite(color[3])) {
       color[3] = 1;
     }
-    uniforms.highlightColor = color;
+    uniforms.highlightColor = color as NumArray4;
   }
 
   if (opts.isActive !== undefined) {

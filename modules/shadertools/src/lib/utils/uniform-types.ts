@@ -64,21 +64,21 @@ export type UniformValue = Readonly<
 
 type UniformType<ValueT extends UniformValue> = ValueT extends number | boolean
   ? 'f32' | 'i32' | 'u32'
-  : ValueT extends NumArray2 | Vector2
+  : ValueT extends Readonly<NumArray2 | Vector2>
   ? 'vec2<f32>' | 'vec2<i32>' | 'vec2<u32>'
-  : ValueT extends NumArray3 | Vector3
+  : ValueT extends Readonly<NumArray3 | Vector3>
   ? 'vec3<f32>' | 'vec3<i32>' | 'vec3<u32>'
-  : ValueT extends NumArray4 | Vector4
+  : ValueT extends Readonly<NumArray4 | Vector4>
   ? 'vec4<f32>' | 'vec4<i32>' | 'vec4<u32>' | 'mat2x2<f32>'
-  : ValueT extends NumArray6
+  : ValueT extends Readonly<NumArray6>
   ? 'mat2x3<f32>' | 'mat3x2<f32>'
-  : ValueT extends NumArray8
+  : ValueT extends Readonly<NumArray8>
   ? 'mat2x4<f32>' | 'mat4x2<f32>'
-  : ValueT extends NumArray9 | Matrix3
+  : ValueT extends Readonly<NumArray9 | Matrix3>
   ? 'mat3x3<f32>'
-  : ValueT extends NumArray12
+  : ValueT extends Readonly<NumArray12>
   ? 'mat3x4<f32>' | 'mat4x3<f32>'
-  : ValueT extends NumArray16 | Matrix4
+  : ValueT extends Readonly<NumArray16 | Matrix4>
   ? 'mat4x4<f32>'
   : never;
 

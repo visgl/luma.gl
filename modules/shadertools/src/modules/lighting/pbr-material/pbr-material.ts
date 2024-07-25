@@ -4,8 +4,9 @@
 
 /* eslint-disable camelcase */
 
-import type {NumberArray, Texture} from '@luma.gl/core';
+import type {Texture} from '@luma.gl/core';
 import type {Vector2, Vector3, Vector4} from '@math.gl/core';
+import type {NumArray2, NumArray3, NumArray4} from '../../../lib/utils/uniform-types';
 
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
 import {lighting} from '../lights/lighting-uniforms';
@@ -18,15 +19,15 @@ export type PBRMaterialProps = PBRMaterialBindings & {
 
   // Base color map
   baseColorMapEnabled: boolean;
-  baseColorFactor: Readonly<Vector4 | NumberArray>;
+  baseColorFactor: Readonly<Vector4 | NumArray4>;
 
   normalMapEnabled: boolean;
   normalScale: number; // #ifdef HAS_NORMALMAP
 
   emissiveMapEnabled: boolean;
-  emissiveFactor: Readonly<Vector3 | NumberArray>; // #ifdef HAS_EMISSIVEMAP
+  emissiveFactor: Readonly<Vector3 | NumArray3>; // #ifdef HAS_EMISSIVEMAP
 
-  metallicRoughnessValues: Readonly<Vector2 | NumberArray>;
+  metallicRoughnessValues: Readonly<Vector2 | NumArray2>;
   metallicRoughnessMapEnabled: boolean;
 
   occlusionMapEnabled: boolean;
@@ -37,12 +38,12 @@ export type PBRMaterialProps = PBRMaterialBindings & {
 
   // IBL
   IBLenabled: boolean;
-  scaleIBLAmbient: Readonly<Vector2 | NumberArray>; // #ifdef USE_IBL
+  scaleIBLAmbient: Readonly<Vector2 | NumArray2>; // #ifdef USE_IBL
 
   // debugging flags used for shader output of intermediate PBR variables
   // #ifdef PBR_DEBUG
-  scaleDiffBaseMR: Readonly<Vector4 | NumberArray>;
-  scaleFGDSpec: Readonly<Vector4 | NumberArray>;
+  scaleDiffBaseMR: Readonly<Vector4 | NumArray4>;
+  scaleFGDSpec: Readonly<Vector4 | NumArray4>;
 };
 
 /** Non-uniform block bindings for pbr module */
@@ -65,15 +66,15 @@ export type PBRMaterialUniforms = {
 
   // Base color map
   baseColorMapEnabled: boolean;
-  baseColorFactor: Readonly<Vector4 | NumberArray>;
+  baseColorFactor: Readonly<Vector4 | NumArray4>;
 
   normalMapEnabled: boolean;
   normalScale: number; // #ifdef HAS_NORMALMAP
 
   emissiveMapEnabled: boolean;
-  emissiveFactor: Readonly<Vector3 | NumberArray>; // #ifdef HAS_EMISSIVEMAP
+  emissiveFactor: Readonly<Vector3 | NumArray3>; // #ifdef HAS_EMISSIVEMAP
 
-  metallicRoughnessValues: Readonly<Vector2 | NumberArray>;
+  metallicRoughnessValues: Readonly<Vector2 | NumArray2>;
   metallicRoughnessMapEnabled: boolean;
 
   occlusionMapEnabled: boolean;
@@ -84,12 +85,12 @@ export type PBRMaterialUniforms = {
 
   // IBL
   IBLenabled: boolean;
-  scaleIBLAmbient: Readonly<Vector2 | NumberArray>; // #ifdef USE_IBL
+  scaleIBLAmbient: Readonly<Vector2 | NumArray2>; // #ifdef USE_IBL
 
   // debugging flags used for shader output of intermediate PBR variables
   // #ifdef PBR_DEBUG
-  scaleDiffBaseMR: Readonly<Vector4 | NumberArray>;
-  scaleFGDSpec: Readonly<Vector4 | NumberArray>;
+  scaleDiffBaseMR: Readonly<Vector4 | NumArray4>;
+  scaleFGDSpec: Readonly<Vector4 | NumArray4>;
 };
 
 /**

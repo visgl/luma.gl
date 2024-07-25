@@ -7,7 +7,7 @@ import {PropType} from '../filters/prop-types';
 import type {Buffer, Sampler, Texture} from '@luma.gl/core';
 import type {UniformTypes, UniformValue} from '../utils/uniform-types';
 
-type BindingValue = Buffer | Texture | Sampler;
+export type BindingValue = Buffer | Texture | Sampler;
 
 export type UniformInfo = {
   format?: UniformFormat;
@@ -16,8 +16,8 @@ export type UniformInfo = {
 // Helper types
 type FilterBindingKeys<T> = {[K in keyof T]: T[K] extends UniformValue ? never : K}[keyof T];
 type FilterUniformKeys<T> = {[K in keyof T]: T[K] extends UniformValue ? K : never}[keyof T];
-type BindingsOnly<T> = {[K in FilterBindingKeys<Required<T>>]: T[K]};
-type UniformsOnly<T> = {[K in FilterUniformKeys<Required<T>>]: T[K]};
+export type BindingsOnly<T> = {[K in FilterBindingKeys<Required<T>>]: T[K]};
+export type UniformsOnly<T> = {[K in FilterUniformKeys<Required<T>>]: T[K]};
 
 /**
  * A shader module definition object
