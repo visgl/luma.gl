@@ -1,12 +1,12 @@
 import type {Matrix3, Matrix4, Vector2, Vector3, Vector4} from '@math.gl/core';
 
-type NumberArray2 = [number, number];
-type NumberArray3 = [number, number, number];
-type NumberArray4 = [number, number, number, number];
-type NumberArray6 = [number, number, number, number, number, number];
-type NumberArray8 = [number, number, number, number, number, number, number, number];
-type NumberArray9 = [number, number, number, number, number, number, number, number, number];
-type NumberArray12 = [
+export type NumArray2 = [number, number];
+export type NumArray3 = [number, number, number];
+export type NumArray4 = [number, number, number, number];
+export type NumArray6 = [number, number, number, number, number, number];
+export type NumArray8 = [number, number, number, number, number, number, number, number];
+export type NumArray9 = [number, number, number, number, number, number, number, number, number];
+export type NumArray12 = [
   number,
   number,
   number,
@@ -20,7 +20,7 @@ type NumberArray12 = [
   number,
   number
 ];
-export type NumberArray16 = [
+export type NumArray16 = [
   number,
   number,
   number,
@@ -47,14 +47,14 @@ export type NumberArray16 = [
 export type UniformValue =
   | number
   | boolean
-  | NumberArray2
-  | NumberArray3
-  | NumberArray4
-  | NumberArray6
-  | NumberArray8
-  | NumberArray9
-  | NumberArray12
-  | NumberArray16
+  | NumArray2
+  | NumArray3
+  | NumArray4
+  | NumArray6
+  | NumArray8
+  | NumArray9
+  | NumArray12
+  | NumArray16
   | Vector2
   | Vector3
   | Vector4
@@ -63,21 +63,21 @@ export type UniformValue =
 
 type UniformType<ValueT extends UniformValue> = ValueT extends number | boolean
   ? 'f32' | 'i32' | 'u32'
-  : ValueT extends NumberArray2 | Vector2
+  : ValueT extends NumArray2 | Vector2
   ? 'vec2<f32>' | 'vec2<i32>' | 'vec2<u32>'
-  : ValueT extends NumberArray3 | Vector3
+  : ValueT extends NumArray3 | Vector3
   ? 'vec3<f32>' | 'vec3<i32>' | 'vec3<u32>'
-  : ValueT extends NumberArray4 | Vector4
+  : ValueT extends NumArray4 | Vector4
   ? 'vec4<f32>' | 'vec4<i32>' | 'vec4<u32>' | 'mat2x2<f32>'
-  : ValueT extends NumberArray6
+  : ValueT extends NumArray6
   ? 'mat2x3<f32>' | 'mat3x2<f32>'
-  : ValueT extends NumberArray8
+  : ValueT extends NumArray8
   ? 'mat2x4<f32>' | 'mat4x2<f32>'
-  : ValueT extends NumberArray9 | Matrix3
+  : ValueT extends NumArray9 | Matrix3
   ? 'mat3x3<f32>'
-  : ValueT extends NumberArray12
+  : ValueT extends NumArray12
   ? 'mat3x4<f32>' | 'mat4x3<f32>'
-  : ValueT extends NumberArray16 | Matrix4
+  : ValueT extends NumArray16 | Matrix4
   ? 'mat4x4<f32>'
   : never;
 
