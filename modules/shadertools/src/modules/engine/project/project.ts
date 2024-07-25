@@ -2,20 +2,21 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {NumericArray as NumberArray, Matrix4, Vector3} from '@math.gl/core';
+import {Matrix4, Vector3} from '@math.gl/core';
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
 import {glsl} from '../../../lib/glsl-utils/highlight';
+import {NumArray3, NumArray16} from '../../../lib/utils/uniform-types';
 
-const IDENTITY_MATRIX: Readonly<NumberArray> = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+const IDENTITY_MATRIX: Readonly<NumArray16> = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
 
 /**
  * @note Projection uniforms are normally constant across draw calls,
  * at least for each view.
  */
 export type ProjectionProps = {
-  viewMatrix?: Readonly<Matrix4 | NumberArray>;
-  projectionMatrix?: Readonly<Matrix4 | NumberArray>;
-  cameraPositionWorld?: Readonly<Vector3 | NumberArray>;
+  viewMatrix?: Readonly<Matrix4 | NumArray16>;
+  projectionMatrix?: Readonly<Matrix4 | NumArray16>;
+  cameraPositionWorld?: Readonly<Vector3 | NumArray3>;
 };
 
 /**
@@ -23,10 +24,10 @@ export type ProjectionProps = {
  * at least for each view.
  */
 export type ProjectionUniforms = {
-  viewMatrix?: Readonly<Matrix4 | NumberArray>;
-  projectionMatrix?: Readonly<Matrix4 | NumberArray>;
-  viewProjectionMatrix?: Readonly<Matrix4 | NumberArray>;
-  cameraPositionWorld?: Readonly<Vector3 | NumberArray>;
+  viewMatrix?: Readonly<Matrix4 | NumArray16>;
+  projectionMatrix?: Readonly<Matrix4 | NumArray16>;
+  viewProjectionMatrix?: Readonly<Matrix4 | NumArray16>;
+  cameraPositionWorld?: Readonly<Vector3 | NumArray3>;
 };
 
 const DEFAULT_MODULE_OPTIONS: Required<ProjectionUniforms> = {

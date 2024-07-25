@@ -44,7 +44,7 @@ export type NumArray16 = [
  *
  * Only allow types whose length we can type-check (not `TypedArray`)
  */
-export type UniformValue =
+export type UniformValue = Readonly<
   | number
   | boolean
   | NumArray2
@@ -59,7 +59,8 @@ export type UniformValue =
   | Vector3
   | Vector4
   | Matrix3
-  | Matrix4;
+  | Matrix4
+>;
 
 type UniformType<ValueT extends UniformValue> = ValueT extends number | boolean
   ? 'f32' | 'i32' | 'u32'
