@@ -58,10 +58,10 @@ const TEST_CASES = [
 ];
 
 test('picking#getUniforms', t => {
-  t.deepEqual(picking.getUniforms!({}), {}, 'Empty input');
+  t.deepEqual(picking.getUniforms({}), {}, 'Empty input');
 
   t.deepEqual(
-    picking.getUniforms!({
+    picking.getUniforms({
       isActive: true,
       highlightedObjectColor: undefined,
       highlightColor: [255, 0, 0]
@@ -75,7 +75,7 @@ test('picking#getUniforms', t => {
   );
 
   t.deepEqual(
-    picking.getUniforms!({
+    picking.getUniforms({
       isActive: true,
       highlightedObjectColor: null,
       highlightColor: [255, 0, 0]
@@ -90,7 +90,7 @@ test('picking#getUniforms', t => {
   );
 
   t.deepEqual(
-    picking.getUniforms!({
+    picking.getUniforms({
       highlightedObjectColor: [0, 0, 1],
       highlightColor: [102, 0, 0, 51]
     }),
@@ -103,7 +103,7 @@ test('picking#getUniforms', t => {
   );
 
   t.deepEqual(
-    picking.getUniforms!({
+    picking.getUniforms({
       highlightedObjectColor: [0, 0, 1],
       highlightColor: [102, 0, 0, 51],
       useFloatColors: false
@@ -159,7 +159,7 @@ test.skip('picking#isVertexPicked(highlightedObjectColor invalid)', async t => {
 
   await Promise.all(
     TEST_CASES.map(async testCase => {
-      const uniforms = picking.getUniforms!({
+      const uniforms = picking.getUniforms({
         highlightedObjectColor: testCase.highlightedObjectColor
       });
 
@@ -214,7 +214,7 @@ test.skip('picking#picking_setPickingColor', async t => {
 
   await Promise.all(
     TEST_CASES.map(async testCase => {
-      const uniforms = picking.getUniforms!({
+      const uniforms = picking.getUniforms({
         highlightedObjectColor: testCase.highlightedObjectColor,
         // @ts-expect-error
         pickingThreshold: testCase.pickingThreshold
