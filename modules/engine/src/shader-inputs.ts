@@ -2,19 +2,24 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {UniformValue, Texture, Sampler} from '@luma.gl/core';
+import type {Buffer, UniformValue, Texture, Sampler} from '@luma.gl/core';
 import {log, splitUniformsAndBindings} from '@luma.gl/core';
 // import type {ShaderUniformType, UniformValue, UniformFormat, UniformInfoDevice, Texture, Sampler} from '@luma.gl/core';
 import {_resolveModules, ShaderModuleInstance} from '@luma.gl/shadertools';
+
+type BindingValue = Buffer | Texture | Sampler;
 
 /** Minimal ShaderModule subset, we don't need shader code etc */
 export type ShaderModuleInputs<
   PropsT extends Record<string, unknown> = Record<string, unknown>,
   UniformsT extends Record<string, UniformValue> = Record<string, UniformValue>,
-  BindingsT extends Record<string, Texture | Sampler> = Record<string, Texture | Sampler>
+  BindingsT extends Record<string, BindingValue> = Record<string, BindingValue>
 > = {
-  defaultUniforms?: UniformsT;
-  getUniforms?: (settings: Partial<PropsT>, prevUniforms?: UniformsT) => UniformsT;
+  defaultUniforms?: Required<UniformsT>;
+  getUniforms?: (
+    props: Partial<PropsT>,
+    prevUniforms?: UniformsT
+  ) => Record<string, BindingValue | UniformValue>;
 
   /** Not used. Used to access props type */
   props?: PropsT;

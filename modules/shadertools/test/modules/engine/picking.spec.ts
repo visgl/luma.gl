@@ -163,6 +163,7 @@ test.skip('picking#isVertexPicked(highlightedObjectColor invalid)', async t => {
         highlightedObjectColor: testCase.highlightedObjectColor
       });
 
+      // @ts-ignore
       transform.model.setUniforms(uniforms);
       transform.run();
 
@@ -219,6 +220,7 @@ test.skip('picking#picking_setPickingColor', async t => {
         pickingThreshold: testCase.pickingThreshold
       });
 
+      // @ts-ignore
       transform.model.setUniforms(uniforms);
       transform.run();
 

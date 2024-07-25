@@ -2,8 +2,12 @@ import test from 'tape-promise/tape';
 import {checkType} from '@luma.gl/test-utils';
 
 import {lighting, ShaderModule} from '@luma.gl/shadertools';
+import type {
+  LightingProps,
+  LightingUniforms
+} from '@luma.gl/shadertools/src/modules/lighting/lights/lighting-uniforms';
 
-checkType<ShaderModule>(lighting);
+checkType<ShaderModule<LightingProps, LightingUniforms>>(lighting);
 
 test('shadertools#lighting', t => {
   let uniforms = lighting.getUniforms({});
