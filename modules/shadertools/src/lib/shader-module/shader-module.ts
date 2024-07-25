@@ -4,11 +4,9 @@
 
 import {UniformFormat} from '../../types';
 import {PropType} from '../filters/prop-types';
-import {Buffer, Sampler, Texture} from '@luma.gl/core';
-import {UniformTypes} from '../utils/uniform-types';
+import type {Buffer, Sampler, Texture} from '@luma.gl/core';
+import type {UniformTypes, UniformValue} from '../utils/uniform-types';
 
-// Do not allow NumberArray as we cannot then typecheck on length
-export type UniformValue = number | boolean | number[];
 type BindingValue = Buffer | Texture | Sampler;
 
 export type UniformInfo = {
