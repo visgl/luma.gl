@@ -14,10 +14,10 @@ export type UniformInfo = {
 } & PropType;
 
 // Helper types
-type FilterBindingKeys<T> = {[K in keyof T]: T[K] extends UniformValue ? never : K}[keyof T];
-type FilterUniformKeys<T> = {[K in keyof T]: T[K] extends UniformValue ? K : never}[keyof T];
-export type BindingsOnly<T> = {[K in FilterBindingKeys<Required<T>>]: T[K]};
-export type UniformsOnly<T> = {[K in FilterUniformKeys<Required<T>>]: T[K]};
+type BindingKeys<T> = {[K in keyof T]: T[K] extends UniformValue ? never : K}[keyof T];
+type UniformKeys<T> = {[K in keyof T]: T[K] extends UniformValue ? K : never}[keyof T];
+export type PickBindings<T> = {[K in BindingKeys<Required<T>>]: T[K]};
+export type PickUniforms<T> = {[K in UniformKeys<Required<T>>]: T[K]};
 
 /**
  * A shader module definition object
@@ -25,8 +25,8 @@ export type UniformsOnly<T> = {[K in FilterUniformKeys<Required<T>>]: T[K]};
  */
 export type ShaderModule<
   PropsT extends Record<string, any> = Record<string, any>,
-  UniformsT extends Record<string, UniformValue> = UniformsOnly<PropsT>,
-  BindingsT extends Record<string, BindingValue> = BindingsOnly<PropsT>
+  UniformsT extends Record<string, UniformValue> = PickUniforms<PropsT>,
+  BindingsT extends Record<string, BindingValue> = PickBindings<PropsT>
 > = {
   /** Used for type inference not for values */
   props?: Required<PropsT>;
