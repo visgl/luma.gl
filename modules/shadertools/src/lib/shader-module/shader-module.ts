@@ -24,7 +24,8 @@ export type PickUniforms<T> = {[K in UniformKeys<Required<T>>]: T[K]};
 
 /**
  * A shader module definition object
- * @note Can be viewed as the ShaderModuleProps for a ShaderModuleInstance
+ * @note `UniformsT` & `BindingsT` are deduced from `PropsT` by default. If
+ * a custom type for `UniformsT` is used, `BindingsT` should be also be provided.
  */
 export type ShaderModule<
   PropsT extends Record<string, any> = Record<string, any>,
