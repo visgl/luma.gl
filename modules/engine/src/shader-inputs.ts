@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {UniformValue, Texture, Sampler} from '@luma.gl/core';
+import type {Binding, UniformValue} from '@luma.gl/core';
 import {log, splitUniformsAndBindings} from '@luma.gl/core';
 // import type {ShaderUniformType, UniformValue, UniformFormat, UniformInfoDevice, Texture, Sampler} from '@luma.gl/core';
 import {_resolveModules, ShaderModule, ShaderModuleInstance} from '@luma.gl/shadertools';
@@ -28,7 +28,7 @@ export class ShaderInputs<
   /** Stores the uniform values for each module */
   moduleUniforms: Record<keyof ShaderPropsT, Record<string, UniformValue>>;
   /** Stores the uniform bindings for each module  */
-  moduleBindings: Record<keyof ShaderPropsT, Record<string, Texture | Sampler>>;
+  moduleBindings: Record<keyof ShaderPropsT, Record<string, Binding>>;
   /** Tracks if uniforms have changed */
   moduleUniformsChanged: Record<keyof ShaderPropsT, false | string>;
 
@@ -51,7 +51,7 @@ export class ShaderInputs<
     // Store the module definitions and create storage for uniform values and binding values, per module
     this.modules = modules as {[P in keyof ShaderPropsT]: ShaderModule<ShaderPropsT[P]>};
     this.moduleUniforms = {} as Record<keyof ShaderPropsT, Record<string, UniformValue>>;
-    this.moduleBindings = {} as Record<keyof ShaderPropsT, Record<string, Texture | Sampler>>;
+    this.moduleBindings = {} as Record<keyof ShaderPropsT, Record<string, Binding>>;
 
     // Initialize the modules
     for (const [name, module] of Object.entries(modules)) {
@@ -113,8 +113,8 @@ export class ShaderInputs<
   }
 
   /** Merges all bindings for the shader (from the various modules) */
-  getBindings(): Record<string, Texture | Sampler> {
-    const bindings = {} as Record<string, Texture | Sampler>;
+  getBindings(): Record<string, Binding> {
+    const bindings = {} as Record<string, Binding>;
     for (const moduleBindings of Object.values(this.moduleBindings)) {
       Object.assign(bindings, moduleBindings);
     }

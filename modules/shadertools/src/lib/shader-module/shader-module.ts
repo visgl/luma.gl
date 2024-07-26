@@ -2,12 +2,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+import type {Binding} from '@luma.gl/core';
 import {UniformFormat} from '../../types';
 import {PropType} from '../filters/prop-types';
-import type {Buffer, Sampler, Texture} from '@luma.gl/core';
 import type {UniformTypes, UniformValue} from '../utils/uniform-types';
-
-export type BindingValue = Buffer | Texture | Sampler;
 
 export type UniformInfo = {
   format?: UniformFormat;
@@ -26,7 +24,7 @@ export type PickUniforms<T> = {[K in UniformKeys<Required<T>>]: T[K]};
 export type ShaderModule<
   PropsT extends Record<string, any> = Record<string, any>,
   UniformsT extends Record<string, UniformValue> = PickUniforms<PropsT>,
-  BindingsT extends Record<string, BindingValue> = PickBindings<PropsT>
+  BindingsT extends Record<string, Binding> = PickBindings<PropsT>
 > = {
   /** Used for type inference not for values */
   props?: Required<PropsT>;
@@ -48,7 +46,7 @@ export type ShaderModule<
   getUniforms?: (
     props?: Partial<PropsT>,
     prevUniforms?: UniformsT
-  ) => Record<string, BindingValue | UniformValue>;
+  ) => Record<string, Binding | UniformValue>;
 
   /** uniform buffers, textures, samplers, storage, ... */
   bindings?: Record<keyof BindingsT, {location: number; type: 'texture' | 'sampler' | 'uniforms'}>;

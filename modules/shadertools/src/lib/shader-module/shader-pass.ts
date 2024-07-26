@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {BindingValue, PickBindings, PickUniforms, ShaderModule} from './shader-module';
+import type {Binding} from '@luma.gl/core';
+import type {PickBindings, PickUniforms, ShaderModule} from './shader-module';
 import type {UniformValue} from '../utils/uniform-types';
 
 /**
@@ -12,7 +13,7 @@ import type {UniformValue} from '../utils/uniform-types';
 export type ShaderPass<
   PropsT extends Record<string, any> = Record<string, any>,
   UniformsT extends Record<string, UniformValue> = PickUniforms<PropsT>,
-  BindingsT extends Record<string, BindingValue> = PickBindings<PropsT>
+  BindingsT extends Record<string, Binding> = PickBindings<PropsT>
 > = ShaderModule<PropsT, UniformsT, BindingsT> & {
   passes: ShaderPassData[];
 };
