@@ -51,7 +51,10 @@ export type ShaderModule<
   defaultUniforms?: Required<UniformsT>; // Record<keyof UniformsT, UniformValue>;
 
   /** Function that maps props to uniforms & bindings */
-  getUniforms?: (props?: Partial<PropsT>, prevUniforms?: UniformsT) => UniformsT & BindingsT;
+  getUniforms?: (
+    props?: Partial<PropsT>,
+    prevUniforms?: UniformsT
+  ) => Partial<UniformsT & BindingsT>;
 
   defines?: Record<string, string | number>;
   /** Injections */
