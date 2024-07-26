@@ -144,16 +144,5 @@ export const pbrMaterial: ShaderModule<PBRMaterialProps, PBRMaterialUniforms> = 
     scaleDiffBaseMR: 'vec4<f32>',
     scaleFGDSpec: 'vec4<f32>'
   },
-  bindings: {
-    baseColorSampler: {type: 'texture', location: 8}, // #ifdef HAS_BASECOLORMAP
-    normalSampler: {type: 'texture', location: 9}, // #ifdef HAS_NORMALMAP
-    emissiveSampler: {type: 'texture', location: 10}, // #ifdef HAS_EMISSIVEMAP
-    metallicRoughnessSampler: {type: 'texture', location: 11}, // #ifdef HAS_METALROUGHNESSMAP
-    occlusionSampler: {type: 'texture', location: 12}, // #ifdef HAS_OCCLUSIONMAP
-    // IBL Samplers
-    diffuseEnvSampler: {type: 'texture', location: 13}, // #ifdef USE_IBL (samplerCube)
-    specularEnvSampler: {type: 'texture', location: 14}, // #ifdef USE_IBL (samplerCube)
-    brdfLUT: {type: 'texture', location: 15} // #ifdef USE_IBL
-  },
   dependencies: [lighting]
 };

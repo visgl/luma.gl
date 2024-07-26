@@ -67,7 +67,7 @@ export type LightingUniforms = {
 };
 
 /** UBO ready lighting module */
-export const lighting: ShaderModule<LightingProps, LightingUniforms> = {
+export const lighting: ShaderModule<LightingProps, LightingUniforms, {}> = {
   name: 'lighting',
   vs: lightingUniforms,
   fs: lightingUniforms,

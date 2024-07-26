@@ -7,7 +7,7 @@ import type {
   LightingUniforms
 } from '@luma.gl/shadertools/src/modules/lighting/lights/lighting-uniforms';
 
-checkType<ShaderModule<LightingProps, LightingUniforms>>(lighting);
+checkType<ShaderModule<LightingProps, LightingUniforms, {}>>(lighting);
 
 test('shadertools#lighting', t => {
   let uniforms = lighting.getUniforms({});
