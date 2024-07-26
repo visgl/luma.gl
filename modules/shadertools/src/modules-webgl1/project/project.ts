@@ -5,16 +5,16 @@
 import {Vector3, Matrix4} from '@math.gl/core';
 import {glsl} from '../../lib/glsl-utils/highlight';
 import {ShaderModule} from '../../lib/shader-module/shader-module';
-import type {NumArray3, NumArray16} from '../../lib/utils/uniform-types';
+import type {NumberArray3, NumberArray16} from '../../lib/utils/uniform-types';
 
 type ProjectionProps = {
-  modelMatrix?: Readonly<Matrix4 | NumArray16>;
-  viewMatrix?: Readonly<Matrix4 | NumArray16>;
-  projectionMatrix?: Readonly<Matrix4 | NumArray16>;
-  cameraPositionWorld?: Readonly<Vector3 | NumArray3>;
+  modelMatrix?: Readonly<Matrix4 | NumberArray16>;
+  viewMatrix?: Readonly<Matrix4 | NumberArray16>;
+  projectionMatrix?: Readonly<Matrix4 | NumberArray16>;
+  cameraPositionWorld?: Readonly<Vector3 | NumberArray3>;
 };
 
-const IDENTITY_MATRIX: NumArray16 = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+const IDENTITY_MATRIX: NumberArray16 = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
 
 const DEFAULT_MODULE_OPTIONS: ProjectionProps = {
   modelMatrix: IDENTITY_MATRIX,
