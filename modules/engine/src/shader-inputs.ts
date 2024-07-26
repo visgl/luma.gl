@@ -80,7 +80,7 @@ export class ShaderInputs<
         continue; // eslint-disable-line no-continue
       }
 
-      const oldUniforms = this.moduleUniforms[moduleName] as any;
+      const oldUniforms = this.moduleUniforms[moduleName] as (typeof module)['uniforms'];
       const oldBindings = this.moduleBindings[moduleName];
       const uniformsAndBindings =
         module.getUniforms?.(moduleProps, oldUniforms) || (moduleProps as any);
@@ -126,8 +126,7 @@ export class ShaderInputs<
     for (const [moduleName, module] of Object.entries(this.moduleUniforms)) {
       for (const [key, value] of Object.entries(module)) {
         table[`${moduleName}.${key}`] = {
-          // @ts-ignore
-          type: this.modules[moduleName].uniformTypes?.[key],
+          type: this.modules[moduleName].uniformTypes?.[key as keyof ShaderPropsT],
           value: String(value)
         };
       }
