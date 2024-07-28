@@ -2,7 +2,43 @@
 
 ## v9
 
-Major new release that includes WebGPU support
+Major new release that includes WebGPU enablement
+
+### v9.1
+
+Minor release that improves WebGPU support and polishes the v9 API.
+
+### 9.1.0-alpha.3
+
+- chore: Partially restore texture-3d example (#2136)
+- chore: Bump to typescript@5.5 (#2127)
+- fix(webgl): Fix cubemap example (#2129)
+- chore(deps): bump katex from 0.16.9 to 0.16.10 in /website (#2098)
+- chore(deps): bump braces from 3.0.2 to 3.0.3 (#2103)
+- chore: typo in AnimationLoopTemplate doc (#2126)
+- types: Add BindingValue to getUniforms return type (#2122)
+- shadertools: Resolve dependencies in ShaderInputs (#2121)
+- chore(webgpu): Fix webgpu texture creation for 8 bit data inputs (#2125)
+- chore: Restore texture tests (#2123)
+- chore: Remove spurios device.getSize() (#2120)
+- fix(engine): AsyncTexture nested promises (#2119)
+- fix(webgl): Apply default viewport sizes (#2116)
+- chore: Bump to yarn v4.3.1 (#2117)
+- feat(engine): ShaderInputs bindings (#2104)
+- fix(examples):  Fix typos of `registerAdapters` (#2102)
+- feat(core): Add `blend` parameter (#2061)
+- feat(webgl): Add WEBGL1 extensions to forced WebGL2 contexts (#2092)
+- fix: CI (#2094)
+- Create CODE_OF_CONDUCT.md (#2097)
+- chore: update CI setup (#2079)
+- chore(shadertools): Remove glsl string template (#2091)
+- feat(core): Adapters methods now async (#2090)
+- chore(core): Convert luma object to singleton (#2083)
+- fix(webgl): Fix spectorjs (#2082)
+- feat(core): Break out Adapter class from Device (#2085)
+- chore(core): Clean up WebGLStateTracker (#2087)
+- docs(core): RenderPass (#2081)
+- chore(core): luma.ts cleanup (#2086)
 
 ### 9.1.0-alpha.2
 
