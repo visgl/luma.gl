@@ -4,6 +4,10 @@
 
 Major new release that includes WebGPU support
 
+### 9.0.17 - Jul 21, 2024
+
+- ShaderModule type improvement (v9) (#2137)
+
 ### 9.0.16 - Jul 21, 2024
 
 - chore(shadertools): Use published wgsl_reflect module (#2055) (#2134)
