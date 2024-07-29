@@ -176,9 +176,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         blendColorDstFactor: 'one-minus-src-alpha',
         blendAlphaSrcFactor: 'one',
         blendAlphaDstFactor: 'one-minus-src-alpha'
-        //   // TODO these should be set on the model, but doesn't work...
-        //   blend: true,
-        //   blendFunc: [GL.ONE, GL.ONE_MINUS_SRC_ALPHA]
       }
     });
   }
