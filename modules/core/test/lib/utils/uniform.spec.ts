@@ -21,7 +21,6 @@ test('splitUniformsAndBindings', t => {
   const mixed: Parameters<typeof splitUniformsAndBindings>[0] = {
     array: [1, 2, 3, 4],
     boolean: true,
-    float32array: new Float32Array([1, 2, 3, 4]),
     number: 123,
     sampler: new WEBGLSampler(device, {}),
     texture: new WEBGLTexture(device, {})
@@ -30,7 +29,7 @@ test('splitUniformsAndBindings', t => {
   t.deepEquals(Object.keys(bindings), ['sampler', 'texture'], 'bindings correctly extracted');
   t.deepEquals(
     Object.keys(uniforms),
-    ['array', 'boolean', 'float32array', 'number'],
+    ['array', 'boolean', 'number'],
     'bindings correctly extracted'
   );
   t.end();

@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {NumberArray} from '@math.gl/types';
+import type {Vector3} from '@math.gl/core';
 import {glsl} from '../../../lib/glsl-utils/highlight';
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
 
 export type DirlightProps = {
-  lightDirection?: NumberArray | [number, number, number];
+  lightDirection?: Vector3 | [number, number, number];
 };
 
 export type DirlightUniforms = DirlightProps;
@@ -72,7 +72,7 @@ export const dirlight: ShaderModule<DirlightProps, DirlightUniforms> = {
     lightDirection: 'vec3<f32>'
   },
   defaultUniforms: {
-    lightDirection: new Float32Array([1, 1, 2])
+    lightDirection: [1, 1, 2]
   },
   getUniforms
 };

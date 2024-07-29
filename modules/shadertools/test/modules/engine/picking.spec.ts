@@ -48,11 +48,11 @@ const TEST_CASES = [
     isPicked: [0, 0, 0, 0, 0, 0, 0, 0, 0]
   },
   {
-    highlightedObjectColor: [255, 255, 255],
+    highlightedObjectColor: [255, 255, 255] as [number, number, number],
     isPicked: [0, 0, 0, 0, 0, 0, 0, 1, 0]
   },
   {
-    highlightedObjectColor: [255, 100, 150],
+    highlightedObjectColor: [255, 100, 150] as [number, number, number],
     isPicked: [0, 1, 0, 0, 0, 0, 0, 0, 0]
   }
 ];
@@ -163,6 +163,7 @@ test.skip('picking#isVertexPicked(highlightedObjectColor invalid)', async t => {
         highlightedObjectColor: testCase.highlightedObjectColor
       });
 
+      // @ts-ignore
       transform.model.setUniforms(uniforms);
       transform.run();
 
@@ -219,6 +220,7 @@ test.skip('picking#picking_setPickingColor', async t => {
         pickingThreshold: testCase.pickingThreshold
       });
 
+      // @ts-ignore
       transform.model.setUniforms(uniforms);
       transform.run();
 

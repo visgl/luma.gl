@@ -10,12 +10,6 @@ import {UniformBlock} from './uniform-block';
 import {UniformBufferLayout} from './uniform-buffer-layout';
 import {log} from '../../utils/log';
 
-export type ShaderModuleInputs = {
-  uniformTypes?: Record<string, ShaderUniformType>;
-  defaultProps?: Record<string, unknown>;
-  defaultUniforms?: Record<string, UniformValue>;
-};
-
 /**
  * A uniform store holds a uniform values for one or more uniform blocks,
  * - It can generate binary data for any uniform buffer
