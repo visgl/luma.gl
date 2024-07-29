@@ -2505,70 +2505,74 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@luma.gl/constants@npm:9.0.0-beta.5":
-  version: 9.0.0-beta.5
-  resolution: "@luma.gl/constants@npm:9.0.0-beta.5"
-  checksum: 10c0/bfca2ec4a96868c0301d9c204d89d395541a27ae478875e369e0a5d21d98db20b9235dae288d0c16acb4e3a9765418c35f348c751ef4309df0200f03e38b42c6
+"@luma.gl/constants@npm:9.0.17, @luma.gl/constants@npm:^9.0.0":
+  version: 9.0.17
+  resolution: "@luma.gl/constants@npm:9.0.17"
+  checksum: 10c0/f6378da632c244eab2b05c238a66fd06e39b4544492f372c69dc8dc33894723d6876009e2f24211bc0412ea130f5ba0aeb8f2236973f4116f9d92dad21af16cc
   languageName: node
   linkType: hard
 
-"@luma.gl/core@npm:9.0.0-beta.5":
-  version: 9.0.0-beta.5
-  resolution: "@luma.gl/core@npm:9.0.0-beta.5"
+"@luma.gl/core@npm:^9.0.0":
+  version: 9.0.17
+  resolution: "@luma.gl/core@npm:9.0.17"
   dependencies:
+    "@math.gl/types": "npm:^4.0.0"
+    "@probe.gl/env": "npm:^4.0.2"
+    "@probe.gl/log": "npm:^4.0.2"
+    "@probe.gl/stats": "npm:^4.0.2"
     "@types/offscreencanvas": "npm:^2019.6.4"
-  checksum: 10c0/eabb7ffd0fbed5d24108be99f8ad5a79a8a65e5468f5602fd56b49d3f6d2f8018f373c09a6d6fd0ec09388b09779c96360ffe161ba7a1f20a213b8d08cdc59d5
+  checksum: 10c0/7cd862cddcf9c365705539c9295dc5f713fafe4c7205be739ce75641d551da5420ddf010654ea1e469ad213d219dda733464bdbbba431d00e011ff3ac484da26
   languageName: node
   linkType: hard
 
-"@luma.gl/engine@npm:9.0.0-beta.5":
-  version: 9.0.0-beta.5
-  resolution: "@luma.gl/engine@npm:9.0.0-beta.5"
+"@luma.gl/engine@npm:^9.0.0":
+  version: 9.0.17
+  resolution: "@luma.gl/engine@npm:9.0.17"
   dependencies:
+    "@luma.gl/shadertools": "npm:9.0.17"
     "@math.gl/core": "npm:^4.0.0"
     "@probe.gl/log": "npm:^4.0.2"
     "@probe.gl/stats": "npm:^4.0.2"
   peerDependencies:
-    "@luma.gl/core": ^9.0.0-beta.4
-    "@luma.gl/shadertools": ^9.0.0-beta.4
-  checksum: 10c0/05927d693909bad38b3d6d6505d799f380961743859725b39657c1f8ebce1e65fc97e3186fc869ed8a0dc5a509f56b0ce663780ca556bc7008f135eaaecff201
+    "@luma.gl/core": ^9.0.0
+  checksum: 10c0/eaacb410562b9ec46944486d9a1ce9d1bff37f295fcdee120524830772255b86ebc1473555d452703111c7d1feddfcc506927595f27bf612c62ed601f7fc12ba
   languageName: node
   linkType: hard
 
-"@luma.gl/shadertools@npm:9.0.0-beta.5":
-  version: 9.0.0-beta.5
-  resolution: "@luma.gl/shadertools@npm:9.0.0-beta.5"
+"@luma.gl/shadertools@npm:9.0.17, @luma.gl/shadertools@npm:^9.0.0":
+  version: 9.0.17
+  resolution: "@luma.gl/shadertools@npm:9.0.17"
   dependencies:
     "@math.gl/core": "npm:^4.0.0"
     "@math.gl/types": "npm:^4.0.0"
+    wgsl_reflect: "npm:^1.0.1"
   peerDependencies:
-    "@luma.gl/core": ^9.0.0-beta.4
-  checksum: 10c0/520f4dbfacfed70933928808678f2a5b46d78dd998ce41f8d2ca552457374959dcf6d2138e526adb00429ecd2a6d5f8da48276f617086e94b0d1598785caba11
+    "@luma.gl/core": ^9.0.0
+  checksum: 10c0/35f10a1871490ef24e3f83199b8c74e129c6e43f8c5d370ab42ab12393097e7336eda1cb8260ff2ac6ed194e69da51d66d10364cfdca1323c630a38142987cb1
   languageName: node
   linkType: hard
 
-"@luma.gl/webgl@npm:9.0.0-beta.5":
-  version: 9.0.0-beta.5
-  resolution: "@luma.gl/webgl@npm:9.0.0-beta.5"
+"@luma.gl/webgl@npm:^9.0.0":
+  version: 9.0.17
+  resolution: "@luma.gl/webgl@npm:9.0.17"
   dependencies:
-    "@luma.gl/constants": "npm:9.0.0-beta.5"
-    "@luma.gl/core": "npm:9.0.0-beta.5"
+    "@luma.gl/constants": "npm:9.0.17"
     "@probe.gl/env": "npm:^4.0.2"
   peerDependencies:
-    "@luma.gl/constants": ^9.0.0-beta.4
-  checksum: 10c0/eb2ebd3f7d8a42360fe929041616ce0d46005a4a95df525eb8941b5adadcd4d5532991b1e76d195779b8b6242f15fd8dc50d318aaee9f0d3e50f2af76c52eab5
+    "@luma.gl/core": ^9.0.0
+  checksum: 10c0/6db95f63de31e53e04afbeb90875852d66490ad2f6a822c4ba245f72573ac4281e6c62b880a0e3fa5aac98657b5bb3ad6f263de2f429c06cb4fd9c96c397e47d
   languageName: node
   linkType: hard
 
-"@luma.gl/webgpu@npm:9.0.0-beta.5":
-  version: 9.0.0-beta.5
-  resolution: "@luma.gl/webgpu@npm:9.0.0-beta.5"
+"@luma.gl/webgpu@npm:^9.0.0":
+  version: 9.0.17
+  resolution: "@luma.gl/webgpu@npm:9.0.17"
   dependencies:
     "@probe.gl/env": "npm:^4.0.2"
     "@webgpu/types": "npm:^0.1.34"
   peerDependencies:
-    "@luma.gl/core": ^9.0.0-beta.4
-  checksum: 10c0/d72fdada1242b74a71d82e8ec2a71dd349ab136fbf5b472162f413714f77fb76eb26d864cc88537bf5244d73a78c6d3a4cdd2121e941ae11eda381174877e8a8
+    "@luma.gl/core": ^9.0.0
+  checksum: 10c0/637c143ce8c5d569ccd897d40d130814a3610a08f0ca730d88714affa99232b8b7cc70c71a25980d5f4e95ad3fa6e5fc07eea4437071256b07a24c5cf932a724
   languageName: node
   linkType: hard
 
@@ -12851,12 +12855,12 @@ __metadata:
     "@docusaurus/plugin-content-docs": "npm:^3.1.1"
     "@docusaurus/preset-classic": "npm:^3.1.1"
     "@docusaurus/tsconfig": "npm:^3.1.1"
-    "@luma.gl/constants": "npm:9.0.0-beta.5"
-    "@luma.gl/core": "npm:9.0.0-beta.5"
-    "@luma.gl/engine": "npm:9.0.0-beta.5"
-    "@luma.gl/shadertools": "npm:9.0.0-beta.5"
-    "@luma.gl/webgl": "npm:9.0.0-beta.5"
-    "@luma.gl/webgpu": "npm:9.0.0-beta.5"
+    "@luma.gl/constants": "npm:^9.0.0"
+    "@luma.gl/core": "npm:^9.0.0"
+    "@luma.gl/engine": "npm:^9.0.0"
+    "@luma.gl/shadertools": "npm:^9.0.0"
+    "@luma.gl/webgl": "npm:^9.0.0"
+    "@luma.gl/webgpu": "npm:^9.0.0"
     "@mdx-js/react": "npm:^3.0.0"
     babel-plugin-styled-components: "npm:^2.0.0"
     clsx: "npm:^1.1.1"
@@ -12887,6 +12891,13 @@ __metadata:
   version: 0.1.4
   resolution: "websocket-extensions@npm:0.1.4"
   checksum: 10c0/bbc8c233388a0eb8a40786ee2e30d35935cacbfe26ab188b3e020987e85d519c2009fe07cfc37b7f718b85afdba7e54654c9153e6697301f72561bfe429177e0
+  languageName: node
+  linkType: hard
+
+"wgsl_reflect@npm:^1.0.1":
+  version: 1.0.8
+  resolution: "wgsl_reflect@npm:1.0.8"
+  checksum: 10c0/e3a02a83fb2aa9fd9e8c17d68fd40aa3d08a247089eca7e4144438170d5d199d9339fd3e1e6481eb398e501d0cd335332f1443604f31a2461b00719716a2113a
   languageName: node
   linkType: hard
 
