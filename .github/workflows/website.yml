@@ -38,6 +38,12 @@ jobs:
 
       - name: Install dependencies
         run: |
+          yarn install
+        env:
+          YARN_ENABLE_IMMUTABLE_INSTALLS: false
+
+      - name: Build code
+        run: |
           yarn bootstrap
           (cd website && yarn)
 
