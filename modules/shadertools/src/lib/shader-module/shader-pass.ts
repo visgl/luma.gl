@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {ShaderModule, UniformValue} from './shader-module';
+import type {Binding} from '@luma.gl/core';
+import type {PickBindings, PickUniforms, ShaderModule} from './shader-module';
+import type {UniformValue} from '../utils/uniform-types';
 
 /**
  * A ShaderPass is a ShaderModule that can be run "standalone" (e.g. post processing effects)
@@ -10,9 +12,10 @@ import type {ShaderModule, UniformValue} from './shader-module';
  * A ShaderPass can require one or more sub passes.
  */
 export type ShaderPass<
-  PropsT extends Record<string, unknown> = Record<string, unknown>,
-  UniformsT extends Record<string, UniformValue> = Record<string, UniformValue>
-> = ShaderModule<PropsT, UniformsT> & {
+  PropsT extends Record<string, any> = Record<string, any>,
+  UniformsT extends Record<string, UniformValue> = PickUniforms<PropsT>,
+  BindingsT extends Record<string, Binding> = PickBindings<PropsT>
+> = ShaderModule<PropsT, UniformsT, BindingsT> & {
   /** A shader pass can run multiple sub passes */
   passes?: ShaderSubPass<UniformsT>[];
   // TODO better name

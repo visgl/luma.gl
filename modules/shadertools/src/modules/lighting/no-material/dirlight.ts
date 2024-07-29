@@ -85,7 +85,7 @@ export const dirlight = {
     lightDirection: 'vec3<f32>'
   },
   defaultUniforms: {
-    lightDirection: new Float32Array([1, 1, 2])
+    lightDirection: [1, 1, 2]
   },
   getUniforms
 } as const satisfies ShaderModule<DirlightProps, DirlightUniforms>;

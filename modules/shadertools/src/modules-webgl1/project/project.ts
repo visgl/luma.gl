@@ -2,19 +2,20 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Matrix4} from '@math.gl/core';
+import {Vector3, Matrix4} from '@math.gl/core';
 import {ShaderModule} from '../../lib/shader-module/shader-module';
+import type {NumberArray3, NumberArray16} from '../../lib/utils/uniform-types';
 
 type ProjectionProps = {
-  modelMatrix?: readonly number[];
-  viewMatrix?: readonly number[];
-  projectionMatrix?: readonly number[];
-  cameraPositionWorld?: readonly number[];
+  modelMatrix?: Readonly<Matrix4 | NumberArray16>;
+  viewMatrix?: Readonly<Matrix4 | NumberArray16>;
+  projectionMatrix?: Readonly<Matrix4 | NumberArray16>;
+  cameraPositionWorld?: Readonly<Vector3 | NumberArray3>;
 };
 
-const IDENTITY_MATRIX = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+const IDENTITY_MATRIX: NumberArray16 = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
 
-const DEFAULT_MODULE_OPTIONS = {
+const DEFAULT_MODULE_OPTIONS: ProjectionProps = {
   modelMatrix: IDENTITY_MATRIX,
   viewMatrix: IDENTITY_MATRIX,
   projectionMatrix: IDENTITY_MATRIX,

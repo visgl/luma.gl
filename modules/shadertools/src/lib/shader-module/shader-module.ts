@@ -2,39 +2,44 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {NumericArray} from '@math.gl/types';
-import {Sampler, Texture} from '@luma.gl/core';
-import type {UniformFormat} from '../../types';
-import {
-  PropType,
-  PropValidator,
-  makePropValidators,
-  getValidatedProperties
-} from '../filters/prop-types';
-import {ShaderInjection, normalizeInjections} from '../shader-assembly/shader-injections';
+import {UniformFormat} from '../../types';
+import {PropType} from '../filters/prop-types';
+import type {UniformTypes, UniformValue} from '../utils/uniform-types';
 
-export type BindingValue = Buffer | Texture | Sampler;
-export type UniformValue = number | boolean | Readonly<NumericArray>;
-// Float32Array> | Readonly<Int32Array> | Readonly<Uint32Array> | Readonly<number[]>;
+// To avoid dependency on core module, do not import `Binding` type.
+// The ShaderModule is not concerned with the type of `Binding`,
+// it is the repsonsibility of `splitUniformsAndBindings` in
+// ShaderInputs to type the result of `getUniforms()`
+type Binding = unknown; // import type {Binding} from '@luma.gl/core';
 
 export type UniformInfo = {
   format?: UniformFormat;
 } & PropType;
 
+// Helper types
+type BindingKeys<T> = {[K in keyof T]: T[K] extends UniformValue ? never : K}[keyof T];
+type UniformKeys<T> = {[K in keyof T]: T[K] extends UniformValue ? K : never}[keyof T];
+export type PickBindings<T> = {[K in BindingKeys<Required<T>>]: T[K]};
+export type PickUniforms<T> = {[K in UniformKeys<Required<T>>]: T[K]};
+
 /**
  * A shader module definition object
  *
  * @note Needs to be initialized with `initializeShaderModules`
+ * @note `UniformsT` & `BindingsT` are deduced from `PropsT` by default. If
+ * a custom type for `UniformsT` is used, `BindingsT` should be also be provided.
  */
 export type ShaderModule<
-  PropsT extends Record<string, unknown> = Record<string, unknown>,
-  UniformsT extends Record<string, UniformValue> = Record<string, UniformValue>,
-  BindingsT extends Record<string, BindingValue> = Record<string, BindingValue>
+  PropsT extends Record<string, any> = Record<string, any>,
+  UniformsT extends Record<string, UniformValue> = PickUniforms<PropsT>,
+  BindingsT extends Record<string, Binding> = PickBindings<PropsT>
 > = {
   /** Used for type inference not for values */
   props?: PropsT;
   /** Used for type inference, not currently used for values */
   uniforms?: UniformsT;
+  /** Used for type inference, not currently used for values */
+  bindings?: BindingsT;
 
   name: string;
 
@@ -46,17 +51,17 @@ export type ShaderModule<
   vs?: string;
 
   /** Uniform shader types @note: Both order and types MUST match uniform block declarations in shader */
-  uniformTypes?: Record<keyof UniformsT, UniformFormat>;
+  uniformTypes?: Required<UniformTypes<UniformsT>>; // Record<keyof UniformsT, UniformFormat>;
   /** Uniform JS prop types  */
   propTypes?: Record<keyof UniformsT, UniformInfo>;
   /** Default uniform values */
   defaultUniforms?: Required<UniformsT>; // Record<keyof UniformsT, UniformValue>;
 
   /** Function that maps props to uniforms & bindings */
-  getUniforms?: (props?: any, oldProps?: any) => Record<string, BindingValue | UniformValue>;
-
-  /** uniform buffers, textures, samplers, storage, ... */
-  bindings?: Record<keyof BindingsT, {location: number; type: 'texture' | 'sampler' | 'uniforms'}>;
+  getUniforms?: (
+    props?: Partial<PropsT>,
+    prevUniforms?: UniformsT
+  ) => Partial<UniformsT & BindingsT>;
 
   defines?: Record<string, string | number>;
   /** Injections */
