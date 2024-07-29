@@ -97,7 +97,7 @@ export function initializeTextureStorage(
 ): void {
   const {dimension, width, height, depth = 0} = options;
   const {glInternalFormat} = options;
-  const glTarget = options.glTarget; // getCubeTargetWebGL(options.glTarget, dimension, depth);
+  const glTarget = options.glTarget; // getWebGLCubeFaceTarget(options.glTarget, dimension, depth);
   switch (dimension) {
     case '2d-array':
     case '3d':
@@ -120,7 +120,7 @@ export function copyCPUImageToMipLevel(
   const {dimension, width, height, depth = 0, level = 0} = options;
   const {x = 0, y = 0, z = 0} = options;
   const {glFormat, glType} = options;
-  const glTarget = getCubeTargetWebGL(options.glTarget, dimension, depth);
+  const glTarget = getWebGLCubeFaceTarget(options.glTarget, dimension, depth);
 
   // width = size.width,
   // height = size.height
@@ -154,7 +154,9 @@ export function copyCPUDataToMipLevel(
   const {dimension, width, height, depth = 0, level = 0, byteOffset = 0} = options;
   const {x = 0, y = 0, z = 0} = options;
   const {glFormat, glType, compressed} = options;
-  const glTarget = getCubeTargetWebGL(options.glTarget, dimension, depth);
+  const glTarget = getWebGLCubeFaceTarget(options.glTarget, dimension, depth);
+
+  // gl.bindTexture(glTarget, null);
 
   switch (dimension) {
     case '2d-array':
@@ -196,7 +198,7 @@ export function copyGPUBufferToMipLevel(
   const {dimension, width, height, depth = 0, level = 0, byteOffset = 0} = options;
   const {x = 0, y = 0, z = 0} = options;
   const {glFormat, glType, compressed} = options;
-  const glTarget = getCubeTargetWebGL(options.glTarget, dimension, depth);
+  const glTarget = getWebGLCubeFaceTarget(options.glTarget, dimension, depth);
 
   gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, webglBuffer);
 
@@ -250,9 +252,10 @@ export function getWebGLTextureTarget(
 
 /**
  * In WebGL, cube maps specify faces by overriding target instead of using the depth parameter.
+ * @note We still bind the texture using GL.TEXTURE_CUBE_MAP, but we need to use the face-specific target when setting mip levels.
  * @returns glTarget unchanged, if dimension !== 'cube'.
  */
-function getCubeTargetWebGL(
+function getWebGLCubeFaceTarget(
   glTarget: GLTextureTarget,
   dimension: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d',
   level: number
@@ -269,7 +272,7 @@ function getCubeTargetWebGL(
 export function clearMipLevel(gl: WebGL2RenderingContext, options: WebGLSetTextureOptions): void {
   const {dimension, width, height, depth = 0, level = 0} = options;
   const {glInternalFormat, glFormat, glType, compressed} = options;
-  const glTarget = getCubeTargetWebGL(options.glTarget, dimension, depth);
+  const glTarget = getWebGLCubeFaceTarget(options.glTarget, dimension, depth);
 
   switch (dimension) {
     case '2d-array':
@@ -312,7 +315,7 @@ export function setMipLevelFromExternalImage(
   const {dimension, width, height, depth = 0, level = 0} = options;
   const {glInternalFormat, glType} = options;
 
-  const glTarget = getCubeTargetWebGL(options.glTarget, dimension, depth);
+  const glTarget = getWebGLCubeFaceTarget(options.glTarget, dimension, depth);
 
   // TODO - we can't change texture width (due to WebGPU limitations) -
   // and the width/heigh of an external image is implicit, so why do we need to extract it?
@@ -363,7 +366,7 @@ export function setMipLevelFromTypedArray(
   const {dimension, width, height, depth = 0, level = 0, offset = 0} = options;
   const {glInternalFormat, glFormat, glType, compressed} = options;
 
-  const glTarget = getCubeTargetWebGL(options.glTarget, dimension, depth);
+  const glTarget = getWebGLCubeFaceTarget(options.glTarget, dimension, depth);
 
   withGLParameters(gl, parameters, () => {
     switch (dimension) {
@@ -442,7 +445,7 @@ export function setMipLevelFromGPUBuffer(
 ): void {
   const {dimension, width, height, depth = 0, level = 0, byteOffset = 0} = options;
   const {glInternalFormat, glFormat, glType, compressed} = options;
-  const glTarget = getCubeTargetWebGL(options.glTarget, dimension, depth);
+  const glTarget = getWebGLCubeFaceTarget(options.glTarget, dimension, depth);
 
   const webglBuffer = buffer as WEBGLBuffer;
   const imageSize = buffer.byteLength;

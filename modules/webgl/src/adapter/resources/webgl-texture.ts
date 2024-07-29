@@ -339,7 +339,7 @@ export class WEBGLTexture extends Texture {
   }
 
   /** Set a simple texture */
-  setTexture2DData(lodData: Texture2DData, depth = 0, glTarget = this.glTarget): void {
+  setTexture2DData(lodData: Texture2DData, depth = 0): void {
     this.bind();
 
     const lodArray = normalizeTextureData(lodData, this);
@@ -367,7 +367,9 @@ export class WEBGLTexture extends Texture {
       throw new Error(this.id);
     }
     if (ArrayBuffer.isView(data)) {
+      this.bind();
       copyCPUDataToMipLevel(this.device.gl, data, this);
+      this.unbind();
     }
   }
 
@@ -381,9 +383,9 @@ export class WEBGLTexture extends Texture {
     if (this.props.dimension !== 'cube') {
       throw new Error(this.id);
     }
-    // for (const face of Texture.CubeFaces) {
-    //   // this.setTextureCubeFaceData(face, data[face]);
-    // }
+    for (const face of Texture.CubeFaces) {
+      this.setTextureCubeFaceData(data[face], face);
+    }
   }
 
   /**
@@ -414,27 +416,9 @@ export class WEBGLTexture extends Texture {
       log.warn(`${this.id} has mipmap and multiple LODs.`)();
     }
 
-    // const glFace = GL.TEXTURE_CUBE_MAP_POSITIVE_X + Texture.CubeFaces.indexOf(face);
-    // const glType = GL.UNSIGNED_BYTE;
-    // const {width, height, format = GL.RGBA, type = GL.UNSIGNED_BYTE} = this;
-    // const {width, height, format = GL.RGBA, type = GL.UNSIGNED_BYTE} = this;
+    const faceDepth = Texture.CubeFaces.indexOf(face);
 
-    this.bind();
-    // for (let lodLevel = 0; lodLevel < lodData.length; lodLevel++) {
-    //   const imageData = lodData[lodLevel];
-    //   if (imageData instanceof ArrayBuffer) {
-    //     // const imageData = image instanceof ArrayBuffer ? new ImageData(new Uint8ClampedArray(image), this.width) : image;
-    //     this.device.gl.texImage2D?.(
-    //       glFace,
-    //       lodLevel,
-    //       this.glInternalFormat,
-    //       this.glInternalFormat,
-    //       glType,
-    //       imageData
-    //     );
-    //   }
-    // }
-    this.unbind();
+    this.setTexture2DData(lodData, faceDepth);
   }
 
   // INTERNAL METHODS
@@ -592,14 +576,19 @@ export class WEBGLTexture extends Texture {
    * Copy a region of data from a CPU memory buffer into this texture.
    * @todo -   GLUnpackParameters parameters
    */
-  protected _setMipLevel(depth: number, level: number, textureData: Texture2DData, offset = 0) {
+  protected _setMipLevel(
+    depth: number,
+    level: number,
+    textureData: Texture2DData,
+    glTarget: GL = this.glTarget
+  ) {
     // if (!textureData) {
     //   clearMipLevel(this.device.gl, {...this, depth, level});
     //   return;
     // }
 
     if (Texture.isExternalImage(textureData)) {
-      copyCPUImageToMipLevel(this.device.gl, textureData, {...this, depth, level});
+      copyCPUImageToMipLevel(this.device.gl, textureData, {...this, depth, level, glTarget});
       return;
     }
 
@@ -608,7 +597,8 @@ export class WEBGLTexture extends Texture {
       copyCPUDataToMipLevel(this.device.gl, textureData.data, {
         ...this,
         depth,
-        level
+        level,
+        glTarget
       });
       return;
     }

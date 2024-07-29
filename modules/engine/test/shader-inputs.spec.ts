@@ -64,6 +64,35 @@ test('ShaderInputs#picking prop merge', t => {
   t.end();
 });
 
+test('ShaderInputs#dependencies', t => {
+  type CustomProps = {color: number[]};
+  const custom: ShaderModule<CustomProps> = {
+    name: 'custom',
+    dependencies: [picking],
+    uniformTypes: {color: 'vec3<f32>'},
+    uniformPropTypes: {color: {value: [0, 0, 0]}}
+  };
+
+  const shaderInputs = new ShaderInputs<{
+    custom: CustomProps;
+    picking: typeof picking.props;
+  }>({custom});
+  t.deepEqual(Object.keys(shaderInputs.modules), ['custom', 'picking']);
+
+  shaderInputs.setProps({
+    custom: {color: [255, 0, 0]},
+    picking: {highlightedObjectColor: [1, 2, 3]}
+  });
+  t.deepEqual(shaderInputs.moduleUniforms.custom.color, [255, 0, 0], 'custom color updated');
+  t.deepEqual(
+    shaderInputs.moduleUniforms.picking.highlightedObjectColor,
+    [1, 2, 3],
+    'highlight object color updated'
+  );
+
+  t.end();
+});
+
 test('ShaderInputs#bindings', t => {
   [true, false].map(callback => {
     t.comment(`custom module created ${callback ? 'with' : 'without'} getUniforms()`);
@@ -74,7 +103,9 @@ test('ShaderInputs#bindings', t => {
       uniformPropTypes: {color: {value: [0, 0, 0]}}
     };
     if (callback) {
-      custom.getUniforms = ({color, colorTexture}) => ({color, colorTexture});
+      custom.getUniforms = ({color, colorTexture}: CustomProps): CustomProps => {
+        return {color, colorTexture};
+      };
     }
 
     const shaderInputs = new ShaderInputs<{

@@ -33,13 +33,13 @@ export function readPixelsToArray(
     // following parameters are auto deduced if not provided
     sourceWidth?: number;
     sourceHeight?: number;
+    sourceDepth?: number;
     sourceType?: number;
   }
 ): Uint8Array | Uint16Array | Float32Array {
   const {
     sourceX = 0,
     sourceY = 0,
-    sourceFormat = GL.RGBA,
     sourceAttachment = GL.COLOR_ATTACHMENT0 // TODO - support gl.readBuffer
   } = options || {};
   let {
@@ -47,29 +47,32 @@ export function readPixelsToArray(
     // following parameters are auto deduced if not provided
     sourceWidth,
     sourceHeight,
+    sourceDepth,
+    sourceFormat,
     sourceType
   } = options || {};
 
   const {framebuffer, deleteFramebuffer} = getFramebuffer(source);
   // assert(framebuffer);
   const {gl, handle} = framebuffer;
-  sourceWidth = sourceWidth || framebuffer.width;
-  sourceHeight = sourceHeight || framebuffer.height;
+  const attachment = sourceAttachment - GL.COLOR_ATTACHMENT0;
+
+  sourceWidth ||= framebuffer.width;
+  sourceHeight ||= framebuffer.height;
 
   // TODO - Set and unset gl.readBuffer
   // if (sourceAttachment === GL.COLOR_ATTACHMENT0 && handle === null) {
   //   sourceAttachment = GL.FRONT;
   // }
 
-  const attachment = sourceAttachment - GL.COLOR_ATTACHMENT0;
-  // assert(attachments[sourceAttachment]);
+  sourceDepth = framebuffer.colorAttachments[attachment]?.texture?.depth || 1;
 
+  sourceFormat ||= framebuffer.colorAttachments[attachment]?.texture?.glFormat || GL.RGBA;
   // Deduce the type from color attachment if not provided.
-  sourceType =
-    sourceType || framebuffer.colorAttachments[attachment]?.texture?.glType || GL.UNSIGNED_BYTE;
+  sourceType ||= framebuffer.colorAttachments[attachment]?.texture?.glType || GL.UNSIGNED_BYTE;
 
   // Deduce type and allocated pixelArray if needed
-  target = getPixelArray(target, sourceType, sourceFormat, sourceWidth, sourceHeight);
+  target = getPixelArray(target, sourceType, sourceFormat, sourceWidth, sourceHeight, sourceDepth);
 
   // Pixel array available, if necessary, deduce type from it.
   sourceType = sourceType || getGLTypeFromTypedArray(target);
@@ -299,12 +302,14 @@ export function toFramebuffer(texture: Texture, props?: FramebufferProps): WEBGL
   return framebuffer as WEBGLFramebuffer;
 }
 
+// eslint-disable-next-line max-params
 function getPixelArray(
   pixelArray,
   type,
   format,
   width: number,
-  height: number
+  height: number,
+  depth?: number
 ): Uint8Array | Uint16Array | Float32Array {
   if (pixelArray) {
     return pixelArray;

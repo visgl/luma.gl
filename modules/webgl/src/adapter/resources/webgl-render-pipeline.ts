@@ -112,7 +112,8 @@ export class WEBGLRenderPipeline extends RenderPipeline {
           .join(', ');
         if (!options?.disableWarnings) {
           log.warn(
-            `Unknown binding "${name}" in render pipeline "${this.id}", expected one of ${validBindings}`
+            `No binding "${name}" in render pipeline "${this.id}", expected one of ${validBindings}`,
+            value
           )();
         }
         continue; // eslint-disable-line no-continue

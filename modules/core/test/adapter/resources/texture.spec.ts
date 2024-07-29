@@ -5,11 +5,14 @@
 import test from 'tape-promise/tape';
 import {webglDevice, getTestDevices} from '@luma.gl/test-utils';
 
-import {Device, Texture, TextureFormat} from '@luma.gl/core';
+import {Device, Texture, TextureFormat, decodeTextureFormat, VertexType} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 
 // TODO(v9): Avoid import from `@luma.gl/webgl` in core tests.
-import {TEXTURE_FORMATS} from '@luma.gl/webgl/adapter/converters/texture-formats';
+import {
+  TEXTURE_FORMATS,
+  getTextureFormatWebGL
+} from '../../../../webgl/src/adapter/converters/texture-formats';
 import {SAMPLER_PARAMETERS} from './sampler.spec';
 
 import {WEBGLTexture} from '@luma.gl/webgl/adapter/resources/webgl-texture';
@@ -63,9 +66,45 @@ test('Texture#depth/stencil formats', async t => {
   t.end();
 });
 
-test.skip('Texture#format deduction', async t => {
+test('Texture#format simple creation', async t => {
   for (const device of await getTestDevices()) {
-    testFormatDeduction(t, device);
+    for (const [formatName, formatInfo] of Object.entries(TEXTURE_FORMATS)) {
+      if (['stencil8'].includes(formatName)) {
+        continue;
+      }
+
+      if (device.isTextureFormatSupported(formatName)) {
+        // For compressed textures there may be a block size that we need to be a multiple of
+        const decodedFormat = decodeTextureFormat(formatName);
+        const width = decodedFormat.blockWidth ?? 4;
+        const height = decodedFormat.blockHeight ?? 4;
+
+        let texture: Texture;
+        t.doesNotThrow(() => {
+          texture = device.createTexture({
+            format: formatName,
+            height,
+            width
+          });
+        }, `Texture(${device.type},${formatName}) creation OK`);
+
+        t.equals(texture.format, formatName, `Texture(${device.type},${formatName}).format OK`);
+        if (device.type === 'webgl') {
+          // const formatInfo = getTextureFormatWebGL(forma)
+          const expectedInternalFormat = formatInfo.gl;
+          t.equals(
+            texture.glInternalFormat,
+            expectedInternalFormat,
+            `Texture(${device.type},${formatName}).glInternal OK`
+          );
+          // const expectedType = formatInfo.types?.[0];
+          // const expectedDataFormat = formatInfo.dataFormat;
+          // t.equals(texture.glType, expectedType, `Texture(${formatName}).type OK`);
+          // t.equals(texture.glFormat, expectedDataFormat, `Texture(${formatName}).glFormat OK`);
+        }
+        texture.destroy();
+      }
+    }
   }
   t.end();
 });
@@ -74,15 +113,18 @@ const DEFAULT_TEXTURE_DATA = new Uint8Array([
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 ]);
 const DATA = [1, 0.5, 0.25, 0.125];
-const UINT8_DATA = new Uint8Array(DATA);
-const UINT16_DATA = new Uint16Array(DATA);
-const FLOAT_DATA = new Float32Array(DATA);
-const TEXTURE_DATA = {
-  [GL.UNSIGNED_BYTE]: UINT8_DATA, // RGB_TO[GL.UNSIGNED_BYTE](DATA)),
-  [GL.UNSIGNED_SHORT_5_6_5]: UINT16_DATA, // RGB_TO[GL.UNSIGNED_SHORT_5_6_5](DATA))
-  [GL.UNSIGNED_SHORT_4_4_4_4]: UINT16_DATA, // RGB_TO[GL.UNSIGNED_SHORT_5_6_5](DATA))
-  [GL.UNSIGNED_SHORT_5_5_5_1]: UINT16_DATA, // RGB_TO[GL.UNSIGNED_SHORT_5_6_5](DATA))
-  [GL.FLOAT]: FLOAT_DATA
+const TEXTURE_DATA: Record<VertexType, any> = {
+  uint8: new Uint8Array(DATA),
+  sint8: new Int8Array(DATA),
+  uint16: new Uint16Array(DATA),
+  sint16: new Int16Array(DATA),
+  uint32: new Uint32Array(DATA),
+  sint32: new Int32Array(DATA),
+  // [GL.UNSIGNED_SHORT_5_6_5]: UINT16_DATA, // RGB_TO[GL.UNSIGNED_SHORT_5_6_5](DATA))
+  // [GL.UNSIGNED_SHORT_4_4_4_4]: UINT16_DATA, // RGB_TO[GL.UNSIGNED_SHORT_5_6_5](DATA))
+  // [GL.UNSIGNED_SHORT_5_5_5_1]: UINT16_DATA, // RGB_TO[GL.UNSIGNED_SHORT_5_6_5](DATA))
+  float16: new Uint16Array(DATA),
+  float32: new Float32Array(DATA)
 };
 // const RGB_TO = {
 //   [GL.UNSIGNED_BYTE]: (r, g, b) => [r * 256, g * 256, b * 256],
@@ -94,14 +136,27 @@ const TEXTURE_DATA = {
 // };
 
 function testFormatCreation(t, device: Device, withData: boolean = false) {
-  for (const [textureFormat, formatInfo] of Object.entries(TEXTURE_FORMATS)) {
-    const format = textureFormat as TextureFormat;
+  for (const [formatName, formatInfo] of Object.entries(TEXTURE_FORMATS)) {
+    const format = formatName as TextureFormat;
+
+    const decodedFormat = decodeTextureFormat(formatName);
+    const {dataType, packed, bitsPerChannel} = decodedFormat;
+
+    // WebGPU texture can currently only be set from 8 bit data
+    const notImplemented = device.type === 'webgpu' && bitsPerChannel !== 8;
+    console.log(formatName, bitsPerChannel);
+
+    if (['stencil8'].includes(formatName) || notImplemented) {
+      continue;
+    }
+
     if (device.isTextureFormatSupported(format)) {
       try {
-        const data = withData ? TEXTURE_DATA[type] || DEFAULT_TEXTURE_DATA : null;
+        const data = withData && !packed ? TEXTURE_DATA[dataType] || DEFAULT_TEXTURE_DATA : null;
         // TODO: for some reason mipmap generation failing for RGB32F format
         const mipmaps =
           device.isTextureFormatRenderable(format) && device.isTextureFormatFilterable(format);
+
         const sampler = mipmaps
           ? {
               magFilter: 'linear',
@@ -122,73 +177,31 @@ function testFormatCreation(t, device: Device, withData: boolean = false) {
         t.equals(
           texture.props.format,
           format,
-          `Texture(${format}) created with mipmaps=${mipmaps}`
+          `Texture(${device.type},${format}) created with mipmaps=${mipmaps}`
         );
         texture.destroy();
       } catch (error) {
-        t.comment(`Texture(${format}) creation FAILED ${error}`);
+        t.comment(`Texture(${device.type},${format}) creation FAILED ${error}`);
       }
     } else {
-      t.comment(`Texture(${format}) not supported in ${device.type}`);
+      t.comment(`Texture(${device.type},${format}) not supported in ${device.type}`);
     }
   }
 }
 
-function testFormatDeduction(t, device: Device) {
-  for (const [formatName, formatInfo] of Object.entries(TEXTURE_FORMATS)) {
-    const expectedType = formatInfo.types[0];
-    const expectedDataFormat = formatInfo.dataFormat;
-    const options = {
-      format: Number(format),
-      height: 1,
-      width: 1
-    };
-    if (device.isTextureFormatSupported({format})) {
-      const texture = device.createTexture(options);
-      const msg = `Texture({format: ${device.getGLKey(format)}}) created`;
-      t.equals(texture.format, Number(format), msg);
-      t.equals(texture.type, expectedType, msg);
-      t.equals(texture.dataFormat, expectedDataFormat, msg);
-      texture.destroy();
-    }
-  }
-}
+// test.skip('Texture#format creation', async t => {
+//   for (const device of await getTestDevices()) {
+//     testFormatCreation(t, device);
+//   }
+//   t.end();
+// });
 
-test.skip('Texture#format deduction', async t => {
-  for (const device of await getTestDevices()) {
-    testFormatDeduction(t, device);
-  }
-  t.end();
-});
-
-test.skip('Texture#format creation', async t => {
-  for (const device of await getTestDevices()) {
-    testFormatCreation(t, device);
-  }
-  t.end();
-});
-
-test.skip('Texture#format creation with data', async t => {
+test('Texture#format creation with data', async t => {
   for (const device of await getTestDevices()) {
     testFormatCreation(t, device, true);
   }
   t.end();
 });
-
-/*
-test.skip('Texture#WebGL2 format creation', t => {
-
-  for (const format in TEXTURE_FORMATS) {
-  }
-  let texture = webglDevice.createTexture({});
-  t.ok(texture instanceof Texture, 'Texture construction successful');
-
-  texture = texture.destroy();
-  t.ok(texture instanceof Texture, 'Texture delete successful');
-
-  t.end();
-});
-*/
 
 test.skip('Texture#setParameters', t => {
   const texture = webglDevice.createTexture({});

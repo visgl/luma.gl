@@ -60,7 +60,7 @@ export class WEBGLShader extends Shader {
   /** Compile a shader and get compilation status */
   protected async _compile(source: string): Promise<void> {
     const addGLSLVersion = (source: string) =>
-      source.startsWith('#version ') ? source : `#version 100\n${source}`;
+      source.startsWith('#version ') ? source : `#version 300 es\n${source}`;
     source = addGLSLVersion(source);
 
     const {gl} = this.device;

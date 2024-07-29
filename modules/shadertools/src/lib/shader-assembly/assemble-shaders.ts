@@ -333,6 +333,7 @@ ${sourceVersionDirective}
 // ----- PROLOGUE -------------------------
 ${getShaderNameDefine({id, source, stage})}
 ${`#define SHADER_TYPE_${stage.toUpperCase()}`}
+
 ${getPlatformShaderDefines(platformInfo)}
 ${stage === 'fragment' ? FRAGMENT_SHADER_PROLOGUE : ''}
 
@@ -354,7 +355,6 @@ ${getApplicationDefines(allDefines)}
   const mainInjections: Record<string, ShaderInjection[]> = {};
 
   for (const key in inject) {
-    // @ts-expect-error
     const injection: ShaderInjection =
       typeof inject[key] === 'string' ? {injection: inject[key], order: 0} : inject[key];
     const match = /^(v|f)s:(#)?([\w-]+)$/.exec(key);
@@ -456,9 +456,7 @@ function getShaderNameDefine(options: {
   const injectShaderName = id && source.indexOf('SHADER_NAME') === -1;
   return injectShaderName
     ? `
-#define SHADER_NAME ${id}_${stage}
-
-`
+#define SHADER_NAME ${id}_${stage}`
     : '';
 }
 

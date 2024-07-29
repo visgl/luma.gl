@@ -130,11 +130,17 @@ export class AsyncTexture {
 async function awaitAllPromises(x: any): Promise<any> {
   x = await x;
   if (Array.isArray(x)) {
-    return x.map(awaitAllPromises);
+    return await Promise.all(x.map(awaitAllPromises));
   }
   if (x && typeof x === 'object' && x.constructor === Object) {
-    const entries = Object.entries(x).map(([key, value]) => [key, awaitAllPromises(value)]);
-    return Object.fromEntries(entries);
+    const object: Record<string, any> = x;
+    const values = await Promise.all(Object.values(object));
+    const keys = Object.keys(object);
+    const resolvedObject: Record<string, any> = {};
+    for (let i = 0; i < keys.length; i++) {
+      resolvedObject[keys[i]] = values[i];
+    }
+    return resolvedObject;
   }
   return x;
 }
