@@ -3,7 +3,7 @@ import type {ShaderUniformType, NumberArray} from '@luma.gl/core';
 import {Device, Framebuffer} from '@luma.gl/core';
 import type {AnimationProps, ModelProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate, CubeGeometry, Timeline, Model, _ShaderInputs} from '@luma.gl/engine';
-// @ts-expect-error TODO - ib added this to solve module resolution mess
+// @ts-ignore TODO - ib added this to solve module resolution mess
 import {makeRandomGenerator} from '@luma.gl/engine';
 import {picking, dirlight} from '@luma.gl/shadertools';
 import {Matrix4, radians} from '@math.gl/core';
