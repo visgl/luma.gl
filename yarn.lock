@@ -1566,13 +1566,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@esbuild/aix-ppc64@npm:0.21.5":
-  version: 0.21.5
-  resolution: "@esbuild/aix-ppc64@npm:0.21.5"
-  conditions: os=aix & cpu=ppc64
-  languageName: node
-  linkType: hard
-
 "@esbuild/android-arm64@npm:0.16.17":
   version: 0.16.17
   resolution: "@esbuild/android-arm64@npm:0.16.17"
@@ -1583,13 +1576,6 @@ __metadata:
 "@esbuild/android-arm64@npm:0.18.20":
   version: 0.18.20
   resolution: "@esbuild/android-arm64@npm:0.18.20"
-  conditions: os=android & cpu=arm64
-  languageName: node
-  linkType: hard
-
-"@esbuild/android-arm64@npm:0.21.5":
-  version: 0.21.5
-  resolution: "@esbuild/android-arm64@npm:0.21.5"
   conditions: os=android & cpu=arm64
   languageName: node
   linkType: hard
@@ -1608,13 +1594,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@esbuild/android-arm@npm:0.21.5":
-  version: 0.21.5
-  resolution: "@esbuild/android-arm@npm:0.21.5"
-  conditions: os=android & cpu=arm
-  languageName: node
-  linkType: hard
-
 "@esbuild/android-x64@npm:0.16.17":
   version: 0.16.17
   resolution: "@esbuild/android-x64@npm:0.16.17"
@@ -1625,13 +1604,6 @@ __metadata:
 "@esbuild/android-x64@npm:0.18.20":
   version: 0.18.20
   resolution: "@esbuild/android-x64@npm:0.18.20"
-  conditions: os=android & cpu=x64
-  languageName: node
-  linkType: hard
-
-"@esbuild/android-x64@npm:0.21.5":
-  version: 0.21.5
-  resolution: "@esbuild/android-x64@npm:0.21.5"
   conditions: os=android & cpu=x64
   languageName: node
   linkType: hard
@@ -1650,13 +1622,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@esbuild/darwin-arm64@npm:0.21.5":
-  version: 0.21.5
-  resolution: "@esbuild/darwin-arm64@npm:0.21.5"
-  conditions: os=darwin & cpu=arm64
-  languageName: node
-  linkType: hard
-
 "@esbuild/darwin-x64@npm:0.16.17":
   version: 0.16.17
   resolution: "@esbuild/darwin-x64@npm:0.16.17"
@@ -1667,13 +1632,6 @@ __metadata:
 "@esbuild/darwin-x64@npm:0.18.20":
   version: 0.18.20
   resolution: "@esbuild/darwin-x64@npm:0.18.20"
-  conditions: os=darwin & cpu=x64
-  languageName: node
-  linkType: hard
-
-"@esbuild/darwin-x64@npm:0.21.5":
-  version: 0.21.5
-  resolution: "@esbuild/darwin-x64@npm:0.21.5"
   conditions: os=darwin & cpu=x64
   languageName: node
   linkType: hard
@@ -1692,13 +1650,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@esbuild/freebsd-arm64@npm:0.21.5":
-  version: 0.21.5
-  resolution: "@esbuild/freebsd-arm64@npm:0.21.5"
-  conditions: os=freebsd & cpu=arm64
-  languageName: node
-  linkType: hard
-
 "@esbuild/freebsd-x64@npm:0.16.17":
   version: 0.16.17
   resolution: "@esbuild/freebsd-x64@npm:0.16.17"
@@ -1709,13 +1660,6 @@ __metadata:
 "@esbuild/freebsd-x64@npm:0.18.20":
   version: 0.18.20
   resolution: "@esbuild/freebsd-x64@npm:0.18.20"
-  conditions: os=freebsd & cpu=x64
-  languageName: node
-  linkType: hard
-
-"@esbuild/freebsd-x64@npm:0.21.5":
-  version: 0.21.5
-  resolution: "@esbuild/freebsd-x64@npm:0.21.5"
   conditions: os=freebsd & cpu=x64
   languageName: node
   linkType: hard
@@ -1734,13 +1678,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@esbuild/linux-arm64@npm:0.21.5":
-  version: 0.21.5
-  resolution: "@esbuild/linux-arm64@npm:0.21.5"
-  conditions: os=linux & cpu=arm64
-  languageName: node
-  linkType: hard
-
 "@esbuild/linux-arm@npm:0.16.17":
   version: 0.16.17
   resolution: "@esbuild/linux-arm@npm:0.16.17"
@@ -1751,13 +1688,6 @@ __metadata:
 "@esbuild/linux-arm@npm:0.18.20":
   version: 0.18.20
   resolution: "@esbuild/linux-arm@npm:0.18.20"
-  conditions: os=linux & cpu=arm
-  languageName: node
-  linkType: hard
-
-"@esbuild/linux-arm@npm:0.21.5":
-  version: 0.21.5
-  resolution: "@esbuild/linux-arm@npm:0.21.5"
   conditions: os=linux & cpu=arm
   languageName: node
   linkType: hard
@@ -1776,13 +1706,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@esbuild/linux-ia32@npm:0.21.5":
-  version: 0.21.5
-  resolution: "@esbuild/linux-ia32@npm:0.21.5"
-  conditions: os=linux & cpu=ia32
-  languageName: node
-  linkType: hard
-
 "@esbuild/linux-loong64@npm:0.16.17":
   version: 0.16.17
   resolution: "@esbuild/linux-loong64@npm:0.16.17"
@@ -1793,13 +1716,6 @@ __metadata:
 "@esbuild/linux-loong64@npm:0.18.20":
   version: 0.18.20
   resolution: "@esbuild/linux-loong64@npm:0.18.20"
-  conditions: os=linux & cpu=loong64
-  languageName: node
-  linkType: hard
-
-"@esbuild/linux-loong64@npm:0.21.5":
-  version: 0.21.5
-  resolution: "@esbuild/linux-loong64@npm:0.21.5"
   conditions: os=linux & cpu=loong64
   languageName: node
   linkType: hard
@@ -1818,13 +1734,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@esbuild/linux-mips64el@npm:0.21.5":
-  version: 0.21.5
-  resolution: "@esbuild/linux-mips64el@npm:0.21.5"
-  conditions: os=linux & cpu=mips64el
-  languageName: node
-  linkType: hard
-
 "@esbuild/linux-ppc64@npm:0.16.17":
   version: 0.16.17
   resolution: "@esbuild/linux-ppc64@npm:0.16.17"
@@ -1835,13 +1744,6 @@ __metadata:
 "@esbuild/linux-ppc64@npm:0.18.20":
   version: 0.18.20
   resolution: "@esbuild/linux-ppc64@npm:0.18.20"
-  conditions: os=linux & cpu=ppc64
-  languageName: node
-  linkType: hard
-
-"@esbuild/linux-ppc64@npm:0.21.5":
-  version: 0.21.5
-  resolution: "@esbuild/linux-ppc64@npm:0.21.5"
   conditions: os=linux & cpu=ppc64
   languageName: node
   linkType: hard
@@ -1860,13 +1762,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@esbuild/linux-riscv64@npm:0.21.5":
-  version: 0.21.5
-  resolution: "@esbuild/linux-riscv64@npm:0.21.5"
-  conditions: os=linux & cpu=riscv64
-  languageName: node
-  linkType: hard
-
 "@esbuild/linux-s390x@npm:0.16.17":
   version: 0.16.17
   resolution: "@esbuild/linux-s390x@npm:0.16.17"
@@ -1877,13 +1772,6 @@ __metadata:
 "@esbuild/linux-s390x@npm:0.18.20":
   version: 0.18.20
   resolution: "@esbuild/linux-s390x@npm:0.18.20"
-  conditions: os=linux & cpu=s390x
-  languageName: node
-  linkType: hard
-
-"@esbuild/linux-s390x@npm:0.21.5":
-  version: 0.21.5
-  resolution: "@esbuild/linux-s390x@npm:0.21.5"
   conditions: os=linux & cpu=s390x
   languageName: node
   linkType: hard
@@ -1902,13 +1790,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@esbuild/linux-x64@npm:0.21.5":
-  version: 0.21.5
-  resolution: "@esbuild/linux-x64@npm:0.21.5"
-  conditions: os=linux & cpu=x64
-  languageName: node
-  linkType: hard
-
 "@esbuild/netbsd-x64@npm:0.16.17":
   version: 0.16.17
   resolution: "@esbuild/netbsd-x64@npm:0.16.17"
@@ -1919,13 +1800,6 @@ __metadata:
 "@esbuild/netbsd-x64@npm:0.18.20":
   version: 0.18.20
   resolution: "@esbuild/netbsd-x64@npm:0.18.20"
-  conditions: os=netbsd & cpu=x64
-  languageName: node
-  linkType: hard
-
-"@esbuild/netbsd-x64@npm:0.21.5":
-  version: 0.21.5
-  resolution: "@esbuild/netbsd-x64@npm:0.21.5"
   conditions: os=netbsd & cpu=x64
   languageName: node
   linkType: hard
@@ -1944,13 +1818,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@esbuild/openbsd-x64@npm:0.21.5":
-  version: 0.21.5
-  resolution: "@esbuild/openbsd-x64@npm:0.21.5"
-  conditions: os=openbsd & cpu=x64
-  languageName: node
-  linkType: hard
-
 "@esbuild/sunos-x64@npm:0.16.17":
   version: 0.16.17
   resolution: "@esbuild/sunos-x64@npm:0.16.17"
@@ -1961,13 +1828,6 @@ __metadata:
 "@esbuild/sunos-x64@npm:0.18.20":
   version: 0.18.20
   resolution: "@esbuild/sunos-x64@npm:0.18.20"
-  conditions: os=sunos & cpu=x64
-  languageName: node
-  linkType: hard
-
-"@esbuild/sunos-x64@npm:0.21.5":
-  version: 0.21.5
-  resolution: "@esbuild/sunos-x64@npm:0.21.5"
   conditions: os=sunos & cpu=x64
   languageName: node
   linkType: hard
@@ -1986,13 +1846,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@esbuild/win32-arm64@npm:0.21.5":
-  version: 0.21.5
-  resolution: "@esbuild/win32-arm64@npm:0.21.5"
-  conditions: os=win32 & cpu=arm64
-  languageName: node
-  linkType: hard
-
 "@esbuild/win32-ia32@npm:0.16.17":
   version: 0.16.17
   resolution: "@esbuild/win32-ia32@npm:0.16.17"
@@ -2007,13 +1860,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@esbuild/win32-ia32@npm:0.21.5":
-  version: 0.21.5
-  resolution: "@esbuild/win32-ia32@npm:0.21.5"
-  conditions: os=win32 & cpu=ia32
-  languageName: node
-  linkType: hard
-
 "@esbuild/win32-x64@npm:0.16.17":
   version: 0.16.17
   resolution: "@esbuild/win32-x64@npm:0.16.17"
@@ -2024,13 +1870,6 @@ __metadata:
 "@esbuild/win32-x64@npm:0.18.20":
   version: 0.18.20
   resolution: "@esbuild/win32-x64@npm:0.18.20"
-  conditions: os=win32 & cpu=x64
-  languageName: node
-  linkType: hard
-
-"@esbuild/win32-x64@npm:0.21.5":
-  version: 0.21.5
-  resolution: "@esbuild/win32-x64@npm:0.21.5"
   conditions: os=win32 & cpu=x64
   languageName: node
   linkType: hard
@@ -2449,7 +2288,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@luma.gl/core@npm:9.1.0-alpha.6, @luma.gl/core@workspace:modules/core":
+"@luma.gl/core@workspace:modules/core":
   version: 0.0.0-use.local
   resolution: "@luma.gl/core@workspace:modules/core"
   dependencies:
@@ -2461,7 +2300,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@luma.gl/engine@npm:9.1.0-alpha.6, @luma.gl/engine@workspace:modules/engine":
+"@luma.gl/engine@workspace:modules/engine":
   version: 0.0.0-use.local
   resolution: "@luma.gl/engine@workspace:modules/engine"
   dependencies:
@@ -2475,7 +2314,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@luma.gl/gltf@npm:9.1.0-alpha.6, @luma.gl/gltf@workspace:modules/gltf":
+"@luma.gl/gltf@workspace:modules/gltf":
   version: 0.0.0-use.local
   resolution: "@luma.gl/gltf@workspace:modules/gltf"
   dependencies:
@@ -2516,7 +2355,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@luma.gl/webgl@npm:9.1.0-alpha.6, @luma.gl/webgl@workspace:modules/webgl":
+"@luma.gl/webgl@workspace:modules/webgl":
   version: 0.0.0-use.local
   resolution: "@luma.gl/webgl@workspace:modules/webgl"
   dependencies:
@@ -2528,7 +2367,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@luma.gl/webgpu@npm:9.1.0-alpha.6, @luma.gl/webgpu@workspace:modules/webgpu":
+"@luma.gl/webgpu@workspace:modules/webgpu":
   version: 0.0.0-use.local
   resolution: "@luma.gl/webgpu@workspace:modules/webgpu"
   dependencies:
@@ -3160,134 +2999,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@rollup/pluginutils@npm:>=4.1.0":
-  version: 5.1.0
-  resolution: "@rollup/pluginutils@npm:5.1.0"
-  dependencies:
-    "@types/estree": "npm:^1.0.0"
-    estree-walker: "npm:^2.0.2"
-    picomatch: "npm:^2.3.1"
-  peerDependencies:
-    rollup: ^1.20.0||^2.0.0||^3.0.0||^4.0.0
-  peerDependenciesMeta:
-    rollup:
-      optional: true
-  checksum: 10c0/c7bed15711f942d6fdd3470fef4105b73991f99a478605e13d41888963330a6f9e32be37e6ddb13f012bc7673ff5e54f06f59fd47109436c1c513986a8a7612d
-  languageName: node
-  linkType: hard
-
-"@rollup/rollup-android-arm-eabi@npm:4.19.1":
-  version: 4.19.1
-  resolution: "@rollup/rollup-android-arm-eabi@npm:4.19.1"
-  conditions: os=android & cpu=arm
-  languageName: node
-  linkType: hard
-
-"@rollup/rollup-android-arm64@npm:4.19.1":
-  version: 4.19.1
-  resolution: "@rollup/rollup-android-arm64@npm:4.19.1"
-  conditions: os=android & cpu=arm64
-  languageName: node
-  linkType: hard
-
-"@rollup/rollup-darwin-arm64@npm:4.19.1":
-  version: 4.19.1
-  resolution: "@rollup/rollup-darwin-arm64@npm:4.19.1"
-  conditions: os=darwin & cpu=arm64
-  languageName: node
-  linkType: hard
-
-"@rollup/rollup-darwin-x64@npm:4.19.1":
-  version: 4.19.1
-  resolution: "@rollup/rollup-darwin-x64@npm:4.19.1"
-  conditions: os=darwin & cpu=x64
-  languageName: node
-  linkType: hard
-
-"@rollup/rollup-linux-arm-gnueabihf@npm:4.19.1":
-  version: 4.19.1
-  resolution: "@rollup/rollup-linux-arm-gnueabihf@npm:4.19.1"
-  conditions: os=linux & cpu=arm & libc=glibc
-  languageName: node
-  linkType: hard
-
-"@rollup/rollup-linux-arm-musleabihf@npm:4.19.1":
-  version: 4.19.1
-  resolution: "@rollup/rollup-linux-arm-musleabihf@npm:4.19.1"
-  conditions: os=linux & cpu=arm & libc=musl
-  languageName: node
-  linkType: hard
-
-"@rollup/rollup-linux-arm64-gnu@npm:4.19.1":
-  version: 4.19.1
-  resolution: "@rollup/rollup-linux-arm64-gnu@npm:4.19.1"
-  conditions: os=linux & cpu=arm64 & libc=glibc
-  languageName: node
-  linkType: hard
-
-"@rollup/rollup-linux-arm64-musl@npm:4.19.1":
-  version: 4.19.1
-  resolution: "@rollup/rollup-linux-arm64-musl@npm:4.19.1"
-  conditions: os=linux & cpu=arm64 & libc=musl
-  languageName: node
-  linkType: hard
-
-"@rollup/rollup-linux-powerpc64le-gnu@npm:4.19.1":
-  version: 4.19.1
-  resolution: "@rollup/rollup-linux-powerpc64le-gnu@npm:4.19.1"
-  conditions: os=linux & cpu=ppc64 & libc=glibc
-  languageName: node
-  linkType: hard
-
-"@rollup/rollup-linux-riscv64-gnu@npm:4.19.1":
-  version: 4.19.1
-  resolution: "@rollup/rollup-linux-riscv64-gnu@npm:4.19.1"
-  conditions: os=linux & cpu=riscv64 & libc=glibc
-  languageName: node
-  linkType: hard
-
-"@rollup/rollup-linux-s390x-gnu@npm:4.19.1":
-  version: 4.19.1
-  resolution: "@rollup/rollup-linux-s390x-gnu@npm:4.19.1"
-  conditions: os=linux & cpu=s390x & libc=glibc
-  languageName: node
-  linkType: hard
-
-"@rollup/rollup-linux-x64-gnu@npm:4.19.1":
-  version: 4.19.1
-  resolution: "@rollup/rollup-linux-x64-gnu@npm:4.19.1"
-  conditions: os=linux & cpu=x64 & libc=glibc
-  languageName: node
-  linkType: hard
-
-"@rollup/rollup-linux-x64-musl@npm:4.19.1":
-  version: 4.19.1
-  resolution: "@rollup/rollup-linux-x64-musl@npm:4.19.1"
-  conditions: os=linux & cpu=x64 & libc=musl
-  languageName: node
-  linkType: hard
-
-"@rollup/rollup-win32-arm64-msvc@npm:4.19.1":
-  version: 4.19.1
-  resolution: "@rollup/rollup-win32-arm64-msvc@npm:4.19.1"
-  conditions: os=win32 & cpu=arm64
-  languageName: node
-  linkType: hard
-
-"@rollup/rollup-win32-ia32-msvc@npm:4.19.1":
-  version: 4.19.1
-  resolution: "@rollup/rollup-win32-ia32-msvc@npm:4.19.1"
-  conditions: os=win32 & cpu=ia32
-  languageName: node
-  linkType: hard
-
-"@rollup/rollup-win32-x64-msvc@npm:4.19.1":
-  version: 4.19.1
-  resolution: "@rollup/rollup-win32-x64-msvc@npm:4.19.1"
-  conditions: os=win32 & cpu=x64
-  languageName: node
-  linkType: hard
-
 "@sigstore/bundle@npm:^2.3.2":
   version: 2.3.2
   resolution: "@sigstore/bundle@npm:2.3.2"
@@ -3418,13 +3129,6 @@ __metadata:
   version: 4.2.2
   resolution: "@types/crypto-js@npm:4.2.2"
   checksum: 10c0/760a2078f36f2a3a1089ef367b0d13229876adcf4bcd6e8824d00d9e9bfad8118dc7e6a3cc66322b083535e12be3a29044ccdc9603bfb12519ff61551a3322c6
-  languageName: node
-  linkType: hard
-
-"@types/estree@npm:1.0.5, @types/estree@npm:^1.0.0":
-  version: 1.0.5
-  resolution: "@types/estree@npm:1.0.5"
-  checksum: 10c0/b3b0e334288ddb407c7b3357ca67dbee75ee22db242ca7c56fe27db4e1a31989cb8af48a84dd401deb787fe10cc6b2ab1ee82dc4783be87ededbe3d53c79c70d
   languageName: node
   linkType: hard
 
@@ -5918,86 +5622,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"esbuild@npm:^0.21.3":
-  version: 0.21.5
-  resolution: "esbuild@npm:0.21.5"
-  dependencies:
-    "@esbuild/aix-ppc64": "npm:0.21.5"
-    "@esbuild/android-arm": "npm:0.21.5"
-    "@esbuild/android-arm64": "npm:0.21.5"
-    "@esbuild/android-x64": "npm:0.21.5"
-    "@esbuild/darwin-arm64": "npm:0.21.5"
-    "@esbuild/darwin-x64": "npm:0.21.5"
-    "@esbuild/freebsd-arm64": "npm:0.21.5"
-    "@esbuild/freebsd-x64": "npm:0.21.5"
-    "@esbuild/linux-arm": "npm:0.21.5"
-    "@esbuild/linux-arm64": "npm:0.21.5"
-    "@esbuild/linux-ia32": "npm:0.21.5"
-    "@esbuild/linux-loong64": "npm:0.21.5"
-    "@esbuild/linux-mips64el": "npm:0.21.5"
-    "@esbuild/linux-ppc64": "npm:0.21.5"
-    "@esbuild/linux-riscv64": "npm:0.21.5"
-    "@esbuild/linux-s390x": "npm:0.21.5"
-    "@esbuild/linux-x64": "npm:0.21.5"
-    "@esbuild/netbsd-x64": "npm:0.21.5"
-    "@esbuild/openbsd-x64": "npm:0.21.5"
-    "@esbuild/sunos-x64": "npm:0.21.5"
-    "@esbuild/win32-arm64": "npm:0.21.5"
-    "@esbuild/win32-ia32": "npm:0.21.5"
-    "@esbuild/win32-x64": "npm:0.21.5"
-  dependenciesMeta:
-    "@esbuild/aix-ppc64":
-      optional: true
-    "@esbuild/android-arm":
-      optional: true
-    "@esbuild/android-arm64":
-      optional: true
-    "@esbuild/android-x64":
-      optional: true
-    "@esbuild/darwin-arm64":
-      optional: true
-    "@esbuild/darwin-x64":
-      optional: true
-    "@esbuild/freebsd-arm64":
-      optional: true
-    "@esbuild/freebsd-x64":
-      optional: true
-    "@esbuild/linux-arm":
-      optional: true
-    "@esbuild/linux-arm64":
-      optional: true
-    "@esbuild/linux-ia32":
-      optional: true
-    "@esbuild/linux-loong64":
-      optional: true
-    "@esbuild/linux-mips64el":
-      optional: true
-    "@esbuild/linux-ppc64":
-      optional: true
-    "@esbuild/linux-riscv64":
-      optional: true
-    "@esbuild/linux-s390x":
-      optional: true
-    "@esbuild/linux-x64":
-      optional: true
-    "@esbuild/netbsd-x64":
-      optional: true
-    "@esbuild/openbsd-x64":
-      optional: true
-    "@esbuild/sunos-x64":
-      optional: true
-    "@esbuild/win32-arm64":
-      optional: true
-    "@esbuild/win32-ia32":
-      optional: true
-    "@esbuild/win32-x64":
-      optional: true
-  bin:
-    esbuild: bin/esbuild
-  checksum: 10c0/fa08508adf683c3f399e8a014a6382a6b65542213431e26206c0720e536b31c09b50798747c2a105a4bbba1d9767b8d3615a74c2f7bf1ddf6d836cd11eb672de
-  languageName: node
-  linkType: hard
-
 "escalade@npm:^3.1.1, escalade@npm:^3.1.2":
   version: 3.1.2
   resolution: "escalade@npm:3.1.2"
@@ -6338,13 +5962,6 @@ __metadata:
   version: 0.6.1
   resolution: "estree-walker@npm:0.6.1"
   checksum: 10c0/6dabc855faa04a1ffb17b6a9121b6008ba75ab5a163ad9dc3d7fca05cfda374c5f5e91418d783496620ca75e99a73c40874d8b75f23b4117508cc8bde78e7b41
-  languageName: node
-  linkType: hard
-
-"estree-walker@npm:^2.0.2":
-  version: 2.0.2
-  resolution: "estree-walker@npm:2.0.2"
-  checksum: 10c0/53a6c54e2019b8c914dc395890153ffdc2322781acf4bd7d1a32d7aedc1710807bdcd866ac133903d5629ec601fbb50abe8c2e5553c7f5a0afdd9b6af6c945af
   languageName: node
   linkType: hard
 
@@ -6756,7 +6373,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"fsevents@npm:~2.3.2, fsevents@npm:~2.3.3":
+"fsevents@npm:~2.3.2":
   version: 2.3.3
   resolution: "fsevents@npm:2.3.3"
   dependencies:
@@ -6766,7 +6383,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"fsevents@patch:fsevents@npm%3A~2.3.2#optional!builtin<compat/fsevents>, fsevents@patch:fsevents@npm%3A~2.3.3#optional!builtin<compat/fsevents>":
+"fsevents@patch:fsevents@npm%3A~2.3.2#optional!builtin<compat/fsevents>":
   version: 2.3.3
   resolution: "fsevents@patch:fsevents@npm%3A2.3.3#optional!builtin<compat/fsevents>::version=2.3.3&hash=df0bf1"
   dependencies:
@@ -8739,262 +8356,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"luma.gl-examples-animation@workspace:examples/api/animation":
-  version: 0.0.0-use.local
-  resolution: "luma.gl-examples-animation@workspace:examples/api/animation"
-  dependencies:
-    "@luma.gl/core": "npm:9.1.0-alpha.6"
-    "@luma.gl/engine": "npm:9.1.0-alpha.6"
-    "@luma.gl/shadertools": "npm:9.1.0-alpha.6"
-    "@luma.gl/webgl": "npm:9.1.0-alpha.6"
-    "@math.gl/core": "npm:^4.0.0"
-    typescript: "npm:^5.5.0"
-    vite: "npm:^5.0.0"
-  languageName: unknown
-  linkType: soft
-
-"luma.gl-examples-cubemap@workspace:examples/api/cubemap":
-  version: 0.0.0-use.local
-  resolution: "luma.gl-examples-cubemap@workspace:examples/api/cubemap"
-  dependencies:
-    "@luma.gl/constants": "npm:9.1.0-alpha.6"
-    "@luma.gl/core": "npm:9.1.0-alpha.6"
-    "@luma.gl/engine": "npm:9.1.0-alpha.6"
-    "@luma.gl/shadertools": "npm:9.1.0-alpha.6"
-    "@luma.gl/webgl": "npm:9.1.0-alpha.6"
-    "@math.gl/core": "npm:^4.0.0"
-    typescript: "npm:^5.5.0"
-    vite: "npm:^5.0.0"
-  languageName: unknown
-  linkType: soft
-
-"luma.gl-examples-hello-cube@workspace:examples/tutorials/hello-cube":
-  version: 0.0.0-use.local
-  resolution: "luma.gl-examples-hello-cube@workspace:examples/tutorials/hello-cube"
-  dependencies:
-    "@luma.gl/core": "npm:9.1.0-alpha.6"
-    "@luma.gl/engine": "npm:9.1.0-alpha.6"
-    "@luma.gl/shadertools": "npm:9.1.0-alpha.6"
-    "@luma.gl/webgl": "npm:9.1.0-alpha.6"
-    "@math.gl/core": "npm:^4.0.0"
-    typescript: "npm:^5.5.0"
-    vite: "npm:^5.0.0"
-  languageName: unknown
-  linkType: soft
-
-"luma.gl-examples-hello-gltf@workspace:examples/tutorials/hello-gltf":
-  version: 0.0.0-use.local
-  resolution: "luma.gl-examples-hello-gltf@workspace:examples/tutorials/hello-gltf"
-  dependencies:
-    "@loaders.gl/core": "npm:^4.2.0"
-    "@loaders.gl/gltf": "npm:^4.2.0"
-    "@luma.gl/core": "npm:9.1.0-alpha.6"
-    "@luma.gl/engine": "npm:9.1.0-alpha.6"
-    "@luma.gl/gltf": "npm:9.1.0-alpha.6"
-    "@luma.gl/shadertools": "npm:9.1.0-alpha.6"
-    "@luma.gl/webgl": "npm:9.1.0-alpha.6"
-    "@luma.gl/webgpu": "npm:9.1.0-alpha.6"
-    "@math.gl/core": "npm:^4.0.0"
-    typescript: "npm:^5.5.0"
-    vite: "npm:^5.0.0"
-  languageName: unknown
-  linkType: soft
-
-"luma.gl-examples-hello-instancing-high@workspace:examples/tutorials/hello-instancing":
-  version: 0.0.0-use.local
-  resolution: "luma.gl-examples-hello-instancing-high@workspace:examples/tutorials/hello-instancing"
-  dependencies:
-    "@luma.gl/core": "npm:9.1.0-alpha.6"
-    "@luma.gl/engine": "npm:9.1.0-alpha.6"
-    "@luma.gl/shadertools": "npm:9.1.0-alpha.6"
-    "@luma.gl/webgl": "npm:9.1.0-alpha.6"
-    typescript: "npm:^5.5.0"
-    vite: "npm:^5.0.0"
-  languageName: unknown
-  linkType: soft
-
-"luma.gl-examples-hello-triangle@workspace:examples/tutorials/hello-triangle-geometry":
-  version: 0.0.0-use.local
-  resolution: "luma.gl-examples-hello-triangle@workspace:examples/tutorials/hello-triangle-geometry"
-  dependencies:
-    "@luma.gl/core": "npm:9.1.0-alpha.6"
-    "@luma.gl/engine": "npm:9.1.0-alpha.6"
-    "@luma.gl/shadertools": "npm:9.1.0-alpha.6"
-    "@luma.gl/webgl": "npm:9.1.0-alpha.6"
-    "@luma.gl/webgpu": "npm:9.1.0-alpha.6"
-    typescript: "npm:^5.5.0"
-    vite: "npm:^5.0.0"
-  languageName: unknown
-  linkType: soft
-
-"luma.gl-examples-instancing@workspace:examples/showcase/instancing":
-  version: 0.0.0-use.local
-  resolution: "luma.gl-examples-instancing@workspace:examples/showcase/instancing"
-  dependencies:
-    "@luma.gl/core": "npm:9.1.0-alpha.6"
-    "@luma.gl/engine": "npm:9.1.0-alpha.6"
-    "@luma.gl/shadertools": "npm:9.1.0-alpha.6"
-    "@luma.gl/webgl": "npm:9.1.0-alpha.6"
-    "@luma.gl/webgpu": "npm:9.1.0-alpha.6"
-    "@math.gl/core": "npm:^4.0.0"
-    typescript: "npm:^5.5.0"
-    vite: "npm:^5.0.0"
-  languageName: unknown
-  linkType: soft
-
-"luma.gl-examples-lighting@workspace:examples/tutorials/lighting":
-  version: 0.0.0-use.local
-  resolution: "luma.gl-examples-lighting@workspace:examples/tutorials/lighting"
-  dependencies:
-    "@luma.gl/core": "npm:9.1.0-alpha.6"
-    "@luma.gl/engine": "npm:9.1.0-alpha.6"
-    "@luma.gl/shadertools": "npm:9.1.0-alpha.6"
-    "@luma.gl/webgl": "npm:9.1.0-alpha.6"
-    "@math.gl/core": "npm:^4.0.0"
-    typescript: "npm:^5.5.0"
-    vite: "npm:^5.0.0"
-  languageName: unknown
-  linkType: soft
-
-"luma.gl-examples-persistence@workspace:examples/showcase/persistence":
-  version: 0.0.0-use.local
-  resolution: "luma.gl-examples-persistence@workspace:examples/showcase/persistence"
-  dependencies:
-    "@luma.gl/core": "npm:9.1.0-alpha.6"
-    "@luma.gl/engine": "npm:9.1.0-alpha.6"
-    "@luma.gl/shadertools": "npm:9.1.0-alpha.6"
-    "@luma.gl/webgl": "npm:9.1.0-alpha.6"
-    "@math.gl/core": "npm:^4.0.0"
-    typescript: "npm:^5.5.0"
-    vite: "npm:^5.0.0"
-  languageName: unknown
-  linkType: soft
-
-"luma.gl-examples-shader-hooks@workspace:examples/tutorials/shader-hooks":
-  version: 0.0.0-use.local
-  resolution: "luma.gl-examples-shader-hooks@workspace:examples/tutorials/shader-hooks"
-  dependencies:
-    "@luma.gl/core": "npm:9.1.0-alpha.6"
-    "@luma.gl/engine": "npm:9.1.0-alpha.6"
-    "@luma.gl/shadertools": "npm:9.1.0-alpha.6"
-    "@luma.gl/webgl": "npm:9.1.0-alpha.6"
-    typescript: "npm:^5.5.0"
-    vite: "npm:^5.0.0"
-  languageName: unknown
-  linkType: soft
-
-"luma.gl-examples-shader-modules@workspace:examples/tutorials/shader-modules":
-  version: 0.0.0-use.local
-  resolution: "luma.gl-examples-shader-modules@workspace:examples/tutorials/shader-modules"
-  dependencies:
-    "@luma.gl/core": "npm:9.1.0-alpha.6"
-    "@luma.gl/engine": "npm:9.1.0-alpha.6"
-    "@luma.gl/shadertools": "npm:9.1.0-alpha.6"
-    "@luma.gl/webgl": "npm:9.1.0-alpha.6"
-    typescript: "npm:^5.5.0"
-    vite: "npm:^5.0.0"
-  languageName: unknown
-  linkType: soft
-
-"luma.gl-examples-texture-3d@workspace:examples/api/texture-3d":
-  version: 0.0.0-use.local
-  resolution: "luma.gl-examples-texture-3d@workspace:examples/api/texture-3d"
-  dependencies:
-    "@luma.gl/core": "npm:9.1.0-alpha.6"
-    "@luma.gl/engine": "npm:9.1.0-alpha.6"
-    "@luma.gl/shadertools": "npm:9.1.0-alpha.6"
-    "@luma.gl/webgl": "npm:9.1.0-alpha.6"
-    "@math.gl/core": "npm:^4.0.0"
-    typescript: "npm:^5.5.0"
-    vite: "npm:^5.0.0"
-  languageName: unknown
-  linkType: soft
-
-"luma.gl-examples-webgpu-computeboids@workspace:examples/webgpu/computeboids":
-  version: 0.0.0-use.local
-  resolution: "luma.gl-examples-webgpu-computeboids@workspace:examples/webgpu/computeboids"
-  dependencies:
-    "@luma.gl/core": "npm:9.1.0-alpha.6"
-    "@luma.gl/engine": "npm:9.1.0-alpha.6"
-    "@luma.gl/shadertools": "npm:9.1.0-alpha.6"
-    "@luma.gl/webgpu": "npm:9.1.0-alpha.6"
-    "@math.gl/core": "npm:^4.0.0"
-    typescript: "npm:^5.5.0"
-    vite: "npm:^5.0.0"
-    vite-plugin-string: "npm:^1.1.1"
-  languageName: unknown
-  linkType: soft
-
-"luma.gl-examples-webgpu-hello-triangle@workspace:examples/tutorials/hello-triangle":
-  version: 0.0.0-use.local
-  resolution: "luma.gl-examples-webgpu-hello-triangle@workspace:examples/tutorials/hello-triangle"
-  dependencies:
-    "@luma.gl/core": "npm:9.1.0-alpha.6"
-    "@luma.gl/engine": "npm:9.1.0-alpha.6"
-    "@luma.gl/shadertools": "npm:9.1.0-alpha.6"
-    "@luma.gl/webgpu": "npm:9.1.0-alpha.6"
-    "@math.gl/core": "npm:^4.0.0"
-    typescript: "npm:^5.5.0"
-    vite: "npm:^5.0.0"
-  languageName: unknown
-  linkType: soft
-
-"luma.gl-examples-webgpu-instance-uniforms@workspace:examples/tutorials/hello-instanced-cubes":
-  version: 0.0.0-use.local
-  resolution: "luma.gl-examples-webgpu-instance-uniforms@workspace:examples/tutorials/hello-instanced-cubes"
-  dependencies:
-    "@luma.gl/core": "npm:9.1.0-alpha.6"
-    "@luma.gl/engine": "npm:9.1.0-alpha.6"
-    "@luma.gl/shadertools": "npm:9.1.0-alpha.6"
-    "@luma.gl/webgpu": "npm:9.1.0-alpha.6"
-    "@math.gl/core": "npm:^4.0.0"
-    typescript: "npm:^5.5.0"
-    vite: "npm:^5.0.0"
-  languageName: unknown
-  linkType: soft
-
-"luma.gl-examples-webgpu-rotating-cube@workspace:examples/wip/rotating-cube":
-  version: 0.0.0-use.local
-  resolution: "luma.gl-examples-webgpu-rotating-cube@workspace:examples/wip/rotating-cube"
-  dependencies:
-    "@luma.gl/core": "npm:9.1.0-alpha.6"
-    "@luma.gl/engine": "npm:9.1.0-alpha.6"
-    "@luma.gl/shadertools": "npm:9.1.0-alpha.6"
-    "@luma.gl/webgpu": "npm:9.1.0-alpha.6"
-    "@math.gl/core": "npm:^4.0.0"
-    typescript: "npm:^5.3.0"
-    vite: "npm:^5.0.0"
-  languageName: unknown
-  linkType: soft
-
-"luma.gl-examples-webgpu-textured-cube@workspace:examples/webgpu/textured-cube":
-  version: 0.0.0-use.local
-  resolution: "luma.gl-examples-webgpu-textured-cube@workspace:examples/webgpu/textured-cube"
-  dependencies:
-    "@luma.gl/core": "npm:9.1.0-alpha.6"
-    "@luma.gl/engine": "npm:9.1.0-alpha.6"
-    "@luma.gl/shadertools": "npm:9.1.0-alpha.6"
-    "@luma.gl/webgpu": "npm:9.1.0-alpha.6"
-    "@math.gl/core": "npm:^4.0.0"
-    typescript: "npm:^5.5.0"
-    vite: "npm:^5.0.0"
-  languageName: unknown
-  linkType: soft
-
-"luma.gl-examples-webgpu-two-cubes@workspace:examples/tutorials/hello-two-cubes":
-  version: 0.0.0-use.local
-  resolution: "luma.gl-examples-webgpu-two-cubes@workspace:examples/tutorials/hello-two-cubes"
-  dependencies:
-    "@luma.gl/core": "npm:9.1.0-alpha.6"
-    "@luma.gl/engine": "npm:9.1.0-alpha.6"
-    "@luma.gl/shadertools": "npm:9.1.0-alpha.6"
-    "@luma.gl/webgpu": "npm:9.1.0-alpha.6"
-    "@math.gl/core": "npm:^4.0.0"
-    typescript: "npm:^5.5.0"
-    vite: "npm:^5.0.0"
-  languageName: unknown
-  linkType: soft
-
 "luma.gl-monorepo@workspace:.":
   version: 0.0.0-use.local
   resolution: "luma.gl-monorepo@workspace:."
@@ -10631,7 +9992,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"postcss@npm:^8.4.27, postcss@npm:^8.4.39":
+"postcss@npm:^8.4.27":
   version: 8.4.40
   resolution: "postcss@npm:8.4.40"
   dependencies:
@@ -11411,69 +10772,6 @@ __metadata:
   bin:
     rollup: dist/bin/rollup
   checksum: 10c0/65eddf84bf389ea8e4d4c1614b1c6a298d08f8ae785c0c087e723a879190c8aaddbab4aa3b8a0524551b9036750c9f8bfea27b377798accfd2ba5084ceff5aaa
-  languageName: node
-  linkType: hard
-
-"rollup@npm:^4.13.0":
-  version: 4.19.1
-  resolution: "rollup@npm:4.19.1"
-  dependencies:
-    "@rollup/rollup-android-arm-eabi": "npm:4.19.1"
-    "@rollup/rollup-android-arm64": "npm:4.19.1"
-    "@rollup/rollup-darwin-arm64": "npm:4.19.1"
-    "@rollup/rollup-darwin-x64": "npm:4.19.1"
-    "@rollup/rollup-linux-arm-gnueabihf": "npm:4.19.1"
-    "@rollup/rollup-linux-arm-musleabihf": "npm:4.19.1"
-    "@rollup/rollup-linux-arm64-gnu": "npm:4.19.1"
-    "@rollup/rollup-linux-arm64-musl": "npm:4.19.1"
-    "@rollup/rollup-linux-powerpc64le-gnu": "npm:4.19.1"
-    "@rollup/rollup-linux-riscv64-gnu": "npm:4.19.1"
-    "@rollup/rollup-linux-s390x-gnu": "npm:4.19.1"
-    "@rollup/rollup-linux-x64-gnu": "npm:4.19.1"
-    "@rollup/rollup-linux-x64-musl": "npm:4.19.1"
-    "@rollup/rollup-win32-arm64-msvc": "npm:4.19.1"
-    "@rollup/rollup-win32-ia32-msvc": "npm:4.19.1"
-    "@rollup/rollup-win32-x64-msvc": "npm:4.19.1"
-    "@types/estree": "npm:1.0.5"
-    fsevents: "npm:~2.3.2"
-  dependenciesMeta:
-    "@rollup/rollup-android-arm-eabi":
-      optional: true
-    "@rollup/rollup-android-arm64":
-      optional: true
-    "@rollup/rollup-darwin-arm64":
-      optional: true
-    "@rollup/rollup-darwin-x64":
-      optional: true
-    "@rollup/rollup-linux-arm-gnueabihf":
-      optional: true
-    "@rollup/rollup-linux-arm-musleabihf":
-      optional: true
-    "@rollup/rollup-linux-arm64-gnu":
-      optional: true
-    "@rollup/rollup-linux-arm64-musl":
-      optional: true
-    "@rollup/rollup-linux-powerpc64le-gnu":
-      optional: true
-    "@rollup/rollup-linux-riscv64-gnu":
-      optional: true
-    "@rollup/rollup-linux-s390x-gnu":
-      optional: true
-    "@rollup/rollup-linux-x64-gnu":
-      optional: true
-    "@rollup/rollup-linux-x64-musl":
-      optional: true
-    "@rollup/rollup-win32-arm64-msvc":
-      optional: true
-    "@rollup/rollup-win32-ia32-msvc":
-      optional: true
-    "@rollup/rollup-win32-x64-msvc":
-      optional: true
-    fsevents:
-      optional: true
-  bin:
-    rollup: dist/bin/rollup
-  checksum: 10c0/2e526c38b4bcb22a058cf95e40c8c105a86f27d582c677c47df9315a17b18e75c772edc0773ca4d12d58ceca254bb5d63d4172041f6fd9f01e1a613d8bba6d09
   languageName: node
   linkType: hard
 
@@ -12927,17 +12225,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vite-plugin-string@npm:^1.1.1":
-  version: 1.2.3
-  resolution: "vite-plugin-string@npm:1.2.3"
-  dependencies:
-    "@rollup/pluginutils": "npm:>=4.1.0"
-  peerDependencies:
-    vite: ">=2"
-  checksum: 10c0/3767bed684e3c7cfb3061f494632aa8aff9814cdb09174865891ef13ec071abd740e0674d3391a76d4b4570aa28e9b0bc6a0b59eadc3081a64bd62c8051b94b0
-  languageName: node
-  linkType: hard
-
 "vite@npm:^4.5.0":
   version: 4.5.3
   resolution: "vite@npm:4.5.3"
@@ -12975,46 +12262,6 @@ __metadata:
   bin:
     vite: bin/vite.js
   checksum: 10c0/caeb1eecc0a8e0865782899e2f83d2993a9816562badc1c8291316d80d49b82f12038abd8cb8b8c627b6f369f58dfb25972ef4517d5e6e1b6e1bf7ee5b63a8a6
-  languageName: node
-  linkType: hard
-
-"vite@npm:^5.0.0":
-  version: 5.3.5
-  resolution: "vite@npm:5.3.5"
-  dependencies:
-    esbuild: "npm:^0.21.3"
-    fsevents: "npm:~2.3.3"
-    postcss: "npm:^8.4.39"
-    rollup: "npm:^4.13.0"
-  peerDependencies:
-    "@types/node": ^18.0.0 || >=20.0.0
-    less: "*"
-    lightningcss: ^1.21.0
-    sass: "*"
-    stylus: "*"
-    sugarss: "*"
-    terser: ^5.4.0
-  dependenciesMeta:
-    fsevents:
-      optional: true
-  peerDependenciesMeta:
-    "@types/node":
-      optional: true
-    less:
-      optional: true
-    lightningcss:
-      optional: true
-    sass:
-      optional: true
-    stylus:
-      optional: true
-    sugarss:
-      optional: true
-    terser:
-      optional: true
-  bin:
-    vite: bin/vite.js
-  checksum: 10c0/795c7e0dbc94b96c4a0aff0d5d4b349dd28ad8b7b70979c1010f96b4d83f7d6c1700ebd6fed91de2e021b0a3689b9abc2d8017f6dfa8c9a6ca5c7af637d6afc6
   languageName: node
   linkType: hard
 

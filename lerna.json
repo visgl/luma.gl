@@ -2,7 +2,7 @@
   "version": "9.1.0-alpha.6",
   "npmClient": "yarn",
   "exact": true,
-  "packages": ["modules/*", "examples/*/*"],
+  "packages": ["modules/*"],
   "command": {
     "publish": {
       "ignoreChanges": ["test", "*.md", "@luma.gl/scripts"]

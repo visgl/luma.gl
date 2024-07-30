@@ -15,7 +15,6 @@
     "3d"
   ],
   "workspaces": [
-    "examples/*/*",
     "modules/*"
   ],
   "browser": {
