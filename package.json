@@ -22,7 +22,7 @@
     "fs": false
   },
   "scripts": {
-    "bootstrap": "yarn && ocular-bootstrap",
+    "bootstrap": "ocular-bootstrap",
     "postinstall": "echo postinstall",
     "start": "open https://luma.gl/docs/getting-started",
     "clean": "ocular-clean",
