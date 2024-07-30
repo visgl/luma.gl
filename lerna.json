@@ -1,11 +1,17 @@
 {
-  "version": "9.1.0-alpha.6",
+  "version": "9.1.0-alpha.9",
   "npmClient": "yarn",
   "exact": true,
-  "packages": ["modules/*"],
+  "packages": [
+    "modules/*"
+  ],
   "command": {
     "publish": {
-      "ignoreChanges": ["test", "*.md", "@luma.gl/scripts"]
+      "ignoreChanges": [
+        "test",
+        "*.md",
+        "@luma.gl/scripts"
+      ]
     },
     "bootstrap": {}
   },
