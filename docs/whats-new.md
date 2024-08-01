@@ -16,6 +16,7 @@ Improvements focused on enhancing WebGPU support.
 
 **@luma.gl/core**
 
+- New `Adapter` class representing a pluggable backend. 
 - New [`luma.registerAdapters()`](/docs/api-reference/core/luma#lumaregisteradapters) method - Register adapters for WebGL and WebGPU.
 - New `Parameters.blend` - Provides explicit control over color blending activation.
 

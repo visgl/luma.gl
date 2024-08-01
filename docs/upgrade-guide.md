@@ -24,9 +24,9 @@ v9.1 continues to build out WebGPU support. Some additional deprecations and bre
 
 | Updated API                    | Status     | Replacement                            | Comment                                                         |
 | ------------------------------ | ---------- | -------------------------------------- | --------------------------------------------------------------- |
-| `Parameters.blend`             | New        |                                        | Explicit activation of color blending                           |
 | `luma.registerDevices()`       | Deprecated | [`luma.registerAdapters()`][adapters]. | Adapters provide a cleaner way to work with GPU backends.       |
 | `Texture.props.data` (Promise) | Removed    | `AsyncTexture` class                   | Textures no longer accept promises.                             |
+| `Parameters.blend`             | New        |                                        | Explicit activation of color blending                           |
 | `triangle-fan-webgl` topology  | Removed    | `triangle-strip`.                      | Reorganize your geometries                                      |
 | `line-loop-webgl` topology     | Removed    | `line-list`.                           | Reorganize your geometries                                      |
 | `glsl` shader template string  | Removed    | `/* glsl */` comment                   | Enable syntax highlighting in vscode using before shader string |
