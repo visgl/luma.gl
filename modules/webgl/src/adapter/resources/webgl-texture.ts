@@ -616,8 +616,7 @@ export class WEBGLTexture extends Texture {
     }
 
     // @ts-expect-error
-    if (this.isTextureLevelData(textureData)) {
-      // @ts-expect-error
+    if (Texture.isTextureLevelData(textureData)) {
       copyCPUDataToMipLevel(this.device.gl, textureData.data, {
         ...this,
         depth,
