@@ -9,7 +9,7 @@ import {
   CubeGeometry,
   Model,
   ModelProps,
-  loadImage,
+  loadImageBitmap,
   AsyncTexture,
   _ShaderInputs
 } from '@luma.gl/engine';
@@ -181,12 +181,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       mipmaps: true,
       // @ts-ignore
       data: (async () => ({
-        '+X': await loadImage('sky-posx.png'),
-        '-X': await loadImage('sky-negx.png'),
-        '+Y': await loadImage('sky-posy.png'),
-        '-Y': await loadImage('sky-negy.png'),
-        '+Z': await loadImage('sky-posz.png'),
-        '-Z': await loadImage('sky-negz.png')
+        '+X': await loadImageBitmap('sky-posx.png'),
+        '-X': await loadImageBitmap('sky-negx.png'),
+        '+Y': await loadImageBitmap('sky-posy.png'),
+        '-Y': await loadImageBitmap('sky-negy.png'),
+        '+Z': await loadImageBitmap('sky-posz.png'),
+        '-Z': await loadImageBitmap('sky-negz.png')
       }))(),
       sampler: {
         magFilter: 'linear',
@@ -196,7 +196,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
 
     const texture = new AsyncTexture(device, {
-      data: loadImage('vis-logo.png'),
+      data: loadImageBitmap('vis-logo.png'),
       mipmaps: true,
       sampler: {
         magFilter: 'linear',

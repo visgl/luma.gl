@@ -3,8 +3,9 @@
 // Copyright (c) vis.gl contributors
 
 import {Device, DeviceProps} from './device';
+
 /**
- * Create and attach devices for a specific backend. Currently static methods on each device
+ * Create and attach devices for a specific backend.
  */
 export abstract class Adapter {
   // new (props: DeviceProps): Device; Constructor isn't used

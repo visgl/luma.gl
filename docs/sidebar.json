@@ -77,6 +77,7 @@
         "items": [
           "api-reference/core/README",
           "api-reference/core/luma",
+          "api-reference/core/adapter",
           "api-reference/core/device",
           "api-reference/core/device-info",
           "api-reference/core/device-features",
@@ -110,6 +111,7 @@
           "api-reference/engine/animation-loop",
           "api-reference/engine/animation-loop-template",
           "api-reference/engine/async-texture",
+          "api-reference/engine/load-image-bitmap",          
           "api-reference/engine/geometry/geometries",
           "api-reference/engine/geometry/geometry",
           "api-reference/engine/animation/key-frames",
