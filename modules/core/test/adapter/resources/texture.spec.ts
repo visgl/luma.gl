@@ -362,26 +362,17 @@ export function testSamplerParameters({t, texture, parameters}) {
   }
 }
 
-// 2D TEXTURES
+// NON-2D TEXTURES
 
-test.skip('Texture#construct/delete', t => {
-  t.throws(
-    // @ts-expect-error
-    () => new Texture(),
-    /.*WebGLRenderingContext.*/,
-    'Texture throws on missing gl context'
-  );
-
-  const texture = webglDevice.createTexture();
-  t.ok(texture instanceof Texture, 'Texture construction successful');
-
-  t.comment(JSON.stringify(texture.getParameters({keys: true})));
-
-  texture.destroy();
-  t.ok(texture instanceof Texture, 'Texture delete successful');
-
-  texture.destroy();
-  t.ok(texture instanceof Texture, 'Texture repeated delete successful');
+test('Texture(dimension)#construct/delete', async t => {
+  for (const device of await getTestDevices()) {
+    for (const dimension of ['3d', '2d-array', 'cube']) {
+      const texture = webglDevice.createTexture({dimension});
+      t.equal(texture.dimension, dimension, `${device.info.type} Texture construction successful`);
+      t.equal(texture.view.props.dimension, dimension,  `${device.info.type} Texture view construction successful`);
+      texture.destroy();
+    }
+  }
 
   t.end();
 });

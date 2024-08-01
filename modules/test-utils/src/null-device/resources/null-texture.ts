@@ -80,8 +80,7 @@ export class NullTexture extends Texture {
   }
 
   initialize(props: TextureProps = {}): this {
-    const data = props.data;
-
+    // const data = props.data;
     // this.setImageData(props);
 
     this.setSampler(props.sampler);

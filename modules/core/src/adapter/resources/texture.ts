@@ -264,7 +264,7 @@ export abstract class Texture extends Resource<TextureProps> {
     }
     // Recurse into arrays (array of miplevels)
     if (Array.isArray(data)) {
-      return this.getTextureDataSize(data[0]);
+      return Texture.getTextureDataSize(data[0]);
     }
     if (Texture.isExternalImage(data)) {
       return Texture.getExternalImageSize(data);
@@ -310,7 +310,7 @@ export abstract class Texture extends Resource<TextureProps> {
     // Calculate size, if not provided
     if (this.props.width === undefined || this.props.height === undefined) {
       // @ts-ignore
-      const size = this.getTextureDataSize(this.props.data);
+      const size = Texture.getTextureDataSize(this.props.data);
       this.width = size?.width || 1;
       this.height = size?.height || 1;
     }
