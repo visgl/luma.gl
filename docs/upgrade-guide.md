@@ -12,7 +12,13 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 
 ## Upgrading to v9.1
 
-Some deprectations and minor breaking changes are necessary as WebGPU support is built out.
+v9.1 continues to build out WebGPU support. Some additional deprecations and breaking changes have been necessary, but impact on most applications should be minimal.
+
+**Spotlight: AsyncTextures**
+
+- To stream line code across WebGL and WebGPU,`Textures` no longer accept promises (for e.g. `loadImage(url)` when setting data. 
+- However, a new `AsyncTexture` class is now available that does accept promises and creates actual `Textures` once the promise resolves and data is available.
+- In addition, the `Model` class accepts `AsyncTextures` as bindings and defers rendering until the underlying texture has been created.
 
 **@luma.gl/core**
 
@@ -20,9 +26,9 @@ Some deprectations and minor breaking changes are necessary as WebGPU support is
 | ------------------------------ | ---------- | -------------------------------------- | --------------------------------------------------------------- |
 | `Parameters.blend`             | New        |                                        | Explicit activation of color blending                           |
 | `luma.registerDevices()`       | Deprecated | [`luma.registerAdapters()`][adapters]. | Adapters provide a cleaner way to work with GPU backends.       |
-| `Texture.props.data` (Promise) | Changed    | `AsyncTexture` class                   | Textures no longer accept promises.                             |
-| `triangle-fan-webgl`           | Removed    | `triangle-strip`.                      | Reorganize your geometries                                      |
-| `line-loop-webgl`              | Removed    | `line-list`.                           | Reorganize your geometries                                      |
+| `Texture.props.data` (Promise) | Removed    | `AsyncTexture` class                   | Textures no longer accept promises.                             |
+| `triangle-fan-webgl` topology  | Removed    | `triangle-strip`.                      | Reorganize your geometries                                      |
+| `line-loop-webgl` topology     | Removed    | `line-list`.                           | Reorganize your geometries                                      |
 | `glsl` shader template string  | Removed    | `/* glsl */` comment                   | Enable syntax highlighting in vscode using before shader string |
 | `depth24unorm-stencil8`        | Removed    | `depth24plus-stencil8`                 | The `TextureFormat` was removed from the WebGPU spec            |
 | `rgb8unorm-unsized`            | Removed    | `rgb8unorm`                            | No longer support unsized WebGL1 `TextureFormat`                |
