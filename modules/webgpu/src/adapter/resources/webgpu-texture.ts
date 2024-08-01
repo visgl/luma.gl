@@ -52,18 +52,7 @@ export class WebGPUTexture extends Texture {
 
   constructor(device: WebGPUDevice, props: TextureProps) {
     super(device, props);
-
     this.device = device;
-
-    if (props.data instanceof Promise) {
-      props.data.then(resolvedImageData => {
-        // @ts-expect-error
-        this.props = {...this.props, data: resolvedImageData};
-        this.initialize(this.props);
-      });
-      return;
-    }
-
     this.initialize(props);
   }
 
@@ -84,7 +73,7 @@ export class WebGPUTexture extends Texture {
 
     if (this.props.data) {
       if (Texture.isExternalImage(this.props.data)) {
-        this.setImage({source: this.props.data});
+        this.copyExternalImage({image: this.props.data});
       } else {
         this.setData({data: this.props.data});
       }
@@ -183,35 +172,18 @@ export class WebGPUTexture extends Texture {
   }
 
   setData(options: {data: any}): {width: number; height: number} {
-    let source = options.data;
-
     if (ArrayBuffer.isView(options.data)) {
       const clampedArray = new Uint8ClampedArray(options.data.buffer);
       // TODO - pass through src data color space as ImageData Options?
-      source = new ImageData(clampedArray, this.width, this.height);
+      const image = new ImageData(clampedArray, this.width, this.height);
+      return this.copyExternalImage({image});
     }
 
-    return this.setImage({source});
+    throw new Error('Texture.setData: Use CommandEncoder to upload data to texture in WebGPU');
   }
 
-  // setDataFromTypedArray(data): this {
-  //   const textureDataBuffer = this.device.handle.createBuffer({
-  //     size: data.byteLength,
-  //     usage: Buffer.COPY_DST | Buffer.COPY_SRC,
-  //     mappedAtCreation: true
-  //   });
-  //   new Uint8Array(textureDataBuffer.getMappedRange()).set(data);
-  //   textureDataBuffer.unmap();
-
-  //   this.setBuffer(textureDataBuffer);
-
-  //   textureDataBuffer.destroy();
-  //   return this;
-  // }
-
-  /** Set image */
-  setImage(options: {
-    source: ExternalImage;
+  copyExternalImage(options: {
+    image: ExternalImage;
     width?: number;
     height?: number;
     depth?: number;
@@ -225,29 +197,30 @@ export class WebGPUTexture extends Texture {
     colorSpace?: 'srgb';
     premultipliedAlpha?: boolean;
   }): {width: number; height: number} {
-    const size = Texture.getExternalImageSize(options.source);
+    const size = Texture.getExternalImageSize(options.image);
+    const opts = {...Texture.defaultCopyExternalImageOptions, ...size, ...options};
     const {
-      source,
-      width = size.width,
-      height = size.height,
-      depth = 1,
-      sourceX = 0,
-      sourceY = 0,
-      mipLevel = 0,
-      x = 0,
-      y = 0,
-      z = 0,
-      aspect = 'all',
-      colorSpace = 'srgb',
-      premultipliedAlpha = false
-    } = options;
+      image,
+      sourceX,
+      sourceY,
+      width,
+      height,
+      depth,
+      mipLevel,
+      x,
+      y,
+      z,
+      aspect,
+      colorSpace,
+      premultipliedAlpha
+    } = opts;
 
     // TODO - max out width
 
     this.device.handle.queue.copyExternalImageToTexture(
       // source: GPUImageCopyExternalImage
       {
-        source,
+        source: image,
         origin: [sourceX, sourceY]
       },
       // destination: GPUImageCopyTextureTagged

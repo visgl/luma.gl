@@ -192,7 +192,7 @@ export class WEBGLTexture extends Texture {
     let {width, height} = props;
 
     if (!width || !height) {
-      const textureSize = this.getTextureDataSize(data);
+      const textureSize = Texture.getTextureDataSize(data);
       width = textureSize?.width || 1;
       height = textureSize?.height || 1;
     }
@@ -333,6 +333,29 @@ export class WEBGLTexture extends Texture {
   }
 
   // Image Data Setters
+  copyExternalImage(options: {
+    image: ExternalImage;
+    sourceX?: number;
+    sourceY?: number;
+    width?: number;
+    height?: number;
+    depth?: number;
+    mipLevel?: number;
+    x?: number;
+    y?: number;
+    z?: number;
+    aspect?: 'all' | 'stencil-only' | 'depth-only';
+    colorSpace?: 'srgb';
+    premultipliedAlpha?: boolean;
+  }): {width: number; height: number} {
+    const size = Texture.getExternalImageSize(options.image);
+    const opts = {...Texture.defaultCopyExternalImageOptions, ...size, ...options};
+    const {depth, mipLevel: lodLevel, image} = opts;
+    this.bind();
+    this._setMipLevel(depth, lodLevel, image);
+    this.unbind();
+    return {width: opts.width, height: opts.height};
+  }
 
   setTexture1DData(data: Texture1DData): void {
     throw new Error('setTexture1DData not supported in WebGL.');
@@ -594,6 +617,7 @@ export class WEBGLTexture extends Texture {
 
     // @ts-expect-error
     if (this.isTextureLevelData(textureData)) {
+      // @ts-expect-error
       copyCPUDataToMipLevel(this.device.gl, textureData.data, {
         ...this,
         depth,

@@ -2,7 +2,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {TextureProps, Sampler, SamplerProps, TextureViewProps} from '@luma.gl/core';
+import type {
+  TextureProps,
+  Sampler,
+  SamplerProps,
+  TextureViewProps,
+  CopyExternalImageOptions
+} from '@luma.gl/core';
 import type {
   Texture1DData,
   Texture2DData,
@@ -112,10 +118,10 @@ export class NullTexture extends Texture {
     return this;
   }
 
-  setImageData(options: {data?: any; width?: number; height?: number}) {
+  copyExternalImage(options: CopyExternalImageOptions): {width: number; height: number} {
     this.trackDeallocatedMemory('Texture');
 
-    const {data} = options;
+    const {image: data} = options;
 
     if (data && data.byteLength) {
       this.trackAllocatedMemory(data.byteLength, 'Texture');
@@ -130,7 +136,7 @@ export class NullTexture extends Texture {
     this.width = width;
     this.height = height;
 
-    return this;
+    return {width, height};
   }
 
   setSubImageData(options: {data: any; width?: number; height?: number; x?: number; y?: number}) {

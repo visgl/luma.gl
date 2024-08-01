@@ -145,3 +145,21 @@ export class WebGPUCommandEncoder extends CommandEncoder {
     );
   }
 }
+
+/*
+  // setDataFromTypedArray(data): this {
+  //   const textureDataBuffer = this.device.handle.createBuffer({
+  //     size: data.byteLength,
+  //     usage: Buffer.COPY_DST | Buffer.COPY_SRC,
+  //     mappedAtCreation: true
+  //   });
+  //   new Uint8Array(textureDataBuffer.getMappedRange()).set(data);
+  //   textureDataBuffer.unmap();
+
+  //   this.setBuffer(textureDataBuffer);
+
+  //   textureDataBuffer.destroy();
+  //   return this;
+  // }
+
+ */
