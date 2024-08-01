@@ -82,19 +82,7 @@ export class NullTexture extends Texture {
   initialize(props: TextureProps = {}): this {
     const data = props.data;
 
-    if (data instanceof Promise) {
-      data.then(resolvedImageData =>
-        this.initialize(
-          Object.assign({}, props, {
-            pixels: resolvedImageData,
-            data: resolvedImageData
-          })
-        )
-      );
-      return this;
-    }
-
-    this.setImageData(props);
+    // this.setImageData(props);
 
     this.setSampler(props.sampler);
 
@@ -123,12 +111,12 @@ export class NullTexture extends Texture {
 
     const {image: data} = options;
 
-    if (data && data.byteLength) {
-      this.trackAllocatedMemory(data.byteLength, 'Texture');
-    } else {
-      const bytesPerPixel = 4;
-      this.trackAllocatedMemory(this.width * this.height * bytesPerPixel, 'Texture');
-    }
+    // if (data && data.byteLength) {
+    //   this.trackAllocatedMemory(data.byteLength, 'Texture');
+    // } else {
+    const bytesPerPixel = 4;
+    this.trackAllocatedMemory(this.width * this.height * bytesPerPixel, 'Texture');
+    // }
 
     const width = options.width ?? (data as ImageBitmap).width;
     const height = options.height ?? (data as ImageBitmap).height;
@@ -137,12 +125,5 @@ export class NullTexture extends Texture {
     this.height = height;
 
     return {width, height};
-  }
-
-  setSubImageData(options: {data: any; width?: number; height?: number; x?: number; y?: number}) {
-    // const {data, x = 0, y = 0} = options;
-    // const width = options.width ?? (data as ImageBitmap).width;
-    // const height = options.height ?? (data as ImageBitmap).height;
-    // assert(width + x <= this.width && height + y <= this.height);
   }
 }
