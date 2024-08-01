@@ -14,11 +14,20 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 
 v9.1 continues to build out WebGPU support. Some additional deprecations and breaking changes have been necessary, but impact on most applications should be minimal.
 
-**Spotlight: AsyncTextures**
+**Notable change: Adapters**
 
-- To stream line code across WebGL and WebGPU,`Textures` no longer accept promises (for e.g. `loadImage(url)` when setting data. 
-- However, a new `AsyncTexture` class is now available that does accept promises and creates actual `Textures` once the promise resolves and data is available.
-- In addition, the `Model` class accepts `AsyncTextures` as bindings and defers rendering until the underlying texture has been created.
+When initializing luma.gl, applications now import an `Adapter` singleton from either the WebGPU or the WebGL module, and pass that to `luma.createDevice()`.
+
+**Notable change: Textures**
+
+- The texture API is being streamlined to work symmetrically across WebGPU and WebGL.
+- `Texture.copyExternalImage()` replaces `Texture.setImageData()` when initializing textures with image data.
+
+**Notable change: AsyncTextures**
+
+- `Textures` no longer accept promises when setting data (e.g. from `loadImageBitmap(url)`. 
+- Instead, a new `AsyncTexture` class does accept promises and creates actual `Textures` once the promise resolves and data is available.
+- The `Model` class now accepts `AsyncTextures` as bindings and defers rendering until the underlying texture has been created.
 
 **@luma.gl/core**
 

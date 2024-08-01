@@ -19,6 +19,7 @@ Improvements focused on enhancing WebGPU support.
 - New [`Adapter`](/docs/api-reference/core/adapter) class for singleton objects representing pluggable GPU backends. 
 - New [`luma.registerAdapters()`](/docs/api-reference/core/luma#lumaregisteradapters) method - Register adapters for WebGL and WebGPU.
 - New `Parameters.blend` - Provides explicit control over color blending activation.
+- New `Texture.copyExternalImage()` function that works on both WebGPU and WebGL.
 
 **@luma.gl/engine**
 
