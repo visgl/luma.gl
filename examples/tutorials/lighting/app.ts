@@ -1,7 +1,7 @@
 import {NumberArray} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate, Model, CubeGeometry} from '@luma.gl/engine';
-import {_ShaderInputs, loadImage, AsyncTexture} from '@luma.gl/engine';
+import {_ShaderInputs, loadImageBitmap, AsyncTexture} from '@luma.gl/engine';
 import {phongMaterial, lighting, ShaderModule} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
 
@@ -112,7 +112,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       }
     });
 
-    const texture = new AsyncTexture(device, {data: loadImage('vis-logo.png')});
+    const texture = new AsyncTexture(device, {data: loadImageBitmap('vis-logo.png')});
 
     this.model = new Model(device, {
       vs,
