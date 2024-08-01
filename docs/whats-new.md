@@ -16,20 +16,20 @@ Improvements focused on enhancing WebGPU support.
 
 **@luma.gl/core**
 
-- New `Adapter` class representing a pluggable backend. 
+- New [`Adapter`](/docs/api-reference/core/adapter) class for singleton objects representing pluggable GPU backends. 
 - New [`luma.registerAdapters()`](/docs/api-reference/core/luma#lumaregisteradapters) method - Register adapters for WebGL and WebGPU.
 - New `Parameters.blend` - Provides explicit control over color blending activation.
 
 **@luma.gl/engine**
 
-- New `AsyncTexture` class allows applications to create textures from a URL or Promise.
+- New [`AsyncTexture`](/docs/api-reference/engine/async-texture) class allows applications to create textures from a URL or Promise.
 
 **@luma.gl/shadertools**
 
-- Improved type safety for `ShaderModule`, in particular for uniforms and bindings.
-- `ShaderModule` type now sufficient, no longer required to instantiate modules into `ShaderModuleInstances`.
-- New function `getShaderModuleUniforms(module, ...)` that works directly with `ShaderModule`
-- New function `getShaderModuleDependencies(module)`  that works directly with `ShaderModule`
+- [`ShaderModule](/docs/api-reference/shadertools/shader-module)`: improves type safety, in particular for uniforms and bindings.
+- `ShaderModule`: Simplified API, no longer required to instantiate modules into `ShaderModuleInstances`.
+- New function `getShaderModuleUniforms(module: ShaderModule, ...)`
+- New function `getShaderModuleDependencies(module: ShaderModule)`
 
 **@luma.gl/webgl**
 
