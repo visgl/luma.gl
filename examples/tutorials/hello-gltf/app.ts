@@ -77,7 +77,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     canvas.style.opacity = '0.1';
 
     const gltf = await load(
-      `https://github.khronos.org/glTF-Sample-Viewer-Release/assets/models/Models/${modelName}/glTF/${modelName}.gltf`,
+      // `https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/DamagedHelmet/glTF/DamagedHelmet.gltf`
+      `https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/${modelName}/glTF/${modelName}.gltf`,
       GLTFLoader
     );
     const processedGLTF = postProcessGLTF(gltf);
