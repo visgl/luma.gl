@@ -4,6 +4,13 @@
 
 Major new release that includes WebGPU support
 
+### 9.1.0-alpha.10
+
+679ed4c84 (HEAD -> master, origin/master) fix: Update path to Khronos glTF assets (#2148)
+d3697ce0f feat: Add Texture.copyExternalImage() function (#2147)
+e8ef73c07 docs: Texture doc cleanup (#2146)
+f0dc17ffa docs: AsyncTexture (#2145)
+
 ### 9.1.0-alpha.9
 
 - fix: Decouple examples from install and build (#2143)
