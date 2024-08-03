@@ -203,7 +203,7 @@ test('Texture#format creation with data', async t => {
   t.end();
 });
 
-test.only('Texture#copyExternaImage', async t => {
+test('Texture#copyExternaImage', async t => {
   for (const device of await getTestDevices()) {
     const texture = device.createTexture({
       width: 2,
@@ -235,7 +235,7 @@ test.only('Texture#copyExternaImage', async t => {
         t.deepEquals(
           device.readPixelsToArrayWebGL(texture),
           new Uint8Array([255, 0, 0, 255, 255, 0, 0, 255]),
-          `${device.info.type} Pixels are then set correctly`
+          `${device.info.type} Pixels were set correctly (full image)`
         );
       }
 
@@ -244,12 +244,12 @@ test.only('Texture#copyExternaImage', async t => {
       ctx.fillRect(0, 0, 2, 1);
 
       texture.copyExternalImage({image: canvas, x: 1});
-      
+
       if (device.info.type === 'webgl') {
         t.deepEquals(
           device.readPixelsToArrayWebGL(texture),
-          new Uint8Array([0, 0, 0, 255, 0, 0, 0, 255]),
-          `${device.info.type} Pixels are then set correctly`
+          new Uint8Array([255, 0, 0, 255, 0, 0, 0, 255]),
+          `${device.info.type} Pixels were set correctly (sub image)`
         );
       }
     }

@@ -55,8 +55,7 @@ import {
   copyExternalImageToMipLevel,
   copyCPUDataToMipLevel,
   // copyGPUBufferToMipLevel,
-  getWebGLTextureTarget,
-  getWebGLCubeFaceTarget
+  getWebGLTextureTarget
 } from '../helpers/webgl-texture-utils';
 
 // PORTABLE HELPERS (Move to methods on Texture?)
@@ -354,8 +353,7 @@ export class WEBGLTexture extends Texture {
 
     const {image, depth, mipLevel, x, y, z} = opts;
     let {width, height} = opts;
-    const {dimension, glFormat, glType} = this;
-    const glTarget = getWebGLCubeFaceTarget(this.glTarget, dimension, depth);
+    const {dimension, glTarget, glFormat, glInternalFormat, glType} = this;
 
     // WebGL will error if we try to copy outside the bounds of the texture
     width = Math.min(width, size.width - x);
@@ -364,30 +362,26 @@ export class WEBGLTexture extends Texture {
     // WebGL does not yet support sourceX/sourceY in copyExternalImage; requires copyTexSubImage2D from a framebuffer'
 
     if (options.sourceX || options.sourceY) {
-      throw new Error('WebGL does not yet support sourceX/sourceY in copyExternalImage; requires copyTexSubImage2D from a framebuffer');
+      throw new Error(
+        'WebGL does not yet support sourceX/sourceY in copyExternalImage; requires copyTexSubImage2D from a framebuffer'
+      );
     }
 
-    switch (dimension) {
-      case '2d-array':
-      case '3d':
-        this.gl.bindTexture(this.glTarget, this.handle);
-        // prettier-ignore
-        this.gl.texSubImage3D(glTarget, mipLevel, x, y, z, width, height, depth, glFormat, glType, image);
-        this.gl.bindTexture(this.glTarget, null);
-        break;
+    copyExternalImageToMipLevel(this.device.gl, this.handle, image, {
+      dimension,
+      mipLevel,
+      x,
+      y,
+      z,
+      width,
+      height,
+      depth,
+      glFormat,
+      glInternalFormat,
+      glType,
+      glTarget
+    });
 
-      case '2d':
-      case 'cube':
-        this.gl.bindTexture(this.glTarget, this.handle);
-        // prettier-ignore
-        debugger
-        this.gl.texSubImage2D(glTarget, mipLevel, x, y, width, height, glFormat, glType, image);
-        this.gl.bindTexture(this.glTarget, null);
-        break;
-
-      default:
-        throw new Error(dimension);
-    }
     return {width: opts.width, height: opts.height};
   }
 
@@ -645,7 +639,12 @@ export class WEBGLTexture extends Texture {
     // }
 
     if (Texture.isExternalImage(textureData)) {
-      copyExternalImageToMipLevel(this.device.gl, this.handle, textureData, {...this, depth, mipLevel, glTarget});
+      copyExternalImageToMipLevel(this.device.gl, this.handle, textureData, {
+        ...this,
+        depth,
+        mipLevel,
+        glTarget
+      });
       return;
     }
 

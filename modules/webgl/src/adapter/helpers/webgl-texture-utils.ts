@@ -28,14 +28,13 @@ export type WebGLSetTextureOptions = {
   dimension: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d';
   height: number;
   width: number;
-  depth?: number;
+  depth: number;
   mipLevel?: number;
   glTarget: GLTextureTarget;
   glInternalFormat: GL;
   glFormat: GLTexelDataFormat;
   glType: GLPixelType;
   compressed?: boolean;
-
   byteOffset?: number;
   byteLength?: number;
 };
@@ -120,6 +119,7 @@ export function copyExternalImageToMipLevel(
   const {dimension, depth = 0, mipLevel = 0} = options;
   const {x = 0, y = 0, z = 0} = options;
   const {glFormat, glType} = options;
+
   const glTarget = getWebGLCubeFaceTarget(options.glTarget, dimension, depth);
 
   switch (dimension) {
