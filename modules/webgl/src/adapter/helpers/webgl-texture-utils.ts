@@ -28,36 +28,27 @@ import {WEBGLTexture} from '../resources/webgl-texture';
 /** A "border" parameter is required in many WebGL texture APIs, but must always be 0... */
 const BORDER = 0;
 
+/**
+ * Options for setting data into a texture
+ */
 export type WebGLSetTextureOptions = {
   dimension: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d';
   height: number;
   width: number;
-  depth?: number;
-  level?: number;
+  depth: number;
+  mipLevel?: number;
   glTarget: GLTextureTarget;
   glInternalFormat: GL;
   glFormat: GLTexelDataFormat;
   glType: GLPixelType;
   compressed?: boolean;
-
   byteOffset?: number;
   byteLength?: number;
 };
 
 /**
- * @param {*} pixels, data -
- *  null - create empty texture of specified format
- *  Typed array - init from image data in typed array
- *  Buffer|WebGLBuffer - (WEBGL2) init from image data in WebGLBuffer
- *  HTMLImageElement|Image - Inits with content of image. Auto width/height
- *  HTMLCanvasElement - Inits with contents of canvas. Auto width/height
- *  HTMLVideoElement - Creates video texture. Auto width/height
+ * Options for copying an image or data into a texture
  *
- * @param  x - xOffset from where texture to be updated
- * @param  y - yOffset from where texture to be updated
- * @param  width - width of the sub image to be updated
- * @param  height - height of the sub image to be updated
- * @param  level - mip level to be updated
  * @param {GLenum} format - internal format of image data.
  * @param {GLenum} type
  *  - format of array (autodetect from type) or
@@ -68,12 +59,19 @@ export type WebGLSetTextureOptions = {
  */
 export type WebGLCopyTextureOptions = {
   dimension: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d';
-  level?: number;
-  height: number;
+  /** mip level to be updated */
+  mipLevel?: number;
+  /** width of the sub image to be updated */
   width: number;
+  /** height of the sub image to be updated */
+  height: number;
+  /** depth of texture to be updated */
   depth?: number;
+  /** xOffset from where texture to be updated */
   x?: number;
+  /** yOffset from where texture to be updated */
   y?: number;
+  /** yOffset from where texture to be updated */
   z?: number;
 
   glTarget: GLTextureTarget;
@@ -81,7 +79,6 @@ export type WebGLCopyTextureOptions = {
   glFormat: GL;
   glType: GL;
   compressed?: boolean;
-
   byteOffset?: number;
   byteLength?: number;
 };
@@ -119,30 +116,34 @@ export function initializeTextureStorage(
 /**
  * Copy a region of compressed data from a GPU memory buffer into this texture.
  */
-export function copyCPUImageToMipLevel(
+export function copyExternalImageToMipLevel(
   gl: WebGL2RenderingContext,
+  handle: WebGLTexture,
   image: ExternalImage,
   options: WebGLCopyTextureOptions
 ): void {
-  const {dimension, width, height, depth = 0, level = 0} = options;
+  const {width, height} = options;
+  const {dimension, depth = 0, mipLevel = 0} = options;
   const {x = 0, y = 0, z = 0} = options;
   const {glFormat, glType} = options;
-  const glTarget = getWebGLCubeFaceTarget(options.glTarget, dimension, depth);
 
-  // width = size.width,
-  // height = size.height
+  const glTarget = getWebGLCubeFaceTarget(options.glTarget, dimension, depth);
 
   switch (dimension) {
     case '2d-array':
     case '3d':
+      gl.bindTexture(glTarget, handle);
       // prettier-ignore
-      gl.texSubImage3D(glTarget, level, x, y, z, width, height, depth, glFormat, glType, image);
+      gl.texSubImage3D(glTarget, mipLevel, x, y, z, width, height, depth, glFormat, glType, image);
+      gl.bindTexture(glTarget, null);
       break;
 
     case '2d':
     case 'cube':
+      gl.bindTexture(glTarget, handle);
       // prettier-ignore
-      gl.texSubImage2D(glTarget, level, x, y, width, height, glFormat, glType, image);
+      gl.texSubImage2D(glTarget, mipLevel, x, y, width, height, glFormat, glType, image);
+      gl.bindTexture(glTarget, null);
       break;
 
     default:
@@ -158,7 +159,7 @@ export function copyCPUDataToMipLevel(
   typedArray: TypedArray,
   options: WebGLCopyTextureOptions
 ): void {
-  const {dimension, width, height, depth = 0, level = 0, byteOffset = 0} = options;
+  const {dimension, width, height, depth = 0, mipLevel = 0, byteOffset = 0} = options;
   const {x = 0, y = 0, z = 0} = options;
   const {glFormat, glType, compressed} = options;
   const glTarget = getWebGLCubeFaceTarget(options.glTarget, dimension, depth);
@@ -170,10 +171,10 @@ export function copyCPUDataToMipLevel(
     case '3d':
       if (compressed) {
         // prettier-ignore
-        gl.compressedTexSubImage3D(glTarget, level, x, y, z, width, height, depth, glFormat, typedArray, byteOffset); // , byteLength
+        gl.compressedTexSubImage3D(glTarget, mipLevel, x, y, z, width, height, depth, glFormat, typedArray, byteOffset); // , byteLength
       } else {
         // prettier-ignore
-        gl.texSubImage3D(glTarget, level, x, y, z, width, height, depth, glFormat, glType, typedArray, byteOffset); // , byteLength
+        gl.texSubImage3D(glTarget, mipLevel, x, y, z, width, height, depth, glFormat, glType, typedArray, byteOffset); // , byteLength
       }
       break;
 
@@ -181,10 +182,10 @@ export function copyCPUDataToMipLevel(
     case 'cube':
       if (compressed) {
         // prettier-ignore
-        gl.compressedTexSubImage2D(glTarget, level, x, y, width, height, glFormat, typedArray, byteOffset); // , byteLength
+        gl.compressedTexSubImage2D(glTarget, mipLevel, x, y, width, height, glFormat, typedArray, byteOffset); // , byteLength
       } else {
         // prettier-ignore
-        gl.texSubImage2D(glTarget, level, x, y, width, height, glFormat, glType, typedArray, byteOffset); // , byteLength
+        gl.texSubImage2D(glTarget, mipLevel, x, y, width, height, glFormat, glType, typedArray, byteOffset); // , byteLength
       }
       break;
 
@@ -202,7 +203,7 @@ export function copyGPUBufferToMipLevel(
   byteLength: number,
   options: WebGLCopyTextureOptions
 ): void {
-  const {dimension, width, height, depth = 0, level = 0, byteOffset = 0} = options;
+  const {dimension, width, height, depth = 0, mipLevel = 0, byteOffset = 0} = options;
   const {x = 0, y = 0, z = 0} = options;
   const {glFormat, glType, compressed} = options;
   const glTarget = getWebGLCubeFaceTarget(options.glTarget, dimension, depth);
@@ -216,10 +217,10 @@ export function copyGPUBufferToMipLevel(
       if (compressed) {
         // TODO enable extension?
         // prettier-ignore
-        gl.compressedTexSubImage3D(glTarget, level, x, y, z, width, height, depth, glFormat, byteLength, byteOffset);
+        gl.compressedTexSubImage3D(glTarget, mipLevel, x, y, z, width, height, depth, glFormat, byteLength, byteOffset);
       } else {
         // prettier-ignore
-        gl.texSubImage3D(glTarget, level, x, y, z, width, height, depth, glFormat, glType, byteOffset);
+        gl.texSubImage3D(glTarget, mipLevel, x, y, z, width, height, depth, glFormat, glType, byteOffset);
       }
       break;
 
@@ -227,10 +228,10 @@ export function copyGPUBufferToMipLevel(
     case 'cube':
       if (compressed) {
         // prettier-ignore
-        gl.compressedTexSubImage2D(glTarget, level, x, y, width, height, glFormat, byteLength, byteOffset);
+        gl.compressedTexSubImage2D(glTarget, mipLevel, x, y, width, height, glFormat, byteLength, byteOffset);
       } else {
         // prettier-ignore
-        gl.texSubImage2D(glTarget, level, x, y, width, height, BORDER, glFormat, byteOffset);
+        gl.texSubImage2D(glTarget, mipLevel, x, y, width, height, BORDER, glFormat, byteOffset);
       }
       break;
 
@@ -262,7 +263,7 @@ export function getWebGLTextureTarget(
  * @note We still bind the texture using GL.TEXTURE_CUBE_MAP, but we need to use the face-specific target when setting mip levels.
  * @returns glTarget unchanged, if dimension !== 'cube'.
  */
-function getWebGLCubeFaceTarget(
+export function getWebGLCubeFaceTarget(
   glTarget: GLTextureTarget,
   dimension: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d',
   level: number

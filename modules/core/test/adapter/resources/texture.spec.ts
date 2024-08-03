@@ -220,24 +220,42 @@ test('Texture#copyExternaImage', async t => {
       );
     }
 
-    // data: canvas
     if (typeof document !== 'undefined') {
       const canvas = document.createElement('canvas');
       canvas.width = 2;
       canvas.height = 1;
       const ctx = canvas.getContext('2d');
+
+      // Full copy
+      ctx.fillStyle = '#FF0000';
       ctx.fillRect(0, 0, 2, 1);
       texture.copyExternalImage({image: canvas});
 
       if (device.info.type === 'webgl') {
         t.deepEquals(
           device.readPixelsToArrayWebGL(texture),
-          new Uint8Array([0, 0, 0, 255, 0, 0, 0, 255]),
-          `${device.info.type} Pixels are then set correctly`
+          new Uint8Array([255, 0, 0, 255, 255, 0, 0, 255]),
+          `${device.info.type} Pixels were set correctly (full image)`
         );
-      } else {
-        t.pass('WebGPU copyExternalImage test cannot yet read pixels');
       }
+
+      // Subimage copy
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(0, 0, 2, 1);
+
+      texture.copyExternalImage({image: canvas, x: 1});
+
+      if (device.info.type === 'webgl') {
+        t.deepEquals(
+          device.readPixelsToArrayWebGL(texture),
+          new Uint8Array([255, 0, 0, 255, 0, 0, 0, 255]),
+          `${device.info.type} Pixels were set correctly (sub image)`
+        );
+      }
+    }
+
+    if (device.info.type !== 'webgl') {
+      t.pass('WebGPU copyExternalImage test cannot yet read pixels');
     }
   }
 

@@ -52,7 +52,7 @@ import {WEBGLTextureView} from './webgl-texture-view';
 import {
   initializeTextureStorage,
   // clearMipLevel,
-  copyCPUImageToMipLevel,
+  copyExternalImageToMipLevel,
   copyCPUDataToMipLevel,
   // copyGPUBufferToMipLevel,
   getWebGLTextureTarget
@@ -350,10 +350,38 @@ export class WEBGLTexture extends Texture {
   }): {width: number; height: number} {
     const size = Texture.getExternalImageSize(options.image);
     const opts = {...Texture.defaultCopyExternalImageOptions, ...size, ...options};
-    const {depth, mipLevel: lodLevel, image} = opts;
-    this.bind();
-    this._setMipLevel(depth, lodLevel, image);
-    this.unbind();
+
+    const {image, depth, mipLevel, x, y, z} = opts;
+    let {width, height} = opts;
+    const {dimension, glTarget, glFormat, glInternalFormat, glType} = this;
+
+    // WebGL will error if we try to copy outside the bounds of the texture
+    width = Math.min(width, size.width - x);
+    height = Math.min(height, size.height - y);
+
+    // WebGL does not yet support sourceX/sourceY in copyExternalImage; requires copyTexSubImage2D from a framebuffer'
+
+    if (options.sourceX || options.sourceY) {
+      throw new Error(
+        'WebGL does not yet support sourceX/sourceY in copyExternalImage; requires copyTexSubImage2D from a framebuffer'
+      );
+    }
+
+    copyExternalImageToMipLevel(this.device.gl, this.handle, image, {
+      dimension,
+      mipLevel,
+      x,
+      y,
+      z,
+      width,
+      height,
+      depth,
+      glFormat,
+      glInternalFormat,
+      glType,
+      glTarget
+    });
+
     return {width: opts.width, height: opts.height};
   }
 
@@ -601,7 +629,7 @@ export class WEBGLTexture extends Texture {
    */
   protected _setMipLevel(
     depth: number,
-    level: number,
+    mipLevel: number,
     textureData: Texture2DData,
     glTarget: GL = this.glTarget
   ) {
@@ -611,7 +639,12 @@ export class WEBGLTexture extends Texture {
     // }
 
     if (Texture.isExternalImage(textureData)) {
-      copyCPUImageToMipLevel(this.device.gl, textureData, {...this, depth, level, glTarget});
+      copyExternalImageToMipLevel(this.device.gl, this.handle, textureData, {
+        ...this,
+        depth,
+        mipLevel,
+        glTarget
+      });
       return;
     }
 
@@ -620,7 +653,7 @@ export class WEBGLTexture extends Texture {
       copyCPUDataToMipLevel(this.device.gl, textureData.data, {
         ...this,
         depth,
-        level,
+        mipLevel,
         glTarget
       });
       return;
