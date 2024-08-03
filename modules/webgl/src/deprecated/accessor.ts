@@ -3,8 +3,8 @@
 // Copyright (c) vis.gl contributors
 
 import {Buffer} from '@luma.gl/core';
-import {GL} from '@luma.gl/constants';
-import {getTypedArrayFromGLType} from './typed-array-utils';
+import {GL, GLDataType, GLPixelType} from '@luma.gl/constants';
+import {TypedArrayConstructor} from '@math.gl/types';
 
 /**
  * Attribute descriptor object
@@ -177,6 +177,46 @@ export class Accessor implements AccessorObject {
     if (this.index === undefined) delete this.index;
 
     return this;
+  }
+}
+
+/**
+ * Converts GL constant to corresponding TYPED ARRAY
+ * Used to auto deduce gl parameter types
+ * @deprecated Use getTypedArrayFromDataType
+ * @param glType
+ * @param param1
+ * @returns
+ */
+// eslint-disable-next-line complexity
+function getTypedArrayFromGLType(
+  glType: GLDataType | GLPixelType,
+  options?: {
+    clamped?: boolean;
+  }
+): TypedArrayConstructor {
+  const {clamped = true} = options || {};
+  // Sorted in some order of likelihood to reduce amount of comparisons
+  switch (glType) {
+    case GL.FLOAT:
+      return Float32Array;
+    case GL.UNSIGNED_SHORT:
+    case GL.UNSIGNED_SHORT_5_6_5:
+    case GL.UNSIGNED_SHORT_4_4_4_4:
+    case GL.UNSIGNED_SHORT_5_5_5_1:
+      return Uint16Array;
+    case GL.UNSIGNED_INT:
+      return Uint32Array;
+    case GL.UNSIGNED_BYTE:
+      return clamped ? Uint8ClampedArray : Uint8Array;
+    case GL.BYTE:
+      return Int8Array;
+    case GL.SHORT:
+      return Int16Array;
+    case GL.INT:
+      return Int32Array;
+    default:
+      throw new Error('Failed to deduce typed array type from GL constant');
   }
 }
 

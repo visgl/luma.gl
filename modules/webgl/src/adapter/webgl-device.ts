@@ -59,14 +59,14 @@ import {WEBGLVertexArray} from './resources/webgl-vertex-array';
 import {WEBGLTransformFeedback} from './resources/webgl-transform-feedback';
 import {WEBGLQuerySet} from './resources/webgl-query-set';
 
-import {readPixelsToArray, readPixelsToBuffer} from '../classic/copy-and-blit';
+import {readPixelsToArray, readPixelsToBuffer} from './helpers/webgl-texture-utils';
 import {
   setGLParameters,
   getGLParameters,
   resetGLParameters
 } from '../context/parameters/unified-parameter-api';
 import {withGLParameters} from '../context/state-tracker/with-parameters';
-import {clear} from '../classic/clear';
+import {clear} from '../deprecated/clear';
 import {getWebGLExtension} from '../context/helpers/webgl-extensions';
 
 /** WebGPU style Device API for a WebGL context */

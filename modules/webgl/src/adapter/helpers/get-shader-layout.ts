@@ -11,7 +11,7 @@ import type {
 } from '@luma.gl/core';
 
 import {GL} from '@luma.gl/constants';
-import {Accessor} from '../../classic/accessor'; // TODO - should NOT depend on classic API
+import {Accessor} from '../../deprecated/accessor'; // TODO - should NOT depend on classic API
 import {decodeGLUniformType, decodeGLAttributeType, isSamplerUniform} from './decode-webgl-types';
 
 /**
