@@ -224,17 +224,17 @@ export function assembleShaderWGSL(platformInfo: PlatformInfo, options: Assemble
   }
 
   // TODO - hack until shadertool modules support WebGPU
-  const modulesToInject = platformInfo.type !== 'webgpu' ? modules : [];
+  const modulesToInject = modules;
 
   for (const module of modulesToInject) {
     if (log) {
       checkShaderModuleDeprecations(module, coreSource, log);
     }
-    const moduleSource = getShaderModuleSource(module, stage);
+    const moduleSource = getShaderModuleSource(module, 'wgsl');
     // Add the module source, and a #define that declares it presence
     assembledSource += moduleSource;
 
-    const injections = module.injections[stage];
+    const injections = module.injections?.[stage] || {};
     for (const key in injections) {
       const match = /^(v|f)s:#([\w-]+)$/.exec(key);
       if (match) {
@@ -496,14 +496,15 @@ export function getShaderModuleSource(
     throw new Error('Shader module must have a name');
   }
   const moduleName = module.name.toUpperCase().replace(/[^0-9a-z]/gi, '_');
-  return `\
+  let source = `\
 // ----- MODULE ${module.name} ---------------
 
-#define MODULE_${moduleName}
-${moduleSource}\
-
-
 `;
+  if (stage !== 'wgsl') {
+    source += `#define MODULE_${moduleName}\n`;
+  }
+  source += `${moduleSource}\n`;
+  return source;
 }
 
 /*
