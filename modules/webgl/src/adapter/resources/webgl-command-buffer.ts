@@ -139,7 +139,7 @@ function _copyTextureToBuffer(device: WebGLDevice, options: CopyTextureToBufferO
 
   // TODO - Not possible to read just stencil or depth part in WebGL?
   if (aspect !== 'all') {
-    throw new Error('not supported');
+    throw new Error('aspect not supported in WebGL');
   }
 
   // TODO - mipLevels are set when attaching texture to framebuffer
