@@ -52,10 +52,11 @@ import {WEBGLTextureView} from './webgl-texture-view';
 import {
   initializeTextureStorage,
   // clearMipLevel,
-  copyCPUImageToMipLevel,
+  copyExternalImageToMipLevel,
   copyCPUDataToMipLevel,
   // copyGPUBufferToMipLevel,
-  getWebGLTextureTarget
+  getWebGLTextureTarget,
+  getWebGLCubeFaceTarget
 } from '../helpers/webgl-texture-utils';
 
 // PORTABLE HELPERS (Move to methods on Texture?)
@@ -350,10 +351,43 @@ export class WEBGLTexture extends Texture {
   }): {width: number; height: number} {
     const size = Texture.getExternalImageSize(options.image);
     const opts = {...Texture.defaultCopyExternalImageOptions, ...size, ...options};
-    const {depth, mipLevel: lodLevel, image} = opts;
-    this.bind();
-    this._setMipLevel(depth, lodLevel, image);
-    this.unbind();
+
+    const {image, depth, mipLevel, x, y, z} = opts;
+    let {width, height} = opts;
+    const {dimension, glFormat, glType} = this;
+    const glTarget = getWebGLCubeFaceTarget(this.glTarget, dimension, depth);
+
+    // WebGL will error if we try to copy outside the bounds of the texture
+    width = Math.min(width, size.width - x);
+    height = Math.min(height, size.height - y);
+
+    // WebGL does not yet support sourceX/sourceY in copyExternalImage; requires copyTexSubImage2D from a framebuffer'
+
+    if (options.sourceX || options.sourceY) {
+      throw new Error('WebGL does not yet support sourceX/sourceY in copyExternalImage; requires copyTexSubImage2D from a framebuffer');
+    }
+
+    switch (dimension) {
+      case '2d-array':
+      case '3d':
+        this.gl.bindTexture(this.glTarget, this.handle);
+        // prettier-ignore
+        this.gl.texSubImage3D(glTarget, mipLevel, x, y, z, width, height, depth, glFormat, glType, image);
+        this.gl.bindTexture(this.glTarget, null);
+        break;
+
+      case '2d':
+      case 'cube':
+        this.gl.bindTexture(this.glTarget, this.handle);
+        // prettier-ignore
+        debugger
+        this.gl.texSubImage2D(glTarget, mipLevel, x, y, width, height, glFormat, glType, image);
+        this.gl.bindTexture(this.glTarget, null);
+        break;
+
+      default:
+        throw new Error(dimension);
+    }
     return {width: opts.width, height: opts.height};
   }
 
@@ -601,7 +635,7 @@ export class WEBGLTexture extends Texture {
    */
   protected _setMipLevel(
     depth: number,
-    level: number,
+    mipLevel: number,
     textureData: Texture2DData,
     glTarget: GL = this.glTarget
   ) {
@@ -611,7 +645,7 @@ export class WEBGLTexture extends Texture {
     // }
 
     if (Texture.isExternalImage(textureData)) {
-      copyCPUImageToMipLevel(this.device.gl, textureData, {...this, depth, level, glTarget});
+      copyExternalImageToMipLevel(this.device.gl, this.handle, textureData, {...this, depth, mipLevel, glTarget});
       return;
     }
 
@@ -620,7 +654,7 @@ export class WEBGLTexture extends Texture {
       copyCPUDataToMipLevel(this.device.gl, textureData.data, {
         ...this,
         depth,
-        level,
+        mipLevel,
         glTarget
       });
       return;
