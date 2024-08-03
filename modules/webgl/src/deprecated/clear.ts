@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Device, Framebuffer} from '@luma.gl/core';
+import {Device, Framebuffer, log} from '@luma.gl/core';
 import {WebGLDevice} from '../adapter/webgl-device';
 import {withGLParameters} from '../context/state-tracker/with-parameters';
 
@@ -24,6 +24,8 @@ export function clear(
   device: Device,
   options?: {framebuffer?: Framebuffer; color?: any; depth?: any; stencil?: any}
 ): void {
+  log.warn('clear will be removed in next minor release');
+
   const {framebuffer = null, color = null, depth = null, stencil = null} = options || {};
   const parameters: any = {};
 

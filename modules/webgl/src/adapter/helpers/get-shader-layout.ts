@@ -11,7 +11,6 @@ import type {
 } from '@luma.gl/core';
 
 import {GL} from '@luma.gl/constants';
-import {Accessor} from '../../deprecated/accessor'; // TODO - should NOT depend on classic API
 import {decodeGLUniformType, decodeGLAttributeType, isSamplerUniform} from './decode-webgl-types';
 
 /**
@@ -143,8 +142,7 @@ function readVaryings(gl: WebGL2RenderingContext, program: WebGLProgram): Varyin
     }
     const {name, type: compositeType, size} = activeInfo;
     const {glType, components} = decodeGLUniformType(compositeType);
-    const accessor = new Accessor({type: glType, size: size * components});
-    const varying = {location, name, accessor}; // Base values
+    const varying = {location, name, type: glType, size: size * components}; // Base values
     varyings.push(varying);
   }
 

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Buffer} from '@luma.gl/core';
+import {Buffer, log} from '@luma.gl/core';
 import {GL, GLDataType, GLPixelType} from '@luma.gl/constants';
 import {TypedArrayConstructor} from '@math.gl/types';
 
@@ -81,6 +81,7 @@ export class Accessor implements AccessorObject {
   }
 
   constructor(...accessors: AccessorObject[]) {
+    log.warn('Accessor will be removed in next minor release');
     accessors.forEach(accessor => this._assign(accessor)); // Merge in sequence
     Object.freeze(this);
   }

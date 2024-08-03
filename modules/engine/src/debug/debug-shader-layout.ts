@@ -31,7 +31,7 @@ export function getDebugTableForShaderLayout(
 
   for (const varyingDeclaration of layout.varyings || []) {
     const glslDeclaration = `${varyingDeclaration.location} ${varyingDeclaration.name}`;
-    table[`out ${glslDeclaration}`] = {[header]: JSON.stringify(varyingDeclaration.accessor)};
+    table[`out ${glslDeclaration}`] = {[header]: JSON.stringify(varyingDeclaration)};
   }
 
   return table;
