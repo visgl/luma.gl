@@ -20,26 +20,7 @@ single GPU draw call using instanced vertex attributes.
 
 const random = makeRandomGenerator();
 
-// WGSL
-
-const DIRLIGHT_WGSL = /* WGSL */ `\
-// MODULE: dirlight
-
-struct DirlightUniforms {
-  lightDirection: vec3<f32>,
-}
-
-@group(0) @binding(1) var<uniform> dirlight : DirlightUniforms;
-
-fn dirlight_filterColor(color: vec4<f32>, normal: vec3<f32>) -> vec4<f32> {
-  let d: f32 = abs(dot(normal, normalize(dirlight.lightDirection)));
-  return vec4<f32>(color.rgb * d, color.a);
-}
-`;
-
-const WGSL_SHADER = /* WGSL */ `\
-
-${DIRLIGHT_WGSL}
+const WGSL_SHADER = /* wgsl */ `\
 
 // APPLICATION
 
@@ -77,7 +58,7 @@ fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
   let offset = vec4<f32>(inputs.instanceOffsets, sin((app.time + delta) * 0.1) * 16.0, 0);
   outputs.Position = app.projectionMatrix * app.viewMatrix * (app.modelMatrix * inputs.positions + offset);
   
-  outputs.normal = (app.modelMatrix * vec4<f32>(inputs.normals, 0.0)).xyz;
+  outputs.normal = dirlight_setNormal((app.modelMatrix * vec4<f32>(inputs.normals, 0.0)).xyz);
   outputs.color = inputs.instanceColors;
 
   // vec4 pickColor = vec4(0., instancePickingColors, 1.0);
@@ -88,9 +69,9 @@ fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
 
 @fragment
 fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
-  var color = inputs.color; 
-  color = dirlight_filterColor(color, inputs.normal); 
-  return color;
+  var fragColor = inputs.color; 
+  fragColor = dirlight_filterColor(fragColor, DirlightInputs(inputs.normal)); 
+  return fragColor;
 }
 `;
 
