@@ -295,7 +295,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       clearColor: [0, 0, 0, 1]
       // clearDepth: true
     });
-    debugger
     for (const cube of this.cubes) {
       cube.model.draw(renderPass);
     }
