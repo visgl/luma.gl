@@ -122,13 +122,13 @@ export class WebGLDevice extends Device {
 
     // If attaching to an already attached context, return the attached device
     // @ts-expect-error device is attached to context
-    const device: WebGLDevice | undefined = props.gl?.device;
+    const device: WebGLDevice | undefined = props.webgl?.gl?.device;
     if (device) {
       throw new Error(`WebGL context already attached to device ${device.id}`);
     }
 
     // Create and instrument context
-    const canvas = props.gl?.canvas || props.canvas;
+    const canvas = props.webgl?.gl?.canvas || props.canvas;
     this.canvasContext = new WebGLCanvasContext(this, {...props, canvas});
 
     this.lost = new Promise<{reason: 'destroyed'; message: string}>(resolve => {
@@ -136,7 +136,7 @@ export class WebGLDevice extends Device {
     });
 
     this.handle = createBrowserContext(this.canvasContext.canvas, {
-      ...props,
+      ...props.webgl,
       onContextLost: (event: Event) =>
         this._resolveContextLost?.({
           reason: 'destroyed',
@@ -152,7 +152,7 @@ export class WebGLDevice extends Device {
     // Add spector debug instrumentation to context
     // We need to trust spector integration to decide if spector should be initialized
     // We also run spector instrumentation first, otherwise spector can clobber luma instrumentation.
-    this.spectorJS = initializeSpectorJS({...this.props, gl: this.handle});
+    this.spectorJS = initializeSpectorJS({...this.props.webgl, gl: this.handle});
 
     // Instrument context
     (this.gl as any).device = this; // Update GL context: Link webgl context back to device
@@ -175,8 +175,8 @@ export class WebGLDevice extends Device {
     glState.trackState(this.gl, {copyState: false});
 
     // DEBUG contexts: Add luma debug instrumentation to the context, force log level to at least 1
-    if (props.debug) {
-      this.gl = makeDebugContext(this.gl, {...props, throwOnError: true});
+    if (props.webgl?.debug) {
+      this.gl = makeDebugContext(this.gl, {...props.webgl, throwOnError: true});
       this.debug = true;
       log.level = Math.max(log.level, 1);
       log.warn('WebGL debug mode activated. Performance reduced.')();
