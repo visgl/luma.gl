@@ -4,7 +4,8 @@
 
 import type {NumberArray} from '@math.gl/types';
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
-import {lightingUniforms} from './lighting-uniforms-glsl';
+import {lightingUniformsGLSL} from './lighting-uniforms-glsl';
+import {lightingUniformsWGSL} from './lighting-uniforms-wgsl';
 
 /** Max number of supported lights (in addition to ambient light */
 const MAX_LIGHTS = 5;
@@ -100,8 +101,9 @@ export const lighting = {
     lightDirection: [1, 1, 1],
     lightAttenuation: [1, 1, 1]
   },
-  vs: lightingUniforms,
-  fs: lightingUniforms,
+  source: lightingUniformsWGSL,
+  vs: lightingUniformsGLSL,
+  fs: lightingUniformsGLSL,
 
   getUniforms
 } as const satisfies ShaderModule<LightingProps, LightingUniforms>;

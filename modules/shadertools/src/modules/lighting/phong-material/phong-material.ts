@@ -4,6 +4,7 @@
 
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
 import {lighting} from '../lights/lighting';
+import {PHONG_WGSL} from './phong-shaders-wgsl';
 import {PHONG_VS, PHONG_FS} from './phong-shaders-glsl';
 
 export type PhongMaterialProps = PhongMaterialUniforms;
@@ -24,6 +25,7 @@ export const phongMaterial = {
   name: 'phong-lighting',
   dependencies: [lighting],
   // Note these are switched between phong and gouraud
+  source: PHONG_WGSL,
   vs: PHONG_VS,
   fs: PHONG_FS,
   defines: {
