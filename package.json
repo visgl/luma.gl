@@ -52,7 +52,6 @@
     "@probe.gl/test-utils": "^4.0.8",
     "@types/tape-promise": "^4.0.1 ",
     "eslint-plugin-tree-shaking": "^1.9.2",
-    "math.gl": "^3.0.0",
     "nyc": "^15.1.0",
     "ocular-dev-tools": "2.0.0-alpha.33",
     "pre-commit": "^1.2.2",
