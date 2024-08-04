@@ -490,6 +490,30 @@ export function setMipLevelFromGPUBuffer(
   gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, null);
 }
 */
+export type ReadPixelsToArrayOptions = {
+  sourceX?: number;
+  sourceY?: number;
+  sourceFormat?: number;
+  sourceAttachment?: number;
+  target?: Uint8Array | Uint16Array | Float32Array;
+  // following parameters are auto deduced if not provided
+  sourceWidth?: number;
+  sourceHeight?: number;
+  sourceDepth?: number;
+  sourceType?: number;
+};
+
+export type ReadPixelsToBufferOptions = {
+  sourceX?: number;
+  sourceY?: number;
+  sourceFormat?: number;
+  target?: Buffer; // A new Buffer object is created when not provided.
+  targetByteOffset?: number; // byte offset in buffer object
+  // following parameters are auto deduced if not provided
+  sourceWidth?: number;
+  sourceHeight?: number;
+  sourceType?: number;
+};
 
 /**
  * Copies data from a type  or a Texture object into ArrayBuffer object.
@@ -504,18 +528,7 @@ export function setMipLevelFromGPUBuffer(
  */
 export function readPixelsToArray(
   source: Framebuffer | Texture,
-  options?: {
-    sourceX?: number;
-    sourceY?: number;
-    sourceFormat?: number;
-    sourceAttachment?: number;
-    target?: Uint8Array | Uint16Array | Float32Array;
-    // following parameters are auto deduced if not provided
-    sourceWidth?: number;
-    sourceHeight?: number;
-    sourceDepth?: number;
-    sourceType?: number;
-  }
+  options?: ReadPixelsToArrayOptions
 ): Uint8Array | Uint16Array | Float32Array {
   const {
     sourceX = 0,
@@ -576,17 +589,7 @@ export function readPixelsToArray(
  */
 export function readPixelsToBuffer(
   source: Framebuffer | Texture,
-  options?: {
-    sourceX?: number;
-    sourceY?: number;
-    sourceFormat?: number;
-    target?: Buffer; // A new Buffer object is created when not provided.
-    targetByteOffset?: number; // byte offset in buffer object
-    // following parameters are auto deduced if not provided
-    sourceWidth?: number;
-    sourceHeight?: number;
-    sourceType?: number;
-  }
+  options?: ReadPixelsToBufferOptions
 ): WEBGLBuffer {
   const {
     target,
