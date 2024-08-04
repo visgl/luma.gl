@@ -4,6 +4,8 @@
 
 Major new release that includes WebGPU support
 
+### 9.1.0-alpha.11
+
 ### 9.1.0-alpha.10
 
 679ed4c84 (HEAD -> master, origin/master) fix: Update path to Khronos glTF assets (#2148)
