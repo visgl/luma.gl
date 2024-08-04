@@ -7,8 +7,7 @@ import type {
   Sampler,
   SamplerProps,
   TextureViewProps,
-  CopyExternalImageOptions
-,
+  CopyExternalImageOptions,
   Texture1DData,
   Texture2DData,
   Texture3DData,

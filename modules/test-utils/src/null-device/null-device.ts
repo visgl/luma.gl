@@ -7,8 +7,7 @@ import type {
   CanvasContextProps,
   TextureFormat,
   VertexArray,
-  VertexArrayProps
-,
+  VertexArrayProps,
   BufferProps,
   ShaderProps,
   SamplerProps,
@@ -27,7 +26,6 @@ import type {
   QuerySetProps
 } from '@luma.gl/core';
 import {Device, DeviceFeatures} from '@luma.gl/core';
-
 
 import {NullDeviceInfo} from './null-device-info';
 import {NullDeviceLimits} from './null-device-features';

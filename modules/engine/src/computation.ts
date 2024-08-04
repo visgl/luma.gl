@@ -3,7 +3,15 @@
 // Copyright (c) vis.gl contributors
 
 import type {DeviceFeature, ComputePipelineProps, Shader, Binding} from '@luma.gl/core';
-import {Device, Buffer, ComputePipeline, ComputePass, UniformStore,log,getTypedArrayFromDataType} from '@luma.gl/core';
+import {
+  Device,
+  Buffer,
+  ComputePipeline,
+  ComputePass,
+  UniformStore,
+  log,
+  getTypedArrayFromDataType
+} from '@luma.gl/core';
 import type {ShaderModule, PlatformInfo} from '@luma.gl/shadertools';
 import {ShaderAssembler, getShaderLayoutFromWGSL} from '@luma.gl/shadertools';
 import {TypedArray, isNumericArray} from '@math.gl/types';

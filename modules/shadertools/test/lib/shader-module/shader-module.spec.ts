@@ -4,7 +4,12 @@
 
 import test from 'tape-promise/tape';
 import type {ShaderModule} from '@luma.gl/shadertools';
-import {initializeShaderModule, checkShaderModuleDeprecations,getShaderModuleUniforms, getShaderModuleSource} from '@luma.gl/shadertools';
+import {
+  initializeShaderModule,
+  checkShaderModuleDeprecations,
+  getShaderModuleUniforms,
+  getShaderModuleSource
+} from '@luma.gl/shadertools';
 
 test('ShaderModule', t => {
   let shaderModule: ShaderModule = {name: 'empty-shader-module', uniformTypes: {}};

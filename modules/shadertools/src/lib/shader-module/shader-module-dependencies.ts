@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {ShaderModule,initializeShaderModules} from './shader-module';
+import {ShaderModule, initializeShaderModules} from './shader-module';
 
 // import type {ShaderModule} from '../shader-module/shader-module';
 

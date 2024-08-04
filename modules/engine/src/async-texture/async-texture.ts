@@ -1,7 +1,12 @@
 // luma.gl, MIT license
 // Copyright (c) vis.gl contributors
 
-import type {Texture, TextureProps, Sampler, TextureView, Device,
+import type {
+  Texture,
+  TextureProps,
+  Sampler,
+  TextureView,
+  Device,
   Texture1DData,
   Texture2DData,
   Texture3DData,
@@ -9,7 +14,6 @@ import type {Texture, TextureProps, Sampler, TextureView, Device,
   TextureCubeData,
   TextureCubeArrayData
 } from '@luma.gl/core';
-
 
 import {loadImageBitmap} from '../application-utils/load-file';
 

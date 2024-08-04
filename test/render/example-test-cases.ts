@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {SnapshotTestRunnerTestCase} from '@luma.gl/test-utils';
-import {AnimationLoopTemplate, AnimationProps,setPathPrefix} from '@luma.gl/engine';
+import {AnimationLoopTemplate, AnimationProps, setPathPrefix} from '@luma.gl/engine';
 
 const RESOURCE_PATH = 'https://raw.githubusercontent.com/uber/luma.gl/master';
 
