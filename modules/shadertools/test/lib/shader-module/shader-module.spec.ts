@@ -62,12 +62,12 @@ void main() {
   const log = {
     deprecatedCalled: [],
     deprecated: function deprecated(...args) {
-      this.deprecatedCalled.push(...args);
+      this.deprecatedCalled.push(args);
       return () => {};
     },
     removedCalled: [],
     removed: function removed(...args) {
-      this.removedCalled.push(...args);
+      this.removedCalled.push(args);
       return () => {};
     }
   };
