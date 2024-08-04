@@ -6,12 +6,12 @@
 import {GL} from './webgl-constants';
 
 /** Type covering all typed arrays and classic arrays consisting of numbers */
-export type NumberArray = number[] | TypedArray;
-/** Type covering all typed arrays and classic arrays consisting of numbers */
 export type NumericArray = TypedArray | number[];
 
-/** TypeScript type covering all typed arrays */
+/** Type covering classic arrays consisting of numbers */
+export type NumberArray = number[];
 
+/** TypeScript type covering all typed arrays */
 export type TypedArray =
   | Int8Array
   | Uint8Array
@@ -246,21 +246,21 @@ export type GLSamplerParameters = {
  */
 export type GLValueParameters = {
   [GL.BLEND]?: boolean;
-  [GL.BLEND_COLOR]?: [number, number, number, number] | NumberArray;
+  [GL.BLEND_COLOR]?: [number, number, number, number] | TypedArray;
   [GL.BLEND_EQUATION_RGB]?: GLBlendEquation;
   [GL.BLEND_EQUATION_ALPHA]?: GLBlendEquation;
   [GL.BLEND_SRC_RGB]?: GLBlendFunction;
   [GL.BLEND_DST_RGB]?: GLBlendFunction;
   [GL.BLEND_SRC_ALPHA]?: GLBlendFunction;
   [GL.BLEND_DST_ALPHA]?: GLBlendFunction;
-  [GL.COLOR_CLEAR_VALUE]?: [number, number, number, number] | NumberArray;
+  [GL.COLOR_CLEAR_VALUE]?: [number, number, number, number] | TypedArray;
   [GL.COLOR_WRITEMASK]?: [boolean, boolean, boolean, boolean] | boolean[];
   [GL.CULL_FACE]?: boolean;
   [GL.CULL_FACE_MODE]?: GL.FRONT | GL.BACK | GL.FRONT_AND_BACK;
   [GL.DEPTH_TEST]?: boolean;
   [GL.DEPTH_CLEAR_VALUE]?: number;
   [GL.DEPTH_FUNC]?: GLFunction;
-  [GL.DEPTH_RANGE]?: [number, number] | NumberArray;
+  [GL.DEPTH_RANGE]?: [number, number] | TypedArray;
   [GL.DEPTH_WRITEMASK]?: boolean;
   [GL.DITHER]?: boolean;
   [GL.FRAGMENT_SHADER_DERIVATIVE_HINT]?: GL.FASTEST | GL.NICEST | GL.DONT_CARE;
@@ -290,7 +290,7 @@ export type GLValueParameters = {
   [GL.SAMPLE_COVERAGE_VALUE]?: number;
   [GL.SAMPLE_COVERAGE_INVERT]?: boolean;
   [GL.SCISSOR_TEST]?: boolean;
-  [GL.SCISSOR_BOX]?: [number, number, number, number] | NumberArray;
+  [GL.SCISSOR_BOX]?: [number, number, number, number] | TypedArray;
   [GL.STENCIL_TEST]?: boolean;
   [GL.STENCIL_CLEAR_VALUE]?: number;
   [GL.STENCIL_WRITEMASK]?: number;
@@ -307,7 +307,7 @@ export type GLValueParameters = {
   [GL.STENCIL_BACK_FAIL]?: GLStencilOp;
   [GL.STENCIL_BACK_PASS_DEPTH_FAIL]?: GLStencilOp;
   [GL.STENCIL_BACK_PASS_DEPTH_PASS]?: GLStencilOp;
-  [GL.VIEWPORT]?: [number, number, number, number] | NumberArray;
+  [GL.VIEWPORT]?: [number, number, number, number] | TypedArray;
 
   [GL.READ_FRAMEBUFFER_BINDING]?: Framebuffer | null;
 
@@ -354,14 +354,14 @@ export type GLFunctionParameters = {
   // Function-style setters
   framebuffer?: Framebuffer | null;
   blend?: boolean;
-  blendColor?: [number, number, number, number] | NumberArray;
+  blendColor?: [number, number, number, number] | TypedArray;
   blendEquation?: GLBlendEquation | [GLBlendEquation, GLBlendEquation];
   /* defines which function is used for blending pixel arithmetic. Defaults to one and zero */
   blendFunc?:
     | [GLBlendFunction, GLBlendFunction]
     | [GLBlendFunction, GLBlendFunction, GLBlendFunction, GLBlendFunction];
 
-  clearColor?: [number, number, number, number] | NumberArray;
+  clearColor?: [number, number, number, number] | TypedArray;
   clearDepth?: number;
   clearStencil?: number;
 
@@ -374,7 +374,7 @@ export type GLFunctionParameters = {
   depthFunc?: GLFunction;
   /** Specifies whether writing into the depth buffer is enabled. Default true, i.e. writing is enabled. */
   depthMask?: boolean;
-  depthRange?: [number, number] | NumberArray;
+  depthRange?: [number, number] | TypedArray;
 
   dither?: boolean;
 
@@ -387,23 +387,23 @@ export type GLFunctionParameters = {
   lineWidth?: number;
 
   polygonOffsetFill?: boolean;
-  polygonOffset?: [number, number];
+  polygonOffset?: [number, number] | TypedArray;
 
   sampleCoverage?: [number, boolean];
 
   scissorTest?: boolean;
-  scissor?: [number, number, number, number] | NumberArray;
+  scissor?: [number, number, number, number] | TypedArray;
 
   stencilTest?: boolean;
   /** Bit mask to enable or disable writing of individual bits in the stencil planes. By default, the mask is all 1. */
-  stencilMask?: number | [number, number];
+  stencilMask?: number | [number, number] | TypedArray;
   stencilFunc?:
     | [GLFunction, number, number]
     | [GLFunction, number, number, GLFunction, number, number];
   stencilOp?:
     | [GLStencilOp, GLStencilOp, GLStencilOp]
     | [GLStencilOp, GLStencilOp, GLStencilOp, GLStencilOp, GLStencilOp, GLStencilOp];
-  viewport?: [number, number, number, number] | NumberArray;
+  viewport?: [number, number, number, number] | TypedArray;
 };
 
 /** WebGL style parameters object (with both GL constants and function style fields) */

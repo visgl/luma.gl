@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {NumericArray} from '@math.gl/types';
+import {NumericArray, NumberArray4} from '@math.gl/types';
 import {RenderPass, RenderPassProps, RenderPassParameters} from '@luma.gl/core';
 import {WebGLDevice} from '../webgl-device';
 import {GL, GLParameters} from '@luma.gl/constants';
@@ -85,11 +85,11 @@ export class WEBGLRenderPass extends RenderPass {
     if (parameters.viewport) {
       // WebGPU viewports are 6 coordinates (X, Y, Z)
       if (parameters.viewport.length >= 6) {
-        glParameters.viewport = parameters.viewport.slice(0, 4);
+        glParameters.viewport = parameters.viewport.slice(0, 4) as NumberArray4;
         glParameters.depthRange = [parameters.viewport[4], parameters.viewport[5]];
       } else {
         // WebGL viewports are 4 coordinates (X, Y)
-        glParameters.viewport = parameters.viewport;
+        glParameters.viewport = parameters.viewport as NumberArray4;
       }
     }
     if (parameters.scissorRect) {

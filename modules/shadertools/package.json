@@ -49,8 +49,8 @@
     "@luma.gl/core": "^9.1.0-alpha"
   },
   "dependencies": {
-    "@math.gl/core": "^4.0.0",
-    "@math.gl/types": "^4.0.0",
+    "@math.gl/core": "4.1.0-alpha.3",
+    "@math.gl/types": "4.1.0-alpha.3",
     "wgsl_reflect": "^1.0.1"
   },
   "gitHead": "c636c34b8f1581eed163e94543a8eb1f4382ba8e"
