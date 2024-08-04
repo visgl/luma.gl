@@ -2,9 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {RenderPipelineProps, RenderPipelineParameters, PrimitiveTopology} from '@luma.gl/core';
-import type {ShaderLayout, UniformValue, Binding} from '@luma.gl/core';
-import type {RenderPass, VertexArray} from '@luma.gl/core';
+import type {RenderPipelineProps, RenderPipelineParameters, PrimitiveTopology,ShaderLayout, UniformValue, Binding,RenderPass, VertexArray} from '@luma.gl/core';
 import {RenderPipeline, log} from '@luma.gl/core';
 // import {getAttributeInfosFromLayouts} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';

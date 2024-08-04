@@ -4,8 +4,7 @@
 
 import test from 'tape-promise/tape';
 import type {ShaderModule} from '@luma.gl/shadertools';
-import {initializeShaderModule, checkShaderModuleDeprecations} from '@luma.gl/shadertools';
-import {getShaderModuleUniforms, getShaderModuleSource} from '@luma.gl/shadertools';
+import {initializeShaderModule, checkShaderModuleDeprecations,getShaderModuleUniforms, getShaderModuleSource} from '@luma.gl/shadertools';
 
 test('ShaderModule', t => {
   let shaderModule: ShaderModule = {name: 'empty-shader-module', uniformTypes: {}};
@@ -57,13 +56,13 @@ void main() {
 
   const log = {
     deprecatedCalled: [],
-    deprecated: function deprecated() {
-      this.deprecatedCalled.push(Array.from(arguments));
+    deprecated: function deprecated(...args) {
+      this.deprecatedCalled.push(...args);
       return () => {};
     },
     removedCalled: [],
-    removed: function removed() {
-      this.removedCalled.push(Array.from(arguments));
+    removed: function removed(...args) {
+      this.removedCalled.push(...args);
       return () => {};
     }
   };

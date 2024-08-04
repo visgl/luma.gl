@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {UniformValue, RenderPipelineProps, Binding} from '@luma.gl/core';
-import type {RenderPass, VertexArray} from '@luma.gl/core';
+import type {UniformValue, RenderPipelineProps, Binding,RenderPass, VertexArray} from '@luma.gl/core';
 import {RenderPipeline} from '@luma.gl/core';
 
 import type {NullDevice} from '../null-device';

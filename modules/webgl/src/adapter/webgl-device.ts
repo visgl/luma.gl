@@ -3,8 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {TypedArray} from '@math.gl/types';
-import type {DeviceProps, DeviceInfo, CanvasContextProps, TextureFormat} from '@luma.gl/core';
-import type {Buffer, Texture, Framebuffer, VertexArray, VertexArrayProps} from '@luma.gl/core';
+import type {DeviceProps, DeviceInfo, CanvasContextProps, TextureFormat,Buffer, Texture, Framebuffer, VertexArray, VertexArrayProps} from '@luma.gl/core';
 import {Device, CanvasContext, log} from '@luma.gl/core';
 import type {GLExtensions} from '@luma.gl/constants';
 import {WebGLStateTracker} from '../context/state-tracker/webgl-state-tracker';

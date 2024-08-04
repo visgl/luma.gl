@@ -3,8 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
-import {ShaderLayout, getAttributeInfosFromLayouts} from '@luma.gl/core';
-import {BufferLayout} from '@luma.gl/core';
+import {ShaderLayout, getAttributeInfosFromLayouts,BufferLayout} from '@luma.gl/core';
 
 const shaderLayout: ShaderLayout = {
   bindings: [],

@@ -6,8 +6,7 @@ import type {Log} from '@probe.gl/log';
 import type {DeviceProps} from './device';
 import {Device} from './device';
 import {Adapter} from './adapter';
-import {StatsManager} from '../utils/stats-manager';
-import {lumaStats} from '../utils/stats-manager';
+import {StatsManager,lumaStats} from '../utils/stats-manager';
 import {log} from '../utils/log';
 
 declare global {

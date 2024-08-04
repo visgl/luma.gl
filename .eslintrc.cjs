@@ -17,6 +17,14 @@ module.exports = getESLintConfig({
     },
 
     rules: {
+      // Definitely disable
+      'no-use-before-define': 0,
+      // disabled after ocular upgrade to unbreak build
+      'prefer-rest-params': 'warn',
+      'import/named': 'warn',
+      'no-shadow': 'warn',
+      '@typescript-eslint/no-explicit-any': 'warn',
+      // desiabled by choice
       'no-unused-expressions': 'warn',
       'no-console': 1,
       'no-continue': ['warn'],

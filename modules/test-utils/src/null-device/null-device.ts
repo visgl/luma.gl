@@ -8,10 +8,7 @@ import type {
   TextureFormat,
   VertexArray,
   VertexArrayProps
-} from '@luma.gl/core';
-import {Device, DeviceFeatures} from '@luma.gl/core';
-
-import type {
+,
   BufferProps,
   ShaderProps,
   SamplerProps,
@@ -29,6 +26,8 @@ import type {
   TransformFeedbackProps,
   QuerySetProps
 } from '@luma.gl/core';
+import {Device, DeviceFeatures} from '@luma.gl/core';
+
 
 import {NullDeviceInfo} from './null-device-info';
 import {NullDeviceLimits} from './null-device-features';

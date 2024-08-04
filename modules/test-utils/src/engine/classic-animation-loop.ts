@@ -5,8 +5,7 @@
 // TODO - replace createGLContext, instrumentGLContext, resizeGLContext?
 // TODO - remove dependency on framebuffer (bundle size impact)
 import {luma, Device, DeviceProps, log} from '@luma.gl/core';
-import {requestAnimationFrame, cancelAnimationFrame} from '@luma.gl/engine';
-import {Timeline, AnimationProps} from '@luma.gl/engine';
+import {requestAnimationFrame, cancelAnimationFrame,Timeline, AnimationProps} from '@luma.gl/engine';
 import {Stats, Stat} from '@probe.gl/stats';
 import {isBrowser} from '@probe.gl/env';
 
