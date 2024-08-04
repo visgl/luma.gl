@@ -7,8 +7,13 @@ import {createTestDevice} from '@luma.gl/test-utils';
 
 import type {WebGLDevice} from '@luma.gl/webgl';
 
-import {getGLParameters, setGLParameters, resetGLParameters, WEBGLTexture} from '@luma.gl/webgl';
-import {WebGLStateTracker} from '@luma.gl/webgl';
+import {
+  getGLParameters,
+  setGLParameters,
+  resetGLParameters,
+  WEBGLTexture,
+  WebGLStateTracker
+} from '@luma.gl/webgl';
 
 import {
   GL_PARAMETER_DEFAULTS,

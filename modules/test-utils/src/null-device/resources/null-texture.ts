@@ -7,9 +7,7 @@ import type {
   Sampler,
   SamplerProps,
   TextureViewProps,
-  CopyExternalImageOptions
-} from '@luma.gl/core';
-import type {
+  CopyExternalImageOptions,
   Texture1DData,
   Texture2DData,
   Texture3DData,

@@ -6,7 +6,7 @@ import type {UniformValue, Binding} from '@luma.gl/core';
 import {isNumericArray} from '@math.gl/types';
 
 export function isUniformValue(value: unknown): value is UniformValue {
-  return isNumericArray(value) !== null || typeof value === 'number' || typeof value === 'boolean';
+  return isNumericArray(value) || typeof value === 'number' || typeof value === 'boolean';
 }
 
 type UniformsAndBindings = {

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {NumberArray} from '../../../types';
+import {NumericArray} from '../../../types';
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
 
 // cyan color
@@ -19,9 +19,9 @@ export type PickingProps = {
   /** Set to true when picking an attribute value instead of object index */
   isAttribute?: boolean;
   /** Set to a picking color to visually highlight that item, or `null` to explicitly clear **/
-  highlightedObjectColor?: NumberArray | null;
+  highlightedObjectColor?: NumericArray | null;
   /** Color of visual highlight of "selected" item */
-  highlightColor?: NumberArray;
+  highlightColor?: NumericArray;
   /** Color range 0-1 or 0-255 */
   useFloatColors?: boolean;
 };
@@ -44,9 +44,9 @@ export type PickingUniforms = {
   /** Do we have a highlighted item? */
   isHighlightActive?: boolean;
   /** Set to a picking color to visually highlight that item */
-  highlightedObjectColor?: NumberArray;
+  highlightedObjectColor?: NumericArray;
   /** Color of visual highlight of "selected" item */
-  highlightColor?: NumberArray;
+  highlightColor?: NumericArray;
 };
 
 const vs = /* glsl */ `\

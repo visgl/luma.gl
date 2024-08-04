@@ -8,11 +8,11 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@luma.gl/core": "9.1.0-alpha.6",
-    "@luma.gl/engine": "9.1.0-alpha.6",
-    "@luma.gl/shadertools": "9.1.0-alpha.6",
-    "@luma.gl/webgpu": "9.1.0-alpha.6",
-    "@math.gl/core": "^4.0.0"
+    "@luma.gl/core": "9.1.0-alpha.10",
+    "@luma.gl/engine": "9.1.0-alpha.10",
+    "@luma.gl/shadertools": "9.1.0-alpha.10",
+    "@luma.gl/webgpu": "9.1.0-alpha.10",
+    "@math.gl/core": "4.1.0-alpha.3"
   },
   "devDependencies": {
     "typescript": "^5.5.0",

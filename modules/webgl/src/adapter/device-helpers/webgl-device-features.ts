@@ -8,8 +8,11 @@
 import {DeviceFeature, DeviceFeatures} from '@luma.gl/core';
 import {GLExtensions} from '@luma.gl/constants';
 import {getWebGLExtension} from '../../context/helpers/webgl-extensions';
-import {isTextureFeature, checkTextureFeature} from '../converters/texture-formats';
-import {TEXTURE_FEATURES} from '../converters/texture-formats';
+import {
+  isTextureFeature,
+  checkTextureFeature,
+  TEXTURE_FEATURES
+} from '../converters/texture-formats';
 
 /**
  * Defines luma.gl "feature" names and semantics

@@ -4,13 +4,32 @@
 
 // A lot of imports, but then Model is where it all comes together...
 import type {TypedArray} from '@math.gl/types';
-import type {RenderPipelineProps, RenderPipelineParameters} from '@luma.gl/core';
-import type {BufferLayout, Shader, VertexArray, TransformFeedback} from '@luma.gl/core';
-import type {AttributeInfo, Binding, UniformValue, PrimitiveTopology} from '@luma.gl/core';
-import {Device, DeviceFeature, Buffer, Texture, TextureView, Sampler} from '@luma.gl/core';
-import {RenderPipeline, RenderPass, UniformStore} from '@luma.gl/core';
-import {log} from '@luma.gl/core';
-import {getTypedArrayFromDataType, getAttributeInfosFromLayouts} from '@luma.gl/core';
+import type {
+  RenderPipelineProps,
+  RenderPipelineParameters,
+  BufferLayout,
+  Shader,
+  VertexArray,
+  TransformFeedback,
+  AttributeInfo,
+  Binding,
+  UniformValue,
+  PrimitiveTopology
+} from '@luma.gl/core';
+import {
+  Device,
+  DeviceFeature,
+  Buffer,
+  Texture,
+  TextureView,
+  Sampler,
+  RenderPipeline,
+  RenderPass,
+  UniformStore,
+  log,
+  getTypedArrayFromDataType,
+  getAttributeInfosFromLayouts
+} from '@luma.gl/core';
 
 import type {ShaderModule, PlatformInfo} from '@luma.gl/shadertools';
 import {ShaderAssembler, getShaderLayoutFromWGSL} from '@luma.gl/shadertools';

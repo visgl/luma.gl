@@ -2,16 +2,20 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {NumberArray} from '@math.gl/types';
+import type {NumericArray} from '@math.gl/types';
 import {Sampler, Texture} from '@luma.gl/core';
 import type {UniformFormat} from '../../types';
-import {PropType, PropValidator} from '../filters/prop-types';
-import {ShaderInjection} from '../shader-assembly/shader-injections';
-import {makePropValidators, getValidatedProperties} from '../filters/prop-types';
-import {normalizeInjections} from '../shader-assembly/shader-injections';
+import {
+  PropType,
+  PropValidator,
+  makePropValidators,
+  getValidatedProperties
+} from '../filters/prop-types';
+import {ShaderInjection, normalizeInjections} from '../shader-assembly/shader-injections';
 
 export type BindingValue = Buffer | Texture | Sampler;
-export type UniformValue = number | boolean | Readonly<NumberArray>; // Float32Array> | Readonly<Int32Array> | Readonly<Uint32Array> | Readonly<number[]>;
+export type UniformValue = number | boolean | Readonly<NumericArray>;
+// Float32Array> | Readonly<Int32Array> | Readonly<Uint32Array> | Readonly<number[]>;
 
 export type UniformInfo = {
   format?: UniformFormat;

@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {NumberArray} from '@math.gl/types';
+import type {Vector3Like, TypedArray} from '@math.gl/core';
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
 
 export type DirlightProps = {
-  lightDirection?: NumberArray | [number, number, number];
+  lightDirection?: Vector3Like | TypedArray;
 };
 
 export type DirlightUniforms = DirlightProps;

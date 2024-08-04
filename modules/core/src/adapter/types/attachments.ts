@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {NumberArray} from '../../types';
 import type {
   ColorTextureFormat,
   DepthStencilTextureFormat,
@@ -12,9 +11,6 @@ import type {Texture} from '../resources/texture'; // TextureView...
 import type {TextureView} from '../resources/texture-view'; // TextureView...
 
 // UNIFORMS
-
-/** Valid values for uniforms. @note boolean values get converted to 0 or 1 before setting */
-export type UniformValue = number | boolean | Readonly<NumberArray>; // Float32Array> | Readonly<Int32Array> | Readonly<Uint32Array> | Readonly<number[]>;
 
 // BINDING LAYOUTS
 

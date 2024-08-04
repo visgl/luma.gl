@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+import {NumberArray4, TypedArray} from '@math.gl/types';
 import type {Device} from '../device';
 import type {RenderPassParameters} from '../types/parameters';
 // import {Binding} from '../types/shader-layout';
 import {Resource, ResourceProps} from './resource';
 import {Framebuffer} from './framebuffer';
-import {NumberArray} from '../../types';
 import {QuerySet} from './query-set';
 
 /**
@@ -22,7 +22,7 @@ export type RenderPassProps = ResourceProps & {
   // TODO - API needs to be able to control multiple render targets
 
   /** Clear value for color attachment, or `load` to preserve the previous value */
-  clearColor?: NumberArray | false;
+  clearColor?: NumberArray4 | TypedArray | false;
   /** Whether to disable / discard the output of the rasterizer */
   discard?: boolean;
 
