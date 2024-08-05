@@ -4,14 +4,28 @@
 
 Major new release that includes WebGPU support
 
+### 9.1.0-alpha.12
+
+- chore(shadertools): Port lights and phongMaterial modules to WGSL (#2158)
+
 ### 9.1.0-alpha.11
+
+- feat(examples): Partial WGSL port of lighting example (#2157)
+- fix(examples): Fix website resolution and dirlight use in instancing example (#2156)
+- chore: Upgrade to math.gl@4.1.0-alpha.3 (#2155)
+- chore: Fix peerExtensions (#2154)
+- fix(webgpu): animation example, dirlight module (#2153)
+- chore: log warnings in deprecated code paths (accessor, clear) (#2151)
+- fix(webgl): Fix texture.copyExternalImage() with offsets (#2150)
+- chore(webgl): Join texture utility files (#2149)
 
 ### 9.1.0-alpha.10
 
-679ed4c84 (HEAD -> master, origin/master) fix: Update path to Khronos glTF assets (#2148)
-d3697ce0f feat: Add Texture.copyExternalImage() function (#2147)
-e8ef73c07 docs: Texture doc cleanup (#2146)
-f0dc17ffa docs: AsyncTexture (#2145)
+- (tag: v9.1.0-alpha.10) v9.1.0-alpha.10
+- fix: Update path to Khronos glTF assets (#2148)
+- feat: Add Texture.copyExternalImage() function (#2147)
+- docs: Texture doc cleanup (#2146)
+- docs: AsyncTexture (#2145)
 
 ### 9.1.0-alpha.9
 
