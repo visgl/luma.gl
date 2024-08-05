@@ -80,21 +80,23 @@ vec3 lighting_getSpecularLightColor(vec3 cameraPosition, vec3 position_worldspac
   vec3 surfaceColor = vec3(0, 0, 0);
 
   if (lighting.enabled == 0) {
-    vec3 view_direction = normalize(cameraPosition - position_worldspace);
+    return lightColor;
+  }
 
-    switch (lighting.lightType) {
-      case 0:
-        PointLight pointLight = lighting_getPointLight(0);
-        vec3 light_position_worldspace = pointLight.position;
-        vec3 light_direction = normalize(light_position_worldspace - position_worldspace);
-        lightColor += lighting_getLightColor(surfaceColor, light_direction, view_direction, normal_worldspace, pointLight.color);
-        break;
+  vec3 view_direction = normalize(cameraPosition - position_worldspace);
 
-      case 1:
-        DirectionalLight directionalLight = lighting_getDirectionalLight(0);
-        lightColor += lighting_getLightColor(surfaceColor, -directionalLight.direction, view_direction, normal_worldspace, directionalLight.color);
-        break;
-    }
+  switch (lighting.lightType) {
+    case 0:
+      PointLight pointLight = lighting_getPointLight(0);
+      vec3 light_position_worldspace = pointLight.position;
+      vec3 light_direction = normalize(light_position_worldspace - position_worldspace);
+      lightColor += lighting_getLightColor(surfaceColor, light_direction, view_direction, normal_worldspace, pointLight.color);
+      break;
+
+    case 1:
+      DirectionalLight directionalLight = lighting_getDirectionalLight(0);
+      lightColor += lighting_getLightColor(surfaceColor, -directionalLight.direction, view_direction, normal_worldspace, directionalLight.color);
+      break;
   }
   return lightColor;
 }
