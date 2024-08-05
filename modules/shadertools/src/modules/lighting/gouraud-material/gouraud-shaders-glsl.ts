@@ -11,15 +11,6 @@ uniform gouraudMaterialUniforms {
   uniform float shininess;
   uniform vec3  specularColor;
 } material;
-`;
-
-export const GOURAUD_FS = glsl`\
-uniform gouraudMaterialUniforms {
-  uniform float ambient;
-  uniform float diffuse;
-  uniform float shininess;
-  uniform vec3  specularColor;
-} material;
 
 vec3 lighting_getLightColor(vec3 surfaceColor, vec3 light_direction, vec3 view_direction, vec3 normal_worldspace, vec3 color) {
   vec3 halfway_direction = normalize(light_direction + view_direction);
@@ -100,6 +91,15 @@ vec3 lighting_getSpecularLightColor(vec3 cameraPosition, vec3 position_worldspac
 
   return lightColor;
 }
+`;
+
+export const GOURAUD_FS = glsl`\
+uniform gouraudMaterialUniforms {
+  uniform float ambient;
+  uniform float diffuse;
+  uniform float shininess;
+  uniform vec3  specularColor;
+} material;
 `;
 
 // TODO - handle multiple lights
