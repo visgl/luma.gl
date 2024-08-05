@@ -25,15 +25,16 @@ struct DirectionalLight {
 
 uniform lightingUniforms {
   int enabled;
-  int pointLightCount;
+  int lightType;
+
   int directionalLightCount;
+  int pointLightCount;
 
   vec3 ambientColor;
 
-  int lightType;
   vec3 lightColor;
-  vec3 lightDirection;
   vec3 lightPosition;
+  vec3 lightDirection;
   vec3 lightAttenuation;
 
   // AmbientLight ambientLight;
