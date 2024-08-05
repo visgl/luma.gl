@@ -5,7 +5,7 @@
 import {glsl} from '../../../lib/glsl-utils/highlight';
 
 export const GOURAUD_VS = glsl`\
-uniform materialUniforms {
+uniform gouraudMaterialUniforms {
   uniform float ambient;
   uniform float diffuse;
   uniform float shininess;
@@ -14,7 +14,7 @@ uniform materialUniforms {
 `;
 
 export const GOURAUD_FS = glsl`\
-uniform materialUniforms {
+uniform gouraudMaterialUniforms {
   uniform float ambient;
   uniform float diffuse;
   uniform float shininess;
