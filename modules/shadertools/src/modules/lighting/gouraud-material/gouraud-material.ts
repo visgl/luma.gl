@@ -18,7 +18,7 @@ export type GouraudMaterialUniforms = {
 
 /** In Gouraud shading, color is calculated for each triangle vertex normal, and then color is interpolated colors across the triangle */
 export const gouraudMaterial: ShaderModule<GouraudMaterialProps, GouraudMaterialUniforms> = {
-  name: 'gouraud-lighting',
+  name: 'gouraudMaterial',
   // Note these are switched between phong and gouraud
   vs: GOURAUD_VS,
   fs: GOURAUD_FS,

@@ -18,7 +18,7 @@ export type PhongMaterialUniforms = {
 
 /** In Phong shading, the normal vector is linearly interpolated across the surface of the polygon from the polygon's vertex normals. */
 export const phongMaterial: ShaderModule<PhongMaterialProps, PhongMaterialUniforms> = {
-  name: 'phong-lighting',
+  name: 'phongMaterial',
   // Note these are switched between phong and gouraud
   vs: PHONG_VS,
   fs: PHONG_FS,
