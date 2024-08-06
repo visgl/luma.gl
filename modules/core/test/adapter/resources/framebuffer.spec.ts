@@ -4,7 +4,7 @@
 
 /* eslint-disable max-len */
 import test from 'tape-promise/tape';
-import {webglDevice, getTestDevices} from '@luma.gl/test-utils';
+import {getTestDevices} from '@luma.gl/test-utils';
 import {Framebuffer} from '@luma.gl/core';
 
 const TEST_CASES = [
@@ -127,21 +127,34 @@ test('WebGLFramebuffer create and resize attachments', async t => {
   t.end();
 });
 
-test.skip('WebGLFramebuffer resize', t => {
-  const frameBufferOptions = {
-    colorAttachments: [webglDevice.createTexture({})]
-    // depthStencilAttachment: webglDevice.createRenderbuffer({format: GL.DEPTH_STENCIL})
-  };
+test('WebGLFramebuffer resize', async t => {
+  for (const testDevice of await getTestDevices()) {
+    const framebuffer = testDevice.createFramebuffer({
+      colorAttachments: ['rgba8unorm'],
+      depthStencilAttachment: 'depth16unorm'
+    });
 
-  const framebuffer = webglDevice.createFramebuffer(frameBufferOptions);
+    framebuffer.resize({width: 2, height: 2});
+    t.equals(framebuffer.width, 2, 'Framebuffer width updated correctly on resize');
+    t.equals(framebuffer.height, 2, 'Framebuffer height updated correctly on resize');
 
-  framebuffer.resize({width: 1000, height: 1000});
-  t.equals(framebuffer.width, 1000, 'Framebuffer width updated correctly on resize');
-  t.equals(framebuffer.height, 1000, 'Framebuffer height updated correctly on resize');
+    if (testDevice.type === 'webgl') {
+      testDevice.beginRenderPass({
+        framebuffer,
+        clearColor: [1, 0, 0, 1]
+      });
 
-  framebuffer.resize({width: 100, height: 100});
-  t.equals(framebuffer.width, 100, 'Framebuffer width updated correctly on resize');
-  t.equals(framebuffer.height, 100, 'Framebuffer height updated correctly on resize');
+      const pixels = testDevice.readPixelsToArrayWebGL(framebuffer);
+      t.deepEqual(
+        pixels,
+        // @prettier-ignore
+        [255, 0, 0, 255, 255, 0, 0, 255, 255, 0, 0, 255, 255, 0, 0, 255],
+        'Framebuffer pixel colors are set correctly'
+      );
+    }
+    framebuffer.delete();
+  }
+
   t.end();
 });
 
