@@ -4,6 +4,10 @@
 
 Major new release that includes WebGPU support
 
+### 9.0.18 - Aug 6, 2024
+
+- shadertools: lighting module fixes (#2159)
+
 ### 9.0.17 - Jul 21, 2024
 
 - ShaderModule type improvement (v9) (#2137)
