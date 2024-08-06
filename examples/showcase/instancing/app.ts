@@ -152,10 +152,10 @@ class InstancedCube extends Model {
     const pickingColors = new Uint8Array(SIDE * SIDE * 4);
     for (let i = 0; i < SIDE; i++) {
       for (let j = 0; j < SIDE; j++) {
-        pickingColors[(i * SIDE + j) * 2 + 0] = i;
-        pickingColors[(i * SIDE + j) * 2 + 1] = j;
-        pickingColors[(i * SIDE + j) * 2 + 2] = 0;
-        pickingColors[(i * SIDE + j) * 2 + 3] = 0;
+        pickingColors[(i * SIDE + j) * 4 + 0] = i;
+        pickingColors[(i * SIDE + j) * 4 + 1] = j;
+        pickingColors[(i * SIDE + j) * 4 + 2] = 0;
+        pickingColors[(i * SIDE + j) * 4 + 3] = 0;
       }
     }
 
@@ -339,7 +339,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       sourceWidth: 1,
       sourceHeight: 1
     });
-    // console.log(color255);
+    console.log(color255);
 
     let highlightedObjectColor = new Float32Array(color255).map(x => x / 255);
     const isHighlightActive =

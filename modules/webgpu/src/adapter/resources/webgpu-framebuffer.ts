@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {FramebufferProps} from '@luma.gl/core';
+import type {FramebufferProps, TextureView} from '@luma.gl/core';
 import {Framebuffer} from '@luma.gl/core';
 import {WebGPUDevice} from '../webgpu-device';
 import {WebGPUTextureView} from '../resources/webgpu-texture-view';
@@ -23,5 +23,13 @@ export class WebGPUFramebuffer extends Framebuffer {
 
     // Auto create textures for attachments if needed
     this.autoCreateAttachmentTextures();
+  }
+
+  protected updateColorAttachment(index: number, textureView: TextureView): void {
+    // WebGPU framebuffers are JS only objects, nothing to update
+  }
+
+  protected updateDepthStencilAttachment(textureView: TextureView): void {
+    // WebGPU framebuffers are JS only objects, nothing to update
   }
 }

@@ -143,6 +143,7 @@ export abstract class Framebuffer extends Resource<FramebufferProps> {
         this.destroyAttachedResource(this.colorAttachments[i]);
         this.colorAttachments[i] = resizedTexture.view;
         this.attachResource(resizedTexture.view);
+        this.updateColorAttachment(i, resizedTexture.view);
       }
     }
 
@@ -155,6 +156,12 @@ export abstract class Framebuffer extends Resource<FramebufferProps> {
       this.destroyAttachedResource(this.depthStencilAttachment);
       this.depthStencilAttachment = resizedTexture.view;
       this.attachResource(resizedTexture);
+      this.updateDepthStencilAttachment(resizedTexture.view);
     }
   }
+
+  /** Implementation is expected to update any underlying binding (WebGL framebuffer attachment) */
+  protected abstract updateColorAttachment(index: number, textureView: TextureView): void;
+  /** Implementation is expected to update any underlying binding (WebGL framebuffer attachment) */
+  protected abstract updateDepthStencilAttachment(textureView: TextureView): void;
 }
