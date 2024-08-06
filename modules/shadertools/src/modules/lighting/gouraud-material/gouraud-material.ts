@@ -21,7 +21,7 @@ export const gouraudMaterial = {
   props: {} as GouraudMaterialProps,
   uniforms: {} as GouraudMaterialUniforms,
 
-  name: 'gouraud-lighting',
+  name: 'gouraudMaterial',
   // Note these are switched between phong and gouraud
   vs: GOURAUD_VS,
   fs: GOURAUD_FS,

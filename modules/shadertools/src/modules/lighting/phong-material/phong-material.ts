@@ -22,7 +22,7 @@ export const phongMaterial = {
   props: {} as PhongMaterialProps,
   uniforms: {} as PhongMaterialUniforms,
 
-  name: 'phong-lighting',
+  name: 'phongMaterial',
   dependencies: [lighting],
   // Note these are switched between phong and gouraud
   source: PHONG_WGSL,

@@ -60,7 +60,8 @@ export type LightingProps = {
 export type LightingUniforms = {
   enabled: number;
   ambientLightColor: Readonly<NumberArray3>;
-  numberOfLights: number;
+  directionalLightCount: number;
+  pointLightCount: number;
   lightType: number; // [];
   lightColor: Readonly<NumberArray3>; // [];
   lightPosition: Readonly<NumberArray3>; // [];
@@ -81,9 +82,12 @@ export const lighting = {
 
   uniformTypes: {
     enabled: 'i32',
-    ambientLightColor: 'vec3<f32>',
-    numberOfLights: 'i32', // , array: MAX_LIGHTS,
     lightType: 'i32', // , array: MAX_LIGHTS,
+
+    directionalLightCount: 'i32', // , array: MAX_LIGHTS,
+    pointLightCount: 'i32', // , array: MAX_LIGHTS,
+
+    ambientLightColor: 'vec3<f32>',
     lightColor: 'vec3<f32>', // , array: MAX_LIGHTS,
     lightPosition: 'vec3<f32>', // , array: MAX_LIGHTS,
     // TODO - could combine direction and attenuation
@@ -93,9 +97,12 @@ export const lighting = {
 
   defaultUniforms: {
     enabled: 1,
-    ambientLightColor: [0.1, 0.1, 0.1],
-    numberOfLights: 0,
     lightType: LIGHT_TYPE.POINT,
+
+    directionalLightCount: 0,
+    pointLightCount: 0,
+
+    ambientLightColor: [0.1, 0.1, 0.1],
     lightColor: [1, 1, 1],
     lightPosition: [1, 1, 2],
     // TODO - could combine direction and attenuation
@@ -191,7 +198,8 @@ function getLightSourceUniforms({
     currentLight++;
   }
 
-  lightSourceUniforms.numberOfLights = currentLight;
+  lightSourceUniforms.directionalLightCount = directionalLights.length;
+  lightSourceUniforms.pointLightCount = pointLights.length;
 
   return lightSourceUniforms;
 }
