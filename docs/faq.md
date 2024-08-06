@@ -40,4 +40,3 @@ Depth and stencil buffers are also cleared to default values:
   renderPass.end();
   device.submit();
 ```
-
