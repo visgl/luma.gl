@@ -834,7 +834,8 @@ export class Model {
     const debugFramebuffers = log.get('framebuffer');
     this._drawCount++;
     // Update first 3 frames and then every 60 frames
-    if (!debugFramebuffers || (this._drawCount++ > 3 && this._drawCount % 60)) {
+    if (!debugFramebuffers) {
+      // } || (this._drawCount++ > 3 && this._drawCount % 60)) {
       return;
     }
     // TODO - display framebuffer output in debug window

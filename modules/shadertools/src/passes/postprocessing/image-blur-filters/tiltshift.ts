@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {ShaderPass} from '../../../lib/shader-module/shader-pass';
-import {random} from '../..//math/random/random';
+import {random} from '../../../modules/math/random/random';
 
 const fs = /* glsl */ `\
 uniform tiltShiftUniforms {
@@ -99,11 +99,11 @@ export const tiltShift = {
     gradientRadius: {value: 200, min: 0, max: 400},
     start: {value: [0, 0]},
     end: {value: [1, 1]},
-    invert: {value: false, private: true}
+    invert: {value: 0, private: true}
   },
   passes: [
-    {sampler: true, uniforms: {invert: false}},
-    {sampler: true, uniforms: {invert: true}}
+    {sampler: true, uniforms: {invert: 0}},
+    {sampler: true, uniforms: {invert: 1}}
   ],
   fs
 } as const satisfies ShaderPass<TiltShiftProps, TiltShiftProps>;

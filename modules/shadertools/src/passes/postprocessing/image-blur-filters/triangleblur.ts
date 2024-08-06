@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {ShaderPass} from '../../../lib/shader-module/shader-pass';
-import {random} from '../..//math/random/random';
+import {random} from '../../../modules/math/random/random';
 
 const fs = /* glsl */ `\
 uniform triangleBlurUniforms {
