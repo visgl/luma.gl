@@ -4,6 +4,11 @@
 
 Major new release that includes WebGPU support
 
+### 9.1.0-alpha.13
+
+- fix: Framebuffer resize (#2161)
+- chore: Upgrade to yarn@4.4.0 (#2160)
+
 ### 9.1.0-alpha.12
 
 - chore(shadertools): Port lights and phongMaterial modules to WGSL (#2158)
