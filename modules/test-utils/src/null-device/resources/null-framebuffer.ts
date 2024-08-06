@@ -17,4 +17,8 @@ export class NullFramebuffer extends Framebuffer {
     super(device, props);
     this.device = device;
   }
+
+  protected override updateAttachments(): void {
+    // Null framebuffers are JS only objects, nothing to
+  }
 }

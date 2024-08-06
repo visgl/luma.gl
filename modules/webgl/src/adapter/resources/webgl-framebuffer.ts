@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {FramebufferProps, TextureFormat, TextureView} from '@luma.gl/core';
+import type {FramebufferProps, TextureFormat} from '@luma.gl/core';
 import {Framebuffer, Texture} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {WebGLDevice} from '../webgl-device';
@@ -39,33 +39,7 @@ export class WEBGLFramebuffer extends Framebuffer {
       // Auto create textures for attachments if needed
       this.autoCreateAttachmentTextures();
 
-      /** Attach from a map of attachments */
-      // @ts-expect-error native bindFramebuffer is overridden by our state tracker
-      const prevHandle: WebGLFramebuffer | null = this.gl.bindFramebuffer(
-        GL.FRAMEBUFFER,
-        this.handle
-      );
-
-      // Walk the attachments
-      for (let i = 0; i < this.colorAttachments.length; ++i) {
-        const attachment = this.colorAttachments[i];
-        if (attachment) {
-          this.updateColorAttachment(i, attachment);
-        }
-      }
-
-      if (this.depthStencilAttachment) {
-        this.updateDepthStencilAttachment(this.depthStencilAttachment);
-      }
-
-      /** Check the status */
-      // @ts-expect-error
-      if (props.check !== false) {
-        const status = this.gl.checkFramebufferStatus(GL.FRAMEBUFFER) as GL;
-        if (status !== GL.FRAMEBUFFER_COMPLETE) {
-          throw new Error(`Framebuffer ${_getFrameBufferStatus(status)}`);
-        }
-      }
+      this.updateAttachments();
     }
   }
 
@@ -78,7 +52,7 @@ export class WEBGLFramebuffer extends Framebuffer {
     }
   }
 
-  protected updateColorAttachment(index: number, textureView: TextureView): void {
+  protected updateAttachments(): void {
     /** Attach from a map of attachments */
     // @ts-expect-error native bindFramebuffer is overridden by our state tracker
     const prevHandle: WebGLFramebuffer | null = this.gl.bindFramebuffer(
@@ -86,26 +60,30 @@ export class WEBGLFramebuffer extends Framebuffer {
       this.handle
     );
 
-    const webglTextureView = textureView as WEBGLTextureView;
-    const attachmentPoint = GL.COLOR_ATTACHMENT0 + index;
-    this._attachTextureView(attachmentPoint, webglTextureView);
+    // Walk the attachments
+    for (let i = 0; i < this.colorAttachments.length; ++i) {
+      const attachment = this.colorAttachments[i];
+      if (attachment) {
+        const attachmentPoint = GL.COLOR_ATTACHMENT0 + i;
+        this._attachTextureView(attachmentPoint, attachment);
+      }
+    }
 
-    this.gl.bindFramebuffer(GL.FRAMEBUFFER, prevHandle);
-  }
+    if (this.depthStencilAttachment) {
+      const attachmentPoint = getDepthStencilAttachmentWebGL(
+        this.depthStencilAttachment.props.format
+      );
+      this._attachTextureView(attachmentPoint, this.depthStencilAttachment);
+    }
 
-  protected updateDepthStencilAttachment(textureView: TextureView): void {
-    /** Attach from a map of attachments */
-    // @ts-expect-error native bindFramebuffer is overridden by our state tracker
-    const prevHandle: WebGLFramebuffer | null = this.gl.bindFramebuffer(
-      GL.FRAMEBUFFER,
-      this.handle
-    );
-
-    const webglTextureView = textureView as WEBGLTextureView;
-    const attachmentPoint = getDepthStencilAttachmentWebGL(
-      this.depthStencilAttachment.props.format
-    );
-    this._attachTextureView(attachmentPoint, webglTextureView);
+    /** Check the status */
+    // @ts-expect-error
+    if (this.props.check !== false) {
+      const status = this.gl.checkFramebufferStatus(GL.FRAMEBUFFER) as GL;
+      if (status !== GL.FRAMEBUFFER_COMPLETE) {
+        throw new Error(`Framebuffer ${_getFrameBufferStatus(status)}`);
+      }
+    }
 
     this.gl.bindFramebuffer(GL.FRAMEBUFFER, prevHandle);
   }

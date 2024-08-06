@@ -339,7 +339,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       sourceWidth: 1,
       sourceHeight: 1
     });
-    console.log(color255);
+    // console.log(color255);
 
     let highlightedObjectColor = new Float32Array(color255).map(x => x / 255);
     const isHighlightActive =
