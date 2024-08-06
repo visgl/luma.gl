@@ -156,5 +156,10 @@ export abstract class Framebuffer extends Resource<FramebufferProps> {
       this.depthStencilAttachment = resizedTexture.view;
       this.attachResource(resizedTexture);
     }
+
+    this.updateAttachments();
   }
+
+  /** Implementation is expected to update any underlying binding (WebGL framebuffer attachment) */
+  protected abstract updateAttachments(): void;
 }
