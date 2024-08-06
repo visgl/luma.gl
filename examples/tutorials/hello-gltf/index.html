@@ -30,7 +30,7 @@
   // luma.registerDevices([WebGLDevice, WebGPUDevice]);
 
   const resolution = 2;
-  const device = luma.createDevice({width: resolution * window.innerWidth, height: resolution * window.innerHeight});
+  const device = luma.createDevice({width: resolution * window.innerWidth, height: resolution * window.innerHeight, type: 'webgl'});
   makeAnimationLoop(AnimationLoopTemplate, {device}).start();
 </script>
 <body>
