@@ -59,7 +59,13 @@ PointLight lighting_getPointLight(int index) {
 }
 
 DirectionalLight lighting_getDirectionalLight(int index) {
-  return DirectionalLight(lighting.lightColor0, lighting.lightDirection0);
+  if (index == 0) {
+    return DirectionalLight(lighting.lightColor0, lighting.lightDirection0);
+  } else if (index == 1) {
+    return DirectionalLight(lighting.lightColor1, lighting.lightDirection1);
+  } else {
+    return DirectionalLight(lighting.lightColor2, lighting.lightDirection2);
+  }
 } 
 
 float getPointLightAttenuation(PointLight pointLight, float distance) {

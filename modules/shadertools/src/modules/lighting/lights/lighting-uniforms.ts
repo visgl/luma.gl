@@ -39,7 +39,6 @@ export type PointLight = {
 
 export type DirectionalLight = {
   type: 'directional';
-  position: Readonly<NumberArray3>;
   direction: Readonly<NumberArray3>;
   color?: Readonly<NumberArray3>;
   intensity?: number;
@@ -202,14 +201,11 @@ function getLightSourceUniforms({
   }
 
   for (const directionalLight of directionalLights) {
-    // lightSourceUniforms.lightType[currentLight] = LIGHT_TYPE.DIRECTIONAL;
-    // lightSourceUniforms.lightColor[currentLight] = convertColor(directionalLight);
-    // lightSourceUniforms.lightPosition[currentLight] = directionalLight.position;
-    // lightSourceUniforms.lightDirection[currentLight] = directionalLight.direction;
     lightSourceUniforms.lightType = LIGHT_TYPE.DIRECTIONAL;
-    lightSourceUniforms.lightColor0 = convertColor(directionalLight);
-    lightSourceUniforms.lightPosition0 = directionalLight.position;
-    lightSourceUniforms.lightDirection0 = directionalLight.direction;
+
+    const i = currentLight as 0 | 1 | 2;
+    lightSourceUniforms[`lightColor${i}`] = convertColor(directionalLight);
+    lightSourceUniforms[`lightDirection${i}`] = directionalLight.direction;
     currentLight++;
   }
 
