@@ -61,10 +61,18 @@ export type LightingUniforms = {
   directionalLightCount: number;
   pointLightCount: number;
   lightType: number; // [];
-  lightColor: Readonly<NumberArray3>; // [];
-  lightPosition: Readonly<NumberArray3>; // [];
-  lightDirection: Readonly<NumberArray3>; // [];
-  lightAttenuation: Readonly<NumberArray3>; // [];
+  lightColor0: Readonly<NumberArray3>;
+  lightPosition0: Readonly<NumberArray3>;
+  lightDirection0: Readonly<NumberArray3>;
+  lightAttenuation0: Readonly<NumberArray3>;
+  lightColor1: Readonly<NumberArray3>;
+  lightPosition1: Readonly<NumberArray3>;
+  lightDirection1: Readonly<NumberArray3>;
+  lightAttenuation1: Readonly<NumberArray3>;
+  lightColor2: Readonly<NumberArray3>;
+  lightPosition2: Readonly<NumberArray3>;
+  lightDirection2: Readonly<NumberArray3>;
+  lightAttenuation2: Readonly<NumberArray3>;
 };
 
 /** UBO ready lighting module */
@@ -89,11 +97,20 @@ export const lighting: ShaderModule<LightingProps, LightingUniforms, {}> = {
     pointLightCount: 'i32', // , array: MAX_LIGHTS,
 
     ambientLightColor: 'vec3<f32>',
-    lightColor: 'vec3<f32>', // , array: MAX_LIGHTS,
-    lightPosition: 'vec3<f32>', // , array: MAX_LIGHTS,
+    lightColor0: 'vec3<f32>',
+    lightPosition0: 'vec3<f32>',
     // TODO - could combine direction and attenuation
-    lightDirection: 'vec3<f32>', // , array: MAX_LIGHTS,
-    lightAttenuation: 'vec3<f32>' // , array: MAX_LIGHTS},
+    lightDirection0: 'vec3<f32>',
+    lightAttenuation0: 'vec3<f32>',
+
+    lightColor1: 'vec3<f32>',
+    lightPosition1: 'vec3<f32>',
+    lightDirection1: 'vec3<f32>',
+    lightAttenuation1: 'vec3<f32>',
+    lightColor2: 'vec3<f32>',
+    lightPosition2: 'vec3<f32>',
+    lightDirection2: 'vec3<f32>',
+    lightAttenuation2: 'vec3<f32>'
   },
 
   defaultUniforms: {
@@ -104,11 +121,20 @@ export const lighting: ShaderModule<LightingProps, LightingUniforms, {}> = {
     pointLightCount: 0,
 
     ambientLightColor: [0.1, 0.1, 0.1],
-    lightColor: [1, 1, 1],
-    lightPosition: [1, 1, 2],
+    lightColor0: [1, 1, 1],
+    lightPosition0: [1, 1, 2],
     // TODO - could combine direction and attenuation
-    lightDirection: [1, 1, 1],
-    lightAttenuation: [1, 1, 1]
+    lightDirection0: [1, 1, 1],
+    lightAttenuation0: [1, 1, 1],
+
+    lightColor1: [1, 1, 1],
+    lightPosition1: [1, 1, 2],
+    lightDirection1: [1, 1, 1],
+    lightAttenuation1: [1, 1, 1],
+    lightColor2: [1, 1, 1],
+    lightPosition2: [1, 1, 2],
+    lightDirection2: [1, 1, 1],
+    lightAttenuation2: [1, 1, 1]
   }
 };
 
@@ -158,13 +184,7 @@ function getLightSourceUniforms({
   pointLights = [],
   directionalLights = []
 }: LightingProps): Partial<LightingUniforms> {
-  const lightSourceUniforms: Partial<LightingUniforms> = {
-    // lightType: new Array(MAX_LIGHTS).fill(0),
-    // lightColor: new Array(MAX_LIGHTS).fill([0, 0, 0]),
-    // lightPosition: new Array(MAX_LIGHTS).fill([0, 0, 0]),
-    // lightDirection: new Array(MAX_LIGHTS).fill([0, 0, 0]),
-    // lightAttenuation: new Array(MAX_LIGHTS).fill([0, 0, 0])
-  };
+  const lightSourceUniforms: Partial<LightingUniforms> = {};
 
   lightSourceUniforms.ambientLightColor = convertColor(ambientLight);
 
@@ -176,9 +196,9 @@ function getLightSourceUniforms({
     // lightSourceUniforms.lightPosition[currentLight] = pointLight.position;
     // lightSourceUniforms.lightAttenuation[currentLight] = [pointLight.attenuation || 1, 0, 0];
     lightSourceUniforms.lightType = LIGHT_TYPE.POINT;
-    lightSourceUniforms.lightColor = convertColor(pointLight);
-    lightSourceUniforms.lightPosition = pointLight.position;
-    lightSourceUniforms.lightAttenuation = [pointLight.attenuation || 1, 0, 0];
+    lightSourceUniforms.lightColor0 = convertColor(pointLight);
+    lightSourceUniforms.lightPosition0 = pointLight.position;
+    lightSourceUniforms.lightAttenuation0 = [pointLight.attenuation || 1, 0, 0];
     currentLight++;
   }
 
@@ -188,9 +208,9 @@ function getLightSourceUniforms({
     // lightSourceUniforms.lightPosition[currentLight] = directionalLight.position;
     // lightSourceUniforms.lightDirection[currentLight] = directionalLight.direction;
     lightSourceUniforms.lightType = LIGHT_TYPE.DIRECTIONAL;
-    lightSourceUniforms.lightColor = convertColor(directionalLight);
-    lightSourceUniforms.lightPosition = directionalLight.position;
-    lightSourceUniforms.lightDirection = directionalLight.direction;
+    lightSourceUniforms.lightColor0 = convertColor(directionalLight);
+    lightSourceUniforms.lightPosition0 = directionalLight.position;
+    lightSourceUniforms.lightDirection0 = directionalLight.direction;
     currentLight++;
   }
 
