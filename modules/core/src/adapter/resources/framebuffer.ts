@@ -135,8 +135,10 @@ export abstract class Framebuffer extends Resource<FramebufferProps> {
   protected resizeAttachments(width: number, height: number): void {
     for (let i = 0; i < this.colorAttachments.length; ++i) {
       if (this.colorAttachments[i]) {
-        const resizedTexture = 
-          this.colorAttachments[i].texture.createResizedTexture({width, height});
+        const resizedTexture = this.colorAttachments[i].texture.createResizedTexture({
+          width,
+          height
+        });
         this.destroyAttachedResource(this.colorAttachments[i]);
         this.colorAttachments[i] = resizedTexture.view;
         this.attachResource(resizedTexture.view);
@@ -144,7 +146,10 @@ export abstract class Framebuffer extends Resource<FramebufferProps> {
     }
 
     if (this.depthStencilAttachment) {
-      const resizedTexture = this.depthStencilAttachment.texture.createResizedTexture({width, height});
+      const resizedTexture = this.depthStencilAttachment.texture.createResizedTexture({
+        width,
+        height
+      });
       this.destroyAttachedResource(this.depthStencilAttachment);
       this.depthStencilAttachment = resizedTexture.view;
       this.attachResource(resizedTexture);

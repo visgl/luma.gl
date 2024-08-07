@@ -342,8 +342,8 @@ export abstract class Texture extends Resource<TextureProps> {
   /** Copy external image data into the texture */
   abstract copyExternalImage(options: CopyExternalImageOptions): {width: number; height: number};
 
-  /** 
-   * Create a new texture with the same parameters but a different size 
+  /**
+   * Create a new texture with the same parameters but a different size
    *
    * @note Textures are immutable and cannot be resized after creation, but we can create a similar texture with the same parameters but a new size.
    * @note Does not copy contents of the texture
@@ -372,7 +372,7 @@ export abstract class Texture extends Resource<TextureProps> {
   /** Ensure we have integer coordinates */
   protected static _fixProps(props: TextureProps): TextureProps {
     const newProps = {...props};
-    let {width, height} = newProps;
+    const {width, height} = newProps;
     if (typeof width === 'number') {
       newProps.width = Math.max(1, Math.ceil(width));
     }
