@@ -4,6 +4,10 @@
 
 Major new release that includes WebGPU support
 
+### 9.0.19 - Aug 7, 2024
+
+- fix: update yarn.lock (#2162)
+
 ### 9.0.18 - Aug 6, 2024
 
 - shadertools: lighting module fixes (#2159)
