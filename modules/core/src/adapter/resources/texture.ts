@@ -342,6 +342,16 @@ export abstract class Texture extends Resource<TextureProps> {
   /** Copy external image data into the texture */
   abstract copyExternalImage(options: CopyExternalImageOptions): {width: number; height: number};
 
+  /**
+   * Create a new texture with the same parameters but a different size
+   *
+   * @note Textures are immutable and cannot be resized after creation, but we can create a similar texture with the same parameters but a new size.
+   * @note Does not copy contents of the texture
+   */
+  createResizedTexture(size: {width: number; height: number}): Texture {
+    return this.device.createTexture({...this.props, ...size});
+  }
+
   /** Default options */
   protected static defaultCopyExternalImageOptions: Required<CopyExternalImageOptions> = {
     image: undefined!,
@@ -358,4 +368,17 @@ export abstract class Texture extends Resource<TextureProps> {
     colorSpace: 'srgb',
     premultipliedAlpha: false
   };
+
+  /** Ensure we have integer coordinates */
+  protected static _fixProps(props: TextureProps): TextureProps {
+    const newProps = {...props};
+    const {width, height} = newProps;
+    if (typeof width === 'number') {
+      newProps.width = Math.max(1, Math.ceil(width));
+    }
+    if (typeof height === 'number') {
+      newProps.height = Math.max(1, Math.ceil(height));
+    }
+    return newProps;
+  }
 }

@@ -100,7 +100,7 @@ export class NullDevice extends Device {
     return new NullRenderPass(this, {});
   }
 
-  _createTexture(props: TextureProps): NullTexture {
+  createTexture(props: TextureProps): NullTexture {
     return new NullTexture(this, props);
   }
 

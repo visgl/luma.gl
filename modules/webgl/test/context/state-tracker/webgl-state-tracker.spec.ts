@@ -11,7 +11,6 @@ import {
   getGLParameters,
   setGLParameters,
   resetGLParameters,
-  WEBGLTexture,
   WebGLStateTracker
 } from '@luma.gl/webgl';
 
@@ -219,7 +218,7 @@ test('WebGLStateTracker#not cached parameters', t => {
 
   t.is(gl.getParameter(gl.TEXTURE_BINDING_2D), null, 'no bound texture');
 
-  const tex = device.createTexture({}) as WEBGLTexture;
+  const tex = device.createTexture({});
   tex.bind();
   t.is(gl.getParameter(gl.TEXTURE_BINDING_2D), tex.handle, 'bound texture');
 

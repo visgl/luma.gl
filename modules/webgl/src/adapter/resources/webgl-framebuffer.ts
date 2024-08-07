@@ -103,37 +103,6 @@ export class WEBGLFramebuffer extends Framebuffer {
   }
 
   /**
-   * Attachment resize is expected to be a noop if size is same
-   *
-  protected override resizeAttachments(width: number, height: number): this {
-    // for default framebuffer, just update the stored size
-    if (this.handle === null) {
-      // assert(width === undefined && height === undefined);
-      this.width = this.gl.drawingBufferWidth;
-      this.height = this.gl.drawingBufferHeight;
-      return this;
-    }
-
-    if (width === undefined) {
-      width = this.gl.drawingBufferWidth;
-    }
-    if (height === undefined) {
-      height = this.gl.drawingBufferHeight;
-    }
-
-    // TODO Not clear that this is better than default destroy/create implementation
-
-    for (const colorAttachment of this.colorAttachments) {
-      colorAttachment.texture.clone({width, height});
-    }
-    if (this.depthStencilAttachment) {
-      this.depthStencilAttachment.texture.resize({width, height});
-    }
-    return this;
-  }
-  */
-
-  /**
    * @param attachment
    * @param texture
    * @param layer = 0 - index into WEBGLTextureArray and Texture3D or face for `TextureCubeMap`
@@ -205,3 +174,34 @@ function _getFrameBufferStatus(status: GL) {
       return `${status}`;
   }
 }
+
+/**
+ * Attachment resize is expected to be a noop if size is same
+ *
+protected override resizeAttachments(width: number, height: number): this {
+  // for default framebuffer, just update the stored size
+  if (this.handle === null) {
+    // assert(width === undefined && height === undefined);
+    this.width = this.gl.drawingBufferWidth;
+    this.height = this.gl.drawingBufferHeight;
+    return this;
+  }
+
+  if (width === undefined) {
+    width = this.gl.drawingBufferWidth;
+  }
+  if (height === undefined) {
+    height = this.gl.drawingBufferHeight;
+  }
+
+  // TODO Not clear that this is better than default destroy/create implementation
+
+  for (const colorAttachment of this.colorAttachments) {
+    colorAttachment.texture.clone({width, height});
+  }
+  if (this.depthStencilAttachment) {
+    this.depthStencilAttachment.texture.resize({width, height});
+  }
+  return this;
+}
+*/

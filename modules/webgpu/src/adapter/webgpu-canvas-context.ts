@@ -119,7 +119,7 @@ export class WebGPUCanvasContext extends CanvasContext {
 
   /** Wrap the current canvas context texture in a luma.gl texture */
   getCurrentTexture(): WebGPUTexture {
-    return this.device._createTexture({
+    return this.device.createTexture({
       id: `${this.id}#color-texture`,
       handle: this.gpuCanvasContext.getCurrentTexture(),
       format: this.format

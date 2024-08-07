@@ -216,8 +216,7 @@ export class WebGLDevice extends Device {
     return new WEBGLBuffer(this, newProps);
   }
 
-  // _createTexture(props: TextureProps): WEBGLTexture {
-  _createTexture(props: TextureProps): Texture {
+  createTexture(props: TextureProps): WEBGLTexture {
     return new WEBGLTexture(this, props);
   }
 
