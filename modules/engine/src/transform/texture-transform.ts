@@ -8,7 +8,6 @@ import {getPassthroughFS} from '@luma.gl/shadertools';
 
 /**
  * Properties for creating a {@link TextureTransform}
- * @deprecated
  */
 export type TextureTransformProps = Omit<ModelProps, 'fs'> & {
   fs?: ModelProps['fs']; // override as optional
@@ -90,20 +89,6 @@ export class TextureTransform {
     const renderPass = this.device.beginRenderPass({framebuffer, ...options});
     this.model.draw(renderPass);
     renderPass.end();
-  }
-
-  /** @deprecated */
-  update(...args: any[]): void {
-    // TODO(v9): Method should likely be removed for v9. Keeping a method stub
-    // to assist with migrating DeckGL usage.
-    // eslint-disable-next-line no-console
-    console.warn('TextureTransform#update() not implemented');
-  }
-
-  getData({packed = false} = {}) {
-    // TODO(v9): Method should likely be removed for v9. Keeping a method stub
-    // to assist with migrating DeckGL usage.
-    throw new Error('getData() not implemented');
   }
 
   getTargetTexture(): Texture {

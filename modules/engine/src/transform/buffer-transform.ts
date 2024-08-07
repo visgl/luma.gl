@@ -9,23 +9,23 @@ import type {ModelProps} from '../model/model';
 
 /**
  * Properties for creating a {@link BufferTransform}
- * @deprecated
+ * @note Only works under WebGL2.
  */
 export type BufferTransformProps = Omit<ModelProps, 'fs'> & {
   fs?: ModelProps['fs']; // override as optional
+  /** Map of output buffers that the shaders will write results of computations to */
   feedbackBuffers?: Record<string, Buffer | BufferRange>;
 };
 
 /**
- * Creates a pipeline for buffer→buffer transforms.
- * @deprecated
+ * Manages a WebGL program (pipeline) for buffer→buffer transforms.
+ * @note Only works under WebGL2.
  */
 export class BufferTransform {
   readonly device: Device;
   readonly model: Model;
   readonly transformFeedback: TransformFeedback;
 
-  /** @deprecated Use device feature test. */
   static isSupported(device: Device): boolean {
     return device?.info?.type === 'webgl';
   }
@@ -72,14 +72,6 @@ export class BufferTransform {
     const renderPass = this.device.beginRenderPass(options);
     this.model.draw(renderPass);
     renderPass.end();
-  }
-
-  /** @deprecated */
-  update(...args: any[]): void {
-    // TODO(v9): Method should likely be removed for v9. Keeping a method stub
-    // to assist with migrating DeckGL usage.
-    // eslint-disable-next-line no-console
-    console.warn('TextureTransform#update() not implemented');
   }
 
   /** Returns the {@link Buffer} or {@link BufferRange} for given varying name. */

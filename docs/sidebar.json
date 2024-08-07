@@ -13,10 +13,6 @@
       "tutorials/hello-instancing",
       "tutorials/shader-modules",
       "tutorials/shader-hooks",
-      "tutorials/transform",
-      "tutorials/transform-feedback",
-      "tutorials/instanced-transform",
-      "tutorials/external-context",
       "tutorials/whats-next"
     ]
   },
