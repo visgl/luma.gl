@@ -47,7 +47,8 @@ vec3 lighting_getLightColor(vec3 surfaceColor, vec3 cameraPosition, vec3 positio
     PointLight pointLight = lighting_getPointLight(i);
     vec3 light_position_worldspace = pointLight.position;
     vec3 light_direction = normalize(light_position_worldspace - position_worldspace);
-    lightColor += lighting_getLightColor(surfaceColor, light_direction, view_direction, normal_worldspace, pointLight.color);
+    float light_attenuation = getPointLightAttenuation(pointLight, distance(light_position_worldspace, position_worldspace));
+    lightColor += lighting_getLightColor(surfaceColor, light_direction, view_direction, normal_worldspace, pointLight.color / light_attenuation);
   }
 
   int totalLights = min(MAX_LIGHTS, lighting.pointLightCount + lighting.directionalLightCount);
