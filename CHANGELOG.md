@@ -4,6 +4,12 @@
 
 Major new release that includes WebGPU support
 
+### 9.1.0-alpha.14
+
+- fix: texture integer coordinates, resize utils (#2167)
+- docs: A first pass on Transform docs (#2165)
+- chore: Add test case for Framebuffer.resize (#2163)
+
 ### 9.1.0-alpha.13
 
 - fix: Framebuffer resize (#2161)
