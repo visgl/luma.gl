@@ -43,7 +43,7 @@ vec3 lighting_getLightColor(vec3 surfaceColor, vec3 cameraPosition, vec3 positio
   vec3 view_direction = normalize(cameraPosition - position_worldspace);
   lightColor = material.ambient * surfaceColor * lighting.ambientColor;
 
-  if (lighting.lightType == 0) {
+  /*if (lighting.lightType == 0) {
     PointLight pointLight = lighting_getPointLight(0);
     vec3 light_position_worldspace = pointLight.position;
     vec3 light_direction = normalize(light_position_worldspace - position_worldspace);
@@ -51,19 +51,20 @@ vec3 lighting_getLightColor(vec3 surfaceColor, vec3 cameraPosition, vec3 positio
   } else if (lighting.lightType == 1) {
     DirectionalLight directionalLight = lighting_getDirectionalLight(0);
     lightColor += lighting_getLightColor(surfaceColor, -directionalLight.direction, view_direction, normal_worldspace, directionalLight.color);
-  }
+  }*/
   
-  /*
+  
   for (int i = 0; i < MAX_LIGHTS; i++) {
     if (i >= lighting.pointLightCount) {
       break;
     }
-    PointLight pointLight = lighting.pointLight[i];
+    PointLight pointLight = lighting_getPointLight(i);
     vec3 light_position_worldspace = pointLight.position;
     vec3 light_direction = normalize(light_position_worldspace - position_worldspace);
     lightColor += lighting_getLightColor(surfaceColor, light_direction, view_direction, normal_worldspace, pointLight.color);
   }
 
+  /*
   for (int i = 0; i < MAX_LIGHTS; i++) {
     if (i >= lighting.directionalLightCount) {
       break;

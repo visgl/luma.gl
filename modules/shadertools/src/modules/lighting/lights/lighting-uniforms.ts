@@ -5,9 +5,10 @@
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
 import {lightingUniforms} from './lighting-uniforms-glsl';
 import type {NumberArray3} from '../../../lib/utils/uniform-types';
+import {log} from '@luma.gl/core';
 
 /** Max number of supported lights (in addition to ambient light */
-const MAX_LIGHTS = 5;
+const MAX_LIGHTS = 3;
 
 /** Whether to divide */
 const COLOR_FACTOR = 255.0;
@@ -188,17 +189,15 @@ function getLightSourceUniforms({
 
   lightSourceUniforms.ambientLightColor = convertColor(ambientLight);
 
-  let currentLight = 0;
+  let currentLight: 0 | 1 | 2 = 0;
 
   for (const pointLight of pointLights) {
-    // lightSourceUniforms.lightType[currentLight] = LIGHT_TYPE.POINT;
-    // lightSourceUniforms.lightColor[currentLight] = convertColor(pointLight);
-    // lightSourceUniforms.lightPosition[currentLight] = pointLight.position;
-    // lightSourceUniforms.lightAttenuation[currentLight] = [pointLight.attenuation || 1, 0, 0];
     lightSourceUniforms.lightType = LIGHT_TYPE.POINT;
-    lightSourceUniforms.lightColor0 = convertColor(pointLight);
-    lightSourceUniforms.lightPosition0 = pointLight.position;
-    lightSourceUniforms.lightAttenuation0 = [pointLight.attenuation || 1, 0, 0];
+
+    const i = currentLight as 0 | 1 | 2;
+    lightSourceUniforms[`lightColor${i}`] = convertColor(pointLight);
+    lightSourceUniforms[`lightPosition${i}`] = pointLight.position;
+    lightSourceUniforms[`lightAttenuation${i}`] = [pointLight.attenuation || 1, 0, 0];
     currentLight++;
   }
 
@@ -212,6 +211,10 @@ function getLightSourceUniforms({
     lightSourceUniforms.lightPosition0 = directionalLight.position;
     lightSourceUniforms.lightDirection0 = directionalLight.direction;
     currentLight++;
+  }
+
+  if (currentLight >= MAX_LIGHTS) {
+    log.warn('MAX_LIGHTS exceeded')();
   }
 
   lightSourceUniforms.directionalLightCount = directionalLights.length;
