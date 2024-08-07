@@ -108,11 +108,13 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       lighting: {
         lights: [
           {type: 'ambient', color: [255, 255, 255]},
-          {type: 'point', color: [255, 255, 255], position: [1, 2, 1]}
+          {type: 'point', color: [255, 120, 10], position: [2, 4, 3]},
+          {type: 'point', color: [0, 255, 10], position: [-2, 1, 3]}
         ]
       },
       phongMaterial: {
-        specularColor: [255, 255, 255]
+        specularColor: [255, 255, 255],
+        shininess: 100
       }
     });
 
