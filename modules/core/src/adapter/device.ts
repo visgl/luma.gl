@@ -389,13 +389,7 @@ export abstract class Device {
   abstract createBuffer(props: BufferProps | ArrayBuffer | ArrayBufferView): Buffer;
 
   /** Create a texture */
-  abstract _createTexture(props: TextureProps): Texture;
-  createTexture(props: TextureProps): Texture;
-  // createTexture(data: Promise<TextureData>): Texture;
-
-  createTexture(props: TextureProps): Texture {
-    return this._createTexture(props);
-  }
+  abstract createTexture(props: TextureProps): Texture;
 
   /** Create a temporary texture view of a video source */
   abstract createExternalTexture(props: ExternalTextureProps): ExternalTexture;

@@ -120,11 +120,20 @@ export class AsyncTexture {
     this.destroyed = true;
   }
 
-  // We could implement resize by replacing the texture
-  // resize(width: number, height: number): boolean {
-  //   throw new Error('Not implemented');
-  //   // return false;
-  // }
+  /** 
+   * Textures are immutable and cannot be resized after creation, 
+   * but we can create a similar texture with the same parameters but a new size.
+   * @note Does not copy contents of the texture
+   * @todo Abort pending promise and create a texture with the new size?
+   */
+  resize(size: {width: number; height: number}): void {
+    if (!isReady) {
+      throw new Error('Cannot resize texture before it is ready');
+    }
+    if (this.texture) {
+      this.texture = this.texture.createResizedTexture(size);
+    }
+  }
 }
 
 // HELPERS

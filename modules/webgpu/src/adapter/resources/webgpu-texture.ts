@@ -51,6 +51,7 @@ export class WebGPUTexture extends Texture {
   // }
 
   constructor(device: WebGPUDevice, props: TextureProps) {
+    props = Texture._fixProps(props);
     super(device, props);
     this.device = device;
     this.initialize(props);

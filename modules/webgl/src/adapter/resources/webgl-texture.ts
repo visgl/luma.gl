@@ -143,6 +143,8 @@ export class WEBGLTexture extends Texture {
   } | null = null;
 
   constructor(device: Device, props: TextureProps) {
+    props = Texture._fixProps(props);
+
     // Note: Clear out `props.data` so that we don't hold a reference to any big memory chunks
     super(device, {...Texture.defaultProps, ...props, data: undefined!});
 

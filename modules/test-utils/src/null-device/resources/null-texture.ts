@@ -28,6 +28,8 @@ export class NullTexture extends Texture {
   view: NullTextureView;
 
   constructor(device: NullDevice, props: TextureProps) {
+    props = Texture._fixProps(props);
+
     super(device, props);
 
     this.device = device;
