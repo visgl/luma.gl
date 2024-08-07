@@ -91,12 +91,14 @@ export const lighting: ShaderModule<LightingProps, LightingUniforms, {}> = {
 
   uniformTypes: {
     enabled: 'i32',
-    lightType: 'i32', // , array: MAX_LIGHTS,
+    lightType: 'i32',
 
-    directionalLightCount: 'i32', // , array: MAX_LIGHTS,
-    pointLightCount: 'i32', // , array: MAX_LIGHTS,
+    directionalLightCount: 'i32',
+    pointLightCount: 'i32',
 
     ambientLightColor: 'vec3<f32>',
+
+    // TODO define as arrays once we have appropriate uniformTypes
     lightColor0: 'vec3<f32>',
     lightPosition0: 'vec3<f32>',
     // TODO - could combine direction and attenuation
@@ -209,7 +211,7 @@ function getLightSourceUniforms({
     currentLight++;
   }
 
-  if (currentLight >= MAX_LIGHTS) {
+  if (currentLight > MAX_LIGHTS) {
     log.warn('MAX_LIGHTS exceeded')();
   }
 
