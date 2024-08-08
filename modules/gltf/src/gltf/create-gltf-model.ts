@@ -3,6 +3,7 @@ import {pbrMaterial} from '@luma.gl/shadertools';
 import {Geometry, Model, ModelNode, ModelProps} from '@luma.gl/engine';
 import {ParsePBRMaterialOptions, parsePBRMaterial} from '../pbr/parse-pbr-material';
 import {ShaderModule} from '@luma.gl/shadertools';
+import {PBRMaterialProps} from '@luma.gl/shadertools/dist/modules/lighting/pbr-material/pbr-material';
 
 // TODO rename attributes to POSITION/NORMAL etc
 // See gpu-geometry.ts: getAttributeBuffersFromGeometry()
@@ -114,6 +115,30 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
   };
 
   const model = new Model(device, modelProps);
+
+  // Convert old to new
+  const inputs = {
+    ...parsedMaterial.uniforms,
+    ...modelOptions.uniforms,
+    ...parsedMaterial.bindings,
+    ...modelOptions.bindings
+  };
+  const pbrMaterialProps: Partial<PBRMaterialProps> = {
+    // Uniforms
+    metallicRoughnessValues: inputs.u_MetallicRoughnessValues,
+    unlit: inputs.pbr_uUnlit,
+    baseColorFactor: inputs.u_BaseColorFactor,
+    normalScale: inputs.u_NormalScale,
+
+    // Bindings
+    u_BaseColorSampler: inputs.u_BaseColorSampler,
+    u_MetallicRoughnessSampler: inputs.u_MetallicRoughnessSampler,
+    u_NormalSampler: inputs.u_NormalSampler
+  };
+
+  model.shaderInputs.setProps({
+    pbrMaterial: pbrMaterialProps
+  });
   return new ModelNode({managedResources, model});
 }
 

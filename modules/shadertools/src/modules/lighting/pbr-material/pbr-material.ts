@@ -73,16 +73,16 @@ export type PBRMaterialProps = PBRMaterialBindings & {
 /** Non-uniform block bindings for pbr module */
 type PBRMaterialBindings = {
   // Samplers
-  baseColorSampler?: Texture | null; // #ifdef HAS_BASECOLORMAP
-  normalSampler?: Texture | null; // #ifdef HAS_NORMALMAP
-  emissiveSampler?: Texture | null; // #ifdef HAS_EMISSIVEMAP
-  metallicRoughnessSampler?: Texture | null; // #ifdef HAS_METALROUGHNESSMAP
-  occlusionSampler?: Texture | null; // #ifdef HAS_OCCLUSIONMAP
+  u_BaseColorSampler?: Texture | null; // #ifdef HAS_BASECOLORMAP
+  u_NormalSampler?: Texture | null; // #ifdef HAS_NORMALMAP
+  u_EmissiveSampler?: Texture | null; // #ifdef HAS_EMISSIVEMAP
+  u_MetallicRoughnessSampler?: Texture | null; // #ifdef HAS_METALROUGHNESSMAP
+  u_OcclusionSampler?: Texture | null; // #ifdef HAS_OCCLUSIONMAP
 
   // IBL Samplers
-  diffuseEnvSampler: Texture | null; // #ifdef USE_IBL (samplerCube)
-  specularEnvSampler: Texture | null; // #ifdef USE_IBL (samplerCube)
-  brdfLUT?: Texture | null; // #ifdef USE_IBL
+  u_DiffuseEnvSampler?: Texture | null; // #ifdef USE_IBL (samplerCube)
+  u_SpecularEnvSampler?: Texture | null; // #ifdef USE_IBL (samplerCube)
+  u_brdfLUT?: Texture | null; // #ifdef USE_IBL
 };
 
 export type PBRMaterialUniforms = {
@@ -135,6 +135,7 @@ export const pbrMaterial: ShaderModule<PBRMaterialProps, PBRMaterialUniforms> = 
     USE_IBL: 0,
     PBR_DEBUG: 0
   },
+  getUniforms: props => props,
   uniformTypes: {
     // Material is unlit
     unlit: 'i32',

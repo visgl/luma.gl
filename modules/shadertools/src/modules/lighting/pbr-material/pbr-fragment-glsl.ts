@@ -286,8 +286,6 @@ vec4 pbr_filterColor(vec4 colorUnused)
 #else
   vec4 baseColor = u_pbrMaterial.baseColorFactor;
 #endif
-  // TODO HACK override texture
-  baseColor = vec4(0.0, 0.0, 1.0, 1.0);
 
 #ifdef ALPHA_CUTOFF
   if (baseColor.a < u_pbrMaterial.alphaCutoff) {
