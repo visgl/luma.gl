@@ -6,7 +6,7 @@ import {
   CubeGeometry,
   _ShaderInputs
 } from '@luma.gl/engine';
-import {phongMaterial, lighting, ShaderModule, gouraudMaterial} from '@luma.gl/shadertools';
+import {phongMaterial, lighting, ShaderModule} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
 
 const INFO_HTML = `
@@ -121,8 +121,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         lights: [
           {type: 'ambient', color: [255, 255, 255]},
           {type: 'point', color: [255, 120, 10], position: [2, 4, 3]},
-          {type: 'point', color: [0, 255, 10], position: [-2, 1, 3]},
-          {type: 'directional', color: [0, 0, 255], direction: [-1, 0, -1]}
+          {type: 'point', color: [0, 255, 10], position: [-2, 1, 3]}
+          // {type: 'directional', color: [0, 0, 255], direction: [-1, 0, -1]}
         ]
       },
       phongMaterial: {
