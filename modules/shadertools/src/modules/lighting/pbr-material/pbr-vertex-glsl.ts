@@ -5,7 +5,7 @@
 import {glsl} from '../../../lib/glsl-utils/highlight';
 
 export const vs = glsl`\
-uniform projection {
+uniform pbrProjectionUniforms {
   mat4 u_MVPMatrix;
   mat4 u_ModelMatrix;
   mat4 u_NormalMatrix;

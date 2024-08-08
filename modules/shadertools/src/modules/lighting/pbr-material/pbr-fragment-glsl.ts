@@ -14,12 +14,16 @@ import {glsl} from '../../../lib/glsl-utils/highlight';
 export const fs = glsl`\
 precision highp float;
 
-uniform Projection {
+// TODO remove
+uniform pbrProjectionUniforms {
+  mat4 u_MVPMatrix;
+  mat4 u_ModelMatrix;
+  mat4 u_NormalMatrix;
   // Projection
-  uniform vec3 u_Camera;
+  vec3 u_Camera;
 } proj;
 
-uniform pbrMaterial {
+uniform pbrMaterialUniforms {
   // Material is unlit
   bool unlit;
 
@@ -60,20 +64,20 @@ uniform sampler2D u_BaseColorSampler;
 #ifdef HAS_NORMALMAP
 uniform sampler2D u_NormalSampler;
 #endif
-#ifdef HAS_EMISSIVEMAP
-uniform sampler2D u_EmissiveSampler;
-#endif
+// #ifdef HAS_EMISSIVEMAP
+// uniform sampler2D u_EmissiveSampler;
+// #endif
 #ifdef HAS_METALROUGHNESSMAP
 uniform sampler2D u_MetallicRoughnessSampler;
 #endif
-#ifdef HAS_OCCLUSIONMAP
-uniform sampler2D u_OcclusionSampler;
-#endif
-#ifdef USE_IBL
-uniform samplerCube u_DiffuseEnvSampler;
-uniform samplerCube u_SpecularEnvSampler;
-uniform sampler2D u_brdfLUT;
-#endif
+// #ifdef HAS_OCCLUSIONMAP
+// uniform sampler2D u_OcclusionSampler;
+// #endif
+// #ifdef USE_IBL
+// uniform samplerCube u_DiffuseEnvSampler;
+// uniform samplerCube u_SpecularEnvSampler;
+// uniform sampler2D u_brdfLUT;
+// #endif
 
 // Inputs from vertex shader
 
@@ -165,32 +169,32 @@ vec3 getNormal()
 // Calculation of the lighting contribution from an optional Image Based Light source.
 // Precomputed Environment Maps are required uniform inputs and are computed as outlined in [1].
 // See our README.md on Environment Maps [3] for additional discussion.
-#ifdef USE_IBL
-vec3 getIBLContribution(PBRInfo pbrInfo, vec3 n, vec3 reflection)
-{
-  float mipCount = 9.0; // resolution of 512x512
-  float lod = (pbrInfo.perceptualRoughness * mipCount);
-  // retrieve a scale and bias to F0. See [1], Figure 3
-  vec3 brdf = SRGBtoLINEAR(texture(u_brdfLUT,
-    vec2(pbrInfo.NdotV, 1.0 - pbrInfo.perceptualRoughness))).rgb;
-  vec3 diffuseLight = SRGBtoLINEAR(texture(u_DiffuseEnvSampler, n)).rgb;
-
-#ifdef USE_TEX_LOD
-  vec3 specularLight = SRGBtoLINEAR(texture(u_SpecularEnvSampler, reflection, lod)).rgb;
-#else
-  vec3 specularLight = SRGBtoLINEAR(texture(u_SpecularEnvSampler, reflection)).rgb;
-#endif
-
-  vec3 diffuse = diffuseLight * pbrInfo.diffuseColor;
-  vec3 specular = specularLight * (pbrInfo.specularColor * brdf.x + brdf.y);
-
-  // For presentation, this allows us to disable IBL terms
-  diffuse *= u_pbrMaterial.scaleIBLAmbient.x;
-  specular *= u_pbrMaterial.scaleIBLAmbient.y;
-
-  return diffuse + specular;
-}
-#endif
+// #ifdef USE_IBL
+// vec3 getIBLContribution(PBRInfo pbrInfo, vec3 n, vec3 reflection)
+// {
+//   float mipCount = 9.0; // resolution of 512x512
+//   float lod = (pbrInfo.perceptualRoughness * mipCount);
+//   // retrieve a scale and bias to F0. See [1], Figure 3
+//   vec3 brdf = SRGBtoLINEAR(texture(u_brdfLUT,
+//     vec2(pbrInfo.NdotV, 1.0 - pbrInfo.perceptualRoughness))).rgb;
+//   vec3 diffuseLight = SRGBtoLINEAR(texture(u_DiffuseEnvSampler, n)).rgb;
+// 
+// #ifdef USE_TEX_LOD
+//   vec3 specularLight = SRGBtoLINEAR(texture(u_SpecularEnvSampler, reflection, lod)).rgb;
+// #else
+//   vec3 specularLight = SRGBtoLINEAR(texture(u_SpecularEnvSampler, reflection)).rgb;
+// #endif
+// 
+//   vec3 diffuse = diffuseLight * pbrInfo.diffuseColor;
+//   vec3 specular = specularLight * (pbrInfo.specularColor * brdf.x + brdf.y);
+// 
+//   // For presentation, this allows us to disable IBL terms
+//   diffuse *= u_pbrMaterial.scaleIBLAmbient.x;
+//   specular *= u_pbrMaterial.scaleIBLAmbient.y;
+// 
+//   return diffuse + specular;
+// }
+// #endif
 
 // Basic Lambertian diffuse
 // Implementation from Lambert's Photometria https://archive.org/details/lambertsphotome00lambgoog
@@ -282,6 +286,8 @@ vec4 pbr_filterColor(vec4 colorUnused)
 #else
   vec4 baseColor = u_pbrMaterial.baseColorFactor;
 #endif
+  // TODO HACK override texture
+  baseColor = vec4(0.0, 0.0, 1.0, 1.0);
 
 #ifdef ALPHA_CUTOFF
   if (baseColor.a < u_pbrMaterial.alphaCutoff) {
@@ -289,6 +295,8 @@ vec4 pbr_filterColor(vec4 colorUnused)
   }
 #endif
 
+  // TODO HACK in color
+  return baseColor;
   vec3 color = vec3(0, 0, 0);
 
   if(u_pbrMaterial.unlit){
@@ -352,6 +360,7 @@ vec4 pbr_filterColor(vec4 colorUnused)
       v
     );
 
+
 #ifdef USE_LIGHTS
     // Apply ambient light
     PBRInfo_setAmbientLight(pbrInfo);
@@ -376,26 +385,26 @@ vec4 pbr_filterColor(vec4 colorUnused)
 #endif
 
     // Calculate lighting contribution from image based lighting source (IBL)
-#ifdef USE_IBL
-    if (u_pbrMaterial.IBLenabled) {
-      color += getIBLContribution(pbrInfo, n, reflection);
-    }
-#endif
+// #ifdef USE_IBL
+//     if (u_pbrMaterial.IBLenabled) {
+//       color += getIBLContribution(pbrInfo, n, reflection);
+//     }
+// #endif
 
     // Apply optional PBR terms for additional (optional) shading
-#ifdef HAS_OCCLUSIONMAP
-    if (u_pbrMaterial.occlusionMapEnabled) {
-      float ao = texture(u_OcclusionSampler, pbr_vUV).r;
-      color = mix(color, color * ao, u_pbrMaterial.occlusionStrength);
-    }
-#endif
+// #ifdef HAS_OCCLUSIONMAP
+//     if (u_pbrMaterial.occlusionMapEnabled) {
+//       float ao = texture(u_OcclusionSampler, pbr_vUV).r;
+//       color = mix(color, color * ao, u_pbrMaterial.occlusionStrength);
+//     }
+// #endif
 
-#ifdef HAS_EMISSIVEMAP
-    if (u_pbrMaterial.emissiveMapEnabled) {
-      vec3 emissive = SRGBtoLINEAR(texture(u_EmissiveSampler, pbr_vUV)).rgb * u_pbrMaterial.emissiveFactor;
-      color += emissive;
-    }
-#endif
+// #ifdef HAS_EMISSIVEMAP
+//     if (u_pbrMaterial.emissiveMapEnabled) {
+//       vec3 emissive = SRGBtoLINEAR(texture(u_EmissiveSampler, pbr_vUV)).rgb * u_pbrMaterial.emissiveFactor;
+//       color += emissive;
+//     }
+// #endif
 
     // This section uses mix to override final color for reference app visualization
     // of various parameters in the lighting equation.

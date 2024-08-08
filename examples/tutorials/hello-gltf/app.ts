@@ -67,6 +67,16 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       });
 
       model.updateModuleSettings({lightSources});
+
+      model.shaderInputs.setProps({
+        lighting: lightSources,
+        pbrProjection: {
+          u_Camera: eye,
+          u_MVPMatrix,
+          u_ModelMatrix: worldMatrix,
+          u_NormalMatrix: new Matrix4(worldMatrix).invert().transpose()
+        }
+      });
       model.draw(renderPass);
     });
     renderPass.end();
@@ -119,7 +129,7 @@ const lightSources: LightingProps = {
   ],
   pointLights: [
     {
-      attenuation: 0,
+      attenuation: [1, 0, 0],
       color: [255, 222, 222],
       position: [3, 10, 0],
       intensity: 5,

@@ -6,13 +6,35 @@
 
 import type {Texture} from '@luma.gl/core';
 import type {Vector2, Vector3, Vector4} from '@math.gl/core';
-import type {NumberArray2, NumberArray3, NumberArray4} from '../../../lib/utils/uniform-types';
+import type {
+  NumberArray2,
+  NumberArray3,
+  NumberArray4,
+  NumberArray16
+} from '../../../lib/utils/uniform-types';
 
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
 import {lighting} from '../lights/lighting-uniforms';
 
 import {vs} from './pbr-vertex-glsl';
 import {fs} from './pbr-fragment-glsl';
+
+type PBRProjectionProps = {
+  u_MVPMatrix: NumberArray16;
+  u_ModelMatrix: NumberArray16;
+  u_NormalMatrix: NumberArray16;
+  u_Camera: NumberArray3;
+};
+const pbrProjection: ShaderModule<PBRProjectionProps> = {
+  name: 'pbrProjection',
+  vs,
+  uniformTypes: {
+    u_MVPMatrix: 'mat4x4<f32>',
+    u_ModelMatrix: 'mat4x4<f32>',
+    u_NormalMatrix: 'mat4x4<f32>',
+    u_Camera: 'vec3<i32>'
+  }
+};
 
 export type PBRMaterialProps = PBRMaterialBindings & {
   unlit: boolean;
@@ -98,8 +120,7 @@ export type PBRMaterialUniforms = {
  * Physically Based Shading of a microfacet surface defined by a glTF material.
  */
 export const pbrMaterial: ShaderModule<PBRMaterialProps, PBRMaterialUniforms> = {
-  name: 'pbr',
-  vs,
+  name: 'pbrMaterial',
   fs,
   defines: {
     LIGHTING_FRAGMENT: 1,
@@ -144,5 +165,5 @@ export const pbrMaterial: ShaderModule<PBRMaterialProps, PBRMaterialUniforms> = 
     scaleDiffBaseMR: 'vec4<f32>',
     scaleFGDSpec: 'vec4<f32>'
   },
-  dependencies: [lighting]
+  dependencies: [lighting, pbrProjection]
 };

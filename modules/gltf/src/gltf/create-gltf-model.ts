@@ -1,5 +1,5 @@
 import {Device, RenderPipelineParameters, log} from '@luma.gl/core';
-import {pbr, pbrMaterial} from '@luma.gl/shadertools';
+import {pbrMaterial} from '@luma.gl/shadertools';
 import {Geometry, Model, ModelNode, ModelProps} from '@luma.gl/engine';
 import {ParsePBRMaterialOptions, parsePBRMaterial} from '../pbr/parse-pbr-material';
 import {ShaderModule} from '@luma.gl/shadertools';
@@ -49,7 +49,10 @@ const vs = `
     #endif
 
     pbr_setPositionNormalTangentUV(positions, _NORMAL, _TANGENT, _TEXCOORD_0);
-    gl_Position = proj.u_MVPMatrix * positions;
+    // gl_Position = proj.u_MVPMatrix * positions;
+    // TODO remove hack
+    gl_Position.xy = positions.xy;
+    gl_Position.zw = vec2(0.0, 0.1);
   }
 `;
 
