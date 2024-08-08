@@ -34,7 +34,7 @@ export type PointLight = {
   position: Readonly<NumberArray3>;
   color?: Readonly<NumberArray3>;
   intensity?: number;
-  attenuation?: number;
+  attenuation?: Readonly<NumberArray3>;
 };
 
 export type DirectionalLight = {
@@ -127,16 +127,16 @@ export const lighting: ShaderModule<LightingProps, LightingUniforms, {}> = {
     lightPosition0: [1, 1, 2],
     // TODO - could combine direction and attenuation
     lightDirection0: [1, 1, 1],
-    lightAttenuation0: [1, 1, 1],
+    lightAttenuation0: [1, 0, 0],
 
     lightColor1: [1, 1, 1],
     lightPosition1: [1, 1, 2],
     lightDirection1: [1, 1, 1],
-    lightAttenuation1: [1, 1, 1],
+    lightAttenuation1: [1, 0, 0],
     lightColor2: [1, 1, 1],
     lightPosition2: [1, 1, 2],
     lightDirection2: [1, 1, 1],
-    lightAttenuation2: [1, 1, 1]
+    lightAttenuation2: [1, 0, 0]
   }
 };
 
@@ -198,7 +198,7 @@ function getLightSourceUniforms({
     const i = currentLight as 0 | 1 | 2;
     lightSourceUniforms[`lightColor${i}`] = convertColor(pointLight);
     lightSourceUniforms[`lightPosition${i}`] = pointLight.position;
-    lightSourceUniforms[`lightAttenuation${i}`] = [pointLight.attenuation || 1, 0, 0];
+    lightSourceUniforms[`lightAttenuation${i}`] = pointLight.attenuation || [1, 0, 0];
     currentLight++;
   }
 
