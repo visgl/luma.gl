@@ -49,22 +49,26 @@ uniform lightingUniforms {
 } lighting;
 
 PointLight lighting_getPointLight(int index) {
-  if (index == 0) {
-    return PointLight(lighting.lightColor0, lighting.lightPosition0, lighting.lightAttenuation0);
-  } else if (index == 1) {
-    return PointLight(lighting.lightColor1, lighting.lightPosition1, lighting.lightAttenuation1);
-  } else {
-    return PointLight(lighting.lightColor2, lighting.lightPosition2, lighting.lightAttenuation2);
+  switch (index) {
+    case 0:
+      return PointLight(lighting.lightColor0, lighting.lightPosition0, lighting.lightAttenuation0);
+    case 1:
+      return PointLight(lighting.lightColor1, lighting.lightPosition1, lighting.lightAttenuation1);
+    case 2:
+    default:  
+      return PointLight(lighting.lightColor2, lighting.lightPosition2, lighting.lightAttenuation2);
   }
 }
 
 DirectionalLight lighting_getDirectionalLight(int index) {
-  if (index == 0) {
-    return DirectionalLight(lighting.lightColor0, lighting.lightDirection0);
-  } else if (index == 1) {
-    return DirectionalLight(lighting.lightColor1, lighting.lightDirection1);
-  } else {
-    return DirectionalLight(lighting.lightColor2, lighting.lightDirection2);
+  switch (index) {
+    case 0:
+      return DirectionalLight(lighting.lightColor0, lighting.lightDirection0);
+    case 1:
+      return DirectionalLight(lighting.lightColor1, lighting.lightDirection1);
+    case 2:
+    default:   
+      return DirectionalLight(lighting.lightColor2, lighting.lightDirection2);
   }
 } 
 
