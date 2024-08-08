@@ -106,12 +106,11 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
     modules: [pbrMaterial as unknown as ShaderModule],
     vs: addVersionToShader(device, vs),
     fs: addVersionToShader(device, fs),
+    // TODO can this be removed? Does deck need it?
     ...modelOptions,
 
-    bindings: {...parsedMaterial.bindings, ...modelOptions.bindings},
     defines: {...parsedMaterial.defines, ...modelOptions.defines},
-    parameters: {...parameters, ...parsedMaterial.parameters, ...modelOptions.parameters},
-    uniforms: {...parsedMaterial.uniforms, ...modelOptions.uniforms}
+    parameters: {...parameters, ...parsedMaterial.parameters, ...modelOptions.parameters}
   };
 
   const model = new Model(device, modelProps);

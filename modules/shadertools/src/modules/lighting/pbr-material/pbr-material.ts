@@ -132,8 +132,8 @@ export const pbrMaterial: ShaderModule<PBRMaterialProps, PBRMaterialUniforms> = 
     HAS_BASECOLORMAP: 0,
     HAS_METALROUGHNESSMAP: 0,
     ALPHA_CUTOFF: 0,
-    USE_IBL: 0,
-    PBR_DEBUG: 0
+    USE_IBL: 0
+    // PBR_DEBUG: 0 // TODO defining this breaks shader
   },
   getUniforms: props => props,
   uniformTypes: {

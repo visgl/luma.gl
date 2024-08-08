@@ -293,8 +293,6 @@ vec4 pbr_filterColor(vec4 colorUnused)
   }
 #endif
 
-  // TODO HACK in color
-  return baseColor;
   vec3 color = vec3(0, 0, 0);
 
   if(u_pbrMaterial.unlit){
