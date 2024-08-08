@@ -28,6 +28,8 @@ type PBRProjectionProps = {
 const pbrProjection: ShaderModule<PBRProjectionProps> = {
   name: 'pbrProjection',
   vs,
+  // TODO why is this needed?
+  getUniforms: props => props,
   uniformTypes: {
     u_MVPMatrix: 'mat4x4<f32>',
     u_ModelMatrix: 'mat4x4<f32>',

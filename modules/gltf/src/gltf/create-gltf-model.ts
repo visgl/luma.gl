@@ -49,10 +49,7 @@ const vs = `
     #endif
 
     pbr_setPositionNormalTangentUV(positions, _NORMAL, _TANGENT, _TEXCOORD_0);
-    // gl_Position = proj.u_MVPMatrix * positions;
-    // TODO remove hack
-    gl_Position.xy = positions.xy;
-    gl_Position.zw = vec2(0.0, 0.1);
+    gl_Position = proj.u_MVPMatrix * positions;
   }
 `;
 
