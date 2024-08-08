@@ -4,7 +4,7 @@
 
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
 import {lighting} from '../lights/lighting';
-import {GOURAUD_VS, GOURAUD_FS} from './gouraud-shaders-glsl';
+import {PHONG_VS, PHONG_FS} from '../phong-material/phong-shaders-glsl';
 
 export type GouraudMaterialProps = GouraudMaterialUniforms;
 
@@ -23,8 +23,8 @@ export const gouraudMaterial = {
 
   name: 'gouraudMaterial',
   // Note these are switched between phong and gouraud
-  vs: GOURAUD_VS,
-  fs: GOURAUD_FS,
+  vs: PHONG_FS.replace('phongMaterial', 'gouraudMaterial'),
+  fs: PHONG_VS.replace('phongMaterial', 'gouraudMaterial'),
   defines: {
     LIGHTING_VERTEX: 1
   },

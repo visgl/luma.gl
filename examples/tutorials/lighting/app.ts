@@ -78,6 +78,7 @@ in vec2 texCoords;
 out vec3 vPosition;
 out vec3 vNormal;
 out vec2 vUV;
+out vec3 vColor;
 
 uniform appUniforms {
   mat4 modelMatrix;
@@ -89,6 +90,10 @@ void main(void) {
   vPosition = (app.modelMatrix * vec4(positions, 1.0)).xyz;
   vNormal = mat3(app.modelMatrix) * normals;
   vUV = texCoords;
+
+  #if (defined(LIGHTING_VERTEX))
+  vColor = lighting_getLightColor(vec3(1.0), app.eyePosition, vPosition, normalize(vNormal));
+  #endif
   gl_Position = app.mvpMatrix * vec4(positions, 1.0);
 }
 `;
@@ -100,6 +105,7 @@ precision highp float;
 in vec3 vPosition;
 in vec3 vNormal;
 in vec2 vUV;
+in vec3 vColor;
 
 uniform sampler2D uTexture;
 
@@ -107,15 +113,20 @@ uniform appUniforms {
   mat4 modelMatrix;
   mat4 mvpMatrix;
   vec3 eyePosition;
-} uApp;
+} app;
 
 out vec4 fragColor;
 
 void main(void) {
+  #if (defined(LIGHTING_FRAGMENT))
   vec3 surfaceColor = texture(uTexture, vec2(vUV.x, 1.0 - vUV.y)).rgb;
-  surfaceColor = lighting_getLightColor(surfaceColor, uApp.eyePosition, vPosition, normalize(vNormal));
-
+  surfaceColor = lighting_getLightColor(surfaceColor, app.eyePosition, vPosition, normalize(vNormal));
   fragColor = vec4(surfaceColor, 1.0);
+  #endif
+
+  #if (defined(LIGHTING_VERTEX))
+  fragColor = vec4(vColor, 1.0);
+  #endif
 }
 `;
 
@@ -146,6 +157,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   shaderInputs = new ShaderInputs<{
     app: typeof app.props;
     lighting: typeof lighting.props;
+    // Can replace with gouraudMaterial
     phongMaterial: typeof phongMaterial.props;
   }>({app, lighting, phongMaterial});
 
@@ -161,11 +173,14 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       lighting: {
         lights: [
           {type: 'ambient', color: [255, 255, 255]},
-          {type: 'point', color: [255, 255, 255], position: [1, 2, 1]}
+          {type: 'point', color: [255, 120, 10], position: [2, 4, 3]},
+          {type: 'point', color: [0, 255, 10], position: [-2, 1, 3]}
+          // {type: 'directional', color: [0, 0, 255], direction: [-1, 0, -1]}
         ]
       },
       phongMaterial: {
-        specularColor: [255, 255, 255]
+        specularColor: [255, 255, 255],
+        shininess: 100
       }
     });
 
