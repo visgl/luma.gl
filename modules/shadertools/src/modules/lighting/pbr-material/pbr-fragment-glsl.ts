@@ -355,29 +355,29 @@ vec4 pbr_filterColor(vec4 colorUnused)
 #ifdef USE_LIGHTS
     // Apply ambient light
     PBRInfo_setAmbientLight(pbrInfo);
-    color += calculateFinalColor(pbrInfo, lighting_uAmbientLight.color);
+    color += calculateFinalColor(pbrInfo, lighting.ambientColor);
 
     // Apply directional light
-    for(int i = 0; i < lighting_uDirectionalLightCount; i++) {
-      if (i < lighting_uDirectionalLightCount) {
-        PBRInfo_setDirectionalLight(pbrInfo, lighting_uDirectionalLight[i].direction);
-        color += calculateFinalColor(pbrInfo, lighting_uDirectionalLight[i].color);
+    for(int i = 0; i < lighting.directionalLightCount; i++) {
+      if (i < lighting.directionalLightCount) {
+        PBRInfo_setDirectionalLight(pbrInfo, lighting_getDirectionalLight(i).direction);
+        color += calculateFinalColor(pbrInfo, lighting_getDirectionalLight(i).color);
       }
     }
 
     // Apply point light
-    for(int i = 0; i < lighting_uPointLightCount; i++) {
-      if (i < lighting_uPointLightCount) {
-        PBRInfo_setPointLight(pbrInfo, lighting_uPointLight[i]);
-        float attenuation = getPointLightAttenuation(lighting_uPointLight[i], distance(lighting_uPointLight[i].position, pbr_vPosition));
-        color += calculateFinalColor(pbrInfo, lighting_uPointLight[i].color / attenuation);
+    for(int i = 0; i < lighting.pointLightCount; i++) {
+      if (i < lighting.pointLightCount) {
+        PBRInfo_setPointLight(pbrInfo, lighting_getPointLight(i));
+        float attenuation = getPointLightAttenuation(lighting_getPointLight(i), distance(lighting_getPointLight(i).position, pbr_vPosition));
+        color += calculateFinalColor(pbrInfo, lighting_getPointLight(i).color / attenuation);
       }
     }
 #endif
 
     // Calculate lighting contribution from image based lighting source (IBL)
 #ifdef USE_IBL
-    if (u_pbrMateral.IBLEnabled) {
+    if (u_pbrMaterial.IBLenabled) {
       color += getIBLContribution(pbrInfo, n, reflection);
     }
 #endif
@@ -391,7 +391,7 @@ vec4 pbr_filterColor(vec4 colorUnused)
 #endif
 
 #ifdef HAS_EMISSIVEMAP
-    if (u_pbrMaterial.emmissiveMapEnabled) {
+    if (u_pbrMaterial.emissiveMapEnabled) {
       vec3 emissive = SRGBtoLINEAR(texture(u_EmissiveSampler, pbr_vUV)).rgb * u_pbrMaterial.emissiveFactor;
       color += emissive;
     }
