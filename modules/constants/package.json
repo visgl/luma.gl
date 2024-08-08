@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/constants",
-  "version": "9.0.19",
+  "version": "9.0.20",
   "description": "WebGL2 constants",
   "type": "module",
   "license": "MIT",

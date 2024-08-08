@@ -2428,7 +2428,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@luma.gl/constants@npm:9.0.19, @luma.gl/constants@workspace:modules/constants":
+"@luma.gl/constants@npm:9.0.20, @luma.gl/constants@workspace:modules/constants":
   version: 0.0.0-use.local
   resolution: "@luma.gl/constants@workspace:modules/constants"
   languageName: unknown
@@ -2477,7 +2477,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@luma.gl/engine@workspace:modules/engine"
   dependencies:
-    "@luma.gl/shadertools": "npm:9.0.19"
+    "@luma.gl/shadertools": "npm:9.0.20"
     "@math.gl/core": "npm:^4.0.0"
     "@probe.gl/log": "npm:^4.0.2"
     "@probe.gl/stats": "npm:^4.0.2"
@@ -2505,7 +2505,7 @@ __metadata:
   resolution: "@luma.gl/gltf@workspace:modules/gltf"
   dependencies:
     "@loaders.gl/textures": "npm:^4.2.0"
-    "@luma.gl/shadertools": "npm:9.0.19"
+    "@luma.gl/shadertools": "npm:9.0.20"
     "@math.gl/core": "npm:^4.0.0"
   peerDependencies:
     "@loaders.gl/core": ^4.2.0
@@ -2526,7 +2526,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@luma.gl/shadertools@npm:9.0.19, @luma.gl/shadertools@workspace:modules/shadertools":
+"@luma.gl/shadertools@npm:9.0.20, @luma.gl/shadertools@workspace:modules/shadertools":
   version: 0.0.0-use.local
   resolution: "@luma.gl/shadertools@workspace:modules/shadertools"
   dependencies:
@@ -2569,7 +2569,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@luma.gl/webgl@workspace:modules/webgl"
   dependencies:
-    "@luma.gl/constants": "npm:9.0.19"
+    "@luma.gl/constants": "npm:9.0.20"
     "@probe.gl/env": "npm:^4.0.2"
   peerDependencies:
     "@luma.gl/core": ^9.0.0
