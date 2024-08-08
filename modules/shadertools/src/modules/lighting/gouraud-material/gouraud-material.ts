@@ -38,7 +38,7 @@ export const gouraudMaterial: ShaderModule<GouraudMaterialProps> = {
     specularColor: [0.15, 0.15, 0.15]
   },
   getUniforms(props: GouraudMaterialProps) {
-    const uniforms = props;
+    const uniforms = {...props};
     if (uniforms.specularColor) {
       uniforms.specularColor = uniforms.specularColor.map(x => x / 255) as NumberArray3;
     }
