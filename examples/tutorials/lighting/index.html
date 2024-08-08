@@ -1,4 +1,18 @@
 <!doctype html>
+<head>
+  <style>
+    body {
+      background: black;
+      margin: 0;
+    }
+
+    canvas {
+      height: 100% !important;
+      width: 100% !important;
+      transition: opacity 1s ease-in-out;
+    }
+  </style>
+</head>
 <script type="module">
   import {WebGLDevice} from '@luma.gl/webgl';
   // import {WebGPUDevice} from '@luma.gl/webgpu';
@@ -7,7 +21,9 @@
   import AnimationLoopTemplate from './app.ts';
 
   luma.registerDevices([WebGLDevice]);
-  makeAnimationLoop(AnimationLoopTemplate).start();
+  const resolution = 2;
+  const device = luma.createDevice({width: resolution * window.innerWidth, height: resolution * window.innerHeight, type: 'webgl'});
+  makeAnimationLoop(AnimationLoopTemplate, {device}).start();
 </script>
 <body>
 </body>

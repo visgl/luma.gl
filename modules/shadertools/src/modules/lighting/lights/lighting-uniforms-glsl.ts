@@ -32,22 +32,44 @@ uniform lightingUniforms {
 
   vec3 ambientColor;
 
-  vec3 lightColor;
-  vec3 lightPosition;
-  vec3 lightDirection;
-  vec3 lightAttenuation;
+  vec3 lightColor0;
+  vec3 lightPosition0;
+  vec3 lightDirection0;
+  vec3 lightAttenuation0;
 
-  // AmbientLight ambientLight;
-  // PointLight pointLight[MAX_LIGHTS];
-  // DirectionalLight directionalLight[MAX_LIGHTS];
+  vec3 lightColor1;
+  vec3 lightPosition1;
+  vec3 lightDirection1;
+  vec3 lightAttenuation1;
+
+  vec3 lightColor2;
+  vec3 lightPosition2;
+  vec3 lightDirection2;
+  vec3 lightAttenuation2;
 } lighting;
 
 PointLight lighting_getPointLight(int index) {
-  return PointLight(lighting.lightColor, lighting.lightPosition, lighting.lightAttenuation);
+  switch (index) {
+    case 0:
+      return PointLight(lighting.lightColor0, lighting.lightPosition0, lighting.lightAttenuation0);
+    case 1:
+      return PointLight(lighting.lightColor1, lighting.lightPosition1, lighting.lightAttenuation1);
+    case 2:
+    default:  
+      return PointLight(lighting.lightColor2, lighting.lightPosition2, lighting.lightAttenuation2);
+  }
 }
 
 DirectionalLight lighting_getDirectionalLight(int index) {
-  return DirectionalLight(lighting.lightColor, lighting.lightDirection);
+  switch (index) {
+    case 0:
+      return DirectionalLight(lighting.lightColor0, lighting.lightDirection0);
+    case 1:
+      return DirectionalLight(lighting.lightColor1, lighting.lightDirection1);
+    case 2:
+    default:   
+      return DirectionalLight(lighting.lightColor2, lighting.lightDirection2);
+  }
 } 
 
 float getPointLightAttenuation(PointLight pointLight, float distance) {
