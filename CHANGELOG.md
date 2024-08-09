@@ -4,6 +4,19 @@
 
 Major new release that includes WebGPU support
 
+### 9.0.23 - Aug 9, 2024
+
+- shadertools: specularColor tests (#2172)
+
+### 9.0.22 - Aug 9, 2024
+
+- shadertools: Normalize specularColor (#2171)
+
+### 9.0.21 - Aug 9, 2024
+
+- shadertools: Attenuation vec3 (#2170)
+- shadertools: Normalize specularColor (#2169)
+
 ### 9.0.20 - Aug 8, 2024
 
 - shadertools: Support mulitple lights in lighting module (#2166)
