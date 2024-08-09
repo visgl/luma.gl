@@ -16,7 +16,7 @@ export class Swap<T extends Resource<any>> {
   /** The next resource - usually the target/destination for transforms / computations */
   next: T;
 
-  constructor(props: {current: T, next: T}) {
+  constructor(props: {current: T; next: T}) {
     this.current = props.current;
     this.next = props.next;
   }
@@ -34,4 +34,3 @@ export class Swap<T extends Resource<any>> {
     this.next = current;
   }
 }
-
