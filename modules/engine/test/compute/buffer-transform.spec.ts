@@ -56,8 +56,8 @@ function createBufferTransform(
     vertexCount,
     attributes: src ? {src} : undefined,
     bufferLayout: [{name: 'src', format: 'float32'}],
-    feedbackBuffers: dst ? {dst} : undefined,
-    varyings: ['dst'],
-    topology: 'point-list'
+    outputs: ['dst'],
+    topology: 'point-list',
+    feedbackBuffers: dst ? {dst} : undefined
   });
 }

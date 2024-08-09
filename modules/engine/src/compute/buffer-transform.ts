@@ -12,8 +12,11 @@ import type {ModelProps} from '../model/model';
  * @note Only works under WebGL2.
  */
 export type BufferTransformProps = Omit<ModelProps, 'fs'> & {
+  /** Optional fragment shader - normally not used in transforms */
   fs?: ModelProps['fs']; // override as optional
-  /** Map of output buffers that the shaders will write results of computations to */
+  /** A list of named outputs corresponding to shader declarations (varyings in WebGL) */
+  outputs?: string[];
+  /** @deprecated Use run({outputBuffers}) instead - Map of output buffers that the shaders will write results of computations to */
   feedbackBuffers?: Record<string, Buffer | BufferRange>;
 };
 
@@ -26,11 +29,17 @@ export class BufferTransform {
   readonly model: Model;
   readonly transformFeedback: TransformFeedback;
 
+  static defaultProps: Required<BufferTransformProps> = {
+    ...Model.defaultProps,
+    outputs: undefined!,
+    feedbackBuffers: undefined!
+  };
+
   static isSupported(device: Device): boolean {
     return device?.info?.type === 'webgl';
   }
 
-  constructor(device: Device, props: BufferTransformProps = Model.defaultProps) {
+  constructor(device: Device, props: BufferTransformProps = BufferTransform.defaultProps) {
     if (!BufferTransform.isSupported(device)) {
       throw new Error('BufferTransform not yet implemented on WebGPU');
     }
@@ -41,6 +50,7 @@ export class BufferTransform {
       id: props.id || 'buffer-transform-model',
       fs: props.fs || getPassthroughFS(),
       topology: props.topology || 'point-list',
+      varyings: props.outputs || props.varyings,
       ...props
     });
 
@@ -68,17 +78,31 @@ export class BufferTransform {
   }
 
   /** Run one transform loop. */
-  run(options?: RenderPassProps): void {
+  run(
+    options?: RenderPassProps & {
+      inputBuffers?: Record<string, Buffer>;
+      outputBuffers?: Record<string, Buffer>;
+    }
+  ): void {
+    if (options?.inputBuffers) {
+      this.model.setAttributes(options.inputBuffers);
+    }
+    if (options?.outputBuffers) {
+      this.transformFeedback.setBuffers(options.outputBuffers);
+    }
     const renderPass = this.device.beginRenderPass(options);
     this.model.draw(renderPass);
     renderPass.end();
   }
 
-  /** Returns the {@link Buffer} or {@link BufferRange} for given varying name. */
+  // DEPRECATED METHODS
+
+  /** @deprecated App knows what buffers it is passing in - Returns the {@link Buffer} or {@link BufferRange} for given varying name. */
   getBuffer(varyingName: string): Buffer | BufferRange | null {
     return this.transformFeedback.getBuffer(varyingName);
   }
 
+  /** @deprecated App knows what buffers it is passing in - Reads the {@link Buffer} or {@link BufferRange} for given varying name. */
   readAsync(varyingName: string): Promise<Uint8Array> {
     const result = this.getBuffer(varyingName);
     if (!result) {

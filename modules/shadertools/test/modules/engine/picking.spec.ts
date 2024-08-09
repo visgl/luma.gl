@@ -204,13 +204,13 @@ test.skip('picking#picking_setPickingColor', async t => {
   const rgbColorASelected = webglDevice.createBuffer({byteLength: vertexCount * 4});
 
   const transform = new BufferTransform(webglDevice, {
-    attributes: {vertexColor},
-    bufferLayout: [{name: 'vertexColor', format: 'float32'}],
-    feedbackBuffers: {rgbColorASelected},
     vs: VS,
-    varyings: ['rgbColorASelected'],
+    bufferLayout: [{name: 'vertexColor', format: 'float32'}],
+    outputs: ['rgbColorASelected'],
     modules: [picking],
-    vertexCount
+    vertexCount,
+    attributes: {vertexColor},
+    feedbackBuffers: {rgbColorASelected}
   });
 
   await Promise.all(
