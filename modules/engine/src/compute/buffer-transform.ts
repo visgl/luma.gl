@@ -68,17 +68,27 @@ export class BufferTransform {
   }
 
   /** Run one transform loop. */
-  run(options?: RenderPassProps): void {
+  run(options?: RenderPassProps & {
+    inputBuffers?: Record<string, Buffer>;
+    outputBuffers?: Record<string, Buffer>;
+  }): void {
+    if (options?.inputBuffers) {
+      this.model.setAttributes(options.inputBuffers);
+    }
+    if (options?.outputBuffers) {
+      this.transformFeedback.setBuffers(options.outputBuffers);
+    }
     const renderPass = this.device.beginRenderPass(options);
     this.model.draw(renderPass);
     renderPass.end();
   }
 
-  /** Returns the {@link Buffer} or {@link BufferRange} for given varying name. */
+  /** @deprecated Returns the {@link Buffer} or {@link BufferRange} for given varying name. */
   getBuffer(varyingName: string): Buffer | BufferRange | null {
     return this.transformFeedback.getBuffer(varyingName);
   }
 
+  /** @deprecated Reads the {@link Buffer} or {@link BufferRange} for given varying name. */
   readAsync(varyingName: string): Promise<Uint8Array> {
     const result = this.getBuffer(varyingName);
     if (!result) {
