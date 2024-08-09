@@ -78,9 +78,10 @@ export {phongMaterial} from './modules/lighting/phong-material/phong-material';
 export type {
   PBRMaterialBindings,
   PBRMaterialProps,
-  PBRMaterialUniforms,
-  PBRProjectionProps
+  PBRMaterialUniforms
 } from './modules/lighting/pbr-material/pbr-material';
+export type {PBRProjectionProps} from './modules/lighting/pbr-material/pbr-projection';
+
 export {pbrMaterial} from './modules/lighting/pbr-material/pbr-material';
 
 // POST PROCESSING / SHADER PASS MODULES

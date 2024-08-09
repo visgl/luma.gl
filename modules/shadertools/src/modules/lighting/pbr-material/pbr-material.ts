@@ -6,37 +6,14 @@
 
 import type {Texture} from '@luma.gl/core';
 import type {Vector2, Vector3, Vector4} from '@math.gl/core';
-import type {
-  NumberArray2,
-  NumberArray3,
-  NumberArray4,
-  NumberArray16
-} from '../../../lib/utils/uniform-types';
+import type {NumberArray2, NumberArray3, NumberArray4} from '../../../lib/utils/uniform-types';
 
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
 import {lighting} from '../lights/lighting-uniforms';
 
 import {vs} from './pbr-vertex-glsl';
 import {fs} from './pbr-fragment-glsl';
-
-export type PBRProjectionProps = {
-  u_MVPMatrix: NumberArray16;
-  u_ModelMatrix: NumberArray16;
-  u_NormalMatrix: NumberArray16;
-  u_Camera: NumberArray3;
-};
-const pbrProjection: ShaderModule<PBRProjectionProps> = {
-  name: 'pbrProjection',
-  vs,
-  // TODO why is this needed?
-  getUniforms: props => props,
-  uniformTypes: {
-    u_MVPMatrix: 'mat4x4<f32>',
-    u_ModelMatrix: 'mat4x4<f32>',
-    u_NormalMatrix: 'mat4x4<f32>',
-    u_Camera: 'vec3<i32>'
-  }
-};
+import {pbrProjection} from './pbr-projection';
 
 /** Non-uniform block bindings for pbr module */
 export type PBRMaterialBindings = {
@@ -93,6 +70,7 @@ export type PBRMaterialProps = PBRMaterialBindings & PBRMaterialUniforms;
  */
 export const pbrMaterial: ShaderModule<PBRMaterialProps, PBRMaterialUniforms> = {
   name: 'pbrMaterial',
+  vs,
   fs,
   defines: {
     LIGHTING_FRAGMENT: 1

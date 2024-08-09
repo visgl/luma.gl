@@ -14,15 +14,6 @@ import {glsl} from '../../../lib/glsl-utils/highlight';
 export const fs = glsl`\
 precision highp float;
 
-// TODO remove
-uniform pbrProjectionUniforms {
-  mat4 u_MVPMatrix;
-  mat4 u_ModelMatrix;
-  mat4 u_NormalMatrix;
-  // Projection
-  vec3 u_Camera;
-} proj;
-
 uniform pbrMaterialUniforms {
   // Material is unlit
   bool unlit;
