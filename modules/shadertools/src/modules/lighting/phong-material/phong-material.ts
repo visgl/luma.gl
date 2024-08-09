@@ -42,6 +42,6 @@ export const phongMaterial: ShaderModule<PhongMaterialProps> = {
     if (uniforms.specularColor) {
       uniforms.specularColor = uniforms.specularColor.map(x => x / 255) as NumberArray3;
     }
-    return {...phongMaterial.defaultUniforms, ...props};
+    return {...phongMaterial.defaultUniforms, ...uniforms};
   }
 };
