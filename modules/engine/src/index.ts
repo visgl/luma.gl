@@ -67,8 +67,11 @@ export {setPathPrefix, loadImage, loadImageBitmap} from './application-utils/loa
 // EXPERIMENTAL
 export type {ShaderModuleInputs} from './shader-inputs';
 export {ShaderInputs as _ShaderInputs} from './shader-inputs';
+
+export {Swap} from './transform/swap';
 export type {ComputationProps} from './computation';
 export {Computation} from './computation';
+
 export {
   requestAnimationFrame,
   cancelAnimationFrame
