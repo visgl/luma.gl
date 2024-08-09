@@ -2,6 +2,8 @@ import test from 'tape';
 import {Swap} from '../../src/compute/swap';
 import {webglDevice} from '@luma.gl/test-utils';
 
+// TODO - these tests could run on NullDevice
+
 test('Swap#constructor', t => {
   const current = webglDevice.createBuffer({byteLength: 1});
   const next = webglDevice.createBuffer({byteLength: 1});
