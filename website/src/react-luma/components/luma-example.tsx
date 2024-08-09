@@ -6,6 +6,8 @@ import {
   makeAnimationLoop,
   setPathPrefix
 } from '@luma.gl/engine';
+import {webgl2Adapter} from '@luma.gl/webgl';
+import {webgpuAdapter} from '@luma.gl/webgpu';
 
 // import StatsWidget from '@probe.gl/stats-widget';
 // import {VRDisplay} from '@luma.gl/experimental';
@@ -85,7 +87,12 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
     const asyncCreateLoop = async () => {
       canvas.style.width = '100%';
       canvas.style.height = '100%';
-      device = await luma.createDevice({type: deviceType, canvas, container: containerName});
+      device = await luma.createDevice({
+        adapters: [webgl2Adapter, webgpuAdapter],
+        type: deviceType,
+        canvas,
+        container: containerName
+      });
 
       animationLoop = makeAnimationLoop(props.template as unknown as typeof AnimationLoopTemplate, {
         device,

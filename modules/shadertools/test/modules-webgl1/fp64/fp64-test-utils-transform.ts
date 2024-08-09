@@ -80,7 +80,7 @@ function setupFloatTest(device: Device, {glslFunc, binary = false, limit = 256, 
       {name: 'b', format: 'float32x2'}
     ],
     feedbackBuffers: {result: bufferResult},
-    varyings: ['result'],
+    outputs: ['result'],
     vertexCount: testCases.length
   });
   return {a, b, expected, a_fp64, b_fp64, expected_fp64, transform};
