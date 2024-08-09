@@ -64,20 +64,20 @@ uniform sampler2D u_BaseColorSampler;
 #ifdef HAS_NORMALMAP
 uniform sampler2D u_NormalSampler;
 #endif
-// #ifdef HAS_EMISSIVEMAP
-// uniform sampler2D u_EmissiveSampler;
-// #endif
+#ifdef HAS_EMISSIVEMAP
+uniform sampler2D u_EmissiveSampler;
+#endif
 #ifdef HAS_METALROUGHNESSMAP
 uniform sampler2D u_MetallicRoughnessSampler;
 #endif
-// #ifdef HAS_OCCLUSIONMAP
-// uniform sampler2D u_OcclusionSampler;
-// #endif
-// #ifdef USE_IBL
-// uniform samplerCube u_DiffuseEnvSampler;
-// uniform samplerCube u_SpecularEnvSampler;
-// uniform sampler2D u_brdfLUT;
-// #endif
+#ifdef HAS_OCCLUSIONMAP
+uniform sampler2D u_OcclusionSampler;
+#endif
+#ifdef USE_IBL
+uniform samplerCube u_DiffuseEnvSampler;
+uniform samplerCube u_SpecularEnvSampler;
+uniform sampler2D u_brdfLUT;
+#endif
 
 // Inputs from vertex shader
 
@@ -381,26 +381,26 @@ vec4 pbr_filterColor(vec4 colorUnused)
 #endif
 
     // Calculate lighting contribution from image based lighting source (IBL)
-// #ifdef USE_IBL
-//     if (u_pbrMaterial.IBLenabled) {
-//       color += getIBLContribution(pbrInfo, n, reflection);
-//     }
-// #endif
+#ifdef USE_IBL
+    if (u_pbrMaterial.IBLenabled) {
+      color += getIBLContribution(pbrInfo, n, reflection);
+    }
+#endif
 
-    // Apply optional PBR terms for additional (optional) shading
-// #ifdef HAS_OCCLUSIONMAP
-//     if (u_pbrMaterial.occlusionMapEnabled) {
-//       float ao = texture(u_OcclusionSampler, pbr_vUV).r;
-//       color = mix(color, color * ao, u_pbrMaterial.occlusionStrength);
-//     }
-// #endif
+ // Apply optional PBR terms for additional (optional) shading
+#ifdef HAS_OCCLUSIONMAP
+    if (u_pbrMaterial.occlusionMapEnabled) {
+      float ao = texture(u_OcclusionSampler, pbr_vUV).r;
+      color = mix(color, color * ao, u_pbrMaterial.occlusionStrength);
+    }
+#endif
 
-// #ifdef HAS_EMISSIVEMAP
-//     if (u_pbrMaterial.emissiveMapEnabled) {
-//       vec3 emissive = SRGBtoLINEAR(texture(u_EmissiveSampler, pbr_vUV)).rgb * u_pbrMaterial.emissiveFactor;
-//       color += emissive;
-//     }
-// #endif
+#ifdef HAS_EMISSIVEMAP
+    if (u_pbrMaterial.emissiveMapEnabled) {
+      vec3 emissive = SRGBtoLINEAR(texture(u_EmissiveSampler, pbr_vUV)).rgb * u_pbrMaterial.emissiveFactor;
+      color += emissive;
+    }
+#endif
 
     // This section uses mix to override final color for reference app visualization
     // of various parameters in the lighting equation.

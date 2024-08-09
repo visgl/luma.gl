@@ -125,15 +125,16 @@ export const pbrMaterial: ShaderModule<PBRMaterialProps, PBRMaterialUniforms> = 
   name: 'pbrMaterial',
   fs,
   defines: {
-    LIGHTING_FRAGMENT: 1,
-    HAS_NORMALMAP: 0,
-    HAS_EMISSIVEMAP: 0,
-    HAS_OCCLUSIONMAP: 0,
-    HAS_BASECOLORMAP: 0,
-    HAS_METALROUGHNESSMAP: 0,
-    ALPHA_CUTOFF: 0,
-    USE_IBL: 0
-    // PBR_DEBUG: 0 // TODO defining this breaks shader
+    LIGHTING_FRAGMENT: 1
+    // TODO defining these as 0 breaks shader
+    // HAS_NORMALMAP: 0
+    // HAS_EMISSIVEMAP: 0,
+    // HAS_OCCLUSIONMAP: 0,
+    // HAS_BASECOLORMAP: 0,
+    // HAS_METALROUGHNESSMAP: 0,
+    // ALPHA_CUTOFF: 0
+    // USE_IBL: 0
+    // PBR_DEBUG: 0
   },
   getUniforms: props => props,
   uniformTypes: {

@@ -128,12 +128,26 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
     unlit: inputs.pbr_uUnlit,
     baseColorFactor: inputs.u_BaseColorFactor,
     normalScale: inputs.u_NormalScale,
-
-    // Bindings
-    u_BaseColorSampler: inputs.u_BaseColorSampler,
-    u_MetallicRoughnessSampler: inputs.u_MetallicRoughnessSampler,
-    u_NormalSampler: inputs.u_NormalSampler
+    occlusionStrength: inputs.u_OcclusionStrength,
+    emissiveFactor: inputs.u_EmissiveFactor
   };
+
+  // Bindings
+  const samplerKeys = [
+    'u_BaseColorSampler',
+    'u_NormalSampler',
+    'u_EmissiveSampler',
+    'u_MetallicRoughnessSampler',
+    'u_OcclusionSampler',
+    'u_DiffuseEnvSampler',
+    'u_SpecularEnvSampler',
+    'u_brdfLUT'
+  ];
+  for (const key of samplerKeys) {
+    if (key in inputs) {
+      pbrMaterialProps[key] = inputs[key];
+    }
+  }
 
   model.shaderInputs.setProps({
     pbrMaterial: pbrMaterialProps
