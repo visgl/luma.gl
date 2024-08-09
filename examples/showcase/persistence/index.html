@@ -1,11 +1,11 @@
 <!doctype html>
 <script type="module">
-  import {luma} from '@luma.gl/core';
-  import {webgl2Adapter} from '@luma.gl/webgl';
   import {makeAnimationLoop} from '@luma.gl/engine';
+  import {webgpuAdapter} from '@luma.gl/webgpu';
+  import {webgl2Adapter} from '@luma.gl/webgl';
   import AppAnimationLoop from './app.ts';
-  luma.registerAdapters([webgl2Adapter]);
-  const animationLoop = makeAnimationLoop(AppAnimationLoop);
+  const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {adapters: [/* webgpuAdapter, */ webgl2Adapter]})
+  animationLoop.start();
   animationLoop.start();
 </script>
 <body>
