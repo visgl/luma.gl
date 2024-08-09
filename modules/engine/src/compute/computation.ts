@@ -15,10 +15,10 @@ import {
 import type {ShaderModule, PlatformInfo} from '@luma.gl/shadertools';
 import {ShaderAssembler, getShaderLayoutFromWGSL} from '@luma.gl/shadertools';
 import {TypedArray, isNumericArray} from '@math.gl/types';
-import {ShaderInputs} from './shader-inputs';
-import {PipelineFactory} from './lib/pipeline-factory';
-import {ShaderFactory} from './lib/shader-factory';
-import {uid} from './utils/uid';
+import {ShaderInputs} from '../shader-inputs';
+import {PipelineFactory} from '../lib/pipeline-factory';
+import {ShaderFactory} from '../lib/shader-factory';
+import {uid} from '../utils/uid';
 // import {getDebugTableForShaderLayout} from '../debug/debug-shader-layout';
 
 const LOG_DRAW_PRIORITY = 2;

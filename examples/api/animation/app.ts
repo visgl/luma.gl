@@ -5,12 +5,12 @@ import {
   Model,
   CubeGeometry,
   Timeline,
-  KeyFrames
+  KeyFrames,
+  makeRandomGenerator
 } from '@luma.gl/engine';
 import {dirlight} from '@luma.gl/shadertools';
 import {Matrix4, radians} from '@math.gl/core';
 
-import {makeRandomGenerator} from '@luma.gl/engine';
 
 // Ensure repeatable rendertests
 const random = makeRandomGenerator();

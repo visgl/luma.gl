@@ -32,6 +32,7 @@ import './debug/get-debug-table-from-shader-layout.spec';
 
 // Experimental
 import './shader-inputs.spec';
-import './transform/buffer-transform.spec';
-import './transform/texture-transform.spec';
-import './computation.spec';
+import './compute/swap.spec';
+import './compute/buffer-transform.spec';
+import './compute/texture-transform.spec';
+import './compute/computation.spec';

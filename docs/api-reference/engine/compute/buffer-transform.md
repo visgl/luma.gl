@@ -4,7 +4,6 @@
 
 `BufferTransform` manages resources and state required for doing TransformFeedback based GPU computations reading from and/or writing to `Buffer` objects. 
 
-
 ## Types
 
 ### `BufferTransformProps`
