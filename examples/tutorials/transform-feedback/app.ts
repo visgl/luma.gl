@@ -13,15 +13,16 @@ const transformVs = /* glsl */ `\
 #define SIN2 0.03489949
 #define COS2 0.99939082
 
-in vec2 position;
-out vec2 vPosition;
+mat2 rotation = mat2(
+  COS2, SIN2,
+  -SIN2, COS2
+);
+
+in vec2 oldPositions;
+out vec2 newPositions;
 
 void main() {
-    mat2 rotation = mat2(
-        COS2, SIN2,
-        -SIN2, COS2
-    );
-    vPosition = rotation * position;
+  newPositions = rotation * oldPositions;
 }
 `;
 
@@ -77,10 +78,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     this.transform = new BufferTransform(device, {
       vs: transformVs,
-      bufferLayout: [{name: 'position', format: 'float32x2'}],
-      // attributes: {position: this.positionBuffers.current},
-      // feedbackBuffers: {vPosition: this.positionBuffers.next},
-      varyings: ['vPosition'],
+      bufferLayout: [{name: 'oldPositions', format: 'float32x2'}],
+      outputs: ['newPositions'],
       vertexCount: 3
     });
 
@@ -104,17 +103,17 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   onRender({device}) {
-    this.transform.model.setAttributes({position: this.positionBuffers.current});
-    this.transform.transformFeedback.setBuffers({vPosition: this.positionBuffers.next});
-    this.transform.run();
+    // Run a rotation step
+    this.transform.run({
+      inputBuffers: {oldPositions: this.positionBuffers.current},
+      outputBuffers: {newPositions: this.positionBuffers.next}
+    });
     this.positionBuffers.swap();
 
+    // Render with the latest positions
     const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
     this.model.setAttributes({position: this.positionBuffers.current});
     this.model.draw(renderPass);
     renderPass.end();
-
-
   }
-
 }
