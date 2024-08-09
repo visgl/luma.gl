@@ -1,4 +1,4 @@
-import {defineConfig} from 'vite';
+import { defineConfig } from 'vite'
 
 const alias = {
   '@luma.gl/constants': `${__dirname}/../../../modules/constants/src`,
@@ -8,10 +8,10 @@ const alias = {
   '@luma.gl/shadertools': `${__dirname}/../../../modules/shadertools/src`,
   '@luma.gl/test-utils': `${__dirname}/../../../modules/test-utils/src`,
   '@luma.gl/webgl': `${__dirname}/../../../modules/webgl/src`
-};
+}
 
 // https://vitejs.dev/config/
 export default defineConfig({
   resolve: {alias},
   server: {open: true}
-});
+})

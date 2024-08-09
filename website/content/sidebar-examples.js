@@ -34,7 +34,8 @@ const sidebars = {
         'tutorials/instanced-cubes',
         'tutorials/hello-instancing',
         'tutorials/shader-modules',
-        'tutorials/shader-hooks'
+        'tutorials/shader-hooks',
+        'tutorials/transform-feedback'
       ]
     }
   ]
