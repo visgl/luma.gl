@@ -102,7 +102,6 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
     geometry,
     topology: geometry.topology,
     vertexCount,
-    // modules: [pbr],
     modules: [pbrMaterial as unknown as ShaderModule],
     vs: addVersionToShader(device, vs),
     fs: addVersionToShader(device, fs),
@@ -115,43 +114,14 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
 
   const model = new Model(device, modelProps);
 
-  // Convert old to new
-  const inputs = {
+  const pbrMaterialProps = {
     ...parsedMaterial.uniforms,
     ...modelOptions.uniforms,
     ...parsedMaterial.bindings,
     ...modelOptions.bindings
   };
-  const pbrMaterialProps: Partial<PBRMaterialProps> = {
-    // Uniforms
-    metallicRoughnessValues: inputs.u_MetallicRoughnessValues,
-    unlit: inputs.pbr_uUnlit,
-    baseColorFactor: inputs.u_BaseColorFactor,
-    normalScale: inputs.u_NormalScale,
-    occlusionStrength: inputs.u_OcclusionStrength,
-    emissiveFactor: inputs.u_EmissiveFactor
-  };
 
-  // Bindings
-  const samplerKeys = [
-    'u_BaseColorSampler',
-    'u_NormalSampler',
-    'u_EmissiveSampler',
-    'u_MetallicRoughnessSampler',
-    'u_OcclusionSampler',
-    'u_DiffuseEnvSampler',
-    'u_SpecularEnvSampler',
-    'u_brdfLUT'
-  ];
-  for (const key of samplerKeys) {
-    if (key in inputs) {
-      pbrMaterialProps[key] = inputs[key];
-    }
-  }
-
-  model.shaderInputs.setProps({
-    pbrMaterial: pbrMaterialProps
-  });
+  model.shaderInputs.setProps({pbrMaterial: pbrMaterialProps});
   return new ModelNode({managedResources, model});
 }
 

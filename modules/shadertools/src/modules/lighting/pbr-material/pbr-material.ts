@@ -19,7 +19,7 @@ import {lighting} from '../lights/lighting-uniforms';
 import {vs} from './pbr-vertex-glsl';
 import {fs} from './pbr-fragment-glsl';
 
-type PBRProjectionProps = {
+export type PBRProjectionProps = {
   u_MVPMatrix: NumberArray16;
   u_ModelMatrix: NumberArray16;
   u_NormalMatrix: NumberArray16;
@@ -38,40 +38,8 @@ const pbrProjection: ShaderModule<PBRProjectionProps> = {
   }
 };
 
-export type PBRMaterialProps = PBRMaterialBindings & {
-  unlit: boolean;
-
-  // Base color map
-  baseColorMapEnabled: boolean;
-  baseColorFactor: Readonly<Vector4 | NumberArray4>;
-
-  normalMapEnabled: boolean;
-  normalScale: number; // #ifdef HAS_NORMALMAP
-
-  emissiveMapEnabled: boolean;
-  emissiveFactor: Readonly<Vector3 | NumberArray3>; // #ifdef HAS_EMISSIVEMAP
-
-  metallicRoughnessValues: Readonly<Vector2 | NumberArray2>;
-  metallicRoughnessMapEnabled: boolean;
-
-  occlusionMapEnabled: boolean;
-  occlusionStrength: number; // #ifdef HAS_OCCLUSIONMAP
-
-  alphaCutoffEnabled: boolean;
-  alphaCutoff: number; // #ifdef ALPHA_CUTOFF
-
-  // IBL
-  IBLenabled: boolean;
-  scaleIBLAmbient: Readonly<Vector2 | NumberArray2>; // #ifdef USE_IBL
-
-  // debugging flags used for shader output of intermediate PBR variables
-  // #ifdef PBR_DEBUG
-  scaleDiffBaseMR: Readonly<Vector4 | NumberArray4>;
-  scaleFGDSpec: Readonly<Vector4 | NumberArray4>;
-};
-
 /** Non-uniform block bindings for pbr module */
-type PBRMaterialBindings = {
+export type PBRMaterialBindings = {
   // Samplers
   u_BaseColorSampler?: Texture | null; // #ifdef HAS_BASECOLORMAP
   u_NormalSampler?: Texture | null; // #ifdef HAS_NORMALMAP
@@ -116,6 +84,8 @@ export type PBRMaterialUniforms = {
   scaleDiffBaseMR: Readonly<Vector4 | NumberArray4>;
   scaleFGDSpec: Readonly<Vector4 | NumberArray4>;
 };
+
+export type PBRMaterialProps = PBRMaterialBindings & PBRMaterialUniforms;
 
 /**
  * An implementation of PBR (Physically-Based Rendering).
