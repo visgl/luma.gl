@@ -115,7 +115,6 @@ const lightSources: LightingProps = {
       color: [222, 244, 255],
       direction: [1, -0.5, 0.5],
       intensity: 10,
-      position: [0, 0, 0],
       type: 'directional'
     }
   ],

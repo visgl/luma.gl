@@ -3,8 +3,6 @@ import {pbrMaterial} from '@luma.gl/shadertools';
 import {Geometry, Model, ModelNode, ModelProps} from '@luma.gl/engine';
 import {ParsePBRMaterialOptions, parsePBRMaterial} from '../pbr/parse-pbr-material';
 import {ShaderModule} from '@luma.gl/shadertools';
-import {PBRMaterialProps} from '@luma.gl/shadertools/dist/modules/lighting/pbr-material/pbr-material';
-import {pbrProjection} from '@luma.gl/shadertools/modules/lighting/pbr-material/pbr-projection';
 
 // TODO rename attributes to POSITION/NORMAL etc
 // See gpu-geometry.ts: getAttributeBuffersFromGeometry()
