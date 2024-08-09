@@ -12,7 +12,7 @@ export type MakeAnimationLoopProps = Omit<
   'onCreateDevice' | 'onInitialize' | 'onRedraw' | 'onFinalize'
 > & {
   /** List of adapters to use when creating the device */
-  adapters?: Adapter[]
+  adapters?: Adapter[];
 };
 
 /** Instantiates and runs the render loop */
@@ -22,7 +22,8 @@ export function makeAnimationLoop(
 ): AnimationLoop {
   let renderLoop: AnimationLoopTemplate | null = null;
 
-  const device = props?.device || luma.createDevice({id: 'animation-loop', adapters: props?.adapters});
+  const device =
+    props?.device || luma.createDevice({id: 'animation-loop', adapters: props?.adapters});
 
   // Create an animation loop;
   const animationLoop = new AnimationLoop({
