@@ -4,6 +4,7 @@ import {Geometry, Model, ModelNode, ModelProps} from '@luma.gl/engine';
 import {ParsePBRMaterialOptions, parsePBRMaterial} from '../pbr/parse-pbr-material';
 import {ShaderModule} from '@luma.gl/shadertools';
 import {PBRMaterialProps} from '@luma.gl/shadertools/dist/modules/lighting/pbr-material/pbr-material';
+import {pbrProjection} from '@luma.gl/shadertools/modules/lighting/pbr-material/pbr-projection';
 
 // TODO rename attributes to POSITION/NORMAL etc
 // See gpu-geometry.ts: getAttributeBuffersFromGeometry()
@@ -114,14 +115,14 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
 
   const model = new Model(device, modelProps);
 
-  const pbrMaterialProps = {
+  const {u_Camera, ...pbrMaterialProps} = {
     ...parsedMaterial.uniforms,
     ...modelOptions.uniforms,
     ...parsedMaterial.bindings,
     ...modelOptions.bindings
   };
 
-  model.shaderInputs.setProps({pbrMaterial: pbrMaterialProps});
+  model.shaderInputs.setProps({pbrMaterial: pbrMaterialProps, pbrProjection: {u_Camera}});
   return new ModelNode({managedResources, model});
 }
 
