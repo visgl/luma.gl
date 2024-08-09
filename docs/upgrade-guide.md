@@ -16,7 +16,9 @@ v9.1 continues to build out WebGPU support. Some additional deprecations and bre
 
 **Notable change: Adapters**
 
-When initializing luma.gl, applications now import an `Adapter` singleton from either the WebGPU or the WebGL module, and pass that to `luma.createDevice()`.
+When initializing luma.gl, applications now import an `Adapter` singleton from either the WebGPU or the WebGL module, and pass the adapter object to `luma.createDevice()`, `makeAnimationLoop` etc. 
+
+`luma.registerDevices()` is replaced with `luma.registerAdapters()` if global registration work best.
 
 **Notable change: Textures**
 

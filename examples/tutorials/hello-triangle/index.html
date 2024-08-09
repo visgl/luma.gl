@@ -1,14 +1,12 @@
 <!doctype html>
 <script type="module">
+  import {makeAnimationLoop} from '@luma.gl/engine';
   import {webgpuAdapter} from '@luma.gl/webgpu';
   import {webgl2Adapter} from '@luma.gl/webgl';
-  import {luma} from '@luma.gl/core';
-  import {makeAnimationLoop} from '@luma.gl/engine';
   import AnimationLoopTemplate from './app.ts';
 
-  luma.registerAdapters([webgpuAdapter, webgl2Adapter]);
-  makeAnimationLoop(AnimationLoopTemplate).start({canvas: 'canvas'});
+  const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {adapters: [webgpuAdapter, webgl2Adapter]});
+  animationLoop.start();
 </script>
 <body style="margin: 0;">
-  <canvas id="canvas" style="width: 100vw; height: 100vh;"></canvas>
 </body>

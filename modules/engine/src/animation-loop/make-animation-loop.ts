@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {luma} from '@luma.gl/core';
+import {luma, Adapter} from '@luma.gl/core';
 import {AnimationLoopTemplate} from './animation-loop-template';
 import {AnimationLoop, AnimationLoopProps} from './animation-loop';
 import type {AnimationProps} from './animation-props';
@@ -10,7 +10,10 @@ import type {AnimationProps} from './animation-props';
 export type MakeAnimationLoopProps = Omit<
   AnimationLoopProps,
   'onCreateDevice' | 'onInitialize' | 'onRedraw' | 'onFinalize'
->;
+> & {
+  /** List of adapters to use when creating the device */
+  adapters?: Adapter[]
+};
 
 /** Instantiates and runs the render loop */
 export function makeAnimationLoop(
@@ -19,7 +22,7 @@ export function makeAnimationLoop(
 ): AnimationLoop {
   let renderLoop: AnimationLoopTemplate | null = null;
 
-  const device = props?.device || luma.createDevice({id: 'animation-loop'});
+  const device = props?.device || luma.createDevice({id: 'animation-loop', adapters: props?.adapters});
 
   // Create an animation loop;
   const animationLoop = new AnimationLoop({

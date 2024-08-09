@@ -26,7 +26,7 @@ export type RenderPassProps = ResourceProps & {
   /** Whether to disable / discard the output of the rasterizer */
   discard?: boolean;
 
-  /** Clear value for depth attachment, or `load` to preserve the previous value */
+  /** Clear value for depth attachment (usually `1`), or `load` to preserve the previous value */
   clearDepth?: number | false;
   /** Clear value for stencil attachment, or `load` to preserve the previous value */
   clearStencil?: number | false;

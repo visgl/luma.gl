@@ -2311,8 +2311,8 @@ __metadata:
     "@probe.gl/log": "npm:^4.0.8"
     "@probe.gl/stats": "npm:^4.0.8"
   peerDependencies:
-    "@luma.gl/core": 9.1.0-alpha.10
-    "@luma.gl/shadertools": 9.1.0-alpha.10
+    "@luma.gl/core": 9.1.0-alpha.14
+    "@luma.gl/shadertools": 9.1.0-alpha.14
   languageName: unknown
   linkType: soft
 
@@ -2324,9 +2324,9 @@ __metadata:
     "@loaders.gl/textures": "npm:^4.2.0"
     "@math.gl/core": "npm:4.1.0-alpha.3"
   peerDependencies:
-    "@luma.gl/core": 9.1.0-alpha.10
-    "@luma.gl/engine": 9.1.0-alpha.10
-    "@luma.gl/shadertools": 9.1.0-alpha.10
+    "@luma.gl/core": 9.1.0-alpha.14
+    "@luma.gl/engine": 9.1.0-alpha.14
+    "@luma.gl/shadertools": 9.1.0-alpha.14
   languageName: unknown
   linkType: soft
 
@@ -2338,7 +2338,7 @@ __metadata:
     "@math.gl/types": "npm:4.1.0-alpha.3"
     wgsl_reflect: "npm:^1.0.1"
   peerDependencies:
-    "@luma.gl/core": 9.1.0-alpha.10
+    "@luma.gl/core": 9.1.0-alpha.14
   languageName: unknown
   linkType: soft
 
@@ -2349,11 +2349,11 @@ __metadata:
     "@probe.gl/env": "npm:^4.0.8"
     "@probe.gl/stats": "npm:^4.0.8"
   peerDependencies:
-    "@luma.gl/core": 9.1.0-alpha.10
-    "@luma.gl/engine": 9.1.0-alpha.10
-    "@luma.gl/shadertools": 9.1.0-alpha.10
-    "@luma.gl/webgl": 9.1.0-alpha.10
-    "@luma.gl/webgpu": 9.1.0-alpha.10
+    "@luma.gl/core": 9.1.0-alpha.14
+    "@luma.gl/engine": 9.1.0-alpha.14
+    "@luma.gl/shadertools": 9.1.0-alpha.14
+    "@luma.gl/webgl": 9.1.0-alpha.14
+    "@luma.gl/webgpu": 9.1.0-alpha.14
   languageName: unknown
   linkType: soft
 
@@ -2365,7 +2365,7 @@ __metadata:
     "@math.gl/types": "npm:4.1.0-alpha.3"
     "@probe.gl/env": "npm:^4.0.8"
   peerDependencies:
-    "@luma.gl/core": 9.1.0-alpha.10
+    "@luma.gl/core": 9.1.0-alpha.14
   languageName: unknown
   linkType: soft
 
@@ -2376,7 +2376,7 @@ __metadata:
     "@probe.gl/env": "npm:^4.0.8"
     "@webgpu/types": "npm:^0.1.34"
   peerDependencies:
-    "@luma.gl/core": 9.1.0-alpha.10
+    "@luma.gl/core": 9.1.0-alpha.14
   languageName: unknown
   linkType: soft
 
