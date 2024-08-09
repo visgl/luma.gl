@@ -45,8 +45,6 @@ const STAT_STYLES = {
   opacity: 0.8
 };
 
-const DEFAULT_ALT_TEXT = 'THIS EXAMPLE IS NOT SUPPORTED';
-
 type LumaExampleProps = {
   id?: string;
   template: Function;

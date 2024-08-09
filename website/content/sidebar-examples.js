@@ -35,7 +35,8 @@ const sidebars = {
         'tutorials/hello-instancing',
         'tutorials/shader-modules',
         'tutorials/shader-hooks',
-        'tutorials/transform-feedback'
+        'tutorials/transform-feedback',
+        'tutorials/transform'
       ]
     }
   ]

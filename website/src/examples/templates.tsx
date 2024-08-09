@@ -24,7 +24,7 @@ import LightingApp from '../../../examples/tutorials/lighting/app';
 import ShaderHooksApp from '../../../examples/tutorials/shader-hooks/app';
 import ShaderModulesApp from '../../../examples/tutorials/shader-modules/app';
 import TransformFeedbackApp from '../../../examples/tutorials/transform-feedback/app';
-// import TransformApp from '../../../examples/tutorials/transform/app';
+import TransformApp from '../../../examples/tutorials/transform/app';
 
 // import AnimationLoop from '../../../examples/webgl/external-webgl-context/app';
 
@@ -191,7 +191,12 @@ export const TransformFeedbackExample: React.FC = () => (
 );
 
 export const TransformExample: React.FC = () => (
-  <h2><i>Note: Transform examples temporarily disabled</i></h2>
+  <LumaExample
+    id="transform"
+    directory="tutorials"
+    template={TransformApp}
+    config={exampleConfig}
+  />
 );
 
 // WebGL Examples

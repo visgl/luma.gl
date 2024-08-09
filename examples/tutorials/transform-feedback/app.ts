@@ -6,8 +6,6 @@ const INFO_HTML = `
 Animation via transform feedback.
 `;
 
-const ALT_TEXT = "THIS DEMO REQUIRES WEBGL 2, BUT YOUR BROWSER DOESN'T SUPPORT IT";
-
 const transformVs = /* glsl */ `\
 #version 300 es
 #define SIN2 0.03489949
@@ -60,11 +58,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   positionBuffers: Swap<Buffer>;
   colorBuffer: Buffer;
 
-  constructor({device}: AnimationProps) {
+  constructor({device, animationLoop}: AnimationProps) {
     super();
 
-    if (device.info.type !== 'webgl') {
-      throw new Error(ALT_TEXT);
+    if (device.type !== 'webgl') {
+      animationLoop.setError(new Error('This demo is only implemented for WebGL2'));
+      return;
     }
 
     this.positionBuffers = new Swap({
