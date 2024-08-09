@@ -160,32 +160,32 @@ vec3 getNormal()
 // Calculation of the lighting contribution from an optional Image Based Light source.
 // Precomputed Environment Maps are required uniform inputs and are computed as outlined in [1].
 // See our README.md on Environment Maps [3] for additional discussion.
-// #ifdef USE_IBL
-// vec3 getIBLContribution(PBRInfo pbrInfo, vec3 n, vec3 reflection)
-// {
-//   float mipCount = 9.0; // resolution of 512x512
-//   float lod = (pbrInfo.perceptualRoughness * mipCount);
-//   // retrieve a scale and bias to F0. See [1], Figure 3
-//   vec3 brdf = SRGBtoLINEAR(texture(u_brdfLUT,
-//     vec2(pbrInfo.NdotV, 1.0 - pbrInfo.perceptualRoughness))).rgb;
-//   vec3 diffuseLight = SRGBtoLINEAR(texture(u_DiffuseEnvSampler, n)).rgb;
-// 
-// #ifdef USE_TEX_LOD
-//   vec3 specularLight = SRGBtoLINEAR(texture(u_SpecularEnvSampler, reflection, lod)).rgb;
-// #else
-//   vec3 specularLight = SRGBtoLINEAR(texture(u_SpecularEnvSampler, reflection)).rgb;
-// #endif
-// 
-//   vec3 diffuse = diffuseLight * pbrInfo.diffuseColor;
-//   vec3 specular = specularLight * (pbrInfo.specularColor * brdf.x + brdf.y);
-// 
-//   // For presentation, this allows us to disable IBL terms
-//   diffuse *= u_pbrMaterial.scaleIBLAmbient.x;
-//   specular *= u_pbrMaterial.scaleIBLAmbient.y;
-// 
-//   return diffuse + specular;
-// }
-// #endif
+#ifdef USE_IBL
+vec3 getIBLContribution(PBRInfo pbrInfo, vec3 n, vec3 reflection)
+{
+  float mipCount = 9.0; // resolution of 512x512
+  float lod = (pbrInfo.perceptualRoughness * mipCount);
+  // retrieve a scale and bias to F0. See [1], Figure 3
+  vec3 brdf = SRGBtoLINEAR(texture(u_brdfLUT,
+    vec2(pbrInfo.NdotV, 1.0 - pbrInfo.perceptualRoughness))).rgb;
+  vec3 diffuseLight = SRGBtoLINEAR(texture(u_DiffuseEnvSampler, n)).rgb;
+
+#ifdef USE_TEX_LOD
+  vec3 specularLight = SRGBtoLINEAR(texture(u_SpecularEnvSampler, reflection, lod)).rgb;
+#else
+  vec3 specularLight = SRGBtoLINEAR(texture(u_SpecularEnvSampler, reflection)).rgb;
+#endif
+
+  vec3 diffuse = diffuseLight * pbrInfo.diffuseColor;
+  vec3 specular = specularLight * (pbrInfo.specularColor * brdf.x + brdf.y);
+
+  // For presentation, this allows us to disable IBL terms
+  diffuse *= u_pbrMaterial.scaleIBLAmbient.x;
+  specular *= u_pbrMaterial.scaleIBLAmbient.y;
+
+  return diffuse + specular;
+}
+#endif
 
 // Basic Lambertian diffuse
 // Implementation from Lambert's Photometria https://archive.org/details/lambertsphotome00lambgoog
