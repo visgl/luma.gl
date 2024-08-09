@@ -5,10 +5,9 @@
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
 import {lighting} from '../lights/lighting-uniforms';
 import {PHONG_VS, PHONG_FS} from '../phong-material/phong-shaders-glsl';
+import type {NumberArray3} from '../../../lib/utils/uniform-types';
 
-export type GouraudMaterialProps = GouraudMaterialUniforms;
-
-export type GouraudMaterialUniforms = {
+export type GouraudMaterialProps = {
   ambient?: number;
   diffuse?: number;
   /** Specularity exponent */
@@ -17,7 +16,7 @@ export type GouraudMaterialUniforms = {
 };
 
 /** In Gouraud shading, color is calculated for each triangle vertex normal, and then color is interpolated colors across the triangle */
-export const gouraudMaterial: ShaderModule<GouraudMaterialProps, GouraudMaterialUniforms> = {
+export const gouraudMaterial: ShaderModule<GouraudMaterialProps> = {
   name: 'gouraudMaterial',
   // Note these are switched between phong and gouraud
   vs: PHONG_FS.replace('phongMaterial', 'gouraudMaterial'),
@@ -38,7 +37,11 @@ export const gouraudMaterial: ShaderModule<GouraudMaterialProps, GouraudMaterial
     shininess: 32,
     specularColor: [0.15, 0.15, 0.15]
   },
-  getUniforms(props: GouraudMaterialProps): GouraudMaterialUniforms {
+  getUniforms(props: GouraudMaterialProps) {
+    const uniforms = {...props};
+    if (uniforms.specularColor) {
+      uniforms.specularColor = uniforms.specularColor.map(x => x / 255) as NumberArray3;
+    }
     return {...gouraudMaterial.defaultUniforms, ...props};
   }
 };
