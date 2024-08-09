@@ -59,14 +59,16 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       const u_MVPMatrix = new Matrix4(projectionMatrix)
         .multiplyRight(viewMatrix)
         .multiplyRight(worldMatrix);
-      model.setUniforms({
-        u_Camera: eye,
-        u_MVPMatrix,
-        u_ModelMatrix: worldMatrix,
-        u_NormalMatrix: new Matrix4(worldMatrix).invert().transpose()
-      });
 
-      model.updateModuleSettings({lightSources});
+      model.shaderInputs.setProps({
+        lighting: lightSources,
+        pbrProjection: {
+          u_Camera: eye,
+          u_MVPMatrix,
+          u_ModelMatrix: worldMatrix,
+          u_NormalMatrix: new Matrix4(worldMatrix).invert().transpose()
+        }
+      });
       model.draw(renderPass);
     });
     renderPass.end();
@@ -77,7 +79,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     canvas.style.opacity = '0.1';
 
     const gltf = await load(
-      `https://github.khronos.org/glTF-Sample-Viewer-Release/assets/models/Models/${modelName}/glTF/${modelName}.gltf`,
+      `https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/${modelName}/glTF/${modelName}.gltf`,
       GLTFLoader
     );
     const processedGLTF = postProcessGLTF(gltf);
@@ -113,13 +115,12 @@ const lightSources: LightingProps = {
       color: [222, 244, 255],
       direction: [1, -0.5, 0.5],
       intensity: 10,
-      position: [0, 0, 0],
       type: 'directional'
     }
   ],
   pointLights: [
     {
-      attenuation: 0,
+      attenuation: [1, 0, 0],
       color: [255, 222, 222],
       position: [3, 10, 0],
       intensity: 5,
