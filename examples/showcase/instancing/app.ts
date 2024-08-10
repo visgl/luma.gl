@@ -302,7 +302,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.cube.destroy();
   }
 
-  pickInstance(mousePosition: number[] | null | undefined, model: Model) {
+  pickInstance(mousePosition: number[] | null | undefined) {
     if (this.picker.device.type !== 'webgl') {
       return;
     }
