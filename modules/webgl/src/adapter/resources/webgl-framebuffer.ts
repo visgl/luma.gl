@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {FramebufferProps, TextureFormat} from '@luma.gl/core';
-import {Framebuffer, Texture} from '@luma.gl/core';
+import type {FramebufferProps} from '@luma.gl/core';
+import {Framebuffer} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {WebGLDevice} from '../webgl-device';
 import {WEBGLTexture} from './webgl-texture';
