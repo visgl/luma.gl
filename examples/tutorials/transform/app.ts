@@ -4,6 +4,7 @@ import {
   AnimationProps,
   Model,
   BufferTransform,
+  Swap,
   makeRandomGenerator
 } from '@luma.gl/engine';
 import {picking} from '@luma.gl/shadertools';
@@ -22,16 +23,6 @@ const INFO_HTML = `
   </a>
 `;
 
-// Text to be displayed on environments when this demos is not supported.
-const ALT_TEXT = "THIS DEMO REQUIRES WEBGL 2, BUT YOUR BROWSER DOESN'T SUPPORT IT";
-
-const EMIT_VS = /* glsl */ `\
-#version 300 es
-#define OFFSET_LOCATION 0
-#define ROTATION_LOCATION 1
-
-#define M_2PI 6.28318530718
-
 // We simulate the wandering of agents using transform feedback in this vertex shader
 // The simulation goes like this:
 // Assume there's a circle in front of the agent whose radius is WANDER_CIRCLE_R
@@ -42,6 +33,13 @@ const EMIT_VS = /* glsl */ `\
 // for our next frame, which means the WANDER_CIRCLE_OFFSET vector will be on this direction
 // Thus we fake a smooth wandering behavior
 
+const COMPUTE_VS = /* glsl */ `\
+#version 300 es
+#define OFFSET_LOCATION 0
+#define ROTATION_LOCATION 1
+
+#define M_2PI 6.28318530718
+
 #define MAP_HALF_LENGTH 1.01
 #define WANDER_CIRCLE_R 0.01
 #define WANDER_CIRCLE_OFFSET 0.04
@@ -49,10 +47,12 @@ const EMIT_VS = /* glsl */ `\
 precision highp float;
 precision highp int;
 uniform float u_time;
-layout(location = OFFSET_LOCATION) in vec2 positions;
-layout(location = ROTATION_LOCATION) in float rotations;
-out vec2 v_offset;
-out float v_rotation;
+
+layout(location = OFFSET_LOCATION) in vec2 oldPositions;
+layout(location = ROTATION_LOCATION) in float oldRotations;
+
+out vec2 newOffsets;
+out float newRotations;
 
 float rand(vec2 co)
 {
@@ -61,28 +61,29 @@ float rand(vec2 co)
 
 void main()
 {
-    float theta = M_2PI * rand(vec2(u_time, rotations + positions.x + positions.y));
-    float cos_r = cos(rotations);
-    float sin_r = sin(rotations);
+    float theta = M_2PI * rand(vec2(u_time, oldRotations + oldPositions.x + oldPositions.y));
+    float cos_r = cos(oldRotations);
+    float sin_r = sin(oldRotations);
     mat2 rot = mat2(
         cos_r, sin_r,
         -sin_r, cos_r
     );
 
     vec2 p = WANDER_CIRCLE_R * vec2(cos(theta), sin(theta)) + vec2(WANDER_CIRCLE_OFFSET, 0.0);
+    
     vec2 move = normalize(rot * p);
-    v_rotation = atan(move.y, move.x);
-    v_offset = positions + MOVE_DELTA * move;
+    newRotations = atan(move.y, move.x);
+    newOffsets = oldPositions + MOVE_DELTA * move;
 
     // wrapping at edges
-    v_offset = vec2 (
-        v_offset.x > MAP_HALF_LENGTH ? - MAP_HALF_LENGTH :
-          ( v_offset.x < - MAP_HALF_LENGTH ? MAP_HALF_LENGTH : v_offset.x ) ,
-        v_offset.y > MAP_HALF_LENGTH ? - MAP_HALF_LENGTH :
-          ( v_offset.y < - MAP_HALF_LENGTH ? MAP_HALF_LENGTH : v_offset.y )
+    newOffsets = vec2 (
+        newOffsets.x > MAP_HALF_LENGTH ? - MAP_HALF_LENGTH :
+          ( newOffsets.x < - MAP_HALF_LENGTH ? MAP_HALF_LENGTH : newOffsets.x ) ,
+        newOffsets.y > MAP_HALF_LENGTH ? - MAP_HALF_LENGTH :
+          ( newOffsets.y < - MAP_HALF_LENGTH ? MAP_HALF_LENGTH : newOffsets.y )
         );
 
-    gl_Position = vec4(v_offset, 0.0, 1.0);
+    gl_Position = vec4(newOffsets, 0.0, 1.0);
 }
 `;
 
@@ -121,17 +122,15 @@ const DRAW_FS = /* glsl */ `\
 precision highp float;
 precision highp int;
 in vec3 vColor;
-out vec4 color;
+out vec4 fragColor;
 void main()
 {
-    color = vec4(vColor * ALPHA, ALPHA);
-    color = picking_filterColor(color);
+    fragColor = vec4(vColor * ALPHA, ALPHA);
+    fragColor = picking_filterColor(fragColor);
 }
 `;
 
 const NUM_INSTANCES = 1000;
-// const RED = new Uint8Array([255, 0, 0, 255]);
-// const log = new Log({id: 'transform'}).enable();
 
 // TODO PICKING TEMPORARILY DISABLED
 // let pickPosition = [0, 0];
@@ -151,9 +150,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   positionBuffer: Buffer;
 
   // Positions, rotations, colors and picking colors for each object
-  instanceRotationBuffer: Buffer;
+  instancePositionBuffers: Swap<Buffer>;
+  instanceRotationBuffers: Swap<Buffer>;
+
   instanceColorBuffer: Buffer;
-  instancePositionBuffer: Buffer;
   instancePickingColorBuffer: Buffer;
 
   renderModel: Model;
@@ -161,14 +161,13 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   pickingFramebuffer: Framebuffer;
 
   // eslint-disable-next-line max-statements
-  constructor({device, width, height}: AnimationProps) {
+  constructor({device, width, height, animationLoop}: AnimationProps) {
     super();
 
     if (device.type !== 'webgl') {
-      throw new Error(ALT_TEXT);
+      animationLoop.setError(new Error('This demo is only implemented for WebGL2'));
+      return;
     }
-    // device.canvasContext.canvas.addEventListener('mousemove', mousemove);
-    // device.canvasContext.canvas.addEventListener('mouseleave', mouseleave);
 
     // -- Initialize data
     const trianglePositions = new Float32Array([0.015, 0.0, -0.01, 0.01, -0.01, -0.01]);
@@ -176,12 +175,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const instancePositions = new Float32Array(NUM_INSTANCES * 2);
     const instanceRotations = new Float32Array(NUM_INSTANCES);
     const instanceColors = new Float32Array(NUM_INSTANCES * 3);
-    const pickingColors = new Uint8ClampedArray(NUM_INSTANCES * 2);
+    const pickingColors = new Float32Array(NUM_INSTANCES * 2);
 
     for (let i = 0; i < NUM_INSTANCES; ++i) {
       instancePositions[i * 2] = random() * 2.0 - 1.0;
       instancePositions[i * 2 + 1] = random() * 2.0 - 1.0;
-
       instanceRotations[i] = random() * 2 * Math.PI;
 
       const randValue = random();
@@ -199,8 +197,14 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     this.positionBuffer = device.createBuffer({data: trianglePositions});
     this.instanceColorBuffer = device.createBuffer({data: instanceColors});
-    this.instancePositionBuffer = device.createBuffer({data: instancePositions});
-    this.instanceRotationBuffer = device.createBuffer({data: instanceRotations});
+    this.instancePositionBuffers = new Swap({
+      current: device.createBuffer({data: instancePositions}),
+      next: device.createBuffer({data: instancePositions})
+    });
+    this.instanceRotationBuffers = new Swap({
+      current: device.createBuffer({data: instanceRotations}),
+      next: device.createBuffer({data: instanceRotations})
+    });
     this.instancePickingColorBuffer = device.createBuffer({data: pickingColors});
 
     this.renderModel = new Model(device, {
@@ -214,31 +218,32 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       instanceCount: NUM_INSTANCES,
       attributes: {
         positions: this.positionBuffer,
-        instancePositions: this.instancePositionBuffer,
-        instanceRotations: this.instanceRotationBuffer,
         instanceColors: this.instanceColorBuffer,
         instancePickingColors: this.instancePickingColorBuffer
       },
-      parameters: {
-        blend: true,
-        blendFunc: 'src-alpha-one'
-      }
+      bufferLayout: [
+        {name: 'positions', format: 'float32x2'},
+        {name: 'instancePositions', format: 'float32x2'},
+        {name: 'instanceRotations', format: 'float32'},
+        {name: 'instanceColors', format: 'float32x3'},
+        {name: 'instancePickingColors', format: 'float32x2'}
+      ]
     });
 
     this.transform = new BufferTransform(device, {
-      vs: EMIT_VS,
-      elementCount: NUM_INSTANCES,
+      vs: COMPUTE_VS,
       vertexCount: NUM_INSTANCES,
-      sourceBuffers: {
-        positions: this.instancePositionBuffer,
-        rotations: this.instanceRotationBuffer
-      },
-      feedbackMap: {
-        positions: 'v_offset',
-        rotations: 'v_rotation'
-      }
+      // elementCount: NUM_INSTANCES,
+      bufferLayout: [
+        {name: 'oldPositions', format: 'float32x2'},
+        {name: 'oldRotations', format: 'float32'}
+      ],
+      outputs: ['newOffsets', 'newRotations']
     });
 
+    // picking
+    // device.canvasContext.canvas.addEventListener('mousemove', mousemove);
+    // device.canvasContext.canvas.addEventListener('mouseleave', mouseleave);
     // this.pickingFramebuffer = device.createFramebuffer({width, height});
   }
 
@@ -249,39 +254,38 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
   override onRender({device, width, height, time}: AnimationProps): void {
     this.transform.model.setUniforms({u_time: time});
-    this.transform.run({});
+    this.transform.run({
+      inputBuffers: {
+        oldPositions: this.instancePositionBuffers.current,
+        oldRotations: this.instanceRotationBuffers.current
+      },
+      outputBuffers: {
+        newOffsets: this.instancePositionBuffers.next,
+        newRotations: this.instanceRotationBuffers.next
+      }
+    });
 
-    this.transform.swap();
+    this.instancePositionBuffers.swap();
+    this.instanceRotationBuffers.swap();
 
-    this.instancePositionBuffer = this.transform.getBuffer('v_offset')!;
-    this.instanceRotationBuffer = this.transform.getBuffer('v_rotation')!;
-
-    // this.instancePositionBuffer.setAccessor({divisor: 1});
-    // this.instanceRotationBuffer.setAccessor({divisor: 1});
+    this.renderModel.setAttributes({
+      instancePositions: this.instancePositionBuffers.current,
+      instanceRotations: this.instanceRotationBuffers.current
+    });
 
     const renderPass = device.beginRenderPass({
       clearColor: [0, 0, 0, 1],
-      clearDepth: 1,
-    });
-    
-    this.renderModel.setAttributes({
-      positions: this.instancePositionBuffer,
-      rotations: this.instanceRotationBuffer
+      clearDepth: 1
     });
 
     this.renderModel.draw(renderPass);
-
-    // this.instancePositionBuffer.setAccessor({divisor: 0});
-    // this.instanceRotationBuffer.setAccessor({divisor: 0});
 
     // if (pickPosition) {
     //   // use the center pixel location in device pixel range
     //   const devicePixels = cssToDevicePixels(gl, pickPosition);
     //   const deviceX = devicePixels.x + Math.floor(devicePixels.width / 2);
     //   const deviceY = devicePixels.y + Math.floor(devicePixels.height / 2);
-
     //   this.pickingFramebuffer.resize({width, height});
-
     //   pickInstance(gl, deviceX, deviceY, this.renderModel, this.pickingFramebuffer);
     // }
   }
