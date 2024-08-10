@@ -4,6 +4,15 @@
 
 Major new release that includes WebGPU support
 
+### 9.1.0-alpha.15
+
+- fix: luma8 sampler param compatibility (#2180)
+- chore(examples): Extract picking helper class from instancing example (#2178)
+- fix(examples): Restore transform example (#2177)
+- fix(examples): Fix TransformFeedback example (#2176)
+- feat(engine): New Swap class for managing pairs of buffers/textures for compute (#2175)
+- chore: Avoid use of luma.registerAdapters() (#2174)
+
 ### 9.1.0-alpha.14
 
 - fix: texture integer coordinates, resize utils (#2167)
