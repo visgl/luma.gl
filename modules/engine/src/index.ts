@@ -79,3 +79,5 @@ export {
 
 export type {AsyncTextureProps} from './async-texture/async-texture';
 export {AsyncTexture} from './async-texture/async-texture';
+
+export {PickingManager as _PickingManager} from './modules/picking/picking-manager';
