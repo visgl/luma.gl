@@ -6,8 +6,8 @@ import {Device, Framebuffer} from '@luma.gl/core';
 import {picking} from '@luma.gl/shadertools';
 import {ShaderInputs} from '../../shader-inputs';
 
-/** 
- * Helper class for using the picking module 
+/**
+ * Helper class for using the picking module
  */
 export class PickingManager {
   device: Device;
