@@ -7,10 +7,10 @@ import {Device} from '@luma.gl/core';
 import type {AnimationProps, ModelProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate, CubeGeometry, Timeline, Model, _ShaderInputs} from '@luma.gl/engine';
 // @ts-ignore TODO - ib added this to solve module resolution mess
-import {makeRandomGenerator} from '@luma.gl/engine';
+import {makeRandomGenerator, _PickingManager as PickingManager} from '@luma.gl/engine';
+import {} from '@luma.gl/engine';
 import {picking, dirlight} from '@luma.gl/shadertools';
 import {Matrix4, radians} from '@math.gl/core';
-import {Picker} from './picker';
 
 const INFO_HTML = `
 <p>
@@ -20,7 +20,6 @@ A luma.gl <code>Cube</code>, rendering 65,536 instances in a
 single GPU draw call using instanced vertex attributes.
 `;
 
-// Picker
 
 // INSTANCE CUBE
 
@@ -222,7 +221,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   cube: InstancedCube;
   timeline: Timeline;
   timelineChannels: Record<string, number>;
-  picker: Picker;
+  picker: PickingManager;
 
   shaderInputs = new _ShaderInputs<{
     app: AppUniforms;
@@ -253,7 +252,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       shaderInputs: this.shaderInputs
     });
 
-    this.picker = new Picker(device, this.shaderInputs);
+    this.picker = new PickingManager(device, this.shaderInputs);
   }
 
   onRender(animationProps: AnimationProps) {

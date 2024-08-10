@@ -3,18 +3,20 @@
 // Copyright (c) vis.gl contributors
 
 import {Device, Framebuffer} from '@luma.gl/core';
-import {_ShaderInputs} from '@luma.gl/engine';
 import {picking} from '@luma.gl/shadertools';
+import {ShaderInputs} from '../../shader-inputs';
 
-/** Helper class for using the picking module */
-export class Picker {
+/** 
+ * Helper class for using the picking module 
+ */
+export class PickingManager {
   device: Device;
   framebuffer: Framebuffer | null = null;
-  shaderInputs: _ShaderInputs<{picking: typeof picking.props}>;
+  shaderInputs: ShaderInputs<{picking: typeof picking.props}>;
 
-  constructor(device: Device, shaderInputs: _ShaderInputs) {
+  constructor(device: Device, shaderInputs: ShaderInputs) {
     this.device = device;
-    this.shaderInputs = shaderInputs as _ShaderInputs<{picking: typeof picking.props}>;
+    this.shaderInputs = shaderInputs as ShaderInputs<{picking: typeof picking.props}>;
   }
 
   destroy() {
