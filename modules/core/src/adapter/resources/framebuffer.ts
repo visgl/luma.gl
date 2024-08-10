@@ -112,7 +112,12 @@ export abstract class Framebuffer extends Resource<FramebufferProps> {
       usage: Texture.RENDER_ATTACHMENT,
       format,
       width: this.width,
-      height: this.height
+      height: this.height,
+      // TODO deprecated? - luma.gl v8 compatibility
+      sampler: {
+        magFilter: 'linear',
+        minFilter: 'linear'
+      }
     });
   }
 
@@ -123,7 +128,8 @@ export abstract class Framebuffer extends Resource<FramebufferProps> {
       usage: Texture.RENDER_ATTACHMENT,
       format,
       width: this.width,
-      height: this.height
+      height: this.height,
+      mipmaps: false
     });
   }
 

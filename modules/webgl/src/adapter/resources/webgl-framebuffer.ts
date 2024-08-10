@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {FramebufferProps, TextureFormat} from '@luma.gl/core';
-import {Framebuffer, Texture} from '@luma.gl/core';
+import type {FramebufferProps} from '@luma.gl/core';
+import {Framebuffer} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {WebGLDevice} from '../webgl-device';
 import {WEBGLTexture} from './webgl-texture';
@@ -91,16 +91,16 @@ export class WEBGLFramebuffer extends Framebuffer {
   // PRIVATE
 
   /** In WebGL we must use renderbuffers for depth/stencil attachments (unless we have extensions) */
-  protected override createDepthStencilTexture(format: TextureFormat): Texture {
-    // return new WEBGLRenderbuffer(this.device, {
-    return new WEBGLTexture(this.device, {
-      id: `${this.id}-depth-stencil`,
-      format,
-      width: this.width,
-      height: this.height,
-      mipmaps: false
-    });
-  }
+  // protected override createDepthStencilTexture(format: TextureFormat): Texture {
+  //   // return new WEBGLRenderbuffer(this.device, {
+  //   return new WEBGLTexture(this.device, {
+  //     id: `${this.id}-depth-stencil`,
+  //     format,
+  //     width: this.width,
+  //     height: this.height,
+  //     mipmaps: false
+  //   });
+  // }
 
   /**
    * @param attachment
