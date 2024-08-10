@@ -4,8 +4,27 @@
 
 import {ShaderPass} from '../../../lib/shader-module/shader-pass';
 
-const fs = /* glsl */ `\
+const source = /* wgsl */ `\
+struct brightnessContrastUniforms {
+  float brightness;
+  float contrast;
+};
 
+// Binding 0:1 is reserved for shader passes
+@binding(1) @group(0) var<uniform> brightnessContrast : brightnessContrastUniforms;
+
+fn brightnessContrast_filterColor(color: vec4<f32>, texSize: vec2<f32>, texCoords: vec2<f32>) -> vec4<f32> {
+  color.rgb += brightnessContrast.brightness;
+  if (brightnessContrast.contrast > 0.0) {
+    color.rgb = (color.rgb - 0.5) / (1.0 - brightnessContrast.contrast) + 0.5;
+  } else {
+    color.rgb = (color.rgb - 0.5) * (1.0 + brightnessContrast.contrast) + 0.5;
+  }
+  return color;
+}
+`;
+
+const fs = /* glsl */ `\
 uniform brightnessContrastUniforms {
   float brightness;
   float contrast;
@@ -52,6 +71,8 @@ export const brightnessContrast = {
     brightness: {format: 'f32', value: 0, min: -1, max: 1},
     contrast: {format: 'f32', value: 0, min: -1, max: 1}
   },
-  fs,
-  passes: [{filter: true}]
+  passes: [{filter: true}],
+
+  source,
+  fs
 } as const satisfies ShaderPass<BrightnessContrastProps>;

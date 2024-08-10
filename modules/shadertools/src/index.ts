@@ -90,95 +90,95 @@ export {pbrMaterial} from './modules/lighting/pbr-material/pbr-material';
 export type {
   BrightnessContrastProps,
   BrightnessContrastUniforms
-} from './modules/postprocessing/image-adjust-filters/brightnesscontrast';
-export {brightnessContrast} from './modules/postprocessing/image-adjust-filters/brightnesscontrast';
+} from './passes/postprocessing/image-adjust-filters/brightnesscontrast';
+export {brightnessContrast} from './passes/postprocessing/image-adjust-filters/brightnesscontrast';
 export type {
   DenoiseProps,
   DenoiseUniforms
-} from './modules/postprocessing/image-adjust-filters/denoise';
-export {denoise} from './modules/postprocessing/image-adjust-filters/denoise';
+} from './passes/postprocessing/image-adjust-filters/denoise';
+export {denoise} from './passes/postprocessing/image-adjust-filters/denoise';
 export type {
   HueSaturationProps,
   HueSaturationUniforms
-} from './modules/postprocessing/image-adjust-filters/huesaturation';
-export {hueSaturation} from './modules/postprocessing/image-adjust-filters/huesaturation';
-export type {NoiseProps, NoiseUniforms} from './modules/postprocessing/image-adjust-filters/noise';
-export {noise} from './modules/postprocessing/image-adjust-filters/noise';
-export type {SepiaProps, SepiaUniforms} from './modules/postprocessing/image-adjust-filters/sepia';
-export {sepia} from './modules/postprocessing/image-adjust-filters/sepia';
+} from './passes/postprocessing/image-adjust-filters/huesaturation';
+export {hueSaturation} from './passes/postprocessing/image-adjust-filters/huesaturation';
+export type {NoiseProps, NoiseUniforms} from './passes/postprocessing/image-adjust-filters/noise';
+export {noise} from './passes/postprocessing/image-adjust-filters/noise';
+export type {SepiaProps, SepiaUniforms} from './passes/postprocessing/image-adjust-filters/sepia';
+export {sepia} from './passes/postprocessing/image-adjust-filters/sepia';
 export type {
   VibranceProps,
   VibranceUniforms
-} from './modules/postprocessing/image-adjust-filters/vibrance';
-export {vibrance} from './modules/postprocessing/image-adjust-filters/vibrance';
+} from './passes/postprocessing/image-adjust-filters/vibrance';
+export {vibrance} from './passes/postprocessing/image-adjust-filters/vibrance';
 export type {
   VignetteProps,
   VignetteUniforms
-} from './modules/postprocessing/image-adjust-filters/vignette';
-export {vignette} from './modules/postprocessing/image-adjust-filters/vignette';
+} from './passes/postprocessing/image-adjust-filters/vignette';
+export {vignette} from './passes/postprocessing/image-adjust-filters/vignette';
 
 // glfx  BLUR shader modules
 export type {
   TiltShiftProps,
   TiltShiftUniforms
-} from './modules/postprocessing/image-blur-filters/tiltshift';
-export {tiltShift} from './modules/postprocessing/image-blur-filters/tiltshift';
+} from './passes/postprocessing/image-blur-filters/tiltshift';
+export {tiltShift} from './passes/postprocessing/image-blur-filters/tiltshift';
 export type {
   TriangleBlurProps,
   TriangleBlurUniforms
-} from './modules/postprocessing/image-blur-filters/triangleblur';
-export {triangleBlur} from './modules/postprocessing/image-blur-filters/triangleblur';
+} from './passes/postprocessing/image-blur-filters/triangleblur';
+export {triangleBlur} from './passes/postprocessing/image-blur-filters/triangleblur';
 export type {
   ZoomBlurProps,
   ZoomBlurUniforms
-} from './modules/postprocessing/image-blur-filters/zoomblur';
-export {zoomBlur} from './modules/postprocessing/image-blur-filters/zoomblur';
+} from './passes/postprocessing/image-blur-filters/zoomblur';
+export {zoomBlur} from './passes/postprocessing/image-blur-filters/zoomblur';
 
 // glfx FUN shader modules
 export type {
   ColorHalftoneProps,
   ColorHalftoneUniforms
-} from './modules/postprocessing/image-fun-filters/colorhalftone';
-export {colorHalftone} from './modules/postprocessing/image-fun-filters/colorhalftone';
+} from './passes/postprocessing/image-fun-filters/colorhalftone';
+export {colorHalftone} from './passes/postprocessing/image-fun-filters/colorhalftone';
 export type {
   DotScreenProps,
   DotScreenUniforms
-} from './modules/postprocessing/image-fun-filters/dotscreen';
-export {dotScreen} from './modules/postprocessing/image-fun-filters/dotscreen';
+} from './passes/postprocessing/image-fun-filters/dotscreen';
+export {dotScreen} from './passes/postprocessing/image-fun-filters/dotscreen';
 export type {
   EdgeWorkProps,
   EdgeWorkUniforms
-} from './modules/postprocessing/image-fun-filters/edgework';
-export {edgeWork} from './modules/postprocessing/image-fun-filters/edgework';
+} from './passes/postprocessing/image-fun-filters/edgework';
+export {edgeWork} from './passes/postprocessing/image-fun-filters/edgework';
 export type {
   HexagonalPixelateProps,
   HexagonalPixelateUniforms
-} from './modules/postprocessing/image-fun-filters/hexagonalpixelate';
-export {hexagonalPixelate} from './modules/postprocessing/image-fun-filters/hexagonalpixelate';
-export type {InkProps, InkUniforms} from './modules/postprocessing/image-fun-filters/ink';
-export {ink} from './modules/postprocessing/image-fun-filters/ink';
+} from './passes/postprocessing/image-fun-filters/hexagonalpixelate';
+export {hexagonalPixelate} from './passes/postprocessing/image-fun-filters/hexagonalpixelate';
+export type {InkProps, InkUniforms} from './passes/postprocessing/image-fun-filters/ink';
+export {ink} from './passes/postprocessing/image-fun-filters/ink';
 export type {
   MagnifyProps,
   MagnifyUniforms
-} from './modules/postprocessing/image-fun-filters/magnify';
-export {magnify} from './modules/postprocessing/image-fun-filters/magnify';
+} from './passes/postprocessing/image-fun-filters/magnify';
+export {magnify} from './passes/postprocessing/image-fun-filters/magnify';
 
 // glfx  WARP shader modules
 export type {
   BulgePinchProps,
   BulgePinchUniforms
-} from './modules/postprocessing/image-warp-filters/bulgepinch';
-export {bulgePinch} from './modules/postprocessing/image-warp-filters/bulgepinch';
-export type {SwirlProps, SwirlUniforms} from './modules/postprocessing/image-warp-filters/swirl';
-export {swirl} from './modules/postprocessing/image-warp-filters/swirl';
+} from './passes/postprocessing/image-warp-filters/bulgepinch';
+export {bulgePinch} from './passes/postprocessing/image-warp-filters/bulgepinch';
+export type {SwirlProps, SwirlUniforms} from './passes/postprocessing/image-warp-filters/swirl';
+export {swirl} from './passes/postprocessing/image-warp-filters/swirl';
 
 // Postprocessing modules
-// export type {FXAAProps, FXAAUniforms} from './modules/postprocessing/fxaa/fxaa';
-export {fxaa} from './modules/postprocessing/fxaa/fxaa';
+// export type {FXAAProps, FXAAUniforms} from './passes/postprocessing/fxaa/fxaa';
+export {fxaa} from './passes/postprocessing/fxaa/fxaa';
 
 // experimental modules
-export type {WarpProps, WarpUniforms} from './modules/postprocessing/image-warp-filters/warp';
-export {warp as _warp} from './modules/postprocessing/image-warp-filters/warp';
+export type {WarpProps, WarpUniforms} from './passes/postprocessing/image-warp-filters/warp';
+export {warp as _warp} from './passes/postprocessing/image-warp-filters/warp';
 
 // DEPRECATED - v8 legacy shader modules (non-uniform buffer)
 

@@ -1,0 +1,25 @@
+{
+  "name": "luma.gl-examples-hello-gltf",
+  "version": "9.1.0-alpha.12",
+  "private": true,
+  "scripts": {
+    "start": "vite",
+    "build": "tsc && vite build",
+    "serve": "vite preview"
+  },
+  "dependencies": {
+    "@loaders.gl/core": "^4.2.0",
+    "@loaders.gl/gltf": "^4.2.0",
+    "@luma.gl/core": "9.1.0-alpha.12",
+    "@luma.gl/engine": "9.1.0-alpha.12",
+    "@luma.gl/gltf": "9.1.0-alpha.12",
+    "@luma.gl/shadertools": "9.1.0-alpha.12",
+    "@luma.gl/webgl": "9.1.0-alpha.12",
+    "@luma.gl/webgpu": "9.1.0-alpha.12",
+    "@math.gl/core": "4.1.0-alpha.3"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "vite": "^5.0.0"
+  }
+}

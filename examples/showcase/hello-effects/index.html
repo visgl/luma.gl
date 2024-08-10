@@ -1,0 +1,37 @@
+<!doctype html>
+<head>
+  <style>
+    body {
+      background: black;
+      margin: 0;
+    }
+
+    canvas {
+      height: 100% !important;
+      width: 100% !important;
+      transition: opacity 1s ease-in-out;
+    }
+
+    #model-select {
+      position: absolute;
+      left: 10px;
+      top: 10px;
+    }
+  </style>
+</head>
+<script type="module">
+  import {luma} from '@luma.gl/core';
+  import {webgl2Adapter} from '@luma.gl/webgl';
+  import {webgpuAdapter} from '@luma.gl/webgpu';
+  import {makeAnimationLoop} from '@luma.gl/engine';
+  import AnimationLoopTemplate from './app.ts';
+
+  luma.registerAdapters([webgl2Adapter]);
+  // luma.registerAdapters([webglDevice, webgpuDevice]);
+
+  const resolution = 2;
+  const device = luma.createDevice({width: resolution * window.innerWidth, height: resolution * window.innerHeight});
+  makeAnimationLoop(AnimationLoopTemplate, {device}).start();
+</script>
+<body>
+</body>
