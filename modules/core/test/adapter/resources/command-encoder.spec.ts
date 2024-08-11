@@ -186,13 +186,12 @@ async function readAsyncF32(source: Buffer): Promise<Float32Array> {
   return new Float32Array(buffer, byteOffset, byteLength / Float32Array.BYTES_PER_ELEMENT);
 }
 
-
-test.only('CommandEncoder#copyTextureToTexture', t => {
+test('CommandEncoder#copyTextureToTexture', t => {
   // for (const device of await getTestDevices()) {
-    testCopyToTexture(t, device, {isSubCopy: false, sourceIsFramebuffer: false});
-    // testCopyToTexture(t, device, {isSubCopy: false, sourceIsFramebuffer: true});
-    // testCopyToTexture(t, device, {isSubCopy: true, sourceIsFramebuffer: false});
-    // testCopyToTexture(t, device, {isSubCopy: true, sourceIsFramebuffer: true});
+  testCopyToTexture(t, device, {isSubCopy: false, sourceIsFramebuffer: false});
+  // testCopyToTexture(t, device, {isSubCopy: false, sourceIsFramebuffer: true});
+  // testCopyToTexture(t, device, {isSubCopy: true, sourceIsFramebuffer: false});
+  // testCopyToTexture(t, device, {isSubCopy: true, sourceIsFramebuffer: true});
   // }
 });
 
@@ -211,6 +210,13 @@ function testCopyToTexture(
   const destinationTexture = sourceTexture.clone();
 
   const commandEncoder = device.createCommandEncoder();
+  commandEncoder.copyTextureToTexture({sourceTexture, destinationTexture});
+  commandEncoder.finish();
+
+  // Read data form destination texture
+  const color = device.readPixelsToArrayWebGL(destinationTexture);
+
+  t.deepEqual(color, sourceColor, 'copyTextureToTexture() successful');
 
   // const opts = {width: 1, height: 1};
   // if (options.isSubCopy) {
@@ -219,17 +225,6 @@ function testCopyToTexture(
   //   // @ts-expect-error
   //   opts.targetY = 1;
   // }
-  commandEncoder.copyTextureToTexture({
-    sourceTexture, 
-    destinationTexture
-  });
-
-
-  
-  // Read data form destination texture
-  const color = device.readPixelsToArrayWebGL(destinationTexture);
-  
-  t.deepEqual(color, sourceColor, 'copyTextureToTexture() successful');
 
   // const clearColor = [1, 0.5, 0.25, 0.125];
   // const colorOffset = options.isSubCopy ? 4 * 3 /* skip first 3 pixels * : 0;
