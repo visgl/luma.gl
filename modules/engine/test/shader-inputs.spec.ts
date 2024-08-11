@@ -120,7 +120,7 @@ test('ShaderInputs#bindings', t => {
     t.equal(shaderInputs.moduleBindings.custom.colorTexture, MOCK_TEXTURE, 'colorTexture updated');
 
     const uniformValues = shaderInputs.getUniformValues();
-    const bindings = shaderInputs.getBindings();
+    const bindings = shaderInputs.getBindingValues();
     t.deepEqual(uniformValues, {custom: {color: [255, 0, 0]}}, 'uniformValues correct');
     t.deepEqual(bindings, {colorTexture: 'MOCK_TEXTURE'}, 'bindings correct');
 

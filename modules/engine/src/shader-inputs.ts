@@ -123,11 +123,6 @@ export class ShaderInputs<
     }
   }
 
-  /** Merges all bindings for the shader (from the various modules) */
-  // getUniformBlocks(): Record<string, Texture | Sampler> {
-  //   return this.moduleUniforms;
-  // }
-
   /**
    * Return the map of modules
    * @todo should should this include the resolved dependencies?
@@ -137,12 +132,12 @@ export class ShaderInputs<
   }
 
   /** Get all uniform values for all modules */
-  getUniformValues(): Record<keyof ShaderPropsT, Record<string, UniformValue>> {
+  getUniformValues(): Partial<Record<keyof ShaderPropsT, Record<string, UniformValue>>> {
     return this.moduleUniforms;
   }
 
   /** Merges all bindings for the shader (from the various modules) */
-  getBindings(): Record<string, Texture | Sampler> {
+  getBindingValues(): Record<string, Texture | Sampler> {
     const bindings = {} as Record<string, Texture | Sampler>;
     for (const moduleBindings of Object.values(this.moduleBindings)) {
       Object.assign(bindings, moduleBindings);
@@ -150,6 +145,7 @@ export class ShaderInputs<
     return bindings;
   }
 
+  /** Return a debug table that can be used for console.table() or log.table() */
   getDebugTable(): Record<string, Record<string, unknown>> {
     const table: Record<string, Record<string, unknown>> = {};
     for (const [moduleName, module] of Object.entries(this.moduleUniforms)) {
