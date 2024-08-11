@@ -44,6 +44,7 @@ import {deepEqual} from '../utils/deep-equal';
 import {uid} from '../utils/uid';
 import {splitUniformsAndBindings} from './split-uniforms-and-bindings';
 
+import type {ShaderModuleInputs} from '../shader-inputs';
 import {ShaderInputs} from '../shader-inputs';
 // import type {AsyncTextureProps} from '../async-texture/async-texture';
 import {AsyncTexture} from '../async-texture/async-texture';
@@ -531,10 +532,12 @@ export class Model {
   setShaderInputs(shaderInputs: ShaderInputs): void {
     this.shaderInputs = shaderInputs;
     this._uniformStore = new UniformStore(this.shaderInputs.modules);
-    // Create uniform buffer bindings for all modules
-    for (const moduleName of Object.keys(this.shaderInputs.modules)) {
-      const uniformBuffer = this._uniformStore.getManagedUniformBuffer(this.device, moduleName);
-      this.bindings[`${moduleName}Uniforms`] = uniformBuffer;
+    // Create uniform buffer bindings for all modules that actually have uniforms
+    for (const [moduleName, module] of Object.entries(this.shaderInputs.modules)) {
+      if (shaderModuleHasUniforms(module)) {
+        const uniformBuffer = this._uniformStore.getManagedUniformBuffer(this.device, moduleName);
+        this.bindings[`${moduleName}Uniforms`] = uniformBuffer;
+      }
     }
     this.setNeedsRedraw('shaderInputs');
   }
@@ -542,7 +545,7 @@ export class Model {
   /** Update uniform buffers from the model's shader inputs */
   updateShaderInputs(): void {
     this._uniformStore.setUniforms(this.shaderInputs.getUniformValues());
-    this.setBindings(this.shaderInputs.getBindings());
+    this.setBindings(this.shaderInputs.getBindingValues());
     // TODO - this is already tracked through buffer/texture update times?
     this.setNeedsRedraw('shaderInputs');
   }
@@ -882,6 +885,10 @@ export class Model {
   }
 }
 
+function shaderModuleHasUniforms(module: ShaderModuleInputs): boolean {
+  return Boolean(module.uniformTypes && !isObjectEmpty(module.uniformTypes));
+}
+
 // HELPERS
 
 /** TODO - move to core, document add tests */
@@ -919,12 +926,10 @@ function getAttributeNames(bufferLayout: BufferLayout): string[] {
 
 /** Returns true if given object is empty, false otherwise. */
 function isObjectEmpty(obj: object): boolean {
-  let isEmpty = true;
   // @ts-ignore key is unused
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   for (const key in obj) {
-    isEmpty = false;
-    break;
+    return false;
   }
-  return isEmpty;
+  return true;
 }

@@ -123,14 +123,14 @@ export function getShaderModuleUniforms<
   ShaderModuleT extends ShaderModule<Record<string, unknown>, Record<string, UniformValue>>
 >(
   module: ShaderModuleT,
-  props: ShaderModuleT['props'],
+  props?: ShaderModuleT['props'],
   oldUniforms?: ShaderModuleT['uniforms']
 ): Record<string, BindingValue | UniformValue> {
   initializeShaderModule(module);
 
   const uniforms = oldUniforms || {...module.defaultUniforms};
   // If module has a getUniforms function, use it
-  if (module.getUniforms) {
+  if (props && module.getUniforms) {
     return module.getUniforms(props, uniforms);
   }
 
