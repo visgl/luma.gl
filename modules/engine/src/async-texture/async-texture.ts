@@ -131,7 +131,7 @@ export class AsyncTexture {
       throw new Error('Cannot resize texture before it is ready');
     }
     if (this.texture) {
-      this.texture = this.texture.createResizedTexture(size);
+      this.texture = this.texture.clone(size);
     }
   }
 }

@@ -53,8 +53,24 @@ export abstract class Framebuffer extends Resource<FramebufferProps> {
   }
 
   /**
+   * Create a copy of this framebuffer with new attached textures, with same props but of the specified size.
+   * @note Does not copy contents of the attached textures.
+   */
+  clone(size?: {width: number; height: number}): Framebuffer {
+    const colorAttachments = this.colorAttachments.map(colorAttachment =>
+      colorAttachment.texture.clone(size)
+    );
+
+    const depthStencilAttachment =
+      this.depthStencilAttachment && this.depthStencilAttachment.texture.clone(size);
+
+    return this.device.createFramebuffer({...this.props, colorAttachments, depthStencilAttachment});
+  }
+
+  /**
    * Resizes all attachments
    * @note resize() destroys existing textures (if size has changed).
+   * @deprecated Use framebuffer.clone()
    */
   resize(size: {width: number; height: number}): void;
   resize(size: [width: number, height: number]): void;
@@ -141,7 +157,7 @@ export abstract class Framebuffer extends Resource<FramebufferProps> {
   protected resizeAttachments(width: number, height: number): void {
     for (let i = 0; i < this.colorAttachments.length; ++i) {
       if (this.colorAttachments[i]) {
-        const resizedTexture = this.colorAttachments[i].texture.createResizedTexture({
+        const resizedTexture = this.colorAttachments[i].texture.clone({
           width,
           height
         });
@@ -152,7 +168,7 @@ export abstract class Framebuffer extends Resource<FramebufferProps> {
     }
 
     if (this.depthStencilAttachment) {
-      const resizedTexture = this.depthStencilAttachment.texture.createResizedTexture({
+      const resizedTexture = this.depthStencilAttachment.texture.clone({
         width,
         height
       });

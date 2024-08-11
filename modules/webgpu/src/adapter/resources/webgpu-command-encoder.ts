@@ -36,14 +36,14 @@ export class WebGPUCommandEncoder extends CommandEncoder {
 
   copyBufferToBuffer(options: // CopyBufferToBufferOptions
   {
-    source: Buffer;
+    sourceBuffer: Buffer;
     sourceOffset?: number;
-    destination: Buffer;
+    destinationBuffer: Buffer;
     destinationOffset?: number;
     size?: number;
   }): void {
-    const webgpuSourceBuffer = options.source as WebGPUBuffer;
-    const WebGPUDestinationBuffer = options.destination as WebGPUBuffer;
+    const webgpuSourceBuffer = options.sourceBuffer as WebGPUBuffer;
+    const WebGPUDestinationBuffer = options.destinationBuffer as WebGPUBuffer;
     this.handle.copyBufferToBuffer(
       webgpuSourceBuffer.handle,
       options.sourceOffset ?? 0,
@@ -55,20 +55,20 @@ export class WebGPUCommandEncoder extends CommandEncoder {
 
   copyBufferToTexture(options: // CopyBufferToTextureOptions
   {
-    source: Buffer;
+    sourceBuffer: Buffer;
     offset?: number;
     bytesPerRow: number;
     rowsPerImage: number;
 
-    destination: Texture;
+    destinationTexture: Texture;
     mipLevel?: number;
     aspect?: 'all' | 'stencil-only' | 'depth-only';
 
     origin?: number[] | [number, number, number];
     extent?: number[] | [number, number, number];
   }): void {
-    const webgpuSourceBuffer = options.source as WebGPUBuffer;
-    const WebGPUDestinationTexture = options.destination as WebGPUTexture;
+    const webgpuSourceBuffer = options.sourceBuffer as WebGPUBuffer;
+    const WebGPUDestinationTexture = options.destinationTexture as WebGPUTexture;
     this.handle.copyBufferToTexture(
       {
         buffer: webgpuSourceBuffer.handle,

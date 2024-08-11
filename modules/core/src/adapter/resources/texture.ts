@@ -343,12 +343,11 @@ export abstract class Texture extends Resource<TextureProps> {
   abstract copyExternalImage(options: CopyExternalImageOptions): {width: number; height: number};
 
   /**
-   * Create a new texture with the same parameters but a different size
-   *
+   * Create a new texture with the same parameters and optionally, a different size
    * @note Textures are immutable and cannot be resized after creation, but we can create a similar texture with the same parameters but a new size.
    * @note Does not copy contents of the texture
    */
-  createResizedTexture(size: {width: number; height: number}): Texture {
+  clone(size?: {width: number; height: number}): Texture {
     return this.device.createTexture({...this.props, ...size});
   }
 

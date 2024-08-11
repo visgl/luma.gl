@@ -32,7 +32,7 @@ import './adapter/texture-formats.spec';
 
 // Resources - TODO these tests only depend on Device and could move to API...
 import './adapter/resources/buffer.spec';
-import './adapter/resources/command-buffer.spec';
+import './adapter/resources/command-encoder.spec';
 import './adapter/resources/shader.spec';
 import './adapter/resources/render-pipeline.spec';
 import './adapter/resources/compute-pipeline.spec';

@@ -133,17 +133,17 @@ async function readF32(
 
 async function readU8(
   webglDevice: Device,
-  source: Texture,
+  sourceTexture: Texture,
   byteLength: number
 ): Promise<Uint8Array> {
-  const destination = webglDevice.createBuffer({byteLength});
+  const destinationBuffer = webglDevice.createBuffer({byteLength});
   try {
     const cmd = webglDevice.createCommandEncoder();
-    cmd.copyTextureToBuffer({source, destination});
+    cmd.copyTextureToBuffer({sourceTexture, destinationBuffer});
     cmd.finish();
-    return destination.readAsync();
+    return destinationBuffer.readAsync();
   } finally {
-    destination.destroy();
+    destinationBuffer.destroy();
   }
 }
 
