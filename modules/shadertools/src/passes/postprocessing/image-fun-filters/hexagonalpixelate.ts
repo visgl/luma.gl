@@ -77,7 +77,7 @@ export const hexagonalPixelate = {
     center: 'vec2<f32>',
     scale: 'f32'
   },
-  uniformPropTypes: {
+  propTypes: {
     center: {value: [0.5, 0.5], hint: 'screenspace'},
     scale: {value: 10, min: 1, softMin: 5, softMax: 50}
   },

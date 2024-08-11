@@ -10,14 +10,10 @@ uniform vignetteUniforms {
   float amount;
 } vignette;
 
-vec4 vignette_filterColor(vec4 color, vec2 texCoord) {
+vec4 vignette_filterColor_ext(vec4 color, vec2 texSize, vec2 texCoord) {
   float dist = distance(texCoord, vec2(0.5, 0.5));
   float ratio = smoothstep(0.8, vignette.radius * 0.799, dist * (vignette.amount + vignette.radius));
   return color.rgba * ratio + (1.0 - ratio)*vec4(0.0, 0.0, 0.0, 1.0);
-}
-
-vec4 vignette_filterColor(vec4 color, vec2 texSize, vec2 texCoord) {
-  return vignette_filterColor(color, texCoord);
 }
 `;
 
@@ -47,7 +43,11 @@ export const vignette = {
     radius: 'f32',
     amount: 'f32'
   },
-  uniformPropTypes: {
+  defaultUniforms: {
+    radius: 0.5,
+    amount: 0.5
+  },
+  propTypes: {
     radius: {value: 0.5, min: 0, max: 1},
     amount: {value: 0.5, min: 0, max: 1}
   },

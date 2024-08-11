@@ -63,7 +63,7 @@ export const bulgePinch = {
     radius: 'f32',
     strength: 'f32'
   },
-  uniformPropTypes: {
+  propTypes: {
     center: {value: [0.5, 0.5]},
     radius: {value: 200, min: 1, softMax: 600},
     strength: {value: 0.5, min: -1, max: 1}

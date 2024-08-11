@@ -94,7 +94,7 @@ export const tiltShift = {
     end: 'vec2<f32>',
     invert: 'i32'
   },
-  uniformPropTypes: {
+  propTypes: {
     blurRadius: {value: 15, min: 0, max: 50},
     gradientRadius: {value: 200, min: 0, max: 400},
     start: {value: [0, 0]},

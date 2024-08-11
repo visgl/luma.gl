@@ -22,7 +22,7 @@ float pattern(float angle, float scale, vec2 texSize, vec2 texCoord) {
   return (sin(point.x) * sin(point.y)) * 4.0;
 }
 
-vec4 colorHalftone_filterColor(vec4 color, vec2 texSize, vec2 texCoord) {
+vec4 colorHalftone_filterColor_ext(vec4 color, vec2 texSize, vec2 texCoord) {
   float scale = 3.1514 / colorHalftone.size;
   vec3 cmy = 1.0 - color.rgb;
   float k = min(cmy.x, min(cmy.y, cmy.z));
@@ -75,7 +75,7 @@ export const colorHalftone = {
     angle: 'f32',
     size: 'f32'
   },
-  uniformPropTypes: {
+  propTypes: {
     center: {value: [0.5, 0.5]},
     angle: {value: 1.1, softMin: 0, softMax: Math.PI / 2},
     size: {value: 4, min: 1, softMin: 3, softMax: 20}

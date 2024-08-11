@@ -60,15 +60,21 @@ export {SphereGeometry} from './geometries/sphere-geometry';
 export type {TruncatedConeGeometryProps} from './geometries/truncated-cone-geometry';
 export {TruncatedConeGeometry} from './geometries/truncated-cone-geometry';
 
+export type {ShaderModuleInputs} from './shader-inputs';
+export {ShaderInputs} from './shader-inputs';
+
 // Application Utilities
 export {makeRandomGenerator} from './application-utils/random';
 export {setPathPrefix, loadImage, loadImageBitmap} from './application-utils/load-file';
 
 // EXPERIMENTAL
-export type {ShaderModuleInputs} from './shader-inputs';
-export {ShaderInputs as _ShaderInputs} from './shader-inputs';
+export type {ShaderPassRendererProps} from './passes/shader-pass-renderer';
+export {ShaderPassRenderer} from './passes/shader-pass-renderer';
 
 export {Swap} from './compute/swap';
+export {SwapBuffers} from './compute/swap';
+export {SwapFramebuffers} from './compute/swap';
+
 export type {ComputationProps} from './compute/computation';
 export {Computation} from './compute/computation';
 

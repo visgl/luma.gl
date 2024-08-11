@@ -22,7 +22,7 @@ vec4 sepia_filterColor(vec4 color) {
   return color;
 }
 
-vec4 sepia_filterColor(vec4 color, vec2 texSize, vec2 texCoord) {
+vec4 sepia_filterColor_ext(vec4 color, vec2 texSize, vec2 texCoord) {
   return sepia_filterColor(color);
 }
 `;
@@ -46,7 +46,7 @@ export const sepia = {
   uniformTypes: {
     amount: 'f32'
   },
-  uniformPropTypes: {
+  propTypes: {
     amount: {value: 0.5, min: 0, max: 1}
   },
   fs,

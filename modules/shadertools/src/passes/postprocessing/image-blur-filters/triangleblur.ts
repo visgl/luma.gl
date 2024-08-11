@@ -71,7 +71,7 @@ export const triangleBlur = {
     radius: 'f32',
     delta: 'vec2<f32>'
   },
-  uniformPropTypes: {
+  propTypes: {
     radius: {value: 20, min: 0, softMax: 100},
     delta: {value: [1, 0], private: true}
   },

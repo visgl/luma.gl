@@ -65,7 +65,7 @@ export const zoomBlur = {
     center: 'vec2<f32>',
     strength: 'f32'
   },
-  uniformPropTypes: {
+  propTypes: {
     center: {value: [0.5, 0.5]},
     strength: {value: 0.3, min: 0, softMax: 1}
   },

@@ -42,10 +42,10 @@ export function getRelativeError(result, reference) {
 
 function getBinaryShader(operation) {
   return `\
-attribute vec3 positions;
+in vec3 positions;
 uniform vec2 a;
 uniform vec2 b;
-varying vec4 vColor;
+out vec4 vColor;
 void main(void) {
   gl_Position = vec4(positions, 1.0);
   vec2 result = ${operation}(a, b);
@@ -56,9 +56,9 @@ void main(void) {
 
 function getUnaryShader(operation) {
   return `\
-attribute vec3 positions;
+in vec3 positions;
 uniform vec2 a;
-varying vec4 vColor;
+out vec4 vColor;
 void main(void) {
   gl_Position = vec4(positions, 1.0);
   vec2 result = ${operation}(a);
@@ -69,7 +69,7 @@ void main(void) {
 
 const FS_RENDER_VCOLOR = `\
 precision highp float;
-varying vec4 vColor;
+in vec4 vColor;
 void main(void) {
   gl_FragColor = vColor;
 }

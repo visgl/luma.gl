@@ -23,7 +23,7 @@ float pattern(vec2 texSize, vec2 texCoord) {
   return (sin(point.x) * sin(point.y)) * 4.0;
 }
 
-vec4 dotScreen_filterColor(vec4 color, vec2 texSize, vec2 texCoord) {
+vec4 dotScreen_filterColor_ext(vec4 color, vec2 texSize, vec2 texCoord) {
   float average = (color.r + color.g + color.b) / 3.0;
   return vec4(vec3(average * 10.0 - 5.0 + pattern(texSize, texCoord)), color.a);
 }
@@ -60,7 +60,7 @@ export const dotScreen = {
     angle: 'f32',
     size: 'f32'
   },
-  uniformPropTypes: {
+  propTypes: {
     center: {value: [0.5, 0.5]},
     angle: {value: 1.1, softMin: 0, softMax: Math.PI / 2},
     size: {value: 3, min: 1, softMin: 3, softMax: 20}

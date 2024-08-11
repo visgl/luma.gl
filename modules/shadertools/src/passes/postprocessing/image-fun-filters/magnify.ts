@@ -57,7 +57,7 @@ export const magnify = {
     borderWidthPixels: 'f32',
     borderColor: 'vec4<f32>'
   },
-  uniformPropTypes: {
+  propTypes: {
     // range 0 to 1
     screenXY: {value: [0, 0]},
     radiusPixels: 200,

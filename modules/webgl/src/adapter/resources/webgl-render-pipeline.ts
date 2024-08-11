@@ -332,7 +332,8 @@ export class WEBGLRenderPipeline extends RenderPipeline {
           this.fs.debugShader();
           throw new Error(`Error during compilation of shader ${this.fs.id}`);
         }
-        throw new Error(`Error during ${status}: ${this.device.gl.getProgramInfoLog(this.handle)}`);
+        const errorLog = this.device.gl.getProgramInfoLog(this.handle);
+        throw new Error(`Error during ${status}: ${errorLog}`);
     }
   }
 

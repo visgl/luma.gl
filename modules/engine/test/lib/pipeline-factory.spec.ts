@@ -10,7 +10,7 @@ import {PipelineFactory} from '@luma.gl/engine';
 // TODO - this doesn't test that parameters etc are properly cached
 
 const vsSource = /* glsl */ `\
-attribute vec4 positions;
+in vec4 positions;
 
 void main(void) {
   gl_Position = positions;
@@ -19,8 +19,9 @@ void main(void) {
 const fsSource = /* glsl */ `\
 precision highp float;
 
+out vec4 fragColor;
 void main(void) {
-  gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+  fragColor = vec4(1.0, 1.0, 1.0, 1.0);
 }
 `;
 

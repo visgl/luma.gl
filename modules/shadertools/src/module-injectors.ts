@@ -10,20 +10,20 @@ export const MODULE_INJECTORS_VS = /* glsl */ `\
 
 export const MODULE_INJECTORS_FS = /* glsl */ `\
 #ifdef MODULE_MATERIAL
-  gl_FragColor = material_filterColor(gl_FragColor);
+  fragColor = material_filterColor(fragColor);
 #endif
 
 #ifdef MODULE_LIGHTING
-  gl_FragColor = lighting_filterColor(gl_FragColor);
+  fragColor = lighting_filterColor(fragColor);
 #endif
 
 #ifdef MODULE_FOG
-  gl_FragColor = fog_filterColor(gl_FragColor);
+  fragColor = fog_filterColor(fragColor);
 #endif
 
 #ifdef MODULE_PICKING
-  gl_FragColor = picking_filterHighlightColor(gl_FragColor);
-  gl_FragColor = picking_filterPickingColor(gl_FragColor);
+  fragColor = picking_filterHighlightColor(fragColor);
+  fragColor = picking_filterPickingColor(fragColor);
 #endif
 
 #ifdef MODULE_LOGDEPTH

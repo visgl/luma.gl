@@ -33,7 +33,7 @@ vec4 hueSaturation_filterColor(vec4 color) {
   return color;
 }
 
-vec4 hueSaturation_filterColor(vec4 color, vec2 texSize, vec2 texCoord) {
+vec4 hueSaturation_filterColor_ext(vec4 color, vec2 texSize, vec2 texCoord) {
   return hueSaturation_filterColor(color);
 }
 `;
@@ -71,7 +71,7 @@ export const hueSaturation = {
     hue: 'f32',
     saturation: 'f32'
   },
-  uniformPropTypes: {
+  propTypes: {
     hue: {value: 0, min: -1, max: 1},
     saturation: {value: 0, min: -1, max: 1}
   },

@@ -7,11 +7,13 @@ The `Model` class is the centerpiece of the luma.gl API. It brings together all 
 - **attributes**
 - **bindings** these can reference textures and uniform buffers
 - **uniforms** WebGL only uniforms
+- **async texture handling** - Model can accept AsyncTextures as bindings, deferring rendering until textures have loaded.
 - **shader module injection**
-- **debugging** - Detailed debug logging of draw calls
+- **debugging** - Detailed debug logging of draw calls by setting `luma.log.level` in the browser console.
 
-The `Model` class integrates with 
+The `Model` class integrates:
 - The `@luma.gl/shadertools` shader module system: [see `Shader Assembly`]( /docs/api-reference/shadertools/shader-assembler).
+- `ShaderInputs` for uniform and binding managment.
 - The `Geometry` classes - accepts a [`Mesh`] or a [`Geometry`](/docs/api-reference/engine/geometry) instance, plus any additional attributes for instanced rendering)
 
 ## Usage
@@ -26,10 +28,11 @@ Create model object by passing shaders, uniforms, geometry and render it by pass
 
 ```typescript
 import {Model, CubeGeometry} from `@luma.gl/engine`;
-// construct the model.
+
 const model = new Model(device, {
-  vs: VERTEX_SHADER,
-  fs: FRAGMENT_SHADER,
+  source: WGSL_SHADER,
+  vs: GLSL_VERTEX_SHADER,
+  fs: GLSL_FRAGMENT_SHADER,
   geometry: new CubeGeometry(),
   bindings: {
     uSampler: texture
@@ -82,17 +85,24 @@ const model = new Model(device, {
 
 | Property           | Type                                           | Description                                                                       |
 | ------------------ | ---------------------------------------------- | --------------------------------------------------------------------------------- |
-| `vs`               | `Shader` \| _string_                           | A vertex shader object, or source as a string.                                    |
-| `fs`               | `Shader` \| _string_                           | A fragment shader object, or source as a string.                                  |
+| `source`           | `Shader` \| _string_                           | A WGSL shader object, or WGSL source as a string.                                 |
+| `vs?`              | `Shader` \| _string_                           | A GLSL vertex shader object, or GLSL source as a string.                          |
+| `fs?`              | `Shader` \| _string_                           | A GLSL fragment shader object, or GLSL source as a string.                        |
 | `modules`          |                                                | shader modules to be applied (shadertools).                                       |
-| `pipelineFactory?` |                                                | `PipelineFactory` to use for program creation and caching.                        |
-| `debugShaders?`    | `'error' \| 'never' \| 'warnings' \| 'always'` | Specify in what triggers the display shader compilation log (default: `'error'`). |
+| `shaderInputs?`    | `ShaderInputs`                                 | Pre-created, typed shaderInputs.                                                  |
 | `onBeforeRender?`  | `Function`                                     | function to be called before every time this model is drawn.                      |
 | `onAfterRender?`   | `Function`                                     | function to be called after every time this model is drawn.                       |
+| `debugShaders?`    | `'error' \| 'never' \| 'warnings' \| 'always'` | Specify in what triggers the display shader compilation log (default: `'error'`). |
+
+Less commonly used properties:
+
+| Property           | Type                                           | Description                                                                       |
+| ------------------ | ---------------------------------------------- | --------------------------------------------------------------------------------- |
+| `pipelineFactory?` |                                                | `PipelineFactory` to use for program creation and caching.                        |
 | `varyings?`        | `string[]`                                     | WebGL: Array of vertex shader output variables (used in TransformFeedback flow).  |
 | `bufferMode?`      |                                                | WebGL: Mode for recording vertex shader outputs (used in TransformFeedback flow). |
 
-`ModelProps` also include `RenderPipelineProps`, which are passed through to the `RenderPipeline` constructor, e.g:
+`ModelProps` also include [`RenderPipelineProps`](/docs/api-reference/core/resources/render-pipeline.md), which are passed through to the `RenderPipeline` constructor, e.g:
 
 | Property          | Type                       | Description                                                                             |
 | ----------------- | -------------------------- | --------------------------------------------------------------------------------------- |

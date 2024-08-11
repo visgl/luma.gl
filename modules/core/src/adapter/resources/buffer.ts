@@ -61,7 +61,7 @@ export abstract class Buffer extends Resource<BufferProps> {
   readonly indexType?: 'uint16' | 'uint32';
   /** Length of buffer in bytes */
   abstract byteLength: number;
-  /** "Time" of last update */
+  /** "Time" of last update, can be used to check if redraw is needed */
   updateTimestamp: number;
 
   constructor(device: Device, props: BufferProps) {
@@ -76,16 +76,29 @@ export abstract class Buffer extends Resource<BufferProps> {
       }
     }
 
+    // Remove data from props before storing, we don't want to hold on to a big chunk of memory
+    delete deducedProps.data;
+
     super(device, deducedProps, Buffer.defaultProps);
 
-    this.usage = props.usage || 0;
+    this.usage = deducedProps.usage || 0;
     this.indexType = deducedProps.indexType;
+
     // TODO - perhaps this should be set on async write completion?
     this.updateTimestamp = device.incrementTimestamp();
   }
 
+  /**
+   * Create a copy of this Buffer with new byteLength, with same props but of the specified size.
+   * @note Does not copy contents of the cloned Buffer.
+   */
+  clone(props: {byteLength: number}): Buffer {
+    return this.device.createBuffer({...this.props, ...props});
+  }
+
   /** Write data to buffer */
   abstract write(data: ArrayBufferView, byteOffset?: number): void;
+
   /** Read data asynchronously */
   abstract readAsync(byteOffset?: number, byteLength?: number): Promise<Uint8Array>;
 
@@ -98,6 +111,7 @@ export abstract class Buffer extends Resource<BufferProps> {
 
   /** Max amount of debug data saved. Two vec4's */
   static DEBUG_DATA_MAX_LENGTH = 32;
+
   /** A partial CPU-side copy of the data in this buffer, for debugging purposes */
   debugData: ArrayBuffer = new ArrayBuffer(0);
 

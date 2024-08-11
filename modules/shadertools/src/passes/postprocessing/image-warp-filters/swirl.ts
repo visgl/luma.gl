@@ -67,7 +67,7 @@ export const swirl = {
     radius: 'f32',
     angle: 'f32'
   },
-  uniformPropTypes: {
+  propTypes: {
     center: {value: [0.5, 0.5]},
     radius: {value: 200, min: 1, softMax: 600},
     angle: {value: 3, softMin: -25, softMax: 25}

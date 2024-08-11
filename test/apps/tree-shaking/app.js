@@ -59,18 +59,18 @@ function makeInstancedCube(gl) {
       instanceColors: {value: colors, size: 3, divisor: 1}
     },
     vs: /* glsl */ `\
-attribute vec3 positions;
-attribute vec3 normals;
-attribute vec2 instanceOffsets;
-attribute vec3 instanceColors;
+in vec3 positions;
+in vec3 normals;
+in vec2 instanceOffsets;
+in vec3 instanceColors;
 
 uniform mat4 uModel;
 uniform mat4 uView;
 uniform mat4 uProjection;
 uniform float uTime;
 
-varying vec3 color;
-varying vec3 normal;
+out vec3 color;
+out vec3 normal;
 
 void main(void) {
   float d = length(instanceOffsets);
@@ -84,8 +84,8 @@ void main(void) {
     fs: /* glsl */ `\
 precision highp float;
 
-varying vec3 color;
-varying vec3 normal;
+in vec3 color;
+in vec3 normal;
 
 void main(void) {
   float d = abs(dot(normalize(normal), normalize(vec3(1,1,2))));
