@@ -6,8 +6,9 @@
   import {makeAnimationLoop} from '@luma.gl/engine';
   import AnimationLoopTemplate from './app.ts';
 
-  luma.registerDevices([WebGLDevice]);
-  makeAnimationLoop(AnimationLoopTemplate).start();
+  // luma.registerDevices([WebGLDevice]);
+  const device = WebGLDevice.create();
+  makeAnimationLoop(AnimationLoopTemplate, { device }).start();
 </script>
 <body>
 </body>

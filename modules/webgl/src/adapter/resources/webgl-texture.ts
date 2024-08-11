@@ -311,7 +311,7 @@ export class WEBGLTexture extends Texture<WEBGLTextureProps> {
       width,
       height,
       depth,
-      format: glFormat,
+      format: props.format,
       type,
       dataFormat,
       // @ts-expect-error

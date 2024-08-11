@@ -1,7 +1,7 @@
 // Ported from PicoGL.js example: https://tsherif.github.io/picogl.js/examples/3Dtexture.html
 
 import {makeRandomNumberGenerator, glsl} from '@luma.gl/core';
-import {AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine';
+import {AnimationLoopTemplate, AnimationProps, Geometry, Model} from '@luma.gl/engine';
 import {Matrix4, radians} from '@math.gl/core';
 import {perlin, lerp, shuffle, range} from './perlin';
 
@@ -81,8 +81,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       x += INCREMENT;
     }
 
-    const positionBuffer = device.createBuffer(positionData);
-
     // CREATE 3D TEXTURE
     const TEXTURE_DIMENSIONS = 16;
     const NOISE_DIMENSIONS = TEXTURE_DIMENSIONS * 0.07;
@@ -124,11 +122,16 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.cloud = new Model(device, {
       vs,
       fs,
-      topology: 'point-list',
-      vertexCount: positionData.length / 3,
-      attributes: {
-        position: positionBuffer
-      },
+      geometry: new Geometry({
+        topology: 'point-list',
+        vertexCount: positionData.length / 3,
+        attributes: {
+          position: {
+            value: positionData,
+            size: 3
+          }
+        }
+      }),
       bindings: {
         uTexture: texture
       },
