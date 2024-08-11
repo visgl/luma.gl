@@ -73,8 +73,8 @@ export class WEBGLCommandBuffer extends CommandBuffer {
 }
 
 function _copyBufferToBuffer(device: WebGLDevice, options: CopyBufferToBufferOptions): void {
-  const source = options.source as WEBGLBuffer;
-  const destination = options.destination as WEBGLBuffer;
+  const source = options.sourceBuffer as WEBGLBuffer;
+  const destination = options.destinationBuffer as WEBGLBuffer;
 
   // {In WebGL2 we can p}erform the copy on the GPU
   // Use GL.COPY_READ_BUFFER+GL.COPY_WRITE_BUFFER avoid disturbing other targets and locking type
@@ -106,22 +106,22 @@ function _copyBufferToTexture(device: WebGLDevice, options: CopyBufferToTextureO
 function _copyTextureToBuffer(device: WebGLDevice, options: CopyTextureToBufferOptions): void {
   const {
     /** Texture to copy to/from. */
-    source,
+    sourceTexture,
     /**  Mip-map level of the texture to copy to/from. (Default 0) */
     mipLevel = 0,
     /** Defines which aspects of the texture to copy to/from. */
     aspect = 'all',
 
     /** Width to copy */
-    width = options.source.width,
+    width = options.sourceTexture.width,
     /** Height to copy */
-    height = options.source.height,
+    height = options.sourceTexture.height,
     depthOrArrayLayers = 0,
     /** Defines the origin of the copy - the minimum corner of the texture sub-region to copy to/from. */
     origin = [0, 0],
 
     /** Destination buffer */
-    destination,
+    destinationBuffer,
     /** Offset, in bytes, from the beginning of the buffer to the start of the image data (default 0) */
     byteOffset = 0,
     /**
@@ -148,10 +148,10 @@ function _copyTextureToBuffer(device: WebGLDevice, options: CopyTextureToBufferO
   }
 
   // Asynchronous read (PIXEL_PACK_BUFFER) is WebGL2 only feature
-  const {framebuffer, destroyFramebuffer} = getFramebuffer(source);
+  const {framebuffer, destroyFramebuffer} = getFramebuffer(sourceTexture);
   let prevHandle: WebGLFramebuffer | null | undefined;
   try {
-    const webglBuffer = destination as WEBGLBuffer;
+    const webglBuffer = destinationBuffer as WEBGLBuffer;
     const sourceWidth = width || framebuffer.width;
     const sourceHeight = height || framebuffer.height;
     const sourceParams = getTextureFormatWebGL(
@@ -220,7 +220,7 @@ export function readPixelsToBuffer(
 function _copyTextureToTexture(device: WebGLDevice, options: CopyTextureToTextureOptions): void {
   const {
     /** Texture to copy to/from. */
-    source,
+    sourceTexture,
     /**  Mip-map level of the texture to copy to (Default 0) */
     destinationMipLevel = 0,
     /** Defines which aspects of the texture to copy to/from. */
@@ -232,7 +232,7 @@ function _copyTextureToTexture(device: WebGLDevice, options: CopyTextureToTextur
     destinationOrigin = [0, 0],
 
     /** Texture to copy to/from. */
-    destination
+    destinationTexture
     /**  Mip-map level of the texture to copy to/from. (Default 0) */
     // destinationMipLevel = options.mipLevel,
     /** Defines the origin of the copy - the minimum corner of the texture sub-region to copy to/from. */
@@ -242,12 +242,12 @@ function _copyTextureToTexture(device: WebGLDevice, options: CopyTextureToTextur
   } = options;
 
   let {
-    width = options.destination.width,
-    height = options.destination.height
+    width = options.destinationTexture.width,
+    height = options.destinationTexture.height
     // depthOrArrayLayers = 0
   } = options;
 
-  const {framebuffer, destroyFramebuffer} = getFramebuffer(source);
+  const {framebuffer, destroyFramebuffer} = getFramebuffer(sourceTexture);
   const [sourceX, sourceY] = origin;
   const [destinationX, destinationY, destinationZ] = destinationOrigin;
 
@@ -261,8 +261,8 @@ function _copyTextureToTexture(device: WebGLDevice, options: CopyTextureToTextur
 
   let texture: WEBGLTexture = null;
   let textureTarget: GL;
-  if (destination instanceof WEBGLTexture) {
-    texture = destination;
+  if (destinationTexture instanceof WEBGLTexture) {
+    texture = destinationTexture;
     width = Number.isFinite(width) ? width : texture.width;
     height = Number.isFinite(height) ? height : texture.height;
     texture.bind(0);

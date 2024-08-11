@@ -30,17 +30,17 @@ export type WriteTextureOptions = {
 };
 
 export type CopyBufferToBufferOptions = {
-  source: Buffer;
+  sourceBuffer: Buffer;
   sourceOffset?: number;
-  destination: Buffer;
+  destinationBuffer: Buffer;
   destinationOffset?: number;
   size: number;
 };
 
 export type CopyBufferToTextureOptions = {
-  source: Buffer;
+  sourceBuffer: Buffer;
   byteOffset?: number;
-  destination: Texture;
+  destinationTexture: Texture;
   mipLevel?: number; //  = 0;
   origin?: [number, number, number] | number[];
   aspect?: 'all' | 'stencil-only' | 'depth-only';
@@ -51,7 +51,7 @@ export type CopyBufferToTextureOptions = {
 
 export type CopyTextureToBufferOptions = {
   /** Texture to copy to/from. */
-  source: Texture;
+  sourceTexture: Texture;
   /**  Mip-map level of the texture to copy to/from. (Default 0) */
   mipLevel?: number;
   /** Defines the origin of the copy - the minimum corner of the texture sub-region to copy to/from.
@@ -67,7 +67,7 @@ export type CopyTextureToBufferOptions = {
   origin?: number[];
 
   /** Destination buffer */
-  destination: Buffer;
+  destinationBuffer: Buffer;
   /** Offset, in bytes, from the beginning of the buffer to the start of the image data (default 0) */
   byteOffset?: number;
   /**
@@ -85,7 +85,7 @@ export type CopyTextureToBufferOptions = {
 
 export type CopyTextureToTextureOptions = {
   /** Texture to copy to/from. */
-  source: Texture;
+  sourceTexture: Texture;
   /**  Mip-map level of the texture to copy to/from. (Default 0) */
   mipLevel?: number;
   /** Defines the origin of the copy - the minimum corner of the texture sub-region to copy from. */
@@ -94,7 +94,7 @@ export type CopyTextureToTextureOptions = {
   aspect?: 'all' | 'stencil-only' | 'depth-only';
 
   /** Texture to copy to/from. */
-  destination: Texture;
+  destinationTexture: Texture;
   /**  Mip-map level of the texture to copy to/from. (Default 0) */
   destinationMipLevel?: number;
   /** Defines the origin of the copy - the minimum corner of the texture sub-region to copy to. */

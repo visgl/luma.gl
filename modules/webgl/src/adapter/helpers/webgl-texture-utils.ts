@@ -623,11 +623,11 @@ export function readPixelsToBuffer(
   // TODO(donmccurdy): Do we have tests to confirm this is working?
   const commandEncoder = source.device.createCommandEncoder();
   commandEncoder.copyTextureToBuffer({
-    source: source as Texture,
+    sourceTexture: source as Texture,
     width: sourceWidth,
     height: sourceHeight,
     origin: [sourceX, sourceY],
-    destination: webglBufferTarget,
+    destinationBuffer: webglBufferTarget,
     byteOffset: targetByteOffset
   });
   commandEncoder.destroy();
@@ -645,8 +645,8 @@ export function readPixelsToBuffer(
  */
 // eslint-disable-next-line complexity, max-statements
 export function copyToTexture(
-  source: Framebuffer | Texture,
-  target: Texture | GL,
+  sourceTexture: Framebuffer | Texture,
+  destinationTexture: Texture | GL,
   options?: {
     sourceX?: number;
     sourceY?: number;
@@ -676,7 +676,7 @@ export function copyToTexture(
     height // defaults to target height
   } = options || {};
 
-  const {framebuffer, deleteFramebuffer} = getFramebuffer(source);
+  const {framebuffer, deleteFramebuffer} = getFramebuffer(sourceTexture);
   // assert(framebuffer);
   const webglFramebuffer = framebuffer;
   const {device, handle} = webglFramebuffer;
@@ -693,8 +693,8 @@ export function copyToTexture(
   // assert(target);
   let texture: WEBGLTexture | null = null;
   let textureTarget: GL;
-  if (target instanceof WEBGLTexture) {
-    texture = target;
+  if (destinationTexture instanceof WEBGLTexture) {
+    texture = destinationTexture;
     width = Number.isFinite(width) ? width : texture.width;
     height = Number.isFinite(height) ? height : texture.height;
     texture?.bind(0);

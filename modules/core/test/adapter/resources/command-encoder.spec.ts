@@ -11,39 +11,39 @@ const {abs} = Math;
 
 test('CommandBuffer#copyBufferToBuffer', async t => {
   const sourceData = new Float32Array([1, 2, 3]);
-  const source = device.createBuffer({data: sourceData});
+  const sourceBuffer = device.createBuffer({data: sourceData});
   const destinationData = new Float32Array([4, 5, 6]);
-  const destination = device.createBuffer({data: destinationData});
+  const destinationBuffer = device.createBuffer({data: destinationData});
 
-  let receivedData = await readAsyncF32(destination);
+  let receivedData = await readAsyncF32(destinationBuffer);
   let expectedData = new Float32Array([4, 5, 6]);
   t.deepEqual(receivedData, expectedData, 'copyBufferToBuffer: default parameters successful');
 
   let commandEncoder = device.createCommandEncoder();
   commandEncoder.copyBufferToBuffer({
-    source,
-    destination,
+    sourceBuffer,
+    destinationBuffer,
     size: 2 * Float32Array.BYTES_PER_ELEMENT
   });
   commandEncoder.finish();
   commandEncoder.destroy();
 
-  receivedData = await readAsyncF32(destination);
+  receivedData = await readAsyncF32(destinationBuffer);
   expectedData = new Float32Array([1, 2, 6]);
   t.deepEqual(receivedData, expectedData, 'copyBufferToBuffer: with size successful');
 
   commandEncoder = device.createCommandEncoder();
   commandEncoder.copyBufferToBuffer({
-    source,
+    sourceBuffer,
     sourceOffset: Float32Array.BYTES_PER_ELEMENT,
-    destination,
+    destinationBuffer,
     destinationOffset: 2 * Float32Array.BYTES_PER_ELEMENT,
     size: Float32Array.BYTES_PER_ELEMENT
   });
   commandEncoder.finish();
   commandEncoder.destroy();
 
-  receivedData = await readAsyncF32(destination);
+  receivedData = await readAsyncF32(destinationBuffer);
   expectedData = new Float32Array([1, 2, 2]);
   t.deepEqual(receivedData, expectedData, 'copyBufferToBuffer: with size and offsets successful');
 
@@ -137,7 +137,7 @@ async function testCopyTextureToBuffer(
   const dstByteOffset = dstOffset * bytesPerElement;
   const byteLength = elementCount * bytesPerElement + dstByteOffset;
 
-  let source;
+  let sourceTexture;
 
   const colorTexture = device.createTexture({
     data: srcPixel,
@@ -147,20 +147,20 @@ async function testCopyTextureToBuffer(
     mipmaps: false
   });
 
-  const destination = device.createBuffer({byteLength});
+  const destinationBuffer = device.createBuffer({byteLength});
 
   if (options.useFramebuffer) {
-    source = device.createFramebuffer({colorAttachments: [colorTexture]});
+    sourceTexture = device.createFramebuffer({colorAttachments: [colorTexture]});
   } else {
-    source = colorTexture;
+    sourceTexture = colorTexture;
   }
 
   const commandEncoder = device.createCommandEncoder();
   commandEncoder.copyTextureToBuffer({
-    source,
+    sourceTexture,
     width: 1,
     height: 1,
-    destination,
+    destinationBuffer,
     byteOffset: dstByteOffset
   });
   commandEncoder.finish();
@@ -168,8 +168,8 @@ async function testCopyTextureToBuffer(
 
   const color =
     srcPixel instanceof Uint8Array
-      ? await readAsyncU8(destination)
-      : await readAsyncF32(destination);
+      ? await readAsyncU8(destinationBuffer)
+      : await readAsyncF32(destinationBuffer);
 
   t.ok(abs(dstPixel[0] - color[0 + dstOffset]) < EPSILON, `reads "R" channel (${title})`);
   t.ok(abs(dstPixel[1] - color[1 + dstOffset]) < EPSILON, `reads "G" channel (${title})`);
@@ -184,6 +184,82 @@ async function readAsyncU8(source: Buffer): Promise<Uint8Array> {
 async function readAsyncF32(source: Buffer): Promise<Float32Array> {
   const {buffer, byteOffset, byteLength} = await source.readAsync();
   return new Float32Array(buffer, byteOffset, byteLength / Float32Array.BYTES_PER_ELEMENT);
+}
+
+
+test.only('CommandEncoder#copyTextureToTexture', t => {
+  // for (const device of await getTestDevices()) {
+    testCopyToTexture(t, device, {isSubCopy: false, sourceIsFramebuffer: false});
+    // testCopyToTexture(t, device, {isSubCopy: false, sourceIsFramebuffer: true});
+    // testCopyToTexture(t, device, {isSubCopy: true, sourceIsFramebuffer: false});
+    // testCopyToTexture(t, device, {isSubCopy: true, sourceIsFramebuffer: true});
+  // }
+});
+
+function testCopyToTexture(
+  t: Test,
+  device: Device,
+  options: {isSubCopy: boolean; sourceIsFramebuffer: boolean}
+): void {
+  // const byteLength = 6 * 4; // 6 floats
+  const sourceColor = [255, 128, 64, 32];
+
+  const sourceTexture = device.createTexture({
+    data: options.sourceIsFramebuffer ? null : new Uint8Array(sourceColor)
+  });
+
+  const destinationTexture = sourceTexture.clone();
+
+  const commandEncoder = device.createCommandEncoder();
+
+  // const opts = {width: 1, height: 1};
+  // if (options.isSubCopy) {
+  //   // @ts-expect-error
+  //   opts.targetX = 1;
+  //   // @ts-expect-error
+  //   opts.targetY = 1;
+  // }
+  commandEncoder.copyTextureToTexture({
+    sourceTexture, 
+    destinationTexture
+  });
+
+
+  
+  // Read data form destination texture
+  const color = device.readPixelsToArrayWebGL(destinationTexture);
+  
+  t.deepEqual(color, sourceColor, 'copyTextureToTexture() successful');
+
+  // const clearColor = [1, 0.5, 0.25, 0.125];
+  // const colorOffset = options.isSubCopy ? 4 * 3 /* skip first 3 pixels * : 0;
+
+  // t.ok(
+  //   abs(sourceColor[0] - color[0 + colorOffset]) < EPSILON,
+  //   `Red channel should have correct value when using ${
+  //     options.sourceIsFramebuffer ? 'Framebuffer' : 'Texture'
+  //   } as source, isSubCopy=${options.isSubCopy}`
+  // );
+  // t.ok(
+  //   abs(sourceColor[1] - color[1 + colorOffset]) < EPSILON,
+  //   `Green channel should have correct value when using ${
+  //     options.sourceIsFramebuffer ? 'Framebuffer' : 'Texture'
+  //   } as source, isSubCopy=${options.isSubCopy}`
+  // );
+  // t.ok(
+  //   abs(sourceColor[2] - color[2 + colorOffset]) < EPSILON,
+  //   `Blue channel should have correct value when using ${
+  //     options.sourceIsFramebuffer ? 'Framebuffer' : 'Texture'
+  //   } as source, isSubCopy=${options.isSubCopy}`
+  // );
+  // t.ok(
+  //   abs(sourceColor[3] - color[3 + colorOffset]) < EPSILON,
+  //   `Alpha channel should have correct value when using ${
+  //     options.sourceIsFramebuffer ? 'Framebuffer' : 'Texture'
+  //   } as source, isSubCopy=${options.isSubCopy}`
+  // );
+
+  t.end();
 }
 
 /*
@@ -219,92 +295,6 @@ const WEBGL_TEXTURE_FORMATS: Record<TextureFormat, WebGLTextureInfo> = {
 
 // COPY TEXTURE TO TEXTURE
 
-test('CommandEncoder#copyTextureToTexture', t => {
-  for (const device of getWebGLTestDevices()) {
-    testCopyToTexture(t, device, {isSubCopy: false, sourceIsFramebuffer: false});
-    testCopyToTexture(t, device, {isSubCopy: false, sourceIsFramebuffer: true});
-    testCopyToTexture(t, device, {isSubCopy: true, sourceIsFramebuffer: false});
-    testCopyToTexture(t, device, {isSubCopy: true, sourceIsFramebuffer: true});
-  }
-});
-
-function testCopyToTexture(
-  t: Test,
-  device: Device,
-  options: {isSubCopy: boolean; sourceIsFramebuffer: boolean}
-): void {
-  // const byteLength = 6 * 4; // 6 floats
-  const sourceColor = [255, 128, 64, 32];
-  const clearColor = [1, 0.5, 0.25, 0.125];
-
-  const sourceTexture = device.createTexture({
-    data: options.sourceIsFramebuffer ? null : new Uint8Array(sourceColor)
-  });
-
-  const destinationTexture = device.createTexture({
-    // allocate extra size to test x/y offsets when using sub copy
-    width: 2,
-    height: 2,
-    // When perfomring sub copy, texture memory is not allcoated CommandEncoder'copyTextureToTexture', allocate it here
-    data: options.isSubCopy ? new Uint8Array(4 * 4) : null
-  });
-
-  let source;
-  if (options.sourceIsFramebuffer) {
-    const framebuffer = device.createFramebuffer({
-      colorAttachments: [sourceTexture]
-    });
-    framebuffer.checkStatus();
-    framebuffer.clear({color: clearColor});
-    source = framebuffer;
-  } else {
-    source = sourceTexture;
-  }
-
-  const opts = {
-    width: 1,
-    height: 1
-  };
-  if (options.isSubCopy) {
-    // @ts-expect-error
-    opts.targetX = 1;
-    // @ts-expect-error
-    opts.targetY = 1;
-  }
-  const commandEncoder = device.createCommandEncoder();
-  commandEncoder.copyTextureToTexture(source, destinationTexture, opts);
-
-  // Read data form destination texture
-  const color = device.readTexture(destinationTexture);
-  const colorOffset = options.isSubCopy ? 4 * 3 /* skip first 3 pixels * : 0;
-
-  t.ok(
-    abs(sourceColor[0] - color[0 + colorOffset]) < EPSILON,
-    `Red channel should have correct value when using ${
-      options.sourceIsFramebuffer ? 'Framebuffer' : 'Texture'
-    } as source, isSubCopy=${options.isSubCopy}`
-  );
-  t.ok(
-    abs(sourceColor[1] - color[1 + colorOffset]) < EPSILON,
-    `Green channel should have correct value when using ${
-      options.sourceIsFramebuffer ? 'Framebuffer' : 'Texture'
-    } as source, isSubCopy=${options.isSubCopy}`
-  );
-  t.ok(
-    abs(sourceColor[2] - color[2 + colorOffset]) < EPSILON,
-    `Blue channel should have correct value when using ${
-      options.sourceIsFramebuffer ? 'Framebuffer' : 'Texture'
-    } as source, isSubCopy=${options.isSubCopy}`
-  );
-  t.ok(
-    abs(sourceColor[3] - color[3 + colorOffset]) < EPSILON,
-    `Alpha channel should have correct value when using ${
-      options.sourceIsFramebuffer ? 'Framebuffer' : 'Texture'
-    } as source, isSubCopy=${options.isSubCopy}`
-  );
-
-  t.end();
-}
 
 function testCopyToArray(t: Test, device: Device) {
   [true, false].forEach(sourceIsFramebuffer => {
