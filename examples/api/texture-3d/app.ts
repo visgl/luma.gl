@@ -16,6 +16,40 @@ Volumetric 3D noise visualized using a <b>3D texture</b>.
 Uses the luma.gl <code>Texture3D</code> class.
 `;
 
+// TODO - WGSL shader is work in progress
+const source = /* WGSL */ `\
+struct Uniforms {
+  mvpMatrix : mat4x4<f32>,
+};
+
+@binding(0) @group(0) var<uniform> app : Uniforms;
+
+struct VertexInputs {
+  // CUBE GEOMETRY
+  @location(0) positions : vec4<f32>,
+};
+
+struct FragmentInputs {
+  @builtin(position) Position : vec4<f32>,
+  @location(0) fragUVW : vec3<f32>,
+}
+
+@vertex
+fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
+  var outputs : FragmentInputs;
+  outputs.Position = app.mvpMatrix * inputs.positions;
+  outputs.fragUVW = inputs.positions.xyz;
+  outputs.fragPosition = 0.5 * (inputs.positions + vec4(1.0, 1.0, 1.0, 1.0));
+  return outputs;
+}
+
+@fragment
+fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
+  // TODO - port GLSL
+  return inputs.fragPosition;
+}
+`;
+
 const vs = /* glsl */ `\
 #version 300 es
 in vec3 position;
@@ -25,9 +59,9 @@ uniform appUniforms {
   float time;
 } app;
 
-out vec3 vUV;
+out vec3 vUVW;
 void main() {
-  vUV = position.xyz + 0.5;
+  vUVW = position.xyz + 0.5;
   gl_Position = app.mvpMatrix * vec4(position, 1.0);
   gl_PointSize = 2.0;
 }`;
@@ -44,15 +78,13 @@ uniform appUniforms {
 
 uniform sampler3D uTexture;
 
-in vec3 vUV;
+in vec3 vUVW;
 out vec4 fragColor;
 
 void main() {
-  vec4 sampleColor = texture(uTexture, vUV + vec3(0.0, 0.0, app.time));
+  vec4 sampleColor = texture(uTexture, vUVW + vec3(0.0, 0.0, app.time));
   float alpha = sampleColor.r * 0.1;
-  fragColor = vec4(fract(vUV) * alpha, alpha);
-  // fragColor = vec4(fract(app.time), 0., 0., 1.);
-  fragColor *= 256.;
+  fragColor = vec4(fract(vUVW) * alpha, alpha);
 }`;
 
 type AppUniforms = {
@@ -70,6 +102,10 @@ const app: ShaderModule<AppUniforms> = {
 
 // APPLICATION
 
+/** number of points per side */
+const POINTS_PER_SIDE = 128;
+const TEXTURE_DIMENSIONS = 16;
+
 const NEAR = 0.1;
 const FAR = 10.0;
 
@@ -79,6 +115,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
   mvpMatrix = new Matrix4();
   viewMat = new Matrix4().lookAt({eye: [1, 1, 1]});
+  
   texture3d: Texture;
   cloud: Model;
 
@@ -87,52 +124,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   constructor({device}: AnimationProps) {
     super();
 
-    const noise = perlin({
-      interpolation: lerp,
-      permutation: shuffle(range(0, 255), random)
-    });
-
-    // CREATE POINT CLOUD
-    const DIMENSIONS = 32;
-    const INCREMENT = 1 / DIMENSIONS;
-
-    const positionData = new Float32Array(DIMENSIONS ** 3 * 3);
-    let positionIndex = 0;
-    let x = -0.5;
-    for (let i = 0; i < DIMENSIONS; ++i) {
-      let y = -0.5;
-      for (let j = 0; j < DIMENSIONS; ++j) {
-        let z = -0.5;
-        for (let k = 0; k < DIMENSIONS; ++k) {
-          positionData[positionIndex++] = x;
-          positionData[positionIndex++] = y;
-          positionData[positionIndex++] = z;
-          z += INCREMENT;
-        }
-        y += INCREMENT;
-      }
-      x += INCREMENT;
-    }
-
+    const positionData = createPointCloud(POINTS_PER_SIDE);
     const positionBuffer = device.createBuffer(positionData);
 
-    // CREATE 3D TEXTURE
-    const TEXTURE_DIMENSIONS = 16;
-    const NOISE_DIMENSIONS = TEXTURE_DIMENSIONS * 0.07;
-    const textureData = new Uint8Array(TEXTURE_DIMENSIONS ** 3);
-    let textureIndex = 0;
-    for (let i = 0; i < TEXTURE_DIMENSIONS; ++i) {
-      for (let j = 0; j < TEXTURE_DIMENSIONS; ++j) {
-        for (let k = 0; k < TEXTURE_DIMENSIONS; ++k) {
-          const noiseLevel = noise(
-            i / NOISE_DIMENSIONS,
-            j / NOISE_DIMENSIONS,
-            k / NOISE_DIMENSIONS
-          );
-          textureData[textureIndex++] = (0.5 + 0.5 * noiseLevel) * 255;
-        }
-      }
-    }
+    const textureData = createNoiseTexture3D(TEXTURE_DIMENSIONS);
+
     // console.log('SETTING DATA', textureData);
 
     this.texture3d = device.createTexture({
@@ -154,6 +150,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     // console.log('GETTING DATA', pixels);
 
     this.cloud = new Model(device, {
+      // source,
       vs,
       fs,
       topology: 'point-list',
@@ -173,7 +170,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         blendColorOperation: 'add',
         blendAlphaOperation: 'add',
         blendColorSrcFactor: 'one',
-        blendColorDstFactor: 'one-minus-src-alpha',
+        blendColorDstFactor: 'one-minus-src-color',
         blendAlphaSrcFactor: 'one',
         blendAlphaDstFactor: 'one-minus-src-alpha'
       }
@@ -185,6 +182,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   onRender({device, tick, aspect}: AnimationProps) {
+    // Update mvp matrix with current aspect ratio
     this.mvpMatrix
       .perspective({fovy: radians(75), aspect, near: NEAR, far: FAR})
       .multiplyRight(this.viewMat);
@@ -200,11 +198,62 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     // Draw the cubes
     const renderPass = device.beginRenderPass({
-      clearColor: [0, 0, 0, 1]
-      // clearDepth: true
+      clearColor: [0,0,0,1],
+      clearDepth: 1
     });
 
     this.cloud.draw(renderPass);
     renderPass.end();
   }
+}
+
+/** Create a cube of points */
+function createPointCloud(pointsPerSide: number): Float32Array {
+  // CREATE POINT CLOUD
+  const INCREMENT = 1 / pointsPerSide;
+
+  const positionData = new Float32Array(pointsPerSide ** 3 * 3);
+  let positionIndex = 0;
+  let x = -0.5;
+  for (let i = 0; i < pointsPerSide; ++i) {
+    let y = -0.5;
+    for (let j = 0; j < pointsPerSide; ++j) {
+      let z = -0.5;
+      for (let k = 0; k < pointsPerSide; ++k) {
+        positionData[positionIndex++] = x;
+        positionData[positionIndex++] = y;
+        positionData[positionIndex++] = z;
+        z += INCREMENT;
+      }
+      y += INCREMENT;
+    }
+    x += INCREMENT;
+  }
+  return positionData;
+}
+
+/** Create a cube of 16x16x16 noise values */
+function createNoiseTexture3D(texelsPerSide: number): Uint8Array {
+  const noise = perlin({
+    interpolation: lerp,
+    permutation: shuffle(range(0, 255), random)
+  });
+
+  // CREATE 3D TEXTURE
+  const NOISE_DIMENSIONS = texelsPerSide * 0.07;
+  const textureData = new Uint8Array(texelsPerSide ** 3);
+  let textureIndex = 0;
+  for (let i = 0; i < texelsPerSide; ++i) {
+    for (let j = 0; j < texelsPerSide; ++j) {
+      for (let k = 0; k < texelsPerSide; ++k) {
+        const noiseLevel = noise(
+          i / NOISE_DIMENSIONS,
+          j / NOISE_DIMENSIONS,
+          k / NOISE_DIMENSIONS
+        );
+        textureData[textureIndex++] = (0.5 + 0.5 * noiseLevel) * 255;
+      }
+    }
+  }
+  return textureData;
 }

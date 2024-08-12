@@ -60,6 +60,8 @@ export abstract class Shader extends Resource<ShaderProps> {
     this.source = this.props.source;
   }
 
+  abstract get asyncCompilationStatus(): Promise<'pending' | 'success' | 'error'>;
+
   /** Get compiler log asynchronously */
   abstract getCompilationInfo(): Promise<readonly CompilerMessage[]>;
 

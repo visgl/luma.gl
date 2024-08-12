@@ -317,23 +317,37 @@ export class WEBGLRenderPipeline extends RenderPipeline {
   }
 
   /** Report link status. First, check for shader compilation failures if linking fails */
-  _reportLinkStatus(status: 'success' | 'linking' | 'validation') {
+  async _reportLinkStatus(status: 'success' | 'linking' | 'validation'): Promise<void> {
     switch (status) {
       case 'success':
         return;
 
       default:
         // First check for shader compilation failures if linking fails
-        if (this.vs.compilationStatus === 'error') {
-          this.vs.debugShader();
-          throw new Error(`Error during compilation of shader ${this.vs.id}`);
+        switch (this.vs.compilationStatus) {
+          case 'error':
+            this.vs.debugShader();
+            throw new Error(`Error during compilation of shader ${this.vs.id}`);
+          case 'pending':
+            this.vs.asyncCompilationStatus.then(() => this.vs.debugShader());
+            break;
+          case 'success':
+            break;
         }
-        if (this.fs?.compilationStatus === 'error') {
-          this.fs.debugShader();
-          throw new Error(`Error during compilation of shader ${this.fs.id}`);
+
+        switch (this.fs?.compilationStatus) {
+          case 'error':
+            this.fs.debugShader();
+            throw new Error(`Error during compilation of shader ${this.fs.id}`);
+          case 'pending':
+            this.fs.asyncCompilationStatus.then(() => this.fs.debugShader());
+            break;
+          case 'success':
+            break;
         }
-        const errorLog = this.device.gl.getProgramInfoLog(this.handle);
-        throw new Error(`Error during ${status}: ${errorLog}`);
+
+        const linkErrorLog = this.device.gl.getProgramInfoLog(this.handle);
+        throw new Error(`Error during ${status}: ${linkErrorLog}`);
     }
   }
 
