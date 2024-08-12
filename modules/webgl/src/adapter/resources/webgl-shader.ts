@@ -39,6 +39,10 @@ export class WEBGLShader extends Shader {
     }
   }
 
+  get asyncCompilationStatus(): Promise<'pending' | 'success' | 'error'> {
+    return this._waitForCompilationComplete().then(() => this.compilationStatus);
+  }
+
   override async getCompilationInfo(): Promise<readonly CompilerMessage[]> {
     await this._waitForCompilationComplete();
     return this.getCompilationInfoSync();
