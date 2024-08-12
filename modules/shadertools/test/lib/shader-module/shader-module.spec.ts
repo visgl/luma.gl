@@ -84,7 +84,7 @@ void main() {
   t.end();
 });
 
-test.only('initializeShaderModule', t => {
+test('initializeShaderModule', t => {
   const module: ShaderModule = {
     name: 'test-shader-module',
     propTypes: {
