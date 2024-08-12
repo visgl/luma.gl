@@ -1,7 +1,7 @@
 import {NumberArray} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate, Model, CubeGeometry} from '@luma.gl/engine';
-import {_ShaderInputs, loadImageBitmap, AsyncTexture} from '@luma.gl/engine';
+import {ShaderInputs, loadImageBitmap, AsyncTexture} from '@luma.gl/engine';
 import {phongMaterial, lighting, ShaderModule} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
 
@@ -143,7 +143,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
   model: Model;
 
-  shaderInputs = new _ShaderInputs<{
+  shaderInputs = new ShaderInputs<{
     app: typeof app.props;
     lighting: typeof lighting.props;
     phongMaterial: typeof phongMaterial.props;

@@ -17,7 +17,7 @@ vec4 vibrance_filterColor(vec4 color) {
   return color;
 }
 
-vec4 vibrance_filterColor(vec4 color, vec2 texSize, vec2 texCoord) {
+vec4 vibrance_filterColor_ext(vec4 color, vec2 texSize, vec2 texCoord) {
   return vibrance_filterColor(color);
 }
 `;
@@ -37,7 +37,7 @@ export const vibrance = {
   props: {} as VibranceProps,
   uniforms: {} as VibranceUniforms,
   name: 'vibrance',
-  uniformPropTypes: {
+  propTypes: {
     amount: {value: 0, min: -1, max: 1}
   },
   fs,

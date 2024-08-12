@@ -5,7 +5,7 @@
 import type {ShaderUniformType, NumberArray} from '@luma.gl/core';
 import {Device} from '@luma.gl/core';
 import type {AnimationProps, ModelProps} from '@luma.gl/engine';
-import {AnimationLoopTemplate, CubeGeometry, Timeline, Model, _ShaderInputs} from '@luma.gl/engine';
+import {AnimationLoopTemplate, CubeGeometry, Timeline, Model, ShaderInputs} from '@luma.gl/engine';
 // @ts-ignore TODO - ib added this to solve module resolution mess
 import {makeRandomGenerator, _PickingManager as PickingManager} from '@luma.gl/engine';
 import {} from '@luma.gl/engine';
@@ -223,7 +223,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   timelineChannels: Record<string, number>;
   picker: PickingManager;
 
-  shaderInputs = new _ShaderInputs<{
+  shaderInputs = new ShaderInputs<{
     app: AppUniforms;
     dirlight: typeof dirlight.props;
     picking: typeof picking.props;

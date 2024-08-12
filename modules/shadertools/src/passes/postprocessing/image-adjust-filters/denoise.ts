@@ -59,7 +59,7 @@ export const denoise = {
   uniformTypes: {
     strength: 'f32'
   },
-  uniformPropTypes: {
+  propTypes: {
     strength: {format: 'f32', value: 0.5, min: 0, max: 1}
     // strength: {..., adjust: (strength: number): number => 0.53 + 200 * Math.pow(1 - strength, 4) // TODO - JS preprocessing
   },

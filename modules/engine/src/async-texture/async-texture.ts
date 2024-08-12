@@ -126,13 +126,21 @@ export class AsyncTexture {
    * @note Does not copy contents of the texture
    * @todo Abort pending promise and create a texture with the new size?
    */
-  resize(size: {width: number; height: number}): void {
+  resize(size: {width: number; height: number}): boolean {
     if (!this.isReady) {
       throw new Error('Cannot resize texture before it is ready');
     }
-    if (this.texture) {
-      this.texture = this.texture.clone(size);
+
+    if (size.width === this.texture.width && size.height === this.texture.height) {
+      return false;
     }
+
+    if (this.texture) {
+      const texture = this.texture;
+      this.texture = texture.clone(size);
+      texture.destroy();
+    }
+    return true;
   }
 }
 

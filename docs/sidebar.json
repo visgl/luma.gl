@@ -105,6 +105,7 @@
         "label": "@luma.gl/engine",
         "items": [
           "api-reference/engine/model",
+          "api-reference/engine/shader-inputs",
           "api-reference/engine/animation-loop",
           "api-reference/engine/animation-loop-template",
           "api-reference/engine/async-texture",
@@ -118,6 +119,7 @@
           "api-reference/engine/scenegraph/scenegraph-node",
           "api-reference/engine/pipeline-factory",
           "api-reference/engine/shader-factory",
+          "api-reference/engine/passes/shader-pass-renderer",
           "api-reference/engine/compute/swap",
           "api-reference/engine/compute/computation",
           "api-reference/engine/compute/buffer-transform",

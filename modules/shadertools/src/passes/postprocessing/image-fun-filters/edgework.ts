@@ -89,7 +89,7 @@ export const edgeWork = {
   dependencies: [random],
   fs,
 
-  uniformPropTypes: {
+  propTypes: {
     radius: {value: 2, min: 1, softMax: 50},
     delta: {value: [1, 0], private: true}
   },
@@ -98,12 +98,12 @@ export const edgeWork = {
     {
       // @ts-expect-error
       sampler: 'edgeWork_sampleColor1',
-      uniformPropTypes: {delta: [1, 0]}
+      propTypes: {delta: [1, 0]}
     },
     {
       // @ts-expect-error
       sampler: 'edgeWork_sampleColor2',
-      uniformPropTypes: {delta: [0, 1]}
+      propTypes: {delta: [0, 1]}
     }
   ]
 } as const satisfies ShaderPass<EdgeWorkProps, EdgeWorkProps>;

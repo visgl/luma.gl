@@ -48,7 +48,7 @@ export type ShaderModule<
   /** Uniform shader types @note: Both order and types MUST match uniform block declarations in shader */
   uniformTypes?: Record<keyof UniformsT, UniformFormat>;
   /** Uniform JS prop types  */
-  uniformPropTypes?: Record<keyof UniformsT, UniformInfo>;
+  propTypes?: Record<keyof UniformsT, UniformInfo>;
   /** Default uniform values */
   defaultUniforms?: Required<UniformsT>; // Record<keyof UniformsT, UniformValue>;
 
@@ -100,7 +100,7 @@ export function initializeShaderModule(module: ShaderModule): void {
   initializeShaderModules(module.dependencies || []);
 
   const {
-    uniformPropTypes = {},
+    propTypes = {},
     deprecations = [],
     // defines = {},
     inject = {}
@@ -111,11 +111,30 @@ export function initializeShaderModule(module: ShaderModule): void {
     parsedDeprecations: parseDeprecationDefinitions(deprecations)
   };
 
-  if (uniformPropTypes) {
-    instance.propValidators = makePropValidators(uniformPropTypes);
+  if (propTypes) {
+    instance.propValidators = makePropValidators(propTypes);
   }
 
   module.instance = instance;
+
+  /* TODO(ib) - we need to apply the original prop types to the default uniforms
+  if (propTypes) {
+    const defaultProps = Object.entries(propTypes).reduce(
+      (obj: ShaderModule['props'], [key, propType]) => {
+        // @ts-expect-error
+        const value = propType?.value;
+        if (value) {
+          // @ts-expect-error
+          obj[key] = value;
+        }
+        return obj;
+      },
+      {} as ShaderModule['props']
+    );
+    const defaultUniforms = getShaderModuleUniforms(module, defaultProps);
+    module.defaultUniforms = {...module.defaultUniforms, ...defaultUniforms} as any;
+  }
+  */
 }
 
 /** Convert module props to uniforms */

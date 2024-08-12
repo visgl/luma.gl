@@ -66,7 +66,7 @@ export const ink = {
   uniformTypes: {
     strength: 'f32'
   },
-  uniformPropTypes: {
+  propTypes: {
     strength: {value: 0.25, min: 0, softMax: 1}
   },
   passes: [{sampler: true}]

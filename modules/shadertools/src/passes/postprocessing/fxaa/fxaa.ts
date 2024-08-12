@@ -687,7 +687,7 @@ export type FXAAUniforms = {};
  */
 export const fxaa = {
   name: 'fxaa',
-  uniformPropTypes: {},
+  propTypes: {},
   fs,
   passes: [{sampler: true}],
   getUniforms: props => props

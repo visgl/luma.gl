@@ -3,15 +3,15 @@
 const {Model, pbr} = luma;
 
 const VERTEX_SHADER = `\
-attribute vec4 a_Position;
+in vec4 a_Position;
 #ifdef HAS_NORMALS
-attribute vec4 a_Normal;
+in vec4 a_Normal;
 #endif
 #ifdef HAS_TANGENTS
-attribute vec4 a_Tangent;
+in vec4 a_Tangent;
 #endif
 #ifdef HAS_UV
-attribute vec2 a_UV;
+in vec2 a_UV;
 #endif
 
 void main()

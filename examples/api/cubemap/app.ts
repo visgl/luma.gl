@@ -11,7 +11,7 @@ import {
   ModelProps,
   loadImageBitmap,
   AsyncTexture,
-  _ShaderInputs
+  ShaderInputs
 } from '@luma.gl/engine';
 import {ShaderModule} from '@luma.gl/shadertools';
 import {Matrix4, radians} from '@math.gl/core';
@@ -165,11 +165,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   cube: RoomCube;
   prism: Prism;
 
-  roomShaderInputs = new _ShaderInputs<{
+  roomShaderInputs = new ShaderInputs<{
     app: typeof app.props;
   }>({app});
 
-  prismShaderInputs = new _ShaderInputs<{
+  prismShaderInputs = new ShaderInputs<{
     app: typeof app.props;
   }>({app});
 

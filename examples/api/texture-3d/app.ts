@@ -2,7 +2,7 @@
 
 import type {AnimationProps} from '@luma.gl/engine';
 import {Texture} from '@luma.gl/core';
-import {AnimationLoopTemplate, Model, _ShaderInputs, makeRandomGenerator} from '@luma.gl/engine';
+import {AnimationLoopTemplate, Model, ShaderInputs, makeRandomGenerator} from '@luma.gl/engine';
 import {ShaderModule} from '@luma.gl/shadertools';
 import {Matrix4, radians, NumericArray} from '@math.gl/core';
 import {perlin, lerp, shuffle, range} from './perlin';
@@ -82,7 +82,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   texture3d: Texture;
   cloud: Model;
 
-  shaderInputs = new _ShaderInputs<{app: typeof app.props}>({app});
+  shaderInputs = new ShaderInputs<{app: typeof app.props}>({app});
 
   constructor({device}: AnimationProps) {
     super();

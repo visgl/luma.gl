@@ -130,8 +130,8 @@ test.skip('picking#isVertexPicked(highlightedObjectColor invalid)', async t => {
   }
 
   const VS = `\
-  attribute vec3 vertexColor;
-  varying float isPicked;
+  in vec3 vertexColor;
+  out float isPicked;
 
   void main()
   {
@@ -187,8 +187,8 @@ test.skip('picking#picking_setPickingColor', async t => {
     return;
   }
   const VS = `\
-  attribute vec3 vertexColor;
-  varying float rgbColorASelected;
+  in vec3 vertexColor;
+  out float rgbColorASelected;
 
   void main()
   {

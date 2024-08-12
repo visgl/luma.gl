@@ -14,8 +14,8 @@ const TEST_CASES = [
   {
     title: 'Attributes and sampler uniform',
     vs: `\
-    attribute vec3 positions;
-    attribute vec2 texCoords;
+    in vec3 positions;
+    in vec2 texCoords;
   
     uniform mat4 uMVP;
     varying vec2 vUV;
@@ -32,7 +32,7 @@ const TEST_CASES = [
     varying vec2 vUV;
   
     void main(void) {
-      gl_FragColor = texture2D(uTexture, vec2(vUV.x, 1.0 - vUV.y));
+      fragColor = texture2D(uTexture, vec2(vUV.x, 1.0 - vUV.y));
     }
    `,
     expected: { 
@@ -54,7 +54,7 @@ const TEST_CASES = [
     skipWebgl1: true,
     varyings: ['vPosition', 'gl_Position'],
     vs: `
-attribute vec3 positions;
+in vec3 positions;
 uniform mat4 uMVMatrix;
 uniform mat4 uPMatrix;
 varying vec3 vPosition;
@@ -66,7 +66,7 @@ void main(void) {
     `,
     fs: `
 void main(void) {
-  gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+  fragColor = vec4(1.0, 1.0, 1.0, 1.0);
 }
     `,
     expected: { 
@@ -145,7 +145,7 @@ void main(void) {
 ];
 
 const vs = `
-attribute vec3 positions;
+in vec3 positions;
 uniform mat4 uMVMatrix;
 uniform mat4 uPMatrix;
 varying vec3 vPosition;
@@ -158,7 +158,7 @@ void main(void) {
 
 const fs = `
 void main(void) {
-  gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+  fragColor = vec4(1.0, 1.0, 1.0, 1.0);
 }
 `;
 

@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Resource} from '@luma.gl/core';
+import type {BufferProps, FramebufferProps} from '@luma.gl/core';
+import {Device, Resource, Buffer, Framebuffer} from '@luma.gl/core';
 
 /**
  * Helper class for working with repeated transformations / computations
@@ -32,5 +33,60 @@ export class Swap<T extends Resource<any>> {
     const current = this.current;
     this.current = this.next;
     this.next = current;
+  }
+}
+
+/** Helper for managing double-buffered framebuffers */
+export class SwapFramebuffers extends Swap<Framebuffer> {
+  constructor(device: Device, props: FramebufferProps) {
+    super({current: device.createFramebuffer(props), next: device.createFramebuffer(props)});
+  }
+
+  /**
+   * Resizes the Framebuffers.
+   * @returns true if the size changed, otherwise exiting framebuffers were preserved
+   * @note any contents are not preserved!
+   */
+  resize(size: {width: number; height: number}): boolean {
+    if (size.width === this.current.width && size.height === this.current.height) {
+      return false;
+    }
+    const {current, next} = this;
+
+    this.current = current.clone(size);
+    current.destroy();
+
+    this.next = next.clone(size);
+    next.destroy();
+
+    return true;
+  }
+}
+
+/** Helper for managing double-buffered GPU buffers */
+export class SwapBuffers extends Swap<Buffer> {
+  constructor(device: Device, props: BufferProps) {
+    super({current: device.createBuffer(props), next: device.createBuffer(props)});
+  }
+
+  /**
+   * Resizes the Buffers.
+   * @returns true if the size changed, otherwise exiting buffers were preserved.
+   * @note any contents are not preserved!
+   */
+  resize(props: {byteLength: number}) {
+    if (props.byteLength === this.current.byteLength) {
+      return false;
+    }
+
+    const {current, next} = this;
+
+    this.current = current.clone(props);
+    current.destroy();
+
+    this.next = next.clone(props);
+    next.destroy();
+
+    return true;
   }
 }

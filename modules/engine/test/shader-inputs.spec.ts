@@ -5,7 +5,6 @@
 import test from 'tape-promise/tape';
 import {Texture} from '../../core/src/index';
 import {picking, ShaderModule} from '../../shadertools/src/index';
-// import {_ShaderInputs as ShaderInputs} from '@luma.gl/engine';
 import {ShaderInputs} from '../src/shader-inputs';
 
 test('ShaderInputs#picking', t => {
@@ -70,7 +69,7 @@ test('ShaderInputs#dependencies', t => {
     name: 'custom',
     dependencies: [picking],
     uniformTypes: {color: 'vec3<f32>'},
-    uniformPropTypes: {color: {value: [0, 0, 0]}}
+    propTypes: {color: {value: [0, 0, 0]}}
   };
 
   const shaderInputs = new ShaderInputs<{
@@ -100,7 +99,7 @@ test('ShaderInputs#bindings', t => {
     const custom: ShaderModule<CustomProps> = {
       name: 'custom',
       uniformTypes: {color: 'vec3<f32>'},
-      uniformPropTypes: {color: {value: [0, 0, 0]}}
+      propTypes: {color: {value: [0, 0, 0]}}
     };
     if (callback) {
       custom.getUniforms = ({color, colorTexture}: CustomProps): CustomProps => {

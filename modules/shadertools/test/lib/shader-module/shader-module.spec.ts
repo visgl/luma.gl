@@ -51,8 +51,8 @@ test('checkShader', t => {
   initializeShaderModule(shaderModule);
   const testShader = `
 uniform vec4 viewMatrix;
-attribute vec3 instancePositions;
-varying vec4 vPos;
+in vec3 instancePositions;
+out vec4 vPos;
 void main() {
   vPos = viewMatrix * vec4(instancePositions, 1.0);
   gl_Position = project(instancePositions);
@@ -87,7 +87,7 @@ void main() {
 test('initializeShaderModule', t => {
   const module: ShaderModule = {
     name: 'test-shader-module',
-    uniformPropTypes: {
+    propTypes: {
       // @ts-expect-error
       center: [0.5, 0.5],
       strength: {type: 'number', value: 0.3, min: 0, max: 1},

@@ -9,7 +9,7 @@ import {createTestContext} from '@luma.gl/test-utils';
 const gl = createTestContext();
 
 const VS = `
-attribute vec3 positions;
+in vec3 positions;
 uniform mat4 uMVMatrix;
 uniform mat4 uPMatrix;
 void main(void) {
@@ -18,8 +18,9 @@ void main(void) {
 `;
 
 const FS = `
+out vec4 fragColor;
 void main(void) {
-  gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+  fragColor = vec4(1.0, 1.0, 1.0, 1.0);
 }
 `;
 

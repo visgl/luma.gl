@@ -17,12 +17,16 @@ export function getFragmentShaderForRenderPass(options: {
   const {shaderPass, action, shadingLanguage} = options;
   switch (action) {
     case 'filter':
-      let func = `${shaderPass.name}_filterColor`;
-      return shadingLanguage === 'wgsl' ? getFilterShaderWGSL(func) : getFilterShaderGLSL(func);
+      const filterFunc = `${shaderPass.name}_filterColor_ext`;
+      return shadingLanguage === 'wgsl'
+        ? getFilterShaderWGSL(filterFunc)
+        : getFilterShaderGLSL(filterFunc);
 
     case 'sample':
-      func = `${shaderPass.name}_sampleColor`;
-      return shadingLanguage === 'wgsl' ? getSamplerShaderWGSL(func) : getSamplerShaderGLSL(func);
+      const samplerFunc = `${shaderPass.name}_sampleColor`;
+      return shadingLanguage === 'wgsl'
+        ? getSamplerShaderWGSL(samplerFunc)
+        : getSamplerShaderGLSL(samplerFunc);
 
     default:
       throw new Error(`${shaderPass.name} no fragment shader generated for shader pass`);
@@ -80,38 +84,46 @@ fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4f {
 /** Get a filtering GLSL fragment shader */
 function getFilterShaderGLSL(func: string) {
   return /* glsl */ `\
-uniform sampler2D texture;
-uniform vec2 texSize;
+#version 300 es
 
-varying vec2 position;
-varying vec2 coordinate;
-varying vec2 uv;
+uniform sampler2D sourceTexture;
+
+in vec2 position;
+in vec2 coordinate;
+in vec2 uv;
+
+out vec4 fragColor;
 
 void main() {
   vec2 texCoord = coordinate;
-  vec2 texSize = textureSize(texture, 0);
+  ivec2 iTexSize = textureSize(sourceTexture, 0);
+  vec2 texSize = vec2(float(iTexSize.x), float(iTexSize.y));
 
-  gl_FragColor = texture2D(texture, texCoord);
-  gl_FragColor = ${func}(gl_FragColor, texSize, texCoord);
+  fragColor = texture(sourceTexture, texCoord);
+  fragColor = ${func}(fragColor, texSize, texCoord);
 }
 `;
 }
 
 /** Get a sampling GLSL fragment shader */
 function getSamplerShaderGLSL(func: string) {
-  return /* glsl */ `\  
-uniform sampler2D texture;
-// uniform vec2 texSize;
+  return /* glsl */ `\
+#version 300 es
 
-varying vec2 position;
-varying vec2 coordinate;
-varying vec2 uv;
+uniform sampler2D sourceTexture;
+
+in vec2 position;
+in vec2 coordinate;
+in vec2 uv;
+
+out vec4 fragColor;
 
 void main() {
   vec2 texCoord = coordinate;
-  vec2 texSize = textureSize(texture, 0);
+  ivec2 iTexSize = textureSize(sourceTexture, 0);
+  vec2 texSize = vec2(float(iTexSize.x), float(iTexSize.y));
 
-  gl_FragColor = ${func}(texture, texSize, texCoord);
+  fragColor = ${func}(sourceTexture, texSize, texCoord);
 }
 `;
 }
