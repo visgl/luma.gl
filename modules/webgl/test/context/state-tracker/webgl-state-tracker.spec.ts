@@ -7,8 +7,12 @@ import {createTestDevice} from '@luma.gl/test-utils';
 
 import type {WebGLDevice} from '@luma.gl/webgl';
 
-import {getGLParameters, setGLParameters, resetGLParameters, WEBGLTexture} from '@luma.gl/webgl';
-import {WebGLStateTracker} from '@luma.gl/webgl';
+import {
+  getGLParameters,
+  setGLParameters,
+  resetGLParameters,
+  WebGLStateTracker
+} from '@luma.gl/webgl';
 
 import {
   GL_PARAMETER_DEFAULTS,
@@ -214,7 +218,7 @@ test('WebGLStateTracker#not cached parameters', t => {
 
   t.is(gl.getParameter(gl.TEXTURE_BINDING_2D), null, 'no bound texture');
 
-  const tex = device.createTexture({}) as WEBGLTexture;
+  const tex = device.createTexture({});
   tex.bind();
   t.is(gl.getParameter(gl.TEXTURE_BINDING_2D), tex.handle, 'bound texture');
 

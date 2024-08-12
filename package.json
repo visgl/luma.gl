@@ -15,14 +15,13 @@
     "3d"
   ],
   "workspaces": [
-    "examples/*/*",
     "modules/*"
   ],
   "browser": {
     "fs": false
   },
   "scripts": {
-    "bootstrap": "yarn && ocular-bootstrap",
+    "bootstrap": "ocular-bootstrap",
     "postinstall": "echo postinstall",
     "start": "open https://luma.gl/docs/getting-started",
     "clean": "ocular-clean",
@@ -53,17 +52,17 @@
     "@probe.gl/test-utils": "^4.0.8",
     "@types/tape-promise": "^4.0.1 ",
     "eslint-plugin-tree-shaking": "^1.9.2",
-    "math.gl": "^3.0.0",
     "nyc": "^15.1.0",
-    "ocular-dev-tools": "2.0.0-alpha.33",
+    "ocular-dev-tools": "2.0.0-alpha.34",
     "pre-commit": "^1.2.2",
     "pre-push": "^0.1.1",
     "puppeteer": "^22.0.0",
     "tap-spec": "^5.0.0"
   },
   "resolutions": {
-    "typescript": "^5.3.0",
-    "tsconfig-paths": "^3.9.0"
+    "typescript": "^5.5.0",
+    "tsconfig-paths": "^3.9.0",
+    "ts-patch": "^3.2.1"
   },
   "pre-commit": [
     "test-fast"
@@ -73,6 +72,6 @@
   },
   "volta": {
     "node": "20.11.1",
-    "yarn": "4.1.1"
+    "yarn": "4.4.0"
   }
 }

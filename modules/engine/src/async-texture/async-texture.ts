@@ -1,9 +1,12 @@
 // luma.gl, MIT license
 // Copyright (c) vis.gl contributors
 
-import type {Texture, TextureProps, Sampler, TextureView, Device} from '@luma.gl/core';
-
 import type {
+  Texture,
+  TextureProps,
+  Sampler,
+  TextureView,
+  Device,
   Texture1DData,
   Texture2DData,
   Texture3DData,
@@ -117,11 +120,28 @@ export class AsyncTexture {
     this.destroyed = true;
   }
 
-  // We could implement resize by replacing the texture
-  // resize(width: number, height: number): boolean {
-  //   throw new Error('Not implemented');
-  //   // return false;
-  // }
+  /**
+   * Textures are immutable and cannot be resized after creation,
+   * but we can create a similar texture with the same parameters but a new size.
+   * @note Does not copy contents of the texture
+   * @todo Abort pending promise and create a texture with the new size?
+   */
+  resize(size: {width: number; height: number}): boolean {
+    if (!this.isReady) {
+      throw new Error('Cannot resize texture before it is ready');
+    }
+
+    if (size.width === this.texture.width && size.height === this.texture.height) {
+      return false;
+    }
+
+    if (this.texture) {
+      const texture = this.texture;
+      this.texture = texture.clone(size);
+      texture.destroy();
+    }
+    return true;
+  }
 }
 
 // HELPERS
@@ -130,11 +150,17 @@ export class AsyncTexture {
 async function awaitAllPromises(x: any): Promise<any> {
   x = await x;
   if (Array.isArray(x)) {
-    return x.map(awaitAllPromises);
+    return await Promise.all(x.map(awaitAllPromises));
   }
   if (x && typeof x === 'object' && x.constructor === Object) {
-    const entries = Object.entries(x).map(([key, value]) => [key, awaitAllPromises(value)]);
-    return Object.fromEntries(entries);
+    const object: Record<string, any> = x;
+    const values = await Promise.all(Object.values(object));
+    const keys = Object.keys(object);
+    const resolvedObject: Record<string, any> = {};
+    for (let i = 0; i < keys.length; i++) {
+      resolvedObject[keys[i]] = values[i];
+    }
+    return resolvedObject;
   }
   return x;
 }

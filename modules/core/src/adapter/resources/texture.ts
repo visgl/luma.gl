@@ -45,14 +45,16 @@ export type TextureLevelData = {
 
 /**
  * Built-in data types that can be used to initialize textures
- * @note WebGL supports OffscreenCanvas but seems WebGPU does not?
+ * @note ImageData can be used for 8 bit data via Uint8ClampedArray
  */
 export type ExternalImage =
-  | ImageData
   | ImageBitmap
+  | ImageData
   | HTMLImageElement
   | HTMLVideoElement
-  | HTMLCanvasElement;
+  | VideoFrame
+  | HTMLCanvasElement
+  | OffscreenCanvas;
 
 export type TextureLevelSource = TextureLevelData | ExternalImage;
 
@@ -81,7 +83,7 @@ export type TextureArrayData = TextureData[];
 /** Array of 6 face textures */
 export type TextureCubeArrayData = Record<TextureCubeFace, TextureData>[];
 
-type TextureDataProps =
+export type TextureDataProps =
   | Texture1DProps
   | Texture2DProps
   | Texture3DProps
@@ -89,12 +91,12 @@ type TextureDataProps =
   | TextureCubeProps
   | TextureCubeArrayProps;
 
-type Texture1DProps = {dimension: '1d'; data?: Texture1DData | null};
-type Texture2DProps = {dimension?: '2d'; data?: Texture2DData | null};
-type Texture3DProps = {dimension: '3d'; data?: Texture3DData | null};
-type TextureArrayProps = {dimension: '2d-array'; data?: TextureArrayData | null};
-type TextureCubeProps = {dimension: 'cube'; data?: TextureCubeData | null};
-type TextureCubeArrayProps = {dimension: 'cube-array'; data: TextureCubeArrayData | null};
+export type Texture1DProps = {dimension: '1d'; data?: Texture1DData | null};
+export type Texture2DProps = {dimension?: '2d'; data?: Texture2DData | null};
+export type Texture3DProps = {dimension: '3d'; data?: Texture3DData | null};
+export type TextureArrayProps = {dimension: '2d-array'; data?: TextureArrayData | null};
+export type TextureCubeProps = {dimension: 'cube'; data?: TextureCubeData | null};
+export type TextureCubeArrayProps = {dimension: 'cube-array'; data: TextureCubeArrayData | null};
 
 /** Texture properties */
 export type TextureProps = ResourceProps &
@@ -121,6 +123,36 @@ export type TextureProps = ResourceProps &
     /** @deprecated - this is implicit from format */
     compressed?: boolean;
   };
+
+/** Options for Texture.copyExternalImage */
+export type CopyExternalImageOptions = {
+  /** Image */
+  image: ExternalImage;
+  /** Copy from image x offset (default 0) */
+  sourceX?: number;
+  /** Copy from image y offset (default 0) */
+  sourceY?: number;
+  /** Copy area width (default 1) */
+  width?: number;
+  /** Copy area height (default 1) */
+  height?: number;
+  /** Copy depth (default 1) */
+  depth?: number;
+  /** Which mip-level to copy into (default 0) */
+  mipLevel?: number;
+  /** Start copying into offset x (default 0) */
+  x?: number;
+  /** Start copying into offset y (default 0) */
+  y?: number;
+  /** Start copying from depth layer z (default 0) */
+  z?: number;
+  /** When copying into depth stencil textures (default 'all') */
+  aspect?: 'all' | 'stencil-only' | 'depth-only';
+  /** Specific color space of image data */
+  colorSpace?: 'srgb';
+  /** premultiplied  */
+  premultipliedAlpha?: boolean;
+};
 
 /**
  * Abstract Texture interface
@@ -184,17 +216,20 @@ export abstract class Texture extends Resource<TextureProps> {
       (typeof ImageData !== 'undefined' && data instanceof ImageData) ||
       (typeof ImageBitmap !== 'undefined' && data instanceof ImageBitmap) ||
       (typeof HTMLImageElement !== 'undefined' && data instanceof HTMLImageElement) ||
+      (typeof HTMLVideoElement !== 'undefined' && data instanceof HTMLVideoElement) ||
+      (typeof VideoFrame !== 'undefined' && data instanceof VideoFrame) ||
       (typeof HTMLCanvasElement !== 'undefined' && data instanceof HTMLCanvasElement) ||
-      (typeof HTMLVideoElement !== 'undefined' && data instanceof HTMLVideoElement)
+      (typeof OffscreenCanvas !== 'undefined' && data instanceof OffscreenCanvas)
     );
   }
 
   /** Determine size (width and height) of provided image data */
-  static getExternalImageSize(data: ExternalImage): {width: number; height: number} | null {
+  static getExternalImageSize(data: ExternalImage): {width: number; height: number} {
     if (
       (typeof ImageData !== 'undefined' && data instanceof ImageData) ||
       (typeof ImageBitmap !== 'undefined' && data instanceof ImageBitmap) ||
-      (typeof HTMLCanvasElement !== 'undefined' && data instanceof HTMLCanvasElement)
+      (typeof HTMLCanvasElement !== 'undefined' && data instanceof HTMLCanvasElement) ||
+      (typeof OffscreenCanvas !== 'undefined' && data instanceof OffscreenCanvas)
     ) {
       return {width: data.width, height: data.height};
     }
@@ -204,17 +239,21 @@ export abstract class Texture extends Resource<TextureProps> {
     if (typeof HTMLVideoElement !== 'undefined' && data instanceof HTMLVideoElement) {
       return {width: data.videoWidth, height: data.videoHeight};
     }
-    return null;
+    if (typeof VideoFrame !== 'undefined' && data instanceof VideoFrame) {
+      // TODO: is this the right choice for width and height?
+      return {width: data.displayWidth, height: data.displayHeight};
+    }
+    throw new Error('Unknown image type');
   }
 
   /** Check if texture data is a typed array */
-  isTextureLevelData(data: TextureData): data is TextureLevelData {
+  static isTextureLevelData(data: TextureData): data is TextureLevelData {
     const typedArray = (data as TextureLevelData)?.data;
     return ArrayBuffer.isView(typedArray);
   }
 
   /** Get the size of the texture described by the provided TextureData */
-  getTextureDataSize(
+  static getTextureDataSize(
     data: TextureData | TextureCubeData | TextureArrayData | TextureCubeArrayData | TypedArray
   ): {width: number; height: number} | null {
     if (!data) {
@@ -225,25 +264,26 @@ export abstract class Texture extends Resource<TextureProps> {
     }
     // Recurse into arrays (array of miplevels)
     if (Array.isArray(data)) {
-      return this.getTextureDataSize(data[0]);
+      return Texture.getTextureDataSize(data[0]);
     }
     if (Texture.isExternalImage(data)) {
       return Texture.getExternalImageSize(data);
     }
     if (data && typeof data === 'object' && data.constructor === Object) {
-      const untypedData = data as unknown as Record<string, number>;
+      const textureDataArray = Object.values(data) as Texture2DData[];
+      const untypedData = textureDataArray[0] as any;
       return {width: untypedData.width, height: untypedData.height};
     }
     throw new Error('texture size deduction failed');
   }
 
   /** Calculate the number of mip levels for a texture of width and height */
-  getMipLevelCount(width: number, height: number): number {
+  static getMipLevelCount(width: number, height: number): number {
     return Math.floor(Math.log2(Math.max(width, height))) + 1;
   }
 
   /** Convert luma.gl cubemap face constants to depth index */
-  getCubeFaceDepth(face: TextureCubeFace): number {
+  static getCubeFaceDepth(face: TextureCubeFace): number {
     // prettier-ignore
     switch (face) {
         case '+X': return  0;
@@ -270,7 +310,7 @@ export abstract class Texture extends Resource<TextureProps> {
     // Calculate size, if not provided
     if (this.props.width === undefined || this.props.height === undefined) {
       // @ts-ignore
-      const size = this.getTextureDataSize(this.props.data);
+      const size = Texture.getTextureDataSize(this.props.data);
       this.width = size?.width || 1;
       this.height = size?.height || 1;
     }
@@ -286,7 +326,7 @@ export abstract class Texture extends Resource<TextureProps> {
     // TODO - Should we clamp to 1-getMipLevelCount?
     this.mipLevels =
       this.props.mipLevels === 'pyramid'
-        ? this.getMipLevelCount(this.width, this.height)
+        ? Texture.getMipLevelCount(this.width, this.height)
         : this.props.mipLevels || 1;
 
     // TODO - perhaps this should be set on async write completion?
@@ -298,4 +338,46 @@ export abstract class Texture extends Resource<TextureProps> {
 
   /** Set sampler props associated with this texture */
   abstract setSampler(sampler?: Sampler | SamplerProps): void;
+
+  /** Copy external image data into the texture */
+  abstract copyExternalImage(options: CopyExternalImageOptions): {width: number; height: number};
+
+  /**
+   * Create a new texture with the same parameters and optionally, a different size
+   * @note Textures are immutable and cannot be resized after creation, but we can create a similar texture with the same parameters but a new size.
+   * @note Does not copy contents of the texture
+   */
+  clone(size?: {width: number; height: number}): Texture {
+    return this.device.createTexture({...this.props, ...size});
+  }
+
+  /** Default options */
+  protected static defaultCopyExternalImageOptions: Required<CopyExternalImageOptions> = {
+    image: undefined!,
+    sourceX: 0,
+    sourceY: 0,
+    width: undefined!,
+    height: undefined!,
+    depth: 1,
+    mipLevel: 0,
+    x: 0,
+    y: 0,
+    z: 0,
+    aspect: 'all',
+    colorSpace: 'srgb',
+    premultipliedAlpha: false
+  };
+
+  /** Ensure we have integer coordinates */
+  protected static _fixProps(props: TextureProps): TextureProps {
+    const newProps = {...props};
+    const {width, height} = newProps;
+    if (typeof width === 'number') {
+      newProps.width = Math.max(1, Math.ceil(width));
+    }
+    if (typeof height === 'number') {
+      newProps.height = Math.max(1, Math.ceil(height));
+    }
+    return newProps;
+  }
 }

@@ -4,6 +4,96 @@
 
 Major new release that includes WebGPU support
 
+### 9.1.0-alpha.15
+
+- fix: luma8 sampler param compatibility (#2180)
+- chore(examples): Extract picking helper class from instancing example (#2178)
+- fix(examples): Restore transform example (#2177)
+- fix(examples): Fix TransformFeedback example (#2176)
+- feat(engine): New Swap class for managing pairs of buffers/textures for compute (#2175)
+- chore: Avoid use of luma.registerAdapters() (#2174)
+
+### 9.1.0-alpha.14
+
+- fix: texture integer coordinates, resize utils (#2167)
+- docs: A first pass on Transform docs (#2165)
+- chore: Add test case for Framebuffer.resize (#2163)
+
+### 9.1.0-alpha.13
+
+- fix: Framebuffer resize (#2161)
+- chore: Upgrade to yarn@4.4.0 (#2160)
+
+### 9.1.0-alpha.12
+
+- chore(shadertools): Port lights and phongMaterial modules to WGSL (#2158)
+
+### 9.1.0-alpha.11
+
+- feat(examples): Partial WGSL port of lighting example (#2157)
+- fix(examples): Fix website resolution and dirlight use in instancing example (#2156)
+- chore: Upgrade to math.gl@4.1.0-alpha.3 (#2155)
+- chore: Fix peerExtensions (#2154)
+- fix(webgpu): animation example, dirlight module (#2153)
+- chore: log warnings in deprecated code paths (accessor, clear) (#2151)
+- fix(webgl): Fix texture.copyExternalImage() with offsets (#2150)
+- chore(webgl): Join texture utility files (#2149)
+
+### 9.1.0-alpha.10
+
+- (tag: v9.1.0-alpha.10) v9.1.0-alpha.10
+- fix: Update path to Khronos glTF assets (#2148)
+- feat: Add Texture.copyExternalImage() function (#2147)
+- docs: Texture doc cleanup (#2146)
+- docs: AsyncTexture (#2145)
+
+### 9.1.0-alpha.9
+
+- fix: Decouple examples from install and build (#2143)
+- chore: Remove an unnecessary yarn install (#2142)
+- chore(gltf): Include @loaders.gl/core dependency (#2106)
+- chore(workspaces): Fix workspace deps with 9.1.0-alpha.6 bump (#2141)
+- chore(deps): bump braces from 3.0.2 to 3.0.3 in /website (#2128)
+
+### 9.1.0-alpha.8
+### 9.1.0-alpha.7
+### 9.1.0-alpha.6
+
+- chore: Partially restore texture-3d example (#2136)
+- chore: Bump to typescript@5.5 (#2127)
+- fix(webgl): Fix cubemap example (#2129)
+- chore(deps): bump katex from 0.16.9 to 0.16.10 in /website (#2098)
+- chore(deps): bump braces from 3.0.2 to 3.0.3 (#2103)
+- chore: typo in AnimationLoopTemplate doc (#2126)
+- types: Add BindingValue to getUniforms return type (#2122)
+- shadertools: Resolve dependencies in ShaderInputs (#2121)
+- chore(webgpu): Fix webgpu texture creation for 8 bit data inputs (#2125)
+- chore: Restore texture tests (#2123)
+- chore: Remove spurios device.getSize() (#2120)
+- fix(engine): AsyncTexture nested promises (#2119)
+- fix(webgl): Apply default viewport sizes (#2116)
+- chore: Bump to yarn v4.3.1 (#2117)
+- feat(engine): ShaderInputs bindings (#2104)
+- fix(examples):  Fix typos of `registerAdapters` (#2102)
+- feat(core): Add `blend` parameter (#2061)
+- feat(webgl): Add WEBGL1 extensions to forced WebGL2 contexts (#2092)
+- fix: CI (#2094)
+- Create CODE_OF_CONDUCT.md (#2097)
+- chore: update CI setup (#2079)
+- chore(shadertools): Remove glsl string template (#2091)
+- feat(core): Adapters methods now async (#2090)
+- chore(core): Convert luma object to singleton (#2083)
+- fix(webgl): Fix spectorjs (#2082)
+- feat(core): Break out Adapter class from Device (#2085)
+- chore(core): Clean up WebGLStateTracker (#2087)
+- docs(core): RenderPass (#2081)
+- chore(core): luma.ts cleanup (#2086)
+
+### 9.1.0-alpha.5
+### 9.1.0-alpha.4
+### 9.1.0-alpha.3
+Failed publish
+
 ### 9.1.0-alpha.2
 
 - fix(webgl): reset buffer binding in WEBGLVertexArray.setBuffer (#2075)

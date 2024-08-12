@@ -7,6 +7,7 @@ import {webglDevice} from '@luma.gl/test-utils';
 
 import {BufferTransform} from '@luma.gl/engine';
 import {picking, getShaderModuleUniforms} from '@luma.gl/shadertools';
+import {UniformValue} from '@luma.gl/core';
 
 /* eslint-disable camelcase */
 
@@ -129,8 +130,8 @@ test.skip('picking#isVertexPicked(highlightedObjectColor invalid)', async t => {
   }
 
   const VS = `\
-  attribute vec3 vertexColor;
-  varying float isPicked;
+  in vec3 vertexColor;
+  out float isPicked;
 
   void main()
   {
@@ -186,8 +187,8 @@ test.skip('picking#picking_setPickingColor', async t => {
     return;
   }
   const VS = `\
-  attribute vec3 vertexColor;
-  varying float rgbColorASelected;
+  in vec3 vertexColor;
+  out float rgbColorASelected;
 
   void main()
   {
@@ -203,13 +204,13 @@ test.skip('picking#picking_setPickingColor', async t => {
   const rgbColorASelected = webglDevice.createBuffer({byteLength: vertexCount * 4});
 
   const transform = new BufferTransform(webglDevice, {
-    attributes: {vertexColor},
-    bufferLayout: [{name: 'vertexColor', format: 'float32'}],
-    feedbackBuffers: {rgbColorASelected},
     vs: VS,
-    varyings: ['rgbColorASelected'],
+    bufferLayout: [{name: 'vertexColor', format: 'float32'}],
+    outputs: ['rgbColorASelected'],
     modules: [picking],
-    vertexCount
+    vertexCount,
+    attributes: {vertexColor},
+    feedbackBuffers: {rgbColorASelected}
   });
 
   await Promise.all(
@@ -222,7 +223,7 @@ test.skip('picking#picking_setPickingColor', async t => {
           pickingThreshold: testCase.pickingThreshold
         },
         {}
-      );
+      ) as Record<string, UniformValue>;
 
       transform.model.setUniforms(uniforms);
       transform.run();

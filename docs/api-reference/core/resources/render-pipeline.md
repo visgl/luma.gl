@@ -66,7 +66,7 @@ vertexArray.setAttributes({
 pipeline.draw({vertexArray, ...});
 ```
 
-Creating a pipeline for transform feedback, specifying which varyings to use
+Creating a pipeline for WebGL transform feedback, specifying which varyings to use
 
 ```ts
 const pipeline = device.createRenderPipeline({vs, fs, varyings: ['gl_Position']});

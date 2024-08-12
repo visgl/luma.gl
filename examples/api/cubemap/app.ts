@@ -1,13 +1,19 @@
-import {Device} from '@luma.gl/core';
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
+import {Device, NumberArray} from '@luma.gl/core';
 import {
   AnimationLoopTemplate,
   AnimationProps,
   CubeGeometry,
   Model,
   ModelProps,
-  loadImage,
-  AsyncTexture
+  loadImageBitmap,
+  AsyncTexture,
+  ShaderInputs
 } from '@luma.gl/engine';
+import {ShaderModule} from '@luma.gl/shadertools';
 import {Matrix4, radians} from '@math.gl/core';
 
 const INFO_HTML = `
@@ -19,28 +25,64 @@ surface
 
 // ROOM CUBE
 
+type AppUniforms = {
+  modelMatrix: NumberArray;
+  viewMatrix: NumberArray;
+  projectionMatrix: NumberArray;
+  eyePosition: NumberArray;
+};
+
+const app: ShaderModule<AppUniforms, AppUniforms> = {
+  name: 'app',
+  uniformTypes: {
+    modelMatrix: 'mat4x4<f32>',
+    viewMatrix: 'mat4x4<f32>',
+    projectionMatrix: 'vec3<f32>',
+    eyePosition: 'vec3<f32>'
+  }
+};
+
 class RoomCube extends Model {
   constructor(device: Device, props: Omit<ModelProps, 'vs' | 'fs'>) {
-    const vs = /* glsl */ `\
+    super(device, {
+      ...props,
+      id: 'room-cube',
+      geometry: new CubeGeometry(),
+      vs: RoomCube.vs,
+      fs: RoomCube.fs
+    });
+  }
+
+  static vs = /* glsl */ `\
 #version 300 es
 in vec3 positions;
 
-uniform mat4 uModel;
-uniform mat4 uView;
-uniform mat4 uProjection;
+uniform appUniforms {
+  mat4 modelMatrix;
+  mat4 viewMatrix;
+  mat4 projectionMatrix;
+} app;
 
 out vec3 vPosition;
 
 void main(void) {
-  gl_Position = uProjection * uView * uModel * vec4(positions, 1.0);
+  gl_Position = app.projectionMatrix * app.viewMatrix * app.modelMatrix * vec4(positions, 1.0);
   vPosition = positions;
 }
-`;
-    const fs = /* glsl */ `\
+  `;
+
+  static fs = /* glsl */ `\
 #version 300 es
 precision highp float;
 
+uniform appUniforms {
+  mat4 modelMatrix;
+  mat4 viewMatrix;
+  mat4 projectionMatrix;
+} app;
+
 uniform samplerCube uTextureCube;
+
 in vec3 vPosition;
 out vec4 fragColor;
 
@@ -48,58 +90,73 @@ void main(void) {
   // The outer cube just samples the texture cube directly
   fragColor = texture(uTextureCube, normalize(vPosition));
 }
-`;
-
-    super(device, {...props, geometry: new CubeGeometry(), fs, vs});
-  }
+  `;
 }
 
 class Prism extends Model {
   constructor(device: Device, props: Omit<ModelProps, 'vs' | 'fs'>) {
-    const vs = /* glsl */ `\
+    super(device, {
+      ...props,
+      id: 'prism',
+      geometry: new CubeGeometry({indices: true}),
+      vs: Prism.vs,
+      fs: Prism.fs
+    });
+  }
+
+  static vs = /* glsl */ `\
 #version 300 es
 in vec3 positions;
 in vec3 normals;
 in vec2 texCoords;
 
-uniform mat4 uModel;
-uniform mat4 uView;
-uniform mat4 uProjection;
-
 out vec3 vPosition;
 out vec3 vNormal;
 out vec2 vUV;
 
+uniform appUniforms {
+  mat4 modelMatrix;
+  mat4 viewMatrix;
+  mat4 projectionMatrix;
+  vec3 eyePosition;
+} app;
+
 void main(void) {
-  gl_Position = uProjection * uView * uModel * vec4(positions, 1.0);
-  vPosition = vec3(uModel * vec4(positions,1));
-  vNormal = vec3(uModel * vec4(normals, 0));
+  gl_Position = app.projectionMatrix * app.viewMatrix * app.modelMatrix * vec4(positions, 1.0);
+  vPosition = vec3(app.modelMatrix * vec4(positions, 1.0));
+  vNormal = normalize(vec3(app.modelMatrix * vec4(normals, 0.0)));
   vUV = texCoords;
 }
-`;
-    const fs = /* glsl */ `\
+  `;
+
+  static fs = /* glsl */ `\
 #version 300 es
 precision highp float;
-
-uniform sampler2D uTexture;
-uniform samplerCube uTextureCube;
-uniform vec3 uEyePosition;
 
 in vec3 vPosition;
 in vec3 vNormal;
 in vec2 vUV;
+
 out vec4 fragColor;
+
+uniform appUniforms {
+  mat4 modelMatrix;
+  mat4 viewMatrix;
+  mat4 projectionMatrix;
+  vec3 eyePosition;
+} app;
+
+uniform sampler2D uTexture;
+uniform samplerCube uTextureCube;
 
 void main(void) {
   vec4 color = texture(uTexture, vec2(vUV.x, 1.0 - vUV.y));
-  vec3 reflectedDir = reflect(normalize(vPosition - uEyePosition), vNormal);
+  vec3 reflectedDir = reflect(normalize(vPosition - app.eyePosition), vNormal);
   vec4 reflectedColor = texture(uTextureCube, reflectedDir);
 
-  fragColor = color; //  * reflectedColor;
+  fragColor = mix(color, reflectedColor, 0.8);
 }
-`;
-    super(device, {...props, geometry: new CubeGeometry(), vs, fs});
-  }
+  `;
 }
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
@@ -108,25 +165,38 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   cube: RoomCube;
   prism: Prism;
 
+  roomShaderInputs = new ShaderInputs<{
+    app: typeof app.props;
+  }>({app});
+
+  prismShaderInputs = new ShaderInputs<{
+    app: typeof app.props;
+  }>({app});
+
   constructor({device}: AnimationProps) {
     super();
 
-    const cubemap = device.createTexture({
+    const cubemap = new AsyncTexture(device, {
       dimension: 'cube',
       mipmaps: true,
       // @ts-ignore
-      data: {
-        '+X': loadImage('sky-posx.png'),
-        '-X': loadImage('sky-negx.png'),
-        '+Y': loadImage('sky-posy.png'),
-        '-Y': loadImage('sky-negy.png'),
-        '+Z': loadImage('sky-posz.png'),
-        '-Z': loadImage('sky-negz.png')
+      data: (async () => ({
+        '+X': await loadImageBitmap('sky-posx.png'),
+        '-X': await loadImageBitmap('sky-negx.png'),
+        '+Y': await loadImageBitmap('sky-posy.png'),
+        '-Y': await loadImageBitmap('sky-negy.png'),
+        '+Z': await loadImageBitmap('sky-posz.png'),
+        '-Z': await loadImageBitmap('sky-negz.png')
+      }))(),
+      sampler: {
+        magFilter: 'linear',
+        minFilter: 'linear',
+        mipmapFilter: 'nearest'
       }
     });
 
     const texture = new AsyncTexture(device, {
-      data: loadImage('vis-logo.png'),
+      data: loadImageBitmap('vis-logo.png'),
       mipmaps: true,
       sampler: {
         magFilter: 'linear',
@@ -136,11 +206,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
 
     this.cube = new RoomCube(device, {
+      shaderInputs: this.roomShaderInputs,
       bindings: {
         uTextureCube: cubemap
-      },
-      uniforms: {
-        uModel: new Matrix4().scale([20, 20, 20])
       },
       parameters: {
         depthWriteEnabled: true,
@@ -149,6 +217,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
 
     this.prism = new Prism(device, {
+      shaderInputs: this.prismShaderInputs,
       bindings: {
         uTexture: texture,
         uTextureCube: cubemap
@@ -168,24 +237,34 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   onRender({device, aspect, tick}: AnimationProps): void {
     const eyePosition = [5, -3, 5];
     const view = new Matrix4().lookAt({eye: eyePosition});
-    const projection = new Matrix4().perspective({fovy: radians(75), aspect});
-
-    const renderPass = device.beginRenderPass({
-      clearColor: [0, 0, 0, 1]
-      // clearDepth: true
+    const projection = new Matrix4().perspective({
+      fovy: radians(45),
+      aspect,
+      near: 0.001,
+      far: 1000
     });
 
-    this.cube.setUniforms({
-      uView: view,
-      uProjection: projection
+    const renderPass = device.beginRenderPass({
+      clearColor: [0, 0, 0, 1],
+      clearDepth: 1
+    });
+
+    this.roomShaderInputs.setProps({
+      app: {
+        viewMatrix: view,
+        projectionMatrix: projection,
+        modelMatrix: new Matrix4().scale([20, 20, 20])
+      }
     });
     this.cube.draw(renderPass);
 
-    this.prism.setUniforms({
-      uEyePosition: eyePosition,
-      uView: view,
-      uProjection: projection,
-      uModel: new Matrix4().rotateX(tick * 0.01).rotateY(tick * 0.013)
+    this.prismShaderInputs.setProps({
+      app: {
+        eyePosition,
+        viewMatrix: view,
+        projectionMatrix: projection,
+        modelMatrix: new Matrix4().rotateX(tick * 0.01).rotateY(tick * 0.013)
+      }
     });
     this.prism.draw(renderPass);
 

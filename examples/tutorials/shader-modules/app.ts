@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {Buffer, NumberArray} from '@luma.gl/core';
-import {AnimationLoopTemplate, AnimationProps, Model, _ShaderInputs} from '@luma.gl/engine';
+import {AnimationLoopTemplate, AnimationProps, Model, ShaderInputs} from '@luma.gl/engine';
 import {ShaderModule} from '@luma.gl/shadertools';
 
 const INFO_HTML = `
@@ -84,10 +84,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = INFO_HTML;
 
   model1: Model;
-  shaderInputs1 = new _ShaderInputs<{color: ColorModuleProps}>({color});
+  shaderInputs1 = new ShaderInputs<{color: ColorModuleProps}>({color});
 
   model2: Model;
-  shaderInputs2 = new _ShaderInputs<{color: ColorModuleProps}>({color});
+  shaderInputs2 = new ShaderInputs<{color: ColorModuleProps}>({color});
 
   positionBuffer: Buffer;
 

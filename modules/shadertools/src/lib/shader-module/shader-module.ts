@@ -2,14 +2,20 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {NumberArray} from '@math.gl/types';
+import type {NumericArray} from '@math.gl/types';
+import {Sampler, Texture} from '@luma.gl/core';
 import type {UniformFormat} from '../../types';
-import {PropType, PropValidator} from '../filters/prop-types';
-import {ShaderInjection} from '../shader-assembly/shader-injections';
-import {makePropValidators, getValidatedProperties} from '../filters/prop-types';
-import {normalizeInjections} from '../shader-assembly/shader-injections';
+import {
+  PropType,
+  PropValidator,
+  makePropValidators,
+  getValidatedProperties
+} from '../filters/prop-types';
+import {ShaderInjection, normalizeInjections} from '../shader-assembly/shader-injections';
 
-export type UniformValue = number | boolean | Readonly<NumberArray>; // Float32Array> | Readonly<Int32Array> | Readonly<Uint32Array> | Readonly<number[]>;
+export type BindingValue = Buffer | Texture | Sampler;
+export type UniformValue = number | boolean | Readonly<NumericArray>;
+// Float32Array> | Readonly<Int32Array> | Readonly<Uint32Array> | Readonly<number[]>;
 
 export type UniformInfo = {
   format?: UniformFormat;
@@ -17,12 +23,13 @@ export type UniformInfo = {
 
 /**
  * A shader module definition object
+ *
  * @note Needs to be initialized with `initializeShaderModules`
  */
 export type ShaderModule<
   PropsT extends Record<string, unknown> = Record<string, unknown>,
   UniformsT extends Record<string, UniformValue> = Record<string, UniformValue>,
-  BindingsT extends Record<string, unknown> = {}
+  BindingsT extends Record<string, BindingValue> = Record<string, BindingValue>
 > = {
   /** Used for type inference not for values */
   props?: PropsT;
@@ -41,13 +48,12 @@ export type ShaderModule<
   /** Uniform shader types @note: Both order and types MUST match uniform block declarations in shader */
   uniformTypes?: Record<keyof UniformsT, UniformFormat>;
   /** Uniform JS prop types  */
-  uniformPropTypes?: Record<keyof UniformsT, UniformInfo>;
+  propTypes?: Record<keyof UniformsT, UniformInfo>;
   /** Default uniform values */
   defaultUniforms?: Required<UniformsT>; // Record<keyof UniformsT, UniformValue>;
 
-  /** Function that maps settings to uniforms */
-  // getUniforms?: (settings?: Partial<SettingsT>, prevUniforms?: any /* UniformsT */) => UniformsT;
-  getUniforms?: (settings?: any, prevUniforms?: any) => Record<string, UniformValue>;
+  /** Function that maps props to uniforms & bindings */
+  getUniforms?: (props?: any, oldProps?: any) => Record<string, BindingValue | UniformValue>;
 
   /** uniform buffers, textures, samplers, storage, ... */
   bindings?: Record<keyof BindingsT, {location: number; type: 'texture' | 'sampler' | 'uniforms'}>;
@@ -94,7 +100,7 @@ export function initializeShaderModule(module: ShaderModule): void {
   initializeShaderModules(module.dependencies || []);
 
   const {
-    uniformPropTypes = {},
+    propTypes = {},
     deprecations = [],
     // defines = {},
     inject = {}
@@ -105,11 +111,30 @@ export function initializeShaderModule(module: ShaderModule): void {
     parsedDeprecations: parseDeprecationDefinitions(deprecations)
   };
 
-  if (uniformPropTypes) {
-    instance.propValidators = makePropValidators(uniformPropTypes);
+  if (propTypes) {
+    instance.propValidators = makePropValidators(propTypes);
   }
 
   module.instance = instance;
+
+  /* TODO(ib) - we need to apply the original prop types to the default uniforms
+  if (propTypes) {
+    const defaultProps = Object.entries(propTypes).reduce(
+      (obj: ShaderModule['props'], [key, propType]) => {
+        // @ts-expect-error
+        const value = propType?.value;
+        if (value) {
+          // @ts-expect-error
+          obj[key] = value;
+        }
+        return obj;
+      },
+      {} as ShaderModule['props']
+    );
+    const defaultUniforms = getShaderModuleUniforms(module, defaultProps);
+    module.defaultUniforms = {...module.defaultUniforms, ...defaultUniforms} as any;
+  }
+  */
 }
 
 /** Convert module props to uniforms */
@@ -117,14 +142,14 @@ export function getShaderModuleUniforms<
   ShaderModuleT extends ShaderModule<Record<string, unknown>, Record<string, UniformValue>>
 >(
   module: ShaderModuleT,
-  props: ShaderModuleT['props'],
+  props?: ShaderModuleT['props'],
   oldUniforms?: ShaderModuleT['uniforms']
-): ShaderModuleT['uniforms'] {
+): Record<string, BindingValue | UniformValue> {
   initializeShaderModule(module);
 
   const uniforms = oldUniforms || {...module.defaultUniforms};
   // If module has a getUniforms function, use it
-  if (module.getUniforms) {
+  if (props && module.getUniforms) {
     return module.getUniforms(props, uniforms);
   }
 

@@ -11,7 +11,7 @@ Highlighting allows application to specify a picking color corresponding to an o
 In your vertex shader, your inform the picking module what object we are currently rendering by supplying a picking color, perhaps from an attribute.
 
 ```
-attribute vec3 aPickingColor;
+in vec3 aPickingColor;
 main() {
   picking_setColor(aPickingColor);
   ...
@@ -22,8 +22,8 @@ In your fragment shader, you simply apply (call) the `picking_filterColor` filte
 
 ```
 main() {
-  gl_FragColor = ...
-  gl_FragColor = picking_filterColor(color);
+  fragColor = ...
+  fragColor = picking_filterColor(color);
 }
 ```
 
@@ -31,8 +31,8 @@ If highlighting is not needed, you simply apply (call) the `picking_filterPickin
 
 ```
 main() {
-  gl_FragColor = ...
-  gl_FragColor = picking_filterPickingColor(gl_FragColor);
+  fragColor = ...
+  fragColor = picking_filterPickingColor(fragColor);
 }
 ```
 
@@ -40,10 +40,10 @@ If additional filters need to be applied on the non-picking color (vertex or hig
 
 ```
 main() {
-  gl_FragColor = ...
-  gl_FragColor = picking_filterHighlightColor(gl_FragColor);
-   ... apply any filters on gl_FragColor ...
- gl_FragColor = picking_filterPickingColor(gl_FragColor);
+  fragColor = ...
+  fragColor = picking_filterHighlightColor(fragColor);
+   ... apply any filters on fragColor ...
+ fragColor = picking_filterPickingColor(fragColor);
 }
 ```
 

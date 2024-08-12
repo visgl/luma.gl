@@ -14,7 +14,8 @@ import type {
   Texture3DData,
   TextureCubeData,
   TextureArrayData,
-  TextureCubeArrayData
+  TextureCubeArrayData,
+  ExternalImage
 } from '@luma.gl/core';
 import {Texture} from '@luma.gl/core';
 
@@ -50,19 +51,9 @@ export class WebGPUTexture extends Texture {
   // }
 
   constructor(device: WebGPUDevice, props: TextureProps) {
+    props = Texture._fixProps(props);
     super(device, props);
-
     this.device = device;
-
-    if (props.data instanceof Promise) {
-      props.data.then(resolvedImageData => {
-        // @ts-expect-error
-        this.props = {...this.props, data: resolvedImageData};
-        this.initialize(this.props);
-      });
-      return;
-    }
-
     this.initialize(props);
   }
 
@@ -82,7 +73,11 @@ export class WebGPUTexture extends Texture {
     this.handle.label ||= this.id;
 
     if (this.props.data) {
-      this.setData({data: this.props.data});
+      if (Texture.isExternalImage(this.props.data)) {
+        this.copyExternalImage({image: this.props.data});
+      } else {
+        this.setData({data: this.props.data});
+      }
     }
 
     this.width = this.handle.width;
@@ -177,13 +172,19 @@ export class WebGPUTexture extends Texture {
     throw new Error('not implemented');
   }
 
-  setData(options: {data: any}) {
-    return this.setImage({source: options.data});
+  setData(options: {data: any}): {width: number; height: number} {
+    if (ArrayBuffer.isView(options.data)) {
+      const clampedArray = new Uint8ClampedArray(options.data.buffer);
+      // TODO - pass through src data color space as ImageData Options?
+      const image = new ImageData(clampedArray, this.width, this.height);
+      return this.copyExternalImage({image});
+    }
+
+    throw new Error('Texture.setData: Use CommandEncoder to upload data to texture in WebGPU');
   }
 
-  /** Set image */
-  setImage(options: {
-    source: ImageBitmap | HTMLCanvasElement | OffscreenCanvas;
+  copyExternalImage(options: {
+    image: ExternalImage;
     width?: number;
     height?: number;
     depth?: number;
@@ -197,28 +198,30 @@ export class WebGPUTexture extends Texture {
     colorSpace?: 'srgb';
     premultipliedAlpha?: boolean;
   }): {width: number; height: number} {
+    const size = Texture.getExternalImageSize(options.image);
+    const opts = {...Texture.defaultCopyExternalImageOptions, ...size, ...options};
     const {
-      source,
-      width = options.source.width,
-      height = options.source.height,
-      depth = 1,
-      sourceX = 0,
-      sourceY = 0,
-      mipLevel = 0,
-      x = 0,
-      y = 0,
-      z = 0,
-      aspect = 'all',
-      colorSpace = 'srgb',
-      premultipliedAlpha = false
-    } = options;
+      image,
+      sourceX,
+      sourceY,
+      width,
+      height,
+      depth,
+      mipLevel,
+      x,
+      y,
+      z,
+      aspect,
+      colorSpace,
+      premultipliedAlpha
+    } = opts;
 
     // TODO - max out width
 
     this.device.handle.queue.copyExternalImageToTexture(
       // source: GPUImageCopyExternalImage
       {
-        source,
+        source: image,
         origin: [sourceX, sourceY]
       },
       // destination: GPUImageCopyTextureTagged
@@ -280,21 +283,6 @@ export class WebGPUTexture extends Texture {
         }
       }
     }
-    return this;
-  }
-
-  setData(data): this {
-    const textureDataBuffer = this.device.handle.createBuffer({
-      size: data.byteLength,
-      usage: Buffer.COPY_DST | Buffer.COPY_SRC,
-      mappedAtCreation: true
-    });
-    new Uint8Array(textureDataBuffer.getMappedRange()).set(data);
-    textureDataBuffer.unmap();
-
-    this.setBuffer(textureDataBuffer);
-
-    textureDataBuffer.destroy();
     return this;
   }
 

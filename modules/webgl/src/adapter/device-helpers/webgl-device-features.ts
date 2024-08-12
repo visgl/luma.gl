@@ -8,8 +8,11 @@
 import {DeviceFeature, DeviceFeatures} from '@luma.gl/core';
 import {GLExtensions} from '@luma.gl/constants';
 import {getWebGLExtension} from '../../context/helpers/webgl-extensions';
-import {isTextureFeature, checkTextureFeature} from '../converters/texture-formats';
-import {TEXTURE_FEATURES} from '../converters/texture-formats';
+import {
+  isTextureFeature,
+  checkTextureFeature,
+  TEXTURE_FEATURES
+} from '../converters/texture-formats';
 
 /**
  * Defines luma.gl "feature" names and semantics
@@ -21,7 +24,6 @@ const WEBGL_FEATURES: Partial<Record<DeviceFeature, boolean | string>> = {
   // 'timestamp-query' // GPUQueryType "timestamp-query"
   // "indirect-first-instance"
   // Textures are handled by getTextureFeatures()
-  // 'depth24unorm-stencil8' // GPUTextureFormat 'depth24unorm-stencil8'
   // 'depth32float-stencil8' // GPUTextureFormat 'depth32float-stencil8'
 
   // optional WebGL features

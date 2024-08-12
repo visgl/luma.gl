@@ -142,7 +142,7 @@ export class WebGPUDevice extends Device {
     return new WebGPUBuffer(this, newProps);
   }
 
-  _createTexture(props: TextureProps): WebGPUTexture {
+  createTexture(props: TextureProps): WebGPUTexture {
     return new WebGPUTexture(this, props);
   }
 

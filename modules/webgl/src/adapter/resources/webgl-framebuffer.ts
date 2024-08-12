@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {FramebufferProps, TextureFormat} from '@luma.gl/core';
-import {Framebuffer, Texture} from '@luma.gl/core';
+import type {FramebufferProps} from '@luma.gl/core';
+import {Framebuffer} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {WebGLDevice} from '../webgl-device';
 import {WEBGLTexture} from './webgl-texture';
@@ -39,39 +39,7 @@ export class WEBGLFramebuffer extends Framebuffer {
       // Auto create textures for attachments if needed
       this.autoCreateAttachmentTextures();
 
-      /** Attach from a map of attachments */
-      // @ts-expect-error native bindFramebuffer is overridden by our state tracker
-      const prevHandle: WebGLFramebuffer | null = this.gl.bindFramebuffer(
-        GL.FRAMEBUFFER,
-        this.handle
-      );
-
-      // Walk the attachments
-      for (let i = 0; i < this.colorAttachments.length; ++i) {
-        const attachment = this.colorAttachments[i];
-        const attachmentPoint = GL.COLOR_ATTACHMENT0 + i;
-        if (attachment) {
-          this._attachTexture(attachmentPoint, attachment);
-        }
-      }
-
-      if (this.depthStencilAttachment) {
-        this._attachTexture(
-          getDepthStencilAttachmentWebGL(this.depthStencilAttachment.props.format),
-          this.depthStencilAttachment
-        );
-      }
-
-      /** Check the status */
-      // @ts-expect-error
-      if (props.check !== false) {
-        const status = this.gl.checkFramebufferStatus(GL.FRAMEBUFFER) as GL;
-        if (status !== GL.FRAMEBUFFER_COMPLETE) {
-          throw new Error(`Framebuffer ${_getFrameBufferStatus(status)}`);
-        }
-      }
-
-      this.gl.bindFramebuffer(GL.FRAMEBUFFER, prevHandle);
+      this.updateAttachments();
     }
   }
 
@@ -84,59 +52,55 @@ export class WEBGLFramebuffer extends Framebuffer {
     }
   }
 
+  protected updateAttachments(): void {
+    /** Attach from a map of attachments */
+    // @ts-expect-error native bindFramebuffer is overridden by our state tracker
+    const prevHandle: WebGLFramebuffer | null = this.gl.bindFramebuffer(
+      GL.FRAMEBUFFER,
+      this.handle
+    );
+
+    // Walk the attachments
+    for (let i = 0; i < this.colorAttachments.length; ++i) {
+      const attachment = this.colorAttachments[i];
+      if (attachment) {
+        const attachmentPoint = GL.COLOR_ATTACHMENT0 + i;
+        this._attachTextureView(attachmentPoint, attachment);
+      }
+    }
+
+    if (this.depthStencilAttachment) {
+      const attachmentPoint = getDepthStencilAttachmentWebGL(
+        this.depthStencilAttachment.props.format
+      );
+      this._attachTextureView(attachmentPoint, this.depthStencilAttachment);
+    }
+
+    /** Check the status */
+    // @ts-expect-error
+    if (this.props.check !== false) {
+      const status = this.gl.checkFramebufferStatus(GL.FRAMEBUFFER) as GL;
+      if (status !== GL.FRAMEBUFFER_COMPLETE) {
+        throw new Error(`Framebuffer ${_getFrameBufferStatus(status)}`);
+      }
+    }
+
+    this.gl.bindFramebuffer(GL.FRAMEBUFFER, prevHandle);
+  }
+
   // PRIVATE
 
   /** In WebGL we must use renderbuffers for depth/stencil attachments (unless we have extensions) */
-  protected override createDepthStencilTexture(format: TextureFormat): Texture {
-    // return new WEBGLRenderbuffer(this.device, {
-    return new WEBGLTexture(this.device, {
-      id: `${this.id}-depth-stencil`,
-      format,
-      width: this.width,
-      height: this.height,
-      mipmaps: false
-    });
-  }
-
-  /**
-   * Attachment resize is expected to be a noop if size is same
-   *
-  protected override resizeAttachments(width: number, height: number): this {
-    // for default framebuffer, just update the stored size
-    if (this.handle === null) {
-      // assert(width === undefined && height === undefined);
-      this.width = this.gl.drawingBufferWidth;
-      this.height = this.gl.drawingBufferHeight;
-      return this;
-    }
-
-    if (width === undefined) {
-      width = this.gl.drawingBufferWidth;
-    }
-    if (height === undefined) {
-      height = this.gl.drawingBufferHeight;
-    }
-
-    // TODO Not clear that this is better than default destroy/create implementation
-
-    for (const colorAttachment of this.colorAttachments) {
-      colorAttachment.texture.clone({width, height});
-    }
-    if (this.depthStencilAttachment) {
-      this.depthStencilAttachment.texture.resize({width, height});
-    }
-    return this;
-  }
-  */
-
-  /** Attach one attachment */
-  protected _attachTexture(attachmentPoint: GL, textureView: WEBGLTextureView): void {
-    // if (attachment instanceof WEBGLRenderbuffer) {
-    //   this._attachWEBGLRenderbuffer(attachmentPoint, attachment);
-    //   return attachment;
-    // }
-    this._attachTextureView(attachmentPoint, textureView);
-  }
+  // protected override createDepthStencilTexture(format: TextureFormat): Texture {
+  //   // return new WEBGLRenderbuffer(this.device, {
+  //   return new WEBGLTexture(this.device, {
+  //     id: `${this.id}-depth-stencil`,
+  //     format,
+  //     width: this.width,
+  //     height: this.height,
+  //     mipmaps: false
+  //   });
+  // }
 
   /**
    * @param attachment
@@ -155,7 +119,7 @@ export class WEBGLFramebuffer extends Framebuffer {
     switch (texture.glTarget) {
       case GL.TEXTURE_2D_ARRAY:
       case GL.TEXTURE_3D:
-        gl.framebufferTextureLayer(GL.FRAMEBUFFER, attachment, texture.glTarget, level, layer);
+        gl.framebufferTextureLayer(GL.FRAMEBUFFER, attachment, texture.handle, level, layer);
         break;
 
       case GL.TEXTURE_CUBE_MAP:
@@ -210,3 +174,34 @@ function _getFrameBufferStatus(status: GL) {
       return `${status}`;
   }
 }
+
+/**
+ * Attachment resize is expected to be a noop if size is same
+ *
+protected override resizeAttachments(width: number, height: number): this {
+  // for default framebuffer, just update the stored size
+  if (this.handle === null) {
+    // assert(width === undefined && height === undefined);
+    this.width = this.gl.drawingBufferWidth;
+    this.height = this.gl.drawingBufferHeight;
+    return this;
+  }
+
+  if (width === undefined) {
+    width = this.gl.drawingBufferWidth;
+  }
+  if (height === undefined) {
+    height = this.gl.drawingBufferHeight;
+  }
+
+  // TODO Not clear that this is better than default destroy/create implementation
+
+  for (const colorAttachment of this.colorAttachments) {
+    colorAttachment.texture.clone({width, height});
+  }
+  if (this.depthStencilAttachment) {
+    this.depthStencilAttachment.texture.resize({width, height});
+  }
+  return this;
+}
+*/

@@ -3,13 +3,13 @@
 // Copyright (c) vis.gl contributors
 
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
-import type {NumberArray} from '../../../types';
+import type {NumericArray} from '../../../types';
 import {project} from '../../project/project';
 
 /* eslint-disable camelcase */
 
 export type DirlightOptions = {
-  lightDirection?: NumberArray;
+  lightDirection?: NumericArray;
 };
 
 const DEFAULT_MODULE_OPTIONS: Required<DirlightOptions> = {

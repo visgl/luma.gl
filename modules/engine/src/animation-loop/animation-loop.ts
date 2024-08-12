@@ -77,6 +77,7 @@ export class AnimationLoop {
   _nextFramePromise: Promise<AnimationLoop> | null = null;
   _resolveNextFrame: ((animationLoop: AnimationLoop) => void) | null = null;
   _cpuStartTime: number = 0;
+  _error: Error | null = null;
 
   // _gpuTimeQuery: Query | null = null;
 
@@ -121,6 +122,23 @@ export class AnimationLoop {
   /** @deprecated Use .destroy() */
   delete(): void {
     this.destroy();
+  }
+
+  setError(error: Error): void {
+    this.props.onError(error);
+    this._error = Error();
+    const canvas = this.device?.canvasContext?.canvas;
+    if (canvas instanceof HTMLCanvasElement) {
+      const errorDiv = document.createElement('h1');
+      errorDiv.innerHTML = error.message;
+      errorDiv.style.position = 'absolute';
+      errorDiv.style.top = '20%'; // left: 50%; transform: translate(-50%, -50%);';
+      errorDiv.style.left = '10px';
+      errorDiv.style.color = 'black';
+      errorDiv.style.backgroundColor = 'red';
+      document.body.appendChild(errorDiv);
+      // canvas.style.position = 'absolute';
+    }
   }
 
   /** Flags this animation loop as needing redraw */
@@ -189,7 +207,7 @@ export class AnimationLoop {
     if (this._running) {
       // call callback
       // If stop is called immediately, we can end up in a state where props haven't been initialized...
-      if (this.animationProps) {
+      if (this.animationProps && !this._error) {
         this.props.onFinalize(this.animationProps);
       }
 
@@ -203,7 +221,7 @@ export class AnimationLoop {
 
   /** Explicitly draw a frame */
   redraw(): this {
-    if (this.device?.isLost) {
+    if (this.device?.isLost || this._error) {
       return this;
     }
 

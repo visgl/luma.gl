@@ -13,6 +13,10 @@ export class NullShader extends Shader {
     this.device = device;
   }
 
+  get asyncCompilationStatus(): Promise<any> {
+    return this.getCompilationInfo().then(() => 'success');
+  }
+
   async getCompilationInfo(): Promise<readonly CompilerMessage[]> {
     return [];
   }

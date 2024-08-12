@@ -4,8 +4,6 @@ import {luma, Device} from '@luma.gl/core';
 import {webgl2Adapter} from '@luma.gl/webgl';
 import {webgpuAdapter} from '@luma.gl/webgpu';
 
-luma.registerAdapters([webgl2Adapter, webgpuAdapter]);
-
 export type Store = {
   device?: Device;
   deviceType?: 'webgl' | 'webgpu';
@@ -27,7 +25,13 @@ function getCanvasContainer() {
 
 export async function createDevice(type: 'webgl' | 'webgpu'): Promise<Device> {
   cachedDevice[type] =
-    cachedDevice[type] || luma.createDevice({type, height: 0, container: getCanvasContainer()});
+    cachedDevice[type] ||
+    luma.createDevice({
+      adapters: [webgl2Adapter, webgpuAdapter],
+      type,
+      height: 0,
+      container: getCanvasContainer()
+    });
   return await cachedDevice[type];
 }
 

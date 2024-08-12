@@ -1,5 +1,14 @@
 <!doctype html>
 <head>
+  <script type="module">
+    import {luma} from '@luma.gl/core';
+    import {makeAnimationLoop} from '@luma.gl/engine';
+    import {webgpuAdapter} from '@luma.gl/webgpu';
+    import {webgl2Adapter} from '@luma.gl/webgl';
+    import AnimationLoopTemplate from './app.ts';
+    const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {adapters: [/* webgpuAdapter */ webgl2Adapter]});
+    animationLoop.start();
+  </script>
   <style>
     body {
       background: black;
@@ -19,20 +28,6 @@
     }
   </style>
 </head>
-<script type="module">
-  import {luma} from '@luma.gl/core';
-  import {webgl2Adapter} from '@luma.gl/webgl';
-  // import {WebGPUDevice} from '@luma.gl/webgpu';
-  import {makeAnimationLoop} from '@luma.gl/engine';
-  import AnimationLoopTemplate from './app.ts';
-
-  luma.reagisterAdapters([webgl2Adapter]);
-  // luma.reagisterAdapters([webglDevice, webgpuDevice]);
-
-  const resolution = 2;
-  const device = luma.createDevice({width: resolution * window.innerWidth, height: resolution * window.innerHeight});
-  makeAnimationLoop(AnimationLoopTemplate, {device}).start();
-</script>
 <body>
   <!-- Some test models from https://github.khronos.org/glTF-Sample-Viewer-Release -->
   <select id="model-select">

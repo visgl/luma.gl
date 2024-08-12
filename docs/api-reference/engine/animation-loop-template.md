@@ -19,10 +19,10 @@ import {AnimationLoopTemplate, ClipSpace} from '@luma.gl/engine';
 
 class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   // This resource is always a valid instance since it is initialized in constructor
-  // i.e. no need to type it as `clipSpaceQuad: ClipSpace | null = null;`` 
-  clipSpaceQuad: ClipSpace; 
+  // i.e. no need to type it as `clipSpaceQuad: ClipSpace | null = null;``
+  clipSpaceQuad: ClipSpace;
 
-  constructor({device) {
+  constructor({device}) {
     // Keys in the object returned here will be available in onRender
     this.clipSpaceQuad = new ClipSpace({gl, fs: FRAGMENT_SHADER});
   }
@@ -36,26 +36,34 @@ class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.clipSpaceQuad.setUniforms({uTime: tick * 0.01});
     this.clipSpaceQuad.draw();
   }
-});
+};
 
-const animationLoop = makeAppAnimationLoop(AppAnimationLoopTemplate).start();
+const animationLoop = makeAnimationLoop(AppAnimationLoopTemplate).start();
 ```
 
 ## Types
 
-The `AnimationLoopTemplate` class uses the `AnimationLoopProps` and `AnimationProps` type docunented in the [`AnimationLoop`](./animation-loop) page.
+### AnimationLoopTemplateProps
+
+The `AnimationLoopTemplate` constructor accepts the `AnimationLoopProps` type documented in the [`AnimationLoop`](./animation-loop) page, with the following additional options:
+
+- `adapters?`: `Adapter[]` - list of adapters used to create the device (these are forwarded to )
+
+### AnimationProps
+
+The `AnimationLoopTemplate` `onInitialize` etc methods accept the `AnimationProps` types documented in the [`AnimationLoop`](./animation-loop) page.
 
 ## Global Functions
 
 ### makeAnimationLoop
 
-Use to instantiate an `AnimateionLoopTemplate` subclass
+Use to instantiate an `AnimationLoop` from an `AnimationLoopTemplate` subclass.
 
 ```ts
 makeAnimationLoop(AnimationLoopTemplateCtor: typeof AnimationLoopTemplate, props?: MakeAnimationLoopProps) : AnimationLoop
 ```
 
-- `props` - forwarded to the `AnimationLoop` constructor.  If no `device` is passed, `makeAimationLoop()` will create one using `type: 'best-availble'`.
+- `props` - forwarded to the `AnimationLoop` constructor.  If no `device` is passed, `makeAimationLoop()` will create one using `type: 'best-available'`, using registered or supplied adaptors.
 
 ## Methods
 

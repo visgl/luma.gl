@@ -4,8 +4,12 @@
 
 import test from 'tape-promise/tape';
 import type {ShaderModule} from '@luma.gl/shadertools';
-import {initializeShaderModule, checkShaderModuleDeprecations} from '@luma.gl/shadertools';
-import {getShaderModuleUniforms, getShaderModuleSource} from '@luma.gl/shadertools';
+import {
+  initializeShaderModule,
+  checkShaderModuleDeprecations,
+  getShaderModuleUniforms,
+  getShaderModuleSource
+} from '@luma.gl/shadertools';
 
 test('ShaderModule', t => {
   let shaderModule: ShaderModule = {name: 'empty-shader-module', uniformTypes: {}};
@@ -47,8 +51,8 @@ test('checkShader', t => {
   initializeShaderModule(shaderModule);
   const testShader = `
 uniform vec4 viewMatrix;
-attribute vec3 instancePositions;
-varying vec4 vPos;
+in vec3 instancePositions;
+out vec4 vPos;
 void main() {
   vPos = viewMatrix * vec4(instancePositions, 1.0);
   gl_Position = project(instancePositions);
@@ -57,13 +61,13 @@ void main() {
 
   const log = {
     deprecatedCalled: [],
-    deprecated: function deprecated() {
-      this.deprecatedCalled.push(Array.from(arguments));
+    deprecated: function deprecated(...args) {
+      this.deprecatedCalled.push(args);
       return () => {};
     },
     removedCalled: [],
-    removed: function removed() {
-      this.removedCalled.push(Array.from(arguments));
+    removed: function removed(...args) {
+      this.removedCalled.push(args);
       return () => {};
     }
   };
@@ -83,7 +87,7 @@ void main() {
 test('initializeShaderModule', t => {
   const module: ShaderModule = {
     name: 'test-shader-module',
-    uniformPropTypes: {
+    propTypes: {
       // @ts-expect-error
       center: [0.5, 0.5],
       strength: {type: 'number', value: 0.3, min: 0, max: 1},

@@ -3,8 +3,17 @@
 // Copyright (c) vis.gl contributors
 
 import type {TypedArray} from '@math.gl/types';
-import type {DeviceProps, DeviceInfo, CanvasContextProps, TextureFormat} from '@luma.gl/core';
-import type {Buffer, Texture, Framebuffer, VertexArray, VertexArrayProps} from '@luma.gl/core';
+import type {
+  DeviceProps,
+  DeviceInfo,
+  CanvasContextProps,
+  TextureFormat,
+  Buffer,
+  Texture,
+  Framebuffer,
+  VertexArray,
+  VertexArrayProps
+} from '@luma.gl/core';
 import {Device, CanvasContext, log} from '@luma.gl/core';
 import type {GLExtensions} from '@luma.gl/constants';
 import {WebGLStateTracker} from '../context/state-tracker/webgl-state-tracker';
@@ -59,14 +68,14 @@ import {WEBGLVertexArray} from './resources/webgl-vertex-array';
 import {WEBGLTransformFeedback} from './resources/webgl-transform-feedback';
 import {WEBGLQuerySet} from './resources/webgl-query-set';
 
-import {readPixelsToArray, readPixelsToBuffer} from '../classic/copy-and-blit';
+import {readPixelsToArray, readPixelsToBuffer} from './helpers/webgl-texture-utils';
 import {
   setGLParameters,
   getGLParameters,
   resetGLParameters
 } from '../context/parameters/unified-parameter-api';
 import {withGLParameters} from '../context/state-tracker/with-parameters';
-import {clear} from '../classic/clear';
+import {clear} from '../deprecated/clear';
 import {getWebGLExtension} from '../context/helpers/webgl-extensions';
 
 /** WebGPU style Device API for a WebGL context */
@@ -194,10 +203,6 @@ export class WebGLDevice extends Device {
     return this.gl.isContextLost();
   }
 
-  getSize(): [number, number] {
-    return [this.gl.drawingBufferWidth, this.gl.drawingBufferHeight];
-  }
-
   isTextureFormatSupported(format: TextureFormat): boolean {
     return isTextureFormatSupported(this.gl, format, this._extensions);
   }
@@ -221,8 +226,7 @@ export class WebGLDevice extends Device {
     return new WEBGLBuffer(this, newProps);
   }
 
-  // _createTexture(props: TextureProps): WEBGLTexture {
-  _createTexture(props: TextureProps): Texture {
+  createTexture(props: TextureProps): WEBGLTexture {
     return new WEBGLTexture(this, props);
   }
 

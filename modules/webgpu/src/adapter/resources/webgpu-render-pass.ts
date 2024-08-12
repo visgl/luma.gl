@@ -136,8 +136,8 @@ export class WebGPURenderPass extends RenderPass {
         viewport[1],
         viewport[2],
         viewport[3],
-        viewport[4],
-        viewport[5]
+        viewport[4] as any,
+        viewport[5] as any
       );
     }
   }

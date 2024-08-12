@@ -11,8 +11,6 @@ export function setPathPrefix(prefix: string) {
   pathPrefix = prefix;
 }
 
-// TODO - keep only loadImageBitmap
-
 /**
  * Loads ImageBitmap asynchronously. Respects setPathPrefix.
  * image.crossOrigin can be set via opts.crossOrigin, default to 'anonymous'

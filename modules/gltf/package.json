@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/gltf",
-  "version": "9.1.0-alpha.2",
+  "version": "9.1.0-alpha.15",
   "description": "glTF support for luma.gl",
   "type": "module",
   "license": "MIT",
@@ -40,13 +40,14 @@
     "prepublishOnly": "npm run build-minified-bundle && npm run build-dev-bundle"
   },
   "peerDependencies": {
-    "@luma.gl/core": "^9.0.0-beta",
-    "@luma.gl/engine": "^9.0.0-beta"
+    "@luma.gl/core": "9.1.0-alpha.14",
+    "@luma.gl/engine": "9.1.0-alpha.14",
+    "@luma.gl/shadertools": "9.1.0-alpha.14"
   },
   "dependencies": {
+    "@loaders.gl/core": "^4.2.0",
     "@loaders.gl/textures": "^4.2.0",
-    "@luma.gl/shadertools": "9.1.0-alpha.2",
-    "@math.gl/core": "^4.0.0"
+    "@math.gl/core": "4.1.0-alpha.3"
   },
   "gitHead": "c636c34b8f1581eed163e94543a8eb1f4382ba8e"
 }

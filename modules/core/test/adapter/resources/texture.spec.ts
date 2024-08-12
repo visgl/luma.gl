@@ -5,11 +5,14 @@
 import test from 'tape-promise/tape';
 import {webglDevice, getTestDevices} from '@luma.gl/test-utils';
 
-import {Device, Texture, TextureFormat} from '@luma.gl/core';
+import {Device, Texture, TextureFormat, decodeTextureFormat, VertexType} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 
 // TODO(v9): Avoid import from `@luma.gl/webgl` in core tests.
-import {TEXTURE_FORMATS} from '@luma.gl/webgl/adapter/converters/texture-formats';
+import {
+  TEXTURE_FORMATS,
+  getTextureFormatWebGL
+} from '../../../../webgl/src/adapter/converters/texture-formats';
 import {SAMPLER_PARAMETERS} from './sampler.spec';
 
 import {WEBGLTexture} from '@luma.gl/webgl/adapter/resources/webgl-texture';
@@ -63,9 +66,45 @@ test('Texture#depth/stencil formats', async t => {
   t.end();
 });
 
-test.skip('Texture#format deduction', async t => {
+test('Texture#format simple creation', async t => {
   for (const device of await getTestDevices()) {
-    testFormatDeduction(t, device);
+    for (const [formatName, formatInfo] of Object.entries(TEXTURE_FORMATS)) {
+      if (['stencil8'].includes(formatName)) {
+        continue;
+      }
+
+      if (device.isTextureFormatSupported(formatName)) {
+        // For compressed textures there may be a block size that we need to be a multiple of
+        const decodedFormat = decodeTextureFormat(formatName);
+        const width = decodedFormat.blockWidth ?? 4;
+        const height = decodedFormat.blockHeight ?? 4;
+
+        let texture: Texture;
+        t.doesNotThrow(() => {
+          texture = device.createTexture({
+            format: formatName,
+            height,
+            width
+          });
+        }, `Texture(${device.type},${formatName}) creation OK`);
+
+        t.equals(texture.format, formatName, `Texture(${device.type},${formatName}).format OK`);
+        if (device.type === 'webgl') {
+          // const formatInfo = getTextureFormatWebGL(forma)
+          const expectedInternalFormat = formatInfo.gl;
+          t.equals(
+            texture.glInternalFormat,
+            expectedInternalFormat,
+            `Texture(${device.type},${formatName}).glInternal OK`
+          );
+          // const expectedType = formatInfo.types?.[0];
+          // const expectedDataFormat = formatInfo.dataFormat;
+          // t.equals(texture.glType, expectedType, `Texture(${formatName}).type OK`);
+          // t.equals(texture.glFormat, expectedDataFormat, `Texture(${formatName}).glFormat OK`);
+        }
+        texture.destroy();
+      }
+    }
   }
   t.end();
 });
@@ -74,15 +113,18 @@ const DEFAULT_TEXTURE_DATA = new Uint8Array([
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 ]);
 const DATA = [1, 0.5, 0.25, 0.125];
-const UINT8_DATA = new Uint8Array(DATA);
-const UINT16_DATA = new Uint16Array(DATA);
-const FLOAT_DATA = new Float32Array(DATA);
-const TEXTURE_DATA = {
-  [GL.UNSIGNED_BYTE]: UINT8_DATA, // RGB_TO[GL.UNSIGNED_BYTE](DATA)),
-  [GL.UNSIGNED_SHORT_5_6_5]: UINT16_DATA, // RGB_TO[GL.UNSIGNED_SHORT_5_6_5](DATA))
-  [GL.UNSIGNED_SHORT_4_4_4_4]: UINT16_DATA, // RGB_TO[GL.UNSIGNED_SHORT_5_6_5](DATA))
-  [GL.UNSIGNED_SHORT_5_5_5_1]: UINT16_DATA, // RGB_TO[GL.UNSIGNED_SHORT_5_6_5](DATA))
-  [GL.FLOAT]: FLOAT_DATA
+const TEXTURE_DATA: Record<VertexType, any> = {
+  uint8: new Uint8Array(DATA),
+  sint8: new Int8Array(DATA),
+  uint16: new Uint16Array(DATA),
+  sint16: new Int16Array(DATA),
+  uint32: new Uint32Array(DATA),
+  sint32: new Int32Array(DATA),
+  // [GL.UNSIGNED_SHORT_5_6_5]: UINT16_DATA, // RGB_TO[GL.UNSIGNED_SHORT_5_6_5](DATA))
+  // [GL.UNSIGNED_SHORT_4_4_4_4]: UINT16_DATA, // RGB_TO[GL.UNSIGNED_SHORT_5_6_5](DATA))
+  // [GL.UNSIGNED_SHORT_5_5_5_1]: UINT16_DATA, // RGB_TO[GL.UNSIGNED_SHORT_5_6_5](DATA))
+  float16: new Uint16Array(DATA),
+  float32: new Float32Array(DATA)
 };
 // const RGB_TO = {
 //   [GL.UNSIGNED_BYTE]: (r, g, b) => [r * 256, g * 256, b * 256],
@@ -94,14 +136,27 @@ const TEXTURE_DATA = {
 // };
 
 function testFormatCreation(t, device: Device, withData: boolean = false) {
-  for (const [textureFormat, formatInfo] of Object.entries(TEXTURE_FORMATS)) {
-    const format = textureFormat as TextureFormat;
+  for (const [formatName, formatInfo] of Object.entries(TEXTURE_FORMATS)) {
+    const format = formatName as TextureFormat;
+
+    const decodedFormat = decodeTextureFormat(formatName);
+    const {dataType, packed, bitsPerChannel} = decodedFormat;
+
+    // WebGPU texture can currently only be set from 8 bit data
+    const notImplemented = device.type === 'webgpu' && bitsPerChannel !== 8;
+    console.log(formatName, bitsPerChannel);
+
+    if (['stencil8'].includes(formatName) || notImplemented) {
+      continue;
+    }
+
     if (device.isTextureFormatSupported(format)) {
       try {
-        const data = withData ? TEXTURE_DATA[type] || DEFAULT_TEXTURE_DATA : null;
+        const data = withData && !packed ? TEXTURE_DATA[dataType] || DEFAULT_TEXTURE_DATA : null;
         // TODO: for some reason mipmap generation failing for RGB32F format
         const mipmaps =
           device.isTextureFormatRenderable(format) && device.isTextureFormatFilterable(format);
+
         const sampler = mipmaps
           ? {
               magFilter: 'linear',
@@ -122,179 +177,96 @@ function testFormatCreation(t, device: Device, withData: boolean = false) {
         t.equals(
           texture.props.format,
           format,
-          `Texture(${format}) created with mipmaps=${mipmaps}`
+          `Texture(${device.type},${format}) created with mipmaps=${mipmaps}`
         );
         texture.destroy();
       } catch (error) {
-        t.comment(`Texture(${format}) creation FAILED ${error}`);
+        t.comment(`Texture(${device.type},${format}) creation FAILED ${error}`);
       }
     } else {
-      t.comment(`Texture(${format}) not supported in ${device.type}`);
+      t.comment(`Texture(${device.type},${format}) not supported in ${device.type}`);
     }
   }
 }
 
-function testFormatDeduction(t, device: Device) {
-  for (const [formatName, formatInfo] of Object.entries(TEXTURE_FORMATS)) {
-    const expectedType = formatInfo.types[0];
-    const expectedDataFormat = formatInfo.dataFormat;
-    const options = {
-      format: Number(format),
-      height: 1,
-      width: 1
-    };
-    if (device.isTextureFormatSupported({format})) {
-      const texture = device.createTexture(options);
-      const msg = `Texture({format: ${device.getGLKey(format)}}) created`;
-      t.equals(texture.format, Number(format), msg);
-      t.equals(texture.type, expectedType, msg);
-      t.equals(texture.dataFormat, expectedDataFormat, msg);
-      texture.destroy();
-    }
-  }
-}
+// test.skip('Texture#format creation', async t => {
+//   for (const device of await getTestDevices()) {
+//     testFormatCreation(t, device);
+//   }
+//   t.end();
+// });
 
-test.skip('Texture#format deduction', async t => {
-  for (const device of await getTestDevices()) {
-    testFormatDeduction(t, device);
-  }
-  t.end();
-});
-
-test.skip('Texture#format creation', async t => {
-  for (const device of await getTestDevices()) {
-    testFormatCreation(t, device);
-  }
-  t.end();
-});
-
-test.skip('Texture#format creation with data', async t => {
+test('Texture#format creation with data', async t => {
   for (const device of await getTestDevices()) {
     testFormatCreation(t, device, true);
   }
   t.end();
 });
 
-/*
-test.skip('Texture#WebGL2 format creation', t => {
+test('Texture#copyExternaImage', async t => {
+  for (const device of await getTestDevices()) {
+    const texture = device.createTexture({
+      width: 2,
+      height: 1,
+      format: 'rgba8unorm',
+      mipmaps: false
+    });
 
-  for (const format in TEXTURE_FORMATS) {
+    if (device.info.type === 'webgl') {
+      t.deepEquals(
+        webglDevice.readPixelsToArrayWebGL(texture),
+        new Uint8Array(8),
+        `${device.info.type} Pixels are initially empty`
+      );
+    }
+
+    if (typeof document !== 'undefined') {
+      const canvas = document.createElement('canvas');
+      canvas.width = 2;
+      canvas.height = 1;
+      const ctx = canvas.getContext('2d');
+
+      // Full copy
+      ctx.fillStyle = '#FF0000';
+      ctx.fillRect(0, 0, 2, 1);
+      texture.copyExternalImage({image: canvas});
+
+      if (device.info.type === 'webgl') {
+        t.deepEquals(
+          device.readPixelsToArrayWebGL(texture),
+          new Uint8Array([255, 0, 0, 255, 255, 0, 0, 255]),
+          `${device.info.type} Pixels were set correctly (full image)`
+        );
+      }
+
+      // Subimage copy
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(0, 0, 2, 1);
+
+      texture.copyExternalImage({image: canvas, x: 1});
+
+      if (device.info.type === 'webgl') {
+        t.deepEquals(
+          device.readPixelsToArrayWebGL(texture),
+          new Uint8Array([255, 0, 0, 255, 0, 0, 0, 255]),
+          `${device.info.type} Pixels were set correctly (sub image)`
+        );
+      }
+    }
+
+    if (device.info.type !== 'webgl') {
+      t.pass('WebGPU copyExternalImage test cannot yet read pixels');
+    }
   }
-  let texture = webglDevice.createTexture({});
-  t.ok(texture instanceof Texture, 'Texture construction successful');
-
-  texture = texture.destroy();
-  t.ok(texture instanceof Texture, 'Texture delete successful');
-
-  t.end();
-});
-*/
-
-test.skip('Texture#setParameters', t => {
-  const texture = webglDevice.createTexture({});
-  t.ok(texture instanceof Texture, 'Texture construction successful');
-
-  testSamplerParameters({t, texture, parameters: SAMPLER_PARAMETERS});
-
-  /*
-  // Bad tests
-  const parameter = GL.TEXTURE_MAG_FILTER;
-  const value = GL.LINEAR_MIPMAP_LINEAR;
-  texture.setParameters({
-    [parameter]: value
-  });
-  const newValue = getParameter(texture, GL.TEXTURE_MAG_FILTER);
-  t.equals(newValue, value,
-    `Texture.setParameters({[${device.getGLKey(parameter)}]: ${device.getGLKey(value)}})`);
-  */
-
-  texture.destroy();
-  t.ok(texture instanceof Texture, 'Texture delete successful');
 
   t.end();
 });
 
-test.skip('WebGL2#Texture setParameters', t => {
-  const texture = webglDevice.createTexture({});
-  t.ok(texture instanceof Texture, 'Texture construction successful');
-
-  testSamplerParameters({t, texture, parameters: SAMPLER_PARAMETERS_WEBGL2});
-
-  texture.destroy();
-  t.ok(texture instanceof Texture, 'Texture delete successful');
-
-  t.end();
-});
-
-test.skip('Texture#NPOT Workaround: texture creation', t => {
-  // Create NPOT texture with no parameters
-  let texture = webglDevice.createTexture({data: null, width: 500, height: 512});
-  t.ok(texture instanceof Texture, 'Texture construction successful');
-
-  // Default parameters should be changed to supported NPOT parameters.
-  let minFilter = getParameter(texture, 'minFilter');
-  t.equals(minFilter, GL.LINEAR, 'NPOT texture min filter is set to LINEAR');
-  let wrapS = getParameter(texture, 'addressModeU');
-  t.equals(wrapS, 'clamp-to-edge', 'NPOT texture wrap_s is set to CLAMP_TO_EDGE');
-  let wrapT = getParameter(texture, 'addressModeV');
-  t.equals(wrapT, 'clamp-to-edge', 'NPOT texture wrap_t is set to CLAMP_TO_EDGE');
-
-  const parameters = {
-    ['minFilter']: 'nearest',
-    ['addressModeU']: 'repeat',
-    ['addressModeV']: 'mirrored-repeat'
-  };
-
-  // Create NPOT texture with parameters
-  texture = webglDevice.createTexture({
-    data: null,
-    width: 512,
-    height: 600,
-    parameters
-  });
-  t.ok(texture instanceof Texture, 'Texture construction successful');
-
-  // Above parameters should be changed to supported NPOT parameters.
-  minFilter = getParameter(texture, 'minFilter');
-  t.equals(minFilter, 'nearest', 'NPOT texture min filter is set to NEAREST');
-  wrapS = getParameter(texture, 'addressModeU');
-  t.equals(wrapS, 'clamp-to-edge', 'NPOT texture wrap_s is set to CLAMP_TO_EDGE');
-  wrapT = getParameter(texture, 'addressModeV');
-  t.equals(wrapT, 'clamp-to-edge', 'NPOT texture wrap_t is set to CLAMP_TO_EDGE');
-
-  t.end();
-});
-
-test.skip('Texture#NPOT Workaround: setParameters', t => {
-  // Create NPOT texture
-  const texture = webglDevice.createTexture({data: null, width: 100, height: 100});
-  t.ok(texture instanceof Texture, 'Texture construction successful');
-
-  const invalidNPOTParameters = {
-    ['minFilter']: 'linear',
-    ['mipmapFilter']: 'nearest',
-    ['addressModeU']: 'mirrored-repeat',
-    ['addressModeV']: 'repeat'
-  };
-  texture.setParameters(invalidNPOTParameters);
-
-  // Above parameters should be changed to supported NPOT parameters.
-  const minFilter = getParameter(texture, 'minFilter');
-  t.equals(minFilter, 'linear', 'NPOT texture min filter is set to LINEAR');
-  const wrapS = getParameter(texture, 'addressModeU');
-  t.equals(wrapS, 'clamp-to-edge', 'NPOT texture wrap_s is set to CLAMP_TO_EDGE');
-  const wrapT = getParameter(texture, 'addressModeV');
-  t.equals(wrapT, 'clamp-to-edge', 'NPOT texture wrap_t is set to CLAMP_TO_EDGE');
-
-  t.end();
-});
-
-test.skip('WebGL2#Texture setImageData', t => {
+test.skip('Texture#setImageData', t => {
   let data;
 
   // data: null
   const texture = webglDevice.createTexture({
-    data: null,
     width: 2,
     height: 1,
     format: GL.RGBA32F,
@@ -305,30 +277,8 @@ test.skip('WebGL2#Texture setImageData', t => {
 
   // data: typed array
   data = new Float32Array([0.1, 0.2, -3, -2, 0, 0.5, 128, 255]);
-  texture.setImageData({data});
+  texture.copyExternalImage({data});
   t.deepEquals(readPixelsToArray(texture), data, 'Pixels are set correctly');
-
-  // data: buffer
-  data = new Float32Array([21, 0.82, 0, 1, 0, 255, 128, 3.333]);
-  const buffer = webglDevice.createByffer({data, accessor: {size: 4, type: GL.FLOAT}});
-  texture.setImageData({data: buffer});
-  t.deepEquals(readPixelsToArray(texture), data, 'Pixels are set correctly');
-
-  // data: canvas
-  if (typeof document !== 'undefined') {
-    const canvas = document.createElement('canvas');
-    canvas.width = 2;
-    canvas.height = 1;
-    const ctx = canvas.getContext('2d');
-    ctx.fillRect(0, 0, 2, 1);
-    texture.setImageData({data: canvas});
-    t.deepEquals(
-      readPixelsToArray(texture),
-      new Float32Array([0, 0, 0, 1, 0, 0, 0, 1]),
-      'Pixels are set correctly'
-    );
-  }
-
   t.end();
 });
 
@@ -407,49 +357,21 @@ test.skip('WebGL2#Texture generateMipmap', t => {
   t.end();
 });
 
-// Shared with texture*.spec.js
-export function testSamplerParameters({t, texture, parameters}) {
-  for (const parameterName in parameters) {
-    const values = parameters[parameterName];
-    const parameter = Number(parameterName);
-    for (const valueName in values) {
-      const value = Number(valueName);
-      texture.setParameters({
-        [parameter]: value
-      });
-      const name = texture.constructor.name;
-      const newValue = getParameter(texture, parameter);
-      t.equals(
-        newValue,
-        value,
-        `${name}.setParameters({[${device.getGLKey(parameter)}]: ${device.getGLKey(
-          value
-        )}}) read back OK`
+// NON-2D TEXTURES
+
+test('Texture(dimension)#construct/delete', async t => {
+  for (const device of await getTestDevices()) {
+    for (const dimension of ['3d', '2d-array', 'cube']) {
+      const texture = webglDevice.createTexture({dimension});
+      t.equal(texture.dimension, dimension, `${device.info.type} Texture construction successful`);
+      t.equal(
+        texture.view.props.dimension,
+        dimension,
+        `${device.info.type} Texture view construction successful`
       );
+      texture.destroy();
     }
   }
-}
-
-// 2D TEXTURES
-
-test.skip('Texture#construct/delete', t => {
-  t.throws(
-    // @ts-expect-error
-    () => new Texture(),
-    /.*WebGLRenderingContext.*/,
-    'Texture throws on missing gl context'
-  );
-
-  const texture = webglDevice.createTexture();
-  t.ok(texture instanceof Texture, 'Texture construction successful');
-
-  t.comment(JSON.stringify(texture.getParameters({keys: true})));
-
-  texture.destroy();
-  t.ok(texture instanceof Texture, 'Texture delete successful');
-
-  texture.destroy();
-  t.ok(texture instanceof Texture, 'Texture repeated delete successful');
 
   t.end();
 });
@@ -569,12 +491,26 @@ test.skip('WebGL#Texture3D construct/delete', t => {
   t.end();
 });
 
-// HELPERS
+test.skip('Texture#setParameters', t => {
+  const texture = webglDevice.createTexture({});
+  t.ok(texture instanceof Texture, 'Texture construction successful');
 
-function getParameter(texture: Texture, pname: number): any {
-  const webglTexture = texture as WEBGLTexture;
-  webglTexture.gl.bindTexture(webglTexture.target, webglTexture.handle);
-  const value = webglTexture.gl.getTexParameter(webglTexture.target, pname);
-  webglTexture.gl.bindTexture(webglTexture.target, null);
-  return value;
-}
+  testSamplerParameters({t, texture, sampler: SAMPLER_PARAMETERS});
+
+  /*
+  // Bad tests
+  const parameter = GL.TEXTURE_MAG_FILTER;
+  const value = GL.LINEAR_MIPMAP_LINEAR;
+  texture.setParameters({
+    [parameter]: value
+  });
+  const newValue = getParameter(texture, GL.TEXTURE_MAG_FILTER);
+  t.equals(newValue, value,
+    `Texture.setParameters({[${device.getGLKey(parameter)}]: ${device.getGLKey(value)}})`);
+  */
+
+  texture.destroy();
+  t.ok(texture instanceof Texture, 'Texture delete successful');
+
+  t.end();
+});

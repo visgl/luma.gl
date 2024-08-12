@@ -1,22 +1,31 @@
-# Using Transforms
+# GPU Computations and Transforms 
 
-:::caution
-Note this documentation has not yet been updated to the luma.gl v9 API
-:::
+Some operations can be very efficiently executed on the GPU.
 
-Transform operations represent a GPGPU/GPU compute technique where GPU draw calls are configured 
-so that they write some specified outputs from the vertex shaders to (one or more) GPU memory buffers 
-that have been provided by the application.
+WebGPU offers extensive GPU compute capabilities via compute shaders, while WebGL is limited to using a technique called "transform feedback".
 
- Applications use transform feedback to data processing from CPU to GPU, where multiple 
- parallel execution units will be used for processing. 
- Data is handled in form of `Buffer` objects, i.e. data resides in the GPU memory.
+| Type              | WebGPU | WebGL | Comment                        |
+| ----------------- | ------ | ----- | ------------------------------ |
+| Compute Shader    | ✅      | ❌     |                                |
+| Buffer Transform  | ❌      | ✅     | Depends on `TransformFeedback` |
+| Texture Transform | ✅      | 🚧     |                                |
 
-Transform Feedback operations write their output into `Buffer` instances. 
-These buffers can then be directly set as attributes on `Model` or `VertexArray` for regular rendering operations.
+
+### General GPU compute guidelines
 
 Buffers can be read back to the CPU, but this has a high performance penalty. 
 Ideally, the application's logic can be designed so that CPU access is not required which avoids expensive CPU and GPU sync.
+
+### Compute Shaders
+
+### Buffer Transforms (aka Transform Feedback)
+
+Transform operations represent a GPGPU/GPU compute technique where standard GPU draw calls are configured 
+so that they also write some specific outputs from the vertex shaders to (one or more) GPU memory buffers 
+that have been provided by the application.
+
+Transform Feedback operations write their output into `Buffer` instances. 
+These buffers can then be directly set as attributes on `Model` or `VertexArray` for regular rendering operations.
 
 To run a single transform feedback operation:
 
@@ -24,17 +33,24 @@ To run a single transform feedback operation:
 - Use `Program.draw()` or `Model.draw()` with a `transformFeedback` parameter.
 - `Model.transform()` is equivalent to `Model.draw()` but automatically turns off the fragment shader stage.
 
-Alternatively, the more powerful `Transform` class is preferable if you don't want to deal with setting up `Program` and `TransformFeedback` instances, or if intend to run a repeating, double buffered transform feedback loop.
+The `BufferTransform` class is preferable to avoid having to deal with low-level WebGL specific `TransformFeedback` objects.
+
+### Texture Transforms
+
+Another approach for random access compute is Texture Transforms.
+This approach stores input data in textures and writing to textures, and does not depend on the presence of the WebGL specific `TransformFeedback` class.
+
+It has some characteristics in common with storage buffers in compute shaders but is less flexible.
 
 ## Usage
 
 ```typescript
-import {Transform} from '@luma.gl/engine';
+import {BufferTransform} from '@luma.gl/engine';
 ```
 
 ### Use case : Specify source and destination buffers.
 
-Create a `Transform` object by passing, vs (vertex shader), source buffer(s), varyings (output variable names in vertex shader) and destination buffers. Then call `run` to perform one transform feedback iteration.
+Create a `BufferTransform` object by passing, vs (vertex shader), source buffer(s), varyings (output variable names in vertex shader) and destination buffers. Then call `run` to perform one transform feedback iteration.
 
 ```typescript
 const VS = `\
@@ -54,7 +70,7 @@ const sourceBuffer = device.createBuffer({data: sourceData});
 // Default values applied for size (1) and type (gl.FLOAT)
 const feedbackBuffer = device.createBuffer({byteLength: sourceData.length * 4});
 
-const transform = new Transform(device, {
+const transform = new BufferTransform(device, {
   sourceBuffers: {
     inValue: sourceBuffer
   },
@@ -72,10 +88,10 @@ transform.run();
 
 ### Use case : Create destination buffers automatically.
 
-`Transform` can internally create destination buffers (i.e. feedback buffers), when `feedbackMap` is provided. Each destination buffer is created with same settings and layout as corresponding source buffer as per `feedbackMap`.
+`BufferTransform` can internally create destination buffers (i.e. feedback buffers), when `feedbackMap` is provided. Each destination buffer is created with same settings and layout as corresponding source buffer as per `feedbackMap`.
 
 ```typescript
-const transform = new Transform(device, {
+const transform = new BufferTransform(device, {
   sourceBuffers: {
     inValue: sourceBuffer
   },
@@ -93,7 +109,7 @@ const transform = new Transform(device, {
 When `feedbackMap` is specified buffers can be swapped using a single call to `swap()`, this is useful for cases like particle simulation, where output of one transform feedback iteration is piped as input to the next iteration.
 
 ```typescript
-// Setup Transform with `souceDestinationMap` as above
+// Setup BufferTransform with `souceDestinationMap` as above
 
 transform.run();
 
@@ -113,7 +129,7 @@ bufferWithNewValues = transform.getBuffer('outValue');
 
 ### Use case : Update one or more buffers using update() method..
 
-Once `Transform` object is constructed and used, one or more source or destination buffers can be updated using `update`.
+Once `BufferTransform` object is constructed and used, one or more source or destination buffers can be updated using `update`.
 
 ```typescript
 // transform is set up as above

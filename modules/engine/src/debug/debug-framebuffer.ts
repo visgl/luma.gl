@@ -38,7 +38,7 @@ export function debugFramebuffer(
     canvas.style.position = 'absolute';
     canvas.style.top = top; // ⚠️
     canvas.style.left = left; // ⚠️
-    canvas.style.border = 'blue 1px solid';
+    canvas.style.border = 'blue 5px solid';
     canvas.style.transform = 'scaleY(-1)';
     document.body.appendChild(canvas);
 

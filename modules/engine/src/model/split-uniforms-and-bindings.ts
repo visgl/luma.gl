@@ -5,8 +5,8 @@
 import type {UniformValue, Binding} from '@luma.gl/core';
 import {isNumericArray} from '@math.gl/types';
 
-export function isUniformValue(value: unknown): boolean {
-  return isNumericArray(value) !== null || typeof value === 'number' || typeof value === 'boolean';
+export function isUniformValue(value: unknown): value is UniformValue {
+  return isNumericArray(value) || typeof value === 'number' || typeof value === 'boolean';
 }
 
 type UniformsAndBindings = {
@@ -21,9 +21,9 @@ export function splitUniformsAndBindings(
   Object.keys(uniforms).forEach(name => {
     const uniform = uniforms[name];
     if (isUniformValue(uniform)) {
-      result.uniforms[name] = uniform as UniformValue;
+      result.uniforms[name] = uniform;
     } else {
-      result.bindings[name] = uniform as Binding;
+      result.bindings[name] = uniform;
     }
   });
 

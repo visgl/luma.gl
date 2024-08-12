@@ -146,7 +146,8 @@ export type Binding =
 export type VaryingBinding = {
   location: number;
   name: string;
-  accessor: AccessorObject;
+  type: number; // glType
+  size: number;
 };
 
 // Uniform bindings

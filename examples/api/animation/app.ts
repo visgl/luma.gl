@@ -5,12 +5,12 @@ import {
   Model,
   CubeGeometry,
   Timeline,
-  KeyFrames
+  KeyFrames,
+  makeRandomGenerator
 } from '@luma.gl/engine';
 import {dirlight} from '@luma.gl/shadertools';
 import {Matrix4, radians} from '@math.gl/core';
 
-import {makeRandomGenerator} from '@luma.gl/engine';
 
 // Ensure repeatable rendertests
 const random = makeRandomGenerator();
@@ -39,6 +39,48 @@ const app: {uniformTypes: Record<string, ShaderUniformType>} = {
     uProjection: 'mat4x4<f32>'
   }
 };
+
+const source = /* wgsl */ `\
+struct Uniforms {
+  uColor : vec3<f32>,
+  uModel : mat4x4<f32>,
+  uView : mat4x4<f32>,
+  uProjection : mat4x4<f32>,
+};
+
+@binding(0) @group(0) var<uniform> app : Uniforms;
+
+struct VertexInputs {
+  // CUBE GEOMETRY
+  @location(0) positions : vec4<f32>,
+  @location(1) normals : vec3<f32>
+};
+
+struct FragmentInputs {
+  @builtin(position) Position : vec4<f32>,
+  @location(0) color : vec3<f32>,
+  @location(1) dirlightNormal: DirlightNormal,
+}
+
+@vertex
+fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
+  var outputs : FragmentInputs;
+  // gl_Position = app.uProjection * app.uView * app.uModel * vec4(positions, 1.0);
+  outputs.Position = app.uProjection * app.uView * app.uModel * inputs.positions;
+  outputs.color = app.uColor;
+
+  let normal: vec3<f32> = (app.uModel * vec4<f32>(inputs.normals, 0.0)).xyz;
+  outputs.dirlightNormal = dirlight_setNormal(normal);
+  return outputs;
+}
+
+@fragment
+fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
+  var fragColor = vec4(inputs.color, 1.);
+  fragColor = dirlight_filterColor(fragColor, DirlightInputs(inputs.dirlightNormal));
+  return fragColor;
+}
+`;
 
 const vs = /* glsl */ `\
 #version 300 es
@@ -194,8 +236,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         keyFrames: keyFrames[i],
         model: new Model(device, {
           id: `cube-${i}`,
+          source,
           vs,
           fs,
+          instanceCount: 1,
           modules: [dirlight],
           geometry: new CubeGeometry(),
           parameters: {

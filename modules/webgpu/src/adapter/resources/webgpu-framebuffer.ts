@@ -24,4 +24,8 @@ export class WebGPUFramebuffer extends Framebuffer {
     // Auto create textures for attachments if needed
     this.autoCreateAttachmentTextures();
   }
+
+  protected updateAttachments(): void {
+    // WebGPU framebuffers are JS only objects, nothing to update
+  }
 }

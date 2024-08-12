@@ -13,6 +13,6 @@ test('tiltShift#build/uniform', t => {
   t.equal(uniforms.gradientRadius, 200, 'tiltShift gradientRadius uniform is ok');
   t.deepEqual(uniforms.start, [0, 0], 'tiltShift start uniform is ok');
   t.deepEqual(uniforms.end, [1, 1], 'tiltShift end uniform is ok');
-  t.equal(uniforms.invert, false, 'tiltShift invert uniform is ok');
+  t.equal(uniforms.invert, 0, 'tiltShift invert uniform is ok');
   t.end();
 });

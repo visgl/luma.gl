@@ -266,26 +266,30 @@ export abstract class CanvasContext {
       this.htmlCanvas.width = canvasWidth;
       this.htmlCanvas.height = canvasHeight;
 
-      // Note: when devicePixelRatio is too high, it is possible we might hit system limit for
-      // drawing buffer width and hight, in those cases they get clamped and resulting aspect ration may not be maintained
-      // for those cases, reduce devicePixelRatio.
-      const [drawingBufferWidth, drawingBufferHeight] = this.getDrawingBufferSize();
+      // @ts-expect-error This only works for WebGL
+      const gl = this.device.gl;
+      if (gl) {
+        // Note: when devicePixelRatio is too high, it is possible we might hit system limit for
+        // drawing buffer width and hight, in those cases they get clamped and resulting aspect ration may not be maintained
+        // for those cases, reduce devicePixelRatio.
+        const [drawingBufferWidth, drawingBufferHeight] = this.getDrawingBufferSize();
 
-      if (drawingBufferWidth !== canvasWidth || drawingBufferHeight !== canvasHeight) {
-        clampedPixelRatio = Math.min(
-          drawingBufferWidth / clientWidth,
-          drawingBufferHeight / clientHeight
-        );
+        if (drawingBufferWidth !== canvasWidth || drawingBufferHeight !== canvasHeight) {
+          clampedPixelRatio = Math.min(
+            drawingBufferWidth / clientWidth,
+            drawingBufferHeight / clientHeight
+          );
 
-        this.htmlCanvas.width = Math.floor(clientWidth * clampedPixelRatio);
-        this.htmlCanvas.height = Math.floor(clientHeight * clampedPixelRatio);
+          this.htmlCanvas.width = Math.floor(clientWidth * clampedPixelRatio);
+          this.htmlCanvas.height = Math.floor(clientHeight * clampedPixelRatio);
 
-        log.warn('Device pixel ratio clamped')();
+          log.warn('Device pixel ratio clamped')();
+        }
+
+        this._canvasSizeInfo.clientWidth = clientWidth;
+        this._canvasSizeInfo.clientHeight = clientHeight;
+        this._canvasSizeInfo.devicePixelRatio = devicePixelRatio;
       }
-
-      this._canvasSizeInfo.clientWidth = clientWidth;
-      this._canvasSizeInfo.clientHeight = clientHeight;
-      this._canvasSizeInfo.devicePixelRatio = devicePixelRatio;
     }
   }
 

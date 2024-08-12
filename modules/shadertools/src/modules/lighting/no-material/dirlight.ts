@@ -2,31 +2,40 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {NumberArray} from '@math.gl/types';
+import type {Vector3Like, TypedArray} from '@math.gl/core';
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
 
 export type DirlightProps = {
-  lightDirection?: NumberArray | [number, number, number];
+  lightDirection?: Vector3Like | TypedArray;
 };
 
 export type DirlightUniforms = DirlightProps;
 
 // TODO
-export const VS_WGSL = /* WGSL */ `\  
-void dirlight_setNormal(normal: vec3<f32>) {
-  dirlight_vNormal = normalize(normal);
-}
-`;
+export const SOURCE_WGSL = /* WGSL */ `\  
+struct dirlightUniforms {
+  lightDirection: vec3<f32>,
+};
 
-// TODO
-export const FS_WGSL = /* WGSL */ `\
-uniform dirlightUniforms {
-  vec3 lightDirection;
-} dirlight;
+alias DirlightNormal = vec3<f32>;
+
+struct DirlightInputs {
+  normal: DirlightNormal,
+};
+
+@binding(1) @group(0) var<uniform> dirlight : dirlightUniforms;
+
+// For vertex
+fn dirlight_setNormal(normal: vec3<f32>) -> DirlightNormal {
+  return normalize(normal);
+}
 
 // Returns color attenuated by angle from light source
-fn dirlight_filterColor(color: vec4<f32>, dirlightInputs): vec4<f32> {
-  const d: float = abs(dot(dirlight_vNormal, normalize(dirlight.lightDirection)));
+fn dirlight_filterColor(color: vec4<f32>, inputs: DirlightInputs) -> vec4<f32> {
+  // TODO - fix default light direction
+  // let lightDirection = dirlight.lightDirection;
+  let lightDirection = vec3<f32>(1, 1, 1);
+  let d: f32 = abs(dot(inputs.normal, normalize(lightDirection)));
   return vec4<f32>(color.rgb * d, color.a);
 }
 `;
@@ -62,6 +71,7 @@ export const dirlight = {
 
   name: 'dirlight',
   dependencies: [],
+  source: SOURCE_WGSL,
   vs: VS_GLSL,
   fs: FS_GLSL,
 

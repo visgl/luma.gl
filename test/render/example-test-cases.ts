@@ -3,8 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {SnapshotTestRunnerTestCase} from '@luma.gl/test-utils';
-import {AnimationLoopTemplate, AnimationProps} from '@luma.gl/engine';
-import {setPathPrefix} from '@luma.gl/engine';
+import {AnimationLoopTemplate, AnimationProps, setPathPrefix} from '@luma.gl/engine';
 
 const RESOURCE_PATH = 'https://raw.githubusercontent.com/uber/luma.gl/master';
 
@@ -73,6 +72,7 @@ function getTestCases(): SnapshotTestRunnerTestCase[] {
       // @ts-ignore
       onInitialize: (props: AnimationProps) => {
         setPathPrefix(`${RESOURCE_PATH}/examples/lessons/${name.slice(-2)}/`);
+        // @ts-ignore TODO - ib added this to solve module resolution mess
         animationLoopTemplate = new ExampleAnimationLoopTemplate(props);
       },
 

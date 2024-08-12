@@ -52,7 +52,7 @@ import {WEBGLTextureView} from './webgl-texture-view';
 import {
   initializeTextureStorage,
   // clearMipLevel,
-  copyCPUImageToMipLevel,
+  copyExternalImageToMipLevel,
   copyCPUDataToMipLevel,
   // copyGPUBufferToMipLevel,
   getWebGLTextureTarget
@@ -143,6 +143,8 @@ export class WEBGLTexture extends Texture {
   } | null = null;
 
   constructor(device: Device, props: TextureProps) {
+    props = Texture._fixProps(props);
+
     // Note: Clear out `props.data` so that we don't hold a reference to any big memory chunks
     super(device, {...Texture.defaultProps, ...props, data: undefined!});
 
@@ -192,7 +194,7 @@ export class WEBGLTexture extends Texture {
     let {width, height} = props;
 
     if (!width || !height) {
-      const textureSize = this.getTextureDataSize(data);
+      const textureSize = Texture.getTextureDataSize(data);
       width = textureSize?.width || 1;
       height = textureSize?.height || 1;
     }
@@ -333,13 +335,64 @@ export class WEBGLTexture extends Texture {
   }
 
   // Image Data Setters
+  copyExternalImage(options: {
+    image: ExternalImage;
+    sourceX?: number;
+    sourceY?: number;
+    width?: number;
+    height?: number;
+    depth?: number;
+    mipLevel?: number;
+    x?: number;
+    y?: number;
+    z?: number;
+    aspect?: 'all' | 'stencil-only' | 'depth-only';
+    colorSpace?: 'srgb';
+    premultipliedAlpha?: boolean;
+  }): {width: number; height: number} {
+    const size = Texture.getExternalImageSize(options.image);
+    const opts = {...Texture.defaultCopyExternalImageOptions, ...size, ...options};
+
+    const {image, depth, mipLevel, x, y, z} = opts;
+    let {width, height} = opts;
+    const {dimension, glTarget, glFormat, glInternalFormat, glType} = this;
+
+    // WebGL will error if we try to copy outside the bounds of the texture
+    width = Math.min(width, size.width - x);
+    height = Math.min(height, size.height - y);
+
+    // WebGL does not yet support sourceX/sourceY in copyExternalImage; requires copyTexSubImage2D from a framebuffer'
+
+    if (options.sourceX || options.sourceY) {
+      throw new Error(
+        'WebGL does not yet support sourceX/sourceY in copyExternalImage; requires copyTexSubImage2D from a framebuffer'
+      );
+    }
+
+    copyExternalImageToMipLevel(this.device.gl, this.handle, image, {
+      dimension,
+      mipLevel,
+      x,
+      y,
+      z,
+      width,
+      height,
+      depth,
+      glFormat,
+      glInternalFormat,
+      glType,
+      glTarget
+    });
+
+    return {width: opts.width, height: opts.height};
+  }
 
   setTexture1DData(data: Texture1DData): void {
     throw new Error('setTexture1DData not supported in WebGL.');
   }
 
   /** Set a simple texture */
-  setTexture2DData(lodData: Texture2DData, depth = 0, glTarget = this.glTarget): void {
+  setTexture2DData(lodData: Texture2DData, depth = 0): void {
     this.bind();
 
     const lodArray = normalizeTextureData(lodData, this);
@@ -367,7 +420,9 @@ export class WEBGLTexture extends Texture {
       throw new Error(this.id);
     }
     if (ArrayBuffer.isView(data)) {
+      this.bind();
       copyCPUDataToMipLevel(this.device.gl, data, this);
+      this.unbind();
     }
   }
 
@@ -381,9 +436,9 @@ export class WEBGLTexture extends Texture {
     if (this.props.dimension !== 'cube') {
       throw new Error(this.id);
     }
-    // for (const face of Texture.CubeFaces) {
-    //   // this.setTextureCubeFaceData(face, data[face]);
-    // }
+    for (const face of Texture.CubeFaces) {
+      this.setTextureCubeFaceData(data[face], face);
+    }
   }
 
   /**
@@ -414,27 +469,9 @@ export class WEBGLTexture extends Texture {
       log.warn(`${this.id} has mipmap and multiple LODs.`)();
     }
 
-    // const glFace = GL.TEXTURE_CUBE_MAP_POSITIVE_X + Texture.CubeFaces.indexOf(face);
-    // const glType = GL.UNSIGNED_BYTE;
-    // const {width, height, format = GL.RGBA, type = GL.UNSIGNED_BYTE} = this;
-    // const {width, height, format = GL.RGBA, type = GL.UNSIGNED_BYTE} = this;
+    const faceDepth = Texture.CubeFaces.indexOf(face);
 
-    this.bind();
-    // for (let lodLevel = 0; lodLevel < lodData.length; lodLevel++) {
-    //   const imageData = lodData[lodLevel];
-    //   if (imageData instanceof ArrayBuffer) {
-    //     // const imageData = image instanceof ArrayBuffer ? new ImageData(new Uint8ClampedArray(image), this.width) : image;
-    //     this.device.gl.texImage2D?.(
-    //       glFace,
-    //       lodLevel,
-    //       this.glInternalFormat,
-    //       this.glInternalFormat,
-    //       glType,
-    //       imageData
-    //     );
-    //   }
-    // }
-    this.unbind();
+    this.setTexture2DData(lodData, faceDepth);
   }
 
   // INTERNAL METHODS
@@ -592,23 +629,34 @@ export class WEBGLTexture extends Texture {
    * Copy a region of data from a CPU memory buffer into this texture.
    * @todo -   GLUnpackParameters parameters
    */
-  protected _setMipLevel(depth: number, level: number, textureData: Texture2DData, offset = 0) {
+  protected _setMipLevel(
+    depth: number,
+    mipLevel: number,
+    textureData: Texture2DData,
+    glTarget: GL = this.glTarget
+  ) {
     // if (!textureData) {
     //   clearMipLevel(this.device.gl, {...this, depth, level});
     //   return;
     // }
 
     if (Texture.isExternalImage(textureData)) {
-      copyCPUImageToMipLevel(this.device.gl, textureData, {...this, depth, level});
+      copyExternalImageToMipLevel(this.device.gl, this.handle, textureData, {
+        ...this,
+        depth,
+        mipLevel,
+        glTarget
+      });
       return;
     }
 
     // @ts-expect-error
-    if (this.isTextureLevelData(textureData)) {
+    if (Texture.isTextureLevelData(textureData)) {
       copyCPUDataToMipLevel(this.device.gl, textureData.data, {
         ...this,
         depth,
-        level
+        mipLevel,
+        glTarget
       });
       return;
     }

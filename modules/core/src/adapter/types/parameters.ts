@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+import {NumberArray4, NumberArray6} from '@math.gl/types';
 import {DepthStencilTextureFormat} from '../../gpu-type-utils/texture-formats';
 
 export type CompareFunction =
@@ -176,11 +177,11 @@ export type MultisampleParameters = {
 /** These parameters are set on the render pass and are thus easy to change frequently */
 export type RenderPassParameters = {
   /** Linear map from normalized device coordinates to viewport coordinates [x, y, width, height, minDepth, maxDepth] */
-  viewport?: number[];
+  viewport?: NumberArray4 | NumberArray6;
   /** Sets scissor rectangle used during rasterization. Discards fragments outside viewport coords [x, y, width, height]. */
-  scissorRect?: number[]; // ;
+  scissorRect?: NumberArray4;
   /** Sets constant blend color and alpha values used with "constant" and "one-minus-constant" blend factors. */
-  blendConstant?: number[]; // GPUColor
+  blendConstant?: NumberArray4;
   /** Stencil operation "replace" sets the value to stencilReference */
   stencilReference?: number; // GPUStencilValue
 

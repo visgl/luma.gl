@@ -106,11 +106,20 @@ export class WebGPUCanvasContext extends CanvasContext {
 
   resize(options?: {width?: number; height?: number; useDevicePixels?: boolean | number}): void {
     this.update();
+
+    if (!this.device.handle) return;
+
+    // Resize browser context .
+    if (this.canvas) {
+      const devicePixelRatio = this.getDevicePixelRatio(options?.useDevicePixels);
+      this.setDevicePixelRatio(devicePixelRatio, options);
+      return;
+    }
   }
 
   /** Wrap the current canvas context texture in a luma.gl texture */
   getCurrentTexture(): WebGPUTexture {
-    return this.device._createTexture({
+    return this.device.createTexture({
       id: `${this.id}#color-texture`,
       handle: this.gpuCanvasContext.getCurrentTexture(),
       format: this.format

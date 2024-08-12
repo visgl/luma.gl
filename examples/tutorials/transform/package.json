@@ -1,0 +1,20 @@
+{
+  "name": "luma.gl-examples-wandering",
+  "version": "9.1.0-alpha.14",
+  "private": true,
+  "scripts": {
+    "start": "vite",
+    "build": "tsc && vite build",
+    "serve": "vite preview"
+  },
+  "dependencies": {
+    "@luma.gl/engine": "9.1.0-alpha.14",
+    "@luma.gl/shadertools": "9.1.0-alpha.14",
+    "@luma.gl/webgl": "9.1.0-alpha.14",
+    "@probe.gl/log": "^4.0.8"
+  },
+  "devDependencies": {
+    "typescript": "^5.1.6",
+    "vite": "^3.2.4"
+  }
+}

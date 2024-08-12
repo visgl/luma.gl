@@ -1,9 +1,14 @@
-//
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import type {ShaderUniformType, NumberArray} from '@luma.gl/core';
-import {Device, Framebuffer} from '@luma.gl/core';
+import {Device} from '@luma.gl/core';
 import type {AnimationProps, ModelProps} from '@luma.gl/engine';
-import {AnimationLoopTemplate, CubeGeometry, Timeline, Model, _ShaderInputs} from '@luma.gl/engine';
-import {makeRandomGenerator} from '@luma.gl/engine';
+import {AnimationLoopTemplate, CubeGeometry, Timeline, Model, ShaderInputs} from '@luma.gl/engine';
+// @ts-ignore TODO - ib added this to solve module resolution mess
+import {makeRandomGenerator, _PickingManager as PickingManager} from '@luma.gl/engine';
+import {} from '@luma.gl/engine';
 import {picking, dirlight} from '@luma.gl/shadertools';
 import {Matrix4, radians} from '@math.gl/core';
 
@@ -15,30 +20,12 @@ A luma.gl <code>Cube</code>, rendering 65,536 instances in a
 single GPU draw call using instanced vertex attributes.
 `;
 
+
 // INSTANCE CUBE
 
 const random = makeRandomGenerator();
 
-// WGSL
-
-const DIRLIGHT_WGSL = /* WGSL */ `\
-// MODULE: dirlight
-
-struct DirlightUniforms {
-  lightDirection: vec3<f32>,
-}
-
-@group(0) @binding(1) var<uniform> dirlight : DirlightUniforms;
-
-fn dirlight_filterColor(color: vec4<f32>, normal: vec3<f32>) -> vec4<f32> {
-  let d: f32 = abs(dot(normal, normalize(dirlight.lightDirection)));
-  return vec4<f32>(color.rgb * d, color.a);
-}
-`;
-
-const WGSL_SHADER = /* WGSL */ `\
-
-${DIRLIGHT_WGSL}
+const WGSL_SHADER = /* wgsl */ `\
 
 // APPLICATION
 
@@ -76,7 +63,7 @@ fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
   let offset = vec4<f32>(inputs.instanceOffsets, sin((app.time + delta) * 0.1) * 16.0, 0);
   outputs.Position = app.projectionMatrix * app.viewMatrix * (app.modelMatrix * inputs.positions + offset);
   
-  outputs.normal = (app.modelMatrix * vec4<f32>(inputs.normals, 0.0)).xyz;
+  outputs.normal = dirlight_setNormal((app.modelMatrix * vec4<f32>(inputs.normals, 0.0)).xyz);
   outputs.color = inputs.instanceColors;
 
   // vec4 pickColor = vec4(0., instancePickingColors, 1.0);
@@ -87,9 +74,9 @@ fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
 
 @fragment
 fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
-  var color = inputs.color; 
-  color = dirlight_filterColor(color, inputs.normal); 
-  return color;
+  var fragColor = inputs.color; 
+  fragColor = dirlight_filterColor(fragColor, DirlightInputs(inputs.normal)); 
+  return fragColor;
 }
 `;
 
@@ -170,10 +157,10 @@ class InstancedCube extends Model {
     const pickingColors = new Uint8Array(SIDE * SIDE * 4);
     for (let i = 0; i < SIDE; i++) {
       for (let j = 0; j < SIDE; j++) {
-        pickingColors[(i * SIDE + j) * 2 + 0] = i;
-        pickingColors[(i * SIDE + j) * 2 + 1] = j;
-        pickingColors[(i * SIDE + j) * 2 + 2] = 0;
-        pickingColors[(i * SIDE + j) * 2 + 3] = 0;
+        pickingColors[(i * SIDE + j) * 4 + 0] = i;
+        pickingColors[(i * SIDE + j) * 4 + 1] = j;
+        pickingColors[(i * SIDE + j) * 4 + 2] = 0;
+        pickingColors[(i * SIDE + j) * 4 + 3] = 0;
       }
     }
 
@@ -234,9 +221,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   cube: InstancedCube;
   timeline: Timeline;
   timelineChannels: Record<string, number>;
-  pickingFramebuffer: Framebuffer;
+  picker: PickingManager;
 
-  shaderInputs = new _ShaderInputs<{
+  shaderInputs = new ShaderInputs<{
     app: AppUniforms;
     dirlight: typeof dirlight.props;
     picking: typeof picking.props;
@@ -260,17 +247,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       eyeZChannel: this.timeline.addChannel({rate: 0.0002})
     };
 
-    if (device.info.type !== 'webgpu') {
-      this.pickingFramebuffer = device.createFramebuffer({
-        colorAttachments: ['rgba8unorm'],
-        depthStencilAttachment: 'depth24plus'
-      });
-    }
-
     this.cube = new InstancedCube(device, {
       // @ts-ignore
       shaderInputs: this.shaderInputs
     });
+
+    this.picker = new PickingManager(device, this.shaderInputs);
   }
 
   onRender(animationProps: AnimationProps) {
@@ -302,9 +284,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       }
     });
 
-    if (device.info.type !== 'webgpu') {
-      this.pickInstance(device, _mousePosition, this.cube, this.pickingFramebuffer);
-    }
+    this.pickInstance(_mousePosition);
 
     // Draw the cubes
     const renderPass = device.beginRenderPass({
@@ -321,53 +301,20 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.cube.destroy();
   }
 
-  pickInstance(
-    device: Device,
-    mousePosition: number[] | null | undefined,
-    model: Model,
-    framebuffer: Framebuffer
-  ) {
-    if (!mousePosition) {
-      this.shaderInputs.setProps({picking: {highlightedObjectColor: null}});
+  pickInstance(mousePosition: number[] | null | undefined) {
+    if (this.picker.device.type !== 'webgl') {
       return;
     }
 
-    // use the center pixel location in device pixel range
-    const devicePixels = device.canvasContext.cssToDevicePixels(mousePosition);
-    const pickX = devicePixels.x + Math.floor(devicePixels.width / 2);
-    const pickY = devicePixels.y + Math.floor(devicePixels.height / 2);
-
-    // Render picking colors
-    framebuffer.resize(device.canvasContext.getPixelSize());
-
-    this.shaderInputs.setProps({picking: {isActive: true}});
-
-    const pickingPass = device.beginRenderPass({
-      framebuffer,
-      clearColor: [0, 0, 0, 0],
-      clearDepth: 1
-    });
-    model.draw(pickingPass);
+    if (!mousePosition) {
+      this.picker.clearPickState();
+      return;
+    }
+    const pickingPass = this.picker.beginRenderPass();
+    this.cube.draw(pickingPass);
     pickingPass.end();
 
-    // Read back
-    const color255 = framebuffer.device.readPixelsToArrayWebGL(framebuffer, {
-      sourceX: pickX,
-      sourceY: pickY,
-      sourceWidth: 1,
-      sourceHeight: 1
-    });
-    // console.log(color255);
-
-    let highlightedObjectColor = new Float32Array(color255).map(x => x / 255);
-    const isHighlightActive =
-      highlightedObjectColor[0] + highlightedObjectColor[1] + highlightedObjectColor[2] > 0;
-    if (!isHighlightActive) {
-      highlightedObjectColor = null;
-    }
-
-    this.shaderInputs.setProps({
-      picking: {isActive: false, highlightedObjectColor}
-    });
+    this.picker.updatePickState(mousePosition as [number, number]);
   }
 }
+

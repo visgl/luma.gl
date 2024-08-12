@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {NumberArray} from '@math.gl/types';
+import type {NumericArray} from '@math.gl/types';
 
 /**
  * Calculate WebGL 64 bit float
@@ -11,7 +11,7 @@ import type {NumberArray} from '@math.gl/types';
  * @param startIndex - the index in the output array to fill from. Default 0.
  * @returns - the fp64 representation of the input number
  */
-export function fp64ify(a: number, out: NumberArray = [], startIndex: number = 0): NumberArray {
+export function fp64ify(a: number, out: NumericArray = [], startIndex: number = 0): NumericArray {
   const hiPart = Math.fround(a);
   const loPart = a - hiPart;
   out[startIndex] = hiPart;
@@ -33,7 +33,7 @@ export function fp64LowPart(a: number): number {
  * @param matrix  the input matrix
  * @returns the fp64 representation of the input matrix
  */
-export function fp64ifyMatrix4(matrix: NumberArray): Float32Array {
+export function fp64ifyMatrix4(matrix: NumericArray): Float32Array {
   // Transpose the projection matrix to column major for GLSL.
   const matrixFP64 = new Float32Array(32);
   for (let i = 0; i < 4; ++i) {

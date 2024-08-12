@@ -7,11 +7,7 @@ import type {
   CanvasContextProps,
   TextureFormat,
   VertexArray,
-  VertexArrayProps
-} from '@luma.gl/core';
-import {Device, DeviceFeatures} from '@luma.gl/core';
-
-import type {
+  VertexArrayProps,
   BufferProps,
   ShaderProps,
   SamplerProps,
@@ -29,6 +25,7 @@ import type {
   TransformFeedbackProps,
   QuerySetProps
 } from '@luma.gl/core';
+import {Device, DeviceFeatures} from '@luma.gl/core';
 
 import {NullDeviceInfo} from './null-device-info';
 import {NullDeviceLimits} from './null-device-features';
@@ -76,10 +73,6 @@ export class NullDevice extends Device {
     return false;
   }
 
-  getSize(): [number, number] {
-    return [this.canvasContext.width, this.canvasContext.height];
-  }
-
   isTextureFormatSupported(format: TextureFormat): boolean {
     return true;
   }
@@ -107,7 +100,7 @@ export class NullDevice extends Device {
     return new NullRenderPass(this, {});
   }
 
-  _createTexture(props: TextureProps): NullTexture {
+  createTexture(props: TextureProps): NullTexture {
     return new NullTexture(this, props);
   }
 

@@ -6,8 +6,8 @@
   import {makeAnimationLoop} from '@luma.gl/engine';
   import AnimationLoopTemplate from './app.ts';
 
-  luma.reagisterAdapters([webgpuDevice, webglDevice]);
-  makeAnimationLoop(AnimationLoopTemplate).start({canvas: 'canvas'});
+  const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {adapters: [webgpuAdapter, webgl2Adapter]});
+  animationLoop.start({canvas: 'canvas'});
 </script>
 <body style=" margin: 0px;">
   <canvas id="canvas" style="width: 100vw; height: 100vh;"></canvas>

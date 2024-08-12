@@ -2,20 +2,40 @@
 
 *This page contains news for recent luma.gl releases. For older releases (through v8.5) refer to the  [Legacy What's New](/docs/legacy/legacy-upgrade-guide) page.*
 
+## Version 9.2 (In Planning)
+
+Target Date: Q3, 2024
+
+Production quality WebGPU backend
+
 ## Version 9.1 (In Development)
 
-Target Date: Q2 2024
+Target Date: Aug 15, 2024
 
-- Production quality (non-experimental) WebGPU backend.
+Improvements focused on enhancing WebGPU support.
 
 **@luma.gl/core**
 
-- New [`luma.registerAdapters()`](/docs/api-reference/core/luma#lumaregisteradapters) method - Register adapters for WebGL and WebGPU.
+- New [`Adapter`](/docs/api-reference/core/adapter) class for singleton objects representing pluggable GPU backends. 
+- New `adapters` options for `luma.createDevice()` and `makeAnimationLoopTemplate` as alternative to global registration of adapters.
+- New [`luma.registerAdapters()`](/docs/api-reference/core/luma#lumaregisteradapters) method for old-stye global registration of adapters.
 - New `Parameters.blend` - Provides explicit control over color blending activation.
+- New `Texture.copyExternalImage()` function that works on both WebGPU and WebGL.
 
 **@luma.gl/engine**
 
-- New `AsyncTexture` class allows applications to create textures from a URL or Promise.
+- New [`AsyncTexture`](/docs/api-reference/engine/async-texture) class allows applications to create textures from a URL or Promise.
+
+**@luma.gl/shadertools**
+
+- [`ShaderModule](/docs/api-reference/shadertools/shader-module)`: improves type safety, in particular for uniforms and bindings.
+- `ShaderModule`: Simplified API, no longer required to instantiate modules into `ShaderModuleInstances`.
+- New function `getShaderModuleUniforms(module: ShaderModule, ...)`
+- New function `getShaderModuleDependencies(module: ShaderModule)`
+
+**@luma.gl/webgl**
+
+- `webglAdapter` - Ability to add WEBGL1 extensions to WebGL2 contexts
 
 ## Version 9.0
 

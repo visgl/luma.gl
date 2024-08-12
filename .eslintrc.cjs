@@ -17,6 +17,14 @@ module.exports = getESLintConfig({
     },
 
     rules: {
+      // Definitely disable
+      'no-use-before-define': 0,
+      // disabled after ocular upgrade to unbreak build
+      'prefer-rest-params': 'warn',
+      'import/named': 'off',
+      'no-shadow': 'warn',
+      '@typescript-eslint/no-explicit-any': 'off', // 'warn',
+      // desiabled by choice
       'no-unused-expressions': 'warn',
       'no-console': 1,
       'no-continue': ['warn'],
@@ -41,6 +49,7 @@ module.exports = getESLintConfig({
           'quotes': 0, // handled by prettier
           'indent': 0, // handled by prettier
 
+          '@typescript-eslint/no-explicit-any': 'off', // 'warn',
           // typescript-eslint 6.0
           '@typescript-eslint/no-unsafe-argument': 0,
           '@typescript-eslint/no-redundant-type-constituents': 0,

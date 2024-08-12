@@ -5,7 +5,7 @@
 import type {NumberArray, ShaderUniformType} from '@luma.gl/core';
 import {Texture, UniformStore} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
-import {AnimationLoopTemplate, Model, CubeGeometry, loadImage, AsyncTexture} from '@luma.gl/engine';
+import {AnimationLoopTemplate, Model, CubeGeometry, loadImageBitmap, AsyncTexture} from '@luma.gl/engine';
 import {Matrix4} from '@math.gl/core';
 
 const INFO_HTML = `\
@@ -122,7 +122,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     const texture = new AsyncTexture(device, {
       usage: Texture.TEXTURE & Texture.COPY_DST,
-      data: loadImage('vis-logo.png'),
+      data: loadImageBitmap('vis-logo.png'),
       mipmaps: true,
       sampler: device.createSampler({
         minFilter: 'linear',

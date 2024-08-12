@@ -12,16 +12,11 @@ export type DepthStencilTextureFormat =
   | 'depth24plus'
   | 'depth24plus-stencil8'
   | 'depth32float'
-  // device.features.has('depth24unorm-stencil8')
-  | 'depth24unorm-stencil8'
   // device.features.has('depth32float-stencil8')
   | 'depth32float-stencil8';
 
 /** Texture formats for color attachments */
-export type ColorTextureFormat =
-  | WebGPUColorTextureFormat
-  | WebGL2ColorTextureFormat
-  | UnsizedColorTextureFormat;
+export type ColorTextureFormat = WebGPUColorTextureFormat | WebGL2ColorTextureFormat;
 
 export type WebGPUColorTextureFormat =
   // 8-bit formats
@@ -103,6 +98,7 @@ export type WebGPUColorTextureFormat =
 
   // ASTC compressed formats usable if "texture-compression-astc" is both
   // supported by the device/user agent and enabled in requestDevice.
+  // Textures must be multiple of block size (encoded in format string).
   | 'astc-4x4-unorm'
   | 'astc-4x4-unorm-srgb'
   | 'astc-5x4-unorm'
@@ -131,13 +127,6 @@ export type WebGPUColorTextureFormat =
   | 'astc-12x10-unorm-srgb'
   | 'astc-12x12-unorm'
   | 'astc-12x12-unorm-srgb';
-
-/** Unsized texture formats (the only formats supported by WebGL1) */
-export type UnsizedColorTextureFormat = 'rgb8unorm-unsized' | 'rgba8unorm-unsized';
-// 'r8unorm-unsized' |
-// 'ra8unorm-unsized' |
-// 'rgb8unorm-srgb-unsized' |
-// 'rgba8unorm-srgb-unsized'
 
 /** Sized formats in WebGL 2 that are not (yet?) supported by WebGPU */
 export type WebGL2ColorTextureFormat =

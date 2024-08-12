@@ -149,22 +149,22 @@ export function polyfillWebGL1Extensions(gl: WebGL2RenderingContext): void {
 
 // Update unsized WebGL1 formats to sized WebGL2 formats
 // todo move to texture format file
-export function getInternalFormat(gl: WebGL2RenderingContext, format: GL, type: GL): GL {
-  // webgl2 texture formats
-  // https://webgl2fundamentals.org/webgl/lessons/webgl-data-textures.html
-  switch (format) {
-    case GL.DEPTH_COMPONENT:
-      return GL.DEPTH_COMPONENT24;
-    case GL.DEPTH_STENCIL:
-      return GL.DEPTH24_STENCIL8;
-    case GL.RGBA:
-      return type === GL.HALF_FLOAT ? GL.RGBA16F : GL.RGBA32F;
-    case GL.RGB:
-      return type === GL.HALF_FLOAT ? GL.RGB16F : GL.RGB32F;
-    default:
-      return format;
-  }
-}
+// export function getInternalFormat(gl: WebGL2RenderingContext, format: GL, type: GL): GL {
+//   // webgl2 texture formats
+//   // https://webgl2fundamentals.org/webgl/lessons/webgl-data-textures.html
+//   switch (format) {
+//     case GL.DEPTH_COMPONENT:
+//       return GL.DEPTH_COMPONENT24;
+//     case GL.DEPTH_STENCIL:
+//       return GL.DEPTH24_STENCIL8;
+//     case GL.RGBA:
+//       return type === GL.HALF_FLOAT ? GL.RGBA16F : GL.RGBA32F;
+//     case GL.RGB:
+//       return type === GL.HALF_FLOAT ? GL.RGB16F : GL.RGB32F;
+//     default:
+//       return format;
+//   }
+// }
 
 /*
 // texture type to update on the fly

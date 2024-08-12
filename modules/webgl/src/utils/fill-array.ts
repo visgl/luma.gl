@@ -2,15 +2,15 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {NumberArray} from '@math.gl/types';
+import type {NumericArray} from '@math.gl/types';
 
 // Uses copyWithin to significantly speed up typed array value filling
 export function fillArray(options: {
-  target: NumberArray;
-  source: NumberArray;
+  target: NumericArray;
+  source: NumericArray;
   start?: number;
   count?: number;
-}): NumberArray {
+}): NumericArray {
   const {target, source, start = 0, count = 1} = options;
   const length = source.length;
   const total = count * length;

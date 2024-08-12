@@ -1,7 +1,7 @@
 import {NumberArray} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate, Model, CubeGeometry} from '@luma.gl/engine';
-import {_ShaderInputs, loadImage, AsyncTexture} from '@luma.gl/engine';
+import {ShaderInputs, loadImageBitmap, AsyncTexture} from '@luma.gl/engine';
 import {phongMaterial, lighting, ShaderModule} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
 
@@ -9,6 +9,63 @@ const INFO_HTML = `
 <p>
 Drawing a phong-shaded cube
 </p>
+`;
+
+const WGSL_SHADER = /* wgsl */ `\
+
+struct Uniforms {
+  modelMatrix : mat4x4<f32>,
+  mvpMatrix : mat4x4<f32>,
+  eyePosition : vec3<f32>,
+};
+
+@binding(0) @group(0) var<uniform> app : Uniforms;
+
+struct VertexInputs {
+  // CUBE GEOMETRY
+  @location(0) positions : vec3<f32>,
+  @location(1) normals : vec3<f32>,
+  @location(2) texCoords : vec2<f32>
+};
+
+struct FragmentInputs {
+  @builtin(position) Position : vec4<f32>,
+  @location(0) fragUV : vec2<f32>,
+  @location(1) fragPosition: vec3<f32>,
+  @location(2) fragNormal: vec3<f32>
+}
+
+@vertex
+fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
+  var outputs : FragmentInputs;
+  outputs.Position = app.mvpMatrix * app.modelMatrix * vec4<f32>(inputs.positions, 1);
+  outputs.fragUV = inputs.texCoords;
+  outputs.fragPosition = (app.modelMatrix * vec4<f32>(inputs.positions, 1.0)).xyz;
+  // NOTE: WGSL lacks conversion syntax: https://github.com/gpuweb/gpuweb/issues/2399
+  let mat3 = mat3x3(app.modelMatrix[0].xyz, app.modelMatrix[1].xyz, app.modelMatrix[2].xyz);
+  outputs.fragNormal = mat3 * inputs.normals;
+  return outputs;
+}
+
+// void main(void) {
+//   vPosition = (app.modelMatrix * vec4(positions, 1.0)).xyz;
+//   vNormal = mat3(app.modelMatrix) * normals;
+//   vUV = texCoords;
+//   gl_Position = app.mvpMatrix * vec4(positions, 1.0);
+// }
+
+// uniform sampler2D uTexture;
+
+@fragment
+fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
+  return vec4<f32>(inputs.fragPosition, 1);
+}
+
+// void main(void) {
+//   vec3 surfaceColor = texture(uTexture, vec2(vUV.x, 1.0 - vUV.y)).rgb;
+//   surfaceColor = lighting_getLightColor(surfaceColor, uApp.eyePosition, vPosition, normalize(vNormal));
+//   fragColor = vec4(surfaceColor, 1.0);
+// }
 `;
 
 const vs = /* glsl */ `\
@@ -86,7 +143,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
   model: Model;
 
-  shaderInputs = new _ShaderInputs<{
+  shaderInputs = new ShaderInputs<{
     app: typeof app.props;
     lighting: typeof lighting.props;
     phongMaterial: typeof phongMaterial.props;
@@ -112,13 +169,15 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       }
     });
 
-    const texture = new AsyncTexture(device, {data: loadImage('vis-logo.png')});
+    const texture = new AsyncTexture(device, {data: loadImageBitmap('vis-logo.png')});
 
     this.model = new Model(device, {
+      source: WGSL_SHADER,
       vs,
       fs,
       shaderInputs: this.shaderInputs,
       geometry: new CubeGeometry(),
+      instanceCount: 1,
       bindings: {
         uTexture: texture
       },

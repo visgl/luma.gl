@@ -21,10 +21,10 @@ export type {ModelProps} from './model/model';
 export {Model} from './model/model';
 
 // Transforms
-export type {BufferTransformProps} from './transform/buffer-transform';
-export {BufferTransform} from './transform/buffer-transform';
-export type {TextureTransformProps} from './transform/texture-transform';
-export {TextureTransform} from './transform/texture-transform';
+export type {BufferTransformProps} from './compute/buffer-transform';
+export {BufferTransform} from './compute/buffer-transform';
+export type {TextureTransformProps} from './compute/texture-transform';
+export {TextureTransform} from './compute/texture-transform';
 
 export {PipelineFactory} from './lib/pipeline-factory';
 export {ShaderFactory} from './lib/shader-factory';
@@ -60,15 +60,24 @@ export {SphereGeometry} from './geometries/sphere-geometry';
 export type {TruncatedConeGeometryProps} from './geometries/truncated-cone-geometry';
 export {TruncatedConeGeometry} from './geometries/truncated-cone-geometry';
 
+export type {ShaderModuleInputs} from './shader-inputs';
+export {ShaderInputs} from './shader-inputs';
+
 // Application Utilities
 export {makeRandomGenerator} from './application-utils/random';
 export {setPathPrefix, loadImage, loadImageBitmap} from './application-utils/load-file';
 
 // EXPERIMENTAL
-export type {ShaderModuleInputs} from './shader-inputs';
-export {ShaderInputs as _ShaderInputs} from './shader-inputs';
-export type {ComputationProps} from './computation';
-export {Computation} from './computation';
+export type {ShaderPassRendererProps} from './passes/shader-pass-renderer';
+export {ShaderPassRenderer} from './passes/shader-pass-renderer';
+
+export {Swap} from './compute/swap';
+export {SwapBuffers} from './compute/swap';
+export {SwapFramebuffers} from './compute/swap';
+
+export type {ComputationProps} from './compute/computation';
+export {Computation} from './compute/computation';
+
 export {
   requestAnimationFrame,
   cancelAnimationFrame
@@ -76,3 +85,5 @@ export {
 
 export type {AsyncTextureProps} from './async-texture/async-texture';
 export {AsyncTexture} from './async-texture/async-texture';
+
+export {PickingManager as _PickingManager} from './modules/picking/picking-manager';

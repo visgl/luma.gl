@@ -2,9 +2,16 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {RenderPipelineProps, RenderPipelineParameters, PrimitiveTopology} from '@luma.gl/core';
-import type {ShaderLayout, UniformValue, Binding} from '@luma.gl/core';
-import type {RenderPass, VertexArray} from '@luma.gl/core';
+import type {
+  RenderPipelineProps,
+  RenderPipelineParameters,
+  PrimitiveTopology,
+  ShaderLayout,
+  UniformValue,
+  Binding,
+  RenderPass,
+  VertexArray
+} from '@luma.gl/core';
 import {RenderPipeline, log} from '@luma.gl/core';
 // import {getAttributeInfosFromLayouts} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
@@ -112,7 +119,8 @@ export class WEBGLRenderPipeline extends RenderPipeline {
           .join(', ');
         if (!options?.disableWarnings) {
           log.warn(
-            `Unknown binding "${name}" in render pipeline "${this.id}", expected one of ${validBindings}`
+            `No binding "${name}" in render pipeline "${this.id}", expected one of ${validBindings}`,
+            value
           )();
         }
         continue; // eslint-disable-line no-continue
@@ -309,22 +317,37 @@ export class WEBGLRenderPipeline extends RenderPipeline {
   }
 
   /** Report link status. First, check for shader compilation failures if linking fails */
-  _reportLinkStatus(status: 'success' | 'linking' | 'validation') {
+  async _reportLinkStatus(status: 'success' | 'linking' | 'validation'): Promise<void> {
     switch (status) {
       case 'success':
         return;
 
       default:
         // First check for shader compilation failures if linking fails
-        if (this.vs.compilationStatus === 'error') {
-          this.vs.debugShader();
-          throw new Error(`Error during compilation of shader ${this.vs.id}`);
+        switch (this.vs.compilationStatus) {
+          case 'error':
+            this.vs.debugShader();
+            throw new Error(`Error during compilation of shader ${this.vs.id}`);
+          case 'pending':
+            this.vs.asyncCompilationStatus.then(() => this.vs.debugShader());
+            break;
+          case 'success':
+            break;
         }
-        if (this.fs?.compilationStatus === 'error') {
-          this.fs.debugShader();
-          throw new Error(`Error during compilation of shader ${this.fs.id}`);
+
+        switch (this.fs?.compilationStatus) {
+          case 'error':
+            this.fs.debugShader();
+            throw new Error(`Error during compilation of shader ${this.fs.id}`);
+          case 'pending':
+            this.fs.asyncCompilationStatus.then(() => this.fs.debugShader());
+            break;
+          case 'success':
+            break;
         }
-        throw new Error(`Error during ${status}: ${this.device.gl.getProgramInfoLog(this.handle)}`);
+
+        const linkErrorLog = this.device.gl.getProgramInfoLog(this.handle);
+        throw new Error(`Error during ${status}: ${linkErrorLog}`);
     }
   }
 

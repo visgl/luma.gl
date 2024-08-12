@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+import {NumberArray4, TypedArray} from '@math.gl/types';
 import type {Device} from '../device';
 import type {RenderPassParameters} from '../types/parameters';
 // import {Binding} from '../types/shader-layout';
 import {Resource, ResourceProps} from './resource';
 import {Framebuffer} from './framebuffer';
-import {NumberArray} from '../../types';
 import {QuerySet} from './query-set';
 
 /**
@@ -22,11 +22,11 @@ export type RenderPassProps = ResourceProps & {
   // TODO - API needs to be able to control multiple render targets
 
   /** Clear value for color attachment, or `load` to preserve the previous value */
-  clearColor?: NumberArray | false;
+  clearColor?: NumberArray4 | TypedArray | false;
   /** Whether to disable / discard the output of the rasterizer */
   discard?: boolean;
 
-  /** Clear value for depth attachment, or `load` to preserve the previous value */
+  /** Clear value for depth attachment (usually `1`), or `load` to preserve the previous value */
   clearDepth?: number | false;
   /** Clear value for stencil attachment, or `load` to preserve the previous value */
   clearStencil?: number | false;
@@ -59,9 +59,9 @@ export abstract class RenderPass extends Resource<RenderPassProps> {
     ...Resource.defaultProps,
     framebuffer: null,
     parameters: undefined!,
-    clearColor: [0, 0, 0, 0],
-    clearDepth: 1,
-    clearStencil: 0,
+    clearColor: false,
+    clearDepth: false,
+    clearStencil: false,
     depthReadOnly: false,
     stencilReadOnly: false,
     discard: false,

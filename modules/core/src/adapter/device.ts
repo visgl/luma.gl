@@ -145,7 +145,6 @@ export type WebGPUDeviceFeature =
   | 'indirect-first-instance'
   | 'timestamp-query'
   | 'shader-f16'
-  | 'depth24unorm-stencil8'
   | 'depth32float-stencil8'
   | 'rg11b10ufloat-renderable' // Is the rg11b10ufloat texture format renderable?
   | 'float32-filterable' // Is the float32 format filterable?
@@ -421,13 +420,7 @@ export abstract class Device {
   abstract createBuffer(props: BufferProps | ArrayBuffer | ArrayBufferView): Buffer;
 
   /** Create a texture */
-  abstract _createTexture(props: TextureProps): Texture;
-  createTexture(props: TextureProps): Texture;
-  // createTexture(data: Promise<TextureData>): Texture;
-
-  createTexture(props: TextureProps): Texture {
-    return this._createTexture(props);
-  }
+  abstract createTexture(props: TextureProps): Texture;
 
   /** Create a temporary texture view of a video source */
   abstract createExternalTexture(props: ExternalTextureProps): ExternalTexture;

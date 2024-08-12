@@ -6,15 +6,18 @@ import type {UniformValue, Texture, Sampler} from '@luma.gl/core';
 import {log} from '@luma.gl/core';
 // import type {ShaderUniformType, UniformValue, UniformFormat, UniformInfoDevice, Texture, Sampler} from '@luma.gl/core';
 import {getShaderModuleDependencies, ShaderModule} from '@luma.gl/shadertools';
+import {splitUniformsAndBindings} from './model/split-uniforms-and-bindings';
+
+type BindingValue = Buffer | Texture | Sampler;
 
 /** Minimal ShaderModule subset, we don't need shader code etc */
 export type ShaderModuleInputs<
   PropsT extends Record<string, unknown> = Record<string, unknown>,
   UniformsT extends Record<string, UniformValue> = Record<string, UniformValue>,
-  BindingsT extends Record<string, Texture | Sampler> = Record<string, Texture | Sampler>
+  BindingsT extends Record<string, BindingValue> = Record<string, BindingValue>
 > = {
   defaultUniforms?: UniformsT;
-  getUniforms?: (settings: Partial<PropsT>, prevUniforms?: UniformsT) => UniformsT;
+  getUniforms?: (props?: any, oldProps?: any) => Record<string, BindingValue | UniformValue>;
 
   /** Not used. Used to access props type */
   props?: PropsT;
@@ -61,16 +64,20 @@ export class ShaderInputs<
    * @param modules
    */
   // @ts-expect-error Fix typings
-  constructor(modules: {[P in keyof ShaderPropsT]: ShaderModuleInputs<ShaderPropsT[P]>}) {
-    // TODO - get all dependencies from modules
-    const allModules = getShaderModuleDependencies(Object.values(modules));
-    log.log(
-      1,
-      'Creating ShaderInputs with modules',
-      allModules.map(m => m.name)
-    )();
+  constructor(modules: {[P in keyof ShaderPropsT]?: ShaderModuleInputs<ShaderPropsT[P]>}) {
+    // Extract modules with dependencies
+    const resolvedModules = getShaderModuleDependencies(
+      Object.values(modules).filter(module => module.dependencies)
+    );
+    for (const resolvedModule of resolvedModules) {
+      // @ts-ignore
+      modules[resolvedModule.name] = resolvedModule;
+    }
+
+    log.log(1, 'Creating ShaderInputs with modules', Object.keys(modules))();
 
     // Store the module definitions and create storage for uniform values and binding values, per module
+    // @ts-expect-error Fix typings
     this.modules = modules;
     this.moduleUniforms = {} as Record<keyof ShaderPropsT, Record<string, UniformValue>>;
     this.moduleBindings = {} as Record<keyof ShaderPropsT, Record<string, Texture | Sampler>>;
@@ -103,24 +110,18 @@ export class ShaderInputs<
       }
 
       const oldUniforms = this.moduleUniforms[moduleName];
-      const uniforms =
-        module.getUniforms?.(moduleProps, this.moduleUniforms[moduleName]) || (moduleProps as any);
-      // console.error(uniforms)
+      const oldBindings = this.moduleBindings[moduleName];
+      let uniformsAndBindings = module.getUniforms?.(moduleProps, this.moduleUniforms[moduleName]);
+      uniformsAndBindings ||= {...this.moduleUniforms[moduleName], ...moduleProps};
+
+      const {uniforms, bindings} = splitUniformsAndBindings(uniformsAndBindings);
       this.moduleUniforms[moduleName] = {...oldUniforms, ...uniforms};
-      // // this.moduleUniformsChanged ||= moduleName;
+      this.moduleBindings[moduleName] = {...oldBindings, ...bindings};
+      // this.moduleUniformsChanged ||= moduleName;
 
       // console.log(`setProps(${String(moduleName)}`, moduleName, this.moduleUniforms[moduleName])
-
-      // TODO - Get Module bindings
-      // const bindings = module.getBindings?.(moduleProps);
-      // this.moduleUniforms[moduleName] = bindings;
     }
   }
-
-  /** Merges all bindings for the shader (from the various modules) */
-  // getUniformBlocks(): Record<string, Texture | Sampler> {
-  //   return this.moduleUniforms;
-  // }
 
   /**
    * Return the map of modules
@@ -131,12 +132,12 @@ export class ShaderInputs<
   }
 
   /** Get all uniform values for all modules */
-  getUniformValues(): Record<keyof ShaderPropsT, Record<string, UniformValue>> {
+  getUniformValues(): Partial<Record<keyof ShaderPropsT, Record<string, UniformValue>>> {
     return this.moduleUniforms;
   }
 
   /** Merges all bindings for the shader (from the various modules) */
-  getBindings(): Record<string, Texture | Sampler> {
+  getBindingValues(): Record<string, Texture | Sampler> {
     const bindings = {} as Record<string, Texture | Sampler>;
     for (const moduleBindings of Object.values(this.moduleBindings)) {
       Object.assign(bindings, moduleBindings);
@@ -144,6 +145,7 @@ export class ShaderInputs<
     return bindings;
   }
 
+  /** Return a debug table that can be used for console.table() or log.table() */
   getDebugTable(): Record<string, Record<string, unknown>> {
     const table: Record<string, Record<string, unknown>> = {};
     for (const [moduleName, module] of Object.entries(this.moduleUniforms)) {

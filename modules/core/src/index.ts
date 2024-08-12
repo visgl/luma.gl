@@ -87,7 +87,8 @@ export type {
   Texture3DData,
   TextureCubeData,
   TextureArrayData,
-  TextureCubeArrayData
+  TextureCubeArrayData,
+  CopyExternalImageOptions
 } from './adapter/resources/texture';
 
 export type {Parameters, PrimitiveTopology, IndexFormat} from './adapter/types/parameters';

@@ -3,8 +3,8 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
-import {picking} from '../../shadertools/src/index';
-// import {_ShaderInputs as ShaderInputs} from '@luma.gl/engine';
+import {Texture} from '../../core/src/index';
+import {picking, ShaderModule} from '../../shadertools/src/index';
 import {ShaderInputs} from '../src/shader-inputs';
 
 test('ShaderInputs#picking', t => {
@@ -61,4 +61,68 @@ test('ShaderInputs#picking prop merge', t => {
   );
 
   t.end();
+});
+
+test('ShaderInputs#dependencies', t => {
+  type CustomProps = {color: number[]};
+  const custom: ShaderModule<CustomProps> = {
+    name: 'custom',
+    dependencies: [picking],
+    uniformTypes: {color: 'vec3<f32>'},
+    propTypes: {color: {value: [0, 0, 0]}}
+  };
+
+  const shaderInputs = new ShaderInputs<{
+    custom: CustomProps;
+    picking: typeof picking.props;
+  }>({custom});
+  t.deepEqual(Object.keys(shaderInputs.modules), ['custom', 'picking']);
+
+  shaderInputs.setProps({
+    custom: {color: [255, 0, 0]},
+    picking: {highlightedObjectColor: [1, 2, 3]}
+  });
+  t.deepEqual(shaderInputs.moduleUniforms.custom.color, [255, 0, 0], 'custom color updated');
+  t.deepEqual(
+    shaderInputs.moduleUniforms.picking.highlightedObjectColor,
+    [1, 2, 3],
+    'highlight object color updated'
+  );
+
+  t.end();
+});
+
+test('ShaderInputs#bindings', t => {
+  [true, false].map(callback => {
+    t.comment(`custom module created ${callback ? 'with' : 'without'} getUniforms()`);
+    type CustomProps = {color: number[]; colorTexture: Texture};
+    const custom: ShaderModule<CustomProps> = {
+      name: 'custom',
+      uniformTypes: {color: 'vec3<f32>'},
+      propTypes: {color: {value: [0, 0, 0]}}
+    };
+    if (callback) {
+      custom.getUniforms = ({color, colorTexture}: CustomProps): CustomProps => {
+        return {color, colorTexture};
+      };
+    }
+
+    const shaderInputs = new ShaderInputs<{
+      custom: CustomProps;
+    }>({custom});
+
+    const MOCK_TEXTURE = 'MOCK_TEXTURE' as unknown as Texture;
+    shaderInputs.setProps({
+      custom: {color: [255, 0, 0], colorTexture: MOCK_TEXTURE}
+    });
+    t.deepEqual(shaderInputs.moduleUniforms.custom.color, [255, 0, 0], 'custom color updated');
+    t.equal(shaderInputs.moduleBindings.custom.colorTexture, MOCK_TEXTURE, 'colorTexture updated');
+
+    const uniformValues = shaderInputs.getUniformValues();
+    const bindings = shaderInputs.getBindingValues();
+    t.deepEqual(uniformValues, {custom: {color: [255, 0, 0]}}, 'uniformValues correct');
+    t.deepEqual(bindings, {colorTexture: 'MOCK_TEXTURE'}, 'bindings correct');
+
+    t.end();
+  });
 });

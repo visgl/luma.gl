@@ -3,8 +3,13 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
-import {getQualifierDetails, getPassthroughFS, convertToVec4} from '@luma.gl/shadertools';
-import {typeToChannelSuffix, typeToChannelCount} from '@luma.gl/shadertools';
+import {
+  getQualifierDetails,
+  getPassthroughFS,
+  convertToVec4,
+  typeToChannelSuffix,
+  typeToChannelCount
+} from '@luma.gl/shadertools';
 
 type channelCount = 1 | 2 | 3 | 4;
 

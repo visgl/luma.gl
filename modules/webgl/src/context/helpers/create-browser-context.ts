@@ -60,6 +60,7 @@ export function createBrowserContext(
   // props.failIfMajorPerformanceCaveat = true;
 
   // We require webgl2 context
+  props.preserveDrawingBuffer = true;
   gl ||= canvas.getContext('webgl2', props) as WebGL2RenderingContext;
 
   // Software GPU

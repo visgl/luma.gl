@@ -2,6 +2,28 @@ import {DeviceTabs, Format as Ft, Filter as L, Render as R} from '@site/src/reac
 
 # Using GPU Textures
 
+While the idea behind textures is simple in principle (a grid of pixels stored on GPU memory), GPU Textures are surprisingly complex objects.
+
+Capabilities
+- Shaders can read (sample) from textures
+- Textures can be set up as render targets (by attaching them to a framebuffer).
+- **Arrays** Textures can have multiple images (texture arrays, cube textures, 3d textures...), indexed by a `depth` parameter.
+- **Mipmaps** Each texture image can have a "pyramid" of "mipmap" images representing 
+
+Textures are supported by additional GPU objects:
+- **Samplers** - The specifics of how shaders read from textures (interpolation methods, edge behaviors etc) are controlled by **GPU Sampler objects**. luma.gl will create a default sampler object for each texture, but the application can override if designed
+- **TextureViews** - A texture view specifies a subset of the images in a texture, enabling operations to be performed on such subsets. luma.gl will create a default TextureView for each texture, but the application can create additional TextureViews.
+- **Framebuffers** - A framebuffer is a map of "attachment points" to one or more textures that can be used when creating `RenderPasses` and made available to shaders.
+
+Setting texture data from CPU data:
+- There is a fast path for setting texture data from "images", that can also be used for 8 bit RGBA data.
+- General data transfer is more complicated, it needs to go through a GPU Buffer and a CommandEncoder object.
+
+Notes:
+- Some GPUs offer additional Texture-related capabilities (such as availability of advanced image formats, more formats being filterable or renderable etc).
+- Check `DeviceFeatures` if you would like to take advantage of such features to discover what features are implemented by the current `Device` (i.e. the current WebGPU or WebGL environment / browser the application is running on). 
+
+
 ## Texture Dimension
 
 Most textures tend to be two dimensional textures, however GPUs can support additional configurations
@@ -30,10 +52,6 @@ Note that even though a GPU supports creating and sampling textures of a certain
 
 GPUs support a wide range of texture formats. In luma.gl, each format is identified with a string (the `TextureFormat` type).
 
-## Texture Data
-
-The textures may not be completely packed, there may be padding (per row)
-
 ### Compressed Textures
 
 Compressed textures refers to textures that are compressed in a way that can be decompressed performantly on the GPU during sampling.
@@ -50,6 +68,11 @@ Supercompressed textures solve the portability problem of compressed textures by
 defining a common super-compressed format which can be decoded after load into a supported compressed texture format.
 
 To use Basis supercompressed textures in luma.gl, see the [loaders.gl](https://loaders.gl) `BasisLoader` which can extract compressed textures from a basis encoded texture.
+
+
+## Texture Data
+
+The textures may not be completely packed, there may be padding (per row)
 
 ## Texture creation
 
@@ -71,6 +94,10 @@ A primary purpose of textures is to allow the GPU to read from them.
 
 ### Texture filtering
 
+Texture formats that are filterable can be interpolated by the GPI
+
+Filtering is specified using a separate `Sampler` object.
+
 Sampling is a sophisticated process
 
 - magnification
@@ -87,9 +114,9 @@ To improve samling mipmaps can be prepared.
 
 Before textures can be sampled in the
 
-## Writing to Textures on the GPU
+## Texture Rendering (Writing to Textures on the GPU)
 
-To write to textures on the GPU
+Texture formats that are renderable can be bound to framebuffer attachments so that shaders can write to them.
 
 ## Blending
 
@@ -99,7 +126,7 @@ In WebGPU/WGSL, textures can be used with compute shaders through storage bindin
 
 ## Copying Textures
 
-Texture data can be copied between GPU and CPU and vice versa.
+Texture data can be copied between GPU and CPU and vice versa, via GPU Buffers. See `CommandEncoder` for more information.
 
 ## Texture Format Capabilities
 
