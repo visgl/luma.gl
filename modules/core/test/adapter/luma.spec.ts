@@ -14,7 +14,7 @@ test('luma#attachDevice', async t => {
   t.end();
 });
 
-test.only('luma#createDevice', async t => {
+test('luma#createDevice', async t => {
   const device = await luma.createDevice({type: 'unknown', adapters: [nullAdapter]});
   t.equal(device.type, 'unknown', 'info.vendor ok');
   t.equal(device.info.vendor, 'no one', 'info.vendor ok');

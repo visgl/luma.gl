@@ -12,13 +12,11 @@ const WEBGL_DEBUG_CDN_URL = 'https://unpkg.com/webgl-debug@2.0.1/index.js';
 
 type DebugContextProps = {
   debug?: boolean;
-  throwOnError?: boolean;
   break?: string[];
 };
 
 // const DEFAULT_DEBUG_CONTEXT_PROPS: Required<DebugContextProps> = {
 //   debug: true,
-//   throwOnError: false,
 //   break: [],
 //   webgl2: false,
 // }
@@ -136,9 +134,7 @@ function onGLError(props: DebugContextProps, err, functionName: string, args: an
   const message = `${errorMessage} in gl.${functionName}(${functionArgs})`;
   log.error(message)();
   debugger; // eslint-disable-line
-  if (props.throwOnError) {
-    throw new Error(message);
-  }
+  throw new Error(message);
 }
 
 // Don't generate function string until it is needed
@@ -167,11 +163,7 @@ function onValidateGLFunc(
   for (const arg of functionArgs) {
     if (arg === undefined) {
       functionString = functionString || getFunctionString(functionName, functionArgs);
-      if (props.throwOnError) {
         throw new Error(`Undefined argument: ${functionString}`);
-      } else {
-        log.error(`Undefined argument: ${functionString}`)();
-        debugger; // eslint-disable-line
       }
     }
   }

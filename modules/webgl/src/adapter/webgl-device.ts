@@ -197,7 +197,7 @@ export class WebGLDevice extends Device {
 
     // DEBUG contexts: Add luma debug instrumentation to the context, force log level to at least 1
     if (props.debugWebGL) {
-      this.gl = makeDebugContext(this.gl, {...props, throwOnError: true});
+      this.gl = makeDebugContext(this.gl, {...props});
       this.debug = true;
       log.level = Math.max(log.level, 1);
       log.warn('WebGL debug mode activated. Performance reduced.')();

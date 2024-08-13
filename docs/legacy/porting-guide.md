@@ -59,12 +59,12 @@ In progress
 A subset of the new interfaces in the luma.gl v9 API:
 
 
-| Interface | Description |
-| --- | --- |
-| `Adapter` | luma.gl exposes GPU capabilities on the device in the form of one or more as `Adapter`s. |
-| `Device`  | Manages resources, and the device’s GPUQueues, which execute commands. |
+| Interface | Description                                                                                                                     |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `Adapter` | luma.gl exposes GPU capabilities on the device in the form of one or more as `Adapter`s.                                        |
+| `Device`  | Manages resources, and the device’s GPUQueues, which execute commands.                                                          |
 | `Buffer`  | The physical resources backed by GPU memory. A `Device` may have its own memory with high-speed access to the processing units. |
-| `Texture` | Like buffer, but supports random access |
+| `Texture` | Like buffer, but supports random access                                                                                         |
 GPUCommandBuffer and GPURenderBundle are containers for user-recorded commands.
 | `Shader` | Compiled shader code.
 | `Sampler` | or GPUBindGroup, configure the way physical resources are used by the GPU. |
@@ -181,15 +181,15 @@ The debug module has been removed. Debug functionality is now built-in (and dyna
 
 #### `AnimationLoop`
 
-| v8 Prop or Method               | v9 Replacement                     | Comment                                          |
-| ------------------------------- | ---------------------------------- | ------------------------------------------------ |
+| v8 Prop or Method               | v9 Replacement                           | Comment                                                                  |
+| ------------------------------- | ---------------------------------------- | ------------------------------------------------------------------------ |
 | Properties                      |
-| `props.gl`                      | `props.device`                     | Now accepts a `Promise<Device>`.                 |
-| `props.glOptions`               | `luma.createDevice(<options>)`     | See [CreateDeviceProps](../api-reference/core/luma.md#createdeviceprops) |
-| `props.createFramebuffer`       | N/A                                | You will need to create framebuffers explicitly. |
-| `props.debug`                   | `luma.createDevice({webgl: {debug: true}, type: 'webgl'})` | Device debug functionality is improved. |
+| `props.gl`                      | `props.device`                           | Now accepts a `Promise<Device>`.                                         |
+| `props.glOptions`               | `luma.createDevice(<options>)`           | See [CreateDeviceProps](../api-reference/core/luma.md#createdeviceprops) |
+| `props.createFramebuffer`       | N/A                                      | You will need to create framebuffers explicitly.                         |
+| `props.debug`                   | `luma.createDevice({debugWebGL: true}})` | Device debug option naming improvements.                                  |
 | Methods                         |
-| `animationLoop.isContextLost()` | `device.lost`, `device.isLost()`   |                                                  |
+| `animationLoop.isContextLost()` | `device.lost`, `device.isLost()`         |                                                                          |
 
 ### `luma.gl/core` / `@luma.gl/webgl`
 
@@ -214,7 +214,7 @@ The v8 luma.gl API was designed to allow apps to work directly with the `WebGLRe
 | `WebGL2RenderingContext`           | `Device.gl`                           | Contexts are created (or wrapped) by the `Device` class.       |  |
 | `getWebGL2Context(gl)`             | `device.gl2`                          |                                                                |
 | `assertWebGLContext(gl)`           | N/A                                   | A device will always hold a valid WebGL context                |
-| `assertWebGL2Context(gl)`          | N/A                                   | Not needed. WebGL devices now always use WebGL2.                   |
+| `assertWebGL2Context(gl)`          | N/A                                   | Not needed. WebGL devices now always use WebGL2.               |
 |                                    |                                       |
 | `createGLContext()`                | `luma.createDevice()`                 | Will create a WebGL context if `WebGLDevice` is registered.    |
 | `createGLContext({onContextLost})` | `device.lost`                         | `Promise` that lets the application `await` context loss.      |
@@ -244,10 +244,10 @@ The v8 luma.gl API was designed to allow apps to work directly with the `WebGLRe
 
 ### `@luma.gl/debug`**
 
-| v8 Prop or Method    | v9 Replacement                                      | Comment                                                                                                                             |
-| -------------------- | --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `makeDebugContext()` | `luma.createDevice({webgl: {debug: true}, type: 'webgl'})` | [Khronos WebGL developer tools][khronos_dev_tools] are dynamically loaded when needed.                                              |
-| Spector.js           | `luma.createDevice({webgl: {debugWithSpectorJS: true}, type: 'webgl'})` | [Spector.js][spector] is pre-integrated. The Spector.js library will be dynamically loaded when needed and the canvas is "captured". |
+| v8 Prop or Method    | v9 Replacement                                                          | Comment                                                                                                                              |
+| -------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `makeDebugContext()` | `luma.createDevice({debugWebGL: true, type: 'webgl'})`              | [Khronos WebGL developer tools][khronos_dev_tools] are dynamically loaded when needed.                                               |
+| Spector.js           | `luma.createDevice({debugSpectorJS: true}, type: 'webgl'})` | [Spector.js][spector] is pre-integrated. The Spector.js library will be dynamically loaded when needed and the canvas is "captured". |
 
 [khronos_dev_tools]: https://github.com/KhronosGroup/WebGLDeveloperTools
 [spector]: https://spector.babylonjs.com/
@@ -261,7 +261,7 @@ Feature constants have been changed to match the WebGPU API and will need to be 
 | luma.gl v8 `FEATURE`                        | v9 `DeviceFeature`                     | Comments                                                                      |
 | ------------------------------------------- | -------------------------------------- | ----------------------------------------------------------------------------- |
 | **General WebGL Features**                  |                                        |                                                                               |
-| `FEATURES.WEBGL2`                           | `webgl`                                | True for WebGL Contexts                                                      |
+| `FEATURES.WEBGL2`                           | `webgl`                                | True for WebGL Contexts                                                       |
 | `FEATURES.TIMER_QUERY`                      | `timer-query-webgl`                    | [`Query`][/]ocs/api-reference/webgl/query) for asynchronous GPU timings       |
 | `FEATURES.INSTANCED_RENDERING`              | N/A (always true)                      | Instanced rendering (via instanced vertex attributes)                         |
 | `FEATURES.VERTEX_ARRAY_OBJECT`              | N/A (always true)                      | `VertexArrayObjects` can be created                                           |
@@ -298,28 +298,28 @@ Feature constants have been changed to match the WebGPU API and will need to be 
 
 The following table shows mappings from luma v8 WebGL parameters to luma v9 WebGPU style parameters.
 
-| luma v8 / WebGL Parameter                                | v9 Parameter                       | Values                                 | v9 Values                         |
-| -------------------------------------------------------- | ---------------------------------- | -------------------------------------- | --------------------------------- |
-| [polygonOffset][polygonoffset]                           | `depthBias`, `depthBiasSlopeScale` |
-| [depthRange][depthrange]                                 | N/A                                |
-| [clearDepth][cleardepth]                                 |                                    |
+| luma v8 / WebGL Parameter                                | v9 Parameter                                              | Values                                 | v9 Values                         |
+| -------------------------------------------------------- | --------------------------------------------------------- | -------------------------------------- | --------------------------------- |
+| [polygonOffset][polygonoffset]                           | `depthBias`, `depthBiasSlopeScale`                        |
+| [depthRange][depthrange]                                 | N/A                                                       |
+| [clearDepth][cleardepth]                                 |                                                           |
 | **Rasterization Parameters**                             |
-| [`cullFace`][cullface]                                   | `cullMode`                         | Which face to cull                     | **`'none'`**, `'front'`, `'back'` |
-| [`frontFace`][frontface]                                 | `frontFace`                        | Which triangle winding order is front  | **`ccw`**, `cw`                   |
-| `polygonOffset`                                          | `depthBias`                        | Small depth offset for polygons        | `float`                           |
-| `polygonOffset`                                          | `depthBiasSlopeScale`              | Small depth factor for polygons        | `float`                           |
-| `polygonOffset`                                          | `depthBiasClamp`                   | Max depth offset for polygons          | `float`                           |
+| [`cullFace`][cullface]                                   | `cullMode`                                                | Which face to cull                     | **`'none'`**, `'front'`, `'back'` |
+| [`frontFace`][frontface]                                 | `frontFace`                                               | Which triangle winding order is front  | **`ccw`**, `cw`                   |
+| `polygonOffset`                                          | `depthBias`                                               | Small depth offset for polygons        | `float`                           |
+| `polygonOffset`                                          | `depthBiasSlopeScale`                                     | Small depth factor for polygons        | `float`                           |
+| `polygonOffset`                                          | `depthBiasClamp`                                          | Max depth offset for polygons          | `float`                           |
 | **Stencil Parameters**                                   |
-| [`stencilMask`][stencilmask] / `GL.STENCIL_WRITEMASK`    | `stencilReadMask`                  | Binary mask for reading stencil values | `number` (**`0xffffffff`**)       |
-| `stencilFunc` / `GL.STENCIL_VALUE_MASK`                  | `stencilWriteMask`                 | Binary mask for writing stencil values | `number` (**`0xffffffff`**)       |
-| `stencilFunc` / `GL.STENCIL_FUNC`                        | `stencilCompare`                   | How the mask is compared               | **`always`**, `not-equal`, ...    |
-| [`stencilOp`][stencilop] /  `GL.STENCIL_PASS_DEPTH_PASS` | `stencilPassOperation`             |                                        | **`'keep'`**                      |
-| [`stencilOp`][stencilop] / `GL.STENCIL_PASS_DEPTH_FAIL`  | `stencilDepthFailOperation`        |                                        | **`'keep'`**                      |
-| [`stencilOp`][stencilop] / `GL.STENCIL_FAIL`             | `stencilFailOperation`             |                                        | **`'keep'`**                      |
-| [`stencilOpSeparate`][stencilopseparate]                 |                                    |                                        |                                   |
+| [`stencilMask`][stencilmask] / `GL.STENCIL_WRITEMASK`    | `stencilReadMask`                                         | Binary mask for reading stencil values | `number` (**`0xffffffff`**)       |
+| `stencilFunc` / `GL.STENCIL_VALUE_MASK`                  | `stencilWriteMask`                                        | Binary mask for writing stencil values | `number` (**`0xffffffff`**)       |
+| `stencilFunc` / `GL.STENCIL_FUNC`                        | `stencilCompare`                                          | How the mask is compared               | **`always`**, `not-equal`, ...    |
+| [`stencilOp`][stencilop] /  `GL.STENCIL_PASS_DEPTH_PASS` | `stencilPassOperation`                                    |                                        | **`'keep'`**                      |
+| [`stencilOp`][stencilop] / `GL.STENCIL_PASS_DEPTH_FAIL`  | `stencilDepthFailOperation`                               |                                        | **`'keep'`**                      |
+| [`stencilOp`][stencilop] / `GL.STENCIL_FAIL`             | `stencilFailOperation`                                    |                                        | **`'keep'`**                      |
+| [`stencilOpSeparate`][stencilopseparate]                 |                                                           |                                        |                                   |
 | **Sampler Parameters**                                   |
-| `magFilter` / `GL.TEXTURE_MAG_FILTER` *                  | `magFilter`, `mipmapFilter`, `lodMinClamp`, `lodMaxClamp` |               | `'linear'`, `'nearest'`, ...      |
-| `minFilter` / `GL.TEXTURE_MIN_FILTER` *                  | `minFilter`, `mipmapFilter`, `lodMinClamp`, `lodMaxClamp` |               | `'linear'`, `'nearest'`, ...      |
+| `magFilter` / `GL.TEXTURE_MAG_FILTER` *                  | `magFilter`, `mipmapFilter`, `lodMinClamp`, `lodMaxClamp` |                                        | `'linear'`, `'nearest'`, ...      |
+| `minFilter` / `GL.TEXTURE_MIN_FILTER` *                  | `minFilter`, `mipmapFilter`, `lodMinClamp`, `lodMaxClamp` |                                        | `'linear'`, `'nearest'`, ...      |
 
 \* Note that the `magFilter`, `minFilter`, and `mipmapFilter` parameters accept only `'nearest'` and `'linear'` as values. To disable use of mipmaps on a texture that includes them, set `lodMaxClamp` to zero.
 

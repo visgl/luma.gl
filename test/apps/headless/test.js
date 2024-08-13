@@ -8,7 +8,6 @@ export const gl = createHeadlessContext({
   width: 1,
   height: 1,
   debug: true,
-  throwOnError: false
 });
 
 const ext = gl.getExtension('EXT_disjoint_timer_query');

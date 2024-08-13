@@ -64,7 +64,7 @@ Specifies props to use when luma creates the device.
 | Parameter                                           | Default                                      | Description                                                                                |
 | --------------------------------------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------ |
 | `id?: string`                                       | `null`                                       | Optional string id, mainly intended for debugging.                                         |
-| `canvasContext?: CanvasContextProps`                | [CanvasContexProps][canvas_context_props]    | Props used to create the default `CanvasContext` for the new `Device`.                     |
+| `canvasContext?: CanvasContextProps`                | [CanvasContexProps][canvas-context]    | Props used to create the default `CanvasContext` for the new `Device`.                     |
 | `onError?: (error: Error) => unknown`               | `log.error`                                  | Error handling.                                                                            |
 | `powerPreference?: string`                          | `'high-performance'`                         | `'default' \| 'high-performance' \| 'low-power'` (WebGL).                                  |
 | `webgl?: WebGLContextAttributes`                    | [`WebGLContextAttributes`][webgl-attributes] | Attributes passed on to WebGL (`canvas.getContext('webgl2', props.webgl)`                  |
@@ -94,8 +94,7 @@ Learn more about WebGL debugging in our [Debugging](../../developer-guide/debugg
 
 #### WebGLContextAttributes
 
-You can specify what [`WebGLContextAttributes`](webgl-attributes) to use if luma creates the WebGL context. 
-For instance, applications often want toset `props.webgl.preserveDrawingBuffer` to ensure that the screen can be "grabbed" with `canvas.toDataURL()`
+For detailed control over WebGL context can specify what [`WebGLContextAttributes`](webgl-attributes) to use if luma creates the WebGL context. 
 
 | `WebGLContextAttributes`                 | Default | Description                                                                                            |
 | ---------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------ |
