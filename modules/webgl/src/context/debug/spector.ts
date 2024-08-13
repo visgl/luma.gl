@@ -5,7 +5,7 @@
 import {log} from '@luma.gl/core';
 import {loadScript} from '../../utils/load-script';
 
-import {Spector} from './spector-types';
+import type {Spector} from './spector-types';
 
 /** Spector debug initialization options */
 type SpectorProps = {
@@ -56,8 +56,8 @@ export function initializeSpectorJS(props: SpectorProps): Spector | null {
 
   if (!spector && globalThis.SPECTOR && !globalThis.luma?.spector) {
     log.probe(LOG_LEVEL, 'SPECTOR found and initialized. Start with `luma.spector.displayUI()`')();
-    const {Spector} = globalThis.SPECTOR as any;
-    spector = new Spector();
+    const {Spector: SpectorJS} = globalThis.SPECTOR as any;
+    spector = new SpectorJS();
     if (globalThis.luma) {
       (globalThis.luma as any).spector = spector;
     }

@@ -31,7 +31,7 @@ export function withDeviceAndGLParameters<T = unknown>(
   device: Device,
   parameters: Parameters,
   glParameters: GLParameters,
-  func: (device?: Device) => T
+  func: (_?: Device) => T
 ): T {
   if (isObjectEmpty(parameters)) {
     // Avoid setting state if no parameters provided. Just call and return
@@ -62,7 +62,7 @@ export function withDeviceAndGLParameters<T = unknown>(
 export function withGLParameters<T = unknown>(
   device: Device,
   parameters: GLParameters,
-  func: (device?: Device) => T
+  func: (_?: Device) => T
 ): T {
   if (isObjectEmpty(parameters)) {
     // Avoid setting state if no parameters provided. Just call and return
@@ -91,7 +91,7 @@ export function withGLParameters<T = unknown>(
 export function withDeviceParameters<T = unknown>(
   device: Device,
   parameters: Parameters,
-  func: (device?: Device) => T
+  func: (_?: Device) => T
 ): T {
   if (isObjectEmpty(parameters)) {
     // Avoid setting state if no parameters provided. Just call and return

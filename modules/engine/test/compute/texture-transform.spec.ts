@@ -123,20 +123,20 @@ test('TextureTransform#texture', async t => {
 });
 
 async function readF32(
-  webglDevice: Device,
+  webglDevice_: Device,
   source: Texture,
   byteLength: number
 ): Promise<Float32Array> {
-  const bytes = await readU8(webglDevice, source, byteLength);
+  const bytes = await readU8(webglDevice_, source, byteLength);
   return new Float32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 4);
 }
 
 async function readU8(
-  webglDevice: Device,
+  webglDevice_: Device,
   sourceTexture: Texture,
   byteLength: number
 ): Promise<Uint8Array> {
-  const destinationBuffer = webglDevice.createBuffer({byteLength});
+  const destinationBuffer = webglDevice_.createBuffer({byteLength});
   try {
     const cmd = webglDevice.createCommandEncoder();
     cmd.copyTextureToBuffer({sourceTexture, destinationBuffer});

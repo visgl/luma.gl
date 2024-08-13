@@ -151,6 +151,7 @@ export class WebGLDevice extends Device {
             reason: 'destroyed',
             message: 'Entered sleep mode, or too many apps or browser tabs are using the GPU.'
           }),
+        // eslint-disable-next-line no-console
         onContextRestored: (event: Event) => console.log('WebGL context restored')
       },
       webglContextAttributes

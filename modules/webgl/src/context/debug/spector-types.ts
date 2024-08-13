@@ -1,5 +1,5 @@
 // Forked from https://github.com/BabylonJS/Spector.js/blob/master/dist/spector.d.ts
-/* eslint-disable camelcase */
+/* eslint-disable camelcase, no-shadow */
 
 interface IEvent<T> {
   add(callback: (element: T) => void, context?: any): number;
