@@ -11,7 +11,7 @@ be created using `luma.createDevice(props)`: See [`DeviceProps`](../core/device#
 import {luma} from '@luma.gl/core';
 import '@luma.gl/webgpu'; // Installs the WebGPUDevice adapter
 
-const device = await luma.createDevice({type: 'webgpu', canvas: ..., webgpu: {...}});
+const device = await luma.createDevice({type: 'webgpu', canvasContext: {...}});
 
 // Resources can now be created
 const buffer = device.createBuffer(...);

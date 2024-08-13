@@ -24,7 +24,7 @@ yarn add @luma.gl/webgpu
 import {luma} from '@luma.gl/core';
 import '@luma.gl/webgpu';
 
-const device = await luma.createDevice({type: 'webgpu', canvas: ...});
+const device = await luma.createDevice({type: 'webgpu', canvasContext: ...});
 ```
 
 It is possible to register more than one device adapter to create an application
@@ -35,7 +35,7 @@ import {luma} from '@luma.gl/core';
 import '@luma.gl/webgpu';
 import '@luma.gl/webgl';
 
-const webgpuDevice = luma.createDevice({type: 'best-available', canvas: ...});
+const webgpuDevice = luma.createDevice({type: 'best-available', canvasContext: ...});
 ```
 
 ## A Typical Install

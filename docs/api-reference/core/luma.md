@@ -22,13 +22,13 @@ Create a WebGL 2 context (throws if WebGL2 not supported)
 import {luma} from '@luma.gl/core';
 import {webgl2Adapter} from '@luma.gl/webgl';
 
-const webgpuDevice = luma.createDevice({type: 'webgl', adapters: [webgl2Adapter], canvas: ...});
+const webgpuDevice = luma.createDevice({type: 'webgl', adapters: [webgl2Adapter], canvasContext: {canvas: ...}});
 ```
 
 ```typescript
 const webgpuDevice = luma.createDevice({
   type: 'best-available', 
-  canvas: ..., 
+  canvasContext: {...}, 
   adapters: [webgl2Adapter, WebGPUDevice]
 });
 ```
@@ -41,7 +41,7 @@ Register the WebGL backend, then create a WebGL2 context, auto creating a canvas
 import {luma} from '@luma.gl/core';
 import {webgl2Adapter} from '@luma.gl/webgl';
 luma.registerAdapters([webgl2Adapter]);
-const webglDevice = luma.createDevice({type: 'webgl', canvas: ...});
+const webglDevice = luma.createDevice({type: 'webgl', canvasContext: {canvas: ...}});
 ```
 
 It is possible to register more than one device to create an application
@@ -52,7 +52,7 @@ import {luma} from '@luma.gl/core';
 import {webgl2Adapter} from '@luma.gl/webgl';
 import {webgpuDevice} from '@luma.gl/webgl';
 luma.registerAdapters([webgl2Adapter, webgpuDevice]);
-const device = luma.createDevice({type: 'best-available', canvas: ...});
+const device = luma.createDevice({type: 'best-available', canvasContext: {canvas: ...}});
 ```
 
 ## Registering Adapters
@@ -72,7 +72,7 @@ import {luma} from '@luma.gl/core';
 import {webgpuAdapter} from '@luma.gl/webgpu';
 
 luma.registerAdapters([webgpuAdapter]);
-const device = await luma.createDevice({type: 'webgpu', canvas: ...});
+const device = await luma.createDevice({type: 'webgpu', canvasContext: ...});
 ```
 
 Pre-register devices
@@ -83,7 +83,7 @@ import {webgl2Adapter} from '@luma.gl/webgl';
 import {webgpuAdapter} from '@luma.gl/webgpu';
 
 luma.registerAdapters([webgl2Adapter, webgpuAdapter]);
-const webgpuDevice = luma.createDevice({type: 'best-available', canvas: ...});
+const webgpuDevice = luma.createDevice({type: 'best-available', canvasContext: ...});
 ```
 
 ## Types
