@@ -48,7 +48,7 @@ export class NullDevice extends Device {
     return true;
   }
   readonly type = 'unknown';
-  features: DeviceFeatures = new DeviceFeatures([], this.props.disabledFeatures);
+  features: DeviceFeatures = new DeviceFeatures([], this.props._disabledFeatures);
   limits: NullDeviceLimits = new NullDeviceLimits();
   readonly info = NullDeviceInfo;
 

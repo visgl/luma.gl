@@ -12,7 +12,7 @@ const CONTEXT_DEFAULTS: Partial<DeviceProps> = {
     width: 1,
     height: 1
   },
-  debug: true
+  debugWebGL: true
 };
 
 /** Create a test WebGL context */
@@ -24,7 +24,7 @@ export function createTestContext(opts: Record<string, any> = {}): WebGL2Renderi
 /** Create a test WebGLDevice */
 export function createTestDevice(props: DeviceProps = {}): WebGLDevice | null {
   try {
-    props = {...CONTEXT_DEFAULTS, ...props, debug: true};
+    props = {...CONTEXT_DEFAULTS, ...props, debugWebGL: true};
     // TODO - We dont use luma.createDevice since createTestDevice currently expect WebGL context to be created synchronously
     return new WebGLDevice(props);
   } catch (error) {

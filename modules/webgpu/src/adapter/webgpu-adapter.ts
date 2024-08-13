@@ -44,7 +44,7 @@ export class WebGPUAdapter extends Adapter {
     const requiredFeatures: GPUFeatureName[] = [];
     const requiredLimits: Record<string, number> = {};
 
-    if (props.requestMaxLimits) {
+    if (props._requestMaxLimits) {
       // Require all features
       requiredFeatures.push(...(Array.from(adapter.features) as GPUFeatureName[]));
 

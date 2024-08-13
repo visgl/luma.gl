@@ -125,6 +125,7 @@ void main() {
         }
         first = false;
 
+        // eslint-disable-next-line no-shadow
         const sourceTexture = this.swapFramebuffers.current.colorAttachments[0].texture;
 
         const bindings = {

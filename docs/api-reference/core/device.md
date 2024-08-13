@@ -67,27 +67,26 @@ Specifies props to use when luma creates the device.
 | `canvasContext?: CanvasContextProps`                | [CanvasContexProps][canvas_context_props]    | Props used to create the default `CanvasContext` for the new `Device`.                     |
 | `onError?: (error: Error) => unknown`               | `log.error`                                  | Error handling.                                                                            |
 | `powerPreference?: string`                          | `'high-performance'`                         | `'default' \| 'high-performance' \| 'low-power'` (WebGL).                                  |
-| `requestMaxLimits?: boolean`                        | `true`                                       | Ensures that the Device exposes the highest `DeviceLimits` supported by platform (WebGPU). |
-| `initializeFeatures?: boolean`                      | `true`                                       | Initialize all `DeviceFeatures` on startup. 🧪                                              |
-| `disabledFeatures?: Record<DeviceFeature, boolean>` | `{ 'compilation-status-async-webgl': true }` | Disable specific `DeviceFeatures`. 🧪                                                       |
-| `_factoryDestroyPolicy?: string`                    | `'unused'`                                   | `'unused' \| 'never'` Never destroy cached shaders and pipelines. 🧪                        |
 | `webgl?: WebGLContextAttributes`                    | [`WebGLContextAttributes`][webgl-attributes] | Attributes passed on to WebGL (`canvas.getContext('webgl2', props.webgl)`                  |
+| `_requestMaxLimits?: boolean`                        | `true`                                       | Ensures that the Device exposes the highest `DeviceLimits` supported by platform (WebGPU). |
+| `_initializeFeatures?: boolean`                      | `true`                                       | Initialize all `DeviceFeatures` on startup. 🧪                                              |
+| `_disabledFeatures?: Record<DeviceFeature, boolean>` | `{ 'compilation-status-async-webgl': true }` | Disable specific `DeviceFeatures`. 🧪                                                       |
+| `_factoryDestroyPolicy?: string`                    | `'unused'`                                   | `'unused' \| 'never'` Never destroy cached shaders and pipelines. 🧪                        |
 
 :::caution
 🧪 denotes experimental feature. Expect API to change.
 :::
 
-
-#### Debug Options
-
 Specify WebGL debugging options to use when luma creates the WebGL context.
 
-| WebGL Debugging                | Default | Description                                                                                                                                 |
-| ------------------------------ | ------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `debug?: boolean`              | `false` | Initialize Khronos WebGLDeveloperTools. WebGL API calls will be logged to the console and WebGL errors will generate JavaScript exceptions. |
-| `break?: string[]`             | `[]`    | Insert a break point (`debugger`) if one of the listed gl functions is called.                                                              |
-| `debugWithSpectorJS?: boolean` | `false` | Initialize the SpectorJS WebGL debugger.                                                                                                    |
-| `spectorUrl?: string`          | N/A     | SpectorJS URL. Override if CDN is down or different SpectorJS version is desired.                                                           |
+| WebGL Debugging                                                        | Default   | Description                                                                                                                                 |
+| ---------------------------------------------------------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `debugShaders?`: `'errors'` \| `'warnings'` \| `'always'` \| `'never'` | `'error'` | Display shader source code with inline errors in the canvas.                                                                                |
+| `debugFramebuffers?: boolean`                                          | `false`   | Show small copy of the contents of updated Framebuffers in the canvas.                                                                      |
+| `debugWebGL?: boolean`                                                 | `false`   | Initialize Khronos WebGLDeveloperTools. WebGL API calls will be logged to the console and WebGL errors will generate JavaScript exceptions. |
+| `break?: string[]`                                                     | `[]`      | Insert a break point (`debugger`) if one of the listed gl functions is called.                                                              |
+| `debugSpectorJS?: boolean`                                             | `false`   | Initialize the SpectorJS WebGL debugger.                                                                                                    |
+| `debugSpectorJSUrl?: string`                                           | N/A       | SpectorJS URL. Override if CDN is down or different SpectorJS version is desired.                                                           |
 
 :::tip
 Learn more about WebGL debugging in our [Debugging](../../developer-guide/debugging.md) guide.
@@ -98,16 +97,16 @@ Learn more about WebGL debugging in our [Debugging](../../developer-guide/debugg
 You can specify what [`WebGLContextAttributes`](webgl-attributes) to use if luma creates the WebGL context. 
 For instance, applications often want toset `props.webgl.preserveDrawingBuffer` to ensure that the screen can be "grabbed" with `canvas.toDataURL()`
 
-| `WebGLContextAttributes`                | Default | Description                                                                                            |
-| --------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------ |
-| `webgl.preserveDrawingBuffers?: boolean` | `true` | Default render target buffers will preserve their values until overwritten. Useful for screen capture. |
-| `webgl.alpha?: boolean`                 | `true`  | Default render target has an alpha buffer.                                                             |
-| `webgl.antialias?: boolean`             | `true`  | Boolean that indicates whether or not to perform anti-aliasing.                                        |
-| `webgl.depth?: boolean`                 | `true`  | Default render target has a depth buffer of at least `16` bits.                                        |
-| `webgl.premultipliedAlpha?: boolean`    | `true`  | The page compositor will assume the drawing buffer contains colors with pre-multiplied alpha.          |
-| `webgl.stencil?: boolean`               | `false` | Default render target has a stencil buffer of at least `8` bits.                                       |
-| `webgl.desynchronized?: boolean`        | `false` | Hint to reduce latency by desynchronizing the canvas paint cycle from the event loop (WebGL).          |
-| `webgl.failIfMajorPerformanceCaveat?`   | `false` | Do not create a Device if the system performance is low (WebGL).                                       |
+| `WebGLContextAttributes`                 | Default | Description                                                                                            |
+| ---------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------ |
+| `webgl.preserveDrawingBuffers?: boolean` | `true`  | Default render target buffers will preserve their values until overwritten. Useful for screen capture. |
+| `webgl.alpha?: boolean`                  | `true`  | Default render target has an alpha buffer.                                                             |
+| `webgl.antialias?: boolean`              | `true`  | Boolean that indicates whether or not to perform anti-aliasing.                                        |
+| `webgl.depth?: boolean`                  | `true`  | Default render target has a depth buffer of at least `16` bits.                                        |
+| `webgl.premultipliedAlpha?: boolean`     | `true`  | The page compositor will assume the drawing buffer contains colors with pre-multiplied alpha.          |
+| `webgl.stencil?: boolean`                | `false` | Default render target has a stencil buffer of at least `8` bits.                                       |
+| `webgl.desynchronized?: boolean`         | `false` | Hint to reduce latency by desynchronizing the canvas paint cycle from the event loop (WebGL).          |
+| `webgl.failIfMajorPerformanceCaveat?`    | `false` | Do not create a Device if the system performance is low (WebGL).                                       |
 
 Note that luma.gl v9.1 and onwards set `webgl.preserveDrawingBuffers` to `true` by default. This can be disabled for some memory savings and a minor performance boost on resource limited devices, such as mobile phones, at the cost of not being able to take screenshots or render to screen without clearing.
 

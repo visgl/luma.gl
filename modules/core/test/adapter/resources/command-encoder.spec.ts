@@ -127,7 +127,7 @@ test('CommandBuffer#copyTextureToBuffer', async t => {
 
 async function testCopyTextureToBuffer(
   t: Test,
-  device: Device,
+  device_: Device,
   options: CopyTextureToBufferFixture & {useFramebuffer?: boolean}
 ) {
   const {title, srcPixel, dstPixel, dstOffset = 0} = options;
@@ -139,7 +139,7 @@ async function testCopyTextureToBuffer(
 
   let sourceTexture;
 
-  const colorTexture = device.createTexture({
+  const colorTexture = device_.createTexture({
     data: srcPixel,
     width: 1,
     height: 1,
@@ -147,15 +147,15 @@ async function testCopyTextureToBuffer(
     mipmaps: false
   });
 
-  const destinationBuffer = device.createBuffer({byteLength});
+  const destinationBuffer = device_.createBuffer({byteLength});
 
   if (options.useFramebuffer) {
-    sourceTexture = device.createFramebuffer({colorAttachments: [colorTexture]});
+    sourceTexture = device_.createFramebuffer({colorAttachments: [colorTexture]});
   } else {
     sourceTexture = colorTexture;
   }
 
-  const commandEncoder = device.createCommandEncoder();
+  const commandEncoder = device_.createCommandEncoder();
   commandEncoder.copyTextureToBuffer({
     sourceTexture,
     width: 1,
@@ -197,24 +197,24 @@ test('CommandEncoder#copyTextureToTexture', t => {
 
 function testCopyToTexture(
   t: Test,
-  device: Device,
+  device_: Device,
   options: {isSubCopy: boolean; sourceIsFramebuffer: boolean}
 ): void {
   // const byteLength = 6 * 4; // 6 floats
   const sourceColor = [255, 128, 64, 32];
 
-  const sourceTexture = device.createTexture({
+  const sourceTexture = device_.createTexture({
     data: options.sourceIsFramebuffer ? null : new Uint8Array(sourceColor)
   });
 
   const destinationTexture = sourceTexture.clone();
 
-  const commandEncoder = device.createCommandEncoder();
+  const commandEncoder = device_.createCommandEncoder();
   commandEncoder.copyTextureToTexture({sourceTexture, destinationTexture});
   commandEncoder.finish();
 
   // Read data form destination texture
-  const color = device.readPixelsToArrayWebGL(destinationTexture);
+  const color = device_.readPixelsToArrayWebGL(destinationTexture);
 
   t.deepEqual(color, sourceColor, 'copyTextureToTexture() successful');
 

@@ -14,6 +14,7 @@ const MAX_LIGHTS = 5;
 const COLOR_FACTOR = 255.0;
 
 /** Shader type field for lights */
+// eslint-disable-next-line no-shadow
 export enum LIGHT_TYPE {
   POINT = 0,
   DIRECTIONAL = 1

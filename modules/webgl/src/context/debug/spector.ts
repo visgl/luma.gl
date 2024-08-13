@@ -9,10 +9,10 @@ import type {Spector} from './spector-types';
 
 /** Spector debug initialization options */
 type SpectorProps = {
-  /** Whether spector is enabled */
-  debugWithSpectorJS?: boolean;
+  /** Whether spector.js is enabled */
+  debugSpectorJS?: boolean;
   /** URL to load spector script from. Typically a CDN URL */
-  spectorUrl?: string;
+  debugSpectorJSUrl?: string;
   /** Canvas to monitor */
   gl?: WebGL2RenderingContext;
 };
@@ -29,19 +29,19 @@ declare global {
 }
 
 export const DEFAULT_SPECTOR_PROPS: Required<SpectorProps> = {
-  debugWithSpectorJS: log.get('spector') || log.get('spectorjs'),
+  debugSpectorJS: log.get('debug-spectorjs'),
   // https://github.com/BabylonJS/Spector.js#basic-usage
   // https://forum.babylonjs.com/t/spectorcdn-is-temporarily-off/48241
   // spectorUrl: 'https://spectorcdn.babylonjs.com/spector.bundle.js';
-  spectorUrl: 'https://cdn.jsdelivr.net/npm/spectorjs@0.9.30/dist/spector.bundle.js',
+  debugSpectorJSUrl: 'https://cdn.jsdelivr.net/npm/spectorjs@0.9.30/dist/spector.bundle.js',
   gl: undefined!
 };
 
 /** Loads spector from CDN if not already installed */
-export async function loadSpectorJS(props: {spectorUrl?: string}): Promise<void> {
+export async function loadSpectorJS(props: {debugSpectorJSUrl?: string}): Promise<void> {
   if (!globalThis.SPECTOR) {
     try {
-      await loadScript(props.spectorUrl || DEFAULT_SPECTOR_PROPS.spectorUrl);
+      await loadScript(props.debugSpectorJSUrl || DEFAULT_SPECTOR_PROPS.debugSpectorJSUrl);
     } catch (error) {
       log.warn(String(error));
     }
@@ -50,7 +50,7 @@ export async function loadSpectorJS(props: {spectorUrl?: string}): Promise<void>
 
 export function initializeSpectorJS(props: SpectorProps): Spector | null {
   props = {...DEFAULT_SPECTOR_PROPS, ...props};
-  if (!props.debugWithSpectorJS) {
+  if (!props.debugSpectorJS) {
     return null;
   }
 

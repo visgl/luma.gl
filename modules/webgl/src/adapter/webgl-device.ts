@@ -12,28 +12,7 @@ import type {
   Texture,
   Framebuffer,
   VertexArray,
-  VertexArrayProps
-} from '@luma.gl/core';
-import {Device, CanvasContext, log} from '@luma.gl/core';
-import type {GLExtensions} from '@luma.gl/constants';
-import {WebGLStateTracker} from '../context/state-tracker/webgl-state-tracker';
-import {createBrowserContext} from '../context/helpers/create-browser-context';
-import {getDeviceInfo} from './device-helpers/webgl-device-info';
-import {WebGLDeviceFeatures} from './device-helpers/webgl-device-features';
-import {WebGLDeviceLimits} from './device-helpers/webgl-device-limits';
-import {WebGLCanvasContext} from './webgl-canvas-context';
-import type {Spector} from '../context/debug/spector-types';
-import {initializeSpectorJS} from '../context/debug/spector';
-import {makeDebugContext} from '../context/debug/webgl-developer-tools';
-import {
-  isTextureFormatSupported,
-  isTextureFormatRenderable,
-  isTextureFormatFilterable
-} from './converters/texture-formats';
-import {uid} from '../utils/uid';
-
-// WebGL classes
-import type {
+  VertexArrayProps,
   BufferProps,
   ShaderProps,
   // Sampler,
@@ -55,6 +34,23 @@ import type {
   TransformFeedbackProps,
   QuerySetProps
 } from '@luma.gl/core';
+import {Device, CanvasContext, log} from '@luma.gl/core';
+import type {GLExtensions} from '@luma.gl/constants';
+import {WebGLStateTracker} from '../context/state-tracker/webgl-state-tracker';
+import {createBrowserContext} from '../context/helpers/create-browser-context';
+import {getDeviceInfo} from './device-helpers/webgl-device-info';
+import {WebGLDeviceFeatures} from './device-helpers/webgl-device-features';
+import {WebGLDeviceLimits} from './device-helpers/webgl-device-limits';
+import {WebGLCanvasContext} from './webgl-canvas-context';
+import type {Spector} from '../context/debug/spector-types';
+import {initializeSpectorJS} from '../context/debug/spector';
+import {makeDebugContext} from '../context/debug/webgl-developer-tools';
+import {
+  isTextureFormatSupported,
+  isTextureFormatRenderable,
+  isTextureFormatFilterable
+} from './converters/texture-formats';
+import {uid} from '../utils/uid';
 
 import {WEBGLBuffer} from './resources/webgl-buffer';
 import {WEBGLShader} from './resources/webgl-shader';
@@ -182,8 +178,12 @@ export class WebGLDevice extends Device {
     // initialize luma Device fields
     this.info = getDeviceInfo(this.gl, this._extensions);
     this.limits = new WebGLDeviceLimits(this.gl);
-    this.features = new WebGLDeviceFeatures(this.gl, this._extensions, this.props.disabledFeatures);
-    if (this.props.initalizeFeatures) {
+    this.features = new WebGLDeviceFeatures(
+      this.gl,
+      this._extensions,
+      this.props._disabledFeatures
+    );
+    if (this.props._initializeFeatures) {
       this.features.initializeFeatures();
     }
 
@@ -196,7 +196,7 @@ export class WebGLDevice extends Device {
     glState.trackState(this.gl, {copyState: false});
 
     // DEBUG contexts: Add luma debug instrumentation to the context, force log level to at least 1
-    if (props.debug) {
+    if (props.debugWebGL) {
       this.gl = makeDebugContext(this.gl, {...props, throwOnError: true});
       this.debug = true;
       log.level = Math.max(log.level, 1);

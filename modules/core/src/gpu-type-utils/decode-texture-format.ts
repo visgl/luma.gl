@@ -11,7 +11,7 @@ const COMPRESSED_TEXTURE_FORMAT_PREFIXES = [
   'bc1', 'bc2', 'bc3', 'bc4', 'bc5', 'bc6', 'bc7', 'etc1', 'etc2', 'eac', 'atc', 'astc', 'pvrtc'
 ];
 
-const REGEX = /^(r|rg|rgb|rgba|bgra)([0-9]*)([a-z]*)(-srgb)?(-webgl)?$/;
+const RGB_FORMAT_REGEX = /^(r|rg|rgb|rgba|bgra)([0-9]*)([a-z]*)(-srgb)?(-webgl)?$/;
 
 export type DecodedTextureFormat = {
   /** String describing which channels this texture has */
@@ -58,7 +58,7 @@ export function isTextureFormatCompressed(textureFormat: TextureFormat): boolean
  * Decodes a vertex format, returning type, components, byte length and flags (integer, signed, normalized)
  */
 export function decodeTextureFormat(format: TextureFormat): DecodedTextureFormat {
-  const matches = REGEX.exec(format as string);
+  const matches = RGB_FORMAT_REGEX.exec(format as string);
   if (matches) {
     const [, channels, length, type, srgb, suffix] = matches;
     if (format) {

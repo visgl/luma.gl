@@ -194,48 +194,45 @@ type WebGLCompressedTextureFeatures =
 
 /** Device properties */
 export type DeviceProps = {
+  /** string id for debugging. Stored on the object, used in logging and set on underlying GPU objects when feasible. */
   id?: string;
-
   /** Properties for the default canvas context */
   canvasContext?: CanvasContextProps;
-
+  /** Control which type of GPU is preferred on systems with both integrated and discrete GPU. Defaults to "high-performance" / discrete GPU. */
+  powerPreference?: 'default' | 'high-performance' | 'low-power';
+  /** Hints that device creation should fail if no hardware GPU is available (if the system performance is "low"). */
+  failIfMajorPerformanceCaveat?: boolean;
   /** Error handling */
   onError?: (error: Error) => unknown;
 
-  powerPreference?: 'default' | 'high-performance' | 'low-power';
-  /** Hints that device creation should fail if the system performance is low or if no hardware GPU is available. WebGL only */
-  failIfMajorPerformanceCaveat?: boolean;
-  /** hints the user agent to reduce the latency by desynchronizing the canvas paint cycle from the event loop. WebGL only */
-  desynchronized?: boolean;
+  /** WebGL specific: Properties passed through to WebGL2RenderingContext creation: `canvas.getContext('webgl2', props.webgl)` */
+  webgl?: WebGLContextProps;
 
-  /** Request a Device with the highest limits supported by platform. On WebGPU devices can be created with minimal limits. */
-  requestMaxLimits?: boolean;
-  /** Initialize all features on startup */
-  initalizeFeatures?: boolean;
+  // DEBUG SETTINGS
+
+  /** Show shader source in browser? The default is`'error'`, meaning that logs are shown when shader compilation has errors */
+  debugShaders?: 'never' | 'errors' | 'warnings' | 'always';
+  /** Renders a small version of updated Framebuffers into the primary canvas context. Can be set in console luma.log.set('debug-framebuffers', true) */
+  debugFramebuffers?: boolean;
+  /** WebGL specific - Trace WebGL calls (instruments WebGL2RenderingContext at the expense of performance). Can be set in console luma.log.set('debug-webgl', true)  */
+  debugWebGL?: boolean;
+  /** WebGL specific - Initialize the SpectorJS WebGL debugger. Can be set in console luma.log.set('debug-spectorjs', true)  */
+  debugSpectorJS?: boolean;
+  /** WebGL specific - SpectorJS URL. Override if CDN is down or different SpectorJS version is desired. */
+  debugSpectorJSUrl?: string;
+
+  // EXPERIMENTAL SETTINGS - subject to change
+
+  /** WebGPU specific - Request a Device with the highest limits supported by platform. On WebGPU devices can be created with minimal limits. */
+  _requestMaxLimits?: boolean;
   /** Disable specific features */
-  disabledFeatures?: Partial<Record<DeviceFeature, boolean>>;
+  _disabledFeatures?: Partial<Record<DeviceFeature, boolean>>;
+  /** WebGL specific - Initialize all features on startup */
+  _initializeFeatures?: boolean;
   /** Never destroy cached shaders and pipelines */
   _factoryDestroyPolicy?: 'unused' | 'never';
 
-  // WEBGL SETTINGS
-
-  /** Properties for WebGL2RenderingContexts */
-  webgl?: WebGLContextProps;
-
-  // WEBGL DEBUG SETTINGS
-
-  /** WebGL: Instrument WebGL2RenderingContext (at the expense of performance) */
-  debug?: boolean;
-  /** Break on WebGL functions matching these strings */
-  break?: string[];
-  /** WebGL: Initialize the SpectorJS WebGL debugger */
-  debugWithSpectorJS?: boolean;
-  /** SpectorJS URL. Override if CDN is down or different SpectorJS version is desired */
-  spectorUrl?: string;
-
-  // INTERNAL - Do not use
-
-  /** Internal: Used by ...Device.attach(). Do not use directly. */
+  /** @deprecated Internal, Do not use directly! Use `luma.attachDevice()` to attach to pre-created contexts/devices. */
   _handle?: unknown; // WebGL2RenderingContext | GPUDevice | null;
 };
 
@@ -268,30 +265,29 @@ export interface DeviceFactory {
 export abstract class Device {
   static defaultProps: Required<DeviceProps> = {
     id: null!,
-    failIfMajorPerformanceCaveat: false,
     powerPreference: 'high-performance',
-    desynchronized: false,
+    failIfMajorPerformanceCaveat: false,
     canvasContext: undefined!,
 
     // Callbacks
     onError: (error: Error) => log.error(error.message),
 
+    _factoryDestroyPolicy: 'unused',
     // TODO - Change these after confirming things work as expected
-    initalizeFeatures: true,
-    disabledFeatures: {
+    _initializeFeatures: true,
+    _disabledFeatures: {
       'compilation-status-async-webgl': true
     },
-    _factoryDestroyPolicy: 'unused',
-
-    // WebGPU
-    requestMaxLimits: true,
+    _requestMaxLimits: true,
 
     // WebGL specific
     webgl: {},
-    debug: Boolean(log.get('debug')), // Instrument context (at the expense of performance)
-    break: (log.get('break') as string[]) || [],
-    debugWithSpectorJS: undefined!,
-    spectorUrl: undefined!,
+
+    debugShaders: log.get('debug-shaders'),
+    debugFramebuffers: log.get('debug-framebuffers'),
+    debugWebGL: Boolean(log.get('debug-webgl')),
+    debugSpectorJS: undefined!, // Note: log setting is queried by the spector.js code
+    debugSpectorJSUrl: undefined!,
 
     // INTERNAL
     _handle: undefined!

@@ -275,7 +275,7 @@ export class WebGPUDevice extends Device {
       features.add(feature);
     }
 
-    return new DeviceFeatures(Array.from(features), this.props.disabledFeatures);
+    return new DeviceFeatures(Array.from(features), this.props._disabledFeatures);
   }
 
   copyExternalImageToTexture(options: {

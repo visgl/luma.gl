@@ -115,7 +115,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
 
       if (!binding) {
         const validBindings = this.shaderLayout.bindings
-          .map(binding => `"${binding.name}"`)
+          .map(binding_ => `"${binding_.name}"`)
           .join(', ');
         if (!options?.disableWarnings) {
           log.warn(

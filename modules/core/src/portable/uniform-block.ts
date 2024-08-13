@@ -37,7 +37,7 @@ export class UniformBlock<
     // TODO - Extract uniform layout from the shaderLayout object
     if (props?.name && props?.shaderLayout) {
       const binding = props?.shaderLayout.bindings?.find(
-        binding => binding.type === 'uniform' && binding.name === props?.name
+        binding_ => binding_.type === 'uniform' && binding_.name === props?.name
       );
       if (!binding) {
         throw new Error(props?.name);

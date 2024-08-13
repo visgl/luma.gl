@@ -61,11 +61,11 @@ export class WebGLAdapter extends Adapter {
     const promises: Promise<unknown>[] = [];
 
     // Load webgl and spector debug scripts from CDN if requested
-    if (props.debug) {
+    if (props.debugWebGL) {
       promises.push(loadWebGLDeveloperTools());
     }
 
-    if (props.debugWithSpectorJS) {
+    if (props.debugSpectorJS) {
       promises.push(loadSpectorJS(props));
     }
 

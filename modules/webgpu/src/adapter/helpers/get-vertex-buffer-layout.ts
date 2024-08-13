@@ -150,7 +150,7 @@ function findAttributeLayout(
   name: string,
   attributeNames: Set<string>
 ): AttributeDeclaration | null {
-  const attribute = shaderLayout.attributes.find(attribute => attribute.name === name);
+  const attribute = shaderLayout.attributes.find(attribute_ => attribute_.name === name);
   if (!attribute) {
     log.warn(`Unknown attribute ${name}`)();
     return null;
