@@ -75,7 +75,7 @@ Debug shader source (even when shader successful)
 const model = new Model(device, {
   vs: VERTEX_SHADER,
   fs: FRAGMENT_SHADER,
-  debugShaders: true
+  debugShaders: 'always'
 });
 ```
 

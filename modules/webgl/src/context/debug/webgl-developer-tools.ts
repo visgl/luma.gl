@@ -11,15 +11,8 @@ import {loadScript} from '../../utils/load-script';
 const WEBGL_DEBUG_CDN_URL = 'https://unpkg.com/webgl-debug@2.0.1/index.js';
 
 type DebugContextProps = {
-  debug?: boolean;
-  break?: string[];
+  debugWebGL?: boolean;
 };
-
-// const DEFAULT_DEBUG_CONTEXT_PROPS: Required<DebugContextProps> = {
-//   debug: true,
-//   break: [],
-//   webgl2: false,
-// }
 
 type ContextData = {
   realContext?: WebGL2RenderingContext;
@@ -58,7 +51,7 @@ export function makeDebugContext(
   gl: WebGL2RenderingContext,
   props: DebugContextProps = {}
 ): WebGL2RenderingContext {
-  return props.debug ? getDebugContext(gl, props) : getRealContext(gl);
+  return props.debugWebGL ? getDebugContext(gl, props) : getRealContext(gl);
 }
 
 // Returns the real context from either of the real/debug contexts
@@ -149,22 +142,10 @@ function onValidateGLFunc(
     log.log(1, functionString)();
   }
 
-  // If array of breakpoint strings supplied, check if any of them is contained in current GLEnum function
-  if (props.break && props.break.length > 0) {
-    functionString = functionString || getFunctionString(functionName, functionArgs);
-    const isBreakpoint = props.break.every(
-      (breakOn: string) => functionString.indexOf(breakOn) !== -1
-    );
-    if (isBreakpoint) {
-      debugger; // eslint-disable-line
-    }
-  }
-
   for (const arg of functionArgs) {
     if (arg === undefined) {
       functionString = functionString || getFunctionString(functionName, functionArgs);
-        throw new Error(`Undefined argument: ${functionString}`);
-      }
+      throw new Error(`Undefined argument: ${functionString}`);
     }
   }
 }

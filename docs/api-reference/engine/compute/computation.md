@@ -62,7 +62,7 @@ Debug shader source (even when shader successful)
 // construct the model.
 const model = new Computation(device, {
   source: COMPUTE_SHADER,
-  debugShaders: true
+  debugShaders: 'always'
 });
 ```
 

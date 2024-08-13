@@ -283,8 +283,8 @@ export abstract class Device {
     // WebGL specific
     webgl: {},
 
-    debugShaders: log.get('debug-shaders'),
-    debugFramebuffers: log.get('debug-framebuffers'),
+    debugShaders: log.get('debug-shaders') || undefined!,
+    debugFramebuffers: Boolean(log.get('debug-framebuffers')),
     debugWebGL: Boolean(log.get('debug-webgl')),
     debugSpectorJS: undefined!, // Note: log setting is queried by the spector.js code
     debugSpectorJSUrl: undefined!,
@@ -371,6 +371,7 @@ export abstract class Device {
   /** Returns the default / primary canvas context. Throws an error if no canvas context is available (a WebGPU compute device) */
   getCanvasContext(): CanvasContext {
     if (!this.canvasContext) {
+      debugger
       throw new Error('Device has no CanvasContext');
     }
     return this.canvasContext;

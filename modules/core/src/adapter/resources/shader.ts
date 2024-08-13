@@ -55,6 +55,7 @@ export abstract class Shader extends Resource<ShaderProps> {
 
   /** Create a new Shader instance */
   constructor(device: Device, props: ShaderProps) {
+    props = {...props, debugShaders: props.debugShaders || device.props.debugShaders || 'errors'};
     super(device, {id: getShaderIdFromProps(props), ...props}, Shader.defaultProps);
     this.stage = this.props.stage;
     this.source = this.props.source;
@@ -79,7 +80,7 @@ export abstract class Shader extends Resource<ShaderProps> {
 
   /** In browser logging of errors */
   async debugShader(): Promise<void> {
-    const trigger = this.props.debugShaders || this.device.props.debugShaders;
+    const trigger = this.props.debugShaders;
     switch (trigger) {
       case 'never':
         return;
