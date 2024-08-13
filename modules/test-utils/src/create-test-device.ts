@@ -8,8 +8,10 @@ import {webgl2Adapter, WebGLDevice} from '@luma.gl/webgl';
 import {webgpuAdapter, WebGPUDevice} from '@luma.gl/webgpu';
 
 const CONTEXT_DEFAULTS: Partial<DeviceProps> = {
-  width: 1,
-  height: 1,
+  canvasContext: {
+    width: 1,
+    height: 1
+  },
   debug: true
 };
 
@@ -28,7 +30,7 @@ export function createTestDevice(props: DeviceProps = {}): WebGLDevice | null {
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error(`Failed to created device '${props.id}': ${(error as Error).message}`);
-    debugger
+    debugger; // eslint-disable-line no-debugger
     return null;
   }
 }

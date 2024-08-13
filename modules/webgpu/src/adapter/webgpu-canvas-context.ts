@@ -96,8 +96,8 @@ export class WebGPUCanvasContext extends CanvasContext {
         format: getWebGPUTextureFormat(this.format),
         // Can be used to define e.g. -srgb views
         // viewFormats: [...]
-        colorSpace: this.props.webgpu.colorSpace,
-        alphaMode: this.props.webgpu.alphaMode
+        colorSpace: this.props.colorSpace,
+        alphaMode: this.props.alphaMode
       });
 
       log.log(1, `Resized to ${this.width}x${this.height}px`)();

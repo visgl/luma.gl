@@ -69,7 +69,7 @@ export class WebGPUAdapter extends Adapter {
 
     log.probe(1, 'GPUDevice available')();
 
-    if (typeof props.canvas === 'string') {
+    if (typeof props.canvasContext?.canvas === 'string') {
       await CanvasContext.pageLoaded;
       log.probe(1, 'DOM is loaded')();
     }

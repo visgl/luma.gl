@@ -88,8 +88,10 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
       device = await luma.createDevice({
         adapters: [webgl2Adapter, webgpuAdapter],
         type: deviceType,
-        canvas,
-        container: containerName
+        canvasContext: {
+          canvas,
+          container: containerName
+        }
       });
 
       animationLoop = makeAnimationLoop(props.template as unknown as typeof AnimationLoopTemplate, {

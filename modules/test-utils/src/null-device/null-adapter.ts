@@ -27,7 +27,7 @@ export class NullAdapter extends Adapter {
   async create(props: DeviceProps = {}): Promise<NullDevice> {
     // Wait for page to load: if canvas is a string we need to query the DOM for the canvas element.
     // We only wait when props.canvas is string to avoids setting the global page onload callback unless necessary.
-    if (typeof props.canvas === 'string') {
+    if (typeof props.canvasContext?.canvas === 'string') {
       await CanvasContext.pageLoaded;
     }
 

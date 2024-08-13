@@ -128,23 +128,33 @@ export class WebGLDevice extends Device {
     }
 
     // Create and instrument context
-    const canvas = props.canvas;
-    this.canvasContext = new WebGLCanvasContext(this, {...props, canvas});
+    this.canvasContext = new WebGLCanvasContext(this, {...props.canvasContext});
 
     this.lost = new Promise<{reason: 'destroyed'; message: string}>(resolve => {
       this._resolveContextLost = resolve;
     });
 
-    const webglContextAttributes = getWebGLContextAttributes(props);
+    const webglContextAttributes: WebGLContextAttributes = {...props.webgl};
+    // Copy props from CanvasContextProps
+    if (props.canvasContext?.alphaMode === 'premultiplied') {
+      webglContextAttributes.premultipliedAlpha = true;
+    }
+    if (props.powerPreference !== undefined) {
+      webglContextAttributes.powerPreference = props.powerPreference;
+    }
 
-    const gl = createBrowserContext(this.canvasContext.canvas, {
-      ...webglContextAttributes,
-      onContextLost: (event: Event) =>
-        this._resolveContextLost?.({
-          reason: 'destroyed',
-          message: 'Entered sleep mode, or too many apps or browser tabs are using the GPU.'
-        })
-    });
+    const gl = createBrowserContext(
+      this.canvasContext.canvas,
+      {
+        onContextLost: (event: Event) =>
+          this._resolveContextLost?.({
+            reason: 'destroyed',
+            message: 'Entered sleep mode, or too many apps or browser tabs are using the GPU.'
+          }),
+        onContextRestored: (event: Event) => console.log('WebGL context restored')
+      },
+      webglContextAttributes
+    );
 
     if (!gl) {
       throw new Error('WebGL context creation failed');
@@ -463,38 +473,6 @@ export class WebGLDevice extends Device {
     getWebGLExtension(this.gl, name, this._extensions);
     return this._extensions;
   }
-}
-
-function getWebGLContextAttributes(props: DeviceProps): WebGLContextAttributes {
-  const attributes: WebGLContextAttributes = {...props.webgl};
-
-  // Copy in deprecated props
-  for (const key in ['alpha', 'antialias', 'depth', 'premultipliedAlpha', 'preserveDrawingBuffer', 'stencil']) {  
-    if (props[key] === undefined) {
-      attributes[key] = true;
-    } 
-  }
-
-  // Copy props from device props
-  if (props.powerPreference !== undefined) {
-    attributes.powerPreference = props.powerPreference;
-  }
-  if (props.desynchronized !== undefined) {
-    attributes.desynchronized = props.desynchronized;
-  }
-  if (props.failIfMajorPerformanceCaveat !== undefined) {
-    attributes.failIfMajorPerformanceCaveat = props.failIfMajorPerformanceCaveat;
-  }
-  if (props.desynchronized !== undefined) {
-    attributes.desynchronized = props.desynchronized;
-  }
-
-  // Copy props from CanvasContextProps
-  if (props.canvasContext?.alphaMode === 'premultiplied') {
-    attributes.premultipliedAlpha = true;
-  }
-
-  return attributes;
 }
 
 /** Set constant float array attribute */
