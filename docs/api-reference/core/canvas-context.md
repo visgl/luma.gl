@@ -37,17 +37,6 @@ const renderPass = device.beginRenderPass({
 
 ### `CanvasContextProps`
 
-```ts
-{
-  // common options
-  webgpu: {
-    // webgpu specific options
-  }
-}
-```
-
-### Common Props
-
 | Property                | Type                                                 |                                                                               |
 | ----------------------- | ---------------------------------------------------- | ----------------------------------------------------------------------------- |
 | `canvas?`               | `HTMLCanvasElement` \| `OffscreenCanvas` \| `string` | A new canvas will be created if not supplied.                                 |
@@ -60,9 +49,6 @@ const renderPass = device.beginRenderPass({
 | `alphaMode?: string`    | `'opaque'`         | `'opaque' \| 'premultiplied'`. See [alphaMode](https://developer.mozilla.org/en-US/docs/Web/API/GPUCanvasContext/configure#alphamode). |
 | `colorSpace?: 'string`  | `'srgb'`           | `'srgb' \| 'display-p3'`. See [colorSpace](https://developer.mozilla.org/en-US/docs/Web/API/GPUCanvasContext/configure#colorspace). |
 
-:::tip
-See [MDN WebGL context attributes](https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/getContext#contextattributes) guide for more information.
-:::
 
 ## Static Fields
 

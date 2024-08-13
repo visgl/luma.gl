@@ -59,27 +59,24 @@ This object can also include all [`CanvasContextProps`][canvas-context-props] pr
 [canvas-context-props]: ./canvas-context.md#canvascontextprops
 [webgl-attributes]: https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/getContext#contextattributes
 
-#### Common Options
+Specifies props to use when luma creates the device.
 
-Specify common props to use when luma creates the device.
-
-| Parameter                                           | Default                                      | Description                                                                                   |
-| --------------------------------------------------- | -------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| `id?: string`                                       | `null`                                       | Optional string id, mainly intended for debugging.                                            |
-| `canvasContext?: CanvasContextProps`                | [CanvasContexProps][canvas_context_props]    | Props used to create the default `CanvasContext` for the new `Device`.                        |
-| `onError?: (error: Error) => unknown`               | `log.error`                                  | Error handling.                                                                               |
-| `powerPreference?: string`                          | `'high-performance'`                         | `'default' \| 'high-performance' \| 'low-power'` (WebGL).                                     |
-| `desynchronized?: boolean`                          | `false`                                      | Hint to reduce latency by desynchronizing the canvas paint cycle from the event loop (WebGL). |
-| `failIfMajorPerformanceCaveat?`                     | `false`                                      | Do not create a Device if the system performance is low (WebGL).                              |
-| `requestMaxLimits?: boolean`                        | `true`                                       | Ensures that the Device exposes the highest `DeviceLimits` supported by platform (WebGPU).    |
-| `webgl?: WebGLContextAttributes`                    | [`WebGLContextAttributes`][webgl-attributes] | Attributes passed on to WebGL (`canvas.getContext('webgl2', props.webgl)`                     |
-| `initializeFeatures?: boolean`                      | `true`                                       | Initialize all `DeviceFeatures` on startup. 🧪                                                 |
-| `disabledFeatures?: Record<DeviceFeature, boolean>` | `{ 'compilation-status-async-webgl': true }` | Disable specific `DeviceFeatures`. 🧪                                                          |
-| `_factoryDestroyPolicy?: string`                    | `'unused'`                                   | `'unused' \| 'never'` Never destroy cached shaders and pipelines. 🧪                           |
+| Parameter                                           | Default                                      | Description                                                                                |
+| --------------------------------------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `id?: string`                                       | `null`                                       | Optional string id, mainly intended for debugging.                                         |
+| `canvasContext?: CanvasContextProps`                | [CanvasContexProps][canvas_context_props]    | Props used to create the default `CanvasContext` for the new `Device`.                     |
+| `onError?: (error: Error) => unknown`               | `log.error`                                  | Error handling.                                                                            |
+| `powerPreference?: string`                          | `'high-performance'`                         | `'default' \| 'high-performance' \| 'low-power'` (WebGL).                                  |
+| `requestMaxLimits?: boolean`                        | `true`                                       | Ensures that the Device exposes the highest `DeviceLimits` supported by platform (WebGPU). |
+| `initializeFeatures?: boolean`                      | `true`                                       | Initialize all `DeviceFeatures` on startup. 🧪                                              |
+| `disabledFeatures?: Record<DeviceFeature, boolean>` | `{ 'compilation-status-async-webgl': true }` | Disable specific `DeviceFeatures`. 🧪                                                       |
+| `_factoryDestroyPolicy?: string`                    | `'unused'`                                   | `'unused' \| 'never'` Never destroy cached shaders and pipelines. 🧪                        |
+| `webgl?: WebGLContextAttributes`                    | [`WebGLContextAttributes`][webgl-attributes] | Attributes passed on to WebGL (`canvas.getContext('webgl2', props.webgl)`                  |
 
 :::caution
 🧪 denotes experimental feature. Expect API to change.
 :::
+
 
 #### Debug Options
 
@@ -103,13 +100,16 @@ For instance, applications often want toset `props.webgl.preserveDrawingBuffer` 
 
 | `WebGLContextAttributes`                | Default | Description                                                                                            |
 | --------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------ |
+| `webgl.preserveDrawingBuffers?: boolean` | `true` | Default render target buffers will preserve their values until overwritten. Useful for screen capture. |
 | `webgl.alpha?: boolean`                 | `true`  | Default render target has an alpha buffer.                                                             |
 | `webgl.antialias?: boolean`             | `true`  | Boolean that indicates whether or not to perform anti-aliasing.                                        |
 | `webgl.depth?: boolean`                 | `true`  | Default render target has a depth buffer of at least `16` bits.                                        |
 | `webgl.premultipliedAlpha?: boolean`    | `true`  | The page compositor will assume the drawing buffer contains colors with pre-multiplied alpha.          |
-| `webgl.preserveDrawingBuffer?: boolean` | `false` | Default render target buffers will preserve their values until overwritten. Useful for screen capture. |
 | `webgl.stencil?: boolean`               | `false` | Default render target has a stencil buffer of at least `8` bits.                                       |
+| `webgl.desynchronized?: boolean`        | `false` | Hint to reduce latency by desynchronizing the canvas paint cycle from the event loop (WebGL).          |
+| `webgl.failIfMajorPerformanceCaveat?`   | `false` | Do not create a Device if the system performance is low (WebGL).                                       |
 
+Note that luma.gl v9.1 and onwards set `webgl.preserveDrawingBuffers` to `true` by default. This can be disabled for some memory savings and a minor performance boost on resource limited devices, such as mobile phones, at the cost of not being able to take screenshots or render to screen without clearing.
 
 ## Fields
 

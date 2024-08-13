@@ -33,17 +33,19 @@ When initializing luma.gl, applications now import an `Adapter` singleton from e
 
 **@luma.gl/core**
 
-| Updated API                    | Status     | Replacement                            | Comment                                                         |
-| ------------------------------ | ---------- | -------------------------------------- | --------------------------------------------------------------- |
-| `luma.registerDevices()`       | Deprecated | [`luma.registerAdapters()`][adapters]. | Adapters provide a cleaner way to work with GPU backends.       |
-| `Texture.props.data` (Promise) | Removed    | `AsyncTexture` class                   | Textures no longer accept promises.                             |
-| `Parameters.blend`             | New        |                                        | Explicit activation of color blending                           |
-| `triangle-fan-webgl` topology  | Removed    | `triangle-strip`.                      | Reorganize your geometries                                      |
-| `line-loop-webgl` topology     | Removed    | `line-list`.                           | Reorganize your geometries                                      |
-| `glsl` shader template string  | Removed    | `/* glsl */` comment                   | Enable syntax highlighting in vscode using before shader string |
-| `depth24unorm-stencil8`        | Removed    | `depth24plus-stencil8`                 | The `TextureFormat` was removed from the WebGPU spec            |
-| `rgb8unorm-unsized`            | Removed    | `rgb8unorm`                            | No longer support unsized WebGL1 `TextureFormat`                |
-| `rgba8unorm-unsized`           | Removed    | `rgb8aunorm`                           | No longer support unsized WebGL1 `TextureFormat`                |
+| Updated API                    | Status     | Replacement                               | Comment                                                         |
+| ------------------------------ | ---------- | ----------------------------------------- | --------------------------------------------------------------- |
+| `luma.registerDevices()`       | Deprecated | [`luma.registerAdapters()`][adapters].    | Adapters provide a cleaner way to work with GPU backends.       |
+| `DeviceProps` for canvas       | Moved      | [`DeviceProps.canvasContext...`][canvas]. | Move canvas related props to `props.canvasContext: {}`.         |
+| `DeviceProps` for webgl        | Moved      | [`DeviceProps.webgl...`][webgl].          | Move canvas related props to `props.webgl: {}`.                 |
+| `Texture.props.data` (Promise) | Removed    | `AsyncTexture` class                      | Textures no longer accept promises.                             |
+| `Parameters.blend`             | New        |                                           | Explicit activation of color blending                           |
+| `triangle-fan-webgl` topology  | Removed    | `triangle-strip`.                         | Reorganize your geometries                                      |
+| `line-loop-webgl` topology     | Removed    | `line-list`.                              | Reorganize your geometries                                      |
+| `glsl` shader template string  | Removed    | `/* glsl */` comment                      | Enable syntax highlighting in vscode using before shader string |
+| `depth24unorm-stencil8`        | Removed    | `depth24plus-stencil8`                    | The `TextureFormat` was removed from the WebGPU spec            |
+| `rgb8unorm-unsized`            | Removed    | `rgb8unorm`                               | No longer support unsized WebGL1 `TextureFormat`                |
+| `rgba8unorm-unsized`           | Removed    | `rgb8aunorm`                              | No longer support unsized WebGL1 `TextureFormat`                |
 
 [adapters]: /docs/api-reference/core/luma#lumaregisteradapters
 
@@ -56,6 +58,11 @@ When initializing luma.gl, applications now import an `Adapter` singleton from e
 | `ShaderModuleInstance.getUniforms()` | Removed | `getShaderModuleUniforms(module, ...)`. | Interact directly with the shader module           |
 | `getDependencyGraph()`               | Removed | `getShaderModuleDependencies(module)` . | Interact directly with the shader module           |
 | `glsl` template string               | Removed | `/* glsl */` comment                    | Enable syntax highlighting in vscode using comment |
+
+
+**@luma.gl/webgl**
+
+- `WebGLDeviceContext` - Note that luma.gl v9.1 and onwards set `DeviceProps.webgl.preserveDrawingBuffers` to `true` by default. This can be disabled for some memory savings and a minor performance boost on resource limited devices, such as mobile phones, at the cost of not being able to take screenshots or rendering to screen without clearing it.
 
 ## Upgrading to v9.0
 
