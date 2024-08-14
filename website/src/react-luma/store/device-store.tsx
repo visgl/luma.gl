@@ -30,7 +30,8 @@ export async function createDevice(type: 'webgl' | 'webgpu'): Promise<Device> {
       adapters: [webgl2Adapter, webgpuAdapter],
       type,
       height: 0,
-      canvasContext: {
+      // @ts-expect-error
+      createCanvasContext: {
         container: getCanvasContainer()
       }
     });

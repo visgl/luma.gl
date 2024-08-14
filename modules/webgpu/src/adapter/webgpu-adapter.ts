@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Adapter, DeviceProps, CanvasContext, log} from '@luma.gl/core';
+import {Adapter, DeviceProps, log} from '@luma.gl/core';
 import {WebGPUDevice} from './webgpu-device';
 
 // / <reference types="@webgpu/types" />
@@ -68,11 +68,6 @@ export class WebGPUAdapter extends Adapter {
     });
 
     log.probe(1, 'GPUDevice available')();
-
-    if (typeof props.canvasContext?.canvas === 'string') {
-      await CanvasContext.pageLoaded;
-      log.probe(1, 'DOM is loaded')();
-    }
 
     const device = new WebGPUDevice(props, gpuDevice, adapter, adapterInfo);
 

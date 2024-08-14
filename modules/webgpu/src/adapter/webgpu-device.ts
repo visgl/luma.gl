@@ -101,8 +101,10 @@ export class WebGPUDevice extends Device {
     });
 
     // Note: WebGPU devices can be created without a canvas, for compute shader purposes
-    if (props.canvasContext) {
-      this.canvasContext = new WebGPUCanvasContext(this, this.adapter, props.canvasContext);
+    if (props.createCanvasContext) {
+      const canvasContextProps =
+        props.createCanvasContext === true ? {} : props.createCanvasContext;
+      this.canvasContext = new WebGPUCanvasContext(this, this.adapter, canvasContextProps);
     }
   }
 
@@ -138,7 +140,7 @@ export class WebGPUDevice extends Device {
   }
 
   createBuffer(props: BufferProps | ArrayBuffer | ArrayBufferView): WebGPUBuffer {
-    const newProps = this._getBufferProps(props);
+    const newProps = this._normalizeBufferProps(props);
     return new WebGPUBuffer(this, newProps);
   }
 
