@@ -36,7 +36,7 @@ When initializing luma.gl, applications now import an `Adapter` singleton from e
 | Updated API                    | Status     | Replacement                               | Comment                                                         |
 | ------------------------------ | ---------- | ----------------------------------------- | --------------------------------------------------------------- |
 | `luma.registerDevices()`       | Deprecated | [`luma.registerAdapters()`][adapters].    | Adapters provide a cleaner way to work with GPU backends.       |
-| `DeviceProps` for canvas       | Moved      | [`DeviceProps.canvasContext...`][canvas]. | Move canvas related props to `props.createCanvasContext: {}`.         |
+| `DeviceProps` for canvas       | Moved      | [`DeviceProps.canvasContextContext`][canvas]. | Move canvas related props to `props.createCanvasContext: {}`.         |
 | `DeviceProps` for webgl        | Moved      | [`DeviceProps.webgl`][webgl].             | Move canvas related props to `props.webgl: {}`.                 |
 | `Texture.props.data` (Promise) | Removed    | `AsyncTexture` class                      | Textures no longer accept promises.                             |
 | `Parameters.blend`             | New        |                                           | Explicit activation of color blending                           |
