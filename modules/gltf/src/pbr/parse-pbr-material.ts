@@ -28,6 +28,7 @@ export type ParsedPBRMaterial = {
 // NOTE: Modules other than `@luma.gl/webgl` should not import `GL` from
 // `@luma.gl/constants`. Locally we use `GLEnum` instead of `GL` to avoid
 // conflicts with the `babel-plugin-inline-webgl-constants` plugin.
+// eslint-disable-next-line no-shadow
 enum GLEnum {
   FUNC_ADD = 0x8006,
   ONE = 1,

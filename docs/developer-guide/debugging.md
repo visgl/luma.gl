@@ -1,5 +1,7 @@
 # Debugging
 
+## Why GPU Debugging can be hard
+
 Debugging GPU code can be challenging. Standard CPU-side debugging tools like 
 breakpoints and single stepping are not avaialble in GPU shaders.  when shaders fail, the result is often a blank screen that does not provide much information about what went wrong. 
 In addition, the error behind a failed render can be located in very different parts of the code:
@@ -8,8 +10,9 @@ In addition, the error behind a failed render can be located in very different p
 - or in one of the many GPU pipeline settings
 - or in the way the APIs were called.
 
-The good news is that luma.gl provides a number of facilities for debugging your GPU code, 
-to help you save time during development. These features include
+## Debug Support Overview
+
+luma.gl provides a number of facilities for debugging your GPU code, to help you save time during development. These features include
 
 - All GPU objects have auto-populated but configurable `id` fields.
 - Configurable logging of GPU operations, with optional verbose logs that display all values being passed to each draw call.
@@ -17,6 +20,37 @@ to help you save time during development. These features include
 - WebGL Parameter validation.
 - Spector.js integration
 - Khronos WebGL debug integration - Synchronous WebGL error capture (optional module).
+
+## Debug flags
+
+The `luma.createDevice()` API accepts a number of debug parameters
+
+```ts
+const device = luma.createDevice({
+  debugFramebuffers: true,
+  debugWebGL: true,
+  debugSpectorJS: true,
+});
+```
+
+## Browser console debug API
+
+luma.gl exposes a global variable `luma.log` that can be manipulated in your browser dev tools console window to activate debugging.
+A nice aspect of this system is that it keeps state when refreshing the browser page, meaning that you can change log level, refresh the browser tab and get logs while your program reinitializes.
+
+You can enable and disable debug features using the `luma.log.set` feature. In your browser console tab, type: 
+
+```ts
+luma.log.set('debug-webgl', true)
+```
+
+You can also control the amount of logging you get by changing `luma.log.level`:
+
+```ts
+luma.log.level=1 
+```
+
+
 
 ## id strings
 
@@ -30,16 +64,15 @@ const program = device.createRenderPipeline({id: 'pyramid-program', ...});
 ```
 
 Apart from providing a human-readable `id` field when inspecting objects in the debugger,  
-the `id`s that the application provides are used in multiple places:
+the `id` is used in the following ways:
 
-- luma.gl's built-in logging (see next section) often includes object `id`s.
+- luma.gl's built-in logging (see next section) often includes the `id`s.
 - `id` is copied into the WebGPU object `label` field which is designed to support debugging.
-- `id` is exposed to Specter.js (luma.gl sets the [`__SPECTOR_Metadata`](https://github.com/BabylonJS/Spector.js#custom-data field on WebGL object handles).
+- `id` is exposed to the WebGL Spector.js library (when activated, luma.gl sets the [`__SPECTOR_Metadata`](https://github.com/BabylonJS/Spector.js#custom-data field on WebGL object handles).
 
 ## Logging
 
-luma.gl logs its activities. 
-
+luma.gl logs a number of activities which can be helpful to understanding what is happening. 
 Set the global variable `luma.log.level` (this can be done in the browser console at any time) 
 
 ```ts
@@ -65,7 +98,6 @@ the debug window to always appear.
 Note that luma.gl also injects and parses `glslify`-style `#define SHADER_NAME` "shader names". 
 Naming shaders directly in the shader code can help identify which 
 shader is involved when debugging shader parsing errors occur.
-
 
 ## Buffer data inspection
 
@@ -95,8 +127,8 @@ The most flexible way to enable WebGL API tracing is by typing the following com
 
 Note that the developer tools module is loaded dynamically when a device is created with the debug flag set, so the developer tools can be activated in production code by opening the browser console and typing:
 
-```
-luma.set('debug', true)
+```ts
+luma.set('debug-webgl', true)
 ```
 
 then reload your browser tab.
@@ -105,7 +137,7 @@ While usually not recommended, it is also possible to activate the developer too
 
 ```ts
 import {luma} from '@luma.gl/core';
-const device = luma.createDevice({type: 'webgl', debug: true});
+const device = luma.createDevice({type: 'webgl', {webgl: {debug: true}});
 ```
 
 > Warning: WebGL debug contexts impose a significant performance penalty (luma waits for the GPU after each WebGL call to check error codes) and should not be activated in production code.
@@ -116,8 +148,8 @@ luma.gl integrates with [Spector.js](https://spector.babylonjs.com/), a powerful
 
 The most flexible way to enable Spector.js is by typing the following command into the browser developer tools console:
 
-```
-luma.log.set('spector', true);
+```ts
+luma.log.set('debug-spectorjs', true);
 ```
 
 And then restarting the application (e.g. via Command-R on MacOS),
@@ -127,7 +159,7 @@ You can also enable spector when creating a device  by adding the `spector: true
 
 To display Spector.js stats when loaded.
 
-```
+```ts
 luma.spector.displayUI()
 ```
 

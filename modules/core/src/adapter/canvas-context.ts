@@ -13,24 +13,24 @@ const isPageLoaded: () => boolean = () => isPage && document.readyState === 'com
 
 /** Properties for a CanvasContext */
 export type CanvasContextProps = {
-  /** If canvas not supplied, will be created and added to the DOM. If string, will be looked up in the DOM */
+  /** If a canvas not supplied, one will be created and added to the DOM. If a string, a canvas with that id will be looked up in the DOM */
   canvas?: HTMLCanvasElement | OffscreenCanvas | string | null;
-  /** If new canvas is created, it will be created in the specified container, otherwise appended to body */
+  /** If new canvas is created, it will be created in the specified container, otherwise is appended as a child of document.body */
   container?: HTMLElement | string | null;
-  /** Width in pixels of the canvas */
+  /** Width in pixels of the canvas - used when creating a new canvas */
   width?: number;
-  /** Height in pixels of the canvas */
+  /** Height in pixels of the canvas - used when creating a new canvas */
   height?: number;
-  /** Whether to apply a device pixels scale factor (`true` uses browser DPI) */
-  useDevicePixels?: boolean | number;
-  /** Whether to track resizes (if not ) */
-  autoResize?: boolean;
   /** Visibility (only used if new canvas is created). */
   visible?: boolean;
-  /** WebGPU only https://www.w3.org/TR/webgpu/#canvas-configuration */
-  colorSpace?: 'srgb'; // GPUPredefinedColorSpace
-  /** WebGPU only https://www.w3.org/TR/webgpu/#canvas-configuration */
+  /** Whether to apply a device pixels scale factor (`true` uses browser DPI) */
+  useDevicePixels?: boolean | number;
+  /** Whether to track window resizes */
+  autoResize?: boolean;
+  /** https://developer.mozilla.org/en-US/docs/Web/API/GPUCanvasContext/configure#alphamode */
   alphaMode?: 'opaque' | 'premultiplied';
+  /** https://developer.mozilla.org/en-US/docs/Web/API/GPUCanvasContext/configure#colorspace */
+  colorSpace?: 'srgb'; // GPUPredefinedColorSpace
 };
 
 const DEFAULT_CANVAS_CONTEXT_PROPS: Required<CanvasContextProps> = {
@@ -41,8 +41,8 @@ const DEFAULT_CANVAS_CONTEXT_PROPS: Required<CanvasContextProps> = {
   autoResize: true,
   container: null,
   visible: true,
-  colorSpace: 'srgb',
-  alphaMode: 'opaque'
+  alphaMode: 'opaque',
+  colorSpace: 'srgb'
 };
 
 /**

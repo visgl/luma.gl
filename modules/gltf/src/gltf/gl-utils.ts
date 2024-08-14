@@ -7,6 +7,7 @@ import {PrimitiveTopology} from '@luma.gl/core';
 // NOTE: Modules other than `@luma.gl/webgl` should not import `GL` from
 // `@luma.gl/constants`. Locally we use `GLEnum` instead of `GL` to avoid
 // conflicts with the `babel-plugin-inline-webgl-constants` plugin.
+// eslint-disable-next-line no-shadow
 export enum GLEnum {
   POINTS = 0x0,
   LINES = 0x1,

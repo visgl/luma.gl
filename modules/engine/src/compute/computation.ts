@@ -288,7 +288,7 @@ export class Computation {
         id: `${this.id}-fragment`,
         stage: 'compute',
         source: this.source,
-        debug: this.props.debugShaders
+        debugShaders: this.props.debugShaders
       });
 
       this.pipeline = this.pipelineFactory.createComputePipeline({

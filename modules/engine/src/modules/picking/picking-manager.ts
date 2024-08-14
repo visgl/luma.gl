@@ -67,7 +67,7 @@ export class PickingManager {
       sourceWidth: 1,
       sourceHeight: 1
     });
-    console.log(color255);
+    // console.log(color255);
 
     // Check if we have
     let highlightedObjectColor: Float32Array | null = new Float32Array(color255).map(x => x / 255);

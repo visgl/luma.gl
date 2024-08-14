@@ -23,8 +23,8 @@ export type ShaderProps = ResourceProps & {
   sourceMap?: string | null;
   /** Optional shader entry point (WebGPU only) */
   entryPoint?: string;
-  /** Show shader source in browser? */
-  debug?: 'never' | 'errors' | 'warnings' | 'always';
+  /** Show shader source in browser? Overrides the device.props.debugShaders setting */
+  debugShaders?: 'never' | 'errors' | 'warnings' | 'always';
 };
 
 /**
@@ -39,7 +39,7 @@ export abstract class Shader extends Resource<ShaderProps> {
     source: '',
     sourceMap: null,
     entryPoint: 'main',
-    debug: 'errors'
+    debugShaders: undefined!
   };
 
   override get [Symbol.toStringTag](): string {
@@ -55,6 +55,7 @@ export abstract class Shader extends Resource<ShaderProps> {
 
   /** Create a new Shader instance */
   constructor(device: Device, props: ShaderProps) {
+    props = {...props, debugShaders: props.debugShaders || device.props.debugShaders || 'errors'};
     super(device, {id: getShaderIdFromProps(props), ...props}, Shader.defaultProps);
     this.stage = this.props.stage;
     this.source = this.props.source;
@@ -78,7 +79,8 @@ export abstract class Shader extends Resource<ShaderProps> {
   // PORTABLE HELPERS
 
   /** In browser logging of errors */
-  async debugShader(trigger = this.props.debug): Promise<void> {
+  async debugShader(): Promise<void> {
+    const trigger = this.props.debugShaders;
     switch (trigger) {
       case 'never':
         return;
@@ -94,7 +96,7 @@ export abstract class Shader extends Resource<ShaderProps> {
     }
 
     const messages = await this.getCompilationInfo();
-    if (this.props.debug === 'warnings' && messages?.length === 0) {
+    if (trigger === 'warnings' && messages?.length === 0) {
       return;
     }
     this._displayShaderLog(messages);

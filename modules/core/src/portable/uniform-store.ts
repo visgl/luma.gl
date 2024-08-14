@@ -153,7 +153,7 @@ export class UniformStore<
   /** Update one uniform buffer. Only updates if values have changed */
   updateUniformBuffer(uniformBufferName: keyof TPropGroups): false | string {
     const uniformBlock = this.uniformBlocks.get(uniformBufferName);
-    const uniformBuffer = this.uniformBuffers.get(uniformBufferName);
+    let uniformBuffer = this.uniformBuffers.get(uniformBufferName);
 
     let reason: false | string = false;
     if (uniformBuffer && uniformBlock?.needsRedraw) {
@@ -161,7 +161,7 @@ export class UniformStore<
       // This clears the needs redraw flag
       const uniformBufferData = this.getUniformBufferData(uniformBufferName);
 
-      const uniformBuffer = this.uniformBuffers.get(uniformBufferName);
+      uniformBuffer = this.uniformBuffers.get(uniformBufferName);
       uniformBuffer?.write(uniformBufferData);
 
       // logging - TODO - don't query the values unnecessarily

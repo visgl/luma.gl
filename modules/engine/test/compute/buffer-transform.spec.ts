@@ -45,12 +45,12 @@ test('BufferTransform#run', async t => {
 });
 
 function createBufferTransform(
-  webglDevice: Device,
+  webglDevice_: Device,
   src?: Buffer,
   dst?: Buffer,
   vertexCount?: number
 ): BufferTransform {
-  return new BufferTransform(webglDevice, {
+  return new BufferTransform(webglDevice_, {
     vs: VS,
     fs: FS,
     vertexCount,

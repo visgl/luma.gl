@@ -12,28 +12,7 @@ import type {
   Texture,
   Framebuffer,
   VertexArray,
-  VertexArrayProps
-} from '@luma.gl/core';
-import {Device, CanvasContext, log} from '@luma.gl/core';
-import type {GLExtensions} from '@luma.gl/constants';
-import {WebGLStateTracker} from '../context/state-tracker/webgl-state-tracker';
-import {createBrowserContext} from '../context/helpers/create-browser-context';
-import {getDeviceInfo} from './device-helpers/webgl-device-info';
-import {WebGLDeviceFeatures} from './device-helpers/webgl-device-features';
-import {WebGLDeviceLimits} from './device-helpers/webgl-device-limits';
-import {WebGLCanvasContext} from './webgl-canvas-context';
-import type {Spector} from '../context/debug/spector-types';
-import {initializeSpectorJS} from '../context/debug/spector';
-import {makeDebugContext} from '../context/debug/webgl-developer-tools';
-import {
-  isTextureFormatSupported,
-  isTextureFormatRenderable,
-  isTextureFormatFilterable
-} from './converters/texture-formats';
-import {uid} from '../utils/uid';
-
-// WebGL classes
-import type {
+  VertexArrayProps,
   BufferProps,
   ShaderProps,
   // Sampler,
@@ -55,6 +34,23 @@ import type {
   TransformFeedbackProps,
   QuerySetProps
 } from '@luma.gl/core';
+import {Device, CanvasContext, log} from '@luma.gl/core';
+import type {GLExtensions} from '@luma.gl/constants';
+import {WebGLStateTracker} from '../context/state-tracker/webgl-state-tracker';
+import {createBrowserContext} from '../context/helpers/create-browser-context';
+import {getDeviceInfo} from './device-helpers/webgl-device-info';
+import {WebGLDeviceFeatures} from './device-helpers/webgl-device-features';
+import {WebGLDeviceLimits} from './device-helpers/webgl-device-limits';
+import {WebGLCanvasContext} from './webgl-canvas-context';
+import type {Spector} from '../context/debug/spector-types';
+import {initializeSpectorJS} from '../context/debug/spector';
+import {makeDebugContext} from '../context/debug/webgl-developer-tools';
+import {
+  isTextureFormatSupported,
+  isTextureFormatRenderable,
+  isTextureFormatFilterable
+} from './converters/texture-formats';
+import {uid} from '../utils/uid';
 
 import {WEBGLBuffer} from './resources/webgl-buffer';
 import {WEBGLShader} from './resources/webgl-shader';
@@ -122,32 +118,53 @@ export class WebGLDevice extends Device {
 
     // If attaching to an already attached context, return the attached device
     // @ts-expect-error device is attached to context
-    const device: WebGLDevice | undefined = props.gl?.device;
+    let device: WebGLDevice | undefined = props.canvasContext?.canvas?.gl?.device;
     if (device) {
       throw new Error(`WebGL context already attached to device ${device.id}`);
     }
 
     // Create and instrument context
-    const canvas = props.gl?.canvas || props.canvas;
-    this.canvasContext = new WebGLCanvasContext(this, {...props, canvas});
+    this.canvasContext = new WebGLCanvasContext(this, props.canvasContext);
 
     this.lost = new Promise<{reason: 'destroyed'; message: string}>(resolve => {
       this._resolveContextLost = resolve;
     });
 
-    this.handle = createBrowserContext(this.canvasContext.canvas, {
-      ...props,
-      onContextLost: (event: Event) =>
-        this._resolveContextLost?.({
-          reason: 'destroyed',
-          message: 'Entered sleep mode, or too many apps or browser tabs are using the GPU.'
-        })
-    });
-    this.gl = this.handle;
+    const webglContextAttributes: WebGLContextAttributes = {...props.webgl};
+    // Copy props from CanvasContextProps
+    if (props.canvasContext?.alphaMode === 'premultiplied') {
+      webglContextAttributes.premultipliedAlpha = true;
+    }
+    if (props.powerPreference !== undefined) {
+      webglContextAttributes.powerPreference = props.powerPreference;
+    }
 
-    if (!this.handle) {
+    const gl = createBrowserContext(
+      this.canvasContext.canvas,
+      {
+        onContextLost: (event: Event) =>
+          this._resolveContextLost?.({
+            reason: 'destroyed',
+            message: 'Entered sleep mode, or too many apps or browser tabs are using the GPU.'
+          }),
+        // eslint-disable-next-line no-console
+        onContextRestored: (event: Event) => console.log('WebGL context restored')
+      },
+      webglContextAttributes
+    );
+
+    if (!gl) {
       throw new Error('WebGL context creation failed');
     }
+
+    // @ts-expect-error device is attached to context
+    device = gl.device;
+    if (device) {
+      throw new Error(`WebGL context already attached to device ${device.id}`);
+    }
+
+    this.handle = gl;
+    this.gl = gl;
 
     // Add spector debug instrumentation to context
     // We need to trust spector integration to decide if spector should be initialized
@@ -161,8 +178,12 @@ export class WebGLDevice extends Device {
     // initialize luma Device fields
     this.info = getDeviceInfo(this.gl, this._extensions);
     this.limits = new WebGLDeviceLimits(this.gl);
-    this.features = new WebGLDeviceFeatures(this.gl, this._extensions, this.props.disabledFeatures);
-    if (this.props.initalizeFeatures) {
+    this.features = new WebGLDeviceFeatures(
+      this.gl,
+      this._extensions,
+      this.props._disabledFeatures
+    );
+    if (this.props._initializeFeatures) {
       this.features.initializeFeatures();
     }
 
@@ -175,8 +196,8 @@ export class WebGLDevice extends Device {
     glState.trackState(this.gl, {copyState: false});
 
     // DEBUG contexts: Add luma debug instrumentation to the context, force log level to at least 1
-    if (props.debug) {
-      this.gl = makeDebugContext(this.gl, {...props, throwOnError: true});
+    if (props.debugWebGL) {
+      this.gl = makeDebugContext(this.gl, {...props});
       this.debug = true;
       log.level = Math.max(log.level, 1);
       log.warn('WebGL debug mode activated. Performance reduced.')();

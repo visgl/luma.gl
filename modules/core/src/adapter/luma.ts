@@ -20,19 +20,21 @@ const ERROR_MESSAGE =
   'No matching device found. Ensure `@luma.gl/webgl` and/or `@luma.gl/webgpu` modules are imported.';
 
 /** Properties for creating a new device */
-export type CreateDeviceProps = DeviceProps & {
+export type CreateDeviceProps = {
   /** Selects the type of device. `best-available` uses webgpu if available, then webgl. */
   type?: 'webgl' | 'webgpu' | 'unknown' | 'best-available';
+  /** List of adapters. Will also search any pre-registered adapters */
   adapters?: Adapter[];
-};
+} & DeviceProps;
 
 /** Properties for attaching an existing WebGL context or WebGPU device to a new luma Device */
-export type AttachDeviceProps = DeviceProps & {
+export type AttachDeviceProps = {
+  type?: 'webgl' | 'webgpu' | 'unknown' | 'best-available';
   /** Externally created WebGL context or WebGPU device */
   handle: unknown; // WebGL2RenderingContext | GPUDevice | null;
-  /** List of adapters. Will also search any pre-registered adapterss */
+  /** List of adapters. Will also search any pre-registered adapters */
   adapters?: Adapter[];
-};
+} & DeviceProps;
 
 /**
  * Entry point to the luma.gl GPU abstraction

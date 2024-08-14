@@ -11,6 +11,7 @@
  * @privateRemarks Locally called `GLEnum` instead of `GL`, because `babel-plugin-inline-webl-constants`
  *  both depends on and processes this module, but shouldn't replace these declarations.
  */
+// eslint-disable-next-line no-shadow
 enum GLEnum {
   // Clearing buffers
   // Constants passed to clear() to clear buffer masks.

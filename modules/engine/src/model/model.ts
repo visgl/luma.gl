@@ -753,7 +753,7 @@ export class Model {
         id: `${this.id}-vertex`,
         stage: 'vertex',
         source: this.source || this.vs,
-        debug: this.props.debugShaders
+        debugShaders: this.props.debugShaders
       });
 
       let fs: Shader | null = null;
@@ -764,7 +764,7 @@ export class Model {
           id: `${this.id}-fragment`,
           stage: 'fragment',
           source: this.source || this.fs,
-          debug: this.props.debugShaders
+          debugShaders: this.props.debugShaders
         });
       }
 
@@ -834,7 +834,7 @@ export class Model {
 
   protected _drawCount = 0;
   _logFramebuffer(renderPass: RenderPass): void {
-    const debugFramebuffers = log.get('framebuffer');
+    const debugFramebuffers = this.device.props.debugFramebuffers;
     this._drawCount++;
     // Update first 3 frames and then every 60 frames
     if (!debugFramebuffers) {

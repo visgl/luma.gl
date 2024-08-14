@@ -5,37 +5,13 @@
 /**
  * ContextProps
  * @param onContextLost
- * @param onContextRestored
- *
- * BROWSER CONTEXT PARAMETERS
- * @param debug Instrument context (at the expense of performance).
- * @param alpha Default render target has an alpha buffer.
- * @param depth Default render target has a depth buffer of at least 16 bits.
- * @param stencil Default render target has a stencil buffer of at least 8 bits.
- * @param antialias Boolean that indicates whether or not to perform anti-aliasing.
- * @param premultipliedAlpha Boolean that indicates that the page compositor will assume the drawing buffer contains colors with pre-multiplied alpha.
- * @param preserveDrawingBuffer Default render target buffers will not be automatically cleared and will preserve their values until cleared or overwritten
- * @param failIfMajorPerformanceCaveat Do not create if the system performance is low.
+ * @param onContextRestored *
  */
 type ContextProps = {
-  onContextLost?: (event: Event) => void;
-  onContextRestored?: (event: Event) => void;
-  alpha?: boolean; // indicates if the canvas contains an alpha buffer.
-  desynchronized?: boolean; // hints the user agent to reduce the latency by desynchronizing the canvas paint cycle from the event loop
-  antialias?: boolean; // indicates whether or not to perform anti-aliasing.
-  depth?: boolean; // indicates that the drawing buffer has a depth buffer of at least 16 bits.
-  failIfMajorPerformanceCaveat?: boolean; // indicates if a context will be created if the system performance is low or if no hardware GPU is available.
-  powerPreference?: 'default' | 'high-performance' | 'low-power';
-  premultipliedAlpha?: boolean; // page compositor will assume the drawing buffer contains colors with pre-multiplied alpha.
-  preserveDrawingBuffer?: boolean; // buffers will not be cleared and will preserve their values until cleared or overwritten by the author.
-};
-
-const DEFAULT_CONTEXT_PROPS: ContextProps = {
-  powerPreference: 'high-performance', // After all, most apps are using WebGL for performance reasons
-  // eslint-disable-next-line no-console
-  onContextLost: () => console.error('WebGL context lost'),
-  // eslint-disable-next-line no-console
-  onContextRestored: () => console.info('WebGL context restored')
+  /** Called when a context is lost */
+  onContextLost: (event: Event) => void;
+  /** Called when a context is restored */
+  onContextRestored: (event: Event) => void;
 };
 
 /**
@@ -45,53 +21,51 @@ const DEFAULT_CONTEXT_PROPS: ContextProps = {
  */
 export function createBrowserContext(
   canvas: HTMLCanvasElement | OffscreenCanvas,
-  props: ContextProps
+  props: ContextProps,
+  webglContextAttributes: WebGLContextAttributes
 ): WebGL2RenderingContext {
-  props = {...DEFAULT_CONTEXT_PROPS, ...props};
-
   // Try to extract any extra information about why context creation failed
-  let errorMessage = null;
-  const onCreateError = error => (errorMessage = error.statusMessage || errorMessage);
-  canvas.addEventListener('webglcontextcreationerror', onCreateError, false);
+  const errorMessage = null;
+  // const onCreateError = error => (errorMessage = error.statusMessage || errorMessage);
+
+  // Avoid multiple listeners?
+  // canvas.removeEventListener('webglcontextcreationerror', onCreateError, false);
+  // canvas.addEventListener('webglcontextcreationerror', onCreateError, false);
+
+  const webglProps: WebGLContextAttributes = {
+    preserveDrawingBuffer: true,
+    // failIfMajorPerformanceCaveat: true,
+    ...webglContextAttributes
+  };
 
   // Create the desired context
   let gl: WebGL2RenderingContext | null = null;
 
-  // props.failIfMajorPerformanceCaveat = true;
+  // Create a webgl2 context
+  gl ||= canvas.getContext('webgl2', webglProps);
 
-  // We require webgl2 context
-  props.preserveDrawingBuffer = true;
-  gl ||= canvas.getContext('webgl2', props) as WebGL2RenderingContext;
-
-  // Software GPU
-
-  // props.failIfMajorPerformanceCaveat = false;
-
-  // if (!gl && props.webgl1) {
-  //   gl = canvas.getContext('webgl', props);
-  // }
-
-  // TODO are we removing this listener before giving it a chance to fire?
-  canvas.removeEventListener('webglcontextcreationerror', onCreateError, false);
+  // Creation failed with failIfMajorPerformanceCaveat - Try a Software GPU
+  if (!gl && !webglContextAttributes.failIfMajorPerformanceCaveat) {
+    webglProps.failIfMajorPerformanceCaveat = false;
+    gl = canvas.getContext('webgl', webglProps) as WebGL2RenderingContext;
+    // @ts-expect-error
+    gl.luma ||= {};
+    // @ts-expect-error
+    gl.luma.softwareRenderer = true;
+  }
 
   if (!gl) {
     throw new Error(`Failed to create WebGL context: ${errorMessage || 'Unknown error'}`);
   }
 
-  if (props.onContextLost) {
-    // Carefully extract and wrap callbacks to prevent addEventListener from rebinding them.
-    const {onContextLost} = props;
-    canvas.addEventListener('webglcontextlost', (event: Event) => onContextLost(event), false);
-  }
-  if (props.onContextRestored) {
-    // Carefully extract and wrap callbacks to prevent addEventListener from rebinding them.
-    const {onContextRestored} = props;
-    canvas.addEventListener(
-      'webglcontextrestored',
-      (event: Event) => onContextRestored(event),
-      false
-    );
-  }
+  // Carefully extract and wrap callbacks to prevent addEventListener from rebinding them.
+  const {onContextLost, onContextRestored} = props;
+  canvas.addEventListener('webglcontextlost', (event: Event) => onContextLost(event), false);
+  canvas.addEventListener(
+    'webglcontextrestored',
+    (event: Event) => onContextRestored(event),
+    false
+  );
 
   return gl;
 }

@@ -48,7 +48,7 @@ export class NullDevice extends Device {
     return true;
   }
   readonly type = 'unknown';
-  features: DeviceFeatures = new DeviceFeatures([], this.props.disabledFeatures);
+  features: DeviceFeatures = new DeviceFeatures([], this.props._disabledFeatures);
   limits: NullDeviceLimits = new NullDeviceLimits();
   readonly info = NullDeviceInfo;
 
@@ -58,7 +58,7 @@ export class NullDevice extends Device {
   constructor(props: DeviceProps) {
     super({...props, id: props.id || 'null-device'});
 
-    this.canvasContext = new NullCanvasContext(this, props);
+    this.canvasContext = new NullCanvasContext(this, props.canvasContext);
     this.lost = new Promise(resolve => {});
     this.canvasContext.resize();
   }

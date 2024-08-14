@@ -52,7 +52,7 @@ export class WebGLAdapter extends Adapter {
     if (!isWebGL(gl)) {
       throw new Error('Invalid WebGL2RenderingContext');
     }
-    return new WebGLDevice({gl: gl as WebGL2RenderingContext});
+    return new WebGLDevice({_handle: gl as WebGL2RenderingContext});
   }
 
   async create(props: DeviceProps = {}): Promise<WebGLDevice> {
@@ -61,17 +61,17 @@ export class WebGLAdapter extends Adapter {
     const promises: Promise<unknown>[] = [];
 
     // Load webgl and spector debug scripts from CDN if requested
-    if (props.debug) {
+    if (props.debugWebGL) {
       promises.push(loadWebGLDeveloperTools());
     }
 
-    if (props.debugWithSpectorJS) {
+    if (props.debugSpectorJS) {
       promises.push(loadSpectorJS(props));
     }
 
     // Wait for page to load: if canvas is a string we need to query the DOM for the canvas element.
     // We only wait when props.canvas is string to avoids setting the global page onload callback unless necessary.
-    if (typeof props.canvas === 'string') {
+    if (typeof props.canvasContext?.canvas === 'string') {
       promises.push(CanvasContext.pageLoaded);
     }
 

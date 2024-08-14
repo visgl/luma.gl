@@ -1,16 +1,9 @@
 # CanvasContext
 
 A `CanvasContext` holds a connection between a GPU `Device` and an HTML `canvas` or `OffscreenCanvas` into which it can render.
-
-Canvas contexts are created using `device.createCanvasContext()`. Depending on options passed, this either:
-- creates a new canvas element, or
-- attaches the context to an existing canvas element
--
-- (see [remarks](#remarks) below for WebGL limitations).
-
 a `CanvasContext` handles the following responsibilities:
 
-- Provides a `Framebuffer` representing the display, with freshly updated and resized textures for every render frame. On WebGPU it manages the "swap chain".
+- A source of `Framebuffer`s that will render into the display.
 - Handles canvas resizing
 - Manages device pixel ratio (mapping between device and CSS pixels)
 
@@ -19,8 +12,10 @@ a `CanvasContext` handles the following responsibilities:
 Use a device's default canvas context:
 
 ```typescript
+const renderPass = device.beginRenderPass({});
+// or
 const renderPass = device.beginRenderPass({
-  framebuffer: device.canvasContext.getFramebuffer()
+  framebuffer: device.getCanvasContext().getFramebuffer()
 });
 ```
 
@@ -31,6 +26,11 @@ const canvasContext2 = device.createCanvasContext({canvas: ...});
 const renderPass = device.beginRenderPass({
   framebuffer: canvasContext2.getFramebuffer()
 });
+
+const renderPass = device.beginRenderPass({
+  framebuffer: canvasContext2.getFramebuffer()
+});
+
 ```
 
 ## Types
@@ -46,8 +46,9 @@ const renderPass = device.beginRenderPass({
 | `useDevicePixels?`      | `boolean` \| `number`                                | Device pixels scale factor (`true` uses browser DPI)                          |
 | `autoResize?`           | `boolean`                                            | Whether to track resizes                                                      |
 | `visible?`              | `boolean`                                            | Visibility (only used if new canvas is created).                              |
-| `colorSpace?`           | `'srgb'`                                             | WebGPU only https://www.w3.org/TR/webgpu/#canvas-configuration                |
-| `compositingAlphaMode?` | `'opaque'` \| `'premultiplied'`                      | WebGPU only https://www.w3.org/TR/webgpu/#canvas-configuration                |
+| `alphaMode?: string`    | `'opaque'`         | `'opaque' \| 'premultiplied'`. See [alphaMode](https://developer.mozilla.org/en-US/docs/Web/API/GPUCanvasContext/configure#alphamode). |
+| `colorSpace?: 'string`  | `'srgb'`           | `'srgb' \| 'display-p3'`. See [colorSpace](https://developer.mozilla.org/en-US/docs/Web/API/GPUCanvasContext/configure#colorspace). |
+
 
 ## Static Fields
 
@@ -81,12 +82,20 @@ Whether the framebuffer backing this canvas context is sized using device pixels
 ### constructor
 
 :::info
-A `CanvasContext` should not be constructed directly. Default canvas contexts are created when instantiating a `WebGPUDevice` or a `WebGLDevice`, and can be accessed through the `device.canvasContext` field.  Additional canvas contexts can be explicitly created through `WebGPUDevice.createCanvasContext(...)`.
+A `CanvasContext` should not be constructed directly. Default canvas contexts are created when instantiating a `WebGPUDevice` or a `WebGLDevice` by supplying the `canvasContext` property, and can be accessed through the `device.canvasContext` field.  Additional canvas contexts can be explicitly created through `WebGPUDevice.createCanvasContext(...)`.
 :::
+
+On `Device` instances that support it (see [remarks](#remarks) below) additional canvas contexts are created using `device.createCanvasContext()`. Depending on options passed, this either:
+- creates a new canvas element with the specified properties,
+- or attaches the context to an existing canvas element
+
+### getCurrentFramebuffer(): Framebuffer
+
+Returns a framebuffer with properly resized current 'swap chain' textures. Rendering to this framebuffer will update the canvas associated with that `CanvasContext`. Note that a new `Framebuffer` must be requested on every redraw cycle.
 
 ### `getDevicePixelResolution(): [number, number]`
 
-T
+TBA
 
 ### `getPixelSize(): [number, number]`
 
@@ -94,18 +103,18 @@ Returns the size in pixels required to cover the canvas at the current device pi
 
 ### `resize(): void`
 
-Resize the drawing surface.
+Resize the drawing surface. Usually called after the window has been resized. Note that automatic resizing is performed as size changes to the underlying canvas object are detected.
 
 ```typescript
-canvasContext.resize(options)
+canvasContext.resize(options: {width: number, height: number; userDevicePixels})
 ```
 
-  - **width**: New drawing surface width.
-  - **height**: New drawing surface height.
-  - **useDevicePixels**: Whether to scale the drawing surface using the device pixel ratio.
+- **width**: New drawing surface width.
+- **height**: New drawing surface height.
+- **useDevicePixels**: Whether to scale the drawing surface using the device pixel ratio.
 
 ## Remarks
 
-- Note that a WebGPU `Device` can have multiple associated `CanvasContext` instances (or none, if only used for compute).
-- However a WebGL `Device` always has exactly one `CanvasContext` and can only render into that single canvas. (This is a fundamental limitation of WebGL.)
-- `useDevicePixels` can accept a custom ratio (Number), instead of `true` or `false`. This allows rendering to a much smaller or higher resolutions. When using high value (usually more than device pixel ratio), it is possible it can get clamped down outside of luma.gl's control due to system memory limitation, in such cases a warning will be logged to the browser console.
+- A WebGPU `Device` can have multiple associated `CanvasContext` instances (or none, if only used for compute).
+- A WebGL `Device` always has exactly one `CanvasContext` and can only render into that single canvas. (This is a fundamental limitation of the WebGL API.)
+- `useDevicePixels` can accept a custom ratio (`number`), instead of `true` or `false`. This allows rendering to a smaller or higher resolutions. When using high value (usually more than device pixel ratio), it is possible it can get clamped down outside of luma.gl's control due to system memory limitation, in such cases a warning will be logged to the browser console.

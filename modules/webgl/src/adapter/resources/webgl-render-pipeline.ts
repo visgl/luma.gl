@@ -110,12 +110,12 @@ export class WEBGLRenderPipeline extends RenderPipeline {
       // and reference them as `app` from both GLSL and JS.
       // TODO - this is rather hacky - we could also remap the name directly in the shader layout.
       const binding =
-        this.shaderLayout.bindings.find(binding => binding.name === name) ||
-        this.shaderLayout.bindings.find(binding => binding.name === `${name}Uniforms`);
+        this.shaderLayout.bindings.find(binding_ => binding_.name === name) ||
+        this.shaderLayout.bindings.find(binding_ => binding_.name === `${name}Uniforms`);
 
       if (!binding) {
         const validBindings = this.shaderLayout.bindings
-          .map(binding => `"${binding.name}"`)
+          .map(binding_ => `"${binding_.name}"`)
           .join(', ');
         if (!options?.disableWarnings) {
           log.warn(

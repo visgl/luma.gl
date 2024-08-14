@@ -353,8 +353,8 @@ test('WebGLCanvasContext#cssToDeviceRatio', t => {
 });
 
 /** Modify the canvas context to mock test conditions */
-function configureCanvasContext(canvasContext: CanvasContext, tc) {
+function configureCanvasContext(canvasContext_: CanvasContext, tc) {
   // @ts-expect-error read only
-  canvasContext._canvasSizeInfo = tc._canvasSizeInfo;
-  canvasContext.getDrawingBufferSize = () => [tc.drawingBufferWidth, tc.drawingBufferHeight];
+  canvasContext_._canvasSizeInfo = tc._canvasSizeInfo;
+  canvasContext_.getDrawingBufferSize = () => [tc.drawingBufferWidth, tc.drawingBufferHeight];
 }

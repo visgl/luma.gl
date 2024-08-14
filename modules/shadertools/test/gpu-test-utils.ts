@@ -1,7 +1,5 @@
 /* eslint-disable max-len, prefer-template, camelcase */
 /* eslint-disable no-console */
-import {setGLParameters} from '@luma.gl/webgl';
-import {createTestContext} from '@luma.gl/test-utils';
 
 // Utilities functions that to be moved to a common place for future tests
 
@@ -34,19 +32,6 @@ function glErrorShouldBe(gl, glErrors, opt_msg) {
     const msg = `getError expected${glErrors.length > 1 ? ' one of: ' : ': '}`;
     console.error('FAIL ' + msg);
   }
-}
-
-export function initializeGL(canvas) {
-  const gl = createTestContext(canvas);
-  setGLParameters(gl, {
-    viewport: [0, 0, canvas.width, canvas.height]
-  });
-  setGLParameters(gl, {
-    clearColor: [0, 0, 0, 1],
-    clearDepth: 1
-  });
-  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-  return gl;
 }
 
 export function initializeTexTarget(gl) {

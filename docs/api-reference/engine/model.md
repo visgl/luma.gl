@@ -75,7 +75,7 @@ Debug shader source (even when shader successful)
 const model = new Model(device, {
   vs: VERTEX_SHADER,
   fs: FRAGMENT_SHADER,
-  debugShaders: true
+  debugShaders: 'always'
 });
 ```
 
@@ -102,7 +102,7 @@ Less commonly used properties:
 | `varyings?`        | `string[]`                                     | WebGL: Array of vertex shader output variables (used in TransformFeedback flow).  |
 | `bufferMode?`      |                                                | WebGL: Mode for recording vertex shader outputs (used in TransformFeedback flow). |
 
-`ModelProps` also include [`RenderPipelineProps`](/docs/api-reference/core/resources/render-pipeline.md), which are passed through to the `RenderPipeline` constructor, e.g:
+`ModelProps` also include [`RenderPipelineProps`](/docs/api-reference/core/resources/render-pipeline), which are passed through to the `RenderPipeline` constructor, e.g:
 
 | Property          | Type                       | Description                                                                             |
 | ----------------- | -------------------------- | --------------------------------------------------------------------------------------- |

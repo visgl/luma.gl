@@ -150,7 +150,7 @@ function testFormatCreation(t, device: Device, withData: boolean = false) {
       continue;
     }
 
-    if (device.isTextureFormatSupported(format)) {
+    if (device.isTextureFormatSupported(format) && !device.isTextureFormatCompressed(format)) {
       try {
         const data = withData && !packed ? TEXTURE_DATA[dataType] || DEFAULT_TEXTURE_DATA : null;
         // TODO: for some reason mipmap generation failing for RGB32F format

@@ -30,7 +30,9 @@ export async function createDevice(type: 'webgl' | 'webgpu'): Promise<Device> {
       adapters: [webgl2Adapter, webgpuAdapter],
       type,
       height: 0,
-      container: getCanvasContainer()
+      canvasContext: {
+        container: getCanvasContainer()
+      }
     });
   return await cachedDevice[type];
 }

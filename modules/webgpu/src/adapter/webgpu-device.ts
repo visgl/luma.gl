@@ -6,7 +6,6 @@
 // / <reference types="@webgpu/types" />
 
 import type {
-  DeviceProps,
   DeviceInfo,
   DeviceLimits,
   DeviceFeature,
@@ -28,7 +27,8 @@ import type {
   TransformFeedback,
   TransformFeedbackProps,
   QuerySet,
-  QuerySetProps
+  QuerySetProps,
+  DeviceProps
 } from '@luma.gl/core';
 import {Device, DeviceFeatures} from '@luma.gl/core';
 import {WebGPUBuffer} from './resources/webgpu-buffer';
@@ -101,14 +101,9 @@ export class WebGPUDevice extends Device {
     });
 
     // Note: WebGPU devices can be created without a canvas, for compute shader purposes
-    // if (props.canvas) {
-    this.canvasContext = new WebGPUCanvasContext(this, this.adapter, {
-      canvas: props.canvas,
-      height: props.height,
-      width: props.width,
-      container: props.container
-    });
-    // }
+    if (props.canvasContext) {
+      this.canvasContext = new WebGPUCanvasContext(this, this.adapter, props.canvasContext);
+    }
   }
 
   // TODO
@@ -280,7 +275,7 @@ export class WebGPUDevice extends Device {
       features.add(feature);
     }
 
-    return new DeviceFeatures(Array.from(features), this.props.disabledFeatures);
+    return new DeviceFeatures(Array.from(features), this.props._disabledFeatures);
   }
 
   copyExternalImageToTexture(options: {

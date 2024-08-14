@@ -25,7 +25,7 @@ import {ENUM_STYLE_SETTINGS_SET1, ENUM_STYLE_SETTINGS_SET2} from './data/sample-
 
 // Settings test, don't reuse a context
 // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-const device = createTestDevice({debug: true}) as WebGLDevice;
+const device = createTestDevice() as WebGLDevice;
 
 test('WebGLStateTracker#imports', t => {
   t.ok(typeof WebGLStateTracker === 'function', 'WebGLStateTracker imported OK');
