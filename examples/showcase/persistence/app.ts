@@ -1,3 +1,7 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import type {NumberArray, ShaderUniformType} from '@luma.gl/core';
 import {UniformStore, Framebuffer} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
@@ -6,7 +10,10 @@ import {
   Geometry,
   SphereGeometry,
   Model,
-  makeRandomGenerator
+  makeRandomGenerator,
+  loadImageBitmap,
+  AsyncTexture,
+  BackgroundTextureModel
 } from '@luma.gl/engine';
 import {Matrix4, Vector3, radians} from '@math.gl/core';
 
@@ -58,7 +65,6 @@ uniform sphereUniforms {
   modelViewMatrix: mat4<f32>;
   projectionMatrix: mat4<f32>;
 } sphere;
-
 
 @vertex
 fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
@@ -298,11 +304,14 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     persistenceQuad
   });
 
-  /** Electron model */
+  /** Model that renders a background texture into transparent areas of the screen */
+  backgroundTextureModel: BackgroundTextureModel;
+  /** Electron model, will be drawn multiple times */
   electron: Model;
-  /** Nucleon model */
+  /** Nucleon model, will be drawn multiple times */
   nucleon: Model;
 
+  /** Model that  */
   mainFramebuffer: Framebuffer;
   pingpongFramebuffers: Framebuffer[];
   screenQuad: Model;
@@ -310,6 +319,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
   constructor({device, width, height}: AnimationProps) {
     super();
+
+    this.backgroundTextureModel = new BackgroundTextureModel(device, {
+      backgroundTexture: new AsyncTexture(device, {data: loadImageBitmap('background.png')}),
+      blend: true
+    });
 
     this.electron = new Model(device, {
       id: 'electron',
@@ -460,7 +474,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     const mainRenderPass = device.beginRenderPass({
       framebuffer: this.mainFramebuffer,
-      clearColor: [0, 0, 0, 1],
+      clearColor: [0, 0, 0, 0],
       clearDepth: 1
     });
 
@@ -520,7 +534,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     // Accumulate in persistence buffer
     const persistenceRenderPass = device.beginRenderPass({
       framebuffer: currentFramebuffer,
-      clearColor: [0, 0, 0, 1]
+      clearColor: [0, 0, 0, 0]
     });
     this.persistenceQuad.setBindings({
       uScene: this.mainFramebuffer.colorAttachments[0],
@@ -533,7 +547,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     persistenceRenderPass.end();
 
     // Copy the current framebuffer to screen
-    const screenRenderPass = device.beginRenderPass({clearColor: [1, 0, 0, 1]});
+    const screenRenderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
     this.screenQuad.setBindings({
       uTexture: currentFramebuffer.colorAttachments[0]
     });
@@ -541,6 +555,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.uniformStore.updateUniformBuffers();
 
     this.screenQuad.draw(screenRenderPass);
+    this.backgroundTextureModel.draw(screenRenderPass);
     screenRenderPass.end();
   }
 }
