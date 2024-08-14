@@ -36,8 +36,8 @@ import {ShaderAssembler, getShaderLayoutFromWGSL} from '@luma.gl/shadertools';
 
 import type {Geometry} from '../geometry/geometry';
 import {GPUGeometry, makeGPUGeometry} from '../geometry/gpu-geometry';
-import {PipelineFactory} from '../lib/pipeline-factory';
-import {ShaderFactory} from '../lib/shader-factory';
+import {PipelineFactory} from '../factories/pipeline-factory';
+import {ShaderFactory} from '../factories/shader-factory';
 import {getDebugTableForShaderLayout} from '../debug/debug-shader-layout';
 import {debugFramebuffer} from '../debug/debug-framebuffer';
 import {deepEqual} from '../utils/deep-equal';

@@ -26,11 +26,14 @@ export {BufferTransform} from './compute/buffer-transform';
 export type {TextureTransformProps} from './compute/texture-transform';
 export {TextureTransform} from './compute/texture-transform';
 
-export {PipelineFactory} from './lib/pipeline-factory';
-export {ShaderFactory} from './lib/shader-factory';
+export {PipelineFactory} from './factories/pipeline-factory';
+export {ShaderFactory} from './factories/shader-factory';
 
-// Utils
-export {ClipSpace} from './lib/clip-space';
+// Models
+export type {ClipSpaceProps} from './models/clip-space';
+export {ClipSpace} from './models/clip-space';
+export type {BackgroundTextureModelProps} from './models/background-texture-model';
+export {BackgroundTextureModel} from './models/background-texture-model';
 
 // Scenegraph Core nodes
 export {ScenegraphNode} from './scenegraph/scenegraph-node';

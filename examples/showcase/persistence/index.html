@@ -3,7 +3,7 @@
   import {makeAnimationLoop} from '@luma.gl/engine';
   import {webgpuAdapter} from '@luma.gl/webgpu';
   import {webgl2Adapter} from '@luma.gl/webgl';
-  import AppAnimationLoop from './app.ts';
+  import AnimationLoopTemplate from './app.ts';
   const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {adapters: [/* webgpuAdapter, */ webgl2Adapter]})
   animationLoop.start();
   animationLoop.start();

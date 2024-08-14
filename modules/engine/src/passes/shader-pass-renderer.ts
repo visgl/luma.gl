@@ -7,7 +7,7 @@ import type {ShaderPass} from '@luma.gl/shadertools';
 import {initializeShaderModule} from '@luma.gl/shadertools';
 import {ShaderInputs} from '../shader-inputs';
 import {AsyncTexture} from '../async-texture/async-texture';
-import {ClipSpace} from '../lib/clip-space';
+import {ClipSpace} from '../models/clip-space';
 import {SwapFramebuffers} from '../compute/swap';
 
 import {getFragmentShaderForRenderPass} from './get-fragment-shader';
