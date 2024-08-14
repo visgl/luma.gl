@@ -64,7 +64,7 @@ Specifies props to use when luma creates the device.
 | Parameter                                           | Default                                      | Description                                                                                |
 | --------------------------------------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------ |
 | `id?: string`                                       | `null`                                       | Optional string id, mainly intended for debugging.                                         |
-| `canvasContext?: CanvasContextProps`                | [CanvasContexProps][canvas-context]    | Props used to create the default `CanvasContext` for the new `Device`.                     |
+| `canvasContext?: CanvasContextProps`                | [CanvasContexProps][canvas-context-props]    | Props used to create the default `CanvasContext` for the new `Device`.                     |
 | `onError?: (error: Error) => unknown`               | `log.error`                                  | Error handling.                                                                            |
 | `powerPreference?: string`                          | `'high-performance'`                         | `'default' \| 'high-performance' \| 'low-power'` (WebGL).                                  |
 | `webgl?: WebGLContextAttributes`                    | [`WebGLContextAttributes`][webgl-attributes] | Attributes passed on to WebGL (`canvas.getContext('webgl2', props.webgl)`                  |
@@ -84,7 +84,6 @@ Specify WebGL debugging options to use when luma creates the WebGL context.
 | `debugShaders?`: `'errors'` \| `'warnings'` \| `'always'` \| `'never'` | `'error'` | Display shader source code with inline errors in the canvas.                                                                                |
 | `debugFramebuffers?: boolean`                                          | `false`   | Show small copy of the contents of updated Framebuffers in the canvas.                                                                      |
 | `debugWebGL?: boolean`                                                 | `false`   | Initialize Khronos WebGLDeveloperTools. WebGL API calls will be logged to the console and WebGL errors will generate JavaScript exceptions. |
-| `break?: string[]`                                                     | `[]`      | Insert a break point (`debugger`) if one of the listed gl functions is called.                                                              |
 | `debugSpectorJS?: boolean`                                             | `false`   | Initialize the SpectorJS WebGL debugger.                                                                                                    |
 | `debugSpectorJSUrl?: string`                                           | N/A       | SpectorJS URL. Override if CDN is down or different SpectorJS version is desired.                                                           |
 

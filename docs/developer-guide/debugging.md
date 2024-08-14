@@ -3,7 +3,7 @@
 ## Why GPU Debugging can be hard
 
 Debugging GPU code can be challenging. Standard CPU-side debugging tools like 
-breakpoints and single stepping are not avaialble in GPU shaders.  when shaders fail, the result is often a blank screen that does not provide much information about what went wrong. 
+breakpoints and single stepping are not available in GPU shaders.  when shaders fail, the result is often a blank screen that does not provide much information about what went wrong. 
 In addition, the error behind a failed render can be located in very different parts of the code:
 - it can be in the shader code itself
 - but it can also be in the data that was provided to the GPU (attributes, bindings, uniforms etc)
@@ -133,11 +133,11 @@ luma.set('debug-webgl', true)
 
 then reload your browser tab.
 
-While usually not recommended, it is also possible to activate the developer tools manually. Call [`luma.createDevice`](/docs/api-reference/core) with `debug: true` to create a WebGL context instrumented with the WebGL developer tools:
+While usually not recommended, it is also possible to activate the developer tools manually. Call [`luma.createDevice`](/docs/api-reference/core/luma#lumacreatedevice) with `debugWebGL: true` to create a WebGL context instrumented with the WebGL developer tools:
 
 ```ts
 import {luma} from '@luma.gl/core';
-const device = luma.createDevice({type: 'webgl', {webgl: {debug: true}});
+const device = luma.createDevice({type: 'webgl', {debugWebGL: true});
 ```
 
 > Warning: WebGL debug contexts impose a significant performance penalty (luma waits for the GPU after each WebGL call to check error codes) and should not be activated in production code.
@@ -155,7 +155,7 @@ luma.log.set('debug-spectorjs', true);
 And then restarting the application (e.g. via Command-R on MacOS),
 
 
-You can also enable spector when creating a device  by adding the `spector: true` option.
+You can also enable spector when creating a device  by adding the `debugSpectorJS: true` option.
 
 To display Spector.js stats when loaded.
 
