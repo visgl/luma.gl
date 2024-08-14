@@ -4,14 +4,14 @@
 
 This module contains the WebGL adapter for the "abstract" luma.gl API (`@luma.gl/core`).
 
-Simply importing `@luma.gl/webgl` installs the adapter and enables WebGL devices to
-be created using `luma.createDevice(props)`. See [`CreateDeviceProps`](../core/luma#createdeviceprops) for WebGL prop options.
+Importing `webgl2Adapter` from `@luma.gl/webgl` enables WebGL devices to
+be created using `luma.createDevice(props)`. See [`CreateDeviceProps`](../core/luma#createdeviceprops) for WebGL property options.
 
 ```typescript
 import {luma} from '@luma.gl/core';
-import '@luma.gl/webgl'; // Installs the WebGLDevice adapter
+import {webgl2Adapter}'@luma.gl/webgl';
 
-const device = await luma.createDevice({type: 'webgl', canvasContext: {...}, webgl: {...}});
+const device = await luma.createDevice({adapters: [webgl2Adapter], canvasContext: {width: 800: height: 600}});
 
 // Resources can now be created
 const buffer = device.createBuffer(...);
@@ -22,7 +22,7 @@ the `WebGL2RenderingContext`. The context is available on the `WebGLDevice` subc
 
 ```typescript
 // @ts-expect-error
-const gl = device.gl;
+const gl = device.handle;
 ```
 
 With a bit more work, typescript users can retrieve the `WebGL2RenderingContext`
@@ -33,5 +33,5 @@ import {cast} from '@luma.gl/core';
 import {WebGLDevice} from '@luma.gl/webgl'; // Installs the WebGLDevice adapter
 
 const webglDevice = cast<WebGLDevice>(device);
-const gl = webglDevice.gl;
+const gl = webglDevice.handle;
 ```

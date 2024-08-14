@@ -2,29 +2,26 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {Device, DeviceProps} from '@luma.gl/core';
+import type {Device, DeviceProps, CanvasContextProps} from '@luma.gl/core';
 import {luma, log} from '@luma.gl/core';
 import {webgl2Adapter, WebGLDevice} from '@luma.gl/webgl';
 import {webgpuAdapter, WebGPUDevice} from '@luma.gl/webgpu';
 
-const CONTEXT_DEFAULTS: Partial<DeviceProps> = {
-  canvasContext: {
-    width: 1,
-    height: 1
-  },
-  debugWebGL: true
+const DEFAULT_CANVAS_CONTEXT_PROPS: Partial<CanvasContextProps> = {
+  width: 1,
+  height: 1
 };
 
 /** Create a test WebGL context */
-export function createTestContext(opts: Record<string, any> = {}): WebGL2RenderingContext | null {
-  const device = createTestDevice(opts);
+export function createTestContext(): WebGL2RenderingContext | null {
+  const device = createTestDevice();
   return device && device.gl;
 }
 
 /** Create a test WebGLDevice */
 export function createTestDevice(props: DeviceProps = {}): WebGLDevice | null {
   try {
-    props = {...CONTEXT_DEFAULTS, ...props, debugWebGL: true};
+    props = {canvasContext: DEFAULT_CANVAS_CONTEXT_PROPS, ...props, debugWebGL: true};
     // TODO - We dont use luma.createDevice since createTestDevice currently expect WebGL context to be created synchronously
     return new WebGLDevice(props);
   } catch (error) {
@@ -54,7 +51,8 @@ export async function getTestDevices(type?: 'webgl' | 'webgpu'): Promise<Device[
       webgpuDevice = (await luma.createDevice({
         id: 'webgpu-test-device',
         type: 'webgpu',
-        adapters: [webgpuAdapter]
+        adapters: [webgpuAdapter],
+        canvasContext: DEFAULT_CANVAS_CONTEXT_PROPS
       })) as WebGPUDevice;
     } catch (error) {
       log.error(String(error))();
@@ -63,7 +61,8 @@ export async function getTestDevices(type?: 'webgl' | 'webgpu'): Promise<Device[
       webglDeviceAsync = (await luma.createDevice({
         id: 'webgl-test-device',
         type: 'webgl',
-        adapters: [webgl2Adapter]
+        adapters: [webgl2Adapter],
+        canvasContext: DEFAULT_CANVAS_CONTEXT_PROPS
       })) as WebGLDevice;
     } catch (error) {
       log.error(String(error))();
