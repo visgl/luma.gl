@@ -371,7 +371,6 @@ export abstract class Device {
   /** Returns the default / primary canvas context. Throws an error if no canvas context is available (a WebGPU compute device) */
   getCanvasContext(): CanvasContext {
     if (!this.canvasContext) {
-      debugger
       throw new Error('Device has no CanvasContext');
     }
     return this.canvasContext;
