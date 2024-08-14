@@ -88,6 +88,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
       device = await luma.createDevice({
         adapters: [webgl2Adapter, webgpuAdapter],
         type: deviceType,
+        // @ts-expect-error
         createCanvasContext: {
           canvas,
           container: containerName
