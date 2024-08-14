@@ -36,19 +36,6 @@ function glErrorShouldBe(gl, glErrors, opt_msg) {
   }
 }
 
-export function initializeGL(canvas) {
-  const gl = createTestContext(canvas);
-  setGLParameters(gl, {
-    viewport: [0, 0, canvas.width, canvas.height]
-  });
-  setGLParameters(gl, {
-    clearColor: [0, 0, 0, 1],
-    clearDepth: 1
-  });
-  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-  return gl;
-}
-
 export function initializeTexTarget(gl) {
   const framebuffer = gl.createFramebuffer();
   gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
