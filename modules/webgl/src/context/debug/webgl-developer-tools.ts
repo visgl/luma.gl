@@ -127,7 +127,7 @@ function onGLError(props: DebugContextProps, err, functionName: string, args: an
   const message = `${errorMessage} in gl.${functionName}(${functionArgs})`;
   log.error(message)();
   debugger; // eslint-disable-line
-  throw new Error(message);
+  // throw new Error(message);
 }
 
 // Don't generate function string until it is needed
@@ -144,8 +144,9 @@ function onValidateGLFunc(
 
   for (const arg of functionArgs) {
     if (arg === undefined) {
-      functionString = functionString || getFunctionString(functionName, functionArgs);
-      throw new Error(`Undefined argument: ${functionString}`);
+      functionString =   functionString || getFunctionString(functionName, functionArgs);
+      debugger; // eslint-disable-line
+      // throw new Error(`Undefined argument: ${functionString}`);
     }
   }
 }
