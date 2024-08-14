@@ -1,7 +1,5 @@
 /* eslint-disable max-len, prefer-template, camelcase */
 /* eslint-disable no-console */
-import {setGLParameters} from '@luma.gl/webgl';
-import {createTestContext} from '@luma.gl/test-utils';
 
 // Utilities functions that to be moved to a common place for future tests
 
