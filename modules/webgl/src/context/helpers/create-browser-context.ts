@@ -29,12 +29,12 @@ export function createBrowserContext(
   const onCreateError = error => (errorMessage = error.statusMessage || errorMessage);
 
   // Avoid multiple listeners?
-  canvas.removeEventListener('webglcontextcreationerror', onCreateError, false);
-  canvas.addEventListener('webglcontextcreationerror', onCreateError, false);
+  // canvas.removeEventListener('webglcontextcreationerror', onCreateError, false);
+  // canvas.addEventListener('webglcontextcreationerror', onCreateError, false);
 
   const webglProps: WebGLContextAttributes = {
     preserveDrawingBuffer: true,
-    failIfMajorPerformanceCaveat: true,
+    // failIfMajorPerformanceCaveat: true,
     ...webglContextAttributes
   };
 

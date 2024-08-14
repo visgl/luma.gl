@@ -124,7 +124,7 @@ export class WebGLDevice extends Device {
     }
 
     // Create and instrument context
-    this.canvasContext = new WebGLCanvasContext(this, {...props.canvasContext});
+    this.canvasContext = new WebGLCanvasContext(this, props.canvasContext);
 
     this.lost = new Promise<{reason: 'destroyed'; message: string}>(resolve => {
       this._resolveContextLost = resolve;

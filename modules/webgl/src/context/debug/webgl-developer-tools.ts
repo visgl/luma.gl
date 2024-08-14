@@ -144,7 +144,7 @@ function onValidateGLFunc(
 
   for (const arg of functionArgs) {
     if (arg === undefined) {
-      functionString =   functionString || getFunctionString(functionName, functionArgs);
+      functionString = functionString || getFunctionString(functionName, functionArgs);
       debugger; // eslint-disable-line
       // throw new Error(`Undefined argument: ${functionString}`);
     }
