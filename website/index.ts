@@ -19,8 +19,7 @@ export {
   CubemapExample,
   Texture3DExample,
 
-  HelloTriangleWebGPUExample,
-  InstancedCubesWebGPUExample,
-  TexturedCubeWebGPUExample,
-  TwoCubesWebGPUExample
+  HelloTriangleGeometryExample,
+  InstancedCubesExample,
+  TwoCubesExample
 } from './src/examples/templates';

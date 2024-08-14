@@ -18,7 +18,7 @@ Transform feedback allows us to capture vertex shader results from one pass and
 use them in subsequent passes. It is a powerful tool that can be used to set up massively parrallelized animations 
 or data transformations. Note that transform feedback can only be used with WebGL 2.
 
-In luma.gl, transform feedback is primarily exposed via the [Transform](/docs/api-reference/engine/transform) class, which simplifies usage by managing input and output buffers. We'll demonstrate its usage by setting up a simple animation that runs completely on the GPU.
+In luma.gl, transform feedback is primarily exposed via the [Transform](/docs/api-reference/engine/compute/buffer-transform) class, which simplifies usage by managing input and output buffers. We'll demonstrate its usage by setting up a simple animation that runs completely on the GPU.
 
 To start, we'll modify our imports to include `Transform` from **@luma.gl/engine**:
 

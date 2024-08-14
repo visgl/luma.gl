@@ -383,7 +383,7 @@ A new method `Model.transform` makes it easier to run basic transform feedback o
 
 #### Transform class (WebGL 2)
 
-[`Transform`](/docs/api-reference/engine/transform) is now an officially supported luma.gl class. This new class provides an easy-to-use interface to Transform Feedback. This class hides complexity by internally creating and managing the supporing WebGL objects that are necessary to perform Transform Feedback operations.
+`Transform` is now an officially supported luma.gl class. This new class provides an easy-to-use interface to Transform Feedback. This class hides complexity by internally creating and managing the supporing WebGL objects that are necessary to perform Transform Feedback operations.
 
 #### GLSL Transpilation
 
@@ -428,7 +428,7 @@ Date: Apr 24, 2018
 
 #### Transform class (WebGL 2, Experimental)
 
-The new experimental [`Transform`](/docs/api-reference/engine/transform) class provides an easy-to-use interface to perform Transform Feedback operations.
+The new experimental `Transform` class provides an easy-to-use interface to perform Transform Feedback operations.
 
 **Pixel Readback to GPU Buffers** (WebGL 2) - A new method `Framebuffer.readPixelsToBuffer` is added to asynchronously read pixel data into a `Buffer` object. This allows applications to reduce the CPU-GPU sync time by postponing transfer of data or to completely avoid GPU-CPU sync by using the pixel data in the GPU `Buffer` object directly as data source for another GPU draw or transform feedback operation.
 

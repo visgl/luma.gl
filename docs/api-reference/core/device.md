@@ -94,7 +94,7 @@ Learn more about WebGL debugging in our [Debugging](../../developer-guide/debugg
 
 #### WebGLContextAttributes
 
-For detailed control over WebGL context can specify what [`WebGLContextAttributes`](webgl-attributes) to use if luma creates the WebGL context. 
+For detailed control over WebGL context can specify what [`WebGLContextAttributes`][webgl-attributes] to use if luma creates the WebGL context. 
 
 | `WebGLContextAttributes`                 | Default | Description                                                                                            |
 | ---------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------ |

@@ -16,22 +16,18 @@ import InstancingApp from '../../../examples/showcase/instancing/app';
 import PersistenceApp from '../../../examples/showcase/persistence/app';
 // import WanderingApp from '../../../examples/showcase/wandering/app';
 
+import HelloTriangleGeometryApp from '../../../examples/tutorials/hello-triangle-geometry/app';
+import HelloTriangleApp from '../../../examples/tutorials/hello-triangle/app';
 import HelloCubeApp from '../../../examples/tutorials/hello-cube/app';
+import TwoCubesApp from '../../../examples/tutorials/hello-two-cubes/app';
+import InstancedCubesApp from '../../../examples/tutorials/hello-instanced-cubes/app';
 import HelloInstancingApp from '../../../examples/tutorials/hello-instancing/app';
-import HelloTriangleApp from '../../../examples/tutorials/hello-triangle-geometry/app';
 import HelloGLTFApp from '../../../examples/tutorials/hello-gltf/app';
 import LightingApp from '../../../examples/tutorials/lighting/app';
 import ShaderHooksApp from '../../../examples/tutorials/shader-hooks/app';
 import ShaderModulesApp from '../../../examples/tutorials/shader-modules/app';
 import TransformFeedbackApp from '../../../examples/tutorials/transform-feedback/app';
 import TransformApp from '../../../examples/tutorials/transform/app';
-
-// import AnimationLoop from '../../../examples/webgl/external-webgl-context/app';
-
-import HelloTriangleWebGPUApp from '../../../examples/tutorials/hello-triangle/app';
-import InstancedCubesWebGPUApp from '../../../examples/tutorials/hello-instanced-cubes/app';
-import TexturedCubeWebGPUApp from '../../../examples/webgpu/textured-cube/app';
-import TwoCubesWebGPUApp from '../../../examples/tutorials/hello-two-cubes/app';
 
 const exampleConfig = {};
 
@@ -237,38 +233,39 @@ export const TransformExample: React.FC = () => (
 
 // WebGPU Examples
 
-export const HelloTriangleWebGPUExample: React.FC = () => (
+export const HelloTriangleGeometryExample: React.FC = () => (
   <LumaExample
-    id="hello-triangle-webgpu"
-    directory="webgpu"
-    template={HelloTriangleWebGPUApp}
+    id="hello-triangle-geometry"
+    directory="tutorials"
+    template={HelloTriangleGeometryApp}
     config={exampleConfig}
   />
 );
 
-export const InstancedCubesWebGPUExample: React.FC = () => (
+export const InstancedCubesExample: React.FC = () => (
   <LumaExample
-    id="instanced-cubes-webgpu"
-    directory="webgpu"
-    template={InstancedCubesWebGPUApp}
+    id="instanced-cubes"
+    directory="tutorials"
+    template={InstancedCubesApp}
     config={exampleConfig}
   />
 );
 
-export const TexturedCubeWebGPUExample: React.FC = () => (
+export const TwoCubesExample: React.FC = () => (
   <LumaExample
-    id="textured-cube-webgpu"
-    directory="webgpu"
-    template={TexturedCubeWebGPUApp}
+    id="two-cubes"
+    directory="tutorials"
+    template={TwoCubesApp}
     config={exampleConfig}
   />
 );
 
-export const TwoCubesWebGPUExample: React.FC = () => (
-  <LumaExample
-    id="two-cubes-webgpu"
-    directory="webgpu"
-    template={TwoCubesWebGPUApp}
-    config={exampleConfig}
-  />
-);
+// export const TexturedCubeExample: React.FC = () => (
+//   <LumaExample
+//     id="textured-cube-webgpu"
+//     directory="webgpu"
+//     template={TexturedCubeApp}
+//     config={exampleConfig}
+//   />
+// );
+
