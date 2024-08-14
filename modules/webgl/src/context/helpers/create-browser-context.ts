@@ -26,7 +26,7 @@ export function createBrowserContext(
 ): WebGL2RenderingContext {
   // Try to extract any extra information about why context creation failed
   let errorMessage = null;
-  const onCreateError = error => (errorMessage = error.statusMessage || errorMessage);
+  // const onCreateError = error => (errorMessage = error.statusMessage || errorMessage);
 
   // Avoid multiple listeners?
   // canvas.removeEventListener('webglcontextcreationerror', onCreateError, false);
