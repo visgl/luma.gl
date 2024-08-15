@@ -1,53 +1,95 @@
 # CanvasContext
 
-A `CanvasContext` holds a connection between a GPU `Device` and an HTML `canvas` or `OffscreenCanvas` into which it can render.
-a `CanvasContext` handles the following responsibilities:
+A `CanvasContext` holds a connection between a GPU `Device` and canvas, (either an HTML `<canvas />` element, aka `HTMLCanvasELement`, or an `OffscreenCanvas`).
 
-- A source of `Framebuffer`s that will render into the display.
-- Handles canvas resizing
-- Manages device pixel ratio (mapping between device and CSS pixels)
+- A `CanvasContext` enables the application to render into the associated canvas, by acting as a source of `Framebuffer`s with special `Texture` color attachments that are copied to the screen at the end of a `RenderPass`.
+- It handles canvas resizing, making sure the returned `Framebuffer`s correspond to the current size of the canvas.
+- It also provides support for device pixel ratios (mapping between device pixels and CSS pixels)
 
 ## Usage
 
-Use a device's default canvas context:
+The luma.gl API is designed to allow a `Device` to create multiple associated `CanvasContext`s (or none, if only used for compute).
+
+```ts
+const device = await luma.createDevice(...);
+const canvasContext1 = device.createCanvasContext(...);
+const canvasContext2 = device.createCanvasContext(...);
+```
+
+However this is only supported on WebGPU. A WebGL `Device` always has exactly one `CanvasContext` that must be created when the device is created, and a WebGL device can only render into that single canvas. (This is a fundamental limitation of the WebGL API, outside of luma.gl's control). 
+
+Because of this, the `Device` class provides a `DeviceProps.createCanvasContext` property that creates a default `CanvasContext`:
+
+```ts
+const device = await luma.createDevice({createCanvasContext: true});
+const canvasContext = device.getDefaultCanvasContext()
+```
+
+The application can also provide properties for the default `CanvasContext`:
+
+```ts
+const device = await luma.createDevice({createCanvasContext: {width, height}}); // Creates a new HTML canvas and adds it to document.body.
+const canvasContext = device.getDefaultCanvasContext()
+```
+
+A `CanvasContext` can be associated with an existing canvas:
+
+```ts
+const device = await luma.createDevice({createCanvasContext: {canvas: document.getElementById('canvas-id')}}); // Creates a new HTML canvas and adds it to document.body.
+const canvasContext = device.getDefaultCanvasContext()
+```
+
+Use a device's default canvas context to render into the associated canvas
 
 ```typescript
 const renderPass = device.beginRenderPass({});
-// or
+```
+
+This is equivalent to
+```ts
 const renderPass = device.beginRenderPass({
-  framebuffer: device.getCanvasContext().getFramebuffer()
+  framebuffer: device.getDefaultCanvasContext().getFramebuffer()
 });
 ```
 
-Create additional canvas contexts (WebGPU only):
+Rendering into  additional canvas contexts (WebGPU only):
 
 ```typescript
-const canvasContext2 = device.createCanvasContext({canvas: ...});
+const newCanvasContext = device.createCanvasContext({canvas: ...});
 const renderPass = device.beginRenderPass({
-  framebuffer: canvasContext2.getFramebuffer()
+  framebuffer: newCanvasContext.getFramebuffer()
 });
+```
 
-const renderPass = device.beginRenderPass({
-  framebuffer: canvasContext2.getFramebuffer()
-});
+On high-DPI screens, the number of pixels in a canvas can be a multiple of the "CSS size" reported by HTMLCanvasElement. Because of this, luma.gl allows the resolution of the textures returned by `canvasContext.getFramebuffer` to be controlled. The `CanvasContextProps.useDevicePixels` prop if set to `true`, multiples the canvas HTML size with the system device pixel ratio. This prop can also a custom ratio (`number`), as well. This allows setting the target texture size to higher or lower resolutions that indicated by an HMTLCanvasElements CSS width and height, to ensure that screen renderings use the maximum resolution of the device (at the cost of using more GPU memory).
 
+```typescript
+const newCanvasContext = device.createCanvasContext({canvas: ..., useDevicePixels: true});
+```
+
+Mote that when using high value (usually more than device pixel ratio), it is possible it can get clamped down outside of luma.gl's control due to system memory limitation, in such cases a warning will be logged to the browser console.
+
+The `CanvasContext` also provides methods for converting between device and CSS pixels, e.g
+
+```ts
+canvasContext.getDevicePixelResolution()
 ```
 
 ## Types
 
 ### `CanvasContextProps`
 
-| Property                | Type                                                 |                                                                               |
-| ----------------------- | ---------------------------------------------------- | ----------------------------------------------------------------------------- |
-| `canvas?`               | `HTMLCanvasElement` \| `OffscreenCanvas` \| `string` | A new canvas will be created if not supplied.                                 |
-| `container?`            | `HTMLElement`                                        | Parent DOM element for new canvas. Defaults to first child of `document.body` |
-| `width?`                | `number`                                             | Width in pixels of the canvas                                                 |
-| `height?`               | `number`                                             | Height in pixels of the canvas                                                |
-| `useDevicePixels?`      | `boolean` \| `number`                                | Device pixels scale factor (`true` uses browser DPI)                          |
-| `autoResize?`           | `boolean`                                            | Whether to track resizes                                                      |
-| `visible?`              | `boolean`                                            | Visibility (only used if new canvas is created).                              |
-| `alphaMode?: string`    | `'opaque'`         | `'opaque' \| 'premultiplied'`. See [alphaMode](https://developer.mozilla.org/en-US/docs/Web/API/GPUCanvasContext/configure#alphamode). |
-| `colorSpace?: 'string`  | `'srgb'`           | `'srgb' \| 'display-p3'`. See [colorSpace](https://developer.mozilla.org/en-US/docs/Web/API/GPUCanvasContext/configure#colorspace). |
+| Property               | Type                                                 |                                                                                                                                        |
+| ---------------------- | ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `width?`               | `number`                                             | Width in pixels of the canvas (if `canvas` is not supplied)                                                                            |
+| `height?`              | `number`                                             | Height in pixels of the canvas (if `canvas` is not supplied)                                                                           |  |
+| `canvas?`              | `HTMLCanvasElement` \| `OffscreenCanvas` \| `string` | A new canvas will be created if not supplied.                                                                                          |
+| `container?`           | `HTMLElement`                                        | Parent DOM element for new canvas. Defaults to first child of `document.body`                                                          |
+| `useDevicePixels?`     | `boolean` \| `number`                                | Device pixels scale factor (`true` uses browser DPI)                                                                                   |
+| `autoResize?`          | `boolean`                                            | Whether to track resizes                                                                                                               |
+| `visible?`             | `boolean`                                            | Visibility (only used if new canvas is created).                                                                                       |
+| `alphaMode?: string`   | `'opaque'`                                           | `'opaque' \| 'premultiplied'`. See [alphaMode](https://developer.mozilla.org/en-US/docs/Web/API/GPUCanvasContext/configure#alphamode). |
+| `colorSpace?: 'string` | `'srgb'`                                             | `'srgb' \| 'display-p3'`. See [colorSpace](https://developer.mozilla.org/en-US/docs/Web/API/GPUCanvasContext/configure#colorspace).    |
 
 
 ## Static Fields
@@ -113,8 +155,3 @@ canvasContext.resize(options: {width: number, height: number; userDevicePixels})
 - **height**: New drawing surface height.
 - **useDevicePixels**: Whether to scale the drawing surface using the device pixel ratio.
 
-## Remarks
-
-- A WebGPU `Device` can have multiple associated `CanvasContext` instances (or none, if only used for compute).
-- A WebGL `Device` always has exactly one `CanvasContext` and can only render into that single canvas. (This is a fundamental limitation of the WebGL API.)
-- `useDevicePixels` can accept a custom ratio (`number`), instead of `true` or `false`. This allows rendering to a smaller or higher resolutions. When using high value (usually more than device pixel ratio), it is possible it can get clamped down outside of luma.gl's control due to system memory limitation, in such cases a warning will be logged to the browser console.
