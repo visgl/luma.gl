@@ -4,6 +4,18 @@
 
 Major new release that includes WebGPU support
 
+### 9.1.0-alpha.16
+
+- chore(core): DeviceProps.createCanvasContext: CanvasContextProps | true (#2188)
+- chore(deps): bump axios from 1.7.3 to 1.7.4 (#2186)
+- chore(core): follow up on device props docs and exports (#2187)
+- feat(core): new device props api (#2100)
+- feat(engine): Add BackgroundTextureModel class (#2185)
+- fix(examples): Fix blending in Texture3D example
+- chore(examples): New ShaderPassRenderer class, improved postprocessing example (#2183)
+- chore(webgl): Consolidate CommandEncoder implementation and tests (#2152)
+- fix{engine): Model - do not bind uniform buffers for modules without uniforms (#2182)
+
 ### 9.1.0-alpha.15
 
 - fix: luma8 sampler param compatibility (#2180)
