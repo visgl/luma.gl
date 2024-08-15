@@ -61,17 +61,17 @@ This object can also include all [`CanvasContextProps`][canvas-context-props] pr
 
 Specifies props to use when luma creates the device.
 
-| Parameter                                           | Default                                      | Description                                                                                |
-| --------------------------------------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `id?: string`                                       | `null`                                       | Optional string id, mainly intended for debugging.                                         |
-| `canvasContext?: CanvasContextProps`                | [CanvasContexProps][canvas-context-props]    | Props used to create the default `CanvasContext` for the new `Device`.                     |
-| `onError?: (error: Error) => unknown`               | `log.error`                                  | Error handling.                                                                            |
-| `powerPreference?: string`                          | `'high-performance'`                         | `'default' \| 'high-performance' \| 'low-power'` (WebGL).                                  |
-| `webgl?: WebGLContextAttributes`                    | [`WebGLContextAttributes`][webgl-attributes] | Attributes passed on to WebGL (`canvas.getContext('webgl2', props.webgl)`                  |
-| `_requestMaxLimits?: boolean`                        | `true`                                       | Ensures that the Device exposes the highest `DeviceLimits` supported by platform (WebGPU). |
-| `_initializeFeatures?: boolean`                      | `true`                                       | Initialize all `DeviceFeatures` on startup. 🧪                                              |
-| `_disabledFeatures?: Record<DeviceFeature, boolean>` | `{ 'compilation-status-async-webgl': true }` | Disable specific `DeviceFeatures`. 🧪                                                       |
-| `_factoryDestroyPolicy?: string`                    | `'unused'`                                   | `'unused' \| 'never'` Never destroy cached shaders and pipelines. 🧪                        |
+| Parameter                                            | Default                                      | Description                                                                                                                                            |
+| ---------------------------------------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `id?: string`                                        | `null`                                       | Optional string id, mainly intended for debugging.                                                                                                     |
+| `createCanvasContext?: CanvasContextProps` \| `true` | [CanvasContexProps][canvas-context-props]    | Props used to create the default `CanvasContext` for the new `Device`. `true` or `{}` uses default settings. |
+| `onError?: (error: Error) => unknown`                | `log.error`                                  | Error handling.                                                                                                                                        |
+| `powerPreference?: string`                           | `'high-performance'`                         | `'default' \| 'high-performance' \| 'low-power'` (WebGL).                                                                                              |
+| `webgl?: WebGLContextAttributes`                     | [`WebGLContextAttributes`][webgl-attributes] | Attributes passed on to WebGL (`canvas.getContext('webgl2', props.webgl)`                                                                              |
+| `_requestMaxLimits?: boolean`                        | `true`                                       | Ensures that the Device exposes the highest `DeviceLimits` supported by platform (WebGPU).                                                             |
+| `_initializeFeatures?: boolean`                      | `true`                                       | Initialize all `DeviceFeatures` on startup. 🧪                                                                                                          |
+| `_disabledFeatures?: Record<DeviceFeature, boolean>` | `{ 'compilation-status-async-webgl': true }` | Disable specific `DeviceFeatures`. 🧪                                                                                                                   |
+| `_factoryDestroyPolicy?: string`                     | `'unused'`                                   | `'unused' \| 'never'` Never destroy cached shaders and pipelines. 🧪                                                                                    |
 
 :::caution
 🧪 denotes experimental feature. Expect API to change.
