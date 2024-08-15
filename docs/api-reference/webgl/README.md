@@ -11,7 +11,7 @@ be created using `luma.createDevice(props)`. See [`CreateDeviceProps`](../core/l
 import {luma} from '@luma.gl/core';
 import {webgl2Adapter}'@luma.gl/webgl';
 
-const device = await luma.createDevice({adapters: [webgl2Adapter], canvasContext: {width: 800: height: 600}});
+const device = await luma.createDevice({adapters: [webgl2Adapter], createCanvasContext: {width: 800: height: 600}});
 
 // Resources can now be created
 const buffer = device.createBuffer(...);

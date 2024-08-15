@@ -16,7 +16,7 @@ const DEFAULT_CANVAS_CONTEXT_PROPS: CanvasContextProps = {
 export function createTestDevice(): WebGLDevice | null {
   try {
     // TODO - We do not use luma.createDevice since createTestDevice currently expect WebGL context to be created synchronously
-    return new WebGLDevice({canvasContext: DEFAULT_CANVAS_CONTEXT_PROPS, debugWebGL: true});
+    return new WebGLDevice({createCanvasContext: DEFAULT_CANVAS_CONTEXT_PROPS, debugWebGL: true});
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error(`Failed to created device: ${(error as Error).message}`);
@@ -45,7 +45,7 @@ export async function getTestDevices(type?: 'webgl' | 'webgpu'): Promise<Device[
         id: 'webgpu-test-device',
         type: 'webgpu',
         adapters: [webgpuAdapter],
-        canvasContext: DEFAULT_CANVAS_CONTEXT_PROPS
+        createCanvasContext: DEFAULT_CANVAS_CONTEXT_PROPS
       })) as WebGPUDevice;
     } catch (error) {
       log.error(String(error))();
@@ -55,7 +55,7 @@ export async function getTestDevices(type?: 'webgl' | 'webgpu'): Promise<Device[
         id: 'webgl-test-device',
         type: 'webgl',
         adapters: [webgl2Adapter],
-        canvasContext: DEFAULT_CANVAS_CONTEXT_PROPS,
+        createCanvasContext: DEFAULT_CANVAS_CONTEXT_PROPS,
         debugWebGL: true
       })) as WebGLDevice;
     } catch (error) {

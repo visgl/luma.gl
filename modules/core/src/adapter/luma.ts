@@ -3,11 +3,15 @@
 // Copyright (c) vis.gl contributors
 
 import type {Log} from '@probe.gl/log';
+import {isBrowser} from '@probe.gl/env';
 import type {DeviceProps} from './device';
 import {Device} from './device';
 import {Adapter} from './adapter';
 import {StatsManager, lumaStats} from '../utils/stats-manager';
 import {log} from '../utils/log';
+
+const isPage: boolean = isBrowser() && typeof document !== 'undefined';
+const isPageLoaded: () => boolean = () => isPage && document.readyState === 'complete';
 
 declare global {
   // eslint-disable-next-line no-var
@@ -47,6 +51,16 @@ export class Luma {
     type: 'best-available',
     adapters: undefined!
   };
+
+  /**
+   * Get a 'lazy' promise that resolves when the DOM is loaded.
+   * @note Since there may be limitations on number of `load` event listeners,
+   * it is recommended avoid calling this function until actually needed.
+   * I.e. don't call it until you know that you will be looking up a string in the DOM.
+   */
+  static pageLoaded: Promise<void> = getPageLoadPromise().then(() => {
+    log.probe(2, 'DOM is loaded')();
+  });
 
   /** Global stats for all devices */
   readonly stats: StatsManager = lumaStats;
@@ -126,6 +140,10 @@ export class Luma {
     //   props.type = 'webgl';
     // }
 
+    if (props.createCanvasContext) {
+      await Luma.pageLoaded;
+    }
+
     const adapterMap = this.getAdapterMap(props.adapters);
 
     let type: string = props.type || '';
@@ -152,6 +170,10 @@ export class Luma {
     let type = '';
     if (props.handle instanceof WebGL2RenderingContext) {
       type = 'webgl';
+    }
+
+    if (props.createCanvasContext) {
+      await Luma.pageLoaded;
     }
 
     // TODO - WebGPU does not yet have a stable API
@@ -218,3 +240,15 @@ export class Luma {
  * Run-time selection of the first available Device
  */
 export const luma = new Luma();
+
+// HELPER FUNCTIONS
+
+/** Returns a promise that resolves when the page is loaded */
+function getPageLoadPromise(): Promise<void> {
+  if (isPageLoaded() || typeof window === 'undefined') {
+    return Promise.resolve();
+  }
+  return new Promise(resolve => {
+    window.addEventListener('load', () => resolve());
+  });
+}

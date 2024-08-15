@@ -8,9 +8,6 @@ import type {Framebuffer} from './resources/framebuffer';
 import {log} from '../utils/log';
 import type {TextureFormat} from '../gpu-type-utils/texture-formats';
 
-const isPage: boolean = isBrowser() && typeof document !== 'undefined';
-const isPageLoaded: () => boolean = () => isPage && document.readyState === 'complete';
-
 /** Properties for a CanvasContext */
 export type CanvasContextProps = {
   /** If a canvas not supplied, one will be created and added to the DOM. If a string, a canvas with that id will be looked up in the DOM */
@@ -33,18 +30,6 @@ export type CanvasContextProps = {
   colorSpace?: 'srgb'; // GPUPredefinedColorSpace
 };
 
-const DEFAULT_CANVAS_CONTEXT_PROPS: Required<CanvasContextProps> = {
-  canvas: null,
-  width: 800, // width are height are only used by headless gl
-  height: 600,
-  useDevicePixels: true,
-  autoResize: true,
-  container: null,
-  visible: true,
-  alphaMode: 'opaque',
-  colorSpace: 'srgb'
-};
-
 /**
  * Manages a canvas. Supports both HTML or offscreen canvas
  * - Creates a new canvas or looks up a canvas from the DOM
@@ -53,6 +38,18 @@ const DEFAULT_CANVAS_CONTEXT_PROPS: Required<CanvasContextProps> = {
  * @todo transferControlToOffscreen: https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/transferControlToOffscreen
  */
 export abstract class CanvasContext {
+  static defaultProps: Required<CanvasContextProps> = {
+    canvas: null,
+    width: 800, // width are height are only used by headless gl
+    height: 600,
+    useDevicePixels: true,
+    autoResize: true,
+    container: null,
+    visible: true,
+    alphaMode: 'opaque',
+    colorSpace: 'srgb'
+  };
+
   abstract readonly device: Device;
   readonly id: string;
   readonly props: Required<CanvasContextProps>;
@@ -74,21 +71,8 @@ export abstract class CanvasContext {
   /** State used by luma.gl classes: TODO - move to canvasContext*/
   readonly _canvasSizeInfo = {clientWidth: 0, clientHeight: 0, devicePixelRatio: 1};
 
-  /** Check if the DOM is loaded */
-  static get isPageLoaded(): boolean {
-    return isPageLoaded();
-  }
-
-  /**
-   * Get a 'lazy' promise that resolves when the DOM is loaded.
-   * @note Since there may be limitations on number of `load` event listeners,
-   * it is recommended avoid calling this function until actually needed.
-   * I.e. don't call it until you know that you will be looking up a string in the DOM.
-   */
-  static pageLoaded: Promise<void> = getPageLoadPromise();
-
   constructor(props?: CanvasContextProps) {
-    this.props = {...DEFAULT_CANVAS_CONTEXT_PROPS, ...props};
+    this.props = {...CanvasContext.defaultProps, ...props};
     props = this.props;
 
     if (!isBrowser()) {
@@ -328,22 +312,9 @@ export abstract class CanvasContext {
 
 // HELPER FUNCTIONS
 
-/** Returns a promise that resolves when the page is loaded */
-function getPageLoadPromise(): Promise<void> {
-  if (isPageLoaded() || typeof window === 'undefined') {
-    return Promise.resolve();
-  }
-  return new Promise(resolve => {
-    window.addEventListener('load', () => resolve());
-  });
-}
-
 function getContainer(container: HTMLElement | string | null): HTMLElement {
   if (typeof container === 'string') {
     const element = document.getElementById(container);
-    if (!element && !isPageLoaded()) {
-      throw new Error(`Accessing '${container}' before page was loaded`);
-    }
     if (!element) {
       throw new Error(`${container} is not an HTML element`);
     }
@@ -357,9 +328,6 @@ function getContainer(container: HTMLElement | string | null): HTMLElement {
 /** Get a Canvas element from DOM id */
 function getCanvasFromDOM(canvasId: string): HTMLCanvasElement {
   const canvas = document.getElementById(canvasId);
-  if (!canvas && !isPageLoaded()) {
-    throw new Error(`Accessing '${canvasId}' before page was loaded`);
-  }
   if (!(canvas instanceof HTMLCanvasElement)) {
     throw new Error('Object is not a canvas element');
   }

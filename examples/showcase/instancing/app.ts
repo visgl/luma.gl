@@ -5,6 +5,7 @@
 import type {ShaderUniformType, NumberArray} from '@luma.gl/core';
 import {Device} from '@luma.gl/core';
 import type {AnimationProps, ModelProps} from '@luma.gl/engine';
+// @ts-ignore - ib added this to solve module resolution mess
 import {AnimationLoopTemplate, CubeGeometry, Timeline, Model, ShaderInputs} from '@luma.gl/engine';
 // @ts-ignore TODO - ib added this to solve module resolution mess
 import {makeRandomGenerator, _PickingManager as PickingManager} from '@luma.gl/engine';

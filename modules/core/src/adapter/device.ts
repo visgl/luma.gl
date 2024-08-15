@@ -196,8 +196,8 @@ type WebGLCompressedTextureFeatures =
 export type DeviceProps = {
   /** string id for debugging. Stored on the object, used in logging and set on underlying GPU objects when feasible. */
   id?: string;
-  /** Properties for the default canvas context */
-  canvasContext?: CanvasContextProps;
+  /** Properties for creating a default canvas context */
+  createCanvasContext?: CanvasContextProps | true;
   /** Control which type of GPU is preferred on systems with both integrated and discrete GPU. Defaults to "high-performance" / discrete GPU. */
   powerPreference?: 'default' | 'high-performance' | 'low-power';
   /** Hints that device creation should fail if no hardware GPU is available (if the system performance is "low"). */
@@ -267,7 +267,7 @@ export abstract class Device {
     id: null!,
     powerPreference: 'high-performance',
     failIfMajorPerformanceCaveat: false,
-    canvasContext: undefined!,
+    createCanvasContext: undefined!,
 
     // Callbacks
     onError: (error: Error) => log.error(error.message),
@@ -312,6 +312,8 @@ export abstract class Device {
   userData: {[key: string]: unknown} = {};
   /** stats */
   readonly statsManager: StatsManager = lumaStats;
+  /** An abstract timestamp used for change tracking */
+  timestamp: number = 0;
 
   /** Used by other luma.gl modules to store data on the device */
   _lumaData: {[key: string]: unknown} = {};
@@ -369,9 +371,9 @@ export abstract class Device {
   abstract canvasContext: CanvasContext | null;
 
   /** Returns the default / primary canvas context. Throws an error if no canvas context is available (a WebGPU compute device) */
-  getCanvasContext(): CanvasContext {
+  getDefaultCanvasContext(): CanvasContext {
     if (!this.canvasContext) {
-      throw new Error('Device has no CanvasContext');
+      throw new Error('Device has no default CanvasContext. See props.createCanvasContext');
     }
     return this.canvasContext;
   }
@@ -424,6 +426,25 @@ export abstract class Device {
 
   createCommandEncoder(props: CommandEncoderProps = {}): CommandEncoder {
     throw new Error('not implemented');
+  }
+
+  /** A monotonic counter for tracking buffer and texture updates */
+  incrementTimestamp(): number {
+    return this.timestamp++;
+  }
+
+  // Error Handling
+
+  /** Report unhandled device errors */
+  onError(error: Error) {
+    this.props.onError(error);
+  }
+
+  // DEPRECATED METHODS
+
+  /** @deprecated Use getDefaultCanvasContext() */
+  getCanvasContext(): CanvasContext {
+    return this.getDefaultCanvasContext();
   }
 
   // WebGL specific HACKS - enables app to remove webgl import
@@ -490,23 +511,10 @@ export abstract class Device {
     throw new Error('not implemented');
   }
 
-  timestamp: number = 0;
-
-  /** A monotonic counter for tracking buffer and texture updates */
-  incrementTimestamp(): number {
-    return this.timestamp++;
-  }
-
-  // Error Handling
-
-  /** Report unhandled device errors */
-  onError(error: Error) {
-    this.props.onError(error);
-  }
-
   // IMPLEMENTATION
 
-  protected _getBufferProps(props: BufferProps | ArrayBuffer | ArrayBufferView): BufferProps {
+  /** Subclasses use this to support .createBuffer() overloads */
+  protected _normalizeBufferProps(props: BufferProps | ArrayBuffer | ArrayBufferView): BufferProps {
     if (props instanceof ArrayBuffer || ArrayBuffer.isView(props)) {
       props = {data: props};
     }

@@ -33,20 +33,20 @@ When initializing luma.gl, applications now import an `Adapter` singleton from e
 
 **@luma.gl/core**
 
-| Updated API                    | Status     | Replacement                               | Comment                                                         |
-| ------------------------------ | ---------- | ----------------------------------------- | --------------------------------------------------------------- |
-| `luma.registerDevices()`       | Deprecated | [`luma.registerAdapters()`][adapters].    | Adapters provide a cleaner way to work with GPU backends.       |
-| `DeviceProps` for canvas       | Moved      | [`DeviceProps.canvasContext`][canvas].    | Move canvas related props to `props.canvasContext: {}`.         |
-| `DeviceProps` for webgl        | Moved      | [`DeviceProps.webgl`][webgl].             | Move canvas related props to `props.webgl: {}`.                 |
-| `DeviceProps.break`            | Removed    |                                           | Use an alterative [debugger][debugging]                         |
-| `Texture.props.data` (Promise) | Removed    | `AsyncTexture` class                      | Textures no longer accept promises.                             |
-| `Parameters.blend`             | New        |                                           | Explicit activation of color blending                           |
-| `triangle-fan-webgl` topology  | Removed    | `triangle-strip`.                         | Reorganize your geometries                                      |
-| `line-loop-webgl` topology     | Removed    | `line-list`.                              | Reorganize your geometries                                      |
-| `glsl` shader template string  | Removed    | `/* glsl */` comment                      | Enable syntax highlighting in vscode using before shader string |
-| `depth24unorm-stencil8`        | Removed    | `depth24plus-stencil8`                    | The `TextureFormat` was removed from the WebGPU spec            |
-| `rgb8unorm-unsized`            | Removed    | `rgb8unorm`                               | No longer support unsized WebGL1 `TextureFormat`                |
-| `rgba8unorm-unsized`           | Removed    | `rgb8aunorm`                              | No longer support unsized WebGL1 `TextureFormat`                |
+| Updated API                    | Status     | Replacement                                  | Comment                                                         |
+| ------------------------------ | ---------- | -------------------------------------------- | --------------------------------------------------------------- |
+| `luma.registerDevices()`       | Deprecated | [`luma.registerAdapters()`][adapters].       | Adapters provide a cleaner way to work with GPU backends.       |
+| `DeviceProps` for canvas       | Moved      | [`DeviceProps.createCanvasContext`][canvas]. | Move canvas related props to `props.createCanvasContext: {}`.   |
+| `DeviceProps` for webgl        | Moved      | [`DeviceProps.webgl`][webgl].                | Move canvas related props to `props.webgl: {}`.                 |
+| `DeviceProps.break`            | Removed    |                                              | Use an alterative [debugger][debugging]                         |
+| `Texture.props.data` (Promise) | Removed    | `AsyncTexture` class                         | Textures no longer accept promises.                             |
+| `Parameters.blend`             | New        |                                              | Explicit activation of color blending                           |
+| `triangle-fan-webgl` topology  | Removed    | `triangle-strip`.                            | Reorganize your geometries                                      |
+| `line-loop-webgl` topology     | Removed    | `line-list`.                                 | Reorganize your geometries                                      |
+| `glsl` shader template string  | Removed    | `/* glsl */` comment                         | Enable syntax highlighting in vscode using before shader string |
+| `depth24unorm-stencil8`        | Removed    | `depth24plus-stencil8`                       | The `TextureFormat` was removed from the WebGPU spec            |
+| `rgb8unorm-unsized`            | Removed    | `rgb8unorm`                                  | No longer support unsized WebGL1 `TextureFormat`                |
+| `rgba8unorm-unsized`           | Removed    | `rgb8aunorm`                                 | No longer support unsized WebGL1 `TextureFormat`                |
 
 [adapters]: /docs/api-reference/core/luma#lumaregisteradapters
 [canvas]: /docs/api-reference/core/canvas-context#canvascontextprops

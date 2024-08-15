@@ -22,13 +22,13 @@ Create a WebGL 2 context (throws if WebGL2 not supported)
 import {luma} from '@luma.gl/core';
 import {webgl2Adapter} from '@luma.gl/webgl';
 
-const webgpuDevice = luma.createDevice({type: 'webgl', adapters: [webgl2Adapter], canvasContext: {canvas: ...}});
+const webgpuDevice = luma.createDevice({type: 'webgl', adapters: [webgl2Adapter], createCanvasContext: true});
 ```
 
 ```typescript
 const webgpuDevice = luma.createDevice({
   type: 'best-available', 
-  canvasContext: {...}, 
+  createCanvasContext: true, 
   adapters: [webgl2Adapter, WebGPUDevice]
 });
 ```
@@ -41,7 +41,7 @@ Register the WebGL backend, then create a WebGL2 context, auto creating a canvas
 import {luma} from '@luma.gl/core';
 import {webgl2Adapter} from '@luma.gl/webgl';
 luma.registerAdapters([webgl2Adapter]);
-const webglDevice = luma.createDevice({type: 'webgl', canvasContext: {canvas: ...}});
+const webglDevice = luma.createDevice({type: 'webgl', createCanvasContext: {canvas: ...}});
 ```
 
 It is possible to register more than one device to create an application
@@ -52,7 +52,7 @@ import {luma} from '@luma.gl/core';
 import {webgl2Adapter} from '@luma.gl/webgl';
 import {webgpuDevice} from '@luma.gl/webgl';
 luma.registerAdapters([webgl2Adapter, webgpuDevice]);
-const device = luma.createDevice({type: 'best-available', canvasContext: {canvas: ...}});
+const device = luma.createDevice({type: 'best-available', createCanvasContext: {canvas: ...}});
 ```
 
 ## Registering Adapters
@@ -72,7 +72,7 @@ import {luma} from '@luma.gl/core';
 import {webgpuAdapter} from '@luma.gl/webgpu';
 
 luma.registerAdapters([webgpuAdapter]);
-const device = await luma.createDevice({type: 'webgpu', canvasContext: ...});
+const device = await luma.createDevice({type: 'webgpu', createCanvasContext: ...});
 ```
 
 Pre-register devices
@@ -83,7 +83,7 @@ import {webgl2Adapter} from '@luma.gl/webgl';
 import {webgpuAdapter} from '@luma.gl/webgpu';
 
 luma.registerAdapters([webgl2Adapter, webgpuAdapter]);
-const webgpuDevice = luma.createDevice({type: 'best-available', canvasContext: ...});
+const webgpuDevice = luma.createDevice({type: 'best-available', createCanvasContext: ...});
 ```
 
 ## Types

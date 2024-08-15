@@ -58,7 +58,8 @@ export class NullDevice extends Device {
   constructor(props: DeviceProps) {
     super({...props, id: props.id || 'null-device'});
 
-    this.canvasContext = new NullCanvasContext(this, props.canvasContext);
+    const canvasContextProps = props.createCanvasContext === true ? {} : props.createCanvasContext;
+    this.canvasContext = new NullCanvasContext(this, canvasContextProps);
     this.lost = new Promise(resolve => {});
     this.canvasContext.resize();
   }
@@ -92,7 +93,7 @@ export class NullDevice extends Device {
   }
 
   createBuffer(props: BufferProps | ArrayBuffer | ArrayBufferView): NullBuffer {
-    const newProps = this._getBufferProps(props);
+    const newProps = this._normalizeBufferProps(props);
     return new NullBuffer(this, newProps);
   }
 

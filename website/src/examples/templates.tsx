@@ -98,7 +98,7 @@ export const InstancingExample: React.FC = () => (
 export const PersistenceExample: React.FC = () => (
   <LumaExample
     id="persistence"
-    directory="showcase/persistence"
+    directory="showcase"
     template={PersistenceApp}
     config={exampleConfig}
   />

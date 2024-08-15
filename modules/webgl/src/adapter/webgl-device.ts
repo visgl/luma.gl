@@ -116,15 +116,21 @@ export class WebGLDevice extends Device {
   constructor(props: DeviceProps) {
     super({...props, id: props.id || uid('webgl-device')});
 
+    // WebGL requires a canvas to be created before creating the context
+    if (!props.createCanvasContext) {
+      throw new Error('WebGLDevice requires props.createCanvasContext to be set');
+    }
+    const canvasContextProps = props.createCanvasContext === true ? {} : props.createCanvasContext;
+
     // If attaching to an already attached context, return the attached device
     // @ts-expect-error device is attached to context
-    let device: WebGLDevice | undefined = props.canvasContext?.canvas?.gl?.device;
+    let device: WebGLDevice | undefined = canvasContextProps.canvas?.gl?.device;
     if (device) {
       throw new Error(`WebGL context already attached to device ${device.id}`);
     }
 
     // Create and instrument context
-    this.canvasContext = new WebGLCanvasContext(this, props.canvasContext);
+    this.canvasContext = new WebGLCanvasContext(this, canvasContextProps);
 
     this.lost = new Promise<{reason: 'destroyed'; message: string}>(resolve => {
       this._resolveContextLost = resolve;
@@ -132,7 +138,7 @@ export class WebGLDevice extends Device {
 
     const webglContextAttributes: WebGLContextAttributes = {...props.webgl};
     // Copy props from CanvasContextProps
-    if (props.canvasContext?.alphaMode === 'premultiplied') {
+    if (canvasContextProps.alphaMode === 'premultiplied') {
       webglContextAttributes.premultipliedAlpha = true;
     }
     if (props.powerPreference !== undefined) {
@@ -233,7 +239,7 @@ export class WebGLDevice extends Device {
   }
 
   createBuffer(props: BufferProps | ArrayBuffer | ArrayBufferView): WEBGLBuffer {
-    const newProps = this._getBufferProps(props);
+    const newProps = this._normalizeBufferProps(props);
     return new WEBGLBuffer(this, newProps);
   }
 

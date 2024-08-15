@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Adapter, Device, DeviceProps, CanvasContext, log} from '@luma.gl/core';
+import {Adapter, Device, DeviceProps, log} from '@luma.gl/core';
 import {WebGLDevice} from './webgl-device';
 import {enforceWebGL2} from '../context/polyfills/polyfill-webgl1-extensions';
 import {loadSpectorJS, DEFAULT_SPECTOR_PROPS} from '../context/debug/spector';
@@ -69,12 +69,6 @@ export class WebGLAdapter extends Adapter {
       promises.push(loadSpectorJS(props));
     }
 
-    // Wait for page to load: if canvas is a string we need to query the DOM for the canvas element.
-    // We only wait when props.canvas is string to avoids setting the global page onload callback unless necessary.
-    if (typeof props.canvasContext?.canvas === 'string') {
-      promises.push(CanvasContext.pageLoaded);
-    }
-
     // Wait for all the loads to settle before creating the context.
     // The Device.create() functions are async, so in contrast to the constructor, we can `await` here.
     const results = await Promise.allSettled(promises);
@@ -83,8 +77,6 @@ export class WebGLAdapter extends Adapter {
         log.error(`Failed to initialize debug libraries ${result.reason}`)();
       }
     }
-
-    log.probe(LOG_LEVEL + 1, 'DOM is loaded')();
 
     const device = new WebGLDevice(props);
 

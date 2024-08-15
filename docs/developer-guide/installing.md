@@ -22,9 +22,9 @@ yarn add @luma.gl/webgpu
 
 ```typescript
 import {luma} from '@luma.gl/core';
-import '@luma.gl/webgpu';
+import {webgl2Adapter} '@luma.gl/webgpu';
 
-const device = await luma.createDevice({type: 'webgpu', canvasContext: ...});
+const device = await luma.createDevice({type: 'webgpu', adapters: [webgl2Adapter], createCanvasContext: ...});
 ```
 
 It is possible to register more than one device adapter to create an application
@@ -32,10 +32,10 @@ that can work in both WebGL and WebGPU environments.
 
 ```typescript
 import {luma} from '@luma.gl/core';
-import '@luma.gl/webgpu';
-import '@luma.gl/webgl';
+import {webgl2Adapter} '@luma.gl/webgpu';
+import {webgpuAdapter} '@luma.gl/webgl';
 
-const webgpuDevice = luma.createDevice({type: 'best-available', canvasContext: ...});
+const webgpuDevice = luma.createDevice({type: 'best-available', adapters: [webgl2Adapter, webgpuAdapter], createCanvasContext: ...});
 ```
 
 ## A Typical Install
