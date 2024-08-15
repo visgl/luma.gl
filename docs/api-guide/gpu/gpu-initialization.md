@@ -65,5 +65,5 @@ import {WebGPUDevice} from '@luma.gl/webgpu';
 
 luma.registerAdapters([WebGLDevice, WebGPUDevice]);
 
-const webgpuDevice = luma.createDevice({type: 'best-available', createCanvasContext true});
+const webgpuDevice = luma.createDevice({type: 'best-available', createCanvasContext: true});
 ```
