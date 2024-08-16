@@ -138,6 +138,10 @@ export class WEBGLRenderPass extends RenderPass {
    * Optionally clears depth, color and stencil buffers based on parameters
    */
   protected clear(): void {
+    const DEFAULT_CLEAR_COLOR: [number, number, number, number] = [0, 0, 0, 1];
+    const DEFAULT_CLEAR_DEPTH = 1;
+    const DEFAULT_CLEAR_STENCIL = 0;
+
     const glParameters: GLParameters = {...this.glParameters};
 
     let clearMask = 0;
@@ -145,6 +149,7 @@ export class WEBGLRenderPass extends RenderPass {
     if (this.props.clearColors) {
       this.props.clearColors.forEach((color, drawBufferIndex) => {
         if (color) {
+          color = color === true ? DEFAULT_CLEAR_COLOR : color;
           this.clearColorBuffer(drawBufferIndex, color);
         }
       });
@@ -156,11 +161,13 @@ export class WEBGLRenderPass extends RenderPass {
     }
     if (this.props.clearDepth !== false) {
       clearMask |= GL.DEPTH_BUFFER_BIT;
-      glParameters.clearDepth = this.props.clearDepth;
+      glParameters.clearDepth =
+        this.props.clearDepth === true ? DEFAULT_CLEAR_DEPTH : this.props.clearDepth;
     }
     if (this.props.clearStencil !== false) {
       clearMask |= GL.STENCIL_BUFFER_BIT;
-      glParameters.clearStencil = this.props.clearStencil;
+      glParameters.clearStencil =
+        this.props.clearStencil === true ? DEFAULT_CLEAR_STENCIL : this.props.clearStencil;
     }
 
     if (clearMask !== 0) {

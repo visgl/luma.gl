@@ -129,6 +129,7 @@ export abstract class Framebuffer extends Resource<FramebufferProps> {
       format,
       width: this.width,
       height: this.height,
+      mipmaps: false,
       // TODO deprecated? - luma.gl v8 compatibility
       sampler: {
         magFilter: 'linear',

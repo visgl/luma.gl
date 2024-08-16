@@ -74,7 +74,7 @@ export class PickingManager {
     const pickingPass = this.device.beginRenderPass({
       framebuffer,
       clearColors: [new Float32Array([0, 0, 0, 0]), new Int32Array([-1, -1, 0, 0])],
-      clearDepth: 1
+      clearDepth: true
     });
 
     return pickingPass;

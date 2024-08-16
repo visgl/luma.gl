@@ -181,7 +181,7 @@ export abstract class Texture extends Resource<TextureProps> {
     width: undefined!,
     height: undefined!,
     depth: 1,
-    mipmaps: false,
+    mipmaps: true,
     compressed: false,
     usage: 0,
     mipLevels: undefined!,

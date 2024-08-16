@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {NumberArray4, TypedArray} from '@math.gl/types';
+import type {NumberArray4, TypedArray} from '@math.gl/types';
 import type {Device} from '../device';
 import type {RenderPassParameters} from '../types/parameters';
 // import {Binding} from '../types/shader-layout';
@@ -21,14 +21,14 @@ export type RenderPassProps = ResourceProps & {
 
   // TODO - API needs to be able to control multiple render targets
 
-  /** Clear value for color attachment, or false to preserve the previous value */
+  /** Clear value for color attachment, or false to preserve the previous value @deprecated Use props.clearColors */
   clearColor?: NumberArray4 | TypedArray | false;
   /** Experimental: Clear values for multiple color attachments */
-  clearColors?: (TypedArray | false)[];
-  /** Clear value for depth attachment (usually `1`), or false to preserve the previous value */
-  clearDepth?: number | false;
-  /** Clear value for stencil attachment (usually `0`), or false to preserve the previous value */
-  clearStencil?: number | false;
+  clearColors?: (NumberArray4 | TypedArray | boolean)[];
+  /** Clear value for depth attachment (true === `1`), or false to preserve the previous value */
+  clearDepth?: number | boolean;
+  /** Clear value for stencil attachment (true === `0`), or false to preserve the previous value */
+  clearStencil?: number | boolean;
 
   /** Indicates that the depth component is read only. */
   depthReadOnly?: boolean;
@@ -64,8 +64,8 @@ export abstract class RenderPass extends Resource<RenderPassProps> {
     parameters: undefined!,
     clearColor: false,
     clearColors: undefined!,
-    clearDepth: false,
-    clearStencil: false,
+    clearDepth: true,
+    clearStencil: undefined!,
     depthReadOnly: false,
     stencilReadOnly: false,
     discard: false,

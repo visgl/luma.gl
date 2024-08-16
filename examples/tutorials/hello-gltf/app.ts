@@ -39,7 +39,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
   onRender({aspect, device, time}: AnimationProps): void {
     if (!this.scenes?.length) return;
-    const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
+    const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1], clearDepth: true});
 
     const far = 2 * this.vantage[0];
     const near = far / 1000;
