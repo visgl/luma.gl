@@ -371,7 +371,7 @@ export class Model {
     this._needsRedraw ||= reason;
   }
 
-  predraw() {
+  predraw(): void {
     // Update uniform buffers if needed
     this.updateShaderInputs();
     // Check if the pipeline is invalidated

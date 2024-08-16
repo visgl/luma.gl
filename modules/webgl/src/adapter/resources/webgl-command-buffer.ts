@@ -2,14 +2,24 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+
 import type {
   CopyBufferToBufferOptions,
   CopyBufferToTextureOptions,
   CopyTextureToBufferOptions,
-  CopyTextureToTextureOptions
+  CopyTextureToTextureOptions,
+  // ClearTextureOptions,
+  // ReadTextureOptions
 } from '@luma.gl/core';
 import {CommandBuffer, Texture, Framebuffer} from '@luma.gl/core';
-import {GL} from '@luma.gl/constants';
+import {
+  GL,
+  GLTextureTarget,
+  GLTextureCubeMapTarget
+  // GLTexelDataFormat,
+  // GLPixelType,
+  // GLDataType
+} from '@luma.gl/constants';
 
 import {WebGLDevice} from '../webgl-device';
 import {WEBGLBuffer} from './webgl-buffer';
@@ -37,11 +47,23 @@ type CopyTextureToTextureCommand = {
   options: CopyTextureToTextureOptions;
 };
 
+type ClearTextureCommand = {
+  name: 'clear-texture';
+  options: {}; // ClearTextureOptions;
+};
+
+type ReadTextureCommand = {
+  name: 'read-texture';
+  options: {}; // ReadTextureOptions;
+};
+
 type Command =
   | CopyBufferToBufferCommand
   | CopyBufferToTextureCommand
   | CopyTextureToBufferCommand
-  | CopyTextureToTextureCommand;
+  | CopyTextureToTextureCommand
+  | ClearTextureCommand
+  | ReadTextureCommand;
 
 export class WEBGLCommandBuffer extends CommandBuffer {
   device: WebGLDevice;
@@ -67,6 +89,9 @@ export class WEBGLCommandBuffer extends CommandBuffer {
         case 'copy-texture-to-texture':
           _copyTextureToTexture(this.device, command.options);
           break;
+        // case 'clear-texture':
+        //   _clearTexture(this.device, command.options);
+        //   break;
       }
     }
   }
@@ -311,7 +336,82 @@ function _copyTextureToTexture(device: WebGLDevice, options: CopyTextureToTextur
   }
 }
 
-// Returns number of components in a specific readPixels WebGL format
+/** Clear one mip level of a texture *
+function _clearTexture(device: WebGLDevice, options: ClearTextureOptions) {
+  const BORDER = 0;
+  const {dimension, width, height, depth = 0, mipLevel = 0} = options;
+  const {glInternalFormat, glFormat, glType, compressed} = options;
+  const glTarget = getWebGLCubeFaceTarget(options.glTarget, dimension, depth);
+
+  switch (dimension) {
+    case '2d-array':
+    case '3d':
+      if (compressed) {
+        // prettier-ignore
+        device.gl.compressedTexImage3D(glTarget, mipLevel, glInternalFormat, width, height, depth, BORDER, null);
+      } else {
+        // prettier-ignore
+        device.gl.texImage3D( glTarget, mipLevel, glInternalFormat, width, height, depth, BORDER, glFormat, glType, null);
+      }
+      break;
+
+    case '2d':
+    case 'cube':
+      if (compressed) {
+        // prettier-ignore
+        device.gl.compressedTexImage2D(glTarget, mipLevel, glInternalFormat, width, height, BORDER, null);
+      } else {
+        // prettier-ignore
+        device.gl.texImage2D(glTarget, mipLevel, glInternalFormat, width, height, BORDER, glFormat, glType, null);
+      }
+      break;
+
+    default:
+      throw new Error(dimension);
+  }
+}
+  */
+
+// function _readTexture(device: WebGLDevice, options: CopyTextureToBufferOptions) {}
+
+// HELPERS
+
+/**
+ * In WebGL, cube maps specify faces by overriding target instead of using the depth parameter.
+ * @note We still bind the texture using GL.TEXTURE_CUBE_MAP, but we need to use the face-specific target when setting mip levels.
+ * @returns glTarget unchanged, if dimension !== 'cube'.
+ */
+export function getWebGLCubeFaceTarget(
+  glTarget: GLTextureTarget,
+  dimension: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d',
+  level: number
+): GLTextureTarget | GLTextureCubeMapTarget {
+  return dimension === 'cube' ? GL.TEXTURE_CUBE_MAP_POSITIVE_X + level : glTarget;
+}
+
+/** Wrap a texture in a framebuffer so that we can use WebGL APIs that work on framebuffers */
+function getFramebuffer(source: Texture | Framebuffer): {
+  framebuffer: WEBGLFramebuffer;
+  destroyFramebuffer: boolean;
+} {
+  if (source instanceof Texture) {
+    const {width, height, id} = source;
+    const framebuffer = source.device.createFramebuffer({
+      id: `framebuffer-for-${id}`,
+      width,
+      height,
+      colorAttachments: [source]
+    }) as unknown as WEBGLFramebuffer;
+
+    return {framebuffer, destroyFramebuffer: true};
+  }
+  return {framebuffer: source as unknown as WEBGLFramebuffer, destroyFramebuffer: false};
+}
+
+/** 
+ * Returns number of components in a specific readPixels WebGL format
+ * @todo use shadertypes utils instead? 
+ */
 export function glFormatToComponents(format): 1 | 2 | 3 | 4 {
   switch (format) {
     case GL.ALPHA:
@@ -333,7 +433,10 @@ export function glFormatToComponents(format): 1 | 2 | 3 | 4 {
   }
 }
 
-// Return byte count for given readPixels WebGL type
+/**
+ * Return byte count for given readPixels WebGL type
+* @todo use shadertypes utils instead? 
+*/
 export function glTypeToBytes(type: GL): 1 | 2 | 4 {
   switch (type) {
     case GL.UNSIGNED_BYTE:
@@ -348,24 +451,4 @@ export function glTypeToBytes(type: GL): 1 | 2 | 4 {
     default:
       throw new Error('GLType');
   }
-}
-
-// Helper methods
-
-function getFramebuffer(source: Texture | Framebuffer): {
-  framebuffer: WEBGLFramebuffer;
-  destroyFramebuffer: boolean;
-} {
-  if (source instanceof Texture) {
-    const {width, height, id} = source;
-    const framebuffer = source.device.createFramebuffer({
-      id: `framebuffer-for-${id}`,
-      width,
-      height,
-      colorAttachments: [source]
-    }) as unknown as WEBGLFramebuffer;
-
-    return {framebuffer, destroyFramebuffer: true};
-  }
-  return {framebuffer: source as unknown as WEBGLFramebuffer, destroyFramebuffer: false};
 }

@@ -14,6 +14,7 @@ import Texture3DApp from '../../../examples/api/texture-3d/app';
 // import GLTFApp from '../../../examples/showcase/gltf/app';
 import InstancingApp from '../../../examples/showcase/instancing/app';
 import PersistenceApp from '../../../examples/showcase/persistence/app';
+import PostprocessingApp from '../../../examples/showcase/postprocessing/app';
 // import WanderingApp from '../../../examples/showcase/wandering/app';
 
 import HelloTriangleGeometryApp from '../../../examples/tutorials/hello-triangle-geometry/app';
@@ -100,6 +101,15 @@ export const PersistenceExample: React.FC = () => (
     id="persistence"
     directory="showcase"
     template={PersistenceApp}
+    config={exampleConfig}
+  />
+);
+
+export const PostprocessingExample: React.FC = () => (
+  <LumaExample
+    id="postprocessing"
+    directory="showcase"
+    template={PostprocessingApp}
     config={exampleConfig}
   />
 );

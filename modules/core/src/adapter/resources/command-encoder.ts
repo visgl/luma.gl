@@ -2,32 +2,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+// import type {TypedArray} from '@math.gl/types';
 import {Device} from '../device';
 import {Resource, ResourceProps} from './resource';
 import {Buffer} from './buffer';
 import {Texture} from './texture';
 import {QuerySet} from './query-set';
 
-export type WriteBufferOptions = {
-  buffer: Buffer;
-  bufferOffset?: number;
-  data: BufferSource;
-  dataOffset?: number;
-  size?: number;
-};
-
-export type WriteTextureOptions = {
-  destination: Texture;
-  mipLevel?: number; //  = 0;
-  origin?: [number, number, number] | number[];
-  aspect?: 'all' | 'stencil-only' | 'depth-only';
-  data: BufferSource;
-  // dataLayout;
-  offset: number;
-  bytesPerRow: number;
-  rowsPerImage: number;
-  size: [number, number, number] | number[];
-};
+// WEBGPU COMMAND ENCODER OPERATIONS
 
 export type CopyBufferToBufferOptions = {
   sourceBuffer: Buffer;
@@ -108,20 +90,38 @@ export type CopyTextureToTextureOptions = {
   depthOrArrayLayers?: number;
 };
 
-// interface Queue {
-//   submit(commandBuffers);
+// ADDITIONAL COMMAND ENCODER OPERATIONS DEFINED BY LUMA.GL
 
-//   // onSubmittedWorkDone(): Promise<undefined>;
+/** Options for clearing a texture mip level */
+export type ClearTextureOptions = {
+  /** Texture to Clear. */
+  texture: Texture;
+  /**  Mip-map level of the texture clear. (Default 0) */
+  mipLevel?: number;
+  /** Defines which aspects of the Texture to clear. */
+  aspect?: 'all' | 'stencil-only' | 'depth-only';
+};
 
-//   writeBuffer(options: WriteBufferOptions): void;
-//   writeTexture(options: WriteTextureOptions): void;
+// export type WriteBufferOptions = {
+//   buffer: Buffer;
+//   bufferOffset?: number;
+//   data: BufferSource;
+//   dataOffset?: number;
+//   size?: number;
+// };
 
-//   // copyExternalImageToTexture(
-//   //   GPUImageCopyExternalImage source,
-//   //   GPUImageCopyTextureTagged destination,
-//   //   GPUExtent3D copySize
-//   // ): void;
-// }
+// export type WriteTextureOptions = {
+//   destination: Texture;
+//   mipLevel?: number; //  = 0;
+//   origin?: [number, number, number] | number[];
+//   aspect?: 'all' | 'stencil-only' | 'depth-only';
+//   data: BufferSource;
+//   // dataLayout;
+//   offset: number;
+//   bytesPerRow: number;
+//   rowsPerImage: number;
+//   size: [number, number, number] | number[];
+// };
 
 export type CommandEncoderProps = ResourceProps & {
   measureExecutionTime?: boolean;
@@ -158,6 +158,11 @@ export abstract class CommandEncoder extends Resource<CommandEncoderProps> {
 
   /** Add a command that copies data from a sub-region of one or multiple contiguous texture subresources to another sub-region of one or multiple continuous texture subresources. */
   abstract copyTextureToTexture(options: CopyTextureToTextureOptions): void;
+
+  /** Add a command that clears a texture mip level. */
+  // abstract clearTexture(options: ClearTextureOptions): void;
+
+  // abstract readTexture(options: ReadTextureOptions): Promise<TypedArray>;
 
   /** Reads results from a query set into a GPU buffer. Values are 64 bits so byteLength must be querySet.props.count * 8 */
   abstract resolveQuerySet(

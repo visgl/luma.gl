@@ -13,13 +13,19 @@ precision highp float;
 uniform sampler2D backgroundTexture;
 out vec4 fragColor;
 
-void main(void) {
+vec2 billboardTexture_getTextureUV() {
   ivec2 iTexSize = textureSize(backgroundTexture, 0) * 2;
   vec2 texSize = vec2(float(iTexSize.x), float(iTexSize.y));
-  vec2 p = gl_FragCoord.xy / texSize;
-  fragColor = texture(backgroundTexture, p);
+  vec2 position = gl_FragCoord.xy / texSize;
+  return position;
+}
+
+void main(void) {
+  vec2 position = billboardTexture_getTextureUV();
+  fragColor = texture(backgroundTexture, position);
 }
 `;
+
 
 /**
  * Props for a Model that renders a bitmap into the "background", i.e covering the screen
@@ -57,8 +63,20 @@ export class BackgroundTextureModel extends ClipSpace {
           : {})
       }
     });
+
+    this.setTexture(props.backgroundTexture);
+  }
+
+  setTexture(backgroundTexture: Texture | AsyncTexture): void {
     this.setBindings({
-      backgroundTexture: props.backgroundTexture
+      backgroundTexture: backgroundTexture
     });
+  }
+
+  override predraw(): void {
+    this.shaderInputs.setProps({
+
+    })
+    super.predraw();
   }
 }

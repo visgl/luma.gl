@@ -4,7 +4,7 @@
 
 import {AnimationLoopTemplate, AnimationProps, GroupNode} from '@luma.gl/engine';
 import {Device} from '@luma.gl/core';
-import {ClipSpace, AsyncTexture, loadImageBitmap, ShaderPassRenderer} from '@luma.gl/engine';
+import {AsyncTexture, loadImageBitmap, ShaderPassRenderer} from '@luma.gl/engine';
 import * as shaderModules from '@luma.gl/shadertools';
 import {ShaderPass} from '@luma.gl/shadertools';
 
@@ -25,26 +25,28 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   vantage = [0, 0, 0];
   time: number = 0;
 
-  shaderPasses: Record<string, ShaderPass>;
+  shaderPassMap: Record<string, ShaderPass>;
   imageTexture: AsyncTexture;
-  clipSpace: ClipSpace;
   selector: HTMLSelectElement;
 
   shaderPassRenderer: ShaderPassRenderer;
-  shaderPass: ShaderPass;
+  // shaderPasses: ShaderPass[];
 
   constructor({device}: AnimationProps) {
     super();
 
     this.device = device;
-    this.imageTexture = new AsyncTexture(device, {data: loadImageBitmap('./image.png')});
+    // @ts-expect-error
+    this.imageTexture = new AsyncTexture(device, {data: loadImageBitmap('./image.jpg', {imageOrientation: 'flipY'})});  
 
-    this.shaderPasses = getShaderPasses();
-    this.setShaderPass(Object.values(this.shaderPasses)[0]);
+    this.shaderPassMap = getShaderPasses();
+    this.setShaderPasses([]);
 
-    this.selector = createSelector(document.body, Object.keys(this.shaderPasses), passName => {
-      const shaderPass = this.shaderPasses[passName]!;
-      this.setShaderPass(shaderPass);
+    const NO_EFFECT = 'No effect';
+    const shaderPassNames = [NO_EFFECT, ...Object.keys(this.shaderPassMap)];
+    this.selector = createSelector(document.body, shaderPassNames, passName => {
+      const shaderPasses: ShaderPass[] = this.shaderPassMap[passName] ? [this.shaderPassMap[passName]] : [];
+      this.setShaderPasses(shaderPasses);
     });
   }
 
@@ -59,11 +61,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
   }
 
-  setShaderPass(shaderPass: ShaderPass) {
-    this.shaderPass = shaderPass;
+  setShaderPasses(shaderPasses: ShaderPass[]) {
+    //this.shaderPasses = shaderPasses;
     this.shaderPassRenderer?.destroy();
     this.shaderPassRenderer = new ShaderPassRenderer(this.device, {
-      shaderPasses: [shaderPass]
+      shaderPasses
     });
   }
 }

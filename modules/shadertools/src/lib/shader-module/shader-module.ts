@@ -128,7 +128,7 @@ export function initializeShaderModule(module: ShaderModule): void {
 
   module.instance = instance;
 
-  /* TODO(ib) - we need to apply the original prop types to the default uniforms
+  // TODO(ib) - we need to apply the original prop types to the default uniforms
   if (propTypes) {
     const defaultProps = Object.entries(propTypes).reduce(
       (obj: ShaderModule['props'], [key, propType]) => {
@@ -145,7 +145,6 @@ export function initializeShaderModule(module: ShaderModule): void {
     const defaultUniforms = getShaderModuleUniforms(module, defaultProps);
     module.defaultUniforms = {...module.defaultUniforms, ...defaultUniforms} as any;
   }
-  */
 }
 
 /** Convert module props to uniforms */
