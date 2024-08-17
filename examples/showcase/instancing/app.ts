@@ -8,9 +8,8 @@ import type {AnimationProps, ModelProps} from '@luma.gl/engine';
 // @ts-ignore - ib added this to solve module resolution mess
 import {AnimationLoopTemplate, CubeGeometry, Timeline, Model, ShaderInputs} from '@luma.gl/engine';
 // @ts-ignore TODO - ib added this to solve module resolution mess
-import {makeRandomGenerator, _PickingManager as PickingManager} from '@luma.gl/engine';
-import {} from '@luma.gl/engine';
-import {picking, dirlight} from '@luma.gl/shadertools';
+import {makeRandomGenerator, PickingManager, indexPicking as picking} from '@luma.gl/engine';
+import {dirlight} from '@luma.gl/shadertools';
 import {Matrix4, radians} from '@math.gl/core';
 
 const INFO_HTML = `
@@ -46,7 +45,7 @@ struct VertexInputs {
   // INSTANCED ATTRIBUTES
   @location(2) instanceOffsets : vec2<f32>,
   @location(3) instanceColors : vec4<f32>,
-  @location(4) instancePickingColors : vec2<f32>,
+  @location(4) instanceIndexes : vec2<f32>,
 }
 
 struct FragmentInputs {
@@ -67,8 +66,8 @@ fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
   outputs.normal = dirlight_setNormal((app.modelMatrix * vec4<f32>(inputs.normals, 0.0)).xyz);
   outputs.color = inputs.instanceColors;
 
-  // vec4 pickColor = vec4(0., instancePickingColors, 1.0);
-  // picking_setPickingColor(pickColor.rgb);
+  // vec4 pickColor = vec4(0., instanceIndexes, 1.0);
+  picking_setPickingColor(0);
   
   return outputs;
 }
@@ -85,13 +84,15 @@ fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
 
 const VS_GLSL = /* glsl */ `\
 #version 300 es
+precision highp float;
+precision highp int;
 
 in vec3 positions;
 in vec3 normals;
 
 in vec2 instanceOffsets;
 in vec3 instanceColors;
-in vec2 instancePickingColors;
+in int instanceIndexes;
 
 uniform appUniforms {
   mat4 modelMatrix;
@@ -107,9 +108,7 @@ void main(void) {
 
   vec3 normal = vec3(app.modelMatrix * vec4(normals, 1.0));
   dirlight_setNormal(normal);
-
-  vec4 pickColor = vec4(0., instancePickingColors, 1.0);
-  picking_setPickingColor(pickColor.rgb);
+  picking_setObjectIndex(instanceIndexes);
 
   // Vertex position (z coordinate undulates with time), and model rotates around center
   float delta = length(instanceOffsets);
@@ -121,11 +120,15 @@ void main(void) {
 const FS_GLSL = /* glsl */ `\
 #version 300 es
 precision highp float;
+precision highp int;
 
 in vec3 color;
-out vec4 fragColor;
+layout(location=0) out vec4 fragColor;
+layout(location=1) out ivec4 pickingColor;
 
 void main(void) {
+  pickingColor = picking_getPickingColor();
+
   fragColor = vec4(color, 1.);
   fragColor = dirlight_filterColor(fragColor);
   fragColor = picking_filterColor(fragColor);
@@ -155,19 +158,11 @@ class InstancedCube extends Model {
       colors[i + 3] = 255;
     }
 
-    const pickingColors = new Uint8Array(SIDE * SIDE * 4);
-    for (let i = 0; i < SIDE; i++) {
-      for (let j = 0; j < SIDE; j++) {
-        pickingColors[(i * SIDE + j) * 4 + 0] = i;
-        pickingColors[(i * SIDE + j) * 4 + 1] = j;
-        pickingColors[(i * SIDE + j) * 4 + 2] = 0;
-        pickingColors[(i * SIDE + j) * 4 + 3] = 0;
-      }
-    }
+    const indexes = new Int32Array(SIDE * SIDE).fill(0).map((_, i) => i);
 
     const offsetsBuffer = device.createBuffer(offsets32);
     const colorsBuffer = device.createBuffer(colors);
-    const pickingColorsBuffer = device.createBuffer(pickingColors);
+    const indexesBuffer = device.createBuffer(indexes);
 
     // Model
     super(device, {
@@ -181,15 +176,13 @@ class InstancedCube extends Model {
       bufferLayout: [
         {name: 'instanceOffsets', format: 'float32x2'},
         {name: 'instanceColors', format: 'unorm8x4'},
-        {name: 'instancePickingColors', format: 'unorm8x4'}
-        // TODO - normalizing picking colors breaks picking
-        // {name: 'instancePickingColors', format: 'unorm8x2'},
+        {name: 'instanceIndexes', format: 'sint32'}
       ],
       attributes: {
         // instanceSizes: device.createBuffer(new Float32Array([1])), // Constant attribute
         instanceOffsets: offsetsBuffer,
         instanceColors: colorsBuffer,
-        instancePickingColors: pickingColorsBuffer
+        instanceIndexes: indexesBuffer
       },
       parameters: {
         depthWriteEnabled: true,
@@ -253,7 +246,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       shaderInputs: this.shaderInputs
     });
 
-    this.picker = new PickingManager(device, this.shaderInputs);
+    this.picker = new PickingManager(device, {
+      shaderInputs: this.shaderInputs
+    });
   }
 
   onRender(animationProps: AnimationProps) {
@@ -315,7 +310,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.cube.draw(pickingPass);
     pickingPass.end();
 
-    this.picker.updatePickState(mousePosition as [number, number]);
+    this.picker.getPickInfo(mousePosition as [number, number]);
   }
 }
 

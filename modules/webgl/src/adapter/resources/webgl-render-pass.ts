@@ -10,12 +10,6 @@ import {withGLParameters} from '../../context/state-tracker/with-parameters';
 import {setGLParameters} from '../../context/parameters/unified-parameter-api';
 import {WEBGLQuerySet} from './webgl-query-set';
 
-// Should collapse during minification
-const GL_DEPTH_BUFFER_BIT = 0x00000100;
-const GL_STENCIL_BUFFER_BIT = 0x00000400;
-const GL_COLOR_BUFFER_BIT = 0x00004000;
-
-const GL_COLOR = 0x1800;
 const COLOR_CHANNELS = [0x1, 0x2, 0x4, 0x8]; // GPUColorWrite RED, GREEN, BLUE, ALPHA
 
 export class WEBGLRenderPass extends RenderPass {
@@ -45,6 +39,16 @@ export class WEBGLRenderPass extends RenderPass {
     // TODO - do parameters (scissorRect) affect the clear operation?
     this.device.pushState();
     this.setParameters({viewport, ...this.props.parameters});
+
+    // Specify mapping of draw buffer locations to color attachments
+    if (this.props.framebuffer) {
+      const drawBuffers = this.props.framebuffer.colorAttachments.map(
+        (_, i) => GL.COLOR_ATTACHMENT0 + i
+      );
+      this.device.gl.drawBuffers(drawBuffers);
+    } else {
+      this.device.gl.drawBuffers([GL.BACK]);
+    }
 
     // Hack - for now WebGL draws in "immediate mode" (instead of queueing the operations)...
     this.clear();
@@ -138,16 +142,24 @@ export class WEBGLRenderPass extends RenderPass {
 
     let clearMask = 0;
 
-    if (this.props.clearColor !== false) {
-      clearMask |= GL_COLOR_BUFFER_BIT;
+    if (this.props.clearColors) {
+      this.props.clearColors.forEach((color, drawBufferIndex) => {
+        if (color) {
+          this.clearColorBuffer(drawBufferIndex, color);
+        }
+      });
+    }
+
+    if (this.props.clearColor !== false && this.props.clearColors === undefined) {
+      clearMask |= GL.COLOR_BUFFER_BIT;
       glParameters.clearColor = this.props.clearColor;
     }
     if (this.props.clearDepth !== false) {
-      clearMask |= GL_DEPTH_BUFFER_BIT;
+      clearMask |= GL.DEPTH_BUFFER_BIT;
       glParameters.clearDepth = this.props.clearDepth;
     }
     if (this.props.clearStencil !== false) {
-      clearMask |= GL_STENCIL_BUFFER_BIT;
+      clearMask |= GL.STENCIL_BUFFER_BIT;
       glParameters.clearStencil = this.props.clearStencil;
     }
 
@@ -156,11 +168,6 @@ export class WEBGLRenderPass extends RenderPass {
       withGLParameters(this.device.gl, glParameters, () => {
         this.device.gl.clear(clearMask);
       });
-
-      // TODO - clear multiple color attachments
-      // for (attachment of this.framebuffer.colorAttachments) {
-      //   this.clearColorBuffer
-      // }
     }
   }
 
@@ -171,22 +178,27 @@ export class WEBGLRenderPass extends RenderPass {
     withGLParameters(this.device.gl, {framebuffer: this.props.framebuffer}, () => {
       // Method selection per OpenGL ES 3 docs
       switch (value.constructor) {
+        case Int8Array:
+        case Int16Array:
         case Int32Array:
-          this.device.gl.clearBufferiv(GL_COLOR, drawBuffer, value);
+          this.device.gl.clearBufferiv(GL.COLOR, drawBuffer, value);
           break;
+        case Uint8Array:
+        case Uint8ClampedArray:
+        case Uint16Array:
         case Uint32Array:
-          this.device.gl.clearBufferuiv(GL_COLOR, drawBuffer, value);
+          this.device.gl.clearBufferuiv(GL.COLOR, drawBuffer, value);
           break;
         case Float32Array:
         default:
-          this.device.gl.clearBufferfv(GL_COLOR, drawBuffer, value);
+          this.device.gl.clearBufferfv(GL.COLOR, drawBuffer, value);
           break;
       }
     });
   }
 
   // clearDepthStencil() {
-  // const GL_DEPTH = 0x1801;
+  // const GL.DEPTH = 0x1801;
   // const GL_STENCIL = 0x1802;
   // const GL_DEPTH_STENCIL = 0x84f9;
 

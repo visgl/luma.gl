@@ -10,14 +10,20 @@ export function glFormatToComponents(format) {
     case GL.ALPHA:
     case GL.R32F:
     case GL.RED:
+    case GL.RED_INTEGER:
       return 1;
+    case GL.RG32I:
+    case GL.RG32UI:
     case GL.RG32F:
+    case GL.RG_INTEGER:
     case GL.RG:
       return 2;
     case GL.RGB:
+    case GL.RGB_INTEGER:
     case GL.RGB32F:
       return 3;
     case GL.RGBA:
+    case GL.RGBA_INTEGER:
     case GL.RGBA32F:
       return 4;
     // TODO: Add support for additional WebGL2 formats

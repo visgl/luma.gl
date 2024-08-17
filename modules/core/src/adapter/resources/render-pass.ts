@@ -21,19 +21,22 @@ export type RenderPassProps = ResourceProps & {
 
   // TODO - API needs to be able to control multiple render targets
 
-  /** Clear value for color attachment, or `load` to preserve the previous value */
+  /** Clear value for color attachment, or false to preserve the previous value */
   clearColor?: NumberArray4 | TypedArray | false;
-  /** Whether to disable / discard the output of the rasterizer */
-  discard?: boolean;
-
-  /** Clear value for depth attachment (usually `1`), or `load` to preserve the previous value */
+  /** Experimental: Clear values for multiple color attachments */
+  clearColors?: (TypedArray | false)[];
+  /** Clear value for depth attachment (usually `1`), or false to preserve the previous value */
   clearDepth?: number | false;
-  /** Clear value for stencil attachment, or `load` to preserve the previous value */
+  /** Clear value for stencil attachment (usually `0`), or false to preserve the previous value */
   clearStencil?: number | false;
+
   /** Indicates that the depth component is read only. */
   depthReadOnly?: boolean;
   /** Indicates that the stencil component is read only. */
   stencilReadOnly?: boolean;
+
+  /** Whether to disable / discard the output of the rasterizer */
+  discard?: boolean;
 
   /** QuerySet to write begin/end timestamps to */
   occlusionQuerySet?: QuerySet;
@@ -60,6 +63,7 @@ export abstract class RenderPass extends Resource<RenderPassProps> {
     framebuffer: null,
     parameters: undefined!,
     clearColor: false,
+    clearColors: undefined!,
     clearDepth: false,
     clearStencil: false,
     depthReadOnly: false,

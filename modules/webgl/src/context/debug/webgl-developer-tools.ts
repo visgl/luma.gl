@@ -12,6 +12,7 @@ const WEBGL_DEBUG_CDN_URL = 'https://unpkg.com/webgl-debug@2.0.1/index.js';
 
 type DebugContextProps = {
   debugWebGL?: boolean;
+  traceWebGL?: boolean;
 };
 
 type ContextData = {
@@ -51,7 +52,7 @@ export function makeDebugContext(
   gl: WebGL2RenderingContext,
   props: DebugContextProps = {}
 ): WebGL2RenderingContext {
-  return props.debugWebGL ? getDebugContext(gl, props) : getRealContext(gl);
+  return props.debugWebGL || props.traceWebGL ? getDebugContext(gl, props) : getRealContext(gl);
 }
 
 // Returns the real context from either of the real/debug contexts
@@ -139,7 +140,9 @@ function onValidateGLFunc(
   let functionString: string = '';
   if (log.level >= 1) {
     functionString = getFunctionString(functionName, functionArgs);
-    log.log(1, functionString)();
+    if (props.traceWebGL) {
+      log.log(1, functionString)();
+    }
   }
 
   for (const arg of functionArgs) {

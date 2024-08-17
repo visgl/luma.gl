@@ -2,65 +2,17 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {NumericArray} from '../../../types';
-import {ShaderModule} from '../../../lib/shader-module/shader-module';
+import type {ShaderModule} from '@luma.gl/shadertools';
 
-// cyan color
-const DEFAULT_HIGHLIGHT_COLOR = new Float32Array([0, 1, 1, 1]);
+import type {PickingProps, PickingUniforms} from './picking-uniforms';
+import {pickingUniforms, GLSL_UNIFORMS, WGSL_UNIFORMS} from './picking-uniforms';
 
-/**
- * Props for the picking module, which depending on mode renders picking colors or highlighted item.
- * When active, renders picking colors, assumed to be rendered to off-screen "picking" buffer.
- * When inactive, renders normal colors, with the exception of selected object which is rendered with highlight
- */
-export type PickingProps = {
-  /** Are we picking? I.e. rendering picking colors? */
-  isActive?: boolean;
-  /** Whether to use instance_index (built-in) or a custom application supplied index (usually from an attribute) */
-  indexMode?: 'instance' | 'custom';
-  /** Set to true when picking an attribute value instead of object index */
-  isAttribute?: boolean;
-  /** Set to a picking color to visually highlight that item, or `null` to explicitly clear **/
-  highlightedObjectColor?: NumericArray | null;
-  /** Color of visual highlight of "selected" item */
-  highlightColor?: NumericArray;
-  /** Color range 0-1 or 0-255 */
-  useFloatColors?: boolean;
-};
-
-/**
- * Uniforms for the picking module, which renders picking colors and highlighted item.
- * When active, renders picking colors, assumed to be rendered to off-screen "picking" buffer.
- * When inactive, renders normal colors, with the exception of selected object which is rendered with highlight
- */
-export type PickingUniforms = {
-  /**
-   * When true, renders picking colors. Set when rendering to off-screen "picking" buffer.
-   * When false, renders normal colors, with the exception of selected object which is rendered with highlight
-   */
-  isActive?: boolean;
-  /** Set to true when picking an attribute value instead of object index */
-  isAttribute?: boolean;
-  /** Color range 0-1 or 0-255 */
-  useFloatColors?: boolean;
-  /** Do we have a highlighted item? */
-  isHighlightActive?: boolean;
-  /** Set to a picking color to visually highlight that item */
-  highlightedObjectColor?: NumericArray;
-  /** Color of visual highlight of "selected" item */
-  highlightColor?: NumericArray;
-};
+const source = /* wgsl */ `\
+${WGSL_UNIFORMS}
+`;
 
 const vs = /* glsl */ `\
-uniform pickingUniforms {
-  float isActive;
-  float isAttribute;
-  float isHighlightActive;
-  float useFloatColors;
-  vec3 highlightedObjectColor;
-  vec4 highlightColor;
-} picking;
-
+${GLSL_UNIFORMS}
 out vec4 picking_vRGBcolor_Avalid;
 
 // Normalize unsigned byte color to 0-1 range
@@ -138,14 +90,7 @@ void picking_setPickingAttribute(vec3 value) {
 `;
 
 const fs = /* glsl */ `\
-uniform pickingUniforms {
-  float isActive;
-  float isAttribute;
-  float isHighlightActive;
-  float useFloatColors;
-  vec3 highlightedObjectColor;
-  vec4 highlightColor;
-} picking;
+${GLSL_UNIFORMS}
 
 in vec4 picking_vRGBcolor_Avalid;
 
@@ -204,62 +149,42 @@ vec4 picking_filterColor(vec4 color) {
  * primitives with the same picking color in non-instanced draw-calls
  */
 export const picking = {
-  props: {} as PickingProps,
-  uniforms: {} as PickingUniforms,
-
+  ...pickingUniforms,
   name: 'picking',
-
-  uniformTypes: {
-    isActive: 'f32',
-    isAttribute: 'f32',
-    isHighlightActive: 'f32',
-    useFloatColors: 'f32',
-    highlightedObjectColor: 'vec3<f32>',
-    highlightColor: 'vec4<f32>'
-  },
-  defaultUniforms: {
-    isActive: false,
-    isAttribute: false,
-    isHighlightActive: false,
-    useFloatColors: true,
-    highlightedObjectColor: new Float32Array([0, 0, 0]),
-    highlightColor: DEFAULT_HIGHLIGHT_COLOR
-  },
-
+  source,
   vs,
-  fs,
-  getUniforms
+  fs
 } as const satisfies ShaderModule<PickingProps, PickingUniforms>;
 
-function getUniforms(opts: PickingProps = {}, prevUniforms?: PickingUniforms): PickingUniforms {
-  const uniforms = {} as PickingUniforms;
+// function getUniforms(opts: PickingProps = {}, prevUniforms?: PickingUniforms): PickingUniforms {
+//   const uniforms = {} as PickingUniforms;
 
-  if (opts.highlightedObjectColor === undefined) {
-    // Unless highlightedObjectColor explicitly null or set, do not update state
-  } else if (opts.highlightedObjectColor === null) {
-    uniforms.isHighlightActive = false;
-  } else {
-    uniforms.isHighlightActive = true;
-    const highlightedObjectColor = opts.highlightedObjectColor.slice(0, 3);
-    uniforms.highlightedObjectColor = highlightedObjectColor;
-  }
+//   if (opts.highlightedObjectColor === undefined) {
+//     // Unless highlightedObjectColor explicitly null or set, do not update state
+//   } else if (opts.highlightedObjectColor === null) {
+//     uniforms.isHighlightActive = false;
+//   } else {
+//     uniforms.isHighlightActive = true;
+//     const highlightedObjectColor = opts.highlightedObjectColor.slice(0, 3);
+//     uniforms.highlightedObjectColor = highlightedObjectColor;
+//   }
 
-  if (opts.highlightColor) {
-    const color = Array.from(opts.highlightColor, x => x / 255);
-    if (!Number.isFinite(color[3])) {
-      color[3] = 1;
-    }
-    uniforms.highlightColor = color;
-  }
+//   if (opts.highlightColor) {
+//     const color = Array.from(opts.highlightColor, x => x / 255);
+//     if (!Number.isFinite(color[3])) {
+//       color[3] = 1;
+//     }
+//     uniforms.highlightColor = color;
+//   }
 
-  if (opts.isActive !== undefined) {
-    uniforms.isActive = Boolean(opts.isActive);
-    uniforms.isAttribute = Boolean(opts.isAttribute);
-  }
+//   if (opts.isActive !== undefined) {
+//     uniforms.isActive = Boolean(opts.isActive);
+//     uniforms.isAttribute = Boolean(opts.isAttribute);
+//   }
 
-  if (opts.useFloatColors !== undefined) {
-    uniforms.useFloatColors = Boolean(opts.useFloatColors);
-  }
+//   if (opts.useFloatColors !== undefined) {
+//     uniforms.useFloatColors = Boolean(opts.useFloatColors);
+//   }
 
-  return uniforms;
-}
+//   return uniforms;
+// }

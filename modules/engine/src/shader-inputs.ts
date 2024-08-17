@@ -84,11 +84,10 @@ export class ShaderInputs<
 
     // Initialize the modules
     for (const [name, module] of Object.entries(modules)) {
-      const moduleName = name as keyof ShaderPropsT;
-
-      // Get default uniforms from module
-      this.moduleUniforms[moduleName] = module.defaultUniforms || {};
-      this.moduleBindings[moduleName] = {};
+      this._addModule(module);
+      if (module.name && name !== module.name) {
+        log.warn(`Module name: ${name} vs ${module.name}`)();
+      }
     }
   }
 
@@ -145,6 +144,8 @@ export class ShaderInputs<
     return bindings;
   }
 
+  // INTERNAL
+
   /** Return a debug table that can be used for console.table() or log.table() */
   getDebugTable(): Record<string, Record<string, unknown>> {
     const table: Record<string, Record<string, unknown>> = {};
@@ -157,5 +158,12 @@ export class ShaderInputs<
       }
     }
     return table;
+  }
+
+  _addModule(module: ShaderModule): void {
+    const moduleName = module.name as keyof ShaderPropsT;
+    // Get default uniforms from module
+    this.moduleUniforms[moduleName] = module.defaultUniforms || {};
+    this.moduleBindings[moduleName] = {};
   }
 }
