@@ -18,7 +18,7 @@ Each `CanvasContext` provides a connection between a `Device` and an `HTMLCanvas
 
 ## CanvasContext
 
-The [`CanvasContext`](/docs/api-reference/core/canvas-context) is an important companion to the `Device`. A `CanvasContext` holds a connection between the GPU `Device` and an HTML or offscreen `canvas` into which it can render.
+The[`CanvasContext` is an important companion to the `Device`. A `CanvasContext` holds a connection between the GPU `Device` and an HTML or offscreen `canvas` into which it can render.
 
 A `CanvasContext` takes care of:
 

@@ -6,7 +6,7 @@
 
 Provides support for GPU-based picking.
 
-Picking is a key capability for most interactive applications. Consult the API guide learn more about [picking](/docs/api-guide/engine/picking). 
+Picking is a key capability for most interactive applications. Consult the API guide learn more about [picking](/docs/api-guide/engine/interactivity). 
 
 GPU picking is based on the conclusion that each pixel on the screen was generated while rendering some "object", which in luma.gl can often be thought of as one row in an a data table being rendered.
 
