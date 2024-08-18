@@ -17,7 +17,7 @@ export type PickingManagerProps = {
   /** Shader Inputs from models to pick */
   shaderInputs?: ShaderInputs<{picking: typeof pickingUniforms.props}>;
   /** Callback */
-  onObjectPicked: (info: PickInfo) => void;
+  onObjectPicked?: (info: PickInfo) => void;
 };
 
 /**
