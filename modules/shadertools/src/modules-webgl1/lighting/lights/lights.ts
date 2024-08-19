@@ -138,6 +138,6 @@ export const lights = {
   fs: lightingShader,
   getUniforms,
   defines: {
-    MAX_LIGHTS: 3
+    // MAX_LIGHTS: 3
   }
 };

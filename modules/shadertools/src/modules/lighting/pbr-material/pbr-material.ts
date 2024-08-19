@@ -84,16 +84,15 @@ export const pbrMaterial = {
   fs,
 
   defines: {
-    LIGHTING_FRAGMENT: 1
-    // TODO defining these as 0 breaks shader
-    // HAS_NORMALMAP: 0
-    // HAS_EMISSIVEMAP: 0,
-    // HAS_OCCLUSIONMAP: 0,
-    // HAS_BASECOLORMAP: 0,
-    // HAS_METALROUGHNESSMAP: 0,
-    // ALPHA_CUTOFF: 0
-    // USE_IBL: 0
-    // PBR_DEBUG: 0
+    LIGHTING_FRAGMENT: true,
+    HAS_NORMALMAP: false,
+    HAS_EMISSIVEMAP: false,
+    HAS_OCCLUSIONMAP: false,
+    HAS_BASECOLORMAP: false,
+    HAS_METALROUGHNESSMAP: false,
+    ALPHA_CUTOFF: false,
+    USE_IBL: false,
+    PBR_DEBUG: false
   },
   getUniforms: props => props,
   uniformTypes: {
