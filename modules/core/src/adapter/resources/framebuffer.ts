@@ -95,9 +95,9 @@ export abstract class Framebuffer extends Resource<FramebufferProps> {
       throw new Error('Framebuffer has noattachments');
     }
 
-    this.colorAttachments = this.props.colorAttachments.map(attachment => {
+    this.colorAttachments = this.props.colorAttachments.map((attachment, index) => {
       if (typeof attachment === 'string') {
-        const texture = this.createColorTexture(attachment);
+        const texture = this.createColorTexture(attachment, index);
         this.attachResource(texture);
         return texture.view;
       }
@@ -122,9 +122,9 @@ export abstract class Framebuffer extends Resource<FramebufferProps> {
   }
 
   /** Create a color texture */
-  protected createColorTexture(format: TextureFormat): Texture {
+  protected createColorTexture(format: TextureFormat, index: number): Texture {
     return this.device.createTexture({
-      id: 'color-attachment',
+      id: `${this.id}-color-attachment-${index}`,
       usage: Texture.RENDER_ATTACHMENT,
       format,
       width: this.width,
@@ -140,7 +140,7 @@ export abstract class Framebuffer extends Resource<FramebufferProps> {
   /** Create depth stencil texture */
   protected createDepthStencilTexture(format: TextureFormat): Texture {
     return this.device.createTexture({
-      id: 'depth-stencil-attachment',
+      id: `${this.id}-depth-stencil-attachment`,
       usage: Texture.RENDER_ATTACHMENT,
       format,
       width: this.width,

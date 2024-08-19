@@ -202,11 +202,14 @@ export class WebGLDevice extends Device {
     glState.trackState(this.gl, {copyState: false});
 
     // DEBUG contexts: Add luma debug instrumentation to the context, force log level to at least 1
-    if (props.debugWebGL) {
-      this.gl = makeDebugContext(this.gl, {...props});
-      this.debug = true;
-      log.level = Math.max(log.level, 1);
+    const debugWebGL = props.debugWebGL || props.debug;
+    const traceWebGL = props.debugWebGL;
+    if (debugWebGL) {
+      this.gl = makeDebugContext(this.gl, {debugWebGL, traceWebGL});
       log.warn('WebGL debug mode activated. Performance reduced.')();
+      if (props.debugWebGL) {
+        log.level = Math.max(log.level, 1);
+      }
     }
   }
 
@@ -425,18 +428,28 @@ export class WebGLDevice extends Device {
    * Be aware that there are some duplicates especially for constants that are 0,
    * so this isn't guaranteed to return the right key in all cases.
    */
-  getGLKey(value: unknown, gl?: WebGL2RenderingContext): string {
-    // @ts-ignore expect-error depends on settings
-    gl = gl || this.gl2 || this.gl;
+  getGLKey(value: unknown, options?: {emptyIfUnknown?: boolean}): string {
     const number = Number(value);
-    for (const key in gl) {
+    for (const key in this.gl) {
       // @ts-ignore expect-error depends on settings
-      if (gl[key] === number) {
+      if (this.gl[key] === number) {
         return `GL.${key}`;
       }
     }
     // No constant found. Stringify the value and return it.
-    return String(value);
+    return options?.emptyIfUnknown ? '' : String(value);
+  }
+
+  /**
+   * Returns a map with any GL.<KEY> constants mapped to strings, both for keys and values
+   */
+  getGLKeys(glParameters: Record<number, unknown>): Record<string, string> {
+    const opts = {emptyIfUnknown: true};
+    return Object.entries(glParameters).reduce<Record<string, string>>((keys, [key, value]) => {
+      // eslint-disable-next-line @typescript-eslint/no-base-to-string
+      keys[`${key}:${this.getGLKey(key, opts)}`] = `${value}:${this.getGLKey(value, opts)}`;
+      return keys;
+    }, {});
   }
 
   /** Store constants */

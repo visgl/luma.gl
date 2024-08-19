@@ -210,6 +210,8 @@ export type DeviceProps = {
 
   // DEBUG SETTINGS
 
+  /** Turn on implementation defined checks that slow down execution but help break where errors occur */
+  debug?: boolean;
   /** Show shader source in browser? The default is`'error'`, meaning that logs are shown when shader compilation has errors */
   debugShaders?: 'never' | 'errors' | 'warnings' | 'always';
   /** Renders a small version of updated Framebuffers into the primary canvas context. Can be set in console luma.log.set('debug-framebuffers', true) */
@@ -283,6 +285,7 @@ export abstract class Device {
     // WebGL specific
     webgl: {},
 
+    debug: log.get('debug') || undefined!,
     debugShaders: log.get('debug-shaders') || undefined!,
     debugFramebuffers: Boolean(log.get('debug-framebuffers')),
     debugWebGL: Boolean(log.get('debug-webgl')),

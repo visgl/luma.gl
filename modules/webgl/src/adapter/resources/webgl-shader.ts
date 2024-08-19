@@ -70,7 +70,7 @@ export class WEBGLShader extends Shader {
     gl.compileShader(this.handle);
 
     // For performance reasons, avoid checking shader compilation errors on production
-    if (log.level === 0) {
+    if (!this.device.props.debug) {
       this.compilationStatus = 'pending';
       return;
     }

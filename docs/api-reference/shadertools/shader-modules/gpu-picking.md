@@ -1,24 +1,48 @@
-# picking
+# gpuPicking
 
 <p class="badges">
-  <img src="https://img.shields.io/badge/Deprecated-from-v9.1-red.svg?style=flat-square" alt="Deprecated in v9.1" />
+  <img src="https://img.shields.io/badge/From-v9.1-blue.svg?style=flat-square" alt="From v9.1" />
 </p>
 
-:::caution
-The `picking` shader module in `@luma.gl/shadertools` is deprecated. Use the picking modules in `@luma.gl/engine` instead.
-:::
+Provides support for GPU-based picking.
 
-Provides support for color-based picking. 
+Picking is a key capability for most interactive applications. Consult the API guide learn more about [picking](/docs/api-guide/engine/interactivity). 
 
-The `picking` modules supports picking and highlighting for both instanced and non-instanced data:
+GPU picking is based on the conclusion that each pixel on the screen was generated while rendering some "object", which in luma.gl can often be thought of as one row in an a data table being rendered.
+
+## Under the Hood
+
+Depending on the structure of the shader, each object can either correspond to an `instance` or a group of vertexes.
+
+An additional consideration 
+
+li
+
+The `gpuPicking` modules supports:
+- picking of object indexes
+- highlighting of objects
 - pick a specific *instance* in an instanced draw call
 - highlight all fragments of an *instance* based on its picking color
 - pick "group of primitives" with the same picking color in non-instanced draw-calls
 - highlight "group of primitives" with the same picking color in non-instanced draw-calls
 
-Color based picking lets the application draw a primitive with a color that can later be used to index this specific primitive.
+Highlighting allows applications to specify a picking color corresponding to an object that need to be highlighted and the highlight color to be used.
 
-Highlighting allows application to specify a picking color corresponding to an object that need to be highlighted and the highlight color to be used.
+## About GPU based picking
+
+GPU based picking has a couple of significant advantage over CPU-based picking:
+- GPU-based picking is a picking technique that can be performed entirely on the GPU, meaning that it is very performant, especially when picking is done every frame.
+
+- can be added to any existing shaders 
+- and is independent of the structure of the input geometry or rendering without requiring any additional picking logic to that shader, beyond calling one function in the vertex shader and one function in the fragment shader.
+
+Note that GPU-based picking does comes with some limitations:
+- Picking occluding objects require re-rendering and discarding the already picked objects.
+- On WebGL-specific: the read back of the picking data from the picking texture can only be done synchronously, causing a GPU pipeline stall, which can defeat some of the performance advantages.
+
+Traditional 3d frameworks often support CPU-based picking. While luma.gl does not include an CPU-based picking algorithms, CPU based picking techniques do have advantages: 
+ - They can often provide precise intersection points on objects and they are better at handling picking of multiple objects, especially for objects that are occluded. 
+ - However CPU based picking techniques are slower and can require more data on the CPU or they may need to be customized to the structure of the input data.
 
 
 ## Usage
@@ -75,7 +99,7 @@ main() {
 
 ### getUniforms()
 
-`getUniforms()` takes an object with key/value pairs, returns an object with key/value pairs representing the uniforms that the `picking` module shaders need.
+`getUniforms()` takes an object with key/value pairs, returns an object with key/value pairs representing the uniforms that the `gpuPicking` module shaders need.
 
 Uniforms for the picking module, which renders picking colors and highlighted item. 
 When active, renders picking colors, assumed to be rendered to off-screen "picking" buffer. 

@@ -14,7 +14,8 @@ import {
   GLTextureTarget,
   GLTextureCubeMapTarget,
   GLTexelDataFormat,
-  GLPixelType
+  GLPixelType,
+  GLDataType
 } from '@luma.gl/constants';
 
 import {TypedArray} from '@math.gl/types';
@@ -533,7 +534,7 @@ export function readPixelsToArray(
   const {
     sourceX = 0,
     sourceY = 0,
-    sourceAttachment = GL.COLOR_ATTACHMENT0 // TODO - support gl.readBuffer
+    sourceAttachment = 0 // TODO - support gl.readBuffer
   } = options || {};
   let {
     target = null,
@@ -548,21 +549,19 @@ export function readPixelsToArray(
   const {framebuffer, deleteFramebuffer} = getFramebuffer(source);
   // assert(framebuffer);
   const {gl, handle} = framebuffer;
-  const attachment = sourceAttachment - GL.COLOR_ATTACHMENT0;
 
   sourceWidth ||= framebuffer.width;
   sourceHeight ||= framebuffer.height;
 
-  // TODO - Set and unset gl.readBuffer
-  // if (sourceAttachment === GL.COLOR_ATTACHMENT0 && handle === null) {
-  //   sourceAttachment = GL.FRONT;
-  // }
+  const texture = framebuffer.colorAttachments[sourceAttachment]?.texture;
+  if (!texture) {
+    throw new Error(`Invalid framebuffer attachment ${sourceAttachment}`);
+  }
+  sourceDepth = texture?.depth || 1;
 
-  sourceDepth = framebuffer.colorAttachments[attachment]?.texture?.depth || 1;
-
-  sourceFormat ||= framebuffer.colorAttachments[attachment]?.texture?.glFormat || GL.RGBA;
+  sourceFormat ||= texture?.glFormat || GL.RGBA;
   // Deduce the type from color attachment if not provided.
-  sourceType ||= framebuffer.colorAttachments[attachment]?.texture?.glType || GL.UNSIGNED_BYTE;
+  sourceType ||= texture?.glType || GL.UNSIGNED_BYTE;
 
   // Deduce type and allocated pixelArray if needed
   target = getPixelArray(target, sourceType, sourceFormat, sourceWidth, sourceHeight, sourceDepth);
@@ -570,13 +569,31 @@ export function readPixelsToArray(
   // Pixel array available, if necessary, deduce type from it.
   sourceType = sourceType || getGLTypeFromTypedArray(target);
 
-  const prevHandle = gl.bindFramebuffer(GL.FRAMEBUFFER, handle);
+  // Note: luma.gl overrides bindFramebuffer so that we can reliably restore the previous framebuffer (this is the only function for which we do that)
+  const prevHandle = gl.bindFramebuffer(
+    GL.FRAMEBUFFER,
+    handle
+  ) as unknown as WebGLFramebuffer | null;
+
+  // Select the color attachment to read from
+  gl.readBuffer(gl.COLOR_ATTACHMENT0 + sourceAttachment);
+
+  // There is a lot of hedging in the WebGL2 spec about what formats are guaranteed to be readable
+  // (It should always be possible to read RGBA/UNSIGNED_BYTE, but most other combinations are not guaranteed)
+  // Querying is possible but expensive:
+  // const {device} = framebuffer;
+  // texture.glReadFormat ||= gl.getParameter(gl.IMPLEMENTATION_COLOR_READ_FORMAT);
+  // texture.glReadType ||= gl.getParameter(gl.IMPLEMENTATION_COLOR_READ_TYPE);
+  // console.log('params', device.getGLKey(texture.glReadFormat), device.getGLKey(texture.glReadType));
+
   gl.readPixels(sourceX, sourceY, sourceWidth, sourceHeight, sourceFormat, sourceType, target);
-  // @ts-expect-error
+  gl.readBuffer(gl.COLOR_ATTACHMENT0);
   gl.bindFramebuffer(GL.FRAMEBUFFER, prevHandle || null);
+
   if (deleteFramebuffer) {
     framebuffer.destroy();
   }
+
   return target;
 }
 
@@ -788,8 +805,8 @@ export function toFramebuffer(texture: Texture, props?: FramebufferProps): WEBGL
 // eslint-disable-next-line max-params
 function getPixelArray(
   pixelArray,
-  type,
-  format,
+  glType: GLDataType | GLPixelType,
+  glFormat: GL,
   width: number,
   height: number,
   depth?: number
@@ -797,10 +814,11 @@ function getPixelArray(
   if (pixelArray) {
     return pixelArray;
   }
+  // const formatInfo = decodeTextureFormat(format);
   // Allocate pixel array if not already available, using supplied type
-  type = type || GL.UNSIGNED_BYTE;
-  const ArrayType = getTypedArrayFromGLType(type, {clamped: false});
-  const components = glFormatToComponents(format);
+  glType ||= GL.UNSIGNED_BYTE;
+  const ArrayType = getTypedArrayFromGLType(glType, {clamped: false});
+  const components = glFormatToComponents(glFormat);
   // TODO - check for composite type (components = 1).
   return new ArrayType(width * height * components) as Uint8Array | Uint16Array | Float32Array;
 }

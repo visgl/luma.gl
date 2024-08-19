@@ -61,34 +61,30 @@ This object can also include all [`CanvasContextProps`][canvas-context-props] pr
 
 Specifies props to use when luma creates the device.
 
-| Parameter                                            | Default                                      | Description                                                                                                          |
-| ---------------------------------------------------- | -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `id?: string`                                        | `null`                                       | Optional string id, mainly intended for debugging.                                                                   |
-| `createCanvasContext?: CanvasContextProps` \| `true` | [CanvasContexProps][canvas-context-props]    | Props used to create the default `CanvasContext` for the new `Device`. `true` or `{}` creates a context with default props. |
-| `onError?: (error: Error) => unknown`                | `log.error`                                  | Error handling.                                                                                                      |
-| `powerPreference?: string`                           | `'high-performance'`                         | `'default' \| 'high-performance' \| 'low-power'` (WebGL).                                                            |
-| `webgl?: WebGLContextAttributes`                     | [`WebGLContextAttributes`][webgl-attributes] | Attributes passed on to WebGL (`canvas.getContext('webgl2', props.webgl)`                                            |
-| `_requestMaxLimits?: boolean`                        | `true`                                       | Ensures that the Device exposes the highest `DeviceLimits` supported by platform (WebGPU).                           |
-| `_initializeFeatures?: boolean`                      | `true`                                       | Initialize all `DeviceFeatures` on startup. 🧪                                                                        |
-| `_disabledFeatures?: Record<DeviceFeature, boolean>` | `{ 'compilation-status-async-webgl': true }` | Disable specific `DeviceFeatures`. 🧪                                                                                 |
-| `_factoryDestroyPolicy?: string`                     | `'unused'`                                   | `'unused' \| 'never'` Never destroy cached shaders and pipelines. 🧪                                                  |
+| Property                                                | Default                                      | Description                                                                                                 |
+| ------------------------------------------------------- | -------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `id?: string`                                           | `null`                                       | Optional string id, mainly intended for debugging.                                                          |
+| `createCanvasContext?: CanvasContextProps` \| `true`    | [CanvasContexProps][canvas-context-props]    | Create a default `CanvasContext` for the new `Device`. `true` creates a context with default props.         |
+| `onError?: (error: Error) => unknown`                   | `log.error`                                  | Error handling.                                                                                             |
+| `powerPreference?: string`                              | `'high-performance'`                         | `'default' \| 'high-performance' \| 'low-power'` (WebGL).                                                   |
+| `webgl?: WebGLContextAttributes`                        | [`WebGLContextAttributes`][webgl-attributes] | Attributes passed on to WebGL (`canvas.getContext('webgl2', props.webgl)`                                   |
+| `debug?`: `boolean`                                     | `false`                                      | Extra checks (wait for shader compilation, framebuffer completion, WebGL API errors will throw exceptions). |
+| `debugShaders?`: `'errors' 'warnings' 'always' 'never'` | `'error'`                                    | Display shader source code with inline errors in the canvas.                                                |
+| `debugFramebuffers?: boolean`                           | `false`                                      | Show small copy of the contents of updated Framebuffers in the canvas.                                      |
+| `debugWebGL?: boolean`                                  | `false`                                      | traces WebGL API calls to the console (via Khronos WebGLDeveloperTools).                                    |
+| `debugSpectorJS?: boolean`                              | `false`                                      | Initialize the SpectorJS WebGL debugger.                                                                    |
+| `debugSpectorJSUrl?: string`                            | CDN url                                      | SpectorJS URL. Override if different SpectorJS version is desired (or if CDN is down).                      |
+| `_requestMaxLimits?: boolean`                           | `true`                                       | Ensures that the Device exposes the highest `DeviceLimits` supported by platform (WebGPU).                  |
+| `_initializeFeatures?: boolean`                         | `true`                                       | Initialize all `DeviceFeatures` on startup. 🧪                                                               |
+| `_disabledFeatures?: Record<DeviceFeature, boolean>`    | `{ 'compilation-status-async-webgl': true }` | Disable specific `DeviceFeatures`. 🧪                                                                        |
+| `_factoryDestroyPolicy?: string`                        | `'unused'`                                   | `'unused' \| 'never'` Never destroy cached shaders and pipelines. 🧪                                         |
 
 :::caution
 🧪 denotes experimental feature. Expect API to change.
 :::
 
-Specify WebGL debugging options to use when luma creates the WebGL context.
-
-| WebGL Debugging                                                        | Default   | Description                                                                                                                                 |
-| ---------------------------------------------------------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `debugShaders?`: `'errors'` \| `'warnings'` \| `'always'` \| `'never'` | `'error'` | Display shader source code with inline errors in the canvas.                                                                                |
-| `debugFramebuffers?: boolean`                                          | `false`   | Show small copy of the contents of updated Framebuffers in the canvas.                                                                      |
-| `debugWebGL?: boolean`                                                 | `false`   | Initialize Khronos WebGLDeveloperTools. WebGL API calls will be logged to the console and WebGL errors will generate JavaScript exceptions. |
-| `debugSpectorJS?: boolean`                                             | `false`   | Initialize the SpectorJS WebGL debugger.                                                                                                    |
-| `debugSpectorJSUrl?: string`                                           | N/A       | SpectorJS URL. Override if CDN is down or different SpectorJS version is desired.                                                           |
-
 :::tip
-Learn more about WebGL debugging in our [Debugging](../../developer-guide/debugging.md) guide.
+Learn more GPU debugging in our [Debugging](../../developer-guide/debugging.md) guide.
 :::
 
 #### WebGLContextAttributes

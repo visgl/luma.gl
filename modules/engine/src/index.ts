@@ -89,4 +89,7 @@ export {
 export type {AsyncTextureProps} from './async-texture/async-texture';
 export {AsyncTexture} from './async-texture/async-texture';
 
-export {PickingManager as _PickingManager} from './modules/picking/picking-manager';
+export {LegacyPickingManager} from './modules/picking/legacy-picking-manager';
+export {PickingManager} from './modules/picking/picking-manager';
+export {picking as indexPicking} from './modules/picking/index-picking';
+export {picking as colorPicking} from './modules/picking/color-picking';
