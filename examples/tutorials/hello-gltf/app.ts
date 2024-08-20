@@ -121,8 +121,6 @@ const lightSources: LightingProps = {
   ],
   pointLights: [
     {
-      // @ts-expect-error Remove once npm package updated with new types
-      attenuation: [1, 0, 0],
       color: [255, 222, 222],
       position: [3, 10, 0],
       intensity: 5,
