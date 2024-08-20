@@ -4,6 +4,11 @@
 
 Major new release that includes WebGPU support
 
+### 9.0.24 - Aug 20, 2024
+
+- shadertools: PBR module using UBO (#2173)
+- fix(webgl): 3d Texture patch (#2181)
+
 ### 9.0.23 - Aug 9, 2024
 
 - shadertools: specularColor tests (#2172)
