@@ -80,7 +80,7 @@ The textures may not be completely packed, there may be padding (per row)
 const texture = device.createTexture({});
 ```
 
-## Reading from Textures on the GPU (Sampling)
+## Sampling
 
 A primary purpose of textures is to allow the GPU to read from them.
 
@@ -108,7 +108,21 @@ The parameters used for sampling is specified in a sampler object.
 
 ### Mipmaps
 
-To improve samling mipmaps can be prepared.
+To improve samling mipmaps can be included in a texture. Mipmaps are a pyramid of lower resolution images that are used when the texture is sampled at a distance.
+Mipmaps can be generated automatically by the GPU, or can be provided by the application.
+
+Mipmap usage is controller via `SamplerProps.mipmapFilter`:
+
+| `mipmapFilter` | `minFilter` | Description                                     | Linearity             | Speed |
+| -------------- | ----------- | ----------------------------------------------- | --------------------- | --- |
+| `none`         | `nearest`   | Mo filtering, no mipmaps                        |                       | |
+| `none`         | `linear`    | Filtering, no mipmaps                           | bilinear              | slowest \* |
+| `nearest`      | `nearest`   | No filtering, sharp switching between mipmaps   |                       | |
+| `nearest`      | `linear`    | No filtering, smooth transition between mipmaps |                       | |
+| `linear`       | `nearest`   | Filtering, sharp switching between mipmaps      | bilinear with mipmaps | fastest \* |
+| `linear`       | `linear`    | Filtering, smooth transition between mipmaps    | trilinear             | |
+
+Performance typically depends on texture LOD, and perhaps surprisingly, mipmaps not only improve visual quality, but can also improve performance. When a scaled down, lower quality mipmap is selected it reduces memory bandwidth requirements.
 
 ## Binding textures
 

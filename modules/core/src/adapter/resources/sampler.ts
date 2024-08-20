@@ -30,7 +30,7 @@ export type SamplerProps = ResourceProps & {
   /** Minification: the area of the fragment in texture space is larger than a texel */
   minFilter?: 'nearest' | 'linear';
   /** mipmapping: select between multiple mipmaps based on angle and size of the texture relative to the screen. */
-  mipmapFilter?: 'nearest' | 'linear';
+  mipmapFilter?: 'none' | 'nearest' | 'linear';
   /** Affects the mipmap image selection */
   lodMinClamp?: number;
   /** Affects the mipmap image selection */
@@ -53,7 +53,7 @@ export abstract class Sampler extends Resource<SamplerProps> {
     addressModeW: 'clamp-to-edge',
     magFilter: 'nearest',
     minFilter: 'nearest',
-    mipmapFilter: 'nearest',
+    mipmapFilter: 'none',
     lodMinClamp: 0,
     lodMaxClamp: 32, // Per WebGPU spec
     compare: 'less-equal',

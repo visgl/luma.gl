@@ -14,6 +14,8 @@ During comparison sampling, the interpolated and clamped `r` texture coordinate 
 and the result of the comparison (`0` or `1`) is assigned to the red channel.
 Specifying the `type: 'comparison-sampler'` sampler property creates a comparison sampler.
 
+For more information, see [Sampling](/docs/api-guide/gpu/gpu-textures#sampling) in the API Guide.
+
 ## Usage
 
 Create a new `Sampler`
@@ -59,7 +61,7 @@ const sampler = device.createSampler(gl, {
 | `addressModeW?`   | `'clamp-to-edge'` \* \| `'repeat'` \| `'mirror-repeat'` | Texture wrapping for texture coordinate `w` (`r`)                   |
 | `magFilter?`      | `'nearest'` \* \| `'linear'`                            | Sample nearest texel, or interpolate closest texels                 |
 | `minFilter?`      | `'nearest'` \* \| `'linear'`                            | Sample nearest texel, or interpolate closest texels                 |
-| `mipmapFilter?`   | `'nearest'` \* \| `'linear'`                            | Sample closest mipmap, or interpolate two closest mipmaps           |
+| `mipmapFilter?`   | `'none'` \* \| `'nearest'` \| `'linear'`                | Sample closest mipmap, or interpolate two closest mipmaps           |
 | `maxAnisotropy?`  | `number`                                                | Combine samples from multiple mipmap levels when appropriate        |
 | `lodMinClamp?`    | `number`                                                | Minimum level of detail to use when sampling                        |
 | `lodMaxClamp?`    | `number`                                                | Maximum level of detail to use when sampling                        |
@@ -111,7 +113,9 @@ Parameter: `mipmapFilter`
 | ------------------- | --------------------------- |
 | `nearest` (default) | nearest mipmap              |
 | `linear`            | interpolate between mipmaps |
-| N/A                 | no mipmaps                  |
+| `none`              | no mipmaps                  |
+
+For more information, see [GPU Textures](/docs/api-guide/gpu/gpu-textures#mipmaps).
 
 #### Texture Max Anisotropy
 
@@ -124,16 +128,16 @@ Controls multiple mipmap level can be consulted when texturing a pixel.
 
 Parameter: `compare`
 
-| `Value                 | Computed result                    |
-| ---------------------- | ---------------------------------- |
+| `Value                 | Computed result                      |
+| ---------------------- | ------------------------------------ |
 | `less-equal` (default) | result = 1.0 0.0, r \<\= D t r > D t |
 | `greater-equal`        | result = 1.0 0.0, r \>\= D t r < D t |
 | `less`                 | result = 1.0 0.0, r < D t r \>\= D t |
 | `greater`              | result = 1.0 0.0, r > D t r \<\= D t |
-| `equal`                | result = 1.0 0.0, r = D t r ≠ D t  |
-| `not-equal`            | result = 1.0 0.0, r ≠ D t r = D t  |
-| `always`               | result = 1.0                       |
-| `never`                | result = 0.0                       |
+| `equal`                | result = 1.0 0.0, r = D t r ≠ D t    |
+| `not-equal`            | result = 1.0 0.0, r ≠ D t r = D t    |
+| `always`               | result = 1.0                         |
+| `never`                | result = 0.0                         |
 
 During sampling, the interpolated and clamped `r` texture coordinate is compared to currently bound depth texture,
 and the result of the comparison (`0` or `1`) is assigned to the red channel.
