@@ -111,7 +111,8 @@ export class luma {
     }
 
     const devices = getDeviceMap(props.devices) || deviceMap;
-    let WebGLDevice, WebGPUDevice;
+    let WebGPUDevice;
+    let WebGLDevice;
 
     switch (props.type) {
       case 'webgpu':
