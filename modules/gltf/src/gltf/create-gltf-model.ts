@@ -3,9 +3,10 @@
 // Copyright (c) vis.gl contributors
 
 import {Device, RenderPipelineParameters, log} from '@luma.gl/core';
-import {pbr} from '@luma.gl/shadertools';
+import {pbrMaterial} from '@luma.gl/shadertools';
 import {Geometry, Model, ModelNode, ModelProps} from '@luma.gl/engine';
 import {ParsePBRMaterialOptions, parsePBRMaterial} from '../pbr/parse-pbr-material';
+import {ShaderModule} from '@luma.gl/shadertools';
 
 const SHADER = /* WGSL */ `
 layout(0) positions: vec4; // in vec4 POSITION;
@@ -94,7 +95,7 @@ const vs = /* glsl */ `\
     #endif
 
     pbr_setPositionNormalTangentUV(positions, _NORMAL, _TANGENT, _TEXCOORD_0);
-    gl_Position = u_MVPMatrix * positions;
+    gl_Position = pbrProjection.modelViewProjectionMatrix * positions;
   }
 `;
 
@@ -145,15 +146,22 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
     geometry,
     topology: geometry.topology,
     vertexCount,
-    modules: [pbr],
+    modules: [pbrMaterial as unknown as ShaderModule],
     ...modelOptions,
 
-    bindings: {...parsedMaterial.bindings, ...modelOptions.bindings},
     defines: {...parsedMaterial.defines, ...modelOptions.defines},
-    parameters: {...parameters, ...parsedMaterial.parameters, ...modelOptions.parameters},
-    uniforms: {...parsedMaterial.uniforms, ...modelOptions.uniforms}
+    parameters: {...parameters, ...parsedMaterial.parameters, ...modelOptions.parameters}
   };
 
   const model = new Model(device, modelProps);
+
+  const {camera, ...pbrMaterialProps} = {
+    ...parsedMaterial.uniforms,
+    ...modelOptions.uniforms,
+    ...parsedMaterial.bindings,
+    ...modelOptions.bindings
+  };
+
+  model.shaderInputs.setProps({pbrMaterial: pbrMaterialProps, pbrProjection: {camera}});
   return new ModelNode({managedResources, model});
 }
