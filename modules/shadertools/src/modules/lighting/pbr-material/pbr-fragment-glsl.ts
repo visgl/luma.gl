@@ -14,12 +14,7 @@ import {glsl} from '../../../lib/glsl-utils/highlight';
 export const fs = glsl`\
 precision highp float;
 
-uniform Projection {
-  // Projection
-  uniform vec3 u_Camera;
-};
-
-uniform pbrMaterial {
+uniform pbrMaterialUniforms {
   // Material is unlit
   bool unlit;
 
@@ -51,40 +46,40 @@ uniform pbrMaterial {
   vec4 scaleDiffBaseMR;
   vec4 scaleFGDSpec;
   // #endif
-} u_pbrMaterial;
+} pbrMaterial;
 
 // Samplers
 #ifdef HAS_BASECOLORMAP
-uniform sampler2D u_BaseColorSampler;
+uniform sampler2D pbr_baseColorSampler;
 #endif
 #ifdef HAS_NORMALMAP
-uniform sampler2D u_NormalSampler;
+uniform sampler2D pbr_normalSampler;
 #endif
 #ifdef HAS_EMISSIVEMAP
-uniform sampler2D u_EmissiveSampler;
+uniform sampler2D pbr_emissiveSampler;
 #endif
 #ifdef HAS_METALROUGHNESSMAP
-uniform sampler2D u_MetallicRoughnessSampler;
+uniform sampler2D pbr_metallicRoughnessSampler;
 #endif
 #ifdef HAS_OCCLUSIONMAP
-uniform sampler2D u_OcclusionSampler;
+uniform sampler2D pbr_occlusionSampler;
 #endif
 #ifdef USE_IBL
-uniform samplerCube u_DiffuseEnvSampler;
-uniform samplerCube u_SpecularEnvSampler;
-uniform sampler2D u_brdfLUT;
+uniform samplerCube pbr_diffuseEnvSampler;
+uniform samplerCube pbr_specularEnvSampler;
+uniform sampler2D pbr_brdfLUT;
 #endif
 
 // Inputs from vertex shader
 
-varying vec3 pbr_vPosition;
-varying vec2 pbr_vUV;
+in vec3 pbr_vPosition;
+in vec2 pbr_vUV;
 
 #ifdef HAS_NORMALS
 #ifdef HAS_TANGENTS
-varying mat3 pbr_vTBN;
+in mat3 pbr_vTBN;
 #else
-varying vec3 pbr_vNormal;
+in vec3 pbr_vNormal;
 #endif
 #endif
 
@@ -152,8 +147,8 @@ vec3 getNormal()
 #endif
 
 #ifdef HAS_NORMALMAP
-  vec3 n = texture2D(u_NormalSampler, pbr_vUV).rgb;
-  n = normalize(tbn * ((2.0 * n - 1.0) * vec3(u_pbrMaterial.normalScale, u_pbrMaterial.normalScale, 1.0)));
+  vec3 n = texture(pbr_normalSampler, pbr_vUV).rgb;
+  n = normalize(tbn * ((2.0 * n - 1.0) * vec3(pbrMaterial.normalScale, pbrMaterial.normalScale, 1.0)));
 #else
   // The tbn matrix is linearly interpolated, so we need to re-normalize
   vec3 n = normalize(tbn[2].xyz);
@@ -171,22 +166,22 @@ vec3 getIBLContribution(PBRInfo pbrInfo, vec3 n, vec3 reflection)
   float mipCount = 9.0; // resolution of 512x512
   float lod = (pbrInfo.perceptualRoughness * mipCount);
   // retrieve a scale and bias to F0. See [1], Figure 3
-  vec3 brdf = SRGBtoLINEAR(texture2D(u_brdfLUT,
+  vec3 brdf = SRGBtoLINEAR(texture(pbr_brdfLUT,
     vec2(pbrInfo.NdotV, 1.0 - pbrInfo.perceptualRoughness))).rgb;
-  vec3 diffuseLight = SRGBtoLINEAR(textureCube(u_DiffuseEnvSampler, n)).rgb;
+  vec3 diffuseLight = SRGBtoLINEAR(texture(pbr_diffuseEnvSampler, n)).rgb;
 
 #ifdef USE_TEX_LOD
-  vec3 specularLight = SRGBtoLINEAR(textureCubeLod(u_SpecularEnvSampler, reflection, lod)).rgb;
+  vec3 specularLight = SRGBtoLINEAR(texture(pbr_specularEnvSampler, reflection, lod)).rgb;
 #else
-  vec3 specularLight = SRGBtoLINEAR(textureCube(u_SpecularEnvSampler, reflection)).rgb;
+  vec3 specularLight = SRGBtoLINEAR(texture(pbr_specularEnvSampler, reflection)).rgb;
 #endif
 
   vec3 diffuse = diffuseLight * pbrInfo.diffuseColor;
   vec3 specular = specularLight * (pbrInfo.specularColor * brdf.x + brdf.y);
 
   // For presentation, this allows us to disable IBL terms
-  diffuse *= u_pbrMaterial.scaleIBLAmbient.x;
-  specular *= u_pbrMaterial.scaleIBLAmbient.y;
+  diffuse *= pbrMaterial.scaleIBLAmbient.x;
+  specular *= pbrMaterial.scaleIBLAmbient.y;
 
   return diffuse + specular;
 }
@@ -278,32 +273,32 @@ vec4 pbr_filterColor(vec4 colorUnused)
 {
   // The albedo may be defined from a base texture or a flat color
 #ifdef HAS_BASECOLORMAP
-  vec4 baseColor = SRGBtoLINEAR(texture2D(u_BaseColorSampler, pbr_vUV)) * u_pbrMaterial.baseColorFactor;
+  vec4 baseColor = SRGBtoLINEAR(texture(pbr_baseColorSampler, pbr_vUV)) * pbrMaterial.baseColorFactor;
 #else
-  vec4 baseColor = u_pbrMaterial.baseColorFactor;
+  vec4 baseColor = pbrMaterial.baseColorFactor;
 #endif
 
 #ifdef ALPHA_CUTOFF
-  if (baseColor.a < u_pbrMaterial.alphaCutoff) {
+  if (baseColor.a < pbrMaterial.alphaCutoff) {
     discard;
   }
 #endif
 
   vec3 color = vec3(0, 0, 0);
 
-  if(u_pbrMaterial.unlit){
+  if(pbrMaterial.unlit){
     color.rgb = baseColor.rgb;
   }
   else{
     // Metallic and Roughness material properties are packed together
     // In glTF, these factors can be specified by fixed scalar values
     // or from a metallic-roughness map
-    float perceptualRoughness = u_pbrMaterial.metallicRoughnessValues.y;
-    float metallic = u_pbrMaterial.metallicRoughnessValues.x;
+    float perceptualRoughness = pbrMaterial.metallicRoughnessValues.y;
+    float metallic = pbrMaterial.metallicRoughnessValues.x;
 #ifdef HAS_METALROUGHNESSMAP
     // Roughness is stored in the 'g' channel, metallic is stored in the 'b' channel.
     // This layout intentionally reserves the 'r' channel for (optional) occlusion map data
-    vec4 mrSample = texture2D(u_MetallicRoughnessSampler, pbr_vUV);
+    vec4 mrSample = texture(pbr_metallicRoughnessSampler, pbr_vUV);
     perceptualRoughness = mrSample.g * perceptualRoughness;
     metallic = mrSample.b * metallic;
 #endif
@@ -330,7 +325,7 @@ vec4 pbr_filterColor(vec4 colorUnused)
     vec3 specularEnvironmentR90 = vec3(1.0, 1.0, 1.0) * reflectance90;
 
     vec3 n = getNormal();                          // normal at surface point
-    vec3 v = normalize(u_Camera - pbr_vPosition);  // Vector from surface point to camera
+    vec3 v = normalize(pbrProjection.camera - pbr_vPosition);  // Vector from surface point to camera
 
     float NdotV = clamp(abs(dot(n, v)), 0.001, 1.0);
     vec3 reflection = -normalize(reflect(v, n));
@@ -352,47 +347,48 @@ vec4 pbr_filterColor(vec4 colorUnused)
       v
     );
 
+
 #ifdef USE_LIGHTS
     // Apply ambient light
     PBRInfo_setAmbientLight(pbrInfo);
-    color += calculateFinalColor(pbrInfo, lighting_uAmbientLight.color);
+    color += calculateFinalColor(pbrInfo, lighting.ambientColor);
 
     // Apply directional light
-    for(int i = 0; i < lighting_uDirectionalLightCount; i++) {
-      if (i < lighting_uDirectionalLightCount) {
-        PBRInfo_setDirectionalLight(pbrInfo, lighting_uDirectionalLight[i].direction);
-        color += calculateFinalColor(pbrInfo, lighting_uDirectionalLight[i].color);
+    for(int i = 0; i < lighting.directionalLightCount; i++) {
+      if (i < lighting.directionalLightCount) {
+        PBRInfo_setDirectionalLight(pbrInfo, lighting_getDirectionalLight(i).direction);
+        color += calculateFinalColor(pbrInfo, lighting_getDirectionalLight(i).color);
       }
     }
 
     // Apply point light
-    for(int i = 0; i < lighting_uPointLightCount; i++) {
-      if (i < lighting_uPointLightCount) {
-        PBRInfo_setPointLight(pbrInfo, lighting_uPointLight[i]);
-        float attenuation = getPointLightAttenuation(lighting_uPointLight[i], distance(lighting_uPointLight[i].position, pbr_vPosition));
-        color += calculateFinalColor(pbrInfo, lighting_uPointLight[i].color / attenuation);
+    for(int i = 0; i < lighting.pointLightCount; i++) {
+      if (i < lighting.pointLightCount) {
+        PBRInfo_setPointLight(pbrInfo, lighting_getPointLight(i));
+        float attenuation = getPointLightAttenuation(lighting_getPointLight(i), distance(lighting_getPointLight(i).position, pbr_vPosition));
+        color += calculateFinalColor(pbrInfo, lighting_getPointLight(i).color / attenuation);
       }
     }
 #endif
 
     // Calculate lighting contribution from image based lighting source (IBL)
 #ifdef USE_IBL
-    if (u_pbrMateral.IBLEnabled) {
+    if (pbrMaterial.IBLenabled) {
       color += getIBLContribution(pbrInfo, n, reflection);
     }
 #endif
 
-    // Apply optional PBR terms for additional (optional) shading
+ // Apply optional PBR terms for additional (optional) shading
 #ifdef HAS_OCCLUSIONMAP
-    if (u_pbrMaterial.occlusionMapEnabled) {
-      float ao = texture2D(u_OcclusionSampler, pbr_vUV).r;
-      color = mix(color, color * ao, u_pbrMaterial.occlusionStrength);
+    if (pbrMaterial.occlusionMapEnabled) {
+      float ao = texture(pbr_occlusionSampler, pbr_vUV).r;
+      color = mix(color, color * ao, pbrMaterial.occlusionStrength);
     }
 #endif
 
 #ifdef HAS_EMISSIVEMAP
-    if (u_pbrMaterial.emmissiveMapEnabled) {
-      vec3 emissive = SRGBtoLINEAR(texture2D(u_EmissiveSampler, pbr_vUV)).rgb * u_pbrMaterial.emissiveFactor;
+    if (pbrMaterial.emissiveMapEnabled) {
+      vec3 emissive = SRGBtoLINEAR(texture(pbr_emissiveSampler, pbr_vUV)).rgb * pbrMaterial.emissiveFactor;
       color += emissive;
     }
 #endif
@@ -402,15 +398,15 @@ vec4 pbr_filterColor(vec4 colorUnused)
 #ifdef PBR_DEBUG
     // TODO: Figure out how to debug multiple lights
 
-    // color = mix(color, F, u_ScaleFGDSpec.x);
-    // color = mix(color, vec3(G), u_ScaleFGDSpec.y);
-    // color = mix(color, vec3(D), u_ScaleFGDSpec.z);
-    // color = mix(color, specContrib, u_ScaleFGDSpec.w);
+    // color = mix(color, F, pbr_scaleFGDSpec.x);
+    // color = mix(color, vec3(G), pbr_scaleFGDSpec.y);
+    // color = mix(color, vec3(D), pbr_scaleFGDSpec.z);
+    // color = mix(color, specContrib, pbr_scaleFGDSpec.w);
 
-    // color = mix(color, diffuseContrib, u_ScaleDiffBaseMR.x);
-    color = mix(color, baseColor.rgb, u_pbrMaterial.scaleDiffBaseMR.y);
-    color = mix(color, vec3(metallic), u_pbrMaterial.scaleDiffBaseMR.z);
-    color = mix(color, vec3(perceptualRoughness), u_pbrMaterial.scaleDiffBaseMR.w);
+    // color = mix(color, diffuseContrib, pbr_scaleDiffBaseMR.x);
+    color = mix(color, baseColor.rgb, pbrMaterial.scaleDiffBaseMR.y);
+    color = mix(color, vec3(metallic), pbrMaterial.scaleDiffBaseMR.z);
+    color = mix(color, vec3(perceptualRoughness), pbrMaterial.scaleDiffBaseMR.w);
 #endif
 
   }
