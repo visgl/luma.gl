@@ -124,6 +124,8 @@ Mipmap usage is controller via `SamplerProps.mipmapFilter`:
 
 Performance typically depends on texture LOD, and perhaps surprisingly, mipmaps not only improve visual quality, but can also improve performance. When a scaled down, lower quality mipmap is selected it reduces memory bandwidth requirements.
 
+Texture filtering is considered bilinear because it is a linear filter that is applied in two directions, sequentially. First, a linear filter is applied along the image's x axis (width), and then a second filter is applied along the y axis (height). This is why bilinear filtering is sometimes referred to as linear/bilinear.
+
 ## Binding textures
 
 Before textures can be sampled in the
