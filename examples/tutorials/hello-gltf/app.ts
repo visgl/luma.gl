@@ -139,7 +139,6 @@ const lightSources: LightingProps = {
     type: 'ambient'
   },
   directionalLights: [
-    // @ts-expect-error Remove once npm package updated with new types
     {
       color: [222, 244, 255],
       direction: [1, -0.5, 0.5],
