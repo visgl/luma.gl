@@ -36,7 +36,6 @@ const sidebars = {
         'tutorials/hello-cube',
         'tutorials/lighting',
         'tutorials/hello-instancing',
-        'tutorials/hello-gltf',
         'tutorials/shader-modules',
         'tutorials/shader-hooks'
       ]
