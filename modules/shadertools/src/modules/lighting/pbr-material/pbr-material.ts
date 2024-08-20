@@ -18,16 +18,16 @@ import {pbrProjection} from './pbr-projection';
 /** Non-uniform block bindings for pbr module */
 export type PBRMaterialBindings = {
   // Samplers
-  u_BaseColorSampler?: Texture | null; // #ifdef HAS_BASECOLORMAP
-  u_NormalSampler?: Texture | null; // #ifdef HAS_NORMALMAP
-  u_EmissiveSampler?: Texture | null; // #ifdef HAS_EMISSIVEMAP
-  u_MetallicRoughnessSampler?: Texture | null; // #ifdef HAS_METALROUGHNESSMAP
-  u_OcclusionSampler?: Texture | null; // #ifdef HAS_OCCLUSIONMAP
+  pbr_baseColorSampler?: Texture | null; // #ifdef HAS_BASECOLORMAP
+  pbr_normalSampler?: Texture | null; // #ifdef HAS_NORMALMAP
+  pbr_emissiveSampler?: Texture | null; // #ifdef HAS_EMISSIVEMAP
+  pbr_metallicRoughnessSampler?: Texture | null; // #ifdef HAS_METALROUGHNESSMAP
+  pbr_occlusionSampler?: Texture | null; // #ifdef HAS_OCCLUSIONMAP
 
   // IBL Samplers
-  u_DiffuseEnvSampler?: Texture | null; // #ifdef USE_IBL (samplerCube)
-  u_SpecularEnvSampler?: Texture | null; // #ifdef USE_IBL (samplerCube)
-  u_brdfLUT?: Texture | null; // #ifdef USE_IBL
+  pbr_diffuseEnvSampler?: Texture | null; // #ifdef USE_IBL (samplerCube)
+  pbr_specularEnvSampler?: Texture | null; // #ifdef USE_IBL (samplerCube)
+  pbr_BrdfLUT?: Texture | null; // #ifdef USE_IBL
 };
 
 export type PBRMaterialUniforms = {

@@ -12,19 +12,18 @@ import {glsl} from '../../../lib/glsl-utils/highlight';
 
 const uniformBlock = glsl`\
 uniform pbrProjectionUniforms {
-  mat4 u_MVPMatrix;
-  mat4 u_ModelMatrix;
-  mat4 u_NormalMatrix;
-  // Projection
-  vec3 u_Camera;
-} proj;
+  mat4 modelViewProjectionMatrix;
+  mat4 modelMatrix;
+  mat4 normalMatrix;
+  vec3 camera;
+} pbrProjection;
 `;
 
 export type PBRProjectionProps = {
-  u_MVPMatrix: NumberArray16;
-  u_ModelMatrix: NumberArray16;
-  u_NormalMatrix: NumberArray16;
-  u_Camera: NumberArray3;
+  modelViewProjectionMatrix: NumberArray16;
+  modelMatrix: NumberArray16;
+  normalMatrix: NumberArray16;
+  camera: NumberArray3;
 };
 
 export const pbrProjection: ShaderModule<PBRProjectionProps> = {
@@ -34,9 +33,9 @@ export const pbrProjection: ShaderModule<PBRProjectionProps> = {
   // TODO why is this needed?
   getUniforms: props => props,
   uniformTypes: {
-    u_MVPMatrix: 'mat4x4<f32>',
-    u_ModelMatrix: 'mat4x4<f32>',
-    u_NormalMatrix: 'mat4x4<f32>',
-    u_Camera: 'vec3<i32>'
+    modelViewProjectionMatrix: 'mat4x4<f32>',
+    modelMatrix: 'mat4x4<f32>',
+    normalMatrix: 'mat4x4<f32>',
+    camera: 'vec3<i32>'
   }
 };

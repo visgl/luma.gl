@@ -58,7 +58,7 @@ export function parsePBRMaterial(
     bindings: {},
     uniforms: {
       // TODO: find better values?
-      u_Camera: [0, 0, 0], // Model should override
+      camera: [0, 0, 0], // Model should override
 
       metallicRoughnessValues: [1, 1] // Default is 1 and 1
     },
@@ -72,9 +72,10 @@ export function parsePBRMaterial(
 
   const {imageBasedLightingEnvironment} = options;
   if (imageBasedLightingEnvironment) {
-    parsedMaterial.bindings.u_DiffuseEnvSampler = imageBasedLightingEnvironment.diffuseEnvSampler;
-    parsedMaterial.bindings.u_SpecularEnvSampler = imageBasedLightingEnvironment.specularEnvSampler;
-    parsedMaterial.bindings.u_brdfLUT = imageBasedLightingEnvironment.brdfLutTexture;
+    parsedMaterial.bindings.pbr_diffuseEnvSampler = imageBasedLightingEnvironment.diffuseEnvSampler;
+    parsedMaterial.bindings.pbr_specularEnvSampler =
+      imageBasedLightingEnvironment.specularEnvSampler;
+    parsedMaterial.bindings.pbr_BrdfLUT = imageBasedLightingEnvironment.brdfLutTexture;
     parsedMaterial.uniforms.scaleIBLAmbient = [1, 1];
   }
 
@@ -107,7 +108,13 @@ function parseMaterial(device: Device, material, parsedMaterial: ParsedPBRMateri
     parsePbrMetallicRoughness(device, material.pbrMetallicRoughness, parsedMaterial);
   }
   if (material.normalTexture) {
-    addTexture(device, material.normalTexture, 'u_NormalSampler', 'HAS_NORMALMAP', parsedMaterial);
+    addTexture(
+      device,
+      material.normalTexture,
+      'pbr_normalSampler',
+      'HAS_NORMALMAP',
+      parsedMaterial
+    );
 
     const {scale = 1} = material.normalTexture;
     parsedMaterial.uniforms.normalScale = scale;
@@ -116,7 +123,7 @@ function parseMaterial(device: Device, material, parsedMaterial: ParsedPBRMateri
     addTexture(
       device,
       material.occlusionTexture,
-      'u_OcclusionSampler',
+      'pbr_occlusionSampler',
       'HAS_OCCLUSIONMAP',
       parsedMaterial
     );
@@ -128,7 +135,7 @@ function parseMaterial(device: Device, material, parsedMaterial: ParsedPBRMateri
     addTexture(
       device,
       material.emissiveTexture,
-      'u_EmissiveSampler',
+      'pbr_emissiveSampler',
       'HAS_EMISSIVEMAP',
       parsedMaterial
     );
@@ -177,7 +184,7 @@ function parsePbrMetallicRoughness(
     addTexture(
       device,
       pbrMetallicRoughness.baseColorTexture,
-      'u_BaseColorSampler',
+      'pbr_baseColorSampler',
       'HAS_BASECOLORMAP',
       parsedMaterial
     );
@@ -188,7 +195,7 @@ function parsePbrMetallicRoughness(
     addTexture(
       device,
       pbrMetallicRoughness.metallicRoughnessTexture,
-      'u_MetallicRoughnessSampler',
+      'pbr_metallicRoughnessSampler',
       'HAS_METALROUGHNESSMAP',
       parsedMaterial
     );
@@ -269,7 +276,7 @@ export class PBRMaterialParser {
 
     this.uniforms = {
       // TODO: find better values?
-      u_Camera: [0, 0, 0], // Model should override
+      camera: [0, 0, 0], // Model should override
 
       metallicRoughnessValues: [1, 1] // Default is 1 and 1
     };
@@ -280,9 +287,9 @@ export class PBRMaterialParser {
     this.generatedTextures = [];
 
     if (imageBasedLightingEnvironment) {
-      this.bindings.u_DiffuseEnvSampler = imageBasedLightingEnvironment.getDiffuseEnvSampler();
-      this.bindings.u_SpecularEnvSampler = imageBasedLightingEnvironment.getSpecularEnvSampler();
-      this.bindings.u_brdfLUT = imageBasedLightingEnvironment.getBrdfTexture();
+      this.bindings.pbr_diffuseEnvSampler = imageBasedLightingEnvironment.getDiffuseEnvSampler();
+      this.bindings.pbr_specularEnvSampler = imageBasedLightingEnvironment.getSpecularEnvSampler();
+      this.bindings.pbr_BrdfLUT = imageBasedLightingEnvironment.getBrdfTexture();
       this.uniforms.scaleIBLAmbient = [1, 1];
     }
 
@@ -328,19 +335,19 @@ export class PBRMaterialParser {
       this.parsePbrMetallicRoughness(material.pbrMetallicRoughness);
     }
     if (material.normalTexture) {
-      this.addTexture(material.normalTexture, 'u_NormalSampler', 'HAS_NORMALMAP');
+      this.addTexture(material.normalTexture, 'pbr_normalSampler', 'HAS_NORMALMAP');
 
       const {scale = 1} = material.normalTexture;
       this.uniforms.normalScale = scale;
     }
     if (material.occlusionTexture) {
-      this.addTexture(material.occlusionTexture, 'u_OcclusionSampler', 'HAS_OCCLUSIONMAP');
+      this.addTexture(material.occlusionTexture, 'pbr_occlusionSampler', 'HAS_OCCLUSIONMAP');
 
       const {strength = 1} = material.occlusionTexture;
       this.uniforms.occlusionStrength = strength;
     }
     if (material.emissiveTexture) {
-      this.addTexture(material.emissiveTexture, 'u_EmissiveSampler', 'HAS_EMISSIVEMAP');
+      this.addTexture(material.emissiveTexture, 'pbr_emissiveSampler', 'HAS_EMISSIVEMAP');
       this.uniforms.emissiveFactor = material.emissiveFactor || [0, 0, 0];
     }
     if (material.alphaMode === 'MASK') {
@@ -362,7 +369,7 @@ export class PBRMaterialParser {
     if (pbrMetallicRoughness.baseColorTexture) {
       this.addTexture(
         pbrMetallicRoughness.baseColorTexture,
-        'u_BaseColorSampler',
+        'pbr_baseColorSampler',
         'HAS_BASECOLORMAP'
       );
     }
@@ -371,7 +378,7 @@ export class PBRMaterialParser {
     if (pbrMetallicRoughness.metallicRoughnessTexture) {
       this.addTexture(
         pbrMetallicRoughness.metallicRoughnessTexture,
-        'u_MetallicRoughnessSampler',
+        'pbr_metallicRoughnessSampler',
         'HAS_METALROUGHNESSMAP'
       );
     }

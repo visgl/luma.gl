@@ -49,7 +49,7 @@ const vs = `
     #endif
 
     pbr_setPositionNormalTangentUV(positions, _NORMAL, _TANGENT, _TEXCOORD_0);
-    gl_Position = proj.u_MVPMatrix * positions;
+    gl_Position = pbrProjection.modelViewProjectionMatrix * positions;
   }
 `;
 
@@ -113,14 +113,14 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
 
   const model = new Model(device, modelProps);
 
-  const {u_Camera, ...pbrMaterialProps} = {
+  const {camera, ...pbrMaterialProps} = {
     ...parsedMaterial.uniforms,
     ...modelOptions.uniforms,
     ...parsedMaterial.bindings,
     ...modelOptions.bindings
   };
 
-  model.shaderInputs.setProps({pbrMaterial: pbrMaterialProps, pbrProjection: {u_Camera}});
+  model.shaderInputs.setProps({pbrMaterial: pbrMaterialProps, pbrProjection: {camera}});
   return new ModelNode({managedResources, model});
 }
 

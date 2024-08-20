@@ -56,17 +56,17 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       const eye = worldMatrix.transformAsPoint(vantage);
       const center = worldMatrix.transformAsPoint(this.center);
       const viewMatrix = new Matrix4().lookAt({eye, center});
-      const u_MVPMatrix = new Matrix4(projectionMatrix)
+      const modelViewProjectionMatrix = new Matrix4(projectionMatrix)
         .multiplyRight(viewMatrix)
         .multiplyRight(worldMatrix);
 
       model.shaderInputs.setProps({
         lighting: lightSources,
         pbrProjection: {
-          u_Camera: eye,
-          u_MVPMatrix,
-          u_ModelMatrix: worldMatrix,
-          u_NormalMatrix: new Matrix4(worldMatrix).invert().transpose()
+          camera: eye,
+          modelViewProjectionMatrix,
+          modelMatrix: worldMatrix,
+          normalMatrix: new Matrix4(worldMatrix).invert().transpose()
         }
       });
       model.draw(renderPass);
