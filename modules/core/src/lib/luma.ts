@@ -111,17 +111,18 @@ export class luma {
     }
 
     const devices = getDeviceMap(props.devices) || deviceMap;
+    let WebGLDevice, WebGPUDevice;
 
     switch (props.type) {
       case 'webgpu':
-        let WebGPUDevice = devices.get('webgpu') as any;
+        WebGPUDevice = devices.get('webgpu') as any;
         if (WebGPUDevice) {
           return await WebGPUDevice.create(props);
         }
         break;
 
       case 'webgl':
-        let WebGLDevice = devices.get('webgl') as any;
+        WebGLDevice = devices.get('webgl') as any;
         if (WebGLDevice) {
           return await WebGLDevice.create(props);
         }
@@ -139,7 +140,7 @@ export class luma {
         if (WebGPUDevice?.isSupported?.()) {
           return await WebGPUDevice.create(props);
         }
-        WebGLDevice = devices.get('webgl');
+        WebGLDevice = devices.get('webgl') as any;
         if (WebGLDevice?.isSupported?.()) {
           return await WebGLDevice.create(props);
         }
