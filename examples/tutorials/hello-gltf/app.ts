@@ -25,12 +25,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   constructor({device}: AnimationProps) {
     super();
     this.device = device;
+    this.addModels();
     this.loadGLTF('Avocado');
-    const modelSelector = document.getElementById('model-select');
-
-    // modelSelector.addEventListener('change', e => {
-    //   this.loadGLTF((e.target as HTMLSelectElement).value);
-    // });
   }
 
   onFinalize() {
@@ -72,6 +68,38 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       model.draw(renderPass);
     });
     renderPass.end();
+  }
+
+  addModels() {
+    const container = document.getElementsByClassName('container')[0] || document.body;
+    const modelSelector = document.createElement('select');
+    modelSelector.style.position = 'relative';
+    modelSelector.style.top = '-40px';
+    modelSelector.style.left = '8px';
+
+    container.appendChild(modelSelector);
+
+    // Some test models from https://github.khronos.org/glTF-Sample-Viewer-Release
+    const models = [
+      'Avocado',
+      'BoomBox',
+      'Corset',
+      'DamagedHelmet',
+      'FlightHelmet',
+      'GlassBrokenWindow',
+      'StainedGlassLamp',
+      'WaterBottle'
+    ];
+    for (const model of models) {
+      const el2 = document.createElement('option');
+      el2.value = model;
+      el2.innerHTML = model;
+      modelSelector.appendChild(el2);
+    }
+
+    modelSelector.addEventListener('change', e => {
+      this.loadGLTF((e.target as HTMLSelectElement).value);
+    });
   }
 
   async loadGLTF(modelName: string) {
