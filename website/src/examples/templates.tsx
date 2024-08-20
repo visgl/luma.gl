@@ -17,6 +17,7 @@ import PersistenceApp from '../../../examples/showcase/persistence/app';
 // import WanderingApp from '../../../examples/showcase/wandering/app';
 
 import HelloCubeApp from '../../../examples/tutorials/hello-cube/app';
+import HelloGltfApp from '../../../examples/tutorials/hello-gltf/app';
 import HelloInstancingApp from '../../../examples/tutorials/hello-instancing/app';
 import HelloTriangleApp from '../../../examples/tutorials/hello-triangle/app';
 import LightingApp from '../../../examples/tutorials/lighting/app';
@@ -124,6 +125,15 @@ export const HelloCubeExample: React.FC = () => (
     id="hello-cube"
     directory="tutorials"
     template={HelloCubeApp}
+    config={exampleConfig}
+  />
+);
+
+export const HelloGltfExample: React.FC = () => (
+  <LumaExample
+    id="hello-gltf"
+    directory="tutorials"
+    template={HelloGltfApp}
     config={exampleConfig}
   />
 );

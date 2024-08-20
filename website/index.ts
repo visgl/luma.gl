@@ -2,6 +2,7 @@
 export {
   HelloTriangleExample,
   HelloCubeExample,
+  HelloGltfExample,
   LightingExample,
   HelloInstancingExample,
   InstancedTransformExample,
@@ -13,11 +14,9 @@ export {
   // GeospatialExample
   InstancingExample,
   PersistenceExample,
-
   AnimationExample,
   CubemapExample,
   Texture3DExample,
-
   HelloTriangleWebGPUExample,
   InstancedCubesWebGPUExample,
   RotatingCubeWebGPUExample,
