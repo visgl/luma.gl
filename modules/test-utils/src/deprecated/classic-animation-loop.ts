@@ -6,8 +6,8 @@
 // TODO - remove dependency on framebuffer (bundle size impact)
 import {luma, Device, DeviceProps, log} from '@luma.gl/core';
 import {
-  requestAnimationFrame,
-  cancelAnimationFrame,
+  requestAnimationFramePolyfill,
+  cancelAnimationFramePolyfill,
   Timeline,
   AnimationProps
 } from '@luma.gl/engine';
@@ -428,7 +428,7 @@ export class ClassicAnimationLoop {
     // if (this.display && this.display.requestAnimationFrame) {
     //   this._animationFrameId = this.display.requestAnimationFrame(this._animationFrame.bind(this));
     // }
-    this._animationFrameId = requestAnimationFrame(this._animationFrame.bind(this));
+    this._animationFrameId = requestAnimationFramePolyfill(this._animationFrame.bind(this));
   }
 
   _cancelAnimationFrame() {
@@ -442,7 +442,7 @@ export class ClassicAnimationLoop {
     // if (this.display && this.display.cancelAnimationFrame) {
     //   this.display.cancelAnimationFrame(this._animationFrameId);
     // }
-    cancelAnimationFrame(this._animationFrameId);
+    cancelAnimationFramePolyfill(this._animationFrameId);
     this._animationFrameId = null;
   }
 
