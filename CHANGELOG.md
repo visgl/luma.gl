@@ -4,6 +4,13 @@
 
 Major new release that includes WebGPU support
 
+
+### 9.0.25 - Aug 21, 2024
+
+- fix(core): Allow webgl 1,3 component unorm8 attributes (#2196) (#2198)
+- chore: Upgrade 9.0 to yarn@4.4 (#2197)
+- core: Fix crash when starting example without specified device (#2191)
+
 ### 9.0.24 - Aug 20, 2024
 
 - shadertools: PBR module using UBO (#2173)
