@@ -3,7 +3,10 @@
 // Copyright (c) vis.gl contributors
 
 import {luma, Device} from '@luma.gl/core';
-import {requestAnimationFrame, cancelAnimationFrame} from './request-animation-frame';
+import {
+  requestAnimationFramePolyfill,
+  cancelAnimationFramePolyfill
+} from './request-animation-frame';
 import {Timeline} from '../animation/timeline';
 import {AnimationProps} from './animation-props';
 import {Stats, Stat} from '@probe.gl/stats';
@@ -320,7 +323,7 @@ export class AnimationLoop {
     // if (this.display && this.display.requestAnimationFrame) {
     //   this._animationFrameId = this.display.requestAnimationFrame(this._animationFrame.bind(this));
     // }
-    this._animationFrameId = requestAnimationFrame(this._animationFrame.bind(this));
+    this._animationFrameId = requestAnimationFramePolyfill(this._animationFrame.bind(this));
   }
 
   _cancelAnimationFrame(): void {
@@ -331,10 +334,10 @@ export class AnimationLoop {
     // VR display has a separate animation frame to sync with headset
     // TODO WebVR API discontinued, replaced by WebXR: https://immersive-web.github.io/webxr/
     // See https://developer.mozilla.org/en-US/docs/Web/API/VRDisplay/requestAnimationFrame
-    // if (this.display && this.display.cancelAnimationFrame) {
+    // if (this.display && this.display.cancelAnimationFramePolyfill) {
     //   this.display.cancelAnimationFrame(this._animationFrameId);
     // }
-    cancelAnimationFrame(this._animationFrameId);
+    cancelAnimationFramePolyfill(this._animationFrameId);
     this._animationFrameId = null;
   }
 

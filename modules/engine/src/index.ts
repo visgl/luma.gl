@@ -81,15 +81,18 @@ export {SwapFramebuffers} from './compute/swap';
 export type {ComputationProps} from './compute/computation';
 export {Computation} from './compute/computation';
 
-export {
-  requestAnimationFrame,
-  cancelAnimationFrame
-} from './animation-loop/request-animation-frame';
-
 export type {AsyncTextureProps} from './async-texture/async-texture';
 export {AsyncTexture} from './async-texture/async-texture';
 
-export {LegacyPickingManager} from './modules/picking/legacy-picking-manager';
 export {PickingManager} from './modules/picking/picking-manager';
 export {picking as indexPicking} from './modules/picking/index-picking';
 export {picking as colorPicking} from './modules/picking/color-picking';
+
+export {
+  requestAnimationFramePolyfill,
+  cancelAnimationFramePolyfill
+} from './animation-loop/request-animation-frame';
+
+// DEPRECATED
+
+export {LegacyPickingManager} from './modules/picking/legacy-picking-manager';

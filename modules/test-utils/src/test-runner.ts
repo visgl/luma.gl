@@ -9,7 +9,7 @@ import {AnimationProps} from '@luma.gl/engine';
 import {webglDevice} from './create-test-device';
 
 // TODO - Replace with new AnimationLoop from `@luma.gl/engine`
-import {ClassicAnimationLoop as AnimationLoop} from './engine/classic-animation-loop';
+import {ClassicAnimationLoop as AnimationLoop} from './deprecated/classic-animation-loop';
 
 /** Describes a test case */
 export type TestRunnerTestCase = {
