@@ -77,14 +77,12 @@ export function getVertexFormatFromAttribute(
   const components = size as 1 | 2 | 3 | 4;
   let dataType: DataType | DataTypeNorm = getDataTypeFromTypedArray(typedArray);
 
-  // Special case for WebGL, overrides check below
-  if ((dataType === 'uint8' || dataType === 'sint8') && normalized) {
-    if (components === 1) {
-      return 'unorm8-webgl';
-    }
-    if (components === 3) {
-      return 'unorm8x3-webgl';
-    }
+  // TODO - Special cases for WebGL (not supported on WebGPU), overrides the check below
+  if (dataType === 'uint8' && normalized && components === 1) {
+    return 'unorm8-webgl';
+  }
+  if (dataType === 'uint8' && normalized && components === 3) {
+    return 'unorm8x3-webgl';
   }
 
   if (dataType === 'uint8' || dataType === 'sint8') {
