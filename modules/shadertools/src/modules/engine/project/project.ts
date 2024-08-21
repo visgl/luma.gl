@@ -4,7 +4,7 @@
 
 import {Matrix4, Vector3} from '@math.gl/core';
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
-import type {NumberArray3, NumberArray16} from '../../../lib/utils/uniform-types';
+import type {NumberArray3, NumberArray16} from '@math.gl/core';
 
 const IDENTITY_MATRIX: Readonly<NumberArray16> = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
 

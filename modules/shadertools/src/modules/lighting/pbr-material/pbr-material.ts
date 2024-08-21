@@ -6,7 +6,7 @@
 
 import type {Texture} from '@luma.gl/core';
 import type {Vector2, Vector3, Vector4} from '@math.gl/core';
-import type {NumberArray2, NumberArray3, NumberArray4} from '../../../lib/utils/uniform-types';
+import type {NumberArray2, NumberArray3, NumberArray4} from '@math.gl/core';
 
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
 import {lighting} from '../lights/lighting';

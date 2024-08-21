@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
-import type {NumberArray3, NumberArray4} from '../../../lib/utils/uniform-types';
+import type {NumberArray3, NumberArray4} from '@math.gl/core';
 
 // cyan color
 const DEFAULT_HIGHLIGHT_COLOR: NumberArray4 = [0, 1, 1, 1];

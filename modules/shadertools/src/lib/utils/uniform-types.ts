@@ -1,43 +1,14 @@
 import type {Matrix3, Matrix4, Vector2, Vector3, Vector4} from '@math.gl/core';
-
-export type NumberArray2 = [number, number];
-export type NumberArray3 = [number, number, number];
-export type NumberArray4 = [number, number, number, number];
-export type NumberArray6 = [number, number, number, number, number, number];
-export type NumberArray8 = [number, number, number, number, number, number, number, number];
-export type NumberArray9 = [number, number, number, number, number, number, number, number, number];
-export type NumberArray12 = [
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-  number
-];
-export type NumberArray16 = [
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-  number
-];
+import type {
+  NumberArray2,
+  NumberArray3,
+  NumberArray4,
+  NumberArray6,
+  NumberArray8,
+  NumberArray9,
+  NumberArray12,
+  NumberArray16
+} from '@math.gl/core';
 
 /*
  * Allowed types to be used for uniform values

@@ -4,7 +4,7 @@
 
 import {Vector3, Matrix4} from '@math.gl/core';
 import {ShaderModule} from '../../lib/shader-module/shader-module';
-import type {NumberArray3, NumberArray16} from '../../lib/utils/uniform-types';
+import type {NumberArray3, NumberArray16} from '@math.gl/core';
 
 type ProjectionProps = {
   modelMatrix?: Readonly<Matrix4 | NumberArray16>;
