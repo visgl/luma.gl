@@ -691,4 +691,4 @@ export const fxaa = {
   fs,
   passes: [{sampler: true}],
   getUniforms: props => props
-} as const satisfies ShaderPass<FXAAProps, FXAAUniforms>;
+} as const satisfies ShaderPass<FXAAProps, FXAAUniforms, {}>;

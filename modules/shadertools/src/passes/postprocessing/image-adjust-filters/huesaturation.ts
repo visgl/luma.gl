@@ -62,7 +62,6 @@ export type HueSaturationUniforms = HueSaturationProps;
  */
 export const hueSaturation = {
   props: {} as HueSaturationProps,
-  uniforms: {} as HueSaturationUniforms,
 
   name: 'hueSaturation',
   fs,
