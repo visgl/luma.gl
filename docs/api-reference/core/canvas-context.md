@@ -92,21 +92,6 @@ canvasContext.getDevicePixelResolution()
 | `colorSpace?: 'string` | `'srgb'`                                             | `'srgb' \| 'display-p3'`. See [colorSpace](https://developer.mozilla.org/en-US/docs/Web/API/GPUCanvasContext/configure#colorspace).    |
 
 
-## Static Fields
-
-### `CanvasContext.isPageLoaded: boolean`
-
-A boolean that indicates if the web page has been loaded. This is sometimes useful as a canvas element specified in the page HTML will not be available until the page has loaded.
-
-### `CanvasContext.pageLoaded: Promise<void>`
-
-A promise that resolves when the page is loaded.
-
-```typescript
-  await CanvasContex.isPageLoaded;
-  const canvas = document.getElementById('canvas');
-```
-
 ## Fields
 
 ### `canvas: HMTLCanvas | OffscreenCanvas`

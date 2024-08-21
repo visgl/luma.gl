@@ -98,6 +98,8 @@ type CreateDeviceProps = {
   type?: 'webgl' | 'webgpu' | 'unknown' | 'best-available';
   /** List of device types. Will also search any pre-registered device backends */
   adapters?: Adapter[];
+  /** Wait for HTML to load. Defaults to `true`. Disable if not referencing DOM or in case load event is defeated by other code */
+  waitForPageLoad?: boolean;
 } & DeviceProps
 ```
 
