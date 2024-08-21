@@ -203,7 +203,7 @@ test('Texture#format creation with data', async t => {
   t.end();
 });
 
-test.only('Texture#dimension=3d,format=r32float', async t => {
+test('Texture#dimension=3d,format=r32float', async t => {
   for (const device of await getTestDevices()) {
     const texture = device.createTexture({
       width: 16,
