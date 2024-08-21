@@ -71,7 +71,6 @@ import {
   resetGLParameters
 } from '../context/parameters/unified-parameter-api';
 import {withGLParameters} from '../context/state-tracker/with-parameters';
-import {clear} from '../deprecated/clear';
 import {getWebGLExtension} from '../context/helpers/webgl-extensions';
 
 /** WebGPU style Device API for a WebGL context */
@@ -361,15 +360,6 @@ export class WebGLDevice extends Device {
 
   override withParametersWebGL(parameters: any, func: any): any {
     return withGLParameters(this.gl, parameters, func);
-  }
-
-  override clearWebGL(options?: {
-    framebuffer?: Framebuffer;
-    color?: any;
-    depth?: any;
-    stencil?: any;
-  }): void {
-    clear(this, options);
   }
 
   override resetWebGL(): void {

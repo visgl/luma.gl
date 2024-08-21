@@ -197,26 +197,24 @@ export class WEBGLRenderPass extends RenderPass {
     });
   }
 
-  // clearDepthStencil() {
-  // const GL.DEPTH = 0x1801;
-  // const GL_STENCIL = 0x1802;
-  // const GL_DEPTH_STENCIL = 0x84f9;
+  /*
+  clearDepthStencil() {
+      case GL.DEPTH:
+        this.device.gl.clearBufferfv(GL.DEPTH, 0, [value]);
+        break;
 
-  //     case GL_DEPTH:
-  //       this.device.gl.clearBufferfv(GL_DEPTH, 0, [value]);
-  //       break;
+      case GL_STENCIL:
+        this.device.gl.clearBufferiv(GL.STENCIL, 0, [value]);
+        break;
 
-  //     case GL_STENCIL:
-  //       this.device.gl.clearBufferiv(GL_STENCIL, 0, [value]);
-  //       break;
+      case GL.DEPTH_STENCIL:
+        const [depth, stencil] = value;
+        this.device.gl.clearBufferfi(GL.DEPTH_STENCIL, 0, depth, stencil);
+        break;
 
-  //     case GL_DEPTH_STENCIL:
-  //       const [depth, stencil] = value;
-  //       this.device.gl.clearBufferfi(GL_DEPTH_STENCIL, 0, depth, stencil);
-  //       break;
-
-  //     default:
-  //       assert(false, ERR_ARGUMENTS);
-  //   }
-  // });
+      default:
+        assert(false, ERR_ARGUMENTS);
+    }
+  });
+  */
 }
