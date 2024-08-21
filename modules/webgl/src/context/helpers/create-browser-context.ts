@@ -44,7 +44,8 @@ export function createBrowserContext(
   // Create a webgl2 context
   gl ||= canvas.getContext('webgl2', webglProps);
   if (webglProps.failIfMajorPerformanceCaveat) {
-    errorMessage ||= 'Only software GPU is available. Set `failIfMajorPerformanceCaveat: false` to allow.'; 
+    errorMessage ||=
+      'Only software GPU is available. Set `failIfMajorPerformanceCaveat: false` to allow.';
   }
 
   // Creation failed with failIfMajorPerformanceCaveat - Try a Software GPU
