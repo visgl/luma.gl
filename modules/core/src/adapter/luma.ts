@@ -29,6 +29,8 @@ export type CreateDeviceProps = {
   type?: 'webgl' | 'webgpu' | 'unknown' | 'best-available';
   /** List of adapters. Will also search any pre-registered adapters */
   adapters?: Adapter[];
+  /** Whether to wait for page to be loaded */
+  waitForPageLoad?: boolean;
 } & DeviceProps;
 
 /** Properties for attaching an existing WebGL context or WebGPU device to a new luma Device */
@@ -49,10 +51,12 @@ export class Luma {
   static defaultProps: Required<CreateDeviceProps> = {
     ...Device.defaultProps,
     type: 'best-available',
-    adapters: undefined!
+    adapters: undefined!,
+    waitForPageLoad: true
   };
 
   /**
+   * Page load promise
    * Get a 'lazy' promise that resolves when the DOM is loaded.
    * @note Since there may be limitations on number of `load` event listeners,
    * it is recommended avoid calling this function until actually needed.
@@ -135,12 +139,8 @@ export class Luma {
   async createDevice(props: CreateDeviceProps = {}): Promise<Device> {
     props = {...Luma.defaultProps, ...props};
 
-    // Should be handled by attach device
-    // if (props.gl) {
-    //   props.type = 'webgl';
-    // }
-
-    if (props.createCanvasContext) {
+    if (props.waitForPageLoad) {
+      // || props.createCanvasContext) {
       await Luma.pageLoaded;
     }
 
