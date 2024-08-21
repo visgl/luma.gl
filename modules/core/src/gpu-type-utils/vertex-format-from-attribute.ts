@@ -77,6 +77,16 @@ export function getVertexFormatFromAttribute(
   const components = size as 1 | 2 | 3 | 4;
   let dataType: DataType | DataTypeNorm = getDataTypeFromTypedArray(typedArray);
 
+  // Special case for WebGL, overrides check below
+  if ((dataType === 'uint8' || dataType === 'sint8') && normalized) {
+    if (components === 1) {
+      return 'unorm8-webgl';
+    }
+    if (components === 3) {
+      return 'unorm8x3-webgl';
+    }
+  }
+
   if (dataType === 'uint8' || dataType === 'sint8') {
     if (components === 1 || components === 3) {
       // WebGPU 8 bit formats must be aligned to 16 bit boundaries');
