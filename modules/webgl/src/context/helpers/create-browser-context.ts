@@ -50,7 +50,7 @@ export function createBrowserContext(
   // Creation failed with failIfMajorPerformanceCaveat - Try a Software GPU
   if (!gl && !webglContextAttributes.failIfMajorPerformanceCaveat) {
     webglProps.failIfMajorPerformanceCaveat = false;
-    gl = canvas.getContext('webgl2', webglProps) as WebGL2RenderingContext;
+    gl = canvas.getContext('webgl2', webglProps);
     // @ts-expect-error
     gl.luma ||= {};
     // @ts-expect-error
