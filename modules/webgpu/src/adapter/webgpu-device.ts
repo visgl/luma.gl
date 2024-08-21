@@ -6,6 +6,9 @@
 // / <reference types="@webgpu/types" />
 
 import type {
+  TextureFormat,
+} from '@luma.gl/shadertypes';
+import type {
   DeviceInfo,
   DeviceLimits,
   DeviceFeature,
@@ -15,7 +18,6 @@ import type {
   ShaderProps,
   Texture,
   TextureProps,
-  TextureFormat,
   ExternalTextureProps,
   FramebufferProps,
   RenderPipelineProps,

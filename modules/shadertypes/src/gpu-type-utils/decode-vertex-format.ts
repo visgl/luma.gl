@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {VertexFormat, VertexType} from './vertex-formats';
+import {VertexFormat, VertexType} from '../gpu-types/vertex-formats';
 import {decodeVertexType} from './decode-data-type';
 
 export type VertexFormatInfo = {

@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
-import type {NumericArray} from '../../../types';
+import type {NumericArray} from '@math.gl/types';
 import {project} from '../../project/project';
 
 /* eslint-disable camelcase */

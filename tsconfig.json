@@ -53,6 +53,8 @@
       "@luma.gl/gltf/test/*": ["modules/gltools/test/*"],
       "@luma.gl/shadertools/*": ["modules/shadertools/src/*"],
       "@luma.gl/shadertools/test/*": ["modules/shadertools/test/*"],
+      "@luma.gl/shadertypes/*": ["modules/shadertypes/src/*"],
+      "@luma.gl/shadertypes/test/*": ["modules/shadertypes/test/*"],
       "@luma.gl/test-utils/*": ["modules/test-utils/src/*"],
       "@luma.gl/test-utils/test/*": ["modules/test-utils/test/*"],
       "@luma.gl/webgl/*": ["modules/webgl/src/*"],

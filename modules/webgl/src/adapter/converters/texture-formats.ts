@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {TextureFormat, DeviceFeature} from '@luma.gl/core';
-import {decodeTextureFormat} from '@luma.gl/core';
+import type {TextureFormat} from '@luma.gl/shadertypes';
+import {decodeTextureFormat} from '@luma.gl/shadertypes';
+import type {DeviceFeature} from '@luma.gl/core';
 import {GL, GLPixelType, GLExtensions, GLTexelDataFormat} from '@luma.gl/constants';
 import {getWebGLExtension} from '../../context/helpers/webgl-extensions';
 import {getGLFromVertexType} from './vertex-formats';

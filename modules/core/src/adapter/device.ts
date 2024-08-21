@@ -2,10 +2,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+import type {TextureFormat} from '@luma.gl/shadertypes';
+import {isTextureFormatCompressed} from '@luma.gl/shadertypes';
 import {StatsManager, lumaStats} from '../utils/stats-manager';
 import {log} from '../utils/log';
 import {uid} from '../utils/uid';
-import type {TextureFormat} from '../gpu-type-utils//texture-formats';
 import type {CanvasContext, CanvasContextProps} from './canvas-context';
 import type {BufferProps} from './resources/buffer';
 import {Buffer} from './resources/buffer';
@@ -22,8 +23,6 @@ import type {CommandEncoder, CommandEncoderProps} from './resources/command-enco
 import type {VertexArray, VertexArrayProps} from './resources/vertex-array';
 import type {TransformFeedback, TransformFeedbackProps} from './resources/transform-feedback';
 import type {QuerySet, QuerySetProps} from './resources/query-set';
-
-import {isTextureFormatCompressed} from '../gpu-type-utils/decode-texture-format';
 
 /**
  * Identifies the GPU vendor and driver.

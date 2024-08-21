@@ -10,6 +10,7 @@
     {"path": "modules/core"},
     {"path": "modules/engine"},
     {"path": "modules/gltf"},
+    {"path": "modules/shadertypes"},
     {"path": "modules/shadertools"},
     {"path": "modules/test-utils"},
     {"path": "modules/webgl"},

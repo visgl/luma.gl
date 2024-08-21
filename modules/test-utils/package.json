@@ -36,11 +36,12 @@
     "pre-build": "echo test utils has no bundle"
   },
   "peerDependencies": {
-    "@luma.gl/core": "9.1.0-alpha.14",
-    "@luma.gl/engine": "9.1.0-alpha.14",
-    "@luma.gl/shadertools": "9.1.0-alpha.14",
-    "@luma.gl/webgl": "9.1.0-alpha.14",
-    "@luma.gl/webgpu": "9.1.0-alpha.14"
+    "@luma.gl/core": "9.1.0-alpha.16",
+    "@luma.gl/engine": "9.1.0-alpha.16",
+    "@luma.gl/shadertools": "9.1.0-alpha.16",
+    "@luma.gl/shadertypes": "9.1.0-alpha.16",
+    "@luma.gl/webgl": "9.1.0-alpha.16",
+    "@luma.gl/webgpu": "9.1.0-alpha.16"
   },
   "dependencies": {
     "@probe.gl/env": "^4.0.8",

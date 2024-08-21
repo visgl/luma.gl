@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {UniformFormat} from '../../types';
+import type {UniformFormat} from '@luma.gl/shadertypes';
 import {
   PropType,
   PropValidator,

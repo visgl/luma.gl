@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {TextureFormat} from '@luma.gl/core';
+import {TextureFormat} from '@luma.gl/shadertypes';
 
 /** Ensure a texture format is WebGPU compatible */
 export function getWebGPUTextureFormat(format: TextureFormat): GPUTextureFormat {

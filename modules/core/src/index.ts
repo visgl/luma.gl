@@ -133,27 +133,6 @@ export type {UniformValue} from './adapter/types/uniforms';
 // GPU TYPE UTILS - GPU MEMORY LAYOUT TYPES - EXTERNAL
 
 export type {NumberArray, TypedArray, TypedArrayConstructor} from './types';
-export type {VertexFormat, VertexType} from './gpu-type-utils/vertex-formats';
-export type {
-  ShaderDataType,
-  ShaderAttributeType,
-  ShaderUniformType
-} from './gpu-type-utils/shader-types';
-export type {
-  TextureFormat,
-  ColorTextureFormat,
-  DepthStencilTextureFormat
-} from './gpu-type-utils/texture-formats';
-
-// GPU TYPE UTILS - GPU MEMORY LAYOUT HELPERS - CAN BE USED BY APPS BUT MOSTLY USED INTERNALLY
-
-export {decodeVertexFormat} from './gpu-type-utils/decode-vertex-format';
-export {decodeTextureFormat} from './gpu-type-utils/decode-texture-format';
-export {decodeShaderUniformType} from './gpu-type-utils/decode-shader-types';
-export {decodeShaderAttributeType} from './gpu-type-utils/decode-attribute-type';
-export {getDataTypeFromTypedArray} from './gpu-type-utils/vertex-format-from-attribute';
-export {getTypedArrayFromDataType} from './gpu-type-utils/vertex-format-from-attribute';
-export {getVertexFormatFromAttribute} from './gpu-type-utils/vertex-format-from-attribute';
 
 // GENERAL EXPORTS - FOR APPLICATIONS
 

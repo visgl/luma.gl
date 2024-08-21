@@ -2,11 +2,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-// MATH TYPES
-export {TypedArray, NumberArray, NumericArray} from '@math.gl/types';
-
-// export type BigIntOrNumberArray = NumberArray | BigIntTypedArray;
-
 // UNIFORM TYPES
 // These are "duplicated" from core module to avoid cross-dependencies
 

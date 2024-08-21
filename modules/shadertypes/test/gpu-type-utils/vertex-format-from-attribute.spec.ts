@@ -8,7 +8,7 @@ import {
   getDataTypeFromTypedArray,
   getTypedArrayFromDataType,
   getVertexFormatFromAttribute
-} from '@luma.gl/core';
+} from '@luma.gl/shadertypes';
 import type {TypedArray, TypedArrayConstructor} from '@math.gl/types';
 
 const TEST_CASES: {

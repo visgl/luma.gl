@@ -3,8 +3,11 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
-import {decodeShaderAttributeType, ShaderAttributeType} from '@luma.gl/core';
-import {ShaderAttributeTypeInfo} from '@luma.gl/core/gpu-type-utils/decode-attribute-type';
+import {
+  decodeShaderAttributeType,
+  ShaderAttributeType,
+  ShaderAttributeTypeInfo
+} from '@luma.gl/shadertypes';
 
 // prettier-ignore
 const TEST_CASES: {format: ShaderAttributeType, result: ShaderAttributeTypeInfo}[] = [

@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+import {ShaderAttributeType, ShaderDataType} from '@luma.gl/shadertypes';
 import {GL} from '@luma.gl/constants';
-import {ShaderAttributeType, ShaderDataType} from '@luma.gl/core';
 
 /** Get shader attribute type from GL constants */
 export function getShaderAttributeTypeFromGL(

@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {ShaderUniformType, ShaderDataType} from '../gpu-type-utils/shader-types';
-import {decodeShaderUniformType, alignTo} from '../gpu-type-utils/decode-shader-types';
+import type {ShaderUniformType, ShaderDataType} from '@luma.gl/shadertypes';
+import {decodeShaderUniformType, alignTo} from '@luma.gl/shadertypes';
 
 import type {UniformValue} from '../adapter/types/uniforms';
 import {getScratchArrayBuffer} from '../utils/array-utils-flat';

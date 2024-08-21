@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {GL} from '@luma.gl/constants';
-import {VertexFormat, VertexType} from '@luma.gl/core';
+import {VertexFormat, VertexType} from '@luma.gl/shadertypes';
 
 type GLDataType =
   | GL.UNSIGNED_BYTE

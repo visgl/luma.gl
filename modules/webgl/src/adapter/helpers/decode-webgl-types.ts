@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {ShaderUniformType, ShaderAttributeType, VertexFormat} from '@luma.gl/core';
+import {ShaderUniformType, ShaderAttributeType, VertexFormat} from '@luma.gl/shadertypes';
 import {GL, GLUniformType, GLSamplerType, GLCompositeType, GLDataType} from '@luma.gl/constants';
 
 /** Check is uniform is of sampler type */

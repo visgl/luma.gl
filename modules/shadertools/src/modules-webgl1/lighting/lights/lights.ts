@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {NumberArray} from '../../../types';
+import type {NumberArray} from '@math.gl/types';
 import {lightingShader} from './lights-glsl';
 
 /* eslint-disable camelcase */

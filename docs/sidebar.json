@@ -187,6 +187,7 @@
     "items": [
       "developer-guide/README",
       "developer-guide/installing",
+      "developer-guide/editing",
       "developer-guide/debugging",
       "developer-guide/testing",
       "developer-guide/profiling",

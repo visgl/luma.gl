@@ -16,6 +16,7 @@ import type {
   UniformValue,
   PrimitiveTopology
 } from '@luma.gl/core';
+import {getTypedArrayFromDataType} from '@luma.gl/shadertypes';
 import {
   Device,
   DeviceFeature,
@@ -27,7 +28,6 @@ import {
   RenderPass,
   UniformStore,
   log,
-  getTypedArrayFromDataType,
   getAttributeInfosFromLayouts
 } from '@luma.gl/core';
 

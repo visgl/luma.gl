@@ -6,7 +6,7 @@ import {isBrowser} from '@probe.gl/env';
 import type {Device} from './device';
 import type {Framebuffer} from './resources/framebuffer';
 import {log} from '../utils/log';
-import type {TextureFormat} from '../gpu-type-utils/texture-formats';
+import type {TextureFormat} from '@luma.gl/shadertypes';
 
 /** Properties for a CanvasContext */
 export type CanvasContextProps = {

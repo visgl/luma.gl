@@ -2,13 +2,16 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+import type {
+  ShaderDataType,
+  ShaderAttributeType,
+  VertexFormat,
+  VertexType
+} from '@luma.gl/shadertypes';
+import {decodeShaderAttributeType, decodeVertexFormat} from '@luma.gl/shadertypes';
 import {log} from '../utils/log';
 import type {ShaderLayout, AttributeDeclaration} from '../adapter/types/shader-layout';
 import type {BufferLayout} from '../adapter/types/buffer-layout';
-import type {ShaderDataType, ShaderAttributeType} from '../gpu-type-utils/shader-types';
-import {decodeShaderAttributeType} from '../gpu-type-utils/decode-attribute-type';
-import type {VertexFormat, VertexType} from '../gpu-type-utils/vertex-formats';
-import {decodeVertexFormat} from '../gpu-type-utils/decode-vertex-format';
 
 /** Resolved info for a buffer / attribute combination to help backend configure it correctly */
 export type AttributeInfo = {

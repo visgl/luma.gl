@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {TypedArray, TypedArrayConstructor} from '../types';
-import {VertexFormat} from './vertex-formats';
+import {VertexFormat} from '../gpu-types/vertex-formats';
 
 // import {DataType} from '../types/vertex-formats';
 // type Omit<DataType, 'float16'> unfortunately breaks Typescript inferance

@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
-import {decodeTextureFormat, TextureFormat} from '@luma.gl/core';
+import {decodeTextureFormat, TextureFormat} from '@luma.gl/shadertypes';
 
 // prettier-ignore
 const TEST_CASES: {format: TextureFormat, result: any}[] = [

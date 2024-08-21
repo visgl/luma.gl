@@ -4,9 +4,7 @@
 
 import {Device} from '@luma.gl/core';
 import type {AnimationProps, ModelProps} from '@luma.gl/engine';
-// @ts-ignore - ib added this to solve module resolution mess
 import {AnimationLoopTemplate, CubeGeometry, Timeline, Model, ShaderInputs} from '@luma.gl/engine';
-// @ts-ignore TODO - ib added this to solve module resolution mess
 import {makeRandomGenerator, PickingManager, indexPicking as picking} from '@luma.gl/engine';
 import {dirlight, ShaderModule} from '@luma.gl/shadertools';
 import {Matrix4, radians} from '@math.gl/core';
@@ -169,7 +167,7 @@ class InstancedCube extends Model {
       vs: VS_GLSL,
       fs: FS_GLSL,
       // @ts-expect-error Remove once npm package updated with new types
-      modules: device.info.type !== 'webgpu' ? [dirlight, picking] : [dirlight],
+      modules: device.type !== 'webgpu' ? [dirlight, picking] : [dirlight],
       instanceCount: SIDE * SIDE,
       geometry: new CubeGeometry({indices: true}),
       bufferLayout: [

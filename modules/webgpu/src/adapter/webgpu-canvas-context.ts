@@ -4,7 +4,8 @@
 
 // / <reference types="@webgpu/types" />
 
-import type {Texture, TextureFormat, CanvasContextProps} from '@luma.gl/core';
+import type {TextureFormat} from '@luma.gl/shadertypes';
+import type {Texture, CanvasContextProps} from '@luma.gl/core';
 import {CanvasContext, log} from '@luma.gl/core';
 import {getWebGPUTextureFormat} from './helpers/convert-texture-format';
 import {WebGPUDevice} from './webgpu-device';

@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {CanvasContextProps, TextureFormat} from '@luma.gl/core';
+import type {TextureFormat} from '@luma.gl/shadertypes';
+import type {CanvasContextProps} from '@luma.gl/core';
 import {CanvasContext} from '@luma.gl/core';
 import {WebGLDevice} from './webgl-device';
 import {WEBGLFramebuffer} from './resources/webgl-framebuffer';

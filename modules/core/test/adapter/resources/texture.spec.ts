@@ -5,7 +5,8 @@
 import test from 'tape-promise/tape';
 import {webglDevice, getTestDevices} from '@luma.gl/test-utils';
 
-import {Device, Texture, TextureFormat, decodeTextureFormat, VertexType} from '@luma.gl/core';
+import {TextureFormat, decodeTextureFormat, VertexType} from '@luma.gl/shadertypes';
+import {Device, Texture} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 
 // TODO(v9): Avoid import from `@luma.gl/webgl` in core tests.

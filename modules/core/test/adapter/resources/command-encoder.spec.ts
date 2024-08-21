@@ -3,7 +3,8 @@
 // Copyright (c) vis.gl contributors
 
 import test, {Test} from 'tape-promise/tape';
-import {Buffer, Device, TextureFormat} from '@luma.gl/core';
+import {TextureFormat} from '@luma.gl/shadertypes';
+import {Buffer, Device} from '@luma.gl/core';
 import {webglDevice as device} from '@luma.gl/test-utils';
 
 const EPSILON = 1e-6;

@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {NumberArray4, NumberArray6} from '@math.gl/types';
-import {DepthStencilTextureFormat} from '../../gpu-type-utils/texture-formats';
+import {DepthStencilTextureFormat} from '@luma.gl/shadertypes';
 
 export type CompareFunction =
   | 'never'

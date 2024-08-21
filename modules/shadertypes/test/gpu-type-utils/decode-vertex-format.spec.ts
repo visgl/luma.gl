@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
-import {decodeVertexFormat, VertexFormat} from '@luma.gl/core';
+import {decodeVertexFormat, VertexFormat} from '@luma.gl/shadertypes';
 
 // prettier-ignore
 const TEST_CASES: {format: VertexFormat, result: any}[] = [

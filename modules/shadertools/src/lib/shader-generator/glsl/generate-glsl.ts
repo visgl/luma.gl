@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {UniformFormat} from '../../../types';
+import {UniformFormat} from '@luma.gl/shadertypes';
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
 import {capitalize} from '../utils/capitalize';
 

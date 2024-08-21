@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {ShaderAttributeType, ShaderLayout, log} from '@luma.gl/core';
+import type {ShaderAttributeType} from '@luma.gl/shadertypes';
+import {ShaderLayout, log} from '@luma.gl/core';
 import {WgslReflect} from 'wgsl_reflect';
 
 /**

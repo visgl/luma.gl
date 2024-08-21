@@ -46,5 +46,8 @@
     "@probe.gl/stats": "^4.0.8",
     "@types/offscreencanvas": "^2019.6.4"
   },
+  "peerDependencies": {
+    "@luma.gl/shadertypes": "9.1.0-alpha.16"
+  },
   "gitHead": "c636c34b8f1581eed163e94543a8eb1f4382ba8e"
 }

@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {ShaderLayout, BufferLayout, AttributeDeclaration, VertexFormat} from '@luma.gl/core';
-import {log, decodeVertexFormat} from '@luma.gl/core';
+import {VertexFormat, decodeVertexFormat} from '@luma.gl/shadertypes';
+import type {ShaderLayout, BufferLayout, AttributeDeclaration} from '@luma.gl/core';
+import {log} from '@luma.gl/core';
 // import {getAttributeInfosFromLayouts} from '@luma.gl/core';
 
 /** Throw error on any WebGL-only vertex formats */

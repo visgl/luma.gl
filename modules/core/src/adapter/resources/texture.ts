@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+import type {TextureFormat} from '@luma.gl/shadertypes';
 import type {Device} from '../device';
 import type {TypedArray} from '../../types';
-import type {TextureFormat} from '../../gpu-type-utils/texture-formats';
 import type {TextureView, TextureViewProps} from './texture-view';
 import {Resource, ResourceProps} from './resource';
 import {Sampler, SamplerProps} from './sampler';

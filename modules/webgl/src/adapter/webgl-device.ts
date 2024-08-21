@@ -3,11 +3,11 @@
 // Copyright (c) vis.gl contributors
 
 import type {TypedArray} from '@math.gl/types';
+import type {TextureFormat} from '@luma.gl/shadertypes';
 import type {
   DeviceProps,
   DeviceInfo,
   CanvasContextProps,
-  TextureFormat,
   Buffer,
   Texture,
   Framebuffer,
