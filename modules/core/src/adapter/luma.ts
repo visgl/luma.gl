@@ -139,7 +139,8 @@ export class Luma {
   async createDevice(props: CreateDeviceProps = {}): Promise<Device> {
     props = {...Luma.defaultProps, ...props};
 
-    if (props.waitForPageLoad) { // || props.createCanvasContext) {
+    if (props.waitForPageLoad) {
+      // || props.createCanvasContext) {
       await Luma.pageLoaded;
     }
 
