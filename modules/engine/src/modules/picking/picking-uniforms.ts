@@ -174,4 +174,4 @@ export const pickingUniforms = {
   },
 
   getUniforms
-} as const satisfies ShaderModule<PickingProps, PickingUniforms>;
+} as const satisfies ShaderModule<PickingProps, PickingUniforms, {}>;

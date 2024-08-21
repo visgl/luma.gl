@@ -3,9 +3,10 @@
 // Copyright (c) vis.gl contributors
 
 import type {Binding, UniformValue} from '@luma.gl/core';
-import {log, splitUniformsAndBindings} from '@luma.gl/core';
+import {log} from '@luma.gl/core';
 // import type {ShaderUniformType, UniformValue, UniformFormat, UniformInfoDevice, Texture, Sampler} from '@luma.gl/core';
-import {_resolveModules, ShaderModule, ShaderModuleInstance} from '@luma.gl/shadertools';
+import {getShaderModuleDependencies, ShaderModule} from '@luma.gl/shadertools';
+import {splitUniformsAndBindings} from './model/split-uniforms-and-bindings';
 
 /**
  * ShaderInputs holds uniform and binding values for one or more shader modules,
@@ -23,6 +24,7 @@ export class ShaderInputs<
    * The map of modules
    * @todo should should this include the resolved dependencies?
    */
+  // @ts-expect-error
   modules: Readonly<{[P in keyof ShaderPropsT]: ShaderModule<ShaderPropsT[P]>}>;
 
   /** Stores the uniform values for each module */
@@ -36,6 +38,7 @@ export class ShaderInputs<
    * Create a new UniformStore instance
    * @param modules
    */
+  // @ts-expect-error
   constructor(modules: {[P in keyof ShaderPropsT]?: ShaderModule<ShaderPropsT[P], any>}) {
     // Extract modules with dependencies
     const resolvedModules = getShaderModuleDependencies(
@@ -49,6 +52,7 @@ export class ShaderInputs<
     log.log(1, 'Creating ShaderInputs with modules', Object.keys(modules))();
 
     // Store the module definitions and create storage for uniform values and binding values, per module
+    // @ts-expect-error
     this.modules = modules as {[P in keyof ShaderPropsT]: ShaderModule<ShaderPropsT[P]>};
     this.moduleUniforms = {} as Record<keyof ShaderPropsT, Record<string, UniformValue>>;
     this.moduleBindings = {} as Record<keyof ShaderPropsT, Record<string, Binding>>;

@@ -154,7 +154,7 @@ export const picking = {
   source,
   vs,
   fs
-} as const satisfies ShaderModule<PickingProps, PickingUniforms>;
+} as const satisfies ShaderModule<PickingProps, PickingUniforms, {}>;
 
 // function getUniforms(opts: PickingProps = {}, prevUniforms?: PickingUniforms): PickingUniforms {
 //   const uniforms = {} as PickingUniforms;

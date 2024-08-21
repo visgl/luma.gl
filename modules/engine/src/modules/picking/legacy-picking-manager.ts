@@ -5,6 +5,7 @@
 import {Device, Framebuffer} from '@luma.gl/core';
 import {picking} from '@luma.gl/shadertools';
 import {ShaderInputs} from '../../shader-inputs';
+import {NumberArray3} from '@math.gl/types';
 
 /**
  * Helper class for using the legacy picking module
@@ -70,7 +71,9 @@ export class LegacyPickingManager {
     // console.log(color255);
 
     // Check if we have
-    let highlightedObjectColor: Float32Array | null = new Float32Array(color255).map(x => x / 255);
+    let highlightedObjectColor: NumberArray3 | null = [...color255].map(
+      x => x / 255
+    ) as NumberArray3;
     const isHighlightActive =
       highlightedObjectColor[0] + highlightedObjectColor[1] + highlightedObjectColor[2] > 0;
 

@@ -5,7 +5,7 @@ import {lighting, ShaderModule} from '@luma.gl/shadertools';
 import type {
   LightingProps,
   LightingUniforms
-} from '@luma.gl/shadertools/src/modules/lighting/lights/lighting-uniforms';
+} from '@luma.gl/shadertools/src/modules/lighting/lights/lighting';
 
 checkType<ShaderModule<LightingProps, LightingUniforms, {}>>(lighting);
 

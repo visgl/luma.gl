@@ -102,6 +102,7 @@ test('ShaderInputs#bindings', t => {
       propTypes: {color: {value: [0, 0, 0]}}
     };
     if (callback) {
+      // @ts-expect-error
       custom.getUniforms = ({color, colorTexture}: CustomProps): CustomProps => {
         return {color, colorTexture};
       };

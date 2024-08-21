@@ -3,8 +3,14 @@
 // Copyright (c) vis.gl contributors
 
 import {UniformFormat} from '../../types';
-import {PropType} from '../filters/prop-types';
+import {
+  PropType,
+  PropValidator,
+  makePropValidators,
+  getValidatedProperties
+} from '../filters/prop-types';
 import type {UniformTypes, UniformValue} from '../utils/uniform-types';
+import {ShaderInjection, normalizeInjections} from '../shader-assembly/shader-injections';
 
 // To avoid dependency on core module, do not import `Binding` type.
 // The ShaderModule is not concerned with the type of `Binding`,
@@ -59,7 +65,7 @@ export type ShaderModule<
 
   /** Function that maps props to uniforms & bindings */
   getUniforms?: (
-    props?: Partial<PropsT>,
+    props: Partial<PropsT>,
     prevUniforms?: UniformsT
   ) => Partial<UniformsT & BindingsT>;
 
@@ -149,7 +155,7 @@ export function getShaderModuleUniforms<
   module: ShaderModuleT,
   props?: ShaderModuleT['props'],
   oldUniforms?: ShaderModuleT['uniforms']
-): Record<string, BindingValue | UniformValue> {
+): Record<string, Binding | UniformValue> {
   initializeShaderModule(module);
 
   const uniforms = oldUniforms || {...module.defaultUniforms};
