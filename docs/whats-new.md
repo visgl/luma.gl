@@ -19,8 +19,9 @@ Improvements focused on enhancing WebGPU support.
 - New [`Adapter`](/docs/api-reference/core/adapter) class for singleton objects representing pluggable GPU backends. 
 - New `adapters` options for `luma.createDevice()` and `makeAnimationLoopTemplate` as alternative to global registration of adapters.
 - New [`luma.registerAdapters()`](/docs/api-reference/core/luma#lumaregisteradapters) method for old-stye global registration of adapters.
-- New `Parameters.blend` - Provides explicit control over color blending activation.
 - New `Texture.copyExternalImage()` function that works on both WebGPU and WebGL.
+- New `Parameters.blend` - Provides explicit control over color blending activation.
+- New `SamplerProps.mipmapFilter` has a new value `'none'` providing a more explicit API for mipmap filtering.
 
 **@luma.gl/engine**
 

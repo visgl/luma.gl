@@ -39,7 +39,7 @@ When initializing luma.gl, applications now import an `Adapter` singleton from e
 | `DeviceProps` for canvas       | Moved      | [`DeviceProps.createCanvasContext`][canvas]. | Move canvas related props to `props.createCanvasContext: {}`.   |
 | `DeviceProps` for webgl        | Moved      | [`DeviceProps.webgl`][webgl].                | Move canvas related props to `props.webgl: {}`.                 |
 | `DeviceProps.break`            | Removed    |                                              | Use an alterative [debugger][debugging]                         |
-| `Texture.props.data` (Promise) | Removed    | `AsyncTexture` class                         | Textures no longer accept promises.                             |
+| `TextureProps.data` (Promise) | Removed    | `AsyncTexture` class                         | Textures no longer accept promises.                             |
 | `Parameters.blend`             | New        |                                              | Explicit activation of color blending                           |
 | `triangle-fan-webgl` topology  | Removed    | `triangle-strip`.                            | Reorganize your geometries                                      |
 | `line-loop-webgl` topology     | Removed    | `line-list`.                                 | Reorganize your geometries                                      |

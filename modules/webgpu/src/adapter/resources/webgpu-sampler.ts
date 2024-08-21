@@ -9,7 +9,7 @@ export type WebGPUSamplerProps = SamplerProps & {
 };
 
 /**
- *
+ * A WebGPU sampler object
  */
 export class WebGPUSampler extends Sampler {
   readonly device: WebGPUDevice;
@@ -19,13 +19,23 @@ export class WebGPUSampler extends Sampler {
     super(device, props);
     this.device = device;
 
-    // Prepare sampler props
-    const samplerProps: Partial<WebGPUSamplerProps> = {...this.props};
-    if (samplerProps.type !== 'comparison-sampler') {
-      delete samplerProps.compare;
+    // Prepare sampler props. Mostly identical
+    const samplerDescriptor: Partial<GPUSamplerDescriptor> = {
+      ...this.props,
+      mipmapFilter: undefined
+    };
+
+    // props.compare automatically turns this into a comparison sampler
+    if (props.type !== 'comparison-sampler') {
+      delete samplerDescriptor.compare;
     }
 
-    this.handle = this.handle || this.device.handle.createSampler(samplerProps);
+    // disable mipmapFilter if not set
+    if (props.mipmapFilter && props.mipmapFilter !== 'none') {
+      samplerDescriptor.mipmapFilter = props.mipmapFilter;
+    }
+
+    this.handle = this.handle || this.device.handle.createSampler(samplerDescriptor);
     this.handle.label = this.props.id;
   }
 
