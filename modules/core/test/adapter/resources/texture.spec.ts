@@ -203,7 +203,29 @@ test('Texture#format creation with data', async t => {
   t.end();
 });
 
-test('Texture#copyExternaImage', async t => {
+test.only('Texture#dimension=3d,format=r32float', async t => {
+  for (const device of await getTestDevices()) {
+    const texture = device.createTexture({
+      width: 16,
+      height: 16,
+      depth: 16,
+      dimension: '3d',
+      format: 'r32float',
+      mipmaps: false,
+      sampler: {
+        minFilter: 'linear',
+        magFilterFilter: 'linear',
+        addressModeU: 'clamp-to-edge',
+        addressModeV: 'clamp-to-edge',
+        addressModeW: 'clamp-to-edge'
+      }
+    });
+    t.ok(texture, `${device.type}: Texture(dimension=3d,format=r32float) created`);
+    t.end();
+  }
+});
+
+test('Texture#copyExternalImage', async t => {
   for (const device of await getTestDevices()) {
     const texture = device.createTexture({
       width: 2,
