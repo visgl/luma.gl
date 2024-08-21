@@ -52,11 +52,11 @@ export class Luma {
     ...Device.defaultProps,
     type: 'best-available',
     adapters: undefined!,
-    waitForPageLoad: true,
+    waitForPageLoad: true
   };
 
-  /** 
-   * Page load promise 
+  /**
+   * Page load promise
    * Get a 'lazy' promise that resolves when the DOM is loaded.
    * @note Since there may be limitations on number of `load` event listeners,
    * it is recommended avoid calling this function until actually needed.
@@ -139,7 +139,7 @@ export class Luma {
   async createDevice(props: CreateDeviceProps = {}): Promise<Device> {
     props = {...Luma.defaultProps, ...props};
 
-    if (props.waitForPageLoad == true || props.createCanvasContext) {
+    if (props.waitForPageLoad) { // || props.createCanvasContext) {
       await Luma.pageLoaded;
     }
 
