@@ -25,7 +25,7 @@ export function createBrowserContext(
   webglContextAttributes: WebGLContextAttributes
 ): WebGL2RenderingContext {
   // Try to extract any extra information about why context creation failed
-  const errorMessage = null;
+  let errorMessage = '';
   // const onCreateError = error => (errorMessage = error.statusMessage || errorMessage);
 
   // Avoid multiple listeners?
@@ -43,11 +43,15 @@ export function createBrowserContext(
 
   // Create a webgl2 context
   gl ||= canvas.getContext('webgl2', webglProps);
+  if (webglProps.failIfMajorPerformanceCaveat) {
+    errorMessage ||=
+      'Only software GPU is available. Set `failIfMajorPerformanceCaveat: false` to allow.';
+  }
 
   // Creation failed with failIfMajorPerformanceCaveat - Try a Software GPU
   if (!gl && !webglContextAttributes.failIfMajorPerformanceCaveat) {
     webglProps.failIfMajorPerformanceCaveat = false;
-    gl = canvas.getContext('webgl', webglProps) as WebGL2RenderingContext;
+    gl = canvas.getContext('webgl2', webglProps);
     // @ts-expect-error
     gl.luma ||= {};
     // @ts-expect-error
@@ -55,7 +59,16 @@ export function createBrowserContext(
   }
 
   if (!gl) {
-    throw new Error(`Failed to create WebGL context: ${errorMessage || 'Unknown error'}`);
+    gl = canvas.getContext('webgl', {}) as WebGL2RenderingContext;
+    if (gl) {
+      gl = null;
+      errorMessage ||= 'Your browser only supports WebGL1';
+    }
+  }
+
+  if (!gl) {
+    errorMessage ||= 'Your browser does not support WebGL';
+    throw new Error(`Failed to create WebGL context: ${errorMessage}`);
   }
 
   // Carefully extract and wrap callbacks to prevent addEventListener from rebinding them.
@@ -67,6 +80,8 @@ export function createBrowserContext(
     false
   );
 
+  // @ts-expect-error
+  gl.luma ||= {};
   return gl;
 }
 
