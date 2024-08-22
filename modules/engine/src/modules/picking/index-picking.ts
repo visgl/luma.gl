@@ -4,7 +4,7 @@
 
 import type {ShaderModule} from '@luma.gl/shadertools';
 
-import type {PickingProps, PickingUniforms} from './picking-uniforms';
+import type {PickingBindings, PickingProps, PickingUniforms} from './picking-uniforms';
 import {pickingUniforms, GLSL_UNIFORMS, WGSL_UNIFORMS, INVALID_INDEX} from './picking-uniforms';
 
 // SHADERS
@@ -153,4 +153,4 @@ export const picking = {
   source,
   vs,
   fs
-} as const satisfies ShaderModule<PickingProps, PickingUniforms, {}>;
+} as const satisfies ShaderModule<PickingProps, PickingUniforms, PickingBindings>;
