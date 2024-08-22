@@ -3,7 +3,8 @@
   "npmClient": "yarn",
   "exact": true,
   "packages": [
-    "modules/*"
+    "modules/*",
+    "examples/*/*"
   ],
   "command": {
     "publish": {

@@ -72,7 +72,6 @@ function getTestCases(): SnapshotTestRunnerTestCase[] {
       // @ts-ignore
       onInitialize: (props: AnimationProps) => {
         setPathPrefix(`${RESOURCE_PATH}/examples/lessons/${name.slice(-2)}/`);
-        // @ts-ignore TODO - ib added this to solve module resolution mess
         animationLoopTemplate = new ExampleAnimationLoopTemplate(props);
       },
 

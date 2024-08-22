@@ -67,11 +67,11 @@
   "include": [
     "modules/*/src",
     "modules/*/test",
+    "examples/**/*",
     "test/**/*",
     "node_modules/@webgpu/types"
   ],
   "exclude":[
-    "examples/**/*",
     "modules/**/wip",
     "modules/**/dist",
     "modules/shadertools/src/libs/wgsl-reflect/wgsl_reflect.module.js",
