@@ -120,6 +120,9 @@ export type TextureProps = ResourceProps &
     /** Props for the default TextureView for this texture. Note that other views can still be created and used. */
     view?: TextureViewProps;
 
+    /** Whether to flip the image vertically. Used if texture is initialized with an image. */
+    flipY?: boolean;
+
     /** @deprecated - this is implicit from format */
     compressed?: boolean;
   };
@@ -150,8 +153,10 @@ export type CopyExternalImageOptions = {
   aspect?: 'all' | 'stencil-only' | 'depth-only';
   /** Specific color space of image data */
   colorSpace?: 'srgb';
-  /** premultiplied  */
+  /** load as premultiplied alpha  */
   premultipliedAlpha?: boolean;
+  /** Whether to flip the image vertically */
+  flipY?: boolean;
 };
 
 /**
@@ -182,7 +187,8 @@ export abstract class Texture extends Resource<TextureProps> {
     mipLevels: undefined!,
     samples: undefined!,
     sampler: {},
-    view: undefined!
+    view: undefined!,
+    flipY: undefined!
   };
 
   override get [Symbol.toStringTag](): string {
@@ -365,7 +371,8 @@ export abstract class Texture extends Resource<TextureProps> {
     z: 0,
     aspect: 'all',
     colorSpace: 'srgb',
-    premultipliedAlpha: false
+    premultipliedAlpha: false,
+    flipY: false
   };
 
   /** Ensure we have integer coordinates */

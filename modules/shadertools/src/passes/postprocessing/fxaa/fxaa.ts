@@ -97,7 +97,7 @@ import {ShaderPass} from '../../../lib/shader-module/shader-pass';
 // _  = the highest digit is directly related to style
 //
 
-const fs = `
+const fs = /* glsl */ `
 #define FXAA_QUALITY_PRESET 29
 
 #if (FXAA_QUALITY_PRESET == 10)

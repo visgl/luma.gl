@@ -9,6 +9,7 @@ import {ShaderInputs} from '../shader-inputs';
 import {AsyncTexture} from '../async-texture/async-texture';
 import {ClipSpace} from '../models/clip-space';
 import {SwapFramebuffers} from '../compute/swap';
+import {BackgroundTextureModel} from '../models/billboard-texture-model';
 
 import {getFragmentShaderForRenderPass} from './get-fragment-shader';
 
@@ -30,6 +31,7 @@ export class ShaderPassRenderer {
   swapFramebuffers: SwapFramebuffers;
   /** For rendering to the screen */
   clipSpace: ClipSpace;
+  textureModel: BackgroundTextureModel;
 
   constructor(device: Device, props: ShaderPassRendererProps) {
     this.device = device;
@@ -47,6 +49,10 @@ export class ShaderPassRenderer {
       colorAttachments: ['rgba8unorm'],
       width: size[0],
       height: size[1]
+    });
+
+    this.textureModel = new BackgroundTextureModel(device, {
+      backgroundTexture: this.swapFramebuffers.current.colorAttachments[0].texture
     });
 
     this.clipSpace = new ClipSpace(device, {
@@ -110,12 +116,25 @@ void main() {
       return null;
     }
 
-    const commandEncoder = this.device.createCommandEncoder();
-    commandEncoder.copyTextureToTexture({
-      sourceTexture: sourceTexture.texture,
-      destinationTexture: this.swapFramebuffers.current.colorAttachments[0].texture
+    this.textureModel.destroy();
+    this.textureModel = new BackgroundTextureModel(this.device, {
+      backgroundTexture: sourceTexture
     });
-    commandEncoder.finish();
+
+    // Clear the current texture before we begin
+    const clearTexturePass = this.device.beginRenderPass({
+      framebuffer: this.swapFramebuffers.current,
+      clearColor: [0, 0, 0, 1]
+    });
+    this.textureModel.draw(clearTexturePass);
+    clearTexturePass.end();
+
+    // const commandEncoder = this.device.createCommandEncoder();
+    // commandEncoder.copyTextureToTexture({
+    //   sourceTexture: sourceTexture.texture,
+    //   destinationTexture: this.swapFramebuffers.current.colorAttachments[0].texture
+    // });
+    // commandEncoder.finish();
 
     let first = true;
     for (const passRenderer of this.passRenderers) {

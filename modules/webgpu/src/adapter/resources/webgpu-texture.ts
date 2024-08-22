@@ -213,7 +213,8 @@ export class WebGPUTexture extends Texture {
       z,
       aspect,
       colorSpace,
-      premultipliedAlpha
+      premultipliedAlpha,
+      flipY
     } = opts;
 
     // TODO - max out width
@@ -222,7 +223,8 @@ export class WebGPUTexture extends Texture {
       // source: GPUImageCopyExternalImage
       {
         source: image,
-        origin: [sourceX, sourceY]
+        origin: [sourceX, sourceY],
+        flipY
       },
       // destination: GPUImageCopyTextureTagged
       {

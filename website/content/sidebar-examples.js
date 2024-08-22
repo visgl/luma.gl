@@ -10,7 +10,8 @@ const sidebars = {
       label: 'Showcase',
       items: [
         'showcase/instancing',
-        'showcase/persistence'
+        'showcase/persistence',
+        'showcase/postprocessing'
       ]
     },
     {

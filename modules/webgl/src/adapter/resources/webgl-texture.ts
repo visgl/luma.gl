@@ -349,11 +349,12 @@ export class WEBGLTexture extends Texture {
     aspect?: 'all' | 'stencil-only' | 'depth-only';
     colorSpace?: 'srgb';
     premultipliedAlpha?: boolean;
+    flipY?: boolean;
   }): {width: number; height: number} {
     const size = Texture.getExternalImageSize(options.image);
     const opts = {...Texture.defaultCopyExternalImageOptions, ...size, ...options};
 
-    const {image, depth, mipLevel, x, y, z} = opts;
+    const {image, depth, mipLevel, x, y, z, flipY} = opts;
     let {width, height} = opts;
     const {dimension, glTarget, glFormat, glInternalFormat, glType} = this;
 
@@ -361,12 +362,9 @@ export class WEBGLTexture extends Texture {
     width = Math.min(width, size.width - x);
     height = Math.min(height, size.height - y);
 
-    // WebGL does not yet support sourceX/sourceY in copyExternalImage; requires copyTexSubImage2D from a framebuffer'
-
     if (options.sourceX || options.sourceY) {
-      throw new Error(
-        'WebGL does not yet support sourceX/sourceY in copyExternalImage; requires copyTexSubImage2D from a framebuffer'
-      );
+      // requires copyTexSubImage2D from a framebuffer'
+      throw new Error('WebGL does not support sourceX/sourceY)');
     }
 
     copyExternalImageToMipLevel(this.device.gl, this.handle, image, {
@@ -381,7 +379,8 @@ export class WEBGLTexture extends Texture {
       glFormat,
       glInternalFormat,
       glType,
-      glTarget
+      glTarget,
+      flipY
     });
 
     return {width: opts.width, height: opts.height};
@@ -645,7 +644,8 @@ export class WEBGLTexture extends Texture {
         ...this,
         depth,
         mipLevel,
-        glTarget
+        glTarget,
+        flipY: this.props.flipY
       });
       return;
     }

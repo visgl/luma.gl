@@ -10,6 +10,6 @@ test('edgeWork#build/uniform', t => {
 
   t.ok(uniforms, 'edgeWork module build is ok');
   t.equal(uniforms.radius, 2, 'edgeWork radius uniform is ok');
-  t.deepEqual(uniforms.delta, [1, 0], 'edgeWork delta uniform is ok');
+  t.deepEqual(uniforms.mode, 0, 'edgeWork mode uniform is ok');
   t.end();
 });

@@ -32,8 +32,8 @@ export {ShaderFactory} from './factories/shader-factory';
 // Models
 export type {ClipSpaceProps} from './models/clip-space';
 export {ClipSpace} from './models/clip-space';
-export type {BackgroundTextureModelProps} from './models/background-texture-model';
-export {BackgroundTextureModel} from './models/background-texture-model';
+export type {BackgroundTextureModelProps} from './models/billboard-texture-model';
+export {BackgroundTextureModel} from './models/billboard-texture-model';
 
 // Scenegraph Core nodes
 export {ScenegraphNode} from './scenegraph/scenegraph-node';

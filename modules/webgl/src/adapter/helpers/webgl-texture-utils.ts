@@ -6,9 +6,9 @@
 // WebGL... the texture API from hell... hopefully made simpler
 //
 
+import {TypedArray} from '@math.gl/types';
 import type {ExternalImage} from '@luma.gl/core';
 import {Buffer, Texture, Framebuffer, FramebufferProps} from '@luma.gl/core';
-
 import {
   GL,
   GLTextureTarget,
@@ -18,13 +18,12 @@ import {
   GLDataType
 } from '@luma.gl/constants';
 
-import {TypedArray} from '@math.gl/types';
-
 import {WEBGLFramebuffer} from '../resources/webgl-framebuffer';
 import {getGLTypeFromTypedArray, getTypedArrayFromGLType} from './typed-array-utils';
 import {glFormatToComponents, glTypeToBytes} from './format-utils';
 import {WEBGLBuffer} from '../resources/webgl-buffer';
 import {WEBGLTexture} from '../resources/webgl-texture';
+import {withGLParameters} from '../../context/state-tracker/with-parameters';
 
 /** A "border" parameter is required in many WebGL texture APIs, but must always be 0... */
 const BORDER = 0;
@@ -121,7 +120,7 @@ export function copyExternalImageToMipLevel(
   gl: WebGL2RenderingContext,
   handle: WebGLTexture,
   image: ExternalImage,
-  options: WebGLCopyTextureOptions
+  options: WebGLCopyTextureOptions & {flipY?: boolean}
 ): void {
   const {width, height} = options;
   const {dimension, depth = 0, mipLevel = 0} = options;
@@ -130,26 +129,29 @@ export function copyExternalImageToMipLevel(
 
   const glTarget = getWebGLCubeFaceTarget(options.glTarget, dimension, depth);
 
-  switch (dimension) {
-    case '2d-array':
-    case '3d':
-      gl.bindTexture(glTarget, handle);
-      // prettier-ignore
-      gl.texSubImage3D(glTarget, mipLevel, x, y, z, width, height, depth, glFormat, glType, image);
-      gl.bindTexture(glTarget, null);
-      break;
+  const glParameters = options.flipY ? {[GL.UNPACK_FLIP_Y_WEBGL]: true} : {};
+  withGLParameters(gl, glParameters, () => {
+    switch (dimension) {
+      case '2d-array':
+      case '3d':
+        gl.bindTexture(glTarget, handle);
+        // prettier-ignore
+        gl.texSubImage3D(glTarget, mipLevel, x, y, z, width, height, depth, glFormat, glType, image);
+        gl.bindTexture(glTarget, null);
+        break;
 
-    case '2d':
-    case 'cube':
-      gl.bindTexture(glTarget, handle);
-      // prettier-ignore
-      gl.texSubImage2D(glTarget, mipLevel, x, y, width, height, glFormat, glType, image);
-      gl.bindTexture(glTarget, null);
-      break;
+      case '2d':
+      case 'cube':
+        gl.bindTexture(glTarget, handle);
+        // prettier-ignore
+        gl.texSubImage2D(glTarget, mipLevel, x, y, width, height, glFormat, glType, image);
+        gl.bindTexture(glTarget, null);
+        break;
 
-    default:
-      throw new Error(dimension);
-  }
+      default:
+        throw new Error(dimension);
+    }
+  });
 }
 
 /**
@@ -279,7 +281,7 @@ export function getWebGLCubeFaceTarget(
  * Wrapper for the messy WebGL texture API
  *
 export function clearMipLevel(gl: WebGL2RenderingContext, options: WebGLSetTextureOptions): void {
-  const {dimension, width, height, depth = 0, level = 0} = options;
+  const {dimension, width, height, depth = 0, mipLevel = 0} = options;
   const {glInternalFormat, glFormat, glType, compressed} = options;
   const glTarget = getWebGLCubeFaceTarget(options.glTarget, dimension, depth);
 
@@ -288,10 +290,10 @@ export function clearMipLevel(gl: WebGL2RenderingContext, options: WebGLSetTextu
     case '3d':
       if (compressed) {
         // prettier-ignore
-        gl.compressedTexImage3D(glTarget, level, glInternalFormat, width, height, depth, BORDER, null);
+        gl.compressedTexImage3D(glTarget, mipLevel, glInternalFormat, width, height, depth, BORDER, null);
       } else {
         // prettier-ignore
-        gl.texImage3D( glTarget, level, glInternalFormat, width, height, depth, BORDER, glFormat, glType, null);
+        gl.texImage3D( glTarget, mipLevel, glInternalFormat, width, height, depth, BORDER, glFormat, glType, null);
       }
       break;
 
@@ -299,10 +301,10 @@ export function clearMipLevel(gl: WebGL2RenderingContext, options: WebGLSetTextu
     case 'cube':
       if (compressed) {
         // prettier-ignore
-        gl.compressedTexImage2D(glTarget, level, glInternalFormat, width, height, BORDER, null);
+        gl.compressedTexImage2D(glTarget, mipLevel, glInternalFormat, width, height, BORDER, null);
       } else {
         // prettier-ignore
-        gl.texImage2D(glTarget, level, glInternalFormat, width, height, BORDER, glFormat, glType, null);
+        gl.texImage2D(glTarget, mipLevel, glInternalFormat, width, height, BORDER, glFormat, glType, null);
       }
       break;
 
@@ -310,6 +312,7 @@ export function clearMipLevel(gl: WebGL2RenderingContext, options: WebGLSetTextu
       throw new Error(dimension);
   }
 }
+  */
 
 /**
  * Set a texture mip level to the contents of an external image.

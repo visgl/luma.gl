@@ -8,11 +8,11 @@ import {random} from '../../../modules/math/random/random';
 const fs = /* glsl */ `\
 uniform edgeWorkUniforms {
   float radius;
-  vec2 delta;
+  int mode;
 } edgeWork;
 
-vec4 edgeWork_sampleColor1(sampler2D source, vec2 texSize, vec2 texCoord) {
-  vec2 relativeDelta = edgeWork.radius * edgeWork.delta / texSize;
+vec4 edgeWork_sampleColorRGB(sampler2D source, vec2 texSize, vec2 texCoord, vec2 delta) {
+  vec2 relativeDelta = edgeWork.radius * delta / texSize;
 
   vec2 color = vec2(0.0);
   vec2 total = vec2(0.0);
@@ -36,8 +36,8 @@ vec4 edgeWork_sampleColor1(sampler2D source, vec2 texSize, vec2 texCoord) {
   return vec4(color / total, 0.0, 1.0);
 }
 
-vec4 edgeWork_sampleColor2(sampler2D source, vec2 texSize, vec2 texCoord) {
-  vec2 relativeDelta = edgeWork.radius * edgeWork.delta / texSize;
+vec4 edgeWork_sampleColorXY(sampler2D source, vec2 texSize, vec2 texCoord, vec2 delta) {
+  vec2 relativeDelta = edgeWork.radius * delta / texSize;
 
   vec2 color = vec2(0.0);
   vec2 total = vec2(0.0);
@@ -60,6 +60,16 @@ vec4 edgeWork_sampleColor2(sampler2D source, vec2 texSize, vec2 texCoord) {
   float c = clamp(10000.0 * (color.y / total.y - color.x / total.x) + 0.5, 0.0, 1.0);
   return vec4(c, c, c, 1.0);
 }
+
+vec4 edgeWork_sampleColor(sampler2D source, vec2 texSize, vec2 texCoord) {
+  switch (edgeWork.mode) {
+    case 0: 
+    return edgeWork_sampleColorRGB(source, texSize, texCoord, vec2(1., 0.));
+    case 1: 
+    default:
+      return edgeWork_sampleColorXY(source, texSize, texCoord, vec2(0., 1.));
+  }
+}
 `;
 
 /**
@@ -70,8 +80,8 @@ vec4 edgeWork_sampleColor2(sampler2D source, vec2 texSize, vec2 texCoord) {
 export type EdgeWorkProps = {
   /** radius The radius of the effect in pixels. */
   radius?: number;
-  /** @deprecated internal */
-  delta?: number;
+  /** @deprecated xy or RGB */
+  mode?: 0 | 1;
 };
 
 export type EdgeWorkUniforms = EdgeWorkProps;
@@ -88,22 +98,23 @@ export const edgeWork = {
   name: 'edgeWork',
   dependencies: [random],
   fs,
-
+  uniformTypes: {
+    radius: 'f32',
+    mode: 'i32'
+  },
   propTypes: {
     radius: {value: 2, min: 1, softMax: 50},
-    delta: {value: [1, 0], private: true}
+    mode: {value: 0, private: true}
   },
 
   passes: [
     {
-      // @ts-expect-error
-      sampler: 'edgeWork_sampleColor1',
-      propTypes: {delta: [1, 0]}
+      sampler: true,
+      uniforms: {mode: 0}
     },
     {
-      // @ts-expect-error
-      sampler: 'edgeWork_sampleColor2',
-      propTypes: {delta: [0, 1]}
+      sampler: true,
+      uniforms: {mode: 1}
     }
   ]
 } as const satisfies ShaderPass<EdgeWorkProps, EdgeWorkProps>;

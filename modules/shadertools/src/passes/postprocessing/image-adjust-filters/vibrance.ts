@@ -37,6 +37,9 @@ export const vibrance = {
   props: {} as VibranceProps,
   uniforms: {} as VibranceUniforms,
   name: 'vibrance',
+  uniformTypes: {
+    amount: 'f32'
+  },
   propTypes: {
     amount: {value: 0, min: -1, max: 1}
   },

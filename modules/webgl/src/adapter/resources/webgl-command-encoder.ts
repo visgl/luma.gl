@@ -8,6 +8,8 @@ import type {
   CopyBufferToTextureOptions,
   CopyTextureToBufferOptions,
   CopyTextureToTextureOptions,
+  // ClearTextureOptions,
+  // ReadTextureOptions,
   QuerySet,
   Buffer
 } from '@luma.gl/core';
@@ -51,6 +53,10 @@ export class WEBGLCommandEncoder extends CommandEncoder {
   copyTextureToTexture(options: CopyTextureToTextureOptions): void {
     this.commandBuffer.commands.push({name: 'copy-texture-to-texture', options});
   }
+
+  // clearTexture(options: ClearTextureOptions): void {
+  //   this.commandBuffer.commands.push({name: 'copy-texture-to-texture', options});
+  // }
 
   override pushDebugGroup(groupLabel: string): void {}
   override popDebugGroup() {}
