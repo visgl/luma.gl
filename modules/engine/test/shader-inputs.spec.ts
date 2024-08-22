@@ -95,14 +95,14 @@ test('ShaderInputs#dependencies', t => {
 test('ShaderInputs#bindings', t => {
   [true, false].map(callback => {
     t.comment(`custom module created ${callback ? 'with' : 'without'} getUniforms()`);
-    type CustomProps = {color: number[]; colorTexture: Texture};
+    type CustomProps = {color: [number, number, number]; colorTexture: Texture};
     const custom: ShaderModule<CustomProps> = {
       name: 'custom',
       uniformTypes: {color: 'vec3<f32>'},
       propTypes: {color: {value: [0, 0, 0]}}
     };
     if (callback) {
-      custom.getUniforms = ({color, colorTexture}: CustomProps): CustomProps => {
+      custom.getUniforms = ({color, colorTexture}) => {
         return {color, colorTexture};
       };
     }

@@ -8,7 +8,7 @@ import {gouraudMaterial} from '@luma.gl/shadertools';
 
 test('shadertools#gouraudMaterial', t => {
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-  let uniforms: Record<string, UniformValue> = gouraudMaterial.getUniforms?.({})!;
+  let uniforms: Record<string, UniformValue | any> = gouraudMaterial.getUniforms?.({})!;
   t.deepEqual(uniforms, gouraudMaterial.defaultUniforms, 'Default phong lighting uniforms ok');
 
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion

@@ -51,7 +51,7 @@ export type TriangleBlurProps = {
   /** The radius of the pyramid convolved with the image. */
   radius?: number;
   /** @deprecated internal property */
-  delta?: number[];
+  delta?: [number, number];
 };
 
 export type TriangleBlurUniforms = TriangleBlurProps;

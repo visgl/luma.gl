@@ -44,7 +44,6 @@ import {deepEqual} from '../utils/deep-equal';
 import {uid} from '../utils/uid';
 import {splitUniformsAndBindings} from './split-uniforms-and-bindings';
 
-import type {ShaderModuleInputs} from '../shader-inputs';
 import {ShaderInputs} from '../shader-inputs';
 // import type {AsyncTextureProps} from '../async-texture/async-texture';
 import {AsyncTexture} from '../async-texture/async-texture';
@@ -233,6 +232,7 @@ export class Model {
     const moduleMap = Object.fromEntries(
       this.props.modules?.map(module => [module.name, module]) || []
     );
+    // @ts-expect-error Fix typings
     this.setShaderInputs(props.shaderInputs || new ShaderInputs(moduleMap));
 
     // Setup shader assembler
@@ -885,7 +885,7 @@ export class Model {
   }
 }
 
-function shaderModuleHasUniforms(module: ShaderModuleInputs): boolean {
+function shaderModuleHasUniforms(module: ShaderModule): boolean {
   return Boolean(module.uniformTypes && !isObjectEmpty(module.uniformTypes));
 }
 

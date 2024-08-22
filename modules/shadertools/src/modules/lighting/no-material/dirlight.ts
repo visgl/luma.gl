@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {Vector3Like, TypedArray} from '@math.gl/core';
+import type {Vector3Like} from '@math.gl/core';
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
 
 export type DirlightProps = {
-  lightDirection?: Vector3Like | TypedArray;
+  lightDirection?: Vector3Like;
 };
 
 export type DirlightUniforms = DirlightProps;
@@ -85,7 +85,7 @@ export const dirlight = {
     lightDirection: 'vec3<f32>'
   },
   defaultUniforms: {
-    lightDirection: new Float32Array([1, 1, 2])
+    lightDirection: [1, 1, 2]
   },
   getUniforms
 } as const satisfies ShaderModule<DirlightProps, DirlightUniforms>;

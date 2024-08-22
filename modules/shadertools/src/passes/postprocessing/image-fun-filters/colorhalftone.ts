@@ -50,7 +50,7 @@ vec4 colorHalftone_filterColor_ext(vec4 color, vec2 texSize, vec2 texCoord) {
  */
 export type ColorHalftoneProps = {
   /** The x,y coordinate of the pattern origin. */
-  center?: number[];
+  center?: [number, number];
   /** The rotation of the pattern in radians. */
   angle?: number;
   /** The diameter of a dot in pixels. */

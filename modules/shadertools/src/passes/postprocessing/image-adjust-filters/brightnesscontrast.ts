@@ -60,7 +60,6 @@ export type BrightnessContrastUniforms = BrightnessContrastProps;
  */
 export const brightnessContrast = {
   props: {} as BrightnessContrastProps,
-  uniforms: {} as BrightnessContrastUniforms,
 
   name: 'brightnessContrast',
   uniformTypes: {
