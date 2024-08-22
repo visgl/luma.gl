@@ -91,7 +91,7 @@ void main(void) {
   vNormal = mat3(app.modelMatrix) * normals;
   vUV = texCoords;
 
-  #if (defined(LIGHTING_VERTEX))
+  #ifdef LIGHTING_VERTEX
   vColor = lighting_getLightColor(vec3(1.0), app.eyePosition, vPosition, normalize(vNormal));
   #endif
   gl_Position = app.mvpMatrix * vec4(positions, 1.0);
@@ -118,13 +118,13 @@ uniform appUniforms {
 out vec4 fragColor;
 
 void main(void) {
-  #if (defined(LIGHTING_FRAGMENT))
+  #ifdef LIGHTING_FRAGMENT
   vec3 surfaceColor = texture(uTexture, vec2(vUV.x, 1.0 - vUV.y)).rgb;
   surfaceColor = lighting_getLightColor(surfaceColor, app.eyePosition, vPosition, normalize(vNormal));
   fragColor = vec4(surfaceColor, 1.0);
   #endif
 
-  #if (defined(LIGHTING_VERTEX))
+  #ifdef LIGHTING_VERTEX
   fragColor = vec4(vColor, 1.0);
   #endif
 }
