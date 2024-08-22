@@ -58,20 +58,20 @@ fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
   let delta = length(inputs.instanceOffsets);
   let offset = vec4<f32>(inputs.instanceOffsets, sin((app.time + delta) * 0.1) * 16.0, 0);
   outputs.Position = app.projectionMatrix * app.viewMatrix * (app.modelMatrix * inputs.positions + offset);
-  
+
   outputs.normal = dirlight_setNormal((app.modelMatrix * vec4<f32>(inputs.normals, 0.0)).xyz);
   outputs.color = inputs.instanceColors;
 
   // vec4 pickColor = vec4(0., instanceIndexes, 1.0);
   picking_setPickingColor(0);
-  
+
   return outputs;
 }
 
 @fragment
 fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
-  var fragColor = inputs.color; 
-  fragColor = dirlight_filterColor(fragColor, DirlightInputs(inputs.normal)); 
+  var fragColor = inputs.color;
+  fragColor = dirlight_filterColor(fragColor, DirlightInputs(inputs.normal));
   return fragColor;
 }
 `;
