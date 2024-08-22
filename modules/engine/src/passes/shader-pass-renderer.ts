@@ -51,7 +51,9 @@ export class ShaderPassRenderer {
       height: size[1]
     });
 
-    this.textureModel = new BackgroundTextureModel(device, {backgroundTexture: this.swapFramebuffers.current.colorAttachments[0].texture});
+    this.textureModel = new BackgroundTextureModel(device, {
+      backgroundTexture: this.swapFramebuffers.current.colorAttachments[0].texture
+    });
 
     this.clipSpace = new ClipSpace(device, {
       fs: `\
@@ -122,7 +124,7 @@ void main() {
     // Clear the current texture before we begin
     const clearTexturePass = this.device.beginRenderPass({
       framebuffer: this.swapFramebuffers.current,
-      clearColor: [0, 0, 0, 1],
+      clearColor: [0, 0, 0, 1]
     });
     this.textureModel.draw(clearTexturePass);
     clearTexturePass.end();

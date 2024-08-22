@@ -2,12 +2,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-
 import type {
   CopyBufferToBufferOptions,
   CopyBufferToTextureOptions,
   CopyTextureToBufferOptions,
-  CopyTextureToTextureOptions,
+  CopyTextureToTextureOptions
   // ClearTextureOptions,
   // ReadTextureOptions
 } from '@luma.gl/core';
@@ -92,6 +91,8 @@ export class WEBGLCommandBuffer extends CommandBuffer {
         // case 'clear-texture':
         //   _clearTexture(this.device, command.options);
         //   break;
+        default:
+          throw new Error(command.name);
       }
     }
   }
@@ -408,9 +409,9 @@ function getFramebuffer(source: Texture | Framebuffer): {
   return {framebuffer: source as unknown as WEBGLFramebuffer, destroyFramebuffer: false};
 }
 
-/** 
+/**
  * Returns number of components in a specific readPixels WebGL format
- * @todo use shadertypes utils instead? 
+ * @todo use shadertypes utils instead?
  */
 export function glFormatToComponents(format): 1 | 2 | 3 | 4 {
   switch (format) {
@@ -435,8 +436,8 @@ export function glFormatToComponents(format): 1 | 2 | 3 | 4 {
 
 /**
  * Return byte count for given readPixels WebGL type
-* @todo use shadertypes utils instead? 
-*/
+ * @todo use shadertypes utils instead?
+ */
 export function glTypeToBytes(type: GL): 1 | 2 | 4 {
   switch (type) {
     case GL.UNSIGNED_BYTE:

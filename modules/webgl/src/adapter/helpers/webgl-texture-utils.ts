@@ -6,9 +6,9 @@
 // WebGL... the texture API from hell... hopefully made simpler
 //
 
+import {TypedArray} from '@math.gl/types';
 import type {ExternalImage} from '@luma.gl/core';
 import {Buffer, Texture, Framebuffer, FramebufferProps} from '@luma.gl/core';
-
 import {
   GL,
   GLTextureTarget,
@@ -18,14 +18,12 @@ import {
   GLDataType
 } from '@luma.gl/constants';
 
-import {TypedArray} from '@math.gl/types';
-
 import {WEBGLFramebuffer} from '../resources/webgl-framebuffer';
 import {getGLTypeFromTypedArray, getTypedArrayFromGLType} from './typed-array-utils';
 import {glFormatToComponents, glTypeToBytes} from './format-utils';
 import {WEBGLBuffer} from '../resources/webgl-buffer';
 import {WEBGLTexture} from '../resources/webgl-texture';
-import {withGLParameters} from '@luma.gl/webgl/context/state-tracker/with-parameters';
+import {withGLParameters} from '../../context/state-tracker/with-parameters';
 
 /** A "border" parameter is required in many WebGL texture APIs, but must always be 0... */
 const BORDER = 0;

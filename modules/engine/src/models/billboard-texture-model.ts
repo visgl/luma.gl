@@ -26,7 +26,6 @@ void main(void) {
 }
 `;
 
-
 /**
  * Props for a Model that renders a bitmap into the "background", i.e covering the screen
  */
@@ -69,14 +68,12 @@ export class BackgroundTextureModel extends ClipSpace {
 
   setTexture(backgroundTexture: Texture | AsyncTexture): void {
     this.setBindings({
-      backgroundTexture: backgroundTexture
+      backgroundTexture
     });
   }
 
   override predraw(): void {
-    this.shaderInputs.setProps({
-
-    })
+    this.shaderInputs.setProps({});
     super.predraw();
   }
 }

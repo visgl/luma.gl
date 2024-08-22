@@ -236,7 +236,7 @@ export class WebGPUTexture extends Texture {
         premultipliedAlpha
       },
       // copySize: GPUExtent3D
-      [width, height, depth],
+      [width, height, depth]
     );
     return {width, height};
   }

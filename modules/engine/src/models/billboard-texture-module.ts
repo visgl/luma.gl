@@ -44,7 +44,6 @@ export const billboardTexture = {
   dependencies: [],
   uniformTypes: {
     topLeft: 'vec2<f32>',
-    bottomRight: 'vec2<f32>',
+    bottomRight: 'vec2<f32>'
   }
-
 } as const satisfies ShaderModule<BillboardTextureProps, BillboardTextureUniforms>;
