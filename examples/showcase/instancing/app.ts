@@ -2,14 +2,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {ShaderUniformType, NumberArray} from '@luma.gl/core';
 import {Device} from '@luma.gl/core';
 import type {AnimationProps, ModelProps} from '@luma.gl/engine';
 // @ts-ignore - ib added this to solve module resolution mess
 import {AnimationLoopTemplate, CubeGeometry, Timeline, Model, ShaderInputs} from '@luma.gl/engine';
 // @ts-ignore TODO - ib added this to solve module resolution mess
 import {makeRandomGenerator, PickingManager, indexPicking as picking} from '@luma.gl/engine';
-import {dirlight} from '@luma.gl/shadertools';
+import {dirlight, ShaderModule} from '@luma.gl/shadertools';
 import {Matrix4, radians} from '@math.gl/core';
 
 const INFO_HTML = `
@@ -19,7 +18,6 @@ Cube drawn with <b>instanced rendering</b>.
 A luma.gl <code>Cube</code>, rendering 65,536 instances in a
 single GPU draw call using instanced vertex attributes.
 `;
-
 
 // INSTANCE CUBE
 
@@ -170,6 +168,7 @@ class InstancedCube extends Model {
       source: WGSL_SHADER,
       vs: VS_GLSL,
       fs: FS_GLSL,
+      // @ts-expect-error Remove once npm package updated with new types
       modules: device.info.type !== 'webgpu' ? [dirlight, picking] : [dirlight],
       instanceCount: SIDE * SIDE,
       geometry: new CubeGeometry({indices: true}),
@@ -193,13 +192,14 @@ class InstancedCube extends Model {
 }
 
 type AppUniforms = {
-  modelMatrix: NumberArray;
-  viewMatrix: NumberArray;
-  projectionMatrix: NumberArray;
+  modelMatrix: Matrix4;
+  viewMatrix: Matrix4;
+  projectionMatrix: Matrix4;
   time: number;
 };
 
-const app: {uniformTypes: Record<string, ShaderUniformType>} = {
+const app: ShaderModule<AppUniforms> = {
+  name: 'app',
   uniformTypes: {
     modelMatrix: 'mat4x4<f32>',
     viewMatrix: 'mat4x4<f32>',
@@ -218,7 +218,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   picker: PickingManager;
 
   shaderInputs = new ShaderInputs<{
-    app: AppUniforms;
+    app: typeof app.props;
     dirlight: typeof dirlight.props;
     picking: typeof picking.props;
   }>({
@@ -313,4 +313,3 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.picker.getPickInfo(mousePosition as [number, number]);
   }
 }
-
