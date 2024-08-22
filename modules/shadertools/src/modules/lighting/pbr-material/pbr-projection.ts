@@ -4,13 +4,11 @@
 
 /* eslint-disable camelcase */
 
-import type {NumberArray3, NumberArray16} from '../../../lib/utils/uniform-types';
+import type {NumberArray3, NumberArray16} from '@math.gl/core';
 
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
 
-import {glsl} from '../../../lib/glsl-utils/highlight';
-
-const uniformBlock = glsl`\
+const uniformBlock = /* glsl */ `\
 uniform pbrProjectionUniforms {
   mat4 modelViewProjectionMatrix;
   mat4 modelMatrix;
