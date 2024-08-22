@@ -144,9 +144,9 @@ export abstract class Framebuffer extends Resource<FramebufferProps> {
       id: `${this.id}-depth-stencil-attachment`,
       usage: Texture.RENDER_ATTACHMENT,
       format,
+      mipmaps: false,
       width: this.width,
-      height: this.height,
-      mipmaps: false
+      height: this.height
     });
   }
 

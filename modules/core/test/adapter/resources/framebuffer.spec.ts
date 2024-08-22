@@ -137,6 +137,20 @@ test('WebGLFramebuffer resize', async t => {
     framebuffer.resize({width: 2, height: 2});
     t.equals(framebuffer.width, 2, 'Framebuffer width updated correctly on resize');
     t.equals(framebuffer.height, 2, 'Framebuffer height updated correctly on resize');
+    framebuffer.delete();
+  }
+
+  t.end();
+});
+
+test('WebGLFramebuffer contents', async t => {
+  for (const testDevice of await getTestDevices()) {
+    const framebuffer = testDevice.createFramebuffer({
+      colorAttachments: ['rgba8unorm'],
+      depthStencilAttachment: 'depth16unorm',
+      width: 2,
+      height: 2
+    });
 
     if (testDevice.type === 'webgl') {
       testDevice.beginRenderPass({
