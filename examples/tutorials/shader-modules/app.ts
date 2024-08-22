@@ -3,7 +3,6 @@
 // Copyright (c) vis.gl contributors
 
 import {Buffer, NumberArray} from '@luma.gl/core';
-// @ts-expect-error
 import {AnimationLoopTemplate, AnimationProps, Model, ShaderInputs} from '@luma.gl/engine';
 import {ShaderModule} from '@luma.gl/shadertools';
 

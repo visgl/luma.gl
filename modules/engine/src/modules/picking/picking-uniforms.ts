@@ -58,6 +58,8 @@ export type PickingUniforms = {
   highlightedObjectIndex: number;
 };
 
+export type PickingBindings = {};
+
 // GLSL_UNIFORMS
 
 const uniformTypes: Required<ShaderModule<PickingProps, PickingUniforms>>['uniformTypes'] = {
@@ -174,4 +176,4 @@ export const pickingUniforms = {
   },
 
   getUniforms
-} as const satisfies ShaderModule<PickingProps, PickingUniforms, {}>;
+} as const satisfies ShaderModule<PickingProps, PickingUniforms, PickingBindings>;
