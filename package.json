@@ -15,7 +15,8 @@
     "3d"
   ],
   "workspaces": [
-    "modules/*"
+    "modules/*",
+    "examples/*/*"
   ],
   "browser": {
     "fs": false
