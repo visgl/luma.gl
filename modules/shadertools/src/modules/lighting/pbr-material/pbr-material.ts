@@ -150,4 +150,4 @@ export const pbrMaterial = {
     scaleDiffBaseMR: 'vec4<f32>',
     scaleFGDSpec: 'vec4<f32>'
   }
-} as const satisfies ShaderModule<PBRMaterialProps, PBRMaterialUniforms>;
+} as const satisfies ShaderModule<PBRMaterialProps, PBRMaterialUniforms, PBRMaterialBindings>;
