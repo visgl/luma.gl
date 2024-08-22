@@ -1,6 +1,7 @@
-import type {Device, Texture, Binding, Parameters} from '@luma.gl/core';
+import type {Device, Texture, Parameters} from '@luma.gl/core';
 import {log} from '@luma.gl/core';
 import {PBREnvironment} from './pbr-environment';
+import {PBRMaterialBindings, PBRMaterialUniforms, PBRProjectionProps} from '@luma.gl/shadertools';
 
 /* eslint-disable camelcase */
 
@@ -17,8 +18,8 @@ export type ParsePBRMaterialOptions = {
 
 export type ParsedPBRMaterial = {
   readonly defines: Record<string, number | boolean>;
-  readonly bindings: Record<string, Binding>;
-  readonly uniforms: Record<string, any>;
+  readonly bindings: Partial<PBRMaterialBindings>;
+  readonly uniforms: Partial<PBRProjectionProps & PBRMaterialUniforms>;
   readonly parameters: Parameters;
   readonly glParameters: Record<string, any>;
   /** List of all generated textures, makes it easy to destroy them later */
@@ -58,9 +59,9 @@ export function parsePBRMaterial(
     bindings: {},
     uniforms: {
       // TODO: find better values?
-      u_Camera: [0, 0, 0], // Model should override
+      camera: [0, 0, 0], // Model should override
 
-      u_MetallicRoughnessValues: [1, 1] // Default is 1 and 1
+      metallicRoughnessValues: [1, 1] // Default is 1 and 1
     },
     parameters: {},
     glParameters: {},
@@ -72,19 +73,19 @@ export function parsePBRMaterial(
 
   const {imageBasedLightingEnvironment} = options;
   if (imageBasedLightingEnvironment) {
-    parsedMaterial.bindings.u_DiffuseEnvSampler =
+    parsedMaterial.bindings.pbr_diffuseEnvSampler =
       imageBasedLightingEnvironment.diffuseEnvSampler.texture;
-    parsedMaterial.bindings.u_SpecularEnvSampler =
+    parsedMaterial.bindings.pbr_specularEnvSampler =
       imageBasedLightingEnvironment.specularEnvSampler.texture;
-    parsedMaterial.bindings.u_brdfLUT = imageBasedLightingEnvironment.brdfLutTexture.texture;
-    parsedMaterial.uniforms.u_ScaleIBLAmbient = [1, 1];
+    parsedMaterial.bindings.pbr_BrdfLUT = imageBasedLightingEnvironment.brdfLutTexture.texture;
+    parsedMaterial.uniforms.scaleIBLAmbient = [1, 1];
   }
 
   if (options?.pbrDebug) {
     parsedMaterial.defines.PBR_DEBUG = 1;
     // Override final color for reference app visualization of various parameters in the lighting equation.
-    parsedMaterial.uniforms.u_ScaleDiffBaseMR = [0, 0, 0, 0];
-    parsedMaterial.uniforms.u_ScaleFGDSpec = [0, 0, 0, 0];
+    parsedMaterial.uniforms.scaleDiffBaseMR = [0, 0, 0, 0];
+    parsedMaterial.uniforms.scaleFGDSpec = [0, 0, 0, 0];
   }
 
   if (attributes.NORMAL) parsedMaterial.defines.HAS_NORMALS = 1;
@@ -103,45 +104,51 @@ export function parsePBRMaterial(
 
 /** Parse GLTF material record */
 function parseMaterial(device: Device, material, parsedMaterial: ParsedPBRMaterial): void {
-  parsedMaterial.uniforms.pbr_uUnlit = Boolean(material.unlit);
+  parsedMaterial.uniforms.unlit = Boolean(material.unlit);
 
   if (material.pbrMetallicRoughness) {
     parsePbrMetallicRoughness(device, material.pbrMetallicRoughness, parsedMaterial);
   }
   if (material.normalTexture) {
-    addTexture(device, material.normalTexture, 'u_NormalSampler', 'HAS_NORMALMAP', parsedMaterial);
+    addTexture(
+      device,
+      material.normalTexture,
+      'pbr_normalSampler',
+      'HAS_NORMALMAP',
+      parsedMaterial
+    );
 
     const {scale = 1} = material.normalTexture;
-    parsedMaterial.uniforms.u_NormalScale = scale;
+    parsedMaterial.uniforms.normalScale = scale;
   }
   if (material.occlusionTexture) {
     addTexture(
       device,
       material.occlusionTexture,
-      'u_OcclusionSampler',
+      'pbr_occlusionSampler',
       'HAS_OCCLUSIONMAP',
       parsedMaterial
     );
 
     const {strength = 1} = material.occlusionTexture;
-    parsedMaterial.uniforms.u_OcclusionStrength = strength;
+    parsedMaterial.uniforms.occlusionStrength = strength;
   }
   if (material.emissiveTexture) {
     addTexture(
       device,
       material.emissiveTexture,
-      'u_EmissiveSampler',
+      'pbr_emissiveSampler',
       'HAS_EMISSIVEMAP',
       parsedMaterial
     );
-    parsedMaterial.uniforms.u_EmissiveFactor = material.emissiveFactor || [0, 0, 0];
+    parsedMaterial.uniforms.emissiveFactor = material.emissiveFactor || [0, 0, 0];
   }
 
   switch (material.alphaMode) {
     case 'MASK':
       const {alphaCutoff = 0.5} = material;
       parsedMaterial.defines.ALPHA_CUTOFF = 1;
-      parsedMaterial.uniforms.u_AlphaCutoff = alphaCutoff;
+      parsedMaterial.uniforms.alphaCutoff = alphaCutoff;
       break;
     case 'BLEND':
       log.warn('glTF BLEND alphaMode might not work well because it requires mesh sorting')();
@@ -179,24 +186,24 @@ function parsePbrMetallicRoughness(
     addTexture(
       device,
       pbrMetallicRoughness.baseColorTexture,
-      'u_BaseColorSampler',
+      'pbr_baseColorSampler',
       'HAS_BASECOLORMAP',
       parsedMaterial
     );
   }
-  parsedMaterial.uniforms.u_BaseColorFactor = pbrMetallicRoughness.baseColorFactor || [1, 1, 1, 1];
+  parsedMaterial.uniforms.baseColorFactor = pbrMetallicRoughness.baseColorFactor || [1, 1, 1, 1];
 
   if (pbrMetallicRoughness.metallicRoughnessTexture) {
     addTexture(
       device,
       pbrMetallicRoughness.metallicRoughnessTexture,
-      'u_MetallicRoughnessSampler',
+      'pbr_metallicRoughnessSampler',
       'HAS_METALROUGHNESSMAP',
       parsedMaterial
     );
   }
   const {metallicFactor = 1, roughnessFactor = 1} = pbrMetallicRoughness;
-  parsedMaterial.uniforms.u_MetallicRoughnessValues = [metallicFactor, roughnessFactor];
+  parsedMaterial.uniforms.metallicRoughnessValues = [metallicFactor, roughnessFactor];
 }
 
 /** Create a texture from a glTF texture/sampler/image combo and add it to bindings */
@@ -271,9 +278,9 @@ export class PBRMaterialParser {
 
     this.uniforms = {
       // TODO: find better values?
-      u_Camera: [0, 0, 0], // Model should override
+      camera: [0, 0, 0], // Model should override
 
-      u_MetallicRoughnessValues: [1, 1] // Default is 1 and 1
+      metallicRoughnessValues: [1, 1] // Default is 1 and 1
     };
 
     this.bindings = {};
@@ -282,17 +289,17 @@ export class PBRMaterialParser {
     this.generatedTextures = [];
 
     if (imageBasedLightingEnvironment) {
-      this.bindings.u_DiffuseEnvSampler = imageBasedLightingEnvironment.getDiffuseEnvSampler();
-      this.bindings.u_SpecularEnvSampler = imageBasedLightingEnvironment.getSpecularEnvSampler();
-      this.bindings.u_brdfLUT = imageBasedLightingEnvironment.getBrdfTexture();
-      this.uniforms.u_ScaleIBLAmbient = [1, 1];
+      this.bindings.pbr_diffuseEnvSampler = imageBasedLightingEnvironment.getDiffuseEnvSampler();
+      this.bindings.pbr_specularEnvSampler = imageBasedLightingEnvironment.getSpecularEnvSampler();
+      this.bindings.pbr_BrdfLUT = imageBasedLightingEnvironment.getBrdfTexture();
+      this.uniforms.scaleIBLAmbient = [1, 1];
     }
 
     if (pbrDebug) {
       // Override final color for reference app visualization
       // of various parameters in the lighting equation.
-      this.uniforms.u_ScaleDiffBaseMR = [0, 0, 0, 0];
-      this.uniforms.u_ScaleFGDSpec = [0, 0, 0, 0];
+      this.uniforms.scaleDiffBaseMR = [0, 0, 0, 0];
+      this.uniforms.scaleFGDSpec = [0, 0, 0, 0];
     }
 
     this.defineIfPresent(attributes.NORMAL, 'HAS_NORMALS');
@@ -324,31 +331,31 @@ export class PBRMaterialParser {
 
   /** Parse GLTF material record *
   parseMaterial(material) {
-    this.uniforms.pbr_uUnlit = Boolean(material.unlit);
+    this.uniforms.unlit = Boolean(material.unlit);
 
     if (material.pbrMetallicRoughness) {
       this.parsePbrMetallicRoughness(material.pbrMetallicRoughness);
     }
     if (material.normalTexture) {
-      this.addTexture(material.normalTexture, 'u_NormalSampler', 'HAS_NORMALMAP');
+      this.addTexture(material.normalTexture, 'pbr_normalSampler', 'HAS_NORMALMAP');
 
       const {scale = 1} = material.normalTexture;
-      this.uniforms.u_NormalScale = scale;
+      this.uniforms.normalScale = scale;
     }
     if (material.occlusionTexture) {
-      this.addTexture(material.occlusionTexture, 'u_OcclusionSampler', 'HAS_OCCLUSIONMAP');
+      this.addTexture(material.occlusionTexture, 'pbr_occlusionSampler', 'HAS_OCCLUSIONMAP');
 
       const {strength = 1} = material.occlusionTexture;
-      this.uniforms.u_OcclusionStrength = strength;
+      this.uniforms.occlusionStrength = strength;
     }
     if (material.emissiveTexture) {
-      this.addTexture(material.emissiveTexture, 'u_EmissiveSampler', 'HAS_EMISSIVEMAP');
-      this.uniforms.u_EmissiveFactor = material.emissiveFactor || [0, 0, 0];
+      this.addTexture(material.emissiveTexture, 'pbr_emissiveSampler', 'HAS_EMISSIVEMAP');
+      this.uniforms.emissiveFactor = material.emissiveFactor || [0, 0, 0];
     }
     if (material.alphaMode === 'MASK') {
       const {alphaCutoff = 0.5} = material;
       this.defines.ALPHA_CUTOFF = 1;
-      this.uniforms.u_AlphaCutoff = alphaCutoff;
+      this.uniforms.alphaCutoff = alphaCutoff;
     } else if (material.alphaMode === 'BLEND') {
       log.warn('BLEND alphaMode might not work well because it requires mesh sorting')();
       Object.assign(this.parameters, {
@@ -364,21 +371,21 @@ export class PBRMaterialParser {
     if (pbrMetallicRoughness.baseColorTexture) {
       this.addTexture(
         pbrMetallicRoughness.baseColorTexture,
-        'u_BaseColorSampler',
+        'pbr_baseColorSampler',
         'HAS_BASECOLORMAP'
       );
     }
-    this.uniforms.u_BaseColorFactor = pbrMetallicRoughness.baseColorFactor || [1, 1, 1, 1];
+    this.uniforms.baseColorFactor = pbrMetallicRoughness.baseColorFactor || [1, 1, 1, 1];
 
     if (pbrMetallicRoughness.metallicRoughnessTexture) {
       this.addTexture(
         pbrMetallicRoughness.metallicRoughnessTexture,
-        'u_MetallicRoughnessSampler',
+        'pbr_metallicRoughnessSampler',
         'HAS_METALROUGHNESSMAP'
       );
     }
     const {metallicFactor = 1, roughnessFactor = 1} = pbrMetallicRoughness;
-    this.uniforms.u_MetallicRoughnessValues = [metallicFactor, roughnessFactor];
+    this.uniforms.metallicRoughnessValues = [metallicFactor, roughnessFactor];
   }
 
   /** Create a texture from a glTF texture/sampler/image combo and add it to bindings *
