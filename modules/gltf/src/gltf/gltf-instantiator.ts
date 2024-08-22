@@ -42,7 +42,7 @@ export class GLTFInstantiator {
   }
 
   instantiate(gltf: any): GroupNode[] {
-    this.gltf = gltf;
+    this.gltf = deepCopy(gltf);
     const scenes = (gltf.scenes || []).map(scene => this.createScene(scene));
     return scenes;
   }
@@ -203,4 +203,23 @@ export class GLTFInstantiator {
     // LINEAR_MIPMAP_NEAREST, or LINEAR_MIPMAP_LINEAR).
     return false;
   }
+}
+
+/** Deeply copies a JS data structure */
+function deepCopy(object: any): any {
+  // don't copy binary data
+  if (ArrayBuffer.isView(object) || object instanceof ArrayBuffer) {
+    return object;
+  }
+  if (Array.isArray(object)) {
+    return object.map(deepCopy);
+  }
+  if (object && typeof object === 'object') {
+    const result = {};
+    for (const key in object) {
+      result[key] = deepCopy(object[key]);
+    }
+    return result;
+  }
+  return object;
 }
