@@ -73,10 +73,11 @@ export function parsePBRMaterial(
 
   const {imageBasedLightingEnvironment} = options;
   if (imageBasedLightingEnvironment) {
-    parsedMaterial.bindings.pbr_diffuseEnvSampler = imageBasedLightingEnvironment.diffuseEnvSampler;
+    parsedMaterial.bindings.pbr_diffuseEnvSampler =
+      imageBasedLightingEnvironment.diffuseEnvSampler.texture;
     parsedMaterial.bindings.pbr_specularEnvSampler =
-      imageBasedLightingEnvironment.specularEnvSampler;
-    parsedMaterial.bindings.pbr_BrdfLUT = imageBasedLightingEnvironment.brdfLutTexture;
+      imageBasedLightingEnvironment.specularEnvSampler.texture;
+    parsedMaterial.bindings.pbr_BrdfLUT = imageBasedLightingEnvironment.brdfLutTexture.texture;
     parsedMaterial.uniforms.scaleIBLAmbient = [1, 1];
   }
 
