@@ -137,19 +137,36 @@ test('WebGLFramebuffer resize', async t => {
     framebuffer.resize({width: 2, height: 2});
     t.equals(framebuffer.width, 2, 'Framebuffer width updated correctly on resize');
     t.equals(framebuffer.height, 2, 'Framebuffer height updated correctly on resize');
+    framebuffer.delete();
+  }
+
+  t.end();
+});
+
+test('WebGLFramebuffer contents', async t => {
+  for (const testDevice of await getTestDevices()) {
+    const framebuffer = testDevice.createFramebuffer({
+      colorAttachments: ['rgba8unorm'],
+      depthStencilAttachment: 'depth16unorm',
+      width: 2,
+      height: 2
+    });
 
     if (testDevice.type === 'webgl') {
       const renderPass = testDevice.beginRenderPass({
         framebuffer,
-        clearColor: [1, 0, 0, 1]
+        clearColor: [1, 0, 0, 1],
+        clearDepth: true
       });
       renderPass.end();
 
+      t.comment('reading from framebuffer');
       const pixels = testDevice.readPixelsToArrayWebGL(framebuffer);
+      t.comment('finished reading from framebuffer');
       t.deepEqual(
         pixels,
         // @prettier-ignore
-        [255, 0, 0, 255, 255, 0, 0, 255, 255, 0, 0, 255, 255, 0, 0, 255],
+        [255, 0, 0, 255,  255, 0, 0, 255,  255, 0, 0, 255,  255, 0, 0, 255],
         'Framebuffer pixel colors are set correctly'
       );
     }
