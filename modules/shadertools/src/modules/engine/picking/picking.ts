@@ -16,8 +16,6 @@ const DEFAULT_HIGHLIGHT_COLOR: NumberArray4 = [0, 1, 1, 1];
 export type PickingProps = {
   /** Are we picking? I.e. rendering picking colors? */
   isActive?: boolean;
-  /** Whether to use instance_index (built-in) or a custom application supplied index (usually from an attribute) */
-  indexMode?: 'instance' | 'custom';
   /** Set to true when picking an attribute value instead of object index */
   isAttribute?: boolean;
   /** Set to a picking color to visually highlight that item, or `null` to explicitly clear **/
@@ -103,18 +101,6 @@ void picking_setPickingColor(vec3 pickingColor) {
   } else {
     // Do the comparison with selected item color in vertex shader as it should mean fewer compares
     picking_vRGBcolor_Avalid.a = float(isVertexHighlighted(pickingColor));
-  }
-}
-
-void picking_setObjectIndex(uint objectIndex) {
-  if (bool(picking.isActive)) {
-    uint index = objectIndex;
-    if (picking.indexMode == PICKING_INDEX_MODE_INSTANCE) {
-      index = uint(gl_InstanceID);
-    }
-    picking_vRGBcolor_Avalid.r = float(index % 255) / 255.0;
-    picking_vRGBcolor_Avalid.g = float((index / 255) % 255) / 255.0;
-    picking_vRGBcolor_Avalid.b = float((index / 255 / 255) %255) / 255.0;
   }
 }
 
