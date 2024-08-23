@@ -153,25 +153,26 @@ test('WebGLFramebuffer contents', async t => {
     });
 
     if (testDevice.type === 'webgl') {
-      const renderPass = testDevice.beginRenderPass({
-        framebuffer,
-        clearColor: [1, 0, 0, 1],
-        clearDepth: 1
-      });
-      renderPass.end();
+      try {
+        t.comment('starting renderpass');
+        const renderPass = testDevice.beginRenderPass({
+          framebuffer,
+          clearColor: [1, 0, 0, 1],
+          clearDepth: true
+        });
+        t.comment('ending renderpass');
+        renderPass.end();
+      } catch (error) {
+        t.comment(`beginRenderPass() failed ${(error as Error).message}`);
+      }
 
       t.comment('reading from framebuffer');
-      let pixels;
-      try {
-        pixels = testDevice.readPixelsToArrayWebGL(framebuffer);
-      } catch (error) {
-        t.comment(`readPixelsToArrayWebGL failed ${(error as Error).message}`);
-      }
+      const pixels = testDevice.readPixelsToArrayWebGL(framebuffer);
       t.comment('finished reading from framebuffer');
       t.deepEqual(
         pixels,
-        // @prettier-ignore
-        [255, 0, 0, 255, 255, 0, 0, 255, 255, 0, 0, 255, 255, 0, 0, 255],
+        // prettier-ignore
+        [255, 0, 0, 255,  255, 0, 0, 255,  255, 0, 0, 255,  255, 0, 0, 255],
         'Framebuffer pixel colors are set correctly'
       );
     }

@@ -155,7 +155,7 @@ void main() {
         const renderPass = this.device.beginRenderPass({
           framebuffer: this.swapFramebuffers.next,
           clearColor: [0, 0, 0, 1],
-          clearDepth: 1
+          clearDepth: true
         });
         subPassRenderer.render({renderPass, bindings});
         renderPass.end();

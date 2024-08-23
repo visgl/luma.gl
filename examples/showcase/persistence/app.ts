@@ -475,7 +475,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const mainRenderPass = device.beginRenderPass({
       framebuffer: this.mainFramebuffer,
       clearColor: [0, 0, 0, 0],
-      clearDepth: 1
+      clearDepth: true
     });
 
     // Render electrons to framebuffer
