@@ -159,6 +159,7 @@ test('WebGLFramebuffer contents', async t => {
         clearColor: [1, 0, 0, 1],
         clearDepth: true
       });
+      t.comment('running renderpass');
       renderPass.end();
       t.comment('ending renderpass');
 
