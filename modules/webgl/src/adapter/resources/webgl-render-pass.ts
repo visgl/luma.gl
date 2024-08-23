@@ -198,9 +198,10 @@ export class WEBGLRenderPass extends RenderPass {
           this.device.gl.clearBufferuiv(GL.COLOR, drawBuffer, value);
           break;
         case Float32Array:
-        default:
           this.device.gl.clearBufferfv(GL.COLOR, drawBuffer, value);
           break;
+        default:
+          throw new Error('clearColorBuffer: color must be typed array');
       }
     });
   }
