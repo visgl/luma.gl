@@ -21,9 +21,9 @@ export type RenderPassProps = ResourceProps & {
 
   // TODO - API needs to be able to control multiple render targets
 
-  /** Clear value for color attachment, or false to preserve the previous value @deprecated Use props.clearColors */
-  clearColor?: NumberArray4 | TypedArray | false;
-  /** Experimental: Clear values for multiple color attachments */
+  /** Clear value for color attachment, or false to preserve the previous value */
+  clearColor?: NumberArray4 | TypedArray | boolean;
+  /** Experimental: Clear color values for multiple color attachments */
   clearColors?: (NumberArray4 | TypedArray | boolean)[];
   /** Clear value for depth attachment (true === `1`), or false to preserve the previous value */
   clearDepth?: number | boolean;
@@ -62,7 +62,7 @@ export abstract class RenderPass extends Resource<RenderPassProps> {
     ...Resource.defaultProps,
     framebuffer: null,
     parameters: undefined!,
-    clearColor: false,
+    clearColor: undefined!,
     clearColors: undefined!,
     clearDepth: undefined!,
     clearStencil: undefined!,
