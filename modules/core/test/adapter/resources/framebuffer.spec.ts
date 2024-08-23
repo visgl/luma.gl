@@ -153,12 +153,14 @@ test('WebGLFramebuffer contents', async t => {
     });
 
     if (testDevice.type === 'webgl') {
+      t.comment('starting renderpass');
       const renderPass = testDevice.beginRenderPass({
         framebuffer,
         clearColor: [1, 0, 0, 1],
         clearDepth: true
       });
       renderPass.end();
+      t.comment('ending renderpass');
 
       t.comment('reading from framebuffer');
       let pixels;
