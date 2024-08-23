@@ -23,8 +23,8 @@ export type RenderPassProps = ResourceProps & {
 
   /** Clear value for color attachment, or false to preserve the previous value */
   clearColor?: NumberArray4 | TypedArray | boolean;
-  /** Experimental: Clear color values for multiple color attachments */
-  clearColors?: (NumberArray4 | TypedArray | boolean)[];
+  /** Experimental: Clear color values for multiple color attachments. Must specify typed arrays */
+  clearColors?: (TypedArray | false)[];
   /** Clear value for depth attachment (true === `1`), or false to preserve the previous value */
   clearDepth?: number | boolean;
   /** Clear value for stencil attachment (true === `0`), or false to preserve the previous value */

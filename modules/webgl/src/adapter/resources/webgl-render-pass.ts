@@ -149,7 +149,6 @@ export class WEBGLRenderPass extends RenderPass {
     if (this.props.clearColors) {
       this.props.clearColors.forEach((color, drawBufferIndex) => {
         if (color) {
-          color = color === true ? DEFAULT_CLEAR_COLOR : color;
           this.clearColorBuffer(drawBufferIndex, color);
         }
       });
