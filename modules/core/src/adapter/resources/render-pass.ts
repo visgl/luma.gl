@@ -81,6 +81,7 @@ export abstract class RenderPass extends Resource<RenderPassProps> {
   }
 
   constructor(device: Device, props: RenderPassProps) {
+    props = RenderPass.normalizeProps(device, props);
     super(device, props, RenderPass.defaultProps);
   }
 
@@ -104,9 +105,17 @@ export abstract class RenderPass extends Resource<RenderPassProps> {
   /** Marks a point in a stream of commands with a label */
   abstract insertDebugMarker(markerLabel: string): void;
 
+  protected static normalizeProps(device: Device, props: RenderPassProps): RenderPassProps {
+    // Intended to override e.g. set default clear values to true
+    const overrideProps = device.props._resourceDefaults?.renderPass;
+    const newProps = {...overrideProps, ...props};
+    return newProps;
+  }
+}
+
+  // TODO - Can we align WebGL implementation with WebGPU API? 
   // In WebGPU the following methods are on the renderpass instead of the renderpipeline
-  // luma.gl keeps them on the pipeline for now.
-  // TODO - Can we align WebGL implementation with WebGPU API?
+  // luma.gl keeps them on the pipeline for now, but that has some issues.
 
   // abstract setPipeline(pipeline: RenderPipeline): void {}
   // abstract setIndexBuffer()
@@ -116,4 +125,4 @@ export abstract class RenderPass extends Resource<RenderPassProps> {
   // abstract draw(options: {
   // abstract drawIndirect(indirectBuffer: GPUBuffer, indirectOffset: number): void;
   // abstract drawIndexedIndirect(indirectBuffer: GPUBuffer, indirectOffset: number): void;
-}
+

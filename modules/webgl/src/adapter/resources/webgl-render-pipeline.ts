@@ -414,11 +414,12 @@ export class WEBGLRenderPipeline extends RenderPipeline {
       }
     }
 
-    for (const [, texture] of Object.entries(this.bindings)) {
-      if (texture instanceof WEBGLTexture) {
-        texture.update();
-      }
-    }
+    // TODO - remove this should be handled by ExternalTexture
+    // for (const [, texture] of Object.entries(this.bindings)) {
+    //   if (texture instanceof WEBGLTexture) {
+    //     texture.update();
+    //   }
+    // }
 
     return texturesRenderable;
   }

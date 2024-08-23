@@ -233,6 +233,12 @@ export type DeviceProps = {
   _initializeFeatures?: boolean;
   /** Never destroy cached shaders and pipelines */
   _factoryDestroyPolicy?: 'unused' | 'never';
+  /** Resource default overrides */
+  _resourceDefaults?: {
+    texture?: Partial<TextureProps>;
+    sampler?: Partial<SamplerProps>;
+    renderPass?: Partial<RenderPassProps>;
+  };
 
   /** @deprecated Internal, Do not use directly! Use `luma.attachDevice()` to attach to pre-created contexts/devices. */
   _handle?: unknown; // WebGL2RenderingContext | GPUDevice | null;
@@ -274,13 +280,14 @@ export abstract class Device {
     // Callbacks
     onError: (error: Error) => log.error(error.message),
 
+    _requestMaxLimits: true,
     _factoryDestroyPolicy: 'unused',
     // TODO - Change these after confirming things work as expected
     _initializeFeatures: true,
     _disabledFeatures: {
       'compilation-status-async-webgl': true
     },
-    _requestMaxLimits: true,
+    _resourceDefaults: {},
 
     // WebGL specific
     webgl: {},

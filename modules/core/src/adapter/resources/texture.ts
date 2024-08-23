@@ -195,6 +195,10 @@ export abstract class Texture extends Resource<TextureProps> {
     return 'Texture';
   }
 
+  override toString(): string {
+    return `Texture(${this.id},${this.format},${this.width}x${this.height})`;
+  }
+
   /** dimension of this texture */
   readonly dimension: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d';
   /** format of this texture */
@@ -213,8 +217,64 @@ export abstract class Texture extends Resource<TextureProps> {
   /** Default view for this texture */
   abstract view: TextureView;
 
-  /** "Time" of last update. Monotonically increasing timestamp */
+  /** "Time" of last update. Monotonically increasing timestamp. TODO move to AsyncTexture? */
   updateTimestamp: number;
+
+  /** Do not use directly. Create with device.createTexture() */
+  constructor(device: Device, props: TextureProps) {
+    props = Texture.normalizeProps(device, props);
+    super(device, props, Texture.defaultProps);
+    this.dimension = this.props.dimension;
+    this.format = this.props.format;
+
+    // Size
+    this.width = this.props.width;
+    this.height = this.props.height;
+    this.depth = this.props.depth;
+
+    // Calculate size, if not provided
+    if (this.props.width === undefined || this.props.height === undefined) {
+      // @ts-ignore
+      const size = Texture.getTextureDataSize(this.props.data);
+      this.width = size?.width || 1;
+      this.height = size?.height || 1;
+    }
+
+    // mipLevels
+
+    // If mipmap generation is requested and mipLevels is not provided, initialize a full pyramid
+    if (this.props.mipmaps && this.props.mipLevels === undefined) {
+      this.props.mipLevels = 'pyramid';
+    }
+
+    // Auto-calculate the number of mip levels as a convenience
+    // TODO - Should we clamp to 1-getMipLevelCount?
+    this.mipLevels =
+      this.props.mipLevels === 'pyramid'
+        ? Texture.getMipLevelCount(this.width, this.height)
+        : this.props.mipLevels || 1;
+
+    // TODO - perhaps this should be set on async write completion?
+    this.updateTimestamp = device.incrementTimestamp();
+  }
+
+  /** Create a texture view for this texture */
+  abstract createView(props: TextureViewProps): TextureView;
+
+  /** Set sampler props associated with this texture */
+  abstract setSampler(sampler?: Sampler | SamplerProps): void;
+
+  /** Copy external image data into the texture */
+  abstract copyExternalImage(options: CopyExternalImageOptions): {width: number; height: number};
+
+  /**
+   * Create a new texture with the same parameters and optionally, a different size
+   * @note Textures are immutable and cannot be resized after creation, but we can create a similar texture with the same parameters but a new size.
+   * @note Does not copy contents of the texture
+   */
+  clone(size?: {width: number; height: number}): Texture {
+    return this.device.createTexture({...this.props, ...size});
+  }
 
   /** Check if data is an external image */
   static isExternalImage(data: unknown): data is ExternalImage {
@@ -283,6 +343,35 @@ export abstract class Texture extends Resource<TextureProps> {
     throw new Error('texture size deduction failed');
   }
 
+  /**
+   * Normalize TextureData to an array of TextureLevelData / ExternalImages
+   * @param data
+   * @param options
+   * @returns array of TextureLevelData / ExternalImages
+   */
+  static normalizeTextureData(
+    data: Texture2DData,
+    options: {width: number; height: number; depth: number}
+  ): (TextureLevelData | ExternalImage)[] {
+    let lodArray: (TextureLevelData | ExternalImage)[];
+    if (ArrayBuffer.isView(data)) {
+      lodArray = [
+        {
+          // ts-expect-error does data really need to be Uint8ClampedArray?
+          data,
+          width: options.width,
+          height: options.height
+          // depth: options.depth
+        }
+      ];
+    } else if (!Array.isArray(data)) {
+      lodArray = [data];
+    } else {
+      lodArray = data;
+    }
+    return lodArray;
+  }
+
   /** Calculate the number of mip levels for a texture of width and height */
   static getMipLevelCount(width: number, height: number): number {
     return Math.floor(Math.log2(Math.max(width, height))) + 1;
@@ -300,61 +389,6 @@ export abstract class Texture extends Resource<TextureProps> {
         case '-Z': return  5;
         default: throw new Error(face);
       }
-  }
-
-  /** Do not use directly. Create with device.createTexture() */
-  constructor(device: Device, props: TextureProps) {
-    super(device, props, Texture.defaultProps);
-    this.dimension = this.props.dimension;
-    this.format = this.props.format;
-
-    // Size
-    this.width = this.props.width;
-    this.height = this.props.height;
-    this.depth = this.props.depth;
-
-    // Calculate size, if not provided
-    if (this.props.width === undefined || this.props.height === undefined) {
-      // @ts-ignore
-      const size = Texture.getTextureDataSize(this.props.data);
-      this.width = size?.width || 1;
-      this.height = size?.height || 1;
-    }
-
-    // mipLevels
-
-    // If mipmap generation is requested and mipLevels is not provided, initialize a full pyramid
-    if (this.props.mipmaps && this.props.mipLevels === undefined) {
-      this.props.mipLevels = 'pyramid';
-    }
-
-    // Auto-calculate the number of mip levels as a convenience
-    // TODO - Should we clamp to 1-getMipLevelCount?
-    this.mipLevels =
-      this.props.mipLevels === 'pyramid'
-        ? Texture.getMipLevelCount(this.width, this.height)
-        : this.props.mipLevels || 1;
-
-    // TODO - perhaps this should be set on async write completion?
-    this.updateTimestamp = device.incrementTimestamp();
-  }
-
-  /** Create a texture view for this texture */
-  abstract createView(props: TextureViewProps): TextureView;
-
-  /** Set sampler props associated with this texture */
-  abstract setSampler(sampler?: Sampler | SamplerProps): void;
-
-  /** Copy external image data into the texture */
-  abstract copyExternalImage(options: CopyExternalImageOptions): {width: number; height: number};
-
-  /**
-   * Create a new texture with the same parameters and optionally, a different size
-   * @note Textures are immutable and cannot be resized after creation, but we can create a similar texture with the same parameters but a new size.
-   * @note Does not copy contents of the texture
-   */
-  clone(size?: {width: number; height: number}): Texture {
-    return this.device.createTexture({...this.props, ...size});
   }
 
   /** Default options */
@@ -376,8 +410,15 @@ export abstract class Texture extends Resource<TextureProps> {
   };
 
   /** Ensure we have integer coordinates */
-  protected static _fixProps(props: TextureProps): TextureProps {
+  protected static normalizeProps(device: Device, props: TextureProps): TextureProps {
     const newProps = {...props};
+
+    // Allow device to override props (e.g. props.mipmaps)
+    const overrideProps: Partial<TextureProps> = device?.props?._resourceDefaults?.texture || {};
+    // TODO - Type issue with props.data circumvented with Object.assign
+    Object.assign(newProps, overrideProps);
+
+    // Ensure we have integer coordinates
     const {width, height} = newProps;
     if (typeof width === 'number') {
       newProps.width = Math.max(1, Math.ceil(width));
