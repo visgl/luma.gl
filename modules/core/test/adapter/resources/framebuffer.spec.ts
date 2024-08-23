@@ -156,7 +156,7 @@ test('WebGLFramebuffer contents', async t => {
       const renderPass = testDevice.beginRenderPass({
         framebuffer,
         clearColor: [1, 0, 0, 1],
-        clearDepth: true
+        clearDepth: 1
       });
       renderPass.end();
 
@@ -165,8 +165,7 @@ test('WebGLFramebuffer contents', async t => {
       try {
         pixels = testDevice.readPixelsToArrayWebGL(framebuffer);
       } catch (error) {
-        t.comment('readPixelsToArrayWebGL failed');
-        t.comment(error.message);
+        t.comment(`readPixelsToArrayWebGL failed ${(error as Error).message}`);
       }
       t.comment('finished reading from framebuffer');
       t.deepEqual(
