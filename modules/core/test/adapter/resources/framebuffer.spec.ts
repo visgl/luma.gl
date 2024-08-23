@@ -153,23 +153,21 @@ test('WebGLFramebuffer contents', async t => {
     });
 
     if (testDevice.type === 'webgl') {
-      t.comment('starting renderpass');
-      const renderPass = testDevice.beginRenderPass({
-        framebuffer,
-        clearColor: [1, 0, 0, 1],
-        clearDepth: true
-      });
-      t.comment('running renderpass');
-      renderPass.end();
-      t.comment('ending renderpass');
+      try {
+        t.comment('starting renderpass');
+        const renderPass = testDevice.beginRenderPass({
+          framebuffer,
+          clearColor: [1, 0, 0, 1],
+          clearDepth: true
+        });
+        t.comment('ending renderpass');
+        renderPass.end();
+      } catch (error) {
+        t.comment(`beginRenderPass() failed ${(error as Error).message}`);
+      }
 
       t.comment('reading from framebuffer');
-      let pixels;
-      try {
-        pixels = testDevice.readPixelsToArrayWebGL(framebuffer);
-      } catch (error) {
-        t.comment(`readPixelsToArrayWebGL failed ${(error as Error).message}`);
-      }
+      const pixels = testDevice.readPixelsToArrayWebGL(framebuffer);
       t.comment('finished reading from framebuffer');
       t.deepEqual(
         pixels,
