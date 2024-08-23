@@ -275,7 +275,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     const renderPass = device.beginRenderPass({
       clearColor: [0, 0, 0, 1],
-      clearDepth: 1
+      clearDepth: true
     });
 
     this.renderModel.draw(renderPass);

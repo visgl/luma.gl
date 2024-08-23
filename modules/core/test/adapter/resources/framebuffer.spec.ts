@@ -156,7 +156,7 @@ test('WebGLFramebuffer contents', async t => {
       const renderPass = testDevice.beginRenderPass({
         framebuffer,
         clearColor: [1, 0, 0, 1],
-        clearDepth: 1
+        clearDepth: true
       });
       renderPass.end();
 
@@ -171,7 +171,7 @@ test('WebGLFramebuffer contents', async t => {
       t.deepEqual(
         pixels,
         // @prettier-ignore
-        [255, 0, 0, 255, 255, 0, 0, 255, 255, 0, 0, 255, 255, 0, 0, 255],
+        [255, 0, 0, 255,  255, 0, 0, 255,  255, 0, 0, 255,  255, 0, 0, 255],
         'Framebuffer pixel colors are set correctly'
       );
     }

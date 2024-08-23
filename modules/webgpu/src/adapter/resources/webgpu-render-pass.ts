@@ -191,7 +191,10 @@ export class WebGPURenderPass extends RenderPass {
       if (this.props.depthReadOnly) {
         depthStencilAttachment.depthReadOnly = true;
       }
-      depthStencilAttachment.depthClearValue = this.props.clearDepth || 0;
+      if (this.props.clearDepth !== false) {
+        depthStencilAttachment.depthClearValue =
+          this.props.clearDepth === true ? 1 : this.props.clearDepth;
+      }
 
       // WebGPU only wants us to set these parameters if the texture format actually has a depth aspect
       const hasDepthAspect = true;
