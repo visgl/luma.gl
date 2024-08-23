@@ -161,7 +161,13 @@ test('WebGLFramebuffer contents', async t => {
       renderPass.end();
 
       t.comment('reading from framebuffer');
-      const pixels = testDevice.readPixelsToArrayWebGL(framebuffer);
+      let pixels;
+      try {
+        pixels = testDevice.readPixelsToArrayWebGL(framebuffer);
+      } catch (error) {
+        t.comment('readPixelsToArrayWebGL failed');
+        t.comment(error.message);
+      }
       t.comment('finished reading from framebuffer');
       t.deepEqual(
         pixels,
