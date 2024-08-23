@@ -172,7 +172,7 @@ test('WebGLFramebuffer contents', async t => {
       t.deepEqual(
         pixels,
         // @prettier-ignore
-        [255, 0, 0, 255,  255, 0, 0, 255,  255, 0, 0, 255,  255, 0, 0, 255],
+        [255, 0, 0, 255, 255, 0, 0, 255, 255, 0, 0, 255, 255, 0, 0, 255],
         'Framebuffer pixel colors are set correctly'
       );
     }
