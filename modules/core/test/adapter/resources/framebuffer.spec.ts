@@ -139,10 +139,11 @@ test('WebGLFramebuffer resize', async t => {
     t.equals(framebuffer.height, 2, 'Framebuffer height updated correctly on resize');
 
     if (testDevice.type === 'webgl') {
-      testDevice.beginRenderPass({
+      const renderPass = testDevice.beginRenderPass({
         framebuffer,
         clearColor: [1, 0, 0, 1]
       });
+      renderPass.end();
 
       const pixels = testDevice.readPixelsToArrayWebGL(framebuffer);
       t.deepEqual(
