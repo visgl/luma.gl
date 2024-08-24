@@ -4,6 +4,29 @@
 
 Major new release that includes WebGPU support
 
+### 9.1.0-alpha.17
+
+- chore: Separate CI step for website build (#2218)
+- chore(webgl): Clean up WebGLTexture implementation (#2213)
+- chore: Refactor texture info table (#2217)
+- fix(engine): TextureTransform.destroy() should remove resources (#2216)
+- fix(core, webgl): Fix clearDepth (#2214)
+- chore: Test if master is broken (#2215)
+- shadertools: Reinstate old picking shader (#2212)
+- fix(examples): Improve postprocessing example (#2209)
+- feat(shadertools): PBRMaterial UBO (#2207)
+- shadertools: Lighting module UBO (#2206)
+- fix(gltf): Prevent GLTFInstantiator from mutating its input (#2203)
+- ShaderModule type improvement (#2194)
+- test: Add test for texture creation(3d,r32float) (#2202)
+- Create security policy (#2205)
+- fix(engine): Prevent recursion in RAF polyfills (#2204)
+- fix(webgl): Better error messages when device creation fails (#2201)
+- feat(core): Option to not wait for page load (#2200)
+- fix(core): Allow webgl 1,3 component unorm8 attributes (#2196)
+- fix(webgl): Do not enable mipmap filtering by default (#2193)
+- feat(engine): Index-based picking manager, support for multiple render targets (#2189)
+
 ### 9.1.0-alpha.16
 
 - chore(core): DeviceProps.createCanvasContext: CanvasContextProps | true (#2188)
