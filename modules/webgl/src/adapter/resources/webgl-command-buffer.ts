@@ -291,7 +291,7 @@ function _copyTextureToTexture(device: WebGLDevice, options: CopyTextureToTextur
     texture = destinationTexture;
     width = Number.isFinite(width) ? width : texture.width;
     height = Number.isFinite(height) ? height : texture.height;
-    texture.bind(0);
+    texture._bind(0);
     textureTarget = texture.glTarget;
   } else {
     throw new Error('invalid destination');
@@ -329,7 +329,7 @@ function _copyTextureToTexture(device: WebGLDevice, options: CopyTextureToTextur
   }
 
   if (texture) {
-    texture.unbind();
+    texture._unbind();
   }
   device.gl.bindFramebuffer(GL.FRAMEBUFFER, prevHandle);
   if (destroyFramebuffer) {

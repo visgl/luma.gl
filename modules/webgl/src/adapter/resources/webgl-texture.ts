@@ -8,7 +8,6 @@ import type {
   TextureViewProps,
   Sampler,
   SamplerProps,
-  SamplerParameters,
   CopyExternalImageOptions,
   CopyImageDataOptions,
   TypedArray
@@ -43,9 +42,6 @@ export class WEBGLTexture extends Texture {
   sampler: WEBGLSampler = undefined; // TODO - currently unused in WebGL. Create dummy sampler?
   view: WEBGLTextureView = undefined; // TODO - currently unused in WebGL. Create dummy view?
 
-  /** Whether mipmaps were requested for this texture */
-  mipmaps: boolean;
-
   /**
    * The WebGL target corresponding to the texture type
    * @note `target` cannot be modified by bind:
@@ -74,8 +70,6 @@ export class WEBGLTexture extends Texture {
 
     this.device = device as WebGLDevice;
     this.gl = this.device.gl;
-
-    this.mipmaps = Boolean(this.props.mipmaps);
 
     const formatInfo = getTextureFormatWebGL(this.props.format);
 
@@ -107,7 +101,7 @@ export class WEBGLTexture extends Texture {
         this.gl.texStorage3D(glTarget, mipLevels, glInternalFormat, width, height, depth);
         break;
       default:
-      // Can never happen in WebGL
+        throw new Error(dimension);
     }
     this.gl.bindTexture(this.glTarget, null);
 
@@ -120,46 +114,6 @@ export class WEBGLTexture extends Texture {
     this.view = new WEBGLTextureView(this.device, {...this.props, texture: this});
 
     Object.seal(this);
-  }
-
-  /** Initialize texture with supplied props */
-  // eslint-disable-next-line max-statements
-  _initializeData(data: TextureProps['data']): void {
-    // Store opts for accessors
-
-    if (this.device.isExternalImage(data)) {
-      this.copyExternalImage({
-        image: data,
-        width: this.width,
-        height: this.height,
-        depth: this.depth,
-        mipLevel: 0,
-        x: 0,
-        y: 0,
-        z: 0,
-        aspect: 'all',
-        colorSpace: 'srgb',
-        premultipliedAlpha: false,
-        flipY: false
-      });
-    } else if (data) {
-      this.copyImageData({
-        data,
-        // width: this.width,
-        // height: this.height,
-        // depth: this.depth,
-        mipLevel: 0,
-        x: 0,
-        y: 0,
-        z: 0,
-        aspect: 'all'
-      });
-    }
-
-    // Do we need to generate mipmaps?
-    if (this.mipmaps) {
-      this.generateMipmaps();
-    }
   }
 
   override destroy(): void {
@@ -176,42 +130,12 @@ export class WEBGLTexture extends Texture {
     return new WEBGLTextureView(this.device, {...props, texture: this});
   }
 
-  setSampler(sampler: Sampler | SamplerProps = {}): void {
-    let samplerProps: SamplerParameters;
-    if (sampler instanceof WEBGLSampler) {
-      this.sampler = sampler;
-      samplerProps = sampler.props;
-    } else {
-      this.sampler = new WEBGLSampler(this.device, sampler);
-      samplerProps = sampler as SamplerProps;
-    }
-
-    const parameters = convertSamplerParametersToWebGL(samplerProps);
+  override setSampler(sampler: Sampler | SamplerProps = {}): void {
+    super.setSampler(sampler);
+    // Apply sampler parameters to texture
+    const parameters = convertSamplerParametersToWebGL(this.sampler.props);
     this._setSamplerParameters(parameters);
   }
-
-  generateMipmaps(options?: {force?: boolean}): void {
-    const isFilterableAndRenderable =
-      this.device.isTextureFormatRenderable(this.props.format) &&
-      this.device.isTextureFormatFilterable(this.props.format);
-    if (!isFilterableAndRenderable) {
-      log.warn(`${this} is not renderable or filterable, may not be able to generate mipmaps`)();
-      if (!options?.force) {
-        return;
-      }
-    }
-
-    try {
-      this.gl.bindTexture(this.glTarget, this.handle);
-      this.gl.generateMipmap(this.glTarget);
-    } catch (error) {
-      log.warn(`Error generating mipmap for ${this}: ${(error as Error).message}`)();
-    } finally {
-      this.gl.bindTexture(this.glTarget, null);
-    }
-  }
-
-  // Image Data Setters
 
   copyImageData(options_: CopyImageDataOptions): void {
     const options = this._normalizeCopyImageDataOptions(options_);
@@ -274,7 +198,7 @@ export class WEBGLTexture extends Texture {
     const glTarget = getWebGLCubeFaceTarget(this.glTarget, this.dimension, depth);
     const glParameters: GLValueParameters = options.flipY ? {[GL.UNPACK_FLIP_Y_WEBGL]: true} : {};
 
-    this.gl.bindTexture(glTarget, this.handle);
+    this.gl.bindTexture(this.glTarget, this.handle);
 
     withGLParameters(this.gl, glParameters, () => {
       switch (this.dimension) {
@@ -293,12 +217,35 @@ export class WEBGLTexture extends Texture {
       }
     });
 
-    this.gl.bindTexture(glTarget, null);
+    this.gl.bindTexture(this.glTarget, null);
 
     return {width: options.width, height: options.height};
   }
 
-  // RESOURCE METHODS
+  // WEBGL SPECIFIC
+
+  generateMipmapsWebGL(options?: {force?: boolean}): void {
+    const isFilterableAndRenderable =
+      this.device.isTextureFormatRenderable(this.props.format) &&
+      this.device.isTextureFormatFilterable(this.props.format);
+    if (!isFilterableAndRenderable) {
+      log.warn(`${this} is not renderable or filterable, may not be able to generate mipmaps`)();
+      if (!options?.force) {
+        return;
+      }
+    }
+
+    try {
+      this.gl.bindTexture(this.glTarget, this.handle);
+      this.gl.generateMipmap(this.glTarget);
+    } catch (error) {
+      log.warn(`Error generating mipmap for ${this}: ${(error as Error).message}`)();
+    } finally {
+      this.gl.bindTexture(this.glTarget, null);
+    }
+  }
+
+  // INTERNAL
 
   /**
    * Sets sampler parameters on texture
@@ -320,21 +267,26 @@ export class WEBGLTexture extends Texture {
           this.gl.texParameterf(this.glTarget, param, value);
           break;
 
+        case GL.TEXTURE_MAG_FILTER:
         case GL.TEXTURE_MIN_FILTER:
           this.gl.texParameteri(this.glTarget, param, value);
           break;
 
         case GL.TEXTURE_WRAP_S:
         case GL.TEXTURE_WRAP_T:
+        case GL.TEXTURE_WRAP_R:
           this.gl.texParameteri(this.glTarget, param, value);
           break;
+
         case GL.TEXTURE_MAX_ANISOTROPY_EXT:
           // We have to query feature before using it
           if (this.device.features.has('texture-filterable-anisotropic-webgl')) {
             this.gl.texParameteri(this.glTarget, param, value);
           }
           break;
-        default:
+
+        case GL.TEXTURE_COMPARE_MODE:
+        case GL.TEXTURE_COMPARE_FUNC:
           this.gl.texParameteri(this.glTarget, param, value);
           break;
       }
@@ -342,16 +294,11 @@ export class WEBGLTexture extends Texture {
 
     this.gl.bindTexture(this.glTarget, null);
   }
-
-  // INTERNAL SETTERS
-
-  // HELPERS
-
-  getActiveUnit(): number {
+  _getActiveUnit(): number {
     return this.gl.getParameter(GL.ACTIVE_TEXTURE) - GL.TEXTURE0;
   }
 
-  bind(_textureUnit?: number): number {
+  _bind(_textureUnit?: number): number {
     const {gl} = this;
 
     if (_textureUnit !== undefined) {
@@ -363,7 +310,7 @@ export class WEBGLTexture extends Texture {
     return _textureUnit;
   }
 
-  unbind(_textureUnit?: number): number | undefined {
+  _unbind(_textureUnit?: number): number | undefined {
     const {gl} = this;
 
     if (_textureUnit !== undefined) {

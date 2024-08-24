@@ -38,17 +38,24 @@ export class WebGPUTextureView extends TextureView {
     this.device = device;
     this.texture = props.texture;
 
+    this.device.pushErrorScope('validation');
     this.handle =
       this.handle ||
       this.texture.handle.createView({
-        format: (props.format || this.texture.format) as GPUTextureFormat,
-        dimension: props.dimension || this.texture.dimension,
-        aspect: props.aspect,
-        baseMipLevel: props.baseMipLevel,
-        mipLevelCount: props.mipLevelCount, // GPUIntegerCoordinate;
-        baseArrayLayer: props.baseArrayLayer, // GPUIntegerCoordinate;
-        arrayLayerCount: props.arrayLayerCount // GPUIntegerCoordinate;
+        format: (this.props.format || this.texture.format) as GPUTextureFormat,
+        dimension: this.props.dimension || this.texture.dimension,
+        aspect: this.props.aspect,
+        baseMipLevel: this.props.baseMipLevel,
+        mipLevelCount: this.props.mipLevelCount,
+        baseArrayLayer: this.props.baseArrayLayer,
+        arrayLayerCount: this.props.arrayLayerCount
       });
+    this.device.handle.popErrorScope().then((error: GPUError | null) => {
+      if (error) {
+        this.device.reportError(new Error(`TextureView validation failed: ${error.message}`), this);
+      }
+    });
+
     this.handle.label = this.props.id;
   }
 

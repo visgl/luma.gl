@@ -11,42 +11,6 @@ import {Sampler, SamplerProps} from './sampler';
 import {ExternalImage} from '../../image-utils/image-types';
 import {log} from '../../utils/log';
 
-/** Texture properties */
-export type TextureProps = ResourceProps & {
-  /** @deprecated Use AsyncTexture to create textures with data. */
-  data?: ExternalImage | TypedArray | null;
-  /** Dimension of this texture. Defaults to '2d' */
-  dimension?: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d';
-  /** The format (bit layout) of the textures pixel data */
-  format?: TextureFormat;
-  /** Width in texels */
-  width?: number | undefined;
-  /** Width in texels */
-  height?: number | undefined;
-  /** Number of depth layers */
-  depth?: number;
-  /** How this texture will be used. Defaults to TEXTURE | COPY_DST | RENDER_ATTACHMENT */
-  usage?: number;
-  /** How many mip levels */
-  mipLevels?: number | 'auto';
-  /** Multi sampling */
-  samples?: number;
-
-  /** Specifying mipmaps will default mipLevels to 'auto' and attempt to generate mipmaps */
-  mipmaps?: boolean;
-
-  /** Sampler (or SamplerProps) for the default sampler for this texture. Used if no sampler provided. Note that other samplers can still be used. */
-  sampler?: Sampler | SamplerProps;
-  /** Props for the default TextureView for this texture. Note that other views can still be created and used. */
-  view?: TextureViewProps;
-
-  /** @deprecated - this is implicit from format */
-  compressed?: boolean;
-
-  /** Whether to flip a supplied image bitmap vertically. Used only if texture is initialized with an image. */
-  flipY?: boolean;
-};
-
 /** Options for Texture.copyExternalImage */
 export type CopyExternalImageOptions = {
   /** Image */
@@ -101,6 +65,42 @@ export type CopyImageDataOptions = {
   aspect?: 'all' | 'stencil-only' | 'depth-only';
 };
 
+const BASE_DIMENSIONS: Record<string, '1d' | '2d' | '3d'> = {
+  '1d': '1d',
+  '2d': '2d',
+  '2d-array': '2d',
+  cube: '2d',
+  'cube-array': '2d',
+  '3d': '3d'
+};
+
+/** Texture properties */
+export type TextureProps = ResourceProps & {
+  /** @deprecated Use AsyncTexture to create textures with data. */
+  data?: ExternalImage | TypedArray | null;
+  /** Dimension of this texture. Defaults to '2d' */
+  dimension?: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d';
+  /** The format (bit layout) of the textures pixel data */
+  format?: TextureFormat;
+  /** Width in texels */
+  width: number;
+  /** Width in texels */
+  height: number;
+  /** Number of depth layers */
+  depth?: number;
+  /** How this texture will be used. Defaults to TEXTURE | COPY_DST | RENDER_ATTACHMENT */
+  usage?: number;
+  /** How many mip levels */
+  mipLevels?: number;
+  /** Multi sampling */
+  samples?: number;
+
+  /** Sampler (or SamplerProps) for the default sampler for this texture. Used if no sampler provided. Note that other samplers can still be used. */
+  sampler?: Sampler | SamplerProps;
+  /** Props for the default TextureView for this texture. Note that other views can still be created and used. */
+  view?: TextureViewProps;
+};
+
 /**
  * Abstract Texture interface
  * Texture Object
@@ -108,7 +108,7 @@ export type CopyImageDataOptions = {
  */
 export abstract class Texture extends Resource<TextureProps> {
   /** The texture can be bound for use as a sampled texture in a shader */
-  static SAMPLER = 0x04;
+  static SAMPLE = 0x04;
   /** The texture can be bound for use as a storage texture in a shader */
   static STORAGE = 0x08;
   /** The texture can be used as a color or depth/stencil attachment in a render pass */
@@ -125,6 +125,8 @@ export abstract class Texture extends Resource<TextureProps> {
 
   /** dimension of this texture */
   readonly dimension: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d';
+  /** base dimension of this texture */
+  readonly baseDimension: '1d' | '2d' | '3d';
   /** format of this texture */
   readonly format: TextureFormat;
   /** width in pixels of this texture */
@@ -156,14 +158,14 @@ export abstract class Texture extends Resource<TextureProps> {
     props = Texture.normalizeProps(device, props);
     super(device, props, Texture.defaultProps);
     this.dimension = this.props.dimension;
+    this.baseDimension = BASE_DIMENSIONS[this.dimension];
     this.format = this.props.format;
 
     // Size
     this.width = this.props.width;
     this.height = this.props.height;
     this.depth = this.props.depth;
-
-    // this.mipmaps = Boolean(this.props.mipmaps);
+    this.mipLevels = this.props.mipLevels;
 
     // Calculate size, if not provided
     if (this.props.width === undefined || this.props.height === undefined) {
@@ -182,33 +184,22 @@ export abstract class Texture extends Resource<TextureProps> {
       }
     }
 
-    // mipLevels
-
-    // If mipmap generation is requested and mipLevels is not provided, initialize a full pyramid
-    // TODO - is this too clever? Require app to specify both mipLevels: 'auto' and mipmaps: true?
-    if (this.props.mipmaps && this.props.mipLevels === undefined) {
-      this.props.mipLevels = 'auto';
-    }
-
-    // Auto-calculate the number of mip levels as a convenience
-    // TODO - Should we clamp to 1-getMipLevelCount?
-    this.mipLevels =
-      this.props.mipLevels === 'auto'
-        ? device.getMipLevelCount(this.width, this.height)
-        : this.props.mipLevels || 1;
-
     // TODO - perhaps this should be set on async write completion?
     this.updateTimestamp = device.incrementTimestamp();
   }
 
+  /** Set sampler props associated with this texture */
+  setSampler(sampler: Sampler | SamplerProps): void {
+    this.sampler = sampler instanceof Sampler ? sampler : this.device.createSampler(sampler);
+  }
   /** Create a texture view for this texture */
   abstract createView(props: TextureViewProps): TextureView;
-  /** Set sampler props associated with this texture */
-  abstract setSampler(sampler?: Sampler | SamplerProps): void;
   /** Copy an image (e.g an ImageBitmap) into the texture */
   abstract copyExternalImage(options: CopyExternalImageOptions): {width: number; height: number};
   /** Copy raw image data (bytes) into the texture */
   abstract copyImageData(options: CopyImageDataOptions): void;
+  /** Generate mipmaps (WebGL only) */
+  abstract generateMipmapsWebGL(): void;
 
   /**
    * Create a new texture with the same parameters and optionally a different size
@@ -223,12 +214,6 @@ export abstract class Texture extends Resource<TextureProps> {
   protected static normalizeProps(device: Device, props: TextureProps): TextureProps {
     const newProps = {...props};
 
-    // Allow device to override props (e.g. props.mipmaps)
-    const overriddenDefaultProps: Partial<TextureProps> =
-      device?.props?._resourceDefaults?.texture || {};
-    // Note: Type issue with props.data circumvented with Object.assign
-    Object.assign(newProps, overriddenDefaultProps);
-
     // Ensure we have integer coordinates
     const {width, height} = newProps;
     if (typeof width === 'number') {
@@ -240,9 +225,54 @@ export abstract class Texture extends Resource<TextureProps> {
     return newProps;
   }
 
+  // HELPERS
+
+  /** Initialize texture with supplied props */
+  // eslint-disable-next-line max-statements
+  _initializeData(data: TextureProps['data']): void {
+    // Store opts for accessors
+
+    if (this.device.isExternalImage(data)) {
+      this.copyExternalImage({
+        image: data,
+        width: this.width,
+        height: this.height,
+        depth: this.depth,
+        mipLevel: 0,
+        x: 0,
+        y: 0,
+        z: 0,
+        aspect: 'all',
+        colorSpace: 'srgb',
+        premultipliedAlpha: false,
+        flipY: false
+      });
+    } else if (data) {
+      this.copyImageData({
+        data,
+        // width: this.width,
+        // height: this.height,
+        // depth: this.depth,
+        mipLevel: 0,
+        x: 0,
+        y: 0,
+        z: 0,
+        aspect: 'all'
+      });
+    }
+  }
+
   _normalizeCopyImageDataOptions(options_: CopyImageDataOptions): Required<CopyImageDataOptions> {
     const {width, height, depth} = this;
     const options = {...Texture.defaultCopyDataOptions, width, height, depth, ...options_};
+
+    const info = this.device.getTextureFormatInfo(this.format);
+    if (!options_.bytesPerRow && !info.bytesPerPixel) {
+      throw new Error(`bytesPerRow must be provided for texture format ${this.format}`);
+    }
+    options.bytesPerRow = options_.bytesPerRow || width * (info.bytesPerPixel || 4);
+    options.rowsPerImage = options_.rowsPerImage || height;
+
     // WebGL will error if we try to copy outside the bounds of the texture
     // options.width = Math.min(options.width, this.width - options.x);
     // options.height = Math.min(options.height, this.height - options.y);
@@ -270,20 +300,17 @@ export abstract class Texture extends Resource<TextureProps> {
     width: undefined!,
     height: undefined!,
     depth: 1,
-    mipmaps: false,
-    compressed: false,
-    mipLevels: undefined!,
+    mipLevels: 1,
     samples: undefined!,
     sampler: {},
-    view: undefined!,
-    flipY: undefined!
+    view: undefined!
   };
 
   protected static defaultCopyDataOptions: Required<CopyImageDataOptions> = {
     data: undefined!,
     byteOffset: 0,
-    bytesPerRow: 0,
-    rowsPerImage: 0,
+    bytesPerRow: undefined!,
+    rowsPerImage: undefined!,
     mipLevel: 0,
     x: 0,
     y: 0,

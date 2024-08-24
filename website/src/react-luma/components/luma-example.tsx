@@ -45,14 +45,14 @@ const STAT_STYLES = {
   opacity: 0.8
 };
 
-type LumaExampleProps = {
+type LumaExampleProps = React.PropsWithChildren<{
   id?: string;
   template: Function;
   config: unknown;
   directory?: string;
   style?: CSSStyleDeclaration;
   container?: string;
-};
+}>;
 
 const defaultProps = {
   name: 'luma-example'
@@ -83,12 +83,11 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
     let animationLoop: AnimationLoop | null = null;
     let device: Device | null = null;
     const asyncCreateLoop = async () => {
-      canvas.style.width = '100%';
-      canvas.style.height = '100%';
+      // canvas.style.width = '100%';
+      // canvas.style.height = '100%';
       device = await luma.createDevice({
         adapters: [webgl2Adapter, webgpuAdapter],
         type: deviceType,
-        // @ts-expect-error
         createCanvasContext: {
           canvas,
           container: containerName
@@ -138,5 +137,25 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
     };
   }, [deviceType, canvas]);
 
-  return <canvas key={deviceType} ref={setCanvas} />;
+  return (
+    <div style={{position: 'relative'}}>
+      <canvas key={deviceType} ref={setCanvas} style={{width: '100%', height: '100%'}} />
+      {props.children && (
+        <div
+          style={{
+            position: 'absolute',
+            boxShadow: '5px 5px 4px grey',
+            backgroundColor: '#F0F0F0F0',
+            top: 20,
+            right: 20,
+            width: 200,
+            height: 250,
+            padding: 10
+          }}
+        >
+          {props.children}
+        </div>
+      )}
+    </div>
+  );
 };

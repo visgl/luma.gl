@@ -14,7 +14,6 @@ import type {
   BufferProps,
   SamplerProps,
   ShaderProps,
-  Texture,
   TextureProps,
   ExternalTextureProps,
   FramebufferProps,
@@ -22,7 +21,6 @@ import type {
   ComputePipelineProps,
   RenderPassProps,
   ComputePassProps,
-  // CommandEncoderProps,
   VertexArrayProps,
   TransformFeedback,
   TransformFeedbackProps,
@@ -43,7 +41,6 @@ import {WebGPUFramebuffer} from './resources/webgpu-framebuffer';
 import {WebGPUComputePipeline} from './resources/webgpu-compute-pipeline';
 import {WebGPURenderPass} from './resources/webgpu-render-pass';
 import {WebGPUComputePass} from './resources/webgpu-compute-pass';
-// import {WebGPUCommandEncoder} from './resources/webgpu-command-encoder';
 import {WebGPUVertexArray} from './resources/webgpu-vertex-array';
 
 import {WebGPUCanvasContext} from './webgpu-canvas-context';
@@ -225,6 +222,20 @@ export class WebGPUDevice extends Device {
     this.commandEncoder = null;
   }
 
+  // WebGPU specific
+
+  pushErrorScope(scope: 'validation' | 'out-of-memory'): void {
+    this.handle.pushErrorScope(scope);
+  }
+
+  popErrorScope(handler: (message: string) => void): void {
+    this.handle.popErrorScope().then((error: GPUError | null) => {
+      if (error) {
+        handler(error.message);
+      }
+    });
+  }
+
   // PRIVATE METHODS
 
   protected _getInfo(): DeviceInfo {
@@ -295,64 +306,5 @@ export class WebGPUDevice extends Device {
       return {format, create: false, render: false, filter: false, blend: false, store: false};
     }
     return capabilities;
-  }
-
-  // DEPRECATED METHODS
-
-  // @deprecated
-  copyExternalImageToTexture(options: {
-    texture: Texture;
-    mipLevel?: number;
-    aspect?: 'all' | 'stencil-only' | 'depth-only';
-    colorSpace?: 'display-p3' | 'srgb';
-    premultipliedAlpha?: boolean;
-
-    source: ImageBitmap | HTMLVideoElement | HTMLCanvasElement | OffscreenCanvas;
-    sourceX?: number;
-    sourceY?: number;
-
-    width?: number;
-    height?: number;
-    depth?: number;
-  }): void {
-    const {
-      source,
-      sourceX = 0,
-      sourceY = 0,
-
-      texture,
-      mipLevel = 0,
-      aspect = 'all',
-      colorSpace = 'display-p3',
-      premultipliedAlpha = false,
-      // destinationX,
-      // destinationY,
-      // desitnationZ,
-
-      width = texture.width,
-      height = texture.height,
-      depth = 1
-    } = options;
-
-    const webGpuTexture = texture as WebGPUTexture;
-
-    this.handle?.queue.copyExternalImageToTexture(
-      // source: GPUImageCopyExternalImage
-      {
-        source,
-        origin: [sourceX, sourceY]
-      },
-      // destination: GPUImageCopyTextureTagged
-      {
-        texture: webGpuTexture.handle,
-        origin: [0, 0, 0], // [x, y, z],
-        mipLevel,
-        aspect,
-        colorSpace,
-        premultipliedAlpha
-      },
-      // copySize: GPUExtent3D
-      [width, height, depth]
-    );
   }
 }

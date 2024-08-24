@@ -11,14 +11,6 @@ import {makeRandomGenerator, PickingManager, indexPicking as picking} from '@lum
 import {dirlight, ShaderModule} from '@luma.gl/shadertools';
 import {Matrix4, radians} from '@math.gl/core';
 
-const INFO_HTML = `
-<p>
-Cube drawn with <b>instanced rendering</b>.
-<p>
-A luma.gl <code>Cube</code>, rendering 65,536 instances in a
-single GPU draw call using instanced vertex attributes.
-`;
-
 // INSTANCE CUBE
 
 const random = makeRandomGenerator();
@@ -209,7 +201,13 @@ const app: ShaderModule<AppUniforms> = {
 };
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
-  static info = INFO_HTML;
+  static info = `\
+  Cube drawn with <b>instanced rendering</b>.
+
+  A luma.gl <code>Cube</code>, rendering 65,536 instances in a
+  single GPU draw call using instanced vertex attributes.
+  `;
+  ;
   static props = {createFramebuffer: true, debug: true};
 
   cube: InstancedCube;

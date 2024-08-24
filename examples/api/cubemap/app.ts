@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Device, NumberArray} from '@luma.gl/core';
+import {Device, NumberArray3, NumberArray16} from '@luma.gl/core';
 import {
   AnimationLoopTemplate,
   AnimationProps,
@@ -16,20 +16,13 @@ import {
 import {ShaderModule} from '@luma.gl/shadertools';
 import {Matrix4, radians} from '@math.gl/core';
 
-const INFO_HTML = `
-<p>
-Uses a luma.gl <code>TextureCube</code> to simulate a reflective
-surface
-</p>
-`;
-
 // ROOM CUBE
 
 type AppUniforms = {
-  modelMatrix: NumberArray;
-  viewMatrix: NumberArray;
-  projectionMatrix: NumberArray;
-  eyePosition: NumberArray;
+  modelMatrix: NumberArray16;
+  viewMatrix: NumberArray16;
+  projectionMatrix: NumberArray16;
+  eyePosition: NumberArray3;
 };
 
 const app: ShaderModule<AppUniforms, AppUniforms> = {
@@ -48,10 +41,46 @@ class RoomCube extends Model {
       ...props,
       id: 'room-cube',
       geometry: new CubeGeometry(),
+      source: RoomCube.source,
       vs: RoomCube.vs,
       fs: RoomCube.fs
     });
   }
+
+  static source = /* wgsl */ `\
+struct appUniforms {
+  modelMatrix: mat4x4<f32>,
+  viewMatrix: mat4x4<f32>,
+  projectionMatrix: mat4x4<f32>,
+};
+
+@group(0) @binding(0) var<uniform> app : appUniforms;
+@group(0) @binding(1) var textureCube : texture_cube<f32>;
+@group(0) @binding(2) var textureCubeSampler : sampler;
+
+struct VertexInputs {
+  @location(0) positions : vec3<f32>,
+};
+
+struct FragmentInputs {
+  @builtin(position) Position : vec4<f32>,
+  @location(0) position : vec3<f32>,
+};
+
+@vertex 
+fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
+  var outputs : FragmentInputs;
+  outputs.Position = app.projectionMatrix * app.viewMatrix * app.modelMatrix * vec4<f32>(inputs.positions, 1.0);
+  outputs.position = inputs.positions;
+  return outputs;
+}
+
+@fragment 
+fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
+  // The outer cube just samples the texture cube directly
+  return textureSample(textureCube, textureCubeSampler, normalize(inputs.position));
+}
+  `;
 
   static vs = /* glsl */ `\
 #version 300 es
@@ -81,14 +110,14 @@ uniform appUniforms {
   mat4 projectionMatrix;
 } app;
 
-uniform samplerCube uTextureCube;
+uniform samplerCube textureCube;
 
 in vec3 vPosition;
 out vec4 fragColor;
 
 void main(void) {
   // The outer cube just samples the texture cube directly
-  fragColor = texture(uTextureCube, normalize(vPosition));
+  fragColor = texture(textureCube, normalize(vPosition));
 }
   `;
 }
@@ -99,10 +128,58 @@ class Prism extends Model {
       ...props,
       id: 'prism',
       geometry: new CubeGeometry({indices: true}),
+      source: Prism.source,
       vs: Prism.vs,
       fs: Prism.fs
     });
   }
+
+  static source = /* wgsl */ `\
+struct appUniforms {
+  modelMatrix: mat4x4<f32>,
+  viewMatrix: mat4x4<f32>,
+  projectionMatrix: mat4x4<f32>,
+  eyePosition: vec3<f32>,
+};
+
+@group(0) @binding(0) var<uniform> app : appUniforms;
+@group(0) @binding(1) var textureCube : texture_cube<f32>;
+@group(0) @binding(2) var textureCubeSampler : sampler;
+@group(0) @binding(3) var texture : texture_2d<f32>;
+@group(0) @binding(4) var textureSampler : sampler;
+
+struct VertexInputs {
+  @location(0) positions : vec3<f32>,
+  @location(1) normals : vec3<f32>,
+  @location(2) texCoords : vec2<f32>,
+};
+
+struct FragmentInputs {
+  @builtin(position) Position : vec4<f32>,
+  @location(0) position : vec3<f32>,
+  @location(1) normal : vec3<f32>,
+  @location(2) uv : vec2<f32>,
+};
+
+@vertex 
+fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
+  var outputs : FragmentInputs;
+  outputs.Position = app.projectionMatrix * app.viewMatrix * app.modelMatrix * vec4(inputs.positions, 1.0);
+  outputs.position = (app.modelMatrix * vec4(inputs.positions, 1.0)).xyz;
+  outputs.normal = normalize((app.modelMatrix * vec4(inputs.normals, 0.0)).xyz);
+  outputs.uv = inputs.texCoords;
+  return outputs;
+}
+
+@fragment 
+fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
+  let color = textureSample(texture, textureSampler, vec2(inputs.uv.x, 1.0 - inputs.uv.y));
+  let reflectedDir = reflect(normalize(inputs.position - app.eyePosition), inputs.normal);
+  let reflectedColor = textureSample(textureCube, textureCubeSampler, reflectedDir);
+
+  return mix(color, reflectedColor, 0.8);
+}
+    `;
 
   static vs = /* glsl */ `\
 #version 300 es
@@ -146,13 +223,13 @@ uniform appUniforms {
   vec3 eyePosition;
 } app;
 
-uniform sampler2D uTexture;
-uniform samplerCube uTextureCube;
+uniform sampler2D texture;
+uniform samplerCube textureCube;
 
 void main(void) {
-  vec4 color = texture(uTexture, vec2(vUV.x, 1.0 - vUV.y));
+  vec4 color = texture(texture, vec2(vUV.x, 1.0 - vUV.y));
   vec3 reflectedDir = reflect(normalize(vPosition - app.eyePosition), vNormal);
-  vec4 reflectedColor = texture(uTextureCube, reflectedDir);
+  vec4 reflectedColor = texture(textureCube, reflectedDir);
 
   fragColor = mix(color, reflectedColor, 0.8);
 }
@@ -160,8 +237,6 @@ void main(void) {
 }
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
-  static info = INFO_HTML;
-
   cube: RoomCube;
   prism: Prism;
 
@@ -207,8 +282,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     this.cube = new RoomCube(device, {
       shaderInputs: this.roomShaderInputs,
+      instanceCount: 1,
       bindings: {
-        uTextureCube: cubemap
+        textureCube: cubemap
       },
       parameters: {
         depthWriteEnabled: true,
@@ -218,9 +294,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     this.prism = new Prism(device, {
       shaderInputs: this.prismShaderInputs,
+      instanceCount: 1,
       bindings: {
-        uTexture: texture,
-        uTextureCube: cubemap
+        texture: texture,
+        textureCube: cubemap
       },
       parameters: {
         depthWriteEnabled: true,
@@ -246,7 +323,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     const renderPass = device.beginRenderPass({
       clearColor: [0, 0, 0, 1],
-      clearDepth: true
+      clearDepth: 1
     });
 
     this.roomShaderInputs.setProps({

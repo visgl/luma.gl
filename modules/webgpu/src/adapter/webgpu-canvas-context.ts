@@ -27,7 +27,13 @@ export class WebGPUCanvasContext extends CanvasContext {
 
   constructor(device: WebGPUDevice, adapter: GPUAdapter, props: CanvasContextProps) {
     super(props);
+
+    const context = this.canvas.getContext('webgpu');
+    if (!context) {
+      throw new Error(`${this}: Failed to create WebGPU canvas context`);
+    }
     this.device = device;
+    this.handle = context;
 
     // Base class constructor cannot access derived methods/fields, so we need to call these functions in the subclass constructor
     this._setAutoCreatedCanvasId(`${this.device.id}-canvas`);
@@ -108,10 +114,13 @@ export class WebGPUCanvasContext extends CanvasContext {
 
   /** Wrap the current canvas context texture in a luma.gl texture */
   getCurrentTexture(): WebGPUTexture {
+    const handle = this.handle.getCurrentTexture();
     return this.device.createTexture({
       id: `${this.id}#color-texture`,
-      handle: this.handle.getCurrentTexture(),
-      format: this.device.preferredColorFormat
+      handle,
+      format: this.device.preferredColorFormat,
+      width: handle.width,
+      height: handle.height
     });
   }
 

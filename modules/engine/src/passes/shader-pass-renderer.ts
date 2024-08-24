@@ -46,7 +46,7 @@ export class ShaderPassRenderer {
 
     const size = device.getCanvasContext().getDrawingBufferSize();
     this.swapFramebuffers = new SwapFramebuffers(device, {
-      colorAttachments: ['bgra8unorm'],
+      colorAttachments: [device.preferredColorFormat],
       width: size[0],
       height: size[1]
     });

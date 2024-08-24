@@ -1,33 +1,20 @@
 // luma.gl, MIT license
 import type {
-  // Device,
   TextureProps,
   TextureViewProps,
-  Sampler,
-  SamplerProps,
   CopyExternalImageOptions,
   CopyImageDataOptions
 } from '@luma.gl/core';
-import {Texture} from '@luma.gl/core';
+import {Texture, log} from '@luma.gl/core';
 
 import {getWebGPUTextureFormat} from '../helpers/convert-texture-format';
 import type {WebGPUDevice} from '../webgpu-device';
 import {WebGPUSampler} from './webgpu-sampler';
 import {WebGPUTextureView} from './webgpu-texture-view';
 
-const BASE_DIMENSIONS: Record<string, '1d' | '2d' | '3d'> = {
-  '1d': '1d',
-  '2d': '2d',
-  '2d-array': '2d',
-  cube: '2d',
-  'cube-array': '2d',
-  '3d': '3d'
-};
-
 export class WebGPUTexture extends Texture {
   readonly device: WebGPUDevice;
   readonly handle: GPUTexture;
-
   sampler: WebGPUSampler;
   view: WebGPUTextureView;
 
@@ -35,13 +22,62 @@ export class WebGPUTexture extends Texture {
     super(device, props);
     this.device = device;
 
-    // Texture base class strips out the data prop, so we need to add it back in
-    const propsWithData = {...this.props};
-    if (props.data) {
-      propsWithData.data = props.data;
+    if (this.dimension === 'cube') {
+      this.depth = 6;
     }
 
-    this.initialize(propsWithData);
+    this.device.handle.pushErrorScope('out-of-memory');
+    this.device.handle.pushErrorScope('validation');
+
+    this.handle =
+      this.props.handle ||
+      this.device.handle.createTexture({
+        label: this.id,
+        size: {
+          width: this.width,
+          height: this.height,
+          depthOrArrayLayers: this.depth
+        },
+        usage: this.props.usage || Texture.TEXTURE | Texture.COPY_DST,
+        dimension: this.baseDimension,
+        format: getWebGPUTextureFormat(this.format),
+        mipLevelCount: this.mipLevels,
+        sampleCount: this.props.samples
+      });
+    this.device.handle.popErrorScope().then((error: GPUError | null) => {
+      if (error) {
+        this.device.reportError(new Error(`Texture validation failed: ${error.message}`), this);
+      }
+    });
+    this.device.handle.popErrorScope().then((error: GPUError | null) => {
+      if (error) {
+        this.device.reportError(new Error(`Texture out of memory: ${error.message}`), this);
+      }
+    });
+
+    // Update props if external handle was supplied - used mainly by CanvasContext.getDefaultFramebuffer()
+    // TODO - Read all properties directly from the supplied handle?
+    if (this.props.handle) {
+      this.handle.label ||= this.id;
+      this.width = this.handle.width;
+      this.height = this.handle.height;
+    }
+
+    this.sampler =
+      props.sampler instanceof WebGPUSampler
+        ? props.sampler
+        : new WebGPUSampler(this.device, props.sampler || {});
+
+    this.view = new WebGPUTextureView(this.device, {
+      ...this.props,
+      texture: this,
+      mipLevelCount: this.mipLevels,
+      arrayLayerCount: this.depth
+    });
+
+    // Set initial data
+    // Texture base class strips out the data prop from this.props, so we need to handle it here
+    this._initializeData(props.data);
   }
 
   override destroy(): void {
@@ -54,154 +90,73 @@ export class WebGPUTexture extends Texture {
     return new WebGPUTextureView(this.device, {...props, texture: this});
   }
 
-  protected initialize(props: TextureProps): void {
-    // @ts-expect-error
-    this.handle = this.props.handle || this.createHandle();
-    this.handle.label ||= this.id;
-    if (this.props.handle) {
-      this.width = this.handle.width;
-      this.height = this.handle.height;
-    }
-
-    if (this.props.data) {
-      if (this.device.isExternalImage(this.props.data)) {
-        this.copyExternalImage({image: this.props.data, flipY: this.props.flipY});
-      } else {
-        this.setData({data: this.props.data});
-      }
-    }
-
-    // Why not just read all properties directly from the texture
-    // this.depthOrArrayLayers = this.handle.depthOrArrayLayers;
-    // this.mipLevelCount = this.handle.mipLevelCount;
-    // this.sampleCount = this.handle.sampleCount;
-    // this.dimension = this.handle.dimension;
-    // this.format = this.handle.format;
-    // this.usage = this.handle.usage;
-
-    // Create a default sampler. This mimics the WebGL1 API where sampler props are stored on the texture
-    // this.setSampler(props.sampler);
-    this.sampler =
-      props.sampler instanceof WebGPUSampler
-        ? props.sampler
-        : new WebGPUSampler(this.device, props.sampler || {});
-
-    // TODO - To support texture arrays we need to create custom views...
-    // But we are not ready to expose TextureViews to the public API.
-    // @ts-expect-error
-
-    this.view = new WebGPUTextureView(this.device, {...this.props, texture: this});
-    // format: this.props.format,
-    // dimension: this.props.dimension,
-    // aspect = "all";
-    // baseMipLevel: 0;
-    // mipLevelCount;
-    // baseArrayLayer = 0;
-    // arrayLayerCount;
-  }
-
-  protected createHandle(): GPUTexture {
-    // Deduce size from data - TODO this is a hack
-    // @ts-expect-error
-    const width = this.props.width || this.props.data?.width || 1;
-    // @ts-expect-error
-    const height = this.props.height || this.props.data?.height || 1;
-
-    return this.device.handle.createTexture({
-      label: this.id,
-      size: {
-        width,
-        height,
-        depthOrArrayLayers: this.depth
-      },
-      usage: this.props.usage || Texture.TEXTURE | Texture.COPY_DST,
-      dimension: BASE_DIMENSIONS[this.dimension],
-      format: getWebGPUTextureFormat(this.format),
-      mipLevelCount: this.mipLevels,
-      sampleCount: this.props.samples
-    });
-  }
-
-  /** @deprecated - intention is to use the createView public API */
-  createGPUTextureView(): GPUTextureView {
-    return this.handle.createView({label: this.id});
-  }
-
-  /**
-   * Set default sampler
-   * Accept a sampler instance or set of props;
-   */
-  setSampler(sampler: Sampler | SamplerProps): this {
-    this.sampler =
-      sampler instanceof WebGPUSampler ? sampler : new WebGPUSampler(this.device, sampler);
-    return this;
-  }
-
-  setData(options: {data: any}): {width: number; height: number} {
-    if (ArrayBuffer.isView(options.data)) {
-      const clampedArray = new Uint8ClampedArray(options.data.buffer);
-      // TODO - pass through src data color space as ImageData Options?
-      const image = new ImageData(clampedArray, this.width, this.height);
-      return this.copyExternalImage({image});
-    }
-
-    throw new Error('Texture.setData: Use CommandEncoder to upload data to texture in WebGPU');
-  }
-
-  copyImageData(options: CopyImageDataOptions): void {
+  copyImageData(options_: CopyImageDataOptions): void {
     const {width, height, depth} = this;
-    const opts = {...Texture.defaultCopyDataOptions, width, height, depth, ...options};
+    const options = this._normalizeCopyImageDataOptions(options_);
+    this.device.handle.pushErrorScope('validation');
     this.device.handle.queue.writeTexture(
       // destination: GPUImageCopyTexture
       {
         // texture subresource
         texture: this.handle,
-        mipLevel: opts.mipLevel,
-        aspect: opts.aspect,
+        mipLevel: options.mipLevel,
+        aspect: options.aspect,
         // origin to write to
-        origin: [opts.x, opts.y, opts.z]
+        origin: [options.x, options.y, options.z]
       },
       // data
-      opts.data,
+      options.data,
       // dataLayout: GPUImageDataLayout
       {
-        offset: opts.byteOffset,
-        bytesPerRow: opts.bytesPerRow,
-        rowsPerImage: opts.rowsPerImage
+        offset: options.byteOffset,
+        bytesPerRow: options.bytesPerRow,
+        rowsPerImage: options.rowsPerImage
       },
       // size: GPUExtent3D - extents of the content to write
-      [opts.width, opts.height, opts.depth]
+      [width, height, depth]
     );
+    this.device.handle.popErrorScope().then((error: GPUError | null) => {
+      if (error) {
+        this.device.reportError(new Error(`copyImageData validation failed: ${error.message}`));
+      }
+    });
   }
 
-  copyExternalImage(options: CopyExternalImageOptions): {width: number; height: number} {
-    const size = this.device.getExternalImageSize(options.image);
-    const opts = {...Texture.defaultCopyExternalImageOptions, ...size, ...options};
+  copyExternalImage(options_: CopyExternalImageOptions): {width: number; height: number} {
+    const options = this._normalizeCopyExternalImageOptions(options_);
 
-    // TODO - apply max to width etc
-
+    this.device.handle.pushErrorScope('validation');
     this.device.handle.queue.copyExternalImageToTexture(
       // source: GPUImageCopyExternalImage
       {
-        source: opts.image,
-        origin: [opts.sourceX, opts.sourceY],
-        flipY: opts.flipY
+        source: options.image,
+        origin: [options.sourceX, options.sourceY],
+        flipY: options.flipY
       },
       // destination: GPUImageCopyTextureTagged
       {
         texture: this.handle,
-        origin: [opts.x, opts.y, opts.z],
-        mipLevel: opts.mipLevel,
-        aspect: opts.aspect,
-        colorSpace: opts.colorSpace,
-        premultipliedAlpha: opts.premultipliedAlpha
+        origin: [options.x, options.y, options.depth],
+        mipLevel: options.mipLevel,
+        aspect: options.aspect,
+        colorSpace: options.colorSpace,
+        premultipliedAlpha: options.premultipliedAlpha
       },
       // copySize: GPUExtent3D
-      [opts.width, opts.height, opts.depth]
+      [options.width, options.height, 1]
     );
+    this.device.handle.popErrorScope().then((error: GPUError | null) => {
+      if (error) {
+        this.device.reportError(new Error(`copyExternalImage validation failed: ${error.message}`));
+      }
+    });
 
     // TODO - should these be clipped to the texture size minus x,y,z?
-    return {width: opts.width, height: opts.height};
+    return {width: options.width, height: options.height};
+  }
+
+  override generateMipmapsWebGL(): void {
+    log.warn(`${this}: generateMipmaps not supported in WebGPU`)();
   }
 
   // WebGPU specific

@@ -1,28 +1,25 @@
 // Ported from PicoGL.js example: https://tsherif.github.io/picogl.js/examples/3Dtexture.html
 
+import type {NumberArray16} from '@math.gl/types';
 import type {AnimationProps} from '@luma.gl/engine';
 import {Texture} from '@luma.gl/core';
 import {AnimationLoopTemplate, Model, ShaderInputs, makeRandomGenerator} from '@luma.gl/engine';
 import {ShaderModule} from '@luma.gl/shadertools';
-import {Matrix4, radians, NumericArray} from '@math.gl/core';
+import {Matrix4, radians} from '@math.gl/core';
 import {perlin, lerp, shuffle, range} from './perlin';
 
 const random = makeRandomGenerator();
-
-const INFO_HTML = `
-<p>
-Volumetric 3D noise visualized using a <b>3D texture</b>.
-<p>
-Uses the luma.gl <code>Texture3D</code> class.
-`;
 
 // TODO - WGSL shader is work in progress
 const source = /* WGSL */ `\
 struct Uniforms {
   mvpMatrix : mat4x4<f32>,
+  time : f32,
 };
 
 @binding(0) @group(0) var<uniform> app : Uniforms;
+@group(0) @binding(1) var uTexture : texture_3d<f32>;
+@group(0) @binding(2) var uTextureSampler : sampler;
 
 struct VertexInputs {
   // CUBE GEOMETRY
@@ -39,14 +36,15 @@ fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
   var outputs : FragmentInputs;
   outputs.Position = app.mvpMatrix * inputs.positions;
   outputs.fragUVW = inputs.positions.xyz;
-  outputs.fragPosition = 0.5 * (inputs.positions + vec4(1.0, 1.0, 1.0, 1.0));
+  // outputs.fragPosition = 0.5 * (inputs.positions + vec4(1.0, 1.0, 1.0, 1.0));
   return outputs;
 }
 
 @fragment
 fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
-  // TODO - port GLSL
-  return inputs.fragPosition;
+  let sampleColor = textureSample(uTexture, uTextureSampler, inputs.fragUVW + vec3<f32>(0.0, 0.0, app.time));
+  let alpha = sampleColor.r * 0.1;
+  return vec4(fract(inputs.fragUVW) * alpha, alpha);
 }
 `;
 
@@ -88,7 +86,7 @@ void main() {
 }`;
 
 type AppUniforms = {
-  mvpMatrix: NumericArray;
+  mvpMatrix: NumberArray16;
   time: number;
 };
 
@@ -110,12 +108,17 @@ const NEAR = 0.1;
 const FAR = 10.0;
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
-  static info = INFO_HTML;
+  static info = `\
+  <p>
+  Volumetric 3D noise visualized using a <b>3D texture</b>.
+  <p>
+  Uses the luma.gl <code>Texture3D</code> class.
+  `;
   static props = {useDevicePixels: true};
 
   mvpMatrix = new Matrix4();
   viewMat = new Matrix4().lookAt({eye: [1, 1, 1]});
-  
+
   texture3d: Texture;
   cloud: Model;
 
@@ -127,37 +130,38 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const positionData = createPointCloud(POINTS_PER_SIDE);
     const positionBuffer = device.createBuffer(positionData);
 
-    const textureData = createNoiseTexture3D(TEXTURE_DIMENSIONS);
+    const textureData = createNoiseTextureData(TEXTURE_DIMENSIONS);
 
     // console.log('SETTING DATA', textureData);
 
     this.texture3d = device.createTexture({
       dimension: '3d',
-      data: textureData,
       width: TEXTURE_DIMENSIONS,
       height: TEXTURE_DIMENSIONS,
       depth: TEXTURE_DIMENSIONS,
       format: 'r8unorm',
-      mipmaps: true,
       sampler: {
         magFilter: 'nearest',
         minFilter: 'nearest',
-        mipmapFilter: 'nearest'
+        mipmapFilter: 'none'
       }
     });
 
-    // const pixels = device.readPixelsToArrayWebGL(this.texture3d);
-    // console.log('GETTING DATA', pixels);
+    // @ts-expect-error TODO - remove when republished
+    this.texture3d.copyImageData({data: textureData});
+
+    const pixels = device.readPixelsToArrayWebGL(this.texture3d);
+    console.log('GETTING DATA', pixels);
 
     this.cloud = new Model(device, {
-      // source,
+      source,
       vs,
       fs,
       topology: 'point-list',
       vertexCount: positionData.length / 3,
-      bufferLayout: [{name: 'position', format: 'float32x3'}],
+      bufferLayout: [{name: 'positions', format: 'float32x3'}],
       attributes: {
-        position: positionBuffer
+        positions: positionBuffer
       },
       bindings: {
         uTexture: this.texture3d
@@ -170,7 +174,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         blendColorOperation: 'add',
         blendAlphaOperation: 'add',
         blendColorSrcFactor: 'one',
-        blendColorDstFactor: 'one-minus-src-color',
+        // @ts-expect-error TODO - remove when republished
+        blendColorDstFactor: 'one-minus-src',
         blendAlphaSrcFactor: 'one',
         blendAlphaDstFactor: 'one-minus-src-alpha'
       }
@@ -198,12 +203,15 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     // Draw the cubes
     const renderPass = device.beginRenderPass({
-      clearColor: [0,0,0,1],
-      clearDepth: true
+      clearColor: [0, 0, 0, 1],
+      clearDepth: 1
     });
 
     this.cloud.draw(renderPass);
     renderPass.end();
+
+    // device.submit();
+    // debugger
   }
 }
 
@@ -233,7 +241,7 @@ function createPointCloud(pointsPerSide: number): Float32Array {
 }
 
 /** Create a cube of 16x16x16 noise values */
-function createNoiseTexture3D(texelsPerSide: number): Uint8Array {
+function createNoiseTextureData(texelsPerSide: number): Uint8Array {
   const noise = perlin({
     interpolation: lerp,
     permutation: shuffle(range(0, 255), random)
@@ -246,11 +254,7 @@ function createNoiseTexture3D(texelsPerSide: number): Uint8Array {
   for (let i = 0; i < texelsPerSide; ++i) {
     for (let j = 0; j < texelsPerSide; ++j) {
       for (let k = 0; k < texelsPerSide; ++k) {
-        const noiseLevel = noise(
-          i / NOISE_DIMENSIONS,
-          j / NOISE_DIMENSIONS,
-          k / NOISE_DIMENSIONS
-        );
+        const noiseLevel = noise(i / NOISE_DIMENSIONS, j / NOISE_DIMENSIONS, k / NOISE_DIMENSIONS);
         textureData[textureIndex++] = (0.5 + 0.5 * noiseLevel) * 255;
       }
     }

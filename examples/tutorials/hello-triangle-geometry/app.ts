@@ -5,10 +5,6 @@
 import {Buffer} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine';
 
-const INFO_HTML = `
-Have to start somewhere...
-`;
-
 export const source = /* wgsl */`\
 struct VertexOutput {
   @builtin(position) Position : vec4<f32>,
@@ -54,7 +50,9 @@ void main() {
 `;
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
-  static info = INFO_HTML;
+  static info = `
+Have to start somewhere...
+`;
 
   model: Model;
   interleavedBuffer: Buffer;

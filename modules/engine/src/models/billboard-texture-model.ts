@@ -73,7 +73,7 @@ export class BackgroundTextureModel extends ClipSpace {
               blendColorOperation: 'add',
               blendAlphaOperation: 'add',
               blendColorSrcFactor: 'one',
-              blendColorDstFactor: 'one-minus-src-color',
+              blendColorDstFactor: 'one-minus-src',
               blendAlphaSrcFactor: 'one',
               blendAlphaDstFactor: 'one-minus-src-alpha'
             }
