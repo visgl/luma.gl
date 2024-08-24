@@ -27,7 +27,7 @@ const TEST_CASES: {format: ShaderAttributeType, result: ShaderAttributeTypeInfo}
   // {format: 'bool-webgl', result: {dataType: 'bool-webgl', components: 1, byteLength: 1 * 4, integer: true, signed: false}}
 ];
 
-test('api#decodeShaderAttributeType', t => {
+test('shadertypes#decodeShaderAttributeType', t => {
   for (const tc of TEST_CASES) {
     const decoded = decodeShaderAttributeType(tc.format);
     t.deepEqual(

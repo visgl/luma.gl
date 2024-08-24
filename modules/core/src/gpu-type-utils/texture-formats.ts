@@ -16,7 +16,10 @@ export type DepthStencilTextureFormat =
   | 'depth32float-stencil8';
 
 /** Texture formats for color attachments */
-export type ColorTextureFormat = WebGPUColorTextureFormat | WebGL2ColorTextureFormat;
+export type ColorTextureFormat =
+  | WebGPUColorTextureFormat
+  | WebGL2ColorTextureFormat
+  | CompressedTextureFormat;
 
 export type WebGPUColorTextureFormat =
   // 8-bit formats
@@ -64,8 +67,9 @@ export type WebGPUColorTextureFormat =
   // 128-bit formats
   | 'rgba32uint'
   | 'rgba32sint'
-  | 'rgba32float'
+  | 'rgba32float';
 
+export type CompressedTextureFormat =
   // BC compressed formats usable if 'texture-compression-bc' is both
   // supported by the device/user agent and enabled in requestDevice.
   | 'bc1-rgba-unorm'
