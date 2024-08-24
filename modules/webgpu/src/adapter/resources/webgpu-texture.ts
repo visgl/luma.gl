@@ -37,24 +37,20 @@ export class WebGPUTexture extends Texture {
   readonly device: WebGPUDevice;
   readonly handle: GPUTexture;
 
-  override height: number = 1;
-  override width: number = 1;
-
   sampler: WebGPUSampler;
   view: WebGPUTextureView;
 
-  // static async createFromImageURL(src, usage = 0) {
-  //   const img = document.createElement('img');
-  //   img.src = src;
-  //   await img.decode();
-  //   return WebGPUTexture(img, usage);
-  // }
-
   constructor(device: WebGPUDevice, props: TextureProps) {
-    props = Texture._fixProps(props);
     super(device, props);
     this.device = device;
-    this.initialize(props);
+
+    // Texture base class strips out the data prop, so we need to add it back in
+    const propsWithData = {...this.props};
+    if (props.data) {
+      propsWithData.data = props.data;
+    }
+
+    this.initialize(propsWithData);
   }
 
   override destroy(): void {

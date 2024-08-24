@@ -28,18 +28,15 @@ export class NullTexture extends Texture {
   view: NullTextureView;
 
   constructor(device: NullDevice, props: TextureProps) {
-    props = Texture._fixProps(props);
-
     super(device, props);
+
+    // Texture base class strips out the data prop, so we need to add it back in
+    const propsWithData = {...this.props};
+    propsWithData.data = props.data;
 
     this.device = device;
 
-    // Signature: new Texture2D(gl, {data: url})
-    if (typeof this.props?.data === 'string') {
-      throw new Error('Texture2D: Loading textures from URLs is not supported');
-    }
-
-    this.initialize(this.props);
+    this.initialize(propsWithData);
 
     Object.seal(this);
   }

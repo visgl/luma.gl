@@ -73,15 +73,6 @@ export const TEXTURE_FEATURES: Partial<Record<DeviceFeature, string[]>> = {
   'texture-compression-atc-webgl': [X_ATC]
 };
 
-/** Return a list of texture feature strings (for Device.features). Mainly compressed texture support */
-// export function getTextureFeatures(
-//   gl: WebGL2RenderingContext,
-//   extensions: GLExtensions
-// ): DeviceFeature[] {
-//   const textureFeatures = Object.keys(TEXTURE_FEATURES) as DeviceFeature[];
-//   return textureFeatures.filter(feature => checkTextureFeature(gl, feature, extensions));
-// }
-
 export function isTextureFeature(feature: DeviceFeature): boolean {
   return feature in TEXTURE_FEATURES;
 }
@@ -115,10 +106,10 @@ type Format = {
   x?: string;
   /** for compressed texture formats */
   f?: DeviceFeature;
-  /** renderable if feature is present */
-  render?: DeviceFeature;
-  /** filterable if feature is present */
-  filter?: DeviceFeature;
+  /** renderable if feature is present. false means the spec does not support this format */
+  render?: DeviceFeature | false;
+  /** filterable if feature is present. false means the spec does not support this format */
+  filter?: DeviceFeature | false;
 
   /** If not supported on WebGPU */
   wgpu?: false;
@@ -201,7 +192,7 @@ export const TEXTURE_FORMATS: Record<TextureFormat, Format> = {
   // 64-bit formats
   'rg32uint': {gl: GL.RG32UI, b: 8, c: 2, rb: true},
   'rg32sint': {gl: GL.RG32I, b: 8, c: 2, rb: true},
-  'rg32float': {gl: GL.RG32F, b: 8, c: 2, render: float32_renderable, filter: float32_filterable, rb: true},
+  'rg32float': {gl: GL.RG32F, b: 8, c: 2, render: false, filter: float32_filterable, rb: true},
   'rgba16uint': {gl: GL.RGBA16UI, b: 8, c: 4, rb: true},
   'rgba16sint': {gl: GL.RGBA16I, b: 8, c: 4, rb: true},
   'rgba16float': {gl: GL.RGBA16F, b: 8, c: 4, render: float16_renderable, filter: float16_filterable},
@@ -318,6 +309,253 @@ export const TEXTURE_FORMATS: Record<TextureFormat, Format> = {
   'atc-rgbai-unorm-webgl': {gl: GL.COMPRESSED_RGBA_ATC_INTERPOLATED_ALPHA_WEBGL, f: texture_compression_atc_webgl}
 };
 
+/** @deprecated should be removed */
+const DATA_FORMAT_CHANNELS = {
+  [GL.RED]: 1,
+  [GL.RED_INTEGER]: 1,
+  [GL.RG]: 2,
+  [GL.RG_INTEGER]: 2,
+  [GL.RGB]: 3,
+  [GL.RGB_INTEGER]: 3,
+  [GL.RGBA]: 4,
+  [GL.RGBA_INTEGER]: 4,
+  [GL.DEPTH_COMPONENT]: 1,
+  [GL.DEPTH_STENCIL]: 1,
+  [GL.ALPHA]: 1,
+  [GL.LUMINANCE]: 1,
+  [GL.LUMINANCE_ALPHA]: 2
+};
+
+/** @deprecated should be removed */
+const TYPE_SIZES = {
+  [GL.FLOAT]: 4,
+  [GL.UNSIGNED_INT]: 4,
+  [GL.INT]: 4,
+  [GL.UNSIGNED_SHORT]: 2,
+  [GL.SHORT]: 2,
+  [GL.HALF_FLOAT]: 2,
+  [GL.BYTE]: 1,
+  [GL.UNSIGNED_BYTE]: 1
+};
+
+// FUNCTIONS
+
+/** Checks if a texture format is supported */
+export function isTextureFormatSupported(
+  gl: WebGL2RenderingContext,
+  format: TextureFormat,
+  extensions: GLExtensions
+): boolean {
+  const info = TEXTURE_FORMATS[format];
+  if (!info) {
+    return false;
+  }
+  // Check that we have a GL constant
+  if (info.gl === undefined) {
+    return false;
+  }
+  const feature = info.f;
+  if (feature) {
+    return checkTextureFeature(gl, feature, extensions);
+  }
+  // Check extensions
+  const extension = info.x || info.gl2ext;
+  if (extension) {
+    return Boolean(getWebGLExtension(gl, extension, extensions));
+  }
+  return true;
+}
+
+/** Checks whether linear filtering (interpolated sampling) is available for floating point textures */
+export function isTextureFormatFilterable(
+  gl: WebGL2RenderingContext,
+  format: TextureFormat,
+  extensions: GLExtensions
+): boolean {
+  return getTextureFormatSupportWebGL(gl, format, extensions).filterable || false;
+}
+
+export function isTextureFormatRenderable(
+  gl: WebGL2RenderingContext,
+  format: TextureFormat,
+  extensions: GLExtensions
+): boolean {
+  return getTextureFormatSupportWebGL(gl, format, extensions).renderable || false;
+}
+
+/** Checks if a texture format is supported, renderable, filterable etc */
+export function getTextureFormatSupportWebGL(
+  gl: WebGL2RenderingContext,
+  format: TextureFormat,
+  extensions: GLExtensions
+): {
+  supported: boolean;
+  filterable?: boolean;
+  renderable?: boolean;
+  blendable?: boolean;
+  storable?: boolean;
+} {
+  const formatInto = decodeTextureFormat(format);
+  if (!formatInto) {
+    return {supported: false};
+  }
+
+  const webglFormatInfo = TEXTURE_FORMATS[format];
+  if (!webglFormatInfo) {
+    return {supported: false};
+  }
+
+  // Support Check that we have a GL constant
+  let supported = webglFormatInfo.gl !== undefined;
+  supported = supported && checkTextureFeature(gl, webglFormatInfo.f, extensions);
+
+  const isDepthStencil = format.startsWith('depth') || format.startsWith('stencil');
+  const isSigned = formatInto?.signed;
+
+  const renderable =
+    supported &&
+    !isSigned &&
+    webglFormatInfo.render &&
+    checkTextureFeature(gl, webglFormatInfo.render, extensions);
+
+  const filterable =
+    supported &&
+    !isDepthStencil &&
+    !isSigned &&
+    webglFormatInfo.filter &&
+    checkTextureFeature(gl, webglFormatInfo.filter, extensions);
+
+  // if (format.endsWith('32float')) {
+  //   return Boolean(getWebGLExtension(gl, 'OES_texture_float_linear, extensions', extensions));
+  // }
+  // if (format.endsWith('16float')) {
+  //   return Boolean(getWebGLExtension(gl, 'OES_texture_half_float_linear, extensions', extensions));
+  // }
+
+  return {
+    supported,
+    renderable,
+    filterable,
+    blendable: false, // TODO,
+    storable: false // TODO
+  };
+}
+
+/** Get parameters necessary to work with format in WebGL: internalFormat, dataFormat, type, compressed, */
+export function getTextureFormatWebGL(format: TextureFormat): {
+  internalFormat: GL;
+  format: GLTexelDataFormat;
+  type: GLPixelType;
+  compressed: boolean;
+} {
+  const formatData = TEXTURE_FORMATS[format];
+  const webglFormat = convertTextureFormatToGL(format);
+  const decoded = decodeTextureFormat(format);
+  return {
+    internalFormat: webglFormat,
+    format:
+      formatData?.dataFormat ||
+      getWebGLPixelDataFormat(decoded.channels, decoded.integer, decoded.normalized, webglFormat),
+    // depth formats don't have a type
+    type: decoded.dataType
+      ? getGLFromVertexType(decoded.dataType)
+      : formatData?.types?.[0] || GL.UNSIGNED_BYTE,
+    compressed: decoded.compressed || false
+  };
+}
+
+export function getDepthStencilAttachmentWebGL(
+  format: TextureFormat
+): GL.DEPTH_ATTACHMENT | GL.STENCIL_ATTACHMENT | GL.DEPTH_STENCIL_ATTACHMENT {
+  const info = TEXTURE_FORMATS[format];
+  if (!info?.attachment) {
+    throw new Error(`${format} is not a depth stencil format`);
+  }
+  return info.attachment;
+}
+
+/** TODO - VERY roundabout legacy way of calculating bytes per pixel */
+export function getTextureFormatBytesPerPixel(format: TextureFormat): number {
+  // TODO remove webgl1 support
+  const params = getTextureFormatWebGL(format);
+  // NOTE(Tarek): Default to RGBA bytes
+  const channels = DATA_FORMAT_CHANNELS[params.format] || 4;
+  const channelSize = TYPE_SIZES[params.type] || 1;
+  return channels * channelSize;
+}
+
+// DATA TYPE HELPERS
+
+export function getWebGLPixelDataFormat(
+  channels: 'r' | 'rg' | 'rgb' | 'rgba' | 'bgra',
+  integer: boolean,
+  normalized: boolean,
+  format: GL
+): GLTexelDataFormat {
+  // WebGL1 formats use same internalFormat
+  if (format === GL.RGBA || format === GL.RGB) {
+    return format;
+  }
+  // prettier-ignore
+  switch (channels) {
+    case 'r': return integer && !normalized ? GL.RED_INTEGER : GL.RED;
+    case 'rg': return integer && !normalized ? GL.RG_INTEGER : GL.RG;
+    case 'rgb': return integer && !normalized ? GL.RGB_INTEGER : GL.RGB;
+    case 'rgba': return integer && !normalized ? GL.RGBA_INTEGER : GL.RGBA;
+    case 'bgra': throw new Error('bgra pixels not supported by WebGL');
+    default: return GL.RGBA;
+  }
+}
+
+/**
+ * Map WebGPU style texture format strings to GL constants
+ */
+function convertTextureFormatToGL(format: TextureFormat): GL | undefined {
+  const formatInfo = TEXTURE_FORMATS[format];
+  const webglFormat = formatInfo?.gl;
+  if (webglFormat === undefined) {
+    throw new Error(`Unsupported texture format ${format}`);
+  }
+  return webglFormat;
+}
+
+// LEGACY CODE
+// TODO - remove when confident in above implementation
+
+/** luma.gl v9 does not user renderbufers 
+export function isRenderbufferFormatSupported(
+  gl: WebGL2RenderingContext,
+  format: TextureFormat,
+  extensions: GLExtensions
+): boolean {
+  // Note: Order is important since the function call initializes extensions.
+  return isTextureFormatSupported(gl, format, extensions) && Boolean(TEXTURE_FORMATS[format]?.rb);
+}
+*/
+
+/** Return a list of texture feature strings (for Device.features). Mainly compressed texture support */
+// export function getTextureFeatures(
+//   gl: WebGL2RenderingContext,
+//   extensions: GLExtensions
+// ): DeviceFeature[] {
+//   const textureFeatures = Object.keys(TEXTURE_FEATURES) as DeviceFeature[];
+//   return textureFeatures.filter(feature => checkTextureFeature(gl, feature, extensions));
+// }
+
+/**
+ * Map WebGL texture formats (GL constants) to WebGPU-style TextureFormat strings
+export function convertGLToTextureFormat(format: GL | TextureFormat): TextureFormat {
+  if (typeof format === 'string') {
+    return format;
+  }
+  const entry = Object.entries(TEXTURE_FORMATS).find(([, entry]) => entry.gl === format);
+  if (!entry) {
+    throw new Error(`Unknown texture format ${format}`);
+  }
+  return entry[0] as TextureFormat;
+}
+ */
+
 /** Legal combinations for internalFormat, format and type *
 // [GL.DEPTH_COMPONENT]: {types: [GL.UNSIGNED_SHORT, GL.UNSIGNED_INT, GL.UNSIGNED_INT_24_8]},
 // [GL.DEPTH_STENCIL]: ,
@@ -411,247 +649,3 @@ export const RENDERBUFFER_FORMATS: Record<string, RenderbufferFormat> = {
   [GL.R11F_G11F_B10F]: {ext: EXT_FLOAT_WEBGL2, bpp: 4}
 };
 */
-
-/** @deprecated should be removed */
-const DATA_FORMAT_CHANNELS = {
-  [GL.RED]: 1,
-  [GL.RED_INTEGER]: 1,
-  [GL.RG]: 2,
-  [GL.RG_INTEGER]: 2,
-  [GL.RGB]: 3,
-  [GL.RGB_INTEGER]: 3,
-  [GL.RGBA]: 4,
-  [GL.RGBA_INTEGER]: 4,
-  [GL.DEPTH_COMPONENT]: 1,
-  [GL.DEPTH_STENCIL]: 1,
-  [GL.ALPHA]: 1,
-  [GL.LUMINANCE]: 1,
-  [GL.LUMINANCE_ALPHA]: 2
-};
-
-/** @deprecated should be removed */
-const TYPE_SIZES = {
-  [GL.FLOAT]: 4,
-  [GL.UNSIGNED_INT]: 4,
-  [GL.INT]: 4,
-  [GL.UNSIGNED_SHORT]: 2,
-  [GL.SHORT]: 2,
-  [GL.HALF_FLOAT]: 2,
-  [GL.BYTE]: 1,
-  [GL.UNSIGNED_BYTE]: 1
-};
-
-// FUNCTIONS
-
-/** Checks if a texture format is supported */
-export function isTextureFormatSupported(
-  gl: WebGL2RenderingContext,
-  format: TextureFormat,
-  extensions: GLExtensions
-): boolean {
-  const info = TEXTURE_FORMATS[format];
-  if (!info) {
-    return false;
-  }
-  // Check that we have a GL constant
-  if (info.gl === undefined) {
-    return false;
-  }
-  const feature = info.f;
-  if (feature) {
-    return checkTextureFeature(gl, feature, extensions);
-  }
-  // Check extensions
-  const extension = info.x || info.gl2ext;
-  if (extension) {
-    return Boolean(getWebGLExtension(gl, extension, extensions));
-  }
-  return true;
-}
-
-export function isRenderbufferFormatSupported(
-  gl: WebGL2RenderingContext,
-  format: TextureFormat,
-  extensions: GLExtensions
-): boolean {
-  // Note: Order is important since the function call initializes extensions.
-  return isTextureFormatSupported(gl, format, extensions) && Boolean(TEXTURE_FORMATS[format]?.rb);
-}
-
-/** Checks if a texture format is supported */
-export function getTextureFormatSupport(
-  gl: WebGL2RenderingContext,
-  format: TextureFormat,
-  extensions: GLExtensions
-): {
-  supported: boolean;
-  filterable?: boolean;
-  renderable?: boolean;
-  blendable?: boolean;
-  storable?: boolean;
-} {
-  const info = TEXTURE_FORMATS[format];
-  if (!info) {
-    return {supported: false};
-  }
-  // let decoded;
-  // try {
-  //   decoded = decodeTextureFormat(format);
-  // } catch {}
-
-  // Support Check that we have a GL constant
-  let supported = info.gl === undefined;
-  supported = supported && checkTextureFeature(gl, info.f, extensions);
-
-  // Filtering
-  // const filterable = info.filter
-  //   ? checkTextureFeature(gl, infofilter])
-  //   : decoded && !decoded.signed;
-  // const renderable = info.filter
-  //   ? checkTextureFeature(gl, inforender])
-  //   : decoded && !decoded.signed;
-
-  return {
-    supported,
-    renderable: supported && checkTextureFeature(gl, info.render, extensions),
-    filterable: supported && checkTextureFeature(gl, info.filter, extensions),
-    blendable: false, // tod,
-    storable: false
-  };
-}
-
-/** Checks whether linear filtering (interpolated sampling) is available for floating point textures */
-export function isTextureFormatFilterable(
-  gl: WebGL2RenderingContext,
-  format: TextureFormat,
-  extensions: GLExtensions
-): boolean {
-  if (!isTextureFormatSupported(gl, format, extensions)) {
-    return false;
-  }
-  if (format.startsWith('depth') || format.startsWith('stencil')) {
-    return false;
-  }
-  try {
-    const decoded = decodeTextureFormat(format);
-    if (decoded.signed) {
-      return false;
-    }
-  } catch {
-    return false;
-  }
-  if (format.endsWith('32float')) {
-    return Boolean(getWebGLExtension(gl, 'OES_texture_float_linear, extensions', extensions));
-  }
-  if (format.endsWith('16float')) {
-    return Boolean(getWebGLExtension(gl, 'OES_texture_half_float_linear, extensions', extensions));
-  }
-  return true;
-}
-
-export function isTextureFormatRenderable(
-  gl: WebGL2RenderingContext,
-  format: TextureFormat,
-  extensions: GLExtensions
-): boolean {
-  if (!isTextureFormatSupported(gl, format, extensions)) {
-    return false;
-  }
-  if (typeof format === 'number') {
-    return false; // isTextureFormatFilterableWebGL(gl, format);
-  }
-  // TODO depends on device...
-  return true;
-}
-
-/** Get parameters necessary to work with format in WebGL: internalFormat, dataFormat, type, compressed, */
-export function getTextureFormatWebGL(format: TextureFormat): {
-  internalFormat: GL;
-  format: GLTexelDataFormat;
-  type: GLPixelType;
-  compressed: boolean;
-} {
-  const formatData = TEXTURE_FORMATS[format];
-  const webglFormat = convertTextureFormatToGL(format);
-  const decoded = decodeTextureFormat(format);
-  return {
-    internalFormat: webglFormat,
-    format:
-      formatData?.dataFormat ||
-      getWebGLPixelDataFormat(decoded.channels, decoded.integer, decoded.normalized, webglFormat),
-    // depth formats don't have a type
-    type: decoded.dataType
-      ? getGLFromVertexType(decoded.dataType)
-      : formatData?.types?.[0] || GL.UNSIGNED_BYTE,
-    compressed: decoded.compressed || false
-  };
-}
-
-export function getDepthStencilAttachmentWebGL(
-  format: TextureFormat
-): GL.DEPTH_ATTACHMENT | GL.STENCIL_ATTACHMENT | GL.DEPTH_STENCIL_ATTACHMENT {
-  const info = TEXTURE_FORMATS[format];
-  if (!info?.attachment) {
-    throw new Error(`${format} is not a depth stencil format`);
-  }
-  return info.attachment;
-}
-
-/** TODO - VERY roundabout legacy way of calculating bytes per pixel */
-export function getTextureFormatBytesPerPixel(format: TextureFormat): number {
-  // TODO remove webgl1 support
-  const params = getTextureFormatWebGL(format);
-  // NOTE(Tarek): Default to RGBA bytes
-  const channels = DATA_FORMAT_CHANNELS[params.format] || 4;
-  const channelSize = TYPE_SIZES[params.type] || 1;
-  return channels * channelSize;
-}
-
-// DATA TYPE HELPERS
-
-export function getWebGLPixelDataFormat(
-  channels: 'r' | 'rg' | 'rgb' | 'rgba' | 'bgra',
-  integer: boolean,
-  normalized: boolean,
-  format: GL
-): GLTexelDataFormat {
-  // WebGL1 formats use same internalFormat
-  if (format === GL.RGBA || format === GL.RGB) {
-    return format;
-  }
-  // prettier-ignore
-  switch (channels) {
-    case 'r': return integer && !normalized ? GL.RED_INTEGER : GL.RED;
-    case 'rg': return integer && !normalized ? GL.RG_INTEGER : GL.RG;
-    case 'rgb': return integer && !normalized ? GL.RGB_INTEGER : GL.RGB;
-    case 'rgba': return integer && !normalized ? GL.RGBA_INTEGER : GL.RGBA;
-    case 'bgra': throw new Error('bgra pixels not supported by WebGL');
-    default: return GL.RGBA;
-  }
-}
-
-/**
- * Map WebGPU style texture format strings to GL constants
- */
-function convertTextureFormatToGL(format: TextureFormat): GL | undefined {
-  const formatInfo = TEXTURE_FORMATS[format];
-  const webglFormat = formatInfo?.gl;
-  if (webglFormat === undefined) {
-    throw new Error(`Unsupported texture format ${format}`);
-  }
-  return webglFormat;
-}
-
-/**
- * Map WebGL texture formats (GL constants) to WebGPU-style TextureFormat strings
-export function convertGLToTextureFormat(format: GL | TextureFormat): TextureFormat {
-  if (typeof format === 'string') {
-    return format;
-  }
-  const entry = Object.entries(TEXTURE_FORMATS).find(([, entry]) => entry.gl === format);
-  if (!entry) {
-    throw new Error(`Unknown texture format ${format}`);
-  }
-  return entry[0] as TextureFormat;
-}
- */

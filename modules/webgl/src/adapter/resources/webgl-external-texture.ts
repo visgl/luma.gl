@@ -72,6 +72,20 @@ export class WEBGLExternalTexture extends WEBGLTexture {
       data.addEventListener('loadeddata', () => this.initialize(props));
       return this;
     }
+  }
+
+  initialize() {
+        // TODO - Video handling, move to ExternalTexture?
+    // if (isVideo) {
+    //   this._video = {
+    //     video: data,
+    //     // TODO  - should we be using the sampler parameters here?
+    //     parameters: {},
+    //     // @ts-expect-error HTMLVideoElement.HAVE_CURRENT_DATA is not declared
+    //     lastTime: data.readyState >= HTMLVideoElement.HAVE_CURRENT_DATA ? data.currentTime : -1
+    //   };
+    // }
+  }
 
   update(): this {
     if (this._video) {

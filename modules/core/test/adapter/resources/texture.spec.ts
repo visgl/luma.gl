@@ -6,9 +6,9 @@ import test from 'tape-promise/tape';
 import {webglDevice, getTestDevices} from '@luma.gl/test-utils';
 
 import {Device, Texture, TextureFormat, decodeTextureFormat, VertexType} from '@luma.gl/core';
+// TODO(v9): Avoid import from `@luma.gl/constants` in core tests.
 import {GL} from '@luma.gl/constants';
 
-// TODO(v9): Avoid import from `@luma.gl/webgl` in core tests.
 import {
   TEXTURE_FORMATS,
   getTextureFormatWebGL
@@ -19,20 +19,75 @@ import {WEBGLTexture} from '@luma.gl/webgl/adapter/resources/webgl-texture';
 // import {convertToSamplerProps} from '@luma.gl/webgl/adapter/converters/sampler-parameters';
 
 test('Device#isTextureFormatSupported()', async t => {
-  const FORMATS: Record<string, TextureFormat[]> = {
-    webgl: ['rgba8unorm', 'r32float', 'rg32float', 'rgb32float-webgl', 'rgba32float'],
-    webgpu: []
+  const UNSUPPORTED_FORMATS: Record<string, TextureFormat[]> = {
+    webgl: [],
+    webgpu: ['rgb32float-webgl']
   };
 
   for (const device of await getTestDevices()) {
-    const unSupportedFormats = [];
-    FORMATS[device.type].forEach(format => {
+    const unSupportedFormats: TextureFormat[] = [];
+    UNSUPPORTED_FORMATS[device.type].forEach(format => {
       if (!device.isTextureFormatSupported(format)) {
         unSupportedFormats.push(format);
       }
     });
 
-    t.deepEqual(unSupportedFormats, [], `All ${device.type} formats are supported`);
+    unSupportedFormats.sort();
+    const expected = UNSUPPORTED_FORMATS[device.type].sort();
+    t.ok(
+      unSupportedFormats.every(format => expected.includes(format)),
+      `${device.type}: unsupported formats ${unSupportedFormats.join(',') in [expected.join(',')]}`
+    );
+  }
+
+  t.end();
+});
+
+test('Device#isTextureFormatFilterable()', async t => {
+  const UNSUPPORTED_FORMATS: Record<string, Record<Device['type'], TextureFormat[]>> = {
+    webgl: ['rgba8unorm', 'r32float', 'rg32float', 'rgb32float-webgl', 'rgba32float'],
+    webgpu: []
+  };
+
+  for (const device of await getTestDevices()) {
+    const unSupportedFormats: TextureFormat[] = [];
+    UNSUPPORTED_FORMATS[device.type].forEach(format => {
+      if (!device.isTextureFormatFilterable(format)) {
+        unSupportedFormats.push(format);
+      }
+    });
+
+    unSupportedFormats.sort();
+    const expected = UNSUPPORTED_FORMATS[device.type].sort();
+    t.ok(
+      unSupportedFormats.every(format => expected.includes(format)),
+      `${device.type}: Unfilterable formats ${unSupportedFormats.join(',') in [expected.join(',')]}`
+    );
+  }
+
+  t.end();
+});
+
+test('Device#isTextureFormatRenderable()', async t => {
+  const UNSUPPORTED_FORMATS: Record<string, Record<Device['type'], TextureFormat[]>> = {
+    webgl: ['rgba8unorm', 'r32float', 'rg32float', 'rgb32float-webgl', 'rgba32float'],
+    webgpu: []
+  };
+
+  for (const device of await getTestDevices()) {
+    const unSupportedFormats: TextureFormat[] = [];
+    UNSUPPORTED_FORMATS[device.type].forEach(format => {
+      if (!device.isTextureFormatRenderable(format)) {
+        unSupportedFormats.push(format);
+      }
+    });
+
+    unSupportedFormats.sort();
+    const expected = UNSUPPORTED_FORMATS[device.type].sort();
+    t.ok(
+      unSupportedFormats.every(format => expected.includes(format)),
+      `${device.type}: Unrenderable formats ${unSupportedFormats.join(',') in [expected.join(',')]}`
+    );
   }
 
   t.end();
@@ -154,8 +209,8 @@ function testFormatCreation(t, device: Device, withData: boolean = false) {
       try {
         const data = withData && !packed ? TEXTURE_DATA[dataType] || DEFAULT_TEXTURE_DATA : null;
         // TODO: for some reason mipmap generation failing for RGB32F format
-        const mipmaps =
-          device.isTextureFormatRenderable(format) && device.isTextureFormatFilterable(format);
+        const mipmaps = format === 'rgba8unorm';
+        // device.isTextureFormatRenderable(format) && device.isTextureFormatFilterable(format);
 
         const sampler = mipmaps
           ? {

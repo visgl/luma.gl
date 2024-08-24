@@ -98,7 +98,7 @@ type CreateDeviceProps = {
   type?: 'webgl' | 'webgpu' | 'unknown' | 'best-available';
   /** List of device types. Will also search any pre-registered device backends */
   adapters?: Adapter[];
-  /** Wait for HTML to load. Defaults to `true`. Disable if not referencing DOM or in case load event is defeated by other code */
+  /** Whether to wait for page to be loaded, which ensures that canvas contexts can refer to existing canvases by id (defaults to true) */
   waitForPageLoad?: boolean;
 } & DeviceProps
 ```

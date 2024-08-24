@@ -74,14 +74,6 @@ Specifies props to use when luma creates the device.
 | `debugWebGL?: boolean`                                  | `false`                                      | traces WebGL API calls to the console (via Khronos WebGLDeveloperTools).                                    |
 | `debugSpectorJS?: boolean`                              | `false`                                      | Initialize the SpectorJS WebGL debugger.                                                                    |
 | `debugSpectorJSUrl?: string`                            | CDN url                                      | SpectorJS URL. Override if different SpectorJS version is desired (or if CDN is down).                      |
-| `_requestMaxLimits?: boolean`                           | `true`                                       | Ensures that the Device exposes the highest `DeviceLimits` supported by platform (WebGPU).                  |
-| `_initializeFeatures?: boolean`                         | `true`                                       | Initialize all `DeviceFeatures` on startup. 🧪                                                               |
-| `_disabledFeatures?: Record<DeviceFeature, boolean>`    | `{ 'compilation-status-async-webgl': true }` | Disable specific `DeviceFeatures`. 🧪                                                                        |
-| `_factoryDestroyPolicy?: string`                        | `'unused'`                                   | `'unused' \| 'never'` Never destroy cached shaders and pipelines. 🧪                                         |
-
-:::caution
-🧪 denotes experimental feature. Expect API to change.
-:::
 
 :::tip
 Learn more GPU debugging in our [Debugging](../../developer-guide/debugging.md) guide.
