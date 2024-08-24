@@ -113,16 +113,15 @@ export abstract class RenderPass extends Resource<RenderPassProps> {
   }
 }
 
-  // TODO - Can we align WebGL implementation with WebGPU API? 
-  // In WebGPU the following methods are on the renderpass instead of the renderpipeline
-  // luma.gl keeps them on the pipeline for now, but that has some issues.
+// TODO - Can we align WebGL implementation with WebGPU API?
+// In WebGPU the following methods are on the renderpass instead of the renderpipeline
+// luma.gl keeps them on the pipeline for now, but that has some issues.
 
-  // abstract setPipeline(pipeline: RenderPipeline): void {}
-  // abstract setIndexBuffer()
-  // abstract setVertexBuffer(slot: number, buffer: Buffer, offset: number): void;
-  // abstract setBindings(bindings: Record<string, Binding>): void;
-  // abstract setParameters(parameters: RenderPassParameters);
-  // abstract draw(options: {
-  // abstract drawIndirect(indirectBuffer: GPUBuffer, indirectOffset: number): void;
-  // abstract drawIndexedIndirect(indirectBuffer: GPUBuffer, indirectOffset: number): void;
-
+// abstract setPipeline(pipeline: RenderPipeline): void {}
+// abstract setIndexBuffer()
+// abstract setVertexBuffer(slot: number, buffer: Buffer, offset: number): void;
+// abstract setBindings(bindings: Record<string, Binding>): void;
+// abstract setParameters(parameters: RenderPassParameters);
+// abstract draw(options: {
+// abstract drawIndirect(indirectBuffer: GPUBuffer, indirectOffset: number): void;
+// abstract drawIndexedIndirect(indirectBuffer: GPUBuffer, indirectOffset: number): void;
