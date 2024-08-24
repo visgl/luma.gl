@@ -44,7 +44,7 @@ void main(void) {
 }
 `;
 
-test('api#UniformBufferLayout', (t) => {
+test('shadertypes#UniformBufferLayout', (t) => {
   const std140 = new UniformBufferLayout({
     uEnabled: 'u32',
     uProjectionMatrix: 'mat4x4<f32>'
@@ -64,7 +64,7 @@ test('api#UniformBufferLayout', (t) => {
   t.end();
 });
 
-test.skip('api#UniformBufferLayout getData', (t) => {
+test.skip('shadertypes#UniformBufferLayout getData', (t) => {
   const program = new Program(gl2, {vs: VS, fs: FS});
 
   const uniformBlockIndex = program.getUniformBlockIndex('uboStruct');
@@ -104,7 +104,7 @@ test.skip('api#UniformBufferLayout getData', (t) => {
   t.end();
 });
 
-test.skip('api#UniformBufferLayout setData', (t) => {
+test.skip('shadertypes#UniformBufferLayout setData', (t) => {
   const {gl2} = fixture;
 
   const sourceData = new Float32Array([1, 2, 3, 4, 5]);

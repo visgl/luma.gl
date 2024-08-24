@@ -25,7 +25,7 @@ const TEST_CASES: {format: VertexFormat, result: any}[] = [
   {format: 'sint32x2', result: {type: 'sint32', components: 2, byteLength: 8, integer: true, signed: true, normalized: false}},
 ];
 
-test('api#decodeVertexFormat', t => {
+test('shadertypes#decodeVertexFormat', t => {
   for (const tc of TEST_CASES) {
     const decoded = decodeVertexFormat(tc.format);
     t.deepEqual(

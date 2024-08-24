@@ -42,7 +42,7 @@ const TEST_CASES: {
   {typedArray: new Float64Array(), size: 2, error: 'Unknown array format'}
 ];
 
-test('api#getVertexFormatFromAttribute', t => {
+test('shadertypes#getVertexFormatFromAttribute', t => {
   for (const {typedArray, size, normalized, result, error} of TEST_CASES) {
     if (result) {
       const vertexFormat = getVertexFormatFromAttribute(typedArray, size, normalized);
@@ -70,7 +70,7 @@ const ARRAY_TEST_CASES: {typedArray: TypedArrayConstructor}[] = [
   {typedArray: Float32Array}
 ];
 
-test('api#getDataTypeFromTypedArray', t => {
+test('shadertypes#getDataTypeFromTypedArray', t => {
   for (const {typedArray} of ARRAY_TEST_CASES) {
     const dataType = getDataTypeFromTypedArray(typedArray);
     const result = getTypedArrayFromDataType(dataType);
