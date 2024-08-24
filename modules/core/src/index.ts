@@ -9,7 +9,12 @@ export {luma} from './adapter/luma';
 // ADAPTER (DEVICE AND GPU RESOURCE INTERFACES)
 export {Adapter} from './adapter/adapter';
 
-export type {DeviceProps, DeviceInfo, DeviceFeature} from './adapter/device';
+export type {
+  DeviceProps,
+  DeviceInfo,
+  DeviceFeature,
+  DeviceTextureFormatCapabilities
+} from './adapter/device';
 export {Device, DeviceFeatures, DeviceLimits} from './adapter/device';
 
 export type {CanvasContextProps} from './adapter/canvas-context';
@@ -144,16 +149,20 @@ export type {
   ColorTextureFormat,
   DepthStencilTextureFormat
 } from './gpu-type-utils/texture-formats';
+export type {TextureFormatInfo} from './gpu-type-utils/texture-format-info';
+export type {TextureFormatCapabilities} from './gpu-type-utils/texture-format-capabilities';
 
 // GPU TYPE UTILS - GPU MEMORY LAYOUT HELPERS - CAN BE USED BY APPS BUT MOSTLY USED INTERNALLY
 
 export {decodeVertexFormat} from './gpu-type-utils/decode-vertex-format';
-export {decodeTextureFormat} from './gpu-type-utils/decode-texture-format';
 export {decodeShaderUniformType} from './gpu-type-utils/decode-shader-types';
 export {decodeShaderAttributeType} from './gpu-type-utils/decode-attribute-type';
 export {getDataTypeFromTypedArray} from './gpu-type-utils/vertex-format-from-attribute';
 export {getTypedArrayFromDataType} from './gpu-type-utils/vertex-format-from-attribute';
 export {getVertexFormatFromAttribute} from './gpu-type-utils/vertex-format-from-attribute';
+
+export {decodeTextureFormat} from './gpu-type-utils/decode-texture-format';
+export {getTextureFormatCapabilities} from './gpu-type-utils/texture-format-capabilities';
 
 // GENERAL EXPORTS - FOR APPLICATIONS
 
@@ -174,3 +183,6 @@ export {getScratchArray} from './utils/array-utils-flat';
 export type {AttributeInfo} from './adapter-utils/get-attribute-from-layouts';
 export {BufferLayoutHelper as _BufferLayoutHelper} from './adapter-utils/buffer-layout-helper';
 export {getAttributeInfosFromLayouts} from './adapter-utils/get-attribute-from-layouts';
+
+// TEST EXPORTS
+export {TEXTURE_FORMAT_TABLE as TEXTURE_FORMATS} from './gpu-type-utils/texture-format-table';

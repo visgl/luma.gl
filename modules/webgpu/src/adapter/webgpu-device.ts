@@ -9,13 +9,13 @@ import type {
   DeviceInfo,
   DeviceLimits,
   DeviceFeature,
+  DeviceTextureFormatCapabilities,
   CanvasContextProps,
   BufferProps,
   SamplerProps,
   ShaderProps,
   Texture,
   TextureProps,
-  TextureFormat,
   ExternalTextureProps,
   FramebufferProps,
   RenderPipelineProps,
@@ -120,24 +120,6 @@ export class WebGPUDevice extends Device {
 
   destroy(): void {
     this.handle.destroy();
-  }
-
-  isTextureFormatSupported(format: TextureFormat): boolean {
-    return !format.includes('webgl');
-  }
-
-  /** @todo implement proper check? */
-  isTextureFormatFilterable(format: TextureFormat): boolean {
-    return (
-      this.isTextureFormatSupported(format) &&
-      !format.startsWith('depth') &&
-      !format.startsWith('stencil')
-    );
-  }
-
-  /** @todo implement proper check? */
-  isTextureFormatRenderable(format: TextureFormat): boolean {
-    return this.isTextureFormatSupported(format);
   }
 
   get isLost(): boolean {
@@ -289,6 +271,19 @@ export class WebGPUDevice extends Device {
     return new DeviceFeatures(Array.from(features), this.props._disabledFeatures);
   }
 
+  override _getDeviceSpecificTextureFormatCapabilities(
+    capabilities: DeviceTextureFormatCapabilities
+  ): DeviceTextureFormatCapabilities {
+    const {format} = capabilities;
+    if (format.includes('webgl')) {
+      return {format, create: false, render: false, filter: false, blend: false, store: false};
+    }
+    return capabilities;
+  }
+
+  // DEPRECATED METHODS
+
+  // @deprecated
   copyExternalImageToTexture(options: {
     texture: Texture;
     mipLevel?: number;

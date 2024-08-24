@@ -2,14 +2,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-// @todo texture refactor
-// - [ ] cube texture init params P1
-// - [ ] 3d texture init params P1
-// - [ ] GPU memory tracking
-// - [ ] raw data inputs
-// - [ ] video (external) textures
-
-// import {TypedArray} from '@math.gl/types';
 import type {
   Device,
   TextureProps,
@@ -26,8 +18,6 @@ import type {
   TextureArrayData,
   TextureCubeArrayData
 } from '@luma.gl/core';
-// import {decodeTextureFormat} from '@luma.gl/core';
-// import {Buffer, Texture, log} from '@luma.gl/core';
 import {Texture, log} from '@luma.gl/core';
 import {
   GL,
@@ -36,17 +26,12 @@ import {
   GLTexelDataFormat,
   GLTextureTarget
 } from '@luma.gl/constants';
-// import {GLPixelDataType} from '@luma.gl/constants';
-import {withGLParameters} from '../../context/state-tracker/with-parameters';
-// getTextureFormatBytesPerPixel
-import {getTextureFormatWebGL} from '../converters/texture-formats';
+import {getTextureFormatWebGL} from '../converters/webgl-texture-table';
 import {convertSamplerParametersToWebGL} from '../converters/sampler-parameters';
 import {WebGLDevice} from '../webgl-device';
-// import {WEBGLBuffer} from './webgl-buffer';
 import {WEBGLSampler} from './webgl-sampler';
 import {WEBGLTextureView} from './webgl-texture-view';
 
-// import type {WebGLSetTextureOptions, WebGLCopyTextureOptions} from '../helpers/webgl-texture-utils';
 import {
   initializeTextureStorage,
   // clearMipLevel,
@@ -121,9 +106,7 @@ export class WEBGLTexture extends Texture {
     Object.seal(this);
   }
 
-  /**
-   * Initialize texture with supplied props
-   */
+  /** Initialize texture with supplied props */
   // eslint-disable-next-line max-statements
   _initialize(propsWithData: TextureProps): void {
     this.handle = this.props.handle || this.gl.createTexture();
@@ -203,19 +186,20 @@ export class WEBGLTexture extends Texture {
   }
 
   // Call to regenerate mipmaps after modifying texture(s)
-  generateMipmap(params = {}): void {
-    if (
-      !this.device.isTextureFormatRenderable(this.props.format) ||
-      !this.device.isTextureFormatFilterable(this.props.format)
-    ) {
+  generateMipmap(options?: {force?: boolean}): void {
+    const isFilterableAndRenderable =
+      this.device.isTextureFormatRenderable(this.props.format) &&
+      this.device.isTextureFormatFilterable(this.props.format);
+    if (!isFilterableAndRenderable) {
       log.warn(`${this} is not renderable or filterable, may not be able to generate mipmaps`)();
+      if (!options?.force) {
+        return;
+      }
     }
 
     try {
       this.gl.bindTexture(this.glTarget, this.handle);
-      withGLParameters(this.gl, params, () => {
-        this.gl.generateMipmap(this.glTarget);
-      });
+      this.gl.generateMipmap(this.glTarget);
     } catch (error) {
       log.warn(`Error generating mipmap for ${this}: ${(error as Error).message}`)();
     } finally {

@@ -6,8 +6,8 @@ import type {TypedArray} from '@math.gl/types';
 import type {
   DeviceProps,
   DeviceInfo,
+  DeviceTextureFormatCapabilities,
   CanvasContextProps,
-  TextureFormat,
   Buffer,
   Texture,
   Framebuffer,
@@ -46,11 +46,7 @@ import {WebGLCanvasContext} from './webgl-canvas-context';
 import type {Spector} from '../context/debug/spector-types';
 import {initializeSpectorJS} from '../context/debug/spector';
 import {makeDebugContext} from '../context/debug/webgl-developer-tools';
-import {
-  isTextureFormatSupported,
-  isTextureFormatRenderable,
-  isTextureFormatFilterable
-} from './converters/texture-formats';
+import {getTextureFormatCapabilitiesWebGL} from './converters/webgl-texture-table';
 import {uid} from '../utils/uid';
 
 import {WEBGLBuffer} from './resources/webgl-buffer';
@@ -222,19 +218,13 @@ export class WebGLDevice extends Device {
     return this.gl.isContextLost();
   }
 
-  isTextureFormatSupported(format: TextureFormat): boolean {
-    return isTextureFormatSupported(this.gl, format, this._extensions);
-  }
-
-  isTextureFormatFilterable(format: TextureFormat): boolean {
-    return isTextureFormatFilterable(this.gl, format, this._extensions);
-  }
-
-  isTextureFormatRenderable(format: TextureFormat): boolean {
-    return isTextureFormatRenderable(this.gl, format, this._extensions);
-  }
-
   // IMPLEMENTATION OF ABSTRACT DEVICE
+
+  override _getDeviceSpecificTextureFormatCapabilities(
+    capabilities: DeviceTextureFormatCapabilities
+  ): DeviceTextureFormatCapabilities {
+    return getTextureFormatCapabilitiesWebGL(this.gl, capabilities, this._extensions);
+  }
 
   createCanvasContext(props?: CanvasContextProps): CanvasContext {
     throw new Error('WebGL only supports a single canvas');

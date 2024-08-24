@@ -5,7 +5,6 @@
 import type {
   DeviceProps,
   CanvasContextProps,
-  TextureFormat,
   VertexArray,
   VertexArrayProps,
   BufferProps,
@@ -65,24 +64,12 @@ export class NullDevice extends Device {
 
   /**
    * Destroys the context
-   * @note Has no effect for WebGL browser contexts, there is no browser API for destroying contexts
+   * @note Has no effect for null contexts
    */
   destroy(): void {}
 
   get isLost(): boolean {
     return false;
-  }
-
-  isTextureFormatSupported(format: TextureFormat): boolean {
-    return true;
-  }
-
-  isTextureFormatFilterable(format: TextureFormat): boolean {
-    return true;
-  }
-
-  isTextureFormatRenderable(format: TextureFormat): boolean {
-    return true;
   }
 
   // IMPLEMENTATION OF ABSTRACT DEVICE

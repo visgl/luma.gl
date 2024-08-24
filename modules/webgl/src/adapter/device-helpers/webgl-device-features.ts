@@ -12,7 +12,7 @@ import {
   isTextureFeature,
   checkTextureFeature,
   TEXTURE_FEATURES
-} from '../converters/texture-formats';
+} from '../converters/webgl-texture-table';
 
 /**
  * Defines luma.gl "feature" names and semantics

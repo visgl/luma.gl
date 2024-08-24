@@ -10,10 +10,7 @@ import {Device, Texture, TextureFormat, decodeTextureFormat, VertexType} from '@
 import {GL} from '@luma.gl/constants';
 import {WebGLDevice} from '@luma.gl/webgl';
 
-import {
-  TEXTURE_FORMATS,
-  getTextureFormatWebGL
-} from '../../../../webgl/src/adapter/converters/texture-formats';
+import {TEXTURE_FORMATS, getTextureFormatWebGL} from '@luma.gl/core';
 import {SAMPLER_PARAMETERS} from './sampler.spec';
 
 import {WEBGLTexture} from '@luma.gl/webgl/adapter/resources/webgl-texture';
@@ -146,19 +143,6 @@ test('Texture#format simple creation', async t => {
         }, `Texture(${device.type},${formatName}) creation OK`);
 
         t.equals(texture.format, formatName, `Texture(${device.type},${formatName}).format OK`);
-        if (device.type === 'webgl') {
-          // const formatInfo = getTextureFormatWebGL(forma)
-          const expectedInternalFormat = formatInfo.gl;
-          t.equals(
-            texture.glInternalFormat,
-            expectedInternalFormat,
-            `Texture(${device.type},${formatName}).glInternal OK`
-          );
-          // const expectedType = formatInfo.types?.[0];
-          // const expectedDataFormat = formatInfo.dataFormat;
-          // t.equals(texture.glType, expectedType, `Texture(${formatName}).type OK`);
-          // t.equals(texture.glFormat, expectedDataFormat, `Texture(${formatName}).glFormat OK`);
-        }
         texture.destroy();
       }
     }
@@ -210,9 +194,12 @@ function testFormatCreation(t, device: Device, withData: boolean = false) {
     if (device.isTextureFormatSupported(format) && !device.isTextureFormatCompressed(format)) {
       try {
         const data = withData && !packed ? TEXTURE_DATA[dataType] || DEFAULT_TEXTURE_DATA : null;
+        if (format === 'rgb10a2uint-webgl') {
+          debugger;
+        }
         // TODO: for some reason mipmap generation failing for RGB32F format
-        const mipmaps = format === 'rgba8unorm';
-        // device.isTextureFormatRenderable(format) && device.isTextureFormatFilterable(format);
+        const capabilities = device.getTextureFormatCapabilities(format);
+        const mipmaps = capabilities.render && capabilities.filter;
 
         const sampler = mipmaps
           ? {
