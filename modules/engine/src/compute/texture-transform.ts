@@ -77,7 +77,12 @@ export class TextureTransform {
   }
 
   // Delete owned resources.
-  destroy(): void {}
+  destroy(): void {
+    this.model.destroy();
+    for (const binding of this.bindings) {
+      binding.framebuffer?.destroy();
+    }
+  }
 
   /** @deprecated Use {@link destroy}. */
   delete(): void {
