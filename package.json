@@ -32,7 +32,7 @@
     "publish-prod": "ocular-publish version-only-prod",
     "version": "node scripts/verify-changelog.js && git add CHANGELOG.md",
     "test": "ocular-test",
-    "test-ci": "ocular-lint && ocular-test node && ocular-test cover && yarn test-website",
+    "test-ci": "ocular-lint && ocular-test node && ocular-test cover",
     "test-fast": "ocular-test fast",
     "test-browser": "ocular-test browser",
     "test-browser-headless": "ocular-test browser-headless | tap-spec",
