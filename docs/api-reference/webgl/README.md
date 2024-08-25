@@ -17,21 +17,17 @@ const device = await luma.createDevice({adapters: [webgl2Adapter], createCanvasC
 const buffer = device.createBuffer(...);
 ```
 
-To use a luma.gl WebGL `Device` with raw WebGL calls, the application needs to access
-the `WebGL2RenderingContext`. The context is available on the `WebGLDevice` subclass:
+## Using with the "raw" WebGL API
+
+To use a luma.gl WebGL `Device` with raw WebGL calls, the application can access
+the underlying WebGL handles (`WebGL2RenderingContext`, `WebGLBuffer`, ...) using the `.handle` properties:
 
 ```typescript
-// @ts-expect-error
-const gl = device.handle;
-```
+import type {WebGLDevice} from '@luma.gl/webgl`;
 
-With a bit more work, typescript users can retrieve the `WebGL2RenderingContext`
-without ignoring type errors:
+const webglDevice = device as WebGLDevice;
+const gpuDevice: WebGL2RenderingContext = webglDevice.handle;
 
-```typescript
-import {cast} from '@luma.gl/core';
-import {WebGLDevice} from '@luma.gl/webgl'; // Installs the WebGLDevice adapter
-
-const webglDevice = cast<WebGLDevice>(device);
-const gl = webglDevice.handle;
+const buffer = device.createBuffer(...);
+const gpuBuffer: WebGLBuffer = buffer.handle;
 ```
