@@ -448,7 +448,7 @@ export class Model {
     const gpuGeometry = geometry && makeGPUGeometry(this.device, geometry);
     if (gpuGeometry) {
       this.setTopology(gpuGeometry.topology || 'triangle-list');
-      const bufferLayoutHelper = new BufferLayoutHelper(this.bufferLayout);
+      const bufferLayoutHelper = new _BufferLayoutHelper(this.bufferLayout);
       this.bufferLayout = bufferLayoutHelper.mergeBufferLayouts(
         gpuGeometry.bufferLayout,
         this.bufferLayout
@@ -476,7 +476,7 @@ export class Model {
    * @note Triggers a pipeline rebuild / pipeline cache fetch
    */
   setBufferLayout(bufferLayout: BufferLayout[]): void {
-    const bufferLayoutHelper = new BufferLayoutHelper(this.bufferLayout);
+    const bufferLayoutHelper = new _BufferLayoutHelper(this.bufferLayout);
     this.bufferLayout = this._gpuGeometry
       ? bufferLayoutHelper.mergeBufferLayouts(bufferLayout, this._gpuGeometry.bufferLayout)
       : bufferLayout;
