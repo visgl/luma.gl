@@ -285,7 +285,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     // Draw the cubes
     const renderPass = device.beginRenderPass({
       clearColor: [0, 0, 0, 1],
-      clearDepth: true
+      clearDepth: 1
     });
 
     this.cube.draw(renderPass);

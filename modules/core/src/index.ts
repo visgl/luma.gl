@@ -168,9 +168,9 @@ export type {
   CopyTextureToTextureOptions
 } from './adapter/resources/command-encoder';
 
-export type {AttributeInfo} from './adapter-utils/get-attribute-from-layouts';
-export {getAttributeInfosFromLayouts} from './adapter-utils/get-attribute-from-layouts';
-export {getScratchArray} from './utils/array-utils-flat';
-
 // INTERNAL UTILS - for use in other luma.gl modules only
 export {log} from './utils/log';
+export {getScratchArray} from './utils/array-utils-flat';
+export type {AttributeInfo} from './adapter-utils/get-attribute-from-layouts';
+export {BufferLayoutHelper as _BufferLayoutHelper} from './adapter-utils/buffer-layout-helper';
+export {getAttributeInfosFromLayouts} from './adapter-utils/get-attribute-from-layouts';

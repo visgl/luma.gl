@@ -49,7 +49,7 @@ export class LegacyPickingManager {
     const pickingPass = this.device.beginRenderPass({
       framebuffer,
       clearColor: [0, 0, 0, 0],
-      clearDepth: true
+      clearDepth: 1
     });
 
     return pickingPass;
