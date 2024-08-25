@@ -172,14 +172,17 @@ export class WebGPURenderPass extends RenderPass {
       colorAttachments: []
     };
 
-    renderPassDescriptor.colorAttachments = framebuffer.colorAttachments.map(colorAttachment => ({
-      // clear values
-      loadOp: this.props.clearColor !== false ? 'clear' : 'load',
-      colorClearValue: this.props.clearColor || [0, 0, 0, 0],
-      storeOp: this.props.discard ? 'discard' : 'store',
-      // ...colorAttachment,
-      view: colorAttachment.handle
-    }));
+    renderPassDescriptor.colorAttachments = framebuffer.colorAttachments.map(
+      (colorAttachment, index) => ({
+        // clear values
+        loadOp: this.props.clearColor !== false ? 'clear' : 'load',
+        colorClearValue:
+          this.props.clearColors?.[index] || this.props.clearColor || RenderPass.defaultClearColor,
+        storeOp: this.props.discard ? 'discard' : 'store',
+        // ...colorAttachment,
+        view: colorAttachment.handle
+      })
+    );
 
     if (framebuffer.depthStencilAttachment) {
       renderPassDescriptor.depthStencilAttachment = {
@@ -192,9 +195,12 @@ export class WebGPURenderPass extends RenderPass {
         depthStencilAttachment.depthReadOnly = true;
       }
       if (this.props.clearDepth !== false) {
-        depthStencilAttachment.depthClearValue =
-          this.props.clearDepth === true ? 1 : this.props.clearDepth;
+        depthStencilAttachment.depthClearValue = this.props.clearDepth;
       }
+      // STENCIL
+      // if (this.props.clearStencil !== false) {
+      //   depthStencilAttachment.stencilClearValue = this.props.clearStencil;
+      // }
 
       // WebGPU only wants us to set these parameters if the texture format actually has a depth aspect
       const hasDepthAspect = true;

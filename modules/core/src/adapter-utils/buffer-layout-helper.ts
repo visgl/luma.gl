@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {BufferLayout} from '@luma.gl/core';
+import type {BufferLayout} from '../adapter/types/buffer-layout';
 
 /** BufferLayoutHelper is a helper class that should not be used directly by applications */
 export class BufferLayoutHelper {
@@ -23,7 +23,10 @@ export class BufferLayoutHelper {
       : [bufferLayout.name];
   }
 
-  mergeBufferLayouts(bufferLayouts1: BufferLayout[], bufferLayouts2 : BufferLayout[]): BufferLayout[] {
+  mergeBufferLayouts(
+    bufferLayouts1: BufferLayout[],
+    bufferLayouts2: BufferLayout[]
+  ): BufferLayout[] {
     const mergedLayouts = [...bufferLayouts1];
     for (const attribute of bufferLayouts2) {
       const index = mergedLayouts.findIndex(attribute2 => attribute2.name === attribute.name);

@@ -22,13 +22,13 @@ export type RenderPassProps = ResourceProps & {
   // TODO - API needs to be able to control multiple render targets
 
   /** Clear value for color attachment, or false to preserve the previous value */
-  clearColor?: NumberArray4 | TypedArray | boolean;
-  /** Experimental: Clear color values for multiple color attachments. Must specify typed arrays */
+  clearColor?: NumberArray4 | TypedArray | false;
+  /** Experimental: Clear color values for multiple color attachments. Must specify typed arrays. props.clearColor will be ignored. */
   clearColors?: (TypedArray | false)[];
   /** Clear value for depth attachment (true === `1`), or false to preserve the previous value. Must be between 0.0 (near) and 1.0 (far), inclusive. */
-  clearDepth?: number | boolean;
+  clearDepth?: number | false;
   /** Clear value for stencil attachment (true === `0`), or false to preserve the previous value. Converted to the type and number of LSBs as the number of bits in the stencil aspect */
-  clearStencil?: number | boolean;
+  clearStencil?: number | false;
 
   /** Indicates that the depth component is read only. */
   depthReadOnly?: boolean;
@@ -57,15 +57,22 @@ export type RenderPassProps = ResourceProps & {
  * - a couple of mutable parameters ()
  */
 export abstract class RenderPass extends Resource<RenderPassProps> {
+  /** TODO - should be [0, 0, 0, 0], update once deck.gl tests run clean */
+  static defaultClearColor: [number, number, number, number] = [0, 0, 0, 1];
+  /** Depth 1.0 represents the far plance */
+  static defaultClearDepth = 1;
+  /** Clears all stencil bits */
+  static defaultClearStencil = 0;
+
   /** Default properties for RenderPass */
   static override defaultProps: Required<RenderPassProps> = {
     ...Resource.defaultProps,
     framebuffer: null,
     parameters: undefined!,
-    clearColor: true,
+    clearColor: RenderPass.defaultClearColor,
     clearColors: undefined!,
-    clearDepth: true,
-    clearStencil: true,
+    clearDepth: RenderPass.defaultClearDepth,
+    clearStencil: RenderPass.defaultClearStencil,
     depthReadOnly: false,
     stencilReadOnly: false,
     discard: false,
@@ -107,8 +114,8 @@ export abstract class RenderPass extends Resource<RenderPassProps> {
 
   protected static normalizeProps(device: Device, props: RenderPassProps): RenderPassProps {
     // Intended to override e.g. set default clear values to true
-    const overrideProps = device.props._resourceDefaults?.renderPass;
-    const newProps = {...overrideProps, ...props};
+    const overriddenDefaultProps = device.props._resourceDefaults?.renderPass;
+    const newProps = {...overriddenDefaultProps, ...props};
     return newProps;
   }
 }

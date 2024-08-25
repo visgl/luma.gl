@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {NumericArray, NumberArray4} from '@math.gl/types';
-import {RenderPass, RenderPassProps, RenderPassParameters, log} from '@luma.gl/core';
+import {RenderPass, RenderPassProps, RenderPassParameters} from '@luma.gl/core';
 import {WebGLDevice} from '../webgl-device';
 import {GL, GLParameters} from '@luma.gl/constants';
 import {withGLParameters} from '../../context/state-tracker/with-parameters';
@@ -138,18 +138,11 @@ export class WEBGLRenderPass extends RenderPass {
    * Optionally clears depth, color and stencil buffers based on parameters
    */
   protected clear(): void {
-    const DEFAULT_CLEAR_COLOR: [number, number, number, number] = [0, 0, 0, 1];
-    const DEFAULT_CLEAR_DEPTH = 1;
-    const DEFAULT_CLEAR_STENCIL = 0;
-
     const glParameters: GLParameters = {...this.glParameters};
 
     let clearMask = 0;
 
     if (this.props.clearColors) {
-      if (this.props.clearColor) {
-        log.warn('RenderPass: props.clearColors and props.clearColor are mutually exclusive')();
-      }
       this.props.clearColors.forEach((color, drawBufferIndex) => {
         if (color) {
           this.clearColorBuffer(drawBufferIndex, color);
@@ -159,19 +152,15 @@ export class WEBGLRenderPass extends RenderPass {
 
     if (this.props.clearColor !== false && this.props.clearColors === undefined) {
       clearMask |= GL.COLOR_BUFFER_BIT;
-      const clearColor =
-        this.props.clearColor === true ? DEFAULT_CLEAR_COLOR : this.props.clearColor;
-      glParameters.clearColor = clearColor;
+      glParameters.clearColor = this.props.clearColor;
     }
     if (this.props.clearDepth !== false) {
       clearMask |= GL.DEPTH_BUFFER_BIT;
-      glParameters.clearDepth =
-        this.props.clearDepth === true ? DEFAULT_CLEAR_DEPTH : this.props.clearDepth;
+      glParameters.clearDepth = this.props.clearDepth;
     }
     if (this.props.clearStencil !== false) {
       clearMask |= GL.STENCIL_BUFFER_BIT;
-      glParameters.clearStencil =
-        this.props.clearStencil === true ? DEFAULT_CLEAR_STENCIL : this.props.clearStencil;
+      glParameters.clearStencil = this.props.clearStencil;
     }
 
     if (clearMask !== 0) {

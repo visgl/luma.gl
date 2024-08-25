@@ -48,7 +48,6 @@ import {ShaderInputs} from '../shader-inputs';
 import {AsyncTexture} from '../async-texture/async-texture';
 
 import {splitUniformsAndBindings} from './split-uniforms-and-bindings';
-import {BufferLayoutHelper} from '@luma.gl/core/adapter-utils/buffer-layout-helper';
 
 const LOG_DRAW_PRIORITY = 2;
 const LOG_DRAW_TIMEOUT = 10000;
@@ -449,8 +448,11 @@ export class Model {
     const gpuGeometry = geometry && makeGPUGeometry(this.device, geometry);
     if (gpuGeometry) {
       this.setTopology(gpuGeometry.topology || 'triangle-list');
-      const bufferLayoutHelper = new BufferLayoutHelper(this.bufferLayout)
-      this.bufferLayout = bufferLayoutHelper.mergeBufferLayouts(gpuGeometry.bufferLayout, this.bufferLayout);
+      const bufferLayoutHelper = new BufferLayoutHelper(this.bufferLayout);
+      this.bufferLayout = bufferLayoutHelper.mergeBufferLayouts(
+        gpuGeometry.bufferLayout,
+        this.bufferLayout
+      );
       if (this.vertexArray) {
         this._setGeometryAttributes(gpuGeometry);
       }
@@ -584,8 +586,8 @@ export class Model {
    * @note Overrides any attributes previously set with the same name
    */
   setAttributes(buffers: Record<string, Buffer>, options?: {disableWarnings?: boolean}): void {
-    const disableWarnings = options?.disableWarnings ?? this.props.disableWarnings
-      if (buffers.indices) {
+    const disableWarnings = options?.disableWarnings ?? this.props.disableWarnings;
+    if (buffers.indices) {
       log.warn(
         `Model:${this.id} setAttributes() - indexBuffer should be set using setIndexBuffer()`
       )();

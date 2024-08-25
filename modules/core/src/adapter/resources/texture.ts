@@ -414,9 +414,10 @@ export abstract class Texture extends Resource<TextureProps> {
     const newProps = {...props};
 
     // Allow device to override props (e.g. props.mipmaps)
-    const overrideProps: Partial<TextureProps> = device?.props?._resourceDefaults?.texture || {};
+    const overriddenDefaultProps: Partial<TextureProps> =
+      device?.props?._resourceDefaults?.texture || {};
     // TODO - Type issue with props.data circumvented with Object.assign
-    Object.assign(newProps, overrideProps);
+    Object.assign(newProps, overriddenDefaultProps);
 
     // Ensure we have integer coordinates
     const {width, height} = newProps;

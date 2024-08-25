@@ -158,7 +158,7 @@ test('WebGLFramebuffer contents', async t => {
         const renderPass = testDevice.beginRenderPass({
           framebuffer,
           clearColor: [1, 0, 0, 1],
-          clearDepth: true
+          clearDepth: 1
         });
         t.comment('ending renderpass');
         renderPass.end();
