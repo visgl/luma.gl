@@ -36,8 +36,8 @@ jobs:
           yarn test-ci
 
       - name: Run lint
-      run: |
-        yarn lint
+        run: |
+          yarn lint
   
       - name: Test website build
       run: |
