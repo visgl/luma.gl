@@ -25,9 +25,9 @@ export type RenderPassProps = ResourceProps & {
   clearColor?: NumberArray4 | TypedArray | boolean;
   /** Experimental: Clear color values for multiple color attachments. Must specify typed arrays */
   clearColors?: (TypedArray | false)[];
-  /** Clear value for depth attachment (true === `1`), or false to preserve the previous value */
+  /** Clear value for depth attachment (true === `1`), or false to preserve the previous value. Must be between 0.0 (near) and 1.0 (far), inclusive. */
   clearDepth?: number | boolean;
-  /** Clear value for stencil attachment (true === `0`), or false to preserve the previous value */
+  /** Clear value for stencil attachment (true === `0`), or false to preserve the previous value. Converted to the type and number of LSBs as the number of bits in the stencil aspect */
   clearStencil?: number | boolean;
 
   /** Indicates that the depth component is read only. */
@@ -62,10 +62,10 @@ export abstract class RenderPass extends Resource<RenderPassProps> {
     ...Resource.defaultProps,
     framebuffer: null,
     parameters: undefined!,
-    clearColor: false,
+    clearColor: true,
     clearColors: undefined!,
-    clearDepth: false,
-    clearStencil: false,
+    clearDepth: true,
+    clearStencil: true,
     depthReadOnly: false,
     stencilReadOnly: false,
     discard: false,

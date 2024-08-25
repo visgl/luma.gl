@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {NumericArray, NumberArray4} from '@math.gl/types';
-import {RenderPass, RenderPassProps, RenderPassParameters} from '@luma.gl/core';
+import {RenderPass, RenderPassProps, RenderPassParameters, log} from '@luma.gl/core';
 import {WebGLDevice} from '../webgl-device';
 import {GL, GLParameters} from '@luma.gl/constants';
 import {withGLParameters} from '../../context/state-tracker/with-parameters';
@@ -147,6 +147,9 @@ export class WEBGLRenderPass extends RenderPass {
     let clearMask = 0;
 
     if (this.props.clearColors) {
+      if (this.props.clearColor) {
+        log.warn('RenderPass: props.clearColors and props.clearColor are mutually exclusive')();
+      }
       this.props.clearColors.forEach((color, drawBufferIndex) => {
         if (color) {
           this.clearColorBuffer(drawBufferIndex, color);

@@ -28,7 +28,8 @@ import {
   UniformStore,
   log,
   getTypedArrayFromDataType,
-  getAttributeInfosFromLayouts
+  getAttributeInfosFromLayouts,
+  _BufferLayoutHelper
 } from '@luma.gl/core';
 
 import type {ShaderModule, PlatformInfo} from '@luma.gl/shadertools';
@@ -42,11 +43,12 @@ import {getDebugTableForShaderLayout} from '../debug/debug-shader-layout';
 import {debugFramebuffer} from '../debug/debug-framebuffer';
 import {deepEqual} from '../utils/deep-equal';
 import {uid} from '../utils/uid';
-import {splitUniformsAndBindings} from './split-uniforms-and-bindings';
-
 import {ShaderInputs} from '../shader-inputs';
 // import type {AsyncTextureProps} from '../async-texture/async-texture';
 import {AsyncTexture} from '../async-texture/async-texture';
+
+import {splitUniformsAndBindings} from './split-uniforms-and-bindings';
+import {BufferLayoutHelper} from '@luma.gl/core/adapter-utils/buffer-layout-helper';
 
 const LOG_DRAW_PRIORITY = 2;
 const LOG_DRAW_TIMEOUT = 10000;
@@ -447,7 +449,8 @@ export class Model {
     const gpuGeometry = geometry && makeGPUGeometry(this.device, geometry);
     if (gpuGeometry) {
       this.setTopology(gpuGeometry.topology || 'triangle-list');
-      this.bufferLayout = mergeBufferLayouts(gpuGeometry.bufferLayout, this.bufferLayout);
+      const bufferLayoutHelper = new BufferLayoutHelper(this.bufferLayout)
+      this.bufferLayout = bufferLayoutHelper.mergeBufferLayouts(gpuGeometry.bufferLayout, this.bufferLayout);
       if (this.vertexArray) {
         this._setGeometryAttributes(gpuGeometry);
       }
@@ -471,8 +474,9 @@ export class Model {
    * @note Triggers a pipeline rebuild / pipeline cache fetch
    */
   setBufferLayout(bufferLayout: BufferLayout[]): void {
+    const bufferLayoutHelper = new BufferLayoutHelper(this.bufferLayout);
     this.bufferLayout = this._gpuGeometry
-      ? mergeBufferLayouts(bufferLayout, this._gpuGeometry.bufferLayout)
+      ? bufferLayoutHelper.mergeBufferLayouts(bufferLayout, this._gpuGeometry.bufferLayout)
       : bufferLayout;
     this._setPipelineNeedsUpdate('bufferLayout');
 
@@ -580,22 +584,27 @@ export class Model {
    * @note Overrides any attributes previously set with the same name
    */
   setAttributes(buffers: Record<string, Buffer>, options?: {disableWarnings?: boolean}): void {
-    if (buffers.indices) {
+    const disableWarnings = options?.disableWarnings ?? this.props.disableWarnings
+      if (buffers.indices) {
       log.warn(
         `Model:${this.id} setAttributes() - indexBuffer should be set using setIndexBuffer()`
       )();
     }
+
+    const bufferLayoutHelper = new _BufferLayoutHelper(this.bufferLayout);
+
+    // Check if all buffers have a layout
     for (const [bufferName, buffer] of Object.entries(buffers)) {
-      const bufferLayout = this.bufferLayout.find(layout =>
-        getAttributeNames(layout).includes(bufferName)
-      );
+      const bufferLayout = bufferLayoutHelper.getBufferLayout(bufferName);
       if (!bufferLayout) {
-        log.warn(`Model(${this.id}): Missing layout for buffer "${bufferName}".`)();
+        if (!disableWarnings) {
+          log.warn(`Model(${this.id}): Missing layout for buffer "${bufferName}".`)();
+        }
         continue; // eslint-disable-line no-continue
       }
 
       // For an interleaved attribute we may need to set multiple attributes
-      const attributeNames = getAttributeNames(bufferLayout);
+      const attributeNames = bufferLayoutHelper.getAttributeNamesForBuffer(bufferLayout);
       let set = false;
       for (const attributeName of attributeNames) {
         const attributeInfo = this._attributeInfos[attributeName];
@@ -604,7 +613,7 @@ export class Model {
           set = true;
         }
       }
-      if (!set && !(options?.disableWarnings ?? this.props.disableWarnings)) {
+      if (!set && !disableWarnings) {
         log.warn(
           `Model(${this.id}): Ignoring buffer "${buffer.id}" for unknown attribute "${bufferName}"`
         )();
@@ -891,20 +900,6 @@ function shaderModuleHasUniforms(module: ShaderModule): boolean {
 
 // HELPERS
 
-/** TODO - move to core, document add tests */
-function mergeBufferLayouts(layouts1: BufferLayout[], layouts2: BufferLayout[]): BufferLayout[] {
-  const layouts = [...layouts1];
-  for (const attribute of layouts2) {
-    const index = layouts.findIndex(attribute2 => attribute2.name === attribute.name);
-    if (index < 0) {
-      layouts.push(attribute);
-    } else {
-      layouts[index] = attribute;
-    }
-  }
-  return layouts;
-}
-
 /** Create a shadertools platform info from the Device */
 export function getPlatformInfo(device: Device): PlatformInfo {
   return {
@@ -915,13 +910,6 @@ export function getPlatformInfo(device: Device): PlatformInfo {
     // HACK - we pretend that the DeviceFeatures is a Set, it has a similar API
     features: device.features as unknown as Set<DeviceFeature>
   };
-}
-
-/** Get attribute names from a BufferLayout */
-function getAttributeNames(bufferLayout: BufferLayout): string[] {
-  return bufferLayout.attributes
-    ? bufferLayout.attributes?.map(layout => layout.attribute)
-    : [bufferLayout.name];
 }
 
 /** Returns true if given object is empty, false otherwise. */
