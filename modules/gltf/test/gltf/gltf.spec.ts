@@ -3,7 +3,7 @@ import {webglDevice} from '@luma.gl/test-utils';
 
 import '@loaders.gl/polyfills';
 import {load} from '@loaders.gl/core';
-import {GLTFLoader} from '@loaders.gl/gltf';
+import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
 
 import {Texture} from '@luma.gl/core';
 import {createScenegraphsFromGLTF, loadPBREnvironment} from '@luma.gl/gltf';
@@ -11,11 +11,13 @@ import {createScenegraphsFromGLTF, loadPBREnvironment} from '@luma.gl/gltf';
 test('gltf#loading', async t => {
   // TODO - is gl argument used?
   const gltf = await load('test/data/box.glb', GLTFLoader);
+  const processedGLTF = gltf.json ? postProcessGLTF(gltf) : gltf;
 
-  const result = createScenegraphsFromGLTF(webglDevice, gltf);
+  const result = createScenegraphsFromGLTF(webglDevice, processedGLTF);
 
   t.ok(result.hasOwnProperty('scenes'), 'Should contain scenes property');
   t.ok(result.hasOwnProperty('animator'), 'Should contain animator property');
+  t.equals(result.scenes.length, 1, 'Should contain single scene');
 
   t.end();
 });
