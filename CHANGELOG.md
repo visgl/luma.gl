@@ -4,6 +4,9 @@
 
 Major new release that includes WebGPU support
 
+### 9.0.26 - Aug 28, 2024
+
+- examples: Fix build (#2228)
 
 ### 9.0.25 - Aug 21, 2024
 
