@@ -1,4 +1,5 @@
-import {glsl, NumberArray, loadImage} from '@luma.gl/core';
+// @ts-ignore Remove once package puublished
+import {NumberArray, loadImage} from '@luma.gl/core';
 import {
   AnimationLoopTemplate,
   AnimationProps,
@@ -15,7 +16,7 @@ Drawing a phong-shaded cube
 </p>
 `;
 
-const vs = glsl`\
+const vs = /* glsl */ `\
 #version 300 es
 
 in vec3 positions;
@@ -45,7 +46,7 @@ void main(void) {
 }
 `;
 
-const fs = glsl`\
+const fs = /* glsl */ `\
 #version 300 es
 precision highp float;
 
