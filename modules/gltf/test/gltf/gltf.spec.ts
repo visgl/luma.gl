@@ -10,7 +10,8 @@ import {createScenegraphsFromGLTF, loadPBREnvironment} from '@luma.gl/gltf';
 
 test('gltf#loading', async t => {
   // TODO - is gl argument used?
-  const gltf = await load('test/data/box.glb', GLTFLoader);
+  // path is relative to /test/index.html
+  const gltf = await load('data/box.glb', GLTFLoader);
 
   const result = createScenegraphsFromGLTF(webglDevice, gltf);
 

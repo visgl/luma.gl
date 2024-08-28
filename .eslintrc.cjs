@@ -1,14 +1,9 @@
-const {getESLintConfig} = require('ocular-dev-tools/configuration');
+const {getESLintConfig} = require('@vis.gl/dev-tools/configuration');
 
 // Make any changes to default config here
 module.exports = getESLintConfig({
   overrides: {
-    parser: '',
-    parserOptions: {
-      project: ['./tsconfig.json']
-    },
-
-    plugins: ['tree-shaking','import'],
+    plugins: ['tree-shaking'],
 
     env: {
       browser: true,
@@ -17,38 +12,30 @@ module.exports = getESLintConfig({
     },
 
     rules: {
-      // Definitely disable
-      'no-use-before-define': 0,
       // disabled after ocular upgrade to unbreak build
       'prefer-rest-params': 'warn',
       'import/named': 'off',
-      'no-shadow': 'warn',
-      '@typescript-eslint/no-explicit-any': 'off', // 'warn',
-      // desiabled by choice
+      // disabled by choice
       'no-unused-expressions': 'warn',
-      'no-console': 1,
-      'no-continue': ['warn'],
+      'no-console': 'warn',
+      'no-continue': 'warn',
       'callback-return': 0,
       'accessor-pairs': 0,
       'max-depth': ['warn', 4],
-      camelcase: 'off',
-      complexity: 'off',
-      'max-statements': 'off',
-      'default-case': ['warn'],
-      'no-eq-null': ['warn'],
-      eqeqeq: ['warn'],
+      camelcase: 0,
+      complexity: 0,
+      'max-statements': 0,
+      'default-case': 'warn',
       radix: 0,
-      'spaced-comment': ["error", "always", { "exceptions": ["/ <"] }]
-      // 'accessor-pairs': ['error', {getWithoutSet: false, setWithoutGet: false}]
+      // handled by prettier
+      quotes: 0,
+      indent: 0
     },
 
     overrides: [
       {
         files: ['**/*.ts', '**/*.tsx', '**/*.d.ts'],
         rules: {
-          'quotes': 0, // handled by prettier
-          'indent': 0, // handled by prettier
-
           '@typescript-eslint/no-explicit-any': 'off', // 'warn',
           // typescript-eslint 6.0
           '@typescript-eslint/no-unsafe-argument': 0,
@@ -61,9 +48,6 @@ module.exports = getESLintConfig({
 
           'consistent-return': 0, // We use typescript noImplicitReturn
           'default-case': 0, // We rely on typescript
-          'import/no-unresolved': 'error',
-          'import/no-extraneous-dependencies': 'error',
-          'no-unused-expressions': 'warn',
           '@typescript-eslint/no-empty-function': 0,
           '@typescript-eslint/no-misused-promises': 0,
           '@typescript-eslint/no-floating-promises': 0,
@@ -80,16 +64,6 @@ module.exports = getESLintConfig({
             'warn',
             {vars: 'all', args: 'none', ignoreRestSiblings: false}
           ],
-          // Warn instead of error
-          // 'max-params': ['warn'],
-          // 'no-undef': ['warn'],
-          // camelcase: ['warn'],
-          // '@typescript-eslint/no-floating-promises': ['warn'],
-          // '@typescript-eslint/await-thenable': ['warn'],
-          // '@typescript-eslint/no-misused-promises': ['warn'],
-          // '@typescript-eslint/no-empty-function': ['warn', {allow: ['arrowFunctions']}],
-          // We use function hoisting
-          '@typescript-eslint/no-use-before-define': 0,
           // We always want explicit typing, e.g `field: string = ''`
           '@typescript-eslint/no-inferrable-types': 0,
           '@typescript-eslint/restrict-template-expressions': 0,
@@ -97,8 +71,7 @@ module.exports = getESLintConfig({
           '@typescript-eslint/require-await': 0,
           '@typescript-eslint/no-unsafe-return': 0,
           '@typescript-eslint/no-unsafe-call': 0,
-          '@typescript-eslint/no-empty-interface': 0,
-          '@typescript-eslint/restrict-plus-operands': 0
+          '@typescript-eslint/no-empty-interface': 0
         }
       },
       // tests are run with aliases set up in node and webpack.
