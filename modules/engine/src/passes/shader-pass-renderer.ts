@@ -155,11 +155,10 @@ void main() {
         }
         first = false;
 
-        // eslint-disable-next-line no-shadow
-        const sourceTexture = this.swapFramebuffers.current.colorAttachments[0].texture;
+        const swapBufferTexture = this.swapFramebuffers.current.colorAttachments[0].texture;
 
         const bindings = {
-          sourceTexture
+          sourceTexture: swapBufferTexture
           // texSize: [sourceTextures.width, sourceTextures.height]
         };
 

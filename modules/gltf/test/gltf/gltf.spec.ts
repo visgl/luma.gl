@@ -10,8 +10,9 @@ import {createScenegraphsFromGLTF, loadPBREnvironment} from '@luma.gl/gltf';
 
 test('gltf#loading', async t => {
   const webglDevice = await getWebGLTestDevice();
+  // path is relative to /test/index.html
+  const gltf = await load('data/box.glb', GLTFLoader);
 
-  const gltf = await load('test/data/box.glb', GLTFLoader);
   const processedGLTF = gltf.json ? postProcessGLTF(gltf) : gltf;
 
   const result = createScenegraphsFromGLTF(webglDevice, processedGLTF);
