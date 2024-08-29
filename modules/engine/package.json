@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/engine",
-  "version": "9.1.0-alpha.17",
+  "version": "9.1.0-alpha.18",
   "description": "3D Engine Components for luma.gl",
   "type": "module",
   "license": "MIT",
