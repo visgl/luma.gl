@@ -102,7 +102,7 @@ export class GLTFInstantiator {
     }
 
     // Copy _node so that gltf-animator can access
-    const topLevelNode = this.gltf.nodes.find(node => node.id == gltfNode.id);
+    const topLevelNode = this.gltf.nodes.find(node => node.id === gltfNode.id);
     topLevelNode._node = gltfNode._node;
 
     return gltfNode._node;
