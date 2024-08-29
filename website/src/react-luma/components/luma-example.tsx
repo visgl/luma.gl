@@ -11,7 +11,6 @@ import {webgpuAdapter} from '@luma.gl/webgpu';
 
 // import StatsWidget from '@probe.gl/stats-widget';
 // import {VRDisplay} from '@luma.gl/experimental';
-// import {InfoPanel} from '../../ocular-docusaurus/react-ocular';
 import {useStore} from '../store/device-store';
 
 const GITHUB_TREE = 'https://github.com/visgl/luma.gl/tree/8.5-release';

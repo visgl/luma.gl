@@ -10,6 +10,13 @@
     "items": [
       "showcase/instancing",
       "showcase/persistence",
+      "showcase/postprocessing"
+    ]
+  },
+  {
+    "type": "category",
+    "label": "API",
+    "items": [
       "api/animation",
       "api/cubemap",
       "api/texture-3d"
@@ -22,20 +29,14 @@
       "tutorials/hello-triangle",
       "tutorials/hello-cube",
       "tutorials/lighting",
+      "tutorials/hello-gltf",
+      "tutorials/two-cubes",
+      "tutorials/instanced-cubes",
       "tutorials/hello-instancing",
       "tutorials/shader-modules",
-      "tutorials/shader-hooks"
-    ]
-  },
-  {
-    "type": "category",
-    "label": "WebGPU",
-    "items": [
-      "portable/hello-triangle",
-      "portable/rotating-cube",
-      // "portable/textured-cube",
-      "portable/two-cubes",
-      "portable/instanced-cubes"
+      "tutorials/shader-hooks",
+      "tutorials/transform-feedback",
+      "tutorials/transform"
     ]
   }
 ]

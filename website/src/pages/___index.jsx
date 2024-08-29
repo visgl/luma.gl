@@ -1,5 +1,5 @@
 import React from 'react';
-import {Home} from '../react-ocular';
+import {Home} from '@vis.gl/docusaurus-website/components';
 import InstancingExample from '../templates/showcase/example-instancing';
 import styled from 'styled-components';
 

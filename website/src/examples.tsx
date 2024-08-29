@@ -1,34 +1,32 @@
-// 
-
 import React from 'react';
-import {LumaExample} from '../react-luma';
+import {LumaExample} from './react-luma';
 
-import AnimationApp from '../../../examples/api/animation/app';
-import CubemapApp from '../../../examples/api/cubemap/app';
-import Texture3DApp from '../../../examples/api/texture-3d/app';
+import AnimationApp from '../../examples/api/animation/app';
+import CubemapApp from '../../examples/api/cubemap/app';
+import Texture3DApp from '../../examples/api/texture-3d/app';
 
-// import PerformanceApp from '../../../examples/performance/stress-test/app';
+// import PerformanceApp from '../../examples/performance/stress-test/app';
 
-// import DOFApp from '../../../examples/showcase/dof/app';
-// import GeospatialApp from '../../../examples/showcase/geospatial/app';
-// import GLTFApp from '../../../examples/showcase/gltf/app';
-import InstancingApp from '../../../examples/showcase/instancing/app';
-import PersistenceApp from '../../../examples/showcase/persistence/app';
-import PostprocessingApp from '../../../examples/showcase/postprocessing/app';
-// import WanderingApp from '../../../examples/showcase/wandering/app';
+// import DOFApp from '../../examples/showcase/dof/app';
+// import GeospatialApp from '../../examples/showcase/geospatial/app';
+// import GLTFApp from '../../examples/showcase/gltf/app';
+import InstancingApp from '../../examples/showcase/instancing/app';
+import PersistenceApp from '../../examples/showcase/persistence/app';
+import PostprocessingApp from '../../examples/showcase/postprocessing/app';
+// import WanderingApp from '../../examples/showcase/wandering/app';
 
-import HelloTriangleGeometryApp from '../../../examples/tutorials/hello-triangle-geometry/app';
-import HelloTriangleApp from '../../../examples/tutorials/hello-triangle/app';
-import HelloCubeApp from '../../../examples/tutorials/hello-cube/app';
-import TwoCubesApp from '../../../examples/tutorials/hello-two-cubes/app';
-import InstancedCubesApp from '../../../examples/tutorials/hello-instanced-cubes/app';
-import HelloInstancingApp from '../../../examples/tutorials/hello-instancing/app';
-import HelloGLTFApp from '../../../examples/tutorials/hello-gltf/app';
-import LightingApp from '../../../examples/tutorials/lighting/app';
-import ShaderHooksApp from '../../../examples/tutorials/shader-hooks/app';
-import ShaderModulesApp from '../../../examples/tutorials/shader-modules/app';
-import TransformFeedbackApp from '../../../examples/tutorials/transform-feedback/app';
-import TransformApp from '../../../examples/tutorials/transform/app';
+import HelloTriangleGeometryApp from '../../examples/tutorials/hello-triangle-geometry/app';
+import HelloTriangleApp from '../../examples/tutorials/hello-triangle/app';
+import HelloCubeApp from '../../examples/tutorials/hello-cube/app';
+import TwoCubesApp from '../../examples/tutorials/hello-two-cubes/app';
+import InstancedCubesApp from '../../examples/tutorials/hello-instanced-cubes/app';
+import HelloInstancingApp from '../../examples/tutorials/hello-instancing/app';
+import HelloGLTFApp from '../../examples/tutorials/hello-gltf/app';
+import LightingApp from '../../examples/tutorials/lighting/app';
+import ShaderHooksApp from '../../examples/tutorials/shader-hooks/app';
+import ShaderModulesApp from '../../examples/tutorials/shader-modules/app';
+import TransformFeedbackApp from '../../examples/tutorials/transform-feedback/app';
+import TransformApp from '../../examples/tutorials/transform/app';
 
 const exampleConfig = {};
 
@@ -217,7 +215,7 @@ export const TransformExample: React.FC = () => (
 //   }
 // }
 
-// import AnimationLoop from '../../../examples/webgl/hello-instancing-webgl/app';
+// import AnimationLoop from '../../examples/webgl/hello-instancing-webgl/app';
 
 // export default class Example extends React.Component {
 //   render() {
@@ -229,7 +227,7 @@ export const TransformExample: React.FC = () => (
 //   }
 // }
 
-// import AnimationLoop from '../../../examples/webgl/shader-modules-webgl/app';
+// import AnimationLoop from '../../examples/webgl/shader-modules-webgl/app';
 
 // export default class Example extends React.Component {
 //   render() {
