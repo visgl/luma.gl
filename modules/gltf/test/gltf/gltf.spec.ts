@@ -3,19 +3,43 @@ import {webglDevice} from '@luma.gl/test-utils';
 
 import '@loaders.gl/polyfills';
 import {load} from '@loaders.gl/core';
-import {GLTFLoader} from '@loaders.gl/gltf';
+import {GLTFLoader, GLTFPostprocessed, postProcessGLTF} from '@loaders.gl/gltf';
 
 import {Texture} from '@luma.gl/core';
 import {createScenegraphsFromGLTF, loadPBREnvironment} from '@luma.gl/gltf';
 
 test('gltf#loading', async t => {
-  // TODO - is gl argument used?
   const gltf = await load('test/data/box.glb', GLTFLoader);
+  const processedGLTF = gltf.json ? postProcessGLTF(gltf) : gltf;
 
-  const result = createScenegraphsFromGLTF(webglDevice, gltf);
+  const result = createScenegraphsFromGLTF(webglDevice, processedGLTF);
 
   t.ok(result.hasOwnProperty('scenes'), 'Should contain scenes property');
   t.ok(result.hasOwnProperty('animator'), 'Should contain animator property');
+  t.equals(result.scenes.length, 1, 'Should contain single scene');
+  t.equals(result.animator, null, 'Should not contain animations');
+
+  t.end();
+});
+
+test('gltf#animator', async t => {
+  const gltf = await load('test/data/BoxAnimated.glb', GLTFLoader);
+  const processedGLTF = gltf.json ? postProcessGLTF(gltf) : gltf;
+
+  const {scenes, animator} = createScenegraphsFromGLTF(webglDevice, processedGLTF);
+
+  t.equals(scenes.length, 1, 'Should contain single scene');
+  t.equals(animator.animations.length, 1, 'Should contain single animation');
+
+  const {channels} = animator.animations[0];
+  t.equals(channels.length, 2, 'Should contain two animation channels');
+  const {target} = channels[0];
+  t.ok(target._node, 'Should contain target node');
+
+  t.ok(
+    (processedGLTF as GLTFPostprocessed).nodes.every(node => !(node as any)._node),
+    'GLTF object is not mutated'
+  );
 
   t.end();
 });
