@@ -329,6 +329,22 @@ test('Texture#copyExternalImage', async t => {
           `${device.info.type} Pixels were set correctly (sub image)`
         );
       }
+
+      // Subimage copy (smaller canvas)
+      canvas.width = 1;
+      canvas.height = 1;
+      ctx.fillStyle = '#00FF00';
+      ctx.fillRect(0, 0, 1, 1);
+
+      texture.copyExternalImage({image: canvas, x: 1});
+
+      if (device.info.type === 'webgl') {
+        t.deepEquals(
+          device.readPixelsToArrayWebGL(texture),
+          new Uint8Array([255, 0, 0, 255, 0, 255, 0, 255]),
+          `${device.info.type} Pixels were set correctly (sub image small canvas)`
+        );
+      }
     }
 
     if (device.info.type !== 'webgl') {

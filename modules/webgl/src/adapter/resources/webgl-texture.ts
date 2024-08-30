@@ -243,8 +243,8 @@ export class WEBGLTexture extends Texture {
     const {dimension, glTarget, glFormat, glInternalFormat, glType} = this;
 
     // WebGL will error if we try to copy outside the bounds of the texture
-    width = Math.min(width, size.width - x);
-    height = Math.min(height, size.height - y);
+    width = Math.min(width, this.width - x);
+    height = Math.min(height, this.height - y);
 
     if (options.sourceX || options.sourceY) {
       // requires copyTexSubImage2D from a framebuffer'
