@@ -4,6 +4,10 @@
 
 Major new release that includes WebGPU support
 
+### 9.1.0-alpha.19
+
+- webgl: clip image write based on texture size (#2234)
+
 ### 9.1.0-alpha.18
 
 - gltf: Fix animations (#2227)
