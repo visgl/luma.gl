@@ -18,7 +18,10 @@ import {decodeGLUniformType, decodeGLAttributeType, isSamplerUniform} from './de
  * Note: `linkProgram()` needs to have been called
  * (although linking does not need to have been successful).
  */
-export function getShaderLayout(gl: WebGL2RenderingContext, program: WebGLProgram): ShaderLayout {
+export function getShaderLayoutFromGLSL(
+  gl: WebGL2RenderingContext,
+  program: WebGLProgram
+): ShaderLayout {
   const shaderLayout: ShaderLayout = {
     attributes: [],
     bindings: []
@@ -39,6 +42,7 @@ export function getShaderLayout(gl: WebGL2RenderingContext, program: WebGLProgra
     shaderLayout.bindings.push({
       type: 'uniform',
       name: uniformBlock.name,
+      group: 0,
       location: uniformBlock.location,
       visibility: (uniformBlock.vertex ? 0x1 : 0) & (uniformBlock.fragment ? 0x2 : 0),
       minBindingSize: uniformBlock.byteLength,
@@ -54,6 +58,7 @@ export function getShaderLayout(gl: WebGL2RenderingContext, program: WebGLProgra
       shaderLayout.bindings.push({
         type: 'texture',
         name: uniform.name,
+        group: 0,
         location: textureUnit,
         viewDimension,
         sampleType

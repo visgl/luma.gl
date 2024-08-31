@@ -17,29 +17,38 @@ export class WebGPUShader extends Shader {
     super(device, props);
     this.device = device;
 
+    const isGLSL = props.source.includes('#version');
+    if (this.props.language === 'glsl' || isGLSL) {
+      throw new Error('GLSL shaders are not supported in WebGPU');
+    }
+
     this.device.handle.pushErrorScope('validation');
+    this.handle = this.props.handle || this.device.handle.createShaderModule({code: props.source});
+    this.device.handle.popErrorScope().then((error: GPUError | null) => {
+      if (error) {
+        log.error(`${this} creation failed:\n"${error.message}"`, this, this.props.source)();
+      }
+    });
 
-    this.handle = this.props.handle || this.createHandle();
     this.handle.label = this.props.id;
-
-    this._checkCompilationError(this.device.handle.popErrorScope());
+    this._checkCompilationError();
   }
 
   get asyncCompilationStatus(): Promise<any> {
     return this.getCompilationInfo().then(() => this.compilationStatus);
   }
 
-  async _checkCompilationError(errorScope: Promise<GPUError | null>): Promise<void> {
-    const error = (await errorScope) as GPUValidationError;
-    if (error) {
-      // The `Shader` base class will determine if debug window should be opened based on props
-      this.debugShader();
+  async _checkCompilationError(): Promise<void> {
+    const shaderLog = await this.getCompilationInfo();
+    const hasErrors = Boolean(shaderLog.find(msg => msg.type === 'error'));
+    this.compilationStatus = hasErrors ? 'error' : 'success';
+    this.debugShader();
 
-      const shaderLog = await this.getCompilationInfo();
-      log.error(`Shader compilation error: ${error.message}`, shaderLog)();
+    if (this.compilationStatus === 'error') {
+      log.error(`Shader compilation error`, shaderLog)();
       // Note: Even though this error is asynchronous and thrown after the constructor completes,
       // it will result in a useful stack trace leading back to the constructor
-      throw new Error(`Shader compilation error: ${error.message}`);
+      // throw new Error(`Shader compilation error`);
     }
   }
 
@@ -54,18 +63,5 @@ export class WebGPUShader extends Shader {
   async getCompilationInfo(): Promise<readonly CompilerMessage[]> {
     const compilationInfo = await this.handle.getCompilationInfo();
     return compilationInfo.messages;
-  }
-
-  // PRIVATE METHODS
-
-  protected createHandle(): GPUShaderModule {
-    const {source} = this.props;
-
-    const isGLSL = source.includes('#version');
-    if (this.props.language === 'glsl' || isGLSL) {
-      throw new Error('GLSL shaders are not supported in WebGPU');
-    }
-
-    return this.device.handle.createShaderModule({code: source});
   }
 }

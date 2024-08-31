@@ -39,10 +39,18 @@ export class WebGPURenderPipeline extends RenderPipeline {
       log.groupCollapsed(1, `new WebGPURenderPipeline(${this.id})`)();
       log.probe(1, JSON.stringify(descriptor, null, 2))();
       log.groupEnd(1)();
+
+      this.device.handle.pushErrorScope('validation');
       this.handle = this.device.handle.createRenderPipeline(descriptor);
+      this.device.handle.popErrorScope().then((error: GPUError | null) => {
+        if (error) {
+          log.error(`${this} creation failed:\n"${error.message}"`, this, this.props.vs?.source)();
+        }
+      });
     }
     this.handle.label = this.props.id;
 
+    // Note: Often the same shader in WebGPU
     this.vs = props.vs as WebGPUShader;
     this.fs = props.fs as WebGPUShader;
 
@@ -78,7 +86,13 @@ export class WebGPURenderPipeline extends RenderPipeline {
     const webgpuRenderPass = options.renderPass as WebGPURenderPass;
 
     // Set pipeline
+    this.device.handle.pushErrorScope('validation');
     webgpuRenderPass.handle.setPipeline(this.handle);
+    this.device.handle.popErrorScope().then((error: GPUError | null) => {
+      if (error) {
+        log.error(`${this} setPipeline failed:\n"${error.message}"`, this)();
+      }
+    });
 
     // Set bindings (uniform buffers, textures etc)
     const bindGroup = this._getBindGroup();

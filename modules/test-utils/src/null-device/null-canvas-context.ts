@@ -18,6 +18,10 @@ export class NullCanvasContext extends CanvasContext {
   presentationSize: [number, number];
   private _framebuffer: NullFramebuffer | null = null;
 
+  get [Symbol.toStringTag]() {
+    return 'NullCanvasContext';
+  }
+
   constructor(device: NullDevice, props: CanvasContextProps) {
     // Note: Base class creates / looks up the canvas (unless under Node.js)
     super(props);

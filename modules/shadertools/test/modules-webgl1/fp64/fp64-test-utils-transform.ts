@@ -104,7 +104,7 @@ export async function runTests(
     testCases
   });
 
-  transform.model.setUniforms(fp64arithmetic.getUniforms());
+  transform.model.setUniformsWebGL(fp64arithmetic.getUniforms());
   transform.run();
 
   const {buffer, byteOffset, byteLength} = await transform.readAsync('result');

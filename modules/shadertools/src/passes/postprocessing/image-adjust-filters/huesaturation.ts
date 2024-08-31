@@ -4,6 +4,47 @@
 
 import {ShaderPass} from '../../../lib/shader-module/shader-pass';
 
+const source = /* wgsl */ `\
+@group(?), @binding(?)
+var<uniform> hueSaturationUniforms {		hue: f32,
+
+		saturation: f32,
+
+}hueSaturation;
+
+fn hueSaturation_filterColor(color: vec4<f32>) -> vec4<f32> {
+	let angle: f32 = hueSaturation.hue * 3.1415927;
+	let s: f32 = sin(angle);
+	let c: f32 = cos(angle);
+	let weights: vec3<f32> = (vec3<f32>(2. * c, -sqrt(3.) * s - c, sqrt(3.) * s - c) + 1.) / 3.;
+	let len: f32 = length(color.rgb);
+	var colorrgb = color.rgb;
+	colorrgb = vec3<f32>(dot(color.rgb, weights.xyz), dot(color.rgb, weights.zxy), dot(color.rgb, weights.yzx));
+	color.r = colorrgb.x;
+	color.g = colorrgb.y;
+	color.b = colorrgb.z;
+	let average: f32 = (color.r + color.g + color.b) / 3.;
+	if (hueSaturation.saturation > 0.) {
+		var colorrgb = color.rgb;
+	colorrgb = color.rgb + ((average - color.rgb) * (1. - 1. / (1.001 - hueSaturation.saturation)));
+	color.r = colorrgb.x;
+	color.g = colorrgb.y;
+	color.b = colorrgb.z;
+	} else { 
+		var colorrgb = color.rgb;
+	colorrgb = color.rgb + ((average - color.rgb) * -hueSaturation.saturation);
+	color.r = colorrgb.x;
+	color.g = colorrgb.y;
+	color.b = colorrgb.z;
+	}
+	return color;
+} 
+
+fn hueSaturation_filterColor_ext(color: vec4<f32>, texSize: vec2<f32>, texCoord: vec2<f32>) -> vec4<f32> {
+	return hueSaturation_filterColor(color);
+} 
+`;
+
 const fs = /* glsl */ `\
 uniform hueSaturationUniforms {
   float hue;
@@ -64,6 +105,7 @@ export const hueSaturation = {
   props: {} as HueSaturationProps,
 
   name: 'hueSaturation',
+  source,
   fs,
 
   uniformTypes: {

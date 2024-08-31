@@ -4,6 +4,26 @@
 
 import {ShaderPass} from '../../../lib/shader-module/shader-pass';
 
+const source = /* wgsl */ `\
+struct noiseUniforms {
+  amount: f32
+};
+
+@group(0), @binding(0) var<uniform> noise: NoiseUniforms;
+
+fn rand(co: vec2<f32>) -> f32 {
+	return fract(sin(dot(co.xy, vec2<f32>(12.9898, 78.233))) * 43758.547);
+} 
+
+fn noise_filterColor_ext(color: vec4<f32>, texSize: vec2<f32>, texCoord: vec2<f32>) -> vec4<f32> {
+	let diff: f32 = (rand(texCoord) - 0.5) * noise.amount;
+	color.r = color.r + (diff);
+	color.g = color.g + (diff);
+	color.b = color.b + (diff);
+	return color;
+} 
+`;
+
 const fs = /* glsl */ `\
 uniform noiseUniforms {
   float amount;
@@ -48,5 +68,6 @@ export const noise = {
     amount: {value: 0.5, min: 0, max: 1}
   },
   fs,
+  source,
   passes: [{filter: true}]
 } as const satisfies ShaderPass<NoiseProps, NoiseProps>;

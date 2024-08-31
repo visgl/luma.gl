@@ -38,7 +38,7 @@ test('ComputePipeline compute', async t => {
     const computePipeline = webgpuDevice.createComputePipeline({
       shader,
       shaderLayout: {
-        bindings: [{name: 'data', type: 'storage', location: 0}]
+        bindings: [{name: 'data', type: 'storage', group: 0, location: 0}]
       }
     });
 

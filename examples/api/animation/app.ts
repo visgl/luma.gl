@@ -280,7 +280,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         .translate(cube.translation)
         .rotateXYZ([rotationX, rotationY, rotationZ]);
 
-      cube.model.setUniforms({});
       cube.uniformStore.setUniforms({
         app: {
           uModel: modelMatrix
