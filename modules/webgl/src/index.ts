@@ -46,7 +46,7 @@ export type {AccessorObject} from './types';
 export {setDeviceParameters, withDeviceParameters} from './adapter/converters/device-parameters';
 
 // HELPERS - EXPERIMENTAL
-export {getShaderLayout} from './adapter/helpers/get-shader-layout';
+export {getShaderLayoutFromGLSL} from './adapter/helpers/get-shader-layout';
 export {WebGLStateTracker} from './context/state-tracker/webgl-state-tracker';
 
 // TEST EXPORTS

@@ -65,9 +65,9 @@ const TEST_CASES: {title?: string; wgsl: string; shaderLayout: ShaderLayout}[] =
         {
           type: 'uniform',
           name: 'uniforms',
+          group: 0,
           location: 0,
           // @ts-expect-error
-          group: 0,
           members: [
             {
               name: 'modelViewProjectionMatrix',

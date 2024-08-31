@@ -278,7 +278,7 @@ export abstract class Device {
     createCanvasContext: undefined!,
 
     // Callbacks
-    onError: (error: Error) => log.error(error.message),
+    onError: (error: Error) => log.error(error.message)(),
 
     _requestMaxLimits: true,
     _factoryDestroyPolicy: 'unused',
@@ -370,8 +370,8 @@ export abstract class Device {
     return false;
   }
 
-  /** Report error (normally for unhandled device errors) */
-  error(error: Error): void {
+  /** Report error (normally called for unhandled device errors) */
+  reportError(error: Error): void {
     this.props.onError(error);
   }
 

@@ -22,7 +22,9 @@ struct Uniforms {
   modelViewProjectionMatrix : mat4x4<f32>,
 };
 
-@binding(0) @group(0) var<uniform> app : Uniforms;
+@group(0) @binding(0) var<uniform> app : Uniforms;
+// @group(0) @binding(1) var uTexture : texture_2d<f32>;
+// @group(0) @binding(2) var uTextureSampler : sampler;
 
 struct VertexInputs {
   // CUBE GEOMETRY
@@ -48,6 +50,7 @@ fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
 @fragment
 fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
   return inputs.fragPosition;
+  // return textureSample(uTexture, uTextureSampler, inputs.fragUV);
 }
 `;
 
@@ -125,9 +128,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       data: loadImageBitmap('vis-logo.png'),
       mipmaps: true,
       sampler: device.createSampler({
-        minFilter: 'linear',
-        magFilter: 'linear',
-        mipmapFilter: 'linear'
+        minFilter: 'nearest',
+        magFilter: 'nearest',
+        mipmapFilter: 'nearest'
       })
     });
 

@@ -16,7 +16,7 @@ import {RenderPipeline, log} from '@luma.gl/core';
 // import {getAttributeInfosFromLayouts} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 
-import {getShaderLayout} from '../helpers/get-shader-layout';
+import {getShaderLayoutFromGLSL} from '../helpers/get-shader-layout';
 import {withDeviceAndGLParameters} from '../converters/device-parameters';
 import {setUniform} from '../helpers/set-uniform';
 import {splitUniformsAndBindings} from '../../utils/split-uniforms-and-bindings';
@@ -80,7 +80,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     this._linkShaders();
 
     log.time(1, `RenderPipeline ${this.id} - shaderLayout introspection`)();
-    this.introspectedLayout = getShaderLayout(this.device.gl, this.handle);
+    this.introspectedLayout = getShaderLayoutFromGLSL(this.device.gl, this.handle);
     log.timeEnd(1, `RenderPipeline ${this.id} - shaderLayout introspection`)();
 
     // Merge provided layout with introspected layout

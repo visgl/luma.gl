@@ -26,10 +26,14 @@ export class WebGPUCanvasContext extends CanvasContext {
 
   private depthStencilAttachment: Texture | null = null;
 
+  get [Symbol.toStringTag](): string {
+    return 'WebGPUCanvasContext';
+  }
+
   constructor(device: WebGPUDevice, adapter: GPUAdapter, props: CanvasContextProps) {
     super(props);
     this.device = device;
-    // TODO - hack to trigger resize?
+    // TODO - ugly hack to trigger first resize
     this.width = -1;
     this.height = -1;
 
@@ -76,13 +80,15 @@ export class WebGPUCanvasContext extends CanvasContext {
 
   /** Resizes and updates render targets if necessary */
   update() {
-    const [width, height] = this.getPixelSize();
+    const oldWidth = this.width;
+    const oldHeight = this.height;
+    const [newWidth, newHeight] = this.getPixelSize();
 
-    const sizeChanged = width !== this.width || height !== this.height;
+    const sizeChanged = newWidth !== oldWidth || newHeight !== oldHeight;
 
     if (sizeChanged) {
-      this.width = width;
-      this.height = height;
+      this.width = newWidth;
+      this.height = newHeight;
 
       if (this.depthStencilAttachment) {
         this.depthStencilAttachment.destroy();
@@ -100,7 +106,7 @@ export class WebGPUCanvasContext extends CanvasContext {
         alphaMode: this.props.alphaMode
       });
 
-      log.log(1, `Resized to ${this.width}x${this.height}px`)();
+      log.log(1, `${this} Resized ${oldWidth}x${oldHeight} => ${newWidth}x${newHeight}px`)();
     }
   }
 

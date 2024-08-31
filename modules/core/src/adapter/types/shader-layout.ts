@@ -61,7 +61,7 @@ export type AttributeDeclaration = {
   stepMode?: 'vertex' | 'instance';
 };
 
-// BINDING LAYOUTS
+// BINDING LAYOUT TYPES
 
 /** ShaderLayout for bindings */
 export type BindingDeclaration =
@@ -73,11 +73,17 @@ export type BindingDeclaration =
 
 export type UniformBufferBindingLayout = {
   type: 'uniform';
+  /** Name of the binding. Used by luma to map bindings by name */
   name: string;
+  /** Bind group index. Always 0 in WebGL */
+  group: number;
+  /** Binding index within the bind group */
   location: number;
+  /** Which shader stages can access this binding */
   visibility?: number;
   hasDynamicOffset?: boolean;
   minBindingSize?: number;
+  /** The uniforms in this uniform buffer */
   uniforms?: UniformInfo[];
 };
 
@@ -92,8 +98,13 @@ export type UniformInfo = {
 
 export type StorageBufferBindingLayout = {
   type: 'storage' | 'read-only-storage';
+  /** Name of the binding. Used by luma to map bindings by name */
   name: string;
+  /** Bind group index. Always 0 in WebGL */
+  group: number;
+  /** Binding index within the bind group */
   location: number;
+  /** Which shader stages can access this binding */
   visibility?: number;
   hasDynamicOffset?: boolean;
   minBindingSize?: number;
@@ -101,8 +112,13 @@ export type StorageBufferBindingLayout = {
 
 type TextureBindingLayout = {
   type: 'texture';
+  /** Name of the binding. Used by luma to map bindings by name */
   name: string;
+  /** Bind group index. Always 0 in WebGL */
+  group: number;
+  /** Binding index within the bind group */
   location: number;
+  /** Which shader stages can access this binding */
   visibility?: number;
   viewDimension?: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d'; // default: '2d'
   sampleType?: 'float' | 'unfilterable-float' | 'depth' | 'sint' | 'uint'; // default: 'float'
@@ -111,23 +127,33 @@ type TextureBindingLayout = {
 
 type SamplerBindingLayout = {
   type: 'sampler';
+  /** Name of the binding. Used by luma to map bindings by name */
   name: string;
+  /** Bind group index. Always 0 in WebGL */
+  group: number;
+  /** Binding index within the bind group */
   location: number;
+  /** Which shader stages can access this binding */
   visibility?: number;
   samplerType?: 'filtering' | 'non-filtering' | 'comparison'; // default: filtering
 };
 
 type StorageTextureBindingLayout = {
   type: 'storage';
+  /** Name of the binding. Used by luma to map bindings by name */
   name: string;
+  /** Bind group index. Always 0 in WebGL */
+  group: number;
+  /** Binding index within the bind group */
   location: number;
+  /** Which shader stages can access this binding */
   visibility?: number;
   access?: 'write-only';
   format: TextureFormat;
   viewDimension?: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d';
 };
 
-// BINDINGS
+// BINDING VALUE TYPES
 
 /** Binding value */
 export type Binding =

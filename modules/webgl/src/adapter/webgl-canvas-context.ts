@@ -18,6 +18,10 @@ export class WebGLCanvasContext extends CanvasContext {
   presentationSize: [number, number];
   private _framebuffer: WEBGLFramebuffer | null = null;
 
+  get [Symbol.toStringTag](): string {
+    return 'WebGLCanvasContext';
+  }
+
   constructor(device: WebGLDevice, props: CanvasContextProps) {
     // Note: Base class creates / looks up the canvas (unless under Node.js)
     super(props);

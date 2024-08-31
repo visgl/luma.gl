@@ -75,7 +75,7 @@ fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
 }
 
 @fragment
-fn fragmentMain(inputs: FragmentInputs) -> [[location(0)]] vec4<f32> {
+fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
   let attenuation = 1.0;
   if (sphere.lighting) {
     light = normalize(vec3(1,1,2));

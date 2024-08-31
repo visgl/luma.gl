@@ -6,6 +6,7 @@ import {isBrowser} from '@probe.gl/env';
 import type {Device} from './device';
 import type {Framebuffer} from './resources/framebuffer';
 import {log} from '../utils/log';
+import {uid} from '../utils/uid';
 import type {TextureFormat} from '../gpu-type-utils/texture-formats';
 
 /** Properties for a CanvasContext */
@@ -70,6 +71,12 @@ export abstract class CanvasContext {
 
   /** State used by luma.gl classes: TODO - move to canvasContext*/
   readonly _canvasSizeInfo = {clientWidth: 0, clientHeight: 0, devicePixelRatio: 1};
+
+  abstract get [Symbol.toStringTag](): string;
+
+  toString(): string {
+    return `${this[Symbol.toStringTag]}(${this.id})`;
+  }
 
   constructor(props?: CanvasContextProps) {
     this.props = {...CanvasContext.defaultProps, ...props};
@@ -338,7 +345,7 @@ function getCanvasFromDOM(canvasId: string): HTMLCanvasElement {
 function createCanvas(props: CanvasContextProps) {
   const {width, height} = props;
   const targetCanvas = document.createElement('canvas');
-  targetCanvas.id = 'lumagl-auto-created-canvas';
+  targetCanvas.id = uid('lumagl-auto-created-canvas');
   targetCanvas.width = width || 1;
   targetCanvas.height = height || 1;
   targetCanvas.style.width = Number.isFinite(width) ? `${width}px` : '100%';

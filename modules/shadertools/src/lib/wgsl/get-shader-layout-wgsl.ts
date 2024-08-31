@@ -33,10 +33,28 @@ export function getShaderLayoutFromWGSL(source: string): ShaderLayout {
     shaderLayout.bindings.push({
       type: 'uniform',
       name: uniform.name,
-      location: uniform.binding,
-      // @ts-expect-error
       group: uniform.group,
+      location: uniform.binding,
+      // @ts-expect-error TODO - unused for now but needs fixing
       members
+    });
+  }
+
+  for (const texture of parsedWGSL.textures) {
+    shaderLayout.bindings.push({
+      type: 'texture',
+      name: texture.name,
+      group: texture.group,
+      location: texture.binding
+    });
+  }
+
+  for (const sampler of parsedWGSL.samplers) {
+    shaderLayout.bindings.push({
+      type: 'sampler',
+      name: sampler.name,
+      group: sampler.group,
+      location: sampler.binding
     });
   }
 
