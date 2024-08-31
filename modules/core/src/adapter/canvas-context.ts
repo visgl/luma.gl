@@ -64,8 +64,8 @@ export abstract class CanvasContext {
   /** Default stencil format for depth textures */
   abstract readonly depthStencilFormat: TextureFormat;
 
-  width: number = 1;
-  height: number = 1;
+  drawingBufferWidth: number = 1;
+  drawingBufferHeight: number = 1;
 
   readonly resizeObserver: ResizeObserver | undefined;
 
@@ -85,8 +85,8 @@ export abstract class CanvasContext {
     if (!isBrowser()) {
       this.id = 'node-canvas-context';
       this.type = 'node';
-      this.width = this.props.width;
-      this.height = this.props.height;
+      this.drawingBufferWidth = this.props.width;
+      this.drawingBufferWidth = this.props.height;
       // TODO - does this prevent app from using jsdom style polyfills?
       this.canvas = null!;
       return;
@@ -119,24 +119,44 @@ export abstract class CanvasContext {
     }
 
     // React to size changes
-    if (this.canvas instanceof HTMLCanvasElement && props.autoResize) {
-      this.resizeObserver = new ResizeObserver(entries => {
-        for (const entry of entries) {
-          if (entry.target === this.canvas) {
-            this.update();
-          }
-        }
-      });
-      this.resizeObserver.observe(this.canvas);
+    if (props.autoResize && this.canvas instanceof HTMLCanvasElement) {
+      this.resizeObserver = new ResizeObserver(entries => this._handleResize(entries));
+      try {
+        this.resizeObserver.observe(this.canvas, {box: 'device-pixel-content-box'});
+      } catch {
+        // Safari fallback
+        this.resizeObserver.observe(this.canvas, {box: 'content-box'});
+      }
     }
   }
 
   /** Returns a framebuffer with properly resized current 'swap chain' textures */
   abstract getCurrentFramebuffer(): Framebuffer;
 
+  /** Resized the canvas. Note: Has no effect if props.autoResize is true */
+  abstract resize(options?: {
+    width?: number;
+    height?: number;
+    useDevicePixels?: boolean | number;
+  }): void;
+
+  // SIZE METHODS
+
+  /** Get the drawing buffer size (number of pixels GPU is rendering into, can be different from CSS size) */
+  getDrawingBufferSize(): [number, number] {
+    return [this.drawingBufferWidth, this.drawingBufferHeight];
+  }
+
+  /** Returns the biggest allowed framebuffer size. @todo Allow the application to limit this? */
+  getMaxDrawingBufferSize(): [number, number] {
+    const maxTextureDimension = this.device.limits.maxTextureDimension2D;
+    return [maxTextureDimension, maxTextureDimension];
+  }
+
   /**
-   * Returns the current DPR, if props.useDevicePixels is true
-   * Device refers to physical
+   * Returns the current DPR (number of physical pixels per CSS pixel), if props.useDevicePixels is true
+   * @note This can be a fractional (non-integer) number, e.g. when the user zooms in the browser.
+   * @note This function handles the non-HTML canvas cases
    */
   getDevicePixelRatio(useDevicePixels?: boolean | number): number {
     if (typeof OffscreenCanvas !== 'undefined' && this.canvas instanceof OffscreenCanvas) {
@@ -167,16 +187,18 @@ export abstract class CanvasContext {
   getPixelSize(): [number, number] {
     switch (this.type) {
       case 'node':
-        return [this.width, this.height];
+        return [this.drawingBufferWidth, this.drawingBufferHeight];
       case 'offscreen-canvas':
         return [this.canvas.width, this.canvas.height];
       case 'html-canvas':
         const dpr = this.getDevicePixelRatio();
         const canvas = this.canvas as HTMLCanvasElement;
-        // If not attached to DOM client size can be 0
-        return canvas.parentElement
-          ? [canvas.clientWidth * dpr, canvas.clientHeight * dpr]
-          : [this.canvas.width, this.canvas.height];
+        // If not attached to DOM client size can be 0.
+        // Note: Avoiding issues with checking parentElement/parentNode.
+        if (document.body.contains(canvas)) {
+          return [canvas.clientWidth * dpr, canvas.clientHeight * dpr];
+        }
+        return [this.canvas.width, this.canvas.height];
       default:
         throw new Error(this.type);
     }
@@ -223,7 +245,7 @@ export abstract class CanvasContext {
    * Use devicePixelRatio to set canvas width and height
    * @note this is a raw port of luma.gl v8 code. Might be worth a review
    */
-  setDevicePixelRatio(
+  _setDevicePixelRatio(
     devicePixelRatio: number,
     options: {width?: number; height?: number} = {}
   ): void {
@@ -284,27 +306,12 @@ export abstract class CanvasContext {
     }
   }
 
-  // PRIVATE
+  // SUBCLASS OVERRIDES
 
-  /** @todo Major hack done to port the CSS methods above, base canvas context should not depend on WebGL */
-  getDrawingBufferSize(): [number, number] {
-    // @ts-expect-error This only works for WebGL
-    const gl = this.device.gl;
-    if (!gl) {
-      // use default device pixel ratio
-      throw new Error('canvas size');
-    }
-    return [gl.drawingBufferWidth, gl.drawingBufferHeight];
-  }
+  /** Performs platform specific updates (WebGPU vs WebGL) */
+  protected abstract updateSize(size: [width: number, height: number]): void;
 
-  abstract resize(options?: {
-    width?: number;
-    height?: number;
-    useDevicePixels?: boolean | number;
-  }): void;
-
-  /** Perform platform specific updates (WebGPU vs WebGL) */
-  protected abstract update(): void;
+  // IMPLEMENTATION
 
   /**
    * Allows subclass constructor to override the canvas id for auto created canvases.
@@ -315,10 +322,62 @@ export abstract class CanvasContext {
       this.htmlCanvas.id = id;
     }
   }
+
+  /** Sets up a resize observer */
+  protected _handleResize(entries: ResizeObserverEntry[]) {
+    for (const entry of entries) {
+      if (entry.target === this.canvas) {
+        this._handleObservedSizeChange(entry);
+      }
+    }
+  }
+
+  /**
+   * Reacts to an observed resize by using the most accurate pixel size information the browser can provide
+   * @see https://web.dev/articles/device-pixel-content-box
+   * @see https://webgpufundamentals.org/webgpu/lessons/webgpu-resizing-the-canvas.html
+   */
+  protected _handleObservedSizeChange(entry: ResizeObserverEntry) {
+    // Use the most accurate drawing buffer size information the current browser can provide
+    // Note: content box sizes are guaranteed to be integers
+    // Note: Safari falls back to contentBoxSize
+    const boxWidth =
+      entry.devicePixelContentBoxSize?.[0].inlineSize ||
+      entry.contentBoxSize[0].inlineSize * devicePixelRatio;
+
+    const boxHeight =
+      entry.devicePixelContentBoxSize?.[0].blockSize ||
+      entry.contentBoxSize[0].blockSize * devicePixelRatio;
+
+    // Make sure we don't overflow the maximum supported texture size
+    const [maxPixelWidth, maxPixelHeight] = this.getMaxDrawingBufferSize();
+    const pixelWidth = Math.max(1, Math.min(boxWidth, maxPixelWidth));
+    const pixelHeight = Math.max(1, Math.min(boxHeight, maxPixelHeight));
+
+    // Update the canvas drawing buffer size
+    // TODO - This does not account for props.useDevicePixels
+    this.canvas.width = pixelWidth;
+    this.canvas.height = pixelHeight;
+
+    // Update our drawing buffer size variables, saving the old values for logging
+    const [oldWidth, oldHeight] = this.getDrawingBufferSize();
+    this.drawingBufferWidth = pixelWidth;
+    this.drawingBufferHeight = pixelHeight;
+
+    // Inform the subclass
+    this.updateSize([pixelWidth, pixelHeight]);
+
+    // Log the resize
+    log.log(1, `${this} Resized ${oldWidth}x${oldHeight} => ${pixelWidth}x${pixelHeight}px`)();
+
+    // TODO - trigger rerender
+    // this.device.triggerRerender();
+  }
 }
 
 // HELPER FUNCTIONS
 
+/** Get a container element from a string or DOM element */
 function getContainer(container: HTMLElement | string | null): HTMLElement {
   if (typeof container === 'string') {
     const element = document.getElementById(container);
@@ -326,7 +385,8 @@ function getContainer(container: HTMLElement | string | null): HTMLElement {
       throw new Error(`${container} is not an HTML element`);
     }
     return element;
-  } else if (container) {
+  }
+  if (container) {
     return container;
   }
   return document.body;
@@ -354,7 +414,7 @@ function createCanvas(props: CanvasContextProps) {
 }
 
 /**
- *
+ * Scales pixels linearly, handles edge cases
  * @param pixel
  * @param ratio
  * @param width

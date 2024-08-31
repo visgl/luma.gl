@@ -68,6 +68,12 @@ export class WebGPURenderPipeline extends RenderPipeline {
    * @todo Do we want to expose BindGroups in the API and remove this?
    */
   setBindings(bindings: Record<string, Binding>): void {
+    // Invalidate the cached bind group if any value has changed
+    for (const [name, binding] of Object.entries(bindings)) {
+      if (this._bindings[name] !== binding) {
+        this._bindGroup = null;
+      }
+    }
     Object.assign(this._bindings, bindings);
   }
 

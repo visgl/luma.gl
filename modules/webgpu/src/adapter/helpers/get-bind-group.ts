@@ -42,13 +42,14 @@ export function getBindGroup(
 
 export function getShaderLayoutBinding(
   shaderLayout: ComputeShaderLayout,
-  bindingName: string
+  bindingName: string,
+  options?: {ignoreWarnings?: boolean}
 ): BindingDeclaration | null {
   const bindingLayout = shaderLayout.bindings.find(
     binding =>
       binding.name === bindingName || `${binding.name}uniforms` === bindingName.toLocaleLowerCase()
   );
-  if (!bindingLayout) {
+  if (!bindingLayout && !options?.ignoreWarnings) {
     log.warn(`Binding ${bindingName} not set: Not found in shader layout.`)();
   }
   return bindingLayout || null;
@@ -71,7 +72,9 @@ function getBindGroupEntries(
     }
 
     // TODO - hack to automatically bind samplers to supplied texture default samplers
-    bindingLayout = getShaderLayoutBinding(shaderLayout, `${bindingName}Sampler`);
+    bindingLayout = getShaderLayoutBinding(shaderLayout, `${bindingName}Sampler`, {
+      ignoreWarnings: true
+    });
     if (bindingLayout) {
       entries.push(getBindGroupEntry(value, bindingLayout.location, {sampler: true}));
     }
