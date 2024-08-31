@@ -57,7 +57,12 @@ export class WebGPUVertexArray extends VertexArray {
     const webgpuIndexBuffer = this.indexBuffer as WebGPUBuffer;
     if (webgpuIndexBuffer?.handle) {
       // Note we can't unset an index buffer
-      log.info(3, 'setting index buffer', webgpuIndexBuffer?.handle, webgpuIndexBuffer?.indexType)();
+      log.info(
+        3,
+        'setting index buffer',
+        webgpuIndexBuffer?.handle,
+        webgpuIndexBuffer?.indexType
+      )();
       webgpuRenderPass.handle.setIndexBuffer(
         webgpuIndexBuffer?.handle,
         // @ts-expect-error TODO - we must enforce type

@@ -388,7 +388,6 @@ export class Model {
   }
 
   draw(renderPass: RenderPass): boolean {
-
     const loadingBinding = this._areBindingsLoading();
     if (loadingBinding) {
       log.info(LOG_DRAW_PRIORITY, `>>> DRAWING ABORTED ${this.id}: ${loadingBinding} not loaded`)();

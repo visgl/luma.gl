@@ -6,7 +6,7 @@
 import {Device} from '@luma.gl/core';
 import {Model, ModelProps} from '../model/model';
 import {Geometry} from '../geometry/geometry';
-import { uid } from '../utils/uid';
+import {uid} from '../utils/uid';
 
 const CLIPSPACE_VERTEX_SHADER_WGSL = /* wgsl */ `\
 struct VertexInputs {

@@ -80,7 +80,11 @@ function getBindGroupEntries(
   return entries;
 }
 
-function getBindGroupEntry(binding: Binding, index: number, options?: {sampler?: boolean}): GPUBindGroupEntry {
+function getBindGroupEntry(
+  binding: Binding,
+  index: number,
+  options?: {sampler?: boolean}
+): GPUBindGroupEntry {
   if (binding instanceof Buffer) {
     return {
       binding: index,

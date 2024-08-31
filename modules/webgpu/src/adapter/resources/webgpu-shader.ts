@@ -40,7 +40,7 @@ export class WebGPUShader extends Shader {
 
   async _checkCompilationError(): Promise<void> {
     const shaderLog = await this.getCompilationInfo();
-    const hasErrors = Boolean(shaderLog.find((msg) => msg.type === 'error'));
+    const hasErrors = Boolean(shaderLog.find(msg => msg.type === 'error'));
     this.compilationStatus = hasErrors ? 'error' : 'success';
     this.debugShader();
 

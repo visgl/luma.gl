@@ -18,7 +18,10 @@ import {decodeGLUniformType, decodeGLAttributeType, isSamplerUniform} from './de
  * Note: `linkProgram()` needs to have been called
  * (although linking does not need to have been successful).
  */
-export function getShaderLayoutFromGLSL(gl: WebGL2RenderingContext, program: WebGLProgram): ShaderLayout {
+export function getShaderLayoutFromGLSL(
+  gl: WebGL2RenderingContext,
+  program: WebGLProgram
+): ShaderLayout {
   const shaderLayout: ShaderLayout = {
     attributes: [],
     bindings: []

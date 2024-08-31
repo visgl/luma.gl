@@ -39,7 +39,7 @@ export class WebGPURenderPipeline extends RenderPipeline {
       log.groupCollapsed(1, `new WebGPURenderPipeline(${this.id})`)();
       log.probe(1, JSON.stringify(descriptor, null, 2))();
       log.groupEnd(1)();
-      
+
       this.device.handle.pushErrorScope('validation');
       this.handle = this.device.handle.createRenderPipeline(descriptor);
       this.device.handle.popErrorScope().then((error: GPUError | null) => {

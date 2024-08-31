@@ -93,7 +93,7 @@ export class WebGPUDevice extends Device {
       this.reportError(new Error(errorMessage));
       if (this.props.debug) {
         // eslint-disable-next-line no-debugger
-        debugger
+        debugger;
       }
       event.preventDefault();
     });
