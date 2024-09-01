@@ -131,7 +131,9 @@ export abstract class CanvasContext {
   }
 
   /** Returns a framebuffer with properly resized current 'swap chain' textures */
-  abstract getCurrentFramebuffer(options?: {depthStencilFormat?: DepthStencilTextureFormat | false}): Framebuffer;
+  abstract getCurrentFramebuffer(options?: {
+    depthStencilFormat?: DepthStencilTextureFormat | false;
+  }): Framebuffer;
 
   /** Resized the canvas. Note: Has no effect if props.autoResize is true */
   abstract resize(options?: {

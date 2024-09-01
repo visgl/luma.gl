@@ -129,7 +129,12 @@ test('Model#setAttributes', t => {
 });
 
 test('Model#setters, getters', t => {
-  const model = new Model(webglDevice, {id: 'setters-getters-test', topology: 'point-list', vs: DUMMY_VS, fs: DUMMY_FS});
+  const model = new Model(webglDevice, {
+    id: 'setters-getters-test',
+    topology: 'point-list',
+    vs: DUMMY_VS,
+    fs: DUMMY_FS
+  });
 
   model.setVertexCount(12);
   t.is(model.vertexCount, 12, 'set vertex count');
@@ -195,7 +200,9 @@ test('Model#topology', async t => {
 
     model.setTopology('line-strip');
 
-    const framebuffer = device.getDefaultCanvasContext().getCurrentFramebuffer({depthStencilFormat: false});
+    const framebuffer = device
+      .getDefaultCanvasContext()
+      .getCurrentFramebuffer({depthStencilFormat: false});
     const renderPass = device.beginRenderPass({framebuffer, clearColor: [0, 0, 0, 0]});
     model.draw(renderPass);
 

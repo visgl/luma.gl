@@ -68,7 +68,9 @@ export class PipelineFactory {
     } else {
       cache[hash].useCount++;
       if (this.debug) {
-        log.warn(`${this}: ${cache[hash].pipeline} reused, count=${cache[hash].useCount}, (id=${props.id})`)();
+        log.warn(
+          `${this}: ${cache[hash].pipeline} reused, count=${cache[hash].useCount}, (id=${props.id})`
+        )();
       }
     }
 
@@ -96,7 +98,9 @@ export class PipelineFactory {
     } else {
       cache[hash].useCount++;
       if (this.debug) {
-        log.warn(`${this}: ${cache[hash].pipeline} reused, count=${cache[hash].useCount}, (id=${props.id})`)();
+        log.warn(
+          `${this}: ${cache[hash].pipeline} reused, count=${cache[hash].useCount}, (id=${props.id})`
+        )();
       }
     }
 
@@ -116,10 +120,8 @@ export class PipelineFactory {
     } else if (cache[hash].useCount < 0) {
       log.error(`${this}: ${pipeline} released, useCount < 0, resetting`)();
       cache[hash].useCount = 0;
-    } else {
-      if (this.debug) {
-        log.warn(`${this}: ${pipeline} released, count=${cache[hash].useCount}`)();
-      }
+    } else if (this.debug) {
+      log.warn(`${this}: ${pipeline} released, count=${cache[hash].useCount}`)();
     }
   }
 

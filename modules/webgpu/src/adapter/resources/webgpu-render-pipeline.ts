@@ -177,9 +177,11 @@ export class WebGPURenderPipeline extends RenderPipeline {
       ]
     };
 
-    const depthStencil: GPUDepthStencilState | undefined = this.props.parameters.depthWriteEnabled ? {
-      format: getWebGPUTextureFormat(this.device.getDefaultCanvasContext().depthStencilFormat)
-    } : undefined;
+    const depthStencil: GPUDepthStencilState | undefined = this.props.parameters.depthWriteEnabled
+      ? {
+          format: getWebGPUTextureFormat(this.device.getDefaultCanvasContext().depthStencilFormat)
+        }
+      : undefined;
 
     // Create a partially populated descriptor
     const descriptor: GPURenderPipelineDescriptor = {

@@ -42,7 +42,7 @@ export class WEBGLRenderPass extends RenderPass {
     this.setParameters({viewport, ...this.props.parameters});
 
     // Specify mapping of draw buffer locations to color attachments
-    const webglFramebuffer = this.props.framebuffer as WEBGLFramebuffer
+    const webglFramebuffer = this.props.framebuffer as WEBGLFramebuffer;
     // Default framebuffers can only be set to GL.BACK or GL.NONE
     if (webglFramebuffer?.handle) {
       const drawBuffers = this.props.framebuffer.colorAttachments.map(
