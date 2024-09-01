@@ -31,7 +31,7 @@ test('TextureTransform#constructor', async t => {
 });
 
 /** Computes a sum over vertex attribute values by writing to framebuffer. */
-test.skip('TextureTransform#attribute', async t => {
+test('TextureTransform#attribute', async t => {
   const webglDevice = await getWebGLTestDevice();
 
   const src = webglDevice.createBuffer({data: new Float32Array([10, 20, 30, 70, 80, 90])});
@@ -73,7 +73,7 @@ test.skip('TextureTransform#attribute', async t => {
 });
 
 /** Computes a sum over texture pixels by writing to framebuffer. */
-test.skip('TextureTransform#texture', async t => {
+test('TextureTransform#texture', async t => {
   const webglDevice = await getWebGLTestDevice();
 
   const srcData = new Uint8Array([2, 10, 255, 255]);
