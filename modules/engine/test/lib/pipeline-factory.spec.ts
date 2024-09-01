@@ -44,6 +44,11 @@ test('PipelineFactory#getDefaultPipelineFactory', async t => {
 
 test('PipelineFactory#release', async t => {
   const webglDevice = await getWebGLTestDevice();
+  if (!webglDevice.props._cachePipelines) {
+    t.comment('Pipeline caching not enabled');
+    t.end();
+    return;
+  }
 
   const pipelineFactory = new PipelineFactory(webglDevice);
 

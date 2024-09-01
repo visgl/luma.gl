@@ -27,6 +27,10 @@ export class WEBGLShader extends Shader {
       default:
         throw new Error(this.props.stage);
     }
+
+    // default framebuffer handle is null, so we can't set spector metadata...
+    device._setWebGLDebugMetadata(this.handle, this, {spector: this.props});
+
     this._compile(this.source);
   }
 
@@ -34,8 +38,10 @@ export class WEBGLShader extends Shader {
     if (this.handle) {
       this.removeStats();
       this.device.gl.deleteShader(this.handle);
-      // this.handle = null;
       this.destroyed = true;
+      // @ts-expect-error
+      this.handle.destroyed = true;
+      // this.handle = null;
     }
   }
 

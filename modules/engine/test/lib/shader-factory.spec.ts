@@ -38,6 +38,11 @@ test('ShaderFactory#getDefaultShaderFactory', async t => {
 
 test('ShaderFactory#createShader', async t => {
   const webglDevice = await getWebGLTestDevice();
+  if (!webglDevice.props._cacheShaders) {
+    t.comment('Shader caching not enabled');
+    t.end();
+    return;
+  }
 
   const factory = ShaderFactory.getDefaultShaderFactory(webglDevice);
   const shader1 = factory.createShader({id: '1', stage: 'vertex', source: vs1});
@@ -62,6 +67,11 @@ test('ShaderFactory#createShader', async t => {
 
 test('ShaderFactory#release', async t => {
   const webglDevice = await getWebGLTestDevice();
+  if (!webglDevice.props._cacheShaders) {
+    t.comment('Shader caching not enabled');
+    t.end();
+    return;
+  }
 
   const factory = new ShaderFactory(webglDevice);
   const shader1 = factory.createShader({id: '1', stage: 'vertex', source: vs1});

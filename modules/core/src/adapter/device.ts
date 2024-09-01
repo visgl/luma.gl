@@ -233,8 +233,12 @@ export type DeviceProps = {
   _disabledFeatures?: Partial<Record<DeviceFeature, boolean>>;
   /** WebGL specific - Initialize all features on startup */
   _initializeFeatures?: boolean;
+  /** Enable shader caching (via ShaderFactory) */
+  _cacheShaders?: boolean;
+  /** Enable shader caching (via PipelineFactory) */
+  _cachePipelines?: boolean;
   /** Never destroy cached shaders and pipelines */
-  _factoryDestroyPolicy?: 'unused' | 'never';
+  _cacheDestroyPolicy?: 'unused' | 'never';
   /** Resource default overrides */
   _resourceDefaults?: {
     texture?: Partial<TextureProps>;
@@ -283,7 +287,9 @@ export abstract class Device {
     onError: (error: Error) => log.error(error.message)(),
 
     _requestMaxLimits: true,
-    _factoryDestroyPolicy: 'unused',
+    _cacheShaders: false,
+    _cachePipelines: false,
+    _cacheDestroyPolicy: 'unused',
     // TODO - Change these after confirming things work as expected
     _initializeFeatures: true,
     _disabledFeatures: {

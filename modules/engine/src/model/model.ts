@@ -352,11 +352,13 @@ export class Model {
 
   destroy(): void {
     if (!this._destroyed) {
+      // Release pipeline before we destroy the shaders used by the pipeline
+      this.pipelineFactory.release(this.pipeline);
+      // Release the shaders
       this.shaderFactory.release(this.pipeline.vs);
       if (this.pipeline.fs) {
         this.shaderFactory.release(this.pipeline.fs);
       }
-      this.pipelineFactory.release(this.pipeline);
       this._uniformStore.destroy();
       // TODO - mark resource as managed and destroyIfManaged() ?
       this._gpuGeometry?.destroy();

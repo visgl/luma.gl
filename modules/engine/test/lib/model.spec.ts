@@ -232,6 +232,11 @@ test('Model#topology', async t => {
 
 test('Model#pipeline caching', async t => {
   const webglDevice = await getWebGLTestDevice();
+  if (!webglDevice.props._cachePipelines) {
+    t.comment('Pipeline caching is disabled');
+    t.end();
+    return;
+  }
 
   const pipelineFactory = new PipelineFactory(webglDevice);
   const shaderFactory = new ShaderFactory(webglDevice);
@@ -289,6 +294,11 @@ test('Model#pipeline caching', async t => {
 
 test('Model#pipeline caching with defines and modules', async t => {
   const webglDevice = await getWebGLTestDevice();
+  if (!webglDevice.props._cachePipelines) {
+    t.comment('Pipeline caching is disabled');
+    t.end();
+    return;
+  }
 
   const pipelineFactory = PipelineFactory.getDefaultPipelineFactory(webglDevice);
   const shaderFactory = ShaderFactory.getDefaultShaderFactory(webglDevice);
