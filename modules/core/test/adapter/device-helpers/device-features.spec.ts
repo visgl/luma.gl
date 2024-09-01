@@ -3,14 +3,16 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
-import {webglDevice} from '@luma.gl/test-utils';
+import {getWebGLTestDevice} from '@luma.gl/test-utils';
 import {DeviceFeature} from '@luma.gl/core';
 
 // TODO - we are not actually testing any features
 const WEBGL2_ALWAYS_FEATURES: DeviceFeature[] = [];
 const WEBGL2_NEVER_FEATURES: DeviceFeature[] = [];
 
-test('WebGLDevice#features (unknown features)', t => {
+test('WebGLDevice#features (unknown features)', async t => {
+  const webglDevice = await getWebGLTestDevice();
+
   // @ts-expect-error
   t.notOk(webglDevice.features.has('unknown'), 'features.has should return false');
   // @ts-expect-error
@@ -18,7 +20,9 @@ test('WebGLDevice#features (unknown features)', t => {
   t.end();
 });
 
-test('WebGLDevice#hasFeatures (WebGL)', t => {
+test('WebGLDevice#hasFeatures (WebGL)', async t => {
+  const webglDevice = await getWebGLTestDevice();
+
   for (const feature of WEBGL2_ALWAYS_FEATURES) {
     t.equal(webglDevice.features.has(feature), true, `${feature} is always supported under WebGL`);
   }

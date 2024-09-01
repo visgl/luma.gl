@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
-import {webglDevice} from '@luma.gl/test-utils';
+import {getWebGLTestDevice} from '@luma.gl/test-utils';
 import {runTests} from './fp64-test-utils-transform';
 
 // Failing test cases are ignored based on gpu and glslFunc, using ignoreFor field
@@ -75,8 +75,8 @@ const commonTestCases = [
 ];
 
 // Filter all tests cases based on current gpu and glsFunc
-function getTestCasesFor(glslFunc) {
-  const debugInfo = webglDevice.info;
+function getTestCasesFor(device, glslFunc) {
+  const debugInfo = device.info;
   const testCases = commonTestCases.filter(testCase => {
     if (testCase.ignoreFor) {
       for (const gpu in testCase.ignoreFor) {
@@ -94,22 +94,28 @@ function getTestCasesFor(glslFunc) {
 }
 
 test('fp64#sum_fp64', async t => {
+  const webglDevice = await getWebGLTestDevice();
+
   const glslFunc = 'sum_fp64';
-  const testCases = getTestCasesFor(glslFunc);
+  const testCases = getTestCasesFor(webglDevice, glslFunc);
   await runTests(webglDevice, {glslFunc, binary: true, op: (a, b) => a + b, testCases, t});
   t.end();
 });
 
 test('fp64#sub_fp64', async t => {
+  const webglDevice = await getWebGLTestDevice();
+
   const glslFunc = 'sub_fp64';
-  const testCases = getTestCasesFor(glslFunc);
+  const testCases = getTestCasesFor(webglDevice, glslFunc);
   await runTests(webglDevice, {glslFunc, binary: true, op: (a, b) => a - b, testCases, t});
   t.end();
 });
 
 test('fp64#mul_fp64', async t => {
+  const webglDevice = await getWebGLTestDevice();
+
   const glslFunc = 'mul_fp64';
-  const testCases = getTestCasesFor(glslFunc);
+  const testCases = getTestCasesFor(webglDevice, glslFunc);
   await runTests(webglDevice, {
     glslFunc,
     binary: true,
@@ -122,8 +128,10 @@ test('fp64#mul_fp64', async t => {
 });
 
 test('fp64#div_fp64', async t => {
+  const webglDevice = await getWebGLTestDevice();
+
   const glslFunc = 'div_fp64';
-  const testCases = getTestCasesFor(glslFunc);
+  const testCases = getTestCasesFor(webglDevice, glslFunc);
   await runTests(webglDevice, {
     glslFunc,
     binary: true,
@@ -136,8 +144,10 @@ test('fp64#div_fp64', async t => {
 });
 
 test('fp64#sqrt_fp64', async t => {
+  const webglDevice = await getWebGLTestDevice();
+
   const glslFunc = 'sqrt_fp64';
-  const testCases = getTestCasesFor(glslFunc);
+  const testCases = getTestCasesFor(webglDevice, glslFunc);
   await runTests(webglDevice, {glslFunc, op: a => Math.sqrt(a), limit: 128, testCases, t});
   t.end();
 });

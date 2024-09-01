@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
-import {webglDevice} from '@luma.gl/test-utils';
+import {getWebGLTestDevice} from '@luma.gl/test-utils';
 
 import {PipelineFactory} from '@luma.gl/engine';
 
@@ -30,7 +30,9 @@ test('PipelineFactory#import', t => {
   t.end();
 });
 
-test('PipelineFactory#getDefaultPipelineFactory', t => {
+test('PipelineFactory#getDefaultPipelineFactory', async t => {
+  const webglDevice = await getWebGLTestDevice();
+
   const pm1 = PipelineFactory.getDefaultPipelineFactory(webglDevice);
   const pm2 = PipelineFactory.getDefaultPipelineFactory(webglDevice);
 
@@ -40,7 +42,9 @@ test('PipelineFactory#getDefaultPipelineFactory', t => {
   t.end();
 });
 
-test('PipelineFactory#release', t => {
+test('PipelineFactory#release', async t => {
+  const webglDevice = await getWebGLTestDevice();
+
   const pipelineFactory = new PipelineFactory(webglDevice);
 
   const vs = webglDevice.createShader({stage: 'vertex', source: vsSource});

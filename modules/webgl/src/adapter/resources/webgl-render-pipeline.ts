@@ -94,6 +94,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
 
   override destroy(): void {
     if (this.handle) {
+      // log.error(`Deleting program ${this.id}`)();
       this.device.gl.deleteProgram(this.handle);
       this.handle = null;
       this.destroyed = true;

@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
-import {webglDevice} from '@luma.gl/test-utils';
+import {getWebGLTestDevice} from '@luma.gl/test-utils';
 
 import {ShaderFactory} from '@luma.gl/engine';
 
@@ -19,12 +19,14 @@ void main(void) {
 }
 `;
 
-test('ShaderFactory#import', t => {
+test('ShaderFactory#import', async t => {
   t.ok(ShaderFactory !== undefined, 'ShaderFactory import successful');
   t.end();
 });
 
-test('ShaderFactory#getDefaultShaderFactory', t => {
+test('ShaderFactory#getDefaultShaderFactory', async t => {
+  const webglDevice = await getWebGLTestDevice();
+
   const factory1 = ShaderFactory.getDefaultShaderFactory(webglDevice);
   const factory2 = ShaderFactory.getDefaultShaderFactory(webglDevice);
 
@@ -34,7 +36,9 @@ test('ShaderFactory#getDefaultShaderFactory', t => {
   t.end();
 });
 
-test('ShaderFactory#createShader', t => {
+test('ShaderFactory#createShader', async t => {
+  const webglDevice = await getWebGLTestDevice();
+
   const factory = ShaderFactory.getDefaultShaderFactory(webglDevice);
   const shader1 = factory.createShader({id: '1', stage: 'vertex', source: vs1});
   const shader2 = factory.createShader({id: '2', stage: 'vertex', source: vs1});
@@ -56,7 +60,9 @@ test('ShaderFactory#createShader', t => {
   t.end();
 });
 
-test('ShaderFactory#release', t => {
+test('ShaderFactory#release', async t => {
+  const webglDevice = await getWebGLTestDevice();
+
   const factory = new ShaderFactory(webglDevice);
   const shader1 = factory.createShader({id: '1', stage: 'vertex', source: vs1});
   const shader2 = factory.createShader({id: '2', stage: 'vertex', source: vs1});
