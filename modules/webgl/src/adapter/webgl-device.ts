@@ -220,12 +220,6 @@ export class WebGLDevice extends Device {
 
   // IMPLEMENTATION OF ABSTRACT DEVICE
 
-  override _getDeviceSpecificTextureFormatCapabilities(
-    capabilities: DeviceTextureFormatCapabilities
-  ): DeviceTextureFormatCapabilities {
-    return getTextureFormatCapabilitiesWebGL(this.gl, capabilities, this._extensions);
-  }
-
   createCanvasContext(props?: CanvasContextProps): CanvasContext {
     throw new Error('WebGL only supports a single canvas');
   }
@@ -364,6 +358,12 @@ export class WebGLDevice extends Device {
   override resetWebGL(): void {
     log.warn('WebGLDevice.resetWebGL is deprecated, use only for debugging')();
     resetGLParameters(this.gl);
+  }
+
+  override _getDeviceSpecificTextureFormatCapabilities(
+    capabilities: DeviceTextureFormatCapabilities
+  ): DeviceTextureFormatCapabilities {
+    return getTextureFormatCapabilitiesWebGL(this.gl, capabilities, this._extensions);
   }
 
   //

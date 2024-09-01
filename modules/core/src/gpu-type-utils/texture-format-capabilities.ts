@@ -35,8 +35,8 @@ export function getTextureFormatCapabilities(format: TextureFormat): TextureForm
   const formatCapabilities: Required<TextureFormatCapabilities> = {
     format,
     create: info.create ?? true,
-    filter: info.filter ?? true,
     render: info.render ?? true,
+    filter: info.filter ?? true,
     blend: info.blend ?? true,
     store: info.store ?? true
   };
@@ -50,7 +50,7 @@ export function getTextureFormatCapabilities(format: TextureFormat): TextureForm
   // signed formats are not renderable
   formatCapabilities.render &&= !isSigned;
   // signed and integer formats are not filterable
-  formatCapabilities.filter &&= (!isDepthStencil && !isSigned && !isInteger && !isWebGLSpecific);
+  formatCapabilities.filter &&= !isDepthStencil && !isSigned && !isInteger && !isWebGLSpecific;
 
   return formatCapabilities;
 }

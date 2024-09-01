@@ -15,7 +15,7 @@ const TEST_CASES: {format: TextureFormat, result: Omit<TextureFormatCapabilities
   {format: 'r8unorm', result: {create: true, render: true, filter: true, blend: true, store: true}},
 
   // 16-bit formats
-  {format: 'r16uint', result: {create: true, render: true, filter: true, blend: true, store: true}},
+  {format: 'r16uint', result: {create: true, render: true, filter: false, blend: true, store: true}},
 ];
 
 test('shadertype#getTextureFormatCapabilities', t => {

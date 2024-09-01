@@ -194,9 +194,6 @@ function testFormatCreation(t, device: Device, withData: boolean = false) {
     if (device.isTextureFormatSupported(format) && !device.isTextureFormatCompressed(format)) {
       try {
         const data = withData && !packed ? TEXTURE_DATA[dataType] || DEFAULT_TEXTURE_DATA : null;
-        if (format === 'rgb10a2uint-webgl') {
-          debugger;
-        }
         // TODO: for some reason mipmap generation failing for RGB32F format
         const capabilities = device.getTextureFormatCapabilities(format);
         const mipmaps = capabilities.render && capabilities.filter;
@@ -228,7 +225,7 @@ function testFormatCreation(t, device: Device, withData: boolean = false) {
         t.comment(`Texture(${device.type},${format}) creation FAILED ${error}`);
       }
     } else {
-      t.comment(`Texture(${device.type},${format}) not supported in ${device.type}`);
+      t.comment(`Texture(${device.type},${format}) not supported`);
     }
   }
 }

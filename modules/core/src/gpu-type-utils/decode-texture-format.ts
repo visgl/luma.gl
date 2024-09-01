@@ -61,16 +61,18 @@ export function decodeTextureFormat(format: TextureFormat): TextureFormatInfo {
     ];
 
     formatInfo = {
-      ...formatInfo,
       format,
-      channels: channels as 'r' | 'rg' | 'rgb' | 'rgba',
-      components,
-      bitsPerChannel,
-      bytesPerPixel: decodedType.byteLength * channels.length,
+      attachment: formatInfo.attachment,
       dataType: decodedType.dataType,
+      components,
+      channels: channels as 'r' | 'rg' | 'rgb' | 'rgba',
       integer: decodedType.integer,
       signed: decodedType.signed,
-      normalized: decodedType.normalized
+      normalized: decodedType.normalized,
+      bitsPerChannel,
+      bytesPerPixel: decodedType.byteLength * channels.length,
+      packed: formatInfo.packed,
+      srgb: formatInfo.srgb
     };
 
     if (suffix === '-webgl') {
@@ -80,6 +82,13 @@ export function decodeTextureFormat(format: TextureFormat): TextureFormatInfo {
     if (srgb === '-srgb') {
       formatInfo.srgb = true;
     }
+  }
+
+  if (format.endsWith('-webgl')) {
+    formatInfo.webgl = true;
+  }
+  if (format.endsWith('-srgb')) {
+    formatInfo.srgb = true;
   }
 
   return formatInfo;

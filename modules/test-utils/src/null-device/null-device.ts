@@ -160,4 +160,8 @@ export class NullDevice extends Device {
     }
     return value;
   }
+
+  override _getDeviceSpecificTextureFormatCapabilities(format: any): any {
+    return format;
+  }
 }
