@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
-import {webgpuDevice, getTestDevices} from '@luma.gl/test-utils';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {Buffer} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 
@@ -19,7 +19,7 @@ const source = /* WGSL*/ `\
 `;
 
 test.skip('Computation#construct/delete', async t => {
-  await getTestDevices();
+  const webgpuDevice = await getWebGPUTestDevice();
   if (webgpuDevice) {
     const computation = new Computation(webgpuDevice, {source});
     t.ok(computation instanceof Computation, 'ComputePipeline construction successful');
@@ -32,7 +32,7 @@ test.skip('Computation#construct/delete', async t => {
 });
 
 test('Computation#compute', async t => {
-  await getTestDevices();
+  const webgpuDevice = await getWebGPUTestDevice();
   if (webgpuDevice) {
     const computation = new Computation(webgpuDevice, {
       source,

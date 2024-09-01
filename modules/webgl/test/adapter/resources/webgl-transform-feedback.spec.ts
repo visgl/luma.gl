@@ -3,9 +3,9 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
-import {webglDevice} from '@luma.gl/test-utils';
+import {getWebGLTestDevice} from '@luma.gl/test-utils';
 
-import {Buffer} from '@luma.gl/core';
+import {Device, Buffer} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
 
 const VS = /* glsl */ `\
@@ -28,10 +28,12 @@ void main()
 }
 `;
 
-test('WebGL#TransformFeedback#constructor/destroy', t => {
+test('WebGL#TransformFeedback#constructor/destroy', async t => {
+  const webglDevice = await getWebGLTestDevice();
+
   const buffer1 = webglDevice.createBuffer({byteLength: 16});
   const buffer2 = webglDevice.createBuffer({byteLength: 16});
-  const model = createModel(buffer1, 4);
+  const model = createModel(webglDevice, buffer1, 4);
 
   const tf = webglDevice.createTransformFeedback({
     layout: model.pipeline.shaderLayout,
@@ -49,11 +51,13 @@ test('WebGL#TransformFeedback#constructor/destroy', t => {
   t.end();
 });
 
-test('WebGL#TransformFeedback#setBuffers', t => {
+test('WebGL#TransformFeedback#setBuffers', async t => {
+  const webglDevice = await getWebGLTestDevice();
+
   const buffer1 = webglDevice.createBuffer({byteLength: 100});
   const buffer2 = webglDevice.createBuffer({byteLength: 200});
   const buffer3 = webglDevice.createBuffer({byteLength: 300});
-  const model = createModel(buffer1, 4);
+  const model = createModel(webglDevice, buffer1, 4);
 
   const transformFeedback = webglDevice.createTransformFeedback({
     layout: model.pipeline.shaderLayout,
@@ -102,6 +106,8 @@ test('WebGL#TransformFeedback#setBuffers', t => {
 });
 
 test('WebGL#TransformFeedback#capture', async t => {
+  const webglDevice = await getWebGLTestDevice();
+
   // TODO(v9) Test writing with offset into output buffer.
 
   const inArray = new Float32Array([10, 20, 31, 0, -57]);
@@ -112,7 +118,7 @@ test('WebGL#TransformFeedback#capture', async t => {
 
   const inBuffer = webglDevice.createBuffer({data: inArray});
   const outBuffer = webglDevice.createBuffer({byteLength: byteLength * 2}); // pad output for write with offset
-  const model = createModel(inBuffer, vertexCount);
+  const model = createModel(webglDevice, inBuffer, vertexCount);
 
   const transformFeedback = webglDevice.createTransformFeedback({
     layout: model.pipeline.shaderLayout,
@@ -140,8 +146,8 @@ test('WebGL#TransformFeedback#capture', async t => {
  * Creates a model for TransformFeedback testing with input attribute 'inValue'
  * and output varying 'outValue', both of type float32.
  */
-function createModel(buffer: Buffer, vertexCount: number): Model {
-  return new Model(webglDevice, {
+function createModel(device: Device, buffer: Buffer, vertexCount: number): Model {
+  return new Model(device, {
     vs: VS,
     fs: FS,
     attributes: {inValue: buffer},

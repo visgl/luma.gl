@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {webglDevice} from '@luma.gl/test-utils';
+import {getWebGLTestDevice} from '@luma.gl/test-utils';
 import {transpileGLSLShader} from '@luma.gl/shadertools/lib/shader-transpiler/transpile-glsl-shader';
 import test, {Test} from 'tape-promise/tape';
 
@@ -27,12 +27,12 @@ function compareStrings(t: Test, string1: string, string2: string, message?: str
   t.equal(string1, string2, message);
 }
 
-test('transpileGLSLShader#import', t => {
+test('transpileGLSLShader#import', async t => {
   t.ok(transpileGLSLShader, 'transpileGLSLShader import successful');
   t.end();
 });
 
-test.skip('transpileGLSLShader', t => {
+test.skip('transpileGLSLShader', async t => {
   for (const tc of TRANSPILATION_TEST_CASES) {
     const {title, stage, GLSL_300} = tc;
 
@@ -49,7 +49,7 @@ test.skip('transpileGLSLShader', t => {
   t.end();
 });
 
-test('transpileGLSLShader#minified shaders', t => {
+test('transpileGLSLShader#minified shaders', async t => {
   let assembleResult;
 
   for (const tc of TRANSPILATION_TEST_CASES) {
@@ -68,7 +68,9 @@ test('transpileGLSLShader#minified shaders', t => {
   t.end();
 });
 
-test('transpileGLSLShader#compilation', t => {
+test('transpileGLSLShader#compilation', async t => {
+  const webglDevice = await getWebGLTestDevice();
+
   for (const tc of COMPILATION_TEST_CASES) {
     const {title, VS_300_VALID, FS_300_VALID} = tc;
 

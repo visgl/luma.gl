@@ -33,7 +33,9 @@ export class WEBGLBuffer extends Buffer {
 
     const handle = typeof props === 'object' ? props.handle : undefined;
     this.handle = handle || this.gl.createBuffer();
-    device.setSpectorMetadata(this.handle, {...this.props, data: typeof this.props.data});
+    device._setWebGLDebugMetadata(this.handle, this, {
+      spector: {...this.props, data: typeof this.props.data}
+    });
 
     // - In WebGL1, need to make sure we use GL.ELEMENT_ARRAY_BUFFER when initializing element buffers
     //   otherwise buffer type will lock to generic (non-element) buffer

@@ -6,7 +6,7 @@
 /* eslint-disable */
 
 import {AnimationProps} from '@luma.gl/engine';
-import {webglDevice} from './create-test-device';
+import {getWebGLTestDevice} from './create-test-device';
 
 // TODO - Replace with new AnimationLoop from `@luma.gl/engine`
 import {ClassicAnimationLoop as AnimationLoop} from './deprecated/classic-animation-loop';
@@ -107,8 +107,10 @@ export class TestRunner {
   /**
    * Returns a promise that resolves when all the test cases are done
    */
-  run(options: object = {}): Promise<void> {
+  async run(options: object = {}): Promise<void> {
     this.testOptions = {...this.testOptions, ...options};
+
+    const device = await getWebGLTestDevice();
 
     return new Promise<void>((resolve, reject) => {
       this._animationLoop = new AnimationLoop({

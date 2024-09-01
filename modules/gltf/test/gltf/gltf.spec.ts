@@ -1,5 +1,5 @@
 import test from 'tape-promise/tape';
-import {webglDevice} from '@luma.gl/test-utils';
+import {getWebGLTestDevice} from '@luma.gl/test-utils';
 
 import '@loaders.gl/polyfills';
 import {load} from '@loaders.gl/core';
@@ -9,6 +9,8 @@ import {Texture} from '@luma.gl/core';
 import {createScenegraphsFromGLTF, loadPBREnvironment} from '@luma.gl/gltf';
 
 test('gltf#loading', async t => {
+  const webglDevice = await getWebGLTestDevice();
+
   const gltf = await load('test/data/box.glb', GLTFLoader);
   const processedGLTF = gltf.json ? postProcessGLTF(gltf) : gltf;
 
@@ -23,6 +25,8 @@ test('gltf#loading', async t => {
 });
 
 test('gltf#animator', async t => {
+  const webglDevice = await getWebGLTestDevice();
+
   const gltf = await load('test/data/BoxAnimated.glb', GLTFLoader);
   const processedGLTF = gltf.json ? postProcessGLTF(gltf) : gltf;
 
@@ -44,7 +48,9 @@ test('gltf#animator', async t => {
   t.end();
 });
 
-test.skip('gltf#environment', t => {
+test.skip('gltf#environment', async t => {
+  const webglDevice = await getWebGLTestDevice();
+
   const environment = loadPBREnvironment(webglDevice, {
     brdfLutUrl: 'test/data/webgl-logo-0.png',
     getTexUrl: (type, dir, mipLevel) => `test/data/webgl-logo-${mipLevel}.png`,

@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
-import {webglDevice} from '@luma.gl/test-utils';
+import {getWebGLTestDevice} from '@luma.gl/test-utils';
 
 import type {TypedArray} from '@math.gl/types';
 import type {GLParameters} from '@luma.gl/constants';
@@ -30,7 +30,7 @@ export function stringifyTypedArray(v: unknown) {
   return JSON.stringify(v);
 }
 
-test('WebGL#state', t => {
+test('WebGL#state', async t => {
   t.ok(getGLParameters, 'getGLParameters imported ok');
   t.ok(setGLParameters, 'setGLParameters imported ok');
   t.ok(withGLParameters, 'withGLParameters imported ok');
@@ -39,7 +39,9 @@ test('WebGL#state', t => {
   t.end();
 });
 
-test('WebGLState#getGLParameters (WebGL)', t => {
+test('WebGLState#getGLParameters (WebGL)', async t => {
+  const webglDevice = await getWebGLTestDevice();
+
   resetGLParameters(webglDevice.gl);
   const parameters = getGLParameters(webglDevice.gl);
 
@@ -54,7 +56,9 @@ test('WebGLState#getGLParameters (WebGL)', t => {
 });
 
 // TODO - restore asap
-test.skip('WebGLState#setGLParameters (Mixing enum and function style keys)', t => {
+test.skip('WebGLState#setGLParameters (Mixing enum and function style keys)', async t => {
+  const webglDevice = await getWebGLTestDevice();
+
   resetGLParameters(webglDevice.gl);
 
   setGLParameters(webglDevice.gl, FUNCTION_STYLE_SETTINGS_SET1);
@@ -72,7 +76,9 @@ test.skip('WebGLState#setGLParameters (Mixing enum and function style keys)', t 
 });
 
 // TODO - restore asap
-test('WebGLState#setGLParameters (Argument expansion for ***SeperateFunc setters))', t => {
+test('WebGLState#setGLParameters (Argument expansion for ***SeperateFunc setters))', async t => {
+  const webglDevice = await getWebGLTestDevice();
+
   const expectedValues = {
     // blendFunc
     [GL.BLEND_SRC_RGB]: GL.SRC_ALPHA,
@@ -115,7 +121,9 @@ test('WebGLState#setGLParameters (Argument expansion for ***SeperateFunc setters
   t.end();
 });
 
-test('WebGLState#withGLParameters', t => {
+test('WebGLState#withGLParameters', async t => {
+  const webglDevice = await getWebGLTestDevice();
+
   const checkParameters = expected => {
     const parameters = getGLParameters(webglDevice.gl);
     for (const key in expected) {
@@ -187,7 +195,9 @@ test('WebGLState#withGLParameters', t => {
   t.end();
 });
 
-test('WebGLState#withGLParameters: recursive', t => {
+test('WebGLState#withGLParameters: recursive', async t => {
+  const webglDevice = await getWebGLTestDevice();
+
   resetGLParameters(webglDevice.gl);
 
   setGLParameters(webglDevice.gl, {
@@ -315,7 +325,9 @@ test('WebGLState#withGLParameters: recursive', t => {
 });
 
 // EXT_blend_minmax
-test('WebGLState#BlendEquationMinMax', t => {
+test('WebGLState#BlendEquationMinMax', async t => {
+  const webglDevice = await getWebGLTestDevice();
+
   // Verify if state set is scuccessful, we could be just returning the value from cache.
 
   const parametersArray: GLParameters[] = [
@@ -364,7 +376,9 @@ test('WebGLState#BlendEquationMinMax', t => {
   t.end();
 });
 
-test('WebGLState#bindFramebuffer', t => {
+test('WebGLState#bindFramebuffer', async t => {
+  const webglDevice = await getWebGLTestDevice();
+
   const framebuffer = webglDevice.createFramebuffer({colorAttachments: ['rgba8unorm']});
   const framebufferTwo = webglDevice.createFramebuffer({colorAttachments: ['rgba8unorm']});
   const framebufferThree = webglDevice.createFramebuffer({colorAttachments: ['rgba8unorm']});
@@ -432,7 +446,9 @@ test('WebGLState#bindFramebuffer', t => {
   t.end();
 });
 
-test('WebGLState#withGLParameters framebuffer', t => {
+test('WebGLState#withGLParameters framebuffer', async t => {
+  const webglDevice = await getWebGLTestDevice();
+
   const framebufferOne = webglDevice.createFramebuffer({colorAttachments: ['rgba8unorm']});
 
   const framebufferTwo = webglDevice.createFramebuffer({colorAttachments: ['rgba8unorm']});
@@ -469,7 +485,9 @@ test('WebGLState#withGLParameters framebuffer', t => {
   t.end();
 });
 
-test('WebGLState#withGLParameters empty parameters object', t => {
+test('WebGLState#withGLParameters empty parameters object', async t => {
+  const webglDevice = await getWebGLTestDevice();
+
   resetGLParameters(webglDevice.gl);
 
   setGLParameters(webglDevice.gl, {

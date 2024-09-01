@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
-import {webglDevice} from '@luma.gl/test-utils';
+import {getWebGLTestDevice} from '@luma.gl/test-utils';
 import {webgl2Adapter} from '@luma.gl/webgl';
 
 test('WebGLDevice#lost (Promise)', async t => {
@@ -23,7 +23,9 @@ test('WebGLDevice#lost (Promise)', async t => {
   device.destroy();
 });
 
-test.skip('WebGLDevice#resize', t => {
+test.skip('WebGLDevice#resize', async t => {
+  const webglDevice = await getWebGLTestDevice();
+
   // Using default pixel ratio of 1
   // update drawing buffer size to simulate webglDevice context
   webglDevice.canvasContext.resize({width: 10, height: 20, useDevicePixels: 1});
