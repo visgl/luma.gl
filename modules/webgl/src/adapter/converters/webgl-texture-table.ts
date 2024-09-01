@@ -37,7 +37,7 @@ const EXT_color_buffer_float = 'EXT_color_buffer_float';
 export const TEXTURE_FEATURES: Partial<Record<DeviceFeature, string[]>> = {
   'float32-renderable-webgl': ['EXT_color_buffer_float'],
   'float16-renderable-webgl': ['EXT_color_buffer_half_float'],
-  'rgb9e5ufloat_renderable-webgl': ['WEBGL_render_shared_exponent'],
+  'rgb9e5ufloat-renderable-webgl': ['WEBGL_render_shared_exponent'],
   'snorm8-renderable-webgl': [EXT_render_snorm],
   'norm16-renderable-webgl': [EXT_texture_norm16],
   'snorm16-renderable-webgl': [EXT_texture_norm16, EXT_render_snorm],
