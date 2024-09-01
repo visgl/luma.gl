@@ -70,7 +70,6 @@ async function makeWebGPUTestDevice(): Promise<WebGPUDevice | null> {
       createCanvasContext: DEFAULT_CANVAS_CONTEXT_PROPS,
       debug: true
     })) as WebGPUDevice;
-    throw new Error('foo');
     webgpuDeviceResolvers.resolve(webgpuDevice);
   } catch (error) {
     log.error(String(error))();
