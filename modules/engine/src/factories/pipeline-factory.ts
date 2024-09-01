@@ -26,8 +26,7 @@ export class PipelineFactory {
 
   readonly device: Device;
   readonly destroyPolicy: 'unused' | 'never';
-  // TODO - Add a device debug prop for factories?
-  readonly debug = false;
+  readonly debug: boolean;
 
   private _hashCounter: number = 0;
   private readonly _hashes: Record<string, number> = {};
@@ -45,6 +44,7 @@ export class PipelineFactory {
   constructor(device: Device) {
     this.device = device;
     this.destroyPolicy = device.props._factoryDestroyPolicy;
+    this.debug = device.props.debugFactories;
   }
 
   /** Return a RenderPipeline matching supplied props. Reuses an equivalent pipeline if already created. */

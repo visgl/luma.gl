@@ -216,6 +216,8 @@ export type DeviceProps = {
   debugShaders?: 'never' | 'errors' | 'warnings' | 'always';
   /** Renders a small version of updated Framebuffers into the primary canvas context. Can be set in console luma.log.set('debug-framebuffers', true) */
   debugFramebuffers?: boolean;
+  /** Traces resource caching, reuse, and destroys in the PipelineFactory */
+  debugFactories?: boolean;
   /** WebGL specific - Trace WebGL calls (instruments WebGL2RenderingContext at the expense of performance). Can be set in console luma.log.set('debug-webgl', true)  */
   debugWebGL?: boolean;
   /** WebGL specific - Initialize the SpectorJS WebGL debugger. Can be set in console luma.log.set('debug-spectorjs', true)  */
@@ -295,6 +297,7 @@ export abstract class Device {
     debug: log.get('debug') || undefined!,
     debugShaders: log.get('debug-shaders') || undefined!,
     debugFramebuffers: Boolean(log.get('debug-framebuffers')),
+    debugFactories: Boolean(log.get('debug-factories')),
     debugWebGL: Boolean(log.get('debug-webgl')),
     debugSpectorJS: undefined!, // Note: log setting is queried by the spector.js code
     debugSpectorJSUrl: undefined!,
