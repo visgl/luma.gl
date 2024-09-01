@@ -5,7 +5,7 @@
   import {webgpuAdapter} from '@luma.gl/webgpu';
   import AnimationLoopTemplate from './app.ts';
 
-  makeAnimationLoop(AnimationLoopTemplate, {adapters: [/* webgpuAdapter, */ webgl2Adapter]}).start();
+  makeAnimationLoop(AnimationLoopTemplate, {adapters: [webgpuAdapter, webgl2Adapter]}).start();
 </script>
 <body>
 </body>

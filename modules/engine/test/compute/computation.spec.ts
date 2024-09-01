@@ -18,7 +18,7 @@ const source = /* WGSL*/ `\
 }
 `;
 
-test.skip('ComputePipeline construct/delete', async t => {
+test.skip('Computation#construct/delete', async t => {
   await getTestDevices();
   if (webgpuDevice) {
     const computation = new Computation(webgpuDevice, {source});
@@ -31,7 +31,7 @@ test.skip('ComputePipeline construct/delete', async t => {
   t.end();
 });
 
-test('ComputePipeline compute', async t => {
+test('Computation#compute', async t => {
   await getTestDevices();
   if (webgpuDevice) {
     const computation = new Computation(webgpuDevice, {

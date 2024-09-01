@@ -30,6 +30,10 @@ export class WebGPURenderPipeline extends RenderPipeline {
   private _bindGroupLayout: GPUBindGroupLayout | null = null;
   private _bindGroup: GPUBindGroup | null = null;
 
+  override get [Symbol.toStringTag]() {
+    return 'WebGPURenderPipeline';
+  }
+
   constructor(device: WebGPUDevice, props: RenderPipelineProps) {
     super(device, props);
     this.device = device;
@@ -68,6 +72,12 @@ export class WebGPURenderPipeline extends RenderPipeline {
    * @todo Do we want to expose BindGroups in the API and remove this?
    */
   setBindings(bindings: Record<string, Binding>): void {
+    // Invalidate the cached bind group if any value has changed
+    for (const [name, binding] of Object.entries(bindings)) {
+      if (this._bindings[name] !== binding) {
+        this._bindGroup = null;
+      }
+    }
     Object.assign(this._bindings, bindings);
   }
 
@@ -162,16 +172,22 @@ export class WebGPURenderPipeline extends RenderPipeline {
       entryPoint: this.props.fragmentEntryPoint || 'main',
       targets: [
         {
-          // TODO exclamation mark hack!
-          format: getWebGPUTextureFormat(this.device.getCanvasContext().format)
+          format: getWebGPUTextureFormat(this.device.getDefaultCanvasContext().format)
         }
       ]
     };
+
+    const depthStencil: GPUDepthStencilState | undefined = this.props.parameters.depthWriteEnabled
+      ? {
+          format: getWebGPUTextureFormat(this.device.getDefaultCanvasContext().depthStencilFormat)
+        }
+      : undefined;
 
     // Create a partially populated descriptor
     const descriptor: GPURenderPipelineDescriptor = {
       vertex,
       fragment,
+      depthStencil,
       primitive: {
         topology: this.props.topology
       },

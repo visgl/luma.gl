@@ -9,6 +9,7 @@ import {GL, GLParameters} from '@luma.gl/constants';
 import {withGLParameters} from '../../context/state-tracker/with-parameters';
 import {setGLParameters} from '../../context/parameters/unified-parameter-api';
 import {WEBGLQuerySet} from './webgl-query-set';
+import {WEBGLFramebuffer} from './webgl-framebuffer';
 
 const COLOR_CHANNELS = [0x1, 0x2, 0x4, 0x8]; // GPUColorWrite RED, GREEN, BLUE, ALPHA
 
@@ -31,7 +32,7 @@ export class WEBGLRenderPass extends RenderPass {
         viewport = [0, 0, width, height];
       } else {
         // Instead of using our own book-keeping, we can just read the values from the WebGL context
-        const [width, height] = device.getCanvasContext().getDrawingBufferSize();
+        const [width, height] = device.getDefaultCanvasContext().getDrawingBufferSize();
         viewport = [0, 0, width, height];
       }
     }
@@ -41,7 +42,9 @@ export class WEBGLRenderPass extends RenderPass {
     this.setParameters({viewport, ...this.props.parameters});
 
     // Specify mapping of draw buffer locations to color attachments
-    if (this.props.framebuffer) {
+    const webglFramebuffer = this.props.framebuffer as WEBGLFramebuffer;
+    // Default framebuffers can only be set to GL.BACK or GL.NONE
+    if (webglFramebuffer?.handle) {
       const drawBuffers = this.props.framebuffer.colorAttachments.map(
         (_, i) => GL.COLOR_ATTACHMENT0 + i
       );

@@ -214,7 +214,7 @@ test('WEBGLBuffer#construction', async t => {
   buffer.destroy();
 
   // TODO - buffer could check for integer ELEMENT_ARRAY_BUFFER types
-  buffer = webglDevice.createBuffer({usage: Buffer.INDEX, data: new Float32Array([1, 2, 3])});
+  buffer = webglDevice.createBuffer({usage: Buffer.INDEX, data: new Uint32Array([1, 2, 3])});
   t.ok(
     buffer.glTarget === GL.ELEMENT_ARRAY_BUFFER,
     `${webglDevice.info.type} Buffer(ELEMENT_ARRAY_BUFFER) successful`
