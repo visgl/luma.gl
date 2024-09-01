@@ -540,7 +540,7 @@ export abstract class Device {
       } else if (props.data instanceof Uint16Array) {
         newProps.indexType = 'uint16';
       } else {
-        log.warn('indices buffer content must be of integer type')();
+        log.warn('indices buffer content must be of type uint16 or uint32')();
       }
     }
     return newProps;

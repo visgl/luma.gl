@@ -7,7 +7,7 @@ import type {Device} from './device';
 import type {Framebuffer} from './resources/framebuffer';
 import {log} from '../utils/log';
 import {uid} from '../utils/uid';
-import type {TextureFormat} from '../gpu-type-utils/texture-formats';
+import type {TextureFormat, DepthStencilTextureFormat} from '../gpu-type-utils/texture-formats';
 
 /** Properties for a CanvasContext */
 export type CanvasContextProps = {
@@ -131,7 +131,7 @@ export abstract class CanvasContext {
   }
 
   /** Returns a framebuffer with properly resized current 'swap chain' textures */
-  abstract getCurrentFramebuffer(): Framebuffer;
+  abstract getCurrentFramebuffer(options?: {depthStencilFormat?: DepthStencilTextureFormat | false}): Framebuffer;
 
   /** Resized the canvas. Note: Has no effect if props.autoResize is true */
   abstract resize(options?: {

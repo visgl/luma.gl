@@ -4,8 +4,8 @@
 
 // / <reference types="@webgpu/types" />
 
-import type {Texture, TextureFormat, CanvasContextProps} from '@luma.gl/core';
-import {CanvasContext, log} from '@luma.gl/core';
+import type {TextureFormat, DepthStencilTextureFormat, CanvasContextProps} from '@luma.gl/core';
+import {CanvasContext, Texture, log} from '@luma.gl/core';
 import {getWebGPUTextureFormat} from './helpers/convert-texture-format';
 import {WebGPUDevice} from './webgpu-device';
 import {WebGPUFramebuffer} from './resources/webgpu-framebuffer';
@@ -24,7 +24,7 @@ export class WebGPUCanvasContext extends CanvasContext {
   /** Default stencil format for depth textures */
   readonly depthStencilFormat: TextureFormat = 'depth24plus';
 
-  private depthStencilAttachment: Texture | null = null;
+  private depthStencilAttachment: WebGPUTexture | null = null;
 
   get [Symbol.toStringTag](): string {
     return 'WebGPUCanvasContext';
@@ -51,7 +51,11 @@ export class WebGPUCanvasContext extends CanvasContext {
   }
 
   /** Update framebuffer with properly resized "swap chain" texture views */
-  getCurrentFramebuffer(): WebGPUFramebuffer {
+  getCurrentFramebuffer(
+    options: {depthStencilFormat?: DepthStencilTextureFormat | false} = {
+      depthStencilFormat: 'depth24plus'
+    }
+  ): WebGPUFramebuffer {
     // Wrap the current canvas context texture in a luma.gl texture
     const currentColorAttachment = this.getCurrentTexture();
     // TODO - temporary debug code
@@ -69,7 +73,9 @@ export class WebGPUCanvasContext extends CanvasContext {
     }
 
     // Resize the depth stencil attachment
-    this._createDepthStencilAttachment();
+    if (options?.depthStencilFormat) {
+      this._createDepthStencilAttachment(options?.depthStencilFormat);
+    }
 
     return new WebGPUFramebuffer(this.device, {
       colorAttachments: [currentColorAttachment],
@@ -121,14 +127,14 @@ export class WebGPUCanvasContext extends CanvasContext {
   }
 
   /** We build render targets on demand (i.e. not when size changes but when about to render) */
-  _createDepthStencilAttachment() {
+  _createDepthStencilAttachment(depthStencilFormat: DepthStencilTextureFormat): WebGPUTexture {
     if (!this.depthStencilAttachment) {
       this.depthStencilAttachment = this.device.createTexture({
         id: `${this.id}#depth-stencil-texture`,
-        format: this.depthStencilFormat,
+        usage: Texture.RENDER_ATTACHMENT,
+        format: depthStencilFormat,
         width: this.drawingBufferWidth,
-        height: this.drawingBufferHeight,
-        usage: GPUTextureUsage.RENDER_ATTACHMENT
+        height: this.drawingBufferHeight
       });
     }
     return this.depthStencilAttachment;
