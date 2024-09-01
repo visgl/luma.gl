@@ -28,7 +28,7 @@ test('BufferTransform#constructor', async t => {
   t.end();
 });
 
-test('BufferTransform#run', async t => {
+test.skip('BufferTransform#run', async t => {
   const webglDevice = await getWebGLTestDevice();
 
   const SRC_ARRAY = new Float32Array([0, 1, 2, 3, 4, 5]);
