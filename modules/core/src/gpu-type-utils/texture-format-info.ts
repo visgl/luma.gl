@@ -4,7 +4,6 @@
 
 import {TextureFormat} from './texture-formats';
 import {VertexType} from './vertex-formats';
-import {TextureFeature} from './texture-features';
 
 /** Information about the structure of a texture format */
 export type TextureFormatInfo = {
@@ -40,13 +39,4 @@ export type TextureFormatInfo = {
   blockWidth?: number;
   /** Compressed formats only: Block size for ASTC formats (texture height must be a multiple of this value) */
   blockHeight?: number;
-
-  /** If a feature, the specified device feature determines if format is renderable. true if not set. */
-  render?: TextureFeature | boolean;
-  /** If a feature, the specified device feature determines if format is filterable. true if not set. */
-  filter?: TextureFeature | boolean;
-  /** If a feature, the specified device feature determines if format is blendable. true if not set. */
-  blend?: TextureFeature | boolean;
-  /** If a feature, the specified device feature determines if format is storeable. true if not set. */
-  store?: TextureFeature | boolean;
 };

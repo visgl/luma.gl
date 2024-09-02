@@ -5,7 +5,8 @@
 import {StatsManager, lumaStats} from '../utils/stats-manager';
 import {log} from '../utils/log';
 import {uid} from '../utils/uid';
-import type {TextureFormat} from '../gpu-type-utils//texture-formats';
+import type {TextureFormat} from '../gpu-type-utils/texture-formats';
+import type {TextureFormatCapabilities} from '../gpu-type-utils/texture-format-capabilities';
 import type {CanvasContext, CanvasContextProps} from './canvas-context';
 import type {BufferProps} from './resources/buffer';
 import {Buffer} from './resources/buffer';
@@ -24,6 +25,7 @@ import type {TransformFeedback, TransformFeedbackProps} from './resources/transf
 import type {QuerySet, QuerySetProps} from './resources/query-set';
 
 import {isTextureFormatCompressed} from '../gpu-type-utils/decode-texture-format';
+import {getTextureFormatCapabilities} from '../gpu-type-utils/texture-format-capabilities';
 
 /**
  * Identifies the GPU vendor and driver.
@@ -170,7 +172,7 @@ export type WebGLDeviceFeature =
   // texture rendering
   | 'float32-renderable-webgl'
   | 'float16-renderable-webgl'
-  | 'rgb9e5ufloat_renderable-webgl'
+  | 'rgb9e5ufloat-renderable-webgl'
   | 'snorm8-renderable-webgl'
   | 'norm16-renderable-webgl'
   | 'snorm16-renderable-webgl'
@@ -191,6 +193,21 @@ type WebGLCompressedTextureFeatures =
   | 'texture-compression-etc1-webgl'
   | 'texture-compression-pvrtc-webgl'
   | 'texture-compression-atc-webgl';
+
+/** Texture format capabilities that have been checked against a specific device */
+export type DeviceTextureFormatCapabilities = {
+  format: TextureFormat;
+  /** Can the format be created */
+  create: boolean;
+  /** If a feature string, the specified device feature determines if format is renderable. */
+  render: boolean;
+  /** If a feature string, the specified device feature determines if format is filterable. */
+  filter: boolean;
+  /** If a feature string, the specified device feature determines if format is blendable. */
+  blend: boolean;
+  /** If a feature string, the specified device feature determines if format is storeable. */
+  store: boolean;
+};
 
 /** Device properties */
 export type DeviceProps = {
@@ -348,14 +365,47 @@ export abstract class Device {
   /** WebGPU style device limits */
   abstract get limits(): DeviceLimits;
 
+  /** Determines what operations are supported on a texture format, checking against supported device features */
+  getTextureFormatCapabilities(format: TextureFormat): DeviceTextureFormatCapabilities {
+    const genericCapabilities = getTextureFormatCapabilities(format);
+
+    // Check standard features
+    const checkFeature = (featureOrBoolean: DeviceFeature | boolean | undefined) =>
+      (typeof featureOrBoolean === 'string'
+        ? this.features.has(featureOrBoolean)
+        : featureOrBoolean) ?? true;
+
+    const supported = checkFeature(genericCapabilities.create);
+
+    const deviceCapabilities: DeviceTextureFormatCapabilities = {
+      format,
+      create: supported,
+      render: supported && checkFeature(genericCapabilities.render),
+      filter: supported && checkFeature(genericCapabilities.filter),
+      blend: supported && checkFeature(genericCapabilities.blend),
+      store: supported && checkFeature(genericCapabilities.store)
+    };
+
+    return this._getDeviceSpecificTextureFormatCapabilities(deviceCapabilities);
+  }
+
   /** Check if device supports a specific texture format (creation and `nearest` sampling) */
-  abstract isTextureFormatSupported(format: TextureFormat): boolean;
+  isTextureFormatSupported(
+    format: TextureFormat,
+    capabilities: Partial<TextureFormatCapabilities>
+  ): boolean {
+    return this.getTextureFormatCapabilities(format).create;
+  }
 
   /** Check if linear filtering (sampler interpolation) is supported for a specific texture format */
-  abstract isTextureFormatFilterable(format: TextureFormat): boolean;
+  isTextureFormatFilterable(format: TextureFormat): boolean {
+    return this.getTextureFormatCapabilities(format).filter;
+  }
 
-  /** Check if device supports rendering to a specific texture format */
-  abstract isTextureFormatRenderable(format: TextureFormat): boolean;
+  /** Check if device supports rendering to a framebuffer color attachment of a specific texture format */
+  isTextureFormatRenderable(format: TextureFormat): boolean {
+    return this.getTextureFormatCapabilities(format).render;
+  }
 
   /** Check if a specific texture format is GPU compressed */
   isTextureFormatCompressed(format: TextureFormat): boolean {
@@ -531,6 +581,14 @@ export abstract class Device {
   }
 
   // IMPLEMENTATION
+
+  /**
+   * Determines what operations are supported on a texture format, checking against supported device features
+   * Subclasses override to apply additional checks
+   */
+  protected abstract _getDeviceSpecificTextureFormatCapabilities(
+    format: DeviceTextureFormatCapabilities
+  ): DeviceTextureFormatCapabilities;
 
   /** Subclasses use this to support .createBuffer() overloads */
   protected _normalizeBufferProps(props: BufferProps | ArrayBuffer | ArrayBufferView): BufferProps {

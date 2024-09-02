@@ -8,7 +8,7 @@ import {GL} from '@luma.gl/constants';
 import {WebGLDevice} from '../webgl-device';
 import {WEBGLTexture} from './webgl-texture';
 import {WEBGLTextureView} from './webgl-texture-view';
-import {getDepthStencilAttachmentWebGL} from '../converters/texture-formats';
+import {getDepthStencilAttachmentWebGL} from '../converters/webgl-texture-table';
 
 export type Attachment = WEBGLTextureView | WEBGLTexture; // | WEBGLRenderbuffer;
 
