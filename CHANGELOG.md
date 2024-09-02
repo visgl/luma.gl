@@ -4,6 +4,10 @@
 
 Major new release that includes WebGPU support
 
+### 9.0.27 - Sep 2, 2024
+
+- Revert "shadertools: PBR module using UBO (#2173)"
+
 ### 9.0.26 - Aug 28, 2024
 
 - examples: Fix build (#2228)
