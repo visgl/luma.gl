@@ -12,10 +12,14 @@ jobs:
       should_deploy: ${{ endsWith(github.ref, steps.get_version.outputs.latest) }}
 
     steps:
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+
       - name: Get version
         id: get_version
         run: |
-          LATEST=$(npm show @luma.gl/core@latest version | grep -o -E "^[0-9]+\.[0-9]+")
+          packageFile=$(if [ -d modules ]; then ls modules/*/package.json | head -n 1; else echo package.json; fi)
+          packageName=$(jq -r '.name' $packageFile)
+          LATEST=$(npm show "${packageName}@latest" version | grep -o -E "^[0-9]+\.[0-9]+")
           echo "latest=${LATEST}-release" >> "$GITHUB_OUTPUT"
 
   deploy:
@@ -31,7 +35,6 @@ jobs:
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
         with:
           token: ${{ secrets.WEBSITE_DEPLOY_TOKEN }}
-
       - uses: volta-cli/action@2d68418f32546fd191eb666e232b321d5726484d # v4.1.1
         with:
           cache: 'yarn'
@@ -49,5 +52,5 @@ jobs:
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           BRANCH: gh-pages
-          FOLDER: website/public
+          FOLDER: website/build
           CLEAN: true

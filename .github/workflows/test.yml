@@ -34,11 +34,11 @@ jobs:
   
       - name: Run tests in Puppeteer and generage Coverage
         run: |
-          yarn test-cover
+          yarn test cover
 
       - name: Run tests on Node
         run: |
-          yarn test-node
+          yarn test node
 
       - name: Run lint
         run: |
