@@ -16,11 +16,14 @@ Improvements focused on enhancing WebGPU support.
 
 **@luma.gl/core**
 
-- [`Adapter`](/docs/api-reference/core/adapter) New class for singleton objects representing pluggable GPU backends. 
 - `luma`
-  - `luma.createDevice()` New `adapters` options for and `makeAnimationLoopTemplate` as alternative to global registration of adapters.
-  - [`luma.registerAdapters()`](/docs/api-reference/core/luma#lumaregisteradapters) New method for global registration of adapters.
+  - `luma.createDevice()` Accepts a new `props.adapters` prop to avoid need for global registration of adapters.
+  - [`luma.registerAdapters()`](/docs/api-reference/core/luma#lumaregisteradapters) New method for global registration of adapters in case it still desired.
+- [`Adapter`](/docs/api-reference/core/adapter)
+  - New class representing a pluggable GPU backend.
+  - Singleton `Adapter` objects are exported by `@luma.gl/webgpu` and `@luma.gl/webgl` notes below.
 - `Device`
+  - `DeviceProps.createCanvasContext` - New prop for creating a default `CanvasContext`.
   - `DeviceProps.onResize` - New callback tracking size changes to a `CanvasContext`.
   - `DeviceProps.onVisibilityChange` - New callback tracking visibility changes to a `CanvasContext`.
   - `DeviceProps.onDevicePixelRatioChange` - New callback tracking DPR changes to a `CanvasContext`.
@@ -38,7 +41,7 @@ Improvements focused on enhancing WebGPU support.
 **@luma.gl/engine**
 
 - `makeAnimationLoopTemplate`
-  - Now accepts new `adapters` prop to avoid global registration of adapters.
+  - Accepts a new `props.adapters` prop. (Avoids need for global registration of adapters).
 - `AsyncTexture`](/docs/api-reference/engine/async-texture)
   - New class allows that applications to create textures from a Promise.
 - `ShaderPassRenderer` 
