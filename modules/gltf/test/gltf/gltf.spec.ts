@@ -28,7 +28,7 @@ test('gltf#loading', async t => {
 test('gltf#animator', async t => {
   const webglDevice = await getWebGLTestDevice();
 
-  const gltf = await load('test/data/BoxAnimated.glb', GLTFLoader);
+  const gltf = await load('data/BoxAnimated.glb', GLTFLoader);
   const processedGLTF = gltf.json ? postProcessGLTF(gltf) : gltf;
 
   const {scenes, animator} = createScenegraphsFromGLTF(webglDevice, processedGLTF);
@@ -53,7 +53,7 @@ test.skip('gltf#environment', async t => {
   const webglDevice = await getWebGLTestDevice();
 
   const environment = loadPBREnvironment(webglDevice, {
-    brdfLutUrl: 'test/data/webgl-logo-0.png',
+    brdfLutUrl: 'data/webgl-logo-0.png',
     getTexUrl: (type, dir, mipLevel) => `test/data/webgl-logo-${mipLevel}.png`,
     specularMipLevels: 9
   });
