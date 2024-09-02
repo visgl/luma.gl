@@ -6,6 +6,26 @@ A `CanvasContext` holds a connection between a GPU `Device` and canvas, (either 
 - It handles canvas resizing, making sure the returned `Framebuffer`s correspond to the current size of the canvas.
 - It also provides support for device pixel ratios (mapping between device pixels and CSS pixels)
 
+
+## Canvas Size Management
+
+While an `OffscreenCanvas` only has one size, `HTMLCanvasElements` effectively has three different sizes:
+- The CSS size, being the size in "logical units" of the canvas
+- The pixel size, being the exact number of pixels covered by the canvas
+- The drawing buffer size, being the size of the texture created to render into the canvas.
+
+Notes:
+- If the drawing buffer size doesn't exactly match the pixel size, undesired effects like moire patterns can result.The `CanvasContext` pixelWidth and pixelHeight members tracks the exact pixel size (called the "device pixel content box" in browser APIs) is surprisingly hard.
+
+
+## Canvas Monitoring
+
+For `HTMLCanvasElements` the `CanvasContext` will monitor changes to the underlying canvas and call callbacks on the associated `Device`, see:
+
+- `DeviceProps.onResize` - called if the size of the "device pixel content box" changes.
+- `DeviceProps.onVisibilityChange` - called if the visibility of the canvas changes (window is closed or occluded).
+- `DeviceProps.onDevicePixelRatioChange` - called if the DPR changes (perhaps by moving the window to another screen or zooming the browser)
+
 ## Usage
 
 The luma.gl API is designed to allow a `Device` to create multiple associated `CanvasContext`s (or none, if only used for compute).
@@ -96,6 +116,14 @@ canvasContext.getDevicePixelResolution()
 
 ### `canvas: HMTLCanvas | OffscreenCanvas`
 
+### `initialized: Promise<void>`
+
+A promise that resolves when the `CanvasContext` been able to obtain its true pixel size.
+
+### `isInitialized: boolean`
+
+Becomes `true` once the `CanvasContext` been able to obtain its true pixel size.
+
 ### `useDevicePixels: boolean | number`
 
 Whether the framebuffer backing this canvas context is sized using device pixels.
@@ -120,23 +148,31 @@ On `Device` instances that support it (see [remarks](#remarks) below) additional
 
 Returns a framebuffer with properly resized current 'swap chain' textures. Rendering to this framebuffer will update the canvas associated with that `CanvasContext`. Note that a new `Framebuffer` must be requested on every redraw cycle.
 
-### `getDevicePixelResolution(): [number, number]`
+### `getCSSSize(): [number, number]`
 
-TBA
+Returns the size in logical CSS units. This is useful when mapping DOM events (mouse clicks etc) to the canvas, as their coordinates will be in CSS units.
+
+_Note: For an `OffscreenCanvas` this function always returns the same value as `getPixelSize()`_
 
 ### `getPixelSize(): [number, number]`
 
-Returns the size in pixels required to cover the canvas at the current device pixel resolution.
+Returns the size in pixels required to cover the canvas at the current device pixel resolution. Note that this value is just informational, the render buffer can be set to any value independently of this size.
 
-### `resize(): void`
+### `getRenderBufferSize(): [number, number]`
 
-Resize the drawing surface. Usually called after the window has been resized. Note that automatic resizing is performed as size changes to the underlying canvas object are detected.
+If `props.autoResize` is true, then this value will always match `getPixelSize()`
+
+_Note: For an `OffscreenCanvas` this function always returns the same value as `getPixelSize()`_
+
+### `setDrawingBufferSize(size [number, number]): void`
+
+Resize the drawing surface. Usually called after the window has been resized. 
 
 ```typescript
-canvasContext.resize(options: {width: number, height: number; userDevicePixels})
+canvasContext.setDrawingBufferSize([width: number, height: number]});
 ```
 
 - **width**: New drawing surface width.
 - **height**: New drawing surface height.
-- **useDevicePixels**: Whether to scale the drawing surface using the device pixel ratio.
 
+_Note: if `props.autoResize` is true, then automatic resizing is performed as size changes to the underlying canvas object are detected._
