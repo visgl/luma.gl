@@ -156,7 +156,7 @@ export abstract class CanvasContext {
         this._resizeObserver.observe(this.canvas, {box: 'content-box'});
       }
 
-      // Track device pixel ratio changes. 
+      // Track device pixel ratio changes.
       // Defer call to after construction completes to ensure `this.device` is available.
       setTimeout(() => this._observeDevicePixelRatio(), 0);
     }
@@ -566,5 +566,6 @@ function withResolvers<T>(): {
     resolve = _resolve;
     reject = _reject;
   });
+  // @ts-expect-error - in fact these are no used before initialized
   return {promise, resolve, reject};
 }
