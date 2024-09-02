@@ -29,83 +29,107 @@ export function isTextureFormatCompressed(
  * Decodes a texture format, returning e.g. attatchment type, components, byte length and flags (integer, signed, normalized)
  */
 export function decodeTextureFormat(format: TextureFormat): TextureFormatInfo {
+  let formatInfo: TextureFormatInfo = decodeTextureFormatUsingTable(format);
+
   if (isTextureFormatCompressed(format)) {
-    return decodeCompressedTextureFormat(format);
+    formatInfo.channels = 'rgb';
+    formatInfo.components = 3;
+    formatInfo.bytesPerPixel = 1;
+    formatInfo.srgb = false;
+    formatInfo.compressed = true;
+
+    const blockSize = getCompressedTextureBlockSize(format);
+    if (blockSize) {
+      formatInfo.blockWidth = blockSize.blockWidth;
+      formatInfo.blockHeight = blockSize.blockHeight;
+    }
   }
 
+  // Fill in missing information that can be derived from the format string
   const matches = RGB_FORMAT_REGEX.exec(format as string);
-  if (!matches) {
-    return decodeNonStandardFormat(format);
+  if (matches) {
+    const [, channels, length, type, srgb, suffix] = matches;
+    const dataType = `${type}${length}` as VertexType;
+    const decodedType = decodeVertexType(dataType);
+    const bits = decodedType.byteLength * 8;
+    const components = channels.length as 1 | 2 | 3 | 4;
+    const bitsPerChannel: [number, number, number, number] = [
+      bits,
+      components >= 2 ? bits : 0,
+      components >= 3 ? bits : 0,
+      components >= 4 ? bits : 0
+    ];
+
+    formatInfo = {
+      format,
+      attachment: formatInfo.attachment,
+      dataType: decodedType.dataType,
+      components,
+      channels: channels as 'r' | 'rg' | 'rgb' | 'rgba',
+      integer: decodedType.integer,
+      signed: decodedType.signed,
+      normalized: decodedType.normalized,
+      bitsPerChannel,
+      bytesPerPixel: decodedType.byteLength * channels.length,
+      packed: formatInfo.packed,
+      srgb: formatInfo.srgb
+    };
+
+    if (suffix === '-webgl') {
+      formatInfo.webgl = true;
+    }
+    // dataType - overwritten by decodedType
+    if (srgb === '-srgb') {
+      formatInfo.srgb = true;
+    }
   }
 
-  const [, channels, length, type, srgb, suffix] = matches;
-  const dataType = `${type}${length}` as VertexType;
-  const decodedType = decodeVertexType(dataType);
-  const bits = decodedType.byteLength * 8;
-  const components = channels.length as 1 | 2 | 3 | 4;
-  const bitsPerChannel: [number, number, number, number] = [
-    bits,
-    components >= 2 ? bits : 0,
-    components >= 3 ? bits : 0,
-    components >= 4 ? bits : 0
-  ];
+  if (format.endsWith('-webgl')) {
+    formatInfo.webgl = true;
+  }
+  if (format.endsWith('-srgb')) {
+    formatInfo.srgb = true;
+  }
 
-  const info: TextureFormatInfo = {
+  return formatInfo;
+}
+
+/** Decode texture format info from the table */
+function decodeTextureFormatUsingTable(format: TextureFormat): TextureFormatInfo {
+  const info = TEXTURE_FORMAT_TABLE[format];
+  if (!info) {
+    throw new Error(`Unknown texture format ${format}`);
+  }
+
+  const bytesPerPixel = info.bytesPerPixel || 1;
+  const bitsPerChannel = info.bitsPerChannel || [8, 8, 8, 8];
+  delete info.bitsPerChannel;
+  delete info.bytesPerPixel;
+  delete info.create;
+  delete info.render;
+  delete info.filter;
+  delete info.blend;
+  delete info.store;
+
+  const formatInfo: TextureFormatInfo = {
+    ...info,
     format,
-    channels: channels as 'r' | 'rg' | 'rgb' | 'rgba',
-    components,
+    attachment: info.attachment || 'color',
+    channels: info.channels || 'r',
+    components: (info.components || info.channels?.length || 1) as 1 | 2 | 3 | 4,
+    bytesPerPixel,
     bitsPerChannel,
-    bytesPerPixel: decodedType.byteLength * channels.length,
-    dataType: decodedType.dataType,
-    integer: decodedType.integer,
-    signed: decodedType.signed,
-    normalized: decodedType.normalized
+    dataType: info.dataType || 'uint8',
+    srgb: info.srgb ?? false,
+    packed: info.packed ?? false,
+    webgl: info.webgl ?? false,
+    integer: info.integer ?? false,
+    signed: info.signed ?? false,
+    normalized: info.normalized ?? false,
+    compressed: info.compressed ?? false
   };
 
-  if (suffix === '-webgl') {
-    info.webgl = true;
-  }
-  // dataType - overwritten by decodedType
-  if (srgb === '-srgb') {
-    info.srgb = true;
-  }
-  return info;
-}
-
-function decodeCompressedTextureFormat(format: CompressedTextureFormat): TextureFormatInfo {
-  const info: TextureFormatInfo = {
-    channels: 'rgb',
-    components: 3,
-    bytesPerPixel: 1,
-    srgb: false,
-    compressed: true
-  } as TextureFormatInfo;
-
-  const blockSize = getCompressedTextureBlockSize(format);
-  if (blockSize) {
-    info.blockWidth = blockSize.blockWidth;
-    info.blockHeight = blockSize.blockHeight;
-  }
-  return info;
-}
-
-function decodeNonStandardFormat(format: TextureFormat): TextureFormatInfo {
-  const data = TEXTURE_FORMAT_TABLE[format];
-  if (!data) {
-    throw new Error(`Unknown format ${format}`);
-  }
-
-  const info: TextureFormatInfo = {
-    ...data,
-    channels: data.channels || '',
-    components: data.components || data.channels?.length || 1,
-    bytesPerPixel: data.bytesPerPixel || 1,
-    srgb: false
-  } as TextureFormatInfo;
-  if (data.packed) {
-    info.packed = data.packed;
-  }
-  return info;
+  return formatInfo;
 }
 
 /** Parses ASTC block widths from format string */

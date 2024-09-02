@@ -56,7 +56,18 @@ export class ShaderPassRenderer {
     });
 
     this.clipSpace = new ClipSpace(device, {
-      fs: `\
+      source: /* wgsl */ `\
+  @group(0) @binding(0) var sourceTexture: texture_2d<f32>;
+  @group(0) @binding(1) var sourceTextureSampler: sampler;
+
+@fragment
+fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
+	let texCoord: vec2<f32> = inputs.coordinate;
+	return textureSample(sourceTexture, sourceTextureSampler, texCoord);
+}
+`,
+
+      fs: /* glsl */ `\
 #version 300 es
 
 uniform sampler2D sourceTexture;

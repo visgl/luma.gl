@@ -9,13 +9,13 @@ import type {
   DeviceInfo,
   DeviceLimits,
   DeviceFeature,
+  DeviceTextureFormatCapabilities,
   CanvasContextProps,
   BufferProps,
   SamplerProps,
   ShaderProps,
   Texture,
   TextureProps,
-  TextureFormat,
   ExternalTextureProps,
   FramebufferProps,
   RenderPipelineProps,
@@ -89,8 +89,13 @@ export class WebGPUDevice extends Device {
     device.addEventListener('uncapturederror', (event: Event) => {
       // TODO is this the right way to make sure the error is an Error instance?
       const errorMessage =
-        event instanceof GPUUncapturedErrorEvent ? event.error.message : 'Unknown error';
-      this.error(new Error(errorMessage));
+        event instanceof GPUUncapturedErrorEvent ? event.error.message : 'Unknown WebGPU error';
+      this.reportError(new Error(errorMessage));
+      if (this.props.debug) {
+        // eslint-disable-next-line no-debugger
+        debugger;
+      }
+      event.preventDefault();
     });
 
     // "Context" loss handling
@@ -115,24 +120,6 @@ export class WebGPUDevice extends Device {
 
   destroy(): void {
     this.handle.destroy();
-  }
-
-  isTextureFormatSupported(format: TextureFormat): boolean {
-    return !format.includes('webgl');
-  }
-
-  /** @todo implement proper check? */
-  isTextureFormatFilterable(format: TextureFormat): boolean {
-    return (
-      this.isTextureFormatSupported(format) &&
-      !format.startsWith('depth') &&
-      !format.startsWith('stencil')
-    );
-  }
-
-  /** @todo implement proper check? */
-  isTextureFormatRenderable(format: TextureFormat): boolean {
-    return this.isTextureFormatSupported(format);
   }
 
   get isLost(): boolean {
@@ -209,13 +196,17 @@ export class WebGPUDevice extends Device {
   }
 
   submit(): void {
-    // this.renderPass?.end();
     const commandBuffer = this.commandEncoder?.finish();
     if (commandBuffer) {
+      this.handle.pushErrorScope('validation');
       this.handle.queue.submit([commandBuffer]);
+      this.handle.popErrorScope().then((error: GPUError | null) => {
+        if (error) {
+          this.reportError(new Error(`WebGPU command submission failed: ${error.message}`));
+        }
+      });
     }
     this.commandEncoder = null;
-    // this.renderPass = null;
   }
 
   // PRIVATE METHODS
@@ -280,6 +271,19 @@ export class WebGPUDevice extends Device {
     return new DeviceFeatures(Array.from(features), this.props._disabledFeatures);
   }
 
+  override _getDeviceSpecificTextureFormatCapabilities(
+    capabilities: DeviceTextureFormatCapabilities
+  ): DeviceTextureFormatCapabilities {
+    const {format} = capabilities;
+    if (format.includes('webgl')) {
+      return {format, create: false, render: false, filter: false, blend: false, store: false};
+    }
+    return capabilities;
+  }
+
+  // DEPRECATED METHODS
+
+  // @deprecated
   copyExternalImageToTexture(options: {
     texture: Texture;
     mipLevel?: number;

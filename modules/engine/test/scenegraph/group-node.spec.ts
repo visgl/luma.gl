@@ -3,12 +3,12 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
-import {webglDevice as device} from '@luma.gl/test-utils';
+import {getWebGLTestDevice} from '@luma.gl/test-utils';
 import {GroupNode, ScenegraphNode, ModelNode, Model} from '@luma.gl/engine';
 import {Matrix4} from '@math.gl/core';
 import {DUMMY_VS, DUMMY_FS} from './model-node.spec';
 
-test('GroupNode#construction', t => {
+test('GroupNode#construction', async t => {
   const grandChild = new ScenegraphNode();
   const child1 = new GroupNode([grandChild]);
   const child2 = new GroupNode();
@@ -27,7 +27,7 @@ test('GroupNode#construction', t => {
   t.end();
 });
 
-test('GroupNode#add', t => {
+test('GroupNode#add', async t => {
   const child1 = new GroupNode();
   const child2 = new GroupNode();
   const child3 = new GroupNode();
@@ -40,7 +40,7 @@ test('GroupNode#add', t => {
   t.end();
 });
 
-test('GroupNode#remove', t => {
+test('GroupNode#remove', async t => {
   const child1 = new GroupNode();
   const child2 = new GroupNode();
   const child3 = new GroupNode();
@@ -56,7 +56,7 @@ test('GroupNode#remove', t => {
   t.end();
 });
 
-test('GroupNode#removeAll', t => {
+test('GroupNode#removeAll', async t => {
   const child1 = new GroupNode();
   const child2 = new GroupNode();
   const child3 = new GroupNode();
@@ -69,7 +69,7 @@ test('GroupNode#removeAll', t => {
   t.end();
 });
 
-test('GroupNode#destroy', t => {
+test('GroupNode#destroy', async t => {
   const grandChild = new GroupNode();
   const child1 = new GroupNode([grandChild]);
   const child2 = new GroupNode();
@@ -82,7 +82,7 @@ test('GroupNode#destroy', t => {
   t.end();
 });
 
-test('GroupNode#traverse', t => {
+test('GroupNode#traverse', async t => {
   const modelMatrices = {};
   const matrix = new Matrix4().identity().scale(2);
 
@@ -107,7 +107,9 @@ test('GroupNode#traverse', t => {
   t.end();
 });
 
-test('GroupNode#getBounds', t => {
+test('GroupNode#getBounds', async t => {
+  const device = await getWebGLTestDevice();
+
   const matrix = new Matrix4().translate([0, 0, 1]).scale(2);
 
   const model1 = new Model(device, {id: 'childSNode', vs: DUMMY_VS, fs: DUMMY_FS});

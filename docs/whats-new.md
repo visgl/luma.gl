@@ -16,27 +16,55 @@ Improvements focused on enhancing WebGPU support.
 
 **@luma.gl/core**
 
-- New [`Adapter`](/docs/api-reference/core/adapter) class for singleton objects representing pluggable GPU backends. 
-- New `adapters` options for `luma.createDevice()` and `makeAnimationLoopTemplate` as alternative to global registration of adapters.
-- New [`luma.registerAdapters()`](/docs/api-reference/core/luma#lumaregisteradapters) method for old-stye global registration of adapters.
-- New `Texture.copyExternalImage()` function that works on both WebGPU and WebGL.
-- New `Parameters.blend` - Provides explicit control over color blending activation.
-- New `SamplerProps.mipmapFilter` has a new value `'none'` providing a more explicit API for mipmap filtering.
+- `luma`
+  - `luma.createDevice()` Accepts a new `props.adapters` prop to avoid need for global registration of adapters.
+  - [`luma.registerAdapters()`](/docs/api-reference/core/luma#lumaregisteradapters) New method for global registration of adapters in case it still desired.
+- [`Adapter`](/docs/api-reference/core/adapter)
+  - New class representing a pluggable GPU backend.
+  - Singleton `Adapter` objects are exported by `@luma.gl/webgpu` and `@luma.gl/webgl` notes below.
+- `Device`
+  - `DeviceProps.createCanvasContext` - New prop for creating a default `CanvasContext`.
+  - `DeviceProps.onResize` - New callback tracking size changes to a `CanvasContext`.
+  - `DeviceProps.onVisibilityChange` - New callback tracking visibility changes to a `CanvasContext`.
+  - `DeviceProps.onDevicePixelRatioChange` - New callback tracking DPR changes to a `CanvasContext`.
+  - `DeviceProps.debug*` - Debug option improvements, please refer to `DeviceProps` documentation.
+- `CanvasContext`
+  - Now calculates exact "device pixel content box" size.
+  - Now tracks size, visibility and DPR changes (see new `DeviceProps` callbacks).
+- `Texture`
+  - `Texture.copyExternalImage()` New function that works on both WebGPU and WebGL.
+- `RenderPipeline`
+  - `Parameters.blend` - New parameter that provides more explicit control over color blending activation.
+-  `Sampler`
+  - `SamplerProps.mipmapFilter` has a new value `'none'` providing more explicit control over mipmap filtering.
 
 **@luma.gl/engine**
 
-- New [`AsyncTexture`](/docs/api-reference/engine/async-texture) class allows applications to create textures from a URL or Promise.
+- `makeAnimationLoopTemplate`
+  - Accepts a new `props.adapters` prop. (Avoids need for global registration of adapters).
+- `AsyncTexture`](/docs/api-reference/engine/async-texture)
+  - New class allows that applications to create textures from a Promise.
+- `ShaderPassRenderer` 
+  - New class that helps applications apply a `ShaderPass` list to a texture.
 
 **@luma.gl/shadertools**
 
-- [`ShaderModule](/docs/api-reference/shadertools/shader-module)`: improves type safety, in particular for uniforms and bindings.
-- `ShaderModule`: Simplified API, no longer required to instantiate modules into `ShaderModuleInstances`.
-- New function `getShaderModuleUniforms(module: ShaderModule, ...)`
-- New function `getShaderModuleDependencies(module: ShaderModule)`
+- [`ShaderModule](/docs/api-reference/shadertools/shader-module)`
+  - New improvements to type safety, in particular for uniforms and bindings.
+  - New simplified API, no longer required to instantiate modules into `ShaderModuleInstances`.
+- `getShaderModuleUniforms(module: ShaderModule, ...)` New function
+- `getShaderModuleDependencies(module: ShaderModule)` New function
 
 **@luma.gl/webgl**
 
-- `webglAdapter` - Ability to add WEBGL1 extensions to WebGL2 contexts
+- `webglAdapter` New object representing the WebGL backend
+  - New: adds mock WEBGL1 extensions to WebGL2 contexts for better compatibility with old WebGL libraries
+  - Big texture refactor to align WebGL implementation with WebGPU APIs
+
+**@luma.gl/webgpu**
+
+- `webgpuAdapter` New object representing the WebGPU backend
+- Numerous under-the-hood improvements and bug fixes
 
 ## Version 9.0
 

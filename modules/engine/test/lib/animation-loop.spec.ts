@@ -3,18 +3,22 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
-import {webglDevice as device} from '@luma.gl/test-utils';
+import {getWebGLTestDevice} from '@luma.gl/test-utils';
 
 import {AnimationLoop} from '@luma.gl/engine';
 
-test('engine#AnimationLoop constructor', t => {
+test('engine#AnimationLoop constructor', async t => {
+  const device = await getWebGLTestDevice();
+
   t.ok(AnimationLoop, 'AnimationLoop imported');
   const animationLoop = new AnimationLoop({device});
   t.ok(animationLoop, 'AnimationLoop constructor should not throw');
   t.end();
 });
 
-test('engine#AnimationLoop start,stop', t => {
+test('engine#AnimationLoop start,stop', async t => {
+  const device = await getWebGLTestDevice();
+
   let initializeCalled = 0;
   let renderCalled = 0;
   let finalizeCalled = 0;
@@ -43,7 +47,9 @@ test('engine#AnimationLoop start,stop', t => {
   }).start();
 });
 
-test('engine#AnimationLoop redraw', t => {
+test('engine#AnimationLoop redraw', async t => {
+  const device = await getWebGLTestDevice();
+
   let renderCalled = 0;
 
   new AnimationLoop({
@@ -63,6 +69,8 @@ test('engine#AnimationLoop redraw', t => {
 });
 
 test('engine#AnimationLoop should not call initialize more than once', async t => {
+  const device = await getWebGLTestDevice();
+
   let initializeCalled = 0;
 
   const animationLoop = new AnimationLoop({
@@ -80,6 +88,8 @@ test('engine#AnimationLoop should not call initialize more than once', async t =
 });
 
 test('engine#AnimationLoop two start()s should only run one loop', async t => {
+  const device = await getWebGLTestDevice();
+
   let renderCalled = 0;
 
   const animationLoop = new AnimationLoop({
@@ -98,7 +108,9 @@ test('engine#AnimationLoop two start()s should only run one loop', async t => {
   t.end();
 });
 
-test.skip('engine#AnimationLoop start followed immediately by stop() should stop', t => {
+test.skip('engine#AnimationLoop start followed immediately by stop() should stop', async t => {
+  const device = await getWebGLTestDevice();
+
   let initializeCalled = 0;
 
   const animationLoop = new AnimationLoop({
@@ -115,7 +127,9 @@ test.skip('engine#AnimationLoop start followed immediately by stop() should stop
   }, 100);
 });
 
-test('engine#AnimationLoop a start/stop/start should not call initialize again', t => {
+test('engine#AnimationLoop a start/stop/start should not call initialize again', async t => {
+  const device = await getWebGLTestDevice();
+
   let initializeCalled = 0;
 
   const animationLoop = new AnimationLoop({

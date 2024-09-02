@@ -4,6 +4,19 @@
 
 Major new release that includes WebGPU support
 
+### 9.1.0-alpha.19
+
+- webgl: clip image write based on texture size (#2234)
+
+### 9.1.0-alpha.18
+
+- gltf: Fix animations (#2227)
+- fix(website): Fix examples (#2225)
+- docs: Clean up webgpu and webgl device docs (#2224)
+- chore: More granular CI workflow (#2223)
+- chore(deps): bump micromatch from 4.0.7 to 4.0.8 (#2219)
+- chore: Separate lint step in CI (#2221)
+
 ### 9.1.0-alpha.17
 
 - chore: Separate CI step for website build (#2218)

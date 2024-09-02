@@ -43,7 +43,7 @@ export class GLTFInstantiator {
 
   instantiate(gltf: any): GroupNode[] {
     this.gltf = deepCopy(gltf);
-    const scenes = (gltf.scenes || []).map(scene => this.createScene(scene));
+    const scenes = (this.gltf.scenes || []).map(scene => this.createScene(scene));
     return scenes;
   }
 
@@ -100,6 +100,10 @@ export class GLTFInstantiator {
       }
       gltfNode._node = node;
     }
+
+    // Copy _node so that gltf-animator can access
+    const topLevelNode = this.gltf.nodes.find(node => node.id === gltfNode.id);
+    topLevelNode._node = gltfNode._node;
 
     return gltfNode._node;
   }

@@ -152,11 +152,11 @@ function findAttributeLayout(
 ): AttributeDeclaration | null {
   const attribute = shaderLayout.attributes.find(attribute_ => attribute_.name === name);
   if (!attribute) {
-    log.warn(`Unknown attribute ${name}`)();
+    log.warn(`Supplied attribute not present in shader layout: ${name}`)();
     return null;
   }
   if (attributeNames.has(name)) {
-    throw new Error(`Duplicate attribute ${name}`);
+    throw new Error(`Found multiple entries for attribute: ${name}`);
   }
   attributeNames.add(name);
   return attribute;

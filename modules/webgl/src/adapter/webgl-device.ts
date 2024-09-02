@@ -6,8 +6,8 @@ import type {TypedArray} from '@math.gl/types';
 import type {
   DeviceProps,
   DeviceInfo,
+  DeviceTextureFormatCapabilities,
   CanvasContextProps,
-  TextureFormat,
   Buffer,
   Texture,
   Framebuffer,
@@ -32,7 +32,8 @@ import type {
   // CommandEncoder,
   CommandEncoderProps,
   TransformFeedbackProps,
-  QuerySetProps
+  QuerySetProps,
+  Resource
 } from '@luma.gl/core';
 import {Device, CanvasContext, log} from '@luma.gl/core';
 import type {GLExtensions} from '@luma.gl/constants';
@@ -45,11 +46,7 @@ import {WebGLCanvasContext} from './webgl-canvas-context';
 import type {Spector} from '../context/debug/spector-types';
 import {initializeSpectorJS} from '../context/debug/spector';
 import {makeDebugContext} from '../context/debug/webgl-developer-tools';
-import {
-  isTextureFormatSupported,
-  isTextureFormatRenderable,
-  isTextureFormatFilterable
-} from './converters/texture-formats';
+import {getTextureFormatCapabilitiesWebGL} from './converters/webgl-texture-table';
 import {uid} from '../utils/uid';
 
 import {WEBGLBuffer} from './resources/webgl-buffer';
@@ -193,8 +190,6 @@ export class WebGLDevice extends Device {
       this.features.initializeFeatures();
     }
 
-    this.canvasContext.resize();
-
     // Install context state tracking
     const glState = new WebGLStateTracker(this.gl, {
       log: (...args: any[]) => log.log(1, ...args)()
@@ -221,18 +216,6 @@ export class WebGLDevice extends Device {
 
   get isLost(): boolean {
     return this.gl.isContextLost();
-  }
-
-  isTextureFormatSupported(format: TextureFormat): boolean {
-    return isTextureFormatSupported(this.gl, format, this._extensions);
-  }
-
-  isTextureFormatFilterable(format: TextureFormat): boolean {
-    return isTextureFormatFilterable(this.gl, format, this._extensions);
-  }
-
-  isTextureFormatRenderable(format: TextureFormat): boolean {
-    return isTextureFormatRenderable(this.gl, format, this._extensions);
   }
 
   // IMPLEMENTATION OF ABSTRACT DEVICE
@@ -377,6 +360,12 @@ export class WebGLDevice extends Device {
     resetGLParameters(this.gl);
   }
 
+  override _getDeviceSpecificTextureFormatCapabilities(
+    capabilities: DeviceTextureFormatCapabilities
+  ): DeviceTextureFormatCapabilities {
+    return getTextureFormatCapabilitiesWebGL(this.gl, capabilities, this._extensions);
+  }
+
   //
   // WebGL-only API (not part of `Device` API)
   //
@@ -411,16 +400,6 @@ export class WebGLDevice extends Device {
   popState(): void {
     const webglState = WebGLStateTracker.get(this.gl);
     webglState.pop();
-  }
-
-  /**
-   * Storing data on a special field on WebGLObjects makes that data visible in SPECTOR chrome debug extension
-   * luma.gl ids and props can be inspected
-   */
-  setSpectorMetadata(handle: unknown, props: Record<string, unknown>) {
-    // @ts-expect-error
-    // eslint-disable-next-line camelcase
-    handle.__SPECTOR_Metadata = props;
   }
 
   /**
@@ -492,6 +471,26 @@ export class WebGLDevice extends Device {
   getExtension(name: keyof GLExtensions): GLExtensions {
     getWebGLExtension(this.gl, name, this._extensions);
     return this._extensions;
+  }
+
+  // INTERNAL SUPPORT METHODS FOR WEBGL RESOURCES
+
+  /**
+   * Storing data on a special field on WebGLObjects makes that data visible in SPECTOR chrome debug extension
+   * luma.gl ids and props can be inspected
+   */
+  _setWebGLDebugMetadata(
+    handle: unknown,
+    resource: Resource<any>,
+    options: {spector: Record<string, unknown>}
+  ): void {
+    // @ts-expect-error
+    handle.luma = resource;
+
+    const spectorMetadata = {props: options.spector, id: options.spector.id};
+    // @ts-expect-error
+    // eslint-disable-next-line camelcase
+    handle.__SPECTOR_Metadata = spectorMetadata;
   }
 }
 

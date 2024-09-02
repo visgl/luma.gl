@@ -4,8 +4,8 @@
 
 // / <reference types="@webgpu/types" />
 
-import type {Texture, TextureFormat, CanvasContextProps} from '@luma.gl/core';
-import {CanvasContext, log} from '@luma.gl/core';
+import type {TextureFormat, DepthStencilTextureFormat, CanvasContextProps} from '@luma.gl/core';
+import {CanvasContext, Texture, log} from '@luma.gl/core';
 import {getWebGPUTextureFormat} from './helpers/convert-texture-format';
 import {WebGPUDevice} from './webgpu-device';
 import {WebGPUFramebuffer} from './resources/webgpu-framebuffer';
@@ -24,21 +24,25 @@ export class WebGPUCanvasContext extends CanvasContext {
   /** Default stencil format for depth textures */
   readonly depthStencilFormat: TextureFormat = 'depth24plus';
 
-  private depthStencilAttachment: Texture | null = null;
+  private depthStencilAttachment: WebGPUTexture | null = null;
+
+  get [Symbol.toStringTag](): string {
+    return 'WebGPUCanvasContext';
+  }
 
   constructor(device: WebGPUDevice, adapter: GPUAdapter, props: CanvasContextProps) {
     super(props);
     this.device = device;
-    // TODO - hack to trigger resize?
-    this.width = -1;
-    this.height = -1;
 
-    this._setAutoCreatedCanvasId(`${this.device.id}-canvas`);
     // @ts-ignore TODO - we don't handle OffscreenRenderingContext.
     this.gpuCanvasContext = this.canvas.getContext('webgpu');
     // TODO this has been replaced
     // this.format = this.gpuCanvasContext.getPreferredFormat(adapter);
     this.format = 'bgra8unorm';
+
+    // Base class constructor cannot access derived methods/fields, so we need to call these functions in the subclass constructor
+    this._setAutoCreatedCanvasId(`${this.device.id}-canvas`);
+    this.updateSize([this.drawingBufferWidth, this.drawingBufferHeight]);
   }
 
   /** Destroy any textures produced while configured and remove the context configuration. */
@@ -47,26 +51,31 @@ export class WebGPUCanvasContext extends CanvasContext {
   }
 
   /** Update framebuffer with properly resized "swap chain" texture views */
-  getCurrentFramebuffer(): WebGPUFramebuffer {
-    // Ensure the canvas context size is updated
-    this.update();
-
-    // Wrap the current canvas context texture in a luma.gl texture
-    // const currentColorAttachment = this.device.createTexture({
-    //   id: 'default-render-target',
-    //   handle: this.gpuCanvasContext.getCurrentTexture(),
-    //   format: this.format,
-    //   width: this.width,
-    //   height: this.height
-    // });
-
+  getCurrentFramebuffer(
+    options: {depthStencilFormat?: DepthStencilTextureFormat | false} = {
+      depthStencilFormat: 'depth24plus'
+    }
+  ): WebGPUFramebuffer {
     // Wrap the current canvas context texture in a luma.gl texture
     const currentColorAttachment = this.getCurrentTexture();
-    this.width = currentColorAttachment.width;
-    this.height = currentColorAttachment.height;
+    // TODO - temporary debug code
+    if (
+      currentColorAttachment.width !== this.drawingBufferWidth ||
+      currentColorAttachment.height !== this.drawingBufferHeight
+    ) {
+      const [oldWidth, oldHeight] = this.getDrawingBufferSize();
+      this.drawingBufferWidth = currentColorAttachment.width;
+      this.drawingBufferHeight = currentColorAttachment.height;
+      log.log(
+        1,
+        `${this}: Resized to compensate for initial canvas size mismatch ${oldWidth}x${oldHeight} => ${this.drawingBufferWidth}x${this.drawingBufferHeight}px`
+      )();
+    }
 
     // Resize the depth stencil attachment
-    this._createDepthStencilAttachment();
+    if (options?.depthStencilFormat) {
+      this._createDepthStencilAttachment(options?.depthStencilFormat);
+    }
 
     return new WebGPUFramebuffer(this.device, {
       colorAttachments: [currentColorAttachment],
@@ -75,44 +84,35 @@ export class WebGPUCanvasContext extends CanvasContext {
   }
 
   /** Resizes and updates render targets if necessary */
-  update() {
-    const [width, height] = this.getPixelSize();
-
-    const sizeChanged = width !== this.width || height !== this.height;
-
-    if (sizeChanged) {
-      this.width = width;
-      this.height = height;
-
-      if (this.depthStencilAttachment) {
-        this.depthStencilAttachment.destroy();
-        this.depthStencilAttachment = null;
-      }
-
-      // Reconfigure the canvas size.
-      // https://www.w3.org/TR/webgpu/#canvas-configuration
-      this.gpuCanvasContext.configure({
-        device: this.device.handle,
-        format: getWebGPUTextureFormat(this.format),
-        // Can be used to define e.g. -srgb views
-        // viewFormats: [...]
-        colorSpace: this.props.colorSpace,
-        alphaMode: this.props.alphaMode
-      });
-
-      log.log(1, `Resized to ${this.width}x${this.height}px`)();
+  updateSize(size: [newWidth: number, newHeight: number]): void {
+    if (this.depthStencilAttachment) {
+      this.depthStencilAttachment.destroy();
+      this.depthStencilAttachment = null;
     }
+
+    // Reconfigure the canvas size.
+    // https://www.w3.org/TR/webgpu/#canvas-configuration
+    this.gpuCanvasContext.configure({
+      device: this.device.handle,
+      format: getWebGPUTextureFormat(this.format),
+      // Can be used to define e.g. -srgb views
+      // viewFormats: [...]
+      colorSpace: this.props.colorSpace,
+      alphaMode: this.props.alphaMode
+    });
   }
 
   resize(options?: {width?: number; height?: number; useDevicePixels?: boolean | number}): void {
-    this.update();
-
     if (!this.device.handle) return;
+
+    if (this.props.autoResize) {
+      return;
+    }
 
     // Resize browser context .
     if (this.canvas) {
       const devicePixelRatio = this.getDevicePixelRatio(options?.useDevicePixels);
-      this.setDevicePixelRatio(devicePixelRatio, options);
+      this._setDevicePixelRatio(devicePixelRatio, options);
       return;
     }
   }
@@ -127,14 +127,14 @@ export class WebGPUCanvasContext extends CanvasContext {
   }
 
   /** We build render targets on demand (i.e. not when size changes but when about to render) */
-  _createDepthStencilAttachment() {
+  _createDepthStencilAttachment(depthStencilFormat: DepthStencilTextureFormat): WebGPUTexture {
     if (!this.depthStencilAttachment) {
       this.depthStencilAttachment = this.device.createTexture({
         id: `${this.id}#depth-stencil-texture`,
-        format: this.depthStencilFormat,
-        width: this.width,
-        height: this.height,
-        usage: GPUTextureUsage.RENDER_ATTACHMENT
+        usage: Texture.RENDER_ATTACHMENT,
+        format: depthStencilFormat,
+        width: this.drawingBufferWidth,
+        height: this.drawingBufferHeight
       });
     }
     return this.depthStencilAttachment;

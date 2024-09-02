@@ -197,7 +197,6 @@ test.skip('Framebuffer#getDefaultFramebuffer', (t) => {
 */
 
 /*
-import {TEXTURE_FORMATS} from '@luma.gl/webgl/texture-formats';
 
 const RGB_TO = {
   [GL.UNSIGNED_BYTE]: (r, g, b) => [r * 256, g * 256, b * 256],

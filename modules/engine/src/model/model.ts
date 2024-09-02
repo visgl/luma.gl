@@ -221,6 +221,14 @@ export class Model {
   /** "Time" of last draw. Monotonically increasing timestamp */
   _lastDrawTimestamp: number = -1;
 
+  get [Symbol.toStringTag](): string {
+    return 'Model';
+  }
+
+  toString(): string {
+    return `Model(${this.id})`;
+  }
+
   constructor(device: Device, props: ModelProps) {
     this.props = {...Model.defaultProps, ...props};
     props = this.props;
@@ -295,7 +303,8 @@ export class Model {
     this.pipeline = this._updatePipeline();
 
     this.vertexArray = device.createVertexArray({
-      renderPipeline: this.pipeline
+      shaderLayout: this.pipeline.shaderLayout,
+      bufferLayout: this.pipeline.bufferLayout
     });
 
     // Now we can apply geometry attributes
@@ -327,11 +336,11 @@ export class Model {
       this.setBindings(props.bindings);
     }
     if (props.uniforms) {
-      this.setUniforms(props.uniforms);
+      this.setUniformsWebGL(props.uniforms);
     }
     if (props.moduleSettings) {
       // log.warn('Model.props.moduleSettings is deprecated. Use Model.shaderInputs.setProps()')();
-      this.updateModuleSettings(props.moduleSettings);
+      this.updateModuleSettingsWebGL(props.moduleSettings);
     }
     if (props.transformFeedback) {
       this.transformFeedback = props.transformFeedback;
@@ -342,16 +351,19 @@ export class Model {
   }
 
   destroy(): void {
-    if (this._destroyed) return;
-    this.pipelineFactory.release(this.pipeline);
-    this.shaderFactory.release(this.pipeline.vs);
-    if (this.pipeline.fs) {
-      this.shaderFactory.release(this.pipeline.fs);
+    if (!this._destroyed) {
+      // Release pipeline before we destroy the shaders used by the pipeline
+      this.pipelineFactory.release(this.pipeline);
+      // Release the shaders
+      this.shaderFactory.release(this.pipeline.vs);
+      if (this.pipeline.fs) {
+        this.shaderFactory.release(this.pipeline.fs);
+      }
+      this._uniformStore.destroy();
+      // TODO - mark resource as managed and destroyIfManaged() ?
+      this._gpuGeometry?.destroy();
+      this._destroyed = true;
     }
-    this._uniformStore.destroy();
-    // TODO - mark resource as managed and destroyIfManaged() ?
-    this._gpuGeometry?.destroy();
-    this._destroyed = true;
   }
 
   // Draw call
@@ -380,10 +392,22 @@ export class Model {
   }
 
   draw(renderPass: RenderPass): boolean {
-    this.predraw();
+    const loadingBinding = this._areBindingsLoading();
+    if (loadingBinding) {
+      log.info(LOG_DRAW_PRIORITY, `>>> DRAWING ABORTED ${this.id}: ${loadingBinding} not loaded`)();
+      return false;
+    }
+
+    try {
+      renderPass.pushDebugGroup(`${this}.predraw(${renderPass})`);
+      this.predraw();
+    } finally {
+      renderPass.popDebugGroup();
+    }
 
     let drawSuccess: boolean;
     try {
+      renderPass.pushDebugGroup(`${this}.draw(${renderPass})`);
       this._logDrawCallStart();
 
       // Update the pipeline if invalidated
@@ -394,6 +418,7 @@ export class Model {
       // Set pipeline state, we may be sharing a pipeline so we need to set all state on every draw
       // Any caching needs to be done inside the pipeline functions
       // TODO this is a busy initialized check for all bindings every frame
+
       const syncBindings = this._getBindings();
       this.pipeline.setBindings(syncBindings, {
         disableWarnings: this.props.disableWarnings
@@ -422,6 +447,7 @@ export class Model {
         topology: this.topology
       });
     } finally {
+      renderPass.popDebugGroup();
       this._logDrawCallEnd();
     }
     this._logFramebuffer(renderPass);
@@ -488,7 +514,8 @@ export class Model {
     // vertex array needs to be updated if we update buffer layout,
     // but not if we update parameters
     this.vertexArray = this.device.createVertexArray({
-      renderPipeline: this.pipeline
+      shaderLayout: this.pipeline.shaderLayout,
+      bufferLayout: this.pipeline.bufferLayout
     });
 
     // Reapply geometry attributes to the new vertex array
@@ -656,7 +683,7 @@ export class Model {
    * @deprecated WebGL only, use uniform buffers for portability
    * @param uniforms
    */
-  setUniforms(uniforms: Record<string, UniformValue>): void {
+  setUniformsWebGL(uniforms: Record<string, UniformValue>): void {
     if (!isObjectEmpty(uniforms)) {
       this.pipeline.setUniformsWebGL(uniforms);
       Object.assign(this.uniforms, uniforms);
@@ -667,7 +694,7 @@ export class Model {
   /**
    * @deprecated Updates shader module settings (which results in uniforms being set)
    */
-  updateModuleSettings(props: Record<string, any>): void {
+  updateModuleSettingsWebGL(props: Record<string, any>): void {
     // log.warn('Model.updateModuleSettings is deprecated. Use Model.shaderInputs.setProps()')();
     const {bindings, uniforms} = splitUniformsAndBindings(this._getModuleUniforms(props));
     Object.assign(this.bindings, bindings);
@@ -677,19 +704,32 @@ export class Model {
 
   // Internal methods
 
-  /** Get texture / texture view from any async textures */
+  /** Check that bindings are loaded. Returns id of first binding that is still loading. */
+  _areBindingsLoading(): string | false {
+    for (const binding of Object.values(this.bindings)) {
+      if (binding instanceof AsyncTexture && !binding.isReady) {
+        return binding.id;
+      }
+    }
+    return false;
+  }
+
+  /** Extracts texture view from loaded async textures. Returns null if any textures have not yet been loaded. */
   _getBindings(): Record<string, Binding> {
-    // Extract actual textures from async textures. If not loaded, null
-    return Object.entries(this.bindings).reduce<Record<string, Binding>>((acc, [name, binding]) => {
+    const validBindings: Record<string, Binding> = {};
+
+    for (const [name, binding] of Object.entries(this.bindings)) {
       if (binding instanceof AsyncTexture) {
+        // Check that async textures are loaded
         if (binding.isReady) {
-          acc[name] = binding.texture;
+          validBindings[name] = binding.texture;
         }
       } else {
-        acc[name] = binding;
+        validBindings[name] = binding;
       }
-      return acc;
-    }, {});
+    }
+
+    return validBindings;
   }
 
   /** Get the timestamp of the latest updated bound GPU memory resource (buffer/texture). */

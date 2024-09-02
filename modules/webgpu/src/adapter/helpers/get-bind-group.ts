@@ -42,13 +42,14 @@ export function getBindGroup(
 
 export function getShaderLayoutBinding(
   shaderLayout: ComputeShaderLayout,
-  bindingName: string
+  bindingName: string,
+  options?: {ignoreWarnings?: boolean}
 ): BindingDeclaration | null {
   const bindingLayout = shaderLayout.bindings.find(
     binding =>
       binding.name === bindingName || `${binding.name}uniforms` === bindingName.toLocaleLowerCase()
   );
-  if (!bindingLayout) {
+  if (!bindingLayout && !options?.ignoreWarnings) {
     log.warn(`Binding ${bindingName} not set: Not found in shader layout.`)();
   }
   return bindingLayout || null;
@@ -65,16 +66,28 @@ function getBindGroupEntries(
   const entries: GPUBindGroupEntry[] = [];
 
   for (const [bindingName, value] of Object.entries(bindings)) {
-    const bindingLayout = getShaderLayoutBinding(shaderLayout, bindingName);
+    let bindingLayout = getShaderLayoutBinding(shaderLayout, bindingName);
     if (bindingLayout) {
       entries.push(getBindGroupEntry(value, bindingLayout.location));
+    }
+
+    // TODO - hack to automatically bind samplers to supplied texture default samplers
+    bindingLayout = getShaderLayoutBinding(shaderLayout, `${bindingName}Sampler`, {
+      ignoreWarnings: true
+    });
+    if (bindingLayout) {
+      entries.push(getBindGroupEntry(value, bindingLayout.location, {sampler: true}));
     }
   }
 
   return entries;
 }
 
-function getBindGroupEntry(binding: Binding, index: number): GPUBindGroupEntry {
+function getBindGroupEntry(
+  binding: Binding,
+  index: number,
+  options?: {sampler?: boolean}
+): GPUBindGroupEntry {
   if (binding instanceof Buffer) {
     return {
       binding: index,
@@ -89,6 +102,12 @@ function getBindGroupEntry(binding: Binding, index: number): GPUBindGroupEntry {
       resource: (binding as WebGPUSampler).handle
     };
   } else if (binding instanceof Texture) {
+    if (options?.sampler) {
+      return {
+        binding: index,
+        resource: (binding as WebGPUTexture).sampler.handle
+      };
+    }
     return {
       binding: index,
       resource: (binding as WebGPUTexture).handle.createView({label: 'bind-group-auto-created'})

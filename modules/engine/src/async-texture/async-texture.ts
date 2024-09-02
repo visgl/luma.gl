@@ -16,6 +16,7 @@ import type {
 } from '@luma.gl/core';
 
 import {loadImageBitmap} from '../application-utils/load-file';
+import {uid} from '../utils/uid';
 
 export type AsyncTextureProps = Omit<TextureProps, 'data'> & AsyncTextureDataProps;
 
@@ -54,6 +55,7 @@ type AsyncTextureData = AsyncTextureProps['data'];
  */
 export class AsyncTexture {
   readonly device: Device;
+  readonly id: string;
 
   // TODO - should we type these as possibly `null`? It will make usage harder?
   // @ts-expect-error
@@ -70,8 +72,18 @@ export class AsyncTexture {
   protected resolveReady: () => void = () => {};
   protected rejectReady: (error: Error) => void = () => {};
 
+  get [Symbol.toStringTag]() {
+    return 'AsyncTexture';
+  }
+
+  toString(): string {
+    return `AsyncTexture:"${this.id}"(${this.isReady ? 'ready' : 'loading'})`;
+  }
+
   constructor(device: Device, props: AsyncTextureProps) {
     this.device = device;
+    this.id = props.id || uid('async-texture');
+    // this.id = typeof props?.data === 'string' ? props.data.slice(-20) : uid('async-texture');
 
     // Signature: new AsyncTexture(device, {data: url})
     if (typeof props?.data === 'string' && props.dimension === '2d') {
