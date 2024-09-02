@@ -1,14 +1,78 @@
 # How Rendering Works
 
 :::info
-Applications will typically used the `Model` class in `@luma.gl/engine` module to issue draw calls.
-While the `Model` class handles some of the necessary setup, it is still useful to understand how
-rendering is done with the underlying `Renderpipeline`
+Note that the luma.gl documentation includes a series of tutorials that explain how to render with the luma.gl API.
 :::
 
-A major feature of any GPU API is the ability to issue GPU draw calls. luma.gl has been designed to offer developers full control over draw calls as outlined below.
+A major feature of any GPU API is the ability to issue GPU draw calls. 
 
-Note that the luma.gl documentation includes a series of tutorials that explain how to render with the luma.gl API.
+GPUs can draw into textures, or to the screen. In luma.gl
+
+## Setup
+
+To draw into a texture, the application needs to create 
+- A `Texture` that is the target of the draw call
+- A `Framebuffer` that references the texture being drawn into.
+- A `RenderPass` using the framebuffer. 
+
+If drawing to the screen, the application will instead need to create
+- A `CanvasContext` connected to a canvas that the GPU should draw into
+- A `Framebuffer` by calling `canvasContext.getCurrentFramebuffer()`.
+- A `RenderPass` using the framebuffer. 
+
+Finally, to perform that actual draw call, the application needs a 
+- A `RenderPipeline` using the shader code that will execute during the draw.
+
+_Note: setting up a "raw" `Renderpipeline` requires a substantial amount of boilerplace and setup. Instead most applications will typically use the `Model` class in `@luma.gl/engine` module to issue draw calls._
+
+
+### Creating a Texture
+
+To create a texture suitable as a simple render target, call `device.createTexture()` with no mipmaps and following sampler parameters:
+
+| Texture parameter | Value           |
+| ----------------- | --------------- |
+| `minFilter`       | `linear`        |
+| `magFilter`       | `linear`        |
+| `addressModeU`    | `clamp-to-edge` |
+| `addressModeV`    | `clamp-to-edge` |
+
+
+### Creating a Framebuffer
+
+To help organize the target texture(s), luma.gl provides a `Framebuffer` class. 
+A `Framebuffer` is a simple container object that holds textures that will be used as render targets for a `RenderPass`, containing
+- one or more color attachments
+- optionally, a depth, stencil or depth-stencil attachment 
+
+`Framebuffer` also provides a `resize` method makes it easy to efficiently resize all the attachments of a `Framebuffer` with a single method call.
+
+`device.createFramebuffer` constructor enables the creation of a framebuffer with all attachments in a single step. 
+
+When no attachments are provided during `Framebuffer` object creation, new resources are created and used as default attachments for enabled targets (color and depth).
+
+An application can render into an (HTML or offscreen) canvas by obtaining a
+`Framebuffer` object from a `CanvasContext` using `canvasContext.getDefaultFramebuffer()`.
+
+Alternatively an application can create custom framebuffers for rendering directly into textures.
+
+The application uses a `Framebuffer` by providing it as a parameter to `device.beginRenderPass()`.
+All operations on that `RenderPass` instance will render into that framebuffer.
+
+A `Framebuffer` is shallowly immutable (the list of attachments cannot be changed after creation),
+however a Framebuffer can be "resized".
+
+
+### Creating a CanvasContext
+
+While a `Device` can be used on its own to perform computations on the GPU,
+at least one `CanvasContext` is required for rendering to the screen.
+
+A `CanvasContext` holds a connection between the GPU `Device` and an HTML or offscreen `canvas` (`HTMLCanvasElement` (or `OffscreenCanvas`)_ into which it can render.
+
+The most important method is `CanvasContext.getCurrentFramebuffer()` that is used to obtain fresh `Framebuffer` every render frame. This framebuffer contains a special texture `colorAttachment` that draws into to the canvas "drawing buffer" which will then be copied to the screen when then render pass ends.
+
+While there are ways to obtain multiple `CanvasContext` instances on WebGPU, the recommended portable way (that also works on WebGL) is to create a "default canvas context" by supplying the `createCanvasContext` prop to your `luma.createDevice({..., createCanvasContext: true})` call. The created canvas contest is available via `device.getDefaultCanvasContext()`.
 
 ### Creating a RenderPipeline
 
@@ -20,16 +84,17 @@ const pipeline = device.createRenderPipeline({
 });
 ```
 
-Set or update uniforms, in this case world and projection matrices
+Set or update bindings
 
 ```typescript
-pipeline.setUniforms({
-  uMVMatrix: view,
-  uPMatrix: projection
-});
+pipeline.setBindings({...});
 ```
 
-### Drawing
+### Creating a Model
+
+See engine documentation.
+
+## Drawing
 
 Once all bindings have been set up, call `pipeline.draw()`
 
@@ -43,33 +108,11 @@ const vertexArray = device.createVertexArray();
 const success = pipeline.draw({vertexArray, ...});
 ```
 
-### Transform Feedback (WebGL)
-
-Creating a pipeline for transform feedback, specifying which varyings to use
-
-```typescript
-const pipeline = device.createRenderPipeline({vs, fs, varyings: ['gl_Position']});
-```
-
-
-```
-
-Set or update uniforms, in this case world and projection matrices
-
-```typescript
-pipeline.setUniforms({
-  uMVMatrix: view,
-  uPMatrix: projection
-});
-```
-
 Create a `VertexArray` to store buffer values for the vertices of a triangle and drawing
 
 ```typescript
 const pipeline = device.createRenderPipeline({vs, fs});
-
 const vertexArray = new VertexArray(gl, {pipeline});
-
 vertexArray.setAttributes({
   aVertexPosition: new Buffer(gl, {data: new Float32Array([0, 1, 0, -1, -1, 0, 1, -1, 0])})
 });
@@ -84,12 +127,6 @@ const pipeline = device.createRenderPipeline({vs, fs, varyings: ['gl_Position']}
 ```
 
 ## Rendering into a canvas
-
-To render to the screen requires rendering into a canvas, a special `Framebuffer` should be obtained from a 
-`CanvasContext` using `canvasContext.getDefaultFramebuffer()`.
-A device context `Framebuffer` and has a (single) special color attachment that is connected to the
-current swap chain buffer, and also a depth buffer, and is automatically resized to match the size of the canvas
-associated.
 
 To draw to the screen in luma.gl, simply create a `RenderPass` by calling 
 `device.beginRenderPass()` and start rendering. When done rendering, call 
@@ -110,9 +147,11 @@ For more detail. `device.canvasContext.getDefaultFramebuffer()` returns a specia
   ...
 ```
 
-## Clearing the screen
+## Clearing
 
-`Framebuffer` attachments are cleared by default when a RenderPass starts. Control is provided via the `RenderPassProps.clearColor` parameter, setting this will clear the attachments to the corresponding color. The default clear color is a fully transparent black `[0, 0, 0, 0]`. 
+Unless implementing special compositing techniques, applications usually want to clear the target texture before rendering.
+Clearing is performed when a `RenderPass` starts. `Framebuffer` attachments are cleared according to the `clearColor,clearDepth,clearStencil` `RenderPassProps`.
+`props.clearColor` will clear the color attachment using the supplied color. The default clear color is a fully transparent black `[0, 0, 0, 0]`. 
 
 ```typescript
   const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
@@ -121,7 +160,7 @@ For more detail. `device.canvasContext.getDefaultFramebuffer()` returns a specia
   device.submit();
 ```
 
-Depth and stencil buffers are also cleared to default values:
+Depth and stencil buffers should normally also be cleared to default values:
 
 ```typescript
   const renderPass = device.beginRenderPass({
@@ -133,53 +172,15 @@ Depth and stencil buffers are also cleared to default values:
   device.submit();
 ```
 
-Clearing can  be disabled by setting any of the clear properties to the string constant `'load'`. Instead of clearing before rendering, this loads the previous contents of the framebuffer. Clearing should generally be expected to be more performant.
+Clearing can be disabled by setting any of the clear properties to the string constant `'false'`. Instead of clearing before rendering, this loads the previous contents of the framebuffer.
+
+_Note: Clearing is normally be expected to be more performant than not clearing, as the latter requires the GPU to read in the previous content of texture while rendering._
 
 ## Offscreen rendering
 
-While is possible to render into an `OffscreenCanvas`, offscreen rendering usually refers to 
-rendering into one or more application created `Texture`s. 
+It is possible to render into an `OffscreenCanvas`, enabling worker thread use cases etc.
 
-To help organize and resize these textures, luma.gl provides a `Framebuffer` class. 
-A `Framebuffer` is a simple container object that holds textures that will be used as render targets for a `RenderPass`, containing
-- one or more color attachments
-- optionally, a depth, stencil or depth-stencil attachment 
-
-`Framebuffer` also provides a `resize` method makes it easy to efficiently resize all the attachments of a `Framebuffer` with a single method call.
-
-`device.createFramebuffer` constructor enables the creation of a framebuffer with all attachments in a single step. 
-
-When no attachments are provided during `Framebuffer` object creation, new resources are created and used as default attachments for enabled targets (color and depth).
-
-For color, new `Texture2D` object is created with no mipmaps and following filtering parameters are set.
-
-| Texture parameter | Value           |
-| ----------------- | --------------- |
-| `minFilter`       | `linear`        |
-| `magFilter`       | `linear`        |
-| `addressModeU`    | `clamp-to-edge` |
-| `addressModeV`    | `clamp-to-edge` |
-
-
-An application can render into an (HTML or offscreen) canvas by obtaining a
-`Framebuffer` object from a `CanvasContext` using `canvasContext.getDefaultFramebuffer()`.
-
-Alternatively an application can create custom framebuffers for rendering directly into textures.
-
-The application uses a `Framebuffer` by providing it as a parameter to `device.beginRenderPass()`.
-All operations on that `RenderPass` instance will render into that framebuffer.
-
-A `Framebuffer` is shallowly immutable (the list of attachments cannot be changed after creation),
-however a Framebuffer can be "resized".
-
-## Framebuffer Attachments
-
-A `Framebuffer` holds:
-
-- an array of "color attachments" (often just one) that store data (one or more color `Texture`s)
-- an optional depth, stencil or combined depth-stencil `Texture`).
-
-All attachments must be in the form of `Texture`s.
+_Note: offscreen rendering sometimes refers to rendering into one or more application created `Texture`s._
 
 ## Resizing Framebuffers
 
@@ -230,15 +231,7 @@ model2.draw({
 });
 ```
 
-
-Clearing a framebuffer
-
-```typescript
-framebuffer.clear();
-framebuffer.clear({color: [0, 0, 0, 0], depth: 1, stencil: 0});
-```
-
-Binding a framebuffer for multiple render calls
+### Binding a framebuffer for multiple render calls
 
 ```typescript
 const framebuffer1 = device.createFramebuffer({...});
@@ -255,11 +248,15 @@ renderPass2.endPass();
 
 ### Using Multiple Render Targets
 
-The colorAttachments can be referenced in the shaders
+:::caution
+Multiple render target support is still experimental
+:::
+
+Multiple textures from the `framebuffer.colorAttachments` array can be referenced in shaders
 
 Writing to multiple framebuffer attachments in GLSL fragment shader
 
-```
+```typescript
 #extension GL_EXT_draw_buffers : require
 precision highp float;
 void main(void) {
