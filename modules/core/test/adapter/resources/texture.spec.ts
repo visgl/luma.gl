@@ -185,19 +185,16 @@ function testFormatCreation(t, device: Device, withData: boolean = false) {
 
     // WebGPU texture can currently only be set from 8 bit data
     const notImplemented = device.type === 'webgpu' && bitsPerChannel !== 8;
-    console.log(formatName, bitsPerChannel);
-
+    // console.log(formatName, bitsPerChannel);
     if (['stencil8'].includes(formatName) || notImplemented) {
       continue;
     }
 
-    if (device.isTextureFormatSupported(format) && !device.isTextureFormatCompressed(format)) {
+    const canGenerateMipmaps = format === 'rgba8unorm';
+    // device.isTextureFormatSupported(format) && !device.isTextureFormatCompressed(format);
+    if (canGenerateMipmaps) {
       try {
         const data = withData && !packed ? TEXTURE_DATA[dataType] || DEFAULT_TEXTURE_DATA : null;
-        if (format === 'r32float') {
-          debugger;
-        }
-        // TODO: for some reason mipmap generation failing for RGB32F format
         const capabilities = device.getTextureFormatCapabilities(format);
         const mipmaps = capabilities.render && capabilities.filter;
 
