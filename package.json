@@ -21,7 +21,7 @@
     "fs": false
   },
   "scripts": {
-    "bootstrap": "yarn && ocular-bootstrap && npm run build",
+    "bootstrap": "yarn && ocular-bootstrap && yarn build",
     "start": "open https://luma.gl/docs/getting-started",
     "build": "ocular-clean && (cd modules/constants && yarn pre-build) && ocular-build",
     "lint": "ocular-lint",
