@@ -75,13 +75,7 @@ export type {GouraudMaterialProps} from './modules/lighting/gouraud-material/gou
 export {gouraudMaterial} from './modules/lighting/gouraud-material/gouraud-material';
 export type {PhongMaterialProps} from './modules/lighting/phong-material/phong-material';
 export {phongMaterial} from './modules/lighting/phong-material/phong-material';
-export type {
-  PBRMaterialBindings,
-  PBRMaterialProps,
-  PBRMaterialUniforms
-} from './modules/lighting/pbr-material/pbr-material';
-export type {PBRProjectionProps} from './modules/lighting/pbr-material/pbr-projection';
-
+// export type {PBRMaterialSettings, PBRMaterialUniforms} from './modules/lighting/pbr-material/pbr';
 export {pbrMaterial} from './modules/lighting/pbr-material/pbr-material';
 
 // POST PROCESSING / SHADER PASS MODULES

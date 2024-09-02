@@ -59,4 +59,5 @@ vec3 lighting_getLightColor(vec3 surfaceColor, vec3 cameraPosition, vec3 positio
   
   return lightColor;
 }
+
 `;

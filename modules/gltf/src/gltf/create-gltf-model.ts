@@ -1,8 +1,7 @@
 import {Device, RenderPipelineParameters, log} from '@luma.gl/core';
-import {pbrMaterial} from '@luma.gl/shadertools';
+import {pbr} from '@luma.gl/shadertools';
 import {Geometry, Model, ModelNode, ModelProps} from '@luma.gl/engine';
 import {ParsePBRMaterialOptions, parsePBRMaterial} from '../pbr/parse-pbr-material';
-import {ShaderModule} from '@luma.gl/shadertools';
 
 // TODO rename attributes to POSITION/NORMAL etc
 // See gpu-geometry.ts: getAttributeBuffersFromGeometry()
@@ -49,7 +48,7 @@ const vs = `
     #endif
 
     pbr_setPositionNormalTangentUV(positions, _NORMAL, _TANGENT, _TEXCOORD_0);
-    gl_Position = pbrProjection.modelViewProjectionMatrix * positions;
+    gl_Position = u_MVPMatrix * positions;
   }
 `;
 
@@ -101,26 +100,18 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
     geometry,
     topology: geometry.topology,
     vertexCount,
-    modules: [pbrMaterial as unknown as ShaderModule],
+    modules: [pbr],
     vs: addVersionToShader(device, vs),
     fs: addVersionToShader(device, fs),
-    // TODO can this be removed? Does deck need it?
     ...modelOptions,
 
+    bindings: {...parsedMaterial.bindings, ...modelOptions.bindings},
     defines: {...parsedMaterial.defines, ...modelOptions.defines},
-    parameters: {...parameters, ...parsedMaterial.parameters, ...modelOptions.parameters}
+    parameters: {...parameters, ...parsedMaterial.parameters, ...modelOptions.parameters},
+    uniforms: {...parsedMaterial.uniforms, ...modelOptions.uniforms}
   };
 
   const model = new Model(device, modelProps);
-
-  const {camera, ...pbrMaterialProps} = {
-    ...parsedMaterial.uniforms,
-    ...modelOptions.uniforms,
-    ...parsedMaterial.bindings,
-    ...modelOptions.bindings
-  };
-
-  model.shaderInputs.setProps({pbrMaterial: pbrMaterialProps, pbrProjection: {camera}});
   return new ModelNode({managedResources, model});
 }
 
