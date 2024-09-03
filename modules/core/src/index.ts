@@ -185,4 +185,7 @@ export {BufferLayoutHelper as _BufferLayoutHelper} from './adapter-utils/buffer-
 export {getAttributeInfosFromLayouts} from './adapter-utils/get-attribute-from-layouts';
 
 // TEST EXPORTS
-export {TEXTURE_FORMAT_TABLE as TEXTURE_FORMATS} from './gpu-type-utils/texture-format-table';
+export {
+  getTextureFormatDefinition as getTextureFormatDefinition_,
+  getTextureFormatTable as getTextureFormatTable_
+} from './gpu-type-utils/texture-format-table';
