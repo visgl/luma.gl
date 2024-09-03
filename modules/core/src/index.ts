@@ -186,6 +186,6 @@ export {getAttributeInfosFromLayouts} from './adapter-utils/get-attribute-from-l
 
 // TEST EXPORTS
 export {
-  getTextureFormatDefinition as getTextureFormatDefinition_,
-  getTextureFormatTable as getTextureFormatTable_
+  getTextureFormatDefinition as _getTextureFormatDefinition,
+  getTextureFormatTable as _getTextureFormatTable
 } from './gpu-type-utils/texture-format-table';
