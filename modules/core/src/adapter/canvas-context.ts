@@ -7,7 +7,7 @@ import type {Device} from './device';
 import type {Framebuffer} from './resources/framebuffer';
 import {log} from '../utils/log';
 import {uid} from '../utils/uid';
-import type {TextureFormat, DepthStencilTextureFormat} from '../gpu-type-utils/texture-formats';
+import type {DepthStencilTextureFormat} from '../gpu-type-utils/texture-formats';
 
 /** Properties for a CanvasContext */
 export type CanvasContextProps = {
@@ -44,7 +44,7 @@ export abstract class CanvasContext {
   static defaultProps: Required<CanvasContextProps> = {
     id: undefined!,
     canvas: null,
-    width: 800, // width are height are only used by headless gl
+    width: 800,
     height: 600,
     useDevicePixels: true,
     autoResize: true,
@@ -55,17 +55,15 @@ export abstract class CanvasContext {
   };
 
   abstract readonly device: Device;
+  abstract readonly handle: unknown;
   readonly id: string;
+
+
   readonly props: Required<CanvasContextProps>;
   readonly canvas: HTMLCanvasElement | OffscreenCanvas;
   readonly htmlCanvas?: HTMLCanvasElement;
   readonly offscreenCanvas?: OffscreenCanvas;
   readonly type: 'html-canvas' | 'offscreen-canvas' | 'node';
-
-  /** Format of returned textures: "bgra8unorm", "rgba8unorm" */
-  abstract readonly format: TextureFormat;
-  /** Default stencil format for depth textures */
-  abstract readonly depthStencilFormat: TextureFormat;
 
   protected _initializedResolvers = withResolvers<void>();
 

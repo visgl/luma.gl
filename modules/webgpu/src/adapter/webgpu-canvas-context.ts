@@ -4,9 +4,8 @@
 
 // / <reference types="@webgpu/types" />
 
-import type {TextureFormat, DepthStencilTextureFormat, CanvasContextProps} from '@luma.gl/core';
+import type {DepthStencilTextureFormat, CanvasContextProps} from '@luma.gl/core';
 import {CanvasContext, Texture, log} from '@luma.gl/core';
-import {getWebGPUTextureFormat} from './helpers/convert-texture-format';
 import {WebGPUDevice} from './webgpu-device';
 import {WebGPUFramebuffer} from './resources/webgpu-framebuffer';
 import {WebGPUTexture} from './resources/webgpu-texture';
@@ -18,12 +17,8 @@ import {WebGPUTexture} from './resources/webgpu-texture';
  */
 export class WebGPUCanvasContext extends CanvasContext {
   readonly device: WebGPUDevice;
-  readonly gpuCanvasContext: GPUCanvasContext;
-  /** Format of returned textures: "bgra8unorm", "rgba8unorm", "rgba16float". */
-  readonly format: TextureFormat = navigator.gpu.getPreferredCanvasFormat() as TextureFormat;
-  /** Default stencil format for depth textures */
-  readonly depthStencilFormat: TextureFormat = 'depth24plus';
-
+  readonly handle: GPUCanvasContext;
+  
   private depthStencilAttachment: WebGPUTexture | null = null;
 
   get [Symbol.toStringTag](): string {
@@ -34,12 +29,6 @@ export class WebGPUCanvasContext extends CanvasContext {
     super(props);
     this.device = device;
 
-    // @ts-ignore TODO - we don't handle OffscreenRenderingContext.
-    this.gpuCanvasContext = this.canvas.getContext('webgpu');
-    // TODO this has been replaced
-    // this.format = this.gpuCanvasContext.getPreferredFormat(adapter);
-    this.format = 'bgra8unorm';
-
     // Base class constructor cannot access derived methods/fields, so we need to call these functions in the subclass constructor
     this._setAutoCreatedCanvasId(`${this.device.id}-canvas`);
     this.updateSize([this.drawingBufferWidth, this.drawingBufferHeight]);
@@ -47,7 +36,7 @@ export class WebGPUCanvasContext extends CanvasContext {
 
   /** Destroy any textures produced while configured and remove the context configuration. */
   destroy(): void {
-    this.gpuCanvasContext.unconfigure();
+    this.handle.unconfigure();
   }
 
   /** Update framebuffer with properly resized "swap chain" texture views */
@@ -92,9 +81,9 @@ export class WebGPUCanvasContext extends CanvasContext {
 
     // Reconfigure the canvas size.
     // https://www.w3.org/TR/webgpu/#canvas-configuration
-    this.gpuCanvasContext.configure({
+    this.handle.configure({
       device: this.device.handle,
-      format: getWebGPUTextureFormat(this.format),
+      format: this.device.preferredColorFormat,
       // Can be used to define e.g. -srgb views
       // viewFormats: [...]
       colorSpace: this.props.colorSpace,
@@ -121,8 +110,8 @@ export class WebGPUCanvasContext extends CanvasContext {
   getCurrentTexture(): WebGPUTexture {
     return this.device.createTexture({
       id: `${this.id}#color-texture`,
-      handle: this.gpuCanvasContext.getCurrentTexture(),
-      format: this.format
+      handle: this.handle.getCurrentTexture(),
+      format: this.device.preferredColorFormat
     });
   }
 

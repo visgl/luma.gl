@@ -166,33 +166,43 @@ export class WebGPURenderPipeline extends RenderPipeline {
       buffers: getVertexBufferLayout(this.shaderLayout, this.props.bufferLayout)
     };
 
+    // Populate color targets
+    // TODO - at the moment blend and write mask are only set on the first target
+    const targets: (GPUColorTargetState | null)[] = [];
+    if (this.props.colorAttachmentFormats) {
+      for (const format of this.props.colorAttachmentFormats) {
+        targets.push(format ? {format: getWebGPUTextureFormat(format)} : null);
+      }
+    } else {
+      targets.push({format: getWebGPUTextureFormat(this.device.preferredColorFormat)});
+    }
+
     // Set up the fragment stage
     const fragment: GPUFragmentState = {
       module: (this.props.fs as WebGPUShader).handle,
       entryPoint: this.props.fragmentEntryPoint || 'main',
-      targets: [
-        {
-          format: getWebGPUTextureFormat(this.device.getDefaultCanvasContext().format)
-        }
-      ]
+      targets
     };
-
-    const depthStencil: GPUDepthStencilState | undefined = this.props.parameters.depthWriteEnabled
-      ? {
-          format: getWebGPUTextureFormat(this.device.getDefaultCanvasContext().depthStencilFormat)
-        }
-      : undefined;
 
     // Create a partially populated descriptor
     const descriptor: GPURenderPipelineDescriptor = {
       vertex,
       fragment,
-      depthStencil,
       primitive: {
         topology: this.props.topology
       },
       layout: 'auto'
     };
+
+    // Set depth format if required, defaulting to the preferred depth format
+    const depthFormat = 
+      this.props.depthStencilAttachmentFormat || this.device.preferredDepthFormat;
+      
+    if (this.props.parameters.depthWriteEnabled) {
+      descriptor.depthStencil = {
+        format: getWebGPUTextureFormat(depthFormat)
+      };
+    }
 
     // Set parameters on the descriptor
     applyParametersToRenderPipelineDescriptor(descriptor, this.props.parameters);

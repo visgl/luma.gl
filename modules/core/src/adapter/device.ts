@@ -314,8 +314,8 @@ export abstract class Device {
     // Callbacks
     onError: (error: Error) => log.error(error.message)(),
     onResize: (context: CanvasContext, info: {oldPixelSize: [number, number]}) => {
-      const [prevWidth, prevHeight] = info.oldPixelSize;
       const [width, height] = context.getPixelSize();
+      const [prevWidth, prevHeight] = info.oldPixelSize;
       log.log(1, `${context} Resized ${prevWidth}x${prevHeight} => ${width}x${height}px`)();
     },
     onVisibilityChange: (context: CanvasContext) =>
@@ -361,6 +361,8 @@ export abstract class Device {
   readonly id: string;
   /** type of this device */
   abstract readonly type: 'webgl' | 'webgpu' | 'unknown';
+  abstract readonly handle: unknown;
+  
   /** A copy of the device props  */
   readonly props: Required<DeviceProps>;
   /** Available for the application to store data on the device */
@@ -383,6 +385,11 @@ export abstract class Device {
   abstract features: DeviceFeatures;
   /** WebGPU style device limits */
   abstract get limits(): DeviceLimits;
+
+  /** Optimal TextureFormat for displaying 8-bit depth, standard dynamic range content on this system. */
+  abstract preferredColorFormat: 'rgba8unorm' | 'bgra8unorm';
+  /** Default depth format used on this system */
+  abstract preferredDepthFormat: 'depth16' | 'depth24plus' | 'depth32float';
 
   /** Determines what operations are supported on a texture format, checking against supported device features */
   getTextureFormatCapabilities(format: TextureFormat): DeviceTextureFormatCapabilities {
