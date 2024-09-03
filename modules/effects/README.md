@@ -1,5 +1,5 @@
-# @luma.gl/shadertools
+# @luma.gl/effects
 
-This is the shader module system module for luma.gl.
+A set of ShaderPasses implementing post processing effects for luma.gl
 
 See [luma.gl](http://luma.gl) for documentation.
