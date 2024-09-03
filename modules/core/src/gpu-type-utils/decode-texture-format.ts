@@ -7,7 +7,7 @@ import {VertexType} from './vertex-formats';
 import {decodeVertexType} from './decode-data-type';
 import {TextureFormatInfo} from './texture-format-info';
 
-import {TEXTURE_FORMAT_TABLE} from './texture-format-table';
+import {getTextureFormatDefinition} from './texture-format-table';
 
 // prettier-ignore
 const COMPRESSED_TEXTURE_FORMAT_PREFIXES = [
@@ -96,16 +96,13 @@ export function decodeTextureFormat(format: TextureFormat): TextureFormatInfo {
 
 /** Decode texture format info from the table */
 function decodeTextureFormatUsingTable(format: TextureFormat): TextureFormatInfo {
-  const info = TEXTURE_FORMAT_TABLE[format];
-  if (!info) {
-    throw new Error(`Unknown texture format ${format}`);
-  }
+  const info = getTextureFormatDefinition(format);
 
   const bytesPerPixel = info.bytesPerPixel || 1;
   const bitsPerChannel = info.bitsPerChannel || [8, 8, 8, 8];
   delete info.bitsPerChannel;
   delete info.bytesPerPixel;
-  delete info.create;
+  delete info.f;
   delete info.render;
   delete info.filter;
   delete info.blend;

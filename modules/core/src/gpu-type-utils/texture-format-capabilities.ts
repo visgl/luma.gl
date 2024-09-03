@@ -6,7 +6,7 @@ import type {TextureFormat} from './texture-formats';
 import type {TextureFeature} from './texture-features';
 import {decodeTextureFormat} from './decode-texture-format';
 
-import {TEXTURE_FORMAT_TABLE} from './texture-format-table';
+import {getTextureFormatDefinition} from './texture-format-table';
 
 /**
  * Texture format capabilities.
@@ -27,14 +27,11 @@ export type TextureFormatCapabilities = {
 };
 
 export function getTextureFormatCapabilities(format: TextureFormat): TextureFormatCapabilities {
-  const info = TEXTURE_FORMAT_TABLE[format];
-  if (!info) {
-    throw new Error(`Unknown texture format ${format}`);
-  }
+  const info = getTextureFormatDefinition(format);
 
   const formatCapabilities: Required<TextureFormatCapabilities> = {
     format,
-    create: info.create ?? true,
+    create: info.f ?? true,
     render: info.render ?? true,
     filter: info.filter ?? true,
     blend: info.blend ?? true,

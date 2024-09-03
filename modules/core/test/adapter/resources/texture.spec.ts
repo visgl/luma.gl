@@ -10,7 +10,7 @@ import {Device, Texture, TextureFormat, decodeTextureFormat, VertexType} from '@
 import {GL} from '@luma.gl/constants';
 import {WebGLDevice} from '@luma.gl/webgl';
 
-import {TEXTURE_FORMATS, getTextureFormatWebGL} from '@luma.gl/core';
+import {_getTextureFormatTable, getTextureFormatWebGL} from '@luma.gl/core';
 import {SAMPLER_PARAMETERS} from './sampler.spec';
 
 import {WEBGLTexture} from '@luma.gl/webgl/adapter/resources/webgl-texture';
@@ -122,7 +122,7 @@ test('Texture#depth/stencil formats', async t => {
 
 test('Texture#format simple creation', async t => {
   for (const device of await getTestDevices()) {
-    for (const [formatName, formatInfo] of Object.entries(TEXTURE_FORMATS)) {
+    for (const [formatName, formatInfo] of Object.entries(_getTextureFormatTable)) {
       if (['stencil8'].includes(formatName)) {
         continue;
       }
@@ -177,7 +177,7 @@ const TEXTURE_DATA: Record<VertexType, any> = {
 // };
 
 function testFormatCreation(t, device: Device, withData: boolean = false) {
-  for (const [formatName, formatInfo] of Object.entries(TEXTURE_FORMATS)) {
+  for (const [formatName, formatInfo] of Object.entries(_getTextureFormatTable)) {
     const format = formatName as TextureFormat;
 
     const decodedFormat = decodeTextureFormat(formatName);
