@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {_warp as warp} from '@luma.gl/shadertools';
+import {_warp as warp} from '@luma.gl/effects';
 import test from 'tape-promise/tape';
 
 test('warp#build', t => {
