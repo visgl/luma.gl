@@ -1011,6 +1011,18 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@luma.gl/effects@workspace:modules/effects":
+  version: 0.0.0-use.local
+  resolution: "@luma.gl/effects@workspace:modules/effects"
+  dependencies:
+    "@math.gl/core": "npm:4.1.0-alpha.3"
+    "@math.gl/types": "npm:4.1.0-alpha.3"
+    wgsl_reflect: "npm:^1.0.1"
+  peerDependencies:
+    "@luma.gl/shadertools": 9.1.0-alpha.19
+  languageName: unknown
+  linkType: soft
+
 "@luma.gl/engine@workspace:modules/engine":
   version: 0.0.0-use.local
   resolution: "@luma.gl/engine@workspace:modules/engine"
