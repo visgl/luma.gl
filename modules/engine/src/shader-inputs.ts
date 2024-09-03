@@ -24,8 +24,7 @@ export class ShaderInputs<
    * The map of modules
    * @todo should should this include the resolved dependencies?
    */
-  // @ts-expect-error Fix typings
-  modules: Readonly<{[P in keyof ShaderPropsT]: ShaderModule<ShaderPropsT[P]>}>;
+  modules: Readonly<{[P in keyof ShaderPropsT]: ShaderModule<Record<string, any>>}>;
 
   /** Stores the uniform values for each module */
   moduleUniforms: Record<keyof ShaderPropsT, Record<string, UniformValue>>;
@@ -38,8 +37,7 @@ export class ShaderInputs<
    * Create a new UniformStore instance
    * @param modules
    */
-  // @ts-expect-error Fix typings
-  constructor(modules: {[P in keyof ShaderPropsT]?: ShaderModule<ShaderPropsT[P], any>}) {
+  constructor(modules: {[P in keyof ShaderPropsT]?: ShaderModule<Record<string, any>, any>}) {
     // Extract modules with dependencies
     const resolvedModules = getShaderModuleDependencies(
       Object.values(modules).filter(module => module.dependencies)
@@ -52,8 +50,7 @@ export class ShaderInputs<
     log.log(1, 'Creating ShaderInputs with modules', Object.keys(modules))();
 
     // Store the module definitions and create storage for uniform values and binding values, per module
-    // @ts-expect-error Fix typings
-    this.modules = modules as {[P in keyof ShaderPropsT]: ShaderModule<ShaderPropsT[P]>};
+    this.modules = modules as {[P in keyof ShaderPropsT]: ShaderModule<Record<string, any>>};
     this.moduleUniforms = {} as Record<keyof ShaderPropsT, Record<string, UniformValue>>;
     this.moduleBindings = {} as Record<keyof ShaderPropsT, Record<string, Binding>>;
 
@@ -72,7 +69,7 @@ export class ShaderInputs<
   /**
    * Set module props
    */
-  setProps(props: Partial<{[P in keyof ShaderPropsT]?: Partial<ShaderPropsT[P]>}>): void {
+  setProps(props: Partial<{[P in keyof ShaderPropsT]?: Partial<Record<string, any>>}>): void {
     for (const name of Object.keys(props)) {
       const moduleName = name as keyof ShaderPropsT;
       const moduleProps = props[moduleName] || {};
