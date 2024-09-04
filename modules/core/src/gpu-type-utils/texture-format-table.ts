@@ -117,7 +117,7 @@ const TEXTURE_FORMAT_TABLE: Readonly<Record<TextureFormat, TextureFormatDefiniti
   'rgb9e5ufloat': {channels: 'rgb', packed: true, render: rgb9e5ufloat_renderable}, // , filter: true},
   'rg11b10ufloat': {channels: 'rgb', bitsPerChannel: [11, 11, 10, 0], packed: true, p: 1,render: float32_renderable},
   'rgb10a2unorm': {channels: 'rgba',  bitsPerChannel: [10, 10, 10, 2], packed: true, p: 1},
-  'rgb10a2uint-webgl': {channels: 'rgba', bitsPerChannel: [10, 10, 10, 2], packed: true, p: 1, wgpu: false},
+  'rgb10a2uint': {channels: 'rgba',  bitsPerChannel: [10, 10, 10, 2], packed: true, p: 1},
 
   // 48-bit formats
   'rgb16unorm-webgl': {f: norm16_renderable}, // rgb not renderable
