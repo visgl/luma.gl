@@ -18,7 +18,7 @@ import {WebGPUTexture} from './resources/webgpu-texture';
 export class WebGPUCanvasContext extends CanvasContext {
   readonly device: WebGPUDevice;
   readonly handle: GPUCanvasContext;
-  
+
   private depthStencilAttachment: WebGPUTexture | null = null;
 
   get [Symbol.toStringTag](): string {

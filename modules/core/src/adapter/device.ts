@@ -362,7 +362,7 @@ export abstract class Device {
   /** type of this device */
   abstract readonly type: 'webgl' | 'webgpu' | 'unknown';
   abstract readonly handle: unknown;
-  
+
   /** A copy of the device props  */
   readonly props: Required<DeviceProps>;
   /** Available for the application to store data on the device */

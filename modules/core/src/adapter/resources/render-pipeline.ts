@@ -7,13 +7,15 @@ import type {UniformValue} from '../types/uniforms';
 import type {PrimitiveTopology, RenderPipelineParameters} from '../types/parameters';
 import type {ShaderLayout, Binding} from '../types/shader-layout';
 import type {BufferLayout} from '../types/buffer-layout';
-import type {ColorTextureFormat, DepthStencilTextureFormat} from '@luma.gl/core/gpu-type-utils/texture-formats';
+import type {
+  ColorTextureFormat,
+  DepthStencilTextureFormat
+} from '@luma.gl/core/gpu-type-utils/texture-formats';
 import type {Shader} from './shader';
 import type {RenderPass} from './render-pass';
 import {Resource, ResourceProps} from './resource';
 import {VertexArray} from './vertex-array';
 import {TransformFeedback} from './transform-feedback';
-
 
 export type RenderPipelineProps = ResourceProps & {
   // Shaders and shader layout

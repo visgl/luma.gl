@@ -58,7 +58,6 @@ export abstract class CanvasContext {
   abstract readonly handle: unknown;
   readonly id: string;
 
-
   readonly props: Required<CanvasContextProps>;
   readonly canvas: HTMLCanvasElement | OffscreenCanvas;
   readonly htmlCanvas?: HTMLCanvasElement;
