@@ -26,14 +26,6 @@ export type ComputePipelineProps = ResourceProps & {
  * A compiled and linked shader program for compute
  */
 export abstract class ComputePipeline extends Resource<ComputePipelineProps> {
-  static override defaultProps: Required<ComputePipelineProps> = {
-    ...Resource.defaultProps,
-    shader: undefined!,
-    entryPoint: undefined!,
-    constants: {},
-    shaderLayout: undefined!
-  };
-
   override get [Symbol.toStringTag](): string {
     return 'ComputePipeline';
   }
@@ -52,4 +44,12 @@ export abstract class ComputePipeline extends Resource<ComputePipelineProps> {
    * @todo Do we want to expose BindGroups in the API and remove this?
    */
   abstract setBindings(bindings: Record<string, Binding>): void;
+
+  static override defaultProps: Required<ComputePipelineProps> = {
+    ...Resource.defaultProps,
+    shader: undefined!,
+    entryPoint: undefined!,
+    constants: {},
+    shaderLayout: undefined!
+  };
 }

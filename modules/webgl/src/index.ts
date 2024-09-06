@@ -37,10 +37,6 @@ export {WEBGLVertexArray} from './adapter/resources/webgl-vertex-array';
 // WebGL adapter classes
 export {WEBGLTransformFeedback} from './adapter/resources/webgl-transform-feedback';
 
-// WebGL adapter classes
-export {Accessor} from './deprecated/accessor';
-export type {AccessorObject} from './types';
-
 // Unified parameter API
 
 export {setDeviceParameters, withDeviceParameters} from './adapter/converters/device-parameters';

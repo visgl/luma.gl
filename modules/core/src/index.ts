@@ -81,20 +81,8 @@ export {UniformStore} from './portable/uniform-store';
 // API TYPES
 export type {CompilerMessage} from './adapter/types/compiler-message';
 
-export type {
-  TextureCompressionFormat,
-  TextureCubeFace,
-  TextureLevelData,
-  ExternalImage,
-  TextureData,
-  Texture1DData,
-  Texture2DData,
-  Texture3DData,
-  TextureCubeData,
-  TextureArrayData,
-  TextureCubeArrayData,
-  CopyExternalImageOptions
-} from './adapter/resources/texture';
+export type {ExternalImage} from './image-utils/image-types';
+export type {CopyExternalImageOptions, CopyImageDataOptions} from './adapter/resources/texture';
 
 export type {Parameters, PrimitiveTopology, IndexFormat} from './adapter/types/parameters';
 
@@ -147,7 +135,8 @@ export type {
 export type {
   TextureFormat,
   ColorTextureFormat,
-  DepthStencilTextureFormat
+  DepthStencilTextureFormat,
+  TextureCompression
 } from './gpu-type-utils/texture-formats';
 export type {TextureFormatInfo} from './gpu-type-utils/texture-format-info';
 export type {TextureFormatCapabilities} from './gpu-type-utils/texture-format-capabilities';

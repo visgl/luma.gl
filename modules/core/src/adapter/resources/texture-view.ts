@@ -27,17 +27,6 @@ export type TextureViewProps = ResourceProps & {
 
 /** Immutable TextureView object */
 export abstract class TextureView extends Resource<TextureViewProps> {
-  static override defaultProps: Required<TextureViewProps> = {
-    ...Resource.defaultProps,
-    format: undefined!,
-    dimension: undefined!,
-    aspect: 'all',
-    baseMipLevel: 0,
-    mipLevelCount: undefined!,
-    baseArrayLayer: 0,
-    arrayLayerCount: undefined!
-  };
-
   abstract texture: Texture;
 
   override get [Symbol.toStringTag](): string {
@@ -48,4 +37,15 @@ export abstract class TextureView extends Resource<TextureViewProps> {
   constructor(device: Device, props: TextureViewProps & {texture: Texture}) {
     super(device, props, TextureView.defaultProps);
   }
+
+  static override defaultProps: Required<TextureViewProps> = {
+    ...Resource.defaultProps,
+    format: undefined!,
+    dimension: undefined!,
+    aspect: 'all',
+    baseMipLevel: 0,
+    mipLevelCount: undefined!,
+    baseArrayLayer: 0,
+    arrayLayerCount: undefined!
+  };
 }

@@ -19,6 +19,7 @@ export class WebGPUCommandEncoder extends CommandEncoder {
     this.handle =
       props.handle ||
       this.device.handle.createCommandEncoder({
+        label: this.props.id
         // TODO was this removed in standard?
         // measureExecutionTime: this.props.measureExecutionTime
       });

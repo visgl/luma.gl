@@ -10,12 +10,6 @@ export type ExternalTextureProps = ResourceProps & {
   colorSpace?: 'srgb';
 };
 export abstract class ExternalTexture extends Resource<ExternalTextureProps> {
-  static override defaultProps: Required<ExternalTextureProps> = {
-    ...Resource.defaultProps,
-    source: undefined!,
-    colorSpace: 'srgb'
-  };
-
   override get [Symbol.toStringTag](): string {
     return 'ExternalTexture';
   }
@@ -23,4 +17,10 @@ export abstract class ExternalTexture extends Resource<ExternalTextureProps> {
   constructor(device: Device, props: ExternalTextureProps) {
     super(device, props, ExternalTexture.defaultProps);
   }
+
+  static override defaultProps: Required<ExternalTextureProps> = {
+    ...Resource.defaultProps,
+    source: undefined!,
+    colorSpace: 'srgb'
+  };
 }

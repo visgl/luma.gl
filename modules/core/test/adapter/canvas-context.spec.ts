@@ -50,7 +50,7 @@ test('CanvasContext#getDevicePixelRatio', async t => {
 
   for (const device of await getTestDevices()) {
     TEST_CASES.forEach(tc => {
-      const result = device.canvasContext?.getDevicePixelRatio(tc.useDevicePixels);
+      const result = device.getDefaultCanvasContext().getDevicePixelRatio(tc.useDevicePixels);
       t.equal(result, tc.expected, tc.name);
     });
   }
