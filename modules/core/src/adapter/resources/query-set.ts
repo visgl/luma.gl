@@ -25,12 +25,6 @@ export type QuerySetProps = ResourceProps & {
 
 /** Immutable QuerySet object */
 export abstract class QuerySet extends Resource<QuerySetProps> {
-  static override defaultProps: Required<QuerySetProps> = {
-    ...Resource.defaultProps,
-    type: undefined!,
-    count: undefined!
-  };
-
   get [Symbol.toStringTag](): string {
     return 'QuerySet';
   }
@@ -38,4 +32,10 @@ export abstract class QuerySet extends Resource<QuerySetProps> {
   constructor(device: Device, props: QuerySetProps) {
     super(device, props, QuerySet.defaultProps);
   }
+
+  static override defaultProps: Required<QuerySetProps> = {
+    ...Resource.defaultProps,
+    type: undefined!,
+    count: undefined!
+  };
 }

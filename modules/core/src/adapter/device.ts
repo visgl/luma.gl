@@ -6,7 +6,6 @@ import {StatsManager, lumaStats} from '../utils/stats-manager';
 import {log} from '../utils/log';
 import {uid} from '../utils/uid';
 import type {TextureFormat} from '../gpu-type-utils/texture-formats';
-import type {TextureFormatCapabilities} from '../gpu-type-utils/texture-format-capabilities';
 import type {CanvasContext, CanvasContextProps} from './canvas-context';
 import type {BufferProps} from './resources/buffer';
 import {Buffer} from './resources/buffer';
@@ -24,6 +23,8 @@ import type {VertexArray, VertexArrayProps} from './resources/vertex-array';
 import type {TransformFeedback, TransformFeedbackProps} from './resources/transform-feedback';
 import type {QuerySet, QuerySetProps} from './resources/query-set';
 
+import type {ExternalImage} from '../image-utils/image-types';
+import {isExternalImage, getExternalImageSize} from '../image-utils/image-types';
 import {isTextureFormatCompressed} from '../gpu-type-utils/decode-texture-format';
 import {getTextureFormatCapabilities} from '../gpu-type-utils/texture-format-capabilities';
 
@@ -197,15 +198,15 @@ type WebGLCompressedTextureFeatures =
 /** Texture format capabilities that have been checked against a specific device */
 export type DeviceTextureFormatCapabilities = {
   format: TextureFormat;
-  /** Can the format be created */
+  /** Can the format be created and sampled?*/
   create: boolean;
-  /** If a feature string, the specified device feature determines if format is renderable. */
+  /** Is the format renderable. */
   render: boolean;
-  /** If a feature string, the specified device feature determines if format is filterable. */
+  /** Is the format filterable. */
   filter: boolean;
-  /** If a feature string, the specified device feature determines if format is blendable. */
+  /** Is the format blendable. */
   blend: boolean;
-  /** If a feature string, the specified device feature determines if format is storeable. */
+  /** Is the format storeable. */
   store: boolean;
 };
 
@@ -386,40 +387,30 @@ export abstract class Device {
   /** WebGPU style device limits */
   abstract get limits(): DeviceLimits;
 
+  // Texture helpers
+
   /** Optimal TextureFormat for displaying 8-bit depth, standard dynamic range content on this system. */
   abstract preferredColorFormat: 'rgba8unorm' | 'bgra8unorm';
   /** Default depth format used on this system */
   abstract preferredDepthFormat: 'depth16' | 'depth24plus' | 'depth32float';
 
-  /** Determines what operations are supported on a texture format, checking against supported device features */
-  getTextureFormatCapabilities(format: TextureFormat): DeviceTextureFormatCapabilities {
-    const genericCapabilities = getTextureFormatCapabilities(format);
+  /** Calculates the number of mip levels for a texture of width and height */
+  getMipLevelCount(width: number, height: number): number {
+    return Math.floor(Math.log2(Math.max(width, height))) + 1;
+  }
 
-    // Check standard features
-    const checkFeature = (featureOrBoolean: DeviceFeature | boolean | undefined) =>
-      (typeof featureOrBoolean === 'string'
-        ? this.features.has(featureOrBoolean)
-        : featureOrBoolean) ?? true;
+  /** Check if data is an external image */
+  isExternalImage(data: unknown): data is ExternalImage {
+    return isExternalImage(data);
+  }
 
-    const supported = checkFeature(genericCapabilities.create);
-
-    const deviceCapabilities: DeviceTextureFormatCapabilities = {
-      format,
-      create: supported,
-      render: supported && checkFeature(genericCapabilities.render),
-      filter: supported && checkFeature(genericCapabilities.filter),
-      blend: supported && checkFeature(genericCapabilities.blend),
-      store: supported && checkFeature(genericCapabilities.store)
-    };
-
-    return this._getDeviceSpecificTextureFormatCapabilities(deviceCapabilities);
+  /** Get the size of an external image */
+  getExternalImageSize(data: ExternalImage): {width: number; height: number} {
+    return getExternalImageSize(data);
   }
 
   /** Check if device supports a specific texture format (creation and `nearest` sampling) */
-  isTextureFormatSupported(
-    format: TextureFormat,
-    capabilities: Partial<TextureFormatCapabilities>
-  ): boolean {
+  isTextureFormatSupported(format: TextureFormat): boolean {
     return this.getTextureFormatCapabilities(format).create;
   }
 
@@ -438,6 +429,12 @@ export abstract class Device {
     return isTextureFormatCompressed(format);
   }
 
+  /** Determines what operations are supported on a texture format, checking against supported device features */
+  getTextureFormatCapabilities(format: TextureFormat): DeviceTextureFormatCapabilities {
+    const capabilities = this._getDeviceTextureFormatCapabilities(format);
+    return this._getDeviceSpecificTextureFormatCapabilities(capabilities);
+  }
+
   // Device loss
 
   /** `true` if device is already lost */
@@ -453,6 +450,11 @@ export abstract class Device {
    */
   loseDevice(): boolean {
     return false;
+  }
+
+  /** A monotonic counter for tracking buffer and texture updates */
+  incrementTimestamp(): number {
+    return this.timestamp++;
   }
 
   /** Report error (normally called for unhandled device errors) */
@@ -514,26 +516,20 @@ export abstract class Device {
   /** Create a ComputePass */
   abstract beginComputePass(props?: ComputePassProps): ComputePass;
 
+  abstract createCommandEncoder(props?: CommandEncoderProps): CommandEncoder;
+
   /** Create a transform feedback (immutable set of output buffer bindings). WebGL only. */
   abstract createTransformFeedback(props: TransformFeedbackProps): TransformFeedback;
 
   abstract createQuerySet(props: QuerySetProps): QuerySet;
 
-  createCommandEncoder(props: CommandEncoderProps = {}): CommandEncoder {
-    throw new Error('not implemented');
-  }
-
-  /** A monotonic counter for tracking buffer and texture updates */
-  incrementTimestamp(): number {
-    return this.timestamp++;
-  }
-
-  // Error Handling
-
-  /** Report unhandled device errors */
-  onError(error: Error) {
-    this.props.onError(error);
-  }
+  /**
+   * Determines what operations are supported on a texture format, checking against supported device features
+   * Subclasses override to apply additional checks
+   */
+  protected abstract _getDeviceSpecificTextureFormatCapabilities(
+    format: DeviceTextureFormatCapabilities
+  ): DeviceTextureFormatCapabilities;
 
   // DEPRECATED METHODS
 
@@ -608,13 +604,25 @@ export abstract class Device {
 
   // IMPLEMENTATION
 
-  /**
-   * Determines what operations are supported on a texture format, checking against supported device features
-   * Subclasses override to apply additional checks
-   */
-  protected abstract _getDeviceSpecificTextureFormatCapabilities(
-    format: DeviceTextureFormatCapabilities
-  ): DeviceTextureFormatCapabilities;
+  protected _getDeviceTextureFormatCapabilities(
+    format: TextureFormat
+  ): DeviceTextureFormatCapabilities {
+    const genericCapabilities = getTextureFormatCapabilities(format);
+
+    // Check standard features
+    const checkFeature = (feature: DeviceFeature | boolean | undefined) =>
+      (typeof feature === 'string' ? this.features.has(feature) : feature) ?? true;
+
+    const supported = checkFeature(genericCapabilities.create);
+    return {
+      format,
+      create: supported,
+      render: supported && checkFeature(genericCapabilities.render),
+      filter: supported && checkFeature(genericCapabilities.filter),
+      blend: supported && checkFeature(genericCapabilities.blend),
+      store: supported && checkFeature(genericCapabilities.store)
+    } as const satisfies DeviceTextureFormatCapabilities;
+  }
 
   /** Subclasses use this to support .createBuffer() overloads */
   protected _normalizeBufferProps(props: BufferProps | ArrayBuffer | ArrayBufferView): BufferProps {

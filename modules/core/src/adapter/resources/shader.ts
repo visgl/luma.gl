@@ -32,16 +32,6 @@ export type ShaderProps = ResourceProps & {
  * In WebGPU the handle can be copied between threads
  */
 export abstract class Shader extends Resource<ShaderProps> {
-  static override defaultProps: Required<ShaderProps> = {
-    ...Resource.defaultProps,
-    language: 'auto',
-    stage: undefined!,
-    source: '',
-    sourceMap: null,
-    entryPoint: 'main',
-    debugShaders: undefined!
-  };
-
   override get [Symbol.toStringTag](): string {
     return 'Shader';
   }
@@ -149,6 +139,16 @@ ${htmlLog}
 
     // TODO - add a small embedded close button
   }
+
+  static override defaultProps: Required<ShaderProps> = {
+    ...Resource.defaultProps,
+    language: 'auto',
+    stage: undefined!,
+    source: '',
+    sourceMap: null,
+    entryPoint: 'main',
+    debugShaders: undefined!
+  };
 }
 
 // HELPERS

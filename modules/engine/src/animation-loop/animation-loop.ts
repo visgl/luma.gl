@@ -130,7 +130,7 @@ export class AnimationLoop {
   setError(error: Error): void {
     this.props.onError(error);
     this._error = Error();
-    const canvas = this.device?.canvasContext?.canvas;
+    const canvas = this.device?.getDefaultCanvasContext().canvas;
     if (canvas instanceof HTMLCanvasElement) {
       const errorDiv = document.createElement('h1');
       errorDiv.innerHTML = error.message;
@@ -377,7 +377,7 @@ export class AnimationLoop {
 
   // Initialize the  object that will be passed to app callbacks
   _initializeAnimationProps(): void {
-    const canvas = this.device?.canvasContext?.canvas;
+    const canvas = this.device?.getDefaultCanvasContext().canvas;
 
     if (!this.device || !canvas) {
       throw new Error('loop');
@@ -460,7 +460,7 @@ export class AnimationLoop {
     if (!this.device) {
       throw new Error('No device provided');
     }
-    this.canvas = this.device.canvasContext?.canvas || null;
+    this.canvas = this.device.getDefaultCanvasContext().canvas || null;
     // this._createInfoDiv();
   }
 
@@ -491,11 +491,11 @@ export class AnimationLoop {
       return {width: 1, height: 1, aspect: 1};
     }
     // https://webglfundamentals.org/webgl/lessons/webgl-resizing-the-canvas.html
-    const [width, height] = this.device?.canvasContext?.getPixelSize() || [1, 1];
+    const [width, height] = this.device?.getDefaultCanvasContext().getPixelSize() || [1, 1];
 
     // https://webglfundamentals.org/webgl/lessons/webgl-anti-patterns.html
     let aspect = 1;
-    const canvas = this.device?.canvasContext?.canvas;
+    const canvas = this.device?.getDefaultCanvasContext().canvas;
 
     // @ts-expect-error
     if (canvas && canvas.clientHeight) {
@@ -531,7 +531,7 @@ export class AnimationLoop {
    */
   _resizeCanvasDrawingBuffer(): void {
     if (this.props.autoResizeDrawingBuffer) {
-      this.device?.canvasContext?.resize({useDevicePixels: this.props.useDevicePixels});
+      this.device?.getDefaultCanvasContext().resize({useDevicePixels: this.props.useDevicePixels});
     }
   }
 

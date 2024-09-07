@@ -67,7 +67,6 @@ export class BackgroundTextureModel extends ClipSpace {
       fs: BACKGROUND_FS,
       parameters: {
         depthWriteEnabled: false,
-        depthCompare: 'always',
         ...(props.blend
           ? {
               blend: true,

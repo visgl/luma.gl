@@ -6,8 +6,8 @@ import type {ShaderPass} from '@luma.gl/shadertools';
 
 const source = /* wgsl */ `\
 struct brightnessContrastUniforms {
-  float brightness;
-  float contrast;
+  brightness: f32,
+  contrast: f32
 };
 
 // Binding 0:1 is reserved for shader passes
@@ -20,7 +20,7 @@ fn brightnessContrast_filterColor_ext(color: vec4<f32>, texSize: vec2<f32>, texC
   } else {
     color.rgb = (color.rgb - 0.5) * (1.0 + brightnessContrast.contrast) + 0.5;
   }
-  return color;
+  return vec4<f32>(1.0, 0.0, 0.0, 1.0);
 }
 `;
 

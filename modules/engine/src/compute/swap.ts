@@ -46,7 +46,7 @@ export class SwapFramebuffers extends Swap<Framebuffer> {
         ? colorAttachment
         : device.createTexture({
             format: colorAttachment,
-            usage: Texture.COPY_DST | Texture.RENDER_ATTACHMENT
+            usage: Texture.TEXTURE | Texture.COPY_SRC | Texture.COPY_DST | Texture.RENDER_ATTACHMENT
           })
     );
 
@@ -57,7 +57,7 @@ export class SwapFramebuffers extends Swap<Framebuffer> {
         ? colorAttachment
         : device.createTexture({
             format: colorAttachment,
-            usage: Texture.COPY_DST | Texture.RENDER_ATTACHMENT
+            usage: Texture.TEXTURE | Texture.COPY_SRC | Texture.COPY_DST | Texture.RENDER_ATTACHMENT
           })
     );
 

@@ -80,6 +80,18 @@ export {SwapFramebuffers} from './compute/swap';
 export type {ComputationProps} from './compute/computation';
 export {Computation} from './compute/computation';
 
+export type {
+  TextureCubeFace,
+  TextureImageData,
+  TextureData,
+  Texture1DData,
+  Texture2DData,
+  Texture3DData,
+  TextureCubeData,
+  TextureArrayData,
+  TextureCubeArrayData
+} from './async-texture/async-texture';
+
 export type {AsyncTextureProps} from './async-texture/async-texture';
 export {AsyncTexture} from './async-texture/async-texture';
 

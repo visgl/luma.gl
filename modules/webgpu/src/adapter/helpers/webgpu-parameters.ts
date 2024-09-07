@@ -54,8 +54,10 @@ export const PARAMETER_TABLE: Record<keyof Parameters, Function> = {
     value: any,
     descriptor: GPURenderPipelineDescriptor
   ) => {
-    const depthStencil = addDepthStencil(descriptor);
-    depthStencil.depthWriteEnabled = value;
+    if (value) {
+      const depthStencil = addDepthStencil(descriptor);
+      depthStencil.depthWriteEnabled = value;
+    }
   },
 
   depthCompare: (

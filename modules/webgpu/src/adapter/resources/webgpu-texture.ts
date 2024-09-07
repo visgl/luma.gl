@@ -5,17 +5,8 @@ import type {
   TextureViewProps,
   Sampler,
   SamplerProps,
-  // TextureFormat,
-  // TextureCubeFace,
-  // ExternalImage,
-  // TextureLevelData,
-  Texture1DData,
-  Texture2DData,
-  Texture3DData,
-  TextureCubeData,
-  TextureArrayData,
-  TextureCubeArrayData,
-  ExternalImage
+  CopyExternalImageOptions,
+  CopyImageDataOptions
 } from '@luma.gl/core';
 import {Texture} from '@luma.gl/core';
 
@@ -67,17 +58,19 @@ export class WebGPUTexture extends Texture {
     // @ts-expect-error
     this.handle = this.props.handle || this.createHandle();
     this.handle.label ||= this.id;
+    if (this.props.handle) {
+      this.width = this.handle.width;
+      this.height = this.handle.height;
+    }
 
     if (this.props.data) {
-      if (Texture.isExternalImage(this.props.data)) {
-        this.copyExternalImage({image: this.props.data});
+      if (this.device.isExternalImage(this.props.data)) {
+        this.copyExternalImage({image: this.props.data, flipY: this.props.flipY});
       } else {
         this.setData({data: this.props.data});
       }
     }
 
-    this.width = this.handle.width;
-    this.height = this.handle.height;
     // Why not just read all properties directly from the texture
     // this.depthOrArrayLayers = this.handle.depthOrArrayLayers;
     // this.mipLevelCount = this.handle.mipLevelCount;
@@ -144,30 +137,6 @@ export class WebGPUTexture extends Texture {
     return this;
   }
 
-  setTexture1DData(data: Texture1DData): void {
-    throw new Error('not implemented');
-  }
-
-  setTexture2DData(lodData: Texture2DData, depth?: number, target?: number): void {
-    throw new Error('not implemented');
-  }
-
-  setTexture3DData(lodData: Texture3DData, depth?: number, target?: number): void {
-    throw new Error('not implemented');
-  }
-
-  setTextureCubeData(data: TextureCubeData, depth?: number): void {
-    throw new Error('not implemented');
-  }
-
-  setTextureArrayData(data: TextureArrayData): void {
-    throw new Error('not implemented');
-  }
-
-  setTextureCubeArrayData(data: TextureCubeArrayData): void {
-    throw new Error('not implemented');
-  }
-
   setData(options: {data: any}): {width: number; height: number} {
     if (ArrayBuffer.isView(options.data)) {
       const clampedArray = new Uint8ClampedArray(options.data.buffer);
@@ -179,62 +148,60 @@ export class WebGPUTexture extends Texture {
     throw new Error('Texture.setData: Use CommandEncoder to upload data to texture in WebGPU');
   }
 
-  copyExternalImage(options: {
-    image: ExternalImage;
-    width?: number;
-    height?: number;
-    depth?: number;
-    sourceX?: number;
-    sourceY?: number;
-    mipLevel?: number;
-    x?: number;
-    y?: number;
-    z?: number;
-    aspect?: 'all' | 'stencil-only' | 'depth-only';
-    colorSpace?: 'srgb';
-    premultipliedAlpha?: boolean;
-  }): {width: number; height: number} {
-    const size = Texture.getExternalImageSize(options.image);
-    const opts = {...Texture.defaultCopyExternalImageOptions, ...size, ...options};
-    const {
-      image,
-      sourceX,
-      sourceY,
-      width,
-      height,
-      depth,
-      mipLevel,
-      x,
-      y,
-      z,
-      aspect,
-      colorSpace,
-      premultipliedAlpha,
-      flipY
-    } = opts;
+  copyImageData(options: CopyImageDataOptions): void {
+    const {width, height, depth} = this;
+    const opts = {...Texture.defaultCopyDataOptions, width, height, depth, ...options};
+    this.device.handle.queue.writeTexture(
+      // destination: GPUImageCopyTexture
+      {
+        // texture subresource
+        texture: this.handle,
+        mipLevel: opts.mipLevel,
+        aspect: opts.aspect,
+        // origin to write to
+        origin: [opts.x, opts.y, opts.z]
+      },
+      // data
+      opts.data,
+      // dataLayout: GPUImageDataLayout
+      {
+        offset: opts.byteOffset,
+        bytesPerRow: opts.bytesPerRow,
+        rowsPerImage: opts.rowsPerImage
+      },
+      // size: GPUExtent3D - extents of the content to write
+      [opts.width, opts.height, opts.depth]
+    );
+  }
 
-    // TODO - max out width
+  copyExternalImage(options: CopyExternalImageOptions): {width: number; height: number} {
+    const size = this.device.getExternalImageSize(options.image);
+    const opts = {...Texture.defaultCopyExternalImageOptions, ...size, ...options};
+
+    // TODO - apply max to width etc
 
     this.device.handle.queue.copyExternalImageToTexture(
       // source: GPUImageCopyExternalImage
       {
-        source: image,
-        origin: [sourceX, sourceY],
-        flipY
+        source: opts.image,
+        origin: [opts.sourceX, opts.sourceY],
+        flipY: opts.flipY
       },
       // destination: GPUImageCopyTextureTagged
       {
         texture: this.handle,
-        origin: [x, y, z],
-        mipLevel,
-        aspect,
-        colorSpace,
-        premultipliedAlpha
+        origin: [opts.x, opts.y, opts.z],
+        mipLevel: opts.mipLevel,
+        aspect: opts.aspect,
+        colorSpace: opts.colorSpace,
+        premultipliedAlpha: opts.premultipliedAlpha
       },
       // copySize: GPUExtent3D
-      [width, height, depth]
+      [opts.width, opts.height, opts.depth]
     );
-    return {width, height};
+
+    // TODO - should these be clipped to the texture size minus x,y,z?
+    return {width: opts.width, height: opts.height};
   }
 
   // WebGPU specific

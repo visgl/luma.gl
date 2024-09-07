@@ -18,17 +18,6 @@ export type ComputePassProps = ResourceProps & {
 };
 
 export abstract class ComputePass extends Resource<ComputePassProps> {
-  static override defaultProps: Required<ComputePassProps> = {
-    ...Resource.defaultProps,
-    timestampQuerySet: undefined!,
-    beginTimestampIndex: undefined!,
-    endTimestampIndex: undefined!
-  };
-
-  override get [Symbol.toStringTag](): string {
-    return 'ComputePass';
-  }
-
   constructor(device: Device, props: ComputePassProps) {
     super(device, props, ComputePass.defaultProps);
   }
@@ -63,4 +52,15 @@ export abstract class ComputePass extends Resource<ComputePassProps> {
   abstract popDebugGroup(): void;
   /** Marks a point in a stream of commands with a label */
   abstract insertDebugMarker(markerLabel: string): void;
+
+  static override defaultProps: Required<ComputePassProps> = {
+    ...Resource.defaultProps,
+    timestampQuerySet: undefined!,
+    beginTimestampIndex: undefined!,
+    endTimestampIndex: undefined!
+  };
+
+  override get [Symbol.toStringTag](): string {
+    return 'ComputePass';
+  }
 }

@@ -1,0 +1,296 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
+import type {Texture, TypedArray, TextureFormat, ExternalImage} from '@luma.gl/core';
+import {isExternalImage, getExternalImageSize} from '@luma.gl/core';
+
+/** Names of cube texture faces */
+export type TextureCubeFace = '+X' | '-X' | '+Y' | '-Y' | '+Z' | '-Z';
+
+/**
+ * One mip level
+ * Basic data structure is similar to `ImageData`
+ * additional optional fields can describe compressed texture data.
+ */
+export type TextureLevelData = {
+  /** WebGPU style format string. Defaults to 'rgba8unorm' */
+  format?: TextureFormat;
+  data: TypedArray;
+  width: number;
+  height: number;
+
+  compressed?: boolean;
+  byteLength?: number;
+  hasAlpha?: boolean;
+};
+
+export type TextureLevelSource = TextureLevelData | ExternalImage;
+
+/** Texture data can be one or more mip levels */
+export type TextureData = TextureLevelData | ExternalImage | (TextureLevelData | ExternalImage)[];
+
+/** @todo - define what data type is supported for 1D textures */
+export type Texture1DData = TypedArray | TextureLevelData;
+
+/** Texture data can be one or more mip levels */
+export type Texture2DData =
+  | TypedArray
+  | TextureLevelData
+  | ExternalImage
+  | (TextureLevelData | ExternalImage)[];
+
+/** Array of textures */
+export type Texture3DData = TypedArray | TextureData[];
+
+/** 6 face textures */
+export type TextureCubeData = Record<TextureCubeFace, Texture2DData>;
+
+/** Array of textures */
+export type TextureArrayData = TextureData[];
+
+/** Array of 6 face textures */
+export type TextureCubeArrayData = Record<TextureCubeFace, TextureData>[];
+
+export type TextureDataProps =
+  | Texture1DProps
+  | Texture2DProps
+  | Texture3DProps
+  | TextureArrayProps
+  | TextureCubeProps
+  | TextureCubeArrayProps;
+
+export type Texture1DProps = {dimension: '1d'; data?: Texture1DData | null};
+export type Texture2DProps = {dimension?: '2d'; data?: Texture2DData | null};
+export type Texture3DProps = {dimension: '3d'; data?: Texture3DData | null};
+export type TextureArrayProps = {dimension: '2d-array'; data?: TextureArrayData | null};
+export type TextureCubeProps = {dimension: 'cube'; data?: TextureCubeData | null};
+export type TextureCubeArrayProps = {dimension: 'cube-array'; data: TextureCubeArrayData | null};
+
+export const CubeFaces: TextureCubeFace[] = ['+X', '-X', '+Y', '-Y', '+Z', '-Z'];
+
+/** Check if texture data is a typed array */
+export function isTextureLevelData(data: TextureData): data is TextureLevelData {
+  const typedArray = (data as TextureLevelData)?.data;
+  return ArrayBuffer.isView(typedArray);
+}
+
+/** Get the size of the texture described by the provided TextureData */
+export function getTextureDataSize(
+  data: TextureData | TextureCubeData | TextureArrayData | TextureCubeArrayData | TypedArray
+): {width: number; height: number} | null {
+  if (!data) {
+    return null;
+  }
+  if (ArrayBuffer.isView(data)) {
+    return null;
+  }
+  // Recurse into arrays (array of miplevels)
+  if (Array.isArray(data)) {
+    return getTextureDataSize(data[0]);
+  }
+  if (isExternalImage(data)) {
+    return getExternalImageSize(data);
+  }
+  if (data && typeof data === 'object' && data.constructor === Object) {
+    const textureDataArray = Object.values(data) as Texture2DData[];
+    const untypedData = textureDataArray[0] as any;
+    return {width: untypedData.width, height: untypedData.height};
+  }
+  throw new Error('texture size deduction failed');
+}
+
+/**
+ * Normalize TextureData to an array of TextureLevelData / ExternalImages
+ * @param data
+ * @param options
+ * @returns array of TextureLevelData / ExternalImages
+ */
+export function normalizeTextureData(
+  data: Texture2DData,
+  options: {width: number; height: number; depth: number}
+): (TextureLevelData | ExternalImage)[] {
+  let lodArray: (TextureLevelData | ExternalImage)[];
+  if (ArrayBuffer.isView(data)) {
+    lodArray = [
+      {
+        // ts-expect-error does data really need to be Uint8ClampedArray?
+        data,
+        width: options.width,
+        height: options.height
+        // depth: options.depth
+      }
+    ];
+  } else if (!Array.isArray(data)) {
+    lodArray = [data];
+  } else {
+    lodArray = data;
+  }
+  return lodArray;
+}
+
+/** Convert luma.gl cubemap face constants to depth index */
+export function getCubeFaceDepth(face: TextureCubeFace): number {
+  // prettier-ignore
+  switch (face) {
+        case '+X': return  0;
+        case '-X': return  1;
+        case '+Y': return  2;
+        case '-Y': return  3;
+        case '+Z': return  4;
+        case '-Z': return  5;
+        default: throw new Error(face);
+      }
+}
+
+// EXPERIMENTAL
+
+/** Set multiple mip levels */
+export function setTexture1DData(texture: Texture, data: Texture1DData): void {
+  throw new Error('setTexture1DData not supported in WebGL.');
+}
+
+/** Set multiple mip levels */
+export function setTexture2DData(texture: Texture, lodData: Texture2DData, depth = 0): void {
+  this.bind();
+
+  const lodArray = Texture.normalizeTextureData(lodData, this);
+
+  // If the user provides multiple LODs, then automatic mipmap
+  // generation generateMipmap() should be disabled to avoid overwriting them.
+  if (lodArray.length > 1 && this.props.mipmaps !== false) {
+    log.warn(`Texture ${this.id} mipmap and multiple LODs.`)();
+  }
+
+  for (let lodLevel = 0; lodLevel < lodArray.length; lodLevel++) {
+    const imageData = lodArray[lodLevel];
+    this._setMipLevel(depth, lodLevel, imageData);
+  }
+
+  this.unbind();
+}
+
+/**
+ * Sets 3D texture data: multiple depth slices, multiple mip levels
+ * @param data
+ */
+export function setTexture3DData(texture: Texture, data: Texture3DData): void {
+  if (this.props.dimension !== '3d') {
+    throw new Error(this.id);
+  }
+  if (ArrayBuffer.isView(data)) {
+    this.bind();
+    copyCPUDataToMipLevel(this.device.gl, data, this);
+    this.unbind();
+  }
+}
+
+/**
+ * Set Cube texture data, multiple faces, multiple mip levels
+ * @todo - could support TextureCubeArray with depth
+ * @param data
+ * @param index
+ */
+export function setTextureCubeData(texture: Texture, data: TextureCubeData): void {
+  if (this.props.dimension !== 'cube') {
+    throw new Error(this.id);
+  }
+  for (const face of Texture.CubeFaces) {
+    this.setTextureCubeFaceData(data[face], face);
+  }
+}
+
+/**
+ * Sets texture array data, multiple levels, multiple depth slices
+ * @param data
+ */
+export function setTextureArrayData(texture: Texture, data: TextureArrayData): void {
+  if (this.props.dimension !== '2d-array') {
+    throw new Error(this.id);
+  }
+  throw new Error('setTextureArrayData not implemented.');
+}
+
+/**
+ * Sets texture cube array, multiple faces, multiple levels, multiple mip levels
+ * @param data
+ */
+export function setTextureCubeArrayData(texture: Texture, data: TextureCubeArrayData): void {
+  throw new Error('setTextureCubeArrayData not supported in WebGL2.');
+}
+
+export function setTextureCubeFaceData(
+  texture: Texture,
+  lodData: Texture2DData,
+  face: TextureCubeFace,
+  depth: number = 0
+): void {
+  // assert(this.props.dimension === 'cube');
+
+  // If the user provides multiple LODs, then automatic mipmap
+  // generation generateMipmap() should be disabled to avoid overwriting them.
+  if (Array.isArray(lodData) && lodData.length > 1 && this.props.mipmaps !== false) {
+    log.warn(`${this.id} has mipmap and multiple LODs.`)();
+  }
+
+  const faceDepth = Texture.CubeFaces.indexOf(face);
+
+  this.setTexture2DData(lodData, faceDepth);
+}
+
+// TODO - Remove when texture refactor is complete
+
+/*
+setCubeMapData(options: {
+  width: number;
+  height: number;
+  data: Record<GL, Texture2DData> | Record<TextureCubeFace, Texture2DData>;
+  format?: any;
+  type?: any;
+  /** @deprecated Use .data *
+  pixels: any;
+}): void {
+  const {gl} = this;
+
+  const {width, height, pixels, data, format = GL.RGBA, type = GL.UNSIGNED_BYTE} = options;
+
+  // pixel data (imageDataMap) is an Object from Face to Image or Promise.
+  // For example:
+  // {
+  // GL.TEXTURE_CUBE_MAP_POSITIVE_X : Image-or-Promise,
+  // GL.TEXTURE_CUBE_MAP_NEGATIVE_X : Image-or-Promise,
+  // ... }
+  // To provide multiple level-of-details (LODs) this can be Face to Array
+  // of Image or Promise, like this
+  // {
+  // GL.TEXTURE_CUBE_MAP_POSITIVE_X : [Image-or-Promise-LOD-0, Image-or-Promise-LOD-1],
+  // GL.TEXTURE_CUBE_MAP_NEGATIVE_X : [Image-or-Promise-LOD-0, Image-or-Promise-LOD-1],
+  // ... }
+
+  const imageDataMap = this._getImageDataMap(pixels || data);
+
+  const resolvedFaces = WEBGLTexture.FACES.map(face => {
+    const facePixels = imageDataMap[face];
+    return Array.isArray(facePixels) ? facePixels : [facePixels];
+  });
+  this.bind();
+
+  WEBGLTexture.FACES.forEach((face, index) => {
+    if (resolvedFaces[index].length > 1 && this.props.mipmaps !== false) {
+      // If the user provides multiple LODs, then automatic mipmap
+      // generation generateMipmaps() should be disabled to avoid overwritting them.
+      log.warn(`${this.id} has mipmap and multiple LODs.`)();
+    }
+    resolvedFaces[index].forEach((image, lodLevel) => {
+      // TODO: adjust width & height for LOD!
+      if (width && height) {
+        gl.texImage2D(face, lodLevel, format, width, height, 0 /* border*, format, type, image);
+      } else {
+        gl.texImage2D(face, lodLevel, format, format, type, image);
+      }
+    });
+  });
+
+  this.unbind();
+}
+*/
