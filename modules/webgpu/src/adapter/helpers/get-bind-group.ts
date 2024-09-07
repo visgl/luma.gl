@@ -68,15 +68,23 @@ function getBindGroupEntries(
   for (const [bindingName, value] of Object.entries(bindings)) {
     let bindingLayout = getShaderLayoutBinding(shaderLayout, bindingName);
     if (bindingLayout) {
-      entries.push(getBindGroupEntry(value, bindingLayout.location));
+      const entry = getBindGroupEntry(value, bindingLayout.location);
+      if (entry) {
+        entries.push(entry);
+      }
     }
 
     // TODO - hack to automatically bind samplers to supplied texture default samplers
-    bindingLayout = getShaderLayoutBinding(shaderLayout, `${bindingName}Sampler`, {
-      ignoreWarnings: true
-    });
-    if (bindingLayout) {
-      entries.push(getBindGroupEntry(value, bindingLayout.location, {sampler: true}));
+    if (value instanceof Texture) {
+      bindingLayout = getShaderLayoutBinding(shaderLayout, `${bindingName}Sampler`, {
+        ignoreWarnings: true
+      });
+      if (bindingLayout) {
+        const entry = getBindGroupEntry(value, bindingLayout.location, {sampler: true});
+        if (entry) {
+          entries.push(entry);
+        }
+      }
     }
   }
 
@@ -87,7 +95,7 @@ function getBindGroupEntry(
   binding: Binding,
   index: number,
   options?: {sampler?: boolean}
-): GPUBindGroupEntry {
+): GPUBindGroupEntry | null {
   if (binding instanceof Buffer) {
     return {
       binding: index,
@@ -101,7 +109,8 @@ function getBindGroupEntry(
       binding: index,
       resource: (binding as WebGPUSampler).handle
     };
-  } else if (binding instanceof Texture) {
+  }
+  if (binding instanceof Texture) {
     if (options?.sampler) {
       return {
         binding: index,
@@ -113,5 +122,6 @@ function getBindGroupEntry(
       resource: (binding as WebGPUTexture).handle.createView({label: 'bind-group-auto-created'})
     };
   }
-  throw new Error('invalid binding');
+  log.warn(`invalid binding ${name}`, binding);
+  return null;
 }

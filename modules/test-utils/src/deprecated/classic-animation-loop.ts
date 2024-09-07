@@ -637,7 +637,7 @@ export class ClassicAnimationLoop {
    */
   _resizeCanvasDrawingBuffer() {
     if (this.props.autoResizeDrawingBuffer) {
-      this.device.canvasContext.resize({useDevicePixels: this.props.useDevicePixels});
+      this.device.getDefaultCanvasContext().resize({useDevicePixels: this.props.useDevicePixels});
     }
   }
 

@@ -63,30 +63,6 @@ export type RenderPipelineProps = ResourceProps & {
  * A compiled and linked shader program
  */
 export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
-  static override defaultProps: Required<RenderPipelineProps> = {
-    ...Resource.defaultProps,
-
-    vs: null,
-    vertexEntryPoint: 'vertexMain',
-    vsConstants: {},
-
-    fs: null,
-    fragmentEntryPoint: 'fragmentMain',
-    fsConstants: {},
-
-    shaderLayout: null,
-    bufferLayout: [],
-    topology: 'triangle-list',
-
-    colorAttachmentFormats: undefined!,
-    depthStencilAttachmentFormat: undefined!,
-
-    parameters: {},
-
-    bindings: {},
-    uniforms: {}
-  };
-
   override get [Symbol.toStringTag](): string {
     return 'RenderPipeline';
   }
@@ -155,4 +131,28 @@ export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
   setUniformsWebGL(uniforms: Record<string, UniformValue>): void {
     throw new Error('Use uniform blocks');
   }
+
+  static override defaultProps: Required<RenderPipelineProps> = {
+    ...Resource.defaultProps,
+
+    vs: null,
+    vertexEntryPoint: 'vertexMain',
+    vsConstants: {},
+
+    fs: null,
+    fragmentEntryPoint: 'fragmentMain',
+    fsConstants: {},
+
+    shaderLayout: null,
+    bufferLayout: [],
+    topology: 'triangle-list',
+
+    colorAttachmentFormats: undefined!,
+    depthStencilAttachmentFormat: undefined!,
+
+    parameters: {},
+
+    bindings: {},
+    uniforms: {}
+  };
 }

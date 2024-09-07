@@ -44,9 +44,9 @@ export class ShaderPassRenderer {
     );
     this.shaderInputs = props.shaderInputs || new ShaderInputs(modules);
 
-    const size = device.getCanvasContext().getPixelSize();
+    const size = device.getCanvasContext().getDrawingBufferSize();
     this.swapFramebuffers = new SwapFramebuffers(device, {
-      colorAttachments: ['rgba8unorm'],
+      colorAttachments: ['bgra8unorm'],
       width: size[0],
       height: size[1]
     });
@@ -99,7 +99,7 @@ void main() {
     // this.props.passes.forEach(pass => pass.resize(width, height));
   }
 
-  renderToScreen(options: {sourceTexture: AsyncTexture; uniforms: any; bindings: any}): boolean {
+  renderToScreen(options: {sourceTexture: AsyncTexture; uniforms?: any; bindings?: any}): boolean {
     // Run the shader passes and generate an output texture
     const outputTexture = this.renderToTexture(options);
     if (!outputTexture) {
@@ -107,7 +107,16 @@ void main() {
       return false;
     }
 
-    const renderPass = this.device.beginRenderPass({clearColor: [0, 0, 0, 1], clearDepth: 1});
+    const framebuffer = this.device
+      .getDefaultCanvasContext()
+      // @ts-expect-error TODO - remove after republish
+      .getCurrentFramebuffer({depthStencilAttachment: false});
+    const renderPass = this.device.beginRenderPass({
+      id: 'shader-pass-renderer-to-screen',
+      framebuffer,
+      clearColor: [0, 0, 0, 1],
+      clearDepth: 1
+    });
     this.clipSpace.setBindings({sourceTexture: outputTexture});
     this.clipSpace.draw(renderPass);
     renderPass.end();
@@ -119,8 +128,8 @@ void main() {
    */
   renderToTexture(options: {
     sourceTexture: AsyncTexture;
-    uniforms: any;
-    bindings: any;
+    uniforms?: any;
+    bindings?: any;
   }): Texture | null {
     const {sourceTexture} = options;
     if (!sourceTexture.isReady) {
@@ -134,6 +143,7 @@ void main() {
 
     // Clear the current texture before we begin
     const clearTexturePass = this.device.beginRenderPass({
+      id: 'shader-pass-renderer-clear-texture',
       framebuffer: this.swapFramebuffers.current,
       clearColor: [0, 0, 0, 1]
     });
@@ -163,6 +173,7 @@ void main() {
         };
 
         const renderPass = this.device.beginRenderPass({
+          id: 'shader-pass-renderer-run-pass',
           framebuffer: this.swapFramebuffers.next,
           clearColor: [0, 0, 0, 1],
           clearDepth: 1
@@ -226,8 +237,7 @@ class SubPassRenderer {
       fs,
       modules: [shaderPass],
       parameters: {
-        depthWriteEnabled: false,
-        depthCompare: 'always'
+        depthWriteEnabled: false
       }
     });
   }
