@@ -136,8 +136,7 @@ export abstract class Framebuffer extends Resource<FramebufferProps> {
       usage: Texture.RENDER_ATTACHMENT,
       format,
       width: this.width,
-      height: this.height,
-      mipmaps: false
+      height: this.height
     });
   }
 

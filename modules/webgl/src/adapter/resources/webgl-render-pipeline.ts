@@ -150,7 +150,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
               value instanceof WEBGLFramebuffer
             )
           ) {
-            throw new Error('texture value');
+            throw new Error(`${this} Bad texture binding for ${name}`);
           }
           break;
         case 'sampler':
@@ -324,19 +324,21 @@ export class WEBGLRenderPipeline extends RenderPipeline {
   }
 
   /** Report link status. First, check for shader compilation failures if linking fails */
-  async _reportLinkStatus(status: 'success' | 'linking' | 'validation'): Promise<void> {
+  async _reportLinkStatus(status: 'success' | 'link-error' | 'validation-error'): Promise<void> {
     switch (status) {
       case 'success':
         return;
 
       default:
+        const errorType = status === 'link-error' ? 'Link error' : 'Validation error';
         // First check for shader compilation failures if linking fails
         switch (this.vs.compilationStatus) {
           case 'error':
             this.vs.debugShader();
-            throw new Error(`Error during compilation of shader ${this.vs.id}`);
+            throw new Error(`${this} ${errorType} during compilation of ${this.vs}`);
           case 'pending':
-            this.vs.asyncCompilationStatus.then(() => this.vs.debugShader());
+            await this.vs.asyncCompilationStatus;
+            this.vs.debugShader();
             break;
           case 'success':
             break;
@@ -345,16 +347,17 @@ export class WEBGLRenderPipeline extends RenderPipeline {
         switch (this.fs?.compilationStatus) {
           case 'error':
             this.fs.debugShader();
-            throw new Error(`Error during compilation of shader ${this.fs.id}`);
+            throw new Error(`${this} ${errorType} during compilation of ${this.fs}`);
           case 'pending':
-            this.fs.asyncCompilationStatus.then(() => this.fs.debugShader());
+            await this.fs.asyncCompilationStatus;
+            this.fs.debugShader();
             break;
           case 'success':
             break;
         }
 
         const linkErrorLog = this.device.gl.getProgramInfoLog(this.handle);
-        throw new Error(`Error during ${status}: ${linkErrorLog}`);
+        this.device.reportError(new Error(`${errorType} during ${status}: ${linkErrorLog}`));
     }
   }
 
@@ -363,19 +366,19 @@ export class WEBGLRenderPipeline extends RenderPipeline {
    * TODO - Load log even when no error reported, to catch warnings?
    * https://gamedev.stackexchange.com/questions/30429/how-to-detect-glsl-warnings
    */
-  _getLinkStatus(): 'success' | 'linking' | 'validation' {
+  _getLinkStatus(): 'success' | 'link-error' | 'validation-error' {
     const {gl} = this.device;
-    const linked = gl.getProgramParameter(this.handle, gl.LINK_STATUS);
+    const linked = gl.getProgramParameter(this.handle, GL.LINK_STATUS);
     if (!linked) {
       this.linkStatus = 'error';
-      return 'linking';
+      return 'link-error';
     }
 
     gl.validateProgram(this.handle);
-    const validated = gl.getProgramParameter(this.handle, gl.VALIDATE_STATUS);
+    const validated = gl.getProgramParameter(this.handle, GL.VALIDATE_STATUS);
     if (!validated) {
       this.linkStatus = 'error';
-      return 'validation';
+      return 'validation-error';
     }
 
     this.linkStatus = 'success';

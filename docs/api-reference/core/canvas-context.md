@@ -137,7 +137,7 @@ Whether the framebuffer backing this canvas context is sized using device pixels
 ### constructor
 
 :::info
-A `CanvasContext` should not be constructed directly. Default canvas contexts are created when instantiating a `WebGPUDevice` or a `WebGLDevice` by supplying the `canvasContext` property, and can be accessed through the `device.canvasContext` field.  Additional canvas contexts can be explicitly created through `WebGPUDevice.createCanvasContext(...)`.
+A `CanvasContext` should not be constructed directly. Default canvas contexts are created when instantiating a `WebGPUDevice` or a `WebGLDevice` by supplying the `canvasContext` property, and can be accessed through the `device.getDefaultCanvasContext()` method.  Additional canvas contexts can be explicitly created through `WebGPUDevice.createCanvasContext(...)`.
 :::
 
 On `Device` instances that support it (see [remarks](#remarks) below) additional canvas contexts are created using `device.createCanvasContext()`. Depending on options passed, this either:

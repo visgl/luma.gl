@@ -15,13 +15,6 @@ import {Matrix4, radians} from '@math.gl/core';
 // Ensure repeatable rendertests
 const random = makeRandomGenerator();
 
-const INFO_HTML = `\
-Key frame animation based on multiple hierarchical timelines.
-<button id="play">Play</button>
-<button id="pause">Pause</button><BR>
-Time: <input type="range" id="time" min="0" max="30000" step="1"><BR>
-`;
-
 // SHADERS
 
 type AppUniforms = {
@@ -122,7 +115,12 @@ void main(void) {
 `;
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
-  static info = INFO_HTML;
+  static info = `\
+Key frame animation based on multiple hierarchical timelines.
+<button id="play">Play</button>
+<button id="pause">Pause</button><BR>
+Time: <input type="range" id="time" min="0" max="30000" step="1"><BR>
+`;
 
   readonly translations = [
     [2, -2, 0],

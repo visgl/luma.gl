@@ -224,7 +224,7 @@ test('WebGLStateTracker#not cached parameters', async t => {
   t.is(gl.getParameter(gl.TEXTURE_BINDING_2D), null, 'no bound texture');
 
   const tex = device.createTexture({});
-  tex.bind();
+  tex._bind();
   t.is(gl.getParameter(gl.TEXTURE_BINDING_2D), tex.handle, 'bound texture');
 
   gl.activeTexture(gl.TEXTURE1);
@@ -233,7 +233,7 @@ test('WebGLStateTracker#not cached parameters', async t => {
   gl.activeTexture(gl.TEXTURE0);
   t.is(gl.getParameter(gl.TEXTURE_BINDING_2D), tex.handle, 'bound texture at texture0');
 
-  tex.unbind();
+  tex._unbind();
   t.is(gl.getParameter(gl.TEXTURE_BINDING_2D), null, 'no binding for texture0');
 
   tex.destroy();

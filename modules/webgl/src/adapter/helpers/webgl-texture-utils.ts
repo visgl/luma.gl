@@ -596,7 +596,7 @@ export function copyToTexture(
     texture = destinationTexture;
     width = Number.isFinite(width) ? width : texture.width;
     height = Number.isFinite(height) ? height : texture.height;
-    texture?.bind(0);
+    texture?._bind(0);
     // @ts-ignore
     textureTarget = texture.target;
   } else {
@@ -648,7 +648,7 @@ export function copyToTexture(
     }
   }
   if (texture) {
-    texture.unbind();
+    texture._unbind();
   }
   // @ts-expect-error
   device.gl.bindFramebuffer(GL.FRAMEBUFFER, prevHandle || null);

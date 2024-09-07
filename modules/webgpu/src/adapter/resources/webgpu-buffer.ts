@@ -24,6 +24,8 @@ export class WebGPUBuffer extends Buffer {
     // WebGPU buffers must be aligned to 4 bytes
     const size = Math.ceil(this.byteLength / 4) * 4;
 
+    this.device.handle.pushErrorScope('out-of-memory');
+    this.device.handle.pushErrorScope('validation');
     this.handle =
       this.props.handle ||
       this.device.handle.createBuffer({
@@ -33,6 +35,16 @@ export class WebGPUBuffer extends Buffer {
         mappedAtCreation: this.props.mappedAtCreation || mapBuffer,
         label: this.props.id
       });
+    this.device.handle.popErrorScope().then((error: GPUError | null) => {
+      if (error) {
+        this.device.reportError(new Error(`Buffer validation failed: ${error.message}`), this);
+      }
+    });
+    this.device.handle.popErrorScope().then((error: GPUError | null) => {
+      if (error) {
+        this.device.reportError(new Error(`Buffer out of memory: ${error.message}`), this);
+      }
+    });
 
     if (props.data) {
       this._writeMapped(props.data);
