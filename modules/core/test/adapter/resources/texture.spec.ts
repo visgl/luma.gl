@@ -248,6 +248,7 @@ test('Texture#format creation with data', async t => {
 test('Texture#dimension=3d,format=r32float', async t => {
   for (const device of await getTestDevices()) {
     const texture = device.createTexture({
+      id: '3d-texture',
       width: 16,
       height: 16,
       depth: 16,

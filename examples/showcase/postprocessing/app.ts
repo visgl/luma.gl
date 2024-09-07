@@ -8,16 +8,14 @@ import {AsyncTexture, loadImageBitmap, ShaderPassRenderer} from '@luma.gl/engine
 import * as shaderModules from '@luma.gl/shadertools';
 import {ShaderPass} from '@luma.gl/shadertools';
 
-const INFO_HTML = `
+export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
+  static info = `\
 <div class="contents">Copyright 2011 <a href="http://madebyevan.com">Evan Wallace</a>
   <br><br>This application is powered by <a href="http://evanw.github.com/glfx.js/">glfx.js</a>, 
   an open-source image effect library that uses WebGL.&nbsp; The source code for this application is 
   also <a href="http://github.com/evanw/webgl-filter/">available on GitHub</a>.
 </div>
 `;
-
-export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
-  static info = INFO_HTML;
 
   device: Device;
   scenes: GroupNode[] = [];
@@ -36,8 +34,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     super();
 
     this.device = device;
-    // @ts-expect-error
-    this.imageTexture = new AsyncTexture(device, {data: loadImageBitmap('./image.jpg', {imageOrientation: 'flipY'})});  
+    this.imageTexture = new AsyncTexture(device, {data: loadImageBitmap('./image.jpg'), flipY: true});  
 
     this.shaderPassMap = getShaderPasses();
     this.setShaderPasses([]);

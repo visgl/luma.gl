@@ -70,9 +70,6 @@ export abstract class Sampler extends Resource<SamplerProps> {
   }
 
   protected static normalizeProps(device: Device, props: SamplerProps): SamplerProps {
-    const overriddenDefaultProps: Partial<SamplerProps> =
-      device?.props?._resourceDefaults?.sampler || {};
-    const newProps = {...props, ...overriddenDefaultProps};
-    return newProps;
+    return props;
   }
 }

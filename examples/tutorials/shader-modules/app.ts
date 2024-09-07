@@ -6,10 +6,6 @@ import {Buffer, NumberArray} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, Model, ShaderInputs} from '@luma.gl/engine';
 import {ShaderModule} from '@luma.gl/shadertools';
 
-const INFO_HTML = `
-Re-using shader code with shader modules
-`;
-
 // Base vertex and fragment shader code pairs
 const vs1 = `\
 #version 300 es
@@ -81,7 +77,9 @@ vec3 color_hsv2rgb(vec3 hsv) {
 };
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
-  static info = INFO_HTML;
+  static info = `
+Re-using shader code with shader modules
+`;;
 
   model1: Model;
   shaderInputs1 = new ShaderInputs<{color: ColorModuleProps}>({color});

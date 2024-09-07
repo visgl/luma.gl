@@ -25,8 +25,12 @@ import type {QuerySet, QuerySetProps} from './resources/query-set';
 
 import type {ExternalImage} from '../image-utils/image-types';
 import {isExternalImage, getExternalImageSize} from '../image-utils/image-types';
-import {isTextureFormatCompressed} from '../gpu-type-utils/decode-texture-format';
+import {
+  isTextureFormatCompressed,
+  decodeTextureFormat
+} from '../gpu-type-utils/decode-texture-format';
 import {getTextureFormatCapabilities} from '../gpu-type-utils/texture-format-capabilities';
+import type {TextureFormatInfo} from '../gpu-type-utils/texture-format-info';
 
 /**
  * Identifies the GPU vendor and driver.
@@ -227,7 +231,7 @@ export type DeviceProps = {
   // CALLBACKS
 
   /** Error handling - uncaught errors */
-  onError?: (error: Error) => unknown;
+  onError?: (error: Error, context?: unknown) => unknown;
   /** Called when the size of a canvas changes */
   onResize?: (ctx: CanvasContext, info: {oldPixelSize: [number, number]}) => unknown;
   /** Called when the visibility of a canvas changes */
@@ -266,12 +270,6 @@ export type DeviceProps = {
   _cachePipelines?: boolean;
   /** Never destroy cached shaders and pipelines */
   _cacheDestroyPolicy?: 'unused' | 'never';
-  /** Resource default overrides */
-  _resourceDefaults?: {
-    texture?: Partial<TextureProps>;
-    sampler?: Partial<SamplerProps>;
-    renderPass?: Partial<RenderPassProps>;
-  };
 
   /** @deprecated Internal, Do not use directly! Use `luma.attachDevice()` to attach to pre-created contexts/devices. */
   _handle?: unknown; // WebGL2RenderingContext | GPUDevice | null;
@@ -313,7 +311,7 @@ export abstract class Device {
     webgl: {},
 
     // Callbacks
-    onError: (error: Error) => log.error(error.message)(),
+    onError: (error: Error, context: unknown) => log.error(error.message, context)(),
     onResize: (context: CanvasContext, info: {oldPixelSize: [number, number]}) => {
       const [width, height] = context.getPixelSize();
       const [prevWidth, prevHeight] = info.oldPixelSize;
@@ -343,7 +341,6 @@ export abstract class Device {
     _disabledFeatures: {
       'compilation-status-async-webgl': true
     },
-    _resourceDefaults: {},
 
     // INTERNAL
     _handle: undefined!
@@ -394,6 +391,24 @@ export abstract class Device {
   /** Default depth format used on this system */
   abstract preferredDepthFormat: 'depth16' | 'depth24plus' | 'depth32float';
 
+  protected _textureCaps: Partial<Record<TextureFormat, DeviceTextureFormatCapabilities>> = {};
+
+  /** Returns information about a texture format, such as data type, channels, bits per channel, compression etc */
+  getTextureFormatInfo(format: TextureFormat): TextureFormatInfo {
+    return decodeTextureFormat(format);
+  }
+
+  /** Determines what operations are supported on a texture format on this particular device (checks against supported device features) */
+  getTextureFormatCapabilities(format: TextureFormat): DeviceTextureFormatCapabilities {
+    let textureCaps = this._textureCaps[format];
+    if (!textureCaps) {
+      const capabilities = this._getDeviceTextureFormatCapabilities(format);
+      textureCaps = this._getDeviceSpecificTextureFormatCapabilities(capabilities);
+      this._textureCaps[format] = textureCaps;
+    }
+    return textureCaps;
+  }
+
   /** Calculates the number of mip levels for a texture of width and height */
   getMipLevelCount(width: number, height: number): number {
     return Math.floor(Math.log2(Math.max(width, height))) + 1;
@@ -429,12 +444,6 @@ export abstract class Device {
     return isTextureFormatCompressed(format);
   }
 
-  /** Determines what operations are supported on a texture format, checking against supported device features */
-  getTextureFormatCapabilities(format: TextureFormat): DeviceTextureFormatCapabilities {
-    const capabilities = this._getDeviceTextureFormatCapabilities(format);
-    return this._getDeviceSpecificTextureFormatCapabilities(capabilities);
-  }
-
   // Device loss
 
   /** `true` if device is already lost */
@@ -458,8 +467,12 @@ export abstract class Device {
   }
 
   /** Report error (normally called for unhandled device errors) */
-  reportError(error: Error): void {
-    this.props.onError(error);
+  reportError(error: Error, context?: unknown): void {
+    if (this.props.debug) {
+      // @ts-ignore
+      debugger; // eslint-disable-line
+    }
+    this.props.onError(error, context);
   }
 
   // Canvas context

@@ -9,13 +9,7 @@ import {Matrix4} from '@math.gl/core';
 
 /* eslint-disable camelcase */
 
-const INFO_HTML = `
-Have to start somewhere...
-`;
-
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
-  static info = INFO_HTML;
-
   device: Device;
   scenes: GroupNode[] = [];
   center = [0, 0, 0];
@@ -75,7 +69,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   async loadGLTF(modelName: string) {
-    const canvas = this.device.canvasContext.canvas as HTMLCanvasElement;
+    const canvas = this.device.getDefaultCanvasContext().canvas as HTMLCanvasElement;
     canvas.style.opacity = '0.1';
 
     const gltf = await load(

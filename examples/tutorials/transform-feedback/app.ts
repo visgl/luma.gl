@@ -1,10 +1,10 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import {Buffer} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, Model, Swap} from '@luma.gl/engine';
 import {BufferTransform} from '@luma.gl/engine';
-
-const INFO_HTML = `
-Animation via transform feedback.
-`;
 
 const transformVs = /* glsl */ `\
 #version 300 es
@@ -50,7 +50,9 @@ void main() {
 `;
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
-  static info = INFO_HTML;
+  static info = `
+Animation via transform feedback.
+`;;
 
   transform: BufferTransform;
   model: Model;

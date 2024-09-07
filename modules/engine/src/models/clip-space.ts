@@ -35,19 +35,19 @@ fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
 
 const CLIPSPACE_VERTEX_SHADER = /* glsl */ `\
 #version 300 es
-in vec2 clipSpacePosition;
-in vec2 texCoord;
-in vec2 coordinate;
+in vec2 clipSpacePositions;
+in vec2 texCoords;
+in vec2 coordinates;
 
 out vec2 position;
 out vec2 coordinate;
 out vec2 uv;
 
 void main(void) {
-  gl_Position = vec4(clipSpacePosition, 0., 1.);
-  position = clipSpacePosition;
-  coordinate = coordinate;
-  uv = texCoord;
+  gl_Position = vec4(clipSpacePositions, 0., 1.);
+  position = clipSpacePositions;
+  coordinate = coordinates;
+  uv = texCoords;
 }
 `;
 
@@ -78,9 +78,9 @@ export class ClipSpace extends Model {
         topology: 'triangle-strip',
         vertexCount: 4,
         attributes: {
-          clipSpacePosition: {size: 2, value: new Float32Array(POSITIONS)},
-          texCoord: {size: 2, value: new Float32Array(TEX_COORDS)},
-          coordinate: {size: 2, value: new Float32Array(TEX_COORDS)}
+          clipSpacePositions: {size: 2, value: new Float32Array(POSITIONS)},
+          texCoords: {size: 2, value: new Float32Array(TEX_COORDS)},
+          coordinates: {size: 2, value: new Float32Array(TEX_COORDS)}
         }
       })
     });
