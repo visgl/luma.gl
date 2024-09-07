@@ -94,10 +94,7 @@ export abstract class RenderPass extends Resource<RenderPassProps> {
   abstract insertDebugMarker(markerLabel: string): void;
 
   protected static normalizeProps(device: Device, props: RenderPassProps): RenderPassProps {
-    // Intended to override e.g. set default clear values to true
-    const overriddenDefaultProps = device.props._resourceDefaults?.renderPass;
-    const newProps = {...overriddenDefaultProps, ...props};
-    return newProps;
+    return props;
   }
 
   /** Default properties for RenderPass */

@@ -11,7 +11,7 @@ const BACKGROUND_FS_WGSL = /* wgsl */ `\
 @group(0) @binding(1) var backgroundTextureSampler: sampler;
 
 fn billboardTexture_getTextureUV(coordinates: vec2<f32>) -> vec2<f32> {
-	let iTexSize: vec2<u32> = textureDimensions(backgroundTexture, 0) * 2;
+	let iTexSize: vec2<u32> = textureDimensions(backgroundTexture, 0);
 	let texSize: vec2<f32> = vec2<f32>(f32(iTexSize.x), f32(iTexSize.y));
 	var position: vec2<f32> = coordinates.xy / texSize;
 	return position;
@@ -32,7 +32,7 @@ uniform sampler2D backgroundTexture;
 out vec4 fragColor;
 
 vec2 billboardTexture_getTextureUV() {
-  ivec2 iTexSize = textureDimensions(backgroundTexture, 0) * 2;
+  ivec2 iTexSize = textureSize(backgroundTexture, 0);
   vec2 texSize = vec2(float(iTexSize.x), float(iTexSize.y));
   vec2 position = gl_FragCoord.xy / texSize;
   return position;
@@ -73,7 +73,7 @@ export class BackgroundTextureModel extends ClipSpace {
               blendColorOperation: 'add',
               blendAlphaOperation: 'add',
               blendColorSrcFactor: 'one',
-              blendColorDstFactor: 'one-minus-src-color',
+              blendColorDstFactor: 'one-minus-src',
               blendAlphaSrcFactor: 'one',
               blendAlphaDstFactor: 'one-minus-src-alpha'
             }
@@ -81,6 +81,9 @@ export class BackgroundTextureModel extends ClipSpace {
       }
     });
 
+    if (!props.backgroundTexture) {
+      throw new Error('BackgroundTextureModel requires a backgroundTexture prop');
+    }
     this.setTexture(props.backgroundTexture);
   }
 

@@ -395,23 +395,33 @@ function convertBlendOperationToEquation(
   });
 }
 
-function convertBlendFactorToFunction(parameter: string, value: BlendFactor): GLBlendFunction {
+function convertBlendFactorToFunction(
+  parameter: string,
+  value: BlendFactor,
+  type: 'color' | 'alpha' = 'color'
+): GLBlendFunction {
   return map<BlendFactor, GLBlendFunction>(parameter, value, {
     one: GL.ONE,
     zero: GL.ZERO,
-    'src-color': GL.SRC_COLOR,
-    'one-minus-src-color': GL.ONE_MINUS_SRC_COLOR,
-    'dst-color': GL.DST_COLOR,
-    'one-minus-dst-color': GL.ONE_MINUS_DST_COLOR,
+    src: GL.SRC_COLOR,
+    'one-minus-src': GL.ONE_MINUS_SRC_COLOR,
+    dst: GL.DST_COLOR,
+    'one-minus-dst': GL.ONE_MINUS_DST_COLOR,
     'src-alpha': GL.SRC_ALPHA,
     'one-minus-src-alpha': GL.ONE_MINUS_SRC_ALPHA,
     'dst-alpha': GL.DST_ALPHA,
     'one-minus-dst-alpha': GL.ONE_MINUS_DST_ALPHA,
     'src-alpha-saturated': GL.SRC_ALPHA_SATURATE,
-    'constant-color': GL.CONSTANT_COLOR,
-    'one-minus-constant-color': GL.ONE_MINUS_CONSTANT_COLOR,
-    'constant-alpha': GL.CONSTANT_ALPHA,
-    'one-minus-constant-alpha': GL.ONE_MINUS_CONSTANT_ALPHA
+    constant: type === 'color' ? GL.CONSTANT_COLOR : GL.CONSTANT_ALPHA,
+    'one-minus-constant':
+      type === 'color' ? GL.ONE_MINUS_CONSTANT_COLOR : GL.ONE_MINUS_CONSTANT_ALPHA,
+    // 'constant-alpha': GL.CONSTANT_ALPHA,
+    // 'one-minus-constant-alpha': GL.ONE_MINUS_CONSTANT_ALPHA,
+    // TODO not supported in WebGL2
+    src1: GL.SRC_COLOR,
+    'one-minus-src1': GL.ONE_MINUS_SRC_COLOR,
+    'src1-alpha': GL.SRC_ALPHA,
+    'one-minus-src1-alpha': GL.ONE_MINUS_SRC_ALPHA
   });
 }
 

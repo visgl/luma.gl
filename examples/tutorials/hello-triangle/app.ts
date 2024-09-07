@@ -35,6 +35,10 @@ void main() {
 `;
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
+  static info = `\
+<p>Have to start somewhere...</p>
+`;
+
   model: Model;
 
   constructor({device}: AnimationProps) {

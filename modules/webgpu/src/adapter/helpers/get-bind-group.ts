@@ -34,10 +34,17 @@ export function getBindGroup(
   bindings: Record<string, Binding>
 ): GPUBindGroup {
   const entries = getBindGroupEntries(bindings, shaderLayout);
-  return device.createBindGroup({
+  device.pushErrorScope('validation');
+  const bindGroup = device.createBindGroup({
     layout: bindGroupLayout,
     entries
   });
+  device.popErrorScope().then((error: GPUError | null) => {
+    if (error) {
+      log.error(`createBindGroup validation failed: ${error.message}`)();
+    }
+  });
+  return bindGroup;
 }
 
 export function getShaderLayoutBinding(
@@ -119,7 +126,7 @@ function getBindGroupEntry(
     }
     return {
       binding: index,
-      resource: (binding as WebGPUTexture).handle.createView({label: 'bind-group-auto-created'})
+      resource: (binding as WebGPUTexture).view.handle
     };
   }
   log.warn(`invalid binding ${name}`, binding);

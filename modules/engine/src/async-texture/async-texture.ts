@@ -3,7 +3,7 @@
 
 import type {
   TextureProps,
-  Sampler,
+  SamplerProps,
   TextureView,
   Device,
   TypedArray,
@@ -11,12 +11,10 @@ import type {
   ExternalImage
 } from '@luma.gl/core';
 
-import {Texture, log} from '@luma.gl/core';
+import {Texture, Sampler, log} from '@luma.gl/core';
 
 import {loadImageBitmap} from '../application-utils/load-file';
 import {uid} from '../utils/uid';
-
-export type AsyncTextureProps = Omit<TextureProps, 'data'> & AsyncTextureDataProps;
 
 type AsyncTextureDataProps =
   | AsyncTexture1DProps
@@ -96,6 +94,19 @@ export type TextureCubeArrayData = Record<TextureCubeFace, TextureData>[];
 
 export const CubeFaces: TextureCubeFace[] = ['+X', '-X', '+Y', '-Y', '+Z', '-Z'];
 
+/** Properties for an async texture */
+export type AsyncTextureProps = Omit<TextureProps, 'data' | 'mipLevels' | 'width' | 'height'> &
+  AsyncTextureDataProps & {
+    /** Generate mipmaps after creating textures and setting data */
+    mipmaps?: boolean;
+    /** nipLevels can be set to 'auto' to generate max number of mipLevels */
+    mipLevels?: number | 'auto';
+    /** Width - can be auto-calculated when initializing from ExternalImage */
+    width?: number;
+    /** Height - can be auto-calculated when initializing from ExternalImage */
+    height?: number;
+  };
+
 /**
  * It is very convenient to be able to initialize textures with promises
  * This can add considerable complexity to the Texture class, and doesn't
@@ -138,9 +149,15 @@ export class AsyncTexture {
     this.props = {...AsyncTexture.defaultProps, id, ...props};
     this.id = this.props.id;
 
+    props = {...props};
     // Signature: new AsyncTexture(device, {data: url})
     if (typeof props?.data === 'string' && props.dimension === '2d') {
-      props = {...props, data: loadImageBitmap(props.data)};
+      props.data = loadImageBitmap(props.data);
+    }
+
+    // If mipmaps are requested, we need to allocate space for them
+    if (props.mipmaps) {
+      props.mipLevels = 'auto';
     }
 
     this.ready = new Promise<void>((resolve, reject) => {
@@ -167,13 +184,55 @@ export class AsyncTexture {
     }
 
     // Now we can actually create the texture
-    // @ts-expect-error Discriminated union
-    const syncProps: TextureProps = {...props, data};
+
+    // Auto-deduce width and height if not supplied
+    const size =
+      this.props.width && this.props.height
+        ? {width: this.props.width, height: this.props.height}
+        : this.getTextureDataSize(data);
+    if (!size) {
+      throw new Error('Texture size could not be determined');
+    }
+    const syncProps: TextureProps = {...size, ...props, data: undefined, mipLevels: 1};
+
+    // Auto-calculate the number of mip levels as a convenience
+    // TODO - Should we clamp to 1-getMipLevelCount?
+    const maxMips = this.device.getMipLevelCount(syncProps.width, syncProps.height);
+    syncProps.mipLevels =
+      this.props.mipLevels === 'auto' ? maxMips : Math.min(maxMips, this.props.mipLevels);
 
     this.texture = this.device.createTexture(syncProps);
     this.sampler = this.texture.sampler;
     this.view = this.texture.view;
     this.isReady = true;
+
+    if (props.data) {
+      switch (this.props.dimension) {
+        case '1d':
+          this._setTexture1DData(this.texture, data as Texture1DData);
+          break;
+        case '2d':
+          this._setTexture2DData(data as Texture2DData);
+          break;
+        case '3d':
+          this._setTexture3DData(this.texture, data as Texture3DData);
+          break;
+        case '2d-array':
+          this._setTextureArrayData(this.texture, data as TextureArrayData);
+          break;
+        case 'cube':
+          this._setTextureCubeData(this.texture, data as unknown as TextureCubeData);
+          break;
+        case 'cube-array':
+          this._setTextureCubeArrayData(this.texture, data as unknown as TextureCubeArrayData);
+          break;
+      }
+    }
+
+    // Do we need to generate mipmaps?
+    if (this.props.mipmaps) {
+      this.generateMipmaps();
+    }
 
     log.info(1, `${this} loaded`);
   }
@@ -187,10 +246,24 @@ export class AsyncTexture {
     this.destroyed = true;
   }
 
+  generateMipmaps(): void {
+    // if (this.device.type === 'webgl') {
+    this.texture.generateMipmapsWebGL();
+    // }
+  }
+
+  /** Set sampler or create and set new Sampler from SamplerProps */
+  setSampler(sampler: Sampler | SamplerProps = {}): void {
+    this.texture.setSampler(
+      sampler instanceof Sampler ? sampler : this.device.createSampler(sampler)
+    );
+  }
+
   /**
    * Textures are immutable and cannot be resized after creation,
    * but we can create a similar texture with the same parameters but a new size.
    * @note Does not copy contents of the texture
+   * @note Mipmaps may need to be regenerated after resizing / setting new data
    * @todo Abort pending promise and create a texture with the new size?
    */
   resize(size: {width: number; height: number}): boolean {
@@ -207,6 +280,7 @@ export class AsyncTexture {
       this.texture = texture.clone(size);
       texture.destroy();
     }
+
     return true;
   }
 
@@ -241,33 +315,6 @@ export class AsyncTexture {
     throw new Error('texture size deduction failed');
   }
 
-  /**
-   * Normalize TextureData to an array of TextureImageData / ExternalImages
-   * @param data
-   * @param options
-   * @returns array of TextureImageData / ExternalImages
-   */
-  normalizeTextureData(data: Texture2DData): (TextureImageData | ExternalImage)[] {
-    const options: {width: number; height: number; depth: number} = this.texture;
-    let mipLevelArray: (TextureImageData | ExternalImage)[];
-    if (ArrayBuffer.isView(data)) {
-      mipLevelArray = [
-        {
-          // ts-expect-error does data really need to be Uint8ClampedArray?
-          data,
-          width: options.width,
-          height: options.height
-          // depth: options.depth
-        }
-      ];
-    } else if (!Array.isArray(data)) {
-      mipLevelArray = [data];
-    } else {
-      mipLevelArray = data;
-    }
-    return mipLevelArray;
-  }
-
   /** Convert luma.gl cubemap face constants to depth index */
   getCubeFaceDepth(face: TextureCubeFace): number {
     // prettier-ignore
@@ -284,6 +331,8 @@ export class AsyncTexture {
 
   // EXPERIMENTAL
 
+  setTextureData(data: TextureData) {}
+
   /** Experimental: Set multiple mip levels */
   _setTexture1DData(texture: Texture, data: Texture1DData): void {
     throw new Error('setTexture1DData not supported in WebGL.');
@@ -295,7 +344,7 @@ export class AsyncTexture {
       throw new Error('Texture not initialized');
     }
 
-    const lodArray = this.normalizeTextureData(lodData);
+    const lodArray = this._normalizeTextureData(lodData);
 
     // If the user provides multiple LODs, then automatic mipmap
     // generation generateMipmap() should be disabled to avoid overwriting them.
@@ -306,9 +355,9 @@ export class AsyncTexture {
     for (let mipLevel = 0; mipLevel < lodArray.length; mipLevel++) {
       const imageData = lodArray[mipLevel];
       if (this.device.isExternalImage(imageData)) {
-        this.texture.copyExternalImage({image: imageData, depth, mipLevel});
+        this.texture.copyExternalImage({image: imageData, depth, mipLevel, flipY: true});
       } else {
-        // this.texture.copyImageData({data: imageData.data, depth, mipLevel});
+        this.texture.copyImageData({data: imageData.data /* , depth */, mipLevel});
       }
     }
   }
@@ -382,9 +431,37 @@ export class AsyncTexture {
     this._setTexture2DData(lodData, faceDepth);
   }
 
+  /**
+   * Normalize TextureData to an array of TextureImageData / ExternalImages
+   * @param data
+   * @param options
+   * @returns array of TextureImageData / ExternalImages
+   */
+  _normalizeTextureData(data: Texture2DData): (TextureImageData | ExternalImage)[] {
+    const options: {width: number; height: number; depth: number} = this.texture;
+    let mipLevelArray: (TextureImageData | ExternalImage)[];
+    if (ArrayBuffer.isView(data)) {
+      mipLevelArray = [
+        {
+          // ts-expect-error does data really need to be Uint8ClampedArray?
+          data,
+          width: options.width,
+          height: options.height
+          // depth: options.depth
+        }
+      ];
+    } else if (!Array.isArray(data)) {
+      mipLevelArray = [data];
+    } else {
+      mipLevelArray = data;
+    }
+    return mipLevelArray;
+  }
+
   static defaultProps: Required<AsyncTextureProps> = {
     ...Texture.defaultProps,
-    data: null
+    data: null,
+    mipmaps: false
   };
 }
 

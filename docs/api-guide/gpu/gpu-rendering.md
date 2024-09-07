@@ -140,10 +140,10 @@ To draw to the screen in luma.gl, simply create a `RenderPass` by calling
   device.submit(); 
 ```
 
-For more detail. `device.canvasContext.getDefaultFramebuffer()` returns a special framebuffer that lets you render to screen (into the device's swap chain textures). This framebuffer is used by default when a `device.beginRenderPass()` is called without providing a `framebuffer`: 
+For more detail. `device.getDefaultCanvasContext().getDefaultFramebuffer()` returns a special framebuffer that lets you render to screen (into the device's swap chain textures). This framebuffer is used by default when a `device.beginRenderPass()` is called without providing a `framebuffer`: 
 
 ```typescript
-  const renderPass = device.beginRenderPass({framebuffer: device.canvasContext.getDefaultFramebuffer()});
+  const renderPass = device.beginRenderPass({framebuffer: device.getDefaultCanvasContext().getDefaultFramebuffer()});
   ...
 ```
 
