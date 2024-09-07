@@ -209,9 +209,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     this.cloud.draw(renderPass);
     renderPass.end();
-
-    // device.submit();
-    // debugger
   }
 }
 

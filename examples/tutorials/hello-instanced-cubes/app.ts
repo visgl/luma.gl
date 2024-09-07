@@ -87,6 +87,10 @@ const MATRIX_SIZE = 4 * 4 * 4; // 4x4 (x4 bytes) matrix
 const UNIFORM_BUFFER_SIZE = NUMBER_OF_INSTANCES * MATRIX_SIZE; // 4x4 (x4 bytes) matrix
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
+  static info = `\
+Instanced cubes drawn using luma.gl's high-level API.
+  `;
+
   cubeModel: Model;
   uniformBuffer: Buffer;
 

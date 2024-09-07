@@ -137,25 +137,37 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
     };
   }, [deviceType, canvas]);
 
+  // @ts-expect-error Intentionally accessing undeclared field info
+  const info = props.template?.info;
+
   return (
     <div style={{position: 'relative'}}>
       <canvas key={deviceType} ref={setCanvas} style={{width: '100%', height: '100%'}} />
-      {props.children && (
-        <div
-          style={{
-            position: 'absolute',
-            boxShadow: '5px 5px 4px grey',
-            backgroundColor: '#F0F0F0F0',
-            top: 20,
-            right: 20,
-            width: 200,
-            height: 250,
-            padding: 10
-          }}
-        >
-          {props.children}
-        </div>
-      )}
+      <div
+        style={{
+          position: 'absolute',
+          boxShadow: '5px 5px 4px grey',
+          backgroundColor: '#F0F0F0F0',
+          top: 20,
+          right: 20,
+          width: 200,
+          height: 250,
+          padding: 10
+        }}
+      >
+        <h3>{capitalizeFirstLetters(props.id)}</h3>
+        {info && <div dangerouslySetInnerHTML={{__html: info}} />}
+        {props.children}
+      </div>
     </div>
   );
 };
+
+function capitalizeFirstLetters(string) {
+  const strings = string.split('-');
+  return strings.map(capitalizeFirstLetter).join(' ');
+}
+
+function capitalizeFirstLetter(string) {
+  return string.charAt(0).toUpperCase() + string.slice(1);
+}

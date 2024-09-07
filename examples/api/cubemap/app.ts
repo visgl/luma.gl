@@ -55,8 +55,8 @@ struct appUniforms {
 };
 
 @group(0) @binding(0) var<uniform> app : appUniforms;
-@group(0) @binding(1) var textureCube : texture_cube<f32>;
-@group(0) @binding(2) var textureCubeSampler : sampler;
+@group(0) @binding(1) var cubeTexture : texture_cube<f32>;
+@group(0) @binding(2) var cubeTextureSampler : sampler;
 
 struct VertexInputs {
   @location(0) positions : vec3<f32>,
@@ -78,7 +78,7 @@ fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
 @fragment 
 fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
   // The outer cube just samples the texture cube directly
-  return textureSample(textureCube, textureCubeSampler, normalize(inputs.position));
+  return textureSample(cubeTexture, cubeTextureSampler, normalize(inputs.position));
 }
   `;
 
@@ -110,14 +110,14 @@ uniform appUniforms {
   mat4 projectionMatrix;
 } app;
 
-uniform samplerCube textureCube;
+uniform samplerCube cubeTexture;
 
 in vec3 vPosition;
 out vec4 fragColor;
 
 void main(void) {
   // The outer cube just samples the texture cube directly
-  fragColor = texture(textureCube, normalize(vPosition));
+  fragColor = texture(cubeTexture, normalize(vPosition));
 }
   `;
 }
@@ -143,10 +143,10 @@ struct appUniforms {
 };
 
 @group(0) @binding(0) var<uniform> app : appUniforms;
-@group(0) @binding(1) var textureCube : texture_cube<f32>;
-@group(0) @binding(2) var textureCubeSampler : sampler;
-@group(0) @binding(3) var texture : texture_2d<f32>;
-@group(0) @binding(4) var textureSampler : sampler;
+@group(0) @binding(1) var cubeTexture : texture_cube<f32>;
+@group(0) @binding(2) var cubeTextureSampler : sampler;
+@group(0) @binding(3) var prismTexture : texture_2d<f32>;
+@group(0) @binding(4) var prismTextureSampler : sampler;
 
 struct VertexInputs {
   @location(0) positions : vec3<f32>,
@@ -173,9 +173,9 @@ fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
 
 @fragment 
 fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
-  let color = textureSample(texture, textureSampler, vec2(inputs.uv.x, 1.0 - inputs.uv.y));
+  let color = textureSample(prismTexture, prismTextureSampler, vec2(inputs.uv.x, 1.0 - inputs.uv.y));
   let reflectedDir = reflect(normalize(inputs.position - app.eyePosition), inputs.normal);
-  let reflectedColor = textureSample(textureCube, textureCubeSampler, reflectedDir);
+  let reflectedColor = textureSample(cubeTexture, cubeTextureSampler, reflectedDir);
 
   return mix(color, reflectedColor, 0.8);
 }
@@ -223,13 +223,13 @@ uniform appUniforms {
   vec3 eyePosition;
 } app;
 
-uniform sampler2D texture;
-uniform samplerCube textureCube;
+uniform sampler2D prismTexture;
+uniform samplerCube cubeTexture;
 
 void main(void) {
-  vec4 color = texture(texture, vec2(vUV.x, 1.0 - vUV.y));
+  vec4 color = texture(prismTexture, vec2(vUV.x, 1.0 - vUV.y));
   vec3 reflectedDir = reflect(normalize(vPosition - app.eyePosition), vNormal);
-  vec4 reflectedColor = texture(textureCube, reflectedDir);
+  vec4 reflectedColor = texture(cubeTexture, reflectedDir);
 
   fragColor = mix(color, reflectedColor, 0.8);
 }
@@ -237,6 +237,11 @@ void main(void) {
 }
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
+  static info = `\
+Uses a luma.gl <code>TextureCube</code> to simulate a reflective surface
+`;
+
+
   cube: RoomCube;
   prism: Prism;
 
@@ -251,7 +256,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   constructor({device}: AnimationProps) {
     super();
 
-    const cubemap = new AsyncTexture(device, {
+    const cubeTexture = new AsyncTexture(device, {
       dimension: 'cube',
       mipmaps: true,
       // @ts-ignore
@@ -270,7 +275,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       }
     });
 
-    const texture = new AsyncTexture(device, {
+    const prismTexture = new AsyncTexture(device, {
       data: loadImageBitmap('vis-logo.png'),
       mipmaps: true,
       sampler: {
@@ -284,7 +289,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       shaderInputs: this.roomShaderInputs,
       instanceCount: 1,
       bindings: {
-        textureCube: cubemap
+        cubeTexture
       },
       parameters: {
         depthWriteEnabled: true,
@@ -296,8 +301,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       shaderInputs: this.prismShaderInputs,
       instanceCount: 1,
       bindings: {
-        texture: texture,
-        textureCube: cubemap
+        prismTexture,
+        cubeTexture
       },
       parameters: {
         depthWriteEnabled: true,

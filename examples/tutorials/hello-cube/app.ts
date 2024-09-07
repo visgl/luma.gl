@@ -110,6 +110,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 <p>
 Drawing a textured cube
 </p>
+
+<p>
+Rendered using the luma.gl <code>Model</code>, <code>CubeGeometry</code> and <code>AnimationLoop</code> classes.
+</p>
 `;;
 
   mvpMatrix = new Matrix4();

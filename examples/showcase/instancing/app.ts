@@ -57,7 +57,7 @@ fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
   outputs.color = inputs.instanceColors;
 
   // vec4 pickColor = vec4(0., instanceIndexes, 1.0);
-  picking_setPickingColor(0);
+  // picking_setPickingColor(0);
   
   return outputs;
 }
@@ -202,12 +202,12 @@ const app: ShaderModule<AppUniforms> = {
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = `\
-  Cube drawn with <b>instanced rendering</b>.
-
+  <p>
   A luma.gl <code>Cube</code>, rendering 65,536 instances in a
   single GPU draw call using instanced vertex attributes.
+  </P>
   `;
-  ;
+  
   static props = {createFramebuffer: true, debug: true};
 
   cube: InstancedCube;
