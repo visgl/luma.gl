@@ -29,6 +29,8 @@ import type {
   QuerySet,
   QuerySetProps,
   DeviceProps,
+  CommandEncoder,
+  CommandEncoderProps,
 } from '@luma.gl/core';
 import {Device, DeviceFeatures} from '@luma.gl/core';
 import {WebGPUBuffer} from './resources/webgpu-buffer';
@@ -93,6 +95,7 @@ export class WebGPUDevice extends Device {
 
     // Listen for uncaptured WebGPU errors
     device.addEventListener('uncapturederror', (event: Event) => {
+      event.preventDefault();
       // TODO is this the right way to make sure the error is an Error instance?
       const errorMessage =
         event instanceof GPUUncapturedErrorEvent ? event.error.message : 'Unknown WebGPU error';
@@ -101,7 +104,6 @@ export class WebGPUDevice extends Device {
         // eslint-disable-next-line no-debugger
         debugger;
       }
-      event.preventDefault();
     });
 
     // "Context" loss handling
@@ -176,13 +178,21 @@ export class WebGPUDevice extends Device {
    * @todo need to support a "Framebuffer" equivalent (aka preconfigured RenderPassDescriptors?).
    */
   beginRenderPass(props: RenderPassProps): WebGPURenderPass {
-    this.commandEncoder = this.commandEncoder || this.handle.createCommandEncoder();
+    this._initializeCommandEncoder();
     return new WebGPURenderPass(this, props);
   }
 
   beginComputePass(props: ComputePassProps): WebGPUComputePass {
-    this.commandEncoder = this.commandEncoder || this.handle.createCommandEncoder();
+    this._initializeCommandEncoder();
     return new WebGPUComputePass(this, props);
+  }
+
+  override createCommandEncoder(props?: CommandEncoderProps): CommandEncoder {
+    throw new Error('Not implemented');
+  }
+
+  protected _initializeCommandEncoder() {
+    this.commandEncoder ||= this.handle.createCommandEncoder({label: `${this.id}-default-encoder`});
   }
 
   // createCommandEncoder(props: CommandEncoderProps): WebGPUCommandEncoder {

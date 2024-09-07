@@ -26,10 +26,6 @@ export type CommandBufferProps = ResourceProps & {};
  * Encodes commands to queue that can be executed later
  */
 export abstract class CommandBuffer extends Resource<CommandBufferProps> {
-  static override defaultProps: Required<CommandBufferProps> = {
-    ...Resource.defaultProps
-  };
-
   override get [Symbol.toStringTag](): string {
     return 'CommandBuffer';
   }
@@ -37,4 +33,8 @@ export abstract class CommandBuffer extends Resource<CommandBufferProps> {
   constructor(device: Device, props: CommandBufferProps) {
     super(device, props, CommandBuffer.defaultProps);
   }
+
+  static override defaultProps: Required<CommandBufferProps> = {
+    ...Resource.defaultProps
+  };
 }

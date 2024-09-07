@@ -2,6 +2,20 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+/**
+ * These represent the main compressed texture formats
+ * Each format typically has a number of more specific subformats
+ */
+export type TextureCompression =
+  | 'dxt'
+  | 'dxt-srgb'
+  | 'etc1'
+  | 'etc2'
+  | 'pvrtc'
+  | 'atc'
+  | 'astc'
+  | 'rgtc';
+
 /** Texture formats */
 export type TextureFormat = ColorTextureFormat | DepthStencilTextureFormat;
 

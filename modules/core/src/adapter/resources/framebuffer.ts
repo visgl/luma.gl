@@ -25,14 +25,6 @@ export type FramebufferProps = ResourceProps & {
  * @note resize() destroys existing textures (if size has changed).
  */
 export abstract class Framebuffer extends Resource<FramebufferProps> {
-  static override defaultProps: Required<FramebufferProps> = {
-    ...Resource.defaultProps,
-    width: 1,
-    height: 1,
-    colorAttachments: [], // ['rgba8unorm'],
-    depthStencilAttachment: null // 'depth24plus-stencil8'
-  };
-
   override get [Symbol.toStringTag](): string {
     return 'Framebuffer';
   }
@@ -182,4 +174,12 @@ export abstract class Framebuffer extends Resource<FramebufferProps> {
 
   /** Implementation is expected to update any underlying binding (WebGL framebuffer attachment) */
   protected abstract updateAttachments(): void;
+
+  static override defaultProps: Required<FramebufferProps> = {
+    ...Resource.defaultProps,
+    width: 1,
+    height: 1,
+    colorAttachments: [], // ['rgba8unorm'],
+    depthStencilAttachment: null // 'depth24plus-stencil8'
+  };
 }

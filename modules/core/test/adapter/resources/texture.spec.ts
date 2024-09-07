@@ -195,6 +195,7 @@ function testFormatCreation(t, device: Device, withData: boolean = false) {
     if (canGenerateMipmaps) {
       try {
         const data = withData && !packed ? TEXTURE_DATA[dataType] || DEFAULT_TEXTURE_DATA : null;
+
         const capabilities = device.getTextureFormatCapabilities(format);
         const mipmaps = capabilities.render && capabilities.filter;
 

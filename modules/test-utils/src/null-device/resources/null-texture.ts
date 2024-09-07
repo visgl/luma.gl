@@ -8,12 +8,7 @@ import type {
   SamplerProps,
   TextureViewProps,
   CopyExternalImageOptions,
-  Texture1DData,
-  Texture2DData,
-  Texture3DData,
-  TextureCubeData,
-  TextureArrayData,
-  TextureCubeArrayData
+  CopyImageDataOptions
 } from '@luma.gl/core';
 
 import {Texture} from '@luma.gl/core';
@@ -50,30 +45,6 @@ export class NullTexture extends Texture {
 
   createView(props: TextureViewProps): NullTextureView {
     return new NullTextureView(this.device, {...props, texture: this});
-  }
-
-  setTexture1DData(data: Texture1DData): void {
-    throw new Error('not implemented');
-  }
-
-  setTexture2DData(lodData: Texture2DData, depth?: number, target?: number): void {
-    throw new Error('not implemented');
-  }
-
-  setTexture3DData(lodData: Texture3DData, depth?: number, target?: number): void {
-    throw new Error('not implemented');
-  }
-
-  setTextureCubeData(data: TextureCubeData, depth?: number): void {
-    throw new Error('not implemented');
-  }
-
-  setTextureArrayData(data: TextureArrayData): void {
-    throw new Error('not implemented');
-  }
-
-  setTextureCubeArrayData(data: TextureCubeArrayData): void {
-    throw new Error('not implemented');
   }
 
   initialize(props: TextureProps = {}): this {
@@ -121,5 +92,9 @@ export class NullTexture extends Texture {
     this.height = height;
 
     return {width, height};
+  }
+
+  override copyImageData(options: CopyImageDataOptions): void {
+    throw new Error('copyImageData not implemented');
   }
 }
