@@ -1,3 +1,5 @@
+//
+
 import React from 'react';
 import {LumaExample} from './react-luma';
 
@@ -30,250 +32,189 @@ import TransformApp from '../../examples/tutorials/transform/app';
 
 const exampleConfig = {};
 
-// API Examples
-
-export const AnimationExample: React.FC = () => (
-  <LumaExample id="animation" directory="api" template={AnimationApp} config={exampleConfig} />
-);
-
-export const CubemapExample: React.FC = () => (
-  <LumaExample id="cubemap" directory="api" template={CubemapApp} config={exampleConfig} />
-);
-
-export const Texture3DExample: React.FC = () => (
-  <LumaExample id="texture-3d" directory="api-3d" template={Texture3DApp} config={exampleConfig} />
-);
-
-// Performance Examples
-
-// export default class Example extends React.Component {
-//   render() {
-//     const { pageContext } = this.props;
-//     const exampleConfig = (pageContext && pageContext.exampleConfig) || {};
-//     return (
-//       <LumaExample AnimationLoop={PerformanceApp} exampleConfig={exampleConfig} />
-//     );
-//   }
-// }
-
 // Showcase Examples
 
-// export const DOFExample: React.FC = () => (
-//   <LumaExample
-//     id="gltf"
-//     directory="showcase"
-//     template={DOFApp}
-//     config={exampleConfig}
-//   />
-// );
-
-// export const GeospatialExample: React.FC = () => (
-//   <LumaExample
-//     id="gltf"
-//     directory="showcase"
-//     template={GeospatialApp}
-//     config={exampleConfig}
-//   />
-// );
-
-// export const GLTFExample: React.FC = () => (
-//   <LumaExample
-//     id="gltf"
-//     directory="showcase"
-//     template={GLTFApp}
-//     config={exampleConfig}
-//   />
-// );
-
-export const InstancingExample: React.FC = () => (
+export const InstancingExample: React.FC = props => (
   <LumaExample
     id="instancing"
     directory="showcase"
     template={InstancingApp}
     config={exampleConfig}
+    {...props}
   />
 );
 
-export const PersistenceExample: React.FC = () => (
+export const PersistenceExample: React.FC = props => (
   <LumaExample
     id="persistence"
     directory="showcase"
     template={PersistenceApp}
     config={exampleConfig}
+    {...props}
   />
 );
 
-export const PostprocessingExample: React.FC = () => (
+export const PostprocessingExample: React.FC = props => (
   <LumaExample
     id="postprocessing"
     directory="showcase"
     template={PostprocessingApp}
     config={exampleConfig}
+    {...props}
   />
 );
 
-// export const WanderingExample: React.FC = () => (
-//   <LumaExample
-//     id="wandering"
-//     directory="showcase/wandering"
-//     template={WanderingApp}
-//     config={exampleConfig}
-//   />
-// );
+// API Examples
+
+export const AnimationExample: React.FC = props => (
+  <LumaExample
+    id="animation"
+    directory="api"
+    template={AnimationApp}
+    config={exampleConfig}
+    {...props}
+  />
+);
+
+export const CubemapExample: React.FC = props => (
+  <LumaExample
+    id="cubemap"
+    directory="api"
+    template={CubemapApp}
+    config={exampleConfig}
+    {...props}
+  />
+);
+
+export const Texture3DExample: React.FC = props => (
+  <LumaExample
+    id="texture-3d"
+    directory="api-3d"
+    template={Texture3DApp}
+    config={exampleConfig}
+    {...props}
+  />
+);
 
 // Tutorial Examples
 
-export const HelloCubeExample: React.FC = () => (
-  <LumaExample
-    id="hello-cube"
-    directory="tutorials"
-    template={HelloCubeApp}
-    config={exampleConfig}
-  />
-);
-
-export const HelloInstancingExample: React.FC = () => (
-  <LumaExample
-    id="hello-instancing"
-    directory="tutorials"
-    template={HelloInstancingApp}
-    config={exampleConfig}
-  />
-);
-
-export const HelloTriangleExample: React.FC = () => (
+export const HelloTriangleExample: React.FC = props => (
   <LumaExample
     id="hello-triangle"
     directory="tutorials"
     template={HelloTriangleApp}
     config={exampleConfig}
+    {...props}
   />
 );
 
-export const InstancedTransformExample: React.FC = () => (
-  <h2><i>Note: Transform examples temporarily disabled</i></h2>
-);
-
-export const LightingExample: React.FC = () => (
-  <LumaExample id="lighting" directory="tutorials" template={LightingApp} config={exampleConfig} />
-);
-
-export const HelloGLTFExample: React.FC = () => (
-  <LumaExample
-    id="hello-gltf"
-    directory="tutorials"
-    template={HelloGLTFApp}
-    config={exampleConfig}
-  />
-);
-
-export const ShaderHooksExample: React.FC = () => (
-  <LumaExample
-    id="shader-hooks"
-    directory="tutorials"
-    template={ShaderHooksApp}
-    config={exampleConfig}
-  />
-);
-
-export const ShaderModulesExample: React.FC = () => (
-  <LumaExample
-    id="shader-modules"
-    directory="tutorials"
-    template={ShaderModulesApp}
-    config={exampleConfig}
-  />
-);
-
-export const TransformFeedbackExample: React.FC = () => (
-  <LumaExample
-    id="transform-feedback"
-    directory="tutorials"
-    template={TransformFeedbackApp}
-    config={exampleConfig}
-  />
-);
-
-export const TransformExample: React.FC = () => (
-  <LumaExample
-    id="transform"
-    directory="tutorials"
-    template={TransformApp}
-    config={exampleConfig}
-  />
-);
-
-// WebGL Examples
-
-// export default class ExternalWebGLContextExample extends React.Component {
-//   render() {
-//     const { pageContext } = this.props;
-//     const exampleConfig = (pageContext && pageContext.exampleConfig) || {};
-//     return (
-//       <LumaExample AnimationLoop={AnimationLoop} exampleConfig={exampleConfig} />
-//     );
-//   }
-// }
-
-// import AnimationLoop from '../../examples/webgl/hello-instancing-webgl/app';
-
-// export default class Example extends React.Component {
-//   render() {
-//     const { pageContext } = this.props;
-//     const exampleConfig = (pageContext && pageContext.exampleConfig) || {};
-//     return (
-//       <LumaExample AnimationLoop={AnimationLoop} exampleConfig={exampleConfig} />
-//     );
-//   }
-// }
-
-// import AnimationLoop from '../../examples/webgl/shader-modules-webgl/app';
-
-// export default class Example extends React.Component {
-//   render() {
-//     const { pageContext } = this.props;
-//     const exampleConfig = (pageContext && pageContext.exampleConfig) || {};
-//     return (
-//       <LumaExample AnimationLoop={AnimationLoop} exampleConfig={exampleConfig} />
-//     );
-//   }
-// }
-
-// WebGPU Examples
-
-export const HelloTriangleGeometryExample: React.FC = () => (
+export const HelloTriangleGeometryExample: React.FC = props => (
   <LumaExample
     id="hello-triangle-geometry"
     directory="tutorials"
     template={HelloTriangleGeometryApp}
     config={exampleConfig}
+    {...props}
   />
 );
 
-export const InstancedCubesExample: React.FC = () => (
+export const HelloCubeExample: React.FC = props => (
+  <LumaExample
+    id="hello-cube"
+    directory="tutorials"
+    template={HelloCubeApp}
+    config={exampleConfig}
+    {...props}
+  />
+);
+
+export const InstancedCubesExample: React.FC = props => (
   <LumaExample
     id="instanced-cubes"
     directory="tutorials"
     template={InstancedCubesApp}
     config={exampleConfig}
+    {...props}
   />
 );
 
-export const TwoCubesExample: React.FC = () => (
+export const TwoCubesExample: React.FC = props => (
   <LumaExample
     id="two-cubes"
     directory="tutorials"
     template={TwoCubesApp}
     config={exampleConfig}
+    {...props}
   />
 );
 
-// export const TexturedCubeExample: React.FC = () => (
-//   <LumaExample
-//     id="textured-cube-webgpu"
-//     directory="webgpu"
-//     template={TexturedCubeApp}
-//     config={exampleConfig}
-//   />
-// );
+export const LightingExample: React.FC = props => (
+  <LumaExample
+    id="lighting"
+    directory="tutorials"
+    template={LightingApp}
+    config={exampleConfig}
+    {...props}
+  />
+);
+
+export const HelloGLTFExample: React.FC = props => (
+  <LumaExample
+    id="hello-gltf"
+    directory="tutorials"
+    template={HelloGLTFApp}
+    config={exampleConfig}
+    {...props}
+  />
+);
+
+export const HelloInstancingExample: React.FC = props => (
+  <LumaExample
+    id="hello-instancing"
+    directory="tutorials"
+    template={HelloInstancingApp}
+    config={exampleConfig}
+    {...props}
+  />
+);
+
+export const ShaderHooksExample: React.FC = props => (
+  <LumaExample
+    id="shader-hooks"
+    directory="tutorials"
+    template={ShaderHooksApp}
+    config={exampleConfig}
+    {...props}
+  />
+);
+
+export const ShaderModulesExample: React.FC = props => (
+  <LumaExample
+    id="shader-modules"
+    directory="tutorials"
+    template={ShaderModulesApp}
+    config={exampleConfig}
+    {...props}
+  />
+);
+
+export const TransformFeedbackExample: React.FC = props => (
+  <LumaExample
+    id="transform-feedback"
+    directory="tutorials"
+    template={TransformFeedbackApp}
+    config={exampleConfig}
+    {...props}
+  />
+);
+
+export const TransformExample: React.FC = props => (
+  <LumaExample
+    id="transform"
+    directory="tutorials"
+    template={TransformApp}
+    config={exampleConfig}
+    {...props}
+  />
+);
 

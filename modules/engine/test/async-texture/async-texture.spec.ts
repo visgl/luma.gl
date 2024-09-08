@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 // import test from 'tape-promise/tape';
-// import {webglDevice} from '@luma.gl/test-utils';
+// import {getWebGLTestDevice} from '@luma.gl/test-utils';
 
 // import {AsyncTexture} from '@luma.gl/engine';
 // import {Texture} from '@luma.gl/core';

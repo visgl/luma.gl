@@ -6,15 +6,33 @@ import {Device, Texture} from '@luma.gl/core';
 import {AsyncTexture} from '../async-texture/async-texture';
 import {ClipSpace} from './clip-space';
 
+const BACKGROUND_FS_WGSL = /* wgsl */ `\
+@group(0) @binding(0) var backgroundTexture: texture_2d<f32>;
+@group(0) @binding(1) var backgroundTextureSampler: sampler;
+
+fn billboardTexture_getTextureUV(coordinates: vec2<f32>) -> vec2<f32> {
+	let iTexSize: vec2<u32> = textureDimensions(backgroundTexture, 0);
+	let texSize: vec2<f32> = vec2<f32>(f32(iTexSize.x), f32(iTexSize.y));
+	var position: vec2<f32> = coordinates.xy / texSize;
+	return position;
+} 
+
+@fragment
+fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
+	let position: vec2<f32> = billboardTexture_getTextureUV(inputs.coordinate);
+	return textureSample(backgroundTexture, backgroundTextureSampler, position);
+}
+`;
+
 const BACKGROUND_FS = /* glsl */ `\
 #version 300 es
-
 precision highp float;
+
 uniform sampler2D backgroundTexture;
 out vec4 fragColor;
 
 vec2 billboardTexture_getTextureUV() {
-  ivec2 iTexSize = textureSize(backgroundTexture, 0) * 2;
+  ivec2 iTexSize = textureSize(backgroundTexture, 0);
   vec2 texSize = vec2(float(iTexSize.x), float(iTexSize.y));
   vec2 position = gl_FragCoord.xy / texSize;
   return position;
@@ -45,17 +63,17 @@ export class BackgroundTextureModel extends ClipSpace {
   constructor(device: Device, props: BackgroundTextureModelProps) {
     super(device, {
       id: props.id || 'background-texture-model',
+      source: BACKGROUND_FS_WGSL,
       fs: BACKGROUND_FS,
       parameters: {
         depthWriteEnabled: false,
-        depthCompare: 'always',
         ...(props.blend
           ? {
               blend: true,
               blendColorOperation: 'add',
               blendAlphaOperation: 'add',
               blendColorSrcFactor: 'one',
-              blendColorDstFactor: 'one-minus-src-color',
+              blendColorDstFactor: 'one-minus-src',
               blendAlphaSrcFactor: 'one',
               blendAlphaDstFactor: 'one-minus-src-alpha'
             }
@@ -63,6 +81,9 @@ export class BackgroundTextureModel extends ClipSpace {
       }
     });
 
+    if (!props.backgroundTexture) {
+      throw new Error('BackgroundTextureModel requires a backgroundTexture prop');
+    }
     this.setTexture(props.backgroundTexture);
   }
 

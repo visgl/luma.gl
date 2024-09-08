@@ -11,12 +11,10 @@ However, the `@luma.gl/core` module cannot be used on its own: it relies on bein
 that implements the API. luma.gl provides adapters (implementations of the abstract API)
 through the `@luma.gl/webgl` and `@luma.gl/webgpu` modules.
 
-The `@luma.gl/core` module is not usable on its own. A device adapter module must
-be imported.
+The `@luma.gl/core` module is not usable on its own. A device adapter module must be imported.
 
 ```bash
 yarn add @luma.gl/core
-yarn add @luma.gl/webgl
 yarn add @luma.gl/webgpu
 ```
 

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {CanvasContextProps, TextureFormat} from '@luma.gl/core';
+import type {CanvasContextProps} from '@luma.gl/core';
 import {CanvasContext} from '@luma.gl/core';
 import type {NullDevice} from './null-device';
 import {NullFramebuffer} from './resources/null-framebuffer';
@@ -12,49 +12,36 @@ import {NullFramebuffer} from './resources/null-framebuffer';
  */
 export class NullCanvasContext extends CanvasContext {
   readonly device: NullDevice;
-  readonly format: TextureFormat = 'rgba8unorm';
-  readonly depthStencilFormat: TextureFormat = 'depth24plus';
+  readonly handle = null;
 
   presentationSize: [number, number];
   private _framebuffer: NullFramebuffer | null = null;
+
+  get [Symbol.toStringTag]() {
+    return 'NullCanvasContext';
+  }
 
   constructor(device: NullDevice, props: CanvasContextProps) {
     // Note: Base class creates / looks up the canvas (unless under Node.js)
     super(props);
     this.device = device;
-    this.presentationSize = [-1, -1];
+
+    // Base class constructor cannot access derived methods/fields, so we need to call these functions in the subclass constructor
     this._setAutoCreatedCanvasId(`${this.device.id}-canvas`);
-    this.update();
+    this.updateSize([this.drawingBufferWidth, this.drawingBufferHeight]);
   }
 
   getCurrentFramebuffer(): NullFramebuffer {
-    this.update();
     // Setting handle to null returns a reference to the default framebuffer
     this._framebuffer = this._framebuffer || new NullFramebuffer(this.device, {handle: null});
     return this._framebuffer;
   }
 
   /** Resizes and updates render targets if necessary */
-  update() {
-    const size = this.getPixelSize();
-    const sizeChanged =
-      size[0] !== this.presentationSize[0] || size[1] !== this.presentationSize[1];
-    if (sizeChanged) {
-      this.presentationSize = size;
-      this.resize();
-    }
-  }
+  updateSize(size: [number, number]) {}
 
   resize(options?: {width?: number; height?: number; useDevicePixels?: boolean | number}): void {
-    if (this.canvas) {
-      const devicePixelRatio = this.getDevicePixelRatio(options?.useDevicePixels);
-      this.setDevicePixelRatio(devicePixelRatio, options);
-      return;
-    }
-  }
-
-  override getDrawingBufferSize(): [number, number] {
-    return [this.width, this.height];
+    throw new Error('not implemented');
   }
 
   commit() {}

@@ -6,10 +6,6 @@ import {Buffer, NumberArray, UniformStore} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine';
 import {ShaderAssembler} from '@luma.gl/shadertools';
 
-const INFO_HTML = `
-Modifying shader behavior with shader hooks
-`;
-
 // Base vertex and fragment shader code
 const vs = `\
 #version 300 es
@@ -51,7 +47,9 @@ const offsetRightModule = {
 };
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
-  static info = INFO_HTML;
+  static info = `
+Modifying shader behavior with shader hooks
+`;
 
   model1: Model;
   model2: Model;

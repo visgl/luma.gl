@@ -5,7 +5,7 @@
 import {StatsManager, lumaStats} from '../utils/stats-manager';
 import {log} from '../utils/log';
 import {uid} from '../utils/uid';
-import type {TextureFormat} from '../gpu-type-utils//texture-formats';
+import type {TextureFormat} from '../gpu-type-utils/texture-formats';
 import type {CanvasContext, CanvasContextProps} from './canvas-context';
 import type {BufferProps} from './resources/buffer';
 import {Buffer} from './resources/buffer';
@@ -23,7 +23,14 @@ import type {VertexArray, VertexArrayProps} from './resources/vertex-array';
 import type {TransformFeedback, TransformFeedbackProps} from './resources/transform-feedback';
 import type {QuerySet, QuerySetProps} from './resources/query-set';
 
-import {isTextureFormatCompressed} from '../gpu-type-utils/decode-texture-format';
+import type {ExternalImage} from '../image-utils/image-types';
+import {isExternalImage, getExternalImageSize} from '../image-utils/image-types';
+import {
+  isTextureFormatCompressed,
+  decodeTextureFormat
+} from '../gpu-type-utils/decode-texture-format';
+import {getTextureFormatCapabilities} from '../gpu-type-utils/texture-format-capabilities';
+import type {TextureFormatInfo} from '../gpu-type-utils/texture-format-info';
 
 /**
  * Identifies the GPU vendor and driver.
@@ -170,7 +177,7 @@ export type WebGLDeviceFeature =
   // texture rendering
   | 'float32-renderable-webgl'
   | 'float16-renderable-webgl'
-  | 'rgb9e5ufloat_renderable-webgl'
+  | 'rgb9e5ufloat-renderable-webgl'
   | 'snorm8-renderable-webgl'
   | 'norm16-renderable-webgl'
   | 'snorm16-renderable-webgl'
@@ -192,6 +199,21 @@ type WebGLCompressedTextureFeatures =
   | 'texture-compression-pvrtc-webgl'
   | 'texture-compression-atc-webgl';
 
+/** Texture format capabilities that have been checked against a specific device */
+export type DeviceTextureFormatCapabilities = {
+  format: TextureFormat;
+  /** Can the format be created and sampled?*/
+  create: boolean;
+  /** Is the format renderable. */
+  render: boolean;
+  /** Is the format filterable. */
+  filter: boolean;
+  /** Is the format blendable. */
+  blend: boolean;
+  /** Is the format storeable. */
+  store: boolean;
+};
+
 /** Device properties */
 export type DeviceProps = {
   /** string id for debugging. Stored on the object, used in logging and set on underlying GPU objects when feasible. */
@@ -202,11 +224,20 @@ export type DeviceProps = {
   powerPreference?: 'default' | 'high-performance' | 'low-power';
   /** Hints that device creation should fail if no hardware GPU is available (if the system performance is "low"). */
   failIfMajorPerformanceCaveat?: boolean;
-  /** Error handling */
-  onError?: (error: Error) => unknown;
 
   /** WebGL specific: Properties passed through to WebGL2RenderingContext creation: `canvas.getContext('webgl2', props.webgl)` */
   webgl?: WebGLContextProps;
+
+  // CALLBACKS
+
+  /** Error handling - uncaught errors */
+  onError?: (error: Error, context?: unknown) => unknown;
+  /** Called when the size of a canvas changes */
+  onResize?: (ctx: CanvasContext, info: {oldPixelSize: [number, number]}) => unknown;
+  /** Called when the visibility of a canvas changes */
+  onVisibilityChange?: (ctx: CanvasContext) => unknown;
+  /** Called when the device pixel ratio of a canvas changes */
+  onDevicePixelRatioChange?: (ctx: CanvasContext, info: {oldRatio: number}) => unknown;
 
   // DEBUG SETTINGS
 
@@ -216,6 +247,8 @@ export type DeviceProps = {
   debugShaders?: 'never' | 'errors' | 'warnings' | 'always';
   /** Renders a small version of updated Framebuffers into the primary canvas context. Can be set in console luma.log.set('debug-framebuffers', true) */
   debugFramebuffers?: boolean;
+  /** Traces resource caching, reuse, and destroys in the PipelineFactory */
+  debugFactories?: boolean;
   /** WebGL specific - Trace WebGL calls (instruments WebGL2RenderingContext at the expense of performance). Can be set in console luma.log.set('debug-webgl', true)  */
   debugWebGL?: boolean;
   /** WebGL specific - Initialize the SpectorJS WebGL debugger. Can be set in console luma.log.set('debug-spectorjs', true)  */
@@ -231,14 +264,12 @@ export type DeviceProps = {
   _disabledFeatures?: Partial<Record<DeviceFeature, boolean>>;
   /** WebGL specific - Initialize all features on startup */
   _initializeFeatures?: boolean;
+  /** Enable shader caching (via ShaderFactory) */
+  _cacheShaders?: boolean;
+  /** Enable shader caching (via PipelineFactory) */
+  _cachePipelines?: boolean;
   /** Never destroy cached shaders and pipelines */
-  _factoryDestroyPolicy?: 'unused' | 'never';
-  /** Resource default overrides */
-  _resourceDefaults?: {
-    texture?: Partial<TextureProps>;
-    sampler?: Partial<SamplerProps>;
-    renderPass?: Partial<RenderPassProps>;
-  };
+  _cacheDestroyPolicy?: 'unused' | 'never';
 
   /** @deprecated Internal, Do not use directly! Use `luma.attachDevice()` to attach to pre-created contexts/devices. */
   _handle?: unknown; // WebGL2RenderingContext | GPUDevice | null;
@@ -276,28 +307,40 @@ export abstract class Device {
     powerPreference: 'high-performance',
     failIfMajorPerformanceCaveat: false,
     createCanvasContext: undefined!,
+    // WebGL specific
+    webgl: {},
 
     // Callbacks
-    onError: (error: Error) => log.error(error.message),
+    onError: (error: Error, context: unknown) => log.error(error.message, context)(),
+    onResize: (context: CanvasContext, info: {oldPixelSize: [number, number]}) => {
+      const [width, height] = context.getPixelSize();
+      const [prevWidth, prevHeight] = info.oldPixelSize;
+      log.log(1, `${context} Resized ${prevWidth}x${prevHeight} => ${width}x${height}px`)();
+    },
+    onVisibilityChange: (context: CanvasContext) =>
+      log.log(1, `${context} Visibility changed ${context.isVisible}`)(),
+    onDevicePixelRatioChange: (context: CanvasContext, info: {oldRatio: number}) =>
+      log.log(1, `${context} DPR changed ${info.oldRatio} => ${context.devicePixelRatio}`)(),
 
+    // Debug flags
+    debug: log.get('debug') || undefined!,
+    debugShaders: log.get('debug-shaders') || undefined!,
+    debugFramebuffers: Boolean(log.get('debug-framebuffers')),
+    debugFactories: Boolean(log.get('debug-factories')),
+    debugWebGL: Boolean(log.get('debug-webgl')),
+    debugSpectorJS: undefined!, // Note: log setting is queried by the spector.js code
+    debugSpectorJSUrl: undefined!,
+
+    // Experimental
     _requestMaxLimits: true,
-    _factoryDestroyPolicy: 'unused',
+    _cacheShaders: false,
+    _cachePipelines: false,
+    _cacheDestroyPolicy: 'unused',
     // TODO - Change these after confirming things work as expected
     _initializeFeatures: true,
     _disabledFeatures: {
       'compilation-status-async-webgl': true
     },
-    _resourceDefaults: {},
-
-    // WebGL specific
-    webgl: {},
-
-    debug: log.get('debug') || undefined!,
-    debugShaders: log.get('debug-shaders') || undefined!,
-    debugFramebuffers: Boolean(log.get('debug-framebuffers')),
-    debugWebGL: Boolean(log.get('debug-webgl')),
-    debugSpectorJS: undefined!, // Note: log setting is queried by the spector.js code
-    debugSpectorJSUrl: undefined!,
 
     // INTERNAL
     _handle: undefined!
@@ -316,6 +359,8 @@ export abstract class Device {
   readonly id: string;
   /** type of this device */
   abstract readonly type: 'webgl' | 'webgpu' | 'unknown';
+  abstract readonly handle: unknown;
+
   /** A copy of the device props  */
   readonly props: Required<DeviceProps>;
   /** Available for the application to store data on the device */
@@ -339,14 +384,60 @@ export abstract class Device {
   /** WebGPU style device limits */
   abstract get limits(): DeviceLimits;
 
+  // Texture helpers
+
+  /** Optimal TextureFormat for displaying 8-bit depth, standard dynamic range content on this system. */
+  abstract preferredColorFormat: 'rgba8unorm' | 'bgra8unorm';
+  /** Default depth format used on this system */
+  abstract preferredDepthFormat: 'depth16' | 'depth24plus' | 'depth32float';
+
+  protected _textureCaps: Partial<Record<TextureFormat, DeviceTextureFormatCapabilities>> = {};
+
+  /** Returns information about a texture format, such as data type, channels, bits per channel, compression etc */
+  getTextureFormatInfo(format: TextureFormat): TextureFormatInfo {
+    return decodeTextureFormat(format);
+  }
+
+  /** Determines what operations are supported on a texture format on this particular device (checks against supported device features) */
+  getTextureFormatCapabilities(format: TextureFormat): DeviceTextureFormatCapabilities {
+    let textureCaps = this._textureCaps[format];
+    if (!textureCaps) {
+      const capabilities = this._getDeviceTextureFormatCapabilities(format);
+      textureCaps = this._getDeviceSpecificTextureFormatCapabilities(capabilities);
+      this._textureCaps[format] = textureCaps;
+    }
+    return textureCaps;
+  }
+
+  /** Calculates the number of mip levels for a texture of width and height */
+  getMipLevelCount(width: number, height: number): number {
+    return Math.floor(Math.log2(Math.max(width, height))) + 1;
+  }
+
+  /** Check if data is an external image */
+  isExternalImage(data: unknown): data is ExternalImage {
+    return isExternalImage(data);
+  }
+
+  /** Get the size of an external image */
+  getExternalImageSize(data: ExternalImage): {width: number; height: number} {
+    return getExternalImageSize(data);
+  }
+
   /** Check if device supports a specific texture format (creation and `nearest` sampling) */
-  abstract isTextureFormatSupported(format: TextureFormat): boolean;
+  isTextureFormatSupported(format: TextureFormat): boolean {
+    return this.getTextureFormatCapabilities(format).create;
+  }
 
   /** Check if linear filtering (sampler interpolation) is supported for a specific texture format */
-  abstract isTextureFormatFilterable(format: TextureFormat): boolean;
+  isTextureFormatFilterable(format: TextureFormat): boolean {
+    return this.getTextureFormatCapabilities(format).filter;
+  }
 
-  /** Check if device supports rendering to a specific texture format */
-  abstract isTextureFormatRenderable(format: TextureFormat): boolean;
+  /** Check if device supports rendering to a framebuffer color attachment of a specific texture format */
+  isTextureFormatRenderable(format: TextureFormat): boolean {
+    return this.getTextureFormatCapabilities(format).render;
+  }
 
   /** Check if a specific texture format is GPU compressed */
   isTextureFormatCompressed(format: TextureFormat): boolean {
@@ -370,9 +461,18 @@ export abstract class Device {
     return false;
   }
 
-  /** Report error (normally for unhandled device errors) */
-  error(error: Error): void {
-    this.props.onError(error);
+  /** A monotonic counter for tracking buffer and texture updates */
+  incrementTimestamp(): number {
+    return this.timestamp++;
+  }
+
+  /** Report error (normally called for unhandled device errors) */
+  reportError(error: Error, context?: unknown): void {
+    if (this.props.debug) {
+      // @ts-ignore
+      debugger; // eslint-disable-line
+    }
+    this.props.onError(error, context);
   }
 
   // Canvas context
@@ -429,26 +529,20 @@ export abstract class Device {
   /** Create a ComputePass */
   abstract beginComputePass(props?: ComputePassProps): ComputePass;
 
+  abstract createCommandEncoder(props?: CommandEncoderProps): CommandEncoder;
+
   /** Create a transform feedback (immutable set of output buffer bindings). WebGL only. */
   abstract createTransformFeedback(props: TransformFeedbackProps): TransformFeedback;
 
   abstract createQuerySet(props: QuerySetProps): QuerySet;
 
-  createCommandEncoder(props: CommandEncoderProps = {}): CommandEncoder {
-    throw new Error('not implemented');
-  }
-
-  /** A monotonic counter for tracking buffer and texture updates */
-  incrementTimestamp(): number {
-    return this.timestamp++;
-  }
-
-  // Error Handling
-
-  /** Report unhandled device errors */
-  onError(error: Error) {
-    this.props.onError(error);
-  }
+  /**
+   * Determines what operations are supported on a texture format, checking against supported device features
+   * Subclasses override to apply additional checks
+   */
+  protected abstract _getDeviceSpecificTextureFormatCapabilities(
+    format: DeviceTextureFormatCapabilities
+  ): DeviceTextureFormatCapabilities;
 
   // DEPRECATED METHODS
 
@@ -523,6 +617,26 @@ export abstract class Device {
 
   // IMPLEMENTATION
 
+  protected _getDeviceTextureFormatCapabilities(
+    format: TextureFormat
+  ): DeviceTextureFormatCapabilities {
+    const genericCapabilities = getTextureFormatCapabilities(format);
+
+    // Check standard features
+    const checkFeature = (feature: DeviceFeature | boolean | undefined) =>
+      (typeof feature === 'string' ? this.features.has(feature) : feature) ?? true;
+
+    const supported = checkFeature(genericCapabilities.create);
+    return {
+      format,
+      create: supported,
+      render: supported && checkFeature(genericCapabilities.render),
+      filter: supported && checkFeature(genericCapabilities.filter),
+      blend: supported && checkFeature(genericCapabilities.blend),
+      store: supported && checkFeature(genericCapabilities.store)
+    } as const satisfies DeviceTextureFormatCapabilities;
+  }
+
   /** Subclasses use this to support .createBuffer() overloads */
   protected _normalizeBufferProps(props: BufferProps | ArrayBuffer | ArrayBufferView): BufferProps {
     if (props instanceof ArrayBuffer || ArrayBuffer.isView(props)) {
@@ -540,7 +654,7 @@ export abstract class Device {
       } else if (props.data instanceof Uint16Array) {
         newProps.indexType = 'uint16';
       } else {
-        log.warn('indices buffer content must be of integer type')();
+        log.warn('indices buffer content must be of type uint16 or uint32')();
       }
     }
     return newProps;

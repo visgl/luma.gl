@@ -17,14 +17,6 @@ import {
 } from '@luma.gl/engine';
 import {Matrix4, Vector3, radians} from '@math.gl/core';
 
-const INFO_HTML = `
-<p>
-  Electron trails renderings persist across multiple frames.
-<p>
-  Uses multiple luma.gl <code>Framebuffer</code>s to hold previously rendered data between frames.
-</p>
-`;
-
 // SPHERE SHADER
 
 type SphereUniforms = {
@@ -75,7 +67,7 @@ fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
 }
 
 @fragment
-fn fragmentMain(inputs: FragmentInputs) -> [[location(0)]] vec4<f32> {
+fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
   let attenuation = 1.0;
   if (sphere.lighting) {
     light = normalize(vec3(1,1,2));
@@ -291,7 +283,13 @@ const nucleonPosition = [];
 
 /* eslint-disable max-statements */
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
-  static info = INFO_HTML;
+  static info = `
+<p>
+  Electron trails renderings persist across multiple frames.
+<p>
+  Uses multiple luma.gl <code>Framebuffer</code>s to hold previously rendered data between frames.
+</p>
+`;;
 
   // A single uniform store that manages uniforms for all our shaders
   uniformStore = new UniformStore<{

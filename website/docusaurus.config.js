@@ -2,7 +2,7 @@ const {getDocusaurusConfig} = require('@vis.gl/docusaurus-website');
 
 const config = getDocusaurusConfig({
   projectName: 'luma.gl',
-  tagline: 'WebGPU and WebGL 2 APIs',
+  tagline: 'WebGPU and WebGL2 API for visualization and compute',
   siteUrl: process.env.STAGING ? 'https://visgl.github.io/luma.gl' : 'https://luma.gl',
   repoUrl: 'https://github.com/visgl/luma.gl',
 

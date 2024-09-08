@@ -9,26 +9,26 @@ import type {
   DeviceInfo,
   DeviceLimits,
   DeviceFeature,
+  DeviceTextureFormatCapabilities,
   CanvasContextProps,
   BufferProps,
   SamplerProps,
   ShaderProps,
-  Texture,
   TextureProps,
-  TextureFormat,
   ExternalTextureProps,
   FramebufferProps,
   RenderPipelineProps,
   ComputePipelineProps,
   RenderPassProps,
   ComputePassProps,
-  // CommandEncoderProps,
   VertexArrayProps,
   TransformFeedback,
   TransformFeedbackProps,
   QuerySet,
   QuerySetProps,
-  DeviceProps
+  DeviceProps,
+  CommandEncoder,
+  CommandEncoderProps,
 } from '@luma.gl/core';
 import {Device, DeviceFeatures} from '@luma.gl/core';
 import {WebGPUBuffer} from './resources/webgpu-buffer';
@@ -41,7 +41,6 @@ import {WebGPUFramebuffer} from './resources/webgpu-framebuffer';
 import {WebGPUComputePipeline} from './resources/webgpu-compute-pipeline';
 import {WebGPURenderPass} from './resources/webgpu-render-pass';
 import {WebGPUComputePass} from './resources/webgpu-compute-pass';
-// import {WebGPUCommandEncoder} from './resources/webgpu-command-encoder';
 import {WebGPUVertexArray} from './resources/webgpu-vertex-array';
 
 import {WebGPUCanvasContext} from './webgpu-canvas-context';
@@ -49,26 +48,32 @@ import {WebGPUQuerySet} from './resources/webgpu-query-set';
 
 /** WebGPU Device implementation */
 export class WebGPUDevice extends Device {
+  /** The underlying WebGPU device */
+  readonly handle: GPUDevice;
   /** type of this device */
   readonly type = 'webgpu';
 
-  /** The underlying WebGPU device */
-  readonly handle: GPUDevice;
-  /* The underlying WebGPU adapter */
-  readonly adapter: GPUAdapter;
-  /* The underlying WebGPU adapter's info */
-  readonly adapterInfo: GPUAdapterInfo;
+  readonly preferredColorFormat = navigator.gpu.getPreferredCanvasFormat() as
+    | 'rgba8unorm'
+    | 'bgra8unorm';
+  readonly preferredDepthFormat = 'depth24plus';
 
   readonly features: DeviceFeatures;
   readonly info: DeviceInfo;
   readonly limits: DeviceLimits;
 
   readonly lost: Promise<{reason: 'destroyed'; message: string}>;
-  canvasContext: WebGPUCanvasContext | null = null;
+
+  renderPass: WebGPURenderPass | null = null;
+  override canvasContext: WebGPUCanvasContext | null;
 
   private _isLost: boolean = false;
+  // canvasContext: WebGPUCanvasContext | null = null;
   commandEncoder: GPUCommandEncoder | null = null;
-  renderPass: WebGPURenderPass | null = null;
+  /* The underlying WebGPU adapter */
+  readonly adapter: GPUAdapter;
+  /* The underlying WebGPU adapter's info */
+  readonly adapterInfo: GPUAdapterInfo;
 
   constructor(
     props: DeviceProps,
@@ -87,10 +92,15 @@ export class WebGPUDevice extends Device {
 
     // Listen for uncaptured WebGPU errors
     device.addEventListener('uncapturederror', (event: Event) => {
+      event.preventDefault();
       // TODO is this the right way to make sure the error is an Error instance?
       const errorMessage =
-        event instanceof GPUUncapturedErrorEvent ? event.error.message : 'Unknown error';
-      this.error(new Error(errorMessage));
+        event instanceof GPUUncapturedErrorEvent ? event.error.message : 'Unknown WebGPU error';
+      this.reportError(new Error(errorMessage));
+      if (this.props.debug) {
+        // eslint-disable-next-line no-debugger
+        debugger;
+      }
     });
 
     // "Context" loss handling
@@ -115,24 +125,6 @@ export class WebGPUDevice extends Device {
 
   destroy(): void {
     this.handle.destroy();
-  }
-
-  isTextureFormatSupported(format: TextureFormat): boolean {
-    return !format.includes('webgl');
-  }
-
-  /** @todo implement proper check? */
-  isTextureFormatFilterable(format: TextureFormat): boolean {
-    return (
-      this.isTextureFormatSupported(format) &&
-      !format.startsWith('depth') &&
-      !format.startsWith('stencil')
-    );
-  }
-
-  /** @todo implement proper check? */
-  isTextureFormatRenderable(format: TextureFormat): boolean {
-    return this.isTextureFormatSupported(format);
   }
 
   get isLost(): boolean {
@@ -183,13 +175,21 @@ export class WebGPUDevice extends Device {
    * @todo need to support a "Framebuffer" equivalent (aka preconfigured RenderPassDescriptors?).
    */
   beginRenderPass(props: RenderPassProps): WebGPURenderPass {
-    this.commandEncoder = this.commandEncoder || this.handle.createCommandEncoder();
+    this._initializeCommandEncoder();
     return new WebGPURenderPass(this, props);
   }
 
   beginComputePass(props: ComputePassProps): WebGPUComputePass {
-    this.commandEncoder = this.commandEncoder || this.handle.createCommandEncoder();
+    this._initializeCommandEncoder();
     return new WebGPUComputePass(this, props);
+  }
+
+  override createCommandEncoder(props?: CommandEncoderProps): CommandEncoder {
+    throw new Error('Not implemented');
+  }
+
+  protected _initializeCommandEncoder() {
+    this.commandEncoder ||= this.handle.createCommandEncoder({label: `${this.id}-default-encoder`});
   }
 
   // createCommandEncoder(props: CommandEncoderProps): WebGPUCommandEncoder {
@@ -209,13 +209,31 @@ export class WebGPUDevice extends Device {
   }
 
   submit(): void {
-    // this.renderPass?.end();
     const commandBuffer = this.commandEncoder?.finish();
     if (commandBuffer) {
+      this.handle.pushErrorScope('validation');
       this.handle.queue.submit([commandBuffer]);
+      this.handle.popErrorScope().then((error: GPUError | null) => {
+        if (error) {
+          this.reportError(new Error(`WebGPU command submission failed: ${error.message}`));
+        }
+      });
     }
     this.commandEncoder = null;
-    // this.renderPass = null;
+  }
+
+  // WebGPU specific
+
+  pushErrorScope(scope: 'validation' | 'out-of-memory'): void {
+    this.handle.pushErrorScope(scope);
+  }
+
+  popErrorScope(handler: (message: string) => void): void {
+    this.handle.popErrorScope().then((error: GPUError | null) => {
+      if (error) {
+        handler(error.message);
+      }
+    });
   }
 
   // PRIVATE METHODS
@@ -280,59 +298,13 @@ export class WebGPUDevice extends Device {
     return new DeviceFeatures(Array.from(features), this.props._disabledFeatures);
   }
 
-  copyExternalImageToTexture(options: {
-    texture: Texture;
-    mipLevel?: number;
-    aspect?: 'all' | 'stencil-only' | 'depth-only';
-    colorSpace?: 'display-p3' | 'srgb';
-    premultipliedAlpha?: boolean;
-
-    source: ImageBitmap | HTMLVideoElement | HTMLCanvasElement | OffscreenCanvas;
-    sourceX?: number;
-    sourceY?: number;
-
-    width?: number;
-    height?: number;
-    depth?: number;
-  }): void {
-    const {
-      source,
-      sourceX = 0,
-      sourceY = 0,
-
-      texture,
-      mipLevel = 0,
-      aspect = 'all',
-      colorSpace = 'display-p3',
-      premultipliedAlpha = false,
-      // destinationX,
-      // destinationY,
-      // desitnationZ,
-
-      width = texture.width,
-      height = texture.height,
-      depth = 1
-    } = options;
-
-    const webGpuTexture = texture as WebGPUTexture;
-
-    this.handle?.queue.copyExternalImageToTexture(
-      // source: GPUImageCopyExternalImage
-      {
-        source,
-        origin: [sourceX, sourceY]
-      },
-      // destination: GPUImageCopyTextureTagged
-      {
-        texture: webGpuTexture.handle,
-        origin: [0, 0, 0], // [x, y, z],
-        mipLevel,
-        aspect,
-        colorSpace,
-        premultipliedAlpha
-      },
-      // copySize: GPUExtent3D
-      [width, height, depth]
-    );
+  override _getDeviceSpecificTextureFormatCapabilities(
+    capabilities: DeviceTextureFormatCapabilities
+  ): DeviceTextureFormatCapabilities {
+    const {format} = capabilities;
+    if (format.includes('webgl')) {
+      return {format, create: false, render: false, filter: false, blend: false, store: false};
+    }
+    return capabilities;
   }
 }

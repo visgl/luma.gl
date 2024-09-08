@@ -4,10 +4,11 @@
 
 import {WEBGLSampler, WEBGLTexture} from '@luma.gl/webgl';
 import {splitUniformsAndBindings} from '@luma.gl/webgl/utils/split-uniforms-and-bindings';
-import {webglDevice as device} from '@luma.gl/test-utils';
+import {getWebGLTestDevice} from '@luma.gl/test-utils';
 import test from 'tape-promise/tape';
 
-test('splitUniformsAndBindings', t => {
+test('splitUniformsAndBindings', async t => {
+  const device = await getWebGLTestDevice();
   const mixed: Parameters<typeof splitUniformsAndBindings>[0] = {
     array: [1, 2, 3, 4],
     boolean: true,

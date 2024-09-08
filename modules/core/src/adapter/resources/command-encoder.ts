@@ -131,11 +131,6 @@ export type CommandEncoderProps = ResourceProps & {
  * Encodes commands to queue that can be executed later
  */
 export abstract class CommandEncoder extends Resource<CommandEncoderProps> {
-  static override defaultProps: Required<CommandEncoderProps> = {
-    ...Resource.defaultProps,
-    measureExecutionTime: undefined!
-  };
-
   override get [Symbol.toStringTag](): string {
     return 'CommandEncoder';
   }
@@ -185,4 +180,9 @@ export abstract class CommandEncoder extends Resource<CommandEncoderProps> {
   // TODO - luma.gl has these on the device, should we align with WebGPU API?
   // beginRenderPass(GPURenderPassDescriptor descriptor): GPURenderPassEncoder;
   // beginComputePass(optional GPUComputePassDescriptor descriptor = {}): GPUComputePassEncoder;
+
+  static override defaultProps: Required<CommandEncoderProps> = {
+    ...Resource.defaultProps,
+    measureExecutionTime: undefined!
+  };
 }

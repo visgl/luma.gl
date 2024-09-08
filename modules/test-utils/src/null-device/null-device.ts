@@ -5,7 +5,6 @@
 import type {
   DeviceProps,
   CanvasContextProps,
-  TextureFormat,
   VertexArray,
   VertexArrayProps,
   BufferProps,
@@ -48,6 +47,11 @@ export class NullDevice extends Device {
     return true;
   }
   readonly type = 'unknown';
+  readonly handle = null;
+
+  readonly preferredColorFormat = 'rgba8unorm';
+  readonly preferredDepthFormat = 'depth24plus';
+
   features: DeviceFeatures = new DeviceFeatures([], this.props._disabledFeatures);
   limits: NullDeviceLimits = new NullDeviceLimits();
   readonly info = NullDeviceInfo;
@@ -61,29 +65,16 @@ export class NullDevice extends Device {
     const canvasContextProps = props.createCanvasContext === true ? {} : props.createCanvasContext;
     this.canvasContext = new NullCanvasContext(this, canvasContextProps);
     this.lost = new Promise(resolve => {});
-    this.canvasContext.resize();
   }
 
   /**
    * Destroys the context
-   * @note Has no effect for WebGL browser contexts, there is no browser API for destroying contexts
+   * @note Has no effect for null contexts
    */
   destroy(): void {}
 
   get isLost(): boolean {
     return false;
-  }
-
-  isTextureFormatSupported(format: TextureFormat): boolean {
-    return true;
-  }
-
-  isTextureFormatFilterable(format: TextureFormat): boolean {
-    return true;
-  }
-
-  isTextureFormatRenderable(format: TextureFormat): boolean {
-    return true;
   }
 
   // IMPLEMENTATION OF ABSTRACT DEVICE
@@ -173,5 +164,9 @@ export class NullDevice extends Device {
       // ignore
     }
     return value;
+  }
+
+  override _getDeviceSpecificTextureFormatCapabilities(format: any): any {
+    return format;
   }
 }

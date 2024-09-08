@@ -2,13 +2,13 @@
   "compilerOptions": {
     "baseUrl": ".",
     "rootDir": ".",
-    "noEmit": true,
 
     // https://www.npmjs.com/package/@webgpu/types
     "typeRoots": ["./node_modules/@webgpu/types", "./node_modules/@types"],
 
     "target": "ES2022",
     "module": "ES2022",
+
     "jsx": "react",
     "allowJs": true,
     "checkJs": false,
@@ -45,6 +45,8 @@
       "@luma.gl/core/test/*": ["modules/core/test/*"],
       "@luma.gl/constants/*": ["modules/constants/src/*"],
       "@luma.gl/constants/test/*": ["modules/constants/test/*"],
+      "@luma.gl/effects/*": ["modules/effects/src/*"],
+      "@luma.gl/effects/test/*": ["modules/effects/test/*"],
       "@luma.gl/engine/*": ["modules/engine/src/*"],
       "@luma.gl/engine/test/*": ["modules/engine/test/*"],
       // "@luma.gl/experimental/*": ["modules/experimental/src/*"],
@@ -60,7 +62,28 @@
       "@luma.gl/webgpu/*": ["modules/webgpu/src/*"],
       "@luma.gl/webgpu/test/*": ["modules/webgpu/test/*"],
       "test/*": ["test/*"]
-    }
+    },
+    "plugins": [
+      {
+        "transform": "@vis.gl/ts-plugins/ts-transform-version-inline"
+      },
+      {
+        "transform": "@vis.gl/ts-plugins/ts-transform-inline-webgl-constants"
+      },
+      {
+        "transform": "@vis.gl/ts-plugins/ts-transform-remove-glsl-comments"
+      },
+      {
+        "transform": "@vis.gl/ts-plugins/ts-transform-append-extension",
+        "extensions": [".js"],
+        "after": true
+      },
+      {
+        "transform": "@vis.gl/ts-plugins/ts-transform-append-extension",
+        "extensions": [".js"],
+        "afterDeclarations": true
+      }
+    ]
   },
   // Note: an "include": [] section dramatically limits coverage.
   // Better to explicitly exclude things.

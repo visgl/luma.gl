@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {CanvasContextProps, TextureFormat} from '@luma.gl/core';
+import type {CanvasContextProps} from '@luma.gl/core';
 import {CanvasContext} from '@luma.gl/core';
 import {WebGLDevice} from './webgl-device';
 import {WEBGLFramebuffer} from './resources/webgl-framebuffer';
@@ -12,38 +12,31 @@ import {WEBGLFramebuffer} from './resources/webgl-framebuffer';
  */
 export class WebGLCanvasContext extends CanvasContext {
   readonly device: WebGLDevice;
-  readonly format: TextureFormat = 'rgba8unorm';
-  readonly depthStencilFormat: TextureFormat = 'depth24plus';
+  readonly handle: unknown = null;
 
-  presentationSize: [number, number];
   private _framebuffer: WEBGLFramebuffer | null = null;
+
+  get [Symbol.toStringTag](): string {
+    return 'WebGLCanvasContext';
+  }
 
   constructor(device: WebGLDevice, props: CanvasContextProps) {
     // Note: Base class creates / looks up the canvas (unless under Node.js)
     super(props);
     this.device = device;
-    this.presentationSize = [-1, -1];
+
+    // Base class constructor cannot access derived methods/fields, so we need to call these functions in the subclass constructor
     this._setAutoCreatedCanvasId(`${this.device.id}-canvas`);
-    this.update();
+    this.updateSize([this.drawingBufferWidth, this.drawingBufferHeight]);
   }
 
   getCurrentFramebuffer(): WEBGLFramebuffer {
-    this.update();
     // Setting handle to null returns a reference to the default framebuffer
     this._framebuffer = this._framebuffer || new WEBGLFramebuffer(this.device, {handle: null});
     return this._framebuffer;
   }
 
-  /** Resizes and updates render targets if necessary */
-  update() {
-    const size = this.getPixelSize();
-    const sizeChanged =
-      size[0] !== this.presentationSize[0] || size[1] !== this.presentationSize[1];
-    if (sizeChanged) {
-      this.presentationSize = size;
-      this.resize();
-    }
-  }
+  updateSize(size: [number, number]): void {}
 
   /**
    * Resize the canvas' drawing buffer.
@@ -60,10 +53,14 @@ export class WebGLCanvasContext extends CanvasContext {
   resize(options?: {width?: number; height?: number; useDevicePixels?: boolean | number}): void {
     if (!this.device.gl) return;
 
-    // Resize browser context .
+    if (this.props.autoResize) {
+      return;
+    }
+
+    // Resize browser context. TODO - this likely needs to be rewritten
     if (this.canvas) {
       const devicePixelRatio = this.getDevicePixelRatio(options?.useDevicePixels);
-      this.setDevicePixelRatio(devicePixelRatio, options);
+      this._setDevicePixelRatio(devicePixelRatio, options);
       return;
     }
   }

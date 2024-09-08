@@ -16,7 +16,7 @@ import {RenderPipeline, log} from '@luma.gl/core';
 // import {getAttributeInfosFromLayouts} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 
-import {getShaderLayout} from '../helpers/get-shader-layout';
+import {getShaderLayoutFromGLSL} from '../helpers/get-shader-layout';
 import {withDeviceAndGLParameters} from '../converters/device-parameters';
 import {setUniform} from '../helpers/set-uniform';
 import {splitUniformsAndBindings} from '../../utils/split-uniforms-and-bindings';
@@ -57,11 +57,15 @@ export class WEBGLRenderPipeline extends RenderPipeline {
   _uniformCount: number = 0;
   _uniformSetters: Record<string, Function> = {}; // TODO are these used?
 
+  override get [Symbol.toStringTag]() {
+    return 'WEBGLRenderPipeline';
+  }
+
   constructor(device: WebGLDevice, props: RenderPipelineProps) {
     super(device, props);
     this.device = device;
     this.handle = this.props.handle || this.device.gl.createProgram();
-    this.device.setSpectorMetadata(this.handle, {id: this.props.id});
+    this.device._setWebGLDebugMetadata(this.handle, this, {spector: {id: this.props.id}});
 
     // Create shaders if needed
     this.vs = props.vs as WEBGLShader;
@@ -78,10 +82,9 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     }
 
     this._linkShaders();
-
-    log.time(1, `RenderPipeline ${this.id} - shaderLayout introspection`)();
-    this.introspectedLayout = getShaderLayout(this.device.gl, this.handle);
-    log.timeEnd(1, `RenderPipeline ${this.id} - shaderLayout introspection`)();
+    log.time(3, `RenderPipeline ${this.id} - shaderLayout introspection`)();
+    this.introspectedLayout = getShaderLayoutFromGLSL(this.device.gl, this.handle);
+    log.timeEnd(3, `RenderPipeline ${this.id} - shaderLayout introspection`)();
 
     // Merge provided layout with introspected layout
     this.shaderLayout = mergeShaderLayout(this.introspectedLayout, props.shaderLayout);
@@ -89,9 +92,13 @@ export class WEBGLRenderPipeline extends RenderPipeline {
 
   override destroy(): void {
     if (this.handle) {
+      // log.error(`Deleting program ${this.id}`)();
+      this.device.gl.useProgram(null);
       this.device.gl.deleteProgram(this.handle);
-      // this.handle = null;
       this.destroyed = true;
+      // @ts-expect-error
+      this.handle.destroyed = true;
+      this.handle = null;
     }
   }
 
@@ -143,7 +150,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
               value instanceof WEBGLFramebuffer
             )
           ) {
-            throw new Error('texture value');
+            throw new Error(`${this} Bad texture binding for ${name}`);
           }
           break;
         case 'sampler':
@@ -317,19 +324,21 @@ export class WEBGLRenderPipeline extends RenderPipeline {
   }
 
   /** Report link status. First, check for shader compilation failures if linking fails */
-  async _reportLinkStatus(status: 'success' | 'linking' | 'validation'): Promise<void> {
+  async _reportLinkStatus(status: 'success' | 'link-error' | 'validation-error'): Promise<void> {
     switch (status) {
       case 'success':
         return;
 
       default:
+        const errorType = status === 'link-error' ? 'Link error' : 'Validation error';
         // First check for shader compilation failures if linking fails
         switch (this.vs.compilationStatus) {
           case 'error':
             this.vs.debugShader();
-            throw new Error(`Error during compilation of shader ${this.vs.id}`);
+            throw new Error(`${this} ${errorType} during compilation of ${this.vs}`);
           case 'pending':
-            this.vs.asyncCompilationStatus.then(() => this.vs.debugShader());
+            await this.vs.asyncCompilationStatus;
+            this.vs.debugShader();
             break;
           case 'success':
             break;
@@ -338,16 +347,17 @@ export class WEBGLRenderPipeline extends RenderPipeline {
         switch (this.fs?.compilationStatus) {
           case 'error':
             this.fs.debugShader();
-            throw new Error(`Error during compilation of shader ${this.fs.id}`);
+            throw new Error(`${this} ${errorType} during compilation of ${this.fs}`);
           case 'pending':
-            this.fs.asyncCompilationStatus.then(() => this.fs.debugShader());
+            await this.fs.asyncCompilationStatus;
+            this.fs.debugShader();
             break;
           case 'success':
             break;
         }
 
         const linkErrorLog = this.device.gl.getProgramInfoLog(this.handle);
-        throw new Error(`Error during ${status}: ${linkErrorLog}`);
+        this.device.reportError(new Error(`${errorType} during ${status}: ${linkErrorLog}`));
     }
   }
 
@@ -356,19 +366,19 @@ export class WEBGLRenderPipeline extends RenderPipeline {
    * TODO - Load log even when no error reported, to catch warnings?
    * https://gamedev.stackexchange.com/questions/30429/how-to-detect-glsl-warnings
    */
-  _getLinkStatus(): 'success' | 'linking' | 'validation' {
+  _getLinkStatus(): 'success' | 'link-error' | 'validation-error' {
     const {gl} = this.device;
-    const linked = gl.getProgramParameter(this.handle, gl.LINK_STATUS);
+    const linked = gl.getProgramParameter(this.handle, GL.LINK_STATUS);
     if (!linked) {
       this.linkStatus = 'error';
-      return 'linking';
+      return 'link-error';
     }
 
     gl.validateProgram(this.handle);
-    const validated = gl.getProgramParameter(this.handle, gl.VALIDATE_STATUS);
+    const validated = gl.getProgramParameter(this.handle, GL.VALIDATE_STATUS);
     if (!validated) {
       this.linkStatus = 'error';
-      return 'validation';
+      return 'validation-error';
     }
 
     this.linkStatus = 'success';

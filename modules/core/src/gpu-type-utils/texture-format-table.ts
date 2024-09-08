@@ -18,7 +18,7 @@ const texture_compression_atc_webgl: TextureFeature = 'texture-compression-atc-w
 
 const float32_renderable: TextureFeature = 'float32-renderable-webgl';
 const float16_renderable: TextureFeature = 'float16-renderable-webgl';
-const rgb9e5ufloat_renderable: TextureFeature = 'rgb9e5ufloat_renderable-webgl';
+const rgb9e5ufloat_renderable: TextureFeature = 'rgb9e5ufloat-renderable-webgl';
 const snorm8_renderable: TextureFeature = 'snorm8-renderable-webgl';
 const norm16_renderable: TextureFeature = 'norm16-renderable-webgl';
 const snorm16_renderable: TextureFeature = 'snorm16-renderable-webgl';
@@ -28,6 +28,7 @@ const float16_filterable: TextureFeature = 'float16-filterable-webgl';
 
 /** https://www.w3.org/TR/webgpu/#texture-format-caps */
 
+/** Internal type representing texture capabilities */
 type TextureFormatDefinition = Partial<TextureFormatInfo> & {
   /** for compressed texture formats */
   f?: TextureFeature;
@@ -35,6 +36,8 @@ type TextureFormatDefinition = Partial<TextureFormatInfo> & {
   render?: TextureFeature | false;
   /** filterable if feature is present. false means the spec does not support this format */
   filter?: TextureFeature | false;
+  blend?: TextureFeature | false;
+  store?: TextureFeature | false;
 
   /** (bytes per pixel), for memory usage calculations. */
   b?: number;
@@ -48,95 +51,107 @@ type TextureFormatDefinition = Partial<TextureFormatInfo> & {
   wgpu?: false;
 };
 
+export function getTextureFormatDefinition(format: TextureFormat): TextureFormatDefinition {
+  const info = TEXTURE_FORMAT_TABLE[format];
+  if (!info) {
+    throw new Error(`Unsupported texture format ${format}`);
+  }
+  return info;
+}
+
+export function getTextureFormatTable(): Readonly<Record<TextureFormat, TextureFormatDefinition>> {
+  return TEXTURE_FORMAT_TABLE;
+}
+
 // prettier-ignore
-export const TEXTURE_FORMAT_TABLE: Readonly<Partial<Record<TextureFormat, TextureFormatDefinition>>> = {
+const TEXTURE_FORMAT_TABLE: Readonly<Record<TextureFormat, TextureFormatDefinition>> = {
   // 8-bit formats
-  'r8unorm': {bpp: 1, c: 1},
-  'r8snorm': {bpp: 1, c: 1, render: snorm8_renderable},
-  'r8uint': {bpp: 1, c: 1},
-  'r8sint': {bpp: 1, c: 1},
+  'r8unorm': {},
+  'r8snorm': {render: snorm8_renderable},
+  'r8uint': {},
+  'r8sint': {},
 
   // 16-bit formats
-  'rg8unorm': {bpp: 2, c: 2},
-  'rg8snorm': {bpp: 2, c: 2, render: snorm8_renderable},
-  'rg8uint': {bpp: 2, c: 2},
-  'rg8sint': {bpp: 2, c: 2},
+  'rg8unorm': {},
+  'rg8snorm': {render: snorm8_renderable},
+  'rg8uint': {},
+  'rg8sint': {},
 
-  'r16uint': {bpp: 2, c: 1},
-  'r16sint': {bpp: 2, c: 1},
-  'r16float': {bpp: 2, c: 1, render: float16_renderable, filter: 'float16-filterable-webgl'},
-  'r16unorm-webgl': {b:2, c:1, f: norm16_renderable},
-  'r16snorm-webgl': {b:2, c:1, f: snorm16_renderable},
+  'r16uint': {},
+  'r16sint': {},
+  'r16float': {render: float16_renderable, filter: 'float16-filterable-webgl'},
+  'r16unorm-webgl': {f: norm16_renderable},
+  'r16snorm-webgl': {f: snorm16_renderable},
 
   // Packed 16-bit formats
-  'rgba4unorm-webgl': {channels: 'rgba', bpp: 2, bitsPerChannel: [4, 4, 4, 4], packed: true},
-  'rgb565unorm-webgl': {channels: 'rgb', bpp: 2, bitsPerChannel: [5, 6, 5, 0], packed: true},
-  'rgb5a1unorm-webgl': {channels: 'rgba', bpp: 2, bitsPerChannel: [5, 5, 5, 1], packed: true},
+  'rgba4unorm-webgl': {channels: 'rgba', bitsPerChannel: [4, 4, 4, 4], packed: true},
+  'rgb565unorm-webgl': {channels: 'rgb', bitsPerChannel: [5, 6, 5, 0], packed: true},
+  'rgb5a1unorm-webgl': {channels: 'rgba', bitsPerChannel: [5, 5, 5, 1], packed: true},
 
   // 24-bit formats
-  'rgb8unorm-webgl': {bpp: 3, c: 3, wgpu: false},
-  'rgb8snorm-webgl': {bpp: 3, c: 3, wgpu: false},
+  'rgb8unorm-webgl': {},
+  'rgb8snorm-webgl': {},
 
   // 32-bit formats  
-  'rgba8unorm': {c: 2, bpp: 4, bitsPerChannel: [8, 8, 8, 8]},
-  'rgba8unorm-srgb': {c: 4, bpp: 4, bitsPerChannel: [8, 8, 8, 8]},
-  'rgba8snorm': {bpp: 4, c: 4, bitsPerChannel: [8, 8, 8, 8], render: snorm8_renderable},
-  'rgba8uint': {c: 4, bpp: 4, bitsPerChannel: [8, 8, 8, 8]},
-  'rgba8sint': {c: 4, bpp: 4,bitsPerChannel: [8, 8, 8, 8]},
+  'rgba8unorm': {},
+  'rgba8unorm-srgb': {},
+  'rgba8snorm': {render: snorm8_renderable},
+  'rgba8uint': {},
+  'rgba8sint': {},
 
   // 32-bit, reverse colors, webgpu only
-  'bgra8unorm': {bpp: 4, c: 4},
-  'bgra8unorm-srgb': {bpp: 4, c: 4},
+  'bgra8unorm': {},
+  'bgra8unorm-srgb': {},
 
-  'rg16uint': {c: 1, bpp: 4},
-  'rg16sint': {c: 2, bpp: 4},
-  'rg16float': {c: 2, bpp: 4, render: float16_renderable, filter: float16_filterable},
-  'rg16unorm-webgl': {b:2, c:2, render: norm16_renderable},
-  'rg16snorm-webgl': {b:2, c:2, render: snorm16_renderable},
+  'rg16uint': {},
+  'rg16sint': {},
+  'rg16float': {render: float16_renderable, filter: float16_filterable},
+  'rg16unorm-webgl': {render: norm16_renderable},
+  'rg16snorm-webgl': {render: snorm16_renderable},
 
-  'r32uint': {c: 1, bpp: 4},
-  'r32sint': {c: 1, bpp: 4},
-  'r32float': {c: 1, bpp: 4, render: float32_renderable, filter: float32_filterable},
+  'r32uint': {},
+  'r32sint': {},
+  'r32float': {render: float32_renderable, filter: float32_filterable},
 
   // Packed 32 bit formats
-  'rgb9e5ufloat': {channels: 'rgb',  packed: true,  c: 3, bpp: 4,p: 1, render: rgb9e5ufloat_renderable}, // , filter: true},
-  'rg11b10ufloat': {channels: 'rgb', c: 3, bpp: 4, bitsPerChannel: [11, 11, 10, 0], packed: true, p: 1,render: float32_renderable},
-  'rgb10a2unorm': {channels: 'rgba', c: 4, bpp: 4,  bitsPerChannel: [10, 10, 10, 2], packed: true, p: 1},
-  'rgb10a2uint-webgl': {channels: 'rgba', c: 4, bpp: 4, bitsPerChannel: [10, 10, 10, 2], packed: true, p: 1, wgpu: false},
+  'rgb9e5ufloat': {channels: 'rgb', packed: true, render: rgb9e5ufloat_renderable}, // , filter: true},
+  'rg11b10ufloat': {channels: 'rgb', bitsPerChannel: [11, 11, 10, 0], packed: true, p: 1,render: float32_renderable},
+  'rgb10a2unorm': {channels: 'rgba',  bitsPerChannel: [10, 10, 10, 2], packed: true, p: 1},
+  'rgb10a2uint': {channels: 'rgba',  bitsPerChannel: [10, 10, 10, 2], packed: true, p: 1},
 
   // 48-bit formats
-  'rgb16unorm-webgl': {b:2, c:3, f: norm16_renderable}, // rgb not renderable
-  'rgb16snorm-webgl': {b:2, c:3, f: norm16_renderable}, // rgb not renderable
+  'rgb16unorm-webgl': {f: norm16_renderable}, // rgb not renderable
+  'rgb16snorm-webgl': {f: norm16_renderable}, // rgb not renderable
 
   // 64-bit formats
-  'rg32uint': {bpp: 8, c: 2, bitsPerChannel: [32, 32, 0, 0]},
-  'rg32sint': {bpp: 8, c: 2, bitsPerChannel: [32, 32, 0, 0]},
-  'rg32float': {bpp: 8, c: 2, bitsPerChannel: [32, 32, 0, 0], render: false, filter: float32_filterable},
-  'rgba16uint': {bpp: 8, c: 4},
-  'rgba16sint': {bpp: 8, c: 4},
-  'rgba16float': {bpp: 8, c: 4, render: float16_renderable, filter: float16_filterable},
-  'rgba16unorm-webgl': {b:2, c:4, render: norm16_renderable},
-  'rgba16snorm-webgl': {b:2, c:4, render: snorm16_renderable},
+  'rg32uint': {},
+  'rg32sint': {},
+  'rg32float': {render: false, filter: float32_filterable},
+  'rgba16uint': {},
+  'rgba16sint': {},
+  'rgba16float': {render: float16_renderable, filter: float16_filterable},
+  'rgba16unorm-webgl': {render: norm16_renderable},
+  'rgba16snorm-webgl': {render: snorm16_renderable},
 
   // 96-bit formats (deprecated!)
   'rgb32float-webgl': {render: float32_renderable, filter: float32_filterable},
   
   // 128-bit formats
-  'rgba32uint': {bpp: 16, c: 4},
-  'rgba32sint': {bpp: 16, c: 4},
-  'rgba32float': {bpp: 16, c: 4, render: float32_renderable, filter: float32_filterable},
+  'rgba32uint': {},
+  'rgba32sint': {},
+  'rgba32float': {render: float32_renderable, filter: float32_filterable},
 
   // Depth/stencil
   
   // Depth and stencil formats
-  stencil8: {attachment: 'stencil', c: 1, bpp: 1,components: 1, bitsPerChannel: [8, 0, 0, 0], dataType: 'uint8'},
-  'depth16unorm': {attachment: 'depth',  c: 1, bpp: 2,components: 1,  bitsPerChannel: [16, 0, 0, 0], dataType: 'uint16'},
-  'depth24plus': {attachment: 'depth', c: 1, bpp: 3, components: 1, bitsPerChannel: [24, 0, 0, 0], dataType: 'uint32'},
-  'depth32float': {attachment: 'depth', c: 1, bpp: 4, components: 1, bitsPerChannel: [32, 0, 0, 0], dataType: 'float32'},
+  stencil8: {attachment: 'stencil', bitsPerChannel: [8, 0, 0, 0], dataType: 'uint8'},
+  'depth16unorm': {attachment: 'depth',  bitsPerChannel: [16, 0, 0, 0], dataType: 'uint16'},
+  'depth24plus': {attachment: 'depth', bitsPerChannel: [24, 0, 0, 0], dataType: 'uint32'},
+  'depth32float': {attachment: 'depth', bitsPerChannel: [32, 0, 0, 0], dataType: 'float32'},
   // The depth component of the "depth24plus" and "depth24plus-stencil8" formats may be implemented as either a 24-bit depth value or a "depth32float" value.
-  'depth24plus-stencil8': {attachment: 'depth-stencil', bpp: 4, c: 2, p: 1, components: 2,bitsPerChannel: [24, 8, 0, 0], packed: true},
+  'depth24plus-stencil8': {attachment: 'depth-stencil', bitsPerChannel: [24, 8, 0, 0], packed: true},
   // "depth32float-stencil8" feature
-  'depth32float-stencil8': {attachment: 'depth-stencil', components: 2, c: 2, bpp: 5, bitsPerChannel: [32, 8, 0, 0], packed: true},
+  'depth32float-stencil8': {attachment: 'depth-stencil', bitsPerChannel: [32, 8, 0, 0], packed: true},
 
   // BC compressed formats: check device.features.has("texture-compression-bc");
 

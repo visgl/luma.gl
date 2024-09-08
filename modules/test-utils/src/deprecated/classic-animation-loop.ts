@@ -83,7 +83,7 @@ export type ClassicAnimationLoopProps = {
 };
 
 const DEFAULT_CLASSIC_ANIMATION_LOOP_PROPS: Required<ClassicAnimationLoopProps> = {
-  onCreateDevice: (props: DeviceProps) => luma.createDevice(props),
+  onCreateDevice: (props: DeviceProps) => luma.createDevice({...props, debug: true}),
   onCreateContext: undefined,
   onAddHTML: undefined,
   onInitialize: () => ({}),
@@ -637,7 +637,7 @@ export class ClassicAnimationLoop {
    */
   _resizeCanvasDrawingBuffer() {
     if (this.props.autoResizeDrawingBuffer) {
-      this.device.canvasContext.resize({useDevicePixels: this.props.useDevicePixels});
+      this.device.getDefaultCanvasContext().resize({useDevicePixels: this.props.useDevicePixels});
     }
   }
 

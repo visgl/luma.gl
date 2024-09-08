@@ -8,12 +8,6 @@ import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate, Model, CubeGeometry, loadImageBitmap, AsyncTexture} from '@luma.gl/engine';
 import {Matrix4} from '@math.gl/core';
 
-const INFO_HTML = `\
-<p>
-Drawing a textured cube
-</p>
-`;
-
 export const title = 'Rotating Cube';
 export const description = 'Shows rendering a basic triangle.';
 
@@ -22,7 +16,9 @@ struct Uniforms {
   modelViewProjectionMatrix : mat4x4<f32>,
 };
 
-@binding(0) @group(0) var<uniform> app : Uniforms;
+@group(0) @binding(0) var<uniform> app : Uniforms;
+@group(0) @binding(1) var uTexture : texture_2d<f32>;
+@group(0) @binding(2) var uTextureSampler : sampler;
 
 struct VertexInputs {
   // CUBE GEOMETRY
@@ -47,7 +43,8 @@ fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
 
 @fragment
 fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
-  return inputs.fragPosition;
+  // return inputs.fragPosition;
+  return textureSample(uTexture, uTextureSampler, inputs.fragUV);
 }
 `;
 
@@ -106,10 +103,18 @@ const app: {uniformTypes: Record<keyof AppUniforms, ShaderUniformType>} = {
   }
 };
 
-const eyePosition = [0, 0, 5];
+const eyePosition = [0, 0, -4];
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
-  static info = INFO_HTML;
+  static info = `\
+<p>
+Drawing a textured cube
+</p>
+
+<p>
+Rendered using the luma.gl <code>Model</code>, <code>CubeGeometry</code> and <code>AnimationLoop</code> classes.
+</p>
+`;;
 
   mvpMatrix = new Matrix4();
   viewMatrix = new Matrix4().lookAt({eye: eyePosition});
@@ -121,8 +126,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     super();
 
     const texture = new AsyncTexture(device, {
-      usage: Texture.TEXTURE & Texture.COPY_DST,
+      usage: Texture.TEXTURE | Texture.RENDER_ATTACHMENT | Texture.COPY_DST,
       data: loadImageBitmap('vis-logo.png'),
+      flipY: true,
       mipmaps: true,
       sampler: device.createSampler({
         minFilter: 'linear',
@@ -140,10 +146,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       bindings: {
         app: this.uniformStore.getManagedUniformBuffer(device, 'app'),
         uTexture: texture
+        // uTextureSampler: texture.sampler
       },
       parameters: {
         depthWriteEnabled: true,
-        depthCompare: 'less-equal'
+        depthCompare: 'less-equal',
       }
     });
   }
@@ -164,7 +171,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       app: {mvpMatrix: this.mvpMatrix}
     });
 
-    const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
+    const framebuffer = device.getDefaultCanvasContext().getCurrentFramebuffer();
+    const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1], clearDepth: 1});
     this.model.draw(renderPass);
     renderPass.end();
   }

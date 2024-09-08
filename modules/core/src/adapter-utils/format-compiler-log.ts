@@ -32,6 +32,14 @@ export function formatCompilerLog(
           });
         }
       }
+      // Print any remaining messages
+      while (log.length > currentMessage) {
+        const message = log[currentMessage++];
+        formattedLog += formatCompilerMessage(message, [], 0, {
+          ...options,
+          inlineSource: false
+        });
+      }
       return formattedLog;
 
     case 'issues':

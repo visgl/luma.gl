@@ -37,11 +37,11 @@ export function getFragmentShaderForRenderPass(options: {
 function getFilterShaderWGSL(func: string) {
   return /* wgsl */ `\
 // Binding 0:1 is reserved for shader passes
-@group(0) @binding(0) var<uniform> brightnessContrast : brightnessContrastUniforms;
+// @group(0) @binding(0) var<uniform> brightnessContrast : brightnessContrastUniforms;
 @group(0) @binding(1) var texture: texture_2d<f32>;
 @group(0) @binding(2) var sampler: sampler;
 
-struct FragmentInputs = {
+struct FragmentInputs {
   @location(0) fragUV: vec2f,
   @location(1) fragPosition: vec4f,
   @location(2) fragCoordinate: vec4f

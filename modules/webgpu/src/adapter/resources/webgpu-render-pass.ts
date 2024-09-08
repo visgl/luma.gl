@@ -46,7 +46,13 @@ export class WebGPURenderPass extends RenderPass {
       throw new Error('commandEncoder not available');
     }
 
+    this.device.handle.pushErrorScope('validation');
     this.handle = this.props.handle || device.commandEncoder.beginRenderPass(renderPassDescriptor);
+    this.device.handle.popErrorScope().then((error: GPUError | null) => {
+      if (error) {
+        log.error(`${this} creation failed:\n"${error.message}"`, this)();
+      }
+    });
     this.handle.label = this.props.id;
     log.groupCollapsed(3, `new WebGPURenderPass(${this.id})`)();
     log.probe(3, JSON.stringify(renderPassDescriptor, null, 2))();

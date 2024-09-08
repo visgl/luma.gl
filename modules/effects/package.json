@@ -1,0 +1,57 @@
+{
+  "name": "@luma.gl/effects",
+  "version": "9.1.0-alpha.19",
+  "description": "Post-processing effects for luma.gl",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/visgl/luma.gl"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "webgl",
+    "glsl",
+    "debug",
+    "3d",
+    "glsl",
+    "shader",
+    "vertex",
+    "fragment",
+    "glsl link",
+    "glsl module"
+  ],
+  "types": "dist/index.d.ts",
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "src",
+    "dist",
+    "dist.min.js",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build-minified-bundle": "ocular-bundle ./bundle.ts --output=dist/dist.min.js",
+    "build-dev-bundle": "ocular-bundle ./bundle.ts --output=dist/dist.dev.js --env=dev",
+    "prepublishOnly": "npm run build-minified-bundle && npm run build-dev-bundle"
+  },
+  "peerDependencies": {
+    "@luma.gl/shadertools": "9.1.0-alpha.19"
+  },
+  "dependencies": {
+    "@math.gl/core": "4.1.0-alpha.3",
+    "@math.gl/types": "4.1.0-alpha.3",
+    "wgsl_reflect": "^1.0.1"
+  },
+  "gitHead": "c636c34b8f1581eed163e94543a8eb1f4382ba8e"
+}

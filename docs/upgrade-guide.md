@@ -10,6 +10,10 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 
 *For detailed commit level logs that include alpha and beta releases, see the [CHANGELOG](https://github.com/visgl/luma.gl/blob/master/CHANGELOG.md) in the github repository.*
 
+## Upgrading to v9.2
+
+- `device.createTexture()` no longer accepts `props.mipmaps`: Use `AsyncTexture` or call texture.generateMipmapsWebGL()`
+
 ## Upgrading to v9.1
 
 v9.1 continues to build out WebGPU support. Some additional deprecations and breaking changes have been necessary, but impact on most applications should be minimal.
@@ -23,7 +27,7 @@ When initializing luma.gl, applications now import an `Adapter` singleton from e
 **Notable change: Textures**
 
 - The texture API is being streamlined to work symmetrically across WebGPU and WebGL.
-- `Texture.copyExternalImage()` replaces `Texture.setImageData()` when initializing textures with image data.
+- `Texture.copyExternalImage()` and `Texture.copyImageData()` replaces `Texture.setImageData()` when initializing texture memory with image data.
 
 **Notable change: AsyncTextures**
 

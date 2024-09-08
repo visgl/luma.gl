@@ -3,21 +3,19 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
-import {createTestDevice} from '@luma.gl/test-utils';
-
-import type {WebGLDevice} from '@luma.gl/webgl';
-
 import {
+  GL_PARAMETER_DEFAULTS,
+  GL_PARAMETER_SETTERS
+} from '@luma.gl/webgl/context/parameters/webgl-parameter-tables';
+
+import {luma} from '@luma.gl/core';
+import {
+  WebGLDevice,
   getGLParameters,
   setGLParameters,
   resetGLParameters,
   WebGLStateTracker
 } from '@luma.gl/webgl';
-
-import {
-  GL_PARAMETER_DEFAULTS,
-  GL_PARAMETER_SETTERS
-} from '@luma.gl/webgl/context/parameters/webgl-parameter-tables';
 
 import {stringifyTypedArray} from './context-state.spec';
 
@@ -25,14 +23,17 @@ import {ENUM_STYLE_SETTINGS_SET1, ENUM_STYLE_SETTINGS_SET2} from './data/sample-
 
 // Settings test, don't reuse a context
 // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-const device = createTestDevice() as WebGLDevice;
+const devicePromise = luma.createDevice({
+  type: 'webgl',
+  createCanvasContext: true
+}) as Promise<WebGLDevice>;
 
-test('WebGLStateTracker#imports', t => {
+test('WebGLStateTracker#imports', async t => {
   t.ok(typeof WebGLStateTracker === 'function', 'WebGLStateTracker imported OK');
   t.end();
 });
 
-// test.skip('WebGLStateTracker#trackContextState', t => {
+// test.skip('WebGLStateTracker#trackContextState', async t => {
 //   const {gl} = device;
 //   t.doesNotThrow(
 //     () => trackContextState(gl, {copyState: false}),
@@ -41,7 +42,8 @@ test('WebGLStateTracker#imports', t => {
 //   t.end();
 // });
 
-test('WebGLStateTracker#push & pop', t => {
+test('WebGLStateTracker#push & pop', async t => {
+  const device = await devicePromise;
   const {gl} = device;
 
   resetGLParameters(gl);
@@ -112,7 +114,8 @@ test('WebGLStateTracker#push & pop', t => {
   t.end();
 });
 
-test('WebGLStateTracker#gl API', t => {
+test('WebGLStateTracker#gl API', async t => {
+  const device = await devicePromise;
   const {gl} = device;
 
   resetGLParameters(gl);
@@ -168,7 +171,8 @@ test('WebGLStateTracker#gl API', t => {
   t.end();
 });
 
-test('WebGLStateTracker#intercept gl calls', t => {
+test('WebGLStateTracker#intercept gl calls', async t => {
+  const device = await devicePromise;
   const {gl} = device;
 
   resetGLParameters(gl);
@@ -211,7 +215,8 @@ test('WebGLStateTracker#intercept gl calls', t => {
   t.end();
 });
 
-test('WebGLStateTracker#not cached parameters', t => {
+test('WebGLStateTracker#not cached parameters', async t => {
+  const device = await devicePromise;
   const {gl} = device;
 
   resetGLParameters(gl);
@@ -219,7 +224,7 @@ test('WebGLStateTracker#not cached parameters', t => {
   t.is(gl.getParameter(gl.TEXTURE_BINDING_2D), null, 'no bound texture');
 
   const tex = device.createTexture({});
-  tex.bind();
+  tex._bind();
   t.is(gl.getParameter(gl.TEXTURE_BINDING_2D), tex.handle, 'bound texture');
 
   gl.activeTexture(gl.TEXTURE1);
@@ -228,7 +233,7 @@ test('WebGLStateTracker#not cached parameters', t => {
   gl.activeTexture(gl.TEXTURE0);
   t.is(gl.getParameter(gl.TEXTURE_BINDING_2D), tex.handle, 'bound texture at texture0');
 
-  tex.unbind();
+  tex._unbind();
   t.is(gl.getParameter(gl.TEXTURE_BINDING_2D), null, 'no binding for texture0');
 
   tex.destroy();

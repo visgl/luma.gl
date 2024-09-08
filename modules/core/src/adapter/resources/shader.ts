@@ -32,16 +32,6 @@ export type ShaderProps = ResourceProps & {
  * In WebGPU the handle can be copied between threads
  */
 export abstract class Shader extends Resource<ShaderProps> {
-  static override defaultProps: Required<ShaderProps> = {
-    ...Resource.defaultProps,
-    language: 'auto',
-    stage: undefined!,
-    source: '',
-    sourceMap: null,
-    entryPoint: 'main',
-    debugShaders: undefined!
-  };
-
   override get [Symbol.toStringTag](): string {
     return 'Shader';
   }
@@ -99,7 +89,7 @@ export abstract class Shader extends Resource<ShaderProps> {
     if (trigger === 'warnings' && messages?.length === 0) {
       return;
     }
-    this._displayShaderLog(messages);
+    this._displayShaderLog(messages, this.id);
   }
 
   // PRIVATE
@@ -108,14 +98,14 @@ export abstract class Shader extends Resource<ShaderProps> {
    * In-browser UI logging of errors
    * TODO - this HTML formatting code should not be in Device, should be pluggable
    */
-  protected _displayShaderLog(messages: readonly CompilerMessage[]): void {
+  protected _displayShaderLog(messages: readonly CompilerMessage[], shaderId: string): void {
     // Return if under Node.js / incomplete `document` polyfills
     if (typeof document === 'undefined' || !document?.createElement) {
       return;
     }
 
-    const shaderName: string = getShaderName(this.source);
-    const shaderTitle: string = `${this.stage} ${shaderName}`;
+    const shaderName: string = shaderId; // getShaderName(this.source) || ;
+    const shaderTitle: string = `${this.stage} shader "${shaderName}"`;
     let htmlLog = formatCompilerLog(messages, this.source, {showSourceCode: 'all', html: true});
     // Show translated source if available
     const translatedSource = this.getTranslatedSource();
@@ -125,7 +115,7 @@ export abstract class Shader extends Resource<ShaderProps> {
     // Make it clickable so we can copy to clipboard
     const button = document.createElement('Button');
     button.innerHTML = `
-<h1>Shader Compilation Error in ${shaderTitle}</h1><br /><br />
+<h1>Compilation error in ${shaderTitle}</h1><br /><br />
 <code style="user-select:text;"><pre>
 ${htmlLog}
 </pre></code>`;
@@ -149,6 +139,16 @@ ${htmlLog}
 
     // TODO - add a small embedded close button
   }
+
+  static override defaultProps: Required<ShaderProps> = {
+    ...Resource.defaultProps,
+    language: 'auto',
+    stage: undefined!,
+    source: '',
+    sourceMap: null,
+    entryPoint: 'main',
+    debugShaders: undefined!
+  };
 }
 
 // HELPERS

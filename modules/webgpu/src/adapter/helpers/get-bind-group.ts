@@ -34,21 +34,29 @@ export function getBindGroup(
   bindings: Record<string, Binding>
 ): GPUBindGroup {
   const entries = getBindGroupEntries(bindings, shaderLayout);
-  return device.createBindGroup({
+  device.pushErrorScope('validation');
+  const bindGroup = device.createBindGroup({
     layout: bindGroupLayout,
     entries
   });
+  device.popErrorScope().then((error: GPUError | null) => {
+    if (error) {
+      log.error(`createBindGroup validation failed: ${error.message}`)();
+    }
+  });
+  return bindGroup;
 }
 
 export function getShaderLayoutBinding(
   shaderLayout: ComputeShaderLayout,
-  bindingName: string
+  bindingName: string,
+  options?: {ignoreWarnings?: boolean}
 ): BindingDeclaration | null {
   const bindingLayout = shaderLayout.bindings.find(
     binding =>
       binding.name === bindingName || `${binding.name}uniforms` === bindingName.toLocaleLowerCase()
   );
-  if (!bindingLayout) {
+  if (!bindingLayout && !options?.ignoreWarnings) {
     log.warn(`Binding ${bindingName} not set: Not found in shader layout.`)();
   }
   return bindingLayout || null;
@@ -65,16 +73,36 @@ function getBindGroupEntries(
   const entries: GPUBindGroupEntry[] = [];
 
   for (const [bindingName, value] of Object.entries(bindings)) {
-    const bindingLayout = getShaderLayoutBinding(shaderLayout, bindingName);
+    let bindingLayout = getShaderLayoutBinding(shaderLayout, bindingName);
     if (bindingLayout) {
-      entries.push(getBindGroupEntry(value, bindingLayout.location));
+      const entry = getBindGroupEntry(value, bindingLayout.location);
+      if (entry) {
+        entries.push(entry);
+      }
+    }
+
+    // TODO - hack to automatically bind samplers to supplied texture default samplers
+    if (value instanceof Texture) {
+      bindingLayout = getShaderLayoutBinding(shaderLayout, `${bindingName}Sampler`, {
+        ignoreWarnings: true
+      });
+      if (bindingLayout) {
+        const entry = getBindGroupEntry(value, bindingLayout.location, {sampler: true});
+        if (entry) {
+          entries.push(entry);
+        }
+      }
     }
   }
 
   return entries;
 }
 
-function getBindGroupEntry(binding: Binding, index: number): GPUBindGroupEntry {
+function getBindGroupEntry(
+  binding: Binding,
+  index: number,
+  options?: {sampler?: boolean}
+): GPUBindGroupEntry | null {
   if (binding instanceof Buffer) {
     return {
       binding: index,
@@ -88,11 +116,19 @@ function getBindGroupEntry(binding: Binding, index: number): GPUBindGroupEntry {
       binding: index,
       resource: (binding as WebGPUSampler).handle
     };
-  } else if (binding instanceof Texture) {
+  }
+  if (binding instanceof Texture) {
+    if (options?.sampler) {
+      return {
+        binding: index,
+        resource: (binding as WebGPUTexture).sampler.handle
+      };
+    }
     return {
       binding: index,
-      resource: (binding as WebGPUTexture).handle.createView({label: 'bind-group-auto-created'})
+      resource: (binding as WebGPUTexture).view.handle
     };
   }
-  throw new Error('invalid binding');
+  log.warn(`invalid binding ${name}`, binding);
+  return null;
 }

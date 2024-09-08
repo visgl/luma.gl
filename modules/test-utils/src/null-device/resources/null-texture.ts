@@ -4,16 +4,9 @@
 
 import type {
   TextureProps,
-  Sampler,
-  SamplerProps,
   TextureViewProps,
   CopyExternalImageOptions,
-  Texture1DData,
-  Texture2DData,
-  Texture3DData,
-  TextureCubeData,
-  TextureArrayData,
-  TextureCubeArrayData
+  CopyImageDataOptions
 } from '@luma.gl/core';
 
 import {Texture} from '@luma.gl/core';
@@ -30,13 +23,19 @@ export class NullTexture extends Texture {
   constructor(device: NullDevice, props: TextureProps) {
     super(device, props);
 
-    // Texture base class strips out the data prop, so we need to add it back in
-    const propsWithData = {...this.props};
-    propsWithData.data = props.data;
-
     this.device = device;
 
-    this.initialize(propsWithData);
+    // const data = props.data;
+    // this.setImageData(props);
+
+    this.setSampler(props.sampler);
+
+    this.view = new NullTextureView(this.device, {
+      ...props,
+      texture: this,
+      mipLevelCount: 1,
+      arrayLayerCount: 1
+    });
 
     Object.seal(this);
   }
@@ -50,56 +49,6 @@ export class NullTexture extends Texture {
 
   createView(props: TextureViewProps): NullTextureView {
     return new NullTextureView(this.device, {...props, texture: this});
-  }
-
-  setTexture1DData(data: Texture1DData): void {
-    throw new Error('not implemented');
-  }
-
-  setTexture2DData(lodData: Texture2DData, depth?: number, target?: number): void {
-    throw new Error('not implemented');
-  }
-
-  setTexture3DData(lodData: Texture3DData, depth?: number, target?: number): void {
-    throw new Error('not implemented');
-  }
-
-  setTextureCubeData(data: TextureCubeData, depth?: number): void {
-    throw new Error('not implemented');
-  }
-
-  setTextureArrayData(data: TextureArrayData): void {
-    throw new Error('not implemented');
-  }
-
-  setTextureCubeArrayData(data: TextureCubeArrayData): void {
-    throw new Error('not implemented');
-  }
-
-  initialize(props: TextureProps = {}): this {
-    // const data = props.data;
-    // this.setImageData(props);
-
-    this.setSampler(props.sampler);
-
-    this.view = new NullTextureView(this.device, {
-      ...props,
-      texture: this,
-      mipLevelCount: 1,
-      arrayLayerCount: 1
-    });
-
-    return this;
-  }
-
-  setSampler(sampler: Sampler | SamplerProps = {}): this {
-    if (sampler instanceof NullSampler) {
-      this.sampler = sampler;
-    } else {
-      this.sampler = new NullSampler(this.device, sampler);
-    }
-
-    return this;
   }
 
   copyExternalImage(options: CopyExternalImageOptions): {width: number; height: number} {
@@ -121,5 +70,13 @@ export class NullTexture extends Texture {
     this.height = height;
 
     return {width, height};
+  }
+
+  override copyImageData(options: CopyImageDataOptions): void {
+    throw new Error('copyImageData not implemented');
+  }
+
+  override generateMipmapsWebGL(): void {
+    // ignore
   }
 }
