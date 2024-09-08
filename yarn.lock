@@ -1003,7 +1003,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@luma.gl/core@workspace:modules/core"
   dependencies:
-    "@math.gl/types": "npm:4.1.0-alpha.3"
+    "@math.gl/types": "npm:^4.1.0"
     "@probe.gl/env": "npm:^4.0.8"
     "@probe.gl/log": "npm:^4.0.8"
     "@probe.gl/stats": "npm:^4.0.8"
@@ -1015,8 +1015,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@luma.gl/effects@workspace:modules/effects"
   dependencies:
-    "@math.gl/core": "npm:4.1.0-alpha.3"
-    "@math.gl/types": "npm:4.1.0-alpha.3"
+    "@math.gl/core": "npm:^4.1.0"
+    "@math.gl/types": "npm:^4.1.0"
     wgsl_reflect: "npm:^1.0.1"
   peerDependencies:
     "@luma.gl/shadertools": 9.1.0-alpha.19
@@ -1027,8 +1027,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@luma.gl/engine@workspace:modules/engine"
   dependencies:
-    "@math.gl/core": "npm:4.1.0-alpha.3"
-    "@math.gl/types": "npm:4.1.0-alpha.3"
+    "@math.gl/core": "npm:^4.1.0"
+    "@math.gl/types": "npm:^4.1.0"
     "@probe.gl/log": "npm:^4.0.8"
     "@probe.gl/stats": "npm:^4.0.8"
   peerDependencies:
@@ -1043,7 +1043,7 @@ __metadata:
   dependencies:
     "@loaders.gl/core": "npm:^4.2.0"
     "@loaders.gl/textures": "npm:^4.2.0"
-    "@math.gl/core": "npm:4.1.0-alpha.3"
+    "@math.gl/core": "npm:^4.1.0"
   peerDependencies:
     "@luma.gl/core": 9.1.0-alpha.19
     "@luma.gl/engine": 9.1.0-alpha.19
@@ -1055,8 +1055,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@luma.gl/shadertools@workspace:modules/shadertools"
   dependencies:
-    "@math.gl/core": "npm:4.1.0-alpha.3"
-    "@math.gl/types": "npm:4.1.0-alpha.3"
+    "@math.gl/core": "npm:^4.1.0"
+    "@math.gl/types": "npm:^4.1.0"
     wgsl_reflect: "npm:^1.0.1"
   peerDependencies:
     "@luma.gl/core": 9.1.0-alpha.19
@@ -1083,7 +1083,7 @@ __metadata:
   resolution: "@luma.gl/webgl@workspace:modules/webgl"
   dependencies:
     "@luma.gl/constants": "npm:9.1.0-alpha.19"
-    "@math.gl/types": "npm:4.1.0-alpha.3"
+    "@math.gl/types": "npm:^4.1.0"
     "@probe.gl/env": "npm:^4.0.8"
   peerDependencies:
     "@luma.gl/core": 9.1.0-alpha.19
@@ -1101,21 +1101,21 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@math.gl/core@npm:4.1.0-alpha.3":
-  version: 4.1.0-alpha.3
-  resolution: "@math.gl/core@npm:4.1.0-alpha.3"
-  dependencies:
-    "@math.gl/types": "npm:4.1.0-alpha.3"
-  checksum: 10c0/750b51a88c138db88f55f92504c040782fb4ece3b01e1f325596c539931818f3f24e2f9bcf7f81f187e8521caed928064f12e2844311b59b62ca21708b19dbfc
-  languageName: node
-  linkType: hard
-
 "@math.gl/core@npm:^4.0.0":
   version: 4.0.1
   resolution: "@math.gl/core@npm:4.0.1"
   dependencies:
     "@math.gl/types": "npm:4.0.1"
   checksum: 10c0/f3c8bfec6c66f0036949a037d565788b99e42edec15d6f3033159901ba1ad3166c9d7208bb33b51abfcbf7a74475e79b941834b47b2577aa2411b8372d07afd6
+  languageName: node
+  linkType: hard
+
+"@math.gl/core@npm:^4.1.0":
+  version: 4.1.0
+  resolution: "@math.gl/core@npm:4.1.0"
+  dependencies:
+    "@math.gl/types": "npm:4.1.0"
+  checksum: 10c0/495934dc2be0b60cd6ff2cc16a0215608c9254919db741a0074b6b41cef9a0543c7f790eda7d529afa102d2937490608ef75fcc64c789ef2876ae750fd0ed3d6
   languageName: node
   linkType: hard
 
@@ -1126,10 +1126,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@math.gl/types@npm:4.1.0-alpha.3":
-  version: 4.1.0-alpha.3
-  resolution: "@math.gl/types@npm:4.1.0-alpha.3"
-  checksum: 10c0/49b3302a4aec2a70bfb71bc2ddff3aab6d43f2cd6ad3e23850119c516a663745ebd992e5e39736fc5998539a5fc8ff618c9958674bf2d468a673422577f482bb
+"@math.gl/types@npm:4.1.0, @math.gl/types@npm:^4.1.0":
+  version: 4.1.0
+  resolution: "@math.gl/types@npm:4.1.0"
+  checksum: 10c0/3c4dfa5ac5c9e2cef24d31f56b89c1dde785a5d70fd1a7030386346cb7dd4fa2cce5ba983b89842c1971492e30870dd22a078d64893f9c66887e38367bf992fa
   languageName: node
   linkType: hard
 
