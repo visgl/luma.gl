@@ -16,7 +16,7 @@ export const pbr = {
   vs,
   fs,
   defines: {
-    LIGHTING_FRAGMENT: 1
+    LIGHTING_FRAGMENT: true
   },
   dependencies: [lights],
   getUniforms: (props: any) => props

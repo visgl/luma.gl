@@ -24,7 +24,7 @@ export const gouraudMaterial: ShaderModule<GouraudMaterialProps> = {
   vs: PHONG_FS.replace('phongMaterial', 'gouraudMaterial'),
   fs: PHONG_VS.replace('phongMaterial', 'gouraudMaterial'),
   defines: {
-    LIGHTING_VERTEX: 1
+    LIGHTING_VERTEX: true
   },
   dependencies: [lighting],
   uniformTypes: {

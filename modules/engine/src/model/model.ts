@@ -60,7 +60,7 @@ export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs' | 'bindings'> & {
   /** shadertool shader modules (added to shader code) */
   modules?: ShaderModule[];
   /** Shadertool module defines (configures shader code)*/
-  defines?: Record<string, string | number | boolean>;
+  defines?: Record<string, boolean>;
   // TODO - injections, hooks etc?
 
   /** Shader inputs, used to generated uniform buffers and bindings */
