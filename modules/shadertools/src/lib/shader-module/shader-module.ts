@@ -69,7 +69,7 @@ export type ShaderModule<
     prevUniforms?: UniformsT
   ) => Partial<UniformsT & BindingsT>;
 
-  defines?: Record<string, string | number>;
+  defines?: Record<string, boolean>;
   /** Injections */
   inject?: Record<string, string | {injection: string; order: number}>;
   dependencies?: ShaderModule<any, any>[];

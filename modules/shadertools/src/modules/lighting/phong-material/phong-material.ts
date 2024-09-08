@@ -25,7 +25,7 @@ export const phongMaterial: ShaderModule<PhongMaterialProps> = {
   vs: PHONG_VS,
   fs: PHONG_FS,
   defines: {
-    LIGHTING_FRAGMENT: 1
+    LIGHTING_FRAGMENT: true
   },
   uniformTypes: {
     ambient: 'f32',
