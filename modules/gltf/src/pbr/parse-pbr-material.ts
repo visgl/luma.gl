@@ -17,7 +17,7 @@ export type ParsePBRMaterialOptions = {
 };
 
 export type ParsedPBRMaterial = {
-  readonly defines: Record<string, number | boolean>;
+  readonly defines: Record<string, boolean>;
   readonly bindings: Partial<PBRMaterialBindings>;
   readonly uniforms: Partial<PBRProjectionProps & PBRMaterialUniforms>;
   readonly parameters: Parameters;
@@ -53,8 +53,8 @@ export function parsePBRMaterial(
   const parsedMaterial: ParsedPBRMaterial = {
     defines: {
       // TODO: Use EXT_sRGB if available (Standard in WebGL 2.0)
-      MANUAL_SRGB: 1,
-      SRGB_FAST_APPROXIMATION: 1
+      MANUAL_SRGB: true,
+      SRGB_FAST_APPROXIMATION: true
     },
     bindings: {},
     uniforms: {
@@ -69,7 +69,7 @@ export function parsePBRMaterial(
   };
 
   // TODO - always available
-  parsedMaterial.defines.USE_TEX_LOD = 1;
+  parsedMaterial.defines.USE_TEX_LOD = true;
 
   const {imageBasedLightingEnvironment} = options;
   if (imageBasedLightingEnvironment) {
@@ -82,18 +82,18 @@ export function parsePBRMaterial(
   }
 
   if (options?.pbrDebug) {
-    parsedMaterial.defines.PBR_DEBUG = 1;
+    parsedMaterial.defines.PBR_DEBUG = true;
     // Override final color for reference app visualization of various parameters in the lighting equation.
     parsedMaterial.uniforms.scaleDiffBaseMR = [0, 0, 0, 0];
     parsedMaterial.uniforms.scaleFGDSpec = [0, 0, 0, 0];
   }
 
-  if (attributes.NORMAL) parsedMaterial.defines.HAS_NORMALS = 1;
-  if (attributes.TANGENT && options?.useTangents) parsedMaterial.defines.HAS_TANGENTS = 1;
-  if (attributes.TEXCOORD_0) parsedMaterial.defines.HAS_UV = 1;
+  if (attributes.NORMAL) parsedMaterial.defines.HAS_NORMALS = true;
+  if (attributes.TANGENT && options?.useTangents) parsedMaterial.defines.HAS_TANGENTS = true;
+  if (attributes.TEXCOORD_0) parsedMaterial.defines.HAS_UV = true;
 
-  if (options?.imageBasedLightingEnvironment) parsedMaterial.defines.USE_IBL = 1;
-  if (options?.lights) parsedMaterial.defines.USE_LIGHTS = 1;
+  if (options?.imageBasedLightingEnvironment) parsedMaterial.defines.USE_IBL = true;
+  if (options?.lights) parsedMaterial.defines.USE_LIGHTS = true;
 
   if (material) {
     parseMaterial(device, material, parsedMaterial);
@@ -147,7 +147,7 @@ function parseMaterial(device: Device, material, parsedMaterial: ParsedPBRMateri
   switch (material.alphaMode) {
     case 'MASK':
       const {alphaCutoff = 0.5} = material;
-      parsedMaterial.defines.ALPHA_CUTOFF = 1;
+      parsedMaterial.defines.ALPHA_CUTOFF = true;
       parsedMaterial.uniforms.alphaCutoff = alphaCutoff;
       break;
     case 'BLEND':
@@ -242,7 +242,7 @@ function addTexture(
     ...textureOptions
   });
   parsedMaterial.bindings[uniformName] = texture;
-  if (define) parsedMaterial.defines[define] = 1;
+  if (define) parsedMaterial.defines[define] = true;
   parsedMaterial.generatedTextures.push(texture);
 }
 
@@ -253,7 +253,7 @@ function addTexture(
 export class PBRMaterialParser {
   readonly device: Device;
 
-  readonly defines: Record<string, number | boolean>;
+  readonly defines: Record<string, boolean>;
   readonly bindings: Record<string, Binding>;
   readonly uniforms: Record<string, any>;
   readonly parameters: Record<string, any>;
@@ -268,12 +268,12 @@ export class PBRMaterialParser {
 
     this.defines = {
       // TODO: Use EXT_sRGB if available (Standard in WebGL 2.0)
-      MANUAL_SRGB: 1,
-      SRGB_FAST_APPROXIMATION: 1
+      MANUAL_SRGB: true,
+      SRGB_FAST_APPROXIMATION: true
     };
 
     if (this.device.features.has('glsl-texture-lod')) {
-      this.defines.USE_TEX_LOD = 1;
+      this.defines.USE_TEX_LOD = true;
     }
 
     this.uniforms = {
@@ -354,8 +354,8 @@ export class PBRMaterialParser {
     }
     if (material.alphaMode === 'MASK') {
       const {alphaCutoff = 0.5} = material;
-      this.defines.ALPHA_CUTOFF = 1;
-      this.uniforms.alphaCutoff = alphaCutoff;
+      this.defines.ALPHA_CUTOFF = true;
+      this.uniforms.u_AlphaCutoff = alphaCutoff;
     } else if (material.alphaMode === 'BLEND') {
       log.warn('BLEND alphaMode might not work well because it requires mesh sorting')();
       Object.assign(this.parameters, {

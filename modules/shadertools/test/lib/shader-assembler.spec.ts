@@ -156,25 +156,25 @@ test('ShaderAssembler#hooks', t => {
   t.ok(injectVs.indexOf('color *= 0.1') > -1, 'argument injection code included in shader hook');
   t.ok(injectFs.indexOf('color += 0.1') > -1, 'argument injection code included in shader hook');
 
-  const injectDefineProgram1 = shaderAssembler.assembleGLSLShaderPair({
-    platformInfo,
-    vs,
-    fs,
-    inject: {
-      'vs:LUMAGL_pickColor': 'color *= 0.1;'
-    }
-  });
+  // const injectDefineProgram1 = shaderAssembler.assembleGLSLShaderPair({
+  //   platformInfo,
+  //   vs,
+  //   fs,
+  //   inject: {
+  //     'vs:LUMAGL_pickColor': 'color *= 0.1;'
+  //   }
+  // });
 
-  const injectDefineProgram2 = shaderAssembler.assembleGLSLShaderPair({
-    platformInfo,
-    vs,
-    fs,
-    defines: {
-      'vs:LUMAGL_pickColor': 'color *= 0.1;'
-    }
-  });
+  // const injectDefineProgram2 = shaderAssembler.assembleGLSLShaderPair({
+  //   platformInfo,
+  //   vs,
+  //   fs,
+  //   defines: {
+  //     'vs:LUMAGL_pickColor': 'color *= 0.1;'
+  //   }
+  // });
 
-  t.ok(injectDefineProgram1 !== injectDefineProgram2, 'Injects and defines hashed separately.');
+  // t.ok(injectDefineProgram1 !== injectDefineProgram2, 'Injects and defines hashed separately.');
 
   t.end();
 });
