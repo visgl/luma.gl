@@ -1,41 +1,53 @@
 import React from 'react';
-import clsx from 'clsx';
 import Layout from '@theme/Layout';
-import Link from '@docusaurus/Link';
-import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
-import styles from './index.module.css';
-import HomepageFeatures from '../components/HomepageFeatures';
-import {InstancingExample} from '../examples/templates';
+import {Home} from '@vis.gl/docusaurus-website/components';
+import {InstancingExample} from '../examples';
+import styled from 'styled-components';
 
-function HomepageHeader() {
-  const {siteConfig} = useDocusaurusContext();
-  return (
-    <header className={clsx('hero hero--primary', styles.heroBanner)}>
-      <div className="container">
-        <h1 className="hero__title">{siteConfig.title}</h1>
-        <p className="hero__subtitle">{siteConfig.tagline}</p>
-        <div className={styles.buttons}>
-          <Link
-            className="button button--secondary button--lg"
-            to="/docs/">
-            luma.gl Tutorial - 5min ⏱️
-          </Link>
-        </div>
-      </div>
-    </header>
-  );
+if (typeof window !== 'undefined') {
+  window.website = true;
 }
 
-export default function Home() {
-  const {siteConfig} = useDocusaurusContext();
-  return (
-    <Layout
-      title={`${siteConfig.title}`}
-      description="WebGPU and WebGL 2 APIs<head />">
+const Bullet = styled.li`
+  background: url(img/icon-high-precision.svg) no-repeat left top;
+  list-style: none;
+  max-width: 540px;
+  margin-top: 8px;
+  padding: 0 0 12px 56px;
+  font: 16px;
+`;
+
+const ContentContainer = styled.div`
+  padding: 64px;
+
+  @media screen and (max-width: 768px) {
+    padding: 48px;
+  }
+`;
+
+const HeroExample = () => <InstancingExample panel={false} />
+
+export default class IndexPage extends React.Component {
+  render() {
+    return <Layout title="Home" description="luma.gl">
       <main>
-        <InstancingExample />
-        <HomepageFeatures />
+        <Home HeroExample={HeroExample} getStartedLink="./docs/developer-guide/installing" theme="dark" />
+        <ContentContainer>
+          <h2>High-performance toolkit for GPU-based data visualization.</h2>
+          <ul>
+            <Bullet>
+            Focused on high-performance data processing, e.g. instanced rendering and GPU compute.
+            </Bullet>
+            <Bullet>
+            The core 3D rendering technology behind tools such as
+            deck.gl, kepler.gl, and avs.auto.
+            </Bullet>
+            <Bullet>
+            A clean TypeScript and WebGPU friendly GPU API that works across WebGPU and WebGL 2.
+            </Bullet>
+          </ul>
+        </ContentContainer>
       </main>
-    </Layout>
-  );
+    </Layout>;
+  }
 }
