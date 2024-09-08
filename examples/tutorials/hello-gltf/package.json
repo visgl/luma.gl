@@ -16,7 +16,7 @@
     "@luma.gl/shadertools": "9.1.0-alpha.19",
     "@luma.gl/webgl": "9.1.0-alpha.19",
     "@luma.gl/webgpu": "9.1.0-alpha.19",
-    "@math.gl/core": "4.1.0-alpha.3"
+    "@math.gl/core": "^4.1.0"
   },
   "devDependencies": {
     "typescript": "^5.5.0",
