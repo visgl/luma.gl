@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {NumberArray, ShaderUniformType} from '@luma.gl/core';
+import type {NumberArray, VariableShaderType} from '@luma.gl/core';
 import {Texture, UniformStore} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate, Model, CubeGeometry, loadImageBitmap, AsyncTexture} from '@luma.gl/engine';
@@ -97,7 +97,7 @@ type AppUniforms = {
   mvpMatrix: NumberArray;
 };
 
-const app: {uniformTypes: Record<keyof AppUniforms, ShaderUniformType>} = {
+const app: {uniformTypes: Record<keyof AppUniforms, VariableShaderType>} = {
   uniformTypes: {
     mvpMatrix: 'mat4x4<f32>'
   }

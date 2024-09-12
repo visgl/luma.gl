@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {VertexFormat} from '../../gpu-type-utils/vertex-formats';
+import type {VertexFormat} from '../../shadertypes/vertex-formats';
 
 /**
  * Provides specific details about the memory layout of the actual buffers

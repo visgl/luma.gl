@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {GL} from '@luma.gl/constants';
-import {VertexFormat, VertexType} from '@luma.gl/core';
+import {VertexFormat, NormalizedDataType} from '@luma.gl/core';
 
 type GLDataType =
   | GL.UNSIGNED_BYTE
@@ -32,7 +32,7 @@ export function getVertexFormatFromGL(type: GLDataType, components: 1 | 2 | 3 | 
 }
 
 /** Get data type from GL constants */
-export function getVertexTypeFromGL(type: GLDataType, normalized = false): VertexType {
+export function getVertexTypeFromGL(type: GLDataType, normalized = false): NormalizedDataType {
   // prettier-ignore
   switch (type) {
     // WebGPU does not support normalized 32 bit integer attributes
@@ -50,7 +50,7 @@ export function getVertexTypeFromGL(type: GLDataType, normalized = false): Verte
 }
 
 export function getGLFromVertexType(
-  dataType: VertexType
+  dataType: NormalizedDataType
 ):
   | GL.UNSIGNED_BYTE
   | GL.BYTE

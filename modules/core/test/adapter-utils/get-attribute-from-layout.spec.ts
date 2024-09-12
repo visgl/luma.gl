@@ -3,7 +3,12 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
-import {ShaderLayout, getAttributeInfosFromLayouts, BufferLayout} from '@luma.gl/core';
+import {
+  ShaderLayout,
+  getAttributeInfosFromLayouts,
+  AttributeInfo,
+  BufferLayout
+} from '@luma.gl/core';
 
 const shaderLayout: ShaderLayout = {
   bindings: [],
@@ -86,13 +91,13 @@ const bufferLayout: BufferLayout[] = [
   }
 ];
 
-const resolvedLayout = {
+const resolvedLayout: Record<string, AttributeInfo> = {
   vertexPositions: {
     attributeName: 'vertexPositions',
     bufferName: 'vertexPositions',
     location: 0,
     shaderType: 'vec3<f32>',
-    shaderDataType: 'f32',
+    primitiveType: 'f32',
     shaderComponents: 3,
     vertexFormat: 'float32x3',
     bufferDataType: 'float32',
@@ -108,7 +113,7 @@ const resolvedLayout = {
     bufferName: 'vertexPositions',
     location: 1,
     shaderType: 'vec3<f32>',
-    shaderDataType: 'f32',
+    primitiveType: 'f32',
     shaderComponents: 3,
     vertexFormat: 'float32x3',
     bufferDataType: 'float32',
@@ -124,7 +129,7 @@ const resolvedLayout = {
     bufferName: 'vertexPositions',
     location: 0,
     shaderType: 'vec3<f32>',
-    shaderDataType: 'f32',
+    primitiveType: 'f32',
     shaderComponents: 3,
     vertexFormat: 'float32x3',
     bufferDataType: 'float32',
@@ -140,7 +145,7 @@ const resolvedLayout = {
     bufferName: 'vertexPositions',
     location: 2,
     shaderType: 'vec3<f32>',
-    shaderDataType: 'f32',
+    primitiveType: 'f32',
     shaderComponents: 3,
     vertexFormat: 'float32x3',
     bufferDataType: 'float32',
@@ -156,7 +161,7 @@ const resolvedLayout = {
     bufferName: 'vertexPositions',
     location: 1,
     shaderType: 'vec3<f32>',
-    shaderDataType: 'f32',
+    primitiveType: 'f32',
     shaderComponents: 3,
     vertexFormat: 'float32x3',
     bufferDataType: 'float32',
@@ -172,7 +177,7 @@ const resolvedLayout = {
     bufferName: 'vertexPositions',
     location: 3,
     shaderType: 'vec3<f32>',
-    shaderDataType: 'f32',
+    primitiveType: 'f32',
     shaderComponents: 3,
     vertexFormat: 'float32x3',
     bufferDataType: 'float32',

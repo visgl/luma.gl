@@ -5,7 +5,7 @@
 import {StatsManager, lumaStats} from '../utils/stats-manager';
 import {log} from '../utils/log';
 import {uid} from '../utils/uid';
-import type {TextureFormat} from '../gpu-type-utils/texture-formats';
+import type {TextureFormat, TextureFormatInfo} from '../shadertypes/texture-formats';
 import type {CanvasContext, CanvasContextProps} from './canvas-context';
 import type {BufferProps} from './resources/buffer';
 import {Buffer} from './resources/buffer';
@@ -23,14 +23,14 @@ import type {VertexArray, VertexArrayProps} from './resources/vertex-array';
 import type {TransformFeedback, TransformFeedbackProps} from './resources/transform-feedback';
 import type {QuerySet, QuerySetProps} from './resources/query-set';
 
-import type {ExternalImage} from '../image-utils/image-types';
-import {isExternalImage, getExternalImageSize} from '../image-utils/image-types';
 import {
   isTextureFormatCompressed,
-  decodeTextureFormat
-} from '../gpu-type-utils/decode-texture-format';
-import {getTextureFormatCapabilities} from '../gpu-type-utils/texture-format-capabilities';
-import type {TextureFormatInfo} from '../gpu-type-utils/texture-format-info';
+  getTextureFormatInfo,
+  getTextureFormatCapabilities
+} from '../shadertypes/utils/decode-texture-format';
+
+import type {ExternalImage} from '../image-utils/image-types';
+import {isExternalImage, getExternalImageSize} from '../image-utils/image-types';
 
 /**
  * Identifies the GPU vendor and driver.
@@ -395,7 +395,7 @@ export abstract class Device {
 
   /** Returns information about a texture format, such as data type, channels, bits per channel, compression etc */
   getTextureFormatInfo(format: TextureFormat): TextureFormatInfo {
-    return decodeTextureFormat(format);
+    return getTextureFormatInfo(format);
   }
 
   /** Determines what operations are supported on a texture format on this particular device (checks against supported device features) */

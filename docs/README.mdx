@@ -52,20 +52,20 @@ Docs for older versions are available on github:
 
 luma.gl is a modern GPU toolkit for the Web, created to facilitate processing and visualization of big data.
 
-- **Portable GPU API** - for working with GPUs in JavaScript.
-- **TypeScript** - All APIs are rigorously typed.
-- **Pluggable backends** - for WebGPU and WebGL .
+- **Rendering and Compute** - for computing and rendering with GPUs in JavaScript.
+- **WebGPU and WebGL2** - support one or both via luma's pluggable backends.
 - **Engine-level classes** - `Model`, `Transform` and `AnimationLoop`, as well as scenegraph support.
-- **glTF** support.
-- **Shader management system** - supports shader modules, dependencies, injection etc.
+- **glTF and PBR** support for glTF models and physically based rendering.
+- **Shader management system** - supports shader modules, dependencies, injection, transpilation etc.
 - **Shader module library** - Pre-optimized moduls for compute, visual effects and post processing.
+- **TypeScript** - All APIs are rigorously typed.
 
-For 3D math and data loading, luma.gl uses companion framworks:
+luma.gl offers extensive support for 3D math and data loading through companion vis.gl framworks:
 
 - [**loaders.gl**](https://loaders.gl) - wide range of 3D and geospatial data format standards.
 - [**math.gl**](https://uber-web.github.io/math.gl/docs) - a variety of high precision geospatial and 3D math logic.
 
-luma.gl is intended to be a foundation on top of which to build higher-level GPU frameworks. The primary example is
+luma.gl is a great foundation for building higher-level GPU frameworks. The primary example is
 
 - [**deck.gl**](https://deck.gl) - geospatial GPU visualization and compute via a high-performance functional programming API.
 
