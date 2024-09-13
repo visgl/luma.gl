@@ -7,26 +7,24 @@ which provides methods for creating GPU resources such as `Buffer`, `Texture`, `
 ## Installing adapters
 
 The `@luma.gl/core` module is not usable on its own. A device adapter module must
-be imported and registered.
+be imported and provided during device creation.
 
 ```typescript
 import {luma} from '@luma.gl/core';
-import {WebGPUAdapter} from '@luma.gl/webgpu';
+import {webgpuAdapter} from '@luma.gl/webgpu';
 
-luma.registerDevice([WebGPUAdapter])
-const device = await luma.createDevice({type: 'webgpu', createCanvasContext: ...});
+const device = await luma.createDevice({type: 'webgpu', adapters: [webgpuAdapter], createCanvasContext: ...});
 ```
 
-It is possible to register more than one device adapter to create an application
+It is possible to supply more than one device adapter to create an application
 that can work in both WebGL and WebGPU environments.
 
 ```typescript
-luma.registerDevice([WebGPUAdapter])
 import {luma} from '@luma.gl/core';
-import {WebGPUAdapter} from '@luma.gl/webgpu';
-import {WebGLAdapter} '@luma.gl/webgl';
+import {webgpuAdapter} from '@luma.gl/webgpu';
+import {webglAdapter} '@luma.gl/webgl';
 
-const webgpuDevice = luma.createDevice({type: 'best-available', createCanvasContext: ...});
+const webgpuDevice = luma.createDevice({type: 'best-available', adapters: [webgpuAdapter, webglAdapter], createCanvasContext: ...});
 ```
 
 ## Creating GPU Resources
@@ -34,15 +32,7 @@ const webgpuDevice = luma.createDevice({type: 'best-available', createCanvasCont
 Once the application has created a `Device`, GPU resources can be created:
 
 ```typescript
-const buffer = device.createBuffer(...)
+const buffer = device.createBuffer(...);
+const texture = device.createTexture(...);
+const renderPass = device.beginRenderPass(...);
 ```
-
-## Accessing the CanvasContext
-
-A `Device` may (optinally) be used to render in one or more canvases (HTML canvas elements).
-The connection between a Device and a canvas is managed by the `CanvasContext` class.
-
-:::info
-In WebGL there is always exactly one canvas associated with the device and it is not
-possible to create a canvas-less context or render into multiple contexts.
-:::
