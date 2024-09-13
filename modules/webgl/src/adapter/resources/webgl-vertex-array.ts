@@ -11,7 +11,7 @@ import {getBrowser} from '@probe.gl/env';
 import {WebGLDevice} from '../webgl-device';
 import {WEBGLBuffer} from '../resources/webgl-buffer';
 
-import {getGLFromVertexType} from '../converters/vertex-formats';
+import {getGLFromVertexType} from '../converters/webgl-vertex-formats';
 import {fillArray} from '../../utils/fill-array';
 
 /** VertexArrayObject wrapper */

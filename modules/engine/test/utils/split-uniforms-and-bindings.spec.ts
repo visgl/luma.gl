@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {WEBGLSampler, WEBGLTexture} from '@luma.gl/webgl';
-import {splitUniformsAndBindings} from '@luma.gl/webgl/utils/split-uniforms-and-bindings';
+import {splitUniformsAndBindings} from '@luma.gl/engine/model/split-uniforms-and-bindings';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
 import test from 'tape-promise/tape';
 

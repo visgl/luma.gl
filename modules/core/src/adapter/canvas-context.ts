@@ -7,7 +7,7 @@ import type {Device} from './device';
 import type {Framebuffer} from './resources/framebuffer';
 import {log} from '../utils/log';
 import {uid} from '../utils/uid';
-import type {DepthStencilTextureFormat} from '../gpu-type-utils/texture-formats';
+import type {DepthStencilTextureFormat} from '../shadertypes/texture-formats';
 
 /** Properties for a CanvasContext */
 export type CanvasContextProps = {

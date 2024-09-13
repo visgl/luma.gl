@@ -2,10 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {TextureFormat} from './texture-formats';
-import {TextureFeature} from './texture-features';
-import {TextureFormatInfo} from './texture-format-info';
-
+import {TextureFormat, TextureFeature, TextureFormatInfo} from '../texture-formats';
 /* eslint-disable camelcase */
 
 // Define local device feature strings to optimize minification

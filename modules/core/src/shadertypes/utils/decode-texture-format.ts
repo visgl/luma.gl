@@ -2,11 +2,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {TextureFormat, CompressedTextureFormat} from './texture-formats';
-import {VertexType} from './vertex-formats';
-import {decodeVertexType} from './decode-data-type';
-import {TextureFormatInfo} from './texture-format-info';
-
+import type {NormalizedDataType} from '../data-types';
+import type {
+  TextureFormat,
+  CompressedTextureFormat,
+  TextureFormatInfo,
+  TextureFormatCapabilities
+} from '../texture-formats';
+import {getDataTypeInfo} from './decode-data-types';
 import {getTextureFormatDefinition} from './texture-format-table';
 
 // prettier-ignore
@@ -28,8 +31,8 @@ export function isTextureFormatCompressed(
 /**
  * Decodes a texture format, returning e.g. attatchment type, components, byte length and flags (integer, signed, normalized)
  */
-export function decodeTextureFormat(format: TextureFormat): TextureFormatInfo {
-  let formatInfo: TextureFormatInfo = decodeTextureFormatUsingTable(format);
+export function getTextureFormatInfo(format: TextureFormat): TextureFormatInfo {
+  let formatInfo: TextureFormatInfo = getTextureFormatInfoUsingTable(format);
 
   if (isTextureFormatCompressed(format)) {
     formatInfo.channels = 'rgb';
@@ -49,8 +52,8 @@ export function decodeTextureFormat(format: TextureFormat): TextureFormatInfo {
   const matches = RGB_FORMAT_REGEX.exec(format as string);
   if (matches) {
     const [, channels, length, type, srgb, suffix] = matches;
-    const dataType = `${type}${length}` as VertexType;
-    const decodedType = decodeVertexType(dataType);
+    const dataType = `${type}${length}` as NormalizedDataType;
+    const decodedType = getDataTypeInfo(dataType);
     const bits = decodedType.byteLength * 8;
     const components = channels.length as 1 | 2 | 3 | 4;
     const bitsPerChannel: [number, number, number, number] = [
@@ -63,7 +66,7 @@ export function decodeTextureFormat(format: TextureFormat): TextureFormatInfo {
     formatInfo = {
       format,
       attachment: formatInfo.attachment,
-      dataType: decodedType.dataType,
+      dataType: decodedType.signedType,
       components,
       channels: channels as 'r' | 'rg' | 'rgb' | 'rgba',
       integer: decodedType.integer,
@@ -94,8 +97,40 @@ export function decodeTextureFormat(format: TextureFormat): TextureFormatInfo {
   return formatInfo;
 }
 
+/**
+ * Returns the "static" capabilities of a texture format.
+ * @note Needs to be checked against current device
+ */
+export function getTextureFormatCapabilities(format: TextureFormat): TextureFormatCapabilities {
+  const info = getTextureFormatDefinition(format);
+
+  const formatCapabilities: Required<TextureFormatCapabilities> = {
+    format,
+    create: info.f ?? true,
+    render: info.render ?? true,
+    filter: info.filter ?? true,
+    blend: info.blend ?? true,
+    store: info.store ?? true
+  };
+
+  const formatInfo = getTextureFormatInfo(format);
+  const isDepthStencil = format.startsWith('depth') || format.startsWith('stencil');
+  const isSigned = formatInfo?.signed;
+  const isInteger = formatInfo?.integer;
+  const isWebGLSpecific = formatInfo?.webgl;
+
+  // signed formats are not renderable
+  formatCapabilities.render &&= !isSigned;
+  // signed and integer formats are not filterable
+  formatCapabilities.filter &&= !isDepthStencil && !isSigned && !isInteger && !isWebGLSpecific;
+
+  return formatCapabilities;
+}
+
+// HELPERS
+
 /** Decode texture format info from the table */
-function decodeTextureFormatUsingTable(format: TextureFormat): TextureFormatInfo {
+function getTextureFormatInfoUsingTable(format: TextureFormat): TextureFormatInfo {
   const info = getTextureFormatDefinition(format);
 
   const bytesPerPixel = info.bytesPerPixel || 1;

@@ -7,11 +7,17 @@ import type {
   UniformBinding,
   UniformBlockBinding,
   AttributeDeclaration,
-  VaryingBinding
+  VaryingBinding,
+  AttributeShaderType
 } from '@luma.gl/core';
+import {getVariableShaderTypeInfo} from '@luma.gl/core';
 
-import {GL} from '@luma.gl/constants';
-import {decodeGLUniformType, decodeGLAttributeType, isSamplerUniform} from './decode-webgl-types';
+import {GL, GLUniformType} from '@luma.gl/constants';
+import {
+  isGLSamplerType,
+  getTextureBindingFromGLSamplerType,
+  convertGLUniformTypeToShaderVariableType
+} from '../converters/webgl-shadertypes';
 
 /**
  * Extract metadata describing binding information for a program's shaders
@@ -53,8 +59,8 @@ export function getShaderLayoutFromGLSL(
   const uniforms: UniformBinding[] = readUniformBindings(gl, program);
   let textureUnit = 0;
   for (const uniform of uniforms) {
-    if (isSamplerUniform(uniform.type)) {
-      const {viewDimension, sampleType} = getSamplerInfo(uniform.type);
+    if (isGLSamplerType(uniform.type)) {
+      const {viewDimension, sampleType} = getTextureBindingFromGLSamplerType(uniform.type);
       shaderLayout.bindings.push({
         type: 'texture',
         name: uniform.name,
@@ -108,7 +114,7 @@ function readAttributeDeclarations(
     const location = gl.getAttribLocation(program, name);
     // Add only user provided attributes, for built-in attributes like `gl_InstanceID` location will be < 0
     if (location >= 0) {
-      const {attributeType} = decodeGLAttributeType(compositeType);
+      const attributeType = convertGLUniformTypeToShaderVariableType(compositeType);
 
       // Whether an attribute is instanced is essentially fixed by the structure of the shader code,
       // so it is arguably a static property of the shader.
@@ -120,7 +126,7 @@ function readAttributeDeclarations(
         name,
         location,
         stepMode,
-        type: attributeType
+        type: attributeType as AttributeShaderType
         // size - for arrays, size is the number of elements in the array
       });
     }
@@ -145,10 +151,10 @@ function readVaryings(gl: WebGL2RenderingContext, program: WebGLProgram): Varyin
     if (!activeInfo) {
       throw new Error('activeInfo');
     }
-    const {name, type: compositeType, size} = activeInfo;
-    const {glType, components} = decodeGLUniformType(compositeType);
-    const varying = {location, name, type: glType, size: size * components}; // Base values
-    varyings.push(varying);
+    const {name, type: glUniformType, size} = activeInfo;
+    const uniformType = convertGLUniformTypeToShaderVariableType(glUniformType as GLUniformType);
+    const {type, components} = getVariableShaderTypeInfo(uniformType);
+    varyings.push({location, name, type, size: size * components});
   }
 
   varyings.sort((a, b) => a.location - b.location);
@@ -251,9 +257,11 @@ function readUniformBlocks(
         throw new Error('activeInfo');
       }
 
+      const format = convertGLUniformTypeToShaderVariableType(uniformType[i]);
+
       blockInfo.uniforms.push({
         name: activeInfo.name,
-        format: decodeGLUniformType(uniformType[i]).format,
+        format,
         type: uniformType[i],
         arrayLength: uniformArrayLength[i],
         byteOffset: uniformOffset[i],
@@ -290,44 +298,6 @@ function readUniformBlocks(
     bindings.push(binding);
   }
 */
-
-const SAMPLER_UNIFORMS_GL_TO_GPU: Record<
-  number,
-  [
-    '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d',
-    'float' | 'unfilterable-float' | 'depth' | 'sint' | 'uint'
-  ]
-> = {
-  [GL.SAMPLER_2D]: ['2d', 'float'],
-  [GL.SAMPLER_CUBE]: ['cube', 'float'],
-  [GL.SAMPLER_3D]: ['3d', 'float'],
-  [GL.SAMPLER_2D_SHADOW]: ['3d', 'depth'],
-  [GL.SAMPLER_2D_ARRAY]: ['2d-array', 'float'],
-  [GL.SAMPLER_2D_ARRAY_SHADOW]: ['2d-array', 'depth'],
-  [GL.SAMPLER_CUBE_SHADOW]: ['cube', 'float'],
-  [GL.INT_SAMPLER_2D]: ['2d', 'sint'],
-  [GL.INT_SAMPLER_3D]: ['3d', 'sint'],
-  [GL.INT_SAMPLER_CUBE]: ['cube', 'sint'],
-  [GL.INT_SAMPLER_2D_ARRAY]: ['2d-array', 'uint'],
-  [GL.UNSIGNED_INT_SAMPLER_2D]: ['2d', 'uint'],
-  [GL.UNSIGNED_INT_SAMPLER_3D]: ['3d', 'uint'],
-  [GL.UNSIGNED_INT_SAMPLER_CUBE]: ['cube', 'uint'],
-  [GL.UNSIGNED_INT_SAMPLER_2D_ARRAY]: ['2d-array', 'uint']
-};
-
-type SamplerInfo = {
-  viewDimension: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d';
-  sampleType: 'float' | 'unfilterable-float' | 'depth' | 'sint' | 'uint';
-};
-
-function getSamplerInfo(type: GL): SamplerInfo {
-  const sampler = SAMPLER_UNIFORMS_GL_TO_GPU[type];
-  if (!sampler) {
-    throw new Error('sampler');
-  }
-  const [viewDimension, sampleType] = sampler;
-  return {viewDimension, sampleType};
-}
 
 // HELPERS
 

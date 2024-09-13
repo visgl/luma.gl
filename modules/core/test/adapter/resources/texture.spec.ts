@@ -5,7 +5,7 @@
 import test from 'tape-promise/tape';
 import {getWebGLTestDevice, getTestDevices} from '@luma.gl/test-utils';
 
-import {Device, Texture, TextureFormat, decodeTextureFormat, VertexType} from '@luma.gl/core';
+import {Device, Texture, TextureFormat, getTextureFormatInfo, VertexType} from '@luma.gl/core';
 // TODO(v9): Avoid import from `@luma.gl/constants` in core tests.
 import {GL} from '@luma.gl/constants';
 import {WebGLDevice} from '@luma.gl/webgl';
@@ -129,7 +129,7 @@ test('Texture#format simple creation', async t => {
 
       if (device.isTextureFormatSupported(formatName)) {
         // For compressed textures there may be a block size that we need to be a multiple of
-        const decodedFormat = decodeTextureFormat(formatName);
+        const decodedFormat = getTextureFormatInfo(formatName);
         const width = decodedFormat.blockWidth ?? 4;
         const height = decodedFormat.blockHeight ?? 4;
 
@@ -180,7 +180,7 @@ function testFormatCreation(t, device: Device, withData: boolean = false) {
   for (const [formatName, formatInfo] of Object.entries(_getTextureFormatTable)) {
     const format = formatName as TextureFormat;
 
-    const decodedFormat = decodeTextureFormat(formatName);
+    const decodedFormat = getTextureFormatInfo(formatName);
     const {dataType, packed, bitsPerChannel} = decodedFormat;
 
     // WebGPU texture can currently only be set from 8 bit data

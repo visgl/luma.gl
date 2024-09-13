@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {ShaderAttributeType, ShaderLayout, log} from '@luma.gl/core';
+import {AttributeShaderType, ShaderLayout, log} from '@luma.gl/core';
 import {WgslReflect} from 'wgsl_reflect';
 
 /**
@@ -80,7 +80,7 @@ export function getShaderLayoutFromWGSL(source: string): ShaderLayout {
 }
 
 /** Get a valid shader attribute type string from a wgsl-reflect type */
-function getType(type: any): ShaderAttributeType {
+function getType(type: any): AttributeShaderType {
   return type.format ? `${type.name}<${type.format.name}>` : type.name;
 }
 

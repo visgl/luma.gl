@@ -126,32 +126,37 @@ export type {UniformValue} from './adapter/types/uniforms';
 // GPU TYPE UTILS - GPU MEMORY LAYOUT TYPES - EXTERNAL
 
 export type {NumberArray, TypedArray, TypedArrayConstructor} from './types';
-export type {VertexFormat, VertexType} from './gpu-type-utils/vertex-formats';
-export type {
-  ShaderDataType,
-  ShaderAttributeType,
-  ShaderUniformType
-} from './gpu-type-utils/shader-types';
+export type {PrimitiveDataType, SignedDataType, NormalizedDataType} from './shadertypes/data-types';
+export type {AttributeShaderType, VariableShaderType} from './shadertypes/shader-types';
+export type {VertexFormat} from './shadertypes/vertex-formats';
 export type {
   TextureFormat,
   ColorTextureFormat,
   DepthStencilTextureFormat,
-  TextureCompression
-} from './gpu-type-utils/texture-formats';
-export type {TextureFormatInfo} from './gpu-type-utils/texture-format-info';
-export type {TextureFormatCapabilities} from './gpu-type-utils/texture-format-capabilities';
+  TextureCompression,
+  TextureFormatInfo,
+  TextureFormatCapabilities
+} from './shadertypes/texture-formats';
 
 // GPU TYPE UTILS - GPU MEMORY LAYOUT HELPERS - CAN BE USED BY APPS BUT MOSTLY USED INTERNALLY
 
-export {decodeVertexFormat} from './gpu-type-utils/decode-vertex-format';
-export {decodeShaderUniformType} from './gpu-type-utils/decode-shader-types';
-export {decodeShaderAttributeType} from './gpu-type-utils/decode-attribute-type';
-export {getDataTypeFromTypedArray} from './gpu-type-utils/vertex-format-from-attribute';
-export {getTypedArrayFromDataType} from './gpu-type-utils/vertex-format-from-attribute';
-export {getVertexFormatFromAttribute} from './gpu-type-utils/vertex-format-from-attribute';
-
-export {decodeTextureFormat} from './gpu-type-utils/decode-texture-format';
-export {getTextureFormatCapabilities} from './gpu-type-utils/texture-format-capabilities';
+export {
+  getDataTypeInfo,
+  getDataTypeFromTypedArray,
+  getTypedArrayFromDataType
+} from './shadertypes/utils/decode-data-types';
+export {
+  getVariableShaderTypeInfo,
+  getAttributeShaderTypeInfo
+} from './shadertypes/utils/decode-shader-types';
+export {
+  getVertexFormatFromAttribute,
+  getVertexFormatInfo
+} from './shadertypes/utils/decode-vertex-format';
+export {
+  getTextureFormatInfo,
+  getTextureFormatCapabilities
+} from './shadertypes/utils/decode-texture-format';
 
 // GENERAL EXPORTS - FOR APPLICATIONS
 
@@ -177,4 +182,4 @@ export {getAttributeInfosFromLayouts} from './adapter-utils/get-attribute-from-l
 export {
   getTextureFormatDefinition as _getTextureFormatDefinition,
   getTextureFormatTable as _getTextureFormatTable
-} from './gpu-type-utils/texture-format-table';
+} from './shadertypes/utils/texture-format-table';
