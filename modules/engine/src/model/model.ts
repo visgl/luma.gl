@@ -13,7 +13,6 @@ import type {
   TransformFeedback,
   AttributeInfo,
   Binding,
-  UniformValue,
   PrimitiveTopology
 } from '@luma.gl/core';
 import {
@@ -44,10 +43,7 @@ import {debugFramebuffer} from '../debug/debug-framebuffer';
 import {deepEqual} from '../utils/deep-equal';
 import {uid} from '../utils/uid';
 import {ShaderInputs} from '../shader-inputs';
-// import type {AsyncTextureProps} from '../async-texture/async-texture';
 import {AsyncTexture} from '../async-texture/async-texture';
-
-import {splitUniformsAndBindings} from './split-uniforms-and-bindings';
 
 const LOG_DRAW_PRIORITY = 2;
 const LOG_DRAW_TIMEOUT = 10000;
@@ -94,9 +90,6 @@ export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs' | 'bindings'> & {
 
   transformFeedback?: TransformFeedback;
 
-  /** Mapped uniforms for shadertool modules */
-  moduleSettings?: Record<string, Record<string, any>>;
-
   /** Show shader source in browser? */
   debugShaders?: 'never' | 'errors' | 'warnings' | 'always';
 
@@ -127,7 +120,6 @@ export class Model {
     userData: {},
     defines: {},
     modules: [],
-    moduleSettings: undefined!,
     geometry: null,
     indexBuffer: null,
     attributes: {},
@@ -187,8 +179,6 @@ export class Model {
   constantAttributes: Record<string, TypedArray> = {};
   /** Bindings (textures, samplers, uniform buffers) */
   bindings: Record<string, Binding | AsyncTexture> = {};
-  /** Sets uniforms @deprecated Use uniform buffers and setBindings() for portability*/
-  uniforms: Record<string, UniformValue> = {};
 
   /**
    * VertexArray
@@ -211,7 +201,6 @@ export class Model {
 
   _attributeInfos: Record<string, AttributeInfo> = {};
   _gpuGeometry: GPUGeometry | null = null;
-  private _getModuleUniforms: (props?: Record<string, Record<string, any>>) => Record<string, any>;
   private props: Required<ModelProps>;
 
   _pipelineNeedsUpdate: string | false = 'newly created';
@@ -335,13 +324,6 @@ export class Model {
     if (props.bindings) {
       this.setBindings(props.bindings);
     }
-    if (props.uniforms) {
-      this.setUniformsWebGL(props.uniforms);
-    }
-    if (props.moduleSettings) {
-      // log.warn('Model.props.moduleSettings is deprecated. Use Model.shaderInputs.setProps()')();
-      this.updateModuleSettingsWebGL(props.moduleSettings);
-    }
     if (props.transformFeedback) {
       this.transformFeedback = props.transformFeedback;
     }
@@ -423,9 +405,6 @@ export class Model {
       this.pipeline.setBindings(syncBindings, {
         disableWarnings: this.props.disableWarnings
       });
-      if (!isObjectEmpty(this.uniforms)) {
-        this.pipeline.setUniformsWebGL(this.uniforms);
-      }
 
       const {indexBuffer} = this.vertexArray;
       const indexCount = indexBuffer
@@ -676,33 +655,7 @@ export class Model {
     this.setNeedsRedraw('constants');
   }
 
-  // DEPRECATED METHODS
-
-  /**
-   * Sets individual uniforms
-   * @deprecated WebGL only, use uniform buffers for portability
-   * @param uniforms
-   */
-  setUniformsWebGL(uniforms: Record<string, UniformValue>): void {
-    if (!isObjectEmpty(uniforms)) {
-      this.pipeline.setUniformsWebGL(uniforms);
-      Object.assign(this.uniforms, uniforms);
-    }
-    this.setNeedsRedraw('uniforms');
-  }
-
-  /**
-   * @deprecated Updates shader module settings (which results in uniforms being set)
-   */
-  updateModuleSettingsWebGL(props: Record<string, any>): void {
-    // log.warn('Model.updateModuleSettings is deprecated. Use Model.shaderInputs.setProps()')();
-    const {bindings, uniforms} = splitUniformsAndBindings(this._getModuleUniforms(props));
-    Object.assign(this.bindings, bindings);
-    Object.assign(this.uniforms, uniforms);
-    this.setNeedsRedraw('moduleSettings');
-  }
-
-  // Internal methods
+  // INTERNAL METHODS
 
   /** Check that bindings are loaded. Returns id of first binding that is still loading. */
   _areBindingsLoading(): string | false {
@@ -868,10 +821,6 @@ export class Model {
       log.table(LOG_DRAW_PRIORITY, shaderLayoutTable)();
 
       const uniformTable = this.shaderInputs.getDebugTable();
-      // Add any global uniforms
-      for (const [name, value] of Object.entries(this.uniforms)) {
-        uniformTable[name] = {value};
-      }
       log.table(LOG_DRAW_PRIORITY, uniformTable)();
 
       const attributeTable = this._getAttributeDebugTable();

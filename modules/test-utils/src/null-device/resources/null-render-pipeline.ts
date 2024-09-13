@@ -41,10 +41,6 @@ export class NullRenderPipeline extends RenderPipeline {
     Object.assign(this.bindings, bindings);
   }
 
-  override setUniformsWebGL(uniforms: Record<string, UniformValue>): void {
-    Object.assign(this.uniforms, uniforms);
-  }
-
   draw(options: {
     renderPass: RenderPass;
     vertexArray: VertexArray;
