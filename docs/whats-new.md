@@ -16,34 +16,40 @@ Improvements focused on enhancing WebGPU support.
 
 **@luma.gl/core**
 
-- `luma`
-  - `luma.createDevice()` Accepts a new `props.adapters` prop to avoid need for global registration of adapters.
-  - [`luma.registerAdapters()`](/docs/api-reference/core/luma#lumaregisteradapters) New method for global registration of adapters in case it still desired.
 - [`Adapter`](/docs/api-reference/core/adapter)
   - New class representing a pluggable GPU backend.
-  - Singleton `Adapter` objects are exported by `@luma.gl/webgpu` and `@luma.gl/webgl` notes below.
+  - Singleton `Adapter` objects are exported by `@luma.gl/webgpu` and `@luma.gl/webgl`.
+- `luma`
+  - Now relies on `Adapter` instances to define which GPU backends are available.
+  - Adapter can be supplied during device creation, avoiding the need for global registration of GPU backends.
+  -  `CreateDeviceProps.adapters` prop to supply list of GPU backend adapters to `luma.createDevice()`. 
+  - [`luma.registerAdapters()`](/docs/api-reference/core/luma#lumaregisteradapters) New method for global registration of adapters (in case it still desired).
 - `Device`
   - `DeviceProps.createCanvasContext` - New prop for creating a default `CanvasContext`.
-  - `DeviceProps.onResize` - New callback tracking size changes to a `CanvasContext`.
-  - `DeviceProps.onVisibilityChange` - New callback tracking visibility changes to a `CanvasContext`.
-  - `DeviceProps.onDevicePixelRatioChange` - New callback tracking DPR changes to a `CanvasContext`.
-  - `DeviceProps.debug*` - Debug option improvements, please refer to `DeviceProps` documentation.
+  - `DeviceProps.onResize` - New callback tracking size changes to `CanvasContext`s.
+  - `DeviceProps.onVisibilityChange` - New callback tracking visibility to `CanvasContext`s.
+  - `DeviceProps.onDevicePixelRatioChange` - New callback tracking device pixel resolution (DPR) changes to `CanvasContext`s.
+  - `DeviceProps.debug*` - New debug options, please refer to `DeviceProps` documentation.
 - `CanvasContext`
-  - Now calculates exact "device pixel content box" size.
-  - Now tracks size, visibility and DPR changes (see new `DeviceProps` callbacks).
+  - Now calculates exact "device pixel content box" size enabling pixel perfect sized drawing buffers (no moire etc).
+  - Now tracks size, visibility and DPR changes (see the new `DeviceProps` callbacks).
 - `Texture`
+  - Textures are now immutable and synchronous. See upgrade guide, and the new `AsyncTexture` class in `@luma.gl/engine`.
   - `Texture.copyExternalImage()` New function that works on both WebGPU and WebGL.
+  - `Texture.copyImageData()` New function that works on both WebGPU and WebGL.
+- `Sampler`
+  - `SamplerProps.mipmapFilter` New value `'none'` providing more explicit control over mipmap filtering.
 - `RenderPipeline`
   - `Parameters.blend` - New parameter that provides more explicit control over color blending activation.
--  `Sampler`
-  - `SamplerProps.mipmapFilter` has a new value `'none'` providing more explicit control over mipmap filtering.
+- `RenderPass`
+  - `RenderPassProps.clearColors` - New prop enables specification of clear colors for multiple color attachments.
 
 **@luma.gl/engine**
 
 - `makeAnimationLoopTemplate`
-  - Accepts a new `props.adapters` prop. (Avoids need for global registration of adapters).
+  - Accepts a new `.adapters` prop. (Avoids need for global registration of adapters).
 - `AsyncTexture`](/docs/api-reference/engine/async-texture)
-  - New class allows that applications to create textures from a Promise.
+  - New class allows that applications to work withcreate textures from a Promise.
 - `ShaderPassRenderer` 
   - New class that helps applications apply a `ShaderPass` list to a texture.
 
@@ -57,9 +63,14 @@ Improvements focused on enhancing WebGPU support.
 
 **@luma.gl/webgl**
 
-- `webglAdapter` New object representing the WebGL backend
+- `webglAdapter` 
+  - New object representing the WebGL backend
   - New: adds mock WEBGL1 extensions to WebGL2 contexts for better compatibility with old WebGL libraries
   - Big texture refactor to align WebGL implementation with WebGPU APIs
+- `RenderPipeline`
+  - WebGL render pipelines now support frame buffers with multiple color attachments.
+- `RenderPass`
+  - Now supports framebuffers with multiple color attachments.
 
 **@luma.gl/webgpu**
 
