@@ -16,10 +16,9 @@ import {RenderPipeline, log} from '@luma.gl/core';
 // import {getAttributeInfosFromLayouts} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 
-import {getShaderLayoutFromGLSL} from '../helpers/get-shader-layout';
+import {getShaderLayoutFromGLSL} from '../helpers/get-shader-layout-from-glsl';
 import {withDeviceAndGLParameters} from '../converters/device-parameters';
 import {setUniform} from '../helpers/set-uniform';
-import {splitUniformsAndBindings} from '../../utils/split-uniforms-and-bindings';
 // import {copyUniform, checkUniformValues} from '../../classes/uniforms';
 
 import {WebGLDevice} from '../webgl-device';
@@ -274,21 +273,6 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     vertexArray.unbindAfterRender(renderPass);
 
     return true;
-  }
-
-  // DEPRECATED METHODS
-
-  override setUniformsWebGL(uniforms: Record<string, UniformValue>) {
-    const {bindings} = splitUniformsAndBindings(uniforms);
-    Object.keys(bindings).forEach(name => {
-      log.warn(
-        `Unsupported value "${JSON.stringify(
-          bindings[name]
-        )}" used in setUniforms() for key ${name}. Use setBindings() instead?`
-      )();
-    });
-    // TODO - check against layout
-    Object.assign(this.uniforms, uniforms);
   }
 
   // PRIVATE METHODS

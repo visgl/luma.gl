@@ -3,12 +3,16 @@
 // Copyright (c) vis.gl contributors
 
 import {log} from '../utils/log';
+import type {PrimitiveDataType, NormalizedDataType} from '../shadertypes/data-types';
+import type {AttributeShaderType} from '../shadertypes/shader-types';
+import type {VertexFormat} from '../shadertypes/vertex-formats';
+import {getAttributeShaderTypeInfo} from '../shadertypes/utils/decode-shader-types';
+import {
+  getVertexFormatInfo,
+  getCompatibleVertexFormat
+} from '../shadertypes/utils/decode-vertex-format';
 import type {ShaderLayout, AttributeDeclaration} from '../adapter/types/shader-layout';
 import type {BufferLayout} from '../adapter/types/buffer-layout';
-import type {ShaderDataType, ShaderAttributeType} from '../gpu-type-utils/shader-types';
-import {decodeShaderAttributeType} from '../gpu-type-utils/decode-attribute-type';
-import type {VertexFormat, VertexType} from '../gpu-type-utils/vertex-formats';
-import {decodeVertexFormat} from '../gpu-type-utils/decode-vertex-format';
 
 /** Resolved info for a buffer / attribute combination to help backend configure it correctly */
 export type AttributeInfo = {
@@ -17,9 +21,9 @@ export type AttributeInfo = {
   /** Location in shader */
   location: number;
   /** Type / precision used in shader (buffer values may be converted) */
-  shaderType: ShaderAttributeType;
+  shaderType: AttributeShaderType;
   /** Calculations are done in this type in the shader's attribute declaration */
-  shaderDataType: ShaderDataType;
+  primitiveType: PrimitiveDataType;
   /** Components refer to the number of components in the shader's attribute declaration */
   shaderComponents: 1 | 2 | 3 | 4;
   /** It is the shader attribute declaration that determines whether GPU will process as integer or float */
@@ -30,7 +34,7 @@ export type AttributeInfo = {
   /** Format of buffer data */
   vertexFormat: VertexFormat;
   /** Memory data type refers to the data type in the buffer */
-  bufferDataType: VertexType;
+  bufferDataType: NormalizedDataType;
   /** Components refer to the number of components in the buffer's vertex format */
   bufferComponents: 1 | 2 | 3 | 4;
   /** Normalization is encoded in the buffer layout's vertex format... */
@@ -108,16 +112,17 @@ function getAttributeInfoFromLayouts(
     return null;
   }
 
-  const attributeTypeInfo = decodeShaderAttributeType(shaderDeclaration.type);
-  const vertexFormat = bufferMapping?.vertexFormat || attributeTypeInfo.defaultVertexFormat;
-  const vertexFormatInfo = decodeVertexFormat(vertexFormat);
+  const attributeTypeInfo = getAttributeShaderTypeInfo(shaderDeclaration.type);
+  const defaultVertexFormat = getCompatibleVertexFormat(attributeTypeInfo);
+  const vertexFormat = bufferMapping?.vertexFormat || defaultVertexFormat;
+  const vertexFormatInfo = getVertexFormatInfo(vertexFormat);
 
   return {
     attributeName: bufferMapping?.attributeName || shaderDeclaration.name,
     bufferName: bufferMapping?.bufferName || shaderDeclaration.name,
     location: shaderDeclaration.location,
     shaderType: shaderDeclaration.type,
-    shaderDataType: attributeTypeInfo.dataType,
+    primitiveType: attributeTypeInfo.primitiveType,
     shaderComponents: attributeTypeInfo.components,
     vertexFormat,
     bufferDataType: vertexFormatInfo.type,
@@ -212,7 +217,7 @@ function getAttributeFromAttributesList(
     // Calculate a default byte stride if not provided
     if (typeof bufferLayout.byteStride !== 'number') {
       for (const attributeMapping of bufferLayout.attributes || []) {
-        const info = decodeVertexFormat(attributeMapping.format);
+        const info = getVertexFormatInfo(attributeMapping.format);
         // @ts-ignore
         byteStride += info.byteLength;
       }

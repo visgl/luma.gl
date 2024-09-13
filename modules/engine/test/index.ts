@@ -4,6 +4,7 @@
 
 // utils
 import './utils/deep-equal.spec';
+import './utils/split-uniforms-and-bindings.spec';
 
 // model etc
 import './lib/model.spec';

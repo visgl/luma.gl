@@ -42,7 +42,7 @@ export {WEBGLTransformFeedback} from './adapter/resources/webgl-transform-feedba
 export {setDeviceParameters, withDeviceParameters} from './adapter/converters/device-parameters';
 
 // HELPERS - EXPERIMENTAL
-export {getShaderLayoutFromGLSL} from './adapter/helpers/get-shader-layout';
+export {getShaderLayoutFromGLSL} from './adapter/helpers/get-shader-layout-from-glsl';
 export {WebGLStateTracker} from './context/state-tracker/webgl-state-tracker';
 
 // DEPRECATED TEST EXPORTS

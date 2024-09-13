@@ -6,14 +6,14 @@
 
 // Uniforms
 import type {UniformValue} from '@luma.gl/core';
-import {GL, GLCompositeType, GLSamplerType} from '@luma.gl/constants';
+import {GL, GLUniformType, GLSamplerType} from '@luma.gl/constants';
 
 /** Set a raw uniform (without type conversion and caching) */
 /* eslint-disable max-len */
 export function setUniform(
   gl: WebGL2RenderingContext,
   location: WebGLUniformLocation,
-  type: GLCompositeType | GLSamplerType,
+  type: GLUniformType | GLSamplerType,
   value: UniformValue
 ): void {
   const gl2 = gl as WebGL2RenderingContext;

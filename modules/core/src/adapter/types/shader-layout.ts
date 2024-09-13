@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {TextureFormat} from '../../gpu-type-utils/texture-formats';
-import type {ShaderUniformType, ShaderAttributeType} from '../../gpu-type-utils/shader-types';
+import type {TextureFormat} from '../../shadertypes/texture-formats';
+import type {VariableShaderType, AttributeShaderType} from '../../shadertypes/shader-types';
 import type {Buffer} from '../resources/buffer';
 import type {Sampler} from '../resources/sampler';
 import type {Texture} from '../resources/texture';
@@ -56,7 +56,7 @@ export type AttributeDeclaration = {
   /** The index into the GPU's vertex array buffer bank (usually between 0-15) */
   location: number;
   /** WebGPU-style shader type. The declared format of the attribute in the shader code. Buffer's vertex format needs to map to this. */
-  type: ShaderAttributeType;
+  type: AttributeShaderType;
   /** Inferred from attribute name. @note Technically not part of static structure of shader */
   stepMode?: 'vertex' | 'instance';
 };
@@ -89,7 +89,7 @@ export type UniformBufferBindingLayout = {
 
 export type UniformInfo = {
   name: string;
-  format: ShaderUniformType;
+  format: VariableShaderType;
   type?: string;
   arrayLength: number;
   byteOffset: number;
@@ -172,7 +172,7 @@ export type Binding =
 export type VaryingBinding = {
   location: number;
   name: string;
-  type: number; // glType
+  type: AttributeShaderType;
   size: number;
 };
 

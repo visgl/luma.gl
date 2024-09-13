@@ -61,7 +61,7 @@
     "@types/offscreencanvas": "^2019.6.4"
   },
   "volta": {
-    "node": "20.11.1",
-    "yarn": "4.4.0"
+    "node": "20.17.0",
+    "yarn": "4.4.1"
   }
 }

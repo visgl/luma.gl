@@ -210,7 +210,9 @@ function testCopyToTexture(
   const sourceColor = [255, 128, 64, 32];
 
   const sourceTexture = device_.createTexture({
-    data: options.sourceIsFramebuffer ? null : new Uint8Array(sourceColor)
+    data: options.sourceIsFramebuffer ? null : new Uint8Array(sourceColor),
+    width: 1,
+    height: 1
   });
 
   const destinationTexture = sourceTexture.clone();

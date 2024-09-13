@@ -4,7 +4,7 @@
 
 import {TypedArray} from '@math.gl/types';
 import type {Device} from '../device';
-import type {TextureFormat} from '../../gpu-type-utils/texture-formats';
+import type {TextureFormat} from '../../shadertypes/texture-formats';
 import type {TextureView, TextureViewProps} from './texture-view';
 import {Resource, ResourceProps} from './resource';
 import {Sampler, SamplerProps} from './sampler';
