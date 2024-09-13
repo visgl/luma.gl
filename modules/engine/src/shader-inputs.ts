@@ -4,7 +4,7 @@
 
 import type {Binding, UniformValue} from '@luma.gl/core';
 import {log} from '@luma.gl/core';
-// import type {ShaderUniformType, UniformValue, UniformFormat, UniformInfoDevice, Texture, Sampler} from '@luma.gl/core';
+// import type {VariableShaderType, UniformValue, UniformFormat, UniformInfoDevice, Texture, Sampler} from '@luma.gl/core';
 import {getShaderModuleDependencies, ShaderModule} from '@luma.gl/shadertools';
 import {splitUniformsAndBindings} from './model/split-uniforms-and-bindings';
 

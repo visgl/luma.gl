@@ -2,41 +2,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-/** Basic data types signed and unsigned integers, and floats, of varying sizes */
-export type DataType =
-  | 'uint8'
-  | 'sint8'
-  | 'uint16'
-  | 'sint16'
-  | 'uint32'
-  | 'sint32'
-  | 'float16'
-  | 'float32';
-
-/** Vertex and Pixel data types. Include normalized integers */
-export type NormalizedDataType =
-  | 'uint8'
-  | 'sint8'
-  | 'unorm8'
-  | 'snorm8'
-  | 'uint16'
-  | 'sint16'
-  | 'unorm16'
-  | 'snorm16'
-  | 'uint32'
-  | 'sint32'
-  // WebGPU does not support normalized 32 bit integer attributes...
-  // | 'unorm32'
-  // | 'snorm32'
-  | 'float32'
-  | 'float16';
-
-/** Describes the type (without number of components) of a vertex format */
-export type VertexType = NormalizedDataType;
+import {NormalizedDataType} from './data-types';
 
 /**
- * Describes the memory format of a buffer that will be supplied to vertex attributes
- * @note Must be compatible with the ShaderAttributeType of the shaders, see documentation.
+ * Describes the **memory format** and interpretation (normalization) of a buffer that will be supplied to vertex attributes
+ * @note Must be compatible with the AttributeShaderType of the shaders, see documentation.
  * @note This is a superset of WebGPU vertex formats to allow foe some flexibility for WebGL only applications
  * @todo Add device.isTextureFormatSupported() method?
  */
@@ -88,3 +58,20 @@ export type VertexFormat =
   | 'float32x2'
   | 'float32x3'
   | 'float32x4';
+
+export type VertexFormatInfo = {
+  /** Type of each component */
+  type: NormalizedDataType;
+  /** Length in bytes */
+  byteLength: number;
+  /** Number of components per vertex / row */
+  components: 1 | 2 | 3 | 4;
+  /** Is this an integer format (normalized integer formats are not integer) */
+  integer: boolean;
+  /** Is this a signed format? */
+  signed: boolean;
+  /** Is this a normalized format? */
+  normalized: boolean;
+  /** Is this a webgl only format? */
+  webglOnly?: boolean;
+};

@@ -16,7 +16,6 @@ export type {
   GLPixelType,
   GLUniformType,
   GLSamplerType,
-  GLCompositeType,
   GLFunction,
   GLBlendEquation,
   GLBlendFunction,

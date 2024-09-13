@@ -1,4 +1,4 @@
-import {UniformStore, ShaderUniformType} from '@luma.gl/core';
+import {UniformStore, VariableShaderType} from '@luma.gl/core';
 import {
   AnimationLoopTemplate,
   AnimationProps,
@@ -24,7 +24,7 @@ type AppUniforms = {
   uProjection: number[];
 };
 
-const app: {uniformTypes: Record<string, ShaderUniformType>} = {
+const app: {uniformTypes: Record<string, VariableShaderType>} = {
   uniformTypes: {
     uColor: 'vec3<f32>',
     uModel: 'mat4x4<f32>',

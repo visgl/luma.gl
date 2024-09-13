@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Buffer, Texture, Framebuffer, FramebufferProps} from '@luma.gl/core';
+import type {Buffer, Texture, FramebufferProps} from '@luma.gl/core';
+import {Framebuffer, getTypedArrayFromDataType, getDataTypeFromTypedArray} from '@luma.gl/core';
 import {
   GL,
   GLTextureTarget,
@@ -12,11 +13,12 @@ import {
   GLDataType
 } from '@luma.gl/constants';
 
+import {convertDataTypeToGLDataType} from '../converters/webgl-shadertypes';
 import {WEBGLFramebuffer} from '../resources/webgl-framebuffer';
-import {getGLTypeFromTypedArray, getTypedArrayFromGLType} from './typed-array-utils';
 import {glFormatToComponents, glTypeToBytes} from './format-utils';
 import {WEBGLBuffer} from '../resources/webgl-buffer';
 import {WEBGLTexture} from '../resources/webgl-texture';
+import {convertGLDataTypeToDataType} from '../converters/shader-formats';
 
 /** A "border" parameter is required in many WebGL texture APIs, but must always be 0... */
 const BORDER = 0;
@@ -449,7 +451,8 @@ export function readPixelsToArray(
   target = getPixelArray(target, sourceType, sourceFormat, sourceWidth, sourceHeight, sourceDepth);
 
   // Pixel array available, if necessary, deduce type from it.
-  sourceType = sourceType || getGLTypeFromTypedArray(target);
+  const signedType = getDataTypeFromTypedArray(target);
+  sourceType = sourceType || convertDataTypeToGLDataType(signedType);
 
   // Note: luma.gl overrides bindFramebuffer so that we can reliably restore the previous framebuffer (this is the only function for which we do that)
   const prevHandle = gl.bindFramebuffer(
@@ -696,10 +699,11 @@ function getPixelArray(
   if (pixelArray) {
     return pixelArray;
   }
-  // const formatInfo = decodeTextureFormat(format);
+  // const formatInfo = getTextureFormatInfo(format);
   // Allocate pixel array if not already available, using supplied type
   glType ||= GL.UNSIGNED_BYTE;
-  const ArrayType = getTypedArrayFromGLType(glType, {clamped: false});
+  const shaderType = convertGLDataTypeToDataType(glType);
+  const ArrayType = getTypedArrayFromDataType(shaderType);
   const components = glFormatToComponents(glFormat);
   // TODO - check for composite type (components = 1).
   return new ArrayType(width * height * components) as Uint8Array | Uint16Array | Float32Array;

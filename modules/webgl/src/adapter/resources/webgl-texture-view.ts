@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {Device, TextureViewProps} from '@luma.gl/core';
-// import {decodeTextureFormat} from '@luma.gl/core';
+// import {getTextureFormatInfo} from '@luma.gl/core';
 import {TextureView, Texture} from '@luma.gl/core';
 
 import {WebGLDevice} from '../webgl-device';
