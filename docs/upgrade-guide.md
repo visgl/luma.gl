@@ -16,6 +16,14 @@ v9.2 brings full WebGPU support. Some additional deprecations and breaking chang
 
 **Major change: Texture and AsyncTextures**
 - `device.createTexture()` no longer accepts `props.mipmaps`: Use `AsyncTexture` or call texture.generateMipmapsWebGL()`
+- `device.createTexture()` no longer accepts `props.mipmaps`: Use `AsyncTexture` or call `texture.generateMipmapsWebGL()`
+
+**Major change: Removal of WebGL uniform support**
+- `Model.setUniformsWebGL()` dropped, use uniform buffer bindings
+- `Renderpipeline.setUniformsWebGL()` dropped, use uniform buffer bindings
+
+**Minor changes**
+- The shader type system has been refactored, some shader type names have changed. These are typically not used directly by applications.
 
 **Minor changes**
 - The shader type system has been refactored, some shader type names have changed. These are typically not used directly by applications.

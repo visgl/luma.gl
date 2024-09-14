@@ -8,7 +8,7 @@
 
 import {Device} from '@luma.gl/core';
 import {BufferTransform} from '@luma.gl/engine';
-import {fp64, fp64arithmetic} from '@luma.gl/shadertools';
+import {fp64} from '@luma.gl/shadertools';
 import {equals, config} from '@math.gl/core';
 const {fp64ify} = fp64;
 
@@ -104,7 +104,7 @@ export async function runTests(
     testCases
   });
 
-  transform.model.setUniformsWebGL(fp64arithmetic.getUniforms());
+  // transform.model.setUniformsWebGL(fp64arithmetic.getUniforms());
   transform.run();
 
   const {buffer, byteOffset, byteLength} = await transform.readAsync('result');

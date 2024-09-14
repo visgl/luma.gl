@@ -120,18 +120,6 @@ export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
     transformFeedback?: TransformFeedback;
   }): boolean;
 
-  // DEPRECATED METHODS
-
-  /**
-   * Uniforms
-   * @deprecated Use uniforms buffers
-   * @note textures, samplers and uniform buffers should be set via `setBindings()`, these are not considered uniforms.
-   * @note In WebGL uniforms have a performance penalty, they are reset before each call to enable pipeline sharing.
-   */
-  setUniformsWebGL(uniforms: Record<string, UniformValue>): void {
-    throw new Error('Use uniform blocks');
-  }
-
   static override defaultProps: Required<RenderPipelineProps> = {
     ...Resource.defaultProps,
 
