@@ -26,6 +26,7 @@ import {
   type TextureArrayData,
   type TextureCubeArrayData,
   type TextureCubeData,
+  type TextureImageData,
 
   // Helpers
   getTextureSizeFromData,
@@ -36,6 +37,7 @@ import {
   getTextureArraySubresources,
   getTextureCubeArraySubresources
 } from './texture-data';
+import {generateMipmap} from './mipmaps';
 
 /**
  * Properties for a dynamic texture
@@ -168,6 +170,14 @@ export class DynamicTexture {
         data: undefined
       } satisfies TextureProps;
 
+      if (this.device.type === 'webgpu' && this.props.mipmaps) {
+        const requiredUsage =
+          this.props.dimension === '3d'
+            ? Texture.SAMPLE | Texture.STORAGE | Texture.COPY_DST | Texture.COPY_SRC
+            : Texture.SAMPLE | Texture.RENDER | Texture.COPY_DST | Texture.COPY_SRC;
+        baseTextureProps.usage |= requiredUsage;
+      }
+
       // Compute mip levels (auto clamps to max)
       const maxMips = this.device.getMipLevelCount(baseTextureProps.width, baseTextureProps.height);
       const desired =
@@ -234,14 +244,12 @@ export class DynamicTexture {
   }
 
   generateMipmaps(): void {
-    // Call the WebGL-style mipmap generation helper
-    // WebGL implementation generates mipmaps, WebGPU logs a warning
     if (this.device.type === 'webgl') {
       this.texture.generateMipmapsWebGL();
+    } else if (this.device.type === 'webgpu') {
+      generateMipmap(this.device, this.texture);
     } else {
-      log.warn(
-        'Mipmap generation not yet implemented on WebGPU: your texture data will not be correctly initialized'
-      );
+      log.warn(`${this} mipmaps not supported on ${this.device.type}`);
     }
   }
 
@@ -362,7 +370,15 @@ export class DynamicTexture {
           const {data} = subresource;
           // TODO - we are throwing away some of the info in data.
           // Did we not need it in the first place? Can we use it to validate?
-          this.texture.copyImageData({data: data.data, z, mipLevel});
+          this.texture.writeData(getAlignedUploadData(this.texture, data), {
+            x: 0,
+            y: 0,
+            z,
+            width: data.width,
+            height: data.height,
+            depthOrArrayLayers: 1,
+            mipLevel
+          });
           break;
         default:
           throw new Error('Unsupported 2D mip-level payload');
@@ -397,6 +413,38 @@ export class DynamicTexture {
     data: null,
     mipmaps: false
   };
+}
+
+function getAlignedUploadData(
+  texture: DynamicTexture['texture'],
+  data: TextureImageData
+): ArrayBuffer | Uint8Array {
+  const {width, height, data: uploadData} = data;
+  const {bytesPerPixel} = texture.device.getTextureFormatInfo(texture.format);
+  const bytesPerRow = width * bytesPerPixel;
+  const alignedBytesPerRow = Math.ceil(bytesPerRow / texture.byteAlignment) * texture.byteAlignment;
+
+  if (alignedBytesPerRow === bytesPerRow) {
+    return uploadData;
+  }
+
+  const sourceBytes = new Uint8Array(
+    uploadData.buffer,
+    uploadData.byteOffset,
+    uploadData.byteLength
+  );
+  const paddedBytes = new Uint8Array(alignedBytesPerRow * height);
+
+  for (let row = 0; row < height; row++) {
+    const sourceOffset = row * bytesPerRow;
+    const destinationOffset = row * alignedBytesPerRow;
+    paddedBytes.set(
+      sourceBytes.subarray(sourceOffset, sourceOffset + bytesPerRow),
+      destinationOffset
+    );
+  }
+
+  return paddedBytes;
 }
 
 // HELPERS

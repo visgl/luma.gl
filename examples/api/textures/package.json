@@ -1,0 +1,30 @@
+{
+  "private": true,
+  "name": "lumagl-example--textures-tester",
+  "version": "0.0.0",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "start": "vite",
+    "build": "tsc && vite build",
+    "serve": "vite preview"
+  },
+  "dependencies": {
+    "@loaders.gl/core": "4.4.0-alpha.16",
+    "@loaders.gl/images": "4.4.0-alpha.16",
+    "@loaders.gl/textures": "4.4.0-alpha.16",
+    "@luma.gl/constants": "9.3.0-alpha.2",
+    "@luma.gl/core": "9.3.0-alpha.2",
+    "@luma.gl/engine": "9.3.0-alpha.2",
+    "@luma.gl/shadertools": "9.3.0-alpha.2",
+    "@luma.gl/webgl": "9.3.0-alpha.2",
+    "@luma.gl/webgpu": "9.3.0-alpha.2",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "styled-components": "^4.2.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.3",
+    "vite": "^7.2.7"
+  }
+}
