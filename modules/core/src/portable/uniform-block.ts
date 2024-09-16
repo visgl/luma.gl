@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {VariableShaderType} from '../shadertypes/shader-types';
+import type {UniformShaderType} from '../shadertypes/shader-types';
 import type {UniformValue} from '../adapter/types/uniforms';
 import {
   ShaderLayout,
@@ -30,7 +30,7 @@ export class UniformBlock<
   constructor(props?: {
     name?: string;
     shaderLayout?: ShaderLayout;
-    uniformTypes?: Record<keyof TUniforms, Record<string, VariableShaderType>>;
+    uniformTypes?: Record<keyof TUniforms, Record<string, UniformShaderType>>;
   }) {
     this.name = props?.name || 'unnamed';
 

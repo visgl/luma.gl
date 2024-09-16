@@ -1,0 +1,83 @@
+type WGSLType = {};
+
+export type TypeDefinition = StructDefinition | ArrayDefinition | IntrinsicDefinition;
+
+export type IntrinsicDefinition = {
+  type: 'intrinsic';
+  shaderType: WGSLType;
+  numElements?: number;
+  size: number;
+};
+
+export type ArrayDefinition = {
+  type: 'array';
+  elementType: TypeDefinition;
+  numElements: number;
+  size: number;
+};
+
+export type StructDefinition = {
+  type: 'struct';
+  fields: Record<string, FieldDefinitions>;
+  size: number;
+};
+
+export type FieldDefinition = {
+  offset: number;
+  type: TypeDefinition;
+};
+
+// export type TextureDefinition = TypeDefinition & {
+//     type: string,
+//     size: number;
+
+// };
+
+// export type SamplerDefinition = TypeDefinition & {
+//     type: string,
+//     size: number;
+
+// };
+
+/**
+ * @group(x) @binding(y) var<...> definition
+ */
+export interface VariableDefinition {
+  binding: number;
+  group: number;
+  size: number;
+  typeDefinition: TypeDefinition;
+}
+
+export type Resource = {
+  name: string;
+  group: number;
+  // entry: GPUBindGroupLayoutEntry;
+};
+
+export type EntryPoint = {
+  // stage: GPUShaderStageFlags;
+  resources: Resource[];
+};
+
+/**
+ * The data definitions and other reflection data from some WGSL shader source.
+ */
+export type ShaderDataDefinitions = {
+  /** definitions for structures by name */
+  structs: Record<string, StructDefinition>;
+  /** definitions for uniform bindings by name */
+  uniforms: Record<string, VariableDefinitions>;
+  /** definitions for storage bindings by name */
+  storages: Record<string, VariableDefinitions>;
+  /** definitions for sampler bindings by name */
+  samplers: Record<string, unknown>;
+  /** definitions for texture bindings by name */
+  textures: Record<string, unknown>;
+  /** definitions for storage texture bindings by name */
+  storageTextures: Record<string, unknown>;
+  /** definitions for external texture bindings by name */
+  externalTextures: Record<string, unknown>;
+  /** Entry points by name. */
+  entryPoints: Record<'vertex' | 'fragment', EntryPoint>;
+};

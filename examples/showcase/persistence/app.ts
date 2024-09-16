@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {NumberArray, VariableShaderType} from '@luma.gl/core';
+import type {NumberArray, UniformShaderType} from '@luma.gl/core';
 import {UniformStore, Framebuffer} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {
@@ -26,7 +26,7 @@ type SphereUniforms = {
   projectionMatrix: NumberArray;
 };
 
-const sphere: {uniformTypes: Record<keyof SphereUniforms, VariableShaderType>} = {
+const sphere: {uniformTypes: Record<keyof SphereUniforms, UniformShaderType>} = {
   uniformTypes: {
     // TODO make sure order doesn't matter
     color: 'vec3<f32>',
@@ -133,7 +133,7 @@ type ScreenQuadUniforms = {
   resolution: NumberArray;
 };
 
-const screenQuad: {uniformTypes: Record<keyof ScreenQuadUniforms, VariableShaderType>} = {
+const screenQuad: {uniformTypes: Record<keyof ScreenQuadUniforms, UniformShaderType>} = {
   uniformTypes: {
     resolution: 'vec2<f32>'
   }
@@ -216,7 +216,7 @@ type PersistenceQuadUniforms = {
   resolution: NumberArray;
 };
 
-const persistenceQuad: {uniformTypes: Record<keyof ScreenQuadUniforms, VariableShaderType>} = {
+const persistenceQuad: {uniformTypes: Record<keyof ScreenQuadUniforms, UniformShaderType>} = {
   uniformTypes: {
     resolution: 'vec2<f32>'
   }

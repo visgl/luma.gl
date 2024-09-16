@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {TextureFormat} from '../../shadertypes/texture-formats';
-import type {VariableShaderType, AttributeShaderType} from '../../shadertypes/shader-types';
+import type {UniformShaderType, AttributeShaderType} from '../../shadertypes/shader-types';
 import type {Buffer} from '../resources/buffer';
 import type {Sampler} from '../resources/sampler';
 import type {Texture} from '../resources/texture';
@@ -89,7 +89,7 @@ export type UniformBufferBindingLayout = {
 
 export type UniformInfo = {
   name: string;
-  format: VariableShaderType;
+  format: UniformShaderType;
   type?: string;
   arrayLength: number;
   byteOffset: number;

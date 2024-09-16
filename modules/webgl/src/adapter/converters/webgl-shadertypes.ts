@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {VariableShaderType, SignedDataType, VertexFormat, NormalizedDataType} from '@luma.gl/core';
+import {UniformShaderType, SignedDataType, VertexFormat, NormalizedDataType} from '@luma.gl/core';
 import {GL, GLUniformType, GLSamplerType, GLDataType} from '@luma.gl/constants';
 
 export type TextureBindingInfo = {
@@ -17,21 +17,22 @@ export function convertDataTypeToGLDataType(normalizedType: NormalizedDataType):
 
 /** Converts to a luma shadertype to a GL data type (GL.BYTE, GL.FLOAT32 etc)  */
 export function convertShaderVariableTypeToGLDataType(
-  normalizedType: VariableShaderType
+  normalizedType: UniformShaderType
 ): GLDataType {
+  // @ts-ignore TODO
   return NORMALIZED_SHADER_TYPE_TO_WEBGL[normalizedType];
 }
 
 /** Convert a WebGL "compisite type (e.g. GL.VEC3) into the corresponding luma shader uniform type */
 export function convertGLUniformTypeToShaderVariableType(
   glUniformType: GLUniformType
-): VariableShaderType {
+): UniformShaderType {
   return WEBGL_SHADER_TYPES[glUniformType];
 }
 
 /** Check if a WebGL "uniform:" is a texture binding */
 export function isGLSamplerType(type: GLUniformType | GLSamplerType): type is GLSamplerType {
-  return Boolean(WEBGL_SAMPLER_TO_TEXTURE_BINDINGS[type]);
+  return type in WEBGL_SAMPLER_TO_TEXTURE_BINDINGS;
 }
 
 /* Get luma texture binding info (viewDimension and sampleType) from a WebGL "sampler" binding */
@@ -64,7 +65,7 @@ export function getVertexTypeFromGL(glType: GLDataType, normalized = false): Nor
 }
 
 // Composite types table
-const WEBGL_SHADER_TYPES: Record<GLUniformType, VariableShaderType> = {
+const WEBGL_SHADER_TYPES: Record<GLUniformType, UniformShaderType> = {
   [GL.FLOAT]: 'f32',
   [GL.FLOAT_VEC2]: 'vec2<f32>',
   [GL.FLOAT_VEC3]: 'vec3<f32>',

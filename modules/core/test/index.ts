@@ -2,11 +2,12 @@
 import './utils/uid.spec';
 
 // type utils
-import './shadertypes/decode-attribute-type.spec';
+import './shadertypes/decode-data-types.spec';
+import './shadertypes/decode-shader-types.spec';
+import './shadertypes/decode-texture-format.spec';
 import './shadertypes/decode-vertex-format.spec';
 import './shadertypes/vertex-format-from-attribute.spec';
-
-import './shadertypes/decode-texture-format.spec';
+import './shadertypes/memory-layout.spec';
 
 // adapter utils
 import './adapter-utils/get-attribute-from-layout.spec';
