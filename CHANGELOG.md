@@ -4,6 +4,22 @@
 
 Major new release that includes WebGPU support
 
+### v9.1.0-beta.1
+
+- chore: Bump to math.gl@4.1.0 (#2249)
+- feat(webgpu): Ability to override render targets on RenderPipeline (#2245)
+- chore: Restore minification optimized texture table (#2243)
+- chore: Restore effects module (#2244)
+- chore: Remove device.clearWebGL() (#2199)
+- chore: use @vis.gl/dev-tools (#2229)
+- docs: Improve CanvasContext and Rendering docs (#2240)
+- feat(core): CanvasContext tracks visibility and DPR changes (#2239)
+- chore: Consolidate core and WebGL texture format info handling (#2220)
+- chore(engine): Re-enable transform tests (async) (#2238)
+- chore(test-utils): Update tests to use async device creation (#2226)
+- chore: Modernize CanvasContext size tracking (#2237)
+- chore(webgpu): Partial WGSL texture/sampler support (#2236)
+
 ### 9.1.0-alpha.19
 
 - webgl: clip image write based on texture size (#2234)
