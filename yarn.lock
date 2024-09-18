@@ -1019,7 +1019,7 @@ __metadata:
     "@math.gl/types": "npm:^4.1.0"
     wgsl_reflect: "npm:^1.0.1"
   peerDependencies:
-    "@luma.gl/shadertools": 9.1.0-alpha.19
+    "@luma.gl/shadertools": 9.2.0-alpha.0
   languageName: unknown
   linkType: soft
 
@@ -1032,8 +1032,8 @@ __metadata:
     "@probe.gl/log": "npm:^4.0.8"
     "@probe.gl/stats": "npm:^4.0.8"
   peerDependencies:
-    "@luma.gl/core": 9.1.0-alpha.19
-    "@luma.gl/shadertools": 9.1.0-alpha.19
+    "@luma.gl/core": 9.2.0-alpha.0
+    "@luma.gl/shadertools": 9.2.0-alpha.0
   languageName: unknown
   linkType: soft
 
@@ -1045,9 +1045,9 @@ __metadata:
     "@loaders.gl/textures": "npm:^4.2.0"
     "@math.gl/core": "npm:^4.1.0"
   peerDependencies:
-    "@luma.gl/core": 9.1.0-alpha.19
-    "@luma.gl/engine": 9.1.0-alpha.19
-    "@luma.gl/shadertools": 9.1.0-alpha.19
+    "@luma.gl/core": 9.2.0-alpha.0
+    "@luma.gl/engine": 9.2.0-alpha.0
+    "@luma.gl/shadertools": 9.2.0-alpha.0
   languageName: unknown
   linkType: soft
 
@@ -1059,7 +1059,7 @@ __metadata:
     "@math.gl/types": "npm:^4.1.0"
     wgsl_reflect: "npm:^1.0.1"
   peerDependencies:
-    "@luma.gl/core": 9.1.0-alpha.19
+    "@luma.gl/core": 9.2.0-alpha.0
   languageName: unknown
   linkType: soft
 
@@ -1070,11 +1070,11 @@ __metadata:
     "@probe.gl/env": "npm:^4.0.8"
     "@probe.gl/stats": "npm:^4.0.8"
   peerDependencies:
-    "@luma.gl/core": 9.1.0-alpha.19
-    "@luma.gl/engine": 9.1.0-alpha.19
-    "@luma.gl/shadertools": 9.1.0-alpha.19
-    "@luma.gl/webgl": 9.1.0-alpha.19
-    "@luma.gl/webgpu": 9.1.0-alpha.19
+    "@luma.gl/core": 9.2.0-alpha.0
+    "@luma.gl/engine": 9.2.0-alpha.0
+    "@luma.gl/shadertools": 9.2.0-alpha.0
+    "@luma.gl/webgl": 9.2.0-alpha.0
+    "@luma.gl/webgpu": 9.2.0-alpha.0
   languageName: unknown
   linkType: soft
 
@@ -1086,7 +1086,7 @@ __metadata:
     "@math.gl/types": "npm:^4.1.0"
     "@probe.gl/env": "npm:^4.0.8"
   peerDependencies:
-    "@luma.gl/core": 9.1.0-alpha.19
+    "@luma.gl/core": 9.2.0-alpha.0
   languageName: unknown
   linkType: soft
 
@@ -1097,7 +1097,7 @@ __metadata:
     "@probe.gl/env": "npm:^4.0.8"
     "@webgpu/types": "npm:^0.1.34"
   peerDependencies:
-    "@luma.gl/core": 9.1.0-alpha.19
+    "@luma.gl/core": 9.2.0-alpha.0
   languageName: unknown
   linkType: soft
 

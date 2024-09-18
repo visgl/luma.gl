@@ -1,8 +1,22 @@
 # luma.gl CHANGELOG
 
-## v9
+## v9.2
 
-Major new release that includes WebGPU support
+Production WebGPU support
+
+### v9.2.0-alpha.1
+
+- chore: remove .setUniformsWebGL and moduleSettings (#2252)
+- docs: Update release notes for 9.1 (#2251)
+- chore: refactor shader types (#2250) (#2250)
+- docs: Use shared module to build website (#2230)
+- chore(shadertools): Support boolean defines only (#2190)
+- chore: WebGPU texture examples (v9.2) (#2248)
+- chore: Consolidate texture implementations, move specialized setters to AsyncTexture (#2247)
+
+## v9.1
+
+Improved WebGPU support
 
 ### v9.1.0-beta.2
 
