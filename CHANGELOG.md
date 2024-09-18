@@ -4,6 +4,10 @@
 
 Major new release that includes WebGPU support
 
+### v9.1.0-beta.2
+
+- chore: Bump dependencies
+
 ### v9.1.0-beta.1
 
 - chore: Bump to math.gl@4.1.0 (#2249)
