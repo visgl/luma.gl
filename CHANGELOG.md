@@ -1,8 +1,12 @@
 # luma.gl CHANGELOG
 
-## v9
+## v9.1
 
-Major new release that includes WebGPU support
+Theme: Improved WebGPU support
+
+### v9.1.0-beta.3
+
+- fix: website beta build (#2255)
 
 ### v9.1.0-beta.2
 
