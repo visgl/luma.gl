@@ -34,6 +34,9 @@ export const fp64arithmetic: ShaderModule<FP64Props, FP64Uniforms, FP64Bindings>
   name: 'fp64-arithmetic',
   vs: fp64arithmeticShader,
   getUniforms,
+  uniformTypes: {ONE: 'f32'},
+
+  // Additional Functions
   fp64ify,
   fp64LowPart,
   fp64ifyMatrix4
@@ -42,7 +45,7 @@ export const fp64arithmetic: ShaderModule<FP64Props, FP64Uniforms, FP64Bindings>
 /**
  * Full 64 bit math library
  */
-export const fp64: ShaderModule<FP64Props, FP64Uniforms, FP64Bindings> & FP64Utilities = {
+export const fp64: ShaderModule<{}> & FP64Utilities = {
   name: 'fp64',
   vs: fp64functionShader,
   dependencies: [fp64arithmetic],
