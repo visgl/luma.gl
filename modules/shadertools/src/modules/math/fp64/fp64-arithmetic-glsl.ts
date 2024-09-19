@@ -3,7 +3,10 @@
 // Copyright (c) vis.gl contributors
 
 export const fp64arithmeticShader = /* glsl */ `\
-uniform float ONE;
+
+uniform fp64arithmeticUniforms {
+  uniform float ONE;
+} fp64;
 
 /*
 About LUMA_FP64_CODE_ELIMINATION_WORKAROUND
@@ -25,8 +28,8 @@ vec2 split(float a) {
   const float SPLIT = 4097.0;
   float t = a * SPLIT;
 #if defined(LUMA_FP64_CODE_ELIMINATION_WORKAROUND)
-  float a_hi = t * ONE - (t - a);
-  float a_lo = a * ONE - a_hi;
+  float a_hi = t * fp64.ONE - (t - a);
+  float a_lo = a * fp64.ONE - a_hi;
 #else
   float a_hi = t - (t - a);
   float a_lo = a - a_hi;
@@ -44,8 +47,8 @@ vec2 split2(vec2 a) {
 // Special sum operation when a > b
 vec2 quickTwoSum(float a, float b) {
 #if defined(LUMA_FP64_CODE_ELIMINATION_WORKAROUND)
-  float sum = (a + b) * ONE;
-  float err = b - (sum - a) * ONE;
+  float sum = (a + b) * fp64.ONE;
+  float err = b - (sum - a) * fp64.ONE;
 #else
   float sum = a + b;
   float err = b - (sum - a);
@@ -57,8 +60,8 @@ vec2 quickTwoSum(float a, float b) {
 vec2 twoSum(float a, float b) {
   float s = (a + b);
 #if defined(LUMA_FP64_CODE_ELIMINATION_WORKAROUND)
-  float v = (s * ONE - a) * ONE;
-  float err = (a - (s - v) * ONE) * ONE * ONE * ONE + (b - v);
+  float v = (s * fp64.ONE - a) * fp64.ONE;
+  float err = (a - (s - v) * fp64.ONE) * fp64.ONE * fp64.ONE * fp64.ONE + (b - v);
 #else
   float v = s - a;
   float err = (a - (s - v)) + (b - v);
@@ -69,8 +72,8 @@ vec2 twoSum(float a, float b) {
 vec2 twoSub(float a, float b) {
   float s = (a - b);
 #if defined(LUMA_FP64_CODE_ELIMINATION_WORKAROUND)
-  float v = (s * ONE - a) * ONE;
-  float err = (a - (s - v) * ONE) * ONE * ONE * ONE - (b + v);
+  float v = (s * fp64.ONE - a) * fp64.ONE;
+  float err = (a - (s - v) * fp64.ONE) * fp64.ONE * fp64.ONE * fp64.ONE - (b + v);
 #else
   float v = s - a;
   float err = (a - (s - v)) - (b + v);
@@ -82,8 +85,8 @@ vec2 twoSqr(float a) {
   float prod = a * a;
   vec2 a_fp64 = split(a);
 #if defined(LUMA_FP64_CODE_ELIMINATION_WORKAROUND)
-  float err = ((a_fp64.x * a_fp64.x - prod) * ONE + 2.0 * a_fp64.x *
-    a_fp64.y * ONE * ONE) + a_fp64.y * a_fp64.y * ONE * ONE * ONE;
+  float err = ((a_fp64.x * a_fp64.x - prod) * fp64.ONE + 2.0 * a_fp64.x *
+    a_fp64.y * fp64.ONE * fp64.ONE) + a_fp64.y * a_fp64.y * fp64.ONE * fp64.ONE * fp64.ONE;
 #else
   float err = ((a_fp64.x * a_fp64.x - prod) + 2.0 * a_fp64.x * a_fp64.y) + a_fp64.y * a_fp64.y;
 #endif
@@ -156,7 +159,7 @@ vec2 sqrt_fp64(vec2 a) {
   float x = 1.0 / sqrt(a.x);
   float yn = a.x * x;
 #if defined(LUMA_FP64_CODE_ELIMINATION_WORKAROUND)
-  vec2 yn_sqr = twoSqr(yn) * ONE;
+  vec2 yn_sqr = twoSqr(yn) * fp64.ONE;
 #else
   vec2 yn_sqr = twoSqr(yn);
 #endif

@@ -31,7 +31,7 @@ function getUniforms() {
  * 64bit arithmetic: add, sub, mul, div (small subset of fp64 module)
  */
 export const fp64arithmetic: ShaderModule<FP64Props, FP64Uniforms, FP64Bindings> & FP64Utilities = {
-  name: 'fp64-arithmetic',
+  name: 'fp64arithmetic',
   vs: fp64arithmeticShader,
   getUniforms,
   uniformTypes: {ONE: 'f32'},

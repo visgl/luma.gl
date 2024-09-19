@@ -109,7 +109,7 @@ vec2 exp_fp64(vec2 a) {
   }
 
 #if defined(NVIDIA_FP64_WORKAROUND) || defined(INTEL_FP64_WORKAROUND)
-  s = sum_fp64(s, vec2(ONE, 0.0));
+  s = sum_fp64(s, vec2(fp64.ONE, 0.0));
 #else
   s = sum_fp64(s, vec2(1.0, 0.0));
 #endif
@@ -125,7 +125,7 @@ vec2 log_fp64(vec2 a)
   vec2 x = vec2(log(a.x), 0.0);
   vec2 s;
 #if defined(NVIDIA_FP64_WORKAROUND) || defined(INTEL_FP64_WORKAROUND)
-  s = vec2(ONE, 0.0);
+  s = vec2(fp64.ONE, 0.0);
 #else
   s = vec2(1.0, 0.0);
 #endif
