@@ -50,8 +50,8 @@ const LOG_DRAW_TIMEOUT = 10000;
 
 export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs' | 'bindings'> & {
   source?: string;
-  vs: string | null;
-  fs: string | null;
+  vs?: string | null;
+  fs?: string | null;
 
   /** shadertool shader modules (added to shader code) */
   modules?: ShaderModule[];

@@ -25,10 +25,6 @@ import type {
   RenderPipelineProps,
   ComputePipeline,
   ComputePipelineProps,
-  // RenderPass,
-  RenderPassProps,
-  ComputePass,
-  ComputePassProps,
   // CommandEncoder,
   CommandEncoderProps,
   TransformFeedbackProps,
@@ -54,9 +50,9 @@ import {WEBGLShader} from './resources/webgl-shader';
 import {WEBGLSampler} from './resources/webgl-sampler';
 import {WEBGLTexture} from './resources/webgl-texture';
 import {WEBGLFramebuffer} from './resources/webgl-framebuffer';
-import {WEBGLRenderPass} from './resources/webgl-render-pass';
 import {WEBGLRenderPipeline} from './resources/webgl-render-pipeline';
 import {WEBGLCommandEncoder} from './resources/webgl-command-encoder';
+import {WEBGLCommandBuffer} from './resources/webgl-command-buffer';
 import {WEBGLVertexArray} from './resources/webgl-vertex-array';
 import {WEBGLTransformFeedback} from './resources/webgl-transform-feedback';
 import {WEBGLQuerySet} from './resources/webgl-query-set';
@@ -87,6 +83,8 @@ export class WebGLDevice extends Device {
   readonly preferredColorFormat = 'rgba8unorm';
   readonly preferredDepthFormat = 'depth24plus';
 
+  commandEncoder: WEBGLCommandEncoder;
+
   readonly lost: Promise<{reason: 'destroyed'; message: string}>;
 
   private _resolveContextLost?: (value: {reason: 'destroyed'; message: string}) => void;
@@ -108,6 +106,10 @@ export class WebGLDevice extends Device {
   //
   // Public API
   //
+
+  override toString(): string {
+    return `${this[Symbol.toStringTag]}(${this.id})`;
+  }
 
   constructor(props: DeviceProps) {
     super({...props, id: props.id || uid('webgl-device')});
@@ -205,6 +207,8 @@ export class WebGLDevice extends Device {
         log.level = Math.max(log.level, 1);
       }
     }
+
+    this.commandEncoder = new WEBGLCommandEncoder(this, {id: `${this}-command-encoder`});
   }
 
   /**
@@ -264,19 +268,9 @@ export class WebGLDevice extends Device {
     return new WEBGLRenderPipeline(this, props);
   }
 
-  beginRenderPass(props: RenderPassProps): WEBGLRenderPass {
-    return new WEBGLRenderPass(this, props);
-  }
-
   createComputePipeline(props?: ComputePipelineProps): ComputePipeline {
     throw new Error('ComputePipeline not supported in WebGL');
   }
-
-  beginComputePass(props: ComputePassProps): ComputePass {
-    throw new Error('ComputePass not supported in WebGL');
-  }
-
-  private renderPass: WEBGLRenderPass | null = null;
 
   override createCommandEncoder(props: CommandEncoderProps = {}): WEBGLCommandEncoder {
     return new WEBGLCommandEncoder(this, props);
@@ -287,10 +281,14 @@ export class WebGLDevice extends Device {
    * https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/commit
    * Chrome's offscreen canvas does not require gl.commit
    */
-  submit(): void {
-    this.renderPass?.end();
-    this.renderPass = null;
-    // this.canvasContext.commit();
+  submit(commandBuffer: WEBGLCommandBuffer): void {
+    if (!commandBuffer) {
+      commandBuffer = this.commandEncoder.finish();
+      this.commandEncoder.destroy();
+      this.commandEncoder = this.createCommandEncoder({id: `${this.id}-default-encoder`});
+    }
+
+    commandBuffer._executeCommands();
   }
 
   //

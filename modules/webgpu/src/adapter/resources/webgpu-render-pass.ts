@@ -47,7 +47,8 @@ export class WebGPURenderPass extends RenderPass {
     }
 
     this.device.handle.pushErrorScope('validation');
-    this.handle = this.props.handle || device.commandEncoder.beginRenderPass(renderPassDescriptor);
+    this.handle =
+      this.props.handle || device.commandEncoder.handle.beginRenderPass(renderPassDescriptor);
     this.device.handle.popErrorScope().then((error: GPUError | null) => {
       if (error) {
         log.error(`${this} creation failed:\n"${error.message}"`, this)();

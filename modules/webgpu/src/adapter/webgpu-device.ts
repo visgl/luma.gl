@@ -19,15 +19,12 @@ import type {
   FramebufferProps,
   RenderPipelineProps,
   ComputePipelineProps,
-  RenderPassProps,
-  ComputePassProps,
   VertexArrayProps,
   TransformFeedback,
   TransformFeedbackProps,
   QuerySet,
   QuerySetProps,
   DeviceProps,
-  CommandEncoder,
   CommandEncoderProps,
 } from '@luma.gl/core';
 import {Device, DeviceFeatures} from '@luma.gl/core';
@@ -39,11 +36,11 @@ import {WebGPUShader} from './resources/webgpu-shader';
 import {WebGPURenderPipeline} from './resources/webgpu-render-pipeline';
 import {WebGPUFramebuffer} from './resources/webgpu-framebuffer';
 import {WebGPUComputePipeline} from './resources/webgpu-compute-pipeline';
-import {WebGPURenderPass} from './resources/webgpu-render-pass';
-import {WebGPUComputePass} from './resources/webgpu-compute-pass';
 import {WebGPUVertexArray} from './resources/webgpu-vertex-array';
 
 import {WebGPUCanvasContext} from './webgpu-canvas-context';
+import {WebGPUCommandEncoder} from './resources/webgpu-command-encoder';
+import {WebGPUCommandBuffer} from './resources/webgpu-command-buffer';
 import {WebGPUQuerySet} from './resources/webgpu-query-set';
 
 /** WebGPU Device implementation */
@@ -64,12 +61,10 @@ export class WebGPUDevice extends Device {
 
   readonly lost: Promise<{reason: 'destroyed'; message: string}>;
 
-  renderPass: WebGPURenderPass | null = null;
   override canvasContext: WebGPUCanvasContext | null;
 
   private _isLost: boolean = false;
-  // canvasContext: WebGPUCanvasContext | null = null;
-  commandEncoder: GPUCommandEncoder | null = null;
+  commandEncoder: WebGPUCommandEncoder;
   /* The underlying WebGPU adapter */
   readonly adapter: GPUAdapter;
   /* The underlying WebGPU adapter's info */
@@ -116,6 +111,8 @@ export class WebGPUDevice extends Device {
         props.createCanvasContext === true ? {} : props.createCanvasContext;
       this.canvasContext = new WebGPUCanvasContext(this, this.adapter, canvasContextProps);
     }
+
+    this.commandEncoder = this.createCommandEncoder({});
   }
 
   // TODO
@@ -168,33 +165,11 @@ export class WebGPUDevice extends Device {
     return new WebGPUVertexArray(this, props);
   }
 
+  override createCommandEncoder(props?: CommandEncoderProps): WebGPUCommandEncoder {
+    return new WebGPUCommandEncoder(this, props);
+  }
+
   // WebGPU specifics
-
-  /**
-   * Allows a render pass to begin against a canvas context
-   * @todo need to support a "Framebuffer" equivalent (aka preconfigured RenderPassDescriptors?).
-   */
-  beginRenderPass(props: RenderPassProps): WebGPURenderPass {
-    this._initializeCommandEncoder();
-    return new WebGPURenderPass(this, props);
-  }
-
-  beginComputePass(props: ComputePassProps): WebGPUComputePass {
-    this._initializeCommandEncoder();
-    return new WebGPUComputePass(this, props);
-  }
-
-  override createCommandEncoder(props?: CommandEncoderProps): CommandEncoder {
-    throw new Error('Not implemented');
-  }
-
-  protected _initializeCommandEncoder() {
-    this.commandEncoder ||= this.handle.createCommandEncoder({label: `${this.id}-default-encoder`});
-  }
-
-  // createCommandEncoder(props: CommandEncoderProps): WebGPUCommandEncoder {
-  //   return new WebGPUCommandEncoder(this, props);
-  // }
 
   createTransformFeedback(props: TransformFeedbackProps): TransformFeedback {
     throw new Error('Transform feedback not supported in WebGPU');
@@ -208,18 +183,20 @@ export class WebGPUDevice extends Device {
     return new WebGPUCanvasContext(this, this.adapter, props);
   }
 
-  submit(): void {
-    const commandBuffer = this.commandEncoder?.finish();
-    if (commandBuffer) {
-      this.handle.pushErrorScope('validation');
-      this.handle.queue.submit([commandBuffer]);
-      this.handle.popErrorScope().then((error: GPUError | null) => {
-        if (error) {
-          this.reportError(new Error(`WebGPU command submission failed: ${error.message}`));
-        }
-      });
+  submit(commandBuffer?: WebGPUCommandBuffer): void {
+    if (!commandBuffer) {
+      commandBuffer = this.commandEncoder.finish();
+      this.commandEncoder.destroy();
+      this.commandEncoder = this.createCommandEncoder({id: `${this.id}-default-encoder`});
     }
-    this.commandEncoder = null;
+
+    this.handle.pushErrorScope('validation');
+    this.handle.queue.submit([commandBuffer.handle]);
+    this.handle.popErrorScope().then((error: GPUError | null) => {
+      if (error) {
+        this.reportError(new Error(`WebGPU command submission failed: ${error.message}`));
+      }
+    });
   }
 
   // WebGPU specific

@@ -144,9 +144,10 @@ async function readU8(
 ): Promise<Uint8Array> {
   const destinationBuffer = webglDevice.createBuffer({byteLength});
   try {
-    const cmd = webglDevice.createCommandEncoder();
-    cmd.copyTextureToBuffer({sourceTexture, destinationBuffer});
-    cmd.finish();
+    const commandEncoder = webglDevice.createCommandEncoder();
+    commandEncoder.copyTextureToBuffer({sourceTexture, destinationBuffer});
+    const commandBuffer = commandEncoder.finish();
+    webglDevice.submit(commandBuffer);
     return destinationBuffer.readAsync();
   } finally {
     destinationBuffer.destroy();

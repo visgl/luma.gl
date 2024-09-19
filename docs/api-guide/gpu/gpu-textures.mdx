@@ -5,24 +5,27 @@ import {DeviceTabs, Format as Ft, Filter as L, Render as R} from '@site/src/reac
 While the idea behind textures is simple in principle (a grid of pixels stored on GPU memory), GPU Textures are surprisingly complex objects.
 
 Capabilities
+
 - Shaders can read (sample) from textures
 - Textures can be set up as render targets (by attaching them to a framebuffer).
 - **Arrays** Textures can have multiple images (texture arrays, cube textures, 3d textures...), indexed by a `depth` parameter.
-- **Mipmaps** Each texture image can have a "pyramid" of "mipmap" images representing 
+- **Mipmaps** Each texture image can have a "pyramid" of "mipmap" images representing
 
 Textures are supported by additional GPU objects:
+
 - **Samplers** - The specifics of how shaders read from textures (interpolation methods, edge behaviors etc) are controlled by **GPU Sampler objects**. luma.gl will create a default sampler object for each texture, but the application can override if designed
 - **TextureViews** - A texture view specifies a subset of the images in a texture, enabling operations to be performed on such subsets. luma.gl will create a default TextureView for each texture, but the application can create additional TextureViews.
 - **Framebuffers** - A framebuffer is a map of "attachment points" to one or more textures that can be used when creating `RenderPasses` and made available to shaders.
 
 Setting texture data from CPU data:
+
 - There is a fast path for setting texture data from "images", that can also be used for 8 bit RGBA data.
 - General data transfer is more complicated, it needs to go through a GPU Buffer and a CommandEncoder object.
 
 Notes:
-- Some GPUs offer additional Texture-related capabilities (such as availability of advanced image formats, more formats being filterable or renderable etc).
-- Check `DeviceFeatures` if you would like to take advantage of such features to discover what features are implemented by the current `Device` (i.e. the current WebGPU or WebGL environment / browser the application is running on). 
 
+- Some GPUs offer additional Texture-related capabilities (such as availability of advanced image formats, more formats being filterable or renderable etc).
+- Check `DeviceFeatures` if you would like to take advantage of such features to discover what features are implemented by the current `Device` (i.e. the current WebGPU or WebGL environment / browser the application is running on).
 
 ## Texture Dimension
 
@@ -69,7 +72,6 @@ defining a common super-compressed format which can be decoded after load into a
 
 To use Basis supercompressed textures in luma.gl, see the [loaders.gl](https://loaders.gl) `BasisLoader` which can extract compressed textures from a basis encoded texture.
 
-
 ## Texture Data
 
 The textures may not be completely packed, there may be padding (per row)
@@ -92,47 +94,57 @@ A primary purpose of textures is to allow the GPU to read from them.
 
 ```
 
-### Texture filtering
+### Filtering
 
-Texture formats that are filterable can be interpolated by the GPI
+Texture formats that are filterable which means that during sampling texel values can be interpolated by the GPU for better results.
+Sampling is a highly configuratble process that is specified using by binding a separate `Sampler` object for each texture.
 
-Filtering is specified using a separate `Sampler` object.
-
-Sampling is a sophisticated process
+Sampling can be specified separately for
 
 - magnification
 - minification
-- anistropy
 
 The parameters used for sampling is specified in a sampler object.
 
+Notes:
+
+- Not all texture formats are filterable. For less common texture formats it is possible to query the device to determine if filtering is supported.
+- Filtering with transparent textures can result in undesirable artifacts (darkening and false color halos) unless you work in premultiplied colors.
+
 ### Mipmaps
 
-To improve samling mipmaps can be included in a texture. Mipmaps are a pyramid of lower resolution images that are used when the texture is sampled at a distance.
-Mipmaps can be generated automatically by the GPU, or can be provided by the application.
+To improve sampling quality further when sampling from a distance (`minFilter`), mipmap filtering can be used.
+Mipmaps are a pyramid of lower resolution images that are stored for each text`ure image and used by the GPU when the texture is sampled at a distance.
+
+Using mipmap filtering requireds some extra setup. The texture being sampled must be created with the `mipLevels` property set the the appropriate number of mip levels,
+and each mip level must be initialized with a scaled down version of the mip level 0 image.
+Note that mip levels can be generated automatically by luma.gl, or each mip level can be set explicitly by the application.
 
 Mipmap usage is controller via `SamplerProps.mipmapFilter`:
 
-| `mipmapFilter` | `minFilter` | Description                                     | Linearity             | Speed |
-| -------------- | ----------- | ----------------------------------------------- | --------------------- | --- |
-| `none`         | `nearest`   | Mo filtering, no mipmaps                        |                       | |
-| `none`         | `linear`    | Filtering, no mipmaps                           | bilinear              | slowest \* |
-| `nearest`      | `nearest`   | No filtering, sharp switching between mipmaps   |                       | |
-| `nearest`      | `linear`    | No filtering, smooth transition between mipmaps |                       | |
-| `linear`       | `nearest`   | Filtering, sharp switching between mipmaps      | bilinear with mipmaps | fastest \* |
-| `linear`       | `linear`    | Filtering, smooth transition between mipmaps    | trilinear             | |
+| `mipmapFilter` | `minFilter` | Description                                     | Linearity             | Speed   |
+| -------------- | ----------- | ----------------------------------------------- | --------------------- | ------- |
+| `none`         | `nearest`   | Mo filtering, no mipmaps                        | none                  |         |
+| `none`         | `linear`    | Filtering, no mipmaps                           | bilinear              | slowest |
+| `nearest`      | `nearest`   | No filtering, sharp switching between mipmaps   | none                  |         |
+| `nearest`      | `linear`    | No filtering, smooth transition between mipmaps | linear                |         |
+| `linear`       | `nearest`   | Filtering, sharp switching between mipmaps      | bilinear with mipmaps | fastest |
+| `linear`       | `linear`    | Filtering, smooth transition between mipmaps    | trilinear             |         |
 
-Performance typically depends on texture LOD, and perhaps surprisingly, mipmaps not only improve visual quality, but can also improve performance. When a scaled down, lower quality mipmap is selected it reduces memory bandwidth requirements.
+In addition, the `anistropy` sampler property controls how many miplevels are used during sampling.
 
-Texture filtering is considered bilinear because it is a linear filter that is applied in two directions, sequentially. First, a linear filter is applied along the image's x axis (width), and then a second filter is applied along the y axis (height). This is why bilinear filtering is sometimes referred to as linear/bilinear.
+Notes:
+- Enabling mipmap filtering not only improves visual quality, but can also improve performance. When a scaled down, lower resolution mip level is selected this reduces memory bandwidth requirements.
+- Linear filtering is considered "bilinear" because it is a linear filter that is applied in two directions, sequentially. First, a linear filter is applied along the image's x axis (width), and then a second filter is applied along the y axis (height).
+- Linear mipmap filtering is considered "trilinear" since it also interpolates linearly between mip levels.
 
 ## Binding textures
 
-Before textures can be sampled in the
+Before textures can be sampled in the fragment shader, they must be bound. A sampler must also be bound for each texture, though luma.gl will bind the textures default sampler if not supplied.
 
 ## Texture Rendering (Writing to Textures on the GPU)
 
-Texture formats that are renderable can be bound to framebuffer attachments so that shaders can write to them.
+Texture formats that are renderable can be bound to framebuffer color or depthStencil attachments so that shaders can write to them.
 
 ## Blending
 

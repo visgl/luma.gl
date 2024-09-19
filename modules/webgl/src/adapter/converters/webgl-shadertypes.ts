@@ -64,7 +64,7 @@ export function getVertexTypeFromGL(glType: GLDataType, normalized = false): Nor
 }
 
 // Composite types table
-const WEBGL_SHADER_TYPES: Record<GLUniformType, VariableShaderType> = {
+const WEBGL_SHADER_TYPES: Partial<Record<GLUniformType, VariableShaderType>> = {
   [GL.FLOAT]: 'f32',
   [GL.FLOAT_VEC2]: 'vec2<f32>',
   [GL.FLOAT_VEC3]: 'vec3<f32>',

@@ -95,6 +95,7 @@ export class TextureTransform {
     const renderPass = this.device.beginRenderPass({framebuffer, ...options});
     this.model.draw(renderPass);
     renderPass.end();
+    this.device.submit();
   }
 
   getTargetTexture(): Texture {

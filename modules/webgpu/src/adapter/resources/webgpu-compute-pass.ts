@@ -33,7 +33,7 @@ export class WebGPUComputePass extends ComputePass {
 
     this.handle =
       this.props.handle ||
-      device.commandEncoder?.beginComputePass({
+      device.commandEncoder.handle.beginComputePass({
         label: this.props.id,
         timestampWrites
       });
