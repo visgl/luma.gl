@@ -46,7 +46,7 @@ export class NullDevice extends Device {
   static isSupported(): boolean {
     return true;
   }
-  readonly type = 'unknown';
+  readonly type = 'null';
   readonly handle = null;
 
   readonly preferredColorFormat = 'rgba8unorm';
