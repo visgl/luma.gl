@@ -11,16 +11,16 @@ struct brightnessContrastUniforms {
 };
 
 // Binding 0:1 is reserved for shader passes
-@binding(1) @group(0) var<uniform> brightnessContrast : brightnessContrastUniforms;
+@group(0) @binding(1) var<uniform> brightnessContrast : brightnessContrastUniforms;
 
-fn brightnessContrast_filterColor_ext(color: vec4<f32>, texSize: vec2<f32>, texCoords: vec2<f32>) -> vec4<f32> {
+fn brightnessContrast_filterColor_ext(color: vec4f, texSize: vec2<f32>, texCoords: vec2<f32>) -> vec4f {
   color.rgb += brightnessContrast.brightness;
   if (brightnessContrast.contrast > 0.0) {
     color.rgb = (color.rgb - 0.5) / (1.0 - brightnessContrast.contrast) + 0.5;
   } else {
     color.rgb = (color.rgb - 0.5) * (1.0 + brightnessContrast.contrast) + 0.5;
   }
-  return vec4<f32>(1.0, 0.0, 0.0, 1.0);
+  return vec4f(1.0, 0.0, 0.0, 1.0);
 }
 `;
 
@@ -59,9 +59,11 @@ export type BrightnessContrastUniforms = BrightnessContrastProps;
  * @param contrast   -1 to 1 (-1 is solid gray, 0 is no change, and 1 is maximum contrast)
  */
 export const brightnessContrast = {
-  props: {} as BrightnessContrastProps,
-
   name: 'brightnessContrast',
+  source,
+  fs,
+
+  props: {} as BrightnessContrastProps,
   uniformTypes: {
     brightness: 'f32',
     contrast: 'f32'
@@ -74,8 +76,6 @@ export const brightnessContrast = {
     brightness: {format: 'f32', value: 0, min: -1, max: 1},
     contrast: {format: 'f32', value: 0, min: -1, max: 1}
   },
-  passes: [{filter: true}],
 
-  source,
-  fs
+  passes: [{filter: true}]
 } as const satisfies ShaderPass<BrightnessContrastProps>;

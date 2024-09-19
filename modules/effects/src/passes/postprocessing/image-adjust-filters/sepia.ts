@@ -4,6 +4,31 @@
 
 import type {ShaderPass} from '@luma.gl/shadertools';
 
+const source = /* wgsl */ `\
+struct sepiaUniforms {
+  amount: f32
+};
+
+@group(0) @binding(1) var<uniform> sepia: sepiaUniforms;
+
+fn sepia_filterColor(color: vec4f) -> vec4f {
+  let r: f32 = color.r;
+  let g: f32 = color.g;
+  let b: f32 = color.b;
+
+  color.r =
+    min(1.0, (r * (1.0 - (0.607 * sepia.amount))) + (g * (0.769 * sepia.amount)) + (b * (0.189 * sepia.amount)));
+  color.g = min(1.0, (r * 0.349 * sepia.amount) + (g * (1.0 - (0.314 * sepia.amount))) + (b * 0.168 * sepia.amount));
+  color.b = min(1.0, (r * 0.272 * sepia.amount) + (g * 0.534 * sepia.amount) + (b * (1.0 - (0.869 * sepia.amount))));
+
+  return color;
+}
+
+vec4 sepia_filterColor_ext(vec4 color, vec2 texSize, vec2 texCoord) {
+  return sepia_filterColor(color);
+}
+`;
+
 const fs = /* glsl */ `\
 uniform sepiaUniforms {
   float amount;
@@ -50,5 +75,6 @@ export const sepia = {
     amount: {value: 0.5, min: 0, max: 1}
   },
   fs,
+  source,
   passes: [{filter: true}]
 } as const satisfies ShaderPass<SepiaProps, SepiaProps>;

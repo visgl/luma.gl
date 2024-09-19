@@ -5,6 +5,54 @@
 import type {ShaderPass} from '@luma.gl/shadertools';
 import {random} from '@luma.gl/shadertools';
 
+const source = /* wgsl */ `\
+uniform tiltShiftUniforms {
+  blurRadius: f32,
+  gradientRadius: f32,
+  start: vec2f,
+  end: vec2f,
+  invert: u32,
+};
+
+@group(0) @binding(1) var<uniform> tiltShift: tiltShiftUniforms;
+
+fn tiltShift_getDelta(vec2 texSize) -> vec2f {
+  vec2 vector = normalize((tiltShift.end - tiltShift.start) * texSize);
+  return tiltShift.invert ? vec2(-vector.y, vector.x) : vector;
+}
+
+fn tiltShift_sampleColor(sampler2D source, vec2 texSize, vec2 texCoord) -> vec4f {
+  vec4 color = vec4(0.0);
+  float total = 0.0;
+
+  /* randomize the lookup values to hide the fixed number of samples */
+  float offset = random(vec3(12.9898, 78.233, 151.7182), 0.0);
+
+  vec2 normal = normalize(vec2((tiltShift.start.y - tiltShift.end.y) * texSize.y, (tiltShift.end.x - tiltShift.start.x) * texSize.x));
+  float radius = smoothstep(0.0, 1.0,
+    abs(dot(texCoord * texSize - tiltShift.start * texSize, normal)) / tiltShift.gradientRadius) * tiltShift.blurRadius;
+
+  for (float t = -30.0; t <= 30.0; t++) {
+    float percent = (t + offset - 0.5) / 30.0;
+    float weight = 1.0 - abs(percent);
+    vec4 offsetColor = texture(source, texCoord + tiltShift_getDelta(texSize) / texSize * percent * radius);
+
+    /* switch to pre-multiplied alpha to correctly blur transparent images */
+    offsetColor.rgb *= offsetColor.a;
+
+    color += offsetColor * weight;
+    total += weight;
+  }
+
+  color = color / total;
+
+  /* switch back from pre-multiplied alpha */
+  color.rgb /= color.a + 0.00001;
+
+  return color;
+}
+`;
+
 const fs = /* glsl */ `\
 uniform tiltShiftUniforms {
   float blurRadius;
@@ -82,11 +130,13 @@ export type TiltShiftUniforms = TiltShiftProps;
  * on the line and increases further from the line.
  */
 export const tiltShift = {
-  props: {} as TiltShiftProps,
-  uniforms: {} as TiltShiftUniforms,
-
   name: 'tiltShift',
   dependencies: [random],
+  source,
+  fs,
+
+  props: {} as TiltShiftProps,
+  uniforms: {} as TiltShiftUniforms,
   uniformTypes: {
     blurRadius: 'f32',
     gradientRadius: 'f32',
@@ -101,11 +151,11 @@ export const tiltShift = {
     end: {value: [1, 1]},
     invert: {value: 0, private: true}
   },
+
   passes: [
     {sampler: true, uniforms: {invert: 0}},
     {sampler: true, uniforms: {invert: 1}}
-  ],
-  fs
+  ]
 } as const satisfies ShaderPass<TiltShiftProps, TiltShiftProps>;
 
 /*

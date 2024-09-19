@@ -17,8 +17,8 @@ import type {
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
 import {lighting} from '../lights/lighting';
 
-import {vs} from './pbr-vertex-glsl';
-import {fs} from './pbr-fragment-glsl';
+import {vs, fs} from './pbr-material-glsl';
+import {source} from './pbr-material-wgsl';
 import {pbrProjection} from './pbr-projection';
 
 /** Non-uniform block bindings for pbr module */
@@ -80,6 +80,7 @@ export const pbrMaterial = {
 
   name: 'pbrMaterial',
   dependencies: [lighting, pbrProjection],
+  source,
   vs,
   fs,
 

@@ -5,6 +5,37 @@
 import type {ShaderPass} from '@luma.gl/shadertools';
 import {warp} from './warp';
 
+const source = /* wgsl */ `\
+uniform bulgePinchUniforms {
+  radius: f32,
+  strength: f32,
+  center: vec2f,
+};
+
+@group(0) @binding(1) var<uniform> bulgePinch: bulgePinchUniforms;
+
+fn bulgePinch_warp(vec2 coord, vec2 texCenter) -> vec2f {
+  coord -= texCenter;
+  float distance = length(coord);
+  if (distance < bulgePinch.radius) {
+    float percent = distance / bulgePinch.radius;
+    if (bulgePinch.strength > 0.0) {
+      coord *= mix(1.0, smoothstep(0.0, bulgePinch.radius / distance, percent), bulgePinch.strength * 0.75);
+    } else {
+      coord *= mix(1.0, pow(percent, 1.0 + bulgePinch.strength * 0.75) * bulgePinch.radius / distance, 1.0 - percent);
+    }
+  }
+  coord += texCenter;
+  return coord;
+}
+
+fn bulgePinch_sampleColor(sampler2D source, vec2 texSize, vec2 texCoord) -> vec4f {
+  vec2 coord = texCoord * texSize;
+  coord = bulgePinch_warp(coord, bulgePinch.center * texSize);
+  return warp_sampleColor(source, texSize, coord);
+}
+`;
+
 const fs = /* glsl */ `\
 uniform bulgePinchUniforms {
   float radius;
@@ -52,12 +83,13 @@ export type BulgePinchUniforms = BulgePinchProps;
  * Bulges or pinches the image in a circle.
  */
 export const bulgePinch = {
-  props: {} as BulgePinchProps,
-  uniforms: {} as BulgePinchUniforms,
-
   name: 'bulgePinch',
   dependencies: [warp],
+  source,
   fs,
+
+  props: {} as BulgePinchProps,
+  uniforms: {} as BulgePinchUniforms,
   uniformTypes: {
     center: 'vec2<f32>',
     radius: 'f32',
@@ -68,5 +100,6 @@ export const bulgePinch = {
     radius: {value: 200, min: 1, softMax: 600},
     strength: {value: 0.5, min: -1, max: 1}
   },
+
   passes: [{sampler: true}]
 } as const satisfies ShaderPass<BulgePinchProps, BulgePinchProps>;

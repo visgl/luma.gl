@@ -5,6 +5,40 @@
 import type {ShaderPass} from '@luma.gl/shadertools';
 import {random} from '@luma.gl/shadertools';
 
+const source = /* wgsl */ `\
+struct edgeWorkUniforms {
+  radius: f32,
+  int mode: uint32,
+};
+
+@group(0) @binding(1) var<uniform> edgeWork: edgeWorkUniforms;
+
+fn edgeWork_sampleColorRGB(sampler2D source, vec2 texSize, vec2 texCoord, vec2 delta) -> vec4f {
+  vec2 relativeDelta = edgeWork.radius * delta / texSize;
+
+  vec2 color = vec2(0.0);
+  vec2 total = vec2(0.0);
+
+  /* randomize the lookup values to hide the fixed number of samples */
+  float offset = random(vec3(12.9898, 78.233, 151.7182), 0.0);
+
+  for (float t = -30.0; t <= 30.0; t++) {
+    float percent = (t + offset - 0.5) / 30.0;
+    float weight = 1.0 - abs(percent);
+    vec3 sampleColor = texture(source, texCoord + relativeDelta * percent).rgb;
+    float average = (sampleColor.r + sampleColor.g + sampleColor.b) / 3.0;
+    color.x += average * weight;
+    total.x += weight;
+    if (abs(t) < 15.0) {
+      weight = weight * 2.0 - 1.0;
+      color.y += average * weight;
+      total.y += weight;
+    }
+  }
+  return vec4(color / total, 0.0, 1.0);
+}
+`;
+
 const fs = /* glsl */ `\
 uniform edgeWorkUniforms {
   float radius;
@@ -92,12 +126,13 @@ export type EdgeWorkUniforms = EdgeWorkProps;
  * copies of the image blurred with different radii.
  */
 export const edgeWork = {
-  props: {} as EdgeWorkProps,
-  uniforms: {} as EdgeWorkProps,
-
   name: 'edgeWork',
   dependencies: [random],
+  source,
   fs,
+
+  props: {} as EdgeWorkProps,
+  uniforms: {} as EdgeWorkProps,
   uniformTypes: {
     radius: 'f32',
     mode: 'i32'

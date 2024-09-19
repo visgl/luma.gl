@@ -5,6 +5,44 @@
 import type {ShaderPass} from '@luma.gl/shadertools';
 import {random} from '@luma.gl/shadertools';
 
+const source = /* wgsl */ `\
+uniform triangleBlurUniforms {
+  radius: f32,
+  delta: vec2f,
+}
+
+@group(0) @binding(1) var<uniform> triangleBlur: triangleBlurUniforms;
+
+vec4 triangleBlur_sampleColor(sampler2D source, vec2 texSize, vec2 texCoord) {
+  vec2 adjustedDelta = triangleBlur.delta * triangleBlur.radius / texSize;
+
+  vec4 color = vec4(0.0);
+  float total = 0.0;
+
+  /* randomize the lookup values to hide the fixed number of samples */
+  float offset = random(vec3(12.9898, 78.233, 151.7182), 0.0);
+
+  for (float t = -30.0; t <= 30.0; t++) {
+    float percent = (t + offset - 0.5) / 30.0;
+    float weight = 1.0 - abs(percent);
+    vec4 offsetColor = texture(source, texCoord + adjustedDelta * percent);
+
+    /* switch to pre-multiplied alpha to correctly blur transparent images */
+    offsetColor.rgb *= offsetColor.a;
+
+    color += offsetColor * weight;
+    total += weight;
+  }
+
+  color = color / total;
+
+  /* switch back from pre-multiplied alpha */
+  color.rgb /= color.a + 0.00001;
+
+  return color;
+}
+`;
+
 const fs = /* glsl */ `\
 uniform triangleBlurUniforms {
   float radius;
@@ -63,10 +101,13 @@ export type TriangleBlurUniforms = TriangleBlurProps;
  *               perpendicular triangle filters.
  */
 export const triangleBlur = {
+  name: 'triangleBlur',
+  dependencies: [random],
+  source,
+  fs,
+
   props: {} as TriangleBlurProps,
   uniforms: {} as TriangleBlurUniforms,
-
-  name: 'triangleBlur',
   uniformTypes: {
     radius: 'f32',
     delta: 'vec2<f32>'
@@ -75,8 +116,7 @@ export const triangleBlur = {
     radius: {value: 20, min: 0, softMax: 100},
     delta: {value: [1, 0], private: true}
   },
-  fs,
-  dependencies: [random],
+
   passes: [
     {sampler: true, uniforms: {delta: [1, 0]}},
     {sampler: true, uniforms: {delta: [0, 1]}}
