@@ -104,7 +104,6 @@ export async function runTests(
     testCases
   });
 
-  transform.model.shaderInputs.setProps({fp64arithmetic: {}});
   transform.run();
 
   const {buffer, byteOffset, byteLength} = await transform.readAsync('result');

@@ -18,14 +18,10 @@ type FP64Utilities = {
   fp64ifyMatrix4: typeof fp64ifyMatrix4;
 };
 
-const CONST_UNIFORMS: FP64Uniforms = {
+const defaultUniforms: FP64Uniforms = {
   // Used in LUMA_FP64_CODE_ELIMINATION_WORKAROUND
   ONE: 1.0
 };
-
-function getUniforms() {
-  return CONST_UNIFORMS;
-}
 
 /**
  * 64bit arithmetic: add, sub, mul, div (small subset of fp64 module)
@@ -33,7 +29,7 @@ function getUniforms() {
 export const fp64arithmetic: ShaderModule<FP64Props, FP64Uniforms, FP64Bindings> & FP64Utilities = {
   name: 'fp64arithmetic',
   vs: fp64arithmeticShader,
-  getUniforms,
+  defaultUniforms,
   uniformTypes: {ONE: 'f32'},
 
   // Additional Functions
