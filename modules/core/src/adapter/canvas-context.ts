@@ -44,11 +44,11 @@ export abstract class CanvasContext {
   static isHTMLCanvas(canvas: unknown): canvas is HTMLCanvasElement {
     return canvas instanceof HTMLCanvasElement;
   }
-  
+
   static isOffscreenCanvas(canvas: unknown): canvas is OffscreenCanvas {
     return typeof OffscreenCanvas !== 'undefined' && canvas instanceof OffscreenCanvas;
   }
-  
+
   static defaultProps: Required<CanvasContextProps> = {
     id: undefined!,
     canvas: null,
