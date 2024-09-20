@@ -38,7 +38,7 @@ const webgpuDevicePromise = makeWebGPUTestDevice();
 
 /** Includes WebGPU device if available */
 export async function getTestDevices(
-  types: ('webgl' | 'webgpu' | 'unknown')[] = ['webgl', 'webgpu']
+  types: ('webgl' | 'webgpu' | 'null' | 'unknown')[] = ['webgl', 'webgpu']
 ): Promise<Device[]> {
   return [await getNullTestDevice(), await getWebGLTestDevice(), await getWebGPUTestDevice()]
     .filter(Boolean)

@@ -7,7 +7,7 @@ import {NullDevice} from './null-device';
 
 export class NullAdapter extends Adapter {
   /** type of device's created by this adapter */
-  readonly type: NullDevice['type'] = 'unknown';
+  readonly type: NullDevice['type'] = 'null';
 
   constructor() {
     super();

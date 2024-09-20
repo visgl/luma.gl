@@ -26,7 +26,7 @@ const ERROR_MESSAGE =
 /** Properties for creating a new device */
 export type CreateDeviceProps = {
   /** Selects the type of device. `best-available` uses webgpu if available, then webgl. */
-  type?: 'webgl' | 'webgpu' | 'unknown' | 'best-available';
+  type?: 'webgl' | 'webgpu' | 'null' | 'unknown' | 'best-available';
   /** List of adapters. Will also search any pre-registered adapters */
   adapters?: Adapter[];
   /** Whether to wait for page to be loaded */
@@ -35,7 +35,7 @@ export type CreateDeviceProps = {
 
 /** Properties for attaching an existing WebGL context or WebGPU device to a new luma Device */
 export type AttachDeviceProps = {
-  type?: 'webgl' | 'webgpu' | 'unknown' | 'best-available';
+  type?: 'webgl' | 'webgpu' | 'null' | 'unknown' | 'best-available';
   /** Externally created WebGL context or WebGPU device */
   handle: unknown; // WebGL2RenderingContext | GPUDevice | null;
   /** List of adapters. Will also search any pre-registered adapters */
@@ -120,13 +120,13 @@ export class Luma {
   }
 
   /** Get type strings for best available Device */
-  getBestAvailableAdapter(adapters: Adapter[] = []): 'webgpu' | 'webgl' | null {
+  getBestAvailableAdapter(adapters: Adapter[] = []): 'webgpu' | 'webgl' | 'null' | null {
+    const KNOWN_ADAPTERS: ('webgpu' | 'webgl' | 'null')[] = ['webgpu', 'webgl', 'null'];
     const adapterMap = this.getAdapterMap(adapters);
-    if (adapterMap.get('webgpu')?.isSupported?.()) {
-      return 'webgpu';
-    }
-    if (adapterMap.get('webgl')?.isSupported?.()) {
-      return 'webgl';
+    for (const type of KNOWN_ADAPTERS) {
+      if (adapterMap.get(type)?.isSupported?.()) {
+        return type;
+      }
     }
     return null;
   }
@@ -167,7 +167,7 @@ export class Luma {
     const adapters = this.getAdapterMap(props.adapters);
 
     // WebGL
-    let type = '';
+    let type = 'unknown';
     if (props.handle instanceof WebGL2RenderingContext) {
       type = 'webgl';
     }
@@ -176,17 +176,18 @@ export class Luma {
       await Luma.pageLoaded;
     }
 
-    // TODO - WebGPU does not yet have a stable API
+    // TODO - WebGPU does not yet seem to have a stable in-browser API, so we "sniff" instead
     // if (props.handle instanceof GPUDevice) {
-    //   const WebGPUDevice = adapters.get('webgpu') as any;
-    //   if (WebGPUDevice) {
-    //     return (await WebGPUDevice.attach(props.handle)) as Device;
-    //   }
-    // }
+    if ((props.handle as any)?.queue) {
+      const WebGPUDevice = adapters.get('webgpu') as any;
+      if (WebGPUDevice) {
+        return (await WebGPUDevice.attach(props.handle)) as Device;
+      }
+    }
 
     // null
     if (props.handle === null) {
-      type = 'unknown';
+      type = 'null';
     }
 
     const adapter = adapters.get(type);

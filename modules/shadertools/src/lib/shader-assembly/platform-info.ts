@@ -9,7 +9,7 @@
  */
 export type PlatformInfo = {
   /** Current Web GPU API backend */
-  type: 'webgl' | 'webgpu' | 'unknown';
+  type: 'webgl' | 'webgpu' | 'null' | 'unknown';
   /** Which shader language is supported */
   shaderLanguage: 'glsl' | 'wgsl';
   /** Which shader language version is preferred */
