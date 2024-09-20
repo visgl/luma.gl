@@ -8,6 +8,9 @@ import {Resource, ResourceProps} from './resource';
 import {Buffer} from './buffer';
 import {Texture} from './texture';
 import {QuerySet} from './query-set';
+import type {RenderPass, RenderPassProps} from './render-pass';
+import type {ComputePass, ComputePassProps} from './compute-pass';
+import type {CommandBuffer, CommandBufferProps} from './command-buffer';
 
 // WEBGPU COMMAND ENCODER OPERATIONS
 
@@ -131,6 +134,8 @@ export type CommandEncoderProps = ResourceProps & {
  * Encodes commands to queue that can be executed later
  */
 export abstract class CommandEncoder extends Resource<CommandEncoderProps> {
+  abstract readonly handle: unknown;
+
   override get [Symbol.toStringTag](): string {
     return 'CommandEncoder';
   }
@@ -140,7 +145,13 @@ export abstract class CommandEncoder extends Resource<CommandEncoderProps> {
   }
 
   /** Completes recording of the commands sequence */
-  abstract finish(): void; // TODO - return the CommandBuffer?
+  abstract finish(props?: CommandBufferProps): CommandBuffer;
+
+  /** Create a RenderPass using the default CommandEncoder */
+  abstract beginRenderPass(props?: RenderPassProps): RenderPass;
+
+  /** Create a ComputePass using the default CommandEncoder*/
+  abstract beginComputePass(props?: ComputePassProps): ComputePass;
 
   /** Add a command that that copies data from a sub-region of a Buffer to a sub-region of another Buffer. */
   abstract copyBufferToBuffer(options: CopyBufferToBufferOptions): void;

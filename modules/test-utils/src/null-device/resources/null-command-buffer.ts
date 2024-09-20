@@ -2,25 +2,25 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {CommandEncoder, CommandEncoderProps} from '@luma.gl/core';
 import type {
+  CommandBufferProps,
   CopyBufferToBufferOptions,
   CopyBufferToTextureOptions,
   CopyTextureToBufferOptions,
   CopyTextureToTextureOptions,
   QuerySet
 } from '@luma.gl/core';
+import {CommandBuffer} from '@luma.gl/core';
 import type {NullDevice} from '../null-device';
 
-export class NullCommandEncoder extends CommandEncoder {
+export class NullCommandBuffer extends CommandBuffer {
   device: NullDevice;
+  handle: null = null;
 
-  constructor(device: NullDevice, props: CommandEncoderProps) {
+  constructor(device: NullDevice, props: CommandBufferProps) {
     super(device, props);
     this.device = device;
   }
-
-  finish(): void {}
 
   copyBufferToBuffer(options: CopyBufferToBufferOptions): void {}
 

@@ -27,8 +27,8 @@ test('CommandBuffer#copyBufferToBuffer', async t => {
     destinationBuffer,
     size: 2 * Float32Array.BYTES_PER_ELEMENT
   });
-  commandEncoder.finish();
-  commandEncoder.destroy();
+  let commandBuffer = commandEncoder.finish();
+  device.submit(commandBuffer);
 
   receivedData = await readAsyncF32(destinationBuffer);
   expectedData = new Float32Array([1, 2, 6]);
@@ -42,8 +42,8 @@ test('CommandBuffer#copyBufferToBuffer', async t => {
     destinationOffset: 2 * Float32Array.BYTES_PER_ELEMENT,
     size: Float32Array.BYTES_PER_ELEMENT
   });
-  commandEncoder.finish();
-  commandEncoder.destroy();
+  commandBuffer = commandEncoder.finish();
+  device.submit(commandBuffer);
 
   receivedData = await readAsyncF32(destinationBuffer);
   expectedData = new Float32Array([1, 2, 2]);
@@ -167,8 +167,8 @@ async function testCopyTextureToBuffer(
     destinationBuffer,
     byteOffset: dstByteOffset
   });
-  commandEncoder.finish();
-  commandEncoder.destroy();
+  const commandBuffer = commandEncoder.finish();
+  device_.submit(commandBuffer);
 
   const color =
     srcPixel instanceof Uint8Array
@@ -219,7 +219,8 @@ function testCopyToTexture(
 
   const commandEncoder = device_.createCommandEncoder();
   commandEncoder.copyTextureToTexture({sourceTexture, destinationTexture});
-  commandEncoder.finish();
+  const commandBuffer = commandEncoder.finish();
+  device_.submit(commandBuffer);
 
   // Read data form destination texture
   const color = device_.readPixelsToArrayWebGL(destinationTexture);

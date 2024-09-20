@@ -73,7 +73,7 @@ export class WEBGLCommandBuffer extends CommandBuffer {
     this.device = device;
   }
 
-  submitCommands(commands: Command[] = this.commands) {
+  _executeCommands(commands: Command[] = this.commands) {
     for (const command of commands) {
       switch (command.name) {
         case 'copy-buffer-to-buffer':

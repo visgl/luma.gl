@@ -2,10 +2,18 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+import type {
+  RenderPassProps,
+  ComputePassProps,
+  CopyTextureToTextureOptions,
+  CopyTextureToBufferOptions
+} from '@luma.gl/core';
 import {CommandEncoder, CommandEncoderProps, Buffer, Texture} from '@luma.gl/core';
-import type {CopyTextureToTextureOptions, CopyTextureToBufferOptions} from '@luma.gl/core';
 import {WebGPUDevice} from '../webgpu-device';
+import {WebGPUCommandBuffer} from './webgpu-command-buffer';
 import {WebGPUBuffer} from './webgpu-buffer';
+import {WebGPURenderPass} from './webgpu-render-pass';
+import {WebGPUComputePass} from './webgpu-compute-pass';
 import {WebGPUTexture} from './webgpu-texture';
 import {WebGPUQuerySet} from './webgpu-query-set';
 
@@ -13,7 +21,7 @@ export class WebGPUCommandEncoder extends CommandEncoder {
   readonly device: WebGPUDevice;
   readonly handle: GPUCommandEncoder;
 
-  constructor(device: WebGPUDevice, props: CommandEncoderProps) {
+  constructor(device: WebGPUDevice, props: CommandEncoderProps = {}) {
     super(device, props);
     this.device = device;
     this.handle =
@@ -28,8 +36,22 @@ export class WebGPUCommandEncoder extends CommandEncoder {
 
   override destroy(): void {}
 
-  finish(options?: {id?: string}): GPUCommandBuffer {
-    return this.finish(options);
+  finish(props?: CommandEncoderProps): WebGPUCommandBuffer {
+    return new WebGPUCommandBuffer(this, {
+      id: props?.id || 'unnamed-command-buffer'
+    });
+  }
+
+  /**
+   * Allows a render pass to begin against a canvas context
+   * @todo need to support a "Framebuffer" equivalent (aka preconfigured RenderPassDescriptors?).
+   */
+  beginRenderPass(props: RenderPassProps): WebGPURenderPass {
+    return new WebGPURenderPass(this.device, props);
+  }
+
+  beginComputePass(props: ComputePassProps): WebGPUComputePass {
+    return new WebGPUComputePass(this.device, props);
   }
 
   // beginRenderPass(GPURenderPassDescriptor descriptor): GPURenderPassEncoder;

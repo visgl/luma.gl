@@ -17,9 +17,6 @@ import type {
   RenderPipelineProps,
   ComputePipeline,
   ComputePipelineProps,
-  RenderPassProps,
-  ComputePass,
-  ComputePassProps,
   CommandEncoderProps,
   TransformFeedbackProps,
   QuerySetProps
@@ -32,7 +29,7 @@ import {NullCanvasContext} from './null-canvas-context';
 import {NullBuffer} from './resources/null-buffer';
 import {NullFramebuffer} from './resources/null-framebuffer';
 import {NullShader} from './resources/null-shader';
-import {NullCommandEncoder} from './resources/null-command-buffer';
+import {NullCommandEncoder} from './resources/null-command-encoder';
 import {NullSampler} from './resources/null-sampler';
 import {NullTexture} from './resources/null-texture';
 import {NullRenderPass} from './resources/null-render-pass';
@@ -57,6 +54,8 @@ export class NullDevice extends Device {
   readonly info = NullDeviceInfo;
 
   readonly canvasContext: NullCanvasContext;
+  override commandEncoder: NullCommandEncoder;
+
   readonly lost: Promise<{reason: 'destroyed'; message: string}>;
 
   constructor(props: DeviceProps) {
@@ -65,6 +64,7 @@ export class NullDevice extends Device {
     const canvasContextProps = props.createCanvasContext === true ? {} : props.createCanvasContext;
     this.canvasContext = new NullCanvasContext(this, canvasContextProps);
     this.lost = new Promise(resolve => {});
+    this.commandEncoder = new NullCommandEncoder(this, {id: 'null-command-encoder'});
   }
 
   /**
@@ -128,16 +128,8 @@ export class NullDevice extends Device {
     return new NullRenderPipeline(this, props);
   }
 
-  beginRenderPass(props: RenderPassProps): NullRenderPass {
-    return new NullRenderPass(this, props);
-  }
-
   createComputePipeline(props?: ComputePipelineProps): ComputePipeline {
     throw new Error('ComputePipeline not supported in WebGL');
-  }
-
-  beginComputePass(props: ComputePassProps): ComputePass {
-    throw new Error('ComputePass not supported in WebGL');
   }
 
   override createCommandEncoder(props: CommandEncoderProps = {}): NullCommandEncoder {

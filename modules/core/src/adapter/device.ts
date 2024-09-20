@@ -19,6 +19,7 @@ import type {Framebuffer, FramebufferProps} from './resources/framebuffer';
 import type {RenderPass, RenderPassProps} from './resources/render-pass';
 import type {ComputePass, ComputePassProps} from './resources/compute-pass';
 import type {CommandEncoder, CommandEncoderProps} from './resources/command-encoder';
+import type {CommandBuffer} from './resources/command-buffer';
 import type {VertexArray, VertexArrayProps} from './resources/vertex-array';
 import type {TransformFeedback, TransformFeedbackProps} from './resources/transform-feedback';
 import type {QuerySet, QuerySetProps} from './resources/query-set';
@@ -360,6 +361,7 @@ export abstract class Device {
   /** type of this device */
   abstract readonly type: 'webgl' | 'webgpu' | 'null' | 'unknown';
   abstract readonly handle: unknown;
+  abstract commandEncoder: CommandEncoder;
 
   /** A copy of the device props  */
   readonly props: Required<DeviceProps>;
@@ -409,9 +411,10 @@ export abstract class Device {
     return textureCaps;
   }
 
-  /** Calculates the number of mip levels for a texture of width and height */
-  getMipLevelCount(width: number, height: number): number {
-    return Math.floor(Math.log2(Math.max(width, height))) + 1;
+  /** Calculates the number of mip levels for a texture of width, height and in case of 3d textures only, depth */
+  getMipLevelCount(width: number, height: number, depth3d: number = 1): number {
+    const maxSize = Math.max(width, height, depth3d);
+    return 1 + Math.floor(Math.log2(maxSize));
   }
 
   /** Check if data is an external image */
@@ -442,6 +445,20 @@ export abstract class Device {
   /** Check if a specific texture format is GPU compressed */
   isTextureFormatCompressed(format: TextureFormat): boolean {
     return isTextureFormatCompressed(format);
+  }
+
+  // DEBUG METHODS
+
+  pushDebugGroup(groupLabel: string): void {
+    this.commandEncoder.pushDebugGroup(groupLabel);
+  }
+
+  popDebugGroup(): void {
+    this.commandEncoder?.popDebugGroup();
+  }
+
+  insertDebugMarker(markerLabel: string): void {
+    this.commandEncoder?.insertDebugMarker(markerLabel);
   }
 
   // Device loss
@@ -492,7 +509,7 @@ export abstract class Device {
   abstract createCanvasContext(props?: CanvasContextProps): CanvasContext;
 
   /** Call after rendering a frame (necessary e.g. on WebGL OffscreenCanvas) */
-  abstract submit(): void;
+  abstract submit(commandBuffer?: CommandBuffer): void;
 
   // Resource creation
 
@@ -523,18 +540,22 @@ export abstract class Device {
   /** Create a vertex array */
   abstract createVertexArray(props: VertexArrayProps): VertexArray;
 
-  /** Create a RenderPass */
-  abstract beginRenderPass(props?: RenderPassProps): RenderPass;
-
-  /** Create a ComputePass */
-  abstract beginComputePass(props?: ComputePassProps): ComputePass;
-
   abstract createCommandEncoder(props?: CommandEncoderProps): CommandEncoder;
 
   /** Create a transform feedback (immutable set of output buffer bindings). WebGL only. */
   abstract createTransformFeedback(props: TransformFeedbackProps): TransformFeedback;
 
   abstract createQuerySet(props: QuerySetProps): QuerySet;
+
+  /** Create a RenderPass using the default CommandEncoder */
+  beginRenderPass(props?: RenderPassProps): RenderPass {
+    return this.commandEncoder.beginRenderPass(props);
+  }
+
+  /** Create a ComputePass using the default CommandEncoder*/
+  beginComputePass(props?: ComputePassProps): ComputePass {
+    return this.commandEncoder.beginComputePass(props);
+  }
 
   /**
    * Determines what operations are supported on a texture format, checking against supported device features

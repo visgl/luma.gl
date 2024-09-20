@@ -4,21 +4,26 @@
 
 import {CommandEncoder, CommandEncoderProps} from '@luma.gl/core';
 import type {
+  RenderPassProps,
+  ComputePass,
+  ComputePassProps,
+  QuerySet,
+  Buffer,
   CopyBufferToBufferOptions,
   CopyBufferToTextureOptions,
   CopyTextureToBufferOptions,
-  CopyTextureToTextureOptions,
+  CopyTextureToTextureOptions
   // ClearTextureOptions,
   // ReadTextureOptions,
-  QuerySet,
-  Buffer
 } from '@luma.gl/core';
 
 import {WEBGLCommandBuffer} from './webgl-command-buffer';
+import {WEBGLRenderPass} from './webgl-render-pass';
 import {WebGLDevice} from '../webgl-device';
 
 export class WEBGLCommandEncoder extends CommandEncoder {
   readonly device: WebGLDevice;
+  readonly handle = null;
 
   readonly commandBuffer: WEBGLCommandBuffer;
 
@@ -30,13 +35,17 @@ export class WEBGLCommandEncoder extends CommandEncoder {
 
   override destroy(): void {}
 
-  override finish(): void {
-    this.commandBuffer.submitCommands();
+  override finish(): WEBGLCommandBuffer {
+    return this.commandBuffer;
   }
 
-  // beginRenderPass(GPURenderPassDescriptor descriptor): GPURenderPassEncoder;
-  // beginComputePass(optional GPUComputePassDescriptor descriptor = {}): GPUComputePassEncoder;
-  // finish(options?: {id?: string}): GPUCommandBuffer;
+  beginRenderPass(props: RenderPassProps): WEBGLRenderPass {
+    return new WEBGLRenderPass(this.device, props);
+  }
+
+  beginComputePass(props: ComputePassProps): ComputePass {
+    throw new Error('ComputePass not supported in WebGL');
+  }
 
   copyBufferToBuffer(options: CopyBufferToBufferOptions): void {
     this.commandBuffer.commands.push({name: 'copy-buffer-to-buffer', options});
