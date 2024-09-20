@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+// prettier-ignore
 // / <reference types="@webgpu/types" />
 
 import type {DepthStencilTextureFormat, CanvasContextProps} from '@luma.gl/core';
