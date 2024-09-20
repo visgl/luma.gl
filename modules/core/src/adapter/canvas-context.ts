@@ -466,7 +466,7 @@ function getCanvasFromDOM(canvasId: string): HTMLCanvasElement {
   ) {
     throw new Error('Object is not a canvas element');
   }
-  return canvas;
+  return canvas as HTMLCanvasElement;
 }
 
 /** Create a new canvas */
