@@ -63,7 +63,7 @@ export {fp64ify, fp64LowPart, fp64ifyMatrix4} from './modules/math/fp64/fp64-uti
 export {random} from './modules/math/random/random';
 
 export {fp32} from './modules/math/fp32/fp32';
-// export {fp64, fp64arithmetic} from './modules/math/fp64/fp64';
+export {fp64, fp64arithmetic} from './modules/math/fp64/fp64';
 
 // engine shader modules
 
@@ -93,7 +93,7 @@ export {pbrMaterial} from './modules/lighting/pbr-material/pbr-material';
 // DEPRECATED - v8 legacy shader modules (non-uniform buffer)
 
 // math libraries
-export {fp64, fp64arithmetic} from './modules-webgl1/math/fp64/fp64';
+// export {fp64, fp64arithmetic} from './modules-webgl1/math/fp64/fp64';
 
 // projection and lighting
 export {geometry as geometry1} from './modules-webgl1/geometry/geometry';
