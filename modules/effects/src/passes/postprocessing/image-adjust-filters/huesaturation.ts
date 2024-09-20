@@ -5,12 +5,13 @@
 import type {ShaderPass} from '@luma.gl/shadertools';
 
 const source = /* wgsl */ `\
-@group(?), @binding(?)
-var<uniform> hueSaturationUniforms {		hue: f32,
 
-		saturation: f32,
+struct hueSaturationUniforms {
+  hue: f32,
+  saturation: f32,
+};
 
-}hueSaturation;
+@group(0), @binding(1) var<uniform> hueSaturation: hueSaturationUniforms;
 
 fn hueSaturation_filterColor(color: vec4<f32>) -> vec4<f32> {
 	let angle: f32 = hueSaturation.hue * 3.1415927;

@@ -4,6 +4,31 @@
 
 import type {ShaderPass} from '@luma.gl/shadertools';
 
+const source = /* wgsl */ `\
+uniform magnifyUniforms {
+  screenXY: vec2f;
+  radiusPixels: f32;
+  zoom: f32;
+  borderWidthPixels: f32;
+  borderColor: vec4f;
+};
+
+@group(0) @binding(1) var<uniform> magnify: magnifyUniforms;
+
+fn magnify_sampleColor(sampler2D source, vec2 texSize, vec2 texCoord) -> vec4f {
+  vec2 pos = vec2(magnify.screenXY.x, 1.0 - magnify.screenXY.y);
+  float dist = distance(texCoord * texSize, pos * texSize);
+  if (dist < magnify.radiusPixels) {
+    return texture(source, (texCoord - pos) / magnify.zoom + pos);
+  }
+
+  if (dist <= magnify.radiusPixels + magnify.borderWidthPixels) {
+    return magnify.borderColor;
+  }
+  return texture(source, texCoord);
+}
+`;
+
 const fs = /* glsl */ `\
 uniform magnifyUniforms {
   vec2 screenXY;
@@ -50,6 +75,9 @@ export type MagnifyUniforms = MagnifyProps;
  */
 export const magnify = {
   name: 'magnify',
+  source,
+  fs,
+
   uniformTypes: {
     screenXY: 'vec2<f32>',
     radiusPixels: 'f32',
@@ -65,6 +93,6 @@ export const magnify = {
     borderWidthPixels: 0.0,
     borderColor: {value: [255, 255, 255, 255]}
   },
-  fs,
+
   passes: [{sampler: true}]
 } as const satisfies ShaderPass<MagnifyProps, MagnifyProps>;

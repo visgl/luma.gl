@@ -4,6 +4,26 @@
 
 import type {ShaderPass} from '@luma.gl/shadertools';
 
+const source = /* wgsl */ `\
+struct vibranceUniforms {
+  amount: f32
+};
+
+@group(0) @binding(1) var<uniform> vibrance: vibranceUniforms;
+
+fn vibrance_filterColor(vec4f color) -> vec4f {
+  let average: f32 = (color.r + color.g + color.b) / 3.0;
+  let mx: f32 = max(color.r, max(color.g, color.b));
+  let amt: f32 = (mx - average) * (-vibrance.amount * 3.0);
+  color.rgb = mix(color.rgb, vec3(mx), amt);
+  return color;
+}
+
+vec4 vibrance_filterColor_ext(vec4 color, vec2 texSize, vec2 texCoord) {
+  return vibrance_filterColor(color);
+}
+`;
+
 const fs = /* glsl */ `\
 uniform vibranceUniforms {
   float amount;
@@ -43,6 +63,7 @@ export const vibrance = {
   propTypes: {
     amount: {value: 0, min: -1, max: 1}
   },
+  source,
   fs,
   passes: [{filter: true}]
 } as const satisfies ShaderPass<VibranceProps, VibranceProps>;

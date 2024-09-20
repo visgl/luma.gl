@@ -4,6 +4,33 @@
 
 import type {ShaderPass} from '@luma.gl/shadertools';
 
+const source = /* wgsl */ `\
+uniform dotScreenUniforms {
+  center: vec2f,
+  angle: f32,
+  size: f32,
+};
+
+@group(0) @binding(1) dotScreen: dotScreenUniforms;
+
+fn pattern(texSize: vec2f, texCoord: vec2f) -> f32 {
+  let scale: f32 = 3.1415 / dotScreen.size;
+
+  let s: f32 = sin(dotScreen.angle), c = cos(dotScreen.angle);
+  tex: vec2f = texCoord * texSize - dotScreen.center * texSize;
+  point = vec2f( 
+    c: * tex.x - s * tex.y,
+    s * tex.x + c * tex.y
+  ) * scale;
+  return (sin(point.x) * sin(point.y)) * 4.0;
+}
+
+fn dotScreen_filterColor_ext(vec4 color, texSize: vec2f, texCoord: vec2f) -> vec4f {
+  let average: f32 = (color.r + color.g + color.b) / 3.0;
+  return vec4(vec3(average * 10.0 - 5.0 + pattern(texSize, texCoord)), color.a);
+}
+`;
+
 const fs = /* glsl */ `\
 uniform dotScreenUniforms {
   vec2 center;
@@ -51,10 +78,12 @@ export type DotScreenUniforms = DotScreenProps;
  * pixel values with a rotated 2D sine wave pattern.
  */
 export const dotScreen = {
+  name: 'dotScreen',
+  source,
+  fs,
+
   props: {} as DotScreenProps,
   uniforms: {} as DotScreenUniforms,
-
-  name: 'dotScreen',
   uniformTypes: {
     center: 'vec2<f32>',
     angle: 'f32',
@@ -65,6 +94,6 @@ export const dotScreen = {
     angle: {value: 1.1, softMin: 0, softMax: Math.PI / 2},
     size: {value: 3, min: 1, softMin: 3, softMax: 20}
   },
-  fs,
+
   passes: [{filter: true}]
 } as const satisfies ShaderPass<DotScreenProps, DotScreenProps>;
