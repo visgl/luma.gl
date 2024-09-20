@@ -5,8 +5,8 @@
 // Forked from https://github.com/greggman/webgpu-utils under MIT license
 // Copyright (c) 2022 Gregg Tavares
 
-import {Device, Shader, Texture, Buffer} from '@luma.gl/core';
-import { Model } from '../model/model';
+import {Device, Texture, Buffer} from '@luma.gl/core';
+import {Model} from '../model/model';
 
 type TextureViewDimension = '1d' | '2d' | '2d-array' | '3d';
 
@@ -21,12 +21,14 @@ type TextureViewDimension = '1d' | '2d' | '2d-array' | '3d';
  *   and it is only needed when the texture is going to be used as a cube map.
  */
 export function generateMipmap(device: Device, texture: Texture) {
-
   const source = getMipmapGenerationWGSL(texture.dimension as any);
 
   const uniformValues = new Uint32Array(1);
-  const uniformBuffer = device.createBuffer({byteLength: 16, usage: Buffer.UNIFORM | Buffer.COPY_DST});
-  const sampler=  device.createSampler({minFilter: 'linear', magFilter: 'linear'}),
+  const uniformBuffer = device.createBuffer({
+    byteLength: 16,
+    usage: Buffer.UNIFORM | Buffer.COPY_DST
+  });
+  const sampler = device.createSampler({minFilter: 'linear', magFilter: 'linear'});
 
   const model = new Model(device, {
     id: `${texture.format}.${viewDimension}`,
@@ -40,7 +42,6 @@ export function generateMipmap(device: Device, texture: Texture) {
     }
   });
 
-
   for (let baseMipLevel = 1; baseMipLevel < texture.mipLevelCount; ++baseMipLevel) {
     for (let baseArrayLayer = 0; baseArrayLayer < texture.depthOrArrayLayers; ++baseArrayLayer) {
       uniformValues[0] = baseArrayLayer;
@@ -50,7 +51,7 @@ export function generateMipmap(device: Device, texture: Texture) {
         dimension: viewDimension,
         baseMipLevel: baseMipLevel - 1,
         mipLevelCount: 1
-      })
+      });
 
       const mipLevelTextureView = texture.createView({
         dimension: '2d',
@@ -58,8 +59,7 @@ export function generateMipmap(device: Device, texture: Texture) {
         mipLevelCount: 1,
         baseArrayLayer,
         arrayLayerCount: 1
-      }),
-
+      });
 
       const mipLevelView = texture.createView({
         dimension: viewDimension,
@@ -71,12 +71,12 @@ export function generateMipmap(device: Device, texture: Texture) {
 
       const framebuffer = device.createFramebuffer({
         colorAttachments: [mipLevelView]
-      })
+      });
 
       model.setBindings({
         previousMipLevelView,
-        previousMipLevelViewSampler: sampler,
-      })
+        previousMipLevelViewSampler: sampler
+      });
       const renderPass = device.beginRenderPass({id: 'mip-gen-pass', framebuffer});
       model.draw(renderPass);
       renderPass.end();
