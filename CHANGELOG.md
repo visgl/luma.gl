@@ -4,6 +4,11 @@
 
 Theme: Improved WebGPU support
 
+### v9.1.0-beta.4
+
+- chore: Use caret for luma dependencies (#2258)
+- fix: Avoid referencing HTMLCanvasElement in node (#2257)
+
 ### v9.1.0-beta.3
 
 - fix: website beta build (#2255)

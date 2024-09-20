@@ -986,18 +986,18 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@luma.gl/constants@npm:9.1.0-beta.4, @luma.gl/constants@workspace:modules/constants":
+  version: 0.0.0-use.local
+  resolution: "@luma.gl/constants@workspace:modules/constants"
+  languageName: unknown
+  linkType: soft
+
 "@luma.gl/constants@npm:^9.0.0":
   version: 9.0.25
   resolution: "@luma.gl/constants@npm:9.0.25"
   checksum: 10c0/8715ba786e1a0b94e1650fa90a2121029587756cb6eb7a9bf3c65f8ecd9d25a54473a209e715bdf0dda707e0faa8607fafcc959321d98f0261e17349e0daf59e
   languageName: node
   linkType: hard
-
-"@luma.gl/constants@npm:^9.1.0-alpha.1, @luma.gl/constants@workspace:modules/constants":
-  version: 0.0.0-use.local
-  resolution: "@luma.gl/constants@workspace:modules/constants"
-  languageName: unknown
-  linkType: soft
 
 "@luma.gl/core@workspace:modules/core":
   version: 0.0.0-use.local
@@ -1082,7 +1082,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@luma.gl/webgl@workspace:modules/webgl"
   dependencies:
-    "@luma.gl/constants": "npm:^9.1.0-alpha.1"
+    "@luma.gl/constants": "npm:9.1.0-beta.4"
     "@math.gl/types": "npm:^4.1.0"
     "@probe.gl/env": "npm:^4.0.8"
   peerDependencies:
