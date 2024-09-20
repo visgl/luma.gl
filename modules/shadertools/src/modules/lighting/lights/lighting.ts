@@ -4,8 +4,8 @@
 
 import {log} from '@luma.gl/core';
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
-import {lightingUniformsGLSL} from './lighting-uniforms-glsl';
-import {lightingUniformsWGSL} from './lighting-uniforms-wgsl';
+import {lightingUniformsGLSL} from './lighting-glsl';
+import {lightingUniformsWGSL} from './lighting-wgsl';
 import type {NumberArray3} from '@math.gl/core';
 
 /** Max number of supported lights (in addition to ambient light */

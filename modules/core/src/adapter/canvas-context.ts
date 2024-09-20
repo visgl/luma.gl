@@ -41,6 +41,14 @@ export type CanvasContextProps = {
  * @todo transferControlToOffscreen: https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/transferControlToOffscreen
  */
 export abstract class CanvasContext {
+  static isHTMLCanvas(canvas: unknown): canvas is HTMLCanvasElement {
+    return canvas instanceof HTMLCanvasElement;
+  }
+
+  static isOffscreenCanvas(canvas: unknown): canvas is OffscreenCanvas {
+    return typeof OffscreenCanvas !== 'undefined' && canvas instanceof OffscreenCanvas;
+  }
+
   static defaultProps: Required<CanvasContextProps> = {
     id: undefined!,
     canvas: null,
@@ -116,11 +124,11 @@ export abstract class CanvasContext {
       this.canvas = props.canvas;
     }
 
-    if (this.canvas instanceof HTMLCanvasElement) {
+    if (CanvasContext.isHTMLCanvas(this.canvas)) {
       this.id = props.id || this.canvas.id;
       this.type = 'html-canvas';
       this.htmlCanvas = this.canvas;
-    } else if (this.canvas instanceof OffscreenCanvas) {
+    } else if (CanvasContext.isOffscreenCanvas(this.canvas)) {
       this.id = props.id || 'offscreen-canvas';
       this.type = 'offscreen-canvas';
       this.offscreenCanvas = this.canvas;
@@ -137,7 +145,7 @@ export abstract class CanvasContext {
     this.drawingBufferHeight = this.canvas.height;
     this.devicePixelRatio = globalThis.devicePixelRatio || 1;
 
-    if (this.canvas instanceof HTMLCanvasElement) {
+    if (CanvasContext.isHTMLCanvas(this.canvas)) {
       // Track visibility changes
       this._intersectionObserver = new IntersectionObserver(entries =>
         this._handleIntersection(entries)
@@ -172,7 +180,7 @@ export abstract class CanvasContext {
    * @note This is independent of the canvas' internal drawing buffer size (.width, .height).
    */
   getCSSSize(): [number, number] {
-    if (this.canvas instanceof HTMLCanvasElement) {
+    if (CanvasContext.isHTMLCanvas(this.canvas)) {
       return [this.canvas.clientWidth, this.canvas.clientHeight];
     }
     return [this.pixelWidth, this.pixelHeight];
@@ -219,7 +227,7 @@ export abstract class CanvasContext {
    * @note This function handles the non-HTML canvas cases
    */
   getDevicePixelRatio(useDevicePixels?: boolean | number): number {
-    if (typeof OffscreenCanvas !== 'undefined' && this.canvas instanceof OffscreenCanvas) {
+    if (CanvasContext.isOffscreenCanvas(this.canvas)) {
       return 1;
     }
 

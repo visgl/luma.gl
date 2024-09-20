@@ -41,7 +41,7 @@ import {isExternalImage, getExternalImageSize} from '../image-utils/image-types'
  */
 export type DeviceInfo = {
   /** Type of device */
-  type: 'webgl' | 'webgpu' | 'unknown';
+  type: 'webgl' | 'webgpu' | 'null' | 'unknown';
   /** Vendor (name of GPU vendor, Apple, nVidia etc */
   vendor: string;
   /** Renderer (usually driver name) */
@@ -359,7 +359,7 @@ export abstract class Device {
   /** id of this device, primarily for debugging */
   readonly id: string;
   /** type of this device */
-  abstract readonly type: 'webgl' | 'webgpu' | 'unknown';
+  abstract readonly type: 'webgl' | 'webgpu' | 'null' | 'unknown';
   abstract readonly handle: unknown;
   abstract commandEncoder: CommandEncoder;
 

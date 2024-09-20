@@ -31,6 +31,7 @@ import './lib/shader-assembler.spec';
 
 // Data utilities
 import './modules/math/fp16-utils.spec';
+import './modules/math/fp64-arithmetic-transform.spec';
 import './modules/math/fp64-utils.spec';
 
 // General modules tests

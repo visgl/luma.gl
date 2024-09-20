@@ -4,14 +4,16 @@
 
 // Attribution:
 // MIT license, Copyright (c) 2016-2017 Mohamad Moneimne and Contributors
-
 // This fragment shader defines a reference implementation for Physically Based Shading of
 // a microfacet surface material defined by a glTF model.
 
 // TODO - better do the checks outside of shader
 
-export const fs = /* glsl */ `\
-precision highp float;
+export const pbrMaterialUniforms = /* glsl */ `\
+uniform Projection {
+  // Projection
+  vec3 u_Camera;
+};
 
 uniform pbrMaterialUniforms {
   // Material is unlit
@@ -45,6 +47,97 @@ uniform pbrMaterialUniforms {
   vec4 scaleDiffBaseMR;
   vec4 scaleFGDSpec;
   // #endif
+};
+
+// Samplers
+#ifdef HAS_BASECOLORMAP
+uniform sampler2D u_BaseColorSampler;
+#endif
+#ifdef HAS_NORMALMAP
+uniform sampler2D u_NormalSampler;
+#endif
+#ifdef HAS_EMISSIVEMAP
+uniform sampler2D u_EmissiveSampler;
+#endif
+#ifdef HAS_METALROUGHNESSMAP
+uniform sampler2D u_MetallicRoughnessSampler;
+#endif
+#ifdef HAS_OCCLUSIONMAP
+uniform sampler2D u_OcclusionSampler;
+#endif
+#ifdef USE_IBL
+uniform samplerCube u_DiffuseEnvSampler;
+uniform samplerCube u_SpecularEnvSampler;
+uniform sampler2D u_brdfLUT;
+#endif
+
+`;
+
+export const source = /* wgsl */ `\
+struct PBRFragmentInputs = {
+  pbr_vPosition: vec3f;
+  pbr_vUV: vec2f;
+  pbr_vTBN: mat3f;
+  pbr_vNormal: vec3f;
+};
+
+var fragmentInputs: PBRFragmentInputs;
+
+fn pbr_setPositionNormalTangentUV(position: vec4f, normal: vec4f, tangent: vec4f, vec2 uv)
+{
+  pos: vec4f = pbrProjection.modelMatrix * position;
+  pbr_vPosition = vec3(pos.xyz) / pos.w;
+
+#ifdef HAS_NORMALS
+#ifdef HAS_TANGENTS
+  let normalW: vec3f = normalize(vec3(pbrProjection.normalMatrix * vec4(normal.xyz, 0.0)));
+  let tangentW: vec3f = normalize(vec3(pbrProjection.modelMatrix * vec4(tangent.xyz, 0.0)));
+  let bitangentW: vec3f = cross(normalW, tangentW) * tangent.w;
+  fragmentInputs,pbr_vTBN = mat3(tangentW, bitangentW, normalW);
+#else // HAS_TANGENTS != 1
+  fragmentInputs.pbr_vNormal = normalize(vec3(pbrProjection.modelMatrix * vec4(normal.xyz, 0.0)));
+#endif
+#endif
+
+#ifdef HAS_UV
+  pbr_vUV = uv;
+#else
+  pbr_vUV = vec2(0.,0.);
+#endif
+}
+
+uniform pbrMaterialUniforms {
+  // Material is unlit
+  unlit: uint32;
+
+  // Base color map
+  baseColorMapEnabled: uint32;
+  baseColorFactor: vec4f;
+
+  normalMapEnabled : uint32 
+  normalScale: f32; // #ifdef HAS_NORMALMAP
+
+  emissiveMapEnabled: uint32;
+  vec3 emissiveFactor; // #ifdef HAS_EMISSIVEMAP
+
+  vec2 metallicRoughnessValues;
+  metallicRoughnessMapEnabled: uint32;
+
+  occlusionMapEnabled: uint32;
+  occlusionStrength: f32; // #ifdef HAS_OCCLUSIONMAP
+  
+  alphaCutoffEnabled: uint32;
+  alphaCutoff: f32; // #ifdef ALPHA_CUTOFF
+  
+  // IBL
+  IBLenabled: uint32;
+  vec2 scaleIBLAmbient; // #ifdef USE_IBL
+  
+  // debugging flags used for shader output of intermediate PBR variables
+  // #ifdef PBR_DEBUG
+  scaleDiffBaseMR: vec4f;
+  scaleFGDSpec: vec4f;
+  // #endif
 } pbrMaterial;
 
 // Samplers
@@ -69,33 +162,20 @@ uniform samplerCube pbr_specularEnvSampler;
 uniform sampler2D pbr_brdfLUT;
 #endif
 
-// Inputs from vertex shader
-
-in vec3 pbr_vPosition;
-in vec2 pbr_vUV;
-
-#ifdef HAS_NORMALS
-#ifdef HAS_TANGENTS
-in mat3 pbr_vTBN;
-#else
-in vec3 pbr_vNormal;
-#endif
-#endif
-
 // Encapsulate the various inputs used by the various functions in the shading equation
 // We store values in this struct to simplify the integration of alternative implementations
 // of the shading terms, outlined in the Readme.MD Appendix.
 struct PBRInfo {
-  float NdotL;                  // cos angle between normal and light direction
-  float NdotV;                  // cos angle between normal and view direction
-  float NdotH;                  // cos angle between normal and half vector
-  float LdotH;                  // cos angle between light direction and half vector
-  float VdotH;                  // cos angle between view direction and half vector
-  float perceptualRoughness;    // roughness value, as authored by the model creator (input to shader)
-  float metalness;              // metallic value at the surface
+  NdotL: f32;                  // cos angle between normal and light direction
+  NdotV: f32;                  // cos angle between normal and view direction
+  NdotH: f32;                  // cos angle between normal and half vector
+  LdotH: f32;                  // cos angle between light direction and half vector
+  VdotH: f32;                  // cos angle between view direction and half vector
+  perceptualRoughness: f32;    // roughness value, as authored by the model creator (input to shader)
+  metalness: f32;              // metallic value at the surface
   vec3 reflectance0;            // full reflectance color (normal incidence angle)
   vec3 reflectance90;           // reflectance color at grazing angle
-  float alphaRoughness;         // roughness mapped to a more linear change in the roughness (proposed by [2])
+  alphaRoughness: f32;         // roughness mapped to a more linear change in the roughness (proposed by [2])
   vec3 diffuseColor;            // color contribution from diffuse lighting
   vec3 specularColor;           // color contribution from specular lighting
   vec3 n;                       // normal at surface point
@@ -207,14 +287,13 @@ vec3 specularReflection(PBRInfo pbrInfo)
 // where rougher material will reflect less light back to the viewer.
 // This implementation is based on [1] Equation 4, and we adopt their modifications to
 // alphaRoughness as input as originally proposed in [2].
-float geometricOcclusion(PBRInfo pbrInfo)
-{
-  float NdotL = pbrInfo.NdotL;
-  float NdotV = pbrInfo.NdotV;
-  float r = pbrInfo.alphaRoughness;
+fn geometricOcclusion(PBRInfo pbrInfo) -> f32 {
+  let NdotL: f32 = pbrInfo.NdotL;
+  let NdotV: f32 = pbrInfo.NdotV;
+  let r: f32 = pbrInfo.alphaRoughness;
 
-  float attenuationL = 2.0 * NdotL / (NdotL + sqrt(r * r + (1.0 - r * r) * (NdotL * NdotL)));
-  float attenuationV = 2.0 * NdotV / (NdotV + sqrt(r * r + (1.0 - r * r) * (NdotV * NdotV)));
+  let attenuationL = 2.0 * NdotL / (NdotL + sqrt(r * r + (1.0 - r * r) * (NdotL * NdotL)));
+  let attenuationV = 2.0 * NdotV / (NdotV + sqrt(r * r + (1.0 - r * r) * (NdotV * NdotV)));
   return attenuationL * attenuationV;
 }
 
@@ -224,21 +303,20 @@ float geometricOcclusion(PBRInfo pbrInfo)
 // for Ray Reflection" by T. S. Trowbridge, and K. P. Reitz
 // Follows the distribution function recommended in the SIGGRAPH 2013 course notes
 // from EPIC Games [1], Equation 3.
-float microfacetDistribution(PBRInfo pbrInfo)
-{
+fn microfacetDistribution(PBRInfo pbrInfo) -> float {
   float roughnessSq = pbrInfo.alphaRoughness * pbrInfo.alphaRoughness;
   float f = (pbrInfo.NdotH * roughnessSq - pbrInfo.NdotH) * pbrInfo.NdotH + 1.0;
   return roughnessSq / (M_PI * f * f);
 }
 
-void PBRInfo_setAmbientLight(inout PBRInfo pbrInfo) {
+fn PBRInfo_setAmbientLight(inout pbrInfo: PBRInfo) {
   pbrInfo.NdotL = 1.0;
   pbrInfo.NdotH = 0.0;
   pbrInfo.LdotH = 0.0;
   pbrInfo.VdotH = 1.0;
 }
 
-void PBRInfo_setDirectionalLight(inout PBRInfo pbrInfo, vec3 lightDirection) {
+fb PBRInfo_setDirectionalLight(inout PBRInfo pbrInfo, vec3 lightDirection) {
   vec3 n = pbrInfo.n;
   vec3 v = pbrInfo.v;
   vec3 l = normalize(lightDirection);             // Vector from surface point to light
@@ -250,25 +328,25 @@ void PBRInfo_setDirectionalLight(inout PBRInfo pbrInfo, vec3 lightDirection) {
   pbrInfo.VdotH = clamp(dot(v, h), 0.0, 1.0);
 }
 
-void PBRInfo_setPointLight(inout PBRInfo pbrInfo, PointLight pointLight) {
+fn PBRInfo_setPointLight(inout pbrInfo: PBRInfo, pointLight: PointLight) {
   vec3 light_direction = normalize(pointLight.position - pbr_vPosition);
   PBRInfo_setDirectionalLight(pbrInfo, light_direction);
 }
 
-vec3 calculateFinalColor(PBRInfo pbrInfo, vec3 lightColor) {
+fn calculateFinalColor(pbrInfo: PBRInfo , lightColor: vec3f) -> vec3f {
   // Calculate the shading terms for the microfacet specular shading model
-  vec3 F = specularReflection(pbrInfo);
-  float G = geometricOcclusion(pbrInfo);
-  float D = microfacetDistribution(pbrInfo);
+  let F: vec3f = specularReflection(pbrInfo);
+  let G: vec3f = geometricOcclusion(pbrInfo);
+  let D: vec3f = microfacetDistribution(pbrInfo);
 
   // Calculation of analytical lighting contribution
-  vec3 diffuseContrib = (1.0 - F) * diffuse(pbrInfo);
-  vec3 specContrib = F * G * D / (4.0 * pbrInfo.NdotL * pbrInfo.NdotV);
+  let diffuseContrib: vec3f = (1.0 - F) * diffuse(pbrInfo);
+  let specContrib: vec3f = F * G * D / (4.0 * pbrInfo.NdotL * pbrInfo.NdotV);
   // Obtain final intensity as reflectance (BRDF) scaled by the energy of the light (cosine law)
   return pbrInfo.NdotL * lightColor * (diffuseContrib + specContrib);
 }
 
-vec4 pbr_filterColor(vec4 colorUnused)
+fn pbr_filterColor(colorUnused: vec4f) -> vec4f
 {
   // The albedo may be defined from a base texture or a flat color
 #ifdef HAS_BASECOLORMAP
@@ -345,7 +423,6 @@ vec4 pbr_filterColor(vec4 colorUnused)
       n,
       v
     );
-
 
 #ifdef USE_LIGHTS
     // Apply ambient light

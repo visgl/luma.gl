@@ -5,6 +5,39 @@
 import type {ShaderPass} from '@luma.gl/shadertools';
 import {warp} from './warp';
 
+const source = /* wgsl */ `\
+uniform swirlUniforms {
+  radius: f32,
+  angle: f32,
+  center: vec2f,
+};
+
+@group(0) @binding(1) swirl: swirlUniforms;
+
+fn swirl_warp(vec2 coord, vec2 texCenter) -> vec2f {
+  coord -= texCenter;
+  float distance = length(coord);
+  if (distance < swirl.radius) {
+    float percent = (swirl.radius - distance) / swirl.radius;
+    float theta = percent * percent * swirl.angle;
+    float s = sin(theta);
+    float c = cos(theta);
+    coord = vec2(
+      coord.x * c - coord.y * s,
+      coord.x * s + coord.y * c
+    );
+  }
+  coord += texCenter;
+  return coord;
+}
+
+fn swirl_sampleColor(sampler2D source, vec2 texSize, vec2 texCoord) -> vec4f {
+  vec2 coord = texCoord * texSize;
+  coord = swirl_warp(coord, swirl.center * texSize);
+  return warp_sampleColor(source, texSize, coord);
+}
+`;
+
 const fs = /* glsl */ `\
 uniform swirlUniforms {
   float radius;
@@ -55,13 +88,13 @@ export type SwirlUniforms = SwirlProps;
  * Warps a circular region of the image in a swirl.
  */
 export const swirl = {
-  props: {} as SwirlProps,
-  uniforms: {} as SwirlProps,
-
   name: 'swirl',
   dependencies: [warp],
+  source,
   fs,
 
+  props: {} as SwirlProps,
+  uniforms: {} as SwirlProps,
   uniformTypes: {
     center: 'vec2<f32>',
     radius: 'f32',

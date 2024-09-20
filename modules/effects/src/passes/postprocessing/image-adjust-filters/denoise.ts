@@ -7,10 +7,14 @@ import type {ShaderPass} from '@luma.gl/shadertools';
 // Do a 9x9 bilateral box filter
 const source = /* wgsl */ `\
 
-@group(?), @binding(?) var<uniform> denoiseUniforms {		strength: f32 } noise;
+struct denoiseUniforms {
+  strength: f32
+};
+
+@group(0), @binding(1) var<uniform> denoise: denoiseUniforms;
 
 fn denoise_sampleColor(source: sampler2D, texSize: vec2<f32>, texCoord: vec2<f32>) -> vec4<f32> {
-	let adjustedExponent: f32 = 3. + 200. * pow(1. - noise.strength, 4.);
+	let adjustedExponent: f32 = 3. + 200. * pow(1. - denoise.strength, 4.);
 	let center: vec4<f32> = sample_texture(BUFFER_source, texCoord);
 	var color: vec4<f32> = vec4<f32>(0.);
 	var total: f32 = 0.;
@@ -32,11 +36,11 @@ fn denoise_sampleColor(source: sampler2D, texSize: vec2<f32>, texCoord: vec2<f32
 `;
 
 const fs = /* glsl */ `\
-uniform denoiseUniforms {
+uniform dedenoiseUniforms {
   float strength;
-} noise;
+} denoise;
 
-vec4 denoise_sampleColor(sampler2D source, vec2 texSize, vec2 texCoord) {
+vec4 dedenoise_sampleColor(sampler2D source, vec2 texSize, vec2 texCoord) {
   float adjustedExponent = 3. + 200. * pow(1. - noise.strength, 4.);
 
   vec4 center = texture(source, texCoord);
