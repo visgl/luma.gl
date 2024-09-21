@@ -30,6 +30,7 @@ export class PerformanceTestRunner extends TestRunner {
     this._fps?.timeEnd();
     this._fps?.timeStart();
 
+    // @ts-ignore TODO
     if (this._fps.count > this.testOptions.maxFramesToRender) {
       animationProps.done();
     }

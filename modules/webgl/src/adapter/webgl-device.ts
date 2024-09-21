@@ -101,7 +101,7 @@ export class WebGLDevice extends Device {
   _polyfilled: boolean = false;
 
   /** Instance of Spector.js (if initialized) */
-  spectorJS: Spector;
+  spectorJS: Spector | null;
 
   //
   // Public API

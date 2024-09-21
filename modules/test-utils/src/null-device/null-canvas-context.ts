@@ -21,7 +21,7 @@ export class NullCanvasContext extends CanvasContext {
     return 'NullCanvasContext';
   }
 
-  constructor(device: NullDevice, props: CanvasContextProps) {
+  constructor(device: NullDevice, props?: CanvasContextProps) {
     // Note: Base class creates / looks up the canvas (unless under Node.js)
     super(props);
     this.device = device;

@@ -27,7 +27,7 @@
     "strictBindCallApply": true, // covered by strict
     "strictFunctionTypes": true, // covered by strict
     "useUnknownInCatchVariables": true, // covered by strict
-    "strictNullChecks": false, // covered by strict
+    "strictNullChecks": true, // covered by strict
     // "strictPropertyInitialization": true, // covered by strict, requires strict null checks
 
     // "exactOptionalPropertyTypes": true, - requires strictNullChecks

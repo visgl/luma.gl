@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+// @ts-nocheck This file will be deleted in upcoming refactor
+
 import type {Buffer, Texture, FramebufferProps} from '@luma.gl/core';
 import {Framebuffer, getTypedArrayFromDataType, getDataTypeFromTypedArray} from '@luma.gl/core';
 import {

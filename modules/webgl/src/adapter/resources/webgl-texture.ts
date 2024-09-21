@@ -39,8 +39,9 @@ export class WEBGLTexture extends Texture {
   readonly gl: WebGL2RenderingContext;
   handle: WebGLTexture;
 
-  sampler: WEBGLSampler = undefined; // TODO - currently unused in WebGL. Create dummy sampler?
-  view: WEBGLTextureView = undefined; // TODO - currently unused in WebGL. Create dummy view?
+  // @ts-ignore TODO - currently unused in WebGL. Create dummy sampler?
+  sampler: WEBGLSampler = undefined; 
+  view: WEBGLTextureView;
 
   /**
    * The WebGL target corresponding to the texture type
@@ -307,6 +308,7 @@ export class WEBGLTexture extends Texture {
     }
 
     gl.bindTexture(this.glTarget, this.handle);
+    // @ts-ignore TODO fix types
     return _textureUnit;
   }
 

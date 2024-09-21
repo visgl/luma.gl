@@ -118,7 +118,7 @@ export type CreateGLTFModelOptions = {
 };
 
 export function createGLTFModel(device: Device, options: CreateGLTFModelOptions): ModelNode {
-  const {id, geometry, material, vertexCount, materialOptions, modelOptions} = options;
+  const {id, geometry, material, vertexCount, materialOptions, modelOptions = {}} = options;
 
   const parsedMaterial = parsePBRMaterial(device, material, geometry.attributes, materialOptions);
   log.info(4, 'createGLTFModel defines: ', parsedMaterial.defines)();

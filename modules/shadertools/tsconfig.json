@@ -1,10 +1,14 @@
 {
   "extends": "../../tsconfig.json",
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "test"],
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "test"
+  ],
   "compilerOptions": {
     "strict": true,
-    "strictNullChecks": true,
     "noImplicitAny": true,
     "composite": true,
     "rootDir": "src",
@@ -12,6 +16,8 @@
   },
   "references": [
     // TODO: shadertools is almost independent of API, is it worth breaking the dependency?
-    {"path": "../core"}
+    {
+      "path": "../core"
+    }
   ]
 }

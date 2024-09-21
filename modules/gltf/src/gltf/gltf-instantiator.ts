@@ -22,7 +22,7 @@ export type GLTFInstantiatorOptions = {
 const DEFAULT_OPTIONS: GLTFInstantiatorOptions = {
   modelOptions: {},
   pbrDebug: false,
-  imageBasedLightingEnvironment: null,
+  imageBasedLightingEnvironment: undefined,
   lights: true,
   useTangents: false
 };
@@ -52,6 +52,7 @@ export class GLTFInstantiator {
       return new GLTFAnimator(this.gltf);
     }
 
+    // @ts-ignore TODO - should we create an empty animator that does nothing?
     return null;
   }
 
