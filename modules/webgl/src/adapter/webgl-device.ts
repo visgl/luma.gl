@@ -96,6 +96,10 @@ export class WebGLDevice extends Device {
   /** State used by luma.gl classes: TODO - move to canvasContext*/
   readonly _canvasSizeInfo = {clientWidth: 0, clientHeight: 0, devicePixelRatio: 1};
 
+  /** Store constants */
+  // @ts-ignore TODO fix
+  _constants: (TypedArray | null)[];
+
   /** State used by luma.gl classes - TODO - not used? */
   readonly _extensions: GLExtensions = {};
   _polyfilled: boolean = false;
@@ -418,9 +422,6 @@ export class WebGLDevice extends Device {
       return keys;
     }, {});
   }
-
-  /** Store constants */
-  _constants: (TypedArray | null)[];
 
   /**
    * Set a constant value for a location. Disabled attributes at that location will read from this value

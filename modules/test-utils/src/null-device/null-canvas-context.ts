@@ -14,7 +14,7 @@ export class NullCanvasContext extends CanvasContext {
   readonly device: NullDevice;
   readonly handle = null;
 
-  presentationSize: [number, number];
+  presentationSize: [number, number] = [1, 1];
   private _framebuffer: NullFramebuffer | null = null;
 
   get [Symbol.toStringTag]() {

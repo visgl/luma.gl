@@ -40,7 +40,7 @@ export class WEBGLTexture extends Texture {
   handle: WebGLTexture;
 
   // @ts-ignore TODO - currently unused in WebGL. Create dummy sampler?
-  sampler: WEBGLSampler = undefined; 
+  sampler: WEBGLSampler = undefined;
   view: WEBGLTextureView;
 
   /**

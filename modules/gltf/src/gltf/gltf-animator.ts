@@ -34,7 +34,7 @@ type GLTFAnimationProps = {
 };
 
 class GLTFAnimation {
-  name: string;
+  name: string = 'unnamed';
   startTime: number = 0;
   playing: boolean = true;
   speed: number = 1;
@@ -102,7 +102,11 @@ function accessorToJsArray(accessor) {
     const length = components * accessor.count;
     const {buffer, byteOffset} = accessor.bufferView.data;
 
-    const array: TypedArray = new ArrayType(buffer, byteOffset + (accessor.byteOffset || 0), length);
+    const array: TypedArray = new ArrayType(
+      buffer,
+      byteOffset + (accessor.byteOffset || 0),
+      length
+    );
 
     if (components === 1) {
       accessor._animation = Array.from(array);

@@ -61,7 +61,7 @@ export class WebGPUDevice extends Device {
 
   readonly lost: Promise<{reason: 'destroyed'; message: string}>;
 
-  override canvasContext: WebGPUCanvasContext | null;
+  override canvasContext: WebGPUCanvasContext | null = null;
 
   private _isLost: boolean = false;
   commandEncoder: WebGPUCommandEncoder;

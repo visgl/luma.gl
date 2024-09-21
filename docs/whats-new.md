@@ -2,15 +2,19 @@
 
 *This page contains news for recent luma.gl releases. For older releases (through v8.5) refer to the  [Legacy What's New](/docs/legacy/legacy-upgrade-guide) page.*
 
-## Version 9.2 (In Planning)
+## Version 9.2 (In Development)
 
-Target Date: Q3, 2024
+Target Date: Q4, 2024
 
 Production quality WebGPU backend
 
-## Version 9.1 (In Development)
+**General**
+- TypeScript v5.6, strictNullChecks enabled.
 
-Target Date: Aug 15, 2024
+
+## Version 9.1 (In Beta)
+
+Target Date: Sep 30, 2024
 
 Improvements focused on enhancing WebGPU support.
 

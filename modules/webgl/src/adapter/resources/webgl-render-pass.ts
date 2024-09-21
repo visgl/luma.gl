@@ -17,7 +17,7 @@ export class WEBGLRenderPass extends RenderPass {
   readonly device: WebGLDevice;
 
   /** Parameters that should be applied before each draw call */
-  glParameters: GLParameters;
+  glParameters: GLParameters = {};
 
   constructor(device: WebGLDevice, props: RenderPassProps) {
     super(device, props);
@@ -119,7 +119,7 @@ export class WEBGLRenderPass extends RenderPass {
 
     if ('colorMask' in parameters) {
       glParameters.colorMask = COLOR_CHANNELS.map(channel =>
-        Boolean(channel & parameters.colorMask as number)
+        Boolean(channel & (parameters.colorMask as number))
       );
     }
 

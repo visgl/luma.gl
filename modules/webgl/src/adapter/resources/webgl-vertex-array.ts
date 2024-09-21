@@ -233,9 +233,8 @@ export class WEBGLVertexArray extends VertexArray {
     this.buffer = this.buffer || this.device.createBuffer({byteLength});
 
     // Reallocate and update contents if needed
-    updateNeeded = updateNeeded || 
-      // @ts-ignore TODO fix types
-      !compareConstantArrayValues(constantValue, this.bufferValue);
+    // @ts-ignore TODO fix types
+    updateNeeded ||= !compareConstantArrayValues(constantValue, this.bufferValue);
 
     if (updateNeeded) {
       // Create a typed array that is big enough, and fill it with the required data

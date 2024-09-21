@@ -32,6 +32,8 @@ export class NullTexture extends Texture {
       this.setSampler(props.sampler);
     }
 
+    this.sampler = new NullSampler(this.device, this.props.sampler);
+
     this.view = new NullTextureView(this.device, {
       ...props,
       texture: this,
