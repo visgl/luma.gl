@@ -24,7 +24,7 @@ export class NullDeviceLimits extends DeviceLimits {
   maxVertexBuffers = 16;
   maxVertexAttributes = 16;
   maxVertexBufferArrayStride = 2048;
-  maxInterStageShaderComponents = 60;
+  maxInterStageShaderVariables = 60;
   maxComputeWorkgroupStorageSize = 0;
   maxComputeInvocationsPerWorkgroup = 0;
   maxComputeWorkgroupSizeX = 0;
