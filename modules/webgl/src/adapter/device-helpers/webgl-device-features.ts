@@ -62,7 +62,7 @@ export class WebGLDeviceFeatures extends DeviceFeatures {
     getWebGLExtension(gl, 'EXT_color_buffer_float', extensions);
   }
 
-  *[Symbol.iterator](): IterableIterator<DeviceFeature> {
+  override *[Symbol.iterator](): IterableIterator<DeviceFeature> {
     const features = this.getFeatures();
     for (const feature of features) {
       if (this.has(feature)) {

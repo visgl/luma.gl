@@ -105,7 +105,7 @@ export abstract class DeviceLimits {
   /** max number of VertexBufferArrayStride */
   abstract maxVertexBufferArrayStride: number;
   /** max number of InterStageShaderComponents */
-  abstract maxInterStageShaderComponents: number;
+  abstract maxInterStageShaderVariables: number;
   /** max number of ComputeWorkgroupStorageSize */
   abstract maxComputeWorkgroupStorageSize: number;
   /** max number of ComputeInvocations per Workgroup */

@@ -26,7 +26,7 @@ const DEVICE_LIMITS = {
   maxVertexBuffers: true,
   maxVertexAttributes: true,
   maxVertexBufferArrayStride: true,
-  maxInterStageShaderComponents: true,
+  maxInterStageShaderVariables: true,
   maxComputeWorkgroupStorageSize: true,
   maxComputeInvocationsPerWorkgroup: true,
   maxComputeWorkgroupSizeX: true,
