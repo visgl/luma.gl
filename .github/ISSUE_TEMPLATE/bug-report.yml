@@ -12,8 +12,9 @@ body:
     value: |
       **Warning: In order to prevent drowning in unactionable issues, any issues that are not clearly actionable bugs will be closed immediately.** 
       luma.gl primarily uses [GitHub Discussions](https://github.com/visgl/luma.gl/discussions) 
-      and the OpenJS Foundation slack channels to interact with users.
+      and the [Open Visualization OpenJS Foundation slack channels](https://www.openvisualization.org/#get-involved) to interact with users.
       GitHub Issues are for confirmed bugs only.
+      
       Please start in the Discussions section rather than opening an issue if you are e.g.
       - not yet sure if you are hitting a bug or just using the APIs wrong
       - having issues with your particular build environment that are not yet clearly root caused,
