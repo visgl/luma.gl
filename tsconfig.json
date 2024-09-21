@@ -20,9 +20,9 @@
     // BEGIN TYPE CHECK SETTINGS
     "skipLibCheck": true,
 
-    "strict": false,
+    "strict": true,
 
-    // "noImplicitAny": true, // covered by strict
+    "noImplicitAny": true, // covered by strict
     "noImplicitThis": true, // covered by strict
     "strictBindCallApply": true, // covered by strict
     "strictFunctionTypes": true, // covered by strict
@@ -30,7 +30,7 @@
     "strictNullChecks": true, // covered by strict
     "strictPropertyInitialization": true, // covered by strict, requires strict null checks
 
-    // "exactOptionalPropertyTypes": true, - requires strictNullChecks
+    // "exactOptionalPropertyTypes": true, // requires strictNullChecks
     "noFallthroughCasesInSwitch": true,
     "noImplicitOverride": true,
     "noImplicitReturns": true,

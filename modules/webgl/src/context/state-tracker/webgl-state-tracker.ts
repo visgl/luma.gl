@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+// @ts-nocheck TODO - fix
+
 import {setGLParameters, getGLParameters} from '../parameters/unified-parameter-api';
 import {deepArrayEqual} from './deep-array-equal';
 import {

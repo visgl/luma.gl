@@ -2,8 +2,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+import {TypedArray} from '@luma.gl/core';
+
 /** deeply compare two arrays */
-export function deepArrayEqual(x: any, y: any): boolean {
+export function deepArrayEqual(
+  x: unknown | unknown[] | TypedArray,
+  y: unknown | unknown[] | TypedArray
+): boolean {
   if (x === y) {
     return true;
   }
