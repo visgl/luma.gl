@@ -10,28 +10,33 @@ body:
 - type: markdown
   attributes:
     value: |
-      **Note: In order to prevent drowning in unactionable issues, any issues that are not clearly actionable will be closed immediately.** 
-      In particular, if you are having issues with your particular build environment that are not clearly root caused,
-      please start a conversation in [Discussions](https://github.com/visgl/loaders.gl/discussions) rather than opening issues.
-      Also please start new feature proposals in the Discussions section.
-- type: markdown
-  attributes:
-    value: |
-      "loaders.gl" is maintained by a few individuals but we can only cover so much.
-      We partly rely on the people who report bugs to make PRs for the fixes.
-      If you choose to open PRs, the vis.gl / Open Visualization leads are focused on helping review and land your PRs, and publish new versions with your fixes.
-      Simple fixes will generally land quickly if you are willing to address comments and fix linter issues.
+      **Warning: In order to prevent drowning in unactionable issues, any issues that are not clearly actionable bugs will be closed immediately.** 
+      luma.gl primarily uses [GitHub Discussions](https://github.com/visgl/luma.gl/discussions) 
+      and the [Open Visualization OpenJS Foundation slack channels](https://www.openvisualization.org/#get-involved) to interact with users.
+      GitHub Issues are for confirmed bugs only.
+      
+      Please start in the Discussions section rather than opening an issue if you are e.g.
+      - not yet sure if you are hitting a bug or just using the APIs wrong
+      - having issues with your particular build environment that are not yet clearly root caused,
+      - wanting to discuss a new feature proposal 
 - type: markdown
   attributes:
     value: |
       Tips: Before filing a new bug:
-      Check [existing issues](https://github.com/visgl/loaders.gl/issues)to avoid filing duplicate bugs.
-      You may find answers faster by searching in [the documentation](https://loaders.gl/search).
+      Check [existing issues](https://github.com/visgl/luma.gl/issues)to avoid filing duplicate bugs.
+      You may find answers faster by searching in [the documentation](https://luma.gl/search).
+- type: markdown
+  attributes:
+    value: |
+      "luma.gl" is developed and maintained by a group of individuals but we can only cover so much.
+      We partly rely on the people who report bugs to make PRs for the fixes.
+      If you choose to open PRs, the vis.gl / Open Visualization leads are focused on helping review and land your PRs, and publish new versions with your fixes.
+      Simple fixes will generally land quickly if you are willing to address comments and fix linter issues.
 - type: textarea
   id: flavor
   attributes:
-    label: Loader
-    description: First, we need to understand which loader you are using.
+    label: Module and/or Feature
+    description: First, are you able to pinpoint which luma.gl module or feature is causing the issue?
 - type: textarea
   attributes:
     label: Description
@@ -58,7 +63,7 @@ body:
     label: Environment
     description: |
       Example:
-        - **Framework version**: loaders.gl@4.2.0
+        - **Framework version**: luma.gl@4.2.0
         - **Browser**: Chrome 110.0
         - **Node**: Node 20.0
     value: |
@@ -71,6 +76,6 @@ body:
 - type: textarea
   attributes:
     label: Logs
-    description: Check the browser or node console for any relevant errors or warnings.
+    description: Check the browser console for any relevant errors or warnings.
   validations:
     required: false
