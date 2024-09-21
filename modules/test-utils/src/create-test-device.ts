@@ -40,9 +40,9 @@ const webgpuDevicePromise = makeWebGPUTestDevice();
 export async function getTestDevices(
   types: ('webgl' | 'webgpu' | 'null' | 'unknown')[] = ['webgl', 'webgpu']
 ): Promise<Device[]> {
-  return [await getNullTestDevice(), await getWebGLTestDevice(), await getWebGPUTestDevice()]
-    .filter(Boolean)
-    .filter(device => types.includes(device.type));
+  return (
+    [await getNullTestDevice(), await getWebGLTestDevice(), await getWebGPUTestDevice()] as Device[]
+  ).filter(device => types.includes(device?.type));
 }
 
 /** returns WebGPU device promise, if available */
@@ -73,6 +73,7 @@ async function makeWebGPUTestDevice(): Promise<WebGPUDevice | null> {
     webgpuDeviceResolvers.resolve(webgpuDevice);
   } catch (error) {
     log.error(String(error))();
+    // @ts-ignore TODO
     webgpuDeviceResolvers.resolve(null);
   }
   return webgpuDeviceResolvers.promise;
@@ -93,6 +94,7 @@ async function makeWebGLTestDevice(): Promise<WebGLDevice> {
     webglDeviceResolvers.resolve(webglDevice);
   } catch (error) {
     log.error(String(error))();
+    // @ts-ignore TODO
     webglDeviceResolvers.resolve(null);
   }
   return webglDeviceResolvers.promise;
@@ -113,6 +115,7 @@ async function makeNullTestDevice(): Promise<NullDevice> {
     nullDeviceResolvers.resolve(nullDevice);
   } catch (error) {
     log.error(String(error))();
+    // @ts-ignore TODO
     nullDevicePromise = Promise.resolve(null);
   }
   return nullDeviceResolvers.promise;

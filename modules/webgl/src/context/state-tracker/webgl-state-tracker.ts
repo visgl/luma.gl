@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+// @ts-nocheck TODO - fix
+
 import {setGLParameters, getGLParameters} from '../parameters/unified-parameter-api';
 import {deepArrayEqual} from './deep-array-equal';
 import {
@@ -66,7 +68,9 @@ export class WebGLStateTracker {
    * temporarily modifying, and then restoring state.
    */
   trackState(gl: WebGL2RenderingContext, options?: {copyState?: boolean}): void {
-    this.cache = options.copyState ? getGLParameters(gl) : Object.assign({}, GL_PARAMETER_DEFAULTS);
+    this.cache = options?.copyState
+      ? getGLParameters(gl)
+      : Object.assign({}, GL_PARAMETER_DEFAULTS);
 
     if (this.initialized) {
       throw new Error('WebGLStateTracker');

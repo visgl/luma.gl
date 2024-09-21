@@ -285,7 +285,7 @@ function _copyTextureToTexture(device: WebGLDevice, options: CopyTextureToTextur
   // TODO - support gl.readBuffer (WebGL2 only)
   // const prevBuffer = gl.readBuffer(attachment);
 
-  let texture: WEBGLTexture = null;
+  let texture: WEBGLTexture;
   let textureTarget: GL;
   if (destinationTexture instanceof WEBGLTexture) {
     texture = destinationTexture;

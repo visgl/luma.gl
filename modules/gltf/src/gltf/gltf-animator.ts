@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {log} from '@luma.gl/core';
+import {log, TypedArray} from '@luma.gl/core';
 import {Matrix4, Quaternion} from '@math.gl/core';
 
 // TODO: import from loaders.gl?
@@ -34,7 +34,7 @@ type GLTFAnimationProps = {
 };
 
 class GLTFAnimation {
-  name: string;
+  name: string = 'unnamed';
   startTime: number = 0;
   playing: boolean = true;
   speed: number = 1;
@@ -102,13 +102,17 @@ function accessorToJsArray(accessor) {
     const length = components * accessor.count;
     const {buffer, byteOffset} = accessor.bufferView.data;
 
-    const array = new ArrayType(buffer, byteOffset + (accessor.byteOffset || 0), length);
+    const array: TypedArray = new ArrayType(
+      buffer,
+      byteOffset + (accessor.byteOffset || 0),
+      length
+    );
 
     if (components === 1) {
       accessor._animation = Array.from(array);
     } else {
       // Slice array
-      const slicedArray = [];
+      const slicedArray: number[][] = [];
       for (let i = 0; i < array.length; i += components) {
         slicedArray.push(Array.from(array.slice(i, i + components)));
       }

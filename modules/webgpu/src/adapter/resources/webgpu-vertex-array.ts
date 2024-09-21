@@ -18,8 +18,8 @@ export class WebGPUVertexArray extends VertexArray {
   }
 
   readonly device: WebGPUDevice;
-  /** Vertex Array is a helper class under WebGPU */
-  readonly handle: never;
+  /** Vertex Array is just a helper class under WebGPU */
+  readonly handle: null = null;
 
   // Create a VertexArray
   constructor(device: WebGPUDevice, props: VertexArrayProps) {

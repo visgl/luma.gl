@@ -21,7 +21,7 @@ export class WEBGLSampler extends Sampler {
     super(device, props);
     this.device = device;
     this.parameters = convertSamplerParametersToWebGL(props);
-    this.handle = this.handle || this.device.gl.createSampler();
+    this.handle = props.handle || this.device.gl.createSampler();
     this._setSamplerParameters(this.parameters);
   }
 

@@ -19,7 +19,7 @@ type SpectorProps = {
 
 const LOG_LEVEL = 1;
 
-let spector: Spector = null;
+let spector: Spector | null = null;
 let initialized: boolean = false;
 
 declare global {

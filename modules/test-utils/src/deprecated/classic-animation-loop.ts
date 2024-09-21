@@ -2,6 +2,8 @@
 // SPDX-License
 // Copyright (c) vis.gl contributors
 
+// @ts-nocheck This should be replaced with model animation loop
+
 // TODO - replace createGLContext, instrumentGLContext, resizeGLContext?
 // TODO - remove dependency on framebuffer (bundle size impact)
 import {luma, Device, DeviceProps, log} from '@luma.gl/core';

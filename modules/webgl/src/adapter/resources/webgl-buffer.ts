@@ -21,9 +21,9 @@ export class WEBGLBuffer extends Buffer {
   readonly glIndexType: GL.UNSIGNED_SHORT | GL.UNSIGNED_INT = GL.UNSIGNED_SHORT;
 
   /** Number of bytes allocated on the GPU for this buffer */
-  byteLength: number;
+  byteLength: number = 0;
   /** Number of bytes used */
-  bytesUsed: number;
+  bytesUsed: number = 0;
 
   constructor(device: WebGLDevice, props: BufferProps = {}) {
     super(device, props);

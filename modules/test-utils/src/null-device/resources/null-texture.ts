@@ -28,7 +28,11 @@ export class NullTexture extends Texture {
     // const data = props.data;
     // this.setImageData(props);
 
-    this.setSampler(props.sampler);
+    if (props.sampler) {
+      this.setSampler(props.sampler);
+    }
+
+    this.sampler = new NullSampler(this.device, this.props.sampler);
 
     this.view = new NullTextureView(this.device, {
       ...props,

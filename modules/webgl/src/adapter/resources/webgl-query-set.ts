@@ -27,7 +27,11 @@ export class WEBGLQuerySet extends QuerySet {
       throw new Error('WebGL QuerySet can only have one value');
     }
 
-    this.handle = this.device.gl.createQuery();
+    const handle = this.device.gl.createQuery();
+    if (!handle) {
+      throw new Error('WebGL query not supported');
+    }
+    this.handle = handle;
     Object.seal(this);
   }
 

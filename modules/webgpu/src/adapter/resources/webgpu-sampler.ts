@@ -35,7 +35,7 @@ export class WebGPUSampler extends Sampler {
       samplerDescriptor.mipmapFilter = props.mipmapFilter;
     }
 
-    this.handle = this.handle || this.device.handle.createSampler(samplerDescriptor);
+    this.handle = props.handle || this.device.handle.createSampler(samplerDescriptor);
     this.handle.label = this.props.id;
   }
 

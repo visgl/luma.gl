@@ -211,7 +211,7 @@ function addTexture(
   device: Device,
   gltfTexture,
   uniformName: string,
-  define = null,
+  define: string,
   parsedMaterial: ParsedPBRMaterial
 ): void {
   const parameters = gltfTexture?.texture?.sampler?.parameters || {};

@@ -1071,8 +1071,11 @@ export abstract class Spector {
   }
   protected static tryGetContextFromHelperField: unknown;
   protected static tryGetContextFromCanvas: unknown;
+  // @ts-ignore TODO
   readonly onCaptureStarted: IEvent<any>;
+  // @ts-ignore TODO
   readonly onCapture: IEvent<ICapture>;
+  // @ts-ignore TODO
   readonly onError: IEvent<string>;
   protected readonly logger;
   protected readonly timeSpy;

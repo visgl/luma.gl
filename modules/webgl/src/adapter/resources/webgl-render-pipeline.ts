@@ -86,7 +86,9 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     log.timeEnd(3, `RenderPipeline ${this.id} - shaderLayout introspection`)();
 
     // Merge provided layout with introspected layout
-    this.shaderLayout = mergeShaderLayout(this.introspectedLayout, props.shaderLayout);
+    this.shaderLayout = props.shaderLayout
+      ? mergeShaderLayout(this.introspectedLayout, props.shaderLayout)
+      : this.introspectedLayout;
   }
 
   override destroy(): void {
@@ -97,6 +99,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
       this.destroyed = true;
       // @ts-expect-error
       this.handle.destroyed = true;
+      // @ts-ignore
       this.handle = null;
     }
   }

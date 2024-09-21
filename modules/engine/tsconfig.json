@@ -3,9 +3,6 @@
   "include": ["src/**/*"],
   "exclude": ["node_modules"],
   "compilerOptions": {
-    "strict": true,
-    "strictNullChecks": true,
-    "noImplicitAny": true,
     "composite": true,
     "rootDir": "src",
     "outDir": "dist"

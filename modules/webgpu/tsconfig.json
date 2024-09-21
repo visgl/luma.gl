@@ -5,7 +5,6 @@
   "compilerOptions": {
     "typeRoots": ["../../node_modules/@webgpu/types"],
     "noImplicitAny": true,
-    "strictNullChecks": true,
     "composite": true,
     "rootDir": "src",
     "outDir": "dist"
