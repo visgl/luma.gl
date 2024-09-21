@@ -1,0 +1,76 @@
+name: Bug Report
+description: Something does not work as expected
+title: "[Bug]"
+labels: bug
+body:
+- type: markdown
+  attributes:
+    value: |
+      Thank you for taking the time to report a bug!
+- type: markdown
+  attributes:
+    value: |
+      **Note: In order to prevent drowning in unactionable issues, any issues that are not clearly actionable will be closed immediately.** 
+      In particular, if you are having issues with your particular build environment that are not clearly root caused,
+      please start a conversation in [Discussions](https://github.com/visgl/loaders.gl/discussions) rather than opening issues.
+      Also please start new feature proposals in the Discussions section.
+- type: markdown
+  attributes:
+    value: |
+      "loaders.gl" is maintained by a few individuals but we can only cover so much.
+      We partly rely on the people who report bugs to make PRs for the fixes.
+      If you choose to open PRs, the vis.gl / Open Visualization leads are focused on helping review and land your PRs, and publish new versions with your fixes.
+      Simple fixes will generally land quickly if you are willing to address comments and fix linter issues.
+- type: markdown
+  attributes:
+    value: |
+      Tips: Before filing a new bug:
+      Check [existing issues](https://github.com/visgl/loaders.gl/issues)to avoid filing duplicate bugs.
+      You may find answers faster by searching in [the documentation](https://loaders.gl/search).
+- type: textarea
+  id: flavor
+  attributes:
+    label: Loader
+    description: First, we need to understand which loader you are using.
+- type: textarea
+  attributes:
+    label: Description
+    description: What you're experiencing.
+  validations:
+    required: true
+- type: textarea
+  attributes:
+    label: Expected Behavior
+    description: What you expect to see.
+  validations:
+    required: false
+- type: textarea
+  attributes:
+    label: Steps to Reproduce
+    description: |
+      Providing the following could help us resolve this issue faster:
+        - A Codepen that reproduces the behavior. A good starting point is the "edit in CodePen" links in the layer documentations.
+        - A sample of your dataset
+  validations:
+    required: true
+- type: textarea
+  attributes:
+    label: Environment
+    description: |
+      Example:
+        - **Framework version**: loaders.gl@4.2.0
+        - **Browser**: Chrome 110.0
+        - **Node**: Node 20.0
+    value: |
+        - Framework version:
+        - Browser:
+        - Node:
+        - OS:
+  validations:
+    required: true
+- type: textarea
+  attributes:
+    label: Logs
+    description: Check the browser or node console for any relevant errors or warnings.
+  validations:
+    required: false
