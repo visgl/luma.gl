@@ -51,7 +51,7 @@ export function withGLParameters(
 // Helpers
 
 // Returns true if given object is empty, false otherwise.
-function isObjectEmpty(object) {
+function isObjectEmpty(object: unknown): boolean {
   // @ts-ignore - dummy key variable
   for (const key in object) {
     return false;

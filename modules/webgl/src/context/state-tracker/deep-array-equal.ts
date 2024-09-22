@@ -12,11 +12,7 @@ export function deepArrayEqual(
   if (x === y) {
     return true;
   }
-  const isArrayX = Array.isArray(x) || ArrayBuffer.isView(x);
-  const isArrayY = Array.isArray(y) || ArrayBuffer.isView(y);
-  // @ts-expect-error TODO fix
-  if (isArrayX && isArrayY && x.length === y.length) {
-    // @ts-expect-error TODO fix
+  if (isArray(x) && isArray(y) && x.length === y.length) {
     for (let i = 0; i < x.length; ++i) {
       if (x[i] !== y[i]) {
         return false;
@@ -25,4 +21,8 @@ export function deepArrayEqual(
     return true;
   }
   return false;
+}
+
+function isArray(x: unknown): x is unknown[] {
+  return Array.isArray(x) || ArrayBuffer.isView(x);
 }

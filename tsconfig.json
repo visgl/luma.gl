@@ -21,7 +21,6 @@
     "skipLibCheck": true,
 
     "strict": true,
-
     "noImplicitAny": true, // covered by strict
     "noImplicitThis": true, // covered by strict
     "strictBindCallApply": true, // covered by strict

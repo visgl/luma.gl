@@ -4,7 +4,6 @@
   "exclude": ["node_modules"],
   "compilerOptions": {
     "typeRoots": ["../../node_modules/@webgpu/types"],
-    "noImplicitAny": true,
     "composite": true,
     "rootDir": "src",
     "outDir": "dist"

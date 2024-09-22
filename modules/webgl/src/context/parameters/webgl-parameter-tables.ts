@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+// @ts-nocheck TODO fix
+
 // Tables describing WebGL parameters
 import {GL, GLParameters} from '@luma.gl/constants';
 

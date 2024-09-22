@@ -126,7 +126,7 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
   // Calculate managedResources
   // TODO: Implement resource management logic that will
   // not deallocate resources/textures/buffers that are shared
-  const managedResources = [];
+  const managedResources: any[] = [];
   // managedResources.push(...parsedMaterial.generatedTextures);
   // managedResources.push(...Object.values(attributes).map((attribute) => attribute.buffer));
 

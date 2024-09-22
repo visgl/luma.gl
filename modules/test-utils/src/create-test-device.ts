@@ -26,6 +26,7 @@ const withResolvers = <T>(): {
     resolve = _resolve;
     reject = _reject;
   });
+  // @ts-ignore Assigned in callback.
   return {promise, resolve, reject};
 };
 

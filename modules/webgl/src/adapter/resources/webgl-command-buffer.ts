@@ -413,7 +413,7 @@ function getFramebuffer(source: Texture | Framebuffer): {
  * Returns number of components in a specific readPixels WebGL format
  * @todo use shadertypes utils instead?
  */
-export function glFormatToComponents(format): 1 | 2 | 3 | 4 {
+export function glFormatToComponents(format: GL): 1 | 2 | 3 | 4 {
   switch (format) {
     case GL.ALPHA:
     case GL.R32F:

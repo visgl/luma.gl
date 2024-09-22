@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+// @ts-nocheck TODO - fix types
+
 import {Device, Buffer, PrimitiveTopology} from '@luma.gl/core';
 import {Geometry, GeometryAttribute, GroupNode, ModelNode, ModelProps} from '@luma.gl/engine';
 import {Matrix4} from '@math.gl/core';
