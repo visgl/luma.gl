@@ -89,6 +89,38 @@ export class Luma {
     globalThis.luma = this;
   }
 
+  /** Creates a device. Asynchronously. */
+  async createDevice(props_: CreateDeviceProps = {}): Promise<Device> {
+    const props: Required<CreateDeviceProps> = {...Luma.defaultProps, ...props_};
+
+    const adapter = this.selectAdapter(props.type, props.adapters);
+    if (!adapter) {
+      throw new Error(ERROR_MESSAGE);
+    }
+
+    // Wait for page to load so that CanvasContext's can access the DOM.
+    if (props.waitForPageLoad) {
+      await adapter.pageLoaded;
+    }
+
+    return await adapter.create(props);
+  }
+
+  /**
+   * Attach to an existing GPU API handle (WebGL2RenderingContext or GPUDevice).
+   * @param handle Externally created WebGL context or WebGPU device
+   */
+  async attachDevice(handle: unknown, props: AttachDeviceProps): Promise<Device> {
+    const type = this._getTypeFromHandle(handle, props.adapters);
+
+    const adapter = type && this.selectAdapter(type, props.adapters);
+    if (!adapter) {
+      throw new Error(ERROR_MESSAGE);
+    }
+
+    return await adapter?.attach?.(handle, props);
+  }
+
   /**
    * Global adapter registration.
    * @deprecated Use props.adapters instead
@@ -129,38 +161,6 @@ export class Luma {
 
     const adapterMap = this._getAdapterMap(adapters);
     return (selectedType && adapterMap.get(selectedType)) || null;
-  }
-
-  /** Creates a device. Asynchronously. */
-  async createDevice(props_: CreateDeviceProps = {}): Promise<Device> {
-    const props: Required<CreateDeviceProps> = {...Luma.defaultProps, ...props_};
-
-    const adapter = this.selectAdapter(props.type, props.adapters);
-    if (!adapter) {
-      throw new Error(ERROR_MESSAGE);
-    }
-
-    // Wait for page to load so that CanvasContext's can access the DOM.
-    if (props.waitForPageLoad) {
-      await adapter.pageLoaded;
-    }
-
-    return await adapter.create(props);
-  }
-
-  /**
-   * Attach to an existing GPU API handle (WebGL2RenderingContext or GPUDevice).
-   * @param handle Externally created WebGL context or WebGPU device
-   */
-  async attachDevice(handle: unknown, props: AttachDeviceProps): Promise<Device> {
-    const type = this._getTypeFromHandle(handle, props.adapters);
-
-    const adapter = type && this.selectAdapter(type, props.adapters);
-    if (!adapter) {
-      throw new Error(ERROR_MESSAGE);
-    }
-
-    return await adapter?.attach?.(handle, props);
   }
 
   /**

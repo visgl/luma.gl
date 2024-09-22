@@ -7,7 +7,7 @@ import {nullAdapter} from '@luma.gl/test-utils';
 import {luma} from '@luma.gl/core';
 
 test('luma#attachDevice', async t => {
-  const device = await luma.attachDevice({handle: null, adapters: [nullAdapter]});
+  const device = await luma.attachDevice(null, {adapters: [nullAdapter]});
   t.equal(device.type, 'null', 'info.vendor ok');
   t.equal(device.info.vendor, 'no one', 'info.vendor ok');
   t.equal(device.info.renderer, 'none', 'info.renderer ok');
@@ -23,7 +23,7 @@ test('luma#createDevice', async t => {
 });
 
 test('luma#registerAdapters', async t => {
-  luma.registerAdapters([NullDevice]);
+  luma.registerAdapters([nullAdapter]);
   const device = await luma.createDevice({type: 'null'});
   t.equal(device.type, 'null', 'info.vendor ok');
   t.equal(device.info.vendor, 'no one', 'info.vendor ok');
@@ -37,12 +37,12 @@ test('luma#getSupportedAdapters', async t => {
   t.ok(types.includes('null'), 'null device is supported');
 });
 
-test('luma#getBestAvailableDeviceType', async t => {
+test('luma#getBestAvailableAdapterType', async t => {
   luma.registerAdapters([nullAdapter]);
   // Somewhat dummy test, as tests rely on test utils registering webgl and webgpu devices
   // But they might not be supported on all devices.
-  const types = luma.getBestAvailableAdapter();
-  t.ok(typeof types === 'string', 'does not crash');
+  const type = luma.getBestAvailableAdapterType();
+  t.ok(typeof type === 'string', 'does not crash');
 });
 
 // To suppress @typescript-eslint/unbound-method
