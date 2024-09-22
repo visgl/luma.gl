@@ -1,3 +1,9 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
+// @ts-nocheck TODO
+
 import type {Device, Texture, Parameters} from '@luma.gl/core';
 import {log} from '@luma.gl/core';
 import {PBREnvironment} from './pbr-environment';
@@ -46,7 +52,7 @@ enum GLEnum {
  */
 export function parsePBRMaterial(
   device: Device,
-  material,
+  material: any,
   attributes: Record<string, any>,
   options: ParsePBRMaterialOptions
 ): ParsedPBRMaterial {

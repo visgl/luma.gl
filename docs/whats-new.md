@@ -9,7 +9,33 @@ Target Date: Q4, 2024
 Production quality WebGPU backend
 
 **General**
-- TypeScript v5.6, strictNullChecks enabled.
+- TypeScript v5.6, all `"strict"` TypeScript options are now applied to all luma.gl modules.
+- Website tooling upgrades
+- All examples run on WebGPU
+- Documentation improvements (TBD)
+- Improved GitHub issue templates
+
+**@luma.gl/core**
+
+- Shader type APIs have been improved.
+- `CommandEncoder`/`CommandBuffer` API improvements
+- `Texture` class refactors complete.
+
+**@luma.gl/engine**
+
+- `AsyncTexture` now supports mipmap generation for WebGPU textures
+
+**@luma.gl/effects**
+
+- All postprocessing effects ported to WGSL (in progress)
+
+**@luma.gl/shadertools**
+
+- All shader modules ported to WGSL (in progress)
+
+**@luma.gl/gltf**
+
+- glTF and PRB now supported on WebGPU (in progress)
 
 
 ## Version 9.1 (In Beta)

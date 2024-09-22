@@ -112,7 +112,7 @@ function getDebugContext(
 
 // DEBUG TRACING
 
-function getFunctionString(functionName: string, functionArgs): string {
+function getFunctionString(functionName: string, functionArgs: unknown[]): string {
   // Cover bug in webgl-debug-tools
   functionArgs = Array.from(functionArgs).map(arg => (arg === undefined ? 'undefined' : arg));
   let args = globalThis.WebGLDebugUtils.glFunctionArgsToString(functionName, functionArgs);
@@ -120,7 +120,12 @@ function getFunctionString(functionName: string, functionArgs): string {
   return `gl.${functionName}(${args})`;
 }
 
-function onGLError(props: DebugContextProps, err, functionName: string, args: any[]): void {
+function onGLError(
+  props: DebugContextProps,
+  err: number,
+  functionName: string,
+  args: unknown[]
+): void {
   // Cover bug in webgl-debug-tools
   args = Array.from(args).map(arg => (arg === undefined ? 'undefined' : arg));
   const errorMessage = globalThis.WebGLDebugUtils.glEnumToString(err);
@@ -135,7 +140,7 @@ function onGLError(props: DebugContextProps, err, functionName: string, args: an
 function onValidateGLFunc(
   props: DebugContextProps,
   functionName: string,
-  functionArgs: any[]
+  functionArgs: unknown[]
 ): void {
   let functionString: string = '';
   if (log.level >= 1) {

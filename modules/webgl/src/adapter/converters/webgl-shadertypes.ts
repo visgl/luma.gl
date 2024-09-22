@@ -19,6 +19,7 @@ export function convertDataTypeToGLDataType(normalizedType: NormalizedDataType):
 export function convertShaderVariableTypeToGLDataType(
   normalizedType: VariableShaderType
 ): GLDataType {
+  // @ts-ignore TODO
   return NORMALIZED_SHADER_TYPE_TO_WEBGL[normalizedType];
 }
 
@@ -31,6 +32,7 @@ export function convertGLUniformTypeToShaderVariableType(
 
 /** Check if a WebGL "uniform:" is a texture binding */
 export function isGLSamplerType(type: GLUniformType | GLSamplerType): type is GLSamplerType {
+  // @ts-ignore TODO
   return Boolean(WEBGL_SAMPLER_TO_TEXTURE_BINDINGS[type]);
 }
 

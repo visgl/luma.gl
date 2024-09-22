@@ -24,7 +24,7 @@ export class WEBGLRenderPass extends RenderPass {
     this.device = device;
 
     // If no viewport is provided, apply reasonably defaults
-    let viewport;
+    let viewport: NumberArray4 | undefined;
     if (!props?.parameters?.viewport) {
       if (props?.framebuffer) {
         // Set the viewport to the size of the framebuffer
@@ -114,7 +114,7 @@ export class WEBGLRenderPass extends RenderPass {
       console.warn('RenderPassParameters.stencilReference not yet implemented in WebGL');
       // parameters.stencilFunc = [func, ref, mask];
       // Does this work?
-      parameters[GL.STENCIL_REF] = parameters.stencilReference;
+      glParameters[GL.STENCIL_REF] = parameters.stencilReference;
     }
 
     if ('colorMask' in parameters) {

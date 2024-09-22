@@ -1,4 +1,6 @@
-// luma.gl, MIT license
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
 
 import {Device, SamplerProps} from '@luma.gl/core';
 import {AsyncTexture} from '@luma.gl/engine';
@@ -85,6 +87,7 @@ function makeCube(
 ): AsyncTexture {
   const data = {};
   FACES.forEach(face => {
+    // @ts-ignore TODO
     data[String(face)] = getTextureForFace(face);
   });
   return new AsyncTexture(device, {

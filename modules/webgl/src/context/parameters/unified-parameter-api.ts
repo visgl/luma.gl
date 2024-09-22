@@ -32,16 +32,19 @@ export function setGLParameters(gl: WebGL2RenderingContext, parameters: GLParame
 
   for (const key in parameters) {
     const glConstant = Number(key);
+    // @ts-ignore TODO
     const setter = GL_PARAMETER_SETTERS[key];
     if (setter) {
       // Composite setters should only be called once, so save them
       if (typeof setter === 'string') {
+        // @ts-ignore TODO
         compositeSetters[setter] = true;
       } else {
         // if (gl[glConstant] !== undefined) {
         // TODO - added above check since this is being called on WebGL2 parameters in WebGL1...
         // TODO - deep equal on values? only call setter if value has changed?
         // NOTE - the setter will automatically update this.state
+        // @ts-ignore TODO
         setter(gl, parameters[key], glConstant);
       }
     }
@@ -59,6 +62,7 @@ export function setGLParameters(gl: WebGL2RenderingContext, parameters: GLParame
   if (cache) {
     for (const key in compositeSetters) {
       // TODO - avoid calling composite setters if values have not changed.
+      // @ts-ignore TODO
       const compositeSetter = GL_COMPOSITE_PARAMETER_SETTERS[key];
       // Note - if `trackContextState` has been called,
       // the setter will automatically update this.state.cache
@@ -92,15 +96,18 @@ export function getGLParameters(
   if (typeof parameters === 'number') {
     // single GL enum
     const key = parameters;
+    // @ts-ignore TODO
     const getter = GL_PARAMETER_GETTERS[key];
     return getter ? getter(gl, key) : gl.getParameter(key);
   }
 
   const parameterKeys = Array.isArray(parameters) ? parameters : Object.keys(parameters);
 
-  const state = {};
+  const state: GLParameters = {};
   for (const key of parameterKeys) {
+    // @ts-ignore TODO
     const getter = GL_PARAMETER_GETTERS[key];
+    // @ts-ignore TODO
     state[key] = getter ? getter(gl, Number(key)) : gl.getParameter(Number(key));
   }
   return state;
@@ -119,7 +126,7 @@ export function resetGLParameters(gl: WebGL2RenderingContext): void {
 // Helpers
 
 // Returns true if given object is empty, false otherwise.
-function isObjectEmpty(object) {
+function isObjectEmpty(object: Record<string, unknown>): boolean {
   // @ts-ignore dummy key variable
   for (const key in object) {
     return false;
