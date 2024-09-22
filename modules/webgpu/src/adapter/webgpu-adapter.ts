@@ -18,7 +18,7 @@ export class WebGPUAdapter extends Adapter {
   }
 
   isDeviceHandle(handle: unknown): boolean {
-    if (typeof GPUDevice !=='undefined' && handle instanceof GPUDevice) {
+    if (typeof GPUDevice !== 'undefined' && handle instanceof GPUDevice) {
       return true;
     }
 
@@ -79,11 +79,6 @@ export class WebGPUAdapter extends Adapter {
     });
 
     log.probe(1, 'GPUDevice available')();
-
-    if (typeof props.canvas === 'string') {
-      await this.pageLoaded;
-      log.probe(1, 'DOM is loaded')();
-    }
 
     const {WebGPUDevice} = await import('./webgpu-device');
 

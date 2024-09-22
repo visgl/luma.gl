@@ -20,12 +20,11 @@ export class WebGLAdapter extends Adapter {
     Device.defaultProps = {...Device.defaultProps, ...DEFAULT_SPECTOR_PROPS};
   }
 
-    /** Force any created WebGL contexts to be WebGL2 contexts, polyfilled with WebGL1 extensions */
-    enforceWebGL2(enable: boolean): void {
-      enforceWebGL2(enable);
-    }
-  
-  
+  /** Force any created WebGL contexts to be WebGL2 contexts, polyfilled with WebGL1 extensions */
+  enforceWebGL2(enable: boolean): void {
+    enforceWebGL2(enable);
+  }
+
   /** Check if WebGL 2 is available */
   isSupported(): boolean {
     return typeof WebGL2RenderingContext !== 'undefined';
@@ -43,7 +42,6 @@ export class WebGLAdapter extends Adapter {
 
     return false;
   }
-
 
   /**
    * Get a device instance from a GL context

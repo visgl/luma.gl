@@ -18,7 +18,7 @@ export abstract class Adapter {
   /** Create a new device for this backend */
   abstract create(props: DeviceProps): Promise<Device>;
   /** Attach a Device to a valid handle for this backend (GPUDevice, WebGL2RenderingContext etc) */
-  abstract attach?(handle: unknown): Promise<Device>;
+  abstract attach(handle: unknown, props: DeviceProps): Promise<Device>;
 
   /**
    * Page load promise
