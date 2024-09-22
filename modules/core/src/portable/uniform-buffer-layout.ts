@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {PrimitiveDataType} from '../shadertypes/data-types';
-import type {VariableShaderType} from '../shadertypes/shader-types';
+import type {UniformShaderType} from '../shadertypes/shader-types';
 import {alignTo} from '../shadertypes/utils/decode-data-types';
 import {getVariableShaderTypeInfo} from '../shadertypes/utils/decode-shader-types';
 
@@ -29,7 +29,7 @@ export class UniformBufferLayout {
   readonly byteLength: number;
 
   /** Create a new UniformBufferLayout given a map of attributes. */
-  constructor(uniformTypes: Record<string, VariableShaderType>) {
+  constructor(uniformTypes: Record<string, UniformShaderType>) {
     /** number of 4 byte slots taken */
     let size: number = 0;
 

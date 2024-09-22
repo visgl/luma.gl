@@ -35,7 +35,7 @@ export function alignTo(size: number, count: number): number {
   }
 }
 
-/** Returns the VariableShaderType that corresponds to a typed array */
+/** Returns the UniformShaderType that corresponds to a typed array */
 export function getDataTypeFromTypedArray(
   arrayOrType: TypedArray | TypedArrayConstructor
 ): SignedDataType {

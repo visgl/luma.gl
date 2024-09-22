@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>webgpu-utils tests</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="mocha.css">
+  </head>
+  <body>
+    <div id="mocha"></div>
+    <script>
+      console.log('userAgent:', navigator.userAgent);
+      function makePromise() {
+        const info = {};
+        const promise = new Promise((resolve, reject) => {
+          Object.assign(info, {resolve, reject});
+        });
+        info.promise = promise;
+        return info;
+      }
+
+      window.testsPromiseInfo = makePromise();
+    </script>
+    <!--<script src="../node_modules/chai/chai.js"></script>-->
+    <script src="mocha.js"></script>
+    <script>
+    /* global mocha */
+    async function main() {
+      mocha.setup('bdd');
+      mocha.fullTrace();
+      mocha.timeout(10000);
+      const query = Object.fromEntries(new URLSearchParams(window.location.search).entries());
+      if (query.timeout !== undefined) {
+        mocha.timeout(query.timeout);
+      }
+      //if (typeof chai === 'undefined') {
+      //  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/chai/4.2.0/chai.min.js');
+      //}
+      loadScript('index.js', 'module');
+    }
+
+    function loadScript(url, type = 'text/javascript') {
+      return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.onload = resolve;
+        script.onerror = reject;
+        script.type = type;
+        script.src = url;
+        document.head.appendChild(script);
+      });
+    }
+
+    main();
+    </script>
+  </body>
+</html>
