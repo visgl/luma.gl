@@ -15,9 +15,12 @@ export class NullAdapter extends Adapter {
     NullDevice.adapter = this;
   }
 
-  /** Check if WebGPU is available */
   isSupported(): boolean {
     return true;
+  }
+
+  isDeviceHandle(handle: any): boolean {
+    return handle === null;
   }
 
   async attach(handle: null): Promise<NullDevice> {

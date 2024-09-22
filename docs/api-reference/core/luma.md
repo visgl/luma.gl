@@ -140,7 +140,7 @@ Note: A specific device type is available and supported if both of the following
 ### `luma.attachDevice()`
 
 ```ts
-luma.attachDevice({handle: WebGL2RenderingContext | GPUDevice, adapters, ...deviceProps}: AttachDeviceProps);
+luma.attachDevice(handle: WebGL2RenderingContext | GPUDevice | null, {adapters, ...deviceProps}: AttachDeviceProps);
 ```
 
 A luma.gl Device can be attached to an externally created `WebGL2RenderingContext` or `GPUDevice`.
