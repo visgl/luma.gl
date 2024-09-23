@@ -1,5 +1,3 @@
-import './register-devices';
-
 // TEST RUNNERS
 export type {TestRunnerTestCase} from './test-runner';
 export type {SnapshotTestRunnerTestCase} from './snapshot-test-runner';

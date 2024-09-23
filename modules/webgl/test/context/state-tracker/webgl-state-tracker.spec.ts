@@ -14,7 +14,8 @@ import {
   getGLParameters,
   setGLParameters,
   resetGLParameters,
-  WebGLStateTracker
+  WebGLStateTracker,
+  webgl2Adapter
 } from '@luma.gl/webgl';
 
 import {stringifyTypedArray} from './context-state.spec';
@@ -25,6 +26,7 @@ import {ENUM_STYLE_SETTINGS_SET1, ENUM_STYLE_SETTINGS_SET2} from './data/sample-
 // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
 const devicePromise = luma.createDevice({
   type: 'webgl',
+  adapters: [webgl2Adapter],
   createCanvasContext: true
 }) as Promise<WebGLDevice>;
 

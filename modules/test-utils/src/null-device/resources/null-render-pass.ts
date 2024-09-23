@@ -15,9 +15,9 @@ export class NullRenderPass extends RenderPass {
 
   end(): void {}
 
-  pushDebugGroup(groupLabel: string): void {}
-  popDebugGroup(): void {}
-  insertDebugMarker(markerLabel: string): void {}
+  override pushDebugGroup(groupLabel: string): void {}
+  override popDebugGroup(): void {}
+  override insertDebugMarker(markerLabel: string): void {}
 
   setParameters(parameters: RenderPassParameters = {}): void {}
 
