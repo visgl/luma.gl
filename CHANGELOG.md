@@ -4,6 +4,10 @@
 
 Theme: Improved WebGPU support
 
+### v9.1.0-beta.6
+
+- fix(engine): Clipspace (#2274)
+
 ### v9.1.0-beta.5
 
 - chore(core): Protect OffscreenCanvas reference in Node (#2266)
