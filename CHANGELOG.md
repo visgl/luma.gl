@@ -4,6 +4,10 @@
 
 Theme: Improved WebGPU support
 
+### v9.1.0-beta.7
+
+- feat(test-utils): Avoid registering devices (#2275)
+
 ### v9.1.0-beta.6
 
 - fix(engine): Clipspace (#2274)
