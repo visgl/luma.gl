@@ -15,8 +15,8 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 v9.2 brings full WebGPU support. Some additional deprecations and breaking changes have been necessary, but apart from the `Texture` -> `AsyncTexture` split, impact on most applications should be minimal. 
 
 **Major change: Texture and AsyncTextures**
+- `device.createTexture()` no longer accepts `props.data`: Use `AsyncTexture` or call `texture.setImageData()`
 - `device.createTexture()` no longer accepts `props.mipmaps`: Use `AsyncTexture` or call texture.generateMipmapsWebGL()`
-- `device.createTexture()` no longer accepts `props.mipmaps`: Use `AsyncTexture` or call `texture.generateMipmapsWebGL()`
 
 **Major change: Removal of WebGL uniform support**
 - `core`: `Renderpipeline.setUniformsWebGL()` dropped, use uniform buffer bindings
@@ -24,10 +24,7 @@ v9.2 brings full WebGPU support. Some additional deprecations and breaking chang
 - `shadertools`: WebGL1 shader modules have been removed, use the new modules uniform buffer-based counterparts.
 
 **Minor changes**
-- The shader type system has been refactored, some shader type names have changed. These are typically not used directly by applications.
-
-**Minor changes**
-- The shader type system has been refactored, some shader type names have changed. These are typically not used directly by applications.
+- `core`: The shader type system has been refactored, some shader type names have changed. These are typically not used directly by applications.
 
 ## Upgrading to v9.1
 

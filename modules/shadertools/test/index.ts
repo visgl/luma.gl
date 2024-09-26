@@ -41,22 +41,11 @@ import './modules/modules.spec';
 import './modules/utils/random.spec';
 
 // Lighting
-import './modules/lighting/dirlight.spec';
 // import './modules/lights/lights.spec';
+import './modules/lighting/dirlight.spec';
 import './modules/lighting/phong-material.spec';
 import './modules/lighting/gouraud-material.spec';
+// import './modules/lighting/pbr-material.spec';
 
 // Engine
 import './modules/engine/picking.spec';
-
-// Tests for V8 shader modules
-
-// Math modules
-// TODO - these are breaking in test-browser but not in test-headless??
-// import './modules-webgl1/fp64/fp64-arithmetic-transform.spec';
-
-// Light and picking
-// import './modules-webgl1/dirlight/dirlight.spec';
-import './modules-webgl1/lights/lights.spec';
-// import './modules-webgl1/phong-lighting/phong-lighting.spec';
-// import './modules-webgl1/picking/picking.spec';
