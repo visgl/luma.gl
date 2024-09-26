@@ -5,7 +5,13 @@
 import test from 'tape-promise/tape';
 import {Device} from '@luma.gl/core';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
-import {assembleGLSLShaderPair, picking, fp64, pbrMaterial, PlatformInfo} from '@luma.gl/shadertools';
+import {
+  assembleGLSLShaderPair,
+  picking,
+  fp64,
+  pbrMaterial,
+  PlatformInfo
+} from '@luma.gl/shadertools';
 import type {WebGLDevice} from '@luma.gl/webgl';
 import {isBrowser} from '@probe.gl/env';
 
