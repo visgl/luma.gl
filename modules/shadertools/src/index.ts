@@ -89,20 +89,3 @@ export type {
 export type {PBRProjectionProps} from './modules/lighting/pbr-material/pbr-projection';
 
 export {pbrMaterial} from './modules/lighting/pbr-material/pbr-material';
-
-// DEPRECATED - v8 legacy shader modules (non-uniform buffer)
-
-// math libraries
-// export {fp64, fp64arithmetic} from './modules-webgl1/math/fp64/fp64';
-
-// projection and lighting
-export {geometry as geometry1} from './modules-webgl1/geometry/geometry';
-export {project as project1} from './modules-webgl1/project/project';
-
-export {lights as lights1} from './modules-webgl1/lighting/lights/lights';
-export {dirlight as dirlight1} from './modules-webgl1/lighting/dirlight/dirlight';
-export {
-  gouraudLighting,
-  phongLighting
-} from './modules-webgl1/lighting/phong-lighting/phong-lighting';
-export {pbr} from './modules-webgl1/lighting/pbr/pbr';
