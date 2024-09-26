@@ -5,7 +5,7 @@
 import test from 'tape-promise/tape';
 import {Device} from '@luma.gl/core';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
-import {assembleGLSLShaderPair, picking, fp64, pbr, PlatformInfo} from '@luma.gl/shadertools';
+import {assembleGLSLShaderPair, picking, fp64, pbrMaterial, PlatformInfo} from '@luma.gl/shadertools';
 import type {WebGLDevice} from '@luma.gl/webgl';
 import {isBrowser} from '@probe.gl/env';
 
@@ -609,7 +609,7 @@ test.skip('assembleGLSLShaderPair#transpilation', async t => {
     platformInfo: getInfo(webglDevice),
     vs: VS_GLSL_300_GLTF,
     fs: FS_GLSL_300_GLTF,
-    modules: [pbr]
+    modules: [pbrMaterial]
   });
 
   t.ok(
