@@ -31,6 +31,7 @@ import './lib/shader-assembler.spec';
 
 // Data utilities
 import './modules/math/fp16-utils.spec';
+import './modules/math/fp64-arithmetic-transform.spec';
 import './modules/math/fp64-utils.spec';
 
 // General modules tests
@@ -52,7 +53,7 @@ import './modules/engine/picking.spec';
 
 // Math modules
 // TODO - these are breaking in test-browser but not in test-headless??
-import './modules-webgl1/fp64/fp64-arithmetic-transform.spec';
+// import './modules-webgl1/fp64/fp64-arithmetic-transform.spec';
 
 // Light and picking
 // import './modules-webgl1/dirlight/dirlight.spec';
