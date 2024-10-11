@@ -4,6 +4,11 @@
 
 Theme: Improved WebGPU support
 
+### v9.1.0-beta.8
+
+- webgl: Canvas resizing minimal back-compatibility fix (#2277)
+- chore(shadertools): Port fp64 module to UBO (#2262)
+
 ### v9.1.0-beta.7
 
 - feat(test-utils): Avoid registering devices (#2275)
