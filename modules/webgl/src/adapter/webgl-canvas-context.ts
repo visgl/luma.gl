@@ -53,10 +53,6 @@ export class WebGLCanvasContext extends CanvasContext {
   resize(options?: {width?: number; height?: number; useDevicePixels?: boolean | number}): void {
     if (!this.device.gl) return;
 
-    if (this.props.autoResize) {
-      return;
-    }
-
     // Resize browser context. TODO - this likely needs to be rewritten
     if (this.canvas) {
       const devicePixelRatio = this.getDevicePixelRatio(options?.useDevicePixels);
