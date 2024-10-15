@@ -58,6 +58,6 @@ export function invertOffsets(offsets: Int32Array): Uint32Array {
       invertedOffsets[offset] = arrayIdx;
     }
   }
-  
+
   return invertedOffsets;
 }

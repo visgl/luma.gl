@@ -213,7 +213,9 @@ export function isMultiPointVector(vector: arrow.Vector): vector is arrow.Vector
   return true;
 }
 
-export function isMultiLineStringVector(vector: arrow.Vector): vector is arrow.Vector<ArrowMultiLineString> {
+export function isMultiLineStringVector(
+  vector: arrow.Vector
+): vector is arrow.Vector<ArrowMultiLineString> {
   // Check the outer vector is a List
   if (!arrow.DataType.isList(vector.type)) {
     return false;
@@ -227,7 +229,9 @@ export function isMultiLineStringVector(vector: arrow.Vector): vector is arrow.V
   return true;
 }
 
-export function isMultiPolygonVector(vector: arrow.Vector): vector is arrow.Vector<ArrowMultiPolygon> {
+export function isMultiPolygonVector(
+  vector: arrow.Vector
+): vector is arrow.Vector<ArrowMultiPolygon> {
   // Check the outer vector is a List
   if (!arrow.DataType.isList(vector.type)) {
     return false;
@@ -326,12 +330,16 @@ export function getMultiPointChild(data: arrow.Data<ArrowMultiPoint>): arrow.Dat
   return data.children[0];
 }
 
-export function getMultiLineStringChild(data: arrow.Data<ArrowMultiLineString>): arrow.Data<ArrowLineString> {
+export function getMultiLineStringChild(
+  data: arrow.Data<ArrowMultiLineString>
+): arrow.Data<ArrowLineString> {
   // @ts-expect-error
   return data.children[0];
 }
 
-export function getMultiPolygonChild(data: arrow.Data<ArrowMultiPolygon>): arrow.Data<ArrowPolygon> {
+export function getMultiPolygonChild(
+  data: arrow.Data<ArrowMultiPolygon>
+): arrow.Data<ArrowPolygon> {
   // @ts-expect-error
   return data.children[0];
 }

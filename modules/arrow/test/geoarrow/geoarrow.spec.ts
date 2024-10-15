@@ -4,7 +4,7 @@
 
 import test from 'tape-promise/tape';
 import {arraysEqual} from '../test-utils';
-import {expandArrayToCoords} from '@luma.gl/arrow/geoarrow/geoarrow';
+import {expandArrayToCoords} from '@luma.gl/arrow';
 
 test('linestring vertex expansion#1', t => {
   const input = new Uint8Array([1, 2, 3, 4]);
@@ -17,8 +17,8 @@ test('linestring vertex expansion#1', t => {
   t.end();
 });
 
-  test('linestring vertex expansion#3', t => {
-    const input = new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7, 8]);
+test('linestring vertex expansion#3', t => {
+  const input = new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7, 8]);
   const size = 3;
   const geomOffsets = new Int32Array([0, 2, 5, 9]);
   const expanded = expandArrayToCoords(input, size, geomOffsets);

@@ -2,18 +2,18 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import * as arrow from "apache-arrow";
+import * as arrow from 'apache-arrow';
 
 /**
  * Enum holding GeoArrow extension type names
  */
 export enum EXTENSION_NAME {
-  POINT = "geoarrow.point",
-  LINESTRING = "geoarrow.linestring",
-  POLYGON = "geoarrow.polygon",
-  MULTIPOINT = "geoarrow.multipoint",
-  MULTILINESTRING = "geoarrow.multilinestring",
-  MULTIPOLYGON = "geoarrow.multipolygon",
+  POINT = 'geoarrow.point',
+  LINESTRING = 'geoarrow.linestring',
+  POLYGON = 'geoarrow.polygon',
+  MULTIPOINT = 'geoarrow.multipoint',
+  MULTILINESTRING = 'geoarrow.multilinestring',
+  MULTIPOLYGON = 'geoarrow.multipolygon'
 }
 
 export type ArrowInterleavedCoord = arrow.FixedSizeList<arrow.Float64>;
@@ -45,5 +45,5 @@ export type ArrowMultiPolygon = arrow.List<arrow.List<arrow.List<ArrowCoord>>>;
 // export type MultiPolygonData = arrow.Data<MultiPolygon>;
 
 export type GeoArrowPickingInfo = {
-  object: arrow.StructRowProxy
-}
+  object: arrow.StructRowProxy;
+};
