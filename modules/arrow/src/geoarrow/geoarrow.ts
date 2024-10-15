@@ -4,34 +4,13 @@
 
 import * as arrow from 'apache-arrow';
 import {
-  Coord,
-  LineString,
-  LineStringData,
-  LineStringVector,
-  MultiLineStringData,
-  MultiLineStringVector,
-  MultiPoint,
-  MultiPointData,
-  MultiPointVector,
-  MultiPolygonData,
-  MultiPolygonVector,
-  PointData,
-  PointVector,
-  Polygon,
-  PolygonData,
-  PolygonVector
+  ArrowPoint,
+  ArrowMultiPoint,
+  ArrowLineString,
+  ArrowMultiLineString,
+  ArrowPolygon,
+  ArrowMultiPolygon
 } from './geoarrow-types';
-
-export type TypedArray =
-  | Uint8Array
-  | Uint8ClampedArray
-  | Uint16Array
-  | Uint32Array
-  | Int8Array
-  | Int16Array
-  | Int32Array
-  | Float32Array
-  | Float64Array;
 
 function assert(condition: boolean, message?: string): asserts condition {
   if (!condition) {
@@ -119,46 +98,6 @@ export function convertStructToFixedSizeList(
 }
 
 /**
- * Expand an array from "one element per geometry" to "one element per coordinate"
- *
- * @param input: the input array to expand
- * @param size : the number of nested elements in the input array per geometry. So for example, for RGB data this would be 3, for RGBA this would be 4. For radius, this would be 1.
- * @param geomOffsets : an offsets array mapping from the geometry to the coordinate indexes. So in the case of a LineStringArray, this is retrieved directly from the GeoArrow storage. In the case of a PolygonArray, this comes from the resolved indexes that need to be given to the SolidPolygonLayer anyways.
- *
- * @return  {TypedArray} values expanded to be per-coordinate
- */
-export function expandArrayToCoords<T extends TypedArray>(
-  input: T,
-  size: number,
-  geomOffsets: Int32Array
-): T {
-  const numCoords = geomOffsets[geomOffsets.length - 1];
-  // @ts-expect-error
-  const outputArray: T = new input.constructor(numCoords * size);
-
-  // geomIdx is an index into the geomOffsets array
-  // geomIdx is also the geometry/table index
-  for (let geomIdx = 0; geomIdx < geomOffsets.length - 1; geomIdx++) {
-    // geomOffsets maps from the geometry index to the coord index
-    // So here we get the range of coords that this geometry covers
-    const lastCoordIdx = geomOffsets[geomIdx];
-    const nextCoordIdx = geomOffsets[geomIdx + 1];
-
-    // Iterate over this range of coord indices
-    for (let coordIdx = lastCoordIdx; coordIdx < nextCoordIdx; coordIdx++) {
-      // Iterate over size
-      for (let i = 0; i < size; i++) {
-        // Copy from the geometry index in `input` to the coord index in
-        // `output`
-        outputArray[coordIdx * size + i] = input[geomIdx * size + i];
-      }
-    }
-  }
-
-  return outputArray;
-}
-
-/**
  * Get a geometry vector with the specified extension type name from the table.
  */
 export function getGeometryVector(
@@ -213,7 +152,7 @@ export function validateColorVector(vector: arrow.Vector) {
   assert(vector.type.children[0].type.bitWidth === 8);
 }
 
-export function isPointVector(vector: arrow.Vector): vector is PointVector {
+export function isPointVector(vector: arrow.Vector): vector is arrow.Vector<ArrowPoint> {
   // Check FixedSizeList
   if (!arrow.DataType.isFixedSizeList(vector.type)) {
     return false;
@@ -232,7 +171,7 @@ export function isPointVector(vector: arrow.Vector): vector is PointVector {
   return true;
 }
 
-export function isLineStringVector(vector: arrow.Vector): vector is LineStringVector {
+export function isLineStringVector(vector: arrow.Vector): vector is arrow.Vector<ArrowLineString> {
   // Check the outer vector is a List
   if (!arrow.DataType.isList(vector.type)) {
     return false;
@@ -246,7 +185,7 @@ export function isLineStringVector(vector: arrow.Vector): vector is LineStringVe
   return true;
 }
 
-export function isPolygonVector(vector: arrow.Vector): vector is PolygonVector {
+export function isPolygonVector(vector: arrow.Vector): vector is arrow.Vector<ArrowPolygon> {
   // Check the outer vector is a List
   if (!arrow.DataType.isList(vector.type)) {
     return false;
@@ -260,7 +199,7 @@ export function isPolygonVector(vector: arrow.Vector): vector is PolygonVector {
   return true;
 }
 
-export function isMultiPointVector(vector: arrow.Vector): vector is MultiPointVector {
+export function isMultiPointVector(vector: arrow.Vector): vector is arrow.Vector<ArrowMultiPoint> {
   // Check the outer vector is a List
   if (!arrow.DataType.isList(vector.type)) {
     return false;
@@ -274,7 +213,7 @@ export function isMultiPointVector(vector: arrow.Vector): vector is MultiPointVe
   return true;
 }
 
-export function isMultiLineStringVector(vector: arrow.Vector): vector is MultiLineStringVector {
+export function isMultiLineStringVector(vector: arrow.Vector): vector is arrow.Vector<ArrowMultiLineString> {
   // Check the outer vector is a List
   if (!arrow.DataType.isList(vector.type)) {
     return false;
@@ -288,7 +227,7 @@ export function isMultiLineStringVector(vector: arrow.Vector): vector is MultiLi
   return true;
 }
 
-export function isMultiPolygonVector(vector: arrow.Vector): vector is MultiPolygonVector {
+export function isMultiPolygonVector(vector: arrow.Vector): vector is arrow.Vector<ArrowMultiPolygon> {
   // Check the outer vector is a List
   if (!arrow.DataType.isList(vector.type)) {
     return false;
@@ -302,7 +241,7 @@ export function isMultiPolygonVector(vector: arrow.Vector): vector is MultiPolyg
   return true;
 }
 
-export function validatePointType(type: arrow.DataType): type is Coord {
+export function validatePointType(type: arrow.DataType): type is ArrowPoint {
   // Assert the point vector is a FixedSizeList
   // TODO: support struct
   assert(arrow.DataType.isFixedSizeList(type));
@@ -316,7 +255,7 @@ export function validatePointType(type: arrow.DataType): type is Coord {
   return true;
 }
 
-export function validateLineStringType(type: arrow.DataType): type is LineString {
+export function validateLineStringType(type: arrow.DataType): type is ArrowLineString {
   // Assert the outer vector is a List
   assert(arrow.DataType.isList(type));
 
@@ -326,7 +265,7 @@ export function validateLineStringType(type: arrow.DataType): type is LineString
   return true;
 }
 
-export function validatePolygonType(type: arrow.DataType): type is Polygon {
+export function validatePolygonType(type: arrow.DataType): type is ArrowPolygon {
   // Assert the outer vector is a List
   assert(arrow.DataType.isList(type));
 
@@ -337,7 +276,7 @@ export function validatePolygonType(type: arrow.DataType): type is Polygon {
 }
 
 // Note: this is the same as validateLineStringType
-export function validateMultiPointType(type: arrow.DataType): type is MultiPoint {
+export function validateMultiPointType(type: arrow.DataType): type is ArrowMultiPoint {
   // Assert the outer vector is a List
   assert(arrow.DataType.isList(type));
 
@@ -347,7 +286,7 @@ export function validateMultiPointType(type: arrow.DataType): type is MultiPoint
   return true;
 }
 
-export function validateMultiLineStringType(type: arrow.DataType): type is Polygon {
+export function validateMultiLineStringType(type: arrow.DataType): type is ArrowPolygon {
   // Assert the outer vector is a List
   assert(arrow.DataType.isList(type));
 
@@ -357,7 +296,7 @@ export function validateMultiLineStringType(type: arrow.DataType): type is Polyg
   return true;
 }
 
-export function validateMultiPolygonType(type: arrow.DataType): type is Polygon {
+export function validateMultiPolygonType(type: arrow.DataType): type is ArrowMultiPolygon {
   // Assert the outer vector is a List
   assert(arrow.DataType.isList(type));
 
@@ -367,112 +306,32 @@ export function validateMultiPolygonType(type: arrow.DataType): type is Polygon 
   return true;
 }
 
-export function getListNestingLevels(data: arrow.Data): number {
-  let nestingLevels = 0;
-  if (arrow.DataType.isList(data.type)) {
-    nestingLevels += 1;
-    data = data.children[0];
-  }
-  return nestingLevels;
-}
-
-export function getPointChild(data: PointData): arrow.Data<arrow.Float> {
+export function getPointChild(data: arrow.Data<ArrowPoint>): arrow.Data<arrow.Float> {
   // @ts-expect-error
   return data.children[0];
 }
 
-export function getLineStringChild(data: LineStringData): PointData {
+export function getLineStringChild(data: arrow.Data<ArrowLineString>): arrow.Data<ArrowPoint> {
   // @ts-expect-error
   return data.children[0];
 }
 
-export function getPolygonChild(data: PolygonData): LineStringData {
+export function getPolygonChild(data: arrow.Data<ArrowPolygon>): arrow.Data<ArrowLineString> {
   // @ts-expect-error
   return data.children[0];
 }
 
-export function getMultiPointChild(data: MultiPointData): PointData {
+export function getMultiPointChild(data: arrow.Data<ArrowMultiPoint>): arrow.Data<ArrowPoint> {
   // @ts-expect-error
   return data.children[0];
 }
 
-export function getMultiLineStringChild(data: MultiLineStringData): LineStringData {
+export function getMultiLineStringChild(data: arrow.Data<ArrowMultiLineString>): arrow.Data<ArrowLineString> {
   // @ts-expect-error
   return data.children[0];
 }
 
-export function getMultiPolygonChild(data: MultiPolygonData): PolygonData {
+export function getMultiPolygonChild(data: arrow.Data<ArrowMultiPolygon>): arrow.Data<ArrowPolygon> {
   // @ts-expect-error
   return data.children[0];
-}
-
-export function getMultiLineStringResolvedOffsets(data: MultiLineStringData): Int32Array {
-  const geomOffsets = data.valueOffsets;
-  const lineStringData = getMultiLineStringChild(data);
-  const ringOffsets = lineStringData.valueOffsets;
-
-  const resolvedRingOffsets = new Int32Array(geomOffsets.length);
-  for (let i = 0; i < resolvedRingOffsets.length; ++i) {
-    // Perform the lookup into the ringIndices array using the geomOffsets
-    // array
-    resolvedRingOffsets[i] = ringOffsets[geomOffsets[i]];
-  }
-
-  return resolvedRingOffsets;
-}
-
-export function getPolygonResolvedOffsets(data: PolygonData): Int32Array {
-  const geomOffsets = data.valueOffsets;
-  const ringData = getPolygonChild(data);
-  const ringOffsets = ringData.valueOffsets;
-
-  const resolvedRingOffsets = new Int32Array(geomOffsets.length);
-  for (let i = 0; i < resolvedRingOffsets.length; ++i) {
-    // Perform the lookup into the ringIndices array using the geomOffsets
-    // array
-    resolvedRingOffsets[i] = ringOffsets[geomOffsets[i]];
-  }
-
-  return resolvedRingOffsets;
-}
-
-export function getMultiPolygonResolvedOffsets(data: MultiPolygonData): Int32Array {
-  const polygonData = getMultiPolygonChild(data);
-  const ringData = getPolygonChild(polygonData);
-
-  const geomOffsets = data.valueOffsets;
-  const polygonOffsets = polygonData.valueOffsets;
-  const ringOffsets = ringData.valueOffsets;
-
-  const resolvedRingOffsets = new Int32Array(geomOffsets.length);
-  for (let i = 0; i < resolvedRingOffsets.length; ++i) {
-    resolvedRingOffsets[i] = ringOffsets[polygonOffsets[geomOffsets[i]]];
-  }
-
-  return resolvedRingOffsets;
-}
-
-/**
- * Invert offsets so that lookup can go in the opposite direction
- */
-export function invertOffsets(offsets: Int32Array): Uint8Array | Uint16Array | Uint32Array {
-  const largestOffset = offsets[offsets.length - 1];
-
-  const arrayConstructor =
-    offsets.length < Math.pow(2, 8)
-      ? Uint8Array
-      : offsets.length < Math.pow(2, 16)
-        ? Uint16Array
-        : Uint32Array;
-
-  const invertedOffsets = new arrayConstructor(largestOffset);
-  for (let arrayIdx = 0; arrayIdx < offsets.length - 1; arrayIdx++) {
-    const thisOffset = offsets[arrayIdx];
-    const nextOffset = offsets[arrayIdx + 1];
-    for (let offset = thisOffset; offset < nextOffset; offset++) {
-      invertedOffsets[offset] = arrayIdx;
-    }
-  }
-
-  return invertedOffsets;
 }

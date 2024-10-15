@@ -3,14 +3,15 @@
 // Copyright (c) vis.gl contributors
 
 import {earcut} from '@math.gl/polygon';
-import {PolygonData} from './geoarrow-types';
+import * as arrow from 'apache-arrow';
+import {ArrowPolygon} from './geoarrow-types';
 import {getLineStringChild, getPointChild, getPolygonChild} from './geoarrow';
 
-export function earcutPolygonArray(data: PolygonData): Uint32Array {
+export function earcutPolygonArray(data: arrow.Data<ArrowPolygon>): Uint32Array {
   const trianglesResults: number[][] = [];
   let outputSize = 0;
-  for (let geomIndex = 0; geomIndex < data.length; geomIndex++) {
-    const triangles = earcutSinglePolygon(data, geomIndex);
+  for (let geometryIndex = 0; geometryIndex < data.length; geometryIndex++) {
+    const triangles = earcutSinglePolygon(data, geometryIndex);
     trianglesResults.push(triangles);
     outputSize += triangles.length;
   }
@@ -27,8 +28,8 @@ export function earcutPolygonArray(data: PolygonData): Uint32Array {
   return outputArray;
 }
 
-function earcutSinglePolygon(data: PolygonData, geomIndex: number): number[] {
-  const geomOffsets = data.valueOffsets;
+function earcutSinglePolygon(data: arrow.Data<ArrowPolygon>, geometryIndex: number): number[] {
+  const geometryOffsets = data.valueOffsets;
   const rings = getPolygonChild(data);
   const ringOffsets = rings.valueOffsets;
 
@@ -36,8 +37,8 @@ function earcutSinglePolygon(data: PolygonData, geomIndex: number): number[] {
   const dim = coords.type.listSize;
   const flatCoords = getPointChild(coords);
 
-  const ringBegin = geomOffsets[geomIndex];
-  const ringEnd = geomOffsets[geomIndex + 1];
+  const ringBegin = geometryOffsets[geometryIndex];
+  const ringEnd = geometryOffsets[geometryIndex + 1];
 
   const coordsBegin = ringOffsets[ringBegin];
   const coordsEnd = ringOffsets[ringEnd];

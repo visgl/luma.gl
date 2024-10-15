@@ -15,12 +15,13 @@ export {getArrowColumnInfo} from './arrow/arrow-column-info';
 
 export {analyzeArrowTable} from './arrow/analyze-arrow-table';
 
+export {getArrowListNestingLevel} from './arrow/arrow-utils';
+
 // GEOARROW
 
 export {
   findGeometryColumnIndex,
   isColumnReference,
-  expandArrayToCoords,
   getGeometryVector,
   validateVectorAccessors,
   validateColorVector,
@@ -36,17 +37,20 @@ export {
   validateMultiPointType,
   validateMultiLineStringType,
   validateMultiPolygonType,
-  getListNestingLevels,
   getPointChild,
   getLineStringChild,
   getPolygonChild,
   getMultiPointChild,
   getMultiLineStringChild,
-  getMultiPolygonChild,
+  getMultiPolygonChild
+} from './geoarrow/geoarrow';
+
+export {
   getMultiLineStringResolvedOffsets,
   getPolygonResolvedOffsets,
-  getMultiPolygonResolvedOffsets,
-  invertOffsets
-} from './geoarrow/geoarrow';
+  getMultiPolygonResolvedOffsets
+} from './geoarrow/geoarrow-transform';
+
+export {expandArrayToCoords, invertOffsets} from './attribute-utils/attribute-utils';
 
 //   assignAccessor,
