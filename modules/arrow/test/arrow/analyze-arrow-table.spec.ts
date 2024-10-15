@@ -6,7 +6,7 @@ import test from 'tape-promise/tape';
 import {ARROW_TABLES} from '@luma.gl/arrow/test/data/arrow/make-arrow-tables';
 import {analyzeArrowTable} from '@luma.gl/arrow';
 
-test.only('getArrowDataByPath', async t => {
+test('getArrowDataByPath', async t => {
   const {simpleTable} = ARROW_TABLES;
   let tableColumns = analyzeArrowTable(simpleTable);
   t.ok(tableColumns, 'extracted info from simple table');
