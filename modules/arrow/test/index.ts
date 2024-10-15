@@ -3,5 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import './arrow/arrow-paths.spec';
-import './arrow/get-arrow-data.spec';
+import './arrow/arrow-column-info.spec';
 import './arrow/analyze-arrow-table.spec';
+
+import './geoarrow/geoarrow.spec';
