@@ -3,9 +3,13 @@
 // Copyright (c) vis.gl contributors
 
 import type {TypedArray} from '../../types';
-import type {NormalizedDataType, PrimitiveDataType} from '../data-types';
+import type {NormalizedDataType, PrimitiveDataType, SignedDataType} from '../data-types';
 import type {VertexFormat, VertexFormatInfo} from '../vertex-formats';
-import {getDataTypeInfo, getDataTypeFromTypedArray} from './decode-data-types';
+import {
+  getDataTypeInfo,
+  getDataTypeFromTypedArray,
+  makeNormalizedDataType
+} from './decode-data-types';
 
 /**
  * Decodes a vertex format, returning type, components, byte  length and flags (integer, signed, normalized)
@@ -37,6 +41,48 @@ export function getVertexFormatInfo(format: VertexFormat): VertexFormatInfo {
   return result;
 }
 
+/** Build a vertex format from a signed data type and a component */
+export function makeVertexFormat(
+  signedDataType: SignedDataType,
+  components: 1 | 2 | 3 | 4,
+  normalized?: boolean
+): VertexFormat {
+  const dataType: NormalizedDataType = normalized
+    ? makeNormalizedDataType(signedDataType)
+    : signedDataType;
+
+  switch (dataType) {
+    // TODO - Special cases for WebGL (not supported on WebGPU), overrides the check below
+    case 'unorm8':
+      if (components === 1) {
+        return 'unorm8-webgl';
+      }
+      if (components === 3) {
+        return 'unorm8x3-webgl';
+      }
+      return `${dataType}x${components}`;
+
+    case 'snorm8':
+    case 'uint8':
+    case 'sint8':
+    // WebGPU 8 bit formats must be aligned to 16 bit boundaries');
+    // fall through
+    case 'uint16':
+    case 'sint16':
+    case 'unorm16':
+    case 'snorm16':
+    case 'float16':
+      // WebGPU 16 bit formats must be aligned to 32 bit boundaries
+      if (components === 1 || components === 3) {
+        throw new Error(`size: ${components}`);
+      }
+      return `${dataType}x${components}`;
+
+    default:
+      return components === 1 ? dataType : `${dataType}x${components}`;
+  }
+}
+
 /** Get the vertex format for an attribute with TypedArray and size */
 export function getVertexFormatFromAttribute(
   typedArray: TypedArray,
@@ -49,44 +95,7 @@ export function getVertexFormatFromAttribute(
 
   const components = size as 1 | 2 | 3 | 4;
   const signedDataType = getDataTypeFromTypedArray(typedArray);
-
-  let dataType: NormalizedDataType = signedDataType;
-
-  // TODO - Special cases for WebGL (not supported on WebGPU), overrides the check below
-  if (dataType === 'uint8' && normalized && components === 1) {
-    return 'unorm8-webgl';
-  }
-  if (dataType === 'uint8' && normalized && components === 3) {
-    return 'unorm8x3-webgl';
-  }
-
-  if (dataType === 'uint8' || dataType === 'sint8') {
-    if (components === 1 || components === 3) {
-      // WebGPU 8 bit formats must be aligned to 16 bit boundaries');
-      throw new Error(`size: ${size}`);
-    }
-    if (normalized) {
-      dataType = dataType.replace('int', 'norm') as 'unorm8' | 'snorm8';
-    }
-    return `${dataType}x${components}`;
-  }
-  if (dataType === 'uint16' || dataType === 'sint16') {
-    if (components === 1 || components === 3) {
-      // WebGPU 16 bit formats must be aligned to 32 bit boundaries
-      throw new Error(`size: ${size}`);
-    }
-    if (normalized) {
-      dataType = dataType.replace('int', 'norm') as 'unorm16' | 'snorm16';
-    }
-    return `${dataType}x${components}`;
-  }
-
-  if (components === 1 && dataType !== 'float16') {
-    return dataType;
-  }
-
-  // @ts-expect-error TODO fix
-  return `${dataType}x${components}`;
+  return makeVertexFormat(signedDataType, components, normalized);
 }
 
 /** Return a "default" vertex format for a certain shader data type

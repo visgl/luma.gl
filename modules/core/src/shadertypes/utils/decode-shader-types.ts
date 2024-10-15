@@ -38,6 +38,13 @@ export function getAttributeShaderTypeInfo(
   };
 }
 
+export function makeShaderAttributeType(
+  primitiveType: PrimitiveDataType,
+  components: 1 | 2 | 3 | 4
+): AttributeShaderType {
+  return components === 1 ? primitiveType : `vec${components}<${primitiveType}>`;
+}
+
 export function resolveAttributeShaderTypeAlias(
   alias: AttributeShaderTypeAlias | AttributeShaderType
 ): AttributeShaderType {

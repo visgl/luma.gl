@@ -1,0 +1,49 @@
+{
+  "private": true,
+  "name": "@luma.gl/arrow",
+  "description": "luma.gl Apache Arrow bindings",
+  "version": "9.2.0-alpha.0",
+  "license": "MIT",
+  "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/visgl/luma.gl"
+  },
+  "keywords": [
+    "webgl",
+    "visualization",
+    "animation",
+    "3d"
+  ],
+  "types": "dist/index.d.ts",
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "src",
+    "dist",
+    "dist.min.js",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build-minified-bundle": "ocular-bundle ./bundle.ts --output=dist/dist.min.js",
+    "build-dev-bundle": "ocular-bundle ./bundle.ts --output=dist/dist.dev.js --env=dev",
+    "prepublishOnly": "npm run build-minified-bundle && npm run build-dev-bundle"
+  },
+  "dependencies": {
+    "@luma.gl/core": "9.2.0-alpha.0",
+    "@math.gl/polygon": "^4.1.0",
+    "apache-arrow": "^17.0.0"
+  },
+  "gitHead": "c636c34b8f1581eed163e94543a8eb1f4382ba8e"
+}

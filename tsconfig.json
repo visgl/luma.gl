@@ -40,6 +40,8 @@
     // END TYPE CHECK SETTINGS
 
     "paths": {
+      "@luma.gl/arrow/*": ["modules/arrow/src/*"],
+      "@luma.gl/arrow/test/*": ["modules/arrow/test/*"],
       "@luma.gl/core/*": ["modules/core/src/*"],
       "@luma.gl/core/test/*": ["modules/core/test/*"],
       "@luma.gl/constants/*": ["modules/constants/src/*"],
