@@ -25,6 +25,24 @@ export function getDataTypeInfo(type: NormalizedDataType): DataTypeInfo {
   };
 }
 
+/** Build a vertex format from a signed data type and a component */
+export function makeNormalizedDataType(signedDataType: SignedDataType): NormalizedDataType {
+  const dataType: NormalizedDataType = signedDataType;
+
+  switch (dataType) {
+    case 'uint8':
+      return 'unorm8';
+    case 'sint8':
+      return 'snorm8';
+    case 'uint16':
+      return 'unorm16';
+    case 'sint16':
+      return 'snorm16';
+    default:
+      return dataType;
+  }
+}
+
 /** Align offset to 1, 2 or 4 elements (4, 8 or 16 bytes) */
 export function alignTo(size: number, count: number): number {
   // prettier-ignore

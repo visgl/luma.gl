@@ -123,9 +123,18 @@ export type {
 
 export type {UniformValue} from './adapter/types/uniforms';
 
+// TYPED ARRAY TYPES
+
+export type {
+  NumberArray,
+  TypedArray,
+  TypedArrayConstructor,
+  BigTypedArray,
+  BigTypedArrayConstructor
+} from './types';
+
 // GPU TYPE UTILS - GPU MEMORY LAYOUT TYPES - EXTERNAL
 
-export type {NumberArray, TypedArray, TypedArrayConstructor} from './types';
 export type {PrimitiveDataType, SignedDataType, NormalizedDataType} from './shadertypes/data-types';
 export type {AttributeShaderType, VariableShaderType} from './shadertypes/shader-types';
 export type {VertexFormat} from './shadertypes/vertex-formats';
@@ -143,15 +152,17 @@ export type {
 export {
   getDataTypeInfo,
   getDataTypeFromTypedArray,
-  getTypedArrayFromDataType
+  getTypedArrayFromDataType,
+  makeNormalizedDataType
 } from './shadertypes/utils/decode-data-types';
 export {
   getVariableShaderTypeInfo,
   getAttributeShaderTypeInfo
 } from './shadertypes/utils/decode-shader-types';
 export {
+  getVertexFormatInfo,
   getVertexFormatFromAttribute,
-  getVertexFormatInfo
+  makeVertexFormat
 } from './shadertypes/utils/decode-vertex-format';
 export {
   getTextureFormatInfo,
