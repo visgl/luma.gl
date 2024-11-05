@@ -116,7 +116,7 @@ export abstract class CanvasContext {
       this.canvas = props.canvas;
     }
 
-    if (typeof HTMLCanvasElement !== 'undefined' && this.canvas instanceof HTMLCanvasElement) {
+    if (this.canvas instanceof HTMLCanvasElement) {
       this.id = props.id || this.canvas.id;
       this.type = 'html-canvas';
       this.htmlCanvas = this.canvas;
@@ -137,7 +137,7 @@ export abstract class CanvasContext {
     this.drawingBufferHeight = this.canvas.height;
     this.devicePixelRatio = globalThis.devicePixelRatio || 1;
 
-    if (typeof HTMLCanvasElement !== 'undefined' && this.canvas instanceof HTMLCanvasElement) {
+    if (this.canvas instanceof HTMLCanvasElement) {
       // Track visibility changes
       this._intersectionObserver = new IntersectionObserver(entries =>
         this._handleIntersection(entries)
@@ -172,7 +172,7 @@ export abstract class CanvasContext {
    * @note This is independent of the canvas' internal drawing buffer size (.width, .height).
    */
   getCSSSize(): [number, number] {
-    if (typeof HTMLCanvasElement !== 'undefined' && this.canvas instanceof HTMLCanvasElement) {
+    if (this.canvas instanceof HTMLCanvasElement) {
       return [this.canvas.clientWidth, this.canvas.clientHeight];
     }
     return [this.pixelWidth, this.pixelHeight];
