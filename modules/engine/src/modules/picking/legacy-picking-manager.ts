@@ -90,7 +90,7 @@ export class LegacyPickingManager {
    * Get pick position in device pixel range
    * use the center pixel location in device pixel range
    */
-  getPickPosition(mousePosition: number[]): [number, number] {
+  getPickPosition(mousePosition: [number, number]): [number, number] {
     const devicePixels = this.device.getCanvasContext().cssToDevicePixels(mousePosition);
     const pickX = devicePixels.x + Math.floor(devicePixels.width / 2);
     const pickY = devicePixels.y + Math.floor(devicePixels.height / 2);

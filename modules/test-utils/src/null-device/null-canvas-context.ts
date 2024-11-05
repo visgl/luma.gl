@@ -28,7 +28,7 @@ export class NullCanvasContext extends CanvasContext {
 
     // Base class constructor cannot access derived methods/fields, so we need to call these functions in the subclass constructor
     this._setAutoCreatedCanvasId(`${this.device.id}-canvas`);
-    this.updateSize([this.drawingBufferWidth, this.drawingBufferHeight]);
+    this._updateConfiguration();
   }
 
   getCurrentFramebuffer(): NullFramebuffer {
@@ -37,12 +37,7 @@ export class NullCanvasContext extends CanvasContext {
     return this._framebuffer;
   }
 
-  /** Resizes and updates render targets if necessary */
-  updateSize(size: [number, number]) {}
+  // IMPLEMENTATION OF ABSTRACT METHODS
 
-  resize(options?: {width?: number; height?: number; useDevicePixels?: boolean | number}): void {
-    throw new Error('not implemented');
-  }
-
-  commit() {}
+  _updateConfiguration() {}
 }

@@ -5,9 +5,9 @@
 import {isBrowser} from '@probe.gl/env';
 import type {Device} from './device';
 import type {Framebuffer} from './resources/framebuffer';
-import {log} from '../utils/log';
-import {uid} from '../utils/uid';
 import type {DepthStencilTextureFormat} from '../shadertypes/texture-formats';
+import {uid} from '../utils/uid';
+import {withResolvers} from '../utils/promise-utils';
 
 /** Properties for a CanvasContext */
 export type CanvasContextProps = {
@@ -23,13 +23,13 @@ export type CanvasContextProps = {
   height?: number;
   /** Visibility (only used if new canvas is created). */
   visible?: boolean;
-  /** Whether to apply a device pixels scale factor (`true` uses browser DPI) */
-  useDevicePixels?: boolean | number;
+  /** Whether to size the drawing buffer to the pixel size during auto resize */
+  useDevicePixels?: boolean;
   /** Whether to track window resizes */
   autoResize?: boolean;
-  /** https://developer.mozilla.org/en-US/docs/Web/API/GPUCanvasContext/configure#alphamode */
+  /** @see https://developer.mozilla.org/en-US/docs/Web/API/GPUCanvasContext/configure#alphamode */
   alphaMode?: 'opaque' | 'premultiplied';
-  /** https://developer.mozilla.org/en-US/docs/Web/API/GPUCanvasContext/configure#colorspace */
+  /** @see https://developer.mozilla.org/en-US/docs/Web/API/GPUCanvasContext/configure#colorspace */
   colorSpace?: 'srgb'; // GPUPredefinedColorSpace
 };
 
@@ -37,12 +37,12 @@ export type CanvasContextProps = {
  * Manages a canvas. Supports both HTML or offscreen canvas
  * - Creates a new canvas or looks up a canvas from the DOM
  * - Provides check for DOM loaded
- * @todo commit(): https://github.com/w3ctag/design-reviews/issues/288
- * @todo transferControlToOffscreen: https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/transferControlToOffscreen
+ * @todo commit() @see https://github.com/w3ctag/design-reviews/issues/288
+ * @todo transferControlToOffscreen: @see https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/transferControlToOffscreen
  */
 export abstract class CanvasContext {
   static isHTMLCanvas(canvas: unknown): canvas is HTMLCanvasElement {
-    return canvas instanceof HTMLCanvasElement;
+    return typeof HTMLCanvasElement !== 'undefined' && canvas instanceof HTMLCanvasElement;
   }
 
   static isOffscreenCanvas(canvas: unknown): canvas is OffscreenCanvas {
@@ -68,7 +68,9 @@ export abstract class CanvasContext {
 
   readonly props: Required<CanvasContextProps>;
   readonly canvas: HTMLCanvasElement | OffscreenCanvas;
+  /** Handle to HTML canvas */
   readonly htmlCanvas?: HTMLCanvasElement;
+  /** Handle to wrapped OffScreenCanvas */
   readonly offscreenCanvas?: OffscreenCanvas;
   readonly type: 'html-canvas' | 'offscreen-canvas' | 'node';
 
@@ -84,21 +86,23 @@ export abstract class CanvasContext {
   /** Device pixel ratio. Automatically updated via media queries */
   devicePixelRatio: number;
 
+  /** Width of canvas in CSS units (tracked by a ResizeObserver) */
+  cssWidth: number;
+  /** Height of canvas in CSS units (tracked by a ResizeObserver) */
+  cssHeight: number;
+
   /** Exact width of canvas in physical pixels (tracked by a ResizeObserver) */
   pixelWidth: number;
   /** Exact height of canvas in physical pixels (tracked by a ResizeObserver) */
   pixelHeight: number;
 
-  /** Width of drawing buffer: automatically updated if props.autoResize is true */
+  /** Width of drawing buffer: automatically tracks this.pixelWidth if props.autoResize is true */
   drawingBufferWidth: number;
-  /** Height of drawing buffer: automatically updated if props.autoResize is true */
+  /** Height of drawing buffer: automatically tracks this.pixelHeight if props.autoResize is true */
   drawingBufferHeight: number;
 
   protected readonly _resizeObserver: ResizeObserver | undefined;
   protected readonly _intersectionObserver: IntersectionObserver | undefined;
-
-  /** State used by luma.gl classes: TODO - remove */
-  readonly _canvasSizeInfo = {clientWidth: 0, clientHeight: 0, devicePixelRatio: 1};
 
   abstract get [Symbol.toStringTag](): string;
 
@@ -139,6 +143,8 @@ export abstract class CanvasContext {
     }
 
     // Initialize size variables (these will be updated by ResizeObserver)
+    this.cssWidth = this.htmlCanvas?.clientWidth || this.canvas.width;
+    this.cssHeight = this.htmlCanvas?.clientHeight || this.canvas.height;
     this.pixelWidth = this.canvas.width;
     this.pixelHeight = this.canvas.height;
     this.drawingBufferWidth = this.canvas.width;
@@ -180,10 +186,7 @@ export abstract class CanvasContext {
    * @note This is independent of the canvas' internal drawing buffer size (.width, .height).
    */
   getCSSSize(): [number, number] {
-    if (CanvasContext.isHTMLCanvas(this.canvas)) {
-      return [this.canvas.clientWidth, this.canvas.clientHeight];
-    }
-    return [this.pixelWidth, this.pixelHeight];
+    return [this.cssWidth, this.cssHeight];
   }
 
   /**
@@ -250,22 +253,14 @@ export abstract class CanvasContext {
    * Returns multiplier need to convert CSS size to Device size
    */
   cssToDeviceRatio(): number {
-    try {
-      // For headless gl we might have used custom width and height
-      // hence use cached clientWidth
-      const [drawingBufferWidth] = this.getDrawingBufferSize();
-      const {clientWidth} = this._canvasSizeInfo;
-      return clientWidth ? drawingBufferWidth / clientWidth : 1;
-    } catch {
-      return 1;
-    }
+    return this.htmlCanvas ? this.drawingBufferWidth / this.cssWidth : 1;
   }
 
   /**
    * Maps CSS pixel position to device pixel position
    */
   cssToDevicePixels(
-    cssPixel: number[],
+    cssPixel: [number, number],
     yInvert: boolean = true
   ): {
     x: number;
@@ -280,8 +275,12 @@ export abstract class CanvasContext {
 
   // SUBCLASS OVERRIDES
 
-  /** Performs platform specific updates (WebGPU vs WebGL) */
-  protected abstract updateSize(size: [width: number, height: number]): void;
+  /**
+   * Performs platform specific updates (WebGPU vs WebGL)
+   * Can be called after changes to size or props, 
+   * to give implementation an opportunity to update configurations.
+   */
+  abstract _updateConfiguration(): void;
 
   // IMPLEMENTATION
 
@@ -295,7 +294,7 @@ export abstract class CanvasContext {
     }
   }
 
-  /** reacts to our intersection observer */
+  /** reacts to an observed intersection */
   protected _handleIntersection(entries: IntersectionObserverEntry[]) {
     const entry = entries.find(entry_ => entry_.target === this.canvas);
     if (!entry) {
@@ -320,32 +319,39 @@ export abstract class CanvasContext {
       return;
     }
 
-    // Use the most accurate drawing buffer size information the current browser can provide
-    // Note: content box sizes are guaranteed to be integers
-    // Note: Safari falls back to contentBoxSize
-    const boxWidth =
-      entry.devicePixelContentBoxSize?.[0].inlineSize ||
-      entry.contentBoxSize[0].inlineSize * devicePixelRatio;
-
-    const boxHeight =
-      entry.devicePixelContentBoxSize?.[0].blockSize ||
-      entry.contentBoxSize[0].blockSize * devicePixelRatio;
+    // Update CSS size using content box size
+    this.cssWidth = entry.contentBoxSize[0].inlineSize;
+    this.cssHeight = entry.contentBoxSize[0].blockSize;
 
     // Update our drawing buffer size variables, saving the old values for logging
     const oldPixelSize = this.getPixelSize();
 
+    // Use the most accurate drawing buffer size information the current browser can provide
+    // Note: content box sizes are guaranteed to be integers
+    // Note: Safari falls back to contentBoxSize
+    const pixelWidth =
+      entry.devicePixelContentBoxSize?.[0].inlineSize ||
+      entry.contentBoxSize[0].inlineSize * devicePixelRatio;
+
+    const pixelHeight =
+      entry.devicePixelContentBoxSize?.[0].blockSize ||
+      entry.contentBoxSize[0].blockSize * devicePixelRatio;
+
     // Make sure we don't overflow the maximum supported texture size
     const [maxPixelWidth, maxPixelHeight] = this.getMaxDrawingBufferSize();
-    this.pixelWidth = Math.max(1, Math.min(boxWidth, maxPixelWidth));
-    this.pixelHeight = Math.max(1, Math.min(boxHeight, maxPixelHeight));
+    this.pixelWidth = Math.max(1, Math.min(pixelWidth, maxPixelWidth));
+    this.pixelHeight = Math.max(1, Math.min(pixelHeight, maxPixelHeight));
 
+    // Update the canvas drawing buffer size
     if (this.props.autoResize) {
-      // Update the canvas drawing buffer size
-      // TODO - This does not account for props.useDevicePixels
-      this.setDrawingBufferSize(this.pixelWidth, this.pixelHeight);
+      if (this.props.useDevicePixels) {
+        this.setDrawingBufferSize(this.pixelWidth, this.pixelHeight);
+      } else {
+        this.setDrawingBufferSize(this.cssWidth, this.cssHeight);
+      }
 
       // Inform the subclass
-      this.updateSize(this.getDrawingBufferSize());
+      this._updateConfiguration();
     }
 
     // Resolve the initialized promise
@@ -370,81 +376,6 @@ export abstract class CanvasContext {
       {once: true}
     );
   }
-
-  // DEPRECATED
-
-  /** @deprecated Use canvasContext.setDrawingBufferSize()
-   * Resizes the canvas. Note: Has no effect if props.autoResize is true */
-  abstract resize(options?: {
-    width?: number;
-    height?: number;
-    useDevicePixels?: boolean | number;
-  }): void;
-
-  /**
-   * @deprecated Use devicePixelRatio to set canvas width and height
-   * @note this is a raw port of luma.gl v8 code. Might be worth a review
-   */
-  _setDevicePixelRatio(
-    devicePixelRatio: number,
-    options: {width?: number; height?: number} = {}
-  ): void {
-    if (!this.htmlCanvas) {
-      return;
-    }
-
-    // NOTE: if options.width and options.height not used remove in v8
-    let clientWidth = 'width' in options ? options.width : this.htmlCanvas.clientWidth;
-    let clientHeight = 'height' in options ? options.height : this.htmlCanvas.clientHeight;
-
-    if (!clientWidth || !clientHeight) {
-      log.log(1, 'Canvas clientWidth/clientHeight is 0')();
-      // by forcing devicePixel ratio to 1, we do not scale canvas.width and height in each frame.
-      devicePixelRatio = 1;
-      clientWidth = this.htmlCanvas.width || 1;
-      clientHeight = this.htmlCanvas.height || 1;
-    }
-
-    const cachedSize = this._canvasSizeInfo;
-    // Check if canvas needs to be resized
-    if (
-      cachedSize.clientWidth !== clientWidth ||
-      cachedSize.clientHeight !== clientHeight ||
-      cachedSize.devicePixelRatio !== devicePixelRatio
-    ) {
-      let clampedPixelRatio = devicePixelRatio;
-
-      const canvasWidth = Math.floor(clientWidth * clampedPixelRatio);
-      const canvasHeight = Math.floor(clientHeight * clampedPixelRatio);
-      this.htmlCanvas.width = canvasWidth;
-      this.htmlCanvas.height = canvasHeight;
-
-      // @ts-expect-error This only works for WebGL
-      const gl = this.device.gl;
-      if (gl) {
-        // Note: when devicePixelRatio is too high, it is possible we might hit system limit for
-        // drawing buffer width and hight, in those cases they get clamped and resulting aspect ration may not be maintained
-        // for those cases, reduce devicePixelRatio.
-        const [drawingBufferWidth, drawingBufferHeight] = this.getDrawingBufferSize();
-
-        if (drawingBufferWidth !== canvasWidth || drawingBufferHeight !== canvasHeight) {
-          clampedPixelRatio = Math.min(
-            drawingBufferWidth / clientWidth,
-            drawingBufferHeight / clientHeight
-          );
-
-          this.htmlCanvas.width = Math.floor(clientWidth * clampedPixelRatio);
-          this.htmlCanvas.height = Math.floor(clientHeight * clampedPixelRatio);
-
-          log.warn('Device pixel ratio clamped')();
-        }
-
-        this._canvasSizeInfo.clientWidth = clientWidth;
-        this._canvasSizeInfo.clientHeight = clientHeight;
-        this._canvasSizeInfo.devicePixelRatio = devicePixelRatio;
-      }
-    }
-  }
 }
 
 // HELPER FUNCTIONS
@@ -467,7 +398,7 @@ function getContainer(container: HTMLElement | string | null): HTMLElement {
 /** Get a Canvas element from DOM id */
 function getCanvasFromDOM(canvasId: string): HTMLCanvasElement {
   const canvas = document.getElementById(canvasId);
-  if (!(canvas instanceof HTMLCanvasElement)) {
+  if (!CanvasContext.isHTMLCanvas(canvas)) {
     throw new Error('Object is not a canvas element');
   }
   return canvas;
@@ -502,7 +433,7 @@ function createCanvasElement(props: CanvasContextProps) {
  * @returns
  */
 function scalePixels(
-  pixel: number[],
+  pixel: [number, number],
   ratio: number,
   width: number,
   height: number,
@@ -557,20 +488,4 @@ function scaleY(y: number, ratio: number, height: number, yInvert: boolean): num
   return yInvert
     ? Math.max(0, height - 1 - Math.round(y * ratio))
     : Math.min(Math.round(y * ratio), height - 1);
-}
-
-// TODO - replace with Promise.withResolvers once we upgrade TS baseline
-function withResolvers<T>(): {
-  promise: Promise<T>;
-  resolve: (t: T) => void;
-  reject: (error: Error) => void;
-} {
-  let resolve: (t: T) => void;
-  let reject: (error: Error) => void;
-  const promise = new Promise<T>((_resolve, _reject) => {
-    resolve = _resolve;
-    reject = _reject;
-  });
-  // @ts-expect-error - in fact these are no used before initialized
-  return {promise, resolve, reject};
 }

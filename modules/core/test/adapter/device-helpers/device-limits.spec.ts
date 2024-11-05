@@ -86,10 +86,10 @@ export const WEBGL_LIMITS = {
   [GL.UNIFORM_BUFFER_OFFSET_ALIGNMENT]: true
 };
 
-test('WebGLDevice#limits (WebGPU style limits)', async t => {
+test('Device#limits (WebGPU style limits)', async t => {
   for (const testDevice of await getTestDevices()) {
     for (const [limit, numeric] of Object.entries(DEVICE_LIMITS)) {
-      const actual = testDevice.limits[limit];
+      const actual = testDevice.limits[limit as keyof typeof DEVICE_LIMITS];
       if (numeric) {
         t.ok(Number.isFinite(actual), `device.limits.${limit} returns a number: ${actual}`);
       } else {
