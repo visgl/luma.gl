@@ -219,20 +219,11 @@ export type DeviceProps = {
   powerPreference?: 'default' | 'high-performance' | 'low-power';
   /** Hints that device creation should fail if no hardware GPU is available (if the system performance is "low"). */
   failIfMajorPerformanceCaveat?: boolean;
+  /** Error handling */
+  onError?: (error: Error) => unknown;
 
   /** WebGL specific: Properties passed through to WebGL2RenderingContext creation: `canvas.getContext('webgl2', props.webgl)` */
   webgl?: WebGLContextProps;
-
-  // CALLBACKS
-
-  /** Error handling - uncaught errors */
-  onError?: (error: Error) => unknown;
-  /** Called when the size of a canvas changes */
-  onResize?: (ctx: CanvasContext, info: {oldPixelSize: [number, number]}) => unknown;
-  /** Called when the visibility of a canvas changes */
-  onVisibilityChange?: (ctx: CanvasContext) => unknown;
-  /** Called when the device pixel ratio of a canvas changes */
-  onDevicePixelRatioChange?: (ctx: CanvasContext, info: {oldRatio: number}) => unknown;
 
   // DEBUG SETTINGS
 
@@ -308,31 +299,10 @@ export abstract class Device {
     powerPreference: 'high-performance',
     failIfMajorPerformanceCaveat: false,
     createCanvasContext: undefined!,
-    // WebGL specific
-    webgl: {},
 
     // Callbacks
     onError: (error: Error) => log.error(error.message)(),
-    onResize: (context: CanvasContext, info: {oldPixelSize: [number, number]}) => {
-      const [prevWidth, prevHeight] = info.oldPixelSize;
-      const [width, height] = context.getPixelSize();
-      log.log(1, `${context} Resized ${prevWidth}x${prevHeight} => ${width}x${height}px`)();
-    },
-    onVisibilityChange: (context: CanvasContext) =>
-      log.log(1, `${context} Visibility changed ${context.isVisible}`)(),
-    onDevicePixelRatioChange: (context: CanvasContext, info: {oldRatio: number}) =>
-      log.log(1, `${context} DPR changed ${info.oldRatio} => ${context.devicePixelRatio}`)(),
 
-    // Debug flags
-    debug: log.get('debug') || undefined!,
-    debugShaders: log.get('debug-shaders') || undefined!,
-    debugFramebuffers: Boolean(log.get('debug-framebuffers')),
-    debugFactories: Boolean(log.get('debug-factories')),
-    debugWebGL: Boolean(log.get('debug-webgl')),
-    debugSpectorJS: undefined!, // Note: log setting is queried by the spector.js code
-    debugSpectorJSUrl: undefined!,
-
-    // Experimental
     _requestMaxLimits: true,
     _cacheShaders: false,
     _cachePipelines: false,
@@ -343,6 +313,17 @@ export abstract class Device {
       'compilation-status-async-webgl': true
     },
     _resourceDefaults: {},
+
+    // WebGL specific
+    webgl: {},
+
+    debug: log.get('debug') || undefined!,
+    debugShaders: log.get('debug-shaders') || undefined!,
+    debugFramebuffers: Boolean(log.get('debug-framebuffers')),
+    debugFactories: Boolean(log.get('debug-factories')),
+    debugWebGL: Boolean(log.get('debug-webgl')),
+    debugSpectorJS: undefined!, // Note: log setting is queried by the spector.js code
+    debugSpectorJSUrl: undefined!,
 
     // INTERNAL
     _handle: undefined!
