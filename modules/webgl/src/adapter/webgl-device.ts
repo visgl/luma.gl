@@ -72,7 +72,9 @@ import {getWebGLExtension} from '../context/helpers/webgl-extensions';
 
 /** WebGPU style Device API for a WebGL context */
 export class WebGLDevice extends Device {
+  //
   // Public `Device` API
+  //
 
   /** type of this device */
   readonly type = 'webgl';
@@ -81,11 +83,9 @@ export class WebGLDevice extends Device {
   readonly handle: WebGL2RenderingContext;
   features: WebGLDeviceFeatures;
   limits: WebGLDeviceLimits;
+
   readonly info: DeviceInfo;
   readonly canvasContext: WebGLCanvasContext;
-
-  readonly preferredColorFormat = 'rgba8unorm';
-  readonly preferredDepthFormat = 'depth24plus';
 
   readonly lost: Promise<{reason: 'destroyed'; message: string}>;
 

@@ -7,13 +7,10 @@ import type {UniformValue} from '../types/uniforms';
 import type {PrimitiveTopology, RenderPipelineParameters} from '../types/parameters';
 import type {ShaderLayout, Binding} from '../types/shader-layout';
 import type {BufferLayout} from '../types/buffer-layout';
-import type {
-  ColorTextureFormat,
-  DepthStencilTextureFormat
-} from '@luma.gl/core/gpu-type-utils/texture-formats';
+// import {normalizeAttributeMap} from '../helpers/attribute-bindings';
+import {Resource, ResourceProps} from './resource';
 import type {Shader} from './shader';
 import type {RenderPass} from './render-pass';
-import {Resource, ResourceProps} from './resource';
 import {VertexArray} from './vertex-array';
 import {TransformFeedback} from './transform-feedback';
 
@@ -40,18 +37,15 @@ export type RenderPipelineProps = ResourceProps & {
 
   /** Determines how vertices are read from the 'vertex' attributes */
   topology?: PrimitiveTopology;
-
-  // color attachment information (needed on WebGPU)
-
-  /** Color attachments expected by this pipeline. Defaults to [device.preferredColorFormat]. Array needs not be contiguous. */
-  colorAttachmentFormats?: (ColorTextureFormat | null)[];
-  /** Depth attachment expected by this pipeline (if depth parameters are specified). Defaults to device.preferredDepthFormat */
-  depthStencilAttachmentFormat?: DepthStencilTextureFormat;
-
   /** Parameters that are controlled by pipeline */
   parameters?: RenderPipelineParameters;
 
-  // Dynamic bindings (TODO - pipelines should be immutable, move to RenderPass)
+  // /** Use instanced rendering? */
+  // isInstanced?: boolean;
+  // /** Number of instances */
+  // instanceCount?: number;
+  // /** Number of vertices */
+  // vertexCount?: number;
 
   /** Buffers, Textures, Samplers for the shader bindings */
   bindings?: Record<string, Binding>;
@@ -77,11 +71,11 @@ export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
     shaderLayout: null,
     bufferLayout: [],
     topology: 'triangle-list',
-
-    colorAttachmentFormats: undefined!,
-    depthStencilAttachmentFormat: undefined!,
-
     parameters: {},
+
+    // isInstanced: false,
+    // instanceCount: 0,
+    // vertexCount: 0,
 
     bindings: {},
     uniforms: {}

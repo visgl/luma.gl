@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {CanvasContextProps} from '@luma.gl/core';
+import type {CanvasContextProps, TextureFormat} from '@luma.gl/core';
 import {CanvasContext} from '@luma.gl/core';
 import type {NullDevice} from './null-device';
 import {NullFramebuffer} from './resources/null-framebuffer';
@@ -12,7 +12,8 @@ import {NullFramebuffer} from './resources/null-framebuffer';
  */
 export class NullCanvasContext extends CanvasContext {
   readonly device: NullDevice;
-  readonly handle = null;
+  readonly format: TextureFormat = 'rgba8unorm';
+  readonly depthStencilFormat: TextureFormat = 'depth24plus';
 
   presentationSize: [number, number];
   private _framebuffer: NullFramebuffer | null = null;

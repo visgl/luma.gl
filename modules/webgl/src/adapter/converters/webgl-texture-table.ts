@@ -148,8 +148,8 @@ export const WEBGL_TEXTURE_FORMATS: Record<TextureFormat, WebGLFormatInfo> = {
   'rgb9e5ufloat': {gl: GL.RGB9_E5}, // , filter: true},
   'rg11b10ufloat': {gl: GL.R11F_G11F_B10F, rb: true},
   'rgb10a2unorm': {gl: GL.RGB10_A2, rb: true},
-  'rgb10a2uint': {gl: GL.RGB10_A2UI, rb: true},
-  
+  'rgb10a2uint-webgl': {gl: GL.RGB10_A2UI, rb: true},
+
   // 48-bit formats
   'rgb16unorm-webgl': {gl: GL.RGB16_EXT}, // rgb not renderable
   'rgb16snorm-webgl': {gl: GL.RGB16_SNORM_EXT}, // rgb not renderable

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {CanvasContextProps} from '@luma.gl/core';
+import type {CanvasContextProps, TextureFormat} from '@luma.gl/core';
 import {CanvasContext} from '@luma.gl/core';
 import {WebGLDevice} from './webgl-device';
 import {WEBGLFramebuffer} from './resources/webgl-framebuffer';
@@ -12,8 +12,10 @@ import {WEBGLFramebuffer} from './resources/webgl-framebuffer';
  */
 export class WebGLCanvasContext extends CanvasContext {
   readonly device: WebGLDevice;
-  readonly handle: unknown = null;
+  readonly format: TextureFormat = 'rgba8unorm';
+  readonly depthStencilFormat: TextureFormat = 'depth24plus';
 
+  presentationSize: [number, number];
   private _framebuffer: WEBGLFramebuffer | null = null;
 
   get [Symbol.toStringTag](): string {
