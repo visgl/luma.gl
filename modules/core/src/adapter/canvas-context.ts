@@ -120,7 +120,7 @@ export abstract class CanvasContext {
       this.id = props.id || this.canvas.id;
       this.type = 'html-canvas';
       this.htmlCanvas = this.canvas;
-    } else if (typeof OffscreenCanvas !== 'undefined' && this.canvas instanceof OffscreenCanvas) {
+    } else if (this.canvas instanceof OffscreenCanvas) {
       this.id = props.id || 'offscreen-canvas';
       this.type = 'offscreen-canvas';
       this.offscreenCanvas = this.canvas;
@@ -459,14 +459,10 @@ function getContainer(container: HTMLElement | string | null): HTMLElement {
 /** Get a Canvas element from DOM id */
 function getCanvasFromDOM(canvasId: string): HTMLCanvasElement {
   const canvas = document.getElementById(canvasId);
-  if (
-    typeof canvas !== 'undefined' &&
-    typeof HTMLCanvasElement !== 'undefined' &&
-    !(canvas instanceof HTMLCanvasElement)
-  ) {
+  if (!(canvas instanceof HTMLCanvasElement)) {
     throw new Error('Object is not a canvas element');
   }
-  return canvas as HTMLCanvasElement;
+  return canvas;
 }
 
 /** Create a new canvas */
