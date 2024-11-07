@@ -28,10 +28,9 @@ test.skip('WEBGLVertexArray#divisors', t => {
   t.end();
 });
 
-// TODO(v9): Fix and re-enable test. NOTE this is a dupe of core?
+// TODO(v9): Fix and re-enable test.
 test.skip('WEBGLVertexArray#enable', t => {
   const renderPipeline = device.createRenderPipeline({});
-  // @ts-ignore
   const vertexArray = device.createVertexArray({renderPipeline}) as WEBGLVertexArray;
 
   const maxVertexAttributes = device.limits.maxVertexAttributes;

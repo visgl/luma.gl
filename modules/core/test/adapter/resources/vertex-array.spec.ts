@@ -9,10 +9,8 @@ import {VertexArray} from '@luma.gl/core';
 
 test('VertexArray construct/delete', t => {
   for (const device of [webglDevice]) {
-    const vertexArray = device.createVertexArray({
-      shaderLayout: {attributes: [], bindings: []},
-      bufferLayout: []
-    });
+    const renderPipeline = device.createRenderPipeline({});
+    const vertexArray = device.createVertexArray({renderPipeline});
     t.ok(vertexArray instanceof VertexArray, 'VertexArray construction successful');
 
     vertexArray.destroy();

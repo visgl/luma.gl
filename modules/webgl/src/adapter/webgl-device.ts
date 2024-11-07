@@ -188,6 +188,8 @@ export class WebGLDevice extends Device {
       this.features.initializeFeatures();
     }
 
+    this.canvasContext.resize();
+
     // Install context state tracking
     const glState = new WebGLStateTracker(this.gl, {
       log: (...args: any[]) => log.log(1, ...args)()

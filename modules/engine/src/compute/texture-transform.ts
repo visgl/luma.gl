@@ -3,9 +3,8 @@
 // Copyright (c) vis.gl contributors
 
 import {Buffer, Device, Framebuffer, RenderPassProps, Sampler, Texture} from '@luma.gl/core';
-import {getPassthroughFS} from '@luma.gl/shadertools';
 import {Model, ModelProps} from '../model/model';
-import {uid} from '../utils/uid';
+import {getPassthroughFS} from '@luma.gl/shadertools';
 
 /**
  * Properties for creating a {@link TextureTransform}
@@ -61,7 +60,7 @@ export class TextureTransform {
     });
 
     this.model = new Model(this.device, {
-      id: props.id || uid('texture-transform-model'),
+      id: props.id || 'texture-transform-model',
       fs:
         props.fs ||
         getPassthroughFS({

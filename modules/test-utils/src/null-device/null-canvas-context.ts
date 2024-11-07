@@ -26,23 +26,39 @@ export class NullCanvasContext extends CanvasContext {
     // Note: Base class creates / looks up the canvas (unless under Node.js)
     super(props);
     this.device = device;
-
-    // Base class constructor cannot access derived methods/fields, so we need to call these functions in the subclass constructor
+    this.presentationSize = [-1, -1];
     this._setAutoCreatedCanvasId(`${this.device.id}-canvas`);
-    this.updateSize([this.drawingBufferWidth, this.drawingBufferHeight]);
+    this.update();
   }
 
   getCurrentFramebuffer(): NullFramebuffer {
+    this.update();
     // Setting handle to null returns a reference to the default framebuffer
     this._framebuffer = this._framebuffer || new NullFramebuffer(this.device, {handle: null});
     return this._framebuffer;
   }
 
   /** Resizes and updates render targets if necessary */
-  updateSize(size: [number, number]) {}
+  update() {
+    const size = this.getPixelSize();
+    const sizeChanged =
+      size[0] !== this.presentationSize[0] || size[1] !== this.presentationSize[1];
+    if (sizeChanged) {
+      this.presentationSize = size;
+      this.resize();
+    }
+  }
 
   resize(options?: {width?: number; height?: number; useDevicePixels?: boolean | number}): void {
-    throw new Error('not implemented');
+    if (this.canvas) {
+      const devicePixelRatio = this.getDevicePixelRatio(options?.useDevicePixels);
+      this.setDevicePixelRatio(devicePixelRatio, options);
+      return;
+    }
+  }
+
+  override getDrawingBufferSize(): [number, number] {
+    return [this.width, this.height];
   }
 
   commit() {}

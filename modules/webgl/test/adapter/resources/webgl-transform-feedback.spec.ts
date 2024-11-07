@@ -28,7 +28,7 @@ void main()
 }
 `;
 
-test('WebGL#TransformFeedback#constructor/destroy', t => {
+test('WebGL#TransformFeedback constructor/destroy', t => {
   const buffer1 = webglDevice.createBuffer({byteLength: 16});
   const buffer2 = webglDevice.createBuffer({byteLength: 16});
   const model = createModel(buffer1, 4);
@@ -49,7 +49,7 @@ test('WebGL#TransformFeedback#constructor/destroy', t => {
   t.end();
 });
 
-test('WebGL#TransformFeedback#setBuffers', t => {
+test('WebGL#TransformFeedback setBuffers', t => {
   const buffer1 = webglDevice.createBuffer({byteLength: 100});
   const buffer2 = webglDevice.createBuffer({byteLength: 200});
   const buffer3 = webglDevice.createBuffer({byteLength: 300});
@@ -81,7 +81,6 @@ test('WebGL#TransformFeedback#setBuffers', t => {
     'set by index, 3 buffers'
   );
 
-  /* Generates unused buffer warnings that pollutes log
   transformFeedback.setBuffers({inValue: buffer1, outValue: buffer2, otherValue: buffer3});
   t.deepEqual(
     transformFeedback.buffers,
@@ -96,12 +95,11 @@ test('WebGL#TransformFeedback#setBuffers', t => {
     },
     'set by name, 2 buffers unused'
   );
-  */
 
   t.end();
 });
 
-test('WebGL#TransformFeedback#capture', async t => {
+test('WebGL#TransformFeedback capture', async t => {
   // TODO(v9) Test writing with offset into output buffer.
 
   const inArray = new Float32Array([10, 20, 31, 0, -57]);

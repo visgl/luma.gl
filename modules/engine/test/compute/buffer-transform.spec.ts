@@ -21,7 +21,7 @@ out vec4 fragColor;
 void main() { fragColor.x = dst; }
 `;
 
-test.skip('BufferTransform#constructor', async t => {
+test('BufferTransform#constructor', async t => {
   t.ok(createBufferTransform(webglDevice), 'WebGL succeeds');
   t.end();
 });
