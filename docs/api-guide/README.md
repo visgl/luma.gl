@@ -10,7 +10,7 @@ Most luma.gl applications will:
 
 1. Use the core API to create a `Device` class to access the GPU (either using WebGPU or WebGL).
 2. Upload data to the GPU via methods on the `Device`, using `Buffer` and `Texture` objects.
-3. Use tne engine API to create one or more `Model` instances from GLSL or WGSL shader code.
+3. Use the engine API to create one or more `Model` instances from GLSL or WGSL shader code.
 4. Bind attribute buffers and bindings (textures, uniform buffers or uniforms).
 5. Start an engine API `AnimationLoop` loop, and draw each frame into a `RenderPass`.
 
