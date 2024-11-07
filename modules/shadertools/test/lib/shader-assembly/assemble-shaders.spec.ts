@@ -4,7 +4,7 @@
 
 import test from 'tape-promise/tape';
 import {Device} from '@luma.gl/core';
-import {getWebGLTestDevice} from '@luma.gl/test-utils';
+import {webglDevice} from '@luma.gl/test-utils';
 import {assembleGLSLShaderPair, picking, fp64, pbr, PlatformInfo} from '@luma.gl/shadertools';
 import type {WebGLDevice} from '@luma.gl/webgl';
 import {isBrowser} from '@probe.gl/env';
@@ -263,14 +263,12 @@ void main(void) {
 }
 `;
 
-test('assembleGLSLShaderPair#import', async t => {
+test('assembleGLSLShaderPair#import', t => {
   t.ok(assembleGLSLShaderPair !== undefined, 'assembleGLSLShaderPair import successful');
   t.end();
 });
 
-test('assembleGLSLShaderPair#version_directive', async t => {
-  const webglDevice = await getWebGLTestDevice();
-
+test('assembleGLSLShaderPair#version_directive', t => {
   const assembleResult = assembleGLSLShaderPair({
     platformInfo: getInfo(webglDevice),
     vs: VS_GLSL_300,
@@ -291,9 +289,7 @@ test('assembleGLSLShaderPair#version_directive', async t => {
   t.end();
 });
 
-test('assembleGLSLShaderPair#getUniforms', async t => {
-  const webglDevice = await getWebGLTestDevice();
-
+test('assembleGLSLShaderPair#getUniforms', t => {
   // inject spy into the picking module's getUniforms
   // const module = getShaderModule(picking);
   // const getUniformsSpy = makeSpy(module, 'getUniforms');
@@ -335,9 +331,7 @@ test('assembleGLSLShaderPair#getUniforms', async t => {
   t.end();
 });
 
-test('assembleGLSLShaderPair#defines', async t => {
-  const webglDevice = await getWebGLTestDevice();
-
+test('assembleGLSLShaderPair#defines', t => {
   const assembleResult = assembleGLSLShaderPair({
     platformInfo: getInfo(webglDevice),
     vs: VS_GLSL_300,
@@ -365,9 +359,7 @@ const pickingInject = {
   }
 };
 
-test('assembleGLSLShaderPair#shaderhooks', async t => {
-  const webglDevice = await getWebGLTestDevice();
-
+test('assembleGLSLShaderPair#shaderhooks', t => {
   const hookFunctions = [
     'vs:LUMAGL_pickColor(inout vec4 color)',
     {
@@ -515,9 +507,7 @@ test('assembleGLSLShaderPair#shaderhooks', async t => {
   t.end();
 });
 
-test('assembleGLSLShaderPair#injection order', async t => {
-  const webglDevice = await getWebGLTestDevice();
-
+test('assembleGLSLShaderPair#injection order', t => {
   let assembleResult = assembleGLSLShaderPair({
     platformInfo: getInfo(webglDevice),
     vs: VS_GLSL_300_MODULES,
@@ -556,9 +546,7 @@ test('assembleGLSLShaderPair#injection order', async t => {
 });
 
 // TODO - restore if we ever support transpilation of uniform blocks
-test.skip('assembleGLSLShaderPair#transpilation', async t => {
-  const webglDevice = await getWebGLTestDevice();
-
+test.skip('assembleGLSLShaderPair#transpilation', t => {
   let assembleResult = assembleGLSLShaderPair({
     platformInfo: getInfo(webglDevice),
     vs: VS_GLSL_300,

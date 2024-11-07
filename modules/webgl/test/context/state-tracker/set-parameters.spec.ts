@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
-import {getWebGLTestDevice} from '@luma.gl/test-utils';
+import {webglDevice} from '@luma.gl/test-utils';
 import {stringifyTypedArray} from './context-state.spec';
 
 import {setGLParameters, getGLParameters, resetGLParameters} from '@luma.gl/webgl';
@@ -13,9 +13,7 @@ import {GL_PARAMETER_DEFAULTS} from '@luma.gl/webgl/context/parameters/webgl-par
 import {ENUM_STYLE_SETTINGS_SET1_PRIMITIVE} from './data/sample-enum-settings';
 
 // Settings test, don't reuse a context
-test('WebGL#set and get', async t => {
-  const webglDevice = await getWebGLTestDevice();
-
+test('WebGL#set and get', t => {
   resetGLParameters(webglDevice.gl);
 
   let cullFace = getGLParameters(webglDevice.gl, [GL.CULL_FACE])[GL.CULL_FACE];
@@ -35,9 +33,7 @@ test('WebGL#set and get', async t => {
   t.end();
 });
 
-test('WebGL#composite setter', async t => {
-  const webglDevice = await getWebGLTestDevice();
-
+test('WebGL#composite setter', t => {
   const compositeStateKeys = [GL.STENCIL_FUNC, GL.STENCIL_REF, GL.STENCIL_VALUE_MASK];
 
   resetGLParameters(webglDevice.gl);
@@ -72,9 +68,7 @@ test('WebGL#composite setter', async t => {
   t.end();
 });
 
-test('WebGLState#get all parameters', async t => {
-  const webglDevice = await getWebGLTestDevice();
-
+test('WebGLState#get all parameters', t => {
   resetGLParameters(webglDevice.gl);
 
   // Set custom values.
@@ -105,9 +99,7 @@ test('WebGLState#get all parameters', async t => {
   t.end();
 });
 
-test('WebGL#reset', async t => {
-  const webglDevice = await getWebGLTestDevice();
-
+test('WebGL#reset', t => {
   // Set custom values and verify.
   setGLParameters(webglDevice.gl, ENUM_STYLE_SETTINGS_SET1_PRIMITIVE);
   for (const key in ENUM_STYLE_SETTINGS_SET1_PRIMITIVE) {
@@ -139,9 +131,7 @@ test('WebGL#reset', async t => {
   t.end();
 });
 
-test('WebGLState#setGLParameters framebuffer', async t => {
-  const webglDevice = await getWebGLTestDevice();
-
+test('WebGLState#setGLParameters framebuffer', t => {
   resetGLParameters(webglDevice.gl);
 
   let fbHandle = getGLParameters(webglDevice.gl, [GL.FRAMEBUFFER_BINDING])[GL.FRAMEBUFFER_BINDING];
@@ -164,9 +154,7 @@ test('WebGLState#setGLParameters framebuffer', async t => {
   t.end();
 });
 
-test('WebGLState#setGLParameters read-framebuffer (WebGL2 only)', async t => {
-  const webglDevice = await getWebGLTestDevice();
-
+test('WebGLState#setGLParameters read-framebuffer (WebGL2 only)', t => {
   resetGLParameters(webglDevice.gl);
 
   let fbHandle = getGLParameters(webglDevice.gl, [GL.READ_FRAMEBUFFER_BINDING])[

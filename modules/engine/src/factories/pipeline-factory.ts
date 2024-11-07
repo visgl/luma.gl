@@ -25,7 +25,6 @@ export class PipelineFactory {
   }
 
   readonly device: Device;
-  readonly cachingEnabled: boolean;
   readonly destroyPolicy: 'unused' | 'never';
   readonly debug: boolean;
 
@@ -44,17 +43,12 @@ export class PipelineFactory {
 
   constructor(device: Device) {
     this.device = device;
-    this.cachingEnabled = device.props._cachePipelines;
-    this.destroyPolicy = device.props._cacheDestroyPolicy;
+    this.destroyPolicy = device.props._factoryDestroyPolicy;
     this.debug = device.props.debugFactories;
   }
 
   /** Return a RenderPipeline matching supplied props. Reuses an equivalent pipeline if already created. */
   createRenderPipeline(props: RenderPipelineProps): RenderPipeline {
-    if (!this.cachingEnabled) {
-      return this.device.createRenderPipeline(props);
-    }
-
     const allProps: Required<RenderPipelineProps> = {...RenderPipeline.defaultProps, ...props};
 
     const cache = this._renderPipelineCache;
@@ -85,10 +79,6 @@ export class PipelineFactory {
 
   /** Return a ComputePipeline matching supplied props. Reuses an equivalent pipeline if already created. */
   createComputePipeline(props: ComputePipelineProps): ComputePipeline {
-    if (!this.cachingEnabled) {
-      return this.device.createComputePipeline(props);
-    }
-
     const allProps: Required<ComputePipelineProps> = {...ComputePipeline.defaultProps, ...props};
 
     const cache = this._computePipelineCache;
@@ -118,11 +108,6 @@ export class PipelineFactory {
   }
 
   release(pipeline: RenderPipeline | ComputePipeline): void {
-    if (!this.cachingEnabled) {
-      pipeline.destroy();
-      return;
-    }
-
     const cache = this._getCache(pipeline);
     const hash = pipeline.hash;
 

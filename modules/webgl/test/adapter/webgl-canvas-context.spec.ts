@@ -3,9 +3,13 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
-import {getWebGLTestDevice} from '@luma.gl/test-utils';
+import {createTestDevice} from '@luma.gl/test-utils';
 import {WebGLCanvasContext} from '@luma.gl/webgl';
 import {CanvasContext} from '@luma.gl/core';
+
+// Create a fresh device since are going to modify it
+const canvasContextDevice = createTestDevice();
+const canvasContext = canvasContextDevice?.canvasContext;
 
 test('WebGLDevice#headless context creation', t => {
   t.ok(WebGLCanvasContext, 'WebGLCanvasContext defined');
@@ -14,6 +18,7 @@ test('WebGLDevice#headless context creation', t => {
 });
 
 // TODO - can these tests be moved up into canvas-context.spec?
+
 const LOW_DPR = 0.5;
 const HIGH_DPR = 4;
 const HIGH_DPR_FRACTION = 2.5;
@@ -292,11 +297,7 @@ const MAP_TEST_CASES = [
   }
 ];
 
-test('WebGLCanvasContext#cssToDevicePixels', async t => {
-  // Create a fresh device since are going to modify it
-  const canvasContextDevice = await getWebGLTestDevice();
-  const canvasContext = canvasContextDevice?.canvasContext;
-
+test('WebGLCanvasContext#cssToDevicePixels', t => {
   MAP_TEST_CASES.forEach(tc => {
     if (canvasContext) {
       configureCanvasContext(canvasContext, tc);
@@ -320,10 +321,7 @@ test('WebGLCanvasContext#cssToDevicePixels', async t => {
   t.end();
 });
 
-test('WebGLCanvasContext#cssToDeviceRatio', async t => {
-  const canvasContextDevice = await getWebGLTestDevice();
-  const canvasContext = canvasContextDevice?.canvasContext;
-
+test('WebGLCanvasContext#cssToDeviceRatio', t => {
   MAP_TEST_CASES.forEach(tc => {
     if (canvasContext) {
       configureCanvasContext(canvasContext, tc);

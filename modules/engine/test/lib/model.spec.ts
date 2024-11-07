@@ -5,7 +5,7 @@
 import test from 'tape-promise/tape';
 import {luma} from '@luma.gl/core';
 import {Model, PipelineFactory, ShaderFactory} from '@luma.gl/engine';
-import {getWebGLTestDevice, getTestDevices} from '@luma.gl/test-utils';
+import {webglDevice, getTestDevices} from '@luma.gl/test-utils';
 
 const stats = luma.stats.get('Resource Counts');
 
@@ -37,9 +37,7 @@ const mockModule = {
   dependencies: []
 };
 
-test('Model#construct/destruct', async t => {
-  const webglDevice = await getWebGLTestDevice();
-
+test('Model#construct/destruct', t => {
   const model = new Model(webglDevice, {
     id: 'construct-destruct-test',
     topology: 'point-list',
@@ -58,9 +56,7 @@ test('Model#construct/destruct', async t => {
   t.end();
 });
 
-test('Model#multiple delete', async t => {
-  const webglDevice = await getWebGLTestDevice();
-
+test('Model#multiple delete', t => {
   const model1 = new Model(webglDevice, {
     id: 'multiple-delete-test-1',
     topology: 'point-list',
@@ -87,9 +83,7 @@ test('Model#multiple delete', async t => {
   t.end();
 });
 
-test('Model#setAttributes', async t => {
-  const webglDevice = await getWebGLTestDevice();
-
+test('Model#setAttributes', t => {
   const buffer1 = webglDevice.createBuffer({data: new Float32Array(9).fill(0)});
   const buffer2 = webglDevice.createBuffer({data: new Float32Array(9).fill(1)});
 
@@ -134,8 +128,7 @@ test('Model#setAttributes', async t => {
   t.end();
 });
 
-test('Model#setters, getters', async t => {
-  const webglDevice = await getWebGLTestDevice();
+test('Model#setters, getters', t => {
   const model = new Model(webglDevice, {
     id: 'setters-getters-test',
     topology: 'point-list',
@@ -157,9 +150,7 @@ test('Model#setters, getters', async t => {
   t.end();
 });
 
-test('Model#draw', async t => {
-  const webglDevice = await getWebGLTestDevice();
-
+test('Model#draw', t => {
   const model = new Model(webglDevice, {
     id: 'draw-test',
     vs: DUMMY_VS,
@@ -230,14 +221,7 @@ test('Model#topology', async t => {
   t.end();
 });
 
-test('Model#pipeline caching', async t => {
-  const webglDevice = await getWebGLTestDevice();
-  if (!webglDevice.props._cachePipelines) {
-    t.comment('Pipeline caching is disabled');
-    t.end();
-    return;
-  }
-
+test('Model#pipeline caching', t => {
   const pipelineFactory = new PipelineFactory(webglDevice);
   const shaderFactory = new ShaderFactory(webglDevice);
 
@@ -292,14 +276,7 @@ test('Model#pipeline caching', async t => {
   t.end();
 });
 
-test('Model#pipeline caching with defines and modules', async t => {
-  const webglDevice = await getWebGLTestDevice();
-  if (!webglDevice.props._cachePipelines) {
-    t.comment('Pipeline caching is disabled');
-    t.end();
-    return;
-  }
-
+test('Model#pipeline caching with defines and modules', t => {
   const pipelineFactory = PipelineFactory.getDefaultPipelineFactory(webglDevice);
   const shaderFactory = ShaderFactory.getDefaultShaderFactory(webglDevice);
   const model1 = new Model(webglDevice, {

@@ -65,7 +65,9 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     super(device, props);
     this.device = device;
     this.handle = this.props.handle || this.device.gl.createProgram();
-    this.device._setWebGLDebugMetadata(this.handle, this, {spector: {id: this.props.id}});
+    this.device.setSpectorMetadata(this.handle, {id: this.props.id});
+    // @ts-expect-error
+    this.handle.luma = this;
 
     // Create shaders if needed
     this.vs = props.vs as WEBGLShader;
@@ -92,13 +94,9 @@ export class WEBGLRenderPipeline extends RenderPipeline {
 
   override destroy(): void {
     if (this.handle) {
-      // log.error(`Deleting program ${this.id}`)();
-      this.device.gl.useProgram(null);
       this.device.gl.deleteProgram(this.handle);
-      this.destroyed = true;
-      // @ts-expect-error
-      this.handle.destroyed = true;
       this.handle = null;
+      this.destroyed = true;
     }
   }
 

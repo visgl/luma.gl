@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
-import {getWebGLTestDevice} from '@luma.gl/test-utils';
+import {webglDevice} from '@luma.gl/test-utils';
 
 import {BufferTransform} from '@luma.gl/engine';
 import {picking, getShaderModuleUniforms} from '@luma.gl/shadertools';
@@ -58,7 +58,7 @@ const TEST_CASES = [
   }
 ];
 
-test('picking#getUniforms', async t => {
+test('picking#getUniforms', t => {
   t.deepEqual(getShaderModuleUniforms(picking, {}, {}), {}, 'Empty input');
 
   t.deepEqual(
@@ -123,9 +123,7 @@ test('picking#getUniforms', async t => {
 
 // TODO(v9): Restore picking tests.
 test.skip('picking#isVertexPicked(highlightedObjectColor invalid)', async t => {
-  const device = await getWebGLTestDevice();
-
-  if (!BufferTransform.isSupported(device)) {
+  if (!BufferTransform.isSupported(webglDevice)) {
     t.comment('Transform not available, skipping tests');
     t.end();
     return;
@@ -143,10 +141,10 @@ test.skip('picking#isVertexPicked(highlightedObjectColor invalid)', async t => {
   const vertexColorData = TEST_DATA.vertexColorData;
 
   const vertexCount = vertexColorData.length / 3;
-  const vertexColor = device.createBuffer(vertexColorData);
-  const isPicked = device.createBuffer({byteLength: vertexCount * 4});
+  const vertexColor = webglDevice.createBuffer(vertexColorData);
+  const isPicked = webglDevice.createBuffer({byteLength: vertexCount * 4});
 
-  const transform = new BufferTransform(device, {
+  const transform = new BufferTransform(webglDevice, {
     // @ts-expect-error
     sourceBuffers: {
       vertexColor
@@ -184,9 +182,7 @@ test.skip('picking#isVertexPicked(highlightedObjectColor invalid)', async t => {
 // TODO(v9): Restore picking tests.
 /* eslint-disable max-nested-callbacks */
 test.skip('picking#picking_setPickingColor', async t => {
-  const device = await getWebGLTestDevice();
-
-  if (!BufferTransform.isSupported(device)) {
+  if (!BufferTransform.isSupported(webglDevice)) {
     t.comment('Transform not available, skipping tests');
     t.end();
     return;
@@ -205,10 +201,10 @@ test.skip('picking#picking_setPickingColor', async t => {
   const vertexColorData = TEST_DATA.vertexColorData;
 
   const vertexCount = vertexColorData.length / 3;
-  const vertexColor = device.createBuffer(vertexColorData);
-  const rgbColorASelected = device.createBuffer({byteLength: vertexCount * 4});
+  const vertexColor = webglDevice.createBuffer(vertexColorData);
+  const rgbColorASelected = webglDevice.createBuffer({byteLength: vertexCount * 4});
 
-  const transform = new BufferTransform(device, {
+  const transform = new BufferTransform(webglDevice, {
     vs: VS,
     bufferLayout: [{name: 'vertexColor', format: 'float32'}],
     outputs: ['rgbColorASelected'],

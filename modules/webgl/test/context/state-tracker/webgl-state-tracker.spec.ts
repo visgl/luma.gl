@@ -3,14 +3,11 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
-import {
-  GL_PARAMETER_DEFAULTS,
-  GL_PARAMETER_SETTERS
-} from '@luma.gl/webgl/context/parameters/webgl-parameter-tables';
+import {createTestDevice} from '@luma.gl/test-utils';
 
-import {luma} from '@luma.gl/core';
+import type {WebGLDevice} from '@luma.gl/webgl';
+
 import {
-  WebGLDevice,
   getGLParameters,
   setGLParameters,
   resetGLParameters,
@@ -18,24 +15,25 @@ import {
   webgl2Adapter
 } from '@luma.gl/webgl';
 
+import {
+  GL_PARAMETER_DEFAULTS,
+  GL_PARAMETER_SETTERS
+} from '@luma.gl/webgl/context/parameters/webgl-parameter-tables';
+
 import {stringifyTypedArray} from './context-state.spec';
 
 import {ENUM_STYLE_SETTINGS_SET1, ENUM_STYLE_SETTINGS_SET2} from './data/sample-enum-settings';
 
 // Settings test, don't reuse a context
 // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-const devicePromise = luma.createDevice({
-  type: 'webgl',
-  adapters: [webgl2Adapter],
-  createCanvasContext: true
-}) as Promise<WebGLDevice>;
+const device = createTestDevice() as WebGLDevice;
 
-test('WebGLStateTracker#imports', async t => {
+test('WebGLStateTracker#imports', t => {
   t.ok(typeof WebGLStateTracker === 'function', 'WebGLStateTracker imported OK');
   t.end();
 });
 
-// test.skip('WebGLStateTracker#trackContextState', async t => {
+// test.skip('WebGLStateTracker#trackContextState', t => {
 //   const {gl} = device;
 //   t.doesNotThrow(
 //     () => trackContextState(gl, {copyState: false}),
@@ -44,8 +42,7 @@ test('WebGLStateTracker#imports', async t => {
 //   t.end();
 // });
 
-test('WebGLStateTracker#push & pop', async t => {
-  const device = await devicePromise;
+test('WebGLStateTracker#push & pop', t => {
   const {gl} = device;
 
   resetGLParameters(gl);
@@ -116,8 +113,7 @@ test('WebGLStateTracker#push & pop', async t => {
   t.end();
 });
 
-test('WebGLStateTracker#gl API', async t => {
-  const device = await devicePromise;
+test('WebGLStateTracker#gl API', t => {
   const {gl} = device;
 
   resetGLParameters(gl);
@@ -173,8 +169,7 @@ test('WebGLStateTracker#gl API', async t => {
   t.end();
 });
 
-test('WebGLStateTracker#intercept gl calls', async t => {
-  const device = await devicePromise;
+test('WebGLStateTracker#intercept gl calls', t => {
   const {gl} = device;
 
   resetGLParameters(gl);
@@ -217,8 +212,7 @@ test('WebGLStateTracker#intercept gl calls', async t => {
   t.end();
 });
 
-test('WebGLStateTracker#not cached parameters', async t => {
-  const device = await devicePromise;
+test('WebGLStateTracker#not cached parameters', t => {
   const {gl} = device;
 
   resetGLParameters(gl);

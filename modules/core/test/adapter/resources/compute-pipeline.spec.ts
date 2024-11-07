@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {webgpuDevice, getTestDevices} from '@luma.gl/test-utils';
 import {ComputePipeline, Buffer} from '@luma.gl/core';
 
 const source = /* WGSL*/ `\
@@ -18,8 +18,7 @@ const source = /* WGSL*/ `\
 `;
 
 test.skip('ComputePipeline#construct/delete', async t => {
-  const webgpuDevice = await getWebGPUTestDevice();
-
+  await getTestDevices();
   if (webgpuDevice) {
     const shader = webgpuDevice.createShader({source});
     const computePipeline = webgpuDevice.createComputePipeline({shader});
@@ -33,8 +32,7 @@ test.skip('ComputePipeline#construct/delete', async t => {
 });
 
 test('ComputePipeline#compute', async t => {
-  const webgpuDevice = await getWebGPUTestDevice();
-
+  await getTestDevices();
   if (webgpuDevice) {
     const shader = webgpuDevice.createShader({source});
     const computePipeline = webgpuDevice.createComputePipeline({

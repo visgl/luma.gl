@@ -3,18 +3,16 @@
 /* eslint-disable */
 
 import test from 'tape-promise/tape';
-import {getWebGLTestDevice, getTestDevices} from '@luma.gl/test-utils';
+import {webglDevice, getTestDevices} from '@luma.gl/test-utils';
 
 import {Device, Texture, TextureFormat, decodeTextureFormat, VertexType} from '@luma.gl/core';
 // TODO(v9): Avoid import from `@luma.gl/constants` in core tests.
 import {GL} from '@luma.gl/constants';
-import {WebGLDevice} from '@luma.gl/webgl';
 
 import {_getTextureFormatTable, getTextureFormatWebGL} from '@luma.gl/core';
 import {SAMPLER_PARAMETERS} from './sampler.spec';
 
 import {WEBGLTexture} from '@luma.gl/webgl/adapter/resources/webgl-texture';
-import {WebGLDevice} from '../../../../webgl/dist/adapter/webgl-device';
 // import {convertToSamplerProps} from '@luma.gl/webgl/adapter/converters/sampler-parameters';
 
 test('Device#isTextureFormatSupported()', async t => {
@@ -276,7 +274,6 @@ test('Texture#copyExternalImage', async t => {
     });
 
     if (device.info.type === 'webgl') {
-      const webglDevice = device as WebGLDevice;
       t.deepEquals(
         webglDevice.readPixelsToArrayWebGL(texture),
         new Uint8Array(8),
@@ -342,8 +339,7 @@ test('Texture#copyExternalImage', async t => {
   t.end();
 });
 
-test.skip('Texture#setImageData', async t => {
-  const webglDevice = await getWebGLTestDevice();
+test.skip('Texture#setImageData', t => {
   let data;
 
   // data: null
@@ -363,7 +359,7 @@ test.skip('Texture#setImageData', async t => {
   t.end();
 });
 
-test.skip('WebGL2#Texture setSubImageData', async t => {
+test.skip('WebGL2#Texture setSubImageData', t => {
   let data;
 
   // data: null
@@ -414,7 +410,7 @@ test.skip('WebGL2#Texture setSubImageData', async t => {
   t.end();
 });
 
-test.skip('WebGL2#Texture generateMipmap', async t => {
+test.skip('WebGL2#Texture generateMipmap', t => {
   let texture = webglDevice.createTexture({
     data: null,
     width: 3,
@@ -443,7 +439,7 @@ test.skip('WebGL2#Texture generateMipmap', async t => {
 test('Texture(dimension)#construct/delete', async t => {
   for (const device of await getTestDevices()) {
     for (const dimension of ['3d', '2d-array', 'cube']) {
-      const texture = device.createTexture({dimension});
+      const texture = webglDevice.createTexture({dimension});
       t.equal(texture.dimension, dimension, `${device.info.type} Texture construction successful`);
       t.equal(
         texture.view.props.dimension,
@@ -457,7 +453,7 @@ test('Texture(dimension)#construct/delete', async t => {
   t.end();
 });
 
-test.skip('Texture#buffer update', async t => {
+test.skip('Texture#buffer update', t => {
   let texture = webglDevice.createTexture();
   t.ok(texture instanceof Texture, 'Texture construction successful');
 
@@ -469,7 +465,7 @@ test.skip('Texture#buffer update', async t => {
 
 // CUBE TEXTURES
 
-test.skip('WebGL#TextureCube construct/delete', async t => {
+test.skip('WebGL#TextureCube construct/delete', t => {
   t.throws(
     // @ts-expect-error
     () => new TextureCube(),
@@ -491,7 +487,7 @@ test.skip('WebGL#TextureCube construct/delete', async t => {
   t.end();
 });
 
-test.skip('WebGL#TextureCube buffer update', async t => {
+test.skip('WebGL#TextureCube buffer update', t => {
   const texture = webglDevice.createTexture({dimension: 'cube'});
   t.ok(texture instanceof Texture, 'TextureCube construction successful');
 
@@ -501,7 +497,7 @@ test.skip('WebGL#TextureCube buffer update', async t => {
   t.end();
 });
 
-test.skip('WebGL#TextureCube multiple LODs', async t => {
+test.skip('WebGL#TextureCube multiple LODs', t => {
   const texture = webglDevice.createTexture(
     {dimension: 'cube'},
     {
@@ -522,7 +518,7 @@ test.skip('WebGL#TextureCube multiple LODs', async t => {
 
 // 3D TEXTURES
 
-test.skip('WebGL#Texture3D construct/delete', async t => {
+test.skip('WebGL#Texture3D construct/delete', t => {
   t.throws(
     () => webglDevice.createTexture({dimension: '3d'}),
     'Texture3D throws on missing gl context'
@@ -572,7 +568,7 @@ test.skip('WebGL#Texture3D construct/delete', async t => {
   t.end();
 });
 
-test.skip('Texture#setParameters', async t => {
+test.skip('Texture#setParameters', t => {
   const texture = webglDevice.createTexture({});
   t.ok(texture instanceof Texture, 'Texture construction successful');
 

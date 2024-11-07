@@ -1,12 +1,10 @@
 import test from 'tape';
 import {Swap} from '../../src/compute/swap';
-import {getWebGLTestDevice} from '@luma.gl/test-utils';
+import {webglDevice} from '@luma.gl/test-utils';
 
 // TODO - these tests could run on NullDevice
 
-test('Swap#constructor', async t => {
-  const webglDevice = await getWebGLTestDevice();
-
+test('Swap#constructor', t => {
   const current = webglDevice.createBuffer({byteLength: 1});
   const next = webglDevice.createBuffer({byteLength: 1});
   const swap = new Swap({current, next});
@@ -17,9 +15,7 @@ test('Swap#constructor', async t => {
   t.end();
 });
 
-test('Swap#destroy', async t => {
-  const webglDevice = await getWebGLTestDevice();
-
+test('Swap#destroy', t => {
   const current = webglDevice.createBuffer({byteLength: 1});
   const next = webglDevice.createBuffer({byteLength: 1});
   const swap = new Swap({current, next});
@@ -35,9 +31,7 @@ test('Swap#destroy', async t => {
   t.end();
 });
 
-test('Swap#swap', async t => {
-  const webglDevice = await getWebGLTestDevice();
-
+test('Swap#swap', t => {
   const current = webglDevice.createBuffer({byteLength: 1});
   const next = webglDevice.createBuffer({byteLength: 1});
   const swap = new Swap({current, next});

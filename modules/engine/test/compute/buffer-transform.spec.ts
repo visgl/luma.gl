@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
-import {getWebGLTestDevice} from '@luma.gl/test-utils';
+import {webglDevice} from '@luma.gl/test-utils';
 import {BufferTransform} from '@luma.gl/engine';
 import {Buffer, Device} from '@luma.gl/core';
 
@@ -21,16 +21,12 @@ out vec4 fragColor;
 void main() { fragColor.x = dst; }
 `;
 
-test('BufferTransform#constructor', async t => {
-  const webglDevice = await getWebGLTestDevice();
-
+test.skip('BufferTransform#constructor', async t => {
   t.ok(createBufferTransform(webglDevice), 'WebGL succeeds');
   t.end();
 });
 
-test.skip('BufferTransform#run', async t => {
-  const webglDevice = await getWebGLTestDevice();
-
+test('BufferTransform#run', async t => {
   const SRC_ARRAY = new Float32Array([0, 1, 2, 3, 4, 5]);
   const DST_ARRAY = new Float32Array([0, 1, 4, 9, 16, 25]);
 
@@ -49,12 +45,12 @@ test.skip('BufferTransform#run', async t => {
 });
 
 function createBufferTransform(
-  webglDevice: Device,
+  webglDevice_: Device,
   src?: Buffer,
   dst?: Buffer,
   vertexCount?: number
 ): BufferTransform {
-  return new BufferTransform(webglDevice, {
+  return new BufferTransform(webglDevice_, {
     vs: VS,
     fs: FS,
     vertexCount,

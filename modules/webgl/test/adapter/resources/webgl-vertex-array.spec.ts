@@ -3,15 +3,13 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
-import {getWebGLTestDevice} from '@luma.gl/test-utils';
+import {webglDevice as device} from '@luma.gl/test-utils';
 
 import {GL} from '@luma.gl/constants';
 import {WEBGLBuffer, WEBGLVertexArray} from '@luma.gl/webgl';
 
 // TODO(v9): Fix and re-enable test.
-test.skip('WEBGLVertexArray#divisors', async t => {
-  const device = await getWebGLTestDevice();
-
+test.skip('WEBGLVertexArray#divisors', t => {
   // @ts-ignore
   const vertexArray = new WEBGLVertexArray(device);
 
@@ -31,9 +29,7 @@ test.skip('WEBGLVertexArray#divisors', async t => {
 });
 
 // TODO(v9): Fix and re-enable test. NOTE this is a dupe of core?
-test.skip('WEBGLVertexArray#enable', async t => {
-  const device = await getWebGLTestDevice();
-
+test.skip('WEBGLVertexArray#enable', t => {
   const renderPipeline = device.createRenderPipeline({});
   // @ts-ignore
   const vertexArray = device.createVertexArray({renderPipeline}) as WEBGLVertexArray;
@@ -85,9 +81,7 @@ test.skip('WEBGLVertexArray#enable', async t => {
 });
 
 // TODO(v9): Fix and re-enable test.
-test.skip('WEBGLVertexArray#getConstantBuffer', async t => {
-  const device = await getWebGLTestDevice();
-
+test.skip('WEBGLVertexArray#getConstantBuffer', t => {
   // @ts-ignore
   const vertexArray = new WEBGLVertexArray(device);
 
