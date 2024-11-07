@@ -292,7 +292,6 @@ export class AnimationLoop {
     this._updateAnimationProps();
 
     // Default viewport setup, in case onInitialize wants to render
-    this._resizeCanvasDrawingBuffer();
     this._resizeViewport();
 
     // this._gpuTimeQuery = Query.isSupported(this.gl, ['timers']) ? new Query(this.gl) : null;
@@ -371,7 +370,6 @@ export class AnimationLoop {
   }
 
   _setupFrame(): void {
-    this._resizeCanvasDrawingBuffer();
     this._resizeViewport();
   }
 
@@ -508,7 +506,7 @@ export class AnimationLoop {
     return {width, height, aspect};
   }
 
-  /** Default viewport setup */
+  /** @deprecated Default viewport setup */
   _resizeViewport(): void {
     // TODO can we use canvas context to code this in a portable way?
     // @ts-expect-error Expose on canvasContext
@@ -522,16 +520,6 @@ export class AnimationLoop {
         // @ts-expect-error Expose canvasContext
         this.device.gl.drawingBufferHeight
       );
-    }
-  }
-
-  /**
-   * Resize the render buffer of the canvas to match canvas client size
-   * Optionally multiplying with devicePixel ratio
-   */
-  _resizeCanvasDrawingBuffer(): void {
-    if (this.props.autoResizeDrawingBuffer) {
-      this.device?.getDefaultCanvasContext().resize({useDevicePixels: this.props.useDevicePixels});
     }
   }
 

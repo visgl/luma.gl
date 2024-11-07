@@ -15,7 +15,7 @@ import './adapter-utils/format-compiler-log.spec';
 
 // adapter
 
-// WebGLDevice, features & limits
+// Device, features & limits
 import './adapter/device-helpers/device-info.spec';
 import './adapter/device-helpers/device-features.spec';
 import './adapter/device-helpers/device-limits.spec';

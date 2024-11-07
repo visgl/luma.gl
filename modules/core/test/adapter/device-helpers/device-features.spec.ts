@@ -10,7 +10,7 @@ import {DeviceFeature} from '@luma.gl/core';
 const WEBGL2_ALWAYS_FEATURES: DeviceFeature[] = [];
 const WEBGL2_NEVER_FEATURES: DeviceFeature[] = [];
 
-test('WebGLDevice#features (unknown features)', async t => {
+test('Device#features (unknown features)', async t => {
   const webglDevice = await getWebGLTestDevice();
 
   // @ts-expect-error
@@ -20,7 +20,7 @@ test('WebGLDevice#features (unknown features)', async t => {
   t.end();
 });
 
-test('WebGLDevice#hasFeatures (WebGL)', async t => {
+test('Device#hasFeatures (WebGL)', async t => {
   const webglDevice = await getWebGLTestDevice();
 
   for (const feature of WEBGL2_ALWAYS_FEATURES) {

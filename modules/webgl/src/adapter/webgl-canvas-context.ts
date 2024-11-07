@@ -27,7 +27,7 @@ export class WebGLCanvasContext extends CanvasContext {
 
     // Base class constructor cannot access derived methods/fields, so we need to call these functions in the subclass constructor
     this._setAutoCreatedCanvasId(`${this.device.id}-canvas`);
-    this.updateSize([this.drawingBufferWidth, this.drawingBufferHeight]);
+    this._updateConfiguration();
   }
 
   getCurrentFramebuffer(): WEBGLFramebuffer {
@@ -36,40 +36,7 @@ export class WebGLCanvasContext extends CanvasContext {
     return this._framebuffer;
   }
 
-  updateSize(size: [number, number]): void {}
+  // IMPLEMENTATION OF ABSTRACT METHODS
 
-  /**
-   * Resize the canvas' drawing buffer.
-   *
-   * Can match the canvas CSS size, and optionally also consider devicePixelRatio
-   * Can be called every frame
-   *
-   * Regardless of size, the drawing buffer will always be scaled to the viewport, but
-   * for best visual results, usually set to either:
-   *  canvas CSS width x canvas CSS height
-   *  canvas CSS width * devicePixelRatio x canvas CSS height * devicePixelRatio
-   * See http://webgl2fundamentals.org/webgl/lessons/webgl-resizing-the-canvas.html
-   */
-  resize(options?: {width?: number; height?: number; useDevicePixels?: boolean | number}): void {
-    if (!this.device.gl) return;
-
-    if (this.props.autoResize) {
-      return;
-    }
-
-    // Resize browser context. TODO - this likely needs to be rewritten
-    if (this.canvas) {
-      const devicePixelRatio = this.getDevicePixelRatio(options?.useDevicePixels);
-      this._setDevicePixelRatio(devicePixelRatio, options);
-      return;
-    }
-  }
-
-  commit() {
-    // gl.commit was ultimately removed from the WebGL standard??
-    // if (this.offScreen && this.gl.commit) {
-    //   // @ts-expect-error gl.commit is not officially part of WebGL2RenderingContext
-    //   this.gl.commit();
-    // }
-  }
+  _updateConfiguration(): void {}
 }

@@ -38,7 +38,7 @@ export class WebGPUCanvasContext extends CanvasContext {
 
     // Base class constructor cannot access derived methods/fields, so we need to call these functions in the subclass constructor
     this._setAutoCreatedCanvasId(`${this.device.id}-canvas`);
-    this.updateSize([this.drawingBufferWidth, this.drawingBufferHeight]);
+    this._updateConfiguration();
   }
 
   /** Destroy any textures produced while configured and remove the context configuration. */
@@ -79,8 +79,9 @@ export class WebGPUCanvasContext extends CanvasContext {
     });
   }
 
-  /** Resizes and updates render targets if necessary */
-  updateSize(size: [newWidth: number, newHeight: number]): void {
+  // IMPLEMENTATION OF ABSTRACT METHODS
+
+  _updateConfiguration(): void {
     if (this.depthStencilAttachment) {
       this.depthStencilAttachment.destroy();
       this.depthStencilAttachment = null;
@@ -96,21 +97,6 @@ export class WebGPUCanvasContext extends CanvasContext {
       colorSpace: this.props.colorSpace,
       alphaMode: this.props.alphaMode
     });
-  }
-
-  resize(options?: {width?: number; height?: number; useDevicePixels?: boolean | number}): void {
-    if (!this.device.handle) return;
-
-    if (this.props.autoResize) {
-      return;
-    }
-
-    // Resize browser context .
-    if (this.canvas) {
-      const devicePixelRatio = this.getDevicePixelRatio(options?.useDevicePixels);
-      this._setDevicePixelRatio(devicePixelRatio, options);
-      return;
-    }
   }
 
   /** Wrap the current canvas context texture in a luma.gl texture */
