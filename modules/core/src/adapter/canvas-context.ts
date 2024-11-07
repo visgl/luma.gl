@@ -225,31 +225,6 @@ export abstract class CanvasContext {
   }
 
   /**
-   * Returns the current DPR (number of physical pixels per CSS pixel), if props.useDevicePixels is true
-   * @note This can be a fractional (non-integer) number, e.g. when the user zooms in the browser.
-   * @note This function handles the non-HTML canvas cases
-   */
-  getDevicePixelRatio(useDevicePixels?: boolean | number): number {
-    if (CanvasContext.isOffscreenCanvas(this.canvas)) {
-      return 1;
-    }
-
-    useDevicePixels = useDevicePixels === undefined ? this.props.useDevicePixels : useDevicePixels;
-
-    if (!useDevicePixels || (useDevicePixels as number) <= 0) {
-      return 1;
-    }
-
-    // The param was mainly provide to support the test cases, could be removed
-    if (useDevicePixels === true) {
-      const dpr = typeof window !== 'undefined' && window.devicePixelRatio;
-      return dpr || 1;
-    }
-
-    return useDevicePixels;
-  }
-
-  /**
    * Returns multiplier need to convert CSS size to Device size
    */
   cssToDeviceRatio(): number {
@@ -277,7 +252,7 @@ export abstract class CanvasContext {
 
   /**
    * Performs platform specific updates (WebGPU vs WebGL)
-   * Can be called after changes to size or props, 
+   * Can be called after changes to size or props,
    * to give implementation an opportunity to update configurations.
    */
   abstract _updateConfiguration(): void;
@@ -444,7 +419,7 @@ function scalePixels(
   width: number;
   height: number;
 } {
-  const point = pixel as [number, number];
+  const point = pixel;
 
   const x = scaleX(point[0], ratio, width);
   let y = scaleY(point[1], ratio, height, yInvert);

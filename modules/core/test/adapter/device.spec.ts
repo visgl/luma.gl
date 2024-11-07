@@ -43,4 +43,3 @@ test('Device#lost (Promise)', async t => {
   // device.destroy();
   t.end();
 });
-
