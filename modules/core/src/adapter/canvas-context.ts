@@ -74,8 +74,6 @@ export abstract class CanvasContext {
   readonly offscreenCanvas?: OffscreenCanvas;
   readonly type: 'html-canvas' | 'offscreen-canvas' | 'node';
 
-  protected _initializedResolvers = withResolvers<void>();
-
   /** Promise that resolved once the resize observer has updated the pixel size */
   initialized: Promise<void>;
   isInitialized: boolean = false;
@@ -83,24 +81,24 @@ export abstract class CanvasContext {
   /** Visibility is automatically updated (via an IntersectionObserver) */
   isVisible: boolean = true;
 
-  /** Device pixel ratio. Automatically updated via media queries */
-  devicePixelRatio: number;
-
   /** Width of canvas in CSS units (tracked by a ResizeObserver) */
   cssWidth: number;
   /** Height of canvas in CSS units (tracked by a ResizeObserver) */
   cssHeight: number;
 
+  /** Device pixel ratio. Automatically updated via media queries */
+  devicePixelRatio: number;
   /** Exact width of canvas in physical pixels (tracked by a ResizeObserver) */
-  pixelWidth: number;
+  devicePixelWidth: number;
   /** Exact height of canvas in physical pixels (tracked by a ResizeObserver) */
-  pixelHeight: number;
+  devicePixelHeight: number;
 
   /** Width of drawing buffer: automatically tracks this.pixelWidth if props.autoResize is true */
   drawingBufferWidth: number;
   /** Height of drawing buffer: automatically tracks this.pixelHeight if props.autoResize is true */
   drawingBufferHeight: number;
 
+  protected _initializedResolvers = withResolvers<void>();
   protected readonly _resizeObserver: ResizeObserver | undefined;
   protected readonly _intersectionObserver: IntersectionObserver | undefined;
 
@@ -145,8 +143,8 @@ export abstract class CanvasContext {
     // Initialize size variables (these will be updated by ResizeObserver)
     this.cssWidth = this.htmlCanvas?.clientWidth || this.canvas.width;
     this.cssHeight = this.htmlCanvas?.clientHeight || this.canvas.height;
-    this.pixelWidth = this.canvas.width;
-    this.pixelHeight = this.canvas.height;
+    this.devicePixelWidth = this.canvas.width;
+    this.devicePixelHeight = this.canvas.height;
     this.drawingBufferWidth = this.canvas.width;
     this.drawingBufferHeight = this.canvas.height;
     this.devicePixelRatio = globalThis.devicePixelRatio || 1;
@@ -194,8 +192,8 @@ export abstract class CanvasContext {
    * @note This can be different from the 'CSS' size of a canvas due to DPR scaling, and rounding to integer pixels
    * @note This is independent of the canvas' internal drawing buffer size (.width, .height).
    */
-  getPixelSize(): [number, number] {
-    return [this.pixelWidth, this.pixelHeight];
+  getDevicePixelSize(): [number, number] {
+    return [this.devicePixelWidth, this.devicePixelHeight];
   }
 
   /** Get the drawing buffer size (number of pixels GPU is rendering into, can be different from CSS size) */
@@ -218,18 +216,17 @@ export abstract class CanvasContext {
     this.drawingBufferHeight = height;
   }
 
-  /** @deprecated - TODO which values should we use for aspect */
-  getAspect(): number {
-    const [width, height] = this.getPixelSize();
-    return width / height;
+  /**
+   * Returns the current DPR (number of physical pixels per CSS pixel), if props.useDevicePixels is true
+   * @note This can be a fractional (non-integer) number, e.g. when the user zooms in the browser.
+   * @note This function handles the non-HTML canvas cases
+   */
+  getDevicePixelRatio(): number {
+    const dpr = typeof window !== 'undefined' && window.devicePixelRatio;
+    return dpr || 1;
   }
 
-  /**
-   * Returns multiplier need to convert CSS size to Device size
-   */
-  cssToDeviceRatio(): number {
-    return this.htmlCanvas ? this.drawingBufferWidth / this.cssWidth : 1;
-  }
+  // DEPRECATED METHODS
 
   /**
    * Maps CSS pixel position to device pixel position
@@ -248,6 +245,33 @@ export abstract class CanvasContext {
     return scalePixels(cssPixel, ratio, width, height, yInvert);
   }
 
+  /** @deprecated - use .getDevicePixelSize() */
+  getPixelSize() {
+    return this.getDevicePixelSize();
+  }
+
+  /** @deprecated - TODO which values should we use for aspect */
+  getAspect(): number {
+    const [width, height] = this.getDevicePixelSize();
+    return width / height;
+  }
+
+  /** @deprecated Returns multiplier need to convert CSS size to Device size */
+  cssToDeviceRatio(): number {
+    try {
+      const [drawingBufferWidth] = this.getDrawingBufferSize();
+      const [cssWidth] = this.getCSSSize();
+      return cssWidth ? drawingBufferWidth / cssWidth : 1;
+    } catch {
+      return 1;
+    }
+  }
+
+  /** @deprecated Use canvasContext.setDrawingBufferSize() */
+  resize(size: {width: number; height: number}): void {
+    this.setDrawingBufferSize(size.width, size.height);
+  }
+
   // SUBCLASS OVERRIDES
 
   /**
@@ -255,7 +279,7 @@ export abstract class CanvasContext {
    * Can be called after changes to size or props,
    * to give implementation an opportunity to update configurations.
    */
-  abstract _updateConfiguration(): void;
+  protected abstract _updateDevice(): void;
 
   // IMPLEMENTATION
 
@@ -299,34 +323,34 @@ export abstract class CanvasContext {
     this.cssHeight = entry.contentBoxSize[0].blockSize;
 
     // Update our drawing buffer size variables, saving the old values for logging
-    const oldPixelSize = this.getPixelSize();
+    const oldPixelSize = this.getDevicePixelSize();
 
     // Use the most accurate drawing buffer size information the current browser can provide
     // Note: content box sizes are guaranteed to be integers
     // Note: Safari falls back to contentBoxSize
-    const pixelWidth =
+    const devicePixelWidth =
       entry.devicePixelContentBoxSize?.[0].inlineSize ||
       entry.contentBoxSize[0].inlineSize * devicePixelRatio;
 
-    const pixelHeight =
+    const devicePixelHeight =
       entry.devicePixelContentBoxSize?.[0].blockSize ||
       entry.contentBoxSize[0].blockSize * devicePixelRatio;
 
     // Make sure we don't overflow the maximum supported texture size
-    const [maxPixelWidth, maxPixelHeight] = this.getMaxDrawingBufferSize();
-    this.pixelWidth = Math.max(1, Math.min(pixelWidth, maxPixelWidth));
-    this.pixelHeight = Math.max(1, Math.min(pixelHeight, maxPixelHeight));
+    const [maxDevicePixelWidth, maxDevicePixelHeight] = this.getMaxDrawingBufferSize();
+    this.devicePixelWidth = Math.max(1, Math.min(devicePixelWidth, maxDevicePixelWidth));
+    this.devicePixelHeight = Math.max(1, Math.min(devicePixelHeight, maxDevicePixelHeight));
 
     // Update the canvas drawing buffer size
     if (this.props.autoResize) {
       if (this.props.useDevicePixels) {
-        this.setDrawingBufferSize(this.pixelWidth, this.pixelHeight);
+        this.setDrawingBufferSize(this.devicePixelWidth, this.devicePixelHeight);
       } else {
         this.setDrawingBufferSize(this.cssWidth, this.cssHeight);
       }
 
       // Inform the subclass
-      this._updateConfiguration();
+      this._updateDevice();
     }
 
     // Resolve the initialized promise

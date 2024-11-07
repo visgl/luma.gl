@@ -314,7 +314,7 @@ export abstract class Device {
     // Callbacks
     onError: (error: Error, context: unknown) => log.error(error.message, context)(),
     onResize: (context: CanvasContext, info: {oldPixelSize: [number, number]}) => {
-      const [width, height] = context.getPixelSize();
+      const [width, height] = context.getDevicePixelSize();
       const [prevWidth, prevHeight] = info.oldPixelSize;
       log.log(1, `${context} Resized ${prevWidth}x${prevHeight} => ${width}x${height}px`)();
     },

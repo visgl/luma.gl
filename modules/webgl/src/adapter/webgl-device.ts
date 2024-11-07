@@ -93,9 +93,6 @@ export class WebGLDevice extends Device {
   readonly gl: WebGL2RenderingContext;
   readonly debug: boolean = false;
 
-  /** State used by luma.gl classes: TODO - move to canvasContext*/
-  readonly _canvasSizeInfo = {clientWidth: 0, clientHeight: 0, devicePixelRatio: 1};
-
   /** Store constants */
   // @ts-ignore TODO fix
   _constants: (TypedArray | null)[];

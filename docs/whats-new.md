@@ -20,6 +20,7 @@ Production quality WebGPU backend
 - Shader type APIs have been improved.
 - `CommandEncoder`/`CommandBuffer` API improvements
 - `Texture` class refactors complete.
+- `CanvasContext` API simplifications (see upgrade guide).
 
 **@luma.gl/engine**
 

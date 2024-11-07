@@ -14,16 +14,22 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 
 v9.2 brings full WebGPU support. Some additional deprecations and breaking changes have been necessary, but apart from the `Texture` -> `AsyncTexture` split, impact on most applications should be minimal. 
 
-**Major change: Texture and AsyncTextures**
+**Texture and AsyncTexture**
 - The `Texture` class has been simplified to the minimum API required for GPU portability. The  `AsyncTexture` texture class provides a higher-level API and is recommended for most applications.
 - `device.createTexture()` no longer accepts `props.data`: Use `AsyncTexture` or call `texture.setImageData()`
 - `device.createTexture()` no longer accepts `props.mipmaps`: Use `AsyncTexture` (or call `texture.generateMipmapsWebGL()`)
 
-**Major change: Removal of WebGL uniform support**
+**Removal of WebGL uniform support**
 - The transition from uniforms to uniform buffers is complete, and remaining support for non-buffer uniforms has been removed.
 - `core`: `Renderpipeline.setUniformsWebGL()` dropped, use uniform buffer bindings
 - `engine`: `Model.setUniformsWebGL()` dropped, use uniform buffer bindings
 - `shadertools`: WebGL1 shader modules have been removed, use the new modules uniform buffer-based counterparts.
+
+**`CanvasContext` simplifications**
+- `canvasContext.devicePixelWidth` and `canvasContext.devicePixelHeight` are now kept updated to exact device pixel size of underlying canvas. 
+- Instead `canvasContext.setDrawingBufferSize()` to explicitly control drawing buffer size, if not using `CanvasContextProps.autoResize` 
+- A new `DeviceProps.onResize` callback can be used to react to changes.
+- `CanvasContextProps.useDevicePixelRatio` no longer accepts `number`s, just a `boolean` value. 
 
 **Minor changes**
 - `core`: The shader types has been refactored, some shader type names have changed. These are typically not used directly by applications.

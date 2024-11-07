@@ -67,7 +67,7 @@ export class PickingManager {
   /** Prepare for rendering picking colors */
   beginRenderPass() {
     const framebuffer = this.getFramebuffer();
-    framebuffer.resize(this.device.getDefaultCanvasContext().getPixelSize());
+    framebuffer.resize(this.device.getDefaultCanvasContext().getDevicePixelSize());
 
     this.props.shaderInputs?.setProps({picking: {isActive: true}});
 

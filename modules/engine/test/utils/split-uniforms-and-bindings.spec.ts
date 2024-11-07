@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {WEBGLSampler, WEBGLTexture} from '@luma.gl/webgl';
 import {splitUniformsAndBindings} from '@luma.gl/engine/model/split-uniforms-and-bindings';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
 import test from 'tape-promise/tape';
@@ -13,8 +12,8 @@ test('splitUniformsAndBindings', async t => {
     array: [1, 2, 3, 4],
     boolean: true,
     number: 123,
-    sampler: new WEBGLSampler(device, {}),
-    texture: new WEBGLTexture(device, {})
+    sampler: device.createSampler({}),
+    texture: device.createTexture({width: 1, height: 1})
   };
   const {bindings, uniforms} = splitUniformsAndBindings(mixed);
   t.deepEquals(Object.keys(bindings), ['sampler', 'texture'], 'bindings correctly extracted');
