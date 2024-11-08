@@ -38,19 +38,19 @@ export type MutableAnimationLoopProps = {
 export class AnimationLoop {
   static defaultAnimationLoopProps = {
     device: null!,
-  
+
     onAddHTML: () => '',
     onInitialize: async () => null,
     onRender: () => {},
     onFinalize: () => {},
     onError: error => console.error(error), // eslint-disable-line no-console
-  
+
     stats: luma.stats.get(`animation-loop-${statIdCounter++}`),
-  
+
     // view parameters
-    autoResizeViewport: false,
+    autoResizeViewport: false
   } as const satisfies Readonly<Required<AnimationLoopProps>>;
-  
+
   device: Device | null = null;
   canvas: HTMLCanvasElement | OffscreenCanvas | null = null;
 

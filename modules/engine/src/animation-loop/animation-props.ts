@@ -10,7 +10,7 @@ import type {AnimationLoop} from './animation-loop';
 export type AnimationProps = {
   animationLoop: AnimationLoop;
   device: Device;
-  canvasContext: CanvasContext,
+  canvasContext: CanvasContext;
   canvas: HTMLCanvasElement | OffscreenCanvas;
   width: number;
   height: number;
