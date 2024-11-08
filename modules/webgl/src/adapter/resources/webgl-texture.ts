@@ -110,12 +110,7 @@ export class WEBGLTexture extends Texture {
   // eslint-disable-next-line max-statements
   _initialize(propsWithData: TextureProps): void {
     this.handle = this.props.handle || this.gl.createTexture();
-    this.device._setWebGLDebugMetadata(this.handle, this, {
-      spector: {
-        ...this.props,
-        data: propsWithData.data
-      }
-    });
+    this.device.setSpectorMetadata(this.handle, {...this.props, data: propsWithData.data});
 
     let {width, height} = propsWithData;
 

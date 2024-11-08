@@ -167,7 +167,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
     this.cubeModel.setBindings({app: this.uniformBuffer1});
     this.cubeModel.draw(renderPass);
-
     this.cubeModel.setBindings({app: this.uniformBuffer2});
     this.cubeModel.draw(renderPass);
     renderPass.end();

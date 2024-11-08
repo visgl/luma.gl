@@ -57,15 +57,11 @@ export class WEBGLRenderPipeline extends RenderPipeline {
   _uniformCount: number = 0;
   _uniformSetters: Record<string, Function> = {}; // TODO are these used?
 
-  override get [Symbol.toStringTag]() {
-    return 'WEBGLRenderPipeline';
-  }
-
   constructor(device: WebGLDevice, props: RenderPipelineProps) {
     super(device, props);
     this.device = device;
     this.handle = this.props.handle || this.device.gl.createProgram();
-    this.device._setWebGLDebugMetadata(this.handle, this, {spector: {id: this.props.id}});
+    this.device.setSpectorMetadata(this.handle, {id: this.props.id});
 
     // Create shaders if needed
     this.vs = props.vs as WEBGLShader;
@@ -82,9 +78,10 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     }
 
     this._linkShaders();
-    log.time(3, `RenderPipeline ${this.id} - shaderLayout introspection`)();
+
+    log.time(1, `RenderPipeline ${this.id} - shaderLayout introspection`)();
     this.introspectedLayout = getShaderLayoutFromGLSL(this.device.gl, this.handle);
-    log.timeEnd(3, `RenderPipeline ${this.id} - shaderLayout introspection`)();
+    log.timeEnd(1, `RenderPipeline ${this.id} - shaderLayout introspection`)();
 
     // Merge provided layout with introspected layout
     this.shaderLayout = mergeShaderLayout(this.introspectedLayout, props.shaderLayout);
@@ -92,13 +89,9 @@ export class WEBGLRenderPipeline extends RenderPipeline {
 
   override destroy(): void {
     if (this.handle) {
-      // log.error(`Deleting program ${this.id}`)();
-      this.device.gl.useProgram(null);
       this.device.gl.deleteProgram(this.handle);
+      // this.handle = null;
       this.destroyed = true;
-      // @ts-expect-error
-      this.handle.destroyed = true;
-      this.handle = null;
     }
   }
 

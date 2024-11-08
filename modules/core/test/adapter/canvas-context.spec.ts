@@ -60,11 +60,11 @@ test('CanvasContext#getDevicePixelRatio', async t => {
 // @ts-expect-error
 class TestCanvasContext extends CanvasContext {
   // @ts-expect-error
-  readonly device = {limits: {maxTextureDimension2D: 1024}};
+  readonly device = {};
   getCurrentFramebuffer(): Framebuffer {
     throw new Error('test');
   }
-  updateSize() {}
+  update() {}
 }
 
 test('CanvasContext', t => {

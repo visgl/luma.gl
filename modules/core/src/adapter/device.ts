@@ -219,20 +219,11 @@ export type DeviceProps = {
   powerPreference?: 'default' | 'high-performance' | 'low-power';
   /** Hints that device creation should fail if no hardware GPU is available (if the system performance is "low"). */
   failIfMajorPerformanceCaveat?: boolean;
+  /** Error handling */
+  onError?: (error: Error) => unknown;
 
   /** WebGL specific: Properties passed through to WebGL2RenderingContext creation: `canvas.getContext('webgl2', props.webgl)` */
   webgl?: WebGLContextProps;
-
-  // CALLBACKS
-
-  /** Error handling - uncaught errors */
-  onError?: (error: Error) => unknown;
-  /** Called when the size of a canvas changes */
-  onResize?: (ctx: CanvasContext, info: {oldPixelSize: [number, number]}) => unknown;
-  /** Called when the visibility of a canvas changes */
-  onVisibilityChange?: (ctx: CanvasContext) => unknown;
-  /** Called when the device pixel ratio of a canvas changes */
-  onDevicePixelRatioChange?: (ctx: CanvasContext, info: {oldRatio: number}) => unknown;
 
   // DEBUG SETTINGS
 
@@ -242,8 +233,6 @@ export type DeviceProps = {
   debugShaders?: 'never' | 'errors' | 'warnings' | 'always';
   /** Renders a small version of updated Framebuffers into the primary canvas context. Can be set in console luma.log.set('debug-framebuffers', true) */
   debugFramebuffers?: boolean;
-  /** Traces resource caching, reuse, and destroys in the PipelineFactory */
-  debugFactories?: boolean;
   /** WebGL specific - Trace WebGL calls (instruments WebGL2RenderingContext at the expense of performance). Can be set in console luma.log.set('debug-webgl', true)  */
   debugWebGL?: boolean;
   /** WebGL specific - Initialize the SpectorJS WebGL debugger. Can be set in console luma.log.set('debug-spectorjs', true)  */
@@ -259,12 +248,8 @@ export type DeviceProps = {
   _disabledFeatures?: Partial<Record<DeviceFeature, boolean>>;
   /** WebGL specific - Initialize all features on startup */
   _initializeFeatures?: boolean;
-  /** Enable shader caching (via ShaderFactory) */
-  _cacheShaders?: boolean;
-  /** Enable shader caching (via PipelineFactory) */
-  _cachePipelines?: boolean;
   /** Never destroy cached shaders and pipelines */
-  _cacheDestroyPolicy?: 'unused' | 'never';
+  _factoryDestroyPolicy?: 'unused' | 'never';
   /** Resource default overrides */
   _resourceDefaults?: {
     texture?: Partial<TextureProps>;
@@ -308,41 +293,28 @@ export abstract class Device {
     powerPreference: 'high-performance',
     failIfMajorPerformanceCaveat: false,
     createCanvasContext: undefined!,
-    // WebGL specific
-    webgl: {},
 
     // Callbacks
     onError: (error: Error) => log.error(error.message)(),
-    onResize: (context: CanvasContext, info: {oldPixelSize: [number, number]}) => {
-      const [width, height] = context.getPixelSize();
-      const [prevWidth, prevHeight] = info.oldPixelSize;
-      log.log(1, `${context} Resized ${prevWidth}x${prevHeight} => ${width}x${height}px`)();
-    },
-    onVisibilityChange: (context: CanvasContext) =>
-      log.log(1, `${context} Visibility changed ${context.isVisible}`)(),
-    onDevicePixelRatioChange: (context: CanvasContext, info: {oldRatio: number}) =>
-      log.log(1, `${context} DPR changed ${info.oldRatio} => ${context.devicePixelRatio}`)(),
 
-    // Debug flags
-    debug: log.get('debug') || undefined!,
-    debugShaders: log.get('debug-shaders') || undefined!,
-    debugFramebuffers: Boolean(log.get('debug-framebuffers')),
-    debugFactories: Boolean(log.get('debug-factories')),
-    debugWebGL: Boolean(log.get('debug-webgl')),
-    debugSpectorJS: undefined!, // Note: log setting is queried by the spector.js code
-    debugSpectorJSUrl: undefined!,
-
-    // Experimental
     _requestMaxLimits: true,
-    _cacheShaders: false,
-    _cachePipelines: false,
-    _cacheDestroyPolicy: 'unused',
+    _factoryDestroyPolicy: 'unused',
     // TODO - Change these after confirming things work as expected
     _initializeFeatures: true,
     _disabledFeatures: {
       'compilation-status-async-webgl': true
     },
     _resourceDefaults: {},
+
+    // WebGL specific
+    webgl: {},
+
+    debug: log.get('debug') || undefined!,
+    debugShaders: log.get('debug-shaders') || undefined!,
+    debugFramebuffers: Boolean(log.get('debug-framebuffers')),
+    debugWebGL: Boolean(log.get('debug-webgl')),
+    debugSpectorJS: undefined!, // Note: log setting is queried by the spector.js code
+    debugSpectorJSUrl: undefined!,
 
     // INTERNAL
     _handle: undefined!
@@ -361,8 +333,6 @@ export abstract class Device {
   readonly id: string;
   /** type of this device */
   abstract readonly type: 'webgl' | 'webgpu' | 'unknown';
-  abstract readonly handle: unknown;
-
   /** A copy of the device props  */
   readonly props: Required<DeviceProps>;
   /** Available for the application to store data on the device */
@@ -385,11 +355,6 @@ export abstract class Device {
   abstract features: DeviceFeatures;
   /** WebGPU style device limits */
   abstract get limits(): DeviceLimits;
-
-  /** Optimal TextureFormat for displaying 8-bit depth, standard dynamic range content on this system. */
-  abstract preferredColorFormat: 'rgba8unorm' | 'bgra8unorm';
-  /** Default depth format used on this system */
-  abstract preferredDepthFormat: 'depth16' | 'depth24plus' | 'depth32float';
 
   /** Determines what operations are supported on a texture format, checking against supported device features */
   getTextureFormatCapabilities(format: TextureFormat): DeviceTextureFormatCapabilities {
@@ -633,7 +598,7 @@ export abstract class Device {
       } else if (props.data instanceof Uint16Array) {
         newProps.indexType = 'uint16';
       } else {
-        log.warn('indices buffer content must be of type uint16 or uint32')();
+        log.warn('indices buffer content must be of integer type')();
       }
     }
     return newProps;

@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
-import {getWebGLTestDevice} from '@luma.gl/test-utils';
+import {getTestDevices} from '@luma.gl/test-utils';
 
 import {GL} from '@luma.gl/constants';
 
@@ -13,9 +13,7 @@ test('@luma.gl/constants', t => {
 });
 
 test('@luma.gl/constants#WebGL2RenderingContext comparison', async t => {
-  const webglDevice = await getWebGLTestDevice();
-
-  for (const device of [webglDevice]) {
+  for (const device of await getTestDevices('webgl')) {
     // @ts-ignore
     const gl = device.gl;
     let count = 0;

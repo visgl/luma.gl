@@ -32,8 +32,7 @@ import type {
   // CommandEncoder,
   CommandEncoderProps,
   TransformFeedbackProps,
-  QuerySetProps,
-  Resource
+  QuerySetProps
 } from '@luma.gl/core';
 import {Device, CanvasContext, log} from '@luma.gl/core';
 import type {GLExtensions} from '@luma.gl/constants';
@@ -72,7 +71,9 @@ import {getWebGLExtension} from '../context/helpers/webgl-extensions';
 
 /** WebGPU style Device API for a WebGL context */
 export class WebGLDevice extends Device {
+  //
   // Public `Device` API
+  //
 
   /** type of this device */
   readonly type = 'webgl';
@@ -81,11 +82,9 @@ export class WebGLDevice extends Device {
   readonly handle: WebGL2RenderingContext;
   features: WebGLDeviceFeatures;
   limits: WebGLDeviceLimits;
+
   readonly info: DeviceInfo;
   readonly canvasContext: WebGLCanvasContext;
-
-  readonly preferredColorFormat = 'rgba8unorm';
-  readonly preferredDepthFormat = 'depth24plus';
 
   readonly lost: Promise<{reason: 'destroyed'; message: string}>;
 
@@ -188,6 +187,8 @@ export class WebGLDevice extends Device {
     if (this.props._initializeFeatures) {
       this.features.initializeFeatures();
     }
+
+    this.canvasContext.resize();
 
     // Install context state tracking
     const glState = new WebGLStateTracker(this.gl, {
@@ -393,6 +394,16 @@ export class WebGLDevice extends Device {
   }
 
   /**
+   * Storing data on a special field on WebGLObjects makes that data visible in SPECTOR chrome debug extension
+   * luma.gl ids and props can be inspected
+   */
+  setSpectorMetadata(handle: unknown, props: Record<string, unknown>) {
+    // @ts-expect-error
+    // eslint-disable-next-line camelcase
+    handle.__SPECTOR_Metadata = props;
+  }
+
+  /**
    * Returns the GL.<KEY> constant that corresponds to a numeric value of a GL constant
    * Be aware that there are some duplicates especially for constants that are 0,
    * so this isn't guaranteed to return the right key in all cases.
@@ -461,26 +472,6 @@ export class WebGLDevice extends Device {
   getExtension(name: keyof GLExtensions): GLExtensions {
     getWebGLExtension(this.gl, name, this._extensions);
     return this._extensions;
-  }
-
-  // INTERNAL SUPPORT METHODS FOR WEBGL RESOURCES
-
-  /**
-   * Storing data on a special field on WebGLObjects makes that data visible in SPECTOR chrome debug extension
-   * luma.gl ids and props can be inspected
-   */
-  _setWebGLDebugMetadata(
-    handle: unknown,
-    resource: Resource<any>,
-    options: {spector: Record<string, unknown>}
-  ): void {
-    // @ts-expect-error
-    handle.luma = resource;
-
-    const spectorMetadata = {props: options.spector, id: options.spector.id};
-    // @ts-expect-error
-    // eslint-disable-next-line camelcase
-    handle.__SPECTOR_Metadata = spectorMetadata;
   }
 }
 

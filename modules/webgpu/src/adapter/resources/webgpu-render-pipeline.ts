@@ -30,10 +30,6 @@ export class WebGPURenderPipeline extends RenderPipeline {
   private _bindGroupLayout: GPUBindGroupLayout | null = null;
   private _bindGroup: GPUBindGroup | null = null;
 
-  override get [Symbol.toStringTag]() {
-    return 'WebGPURenderPipeline';
-  }
-
   constructor(device: WebGPUDevice, props: RenderPipelineProps) {
     super(device, props);
     this.device = device;
@@ -72,12 +68,6 @@ export class WebGPURenderPipeline extends RenderPipeline {
    * @todo Do we want to expose BindGroups in the API and remove this?
    */
   setBindings(bindings: Record<string, Binding>): void {
-    // Invalidate the cached bind group if any value has changed
-    for (const [name, binding] of Object.entries(bindings)) {
-      if (this._bindings[name] !== binding) {
-        this._bindGroup = null;
-      }
-    }
     Object.assign(this._bindings, bindings);
   }
 
@@ -166,22 +156,16 @@ export class WebGPURenderPipeline extends RenderPipeline {
       buffers: getVertexBufferLayout(this.shaderLayout, this.props.bufferLayout)
     };
 
-    // Populate color targets
-    // TODO - at the moment blend and write mask are only set on the first target
-    const targets: (GPUColorTargetState | null)[] = [];
-    if (this.props.colorAttachmentFormats) {
-      for (const format of this.props.colorAttachmentFormats) {
-        targets.push(format ? {format: getWebGPUTextureFormat(format)} : null);
-      }
-    } else {
-      targets.push({format: getWebGPUTextureFormat(this.device.preferredColorFormat)});
-    }
-
     // Set up the fragment stage
     const fragment: GPUFragmentState = {
       module: (this.props.fs as WebGPUShader).handle,
       entryPoint: this.props.fragmentEntryPoint || 'main',
-      targets
+      targets: [
+        {
+          // TODO exclamation mark hack!
+          format: getWebGPUTextureFormat(this.device.getCanvasContext().format)
+        }
+      ]
     };
 
     // Create a partially populated descriptor
@@ -193,15 +177,6 @@ export class WebGPURenderPipeline extends RenderPipeline {
       },
       layout: 'auto'
     };
-
-    // Set depth format if required, defaulting to the preferred depth format
-    const depthFormat = this.props.depthStencilAttachmentFormat || this.device.preferredDepthFormat;
-
-    if (this.props.parameters.depthWriteEnabled) {
-      descriptor.depthStencil = {
-        format: getWebGPUTextureFormat(depthFormat)
-      };
-    }
 
     // Set parameters on the descriptor
     applyParametersToRenderPipelineDescriptor(descriptor, this.props.parameters);

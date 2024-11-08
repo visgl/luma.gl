@@ -5,7 +5,7 @@
 /* eslint-disable camelcase, no-console, no-undef */
 import test from 'tape-promise/tape';
 import {Device} from '@luma.gl/core';
-import {getWebGLTestDevice} from '@luma.gl/test-utils';
+import {webglDevice} from '@luma.gl/test-utils';
 import {assembleGLSLShaderPair, PlatformInfo} from '@luma.gl/shadertools';
 import {
   injectShader,
@@ -107,12 +107,12 @@ const COMBINED_INJECT = {
   'vs:#main-start': ' uNewUniform = uNewUniform2;\n'
 };
 
-test('injectShader#import', async t => {
+test('injectShader#import', t => {
   t.ok(injectShader !== undefined, 'injectShader import successful');
   t.end();
 });
 
-test('injectShader#injectShader', async t => {
+test('injectShader#injectShader', t => {
   let injectResult;
 
   injectResult = injectShader(VS_GLSL_TEMPLATE, 'vertex', injectionData(INJECT), true);
@@ -140,9 +140,7 @@ test('injectShader#injectShader', async t => {
   t.end();
 });
 
-test('injectShader#assembleGLSLShaderPair', async t => {
-  const webglDevice = await getWebGLTestDevice();
-
+test('injectShader#assembleGLSLShaderPair', t => {
   const assembleResult = assembleGLSLShaderPair({
     platformInfo: getInfo(webglDevice),
     vs: VS_GLSL_TEMPLATE,
@@ -172,7 +170,7 @@ test('injectShader#assembleGLSLShaderPair', async t => {
   t.end();
 });
 
-test('injectShader#combineInjects', async t => {
+test('injectShader#combineInjects', t => {
   t.deepEqual(combineInjects([INJECT1, INJECT2]), COMBINED_INJECT, 'injects correctly combined');
   t.end();
 });

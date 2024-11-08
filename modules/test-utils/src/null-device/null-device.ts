@@ -47,11 +47,6 @@ export class NullDevice extends Device {
     return true;
   }
   readonly type = 'unknown';
-  readonly handle = null;
-
-  readonly preferredColorFormat = 'rgba8unorm';
-  readonly preferredDepthFormat = 'depth24plus';
-
   features: DeviceFeatures = new DeviceFeatures([], this.props._disabledFeatures);
   limits: NullDeviceLimits = new NullDeviceLimits();
   readonly info = NullDeviceInfo;
@@ -65,6 +60,7 @@ export class NullDevice extends Device {
     const canvasContextProps = props.createCanvasContext === true ? {} : props.createCanvasContext;
     this.canvasContext = new NullCanvasContext(this, canvasContextProps);
     this.lost = new Promise(resolve => {});
+    this.canvasContext.resize();
   }
 
   /**

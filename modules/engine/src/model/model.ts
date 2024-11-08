@@ -303,8 +303,7 @@ export class Model {
     this.pipeline = this._updatePipeline();
 
     this.vertexArray = device.createVertexArray({
-      shaderLayout: this.pipeline.shaderLayout,
-      bufferLayout: this.pipeline.bufferLayout
+      renderPipeline: this.pipeline
     });
 
     // Now we can apply geometry attributes
@@ -351,19 +350,16 @@ export class Model {
   }
 
   destroy(): void {
-    if (!this._destroyed) {
-      // Release pipeline before we destroy the shaders used by the pipeline
-      this.pipelineFactory.release(this.pipeline);
-      // Release the shaders
-      this.shaderFactory.release(this.pipeline.vs);
-      if (this.pipeline.fs) {
-        this.shaderFactory.release(this.pipeline.fs);
-      }
-      this._uniformStore.destroy();
-      // TODO - mark resource as managed and destroyIfManaged() ?
-      this._gpuGeometry?.destroy();
-      this._destroyed = true;
+    if (this._destroyed) return;
+    this.pipelineFactory.release(this.pipeline);
+    this.shaderFactory.release(this.pipeline.vs);
+    if (this.pipeline.fs) {
+      this.shaderFactory.release(this.pipeline.fs);
     }
+    this._uniformStore.destroy();
+    // TODO - mark resource as managed and destroyIfManaged() ?
+    this._gpuGeometry?.destroy();
+    this._destroyed = true;
   }
 
   // Draw call
@@ -514,8 +510,7 @@ export class Model {
     // vertex array needs to be updated if we update buffer layout,
     // but not if we update parameters
     this.vertexArray = this.device.createVertexArray({
-      shaderLayout: this.pipeline.shaderLayout,
-      bufferLayout: this.pipeline.bufferLayout
+      renderPipeline: this.pipeline
     });
 
     // Reapply geometry attributes to the new vertex array

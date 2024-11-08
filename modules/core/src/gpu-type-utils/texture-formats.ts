@@ -54,7 +54,6 @@ export type WebGPUColorTextureFormat =
   // Packed 32-bit formats
   | 'rgb9e5ufloat'
   | 'rgb10a2unorm'
-  | 'rgb10a2uint'
   | 'rg11b10ufloat'
 
   // 64-bit formats
@@ -144,7 +143,7 @@ export type WebGL2ColorTextureFormat =
   | 'rgb8snorm-webgl'
   | 'rg16unorm-webgl'
   | 'rg16snorm-webgl'
-  | 'rgb10a2uint'
+  | 'rgb10a2uint-webgl'
   | 'rgb16unorm-webgl'
   | 'rgb16snorm-webgl'
   | 'rgba16unorm-webgl'

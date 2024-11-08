@@ -10,14 +10,12 @@ import {
 import type {Device} from '../device';
 import type {Buffer} from './buffer';
 import type {RenderPass} from './render-pass';
+import type {RenderPipeline} from './render-pipeline';
 import {Resource, ResourceProps} from './resource';
-import {ShaderLayout} from '../types/shader-layout';
-import {BufferLayout} from '../types/buffer-layout';
 
 /** Properties for initializing a VertexArray */
 export type VertexArrayProps = ResourceProps & {
-  shaderLayout: ShaderLayout;
-  bufferLayout: BufferLayout[];
+  renderPipeline: RenderPipeline | null;
 };
 
 /**
@@ -30,8 +28,7 @@ export type VertexArrayProps = ResourceProps & {
 export abstract class VertexArray extends Resource<VertexArrayProps> {
   static override defaultProps: Required<VertexArrayProps> = {
     ...Resource.defaultProps,
-    shaderLayout: undefined!,
-    bufferLayout: []
+    renderPipeline: null
   };
 
   override get [Symbol.toStringTag](): string {
@@ -52,9 +49,13 @@ export abstract class VertexArray extends Resource<VertexArrayProps> {
     super(device, props, VertexArray.defaultProps);
     this.maxVertexAttributes = device.limits.maxVertexAttributes;
     this.attributes = new Array(this.maxVertexAttributes).fill(null);
+    const {shaderLayout, bufferLayout} = props.renderPipeline || {};
+    if (!shaderLayout || !bufferLayout) {
+      throw new Error('VertexArray');
+    }
     this.attributeInfos = getAttributeInfosByLocation(
-      props.shaderLayout,
-      props.bufferLayout,
+      shaderLayout,
+      bufferLayout,
       this.maxVertexAttributes
     );
   }

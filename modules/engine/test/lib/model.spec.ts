@@ -5,7 +5,7 @@
 import test from 'tape-promise/tape';
 import {luma} from '@luma.gl/core';
 import {Model, PipelineFactory, ShaderFactory} from '@luma.gl/engine';
-import {getWebGLTestDevice, getTestDevices} from '@luma.gl/test-utils';
+import {webglDevice, getTestDevices} from '@luma.gl/test-utils';
 
 const stats = luma.stats.get('Resource Counts');
 
@@ -37,11 +37,8 @@ const mockModule = {
   dependencies: []
 };
 
-test('Model#construct/destruct', async t => {
-  const webglDevice = await getWebGLTestDevice();
-
+test('Model#construct/destruct', t => {
   const model = new Model(webglDevice, {
-    id: 'construct-destruct-test',
     topology: 'point-list',
     vertexCount: 0,
     vs: DUMMY_VS,
@@ -58,11 +55,8 @@ test('Model#construct/destruct', async t => {
   t.end();
 });
 
-test('Model#multiple delete', async t => {
-  const webglDevice = await getWebGLTestDevice();
-
+test('Model#multiple delete', t => {
   const model1 = new Model(webglDevice, {
-    id: 'multiple-delete-test-1',
     topology: 'point-list',
     vertexCount: 0,
     vs: DUMMY_VS,
@@ -70,7 +64,6 @@ test('Model#multiple delete', async t => {
   });
 
   const model2 = new Model(webglDevice, {
-    id: 'multiple-delete-test-2',
     topology: 'point-list',
     vertexCount: 0,
     vs: DUMMY_VS,
@@ -87,21 +80,14 @@ test('Model#multiple delete', async t => {
   t.end();
 });
 
-test('Model#setAttributes', async t => {
-  const webglDevice = await getWebGLTestDevice();
-
+test('Model#setAttributes', t => {
   const buffer1 = webglDevice.createBuffer({data: new Float32Array(9).fill(0)});
   const buffer2 = webglDevice.createBuffer({data: new Float32Array(9).fill(1)});
 
   const initialActiveBuffers = stats.get('Buffers Active').count;
 
   const model = new Model(webglDevice, {
-    id: 'set-attributes-test',
-    vs: `#version 300 es
-  in vec4 positions;
-  in vec3 normals;
-  void main() { gl_Position = positions + vec4(normals, 0.); }
-`,
+    vs: DUMMY_VS,
     fs: DUMMY_FS,
     attributes: {
       positions: webglDevice.createBuffer({data: new Float32Array(12).fill(2)}),
@@ -134,14 +120,8 @@ test('Model#setAttributes', async t => {
   t.end();
 });
 
-test('Model#setters, getters', async t => {
-  const webglDevice = await getWebGLTestDevice();
-  const model = new Model(webglDevice, {
-    id: 'setters-getters-test',
-    topology: 'point-list',
-    vs: DUMMY_VS,
-    fs: DUMMY_FS
-  });
+test('Model#setters, getters', t => {
+  const model = new Model(webglDevice, {topology: 'point-list', vs: DUMMY_VS, fs: DUMMY_FS});
 
   model.setVertexCount(12);
   t.is(model.vertexCount, 12, 'set vertex count');
@@ -157,11 +137,8 @@ test('Model#setters, getters', async t => {
   t.end();
 });
 
-test('Model#draw', async t => {
-  const webglDevice = await getWebGLTestDevice();
-
+test('Model#draw', t => {
   const model = new Model(webglDevice, {
-    id: 'draw-test',
     vs: DUMMY_VS,
     fs: DUMMY_FS,
     attributes: {
@@ -188,13 +165,11 @@ test('Model#draw', async t => {
 test('Model#topology', async t => {
   for (const device of await getTestDevices()) {
     const model = new Model(device, {
-      id: 'topology-test',
       vs: DUMMY_VS,
       fs: DUMMY_FS,
       source: DUMMY_WGSL,
       vertexEntryPoint: 'vertexMain',
-      fragmentEntryPoint: 'fragmentMain',
-      vertexCount: 3
+      fragmentEntryPoint: 'fragmentMain'
     });
 
     t.equal(model.topology, 'triangle-list', 'Pipeline has triangle-list topology');
@@ -209,10 +184,7 @@ test('Model#topology', async t => {
 
     model.setTopology('line-strip');
 
-    const framebuffer = device
-      .getDefaultCanvasContext()
-      .getCurrentFramebuffer({depthStencilFormat: false});
-    const renderPass = device.beginRenderPass({framebuffer, clearColor: [0, 0, 0, 0]});
+    const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 0]});
     model.draw(renderPass);
 
     t.equal(model.topology, 'line-strip', 'Pipeline has line-strip topology');
@@ -230,19 +202,11 @@ test('Model#topology', async t => {
   t.end();
 });
 
-test('Model#pipeline caching', async t => {
-  const webglDevice = await getWebGLTestDevice();
-  if (!webglDevice.props._cachePipelines) {
-    t.comment('Pipeline caching is disabled');
-    t.end();
-    return;
-  }
-
+test('Model#pipeline caching', t => {
   const pipelineFactory = new PipelineFactory(webglDevice);
   const shaderFactory = new ShaderFactory(webglDevice);
 
   const model1 = new Model(webglDevice, {
-    id: 'pipeline-caching-test-1',
     pipelineFactory,
     shaderFactory,
     topology: 'point-list',
@@ -252,7 +216,6 @@ test('Model#pipeline caching', async t => {
   });
 
   const model2 = new Model(webglDevice, {
-    id: 'pipeline-caching-test-2',
     pipelineFactory,
     shaderFactory,
     topology: 'point-list',
@@ -292,18 +255,10 @@ test('Model#pipeline caching', async t => {
   t.end();
 });
 
-test('Model#pipeline caching with defines and modules', async t => {
-  const webglDevice = await getWebGLTestDevice();
-  if (!webglDevice.props._cachePipelines) {
-    t.comment('Pipeline caching is disabled');
-    t.end();
-    return;
-  }
-
+test('Model#pipeline caching with defines and modules', t => {
   const pipelineFactory = PipelineFactory.getDefaultPipelineFactory(webglDevice);
   const shaderFactory = ShaderFactory.getDefaultShaderFactory(webglDevice);
   const model1 = new Model(webglDevice, {
-    id: 'caching-with-modules-test-1',
     topology: 'triangle-list',
     vs: DUMMY_VS,
     fs: DUMMY_FS
@@ -320,7 +275,6 @@ test('Model#pipeline caching with defines and modules', async t => {
   t.ok(model1.pipeline === pipeline2, 'Got cached pipeline');
 
   const defineModel1 = new Model(webglDevice, {
-    id: 'caching-with-modules-test-2',
     topology: 'triangle-list',
     vs: DUMMY_VS,
     fs: DUMMY_FS,
@@ -330,7 +284,6 @@ test('Model#pipeline caching with defines and modules', async t => {
   t.ok(model1.pipeline !== defineModel1.pipeline, 'Define triggers new pipeline');
 
   const defineModel2 = new Model(webglDevice, {
-    id: 'caching-with-modules-test-3',
     topology: 'triangle-list',
     vs: DUMMY_VS,
     fs: DUMMY_FS,
@@ -340,7 +293,6 @@ test('Model#pipeline caching with defines and modules', async t => {
   t.ok(defineModel1.pipeline === defineModel2.pipeline, 'Got cached pipeline with defines');
 
   const moduleModel1 = new Model(webglDevice, {
-    id: 'caching-with-modules-test-4',
     topology: 'triangle-list',
     vs: DUMMY_VS,
     fs: DUMMY_FS,
@@ -351,7 +303,6 @@ test('Model#pipeline caching with defines and modules', async t => {
   t.ok(defineModel1.pipeline !== moduleModel1.pipeline, 'Module triggers new pipeline');
 
   const moduleModel2 = new Model(webglDevice, {
-    id: 'caching-with-modules-test-5',
     topology: 'triangle-list',
     vs: DUMMY_VS,
     fs: DUMMY_FS,
@@ -361,7 +312,6 @@ test('Model#pipeline caching with defines and modules', async t => {
   t.ok(moduleModel1.pipeline === moduleModel2.pipeline, 'Got cached pipeline with modules');
 
   const defineModuleModel1 = new Model(webglDevice, {
-    id: 'caching-with-modules-test-6',
     vs: DUMMY_VS,
     fs: DUMMY_FS,
     topology: 'triangle-list',
@@ -380,7 +330,6 @@ test('Model#pipeline caching with defines and modules', async t => {
   );
 
   const defineModuleModel2 = new Model(webglDevice, {
-    id: 'caching-with-modules-test-7',
     vs: DUMMY_VS,
     fs: DUMMY_FS,
     topology: 'triangle-list',

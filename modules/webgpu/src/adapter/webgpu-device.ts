@@ -28,7 +28,7 @@ import type {
   TransformFeedbackProps,
   QuerySet,
   QuerySetProps,
-  DeviceProps,
+  DeviceProps
 } from '@luma.gl/core';
 import {Device, DeviceFeatures} from '@luma.gl/core';
 import {WebGPUBuffer} from './resources/webgpu-buffer';
@@ -49,32 +49,26 @@ import {WebGPUQuerySet} from './resources/webgpu-query-set';
 
 /** WebGPU Device implementation */
 export class WebGPUDevice extends Device {
-  /** The underlying WebGPU device */
-  readonly handle: GPUDevice;
   /** type of this device */
   readonly type = 'webgpu';
 
-  readonly preferredColorFormat = navigator.gpu.getPreferredCanvasFormat() as
-    | 'rgba8unorm'
-    | 'bgra8unorm';
-  readonly preferredDepthFormat = 'depth24plus';
+  /** The underlying WebGPU device */
+  readonly handle: GPUDevice;
+  /* The underlying WebGPU adapter */
+  readonly adapter: GPUAdapter;
+  /* The underlying WebGPU adapter's info */
+  readonly adapterInfo: GPUAdapterInfo;
 
   readonly features: DeviceFeatures;
   readonly info: DeviceInfo;
   readonly limits: DeviceLimits;
 
   readonly lost: Promise<{reason: 'destroyed'; message: string}>;
-
-  renderPass: WebGPURenderPass | null = null;
-  override canvasContext: WebGPUCanvasContext | null;
+  canvasContext: WebGPUCanvasContext | null = null;
 
   private _isLost: boolean = false;
-  // canvasContext: WebGPUCanvasContext | null = null;
   commandEncoder: GPUCommandEncoder | null = null;
-  /* The underlying WebGPU adapter */
-  readonly adapter: GPUAdapter;
-  /* The underlying WebGPU adapter's info */
-  readonly adapterInfo: GPUAdapterInfo;
+  renderPass: WebGPURenderPass | null = null;
 
   constructor(
     props: DeviceProps,

@@ -83,7 +83,7 @@ export type ClassicAnimationLoopProps = {
 };
 
 const DEFAULT_CLASSIC_ANIMATION_LOOP_PROPS: Required<ClassicAnimationLoopProps> = {
-  onCreateDevice: (props: DeviceProps) => luma.createDevice({...props, debug: true}),
+  onCreateDevice: (props: DeviceProps) => luma.createDevice(props),
   onCreateContext: undefined,
   onAddHTML: undefined,
   onInitialize: () => ({}),

@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import test, {Test} from 'tape-promise/tape';
-import {getWebGLTestDevice} from '@luma.gl/test-utils';
+import {webglDevice} from '@luma.gl/test-utils';
 
 import {Device, Sampler} from '@luma.gl/core';
 
@@ -66,9 +66,7 @@ export const SAMPLER_PARAMETERS = {
   */
 };
 
-test('WebGL#Sampler setParameters', async t => {
-  const webglDevice = await getWebGLTestDevice();
-
+test('WebGL#Sampler setParameters', t => {
   testSampler(t, webglDevice);
   testSampler(t, webglDevice);
   // testSampler(t, webgpuDevice);

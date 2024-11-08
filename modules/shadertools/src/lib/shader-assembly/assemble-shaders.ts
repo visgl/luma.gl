@@ -288,6 +288,7 @@ function assembleShaderGLSL(
   }
 ) {
   const {
+    id,
     source,
     stage,
     language = 'glsl',
@@ -330,6 +331,7 @@ function assembleShaderGLSL(
 ${sourceVersionDirective}
 
 // ----- PROLOGUE -------------------------
+${getShaderNameDefine({id, source, stage})}
 ${`#define SHADER_TYPE_${stage.toUpperCase()}`}
 
 ${getPlatformShaderDefines(platformInfo)}
@@ -441,12 +443,11 @@ export function assembleGetUniforms(modules: ShaderModule[]) {
 }
 
 /**
- * NOTE: Removed as id injection defeated caching of shaders
- * 
  * Generate "glslify-compatible" SHADER_NAME defines
  * These are understood by the GLSL error parsing function
  * If id is provided and no SHADER_NAME constant is present in source, create one
- unction getShaderNameDefine(options: {
+ */
+function getShaderNameDefine(options: {
   id?: string;
   source: string;
   stage: 'vertex' | 'fragment';
@@ -458,7 +459,6 @@ export function assembleGetUniforms(modules: ShaderModule[]) {
 #define SHADER_NAME ${id}_${stage}`
     : '';
 }
-*/
 
 /** Generates application defines from an object of key value pairs */
 function getApplicationDefines(defines: Record<string, ShaderDefine> = {}): string {

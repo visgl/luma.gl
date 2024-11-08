@@ -5,7 +5,7 @@
 /* eslint-disable no-continue */
 
 import test from 'tape-promise/tape';
-import {getTestDevices, getWebGLTestDevice} from '@luma.gl/test-utils';
+import {getTestDevices, webglDevice} from '@luma.gl/test-utils';
 
 import {TypedArray} from '@math.gl/types';
 import {Buffer} from '@luma.gl/core';
@@ -202,7 +202,7 @@ test('Buffer#debugData', async t => {
 // WEBGL specific tests
 
 test('WEBGLBuffer#construction', async t => {
-  const webglDevice = await getWebGLTestDevice();
+  await getTestDevices();
 
   let buffer;
 
@@ -214,7 +214,7 @@ test('WEBGLBuffer#construction', async t => {
   buffer.destroy();
 
   // TODO - buffer could check for integer ELEMENT_ARRAY_BUFFER types
-  buffer = webglDevice.createBuffer({usage: Buffer.INDEX, data: new Uint32Array([1, 2, 3])});
+  buffer = webglDevice.createBuffer({usage: Buffer.INDEX, data: new Float32Array([1, 2, 3])});
   t.ok(
     buffer.glTarget === GL.ELEMENT_ARRAY_BUFFER,
     `${webglDevice.info.type} Buffer(ELEMENT_ARRAY_BUFFER) successful`
