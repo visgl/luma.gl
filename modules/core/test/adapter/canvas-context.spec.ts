@@ -9,6 +9,7 @@ import {getTestDevices, getWebGLTestDevice} from '@luma.gl/test-utils';
 
 /** Mock CanvasContext */
 class TestCanvasContext extends CanvasContext {
+  // @ts-expect-error
   readonly device = {
     limits: {maxTextureDimension2D: 1024},
     props: {
@@ -35,15 +36,6 @@ test('CanvasContext#defined', t => {
   // t.ok(new WEBGLCanvasContext()), 'Context creation ok');
   t.end();
 });
-// @ts-expect-error
-class TestCanvasContext extends CanvasContext {
-  // @ts-expect-error
-  readonly device = {limits: {maxTextureDimension2D: 1024}};
-  getCurrentFramebuffer(): Framebuffer {
-    throw new Error('test');
-  }
-  updateSize() {}
-}
 
 test('CanvasContext', t => {
   if (isBrowser()) {
