@@ -4,8 +4,32 @@
 
 Production WebGPU support
 
+
+
 ### v9.2.0-alpha.1
 
+- chore(core): Continued simplification of CanvasContext and AnimationLoop (#2286)
+- chore: Remove legacy code from wip folder (#2287) 
+- chore(deps): bump http-proxy-middleware from 2.0.6 to 2.0.7 in /website (#2281)
+- chore(deps): bump webpack from 5.90.3 to 5.95.0 in /website (#2279)
+- docs: Fix typo in README.md (#2282) 
+- chore(core): Simplify canvas contexts (#2283) 
+- feat(arrow): Add Polygon column support (GeoArrow compatible) (#2280) 
+- feat(arrow): Experimental module for Apache Arrow attribute data extraction (#2278) 
+- chore: Remove WebGL1 shader modules (#2276) 
+- feat: Dynamically load GPU backends (#2089) 
+- chore: TypeScript strict mode: noImplicitAny (#2271) 
+- chore: Enable TypeScript null checks (#2270) 
+- chore: Upgrade typescript and other dependencies (#2269) 
+- chore: Update issue templates (#2268) 
+- chore: Update issue templates (#2267) 
+- chore: Improve CommandEncoder implementation (#2265) 
+- chore(shadertools): Port more shader modules to WGSL (#2264) 
+- chore(shadertools): Port fp64 module to UBO (#2262) 
+- chore: Add "null" type for NullDevice (#2261) 
+- fix(core): CanvasContext node fixes (#2259) 
+- (ib/post-persistence) chore(deps): bump express from 4.18.3 to 4.21.0 in /website
+- chore(deps): bump vite from 4.5.3 to 4.5.5 
 - chore: remove .setUniformsWebGL and moduleSettings (#2252)
 - docs: Update release notes for 9.1 (#2251)
 - chore: refactor shader types (#2250) (#2250)
