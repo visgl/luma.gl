@@ -4,6 +4,10 @@
 
 Theme: Improved WebGPU support
 
+### v9.1.0-beta.9
+
+- chore: Revert Modernize Canvas handling (#2285)
+
 ### v9.1.0-beta.8
 
 - webgl: Canvas resizing minimal back-compatibility fix (#2277)
