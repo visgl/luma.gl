@@ -27,7 +27,7 @@ export class WebGLCanvasContext extends CanvasContext {
 
     // Base class constructor cannot access derived methods/fields, so we need to call these functions in the subclass constructor
     this._setAutoCreatedCanvasId(`${this.device.id}-canvas`);
-    this._updateConfiguration();
+    this._updateDevice();
   }
 
   getCurrentFramebuffer(): WEBGLFramebuffer {
@@ -38,5 +38,5 @@ export class WebGLCanvasContext extends CanvasContext {
 
   // IMPLEMENTATION OF ABSTRACT METHODS
 
-  _updateConfiguration(): void {}
+  _updateDevice(): void {}
 }

@@ -2,7 +2,8 @@
 
 A `CanvasContext` holds a connection between a GPU `Device` and canvas, (either an HTML `<canvas />` element, aka `HTMLCanvasELement`, or an `OffscreenCanvas`).
 
-- A `CanvasContext` enables the application to render into the associated canvas, by acting as a source of `Framebuffer`s with special `Texture` color attachments that are copied to the screen at the end of a `RenderPass`.
+- A `CanvasContext` enables the application to do GPU render into a canvas. 
+- The `CanvasContext` acts as a source of `Framebuffer`s with special `Texture` color attachments that are copied to the screen at the end of a `RenderPass`.
 - It handles canvas resizing, making sure the returned `Framebuffer`s correspond to the current size of the canvas.
 - It also provides support for device pixel ratios (mapping between device pixels and CSS pixels)
 
@@ -10,11 +11,14 @@ A `CanvasContext` holds a connection between a GPU `Device` and canvas, (either 
 ## Canvas Size Management
 
 While an `OffscreenCanvas` only has one size, `HTMLCanvasElements` effectively has three different sizes:
-- The CSS size, being the size in "logical units" of the canvas
-- The pixel size, being the exact number of pixels covered by the canvas
-- The drawing buffer size, being the size of the texture created to render into the canvas.
+- The *CSS size*, being the size in "logical units" of the canvas
+- The *device pixel size*, being the exact number of "screen pixels" covered by the canvas
+- The *drawing buffer size*, representing the "hidden" system texture created to render into the canvas. 
+
 
 Notes:
+- For best results, the drawing buffer should match the device pixel size. The `autoResizeDrawingBuffer` and `useDevicePixels` props will ensure this.
+- However, significant memory savings are possible by using say half resolution drawing buffers.
 - If the drawing buffer size doesn't exactly match the pixel size, undesired effects like moire patterns can result.The `CanvasContext` pixelWidth and pixelHeight members tracks the exact pixel size (called the "device pixel content box" in browser APIs) is surprisingly hard.
 
 
@@ -101,16 +105,22 @@ canvasContext.getDevicePixelResolution()
 
 | Property               | Type                                                 |                                                                                                                                        |
 | ---------------------- | ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `autoResize?`          | `boolean`                                            | Whether to resize drawing buffer when canvas size changes                                                                              |
+| `useDevicePixels?`     | `boolean`                                            | Whether to auto resize drawing buffer to device or CSS pixels                                                                          |
 | `width?`               | `number`                                             | Width in pixels of the canvas (if `canvas` is not supplied)                                                                            |
 | `height?`              | `number`                                             | Height in pixels of the canvas (if `canvas` is not supplied)                                                                           |  |
 | `canvas?`              | `HTMLCanvasElement` \| `OffscreenCanvas` \| `string` | A new canvas will be created if not supplied.                                                                                          |
 | `container?`           | `HTMLElement`                                        | Parent DOM element for new canvas. Defaults to first child of `document.body`                                                          |
-| `useDevicePixels?`     | `boolean` \| `number`                                | Device pixels scale factor (`true` uses browser DPI)                                                                                   |
-| `autoResize?`          | `boolean`                                            | Whether to track resizes                                                                                                               |
 | `visible?`             | `boolean`                                            | Visibility (only used if new canvas is created).                                                                                       |
 | `alphaMode?: string`   | `'opaque'`                                           | `'opaque' \| 'premultiplied'`. See [alphaMode](https://developer.mozilla.org/en-US/docs/Web/API/GPUCanvasContext/configure#alphamode). |
 | `colorSpace?: 'string` | `'srgb'`                                             | `'srgb' \| 'display-p3'`. See [colorSpace](https://developer.mozilla.org/en-US/docs/Web/API/GPUCanvasContext/configure#colorspace).    |
 
+### `useDevicePixels: boolean`
+
+Whether the framebuffer backing this canvas context is auto resized using device pixels.
+
+- `false` - Framebuffer is sized according to CSS pixel size.
+- `true` - Framebuffer is sized according to the device pixel ratio reported by the browser.
 
 ## Fields
 
@@ -123,14 +133,6 @@ A promise that resolves when the `CanvasContext` been able to obtain its true pi
 ### `isInitialized: boolean`
 
 Becomes `true` once the `CanvasContext` been able to obtain its true pixel size.
-
-### `useDevicePixels: boolean | number`
-
-Whether the framebuffer backing this canvas context is sized using device pixels.
-
-- `false` - Framebuffer is sized according to CSS pixel size.
-- `true` - Framebuffer is sized according to the device pixel ratio reported by the browser.
-- `number` - Framebuffer is sized according to the provided ratio.
 
 ## Methods
 
@@ -150,19 +152,19 @@ Returns a framebuffer with properly resized current 'swap chain' textures. Rende
 
 ### `getCSSSize(): [number, number]`
 
-Returns the size in logical CSS units. This is useful when mapping DOM events (mouse clicks etc) to the canvas, as their coordinates will be in CSS units.
+Returns the size in logical (CSS) units. This is useful when mapping DOM events (mouse clicks etc) to the canvas, as their coordinates will be in CSS units.
 
-_Note: For an `OffscreenCanvas` this function always returns the same value as `getPixelSize()`_
+_Note: For an `OffscreenCanvas` this function always returns the same value as `getDevicePixelSize()`_
 
-### `getPixelSize(): [number, number]`
+### `getDevicePixelSize(): [number, number]`
 
 Returns the size in pixels required to cover the canvas at the current device pixel resolution. Note that this value is just informational, the render buffer can be set to any value independently of this size.
 
-### `getRenderBufferSize(): [number, number]`
+### `getDrawingBufferSize(): [number, number]`
 
-If `props.autoResize` is true, then this value will always match `getPixelSize()`
+If `props.autoResize` is true, then this value will always match `getDevicePixelSize()`
 
-_Note: For an `OffscreenCanvas` this function always returns the same value as `getPixelSize()`_
+_Note: For an `OffscreenCanvas` this function always returns the same value as `getDevicePixelSize()`_
 
 ### `setDrawingBufferSize(size [number, number]): void`
 

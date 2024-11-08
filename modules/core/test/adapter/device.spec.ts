@@ -26,20 +26,20 @@ test('Device#isTextureFormatCompressed', async t => {
   t.end();
 });
 
-test('Device#lost (Promise)', async t => {
-  // const device = await luma.createDevice({webgl2: false});
+test.skip('WebGLDevice#lost (Promise)', async t => {
+  const device = await luma.createDevice({});
 
-  // // Wrap in a promise to make sure tape waits for us
-  // await new Promise<void>(async (resolve) => {
-  //   setTimeout(async () => {
-  //     const cause = await device.lost;
-  //     t.equal(cause.reason, 'destroyed', `Context lost: ${cause.message}`);
-  //     t.end();
-  //     resolve();
-  //   }, 0);
-  //   device.loseDevice();
-  // });
+  // Wrap in a promise to make sure tape waits for us
+  await new Promise<void>(async resolve => {
+    setTimeout(async () => {
+      const cause = await device.lost;
+      t.equal(cause.reason, 'destroyed', `Context lost: ${cause.message}`);
+      t.end();
+      resolve();
+    }, 0);
+    device.loseDevice();
+  });
 
-  // device.destroy();
+  device.destroy();
   t.end();
 });

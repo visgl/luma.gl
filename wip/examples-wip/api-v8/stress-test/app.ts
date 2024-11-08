@@ -1,8 +1,4 @@
-<<<<<<< HEAD:wip/examples-wip/api-v8/stress-test/app.ts
-import {Device, getRandom,glsl} from '@luma.gl/core';
-=======
-import {Device, getRandomNumberGenerator,glsl} from '@luma.gl/api';
->>>>>>> 29be19a97 (chore(shadertools): interface block generation):examples-wip/api-v8/stress-test/app.ts
+import {Device, getRandomNumberGenerator,glsl} from '@luma.gl/core';
 import {makeAnimationLoop, AnimationLoopTemplate, AnimationProps, CubeGeometry} from '@luma.gl/engine';
 import {dirlight} from '@luma.gl/shadertools';
 import {Model, ModelProps} from '@luma.gl/engine';

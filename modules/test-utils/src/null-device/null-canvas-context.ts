@@ -28,7 +28,7 @@ export class NullCanvasContext extends CanvasContext {
 
     // Base class constructor cannot access derived methods/fields, so we need to call these functions in the subclass constructor
     this._setAutoCreatedCanvasId(`${this.device.id}-canvas`);
-    this._updateConfiguration();
+    this._updateDevice();
   }
 
   getCurrentFramebuffer(): NullFramebuffer {
@@ -37,7 +37,5 @@ export class NullCanvasContext extends CanvasContext {
     return this._framebuffer;
   }
 
-  // IMPLEMENTATION OF ABSTRACT METHODS
-
-  _updateConfiguration() {}
+  _updateDevice() {}
 }

@@ -42,7 +42,7 @@ export class LegacyPickingManager {
   /** Prepare for rendering picking colors */
   beginRenderPass() {
     const framebuffer = this.getFramebuffer();
-    framebuffer.resize(this.device.getCanvasContext().getPixelSize());
+    framebuffer.resize(this.device.getCanvasContext().getDevicePixelSize());
 
     this.shaderInputs.setProps({picking: {isActive: true}});
 
