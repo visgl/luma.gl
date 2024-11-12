@@ -4,6 +4,10 @@
 
 Theme: Improved WebGPU support
 
+### v9.1.0-beta.10
+
+- fix(gltf): Copy across ImageBitmap in deepCopy (#2288)
+
 ### v9.1.0-beta.9
 
 - chore: Revert Modernize Canvas handling (#2285)
