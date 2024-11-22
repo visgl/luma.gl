@@ -678,6 +678,15 @@ export class Model {
    * @deprecated WebGL only, use uniform buffers for portability
    * @param uniforms
    */
+  setUniforms(uniforms: Record<string, UniformValue>): void {
+    this.setUniformsWebGL(uniforms);
+  }
+
+  /**
+   * Sets individual uniforms
+   * @deprecated WebGL only, use uniform buffers for portability
+   * @param uniforms
+   */
   setUniformsWebGL(uniforms: Record<string, UniformValue>): void {
     if (!isObjectEmpty(uniforms)) {
       this.pipeline.setUniformsWebGL(uniforms);
