@@ -2,7 +2,7 @@ import {AnimationLoopTemplate, AnimationProps, GroupNode} from '@luma.gl/engine'
 import {Device} from '@luma.gl/core';
 import {load} from '@loaders.gl/core';
 import {LightingProps} from '@luma.gl/shadertools';
-import {createScenegraphsFromGLTF} from '@luma.gl/gltf';
+import {createScenegraphsFromGLTF, GLTFAnimator} from '@luma.gl/gltf';
 import {ModelNode} from '@luma.gl/engine';
 import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
 import {Matrix4} from '@math.gl/core';
@@ -21,6 +21,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   center = [0, 0, 0];
   vantage = [0, 0, 0];
   time: number = 0;
+  animator: GLTFAnimator;
 
   constructor({device}: AnimationProps) {
     super();
@@ -39,6 +40,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
   onRender({aspect, device, time}: AnimationProps): void {
     if (!this.scenes?.length) return;
+    this.animator.setTime(time);
     const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1], clearDepth: true});
 
     const far = 2 * this.vantage[0];
@@ -86,8 +88,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const processedGLTF = postProcessGLTF(gltf);
 
     const options = {pbrDebug: false, imageBasedLightingEnvironment: null, lights: true};
-    const {scenes} = createScenegraphsFromGLTF(this.device, processedGLTF, options);
+    const {scenes, animator} = createScenegraphsFromGLTF(this.device, processedGLTF, options);
     this.scenes = scenes;
+    // animator?.animations.forEach(animation => {
+    //   Object.assign(animation, {playing: true, speed: 1, startTime: 0});
+    // });
+    this.animator = animator;
 
     // Calculate nice camera view
     // TODO move to utility in gltf module
