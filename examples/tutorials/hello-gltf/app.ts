@@ -25,7 +25,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   constructor({device}: AnimationProps) {
     super();
     this.device = device;
-    this.loadGLTF('Avocado');
+    this.loadGLTF('BoxAnimated.glb');
 
     const modelSelector = document.getElementById('model-select');
     modelSelector?.addEventListener('change', e => {
@@ -79,7 +79,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     canvas.style.opacity = '0.1';
 
     const gltf = await load(
-      `https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/${modelName}/glTF/${modelName}.gltf`,
+      `./${modelName}`,
+      // `https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/${modelName}/glTF/${modelName}.gltf`,
       GLTFLoader
     );
     const processedGLTF = postProcessGLTF(gltf);
