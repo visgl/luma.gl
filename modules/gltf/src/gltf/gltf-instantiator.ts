@@ -215,7 +215,11 @@ export class GLTFInstantiator {
 /** Deeply copies a JS data structure */
 function deepCopy(object: any): any {
   // don't copy binary data
-  if (ArrayBuffer.isView(object) || object instanceof ArrayBuffer) {
+  if (
+    ArrayBuffer.isView(object) ||
+    object instanceof ArrayBuffer ||
+    object instanceof ImageBitmap
+  ) {
     return object;
   }
   if (Array.isArray(object)) {
