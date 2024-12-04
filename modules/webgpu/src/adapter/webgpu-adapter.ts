@@ -38,7 +38,10 @@ export class WebGPUAdapter extends Adapter {
       throw new Error('Failed to request WebGPU adapter');
     }
 
-    const adapterInfo = await adapter.requestAdapterInfo();
+    const adapterInfo =
+      adapter.info ||
+      // @ts-ignore Chrome has removed this function
+      (await adapter.requestAdapterInfo?.());
     log.probe(2, 'Adapter available', adapterInfo)();
 
     const requiredFeatures: GPUFeatureName[] = [];
