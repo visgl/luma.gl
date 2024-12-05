@@ -92,7 +92,11 @@ export class WebGPUDevice extends Device {
       throw new Error('Failed to request WebGPU adapter');
     }
 
-    const adapterInfo = await adapter.requestAdapterInfo();
+    //  Note: adapter.requestAdapterInfo() has been replaced with adapter.info. Fall back in case adapter.info is not available
+    const adapterInfo =
+      adapter.info ||
+      // @ts-ignore
+      (await adapter.requestAdapterInfo?.());
     log.probe(2, 'Adapter available', adapterInfo)();
 
     const requiredFeatures: GPUFeatureName[] = [];
