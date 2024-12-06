@@ -62,7 +62,10 @@ export class WebGLAdapter extends Adapter {
     if (!isWebGL(gl)) {
       throw new Error('Invalid WebGL2RenderingContext');
     }
-    return new WebGLDevice({_handle: gl as WebGL2RenderingContext});
+    return new WebGLDevice({
+      _handle: gl as WebGL2RenderingContext,
+      createCanvasContext: {autoResize: false}
+    });
   }
 
   async create(props: DeviceProps = {}): Promise<WebGLDevice> {
