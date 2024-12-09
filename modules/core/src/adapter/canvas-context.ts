@@ -195,7 +195,8 @@ export abstract class CanvasContext {
       // For headless gl we might have used custom width and height
       // hence use cached clientWidth
       const [drawingBufferWidth] = this.getDrawingBufferSize();
-      const {clientWidth} = this._canvasSizeInfo;
+      // _canvasSizeInfo may not be populated if `setDevicePixelRatio` is never called
+      const clientWidth = this._canvasSizeInfo.clientWidth || this.htmlCanvas?.clientWidth;
       return clientWidth ? drawingBufferWidth / clientWidth : 1;
     } catch {
       return 1;
