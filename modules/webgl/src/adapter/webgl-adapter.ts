@@ -45,7 +45,8 @@ export class WebGLAdapter extends Adapter {
 
   /**
    * Get a device instance from a GL context
-   * Creates and instruments the device if not already created
+   * Creates a WebGLCanvasContext against the contexts canvas
+   * @note autoResize will be disabled, assuming that whoever created the external context will be handling resizes.
    * @param gl
    * @returns
    */
@@ -62,7 +63,13 @@ export class WebGLAdapter extends Adapter {
     if (!isWebGL(gl)) {
       throw new Error('Invalid WebGL2RenderingContext');
     }
-    return new WebGLDevice({_handle: gl as WebGL2RenderingContext});
+
+    // We create a new device using the provided WebGL context and its canvas
+    // Assume that whoever created the external context will be handling resizes.
+    return new WebGLDevice({
+      _handle: gl,
+      createCanvasContext: {canvas: gl.canvas, autoResize: false}
+    });
   }
 
   async create(props: DeviceProps = {}): Promise<WebGLDevice> {
@@ -106,7 +113,7 @@ ${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContex
 }
 
 /** Check if supplied parameter is a WebGL2RenderingContext */
-function isWebGL(gl: any): boolean {
+function isWebGL(gl: any): gl is WebGL2RenderingContext {
   if (typeof WebGL2RenderingContext !== 'undefined' && gl instanceof WebGL2RenderingContext) {
     return true;
   }
