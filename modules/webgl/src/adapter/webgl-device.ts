@@ -203,7 +203,8 @@ ${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContex
 
     // Create and instrument context
     const canvas = props.gl?.canvas || props.canvas;
-    this.canvasContext = new WebGLCanvasContext(this, {...props, canvas});
+    const autoResize = !props.gl;
+    this.canvasContext = new WebGLCanvasContext(this, {...props, autoResize, canvas});
 
     this.lost = new Promise<{reason: 'destroyed'; message: string}>(resolve => {
       this._resolveContextLost = resolve;
@@ -241,7 +242,9 @@ ${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContex
       this.features.initializeFeatures();
     }
 
-    this.canvasContext.resize();
+    if (autoResize) {
+      this.canvasContext.resize();
+    }
 
     // Install context state tracking
     // @ts-expect-error - hidden parameters
