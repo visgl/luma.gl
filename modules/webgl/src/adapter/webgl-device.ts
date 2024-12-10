@@ -140,7 +140,10 @@ export class WebGLDevice extends Device {
       webglContextAttributes.powerPreference = props.powerPreference;
     }
 
-    const gl = createBrowserContext(
+    // Check if we should attach to an externally created context or create a new context
+    const externalGLContext = this.props._handle as WebGL2RenderingContext | null;
+
+    const gl = externalGLContext || createBrowserContext(
       this.canvasContext.canvas,
       {
         onContextLost: (event: Event) =>
@@ -188,7 +191,7 @@ export class WebGLDevice extends Device {
       this.features.initializeFeatures();
     }
 
-    if (canvasContextProps.autoResize) {
+    if (canvasContextProps.autoResize !== false) {
       this.canvasContext.resize();
     }
 
