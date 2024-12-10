@@ -140,19 +140,24 @@ export class WebGLDevice extends Device {
       webglContextAttributes.powerPreference = props.powerPreference;
     }
 
-    const gl = createBrowserContext(
-      this.canvasContext.canvas,
-      {
-        onContextLost: (event: Event) =>
-          this._resolveContextLost?.({
-            reason: 'destroyed',
-            message: 'Entered sleep mode, or too many apps or browser tabs are using the GPU.'
-          }),
-        // eslint-disable-next-line no-console
-        onContextRestored: (event: Event) => console.log('WebGL context restored')
-      },
-      webglContextAttributes
-    );
+    // Check if we should attach to an externally created context or create a new context
+    const externalGLContext = this.props._handle as WebGL2RenderingContext | null;
+
+    const gl =
+      externalGLContext ||
+      createBrowserContext(
+        this.canvasContext.canvas,
+        {
+          onContextLost: (event: Event) =>
+            this._resolveContextLost?.({
+              reason: 'destroyed',
+              message: 'Entered sleep mode, or too many apps or browser tabs are using the GPU.'
+            }),
+          // eslint-disable-next-line no-console
+          onContextRestored: (event: Event) => console.log('WebGL context restored')
+        },
+        webglContextAttributes
+      );
 
     if (!gl) {
       throw new Error('WebGL context creation failed');
@@ -188,7 +193,7 @@ export class WebGLDevice extends Device {
       this.features.initializeFeatures();
     }
 
-    if (canvasContextProps.autoResize) {
+    if (canvasContextProps.autoResize !== false) {
       this.canvasContext.resize();
     }
 
