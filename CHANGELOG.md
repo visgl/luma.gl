@@ -4,6 +4,13 @@
 
 Theme: Improved WebGPU support
 
+### v9.1.0-beta.12
+
+- fix(webgl): Fix webglAdapter.attach() (#2299)
+- fix(webgl): Prevent auto resizing when using external gl context (#2297)
+- fix(webgpu): Chrome ghas removed getAdapterInfo() (#2294)
+- chore(engine): Add back Model.setUniforms() (#2291)
+
 ### v9.1.0-beta.11
 
 - No changes
