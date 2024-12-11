@@ -4,6 +4,11 @@
 
 Major new release that includes WebGPU support
 
+### 9.0.28 - Dec 11, 2024
+
+- fix(webgl): Prevent auto resizing when using external gl context (#2296)
+- fix(webgpu): Chrome has removed requestAdapterInfo() (#2293)
+
 ### 9.0.27 - Sep 2, 2024
 
 - Revert "shadertools: PBR module using UBO (#2173)"
