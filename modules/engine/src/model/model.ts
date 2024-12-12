@@ -231,18 +231,18 @@ export class Model {
       this.props.modules?.map(module => [module.name, module]) || []
     );
 
-    // @ts-expect-error Fix typings
-    this.setShaderInputs(
+    const shaderInputs =
       props.shaderInputs ||
-        new ShaderInputs(moduleMap, {disableWarnings: this.props.disableWarnings})
-    );
+      new ShaderInputs(moduleMap, {disableWarnings: this.props.disableWarnings});
+    // @ts-ignore
+    this.setShaderInputs(shaderInputs);
 
     // Setup shader assembler
     const platformInfo = getPlatformInfo(device);
 
     // Extract modules from shader inputs if not supplied
     const modules =
-      // @ts-expect-error shaderInputs is assigned in setShaderInputs above.
+      // @ts-ignore shaderInputs is assigned in setShaderInputs above.
       (this.props.modules?.length > 0 ? this.props.modules : this.shaderInputs?.getModules()) || [];
 
     const isWebGPU = this.device.type === 'webgpu';

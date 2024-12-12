@@ -32,7 +32,7 @@ export class ShaderInputs<
    * The map of modules
    * @todo should should this include the resolved dependencies?
    */
-  // @ts-expect-error Fix typings
+  // @ts-ignore Fix typings
   modules: Readonly<{[P in keyof ShaderPropsT]: ShaderModule<ShaderPropsT[P]>}>;
 
   /** Stores the uniform values for each module */
@@ -46,8 +46,8 @@ export class ShaderInputs<
    * Create a new UniformStore instance
    * @param modules
    */
-  // @ts-expect-error Fix typings
   constructor(
+    // @ts-ignore Fix typings
     modules: {[P in keyof ShaderPropsT]?: ShaderModule<ShaderPropsT[P], any>},
     options?: ShaderInputsOptions
   ) {
@@ -65,7 +65,7 @@ export class ShaderInputs<
     log.log(1, 'Creating ShaderInputs with modules', Object.keys(modules))();
 
     // Store the module definitions and create storage for uniform values and binding values, per module
-    // @ts-expect-error Fix typings
+    // @ts-ignore Fix typings
     this.modules = modules as {[P in keyof ShaderPropsT]: ShaderModule<ShaderPropsT[P]>};
     this.moduleUniforms = {} as Record<keyof ShaderPropsT, Record<string, UniformValue>>;
     this.moduleBindings = {} as Record<keyof ShaderPropsT, Record<string, Binding>>;
