@@ -25,7 +25,7 @@ export class ShaderInputs<
   >
 > {
   options: Required<ShaderInputsOptions> = {
-    disableWarnings: false;
+    disableWarnings: false
   }
 
   /**
