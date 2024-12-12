@@ -10,7 +10,7 @@ import {splitUniformsAndBindings} from './model/split-uniforms-and-bindings';
 
 export type ShaderInputsOptions = {
   disableWarnings?: boolean;
-}
+};
 
 /**
  * ShaderInputs holds uniform and binding values for one or more shader modules,
@@ -26,7 +26,7 @@ export class ShaderInputs<
 > {
   options: Required<ShaderInputsOptions> = {
     disableWarnings: false
-  }
+  };
 
   /**
    * The map of modules
@@ -47,7 +47,10 @@ export class ShaderInputs<
    * @param modules
    */
   // @ts-expect-error Fix typings
-  constructor(modules: {[P in keyof ShaderPropsT]?: ShaderModule<ShaderPropsT[P], any>}, options?: ShaderInputsOptions) {
+  constructor(
+    modules: {[P in keyof ShaderPropsT]?: ShaderModule<ShaderPropsT[P], any>},
+    options?: ShaderInputsOptions
+  ) {
     Object.assign(this.options, options);
 
     // Extract modules with dependencies
