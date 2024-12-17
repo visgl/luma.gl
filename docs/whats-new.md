@@ -39,18 +39,24 @@ Production quality WebGPU backend
 - glTF and PRB now supported on WebGPU (in progress)
 
 
-## Version 9.1 (In Beta)
+## Version 9.1
 
-Target Date: Sep 30, 2024
+Target Date: Dec 20, 2024
 
-Improvements focused on enhancing WebGPU support.
+Improvements and API changes focused on enhancing WebGPU support.
+
+**Highlights**
+- GPU backend management is streamlined via the new `Adapter` API.
+- GPU connection to HTML DOM (via `canvas` elements) improved via `CanvasContext` API changes.
+- `Texture`s are now immutable, however a new `AsyncTexture` class offers a higher-level, mutable texture API.
+- `ShaderModule` type safety improvements (uniform types etc)
 
 **@luma.gl/core**
 
 - [`Adapter`](/docs/api-reference/core/adapter)
-  - New class representing a pluggable GPU backend.
-  - Singleton `Adapter` objects are exported by `@luma.gl/webgpu` and `@luma.gl/webgl`.
-- `luma`
+  - New class for singleton objects representing pluggable GPU backends.
+  - Singleton `Adapter` objects are exported by the `@luma.gl/webgpu` and `@luma.gl/webgl` modules.
+- [`luma`](/docs/api-reference/core/luma)
   - Now relies on `Adapter` instances to define which GPU backends are available.
   - Adapter can be supplied during device creation, avoiding the need for global registration of GPU backends.
   -  `CreateDeviceProps.adapters` prop to supply list of GPU backend adapters to `luma.createDevice()`. 
