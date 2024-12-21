@@ -5,7 +5,7 @@
 This module contains the WebGL adapter for the "abstract" luma.gl API (`@luma.gl/core`).
 
 Importing `webgl2Adapter` from `@luma.gl/webgl` enables WebGL devices to
-be created using `luma.createDevice(props)`. See [`CreateDeviceProps`](../core/luma#createdeviceprops) for WebGL property options.
+be created using `luma.createDevice(props)`. See [`CreateDeviceProps`](/docs/api-reference/core/luma#createdeviceprops) for WebGL property options.
 
 ```typescript
 import {luma} from '@luma.gl/core';

@@ -10,8 +10,8 @@ const sidebars = {
       label: 'Showcase',
       items: [
         'showcase/instancing',
-        'showcase/persistence',
-        'showcase/postprocessing'
+        'showcase/persistence'
+        // 'showcase/postprocessing'
       ]
     },
     {
@@ -19,8 +19,8 @@ const sidebars = {
       label: 'API',
       items: [
         'api/animation',
-        'api/cubemap',
-        'api/texture-3d'
+        'api/cubemap'
+        // 'api/texture-3d'
       ]
     },
     {
@@ -36,8 +36,8 @@ const sidebars = {
         // 'tutorials/hello-instancing',
         // 'tutorials/shader-modules',
         // 'tutorials/shader-hooks',
-        'tutorials/transform-feedback',
-        'tutorials/transform'
+        'tutorials/transform-feedback'
+        // 'tutorials/transform'
       ]
     }
   ]
