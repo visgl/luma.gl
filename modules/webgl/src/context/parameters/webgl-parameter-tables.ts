@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+// @ts-nocheck TODO fix
+
 // Tables describing WebGL parameters
 import {GL, GLParameters} from '@luma.gl/constants';
 
@@ -412,9 +414,9 @@ export const GL_HOOKED_SETTERS = {
     update({
       [pname]: value
     }),
-  hint: (update: UpdateFunc, pname: GL, hint: GL) =>
+  hint: (update: UpdateFunc, pname: GL, value: GL) =>
     update({
-      [pname]: hint
+      [pname]: value
     }),
 
   // SPECIFIC SETTERS

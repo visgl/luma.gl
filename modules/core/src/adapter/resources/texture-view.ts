@@ -4,7 +4,7 @@
 
 import type {Device} from '../device';
 import type {Texture} from './texture';
-import type {TextureFormat} from '../../gpu-type-utils/texture-formats';
+import type {TextureFormat} from '../../shadertypes/texture-formats';
 import {Resource, ResourceProps} from './resource';
 
 /** Properties for initializing a texture view */
@@ -27,17 +27,6 @@ export type TextureViewProps = ResourceProps & {
 
 /** Immutable TextureView object */
 export abstract class TextureView extends Resource<TextureViewProps> {
-  static override defaultProps: Required<TextureViewProps> = {
-    ...Resource.defaultProps,
-    format: undefined!,
-    dimension: undefined!,
-    aspect: 'all',
-    baseMipLevel: 0,
-    mipLevelCount: undefined!,
-    baseArrayLayer: 0,
-    arrayLayerCount: undefined!
-  };
-
   abstract texture: Texture;
 
   override get [Symbol.toStringTag](): string {
@@ -48,4 +37,15 @@ export abstract class TextureView extends Resource<TextureViewProps> {
   constructor(device: Device, props: TextureViewProps & {texture: Texture}) {
     super(device, props, TextureView.defaultProps);
   }
+
+  static override defaultProps: Required<TextureViewProps> = {
+    ...Resource.defaultProps,
+    format: undefined!,
+    dimension: undefined!,
+    aspect: 'all',
+    baseMipLevel: 0,
+    mipLevelCount: undefined!,
+    baseArrayLayer: 0,
+    arrayLayerCount: undefined!
+  };
 }

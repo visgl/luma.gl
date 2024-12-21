@@ -10,7 +10,8 @@ const sidebars = {
       label: 'Showcase',
       items: [
         'showcase/instancing',
-        'showcase/persistence'
+        'showcase/persistence',
+        'showcase/postprocessing'
       ]
     },
     {
@@ -32,9 +33,9 @@ const sidebars = {
         'tutorials/hello-gltf',
         'tutorials/two-cubes',
         'tutorials/instanced-cubes',
-        'tutorials/hello-instancing',
-        'tutorials/shader-modules',
-        'tutorials/shader-hooks',
+        // 'tutorials/hello-instancing',
+        // 'tutorials/shader-modules',
+        // 'tutorials/shader-hooks',
         'tutorials/transform-feedback',
         'tutorials/transform'
       ]

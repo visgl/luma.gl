@@ -1,6 +1,8 @@
 // Forked from https://github.com/BabylonJS/Spector.js/blob/master/dist/spector.d.ts
 /* eslint-disable camelcase, no-shadow */
 
+// @ts-nocheck
+
 interface IEvent<T> {
   add(callback: (element: T) => void, context?: any): number;
   remove(id: number): void;
@@ -1071,8 +1073,11 @@ export abstract class Spector {
   }
   protected static tryGetContextFromHelperField: unknown;
   protected static tryGetContextFromCanvas: unknown;
+  // @ts-ignore TODO
   readonly onCaptureStarted: IEvent<any>;
+  // @ts-ignore TODO
   readonly onCapture: IEvent<ICapture>;
+  // @ts-ignore TODO
   readonly onError: IEvent<string>;
   protected readonly logger;
   protected readonly timeSpy;

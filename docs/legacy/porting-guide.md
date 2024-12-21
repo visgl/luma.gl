@@ -229,7 +229,7 @@ The v8 luma.gl API was designed to allow apps to work directly with the `WebGLRe
 | `resizeGLContext(gl, options)`     | `canvasContext.resize(options)`       | Same options: `{width, height, useDevicePixels}`               |
 | `getDevicePixelRatio()`            | `canvasContext.getDevicePixelRatio()` | Uses `useDevicePixels` prop on the `CanvasContext`             |
 | `setDevicePixelRatio()`            | `canvasContext.setDevicePixelRatio()` |                                                                |
-|                                    | `canvasContext.getPixelSize()`        |
+|                                    | `canvasContext.getDevicePixelSize()`        |
 |                                    | `canvasContext.getAspect()`           |
 | `cssToDeviceRatio()`               | `canvasContext.cssToDeviceRatio()`    |                                                                |
 | `cssToDevicePixels()`              | `canvasContext.cssToDevicePixels()`   |                                                                |

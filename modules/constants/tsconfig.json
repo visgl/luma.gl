@@ -1,10 +1,8 @@
 {
-  "extends": "../../tsconfig.module.json",
+  "extends": "../../tsconfig.json",
   "include": ["src/**/*"],
   "exclude": ["node_modules"],
   "compilerOptions": {
-    "strict": true,
-    "noImplicitAny": true,
     "composite": true,
     "rootDir": "src",
     "outDir": "dist"

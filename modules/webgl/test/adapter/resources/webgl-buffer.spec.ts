@@ -6,9 +6,11 @@ import test from 'tape-promise/tape';
 import {Buffer} from '@luma.gl/core';
 import {WEBGLBuffer} from '@luma.gl/webgl';
 
-import {webglDevice as device} from '@luma.gl/test-utils';
+import {getWebGLTestDevice} from '@luma.gl/test-utils';
 
-test('WEBGLBuffer#bind/unbind with index', t => {
+test('WEBGLBuffer#bind/unbind with index', async t => {
+  const device = await getWebGLTestDevice();
+
   const buffer = device.createBuffer({usage: Buffer.UNIFORM});
   device.gl.bindBufferBase(buffer.glTarget, 0, buffer.handle);
   t.ok(buffer instanceof Buffer, `${device.type} Buffer bind/unbind with index successful`);
@@ -20,6 +22,8 @@ test('WEBGLBuffer#bind/unbind with index', t => {
 });
 
 test('WEBGLBuffer#write', async t => {
+  const device = await getWebGLTestDevice();
+
   const initialData = new Float32Array([1, 2, 3]);
   const updateData = new Float32Array([4, 5, 6]);
 
@@ -42,19 +46,23 @@ test('WEBGLBuffer#write', async t => {
   );
 
   buffer.destroy();
-  buffer = device.createBuffer({usage: Buffer.INDEX, data: initialData});
+
+  const initialDataInt = new Uint32Array([1, 2, 3]);
+  const updateDataInt = new Uint32Array([4, 5, 6]);
+
+  buffer = device.createBuffer({usage: Buffer.INDEX, data: initialDataInt});
 
   t.deepEqual(
-    await readAsyncF32(buffer),
-    initialData,
+    await readAsyncU32(buffer),
+    initialDataInt,
     `${device.type} Device.createBuffer(ELEMENT_ARRAY_BUFFER) successful`
   );
 
-  buffer.write(updateData);
+  buffer.write(updateDataInt);
 
   t.deepEqual(
-    await readAsyncF32(buffer),
-    updateData,
+    await readAsyncU32(buffer),
+    updateDataInt,
     `${device.type} Buffer.write(ARRAY_ELEMENT_BUFFER) successful`
   );
 
@@ -66,4 +74,9 @@ test('WEBGLBuffer#write', async t => {
 async function readAsyncF32(source: Buffer): Promise<Float32Array> {
   const {buffer, byteOffset, byteLength} = await source.readAsync();
   return new Float32Array(buffer, byteOffset, byteLength / Float32Array.BYTES_PER_ELEMENT);
+}
+
+async function readAsyncU32(source: Buffer): Promise<Uint32Array> {
+  const {buffer, byteOffset, byteLength} = await source.readAsync();
+  return new Uint32Array(buffer, byteOffset, byteLength / Uint32Array.BYTES_PER_ELEMENT);
 }

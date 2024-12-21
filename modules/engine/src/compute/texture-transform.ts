@@ -3,8 +3,9 @@
 // Copyright (c) vis.gl contributors
 
 import {Buffer, Device, Framebuffer, RenderPassProps, Sampler, Texture} from '@luma.gl/core';
-import {Model, ModelProps} from '../model/model';
 import {getPassthroughFS} from '@luma.gl/shadertools';
+import {Model, ModelProps} from '../model/model';
+import {uid} from '../utils/uid';
 
 /**
  * Properties for creating a {@link TextureTransform}
@@ -60,7 +61,7 @@ export class TextureTransform {
     });
 
     this.model = new Model(this.device, {
-      id: props.id || 'texture-transform-model',
+      id: props.id || uid('texture-transform-model'),
       fs:
         props.fs ||
         getPassthroughFS({
@@ -77,7 +78,12 @@ export class TextureTransform {
   }
 
   // Delete owned resources.
-  destroy(): void {}
+  destroy(): void {
+    this.model.destroy();
+    for (const binding of this.bindings) {
+      binding.framebuffer?.destroy();
+    }
+  }
 
   /** @deprecated Use {@link destroy}. */
   delete(): void {
@@ -89,6 +95,7 @@ export class TextureTransform {
     const renderPass = this.device.beginRenderPass({framebuffer, ...options});
     this.model.draw(renderPass);
     renderPass.end();
+    this.device.submit();
   }
 
   getTargetTexture(): Texture {

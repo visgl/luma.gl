@@ -11,7 +11,7 @@ import {getBrowser} from '@probe.gl/env';
 import {WebGLDevice} from '../webgl-device';
 import {WEBGLBuffer} from '../resources/webgl-buffer';
 
-import {getGLFromVertexType} from '../converters/vertex-formats';
+import {getGLFromVertexType} from '../converters/webgl-vertex-formats';
 import {fillArray} from '../../utils/fill-array';
 
 /** VertexArrayObject wrapper */
@@ -25,7 +25,7 @@ export class WEBGLVertexArray extends VertexArray {
 
   /** Attribute 0 buffer constant */
   private buffer: WEBGLBuffer | null = null;
-  private bufferValue = null;
+  private bufferValue: TypedArray | null = null;
 
   /** * Attribute 0 can not be disable on most desktop OpenGL based browsers */
   static isConstantAttributeZeroSupported(device: Device): boolean {
@@ -233,7 +233,8 @@ export class WEBGLVertexArray extends VertexArray {
     this.buffer = this.buffer || this.device.createBuffer({byteLength});
 
     // Reallocate and update contents if needed
-    updateNeeded = updateNeeded || !compareConstantArrayValues(constantValue, this.bufferValue);
+    // @ts-ignore TODO fix types
+    updateNeeded ||= !compareConstantArrayValues(constantValue, this.bufferValue);
 
     if (updateNeeded) {
       // Create a typed array that is big enough, and fill it with the required data

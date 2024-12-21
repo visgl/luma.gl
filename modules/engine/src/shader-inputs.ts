@@ -4,9 +4,13 @@
 
 import type {Binding, UniformValue} from '@luma.gl/core';
 import {log} from '@luma.gl/core';
-// import type {ShaderUniformType, UniformValue, UniformFormat, UniformInfoDevice, Texture, Sampler} from '@luma.gl/core';
+// import type {VariableShaderType, UniformValue, UniformFormat, UniformInfoDevice, Texture, Sampler} from '@luma.gl/core';
 import {getShaderModuleDependencies, ShaderModule} from '@luma.gl/shadertools';
 import {splitUniformsAndBindings} from './model/split-uniforms-and-bindings';
+
+export type ShaderInputsOptions = {
+  disableWarnings?: boolean;
+};
 
 /**
  * ShaderInputs holds uniform and binding values for one or more shader modules,
@@ -20,11 +24,15 @@ export class ShaderInputs<
     Record<string, Record<string, unknown>>
   >
 > {
+  options: Required<ShaderInputsOptions> = {
+    disableWarnings: false
+  };
+
   /**
    * The map of modules
    * @todo should should this include the resolved dependencies?
    */
-  // @ts-expect-error Fix typings
+  // @ts-ignore Fix typings
   modules: Readonly<{[P in keyof ShaderPropsT]: ShaderModule<ShaderPropsT[P]>}>;
 
   /** Stores the uniform values for each module */
@@ -38,8 +46,13 @@ export class ShaderInputs<
    * Create a new UniformStore instance
    * @param modules
    */
-  // @ts-expect-error Fix typings
-  constructor(modules: {[P in keyof ShaderPropsT]?: ShaderModule<ShaderPropsT[P], any>}) {
+  constructor(
+    // @ts-ignore Fix typings
+    modules: {[P in keyof ShaderPropsT]?: ShaderModule<ShaderPropsT[P], any>},
+    options?: ShaderInputsOptions
+  ) {
+    Object.assign(this.options, options);
+
     // Extract modules with dependencies
     const resolvedModules = getShaderModuleDependencies(
       Object.values(modules).filter(module => module.dependencies)
@@ -52,7 +65,7 @@ export class ShaderInputs<
     log.log(1, 'Creating ShaderInputs with modules', Object.keys(modules))();
 
     // Store the module definitions and create storage for uniform values and binding values, per module
-    // @ts-expect-error Fix typings
+    // @ts-ignore Fix typings
     this.modules = modules as {[P in keyof ShaderPropsT]: ShaderModule<ShaderPropsT[P]>};
     this.moduleUniforms = {} as Record<keyof ShaderPropsT, Record<string, UniformValue>>;
     this.moduleBindings = {} as Record<keyof ShaderPropsT, Record<string, Binding>>;
@@ -60,7 +73,7 @@ export class ShaderInputs<
     // Initialize the modules
     for (const [name, module] of Object.entries(modules)) {
       this._addModule(module);
-      if (module.name && name !== module.name) {
+      if (module.name && name !== module.name && !this.options.disableWarnings) {
         log.warn(`Module name: ${name} vs ${module.name}`)();
       }
     }
@@ -77,7 +90,7 @@ export class ShaderInputs<
       const moduleName = name as keyof ShaderPropsT;
       const moduleProps = props[moduleName] || {};
       const module = this.modules[moduleName];
-      if (!module) {
+      if (!module && !this.options.disableWarnings) {
         // Ignore props for unregistered modules
         log.warn(`Module ${name} not found`)();
         continue; // eslint-disable-line no-continue

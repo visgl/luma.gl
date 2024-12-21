@@ -2,18 +2,16 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Device} from '@luma.gl/core';
+import {CanvasContext, Device} from '@luma.gl/core';
 import {Timeline} from '../animation/timeline';
 import type {AnimationLoop} from './animation-loop';
 
 /** Properties passed to every render frame  */
 export type AnimationProps = {
-  device: Device;
   animationLoop: AnimationLoop;
-
-  /** @todo Should be canvasContext */
+  device: Device;
+  canvasContext: CanvasContext;
   canvas: HTMLCanvasElement | OffscreenCanvas;
-  useDevicePixels: number | boolean;
   width: number;
   height: number;
   aspect: number;

@@ -1,10 +1,9 @@
-import {Buffer} from '@luma.gl/core';
-import {AnimationLoopTemplate, AnimationProps, Model, Swap} from '@luma.gl/engine';
-import {BufferTransform} from '@luma.gl/engine';
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
 
-const INFO_HTML = `
-Animation via transform feedback.
-`;
+import {Buffer} from '@luma.gl/core';
+import {AnimationLoopTemplate, AnimationProps, Model, Swap, BufferTransform} from '@luma.gl/engine';
 
 const transformVs = /* glsl */ `\
 #version 300 es
@@ -50,7 +49,9 @@ void main() {
 `;
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
-  static info = INFO_HTML;
+  static info = `
+Animation via transform feedback.
+`;
 
   transform: BufferTransform;
   model: Model;
@@ -70,7 +71,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       current: device.createBuffer(new Float32Array([-0.5, -0.5, 0.5, -0.5, 0.0, 0.5])),
       next: device.createBuffer(new Float32Array(6))
     });
-    
+
     this.colorBuffer = device.createBuffer(
       new Float32Array([1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0])
     );

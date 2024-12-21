@@ -25,13 +25,8 @@
   import {webgpuAdapter} from '@luma.gl/webgpu';
   import {makeAnimationLoop} from '@luma.gl/engine';
   import AnimationLoopTemplate from './app.ts';
-
-  luma.registerAdapters([webgl2Adapter]);
-  // luma.registerAdapters([webglDevice, webgpuDevice]);
-
-  const resolution = 2;
-  const device = luma.createDevice({width: resolution * window.innerWidth, height: resolution * window.innerHeight});
-  makeAnimationLoop(AnimationLoopTemplate, {device}).start();
+  const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {adapters: [webgpuAdapter, webgl2Adapter]});
+  animationLoop.start();
 </script>
 <body>
 </body>

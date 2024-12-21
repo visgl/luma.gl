@@ -1,12 +1,11 @@
 import {Buffer} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine';
 
-const INFO_HTML = `
-Instanced triangles using luma.gl's high-level API
-`;
-
 const colorShaderModule = {
   name: 'color',
+  source: /* wgsl */ `\
+
+  `,
   vs: /* glsl */ `\
 out vec3 color_vColor;
 
@@ -23,9 +22,51 @@ vec3 color_getColor() {
   `
 };
 
-export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
-  static info = INFO_HTML;
+const source = /* wgsl */ `\
+type VertexInputs {
+  @location(0) position: vec2<f32>;
+  @location(1) instanceColor: vec3<f32>;
+  @location(2) instanceOffset: vec2<f32>;
+};  
 
+type FragmentInputs {
+  Position: vec4<f32>;
+  color: vec4<f32>;
+}
+
+@vertexMain
+fn vertexMain(inputs: VertexInputs) -> [[builtin(position)]] vec4<f32> {
+  color_setColor(inputs.instanceColor);
+  return vec4<f32>(inputs.position + inputs.instanceOffset, 0.0, 1.0);
+}
+
+@fragmentMain
+fn fragmentMain(inputs: FragmentInputs) -> [[location(0)]] vec4<f32 {
+  return vec4<f32>(color_getColor(), 1.0);
+}
+`;
+
+const vs = /* glsl */ `\
+#version 300 es
+in vec2 position;
+in vec3 instanceColor;
+in vec2 instanceOffset;
+
+void main() {
+  color_setColor(instanceColor);
+  gl_Position = vec4(position + instanceOffset, 0.0, 1.0);
+}
+`;
+
+const fs = /* glsl */ `\
+#version 300 es
+out vec4 fragColor;
+void main() {
+  fragColor = vec4(color_getColor(), 1.0);
+}
+`;
+
+export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   model: Model;
   positionBuffer: Buffer;
   colorBuffer: Buffer;
@@ -43,24 +84,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     );
 
     this.model = new Model(device, {
-      vs: /* glsl */ `\
-#version 300 es
-in vec2 position;
-in vec3 instanceColor;
-in vec2 instanceOffset;
-
-void main() {
-  color_setColor(instanceColor);
-  gl_Position = vec4(position + instanceOffset, 0.0, 1.0);
-}
-      `,
-      fs: /* glsl */ `\
-#version 300 es
-out vec4 fragColor;
-void main() {
-  fragColor = vec4(color_getColor(), 1.0);
-}
-      `,
+      source,
+      vs,
+      fs,
       modules: [colorShaderModule],
       bufferLayout: [
         {name: 'position', format: 'float32x2'},

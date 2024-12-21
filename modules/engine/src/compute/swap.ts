@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {BufferProps, FramebufferProps} from '@luma.gl/core';
-import {Device, Resource, Buffer, Framebuffer} from '@luma.gl/core';
+import {Device, Resource, Buffer, Framebuffer, Texture} from '@luma.gl/core';
 
 /**
  * Helper class for working with repeated transformations / computations
@@ -39,7 +39,36 @@ export class Swap<T extends Resource<any>> {
 /** Helper for managing double-buffered framebuffers */
 export class SwapFramebuffers extends Swap<Framebuffer> {
   constructor(device: Device, props: FramebufferProps) {
-    super({current: device.createFramebuffer(props), next: device.createFramebuffer(props)});
+    props = {...props};
+
+    let colorAttachments = props.colorAttachments?.map(colorAttachment =>
+      typeof colorAttachment !== 'string'
+        ? colorAttachment
+        : device.createTexture({
+            format: colorAttachment,
+            usage: Texture.SAMPLE | Texture.RENDER | Texture.COPY_SRC | Texture.COPY_DST,
+            width: 1,
+            height: 1
+          })
+    );
+
+    const current = device.createFramebuffer({...props, colorAttachments});
+
+    colorAttachments = props.colorAttachments?.map(colorAttachment =>
+      typeof colorAttachment !== 'string'
+        ? colorAttachment
+        : device.createTexture({
+            format: colorAttachment,
+            usage:
+              Texture.TEXTURE | Texture.COPY_SRC | Texture.COPY_DST | Texture.RENDER_ATTACHMENT,
+            width: 1,
+            height: 1
+          })
+    );
+
+    const next = device.createFramebuffer({...props, colorAttachments});
+
+    super({current, next});
   }
 
   /**

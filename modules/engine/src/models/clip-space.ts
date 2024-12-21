@@ -6,46 +6,48 @@
 import {Device} from '@luma.gl/core';
 import {Model, ModelProps} from '../model/model';
 import {Geometry} from '../geometry/geometry';
+import {uid} from '../utils/uid';
 
 const CLIPSPACE_VERTEX_SHADER_WGSL = /* wgsl */ `\
-struct VertexInput {
-  aClipSpacePosition: vec2<f32>;
-  aTexCoord: vec2<f32>;
-  aCoordinate: vec2<f32>;  
+struct VertexInputs {
+  @location(0) clipSpacePosition: vec2<f32>,
+  @location(1) texCoord: vec2<f32>,
+  @location(2) coordinate: vec2<f32>  
 }
 
-struct FragmentInput {
-  @builtin(position) Position : vec4<f32>;
-  @location(0) position : vec2<f32>;
-  @location(1) coordinate : vec2<f32>;
-  @location(2) uv : vec2<f32>;
+struct FragmentInputs {
+  @builtin(position) Position : vec4<f32>,
+  @location(0) position : vec2<f32>,
+  @location(1) coordinate : vec2<f32>,
+  @location(2) uv : vec2<f32>
 };
 
-@stage(vertex)
-fn vertexMain(input: VertexInput) -> FragmentInput {
-  var output: FragmentInput;
-  output.Position = vec4(aClipSpacePosition, 0., 1.);
-  output.position = input.aClipSpacePosition;
-  output.coordinate = input.aCoordinate;
-  output.uv = aTexCoord;
+@vertex
+fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
+  var outputs: FragmentInputs;
+  outputs.Position = vec4(inputs.clipSpacePosition, 0., 1.);
+  outputs.position = inputs.clipSpacePosition;
+  outputs.coordinate = inputs.coordinate;
+  outputs.uv = inputs.texCoord;
+  return outputs;
 }
 `;
 
 const CLIPSPACE_VERTEX_SHADER = /* glsl */ `\
 #version 300 es
-in vec2 aClipSpacePosition;
-in vec2 aTexCoord;
-in vec2 aCoordinate;
+in vec2 clipSpacePositions;
+in vec2 texCoords;
+in vec2 coordinates;
 
 out vec2 position;
 out vec2 coordinate;
 out vec2 uv;
 
 void main(void) {
-  gl_Position = vec4(aClipSpacePosition, 0., 1.);
-  position = aClipSpacePosition;
-  coordinate = aCoordinate;
-  uv = aTexCoord;
+  gl_Position = vec4(clipSpacePositions, 0., 1.);
+  position = clipSpacePositions;
+  coordinate = coordinates;
+  uv = texCoords;
 }
 `;
 
@@ -64,21 +66,21 @@ export class ClipSpace extends Model {
 
     // For WGSL we need to append the supplied fragment shader to the default vertex shader source
     if (props.source) {
-      props = {...props, source: `${CLIPSPACE_VERTEX_SHADER_WGSL}\m${props.source}`};
+      props = {...props, source: `${CLIPSPACE_VERTEX_SHADER_WGSL}\n${props.source}`};
     }
 
     super(device, {
+      id: props.id || uid('clip-space'),
       ...props,
-      source: CLIPSPACE_VERTEX_SHADER_WGSL,
       vs: CLIPSPACE_VERTEX_SHADER,
       vertexCount: 4,
       geometry: new Geometry({
         topology: 'triangle-strip',
         vertexCount: 4,
         attributes: {
-          aClipSpacePosition: {size: 2, value: new Float32Array(POSITIONS)},
-          aTexCoord: {size: 2, value: new Float32Array(TEX_COORDS)},
-          aCoordinate: {size: 2, value: new Float32Array(TEX_COORDS)}
+          clipSpacePositions: {size: 2, value: new Float32Array(POSITIONS)},
+          texCoords: {size: 2, value: new Float32Array(TEX_COORDS)},
+          coordinates: {size: 2, value: new Float32Array(TEX_COORDS)}
         }
       })
     });

@@ -65,6 +65,11 @@ export abstract class Sampler extends Resource<SamplerProps> {
   }
 
   constructor(device: Device, props: SamplerProps) {
+    props = Sampler.normalizeProps(device, props);
     super(device, props, Sampler.defaultProps);
+  }
+
+  protected static normalizeProps(device: Device, props: SamplerProps): SamplerProps {
+    return props;
   }
 }

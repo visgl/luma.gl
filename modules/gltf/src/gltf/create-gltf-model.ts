@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {Device, RenderPipelineParameters, log} from '@luma.gl/core';
-import {pbr} from '@luma.gl/shadertools';
+import {pbrMaterial, ShaderModule} from '@luma.gl/shadertools';
 import {Geometry, Model, ModelNode, ModelProps} from '@luma.gl/engine';
 import {ParsePBRMaterialOptions, parsePBRMaterial} from '../pbr/parse-pbr-material';
 
@@ -94,7 +94,7 @@ const vs = /* glsl */ `\
     #endif
 
     pbr_setPositionNormalTangentUV(positions, _NORMAL, _TANGENT, _TEXCOORD_0);
-    gl_Position = u_MVPMatrix * positions;
+    gl_Position = pbrProjection.modelViewProjectionMatrix * positions;
   }
 `;
 
@@ -118,7 +118,7 @@ export type CreateGLTFModelOptions = {
 };
 
 export function createGLTFModel(device: Device, options: CreateGLTFModelOptions): ModelNode {
-  const {id, geometry, material, vertexCount, materialOptions, modelOptions} = options;
+  const {id, geometry, material, vertexCount, materialOptions, modelOptions = {}} = options;
 
   const parsedMaterial = parsePBRMaterial(device, material, geometry.attributes, materialOptions);
   log.info(4, 'createGLTFModel defines: ', parsedMaterial.defines)();
@@ -126,7 +126,7 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
   // Calculate managedResources
   // TODO: Implement resource management logic that will
   // not deallocate resources/textures/buffers that are shared
-  const managedResources = [];
+  const managedResources: any[] = [];
   // managedResources.push(...parsedMaterial.generatedTextures);
   // managedResources.push(...Object.values(attributes).map((attribute) => attribute.buffer));
 
@@ -145,15 +145,22 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
     geometry,
     topology: geometry.topology,
     vertexCount,
-    modules: [pbr],
+    modules: [pbrMaterial as unknown as ShaderModule],
     ...modelOptions,
 
-    bindings: {...parsedMaterial.bindings, ...modelOptions.bindings},
     defines: {...parsedMaterial.defines, ...modelOptions.defines},
-    parameters: {...parameters, ...parsedMaterial.parameters, ...modelOptions.parameters},
-    uniforms: {...parsedMaterial.uniforms, ...modelOptions.uniforms}
+    parameters: {...parameters, ...parsedMaterial.parameters, ...modelOptions.parameters}
   };
 
   const model = new Model(device, modelProps);
+
+  const {camera, ...pbrMaterialProps} = {
+    ...parsedMaterial.uniforms,
+    ...modelOptions.uniforms,
+    ...parsedMaterial.bindings,
+    ...modelOptions.bindings
+  };
+
+  model.shaderInputs.setProps({pbrMaterial: pbrMaterialProps, pbrProjection: {camera}});
   return new ModelNode({managedResources, model});
 }

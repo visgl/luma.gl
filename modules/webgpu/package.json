@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/webgpu",
-  "version": "9.1.0-alpha.16",
+  "version": "9.2.0-alpha.1",
   "description": "WebGPU adapter for the luma.gl core API",
   "type": "module",
   "license": "MIT",
@@ -37,7 +37,7 @@
     "prepublishOnly": "npm run build-minified-bundle && npm run build-dev-bundle"
   },
   "peerDependencies": {
-    "@luma.gl/core": "9.1.0-alpha.16"
+    "@luma.gl/core": "9.2.0-alpha.1"
   },
   "dependencies": {
     "@probe.gl/env": "^4.0.8",

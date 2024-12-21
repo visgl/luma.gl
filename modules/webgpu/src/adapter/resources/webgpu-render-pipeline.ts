@@ -30,6 +30,10 @@ export class WebGPURenderPipeline extends RenderPipeline {
   private _bindGroupLayout: GPUBindGroupLayout | null = null;
   private _bindGroup: GPUBindGroup | null = null;
 
+  override get [Symbol.toStringTag]() {
+    return 'WebGPURenderPipeline';
+  }
+
   constructor(device: WebGPUDevice, props: RenderPipelineProps) {
     super(device, props);
     this.device = device;
@@ -39,10 +43,18 @@ export class WebGPURenderPipeline extends RenderPipeline {
       log.groupCollapsed(1, `new WebGPURenderPipeline(${this.id})`)();
       log.probe(1, JSON.stringify(descriptor, null, 2))();
       log.groupEnd(1)();
+
+      this.device.handle.pushErrorScope('validation');
       this.handle = this.device.handle.createRenderPipeline(descriptor);
+      this.device.handle.popErrorScope().then((error: GPUError | null) => {
+        if (error) {
+          log.error(`${this} creation failed:\n"${error.message}"`, this, this.props.vs?.source)();
+        }
+      });
     }
     this.handle.label = this.props.id;
 
+    // Note: Often the same shader in WebGPU
     this.vs = props.vs as WebGPUShader;
     this.fs = props.fs as WebGPUShader;
 
@@ -60,6 +72,12 @@ export class WebGPURenderPipeline extends RenderPipeline {
    * @todo Do we want to expose BindGroups in the API and remove this?
    */
   setBindings(bindings: Record<string, Binding>): void {
+    // Invalidate the cached bind group if any value has changed
+    for (const [name, binding] of Object.entries(bindings)) {
+      if (this._bindings[name] !== binding) {
+        this._bindGroup = null;
+      }
+    }
     Object.assign(this._bindings, bindings);
   }
 
@@ -78,7 +96,13 @@ export class WebGPURenderPipeline extends RenderPipeline {
     const webgpuRenderPass = options.renderPass as WebGPURenderPass;
 
     // Set pipeline
+    this.device.handle.pushErrorScope('validation');
     webgpuRenderPass.handle.setPipeline(this.handle);
+    this.device.handle.popErrorScope().then((error: GPUError | null) => {
+      if (error) {
+        log.error(`${this} setPipeline failed:\n"${error.message}"`, this)();
+      }
+    });
 
     // Set bindings (uniform buffers, textures etc)
     const bindGroup = this._getBindGroup();
@@ -142,16 +166,22 @@ export class WebGPURenderPipeline extends RenderPipeline {
       buffers: getVertexBufferLayout(this.shaderLayout, this.props.bufferLayout)
     };
 
+    // Populate color targets
+    // TODO - at the moment blend and write mask are only set on the first target
+    const targets: (GPUColorTargetState | null)[] = [];
+    if (this.props.colorAttachmentFormats) {
+      for (const format of this.props.colorAttachmentFormats) {
+        targets.push(format ? {format: getWebGPUTextureFormat(format)} : null);
+      }
+    } else {
+      targets.push({format: getWebGPUTextureFormat(this.device.preferredColorFormat)});
+    }
+
     // Set up the fragment stage
     const fragment: GPUFragmentState = {
       module: (this.props.fs as WebGPUShader).handle,
       entryPoint: this.props.fragmentEntryPoint || 'main',
-      targets: [
-        {
-          // TODO exclamation mark hack!
-          format: getWebGPUTextureFormat(this.device.getCanvasContext().format)
-        }
-      ]
+      targets
     };
 
     // Create a partially populated descriptor
@@ -163,6 +193,15 @@ export class WebGPURenderPipeline extends RenderPipeline {
       },
       layout: 'auto'
     };
+
+    // Set depth format if required, defaulting to the preferred depth format
+    const depthFormat = this.props.depthStencilAttachmentFormat || this.device.preferredDepthFormat;
+
+    if (this.props.parameters.depthWriteEnabled) {
+      descriptor.depthStencil = {
+        format: getWebGPUTextureFormat(depthFormat)
+      };
+    }
 
     // Set parameters on the descriptor
     applyParametersToRenderPipelineDescriptor(descriptor, this.props.parameters);

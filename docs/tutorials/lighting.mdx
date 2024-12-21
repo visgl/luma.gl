@@ -1,5 +1,5 @@
 import {DeviceTabs} from '@site/src/react-luma';
-import {LightingExample} from '@site';
+import {LightingExample} from '@site/src/examples';
 
 # Lighting
 
@@ -10,7 +10,7 @@ The tutorial pages have not yet been updated for luma.gl v9.
 :::
 
 <DeviceTabs />
-<LightingExample />
+<LightingExample devices={["webgl2"]} />
 
 To add lighting, we'll use one of built-in luma.gl shader modules for the first time.
 To start, we'll add the `phongLighting` module from **@luma.gl/shadertools** to our imports:

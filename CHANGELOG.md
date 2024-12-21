@@ -1,8 +1,102 @@
 # luma.gl CHANGELOG
 
-## v9
+## v9.2
 
-Major new release that includes WebGPU support
+Production WebGPU support
+
+
+
+### v9.2.0-alpha.1
+
+- chore(core): Continued simplification of CanvasContext and AnimationLoop (#2286)
+- chore: Remove legacy code from wip folder (#2287) 
+- chore(deps): bump http-proxy-middleware from 2.0.6 to 2.0.7 in /website (#2281)
+- chore(deps): bump webpack from 5.90.3 to 5.95.0 in /website (#2279)
+- docs: Fix typo in README.md (#2282) 
+- chore(core): Simplify canvas contexts (#2283) 
+- feat(arrow): Add Polygon column support (GeoArrow compatible) (#2280) 
+- feat(arrow): Experimental module for Apache Arrow attribute data extraction (#2278) 
+- chore: Remove WebGL1 shader modules (#2276) 
+- feat: Dynamically load GPU backends (#2089) 
+- chore: TypeScript strict mode: noImplicitAny (#2271) 
+- chore: Enable TypeScript null checks (#2270) 
+- chore: Upgrade typescript and other dependencies (#2269) 
+- chore: Update issue templates (#2268) 
+- chore: Update issue templates (#2267) 
+- chore: Improve CommandEncoder implementation (#2265) 
+- chore(shadertools): Port more shader modules to WGSL (#2264) 
+- chore(shadertools): Port fp64 module to UBO (#2262) 
+- chore: Add "null" type for NullDevice (#2261) 
+- fix(core): CanvasContext node fixes (#2259) 
+- (ib/post-persistence) chore(deps): bump express from 4.18.3 to 4.21.0 in /website
+- chore(deps): bump vite from 4.5.3 to 4.5.5 
+- chore: remove .setUniformsWebGL and moduleSettings (#2252)
+- docs: Update release notes for 9.1 (#2251)
+- chore: refactor shader types (#2250) (#2250)
+- docs: Use shared module to build website (#2230)
+- chore(shadertools): Support boolean defines only (#2190)
+- chore: WebGPU texture examples (v9.2) (#2248)
+- chore: Consolidate texture implementations, move specialized setters to AsyncTexture (#2247)
+
+## v9.1
+
+Improved WebGPU support
+
+### v9.1.0-beta.2
+
+- chore: Bump dependencies
+
+### v9.1.0-beta.1
+
+- chore: Bump to math.gl@4.1.0 (#2249)
+- feat(webgpu): Ability to override render targets on RenderPipeline (#2245)
+- chore: Restore minification optimized texture table (#2243)
+- chore: Restore effects module (#2244)
+- chore: Remove device.clearWebGL() (#2199)
+- chore: use @vis.gl/dev-tools (#2229)
+- docs: Improve CanvasContext and Rendering docs (#2240)
+- feat(core): CanvasContext tracks visibility and DPR changes (#2239)
+- chore: Consolidate core and WebGL texture format info handling (#2220)
+- chore(engine): Re-enable transform tests (async) (#2238)
+- chore(test-utils): Update tests to use async device creation (#2226)
+- chore: Modernize CanvasContext size tracking (#2237)
+- chore(webgpu): Partial WGSL texture/sampler support (#2236)
+
+### 9.1.0-alpha.19
+
+- webgl: clip image write based on texture size (#2234)
+
+### 9.1.0-alpha.18
+
+- gltf: Fix animations (#2227)
+- fix(website): Fix examples (#2225)
+- docs: Clean up webgpu and webgl device docs (#2224)
+- chore: More granular CI workflow (#2223)
+- chore(deps): bump micromatch from 4.0.7 to 4.0.8 (#2219)
+- chore: Separate lint step in CI (#2221)
+
+### 9.1.0-alpha.17
+
+- chore: Separate CI step for website build (#2218)
+- chore(webgl): Clean up WebGLTexture implementation (#2213)
+- chore: Refactor texture info table (#2217)
+- fix(engine): TextureTransform.destroy() should remove resources (#2216)
+- fix(core, webgl): Fix clearDepth (#2214)
+- chore: Test if master is broken (#2215)
+- shadertools: Reinstate old picking shader (#2212)
+- fix(examples): Improve postprocessing example (#2209)
+- feat(shadertools): PBRMaterial UBO (#2207)
+- shadertools: Lighting module UBO (#2206)
+- fix(gltf): Prevent GLTFInstantiator from mutating its input (#2203)
+- ShaderModule type improvement (#2194)
+- test: Add test for texture creation(3d,r32float) (#2202)
+- Create security policy (#2205)
+- fix(engine): Prevent recursion in RAF polyfills (#2204)
+- fix(webgl): Better error messages when device creation fails (#2201)
+- feat(core): Option to not wait for page load (#2200)
+- fix(core): Allow webgl 1,3 component unorm8 attributes (#2196)
+- fix(webgl): Do not enable mipmap filtering by default (#2193)
+- feat(engine): Index-based picking manager, support for multiple render targets (#2189)
 
 ### 9.1.0-alpha.16
 

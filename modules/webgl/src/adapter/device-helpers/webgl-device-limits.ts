@@ -26,7 +26,7 @@ export class WebGLDeviceLimits extends DeviceLimits {
   get maxVertexBuffers() { return 16; } // WebGL 2 supports 16 buffers, see https://github.com/gpuweb/gpuweb/issues/4284
   get maxVertexAttributes() { return this.getParameter(GL.MAX_VERTEX_ATTRIBS); }
   get maxVertexBufferArrayStride() { return 2048; } // TBD, this is just the default value from WebGPU
-  get maxInterStageShaderComponents() { return this.getParameter(GL.MAX_VARYING_COMPONENTS); }
+  get maxInterStageShaderVariables() { return this.getParameter(GL.MAX_VARYING_COMPONENTS); }
   get maxComputeWorkgroupStorageSize() { return 0; } // WebGL does not support compute shaders
   get maxComputeInvocationsPerWorkgroup() { return 0; } // WebGL does not support compute shaders
   get maxComputeWorkgroupSizeX() { return 0; } // WebGL does not support compute shaders

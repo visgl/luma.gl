@@ -1,4 +1,4 @@
-import {UniformStore, ShaderUniformType} from '@luma.gl/core';
+import {UniformStore, VariableShaderType} from '@luma.gl/core';
 import {
   AnimationLoopTemplate,
   AnimationProps,
@@ -11,16 +11,8 @@ import {
 import {dirlight} from '@luma.gl/shadertools';
 import {Matrix4, radians} from '@math.gl/core';
 
-
 // Ensure repeatable rendertests
 const random = makeRandomGenerator();
-
-const INFO_HTML = `\
-Key frame animation based on multiple hierarchical timelines.
-<button id="play">Play</button>
-<button id="pause">Pause</button><BR>
-Time: <input type="range" id="time" min="0" max="30000" step="1"><BR>
-`;
 
 // SHADERS
 
@@ -31,7 +23,7 @@ type AppUniforms = {
   uProjection: number[];
 };
 
-const app: {uniformTypes: Record<string, ShaderUniformType>} = {
+const app: {uniformTypes: Record<string, VariableShaderType>} = {
   uniformTypes: {
     uColor: 'vec3<f32>',
     uModel: 'mat4x4<f32>',
@@ -122,7 +114,12 @@ void main(void) {
 `;
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
-  static info = INFO_HTML;
+  static info = `\
+Key frame animation based on multiple hierarchical timelines.
+<button id="play">Play</button>
+<button id="pause">Pause</button><BR>
+Time: <input type="range" id="time" min="0" max="30000" step="1"><BR>
+`;
 
   readonly translations = [
     [2, -2, 0],
@@ -280,7 +277,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         .translate(cube.translation)
         .rotateXYZ([rotationX, rotationY, rotationZ]);
 
-      cube.model.setUniforms({});
       cube.uniformStore.setUniforms({
         app: {
           uModel: modelMatrix
@@ -292,8 +288,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     // Draw the cubes
     const renderPass = device.beginRenderPass({
-      clearColor: [0, 0, 0, 1]
-      // clearDepth: true
+      clearColor: [0, 0, 0, 1],
+      clearDepth: true
     });
     for (const cube of this.cubes) {
       cube.model.draw(renderPass);

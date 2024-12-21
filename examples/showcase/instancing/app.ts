@@ -4,18 +4,18 @@
 
 import {Device} from '@luma.gl/core';
 import type {AnimationProps, ModelProps} from '@luma.gl/engine';
-import {AnimationLoopTemplate, CubeGeometry, Timeline, Model, ShaderInputs} from '@luma.gl/engine';
-import {makeRandomGenerator, PickingManager, indexPicking as picking} from '@luma.gl/engine';
+import {
+  AnimationLoopTemplate,
+  CubeGeometry,
+  Timeline,
+  Model,
+  ShaderInputs,
+  makeRandomGenerator,
+  PickingManager,
+  indexPicking as picking
+} from '@luma.gl/engine';
 import {dirlight, ShaderModule} from '@luma.gl/shadertools';
 import {Matrix4, radians} from '@math.gl/core';
-
-const INFO_HTML = `
-<p>
-Cube drawn with <b>instanced rendering</b>.
-<p>
-A luma.gl <code>Cube</code>, rendering 65,536 instances in a
-single GPU draw call using instanced vertex attributes.
-`;
 
 // INSTANCE CUBE
 
@@ -63,8 +63,8 @@ fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
   outputs.color = inputs.instanceColors;
 
   // vec4 pickColor = vec4(0., instanceIndexes, 1.0);
-  picking_setPickingColor(0);
-
+  // picking_setPickingColor(0);
+  
   return outputs;
 }
 
@@ -207,7 +207,13 @@ const app: ShaderModule<AppUniforms> = {
 };
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
-  static info = INFO_HTML;
+  static info = `\
+  <p>
+  A luma.gl <code>Cube</code>, rendering 65,536 instances in a
+  single GPU draw call using instanced vertex attributes.
+  </P>
+  `;
+
   static props = {createFramebuffer: true, debug: true};
 
   cube: InstancedCube;
@@ -283,8 +289,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     // Draw the cubes
     const renderPass = device.beginRenderPass({
       clearColor: [0, 0, 0, 1],
-      clearDepth: 1,
-      clearStencil: 0
+      clearDepth: 1
     });
 
     this.cube.draw(renderPass);

@@ -27,38 +27,30 @@ export type AnimationLoopProps = {
 
   // view parameters - TODO move to CanvasContext?
   autoResizeViewport?: boolean;
-  autoResizeDrawingBuffer?: boolean;
-  useDevicePixels?: number | boolean;
 };
 
 export type MutableAnimationLoopProps = {
   // view parameters
   autoResizeViewport?: boolean;
-  autoResizeDrawingBuffer?: boolean;
-  useDevicePixels?: number | boolean;
-};
-
-const DEFAULT_ANIMATION_LOOP_PROPS: Required<AnimationLoopProps> = {
-  device: null!,
-
-  onAddHTML: () => '',
-  onInitialize: async () => {
-    return null;
-  },
-  onRender: () => {},
-  onFinalize: () => {},
-  onError: error => console.error(error), // eslint-disable-line no-console
-
-  stats: luma.stats.get(`animation-loop-${statIdCounter++}`),
-
-  // view parameters
-  useDevicePixels: true,
-  autoResizeViewport: false,
-  autoResizeDrawingBuffer: false
 };
 
 /** Convenient animation loop */
 export class AnimationLoop {
+  static defaultAnimationLoopProps = {
+    device: null!,
+
+    onAddHTML: () => '',
+    onInitialize: async () => null,
+    onRender: () => {},
+    onFinalize: () => {},
+    onError: error => console.error(error), // eslint-disable-line no-console
+
+    stats: luma.stats.get(`animation-loop-${statIdCounter++}`),
+
+    // view parameters
+    autoResizeViewport: false
+  } as const satisfies Readonly<Required<AnimationLoopProps>>;
+
   device: Device | null = null;
   canvas: HTMLCanvasElement | OffscreenCanvas | null = null;
 
@@ -88,14 +80,12 @@ export class AnimationLoop {
    * @param {HTMLCanvasElement} canvas - if provided, width and height will be passed to context
    */
   constructor(props: AnimationLoopProps) {
-    this.props = {...DEFAULT_ANIMATION_LOOP_PROPS, ...props};
+    this.props = {...AnimationLoop.defaultAnimationLoopProps, ...props};
     props = this.props;
 
     if (!props.device) {
       throw new Error('No device provided');
     }
-
-    const {useDevicePixels = true} = this.props;
 
     // state
     this.stats = props.stats || new Stats({id: 'animation-loop-stats'});
@@ -103,11 +93,7 @@ export class AnimationLoop {
     this.gpuTime = this.stats.get('GPU Time');
     this.frameRate = this.stats.get('Frame Rate');
 
-    this.setProps({
-      autoResizeViewport: props.autoResizeViewport,
-      autoResizeDrawingBuffer: props.autoResizeDrawingBuffer,
-      useDevicePixels
-    });
+    this.setProps({autoResizeViewport: props.autoResizeViewport});
 
     // Bind methods
     this.start = this.start.bind(this);
@@ -130,7 +116,7 @@ export class AnimationLoop {
   setError(error: Error): void {
     this.props.onError(error);
     this._error = Error();
-    const canvas = this.device?.canvasContext?.canvas;
+    const canvas = this.device?.getDefaultCanvasContext().canvas;
     if (canvas instanceof HTMLCanvasElement) {
       const errorDiv = document.createElement('h1');
       errorDiv.innerHTML = error.message;
@@ -150,16 +136,9 @@ export class AnimationLoop {
     return this;
   }
 
-  /** TODO - move these props to CanvasContext? */
   setProps(props: MutableAnimationLoopProps): this {
     if ('autoResizeViewport' in props) {
       this.props.autoResizeViewport = props.autoResizeViewport || false;
-    }
-    if ('autoResizeDrawingBuffer' in props) {
-      this.props.autoResizeDrawingBuffer = props.autoResizeDrawingBuffer || false;
-    }
-    if ('useDevicePixels' in props) {
-      this.props.useDevicePixels = props.useDevicePixels || false;
     }
     return this;
   }
@@ -292,7 +271,6 @@ export class AnimationLoop {
     this._updateAnimationProps();
 
     // Default viewport setup, in case onInitialize wants to render
-    this._resizeCanvasDrawingBuffer();
     this._resizeViewport();
 
     // this._gpuTimeQuery = Query.isSupported(this.gl, ['timers']) ? new Query(this.gl) : null;
@@ -371,26 +349,30 @@ export class AnimationLoop {
   }
 
   _setupFrame(): void {
-    this._resizeCanvasDrawingBuffer();
     this._resizeViewport();
   }
 
   // Initialize the  object that will be passed to app callbacks
   _initializeAnimationProps(): void {
-    const canvas = this.device?.canvasContext?.canvas;
-
-    if (!this.device || !canvas) {
+    const canvasContext = this.device?.getDefaultCanvasContext();
+    if (!this.device || !canvasContext) {
       throw new Error('loop');
     }
+
+    const canvas = canvasContext?.canvas;
+    const useDevicePixels = canvasContext.props.useDevicePixels;
+
     this.animationProps = {
       animationLoop: this,
 
       device: this.device,
+      canvasContext,
       canvas,
+      // @ts-expect-error Deprecated
+      useDevicePixels,
+
       timeline: this.timeline,
 
-      // Initial values
-      useDevicePixels: this.props.useDevicePixels,
       needsRedraw: false,
 
       // Placeholders
@@ -460,7 +442,7 @@ export class AnimationLoop {
     if (!this.device) {
       throw new Error('No device provided');
     }
-    this.canvas = this.device.canvasContext?.canvas || null;
+    this.canvas = this.device.getDefaultCanvasContext().canvas || null;
     // this._createInfoDiv();
   }
 
@@ -491,11 +473,11 @@ export class AnimationLoop {
       return {width: 1, height: 1, aspect: 1};
     }
     // https://webglfundamentals.org/webgl/lessons/webgl-resizing-the-canvas.html
-    const [width, height] = this.device?.canvasContext?.getPixelSize() || [1, 1];
+    const [width, height] = this.device?.getDefaultCanvasContext().getDevicePixelSize() || [1, 1];
 
     // https://webglfundamentals.org/webgl/lessons/webgl-anti-patterns.html
     let aspect = 1;
-    const canvas = this.device?.canvasContext?.canvas;
+    const canvas = this.device?.getDefaultCanvasContext().canvas;
 
     // @ts-expect-error
     if (canvas && canvas.clientHeight) {
@@ -508,7 +490,7 @@ export class AnimationLoop {
     return {width, height, aspect};
   }
 
-  /** Default viewport setup */
+  /** @deprecated Default viewport setup */
   _resizeViewport(): void {
     // TODO can we use canvas context to code this in a portable way?
     // @ts-expect-error Expose on canvasContext
@@ -522,16 +504,6 @@ export class AnimationLoop {
         // @ts-expect-error Expose canvasContext
         this.device.gl.drawingBufferHeight
       );
-    }
-  }
-
-  /**
-   * Resize the render buffer of the canvas to match canvas client size
-   * Optionally multiplying with devicePixel ratio
-   */
-  _resizeCanvasDrawingBuffer(): void {
-    if (this.props.autoResizeDrawingBuffer) {
-      this.device?.canvasContext?.resize({useDevicePixels: this.props.useDevicePixels});
     }
   }
 

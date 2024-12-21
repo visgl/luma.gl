@@ -6,64 +6,118 @@ import type {Device, CanvasContextProps} from '@luma.gl/core';
 import {luma, log} from '@luma.gl/core';
 import {webgl2Adapter, WebGLDevice} from '@luma.gl/webgl';
 import {webgpuAdapter, WebGPUDevice} from '@luma.gl/webgpu';
+import {nullAdapter} from './null-device/null-adapter';
+import {NullDevice} from './null-device/null-device';
 
 const DEFAULT_CANVAS_CONTEXT_PROPS: CanvasContextProps = {
   width: 1,
   height: 1
 };
 
-/** Create a test WebGLDevice */
-export function createTestDevice(): WebGLDevice | null {
-  try {
-    // TODO - We do not use luma.createDevice since createTestDevice currently expect WebGL context to be created synchronously
-    return new WebGLDevice({createCanvasContext: DEFAULT_CANVAS_CONTEXT_PROPS, debugWebGL: true});
-  } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error(`Failed to created device: ${(error as Error).message}`);
-    debugger; // eslint-disable-line no-debugger
-    return null;
-  }
-}
+// TODO - replace with Promise.withResolvers once we upgrade TS baseline
+const withResolvers = <T>(): {
+  promise: Promise<T>;
+  resolve: (t: T) => void;
+  reject: (error: Error) => void;
+} => {
+  let resolve;
+  let reject;
+  const promise = new Promise<T>((_resolve, _reject) => {
+    resolve = _resolve;
+    reject = _reject;
+  });
+  // @ts-ignore Assigned in callback.
+  return {promise, resolve, reject};
+};
 
+/** A null device intended for testing - @note Only available after getTestDevices() has completed */
+let nullDevicePromise = makeNullTestDevice();
 /** This WebGL Device can be used directly but will not have WebGL debugging initialized */
-export const webglDevice = createTestDevice();
-
+const webglDevicePromise = makeWebGLTestDevice();
 /** A WebGL 2 Device intended for testing - @note Only available after getTestDevices() has completed */
-export let webglDeviceAsync: WebGLDevice;
-
-/** A WebGL 2 Device intended for testing - @note Only available after getTestDevices() has completed */
-export let webgpuDevice: WebGPUDevice;
-
-let devicesCreated = false;
+const webgpuDevicePromise = makeWebGPUTestDevice();
 
 /** Includes WebGPU device if available */
-export async function getTestDevices(type?: 'webgl' | 'webgpu'): Promise<Device[]> {
-  if (!devicesCreated) {
-    devicesCreated = true;
-    try {
-      webgpuDevice = (await luma.createDevice({
-        id: 'webgpu-test-device',
-        type: 'webgpu',
-        adapters: [webgpuAdapter],
-        createCanvasContext: DEFAULT_CANVAS_CONTEXT_PROPS
-      })) as WebGPUDevice;
-    } catch (error) {
-      log.error(String(error))();
-    }
-    try {
-      webglDeviceAsync = (await luma.createDevice({
-        id: 'webgl-test-device',
-        type: 'webgl',
-        adapters: [webgl2Adapter],
-        createCanvasContext: DEFAULT_CANVAS_CONTEXT_PROPS,
-        debugWebGL: true
-      })) as WebGLDevice;
-    } catch (error) {
-      log.error(String(error))();
-    }
-  }
+export async function getTestDevices(
+  types: ('webgl' | 'webgpu' | 'null' | 'unknown')[] = ['webgl', 'webgpu']
+): Promise<Device[]> {
+  return (
+    [await getNullTestDevice(), await getWebGLTestDevice(), await getWebGPUTestDevice()] as Device[]
+  ).filter(device => types.includes(device?.type));
+}
 
-  return [webglDeviceAsync, webgpuDevice]
-    .filter(Boolean)
-    .filter(device => !type || type === device.type);
+/** returns WebGPU device promise, if available */
+export function getWebGPUTestDevice(): Promise<WebGPUDevice | null> {
+  return webgpuDevicePromise;
+}
+
+/** returns WebGL device promise, if available */
+export async function getWebGLTestDevice(): Promise<WebGLDevice> {
+  return webglDevicePromise;
+}
+
+/** returns null device promise, if available */
+export async function getNullTestDevice(): Promise<NullDevice> {
+  return nullDevicePromise;
+}
+
+async function makeWebGPUTestDevice(): Promise<WebGPUDevice | null> {
+  const webgpuDeviceResolvers = withResolvers<WebGPUDevice | null>();
+  try {
+    const webgpuDevice = (await luma.createDevice({
+      id: 'webgpu-test-device',
+      type: 'webgpu',
+      adapters: [webgpuAdapter],
+      createCanvasContext: DEFAULT_CANVAS_CONTEXT_PROPS,
+      debug: true
+    })) as WebGPUDevice;
+    webgpuDeviceResolvers.resolve(webgpuDevice);
+  } catch (error) {
+    log.error(String(error))();
+    // @ts-ignore TODO
+    webgpuDeviceResolvers.resolve(null);
+  }
+  return webgpuDeviceResolvers.promise;
+}
+
+/** returns WebGL device promise, if available */
+async function makeWebGLTestDevice(): Promise<WebGLDevice> {
+  const webglDeviceResolvers = withResolvers<WebGLDevice>();
+  try {
+    const webglDevice = (await luma.createDevice({
+      id: 'webgl-test-device',
+      type: 'webgl',
+      adapters: [webgl2Adapter],
+      createCanvasContext: DEFAULT_CANVAS_CONTEXT_PROPS,
+      debug: true,
+      debugWebGL: true
+    })) as WebGLDevice;
+    webglDeviceResolvers.resolve(webglDevice);
+  } catch (error) {
+    log.error(String(error))();
+    // @ts-ignore TODO
+    webglDeviceResolvers.resolve(null);
+  }
+  return webglDeviceResolvers.promise;
+}
+
+/** returns null device promise, if available */
+async function makeNullTestDevice(): Promise<NullDevice> {
+  const nullDeviceResolvers = withResolvers<NullDevice>();
+  try {
+    const nullDevice = (await luma.createDevice({
+      id: 'null-test-device',
+      type: 'unknown',
+      adapters: [nullAdapter],
+      createCanvasContext: DEFAULT_CANVAS_CONTEXT_PROPS,
+      debug: true,
+      debugWebGL: true
+    })) as NullDevice;
+    nullDeviceResolvers.resolve(nullDevice);
+  } catch (error) {
+    log.error(String(error))();
+    // @ts-ignore TODO
+    nullDevicePromise = Promise.resolve(null);
+  }
+  return nullDeviceResolvers.promise;
 }

@@ -4,8 +4,14 @@
 
 import test from 'tape-promise/tape';
 import {Device} from '@luma.gl/core';
-import {webglDevice} from '@luma.gl/test-utils';
-import {assembleGLSLShaderPair, picking, fp64, pbr, PlatformInfo} from '@luma.gl/shadertools';
+import {getWebGLTestDevice} from '@luma.gl/test-utils';
+import {
+  assembleGLSLShaderPair,
+  picking,
+  fp64,
+  pbrMaterial,
+  PlatformInfo
+} from '@luma.gl/shadertools';
 import type {WebGLDevice} from '@luma.gl/webgl';
 import {isBrowser} from '@probe.gl/env';
 
@@ -263,12 +269,14 @@ void main(void) {
 }
 `;
 
-test('assembleGLSLShaderPair#import', t => {
+test('assembleGLSLShaderPair#import', async t => {
   t.ok(assembleGLSLShaderPair !== undefined, 'assembleGLSLShaderPair import successful');
   t.end();
 });
 
-test('assembleGLSLShaderPair#version_directive', t => {
+test('assembleGLSLShaderPair#version_directive', async t => {
+  const webglDevice = await getWebGLTestDevice();
+
   const assembleResult = assembleGLSLShaderPair({
     platformInfo: getInfo(webglDevice),
     vs: VS_GLSL_300,
@@ -289,7 +297,9 @@ test('assembleGLSLShaderPair#version_directive', t => {
   t.end();
 });
 
-test('assembleGLSLShaderPair#getUniforms', t => {
+test('assembleGLSLShaderPair#getUniforms', async t => {
+  const webglDevice = await getWebGLTestDevice();
+
   // inject spy into the picking module's getUniforms
   // const module = getShaderModule(picking);
   // const getUniformsSpy = makeSpy(module, 'getUniforms');
@@ -331,7 +341,9 @@ test('assembleGLSLShaderPair#getUniforms', t => {
   t.end();
 });
 
-test('assembleGLSLShaderPair#defines', t => {
+test('assembleGLSLShaderPair#defines', async t => {
+  const webglDevice = await getWebGLTestDevice();
+
   const assembleResult = assembleGLSLShaderPair({
     platformInfo: getInfo(webglDevice),
     vs: VS_GLSL_300,
@@ -359,7 +371,9 @@ const pickingInject = {
   }
 };
 
-test('assembleGLSLShaderPair#shaderhooks', t => {
+test('assembleGLSLShaderPair#shaderhooks', async t => {
+  const webglDevice = await getWebGLTestDevice();
+
   const hookFunctions = [
     'vs:LUMAGL_pickColor(inout vec4 color)',
     {
@@ -507,7 +521,9 @@ test('assembleGLSLShaderPair#shaderhooks', t => {
   t.end();
 });
 
-test('assembleGLSLShaderPair#injection order', t => {
+test('assembleGLSLShaderPair#injection order', async t => {
+  const webglDevice = await getWebGLTestDevice();
+
   let assembleResult = assembleGLSLShaderPair({
     platformInfo: getInfo(webglDevice),
     vs: VS_GLSL_300_MODULES,
@@ -546,7 +562,9 @@ test('assembleGLSLShaderPair#injection order', t => {
 });
 
 // TODO - restore if we ever support transpilation of uniform blocks
-test.skip('assembleGLSLShaderPair#transpilation', t => {
+test.skip('assembleGLSLShaderPair#transpilation', async t => {
+  const webglDevice = await getWebGLTestDevice();
+
   let assembleResult = assembleGLSLShaderPair({
     platformInfo: getInfo(webglDevice),
     vs: VS_GLSL_300,
@@ -597,7 +615,7 @@ test.skip('assembleGLSLShaderPair#transpilation', t => {
     platformInfo: getInfo(webglDevice),
     vs: VS_GLSL_300_GLTF,
     fs: FS_GLSL_300_GLTF,
-    modules: [pbr]
+    modules: [pbrMaterial]
   });
 
   t.ok(

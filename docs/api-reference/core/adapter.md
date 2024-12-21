@@ -4,16 +4,29 @@
   <img src="https://img.shields.io/badge/From-v9.1-blue.svg?style=flat-square" alt="From-v9.1" />
 </p>
 
-An `Adapter` is a factory for `Device` instances for a specific backend (e.g. WebGPU or WebGL).
+An `Adapter` is a factory that creates [`Device`](./device) instances for a specific backend (e.g. WebGPU or WebGL).
+Each GPU backend exports a singleton adapter instance that is used to create devices for that GPU backend.
 
-Each GPU backend exports a singleton adapter instance.
+Adapters can be used directly to create and attach devices, but they are usually imported and used via the [`luma`](./luma) API through 
+methods like [`luma.createDevice`].
 
-Methods on adapters are normally not called directly, they are imported and passed to 
-methods like [`luma.createDevice`] that select the appropriate adapter before calling it.
+Note: an adapter may perform asynchronous loading of adapter code, debug libraries, etc before creating the `Device`.
+
+## Usage 
+
+Register the WebGL backend, then create a WebGL2 context, auto creating a canvas
+
+```typescript
+import {luma} from '@luma.gl/core';
+import {webgl2Adapter} from '@luma.gl/webgl';
+luma.registerAdapters([webgl2Adapter]);
+const webglDevice = await luma.createDevice({type: 'webgl', createCanvasContext: ...});
+```
 
 ## Members
 
 ### `type`
+
 ```ts
 type: string;
 ```
@@ -43,4 +56,3 @@ Attaches a device to a GPU device handle from this backend.
 ```ts
 attach?(handle: unknown): Promise<Device>;
 ```
-}

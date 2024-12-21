@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {NumberArray4, NumberArray6} from '@math.gl/types';
-import {DepthStencilTextureFormat} from '../../gpu-type-utils/texture-formats';
+import {DepthStencilTextureFormat} from '../../shadertypes/texture-formats';
 
 export type CompareFunction =
   | 'never'
@@ -124,24 +124,29 @@ export type DepthStencilParameters = {
 export type BlendFactor =
   | 'zero'
   | 'one'
-  | 'src-color'
-  | 'one-minus-src-color'
+  | 'src'
+  | 'one-minus-src'
   | 'src-alpha'
   | 'one-minus-src-alpha'
-  | 'dst-color'
-  | 'one-minus-dst-color'
+  | 'dst'
+  | 'one-minus-dst'
   | 'dst-alpha'
   | 'one-minus-dst-alpha'
   | 'src-alpha-saturated'
-  | 'constant-color'
-  | 'one-minus-constant-color'
-  | 'constant-alpha'
-  | 'one-minus-constant-alpha';
+  | 'constant'
+  | 'one-minus-constant'
+  | 'src1'
+  | 'one-minus-src1'
+  | 'src1-alpha'
+  | 'one-minus-src1-alpha';
 
 /** BlendOperation defines the algorithm used to combine source and destination blend factors: */
 export type BlendOperation = 'add' | 'subtract' | 'reverse-subtract' | 'min' | 'max';
 
-/* Color parameters are set on the RenderPipeline */
+/**
+ * Color parameters are set on the RenderPipeline
+ * @todo - this needs to be settable on a per-attachment basis, not just for first attachment
+ */
 export type ColorParameters = {
   /** Enable blending */
   blend?: boolean;

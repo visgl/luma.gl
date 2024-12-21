@@ -2,13 +2,13 @@
   "compilerOptions": {
     "baseUrl": ".",
     "rootDir": ".",
-    "noEmit": true,
 
     // https://www.npmjs.com/package/@webgpu/types
     "typeRoots": ["./node_modules/@webgpu/types", "./node_modules/@types"],
 
     "target": "ES2022",
     "module": "ES2022",
+
     "jsx": "react",
     "allowJs": true,
     "checkJs": false,
@@ -20,17 +20,16 @@
     // BEGIN TYPE CHECK SETTINGS
     "skipLibCheck": true,
 
-    "strict": false,
-
-    // "noImplicitAny": true, // covered by strict
+    "strict": true,
+    "noImplicitAny": true, // covered by strict
     "noImplicitThis": true, // covered by strict
     "strictBindCallApply": true, // covered by strict
     "strictFunctionTypes": true, // covered by strict
     "useUnknownInCatchVariables": true, // covered by strict
-    "strictNullChecks": false, // covered by strict
-    // "strictPropertyInitialization": true, // covered by strict, requires strict null checks
+    "strictNullChecks": true, // covered by strict
+    "strictPropertyInitialization": true, // covered by strict, requires strict null checks
 
-    // "exactOptionalPropertyTypes": true, - requires strictNullChecks
+    // "exactOptionalPropertyTypes": true, // requires strictNullChecks
     "noFallthroughCasesInSwitch": true,
     "noImplicitOverride": true,
     "noImplicitReturns": true,
@@ -41,10 +40,14 @@
     // END TYPE CHECK SETTINGS
 
     "paths": {
+      "@luma.gl/arrow/*": ["modules/arrow/src/*"],
+      "@luma.gl/arrow/test/*": ["modules/arrow/test/*"],
       "@luma.gl/core/*": ["modules/core/src/*"],
       "@luma.gl/core/test/*": ["modules/core/test/*"],
       "@luma.gl/constants/*": ["modules/constants/src/*"],
       "@luma.gl/constants/test/*": ["modules/constants/test/*"],
+      "@luma.gl/effects/*": ["modules/effects/src/*"],
+      "@luma.gl/effects/test/*": ["modules/effects/test/*"],
       "@luma.gl/engine/*": ["modules/engine/src/*"],
       "@luma.gl/engine/test/*": ["modules/engine/test/*"],
       // "@luma.gl/experimental/*": ["modules/experimental/src/*"],
@@ -60,7 +63,28 @@
       "@luma.gl/webgpu/*": ["modules/webgpu/src/*"],
       "@luma.gl/webgpu/test/*": ["modules/webgpu/test/*"],
       "test/*": ["test/*"]
-    }
+    },
+    "plugins": [
+      {
+        "transform": "@vis.gl/ts-plugins/ts-transform-version-inline"
+      },
+      {
+        "transform": "@vis.gl/ts-plugins/ts-transform-inline-webgl-constants"
+      },
+      {
+        "transform": "@vis.gl/ts-plugins/ts-transform-remove-glsl-comments"
+      },
+      {
+        "transform": "@vis.gl/ts-plugins/ts-transform-append-extension",
+        "extensions": [".js"],
+        "after": true
+      },
+      {
+        "transform": "@vis.gl/ts-plugins/ts-transform-append-extension",
+        "extensions": [".js"],
+        "afterDeclarations": true
+      }
+    ]
   },
   // Note: an "include": [] section dramatically limits coverage.
   // Better to explicitly exclude things.

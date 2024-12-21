@@ -9,7 +9,12 @@ export {luma} from './adapter/luma';
 // ADAPTER (DEVICE AND GPU RESOURCE INTERFACES)
 export {Adapter} from './adapter/adapter';
 
-export type {DeviceProps, DeviceInfo, DeviceFeature} from './adapter/device';
+export type {
+  DeviceProps,
+  DeviceInfo,
+  DeviceFeature,
+  DeviceTextureFormatCapabilities
+} from './adapter/device';
 export {Device, DeviceFeatures, DeviceLimits} from './adapter/device';
 
 export type {CanvasContextProps} from './adapter/canvas-context';
@@ -76,20 +81,8 @@ export {UniformStore} from './portable/uniform-store';
 // API TYPES
 export type {CompilerMessage} from './adapter/types/compiler-message';
 
-export type {
-  TextureCompressionFormat,
-  TextureCubeFace,
-  TextureLevelData,
-  ExternalImage,
-  TextureData,
-  Texture1DData,
-  Texture2DData,
-  Texture3DData,
-  TextureCubeData,
-  TextureArrayData,
-  TextureCubeArrayData,
-  CopyExternalImageOptions
-} from './adapter/resources/texture';
+export type {ExternalImage} from './image-utils/image-types';
+export type {CopyExternalImageOptions, CopyImageDataOptions} from './adapter/resources/texture';
 
 export type {Parameters, PrimitiveTopology, IndexFormat} from './adapter/types/parameters';
 
@@ -130,30 +123,51 @@ export type {
 
 export type {UniformValue} from './adapter/types/uniforms';
 
+// TYPED ARRAY TYPES
+
+export type {
+  NumberArray,
+  TypedArray,
+  TypedArrayConstructor,
+  BigTypedArray,
+  BigTypedArrayConstructor
+} from './types';
+
 // GPU TYPE UTILS - GPU MEMORY LAYOUT TYPES - EXTERNAL
 
-export type {NumberArray, TypedArray, TypedArrayConstructor} from './types';
-export type {VertexFormat, VertexType} from './gpu-type-utils/vertex-formats';
-export type {
-  ShaderDataType,
-  ShaderAttributeType,
-  ShaderUniformType
-} from './gpu-type-utils/shader-types';
+export type {PrimitiveDataType, SignedDataType, NormalizedDataType} from './shadertypes/data-types';
+export type {AttributeShaderType, VariableShaderType} from './shadertypes/shader-types';
+export type {VertexFormat} from './shadertypes/vertex-formats';
 export type {
   TextureFormat,
   ColorTextureFormat,
-  DepthStencilTextureFormat
-} from './gpu-type-utils/texture-formats';
+  DepthStencilTextureFormat,
+  TextureCompression,
+  TextureFormatInfo,
+  TextureFormatCapabilities
+} from './shadertypes/texture-formats';
 
 // GPU TYPE UTILS - GPU MEMORY LAYOUT HELPERS - CAN BE USED BY APPS BUT MOSTLY USED INTERNALLY
 
-export {decodeVertexFormat} from './gpu-type-utils/decode-vertex-format';
-export {decodeTextureFormat} from './gpu-type-utils/decode-texture-format';
-export {decodeShaderUniformType} from './gpu-type-utils/decode-shader-types';
-export {decodeShaderAttributeType} from './gpu-type-utils/decode-attribute-type';
-export {getDataTypeFromTypedArray} from './gpu-type-utils/vertex-format-from-attribute';
-export {getTypedArrayFromDataType} from './gpu-type-utils/vertex-format-from-attribute';
-export {getVertexFormatFromAttribute} from './gpu-type-utils/vertex-format-from-attribute';
+export {
+  getDataTypeInfo,
+  getDataTypeFromTypedArray,
+  getTypedArrayFromDataType,
+  makeNormalizedDataType
+} from './shadertypes/utils/decode-data-types';
+export {
+  getVariableShaderTypeInfo,
+  getAttributeShaderTypeInfo
+} from './shadertypes/utils/decode-shader-types';
+export {
+  getVertexFormatInfo,
+  getVertexFormatFromAttribute,
+  makeVertexFormat
+} from './shadertypes/utils/decode-vertex-format';
+export {
+  getTextureFormatInfo,
+  getTextureFormatCapabilities
+} from './shadertypes/utils/decode-texture-format';
 
 // GENERAL EXPORTS - FOR APPLICATIONS
 
@@ -168,9 +182,15 @@ export type {
   CopyTextureToTextureOptions
 } from './adapter/resources/command-encoder';
 
-export type {AttributeInfo} from './adapter-utils/get-attribute-from-layouts';
-export {getAttributeInfosFromLayouts} from './adapter-utils/get-attribute-from-layouts';
-export {getScratchArray} from './utils/array-utils-flat';
-
 // INTERNAL UTILS - for use in other luma.gl modules only
 export {log} from './utils/log';
+export {getScratchArray} from './utils/array-utils-flat';
+export type {AttributeInfo} from './adapter-utils/get-attribute-from-layouts';
+export {BufferLayoutHelper as _BufferLayoutHelper} from './adapter-utils/buffer-layout-helper';
+export {getAttributeInfosFromLayouts} from './adapter-utils/get-attribute-from-layouts';
+
+// TEST EXPORTS
+export {
+  getTextureFormatDefinition as _getTextureFormatDefinition,
+  getTextureFormatTable as _getTextureFormatTable
+} from './shadertypes/utils/texture-format-table';

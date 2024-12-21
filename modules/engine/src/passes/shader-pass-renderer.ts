@@ -9,6 +9,7 @@ import {ShaderInputs} from '../shader-inputs';
 import {AsyncTexture} from '../async-texture/async-texture';
 import {ClipSpace} from '../models/clip-space';
 import {SwapFramebuffers} from '../compute/swap';
+import {BackgroundTextureModel} from '../models/billboard-texture-model';
 
 import {getFragmentShaderForRenderPass} from './get-fragment-shader';
 
@@ -30,6 +31,7 @@ export class ShaderPassRenderer {
   swapFramebuffers: SwapFramebuffers;
   /** For rendering to the screen */
   clipSpace: ClipSpace;
+  textureModel: BackgroundTextureModel;
 
   constructor(device: Device, props: ShaderPassRendererProps) {
     this.device = device;
@@ -42,15 +44,30 @@ export class ShaderPassRenderer {
     );
     this.shaderInputs = props.shaderInputs || new ShaderInputs(modules);
 
-    const size = device.getCanvasContext().getPixelSize();
+    const size = device.getCanvasContext().getDrawingBufferSize();
     this.swapFramebuffers = new SwapFramebuffers(device, {
-      colorAttachments: ['rgba8unorm'],
+      colorAttachments: [device.preferredColorFormat],
       width: size[0],
       height: size[1]
     });
 
+    this.textureModel = new BackgroundTextureModel(device, {
+      backgroundTexture: this.swapFramebuffers.current.colorAttachments[0].texture
+    });
+
     this.clipSpace = new ClipSpace(device, {
-      fs: `\
+      source: /* wgsl */ `\
+  @group(0) @binding(0) var sourceTexture: texture_2d<f32>;
+  @group(0) @binding(1) var sourceTextureSampler: sampler;
+
+@fragment
+fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
+	let texCoord: vec2<f32> = inputs.coordinate;
+	return textureSample(sourceTexture, sourceTextureSampler, texCoord);
+}
+`,
+
+      fs: /* glsl */ `\
 #version 300 es
 
 uniform sampler2D sourceTexture;
@@ -82,7 +99,7 @@ void main() {
     // this.props.passes.forEach(pass => pass.resize(width, height));
   }
 
-  renderToScreen(options: {sourceTexture: AsyncTexture; uniforms: any; bindings: any}): boolean {
+  renderToScreen(options: {sourceTexture: AsyncTexture; uniforms?: any; bindings?: any}): boolean {
     // Run the shader passes and generate an output texture
     const outputTexture = this.renderToTexture(options);
     if (!outputTexture) {
@@ -90,7 +107,16 @@ void main() {
       return false;
     }
 
-    const renderPass = this.device.beginRenderPass({clearColor: [0, 0, 0, 1], clearDepth: 1});
+    const framebuffer = this.device
+      .getDefaultCanvasContext()
+      // @ts-expect-error TODO - remove after republish
+      .getCurrentFramebuffer({depthStencilAttachment: false});
+    const renderPass = this.device.beginRenderPass({
+      id: 'shader-pass-renderer-to-screen',
+      framebuffer,
+      clearColor: [0, 0, 0, 1],
+      clearDepth: 1
+    });
     this.clipSpace.setBindings({sourceTexture: outputTexture});
     this.clipSpace.draw(renderPass);
     renderPass.end();
@@ -102,20 +128,34 @@ void main() {
    */
   renderToTexture(options: {
     sourceTexture: AsyncTexture;
-    uniforms: any;
-    bindings: any;
+    uniforms?: any;
+    bindings?: any;
   }): Texture | null {
     const {sourceTexture} = options;
     if (!sourceTexture.isReady) {
       return null;
     }
 
-    const commandEncoder = this.device.createCommandEncoder();
-    commandEncoder.copyTextureToTexture({
-      sourceTexture: sourceTexture.texture,
-      destinationTexture: this.swapFramebuffers.current.colorAttachments[0].texture
+    this.textureModel.destroy();
+    this.textureModel = new BackgroundTextureModel(this.device, {
+      backgroundTexture: sourceTexture
     });
-    commandEncoder.finish();
+
+    // Clear the current texture before we begin
+    const clearTexturePass = this.device.beginRenderPass({
+      id: 'shader-pass-renderer-clear-texture',
+      framebuffer: this.swapFramebuffers.current,
+      clearColor: [0, 0, 0, 1]
+    });
+    this.textureModel.draw(clearTexturePass);
+    clearTexturePass.end();
+
+    // const commandEncoder = this.device.createCommandEncoder();
+    // commandEncoder.copyTextureToTexture({
+    //   sourceTexture: sourceTexture.texture,
+    //   destinationTexture: this.swapFramebuffers.current.colorAttachments[0].texture
+    // });
+    // commandEncoder.finish();
 
     let first = true;
     for (const passRenderer of this.passRenderers) {
@@ -125,15 +165,15 @@ void main() {
         }
         first = false;
 
-        // eslint-disable-next-line no-shadow
-        const sourceTexture = this.swapFramebuffers.current.colorAttachments[0].texture;
+        const swapBufferTexture = this.swapFramebuffers.current.colorAttachments[0].texture;
 
         const bindings = {
-          sourceTexture
+          sourceTexture: swapBufferTexture
           // texSize: [sourceTextures.width, sourceTextures.height]
         };
 
         const renderPass = this.device.beginRenderPass({
+          id: 'shader-pass-renderer-run-pass',
           framebuffer: this.swapFramebuffers.next,
           clearColor: [0, 0, 0, 1],
           clearDepth: 1
@@ -197,8 +237,7 @@ class SubPassRenderer {
       fs,
       modules: [shaderPass],
       parameters: {
-        depthWriteEnabled: false,
-        depthCompare: 'always'
+        depthWriteEnabled: false
       }
     });
   }

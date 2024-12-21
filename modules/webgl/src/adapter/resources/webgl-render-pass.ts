@@ -9,21 +9,22 @@ import {GL, GLParameters} from '@luma.gl/constants';
 import {withGLParameters} from '../../context/state-tracker/with-parameters';
 import {setGLParameters} from '../../context/parameters/unified-parameter-api';
 import {WEBGLQuerySet} from './webgl-query-set';
+import {WEBGLFramebuffer} from './webgl-framebuffer';
 
-const COLOR_CHANNELS = [0x1, 0x2, 0x4, 0x8]; // GPUColorWrite RED, GREEN, BLUE, ALPHA
+const COLOR_CHANNELS: NumberArray4 = [0x1, 0x2, 0x4, 0x8]; // GPUColorWrite RED, GREEN, BLUE, ALPHA
 
 export class WEBGLRenderPass extends RenderPass {
   readonly device: WebGLDevice;
 
   /** Parameters that should be applied before each draw call */
-  glParameters: GLParameters;
+  glParameters: GLParameters = {};
 
   constructor(device: WebGLDevice, props: RenderPassProps) {
     super(device, props);
     this.device = device;
 
     // If no viewport is provided, apply reasonably defaults
-    let viewport;
+    let viewport: NumberArray4 | undefined;
     if (!props?.parameters?.viewport) {
       if (props?.framebuffer) {
         // Set the viewport to the size of the framebuffer
@@ -31,7 +32,7 @@ export class WEBGLRenderPass extends RenderPass {
         viewport = [0, 0, width, height];
       } else {
         // Instead of using our own book-keeping, we can just read the values from the WebGL context
-        const [width, height] = device.getCanvasContext().getDrawingBufferSize();
+        const [width, height] = device.getDefaultCanvasContext().getDrawingBufferSize();
         viewport = [0, 0, width, height];
       }
     }
@@ -41,7 +42,9 @@ export class WEBGLRenderPass extends RenderPass {
     this.setParameters({viewport, ...this.props.parameters});
 
     // Specify mapping of draw buffer locations to color attachments
-    if (this.props.framebuffer) {
+    const webglFramebuffer = this.props.framebuffer as WEBGLFramebuffer;
+    // Default framebuffers can only be set to GL.BACK or GL.NONE
+    if (this.props.framebuffer && webglFramebuffer?.handle) {
       const drawBuffers = this.props.framebuffer.colorAttachments.map(
         (_, i) => GL.COLOR_ATTACHMENT0 + i
       );
@@ -90,7 +93,10 @@ export class WEBGLRenderPass extends RenderPass {
       // WebGPU viewports are 6 coordinates (X, Y, Z)
       if (parameters.viewport.length >= 6) {
         glParameters.viewport = parameters.viewport.slice(0, 4) as NumberArray4;
-        glParameters.depthRange = [parameters.viewport[4], parameters.viewport[5]];
+        glParameters.depthRange = [
+          parameters.viewport[4] as number,
+          parameters.viewport[5] as number
+        ];
       } else {
         // WebGL viewports are 4 coordinates (X, Y)
         glParameters.viewport = parameters.viewport as NumberArray4;
@@ -108,12 +114,12 @@ export class WEBGLRenderPass extends RenderPass {
       console.warn('RenderPassParameters.stencilReference not yet implemented in WebGL');
       // parameters.stencilFunc = [func, ref, mask];
       // Does this work?
-      parameters[GL.STENCIL_REF] = parameters.stencilReference;
+      glParameters[GL.STENCIL_REF] = parameters.stencilReference;
     }
 
-    if (parameters.colorMask) {
+    if ('colorMask' in parameters) {
       glParameters.colorMask = COLOR_CHANNELS.map(channel =>
-        Boolean(channel & parameters.colorMask)
+        Boolean(channel & (parameters.colorMask as number))
       );
     }
 
@@ -190,33 +196,32 @@ export class WEBGLRenderPass extends RenderPass {
           this.device.gl.clearBufferuiv(GL.COLOR, drawBuffer, value);
           break;
         case Float32Array:
-        default:
           this.device.gl.clearBufferfv(GL.COLOR, drawBuffer, value);
           break;
+        default:
+          throw new Error('clearColorBuffer: color must be typed array');
       }
     });
   }
 
-  // clearDepthStencil() {
-  // const GL.DEPTH = 0x1801;
-  // const GL_STENCIL = 0x1802;
-  // const GL_DEPTH_STENCIL = 0x84f9;
+  /*
+  clearDepthStencil() {
+      case GL.DEPTH:
+        this.device.gl.clearBufferfv(GL.DEPTH, 0, [value]);
+        break;
 
-  //     case GL_DEPTH:
-  //       this.device.gl.clearBufferfv(GL_DEPTH, 0, [value]);
-  //       break;
+      case GL_STENCIL:
+        this.device.gl.clearBufferiv(GL.STENCIL, 0, [value]);
+        break;
 
-  //     case GL_STENCIL:
-  //       this.device.gl.clearBufferiv(GL_STENCIL, 0, [value]);
-  //       break;
+      case GL.DEPTH_STENCIL:
+        const [depth, stencil] = value;
+        this.device.gl.clearBufferfi(GL.DEPTH_STENCIL, 0, depth, stencil);
+        break;
 
-  //     case GL_DEPTH_STENCIL:
-  //       const [depth, stencil] = value;
-  //       this.device.gl.clearBufferfi(GL_DEPTH_STENCIL, 0, depth, stencil);
-  //       break;
-
-  //     default:
-  //       assert(false, ERR_ARGUMENTS);
-  //   }
-  // });
+      default:
+        assert(false, ERR_ARGUMENTS);
+    }
+  });
+  */
 }

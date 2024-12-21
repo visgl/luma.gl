@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+// @ts-nocheck TODO - fix types
+
 import {Device, Buffer, PrimitiveTopology} from '@luma.gl/core';
 import {Geometry, GeometryAttribute, GroupNode, ModelNode, ModelProps} from '@luma.gl/engine';
 import {Matrix4} from '@math.gl/core';
@@ -22,7 +24,7 @@ export type GLTFInstantiatorOptions = {
 const DEFAULT_OPTIONS: GLTFInstantiatorOptions = {
   modelOptions: {},
   pbrDebug: false,
-  imageBasedLightingEnvironment: null,
+  imageBasedLightingEnvironment: undefined,
   lights: true,
   useTangents: false
 };
@@ -43,7 +45,7 @@ export class GLTFInstantiator {
 
   instantiate(gltf: any): GroupNode[] {
     this.gltf = deepCopy(gltf);
-    const scenes = (gltf.scenes || []).map(scene => this.createScene(scene));
+    const scenes = (this.gltf.scenes || []).map(scene => this.createScene(scene));
     return scenes;
   }
 
@@ -52,6 +54,7 @@ export class GLTFInstantiator {
       return new GLTFAnimator(this.gltf);
     }
 
+    // @ts-ignore TODO - should we create an empty animator that does nothing?
     return null;
   }
 
@@ -100,6 +103,10 @@ export class GLTFInstantiator {
       }
       gltfNode._node = node;
     }
+
+    // Copy _node so that gltf-animator can access
+    const topLevelNode = this.gltf.nodes.find(node => node.id === gltfNode.id);
+    topLevelNode._node = gltfNode._node;
 
     return gltfNode._node;
   }
@@ -208,7 +215,11 @@ export class GLTFInstantiator {
 /** Deeply copies a JS data structure */
 function deepCopy(object: any): any {
   // don't copy binary data
-  if (ArrayBuffer.isView(object) || object instanceof ArrayBuffer) {
+  if (
+    ArrayBuffer.isView(object) ||
+    object instanceof ArrayBuffer ||
+    object instanceof ImageBitmap
+  ) {
     return object;
   }
   if (Array.isArray(object)) {

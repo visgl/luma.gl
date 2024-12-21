@@ -4,12 +4,14 @@
 
 import test, {Test} from 'tape-promise/tape';
 import {Buffer, Device, TextureFormat} from '@luma.gl/core';
-import {webglDevice as device} from '@luma.gl/test-utils';
+import {getWebGLTestDevice} from '@luma.gl/test-utils';
 
 const EPSILON = 1e-6;
 const {abs} = Math;
 
 test('CommandBuffer#copyBufferToBuffer', async t => {
+  const device = await getWebGLTestDevice();
+
   const sourceData = new Float32Array([1, 2, 3]);
   const sourceBuffer = device.createBuffer({data: sourceData});
   const destinationData = new Float32Array([4, 5, 6]);
@@ -25,8 +27,8 @@ test('CommandBuffer#copyBufferToBuffer', async t => {
     destinationBuffer,
     size: 2 * Float32Array.BYTES_PER_ELEMENT
   });
-  commandEncoder.finish();
-  commandEncoder.destroy();
+  let commandBuffer = commandEncoder.finish();
+  device.submit(commandBuffer);
 
   receivedData = await readAsyncF32(destinationBuffer);
   expectedData = new Float32Array([1, 2, 6]);
@@ -40,8 +42,8 @@ test('CommandBuffer#copyBufferToBuffer', async t => {
     destinationOffset: 2 * Float32Array.BYTES_PER_ELEMENT,
     size: Float32Array.BYTES_PER_ELEMENT
   });
-  commandEncoder.finish();
-  commandEncoder.destroy();
+  commandBuffer = commandEncoder.finish();
+  device.submit(commandBuffer);
 
   receivedData = await readAsyncF32(destinationBuffer);
   expectedData = new Float32Array([1, 2, 2]);
@@ -113,6 +115,8 @@ const COPY_TEXTURE_TO_BUFFER_FIXTURES: CopyTextureToBufferFixture[] = [
 ];
 
 test('CommandBuffer#copyTextureToBuffer', async t => {
+  const device = await getWebGLTestDevice();
+
   for (const fixture of COPY_TEXTURE_TO_BUFFER_FIXTURES) {
     await testCopyTextureToBuffer(t, device, {...fixture});
     await testCopyTextureToBuffer(t, device, {
@@ -163,8 +167,8 @@ async function testCopyTextureToBuffer(
     destinationBuffer,
     byteOffset: dstByteOffset
   });
-  commandEncoder.finish();
-  commandEncoder.destroy();
+  const commandBuffer = commandEncoder.finish();
+  device_.submit(commandBuffer);
 
   const color =
     srcPixel instanceof Uint8Array
@@ -186,7 +190,9 @@ async function readAsyncF32(source: Buffer): Promise<Float32Array> {
   return new Float32Array(buffer, byteOffset, byteLength / Float32Array.BYTES_PER_ELEMENT);
 }
 
-test('CommandEncoder#copyTextureToTexture', t => {
+test('CommandEncoder#copyTextureToTexture', async t => {
+  const device = await getWebGLTestDevice();
+
   // for (const device of await getTestDevices()) {
   testCopyToTexture(t, device, {isSubCopy: false, sourceIsFramebuffer: false});
   // testCopyToTexture(t, device, {isSubCopy: false, sourceIsFramebuffer: true});
@@ -204,14 +210,17 @@ function testCopyToTexture(
   const sourceColor = [255, 128, 64, 32];
 
   const sourceTexture = device_.createTexture({
-    data: options.sourceIsFramebuffer ? null : new Uint8Array(sourceColor)
+    data: options.sourceIsFramebuffer ? null : new Uint8Array(sourceColor),
+    width: 1,
+    height: 1
   });
 
   const destinationTexture = sourceTexture.clone();
 
   const commandEncoder = device_.createCommandEncoder();
   commandEncoder.copyTextureToTexture({sourceTexture, destinationTexture});
-  commandEncoder.finish();
+  const commandBuffer = commandEncoder.finish();
+  device_.submit(commandBuffer);
 
   // Read data form destination texture
   const color = device_.readPixelsToArrayWebGL(destinationTexture);
@@ -359,14 +368,14 @@ function testCopyToArray(t: Test, device: Device) {
   });
 }
 
-test('WebGL1#CopyAndBlit readPixelsToArray', t => {
+test('WebGL1#CopyAndBlit readPixelsToArray', async t => {
   for (const device of getWebGLTestDevices()) {
     testCopyToArray(t, device);
   }
   t.end();
 });
 
-test('WebGL2#CopyAndBlit readPixels', t => {
+test('WebGL2#CopyAndBlit readPixels', async t => {
   for (const device of getWebGLTestDevices()) {
       testCopyToArray(t, device);
   }

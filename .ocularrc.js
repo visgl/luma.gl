@@ -9,15 +9,10 @@ const testDir = join(packageRoot, 'test');
 
 /** @type {OcularConfig} */
 const config = {
-  babel: false,
 
   lint: {
     paths: ['modules', 'docs', 'test', 'examples'],
     extensions: ['js', 'ts', 'jsx', 'tsx']
-  },
-
-  typescript: {
-    project: 'tsconfig.build.json'
   },
 
   aliases: {
@@ -44,7 +39,7 @@ const config = {
 
   entry: {
     test: 'test/index.ts',
-    'test-browser': 'index.html',
+    'test-browser': 'test/index.html',
     bench: 'test/bench/index.js',
     'bench-browser': 'test/bench/index.html',
     size: 'test/size/import-nothing.js'

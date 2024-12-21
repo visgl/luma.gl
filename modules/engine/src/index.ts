@@ -32,8 +32,8 @@ export {ShaderFactory} from './factories/shader-factory';
 // Models
 export type {ClipSpaceProps} from './models/clip-space';
 export {ClipSpace} from './models/clip-space';
-export type {BackgroundTextureModelProps} from './models/background-texture-model';
-export {BackgroundTextureModel} from './models/background-texture-model';
+export type {BackgroundTextureModelProps} from './models/billboard-texture-model';
+export {BackgroundTextureModel} from './models/billboard-texture-model';
 
 // Scenegraph Core nodes
 export {ScenegraphNode} from './scenegraph/scenegraph-node';
@@ -79,6 +79,18 @@ export {SwapFramebuffers} from './compute/swap';
 
 export type {ComputationProps} from './compute/computation';
 export {Computation} from './compute/computation';
+
+export type {
+  TextureCubeFace,
+  TextureImageData,
+  TextureData,
+  Texture1DData,
+  Texture2DData,
+  Texture3DData,
+  TextureCubeData,
+  TextureArrayData,
+  TextureCubeArrayData
+} from './async-texture/async-texture';
 
 export type {AsyncTextureProps} from './async-texture/async-texture';
 export {AsyncTexture} from './async-texture/async-texture';

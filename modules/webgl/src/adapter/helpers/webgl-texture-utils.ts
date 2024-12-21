@@ -2,13 +2,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-//
-// WebGL... the texture API from hell... hopefully made simpler
-//
+// @ts-nocheck This file will be deleted in upcoming refactor
 
-import type {ExternalImage} from '@luma.gl/core';
-import {Buffer, Texture, Framebuffer, FramebufferProps} from '@luma.gl/core';
-
+import type {Buffer, Texture, FramebufferProps} from '@luma.gl/core';
+import {Framebuffer, getTypedArrayFromDataType, getDataTypeFromTypedArray} from '@luma.gl/core';
 import {
   GL,
   GLTextureTarget,
@@ -18,13 +15,12 @@ import {
   GLDataType
 } from '@luma.gl/constants';
 
-import {TypedArray} from '@math.gl/types';
-
+import {convertDataTypeToGLDataType} from '../converters/webgl-shadertypes';
 import {WEBGLFramebuffer} from '../resources/webgl-framebuffer';
-import {getGLTypeFromTypedArray, getTypedArrayFromGLType} from './typed-array-utils';
 import {glFormatToComponents, glTypeToBytes} from './format-utils';
 import {WEBGLBuffer} from '../resources/webgl-buffer';
 import {WEBGLTexture} from '../resources/webgl-texture';
+import {convertGLDataTypeToDataType} from '../converters/shader-formats';
 
 /** A "border" parameter is required in many WebGL texture APIs, but must always be 0... */
 const BORDER = 0;
@@ -83,117 +79,6 @@ export type WebGLCopyTextureOptions = {
   byteOffset?: number;
   byteLength?: number;
 };
-
-/**
- * Initializes a texture memory space
- * Clear all the textures and mip levels of a two-dimensional or array texture at the same time.
- * On some implementations faster than repeatedly setting levels
- *
- * @note From WebGL 2 spec section 3.7.6:
- * @see https://registry.khronos.org/webgl/specs/latest/2.0/
- * - The image contents are set as if a buffer of sufficient size initialized to 0 would be passed to each level's texImage2D/3D
- * - texStorage2D should be considered a preferred alternative to texImage2D. It may have lower memory costs than texImage2D in some implementations.
- * - Once texStorage*D has been called, the texture is immutable and can only be updated with texSubImage*(), not texImage()
- */
-export function initializeTextureStorage(
-  gl: WebGL2RenderingContext,
-  levels: number,
-  options: WebGLSetTextureOptions
-): void {
-  const {dimension, width, height, depth = 0} = options;
-  const {glInternalFormat} = options;
-  const glTarget = options.glTarget; // getWebGLCubeFaceTarget(options.glTarget, dimension, depth);
-  switch (dimension) {
-    case '2d-array':
-    case '3d':
-      gl.texStorage3D(glTarget, levels, glInternalFormat, width, height, depth);
-      break;
-
-    default:
-      gl.texStorage2D(glTarget, levels, glInternalFormat, width, height);
-  }
-}
-
-/**
- * Copy a region of compressed data from a GPU memory buffer into this texture.
- */
-export function copyExternalImageToMipLevel(
-  gl: WebGL2RenderingContext,
-  handle: WebGLTexture,
-  image: ExternalImage,
-  options: WebGLCopyTextureOptions
-): void {
-  const {width, height} = options;
-  const {dimension, depth = 0, mipLevel = 0} = options;
-  const {x = 0, y = 0, z = 0} = options;
-  const {glFormat, glType} = options;
-
-  const glTarget = getWebGLCubeFaceTarget(options.glTarget, dimension, depth);
-
-  switch (dimension) {
-    case '2d-array':
-    case '3d':
-      gl.bindTexture(glTarget, handle);
-      // prettier-ignore
-      gl.texSubImage3D(glTarget, mipLevel, x, y, z, width, height, depth, glFormat, glType, image);
-      gl.bindTexture(glTarget, null);
-      break;
-
-    case '2d':
-    case 'cube':
-      gl.bindTexture(glTarget, handle);
-      // prettier-ignore
-      gl.texSubImage2D(glTarget, mipLevel, x, y, width, height, glFormat, glType, image);
-      gl.bindTexture(glTarget, null);
-      break;
-
-    default:
-      throw new Error(dimension);
-  }
-}
-
-/**
- * Copy a region of data from a CPU memory buffer into this texture.
- */
-export function copyCPUDataToMipLevel(
-  gl: WebGL2RenderingContext,
-  typedArray: TypedArray,
-  options: WebGLCopyTextureOptions
-): void {
-  const {dimension, width, height, depth = 0, mipLevel = 0, byteOffset = 0} = options;
-  const {x = 0, y = 0, z = 0} = options;
-  const {glFormat, glType, compressed} = options;
-  const glTarget = getWebGLCubeFaceTarget(options.glTarget, dimension, depth);
-
-  // gl.bindTexture(glTarget, null);
-
-  switch (dimension) {
-    case '2d-array':
-    case '3d':
-      if (compressed) {
-        // prettier-ignore
-        gl.compressedTexSubImage3D(glTarget, mipLevel, x, y, z, width, height, depth, glFormat, typedArray, byteOffset); // , byteLength
-      } else {
-        // prettier-ignore
-        gl.texSubImage3D(glTarget, mipLevel, x, y, z, width, height, depth, glFormat, glType, typedArray, byteOffset); // , byteLength
-      }
-      break;
-
-    case '2d':
-    case 'cube':
-      if (compressed) {
-        // prettier-ignore
-        gl.compressedTexSubImage2D(glTarget, mipLevel, x, y, width, height, glFormat, typedArray, byteOffset); // , byteLength
-      } else {
-        // prettier-ignore
-        gl.texSubImage2D(glTarget, mipLevel, x, y, width, height, glFormat, glType, typedArray, byteOffset); // , byteLength
-      }
-      break;
-
-    default:
-      throw new Error(dimension);
-  }
-}
 
 /**
  * Copy a region of compressed data from a GPU memory buffer into this texture.
@@ -279,7 +164,7 @@ export function getWebGLCubeFaceTarget(
  * Wrapper for the messy WebGL texture API
  *
 export function clearMipLevel(gl: WebGL2RenderingContext, options: WebGLSetTextureOptions): void {
-  const {dimension, width, height, depth = 0, level = 0} = options;
+  const {dimension, width, height, depth = 0, mipLevel = 0} = options;
   const {glInternalFormat, glFormat, glType, compressed} = options;
   const glTarget = getWebGLCubeFaceTarget(options.glTarget, dimension, depth);
 
@@ -288,10 +173,10 @@ export function clearMipLevel(gl: WebGL2RenderingContext, options: WebGLSetTextu
     case '3d':
       if (compressed) {
         // prettier-ignore
-        gl.compressedTexImage3D(glTarget, level, glInternalFormat, width, height, depth, BORDER, null);
+        gl.compressedTexImage3D(glTarget, mipLevel, glInternalFormat, width, height, depth, BORDER, null);
       } else {
         // prettier-ignore
-        gl.texImage3D( glTarget, level, glInternalFormat, width, height, depth, BORDER, glFormat, glType, null);
+        gl.texImage3D( glTarget, mipLevel, glInternalFormat, width, height, depth, BORDER, glFormat, glType, null);
       }
       break;
 
@@ -299,10 +184,10 @@ export function clearMipLevel(gl: WebGL2RenderingContext, options: WebGLSetTextu
     case 'cube':
       if (compressed) {
         // prettier-ignore
-        gl.compressedTexImage2D(glTarget, level, glInternalFormat, width, height, BORDER, null);
+        gl.compressedTexImage2D(glTarget, mipLevel, glInternalFormat, width, height, BORDER, null);
       } else {
         // prettier-ignore
-        gl.texImage2D(glTarget, level, glInternalFormat, width, height, BORDER, glFormat, glType, null);
+        gl.texImage2D(glTarget, mipLevel, glInternalFormat, width, height, BORDER, glFormat, glType, null);
       }
       break;
 
@@ -310,6 +195,7 @@ export function clearMipLevel(gl: WebGL2RenderingContext, options: WebGLSetTextu
       throw new Error(dimension);
   }
 }
+  */
 
 /**
  * Set a texture mip level to the contents of an external image.
@@ -567,7 +453,8 @@ export function readPixelsToArray(
   target = getPixelArray(target, sourceType, sourceFormat, sourceWidth, sourceHeight, sourceDepth);
 
   // Pixel array available, if necessary, deduce type from it.
-  sourceType = sourceType || getGLTypeFromTypedArray(target);
+  const signedType = getDataTypeFromTypedArray(target);
+  sourceType = sourceType || convertDataTypeToGLDataType(signedType);
 
   // Note: luma.gl overrides bindFramebuffer so that we can reliably restore the previous framebuffer (this is the only function for which we do that)
   const prevHandle = gl.bindFramebuffer(
@@ -714,7 +601,7 @@ export function copyToTexture(
     texture = destinationTexture;
     width = Number.isFinite(width) ? width : texture.width;
     height = Number.isFinite(height) ? height : texture.height;
-    texture?.bind(0);
+    texture?._bind(0);
     // @ts-ignore
     textureTarget = texture.target;
   } else {
@@ -766,7 +653,7 @@ export function copyToTexture(
     }
   }
   if (texture) {
-    texture.unbind();
+    texture._unbind();
   }
   // @ts-expect-error
   device.gl.bindFramebuffer(GL.FRAMEBUFFER, prevHandle || null);
@@ -814,10 +701,11 @@ function getPixelArray(
   if (pixelArray) {
     return pixelArray;
   }
-  // const formatInfo = decodeTextureFormat(format);
+  // const formatInfo = getTextureFormatInfo(format);
   // Allocate pixel array if not already available, using supplied type
   glType ||= GL.UNSIGNED_BYTE;
-  const ArrayType = getTypedArrayFromGLType(glType, {clamped: false});
+  const shaderType = convertGLDataTypeToDataType(glType);
+  const ArrayType = getTypedArrayFromDataType(shaderType);
   const components = glFormatToComponents(glFormat);
   // TODO - check for composite type (components = 1).
   return new ArrayType(width * height * components) as Uint8Array | Uint16Array | Float32Array;

@@ -4,12 +4,12 @@
 
 import {log} from '@luma.gl/core';
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
-import {lightingUniformsGLSL} from './lighting-uniforms-glsl';
-import {lightingUniformsWGSL} from './lighting-uniforms-wgsl';
+import {lightingUniformsGLSL} from './lighting-glsl';
+import {lightingUniformsWGSL} from './lighting-wgsl';
 import type {NumberArray3} from '@math.gl/core';
 
 /** Max number of supported lights (in addition to ambient light */
-const MAX_LIGHTS = 3;
+const MAX_LIGHTS = 5;
 
 /** Whether to divide */
 const COLOR_FACTOR = 255.0;
@@ -85,7 +85,7 @@ export const lighting = {
   name: 'lighting',
 
   defines: {
-    MAX_LIGHTS
+    // MAX_LIGHTS
   },
 
   uniformTypes: {

@@ -222,23 +222,10 @@ The following WebGL APIs are called in this function:
 
 ### setBindings()
 
+Sets named bindings from a map, ignoring names
 
-### setUniformsWebGL()
-
-:::caution
-WebGL only, deprecated
-:::
-
-```ts
-renderPipeline.setUniformsWebGL(uniforms: Object): void
-```
-
-Sets named uniforms from a map, ignoring names
-
-- `key` (_String_) - The name of the uniform to be set. The name of the uniform will be matched with the name of the uniform declared in the shader. You can set more uniforms on the RenderPipeline than its shaders use, the extra uniforms will simply be ignored.
-- `value` (_mixed_) - The value to be set. Can be a float, an array of floats, a typed array, a boolean, `Texture` etc. The values must match the declarations in the shader.
-
-[gl.useProgram](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/useProgram)
+- `key` (_String_) - The name of the uniform to be set. The name of the uniform will be matched with the name of the uniform declared in the shader. You can set more bindings on the RenderPipeline than its shaders use, the extra bindings will simply be ignored.
+- `value` (_mixed_) - The value to be set. Can be a float, an array of floats, a typed array, a boolean, etc. The values must match the declarations in the shader.
 
 ### WebGL notes
 

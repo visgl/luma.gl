@@ -6,8 +6,8 @@ import type {TypedArray} from '@math.gl/types';
 import type {
   DeviceProps,
   DeviceInfo,
+  DeviceTextureFormatCapabilities,
   CanvasContextProps,
-  TextureFormat,
   Buffer,
   Texture,
   Framebuffer,
@@ -25,14 +25,11 @@ import type {
   RenderPipelineProps,
   ComputePipeline,
   ComputePipelineProps,
-  // RenderPass,
-  RenderPassProps,
-  ComputePass,
-  ComputePassProps,
   // CommandEncoder,
   CommandEncoderProps,
   TransformFeedbackProps,
-  QuerySetProps
+  QuerySetProps,
+  Resource
 } from '@luma.gl/core';
 import {Device, CanvasContext, log} from '@luma.gl/core';
 import type {GLExtensions} from '@luma.gl/constants';
@@ -45,11 +42,7 @@ import {WebGLCanvasContext} from './webgl-canvas-context';
 import type {Spector} from '../context/debug/spector-types';
 import {initializeSpectorJS} from '../context/debug/spector';
 import {makeDebugContext} from '../context/debug/webgl-developer-tools';
-import {
-  isTextureFormatSupported,
-  isTextureFormatRenderable,
-  isTextureFormatFilterable
-} from './converters/texture-formats';
+import {getTextureFormatCapabilitiesWebGL} from './converters/webgl-texture-table';
 import {uid} from '../utils/uid';
 
 import {WEBGLBuffer} from './resources/webgl-buffer';
@@ -57,9 +50,9 @@ import {WEBGLShader} from './resources/webgl-shader';
 import {WEBGLSampler} from './resources/webgl-sampler';
 import {WEBGLTexture} from './resources/webgl-texture';
 import {WEBGLFramebuffer} from './resources/webgl-framebuffer';
-import {WEBGLRenderPass} from './resources/webgl-render-pass';
 import {WEBGLRenderPipeline} from './resources/webgl-render-pipeline';
 import {WEBGLCommandEncoder} from './resources/webgl-command-encoder';
+import {WEBGLCommandBuffer} from './resources/webgl-command-buffer';
 import {WEBGLVertexArray} from './resources/webgl-vertex-array';
 import {WEBGLTransformFeedback} from './resources/webgl-transform-feedback';
 import {WEBGLQuerySet} from './resources/webgl-query-set';
@@ -71,14 +64,11 @@ import {
   resetGLParameters
 } from '../context/parameters/unified-parameter-api';
 import {withGLParameters} from '../context/state-tracker/with-parameters';
-import {clear} from '../deprecated/clear';
 import {getWebGLExtension} from '../context/helpers/webgl-extensions';
 
 /** WebGPU style Device API for a WebGL context */
 export class WebGLDevice extends Device {
-  //
   // Public `Device` API
-  //
 
   /** type of this device */
   readonly type = 'webgl';
@@ -87,9 +77,13 @@ export class WebGLDevice extends Device {
   readonly handle: WebGL2RenderingContext;
   features: WebGLDeviceFeatures;
   limits: WebGLDeviceLimits;
-
   readonly info: DeviceInfo;
   readonly canvasContext: WebGLCanvasContext;
+
+  readonly preferredColorFormat = 'rgba8unorm';
+  readonly preferredDepthFormat = 'depth24plus';
+
+  commandEncoder: WEBGLCommandEncoder;
 
   readonly lost: Promise<{reason: 'destroyed'; message: string}>;
 
@@ -99,19 +93,24 @@ export class WebGLDevice extends Device {
   readonly gl: WebGL2RenderingContext;
   readonly debug: boolean = false;
 
-  /** State used by luma.gl classes: TODO - move to canvasContext*/
-  readonly _canvasSizeInfo = {clientWidth: 0, clientHeight: 0, devicePixelRatio: 1};
+  /** Store constants */
+  // @ts-ignore TODO fix
+  _constants: (TypedArray | null)[];
 
   /** State used by luma.gl classes - TODO - not used? */
   readonly _extensions: GLExtensions = {};
   _polyfilled: boolean = false;
 
   /** Instance of Spector.js (if initialized) */
-  spectorJS: Spector;
+  spectorJS: Spector | null;
 
   //
   // Public API
   //
+
+  override toString(): string {
+    return `${this[Symbol.toStringTag]}(${this.id})`;
+  }
 
   constructor(props: DeviceProps) {
     super({...props, id: props.id || uid('webgl-device')});
@@ -145,19 +144,24 @@ export class WebGLDevice extends Device {
       webglContextAttributes.powerPreference = props.powerPreference;
     }
 
-    const gl = createBrowserContext(
-      this.canvasContext.canvas,
-      {
-        onContextLost: (event: Event) =>
-          this._resolveContextLost?.({
-            reason: 'destroyed',
-            message: 'Entered sleep mode, or too many apps or browser tabs are using the GPU.'
-          }),
-        // eslint-disable-next-line no-console
-        onContextRestored: (event: Event) => console.log('WebGL context restored')
-      },
-      webglContextAttributes
-    );
+    // Check if we should attach to an externally created context or create a new context
+    const externalGLContext = this.props._handle as WebGL2RenderingContext | null;
+
+    const gl =
+      externalGLContext ||
+      createBrowserContext(
+        this.canvasContext.canvas,
+        {
+          onContextLost: (event: Event) =>
+            this._resolveContextLost?.({
+              reason: 'destroyed',
+              message: 'Entered sleep mode, or too many apps or browser tabs are using the GPU.'
+            }),
+          // eslint-disable-next-line no-console
+          onContextRestored: (event: Event) => console.log('WebGL context restored')
+        },
+        webglContextAttributes
+      );
 
     if (!gl) {
       throw new Error('WebGL context creation failed');
@@ -193,8 +197,6 @@ export class WebGLDevice extends Device {
       this.features.initializeFeatures();
     }
 
-    this.canvasContext.resize();
-
     // Install context state tracking
     const glState = new WebGLStateTracker(this.gl, {
       log: (...args: any[]) => log.log(1, ...args)()
@@ -211,6 +213,8 @@ export class WebGLDevice extends Device {
         log.level = Math.max(log.level, 1);
       }
     }
+
+    this.commandEncoder = new WEBGLCommandEncoder(this, {id: `${this}-command-encoder`});
   }
 
   /**
@@ -221,18 +225,6 @@ export class WebGLDevice extends Device {
 
   get isLost(): boolean {
     return this.gl.isContextLost();
-  }
-
-  isTextureFormatSupported(format: TextureFormat): boolean {
-    return isTextureFormatSupported(this.gl, format, this._extensions);
-  }
-
-  isTextureFormatFilterable(format: TextureFormat): boolean {
-    return isTextureFormatFilterable(this.gl, format, this._extensions);
-  }
-
-  isTextureFormatRenderable(format: TextureFormat): boolean {
-    return isTextureFormatRenderable(this.gl, format, this._extensions);
   }
 
   // IMPLEMENTATION OF ABSTRACT DEVICE
@@ -282,19 +274,9 @@ export class WebGLDevice extends Device {
     return new WEBGLRenderPipeline(this, props);
   }
 
-  beginRenderPass(props: RenderPassProps): WEBGLRenderPass {
-    return new WEBGLRenderPass(this, props);
-  }
-
   createComputePipeline(props?: ComputePipelineProps): ComputePipeline {
     throw new Error('ComputePipeline not supported in WebGL');
   }
-
-  beginComputePass(props: ComputePassProps): ComputePass {
-    throw new Error('ComputePass not supported in WebGL');
-  }
-
-  private renderPass: WEBGLRenderPass | null = null;
 
   override createCommandEncoder(props: CommandEncoderProps = {}): WEBGLCommandEncoder {
     return new WEBGLCommandEncoder(this, props);
@@ -305,10 +287,14 @@ export class WebGLDevice extends Device {
    * https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/commit
    * Chrome's offscreen canvas does not require gl.commit
    */
-  submit(): void {
-    this.renderPass?.end();
-    this.renderPass = null;
-    // this.canvasContext.commit();
+  submit(commandBuffer: WEBGLCommandBuffer): void {
+    if (!commandBuffer) {
+      commandBuffer = this.commandEncoder.finish();
+      this.commandEncoder.destroy();
+      this.commandEncoder = this.createCommandEncoder({id: `${this.id}-default-encoder`});
+    }
+
+    commandBuffer._executeCommands();
   }
 
   //
@@ -363,18 +349,15 @@ export class WebGLDevice extends Device {
     return withGLParameters(this.gl, parameters, func);
   }
 
-  override clearWebGL(options?: {
-    framebuffer?: Framebuffer;
-    color?: any;
-    depth?: any;
-    stencil?: any;
-  }): void {
-    clear(this, options);
-  }
-
   override resetWebGL(): void {
     log.warn('WebGLDevice.resetWebGL is deprecated, use only for debugging')();
     resetGLParameters(this.gl);
+  }
+
+  override _getDeviceSpecificTextureFormatCapabilities(
+    capabilities: DeviceTextureFormatCapabilities
+  ): DeviceTextureFormatCapabilities {
+    return getTextureFormatCapabilitiesWebGL(this.gl, capabilities, this._extensions);
   }
 
   //
@@ -414,16 +397,6 @@ export class WebGLDevice extends Device {
   }
 
   /**
-   * Storing data on a special field on WebGLObjects makes that data visible in SPECTOR chrome debug extension
-   * luma.gl ids and props can be inspected
-   */
-  setSpectorMetadata(handle: unknown, props: Record<string, unknown>) {
-    // @ts-expect-error
-    // eslint-disable-next-line camelcase
-    handle.__SPECTOR_Metadata = props;
-  }
-
-  /**
    * Returns the GL.<KEY> constant that corresponds to a numeric value of a GL constant
    * Be aware that there are some duplicates especially for constants that are 0,
    * so this isn't guaranteed to return the right key in all cases.
@@ -451,9 +424,6 @@ export class WebGLDevice extends Device {
       return keys;
     }, {});
   }
-
-  /** Store constants */
-  _constants: (TypedArray | null)[];
 
   /**
    * Set a constant value for a location. Disabled attributes at that location will read from this value
@@ -492,6 +462,26 @@ export class WebGLDevice extends Device {
   getExtension(name: keyof GLExtensions): GLExtensions {
     getWebGLExtension(this.gl, name, this._extensions);
     return this._extensions;
+  }
+
+  // INTERNAL SUPPORT METHODS FOR WEBGL RESOURCES
+
+  /**
+   * Storing data on a special field on WebGLObjects makes that data visible in SPECTOR chrome debug extension
+   * luma.gl ids and props can be inspected
+   */
+  _setWebGLDebugMetadata(
+    handle: unknown,
+    resource: Resource<any>,
+    options: {spector: Record<string, unknown>}
+  ): void {
+    // @ts-expect-error
+    handle.luma = resource;
+
+    const spectorMetadata = {props: options.spector, id: options.spector.id};
+    // @ts-expect-error
+    // eslint-disable-next-line camelcase
+    handle.__SPECTOR_Metadata = spectorMetadata;
   }
 }
 

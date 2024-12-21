@@ -2,8 +2,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {ShaderUniformType, ShaderDataType} from '../gpu-type-utils/shader-types';
-import {decodeShaderUniformType, alignTo} from '../gpu-type-utils/decode-shader-types';
+import type {PrimitiveDataType} from '../shadertypes/data-types';
+import type {VariableShaderType} from '../shadertypes/shader-types';
+import {alignTo} from '../shadertypes/utils/decode-data-types';
+import {getVariableShaderTypeInfo} from '../shadertypes/utils/decode-shader-types';
 
 import type {UniformValue} from '../adapter/types/uniforms';
 import {getScratchArrayBuffer} from '../utils/array-utils-flat';
@@ -21,19 +23,19 @@ const minBufferSize: number = 1024;
  * Supports manual listing of uniforms
  */
 export class UniformBufferLayout {
-  readonly layout: Record<string, {offset: number; size: number; type: ShaderDataType}> = {};
+  readonly layout: Record<string, {offset: number; size: number; type: PrimitiveDataType}> = {};
 
   /** number of bytes needed for buffer allocation */
   readonly byteLength: number;
 
   /** Create a new UniformBufferLayout given a map of attributes. */
-  constructor(uniformTypes: Record<string, ShaderUniformType>) {
+  constructor(uniformTypes: Record<string, VariableShaderType>) {
     /** number of 4 byte slots taken */
     let size: number = 0;
 
     // Add layout (type, size and offset) definitions for each uniform in the layout
     for (const [key, uniformType] of Object.entries(uniformTypes)) {
-      const typeAndComponents = decodeShaderUniformType(uniformType);
+      const typeAndComponents = getVariableShaderTypeInfo(uniformType);
       const {type, components: count} = typeAndComponents;
       // First, align (bump) current offset to an even multiple of current object (1, 2, 4)
       size = alignTo(size, count);

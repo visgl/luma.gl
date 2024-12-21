@@ -18,13 +18,13 @@ export function setPathPrefix(prefix: string) {
  */
 export async function loadImageBitmap(
   url: string,
-  opts?: {crossOrigin?: string}
+  opts?: {crossOrigin?: string} & ImageBitmapOptions
 ): Promise<ImageBitmap> {
   const image = new Image();
   image.crossOrigin = opts?.crossOrigin || 'anonymous';
   image.src = url.startsWith('http') ? url : pathPrefix + url;
   await image.decode();
-  return await createImageBitmap(image);
+  return opts ? await createImageBitmap(image, opts) : await createImageBitmap(image);
 }
 
 /**

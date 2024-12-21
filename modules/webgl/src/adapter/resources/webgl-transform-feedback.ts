@@ -102,7 +102,7 @@ export class WEBGLTransformFeedback extends TransformFeedback {
     return location >= 0 ? this.buffers[location] : null;
   }
 
-  bind(funcOrHandle = this.handle) {
+  bind(funcOrHandle: (() => void) | WebGLTransformFeedback | null = this.handle) {
     if (typeof funcOrHandle !== 'function') {
       this.gl.bindTransformFeedback(GL.TRANSFORM_FEEDBACK, funcOrHandle);
       return this;
@@ -148,7 +148,7 @@ export class WEBGLTransformFeedback extends TransformFeedback {
       return Number(locationOrName);
     }
 
-    for (const varying of this.layout.varyings) {
+    for (const varying of this.layout.varyings || []) {
       if (locationOrName === varying.name) {
         return varying.location;
       }

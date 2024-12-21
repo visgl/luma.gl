@@ -2,6 +2,8 @@
 // SPDX-License
 // Copyright (c) vis.gl contributors
 
+// @ts-nocheck This should be replaced with model animation loop
+
 // TODO - replace createGLContext, instrumentGLContext, resizeGLContext?
 // TODO - remove dependency on framebuffer (bundle size impact)
 import {luma, Device, DeviceProps, log} from '@luma.gl/core';
@@ -83,7 +85,7 @@ export type ClassicAnimationLoopProps = {
 };
 
 const DEFAULT_CLASSIC_ANIMATION_LOOP_PROPS: Required<ClassicAnimationLoopProps> = {
-  onCreateDevice: (props: DeviceProps) => luma.createDevice(props),
+  onCreateDevice: (props: DeviceProps) => luma.createDevice({...props, debug: true}),
   onCreateContext: undefined,
   onAddHTML: undefined,
   onInitialize: () => ({}),
@@ -637,7 +639,7 @@ export class ClassicAnimationLoop {
    */
   _resizeCanvasDrawingBuffer() {
     if (this.props.autoResizeDrawingBuffer) {
-      this.device.canvasContext.resize({useDevicePixels: this.props.useDevicePixels});
+      this.device.getDefaultCanvasContext().resize({useDevicePixels: this.props.useDevicePixels});
     }
   }
 

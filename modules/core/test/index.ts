@@ -2,10 +2,11 @@
 import './utils/uid.spec';
 
 // type utils
-import './gpu-type-utils/decode-attribute-type.spec';
-import './gpu-type-utils/decode-vertex-format.spec';
-import './gpu-type-utils/decode-texture-format.spec';
-import './gpu-type-utils/vertex-format-from-attribute.spec';
+import './shadertypes/decode-attribute-type.spec';
+import './shadertypes/decode-vertex-format.spec';
+import './shadertypes/vertex-format-from-attribute.spec';
+
+import './shadertypes/decode-texture-format.spec';
 
 // adapter utils
 import './adapter-utils/get-attribute-from-layout.spec';
@@ -14,7 +15,7 @@ import './adapter-utils/format-compiler-log.spec';
 
 // adapter
 
-// WebGLDevice, features & limits
+// Device, features & limits
 import './adapter/device-helpers/device-info.spec';
 import './adapter/device-helpers/device-features.spec';
 import './adapter/device-helpers/device-limits.spec';

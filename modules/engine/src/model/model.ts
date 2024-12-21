@@ -13,7 +13,6 @@ import type {
   TransformFeedback,
   AttributeInfo,
   Binding,
-  UniformValue,
   PrimitiveTopology
 } from '@luma.gl/core';
 import {
@@ -28,7 +27,8 @@ import {
   UniformStore,
   log,
   getTypedArrayFromDataType,
-  getAttributeInfosFromLayouts
+  getAttributeInfosFromLayouts,
+  _BufferLayoutHelper
 } from '@luma.gl/core';
 
 import type {ShaderModule, PlatformInfo} from '@luma.gl/shadertools';
@@ -42,10 +42,7 @@ import {getDebugTableForShaderLayout} from '../debug/debug-shader-layout';
 import {debugFramebuffer} from '../debug/debug-framebuffer';
 import {deepEqual} from '../utils/deep-equal';
 import {uid} from '../utils/uid';
-import {splitUniformsAndBindings} from './split-uniforms-and-bindings';
-
 import {ShaderInputs} from '../shader-inputs';
-// import type {AsyncTextureProps} from '../async-texture/async-texture';
 import {AsyncTexture} from '../async-texture/async-texture';
 
 const LOG_DRAW_PRIORITY = 2;
@@ -53,13 +50,13 @@ const LOG_DRAW_TIMEOUT = 10000;
 
 export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs' | 'bindings'> & {
   source?: string;
-  vs: string | null;
-  fs: string | null;
+  vs?: string | null;
+  fs?: string | null;
 
   /** shadertool shader modules (added to shader code) */
   modules?: ShaderModule[];
   /** Shadertool module defines (configures shader code)*/
-  defines?: Record<string, string | number | boolean>;
+  defines?: Record<string, boolean>;
   // TODO - injections, hooks etc?
 
   /** Shader inputs, used to generated uniform buffers and bindings */
@@ -93,9 +90,6 @@ export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs' | 'bindings'> & {
 
   transformFeedback?: TransformFeedback;
 
-  /** Mapped uniforms for shadertool modules */
-  moduleSettings?: Record<string, Record<string, any>>;
-
   /** Show shader source in browser? */
   debugShaders?: 'never' | 'errors' | 'warnings' | 'always';
 
@@ -126,7 +120,6 @@ export class Model {
     userData: {},
     defines: {},
     modules: [],
-    moduleSettings: undefined!,
     geometry: null,
     indexBuffer: null,
     attributes: {},
@@ -186,8 +179,6 @@ export class Model {
   constantAttributes: Record<string, TypedArray> = {};
   /** Bindings (textures, samplers, uniform buffers) */
   bindings: Record<string, Binding | AsyncTexture> = {};
-  /** Sets uniforms @deprecated Use uniform buffers and setBindings() for portability*/
-  uniforms: Record<string, UniformValue> = {};
 
   /**
    * VertexArray
@@ -210,7 +201,6 @@ export class Model {
 
   _attributeInfos: Record<string, AttributeInfo> = {};
   _gpuGeometry: GPUGeometry | null = null;
-  private _getModuleUniforms: (props?: Record<string, Record<string, any>>) => Record<string, any>;
   private props: Required<ModelProps>;
 
   _pipelineNeedsUpdate: string | false = 'newly created';
@@ -219,6 +209,14 @@ export class Model {
 
   /** "Time" of last draw. Monotonically increasing timestamp */
   _lastDrawTimestamp: number = -1;
+
+  get [Symbol.toStringTag](): string {
+    return 'Model';
+  }
+
+  toString(): string {
+    return `Model(${this.id})`;
+  }
 
   constructor(device: Device, props: ModelProps) {
     this.props = {...Model.defaultProps, ...props};
@@ -232,15 +230,19 @@ export class Model {
     const moduleMap = Object.fromEntries(
       this.props.modules?.map(module => [module.name, module]) || []
     );
-    // @ts-expect-error Fix typings
-    this.setShaderInputs(props.shaderInputs || new ShaderInputs(moduleMap));
+
+    const shaderInputs =
+      props.shaderInputs ||
+      new ShaderInputs(moduleMap, {disableWarnings: this.props.disableWarnings});
+    // @ts-ignore
+    this.setShaderInputs(shaderInputs);
 
     // Setup shader assembler
     const platformInfo = getPlatformInfo(device);
 
     // Extract modules from shader inputs if not supplied
     const modules =
-      // @ts-expect-error shaderInputs is assigned in setShaderInputs above.
+      // @ts-ignore shaderInputs is assigned in setShaderInputs above.
       (this.props.modules?.length > 0 ? this.props.modules : this.shaderInputs?.getModules()) || [];
 
     const isWebGPU = this.device.type === 'webgpu';
@@ -294,7 +296,8 @@ export class Model {
     this.pipeline = this._updatePipeline();
 
     this.vertexArray = device.createVertexArray({
-      renderPipeline: this.pipeline
+      shaderLayout: this.pipeline.shaderLayout,
+      bufferLayout: this.pipeline.bufferLayout
     });
 
     // Now we can apply geometry attributes
@@ -325,13 +328,6 @@ export class Model {
     if (props.bindings) {
       this.setBindings(props.bindings);
     }
-    if (props.uniforms) {
-      this.setUniforms(props.uniforms);
-    }
-    if (props.moduleSettings) {
-      // log.warn('Model.props.moduleSettings is deprecated. Use Model.shaderInputs.setProps()')();
-      this.updateModuleSettings(props.moduleSettings);
-    }
     if (props.transformFeedback) {
       this.transformFeedback = props.transformFeedback;
     }
@@ -341,16 +337,19 @@ export class Model {
   }
 
   destroy(): void {
-    if (this._destroyed) return;
-    this.pipelineFactory.release(this.pipeline);
-    this.shaderFactory.release(this.pipeline.vs);
-    if (this.pipeline.fs) {
-      this.shaderFactory.release(this.pipeline.fs);
+    if (!this._destroyed) {
+      // Release pipeline before we destroy the shaders used by the pipeline
+      this.pipelineFactory.release(this.pipeline);
+      // Release the shaders
+      this.shaderFactory.release(this.pipeline.vs);
+      if (this.pipeline.fs) {
+        this.shaderFactory.release(this.pipeline.fs);
+      }
+      this._uniformStore.destroy();
+      // TODO - mark resource as managed and destroyIfManaged() ?
+      this._gpuGeometry?.destroy();
+      this._destroyed = true;
     }
-    this._uniformStore.destroy();
-    // TODO - mark resource as managed and destroyIfManaged() ?
-    this._gpuGeometry?.destroy();
-    this._destroyed = true;
   }
 
   // Draw call
@@ -371,7 +370,7 @@ export class Model {
     this._needsRedraw ||= reason;
   }
 
-  predraw() {
+  predraw(): void {
     // Update uniform buffers if needed
     this.updateShaderInputs();
     // Check if the pipeline is invalidated
@@ -379,10 +378,22 @@ export class Model {
   }
 
   draw(renderPass: RenderPass): boolean {
-    this.predraw();
+    const loadingBinding = this._areBindingsLoading();
+    if (loadingBinding) {
+      log.info(LOG_DRAW_PRIORITY, `>>> DRAWING ABORTED ${this.id}: ${loadingBinding} not loaded`)();
+      return false;
+    }
+
+    try {
+      renderPass.pushDebugGroup(`${this}.predraw(${renderPass})`);
+      this.predraw();
+    } finally {
+      renderPass.popDebugGroup();
+    }
 
     let drawSuccess: boolean;
     try {
+      renderPass.pushDebugGroup(`${this}.draw(${renderPass})`);
       this._logDrawCallStart();
 
       // Update the pipeline if invalidated
@@ -393,13 +404,11 @@ export class Model {
       // Set pipeline state, we may be sharing a pipeline so we need to set all state on every draw
       // Any caching needs to be done inside the pipeline functions
       // TODO this is a busy initialized check for all bindings every frame
+
       const syncBindings = this._getBindings();
       this.pipeline.setBindings(syncBindings, {
         disableWarnings: this.props.disableWarnings
       });
-      if (!isObjectEmpty(this.uniforms)) {
-        this.pipeline.setUniformsWebGL(this.uniforms);
-      }
 
       const {indexBuffer} = this.vertexArray;
       const indexCount = indexBuffer
@@ -421,6 +430,7 @@ export class Model {
         topology: this.topology
       });
     } finally {
+      renderPass.popDebugGroup();
       this._logDrawCallEnd();
     }
     this._logFramebuffer(renderPass);
@@ -447,7 +457,11 @@ export class Model {
     const gpuGeometry = geometry && makeGPUGeometry(this.device, geometry);
     if (gpuGeometry) {
       this.setTopology(gpuGeometry.topology || 'triangle-list');
-      this.bufferLayout = mergeBufferLayouts(gpuGeometry.bufferLayout, this.bufferLayout);
+      const bufferLayoutHelper = new _BufferLayoutHelper(this.bufferLayout);
+      this.bufferLayout = bufferLayoutHelper.mergeBufferLayouts(
+        gpuGeometry.bufferLayout,
+        this.bufferLayout
+      );
       if (this.vertexArray) {
         this._setGeometryAttributes(gpuGeometry);
       }
@@ -471,8 +485,9 @@ export class Model {
    * @note Triggers a pipeline rebuild / pipeline cache fetch
    */
   setBufferLayout(bufferLayout: BufferLayout[]): void {
+    const bufferLayoutHelper = new _BufferLayoutHelper(this.bufferLayout);
     this.bufferLayout = this._gpuGeometry
-      ? mergeBufferLayouts(bufferLayout, this._gpuGeometry.bufferLayout)
+      ? bufferLayoutHelper.mergeBufferLayouts(bufferLayout, this._gpuGeometry.bufferLayout)
       : bufferLayout;
     this._setPipelineNeedsUpdate('bufferLayout');
 
@@ -482,7 +497,8 @@ export class Model {
     // vertex array needs to be updated if we update buffer layout,
     // but not if we update parameters
     this.vertexArray = this.device.createVertexArray({
-      renderPipeline: this.pipeline
+      shaderLayout: this.pipeline.shaderLayout,
+      bufferLayout: this.pipeline.bufferLayout
     });
 
     // Reapply geometry attributes to the new vertex array
@@ -580,22 +596,27 @@ export class Model {
    * @note Overrides any attributes previously set with the same name
    */
   setAttributes(buffers: Record<string, Buffer>, options?: {disableWarnings?: boolean}): void {
+    const disableWarnings = options?.disableWarnings ?? this.props.disableWarnings;
     if (buffers.indices) {
       log.warn(
         `Model:${this.id} setAttributes() - indexBuffer should be set using setIndexBuffer()`
       )();
     }
+
+    const bufferLayoutHelper = new _BufferLayoutHelper(this.bufferLayout);
+
+    // Check if all buffers have a layout
     for (const [bufferName, buffer] of Object.entries(buffers)) {
-      const bufferLayout = this.bufferLayout.find(layout =>
-        getAttributeNames(layout).includes(bufferName)
-      );
+      const bufferLayout = bufferLayoutHelper.getBufferLayout(bufferName);
       if (!bufferLayout) {
-        log.warn(`Model(${this.id}): Missing layout for buffer "${bufferName}".`)();
+        if (!disableWarnings) {
+          log.warn(`Model(${this.id}): Missing layout for buffer "${bufferName}".`)();
+        }
         continue; // eslint-disable-line no-continue
       }
 
       // For an interleaved attribute we may need to set multiple attributes
-      const attributeNames = getAttributeNames(bufferLayout);
+      const attributeNames = bufferLayoutHelper.getAttributeNamesForBuffer(bufferLayout);
       let set = false;
       for (const attributeName of attributeNames) {
         const attributeInfo = this._attributeInfos[attributeName];
@@ -604,7 +625,7 @@ export class Model {
           set = true;
         }
       }
-      if (!set && !(options?.disableWarnings ?? this.props.disableWarnings)) {
+      if (!set && !disableWarnings) {
         log.warn(
           `Model(${this.id}): Ignoring buffer "${buffer.id}" for unknown attribute "${bufferName}"`
         )();
@@ -638,47 +659,34 @@ export class Model {
     this.setNeedsRedraw('constants');
   }
 
-  // DEPRECATED METHODS
+  // INTERNAL METHODS
 
-  /**
-   * Sets individual uniforms
-   * @deprecated WebGL only, use uniform buffers for portability
-   * @param uniforms
-   */
-  setUniforms(uniforms: Record<string, UniformValue>): void {
-    if (!isObjectEmpty(uniforms)) {
-      this.pipeline.setUniformsWebGL(uniforms);
-      Object.assign(this.uniforms, uniforms);
+  /** Check that bindings are loaded. Returns id of first binding that is still loading. */
+  _areBindingsLoading(): string | false {
+    for (const binding of Object.values(this.bindings)) {
+      if (binding instanceof AsyncTexture && !binding.isReady) {
+        return binding.id;
+      }
     }
-    this.setNeedsRedraw('uniforms');
+    return false;
   }
 
-  /**
-   * @deprecated Updates shader module settings (which results in uniforms being set)
-   */
-  updateModuleSettings(props: Record<string, any>): void {
-    // log.warn('Model.updateModuleSettings is deprecated. Use Model.shaderInputs.setProps()')();
-    const {bindings, uniforms} = splitUniformsAndBindings(this._getModuleUniforms(props));
-    Object.assign(this.bindings, bindings);
-    Object.assign(this.uniforms, uniforms);
-    this.setNeedsRedraw('moduleSettings');
-  }
-
-  // Internal methods
-
-  /** Get texture / texture view from any async textures */
+  /** Extracts texture view from loaded async textures. Returns null if any textures have not yet been loaded. */
   _getBindings(): Record<string, Binding> {
-    // Extract actual textures from async textures. If not loaded, null
-    return Object.entries(this.bindings).reduce<Record<string, Binding>>((acc, [name, binding]) => {
+    const validBindings: Record<string, Binding> = {};
+
+    for (const [name, binding] of Object.entries(this.bindings)) {
       if (binding instanceof AsyncTexture) {
+        // Check that async textures are loaded
         if (binding.isReady) {
-          acc[name] = binding.texture;
+          validBindings[name] = binding.texture;
         }
       } else {
-        acc[name] = binding;
+        validBindings[name] = binding;
       }
-      return acc;
-    }, {});
+    }
+
+    return validBindings;
   }
 
   /** Get the timestamp of the latest updated bound GPU memory resource (buffer/texture). */
@@ -817,10 +825,6 @@ export class Model {
       log.table(LOG_DRAW_PRIORITY, shaderLayoutTable)();
 
       const uniformTable = this.shaderInputs.getDebugTable();
-      // Add any global uniforms
-      for (const [name, value] of Object.entries(this.uniforms)) {
-        uniformTable[name] = {value};
-      }
       log.table(LOG_DRAW_PRIORITY, uniformTable)();
 
       const attributeTable = this._getAttributeDebugTable();
@@ -891,20 +895,6 @@ function shaderModuleHasUniforms(module: ShaderModule): boolean {
 
 // HELPERS
 
-/** TODO - move to core, document add tests */
-function mergeBufferLayouts(layouts1: BufferLayout[], layouts2: BufferLayout[]): BufferLayout[] {
-  const layouts = [...layouts1];
-  for (const attribute of layouts2) {
-    const index = layouts.findIndex(attribute2 => attribute2.name === attribute.name);
-    if (index < 0) {
-      layouts.push(attribute);
-    } else {
-      layouts[index] = attribute;
-    }
-  }
-  return layouts;
-}
-
 /** Create a shadertools platform info from the Device */
 export function getPlatformInfo(device: Device): PlatformInfo {
   return {
@@ -915,13 +905,6 @@ export function getPlatformInfo(device: Device): PlatformInfo {
     // HACK - we pretend that the DeviceFeatures is a Set, it has a similar API
     features: device.features as unknown as Set<DeviceFeature>
   };
-}
-
-/** Get attribute names from a BufferLayout */
-function getAttributeNames(bufferLayout: BufferLayout): string[] {
-  return bufferLayout.attributes
-    ? bufferLayout.attributes?.map(layout => layout.attribute)
-    : [bufferLayout.name];
 }
 
 /** Returns true if given object is empty, false otherwise. */

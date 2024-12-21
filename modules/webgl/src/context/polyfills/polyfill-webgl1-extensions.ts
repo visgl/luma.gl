@@ -132,6 +132,7 @@ export function polyfillWebGL1Extensions(gl: WebGL2RenderingContext): void {
 
     // Injected extensions
     if (extensionName in boundExtensions) {
+      // @ts-ignore TODO string index
       return boundExtensions[extensionName];
     }
 

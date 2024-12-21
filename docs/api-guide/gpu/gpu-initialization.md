@@ -12,31 +12,16 @@ application with facilities for creating GPU resources (such as `Buffer` and `Te
 querying GPU capabilities, compiling and linking shaders into pipelines, setting parameters, 
 and of course performing draw and compute calls.
 
-While a `Device` can be used on its own to perform computations on the GPU,
-at least one `CanvasContext` is required for rendering to the screen.
-Each `CanvasContext` provides a connection between a `Device` and an `HTMLCanvasElement` (or `OffscreenCanvas`).
+## Backend Adapters
 
-## CanvasContext
-
-The[`CanvasContext` is an important companion to the `Device`. A `CanvasContext` holds a connection between the GPU `Device` and an HTML or offscreen `canvas` into which it can render.
-
-A `CanvasContext` takes care of:
-
-- providing a fresh `Framebuffer` every render frame, set up to render into the canvas' swap chain.
-- canvas resizing
-- device pixel ratio calculations
-
-## Registering Backend Adapters
-
-The `@luma.gl/core` module defines abstract API interfaces such as `Device`, `Buffer` etc and is not usable on its own. 
-
-One or more GPU backend modules must be also be imported from a corresponding GPU API backend module (`@luma.gl/webgl` and/or `@luma.gl/webgpu`) and then registered with luma.gl.
+The `@luma.gl/core` API is not usable on its own. One or more GPU backend modules 
+must be also be imported from a corresponding GPU API backend module (`@luma.gl/webgpu` and/or `@luma.gl/webgl`). 
+and provided when creating a `Device`.
 
 To create a WebGPU device:
 
 ```sh
 yarn add @luma.gl/core
-yarn add @luma.gl/webgl
 yarn add @luma.gl/webgpu
 ```
 
@@ -44,11 +29,10 @@ yarn add @luma.gl/webgpu
 import {luma} from '@luma.gl/core';
 import {webgpuAdapter} from '@luma.gl/webgpu';
 
-luma.registerAdapters([webgpuAdapter]);
-const device = await luma.createDevice({type: 'webgpu', createCanvasContext: {canvas: ...}});
+const device = await luma.createDevice({type: 'webgpu', adapters: [webgpuAdapter], createCanvasContext: {canvas: ...}});
 ```
 
-It is possible to register more than one device adapter to create an application
+It is possible to supply more than one device adapter to create an application
 that can work in both WebGL and WebGPU environments. To create a `Device` using 
 the best available adapter (luma.gl favors WebGPU over WebGL devices, whenever WebGPU is available).
 
@@ -60,10 +44,9 @@ yarn add @luma.gl/webgpu
 
 ```typescript
 import {luma} from '@luma.gl/core';
-import {WebGLDevice} from '@luma.gl/webgl';
-import {WebGPUDevice} from '@luma.gl/webgpu';
+import {webglAdapter} from '@luma.gl/webgl';
+import {webgpuAdapter} from '@luma.gl/webgpu';
 
-luma.registerAdapters([WebGLDevice, WebGPUDevice]);
-
-const webgpuDevice = luma.createDevice({type: 'best-available', createCanvasContext: true});
+const bestAvailableDevice = luma.createDevice({type: 'best-available', adapters: [webglAdapter, webgpuAdapter], createCanvasContext: true});
+console.log(device.type); // 'webgpu' or 'webgl' depending on what the browser supports.
 ```

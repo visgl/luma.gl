@@ -1,15 +1,19 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import {NumberArray} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
-import {AnimationLoopTemplate, Model, CubeGeometry} from '@luma.gl/engine';
-import {ShaderInputs, loadImageBitmap, AsyncTexture} from '@luma.gl/engine';
+import {
+  AnimationLoopTemplate,
+  Model,
+  CubeGeometry,
+  ShaderInputs,
+  loadImageBitmap,
+  AsyncTexture
+} from '@luma.gl/engine';
 import {phongMaterial, lighting, ShaderModule} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
-
-const INFO_HTML = `
-<p>
-Drawing a phong-shaded cube
-</p>
-`;
 
 const WGSL_SHADER = /* wgsl */ `\
 
@@ -20,6 +24,8 @@ struct Uniforms {
 };
 
 @binding(0) @group(0) var<uniform> app : Uniforms;
+@group(0) @binding(1) var uTexture : texture_2d<f32>;
+@group(0) @binding(2) var uTextureSampler : sampler;
 
 struct VertexInputs {
   // CUBE GEOMETRY
@@ -45,27 +51,20 @@ fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
   let mat3 = mat3x3(app.modelMatrix[0].xyz, app.modelMatrix[1].xyz, app.modelMatrix[2].xyz);
   outputs.fragNormal = mat3 * inputs.normals;
   return outputs;
+  //   vPosition = (app.modelMatrix * vec4(positions, 1.0)).xyz;
+  //   vNormal = mat3(app.modelMatrix) * normals;
+  //   vUV = texCoords;
+  //   gl_Position = app.mvpMatrix * vec4(positions, 1.0);
 }
-
-// void main(void) {
-//   vPosition = (app.modelMatrix * vec4(positions, 1.0)).xyz;
-//   vNormal = mat3(app.modelMatrix) * normals;
-//   vUV = texCoords;
-//   gl_Position = app.mvpMatrix * vec4(positions, 1.0);
-// }
-
-// uniform sampler2D uTexture;
 
 @fragment
 fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
-  return vec4<f32>(inputs.fragPosition, 1);
-}
-
-// void main(void) {
+  // return inputs.fragPosition;
+  return textureSample(uTexture, uTextureSampler, inputs.fragUV);
 //   vec3 surfaceColor = texture(uTexture, vec2(vUV.x, 1.0 - vUV.y)).rgb;
 //   surfaceColor = lighting_getLightColor(surfaceColor, uApp.eyePosition, vPosition, normalize(vNormal));
 //   fragColor = vec4(surfaceColor, 1.0);
-// }
+}
 `;
 
 const vs = /* glsl */ `\
@@ -150,7 +149,11 @@ const app: ShaderModule<AppUniforms, AppUniforms> = {
 const eyePosition = [0, 0, 5];
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
-  static info = INFO_HTML;
+  static info = `\
+<p>
+Drawing a phong-shaded cube
+</p>
+`;
 
   model: Model;
 

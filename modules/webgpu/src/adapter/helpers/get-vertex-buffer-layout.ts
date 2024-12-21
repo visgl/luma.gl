@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {ShaderLayout, BufferLayout, AttributeDeclaration, VertexFormat} from '@luma.gl/core';
-import {log, decodeVertexFormat} from '@luma.gl/core';
+import {log, getVertexFormatInfo} from '@luma.gl/core';
 // import {getAttributeInfosFromLayouts} from '@luma.gl/core';
 
 /** Throw error on any WebGL-only vertex formats */
@@ -58,7 +58,7 @@ export function getVertexBufferLayout(
           shaderLocation: location
         });
 
-        byteStride += decodeVertexFormat(format).byteLength;
+        byteStride += getVertexFormatInfo(format).byteLength;
       }
       // non-interleaved mapping (just set offset and stride)
     } else {
@@ -66,7 +66,7 @@ export function getVertexBufferLayout(
       if (!attributeLayout) {
         continue; // eslint-disable-line no-continue
       }
-      byteStride = decodeVertexFormat(format).byteLength;
+      byteStride = getVertexFormatInfo(format).byteLength;
 
       stepMode =
         attributeLayout.stepMode ||
@@ -91,7 +91,7 @@ export function getVertexBufferLayout(
   for (const attribute of shaderLayout.attributes) {
     if (!usedAttributes.has(attribute.name)) {
       vertexBufferLayouts.push({
-        arrayStride: decodeVertexFormat('float32x3').byteLength,
+        arrayStride: getVertexFormatInfo('float32x3').byteLength,
         stepMode:
           attribute.stepMode || (attribute.name.startsWith('instance') ? 'instance' : 'vertex'),
         attributes: [
@@ -152,11 +152,11 @@ function findAttributeLayout(
 ): AttributeDeclaration | null {
   const attribute = shaderLayout.attributes.find(attribute_ => attribute_.name === name);
   if (!attribute) {
-    log.warn(`Unknown attribute ${name}`)();
+    log.warn(`Supplied attribute not present in shader layout: ${name}`)();
     return null;
   }
   if (attributeNames.has(name)) {
-    throw new Error(`Duplicate attribute ${name}`);
+    throw new Error(`Found multiple entries for attribute: ${name}`);
   }
   attributeNames.add(name);
   return attribute;

@@ -10,6 +10,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     strategy:
       matrix:
         node-version: [20]
@@ -31,11 +32,23 @@ jobs:
         run: |
           yarn build
   
-      - name: Run tests
+      - name: Run tests in Puppeteer and generage Coverage
         run: |
-          yarn test-ci
+          yarn test cover
 
-      - name: Coveralls
+      - name: Run tests on Node
+        run: |
+          yarn test node
+
+      - name: Run lint
+        run: |
+          yarn lint
+  
+      - name: Test website build
+        run: |
+          yarn test-website
+
+      - name: Upload coverage to Coveralls
         uses: coverallsapp/github-action@09b709cf6a16e30b0808ba050c7a6e8a5ef13f8d # v1.2.5
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}

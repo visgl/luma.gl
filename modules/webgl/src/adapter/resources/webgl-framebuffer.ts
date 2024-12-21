@@ -8,7 +8,7 @@ import {GL} from '@luma.gl/constants';
 import {WebGLDevice} from '../webgl-device';
 import {WEBGLTexture} from './webgl-texture';
 import {WEBGLTextureView} from './webgl-texture-view';
-import {getDepthStencilAttachmentWebGL} from '../converters/texture-formats';
+import {getDepthStencilAttachmentWebGL} from '../converters/webgl-texture-table';
 
 export type Attachment = WEBGLTextureView | WEBGLTexture; // | WEBGLRenderbuffer;
 
@@ -33,8 +33,8 @@ export class WEBGLFramebuffer extends Framebuffer {
       this.props.handle || isDefaultFramebuffer ? this.props.handle : this.gl.createFramebuffer();
 
     if (!isDefaultFramebuffer) {
-      // default framebuffer handle is null, so we can't set spector metadata...
-      device.setSpectorMetadata(this.handle, {id: this.props.id, props: this.props});
+      // default framebuffer handle is null, so we can't set debug metadata...
+      device._setWebGLDebugMetadata(this.handle, this, {spector: this.props});
 
       // Auto create textures for attachments if needed
       this.autoCreateAttachmentTextures();

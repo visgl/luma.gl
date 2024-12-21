@@ -1,4 +1,6 @@
-// luma.gl, MIT license
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
 
 import {Device, SamplerProps} from '@luma.gl/core';
 import {AsyncTexture} from '@luma.gl/engine';
@@ -23,11 +25,11 @@ export function loadPBREnvironment(device: Device, props: PBREnvironmentProps): 
   const brdfLutTexture = new AsyncTexture(device, {
     id: 'brdfLUT',
     sampler: {
-      wrapS: 'clamp-to-edge',
-      wrapT: 'clamp-to-edge',
+      addressModeU: 'clamp-to-edge',
+      addressModeV: 'clamp-to-edge',
       minFilter: 'linear',
-      maxFilter: 'linear'
-    } as SamplerProps,
+      magFilter: 'linear'
+    } as const satisfies SamplerProps,
     // Texture accepts a promise that returns an image as data (Async Textures)
     data: loadImageTexture(props.brdfLutUrl)
   });
@@ -36,28 +38,29 @@ export function loadPBREnvironment(device: Device, props: PBREnvironmentProps): 
     id: 'DiffuseEnvSampler',
     getTextureForFace: dir => loadImageTexture(props.getTexUrl('diffuse', dir, 0)),
     sampler: {
-      wrapS: 'clamp-to-edge',
-      wrapT: 'clamp-to-edge',
+      addressModeU: 'clamp-to-edge',
+      addressModeV: 'clamp-to-edge',
       minFilter: 'linear',
-      maxFilter: 'linear'
-    } as SamplerProps
+      magFilter: 'linear'
+    } as const satisfies SamplerProps
   });
 
   const specularEnvSampler = makeCube(device, {
     id: 'SpecularEnvSampler',
     getTextureForFace: (dir: number) => {
-      const imageArray = [];
+      const imageArray: Promise<any>[] = [];
+      // @ts-ignore
       for (let lod = 0; lod <= props.specularMipLevels - 1; lod++) {
         imageArray.push(loadImageTexture(props.getTexUrl('specular', dir, lod)));
       }
       return imageArray;
     },
     sampler: {
-      wrapS: 'clamp-to-edge',
-      wrapT: 'clamp-to-edge',
+      addressModeU: 'clamp-to-edge',
+      addressModeV: 'clamp-to-edge',
       minFilter: 'linear', // [GL.TEXTURE_MIN_FILTER]: GL.LINEAR_MIPMAP_LINEAR,
-      maxFilter: 'linear'
-    } as SamplerProps
+      magFilter: 'linear'
+    } as const satisfies SamplerProps
   });
 
   return {
@@ -84,6 +87,7 @@ function makeCube(
 ): AsyncTexture {
   const data = {};
   FACES.forEach(face => {
+    // @ts-ignore TODO
     data[String(face)] = getTextureForFace(face);
   });
   return new AsyncTexture(device, {

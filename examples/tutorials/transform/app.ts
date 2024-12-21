@@ -1,3 +1,7 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import {Buffer, Framebuffer} from '@luma.gl/core';
 import {
   AnimationLoopTemplate,
@@ -11,17 +15,6 @@ import {picking} from '@luma.gl/shadertools';
 
 // Ensure repeatable rendertests
 const random = makeRandomGenerator();
-
-// eslint-disable-next-line max-len
-const INFO_HTML = `
-<p>
-  Instanced triangles animated on the GPU using a luma.gl <code>BufferTransform</code> object.
-
-  This is a port of an example from
-  <a href="https://github.com/WebGLSamples/WebGL2Samples/blob/master/samples/transform_feedback_instanced.html">
-    WebGL2Samples
-  </a>
-`;
 
 // We simulate the wandering of agents using transform feedback in this vertex shader
 // The simulation goes like this:
@@ -46,7 +39,10 @@ const COMPUTE_VS = /* glsl */ `\
 #define MOVE_DELTA 0.001
 precision highp float;
 precision highp int;
-uniform float u_time;
+
+uniform appUniforms{
+  float time;
+} app;
 
 layout(location = OFFSET_LOCATION) in vec2 oldPositions;
 layout(location = ROTATION_LOCATION) in float oldRotations;
@@ -61,7 +57,7 @@ float rand(vec2 co)
 
 void main()
 {
-    float theta = M_2PI * rand(vec2(u_time, oldRotations + oldPositions.x + oldPositions.y));
+    float theta = M_2PI * rand(vec2(app.time, oldRotations + oldPositions.x + oldPositions.y));
     float cos_r = cos(oldRotations);
     float sin_r = sin(oldRotations);
     mat2 rot = mat2(
@@ -132,19 +128,16 @@ void main()
 
 const NUM_INSTANCES = 1000;
 
-// TODO PICKING TEMPORARILY DISABLED
-// let pickPosition = [0, 0];
-
-// function mousemove(e) {
-//   pickPosition = [e.offsetX, e.offsetY];
-// }
-
-// function mouseleave(e) {
-//   pickPosition = null;
-// }
-
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
-  static info = INFO_HTML;
+  static info = `
+<p>
+  Instanced triangles animated on the GPU using a luma.gl <code>BufferTransform</code> object.
+
+  This is a port of an example from
+  <a href="https://github.com/WebGLSamples/WebGL2Samples/blob/master/samples/transform_feedback_instanced.html">
+    WebGL2Samples
+  </a>
+`;
 
   // Geometry of each object (a triangle)
   positionBuffer: Buffer;
@@ -242,8 +235,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
 
     // picking
-    // device.canvasContext.canvas.addEventListener('mousemove', mousemove);
-    // device.canvasContext.canvas.addEventListener('mouseleave', mouseleave);
+    // device.getDefaultCanvasContext().canvas.addEventListener('mousemove', mousemove);
+    // device.getDefaultCanvasContext().canvas.addEventListener('mouseleave', mouseleave);
     // this.pickingFramebuffer = device.createFramebuffer({width, height});
   }
 
@@ -253,7 +246,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   override onRender({device, width, height, time}: AnimationProps): void {
-    this.transform.model.setUniforms({u_time: time});
+    this.transform.model.shaderInputs.setProps({app: {time}});
     this.transform.run({
       inputBuffers: {
         oldPositions: this.instancePositionBuffers.current,

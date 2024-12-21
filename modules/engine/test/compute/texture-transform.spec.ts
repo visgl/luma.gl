@@ -3,12 +3,14 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
-import {webglDevice} from '@luma.gl/test-utils';
+import {getWebGLTestDevice} from '@luma.gl/test-utils';
 import {TextureTransform} from '@luma.gl/engine';
 import {Device, Texture} from '@luma.gl/core';
 
 /** Creates a minimal, no-op transform. */
 test('TextureTransform#constructor', async t => {
+  const webglDevice = await getWebGLTestDevice();
+
   const targetTexture = webglDevice.createTexture({
     data: new Float32Array([201, 202, 203, 1.0]),
     width: 1,
@@ -30,6 +32,8 @@ test('TextureTransform#constructor', async t => {
 
 /** Computes a sum over vertex attribute values by writing to framebuffer. */
 test('TextureTransform#attribute', async t => {
+  const webglDevice = await getWebGLTestDevice();
+
   const src = webglDevice.createBuffer({data: new Float32Array([10, 20, 30, 70, 80, 90])});
   const targetTexture = webglDevice.createTexture({
     data: new Float32Array([201, 202, 203, 1.0]),
@@ -70,6 +74,8 @@ test('TextureTransform#attribute', async t => {
 
 /** Computes a sum over texture pixels by writing to framebuffer. */
 test('TextureTransform#texture', async t => {
+  const webglDevice = await getWebGLTestDevice();
+
   const srcData = new Uint8Array([2, 10, 255, 255]);
   const dstData = new Uint8Array([8, 40, 255, 255]); // src x 4
   const dstOffsetData = new Uint8Array([108, 140, 255, 255]); // src x 4 + 100
@@ -132,15 +138,16 @@ async function readF32(
 }
 
 async function readU8(
-  webglDevice_: Device,
+  webglDevice: Device,
   sourceTexture: Texture,
   byteLength: number
 ): Promise<Uint8Array> {
-  const destinationBuffer = webglDevice_.createBuffer({byteLength});
+  const destinationBuffer = webglDevice.createBuffer({byteLength});
   try {
-    const cmd = webglDevice.createCommandEncoder();
-    cmd.copyTextureToBuffer({sourceTexture, destinationBuffer});
-    cmd.finish();
+    const commandEncoder = webglDevice.createCommandEncoder();
+    commandEncoder.copyTextureToBuffer({sourceTexture, destinationBuffer});
+    const commandBuffer = commandEncoder.finish();
+    webglDevice.submit(commandBuffer);
     return destinationBuffer.readAsync();
   } finally {
     destinationBuffer.destroy();

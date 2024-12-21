@@ -14,9 +14,6 @@ import {ShaderHook, normalizeShaderHooks, getShaderHooks} from './shader-hooks';
 import {assert} from '../utils/assert';
 import {getShaderInfo} from '../glsl-utils/get-shader-info';
 
-/** Define map */
-export type ShaderDefine = string | number | boolean;
-
 const INJECT_SHADER_DECLARATIONS = `\n\n${DECLARATION_INJECT_MARKER}\n`;
 
 /**
@@ -48,7 +45,9 @@ export type AssembleShaderOptions = {
   /** Modules to be injected */
   modules?: ShaderModule[];
   /** Defines to be injected */
-  defines?: Record<string, ShaderDefine>;
+  defines?: Record<string, boolean>;
+  /** GLSL only: Overrides to be injected. In WGSL these are supplied during Pipeline creation time */
+  constants?: Record<string, number>;
   /** Hook functions */
   hookFunctions?: (ShaderHook | string)[];
   /** Code injections */
@@ -68,7 +67,9 @@ type AssembleStageOptions = {
   /** Modules to be injected */
   modules: any[];
   /** Defines to be injected */
-  defines?: Record<string, ShaderDefine>;
+  defines?: Record<string, boolean>;
+  /** GLSL only: Overrides to be injected. In WGSL these are supplied during Pipeline creation time */
+  constants?: Record<string, number>;
   /** Hook functions */
   hookFunctions?: (ShaderHook | string)[];
   /** Code injections */
@@ -280,7 +281,7 @@ function assembleShaderGLSL(
     language?: 'glsl' | 'wgsl';
     stage: 'vertex' | 'fragment';
     modules: ShaderModule[];
-    defines?: Record<string, ShaderDefine>;
+    defines?: Record<string, boolean>;
     hookFunctions?: any[];
     inject?: Record<string, string | ShaderInjection>;
     prologue?: boolean;
@@ -288,7 +289,6 @@ function assembleShaderGLSL(
   }
 ) {
   const {
-    id,
     source,
     stage,
     language = 'glsl',
@@ -331,7 +331,6 @@ function assembleShaderGLSL(
 ${sourceVersionDirective}
 
 // ----- PROLOGUE -------------------------
-${getShaderNameDefine({id, source, stage})}
 ${`#define SHADER_TYPE_${stage.toUpperCase()}`}
 
 ${getPlatformShaderDefines(platformInfo)}
@@ -443,11 +442,12 @@ export function assembleGetUniforms(modules: ShaderModule[]) {
 }
 
 /**
+ * NOTE: Removed as id injection defeated caching of shaders
+ * 
  * Generate "glslify-compatible" SHADER_NAME defines
  * These are understood by the GLSL error parsing function
  * If id is provided and no SHADER_NAME constant is present in source, create one
- */
-function getShaderNameDefine(options: {
+ unction getShaderNameDefine(options: {
   id?: string;
   source: string;
   stage: 'vertex' | 'fragment';
@@ -459,9 +459,10 @@ function getShaderNameDefine(options: {
 #define SHADER_NAME ${id}_${stage}`
     : '';
 }
+*/
 
 /** Generates application defines from an object of key value pairs */
-function getApplicationDefines(defines: Record<string, ShaderDefine> = {}): string {
+function getApplicationDefines(defines: Record<string, boolean> = {}): string {
   let sourceText = '';
   for (const define in defines) {
     const value = defines[define];

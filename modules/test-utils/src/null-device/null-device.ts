@@ -5,7 +5,6 @@
 import type {
   DeviceProps,
   CanvasContextProps,
-  TextureFormat,
   VertexArray,
   VertexArrayProps,
   BufferProps,
@@ -18,9 +17,6 @@ import type {
   RenderPipelineProps,
   ComputePipeline,
   ComputePipelineProps,
-  RenderPassProps,
-  ComputePass,
-  ComputePassProps,
   CommandEncoderProps,
   TransformFeedbackProps,
   QuerySetProps
@@ -33,7 +29,7 @@ import {NullCanvasContext} from './null-canvas-context';
 import {NullBuffer} from './resources/null-buffer';
 import {NullFramebuffer} from './resources/null-framebuffer';
 import {NullShader} from './resources/null-shader';
-import {NullCommandEncoder} from './resources/null-command-buffer';
+import {NullCommandEncoder} from './resources/null-command-encoder';
 import {NullSampler} from './resources/null-sampler';
 import {NullTexture} from './resources/null-texture';
 import {NullRenderPass} from './resources/null-render-pass';
@@ -47,12 +43,19 @@ export class NullDevice extends Device {
   static isSupported(): boolean {
     return true;
   }
-  readonly type = 'unknown';
+  readonly type = 'null';
+  readonly handle = null;
+
+  readonly preferredColorFormat = 'rgba8unorm';
+  readonly preferredDepthFormat = 'depth24plus';
+
   features: DeviceFeatures = new DeviceFeatures([], this.props._disabledFeatures);
   limits: NullDeviceLimits = new NullDeviceLimits();
   readonly info = NullDeviceInfo;
 
   readonly canvasContext: NullCanvasContext;
+  override commandEncoder: NullCommandEncoder;
+
   readonly lost: Promise<{reason: 'destroyed'; message: string}>;
 
   constructor(props: DeviceProps) {
@@ -61,29 +64,17 @@ export class NullDevice extends Device {
     const canvasContextProps = props.createCanvasContext === true ? {} : props.createCanvasContext;
     this.canvasContext = new NullCanvasContext(this, canvasContextProps);
     this.lost = new Promise(resolve => {});
-    this.canvasContext.resize();
+    this.commandEncoder = new NullCommandEncoder(this, {id: 'null-command-encoder'});
   }
 
   /**
    * Destroys the context
-   * @note Has no effect for WebGL browser contexts, there is no browser API for destroying contexts
+   * @note Has no effect for null contexts
    */
   destroy(): void {}
 
   get isLost(): boolean {
     return false;
-  }
-
-  isTextureFormatSupported(format: TextureFormat): boolean {
-    return true;
-  }
-
-  isTextureFormatFilterable(format: TextureFormat): boolean {
-    return true;
-  }
-
-  isTextureFormatRenderable(format: TextureFormat): boolean {
-    return true;
   }
 
   // IMPLEMENTATION OF ABSTRACT DEVICE
@@ -137,16 +128,8 @@ export class NullDevice extends Device {
     return new NullRenderPipeline(this, props);
   }
 
-  beginRenderPass(props: RenderPassProps): NullRenderPass {
-    return new NullRenderPass(this, props);
-  }
-
   createComputePipeline(props?: ComputePipelineProps): ComputePipeline {
     throw new Error('ComputePipeline not supported in WebGL');
-  }
-
-  beginComputePass(props: ComputePassProps): ComputePass {
-    throw new Error('ComputePass not supported in WebGL');
   }
 
   override createCommandEncoder(props: CommandEncoderProps = {}): NullCommandEncoder {
@@ -173,5 +156,9 @@ export class NullDevice extends Device {
       // ignore
     }
     return value;
+  }
+
+  override _getDeviceSpecificTextureFormatCapabilities(format: any): any {
+    return format;
   }
 }

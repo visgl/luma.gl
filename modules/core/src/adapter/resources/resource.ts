@@ -27,6 +27,10 @@ export abstract class Resource<Props extends ResourceProps> {
 
   abstract get [Symbol.toStringTag](): string;
 
+  toString(): string {
+    return `${this[Symbol.toStringTag] || this.constructor.name}:"${this.id}"`;
+  }
+
   /** props.id, for debugging. */
   id: string;
   readonly props: Required<Props>;
@@ -71,10 +75,6 @@ export abstract class Resource<Props extends ResourceProps> {
   delete(): this {
     this.destroy();
     return this;
-  }
-
-  toString(): string {
-    return `${this[Symbol.toStringTag] || this.constructor.name}(${this.id})`;
   }
 
   /**

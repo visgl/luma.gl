@@ -1,11 +1,31 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import {Buffer} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine';
 
-const INFO_HTML = `
-Have to start somewhere...
+export const source = /* wgsl */ `\
+struct VertexOutput {
+  @builtin(position) Position : vec4<f32>,
+  @location(0) fragColor : vec3<f32>
+};
+
+@vertex
+fn vertexMain(@location(0) position : vec2<f32>, @location(1) color : vec3<f32>) -> VertexOutput {
+  var output : VertexOutput;
+  output.Position = vec4<f32>(position.x, position.y, 0.0, 1.0);
+  output.fragColor = color;
+  return output;
+}
+
+@fragment
+fn fragmentMain(@location(0) fragColor: vec3<f32>) -> @location(0) vec4<f32> {
+  return vec4<f32>(fragColor, 1.0);
+}
 `;
 
-const vs = `\
+const vs = /* glsl */ `\
 #version 300 es
 
 in vec2 position;
@@ -29,30 +49,10 @@ void main() {
 }
 `;
 
-// export const vs_wgsl = /* WGSL */`\
-// struct VertexOutput {
-// @builtin(position) Position : vec4<f32>;
-// @location(0) fragColor : vec3<f32>;
-// };
-
-// @vertex
-// fn main(@location(0) position : vec2<f32>, @location(1) color : vec3<f32>) -> VertexOutput {
-//   var output : VertexOutput;
-//   output.Position = uniforms.modelViewProjectionMatrix * position;
-//   output.fragColor = color;
-//   return output;
-// }
-// `;
-
-// export const fs_wgsl = /* WGSL */`\
-// @fragment
-// fn main(@location(0) fragColor: vec3<f32>) -> @location(0) vec4<f32> {
-//   return vec4<f32>(fragColor, 1.0);
-// }
-// `;
-
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
-  static info = INFO_HTML;
+  static info = `
+Have to start somewhere...
+`;
 
   model: Model;
   interleavedBuffer: Buffer;
@@ -75,6 +75,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     this.model = new Model(device, {
       id: 'triangle',
+      source,
       vs,
       fs,
       bufferLayout: [

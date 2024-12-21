@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {NumberArray4, TypedArray} from '@math.gl/types';
+import type {NumberArray4, TypedArray} from '@math.gl/types';
 import type {Device} from '../device';
 import type {RenderPassParameters} from '../types/parameters';
 // import {Binding} from '../types/shader-layout';
@@ -23,11 +23,11 @@ export type RenderPassProps = ResourceProps & {
 
   /** Clear value for color attachment, or false to preserve the previous value */
   clearColor?: NumberArray4 | TypedArray | false;
-  /** Experimental: Clear values for multiple color attachments */
+  /** Experimental: Clear color values for multiple color attachments. Must specify typed arrays. props.clearColor will be ignored. */
   clearColors?: (TypedArray | false)[];
-  /** Clear value for depth attachment (usually `1`), or false to preserve the previous value */
+  /** Clear value for depth attachment (true === `1`), or false to preserve the previous value. Must be between 0.0 (near) and 1.0 (far), inclusive. */
   clearDepth?: number | false;
-  /** Clear value for stencil attachment (usually `0`), or false to preserve the previous value */
+  /** Clear value for stencil attachment (true === `0`), or false to preserve the previous value. Converted to the type and number of LSBs as the number of bits in the stencil aspect */
   clearStencil?: number | false;
 
   /** Indicates that the depth component is read only. */
@@ -57,30 +57,19 @@ export type RenderPassProps = ResourceProps & {
  * - a couple of mutable parameters ()
  */
 export abstract class RenderPass extends Resource<RenderPassProps> {
-  /** Default properties for RenderPass */
-  static override defaultProps: Required<RenderPassProps> = {
-    ...Resource.defaultProps,
-    framebuffer: null,
-    parameters: undefined!,
-    clearColor: false,
-    clearColors: undefined!,
-    clearDepth: false,
-    clearStencil: false,
-    depthReadOnly: false,
-    stencilReadOnly: false,
-    discard: false,
-
-    occlusionQuerySet: undefined!,
-    timestampQuerySet: undefined!,
-    beginTimestampIndex: undefined!,
-    endTimestampIndex: undefined!
-  };
+  /** TODO - should be [0, 0, 0, 0], update once deck.gl tests run clean */
+  static defaultClearColor: [number, number, number, number] = [0, 0, 0, 1];
+  /** Depth 1.0 represents the far plance */
+  static defaultClearDepth = 1;
+  /** Clears all stencil bits */
+  static defaultClearStencil = 0;
 
   override get [Symbol.toStringTag](): string {
     return 'RenderPass';
   }
 
   constructor(device: Device, props: RenderPassProps) {
+    props = RenderPass.normalizeProps(device, props);
     super(device, props, RenderPass.defaultProps);
   }
 
@@ -104,16 +93,39 @@ export abstract class RenderPass extends Resource<RenderPassProps> {
   /** Marks a point in a stream of commands with a label */
   abstract insertDebugMarker(markerLabel: string): void;
 
-  // In WebGPU the following methods are on the renderpass instead of the renderpipeline
-  // luma.gl keeps them on the pipeline for now.
-  // TODO - Can we align WebGL implementation with WebGPU API?
+  protected static normalizeProps(device: Device, props: RenderPassProps): RenderPassProps {
+    return props;
+  }
 
-  // abstract setPipeline(pipeline: RenderPipeline): void {}
-  // abstract setIndexBuffer()
-  // abstract setVertexBuffer(slot: number, buffer: Buffer, offset: number): void;
-  // abstract setBindings(bindings: Record<string, Binding>): void;
-  // abstract setParameters(parameters: RenderPassParameters);
-  // abstract draw(options: {
-  // abstract drawIndirect(indirectBuffer: GPUBuffer, indirectOffset: number): void;
-  // abstract drawIndexedIndirect(indirectBuffer: GPUBuffer, indirectOffset: number): void;
+  /** Default properties for RenderPass */
+  static override defaultProps: Required<RenderPassProps> = {
+    ...Resource.defaultProps,
+    framebuffer: null,
+    parameters: undefined!,
+    clearColor: RenderPass.defaultClearColor,
+    clearColors: undefined!,
+    clearDepth: RenderPass.defaultClearDepth,
+    clearStencil: RenderPass.defaultClearStencil,
+    depthReadOnly: false,
+    stencilReadOnly: false,
+    discard: false,
+
+    occlusionQuerySet: undefined!,
+    timestampQuerySet: undefined!,
+    beginTimestampIndex: undefined!,
+    endTimestampIndex: undefined!
+  };
 }
+
+// TODO - Can we align WebGL implementation with WebGPU API?
+// In WebGPU the following methods are on the renderpass instead of the renderpipeline
+// luma.gl keeps them on the pipeline for now, but that has some issues.
+
+// abstract setPipeline(pipeline: RenderPipeline): void {}
+// abstract setIndexBuffer()
+// abstract setVertexBuffer(slot: number, buffer: Buffer, offset: number): void;
+// abstract setBindings(bindings: Record<string, Binding>): void;
+// abstract setParameters(parameters: RenderPassParameters);
+// abstract draw(options: {
+// abstract drawIndirect(indirectBuffer: GPUBuffer, indirectOffset: number): void;
+// abstract drawIndexedIndirect(indirectBuffer: GPUBuffer, indirectOffset: number): void;

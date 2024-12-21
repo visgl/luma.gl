@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {ShaderAttributeType, ShaderLayout, log} from '@luma.gl/core';
+import {AttributeShaderType, ShaderLayout, log} from '@luma.gl/core';
 import {WgslReflect} from 'wgsl_reflect';
 
 /**
@@ -33,10 +33,28 @@ export function getShaderLayoutFromWGSL(source: string): ShaderLayout {
     shaderLayout.bindings.push({
       type: 'uniform',
       name: uniform.name,
-      location: uniform.binding,
-      // @ts-expect-error
       group: uniform.group,
+      location: uniform.binding,
+      // @ts-expect-error TODO - unused for now but needs fixing
       members
+    });
+  }
+
+  for (const texture of parsedWGSL.textures) {
+    shaderLayout.bindings.push({
+      type: 'texture',
+      name: texture.name,
+      group: texture.group,
+      location: texture.binding
+    });
+  }
+
+  for (const sampler of parsedWGSL.samplers) {
+    shaderLayout.bindings.push({
+      type: 'sampler',
+      name: sampler.name,
+      group: sampler.group,
+      location: sampler.binding
     });
   }
 
@@ -62,7 +80,7 @@ export function getShaderLayoutFromWGSL(source: string): ShaderLayout {
 }
 
 /** Get a valid shader attribute type string from a wgsl-reflect type */
-function getType(type: any): ShaderAttributeType {
+function getType(type: any): AttributeShaderType {
   return type.format ? `${type.name}<${type.format.name}>` : type.name;
 }
 

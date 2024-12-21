@@ -17,54 +17,23 @@ import type {
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
 import {lighting} from '../lights/lighting';
 
-import {vs} from './pbr-vertex-glsl';
-import {fs} from './pbr-fragment-glsl';
-
-export type PBRMaterialProps = PBRMaterialBindings & {
-  unlit?: boolean;
-
-  // Base color map
-  baseColorMapEnabled?: boolean;
-  baseColorFactor?: Readonly<Vector4 | NumberArray4>;
-
-  normalMapEnabled?: boolean;
-  normalScale?: number; // #ifdef HAS_NORMALMAP
-
-  emissiveMapEnabled?: boolean;
-  emissiveFactor?: Readonly<Vector3 | NumberArray3>; // #ifdef HAS_EMISSIVEMAP
-
-  metallicRoughnessValues?: Readonly<Vector2 | NumberArray2>;
-  metallicRoughnessMapEnabled?: boolean;
-
-  occlusionMapEnabled?: boolean;
-  occlusionStrength?: number; // #ifdef HAS_OCCLUSIONMAP
-
-  alphaCutoffEnabled?: boolean;
-  alphaCutoff?: number; // #ifdef ALPHA_CUTOFF
-
-  // IBL
-  IBLenabled?: boolean;
-  scaleIBLAmbient?: Readonly<Vector2 | NumberArray2>; // #ifdef USE_IBL
-
-  // debugging flags used for shader output of intermediate PBR variables
-  // #ifdef PBR_DEBUG
-  scaleDiffBaseMR?: Readonly<Vector4 | NumberArray4>;
-  scaleFGDSpec?: Readonly<Vector4 | NumberArray4>;
-};
+import {vs, fs} from './pbr-material-glsl';
+import {source} from './pbr-material-wgsl';
+import {pbrProjection} from './pbr-projection';
 
 /** Non-uniform block bindings for pbr module */
-type PBRMaterialBindings = {
+export type PBRMaterialBindings = {
   // Samplers
-  baseColorSampler?: Texture | null; // #ifdef HAS_BASECOLORMAP
-  normalSampler?: Texture | null; // #ifdef HAS_NORMALMAP
-  emissiveSampler?: Texture | null; // #ifdef HAS_EMISSIVEMAP
-  metallicRoughnessSampler?: Texture | null; // #ifdef HAS_METALROUGHNESSMAP
-  occlusionSampler?: Texture | null; // #ifdef HAS_OCCLUSIONMAP
+  pbr_baseColorSampler?: Texture | null; // #ifdef HAS_BASECOLORMAP
+  pbr_normalSampler?: Texture | null; // #ifdef HAS_NORMALMAP
+  pbr_emissiveSampler?: Texture | null; // #ifdef HAS_EMISSIVEMAP
+  pbr_metallicRoughnessSampler?: Texture | null; // #ifdef HAS_METALROUGHNESSMAP
+  pbr_occlusionSampler?: Texture | null; // #ifdef HAS_OCCLUSIONMAP
 
   // IBL Samplers
-  diffuseEnvSampler?: Texture | null; // #ifdef USE_IBL (samplerCube)
-  specularEnvSampler?: Texture | null; // #ifdef USE_IBL (samplerCube)
-  brdfLUT?: Texture | null; // #ifdef USE_IBL
+  pbr_diffuseEnvSampler?: Texture | null; // #ifdef USE_IBL (samplerCube)
+  pbr_specularEnvSampler?: Texture | null; // #ifdef USE_IBL (samplerCube)
+  pbr_BrdfLUT?: Texture | null; // #ifdef USE_IBL
 };
 
 export type PBRMaterialUniforms = {
@@ -99,6 +68,8 @@ export type PBRMaterialUniforms = {
   scaleFGDSpec?: Readonly<Vector4 | NumberArray4>;
 };
 
+export type PBRMaterialProps = PBRMaterialBindings & PBRMaterialUniforms;
+
 /**
  * An implementation of PBR (Physically-Based Rendering).
  * Physically Based Shading of a microfacet surface defined by a glTF material.
@@ -107,23 +78,24 @@ export const pbrMaterial = {
   props: {} as PBRMaterialProps,
   uniforms: {} as PBRMaterialUniforms,
 
-  name: 'pbr',
-  dependencies: [lighting],
+  name: 'pbrMaterial',
+  dependencies: [lighting, pbrProjection],
+  source,
   vs,
   fs,
 
   defines: {
-    LIGHTING_FRAGMENT: 1,
-    HAS_NORMALMAP: 0,
-    HAS_EMISSIVEMAP: 0,
-    HAS_OCCLUSIONMAP: 0,
-    HAS_BASECOLORMAP: 0,
-    HAS_METALROUGHNESSMAP: 0,
-    ALPHA_CUTOFF: 0,
-    USE_IBL: 0,
-    PBR_DEBUG: 0
+    LIGHTING_FRAGMENT: true,
+    HAS_NORMALMAP: false,
+    HAS_EMISSIVEMAP: false,
+    HAS_OCCLUSIONMAP: false,
+    HAS_BASECOLORMAP: false,
+    HAS_METALROUGHNESSMAP: false,
+    ALPHA_CUTOFF: false,
+    USE_IBL: false,
+    PBR_DEBUG: false
   },
-
+  getUniforms: props => props,
   uniformTypes: {
     // Material is unlit
     unlit: 'i32',
