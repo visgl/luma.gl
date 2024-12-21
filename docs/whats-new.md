@@ -4,7 +4,7 @@
 
 ## Version 9.2 (In Development)
 
-Target Date: Q4, 2024
+Target Date: Q2, 2025
 
 Production quality WebGPU backend
 
@@ -41,15 +41,15 @@ Production quality WebGPU backend
 
 ## Version 9.1
 
-Target Date: Dec 20, 2024
+Target Date: Dec, 2024
 
-Improvements and API changes focused on enhancing WebGPU support.
+Enhanced WebGPU support.
 
 **Highlights**
 - GPU backend management is streamlined via the new `Adapter` API.
 - GPU connection to HTML DOM (via `canvas` elements) improved via `CanvasContext` API changes.
 - `Texture`s are now immutable, however a new `AsyncTexture` class offers a higher-level, mutable texture API.
-- `ShaderModule` type safety improvements (uniform types etc)
+- `ShaderModule` type safety improvements (shader uniforms can now be strictly typed in JavaScript)
 
 **@luma.gl/core**
 
