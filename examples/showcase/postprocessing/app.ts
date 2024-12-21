@@ -2,9 +2,15 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {AnimationLoopTemplate, AnimationProps, GroupNode} from '@luma.gl/engine';
+import {
+  AnimationLoopTemplate,
+  AnimationProps,
+  GroupNode,
+  AsyncTexture,
+  loadImageBitmap,
+  ShaderPassRenderer
+} from '@luma.gl/engine';
 import {Device} from '@luma.gl/core';
-import {AsyncTexture, loadImageBitmap, ShaderPassRenderer} from '@luma.gl/engine';
 import * as shaderModules from '@luma.gl/shadertools';
 import {ShaderPass} from '@luma.gl/shadertools';
 
@@ -34,7 +40,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     super();
 
     this.device = device;
-    this.imageTexture = new AsyncTexture(device, {data: loadImageBitmap('./image.jpg'), flipY: true});  
+    this.imageTexture = new AsyncTexture(device, {
+      data: loadImageBitmap('./image.jpg'),
+      flipY: true
+    });
 
     this.shaderPassMap = getShaderPasses();
     this.setShaderPasses([]);
@@ -42,7 +51,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const NO_EFFECT = 'No effect';
     const shaderPassNames = [NO_EFFECT, ...Object.keys(this.shaderPassMap)];
     this.selector = createSelector(document.body, shaderPassNames, passName => {
-      const shaderPasses: ShaderPass[] = this.shaderPassMap[passName] ? [this.shaderPassMap[passName]] : [];
+      const shaderPasses: ShaderPass[] = this.shaderPassMap[passName]
+        ? [this.shaderPassMap[passName]]
+        : [];
       this.setShaderPasses(shaderPasses);
     });
   }
@@ -53,13 +64,13 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
   onRender({device}: AnimationProps): void {
     // Run the shader passes and generate an output texture
-    const outputTexture = this.shaderPassRenderer.renderToScreen({
+    /* const outputTexture = */ this.shaderPassRenderer.renderToScreen({
       sourceTexture: this.imageTexture
     });
   }
 
   setShaderPasses(shaderPasses: ShaderPass[]) {
-    //this.shaderPasses = shaderPasses;
+    // this.shaderPasses = shaderPasses;
     this.shaderPassRenderer?.destroy();
     this.shaderPassRenderer = new ShaderPassRenderer(this.device, {
       shaderPasses
@@ -85,15 +96,15 @@ function createSelector(
   array: string[],
   onChange: (key: string) => void
 ): HTMLSelectElement {
-  //Create and append select list
-  var selectList = document.createElement('select') as HTMLSelectElement;
+  // Create and append select list
+  const selectList = document.createElement('select');
   selectList.id = 'selector';
   parent.appendChild(selectList);
   selectList.style.cssText = 'position: absolute; top: 0; right: 0; margin: 20px; z-index: 1000;';
 
-  //Create and append the options
+  // Create and append the options
   for (const key of array) {
-    var option = document.createElement('option');
+    const option = document.createElement('option');
     option.value = key;
     option.text = key;
     option.id = key;

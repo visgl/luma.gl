@@ -132,8 +132,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     const textureData = createNoiseTextureData(TEXTURE_DIMENSIONS);
 
-    // console.log('SETTING DATA', textureData);
-
     this.texture3d = device.createTexture({
       dimension: '3d',
       width: TEXTURE_DIMENSIONS,
@@ -147,11 +145,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       }
     });
 
-    // @ts-expect-error TODO - remove when republished
     this.texture3d.copyImageData({data: textureData});
 
-    const pixels = device.readPixelsToArrayWebGL(this.texture3d);
-    console.log('GETTING DATA', pixels);
+    // Debug to see what was actually set
+    // const pixels = device.readPixelsToArrayWebGL(this.texture3d);
+    // console.log('GETTING DATA', pixels);
 
     this.cloud = new Model(device, {
       source,
@@ -174,7 +172,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         blendColorOperation: 'add',
         blendAlphaOperation: 'add',
         blendColorSrcFactor: 'one',
-        // @ts-expect-error TODO - remove when republished
         blendColorDstFactor: 'one-minus-src',
         blendAlphaSrcFactor: 'one',
         blendAlphaDstFactor: 'one-minus-src-alpha'

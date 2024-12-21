@@ -5,7 +5,7 @@
 import {Buffer} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine';
 
-export const source = /* wgsl */`\
+export const source = /* wgsl */ `\
 struct VertexOutput {
   @builtin(position) Position : vec4<f32>,
   @location(0) fragColor : vec3<f32>

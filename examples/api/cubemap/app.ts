@@ -241,7 +241,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 Uses a luma.gl <code>TextureCube</code> to simulate a reflective surface
 `;
 
-
   cube: RoomCube;
   prism: Prism;
 

@@ -289,7 +289,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 <p>
   Uses multiple luma.gl <code>Framebuffer</code>s to hold previously rendered data between frames.
 </p>
-`;;
+`;
 
   // A single uniform store that manages uniforms for all our shaders
   uniformStore = new UniformStore<{

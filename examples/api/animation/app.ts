@@ -11,7 +11,6 @@ import {
 import {dirlight} from '@luma.gl/shadertools';
 import {Matrix4, radians} from '@math.gl/core';
 
-
 // Ensure repeatable rendertests
 const random = makeRandomGenerator();
 

@@ -57,7 +57,7 @@ void main() {
   gl_Position = vec4(position + instanceOffset, 0.0, 1.0);
 }
 `;
-      
+
 const fs = /* glsl */ `\
 #version 300 es
 out vec4 fragColor;
@@ -65,7 +65,6 @@ void main() {
   fragColor = vec4(color_getColor(), 1.0);
 }
 `;
-
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   model: Model;

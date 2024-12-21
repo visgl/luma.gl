@@ -11,7 +11,7 @@ const testDir = join(packageRoot, 'test');
 const config = {
 
   lint: {
-    paths: ['modules', 'test'], // 'docs', 'examples'], module resolution errors
+    paths: ['modules', 'docs', 'test', 'examples'],
     extensions: ['js', 'ts', 'jsx', 'tsx']
   },
 

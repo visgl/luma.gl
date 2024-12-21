@@ -137,7 +137,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   <a href="https://github.com/WebGLSamples/WebGL2Samples/blob/master/samples/transform_feedback_instanced.html">
     WebGL2Samples
   </a>
-`;;
+`;
 
   // Geometry of each object (a triangle)
   positionBuffer: Buffer;
@@ -246,7 +246,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   override onRender({device, width, height, time}: AnimationProps): void {
-    this.transform.model.shaderInputs.setProps({app: {time: time}});
+    this.transform.model.shaderInputs.setProps({app: {time}});
     this.transform.run({
       inputBuffers: {
         oldPositions: this.instancePositionBuffers.current,

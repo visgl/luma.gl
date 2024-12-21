@@ -4,8 +4,14 @@
 
 import {NumberArray} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
-import {AnimationLoopTemplate, Model, CubeGeometry} from '@luma.gl/engine';
-import {ShaderInputs, loadImageBitmap, AsyncTexture} from '@luma.gl/engine';
+import {
+  AnimationLoopTemplate,
+  Model,
+  CubeGeometry,
+  ShaderInputs,
+  loadImageBitmap,
+  AsyncTexture
+} from '@luma.gl/engine';
 import {phongMaterial, lighting, ShaderModule} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
 
@@ -147,7 +153,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 <p>
 Drawing a phong-shaded cube
 </p>
-`;;
+`;
 
   model: Model;
 

@@ -5,7 +5,13 @@
 import type {NumberArray, VariableShaderType} from '@luma.gl/core';
 import {Texture, UniformStore} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
-import {AnimationLoopTemplate, Model, CubeGeometry, loadImageBitmap, AsyncTexture} from '@luma.gl/engine';
+import {
+  AnimationLoopTemplate,
+  Model,
+  CubeGeometry,
+  loadImageBitmap,
+  AsyncTexture
+} from '@luma.gl/engine';
 import {Matrix4} from '@math.gl/core';
 
 export const title = 'Rotating Cube';
@@ -114,7 +120,7 @@ Drawing a textured cube
 <p>
 Rendered using the luma.gl <code>Model</code>, <code>CubeGeometry</code> and <code>AnimationLoop</code> classes.
 </p>
-`;;
+`;
 
   mvpMatrix = new Matrix4();
   viewMatrix = new Matrix4().lookAt({eye: eyePosition});
@@ -150,7 +156,7 @@ Rendered using the luma.gl <code>Model</code>, <code>CubeGeometry</code> and <co
       },
       parameters: {
         depthWriteEnabled: true,
-        depthCompare: 'less-equal',
+        depthCompare: 'less-equal'
       }
     });
   }
@@ -171,7 +177,7 @@ Rendered using the luma.gl <code>Model</code>, <code>CubeGeometry</code> and <co
       app: {mvpMatrix: this.mvpMatrix}
     });
 
-    const framebuffer = device.getDefaultCanvasContext().getCurrentFramebuffer();
+    // const framebuffer = device.getDefaultCanvasContext().getCurrentFramebuffer();
     const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1], clearDepth: 1});
     this.model.draw(renderPass);
     renderPass.end();

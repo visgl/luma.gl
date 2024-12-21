@@ -79,7 +79,7 @@ vec3 color_hsv2rgb(vec3 hsv) {
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = `
 Re-using shader code with shader modules
-`;;
+`;
 
   model1: Model;
   shaderInputs1 = new ShaderInputs<{color: ColorModuleProps}>({color});

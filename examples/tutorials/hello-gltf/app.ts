@@ -1,9 +1,8 @@
-import {AnimationLoopTemplate, AnimationProps, GroupNode} from '@luma.gl/engine';
+import {AnimationLoopTemplate, AnimationProps, GroupNode, ModelNode} from '@luma.gl/engine';
 import {Device} from '@luma.gl/core';
 import {load} from '@loaders.gl/core';
 import {LightingProps} from '@luma.gl/shadertools';
 import {createScenegraphsFromGLTF} from '@luma.gl/gltf';
-import {ModelNode} from '@luma.gl/engine';
 import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
 import {Matrix4} from '@math.gl/core';
 

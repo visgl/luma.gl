@@ -1,0 +1,1 @@
+/* ocular lint version used breaks if no JS files in the docs folder */
