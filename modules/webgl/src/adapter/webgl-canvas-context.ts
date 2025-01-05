@@ -15,7 +15,6 @@ export class WebGLCanvasContext extends CanvasContext {
   readonly format: TextureFormat = 'rgba8unorm';
   readonly depthStencilFormat: TextureFormat = 'depth24plus';
 
-  presentationSize: [number, number];
   private _framebuffer: WEBGLFramebuffer | null = null;
 
   get [Symbol.toStringTag](): string {
@@ -26,7 +25,8 @@ export class WebGLCanvasContext extends CanvasContext {
     // Note: Base class creates / looks up the canvas (unless under Node.js)
     super(props);
     this.device = device;
-    this.presentationSize = [-1, -1];
+    this.width = -1;
+    this.height = -1;
     this._setAutoCreatedCanvasId(`${this.device.id}-canvas`);
     this.update();
   }
@@ -40,12 +40,18 @@ export class WebGLCanvasContext extends CanvasContext {
 
   /** Resizes and updates render targets if necessary */
   update() {
-    const size = this.getPixelSize();
-    const sizeChanged =
-      size[0] !== this.presentationSize[0] || size[1] !== this.presentationSize[1];
+    const oldWidth = this.width;
+    const oldHeight = this.height;
+    const [newWidth, newHeight] = this.getPixelSize();
+
+    const sizeChanged = newWidth !== oldWidth || newHeight !== oldHeight;
     if (sizeChanged) {
-      this.presentationSize = size;
-      this.resize();
+      this.width = newWidth;
+      this.height = newHeight;
+
+      if (this.props.autoResize) {
+        this.resize();
+      }
     }
   }
 
@@ -61,7 +67,9 @@ export class WebGLCanvasContext extends CanvasContext {
    *  canvas CSS width * devicePixelRatio x canvas CSS height * devicePixelRatio
    * See http://webgl2fundamentals.org/webgl/lessons/webgl-resizing-the-canvas.html
    */
-  resize(options?: {width?: number; height?: number; useDevicePixels?: boolean | number}): void {
+  resize(
+    options: {width?: number; height?: number; useDevicePixels?: boolean | number} = this.props
+  ): void {
     if (!this.device.gl) return;
 
     // Resize browser context .

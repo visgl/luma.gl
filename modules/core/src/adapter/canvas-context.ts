@@ -119,7 +119,7 @@ export abstract class CanvasContext {
     }
 
     // React to size changes
-    if (this.canvas instanceof HTMLCanvasElement && props.autoResize) {
+    if (this.canvas instanceof HTMLCanvasElement) {
       this.resizeObserver = new ResizeObserver(entries => {
         for (const entry of entries) {
           if (entry.target === this.canvas) {
