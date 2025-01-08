@@ -4,6 +4,10 @@
 
 Theme: Improved WebGPU support
 
+### v9.1.0-beta.13
+
+- feat(engine): Option to disable warnings in ShaderInputs (#2301)
+
 ### v9.1.0-beta.12
 
 - fix(webgl): Fix webglAdapter.attach() (#2299)

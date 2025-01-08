@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/webgl",
-  "version": "9.1.0-beta.12",
+  "version": "9.1.0-beta.13",
   "description": "WebGL2 adapter for the luma.gl core API",
   "type": "module",
   "license": "MIT",
@@ -43,7 +43,7 @@
     "@luma.gl/core": "^9.1.0-alpha.1"
   },
   "dependencies": {
-    "@luma.gl/constants": "9.1.0-beta.12",
+    "@luma.gl/constants": "9.1.0-beta.13",
     "@math.gl/types": "^4.1.0",
     "@probe.gl/env": "^4.0.8"
   },
