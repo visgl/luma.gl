@@ -90,9 +90,11 @@ export class ShaderInputs<
       const moduleName = name as keyof ShaderPropsT;
       const moduleProps = props[moduleName] || {};
       const module = this.modules[moduleName];
-      if (!module && !this.options.disableWarnings) {
+      if (!module) {
         // Ignore props for unregistered modules
-        log.warn(`Module ${name} not found`)();
+        if (!this.options.disableWarnings) {
+          log.warn(`Module ${name} not found`)();
+        }
         continue; // eslint-disable-line no-continue
       }
 
