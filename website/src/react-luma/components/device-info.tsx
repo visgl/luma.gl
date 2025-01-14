@@ -14,13 +14,21 @@ function getFeature(device: Device, feature: string): string {
 }
 
 function getFormat(device: Device, format: TextureFormat): string {
-  const isSupported = device && device.isTextureFormatSupported(format);
-  return device ? isSupported ? '✅' : '❌' : 'N/A';
+  try {
+    const isSupported = device && device.isTextureFormatSupported(format);
+    return device ? isSupported ? '✅' : '❌' : 'N/A';
+  } catch {
+    return '❌';
+  }
 }
 
 function getFiltering(device: Device, format: TextureFormat): string {
-  const isSupported = device && device.isTextureFormatSupported(format) && device.isTextureFormatFilterable(format);
-  return device ? isSupported ? '✅' : '❌' : 'N/A';
+  try {
+    const isSupported = device && device.isTextureFormatSupported(format) && device.isTextureFormatFilterable(format);
+    return device ? isSupported ? '✅' : '❌' : 'N/A';
+  } catch {
+    return '❌';
+  }
 }
 
 /** DeviceInfo field */
@@ -54,8 +62,12 @@ export const Filter = ({f}) => {
 export const Render = ({f}) => {
   const device = useStore(state => state.device);
   const format = f as TextureFormat;
-  const isSupported = device && device.isTextureFormatSupported(format) && device.isTextureFormatRenderable(format);
-  return device ? isSupported ? '✅' : '❌' : 'N/A';
+  try {
+    const isSupported = device && device.isTextureFormatSupported(format) && device.isTextureFormatRenderable(format);
+    return device ? isSupported ? '✅' : '❌' : 'N/A';
+  } catch {
+    return '❌';
+  }
 }
 
 // WebGL
