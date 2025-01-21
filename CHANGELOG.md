@@ -4,6 +4,10 @@
 
 Theme: Improved WebGPU support
 
+### v9.1.0
+
+- See [whats new](https://luma.gl/docs/whats-new#version-91)
+
 ### v9.1.0-beta.16
 
 - fix(engine): ShaderInputs ignore props with disableWarnings (#2314)
