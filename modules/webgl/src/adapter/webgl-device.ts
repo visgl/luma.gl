@@ -183,6 +183,7 @@ export class WebGLDevice extends Device {
 
     // Instrument context
     (this.gl as any).device = this; // Update GL context: Link webgl context back to device
+    // TODO - remove, this is only used to detect debug contexts.
     (this.gl as any)._version = 2; // Update GL context: Store WebGL version field on gl context (HACK to identify debug contexts)
 
     // initialize luma Device fields
@@ -218,10 +219,18 @@ export class WebGLDevice extends Device {
   }
 
   /**
-   * Destroys the context
-   * @note Has no effect for WebGL browser contexts, there is no browser API for destroying contexts
+   * Destroys the device 
+   * 
+   * @note "detaches" from the WebGL context,
+   * implying that another WebGLDevice could now attach to it.
+   * 
+   * @note The underlying WebGL context is not immediately destroyed, but may be destroyed later 
+   * through normal JavaScript garbage collection. This is a fundamental limitation as WebGL 
+   * since WebGL does not offer any browser API for destroying WeGL contexts.
    */
-  destroy(): void {}
+  destroy(): void {
+    delete (this.gl as any).device;
+  }
 
   get isLost(): boolean {
     return this.gl.isContextLost();
