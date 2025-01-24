@@ -219,13 +219,13 @@ export class WebGLDevice extends Device {
   }
 
   /**
-   * Destroys the device 
-   * 
+   * Destroys the device
+   *
    * @note "detaches" from the WebGL context,
    * implying that another WebGLDevice could now attach to it.
-   * 
-   * @note The underlying WebGL context is not immediately destroyed, but may be destroyed later 
-   * through normal JavaScript garbage collection. This is a fundamental limitation as WebGL 
+   *
+   * @note The underlying WebGL context is not immediately destroyed, but may be destroyed later
+   * through normal JavaScript garbage collection. This is a fundamental limitation as WebGL
    * since WebGL does not offer any browser API for destroying WeGL contexts.
    */
   destroy(): void {
