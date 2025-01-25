@@ -259,6 +259,8 @@ export type DeviceProps = {
 
   // EXPERIMENTAL SETTINGS - subject to change
 
+  /** adapter.create() returns the existing Device if the provided canvas' WebGL context is already associated with a Device.  */
+  _reuseDevices?: boolean;
   /** WebGPU specific - Request a Device with the highest limits supported by platform. On WebGPU devices can be created with minimal limits. */
   _requestMaxLimits?: boolean;
   /** Disable specific features */
@@ -333,6 +335,7 @@ export abstract class Device {
     debugSpectorJSUrl: undefined!,
 
     // Experimental
+    _reuseDevices: false,
     _requestMaxLimits: true,
     _cacheShaders: false,
     _cachePipelines: false,

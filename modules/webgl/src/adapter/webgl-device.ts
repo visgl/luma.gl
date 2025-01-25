@@ -121,7 +121,7 @@ export class WebGLDevice extends Device {
     }
     const canvasContextProps = props.createCanvasContext === true ? {} : props.createCanvasContext;
 
-    // If attaching to an already attached context, return the attached device
+    // Check if the WebGL context is already associated with a device
     // @ts-expect-error device is attached to context
     let device: WebGLDevice | undefined = canvasContextProps.canvas?.gl?.device;
     if (device) {
