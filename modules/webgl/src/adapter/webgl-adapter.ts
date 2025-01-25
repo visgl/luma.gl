@@ -103,14 +103,15 @@ export class WebGLAdapter extends Adapter {
     let device: WebGLDevice | undefined = canvasContextProps.canvas?.gl?.device;
     if (device) {
       if (props._reuseDevices) {
-        log.log(1, 
+        log.log(
+          1,
           `webgl2adapter.create() - Returning existing Device ${device.id} already attached to WebGL context`,
           device
         )();
         return device;
-      } 
+      }
     }
-    
+
     device = new WebGLDevice(props);
 
     // Log some debug info about the newly created context

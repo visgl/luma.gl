@@ -221,15 +221,23 @@ export class WebGLDevice extends Device {
   /**
    * Destroys the device
    *
-   * @note "detaches" from the WebGL context,
-   * implying that another WebGLDevice could now attach to it.
+   * @note "Detaches" from the WebGL context unless _reuseDevices is true.
    *
-   * @note The underlying WebGL context is not immediately destroyed, but may be destroyed later
-   * through normal JavaScript garbage collection. This is a fundamental limitation as WebGL
-   * since WebGL does not offer any browser API for destroying WeGL contexts.
+   * @note The underlying WebGL context is not immediately destroyed,
+   * but may be destroyed later through normal JavaScript garbage collection.
+   * This is a fundamental limitation since WebGL does not offer any
+   * browser API for destroying WebGL contexts.
    */
   destroy(): void {
-    delete (this.gl as any).device;
+    // Note that deck.gl depends on being able to create a Device against
+    // the same WebGL context multiple times and getting the same device back.
+    // Since deck is not aware of this sharing, it may call destroy()
+    // multiple times on the same device.
+    // Therefore we must do nothing in destroy() if _reuseDevices is true
+    // unless we e.g. implement reference counting.
+    if (!this.props._reuseDevices) {
+      delete (this.gl as any).device;
+    }
   }
 
   get isLost(): boolean {
