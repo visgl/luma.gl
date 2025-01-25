@@ -115,13 +115,16 @@ export class WebGLDevice extends Device {
   constructor(props: DeviceProps) {
     super({...props, id: props.id || uid('webgl-device')});
 
+    const canvasContextProps = Device._getCanvasContextProps(props)!;
+
     // WebGL requires a canvas to be created before creating the context
-    if (!props.createCanvasContext) {
+    if (!canvasContextProps) {
       throw new Error('WebGLDevice requires props.createCanvasContext to be set');
     }
-    const canvasContextProps = props.createCanvasContext === true ? {} : props.createCanvasContext;
 
     // Check if the WebGL context is already associated with a device
+    // Note that this can be avoided in webgl2adapter.create() if
+    // DeviceProps._reuseDevices is set.
     // @ts-expect-error device is attached to context
     let device: WebGLDevice | undefined = canvasContextProps.canvas?.gl?.device;
     if (device) {
@@ -235,9 +238,9 @@ export class WebGLDevice extends Device {
     // multiple times on the same device.
     // Therefore we must do nothing in destroy() if _reuseDevices is true
     // unless we e.g. implement reference counting.
-    if (!this.props._reuseDevices) {
-      delete (this.gl as any).device;
-    }
+    // if (!this.props._reuseDevices) {
+    //   delete (this.gl as any).device;
+    // }
   }
 
   get isLost(): boolean {

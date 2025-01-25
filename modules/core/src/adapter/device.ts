@@ -641,6 +641,11 @@ export abstract class Device {
 
   // IMPLEMENTATION
 
+  /** Helper to get the canvas context props */
+  protected static _getCanvasContextProps(props: DeviceProps): CanvasContextProps | undefined {
+    return props.createCanvasContext === true ? {} : props.createCanvasContext;
+  }
+
   protected _getDeviceTextureFormatCapabilities(
     format: TextureFormat
   ): DeviceTextureFormatCapabilities {
