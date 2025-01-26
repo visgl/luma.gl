@@ -375,6 +375,8 @@ export abstract class Device {
   /** An abstract timestamp used for change tracking */
   timestamp: number = 0;
 
+  /** True if this device has been reused during device creation (app has multiple references) */
+  _reused: boolean = false;
   /** Used by other luma.gl modules to store data on the device */
   _lumaData: {[key: string]: unknown} = {};
 

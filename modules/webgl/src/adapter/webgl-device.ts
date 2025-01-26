@@ -170,9 +170,20 @@ export class WebGLDevice extends Device {
       throw new Error('WebGL context creation failed');
     }
 
-    // @ts-expect-error device is attached to context
+    // Note that the browser will only create one WebGL context per canvas.
+    // This means that a newly created gl context may already have a device attached to it.
+    // @ts-expect-error luma.gl stores a device reference on the context.
     device = gl.device;
     if (device) {
+      if (props._reuseDevices) {
+        log.log(
+          1,
+          `Not creating a new Device, instead returning a reference to Device ${device.id} already attached to WebGL context`,
+          device
+        )();
+        device._reused = true;
+        return device;
+      }
       throw new Error(`WebGL context already attached to device ${device.id}`);
     }
 
@@ -232,15 +243,15 @@ export class WebGLDevice extends Device {
    * browser API for destroying WebGL contexts.
    */
   destroy(): void {
-    // Note that deck.gl depends on being able to create a Device against
-    // the same WebGL context multiple times and getting the same device back.
-    // Since deck is not aware of this sharing, it may call destroy()
-    // multiple times on the same device.
-    // Therefore we must do nothing in destroy() if _reuseDevices is true
-    // unless we e.g. implement reference counting.
-    // if (!this.props._reuseDevices) {
-    //   delete (this.gl as any).device;
-    // }
+    // Note that deck.gl (especially in React strict mode) depends on being able
+    // to asynchronously create a Device against the same canvas (i.e. WebGL context)
+    // multiple times and getting the same device back. Since deck.gl is not aware
+    // of this sharing, it might call destroy() multiple times on the same device.
+    // Therefore we must do nothing in destroy() if props._reuseDevices is true
+    if (!this.props._reuseDevices && !this._reused) {
+      // Delete the reference to the device that we store on the WebGL context
+      delete (this.gl as any).device;
+    }
   }
 
   get isLost(): boolean {
