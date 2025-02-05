@@ -73,24 +73,25 @@ export class WebGLDevice extends Device {
   /** type of this device */
   readonly type = 'webgl';
 
+  // Use the ! assertion to handle the case where _reuseDevices causes the constructor to return early
   /** The underlying WebGL context */
-  readonly handle: WebGL2RenderingContext;
-  features: WebGLDeviceFeatures;
-  limits: WebGLDeviceLimits;
-  readonly info: DeviceInfo;
-  readonly canvasContext: WebGLCanvasContext;
+  readonly handle!: WebGL2RenderingContext;
+  features!: WebGLDeviceFeatures;
+  limits!: WebGLDeviceLimits;
+  readonly info!: DeviceInfo;
+  readonly canvasContext!: WebGLCanvasContext;
 
   readonly preferredColorFormat = 'rgba8unorm';
   readonly preferredDepthFormat = 'depth24plus';
 
-  commandEncoder: WEBGLCommandEncoder;
+  commandEncoder!: WEBGLCommandEncoder;
 
   readonly lost: Promise<{reason: 'destroyed'; message: string}>;
 
   private _resolveContextLost?: (value: {reason: 'destroyed'; message: string}) => void;
 
   /** WebGL2 context. */
-  readonly gl: WebGL2RenderingContext;
+  readonly gl!: WebGL2RenderingContext;
   readonly debug: boolean = false;
 
   /** Store constants */
@@ -102,7 +103,7 @@ export class WebGLDevice extends Device {
   _polyfilled: boolean = false;
 
   /** Instance of Spector.js (if initialized) */
-  spectorJS: Spector | null;
+  spectorJS!: Spector | null;
 
   //
   // Public API
