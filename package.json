@@ -46,7 +46,6 @@
     "eslint-plugin-tree-shaking": "^1.9.2",
     "nyc": "^15.1.0",
     "pre-commit": "^1.2.2",
-    "pre-push": "^0.1.1",
     "puppeteer": "^22.0.0"
   },
   "resolutions": {
