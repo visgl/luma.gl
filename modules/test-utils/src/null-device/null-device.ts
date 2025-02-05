@@ -57,7 +57,7 @@ export class NullDevice extends Device {
   constructor(props: DeviceProps) {
     super({...props, id: props.id || 'null-device'});
 
-    const canvasContextProps = props.createCanvasContext === true ? {} : props.createCanvasContext;
+    const canvasContextProps = Device._getCanvasContextProps(props);
     this.canvasContext = new NullCanvasContext(this, canvasContextProps);
     this.lost = new Promise(resolve => {});
     this.canvasContext.resize();
