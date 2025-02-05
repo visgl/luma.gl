@@ -7943,7 +7943,6 @@ __metadata:
     eslint-plugin-tree-shaking: "npm:^1.9.2"
     nyc: "npm:^15.1.0"
     pre-commit: "npm:^1.2.2"
-    pre-push: "npm:^0.1.1"
     puppeteer: "npm:^22.0.0"
   languageName: unknown
   linkType: soft
@@ -9501,17 +9500,6 @@ __metadata:
     spawn-sync: "npm:^1.0.15"
     which: "npm:1.2.x"
   checksum: 10c0/879e57445ce6ce821f1e5eaf7c2f449912ca337b431c4fbd4d167cbf8d5040de87930db4c2ca583e1c4abcb525f53b220d9b0686dc3b548d7563067a7a8ad5bb
-  languageName: node
-  linkType: hard
-
-"pre-push@npm:^0.1.1":
-  version: 0.1.4
-  resolution: "pre-push@npm:0.1.4"
-  dependencies:
-    cross-spawn: "npm:^5.0.1"
-    spawn-sync: "npm:^1.0.15"
-    which: "npm:1.2.x"
-  checksum: 10c0/c26b433fcb7f77415aa1e7b714fdea36eb35c001b33cfbb02e5b87d70177cbbba2c9e093f0dbfdeec885e9878d281f123dd862ae9b6a3eb4684286b51a94ed7a
   languageName: node
   linkType: hard
 
