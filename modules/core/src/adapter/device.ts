@@ -259,6 +259,8 @@ export type DeviceProps = {
 
   // EXPERIMENTAL SETTINGS - subject to change
 
+  /** adapter.create() returns the existing Device if the provided canvas' WebGL context is already associated with a Device.  */
+  _reuseDevices?: boolean;
   /** WebGPU specific - Request a Device with the highest limits supported by platform. On WebGPU devices can be created with minimal limits. */
   _requestMaxLimits?: boolean;
   /** Disable specific features */
@@ -333,6 +335,7 @@ export abstract class Device {
     debugSpectorJSUrl: undefined!,
 
     // Experimental
+    _reuseDevices: false,
     _requestMaxLimits: true,
     _cacheShaders: false,
     _cachePipelines: false,
@@ -372,6 +375,8 @@ export abstract class Device {
   /** An abstract timestamp used for change tracking */
   timestamp: number = 0;
 
+  /** True if this device has been reused during device creation (app has multiple references) */
+  _reused: boolean = false;
   /** Used by other luma.gl modules to store data on the device */
   _lumaData: {[key: string]: unknown} = {};
 
@@ -637,6 +642,11 @@ export abstract class Device {
   }
 
   // IMPLEMENTATION
+
+  /** Helper to get the canvas context props */
+  static _getCanvasContextProps(props: DeviceProps): CanvasContextProps | undefined {
+    return props.createCanvasContext === true ? {} : props.createCanvasContext;
+  }
 
   protected _getDeviceTextureFormatCapabilities(
     format: TextureFormat

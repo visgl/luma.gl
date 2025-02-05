@@ -73,24 +73,25 @@ export class WebGLDevice extends Device {
   /** type of this device */
   readonly type = 'webgl';
 
+  // Use the ! assertion to handle the case where _reuseDevices causes the constructor to return early
   /** The underlying WebGL context */
-  readonly handle: WebGL2RenderingContext;
-  features: WebGLDeviceFeatures;
-  limits: WebGLDeviceLimits;
-  readonly info: DeviceInfo;
-  readonly canvasContext: WebGLCanvasContext;
+  readonly handle!: WebGL2RenderingContext;
+  features!: WebGLDeviceFeatures;
+  limits!: WebGLDeviceLimits;
+  readonly info!: DeviceInfo;
+  readonly canvasContext!: WebGLCanvasContext;
 
   readonly preferredColorFormat = 'rgba8unorm';
   readonly preferredDepthFormat = 'depth24plus';
 
-  commandEncoder: WEBGLCommandEncoder;
+  commandEncoder!: WEBGLCommandEncoder;
 
   readonly lost: Promise<{reason: 'destroyed'; message: string}>;
 
   private _resolveContextLost?: (value: {reason: 'destroyed'; message: string}) => void;
 
   /** WebGL2 context. */
-  readonly gl: WebGL2RenderingContext;
+  readonly gl!: WebGL2RenderingContext;
   readonly debug: boolean = false;
 
   /** Store constants */
@@ -102,7 +103,7 @@ export class WebGLDevice extends Device {
   _polyfilled: boolean = false;
 
   /** Instance of Spector.js (if initialized) */
-  spectorJS: Spector | null;
+  spectorJS!: Spector | null;
 
   //
   // Public API
@@ -115,13 +116,16 @@ export class WebGLDevice extends Device {
   constructor(props: DeviceProps) {
     super({...props, id: props.id || uid('webgl-device')});
 
+    const canvasContextProps = Device._getCanvasContextProps(props)!;
+
     // WebGL requires a canvas to be created before creating the context
-    if (!props.createCanvasContext) {
+    if (!canvasContextProps) {
       throw new Error('WebGLDevice requires props.createCanvasContext to be set');
     }
-    const canvasContextProps = props.createCanvasContext === true ? {} : props.createCanvasContext;
 
-    // If attaching to an already attached context, return the attached device
+    // Check if the WebGL context is already associated with a device
+    // Note that this can be avoided in webgl2adapter.create() if
+    // DeviceProps._reuseDevices is set.
     // @ts-expect-error device is attached to context
     let device: WebGLDevice | undefined = canvasContextProps.canvas?.gl?.device;
     if (device) {
@@ -167,9 +171,20 @@ export class WebGLDevice extends Device {
       throw new Error('WebGL context creation failed');
     }
 
-    // @ts-expect-error device is attached to context
+    // Note that the browser will only create one WebGL context per canvas.
+    // This means that a newly created gl context may already have a device attached to it.
+    // @ts-expect-error luma.gl stores a device reference on the context.
     device = gl.device;
     if (device) {
+      if (props._reuseDevices) {
+        log.log(
+          1,
+          `Not creating a new Device, instead returning a reference to Device ${device.id} already attached to WebGL context`,
+          device
+        )();
+        device._reused = true;
+        return device;
+      }
       throw new Error(`WebGL context already attached to device ${device.id}`);
     }
 
@@ -183,6 +198,7 @@ export class WebGLDevice extends Device {
 
     // Instrument context
     (this.gl as any).device = this; // Update GL context: Link webgl context back to device
+    // TODO - remove, this is only used to detect debug contexts.
     (this.gl as any)._version = 2; // Update GL context: Store WebGL version field on gl context (HACK to identify debug contexts)
 
     // initialize luma Device fields
@@ -218,10 +234,26 @@ export class WebGLDevice extends Device {
   }
 
   /**
-   * Destroys the context
-   * @note Has no effect for WebGL browser contexts, there is no browser API for destroying contexts
+   * Destroys the device
+   *
+   * @note "Detaches" from the WebGL context unless _reuseDevices is true.
+   *
+   * @note The underlying WebGL context is not immediately destroyed,
+   * but may be destroyed later through normal JavaScript garbage collection.
+   * This is a fundamental limitation since WebGL does not offer any
+   * browser API for destroying WebGL contexts.
    */
-  destroy(): void {}
+  destroy(): void {
+    // Note that deck.gl (especially in React strict mode) depends on being able
+    // to asynchronously create a Device against the same canvas (i.e. WebGL context)
+    // multiple times and getting the same device back. Since deck.gl is not aware
+    // of this sharing, it might call destroy() multiple times on the same device.
+    // Therefore we must do nothing in destroy() if props._reuseDevices is true
+    if (!this.props._reuseDevices && !this._reused) {
+      // Delete the reference to the device that we store on the WebGL context
+      delete (this.gl as any).device;
+    }
+  }
 
   get isLost(): boolean {
     return this.gl.isContextLost();
