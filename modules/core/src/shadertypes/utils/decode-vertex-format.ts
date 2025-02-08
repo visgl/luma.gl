@@ -55,7 +55,7 @@ export function makeVertexFormat(
     // TODO - Special cases for WebGL (not supported on WebGPU), overrides the check below
     case 'unorm8':
       if (components === 1) {
-        return 'unorm8-webgl';
+        return 'unorm8';
       }
       if (components === 3) {
         return 'unorm8x3-webgl';
