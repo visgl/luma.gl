@@ -45,6 +45,8 @@ export type WebGPUColorTextureFormat =
   | 'r8sint'
 
   // 16-bit formats
+  | 'r16unorm' // feature: 'chromium-experimental-snorm16-texture-formats' chrome://flags/#enable-unsafe-webgpu 'r16unorm', 'rg16unorm', 'rgba16unorm',
+  | 'r16snorm' // feature: 'chromium-experimental-unorm16-texture-formats' chrome://flags/#enable-unsafe-webgpu 'r16snorm', 'rg16snorm',  'rgba16snorm'.
   | 'r16uint'
   | 'r16sint'
   | 'r16float'
@@ -54,6 +56,8 @@ export type WebGPUColorTextureFormat =
   | 'rg8sint'
 
   // 32-bit formats
+  | 'rg16unorm' // feature: 'chromium-experimental-snorm16-texture-formats' chrome://flags/#enable-unsafe-webgpu 'r16unorm', 'rg16unorm', 'rgba16unorm',
+  | 'rg16snorm' // feature: 'chromium-experimental-unorm16-texture-formats' chrome://flags/#enable-unsafe-webgpu 'r16snorm', 'rg16snorm',  'rgba16snorm'.
   | 'r32uint'
   | 'r32sint'
   | 'r32float'
@@ -74,6 +78,8 @@ export type WebGPUColorTextureFormat =
   | 'rg11b10ufloat'
 
   // 64-bit formats
+  | 'rgba16unorm' // feature: 'chromium-experimental-snorm16-texture-formats' chrome://flags/#enable-unsafe-webgpu 'r16unorm', 'rg16unorm', 'rgba16unorm',
+  | 'rgba16snorm' // feature: 'chromium-experimental-unorm16-texture-formats' chrome://flags/#enable-unsafe-webgpu 'r16snorm', 'rg16snorm',  'rgba16snorm'.
   | 'rg32uint'
   | 'rg32sint'
   | 'rg32float'
@@ -151,20 +157,14 @@ export type CompressedTextureFormat =
 
 /** Sized formats in WebGL 2 that are not (yet?) supported by WebGPU */
 export type WebGL2ColorTextureFormat =
-  | 'r16unorm-webgl'
-  | 'r16snorm-webgl'
   | 'rgba4unorm-webgl'
   | 'rgb565unorm-webgl'
   | 'rgb5a1unorm-webgl'
   | 'rgb8unorm-webgl'
   | 'rgb8snorm-webgl'
-  | 'rg16unorm-webgl'
-  | 'rg16snorm-webgl'
   | 'rgb10a2uint'
   | 'rgb16unorm-webgl'
   | 'rgb16snorm-webgl'
-  | 'rgba16unorm-webgl'
-  | 'rgba16snorm-webgl'
   | 'rgb32float-webgl'
   | 'bc1-rgb-unorm-webgl'
   | 'bc1-rgb-unorm-srgb-webgl'
@@ -196,6 +196,11 @@ export type TextureFeature =
   | 'snorm16-renderable-webgl'
   | 'float32-filterable'
   | 'float16-filterable-webgl';
+
+/** Chrome-specific extensions. Expected to eventually become standard features. */
+export type ChromeExperimentalTextureFeature =
+  | 'chromium-experimental-unorm16-texture-formats' // 'r16unorm', 'rg16unorm', 'rgba16unorm'
+  | 'chromium-experimental-snorm16-texture-formats'; // 'r16snorm', 'rg16snorm', 'rgba16snorm'
 
 /** Information about the structure of a texture format */
 export type TextureFormatInfo = {

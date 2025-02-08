@@ -74,11 +74,11 @@ const TEXTURE_FORMAT_TABLE: Readonly<Record<TextureFormat, TextureFormatDefiniti
   'rg8uint': {},
   'rg8sint': {},
 
+  'r16unorm': {f: norm16_renderable},
+  'r16snorm': {f: snorm16_renderable},
   'r16uint': {},
   'r16sint': {},
   'r16float': {render: float16_renderable, filter: 'float16-filterable-webgl'},
-  'r16unorm-webgl': {f: norm16_renderable},
-  'r16snorm-webgl': {f: snorm16_renderable},
 
   // Packed 16-bit formats
   'rgba4unorm-webgl': {channels: 'rgba', bitsPerChannel: [4, 4, 4, 4], packed: true},
@@ -100,11 +100,11 @@ const TEXTURE_FORMAT_TABLE: Readonly<Record<TextureFormat, TextureFormatDefiniti
   'bgra8unorm': {},
   'bgra8unorm-srgb': {},
 
+  'rg16unorm': {render: norm16_renderable},
+  'rg16snorm': {render: snorm16_renderable},
   'rg16uint': {},
   'rg16sint': {},
   'rg16float': {render: float16_renderable, filter: float16_filterable},
-  'rg16unorm-webgl': {render: norm16_renderable},
-  'rg16snorm-webgl': {render: snorm16_renderable},
 
   'r32uint': {},
   'r32sint': {},
@@ -124,11 +124,11 @@ const TEXTURE_FORMAT_TABLE: Readonly<Record<TextureFormat, TextureFormatDefiniti
   'rg32uint': {},
   'rg32sint': {},
   'rg32float': {render: false, filter: float32_filterable},
+  'rgba16unorm': {render: norm16_renderable},
+  'rgba16snorm': {render: snorm16_renderable},
   'rgba16uint': {},
   'rgba16sint': {},
   'rgba16float': {render: float16_renderable, filter: float16_filterable},
-  'rgba16unorm-webgl': {render: norm16_renderable},
-  'rgba16snorm-webgl': {render: snorm16_renderable},
 
   // 96-bit formats (deprecated!)
   'rgb32float-webgl': {render: float32_renderable, filter: float32_filterable},

@@ -112,8 +112,8 @@ export const WEBGL_TEXTURE_FORMATS: Record<TextureFormat, WebGLFormatInfo> = {
   'r16uint': {gl: GL.R16UI, rb: true},
   'r16sint': {gl: GL.R16I, rb: true},
   'r16float': {gl: GL.R16F, rb: true},
-  'r16unorm-webgl': {gl: GL.R16_EXT, rb: true},
-  'r16snorm-webgl': {gl: GL.R16_SNORM_EXT},
+  'r16unorm': {gl: GL.R16_EXT, rb: true},
+  'r16snorm': {gl: GL.R16_SNORM_EXT},
 
   // Packed 16-bit formats
   'rgba4unorm-webgl': {gl: GL.RGBA4, rb: true},
@@ -137,8 +137,8 @@ export const WEBGL_TEXTURE_FORMATS: Record<TextureFormat, WebGLFormatInfo> = {
   'rg16uint': {gl: GL.RG16UI},
   'rg16sint': {gl: GL.RG16I},
   'rg16float': {gl: GL.RG16F, rb: true},
-  'rg16unorm-webgl': {gl: GL.RG16_EXT},
-  'rg16snorm-webgl': {gl: GL.RG16_SNORM_EXT},
+  'rg16unorm': {gl: GL.RG16_EXT},
+  'rg16snorm': {gl: GL.RG16_SNORM_EXT},
 
   'r32uint': {gl: GL.R32UI, rb: true},
   'r32sint': {gl: GL.R32I, rb: true},
@@ -161,8 +161,8 @@ export const WEBGL_TEXTURE_FORMATS: Record<TextureFormat, WebGLFormatInfo> = {
   'rgba16uint': {gl: GL.RGBA16UI, rb: true},
   'rgba16sint': {gl: GL.RGBA16I, rb: true},
   'rgba16float': {gl: GL.RGBA16F},
-  'rgba16unorm-webgl': {gl: GL.RGBA16_EXT, rb: true},
-  'rgba16snorm-webgl': {gl: GL.RGBA16_SNORM_EXT},
+  'rgba16unorm': {gl: GL.RGBA16_EXT, rb: true},
+  'rgba16snorm': {gl: GL.RGBA16_SNORM_EXT},
 
   // 96-bit formats (deprecated!)
   'rgb32float-webgl': {gl: GL.RGB32F, x: EXT_color_buffer_float, dataFormat: GL.RGB, types: [GL.FLOAT]},

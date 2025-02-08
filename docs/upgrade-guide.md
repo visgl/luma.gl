@@ -22,7 +22,7 @@ v9.2 brings full WebGPU support. Some additional deprecations and breaking chang
 **Removal of WebGL uniform support**
 - The transition from uniforms to uniform buffers is complete, and remaining support for non-buffer uniforms has been removed.
 - `core`: `Renderpipeline.setUniformsWebGL()` dropped, use uniform buffer bindings
-- `engine`: `Model.setUniformsWebGL()` dropped, use uniform buffer bindings
+- `engine`: `Model.setUniformsWebGL()` deprecated, use uniform buffer bindings
 - `shadertools`: WebGL1 shader modules have been removed, use the new modules uniform buffer-based counterparts.
 
 **`CanvasContext` simplifications**

@@ -146,7 +146,12 @@ export class DeviceFeatures {
 export type DeviceFeature =
   | WebGPUDeviceFeature
   | WebGLDeviceFeature
-  | WebGLCompressedTextureFeatures;
+  | WebGLCompressedTextureFeatures
+  // | ChromeExperimentalFeatures
+  ;
+
+/** Chrome-specific extensions. Expected to eventually become standard features. */
+// export type ChromeExperimentalFeatures = ;
 
 export type WebGPUDeviceFeature =
   | 'depth-clip-control'
@@ -244,7 +249,7 @@ export type DeviceProps = {
 
   /** Turn on implementation defined checks that slow down execution but help break where errors occur */
   debug?: boolean;
-  /** Show shader source in browser? The default is`'error'`, meaning that logs are shown when shader compilation has errors */
+  /** Show shader source in browser? The default is `'error'`, meaning that logs are shown when shader compilation has errors */
   debugShaders?: 'never' | 'errors' | 'warnings' | 'always';
   /** Renders a small version of updated Framebuffers into the primary canvas context. Can be set in console luma.log.set('debug-framebuffers', true) */
   debugFramebuffers?: boolean;
