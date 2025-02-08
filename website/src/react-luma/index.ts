@@ -11,6 +11,7 @@ export {
   Info,
   Limit,
   Feature,
+  VFormat,
   Format,
   Filter,
   Render,

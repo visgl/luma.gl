@@ -48,10 +48,9 @@ export function getVertexFormatFromGL(type: GLDataType, components: 1 | 2 | 3 | 
   const base = getVertexTypeFromGL(type);
   // prettier-ignore
   switch (components) {
-    // @ts-expect-error TODO deal with lack of formats
     case 1: return base;
     case 2: return `${base}x2`;
-    // @ts-expect-error TODO deal with lack of formats
+    // @ts-expect-error - deal with lack of "unaligned" formats
     case 3: return `${base}x3`;
     case 4: return `${base}x4`;
   }

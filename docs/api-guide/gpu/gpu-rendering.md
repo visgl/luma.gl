@@ -1,4 +1,4 @@
-# How Rendering Works
+# How GPU Rendering Works
 
 :::info
 Note that the luma.gl documentation includes a series of tutorials that explain how to render with the luma.gl API.

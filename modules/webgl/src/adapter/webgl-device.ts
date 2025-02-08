@@ -29,7 +29,8 @@ import type {
   CommandEncoderProps,
   TransformFeedbackProps,
   QuerySetProps,
-  Resource
+  Resource,
+  VertexFormat
 } from '@luma.gl/core';
 import {Device, CanvasContext, log} from '@luma.gl/core';
 import type {GLExtensions} from '@luma.gl/constants';
@@ -111,6 +112,15 @@ export class WebGLDevice extends Device {
 
   override toString(): string {
     return `${this[Symbol.toStringTag]}(${this.id})`;
+  }
+
+  override isVertexFormatSupported(format: VertexFormat): boolean {
+    switch (format) {
+      case 'unorm8x4-bgra':
+        return false;
+      default:
+        return true;
+    }
   }
 
   constructor(props: DeviceProps) {

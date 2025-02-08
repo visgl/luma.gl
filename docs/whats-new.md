@@ -1,6 +1,6 @@
 # What's New
 
-*This page contains news for recent luma.gl releases. For older releases (through v8.5) refer to the  [Legacy What's New](/docs/legacy/legacy-upgrade-guide) page.*
+_This page contains news for recent luma.gl releases. For older releases (through v8.5) refer to the [Legacy What's New](/docs/legacy/legacy-upgrade-guide) page._
 
 ## Version 9.2 (In Development)
 
@@ -9,14 +9,21 @@ Target Date: Q2, 2025
 Production quality WebGPU backend
 
 **General**
+
+- All luma.gl examples now run under both WebGPU and WebGL
+- API updates to cover [new Chrome WebGPU features](https://developer.chrome.com/docs/web-platform/webgpu/news)
 - TypeScript v5.6, all `"strict"` TypeScript options are now applied to all luma.gl modules.
 - Website tooling upgrades
-- All examples run on WebGPU
 - Documentation improvements (TBD)
 - Improved GitHub issue templates
 
 **@luma.gl/core**
 
+- New [Vertex Formats](/docs/api-reference/core/vertex-formats) (added in Chrome v133 and v119)
+  - Single component 8 and 16 bit formats are now supported by WebGPU: `'uint8'`, `'sint8'`, `'unorm8'`, `'snorm8'`, `'uint16'`, `'sint16'`, `'unorm16'`, `'snorm16'`, and `'float16'`.
+  - Note: 3 component formats are still missing in WebGPU. 
+  - `'unorm8x4-bgra'` - WebGPU only. Simplifies working with BGRA data.
+  - `'unorm10-10-10-2` - Exposed since available in all WebGPU backends. Also supported by WebGL2.
 - Shader type APIs have been improved.
 - `CommandEncoder`/`CommandBuffer` API improvements
 - `Texture` class refactors complete.
@@ -38,7 +45,6 @@ Production quality WebGPU backend
 
 - glTF and PRB now supported on WebGPU (in progress)
 
-
 ## Version 9.1
 
 Target Date: Dec, 2024
@@ -46,6 +52,7 @@ Target Date: Dec, 2024
 Enhanced WebGPU support.
 
 **Highlights**
+
 - GPU backend management is streamlined via the new `Adapter` API.
 - GPU connection to HTML DOM (via `canvas` elements) improved via `CanvasContext` API changes.
 - `Texture`s are now immutable, however a new `AsyncTexture` class offers a higher-level, mutable texture API.
@@ -59,7 +66,7 @@ Enhanced WebGPU support.
 - [`luma`](/docs/api-reference/core/luma)
   - Now relies on `Adapter` instances to define which GPU backends are available.
   - Adapter can be supplied during device creation, avoiding the need for global registration of GPU backends.
-  -  `CreateDeviceProps.adapters` prop to supply list of GPU backend adapters to `luma.createDevice()`. 
+  - `CreateDeviceProps.adapters` prop to supply list of GPU backend adapters to `luma.createDevice()`.
   - [`luma.registerAdapters()`](/docs/api-reference/core/luma#lumaregisteradapters) New method for global registration of adapters (in case it still desired).
 - `Device`
   - `DeviceProps.createCanvasContext` - New prop for creating a default `CanvasContext`.
@@ -87,7 +94,7 @@ Enhanced WebGPU support.
   - Accepts a new `.adapters` prop. (Avoids need for global registration of adapters).
 - `AsyncTexture`](/docs/api-reference/engine/async-texture)
   - New class allows that applications to work withcreate textures from a Promise.
-- `ShaderPassRenderer` 
+- `ShaderPassRenderer`
   - New class that helps applications apply a `ShaderPass` list to a texture.
 
 **@luma.gl/shadertools**
@@ -100,7 +107,7 @@ Enhanced WebGPU support.
 
 **@luma.gl/webgl**
 
-- `webglAdapter` 
+- `webglAdapter`
   - New object representing the WebGL backend
   - New: adds mock WEBGL1 extensions to WebGL2 contexts for better compatibility with old WebGL libraries
   - Big texture refactor to align WebGL implementation with WebGPU APIs
@@ -137,7 +144,7 @@ The biggest change is that the core API is now portable (no longer WebGL-specifi
 luma.gl v9 drops support for WebGL 1 functionality.
 
 - **WebGL1** WebGL 1 support is dropped.
-- **GLSL 1.00** is  no longer supported. GLSL shaders need to be ported to **GLSL 3.00**.
+- **GLSL 1.00** is no longer supported. GLSL shaders need to be ported to **GLSL 3.00**.
 - **headless-gl** The Node.js WebGL 1 integration is no longer supported
 
 On the upside this means that all features requiring WebGL 2 are now available and luma.gl also brings support for a range of new WebGL 2 extensions, see more below.
@@ -185,33 +192,36 @@ On the upside this means that all features requiring WebGL 2 are now available a
 - New `CompilerMessage` type and `formatCompilerLog` function for portable shader log handling.
 - Shader assembly now supports WGSL and single shader source (compute or single vertex+fragment WGSL shaders)
 
-**`@luma.gl/webgl`** 
+**`@luma.gl/webgl`**
 
 - The new bindings API now supports WebGL 2 Uniform Buffers.
 
-WebGL 2 Extension support: WebGL is not dead yet! Browsers (Chrome in particular) 
-are actively developing "extensions" for WebGL 2, 
-and luma.gl is exposing support for many of the new WebGL extensions through the 
+WebGL 2 Extension support: WebGL is not dead yet! Browsers (Chrome in particular)
+are actively developing "extensions" for WebGL 2,
+and luma.gl is exposing support for many of the new WebGL extensions through the
 [`DeviceFeatures`](/docs/api-reference/core/device-features) API.
 
 New `Device.features` that improve application performance in WebGL:
-- `compilation-status-async-webgl`: Asynchronous shader compilation and linking is used automatically by luma.gl and significantly speeds up applications that create many `RenderPipelines`. 
+
+- `compilation-status-async-webgl`: Asynchronous shader compilation and linking is used automatically by luma.gl and significantly speeds up applications that create many `RenderPipelines`.
 
 New `Device.features` that enable additional color format support in WebGL:
+
 - `rgb9e5ufloat-renderable-webgl`: `rgb9e5ufloat` is renderable.
 - `snorm8-renderable-webgl`: `r,rg,rgba8snorm` are renderable.
-- `norm16-renderable-webgl`: `r,rg,rgba16norm` are renderable. 
+- `norm16-renderable-webgl`: `r,rg,rgba16norm` are renderable.
 - `snorm16-renderable-webgl`: `r,rg,rgba16snorm` are renderable.
 
 New `Device.features` that expose new GPU parameters in WebGL:
+
 - `depth-clip-control`: `parameters.unclippedDepth` - depth clipping can now be disabled.
-- `provoking-vertex-webgl`: `parameters.provokingVertex` - controls which primitive vertex is used for flat shading. 
+- `provoking-vertex-webgl`: `parameters.provokingVertex` - controls which primitive vertex is used for flat shading.
 - `polygon-mode-webgl`: `parameters.polygonMode` - enables wire frame rendering of polygons.
-- `polygon-mode-webgl`: `parameters.polygonOffsetLine` - enables depth bias (polygon offset) for lines. 
+- `polygon-mode-webgl`: `parameters.polygonOffsetLine` - enables depth bias (polygon offset) for lines.
 - `shader-clip-cull-distance-webgl`: `parameters.clipCullDistance0-7`, also see GLSL effects below.
 
 New `Device.features` that enable new GLSL syntax
+
 - `shader-noperspective-interpolation-webgl`: GLSL vertex outputs and fragment inputs may be declared with a `noperspective` interpolation qualifier.
 - `shader-conservative-depth-webgl`: GLSL `gl_FragDepth` qualifiers `depth_any` `depth_greater` `depth_less` `depth_unchanged` can enable early depth test optimizations.
 - `shader-clip-cull-distance-webgl`: Enables `gl_ClipDistance[] / gl_CullDistance[]`.
-
