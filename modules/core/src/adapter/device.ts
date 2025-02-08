@@ -166,7 +166,7 @@ export type WebGPUDeviceFeature =
   | 'float32-blendable' // Is the float32 format blendable?
   | 'clip-distances'
   | 'dual-source-blending'
-  | 'subgroups'
+  | 'subgroups';
 // | 'depth-clamping' // removed from the WebGPU spec...
 // | 'pipeline-statistics-query' // removed from the WebGPU spec...
 

@@ -21,7 +21,6 @@ export type VertexFormat =
   | 'sint8x2'
   | 'sint8x4'
   | 'unorm8' // Chrome 133+
-  | 'unorm8'
   | 'unorm8x2'
   | 'unorm8x3-webgl' // Not in WebGPU
   | 'unorm8x4'
@@ -29,7 +28,6 @@ export type VertexFormat =
   | 'unorm10-10-10-2' // Chrome 119+
   // | 'snorm-10-10-10-2' // Not in WebGPU, DXD12 doesn't support
   | 'snorm8' // Chrome 133+
-  | 'snorm8'
   | 'snorm8x2'
   | 'snorm8x3-webgl'
   | 'snorm8x4'
