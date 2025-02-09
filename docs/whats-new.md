@@ -17,20 +17,12 @@ Production quality WebGPU backend
 
 **@luma.gl/core**
 
-<<<<<<< Updated upstream
-=======
-- New [Vertex Formats](/docs/api-reference/core/vertex-formats) (added in Chrome v133 and v119)
-  - Single component 8 and 16 bit formats are now supported by WebGPU: `'uint8'`, `'sint8'`, `'unorm8'`, `'snorm8'`, `'uint16'`, `'sint16'`, `'unorm16'`, `'snorm16'`, and `'float16'`.
-  - Note: 3 component formats are still missing in WebGPU. 
-  - `'unorm8x4-bgra'` - WebGPU only. Simplifies working with BGRA data.
-  - `'unorm10-10-10-2`
 - New [Texture Formats](/docs/api-reference/core/texture-formats) (added in Chrome 132, currently require setting chrome://flags/#enable-unsafe-webgpu)
   - `'r16unorm'`, `'rg16unorm'`, `'rgba16unorm'` (feature `'chromium-experimental-unorm16-texture-formats'`)
   - `'r16snorm'`, `'rg16snorm'`, `'rgba16snorm'` (feature `'chromium-experimental-snorm16-texture-formats'`)
->>>>>>> Stashed changes
 - Shader type APIs have been improved.
-- `CommandEncoder`/`CommandBuffer` API improvements
 - `Texture` class refactors complete.
+- `CommandEncoder`/`CommandBuffer` API improvements
 - `CanvasContext` API simplifications (see upgrade guide).
 
 **@luma.gl/engine**
