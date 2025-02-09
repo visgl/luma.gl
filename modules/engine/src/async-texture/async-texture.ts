@@ -212,7 +212,7 @@ export class AsyncTexture {
           this._setTexture1DData(this.texture, data as Texture1DData);
           break;
         case '2d':
-          this._setTexture2DData(data as Texture2DData);
+          this._setTexture2DData(data);
           break;
         case '3d':
           this._setTexture3DData(this.texture, data as Texture3DData);
@@ -308,8 +308,8 @@ export class AsyncTexture {
       return this.device.getExternalImageSize(data);
     }
     if (data && typeof data === 'object' && data.constructor === Object) {
-      const textureDataArray = Object.values(data) as Texture2DData[];
-      const untypedData = textureDataArray[0] as any;
+      const textureDataArray = Object.values(data);
+      const untypedData = textureDataArray[0];
       return {width: untypedData.width, height: untypedData.height};
     }
     throw new Error('texture size deduction failed');

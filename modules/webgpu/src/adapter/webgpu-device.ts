@@ -71,6 +71,14 @@ export class WebGPUDevice extends Device {
   /* The underlying WebGPU adapter's info */
   readonly adapterInfo: GPUAdapterInfo;
 
+  override get [Symbol.toStringTag](): string {
+    return 'WebGPUDevice';
+  }
+
+  override toString(): string {
+    return `WebGPUDevice(${this.id})`;
+  }
+
   constructor(
     props: DeviceProps,
     device: GPUDevice,
@@ -196,7 +204,7 @@ export class WebGPUDevice extends Device {
     this.handle.queue.submit([commandBuffer.handle]);
     this.handle.popErrorScope().then((error: GPUError | null) => {
       if (error) {
-        this.reportError(new Error(`WebGPU command submission failed: ${error.message}`))();
+        this.reportError(new Error(`${this} command submission: ${error.message}`))();
         this.debug();
       }
     });

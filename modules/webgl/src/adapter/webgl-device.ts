@@ -109,6 +109,10 @@ export class WebGLDevice extends Device {
   // Public API
   //
 
+  override get [Symbol.toStringTag](): string {
+    return 'WebGLDevice';
+  }
+
   override toString(): string {
     return `${this[Symbol.toStringTag]}(${this.id})`;
   }

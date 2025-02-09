@@ -43,7 +43,7 @@ export class WebGPUCommandEncoder extends CommandEncoder {
     });
     this.device.handle.popErrorScope().then((error: GPUError | null) => {
       if (error) {
-        const message = `WebGPU command encoding failed: ${error.message}. Maybe add depthWriteEnabled to your Model?`;
+        const message = `${this} command encoding: ${error.message}. Maybe add depthWriteEnabled to your Model?`;
         this.device.reportError(new Error(message), this)();
         this.device.debug();
       }
