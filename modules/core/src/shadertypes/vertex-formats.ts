@@ -4,27 +4,38 @@
 
 import {NormalizedDataType} from './data-types';
 
+/*
+ */
 /**
  * Describes the **memory format** and interpretation (normalization) of a buffer that will be supplied to vertex attributes
  * @note Must be compatible with the AttributeShaderType of the shaders, see documentation.
- * @note This is a superset of WebGPU vertex formats to allow foe some flexibility for WebGL only applications
+ * @note This is a superset of WebGPU vertex formats to allow for some flexibility for WebGL only applications
  * @todo Add device.isTextureFormatSupported() method?
  */
 export type VertexFormat =
   // 8 bit integers, note that only 16 bit aligned formats are supported in WebGPU (x2 and x4)
+  | 'uint8' // Chrome 133+
   | 'uint8x2'
   | 'uint8x4'
+  | 'sint8' // Chrome 133+
   | 'sint8x2'
   | 'sint8x4'
-  | 'unorm8-webgl'
+  | 'unorm8' // Chrome 133+
   | 'unorm8x2'
-  | 'unorm8x3-webgl'
+  | 'unorm8x3-webgl' // Not in WebGPU
   | 'unorm8x4'
-  | 'snorm8-webgl'
+  | 'unorm8x4-bgra' // Chrome 133+
+  | 'unorm10-10-10-2' // Chrome 119+
+  // | 'snorm-10-10-10-2' // Not in WebGPU, DXD12 doesn't support
+  | 'snorm8' // Chrome 133+
   | 'snorm8x2'
   | 'snorm8x3-webgl'
   | 'snorm8x4'
-  // 16 bit integers, note that only 32 bit aligned formats are supported in WebGPU (x2 and x4)
+  // 16 bit integers, that only 32 bit aligned formats are supported in WebGPU (x2 and x4)
+  | 'uint16' // Chrome 133+
+  | 'sint16' // Chrome 133+
+  | 'unorm16' // Chrome 133+
+  | 'snorm16' // Chrome 133+
   | 'uint16x2'
   | 'uint16x4'
   | 'sint16x2'
@@ -52,6 +63,7 @@ export type VertexFormat =
   // | 'snorm32x3'
   // | 'snorm32x4'
   // floats
+  | 'float16' // Chrome 133+
   | 'float16x2'
   | 'float16x4'
   | 'float32'
@@ -72,6 +84,8 @@ export type VertexFormatInfo = {
   signed: boolean;
   /** Is this a normalized format? */
   normalized: boolean;
+  /** Is this a bgra format? */
+  bgra?: boolean;
   /** Is this a webgl only format? */
   webglOnly?: boolean;
 };

@@ -14,6 +14,9 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 
 v9.2 brings full WebGPU support. Some additional deprecations and breaking changes have been necessary, but apart from the `Texture` -> `AsyncTexture` split, impact on most applications should be minimal. 
 
+**New VertexFormats**
+- `VertexFormat` Replace `'unorm8-webgl'` with `'unorm8'`.
+
 **Texture and AsyncTexture**
 - The `Texture` class has been simplified to the minimum API required for GPU portability. The  `AsyncTexture` texture class provides a higher-level API and is recommended for most applications.
 - `device.createTexture()` no longer accepts `props.data`: Use `AsyncTexture` or call `texture.setImageData()`
