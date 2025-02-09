@@ -92,11 +92,8 @@ export class WebGPUDevice extends Device {
       // TODO is this the right way to make sure the error is an Error instance?
       const errorMessage =
         event instanceof GPUUncapturedErrorEvent ? event.error.message : 'Unknown WebGPU error';
-      this.reportError(new Error(errorMessage));
-      if (this.props.debug) {
-        // eslint-disable-next-line no-debugger
-        debugger;
-      }
+      this.reportError(new Error(errorMessage))();
+      this.debug();
     });
 
     // "Context" loss handling
@@ -199,7 +196,8 @@ export class WebGPUDevice extends Device {
     this.handle.queue.submit([commandBuffer.handle]);
     this.handle.popErrorScope().then((error: GPUError | null) => {
       if (error) {
-        this.reportError(new Error(`WebGPU command submission failed: ${error.message}`));
+        this.reportError(new Error(`WebGPU command submission failed: ${error.message}`))();
+        this.debug();
       }
     });
   }

@@ -68,7 +68,13 @@ export class WebGPURenderPass extends RenderPass {
 
   setPipeline(pipeline: RenderPipeline): void {
     this.pipeline = pipeline as WebGPURenderPipeline;
+    this.device.handle.pushErrorScope('validation');
     this.handle.setPipeline(this.pipeline.handle);
+    this.device.handle.popErrorScope().then((error: GPUError | null) => {
+      if (error) {
+        log.error(`${this} setPipeline failed:\n"${error.message}"`, this)();
+      }
+    });
   }
 
   /** Sets an array of bindings (uniform buffers, samplers, textures, ...) */

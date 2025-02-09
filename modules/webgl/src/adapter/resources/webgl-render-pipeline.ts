@@ -344,7 +344,8 @@ export class WEBGLRenderPipeline extends RenderPipeline {
         }
 
         const linkErrorLog = this.device.gl.getProgramInfoLog(this.handle);
-        this.device.reportError(new Error(`${errorType} during ${status}: ${linkErrorLog}`));
+        this.device.reportError(new Error(`${errorType} during ${status}: ${linkErrorLog}`))();
+        this.device.debug();
     }
   }
 

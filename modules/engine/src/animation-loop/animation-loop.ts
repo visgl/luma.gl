@@ -118,15 +118,27 @@ export class AnimationLoop {
     this._error = Error();
     const canvas = this.device?.getDefaultCanvasContext().canvas;
     if (canvas instanceof HTMLCanvasElement) {
-      const errorDiv = document.createElement('h1');
+      canvas.style.overflow = 'visible';
+      let errorDiv = document.getElementById('animation-loop-error');
+      errorDiv?.remove();
+      errorDiv = document.createElement('h1');
+      errorDiv.id = 'animation-loop-error';
       errorDiv.innerHTML = error.message;
       errorDiv.style.position = 'absolute';
-      errorDiv.style.top = '20%'; // left: 50%; transform: translate(-50%, -50%);';
+      errorDiv.style.top = '10px'; // left: 50%; transform: translate(-50%, -50%);';
       errorDiv.style.left = '10px';
       errorDiv.style.color = 'black';
       errorDiv.style.backgroundColor = 'red';
-      document.body.appendChild(errorDiv);
+      canvas.parentElement?.appendChild(errorDiv);
       // canvas.style.position = 'absolute';
+    }
+  }
+
+  clearError(): void {
+    this._error = null;
+    const errorDiv = document.getElementById('animation-loop-error');
+    if (errorDiv) {
+      errorDiv.remove();
     }
   }
 

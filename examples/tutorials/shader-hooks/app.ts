@@ -69,8 +69,13 @@ Modifying shader behavior with shader hooks
     }
   });
 
-  constructor({device}: AnimationProps) {
+  constructor({device, animationLoop}: AnimationProps) {
     super();
+
+    if (device.type !== 'webgl') {
+      animationLoop.setError(new Error('This demo is only implemented for WebGL2'));
+      return;
+    }
 
     const shaderAssembler = ShaderAssembler.getDefaultShaderAssembler();
     shaderAssembler.addShaderHook('vs:OFFSET_POSITION(inout vec4 position)');

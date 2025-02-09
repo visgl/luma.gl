@@ -93,7 +93,6 @@ export class WebGLDevice extends Device {
 
   /** WebGL2 context. */
   readonly gl!: WebGL2RenderingContext;
-  readonly debug: boolean = false;
 
   /** Store constants */
   // @ts-ignore TODO fix
