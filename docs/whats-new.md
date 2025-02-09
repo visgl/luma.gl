@@ -9,7 +9,7 @@ Target Date: Q2, 2025
 Production quality WebGPU backend
 
 **General**
-- TypeScript v5.6, all `"strict"` TypeScript options are now applied to all luma.gl modules.
+- TypeScript v5.7, and all `"strict"` TypeScript options are now enabled.
 - Website tooling upgrades
 - All examples run on WebGPU
 - Documentation improvements (TBD)
