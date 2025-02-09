@@ -12,10 +12,8 @@ Production quality WebGPU backend
 
 - All luma.gl examples now run under both WebGPU and WebGL
 - API updates to cover [new Chrome WebGPU features](https://developer.chrome.com/docs/web-platform/webgpu/news)
-- TypeScript v5.6, all `"strict"` TypeScript options are now applied to all luma.gl modules.
-- Website tooling upgrades
-- Documentation improvements (TBD)
-- Improved GitHub issue templates
+- TypeScript v5.7, and all `"strict"` TypeScript options are now enabled.
+- Documentation improvements
 
 **@luma.gl/core**
 
