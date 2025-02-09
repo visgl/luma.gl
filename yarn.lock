@@ -7834,6 +7834,7 @@ __metadata:
     "@luma.gl/engine": "npm:9.2.0-alpha.1"
     "@luma.gl/shadertools": "npm:9.2.0-alpha.1"
     "@luma.gl/webgl": "npm:9.2.0-alpha.1"
+    "@math.gl/types": "npm:^4.1.0"
     typescript: "npm:^5.5.0"
     vite: "npm:^5.0.0"
   languageName: unknown
@@ -7932,6 +7933,7 @@ __metadata:
     "@loaders.gl/core": "npm:^4.2.0"
     "@loaders.gl/gltf": "npm:^4.2.0"
     "@loaders.gl/polyfills": "npm:^4.2.0"
+    "@math.gl/types": "npm:^4.1.0"
     "@probe.gl/bench": "npm:^4.0.8"
     "@probe.gl/stats": "npm:^4.0.8"
     "@probe.gl/stats-widget": "npm:^4.0.8"

@@ -46,12 +46,14 @@ export class WebGPUTexture extends Texture {
       });
     this.device.handle.popErrorScope().then((error: GPUError | null) => {
       if (error) {
-        this.device.reportError(new Error(`Texture validation failed: ${error.message}`), this);
+        this.device.reportError(new Error(`${this} constructor: ${error.message}`), this)();
+        this.device.debug();
       }
     });
     this.device.handle.popErrorScope().then((error: GPUError | null) => {
       if (error) {
-        this.device.reportError(new Error(`Texture out of memory: ${error.message}`), this);
+        this.device.reportError(new Error(`${this} out of memory: ${error.message}`), this)();
+        this.device.debug();
       }
     });
 
@@ -72,7 +74,8 @@ export class WebGPUTexture extends Texture {
       ...this.props,
       texture: this,
       mipLevelCount: this.mipLevels,
-      arrayLayerCount: this.depth
+      // Note: arrayLayerCount controls the view of array textures, but does not apply to 3d texture depths
+      arrayLayerCount: this.dimension !== '3d' ? this.depth : 1
     });
 
     // Set initial data
@@ -117,7 +120,8 @@ export class WebGPUTexture extends Texture {
     );
     this.device.handle.popErrorScope().then((error: GPUError | null) => {
       if (error) {
-        this.device.reportError(new Error(`copyImageData validation failed: ${error.message}`));
+        this.device.reportError(new Error(`copyImageData: ${error.message}`))();
+        this.device.debug();
       }
     });
   }
@@ -147,7 +151,8 @@ export class WebGPUTexture extends Texture {
     );
     this.device.handle.popErrorScope().then((error: GPUError | null) => {
       if (error) {
-        this.device.reportError(new Error(`copyExternalImage validation failed: ${error.message}`));
+        this.device.reportError(new Error(`copyExternalImage: ${error.message}`))();
+        this.device.debug();
       }
     });
 

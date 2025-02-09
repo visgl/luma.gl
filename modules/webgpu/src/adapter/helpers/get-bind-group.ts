@@ -41,7 +41,7 @@ export function getBindGroup(
   });
   device.popErrorScope().then((error: GPUError | null) => {
     if (error) {
-      log.error(`createBindGroup validation failed: ${error.message}`)();
+      log.error(`bindGroup creation: ${error.message}`, bindGroup)();
     }
   });
   return bindGroup;

@@ -37,12 +37,14 @@ export class WebGPUBuffer extends Buffer {
       });
     this.device.handle.popErrorScope().then((error: GPUError | null) => {
       if (error) {
-        this.device.reportError(new Error(`Buffer validation failed: ${error.message}`), this);
+        this.device.reportError(new Error(`${this} creation failed ${error.message}`), this)();
+        this.device.debug();
       }
     });
     this.device.handle.popErrorScope().then((error: GPUError | null) => {
       if (error) {
-        this.device.reportError(new Error(`Buffer out of memory: ${error.message}`), this);
+        this.device.reportError(new Error(`${this} out of memory: ${error.message}`), this)();
+        this.device.debug();
       }
     });
 

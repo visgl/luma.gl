@@ -242,7 +242,7 @@ export type DeviceProps = {
 
   // CALLBACKS
 
-  /** Error handling - uncaught errors */
+  /** Error handler. If it returns a probe logger style function, it will be called at the site of the error to optimize console error links. */
   onError?: (error: Error, context?: unknown) => unknown;
   /** Called when the size of a canvas changes */
   onResize?: (ctx: CanvasContext, info: {oldPixelSize: [number, number]}) => unknown;
@@ -325,7 +325,8 @@ export abstract class Device {
     webgl: {},
 
     // Callbacks
-    onError: (error: Error, context: unknown) => log.error(error.message, context)(),
+    // eslint-disable-next-line handle-callback-err
+    onError: (error: Error, context: unknown) => {},
     onResize: (context: CanvasContext, info: {oldPixelSize: [number, number]}) => {
       const [width, height] = context.getDevicePixelSize();
       const [prevWidth, prevHeight] = info.oldPixelSize;
@@ -363,6 +364,10 @@ export abstract class Device {
 
   get [Symbol.toStringTag](): string {
     return 'Device';
+  }
+
+  toString(): string {
+    return `Device(${this.id})`;
   }
 
   constructor(props: DeviceProps) {
@@ -507,13 +512,45 @@ export abstract class Device {
     return this.timestamp++;
   }
 
-  /** Report error (normally called for unhandled device errors) */
-  reportError(error: Error, context?: unknown): void {
+  /**
+   * Reports Device errors in a way that optimizes for developer experience / debugging.
+   * - Logs so that the console error links directly to the source code that generated the error.
+   * - Includes the object that reported the error in the log message, even if the error is asynchronous.
+   *
+   * Conventions when calling reportError():
+   * - Always call the returned function - to ensure error is logged, at the error site
+   * - Follow with a call to device.debug() - to ensure that the debugger breaks at the error site
+   *
+   * @param error - the error to report. If needed, just create a new Error object with the appropriate message.
+   * @param context - pass `this` as context, otherwise it may not be available in the debugger for async errors.
+   * @returns the logger function returned by device.props.onError() so that it can be called from the error site.
+   *
+   * @example
+   *   device.reportError(new Error(...), this)();
+   *   device.debug();
+   */
+  reportError(error: Error, context?: unknown): () => unknown {
+    // Call the error handler
+    const isHandled = this.props.onError(error, context);
+    if (!isHandled) {
+      // Note: Returns a function that must be called: `device.reportError(...)()`
+      return log.error(error.message, context);
+    }
+    return () => {};
+  }
+
+  /** Break in the debugger - if device.props.debug is true */
+  debug(): void {
     if (this.props.debug) {
       // @ts-ignore
       debugger; // eslint-disable-line
+    } else {
+      // TODO(ibgreen): Does not appear to be printed in the console
+      const message = `\
+'Type luma.log.set({debug: true}) in console to enable debug breakpoints',
+or create a device with the 'debug: true' prop.`;
+      log.once(0, message)();
     }
-    this.props.onError(error, context);
   }
 
   // Canvas context
@@ -693,7 +730,7 @@ export abstract class Device {
       props = {data: props};
     }
 
-    // TODO - fragile, as this is done before we merge with default options
+    // TODO(ibgreen) - fragile, as this is done before we merge with default options
     // inside the Buffer constructor
 
     const newProps = {...props};

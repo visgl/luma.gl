@@ -2,11 +2,61 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Buffer, NumberArray} from '@luma.gl/core';
+import {NumberArray3} from '@math.gl/types';
+import {Buffer} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, Model, ShaderInputs} from '@luma.gl/engine';
 import {ShaderModule} from '@luma.gl/shadertools';
 
 // Base vertex and fragment shader code pairs
+
+const source1 = /* wgsl */ `\
+struct VertexOutput {
+  @builtin(position) position: vec4<f32>,
+};
+
+@vertex
+fn vertexMain(@location(0) position: vec2<f32>) -> VertexOutput {
+  var output: VertexOutput;
+  output.position = vec4<f32>(position - vec2<f32>(0.5, 0.0), 0.0, 1.0);
+  return output;
+}
+
+struct ColorUniforms {
+  hsv: vec3<f32>,
+};
+
+@group(0) @binding(0) var<uniform> color: ColorUniforms;
+
+@fragment
+fn fragmentMain() -> @location(0) vec4<f32> {
+  return vec4<f32>(color_hsv2rgb(color.hsv), 1.0);
+}
+`;
+
+const source2 = /* wgsl */ `\
+struct VertexOutput {
+  @builtin(position) position: vec4<f32>,
+};
+
+@vertex
+fn vertexMain(@location(0) position: vec2<f32>) -> VertexOutput {
+  var output: VertexOutput;
+  output.position = vec4<f32>(position + vec2<f32>(0.5, 0.0), 0.0, 1.0);
+  return output;
+}
+
+struct ColorUniforms {
+  hsv: vec3<f32>,
+};
+
+@group(0) @binding(0) var<uniform> color: ColorUniforms;
+
+@fragment
+fn fragmentMain() -> @location(0) vec4<f32> {
+  return vec4<f32>(color_hsv2rgb(color.hsv) - vec3<f32>(0.3), 1.0);
+}
+`;
+
 const vs1 = `\
 #version 300 es
 in vec2 position;
@@ -55,7 +105,7 @@ void main() {
 `;
 
 type ColorModuleProps = {
-  hsv: NumberArray;
+  hsv: NumberArray3;
 };
 
 // We define a small customer shader module that injects a function into the fragment shader
@@ -63,7 +113,15 @@ type ColorModuleProps = {
 // From http://lolengine.net/blog/2013/07/27/rgb-to-hsv-in-glsl
 const color: ShaderModule<ColorModuleProps> = {
   name: 'color',
-  fs: `
+  source: /* wgsl */ `\
+fn color_hsv2rgb(hsv: vec3<f32>) -> vec3<f32> {
+  let K = vec4<f32>(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+  let p = abs(fract(hsv.xxx + K.xyz) * 6.0 - K.www);
+  let rgb = hsv.z * mix(K.xxx, clamp(p - K.xxx, vec3<f32>(0.0), vec3<f32>(1.0)), hsv.y);
+  return rgb;
+}
+`,
+  fs: /* glsl */ `\
 vec3 color_hsv2rgb(vec3 hsv) {
   vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
   vec3 p = abs(fract(hsv.xxx + K.xyz) * 6.0 - K.www);
@@ -98,6 +156,8 @@ Re-using shader code with shader modules
     this.shaderInputs2.setProps({color: {hsv: [1.0, 1.0, 1.0]}});
 
     this.model1 = new Model(device, {
+      id: 'model1',
+      source: source1,
       vs: vs1,
       fs: fs1,
       shaderInputs: this.shaderInputs1,
@@ -105,10 +165,17 @@ Re-using shader code with shader modules
       attributes: {
         position: this.positionBuffer
       },
-      vertexCount: 3
+      vertexCount: 3,
+      parameters: {
+        // TODO(ibgreen): Remove, hack to ensure WebGPU depth target is used.
+        depthWriteEnabled: true,
+        depthCompare: 'less'
+      }
     });
 
     this.model2 = new Model(device, {
+      id: 'model2',
+      source: source2,
       vs: vs2,
       fs: fs2,
       shaderInputs: this.shaderInputs2,
@@ -116,7 +183,12 @@ Re-using shader code with shader modules
       attributes: {
         position: this.positionBuffer
       },
-      vertexCount: 3
+      vertexCount: 3,
+      parameters: {
+        // TODO(ibgreen): Remove, hack to ensure WebGPU depth target is used.
+        depthWriteEnabled: true,
+        depthCompare: 'less'
+      }
     });
   }
 

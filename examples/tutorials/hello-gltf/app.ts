@@ -1,3 +1,7 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import {AnimationLoopTemplate, AnimationProps, GroupNode, ModelNode} from '@luma.gl/engine';
 import {Device} from '@luma.gl/core';
 import {load} from '@loaders.gl/core';
@@ -15,9 +19,15 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   vantage = [0, 0, 0];
   time: number = 0;
 
-  constructor({device}: AnimationProps) {
+  constructor({device, animationLoop}: AnimationProps) {
     super();
     this.device = device;
+
+    if (device.type !== 'webgl') {
+      animationLoop.setError(new Error('This demo is only implemented for WebGL2'));
+      return;
+    }
+
     this.loadGLTF('Avocado');
 
     const modelSelector = document.getElementById('model-select');

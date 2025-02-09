@@ -93,7 +93,6 @@ export class WebGLDevice extends Device {
 
   /** WebGL2 context. */
   readonly gl!: WebGL2RenderingContext;
-  readonly debug: boolean = false;
 
   /** Store constants */
   // @ts-ignore TODO fix
@@ -109,6 +108,10 @@ export class WebGLDevice extends Device {
   //
   // Public API
   //
+
+  override get [Symbol.toStringTag](): string {
+    return 'WebGLDevice';
+  }
 
   override toString(): string {
     return `${this[Symbol.toStringTag]}(${this.id})`;
