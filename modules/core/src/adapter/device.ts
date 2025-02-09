@@ -146,9 +146,8 @@ export class DeviceFeatures {
 export type DeviceFeature =
   | WebGPUDeviceFeature
   | WebGLDeviceFeature
-  | WebGLCompressedTextureFeatures
-  // | ChromeExperimentalFeatures
-  ;
+  | WebGLCompressedTextureFeatures;
+// | ChromeExperimentalFeatures
 
 /** Chrome-specific extensions. Expected to eventually become standard features. */
 // export type ChromeExperimentalFeatures = ;
