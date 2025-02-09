@@ -52,7 +52,10 @@ export class WebGPUTextureView extends TextureView {
       });
     this.device.handle.popErrorScope().then((error: GPUError | null) => {
       if (error) {
-        this.device.reportError(new Error(`TextureView validation failed: ${error.message}`), this)();
+        this.device.reportError(
+          new Error(`TextureView validation failed: ${error.message}`),
+          this
+        )();
         this.device.debug();
       }
     });

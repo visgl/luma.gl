@@ -74,6 +74,7 @@ export class WebGPUTexture extends Texture {
       ...this.props,
       texture: this,
       mipLevelCount: this.mipLevels,
+      // Note: arrayLayerCount controls the view of array textures, but does not apply to 3d texture depths
       arrayLayerCount: this.dimension !== '3d' ? this.depth : 1
     });
 
@@ -150,7 +151,9 @@ export class WebGPUTexture extends Texture {
     );
     this.device.handle.popErrorScope().then((error: GPUError | null) => {
       if (error) {
-        this.device.reportError(new Error(`copyExternalImage validation failed: ${error.message}`))();
+        this.device.reportError(
+          new Error(`copyExternalImage validation failed: ${error.message}`)
+        )();
         this.device.debug();
       }
     });

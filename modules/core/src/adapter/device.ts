@@ -243,7 +243,7 @@ export type DeviceProps = {
   // CALLBACKS
 
   /** Error handler. If it returns a probe logger style function, it will be called at the site of the error to optimize console error links. */
-  onError?: (error: Error, context?: unknown) => () => unknown | unknown;
+  onError?: (error: Error, context?: unknown) => () => unknown;
   /** Called when the size of a canvas changes */
   onResize?: (ctx: CanvasContext, info: {oldPixelSize: [number, number]}) => unknown;
   /** Called when the visibility of a canvas changes */
