@@ -44,7 +44,8 @@
           "api-guide/gpu/gpu-parameters",
           "api-guide/gpu/gpu-bindings",
           "api-guide/gpu/gpu-attributes",
-          "api-guide/gpu/gpu-uniforms"
+          "api-guide/gpu/gpu-uniforms",
+          "api-guide/gpu/gpu-storage-buffers"
         ]
       },
       {
@@ -83,6 +84,7 @@
           "api-reference/core/parameters",
           "api-reference/core/bindings",
           "api-reference/core/shader-layout",
+          "api-reference/core/vertex-formats",
           "api-reference/core/texture-formats",
           "api-reference/core/resources/buffer",
           "api-reference/core/resources/compute-pass",

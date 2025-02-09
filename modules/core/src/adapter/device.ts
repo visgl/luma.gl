@@ -5,6 +5,7 @@
 import {StatsManager, lumaStats} from '../utils/stats-manager';
 import {log} from '../utils/log';
 import {uid} from '../utils/uid';
+import type {VertexFormat, VertexFormatInfo} from '../shadertypes/vertex-formats';
 import type {TextureFormat, TextureFormatInfo} from '../shadertypes/texture-formats';
 import type {CanvasContext, CanvasContextProps} from './canvas-context';
 import type {BufferProps} from './resources/buffer';
@@ -24,12 +25,12 @@ import type {VertexArray, VertexArrayProps} from './resources/vertex-array';
 import type {TransformFeedback, TransformFeedbackProps} from './resources/transform-feedback';
 import type {QuerySet, QuerySetProps} from './resources/query-set';
 
+import {getVertexFormatInfo} from '../shadertypes/utils/decode-vertex-format';
 import {
   isTextureFormatCompressed,
   getTextureFormatInfo,
   getTextureFormatCapabilities
 } from '../shadertypes/utils/decode-texture-format';
-
 import type {ExternalImage} from '../image-utils/image-types';
 import {isExternalImage, getExternalImageSize} from '../image-utils/image-types';
 
@@ -150,16 +151,22 @@ export type DeviceFeature =
 
 export type WebGPUDeviceFeature =
   | 'depth-clip-control'
-  | 'indirect-first-instance'
-  | 'timestamp-query'
-  | 'shader-f16'
   | 'depth32float-stencil8'
-  | 'rg11b10ufloat-renderable' // Is the rg11b10ufloat texture format renderable?
-  | 'float32-filterable' // Is the float32 format filterable?
-  | 'bgra8unorm-storage' // Can the bgra8unorm texture format be used in storage buffers?
   | 'texture-compression-bc'
+  | 'texture-compression-bc-sliced-3d'
   | 'texture-compression-etc2'
-  | 'texture-compression-astc';
+  | 'texture-compression-astc'
+  | 'texture-compression-astc-sliced-3d'
+  | 'timestamp-query'
+  | 'indirect-first-instance'
+  | 'shader-f16'
+  | 'rg11b10ufloat-renderable' // Is the rg11b10ufloat texture format renderable?
+  | 'bgra8unorm-storage' // Can the bgra8unorm texture format be used in storage buffers?
+  | 'float32-filterable' // Is the float32 format filterable?
+  | 'float32-blendable' // Is the float32 format blendable?
+  | 'clip-distances'
+  | 'dual-source-blending'
+  | 'subgroups';
 // | 'depth-clamping' // removed from the WebGPU spec...
 // | 'pipeline-statistics-query' // removed from the WebGPU spec...
 
@@ -399,6 +406,14 @@ export abstract class Device {
   abstract preferredDepthFormat: 'depth16' | 'depth24plus' | 'depth32float';
 
   protected _textureCaps: Partial<Record<TextureFormat, DeviceTextureFormatCapabilities>> = {};
+
+  getVertexFormatInfo(format: VertexFormat): VertexFormatInfo {
+    return getVertexFormatInfo(format);
+  }
+
+  isVertexFormatSupported(format: VertexFormat): boolean {
+    return true;
+  }
 
   /** Returns information about a texture format, such as data type, channels, bits per channel, compression etc */
   getTextureFormatInfo(format: TextureFormat): TextureFormatInfo {
