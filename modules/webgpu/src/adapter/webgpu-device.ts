@@ -10,6 +10,7 @@ import type {
   DeviceLimits,
   DeviceFeature,
   DeviceTextureFormatCapabilities,
+  VertexFormat,
   CanvasContextProps,
   BufferProps,
   SamplerProps,
@@ -125,6 +126,11 @@ export class WebGPUDevice extends Device {
 
   get isLost(): boolean {
     return this._isLost;
+  }
+
+  override isVertexFormatSupported(format: VertexFormat): boolean {
+    const info = this.getVertexFormatInfo(format);
+    return !info.webglOnly;
   }
 
   createBuffer(props: BufferProps | ArrayBuffer | ArrayBufferView): WebGPUBuffer {

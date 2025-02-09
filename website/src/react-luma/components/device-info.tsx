@@ -1,5 +1,6 @@
+// luma.gl
 import React from 'react';
-import {Device, DeviceFeature, DeviceLimits, TextureFormat} from '@luma.gl/core';
+import type {Device, DeviceFeature, DeviceLimits, TextureFormat, VertexFormat} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {WebGLDevice} from '@luma.gl/webgl';
 
@@ -11,6 +12,15 @@ function getLimit(device: Device, feature: keyof DeviceLimits): string {
 
 function getFeature(device: Device, feature: string): string {
   return device ? device.features.has(feature as DeviceFeature) ? '✅' : '❌' : 'N/A';
+}
+
+function getVertexFormat(device: Device, format: VertexFormat): string {
+  try {
+    const isSupported = device && device.isVertexFormatSupported(format);
+    return device ? isSupported ? '✅' : '❌' : 'N/A';
+  } catch {
+    return '❌';
+  }
 }
 
 function getFormat(device: Device, format: TextureFormat): string {
@@ -47,6 +57,11 @@ export const Limit = ({f}) => {
 export const Feature = ({f}) => {
   const device = useStore(state => state.device);
   return <span>{getFeature(device, f)}</span>;
+}
+
+export const VFormat = ({f}) => {
+  const device = useStore(state => state.device);
+  return <span key={f}>{getVertexFormat(device, f)}</span>;
 }
 
 export const Format = ({f}) => {
