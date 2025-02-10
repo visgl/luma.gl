@@ -25,8 +25,12 @@ export class WebGPUShader extends Shader {
     this.device.pushErrorScope('validation');
     this.handle = this.props.handle || this.device.handle.createShaderModule({code: props.source});
     this.device.popErrorScope((error: GPUError) => {
-        this.device.reportError(new Error(`${this} creation failed:\n"${error.message}"`), this, this.props.source)();
-        this.device.debug();
+      this.device.reportError(
+        new Error(`${this} creation failed:\n"${error.message}"`),
+        this,
+        this.props.source
+      )();
+      this.device.debug();
     });
 
     this.handle.label = this.props.id;

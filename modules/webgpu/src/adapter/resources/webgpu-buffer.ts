@@ -40,8 +40,8 @@ export class WebGPUBuffer extends Buffer {
       this.device.debug();
     });
     this.device.popErrorScope((error: GPUError) => {
-        this.device.reportError(new Error(`${this} out of memory: ${error.message}`), this)();
-        this.device.debug();
+      this.device.reportError(new Error(`${this} out of memory: ${error.message}`), this)();
+      this.device.debug();
     });
 
     if (props.data) {

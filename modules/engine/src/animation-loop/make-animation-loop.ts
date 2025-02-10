@@ -15,7 +15,7 @@ export type MakeAnimationLoopProps = Omit<
   adapters?: Adapter[];
 };
 
-/** 
+/**
  * Instantiates an animation loop and initializes it with the template.
  * @note The application needs to call `start()` on the returned animation loop to start the rendering loop.
  */
