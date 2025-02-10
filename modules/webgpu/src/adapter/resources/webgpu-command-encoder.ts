@@ -37,16 +37,14 @@ export class WebGPUCommandEncoder extends CommandEncoder {
   override destroy(): void {}
 
   finish(props?: CommandEncoderProps): WebGPUCommandBuffer {
-    this.device.handle.pushErrorScope('validation');
+    this.device.pushErrorScope('validation');
     const commandBuffer = new WebGPUCommandBuffer(this, {
       id: props?.id || 'unnamed-command-buffer'
     });
-    this.device.handle.popErrorScope().then((error: GPUError | null) => {
-      if (error) {
-        const message = `${this} command encoding: ${error.message}. Maybe add depthWriteEnabled to your Model?`;
-        this.device.reportError(new Error(message), this)();
-        this.device.debug();
-      }
+    this.device.popErrorScope((error: GPUError) => {
+      const message = `${this} command encoding: ${error.message}. Maybe add depthWriteEnabled to your Model?`;
+      this.device.reportError(new Error(message), this)();
+      this.device.debug();
     });
     return commandBuffer;
   }

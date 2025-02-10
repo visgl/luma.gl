@@ -73,8 +73,7 @@ Modifying shader behavior with shader hooks
     super();
 
     if (device.type !== 'webgl') {
-      animationLoop.setError(new Error('This demo is only implemented for WebGL2'));
-      return;
+      throw new Error('This demo is only implemented for WebGL2');
     }
 
     const shaderAssembler = ShaderAssembler.getDefaultShaderAssembler();

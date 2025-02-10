@@ -113,33 +113,9 @@ export class AnimationLoop {
     this.destroy();
   }
 
-  setError(error: Error): void {
+  reportError(error: Error): void {
     this.props.onError(error);
-    this._error = Error();
-    const canvas = this.device?.getDefaultCanvasContext().canvas;
-    if (canvas instanceof HTMLCanvasElement) {
-      canvas.style.overflow = 'visible';
-      let errorDiv = document.getElementById('animation-loop-error');
-      errorDiv?.remove();
-      errorDiv = document.createElement('h1');
-      errorDiv.id = 'animation-loop-error';
-      errorDiv.innerHTML = error.message;
-      errorDiv.style.position = 'absolute';
-      errorDiv.style.top = '10px'; // left: 50%; transform: translate(-50%, -50%);';
-      errorDiv.style.left = '10px';
-      errorDiv.style.color = 'black';
-      errorDiv.style.backgroundColor = 'red';
-      canvas.parentElement?.appendChild(errorDiv);
-      // canvas.style.position = 'absolute';
-    }
-  }
-
-  clearError(): void {
-    this._error = null;
-    const errorDiv = document.getElementById('animation-loop-error');
-    if (errorDiv) {
-      errorDiv.remove();
-    }
+    this._error = error;
   }
 
   /** Flags this animation loop as needing redraw */

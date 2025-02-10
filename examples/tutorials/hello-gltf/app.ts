@@ -24,8 +24,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.device = device;
 
     if (device.type !== 'webgl') {
-      animationLoop.setError(new Error('This demo is only implemented for WebGL2'));
-      return;
+      throw new Error('This demo is only implemented for WebGL2');
     }
 
     this.loadGLTF('Avocado');
