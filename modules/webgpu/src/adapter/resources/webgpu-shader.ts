@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {ShaderProps, CompilerMessage} from '@luma.gl/core';
-import {Shader, log} from '@luma.gl/core';
+import {Shader} from '@luma.gl/core';
 import type {WebGPUDevice} from '../webgpu-device';
 
 /**
@@ -22,12 +22,11 @@ export class WebGPUShader extends Shader {
       throw new Error('GLSL shaders are not supported in WebGPU');
     }
 
-    this.device.handle.pushErrorScope('validation');
+    this.device.pushErrorScope('validation');
     this.handle = this.props.handle || this.device.handle.createShaderModule({code: props.source});
-    this.device.handle.popErrorScope().then((error: GPUError | null) => {
-      if (error) {
-        log.error(`${this} creation failed:\n"${error.message}"`, this, this.props.source)();
-      }
+    this.device.popErrorScope((error: GPUError) => {
+        this.device.reportError(new Error(`${this} creation failed:\n"${error.message}"`), this, this.props.source)();
+        this.device.debug();
     });
 
     this.handle.label = this.props.id;
@@ -45,10 +44,10 @@ export class WebGPUShader extends Shader {
     this.debugShader();
 
     if (this.compilationStatus === 'error') {
-      log.error(`Shader compilation error`, shaderLog)();
       // Note: Even though this error is asynchronous and thrown after the constructor completes,
       // it will result in a useful stack trace leading back to the constructor
-      // throw new Error(`Shader compilation error`);
+      this.device.reportError(new Error(`Shader compilation error`), this, shaderLog)();
+      this.device.debug();
     }
   }
 
