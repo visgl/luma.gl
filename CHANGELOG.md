@@ -4,6 +4,10 @@
 
 Theme: Improved WebGPU support
 
+### v9.1.2
+
+- fix(webgl): Add DeviceProps._reuseDevices to support deck.gl React StrictMode (#2322)
+
 ### v9.1.1
 
 - fix: peerDependencies should use production versions (#2323)
