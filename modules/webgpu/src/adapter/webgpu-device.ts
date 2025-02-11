@@ -106,9 +106,8 @@ export class WebGPUDevice extends Device {
     });
 
     // Note: WebGPU devices can be created without a canvas, for compute shader purposes
-    if (props.createCanvasContext) {
-      const canvasContextProps =
-        props.createCanvasContext === true ? {} : props.createCanvasContext;
+    const canvasContextProps = Device._getCanvasContextProps(props);
+    if (canvasContextProps) {
       this.canvasContext = new WebGPUCanvasContext(this, this.adapter, canvasContextProps);
     }
   }
