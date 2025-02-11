@@ -4,6 +4,10 @@
 
 Theme: Improved WebGPU support
 
+### v9.1.1
+
+- fix: peerDependencies should use production versions (#2323)
+
 ### v9.1.0
 
 - See [whats new](https://luma.gl/docs/whats-new#version-91)
