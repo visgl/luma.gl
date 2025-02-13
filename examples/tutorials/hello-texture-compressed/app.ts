@@ -58,6 +58,7 @@ fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
 fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
   // return inputs.fragPosition;
   return textureSample(uTexture, uTextureSampler, inputs.fragUV);
+  // TODO: apply sRGB OETF
 }
 `;
 
