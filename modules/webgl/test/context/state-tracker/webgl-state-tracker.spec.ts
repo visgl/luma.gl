@@ -11,8 +11,7 @@ import {
   getGLParameters,
   setGLParameters,
   resetGLParameters,
-  WebGLStateTracker,
-  webgl2Adapter
+  WebGLStateTracker
 } from '@luma.gl/webgl';
 
 import {

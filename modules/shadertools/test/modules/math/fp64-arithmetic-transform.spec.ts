@@ -94,9 +94,6 @@ function getTestCasesFor(device, glslFunc) {
 }
 
 test('fp64#sum_fp64', async t => {
-  console.log('start');
-  console.log('device');
-
   const glslFunc = 'sum_fp64';
   const testCases = getTestCasesFor(webglDevice, glslFunc);
   await runTests(webglDevice, {glslFunc, binary: true, op: (a, b) => a + b, testCases, t});
