@@ -72,6 +72,6 @@ export abstract class VertexArray extends Resource<VertexArrayProps> {
 
   /** @deprecated Set constant attributes (WebGL only) */
   setConstantWebGL(location: number, value: TypedArray | null): void {
-    throw new Error('constant attributes not supported');
+    this.device.reportError(new Error('constant attributes not supported'), this);
   }
 }

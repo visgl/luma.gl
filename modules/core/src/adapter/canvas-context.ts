@@ -293,7 +293,7 @@ export abstract class CanvasContext {
     const gl = this.device.gl;
     if (!gl) {
       // use default device pixel ratio
-      throw new Error('canvas size');
+      return this.getPixelSize();
     }
     return [gl.drawingBufferWidth, gl.drawingBufferHeight];
   }
