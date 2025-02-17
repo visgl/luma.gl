@@ -305,12 +305,14 @@ function setParameters(
 }
 
 function addColorState(descriptor: GPURenderPipelineDescriptor): GPUColorTargetState[] {
-  // @ts-ignore
+  // @ts-ignore GPU types as iterator
   descriptor.fragment.targets = descriptor.fragment?.targets || [];
   if (!Array.isArray(descriptor.fragment?.targets)) {
     log.warn('parameters: no targets array')();
   }
+  // @ts-expect-error GPU types as iterator
   if (descriptor.fragment?.targets?.length === 0) {
+    // @ts-expect-error GPU types as iterator
     descriptor.fragment.targets?.push({});
   }
   return descriptor.fragment?.targets as GPUColorTargetState[];

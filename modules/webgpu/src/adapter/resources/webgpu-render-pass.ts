@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+import type {TypedArray, NumberArray4} from '@math.gl/types';
 import type {RenderPassProps, RenderPassParameters, Binding} from '@luma.gl/core';
 import {Buffer, RenderPass, RenderPipeline, log} from '@luma.gl/core';
 import {WebGPUDevice} from '../webgpu-device';
@@ -183,7 +184,8 @@ export class WebGPURenderPass extends RenderPass {
         // clear values
         loadOp: this.props.clearColor !== false ? 'clear' : 'load',
         clearValue: convertColor(
-          this.props.clearColors?.[index] || this.props.clearColor || RenderPass.defaultClearColor),
+          this.props.clearColors?.[index] || this.props.clearColor || RenderPass.defaultClearColor
+        ),
         storeOp: this.props.discard ? 'discard' : 'store',
         // ...colorAttachment,
         view: colorAttachment.handle
@@ -227,6 +229,6 @@ export class WebGPURenderPass extends RenderPass {
   }
 }
 
-function convertColor(color: number[]): GPUColor {
+function convertColor(color: TypedArray | NumberArray4): GPUColor {
   return {r: color[0], g: color[1], b: color[2], a: color[3]};
 }
