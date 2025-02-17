@@ -178,6 +178,14 @@ export class WebGPURenderPipeline extends RenderPipeline {
       layout: 'auto'
     };
 
+    if (this.props.parameters.depthWriteEnabled && this.props.parameters.depthCompare) {
+      descriptor.depthStencil = {
+        format: 'depth24plus',
+        depthWriteEnabled: this.props.parameters.depthWriteEnabled,
+        depthCompare: this.props.parameters.depthCompare
+      };
+    }
+
     // Set parameters on the descriptor
     applyParametersToRenderPipelineDescriptor(descriptor, this.props.parameters);
 

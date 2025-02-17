@@ -182,8 +182,8 @@ export class WebGPURenderPass extends RenderPass {
       (colorAttachment, index) => ({
         // clear values
         loadOp: this.props.clearColor !== false ? 'clear' : 'load',
-        colorClearValue:
-          this.props.clearColors?.[index] || this.props.clearColor || RenderPass.defaultClearColor,
+        clearValue: convertColor(
+          this.props.clearColors?.[index] || this.props.clearColor || RenderPass.defaultClearColor),
         storeOp: this.props.discard ? 'discard' : 'store',
         // ...colorAttachment,
         view: colorAttachment.handle
@@ -225,4 +225,8 @@ export class WebGPURenderPass extends RenderPass {
 
     return renderPassDescriptor;
   }
+}
+
+function convertColor(color: number[]): GPUColor {
+  return {r: color[0], g: color[1], b: color[2], a: color[3]};
 }

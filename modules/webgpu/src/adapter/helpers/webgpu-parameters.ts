@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Parameters} from '@luma.gl/core';
+import {Parameters, log} from '@luma.gl/core';
 
 function addDepthStencil(descriptor: GPURenderPipelineDescriptor): GPUDepthStencilState {
   descriptor.depthStencil = descriptor.depthStencil || {
@@ -297,7 +297,8 @@ function setParameters(
   for (const [key, value] of Object.entries(parameters)) {
     const setterFunction = PARAMETER_TABLE[key as keyof Parameters];
     if (!setterFunction) {
-      throw new Error(`Illegal parameter ${key}`);
+      log.warn(`Illegal parameter ${key}`)();
+      continue;
     }
     setterFunction(key, value, pipelineDescriptor);
   }
@@ -307,7 +308,7 @@ function addColorState(descriptor: GPURenderPipelineDescriptor): GPUColorTargetS
   // @ts-ignore
   descriptor.fragment.targets = descriptor.fragment?.targets || [];
   if (!Array.isArray(descriptor.fragment?.targets)) {
-    throw new Error('colorstate');
+    log.warn('parameters: no targets array')();
   }
   if (descriptor.fragment?.targets?.length === 0) {
     descriptor.fragment.targets?.push({});
