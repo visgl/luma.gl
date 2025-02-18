@@ -63,6 +63,9 @@ When initializing luma.gl, applications now import an `Adapter` singleton from e
 | `getDependencyGraph()`               | Removed | `getShaderModuleDependencies(module)` . | Interact directly with the shader module           |
 | `glsl` template string               | Removed | `/* glsl */` comment                    | Enable syntax highlighting in vscode using comment |
 
+**@luma.gl/effects**
+
+New module. All postprocessing effects that were previously in `@luma.gl/shadertools` are now exported from `@luma.gl/effects`.
 
 **@luma.gl/webgl**
 
