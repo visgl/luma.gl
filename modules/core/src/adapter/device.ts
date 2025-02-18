@@ -294,6 +294,7 @@ type WebGLContextProps = {
   alpha?: boolean; // indicates if the canvas contains an alpha buffer.
   desynchronized?: boolean; // hints the user agent to reduce the latency by desynchronizing the canvas paint cycle from the event loop
   antialias?: boolean; // indicates whether or not to perform anti-aliasing.
+  stencil?: boolean; // indicates that the render target has a stencil buffer of at least `8` bits.   
   depth?: boolean; // indicates that the drawing buffer has a depth buffer of at least 16 bits.
   failIfMajorPerformanceCaveat?: boolean; // indicates if a context will be created if the system performance is low or if no hardware GPU is available.
   powerPreference?: 'default' | 'high-performance' | 'low-power';
