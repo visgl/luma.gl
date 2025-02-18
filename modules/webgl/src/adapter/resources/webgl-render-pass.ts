@@ -9,6 +9,7 @@ import {GL, GLParameters} from '@luma.gl/constants';
 import {withGLParameters} from '../../context/state-tracker/with-parameters';
 import {setGLParameters} from '../../context/parameters/unified-parameter-api';
 import {WEBGLQuerySet} from './webgl-query-set';
+import {WEBGLFramebuffer} from './webgl-framebuffer';
 
 const COLOR_CHANNELS = [0x1, 0x2, 0x4, 0x8]; // GPUColorWrite RED, GREEN, BLUE, ALPHA
 
@@ -41,13 +42,16 @@ export class WEBGLRenderPass extends RenderPass {
     this.setParameters({viewport, ...this.props.parameters});
 
     // Specify mapping of draw buffer locations to color attachments
-    if (this.props.framebuffer) {
-      const drawBuffers = this.props.framebuffer.colorAttachments.map(
-        (_, i) => GL.COLOR_ATTACHMENT0 + i
-      );
-      this.device.gl.drawBuffers(drawBuffers);
-    } else {
-      this.device.gl.drawBuffers([GL.BACK]);
+    const webglFramebuffer = this.props.framebuffer as WEBGLFramebuffer;
+    if (webglFramebuffer?.handle) {
+      if (this.props.framebuffer) {
+        const drawBuffers = this.props.framebuffer.colorAttachments.map(
+          (_, i) => GL.COLOR_ATTACHMENT0 + i
+        );
+        this.device.gl.drawBuffers(drawBuffers);
+      } else {
+        this.device.gl.drawBuffers([GL.BACK]);
+      }
     }
 
     // Hack - for now WebGL draws in "immediate mode" (instead of queueing the operations)...
