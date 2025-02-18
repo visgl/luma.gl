@@ -4,6 +4,10 @@
 
 Theme: Improved WebGPU support
 
+### v9.1.3
+
+- fix(9.1): Minor fixes to unblock WebGPU in deck.gl (#2335)
+
 ### v9.1.2
 
 - fix(webgl): Add DeviceProps._reuseDevices to support deck.gl React StrictMode (#2322)
