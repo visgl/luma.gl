@@ -4,6 +4,11 @@
 
 Theme: Improved WebGPU support
 
+### v9.1.4
+
+- fix(shadertools): Explicitly export UniformTypes (#2339)
+- fix(webgl): Do not set drawBuffers for external Framebuffer (#2338)
+
 ### v9.1.3
 
 - fix(9.1): Minor fixes to unblock WebGPU in deck.gl (#2335)
