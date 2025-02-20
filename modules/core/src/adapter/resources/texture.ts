@@ -16,6 +16,19 @@ import {Buffer} from './buffer';
 import {log} from '../../utils/log';
 import {textureFormatDecoder} from '../../shadertypes/textures/texture-format-decoder';
 
+/**
+ * Describes the required layout of memory to store texture data that has been read or is to be written
+ * @note Total byte length of buffer `byteLength = layout.bytesPerRow * rowsPerImage * imageCount
+ */
+export type TextureDataLayout = {
+  /** Bytes per row, can be less than width if subimage, but padded to 256 bytes on WebGPU */
+  bytesPerRow: number;
+  /** Number of rows per image in this buffer (can be less than height if subimage) */
+  rowsPerImage: number;
+  /** Number of images, if more than one depth or arrayLayer is read or written */
+  imageCount: number;
+};
+
 /** Options for Texture.copyExternalImage */
 export type CopyExternalImageOptions = {
   /** Image */
@@ -423,13 +436,12 @@ export abstract class Texture extends Resource<TextureProps> {
     return options;
   }
 
-  /** Default options */
   static override defaultProps: Required<TextureProps> = {
     ...Resource.defaultProps,
     data: null,
     dimension: '2d',
     format: 'rgba8unorm',
-    usage: Texture.TEXTURE | Texture.RENDER_ATTACHMENT | Texture.COPY_DST,
+    usage: Texture.SAMPLE | Texture.RENDER | Texture.COPY_DST,
     width: undefined!,
     height: undefined!,
     depth: 1,

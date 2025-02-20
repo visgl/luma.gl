@@ -38,12 +38,10 @@ import {WebGLDevice} from '../webgl-device';
 import {WEBGLFramebuffer} from './webgl-framebuffer';
 import {WEBGLSampler} from './webgl-sampler';
 import {WEBGLTextureView} from './webgl-texture-view';
-
-import {getTypedArrayConstructor, getDataType} from '@luma.gl/core';
-
 import {convertDataTypeToGLDataType} from '../converters/webgl-shadertypes';
-// import {glFormatToComponents} from '../helpers/format-utils';
 import {convertGLDataTypeToDataType} from '../converters/shader-formats';
+// import {glFormatToComponents} from '../helpers/format-utils';
+import {getTypedArrayConstructor, getDataType} from '@luma.gl/core';
 
 /**
  * WebGL... the texture API from hell... hopefully made simpler
@@ -208,7 +206,6 @@ export class WEBGLTexture extends Texture {
     const {glFormat, glType, compressed} = this;
     const glTarget = getWebGLCubeFaceTarget(this.glTarget, this.dimension, depth);
 
-    // WebGL automatically ignores these for compressed textures, but we are careful
     const glParameters: GLValueParameters = !this.compressed
       ? {
           [GL.UNPACK_ROW_LENGTH]: options.bytesPerRow,
@@ -248,44 +245,16 @@ export class WEBGLTexture extends Texture {
     this.gl.bindTexture(glTarget, null);
   }
 
-  /**
-   * Read the contents of a texture into a GPU Buffer.
-   * @returns A Buffer containing the texture data.
-   *
-   * @note The memory layout of the texture data is determined by the texture format and dimensions.
-   * @note The application can call Texture.computeMemoryLayout() to compute the layout.
-   * @note The application can call Buffer.readAsync()
-   * @note If not supplied a buffer will be created and the application needs to call Buffer.destroy
-   */
   readBuffer(options: TextureReadOptions = {}, buffer?: Buffer): Buffer {
     throw new Error('readBuffer not implemented');
   }
 
-  /**
-   * Reads data from a texture into an ArrayBuffer.
-   * @returns An ArrayBuffer containing the texture data.
-   *
-   * @note The memory layout of the texture data is determined by the texture format and dimensions.
-   * @note The application can call Texture.computeMemoryLayout() to compute the layout.
-   */
   async readDataAsync(options: TextureReadOptions = {}): Promise<ArrayBuffer> {
     return this.readDataSyncWebGL(options);
   }
 
-  /**
-   * Writes an GPU Buffer into a texture.
-   *
-   * @note The memory layout of the texture data is determined by the texture format and dimensions.
-   * @note The application can call Texture.computeMemoryLayout() to compute the layout.
-   */
-  writeBuffer(buffer: Buffer, options_: TextureWriteOptions = {}) {}
+  writeBuffer(buffer: GPUBuffer, options_: TextureWriteOptions = {}) {}
 
-  /**
-   * Writes an array buffer into a texture.
-   *
-   * @note The memory layout of the texture data is determined by the texture format and dimensions.
-   * @note The application can call Texture.computeMemoryLayout() to compute the layout.
-   */
   writeData(data: ArrayBuffer | ArrayBufferView, options_: TextureWriteOptions = {}): void {
     const options = this._normalizeTextureWriteOptions(options_);
 
@@ -344,15 +313,16 @@ export class WEBGLTexture extends Texture {
 
   // IMPLEMENTATION SPECIFIC
 
-  private _getRowByteAlignment(format: TextureFormat, width: number): 1 | 2 | 4 | 8 {
+  getBestByteAlignment(format: TextureFormat, width: number): 1 | 2 | 4 | 8 {
+    // TODO - for now we always use 1 for maximum compatibility, we can fine tune later
     // For best texture data read/write performance, calculate the biggest pack/unpack alignment
     // that fits with the provided texture row byte length
     // Note: Any RGBA or 32 bit type will be at least 4 bytes, which should result in good performance.
-    const info = this.device.getTextureFormatInfo(format);
-    const rowByteLength = width * info.bytesPerPixel;
-    if (rowByteLength % 8 === 0) return 8;
-    if (rowByteLength % 4 === 0) return 4;
-    if (rowByteLength % 2 === 0) return 2;
+    // const info = this.device.getTextureFormatInfo(format);
+    // const rowByteLength = width * info.bytesPerPixel!;
+    // if (rowByteLength % 8 === 0) return 8;
+    // if (rowByteLength % 4 === 0) return 4;
+    // if (rowByteLength % 2 === 0) return 2;
     return 1;
   }
 
@@ -368,6 +338,20 @@ export class WEBGLTexture extends Texture {
       colorAttachments: [this]
     });
     return this._framebuffer;
+  }
+
+  // IMPLEMENTATION SPECIFIC
+
+  private _getRowByteAlignment(format: TextureFormat, width: number): 1 | 2 | 4 | 8 {
+    // For best texture data read/write performance, calculate the biggest pack/unpack alignment
+    // that fits with the provided texture row byte length
+    // Note: Any RGBA or 32 bit type will be at least 4 bytes, which should result in good performance.
+    const info = this.device.getTextureFormatInfo(format);
+    const rowByteLength = width * info.bytesPerPixel;
+    if (rowByteLength % 8 === 0) return 8;
+    if (rowByteLength % 4 === 0) return 4;
+    if (rowByteLength % 2 === 0) return 2;
+    return 1;
   }
 
   // WEBGL SPECIFIC

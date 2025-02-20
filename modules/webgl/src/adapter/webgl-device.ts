@@ -274,7 +274,7 @@ export class WebGLDevice extends Device {
 
   // IMPLEMENTATION OF ABSTRACT DEVICE
 
-  getTextureByteAlignment(): number {
+  override getTextureByteAlignment(): number {
     return 4;
   }
 

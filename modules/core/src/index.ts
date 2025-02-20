@@ -196,9 +196,7 @@ export {
 } from './shadertypes/textures/texture-format-decoder';
 
 export {getTextureImageView, setTextureImageData} from './shadertypes/textures/texture-layout';
-
 // export {TexturePacker} from './shadertypes/textures/texture-packer'
-
 export {type PixelData, readPixel, writePixel} from './shadertypes/textures/pixel-utils';
 
 // GENERAL EXPORTS - FOR APPLICATIONS

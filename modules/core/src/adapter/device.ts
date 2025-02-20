@@ -435,6 +435,11 @@ export abstract class Device {
     return true;
   }
 
+  /** Return the implementation specific alignment for a texture format. 1 on WebGL, 256 on WebGPU */
+  getTextureByteAlignment(): number { 
+    return 1; 
+  }
+
   /** Returns information about a texture format, such as data type, channels, bits per channel, compression etc */
   getTextureFormatInfo(format: TextureFormat): TextureFormatInfo {
     return textureFormatDecoder.getInfo(format);
@@ -450,9 +455,6 @@ export abstract class Device {
     }
     return textureCaps;
   }
-
-  /** Return the implementation specific alignment for a texture format. 1 on WebGL, 256 on WebGPU */
-  abstract getTextureByteAlignment(): number;
 
   /** Calculates the number of mip levels for a texture of width, height and in case of 3d textures only, depth */
   getMipLevelCount(width: number, height: number, depth3d: number = 1): number {

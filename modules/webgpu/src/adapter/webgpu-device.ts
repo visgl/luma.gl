@@ -141,8 +141,8 @@ export class WebGPUDevice extends Device {
     return !info.webglOnly;
   }
 
-  getTextureByteAlignment(): number {
-    return 1;
+  override getTextureByteAlignment(): number {
+    return 256;
   }
 
   createBuffer(props: BufferProps | ArrayBuffer | ArrayBufferView): WebGPUBuffer {
