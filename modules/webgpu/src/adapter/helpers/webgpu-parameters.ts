@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Parameters} from '@luma.gl/core';
+import {Parameters, log} from '@luma.gl/core';
 
 function addDepthStencil(descriptor: GPURenderPipelineDescriptor): GPUDepthStencilState {
   descriptor.depthStencil = descriptor.depthStencil || {
@@ -33,7 +33,6 @@ function addDepthStencilBack(descriptor: GPURenderPipelineDescriptor): GPUStenci
  * Supports for luma.gl's flat parameter space
  * Populates the corresponding sub-objects in a GPURenderPipelineDescriptor
  */
-// @ts-expect-error
 export const PARAMETER_TABLE: Record<keyof Parameters, Function> = {
   // RASTERIZATION PARAMETERS
 
@@ -228,8 +227,29 @@ export const PARAMETER_TABLE: Record<keyof Parameters, Function> = {
     const blend = addBlendState(descriptor, 0);
     blend.alpha = blend.alpha || {};
     blend.alpha.dstFactor = value;
-  }
+  },
+
+  unclippedDepth: notSupported,
+  provokingVertex: notSupported,
+  polygonMode: notSupported,
+  polygonOffsetLine: notSupported,
+  clipDistance0: notSupported,
+  clipDistance1: notSupported,
+  clipDistance2: notSupported,
+  clipDistance3: notSupported,
+  clipDistance4: notSupported,
+  clipDistance5: notSupported,
+  clipDistance6: notSupported,
+  clipDistance7: notSupported
 };
+
+function notSupported(
+  key: keyof Parameters,
+  value: any,
+  descriptor: GPURenderPipelineDescriptor
+): void {
+  log.warn(`${key} parameter not supported in WebGPU`)();
+}
 
 const DEFAULT_PIPELINE_DESCRIPTOR: GPURenderPipelineDescriptor = {
   // depthStencil: {
@@ -277,10 +297,11 @@ function setParameters(
 ): void {
   for (const [key, value] of Object.entries(parameters)) {
     const setterFunction = PARAMETER_TABLE[key as keyof Parameters];
-    if (!setterFunction) {
-      throw new Error(`Illegal parameter ${key}`);
+    if (setterFunction) {
+      setterFunction(key, value, pipelineDescriptor);
+    } else {
+      log.error(`Illegal parameter ${key} in WebGPU`)();
     }
-    setterFunction(key, value, pipelineDescriptor);
   }
 }
 
@@ -292,12 +313,15 @@ function addColorState(
   // @ts-ignore
   descriptor.fragment.targets = descriptor.fragment?.targets || ([] as GPUColorTargetState[]);
   if (!Array.isArray(descriptor.fragment?.targets)) {
-    throw new Error('colorstate');
+    log.warn('parameters: no targets array')();
   }
+  // @ts-expect-error GPU types as iterator
   if (descriptor.fragment?.targets?.length === 0) {
+    // @ts-expect-error GPU types as iterator
     descriptor.fragment.targets?.push({});
   }
-  return descriptor.fragment?.targets[0] as GPUColorTargetState;
+  // @ts-expect-error GPU types as iterator
+  return descriptor.fragment?.targets?.[0] as GPUColorTargetState;
 }
 
 function addBlendState(descriptor: GPURenderPipelineDescriptor, attachment: number): GPUBlendState {

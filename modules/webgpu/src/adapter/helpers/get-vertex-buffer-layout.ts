@@ -37,7 +37,7 @@ export function getVertexBufferLayout(
     let stepMode: 'vertex' | 'instance' = 'vertex';
     let byteStride = 0;
     // @ts-ignore
-    const format: VertexFormat = mapping.format;
+    let format: VertexFormat = mapping.format;
 
     // interleaved mapping {..., attributes: [{...}, ...]}
     if (mapping.attributes) {
@@ -48,12 +48,13 @@ export function getVertexBufferLayout(
 
         // @ts-ignore
         const location: number = attributeLayout?.location;
+        format = attributeMapping.format || mapping.format;
 
         stepMode =
           attributeLayout?.stepMode ||
           (attributeLayout?.name.startsWith('instance') ? 'instance' : 'vertex');
         vertexAttributes.push({
-          format: getWebGPUVertexFormat(attributeMapping.format || mapping.format),
+          format: getWebGPUVertexFormat(format),
           offset: attributeMapping.byteOffset,
           shaderLocation: location
         });

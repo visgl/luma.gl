@@ -41,7 +41,7 @@ struct VertexInputs {
   // INSTANCED ATTRIBUTES
   @location(2) instanceOffsets : vec2<f32>,
   @location(3) instanceColors : vec4<f32>,
-  @location(4) instanceIndexes : vec2<f32>,
+  @location(4) instanceIndexes : i32,
 }
 
 struct FragmentInputs {
@@ -301,10 +301,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   pickInstance(mousePosition: number[] | null | undefined) {
-    if (this.picker.device.type !== 'webgl') {
-      return;
-    }
-
     if (!mousePosition) {
       this.picker.clearPickState();
       return;
@@ -313,6 +309,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.cube.draw(pickingPass);
     pickingPass.end();
 
-    this.picker.getPickInfo(mousePosition as [number, number]);
+    if (this.picker.device.type !== 'webgl') {
+      this.picker.getPickInfo(mousePosition as [number, number]);
+    }
   }
 }
