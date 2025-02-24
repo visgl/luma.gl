@@ -147,10 +147,14 @@ export class WEBGLTexture extends Texture {
     const {glFormat, glType, compressed} = this;
     const glTarget = getWebGLCubeFaceTarget(this.glTarget, this.dimension, depth);
 
-    const glParameters: GLValueParameters = {
-      [GL.UNPACK_ROW_LENGTH]: options.bytesPerRow,
-      [GL.UNPACK_IMAGE_HEIGHT]: options.rowsPerImage
-    };
+    const glParameters: GLValueParameters = {};
+    // The parameters below will break for compressed textures, as well as
+    // uncompressed textures like `new Uint8Array(2 * 2 * 4).fill(220)`. Are
+    // these parameters needed for other cases?
+    // {
+    //   [GL.UNPACK_ROW_LENGTH]: options.bytesPerRow,
+    //   [GL.UNPACK_IMAGE_HEIGHT]: options.rowsPerImage
+    // };
 
     this.gl.bindTexture(glTarget, this.handle);
 
