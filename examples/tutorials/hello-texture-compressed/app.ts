@@ -2,22 +2,33 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {Device, NumberArray, TextureFormat, VariableShaderType} from '@luma.gl/core';
+import type {
+  Device,
+  NumberArray,
+  TextureFormat,
+  TypedArray,
+  VariableShaderType
+} from '@luma.gl/core';
 import {UniformStore} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate, Model, CubeGeometry} from '@luma.gl/engine';
 import {Matrix4} from '@math.gl/core';
 import {
   read as readKTX2,
+  KHR_SUPERCOMPRESSION_NONE,
   VKFormat,
   VK_FORMAT_R8G8B8A8_SRGB,
   VK_FORMAT_R8G8B8A8_UNORM,
+  VK_FORMAT_R16G16B16A16_SFLOAT,
+  VK_FORMAT_R32G32B32A32_SFLOAT,
   VK_FORMAT_ASTC_4x4_SRGB_BLOCK,
   VK_FORMAT_ETC2_R8G8B8_SRGB_BLOCK,
   VK_FORMAT_ETC2_R8G8B8A8_SRGB_BLOCK,
   VK_FORMAT_BC1_RGB_SRGB_BLOCK,
+  VK_FORMAT_BC3_SRGB_BLOCK,
   VK_FORMAT_BC5_UNORM_BLOCK,
-  VK_FORMAT_BC3_SRGB_BLOCK
+  VK_FORMAT_BC7_SRGB_BLOCK,
+  KTX2Container
 } from 'ktx-parse';
 
 export const title = 'Texture Compressed';
@@ -151,13 +162,17 @@ Rendered using the luma.gl <code>Model</code>, <code>CubeGeometry</code> and <co
   async initialize() {
     const device = this.device;
 
-    // failing: 2d_etc2.ktx2
-    const buffer = await fetch('2d_astc.ktx2').then(res => res.arrayBuffer());
+    // failing: 2d_etc2, 2d_rgba16, 2d_rgba32
+    const buffer = await fetch('2d_rgba8.ktx2').then(res => res.arrayBuffer());
     const container = readKTX2(new Uint8Array(buffer));
 
+    if (container.supercompressionScheme !== KHR_SUPERCOMPRESSION_NONE) {
+      throw new Error(`Supercompression not implemented: ${container.supercompressionScheme}`);
+    }
+
     const texture = device.createTexture({
+      data: getData(container),
       format: getFormat(container.vkFormat),
-      data: container.levels[0].levelData,
       mipLevels: 1,
       width: container.pixelWidth,
       height: container.pixelHeight,
@@ -201,6 +216,21 @@ Rendered using the luma.gl <code>Model</code>, <code>CubeGeometry</code> and <co
   }
 }
 
+function getData(container: KTX2Container): TypedArray {
+  const data: TypedArray = container.levels[0].levelData;
+
+  switch (container.vkFormat) {
+    case VK_FORMAT_R32G32B32A32_SFLOAT:
+      return new Float32Array(data.buffer);
+
+    case VK_FORMAT_R16G16B16A16_SFLOAT:
+      return new Uint16Array(data.buffer);
+
+    default:
+      return data;
+  }
+}
+
 function getFormat(vkFormat: VKFormat): TextureFormat {
   switch (vkFormat) {
     case VK_FORMAT_R8G8B8A8_UNORM:
@@ -208,6 +238,12 @@ function getFormat(vkFormat: VKFormat): TextureFormat {
 
     case VK_FORMAT_R8G8B8A8_SRGB:
       return 'rgba8unorm-srgb';
+
+    case VK_FORMAT_R16G16B16A16_SFLOAT:
+      return 'rgba16float';
+
+    case VK_FORMAT_R32G32B32A32_SFLOAT:
+      return 'rgba32float';
 
     case VK_FORMAT_ASTC_4x4_SRGB_BLOCK:
       return 'astc-4x4-unorm-srgb';
@@ -226,6 +262,9 @@ function getFormat(vkFormat: VKFormat): TextureFormat {
 
     case VK_FORMAT_BC5_UNORM_BLOCK:
       return 'bc5-rg-unorm';
+
+    case VK_FORMAT_BC7_SRGB_BLOCK:
+      return 'bc7-rgba-unorm-srgb';
 
     default:
       throw new Error(`Unknown vkFormat, ${vkFormat}`);
