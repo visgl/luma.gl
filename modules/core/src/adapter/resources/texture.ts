@@ -262,7 +262,7 @@ export abstract class Texture extends Resource<TextureProps> {
     }
   }
 
-  _normalizeCopyImageDataOptions(options_: CopyImageDataOptions): Required<CopyImageDataOptions> {
+  _normalizeCopyImageDataOptions(options_: CopyImageDataOptions): CopyImageDataOptions {
     const {width, height, depth} = this;
     const options = {...Texture.defaultCopyDataOptions, width, height, depth, ...options_};
 
@@ -270,8 +270,6 @@ export abstract class Texture extends Resource<TextureProps> {
     if (!options_.bytesPerRow && !info.bytesPerPixel) {
       throw new Error(`bytesPerRow must be provided for texture format ${this.format}`);
     }
-    options.bytesPerRow = options_.bytesPerRow || width * (info.bytesPerPixel || 4);
-    options.rowsPerImage = options_.rowsPerImage || height;
 
     // WebGL will error if we try to copy outside the bounds of the texture
     // options.width = Math.min(options.width, this.width - options.x);

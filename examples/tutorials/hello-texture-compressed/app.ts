@@ -162,8 +162,8 @@ Rendered using the luma.gl <code>Model</code>, <code>CubeGeometry</code> and <co
   async initialize() {
     const device = this.device;
 
-    // failing: 2d_etc2, 2d_rgba16, 2d_rgba32
-    const buffer = await fetch('2d_rgba8.ktx2').then(res => res.arrayBuffer());
+    // failing: 2d_etc2, 2d_rgba16_linear, 2d_rgba32_linear
+    const buffer = await fetch('2d_astc4x4.ktx2').then(res => res.arrayBuffer());
     const container = readKTX2(new Uint8Array(buffer));
 
     if (container.supercompressionScheme !== KHR_SUPERCOMPRESSION_NONE) {
