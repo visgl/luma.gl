@@ -11,6 +11,8 @@ import {Sampler, SamplerProps} from './sampler';
 import {ExternalImage} from '../../image-utils/image-types';
 import {log} from '../../utils/log';
 
+type RequiredExcept<T, K extends keyof T> = Pick<T, K> & Required<Omit<T, K>>;
+
 /** Options for Texture.copyExternalImage */
 export type CopyExternalImageOptions = {
   /** Image */
@@ -262,7 +264,9 @@ export abstract class Texture extends Resource<TextureProps> {
     }
   }
 
-  _normalizeCopyImageDataOptions(options_: CopyImageDataOptions): CopyImageDataOptions {
+  _normalizeCopyImageDataOptions(
+    options_: CopyImageDataOptions
+  ): RequiredExcept<CopyImageDataOptions, 'bytesPerRow' | 'rowsPerImage'> {
     const {width, height, depth} = this;
     const options = {...Texture.defaultCopyDataOptions, width, height, depth, ...options_};
 
