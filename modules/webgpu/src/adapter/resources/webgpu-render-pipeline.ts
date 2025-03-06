@@ -44,12 +44,11 @@ export class WebGPURenderPipeline extends RenderPipeline {
       log.probe(1, JSON.stringify(descriptor, null, 2))();
       log.groupEnd(1)();
 
-      this.device.handle.pushErrorScope('validation');
+      this.device.pushErrorScope('validation');
       this.handle = this.device.handle.createRenderPipeline(descriptor);
-      this.device.handle.popErrorScope().then((error: GPUError | null) => {
-        if (error) {
-          log.error(`${this} creation failed:\n"${error.message}"`, this, this.props.vs?.source)();
-        }
+      this.device.popErrorScope((error: GPUError) => {
+        this.device.reportError(new Error(`${this} creation failed:\n"${error.message}"`), this)();
+        this.device.debug();
       });
     }
     this.handle.label = this.props.id;
@@ -96,12 +95,11 @@ export class WebGPURenderPipeline extends RenderPipeline {
     const webgpuRenderPass = options.renderPass as WebGPURenderPass;
 
     // Set pipeline
-    this.device.handle.pushErrorScope('validation');
+    this.device.pushErrorScope('validation');
     webgpuRenderPass.handle.setPipeline(this.handle);
-    this.device.handle.popErrorScope().then((error: GPUError | null) => {
-      if (error) {
-        log.error(`${this} setPipeline failed:\n"${error.message}"`, this)();
-      }
+    this.device.popErrorScope((error: GPUError) => {
+      this.device.reportError(new Error(`${this} setPipeline failed:\n"${error.message}"`), this)();
+      this.device.debug();
     });
 
     // Set bindings (uniform buffers, textures etc)

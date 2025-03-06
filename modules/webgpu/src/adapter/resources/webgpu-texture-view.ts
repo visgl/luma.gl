@@ -50,11 +50,9 @@ export class WebGPUTextureView extends TextureView {
         baseArrayLayer: this.props.baseArrayLayer,
         arrayLayerCount: this.props.arrayLayerCount
       });
-    this.device.handle.popErrorScope().then((error: GPUError | null) => {
-      if (error) {
-        this.device.reportError(new Error(`TextureView constructor: ${error.message}`), this)();
-        this.device.debug();
-      }
+    this.device.popErrorScope((error: GPUError) => {
+      this.device.reportError(new Error(`TextureView constructor: ${error.message}`), this)();
+      this.device.debug();
     });
 
     this.handle.label = this.props.id;

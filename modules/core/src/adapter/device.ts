@@ -529,12 +529,12 @@ export abstract class Device {
    *   device.reportError(new Error(...), this)();
    *   device.debug();
    */
-  reportError(error: Error, context?: unknown): () => unknown {
+  reportError(error: Error, context: unknown, ...args: unknown[]): () => unknown {
     // Call the error handler
     const isHandled = this.props.onError(error, context);
     if (!isHandled) {
       // Note: Returns a function that must be called: `device.reportError(...)()`
-      return log.error(error.message, context);
+      return log.error(error.message, context, ...args);
     }
     return () => {};
   }

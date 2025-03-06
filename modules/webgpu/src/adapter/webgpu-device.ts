@@ -100,7 +100,7 @@ export class WebGPUDevice extends Device {
       // TODO is this the right way to make sure the error is an Error instance?
       const errorMessage =
         event instanceof GPUUncapturedErrorEvent ? event.error.message : 'Unknown WebGPU error';
-      this.reportError(new Error(errorMessage))();
+      this.reportError(new Error(errorMessage), this)();
       this.debug();
     });
 
@@ -200,13 +200,11 @@ export class WebGPUDevice extends Device {
       this.commandEncoder = this.createCommandEncoder({id: `${this.id}-default-encoder`});
     }
 
-    this.handle.pushErrorScope('validation');
+    this.pushErrorScope('validation');
     this.handle.queue.submit([commandBuffer.handle]);
-    this.handle.popErrorScope().then((error: GPUError | null) => {
-      if (error) {
-        this.reportError(new Error(`${this} command submission: ${error.message}`))();
-        this.debug();
-      }
+    this.popErrorScope((error: GPUError) => {
+      this.reportError(new Error(`${this} command submission: ${error.message}`), this)();
+      this.debug();
     });
   }
 
@@ -216,10 +214,10 @@ export class WebGPUDevice extends Device {
     this.handle.pushErrorScope(scope);
   }
 
-  popErrorScope(handler: (message: string) => void): void {
+  popErrorScope(handler: (error: GPUError) => void): void {
     this.handle.popErrorScope().then((error: GPUError | null) => {
       if (error) {
-        handler(error.message);
+        handler(error);
       }
     });
   }

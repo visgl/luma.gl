@@ -47,13 +47,12 @@ export class WebGPURenderPass extends RenderPass {
       throw new Error('commandEncoder not available');
     }
 
-    this.device.handle.pushErrorScope('validation');
+    this.device.pushErrorScope('validation');
     this.handle =
       this.props.handle || device.commandEncoder.handle.beginRenderPass(renderPassDescriptor);
-    this.device.handle.popErrorScope().then((error: GPUError | null) => {
-      if (error) {
-        log.error(`${this} creation failed:\n"${error.message}"`, this)();
-      }
+    this.device.popErrorScope((error: GPUError) => {
+      this.device.reportError(new Error(`${this} creation failed:\n"${error.message}"`), this)();
+      this.device.debug();
     });
     this.handle.label = this.props.id;
     log.groupCollapsed(3, `new WebGPURenderPass(${this.id})`)();
@@ -69,12 +68,11 @@ export class WebGPURenderPass extends RenderPass {
 
   setPipeline(pipeline: RenderPipeline): void {
     this.pipeline = pipeline as WebGPURenderPipeline;
-    this.device.handle.pushErrorScope('validation');
+    this.device.pushErrorScope('validation');
     this.handle.setPipeline(this.pipeline.handle);
-    this.device.handle.popErrorScope().then((error: GPUError | null) => {
-      if (error) {
-        log.error(`${this} setPipeline failed:\n"${error.message}"`, this)();
-      }
+    this.device.popErrorScope((error: GPUError) => {
+      this.device.reportError(new Error(`${this} setPipeline failed:\n"${error.message}"`), this)();
+      this.device.debug();
     });
   }
 
