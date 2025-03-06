@@ -263,7 +263,6 @@ export class Model {
     // TODO - this is wrong, compile a single shader
     if (isWebGPU && this.props.source) {
       // WGSL
-      this.props.shaderLayout ||= getShaderLayoutFromWGSL(this.props.source);
       const {source, getUniforms} = this.props.shaderAssembler.assembleWGSLShader({
         platformInfo,
         ...this.props,
@@ -272,6 +271,8 @@ export class Model {
       this.source = source;
       // @ts-expect-error
       this._getModuleUniforms = getUniforms;
+      // Extract shader layout after modules have been added to WGSL source, to include any bindings added by modules
+      this.props.shaderLayout ||= getShaderLayoutFromWGSL(this.source);
     } else {
       // GLSL
       const {vs, fs, getUniforms} = this.props.shaderAssembler.assembleGLSLShaderPair({
