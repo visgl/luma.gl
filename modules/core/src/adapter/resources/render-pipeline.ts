@@ -45,7 +45,7 @@ export type RenderPipelineProps = ResourceProps & {
 
   /** Color attachments expected by this pipeline. Defaults to [device.preferredColorFormat]. Array needs not be contiguous. */
   colorAttachmentFormats?: (ColorTextureFormat | null)[];
-  /** Depth attachment expected by this pipeline (if depth parameters are specified). Defaults to device.preferredDepthFormat */
+  /** Depth attachment expected by this pipeline. Defaults to device.preferredDepthFormat, if depthWriteEnables parameter is set */
   depthStencilAttachmentFormat?: DepthStencilTextureFormat;
 
   /** Parameters that are controlled by pipeline */
