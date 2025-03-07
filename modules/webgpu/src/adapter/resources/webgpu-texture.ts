@@ -26,8 +26,8 @@ export class WebGPUTexture extends Texture {
       this.depth = 6;
     }
 
-    this.device.handle.pushErrorScope('out-of-memory');
-    this.device.handle.pushErrorScope('validation');
+    this.device.pushErrorScope('out-of-memory');
+    this.device.pushErrorScope('validation');
 
     this.handle =
       this.props.handle ||
@@ -44,17 +44,13 @@ export class WebGPUTexture extends Texture {
         mipLevelCount: this.mipLevels,
         sampleCount: this.props.samples
       });
-    this.device.handle.popErrorScope().then((error: GPUError | null) => {
-      if (error) {
-        this.device.reportError(new Error(`${this} constructor: ${error.message}`), this)();
-        this.device.debug();
-      }
+    this.device.popErrorScope((error: GPUError) => {
+      this.device.reportError(new Error(`${this} constructor: ${error.message}`), this)();
+      this.device.debug();
     });
-    this.device.handle.popErrorScope().then((error: GPUError | null) => {
-      if (error) {
-        this.device.reportError(new Error(`${this} out of memory: ${error.message}`), this)();
-        this.device.debug();
-      }
+    this.device.popErrorScope((error: GPUError) => {
+      this.device.reportError(new Error(`${this} out of memory: ${error.message}`), this)();
+      this.device.debug();
     });
 
     // Update props if external handle was supplied - used mainly by CanvasContext.getDefaultFramebuffer()
@@ -96,7 +92,7 @@ export class WebGPUTexture extends Texture {
   copyImageData(options_: CopyImageDataOptions): void {
     const {width, height, depth} = this;
     const options = this._normalizeCopyImageDataOptions(options_);
-    this.device.handle.pushErrorScope('validation');
+    this.device.pushErrorScope('validation');
     this.device.handle.queue.writeTexture(
       // destination: GPUImageCopyTexture
       {
@@ -118,18 +114,16 @@ export class WebGPUTexture extends Texture {
       // size: GPUExtent3D - extents of the content to write
       [width, height, depth]
     );
-    this.device.handle.popErrorScope().then((error: GPUError | null) => {
-      if (error) {
-        this.device.reportError(new Error(`copyImageData: ${error.message}`))();
-        this.device.debug();
-      }
+    this.device.popErrorScope((error: GPUError) => {
+      this.device.reportError(new Error(`copyImageData: ${error.message}`), this)();
+      this.device.debug();
     });
   }
 
   copyExternalImage(options_: CopyExternalImageOptions): {width: number; height: number} {
     const options = this._normalizeCopyExternalImageOptions(options_);
 
-    this.device.handle.pushErrorScope('validation');
+    this.device.pushErrorScope('validation');
     this.device.handle.queue.copyExternalImageToTexture(
       // source: GPUImageCopyExternalImage
       {
@@ -149,11 +143,9 @@ export class WebGPUTexture extends Texture {
       // copySize: GPUExtent3D
       [options.width, options.height, 1]
     );
-    this.device.handle.popErrorScope().then((error: GPUError | null) => {
-      if (error) {
-        this.device.reportError(new Error(`copyExternalImage: ${error.message}`))();
-        this.device.debug();
-      }
+    this.device.popErrorScope((error: GPUError) => {
+      this.device.reportError(new Error(`copyExternalImage: ${error.message}`), this)();
+      this.device.debug();
     });
 
     // TODO - should these be clipped to the texture size minus x,y,z?

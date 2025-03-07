@@ -86,6 +86,10 @@ v9.1 continues to build out WebGPU support. Some additional deprecations and bre
 | `getDependencyGraph()`               | Removed | `getShaderModuleDependencies(module)` . | Interact directly with the shader module           |
 | `glsl` template string               | Removed | `/* glsl */` comment                    | Enable syntax highlighting in vscode using comment |
 
+**@luma.gl/effects**
+
+New module. All postprocessing effects that were previously in `@luma.gl/shadertools` are now exported from `@luma.gl/effects`.
+
 **@luma.gl/webgl**
 
 - `WebGLDeviceContext` - Note that luma.gl v9.1 and onwards set `DeviceProps.webgl.preserveDrawingBuffers` to `true` by default. This can be disabled for some (potential) memory savings and a (potential) minor performance boost on resource limited devices, such as mobile phones, at the cost of not being able to take screenshots or rendering to the screen without clearing it.

@@ -131,6 +131,7 @@ function onGLError(
   const errorMessage = globalThis.WebGLDebugUtils.glEnumToString(err);
   const functionArgs = globalThis.WebGLDebugUtils.glFunctionArgsToString(functionName, args);
   const message = `${errorMessage} in gl.${functionName}(${functionArgs})`;
+  // TODO - call device.reportError
   log.error(message)();
   debugger; // eslint-disable-line
   // throw new Error(message);
