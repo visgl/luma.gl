@@ -4,6 +4,10 @@
 
 Theme: Improved WebGPU support
 
+### v9.1.5
+
+- fix: Extract WGSL shader layout after modules have been resolved (#2343)
+
 ### v9.1.4
 
 - fix(shadertools): Explicitly export UniformTypes (#2339)
