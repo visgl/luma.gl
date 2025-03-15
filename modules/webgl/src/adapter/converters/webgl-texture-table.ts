@@ -124,7 +124,7 @@ export const WEBGL_TEXTURE_FORMATS: Record<TextureFormat, WebGLFormatInfo> = {
   'rgb8unorm-webgl': {gl: GL.RGB8},
   'rgb8snorm-webgl': {gl: GL.RGB8_SNORM},
 
-  // 32-bit formats  
+  // 32-bit formats
   'rgba8unorm': {gl: GL.RGBA8},
   'rgba8unorm-srgb': {gl: GL.SRGB8_ALPHA8},
   'rgba8snorm': {gl: GL.RGBA8_SNORM},
@@ -149,7 +149,7 @@ export const WEBGL_TEXTURE_FORMATS: Record<TextureFormat, WebGLFormatInfo> = {
   'rg11b10ufloat': {gl: GL.R11F_G11F_B10F, rb: true},
   'rgb10a2unorm': {gl: GL.RGB10_A2, rb: true},
   'rgb10a2uint': {gl: GL.RGB10_A2UI, rb: true},
-  
+
   // 48-bit formats
   'rgb16unorm-webgl': {gl: GL.RGB16_EXT}, // rgb not renderable
   'rgb16snorm-webgl': {gl: GL.RGB16_SNORM_EXT}, // rgb not renderable
@@ -166,7 +166,7 @@ export const WEBGL_TEXTURE_FORMATS: Record<TextureFormat, WebGLFormatInfo> = {
 
   // 96-bit formats (deprecated!)
   'rgb32float-webgl': {gl: GL.RGB32F, x: EXT_color_buffer_float, dataFormat: GL.RGB, types: [GL.FLOAT]},
-  
+
   // 128-bit formats
   'rgba32uint': {gl: GL.RGBA32UI, rb: true},
   'rgba32sint': {gl: GL.RGBA32I, rb: true},
@@ -333,6 +333,12 @@ export function getTextureFormatWebGL(format: TextureFormat): {
   const formatData = WEBGL_TEXTURE_FORMATS[format];
   const webglFormat = convertTextureFormatToGL(format);
   const decoded = getTextureFormatInfo(format);
+
+  if (decoded.compressed) {
+    // TODO: Unclear whether this is always valid, this may be why ETC2 RGBA8 fails.
+    formatData.dataFormat = webglFormat as GLTexelDataFormat;
+  }
+
   return {
     internalFormat: webglFormat,
     format:
