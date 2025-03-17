@@ -74,16 +74,7 @@ fn lighting_getSpecularLightColor(cameraPosition: vec3<f32>, position_worldspace
     let view_direction = normalize(cameraPosition - position_worldspace);
 
     switch (lighting.lightType) {
-      case 0: {
-        let pointLight: PointLight = lighting_getPointLight(0);
-        let light_position_worldspace: vec3<f32> = pointLight.position;
-        let light_direction: vec3<f32> = normalize(light_position_worldspace - position_worldspace);
-        lightColor += lighting_getLightColor(surfaceColor, light_direction, view_direction, normal_worldspace, pointLight.color);
-      }
-      // TODO (kaapp): these branches are identical but wgsl_reflect will error
-      // on a case containing both 0 and default. Will attempt to upstream a fix to that
-      // so we can combine these again.
-      default: {
+      case 0, default: {
         let pointLight: PointLight = lighting_getPointLight(0);
         let light_position_worldspace: vec3<f32> = pointLight.position;
         let light_direction: vec3<f32> = normalize(light_position_worldspace - position_worldspace);
