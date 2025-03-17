@@ -66,6 +66,9 @@ fn lighting_getLightColor2(surfaceColor: vec3<f32>, cameraPosition: vec3<f32>, p
   */
 }
 
+// TODO: wgsl parser has a bug which will error on this code, will upstream a fix.
+/**
+
 fn lighting_getSpecularLightColor(cameraPosition: vec3<f32>, position_worldspace: vec3<f32>, normal_worldspace: vec3<f32>) -> vec3<f32>{
   var lightColor = vec3<f32>(0, 0, 0);
   let surfaceColor = vec3<f32>(0, 0, 0);
@@ -89,6 +92,7 @@ fn lighting_getSpecularLightColor(cameraPosition: vec3<f32>, position_worldspace
   return lightColor;
 }
 `;
+
 
 // TODO - handle multiple lights
 /**
