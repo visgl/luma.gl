@@ -80,7 +80,7 @@ fn lighting_getSpecularLightColor(cameraPosition: vec3<f32>, position_worldspace
         let light_direction: vec3<f32> = normalize(light_position_worldspace - position_worldspace);
         lightColor += lighting_getLightColor(surfaceColor, light_direction, view_direction, normal_worldspace, pointLight.color);
       }
-      // TODO (kaapp): these branches are identical but wgsl_parser will error
+      // TODO (kaapp): these branches are identical but wgsl_reflect will error
       // on a case containing both 0 and default. Will attempt to upstream a fix to that
       // so we can combine these again.
       default: {
@@ -98,8 +98,6 @@ fn lighting_getSpecularLightColor(cameraPosition: vec3<f32>, position_worldspace
   return lightColor;
 }
 `;
-
-
 
 // TODO - handle multiple lights
 /**
