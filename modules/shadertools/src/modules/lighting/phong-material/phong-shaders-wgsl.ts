@@ -10,7 +10,7 @@ struct phongMaterialUniforms {
   specularColor: vec3<f32>,
 };
 
-@binding(2) @group(0) var<uniform> material : phongMaterialUniforms;
+@binding(2) @group(0) var<uniform> phongMaterial : phongMaterialUniforms;
 
 fn lighting_getLightColor(surfaceColor: vec3<f32>, light_direction: vec3<f32>, view_direction: vec3<f32>, normal_worldspace: vec3<f32>, color: vec3<f32>) -> vec3<f32> {
   let halfway_direction: vec3<f32> = normalize(light_direction + view_direction);
@@ -18,10 +18,10 @@ fn lighting_getLightColor(surfaceColor: vec3<f32>, light_direction: vec3<f32>, v
   var specular: f32 = 0.0;
   if (lambertian > 0.0) {
     let specular_angle = max(dot(normal_worldspace, halfway_direction), 0.0);
-    specular = pow(specular_angle, material.shininess);
+    specular = pow(specular_angle, phongMaterial.shininess);
   }
   lambertian = max(lambertian, 0.0);
-  return (lambertian * material.diffuse * surfaceColor + specular * material.specularColor) * color;
+  return (lambertian * phongMaterial.diffuse * surfaceColor + specular * phongMaterial.specularColor) * color;
 }
 
 fn lighting_getLightColor2(surfaceColor: vec3<f32>, cameraPosition: vec3<f32>, position_worldspace: vec3<f32>, normal_worldspace: vec3<f32>) -> vec3<f32> {
@@ -32,7 +32,7 @@ fn lighting_getLightColor2(surfaceColor: vec3<f32>, cameraPosition: vec3<f32>, p
   }
 
   let view_direction: vec3<f32> = normalize(cameraPosition - position_worldspace);
-  lightColor = material.ambient * surfaceColor * lighting.ambientColor;
+  lightColor = phongMaterial.ambient * surfaceColor * lighting.ambientColor;
 
   if (lighting.lightType == 0) {
     let pointLight: PointLight  = lighting_getPointLight(0);
