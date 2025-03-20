@@ -6,7 +6,7 @@ import {NumberArray3} from '@math.gl/types';
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
 import {lighting} from '../lights/lighting';
 import {PHONG_VS, PHONG_FS} from '../phong-material/phong-shaders-glsl';
-import { PHONG_WGSL } from '../phong-material/phong-shaders-wgsl';
+import {PHONG_WGSL} from '../phong-material/phong-shaders-wgsl';
 
 export type GouraudMaterialProps = {
   ambient?: number;
