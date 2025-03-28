@@ -27,6 +27,7 @@ import type {
   QuerySetProps,
   DeviceProps,
   CommandEncoderProps,
+  PipelineLayoutProps,
 } from '@luma.gl/core';
 import {Device, DeviceFeatures} from '@luma.gl/core';
 import {WebGPUBuffer} from './resources/webgpu-buffer';
@@ -43,6 +44,7 @@ import {WebGPUCanvasContext} from './webgpu-canvas-context';
 import {WebGPUCommandEncoder} from './resources/webgpu-command-encoder';
 import {WebGPUCommandBuffer} from './resources/webgpu-command-buffer';
 import {WebGPUQuerySet} from './resources/webgpu-query-set';
+import {WebGPUPipelineLayout} from './resources/webgpu-pipeline-layout';
 
 /** WebGPU Device implementation */
 export class WebGPUDevice extends Device {
@@ -191,6 +193,10 @@ export class WebGPUDevice extends Device {
 
   createCanvasContext(props: CanvasContextProps): WebGPUCanvasContext {
     return new WebGPUCanvasContext(this, this.adapter, props);
+  }
+
+  createPipelineLayout(props: PipelineLayoutProps): WebGPUPipelineLayout {
+    return new WebGPUPipelineLayout(this, props);
   }
 
   submit(commandBuffer?: WebGPUCommandBuffer): void {

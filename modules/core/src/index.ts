@@ -72,6 +72,9 @@ export {TransformFeedback} from './adapter/resources/transform-feedback';
 export type {QuerySetProps} from './adapter/resources/query-set';
 export {QuerySet} from './adapter/resources/query-set';
 
+export type {PipelineLayoutProps} from './adapter/resources/pipeline-layout';
+export {PipelineLayout} from './adapter/resources/pipeline-layout';
+
 // PORTABLE API - UNIFORM BUFFERS
 export {UniformBufferLayout} from './portable/uniform-buffer-layout';
 export {UniformBlock} from './portable/uniform-block';
@@ -110,7 +113,12 @@ export type {
   ComputeShaderLayout,
   AttributeDeclaration,
   BindingDeclaration,
-  Binding
+  Binding,
+  UniformBufferBindingLayout,
+  StorageBufferBindingLayout,
+  TextureBindingLayout,
+  SamplerBindingLayout,
+  StorageTextureBindingLayout
 } from './adapter/types/shader-layout';
 export type {BufferLayout, BufferAttributeLayout} from './adapter/types/buffer-layout';
 export type {

@@ -1,6 +1,12 @@
 // luma.gl MIT license
 
-import type {Binding, RenderPass, VertexArray} from '@luma.gl/core';
+import type {
+  Binding,
+  RenderPass,
+  VertexArray,
+  StorageTextureBindingLayout,
+  StorageBufferBindingLayout
+} from '@luma.gl/core';
 import {RenderPipeline, RenderPipelineProps, log} from '@luma.gl/core';
 import {applyParametersToRenderPipelineDescriptor} from '../helpers/webgpu-parameters';
 import {getWebGPUTextureFormat} from '../helpers/convert-texture-format';
@@ -182,6 +188,10 @@ export class WebGPURenderPipeline extends RenderPipeline {
       targets
     };
 
+    const layout = this.device.createPipelineLayout({
+      shaderLayout: this.shaderLayout
+    });
+
     // Create a partially populated descriptor
     const descriptor: GPURenderPipelineDescriptor = {
       vertex,
@@ -189,7 +199,7 @@ export class WebGPURenderPipeline extends RenderPipeline {
       primitive: {
         topology: this.props.topology
       },
-      layout: 'auto'
+      layout: layout.handle
     };
 
     // Set depth format if required, defaulting to the preferred depth format
