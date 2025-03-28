@@ -5,7 +5,6 @@ import {
   StorageTextureBindingLayout
 } from '@luma.gl/core';
 import {WebGPUDevice} from '../webgpu-device';
-import {uid} from '@luma.gl/core/utils/uid';
 
 const VISIBILITY_ALL = GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT | GPUShaderStage.COMPUTE;
 
@@ -27,11 +26,17 @@ export class WebGPUPipelineLayout extends PipelineLayout {
         // layers, particularly if using a separate group for injected
         // bindings (e.g. project/lighting)
         this.device.handle.createBindGroupLayout({
-          label: uid('bind-group-layout'),
+          label: 'bind-group-layout',
           entries: bindGroupEntries
         })
       ]
     });
+  }
+
+  override destroy(): void {
+    // WebGPUPipelineLayout has no destroy method.
+    // @ts-expect-error
+    this.handle = null;
   }
 
   protected mapShaderLayoutToBindGroupEntries(): GPUBindGroupLayoutEntry[] {
@@ -116,5 +121,5 @@ export class WebGPUPipelineLayout extends PipelineLayout {
 const isStorageTextureBindingLayout = (
   maybe: StorageBufferBindingLayout | StorageTextureBindingLayout
 ): maybe is StorageTextureBindingLayout => {
-  return !!(maybe as StorageTextureBindingLayout).format;
+  return (maybe as StorageTextureBindingLayout).format !== undefined;
 };
