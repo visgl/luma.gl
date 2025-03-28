@@ -1,12 +1,6 @@
 // luma.gl MIT license
 
-import type {
-  Binding,
-  RenderPass,
-  VertexArray,
-  StorageTextureBindingLayout,
-  StorageBufferBindingLayout
-} from '@luma.gl/core';
+import type {Binding, RenderPass, VertexArray} from '@luma.gl/core';
 import {RenderPipeline, RenderPipelineProps, log} from '@luma.gl/core';
 import {applyParametersToRenderPipelineDescriptor} from '../helpers/webgpu-parameters';
 import {getWebGPUTextureFormat} from '../helpers/convert-texture-format';
