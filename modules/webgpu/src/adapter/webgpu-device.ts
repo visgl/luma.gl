@@ -28,7 +28,9 @@ import type {
   TransformFeedbackProps,
   QuerySet,
   QuerySetProps,
-  DeviceProps
+  DeviceProps,
+  CommandEncoderProps,
+  PipelineLayoutProps,
 } from '@luma.gl/core';
 import {Device, DeviceFeatures} from '@luma.gl/core';
 import {WebGPUBuffer} from './resources/webgpu-buffer';
@@ -46,6 +48,7 @@ import {WebGPUVertexArray} from './resources/webgpu-vertex-array';
 
 import {WebGPUCanvasContext} from './webgpu-canvas-context';
 import {WebGPUQuerySet} from './resources/webgpu-query-set';
+import {WebGPUPipelineLayout} from './resources/webgpu-pipeline-layout';
 
 /** WebGPU Device implementation */
 export class WebGPUDevice extends Device {
@@ -194,6 +197,10 @@ export class WebGPUDevice extends Device {
     return new WebGPUCanvasContext(this, this.adapter, props);
   }
 
+  createPipelineLayout(props: PipelineLayoutProps): WebGPUPipelineLayout {
+    return new WebGPUPipelineLayout(this, props);
+  }
+
   submit(): void {
     const commandBuffer = this.commandEncoder?.finish();
     if (commandBuffer) {
@@ -205,7 +212,6 @@ export class WebGPUDevice extends Device {
         }
       });
     }
-    this.commandEncoder = null;
   }
 
   // PRIVATE METHODS

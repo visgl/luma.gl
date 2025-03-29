@@ -110,7 +110,7 @@ export type StorageBufferBindingLayout = {
   minBindingSize?: number;
 };
 
-type TextureBindingLayout = {
+export type TextureBindingLayout = {
   type: 'texture';
   /** Name of the binding. Used by luma to map bindings by name */
   name: string;
@@ -125,7 +125,7 @@ type TextureBindingLayout = {
   multisampled?: boolean;
 };
 
-type SamplerBindingLayout = {
+export type SamplerBindingLayout = {
   type: 'sampler';
   /** Name of the binding. Used by luma to map bindings by name */
   name: string;
@@ -138,7 +138,7 @@ type SamplerBindingLayout = {
   samplerType?: 'filtering' | 'non-filtering' | 'comparison'; // default: filtering
 };
 
-type StorageTextureBindingLayout = {
+export type StorageTextureBindingLayout = {
   type: 'storage';
   /** Name of the binding. Used by luma to map bindings by name */
   name: string;

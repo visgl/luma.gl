@@ -168,6 +168,10 @@ export class WebGPURenderPipeline extends RenderPipeline {
       ]
     };
 
+    const layout = this.device.createPipelineLayout({
+      shaderLayout: this.shaderLayout
+    });
+
     // Create a partially populated descriptor
     const descriptor: GPURenderPipelineDescriptor = {
       vertex,
@@ -175,7 +179,7 @@ export class WebGPURenderPipeline extends RenderPipeline {
       primitive: {
         topology: this.props.topology
       },
-      layout: 'auto'
+      layout: layout.handle
     };
 
     if (this.props.parameters.depthWriteEnabled && this.props.parameters.depthCompare) {
