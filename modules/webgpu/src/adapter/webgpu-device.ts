@@ -29,7 +29,6 @@ import type {
   QuerySet,
   QuerySetProps,
   DeviceProps,
-  CommandEncoderProps,
   PipelineLayoutProps,
 } from '@luma.gl/core';
 import {Device, DeviceFeatures} from '@luma.gl/core';

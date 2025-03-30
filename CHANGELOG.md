@@ -4,6 +4,12 @@
 
 Theme: Improved WebGPU support
 
+## v9.1.6
+
+- feat: Create explicit pipeline layouts from shaderLayout (#2355)
+- fix: WebGPU phong/gouraud shaders, uniform buffer name, wgls_reflect version (#2353)
+
+
 ### v9.1.5
 
 - fix: Extract WGSL shader layout after modules have been resolved (#2343)
