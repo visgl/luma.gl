@@ -6,8 +6,6 @@ import {
 } from '@luma.gl/core';
 import {WebGPUDevice} from '../webgpu-device';
 
-const VISIBILITY_ALL = GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT | GPUShaderStage.COMPUTE;
-
 export class WebGPUPipelineLayout extends PipelineLayout {
   device: WebGPUDevice;
   handle: GPUPipelineLayout;
@@ -106,6 +104,9 @@ export class WebGPUPipelineLayout extends PipelineLayout {
           console.warn('unhandled binding type when creating pipeline descriptor');
         }
       }
+
+      const VISIBILITY_ALL =
+        GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT | GPUShaderStage.COMPUTE;
 
       bindGroupEntries.push({
         binding: binding.location,
