@@ -102,11 +102,13 @@ export class AsyncTexture {
   }
 
   async initAsync(props: AsyncTextureProps): Promise<void> {
-    let resolveReady;
-    let rejectReady;
-
     const asyncData: AsyncTextureData = props.data;
-    const data: TextureData = await awaitAllPromises(asyncData).then(resolveReady, rejectReady);
+    let data: TextureData;
+    try {
+      data = await awaitAllPromises(asyncData);
+    } catch (error) {
+      this.rejectReady(error as Error);
+    }
 
     // Check that we haven't been destroyed while waiting for texture data to load
     if (this.destroyed) {
@@ -121,6 +123,7 @@ export class AsyncTexture {
     this.sampler = this.texture.sampler;
     this.view = this.texture.view;
     this.isReady = true;
+    this.resolveReady();
   }
 
   destroy(): void {
