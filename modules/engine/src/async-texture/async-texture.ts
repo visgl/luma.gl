@@ -209,7 +209,7 @@ export class AsyncTexture {
     if (props.data) {
       switch (this.props.dimension) {
         case '1d':
-          this._setTexture1DData(this.texture, data as Texture1DData);
+          this._setTexture1DData(this.texture, data);
           break;
         case '2d':
           this._setTexture2DData(data);

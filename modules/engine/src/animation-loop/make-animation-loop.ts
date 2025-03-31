@@ -36,14 +36,14 @@ export function makeAnimationLoop(
     device,
 
     async onInitialize(animationProps: AnimationProps): Promise<unknown> {
-      clearError(animationProps.animationLoop.device!);
+      clearError(animationProps.animationLoop.device);
       try {
         // @ts-expect-error abstract to prevent instantiation
         renderLoop = new AnimationLoopTemplateCtor(animationProps);
         // Any async loading can be handled here
         return await renderLoop?.onInitialize(animationProps);
       } catch (error) {
-        setError(animationProps.animationLoop.device!, error as Error);
+        setError(animationProps.animationLoop.device, error as Error);
         return null;
       }
     },
