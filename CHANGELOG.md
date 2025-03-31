@@ -4,6 +4,10 @@
 
 Theme: Improved WebGPU support
 
+## v9.1.7
+
+- fix: Don't reference WebGPU enums on global level (#2357)
+
 ## v9.1.6
 
 - feat: Create explicit pipeline layouts from shaderLayout (#2355)
