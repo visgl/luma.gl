@@ -51,7 +51,7 @@ const TEST_CASES: {
   bufferLayout: BufferLayout[];
   vertexBufferLayout: GPUVertexBufferLayout[];
 }[] = [
-  // TODO: Renable test without bufferLayout when not using hardcoded types
+  // TODO: Re-enable test without bufferLayout when not using hardcoded types
   // {
   //   shaderLayout,
   //   bufferLayout: [],
