@@ -28,23 +28,7 @@ export function getVertexBufferLayout(
   const vertexBufferLayouts: GPUVertexBufferLayout[] = [];
   const usedAttributes = new Set<string>();
 
-  // don't mutate the original array
-  const orderedBufferLayout = bufferLayout.slice();
-  // it's important that the VertexBufferLayout order matches the
-  // @location order of the attribute struct otherwise the buffers
-  // will not contain the data the shader expects them to.
-  orderedBufferLayout.sort((a, b) => {
-    const attributeA = findAttributeLayout(shaderLayout, a.name);
-    const attributeB = findAttributeLayout(shaderLayout, b.name);
-
-    if (attributeA && attributeB) {
-      return attributeA.location - attributeB.location;
-    }
-
-    return 0;
-  });
-
-  for (const mapping of orderedBufferLayout) {
+  for (const mapping of bufferLayout) {
     // First handle any buffers mentioned in `bufferLayout`
     // Build vertex attributes for one buffer
     const vertexAttributes: GPUVertexAttribute[] = [];
@@ -121,6 +105,16 @@ export function getVertexBufferLayout(
       });
     }
   }
+
+  // it's important that the VertexBufferLayout order matches the
+  // @location order of the attribute struct otherwise the buffers
+  // will not contain the data the shader expects them to.
+  vertexBufferLayouts.sort((a, b) => {
+    const minLocationA = Math.min(...Array.from(a.attributes).map(attr => attr.shaderLocation));
+    const minLocationB = Math.min(...Array.from(b.attributes).map(attr => attr.shaderLocation));
+
+    return minLocationA - minLocationB;
+  });
 
   return vertexBufferLayouts;
 }
