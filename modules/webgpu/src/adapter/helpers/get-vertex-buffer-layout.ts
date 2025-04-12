@@ -28,8 +28,24 @@ export function getVertexBufferLayout(
   const vertexBufferLayouts: GPUVertexBufferLayout[] = [];
   const usedAttributes = new Set<string>();
 
-  // First handle any buffers mentioned in `bufferLayout`
-  for (const mapping of bufferLayout) {
+  // don't mutate the original array
+  const orderedBufferLayout = bufferLayout.slice();
+  // it's important that the VertexBufferLayout order matches the
+  // @location order of the attribute struct otherwise the buffers
+  // will not contain the data the shader expects them to.
+  orderedBufferLayout.sort((a, b) => {
+    const attributeA = findAttributeLayout(shaderLayout, a.name);
+    const attributeB = findAttributeLayout(shaderLayout, b.name);
+
+    if (attributeA && attributeB) {
+      return attributeA.location - attributeB.location;
+    }
+
+    return 0;
+  });
+
+  for (const mapping of orderedBufferLayout) {
+    // First handle any buffers mentioned in `bufferLayout`
     // Build vertex attributes for one buffer
     const vertexAttributes: GPUVertexAttribute[] = [];
 
@@ -144,21 +160,23 @@ export function getBufferSlots(
 /**
  * Looks up an attribute in the ShaderLayout.
  * @throws if name is not in ShaderLayout
- * @throws if name has already been referenced
+ * @throws if name has already been referenced and attributeNames is provided
  */
 function findAttributeLayout(
   shaderLayout: ShaderLayout,
   name: string,
-  attributeNames: Set<string>
+  attributeNames?: Set<string>
 ): AttributeDeclaration | null {
   const attribute = shaderLayout.attributes.find(attribute_ => attribute_.name === name);
   if (!attribute) {
     log.warn(`Supplied attribute not present in shader layout: ${name}`)();
     return null;
   }
-  if (attributeNames.has(name)) {
-    throw new Error(`Found multiple entries for attribute: ${name}`);
+  if (attributeNames) {
+    if (attributeNames.has(name)) {
+      throw new Error(`Found multiple entries for attribute: ${name}`);
+    }
+    attributeNames.add(name);
   }
-  attributeNames.add(name);
   return attribute;
 }
