@@ -28,8 +28,8 @@ export function getVertexBufferLayout(
   const vertexBufferLayouts: GPUVertexBufferLayout[] = [];
   const usedAttributes = new Set<string>();
 
+  // First handle any buffers mentioned in `bufferLayout`
   for (const mapping of bufferLayout) {
-    // First handle any buffers mentioned in `bufferLayout`
     // Build vertex attributes for one buffer
     const vertexAttributes: GPUVertexAttribute[] = [];
 
