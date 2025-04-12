@@ -110,8 +110,8 @@ export function getVertexBufferLayout(
   // @location order of the attribute struct otherwise the buffers
   // will not contain the data the shader expects them to.
   vertexBufferLayouts.sort((a, b) => {
-    const minLocationA = Math.min(...Array.from(a.attributes).map(attr => attr.shaderLocation));
-    const minLocationB = Math.min(...Array.from(b.attributes).map(attr => attr.shaderLocation));
+    const minLocationA = Math.min(...Array.from(a.attributes, attr => attr.shaderLocation));
+    const minLocationB = Math.min(...Array.from(b.attributes, attr => attr.shaderLocation));
 
     return minLocationA - minLocationB;
   });
