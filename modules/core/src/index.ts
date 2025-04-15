@@ -196,6 +196,7 @@ export {getScratchArray} from './utils/array-utils-flat';
 export type {AttributeInfo} from './adapter-utils/get-attribute-from-layouts';
 export {BufferLayoutHelper as _BufferLayoutHelper} from './adapter-utils/buffer-layout-helper';
 export {getAttributeInfosFromLayouts} from './adapter-utils/get-attribute-from-layouts';
+export {sortedBufferLayoutByShaderSourceLocations} from './adapter-utils/buffer-layout-order';
 
 // TEST EXPORTS
 export {

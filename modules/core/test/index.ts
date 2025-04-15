@@ -9,6 +9,7 @@ import './shadertypes/vertex-format-from-attribute.spec';
 import './shadertypes/decode-texture-format.spec';
 
 // adapter utils
+import './adapter-utils/buffer-layout-order.spec';
 import './adapter-utils/get-attribute-from-layout.spec';
 import './adapter-utils/is-uniform-value.spec';
 import './adapter-utils/format-compiler-log.spec';
