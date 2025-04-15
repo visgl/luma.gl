@@ -106,6 +106,16 @@ export function getVertexBufferLayout(
     }
   }
 
+  // it's important that the VertexBufferLayout order matches the
+  // @location order of the attribute struct otherwise the buffers
+  // will not contain the data the shader expects them to.
+  vertexBufferLayouts.sort((a, b) => {
+    const minLocationA = Math.min(...Array.from(a.attributes, attr => attr.shaderLocation));
+    const minLocationB = Math.min(...Array.from(b.attributes, attr => attr.shaderLocation));
+
+    return minLocationA - minLocationB;
+  });
+
   return vertexBufferLayouts;
 }
 
@@ -144,21 +154,23 @@ export function getBufferSlots(
 /**
  * Looks up an attribute in the ShaderLayout.
  * @throws if name is not in ShaderLayout
- * @throws if name has already been referenced
+ * @throws if name has already been referenced and attributeNames is provided
  */
 function findAttributeLayout(
   shaderLayout: ShaderLayout,
   name: string,
-  attributeNames: Set<string>
+  attributeNames?: Set<string>
 ): AttributeDeclaration | null {
   const attribute = shaderLayout.attributes.find(attribute_ => attribute_.name === name);
   if (!attribute) {
     log.warn(`Supplied attribute not present in shader layout: ${name}`)();
     return null;
   }
-  if (attributeNames.has(name)) {
-    throw new Error(`Found multiple entries for attribute: ${name}`);
+  if (attributeNames) {
+    if (attributeNames.has(name)) {
+      throw new Error(`Found multiple entries for attribute: ${name}`);
+    }
+    attributeNames.add(name);
   }
-  attributeNames.add(name);
   return attribute;
 }
