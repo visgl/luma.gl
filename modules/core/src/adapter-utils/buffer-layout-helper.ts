@@ -3,6 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {BufferLayout} from '../adapter/types/buffer-layout';
+import {log} from '../utils/log';
 
 /** BufferLayoutHelper is a helper class that should not be used directly by applications */
 export class BufferLayoutHelper {
@@ -37,5 +38,15 @@ export class BufferLayoutHelper {
       }
     }
     return mergedLayouts;
+  }
+
+  getBufferIndex(bufferName: string): number {
+    const bufferIndex = this.bufferLayouts.findIndex(layout => layout.name === bufferName);
+
+    if (bufferIndex === -1) {
+      log.warn(`BufferLayout: Missing buffer for "${bufferName}".`)();
+    }
+
+    return bufferIndex;
   }
 }
