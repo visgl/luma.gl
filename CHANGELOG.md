@@ -4,6 +4,13 @@
 
 Theme: Improved WebGPU support
 
+## v9.1.8
+
+- Fix buffer locations being set incorrectly (#2364)
+- fix: Ensure VertexBufferLayout matches parsed WGSL shader @location layout (#2363)
+- fix(webgpu) Fill default viewport depth if not provided (#2362)
+- fix: Resolve AsyncTexture.ready (#2358)
+
 ## v9.1.7
 
 - fix: Don't reference WebGPU enums on global level (#2357)
