@@ -7,7 +7,7 @@ on:
 
 jobs:
   check_branch:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     outputs:
       should_deploy: ${{ endsWith(github.ref, steps.get_version.outputs.latest) }}
 
@@ -23,7 +23,7 @@ jobs:
           echo "latest=${LATEST}-release" >> "$GITHUB_OUTPUT"
 
   deploy:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: check_branch
     
     permissions:
