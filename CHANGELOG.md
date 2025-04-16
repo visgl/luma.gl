@@ -4,6 +4,10 @@
 
 Theme: Improved WebGPU support
 
+## v9.1.9
+
+- chore: Update yarn.lock (#2367)
+
 ## v9.1.8
 
 - Fix buffer locations being set incorrectly (#2364)
