@@ -41,7 +41,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
   onRender({aspect, device, time}: AnimationProps): void {
     if (!this.scenes?.length) return;
-    const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1], clearDepth: true});
+    const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1], clearDepth: 1});
 
     const far = 2 * this.vantage[0];
     const near = far / 1000;
@@ -113,7 +113,6 @@ export const lightSources: LightingProps = {
     type: 'ambient'
   },
   directionalLights: [
-    // @ts-expect-error Remove once npm package updated with new types
     {
       color: [222, 244, 255],
       direction: [1, -0.5, 0.5],

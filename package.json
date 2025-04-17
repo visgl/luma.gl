@@ -16,7 +16,7 @@
   ],
   "workspaces": [
     "modules/*",
-    "examples/*/*"
+    "examples/**/*"
   ],
   "browser": {
     "fs": false
@@ -63,6 +63,6 @@
   },
   "volta": {
     "node": "20.17.0",
-    "yarn": "4.5.1"
+    "yarn": "4.9.1"
   }
 }
