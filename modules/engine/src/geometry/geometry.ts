@@ -103,6 +103,7 @@ export class Geometry {
    * TODO Geometry types are a mess
    */
   getAttributes(): GeometryAttributes {
+    // @ts-expect-error
     return this.indices ? {indices: this.indices, ...this.attributes} : this.attributes;
   }
 
