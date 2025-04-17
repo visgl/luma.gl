@@ -16,6 +16,7 @@ npm-debug.log
 stats.json
 .reify-cache
 .cache
+.yarn
 .playwright-artifacts/
 jscpd-report.md
 

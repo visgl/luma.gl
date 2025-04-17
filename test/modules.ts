@@ -27,6 +27,7 @@ import '@luma.gl/experimental/test';
 // EXPERIMENTAL
 import '@luma.gl/arrow/test';
 import '@luma.gl/text/test';
+import '@luma.gl/gpgpu/test';
 
 // DEPRECATED TESTS
 import '@luma.gl/constants/test';
