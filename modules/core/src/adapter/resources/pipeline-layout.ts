@@ -1,3 +1,7 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import {Device} from '../device';
 import {ShaderLayout} from '../types/shader-layout';
 import {Resource, ResourceProps} from './resource';

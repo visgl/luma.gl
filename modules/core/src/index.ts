@@ -177,6 +177,10 @@ export {
   getTextureFormatCapabilities
 } from './shadertypes/utils/decode-texture-format';
 
+// PIXEL UTILS
+
+export {type PixelData, readPixel, writePixel} from './shadertypes/utils/pixel-utils';
+
 // GENERAL EXPORTS - FOR APPLICATIONS
 
 export type {StatsManager} from './utils/stats-manager'; // TODO - should this be moved to probe.gl?

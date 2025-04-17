@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Adapter, DeviceProps} from '@luma.gl/core';
+import {Adapter, Device, DeviceProps} from '@luma.gl/core';
 import {NullDevice} from './null-device';
 
 export class NullAdapter extends Adapter {
@@ -23,7 +23,7 @@ export class NullAdapter extends Adapter {
     return handle === null;
   }
 
-  async attach(handle: null): Promise<NullDevice> {
+  async attach(handle: null, props: DeviceProps): Promise<NullDevice> {
     return new NullDevice({});
   }
 

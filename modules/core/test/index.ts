@@ -5,8 +5,8 @@ import './utils/uid.spec';
 import './shadertypes/decode-attribute-type.spec';
 import './shadertypes/decode-vertex-format.spec';
 import './shadertypes/vertex-format-from-attribute.spec';
-
 import './shadertypes/decode-texture-format.spec';
+import './shadertypes/pixel-utils.spec';
 
 // adapter utils
 import './adapter-utils/buffer-layout-order.spec';

@@ -30,6 +30,7 @@ export class WebGPUAdapter extends Adapter {
     return false;
   }
 
+  // @ts-expect-error We only import type so ts can't determine inheritance
   async create(props: DeviceProps): Promise<WebGPUDevice> {
     if (!navigator.gpu) {
       throw new Error('WebGPU not available. Recent Chrome browsers should work.');
@@ -97,6 +98,7 @@ export class WebGPUAdapter extends Adapter {
     }
   }
 
+  // @ts-expect-error We only import type so ts can't determine inheritance
   async attach(handle: GPUDevice): Promise<WebGPUDevice> {
     throw new Error('WebGPUAdapter.attach() not implemented');
   }
