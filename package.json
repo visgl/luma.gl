@@ -50,7 +50,7 @@
     "puppeteer": "^22.0.0"
   },
   "resolutions": {
-    "typescript": "^5.7.3",
+    "typescript": "^5.8.3",
     "tsconfig-paths": "^3.9.0",
     "ts-patch": "^3.3.0"
   },
