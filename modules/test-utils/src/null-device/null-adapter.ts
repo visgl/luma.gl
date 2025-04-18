@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Adapter, Device, DeviceProps} from '@luma.gl/core';
+import {Adapter, DeviceProps} from '@luma.gl/core';
 import {NullDevice} from './null-device';
 
 export class NullAdapter extends Adapter {
