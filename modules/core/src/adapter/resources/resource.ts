@@ -36,6 +36,7 @@ export abstract class Resource<Props extends ResourceProps> {
   readonly props: Required<Props>;
   readonly userData: Record<string, unknown> = {};
   abstract readonly device: Device;
+  abstract readonly handle: unknown;
   private _device: Device;
 
   /** Whether this resource has been destroyed */

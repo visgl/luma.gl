@@ -8,6 +8,7 @@ import type {NullDevice} from '../null-device';
 
 export class NullBuffer extends Buffer {
   device: NullDevice;
+  readonly handle = null;
 
   byteLength: number;
 

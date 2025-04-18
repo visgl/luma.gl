@@ -10,6 +10,8 @@ import type {NullTexture} from './null-texture';
 
 export class NullTextureView extends TextureView {
   readonly device: NullDevice;
+  readonly handle = null;
+
   readonly texture: NullTexture;
 
   constructor(device: NullDevice, props: TextureViewProps & {texture: NullTexture}) {

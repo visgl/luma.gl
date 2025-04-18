@@ -14,9 +14,9 @@ export type Attachment = WEBGLTextureView | WEBGLTexture; // | WEBGLRenderbuffer
 
 /** luma.gl Framebuffer, WebGL implementation  */
 export class WEBGLFramebuffer extends Framebuffer {
-  device: WebGLDevice;
+  readonly device: WebGLDevice;
   gl: WebGL2RenderingContext;
-  handle: WebGLFramebuffer;
+  readonly handle: WebGLFramebuffer;
 
   colorAttachments: WEBGLTextureView[] = [];
   depthStencilAttachment: WEBGLTextureView | null = null;

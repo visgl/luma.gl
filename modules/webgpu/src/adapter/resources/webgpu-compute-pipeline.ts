@@ -11,8 +11,8 @@ import {WebGPUShader} from './webgpu-shader';
 
 /** Creates a new compute pipeline when parameters change */
 export class WebGPUComputePipeline extends ComputePipeline {
-  device: WebGPUDevice;
-  handle: GPUComputePipeline;
+  readonly device: WebGPUDevice;
+  readonly handle: GPUComputePipeline;
 
   /** For internal use to create BindGroups */
   private _bindGroupLayout: GPUBindGroupLayout | null = null;

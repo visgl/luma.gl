@@ -19,11 +19,11 @@ import type {WebGPURenderPass} from './webgpu-render-pass';
 
 /** Creates a new render pipeline when parameters change */
 export class WebGPURenderPipeline extends RenderPipeline {
-  device: WebGPUDevice;
-  handle: GPURenderPipeline;
+  readonly device: WebGPUDevice;
+  readonly handle: GPURenderPipeline;
 
-  vs: WebGPUShader;
-  fs: WebGPUShader | null = null;
+  readonly vs: WebGPUShader;
+  readonly fs: WebGPUShader | null = null;
 
   /** For internal use to create BindGroups */
   private _bindings: Record<string, Binding>;

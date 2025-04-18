@@ -3,7 +3,8 @@ import type {
   TextureProps,
   TextureViewProps,
   CopyExternalImageOptions,
-  CopyImageDataOptions
+  CopyImageDataOptions,
+  SamplerProps
 } from '@luma.gl/core';
 import {Texture, log} from '@luma.gl/core';
 
@@ -64,7 +65,7 @@ export class WebGPUTexture extends Texture {
     this.sampler =
       props.sampler instanceof WebGPUSampler
         ? props.sampler
-        : new WebGPUSampler(this.device, props.sampler || {});
+        : new WebGPUSampler(this.device, (props.sampler as SamplerProps) || {});
 
     this.view = new WebGPUTextureView(this.device, {
       ...this.props,

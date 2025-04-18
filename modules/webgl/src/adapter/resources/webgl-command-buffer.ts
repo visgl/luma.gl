@@ -65,7 +65,8 @@ type Command =
   | ReadTextureCommand;
 
 export class WEBGLCommandBuffer extends CommandBuffer {
-  device: WebGLDevice;
+  readonly device: WebGLDevice;
+  readonly handle = null;
   commands: Command[] = [];
 
   constructor(device: WebGLDevice) {

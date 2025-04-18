@@ -36,9 +36,9 @@ const LOG_PROGRAM_PERF_PRIORITY = 4;
 /** Creates a new render pipeline */
 export class WEBGLRenderPipeline extends RenderPipeline {
   /** The WebGL device that created this render pipeline */
-  device: WebGLDevice;
+  readonly device: WebGLDevice;
   /** Handle to underlying WebGL program */
-  handle: WebGLProgram;
+  readonly handle: WebGLProgram;
   /** vertex shader */
   vs: WEBGLShader;
   /** fragment shader */

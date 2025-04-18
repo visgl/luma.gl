@@ -134,8 +134,6 @@ export type CommandEncoderProps = ResourceProps & {
  * Encodes commands to queue that can be executed later
  */
 export abstract class CommandEncoder extends Resource<CommandEncoderProps> {
-  abstract readonly handle: unknown;
-
   override get [Symbol.toStringTag](): string {
     return 'CommandEncoder';
   }

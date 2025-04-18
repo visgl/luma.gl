@@ -8,6 +8,7 @@ import type {NullDevice} from '../null-device';
 
 export class NullTransformFeedback extends TransformFeedback {
   readonly device: NullDevice;
+  readonly handle = null;
 
   readonly layout: ShaderLayout;
   buffers: Record<string, Buffer | BufferRange> = {};

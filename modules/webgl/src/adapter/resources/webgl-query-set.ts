@@ -7,8 +7,8 @@ import {WebGLDevice} from '../webgl-device';
  * Asynchronous queries for different kinds of information
  */
 export class WEBGLQuerySet extends QuerySet {
-  device: WebGLDevice;
-  handle: WebGLQuery;
+  readonly device: WebGLDevice;
+  readonly handle: WebGLQuery;
 
   target: number | null = null;
   _queryPending = false;

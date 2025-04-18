@@ -6,7 +6,9 @@ import type {
   TextureProps,
   TextureViewProps,
   CopyExternalImageOptions,
-  CopyImageDataOptions
+  CopyImageDataOptions,
+  Sampler,
+  SamplerProps
 } from '@luma.gl/core';
 
 import {Texture} from '@luma.gl/core';
@@ -16,6 +18,7 @@ import {NullTextureView} from './null-texture-view';
 
 export class NullTexture extends Texture {
   readonly device: NullDevice;
+  readonly handle = null;
 
   sampler: NullSampler;
   view: NullTextureView;
@@ -76,11 +79,15 @@ export class NullTexture extends Texture {
     return {width, height};
   }
 
-  override copyImageData(options: CopyImageDataOptions): void {
+  override setSampler(sampler?: Sampler | SamplerProps): void {
+    // ignore
+  }
+
+  copyImageData(options: CopyImageDataOptions): void {
     throw new Error('copyImageData not implemented');
   }
 
-  override generateMipmapsWebGL(): void {
+  generateMipmapsWebGL(): void {
     // ignore
   }
 }
