@@ -8,7 +8,7 @@ import type {
   TextureFormatCapabilities,
   DeviceTextureFormatCapabilities
 } from '@luma.gl/core';
-import {getTextureFormatInfo} from '@luma.gl/core';
+import {textureFormatDecoder} from '@luma.gl/core';
 import {GL, GLPixelType, GLExtensions, GLTexelDataFormat} from '@luma.gl/constants';
 import {getWebGLExtension} from '../../context/helpers/webgl-extensions';
 import {getGLFromVertexType} from './webgl-vertex-formats';
@@ -332,7 +332,7 @@ export function getTextureFormatWebGL(format: TextureFormat): {
 } {
   const formatData = WEBGL_TEXTURE_FORMATS[format];
   const webglFormat = convertTextureFormatToGL(format);
-  const decoded = getTextureFormatInfo(format);
+  const decoded = textureFormatDecoder.getInfo(format);
 
   if (decoded.compressed) {
     // TODO: Unclear whether this is always valid, this may be why ETC2 RGBA8 fails.
@@ -355,7 +355,7 @@ export function getTextureFormatWebGL(format: TextureFormat): {
 export function getDepthStencilAttachmentWebGL(
   format: TextureFormat
 ): GL.DEPTH_ATTACHMENT | GL.STENCIL_ATTACHMENT | GL.DEPTH_STENCIL_ATTACHMENT {
-  const formatInfo = getTextureFormatInfo(format);
+  const formatInfo = textureFormatDecoder.getInfo(format);
   switch (formatInfo.attachment) {
     case 'depth':
       return GL.DEPTH_ATTACHMENT;
@@ -370,7 +370,7 @@ export function getDepthStencilAttachmentWebGL(
 
 /** TODO - VERY roundabout legacy way of calculating bytes per pixel */
 export function getTextureFormatBytesPerPixel(format: TextureFormat): number {
-  const formatInfo = getTextureFormatInfo(format);
+  const formatInfo = textureFormatDecoder.getInfo(format);
   return formatInfo.bytesPerPixel as number;
 }
 

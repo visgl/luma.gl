@@ -3,13 +3,13 @@
 // Copyright (c) vis.gl contributors
 
 import type {TypedArray} from '../../types';
-import type {NormalizedDataType, PrimitiveDataType, SignedDataType} from '../data-types';
-import type {VertexFormat, VertexFormatInfo} from '../vertex-formats';
+import type {NormalizedDataType, PrimitiveDataType, SignedDataType} from '../data-types/data-types';
+import type {VertexFormat, VertexFormatInfo} from './vertex-formats';
 import {
   getDataTypeInfo,
   getDataTypeFromTypedArray,
   makeNormalizedDataType
-} from './decode-data-types';
+} from '../data-types/decode-data-types';
 
 /**
  * Decodes a vertex format, returning type, components, byte  length and flags (integer, signed, normalized)

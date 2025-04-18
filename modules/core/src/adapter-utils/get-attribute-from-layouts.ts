@@ -3,14 +3,14 @@
 // Copyright (c) vis.gl contributors
 
 import {log} from '../utils/log';
-import type {PrimitiveDataType, NormalizedDataType} from '../shadertypes/data-types';
-import type {AttributeShaderType} from '../shadertypes/shader-types';
-import type {VertexFormat} from '../shadertypes/vertex-formats';
-import {getAttributeShaderTypeInfo} from '../shadertypes/utils/decode-shader-types';
+import type {PrimitiveDataType, NormalizedDataType} from '../shadertypes/data-types/data-types';
+import type {AttributeShaderType} from '../shadertypes/data-types/shader-types';
+import type {VertexFormat} from '../shadertypes/vertex-arrays/vertex-formats';
+import {getAttributeShaderTypeInfo} from '../shadertypes/data-types/decode-shader-types';
 import {
   getVertexFormatInfo,
   getCompatibleVertexFormat
-} from '../shadertypes/utils/decode-vertex-format';
+} from '../shadertypes/vertex-arrays/decode-vertex-format';
 import type {ShaderLayout, AttributeDeclaration} from '../adapter/types/shader-layout';
 import type {BufferLayout} from '../adapter/types/buffer-layout';
 

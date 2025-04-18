@@ -8,9 +8,9 @@ import type {PrimitiveTopology, RenderPipelineParameters} from '../types/paramet
 import type {ShaderLayout, Binding} from '../types/shader-layout';
 import type {BufferLayout} from '../types/buffer-layout';
 import type {
-  ColorTextureFormat,
-  DepthStencilTextureFormat
-} from '@luma.gl/core/shadertypes/texture-formats';
+  TextureFormatColor,
+  TextureFormatDepthStencil
+} from '@luma.gl/core/shadertypes/textures/texture-formats';
 import type {Shader} from './shader';
 import type {RenderPass} from './render-pass';
 import {Resource, ResourceProps} from './resource';
@@ -44,9 +44,9 @@ export type RenderPipelineProps = ResourceProps & {
   // color attachment information (needed on WebGPU)
 
   /** Color attachments expected by this pipeline. Defaults to [device.preferredColorFormat]. Array needs not be contiguous. */
-  colorAttachmentFormats?: (ColorTextureFormat | null)[];
+  colorAttachmentFormats?: (TextureFormatColor | null)[];
   /** Depth attachment expected by this pipeline. Defaults to device.preferredDepthFormat, if depthWriteEnables parameter is set */
-  depthStencilAttachmentFormat?: DepthStencilTextureFormat;
+  depthStencilAttachmentFormat?: TextureFormatDepthStencil;
 
   /** Parameters that are controlled by pipeline */
   parameters?: RenderPipelineParameters;

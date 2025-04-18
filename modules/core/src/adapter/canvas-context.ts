@@ -5,7 +5,7 @@
 import {isBrowser} from '@probe.gl/env';
 import type {Device} from './device';
 import type {Framebuffer} from './resources/framebuffer';
-import type {DepthStencilTextureFormat} from '../shadertypes/texture-formats';
+import type {TextureFormatDepthStencil} from '../shadertypes/textures/texture-formats';
 import {uid} from '../utils/uid';
 import {withResolvers} from '../utils/promise-utils';
 
@@ -173,7 +173,7 @@ export abstract class CanvasContext {
 
   /** Returns a framebuffer with properly resized current 'swap chain' textures */
   abstract getCurrentFramebuffer(options?: {
-    depthStencilFormat?: DepthStencilTextureFormat | false;
+    depthStencilFormat?: TextureFormatDepthStencil | false;
   }): Framebuffer;
 
   // SIZE METHODS

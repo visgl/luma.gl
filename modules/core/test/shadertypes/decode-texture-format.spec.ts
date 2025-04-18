@@ -4,10 +4,9 @@
 
 import test from 'tape-promise/tape';
 import {
-  getTextureFormatInfo,
-  TextureFormat,
-  getTextureFormatCapabilities,
-  TextureFormatCapabilities
+  textureFormatDecoder,
+  type TextureFormat,
+  type TextureFormatCapabilities
 } from '@luma.gl/core';
 
 // prettier-ignore
@@ -24,14 +23,14 @@ const TEST_CASES: {format: TextureFormat, result: any}[] = [
   {format: 'r16float', result: {attachment: 'color', dataType: 'float16', components: 1, channels: 'r', integer: false, signed: false, normalized: false, bitsPerChannel: [16, 0, 0, 0], bytesPerPixel: 2, packed: false, srgb: false }}
 ];
 
-test('shadertype#getTextureFormatInfo', t => {
+test('shadertype#textureFormatDecoder.getInfo', t => {
   for (const tc of TEST_CASES) {
-    const decoded = getTextureFormatInfo(tc.format);
+    const decoded = textureFormatDecoder.getInfo(tc.format);
 
     t.deepEqual(
       decoded,
       {format: tc.format, ...tc.result},
-      `getTextureFormatInfo('${tc.format}') => ${JSON.stringify(decoded.dataType)}`
+      `textureFormatDecoder.getInfo('${tc.format}') => ${JSON.stringify(decoded.dataType)}`
     );
   }
   t.end();
@@ -46,9 +45,9 @@ const TEST_CASES_CAPABILITIES: {format: TextureFormat, result: Omit<TextureForma
   {format: 'r16uint', result: {create: true, render: true, filter: false, blend: true, store: true}},
 ];
 
-test('shadertype#getTextureFormatCapabilities', t => {
+test('shadertype#textureFormatDecoder.getCapabilities', t => {
   for (const tc of TEST_CASES_CAPABILITIES) {
-    const decoded = getTextureFormatCapabilities(tc.format);
+    const decoded = textureFormatDecoder.getCapabilities(tc.format);
 
     t.deepEqual(
       decoded,

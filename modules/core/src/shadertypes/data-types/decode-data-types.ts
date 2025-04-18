@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {TypedArray, TypedArrayConstructor} from '../../types';
-import {PrimitiveDataType, SignedDataType, NormalizedDataType, DataTypeInfo} from '../data-types';
+import {PrimitiveDataType, SignedDataType, NormalizedDataType, DataTypeInfo} from './data-types';
 
 /**
  * Gets info about a data type constant (signed or normalized)

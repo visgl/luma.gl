@@ -5,8 +5,8 @@
 import {StatsManager, lumaStats} from '../utils/stats-manager';
 import {log} from '../utils/log';
 import {uid} from '../utils/uid';
-import type {VertexFormat, VertexFormatInfo} from '../shadertypes/vertex-formats';
-import type {TextureFormat, TextureFormatInfo} from '../shadertypes/texture-formats';
+import type {VertexFormat, VertexFormatInfo} from '../shadertypes/vertex-arrays/vertex-formats';
+import type {TextureFormat, TextureFormatInfo} from '../shadertypes/textures/texture-formats';
 import type {CanvasContext, CanvasContextProps} from './canvas-context';
 import type {BufferProps} from './resources/buffer';
 import {Buffer} from './resources/buffer';
@@ -25,12 +25,8 @@ import type {VertexArray, VertexArrayProps} from './resources/vertex-array';
 import type {TransformFeedback, TransformFeedbackProps} from './resources/transform-feedback';
 import type {QuerySet, QuerySetProps} from './resources/query-set';
 
-import {getVertexFormatInfo} from '../shadertypes/utils/decode-vertex-format';
-import {
-  isTextureFormatCompressed,
-  getTextureFormatInfo,
-  getTextureFormatCapabilities
-} from '../shadertypes/utils/decode-texture-format';
+import {getVertexFormatInfo} from '../shadertypes/vertex-arrays/decode-vertex-format';
+import {textureFormatDecoder} from '../shadertypes/textures/texture-format-decoder';
 import type {ExternalImage} from '../image-utils/image-types';
 import {isExternalImage, getExternalImageSize} from '../image-utils/image-types';
 
@@ -380,11 +376,6 @@ export abstract class Device {
     return `Device(${this.id})`;
   }
 
-  constructor(props: DeviceProps) {
-    this.props = {...Device.defaultProps, ...props};
-    this.id = this.props.id || uid(this[Symbol.toStringTag].toLowerCase());
-  }
-
   /** id of this device, primarily for debugging */
   readonly id: string;
   /** type of this device */
@@ -406,8 +397,6 @@ export abstract class Device {
   /** Used by other luma.gl modules to store data on the device */
   _lumaData: {[key: string]: unknown} = {};
 
-  abstract destroy(): void;
-
   // Capabilities
 
   /** Information about the device (vendor, versions etc) */
@@ -426,6 +415,13 @@ export abstract class Device {
 
   protected _textureCaps: Partial<Record<TextureFormat, DeviceTextureFormatCapabilities>> = {};
 
+  constructor(props: DeviceProps) {
+    this.props = {...Device.defaultProps, ...props};
+    this.id = this.props.id || uid(this[Symbol.toStringTag].toLowerCase());
+  }
+
+  abstract destroy(): void;
+
   getVertexFormatInfo(format: VertexFormat): VertexFormatInfo {
     return getVertexFormatInfo(format);
   }
@@ -436,7 +432,7 @@ export abstract class Device {
 
   /** Returns information about a texture format, such as data type, channels, bits per channel, compression etc */
   getTextureFormatInfo(format: TextureFormat): TextureFormatInfo {
-    return getTextureFormatInfo(format);
+    return textureFormatDecoder.getInfo(format);
   }
 
   /** Determines what operations are supported on a texture format on this particular device (checks against supported device features) */
@@ -483,7 +479,7 @@ export abstract class Device {
 
   /** Check if a specific texture format is GPU compressed */
   isTextureFormatCompressed(format: TextureFormat): boolean {
-    return isTextureFormatCompressed(format);
+    return textureFormatDecoder.isCompressed(format);
   }
 
   // DEBUG METHODS
@@ -717,7 +713,7 @@ or create a device with the 'debug: true' prop.`;
   protected _getDeviceTextureFormatCapabilities(
     format: TextureFormat
   ): DeviceTextureFormatCapabilities {
-    const genericCapabilities = getTextureFormatCapabilities(format);
+    const genericCapabilities = textureFormatDecoder.getCapabilities(format);
 
     // Check standard features
     const checkFeature = (feature: DeviceFeature | boolean | undefined) =>
