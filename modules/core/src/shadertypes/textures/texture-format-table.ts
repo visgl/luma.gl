@@ -2,7 +2,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {TextureFormat, TextureFeature, TextureFormatInfo} from '../texture-formats';
+import {
+  TextureFormat,
+  TextureFormatColorUncompressed,
+  TextureFormatDepthStencil,
+  TextureFeature,
+  TextureFormatInfo,
+  TextureFormatCompressed
+} from './texture-formats';
 /* eslint-disable camelcase */
 
 // Define local device feature strings to optimize minification
@@ -61,54 +68,70 @@ export function getTextureFormatTable(): Readonly<Record<TextureFormat, TextureF
 }
 
 // prettier-ignore
-const TEXTURE_FORMAT_TABLE: Readonly<Record<TextureFormat, TextureFormatDefinition>> = {
+const TEXTURE_FORMAT_COLOR_DEPTH_TABLE: Readonly<Record<TextureFormatColorUncompressed | TextureFormatDepthStencil, TextureFormatDefinition>> = {
   // 8-bit formats
   'r8unorm': {},
-  'r8snorm': {render: snorm8_renderable},
-  'r8uint': {},
-  'r8sint': {},
-
-  // 16-bit formats
   'rg8unorm': {},
+  'rgb8unorm-webgl': {},
+  'rgba8unorm': {},
+  'rgba8unorm-srgb': {},
+
+  'r8snorm': {render: snorm8_renderable},
   'rg8snorm': {render: snorm8_renderable},
+  'rgb8snorm-webgl': {},
+  'rgba8snorm': {render: snorm8_renderable},
+
+  'r8uint': {},
   'rg8uint': {},
+  'rgba8uint': {},
+
+  'r8sint': {},
   'rg8sint': {},
+  'rgba8sint': {},
+
+  'bgra8unorm': {},
+  'bgra8unorm-srgb': {},
+
 
   'r16unorm': {f: norm16_renderable},
+  'rg16unorm': {render: norm16_renderable},
+  'rgb16unorm-webgl': {f: norm16_renderable}, // rgb not renderable
+  'rgba16unorm': {render: norm16_renderable},
+
   'r16snorm': {f: snorm16_renderable},
+  'rg16snorm': {render: snorm16_renderable},
+  'rgb16snorm-webgl': {f: norm16_renderable}, // rgb not renderable
+  'rgba16snorm': {render: snorm16_renderable},
+
   'r16uint': {},
+  'rg16uint': {},
+  'rgba16uint': {},
+
   'r16sint': {},
+  'rg16sint': {},
+  'rgba16sint': {},
+
   'r16float': {render: float16_renderable, filter: 'float16-filterable-webgl'},
+  'rg16float': {render: float16_renderable, filter: float16_filterable},
+  'rgba16float': {render: float16_renderable, filter: float16_filterable},
+
+  'r32uint': {},
+  'rg32uint': {},
+  'rgba32uint': {},
+
+  'r32sint': {},
+  'rg32sint': {},
+  'rgba32sint': {},
+
+  'r32float': {render: float32_renderable, filter: float32_filterable},
+  'rg32float': {render: false, filter: float32_filterable},
+  'rgb32float-webgl': {render: float32_renderable, filter: float32_filterable},
+  'rgba32float': {render: float32_renderable, filter: float32_filterable},
 
   // Packed 16-bit formats
   'rgba4unorm-webgl': {channels: 'rgba', bitsPerChannel: [4, 4, 4, 4], packed: true},
   'rgb565unorm-webgl': {channels: 'rgb', bitsPerChannel: [5, 6, 5, 0], packed: true},
   'rgb5a1unorm-webgl': {channels: 'rgba', bitsPerChannel: [5, 5, 5, 1], packed: true},
-
-  // 24-bit formats
-  'rgb8unorm-webgl': {},
-  'rgb8snorm-webgl': {},
-
-  // 32-bit formats  
-  'rgba8unorm': {},
-  'rgba8unorm-srgb': {},
-  'rgba8snorm': {render: snorm8_renderable},
-  'rgba8uint': {},
-  'rgba8sint': {},
-
-  // 32-bit, reverse colors, webgpu only
-  'bgra8unorm': {},
-  'bgra8unorm-srgb': {},
-
-  'rg16unorm': {render: norm16_renderable},
-  'rg16snorm': {render: snorm16_renderable},
-  'rg16uint': {},
-  'rg16sint': {},
-  'rg16float': {render: float16_renderable, filter: float16_filterable},
-
-  'r32uint': {},
-  'r32sint': {},
-  'r32float': {render: float32_renderable, filter: float32_filterable},
 
   // Packed 32 bit formats
   'rgb9e5ufloat': {channels: 'rgb', packed: true, render: rgb9e5ufloat_renderable}, // , filter: true},
@@ -116,29 +139,7 @@ const TEXTURE_FORMAT_TABLE: Readonly<Record<TextureFormat, TextureFormatDefiniti
   'rgb10a2unorm': {channels: 'rgba',  bitsPerChannel: [10, 10, 10, 2], packed: true, p: 1},
   'rgb10a2uint': {channels: 'rgba',  bitsPerChannel: [10, 10, 10, 2], packed: true, p: 1},
 
-  // 48-bit formats
-  'rgb16unorm-webgl': {f: norm16_renderable}, // rgb not renderable
-  'rgb16snorm-webgl': {f: norm16_renderable}, // rgb not renderable
-
-  // 64-bit formats
-  'rg32uint': {},
-  'rg32sint': {},
-  'rg32float': {render: false, filter: float32_filterable},
-  'rgba16unorm': {render: norm16_renderable},
-  'rgba16snorm': {render: snorm16_renderable},
-  'rgba16uint': {},
-  'rgba16sint': {},
-  'rgba16float': {render: float16_renderable, filter: float16_filterable},
-
-  // 96-bit formats (deprecated!)
-  'rgb32float-webgl': {render: float32_renderable, filter: float32_filterable},
-  
-  // 128-bit formats
-  'rgba32uint': {},
-  'rgba32sint': {},
-  'rgba32float': {render: float32_renderable, filter: float32_filterable},
-
-  // Depth/stencil
+  // Depth/stencil Formats
   
   // Depth and stencil formats
   stencil8: {attachment: 'stencil', bitsPerChannel: [8, 0, 0, 0], dataType: 'uint8'},
@@ -149,6 +150,10 @@ const TEXTURE_FORMAT_TABLE: Readonly<Record<TextureFormat, TextureFormatDefiniti
   'depth24plus-stencil8': {attachment: 'depth-stencil', bitsPerChannel: [24, 8, 0, 0], packed: true},
   // "depth32float-stencil8" feature
   'depth32float-stencil8': {attachment: 'depth-stencil', bitsPerChannel: [32, 8, 0, 0], packed: true},
+};
+
+// prettier-ignore
+const TEXTURE_FORMAT_COMPRESSED_TABLE: Readonly<Record<TextureFormatCompressed, TextureFormatDefinition>> = {
 
   // BC compressed formats: check device.features.has("texture-compression-bc");
 
@@ -232,4 +237,9 @@ const TEXTURE_FORMAT_TABLE: Readonly<Record<TextureFormat, TextureFormatDefiniti
   'atc-rgb-unorm-webgl': {f: texture_compression_atc_webgl},
   'atc-rgba-unorm-webgl': {f: texture_compression_atc_webgl},
   'atc-rgbai-unorm-webgl': {f: texture_compression_atc_webgl}
+};
+
+export const TEXTURE_FORMAT_TABLE: Readonly<Record<TextureFormat, TextureFormatDefinition>> = {
+  ...TEXTURE_FORMAT_COLOR_DEPTH_TABLE,
+  ...TEXTURE_FORMAT_COMPRESSED_TABLE
 };

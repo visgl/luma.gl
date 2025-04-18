@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {NormalizedDataType} from './data-types';
+import {NormalizedDataType} from '../data-types/data-types';
 
 /*
  */

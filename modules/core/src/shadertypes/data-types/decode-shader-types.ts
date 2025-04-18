@@ -2,14 +2,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {PrimitiveDataType} from '../data-types';
+import {PrimitiveDataType} from './data-types';
 import type {
   VariableShaderType,
   AttributeShaderType,
   AttributeShaderTypeInfo,
   VariableShaderTypeAlias,
   AttributeShaderTypeAlias
-} from '../shader-types';
+} from './shader-types';
 
 /** Split a uniform type string into type and components */
 export function getVariableShaderTypeInfo(format: VariableShaderType): {

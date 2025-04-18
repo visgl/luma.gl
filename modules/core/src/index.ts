@@ -141,41 +141,62 @@ export type {
   BigTypedArrayConstructor
 } from './types';
 
-// GPU TYPE UTILS - GPU MEMORY LAYOUT TYPES - EXTERNAL
+// GPU TYPE UTILS - BASIC DATA TYPES
 
-export type {PrimitiveDataType, SignedDataType, NormalizedDataType} from './shadertypes/data-types';
-export type {AttributeShaderType, VariableShaderType} from './shadertypes/shader-types';
-export type {VertexFormat} from './shadertypes/vertex-formats';
-export type {
-  TextureFormat,
-  ColorTextureFormat,
-  DepthStencilTextureFormat,
-  TextureCompression,
-  TextureFormatInfo,
-  TextureFormatCapabilities
-} from './shadertypes/texture-formats';
-
-// GPU TYPE UTILS - GPU MEMORY LAYOUT HELPERS - CAN BE USED BY APPS BUT MOSTLY USED INTERNALLY
-
+export {
+  type PrimitiveDataType,
+  type SignedDataType,
+  type NormalizedDataType,
+  type DataTypeInfo,
+  type DataTypeArray,
+  type NormalizedDataTypeArray
+} from './shadertypes/data-types/data-types';
+export {
+  type AttributeShaderType,
+  type VariableShaderType
+} from './shadertypes/data-types/shader-types';
 export {
   getDataTypeInfo,
   getDataTypeFromTypedArray,
   getTypedArrayFromDataType,
   makeNormalizedDataType
-} from './shadertypes/utils/decode-data-types';
+} from './shadertypes/data-types/decode-data-types';
 export {
   getVariableShaderTypeInfo,
   getAttributeShaderTypeInfo
-} from './shadertypes/utils/decode-shader-types';
+} from './shadertypes/data-types/decode-shader-types';
+
+// GPU TYPE UTILS - VERTEX ARRAYs
+
+export {type VertexFormat} from './shadertypes/vertex-arrays/vertex-formats';
+
 export {
   getVertexFormatInfo,
   getVertexFormatFromAttribute,
   makeVertexFormat
-} from './shadertypes/utils/decode-vertex-format';
+} from './shadertypes/vertex-arrays/decode-vertex-format';
+
+// GPU TYPE UTILS - Texture Formats
+
 export {
-  getTextureFormatInfo,
-  getTextureFormatCapabilities
-} from './shadertypes/utils/decode-texture-format';
+  type TextureFormat,
+  type TextureFormatColor,
+  type TextureFormatDepthStencil,
+  type TextureCompression,
+  type TextureFormatInfo,
+  type TextureFormatCapabilities
+} from './shadertypes/textures/texture-formats';
+
+export {
+  TextureFormatDecoder,
+  textureFormatDecoder
+} from './shadertypes/textures/texture-format-decoder';
+
+export {
+  type TextureMemoryLayout,
+  getTextureMemoryLayout
+} from './shadertypes/textures/texture-layout';
+export {type PixelData, readPixel, writePixel} from './shadertypes/textures/pixel-utils';
 
 // GENERAL EXPORTS - FOR APPLICATIONS
 
@@ -202,4 +223,4 @@ export {sortedBufferLayoutByShaderSourceLocations} from './adapter-utils/buffer-
 export {
   getTextureFormatDefinition as _getTextureFormatDefinition,
   getTextureFormatTable as _getTextureFormatTable
-} from './shadertypes/utils/texture-format-table';
+} from './shadertypes/textures/texture-format-table';

@@ -70,7 +70,7 @@ async function makeWebGPUTestDevice(): Promise<WebGPUDevice | null> {
       adapters: [webgpuAdapter],
       createCanvasContext: DEFAULT_CANVAS_CONTEXT_PROPS,
       debug: true
-    })) as WebGPUDevice;
+    })) as unknown as WebGPUDevice;
     webgpuDeviceResolvers.resolve(webgpuDevice);
   } catch (error) {
     log.error(String(error))();
@@ -91,7 +91,7 @@ async function makeWebGLTestDevice(): Promise<WebGLDevice> {
       createCanvasContext: DEFAULT_CANVAS_CONTEXT_PROPS,
       debug: true,
       debugWebGL: true
-    })) as WebGLDevice;
+    })) as unknown as WebGLDevice;
     webglDeviceResolvers.resolve(webglDevice);
   } catch (error) {
     log.error(String(error))();
@@ -107,12 +107,12 @@ async function makeNullTestDevice(): Promise<NullDevice> {
   try {
     const nullDevice = (await luma.createDevice({
       id: 'null-test-device',
-      type: 'unknown',
+      type: 'null',
       adapters: [nullAdapter],
       createCanvasContext: DEFAULT_CANVAS_CONTEXT_PROPS,
       debug: true,
       debugWebGL: true
-    })) as NullDevice;
+    })) as unknown as NullDevice;
     nullDeviceResolvers.resolve(nullDevice);
   } catch (error) {
     log.error(String(error))();

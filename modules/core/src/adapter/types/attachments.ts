@@ -3,10 +3,10 @@
 // Copyright (c) vis.gl contributors
 
 import type {
-  ColorTextureFormat,
-  DepthStencilTextureFormat,
+  TextureFormatColor,
+  TextureFormatDepthStencil,
   TextureFormat
-} from '../../shadertypes/texture-formats';
+} from '../../shadertypes/textures/texture-formats';
 import type {Texture} from '../resources/texture'; // TextureView...
 import type {TextureView} from '../resources/texture-view'; // TextureView...
 
@@ -60,7 +60,7 @@ export type ColorAttachment = {
   /** Describes the texture subresource that will be output to for this color attachment. */
   texture?: TextureView | Texture;
   /** Format of the texture resource. Used to auto create texture if not supplied */
-  format?: ColorTextureFormat;
+  format?: TextureFormatColor;
   /* Describes the texture subresource that will receive  resolved output for this color attachment if multisampled. */
   // resolveTarget?: GPUTextureView;
 
@@ -80,7 +80,7 @@ export type DepthStencilAttachment = {
   /** Describes the texture subresource that will be output to and read from for this depth/stencil attachment. */
   texture?: TextureView | Texture;
   /** Format of the texture resource. Used to auto create texture if not supplied */
-  format?: DepthStencilTextureFormat;
+  format?: TextureFormatDepthStencil;
 
   /** Value to clear depth component to prior to executing the render pass, if depthLoadOp is "clear". 0.0-1.0. */
   depthClearValue?: number;
