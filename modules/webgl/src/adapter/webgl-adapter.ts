@@ -50,7 +50,6 @@ export class WebGLAdapter extends Adapter {
    * @param gl
    * @returns
    */
-  // @ts-expect-error We only import type so ts can't determine inheritance
   async attach(gl: Device | WebGL2RenderingContext): Promise<WebGLDevice> {
     const {WebGLDevice} = await import('./webgl-device');
     if (gl instanceof WebGLDevice) {
@@ -73,7 +72,6 @@ export class WebGLAdapter extends Adapter {
     });
   }
 
-  // @ts-expect-error We only import type so ts can't determine inheritance
   async create(props: DeviceProps = {}): Promise<WebGLDevice> {
     const {WebGLDevice} = await import('./webgl-device');
 
