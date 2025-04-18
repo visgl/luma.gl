@@ -4,7 +4,10 @@
 
 import test from 'tape';
 import {writePixel, readPixel, PixelData} from '@luma.gl/core';
-import {readBitsFromDataView, writeBitsToDataView} from '../../src/shadertypes/textures/pixel-utils';
+import {
+  readBitsFromDataView,
+  writeBitsToDataView
+} from '../../src/shadertypes/textures/pixel-utils';
 
 /**
  * Test readBitsFromDataView.

@@ -56,21 +56,20 @@ export class TextureFormatDecoder {
       blend: info.blend ?? true,
       store: info.store ?? true
     };
-  
+
     const formatInfo = getTextureFormatInfo(format);
     const isDepthStencil = format.startsWith('depth') || format.startsWith('stencil');
     const isSigned = formatInfo?.signed;
     const isInteger = formatInfo?.integer;
     const isWebGLSpecific = formatInfo?.webgl;
-  
+
     // signed formats are not renderable
     formatCapabilities.render &&= !isSigned;
     // signed and integer formats are not filterable
     formatCapabilities.filter &&= !isDepthStencil && !isSigned && !isInteger && !isWebGLSpecific;
-  
+
     return formatCapabilities;
   }
-
 }
 
 export const textureFormatDecoder = new TextureFormatDecoder();

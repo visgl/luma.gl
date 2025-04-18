@@ -151,7 +151,10 @@ export {
   type DataTypeArray,
   type NormalizedDataTypeArray
 } from './shadertypes/data-types/data-types';
-export {type AttributeShaderType, type VariableShaderType} from './shadertypes/data-types/shader-types';
+export {
+  type AttributeShaderType,
+  type VariableShaderType
+} from './shadertypes/data-types/shader-types';
 export {
   getDataTypeInfo,
   getDataTypeFromTypedArray,

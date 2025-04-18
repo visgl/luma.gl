@@ -11,8 +11,7 @@ export type ImageData = {
   rowsPerImage?: number;
   /** Bits per channel */
   bitsPerChannel: [number, number, number, number];
-}
-
+};
 
 export type PixelData = {
   arrayBuffer: ArrayBuffer;
