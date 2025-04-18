@@ -50,6 +50,11 @@ import {WebGPUPipelineLayout} from './resources/webgpu-pipeline-layout';
 export class WebGPUDevice extends Device {
   /** The underlying WebGPU device */
   readonly handle: GPUDevice;
+  /* The underlying WebGPU adapter */
+  readonly adapter: GPUAdapter;
+  /* The underlying WebGPU adapter's info */
+  readonly adapterInfo: GPUAdapterInfo;
+
   /** type of this device */
   readonly type = 'webgpu';
 
@@ -68,10 +73,6 @@ export class WebGPUDevice extends Device {
 
   private _isLost: boolean = false;
   commandEncoder: WebGPUCommandEncoder;
-  /* The underlying WebGPU adapter */
-  readonly adapter: GPUAdapter;
-  /* The underlying WebGPU adapter's info */
-  readonly adapterInfo: GPUAdapterInfo;
 
   override get [Symbol.toStringTag](): string {
     return 'WebGPUDevice';

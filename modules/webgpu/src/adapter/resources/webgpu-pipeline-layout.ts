@@ -1,4 +1,9 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
 import {
+  log,
   PipelineLayout,
   PipelineLayoutProps,
   StorageBufferBindingLayout,
@@ -7,8 +12,8 @@ import {
 import {WebGPUDevice} from '../webgpu-device';
 
 export class WebGPUPipelineLayout extends PipelineLayout {
-  device: WebGPUDevice;
-  handle: GPUPipelineLayout;
+  readonly device: WebGPUDevice;
+  readonly handle: GPUPipelineLayout;
 
   constructor(device: WebGPUDevice, props: PipelineLayoutProps) {
     super(device, props);
@@ -101,7 +106,7 @@ export class WebGPUPipelineLayout extends PipelineLayout {
         }
 
         default: {
-          console.warn('unhandled binding type when creating pipeline descriptor');
+          log.warn('unhandled binding type when creating pipeline descriptor')();
         }
       }
 

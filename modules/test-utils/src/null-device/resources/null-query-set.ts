@@ -7,6 +7,7 @@ import {NullDevice} from '../null-device';
 
 export class NullQuerySet extends QuerySet {
   device: NullDevice;
+  readonly handle = null;
 
   constructor(device: NullDevice, props: QuerySetProps) {
     super(device, props);

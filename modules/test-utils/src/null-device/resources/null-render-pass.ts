@@ -7,6 +7,7 @@ import {NullDevice} from '../null-device';
 
 export class NullRenderPass extends RenderPass {
   readonly device: NullDevice;
+  readonly handle = null;
 
   constructor(device: NullDevice, props: RenderPassProps) {
     super(device, props);

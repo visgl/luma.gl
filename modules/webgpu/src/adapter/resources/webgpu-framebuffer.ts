@@ -13,9 +13,10 @@ import {WebGPUTextureView} from '../resources/webgpu-texture-view';
  */
 export class WebGPUFramebuffer extends Framebuffer {
   readonly device: WebGPUDevice;
+  readonly handle = null;
 
-  colorAttachments: WebGPUTextureView[] = [];
-  depthStencilAttachment: WebGPUTextureView | null = null;
+  readonly colorAttachments: WebGPUTextureView[] = [];
+  readonly depthStencilAttachment: WebGPUTextureView | null = null;
 
   constructor(device: WebGPUDevice, props: FramebufferProps) {
     super(device, props);

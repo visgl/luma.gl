@@ -1,12 +1,36 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
+// deck.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
 
-import test from 'tape-promise/tape';
+/* global window */
+import test from 'tape';
+import {_enableDOMLogging as enableDOMLogging} from '@probe.gl/test-utils';
 
-const noop = () => {};
-test.onFinish(window.browserTestDriver_finish || noop);
-test.onFailure(window.browserTestDriver_fail || noop);
+// import '@luma.gl/debug';
+
+let failed = false;
+if (window.browserTestDriver_finish && window.browserTestDriver_fail) {
+  test.onFinish(window.browserTestDriver_finish);
+  test.onFailure(() => {
+    failed = true;
+    window.browserTestDriver_fail();
+  });
+} else {
+  console.warn('Use Google Chrome for Testing to report test completion.');
+}
+
+// tap-browser-color alternative
+enableDOMLogging({
+  getStyle: message => ({
+    background: failed ? '#F28E82' : '#8ECA6C',
+    position: 'absolute',
+    top: '500px',
+    width: '100%'
+  })
+});
 
 // hack: prevent example imports from starting their own animation loop
 globalThis.website = true;

@@ -15,6 +15,7 @@ const COLOR_CHANNELS: NumberArray4 = [0x1, 0x2, 0x4, 0x8]; // GPUColorWrite RED,
 
 export class WEBGLRenderPass extends RenderPass {
   readonly device: WebGLDevice;
+  readonly handle = null;
 
   /** Parameters that should be applied before each draw call */
   glParameters: GLParameters = {};

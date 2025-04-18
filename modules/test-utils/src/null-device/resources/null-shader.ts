@@ -7,6 +7,7 @@ import {NullDevice} from '../null-device';
 
 export class NullShader extends Shader {
   readonly device: NullDevice;
+  readonly handle = null;
 
   constructor(device: NullDevice, props: ShaderProps) {
     super(device, props);

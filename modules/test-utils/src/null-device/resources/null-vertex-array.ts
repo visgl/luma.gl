@@ -10,6 +10,7 @@ import type {NullDevice} from '../null-device';
 
 export class NullVertexArray extends VertexArray {
   device: NullDevice;
+  readonly handle = null;
 
   // Create a VertexArray
   constructor(device: NullDevice, props: VertexArrayProps) {
