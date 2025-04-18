@@ -2,12 +2,26 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+export type ImageData = {
+  /** Offset into the data (in addition to any offset built-in to the ArrayBufferView) */
+  byteOffset?: number;
+  /** The stride, in bytes, between the beginning of each texel block row and the subsequent texel block row. Required if there are multiple texel block rows (i.e. the copy height or depth is more than one block). */
+  bytesPerRow?: number;
+  /** Number or rows per image (needed if multiple images are being set) */
+  rowsPerImage?: number;
+  /** Bits per channel */
+  bitsPerChannel: [number, number, number, number];
+}
+
+
 export type PixelData = {
+  arrayBuffer: ArrayBuffer;
   width: number;
   height: number;
+  /** Bytes per pixel */
   bytesPerPixel: number;
   bytesPerRow: number;
-  arrayBuffer: ArrayBuffer;
+  bitsPerChannel: [number, number, number, number];
 };
 
 /**

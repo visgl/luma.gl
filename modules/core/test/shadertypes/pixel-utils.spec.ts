@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape';
-import {writePixel, readPixel} from '@luma.gl/core';
+import {writePixel, readPixel, PixelData} from '@luma.gl/core';
 import {readBitsFromDataView, writeBitsToDataView} from '../../src/shadertypes/utils/pixel-utils';
 
 /**
