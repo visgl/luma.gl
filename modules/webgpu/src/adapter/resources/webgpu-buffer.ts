@@ -93,7 +93,7 @@ export class WebGPUBuffer extends Buffer {
     byteLength: number = this.byteLength - byteOffset
   ): Promise<void> {
     // Unless the application created and supplied a mappable buffer, a staging buffer is needed
-    const isMappable = (this.usage & Buffer.MAP_WRITE) === 0;
+    const isMappable = (this.usage & Buffer.MAP_WRITE) !== 0;
     const mappableBuffer: WebGPUBuffer | null = !isMappable
       ? this._getMappableBuffer(Buffer.MAP_WRITE | Buffer.COPY_SRC, 0, this.byteLength)
       : null;
@@ -146,7 +146,7 @@ export class WebGPUBuffer extends Buffer {
     }
 
     // Unless the application created and supplied a mappable buffer, a staging buffer is needed
-    const isMappable = (this.usage & Buffer.MAP_READ) === 0;
+    const isMappable = (this.usage & Buffer.MAP_READ) !== 0;
     const mappableBuffer: WebGPUBuffer | null = !isMappable
       ? this._getMappableBuffer(Buffer.MAP_READ | Buffer.COPY_DST, 0, this.byteLength)
       : null;
@@ -157,10 +157,10 @@ export class WebGPUBuffer extends Buffer {
     this.device.pushErrorScope('validation');
     try {
       await this.device.handle.queue.onSubmittedWorkDone();
-      await readBuffer.handle.mapAsync(GPUMapMode.READ, byteOffset, byteLength);
       if (mappableBuffer) {
         mappableBuffer._copyBuffer(this);
       }
+      await readBuffer.handle.mapAsync(GPUMapMode.READ, byteOffset, byteLength);
       const arrayBuffer = readBuffer.handle.getMappedRange(byteOffset, byteLength);
       // eslint-disable-next-line @typescript-eslint/await-thenable
       const result = await callback(arrayBuffer, 'mapped');

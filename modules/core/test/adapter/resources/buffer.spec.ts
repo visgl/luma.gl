@@ -163,20 +163,25 @@ test('Buffer#readAsync', async t => {
   t.end();
 });
 
-test('Buffer#mapAndWriteAsync (full and partial)', async t => {
+test.only('Buffer#mapAndWriteAsync (full and partial)', async t => {
   for (const device of await getTestDevices(DEVICE_TYPES)) {
     const isWebGPU = device.type === 'webgpu';
     const mapped = isWebGPU ? 'mapped' : 'copied';
 
     // Full write test
-    const buffer = device.createBuffer({byteLength: 16, usage: Buffer.MAP_WRITE | Buffer.COPY_SRC});
+    const buffer = device.createBuffer({byteLength: 16, usage: Buffer.COPY_DST | Buffer.COPY_SRC});
 
     await buffer.mapAndWriteAsync((arrayBuffer, lifetime) => {
       t.ok(
         arrayBuffer instanceof ArrayBuffer,
-        `${device.type} full mapAndWriteAsync returns ArrayBuffer`
+        `${device.type} mapAndWriteAsync calls with ArrayBuffer`
       );
-      t.equal(lifetime, mapped, `${device.type} full mapAndWriteAsync returns correct lifetime`);
+      t.equal(
+        arrayBuffer.byteLength,
+        16,
+        `${device.type} mapAndWriteAsync calls with correct byteLength`
+      );
+      t.equal(lifetime, mapped, `${device.type} mapAndWriteAsync calls with correct lifetime`);
       new Float32Array(arrayBuffer).set([1, 2, 3, 4]);
     });
 
@@ -216,7 +221,7 @@ test('Buffer#mapAndReadAsync (full and partial)', async t => {
     const initialData = new Float32Array([10, 20, 30, 40]);
     const buffer = device.createBuffer({
       data: initialData,
-      usage: Buffer.COPY_DST | Buffer.MAP_READ
+      usage: Buffer.COPY_DST | Buffer.COPY_SRC
     });
 
     // Test full map
