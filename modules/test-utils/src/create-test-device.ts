@@ -22,10 +22,14 @@ const webgpuDevicePromise = makeWebGPUTestDevice();
 export async function getTestDevices(
   types: Readonly<('webgl' | 'webgpu' | 'null' | 'unknown')[]> = ['webgl', 'webgpu']
 ): Promise<Device[]> {
-  return await Promise.all(types.map(type => getTestDevice(type)));
+  const promises = types.map(type => getTestDevice(type));
+  const devices = await Promise.all(promises);
+  return devices.filter(device => device !== null);
 }
 
-export function getTestDevice(type: 'webgl' | 'webgpu' | 'null' | 'unknown'): Promise<Device> {
+export async function getTestDevice(
+  type: 'webgl' | 'webgpu' | 'null' | 'unknown'
+): Promise<Device | null> {
   switch (type) {
     case 'webgl':
       return webglDevicePromise;
