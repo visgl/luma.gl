@@ -17,22 +17,29 @@ Production quality WebGPU backend
 
 **@luma.gl/core**
 
-- New [Texture Formats](/docs/api-reference/core/texture-formats) (added in Chrome 132, currently require setting chrome://flags/#enable-unsafe-webgpu)
+- [`Buffer`]
+  - [`Buffer.mapAndReadAsync()`] New method that reads directly from buffer memory without performing a copy.
+  - [`Buffer.mapAndWriteAsync()`] New method that writes directly to buffer memory.
+- [`Texture`]
+  - `Texture` class refactors complete, see upgrade guide. 
+- Shader type APIs have been improved.
+- `CommandEncoder`/`CommandBuffer` API improvements
+- `CanvasContext` API simplifications (see upgrade guide).
+
+- [Texture Formats](/docs/api-reference/core/texture-formats). Adds support for the new texture formats added in Chrome 132 (currently require setting chrome://flags/#enable-unsafe-webgpu)
   - `'r16unorm'`, `'rg16unorm'`, `'rgba16unorm'` (feature `'chromium-experimental-unorm16-texture-formats'`)
   - `'r16snorm'`, `'rg16snorm'`, `'rgba16snorm'` (feature `'chromium-experimental-snorm16-texture-formats'`)
-- New [Vertex Formats](/docs/api-reference/core/vertex-formats) (added in Chrome v133 and v119)
+
+- [Vertex Formats](/docs/api-reference/core/vertex-formats) (added in Chrome v133 and v119)
   - Single component 8 and 16 bit formats are now supported by WebGPU: `'uint8'`, `'sint8'`, `'unorm8'`, `'snorm8'`, `'uint16'`, `'sint16'`, `'unorm16'`, `'snorm16'`, and `'float16'`.
   - Note: 3 component formats are still missing in WebGPU. 
   - `'unorm8x4-bgra'` - WebGPU only. Simplifies working with BGRA data.
   - `'unorm10-10-10-2` - Exposed since available in all WebGPU backends. Also supported by WebGL2.
-- Shader type APIs have been improved.
-- `Texture` class refactors complete.
-- `CommandEncoder`/`CommandBuffer` API improvements
-- `CanvasContext` API simplifications (see upgrade guide).
 
 **@luma.gl/engine**
 
-- `AsyncTexture` now supports mipmap generation for WebGPU textures
+- `AsyncTexture` 
+  - now supports mipmap generation for WebGPU textures (in progress)
 
 **@luma.gl/effects**
 

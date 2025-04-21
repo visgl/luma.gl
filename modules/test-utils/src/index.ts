@@ -10,6 +10,7 @@ export {PerformanceTestRunner} from './performance-test-runner';
 // TEST DEVICES
 export {
   getTestDevices,
+  getTestDevice,
   getWebGLTestDevice,
   getWebGPUTestDevice,
   getNullTestDevice

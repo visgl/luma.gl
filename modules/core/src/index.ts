@@ -21,17 +21,13 @@ export type {CanvasContextProps} from './adapter/canvas-context';
 export {CanvasContext} from './adapter/canvas-context';
 
 // GPU RESOURCES
-export type {ResourceProps} from './adapter/resources/resource';
-export {Resource} from './adapter/resources/resource';
+export {Resource, type ResourceProps} from './adapter/resources/resource';
 
-export type {BufferProps} from './adapter/resources/buffer';
-export {Buffer} from './adapter/resources/buffer';
+export {Buffer, type BufferProps, type BufferMapCallback} from './adapter/resources/buffer';
 
-export type {TextureProps} from './adapter/resources/texture';
-export {Texture} from './adapter/resources/texture';
+export {Texture, type TextureProps} from './adapter/resources/texture';
 
-export type {TextureViewProps} from './adapter/resources/texture-view';
-export {TextureView} from './adapter/resources/texture-view';
+export {TextureView, type TextureViewProps} from './adapter/resources/texture-view';
 
 export type {ExternalTextureProps} from './adapter/resources/external-texture';
 export {ExternalTexture} from './adapter/resources/external-texture';

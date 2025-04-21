@@ -135,7 +135,7 @@ export class WebGPUTexture extends Texture {
       // destination: GPUImageCopyTextureTagged
       {
         texture: this.handle,
-        origin: [options.x, options.y, options.depth],
+        origin: [options.x, options.y, 0], // options.depth],
         mipLevel: options.mipLevel,
         aspect: options.aspect,
         colorSpace: options.colorSpace,
@@ -176,7 +176,7 @@ export class WebGPUTexture extends Texture {
     device.submit([encoder.finish()]);
 
     // Get the data on the CPU.
-    await buffer.mapAsync(GPUMapMode.READ);
+    await buffer.mapAndReadAsync(GPUMapMode.READ);
     saveScreenshot(buffer.getMappedRange());
     buffer.unmap();
   }
