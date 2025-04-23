@@ -2,12 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Buffer, BufferProps} from '@luma.gl/core';
-import type {WebGPUDevice} from '../webgpu-device';
-
-function getByteLength(props: BufferProps): number {
-  return props.byteLength || props.data?.byteLength || 0;
-}
+import {log, Buffer, type BufferProps, type BufferMapCallback} from '@luma.gl/core';
+import {type WebGPUDevice} from '../webgpu-device';
 
 export class WebGPUBuffer extends Buffer {
   readonly device: WebGPUDevice;
@@ -18,8 +14,8 @@ export class WebGPUBuffer extends Buffer {
     super(device, props);
     this.device = device;
 
-    this.byteLength = getByteLength(props);
-    const mapBuffer = Boolean(props.data);
+    this.byteLength = props.byteLength || props.data?.byteLength || 0;
+    const mappedAtCreation = Boolean(this.props.onMapped || props.data);
 
     // WebGPU buffers must be aligned to 4 bytes
     const size = Math.ceil(this.byteLength / 4) * 4;
@@ -29,11 +25,11 @@ export class WebGPUBuffer extends Buffer {
     this.handle =
       this.props.handle ||
       this.device.handle.createBuffer({
-        size,
+        label: this.props.id,
         // usage defaults to vertex
         usage: this.props.usage || GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-        mappedAtCreation: this.props.mappedAtCreation || mapBuffer,
-        label: this.props.id
+        mappedAtCreation,
+        size
       });
     this.device.popErrorScope((error: GPUError) => {
       this.device.reportError(new Error(`${this} creation failed ${error.message}`), this)();
@@ -44,14 +40,25 @@ export class WebGPUBuffer extends Buffer {
       this.device.debug();
     });
 
-    if (props.data) {
-      this._writeMapped(props.data);
-      // this.handle.writeAsync({data: props.data, map: false, unmap: false});
+    this.device.pushErrorScope('validation');
+    if (props.data || props.onMapped) {
+      try {
+        const arrayBuffer = this.handle.getMappedRange();
+        if (props.data) {
+          const typedArray = props.data;
+          // @ts-expect-error
+          new typedArray.constructor(arrayBuffer).set(typedArray);
+        } else {
+          props.onMapped?.(arrayBuffer, 'mapped');
+        }
+      } finally {
+        this.handle.unmap();
+      }
     }
-
-    if (mapBuffer && !props.mappedAtCreation) {
-      this.handle.unmap();
-    }
+    this.device.popErrorScope((error: GPUError) => {
+      this.device.reportError(new Error(`${this} creation failed ${error.message}`), this)();
+      this.device.debug();
+    });
   }
 
   override destroy(): void {
@@ -60,111 +67,155 @@ export class WebGPUBuffer extends Buffer {
     this.handle = null;
   }
 
-  // WebGPU provides multiple ways to write a buffer...
-  override write(data: ArrayBufferView, byteOffset = 0) {
+  write(data: ArrayBufferLike | ArrayBufferView | SharedArrayBuffer, byteOffset = 0) {
+    const arrayBuffer = ArrayBuffer.isView(data) ? data.buffer : data;
+    const dataByteOffset = ArrayBuffer.isView(data) ? data.byteOffset : 0;
+
+    this.device.pushErrorScope('validation');
+
+    // WebGPU provides multiple ways to write a buffer, this is the simplest API
     this.device.handle.queue.writeBuffer(
       this.handle,
       byteOffset,
-      data.buffer,
-      data.byteOffset,
+      arrayBuffer,
+      dataByteOffset,
       data.byteLength
+    );
+    this.device.popErrorScope((error: GPUError) => {
+      this.device.reportError(new Error(`${this}.write() ${error.message}`), this)();
+      this.device.debug();
+    });
+  }
+
+  async mapAndWriteAsync(
+    callback: BufferMapCallback<void>,
+    byteOffset: number = 0,
+    byteLength: number = this.byteLength - byteOffset
+  ): Promise<void> {
+    // Unless the application created and supplied a mappable buffer, a staging buffer is needed
+    const isMappable = (this.usage & Buffer.MAP_WRITE) !== 0;
+    const mappableBuffer: WebGPUBuffer | null = !isMappable
+      ? this._getMappableBuffer(Buffer.MAP_WRITE | Buffer.COPY_SRC, 0, this.byteLength)
+      : null;
+
+    const writeBuffer = mappableBuffer || this;
+
+    // const isWritable = this.usage & Buffer.MAP_WRITE;
+    // Map the temp buffer and read the data.
+    this.device.pushErrorScope('validation');
+    try {
+      await this.device.handle.queue.onSubmittedWorkDone();
+      await writeBuffer.handle.mapAsync(GPUMapMode.WRITE, byteOffset, byteLength);
+      const arrayBuffer = writeBuffer.handle.getMappedRange(byteOffset, byteLength);
+      // eslint-disable-next-line @typescript-eslint/await-thenable
+      await callback(arrayBuffer, 'mapped');
+      writeBuffer.handle.unmap();
+      if (mappableBuffer) {
+        this._copyBuffer(mappableBuffer, byteOffset, byteLength);
+      }
+    } finally {
+      this.device.popErrorScope((error: GPUError) => {
+        this.device.reportError(new Error(`${this}.mapAndWriteAsync() ${error.message}`), this)();
+        this.device.debug();
+      });
+      mappableBuffer?.destroy();
+    }
+  }
+
+  async readAsync(
+    byteOffset: number = 0,
+    byteLength = this.byteLength - byteOffset
+  ): Promise<Uint8Array> {
+    return this.mapAndReadAsync(
+      arrayBuffer => new Uint8Array(arrayBuffer.slice(0)),
+      byteOffset,
+      byteLength
     );
   }
 
-  override async readAsync(
-    byteOffset: number = 0,
-    byteLength: number = this.byteLength
-  ): Promise<Uint8Array> {
-    // We need MAP_READ flag, but only COPY_DST buffers can have MAP_READ flag, so we need to create a temp buffer
-    const tempBuffer = new WebGPUBuffer(this.device, {
-      usage: Buffer.MAP_READ | Buffer.COPY_DST,
-      byteLength
-    });
+  async mapAndReadAsync<T>(
+    callback: BufferMapCallback<T>,
+    byteOffset = 0,
+    byteLength = this.byteLength - byteOffset
+  ): Promise<T> {
+    if (byteOffset % 8 !== 0 || byteLength % 4 !== 0) {
+      throw new Error('byteOffset must be multiple of 8 and byteLength multiple of 4');
+    }
+    if (byteOffset + byteLength > this.handle.size) {
+      throw new Error('Mapping range exceeds buffer size');
+    }
 
-    // Now do a GPU-side copy into the temp buffer we can actually read.
-    // TODO - we are spinning up an independent command queue here, what does this mean
-    const commandEncoder = this.device.handle.createCommandEncoder();
-    commandEncoder.copyBufferToBuffer(this.handle, byteOffset, tempBuffer.handle, 0, byteLength);
-    this.device.handle.queue.submit([commandEncoder.finish()]);
+    // Unless the application created and supplied a mappable buffer, a staging buffer is needed
+    const isMappable = (this.usage & Buffer.MAP_READ) !== 0;
+    const mappableBuffer: WebGPUBuffer | null = !isMappable
+      ? this._getMappableBuffer(Buffer.MAP_READ | Buffer.COPY_DST, 0, this.byteLength)
+      : null;
+
+    const readBuffer = mappableBuffer || this;
 
     // Map the temp buffer and read the data.
-    await tempBuffer.handle.mapAsync(GPUMapMode.READ, byteOffset, byteLength);
-    const arrayBuffer = tempBuffer.handle.getMappedRange().slice(0);
-    tempBuffer.handle.unmap();
-    tempBuffer.destroy();
-
-    return new Uint8Array(arrayBuffer);
+    this.device.pushErrorScope('validation');
+    try {
+      await this.device.handle.queue.onSubmittedWorkDone();
+      if (mappableBuffer) {
+        mappableBuffer._copyBuffer(this);
+      }
+      await readBuffer.handle.mapAsync(GPUMapMode.READ, byteOffset, byteLength);
+      const arrayBuffer = readBuffer.handle.getMappedRange(byteOffset, byteLength);
+      // eslint-disable-next-line @typescript-eslint/await-thenable
+      const result = await callback(arrayBuffer, 'mapped');
+      readBuffer.handle.unmap();
+      return result;
+    } finally {
+      this.device.popErrorScope((error: GPUError) => {
+        this.device.reportError(new Error(`${this}.mapAndReadAsync() ${error.message}`), this)();
+        this.device.debug();
+      });
+      mappableBuffer?.destroy();
+    }
   }
 
-  _writeMapped<TypedArray>(typedArray: TypedArray): void {
-    const arrayBuffer = this.handle.getMappedRange();
-    // @ts-expect-error
-    new typedArray.constructor(arrayBuffer).set(typedArray);
+  readSyncWebGL(byteOffset?: number, byteLength?: number): Uint8Array<ArrayBuffer> {
+    throw new Error('Not implemented');
   }
 
-  // WEBGPU API
+  // INTERNAL METHODS
 
-  mapAsync(mode: number, offset: number = 0, size?: number): Promise<void> {
-    return this.handle.mapAsync(mode, offset, size);
+  /**
+   * @todo - A small set of mappable buffers could be cached on the device,
+   * however this goes against the goal of keeping core as a thin GPU API layer.
+   */
+  protected _getMappableBuffer(
+    usage: number, // Buffer.MAP_READ | Buffer.MAP_WRITE,
+    byteOffset: number,
+    byteLength: number
+  ): WebGPUBuffer {
+    log.warn(`${this} is not readable, creating a temporary Buffer`);
+    const readableBuffer = new WebGPUBuffer(this.device, {usage, byteLength});
+
+    return readableBuffer;
   }
 
-  getMappedRange(offset: number = 0, size?: number): ArrayBuffer {
-    return this.handle.getMappedRange(offset, size);
-  }
-
-  unmap(): void {
-    this.handle.unmap();
+  protected _copyBuffer(
+    sourceBuffer: WebGPUBuffer,
+    byteOffset: number = 0,
+    byteLength: number = this.byteLength
+  ) {
+    // Now do a GPU-side copy into the temp buffer we can actually read.
+    // TODO - we are spinning up an independent command queue here, what does this mean
+    this.device.pushErrorScope('validation');
+    const commandEncoder = this.device.handle.createCommandEncoder();
+    commandEncoder.copyBufferToBuffer(
+      sourceBuffer.handle,
+      byteOffset,
+      this.handle,
+      byteOffset,
+      byteLength
+    );
+    this.device.handle.queue.submit([commandEncoder.finish()]);
+    this.device.popErrorScope((error: GPUError) => {
+      this.device.reportError(new Error(`${this}._getReadableBuffer() ${error.message}`), this)();
+      this.device.debug();
+    });
   }
 }
-
-/*
-// Convenience API
-  /** Read data from the buffer *
-  async readAsync(options: {
-    byteOffset?: number,
-    byteLength?: number,
-    map?: boolean,
-    unmap?: boolean
-  }): Promise<ArrayBuffer> {
-    if (options.map ?? true) {
-      await this.mapAsync(Buffer.MAP_READ, options.byteOffset, options.byteLength);
-    }
-    const arrayBuffer = this.getMappedRange(options.byteOffset, options.byteLength);
-    if (options.unmap ?? true) {
-      this.unmap();
-    }
-    return arrayBuffer;
-  }
-
-  /** Write data to the buffer *
-  async writeAsync(options: {
-    data: ArrayBuffer,
-    byteOffset?: number,
-    byteLength?: number,
-    map?: boolean,
-    unmap?: boolean
-  }): Promise<void> {
-    if (options.map ?? true) {
-      await this.mapAsync(Buffer.MAP_WRITE, options.byteOffset, options.byteLength);
-    }
-    const arrayBuffer = this.getMappedRange(options.byteOffset, options.byteLength);
-    const destArray = new Uint8Array(arrayBuffer);
-    const srcArray = new Uint8Array(options.data);
-    destArray.set(srcArray);
-    if (options.unmap ?? true) {
-      this.unmap();
-    }
-  }
-  */
-
-// Mapped API (WebGPU)
-
-/** Maps the memory so that it can be read *
-  // abstract mapAsync(mode, byteOffset, byteLength): Promise<void>
-
-  /** Get the mapped range of data for reading or writing *
-  // abstract getMappedRange(byteOffset, byteLength): ArrayBuffer;
-
-  /** unmap makes the contents of the buffer available to the GPU again *
-  // abstract unmap(): void;
-*/

@@ -5,6 +5,9 @@
 import type {Device} from '../device';
 import {Resource, ResourceProps} from './resource';
 
+/** Callback for Buffer.mapAndReadAsync */
+export type BufferMapCallback<T> = (arrayBuffer: ArrayBuffer, lifetime: 'mapped' | 'copied') => T;
+
 export type BufferProps = ResourceProps & {
   /** Supply a handle to connect to an existing device-specific buffer */
   handle?: WebGLBuffer;
@@ -12,15 +15,14 @@ export type BufferProps = ResourceProps & {
   usage?: number;
   /** Length in bytes of memory to be allocated. If not specified, `byteLength` of  `props.data` will be used. */
   byteLength?: number;
-  /** Data to initialize the buffer with. */
-  data?: ArrayBuffer | ArrayBufferView | null;
   /** Byte offset into the newly created Buffer to store data at */
   byteOffset?: number;
   /** If props.usage includes Buffer.INDEX */
   indexType?: 'uint16' | 'uint32';
-
-  // TBD
-  mappedAtCreation?: boolean;
+  /** Data to initialize the buffer with. */
+  data?: ArrayBuffer | ArrayBufferView | null;
+  /** Callback to initialize data without copy */
+  onMapped?: BufferMapCallback<void>;
 };
 
 /** Abstract GPU buffer */
@@ -88,15 +90,29 @@ export abstract class Buffer extends Resource<BufferProps> {
   }
 
   /** Write data to buffer */
-  abstract write(data: ArrayBufferView, byteOffset?: number): void;
+  abstract write(
+    data: ArrayBufferLike | ArrayBufferView | SharedArrayBuffer,
+    byteOffset?: number
+  ): void;
 
-  /** Read data asynchronously */
+  abstract mapAndWriteAsync(
+    onMapped: BufferMapCallback<void | Promise<void>>,
+    byteOffset?: number,
+    byteLength?: number
+  ): Promise<void>;
+
+  /** Reads data asynchronously, returns a copy of the buffer data */
   abstract readAsync(byteOffset?: number, byteLength?: number): Promise<Uint8Array>;
 
+  /** Maps buffer data to CPU memory. Mapped memory is only accessible in the callback */
+  abstract mapAndReadAsync<T>(
+    onMapped: BufferMapCallback<T>,
+    byteOffset?: number,
+    byteLength?: number
+  ): Promise<T>;
+
   /** Read data synchronously. @note WebGL2 only */
-  readSyncWebGL(byteOffset?: number, byteLength?: number): Uint8Array {
-    throw new Error('not implemented');
-  }
+  abstract readSyncWebGL(byteOffset?: number, byteLength?: number): Uint8Array;
 
   // PROTECTED METHODS (INTENDED FOR USE BY OTHER FRAMEWORK CODE ONLY)
 
@@ -108,11 +124,11 @@ export abstract class Buffer extends Resource<BufferProps> {
 
   /** This doesn't handle partial non-zero offset updates correctly */
   protected _setDebugData(
-    data: ArrayBufferView | ArrayBuffer | null,
+    data: ArrayBufferView | ArrayBufferLike | null,
     byteOffset: number,
     byteLength: number
   ): void {
-    const arrayBuffer: ArrayBuffer | null = ArrayBuffer.isView(data) ? data.buffer : data;
+    const arrayBuffer: ArrayBufferLike | null = ArrayBuffer.isView(data) ? data.buffer : data;
     const debugDataLength = Math.min(
       data ? data.byteLength : byteLength,
       Buffer.DEBUG_DATA_MAX_LENGTH
@@ -133,6 +149,6 @@ export abstract class Buffer extends Resource<BufferProps> {
     byteOffset: 0,
     data: null,
     indexType: 'uint16',
-    mappedAtCreation: false
+    onMapped: undefined!
   };
 }

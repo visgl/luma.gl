@@ -9,26 +9,7 @@ import {webgpuAdapter, WebGPUDevice} from '@luma.gl/webgpu';
 import {nullAdapter} from './null-device/null-adapter';
 import {NullDevice} from './null-device/null-device';
 
-const DEFAULT_CANVAS_CONTEXT_PROPS: CanvasContextProps = {
-  width: 1,
-  height: 1
-};
-
-// TODO - replace with Promise.withResolvers once we upgrade TS baseline
-const withResolvers = <T>(): {
-  promise: Promise<T>;
-  resolve: (t: T) => void;
-  reject: (error: Error) => void;
-} => {
-  let resolve;
-  let reject;
-  const promise = new Promise<T>((_resolve, _reject) => {
-    resolve = _resolve;
-    reject = _reject;
-  });
-  // @ts-ignore Assigned in callback.
-  return {promise, resolve, reject};
-};
+const DEFAULT_CANVAS_CONTEXT_PROPS: CanvasContextProps = {width: 1, height: 1};
 
 /** A null device intended for testing - @note Only available after getTestDevices() has completed */
 let nullDevicePromise = makeNullTestDevice();
@@ -39,11 +20,26 @@ const webgpuDevicePromise = makeWebGPUTestDevice();
 
 /** Includes WebGPU device if available */
 export async function getTestDevices(
-  types: ('webgl' | 'webgpu' | 'null' | 'unknown')[] = ['webgl', 'webgpu']
+  types: Readonly<('webgl' | 'webgpu' | 'null' | 'unknown')[]> = ['webgl', 'webgpu']
 ): Promise<Device[]> {
-  return (
-    [await getNullTestDevice(), await getWebGLTestDevice(), await getWebGPUTestDevice()] as Device[]
-  ).filter(device => types.includes(device?.type));
+  const promises = types.map(type => getTestDevice(type));
+  const devices = await Promise.all(promises);
+  return devices.filter(device => device !== null);
+}
+
+export async function getTestDevice(
+  type: 'webgl' | 'webgpu' | 'null' | 'unknown'
+): Promise<Device | null> {
+  switch (type) {
+    case 'webgl':
+      return webglDevicePromise;
+    case 'webgpu':
+      return webgpuDevicePromise;
+    case 'null':
+      return nullDevicePromise;
+    case 'unknown':
+      return null;
+  }
 }
 
 /** returns WebGPU device promise, if available */
@@ -120,4 +116,22 @@ async function makeNullTestDevice(): Promise<NullDevice> {
     nullDevicePromise = Promise.resolve(null);
   }
   return nullDeviceResolvers.promise;
+}
+
+// HELPERS
+
+// TODO - replace with Promise.withResolvers once we upgrade TS baseline
+function withResolvers<T>(): {
+  promise: Promise<T>;
+  resolve: (t: T) => void;
+  reject: (error: Error) => void;
+} {
+  let resolve;
+  let reject;
+  const promise = new Promise<T>((_resolve, _reject) => {
+    resolve = _resolve;
+    reject = _reject;
+  });
+  // @ts-ignore Assigned in callback.
+  return {promise, resolve, reject};
 }
