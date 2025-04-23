@@ -163,7 +163,7 @@ test('Buffer#readAsync', async t => {
   t.end();
 });
 
-test.only('Buffer#mapAndWriteAsync (full and partial)', async t => {
+test('Buffer#mapAndWriteAsync (full and partial)', async t => {
   for (const device of await getTestDevices(DEVICE_TYPES)) {
     const isWebGPU = device.type === 'webgpu';
     const mapped = isWebGPU ? 'mapped' : 'copied';

@@ -111,7 +111,7 @@ export class WebGPUBuffer extends Buffer {
       await callback(arrayBuffer, 'mapped');
       writeBuffer.handle.unmap();
       if (mappableBuffer) {
-        this._copyBuffer(mappableBuffer);
+        this._copyBuffer(mappableBuffer, byteOffset, byteLength);
       }
     } finally {
       this.device.popErrorScope((error: GPUError) => {
@@ -205,7 +205,13 @@ export class WebGPUBuffer extends Buffer {
     // TODO - we are spinning up an independent command queue here, what does this mean
     this.device.pushErrorScope('validation');
     const commandEncoder = this.device.handle.createCommandEncoder();
-    commandEncoder.copyBufferToBuffer(sourceBuffer.handle, byteOffset, this.handle, 0, byteLength);
+    commandEncoder.copyBufferToBuffer(
+      sourceBuffer.handle,
+      byteOffset,
+      this.handle,
+      byteOffset,
+      byteLength
+    );
     this.device.handle.queue.submit([commandEncoder.finish()]);
     this.device.popErrorScope((error: GPUError) => {
       this.device.reportError(new Error(`${this}._getReadableBuffer() ${error.message}`), this)();
