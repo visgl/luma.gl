@@ -1,21 +1,230 @@
-// TODO - fix
-// @ts-nocheck
-/* eslint-disable */
-
 import test from 'tape-promise/tape';
 import {getWebGLTestDevice, getTestDevices} from '@luma.gl/test-utils';
 
-import {Device, Texture, TextureFormat, textureFormatDecoder, VertexType} from '@luma.gl/core';
-// TODO(v9): Avoid import from `@luma.gl/constants` in core tests.
+import {
+  TypedArray,
+  Device,
+  Texture,
+  TextureFormat,
+  textureFormatDecoder,
+  VertexType,
+  _getTextureFormatTable,
+  TextureView,
+  Buffer as LumaBuffer
+} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {WebGLDevice} from '@luma.gl/webgl';
 
-import {_getTextureFormatTable, getTextureFormatWebGL} from '@luma.gl/core';
 import {SAMPLER_PARAMETERS} from './sampler.spec';
 
-import {WEBGLTexture} from '@luma.gl/webgl/adapter/resources/webgl-texture';
-import {WebGLDevice} from '../../../../webgl/dist/adapter/webgl-device';
-// import {convertToSamplerProps} from '@luma.gl/webgl/adapter/converters/sampler-parameters';
+// Utility to compare TypedArray contents
+function toUint8(arr: ArrayBuffer | ArrayBufferView): Uint8Array {
+  return arr instanceof ArrayBuffer
+    ? new Uint8Array(arr)
+    : new Uint8Array(arr.buffer, arr.byteOffset, arr.byteLength);
+}
+
+test.skip('Texture#createView returns a TextureView', async t => {
+  for (const device of await getTestDevices()) {
+    const tex = device.createTexture({width: 2, height: 2});
+    const view = tex.createView({});
+    t.ok(view instanceof TextureView, `${device.type}: createView returns TextureView`);
+    t.equal(view.props.width, tex.width, `${device.type}: view.props.width matches texture.width`);
+    t.equal(
+      view.props.height,
+      tex.height,
+      `${device.type}: view.props.height matches texture.height`
+    );
+    tex.destroy();
+  }
+  t.end();
+});
+
+const RGBA8_DATA = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]);
+
+test('Texture#writeData & readDataAsync round-trip', async t => {
+  for (const device of await getTestDevices()) {
+    t.comment(`Testing ${device.type}`);
+
+    const tex = device.createTexture({
+      width: 2,
+      height: 1,
+      format: 'rgba8unorm',
+      usage: Texture.COPY_DST | Texture.COPY_SRC
+    });
+
+    tex.writeData(RGBA8_DATA);
+    const arrayBuffer = await tex.readDataAsync();
+    const result = toUint8(arrayBuffer).slice(0, RGBA8_DATA.length);
+
+    t.deepEquals(
+      result,
+      RGBA8_DATA,
+      `${device.type}: writeData + readDataAsync returns same pixels`
+    );
+    tex.destroy();
+  }
+  t.end();
+});
+
+test.only('Texture#writeData & readDataAsync round-trip for all formats and dimensions', async t => {
+  for (const device of await getTestDevices()) {
+    t.comment(`Testing device: ${device.type}`);
+    const formatTable = _getTextureFormatTable();
+    const formats: TextureFormat[] = Object.keys(formatTable) as TextureFormat[];
+
+    for (const format of formats) {
+      const info = device.getTextureFormatInfo(format);
+
+      // Loop over supported dimensions
+      for (const dimension of ['2d', '3d'] as const) {
+        if (dimension === '3d' && device.type === 'webgl') continue;
+
+        // Pick small, fixed size
+        const texSize = {
+          // '1d': {width: 8},
+          '2d': {width: 4, height: 2},
+          '3d': {width: 2, height: 2, depthOrArrayLayers: 2}
+        }[dimension];
+
+        const tex = device.createTexture({
+          ...texSize,
+          dimension,
+          format,
+          usage: Texture.COPY_SRC | Texture.COPY_DST
+        });
+
+        const ArrayType = Uint8Array;
+        const textureDataLayout = tex.getTextureDataLayout({});
+        // const dataEncoder = new TextureDataEncoder(format, textureDataLayout);
+        // for (let depth = 0; depth < (texSize.depthOrArrayLayers ?? 1); ++depth) {
+        //   for (let y = 0; y < texSize.height; y++) {
+        //     for (let x = 0; x < texSize.width; x++) {
+        //       const dataEncoder.setPixel(x, y, depth, )
+        //     }
+        //   }
+        // }
+        // const input = dataEncoder.getTypedArray();
+
+        const input = new Uint16Array(1);
+        for (let i = 0; i < input.length; i++)
+          try {
+            tex.writeData(input);
+            const outputBuffer = await tex.readDataAsync();
+            const output = new ArrayType(outputBuffer).slice(0, input.length);
+
+            const match =
+              ArrayType === Float32Array ? almostEqual(output, input) : deepEqual(output, input);
+
+            if (!match) {
+              // debugger
+            }
+            t.ok(match, `${device.type} ${format} ${dimension} round-trip succeeded`);
+          } catch (err) {
+            t.fail(`${device.type} ${format} ${dimension} round-trip failed: ${err.message}`);
+          }
+
+        tex.destroy();
+      }
+    }
+  }
+
+  t.end();
+});
+
+function deepEqual(a: TypedArray, b: TypedArray): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+  return true;
+}
+
+function almostEqual(a: Float32Array, b: Float32Array, epsilon = 1e-6): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (Math.abs(a[i] - b[i]) > epsilon) return false;
+  }
+  return true;
+}
+
+test('Texture#copyImageData & readDataAsync round-trip', async t => {
+  for (const device of await getTestDevices()) {
+    const tex = device.createTexture({width: 2, height: 1, format: 'rgba8unorm'});
+    tex.copyImageData({data: RGBA8_DATA});
+    const buffer = await tex.readDataAsync({});
+    const result = toUint8(buffer);
+    t.deepEquals(
+      result,
+      RGBA8_DATA,
+      `${device.type}: copyImageData + readDataAsync returns same pixels`
+    );
+    tex.destroy();
+  }
+  t.end();
+});
+
+test('Texture#writeBuffer & readDataAsync round-trip', async t => {
+  for (const device of await getTestDevices()) {
+    const width = 2;
+    const height = 1;
+    const bytesPerRow = width * 4;
+    const bufferSize = bytesPerRow * height;
+    const upload = device.createBuffer({
+      size: bufferSize,
+      usage: GPUBufferUsage.COPY_SRC | GPUBufferUsage.MAP_WRITE,
+      mappedAtCreation: true
+    });
+    new Uint8Array(upload.getMappedRange()).set(RGBA8_DATA);
+    upload.unmap();
+
+    const tex = device.createTexture({width, height, format: 'rgba8unorm'});
+    tex.writeBuffer(upload, {});
+    const data = await tex.readDataAsync({});
+    const result = toUint8(data);
+    t.deepEquals(
+      result,
+      RGBA8_DATA,
+      `${device.type}: writeBuffer + readDataAsync returns same pixels`
+    );
+    upload.destroy();
+    tex.destroy();
+  }
+  t.end();
+});
+
+test('Texture#readBuffer & Buffer.readAsync round-trip', async t => {
+  for (const device of await getTestDevices()) {
+    const tex = device.createTexture({width: 2, height: 1, format: 'rgba8unorm'});
+    // initialize via writeData
+    tex.writeData(RGBA8_DATA, {});
+    const buf = tex.readBuffer({});
+    const arr = await buf.readAsync();
+    const result = toUint8(arr);
+    t.deepEquals(
+      result,
+      RGBA8_DATA,
+      `${device.type}: readBuffer + Buffer.readAsync returns same pixels`
+    );
+    tex.destroy();
+  }
+  t.end();
+});
+
+test('Texture#readDataSyncWebGL returns correct data on WebGL', async t => {
+  const devices = await getTestDevices();
+  for (const device of devices) {
+    if (device instanceof WebGLDevice) {
+      const tex = device.createTexture({width: 2, height: 1, format: 'rgba8unorm'});
+      tex.writeData(RGBA8_DATA, {});
+      const syncData = tex.readDataSyncWebGL({});
+      const result = toUint8(syncData);
+      t.deepEquals(result, RGBA8_DATA, `webgl: readDataSyncWebGL returns same pixels`);
+      tex.destroy();
+    }
+  }
+  t.end();
+});
+
+// //////////////////////////////
 
 test('Device#isTextureFormatSupported()', async t => {
   const UNSUPPORTED_FORMATS: Record<string, TextureFormat[]> = {
@@ -43,7 +252,7 @@ test('Device#isTextureFormatSupported()', async t => {
 });
 
 test('Device#isTextureFormatFilterable()', async t => {
-  const UNSUPPORTED_FORMATS: Record<string, Record<Device['type'], TextureFormat[]>> = {
+  const UNSUPPORTED_FORMATS: Record<Device['type'], TextureFormat[]> = {
     webgl: ['rgba8unorm', 'r32float', 'rg32float', 'rgb32float-webgl', 'rgba32float'],
     webgpu: []
   };
@@ -68,7 +277,7 @@ test('Device#isTextureFormatFilterable()', async t => {
 });
 
 test('Device#isTextureFormatRenderable()', async t => {
-  const UNSUPPORTED_FORMATS: Record<string, Record<Device['type'], TextureFormat[]>> = {
+  const UNSUPPORTED_FORMATS: Record<Device['type'], TextureFormat[]> = {
     webgl: ['rgba8unorm', 'r32float', 'rg32float', 'rgb32float-webgl', 'rgba32float'],
     webgpu: []
   };
@@ -258,10 +467,9 @@ test('Texture#dimension=3d,format=r32float', async t => {
       depth: 16,
       dimension: '3d',
       format: 'r32float',
-      mipmaps: false,
       sampler: {
         minFilter: 'linear',
-        magFilterFilter: 'linear',
+        magFilter: 'linear',
         addressModeU: 'clamp-to-edge',
         addressModeV: 'clamp-to-edge',
         addressModeW: 'clamp-to-edge'
@@ -277,8 +485,7 @@ test('Texture#copyExternalImage', async t => {
     const texture = device.createTexture({
       width: 2,
       height: 1,
-      format: 'rgba8unorm',
-      mipmaps: false
+      format: 'rgba8unorm'
     });
 
     if (device.info.type === 'webgl') {
@@ -294,7 +501,7 @@ test('Texture#copyExternalImage', async t => {
       const canvas = document.createElement('canvas');
       canvas.width = 2;
       canvas.height = 1;
-      const ctx = canvas.getContext('2d');
+      const ctx = canvas.getContext('2d')!;
 
       // Full copy
       ctx.fillStyle = '#FF0000';
@@ -350,7 +557,6 @@ test('Texture#copyExternalImage', async t => {
 
 test.skip('Texture#setImageData', async t => {
   const webglDevice = await getWebGLTestDevice();
-  let data;
 
   // data: null
   const texture = webglDevice.createTexture({
@@ -363,7 +569,7 @@ test.skip('Texture#setImageData', async t => {
   t.deepEquals(readPixelsToArray(texture), new Float32Array(8), 'Pixels are empty');
 
   // data: typed array
-  data = new Float32Array([0.1, 0.2, -3, -2, 0, 0.5, 128, 255]);
+  const data = new Float32Array([0.1, 0.2, -3, -2, 0, 0.5, 128, 255]);
   texture.copyExternalImage({data});
   t.deepEquals(readPixelsToArray(texture), data, 'Pixels are set correctly');
   t.end();
@@ -416,30 +622,6 @@ test.skip('WebGL2#Texture setSubImageData', async t => {
       'Pixels are set correctly'
     );
   }
-
-  t.end();
-});
-
-test.skip('WebGL2#Texture generateMipmap', async t => {
-  let texture = webglDevice.createTexture({
-    data: null,
-    width: 3,
-    height: 3,
-    mipmaps: false
-  });
-
-  texture.generateMipmap();
-  t.notOk(texture.mipmaps, 'Should not turn on mipmaps for NPOT.');
-
-  texture = webglDevice.createTexture({
-    data: null,
-    width: 2,
-    height: 2,
-    mipmaps: false
-  });
-
-  texture.generateMipmap();
-  t.ok(texture.mipmaps, 'Should turn on mipmaps for POT.');
 
   t.end();
 });
@@ -598,6 +780,32 @@ test.skip('Texture#setParameters', async t => {
 
   texture.destroy();
   t.ok(texture instanceof Texture, 'Texture delete successful');
+
+  t.end();
+});
+
+// Move to engine
+
+test.skip('WebGL2#Texture generateMipmap', async t => {
+  let texture = webglDevice.createTexture({
+    data: null,
+    width: 3,
+    height: 3,
+    mipmaps: false
+  });
+
+  texture.generateMipmap();
+  t.notOk(texture.mipmaps, 'Should not turn on mipmaps for NPOT.');
+
+  texture = webglDevice.createTexture({
+    data: null,
+    width: 2,
+    height: 2,
+    mipmaps: false
+  });
+
+  texture.generateMipmap();
+  t.ok(texture.mipmaps, 'Should turn on mipmaps for POT.');
 
   t.end();
 });

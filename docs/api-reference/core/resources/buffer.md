@@ -65,7 +65,7 @@ Free up any GPU resources associated with this buffer immediately (instead of wa
 buffer.write(data: ArrayBufferLike | ArrayBufferView, byteOffset?: number): void;
 ```
 
-Writes data to the GPU buffer. 
+Writes data to the GPU buffer.
 
 - `data` - binary data to be written to the GPU Buffer.
 - `byteOffset` - the first byte to read from the GPU buffer.
