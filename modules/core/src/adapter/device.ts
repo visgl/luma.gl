@@ -240,11 +240,13 @@ export type DeviceProps = {
 
   /** Error handler. If it returns a probe logger style function, it will be called at the site of the error to optimize console error links. */
   onError?: (error: Error, context?: unknown) => unknown;
-  /** Called when the size of a canvas changes */
+  /** Called when the size of a CanvasContext's canvas changes */
   onResize?: (ctx: CanvasContext, info: {oldPixelSize: [number, number]}) => unknown;
-  /** Called when the visibility of a canvas changes */
+  /** Called when the absolute position of a CanvasContext's canvas changes. Must set `CanvasContextProps.trackPosition: true` */
+  onPositionChange?: (ctx: CanvasContext, info: {oldPosition: [number, number]}) => unknown;
+  /** Called when the visibility of a CanvasContext's canvas changes */
   onVisibilityChange?: (ctx: CanvasContext) => unknown;
-  /** Called when the device pixel ratio of a canvas changes */
+  /** Called when the device pixel ratio of a CanvasContext's canvas changes */
   onDevicePixelRatioChange?: (ctx: CanvasContext, info: {oldRatio: number}) => unknown;
 
   // DEBUG SETTINGS
