@@ -79,7 +79,7 @@ export const textureFormatDecoder = new TextureFormatDecoder();
 /**
  * Decodes a texture format, returning e.g. attatchment type, components, byte length and flags (integer, signed, normalized)
  */
-function getTextureFormatInfo(format: TextureFormat): TextureFormatInfo {
+export function getTextureFormatInfo(format: TextureFormat): TextureFormatInfo {
   let formatInfo: TextureFormatInfo = getTextureFormatInfoUsingTable(format);
 
   if (textureFormatDecoder.isCompressed(format)) {

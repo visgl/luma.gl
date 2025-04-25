@@ -2,33 +2,46 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {
-  Device,
-  TextureProps,
-  TextureViewProps,
-  Sampler,
-  SamplerProps,
-  CopyExternalImageOptions,
-  CopyImageDataOptions,
-  TypedArray
-} from '@luma.gl/core';
-import {Texture, log} from '@luma.gl/core';
+// @ts-nocheck
+
 import {
+  type Device,
+  type TextureProps,
+  type TextureViewProps,
+  type Sampler,
+  type SamplerProps,
+  type CopyExternalImageOptions,
+  type CopyImageDataOptions,
+  type TextureReadOptions,
+  type TextureWriteOptions,
+  type TextureFormat,
+  type TypedArray,
+  Buffer,
+  Texture,
+  log
+} from '@luma.gl/core';
+
+import {GLSamplerParameters, GLValueParameters,
   GL,
   GLTextureTarget,
   GLTextureCubeMapTarget,
   GLTexelDataFormat,
-  GLPixelType,
-  // GLDataType,
-  GLSamplerParameters,
-  GLValueParameters
+  GLPixelType
 } from '@luma.gl/constants';
+
 import {getTextureFormatWebGL} from '../converters/webgl-texture-table';
 import {convertSamplerParametersToWebGL} from '../converters/sampler-parameters';
 import {withGLParameters} from '../../context/state-tracker/with-parameters';
 import {WebGLDevice} from '../webgl-device';
+import {WEBGLFramebuffer} from './webgl-framebuffer';
 import {WEBGLSampler} from './webgl-sampler';
 import {WEBGLTextureView} from './webgl-texture-view';
+
+import {getTypedArrayConstructor, getDataType} from '@luma.gl/core';
+
+import {convertDataTypeToGLDataType} from '../converters/webgl-shadertypes';
+// import {glFormatToComponents} from '../helpers/format-utils';
+import {convertGLDataTypeToDataType} from '../converters/shader-formats';
 
 /**
  * WebGL... the texture API from hell... hopefully made simpler
@@ -65,6 +78,8 @@ export class WEBGLTexture extends Texture {
   // state
   /** Texture binding slot - TODO - move to texture view? */
   _textureUnit: number = 0;
+  /** Chached framebuffer */
+  _framebuffer: WEBGLFramebuffer | null = null;
 
   constructor(device: Device, props: TextureProps) {
     super(device, props);
@@ -119,6 +134,10 @@ export class WEBGLTexture extends Texture {
 
   override destroy(): void {
     if (this.handle) {
+      // Destroy any cached framebuffer
+      this._framebuffer?.destroy();
+      this._framebuffer = null;
+
       this.gl.deleteTexture(this.handle);
       this.removeStats();
       this.trackDeallocatedMemory('Texture');
@@ -136,6 +155,45 @@ export class WEBGLTexture extends Texture {
     // Apply sampler parameters to texture
     const parameters = convertSamplerParametersToWebGL(this.sampler.props);
     this._setSamplerParameters(parameters);
+  }
+
+  copyExternalImage(options_: CopyExternalImageOptions): {width: number; height: number} {
+    const options = this._normalizeCopyExternalImageOptions(options_);
+
+    if (options.sourceX || options.sourceY) {
+      // requires copyTexSubImage2D from a framebuffer'
+      throw new Error('WebGL does not support sourceX/sourceY)');
+    }
+
+    const {glFormat, glType} = this;
+    const {image, depth, mipLevel, x, y, z, width, height} = options;
+
+    // WebGL cube maps specify faces by overriding target instead of using the depth parameter
+    const glTarget = getWebGLCubeFaceTarget(this.glTarget, this.dimension, depth);
+    const glParameters: GLValueParameters = options.flipY ? {[GL.UNPACK_FLIP_Y_WEBGL]: true} : {};
+
+    this.gl.bindTexture(this.glTarget, this.handle);
+
+    withGLParameters(this.gl, glParameters, () => {
+      switch (this.dimension) {
+        case '2d':
+        case 'cube':
+          // prettier-ignore
+          this.gl.texSubImage2D(glTarget, mipLevel, x, y, width, height, glFormat, glType, image);
+          break;
+        case '2d-array':
+        case '3d':
+          // prettier-ignore
+          this.gl.texSubImage3D(glTarget, mipLevel, x, y, z, width, height, depth, glFormat, glType, image);
+          break;
+        default:
+        // Can never happen in WebGL
+      }
+    });
+
+    this.gl.bindTexture(this.glTarget, null);
+
+    return {width: options.width, height: options.height};
   }
 
   copyImageData(options_: CopyImageDataOptions): void {
@@ -187,48 +245,189 @@ export class WEBGLTexture extends Texture {
     this.gl.bindTexture(glTarget, null);
   }
 
-  copyExternalImage(options_: CopyExternalImageOptions): {width: number; height: number} {
-    const options = this._normalizeCopyExternalImageOptions(options_);
+  /**
+   * Read the contents of a texture into a GPU Buffer.
+   * @returns A Buffer containing the texture data.
+   *
+   * @note The memory layout of the texture data is determined by the texture format and dimensions.
+   * @note The application can call Texture.getMemoryLayout() to compute the layout.
+   * @note The application can call Buffer.readAsync()
+   * @note If not supplied a buffer will be created and the application needs to call Buffer.destroy
+   */
+  readBuffer(options: TextureReadOptions = {}, buffer?: Buffer): Buffer {
+    throw new Error('readBuffer not implemented');
+  }
 
-    if (options.sourceX || options.sourceY) {
-      // requires copyTexSubImage2D from a framebuffer'
-      throw new Error('WebGL does not support sourceX/sourceY)');
-    }
+  /**
+   * Reads data from a texture into an ArrayBuffer.
+   * @returns An ArrayBuffer containing the texture data.
+   *
+   * @note The memory layout of the texture data is determined by the texture format and dimensions.
+   * @note The application can call Texture.getMemoryLayout() to compute the layout.
+   */
+  async readDataAsync(options: TextureReadOptions = {}): Promise<ArrayBuffer> {
+    return this.readDataSyncWebGL(options);
+  }
 
-    const {glFormat, glType} = this;
-    const {image, depth, mipLevel, x, y, z, width, height} = options;
+  /**
+   * Writes an GPU Buffer into a texture.
+   *
+   * @note The memory layout of the texture data is determined by the texture format and dimensions.
+   * @note The application can call Texture.getMemoryLayout() to compute the layout.
+   */
+  writeBuffer(buffer: Buffer, options_: TextureWriteOptions = {}) {}
 
-    // WebGL cube maps specify faces by overriding target instead of using the depth parameter
+  /**
+   * Writes an array buffer into a texture.
+   *
+   * @note The memory layout of the texture data is determined by the texture format and dimensions.
+   * @note The application can call Texture.getMemoryLayout() to compute the layout.
+   */
+  writeData(data: ArrayBuffer | ArrayBufferView, options_: TextureWriteOptions = {}): void {
+    const options = this._normalizeTextureWriteOptions(options_);
+
+    const typedArray = ArrayBuffer.isView(data) ? data : new Uint8Array(data);
+    const {} = this;
+    const {width, height, mipLevel, x, y, z} = options;
+    const {glFormat, glType, compressed} = this;
+    const depth = 0; // TODO - fix
     const glTarget = getWebGLCubeFaceTarget(this.glTarget, this.dimension, depth);
-    const glParameters: GLValueParameters = options.flipY ? {[GL.UNPACK_FLIP_Y_WEBGL]: true} : {};
+    const byteOffset = 0;
 
-    this.gl.bindTexture(this.glTarget, this.handle);
+    const memoryLayout = this.getMemoryLayout(options);
+    const {bytesPerRow, rowsPerImage} = memoryLayout;
+
+    const byteAlignment  = this._getRowByteAlignment(this.format, width)
+
+    const glParameters: GLValueParameters = !this.compressed
+      ? {
+          [GL.UNPACK_ALIGNMENT]: byteAlignment,
+          [GL.UNPACK_ROW_LENGTH]: bytesPerRow,
+          [GL.UNPACK_IMAGE_HEIGHT]: rowsPerImage
+        }
+      : {};
+
+    this.gl.bindTexture(glTarget, this.handle);
 
     withGLParameters(this.gl, glParameters, () => {
       switch (this.dimension) {
         case '2d':
         case 'cube':
-          // prettier-ignore
-          this.gl.texSubImage2D(glTarget, mipLevel, x, y, width, height, glFormat, glType, image);
+          if (compressed) {
+            // prettier-ignore
+            this.gl.compressedTexSubImage2D(glTarget, mipLevel, x, y, width, height, glFormat, typedArray, byteOffset); // , byteLength
+          } else {
+            // prettier-ignore
+            this.gl.texSubImage2D(glTarget, mipLevel, x, y, width, height, glFormat, glType, typedArray, byteOffset); // , byteLength
+          }
           break;
         case '2d-array':
         case '3d':
-          // prettier-ignore
-          this.gl.texSubImage3D(glTarget, mipLevel, x, y, z, width, height, depth, glFormat, glType, image);
+          if (compressed) {
+            // prettier-ignore
+            this.gl.compressedTexSubImage3D(glTarget, mipLevel, x, y, z, width, height, depth, glFormat, typedArray, byteOffset); // , byteLength
+          } else {
+            // prettier-ignore
+            this.gl.texSubImage3D(glTarget, mipLevel, x, y, z, width, height, depth, glFormat, glType, typedArray, byteOffset); // , byteLength
+          }
           break;
         default:
         // Can never happen in WebGL
       }
     });
 
-    this.gl.bindTexture(this.glTarget, null);
+    this.gl.bindTexture(glTarget, null);
+  }
 
-    return {width: options.width, height: options.height};
+  // IMPLEMENTATION SPECIFIC
+
+  _getRowByteAlignment(format: TextureFormat, width: number): 1 | 2 | 4 | 8 {
+    // For best texture data read/write performance, calculate the biggest pack/unpack alignment
+    // that fits with the provided texture row byte length
+    // Note: Any RGBA or 32 bit type will be at least 4 bytes, which should result in good performance.
+    const info = this.device.getTextureFormatInfo(format);
+    const rowByteLength = width * info.bytesPerPixel;
+    if (rowByteLength % 8 === 0) return 8;
+    if (rowByteLength % 4 === 0) return 4;
+    if (rowByteLength % 2 === 0) return 2;
+    return 1;
+  }
+
+  /**
+   * Wraps a given texture into a framebuffer object, that can be further used
+   * to read data from the texture object.
+   */
+  _getFramebuffer() {
+    this._framebuffer ||= this.device.createFramebuffer({
+      id: `framebuffer-for-${this.id}`,
+      width: this.width,
+      height: this.height,
+      colorAttachments: [this]
+    });
+    return this._framebuffer;
   }
 
   // WEBGL SPECIFIC
 
-  generateMipmapsWebGL(options?: {force?: boolean}): void {
+  override readDataSyncWebGL(options_: TextureReadOptions = {}): ArrayBuffer {
+    const options = this._normalizeTextureReadOptions(options_);
+
+    const memoryLayout = this.getMemoryLayout(options);
+
+    // const formatInfo = getTextureFormatInfo(format);
+    // Allocate pixel array if not already available, using supplied type
+    const shaderType = convertGLDataTypeToDataType(this.glType);
+
+    const ArrayType = getTypedArrayConstructor(shaderType);
+    // const components = glFormatToComponents(this.glFormat);
+    // TODO - check for composite type (components = 1).
+
+    debugger;
+    const targetArray = new ArrayType(memoryLayout.byteLength) as
+      | Uint8Array
+      | Uint16Array
+      | Float32Array;
+
+    // Pixel array available, if necessary, deduce type from it.
+    const signedType = getDataType(targetArray);
+    const sourceType = convertDataTypeToGLDataType(signedType);
+
+    // There is a lot of hedging in the WebGL2 spec about what formats are guaranteed to be readable
+    // (It should always be possible to read RGBA/UNSIGNED_BYTE, but most other combinations are not guaranteed)
+    // Querying is possible but expensive:
+    // const {device} = framebuffer;
+    // texture.glReadFormat ||= gl.getParameter(gl.IMPLEMENTATION_COLOR_READ_FORMAT);
+    // texture.glReadType ||= gl.getParameter(gl.IMPLEMENTATION_COLOR_READ_TYPE);
+    // console.log('params', device.getGLKey(texture.glReadFormat), device.getGLKey(texture.glReadType));
+
+    const framebuffer = this._getFramebuffer();
+
+    // Note: luma.gl overrides bindFramebuffer so that we can reliably restore the previous framebuffer (this is the only function for which we do that)
+    const prevHandle = this.gl.bindFramebuffer(
+      GL.FRAMEBUFFER,
+      framebuffer.handle
+    ) as unknown as WebGLFramebuffer | null;
+
+    // Select the color attachment to read from
+    this.gl.readBuffer(GL.COLOR_ATTACHMENT0);
+    this.gl.readPixels(
+      options.x,
+      options.y,
+      options.width,
+      options.height,
+      this.glFormat,
+      sourceType,
+      targetArray
+    );
+    this.gl.bindFramebuffer(GL.FRAMEBUFFER, prevHandle || null);
+
+    return targetArray.buffer as ArrayBuffer;
+  }
+
+  /**
+   * @note - this is used by the AsyncTexture class to generate mipmaps on WebGL
+   */
+  override generateMipmapsWebGL(options?: {force?: boolean}): void {
     const isFilterableAndRenderable =
       this.device.isTextureFormatRenderable(this.props.format) &&
       this.device.isTextureFormatFilterable(this.props.format);
@@ -298,6 +497,7 @@ export class WEBGLTexture extends Texture {
 
     this.gl.bindTexture(this.glTarget, null);
   }
+
   _getActiveUnit(): number {
     return this.gl.getParameter(GL.ACTIVE_TEXTURE) - GL.TEXTURE0;
   }

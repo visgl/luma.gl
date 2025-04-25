@@ -2,16 +2,19 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {
-  TextureProps,
-  TextureViewProps,
-  CopyExternalImageOptions,
-  CopyImageDataOptions,
-  Sampler,
-  SamplerProps
+import {
+  type TextureProps,
+  type TextureViewProps,
+  type CopyExternalImageOptions,
+  type CopyImageDataOptions,
+  type TextureReadOptions,
+  type TextureWriteOptions,
+  type Sampler,
+  type SamplerProps,
+  type TextureFormat,
+  Buffer,
+  Texture
 } from '@luma.gl/core';
-
-import {Texture} from '@luma.gl/core';
 import {NullDevice} from '../null-device';
 import {NullSampler} from './null-sampler';
 import {NullTextureView} from './null-texture-view';
@@ -87,7 +90,23 @@ export class NullTexture extends Texture {
     throw new Error('copyImageData not implemented');
   }
 
-  generateMipmapsWebGL(): void {
+  override readBuffer(options: TextureReadOptions = {}, buffer?: Buffer): Buffer {
+    return this.device.createBuffer({});
+  }
+
+  override async readDataAsync(options: TextureReadOptions = {}): Promise<ArrayBuffer> {
+    return new ArrayBuffer(0);
+  }
+
+  override writeBuffer(buffer: Buffer, options: TextureWriteOptions = {}) {
     // ignore
+  }
+
+  override writeData(data: ArrayBuffer | ArrayBufferView, options: TextureWriteOptions = {}): void {
+    // ignore
+  }
+
+  override _getRowByteAlignment(format: TextureFormat): number {
+    return 1;
   }
 }
