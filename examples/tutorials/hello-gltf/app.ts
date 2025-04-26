@@ -27,12 +27,35 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       throw new Error('This demo is only implemented for WebGL2');
     }
 
-    this.loadGLTF('Avocado');
+    window.localStorage.lastGltfModel = window.localStorage.lastGltfModel ?? 'Avocado';
+    this.loadGLTF(window.localStorage.lastGltfModel);
 
-    const modelSelector = document.getElementById('model-select');
+    const modelSelector = document.getElementById('model-select') as HTMLSelectElement;
+
+    this.fetchModelList(modelSelector);
+
     modelSelector?.addEventListener('change', e => {
-      this.loadGLTF((e.target as HTMLSelectElement).value);
+      const name = (e.target as HTMLSelectElement).value;
+      this.loadGLTF(name);
+      window.localStorage.lastGltfModel = name;
     });
+  }
+
+  async fetchModelList(modelSelector: HTMLSelectElement) {
+    const response = await fetch(
+      'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/model-index.json'
+    );
+    const models = await response.json();
+
+    const options = models.map(({name}) => {
+      const option = document.createElement('option');
+      option.value = name;
+      option.textContent = name;
+      return option;
+    });
+
+    modelSelector.append(...options);
+    modelSelector.value = window.localStorage.lastGltfModel;
   }
 
   onFinalize() {
