@@ -25,12 +25,14 @@ export type CanvasContextProps = {
   visible?: boolean;
   /** Whether to size the drawing buffer to the pixel size during auto resize */
   useDevicePixels?: boolean;
-  /** Whether to track window resizes */
+  /** Whether to track window resizes. */
   autoResize?: boolean;
   /** @see https://developer.mozilla.org/en-US/docs/Web/API/GPUCanvasContext/configure#alphamode */
   alphaMode?: 'opaque' | 'premultiplied';
   /** @see https://developer.mozilla.org/en-US/docs/Web/API/GPUCanvasContext/configure#colorspace */
   colorSpace?: 'srgb'; // GPUPredefinedColorSpace
+  /** Whether to track position changes. Calls this.device.onPositionChange */
+  trackPosition?: boolean;
 };
 
 /**
@@ -59,7 +61,8 @@ export abstract class CanvasContext {
     container: null,
     visible: true,
     alphaMode: 'opaque',
-    colorSpace: 'srgb'
+    colorSpace: 'srgb',
+    trackPosition: false
   };
 
   abstract readonly device: Device;
@@ -101,6 +104,8 @@ export abstract class CanvasContext {
   protected _initializedResolvers = withResolvers<void>();
   protected readonly _resizeObserver: ResizeObserver | undefined;
   protected readonly _intersectionObserver: IntersectionObserver | undefined;
+  protected _position: [number, number];
+  protected destroyed = false;
 
   abstract get [Symbol.toStringTag](): string;
 
@@ -140,7 +145,7 @@ export abstract class CanvasContext {
       this.type = 'node';
     }
 
-    // Initialize size variables (these will be updated by ResizeObserver)
+    // Initialize size variables to some sane values (these will be updated by ResizeObserver)
     this.cssWidth = this.htmlCanvas?.clientWidth || this.canvas.width;
     this.cssHeight = this.htmlCanvas?.clientHeight || this.canvas.height;
     this.devicePixelWidth = this.canvas.width;
@@ -148,6 +153,7 @@ export abstract class CanvasContext {
     this.drawingBufferWidth = this.canvas.width;
     this.drawingBufferHeight = this.canvas.height;
     this.devicePixelRatio = globalThis.devicePixelRatio || 1;
+    this._position = [0, 0];
 
     if (CanvasContext.isHTMLCanvas(this.canvas)) {
       // Track visibility changes
@@ -168,7 +174,16 @@ export abstract class CanvasContext {
       // Track device pixel ratio changes.
       // Defer call to after construction completes to ensure `this.device` is available.
       setTimeout(() => this._observeDevicePixelRatio(), 0);
+
+      // Track top/left position changes
+      if (this.props.trackPosition) {
+        this._trackPosition();
+      }
     }
+  }
+
+  destroy() {
+    this.destroyed = true;
   }
 
   /** Returns a framebuffer with properly resized current 'swap chain' textures */
@@ -185,6 +200,10 @@ export abstract class CanvasContext {
    */
   getCSSSize(): [number, number] {
     return [this.cssWidth, this.cssHeight];
+  }
+
+  getPosition() {
+    return this._position;
   }
 
   /**
@@ -357,6 +376,8 @@ export abstract class CanvasContext {
     this._initializedResolvers.resolve();
     this.isInitialized = true;
 
+    this.updatePosition();
+
     // Inform the device
     this.device.props.onResize(this, {oldPixelSize});
   }
@@ -366,6 +387,8 @@ export abstract class CanvasContext {
     const oldRatio = this.devicePixelRatio;
     this.devicePixelRatio = window.devicePixelRatio;
 
+    this.updatePosition();
+
     // Inform the device
     this.device.props.onDevicePixelRatioChange(this, {oldRatio});
     // Set up a one time query against the current resolution.
@@ -374,6 +397,38 @@ export abstract class CanvasContext {
       () => this._observeDevicePixelRatio(),
       {once: true}
     );
+  }
+
+  /** Start tracking positions with a timer */
+  _trackPosition(intervalMs: number = 100): void {
+    const intervalId = setInterval(() => {
+      if (this.destroyed) {
+        clearInterval(intervalId);
+      } else {
+        this.updatePosition();
+      }
+    }, intervalMs);
+  }
+
+  /**
+   * Calculated the absolute position of the canvas
+   * @note - getBoundingClientRect() is normally cheap but can be expensive
+   * if called before browser has finished a reflow. Should not be the case here.
+   */
+  updatePosition() {
+    const newRect = this.htmlCanvas?.getBoundingClientRect();
+    if (newRect) {
+      // We only track position since we rely on the more precise ResizeObserver for size
+      const position: [number, number] = [newRect.left, newRect.top];
+      this._position ??= position;
+      const positionChanged =
+        position[0] !== this._position[0] || position[1] !== this._position[1];
+      if (positionChanged) {
+        const oldPosition = this._position;
+        this._position = position;
+        this.device.props.onPositionChange?.(this, {oldPosition});
+      }
+    }
   }
 }
 
