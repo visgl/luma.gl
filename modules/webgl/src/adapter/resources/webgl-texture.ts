@@ -147,6 +147,7 @@ export class WEBGLTexture extends Texture {
     const {glFormat, glType, compressed} = this;
     const glTarget = getWebGLCubeFaceTarget(this.glTarget, this.dimension, depth);
 
+    // WebGL automatically ignores these for compressed textures, but we are careful
     const glParameters: GLValueParameters = !this.compressed
       ? {
           [GL.UNPACK_ROW_LENGTH]: options.bytesPerRow,
