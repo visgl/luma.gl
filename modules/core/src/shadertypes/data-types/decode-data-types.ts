@@ -14,7 +14,6 @@ export function getDataTypeInfo(type: NormalizedDataType): DataTypeInfo {
   const normalized: boolean = type.includes('norm');
   const integer: boolean = !normalized && !type.startsWith('float');
   const signed: boolean = type.startsWith('s');
-
   return {
     signedType,
     primitiveType,
@@ -26,20 +25,15 @@ export function getDataTypeInfo(type: NormalizedDataType): DataTypeInfo {
 }
 
 /** Build a vertex format from a signed data type and a component */
-export function makeNormalizedDataType(signedDataType: SignedDataType): NormalizedDataType {
+export function getNormalizedDataType(signedDataType: SignedDataType): NormalizedDataType {
   const dataType: NormalizedDataType = signedDataType;
-
+  // prettier-ignore
   switch (dataType) {
-    case 'uint8':
-      return 'unorm8';
-    case 'sint8':
-      return 'snorm8';
-    case 'uint16':
-      return 'unorm16';
-    case 'sint16':
-      return 'snorm16';
-    default:
-      return dataType;
+    case 'uint8': return 'unorm8';
+    case 'sint8': return 'snorm8';
+    case 'uint16': return 'unorm16';
+    case 'sint16': return 'snorm16';
+    default: return dataType;
   }
 }
 
@@ -54,78 +48,44 @@ export function alignTo(size: number, count: number): number {
 }
 
 /** Returns the VariableShaderType that corresponds to a typed array */
-export function getDataTypeFromTypedArray(
-  arrayOrType: TypedArray | TypedArrayConstructor
-): SignedDataType {
-  const type = ArrayBuffer.isView(arrayOrType) ? arrayOrType.constructor : arrayOrType;
-  switch (type) {
-    case Float32Array:
-      return 'float32';
-    case Uint16Array:
-      return 'uint16';
-    case Uint32Array:
-      return 'uint32';
-    case Uint8Array:
-    case Uint8ClampedArray:
-      return 'uint8';
-    case Int8Array:
-      return 'sint8';
-    case Int16Array:
-      return 'sint16';
-    case Int32Array:
-      return 'sint32';
-    default:
-      // Failed to deduce data type from typed array
-      throw new Error(type.constructor.name);
+export function getDataType(arrayOrType: TypedArray | TypedArrayConstructor): SignedDataType {
+  const Constructor = ArrayBuffer.isView(arrayOrType) ? arrayOrType.constructor : arrayOrType;
+  if (Constructor === Uint8ClampedArray) {
+    return 'uint8';
   }
+  const info = Object.values(NORMALIZED_TYPE_MAP).find(entry => Constructor === entry[4]);
+  if (!info) {
+    throw new Error(Constructor.name);
+  }
+  return info[0];
 }
 
 /** Returns the TypedArray that corresponds to a shader data type */
-export function getTypedArrayFromDataType(
-  type: NormalizedDataType | PrimitiveDataType
-): TypedArrayConstructor {
-  switch (type) {
-    case 'f32':
-    case 'float32':
-      return Float32Array;
-    case 'u32':
-    case 'uint32':
-      return Uint32Array;
-    case 'i32':
-    case 'sint32':
-      return Int32Array;
-    case 'uint16':
-    case 'unorm16':
-      return Uint16Array;
-    case 'sint16':
-    case 'snorm16':
-      return Int16Array;
-    case 'uint8':
-    case 'unorm8':
-      return Uint8Array;
-    case 'sint8':
-    case 'snorm8':
-      return Int8Array;
-    case 'f16':
-    default:
-      throw new Error(type);
-  }
+export function getTypedArrayConstructor(type: NormalizedDataType): TypedArrayConstructor {
+  const [, , , , Constructor] = NORMALIZED_TYPE_MAP[type];
+  return Constructor;
 }
 
 const NORMALIZED_TYPE_MAP: Record<
   NormalizedDataType,
-  [SignedDataType, PrimitiveDataType, bytes: 1 | 2 | 4, normalized: boolean]
+  [
+    SignedDataType,
+    PrimitiveDataType,
+    bytes: 1 | 2 | 4,
+    normalized: boolean,
+    arrayConstructor: TypedArrayConstructor
+  ]
 > = {
-  uint8: ['uint8', 'u32', 1, false],
-  sint8: ['sint8', 'i32', 1, false],
-  unorm8: ['uint8', 'f32', 1, true],
-  snorm8: ['sint8', 'f32', 1, true],
-  uint16: ['uint16', 'u32', 2, false],
-  sint16: ['sint16', 'i32', 2, false],
-  unorm16: ['uint16', 'u32', 2, true],
-  snorm16: ['sint16', 'i32', 2, true],
-  float16: ['float16', 'f16', 2, false],
-  float32: ['float32', 'f32', 4, false],
-  uint32: ['uint32', 'u32', 4, false],
-  sint32: ['sint32', 'i32', 4, false]
+  uint8: ['uint8', 'u32', 1, false, Uint8Array],
+  sint8: ['sint8', 'i32', 1, false, Int8Array],
+  unorm8: ['uint8', 'f32', 1, true, Uint8Array],
+  snorm8: ['sint8', 'f32', 1, true, Int8Array],
+  uint16: ['uint16', 'u32', 2, false, Uint16Array],
+  sint16: ['sint16', 'i32', 2, false, Int16Array],
+  unorm16: ['uint16', 'u32', 2, true, Uint16Array],
+  snorm16: ['sint16', 'i32', 2, true, Int16Array],
+  float16: ['float16', 'f16', 2, false, Uint16Array],
+  float32: ['float32', 'f32', 4, false, Float32Array],
+  uint32: ['uint32', 'u32', 4, false, Uint32Array],
+  sint32: ['sint32', 'i32', 4, false, Int32Array]
 };

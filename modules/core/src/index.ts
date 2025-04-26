@@ -81,7 +81,11 @@ export {UniformStore} from './portable/uniform-store';
 export type {CompilerMessage} from './adapter/types/compiler-message';
 
 export type {ExternalImage} from './image-utils/image-types';
-export type {CopyExternalImageOptions, CopyImageDataOptions} from './adapter/resources/texture';
+
+export {
+  type CopyExternalImageOptions,
+  type CopyImageDataOptions
+} from './adapter/resources/texture';
 
 export type {Parameters, PrimitiveTopology, IndexFormat} from './adapter/types/parameters';
 
@@ -153,9 +157,9 @@ export {
 } from './shadertypes/data-types/shader-types';
 export {
   getDataTypeInfo,
-  getDataTypeFromTypedArray,
-  getTypedArrayFromDataType,
-  makeNormalizedDataType
+  getDataType,
+  getTypedArrayConstructor,
+  getNormalizedDataType
 } from './shadertypes/data-types/decode-data-types';
 export {
   getVariableShaderTypeInfo,
@@ -188,10 +192,6 @@ export {
   textureFormatDecoder
 } from './shadertypes/textures/texture-format-decoder';
 
-export {
-  type TextureMemoryLayout,
-  getTextureMemoryLayout
-} from './shadertypes/textures/texture-layout';
 export {type PixelData, readPixel, writePixel} from './shadertypes/textures/pixel-utils';
 
 // GENERAL EXPORTS - FOR APPLICATIONS

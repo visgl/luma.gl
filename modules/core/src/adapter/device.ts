@@ -451,6 +451,9 @@ export abstract class Device {
     return textureCaps;
   }
 
+  /** Return the implementation specific alignment for a texture format. 1 on WebGL, 256 on WebGPU */
+  abstract getTextureByteAlignment(): number;
+
   /** Calculates the number of mip levels for a texture of width, height and in case of 3d textures only, depth */
   getMipLevelCount(width: number, height: number, depth3d: number = 1): number {
     const maxSize = Math.max(width, height, depth3d);

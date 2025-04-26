@@ -16,12 +16,12 @@ export type TextureFormatInfo = {
   components: 1 | 2 | 3 | 4;
   /** What is the data type of each component */
   dataType?: NormalizedDataType;
-  /** If this is a packed data type */
-  packed?: boolean;
   /** Number of bytes per pixel */
-  bytesPerPixel?: number;
+  bytesPerPixel: number;
   /** Number of bits per channel (may be unreliable for packed formats) */
   bitsPerChannel: [number, number, number, number];
+  /** If this is a packed data type */
+  packed?: boolean;
   /** SRGB texture format? */
   srgb?: boolean;
   /** WebGL specific texture format? */
