@@ -161,11 +161,20 @@ Rendered using the luma.gl <code>Model</code>, <code>CubeGeometry</code> and <co
 
   async initialize() {
     const device = this.device;
+    console.log(device.info);
+    let filename = '';
+    if (device.features.has('texture-compression-astc')) {
+      filename = '2d_astc4x4.ktx2';
+    } else if (device.features.has('texture-compression-bc')) {
+      filename = '2d_bc5.ktx2';
+    } else {
+      throw new Error('compressed formats not supported')
+    }
 
     // failing: 2d_etc2, 2d_rgba16_linear, 2d_rgba32_linear
-    const buffer = await fetch('2d_astc4x4.ktx2').then(res => res.arrayBuffer());
-    const container = readKTX2(new Uint8Array(buffer));
-
+    const response = await fetch(filename);
+    const arrayBuffer = await response.arrayBuffer();
+    const container = readKTX2(new Uint8Array(arrayBuffer));
     if (container.supercompressionScheme !== KHR_SUPERCOMPRESSION_NONE) {
       throw new Error(`Supercompression not implemented: ${container.supercompressionScheme}`);
     }
