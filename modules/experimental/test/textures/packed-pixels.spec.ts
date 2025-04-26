@@ -3,12 +3,9 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape';
-import {
-  decodePackedRGBA,
-  decodePackedRGBAFloat,
-  encodePackedRGBA,
-  encodePackedRGBAFloat
-} from '@luma.gl/experimental/textures/packed-pixels';
+import {RGBADecoder, TEXTURE_FORMAT_PIXEL_DECODERS} from '@luma.gl/experimental';
+
+const rgbaDecoder = new RGBADecoder({tables: [TEXTURE_FORMAT_PIXEL_DECODERS]});
 
 // Helper for float comparisons
 function almostEqual(a: number, b: number, eps = 1e-3): boolean {
@@ -22,8 +19,8 @@ test('Integer/unorm formats round-trip', t => {
   > = ['rgba4unorm-webgl', 'rgb565unorm-webgl', 'rgb5a1unorm-webgl', 'rgb10a2unorm', 'rgb10a2uint'];
   const vals: [number, number, number, number] = [0.2, 0.5, 0.8, 1.0];
   for (const fmt of formats) {
-    const bits = encodePackedRGBA(vals, fmt);
-    const decoded = decodePackedRGBA(bits, fmt);
+    const bits = rgbaDecoder.encodeRGBA(vals, fmt);
+    const decoded = rgbaDecoder.decodeRGBA(bits, fmt);
     t.deepEqual(decoded, decoded, `${fmt} round-trip`);
   }
   t.end();
@@ -39,7 +36,7 @@ test('Precomputed integer/unorm decodes', t => {
     {format: 'rgb10a2uint', bits: 0xffc00003, expected: [1023, 0, 0, 3]}
   ];
   for (const {format, bits, expected} of cases) {
-    const decoded = decodePackedRGBA(bits, format as any);
+    const decoded = rgbaDecoder.decodeRGBA(bits, format as any);
     t.deepEqual(decoded, expected, `${format} decodes expected values`);
   }
   t.end();
@@ -56,8 +53,8 @@ test.skip('Float-packed formats round-trip', t => {
   ];
   for (const fmt of formats) {
     for (const sample of samples) {
-      const bits = encodePackedRGBAFloat(sample, fmt);
-      const [r, g, b, a] = decodePackedRGBAFloat(bits, fmt);
+      const bits = rgbaDecoder.encodeRGBA(sample, fmt);
+      const [r, g, b, a] = rgbaDecoder.decodeRGBA(bits, fmt);
       t.ok(almostEqual(r, sample[0]), `${fmt} R ~ round-trip`);
       t.ok(almostEqual(g, sample[1]), `${fmt} G ~ round-trip`);
       t.ok(almostEqual(b, sample[2]), `${fmt} B ~ round-trip`);
@@ -70,14 +67,14 @@ test.skip('Float-packed formats round-trip', t => {
 // Precomputed float-packed decodes
 test.skip('Precomputed float-packed decodes', t => {
   // zero case
-  let color = decodePackedRGBAFloat(0, 'rgb9e5ufloat');
+  let color = rgbaDecoder.decodeRGBA(0, 'rgb9e5ufloat');
   t.deepEqual(color, [0, 0, 0, 1], 'rgb9e5ufloat zero');
-  color = decodePackedRGBAFloat(0, 'rg11b10ufloat');
+  color = rgbaDecoder.decodeRGBA(0, 'rg11b10ufloat');
   t.deepEqual(color, [0, 0, 0, 1], 'rg11b10ufloat zero');
 
   // rgb9e5ufloat: mantR=512 => 1.0, mantG/B=0, exp=15 => value = mant/512 * 2^(15-15) = 1
   const rgb9e5Bits = (15 << 27) | (0 << 18) | (0 << 9) | 512;
-  color = decodePackedRGBAFloat(rgb9e5Bits, 'rgb9e5ufloat');
+  color = rgbaDecoder.decodeRGBA(rgb9e5Bits, 'rgb9e5ufloat');
   t.deepEqual(color, [1, 0, 0, 1], 'rgb9e5ufloat [1,0,0]');
 
   // rg11b10ufloat: r/g=1.0 with raw=(15<<6), b=1.0 with raw=(15<<5)
@@ -85,7 +82,7 @@ test.skip('Precomputed float-packed decodes', t => {
   const gRaw = 15 << 6;
   const bRaw = 15 << 5;
   const rg11Bits = (bRaw << 22) | (gRaw << 11) | rRaw;
-  color = decodePackedRGBAFloat(rg11Bits, 'rg11b10ufloat');
+  color = rgbaDecoder.decodeRGBA(rg11Bits, 'rg11b10ufloat');
   t.deepEqual(color, [1, 1, 1, 1], 'rg11b10ufloat [1,1,1]');
 
   t.end();

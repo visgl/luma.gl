@@ -21,11 +21,20 @@ export type TextureFormatEncoders = Record<
   {decodeRGBA?: DecodeRGBA; encodeRGBA?: EncodeRGBA}
 >;
 
+export type RBGADecoderProps = {
+  tables?: TextureFormatEncoders[];
+};
+
 /**
+ * RGBADecoder encodes and decodes packed pixel format
  * Supports installable texture format definitions to keep core small
  */
 export class RGBADecoder {
   tables: TextureFormatEncoders[] = [];
+
+  constructor(props?: RBGADecoderProps) {
+    props?.tables?.forEach(table => this.addTable(table));
+  }
 
   addTable(newTable: TextureFormatEncoders) {
     if (!this.tables.find(table => table === newTable)) {
@@ -39,10 +48,9 @@ export class RGBADecoder {
   decodeRGBA(
     bits: number,
     format: TextureFormatPacked,
-    tables: Record<TextureFormatPacked, {decodeRGBA?: DecodeRGBA}>[],
     target?: [number, number, number, number]
   ): [number, number, number, number] {
-    const tableWithFormat = tables.find(table => table[format]);
+    const tableWithFormat = this.tables.find(table => table[format]);
     const entry = tableWithFormat?.[format];
     if (!entry?.decodeRGBA) {
       throw new Error(`No decoder for format ${format}`);
@@ -54,12 +62,8 @@ export class RGBADecoder {
   /**
    * Generic encode: looks up the encoder in the provided table and calls it.
    */
-  encodeRGBA(
-    rgba: [number, number, number, number],
-    format: TextureFormatPacked,
-    tables: Record<TextureFormatPacked, {encodeRGBA?: EncodeRGBA}>[]
-  ): number {
-    const tableWithFormat = tables.find(table => table[format]);
+  encodeRGBA(rgba: [number, number, number, number], format: TextureFormatPacked): number {
+    const tableWithFormat = this.tables.find(table => table[format]);
     const entry = tableWithFormat?.[format];
     if (!entry?.encodeRGBA) {
       throw new Error(`No encoder for format ${format}`);
