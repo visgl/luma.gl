@@ -27,9 +27,7 @@ import {
   UniformStore,
   log,
   getTypedArrayConstructor,
-  getAttributeInfosFromLayouts,
-  _BufferLayoutHelper,
-  sortedBufferLayoutByShaderSourceLocations
+  getAttributeInfosFromLayouts
 } from '@luma.gl/core';
 
 import type {ShaderModule, PlatformInfo} from '@luma.gl/shadertools';
@@ -42,6 +40,8 @@ import {ShaderFactory} from '../factories/shader-factory';
 import {getDebugTableForShaderLayout} from '../debug/debug-shader-layout';
 import {debugFramebuffer} from '../debug/debug-framebuffer';
 import {deepEqual} from '../utils/deep-equal';
+import {BufferLayoutHelper} from '../utils/buffer-layout-helper';
+import {sortedBufferLayoutByShaderSourceLocations} from '../utils/buffer-layout-order';
 import {uid} from '../utils/uid';
 import {ShaderInputs} from '../shader-inputs';
 import {AsyncTexture} from '../async-texture/async-texture';
@@ -459,7 +459,7 @@ export class Model {
     const gpuGeometry = geometry && makeGPUGeometry(this.device, geometry);
     if (gpuGeometry) {
       this.setTopology(gpuGeometry.topology || 'triangle-list');
-      const bufferLayoutHelper = new _BufferLayoutHelper(this.bufferLayout);
+      const bufferLayoutHelper = new BufferLayoutHelper(this.bufferLayout);
       this.bufferLayout = bufferLayoutHelper.mergeBufferLayouts(
         gpuGeometry.bufferLayout,
         this.bufferLayout
@@ -487,7 +487,7 @@ export class Model {
    * @note Triggers a pipeline rebuild / pipeline cache fetch
    */
   setBufferLayout(bufferLayout: BufferLayout[]): void {
-    const bufferLayoutHelper = new _BufferLayoutHelper(this.bufferLayout);
+    const bufferLayoutHelper = new BufferLayoutHelper(this.bufferLayout);
     this.bufferLayout = this._gpuGeometry
       ? bufferLayoutHelper.mergeBufferLayouts(bufferLayout, this._gpuGeometry.bufferLayout)
       : bufferLayout;
@@ -611,7 +611,7 @@ export class Model {
       this.pipeline.shaderLayout,
       this.bufferLayout
     );
-    const bufferLayoutHelper = new _BufferLayoutHelper(this.bufferLayout);
+    const bufferLayoutHelper = new BufferLayoutHelper(this.bufferLayout);
 
     // Check if all buffers have a layout
     for (const [bufferName, buffer] of Object.entries(buffers)) {

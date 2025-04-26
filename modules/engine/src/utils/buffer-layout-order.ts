@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {BufferLayout} from '../adapter/types/buffer-layout';
-import {ShaderLayout} from '../adapter/types/shader-layout';
+import {type BufferLayout, type ShaderLayout} from '@luma.gl/core';
 
 export function sortedBufferLayoutByShaderSourceLocations(
   shaderLayout: ShaderLayout,
