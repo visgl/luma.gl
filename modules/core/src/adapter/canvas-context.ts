@@ -104,7 +104,7 @@ export abstract class CanvasContext {
   protected _initializedResolvers = withResolvers<void>();
   protected readonly _resizeObserver: ResizeObserver | undefined;
   protected readonly _intersectionObserver: IntersectionObserver | undefined;
-  protected _position?: [number, number];
+  protected _position: [number, number];
   protected destroyed = false;
 
   abstract get [Symbol.toStringTag](): string;
@@ -153,6 +153,7 @@ export abstract class CanvasContext {
     this.drawingBufferWidth = this.canvas.width;
     this.drawingBufferHeight = this.canvas.height;
     this.devicePixelRatio = globalThis.devicePixelRatio || 1;
+    this._position = [0, 0];
 
     if (CanvasContext.isHTMLCanvas(this.canvas)) {
       // Track visibility changes

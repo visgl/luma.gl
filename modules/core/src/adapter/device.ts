@@ -337,8 +337,11 @@ export abstract class Device {
     onError: (error: Error, context: unknown) => {},
     onResize: (context: CanvasContext, info: {oldPixelSize: [number, number]}) => {
       const [width, height] = context.getDevicePixelSize();
-      const [prevWidth, prevHeight] = info.oldPixelSize;
-      log.log(1, `${context} Resized ${prevWidth}x${prevHeight} => ${width}x${height}px`)();
+      log.log(1, `${context} resized => ${width}x${height}px`)();
+    },
+    onPositionChange: (context: CanvasContext, info: {oldPosition: [number, number]}) => {
+      const [left, top] = context.getPosition();
+      log.log(1, `${context} repositioned => ${left},${top}`)();
     },
     onVisibilityChange: (context: CanvasContext) =>
       log.log(1, `${context} Visibility changed ${context.isVisible}`)(),

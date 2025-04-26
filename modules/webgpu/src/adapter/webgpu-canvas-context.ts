@@ -42,8 +42,9 @@ export class WebGPUCanvasContext extends CanvasContext {
   }
 
   /** Destroy any textures produced while configured and remove the context configuration. */
-  destroy(): void {
+  override destroy(): void {
     this.handle.unconfigure();
+    super.destroy();
   }
 
   /** Update framebuffer with properly resized "swap chain" texture views */
