@@ -19,12 +19,13 @@ if (window.browserTestDriver_finish && window.browserTestDriver_fail) {
     window.browserTestDriver_fail();
   });
 } else {
+  // eslint-disable-next-line no-console
   console.warn('Use Google Chrome for Testing to report test completion.');
 }
 
 // tap-browser-color alternative
 enableDOMLogging({
-  getStyle: message => ({
+  getStyle: () => ({
     background: failed ? '#F28E82' : '#8ECA6C',
     position: 'absolute',
     top: '500px',
