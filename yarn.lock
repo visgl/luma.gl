@@ -7892,9 +7892,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"luma.gl-examples-texture-compressed@workspace:examples/tutorials/hello-texture-compressed":
+"luma.gl-examples-texture-compressed@workspace:examples/api/texture-compressed":
   version: 0.0.0-use.local
-  resolution: "luma.gl-examples-texture-compressed@workspace:examples/tutorials/hello-texture-compressed"
+  resolution: "luma.gl-examples-texture-compressed@workspace:examples/api/texture-compressed"
   dependencies:
     "@luma.gl/core": "npm:9.2.0-alpha.1"
     "@luma.gl/engine": "npm:9.2.0-alpha.1"
