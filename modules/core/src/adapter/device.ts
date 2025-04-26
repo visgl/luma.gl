@@ -240,11 +240,13 @@ export type DeviceProps = {
 
   /** Error handler. If it returns a probe logger style function, it will be called at the site of the error to optimize console error links. */
   onError?: (error: Error, context?: unknown) => unknown;
-  /** Called when the size of a canvas changes */
+  /** Called when the size of a CanvasContext's canvas changes */
   onResize?: (ctx: CanvasContext, info: {oldPixelSize: [number, number]}) => unknown;
-  /** Called when the visibility of a canvas changes */
+  /** Called when the absolute position of a CanvasContext's canvas changes. Must set `CanvasContextProps.trackPosition: true` */
+  onPositionChange?: (ctx: CanvasContext, info: {oldPosition: [number, number]}) => unknown;
+  /** Called when the visibility of a CanvasContext's canvas changes */
   onVisibilityChange?: (ctx: CanvasContext) => unknown;
-  /** Called when the device pixel ratio of a canvas changes */
+  /** Called when the device pixel ratio of a CanvasContext's canvas changes */
   onDevicePixelRatioChange?: (ctx: CanvasContext, info: {oldRatio: number}) => unknown;
 
   // DEBUG SETTINGS
@@ -335,8 +337,11 @@ export abstract class Device {
     onError: (error: Error, context: unknown) => {},
     onResize: (context: CanvasContext, info: {oldPixelSize: [number, number]}) => {
       const [width, height] = context.getDevicePixelSize();
-      const [prevWidth, prevHeight] = info.oldPixelSize;
-      log.log(1, `${context} Resized ${prevWidth}x${prevHeight} => ${width}x${height}px`)();
+      log.log(1, `${context} resized => ${width}x${height}px`)();
+    },
+    onPositionChange: (context: CanvasContext, info: {oldPosition: [number, number]}) => {
+      const [left, top] = context.getPosition();
+      log.log(1, `${context} repositioned => ${left},${top}`)();
     },
     onVisibilityChange: (context: CanvasContext) =>
       log.log(1, `${context} Visibility changed ${context.isVisible}`)(),
@@ -430,9 +435,6 @@ export abstract class Device {
     return true;
   }
 
-  /** Return the implementation specific alignment for a texture format. 1 on WebGL, 256 on WebGPU */
-  abstract getTextureByteAlignment(): number;
-
   /** Returns information about a texture format, such as data type, channels, bits per channel, compression etc */
   getTextureFormatInfo(format: TextureFormat): TextureFormatInfo {
     return textureFormatDecoder.getInfo(format);
@@ -448,6 +450,9 @@ export abstract class Device {
     }
     return textureCaps;
   }
+
+  /** Return the implementation specific alignment for a texture format. 1 on WebGL, 256 on WebGPU */
+  abstract getTextureByteAlignment(): number;
 
   /** Calculates the number of mip levels for a texture of width, height and in case of 3d textures only, depth */
   getMipLevelCount(width: number, height: number, depth3d: number = 1): number {

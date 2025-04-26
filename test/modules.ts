@@ -21,7 +21,7 @@ import '@luma.gl/webgpu/test';
 // CROSS-DEVICE TESTS
 import '@luma.gl/engine/test';
 import '@luma.gl/gltf/test';
-// import '@luma.gl/experimental/test';
+import '@luma.gl/experimental/test';
 
 // EXPERIMENTAL
 import '@luma.gl/arrow/test';
