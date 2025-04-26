@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {BufferLayout} from '../adapter/types/buffer-layout';
-import {log} from '../utils/log';
+import {log, type BufferLayout} from '@luma.gl/core';
 
 /** BufferLayoutHelper is a helper class that should not be used directly by applications */
 export class BufferLayoutHelper {

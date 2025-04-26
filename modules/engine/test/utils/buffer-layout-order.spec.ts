@@ -3,7 +3,8 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
-import {ShaderLayout, sortedBufferLayoutByShaderSourceLocations, BufferLayout} from '@luma.gl/core';
+import {type ShaderLayout, type BufferLayout} from '@luma.gl/core';
+import {sortedBufferLayoutByShaderSourceLocations} from '@luma.gl/engine/utils/buffer-layout-order';
 
 const shaderLayout: ShaderLayout = {
   bindings: [],

@@ -1234,6 +1234,17 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@luma.gl/experimental@workspace:modules/experimental":
+  version: 0.0.0-use.local
+  resolution: "@luma.gl/experimental@workspace:modules/experimental"
+  dependencies:
+    "@luma.gl/core": "npm:9.2.0-alpha.1"
+    "@math.gl/polygon": "npm:^4.1.0"
+    "@math.gl/types": "npm:^4.1.0"
+    apache-arrow: "npm:^17.0.0"
+  languageName: unknown
+  linkType: soft
+
 "@luma.gl/gltf@npm:9.2.0-alpha.1, @luma.gl/gltf@workspace:modules/gltf":
   version: 0.0.0-use.local
   resolution: "@luma.gl/gltf@workspace:modules/gltf"
