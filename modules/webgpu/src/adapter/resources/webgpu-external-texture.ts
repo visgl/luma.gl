@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {ExternalTexture, ExternalTextureProps, Sampler, SamplerProps} from '@luma.gl/core';
+import {ExternalTexture, ExternalTextureProps, SamplerProps} from '@luma.gl/core';
 import type {WebGPUDevice} from '../webgpu-device';
 import {WebGPUSampler} from './webgpu-sampler';
 
@@ -37,7 +37,7 @@ export class WebGPUExternalTexture extends ExternalTexture {
   }
 
   /** Set default sampler */
-  setSampler(sampler: Sampler | SamplerProps): this {
+  setSampler(sampler: WebGPUSampler | SamplerProps): this {
     // We can accept a sampler instance or set of props;
     this.sampler =
       sampler instanceof WebGPUSampler ? sampler : new WebGPUSampler(this.device, sampler);

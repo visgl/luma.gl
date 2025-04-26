@@ -274,6 +274,10 @@ export class WebGLDevice extends Device {
 
   // IMPLEMENTATION OF ABSTRACT DEVICE
 
+  getTextureByteAlignment(): number {
+    return 4;
+  }
+
   createCanvasContext(props?: CanvasContextProps): CanvasContext {
     throw new Error('WebGL only supports a single canvas');
   }

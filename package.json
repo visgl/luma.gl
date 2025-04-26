@@ -16,7 +16,7 @@
   ],
   "workspaces": [
     "modules/*",
-    "examples/*/*"
+    "examples/**/*"
   ],
   "browser": {
     "fs": false
@@ -50,7 +50,7 @@
     "puppeteer": "^22.0.0"
   },
   "resolutions": {
-    "typescript": "^5.7.3",
+    "typescript": "^5.8.3",
     "tsconfig-paths": "^3.9.0",
     "ts-patch": "^3.3.0"
   },
@@ -63,6 +63,6 @@
   },
   "volta": {
     "node": "20.17.0",
-    "yarn": "4.5.1"
+    "yarn": "4.9.1"
   }
 }

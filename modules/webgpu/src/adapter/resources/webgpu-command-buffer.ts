@@ -9,8 +9,8 @@ import {WebGPUDevice} from '../webgpu-device';
 import type {WebGPUCommandEncoder} from './webgpu-command-encoder';
 
 export class WebGPUCommandBuffer extends CommandBuffer {
-  device: WebGPUDevice;
-  handle: GPUCommandBuffer;
+  readonly device: WebGPUDevice;
+  readonly handle: GPUCommandBuffer;
 
   constructor(commandEncoder: WebGPUCommandEncoder, props: CommandBufferProps) {
     super(commandEncoder.device, {});

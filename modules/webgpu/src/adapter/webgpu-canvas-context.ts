@@ -5,7 +5,7 @@
 // prettier-ignore
 // / <reference types="@webgpu/types" />
 
-import type {DepthStencilTextureFormat, CanvasContextProps} from '@luma.gl/core';
+import type {TextureFormatDepthStencil, CanvasContextProps} from '@luma.gl/core';
 import {CanvasContext, Texture, log} from '@luma.gl/core';
 import {WebGPUDevice} from './webgpu-device';
 import {WebGPUFramebuffer} from './resources/webgpu-framebuffer';
@@ -42,13 +42,14 @@ export class WebGPUCanvasContext extends CanvasContext {
   }
 
   /** Destroy any textures produced while configured and remove the context configuration. */
-  destroy(): void {
+  override destroy(): void {
     this.handle.unconfigure();
+    super.destroy();
   }
 
   /** Update framebuffer with properly resized "swap chain" texture views */
   getCurrentFramebuffer(
-    options: {depthStencilFormat?: DepthStencilTextureFormat | false} = {
+    options: {depthStencilFormat?: TextureFormatDepthStencil | false} = {
       depthStencilFormat: 'depth24plus'
     }
   ): WebGPUFramebuffer {
@@ -112,7 +113,7 @@ export class WebGPUCanvasContext extends CanvasContext {
   }
 
   /** We build render targets on demand (i.e. not when size changes but when about to render) */
-  _createDepthStencilAttachment(depthStencilFormat: DepthStencilTextureFormat): WebGPUTexture {
+  _createDepthStencilAttachment(depthStencilFormat: TextureFormatDepthStencil): WebGPUTexture {
     if (!this.depthStencilAttachment) {
       this.depthStencilAttachment = this.device.createTexture({
         id: `${this.id}#depth-stencil-texture`,

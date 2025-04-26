@@ -19,11 +19,11 @@ import type {WebGPURenderPass} from './webgpu-render-pass';
 
 /** Creates a new render pipeline when parameters change */
 export class WebGPURenderPipeline extends RenderPipeline {
-  device: WebGPUDevice;
-  handle: GPURenderPipeline;
+  readonly device: WebGPUDevice;
+  readonly handle: GPURenderPipeline;
 
-  vs: WebGPUShader;
-  fs: WebGPUShader | null = null;
+  readonly vs: WebGPUShader;
+  readonly fs: WebGPUShader | null = null;
 
   /** For internal use to create BindGroups */
   private _bindings: Record<string, Binding>;
@@ -182,6 +182,10 @@ export class WebGPURenderPipeline extends RenderPipeline {
       targets
     };
 
+    const layout = this.device.createPipelineLayout({
+      shaderLayout: this.shaderLayout
+    });
+
     // Create a partially populated descriptor
     const descriptor: GPURenderPipelineDescriptor = {
       vertex,
@@ -189,7 +193,7 @@ export class WebGPURenderPipeline extends RenderPipeline {
       primitive: {
         topology: this.props.topology
       },
-      layout: 'auto'
+      layout: layout.handle
     };
 
     // Set depth format if required, defaulting to the preferred depth format

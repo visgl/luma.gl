@@ -2,14 +2,15 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {NormalizedDataType} from '../data-types';
+import type {NormalizedDataType} from '../data-types/data-types';
+import {getDataTypeInfo} from '../data-types/decode-data-types';
 import type {
   TextureFormat,
-  CompressedTextureFormat,
+  TextureFormatCompressed,
   TextureFormatInfo,
-  TextureFormatCapabilities
-} from '../texture-formats';
-import {getDataTypeInfo} from './decode-data-types';
+  TextureFormatCapabilities,
+  TextureFormatColor
+} from './texture-formats';
 import {getTextureFormatDefinition} from './texture-format-table';
 
 // prettier-ignore
@@ -19,22 +20,69 @@ const COMPRESSED_TEXTURE_FORMAT_PREFIXES = [
 
 const RGB_FORMAT_REGEX = /^(r|rg|rgb|rgba|bgra)([0-9]*)([a-z]*)(-srgb)?(-webgl)?$/;
 
-/**
- * Returns true if a texture format is GPU compressed
- */
-export function isTextureFormatCompressed(
-  format: TextureFormat
-): format is CompressedTextureFormat {
-  return COMPRESSED_TEXTURE_FORMAT_PREFIXES.some(prefix => (format as string).startsWith(prefix));
+export class TextureFormatDecoder {
+  /** Returns information about a texture format, e.g. attatchment type, components, byte length and flags (integer, signed, normalized) */
+  getInfo(format: TextureFormat): TextureFormatInfo {
+    return getTextureFormatInfo(format);
+  }
+
+  /** Checks if a texture format is color */
+  isColor(format: TextureFormat): format is TextureFormatColor {
+    return format.startsWith('rgba') || format.startsWith('bgra') || format.startsWith('rgb');
+  }
+
+  /** Checks if a texture format is depth or stencil */
+  isDepthStencil(format: TextureFormat): boolean {
+    return format.startsWith('depth') || format.startsWith('stencil');
+  }
+
+  /** Checks if a texture format is compressed */
+  isCompressed(format: TextureFormat): format is TextureFormatCompressed {
+    return COMPRESSED_TEXTURE_FORMAT_PREFIXES.some(prefix => (format as string).startsWith(prefix));
+  }
+
+  /**
+   * Returns the "static" capabilities of a texture format.
+   * @note Needs to be checked against current device
+   */
+  getCapabilities(format: TextureFormat): TextureFormatCapabilities {
+    const info = getTextureFormatDefinition(format);
+
+    const formatCapabilities: Required<TextureFormatCapabilities> = {
+      format,
+      create: info.f ?? true,
+      render: info.render ?? true,
+      filter: info.filter ?? true,
+      blend: info.blend ?? true,
+      store: info.store ?? true
+    };
+
+    const formatInfo = getTextureFormatInfo(format);
+    const isDepthStencil = format.startsWith('depth') || format.startsWith('stencil');
+    const isSigned = formatInfo?.signed;
+    const isInteger = formatInfo?.integer;
+    const isWebGLSpecific = formatInfo?.webgl;
+
+    // signed formats are not renderable
+    formatCapabilities.render &&= !isSigned;
+    // signed and integer formats are not filterable
+    formatCapabilities.filter &&= !isDepthStencil && !isSigned && !isInteger && !isWebGLSpecific;
+
+    return formatCapabilities;
+  }
 }
+
+export const textureFormatDecoder = new TextureFormatDecoder();
+
+// HELPERS
 
 /**
  * Decodes a texture format, returning e.g. attatchment type, components, byte length and flags (integer, signed, normalized)
  */
-export function getTextureFormatInfo(format: TextureFormat): TextureFormatInfo {
+function getTextureFormatInfo(format: TextureFormat): TextureFormatInfo {
   let formatInfo: TextureFormatInfo = getTextureFormatInfoUsingTable(format);
 
-  if (isTextureFormatCompressed(format)) {
+  if (textureFormatDecoder.isCompressed(format)) {
     formatInfo.channels = 'rgb';
     formatInfo.components = 3;
     formatInfo.bytesPerPixel = 1;
@@ -97,38 +145,6 @@ export function getTextureFormatInfo(format: TextureFormat): TextureFormatInfo {
   return formatInfo;
 }
 
-/**
- * Returns the "static" capabilities of a texture format.
- * @note Needs to be checked against current device
- */
-export function getTextureFormatCapabilities(format: TextureFormat): TextureFormatCapabilities {
-  const info = getTextureFormatDefinition(format);
-
-  const formatCapabilities: Required<TextureFormatCapabilities> = {
-    format,
-    create: info.f ?? true,
-    render: info.render ?? true,
-    filter: info.filter ?? true,
-    blend: info.blend ?? true,
-    store: info.store ?? true
-  };
-
-  const formatInfo = getTextureFormatInfo(format);
-  const isDepthStencil = format.startsWith('depth') || format.startsWith('stencil');
-  const isSigned = formatInfo?.signed;
-  const isInteger = formatInfo?.integer;
-  const isWebGLSpecific = formatInfo?.webgl;
-
-  // signed formats are not renderable
-  formatCapabilities.render &&= !isSigned;
-  // signed and integer formats are not filterable
-  formatCapabilities.filter &&= !isDepthStencil && !isSigned && !isInteger && !isWebGLSpecific;
-
-  return formatCapabilities;
-}
-
-// HELPERS
-
 /** Decode texture format info from the table */
 function getTextureFormatInfoUsingTable(format: TextureFormat): TextureFormatInfo {
   const info = getTextureFormatDefinition(format);
@@ -166,7 +182,7 @@ function getTextureFormatInfoUsingTable(format: TextureFormat): TextureFormatInf
 
 /** Parses ASTC block widths from format string */
 function getCompressedTextureBlockSize(
-  format: CompressedTextureFormat
+  format: TextureFormatCompressed
 ): {blockWidth: number; blockHeight: number} | null {
   const REGEX = /.*-(\d+)x(\d+)-.*/;
   const matches = REGEX.exec(format as string);

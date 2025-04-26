@@ -5,7 +5,7 @@
 // @ts-nocheck This file will be deleted in upcoming refactor
 
 import type {Buffer, Texture, FramebufferProps} from '@luma.gl/core';
-import {Framebuffer, getTypedArrayFromDataType, getDataTypeFromTypedArray} from '@luma.gl/core';
+import {Framebuffer, getTypedArrayConstructor, getDataType} from '@luma.gl/core';
 import {
   GL,
   GLTextureTarget,
@@ -156,227 +156,6 @@ export function getWebGLCubeFaceTarget(
 ): GLTextureTarget | GLTextureCubeMapTarget {
   return dimension === 'cube' ? GL.TEXTURE_CUBE_MAP_POSITIVE_X + level : glTarget;
 }
-
-// texImage methods
-
-/**
- * Clear a texture mip level.
- * Wrapper for the messy WebGL texture API
- *
-export function clearMipLevel(gl: WebGL2RenderingContext, options: WebGLSetTextureOptions): void {
-  const {dimension, width, height, depth = 0, mipLevel = 0} = options;
-  const {glInternalFormat, glFormat, glType, compressed} = options;
-  const glTarget = getWebGLCubeFaceTarget(options.glTarget, dimension, depth);
-
-  switch (dimension) {
-    case '2d-array':
-    case '3d':
-      if (compressed) {
-        // prettier-ignore
-        gl.compressedTexImage3D(glTarget, mipLevel, glInternalFormat, width, height, depth, BORDER, null);
-      } else {
-        // prettier-ignore
-        gl.texImage3D( glTarget, mipLevel, glInternalFormat, width, height, depth, BORDER, glFormat, glType, null);
-      }
-      break;
-
-    case '2d':
-    case 'cube':
-      if (compressed) {
-        // prettier-ignore
-        gl.compressedTexImage2D(glTarget, mipLevel, glInternalFormat, width, height, BORDER, null);
-      } else {
-        // prettier-ignore
-        gl.texImage2D(glTarget, mipLevel, glInternalFormat, width, height, BORDER, glFormat, glType, null);
-      }
-      break;
-
-    default:
-      throw new Error(dimension);
-  }
-}
-  */
-
-/**
- * Set a texture mip level to the contents of an external image.
- * Wrapper for the messy WebGL texture API
- * @note Corresponds to WebGPU device.queue.copyExternalImageToTexture()
- *
-export function setMipLevelFromExternalImage(
-  gl: WebGL2RenderingContext,
-  image: ExternalImage,
-  options: WebGLSetTextureOptions
-): void {
-  const {dimension, width, height, depth = 0, level = 0} = options;
-  const {glInternalFormat, glType} = options;
-
-  const glTarget = getWebGLCubeFaceTarget(options.glTarget, dimension, depth);
-
-  // TODO - we can't change texture width (due to WebGPU limitations) -
-  // and the width/heigh of an external image is implicit, so why do we need to extract it?
-  // So what width height do we supply? The image size or the texture size?
-  // const {width, height} = Texture.getExternalImageSize(image);
-
-  switch (dimension) {
-    case '2d-array':
-    case '3d':
-      // prettier-ignore
-      gl.texImage3D(glTarget, level, glInternalFormat, width, height, depth, BORDER, glInternalFormat, glType, image);
-      break;
-
-    case '2d':
-    case 'cube':
-      // prettier-ignore
-      gl.texImage2D(glTarget, level, glInternalFormat, width, height, BORDER, glInternalFormat, glType, image);
-      break;
-
-    default:
-      throw new Error(dimension);
-  }
-}
-
-/**
- * Set a texture mip level from CPU memory
- * Wrapper for the messy WebGL texture API
- * @note Not available (directly) in WebGPU
- *
-export function setMipLevelFromTypedArray(
-  gl: WebGL2RenderingContext,
-  data: TypedArray,
-  parameters: {},
-  options: {
-    dimension: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d';
-    height: number;
-    width: number;
-    depth?: number;
-    level?: number;
-    offset?: number;
-    glTarget: GLTextureTarget;
-    glInternalFormat: GL;
-    glFormat: GL;
-    glType: GL;
-    compressed?: boolean;
-  }
-): void {
-  const {dimension, width, height, depth = 0, level = 0, offset = 0} = options;
-  const {glInternalFormat, glFormat, glType, compressed} = options;
-
-  const glTarget = getWebGLCubeFaceTarget(options.glTarget, dimension, depth);
-
-  withGLParameters(gl, parameters, () => {
-    switch (dimension) {
-      case '2d-array':
-      case '3d':
-        if (compressed) {
-          // prettier-ignore
-          gl.compressedTexImage3D(glTarget, level, glInternalFormat, width, height, depth, BORDER, data);
-        } else {
-          // prettier-ignore
-          gl.texImage3D( glTarget, level, glInternalFormat, width, height, depth, BORDER, glFormat, glType, data);
-        }
-        break;
-
-      case '2d':
-        if (compressed) {
-          // prettier-ignore
-          gl.compressedTexImage2D(glTarget, level, glInternalFormat, width, height, BORDER, data);
-        } else {
-          // prettier-ignore
-          gl.texImage2D( glTarget, level, glInternalFormat, width, height, BORDER, glFormat, glType, data, offset);
-        }
-        break;
-
-      default:
-        throw new Error(dimension);
-    }
-  });
-}
-
-/**
-   * Set a texture level from CPU memory
-   * @note Not available (directly) in WebGPU
-  _setMipLevelFromTypedArray(
-    depth: number,
-    level: number,
-    data: TextureLevelData,
-    offset = 0,
-    parameters
-  ): void {
-    withGLParameters(this.gl, parameters, () => {
-      switch (this.props.dimension) {
-        case '2d-array':
-        case '3d':
-          if (this.compressed) {
-            // prettier-ignore
-            this.device.gl.compressedTexImage3D(this.glTarget, level, this.glInternalFormat, data.width, data.height, depth, BORDER, data.data);
-          } else {
-            // prettier-ignore
-            this.gl.texImage3D( this.glTarget, level, this.glInternalFormat, this.width, this.height, depth, BORDER, this.glFormat, this.glType, data.data);
-          }
-          break;
-
-        case '2d':
-          if (this.compressed) {
-            // prettier-ignore
-            this.device.gl.compressedTexImage2D(this.glTarget, level, this.glInternalFormat, data.width, data.height, BORDER, data.data);
-          } else {
-            // prettier-ignore
-            this.device.gl.texImage2D( this.glTarget, level, this.glInternalFormat, this.width, this.height, BORDER, this.glFormat, this.glType, data.data, offset);
-          }
-          break;
-
-        default:
-          throw new Error(this.props.dimension);
-      }
-    });
-  }
-
- * Set a texture level from a GPU buffer
- *
-export function setMipLevelFromGPUBuffer(
-  gl: WebGL2RenderingContext,
-  buffer: Buffer,
-  options: WebGLSetTextureOptions
-): void {
-  const {dimension, width, height, depth = 0, level = 0, byteOffset = 0} = options;
-  const {glInternalFormat, glFormat, glType, compressed} = options;
-  const glTarget = getWebGLCubeFaceTarget(options.glTarget, dimension, depth);
-
-  const webglBuffer = buffer as WEBGLBuffer;
-  const imageSize = buffer.byteLength;
-
-  // In WebGL the source buffer is not a parameter. Instead it needs to be bound to a special bind point
-  gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, webglBuffer.handle);
-
-  switch (dimension) {
-    case '2d-array':
-    case '3d':
-      if (compressed) {
-        // prettier-ignore
-        gl.compressedTexImage3D(glTarget, level, glInternalFormat, width, height, depth, BORDER, imageSize, byteOffset);
-      } else {
-        // prettier-ignore
-        gl.texImage3D(glTarget, level, glInternalFormat, width, height, depth, BORDER, glFormat, glType, byteOffset);
-      }
-      break;
-
-    case '2d':
-      if (compressed) {
-        // prettier-ignore
-        gl.compressedTexImage2D(glTarget, level, glInternalFormat, width, height, BORDER, imageSize, byteOffset);
-      } else {
-        // prettier-ignore
-        gl.texImage2D(glTarget, level, glInternalFormat, width, height, BORDER, glFormat, glType, byteOffset);
-      }
-      break;
-
-    default:
-      throw new Error(dimension);
-  }
-
-  gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, null);
-}
-*/
 export type ReadPixelsToArrayOptions = {
   sourceX?: number;
   sourceY?: number;
@@ -453,7 +232,7 @@ export function readPixelsToArray(
   target = getPixelArray(target, sourceType, sourceFormat, sourceWidth, sourceHeight, sourceDepth);
 
   // Pixel array available, if necessary, deduce type from it.
-  const signedType = getDataTypeFromTypedArray(target);
+  const signedType = getDataType(target);
   sourceType = sourceType || convertDataTypeToGLDataType(signedType);
 
   // Note: luma.gl overrides bindFramebuffer so that we can reliably restore the previous framebuffer (this is the only function for which we do that)
@@ -705,7 +484,7 @@ function getPixelArray(
   // Allocate pixel array if not already available, using supplied type
   glType ||= GL.UNSIGNED_BYTE;
   const shaderType = convertGLDataTypeToDataType(glType);
-  const ArrayType = getTypedArrayFromDataType(shaderType);
+  const ArrayType = getTypedArrayConstructor(shaderType);
   const components = glFormatToComponents(glFormat);
   // TODO - check for composite type (components = 1).
   return new ArrayType(width * height * components) as Uint8Array | Uint16Array | Float32Array;

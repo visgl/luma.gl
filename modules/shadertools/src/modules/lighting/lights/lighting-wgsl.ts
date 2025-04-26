@@ -21,7 +21,7 @@ struct DirectionalLight {
 
 struct lightingUniforms {
   enabled: i32,
-  poightCount: i32,
+  pointLightCount: i32,
   directionalLightCount: i32,
 
   ambientColor: vec3<f32>,

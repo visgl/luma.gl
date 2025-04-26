@@ -27,6 +27,5 @@ import './adapter/webgl-device.spec';
 import './adapter/webgl-canvas-context.spec';
 
 // Resources, WebGL-specific APIs
-import './adapter/resources/webgl-buffer.spec';
 import './adapter/resources/webgl-vertex-array.spec';
 import './adapter/resources/webgl-transform-feedback.spec';

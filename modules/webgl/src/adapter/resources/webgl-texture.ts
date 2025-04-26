@@ -254,7 +254,7 @@ export class WEBGLTexture extends Texture {
    * Sets sampler parameters on texture
    */
   _setSamplerParameters(parameters: GLSamplerParameters): void {
-    log.log(1, `${this.id} sampler parameters`, this.device.getGLKeys(parameters))();
+    log.log(2, `${this.id} sampler parameters`, this.device.getGLKeys(parameters))();
 
     this.gl.bindTexture(this.glTarget, this.handle);
 

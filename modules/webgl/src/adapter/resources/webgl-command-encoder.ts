@@ -14,7 +14,7 @@ import type {
   CopyTextureToBufferOptions,
   CopyTextureToTextureOptions
   // ClearTextureOptions,
-  // ReadTextureOptions,
+  // TextureReadOptions,
 } from '@luma.gl/core';
 
 import {WEBGLCommandBuffer} from './webgl-command-buffer';

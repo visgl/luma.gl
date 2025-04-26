@@ -26,9 +26,10 @@ import {
   RenderPass,
   UniformStore,
   log,
-  getTypedArrayFromDataType,
+  getTypedArrayConstructor,
   getAttributeInfosFromLayouts,
-  _BufferLayoutHelper
+  _BufferLayoutHelper,
+  sortedBufferLayoutByShaderSourceLocations
 } from '@luma.gl/core';
 
 import type {ShaderModule, PlatformInfo} from '@luma.gl/shadertools';
@@ -604,6 +605,12 @@ export class Model {
       )();
     }
 
+    // ensure bufferLayout order matches source layout so we bind
+    // the correct buffers to the correct indices in webgpu.
+    this.bufferLayout = sortedBufferLayoutByShaderSourceLocations(
+      this.pipeline.shaderLayout,
+      this.bufferLayout
+    );
     const bufferLayoutHelper = new _BufferLayoutHelper(this.bufferLayout);
 
     // Check if all buffers have a layout
@@ -616,13 +623,19 @@ export class Model {
         continue; // eslint-disable-line no-continue
       }
 
-      // For an interleaved attribute we may need to set multiple attributes
+      // In WebGL, for an interleaved attribute we may need to set multiple attributes
+      // but in WebGPU, we set it according to the buffer's position in the vertexArray
       const attributeNames = bufferLayoutHelper.getAttributeNamesForBuffer(bufferLayout);
       let set = false;
       for (const attributeName of attributeNames) {
         const attributeInfo = this._attributeInfos[attributeName];
         if (attributeInfo) {
-          this.vertexArray.setBuffer(attributeInfo.location, buffer);
+          const location =
+            this.device.type === 'webgpu'
+              ? bufferLayoutHelper.getBufferIndex(attributeInfo.bufferName)
+              : attributeInfo.location;
+
+          this.vertexArray.setBuffer(location, buffer);
           set = true;
         }
       }
@@ -883,7 +896,7 @@ export class Model {
 
   // TODO - fix typing of luma data types
   _getBufferOrConstantValues(attribute: Buffer | TypedArray, dataType: any): string {
-    const TypedArrayConstructor = getTypedArrayFromDataType(dataType);
+    const TypedArrayConstructor = getTypedArrayConstructor(dataType);
     const typedArray =
       attribute instanceof Buffer ? new TypedArrayConstructor(attribute.debugData) : attribute;
     return typedArray.toString();

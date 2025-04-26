@@ -17,6 +17,8 @@ import {NullShader} from './null-shader';
 /** Creates a new render pipeline */
 export class NullRenderPipeline extends RenderPipeline {
   device: NullDevice;
+  readonly handle = null;
+
   vs: NullShader;
   fs: NullShader;
 

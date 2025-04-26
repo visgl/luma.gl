@@ -313,7 +313,7 @@ export type GLValueParameters = {
   [GL.PACK_SKIP_PIXELS]?: number;
   [GL.PACK_SKIP_ROWS]?: number;
 
-  [GL.UNPACK_ALIGNMENT]?: number;
+  [GL.UNPACK_ALIGNMENT]?: 1 | 2 | 4 | 8;
   [GL.UNPACK_FLIP_Y_WEBGL]?: boolean;
   [GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL]?: boolean;
   [GL.UNPACK_COLORSPACE_CONVERSION_WEBGL]?: GL.NONE | GL.BROWSER_DEFAULT_WEBGL;
@@ -325,7 +325,7 @@ export type GLValueParameters = {
 };
 
 export type GLPackParameters = {
-  [GL.PACK_ALIGNMENT]?: number;
+  [GL.PACK_ALIGNMENT]?: 1 | 2 | 4 | 8;
   [GL.PACK_ROW_LENGTH]?: number;
   [GL.PACK_SKIP_PIXELS]?: number;
   [GL.PACK_SKIP_ROWS]?: number;

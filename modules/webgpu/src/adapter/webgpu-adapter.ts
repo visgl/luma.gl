@@ -36,61 +36,65 @@ export class WebGPUAdapter extends Adapter {
     }
 
     log.groupCollapsed(1, 'WebGPUDevice created')();
-    const adapter = await navigator.gpu.requestAdapter({
-      powerPreference: 'high-performance'
-      // forceSoftware: false
-    });
+    try {
+      const adapter = await navigator.gpu.requestAdapter({
+        powerPreference: 'high-performance'
+        // forceSoftware: false
+      });
 
-    if (!adapter) {
-      throw new Error('Failed to request WebGPU adapter');
-    }
+      if (!adapter) {
+        throw new Error('Failed to request WebGPU adapter');
+      }
 
-    //  Note: adapter.requestAdapterInfo() has been replaced with adapter.info. Fall back in case adapter.info is not available
-    const adapterInfo =
-      adapter.info ||
-      // @ts-ignore
-      (await adapter.requestAdapterInfo?.());
-    log.probe(2, 'Adapter available', adapterInfo)();
+      //  Note: adapter.requestAdapterInfo() has been replaced with adapter.info. Fall back in case adapter.info is not available
+      const adapterInfo =
+        adapter.info ||
+        // @ts-ignore
+        (await adapter.requestAdapterInfo?.());
+      log.probe(2, 'Adapter available', adapterInfo)();
 
-    const requiredFeatures: GPUFeatureName[] = [];
-    const requiredLimits: Record<string, number> = {};
+      const requiredFeatures: GPUFeatureName[] = [];
+      const requiredLimits: Record<string, number> = {};
 
-    if (props._requestMaxLimits) {
-      // Require all features
-      requiredFeatures.push(...(Array.from(adapter.features) as GPUFeatureName[]));
+      if (props._requestMaxLimits) {
+        // Require all features
+        requiredFeatures.push(...(Array.from(adapter.features) as GPUFeatureName[]));
 
-      // Require all limits
-      // Filter out chrome specific keys (avoid crash)
-      const limits = Object.keys(adapter.limits).filter(
-        key => !['minSubgroupSize', 'maxSubgroupSize'].includes(key)
-      );
-      for (const key of limits) {
-        const limit = key as keyof GPUSupportedLimits;
-        const value = adapter.limits[limit];
-        if (typeof value === 'number') {
-          requiredLimits[limit] = value;
+        // Require all limits
+        // Filter out chrome specific keys (avoid crash)
+        const limits = Object.keys(adapter.limits).filter(
+          key => !['minSubgroupSize', 'maxSubgroupSize'].includes(key)
+        );
+        for (const key of limits) {
+          const limit = key as keyof GPUSupportedLimits;
+          const value = adapter.limits[limit];
+          if (typeof value === 'number') {
+            requiredLimits[limit] = value;
+          }
         }
       }
+
+      const gpuDevice = await adapter.requestDevice({
+        requiredFeatures,
+        requiredLimits
+      });
+
+      log.probe(1, 'GPUDevice available')();
+
+      const {WebGPUDevice} = await import('./webgpu-device');
+
+      const device = new WebGPUDevice(props, gpuDevice, adapter, adapterInfo);
+
+      log.probe(
+        1,
+        'Device created. For more info, set chrome://flags/#enable-webgpu-developer-features'
+      )();
+      log.table(1, device.info)();
+
+      return device;
+    } finally {
+      log.groupEnd(1)();
     }
-
-    const gpuDevice = await adapter.requestDevice({
-      requiredFeatures,
-      requiredLimits
-    });
-
-    log.probe(1, 'GPUDevice available')();
-
-    const {WebGPUDevice} = await import('./webgpu-device');
-
-    const device = new WebGPUDevice(props, gpuDevice, adapter, adapterInfo);
-
-    log.probe(
-      1,
-      'Device created. For more info, set chrome://flags/#enable-webgpu-developer-features'
-    )();
-    log.table(1, device.info)();
-    log.groupEnd(1)();
-    return device;
   }
 
   async attach(handle: GPUDevice): Promise<WebGPUDevice> {

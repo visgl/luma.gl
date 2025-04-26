@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {BufferProps} from '@luma.gl/core';
+import type {BufferMapCallback, BufferProps} from '@luma.gl/core';
 import {Buffer} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {WebGLDevice} from '../webgl-device';
@@ -52,7 +52,16 @@ export class WEBGLBuffer extends Buffer {
     }
   }
 
-  // PRIVATE METHODS
+  override destroy(): void {
+    if (!this.destroyed && this.handle) {
+      this.removeStats();
+      this.trackDeallocatedMemory();
+      this.gl.deleteBuffer(this.handle);
+      this.destroyed = true;
+      // @ts-expect-error
+      this.handle = null;
+    }
+  }
 
   /** Allocate a new buffer and initialize to contents of typed array */
   _initWithData(
@@ -102,18 +111,8 @@ export class WEBGLBuffer extends Buffer {
     return this;
   }
 
-  override destroy(): void {
-    if (!this.destroyed && this.handle) {
-      this.removeStats();
-      this.trackDeallocatedMemory();
-      this.gl.deleteBuffer(this.handle);
-      this.destroyed = true;
-      // @ts-expect-error
-      this.handle = null;
-    }
-  }
-
-  override write(data: ArrayBufferView, byteOffset: number = 0): void {
+  write(data: ArrayBufferLike | ArrayBufferView, byteOffset: number = 0): void {
+    const dataView = ArrayBuffer.isView(data) ? data : new Uint8Array(data);
     const srcOffset = 0;
     const byteLength = undefined; // data.byteLength;
 
@@ -123,22 +122,41 @@ export class WEBGLBuffer extends Buffer {
     this.gl.bindBuffer(glTarget, this.handle);
     // WebGL2: subData supports additional srcOffset and length parameters
     if (srcOffset !== 0 || byteLength !== undefined) {
-      this.gl.bufferSubData(glTarget, byteOffset, data, srcOffset, byteLength);
+      this.gl.bufferSubData(glTarget, byteOffset, dataView, srcOffset, byteLength);
     } else {
-      this.gl.bufferSubData(glTarget, byteOffset, data);
+      this.gl.bufferSubData(glTarget, byteOffset, dataView);
     }
     this.gl.bindBuffer(glTarget, null);
 
     this._setDebugData(data, byteOffset, data.byteLength);
   }
 
-  /** Asynchronously read data from the buffer */
-  override async readAsync(byteOffset = 0, byteLength?: number): Promise<Uint8Array> {
+  async mapAndWriteAsync(
+    callback: BufferMapCallback<void>,
+    byteOffset: number = 0,
+    byteLength: number = this.byteLength - byteOffset
+  ): Promise<void> {
+    const arrayBuffer = new ArrayBuffer(byteLength);
+    // eslint-disable-next-line @typescript-eslint/await-thenable
+    await callback(arrayBuffer, 'copied');
+    this.write(arrayBuffer, byteOffset);
+  }
+
+  async readAsync(byteOffset = 0, byteLength?: number): Promise<Uint8Array<ArrayBuffer>> {
     return this.readSyncWebGL(byteOffset, byteLength);
   }
 
-  /** Synchronously read data from the buffer. WebGL only. */
-  override readSyncWebGL(byteOffset = 0, byteLength?: number): Uint8Array {
+  async mapAndReadAsync<T>(
+    callback: BufferMapCallback<T>,
+    byteOffset = 0,
+    byteLength?: number
+  ): Promise<T> {
+    const data = await this.readAsync(byteOffset, byteLength);
+    // eslint-disable-next-line @typescript-eslint/await-thenable
+    return await callback(data.buffer, 'copied');
+  }
+
+  readSyncWebGL(byteOffset = 0, byteLength?: number): Uint8Array<ArrayBuffer> {
     byteLength = byteLength ?? this.byteLength - byteOffset;
     const data = new Uint8Array(byteLength);
     const dstOffset = 0;

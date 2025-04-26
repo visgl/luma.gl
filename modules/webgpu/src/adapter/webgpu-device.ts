@@ -27,6 +27,7 @@ import type {
   QuerySetProps,
   DeviceProps,
   CommandEncoderProps,
+  PipelineLayoutProps,
 } from '@luma.gl/core';
 import {Device, DeviceFeatures} from '@luma.gl/core';
 import {WebGPUBuffer} from './resources/webgpu-buffer';
@@ -43,11 +44,17 @@ import {WebGPUCanvasContext} from './webgpu-canvas-context';
 import {WebGPUCommandEncoder} from './resources/webgpu-command-encoder';
 import {WebGPUCommandBuffer} from './resources/webgpu-command-buffer';
 import {WebGPUQuerySet} from './resources/webgpu-query-set';
+import {WebGPUPipelineLayout} from './resources/webgpu-pipeline-layout';
 
 /** WebGPU Device implementation */
 export class WebGPUDevice extends Device {
   /** The underlying WebGPU device */
   readonly handle: GPUDevice;
+  /* The underlying WebGPU adapter */
+  readonly adapter: GPUAdapter;
+  /* The underlying WebGPU adapter's info */
+  readonly adapterInfo: GPUAdapterInfo;
+
   /** type of this device */
   readonly type = 'webgpu';
 
@@ -66,10 +73,6 @@ export class WebGPUDevice extends Device {
 
   private _isLost: boolean = false;
   commandEncoder: WebGPUCommandEncoder;
-  /* The underlying WebGPU adapter */
-  readonly adapter: GPUAdapter;
-  /* The underlying WebGPU adapter's info */
-  readonly adapterInfo: GPUAdapterInfo;
 
   override get [Symbol.toStringTag](): string {
     return 'WebGPUDevice';
@@ -138,6 +141,10 @@ export class WebGPUDevice extends Device {
     return !info.webglOnly;
   }
 
+  getTextureByteAlignment(): number {
+    return 1;
+  }
+
   createBuffer(props: BufferProps | ArrayBuffer | ArrayBufferView): WebGPUBuffer {
     const newProps = this._normalizeBufferProps(props);
     return new WebGPUBuffer(this, newProps);
@@ -191,6 +198,10 @@ export class WebGPUDevice extends Device {
 
   createCanvasContext(props: CanvasContextProps): WebGPUCanvasContext {
     return new WebGPUCanvasContext(this, this.adapter, props);
+  }
+
+  createPipelineLayout(props: PipelineLayoutProps): WebGPUPipelineLayout {
+    return new WebGPUPipelineLayout(this, props);
   }
 
   submit(commandBuffer?: WebGPUCommandBuffer): void {

@@ -21,17 +21,13 @@ export type {CanvasContextProps} from './adapter/canvas-context';
 export {CanvasContext} from './adapter/canvas-context';
 
 // GPU RESOURCES
-export type {ResourceProps} from './adapter/resources/resource';
-export {Resource} from './adapter/resources/resource';
+export {Resource, type ResourceProps} from './adapter/resources/resource';
 
-export type {BufferProps} from './adapter/resources/buffer';
-export {Buffer} from './adapter/resources/buffer';
+export {Buffer, type BufferProps, type BufferMapCallback} from './adapter/resources/buffer';
 
-export type {TextureProps} from './adapter/resources/texture';
-export {Texture} from './adapter/resources/texture';
+export {Texture, type TextureProps} from './adapter/resources/texture';
 
-export type {TextureViewProps} from './adapter/resources/texture-view';
-export {TextureView} from './adapter/resources/texture-view';
+export {TextureView, type TextureViewProps} from './adapter/resources/texture-view';
 
 export type {ExternalTextureProps} from './adapter/resources/external-texture';
 export {ExternalTexture} from './adapter/resources/external-texture';
@@ -72,6 +68,9 @@ export {TransformFeedback} from './adapter/resources/transform-feedback';
 export type {QuerySetProps} from './adapter/resources/query-set';
 export {QuerySet} from './adapter/resources/query-set';
 
+export type {PipelineLayoutProps} from './adapter/resources/pipeline-layout';
+export {PipelineLayout} from './adapter/resources/pipeline-layout';
+
 // PORTABLE API - UNIFORM BUFFERS
 export {UniformBufferLayout} from './portable/uniform-buffer-layout';
 export {UniformBlock} from './portable/uniform-block';
@@ -82,7 +81,11 @@ export {UniformStore} from './portable/uniform-store';
 export type {CompilerMessage} from './adapter/types/compiler-message';
 
 export type {ExternalImage} from './image-utils/image-types';
-export type {CopyExternalImageOptions, CopyImageDataOptions} from './adapter/resources/texture';
+
+export {
+  type CopyExternalImageOptions,
+  type CopyImageDataOptions
+} from './adapter/resources/texture';
 
 export type {Parameters, PrimitiveTopology, IndexFormat} from './adapter/types/parameters';
 
@@ -110,7 +113,12 @@ export type {
   ComputeShaderLayout,
   AttributeDeclaration,
   BindingDeclaration,
-  Binding
+  Binding,
+  UniformBufferBindingLayout,
+  StorageBufferBindingLayout,
+  TextureBindingLayout,
+  SamplerBindingLayout,
+  StorageTextureBindingLayout
 } from './adapter/types/shader-layout';
 export type {BufferLayout, BufferAttributeLayout} from './adapter/types/buffer-layout';
 export type {
@@ -133,41 +141,58 @@ export type {
   BigTypedArrayConstructor
 } from './types';
 
-// GPU TYPE UTILS - GPU MEMORY LAYOUT TYPES - EXTERNAL
-
-export type {PrimitiveDataType, SignedDataType, NormalizedDataType} from './shadertypes/data-types';
-export type {AttributeShaderType, VariableShaderType} from './shadertypes/shader-types';
-export type {VertexFormat} from './shadertypes/vertex-formats';
-export type {
-  TextureFormat,
-  ColorTextureFormat,
-  DepthStencilTextureFormat,
-  TextureCompression,
-  TextureFormatInfo,
-  TextureFormatCapabilities
-} from './shadertypes/texture-formats';
-
-// GPU TYPE UTILS - GPU MEMORY LAYOUT HELPERS - CAN BE USED BY APPS BUT MOSTLY USED INTERNALLY
+// GPU TYPE UTILS - BASIC DATA TYPES
 
 export {
+  type PrimitiveDataType,
+  type SignedDataType,
+  type NormalizedDataType,
+  type DataTypeInfo,
+  type DataTypeArray,
+  type NormalizedDataTypeArray
+} from './shadertypes/data-types/data-types';
+export {
+  type AttributeShaderType,
+  type VariableShaderType
+} from './shadertypes/data-types/shader-types';
+export {
   getDataTypeInfo,
-  getDataTypeFromTypedArray,
-  getTypedArrayFromDataType,
-  makeNormalizedDataType
-} from './shadertypes/utils/decode-data-types';
+  getDataType,
+  getTypedArrayConstructor,
+  getNormalizedDataType
+} from './shadertypes/data-types/decode-data-types';
 export {
   getVariableShaderTypeInfo,
   getAttributeShaderTypeInfo
-} from './shadertypes/utils/decode-shader-types';
+} from './shadertypes/data-types/decode-shader-types';
+
+// GPU TYPE UTILS - VERTEX ARRAYs
+
+export {type VertexFormat} from './shadertypes/vertex-arrays/vertex-formats';
+
 export {
   getVertexFormatInfo,
   getVertexFormatFromAttribute,
   makeVertexFormat
-} from './shadertypes/utils/decode-vertex-format';
+} from './shadertypes/vertex-arrays/decode-vertex-format';
+
+// GPU TYPE UTILS - Texture Formats
+
 export {
-  getTextureFormatInfo,
-  getTextureFormatCapabilities
-} from './shadertypes/utils/decode-texture-format';
+  type TextureFormat,
+  type TextureFormatColor,
+  type TextureFormatDepthStencil,
+  type TextureCompression,
+  type TextureFormatInfo,
+  type TextureFormatCapabilities
+} from './shadertypes/textures/texture-formats';
+
+export {
+  TextureFormatDecoder,
+  textureFormatDecoder
+} from './shadertypes/textures/texture-format-decoder';
+
+export {type PixelData, readPixel, writePixel} from './shadertypes/textures/pixel-utils';
 
 // GENERAL EXPORTS - FOR APPLICATIONS
 
@@ -188,9 +213,10 @@ export {getScratchArray} from './utils/array-utils-flat';
 export type {AttributeInfo} from './adapter-utils/get-attribute-from-layouts';
 export {BufferLayoutHelper as _BufferLayoutHelper} from './adapter-utils/buffer-layout-helper';
 export {getAttributeInfosFromLayouts} from './adapter-utils/get-attribute-from-layouts';
+export {sortedBufferLayoutByShaderSourceLocations} from './adapter-utils/buffer-layout-order';
 
 // TEST EXPORTS
 export {
   getTextureFormatDefinition as _getTextureFormatDefinition,
   getTextureFormatTable as _getTextureFormatTable
-} from './shadertypes/utils/texture-format-table';
+} from './shadertypes/textures/texture-format-table';

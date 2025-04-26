@@ -2,8 +2,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {TextureFormat} from '../../shadertypes/texture-formats';
-import type {VariableShaderType, AttributeShaderType} from '../../shadertypes/shader-types';
+import type {TextureFormat} from '../../shadertypes/textures/texture-formats';
+import type {
+  VariableShaderType,
+  AttributeShaderType
+} from '../../shadertypes/data-types/shader-types';
 import type {Buffer} from '../resources/buffer';
 import type {Sampler} from '../resources/sampler';
 import type {Texture} from '../resources/texture';
@@ -110,7 +113,7 @@ export type StorageBufferBindingLayout = {
   minBindingSize?: number;
 };
 
-type TextureBindingLayout = {
+export type TextureBindingLayout = {
   type: 'texture';
   /** Name of the binding. Used by luma to map bindings by name */
   name: string;
@@ -125,7 +128,7 @@ type TextureBindingLayout = {
   multisampled?: boolean;
 };
 
-type SamplerBindingLayout = {
+export type SamplerBindingLayout = {
   type: 'sampler';
   /** Name of the binding. Used by luma to map bindings by name */
   name: string;
@@ -138,7 +141,7 @@ type SamplerBindingLayout = {
   samplerType?: 'filtering' | 'non-filtering' | 'comparison'; // default: filtering
 };
 
-type StorageTextureBindingLayout = {
+export type StorageTextureBindingLayout = {
   type: 'storage';
   /** Name of the binding. Used by luma to map bindings by name */
   name: string;

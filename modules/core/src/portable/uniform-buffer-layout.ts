@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {PrimitiveDataType} from '../shadertypes/data-types';
-import type {VariableShaderType} from '../shadertypes/shader-types';
-import {alignTo} from '../shadertypes/utils/decode-data-types';
-import {getVariableShaderTypeInfo} from '../shadertypes/utils/decode-shader-types';
+import type {PrimitiveDataType} from '../shadertypes/data-types/data-types';
+import type {VariableShaderType} from '../shadertypes/data-types/shader-types';
+import {alignTo} from '../shadertypes/data-types/decode-data-types';
+import {getVariableShaderTypeInfo} from '../shadertypes/data-types/decode-shader-types';
 
 import type {UniformValue} from '../adapter/types/uniforms';
 import {getScratchArrayBuffer} from '../utils/array-utils-flat';

@@ -9,6 +9,7 @@ import type {NullTextureView} from './null-texture-view';
 
 export class NullFramebuffer extends Framebuffer {
   device: NullDevice;
+  readonly handle = null;
 
   colorAttachments: NullTextureView[] = [];
   depthStencilAttachment: NullTextureView | null = null;

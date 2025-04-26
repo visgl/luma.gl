@@ -3,10 +3,10 @@
 // Copyright (c) vis.gl contributors
 
 import type {
-  ColorTextureFormat,
-  DepthStencilTextureFormat,
+  TextureFormatColor,
+  TextureFormatDepthStencil,
   TextureFormat
-} from '../../shadertypes/texture-formats';
+} from '../../shadertypes/textures/texture-formats';
 import type {Device} from '../device';
 import {Resource, ResourceProps} from './resource';
 import {Texture} from './texture';
@@ -16,8 +16,8 @@ import {log} from '../../utils/log';
 export type FramebufferProps = ResourceProps & {
   width?: number;
   height?: number;
-  colorAttachments?: (TextureView | Texture | ColorTextureFormat)[];
-  depthStencilAttachment?: (TextureView | Texture | DepthStencilTextureFormat) | null;
+  colorAttachments?: (TextureView | Texture | TextureFormatColor)[];
+  depthStencilAttachment?: (TextureView | Texture | TextureFormatDepthStencil) | null;
 };
 
 /**
