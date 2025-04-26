@@ -161,14 +161,14 @@ Rendered using the luma.gl <code>Model</code>, <code>CubeGeometry</code> and <co
 
   async initialize() {
     const device = this.device;
-    console.log(device.info);
+
     let filename = '';
     if (device.features.has('texture-compression-astc')) {
       filename = '2d_astc4x4.ktx2';
     } else if (device.features.has('texture-compression-bc')) {
       filename = '2d_bc5.ktx2';
     } else {
-      throw new Error('compressed formats not supported')
+      throw new Error('compressed formats not supported');
     }
 
     // failing: 2d_etc2, 2d_rgba16_linear, 2d_rgba32_linear
