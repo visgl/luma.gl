@@ -50,6 +50,9 @@ export function alignTo(size: number, count: number): number {
 /** Returns the VariableShaderType that corresponds to a typed array */
 export function getDataType(arrayOrType: TypedArray | TypedArrayConstructor): SignedDataType {
   const Constructor = ArrayBuffer.isView(arrayOrType) ? arrayOrType.constructor : arrayOrType;
+  if (Constructor === Uint8ClampedArray) {
+    return 'uint8';
+  }
   const info = Object.values(NORMALIZED_TYPE_MAP).find(entry => Constructor === entry[4]);
   if (!info) {
     throw new Error(Constructor.name);
