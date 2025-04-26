@@ -90,7 +90,7 @@ export type NormalizedDataTypeArray<T extends NormalizedDataType> = T extends 'u
                   : T extends 'sint32'
                     ? Int32Array
                     : T extends 'float16'
-                      ? Uint16Array
+                      ? Float32Array
                       : T extends 'float32'
                         ? Float32Array
                         : never;

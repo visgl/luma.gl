@@ -19,6 +19,7 @@ if (window.browserTestDriver_finish && window.browserTestDriver_fail) {
     window.browserTestDriver_fail();
   });
 } else {
+  // eslint-disable-next-line no-console
   console.warn('Use Google Chrome for Testing to report test completion.');
 }
 

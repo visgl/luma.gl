@@ -371,7 +371,7 @@ export function getDepthStencilAttachmentWebGL(
 /** TODO - VERY roundabout legacy way of calculating bytes per pixel */
 export function getTextureFormatBytesPerPixel(format: TextureFormat): number {
   const formatInfo = textureFormatDecoder.getInfo(format);
-  return formatInfo.bytesPerPixel as number;
+  return formatInfo.bytesPerPixel;
 }
 
 // DATA TYPE HELPERS

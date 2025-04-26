@@ -5,11 +5,7 @@
 import type {TypedArray} from '../../types';
 import type {NormalizedDataType, PrimitiveDataType, SignedDataType} from '../data-types/data-types';
 import type {VertexFormat, VertexFormatInfo} from './vertex-formats';
-import {
-  getDataTypeInfo,
-  getDataTypeFromTypedArray,
-  makeNormalizedDataType
-} from '../data-types/decode-data-types';
+import {getDataTypeInfo, getDataType, getNormalizedDataType} from '../data-types/decode-data-types';
 
 /**
  * Decodes a vertex format, returning type, components, byte  length and flags (integer, signed, normalized)
@@ -48,7 +44,7 @@ export function makeVertexFormat(
   normalized?: boolean
 ): VertexFormat {
   const dataType: NormalizedDataType = normalized
-    ? makeNormalizedDataType(signedDataType)
+    ? getNormalizedDataType(signedDataType)
     : signedDataType;
 
   switch (dataType) {
@@ -94,7 +90,7 @@ export function getVertexFormatFromAttribute(
   }
 
   const components = size as 1 | 2 | 3 | 4;
-  const signedDataType = getDataTypeFromTypedArray(typedArray);
+  const signedDataType = getDataType(typedArray);
   return makeVertexFormat(signedDataType, components, normalized);
 }
 

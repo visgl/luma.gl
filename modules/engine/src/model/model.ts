@@ -26,7 +26,7 @@ import {
   RenderPass,
   UniformStore,
   log,
-  getTypedArrayFromDataType,
+  getTypedArrayConstructor,
   getAttributeInfosFromLayouts,
   _BufferLayoutHelper,
   sortedBufferLayoutByShaderSourceLocations
@@ -896,7 +896,7 @@ export class Model {
 
   // TODO - fix typing of luma data types
   _getBufferOrConstantValues(attribute: Buffer | TypedArray, dataType: any): string {
-    const TypedArrayConstructor = getTypedArrayFromDataType(dataType);
+    const TypedArrayConstructor = getTypedArrayConstructor(dataType);
     const typedArray =
       attribute instanceof Buffer ? new TypedArrayConstructor(attribute.debugData) : attribute;
     return typedArray.toString();

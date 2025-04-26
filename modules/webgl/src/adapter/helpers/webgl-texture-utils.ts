@@ -5,7 +5,7 @@
 // @ts-nocheck This file will be deleted in upcoming refactor
 
 import type {Buffer, Texture, FramebufferProps} from '@luma.gl/core';
-import {Framebuffer, getTypedArrayFromDataType, getDataTypeFromTypedArray} from '@luma.gl/core';
+import {Framebuffer, getTypedArrayConstructor, getDataType} from '@luma.gl/core';
 import {
   GL,
   GLTextureTarget,
@@ -232,7 +232,7 @@ export function readPixelsToArray(
   target = getPixelArray(target, sourceType, sourceFormat, sourceWidth, sourceHeight, sourceDepth);
 
   // Pixel array available, if necessary, deduce type from it.
-  const signedType = getDataTypeFromTypedArray(target);
+  const signedType = getDataType(target);
   sourceType = sourceType || convertDataTypeToGLDataType(signedType);
 
   // Note: luma.gl overrides bindFramebuffer so that we can reliably restore the previous framebuffer (this is the only function for which we do that)
@@ -484,7 +484,7 @@ function getPixelArray(
   // Allocate pixel array if not already available, using supplied type
   glType ||= GL.UNSIGNED_BYTE;
   const shaderType = convertGLDataTypeToDataType(glType);
-  const ArrayType = getTypedArrayFromDataType(shaderType);
+  const ArrayType = getTypedArrayConstructor(shaderType);
   const components = glFormatToComponents(glFormat);
   // TODO - check for composite type (components = 1).
   return new ArrayType(width * height * components) as Uint8Array | Uint16Array | Float32Array;

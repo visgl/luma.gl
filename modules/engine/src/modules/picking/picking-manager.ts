@@ -80,7 +80,7 @@ export class PickingManager {
     return pickingPass;
   }
 
-  getPickInfo(mousePosition: [number, number]): PickInfo | null {
+  async updatePickInfo(mousePosition: [number, number]): Promise<PickInfo | null> {
     const framebuffer = this.getFramebuffer();
 
     // use the center pixel location in device pixel range

@@ -10,7 +10,7 @@ import {
   ComputePass,
   UniformStore,
   log,
-  getTypedArrayFromDataType
+  getTypedArrayConstructor
 } from '@luma.gl/core';
 import type {ShaderModule, PlatformInfo} from '@luma.gl/shadertools';
 import {ShaderAssembler, getShaderLayoutFromWGSL} from '@luma.gl/shadertools';
@@ -340,7 +340,7 @@ export class Computation {
 
   // TODO - fix typing of luma data types
   _getBufferOrConstantValues(attribute: Buffer | TypedArray, dataType: any): string {
-    const TypedArrayConstructor = getTypedArrayFromDataType(dataType);
+    const TypedArrayConstructor = getTypedArrayConstructor(dataType);
     const typedArray =
       attribute instanceof Buffer ? new TypedArrayConstructor(attribute.debugData) : attribute;
     return typedArray.toString();

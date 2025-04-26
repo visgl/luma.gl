@@ -5,8 +5,8 @@
 import test from 'tape-promise/tape';
 import {
   VertexFormat,
-  getDataTypeFromTypedArray,
-  getTypedArrayFromDataType,
+  getDataType,
+  getTypedArrayConstructor,
   getVertexFormatFromAttribute
 } from '@luma.gl/core';
 import type {TypedArray, TypedArrayConstructor} from '@math.gl/types';
@@ -70,10 +70,10 @@ const ARRAY_TEST_CASES: {typedArray: TypedArrayConstructor}[] = [
   {typedArray: Float32Array}
 ];
 
-test('shadertypes#getDataTypeFromTypedArray', t => {
+test('shadertypes#getDataType', t => {
   for (const {typedArray} of ARRAY_TEST_CASES) {
-    const dataType = getDataTypeFromTypedArray(typedArray);
-    const result = getTypedArrayFromDataType(dataType);
+    const dataType = getDataType(typedArray);
+    const result = getTypedArrayConstructor(dataType);
     t.deepEqual(
       typedArray,
       result,

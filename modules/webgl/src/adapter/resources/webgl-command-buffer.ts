@@ -8,7 +8,7 @@ import type {
   CopyTextureToBufferOptions,
   CopyTextureToTextureOptions
   // ClearTextureOptions,
-  // ReadTextureOptions
+  // TextureReadOptions
 } from '@luma.gl/core';
 import {CommandBuffer, Texture, Framebuffer} from '@luma.gl/core';
 import {
@@ -53,7 +53,7 @@ type ClearTextureCommand = {
 
 type ReadTextureCommand = {
   name: 'read-texture';
-  options: {}; // ReadTextureOptions;
+  options: {}; // TextureReadOptions;
 };
 
 type Command =
