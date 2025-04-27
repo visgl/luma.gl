@@ -527,7 +527,7 @@ export class WebGLDevice extends Device {
     // @ts-expect-error
     handle.luma = resource;
 
-    const spectorMetadata = {props: options.spector, id: options.spector.id};
+    const spectorMetadata = {props: options.spector, id: options.spector['id']};
     // @ts-expect-error
     // eslint-disable-next-line camelcase
     handle.__SPECTOR_Metadata = spectorMetadata;

@@ -86,9 +86,9 @@ export class Geometry {
       }
     }
 
-    if (this.indices && this.indices.isIndexed !== undefined) {
+    if (this.indices && this.indices['isIndexed'] !== undefined) {
       this.indices = Object.assign({}, this.indices);
-      delete this.indices.isIndexed;
+      delete this.indices['isIndexed'];
     }
 
     this.vertexCount = vertexCount || this._calculateVertexCount(this.attributes, this.indices);

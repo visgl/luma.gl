@@ -19,9 +19,9 @@ export class PipelineFactory {
 
   /** Get the singleton default pipeline factory for the specified device */
   static getDefaultPipelineFactory(device: Device): PipelineFactory {
-    device._lumaData.defaultPipelineFactory =
-      device._lumaData.defaultPipelineFactory || new PipelineFactory(device);
-    return device._lumaData.defaultPipelineFactory as PipelineFactory;
+    device._lumaData['defaultPipelineFactory'] =
+      device._lumaData['defaultPipelineFactory'] || new PipelineFactory(device);
+    return device._lumaData['defaultPipelineFactory'] as PipelineFactory;
   }
 
   readonly device: Device;

@@ -10,8 +10,8 @@ export class ShaderFactory {
 
   /** Returns the default ShaderFactory for the given {@link Device}, creating one if necessary. */
   static getDefaultShaderFactory(device: Device): ShaderFactory {
-    device._lumaData.defaultShaderFactory ||= new ShaderFactory(device);
-    return device._lumaData.defaultShaderFactory as ShaderFactory;
+    device._lumaData['defaultShaderFactory'] ||= new ShaderFactory(device);
+    return device._lumaData['defaultShaderFactory'] as ShaderFactory;
   }
 
   public readonly device: Device;
