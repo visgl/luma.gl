@@ -103,7 +103,7 @@ function getTextureFormatInfo(format: TextureFormat): TextureFormatInfo {
     const dataType = `${type}${length}` as NormalizedDataType;
     const decodedType = getDataTypeInfo(dataType);
     const bits = decodedType.byteLength * 8;
-    const components = channels.length as 1 | 2 | 3 | 4;
+    const components = (channels?.length ?? 1) as 1 | 2 | 3 | 4;
     const bitsPerChannel: [number, number, number, number] = [
       bits,
       components >= 2 ? bits : 0,
@@ -121,7 +121,7 @@ function getTextureFormatInfo(format: TextureFormat): TextureFormatInfo {
       signed: decodedType.signed,
       normalized: decodedType.normalized,
       bitsPerChannel,
-      bytesPerPixel: decodedType.byteLength * channels.length,
+      bytesPerPixel: decodedType.byteLength * components,
       packed: formatInfo.packed,
       srgb: formatInfo.srgb
     };
