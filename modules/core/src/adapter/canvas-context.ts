@@ -8,6 +8,7 @@ import type {Framebuffer} from './resources/framebuffer';
 import type {TextureFormatDepthStencil} from '../shadertypes/textures/texture-formats';
 import {uid} from '../utils/uid';
 import {withResolvers} from '../utils/promise-utils';
+import {assertDefined} from '../utils/assert';
 
 /** Properties for a CanvasContext */
 export type CanvasContextProps = {
@@ -346,13 +347,10 @@ export abstract class CanvasContext {
    */
   protected _handleResize(entries: ResizeObserverEntry[]) {
     const entry = entries.find(entry_ => entry_.target === this.canvas);
-    if (!entry) {
-      return;
-    }
-
+    const contentBoxSize = assertDefined(entry?.contentBoxSize?.[0]);
     // Update CSS size using content box size
-    this.cssWidth = entry.contentBoxSize[0].inlineSize;
-    this.cssHeight = entry.contentBoxSize[0].blockSize;
+    this.cssWidth = contentBoxSize.inlineSize;
+    this.cssHeight = contentBoxSize.blockSize;
 
     // Update our drawing buffer size variables, saving the old values for logging
     const oldPixelSize = this.getDevicePixelSize();
@@ -360,13 +358,12 @@ export abstract class CanvasContext {
     // Use the most accurate drawing buffer size information the current browser can provide
     // Note: content box sizes are guaranteed to be integers
     // Note: Safari falls back to contentBoxSize
+    const devicePixelContentBoxSize = assertDefined(entry?.devicePixelContentBoxSize?.[0]);
     const devicePixelWidth =
-      entry.devicePixelContentBoxSize?.[0].inlineSize ||
-      entry.contentBoxSize[0].inlineSize * devicePixelRatio;
+      devicePixelContentBoxSize.inlineSize || contentBoxSize.inlineSize * devicePixelRatio;
 
     const devicePixelHeight =
-      entry.devicePixelContentBoxSize?.[0].blockSize ||
-      entry.contentBoxSize[0].blockSize * devicePixelRatio;
+      devicePixelContentBoxSize.blockSize || contentBoxSize.blockSize * devicePixelRatio;
 
     // Make sure we don't overflow the maximum supported texture size
     const [maxDevicePixelWidth, maxDevicePixelHeight] = this.getMaxDrawingBufferSize();

@@ -92,14 +92,14 @@ export type TextureWriteOptions = {
   aspect?: 'all' | 'stencil-only' | 'depth-only';
 };
 
-const BASE_DIMENSIONS: Record<string, '1d' | '2d' | '3d'> = {
+const BASE_DIMENSIONS = {
   '1d': '1d',
   '2d': '2d',
   '2d-array': '2d',
   cube: '2d',
   'cube-array': '2d',
   '3d': '3d'
-};
+} as const satisfies Record<string, '1d' | '2d' | '3d'>;
 
 /** Texture properties */
 export type TextureProps = ResourceProps & {

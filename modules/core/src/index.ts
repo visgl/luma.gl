@@ -216,6 +216,7 @@ export type {
 
 // INTERNAL UTILS - for use in other luma.gl modules only
 export {log} from './utils/log';
+export {assert, assertDefined} from './utils/assert';
 export {getScratchArray} from './utils/array-utils-flat';
 export type {AttributeInfo} from './adapter-utils/get-attribute-from-layouts';
 export {getAttributeInfosFromLayouts} from './adapter-utils/get-attribute-from-layouts';
