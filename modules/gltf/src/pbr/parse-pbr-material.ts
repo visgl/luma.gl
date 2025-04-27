@@ -2,14 +2,44 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-// @ts-nocheck TODO
-
 import type {Device, Texture, Parameters} from '@luma.gl/core';
 import {log} from '@luma.gl/core';
 import {PBREnvironment} from './pbr-environment';
 import {PBRMaterialBindings, PBRMaterialUniforms, PBRProjectionProps} from '@luma.gl/shadertools';
 
+// TODO - synchronize the GLTF... types with loaders.gl
+// TODO - remove the glParameters, use only parameters
+
 /* eslint-disable camelcase */
+
+type GLTFTexture = {
+  id: string;
+  texture: {source: {image: any}; sampler: {parameters: any}};
+  uniformName?: string;
+  // is this on all textures?
+  scale?: number;
+  // is this on all textures?
+  strength?: number;
+};
+
+type GLTFPBRMetallicRoughness = {
+  baseColorTexture?: GLTFTexture;
+  baseColorFactor?: [number, number, number, number];
+  metallicRoughnessTexture?: GLTFTexture;
+  metallicFactor?: number;
+  roughnessFactor?: number;
+};
+
+type GLTFPBRMaterial = {
+  unlit?: boolean;
+  pbrMetallicRoughness?: GLTFPBRMetallicRoughness;
+  normalTexture?: GLTFTexture;
+  occlusionTexture?: GLTFTexture;
+  emissiveTexture?: GLTFTexture;
+  emissiveFactor?: [number, number, number];
+  alphaMode?: 'MASK' | 'BLEND';
+  alphaCutoff?: number;
+};
 
 export type ParsePBRMaterialOptions = {
   /** Debug PBR shader */
@@ -27,6 +57,7 @@ export type ParsedPBRMaterial = {
   readonly bindings: Partial<PBRMaterialBindings>;
   readonly uniforms: Partial<PBRProjectionProps & PBRMaterialUniforms>;
   readonly parameters: Parameters;
+  /** @deprecated Use parameters */
   readonly glParameters: Record<string, any>;
   /** List of all generated textures, makes it easy to destroy them later */
   readonly generatedTextures: Texture[];
@@ -52,7 +83,7 @@ enum GLEnum {
  */
 export function parsePBRMaterial(
   device: Device,
-  material: any,
+  material: GLTFPBRMaterial,
   attributes: Record<string, any>,
   options: ParsePBRMaterialOptions
 ): ParsedPBRMaterial {
@@ -75,7 +106,8 @@ export function parsePBRMaterial(
   };
 
   // TODO - always available
-  parsedMaterial.defines.USE_TEX_LOD = true;
+  // TODO - always available
+  parsedMaterial.defines['USE_TEX_LOD'] = true;
 
   const {imageBasedLightingEnvironment} = options;
   if (imageBasedLightingEnvironment) {
@@ -88,18 +120,18 @@ export function parsePBRMaterial(
   }
 
   if (options?.pbrDebug) {
-    parsedMaterial.defines.PBR_DEBUG = true;
+    parsedMaterial.defines['PBR_DEBUG'] = true;
     // Override final color for reference app visualization of various parameters in the lighting equation.
     parsedMaterial.uniforms.scaleDiffBaseMR = [0, 0, 0, 0];
     parsedMaterial.uniforms.scaleFGDSpec = [0, 0, 0, 0];
   }
 
-  if (attributes.NORMAL) parsedMaterial.defines.HAS_NORMALS = true;
-  if (attributes.TANGENT && options?.useTangents) parsedMaterial.defines.HAS_TANGENTS = true;
-  if (attributes.TEXCOORD_0) parsedMaterial.defines.HAS_UV = true;
+  if (attributes['NORMAL']) parsedMaterial.defines['HAS_NORMALS'] = true;
+  if (attributes['TANGENT'] && options?.useTangents) parsedMaterial.defines['HAS_TANGENTS'] = true;
+  if (attributes['TEXCOORD_0']) parsedMaterial.defines['HAS_UV'] = true;
 
-  if (options?.imageBasedLightingEnvironment) parsedMaterial.defines.USE_IBL = true;
-  if (options?.lights) parsedMaterial.defines.USE_LIGHTS = true;
+  if (options?.imageBasedLightingEnvironment) parsedMaterial.defines['USE_IBL'] = true;
+  if (options?.lights) parsedMaterial.defines['USE_LIGHTS'] = true;
 
   if (material) {
     parseMaterial(device, material, parsedMaterial);
@@ -109,7 +141,11 @@ export function parsePBRMaterial(
 }
 
 /** Parse GLTF material record */
-function parseMaterial(device: Device, material, parsedMaterial: ParsedPBRMaterial): void {
+function parseMaterial(
+  device: Device,
+  material: GLTFPBRMaterial,
+  parsedMaterial: ParsedPBRMaterial
+): void {
   parsedMaterial.uniforms.unlit = Boolean(material.unlit);
 
   if (material.pbrMetallicRoughness) {
@@ -150,10 +186,10 @@ function parseMaterial(device: Device, material, parsedMaterial: ParsedPBRMateri
     parsedMaterial.uniforms.emissiveFactor = material.emissiveFactor || [0, 0, 0];
   }
 
-  switch (material.alphaMode) {
+  switch (material.alphaMode || 'MASK') {
     case 'MASK':
       const {alphaCutoff = 0.5} = material;
-      parsedMaterial.defines.ALPHA_CUTOFF = true;
+      parsedMaterial.defines['ALPHA_CUTOFF'] = true;
       parsedMaterial.uniforms.alphaCutoff = alphaCutoff;
       break;
     case 'BLEND':
@@ -169,9 +205,10 @@ function parseMaterial(device: Device, material, parsedMaterial: ParsedPBRMateri
       parsedMaterial.parameters.blendAlphaDstFactor = 'one-minus-src-alpha';
 
       // GL parameters
-      parsedMaterial.glParameters.blend = true;
-      parsedMaterial.glParameters.blendEquation = GLEnum.FUNC_ADD;
-      parsedMaterial.glParameters.blendFunc = [
+      // TODO - remove in favor of parameters
+      parsedMaterial.glParameters['blend'] = true;
+      parsedMaterial.glParameters['blendEquation'] = GLEnum.FUNC_ADD;
+      parsedMaterial.glParameters['blendFunc'] = [
         GLEnum.SRC_ALPHA,
         GLEnum.ONE_MINUS_SRC_ALPHA,
         GLEnum.ONE,
@@ -185,7 +222,7 @@ function parseMaterial(device: Device, material, parsedMaterial: ParsedPBRMateri
 /** Parse GLTF material sub record */
 function parsePbrMetallicRoughness(
   device: Device,
-  pbrMetallicRoughness,
+  pbrMetallicRoughness: GLTFPBRMetallicRoughness,
   parsedMaterial: ParsedPBRMaterial
 ): void {
   if (pbrMetallicRoughness.baseColorTexture) {
@@ -215,8 +252,8 @@ function parsePbrMetallicRoughness(
 /** Create a texture from a glTF texture/sampler/image combo and add it to bindings */
 function addTexture(
   device: Device,
-  gltfTexture,
-  uniformName: string,
+  gltfTexture: GLTFTexture,
+  uniformName: keyof PBRMaterialBindings,
   define: string,
   parsedMaterial: ParsedPBRMaterial
 ): void {
