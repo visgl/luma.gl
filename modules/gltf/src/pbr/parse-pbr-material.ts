@@ -275,6 +275,7 @@ function addTexture(
 
   const texture: Texture = device.createTexture({
     id: gltfTexture.uniformName || gltfTexture.id,
+    // TODO: FIX THIS
     parameters: {
       ...parameters,
       ...specialTextureParameters
