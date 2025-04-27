@@ -163,7 +163,7 @@ export class WEBGLTransformFeedback extends TransformFeedback {
    */
   protected _bindBuffers(): void {
     for (const [bufferIndex, bufferEntry] of Object.entries(this.buffers)) {
-      const {buffer, byteLength, byteOffset} = this._getBufferRange(bufferEntry );
+      const {buffer, byteLength, byteOffset} = this._getBufferRange(bufferEntry);
       this._bindBuffer(Number(bufferIndex), buffer, byteOffset, byteLength);
     }
   }

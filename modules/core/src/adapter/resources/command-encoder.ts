@@ -74,7 +74,7 @@ export type CopyTextureToTextureOptions = {
   /**  Mip-map level of the texture to copy to/from. (Default 0) */
   mipLevel?: number;
   /** Defines the origin of the copy - the minimum corner of the texture sub-region to copy from. */
-  origin?: [number, number, number],
+  origin?: [number, number, number];
   /** Defines which aspects of the {@link GPUImageCopyTexture#texture} to copy to/from. */
   aspect?: 'all' | 'stencil-only' | 'depth-only';
 

@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {CompilerMessage} from '../adapter/types/compiler-message';
-import { assertDefined } from '../utils/assert';
+import {assertDefined} from '../utils/assert';
 
 /** @returns annotated errors or warnings */
 export function formatCompilerLog(

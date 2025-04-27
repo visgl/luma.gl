@@ -88,7 +88,7 @@ export function readPixel(
     }
   }
 
-  return [channels[0] ?? 0, channels[1] ?? 0, channels[2]?? 0, channels[3] ?? 0];
+  return [channels[0] ?? 0, channels[1] ?? 0, channels[2] ?? 0, channels[3] ?? 0];
 }
 
 /**

@@ -356,7 +356,7 @@ export abstract class CanvasContext {
     const [maxDevicePixelWidth, maxDevicePixelHeight] = this.getMaxDrawingBufferSize();
     this.devicePixelWidth = Math.max(1, Math.min(devicePixelWidth, maxDevicePixelWidth));
     this.devicePixelHeight = Math.max(1, Math.min(devicePixelHeight, maxDevicePixelHeight));
-    
+
     // Update the canvas drawing buffer size
     if (this.props.autoResize) {
       if (this.props.useDevicePixels) {
