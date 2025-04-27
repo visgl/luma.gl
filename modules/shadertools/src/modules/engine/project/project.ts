@@ -44,7 +44,7 @@ function getUniforms(
   // viewInverseMatrix: view.invert(),
   // viewProjectionInverseMatrix: viewProjectionInverse
 
-  const uniforms: Record<string, any> = {};
+  const uniforms: ProjectionUniforms = {};
   if (opts.viewMatrix !== undefined) {
     uniforms.viewMatrix = opts.viewMatrix;
   }
@@ -54,11 +54,14 @@ function getUniforms(
   if (opts.cameraPositionWorld !== undefined) {
     uniforms.cameraPositionWorld = opts.cameraPositionWorld;
   }
+
   // COMPOSITE UNIFORMS
-  if (opts.projectionMatrix !== undefined || opts.viewMatrix !== undefined) {
-    uniforms.viewProjectionMatrix = new Matrix4(uniforms.projectionMatrix).multiplyRight(
-      uniforms.viewMatrix
-    );
+  if (opts.projectionMatrix !== undefined) {
+    if (opts.viewMatrix !== undefined) {
+      uniforms.viewProjectionMatrix = new Matrix4(uniforms.projectionMatrix).multiplyRight(
+        opts.viewMatrix
+      );
+    }
   }
 
   return uniforms;

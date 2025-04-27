@@ -91,10 +91,9 @@ export const dirlight = {
 } as const satisfies ShaderModule<DirlightProps, DirlightUniforms>;
 
 function getUniforms(opts: DirlightProps = dirlight.defaultUniforms): DirlightUniforms {
-  const uniforms: Record<string, unknown> = {};
+  const uniforms: DirlightUniforms = {};
   if (opts.lightDirection) {
-    // eslint-disable-next-line camelcase
-    uniforms.dirlight_uLightDirection = opts.lightDirection;
+    uniforms.lightDirection = opts.lightDirection;
   }
   return uniforms;
 }

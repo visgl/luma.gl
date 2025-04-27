@@ -599,7 +599,7 @@ export class Model {
    */
   setAttributes(buffers: Record<string, Buffer>, options?: {disableWarnings?: boolean}): void {
     const disableWarnings = options?.disableWarnings ?? this.props.disableWarnings;
-    if (buffers.indices) {
+    if (buffers['indices']) {
       log.warn(
         `Model:${this.id} setAttributes() - indexBuffer should be set using setIndexBuffer()`
       )();
@@ -885,7 +885,7 @@ export class Model {
         indexBuffer.indexType === 'uint32'
           ? new Uint32Array(indexBuffer.debugData)
           : new Uint16Array(indexBuffer.debugData);
-      table.indices = {
+      table['indices'] = {
         name: 'indices',
         type: indexBuffer.indexType,
         values: values.toString()

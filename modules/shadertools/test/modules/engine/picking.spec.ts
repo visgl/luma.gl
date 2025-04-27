@@ -9,8 +9,6 @@ import {BufferTransform} from '@luma.gl/engine';
 import {picking, getShaderModuleUniforms} from '@luma.gl/shadertools';
 import {UniformValue} from '@luma.gl/core';
 
-/* eslint-disable camelcase */
-
 const TEST_DATA = {
   vertexColorData: new Float32Array([
     0,

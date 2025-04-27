@@ -36,6 +36,11 @@ module.exports = getESLintConfig({
       {
         files: ['**/*.ts', '**/*.tsx', '**/*.d.ts'],
         rules: {
+          // These should be upstreamed to ocular, required for noPropertyAccessFromIndexSignature
+          'dot-notation': 'off', // Disable the base rule
+          '@typescript-eslint/dot-notation': ['error'],
+
+          // This should be turned off
           '@typescript-eslint/no-explicit-any': 'off', // 'warn',
           // typescript-eslint 6.0
           '@typescript-eslint/no-unsafe-argument': 0,

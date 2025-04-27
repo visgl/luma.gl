@@ -10,8 +10,6 @@ import {GL} from '@luma.gl/constants';
 import {TRANSPILATION_TEST_CASES, COMPILATION_TEST_CASES} from './transpile-shader-cases';
 import {minifyShader} from './minify-shader';
 
-/* eslint-disable camelcase */
-
 /** Compare shader strings - TODO move to test/utils */
 function compareStrings(t: Test, string1: string, string2: string, message?: string): void {
   const lines1 = string1.split('\n');
