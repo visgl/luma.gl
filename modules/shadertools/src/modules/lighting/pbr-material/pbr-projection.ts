@@ -2,8 +2,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-/* eslint-disable camelcase */
-
 import type {NumberArray3, NumberArray16} from '@math.gl/core';
 
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
