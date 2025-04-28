@@ -2,13 +2,17 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-// @ts-nocheck TODO
-
+import {
+  GLTFAccessorPostprocessed,
+  GLTFNodePostprocessed,
+  GLTFPostprocessed
+} from '@loaders.gl/gltf';
 import {log, TypedArray} from '@luma.gl/core';
+import {GroupNode} from '@luma.gl/engine';
 import {Matrix4, Quaternion} from '@math.gl/core';
 
 // TODO: import from loaders.gl?
-export const ATTRIBUTE_TYPE_TO_COMPONENTS = {
+export const ATTRIBUTE_TYPE_TO_COMPONENTS: Record<string, number> = {
   SCALAR: 1,
   VEC2: 2,
   VEC3: 3,
@@ -18,7 +22,7 @@ export const ATTRIBUTE_TYPE_TO_COMPONENTS = {
   MAT4: 16
 };
 
-export const ATTRIBUTE_COMPONENT_TYPE_TO_ARRAY = {
+export const ATTRIBUTE_COMPONENT_TYPE_TO_ARRAY: Record<number, any> = {
   5120: Int8Array,
   5121: Uint8Array,
   5122: Int16Array,
@@ -27,12 +31,26 @@ export const ATTRIBUTE_COMPONENT_TYPE_TO_ARRAY = {
   5126: Float32Array
 };
 
+type GLTFAnimationSamplerInternal = {
+  input: number[];
+  interpolation: string;
+  output: number[] | number[][];
+};
+
+type GLTFAnimationPathInternal = 'translation' | 'rotation' | 'scale' | 'weights';
+
+type GLTFAnimationChannelInternal = {
+  sampler: GLTFAnimationSamplerInternal;
+  target: GLTFNodePostprocessed;
+  path: GLTFAnimationPathInternal;
+};
+
 type GLTFAnimationProps = {
   name: string;
   startTime?: number;
   playing?: boolean;
   speed?: number;
-  channels?: any;
+  channels?: GLTFAnimationChannelInternal[];
 };
 
 class GLTFAnimation {
@@ -40,7 +58,7 @@ class GLTFAnimation {
   startTime: number = 0;
   playing: boolean = true;
   speed: number = 1;
-  channels: any = [];
+  channels: GLTFAnimationChannelInternal[] = [];
 
   constructor(props: GLTFAnimationProps) {
     Object.assign(this, props);
@@ -56,7 +74,7 @@ class GLTFAnimation {
 
     this.channels.forEach(({sampler, target, path}) => {
       interpolate(time, sampler, target, path);
-      applyTranslationRotationScale(target, target._node);
+      applyTranslationRotationScale(target, (target as any)._node as GroupNode);
     });
   }
 }
@@ -64,19 +82,23 @@ class GLTFAnimation {
 export class GLTFAnimator {
   animations: GLTFAnimation[];
 
-  constructor(gltf: any) {
+  constructor(gltf: GLTFPostprocessed) {
     this.animations = gltf.animations.map((animation, index) => {
       const name = animation.name || `Animation-${index}`;
-      const samplers = animation.samplers.map(({input, interpolation = 'LINEAR', output}) => ({
-        input: accessorToJsArray(gltf.accessors[input]),
-        interpolation,
-        output: accessorToJsArray(gltf.accessors[output])
-      }));
-      const channels = animation.channels.map(({sampler, target}) => ({
-        sampler: samplers[sampler],
-        target: gltf.nodes[target.node],
-        path: target.path
-      }));
+      const samplers: GLTFAnimationSamplerInternal[] = animation.samplers.map(
+        ({input, interpolation = 'LINEAR', output}) => ({
+          input: accessorToJsArray(gltf.accessors[input]) as number[],
+          interpolation,
+          output: accessorToJsArray(gltf.accessors[output])
+        })
+      );
+      const channels: GLTFAnimationChannelInternal[] = animation.channels.map(
+        ({sampler, target}) => ({
+          sampler: samplers[sampler],
+          target: gltf.nodes[target.node ?? 0],
+          path: target.path as GLTFAnimationPathInternal
+        })
+      );
       return new GLTFAnimation({name, channels});
     });
   }
@@ -97,12 +119,14 @@ export class GLTFAnimator {
 
 //
 
-function accessorToJsArray(accessor) {
+function accessorToJsArray(
+  accessor: GLTFAccessorPostprocessed & {_animation?: number[] | number[][]}
+): number[] | number[][] {
   if (!accessor._animation) {
     const ArrayType = ATTRIBUTE_COMPONENT_TYPE_TO_ARRAY[accessor.componentType];
     const components = ATTRIBUTE_TYPE_TO_COMPONENTS[accessor.type];
     const length = components * accessor.count;
-    const {buffer, byteOffset} = accessor.bufferView.data;
+    const {buffer, byteOffset = 0} = accessor.bufferView?.data ?? {};
 
     const array: TypedArray = new ArrayType(
       buffer,
@@ -127,7 +151,7 @@ function accessorToJsArray(accessor) {
 
 // TODO: share with GLTFInstantiator
 const helperMatrix = new Matrix4();
-function applyTranslationRotationScale(gltfNode, node) {
+function applyTranslationRotationScale(gltfNode: GLTFNodePostprocessed, node: GroupNode) {
   node.matrix.identity();
 
   if (gltfNode.translation) {
@@ -145,7 +169,17 @@ function applyTranslationRotationScale(gltfNode, node) {
 }
 
 const quaternion = new Quaternion();
-function linearInterpolate(target, path, start, stop, ratio) {
+function linearInterpolate(
+  target: GLTFNodePostprocessed,
+  path: GLTFAnimationPathInternal,
+  start: number[],
+  stop: number[],
+  ratio: number
+) {
+  if (!target[path]) {
+    throw new Error();
+  }
+
   if (path === 'rotation') {
     // SLERP when path is rotation
     quaternion.slerp({start, target: stop, ratio});
@@ -160,7 +194,29 @@ function linearInterpolate(target, path, start, stop, ratio) {
   }
 }
 
-function cubicsplineInterpolate(target, path, {p0, outTangent0, inTangent1, p1, tDiff, ratio: t}) {
+function cubicsplineInterpolate(
+  target: GLTFNodePostprocessed,
+  path: GLTFAnimationPathInternal,
+  {
+    p0,
+    outTangent0,
+    inTangent1,
+    p1,
+    tDiff,
+    ratio: t
+  }: {
+    p0: number[];
+    outTangent0: number[];
+    inTangent1: number[];
+    p1: number[];
+    tDiff: number;
+    ratio: number;
+  }
+) {
+  if (!target[path]) {
+    throw new Error();
+  }
+
   // TODO: Quaternion might need normalization
   for (let i = 0; i < target[path].length; i++) {
     const m0 = outTangent0[i] * tDiff;
@@ -173,13 +229,26 @@ function cubicsplineInterpolate(target, path, {p0, outTangent0, inTangent1, p1, 
   }
 }
 
-function stepInterpolate(target, path, value) {
+function stepInterpolate(
+  target: GLTFNodePostprocessed,
+  path: GLTFAnimationPathInternal,
+  value: number[]
+) {
+  if (!target[path]) {
+    throw new Error();
+  }
+
   for (let i = 0; i < value.length; i++) {
     target[path][i] = value[i];
   }
 }
 
-function interpolate(time, {input, interpolation, output}, target, path) {
+function interpolate(
+  time: number,
+  {input, interpolation, output}: GLTFAnimationSamplerInternal,
+  target: GLTFNodePostprocessed,
+  path: GLTFAnimationPathInternal
+) {
   const maxTime = input[input.length - 1];
   const animationTime = time % maxTime;
 
@@ -211,13 +280,19 @@ function interpolate(time, {input, interpolation, output}, target, path) {
 
   switch (interpolation) {
     case 'STEP':
-      stepInterpolate(target, path, output[previousIndex]);
+      stepInterpolate(target, path, output[previousIndex] as number[]);
       break;
 
     case 'LINEAR':
       if (nextTime > previousTime) {
         const ratio = (animationTime - previousTime) / (nextTime - previousTime);
-        linearInterpolate(target, path, output[previousIndex], output[nextIndex], ratio);
+        linearInterpolate(
+          target,
+          path,
+          output[previousIndex] as number[],
+          output[nextIndex] as number[],
+          ratio
+        );
       }
       break;
 
@@ -226,10 +301,10 @@ function interpolate(time, {input, interpolation, output}, target, path) {
         const ratio = (animationTime - previousTime) / (nextTime - previousTime);
         const tDiff = nextTime - previousTime;
 
-        const p0 = output[3 * previousIndex + 1];
-        const outTangent0 = output[3 * previousIndex + 2];
-        const inTangent1 = output[3 * nextIndex + 0];
-        const p1 = output[3 * nextIndex + 1];
+        const p0 = output[3 * previousIndex + 1] as number[];
+        const outTangent0 = output[3 * previousIndex + 2] as number[];
+        const inTangent1 = output[3 * nextIndex + 0] as number[];
+        const p1 = output[3 * nextIndex + 1] as number[];
 
         cubicsplineInterpolate(target, path, {p0, outTangent0, inTangent1, p1, tDiff, ratio});
       }

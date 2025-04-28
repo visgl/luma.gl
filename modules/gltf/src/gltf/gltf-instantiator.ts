@@ -2,9 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-// @ts-nocheck TODO - fix types
-
-import {Device, Buffer, PrimitiveTopology} from '@luma.gl/core';
+import {Device, PrimitiveTopology} from '@luma.gl/core';
 import {Geometry, GeometryAttribute, GroupNode, ModelNode, ModelProps} from '@luma.gl/engine';
 import {Matrix4} from '@math.gl/core';
 
@@ -12,6 +10,12 @@ import {GLTFAnimator} from './gltf-animator';
 import {createGLTFModel} from './create-gltf-model';
 import type {PBREnvironment} from '../pbr/pbr-environment';
 import {convertGLDrawModeToTopology} from './gl-utils';
+import {GLTFPostprocessed} from '@loaders.gl/gltf';
+import {
+  GLTFMeshPostprocessed,
+  GLTFNodePostprocessed,
+  GLTFScenePostprocessed
+} from '@loaders.gl/gltf/dist/lib/types/gltf-postprocessed-schema';
 
 export type GLTFInstantiatorOptions = {
   modelOptions?: Partial<ModelProps>;
@@ -36,21 +40,21 @@ const DEFAULT_OPTIONS: GLTFInstantiatorOptions = {
 export class GLTFInstantiator {
   device: Device;
   options: GLTFInstantiatorOptions;
-  gltf: any;
+  gltf?: GLTFPostprocessed;
 
   constructor(device: Device, options: GLTFInstantiatorOptions = {}) {
     this.device = device;
     this.options = {...DEFAULT_OPTIONS, ...options};
   }
 
-  instantiate(gltf: any): GroupNode[] {
+  instantiate(gltf: GLTFPostprocessed): GroupNode[] {
     this.gltf = deepCopy(gltf);
-    const scenes = (this.gltf.scenes || []).map(scene => this.createScene(scene));
+    const scenes = (this.gltf?.scenes || []).map(scene => this.createScene(scene));
     return scenes;
   }
 
   createAnimator(): GLTFAnimator {
-    if (Array.isArray(this.gltf.animations)) {
+    if (Array.isArray(this.gltf?.animations)) {
       return new GLTFAnimator(this.gltf);
     }
 
@@ -58,7 +62,7 @@ export class GLTFInstantiator {
     return null;
   }
 
-  createScene(gltfScene: any): GroupNode {
+  createScene(gltfScene: GLTFScenePostprocessed): GroupNode {
     const gltfNodes = gltfScene.nodes || [];
     const nodes = gltfNodes.map(node => this.createNode(node));
     const scene = new GroupNode({
@@ -68,7 +72,7 @@ export class GLTFInstantiator {
     return scene;
   }
 
-  createNode(gltfNode) {
+  createNode(gltfNode: GLTFNodePostprocessed & {_node?: GroupNode}): GroupNode {
     if (!gltfNode._node) {
       const gltfChildren = gltfNode.children || [];
       const children = gltfChildren.map(child => this.createNode(child));
@@ -105,13 +109,13 @@ export class GLTFInstantiator {
     }
 
     // Copy _node so that gltf-animator can access
-    const topLevelNode = this.gltf.nodes.find(node => node.id === gltfNode.id);
+    const topLevelNode = this.gltf?.nodes.find(node => node.id === gltfNode.id) as any;
     topLevelNode._node = gltfNode._node;
 
     return gltfNode._node;
   }
 
-  createMesh(gltfMesh): GroupNode {
+  createMesh(gltfMesh: GLTFMeshPostprocessed & {_mesh?: GroupNode}): GroupNode {
     // TODO: avoid changing the gltf
     if (!gltfMesh._mesh) {
       const gltfPrimitives = gltfMesh.primitives || [];
@@ -128,7 +132,7 @@ export class GLTFInstantiator {
     return gltfMesh._mesh;
   }
 
-  createPrimitive(gltfPrimitive: any, i: number, gltfMesh): ModelNode {
+  createPrimitive(gltfPrimitive: any, i: number, gltfMesh: GLTFMeshPostprocessed): ModelNode {
     const id = gltfPrimitive.name || `${gltfMesh.name || gltfMesh.id}-primitive-${i}`;
     const topology = convertGLDrawModeToTopology(gltfPrimitive.mode || 4);
     const vertexCount = gltfPrimitive.indices
@@ -159,7 +163,7 @@ export class GLTFInstantiator {
   }
 
   createGeometry(id: string, gltfPrimitive: any, topology: PrimitiveTopology): Geometry {
-    const attributes = {};
+    const attributes: Record<string, GeometryAttribute> = {};
     for (const [attributeName, attribute] of Object.entries(gltfPrimitive.attributes)) {
       const {components, size, value} = attribute as GeometryAttribute;
 
@@ -174,32 +178,32 @@ export class GLTFInstantiator {
     });
   }
 
-  createBuffer(attribute, usage: number): Buffer {
-    if (!attribute.bufferView) {
-      // Draco decoded files do not have a bufferView
-      attribute.bufferView = {};
-    }
+  // createBuffer(attribute, usage: number): Buffer {
+  //   if (!attribute.bufferView) {
+  //     // Draco decoded files do not have a bufferView
+  //     attribute.bufferView = {};
+  //   }
 
-    const {bufferView} = attribute;
-    if (!bufferView.lumaBuffers) {
-      bufferView.lumaBuffers = {};
-    }
+  //   const {bufferView} = attribute;
+  //   if (!bufferView.lumaBuffers) {
+  //     bufferView.lumaBuffers = {};
+  //   }
 
-    if (!bufferView.lumaBuffers[usage]) {
-      bufferView.lumaBuffers[usage] = this.device.createBuffer({
-        id: `from-${bufferView.id}`,
-        // Draco decoded files have attribute.value
-        data: bufferView.data || attribute.value
-      });
-    }
+  //   if (!bufferView.lumaBuffers[usage]) {
+  //     bufferView.lumaBuffers[usage] = this.device.createBuffer({
+  //       id: `from-${bufferView.id}`,
+  //       // Draco decoded files have attribute.value
+  //       data: bufferView.data || attribute.value
+  //     });
+  //   }
 
-    return bufferView.lumaBuffers[usage];
-  }
+  //   return bufferView.lumaBuffers[usage];
+  // }
 
   // TODO - create sampler in WebGL2
-  createSampler(gltfSampler) {
-    return gltfSampler;
-  }
+  // createSampler(gltfSampler) {
+  //   return gltfSampler;
+  // }
 
   // Helper methods (move to GLTFLoader.resolve...?)
 
@@ -226,7 +230,7 @@ function deepCopy(object: any): any {
     return object.map(deepCopy);
   }
   if (object && typeof object === 'object') {
-    const result = {};
+    const result: typeof object = {};
     for (const key in object) {
       result[key] = deepCopy(object[key]);
     }

@@ -4,12 +4,13 @@
 
 import {Device} from '@luma.gl/core';
 import {GroupNode} from '@luma.gl/engine';
+import {GLTFPostprocessed} from '@loaders.gl/gltf';
 import {GLTFInstantiator, GLTFInstantiatorOptions} from './gltf-instantiator';
 import {GLTFAnimator} from './gltf-animator';
 
 export function createScenegraphsFromGLTF(
   device: Device,
-  gltf: any,
+  gltf: GLTFPostprocessed,
   options?: GLTFInstantiatorOptions
 ): {
   scenes: GroupNode[];

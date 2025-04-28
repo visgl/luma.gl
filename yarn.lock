@@ -1401,6 +1401,7 @@ __metadata:
   resolution: "@luma.gl/gltf@workspace:modules/gltf"
   dependencies:
     "@loaders.gl/core": "npm:^4.2.0"
+    "@loaders.gl/gltf": "npm:^4.2.0"
     "@loaders.gl/textures": "npm:^4.2.0"
     "@math.gl/core": "npm:^4.1.0"
   peerDependencies:
