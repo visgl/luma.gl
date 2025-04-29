@@ -99,8 +99,19 @@ function convertMinFilterMode(
     case 'none':
       return convertMaxFilterMode(minFilter);
     case 'nearest':
-      return minFilter === 'nearest' ? GL.NEAREST_MIPMAP_NEAREST : GL.NEAREST_MIPMAP_LINEAR;
+      switch (minFilter) {
+        case 'nearest':
+          return GL.NEAREST_MIPMAP_NEAREST;
+        case 'linear':
+          return GL.LINEAR_MIPMAP_NEAREST;
+      }
+      break;
     case 'linear':
-      return minFilter === 'nearest' ? GL.LINEAR_MIPMAP_NEAREST : GL.LINEAR_MIPMAP_LINEAR;
+      switch (minFilter) {
+        case 'nearest':
+          return GL.NEAREST_MIPMAP_LINEAR;
+        case 'linear':
+          return GL.LINEAR_MIPMAP_LINEAR;
+      }
   }
 }

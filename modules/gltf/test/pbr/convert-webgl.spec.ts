@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {GL} from '@luma.gl/constants/webgl-constants';
-import {convertSampler} from '@luma.gl/gltf/pbr/parse-pbr-material';
+import {convertSampler} from '@luma.gl/gltf/pbr/convert-webgl';
 import {convertSamplerParametersToWebGL} from '@luma.gl/webgl/adapter/converters/sampler-parameters';
 import test from 'tape-promise/tape';
 
