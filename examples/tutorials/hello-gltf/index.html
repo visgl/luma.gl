@@ -21,14 +21,26 @@
       transition: opacity 1s ease-in-out;
     }
 
-    #model-select {
+    #model-options {
       position: absolute;
       left: 10px;
       top: 10px;
+      padding: 4px;
+      background-color: gray;
+      user-select: none;
+    }
+
+    #model-options label {
+      color: white;
     }
   </style>
 </head>
 <body>
-  <!-- Loaded dynamically from model index -->
-  <select id="model-select"></select>
+  <div id="model-options">
+    <!-- Loaded dynamically from model index -->
+    <select id="model-select"></select>
+    <div><label><input type="checkbox" id="cameraAnimation" />Camera Animation</label></div>
+    <div><label><input type="checkbox" id="gltfAnimation" />glTF Animation</label></div>
+    <div><label><input type="checkbox" id="pbr" />PBR</label></div>
+  </div>
 </body>
