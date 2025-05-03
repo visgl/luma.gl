@@ -16,6 +16,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   device: Device;
   scenes: GroupNode[] = [];
   animator?: GLTFAnimator;
+  processedGLTF: any;
   center = [0, 0, 0];
   cameraPos = [0, 0, 0];
   time: number = 0;
@@ -107,6 +108,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         .multiplyRight(viewMatrix)
         .multiplyRight(modelMatrix);
 
+      // console.log(model);
       model.shaderInputs.setProps({
         lighting: lightSources,
         pbrProjection: {
@@ -114,6 +116,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
           modelViewProjectionMatrix,
           modelMatrix,
           normalMatrix: new Matrix4(modelMatrix).invert().transpose()
+        },
+        skin: {
+          gltf: this.processedGLTF,
         }
       });
       model.draw(renderPass);
@@ -132,9 +137,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const processedGLTF = postProcessGLTF(gltf);
 
     const options = {pbrDebug: false, imageBasedLightingEnvironment: null, lights: true};
-    const {scenes, animator} = createScenegraphsFromGLTF(this.device, processedGLTF, options);
+    const {scenes, animator, gltfX} = createScenegraphsFromGLTF(this.device, processedGLTF, options);
     this.scenes = scenes;
     this.animator = animator;
+    this.processedGLTF = gltfX;
+    console.log({processedGLTF, gltf, animator, gltfX});
 
     // Calculate nice camera view
     // TODO move to utility in gltf module

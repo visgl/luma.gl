@@ -19,5 +19,5 @@ export function createScenegraphsFromGLTF(
   const instantiator = new GLTFInstantiator(device, options);
   const scenes = instantiator.instantiate(gltf);
   const animator = instantiator.createAnimator();
-  return {scenes, animator};
+  return {scenes, animator, gltfX: instantiator.gltf};
 }

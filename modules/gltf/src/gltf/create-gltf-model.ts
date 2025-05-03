@@ -6,6 +6,7 @@ import {Device, RenderPipelineParameters, log} from '@luma.gl/core';
 import {pbrMaterial, ShaderModule} from '@luma.gl/shadertools';
 import {Geometry, Model, ModelNode, ModelProps} from '@luma.gl/engine';
 import {ParsePBRMaterialOptions, parsePBRMaterial} from '../pbr/parse-pbr-material';
+import { skin } from '@luma.gl/shadertools/modules/engine/skin/skin';
 
 const SHADER = /* WGSL */ `
 layout(0) positions: vec4; // in vec4 POSITION;
@@ -76,6 +77,11 @@ const vs = /* glsl */ `\
     in vec2 texCoords;
   #endif
 
+  #ifdef HAS_SKIN
+    in uvec4 JOINTS_0;
+    in vec4 WEIGHTS_0;
+  #endif
+
   void main(void) {
     vec4 _NORMAL = vec4(0.);
     vec4 _TANGENT = vec4(0.);
@@ -93,8 +99,15 @@ const vs = /* glsl */ `\
       _TEXCOORD_0 = texCoords;
     #endif
 
-    pbr_setPositionNormalTangentUV(positions, _NORMAL, _TANGENT, _TEXCOORD_0);
-    gl_Position = pbrProjection.modelViewProjectionMatrix * positions;
+    vec4 pos = positions;
+
+    #ifdef HAS_SKIN
+      mat4 skinMat = getSkinMatrix(WEIGHTS_0, JOINTS_0);
+      pos = skinMat * pos;
+    #endif
+
+    pbr_setPositionNormalTangentUV(pos, _NORMAL, _TANGENT, _TEXCOORD_0);
+    gl_Position = pbrProjection.modelViewProjectionMatrix * pos;
   }
 `;
 
@@ -145,7 +158,10 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
     geometry,
     topology: geometry.topology,
     vertexCount,
-    modules: [pbrMaterial as unknown as ShaderModule],
+    modules: [
+      pbrMaterial,
+      skin,
+    ],
     ...modelOptions,
 
     defines: {...parsedMaterial.defines, ...modelOptions.defines},

@@ -16,7 +16,7 @@ import {log} from '../utils/log';
  * Smallest buffer size that can be used for uniform buffers.
  * TODO - does this depend on device?
  */
-const minBufferSize: number = 1024;
+const minBufferSize: number = 2048;
 
 /**
  * Std140 layout for uniform buffers
