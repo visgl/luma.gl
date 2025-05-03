@@ -5,7 +5,7 @@
 import {Device, RenderPipelineParameters, log} from '@luma.gl/core';
 import {pbrMaterial, ShaderModule} from '@luma.gl/shadertools';
 import {Geometry, Model, ModelNode, ModelProps} from '@luma.gl/engine';
-import {ParsePBRMaterialOptions, parsePBRMaterial} from '../pbr/parse-pbr-material';
+import {ParsePBRMaterialOptions, parsePBRMaterial} from '../parsers/parse-pbr-material';
 
 const SHADER = /* WGSL */ `
 layout(0) positions: vec4; // in vec4 POSITION;
@@ -117,6 +117,7 @@ export type CreateGLTFModelOptions = {
   modelOptions?: Partial<ModelProps>;
 };
 
+/** Creates a luma.gl Model from GLTF data*/
 export function createGLTFModel(device: Device, options: CreateGLTFModelOptions): ModelNode {
   const {id, geometry, material, vertexCount, materialOptions, modelOptions = {}} = options;
 

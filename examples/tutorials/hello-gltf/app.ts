@@ -12,6 +12,30 @@ import {Matrix4} from '@math.gl/core';
 
 /* eslint-disable camelcase */
 
+const lightSources = {
+  ambientLight: {
+    color: [255, 133, 133],
+    intensity: 1,
+    type: 'ambient'
+  },
+  directionalLights: [
+    {
+      color: [222, 244, 255],
+      direction: [1, -0.5, 0.5],
+      intensity: 10,
+      type: 'directional'
+    }
+  ],
+  pointLights: [
+    {
+      color: [255, 222, 222],
+      position: [3, 10, 0],
+      intensity: 5,
+      type: 'point'
+    }
+  ]
+} as const satisfies LightingProps;
+
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   device: Device;
   scenes: GroupNode[] = [];
@@ -122,56 +146,43 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   async loadGLTF(modelName: string) {
-    const canvas = this.device.getDefaultCanvasContext().canvas as HTMLCanvasElement;
-    canvas.style.opacity = '0.1';
+    try {
+      const canvas = this.device.getDefaultCanvasContext().canvas as HTMLCanvasElement;
+      canvas.style.opacity = '0.1';
 
-    const gltf = await load(
-      `https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/${modelName}/glTF/${modelName}.gltf`,
-      GLTFLoader
-    );
-    const processedGLTF = postProcessGLTF(gltf);
+      const gltf = await load(
+        `https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/${modelName}/glTF/${modelName}.gltf`,
+        GLTFLoader
+      );
+      const processedGLTF = postProcessGLTF(gltf);
 
-    const options = {pbrDebug: false, imageBasedLightingEnvironment: null, lights: true};
-    const {scenes, animator} = createScenegraphsFromGLTF(this.device, processedGLTF, options);
-    this.scenes = scenes;
-    this.animator = animator;
+      const {scenes, animator} = createScenegraphsFromGLTF(this.device, processedGLTF, {
+        lights: true,
+        imageBasedLightingEnvironment: undefined,
+        pbrDebug: false
+      });
 
-    // Calculate nice camera view
-    // TODO move to utility in gltf module
-    let min = [Infinity, Infinity, Infinity];
-    let max = [0, 0, 0];
-    this.scenes[0].traverse(node => {
-      const {bounds} = node as ModelNode;
-      min = min.map((n, i) => Math.min(n, bounds[0][i], bounds[1][i]));
-      max = max.map((n, i) => Math.max(n, bounds[0][i], bounds[1][i]));
-    });
-    this.cameraPos = [2 * (max[0] + max[2]), max[1], 2 * (max[0] + max[2])];
-    this.center = [0.5 * (min[0] + max[0]), 0.5 * (min[1] + max[1]), 0.5 * (min[2] + max[2])];
+      this.scenes = scenes;
+      this.animator = animator;
 
-    canvas.style.opacity = '1';
+      // Calculate nice camera view
+      // TODO move to utility in gltf module
+      let min = [Infinity, Infinity, Infinity];
+      let max = [0, 0, 0];
+      this.scenes[0].traverse(node => {
+        const {bounds} = node as ModelNode;
+        min = min.map((n, i) => Math.min(n, bounds[0][i], bounds[1][i]));
+        max = max.map((n, i) => Math.max(n, bounds[0][i], bounds[1][i]));
+      });
+      this.cameraPos = [2 * (max[0] + max[2]), max[1], 2 * (max[0] + max[2])];
+      this.center = [0.5 * (min[0] + max[0]), 0.5 * (min[1] + max[1]), 0.5 * (min[2] + max[2])];
+
+      canvas.style.opacity = '1';
+    } catch (error) {
+      const errorDiv = document.getElementById('error') as HTMLDivElement;
+      const errorMessage = (error as Error).message;
+      errorDiv.innerHTML = `Error loading model ${modelName}<br> ${errorMessage}`;
+      errorDiv.style.display = 'block';
+    }
   }
 }
-
-export const lightSources: LightingProps = {
-  ambientLight: {
-    color: [255, 133, 133],
-    intensity: 1,
-    type: 'ambient'
-  },
-  directionalLights: [
-    {
-      color: [222, 244, 255],
-      direction: [1, -0.5, 0.5],
-      intensity: 10,
-      type: 'directional'
-    }
-  ],
-  pointLights: [
-    {
-      color: [255, 222, 222],
-      position: [3, 10, 0],
-      intensity: 5,
-      type: 'point'
-    }
-  ]
-};

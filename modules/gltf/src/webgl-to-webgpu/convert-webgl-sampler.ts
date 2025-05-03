@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+// TODO: convert in loaders.gl?
+
 import type {SamplerProps} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 

@@ -2,12 +2,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {Device, Texture, Parameters} from '@luma.gl/core';
-import {log} from '@luma.gl/core';
-import {PBREnvironment} from './pbr-environment';
-import {PBRMaterialBindings, PBRMaterialUniforms, PBRProjectionProps} from '@luma.gl/shadertools';
+import type {Device, Texture} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
-import {convertSampler} from './convert-webgl';
+
+import {log} from '@luma.gl/core';
+import {type ParsedPBRMaterial} from '../pbr/pbr-material';
+import {type PBREnvironment} from '../pbr/pbr-environment';
+import {type PBRMaterialBindings} from '@luma.gl/shadertools';
+import {convertSampler} from '../webgl-to-webgpu/convert-webgl-sampler';
 
 // TODO - synchronize the GLTF... types with loaders.gl
 // TODO - remove the glParameters, use only parameters
@@ -54,17 +56,6 @@ export type ParsePBRMaterialOptions = {
   imageBasedLightingEnvironment?: PBREnvironment;
 };
 
-export type ParsedPBRMaterial = {
-  readonly defines: Record<string, boolean>;
-  readonly bindings: Partial<PBRMaterialBindings>;
-  readonly uniforms: Partial<PBRProjectionProps & PBRMaterialUniforms>;
-  readonly parameters: Parameters;
-  /** @deprecated Use parameters */
-  readonly glParameters: Record<string, any>;
-  /** List of all generated textures, makes it easy to destroy them later */
-  readonly generatedTextures: Texture[];
-};
-
 /**
  * Parses a GLTF material definition into uniforms and parameters for the PBR shader module
  */
@@ -92,7 +83,6 @@ export function parsePBRMaterial(
     generatedTextures: []
   };
 
-  // TODO - always available
   // TODO - always available
   parsedMaterial.defines['USE_TEX_LOD'] = true;
 
@@ -183,6 +173,8 @@ function parseMaterial(
       log.warn('glTF BLEND alphaMode might not work well because it requires mesh sorting')();
 
       // WebGPU style parameters
+      parsedMaterial.parameters.blend = true;
+
       parsedMaterial.parameters.blendColorOperation = 'add';
       parsedMaterial.parameters.blendColorSrcFactor = 'src-alpha';
       parsedMaterial.parameters.blendColorDstFactor = 'one-minus-src-alpha';

@@ -749,15 +749,20 @@ or create a device with the 'debug: true' prop.`;
 
     const newProps = {...props};
     // Deduce indexType
-    if ((props.usage || 0) & Buffer.INDEX && !props.indexType) {
-      if (props.data instanceof Uint32Array) {
-        newProps.indexType = 'uint32';
-      } else if (props.data instanceof Uint16Array) {
-        newProps.indexType = 'uint16';
-      } else {
-        log.warn('indices buffer content must be of type uint16 or uint32')();
+    const usage = props.usage || 0;
+    if (usage & Buffer.INDEX) {
+      if (!props.indexType) {
+        if (props.data instanceof Uint32Array) {
+          newProps.indexType = 'uint32';
+        } else if (props.data instanceof Uint16Array) {
+          newProps.indexType = 'uint16';
+        }
+      }
+      if (!newProps.indexType) {
+        throw new Error('indices buffer content must be of type uint16 or uint32');
       }
     }
+
     return newProps;
   }
 }
