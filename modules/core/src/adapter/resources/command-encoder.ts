@@ -27,11 +27,11 @@ export type CopyBufferToTextureOptions = {
   byteOffset?: number;
   destinationTexture: Texture;
   mipLevel?: number; //  = 0;
-  origin?: [number, number, number] | number[];
+  origin?: [number, number, number];
   aspect?: 'all' | 'stencil-only' | 'depth-only';
   bytesPerRow: number;
   rowsPerImage: number;
-  size: [number, number, number] | number[];
+  size: [number, number, number];
 };
 
 export type CopyTextureToBufferOptions = {
@@ -49,7 +49,7 @@ export type CopyTextureToBufferOptions = {
   width?: number;
   height?: number;
   depthOrArrayLayers?: number;
-  origin?: number[];
+  origin?: [number, number, number];
 
   /** Destination buffer */
   destinationBuffer: Buffer;
@@ -74,7 +74,7 @@ export type CopyTextureToTextureOptions = {
   /**  Mip-map level of the texture to copy to/from. (Default 0) */
   mipLevel?: number;
   /** Defines the origin of the copy - the minimum corner of the texture sub-region to copy from. */
-  origin?: number[];
+  origin?: [number, number, number];
   /** Defines which aspects of the {@link GPUImageCopyTexture#texture} to copy to/from. */
   aspect?: 'all' | 'stencil-only' | 'depth-only';
 
@@ -83,7 +83,7 @@ export type CopyTextureToTextureOptions = {
   /**  Mip-map level of the texture to copy to/from. (Default 0) */
   destinationMipLevel?: number;
   /** Defines the origin of the copy - the minimum corner of the texture sub-region to copy to. */
-  destinationOrigin?: number[];
+  destinationOrigin?: [number, number, number];
   /** Defines which aspects of the {@link GPUImageCopyTexture#texture} to copy to/from. */
   destinationAspect?: 'all' | 'stencil-only' | 'depth-only';
 
