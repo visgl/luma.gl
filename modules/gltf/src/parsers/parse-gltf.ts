@@ -16,6 +16,8 @@ import {type PBREnvironment} from '../pbr/pbr-environment';
 import {convertGLDrawModeToTopology} from '../webgl-to-webgpu/convert-webgl-topology';
 import {createGLTFModel} from '../gltf/create-gltf-model';
 
+import {parsePBRMaterial} from './parse-pbr-material';
+
 export type ParseGLTFOptions = {
   modelOptions?: Partial<ModelProps>;
   pbrDebug?: boolean;
@@ -145,11 +147,19 @@ function createPrimitive(
     ? gltfPrimitive.indices.count
     : getVertexCount(gltfPrimitive.attributes);
 
+  const geometry = createGeometry(id, gltfPrimitive, topology);
+
+  const parsedPPBRMaterial = parsePBRMaterial(
+    device,
+    gltfPrimitive.material,
+    geometry.attributes,
+    options
+  );
+
   const modelNode = createGLTFModel(device, {
     id,
     geometry: createGeometry(id, gltfPrimitive, topology),
-    material: gltfPrimitive.material,
-    materialOptions: options,
+    parsedPPBRMaterial,
     modelOptions: options.modelOptions,
     vertexCount
   });

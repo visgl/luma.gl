@@ -12,6 +12,11 @@ import {Matrix4} from '@math.gl/core';
 
 /* eslint-disable camelcase */
 
+const MODEL_DIRECTORY_URL =
+  'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/';
+const MODEL_LIST_URL =
+  'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/model-index.json';
+
 const lightSources = {
   ambientLight: {
     color: [255, 133, 133],
@@ -57,47 +62,23 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       throw new Error('This demo is only implemented for WebGL2');
     }
 
-    window.localStorage['lastGltfModel'] ??= 'Avocado';
-    this.loadGLTF(window.localStorage['lastGltfModel']);
+    window.localStorage['last-gltf-model'] ??= 'Avocado';
+    this.loadGLTF(window.localStorage['last-gltf-model']);
 
-    this.initUiOptions();
-  }
+    setOptionsUI(this.options);
 
-  initUiOptions() {
-    Object.keys(this.options).forEach(id => {
-      const checkbox = document.getElementById(id) as HTMLInputElement;
-      checkbox.checked = this.options[id];
-      checkbox.addEventListener('change', e => {
-        this.options[id] = checkbox.checked;
-      });
+    // Asynchronously fetch the model list and set up the model selector
+    this.fetchModelList().then(models => {
+      const currentModel = window.localStorage['last-gltf-model'];
+      setModelMenu(
+        models.map(model => model.name),
+        currentModel,
+        (modelName: string) => {
+          this.loadGLTF(modelName);
+          window.localStorage['last-gltf-model'] = modelName;
+        }
+      );
     });
-
-    const modelSelector = document.getElementById('model-select') as HTMLSelectElement;
-
-    this.fetchModelList(modelSelector);
-
-    modelSelector?.addEventListener('change', e => {
-      const name = (e.target as HTMLSelectElement).value;
-      this.loadGLTF(name);
-      window.localStorage['lastGltfModel'] = name;
-    });
-  }
-
-  async fetchModelList(modelSelector: HTMLSelectElement) {
-    const response = await fetch(
-      'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/model-index.json'
-    );
-    const models = await response.json();
-
-    const options = models.map(({name}) => {
-      const option = document.createElement('option');
-      option.value = name;
-      option.textContent = name;
-      return option;
-    });
-
-    modelSelector.append(...options);
-    modelSelector.value = window.localStorage['lastGltfModel'];
   }
 
   onFinalize() {
@@ -145,13 +126,19 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     renderPass.end();
   }
 
+  async fetchModelList(): Promise<{name: string}[]> {
+    const response = await fetch(MODEL_LIST_URL);
+    const models = await response.json();
+    return models;
+  }
+
   async loadGLTF(modelName: string) {
     try {
       const canvas = this.device.getDefaultCanvasContext().canvas as HTMLCanvasElement;
       canvas.style.opacity = '0.1';
 
       const gltf = await load(
-        `https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/${modelName}/glTF/${modelName}.gltf`,
+        `${MODEL_DIRECTORY_URL}/${modelName}/glTF/${modelName}.gltf`,
         GLTFLoader
       );
       const processedGLTF = postProcessGLTF(gltf);
@@ -178,11 +165,49 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       this.center = [0.5 * (min[0] + max[0]), 0.5 * (min[1] + max[1]), 0.5 * (min[2] + max[2])];
 
       canvas.style.opacity = '1';
+      showError();
     } catch (error) {
-      const errorDiv = document.getElementById('error') as HTMLDivElement;
-      const errorMessage = (error as Error).message;
-      errorDiv.innerHTML = `Error loading model ${modelName}<br> ${errorMessage}`;
-      errorDiv.style.display = 'block';
+      showError(error as Error);
     }
   }
+}
+
+//
+// HTML helpers, can be cut if copying this code
+//
+
+function setModelMenu(
+  items: string[],
+  currentItem: string,
+  onMenuItemSelected: (item: string) => void
+) {
+  const modelSelector = document.getElementById('model-select') as HTMLSelectElement;
+  modelSelector?.addEventListener('change', e => {
+    const name = (e.target as HTMLSelectElement).value;
+    onMenuItemSelected(name);
+  });
+  const options = items.map(item => {
+    const option = document.createElement('option');
+    option.value = item;
+    option.textContent = item;
+    return option;
+  });
+
+  modelSelector.append(...options);
+}
+
+function setOptionsUI(options: Record<string, boolean>) {
+  for (const id of Object.keys(options)) {
+    const checkbox = document.getElementById(id) as HTMLInputElement;
+    checkbox.checked = options[id];
+    checkbox.addEventListener('change', e => {
+      options[id] = checkbox.checked;
+    });
+  }
+}
+
+function showError(error?: Error) {
+  const errorDiv = document.getElementById('error') as HTMLDivElement;
+  errorDiv.innerHTML = error ? `Error loading model ${error.message}` : '';
+  errorDiv.style.display = error ? 'block' : 'hidden';
 }

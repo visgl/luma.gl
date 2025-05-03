@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Device, RenderPipelineParameters, log} from '@luma.gl/core';
+import {Device, type RenderPipelineParameters, log} from '@luma.gl/core';
 import {pbrMaterial, ShaderModule} from '@luma.gl/shadertools';
-import {Geometry, Model, ModelNode, ModelProps} from '@luma.gl/engine';
-import {ParsePBRMaterialOptions, parsePBRMaterial} from '../parsers/parse-pbr-material';
+import {Geometry, Model, ModelNode, type ModelProps} from '@luma.gl/engine';
+import {type ParsedPBRMaterial} from '../pbr/pbr-material';
 
 const SHADER = /* WGSL */ `
 layout(0) positions: vec4; // in vec4 POSITION;
@@ -112,17 +112,15 @@ export type CreateGLTFModelOptions = {
   id?: string;
   vertexCount?: number;
   geometry: Geometry;
-  material: any;
-  materialOptions: ParsePBRMaterialOptions;
+  parsedPPBRMaterial: ParsedPBRMaterial;
   modelOptions?: Partial<ModelProps>;
 };
 
 /** Creates a luma.gl Model from GLTF data*/
 export function createGLTFModel(device: Device, options: CreateGLTFModelOptions): ModelNode {
-  const {id, geometry, material, vertexCount, materialOptions, modelOptions = {}} = options;
+  const {id, geometry, parsedPPBRMaterial, vertexCount, modelOptions = {}} = options;
 
-  const parsedMaterial = parsePBRMaterial(device, material, geometry.attributes, materialOptions);
-  log.info(4, 'createGLTFModel defines: ', parsedMaterial.defines)();
+  log.info(4, 'createGLTFModel defines: ', parsedPPBRMaterial.defines)();
 
   // Calculate managedResources
   // TODO: Implement resource management logic that will
@@ -149,16 +147,16 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
     modules: [pbrMaterial as unknown as ShaderModule],
     ...modelOptions,
 
-    defines: {...parsedMaterial.defines, ...modelOptions.defines},
-    parameters: {...parameters, ...parsedMaterial.parameters, ...modelOptions.parameters}
+    defines: {...parsedPPBRMaterial.defines, ...modelOptions.defines},
+    parameters: {...parameters, ...parsedPPBRMaterial.parameters, ...modelOptions.parameters}
   };
 
   const model = new Model(device, modelProps);
 
   const {camera, ...pbrMaterialProps} = {
-    ...parsedMaterial.uniforms,
+    ...parsedPPBRMaterial.uniforms,
     ...modelOptions.uniforms,
-    ...parsedMaterial.bindings,
+    ...parsedPPBRMaterial.bindings,
     ...modelOptions.bindings
   };
 
