@@ -2,13 +2,15 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {TypedArray} from '@math.gl/types';
-import type {Device} from '../device';
-import type {TextureFormat} from '../../shadertypes/textures/texture-formats';
-import type {TextureView, TextureViewProps} from './texture-view';
-import {Resource, ResourceProps} from './resource';
-import {Sampler, SamplerProps} from './sampler';
-import {ExternalImage} from '../../image-utils/image-types';
+import {type TypedArray} from '@math.gl/types';
+import {type Device} from '../device';
+import {type TextureFormat} from '../../shadertypes/textures/texture-formats';
+import {type TextureDataLayout} from '../../shadertypes/textures/texture-layout';
+import {type ExternalImage} from '../../image-utils/image-types';
+import {type TextureView, type TextureViewProps} from './texture-view';
+import {Resource, type ResourceProps} from './resource';
+import {Sampler, type SamplerProps} from './sampler';
+import {Buffer} from './buffer';
 import {log} from '../../utils/log';
 
 /** Options for Texture.copyExternalImage */
@@ -64,6 +66,20 @@ export type CopyImageDataOptions = {
   /** When copying into depth stencil textures (default 'all') */
   aspect?: 'all' | 'stencil-only' | 'depth-only';
 };
+
+export type TextureReadWriteOptions = {
+  x?: number;
+  y?: number;
+  z?: number;
+  width?: number;
+  height?: number;
+  depthOrArrayLayers?: number;
+  mipLevel?: number;
+  aspect?: 'all' | 'stencil-only' | 'depth-only';
+};
+
+export type TextureWriteOptions = TextureReadWriteOptions;
+export type TextureReadOptions = TextureReadWriteOptions;
 
 const BASE_DIMENSIONS: Record<string, '1d' | '2d' | '3d'> = {
   '1d': '1d',
@@ -122,6 +138,21 @@ export abstract class Texture extends Resource<TextureProps> {
   static TEXTURE = 0x04;
   /** @deprecated Use Texture.RENDER */
   static RENDER_ATTACHMENT = 0x10;
+
+  static override defaultProps: Required<TextureProps> = {
+    ...Resource.defaultProps,
+    data: null,
+    dimension: '2d',
+    format: 'rgba8unorm',
+    usage: Texture.SAMPLE | Texture.RENDER | Texture.COPY_DST,
+    width: undefined!,
+    height: undefined!,
+    depth: 1,
+    mipLevels: 1,
+    samples: undefined!,
+    sampler: {},
+    view: undefined!
+  };
 
   /** dimension of this texture */
   readonly dimension: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d';
@@ -188,19 +219,6 @@ export abstract class Texture extends Resource<TextureProps> {
     this.updateTimestamp = device.incrementTimestamp();
   }
 
-  /** Set sampler props associated with this texture */
-  setSampler(sampler: Sampler | SamplerProps): void {
-    this.sampler = sampler instanceof Sampler ? sampler : this.device.createSampler(sampler);
-  }
-  /** Create a texture view for this texture */
-  abstract createView(props: TextureViewProps): TextureView;
-  /** Copy an image (e.g an ImageBitmap) into the texture */
-  abstract copyExternalImage(options: CopyExternalImageOptions): {width: number; height: number};
-  /** Copy raw image data (bytes) into the texture */
-  abstract copyImageData(options: CopyImageDataOptions): void;
-  /** Generate mipmaps (WebGL only) */
-  abstract generateMipmapsWebGL(): void;
-
   /**
    * Create a new texture with the same parameters and optionally a different size
    * @note Textures are immutable and cannot be resized after creation, but we can create a similar texture with the same parameters but a new size.
@@ -209,6 +227,109 @@ export abstract class Texture extends Resource<TextureProps> {
   clone(size?: {width: number; height: number}): Texture {
     return this.device.createTexture({...this.props, ...size});
   }
+
+  /** Set sampler props associated with this texture */
+  setSampler(sampler: Sampler | SamplerProps): void {
+    this.sampler = sampler instanceof Sampler ? sampler : this.device.createSampler(sampler);
+  }
+
+  /** Create a texture view for this texture */
+  abstract createView(props: TextureViewProps): TextureView;
+
+  /** Copy an image (e.g an ImageBitmap) into the texture */
+  abstract copyExternalImage(options: CopyExternalImageOptions): {width: number; height: number};
+
+  /** Copy raw image data (bytes) into the texture */
+  abstract copyImageData(options: CopyImageDataOptions): void;
+
+  /**
+   * Read the contents of a texture into a GPU Buffer.
+   * @returns A Buffer containing the texture data.
+   *
+   * @note The memory layout of the texture data is determined by the texture format and dimensions.
+   * @note The application can call Texture.getTextureDataLayout() to compute the layout.
+   * @note The application can call Buffer.readAsync()
+   * @note If not supplied a buffer will be created and the application needs to call Buffer.destroy
+   */
+  abstract readBuffer(options?: TextureReadOptions, buffer?: Buffer): Buffer;
+
+  /**
+   * Reads data from a texture into an ArrayBuffer.
+   * @returns An ArrayBuffer containing the texture data.
+   *
+   * @note The memory layout of the texture data is determined by the texture format and dimensions.
+   * @note The application can call Texture.getTextureDataLayout() to compute the layout.
+   */
+  abstract readDataAsync(options?: TextureReadOptions): Promise<ArrayBuffer>;
+
+  /**
+   * Writes an GPU Buffer into a texture.
+   *
+   * @note The memory layout of the texture data is determined by the texture format and dimensions.
+   * @note The application can call Texture.getTextureDataLayout() to compute the layout.
+   */
+  abstract writeBuffer(buffer: Buffer, options?: TextureWriteOptions): void;
+
+  /**
+   * Writes an array buffer into a texture.
+   *
+   * @note The memory layout of the texture data is determined by the texture format and dimensions.
+   * @note The application can call Texture.getTextureDataLayout() to compute the layout.
+   */
+  abstract writeData(data: ArrayBuffer | ArrayBufferView, options?: TextureWriteOptions): void;
+
+  /**
+   * Calculates the memory layout of the texture, required when reading and writing data.
+   * @return Returns the minimal buffer size and layout for (sub) image data
+   * @note bytesPerRow which includes required padding on WebGPU
+   */
+  /**   */
+  static getTextureDataLayout(
+    options: Required<TextureReadOptions> & {
+      /** Bytes per pixel for the texture format */
+      bytesPerPixel: number;
+      /** Byte alignment for this platform */
+      byteAlignment: number;
+    }
+  ): TextureDataLayout {
+    const pixelWidth = options.width - options.x;
+    const rowsPerImage = options.height - options.y;
+    const imageCount = options.depthOrArrayLayers; // TODO
+
+    const {bytesPerPixel, byteAlignment} = options;
+    const bytesPerRow = Math.ceil((pixelWidth * bytesPerPixel) / byteAlignment) * byteAlignment;
+
+    return {
+      bytesPerRow,
+      rowsPerImage,
+      imageCount
+    };
+  }
+
+  /** Returns the minimal buffer size for a specific texture */
+  getTextureDataLayout(options_: TextureReadOptions): TextureDataLayout {
+    const options = this._normalizeTextureReadOptions(options_);
+    const bytesPerPixel = this.device.getTextureFormatInfo(this.format).bytesPerPixel;
+    const byteAlignment = this.device.getTextureByteAlignment();
+    return Texture.getTextureDataLayout({...options, bytesPerPixel, byteAlignment});
+  }
+
+  // IMPLEMENTATION SPECIFIC
+
+  /**
+   * WebGL can read data synchronously.
+   * @note While it is convenient, the performance penalty is very significant
+   */
+  readDataSyncWebGL(options?: TextureReadOptions): ArrayBuffer | ArrayBufferView {
+    throw new Error('readDataSyncWebGL not available');
+  }
+
+  /** Generate mipmaps (WebGL only) */
+  generateMipmapsWebGL(): void {
+    throw new Error('generateMipmapsWebGL not available');
+  }
+
+  // HELPERS
 
   /** Ensure we have integer coordinates */
   protected static normalizeProps(device: Device, props: TextureProps): TextureProps {
@@ -225,7 +346,92 @@ export abstract class Texture extends Resource<TextureProps> {
     return newProps;
   }
 
-  // HELPERS
+  /** Default options */
+  protected static defaultCopyExternalImageOptions: Required<CopyExternalImageOptions> = {
+    image: undefined!,
+    sourceX: 0,
+    sourceY: 0,
+    width: undefined!,
+    height: undefined!,
+    depth: 1,
+    mipLevel: 0,
+    x: 0,
+    y: 0,
+    z: 0,
+    aspect: 'all',
+    colorSpace: 'srgb',
+    premultipliedAlpha: false,
+    flipY: false
+  };
+
+  _normalizeCopyExternalImageOptions(
+    options_: CopyExternalImageOptions
+  ): Required<CopyExternalImageOptions> {
+    const size = this.device.getExternalImageSize(options_.image);
+    const options = {...Texture.defaultCopyExternalImageOptions, ...size, ...options_};
+    // WebGL will error if we try to copy outside the bounds of the texture
+    options.width = Math.min(options.width, this.width - options.x);
+    options.height = Math.min(options.height, this.height - options.y);
+    return options;
+  }
+
+  protected static defaultCopyDataOptions: Required<CopyImageDataOptions> = {
+    data: undefined!,
+    byteOffset: 0,
+    bytesPerRow: undefined!,
+    rowsPerImage: undefined!,
+    mipLevel: 0,
+    x: 0,
+    y: 0,
+    z: 0,
+    aspect: 'all'
+  };
+
+  _normalizeCopyImageDataOptions(options_: CopyImageDataOptions): Required<CopyImageDataOptions> {
+    const {width, height, depth} = this;
+    const options = {...Texture.defaultCopyDataOptions, width, height, depth, ...options_};
+
+    const info = this.device.getTextureFormatInfo(this.format);
+    if (!options_.bytesPerRow && !info.bytesPerPixel) {
+      throw new Error(`bytesPerRow must be provided for texture format ${this.format}`);
+    }
+    options.bytesPerRow = options_.bytesPerRow || width * (info.bytesPerPixel || 4);
+    options.rowsPerImage = options_.rowsPerImage || height;
+
+    // WebGL will error if we try to copy outside the bounds of the texture
+    // options.width = Math.min(options.width, this.width - options.x);
+    // options.height = Math.min(options.height, this.height - options.y);
+    return options;
+  }
+
+  protected static defaultTextureReadOptions: Required<TextureReadOptions> = {
+    x: 0,
+    y: 0,
+    z: 0,
+    width: undefined!,
+    height: undefined!,
+    depthOrArrayLayers: 1,
+    mipLevel: 0,
+    aspect: 'all'
+  };
+
+  _normalizeTextureReadOptions(options_: TextureReadOptions): Required<TextureReadOptions> {
+    const {width, height} = this;
+    const options = {...Texture.defaultTextureReadOptions, width, height, ...options_};
+    // WebGL will error if we try to copy outside the bounds of the texture
+    options.width = Math.min(options.width, this.width - options.x);
+    options.height = Math.min(options.height, this.height - options.y);
+    return options;
+  }
+
+  _normalizeTextureWriteOptions(options_: TextureWriteOptions): Required<TextureWriteOptions> {
+    const {width, height} = this;
+    const options = {...Texture.defaultTextureReadOptions, width, height, ...options_};
+    // WebGL will error if we try to copy outside the bounds of the texture
+    options.width = Math.min(options.width, this.width - options.x);
+    options.height = Math.min(options.height, this.height - options.y);
+    return options;
+  }
 
   /** Initialize texture with supplied props */
   // eslint-disable-next-line max-statements
@@ -261,78 +467,4 @@ export abstract class Texture extends Resource<TextureProps> {
       });
     }
   }
-
-  _normalizeCopyImageDataOptions(options_: CopyImageDataOptions): Required<CopyImageDataOptions> {
-    const {width, height, depth} = this;
-    const options = {...Texture.defaultCopyDataOptions, width, height, depth, ...options_};
-
-    const info = this.device.getTextureFormatInfo(this.format);
-    if (!options_.bytesPerRow && !info.bytesPerPixel) {
-      throw new Error(`bytesPerRow must be provided for texture format ${this.format}`);
-    }
-    options.bytesPerRow = options_.bytesPerRow || width * (info.bytesPerPixel || 4);
-    options.rowsPerImage = options_.rowsPerImage || height;
-
-    // WebGL will error if we try to copy outside the bounds of the texture
-    // options.width = Math.min(options.width, this.width - options.x);
-    // options.height = Math.min(options.height, this.height - options.y);
-    return options;
-  }
-
-  _normalizeCopyExternalImageOptions(
-    options_: CopyExternalImageOptions
-  ): Required<CopyExternalImageOptions> {
-    const size = this.device.getExternalImageSize(options_.image);
-    const options = {...Texture.defaultCopyExternalImageOptions, ...size, ...options_};
-    // WebGL will error if we try to copy outside the bounds of the texture
-    options.width = Math.min(options.width, this.width - options.x);
-    options.height = Math.min(options.height, this.height - options.y);
-    return options;
-  }
-
-  /** Default options */
-  static override defaultProps: Required<TextureProps> = {
-    ...Resource.defaultProps,
-    data: null,
-    dimension: '2d',
-    format: 'rgba8unorm',
-    usage: Texture.TEXTURE | Texture.RENDER_ATTACHMENT | Texture.COPY_DST,
-    width: undefined!,
-    height: undefined!,
-    depth: 1,
-    mipLevels: 1,
-    samples: undefined!,
-    sampler: {},
-    view: undefined!
-  };
-
-  protected static defaultCopyDataOptions: Required<CopyImageDataOptions> = {
-    data: undefined!,
-    byteOffset: 0,
-    bytesPerRow: undefined!,
-    rowsPerImage: undefined!,
-    mipLevel: 0,
-    x: 0,
-    y: 0,
-    z: 0,
-    aspect: 'all'
-  };
-
-  /** Default options */
-  protected static defaultCopyExternalImageOptions: Required<CopyExternalImageOptions> = {
-    image: undefined!,
-    sourceX: 0,
-    sourceY: 0,
-    width: undefined!,
-    height: undefined!,
-    depth: 1,
-    mipLevel: 0,
-    x: 0,
-    y: 0,
-    z: 0,
-    aspect: 'all',
-    colorSpace: 'srgb',
-    premultipliedAlpha: false,
-    flipY: false
-  };
 }

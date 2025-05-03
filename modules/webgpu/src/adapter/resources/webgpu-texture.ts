@@ -1,17 +1,22 @@
 // luma.gl, MIT license
-import type {
-  TextureProps,
-  TextureViewProps,
-  CopyExternalImageOptions,
-  CopyImageDataOptions,
-  SamplerProps
+import {
+  type TextureProps,
+  type TextureViewProps,
+  type CopyExternalImageOptions,
+  type CopyImageDataOptions,
+  type TextureReadOptions,
+  type TextureWriteOptions,
+  type SamplerProps,
+  Buffer,
+  Texture
 } from '@luma.gl/core';
-import {Texture, log} from '@luma.gl/core';
 
 import {getWebGPUTextureFormat} from '../helpers/convert-texture-format';
 import type {WebGPUDevice} from '../webgpu-device';
 import {WebGPUSampler} from './webgpu-sampler';
 import {WebGPUTextureView} from './webgpu-texture-view';
+
+// Move to core/texture
 
 export class WebGPUTexture extends Texture {
   readonly device: WebGPUDevice;
@@ -90,6 +95,38 @@ export class WebGPUTexture extends Texture {
     return new WebGPUTextureView(this.device, {...props, texture: this});
   }
 
+  copyExternalImage(options_: CopyExternalImageOptions): {width: number; height: number} {
+    const options = this._normalizeCopyExternalImageOptions(options_);
+
+    this.device.pushErrorScope('validation');
+    this.device.handle.queue.copyExternalImageToTexture(
+      // source: GPUImageCopyExternalImage
+      {
+        source: options.image,
+        origin: [options.sourceX, options.sourceY],
+        flipY: options.flipY
+      },
+      // destination: GPUImageCopyTextureTagged
+      {
+        texture: this.handle,
+        origin: [options.x, options.y, options.depth],
+        mipLevel: options.mipLevel,
+        aspect: options.aspect,
+        colorSpace: options.colorSpace,
+        premultipliedAlpha: options.premultipliedAlpha
+      },
+      // copySize: GPUExtent3D
+      [options.width, options.height, 0] // options.depth
+    );
+    this.device.popErrorScope((error: GPUError) => {
+      this.device.reportError(new Error(`copyExternalImage: ${error.message}`), this)();
+      this.device.debug();
+    });
+
+    // TODO - should these be clipped to the texture size minus x,y,z?
+    return {width: options.width, height: options.height};
+  }
+
   copyImageData(options_: CopyImageDataOptions): void {
     const {width, height, depth} = this;
     const options = this._normalizeCopyImageDataOptions(options_);
@@ -121,108 +158,192 @@ export class WebGPUTexture extends Texture {
     });
   }
 
-  copyExternalImage(options_: CopyExternalImageOptions): {width: number; height: number} {
-    const options = this._normalizeCopyExternalImageOptions(options_);
+  readBuffer(options: TextureReadOptions = {}, buffer?: Buffer): Buffer {
+    return buffer!;
+    /*
+    const {
+      x = 0,
+      y = 0,
+      z = 0,
+      width = this.width,
+      height = this.height,
+      depthOrArrayLayers = this.depth,
+      mipLevel = 0,
+      aspect = 'all'
+    } = options;
+
+    const layout = this.getTextureDataLayout(options);
+
+    const {bytesPerRow, rowsPerImage, imageCount} = layout;
+    const byteLength = bytesPerRow * rowsPerImage * imageCount;
+
+    // Create a GPUBuffer to hold the copied pixel data.
+    const readBuffer =
+      buffer ||
+      this.device.createBuffer({
+        byteLength,
+        usage: Buffer.COPY_DST | Buffer.MAP_READ
+      });
+    const gpuReadBuffer = readBuffer.handle as GPUBuffer;
+
+    // Record commands to copy from the texture to the buffer.
+    const gpuDevice = this.device.handle;
 
     this.device.pushErrorScope('validation');
-    this.device.handle.queue.copyExternalImageToTexture(
-      // source: GPUImageCopyExternalImage
+    const commandEncoder = gpuDevice.createCommandEncoder();
+    commandEncoder.copyTextureToBuffer(
+      // source
       {
-        source: options.image,
-        origin: [options.sourceX, options.sourceY],
-        flipY: options.flipY
+        texture: this.handle,
+        origin: {x, y, z},
+        // origin: [options.x, options.y, 0], // options.depth],
+        mipLevel,
+        aspect
+        // colorSpace: options.colorSpace,
+        // premultipliedAlpha: options.premultipliedAlpha
       },
-      // destination: GPUImageCopyTextureTagged
+      // destination
       {
+<<<<<<< HEAD
         texture: this.handle,
         origin: [options.x, options.y, 0], // options.depth],
         mipLevel: options.mipLevel,
         aspect: options.aspect,
         colorSpace: options.colorSpace,
         premultipliedAlpha: options.premultipliedAlpha
+=======
+        buffer: gpuReadBuffer,
+        offset: 0,
+        bytesPerRow,
+        rowsPerImage
+>>>>>>> feat: Add Buffer.mapAndWrite(), mapAndRead() (#2372)
       },
-      // copySize: GPUExtent3D
-      [options.width, options.height, 1]
+      // copy size
+      {
+        width,
+        height,
+        depthOrArrayLayers
+      }
     );
+
+    // Submit the command.
+    const commandBuffer = commandEncoder.finish();
+    this.device.handle.queue.submit([commandBuffer]);
     this.device.popErrorScope((error: GPUError) => {
-      this.device.reportError(new Error(`copyExternalImage: ${error.message}`), this)();
+      this.device.reportError(new Error(`${this} readBuffer: ${error.message}`), this)();
       this.device.debug();
     });
 
-    // TODO - should these be clipped to the texture size minus x,y,z?
-    return {width: options.width, height: options.height};
+    return readBuffer;
+    */
   }
 
-  override generateMipmapsWebGL(): void {
-    log.warn(`${this}: generateMipmaps not supported in WebGPU`)();
+  async readDataAsync(options: TextureReadOptions = {}): Promise<ArrayBuffer> {
+    const buffer = this.readBuffer(options);
+    const data = await buffer.readAsync();
+    buffer.destroy();
+    return data.buffer as ArrayBuffer;
   }
 
-  // WebGPU specific
+  writeBuffer(buffer: Buffer, options: TextureWriteOptions = {}) {
+    /*
+    const {
+      x = 0,
+      y = 0,
+      z = 0,
+      width = this.width,
+      height = this.height,
+      depthOrArrayLayers = this.depth,
+      mipLevel = 0,
+      aspect = 'all'
+    } = options;
 
-  /*
-  async readPixels() {
-    const readbackBuffer = device.createBuffer({
-        usage: Buffer.COPY_DST | Buffer.MAP_READ,
-        size: 4 * textureWidth * textureHeight,
-    });
-
-    // Copy data from the texture to the buffer.
-    const encoder = device.createCommandEncoder();
-    encoder.copyTextureToBuffer(
-        { texture },
-        { buffer, rowPitch: textureWidth * 4 },
-        [textureWidth, textureHeight],
-    );
-    device.submit([encoder.finish()]);
+    const layout = this.getTextureDataLayout(options);
 
     // Get the data on the CPU.
+<<<<<<< HEAD
     await buffer.mapAndReadAsync(GPUMapMode.READ);
     saveScreenshot(buffer.getMappedRange());
     buffer.unmap();
   }
+=======
+    // await buffer.mapAndReadAsync();
+>>>>>>> feat: Add Buffer.mapAndWrite(), mapAndRead() (#2372)
 
-  setImageData(imageData, usage): this {
-    let data = null;
+    const {bytesPerRow, rowsPerImage} = layout;
 
-    const bytesPerRow = Math.ceil((img.width * 4) / 256) * 256;
-    if (bytesPerRow == img.width * 4) {
-      data = imageData.data;
-    } else {
-      data = new Uint8Array(bytesPerRow * img.height);
-      let imagePixelIndex = 0;
-      for (let y = 0; y < img.height; ++y) {
-        for (let x = 0; x < img.width; ++x) {
-          const i = x * 4 + y * bytesPerRow;
-          data[i] = imageData.data[imagePixelIndex];
-          data[i + 1] = imageData.data[imagePixelIndex + 1];
-          data[i + 2] = imageData.data[imagePixelIndex + 2];
-          data[i + 3] = imageData.data[imagePixelIndex + 3];
-          imagePixelIndex += 4;
-        }
-      }
-    }
-    return this;
-  }
+    const gpuDevice = this.device.handle;
 
-  setBuffer(textureDataBuffer, {bytesPerRow}): this {
-    const commandEncoder = this.device.handle.createCommandEncoder();
+    this.device.pushErrorScope('validation');
+    const commandEncoder = gpuDevice.createCommandEncoder();
     commandEncoder.copyBufferToTexture(
       {
-        buffer: textureDataBuffer,
-        bytesPerRow
+        buffer,
+        offset: 0,
+        bytesPerRow,
+        rowsPerImage
       },
       {
-        texture: this.handle
+        texture: this.handle,
+        origin: {x, y, z},
+        mipLevel,
+        aspect
       },
-      {
-        width,
-        height,
-        depth
-      }
+      {width, height, depthOrArrayLayers}
     );
-
-    this.device.handle.defaultQueue.submit([commandEncoder.finish()]);
-    return this;
+    const commandBuffer = commandEncoder.finish();
+    this.device.handle.queue.submit([commandBuffer]);
+    this.device.popErrorScope((error: GPUError) => {
+      this.device.reportError(new Error(`${this} writeBuffer: ${error.message}`), this)();
+      this.device.debug();
+    });
+    */
   }
-  */
+
+  writeData(data: ArrayBuffer | ArrayBufferView, options: TextureWriteOptions = {}): void {
+    /*
+    const device = this.device;
+
+    const {
+      x = 0,
+      y = 0,
+      z = 0,
+      width = this.width,
+      height = this.height,
+      depthOrArrayLayers = this.depth,
+      mipLevel = 0,
+      aspect = 'all'
+    } = options;
+
+    const layout = getTextureMemoryLayout({
+      textureWidth: this.width,
+      rows: this.height,
+      bytesPerPixel: 4
+    });
+
+    const {bytesPerRow, rowsPerImage} = layout;
+
+    this.device.pushErrorScope('validation');
+    debugger;
+    device.handle.queue.writeTexture(
+      {
+        texture: this.handle,
+        mipLevel,
+        aspect,
+        origin: {x, y, z}
+      },
+      data,
+      {
+        offset: 0,
+        bytesPerRow,
+        rowsPerImage
+      },
+      {width, height, depthOrArrayLayers}
+    );
+    this.device.popErrorScope((error: GPUError) => {
+      this.device.reportError(new Error(`${this} writeData: ${error.message}`), this)();
+      this.device.debug();
+    });
+    */
+  }
 }
