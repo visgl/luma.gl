@@ -24,7 +24,7 @@ test('gltf#loading', async t => {
   t.ok(result.hasOwnProperty('scenes'), 'Should contain scenes property');
   t.ok(result.hasOwnProperty('animator'), 'Should contain animator property');
   t.equals(result.scenes.length, 1, 'Should contain single scene');
-  t.equals(result.animator, null, 'Should not contain animations');
+  t.deepEquals(result.animator.animations, [], 'Should not contain animations');
 
   t.end();
 });
@@ -40,7 +40,7 @@ test('gltf#animator', async t => {
   t.equals(scenes.length, 1, 'Should contain single scene');
   t.equals(animator.animations.length, 1, 'Should contain single animation');
 
-  const {channels} = animator.animations[0];
+  const {channels} = animator.animations[0].animation;
   t.equals(channels.length, 2, 'Should contain two animation channels');
   const {target} = channels[0];
   t.ok(target._node, 'Should contain target node');

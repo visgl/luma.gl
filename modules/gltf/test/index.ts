@@ -3,4 +3,4 @@
 // Copyright (c) vis.gl contributors
 
 import './gltf/gltf.spec';
-import './pbr/convert-webgl.spec';
+import './webgl-to-webgpu/convert-webgl-sampler.spec';

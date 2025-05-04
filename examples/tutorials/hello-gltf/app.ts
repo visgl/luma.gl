@@ -12,6 +12,35 @@ import {Matrix4} from '@math.gl/core';
 
 /* eslint-disable camelcase */
 
+const MODEL_DIRECTORY_URL =
+  'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/';
+const MODEL_LIST_URL =
+  'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/model-index.json';
+
+const lightSources = {
+  ambientLight: {
+    color: [255, 133, 133],
+    intensity: 1,
+    type: 'ambient'
+  },
+  directionalLights: [
+    {
+      color: [222, 244, 255],
+      direction: [1, -0.5, 0.5],
+      intensity: 10,
+      type: 'directional'
+    }
+  ],
+  pointLights: [
+    {
+      color: [255, 222, 222],
+      position: [3, 10, 0],
+      intensity: 5,
+      type: 'point'
+    }
+  ]
+} as const satisfies LightingProps;
+
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   device: Device;
   scenes: GroupNode[] = [];
@@ -33,47 +62,23 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       throw new Error('This demo is only implemented for WebGL2');
     }
 
-    window.localStorage['lastGltfModel'] ??= 'Avocado';
-    this.loadGLTF(window.localStorage['lastGltfModel']);
+    window.localStorage['last-gltf-model'] ??= 'Avocado';
+    this.loadGLTF(window.localStorage['last-gltf-model']);
 
-    this.initUiOptions();
-  }
+    setOptionsUI(this.options);
 
-  initUiOptions() {
-    Object.keys(this.options).forEach(id => {
-      const checkbox = document.getElementById(id) as HTMLInputElement;
-      checkbox.checked = this.options[id];
-      checkbox.addEventListener('change', e => {
-        this.options[id] = checkbox.checked;
-      });
+    // Asynchronously fetch the model list and set up the model selector
+    this.fetchModelList().then(models => {
+      const currentModel = window.localStorage['last-gltf-model'];
+      setModelMenu(
+        models.map(model => model.name),
+        currentModel,
+        (modelName: string) => {
+          this.loadGLTF(modelName);
+          window.localStorage['last-gltf-model'] = modelName;
+        }
+      );
     });
-
-    const modelSelector = document.getElementById('model-select') as HTMLSelectElement;
-
-    this.fetchModelList(modelSelector);
-
-    modelSelector?.addEventListener('change', e => {
-      const name = (e.target as HTMLSelectElement).value;
-      this.loadGLTF(name);
-      window.localStorage['lastGltfModel'] = name;
-    });
-  }
-
-  async fetchModelList(modelSelector: HTMLSelectElement) {
-    const response = await fetch(
-      'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/model-index.json'
-    );
-    const models = await response.json();
-
-    const options = models.map(({name}) => {
-      const option = document.createElement('option');
-      option.value = name;
-      option.textContent = name;
-      return option;
-    });
-
-    modelSelector.append(...options);
-    modelSelector.value = window.localStorage['lastGltfModel'];
   }
 
   onFinalize() {
@@ -121,57 +126,88 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     renderPass.end();
   }
 
+  async fetchModelList(): Promise<{name: string}[]> {
+    const response = await fetch(MODEL_LIST_URL);
+    const models = await response.json();
+    return models;
+  }
+
   async loadGLTF(modelName: string) {
-    const canvas = this.device.getDefaultCanvasContext().canvas as HTMLCanvasElement;
-    canvas.style.opacity = '0.1';
+    try {
+      const canvas = this.device.getDefaultCanvasContext().canvas as HTMLCanvasElement;
+      canvas.style.opacity = '0.1';
 
-    const gltf = await load(
-      `https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/${modelName}/glTF/${modelName}.gltf`,
-      GLTFLoader
-    );
-    const processedGLTF = postProcessGLTF(gltf);
+      const gltf = await load(
+        `${MODEL_DIRECTORY_URL}/${modelName}/glTF/${modelName}.gltf`,
+        GLTFLoader
+      );
+      const processedGLTF = postProcessGLTF(gltf);
 
-    const options = {pbrDebug: false, imageBasedLightingEnvironment: null, lights: true};
-    const {scenes, animator} = createScenegraphsFromGLTF(this.device, processedGLTF, options);
-    this.scenes = scenes;
-    this.animator = animator;
+      const {scenes, animator} = createScenegraphsFromGLTF(this.device, processedGLTF, {
+        lights: true,
+        imageBasedLightingEnvironment: undefined,
+        pbrDebug: false
+      });
 
-    // Calculate nice camera view
-    // TODO move to utility in gltf module
-    let min = [Infinity, Infinity, Infinity];
-    let max = [0, 0, 0];
-    this.scenes[0].traverse(node => {
-      const {bounds} = node as ModelNode;
-      min = min.map((n, i) => Math.min(n, bounds[0][i], bounds[1][i]));
-      max = max.map((n, i) => Math.max(n, bounds[0][i], bounds[1][i]));
-    });
-    this.cameraPos = [2 * (max[0] + max[2]), max[1], 2 * (max[0] + max[2])];
-    this.center = [0.5 * (min[0] + max[0]), 0.5 * (min[1] + max[1]), 0.5 * (min[2] + max[2])];
+      this.scenes = scenes;
+      this.animator = animator;
 
-    canvas.style.opacity = '1';
+      // Calculate nice camera view
+      // TODO move to utility in gltf module
+      let min = [Infinity, Infinity, Infinity];
+      let max = [0, 0, 0];
+      this.scenes[0].traverse(node => {
+        const {bounds} = node as ModelNode;
+        min = min.map((n, i) => Math.min(n, bounds[0][i], bounds[1][i]));
+        max = max.map((n, i) => Math.max(n, bounds[0][i], bounds[1][i]));
+      });
+      this.cameraPos = [2 * (max[0] + max[2]), max[1], 2 * (max[0] + max[2])];
+      this.center = [0.5 * (min[0] + max[0]), 0.5 * (min[1] + max[1]), 0.5 * (min[2] + max[2])];
+
+      canvas.style.opacity = '1';
+      showError();
+    } catch (error) {
+      showError(error as Error);
+    }
   }
 }
 
-export const lightSources: LightingProps = {
-  ambientLight: {
-    color: [255, 133, 133],
-    intensity: 1,
-    type: 'ambient'
-  },
-  directionalLights: [
-    {
-      color: [222, 244, 255],
-      direction: [1, -0.5, 0.5],
-      intensity: 10,
-      type: 'directional'
-    }
-  ],
-  pointLights: [
-    {
-      color: [255, 222, 222],
-      position: [3, 10, 0],
-      intensity: 5,
-      type: 'point'
-    }
-  ]
-};
+//
+// HTML helpers, can be cut if copying this code
+//
+
+function setModelMenu(
+  items: string[],
+  currentItem: string,
+  onMenuItemSelected: (item: string) => void
+) {
+  const modelSelector = document.getElementById('model-select') as HTMLSelectElement;
+  modelSelector?.addEventListener('change', e => {
+    const name = (e.target as HTMLSelectElement).value;
+    onMenuItemSelected(name);
+  });
+  const options = items.map(item => {
+    const option = document.createElement('option');
+    option.value = item;
+    option.textContent = item;
+    return option;
+  });
+
+  modelSelector.append(...options);
+}
+
+function setOptionsUI(options: Record<string, boolean>) {
+  for (const id of Object.keys(options)) {
+    const checkbox = document.getElementById(id) as HTMLInputElement;
+    checkbox.checked = options[id];
+    checkbox.addEventListener('change', e => {
+      options[id] = checkbox.checked;
+    });
+  }
+}
+
+function showError(error?: Error) {
+  const errorDiv = document.getElementById('error') as HTMLDivElement;
+  errorDiv.innerHTML = error ? `Error loading model ${error.message}` : '';
+  errorDiv.style.display = error ? 'block' : 'hidden';
+}

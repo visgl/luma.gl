@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {GL} from '@luma.gl/constants/webgl-constants';
-import {convertSampler} from '@luma.gl/gltf/pbr/convert-webgl';
+import {convertSampler} from '@luma.gl/gltf/webgl-to-webgpu/convert-webgl-sampler';
 import {convertSamplerParametersToWebGL} from '@luma.gl/webgl/adapter/converters/sampler-parameters';
 import test from 'tape-promise/tape';
 
