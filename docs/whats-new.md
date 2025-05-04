@@ -41,6 +41,13 @@ Production quality WebGPU backend
 - `AsyncTexture` 
   - now supports mipmap generation for WebGPU textures (in progress)
 
+**@luma.gl/gltf**
+
+- glTF Skeleton Animation Support  (in progress)
+- glTF Mesh Target Animation Support  (in progress)
+- glTF and PRB now supported on WebGPU (in progress)
+- Improved documentation
+
 **@luma.gl/effects**
 
 - All postprocessing effects ported to WGSL (in progress)
@@ -49,9 +56,6 @@ Production quality WebGPU backend
 
 - All shader modules ported to WGSL (in progress)
 
-**@luma.gl/gltf**
-
-- glTF and PRB now supported on WebGPU (in progress)
 
 ## Version 9.1
 
