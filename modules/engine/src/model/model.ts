@@ -598,7 +598,7 @@ export class Model {
    * @note Overrides any attributes previously set with the same name
    */
   setAttributes(buffers: Record<string, Buffer>, options?: {disableWarnings?: boolean}): void {
-    const disableWarnings = false;
+    const disableWarnings = options?.disableWarnings ?? this.props.disableWarnings;
     if (buffers['indices']) {
       log.warn(
         `Model:${this.id} setAttributes() - indexBuffer should be set using setIndexBuffer()`

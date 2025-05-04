@@ -109,7 +109,7 @@ export class GroupNode extends ScenegraphNode {
     }
   }
 
-  traverse2(
+  preorderTraversal(
     visitor: (node: ScenegraphNode, context: {worldMatrix: Matrix4}) => void,
     {worldMatrix = new Matrix4()} = {}
   ) {
@@ -118,7 +118,9 @@ export class GroupNode extends ScenegraphNode {
 
     for (const child of this.children) {
       if (child instanceof GroupNode) {
-        child.traverse2(visitor, {worldMatrix: modelMatrix});
+        child.preorderTraversal(visitor, {worldMatrix: modelMatrix});
+      } else {
+        visitor(child, {worldMatrix: modelMatrix});
       }
     }
   }

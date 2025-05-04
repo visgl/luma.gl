@@ -5,11 +5,12 @@
 import { Matrix4 } from '@math.gl/core';
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
 
+const SKIN_MAX_JOINTS = 20;
+
 export const vs = /* glsl */ `\
 
-#define MAX_JOINTS 30
 uniform skinUniforms {
-  mat4 jointMatrix[MAX_JOINTS];
+  mat4 jointMatrix[SKIN_MAX_JOINTS];
 } skin;
 
 mat4 getSkinMatrix(vec4 weights, uvec4 joints) {
@@ -32,7 +33,6 @@ export type SkinUniforms = {
   jointMatrix: any;
 };
 
-
 export const skin = {
   props: {} as SkinProps,
   uniforms: {} as SkinUniforms,
@@ -43,7 +43,9 @@ export const skin = {
   vs,
   fs,
 
-  defines: {},
+  defines: {
+    SKIN_MAX_JOINTS,
+  },
 
   getUniforms: (props: SkinProps = {}, prevUniforms?: SkinUniforms): SkinUniforms => {
     const {gltf} = props;
@@ -56,13 +58,12 @@ export const skin = {
       matsib.push(new Matrix4(Array.from(slice)));
     }
 
-    gltf.nodes[skeleton]._node.traverse2((node, {worldMatrix}) => {
+    gltf.nodes[skeleton]._node.preorderTraversal((node, {worldMatrix}) => {
       node.skinWorldMatrixTemp = worldMatrix;
     });  
 
-    const count = 30;
-    const mats = new Float32Array(count * 16);  // 16 floats per 4x4 matrix
-    for (let i = 0; i < count; ++i) {
+    const mats = new Float32Array(SKIN_MAX_JOINTS * 16);  // 16 floats per 4x4 matrix
+    for (let i = 0; i < SKIN_MAX_JOINTS; ++i) {
       const nodeIndex = joints[i];
       if (nodeIndex === undefined) break;
 
