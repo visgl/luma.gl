@@ -41,11 +41,11 @@ const defaultOptions: Required<ParseGLTFOptions> = {
 export function parseGLTF(
   device: Device,
   gltf: GLTFPostprocessed,
-  options_: ParseGLTFOptions = {}
+  options: ParseGLTFOptions = {},
+  sceneMap: Map<number, GroupNode>
 ): GroupNode[] {
-  const options = {...defaultOptions, ...options_};
   const sceneNodes = gltf.scenes.map(gltfScene =>
-    createScene(device, gltfScene, gltf.nodes, options)
+    createScene(device, gltfScene, gltf.nodes, {...defaultOptions, ...options}, sceneMap)
   );
   return sceneNodes;
 }
@@ -54,10 +54,11 @@ function createScene(
   device: Device,
   gltfScene: GLTFScenePostprocessed,
   gltfNodes: GLTFNodePostprocessed[],
-  options: Required<ParseGLTFOptions>
+  options: Required<ParseGLTFOptions>,
+  sceneMap: Map<number, GroupNode>
 ): GroupNode {
   const gltfSceneNodes = gltfScene.nodes || [];
-  const nodes = gltfSceneNodes.map(node => createNode(device, node, gltfNodes, options));
+  const nodes = gltfSceneNodes.map(node => createNode(device, node, gltfNodes, options, sceneMap));
   const sceneNode = new GroupNode({
     id: gltfScene.name || gltfScene.id,
     children: nodes
@@ -67,9 +68,10 @@ function createScene(
 
 function createNode(
   device: Device,
-  gltfNode: GLTFNodePostprocessed & {_node?: GroupNode},
+  gltfNode: GLTFNodePostprocessed,
   gltfNodes: GLTFNodePostprocessed[],
-  options: Required<ParseGLTFOptions>
+  options: Required<ParseGLTFOptions>,
+  sceneMap: Map<number, GroupNode>
 ): GroupNode {
   if (!gltfNode._node) {
     const gltfChildren = gltfNode.children || [];
@@ -108,7 +110,7 @@ function createNode(
 
   // Copy _node so that gltf-animator can access
   const topLevelNode = gltfNodes.find(node => node.id === gltfNode.id) as any;
-  topLevelNode._node = gltfNode._node;
+  topLevelNode._node = null;
 
   return gltfNode._node;
 }

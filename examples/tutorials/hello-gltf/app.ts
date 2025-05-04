@@ -13,9 +13,8 @@ import {Matrix4} from '@math.gl/core';
 /* eslint-disable camelcase */
 
 const MODEL_DIRECTORY_URL =
-  'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/';
-const MODEL_LIST_URL =
-  'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/model-index.json';
+  'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models';
+const MODEL_LIST_URL = `${MODEL_DIRECTORY_URL}/model-index.json`;
 
 const lightSources = {
   ambientLight: {
@@ -119,6 +118,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
           modelViewProjectionMatrix,
           modelMatrix,
           normalMatrix: new Matrix4(modelMatrix).invert().transpose()
+        },
+        skin: {
+          // TODO: This is required to trigger getUniforms() of skin.
+          // Fix it, then remove this.
         }
       });
       model.draw(renderPass);
@@ -194,6 +197,7 @@ function setModelMenu(
   });
 
   modelSelector.append(...options);
+  modelSelector.value = currentItem;
 }
 
 function setOptionsUI(options: Record<string, boolean>) {
