@@ -118,11 +118,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
           modelViewProjectionMatrix,
           modelMatrix,
           normalMatrix: new Matrix4(modelMatrix).invert().transpose()
-        },
-        skin: {
-          // TODO: This is required to trigger getUniforms() of skin.
-          // Fix it, then remove this.
         }
+        // skin: {
+        //   // TODO: This is required to trigger getUniforms() of skin.
+        //   // Fix it, then remove this.
+        // }
       });
       model.draw(renderPass);
     });

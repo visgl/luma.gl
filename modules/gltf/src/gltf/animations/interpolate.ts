@@ -1,15 +1,36 @@
-import {GLTFNodePostprocessed} from '@loaders.gl/gltf';
 import {log} from '@luma.gl/core';
-import {Quaternion} from '@math.gl/core';
-import {GLTFAnimationChannel, GLTFAnimationSampler} from './animations';
+import {Quaternion, Vector3} from '@math.gl/core';
+import {GLTFAnimationChannel, GLTFAnimationPath, GLTFAnimationSampler} from './animations';
+import {GroupNode} from '@luma.gl/engine';
 
 const scratchQuaternion = new Quaternion();
+
+function updateTargetPath(
+  target: GroupNode,
+  path: GLTFAnimationPath,
+  newValue: Vector3 | Quaternion | number[]
+): GroupNode | null {
+  switch (path) {
+    case 'translation':
+      return target.setPosition(newValue).updateMatrix();
+
+    case 'rotation':
+      return target.setRotation(newValue).updateMatrix();
+
+    case 'scale':
+      return target.setScale(newValue).updateMatrix();
+
+    default:
+      log.warn(`Bad animation path ${path}`)();
+      return null;
+  }
+}
 
 export function interpolate(
   time: number,
   {input, interpolation, output}: GLTFAnimationSampler,
-  target: GLTFNodePostprocessed,
-  path: GLTFAnimationChannel['path']
+  target: GroupNode,
+  path: GLTFAnimationPath
 ) {
   const maxTime = input[input.length - 1];
   const animationTime = time % maxTime;
@@ -17,26 +38,6 @@ export function interpolate(
   const nextIndex = input.findIndex(t => t >= animationTime);
   const previousIndex = Math.max(0, nextIndex - 1);
 
-  if (!Array.isArray(target[path])) {
-    switch (path) {
-      case 'translation':
-        target[path] = [0, 0, 0];
-        break;
-
-      case 'rotation':
-        target[path] = [0, 0, 0, 1];
-        break;
-
-      case 'scale':
-        target[path] = [1, 1, 1];
-        break;
-
-      default:
-        log.warn(`Bad animation path ${path}`)();
-    }
-  }
-
-  // assert(target[path].length === output[previousIndex].length);
   const previousTime = input[previousIndex];
   const nextTime = input[nextIndex];
 
@@ -79,8 +80,8 @@ export function interpolate(
 }
 
 function linearInterpolate(
-  target: GLTFNodePostprocessed,
-  path: GLTFAnimationChannel['path'],
+  target: GroupNode,
+  path: GLTFAnimationPath,
   start: number[],
   stop: number[],
   ratio: number
@@ -104,8 +105,8 @@ function linearInterpolate(
 }
 
 function cubicsplineInterpolate(
-  target: GLTFNodePostprocessed,
-  path: GLTFAnimationChannel['path'],
+  target: GroupNode,
+  path: GLTFAnimationPath,
   {
     p0,
     outTangent0,
@@ -122,10 +123,6 @@ function cubicsplineInterpolate(
     ratio: number;
   }
 ) {
-  if (!target[path]) {
-    throw new Error();
-  }
-
   // TODO: Quaternion might need normalization
   for (let i = 0; i < target[path].length; i++) {
     const m0 = outTangent0[i] * tDiff;
@@ -138,16 +135,6 @@ function cubicsplineInterpolate(
   }
 }
 
-function stepInterpolate(
-  target: GLTFNodePostprocessed,
-  path: GLTFAnimationChannel['path'],
-  value: number[]
-) {
-  if (!target[path]) {
-    throw new Error();
-  }
-
-  for (let i = 0; i < value.length; i++) {
-    target[path][i] = value[i];
-  }
+function stepInterpolate(target: GroupNode, path: GLTFAnimationPath, value: number[]) {
+  updateTargetPath(target, path, value);
 }

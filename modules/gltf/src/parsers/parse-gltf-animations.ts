@@ -3,7 +3,9 @@
 // Copyright (c) vis.gl contributors
 
 import {type GLTFAccessorPostprocessed, type GLTFPostprocessed} from '@loaders.gl/gltf';
+import {GroupNode} from '@luma.gl/engine';
 import {
+  GLTFAnimationPath,
   type GLTFAnimation,
   type GLTFAnimationChannel,
   type GLTFAnimationSampler
@@ -11,8 +13,12 @@ import {
 
 import {accessorToTypedArray} from '..//webgl-to-webgpu/convert-webgl-attribute';
 
-export function parseGLTFAnimations(gltf: GLTFPostprocessed): GLTFAnimation[] {
+export function parseGLTFAnimations(
+  gltf: GLTFPostprocessed,
+  nodeMap: Map<number | string, GroupNode>
+): GLTFAnimation[] {
   const gltfAnimations = gltf.animations || [];
+
   return gltfAnimations.map((animation, index) => {
     const name = animation.name || `Animation-${index}`;
     const samplers: GLTFAnimationSampler[] = animation.samplers.map(
@@ -22,11 +28,19 @@ export function parseGLTFAnimations(gltf: GLTFPostprocessed): GLTFAnimation[] {
         output: accessorToJsArray(gltf.accessors[output])
       })
     );
-    const channels: GLTFAnimationChannel[] = animation.channels.map(({sampler, target}) => ({
-      sampler: samplers[sampler],
-      target: gltf.nodes[target.node ?? 0],
-      path: target.path as GLTFAnimationChannel['path']
-    }));
+
+    const channels: GLTFAnimationChannel[] = animation.channels.map(({sampler, target}) => {
+      const targetNode = nodeMap.get(target.node ?? 0);
+      if (!targetNode) {
+        throw new Error(`Cannot find animation target ${target.node}`);
+      }
+      return {
+        sampler: samplers[sampler],
+        target: targetNode,
+        path: target.path as GLTFAnimationPath
+      };
+    });
+
     return {name, channels};
   });
 }
