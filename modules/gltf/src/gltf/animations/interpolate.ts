@@ -1,14 +1,12 @@
 import {log} from '@luma.gl/core';
-import {Quaternion, Vector3} from '@math.gl/core';
-import {GLTFAnimationChannel, GLTFAnimationPath, GLTFAnimationSampler} from './animations';
+import {Quaternion} from '@math.gl/core';
+import {GLTFAnimationPath, GLTFAnimationSampler} from './animations';
 import {GroupNode} from '@luma.gl/engine';
-
-const scratchQuaternion = new Quaternion();
 
 function updateTargetPath(
   target: GroupNode,
   path: GLTFAnimationPath,
-  newValue: Vector3 | Quaternion | number[]
+  newValue: number[]
 ): GroupNode | null {
   switch (path) {
     case 'translation':
@@ -86,21 +84,16 @@ function linearInterpolate(
   stop: number[],
   ratio: number
 ) {
-  if (!target[path]) {
-    throw new Error();
-  }
-
   if (path === 'rotation') {
     // SLERP when path is rotation
-    scratchQuaternion.slerp({start, target: stop, ratio});
-    for (let i = 0; i < scratchQuaternion.length; i++) {
-      target[path][i] = scratchQuaternion[i];
-    }
+    updateTargetPath(target, path, new Quaternion().slerp({start, target: stop, ratio}));
   } else {
     // regular interpolation
+    const newVal = [];
     for (let i = 0; i < start.length; i++) {
-      target[path][i] = ratio * stop[i] + (1 - ratio) * start[i];
+      newVal[i] = ratio * stop[i] + (1 - ratio) * start[i];
     }
+    updateTargetPath(target, path, newVal);
   }
 }
 
@@ -124,15 +117,17 @@ function cubicsplineInterpolate(
   }
 ) {
   // TODO: Quaternion might need normalization
-  for (let i = 0; i < target[path].length; i++) {
+  const newVal = [];
+  for (let i = 0; i < p0.length; i++) {
     const m0 = outTangent0[i] * tDiff;
     const m1 = inTangent1[i] * tDiff;
-    target[path][i] =
+    newVal[i] =
       (2 * Math.pow(t, 3) - 3 * Math.pow(t, 2) + 1) * p0[i] +
       (Math.pow(t, 3) - 2 * Math.pow(t, 2) + t) * m0 +
       (-2 * Math.pow(t, 3) + 3 * Math.pow(t, 2)) * p1[i] +
       (Math.pow(t, 3) - Math.pow(t, 2)) * m1;
   }
+  updateTargetPath(target, path, newVal);
 }
 
 function stepInterpolate(target: GroupNode, path: GLTFAnimationPath, value: number[]) {

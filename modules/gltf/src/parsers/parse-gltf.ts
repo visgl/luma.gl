@@ -4,13 +4,11 @@
 
 import {Device, type PrimitiveTopology} from '@luma.gl/core';
 import {Geometry, GeometryAttribute, GroupNode, ModelNode, type ModelProps} from '@luma.gl/engine';
-import {Matrix4} from '@math.gl/core';
 import {
   type GLTFMeshPostprocessed,
   type GLTFNodePostprocessed,
   type GLTFPostprocessed
 } from '@loaders.gl/gltf';
-import {type GLTFScenePostprocessed} from '@loaders.gl/gltf/dist/lib/types/gltf-postprocessed-schema';
 
 import {type PBREnvironment} from '../pbr/pbr-environment';
 import {convertGLDrawModeToTopology} from '../webgl-to-webgpu/convert-webgl-topology';
