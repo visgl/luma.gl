@@ -1,6 +1,6 @@
 {
   "name": "luma.gl-examples-transform-feedback",
-  "version": "9.1.0-alpha.1",
+  "version": "9.2.0-alpha.2",
   "private": true,
   "scripts": {
     "start": "vite",
@@ -8,11 +8,11 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@luma.gl/core": "9.2.0-alpha.1",
-    "@luma.gl/engine": "9.2.0-alpha.1",
-    "@luma.gl/shadertools": "9.2.0-alpha.1",
-    "@luma.gl/webgl": "9.2.0-alpha.1",
-    "@luma.gl/webgpu": "9.2.0-alpha.1"
+    "@luma.gl/core": "9.2.0-alpha.2",
+    "@luma.gl/engine": "9.2.0-alpha.2",
+    "@luma.gl/shadertools": "9.2.0-alpha.2",
+    "@luma.gl/webgl": "9.2.0-alpha.2",
+    "@luma.gl/webgpu": "9.2.0-alpha.2"
   },
   "devDependencies": {
     "typescript": "^5.1.6",
