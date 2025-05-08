@@ -4,6 +4,8 @@
 
 Production WebGPU support
 
+### v9.2.0-alpha.3
+
 ### v9.2.0-alpha.2
 
 - chore(gltf): gltf module cleanup (#2389)
