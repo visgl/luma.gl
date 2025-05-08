@@ -43,7 +43,7 @@ const lightSources = {
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   device: Device;
-  scenes: ScenegraphsFromGLTF;
+  scenegraphsFromGLTF?: ScenegraphsFromGLTF;
   center = [0, 0, 0];
   cameraPos = [0, 0, 0];
   time: number = 0;
@@ -81,11 +81,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   onFinalize() {
-    this.scenes.scenes[0].traverse(node => (node as ModelNode).model.destroy());
+    this.scenegraphsFromGLTF.scenes[0].traverse(node => (node as ModelNode).model.destroy());
   }
 
   onRender({aspect, device, time}: AnimationProps): void {
-    if (!this.scenes?.scenes?.length) return;
+    if (!this.scenegraphsFromGLTF?.scenes?.length) return;
     const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1], clearDepth: 1});
 
     const far = 2 * this.cameraPos[0];
@@ -99,12 +99,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     ];
 
     if (this.options['gltfAnimation']) {
-      this.scenes.animator?.setTime(time);
+      this.scenegraphsFromGLTF.animator?.setTime(time);
     }
 
     const viewMatrix = new Matrix4().lookAt({eye: cameraPos, center: this.center});
 
-    this.scenes.scenes[0].traverse((node, {worldMatrix: modelMatrix}) => {
+    this.scenegraphsFromGLTF.scenes[0].traverse((node, {worldMatrix: modelMatrix}) => {
       const {model} = node as ModelNode;
 
       const modelViewProjectionMatrix = new Matrix4(projectionMatrix)
@@ -118,11 +118,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
           modelViewProjectionMatrix,
           modelMatrix,
           normalMatrix: new Matrix4(modelMatrix).invert().transpose()
+        },
+        skin: {
+          // TODO: This is required to trigger getUniforms() of skin.
+          // Fix it, then remove this.
+          scenegraphsFromGLTF: this.scenegraphsFromGLTF
         }
-        // skin: {
-        //   // TODO: This is required to trigger getUniforms() of skin.
-        //   // Fix it, then remove this.
-        // }
       });
       model.draw(renderPass);
     });
@@ -146,7 +147,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       );
       const processedGLTF = postProcessGLTF(gltf);
 
-      this.scenes = createScenegraphsFromGLTF(this.device, processedGLTF, {
+      this.scenegraphsFromGLTF = createScenegraphsFromGLTF(this.device, processedGLTF, {
         lights: true,
         imageBasedLightingEnvironment: undefined,
         pbrDebug: false
@@ -156,7 +157,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       // TODO move to utility in gltf module
       let min = [Infinity, Infinity, Infinity];
       let max = [0, 0, 0];
-      this.scenes.scenes[0].traverse(node => {
+      this.scenegraphsFromGLTF?.scenes[0].traverse(node => {
         const {bounds} = node as ModelNode;
         min = min.map((n, i) => Math.min(n, bounds[0][i], bounds[1][i]));
         max = max.map((n, i) => Math.max(n, bounds[0][i], bounds[1][i]));

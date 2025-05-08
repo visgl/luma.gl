@@ -14,6 +14,8 @@ export type ScenegraphsFromGLTF = {
   animator: GLTFAnimator;
   nodeMap: Map<number | string, GroupNode>;
   meshMap: Map<number | string, GroupNode>;
+
+  gltf: GLTFPostprocessed;
 };
 
 export function createScenegraphsFromGLTF(
@@ -25,5 +27,5 @@ export function createScenegraphsFromGLTF(
   const animations = parseGLTFAnimations(gltf, nodeMap);
   const animator = new GLTFAnimator({animations});
 
-  return {scenes, animator, nodeMap, meshMap};
+  return {scenes, animator, nodeMap, meshMap, gltf};
 }

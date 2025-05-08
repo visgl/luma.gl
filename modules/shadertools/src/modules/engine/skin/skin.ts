@@ -26,7 +26,7 @@ export const fs = /* glsl */ `\
 `;
 
 export type SkinProps = {
-  gltf?: any;
+  scenegraphsFromGLTF?: any;
 };
 
 export type SkinUniforms = {
@@ -48,9 +48,13 @@ export const skin = {
   },
 
   getUniforms: (props: SkinProps = {}, prevUniforms?: SkinUniforms): SkinUniforms => {
-    console.log('getUniforms', props, prevUniforms);
-    const {gltf} = props;
-    const {inverseBindMatrices, joints, skeleton} = gltf.skins[0];
+    const {scenegraphsFromGLTF} = props;
+
+    if (!scenegraphsFromGLTF?.gltf?.skins?.[0]) {
+      return {jointMatrix: []};
+    }
+
+    const {inverseBindMatrices, joints, skeleton} = scenegraphsFromGLTF.gltf.skins[0];
 
     const matsib = [];
     const countib = inverseBindMatrices.value.length / 16;
@@ -59,8 +63,11 @@ export const skin = {
       matsib.push(new Matrix4(Array.from(slice)));
     }
 
-    gltf.nodes[skeleton]._node.preorderTraversal((node, {worldMatrix}) => {
+    const top = scenegraphsFromGLTF.nodeMap.get(skeleton);
+    const matrices = {};
+    top.preorderTraversal((node, {worldMatrix}) => {
       node.skinWorldMatrixTemp = worldMatrix;
+      matrices[node.id] = worldMatrix;
     });
 
     const mats = new Float32Array(SKIN_MAX_JOINTS * 16); // 16 floats per 4x4 matrix
@@ -68,7 +75,7 @@ export const skin = {
       const nodeIndex = joints[i];
       if (nodeIndex === undefined) break;
 
-      const worldMat = gltf.nodes[nodeIndex]._node.skinWorldMatrixTemp;
+      const worldMat = matrices[scenegraphsFromGLTF.nodeMap.get(nodeIndex).id];
       const invBindMat = matsib[i];
 
       const Z = new Matrix4().copy(worldMat).multiplyRight(invBindMat);
