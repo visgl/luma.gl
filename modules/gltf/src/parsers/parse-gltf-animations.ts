@@ -3,7 +3,9 @@
 // Copyright (c) vis.gl contributors
 
 import {type GLTFAccessorPostprocessed, type GLTFPostprocessed} from '@loaders.gl/gltf';
+import {GroupNode} from '@luma.gl/engine';
 import {
+  GLTFAnimationPath,
   type GLTFAnimation,
   type GLTFAnimationChannel,
   type GLTFAnimationSampler
@@ -11,45 +13,60 @@ import {
 
 import {accessorToTypedArray} from '..//webgl-to-webgpu/convert-webgl-attribute';
 
-export function parseGLTFAnimations(gltf: GLTFPostprocessed): GLTFAnimation[] {
+export function parseGLTFAnimations(
+  gltf: GLTFPostprocessed,
+  nodeMap: Map<number | string, GroupNode>
+): GLTFAnimation[] {
   const gltfAnimations = gltf.animations || [];
+  const accessorCache = new Map<GLTFAccessorPostprocessed, number[] | number[][]>();
+
   return gltfAnimations.map((animation, index) => {
     const name = animation.name || `Animation-${index}`;
     const samplers: GLTFAnimationSampler[] = animation.samplers.map(
       ({input, interpolation = 'LINEAR', output}) => ({
-        input: accessorToJsArray(gltf.accessors[input]) as number[],
+        input: accessorToJsArray(gltf.accessors[input], accessorCache) as number[],
         interpolation,
-        output: accessorToJsArray(gltf.accessors[output])
+        output: accessorToJsArray(gltf.accessors[output], accessorCache)
       })
     );
-    const channels: GLTFAnimationChannel[] = animation.channels.map(({sampler, target}) => ({
-      sampler: samplers[sampler],
-      target: gltf.nodes[target.node ?? 0],
-      path: target.path as GLTFAnimationChannel['path']
-    }));
+
+    const channels: GLTFAnimationChannel[] = animation.channels.map(({sampler, target}) => {
+      const targetNode = nodeMap.get(target.node ?? 0);
+      if (!targetNode) {
+        throw new Error(`Cannot find animation target ${target.node}`);
+      }
+      return {
+        sampler: samplers[sampler],
+        target: targetNode,
+        path: target.path as GLTFAnimationPath
+      };
+    });
+
     return {name, channels};
   });
 }
 
-//
-
 function accessorToJsArray(
-  accessor: GLTFAccessorPostprocessed & {_animation?: number[] | number[][]}
+  accessor: GLTFAccessorPostprocessed,
+  accessorCache: Map<GLTFAccessorPostprocessed, number[] | number[][]>
 ): number[] | number[][] {
-  if (!accessor._animation) {
-    const {typedArray: array, components} = accessorToTypedArray(accessor);
+  if (accessorCache.has(accessor)) {
+    return accessorCache.get(accessor) as number[] | number[][];
+  }
 
-    if (components === 1) {
-      accessor._animation = Array.from(array);
-    } else {
-      // Slice array
-      const slicedArray: number[][] = [];
-      for (let i = 0; i < array.length; i += components) {
-        slicedArray.push(Array.from(array.slice(i, i + components)));
-      }
-      accessor._animation = slicedArray;
+  const {typedArray: array, components} = accessorToTypedArray(accessor);
+  let result;
+
+  if (components === 1) {
+    result = Array.from(array);
+  } else {
+    // Slice array
+    result = [];
+    for (let i = 0; i < array.length; i += components) {
+      result.push(Array.from(array.slice(i, i + components)));
     }
   }
 
-  return accessor._animation;
+  accessorCache.set(accessor, result);
+  return result;
 }
