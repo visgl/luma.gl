@@ -1,4 +1,4 @@
-import {Matrix4} from '@math.gl/core';
+import { Matrix4 } from '@math.gl/core';
 import type {
   GLTFNodePostprocessed,
   GLTFPostprocessed
@@ -11,7 +11,7 @@ import type {
 
 /** Parse KHR_lights_punctual extension into luma.gl light definitions */
 export function parseGLTFLights(gltf: GLTFPostprocessed): Light[] {
-  const lightDefs = gltf.extensions?.KHR_lights_punctual?.lights;
+  const lightDefs = gltf.extensions?.['KHR_lights_punctual']?.['lights'];
   if (!lightDefs || !Array.isArray(lightDefs) || lightDefs.length === 0) {
     return [];
   }

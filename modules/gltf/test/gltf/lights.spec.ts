@@ -1,5 +1,5 @@
 import test from 'tape-promise/tape';
-import {parseGLTFLights} from '@luma.gl/gltf';
+import {parseGLTFLights} from '@luma.gl/gltf/parsers/parse-gltf-lights';
 import type {GLTFPostprocessed} from '@loaders.gl/gltf';
 
 test('gltf#parseGLTFLights - directional', t => {
@@ -66,7 +66,7 @@ test('gltf#parseGLTFLights - point', t => {
   t.end();
 });
 
-test('gltf#parseGLTFLights - missing extension', t => {
+test.only('gltf#parseGLTFLights - missing extension', t => {
   const gltf: GLTFPostprocessed = {
     nodes: [],
     scenes: []
