@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {NumberArray4, NumberArray6} from '@math.gl/types';
-import {TextureFormatDepthStencil} from '../../shadertypes/textures/texture-formats';
+import {TextureFormatDepthStencil} from '../../shadertypes/texture-types/texture-formats';
 
 export type CompareFunction =
   | 'never'

@@ -3,13 +3,14 @@
 // Copyright (c) vis.gl contributors
 
 import type {NormalizedDataType} from '../data-types/data-types';
-import {getDataTypeInfo} from '../data-types/decode-data-types';
+import {dataTypeDecoder} from '../data-types/data-type-decoder';
 import type {
   TextureFormat,
   TextureFormatCompressed,
   TextureFormatInfo,
   TextureFormatCapabilities,
-  TextureFormatColor
+  TextureFormatColor,
+  TextureFormatDepthStencil,
 } from './texture-formats';
 import {getTextureFormatDefinition} from './texture-format-table';
 
@@ -32,7 +33,7 @@ export class TextureFormatDecoder {
   }
 
   /** Checks if a texture format is depth or stencil */
-  isDepthStencil(format: TextureFormat): boolean {
+  isDepthStencil(format: TextureFormat): format is TextureFormatDepthStencil {
     return format.startsWith('depth') || format.startsWith('stencil');
   }
 
@@ -101,7 +102,7 @@ function getTextureFormatInfo(format: TextureFormat): TextureFormatInfo {
   if (matches) {
     const [, channels, length, type, srgb, suffix] = matches;
     const dataType = `${type}${length}` as NormalizedDataType;
-    const decodedType = getDataTypeInfo(dataType);
+    const decodedType = dataTypeDecoder.getDataTypeInfo(dataType);
     const bits = decodedType.byteLength * 8;
     const components = channels.length as 1 | 2 | 3 | 4;
     const bitsPerChannel: [number, number, number, number] = [

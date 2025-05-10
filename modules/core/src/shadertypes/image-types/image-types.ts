@@ -15,13 +15,6 @@ export type ExternalImage =
   | HTMLCanvasElement
   | OffscreenCanvas;
 
-export type ExternalImageData = {
-  data: ArrayBuffer | SharedArrayBuffer | ArrayBufferView;
-  byteOffset?: number;
-  bytesPerRow?: number;
-  rowsPerImage?: number;
-};
-
 /** Check if data is an external image */
 export function isExternalImage(data: unknown): data is ExternalImage {
   return (

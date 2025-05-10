@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {PrimitiveDataType} from './data-types';
+import type {PrimitiveDataType} from '../data-types/data-types';
 
 /**
- * Describes the type of an attribute as defined in the shader source code.
+ * @type the type of an attribute as defined in the shader source code.
  * @note This is a subset of shader variable types
  * @note Buffers with various `VertexFormat`s can be supplied for each type, GPU will convert them at runtime/
  */

@@ -8,54 +8,8 @@ import {
   type TextureFormatCompressed
 } from './texture-formats';
 
-import {type DataTypeArray, NormalizedDataTypeArray} from '../data-types/data-types';
-
-export type TextureFormatTypedArray<T extends TextureFormat> = DataTypeArray<
-  TextureFormatDataType<T>
->;
-
-export type TextureFormatNormalizedTypedArray<T extends TextureFormat> = NormalizedDataTypeArray<
-  TextureFormatDataType<T>
->;
-
-/** A numeric array of length matching the number of components in the texture format */
-export type TextureFormatPixel<T extends TextureFormat> =
-  TextureFormatPackedComponents<T> extends 1
-    ? [number]
-    : TextureFormatPackedComponents<T> extends 2
-      ? [number, number]
-      : TextureFormatPackedComponents<T> extends 3
-        ? [number, number, number]
-        : TextureFormatPackedComponents<T> extends 4
-          ? [number, number, number, number]
-          : never;
-
-/** @note packed formats have only one component. Use TextureFormatPackedComponents */
-export type TextureFormatComponents<T extends TextureFormat> = T extends
-  | TextureFormatR
-  | TextureFormatPackedRGB
-  | TextureFormatPackedRGBA
-  ? 1
-  : T extends TextureFormatRG
-    ? 2
-    : T extends TextureFormatRGB
-      ? 3
-      : T extends TextureFormatRGBA
-        ? 4
-        : never;
-
-export type TextureFormatPackedComponents<T extends TextureFormat> = T extends TextureFormatR
-  ? 1
-  : T extends TextureFormatRG
-    ? 2
-    : T extends TextureFormatRGB | TextureFormatPackedRGB
-      ? 3
-      : T extends TextureFormatRGBA | TextureFormatPackedRGBA
-        ? 4
-        : never;
-
-/** Get the data type for a texture format */
-export type TextureFormatDataType<T extends TextureFormat> = T extends TextureFormatUint8
+/** @type data type for a texture format */
+export type TextureFormatDataTypeT<T extends TextureFormat> = T extends TextureFormatUint8
   ? 'uint8'
   : T extends TextureFormatSint8
     ? 'sint8'
@@ -88,6 +42,46 @@ export type TextureFormatDataType<T extends TextureFormat> = T extends TextureFo
                               : T extends TextureFormatPacked32
                                 ? 'uint32'
                                 : never;
+
+/** @type A numeric array of length matching the number of components in the texture format */
+export type TextureFormatPixelT<T extends TextureFormat> =
+  TextureFormatPackedComponentsT<T> extends 1
+    ? [number]
+    : TextureFormatPackedComponentsT<T> extends 2
+      ? [number, number]
+      : TextureFormatPackedComponentsT<T> extends 3
+        ? [number, number, number]
+        : TextureFormatPackedComponentsT<T> extends 4
+          ? [number, number, number, number]
+          : never;
+
+/**
+ * @type number - the number of components in a texture format
+ * @note packed formats have only one component. Use TextureFormatPackedComponentsT
+ */
+export type TextureFormatComponentsT<T extends TextureFormat> = T extends
+  | TextureFormatR
+  | TextureFormatPackedRGB
+  | TextureFormatPackedRGBA
+  ? 1
+  : T extends TextureFormatRG
+    ? 2
+    : T extends TextureFormatRGB
+      ? 3
+      : T extends TextureFormatRGBA
+        ? 4
+        : never;
+
+/** @type number - the number of components in a packed texture format */
+export type TextureFormatPackedComponentsT<T extends TextureFormat> = T extends TextureFormatR
+  ? 1
+  : T extends TextureFormatRG
+    ? 2
+    : T extends TextureFormatRGB | TextureFormatPackedRGB
+      ? 3
+      : T extends TextureFormatRGBA | TextureFormatPackedRGBA
+        ? 4
+        : never;
 
 // Component groups
 

@@ -10,7 +10,7 @@ import type {
   VaryingBinding,
   AttributeShaderType
 } from '@luma.gl/core';
-import {getVariableShaderTypeInfo} from '@luma.gl/core';
+import {shaderTypeDecoder} from '@luma.gl/core';
 
 import {GL, GLUniformType} from '@luma.gl/constants';
 import {
@@ -153,7 +153,7 @@ function readVaryings(gl: WebGL2RenderingContext, program: WebGLProgram): Varyin
     }
     const {name, type: glUniformType, size} = activeInfo;
     const uniformType = convertGLUniformTypeToShaderVariableType(glUniformType as GLUniformType);
-    const {type, components} = getVariableShaderTypeInfo(uniformType);
+    const {type, components} = shaderTypeDecoder.getVariableShaderTypeInfo(uniformType);
     varyings.push({location, name, type, size: size * components});
   }
 
