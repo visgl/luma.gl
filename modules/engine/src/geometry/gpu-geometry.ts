@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {PrimitiveTopology, BufferLayout} from '@luma.gl/core';
-import {Device, Buffer, getVertexFormatFromAttribute} from '@luma.gl/core';
+import {Device, Buffer, vertexFormatDecoder} from '@luma.gl/core';
 import type {Geometry} from '../geometry/geometry';
 import {uid} from '../utils/uid';
 
@@ -128,7 +128,10 @@ export function getAttributeBuffersFromGeometry(
       });
       const {value, size, normalized} = attribute;
       // @ts-expect-error
-      bufferLayout.push({name, format: getVertexFormatFromAttribute(value, size, normalized)});
+      bufferLayout.push({
+        name,
+        format: vertexFormatDecoder.getVertexFormatFromAttribute(value, size, normalized)
+      });
     }
   }
 

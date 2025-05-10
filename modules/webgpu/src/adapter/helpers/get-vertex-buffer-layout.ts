@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {ShaderLayout, BufferLayout, AttributeDeclaration, VertexFormat} from '@luma.gl/core';
-import {log, getVertexFormatInfo} from '@luma.gl/core';
+import {log, vertexFormatDecoder} from '@luma.gl/core';
 // import {getAttributeInfosFromLayouts} from '@luma.gl/core';
 
 /** Throw error on any WebGL-only vertex formats */
@@ -59,7 +59,7 @@ export function getVertexBufferLayout(
           shaderLocation: location
         });
 
-        byteStride += getVertexFormatInfo(format).byteLength;
+        byteStride += vertexFormatDecoder.getVertexFormatInfo(format).byteLength;
       }
       // non-interleaved mapping (just set offset and stride)
     } else {
@@ -67,7 +67,7 @@ export function getVertexBufferLayout(
       if (!attributeLayout) {
         continue; // eslint-disable-line no-continue
       }
-      byteStride = getVertexFormatInfo(format).byteLength;
+      byteStride = vertexFormatDecoder.getVertexFormatInfo(format).byteLength;
 
       stepMode =
         attributeLayout.stepMode ||
@@ -92,7 +92,7 @@ export function getVertexBufferLayout(
   for (const attribute of shaderLayout.attributes) {
     if (!usedAttributes.has(attribute.name)) {
       vertexBufferLayouts.push({
-        arrayStride: getVertexFormatInfo('float32x3').byteLength,
+        arrayStride: vertexFormatDecoder.getVertexFormatInfo('float32x3').byteLength,
         stepMode:
           attribute.stepMode || (attribute.name.startsWith('instance') ? 'instance' : 'vertex'),
         attributes: [

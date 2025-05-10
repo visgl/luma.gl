@@ -142,33 +142,6 @@ type TextureFormatUnorm8 =
   | 'bgra8unorm'
   | 'bgra8unorm-srgb';
 
-type TextureFormatSnorm8 = 'r8snorm' | 'rg8snorm' | 'rgb8snorm-webgl' | 'rgba8snorm';
-
-type TextureFormatUint8 = 'r8uint' | 'rg8uint' | 'rgba8uint';
-
-type TextureFormatSint8 = 'r8sint' | 'rg8sint' | 'rgba8sint';
-
-type TextureFormatUnorm16 = 'r16unorm' | 'rg16unorm' | 'rgb16unorm-webgl' | 'rgba16unorm';
-
-type TextureFormatSnorm16 = 'r16snorm' | 'rg16snorm' | 'rgb16snorm-webgl' | 'rgba16snorm';
-
-type TextureFormatUint16 = 'r16uint' | 'rg16uint' | 'rgba16uint';
-
-type TextureFormatSint16 = 'r16sint' | 'rg16sint' | 'rgba16sint';
-
-type TextureFormatFloat16 = 'r16float' | 'rg16float' | 'rgba16float';
-
-// 96-bit formats (deprecated!)
-type TextureFormatUint32 = 'r32uint' | 'rg32uint' | 'rgba32uint';
-
-type TextureFormatSint32 = 'r32sint' | 'rg32sint' | 'rgba32sint';
-
-type TextureFormatFloat32 = 'r32float' | 'rg32float' | 'rgb32float-webgl' | 'rgba32float';
-
-type TextureFormatPacked16 = 'rgba4unorm-webgl' | 'rgb565unorm-webgl' | 'rgb5a1unorm-webgl';
-
-type TextureFormatPacked32 = 'rgb9e5ufloat' | 'rg11b10ufloat' | 'rgb10a2unorm' | 'rgb10a2uint';
-
 export type TextureFormatCompressed =
   | 'bc1-rgb-unorm-webgl'
   | 'bc1-rgb-unorm-srgb-webgl'
@@ -245,7 +218,7 @@ export type TextureFormatCompressed =
 
 // Texture format helper types
 
-export type TextureFormatDataType<T extends TextureFormat> = T extends TextureFormatUint8
+export type TextureFormatDataTypeT<T extends TextureFormat> = T extends TextureFormatUint8
   ? 'uint8'
   : T extends TextureFormatSint8
     ? 'sint8'
@@ -278,6 +251,22 @@ export type TextureFormatDataType<T extends TextureFormat> = T extends TextureFo
                               : T extends TextureFormatPacked32
                                 ? 'uint32'
                                 : never;
+
+// HELPER TYPES
+
+type TextureFormatSnorm8 = 'r8snorm' | 'rg8snorm' | 'rgb8snorm-webgl' | 'rgba8snorm';
+type TextureFormatUint8 = 'r8uint' | 'rg8uint' | 'rgba8uint';
+type TextureFormatSint8 = 'r8sint' | 'rg8sint' | 'rgba8sint';
+type TextureFormatUnorm16 = 'r16unorm' | 'rg16unorm' | 'rgb16unorm-webgl' | 'rgba16unorm';
+type TextureFormatSnorm16 = 'r16snorm' | 'rg16snorm' | 'rgb16snorm-webgl' | 'rgba16snorm';
+type TextureFormatUint16 = 'r16uint' | 'rg16uint' | 'rgba16uint';
+type TextureFormatSint16 = 'r16sint' | 'rg16sint' | 'rgba16sint';
+type TextureFormatFloat16 = 'r16float' | 'rg16float' | 'rgba16float';
+type TextureFormatUint32 = 'r32uint' | 'rg32uint' | 'rgba32uint';
+type TextureFormatSint32 = 'r32sint' | 'rg32sint' | 'rgba32sint';
+type TextureFormatFloat32 = 'r32float' | 'rg32float' | 'rgb32float-webgl' | 'rgba32float';
+type TextureFormatPacked16 = 'rgba4unorm-webgl' | 'rgb565unorm-webgl' | 'rgb5a1unorm-webgl';
+type TextureFormatPacked32 = 'rgb9e5ufloat' | 'rg11b10ufloat' | 'rgb10a2unorm' | 'rgb10a2uint';
 
 /*
 export type TextureFormatColorWebGPU =

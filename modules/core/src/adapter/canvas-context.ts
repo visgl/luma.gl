@@ -5,7 +5,7 @@
 import {isBrowser} from '@probe.gl/env';
 import type {Device} from './device';
 import type {Framebuffer} from './resources/framebuffer';
-import type {TextureFormatDepthStencil} from '../shadertypes/textures/texture-formats';
+import type {TextureFormatDepthStencil} from '../shadertypes/texture-types/texture-formats';
 import {uid} from '../utils/uid';
 import {withResolvers} from '../utils/promise-utils';
 

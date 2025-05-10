@@ -4,9 +4,9 @@
 
 import test from 'tape-promise/tape';
 import {
-  getAttributeShaderTypeInfo,
-  AttributeShaderType,
-  AttributeShaderTypeInfo
+  type AttributeShaderType,
+  type AttributeShaderTypeInfo,
+  shaderTypeDecoder
 } from '@luma.gl/core';
 
 // prettier-ignore
@@ -30,13 +30,13 @@ const TEST_CASES: {format: AttributeShaderType, result: AttributeShaderTypeInfo}
   // {format: 'bool-webgl', result: {primitiveType: 'bool-webgl', components: 1, byteLength: 1 * 4, integer: true, signed: false}}
 ];
 
-test('shadertypes#getAttributeShaderTypeInfo', t => {
+test('shadertypes#shaderTypeDecoder.getAttributeShaderTypeInfo', t => {
   for (const tc of TEST_CASES) {
-    const decoded = getAttributeShaderTypeInfo(tc.format);
+    const decoded = shaderTypeDecoder.getAttributeShaderTypeInfo(tc.format);
     t.deepEqual(
       decoded,
       tc.result,
-      `getAttributeShaderTypeInfo('${tc.format}') => ${JSON.stringify(decoded.dataType)}`
+      `shaderTypeDecoder.getAttributeShaderTypeInfo('${tc.format}') => ${JSON.stringify(decoded.dataType)}`
     );
   }
   t.end();
