@@ -2,60 +2,79 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {PrimitiveDataType} from './data-types';
-import type {
-  VariableShaderType,
-  AttributeShaderType,
-  AttributeShaderTypeInfo,
-  VariableShaderTypeAlias,
-  AttributeShaderTypeAlias
+import {type PrimitiveDataType} from '../data-types/data-types';
+import {
+  type VariableShaderType,
+  type AttributeShaderType,
+  type VariableShaderTypeAlias,
+  type AttributeShaderTypeAlias
 } from './shader-types';
 
-/** Split a uniform type string into type and components */
-export function getVariableShaderTypeInfo(format: VariableShaderType): {
+/** Information extracted from a VariableShaderType constant */
+export type VariableShaderTypeInfo = {
   type: PrimitiveDataType;
   components: number;
-} {
-  const decoded = UNIFORM_FORMATS[format];
-  return decoded;
+};
+
+/** Information extracted from a AttributeShaderType constant */
+export type AttributeShaderTypeInfo = {
+  /** WGSL-style primitive data type, f32, i32, u32 */
+  primitiveType: PrimitiveDataType;
+  /** Whether this is a normalized integer (that must be used as float) */
+  components: 1 | 2 | 3 | 4;
+  /** Length in bytes of the data for one vertex */
+  byteLength?: number;
+  /** Whether this is for integer or float vert */
+  integer: boolean;
+  /** Whether this data type is signed */
+  signed: boolean;
+};
+
+export class ShaderTypeDecoder {
+  /** Split a uniform type string into type and components */
+  getVariableShaderTypeInfo(format: VariableShaderType): VariableShaderTypeInfo {
+    const decoded = UNIFORM_FORMATS[format];
+    return decoded;
+  }
+
+  /** Decodes a vertex type, returning byte length and flags (integer, signed, normalized) */
+  getAttributeShaderTypeInfo(attributeType: AttributeShaderType): AttributeShaderTypeInfo {
+    const [primitiveType, components] = TYPE_INFO[attributeType];
+    const integer: boolean = primitiveType === 'i32' || primitiveType === 'u32';
+    const signed: boolean = primitiveType !== 'u32';
+
+    const byteLength = PRIMITIVE_TYPE_SIZES[primitiveType] * components;
+    return {
+      primitiveType,
+      components,
+      byteLength,
+      integer,
+      signed
+    };
+  }
+
+  makeShaderAttributeType(
+    primitiveType: PrimitiveDataType,
+    components: 1 | 2 | 3 | 4
+  ): AttributeShaderType {
+    return components === 1 ? primitiveType : `vec${components}<${primitiveType}>`;
+  }
+
+  resolveAttributeShaderTypeAlias(
+    alias: AttributeShaderTypeAlias | AttributeShaderType
+  ): AttributeShaderType {
+    return WGSL_ATTRIBUTE_TYPE_ALIAS_MAP[alias as AttributeShaderTypeAlias] || alias;
+  }
+
+  resolveVariableShaderTypeAlias(
+    alias: VariableShaderTypeAlias | VariableShaderType
+  ): VariableShaderType {
+    return WGSL_VARIABLE_TYPE_ALIAS_MAP[alias as VariableShaderTypeAlias] || alias;
+  }
 }
 
-/** Decodes a vertex type, returning byte length and flags (integer, signed, normalized) */
-export function getAttributeShaderTypeInfo(
-  attributeType: AttributeShaderType
-): AttributeShaderTypeInfo {
-  const [primitiveType, components] = TYPE_INFO[attributeType];
-  const integer: boolean = primitiveType === 'i32' || primitiveType === 'u32';
-  const signed: boolean = primitiveType !== 'u32';
-
-  const byteLength = PRIMITIVE_TYPE_SIZES[primitiveType] * components;
-  return {
-    primitiveType,
-    components,
-    byteLength,
-    integer,
-    signed
-  };
-}
-
-export function makeShaderAttributeType(
-  primitiveType: PrimitiveDataType,
-  components: 1 | 2 | 3 | 4
-): AttributeShaderType {
-  return components === 1 ? primitiveType : `vec${components}<${primitiveType}>`;
-}
-
-export function resolveAttributeShaderTypeAlias(
-  alias: AttributeShaderTypeAlias | AttributeShaderType
-): AttributeShaderType {
-  return WGSL_ATTRIBUTE_TYPE_ALIAS_MAP[alias as AttributeShaderTypeAlias] || alias;
-}
-
-export function resolveVariableShaderTypeAlias(
-  alias: VariableShaderTypeAlias | VariableShaderType
-): VariableShaderType {
-  return WGSL_VARIABLE_TYPE_ALIAS_MAP[alias as VariableShaderTypeAlias] || alias;
-}
+/** Decoder for luma.gl shader types */
+export const shaderTypeDecoder = new ShaderTypeDecoder();
 
 // TABLES
 

@@ -5,8 +5,8 @@
 import {StatsManager, lumaStats} from '../utils/stats-manager';
 import {log} from '../utils/log';
 import {uid} from '../utils/uid';
-import type {VertexFormat, VertexFormatInfo} from '../shadertypes/vertex-arrays/vertex-formats';
-import type {TextureFormat, TextureFormatInfo} from '../shadertypes/textures/texture-formats';
+import type {VertexFormat, VertexFormatInfo} from '../shadertypes/vertex-types/vertex-formats';
+import type {TextureFormat, TextureFormatInfo} from '../shadertypes/texture-types/texture-formats';
 import type {CanvasContext, CanvasContextProps} from './canvas-context';
 import type {BufferProps} from './resources/buffer';
 import {Buffer} from './resources/buffer';
@@ -25,10 +25,10 @@ import type {VertexArray, VertexArrayProps} from './resources/vertex-array';
 import type {TransformFeedback, TransformFeedbackProps} from './resources/transform-feedback';
 import type {QuerySet, QuerySetProps} from './resources/query-set';
 
-import {getVertexFormatInfo} from '../shadertypes/vertex-arrays/decode-vertex-format';
-import {textureFormatDecoder} from '../shadertypes/textures/texture-format-decoder';
-import type {ExternalImage} from '../image-utils/image-types';
-import {isExternalImage, getExternalImageSize} from '../image-utils/image-types';
+import {vertexFormatDecoder} from '../shadertypes/vertex-types/vertex-format-decoder';
+import {textureFormatDecoder} from '../shadertypes/texture-types/texture-format-decoder';
+import type {ExternalImage} from '../shadertypes/image-types/image-types';
+import {isExternalImage, getExternalImageSize} from '../shadertypes/image-types/image-types';
 
 /**
  * Identifies the GPU vendor and driver.
@@ -427,8 +427,10 @@ export abstract class Device {
 
   abstract destroy(): void;
 
+  // TODO - just expose the shadertypes decoders?
+
   getVertexFormatInfo(format: VertexFormat): VertexFormatInfo {
-    return getVertexFormatInfo(format);
+    return vertexFormatDecoder.getVertexFormatInfo(format);
   }
 
   isVertexFormatSupported(format: VertexFormat): boolean {

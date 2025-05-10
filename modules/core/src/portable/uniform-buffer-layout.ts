@@ -3,9 +3,9 @@
 // Copyright (c) vis.gl contributors
 
 import type {PrimitiveDataType} from '../shadertypes/data-types/data-types';
-import type {VariableShaderType} from '../shadertypes/data-types/shader-types';
-import {alignTo} from '../shadertypes/data-types/decode-data-types';
-import {getVariableShaderTypeInfo} from '../shadertypes/data-types/decode-shader-types';
+import type {VariableShaderType} from '../shadertypes/shader-types/shader-types';
+import {dataTypeDecoder} from '../shadertypes/data-types/data-type-decoder';
+import {shaderTypeDecoder} from '../shadertypes/shader-types/shader-type-decoder';
 
 import type {UniformValue} from '../adapter/types/uniforms';
 import {getScratchArrayBuffer} from '../utils/array-utils-flat';
@@ -35,10 +35,10 @@ export class UniformBufferLayout {
 
     // Add layout (type, size and offset) definitions for each uniform in the layout
     for (const [key, uniformType] of Object.entries(uniformTypes)) {
-      const typeAndComponents = getVariableShaderTypeInfo(uniformType);
+      const typeAndComponents = shaderTypeDecoder.getVariableShaderTypeInfo(uniformType);
       const {type, components: count} = typeAndComponents;
       // First, align (bump) current offset to an even multiple of current object (1, 2, 4)
-      size = alignTo(size, count);
+      size = dataTypeDecoder.alignTo(size, count);
       // Use the aligned size as the offset of the current uniform.
       const offset = size;
       // Then, add our object's padded size ((1, 2, multiple of 4) to the current offset

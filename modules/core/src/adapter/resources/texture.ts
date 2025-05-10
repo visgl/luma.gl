@@ -4,11 +4,11 @@
 
 import {TypedArray} from '@math.gl/types';
 import type {Device} from '../device';
-import type {TextureFormat} from '../../shadertypes/textures/texture-formats';
+import type {TextureFormat} from '../../shadertypes/texture-types/texture-formats';
 import type {TextureView, TextureViewProps} from './texture-view';
 import {Resource, ResourceProps} from './resource';
 import {Sampler, SamplerProps} from './sampler';
-import {ExternalImage} from '../../image-utils/image-types';
+import {ExternalImage} from '../../shadertypes/image-types/image-types';
 import {log} from '../../utils/log';
 
 /** Options for Texture.copyExternalImage */

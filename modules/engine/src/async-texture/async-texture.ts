@@ -24,20 +24,20 @@ type AsyncTextureDataProps =
   | AsyncTextureCubeProps
   | AsyncTextureCubeArrayProps;
 
-type AsyncTexture1DProps = {dimension: '1d'; data: Promise<Texture1DData> | Texture1DData | null};
-type AsyncTexture2DProps = {dimension?: '2d'; data: Promise<Texture2DData> | Texture2DData | null};
-type AsyncTexture3DProps = {dimension: '3d'; data: Promise<Texture3DData> | Texture3DData | null};
+type AsyncTexture1DProps = {dimension: '1d'; data?: Promise<Texture1DData> | Texture1DData | null};
+type AsyncTexture2DProps = {dimension?: '2d'; data?: Promise<Texture2DData> | Texture2DData | null};
+type AsyncTexture3DProps = {dimension: '3d'; data?: Promise<Texture3DData> | Texture3DData | null};
 type AsyncTextureArrayProps = {
   dimension: '2d-array';
-  data: Promise<TextureArrayData> | TextureArrayData | null;
+  data?: Promise<TextureArrayData> | TextureArrayData | null;
 };
 type AsyncTextureCubeProps = {
   dimension: 'cube';
-  data: Promise<TextureCubeData> | TextureCubeData | null;
+  data?: Promise<TextureCubeData> | TextureCubeData | null;
 };
 type AsyncTextureCubeArrayProps = {
   dimension: 'cube-array';
-  data: Promise<TextureCubeArrayData> | TextureCubeArrayData | null;
+  data?: Promise<TextureCubeArrayData> | TextureCubeArrayData | null;
 };
 
 type AsyncTextureData = AsyncTextureProps['data'];

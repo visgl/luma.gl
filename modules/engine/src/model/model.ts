@@ -3,19 +3,17 @@
 // Copyright (c) vis.gl contributors
 
 // A lot of imports, but then Model is where it all comes together...
-import type {TypedArray} from '@math.gl/types';
-import type {
-  RenderPipelineProps,
-  RenderPipelineParameters,
-  BufferLayout,
-  Shader,
-  VertexArray,
-  TransformFeedback,
-  AttributeInfo,
-  Binding,
-  PrimitiveTopology
-} from '@luma.gl/core';
+import {type TypedArray} from '@math.gl/types';
 import {
+  type RenderPipelineProps,
+  type RenderPipelineParameters,
+  type BufferLayout,
+  type Shader,
+  type VertexArray,
+  type TransformFeedback,
+  type AttributeInfo,
+  type Binding,
+  type PrimitiveTopology,
   Device,
   DeviceFeature,
   Buffer,
@@ -26,7 +24,7 @@ import {
   RenderPass,
   UniformStore,
   log,
-  getTypedArrayConstructor,
+  dataTypeDecoder,
   getAttributeInfosFromLayouts
 } from '@luma.gl/core';
 
@@ -896,7 +894,7 @@ export class Model {
 
   // TODO - fix typing of luma data types
   _getBufferOrConstantValues(attribute: Buffer | TypedArray, dataType: any): string {
-    const TypedArrayConstructor = getTypedArrayConstructor(dataType);
+    const TypedArrayConstructor = dataTypeDecoder.getTypedArrayConstructor(dataType);
     const typedArray =
       attribute instanceof Buffer ? new TypedArrayConstructor(attribute.debugData) : attribute;
     return typedArray.toString();
