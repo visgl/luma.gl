@@ -8,33 +8,33 @@
  * Marks GLSL shaders for syntax highlighting: glsl`...`
  * Install https://marketplace.visualstudio.com/items?itemName=boyswan.glsl-literal
  */
-export type { PlatformInfo } from './lib/shader-assembly/platform-info';
+export type {PlatformInfo} from './lib/shader-assembly/platform-info';
 
 // ShaderModules
 
-export type { ShaderModule } from './lib/shader-module/shader-module';
-export type { ShaderPass } from './lib/shader-module/shader-pass';
-export type { UniformTypes } from './lib/utils/uniform-types';
+export type {ShaderModule} from './lib/shader-module/shader-module';
+export type {ShaderPass} from './lib/shader-module/shader-pass';
+export type {UniformTypes} from './lib/utils/uniform-types';
 
-export { initializeShaderModule, initializeShaderModules } from './lib/shader-module/shader-module';
-export { getShaderModuleUniforms } from './lib/shader-module/shader-module';
-export { getShaderModuleDependencies } from './lib/shader-module/shader-module-dependencies';
-export { checkShaderModuleDeprecations } from './lib/shader-module/shader-module';
+export {initializeShaderModule, initializeShaderModules} from './lib/shader-module/shader-module';
+export {getShaderModuleUniforms} from './lib/shader-module/shader-module';
+export {getShaderModuleDependencies} from './lib/shader-module/shader-module-dependencies';
+export {checkShaderModuleDeprecations} from './lib/shader-module/shader-module';
 
-export { getShaderModuleSource } from './lib/shader-assembly/assemble-shaders';
+export {getShaderModuleSource} from './lib/shader-assembly/assemble-shaders';
 
-export { resolveModules as _resolveModules } from './lib/shader-module/shader-module-dependencies';
-export { getDependencyGraph as _getDependencyGraph } from './lib/shader-module/shader-module-dependencies';
+export {resolveModules as _resolveModules} from './lib/shader-module/shader-module-dependencies';
+export {getDependencyGraph as _getDependencyGraph} from './lib/shader-module/shader-module-dependencies';
 
 // ShaderAssembler
-export { ShaderAssembler } from './lib/shader-assembler';
-export type { ShaderHook } from './lib/shader-assembly/shader-hooks';
-export type { ShaderInjection } from './lib/shader-assembly/shader-injections';
+export {ShaderAssembler} from './lib/shader-assembler';
+export type {ShaderHook} from './lib/shader-assembly/shader-hooks';
+export type {ShaderInjection} from './lib/shader-assembly/shader-injections';
 
 // SHADER HELPERS
 
 // Shader source introspection
-export { getShaderInfo } from './lib/glsl-utils/get-shader-info';
+export {getShaderInfo} from './lib/glsl-utils/get-shader-info';
 export {
   getQualifierDetails,
   getPassthroughFS,
@@ -44,35 +44,35 @@ export {
 } from './lib/glsl-utils/shader-utils';
 
 // EXPERIMENTAL - Do not use in production applications
-export type { ShaderGenerationOptions } from './lib/shader-generator/generate-shader';
-export { generateShaderForModule } from './lib/shader-generator/generate-shader';
-export { capitalize } from './lib/shader-generator/utils/capitalize';
+export type {ShaderGenerationOptions} from './lib/shader-generator/generate-shader';
+export {generateShaderForModule} from './lib/shader-generator/generate-shader';
+export {capitalize} from './lib/shader-generator/utils/capitalize';
 
 // TEST EXPORTS - Do not use in production applications
-export { preprocess } from './lib/preprocessor/preprocessor';
-export { assembleGLSLShaderPair } from './lib/shader-assembly/assemble-shaders';
-export { combineInjects } from './lib/shader-assembly/shader-injections';
+export {preprocess} from './lib/preprocessor/preprocessor';
+export {assembleGLSLShaderPair} from './lib/shader-assembly/assemble-shaders';
+export {combineInjects} from './lib/shader-assembly/shader-injections';
 
 // EXPERIMENTAL WGSL
-export { getShaderLayoutFromWGSL } from './lib/wgsl/get-shader-layout-wgsl';
+export {getShaderLayoutFromWGSL} from './lib/wgsl/get-shader-layout-wgsl';
 
 // data utils
-export { toHalfFloat, fromHalfFloat } from './modules/math/fp16/fp16-utils';
-export { fp64ify, fp64LowPart, fp64ifyMatrix4 } from './modules/math/fp64/fp64-utils';
+export {toHalfFloat, fromHalfFloat} from './modules/math/fp16/fp16-utils';
+export {fp64ify, fp64LowPart, fp64ifyMatrix4} from './modules/math/fp64/fp64-utils';
 
 // math libraries
-export { random } from './modules/math/random/random';
+export {random} from './modules/math/random/random';
 
-export { fp32 } from './modules/math/fp32/fp32';
-export { fp64, fp64arithmetic } from './modules/math/fp64/fp64';
+export {fp32} from './modules/math/fp32/fp32';
+export {fp64, fp64arithmetic} from './modules/math/fp64/fp64';
 
 // engine shader modules
 
 //  projection
 // export type {ProjectionUniforms} from './modules/engine/project/project';
 // export {projection} from './modules/engine/project/project';
-export type { PickingProps, PickingUniforms } from './modules/engine/picking/picking';
-export { picking } from './modules/engine/picking/picking';
+export type {PickingProps, PickingUniforms} from './modules/engine/picking/picking';
+export {picking} from './modules/engine/picking/picking';
 
 // lighting
 export {
@@ -82,18 +82,18 @@ export {
   type DirectionalLight
 } from './modules/lighting/lights/lighting';
 
-export type { LightingProps, LightingUniforms } from './modules/lighting/lights/lighting';
-export { lighting } from './modules/lighting/lights/lighting';
-export { dirlight } from './modules/lighting/no-material/dirlight';
-export type { GouraudMaterialProps } from './modules/lighting/gouraud-material/gouraud-material';
-export { gouraudMaterial } from './modules/lighting/gouraud-material/gouraud-material';
-export type { PhongMaterialProps } from './modules/lighting/phong-material/phong-material';
-export { phongMaterial } from './modules/lighting/phong-material/phong-material';
+export type {LightingProps, LightingUniforms} from './modules/lighting/lights/lighting';
+export {lighting} from './modules/lighting/lights/lighting';
+export {dirlight} from './modules/lighting/no-material/dirlight';
+export type {GouraudMaterialProps} from './modules/lighting/gouraud-material/gouraud-material';
+export {gouraudMaterial} from './modules/lighting/gouraud-material/gouraud-material';
+export type {PhongMaterialProps} from './modules/lighting/phong-material/phong-material';
+export {phongMaterial} from './modules/lighting/phong-material/phong-material';
 export type {
   PBRMaterialBindings,
   PBRMaterialProps,
   PBRMaterialUniforms
 } from './modules/lighting/pbr-material/pbr-material';
-export type { PBRProjectionProps } from './modules/lighting/pbr-material/pbr-projection';
+export type {PBRProjectionProps} from './modules/lighting/pbr-material/pbr-projection';
 
-export { pbrMaterial } from './modules/lighting/pbr-material/pbr-material';
+export {pbrMaterial} from './modules/lighting/pbr-material/pbr-material';

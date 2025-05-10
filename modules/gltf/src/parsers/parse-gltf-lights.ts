@@ -1,13 +1,6 @@
-import { Matrix4 } from '@math.gl/core';
-import type {
-  GLTFNodePostprocessed,
-  GLTFPostprocessed
-} from '@loaders.gl/gltf';
-import type {
-  DirectionalLight,
-  Light,
-  PointLight
-} from '@luma.gl/shadertools';
+import {Matrix4} from '@math.gl/core';
+import type {GLTFNodePostprocessed, GLTFPostprocessed} from '@loaders.gl/gltf';
+import type {DirectionalLight, Light, PointLight} from '@luma.gl/shadertools';
 
 /** Parse KHR_lights_punctual extension into luma.gl light definitions */
 export function parseGLTFLights(gltf: GLTFPostprocessed): Light[] {
