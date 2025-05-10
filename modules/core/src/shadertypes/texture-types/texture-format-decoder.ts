@@ -10,7 +10,7 @@ import type {
   TextureFormatInfo,
   TextureFormatCapabilities,
   TextureFormatColor,
-  TextureFormatDepthStencil,
+  TextureFormatDepthStencil
 } from './texture-formats';
 import {getTextureFormatDefinition} from './texture-format-table';
 
@@ -73,6 +73,7 @@ export class TextureFormatDecoder {
   }
 }
 
+/** Decoder for luma.gl texture types */
 export const textureFormatDecoder = new TextureFormatDecoder();
 
 // HELPERS

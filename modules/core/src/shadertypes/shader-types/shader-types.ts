@@ -16,7 +16,7 @@ export type AttributeShaderType =
   | `vec4<${PrimitiveDataType}>`;
 
 /**
- * Describes the type of a variable that can declared in shader source code.
+ * @type Describes the type of a variable that can declared in shader source code.
  * @note Uniforms can be declared using these types
  * @note Uniforms can be of a wider range of types than attributes.
  * @note to WebGL users: "bindings" (textures, samplers, and uniform buffers) are considered "bindings", not shader variables/uniforms
@@ -39,13 +39,13 @@ export type VariableShaderType =
 /* Suffixes used by WGSL alias types */
 type ShaderTypeAliasSuffix = 'f' | 'i' | 'u' | 'h';
 
-/** Shorthand type aliases recognized by WGSL */
+/** @type Shorthand type aliases recognized by WGSL */
 export type AttributeShaderTypeAlias =
   | `vec2${ShaderTypeAliasSuffix}`
   | `vec3${ShaderTypeAliasSuffix}`
   | `vec4${ShaderTypeAliasSuffix}`;
 
-/** Shorthand type aliases recognized by WGSL */
+/** @type Shorthand type aliases recognized by WGSL */
 export type VariableShaderTypeAlias =
   | AttributeShaderTypeAlias
   | `mat2x2${ShaderTypeAliasSuffix}`
@@ -58,30 +58,124 @@ export type VariableShaderTypeAlias =
   | `mat4x3${ShaderTypeAliasSuffix}`
   | `mat4x4${ShaderTypeAliasSuffix}`;
 
-/** A composite shader type can include structs and arrays, recursively */
+/** @type A composite shader type can include structs and arrays, recursively */
 export type CompositeShaderType = VariableShaderType | StructShaderType | ArrayShaderType;
 
-/** Represents a struct in WGSL */
+/** @type Represents a struct in WGSL */
 export type StructShaderType = {
   members: Record<string, CompositeShaderType>;
 };
 
-/** Represents an array in WGSL */
+/** @type Represents an array in WGSL */
 export type ArrayShaderType = {
   type: CompositeShaderType;
   length: number;
 };
 
-/** Information extracted from a AttributeShaderType constant */
-export type AttributeShaderTypeInfo = {
-  /** WGSL-style primitive data type, f32, i32, u32 */
-  primitiveType: PrimitiveDataType;
-  /** Whether this is a normalized integer (that must be used as float) */
-  components: 1 | 2 | 3 | 4;
-  /** Length in bytes of the data for one vertex */
-  byteLength?: number;
-  /** Whether this is for integer or float vert */
-  integer: boolean;
-  /** Whether this data type is signed */
-  signed: boolean;
-};
+// GENERICS
+
+type TypeOfAliasSuffix<T extends string> = T extends 'f'
+  ? 'f32'
+  : T extends 'i'
+    ? 'i32'
+    : T extends 'u'
+      ? 'u32'
+      : T extends 'h'
+        ? 'f16'
+        : never;
+
+/** @type The unaliased type */
+export type AttributeShaderTypeT<T extends AttributeShaderType | AttributeShaderTypeAlias> =
+  T extends AttributeShaderTypeAlias
+    ? T extends `vec2${infer S}`
+      ? `vec2<${TypeOfAliasSuffix<S>}>`
+      : T extends `vec3${infer S}`
+        ? `vec3<${TypeOfAliasSuffix<S>}>`
+        : T extends `vec4${infer S}`
+          ? `vec4<${TypeOfAliasSuffix<S>}>`
+          : T extends `mat2x2${infer S}`
+            ? `mat2x2<${TypeOfAliasSuffix<S>}>`
+            : T extends `mat3x3${infer S}`
+              ? `mat3x3<${TypeOfAliasSuffix<S>}>`
+              : T extends `mat4x4${infer S}`
+                ? `mat4x4<${TypeOfAliasSuffix<S>}>`
+                : never
+    : T extends `vec2<${infer S}>`
+      ? `vec2<${TypeOfAliasSuffix<S>}>`
+      : T extends `vec3<${infer S}>`
+        ? `vec3<${TypeOfAliasSuffix<S>}>`
+        : T extends `vec4<${infer S}>`
+          ? `vec4<${TypeOfAliasSuffix<S>}>`
+          : T extends `mat2x2<${infer S}>`
+            ? `mat2x2<${TypeOfAliasSuffix<S>}>`
+            : T extends `mat2x3<${infer S}>`
+              ? `mat2x3<${TypeOfAliasSuffix<S>}>`
+              : T extends `mat2x4<${infer S}>`
+                ? `mat2x4<${TypeOfAliasSuffix<S>}>`
+                : T extends `mat3x2<${infer S}>`
+                  ? `mat3x2<${TypeOfAliasSuffix<S>}>`
+                  : T extends `mat3x3<${infer S}>`
+                    ? `mat3x3<${TypeOfAliasSuffix<S>}>`
+                    : T extends `mat3x4<${infer S}>`
+                      ? `mat3x4<${TypeOfAliasSuffix<S>}>`
+                      : T extends `mat4x2<${infer S}>`
+                        ? `mat4x2<${TypeOfAliasSuffix<S>}>`
+                        : T extends `mat4x3<${infer S}>`
+                          ? `mat4x3<${TypeOfAliasSuffix<S>}>`
+                          : T extends `mat4x4<${infer S}>`
+                            ? `mat4x4<${TypeOfAliasSuffix<S>}>`
+                            : never;
+
+/** @type The unaliased type */
+export type VariableShaderTypeT<T extends VariableShaderType | VariableShaderTypeAlias> =
+  T extends VariableShaderTypeAlias
+    ? T extends `vec2${infer S}`
+      ? `vec2<${S}>`
+      : T extends `vec3${infer S}`
+        ? `vec3<${S}>`
+        : T extends `vec4${infer S}`
+          ? `vec4<${S}>`
+          : T extends `mat2x2${infer S}`
+            ? `mat2x2<${S}>`
+            : T extends `mat2x3${infer S}`
+              ? `mat2x3<${S}>`
+              : T extends `mat2x4${infer S}`
+                ? `mat2x4<${S}>`
+                : T extends `mat3x2${infer S}`
+                  ? `mat3x2<${S}>`
+                  : T extends `mat3x3${infer S}`
+                    ? `mat3x3<${S}>`
+                    : T extends `mat3x4${infer S}`
+                      ? `mat3x4<${S}>`
+                      : T extends `mat4x2${infer S}`
+                        ? `mat4x2<${S}>`
+                        : T extends `mat4x3${infer S}`
+                          ? `mat4x3<${S}>`
+                          : T extends `mat4x4${infer S}`
+                            ? `mat4x4<${S}>`
+                            : never
+    : T extends `vec2<${infer S}>`
+      ? `vec2<${S}>`
+      : T extends `vec3<${infer S}>`
+        ? `vec3<${S}>`
+        : T extends `vec4<${infer S}>`
+          ? `vec4<${S}>`
+          : T extends `mat2x2<${infer S}>`
+            ? `mat2x2<${S}>`
+            : T extends `mat2x3<${infer S}>`
+              ? `mat2x3<${S}>`
+              : T extends `mat2x4<${infer S}>`
+                ? `mat2x4<${S}>`
+                : T extends `mat3x2<${infer S}>`
+                  ? `mat3x2<${S}>`
+                  : T extends `mat3x3<${infer S}>`
+                    ? `mat3x3<${S}>`
+                    : T extends `mat3x4<${infer S}>`
+                      ? `mat3x4<${S}>`
+                      : T extends `mat4x2<${infer S}>`
+                        ? `mat4x2<${S}>`
+                        : T extends `mat4x3<${infer S}>`
+                          ? `mat4x3<${S}>`
+                          : T extends `mat4x4<${infer S}>`
+                            ? `mat4x4<${S}>`
+                            : never;

@@ -156,10 +156,15 @@ export {
 export {dataTypeDecoder} from './shadertypes/data-types/data-type-decoder';
 
 export {
+  type AttributeShaderTypeT,
   type AttributeShaderType,
+  type VariableShaderTypeT,
   type VariableShaderType
 } from './shadertypes/shader-types/shader-types';
-export {shaderTypeDecoder} from './shadertypes/shader-types/shader-type-decoder';
+export {
+  shaderTypeDecoder,
+  type AttributeShaderTypeInfo
+} from './shadertypes/shader-types/shader-type-decoder';
 
 // GPU TYPE UTILS - VERTEX ARRAYs
 

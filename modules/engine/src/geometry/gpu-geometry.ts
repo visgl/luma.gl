@@ -128,7 +128,10 @@ export function getAttributeBuffersFromGeometry(
       });
       const {value, size, normalized} = attribute;
       // @ts-expect-error
-      bufferLayout.push({name, format: vertexFormatDecoder.getVertexFormatFromAttribute(value, size, normalized)});
+      bufferLayout.push({
+        name,
+        format: vertexFormatDecoder.getVertexFormatFromAttribute(value, size, normalized)
+      });
     }
   }
 

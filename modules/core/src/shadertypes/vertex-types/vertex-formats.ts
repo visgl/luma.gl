@@ -2,7 +2,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {DataTypeIsIntegerT, DataTypeIsNormalizedT, DataTypeIsSignedT} from "../data-types/data-types";
+import {
+  DataTypeIsIntegerT,
+  DataTypeIsNormalizedT,
+  DataTypeIsSignedT
+} from '../data-types/data-types';
 
 /**
  * Describes the **memory format** and interpretation (normalization) of a buffer that will be supplied to vertex attributes

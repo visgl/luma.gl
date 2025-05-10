@@ -77,6 +77,7 @@ export class DataTypeDecoder {
   }
 }
 
+/** Entry point for decoding luma.gl data types */
 export const dataTypeDecoder = new DataTypeDecoder();
 
 const NORMALIZED_TYPE_MAP = {

@@ -127,4 +127,5 @@ export class VertexFormatDecoder {
   }
 }
 
+/** Decoder for luma.gl vertex types */
 export const vertexFormatDecoder = new VertexFormatDecoder();

@@ -6,17 +6,33 @@ import {type PrimitiveDataType} from '../data-types/data-types';
 import {
   type VariableShaderType,
   type AttributeShaderType,
-  type AttributeShaderTypeInfo,
   type VariableShaderTypeAlias,
   type AttributeShaderTypeAlias
 } from './shader-types';
 
+/** Information extracted from a VariableShaderType constant */
+export type VariableShaderTypeInfo = {
+  type: PrimitiveDataType;
+  components: number;
+};
+
+/** Information extracted from a AttributeShaderType constant */
+export type AttributeShaderTypeInfo = {
+  /** WGSL-style primitive data type, f32, i32, u32 */
+  primitiveType: PrimitiveDataType;
+  /** Whether this is a normalized integer (that must be used as float) */
+  components: 1 | 2 | 3 | 4;
+  /** Length in bytes of the data for one vertex */
+  byteLength?: number;
+  /** Whether this is for integer or float vert */
+  integer: boolean;
+  /** Whether this data type is signed */
+  signed: boolean;
+};
+
 export class ShaderTypeDecoder {
   /** Split a uniform type string into type and components */
-  getVariableShaderTypeInfo(format: VariableShaderType): {
-    type: PrimitiveDataType;
-    components: number;
-  } {
+  getVariableShaderTypeInfo(format: VariableShaderType): VariableShaderTypeInfo {
     const decoded = UNIFORM_FORMATS[format];
     return decoded;
   }
@@ -57,6 +73,7 @@ export class ShaderTypeDecoder {
   }
 }
 
+/** Decoder for luma.gl shader types */
 export const shaderTypeDecoder = new ShaderTypeDecoder();
 
 // TABLES

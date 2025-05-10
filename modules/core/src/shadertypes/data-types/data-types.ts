@@ -49,6 +49,7 @@ export type DataTypeInfo<T extends NormalizedDataType = NormalizedDataType> = {
   signed: DataTypeIsSignedT<T>;
 };
 
+/** @type the primitive data type seen by the shader */
 export type PrimitiveDataTypeT<T extends NormalizedDataType> = T extends 'float32'
   ? 'f32'
   : T extends 'float16'
@@ -61,6 +62,7 @@ export type PrimitiveDataTypeT<T extends NormalizedDataType> = T extends 'float3
           ? 'i32'
           : never;
 
+/** @type The signed data type representing a normalized data type */
 export type SignedDataTypeT<T extends NormalizedDataType> = T extends 'unorm8'
   ? 'uint8'
   : T extends 'snorm8'
