@@ -7,10 +7,12 @@ import {getDataTypeInfo} from '../data-types/decode-data-types';
 import type {
   TextureFormat,
   TextureFormatCompressed,
-  TextureFormatInfo,
-  TextureFormatCapabilities,
   TextureFormatColor
 } from './texture-formats';
+import type {
+  TextureFormatInfo,
+  TextureFormatCapabilities,
+} from './texture-format-types';
 import {getTextureFormatDefinition} from './texture-format-table';
 
 // prettier-ignore
