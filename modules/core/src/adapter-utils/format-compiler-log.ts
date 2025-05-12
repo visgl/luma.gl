@@ -3,6 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {CompilerMessage} from '../adapter/types/compiler-message';
+import {assertDefined} from '../utils/assert';
 
 /** @returns annotated errors or warnings */
 export function formatCompilerLog(
@@ -21,11 +22,13 @@ export function formatCompilerLog(
   switch (options?.showSourceCode || 'no') {
     case 'all':
       // Parse the error - note: browser and driver dependent
-      let currentMessage = 0;
+      let currentMessageIndex = 0;
       for (let lineNum = 1; lineNum <= lines.length; lineNum++) {
-        formattedLog += getNumberedLine(lines[lineNum - 1], lineNum, options);
-        while (log.length > currentMessage && log[currentMessage].lineNum === lineNum) {
-          const message = log[currentMessage++];
+        const line = assertDefined(lines[lineNum - 1]);
+        const currentMessage = assertDefined(log[currentMessageIndex]);
+        formattedLog += getNumberedLine(line, lineNum, options);
+        while (log.length > currentMessageIndex && currentMessage.lineNum === lineNum) {
+          const message = assertDefined(log[currentMessageIndex++]);
           formattedLog += formatCompilerMessage(message, lines, message.lineNum, {
             ...options,
             inlineSource: false
@@ -33,8 +36,8 @@ export function formatCompilerLog(
         }
       }
       // Print any remaining messages
-      while (log.length > currentMessage) {
-        const message = log[currentMessage++];
+      while (log.length > currentMessageIndex) {
+        const message = assertDefined(log[currentMessageIndex++]);
         formattedLog += formatCompilerMessage(message, [], 0, {
           ...options,
           inlineSource: false
