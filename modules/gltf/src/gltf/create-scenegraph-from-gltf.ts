@@ -8,20 +8,24 @@ import {GLTFPostprocessed} from '@loaders.gl/gltf';
 import {parseGLTF, type ParseGLTFOptions} from '../parsers/parse-gltf';
 import {GLTFAnimator} from './gltf-animator';
 import {parseGLTFAnimations} from '../parsers/parse-gltf-animations';
-import {deepCopy} from '../utils/deep-copy';
+
+export type ScenegraphsFromGLTF = {
+  scenes: GroupNode[];
+  animator: GLTFAnimator;
+  nodeMap: Map<number | string, GroupNode>;
+  meshMap: Map<number | string, GroupNode>;
+
+  gltf: GLTFPostprocessed;
+};
 
 export function createScenegraphsFromGLTF(
   device: Device,
   gltf: GLTFPostprocessed,
   options?: ParseGLTFOptions
-): {
-  scenes: GroupNode[];
-  animator: GLTFAnimator;
-} {
-  gltf = deepCopy(gltf);
-  const scenes = parseGLTF(device, gltf, options);
-  // Note: There is a nasty dependency on injected nodes in the glTF
-  const animations = parseGLTFAnimations(gltf);
+): ScenegraphsFromGLTF {
+  const {scenes, nodeMap, meshMap} = parseGLTF(device, gltf, options);
+  const animations = parseGLTFAnimations(gltf, nodeMap);
   const animator = new GLTFAnimator({animations});
-  return {scenes, animator};
+
+  return {scenes, animator, nodeMap, meshMap, gltf};
 }
