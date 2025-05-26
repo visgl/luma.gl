@@ -4,6 +4,7 @@
 
 import {Matrix4} from '@math.gl/core';
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
+// import {GroupNode} from '@luma.gl/engine';
 
 const SKIN_MAX_JOINTS = 20;
 
@@ -30,7 +31,7 @@ export type SkinProps = {
 };
 
 export type SkinUniforms = {
-  jointMatrix: any;
+  jointMatrix?: any;
 };
 
 export const skin = {
@@ -63,9 +64,9 @@ export const skin = {
       matsib.push(new Matrix4(Array.from(slice)));
     }
 
-    const top = scenegraphsFromGLTF.nodeMap.get(skeleton);
-    const matrices = {};
-    top.preorderTraversal((node, {worldMatrix}) => {
+    const top = scenegraphsFromGLTF.nodeMap.get(skeleton); // as GroupNode;
+    const matrices: Record<string, Matrix4> = {};
+    top.preorderTraversal((node: any, {worldMatrix}: any) => {
       node.skinWorldMatrixTemp = worldMatrix;
       matrices[node.id] = worldMatrix;
     });

@@ -3,10 +3,9 @@
 // Copyright (c) vis.gl contributors
 
 import {Device, type RenderPipelineParameters, log} from '@luma.gl/core';
-import {pbrMaterial, ShaderModule} from '@luma.gl/shadertools';
+import {pbrMaterial, skin} from '@luma.gl/shadertools';
 import {Geometry, Model, ModelNode, type ModelProps} from '@luma.gl/engine';
 import {type ParsedPBRMaterial} from '../pbr/pbr-material';
-import {skin} from '@luma.gl/shadertools/modules/engine/skin/skin';
 
 const SHADER = /* WGSL */ `
 layout(0) positions: vec4; // in vec4 POSITION;

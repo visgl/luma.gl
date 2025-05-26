@@ -2,14 +2,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {AnimationLoopTemplate, AnimationProps, GroupNode, ModelNode} from '@luma.gl/engine';
+import {AnimationLoopTemplate, AnimationProps, ModelNode} from '@luma.gl/engine';
 import {Device} from '@luma.gl/core';
 import {load} from '@loaders.gl/core';
 import {LightingProps} from '@luma.gl/shadertools';
-import {createScenegraphsFromGLTF} from '@luma.gl/gltf';
+import {createScenegraphsFromGLTF, ScenegraphsFromGLTF} from '@luma.gl/gltf';
 import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
 import {Matrix4} from '@math.gl/core';
-import {ScenegraphsFromGLTF} from '@luma.gl/gltf/gltf/create-scenegraph-from-gltf';
 
 /* eslint-disable camelcase */
 
