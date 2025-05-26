@@ -41,19 +41,13 @@ export function interpolate(
 
   switch (interpolation) {
     case 'STEP':
-      stepInterpolate(target, path, output[previousIndex] as number[]);
+      stepInterpolate(target, path, output[previousIndex]);
       break;
 
     case 'LINEAR':
       if (nextTime > previousTime) {
         const ratio = (animationTime - previousTime) / (nextTime - previousTime);
-        linearInterpolate(
-          target,
-          path,
-          output[previousIndex] as number[],
-          output[nextIndex] as number[],
-          ratio
-        );
+        linearInterpolate(target, path, output[previousIndex], output[nextIndex], ratio);
       }
       break;
 
@@ -62,10 +56,10 @@ export function interpolate(
         const ratio = (animationTime - previousTime) / (nextTime - previousTime);
         const tDiff = nextTime - previousTime;
 
-        const p0 = output[3 * previousIndex + 1] as number[];
-        const outTangent0 = output[3 * previousIndex + 2] as number[];
-        const inTangent1 = output[3 * nextIndex + 0] as number[];
-        const p1 = output[3 * nextIndex + 1] as number[];
+        const p0 = output[3 * previousIndex + 1];
+        const outTangent0 = output[3 * previousIndex + 2];
+        const inTangent1 = output[3 * nextIndex + 0];
+        const p1 = output[3 * nextIndex + 1];
 
         cubicsplineInterpolate(target, path, {p0, outTangent0, inTangent1, p1, tDiff, ratio});
       }

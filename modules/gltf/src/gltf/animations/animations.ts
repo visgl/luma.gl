@@ -20,5 +20,5 @@ export type GLTFAnimationChannel = {
 export type GLTFAnimationSampler = {
   input: number[];
   interpolation: string;
-  output: number[] | number[][];
+  output: number[][];
 };

@@ -26,7 +26,7 @@ export function parseGLTFAnimations(
       ({input, interpolation = 'LINEAR', output}) => ({
         input: accessorToJsArray(gltf.accessors[input], accessorCache) as number[],
         interpolation,
-        output: accessorToJsArray(gltf.accessors[output], accessorCache)
+        output: accessorToJsArray(gltf.accessors[output], accessorCache) as number[][]
       })
     );
 
@@ -46,6 +46,15 @@ export function parseGLTFAnimations(
   });
 }
 
+/**
+ * Convert accessor to js array or array of arrays.
+ * For input we always use an array of numbers.
+ * For output we use an array of array of numbers.
+ *
+ * @param accessor gltf accessor
+ * @param accessorCache cache
+ * @returns number[] or number[][]
+ */
 function accessorToJsArray(
   accessor: GLTFAccessorPostprocessed,
   accessorCache: Map<GLTFAccessorPostprocessed, number[] | number[][]>

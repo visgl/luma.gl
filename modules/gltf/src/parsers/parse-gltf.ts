@@ -49,14 +49,14 @@ export function parseGLTF(
 
   const meshMap = new Map<number | string, GroupNode>();
   gltf.meshes.forEach((gltfMesh, idx) => {
-    const newMesh = createMesh(device, gltfMesh, combinedOptions);
+    const newMesh = createNodeForGLTFMesh(device, gltfMesh, combinedOptions);
     meshMap.set(idx, newMesh);
     meshMap.set(gltfMesh.id, newMesh);
   });
 
   const nodeMap = new Map<number | string, GroupNode>();
   gltf.nodes.forEach((gltfNode, idx) => {
-    const newNode = createNode(device, gltfNode, combinedOptions);
+    const newNode = createNodeForGLTFNode(device, gltfNode, combinedOptions);
     nodeMap.set(idx, newNode);
     nodeMap.set(gltfNode.id, newNode);
   });
@@ -96,7 +96,7 @@ export function parseGLTF(
   return {scenes, nodeMap, meshMap};
 }
 
-function createNode(
+function createNodeForGLTFNode(
   device: Device,
   gltfNode: GLTFNodePostprocessed,
   options: Required<ParseGLTFOptions>
@@ -119,7 +119,7 @@ function createNode(
   return node;
 }
 
-function createMesh(
+function createNodeForGLTFMesh(
   device: Device,
   gltfMesh: GLTFMeshPostprocessed,
   options: Required<ParseGLTFOptions>
