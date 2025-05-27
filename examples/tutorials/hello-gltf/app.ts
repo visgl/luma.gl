@@ -6,7 +6,7 @@ import {AnimationLoopTemplate, AnimationProps, ModelNode} from '@luma.gl/engine'
 import {Device} from '@luma.gl/core';
 import {load} from '@loaders.gl/core';
 import {LightingProps} from '@luma.gl/shadertools';
-import {createScenegraphsFromGLTF, type ScenegraphsFromGLTF} from '@luma.gl/gltf';
+import {createScenegraphsFromGLTF} from '@luma.gl/gltf';
 import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
 import {Matrix4} from '@math.gl/core';
 
@@ -42,7 +42,7 @@ const lightSources = {
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   device: Device;
-  scenegraphsFromGLTF?: ScenegraphsFromGLTF;
+  scenegraphsFromGLTF?: ReturnType<typeof createScenegraphsFromGLTF>;
   center = [0, 0, 0];
   cameraPos = [0, 0, 0];
   mouseCameraTime: number = 0;

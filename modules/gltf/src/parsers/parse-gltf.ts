@@ -56,12 +56,15 @@ export function parseGLTF(
 
   const gltfNodeIndexToNodeMap = new Map<number, GroupNode>();
   const gltfNodeIdToNodeMap = new Map<string, GroupNode>();
+  // Step 1/2: Generate a GroupNode for each gltf node. (1:1 mapping).
   gltf.nodes.forEach((gltfNode, idx) => {
     const newNode = createNodeForGLTFNode(device, gltfNode, combinedOptions);
     gltfNodeIndexToNodeMap.set(idx, newNode);
     gltfNodeIdToNodeMap.set(gltfNode.id, newNode);
   });
 
+  // Step 2/2: Go though each gltf node and attach the children.
+  // This guarantees that each gltf node will have exactly one luma GroupNode.
   gltf.nodes.forEach((gltfNode, idx) => {
     gltfNodeIndexToNodeMap.get(idx)!.add(
       (gltfNode.children ?? []).map(({id}) => {
@@ -74,11 +77,10 @@ export function parseGLTF(
     // Nodes can have children nodes and one optional child mesh at the same time.
     if (gltfNode.mesh) {
       const mesh = gltfMeshIdToNodeMap.get(gltfNode.mesh.id);
-      if (mesh) {
-        gltfNodeIndexToNodeMap.get(idx)!.add(mesh);
-      } else {
+      if (!mesh) {
         throw new Error(`Cannot find mesh child ${gltfNode.mesh.id} of node ${idx}`);
       }
+      gltfNodeIndexToNodeMap.get(idx)!.add(mesh);
     }
   });
 

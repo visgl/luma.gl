@@ -6,8 +6,5 @@ export {parsePBRMaterial, type ParsePBRMaterialOptions} from './parsers/parse-pb
 export {} from './pbr/pbr-environment';
 
 // glTF Scenegraph Instantiator
-export {
-  createScenegraphsFromGLTF,
-  type ScenegraphsFromGLTF
-} from './gltf/create-scenegraph-from-gltf';
+export {createScenegraphsFromGLTF} from './gltf/create-scenegraph-from-gltf';
 export {GLTFAnimator} from './gltf/gltf-animator';

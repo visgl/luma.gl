@@ -9,7 +9,11 @@ import {parseGLTF, type ParseGLTFOptions} from '../parsers/parse-gltf';
 import {GLTFAnimator} from './gltf-animator';
 import {parseGLTFAnimations} from '../parsers/parse-gltf-animations';
 
-export type ScenegraphsFromGLTF = {
+export function createScenegraphsFromGLTF(
+  device: Device,
+  gltf: GLTFPostprocessed,
+  options?: ParseGLTFOptions
+): {
   scenes: GroupNode[];
   animator: GLTFAnimator;
 
@@ -18,13 +22,7 @@ export type ScenegraphsFromGLTF = {
   gltfNodeIdToNodeMap: Map<string, GroupNode>;
 
   gltf: GLTFPostprocessed;
-};
-
-export function createScenegraphsFromGLTF(
-  device: Device,
-  gltf: GLTFPostprocessed,
-  options?: ParseGLTFOptions
-): ScenegraphsFromGLTF {
+} {
   const {scenes, gltfMeshIdToNodeMap, gltfNodeIdToNodeMap, gltfNodeIndexToNodeMap} = parseGLTF(
     device,
     gltf,
