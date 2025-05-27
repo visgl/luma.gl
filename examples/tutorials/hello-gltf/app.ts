@@ -2,20 +2,19 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {AnimationLoopTemplate, AnimationProps, GroupNode, ModelNode} from '@luma.gl/engine';
+import {AnimationLoopTemplate, AnimationProps, ModelNode} from '@luma.gl/engine';
 import {Device} from '@luma.gl/core';
 import {load} from '@loaders.gl/core';
 import {LightingProps} from '@luma.gl/shadertools';
-import {createScenegraphsFromGLTF, GLTFAnimator} from '@luma.gl/gltf';
+import {createScenegraphsFromGLTF} from '@luma.gl/gltf';
 import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
 import {Matrix4} from '@math.gl/core';
 
 /* eslint-disable camelcase */
 
 const MODEL_DIRECTORY_URL =
-  'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/';
-const MODEL_LIST_URL =
-  'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/model-index.json';
+  'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models';
+const MODEL_LIST_URL = `${MODEL_DIRECTORY_URL}/model-index.json`;
 
 const lightSources = {
   ambientLight: {
@@ -43,11 +42,10 @@ const lightSources = {
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   device: Device;
-  scenes: GroupNode[] = [];
-  animator?: GLTFAnimator;
+  scenegraphsFromGLTF?: ReturnType<typeof createScenegraphsFromGLTF>;
   center = [0, 0, 0];
   cameraPos = [0, 0, 0];
-  time: number = 0;
+  mouseCameraTime: number = 0;
   options: Record<string, boolean> = {
     cameraAnimation: true,
     gltfAnimation: false,
@@ -79,20 +77,27 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         }
       );
     });
+
+    this.device.getDefaultCanvasContext().canvas.addEventListener('mousemove', event => {
+      const e = event as MouseEvent;
+      if (e.buttons) {
+        this.mouseCameraTime -= e.movementX * 3.5;
+      }
+    });
   }
 
   onFinalize() {
-    this.scenes[0].traverse(node => (node as ModelNode).model.destroy());
+    this.scenegraphsFromGLTF?.scenes[0].traverse(node => (node as ModelNode).model.destroy());
   }
 
   onRender({aspect, device, time}: AnimationProps): void {
-    if (!this.scenes?.length) return;
+    if (!this.scenegraphsFromGLTF?.scenes?.length) return;
     const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1], clearDepth: 1});
 
     const far = 2 * this.cameraPos[0];
     const near = far / 1000;
     const projectionMatrix = new Matrix4().perspective({fovy: Math.PI / 3, aspect, near, far});
-    const cameraTime = this.options['cameraAnimation'] ? time : 0;
+    const cameraTime = this.options['cameraAnimation'] ? time : this.mouseCameraTime;
     const cameraPos = [
       this.cameraPos[0] * Math.sin(0.001 * cameraTime),
       this.cameraPos[1],
@@ -100,12 +105,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     ];
 
     if (this.options['gltfAnimation']) {
-      this.animator?.setTime(time);
+      this.scenegraphsFromGLTF.animator?.setTime(time);
     }
 
     const viewMatrix = new Matrix4().lookAt({eye: cameraPos, center: this.center});
 
-    this.scenes[0].traverse((node, {worldMatrix: modelMatrix}) => {
+    this.scenegraphsFromGLTF.scenes[0].traverse((node, {worldMatrix: modelMatrix}) => {
       const {model} = node as ModelNode;
 
       const modelViewProjectionMatrix = new Matrix4(projectionMatrix)
@@ -119,6 +124,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
           modelViewProjectionMatrix,
           modelMatrix,
           normalMatrix: new Matrix4(modelMatrix).invert().transpose()
+        },
+        skin: {
+          // TODO: This is required to trigger getUniforms() of skin.
+          // Fix it, then remove this.
+          scenegraphsFromGLTF: this.scenegraphsFromGLTF
         }
       });
       model.draw(renderPass);
@@ -143,20 +153,17 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       );
       const processedGLTF = postProcessGLTF(gltf);
 
-      const {scenes, animator} = createScenegraphsFromGLTF(this.device, processedGLTF, {
+      this.scenegraphsFromGLTF = createScenegraphsFromGLTF(this.device, processedGLTF, {
         lights: true,
         imageBasedLightingEnvironment: undefined,
         pbrDebug: false
       });
 
-      this.scenes = scenes;
-      this.animator = animator;
-
       // Calculate nice camera view
       // TODO move to utility in gltf module
       let min = [Infinity, Infinity, Infinity];
       let max = [0, 0, 0];
-      this.scenes[0].traverse(node => {
+      this.scenegraphsFromGLTF?.scenes[0].traverse(node => {
         const {bounds} = node as ModelNode;
         min = min.map((n, i) => Math.min(n, bounds[0][i], bounds[1][i]));
         max = max.map((n, i) => Math.max(n, bounds[0][i], bounds[1][i]));
@@ -167,6 +174,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       canvas.style.opacity = '1';
       showError();
     } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error(error);
       showError(error as Error);
     }
   }
@@ -194,6 +203,7 @@ function setModelMenu(
   });
 
   modelSelector.append(...options);
+  modelSelector.value = currentItem;
 }
 
 function setOptionsUI(options: Record<string, boolean>) {
