@@ -42,38 +42,40 @@ export function parseGLTF(
   options: ParseGLTFOptions = {}
 ): {
   scenes: GroupNode[];
-  nodeMap: Map<number | string, GroupNode>;
-  meshMap: Map<number | string, GroupNode>;
+  gltfMeshIdToNodeMap: Map<string, GroupNode>;
+  gltfNodeIndexToNodeMap: Map<number, GroupNode>;
+  gltfNodeIdToNodeMap: Map<string, GroupNode>;
 } {
   const combinedOptions = {...defaultOptions, ...options};
 
-  const meshMap = new Map<number | string, GroupNode>();
+  const gltfMeshIdToNodeMap = new Map<string, GroupNode>();
   gltf.meshes.forEach((gltfMesh, idx) => {
     const newMesh = createNodeForGLTFMesh(device, gltfMesh, combinedOptions);
-    meshMap.set(idx, newMesh);
-    meshMap.set(gltfMesh.id, newMesh);
+    gltfMeshIdToNodeMap.set(gltfMesh.id, newMesh);
   });
 
-  const nodeMap = new Map<number | string, GroupNode>();
+  const gltfNodeIndexToNodeMap = new Map<number, GroupNode>();
+  const gltfNodeIdToNodeMap = new Map<string, GroupNode>();
   gltf.nodes.forEach((gltfNode, idx) => {
     const newNode = createNodeForGLTFNode(device, gltfNode, combinedOptions);
-    nodeMap.set(idx, newNode);
-    nodeMap.set(gltfNode.id, newNode);
+    gltfNodeIndexToNodeMap.set(idx, newNode);
+    gltfNodeIdToNodeMap.set(gltfNode.id, newNode);
   });
 
   gltf.nodes.forEach((gltfNode, idx) => {
-    nodeMap.get(idx)?.add(
+    gltfNodeIndexToNodeMap.get(idx)!.add(
       (gltfNode.children ?? []).map(({id}) => {
-        const child = nodeMap.get(id);
+        const child = gltfNodeIdToNodeMap.get(id);
         if (!child) throw new Error(`Cannot find child ${id} of node ${idx}`);
         return child;
       })
     );
-    // Node can have children nodes and meshes at the same time
+
+    // Nodes can have children nodes and one optional child mesh at the same time.
     if (gltfNode.mesh) {
-      const mesh = meshMap.get(gltfNode.mesh.id);
+      const mesh = gltfMeshIdToNodeMap.get(gltfNode.mesh.id);
       if (mesh) {
-        nodeMap.get(idx)?.add(mesh);
+        gltfNodeIndexToNodeMap.get(idx)!.add(mesh);
       } else {
         throw new Error(`Cannot find mesh child ${gltfNode.mesh.id} of node ${idx}`);
       }
@@ -82,7 +84,7 @@ export function parseGLTF(
 
   const scenes = gltf.scenes.map(gltfScene => {
     const children = (gltfScene.nodes || []).map(({id}) => {
-      const child = nodeMap.get(id);
+      const child = gltfNodeIdToNodeMap.get(id);
       if (!child)
         throw new Error(`Cannot find child ${id} of scene ${gltfScene.name || gltfScene.id}`);
       return child;
@@ -93,7 +95,7 @@ export function parseGLTF(
     });
   });
 
-  return {scenes, nodeMap, meshMap};
+  return {scenes, gltfMeshIdToNodeMap, gltfNodeIdToNodeMap, gltfNodeIndexToNodeMap};
 }
 
 function createNodeForGLTFNode(
@@ -126,7 +128,7 @@ function createNodeForGLTFMesh(
 ): GroupNode {
   const gltfPrimitives = gltfMesh.primitives || [];
   const primitives = gltfPrimitives.map((gltfPrimitive, i) =>
-    createPrimitive(device, gltfPrimitive, i, gltfMesh, options)
+    createNodeForGLTFPrimitive(device, gltfPrimitive, i, gltfMesh, options)
   );
   const mesh = new GroupNode({
     id: gltfMesh.name || gltfMesh.id,
@@ -136,7 +138,7 @@ function createNodeForGLTFMesh(
   return mesh;
 }
 
-function createPrimitive(
+function createNodeForGLTFPrimitive(
   device: Device,
   gltfPrimitive: any,
   i: number,

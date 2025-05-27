@@ -15,7 +15,7 @@ import {accessorToTypedArray} from '..//webgl-to-webgpu/convert-webgl-attribute'
 
 export function parseGLTFAnimations(
   gltf: GLTFPostprocessed,
-  nodeMap: Map<number | string, GroupNode>
+  gltfNodeIndexToNodeMap: Map<number, GroupNode>
 ): GLTFAnimation[] {
   const gltfAnimations = gltf.animations || [];
   const accessorCache1D = new Map<GLTFAccessorPostprocessed, number[]>();
@@ -32,7 +32,7 @@ export function parseGLTFAnimations(
     );
 
     const channels: GLTFAnimationChannel[] = animation.channels.map(({sampler, target}) => {
-      const targetNode = nodeMap.get(target.node ?? 0);
+      const targetNode = gltfNodeIndexToNodeMap.get(target.node ?? 0);
       if (!targetNode) {
         throw new Error(`Cannot find animation target ${target.node}`);
       }

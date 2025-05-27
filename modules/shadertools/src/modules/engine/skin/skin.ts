@@ -64,7 +64,7 @@ export const skin = {
       matsib.push(new Matrix4(Array.from(slice)));
     }
 
-    const top = scenegraphsFromGLTF.nodeMap.get(skeleton);
+    const top = scenegraphsFromGLTF.gltfNodeIndexToNodeMap.get(skeleton);
     const matrices: Record<string, Matrix4> = {};
     top.preorderTraversal((node: any, {worldMatrix}: any) => {
       matrices[node.id] = worldMatrix;
@@ -75,7 +75,7 @@ export const skin = {
       const nodeIndex = joints[i];
       if (nodeIndex === undefined) break;
 
-      const worldMat = matrices[scenegraphsFromGLTF.nodeMap.get(nodeIndex).id];
+      const worldMat = matrices[scenegraphsFromGLTF.gltfNodeIndexToNodeMap.get(nodeIndex).id];
       const invBindMat = matsib[i];
 
       const Z = new Matrix4().copy(worldMat).multiplyRight(invBindMat);
