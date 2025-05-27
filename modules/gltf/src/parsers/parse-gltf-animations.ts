@@ -18,15 +18,16 @@ export function parseGLTFAnimations(
   nodeMap: Map<number | string, GroupNode>
 ): GLTFAnimation[] {
   const gltfAnimations = gltf.animations || [];
-  const accessorCache = new Map<GLTFAccessorPostprocessed, number[] | number[][]>();
+  const accessorCache1D = new Map<GLTFAccessorPostprocessed, number[]>();
+  const accessorCache2D = new Map<GLTFAccessorPostprocessed, number[][]>();
 
   return gltfAnimations.map((animation, index) => {
     const name = animation.name || `Animation-${index}`;
     const samplers: GLTFAnimationSampler[] = animation.samplers.map(
       ({input, interpolation = 'LINEAR', output}) => ({
-        input: accessorToJsArray(gltf.accessors[input], accessorCache) as number[],
+        input: accessorToJsArray1D(gltf.accessors[input], accessorCache1D),
         interpolation,
-        output: accessorToJsArray(gltf.accessors[output], accessorCache) as number[][]
+        output: accessorToJsArray2D(gltf.accessors[output], accessorCache2D)
       })
     );
 
@@ -46,36 +47,46 @@ export function parseGLTFAnimations(
   });
 }
 
-/**
- * Convert accessor to js array or array of arrays.
- * For input we always use an array of numbers.
- * For output we use an array of array of numbers.
- *
- * @param accessor gltf accessor
- * @param accessorCache cache
- * @returns number[] or number[][]
- */
-function accessorToJsArray(
+function accessorToJsArray1D(
   accessor: GLTFAccessorPostprocessed,
-  accessorCache: Map<GLTFAccessorPostprocessed, number[] | number[][]>
-): number[] | number[][] {
+  accessorCache: Map<GLTFAccessorPostprocessed, number[]>
+): number[] {
   if (accessorCache.has(accessor)) {
-    return accessorCache.get(accessor) as number[] | number[][];
+    return accessorCache.get(accessor)!;
   }
 
   const {typedArray: array, components} = accessorToTypedArray(accessor);
-  let result;
+  assert(components === 1, 'accessorToJsArray1D must have exactly 1 component');
+  const result = Array.from(array);
 
-  if (components === 1) {
-    result = Array.from(array);
-  } else {
-    // Slice array
-    result = [];
-    for (let i = 0; i < array.length; i += components) {
-      result.push(Array.from(array.slice(i, i + components)));
-    }
+  accessorCache.set(accessor, result);
+  return result;
+}
+
+function accessorToJsArray2D(
+  accessor: GLTFAccessorPostprocessed,
+  accessorCache: Map<GLTFAccessorPostprocessed, number[][]>
+): number[][] {
+  if (accessorCache.has(accessor)) {
+    return accessorCache.get(accessor)!;
+  }
+
+  const {typedArray: array, components} = accessorToTypedArray(accessor);
+  assert(components > 1, 'accessorToJsArray2D must have more than 1 component');
+
+  const result = [];
+
+  // Slice array
+  for (let i = 0; i < array.length; i += components) {
+    result.push(Array.from(array.slice(i, i + components)));
   }
 
   accessorCache.set(accessor, result);
   return result;
+}
+
+function assert(condition: boolean, message?: string): asserts condition {
+  if (!condition) {
+    throw new Error(message);
+  }
 }
