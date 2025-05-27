@@ -105,22 +105,14 @@ function createNodeForGLTFNode(
   gltfNode: GLTFNodePostprocessed,
   options: Required<ParseGLTFOptions>
 ): GroupNode {
-  const node = new GroupNode({
+  return new GroupNode({
     id: gltfNode.name || gltfNode.id,
-    children: []
+    children: [],
+    matrix: gltfNode.matrix,
+    position: gltfNode.translation,
+    rotation: gltfNode.rotation,
+    scale: gltfNode.scale
   });
-
-  if (gltfNode.matrix) {
-    node.setMatrix(gltfNode.matrix);
-  } else {
-    node.update({
-      position: gltfNode.translation,
-      rotation: gltfNode.rotation,
-      scale: gltfNode.scale
-    });
-  }
-
-  return node;
 }
 
 function createNodeForGLTFMesh(

@@ -197,18 +197,20 @@ export class ScenegraphNode {
     //   this.display = props.display;
     // }
 
-    if ('position' in props) {
+    if (props?.position) {
       this.setPosition(props.position);
     }
-    if ('rotation' in props) {
+    if (props?.rotation) {
       this.setRotation(props.rotation);
     }
-    if ('scale' in props) {
+    if (props?.scale) {
       this.setScale(props.scale);
     }
 
+    this.updateMatrix();
+
     // Matrix overwrites other props
-    if ('matrix' in props) {
+    if (props?.matrix) {
       this.setMatrix(props.matrix);
     }
 

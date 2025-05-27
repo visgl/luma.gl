@@ -174,6 +174,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       canvas.style.opacity = '1';
       showError();
     } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error(error);
       showError(error as Error);
     }
   }
