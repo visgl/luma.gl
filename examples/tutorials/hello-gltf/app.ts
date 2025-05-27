@@ -6,7 +6,7 @@ import {AnimationLoopTemplate, AnimationProps, ModelNode} from '@luma.gl/engine'
 import {Device} from '@luma.gl/core';
 import {load} from '@loaders.gl/core';
 import {LightingProps} from '@luma.gl/shadertools';
-import {createScenegraphsFromGLTF, ScenegraphsFromGLTF} from '@luma.gl/gltf';
+import {createScenegraphsFromGLTF, type ScenegraphsFromGLTF} from '@luma.gl/gltf';
 import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
 import {Matrix4} from '@math.gl/core';
 
@@ -45,7 +45,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   scenegraphsFromGLTF?: ScenegraphsFromGLTF;
   center = [0, 0, 0];
   cameraPos = [0, 0, 0];
-  time: number = 0;
+  mouseCameraTime: number = 0;
   options: Record<string, boolean> = {
     cameraAnimation: true,
     gltfAnimation: false,
@@ -77,10 +77,17 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         }
       );
     });
+
+    this.device.getDefaultCanvasContext().canvas.addEventListener('mousemove', event => {
+      const e = event as MouseEvent;
+      if (e.buttons) {
+        this.mouseCameraTime -= e.movementX * 3.5;
+      }
+    });
   }
 
   onFinalize() {
-    this.scenegraphsFromGLTF.scenes[0].traverse(node => (node as ModelNode).model.destroy());
+    this.scenegraphsFromGLTF?.scenes[0].traverse(node => (node as ModelNode).model.destroy());
   }
 
   onRender({aspect, device, time}: AnimationProps): void {
@@ -90,7 +97,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const far = 2 * this.cameraPos[0];
     const near = far / 1000;
     const projectionMatrix = new Matrix4().perspective({fovy: Math.PI / 3, aspect, near, far});
-    const cameraTime = this.options['cameraAnimation'] ? time : 0;
+    const cameraTime = this.options['cameraAnimation'] ? time : this.mouseCameraTime;
     const cameraPos = [
       this.cameraPos[0] * Math.sin(0.001 * cameraTime),
       this.cameraPos[1],

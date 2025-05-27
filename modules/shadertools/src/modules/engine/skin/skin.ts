@@ -3,8 +3,8 @@
 // Copyright (c) vis.gl contributors
 
 import {Matrix4} from '@math.gl/core';
+
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
-// import {GroupNode} from '@luma.gl/engine';
 
 const SKIN_MAX_JOINTS = 20;
 
@@ -64,10 +64,9 @@ export const skin = {
       matsib.push(new Matrix4(Array.from(slice)));
     }
 
-    const top = scenegraphsFromGLTF.nodeMap.get(skeleton); // as GroupNode;
+    const top = scenegraphsFromGLTF.nodeMap.get(skeleton);
     const matrices: Record<string, Matrix4> = {};
     top.preorderTraversal((node: any, {worldMatrix}: any) => {
-      node.skinWorldMatrixTemp = worldMatrix;
       matrices[node.id] = worldMatrix;
     });
 
