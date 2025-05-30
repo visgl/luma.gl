@@ -67,6 +67,13 @@ export class ShaderAssembler {
     this._hookFunctions.push(hook);
   }
 
+  /*
+   * Remove all registered shader hooks
+   */
+  resetShaderHooks(): void {
+    this._hookFunctions.length = 0;
+  }
+
   /**
    * Assemble a WGSL unified shader
    * @param platformInfo
