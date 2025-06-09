@@ -29,14 +29,19 @@ export class UniformBufferLayout {
   readonly byteLength: number;
 
   /** Create a new UniformBufferLayout given a map of attributes. */
-  constructor(uniformTypes: Record<string, VariableShaderType>) {
+  constructor(
+    uniformTypes: Record<string, VariableShaderType>,
+    uniformSizes: Record<string, number> = {}
+  ) {
     /** number of 4 byte slots taken */
     let size: number = 0;
 
     // Add layout (type, size and offset) definitions for each uniform in the layout
     for (const [key, uniformType] of Object.entries(uniformTypes)) {
       const typeAndComponents = getVariableShaderTypeInfo(uniformType);
-      const {type, components: count} = typeAndComponents;
+      const {type, components} = typeAndComponents;
+      // Calculate total count for uniform arrays.
+      const count = components * (uniformSizes?.[key] ?? 1);
       // First, align (bump) current offset to an even multiple of current object (1, 2, 4)
       size = alignTo(size, count);
       // Use the aligned size as the offset of the current uniform.
@@ -53,10 +58,8 @@ export class UniformBufferLayout {
 
   /** Get the data for the complete buffer */
   getData(uniformValues: Record<string, UniformValue>): Uint8Array {
-    const bufferSize = Math.max(this.byteLength, minBufferSize);
-
     // Allocate three typed arrays pointing at same memory
-    const arrayBuffer = getScratchArrayBuffer(bufferSize);
+    const arrayBuffer = getScratchArrayBuffer(this.byteLength);
     const typedArrays = {
       i32: new Int32Array(arrayBuffer),
       u32: new Uint32Array(arrayBuffer),
@@ -64,8 +67,6 @@ export class UniformBufferLayout {
       // TODO not implemented
       f16: new Uint16Array(arrayBuffer)
     };
-    // TODO is this needed?
-    // typedArrays.i32.fill(0);
 
     for (const [name, value] of Object.entries(uniformValues)) {
       const uniformLayout = this.layout[name];
@@ -101,7 +102,7 @@ export class UniformBufferLayout {
       }
     }
 
-    return new Uint8Array(arrayBuffer);
+    return new Uint8Array(arrayBuffer, 0, this.byteLength);
   }
 
   /** Does this layout have a field with specified name */

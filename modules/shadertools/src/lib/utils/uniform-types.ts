@@ -64,3 +64,7 @@ type UniformProps = {
 export type UniformTypes<PropsT extends UniformProps> = {
   [name in keyof PropsT]: UniformType<PropsT[name]>;
 };
+
+export type UniformSizes<PropsT extends UniformProps> = {
+  [name in keyof PropsT]: number;
+};
