@@ -21,7 +21,7 @@ Production quality WebGPU backend
   - [`Buffer.mapAndReadAsync()`] New method that reads directly from buffer memory without performing a copy.
   - [`Buffer.mapAndWriteAsync()`] New method that writes directly to buffer memory.
 - [`Texture`]
-  - `Texture` class refactors complete, see upgrade guide. 
+  - `Texture` class refactors complete, see upgrade guide.
 - Shader type APIs have been improved.
 - `CommandEncoder`/`CommandBuffer` API improvements
 - `CanvasContext` API simplifications (see upgrade guide).
@@ -38,7 +38,7 @@ Production quality WebGPU backend
 
 **@luma.gl/engine**
 
-- `AsyncTexture` 
+- `AsyncTexture`
   - now supports mipmap generation for WebGPU textures (in progress)
 
 **@luma.gl/effects**

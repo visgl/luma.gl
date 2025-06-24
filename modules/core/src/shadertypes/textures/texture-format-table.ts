@@ -6,10 +6,14 @@ import {
   TextureFormat,
   TextureFormatColorUncompressed,
   TextureFormatDepthStencil,
-  TextureFeature,
-  TextureFormatInfo,
   TextureFormatCompressed
 } from './texture-formats';
+
+import {
+  TextureFeature,
+  TextureFormatInfo,
+} from './texture-format-types';
+
 /* eslint-disable camelcase */
 
 // Define local device feature strings to optimize minification
