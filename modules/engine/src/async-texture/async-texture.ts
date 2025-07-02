@@ -172,11 +172,12 @@ export class AsyncTexture {
   }
 
   async initAsync(props: AsyncTextureProps): Promise<void> {
-    let resolveReady;
-    let rejectReady;
-
     const asyncData: AsyncTextureData = props.data;
-    const data: TextureData = await awaitAllPromises(asyncData).then(resolveReady, rejectReady);
+    // @ts-expect-error not clear how to convince TS that null will be returned
+    const data: TextureData | null = await awaitAllPromises(asyncData).then(
+      undefined,
+      this.rejectReady
+    );
 
     // Check that we haven't been destroyed while waiting for texture data to load
     if (this.destroyed) {
@@ -204,7 +205,6 @@ export class AsyncTexture {
     this.texture = this.device.createTexture(syncProps);
     this.sampler = this.texture.sampler;
     this.view = this.texture.view;
-    this.isReady = true;
 
     if (props.data) {
       switch (this.props.dimension) {
@@ -212,7 +212,7 @@ export class AsyncTexture {
           this._setTexture1DData(this.texture, data as Texture1DData);
           break;
         case '2d':
-          this._setTexture2DData(data);
+          this._setTexture2DData(data as Texture2DData);
           break;
         case '3d':
           this._setTexture3DData(this.texture, data as Texture3DData);
@@ -235,6 +235,19 @@ export class AsyncTexture {
     }
 
     log.info(1, `${this} loaded`);
+    this.resolveReady();
+  }
+
+  /**
+   * Factory method to create an AsyncTexture and wait for it to be ready
+   * @param device The device to create the texture on
+   * @param props The texture properties
+   * @returns Promise that resolves to the ready texture
+   */
+  static async createTexture(device: Device, props: AsyncTextureProps): Promise<AsyncTexture> {
+    const asyncTexture = new AsyncTexture(device, props);
+    await asyncTexture.ready;
+    return asyncTexture;
   }
 
   destroy(): void {
@@ -292,7 +305,13 @@ export class AsyncTexture {
 
   /** Get the size of the texture described by the provided TextureData */
   getTextureDataSize(
-    data: TextureData | TextureCubeData | TextureArrayData | TextureCubeArrayData | TypedArray
+    data:
+      | TextureData
+      | TextureCubeData
+      | TextureArrayData
+      | TextureCubeArrayData
+      | TypedArray
+      | null
   ): {width: number; height: number} | null {
     if (!data) {
       return null;
