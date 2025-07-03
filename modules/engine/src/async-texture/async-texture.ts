@@ -238,18 +238,6 @@ export class AsyncTexture {
     this.resolveReady();
   }
 
-  /**
-   * Factory method to create an AsyncTexture and wait for it to be ready
-   * @param device The device to create the texture on
-   * @param props The texture properties
-   * @returns Promise that resolves to the ready texture
-   */
-  static async createTexture(device: Device, props: AsyncTextureProps): Promise<AsyncTexture> {
-    const asyncTexture = new AsyncTexture(device, props);
-    await asyncTexture.ready;
-    return asyncTexture;
-  }
-
   destroy(): void {
     if (this.texture) {
       this.texture.destroy();
