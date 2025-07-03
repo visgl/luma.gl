@@ -4,6 +4,12 @@
 
 Production WebGPU support
 
+### v9.2.0-alpha.4
+
+- fix(engine): AsyncTexture correctly resolve Promise on data load (#2402)
+- fix(postprocessing): Remove pre-multiplied alpha (#2400)
+- fix uniform-buffer-layout size calculation and add support for arrays (#2398)
+
 ### v9.2.0-alpha.3
 
 ### v9.2.0-alpha.2

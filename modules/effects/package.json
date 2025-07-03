@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/effects",
-  "version": "9.2.0-alpha.3",
+  "version": "9.2.0-alpha.4",
   "description": "Post-processing effects for luma.gl",
   "type": "module",
   "license": "MIT",
