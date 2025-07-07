@@ -59,7 +59,7 @@ export type LightingProps = {
 
 export type LightingUniforms = {
   enabled: number;
-  ambientLightColor: Readonly<NumberArray3>;
+  ambientColor: Readonly<NumberArray3>;
   directionalLightCount: number;
   pointLightCount: number;
   lightType: number; // [];
@@ -95,7 +95,7 @@ export const lighting = {
     directionalLightCount: 'i32',
     pointLightCount: 'i32',
 
-    ambientLightColor: 'vec3<f32>',
+    ambientColor: 'vec3<f32>',
 
     // TODO define as arrays once we have appropriate uniformTypes
     lightColor0: 'vec3<f32>',
@@ -121,7 +121,7 @@ export const lighting = {
     directionalLightCount: 0,
     pointLightCount: 0,
 
-    ambientLightColor: [0.1, 0.1, 0.1],
+    ambientColor: [0.1, 0.1, 0.1],
     lightColor0: [1, 1, 1],
     lightPosition0: [1, 1, 2],
     // TODO - could combine direction and attenuation
@@ -192,7 +192,7 @@ function getLightSourceUniforms({
 }: LightingProps): Partial<LightingUniforms> {
   const lightSourceUniforms: Partial<LightingUniforms> = {};
 
-  lightSourceUniforms.ambientLightColor = convertColor(ambientLight);
+  lightSourceUniforms.ambientColor = convertColor(ambientLight);
 
   let currentLight: 0 | 1 | 2 = 0;
 
