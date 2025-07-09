@@ -4,6 +4,12 @@
 
 Production WebGPU support
 
+### v9.2.0-alpha.5
+
+- fix(core): Support number for useDevicePixels (#2405)
+- fix(lighting): Default to 3 MAX_LIGHTS (#2404)
+- fix(effects): Reinstate vignette GLSL shader (#2403)
+
 ### v9.2.0-alpha.4
 
 - fix(engine): AsyncTexture correctly resolve Promise on data load (#2402)
