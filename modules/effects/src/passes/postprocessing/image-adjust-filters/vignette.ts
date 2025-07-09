@@ -4,7 +4,7 @@
 
 import type {ShaderPass} from '@luma.gl/shadertools';
 
-const fs = /* wgsl */ `\
+const source = /* wgsl */ `\
 struct vignetteUniforms {
   radius: f32,
   amount: f32
@@ -24,6 +24,19 @@ fn vignette_filterColor_ext(color: vec4f, texSize: vec2f, texCoord: vec2f) ->vec
   let dist: f32 = distance(texCoord, vec2f(0.5, 0.5));
   let ratio: f32 = smoothstep(0.8, vignette.radius * 0.799, dist * (vignette.amount + vignette.radius));
   return color.rgba * ratio + (1.0 - ratio)*vec4f(0.0, 0.0, 0.0, 1.0);
+}
+`;
+
+const fs = /* glsl */ `\
+uniform vignetteUniforms {
+  float radius;
+  float amount;
+} vignette;
+
+vec4 vignette_filterColor_ext(vec4 color, vec2 texSize, vec2 texCoord) {
+  float dist = distance(texCoord, vec2(0.5, 0.5));
+  float ratio = smoothstep(0.8, vignette.radius * 0.799, dist * (vignette.amount + vignette.radius));
+  return color.rgba * ratio + (1.0 - ratio)*vec4(0.0, 0.0, 0.0, 1.0);
 }
 `;
 
@@ -48,6 +61,8 @@ export const vignette = {
   uniforms: {} as VignetteUniforms,
 
   name: 'vignette',
+  source,
+  fs,
 
   uniformTypes: {
     radius: 'f32',
@@ -62,7 +77,5 @@ export const vignette = {
     amount: {value: 0.5, min: 0, max: 1}
   },
 
-  passes: [{filter: true}],
-
-  fs
+  passes: [{filter: true}]
 } as const satisfies ShaderPass<VignetteProps, VignetteProps>;
