@@ -23,8 +23,8 @@ export type CanvasContextProps = {
   height?: number;
   /** Visibility (only used if new canvas is created). */
   visible?: boolean;
-  /** Whether to size the drawing buffer to the pixel size during auto resize */
-  useDevicePixels?: boolean;
+  /** Whether to size the drawing buffer to the pixel size during auto resize. If a number is provided it is used as a static pixel ratio */
+  useDevicePixels?: boolean | number;
   /** Whether to track window resizes. */
   autoResize?: boolean;
   /** @see https://developer.mozilla.org/en-US/docs/Web/API/GPUCanvasContext/configure#alphamode */
@@ -362,7 +362,10 @@ export abstract class CanvasContext {
 
     // Update the canvas drawing buffer size
     if (this.props.autoResize) {
-      if (this.props.useDevicePixels) {
+      if (typeof this.props.useDevicePixels === 'number') {
+        const dpr = this.props.useDevicePixels;
+        this.setDrawingBufferSize(this.cssWidth * dpr, this.cssHeight * dpr);
+      } else if (this.props.useDevicePixels) {
         this.setDrawingBufferSize(this.devicePixelWidth, this.devicePixelHeight);
       } else {
         this.setDrawingBufferSize(this.cssWidth, this.cssHeight);
