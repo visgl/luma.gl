@@ -35,6 +35,11 @@ export type CanvasContextProps = {
   trackPosition?: boolean;
 };
 
+export type MutableCanvasContextProps = {
+  /** Whether to size the drawing buffer to the pixel size during auto resize. If a number is provided it is used as a static pixel ratio */
+  useDevicePixels?: boolean | number;
+};
+
 /**
  * Manages a canvas. Supports both HTML or offscreen canvas
  * - Creates a new canvas or looks up a canvas from the DOM
@@ -184,6 +189,14 @@ export abstract class CanvasContext {
 
   destroy() {
     this.destroyed = true;
+  }
+
+  setProps(props: MutableCanvasContextProps): this {
+    if ('useDevicePixels' in props) {
+      this.props.useDevicePixels = props.useDevicePixels || false;
+      this._updateDrawingBufferSize();
+    }
+    return this;
   }
 
   /** Returns a framebuffer with properly resized current 'swap chain' textures */
@@ -360,6 +373,13 @@ export abstract class CanvasContext {
     this.devicePixelWidth = Math.max(1, Math.min(devicePixelWidth, maxDevicePixelWidth));
     this.devicePixelHeight = Math.max(1, Math.min(devicePixelHeight, maxDevicePixelHeight));
 
+    this._updateDrawingBufferSize();
+
+    // Inform the device
+    this.device.props.onResize(this, {oldPixelSize});
+  }
+
+  protected _updateDrawingBufferSize() {
     // Update the canvas drawing buffer size
     if (this.props.autoResize) {
       if (typeof this.props.useDevicePixels === 'number') {
@@ -380,9 +400,6 @@ export abstract class CanvasContext {
     this.isInitialized = true;
 
     this.updatePosition();
-
-    // Inform the device
-    this.device.props.onResize(this, {oldPixelSize});
   }
 
   /** Monitor DPR changes */
