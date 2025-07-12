@@ -4,9 +4,13 @@
 
 Production WebGPU support
 
+### v9.2.0-beta.1
+
+- beta release track
+
 ### v9.2.0-alpha.6
 
--   feature(core): CanvasContext.setProps({useDevicePixels}) (#2406)
+- feature(core): CanvasContext.setProps({useDevicePixels}) (#2406)
 
 ### v9.2.0-alpha.5
 
