@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/shadertools",
-  "version": "9.2.0-beta.1",
+  "version": "9.2.0-beta.2",
   "description": "Shader module system for luma.gl",
   "type": "module",
   "license": "MIT",
@@ -46,7 +46,7 @@
     "prepublishOnly": "npm run build-minified-bundle && npm run build-dev-bundle"
   },
   "peerDependencies": {
-    "@luma.gl/core": "9.2.0-alpha.1"
+    "@luma.gl/core": "~9.2.0-beta.1"
   },
   "dependencies": {
     "@math.gl/core": "^4.1.0",

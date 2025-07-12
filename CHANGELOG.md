@@ -4,9 +4,13 @@
 
 Production WebGPU support
 
+### v9.2.0-beta.2
+
+- Fix dependencies
+
 ### v9.2.0-beta.1
 
-- beta release track
+- Start beta release track
 
 ### v9.2.0-alpha.6
 
