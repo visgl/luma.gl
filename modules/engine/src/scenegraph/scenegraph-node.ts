@@ -5,6 +5,12 @@
 import {Vector3, Matrix4, NumericArray} from '@math.gl/core';
 import {uid} from '../utils/uid';
 
+function assert(condition: boolean, message?: string): asserts condition {
+  if (!condition) {
+    throw new Error(message);
+  }
+}
+
 /** Properties for creating a new Scenegraph */
 export type ScenegraphNodeProps = {
   id?: string;
@@ -57,19 +63,19 @@ export class ScenegraphNode {
   }
 
   setPosition(position: any): this {
-    // assert(position.length === 3, 'setPosition requires vector argument');
+    assert(position.length === 3, 'setPosition requires vector argument');
     this.position = position;
     return this;
   }
 
   setRotation(rotation: any): this {
-    // assert(rotation.length === 3, 'setRotation requires vector argument');
+    assert(rotation.length === 3 || rotation.length === 4, 'setRotation requires vector argument');
     this.rotation = rotation;
     return this;
   }
 
   setScale(scale: any): this {
-    // assert(scale.length === 3, 'setScale requires vector argument');
+    assert(scale.length === 3, 'setScale requires vector argument');
     this.scale = scale;
     return this;
   }
@@ -105,19 +111,20 @@ export class ScenegraphNode {
   }
 
   updateMatrix(): this {
-    const pos = this.position;
-    const rot = this.rotation;
-    const scale = this.scale;
-
     this.matrix.identity();
-    this.matrix.translate(pos);
-    this.matrix.rotateXYZ(rot);
-    this.matrix.scale(scale);
+    this.matrix.translate(this.position);
+    if (this.rotation.length === 4) {
+      const rotationMatrix = new Matrix4().fromQuaternion(this.rotation);
+      this.matrix.multiplyRight(rotationMatrix);
+    } else {
+      this.matrix.rotateXYZ(this.rotation);
+    }
+    this.matrix.scale(this.scale);
+
     return this;
   }
 
-  update(options: {position?: any; rotation?: any; scale?: any} = {}): this {
-    const {position, rotation, scale} = options;
+  update({position, rotation, scale}: {position?: any; rotation?: any; scale?: any} = {}): this {
     if (position) {
       this.setPosition(position);
     }
@@ -127,7 +134,9 @@ export class ScenegraphNode {
     if (scale) {
       this.setScale(scale);
     }
+
     this.updateMatrix();
+
     return this;
   }
 
@@ -188,18 +197,20 @@ export class ScenegraphNode {
     //   this.display = props.display;
     // }
 
-    if ('position' in props) {
+    if (props?.position) {
       this.setPosition(props.position);
     }
-    if ('rotation' in props) {
+    if (props?.rotation) {
       this.setRotation(props.rotation);
     }
-    if ('scale' in props) {
+    if (props?.scale) {
       this.setScale(props.scale);
     }
 
+    this.updateMatrix();
+
     // Matrix overwrites other props
-    if ('matrix' in props) {
+    if (props?.matrix) {
       this.setMatrix(props.matrix);
     }
 
