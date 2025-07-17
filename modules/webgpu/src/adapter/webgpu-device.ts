@@ -211,6 +211,7 @@ export class WebGPUDevice extends Device {
         }
       });
     }
+    this.commandEncoder = null;
   }
 
   // PRIVATE METHODS
