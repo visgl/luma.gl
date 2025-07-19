@@ -1365,7 +1365,6 @@ __metadata:
   dependencies:
     "@math.gl/core": "npm:^4.1.0"
     "@math.gl/types": "npm:^4.1.0"
-    wgsl_reflect: "npm:^1.0.1"
   peerDependencies:
     "@luma.gl/shadertools": 9.2.0-alpha.1
   languageName: unknown
@@ -1418,7 +1417,7 @@ __metadata:
   dependencies:
     "@math.gl/core": "npm:^4.1.0"
     "@math.gl/types": "npm:^4.1.0"
-    wgsl_reflect: "npm:^1.2.0"
+    wgsl_reflect: "npm:^1.2.1"
   peerDependencies:
     "@luma.gl/core": 9.2.0-alpha.1
   languageName: unknown
@@ -12404,10 +12403,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"wgsl_reflect@npm:^1.0.1, wgsl_reflect@npm:^1.2.0":
-  version: 1.2.0
-  resolution: "wgsl_reflect@npm:1.2.0"
-  checksum: 10c0/1e8439b3f9b660775a21ccc68db918b69485df0f82870e75952e718e62cc58ebbe8f4c190256c6bce940fd6a8652c85f56ec66ab18d82488378178f4d84792f4
+"wgsl_reflect@npm:^1.2.1":
+  version: 1.2.1
+  resolution: "wgsl_reflect@npm:1.2.1"
+  checksum: 10c0/a64531d27c7e4040155a0e49ec707eb3fbaa912daaeb31dd708a73a80b68b921f45dd998f1e34cadd39142c3ae65cf8b2f94c2c56ba3e659ecb14c14dc902401
   languageName: node
   linkType: hard
 

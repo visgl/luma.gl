@@ -98,7 +98,6 @@
   "exclude":[
     "modules/**/wip",
     "modules/**/dist",
-    "modules/shadertools/src/libs/wgsl-reflect/wgsl_reflect.module.js",
     "node_modules"
   ]
 }
