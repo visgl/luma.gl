@@ -134,6 +134,7 @@ Mipmap usage is controller via `SamplerProps.mipmapFilter`:
 In addition, the `anistropy` sampler property controls how many miplevels are used during sampling.
 
 Notes:
+
 - Enabling mipmap filtering not only improves visual quality, but can also improve performance. When a scaled down, lower resolution mip level is selected this reduces memory bandwidth requirements.
 - Linear filtering is considered "bilinear" because it is a linear filter that is applied in two directions, sequentially. First, a linear filter is applied along the image's x axis (width), and then a second filter is applied along the y axis (height).
 - Linear mipmap filtering is considered "trilinear" since it also interpolates linearly between mip levels.
@@ -177,3 +178,50 @@ Remarks
 - All depth/stencil formats are renderable.
 - Samplers always read a "vec4" regardless of which texture format is used. For formats with less than 4 components, missing red, green and blue components in the texture format are read as `0.0`, alpha as `1.0`/
 - Note that some formats are not mandated by the base standard but represent additional capabilities (e.g. a WebGL2 device running on top of an OpenGL ES 3.2 driver). .
+
+## Reading and Writing Texture Data
+
+Textures offer a set of methods to read and write texture data
+
+| Method | Description |
+| --- | --- |
+| `Texture.writeData()` | |
+| `Texture.readDataAsync()` | |
+| `Texture.writeBuffer()` | |
+| `Texture.readBuffer()` | |
+
+### WebGPU Texture Data Alignment
+
+It is worth noting, especially when working directly with buffers that WebGPU requires that `bytesPerRow` must be a multiple of `256` for all texture data
+(except for 1D textures which do not have alignment requirements).
+
+This is because most modern GPU architectures access texture data in large aligned memory blocks, and unaligned row strides:
+
+- Break fast memory page access
+- Require slower fallback modes or copies
+- May even crash or cause undefined behavior on some hardware
+
+So WebGPU enforces the strictest alignment across the board to avoid inconsistent behavior or costly driver fallbacks.
+It's not a limitation of a specific platform, but rather a lowest common denominator across vendors, including:
+
+| Platform / Vendor              | 256-byte alignment reason                                                                                 |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------- |
+| Apple / Metal                  | Metal requires row strides aligned to 256 bytes for optimal performance and correctness.                  |
+| Direct3D 12 (Windows)          | D3D12 has alignment requirements for D3D12_TEXTURE_COPY_LOCATION buffer layouts.                          |
+| Vulkan (Linux/Windows/Android) | vkCmdCopyBufferToImage requires bufferRowLength alignment for tight row packing.                          |
+| Mobile GPUs                    | Unified memory and tile-based rendering architectures strongly prefer 256-byte rows for coalesced access. |
+
+Why 256? It has been chose as a sweet spot between overhead and performance. 256 bytes is a power of two, making it a natural alignment boundary that fits well with:
+
+- Cache line sizes
+- Tile sizes (especially on mobile GPUs)
+- SIMD vectorized memory access units (e.g., 32 or 64 bytes \* 4 or 8 lanes)
+
+Essentially, large enough for efficient DMA transfers, small enough not to waste too much memory.
+
+### WebGL2 Texture Data Alignment
+
+WebGL2 accepts unaligned texture data, however there may be a small performance benefit in pre-aligning the data on 2, 4 or 8 byte boundaries.
+This is however unlikely to matter unless many large texture copies are being performed.
+
+### Texture Data Alignment Utilities

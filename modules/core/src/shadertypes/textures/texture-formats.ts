@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {NormalizedDataType} from '../data-types/data-types';
+import {NormalizedDataType, DataTypeArray, NormalizedDataTypeArray} from '../data-types/data-types';
 
 /** Information about the structure of a texture format */
 export type TextureFormatInfo = {
@@ -244,6 +244,14 @@ export type TextureFormatCompressed =
   | 'astc-12x12-unorm-srgb';
 
 // Texture format helper types
+
+export type TextureFormatTypedArray<T extends TextureFormat> = DataTypeArray<
+  TextureFormatDataType<T>
+>;
+
+export type TextureFormatNormalizedTypedArray<T extends TextureFormat> = NormalizedDataTypeArray<
+  TextureFormatDataType<T>
+>;
 
 export type TextureFormatDataType<T extends TextureFormat> = T extends TextureFormatUint8
   ? 'uint8'
