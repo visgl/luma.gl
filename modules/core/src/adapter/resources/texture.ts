@@ -247,7 +247,7 @@ export abstract class Texture extends Resource<TextureProps> {
     const {width = this.width, height = this.height, depthOrArrayLayers = this.depth} = options;
     const {device, format} = this;
     const formatInfo = device.getTextureFormatInfo(format);
-    const bytesPerPixel = formatInfo.bytesPerPixel!;
+    const bytesPerPixel = formatInfo.bytesPerPixel;
     const byteAlignment = this._getRowByteAlignment(format, width);
 
     return getTextureMemoryLayout({

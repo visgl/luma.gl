@@ -1,17 +1,16 @@
 import test from 'tape-promise/tape';
 import {getWebGLTestDevice, getTestDevices} from '@luma.gl/test-utils';
 
-import {TypedArray, Device, Texture, TextureFormat, textureFormatDecoder, VertexType, _getTextureFormatTable} from '@luma.gl/core';
+import {TypedArray, Device, Texture, TextureFormat, textureFormatDecoder, VertexType, _getTextureFormatTable,
+  TextureView,
+  Buffer as LumaBuffer,
+} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {WebGLDevice} from '@luma.gl/webgl';
 
 import {SAMPLER_PARAMETERS} from './sampler.spec';
 
 
-import {
-  TextureView,
-  Buffer as LumaBuffer,
-} from '@luma.gl/core';
 
 // Utility to compare TypedArray contents
 function toUint8(arr: ArrayBuffer | ArrayBufferView): Uint8Array {
@@ -231,7 +230,7 @@ test('Texture#readDataSyncWebGL returns correct data on WebGL', async t => {
 });
 
 
-////////////////////////////////
+// //////////////////////////////
 
 test('Device#isTextureFormatSupported()', async t => {
   const UNSUPPORTED_FORMATS: Record<string, TextureFormat[]> = {

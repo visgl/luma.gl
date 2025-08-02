@@ -1,5 +1,5 @@
-import {TypedArray} from '@math.gl/types';
-import {TextureFormat, getTextureFormatInfo} from '@luma.gl/core';
+import {TextureFormat} from './texture-formats';
+import {getTextureFormatInfo} from './texture-format-decoder';
 import {TextureFormatTypedArray} from './texture-formats';
 
 export type PackedTextureData<FormatT extends TextureFormat> = {
@@ -24,7 +24,7 @@ export class TexturePacker {
   /**
    * Converts tightly packed texture data into padded texture layout required for WebGPU.
    */
-  static toAligned(packed: PackedTextureData<TextureFormat>): AlignedTextureData<FormatT> {
+  static toAligned<FormatT extends TextureFormat>(packed: PackedTextureData<FormatT>): AlignedTextureData<FormatT> {
     const {data, format, width, height, depthOrArrayLayers} = packed;
     const info = getTextureFormatInfo(format);
     if (!info || !info.color) throw new Error(`Unsupported format ${format}`);
@@ -98,8 +98,8 @@ export class TexturePacker {
     };
   }
 
-  static readAlignedPixel(
-    data: AlignedTextureData,
+  static readAlignedPixel<FormatT extends TextureFormat>(
+    data: AlignedTextureData<FormatT>,
     x: number,
     y: number,
     layer: number,
@@ -114,7 +114,7 @@ export class TexturePacker {
     const bitsPerPixel = bitsPerChannel.reduce((sum, bits) => sum + bits, 0);
     const rowOffset = y * bytesPerRow;
     const sliceOffset = layer * rowsPerImage * bytesPerRow;
-    const byteOffset = sliceOffset + rowOffset + Math.floor((x * bitsPerPixel) / 8);
+    // const byteOffset = sliceOffset + rowOffset + Math.floor((x * bitsPerPixel) / 8);
     const bitOffset = (sliceOffset + rowOffset) * 8 + x * bitsPerPixel;
 
     const view = new Uint8Array(data.data.buffer, data.data.byteOffset, data.data.byteLength);
@@ -133,8 +133,9 @@ export class TexturePacker {
     return result;
   }
 
-  writeAlignedPixel(
-    data: AlignedTextureData,
+  // eslint-disable-next-line max-params
+  writeAlignedPixel<FormatT extends TextureFormat>(
+    data: AlignedTextureData<FormatT>,
     x: number,
     y: number,
     layer: number,

@@ -84,13 +84,9 @@ export type {ExternalImage} from './image-utils/image-types';
 
 export {
   type CopyExternalImageOptions,
-<<<<<<< HEAD
-  type CopyImageDataOptions
-=======
   type CopyImageDataOptions,
   type ReadTextureOptions,
   type WriteTextureOptions
->>>>>>> 57f4389ac (wip)
 } from './adapter/resources/texture';
 
 export type {Parameters, PrimitiveTopology, IndexFormat} from './adapter/types/parameters';
@@ -203,7 +199,7 @@ export {
   getTextureMemoryLayout
 } from './shadertypes/textures/texture-layout';
 
-export {TexturePacker} from './shadertypes/textures/texture-packer'
+// export {TexturePacker} from './shadertypes/textures/texture-packer'
 
 export {type PixelData, readPixel, writePixel} from './shadertypes/textures/pixel-utils';
 

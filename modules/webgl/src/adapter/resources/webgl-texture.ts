@@ -19,7 +19,13 @@ import {
   log
 } from '@luma.gl/core';
 
-import {GLSamplerParameters, GLValueParameters} from '@luma.gl/constants';
+import {GLSamplerParameters, GLValueParameters,
+  GL,
+  GLTextureTarget,
+  GLTextureCubeMapTarget,
+  GLTexelDataFormat,
+  GLPixelType
+} from '@luma.gl/constants';
 
 import {getTextureFormatWebGL} from '../converters/webgl-texture-table';
 import {convertSamplerParametersToWebGL} from '../converters/sampler-parameters';
@@ -29,17 +35,10 @@ import {WEBGLFramebuffer} from './webgl-framebuffer';
 import {WEBGLSampler} from './webgl-sampler';
 import {WEBGLTextureView} from './webgl-texture-view';
 
-import {getTypedArrayFromDataType, getDataTypeFromTypedArray} from '@luma.gl/core';
-import {
-  GL,
-  GLTextureTarget,
-  GLTextureCubeMapTarget,
-  GLTexelDataFormat,
-  GLPixelType
-} from '@luma.gl/constants';
+import {getTypedArrayConstructor, getDataType} from '@luma.gl/core';
 
 import {convertDataTypeToGLDataType} from '../converters/webgl-shadertypes';
-import {glFormatToComponents} from '../helpers/format-utils';
+// import {glFormatToComponents} from '../helpers/format-utils';
 import {convertGLDataTypeToDataType} from '../converters/shader-formats';
 
 /**
@@ -345,7 +344,7 @@ export class WEBGLTexture extends Texture {
     // that fits with the provided texture row byte length
     // Note: Any RGBA or 32 bit type will be at least 4 bytes, which should result in good performance.
     const info = this.device.getTextureFormatInfo(format);
-    const rowByteLength = width * info.bytesPerPixel!;
+    const rowByteLength = width * info.bytesPerPixel;
     if (rowByteLength % 8 === 0) return 8;
     if (rowByteLength % 4 === 0) return 4;
     if (rowByteLength % 2 === 0) return 2;
@@ -377,8 +376,8 @@ export class WEBGLTexture extends Texture {
     // Allocate pixel array if not already available, using supplied type
     const shaderType = convertGLDataTypeToDataType(this.glType);
 
-    const ArrayType = getTypedArrayFromDataType(shaderType);
-    const components = glFormatToComponents(this.glFormat);
+    const ArrayType = getTypedArrayConstructor(shaderType);
+    // const components = glFormatToComponents(this.glFormat);
     // TODO - check for composite type (components = 1).
 
     debugger;
@@ -388,7 +387,7 @@ export class WEBGLTexture extends Texture {
       | Float32Array;
 
     // Pixel array available, if necessary, deduce type from it.
-    const signedType = getDataTypeFromTypedArray(targetArray);
+    const signedType = getDataType(targetArray);
     const sourceType = convertDataTypeToGLDataType(signedType);
 
     // There is a lot of hedging in the WebGL2 spec about what formats are guaranteed to be readable

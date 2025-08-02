@@ -24,6 +24,6 @@
     "require": "./dist/index.cjs"
   },
   "dependencies": {
-    "@luma.gl/constants": "9.2.0-alpha.1"
+    "@luma.gl/constants": "9.2.0-alpha.6"
   }
 }
