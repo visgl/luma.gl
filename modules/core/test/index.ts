@@ -44,3 +44,4 @@ import './adapter/resources/query-set.spec';
 
 // portable - uniform buffers
 import './portable/uniform-buffer-layout.spec';
+import './portable/uniform-buffer-layout-composite.spec';

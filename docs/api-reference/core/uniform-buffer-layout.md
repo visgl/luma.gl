@@ -1,6 +1,6 @@
 # UniformBufferLayout
 
-A helper class that lets the application describe the contents of a uniform block and then perform `setUniforms({uniform: value})` calls on it, manipulating individual values without concern for memory layout requirements.
+A helper class that lets the application describe the contents of a uniform block and then perform `setUniforms({uniform: value})` calls on it, manipulating individual values without concern for memory layout requirements. The layout definition now supports `CompositeShaderType`s such as structs and arrays.
 
 ## Usage
 

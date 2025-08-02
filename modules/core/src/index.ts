@@ -153,7 +153,10 @@ export {
 } from './shadertypes/data-types/data-types';
 export {
   type AttributeShaderType,
-  type VariableShaderType
+  type VariableShaderType,
+  type CompositeShaderType,
+  type StructShaderType,
+  type ArrayShaderType
 } from './shadertypes/data-types/shader-types';
 export {
   getDataTypeInfo,

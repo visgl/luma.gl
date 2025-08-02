@@ -3,7 +3,12 @@
 // Copyright (c) vis.gl contributors
 
 import type {PrimitiveDataType} from '../shadertypes/data-types/data-types';
-import type {VariableShaderType} from '../shadertypes/data-types/shader-types';
+import type {
+  CompositeShaderType,
+  VariableShaderType,
+  StructShaderType,
+  ArrayShaderType
+} from '../shadertypes/data-types/shader-types';
 import {alignTo} from '../shadertypes/data-types/decode-data-types';
 import {getVariableShaderTypeInfo} from '../shadertypes/data-types/decode-shader-types';
 
@@ -28,28 +33,48 @@ export class UniformBufferLayout {
   /** number of bytes needed for buffer allocation */
   readonly byteLength: number;
 
+  /** Original uniform type definitions */
+  private readonly uniformTypes: Record<string, CompositeShaderType>;
+
   /** Create a new UniformBufferLayout given a map of attributes. */
   constructor(
-    uniformTypes: Record<string, VariableShaderType>,
+    uniformTypes: Record<string, CompositeShaderType>,
     uniformSizes: Record<string, number> = {}
   ) {
+    this.uniformTypes = uniformTypes;
+
     /** number of 4 byte slots taken */
     let size: number = 0;
 
-    // Add layout (type, size and offset) definitions for each uniform in the layout
+    const processType = (name: string, uniformType: CompositeShaderType) => {
+      if (typeof uniformType === 'string') {
+        const {type, components} = getVariableShaderTypeInfo(
+          uniformType as VariableShaderType
+        );
+        const count = components * (uniformSizes?.[name] ?? 1);
+        size = alignTo(size, count);
+        const offset = size;
+        size += count;
+        this.layout[name] = {type, size: count, offset};
+      } else if ((uniformType as StructShaderType).members) {
+        const struct = uniformType as StructShaderType;
+        for (const [memberName, memberType] of Object.entries(struct.members)) {
+          processType(`${name}.${memberName}`, memberType);
+        }
+        size = alignTo(size, 4);
+      } else if ((uniformType as ArrayShaderType).type) {
+        const arrayType = uniformType as ArrayShaderType;
+        for (let i = 0; i < arrayType.length; i++) {
+          processType(`${name}[${i}]`, arrayType.type);
+          size = alignTo(size, 4);
+        }
+      }
+    };
+
     for (const [key, uniformType] of Object.entries(uniformTypes)) {
-      const typeAndComponents = getVariableShaderTypeInfo(uniformType);
-      const {type, components} = typeAndComponents;
-      // Calculate total count for uniform arrays.
-      const count = components * (uniformSizes?.[key] ?? 1);
-      // First, align (bump) current offset to an even multiple of current object (1, 2, 4)
-      size = alignTo(size, count);
-      // Use the aligned size as the offset of the current uniform.
-      const offset = size;
-      // Then, add our object's padded size ((1, 2, multiple of 4) to the current offset
-      size += count;
-      this.layout[key] = {type, size: count, offset};
+      processType(key, uniformType);
     }
+
     size += (4 - (size % 4)) % 4;
 
     const actualByteLength = size * 4;
@@ -58,7 +83,6 @@ export class UniformBufferLayout {
 
   /** Get the data for the complete buffer */
   getData(uniformValues: Record<string, UniformValue>): Uint8Array {
-    // Allocate three typed arrays pointing at same memory
     const arrayBuffer = getScratchArrayBuffer(this.byteLength);
     const typedArrays = {
       i32: new Int32Array(arrayBuffer),
@@ -68,38 +92,51 @@ export class UniformBufferLayout {
       f16: new Uint16Array(arrayBuffer)
     };
 
-    for (const [name, value] of Object.entries(uniformValues)) {
-      const uniformLayout = this.layout[name];
-      if (!uniformLayout) {
-        log.warn(`Supplied uniform value ${name} not present in uniform block layout`)();
-        // eslint-disable-next-line no-continue
+    const write = (name: string, value: any, type: CompositeShaderType) => {
+      if (typeof type === 'string') {
+        const uniformLayout = this.layout[name];
+        if (!uniformLayout) {
+          log.warn(`Supplied uniform value ${name} not present in uniform block layout`)();
+          return;
+        }
+        const {type: primitiveType, size, offset} = uniformLayout;
+        const typedArray = typedArrays[primitiveType];
+        if (size === 1) {
+          if (typeof value !== 'number' && typeof value !== 'boolean') {
+            log.warn(
+              `Supplied value for single component uniform ${name} is not a number: ${value}`
+            )();
+            return;
+          }
+          typedArray[offset] = Number(value);
+        } else {
+          if (!isNumberArray(value)) {
+            log.warn(
+              `Supplied value for multi component / array uniform ${name} is not a numeric array: ${value}`
+            )();
+            return;
+          }
+          typedArray.set(value, offset);
+        }
+      } else if ((type as StructShaderType).members) {
+        const struct = type as StructShaderType;
+        for (const [memberName, memberType] of Object.entries(struct.members)) {
+          write(`${name}.${memberName}`, value?.[memberName], memberType);
+        }
+      } else if ((type as ArrayShaderType).type) {
+        const arrayType = type as ArrayShaderType;
+        for (let i = 0; i < arrayType.length; i++) {
+          write(`${name}[${i}]`, value?.[i], arrayType.type);
+        }
+      }
+    };
+
+    for (const [name, type] of Object.entries(this.uniformTypes)) {
+      const value = (uniformValues as any)[name];
+      if (value === undefined) {
         continue;
       }
-
-      const {type, size, offset} = uniformLayout;
-      const typedArray = typedArrays[type];
-      if (size === 1) {
-        if (typeof value !== 'number' && typeof value !== 'boolean') {
-          log.warn(
-            `Supplied value for single component uniform ${name} is not a number: ${value}`
-          )();
-          // eslint-disable-next-line no-continue
-          continue;
-        }
-        // single value -> just set it
-        typedArray[offset] = Number(value);
-      } else {
-        if (!isNumberArray(value)) {
-          log.warn(
-            `Supplied value for multi component / array uniform ${name} is not a numeric array: ${value}`
-          )();
-          // eslint-disable-next-line no-continue
-          continue;
-        }
-        // vector/matrix -> copy the supplied (typed) array, starting from offset
-        // TODO: we should limit or check size in case the supplied data overflows
-        typedArray.set(value, offset);
-      }
+      write(name, value, type);
     }
 
     return new Uint8Array(arrayBuffer, 0, this.byteLength);

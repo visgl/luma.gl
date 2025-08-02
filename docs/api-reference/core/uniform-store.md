@@ -26,7 +26,7 @@ Create a new UniformStore instance
   constructor(
     device: Device, 
     blocks: Record<string, {
-      uniformFormats: Record<string, UniformFormat>;
+      uniformTypes: Record<string, CompositeShaderType>;
       defaultValues?: Record<string, UniformValue>;
     }>
   )
