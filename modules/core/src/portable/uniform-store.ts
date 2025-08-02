@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {VariableShaderType} from '../shadertypes/data-types/shader-types';
+import type {CompositeShaderType} from '../shadertypes/data-types/shader-types';
 import type {UniformValue} from '../adapter/types/uniforms';
 import type {Device} from '../adapter/device';
 import {Buffer} from '../adapter/resources/buffer';
@@ -38,7 +38,7 @@ export class UniformStore<
     blocks: Record<
       keyof TPropGroups,
       {
-        uniformTypes?: Record<string, VariableShaderType>;
+        uniformTypes?: Record<string, CompositeShaderType>;
         uniformSizes?: Record<string, number>;
         defaultProps?: Record<string, unknown>;
         defaultUniforms?: Record<string, UniformValue>;

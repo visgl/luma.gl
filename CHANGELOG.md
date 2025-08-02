@@ -4,6 +4,10 @@
 
 Production WebGPU support
 
+### v9.2.0-alpha.7
+
+- feat(core): UniformBufferLayout supports CompositeShaderType
+
 ### v9.2.0-alpha.6
 
 -   feature(core): CanvasContext.setProps({useDevicePixels}) (#2406)
