@@ -84,7 +84,7 @@ export type {ExternalImage} from './image-utils/image-types';
 
 export {
   type CopyExternalImageOptions,
-  type CopyImageDataOptions,
+  type CopyImageDataOptions
   // type ReadTextureOptions,
   // type WriteTextureOptions
 } from './adapter/resources/texture';
