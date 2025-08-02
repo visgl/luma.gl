@@ -7,12 +7,12 @@ import {
   type TextureViewProps,
   type CopyExternalImageOptions,
   type CopyImageDataOptions,
-  type ReadTextureOptions,
-  type WriteTextureOptions,
+  // type ReadTextureOptions,
+  // type WriteTextureOptions,
   type Sampler,
   type SamplerProps,
   type TextureFormat,
-  Buffer,
+  // Buffer,
   Texture
 } from '@luma.gl/core';
 import {NullDevice} from '../null-device';
@@ -90,20 +90,24 @@ export class NullTexture extends Texture {
     throw new Error('copyImageData not implemented');
   }
 
-  readBuffer(options: ReadTextureOptions = {}, buffer?: Buffer): Buffer {
-    return this.device.createBuffer({});
-  }
+  // readBuffer(options: ReadTextureOptions = {}, buffer?: Buffer): Buffer {
+  //   return this.device.createBuffer({});
+  // }
 
-  async readDataAsync(options: ReadTextureOptions = {}): Promise<ArrayBuffer> {
-    return new ArrayBuffer(0);
-  }
+  // async readDataAsync(options: ReadTextureOptions = {}): Promise<ArrayBuffer> {
+  //   return new ArrayBuffer(0);
+  // }
 
-  writeBuffer(buffer: GPUBuffer, options: WriteTextureOptions = {}) {
-    // ignore
-  }
+  // writeBuffer(buffer: GPUBuffer, options: WriteTextureOptions = {}) {
+  //   // ignore
+  // }
 
-  writeData(data: ArrayBuffer | ArrayBufferView, options: WriteTextureOptions = {}): void {
-    // ignore
+  // writeData(data: ArrayBuffer | ArrayBufferView, options: WriteTextureOptions = {}): void {
+  //   // ignore
+  // }
+
+  override generateMipmapsWebGL(): void {
+    // No-op for null device
   }
 
   _getRowByteAlignment(format: TextureFormat): number {

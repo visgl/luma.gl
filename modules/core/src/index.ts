@@ -85,8 +85,8 @@ export type {ExternalImage} from './image-utils/image-types';
 export {
   type CopyExternalImageOptions,
   type CopyImageDataOptions,
-  type ReadTextureOptions,
-  type WriteTextureOptions
+  // type ReadTextureOptions,
+  // type WriteTextureOptions
 } from './adapter/resources/texture';
 
 export type {Parameters, PrimitiveTopology, IndexFormat} from './adapter/types/parameters';
