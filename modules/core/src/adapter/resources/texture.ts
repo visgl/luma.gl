@@ -243,7 +243,7 @@ export abstract class Texture extends Resource<TextureProps> {
    * @return the memory layout of the texture, in particular bytesPerRow which includes required padding
    */
   getMemoryLayout(options_: TextureReadOptions = {}): TextureMemoryLayout {
-    const options = this._normalizeTextureReadOptions(options_)
+    const options = this._normalizeTextureReadOptions(options_);
     const {width = this.width, height = this.height, depthOrArrayLayers = this.depth} = options;
     const {device, format} = this;
     const formatInfo = device.getTextureFormatInfo(format);
@@ -257,7 +257,7 @@ export abstract class Texture extends Resource<TextureProps> {
       bytesPerPixel,
       byteAlignment
     });
-  } 
+  }
 
   /**
    * Read the contents of a texture into a GPU Buffer.
@@ -270,7 +270,7 @@ export abstract class Texture extends Resource<TextureProps> {
    */
   readBuffer(options?: TextureReadOptions, buffer?: Buffer): Buffer {
     throw new Error('readBuffer not implemented');
-}
+  }
 
   /**
    * Reads data from a texture into an ArrayBuffer.
@@ -281,7 +281,7 @@ export abstract class Texture extends Resource<TextureProps> {
    */
   readDataAsync(options?: TextureReadOptions): Promise<ArrayBuffer> {
     throw new Error('readBuffer not implemented');
-}
+  }
 
   /**
    * Writes an GPU Buffer into a texture.
@@ -403,9 +403,7 @@ export abstract class Texture extends Resource<TextureProps> {
     return options;
   }
 
-  _normalizeTextureReadOptions(
-    options_: TextureReadOptions
-  ): Required<TextureReadOptions> {
+  _normalizeTextureReadOptions(options_: TextureReadOptions): Required<TextureReadOptions> {
     const {width, height} = this;
     const options = {...Texture.defaultTextureReadOptions, width, height, ...options_};
     // WebGL will error if we try to copy outside the bounds of the texture
@@ -414,9 +412,7 @@ export abstract class Texture extends Resource<TextureProps> {
     return options;
   }
 
-  _normalizeTextureWriteOptions(
-    options_: TextureWriteOptions
-  ): Required<TextureWriteOptions> {
+  _normalizeTextureWriteOptions(options_: TextureWriteOptions): Required<TextureWriteOptions> {
     const {width, height} = this;
     const options = {...Texture.defaultTextureReadOptions, width, height, ...options_};
     // WebGL will error if we try to copy outside the bounds of the texture

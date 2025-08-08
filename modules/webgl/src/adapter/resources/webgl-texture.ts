@@ -21,7 +21,9 @@ import {
   log
 } from '@luma.gl/core';
 
-import {GLSamplerParameters, GLValueParameters,
+import {
+  GLSamplerParameters,
+  GLValueParameters,
   GL,
   GLTextureTarget,
   GLTextureCubeMapTarget,
@@ -297,7 +299,7 @@ export class WEBGLTexture extends Texture {
     const memoryLayout = this.getMemoryLayout(options);
     const {bytesPerRow, rowsPerImage} = memoryLayout;
 
-    const byteAlignment  = this._getRowByteAlignment(this.format, width)
+    const byteAlignment = this._getRowByteAlignment(this.format, width);
 
     const glParameters: GLValueParameters = !this.compressed
       ? {

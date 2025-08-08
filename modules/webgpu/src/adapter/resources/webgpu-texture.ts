@@ -219,7 +219,7 @@ export class WebGPUTexture extends Texture {
         origin: {x, y, z},
         // origin: [options.x, options.y, 0], // options.depth],
         mipLevel,
-        aspect,
+        aspect
         // colorSpace: options.colorSpace,
         // premultipliedAlpha: options.premultipliedAlpha
       },
@@ -272,7 +272,7 @@ export class WebGPUTexture extends Texture {
 
     // Get the data on the CPU.
     // await buffer.mapAndReadAsync();
-  
+
     const {bytesPerRow, rowsPerImage} = layout;
 
     const gpuDevice = this.device.handle;
@@ -321,7 +321,7 @@ export class WebGPUTexture extends Texture {
       rows: this.height,
       bytesPerPixel: 4,
       depthOrArrayLayers: this.depth,
-      byteAlignment: this._getRowByteAlignment(this.format),
+      byteAlignment: this._getRowByteAlignment(this.format)
     });
 
     const {bytesPerRow, rowsPerImage} = layout;
