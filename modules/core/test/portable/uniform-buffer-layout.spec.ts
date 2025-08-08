@@ -63,7 +63,7 @@ test('nested struct layout (struct inside struct)', t => {
   t.end();
 });
 
-test.only('array of structs layout', t => {
+test('array of structs layout', t => {
   const uniformTypes = {
     lights: [
       {
