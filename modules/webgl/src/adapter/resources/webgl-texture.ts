@@ -382,7 +382,6 @@ export class WEBGLTexture extends Texture {
     // const components = glFormatToComponents(this.glFormat);
     // TODO - check for composite type (components = 1).
 
-    debugger;
     const targetArray = new ArrayType(memoryLayout.byteLength) as
       | Uint8Array
       | Uint16Array
