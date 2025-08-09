@@ -84,7 +84,9 @@ export type {ExternalImage} from './image-utils/image-types';
 
 export {
   type CopyExternalImageOptions,
-  type CopyImageDataOptions
+  type CopyImageDataOptions,
+  type TextureReadOptions,
+  type TextureWriteOptions
 } from './adapter/resources/texture';
 
 export type {Parameters, PrimitiveTopology, IndexFormat} from './adapter/types/parameters';
@@ -184,13 +186,18 @@ export {
   type TextureFormatDepthStencil,
   type TextureCompression,
   type TextureFormatInfo,
-  type TextureFormatCapabilities
+  type TextureFormatCapabilities,
+  type TextureMemoryLayout
 } from './shadertypes/textures/texture-formats';
 
 export {
   TextureFormatDecoder,
   textureFormatDecoder
 } from './shadertypes/textures/texture-format-decoder';
+
+export {getTextureImageView, setTextureImageData} from './shadertypes/textures/texture-layout';
+
+// export {TexturePacker} from './shadertypes/textures/texture-packer'
 
 export {type PixelData, readPixel, writePixel} from './shadertypes/textures/pixel-utils';
 

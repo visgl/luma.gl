@@ -11,7 +11,7 @@ import {Resource, ResourceProps} from './resource';
 //   // onSubmittedWorkDone(): Promise<undefined>;
 
 //   writeBuffer(options: WriteBufferOptions): void;
-//   writeTexture(options: WriteTextureOptions): void;
+//   writeTexture(options: TextureWriteOptions): void;
 
 //   // copyExternalImageToTexture(
 //   //   GPUImageCopyExternalImage source,
