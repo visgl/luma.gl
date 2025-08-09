@@ -4,17 +4,17 @@
 
 import {type TypedArray} from '@math.gl/types';
 import {type Device} from '../device';
-import {type TextureFormat} from '../../shadertypes/textures/texture-formats';
 import {
-  getTextureMemoryLayout,
+  type TextureFormat,
   type TextureMemoryLayout
-} from '../../shadertypes/textures/texture-layout';
+} from '../../shadertypes/textures/texture-formats';
 import {type ExternalImage} from '../../image-utils/image-types';
 import {type TextureView, type TextureViewProps} from './texture-view';
 import {Resource, type ResourceProps} from './resource';
 import {Sampler, type SamplerProps} from './sampler';
 import {Buffer} from './buffer';
 import {log} from '../../utils/log';
+import {textureFormatDecoder} from '../../shadertypes/textures/texture-format-decoder';
 
 /** Options for Texture.copyExternalImage */
 export type CopyExternalImageOptions = {
@@ -157,13 +157,15 @@ export abstract class Texture extends Resource<TextureProps> {
   /** format of this texture */
   readonly format: TextureFormat;
   /** width in pixels of this texture */
-  width: number;
+  readonly width: number;
   /** height in pixels of this texture */
-  height: number;
+  readonly height: number;
   /** depth of this texture */
-  depth: number;
+  readonly depth: number;
   /** mip levels in this texture */
-  mipLevels: number;
+  readonly mipLevels: number;
+  /** Rows are multiples of this length, padded with extra bytes if needed */
+  readonly byteAlignment: number;
   /** Default sampler for this texture */
   abstract sampler: Sampler;
   /** Default view for this texture */
@@ -181,7 +183,7 @@ export abstract class Texture extends Resource<TextureProps> {
   }
 
   /** Do not use directly. Create with device.createTexture() */
-  constructor(device: Device, props: TextureProps) {
+  constructor(device: Device, props: TextureProps, backendProps?: {byteAlignment?: number}) {
     props = Texture.normalizeProps(device, props);
     super(device, props, Texture.defaultProps);
     this.dimension = this.props.dimension;
@@ -193,6 +195,10 @@ export abstract class Texture extends Resource<TextureProps> {
     this.height = this.props.height;
     this.depth = this.props.depth;
     this.mipLevels = this.props.mipLevels;
+
+    if (this.dimension === 'cube') {
+      this.depth = 6;
+    }
 
     // Calculate size, if not provided
     if (this.props.width === undefined || this.props.height === undefined) {
@@ -210,6 +216,8 @@ export abstract class Texture extends Resource<TextureProps> {
         }
       }
     }
+
+    this.byteAlignment = backendProps?.byteAlignment || 1;
 
     // TODO - perhaps this should be set on async write completion?
     this.updateTimestamp = device.incrementTimestamp();
@@ -242,19 +250,18 @@ export abstract class Texture extends Resource<TextureProps> {
    * Calculates the memory layout of the texture, required when reading and writing data.
    * @return the memory layout of the texture, in particular bytesPerRow which includes required padding
    */
-  getMemoryLayout(options_: TextureReadOptions = {}): TextureMemoryLayout {
+  computeMemoryLayout(options_: TextureReadOptions = {}): TextureMemoryLayout {
     const options = this._normalizeTextureReadOptions(options_);
     const {width = this.width, height = this.height, depthOrArrayLayers = this.depth} = options;
-    const {device, format} = this;
-    const formatInfo = device.getTextureFormatInfo(format);
-    const bytesPerPixel = formatInfo.bytesPerPixel;
-    const byteAlignment = this._getRowByteAlignment(format, width);
+    const {format, byteAlignment} = this;
 
-    return getTextureMemoryLayout({
-      textureWidth: width,
-      rows: height,
-      depthOrArrayLayers,
-      bytesPerPixel,
+    // TODO - does the overriding above make sense?
+    // return textureFormatDecoder.computeMemoryLayout(this);
+    return textureFormatDecoder.computeMemoryLayout({
+      format,
+      width,
+      height,
+      depth: depthOrArrayLayers,
       byteAlignment
     });
   }
@@ -264,7 +271,7 @@ export abstract class Texture extends Resource<TextureProps> {
    * @returns A Buffer containing the texture data.
    *
    * @note The memory layout of the texture data is determined by the texture format and dimensions.
-   * @note The application can call Texture.getMemoryLayout() to compute the layout.
+   * @note The application can call Texture.computeMemoryLayout() to compute the layout.
    * @note The application can call Buffer.readAsync()
    * @note If not supplied a buffer will be created and the application needs to call Buffer.destroy
    */
@@ -277,7 +284,7 @@ export abstract class Texture extends Resource<TextureProps> {
    * @returns An ArrayBuffer containing the texture data.
    *
    * @note The memory layout of the texture data is determined by the texture format and dimensions.
-   * @note The application can call Texture.getMemoryLayout() to compute the layout.
+   * @note The application can call Texture.computeMemoryLayout() to compute the layout.
    */
   readDataAsync(options?: TextureReadOptions): Promise<ArrayBuffer> {
     throw new Error('readBuffer not implemented');
@@ -287,7 +294,7 @@ export abstract class Texture extends Resource<TextureProps> {
    * Writes an GPU Buffer into a texture.
    *
    * @note The memory layout of the texture data is determined by the texture format and dimensions.
-   * @note The application can call Texture.getMemoryLayout() to compute the layout.
+   * @note The application can call Texture.computeMemoryLayout() to compute the layout.
    */
   writeBuffer(buffer: Buffer, options?: TextureWriteOptions): void {
     throw new Error('readBuffer not implemented');
@@ -297,18 +304,13 @@ export abstract class Texture extends Resource<TextureProps> {
    * Writes an array buffer into a texture.
    *
    * @note The memory layout of the texture data is determined by the texture format and dimensions.
-   * @note The application can call Texture.getMemoryLayout() to compute the layout.
+   * @note The application can call Texture.computeMemoryLayout() to compute the layout.
    */
   writeData(data: ArrayBuffer | ArrayBufferView, options?: TextureWriteOptions): void {
     throw new Error('readBuffer not implemented');
   }
 
   // IMPLEMENTATION SPECIFIC
-
-  /** Return the implementation specific alignment for a texture format */
-  _getRowByteAlignment(format: TextureFormat, width: number): number {
-    throw new Error('readBuffer not implemented');
-  }
 
   /**
    * WebGL can read data synchronously.

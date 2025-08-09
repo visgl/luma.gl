@@ -1,6 +1,5 @@
 // luma.gl, MIT license
 import {
-  type TextureFormat,
   type TextureProps,
   type TextureViewProps,
   type CopyExternalImageOptions,
@@ -10,8 +9,8 @@ import {
   type SamplerProps,
   Buffer,
   Texture,
-  getTextureMemoryLayout,
-  log
+  log,
+  textureFormatDecoder
 } from '@luma.gl/core';
 
 import {getWebGPUTextureFormat} from '../helpers/convert-texture-format';
@@ -19,8 +18,7 @@ import type {WebGPUDevice} from '../webgpu-device';
 import {WebGPUSampler} from './webgpu-sampler';
 import {WebGPUTextureView} from './webgpu-texture-view';
 
-// Move to core/texture
-
+/** WebGPU implementation of the luma.gl core Texture resource */
 export class WebGPUTexture extends Texture {
   readonly device: WebGPUDevice;
   readonly handle: GPUTexture;
@@ -28,12 +26,8 @@ export class WebGPUTexture extends Texture {
   view: WebGPUTextureView;
 
   constructor(device: WebGPUDevice, props: TextureProps) {
-    super(device, props);
+    super(device, props, {byteAlignment: 256}); // WebGPU requires row width to be a multiple of 256 bytes
     this.device = device;
-
-    if (this.dimension === 'cube') {
-      this.depth = 6;
-    }
 
     this.device.pushErrorScope('out-of-memory');
     this.device.pushErrorScope('validation');
@@ -66,7 +60,9 @@ export class WebGPUTexture extends Texture {
     // TODO - Read all properties directly from the supplied handle?
     if (this.props.handle) {
       this.handle.label ||= this.id;
+      // @ts-expect-error readonly
       this.width = this.handle.width;
+      // @ts-expect-error readonly
       this.height = this.handle.height;
     }
 
@@ -165,11 +161,6 @@ export class WebGPUTexture extends Texture {
     log.warn(`${this}: generateMipmaps not supported in WebGPU`)();
   }
 
-  override _getRowByteAlignment(format: TextureFormat): number {
-    // WebGPU requires row width to be a multiple of 256 bytes
-    return 256;
-  }
-
   getImageDataLayout(options: TextureReadOptions): {
     byteLength: number;
     bytesPerRow: number;
@@ -194,7 +185,7 @@ export class WebGPUTexture extends Texture {
       aspect = 'all'
     } = options;
 
-    const layout = this.getMemoryLayout(options);
+    const layout = this.computeMemoryLayout(options);
 
     const {bytesPerRow, rowsPerImage, byteLength} = layout;
 
@@ -268,7 +259,7 @@ export class WebGPUTexture extends Texture {
       aspect = 'all'
     } = options;
 
-    const layout = this.getMemoryLayout(options);
+    const layout = this.computeMemoryLayout(options);
 
     // Get the data on the CPU.
     // await buffer.mapAndReadAsync();
@@ -316,12 +307,12 @@ export class WebGPUTexture extends Texture {
       aspect = 'all'
     } = options;
 
-    const layout = getTextureMemoryLayout({
-      textureWidth: this.width,
-      rows: this.height,
-      bytesPerPixel: 4,
-      depthOrArrayLayers: this.depth,
-      byteAlignment: this._getRowByteAlignment(this.format)
+    const layout = textureFormatDecoder.computeMemoryLayout({
+      format: this.format,
+      width: this.width,
+      height: this.height,
+      depth: this.depth,
+      byteAlignment: this.byteAlignment
     });
 
     const {bytesPerRow, rowsPerImage} = layout;

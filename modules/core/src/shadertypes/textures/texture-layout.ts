@@ -3,94 +3,20 @@
 // Copyright (c) vis.gl contributors
 
 import {TypedArray} from '@math.gl/types';
-import {TextureFormat} from './texture-formats';
+import {type TextureFormat, type TextureMemoryLayout} from './texture-formats';
+import {textureFormatDecoder} from './texture-format-decoder';
 
-// type TextureFormatToTypedArray<T extends TextureFormat> = T extends
-//   | 'r8unorm'
-//   | 'rgba8unorm'
-//   | 'bgra8unorm'
-//   | 'rgba8uint'
-//   ? Uint8Array<ArrayBuffer>
-//   : T extends 'r16uint' | 'rgba16uint' | 'rgba16float'
-//     ? Uint16Array<ArrayBuffer>
-//     : T extends 'r32uint' | 'rgba32uint'
-//       ? Uint32Array<ArrayBuffer>
-//       : T extends 'r32float' | 'rgba32float'
-//         ? Float32Array<ArrayBuffer>
-//         : // Default to UINT8Array for other formats
-//           Uint8Array<ArrayBuffer>;
-
-/**
- * Memory layout for reading/writing to a texture
- * Layout and size of  memory covering a specific range of rows and images in a texture.
- *
- * @note The total length is bytesPerRow * rowsPerImage * depthOrArrayLayers.
- *
- * @note Texture data must be provided in this layout.
- * - Only the range of rows that are actually read or written need to be allocated.
- * - However, space for the full, padded! rows must be allocated in the buffer,
- *   even if just a partial horizontal range `{x, width}` is actually read or written.
- */
-export type TextureMemoryLayout = {
-  bytesPerPixel: number;
-  /** Number of bytes per row (padded) */
-  bytesPerRow: number;
-  /** Number of rows per image */
-  rowsPerImage: number;
-  /** Number of images */
-  depthOrArrayLayers: number;
-  /** Stride between successive images (Use when depthOrArrayLayers > 1) */
-  bytesPerImage: number;
-  /** Total length in bytes */
-  byteLength: number;
-};
-
-export type TextureMemoryLayoutOptions = {
-  /** Width of the texture in pixels/texels */
-  textureWidth: number;
-  /** Number of rows to be read or written */
-  rows: number;
-  /** Number of images to be read or written */
-  depthOrArrayLayers: number;
-  /** Number of bytes per pixel */
-  bytesPerPixel: number;
-  /** Alignment of each row */
-  byteAlignment: number;
-};
-
-/** Get the memory layout of a texture */
-export function getTextureMemoryLayout({
-  textureWidth,
-  rows,
-  depthOrArrayLayers,
-  bytesPerPixel,
-  byteAlignment
-}: TextureMemoryLayoutOptions): TextureMemoryLayout {
-  // WebGPU requires bytesPerRow to be a multiple of 256.
-  const unpaddedBytesPerRow = textureWidth * bytesPerPixel;
-  const bytesPerRow = Math.ceil(unpaddedBytesPerRow / byteAlignment) * byteAlignment;
-  const rowsPerImage = rows;
-  const byteLength = bytesPerRow * rowsPerImage * depthOrArrayLayers;
-
-  return {
-    bytesPerPixel,
-    bytesPerRow,
-    rowsPerImage: rows,
-    depthOrArrayLayers,
-    bytesPerImage: bytesPerRow * rowsPerImage,
-    byteLength
-  };
-}
-
-export function getTextureSlice<T extends TextureFormat>(
+export function getTextureImageView<T extends TextureFormat>(
   arrayBuffer: ArrayBuffer,
   memoryLayout: TextureMemoryLayout,
   format: T,
-  slice = 0
+  image = 0
 ) {
+  const formatInfo = textureFormatDecoder.getInfo(format);
+  const bytesPerComponent = formatInfo.bytesPerPixel / formatInfo.components;
   const {bytesPerImage} = memoryLayout;
-  const offset = bytesPerImage * slice;
-  const totalPixels = memoryLayout.bytesPerImage / memoryLayout.bytesPerPixel;
+  const offset = bytesPerImage * image;
+  const totalPixels = memoryLayout.bytesPerImage / bytesPerComponent;
 
   switch (format) {
     case 'rgba8unorm':
@@ -116,16 +42,19 @@ export function getTextureSlice<T extends TextureFormat>(
   }
 }
 
-export function setTextureSlice<T extends TextureFormat>(
+export function setTextureImageData<T extends TextureFormat>(
   arrayBuffer: ArrayBuffer,
   memoryLayout: TextureMemoryLayout,
   format: T,
   data: TypedArray,
-  slice = 0
+  image = 0
 ): void {
-  const {bytesPerImage} = memoryLayout;
-  const offset = bytesPerImage * slice;
+  const offset = 0; // memoryLayout.bytesPerImage * image;
+
   const totalPixels = memoryLayout.bytesPerImage / memoryLayout.bytesPerPixel;
-  const typedArray = getTextureSlice(arrayBuffer, memoryLayout, format, slice);
-  typedArray.set(data.subarray(0, totalPixels), offset);
+  const subArray = data.subarray(0, totalPixels);
+
+  const typedArray = getTextureImageView(arrayBuffer, memoryLayout, format, image);
+
+  typedArray.set(subArray, offset);
 }

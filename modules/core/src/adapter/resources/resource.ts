@@ -33,10 +33,15 @@ export abstract class Resource<Props extends ResourceProps> {
 
   /** props.id, for debugging. */
   id: string;
+  /** The props that this resource was created with */
   readonly props: Required<Props>;
+  /** User data object, reserved for the application */
   readonly userData: Record<string, unknown> = {};
+  /** The device that this resource is associated with */
   abstract readonly device: Device;
+  /** The handle for the underlying resource, e.g. WebGL object or WebGPU handle */
   abstract readonly handle: unknown;
+  /** The device that this resource is associated with - TODO can we remove this dup? */
   private _device: Device;
 
   /** Whether this resource has been destroyed */

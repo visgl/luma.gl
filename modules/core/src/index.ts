@@ -186,7 +186,8 @@ export {
   type TextureFormatDepthStencil,
   type TextureCompression,
   type TextureFormatInfo,
-  type TextureFormatCapabilities
+  type TextureFormatCapabilities,
+  type TextureMemoryLayout
 } from './shadertypes/textures/texture-formats';
 
 export {
@@ -194,10 +195,7 @@ export {
   textureFormatDecoder
 } from './shadertypes/textures/texture-format-decoder';
 
-export {
-  type TextureMemoryLayout,
-  getTextureMemoryLayout
-} from './shadertypes/textures/texture-layout';
+export {getTextureImageView, setTextureImageData} from './shadertypes/textures/texture-layout';
 
 // export {TexturePacker} from './shadertypes/textures/texture-packer'
 

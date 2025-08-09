@@ -84,7 +84,8 @@ export class WEBGLTexture extends Texture {
   _framebuffer: WEBGLFramebuffer | null = null;
 
   constructor(device: Device, props: TextureProps) {
-    super(device, props);
+    // const byteAlignment = this._getRowByteAlignment(props.format, props.width);
+    super(device, props, {byteAlignment: 1});
 
     this.device = device as WebGLDevice;
     this.gl = this.device.gl;
@@ -252,7 +253,7 @@ export class WEBGLTexture extends Texture {
    * @returns A Buffer containing the texture data.
    *
    * @note The memory layout of the texture data is determined by the texture format and dimensions.
-   * @note The application can call Texture.getMemoryLayout() to compute the layout.
+   * @note The application can call Texture.computeMemoryLayout() to compute the layout.
    * @note The application can call Buffer.readAsync()
    * @note If not supplied a buffer will be created and the application needs to call Buffer.destroy
    */
@@ -265,7 +266,7 @@ export class WEBGLTexture extends Texture {
    * @returns An ArrayBuffer containing the texture data.
    *
    * @note The memory layout of the texture data is determined by the texture format and dimensions.
-   * @note The application can call Texture.getMemoryLayout() to compute the layout.
+   * @note The application can call Texture.computeMemoryLayout() to compute the layout.
    */
   async readDataAsync(options: TextureReadOptions = {}): Promise<ArrayBuffer> {
     return this.readDataSyncWebGL(options);
@@ -275,7 +276,7 @@ export class WEBGLTexture extends Texture {
    * Writes an GPU Buffer into a texture.
    *
    * @note The memory layout of the texture data is determined by the texture format and dimensions.
-   * @note The application can call Texture.getMemoryLayout() to compute the layout.
+   * @note The application can call Texture.computeMemoryLayout() to compute the layout.
    */
   writeBuffer(buffer: Buffer, options_: TextureWriteOptions = {}) {}
 
@@ -283,7 +284,7 @@ export class WEBGLTexture extends Texture {
    * Writes an array buffer into a texture.
    *
    * @note The memory layout of the texture data is determined by the texture format and dimensions.
-   * @note The application can call Texture.getMemoryLayout() to compute the layout.
+   * @note The application can call Texture.computeMemoryLayout() to compute the layout.
    */
   writeData(data: ArrayBuffer | ArrayBufferView, options_: TextureWriteOptions = {}): void {
     const options = this._normalizeTextureWriteOptions(options_);
@@ -296,10 +297,10 @@ export class WEBGLTexture extends Texture {
     const glTarget = getWebGLCubeFaceTarget(this.glTarget, this.dimension, depth);
     const byteOffset = 0;
 
-    const memoryLayout = this.getMemoryLayout(options);
+    const memoryLayout = this.computeMemoryLayout(options);
     const {bytesPerRow, rowsPerImage} = memoryLayout;
 
-    const byteAlignment = this._getRowByteAlignment(this.format, width);
+    const byteAlignment = this.byteAlignment; // WebGL does not require any byte alignment
 
     const glParameters: GLValueParameters = !this.compressed
       ? {
@@ -343,7 +344,7 @@ export class WEBGLTexture extends Texture {
 
   // IMPLEMENTATION SPECIFIC
 
-  _getRowByteAlignment(format: TextureFormat, width: number): 1 | 2 | 4 | 8 {
+  private _getRowByteAlignment(format: TextureFormat, width: number): 1 | 2 | 4 | 8 {
     // For best texture data read/write performance, calculate the biggest pack/unpack alignment
     // that fits with the provided texture row byte length
     // Note: Any RGBA or 32 bit type will be at least 4 bytes, which should result in good performance.
@@ -374,7 +375,7 @@ export class WEBGLTexture extends Texture {
   override readDataSyncWebGL(options_: TextureReadOptions = {}): ArrayBuffer {
     const options = this._normalizeTextureReadOptions(options_);
 
-    const memoryLayout = this.getMemoryLayout(options);
+    const memoryLayout = this.computeMemoryLayout(options);
 
     // const formatInfo = getTextureFormatInfo(format);
     // Allocate pixel array if not already available, using supplied type

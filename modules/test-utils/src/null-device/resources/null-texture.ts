@@ -11,7 +11,6 @@ import {
   type TextureWriteOptions,
   type Sampler,
   type SamplerProps,
-  type TextureFormat,
   Buffer,
   Texture
 } from '@luma.gl/core';
@@ -64,8 +63,7 @@ export class NullTexture extends Texture {
   copyExternalImage(options: CopyExternalImageOptions): {width: number; height: number} {
     this.trackDeallocatedMemory('Texture');
 
-    const {image: data} = options;
-
+    // const {image: data} = options;
     // if (data && data.byteLength) {
     //   this.trackAllocatedMemory(data.byteLength, 'Texture');
     // } else {
@@ -73,13 +71,7 @@ export class NullTexture extends Texture {
     this.trackAllocatedMemory(this.width * this.height * bytesPerPixel, 'Texture');
     // }
 
-    const width = options.width ?? (data as ImageBitmap).width;
-    const height = options.height ?? (data as ImageBitmap).height;
-
-    this.width = width;
-    this.height = height;
-
-    return {width, height};
+    return {width: this.width, height: this.height};
   }
 
   override setSampler(sampler?: Sampler | SamplerProps): void {
@@ -104,9 +96,5 @@ export class NullTexture extends Texture {
 
   override writeData(data: ArrayBuffer | ArrayBufferView, options: TextureWriteOptions = {}): void {
     // ignore
-  }
-
-  override _getRowByteAlignment(format: TextureFormat): number {
-    return 1;
   }
 }

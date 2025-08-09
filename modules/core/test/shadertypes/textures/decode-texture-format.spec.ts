@@ -57,3 +57,25 @@ test('shadertype#textureFormatDecoder.getCapabilities', t => {
   }
   t.end();
 });
+
+/**
+ * Compute bytesPerPixel from format metadata.
+ * If you prefer not to pass `bytesPerPixel` into `textureFormatDecoder.computeMemoryLayout`,
+ * you can derive it from `TextureFormat` via this helper.
+ */
+const bytesPerPixelFromFormat = (format: TextureFormat) =>
+  textureFormatDecoder.getInfo(format).bytesPerPixel;
+
+test('bytesPerPixelFromFormat', t => {
+  t.equal(bytesPerPixelFromFormat('r8unorm'), 1, 'r8unorm = 1 B/px');
+  t.equal(bytesPerPixelFromFormat('rgba8unorm'), 4, 'rgba8unorm = 4 B/px');
+  t.equal(bytesPerPixelFromFormat('bgra8unorm'), 4, 'bgra8unorm = 4 B/px');
+  t.equal(bytesPerPixelFromFormat('r16uint'), 2, 'r16uint = 2 B/px');
+  t.equal(bytesPerPixelFromFormat('rgba16uint'), 8, 'rgba16uint = 8 B/px');
+  t.equal(bytesPerPixelFromFormat('rgba16float'), 8, 'rgba16float = 8 B/px');
+  t.equal(bytesPerPixelFromFormat('r32uint'), 4, 'r32uint = 4 B/px');
+  t.equal(bytesPerPixelFromFormat('rgba32uint'), 16, 'rgba32uint = 16 B/px');
+  t.equal(bytesPerPixelFromFormat('r32float'), 4, 'r32float = 4 B/px');
+  t.equal(bytesPerPixelFromFormat('rgba32float'), 16, 'rgba32float = 16 B/px');
+  t.end();
+});

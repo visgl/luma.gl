@@ -9,72 +9,127 @@ import type {
   TextureFormatCompressed,
   TextureFormatInfo,
   TextureFormatCapabilities,
-  TextureFormatColor
+  TextureFormatColor,
+  TextureMemoryLayout,
+  TextureFormatDepthStencil
 } from './texture-formats';
 import {getTextureFormatDefinition} from './texture-format-table';
 
+const RGB_FORMAT_REGEX = /^(r|rg|rgb|rgba|bgra)([0-9]*)([a-z]*)(-srgb)?(-webgl)?$/;
+const COLOR_FORMAT_PREFIXES = ['rgb', 'rgba', 'bgra'];
+const DEPTH_FORMAT_PREFIXES = ['depth', 'stencil'];
 // prettier-ignore
 const COMPRESSED_TEXTURE_FORMAT_PREFIXES = [
   'bc1', 'bc2', 'bc3', 'bc4', 'bc5', 'bc6', 'bc7', 'etc1', 'etc2', 'eac', 'atc', 'astc', 'pvrtc'
 ];
 
-const RGB_FORMAT_REGEX = /^(r|rg|rgb|rgba|bgra)([0-9]*)([a-z]*)(-srgb)?(-webgl)?$/;
+// HELPERS - MEMORY LAYOUT
 
+/** Options to calculate a texture layout */
+export type TextureMemoryLayoutOptions = {
+  /** Number of bytes per pixel */
+  format: TextureFormat;
+  /** Width of the texture in pixels */
+  width: number;
+  /** Height of the texture in pixels */
+  height: number;
+  /** Number of images in the texture */
+  depth: number;
+  /** Alignment of each row */
+  byteAlignment: number;
+};
+
+/** Class that helps applications work with texture formats */
 export class TextureFormatDecoder {
-  /** Returns information about a texture format, e.g. attatchment type, components, byte length and flags (integer, signed, normalized) */
-  getInfo(format: TextureFormat): TextureFormatInfo {
-    return getTextureFormatInfo(format);
-  }
-
   /** Checks if a texture format is color */
   isColor(format: TextureFormat): format is TextureFormatColor {
-    return format.startsWith('rgba') || format.startsWith('bgra') || format.startsWith('rgb');
+    return COLOR_FORMAT_PREFIXES.some(prefix => format.startsWith(prefix));
   }
 
   /** Checks if a texture format is depth or stencil */
-  isDepthStencil(format: TextureFormat): boolean {
-    return format.startsWith('depth') || format.startsWith('stencil');
+  isDepthStencil(format: TextureFormat): format is TextureFormatDepthStencil {
+    return DEPTH_FORMAT_PREFIXES.some(prefix => format.startsWith(prefix));
   }
 
   /** Checks if a texture format is compressed */
   isCompressed(format: TextureFormat): format is TextureFormatCompressed {
-    return COMPRESSED_TEXTURE_FORMAT_PREFIXES.some(prefix => (format as string).startsWith(prefix));
+    return COMPRESSED_TEXTURE_FORMAT_PREFIXES.some(prefix => format.startsWith(prefix));
   }
 
-  /**
-   * Returns the "static" capabilities of a texture format.
-   * @note Needs to be checked against current device
-   */
+  /** Returns information about a texture format, e.g. attachment type, components, byte length and flags (integer, signed, normalized) */
+  getInfo(format: TextureFormat): TextureFormatInfo {
+    return getTextureFormatInfo(format);
+  }
+
+  /**  "static" capabilities of a texture format. @note Needs to be adjusted against current device */
   getCapabilities(format: TextureFormat): TextureFormatCapabilities {
-    const info = getTextureFormatDefinition(format);
+    return getTextureFormatCapabilities(format);
+  }
 
-    const formatCapabilities: Required<TextureFormatCapabilities> = {
-      format,
-      create: info.f ?? true,
-      render: info.render ?? true,
-      filter: info.filter ?? true,
-      blend: info.blend ?? true,
-      store: info.store ?? true
-    };
-
-    const formatInfo = getTextureFormatInfo(format);
-    const isDepthStencil = format.startsWith('depth') || format.startsWith('stencil');
-    const isSigned = formatInfo?.signed;
-    const isInteger = formatInfo?.integer;
-    const isWebGLSpecific = formatInfo?.webgl;
-
-    // signed formats are not renderable
-    formatCapabilities.render &&= !isSigned;
-    // signed and integer formats are not filterable
-    formatCapabilities.filter &&= !isDepthStencil && !isSigned && !isInteger && !isWebGLSpecific;
-
-    return formatCapabilities;
+  /** Computes the memory layout for a texture, in particular including row byte alignment */
+  computeMemoryLayout(opts: TextureMemoryLayoutOptions): TextureMemoryLayout {
+    return computeTextureMemoryLayout(opts);
   }
 }
 
 export const textureFormatDecoder = new TextureFormatDecoder();
 
-// HELPERS
+// HELPERS - MEMORY LAYOUT
+
+/** Get the memory layout of a texture */
+function computeTextureMemoryLayout({
+  format,
+  width,
+  height,
+  depth,
+  byteAlignment
+}: TextureMemoryLayoutOptions): TextureMemoryLayout {
+  const {bytesPerPixel} = textureFormatDecoder.getInfo(format);
+  // WebGPU requires bytesPerRow to be a multiple of 256.
+  const unpaddedBytesPerRow = width * bytesPerPixel;
+  const bytesPerRow = Math.ceil(unpaddedBytesPerRow / byteAlignment) * byteAlignment;
+  const rowsPerImage = height;
+  const byteLength = bytesPerRow * rowsPerImage * depth;
+
+  return {
+    bytesPerPixel,
+    bytesPerRow,
+    rowsPerImage,
+    depthOrArrayLayers: depth,
+    bytesPerImage: bytesPerRow * rowsPerImage,
+    byteLength
+  };
+}
+
+// HELPERS - CAPABILITIES
+
+function getTextureFormatCapabilities(format: TextureFormat): TextureFormatCapabilities {
+  const info = getTextureFormatDefinition(format);
+
+  const formatCapabilities: Required<TextureFormatCapabilities> = {
+    format,
+    create: info.f ?? true,
+    render: info.render ?? true,
+    filter: info.filter ?? true,
+    blend: info.blend ?? true,
+    store: info.store ?? true
+  };
+
+  const formatInfo = getTextureFormatInfo(format);
+  const isDepthStencil = format.startsWith('depth') || format.startsWith('stencil');
+  const isSigned = formatInfo?.signed;
+  const isInteger = formatInfo?.integer;
+  const isWebGLSpecific = formatInfo?.webgl;
+
+  // signed formats are not renderable
+  formatCapabilities.render &&= !isSigned;
+  // signed and integer formats are not filterable
+  formatCapabilities.filter &&= !isDepthStencil && !isSigned && !isInteger && !isWebGLSpecific;
+
+  return formatCapabilities;
+}
+
+// HELPER - FORMAT INFO
 
 /**
  * Decodes a texture format, returning e.g. attatchment type, components, byte length and flags (integer, signed, normalized)
