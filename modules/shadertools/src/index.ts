@@ -53,9 +53,6 @@ export {preprocess} from './lib/preprocessor/preprocessor';
 export {assembleGLSLShaderPair} from './lib/shader-assembly/assemble-shaders';
 export {combineInjects} from './lib/shader-assembly/shader-injections';
 
-// EXPERIMENTAL WGSL
-export {getShaderLayoutFromWGSL} from './lib/wgsl/get-shader-layout-wgsl';
-
 // data utils
 export {toHalfFloat, fromHalfFloat} from './modules/math/fp16/fp16-utils';
 export {fp64ify, fp64LowPart, fp64ifyMatrix4} from './modules/math/fp64/fp64-utils';

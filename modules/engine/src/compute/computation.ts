@@ -13,7 +13,7 @@ import {
   getTypedArrayConstructor
 } from '@luma.gl/core';
 import type {ShaderModule, PlatformInfo} from '@luma.gl/shadertools';
-import {ShaderAssembler, getShaderLayoutFromWGSL} from '@luma.gl/shadertools';
+import {ShaderAssembler} from '@luma.gl/shadertools';
 import {TypedArray, isNumericArray} from '@math.gl/types';
 import {ShaderInputs} from '../shader-inputs';
 import {PipelineFactory} from '../factories/pipeline-factory';
@@ -133,7 +133,8 @@ export class Computation {
 
     // Support WGSL shader layout introspection
     // TODO - Don't modify props!!
-    this.props.shaderLayout ||= getShaderLayoutFromWGSL(this.props.source);
+    // @ts-expect-error method on WebGPUDevice
+    this.props.shaderLayout ||= device.getShaderLayout(this.props.source);
 
     // Setup shader assembler
     const platformInfo = getPlatformInfo(device);
