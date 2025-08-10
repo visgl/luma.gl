@@ -1,3 +1,5 @@
+/* eslint-disable no-continue, max-depth */
+
 import test from 'tape-promise/tape';
 import {getWebGLTestDevice, getTestDevices} from '@luma.gl/test-utils';
 
@@ -92,7 +94,9 @@ test('Texture#writeData & readDataAsync round-trip for all formats and dimension
         info.dataType === 'float16' ||
         info.packed ||
         info.attachment !== 'color' ||
-        (device.type === 'webgpu' && format.includes('16'));
+        (device.type === 'webgpu' && format.includes('16')) ||
+        !device.isTextureFormatRenderable(format);
+
       if (skipFormat) {
         continue;
       }
@@ -333,7 +337,8 @@ test('Texture#construct/delete', async t => {
 test('Texture#depth/stencil formats', async t => {
   const DEPTH_STENCIL_FORMATS = ['depth16unorm', 'depth24plus', 'depth24plus-stencil8'];
   for (const device of await getTestDevices()) {
-    for (const format of DEPTH_STENCIL_FORMATS) {
+    for (const key of DEPTH_STENCIL_FORMATS) {
+      const format = key as TextureFormat;
       t.ok(device.isTextureFormatSupported(format), `${device.type} ${format} is supported`);
       t.notOk(
         device.isTextureFormatFilterable(format),
@@ -348,7 +353,8 @@ test('Texture#depth/stencil formats', async t => {
 
 test('Texture#format simple creation', async t => {
   for (const device of await getTestDevices()) {
-    for (const [formatName, formatInfo] of Object.entries(_getTextureFormatTable)) {
+    for (const key of Object.keys(_getTextureFormatTable)) {
+      const formatName = key as TextureFormat;
       if (['stencil8'].includes(formatName)) {
         continue;
       }
@@ -380,7 +386,7 @@ const DEFAULT_TEXTURE_DATA = new Uint8Array([
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 ]);
 const DATA = [1, 0.5, 0.25, 0.125];
-const TEXTURE_DATA: Record<VertexFormat, any> = {
+const TEXTURE_DATA = {
   uint8: new Uint8Array(DATA),
   sint8: new Int8Array(DATA),
   uint16: new Uint16Array(DATA),
@@ -392,7 +398,8 @@ const TEXTURE_DATA: Record<VertexFormat, any> = {
   // [GL.UNSIGNED_SHORT_5_5_5_1]: UINT16_DATA, // RGB_TO[GL.UNSIGNED_SHORT_5_6_5](DATA))
   float16: new Uint16Array(DATA),
   float32: new Float32Array(DATA)
-};
+} as const satisfies Partial<Record<VertexFormat, TypedArray>>;
+
 // const RGB_TO = {
 //   [GL.UNSIGNED_BYTE]: (r, g, b) => [r * 256, g * 256, b * 256],
 //   [GL.UNSIGNED_SHORT_5_6_5]: (r, g, b) => r * 32 << 11 + g * 64 << 6 + b * 32
@@ -403,10 +410,10 @@ const TEXTURE_DATA: Record<VertexFormat, any> = {
 // };
 
 function testFormatCreation(t, device: Device, withData: boolean = false) {
-  for (const [formatName, formatInfo] of Object.entries(_getTextureFormatTable)) {
+  for (const [formatName] of Object.entries(_getTextureFormatTable)) {
     const format = formatName as TextureFormat;
 
-    const decodedFormat = textureFormatDecoder.getInfo(formatName);
+    const decodedFormat = textureFormatDecoder.getInfo(format);
     const {dataType, packed, bitsPerChannel} = decodedFormat;
 
     // WebGPU texture can currently only be set from 8 bit data

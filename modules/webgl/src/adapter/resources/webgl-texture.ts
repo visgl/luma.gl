@@ -264,15 +264,14 @@ export class WEBGLTexture extends Texture {
     const {glFormat, glType, compressed} = this;
     const depth = 0; // TODO - fix
     const glTarget = getWebGLCubeFaceTarget(this.glTarget, this.dimension, depth);
-    const byteOffset = 0;
 
-    const memoryLayout = this.computeMemoryLayout(options);
-    // const {bytesPerRow, rowsPerImage} = memoryLayout;
-    const byteAlignment = this.byteAlignment; // WebGL does not require any byte alignment
+    // const byteOffset = 0;
+    // const {bytesPerRow, rowsPerImage} = this.computeMemoryLayout(options);
 
     const glParameters: GLValueParameters = !this.compressed
       ? {
-          [GL.UNPACK_ALIGNMENT]: byteAlignment
+          // WebGL does not require byte alignment, but allows it to be specified
+          [GL.UNPACK_ALIGNMENT]: this.byteAlignment
           // [GL.UNPACK_ROW_LENGTH]: bytesPerRow,
           // [GL.UNPACK_IMAGE_HEIGHT]: rowsPerImage
         }
