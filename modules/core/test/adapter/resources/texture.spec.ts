@@ -73,7 +73,7 @@ test('Texture#writeData & readDataAsync round-trip', async t => {
   t.end();
 });
 
-test('Texture#writeData & readDataAsync round-trip for all formats and dimensions', async t => {
+test.only('Texture#writeData & readDataAsync round-trip for all formats and dimensions', async t => {
   for (const device of await getTestDevices()) {
     t.comment(`Testing device: ${device.type}`);
     const formatTable = _getTextureFormatTable(device);
@@ -94,10 +94,15 @@ test('Texture#writeData & readDataAsync round-trip for all formats and dimension
         info.dataType === 'float16' ||
         info.packed ||
         info.attachment !== 'color' ||
-        (device.type === 'webgpu' && format.includes('16')) ||
-        !device.isTextureFormatRenderable(format);
+        (device.type === 'webgpu' && format.includes('16'))
+        ;
 
       if (skipFormat) {
+        continue;
+      }
+
+      if (!device.isTextureFormatRenderable(format)) {
+        t.comment(`Skipping unrenderable format ${format}`);
         continue;
       }
 

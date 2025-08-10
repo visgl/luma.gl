@@ -278,6 +278,14 @@ export class WebGPUDevice extends Device {
       features.add('texture-compression-bc5-webgl');
     }
 
+    if (this.handle.features.has('chromium-experimental-norm16-texture-formats')) {
+      features.add('norm16-renderable-webgl');
+    }
+
+    if (this.handle.features.has('chromium-experimental-snorm16-texture-formats')) {
+      features.add('snorm16-renderable-webgl');
+    }
+
     const WEBGPU_ALWAYS_FEATURES: DeviceFeature[] = [
       'timer-query-webgl',
       'compilation-status-async-webgl',
