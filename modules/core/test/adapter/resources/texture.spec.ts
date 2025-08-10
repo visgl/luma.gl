@@ -94,9 +94,7 @@ test.only('Texture#writeData & readDataAsync round-trip for all formats and dime
         info.dataType === 'float16' ||
         info.packed ||
         info.attachment !== 'color' ||
-        (device.type === 'webgpu' && format.includes('16'))
-        ;
-
+        (device.type === 'webgpu' && format.includes('16'));
       if (skipFormat) {
         continue;
       }
