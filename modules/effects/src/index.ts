@@ -51,10 +51,7 @@ export type {
   ZoomBlurUniforms
 } from './passes/postprocessing/image-blur-filters/zoomblur';
 export {zoomBlur} from './passes/postprocessing/image-blur-filters/zoomblur';
-export type {
-  BloomProps,
-  BloomUniforms
-} from './passes/postprocessing/image-blur-filters/bloom';
+export type {BloomProps, BloomUniforms} from './passes/postprocessing/image-blur-filters/bloom';
 export {bloom} from './passes/postprocessing/image-blur-filters/bloom';
 
 // glfx FUN shader modules

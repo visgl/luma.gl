@@ -106,4 +106,3 @@ export const bloom = {
 
   passes: [{sampler: true}]
 } as const satisfies ShaderPass<BloomProps, BloomProps>;
-
