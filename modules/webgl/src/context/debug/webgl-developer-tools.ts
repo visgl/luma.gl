@@ -132,9 +132,13 @@ function onGLError(
   const functionArgs = globalThis.WebGLDebugUtils.glFunctionArgsToString(functionName, args);
   const message = `${errorMessage} in gl.${functionName}(${functionArgs})`;
   // TODO - call device.reportError
-  log.error(message)();
+  log.error(
+    '%cWebGL',
+    'color: white; background: red; padding: 2px 6px; border-radius: 3px;',
+    message
+  )();
   debugger; // eslint-disable-line
-  // throw new Error(message);
+  throw new Error(message);
 }
 
 // Don't generate function string until it is needed
@@ -144,11 +148,14 @@ function onValidateGLFunc(
   functionArgs: unknown[]
 ): void {
   let functionString: string = '';
-  if (log.level >= 1) {
+  if (props.traceWebGL && log.level >= 1) {
     functionString = getFunctionString(functionName, functionArgs);
-    if (props.traceWebGL) {
-      log.log(1, functionString)();
-    }
+    log.info(
+      1,
+      '%cWebGL',
+      'color: white; background: blue; padding: 2px 6px; border-radius: 3px;',
+      functionString
+    )();
   }
 
   for (const arg of functionArgs) {

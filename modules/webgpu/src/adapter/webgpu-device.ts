@@ -141,10 +141,6 @@ export class WebGPUDevice extends Device {
     return !info.webglOnly;
   }
 
-  getTextureByteAlignment(): number {
-    return 1;
-  }
-
   createBuffer(props: BufferProps | ArrayBuffer | ArrayBufferView): WebGPUBuffer {
     const newProps = this._normalizeBufferProps(props);
     return new WebGPUBuffer(this, newProps);
@@ -276,6 +272,14 @@ export class WebGPUDevice extends Device {
     // Some subsets of WebGPU extensions correspond to WebGL extensions
     if (features.has('texture-compression-bc')) {
       features.add('texture-compression-bc5-webgl');
+    }
+
+    if (this.handle.features.has('chromium-experimental-norm16-texture-formats')) {
+      features.add('norm16-renderable-webgl');
+    }
+
+    if (this.handle.features.has('chromium-experimental-snorm16-texture-formats')) {
+      features.add('snorm16-renderable-webgl');
     }
 
     const WEBGPU_ALWAYS_FEATURES: DeviceFeature[] = [

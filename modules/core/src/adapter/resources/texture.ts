@@ -423,13 +423,12 @@ export abstract class Texture extends Resource<TextureProps> {
     return options;
   }
 
-  /** Default options */
   static override defaultProps: Required<TextureProps> = {
     ...Resource.defaultProps,
     data: null,
     dimension: '2d',
     format: 'rgba8unorm',
-    usage: Texture.TEXTURE | Texture.RENDER_ATTACHMENT | Texture.COPY_DST,
+    usage: Texture.SAMPLE | Texture.RENDER | Texture.COPY_DST,
     width: undefined!,
     height: undefined!,
     depth: 1,
