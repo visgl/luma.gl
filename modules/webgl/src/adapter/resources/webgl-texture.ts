@@ -40,7 +40,6 @@ import {WEBGLSampler} from './webgl-sampler';
 import {WEBGLTextureView} from './webgl-texture-view';
 import {convertDataTypeToGLDataType} from '../converters/webgl-shadertypes';
 import {convertGLDataTypeToDataType} from '../converters/shader-formats';
-// import {glFormatToComponents} from '../helpers/format-utils';
 import {getTypedArrayConstructor, getDataType} from '@luma.gl/core';
 
 /**
@@ -286,20 +285,20 @@ export class WEBGLTexture extends Texture {
         case 'cube':
           if (compressed) {
             // prettier-ignore
-            this.gl.compressedTexSubImage2D(glTarget, mipLevel, x, y, width, height, glFormat, typedArray); // , byteLength
+            this.gl.compressedTexSubImage2D(glTarget, mipLevel, x, y, width, height, glFormat, typedArray);
           } else {
             // prettier-ignore
-            this.gl.texSubImage2D(glTarget, mipLevel, x, y, width, height, glFormat, glType, typedArray); // , byteLength
+            this.gl.texSubImage2D(glTarget, mipLevel, x, y, width, height, glFormat, glType, typedArray);
           }
           break;
         case '2d-array':
         case '3d':
           if (compressed) {
             // prettier-ignore
-            this.gl.compressedTexSubImage3D(glTarget, mipLevel, x, y, z, width, height, depth, glFormat, typedArray); // , byteLength
+            this.gl.compressedTexSubImage3D(glTarget, mipLevel, x, y, z, width, height, depth, glFormat, typedArray);
           } else {
             // prettier-ignore
-            this.gl.texSubImage3D(glTarget, mipLevel, x, y, z, width, height, depth, glFormat, glType, typedArray); // , byteLength
+            this.gl.texSubImage3D(glTarget, mipLevel, x, y, z, width, height, depth, glFormat, glType, typedArray);
           }
           break;
         default:
@@ -312,13 +311,13 @@ export class WEBGLTexture extends Texture {
 
   // IMPLEMENTATION SPECIFIC
 
-  getBestByteAlignment(format: TextureFormat, width: number): 1 | 2 | 4 | 8 {
-    // TODO - for now we always use 1 for maximum compatibility, we can fine tune later
+  /** @todo - for now we always use 1 for maximum compatibility, we can fine tune later */
+  private _getRowByteAlignment(format: TextureFormat, width: number): 1 | 2 | 4 | 8 {
     // For best texture data read/write performance, calculate the biggest pack/unpack alignment
     // that fits with the provided texture row byte length
     // Note: Any RGBA or 32 bit type will be at least 4 bytes, which should result in good performance.
     // const info = this.device.getTextureFormatInfo(format);
-    // const rowByteLength = width * info.bytesPerPixel!;
+    // const rowByteLength = width * info.bytesPerPixel;
     // if (rowByteLength % 8 === 0) return 8;
     // if (rowByteLength % 4 === 0) return 4;
     // if (rowByteLength % 2 === 0) return 2;
@@ -337,20 +336,6 @@ export class WEBGLTexture extends Texture {
       colorAttachments: [this]
     });
     return this._framebuffer;
-  }
-
-  // IMPLEMENTATION SPECIFIC
-
-  private _getRowByteAlignment(format: TextureFormat, width: number): 1 | 2 | 4 | 8 {
-    // For best texture data read/write performance, calculate the biggest pack/unpack alignment
-    // that fits with the provided texture row byte length
-    // Note: Any RGBA or 32 bit type will be at least 4 bytes, which should result in good performance.
-    const info = this.device.getTextureFormatInfo(format);
-    const rowByteLength = width * info.bytesPerPixel;
-    if (rowByteLength % 8 === 0) return 8;
-    if (rowByteLength % 4 === 0) return 4;
-    if (rowByteLength % 2 === 0) return 2;
-    return 1;
   }
 
   // WEBGL SPECIFIC

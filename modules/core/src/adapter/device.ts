@@ -435,11 +435,6 @@ export abstract class Device {
     return true;
   }
 
-  /** Return the implementation specific alignment for a texture format. 1 on WebGL, 256 on WebGPU */
-  // getTextureByteAlignment(): number {
-  //   return 1;
-  // }
-
   /** Returns information about a texture format, such as data type, channels, bits per channel, compression etc */
   getTextureFormatInfo(format: TextureFormat): TextureFormatInfo {
     return textureFormatDecoder.getInfo(format);

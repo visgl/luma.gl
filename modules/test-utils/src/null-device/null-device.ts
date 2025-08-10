@@ -79,10 +79,6 @@ export class NullDevice extends Device {
 
   // IMPLEMENTATION OF ABSTRACT DEVICE
 
-  getTextureByteAlignment(): number {
-    return 1;
-  }
-
   createCanvasContext(props: CanvasContextProps): NullCanvasContext {
     return new NullCanvasContext(this, props);
   }
