@@ -233,7 +233,7 @@ export class WebGLDevice extends Device {
     glState.trackState(this.gl, {copyState: false});
 
     // DEBUG contexts: Add luma debug instrumentation to the context, force log level to at least 1
-    const debugWebGL = props.debugWebGL || props.debug;
+    const debugWebGL = props.debugWebGL;
     const traceWebGL = props.debugWebGL;
     if (debugWebGL) {
       this.gl = makeDebugContext(this.gl, {debugWebGL, traceWebGL});
@@ -274,9 +274,9 @@ export class WebGLDevice extends Device {
 
   // IMPLEMENTATION OF ABSTRACT DEVICE
 
-  override getTextureByteAlignment(): number {
-    return 4;
-  }
+  // override getTextureByteAlignment(): number {
+  //   return 4;
+  // }
 
   createCanvasContext(props?: CanvasContextProps): CanvasContext {
     throw new Error('WebGL only supports a single canvas');

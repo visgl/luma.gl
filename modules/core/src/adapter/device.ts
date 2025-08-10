@@ -436,9 +436,9 @@ export abstract class Device {
   }
 
   /** Return the implementation specific alignment for a texture format. 1 on WebGL, 256 on WebGPU */
-  getTextureByteAlignment(): number { 
-    return 1; 
-  }
+  // getTextureByteAlignment(): number {
+  //   return 1;
+  // }
 
   /** Returns information about a texture format, such as data type, channels, bits per channel, compression etc */
   getTextureFormatInfo(format: TextureFormat): TextureFormatInfo {
@@ -550,7 +550,13 @@ export abstract class Device {
     const isHandled = this.props.onError(error, context);
     if (!isHandled) {
       // Note: Returns a function that must be called: `device.reportError(...)()`
-      return log.error(error.message, context, ...args);
+      return log.error(
+        this.type === 'webgl' ? '%cWebGL' : '%cWebGPU',
+        'color: white; background: red; padding: 2px 6px; border-radius: 3px;',
+        error.message,
+        context,
+        ...args
+      );
     }
     return () => {};
   }

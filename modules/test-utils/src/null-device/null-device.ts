@@ -79,7 +79,7 @@ export class NullDevice extends Device {
 
   // IMPLEMENTATION OF ABSTRACT DEVICE
 
-  override getTextureByteAlignment(): number {
+  getTextureByteAlignment(): number {
     return 1;
   }
 

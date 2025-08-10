@@ -141,7 +141,7 @@ export class WebGPUDevice extends Device {
     return !info.webglOnly;
   }
 
-  override getTextureByteAlignment(): number {
+  getTextureByteAlignment(): number {
     return 256;
   }
 
