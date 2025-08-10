@@ -232,15 +232,14 @@ export class WebGLDevice extends Device {
     });
     glState.trackState(this.gl, {copyState: false});
 
-    // DEBUG contexts: Add luma debug instrumentation to the context, force log level to at least 1
-    const debugWebGL = props.debugWebGL;
-    const traceWebGL = props.debugWebGL;
-    if (debugWebGL) {
-      this.gl = makeDebugContext(this.gl, {debugWebGL, traceWebGL});
+    // props.debug - instrument the WebGL context with Khronos debug tools
+    // props.debugWebGL - activate WebGL context tracing, force log level to at least 1
+    if (props.debug || props.debugWebGL) {
+      this.gl = makeDebugContext(this.gl, {debugWebGL: true, traceWebGL: props.debugWebGL});
       log.warn('WebGL debug mode activated. Performance reduced.')();
-      if (props.debugWebGL) {
-        log.level = Math.max(log.level, 1);
-      }
+    }
+    if (props.debugWebGL) {
+      log.level = Math.max(log.level, 1);
     }
 
     this.commandEncoder = new WEBGLCommandEncoder(this, {id: `${this}-command-encoder`});

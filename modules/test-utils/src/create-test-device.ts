@@ -85,8 +85,7 @@ async function makeWebGLTestDevice(): Promise<WebGLDevice> {
       type: 'webgl',
       adapters: [webgl2Adapter],
       createCanvasContext: DEFAULT_CANVAS_CONTEXT_PROPS,
-      debug: true,
-      debugWebGL: true
+      debug: true
     })) as unknown as WebGLDevice;
     webglDeviceResolvers.resolve(webglDevice);
   } catch (error) {
@@ -106,8 +105,7 @@ async function makeNullTestDevice(): Promise<NullDevice> {
       type: 'null',
       adapters: [nullAdapter],
       createCanvasContext: DEFAULT_CANVAS_CONTEXT_PROPS,
-      debug: true,
-      debugWebGL: true
+      debug: true
     })) as unknown as NullDevice;
     nullDeviceResolvers.resolve(nullDevice);
   } catch (error) {

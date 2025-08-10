@@ -95,10 +95,10 @@ export class WebGLAdapter extends Adapter {
       }
     }
 
-    log.groupCollapsed(LOG_LEVEL, 'WebGLDevice created')();
     try {
       const device = new WebGLDevice(props);
 
+      log.groupCollapsed(LOG_LEVEL, `WebGLDevice ${device.id} created`)();
       // Log some debug info about the newly created context
       const message = `\
 ${device._reused ? 'Reusing' : 'Created'} device with WebGL2 ${device.props.debug ? 'debug ' : ''}context: \
