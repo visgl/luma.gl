@@ -14,4 +14,3 @@ test('bloom#build/uniform', t => {
   t.equal(uniforms.intensity, 1, 'bloom intensity uniform is ok');
   t.end();
 });
-
