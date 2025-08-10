@@ -73,7 +73,7 @@ test('Texture#writeData & readDataAsync round-trip', async t => {
   t.end();
 });
 
-test.only('Texture#writeData & readDataAsync round-trip for all formats and dimensions', async t => {
+test('Texture#writeData & readDataAsync round-trip for all formats and dimensions', async t => {
   for (const device of await getTestDevices()) {
     t.comment(`Testing device: ${device.type}`);
     const formatTable = _getTextureFormatTable(device);
