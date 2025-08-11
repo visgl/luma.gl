@@ -68,8 +68,6 @@ export {TransformFeedback} from './adapter/resources/transform-feedback';
 export type {QuerySetProps} from './adapter/resources/query-set';
 export {QuerySet} from './adapter/resources/query-set';
 
-export {Fence, type FenceProps} from './adapter/resources/fence';
-
 export type {PipelineLayoutProps} from './adapter/resources/pipeline-layout';
 export {PipelineLayout} from './adapter/resources/pipeline-layout';
 

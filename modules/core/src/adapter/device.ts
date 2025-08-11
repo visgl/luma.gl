@@ -24,7 +24,6 @@ import type {CommandBuffer} from './resources/command-buffer';
 import type {VertexArray, VertexArrayProps} from './resources/vertex-array';
 import type {TransformFeedback, TransformFeedbackProps} from './resources/transform-feedback';
 import type {QuerySet, QuerySetProps} from './resources/query-set';
-import type {Fence} from './resources/fence';
 
 import {getVertexFormatInfo} from '../shadertypes/vertex-arrays/decode-vertex-format';
 import {textureFormatDecoder} from '../shadertypes/textures/texture-format-decoder';
@@ -625,11 +624,6 @@ or create a device with the 'debug: true' prop.`;
   abstract createTransformFeedback(props: TransformFeedbackProps): TransformFeedback;
 
   abstract createQuerySet(props: QuerySetProps): QuerySet;
-
-  /** Create a fence sync object */
-  createFence(): Fence {
-    throw new Error('createFence() not implemented');
-  }
 
   /** Create a RenderPass using the default CommandEncoder */
   beginRenderPass(props?: RenderPassProps): RenderPass {

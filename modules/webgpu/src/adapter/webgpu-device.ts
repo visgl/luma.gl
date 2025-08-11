@@ -45,7 +45,6 @@ import {WebGPUCommandEncoder} from './resources/webgpu-command-encoder';
 import {WebGPUCommandBuffer} from './resources/webgpu-command-buffer';
 import {WebGPUQuerySet} from './resources/webgpu-query-set';
 import {WebGPUPipelineLayout} from './resources/webgpu-pipeline-layout';
-import {WebGPUFence} from './resources/webgpu-fence';
 
 import {getShaderLayoutFromWGSL} from '../wgsl/get-shader-layout-wgsl';
 
@@ -197,10 +196,6 @@ export class WebGPUDevice extends Device {
 
   override createQuerySet(props: QuerySetProps): QuerySet {
     return new WebGPUQuerySet(this, props);
-  }
-
-  override createFence(): WebGPUFence {
-    return new WebGPUFence(this);
   }
 
   createCanvasContext(props: CanvasContextProps): WebGPUCanvasContext {
