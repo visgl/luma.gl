@@ -357,6 +357,14 @@ createComputePipeline(props: ComputePipelineProps): ComputePipeline
 
 Creates a [`ComputePipeline`](./resources/compute-pipeline) (aka program)
 
+### createFence
+
+```typescript
+createFence(): Fence
+```
+
+Creates a [`Fence`](./resources/fence) used to wait for completion of submitted GPU work.
+
 ### beginRenderPass
 
 ```typescript
