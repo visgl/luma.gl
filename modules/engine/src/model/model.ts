@@ -31,7 +31,7 @@ import {
 } from '@luma.gl/core';
 
 import type {ShaderModule, PlatformInfo} from '@luma.gl/shadertools';
-import {ShaderAssembler, getShaderLayoutFromWGSL} from '@luma.gl/shadertools';
+import {ShaderAssembler} from '@luma.gl/shadertools';
 
 import type {Geometry} from '../geometry/geometry';
 import {GPUGeometry, makeGPUGeometry} from '../geometry/gpu-geometry';
@@ -262,7 +262,8 @@ export class Model {
       // @ts-expect-error
       this._getModuleUniforms = getUniforms;
       // Extract shader layout after modules have been added to WGSL source, to include any bindings added by modules
-      this.props.shaderLayout ||= getShaderLayoutFromWGSL(this.source);
+      // @ts-expect-error Method on WebGPUDevice
+      this.props.shaderLayout ||= device.getShaderLayout(this.source);
     } else {
       // GLSL
       const {vs, fs, getUniforms} = this.props.shaderAssembler.assembleGLSLShaderPair({

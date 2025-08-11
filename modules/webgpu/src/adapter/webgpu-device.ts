@@ -46,6 +46,8 @@ import {WebGPUCommandBuffer} from './resources/webgpu-command-buffer';
 import {WebGPUQuerySet} from './resources/webgpu-query-set';
 import {WebGPUPipelineLayout} from './resources/webgpu-pipeline-layout';
 
+import {getShaderLayoutFromWGSL} from '../wgsl/get-shader-layout-wgsl';
+
 /** WebGPU Device implementation */
 export class WebGPUDevice extends Device {
   /** The underlying WebGPU device */
@@ -134,6 +136,10 @@ export class WebGPUDevice extends Device {
 
   get isLost(): boolean {
     return this._isLost;
+  }
+
+  getShaderLayout(source: string) {
+    return getShaderLayoutFromWGSL(source);
   }
 
   override isVertexFormatSupported(format: VertexFormat): boolean {

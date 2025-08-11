@@ -41,7 +41,8 @@
   },
   "dependencies": {
     "@probe.gl/env": "^4.0.8",
-    "@webgpu/types": "^0.1.34"
+    "@webgpu/types": "^0.1.34",
+    "wgsl_reflect": "^1.2.1"
   },
   "gitHead": "c636c34b8f1581eed163e94543a8eb1f4382ba8e"
 }
