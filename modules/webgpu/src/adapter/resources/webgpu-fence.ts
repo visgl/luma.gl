@@ -28,4 +28,3 @@ export class WebGPUFence extends Fence {
     // Nothing to release for WebGPU fence
   }
 }
-
