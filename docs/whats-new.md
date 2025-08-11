@@ -24,6 +24,7 @@ Production quality WebGPU backend
   - `Texture` class refactors complete, see upgrade guide. 
 - Shader type APIs have been improved.
 - `CommandEncoder`/`CommandBuffer` API improvements
+- `Fence` - New synchronization primitive created with `device.createFence()`
 - `CanvasContext` API simplifications (see upgrade guide).
 
 - [Texture Formats](/docs/api-reference/core/texture-formats). Adds support for the new texture formats added in Chrome 132 (currently require setting chrome://flags/#enable-unsafe-webgpu)

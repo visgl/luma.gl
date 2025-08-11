@@ -89,6 +89,7 @@
           "api-reference/core/resources/buffer",
           "api-reference/core/resources/compute-pass",
           "api-reference/core/resources/compute-pipeline",
+          "api-reference/core/resources/fence",
           "api-reference/core/resources/framebuffer",
           "api-reference/core/resources/render-pass",
           "api-reference/core/resources/render-pipeline",
