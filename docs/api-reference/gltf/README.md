@@ -21,7 +21,7 @@ Loading a glTF file and instantiating scenegraphs
 
 ```ts
 import {load} from '@loaders.gl/core';
-import {GLTFLoader} from '@loaders.gl/gltf';
+import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
 import {luma} from '@luma.gl/core';
 import {webglAdapter} from '@luma.gl/webgl';
 import {createScenegraphsFromGLTF} from '@luma.gl/gltf';
@@ -42,7 +42,6 @@ for (const scene of scenes) {
 // Move animations forward each frame:
 function renderFrame(timeMs: number) {
   animator.setTime(timeMs);
-  device.submit();
   requestAnimationFrame(renderFrame);
 }
 requestAnimationFrame(renderFrame);
@@ -50,15 +49,10 @@ requestAnimationFrame(renderFrame);
 
 Typical flow:
 
-1. Use `@loaders.gl/gltf` to load a glTF/GLB file.
-2. Pass the parsed glTF to `createScenegraphsFromGLTF()` which returns an
-   array of [`GroupNode`](../engine/README.md) scenes and an optional
-   `GLTFAnimator`.
-3. Add the resulting nodes to your own scenegraph and update the`GLTFAnimator` each frame to animate the nodes.
+1. Use `GTLFLoader` from the `@loaders.gl/gltf` module to load a glTF/GLB file.
+2. Use the `postProcessGLTF()` function from the `@loaders.gl/gltf` module further process and prepare the raw glTF.
+3. Pass the processed glTF to the `createScenegraphsFromGLTF()` function, which returns an array of [`GroupNode`](../engine/README.md) scenes and a `GLTFAnimator` instances.4. Add the resulting nodes to your own scenegraph and update the`GLTFAnimator` each frame to animate the nodes.
 
-`@luma.gl/gltf` doesn’t perform any fetching or I/O itself: the supplied
-glTF object must already be in the “post-processed” form produced by the
-`@loaders.gl/gltf` loader (`{gltf: {postProcess: true}}` option).
 
 ## API
 
