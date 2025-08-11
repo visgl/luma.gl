@@ -4,3 +4,6 @@
 
 import './webgpu/adapter/webgpu-adapter.spec';
 import './adapter/helpers/get-vertex-buffer-layout.spec';
+
+// WGSL parsing
+import './lib/wgsl/get-shader-layout-wgsl.spec';
