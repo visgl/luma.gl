@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Fence} from '@luma.gl/core';
+import {Fence, type FenceProps} from '@luma.gl/core';
 import {WebGPUDevice} from '../webgpu-device';
 
 /** WebGPU fence implemented by waiting for submitted work */
@@ -12,7 +12,7 @@ export class WebGPUFence extends Fence {
   readonly signaled: Promise<void>;
   private _signaled = false;
 
-  constructor(device: WebGPUDevice) {
+  constructor(device: WebGPUDevice, props: FenceProps = {}) {
     super(device, {});
     this.device = device;
     this.signaled = device.handle.queue.onSubmittedWorkDone().then(() => {
@@ -26,7 +26,6 @@ export class WebGPUFence extends Fence {
 
   override destroy(): void {
     // Nothing to release for WebGPU fence
-    super.destroy();
   }
 }
 

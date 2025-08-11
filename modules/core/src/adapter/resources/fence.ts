@@ -13,6 +13,8 @@ export abstract class Fence extends Resource<FenceProps> {
     ...Resource.defaultProps
   };
 
+  [Symbol.toStringTag]: string = 'WEBGLFence';
+
   /** Promise that resolves when the fence is signaled */
   abstract readonly signaled: Promise<void>;
 
@@ -20,10 +22,9 @@ export abstract class Fence extends Resource<FenceProps> {
     super(device, props, Fence.defaultProps);
   }
 
-  /** Check if the fence has been signaled */
-  abstract isSignaled(): boolean;
-
   /** Destroy the fence and release any resources */
   abstract override destroy(): void;
-}
 
+  /** Check if the fence has been signaled */
+  abstract isSignaled(): boolean;
+}

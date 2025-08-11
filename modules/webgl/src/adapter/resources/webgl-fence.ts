@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Fence} from '@luma.gl/core';
+import {Fence, type FenceProps} from '@luma.gl/core';
 import {WebGLDevice} from '../webgl-device';
 
 /** WebGL fence implemented with gl.fenceSync */
@@ -13,11 +13,12 @@ export class WEBGLFence extends Fence {
   readonly signaled: Promise<void>;
   private _signaled = false;
 
-  constructor(device: WebGLDevice) {
+  constructor(device: WebGLDevice, props: FenceProps = {}) {
     super(device, {});
     this.device = device;
     this.gl = device.gl;
-    const sync = this.gl.fenceSync(this.gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
+
+    const sync = this.props.handle || this.gl.fenceSync(this.gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
     if (!sync) {
       throw new Error('Failed to create WebGL fence');
     }
@@ -46,11 +47,9 @@ export class WEBGLFence extends Fence {
     return this._signaled;
   }
 
-  override destroy(): void {
+  destroy(): void {
     if (!this.destroyed) {
       this.gl.deleteSync(this.handle);
-      super.destroy();
     }
   }
 }
-

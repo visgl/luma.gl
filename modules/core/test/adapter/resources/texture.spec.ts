@@ -124,7 +124,7 @@ test('Texture#writeData & readDataAsync round-trip for all formats and dimension
         });
 
         const {byteLength, bytesPerRow} = tex.computeMemoryLayout();
-        const ArrayType = getTypedArrayConstructor(info.dataType!);
+        const ArrayType = getTypedArrayConstructor(info.dataType);
         const arraySize = byteLength / ArrayType.BYTES_PER_ELEMENT;
         const input = new ArrayType(arraySize);
         for (let i = 0; i < texSize.height; i++)
