@@ -4,7 +4,7 @@
 
 import test from 'tape-promise/tape';
 import {ShaderLayout} from '@luma.gl/core';
-import {getShaderLayoutFromWGSL} from '@luma.gl/shadertools';
+import {getShaderLayoutFromWGSL} from '@luma.gl/webgpu/wgsl/get-shader-layout-wgsl';
 
 const SHADER = /* WGSL */ `\
 struct Uniforms {
