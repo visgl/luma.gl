@@ -12,5 +12,6 @@ export {WebGPUBuffer} from './adapter/resources/webgpu-buffer';
 export {WebGPUTexture} from './adapter/resources/webgpu-texture';
 export {WebGPUSampler} from './adapter/resources/webgpu-sampler';
 export {WebGPUShader} from './adapter/resources/webgpu-shader';
+export {WebGPUFence} from './adapter/resources/webgpu-fence';
 
 export {getShaderLayoutFromWGSL} from './wgsl/get-shader-layout-wgsl';

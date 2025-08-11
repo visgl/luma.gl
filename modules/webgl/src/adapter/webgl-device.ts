@@ -57,6 +57,7 @@ import {WEBGLCommandBuffer} from './resources/webgl-command-buffer';
 import {WEBGLVertexArray} from './resources/webgl-vertex-array';
 import {WEBGLTransformFeedback} from './resources/webgl-transform-feedback';
 import {WEBGLQuerySet} from './resources/webgl-query-set';
+import {WEBGLFence} from './resources/webgl-fence';
 
 import {readPixelsToArray, readPixelsToBuffer} from './helpers/webgl-texture-utils';
 import {
@@ -312,6 +313,10 @@ export class WebGLDevice extends Device {
 
   createQuerySet(props: QuerySetProps): WEBGLQuerySet {
     return new WEBGLQuerySet(this, props);
+  }
+
+  override createFence(): WEBGLFence {
+    return new WEBGLFence(this);
   }
 
   createRenderPipeline(props: RenderPipelineProps): WEBGLRenderPipeline {
