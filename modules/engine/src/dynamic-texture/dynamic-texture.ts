@@ -25,7 +25,10 @@ type DynamicTextureDataProps =
   | DynamicTextureCubeArrayProps;
 
 type DynamicTexture1DProps = {dimension: '1d'; data: Promise<Texture1DData> | Texture1DData | null};
-type DynamicTexture2DProps = {dimension?: '2d'; data: Promise<Texture2DData> | Texture2DData | null};
+type DynamicTexture2DProps = {
+  dimension?: '2d';
+  data: Promise<Texture2DData> | Texture2DData | null;
+};
 type DynamicTexture3DProps = {dimension: '3d'; data: Promise<Texture3DData> | Texture3DData | null};
 type DynamicTextureArrayProps = {
   dimension: '2d-array';

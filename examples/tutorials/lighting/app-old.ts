@@ -1,6 +1,12 @@
 import {glsl, NumberArray, UniformStore, ShaderUniformType} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
-import {AnimationLoopTemplate, Model, CubeGeometry, loadImage, DynamicTexture} from '@luma.gl/engine';
+import {
+  AnimationLoopTemplate,
+  Model,
+  CubeGeometry,
+  loadImage,
+  DynamicTexture
+} from '@luma.gl/engine';
 import {phongMaterial, lighting} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
 

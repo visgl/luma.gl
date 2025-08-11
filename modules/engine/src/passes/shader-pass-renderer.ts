@@ -99,7 +99,11 @@ void main() {
     // this.props.passes.forEach(pass => pass.resize(width, height));
   }
 
-  renderToScreen(options: {sourceTexture: DynamicTexture; uniforms?: any; bindings?: any}): boolean {
+  renderToScreen(options: {
+    sourceTexture: DynamicTexture;
+    uniforms?: any;
+    bindings?: any;
+  }): boolean {
     // Run the shader passes and generate an output texture
     const outputTexture = this.renderToTexture(options);
     if (!outputTexture) {
