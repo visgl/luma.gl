@@ -13,7 +13,7 @@ import './lib/animation-loop.spec';
 import './lib/pipeline-factory.spec';
 import './lib/shader-factory.spec';
 
-import './async-texture/async-texture.spec';
+import './dynamic-texture/dynamic-texture.spec';
 
 import './geometry/geometries.spec';
 import './geometry/geometry.spec';

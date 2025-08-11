@@ -5,11 +5,11 @@
 // import test from 'tape-promise/tape';
 // import {getWebGLTestDevice} from '@luma.gl/test-utils';
 
-// import {AsyncTexture} from '@luma.gl/engine';
+// import {DynamicTexture} from '@luma.gl/engine';
 // import {Texture} from '@luma.gl/core';
 
 // test.skip('Texture#async constructor', async t => {
-//   let texture = new AsyncTexture(webglDevice, {});
+//   let texture = new DynamicTexture(webglDevice, {});
 //   t.ok(texture.texture instanceof Texture, 'Synchronous Texture construction successful');
 //   t.equal(texture.loaded, false, 'Sync Texture marked as loaded');
 //   texture.destroy();
@@ -18,7 +18,7 @@
 //   const loadPromise = new Promise(resolve => {
 //     loadCompleted = resolve; // eslint-disable-line
 //   });
-//   texture = new AsyncTexture(gl, loadPromise);
+//   texture = new DynamicTexture(gl, loadPromise);
 //   t.ok(texture.texture instanceof Texture, 'Asynchronous Texture construction successful');
 //   t.equal(texture.loaded, false, 'Async Texture initially marked as not loaded');
 

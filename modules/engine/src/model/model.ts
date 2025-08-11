@@ -44,7 +44,7 @@ import {BufferLayoutHelper} from '../utils/buffer-layout-helper';
 import {sortedBufferLayoutByShaderSourceLocations} from '../utils/buffer-layout-order';
 import {uid} from '../utils/uid';
 import {ShaderInputs} from '../shader-inputs';
-import {AsyncTexture} from '../async-texture/async-texture';
+import {DynamicTexture} from '../dynamic-texture/dynamic-texture';
 
 const LOG_DRAW_PRIORITY = 2;
 const LOG_DRAW_TIMEOUT = 10000;
@@ -63,7 +63,7 @@ export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs' | 'bindings'> & {
   /** Shader inputs, used to generated uniform buffers and bindings */
   shaderInputs?: ShaderInputs;
   /** Bindings */
-  bindings?: Record<string, Binding | AsyncTexture>;
+  bindings?: Record<string, Binding | DynamicTexture>;
   /** Parameters that are built into the pipeline */
   parameters?: RenderPipelineParameters;
 
@@ -179,7 +179,7 @@ export class Model {
   /** Constant-valued attributes */
   constantAttributes: Record<string, TypedArray> = {};
   /** Bindings (textures, samplers, uniform buffers) */
-  bindings: Record<string, Binding | AsyncTexture> = {};
+  bindings: Record<string, Binding | DynamicTexture> = {};
 
   /**
    * VertexArray
@@ -571,7 +571,7 @@ export class Model {
   /**
    * Sets bindings (textures, samplers, uniform buffers)
    */
-  setBindings(bindings: Record<string, Binding | AsyncTexture>): void {
+  setBindings(bindings: Record<string, Binding | DynamicTexture>): void {
     Object.assign(this.bindings, bindings);
     this.setNeedsRedraw('bindings');
   }
@@ -678,7 +678,7 @@ export class Model {
   /** Check that bindings are loaded. Returns id of first binding that is still loading. */
   _areBindingsLoading(): string | false {
     for (const binding of Object.values(this.bindings)) {
-      if (binding instanceof AsyncTexture && !binding.isReady) {
+      if (binding instanceof DynamicTexture && !binding.isReady) {
         return binding.id;
       }
     }
@@ -690,7 +690,7 @@ export class Model {
     const validBindings: Record<string, Binding> = {};
 
     for (const [name, binding] of Object.entries(this.bindings)) {
-      if (binding instanceof AsyncTexture) {
+      if (binding instanceof DynamicTexture) {
         // Check that async textures are loaded
         if (binding.isReady) {
           validBindings[name] = binding.texture;
@@ -711,7 +711,7 @@ export class Model {
         timestamp = Math.max(timestamp, binding.texture.updateTimestamp);
       } else if (binding instanceof Buffer || binding instanceof Texture) {
         timestamp = Math.max(timestamp, binding.updateTimestamp);
-      } else if (binding instanceof AsyncTexture) {
+      } else if (binding instanceof DynamicTexture) {
         timestamp = binding.texture
           ? Math.max(timestamp, binding.texture.updateTimestamp)
           : // The texture will become available in the future

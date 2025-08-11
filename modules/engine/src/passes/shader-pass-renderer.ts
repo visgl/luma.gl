@@ -6,7 +6,7 @@ import {Device, RenderPass, Texture} from '@luma.gl/core';
 import type {ShaderPass} from '@luma.gl/shadertools';
 import {initializeShaderModule} from '@luma.gl/shadertools';
 import {ShaderInputs} from '../shader-inputs';
-import {AsyncTexture} from '../async-texture/async-texture';
+import {DynamicTexture} from '../dynamic-texture/dynamic-texture';
 import {ClipSpace} from '../models/clip-space';
 import {SwapFramebuffers} from '../compute/swap';
 import {BackgroundTextureModel} from '../models/billboard-texture-model';
@@ -99,7 +99,7 @@ void main() {
     // this.props.passes.forEach(pass => pass.resize(width, height));
   }
 
-  renderToScreen(options: {sourceTexture: AsyncTexture; uniforms?: any; bindings?: any}): boolean {
+  renderToScreen(options: {sourceTexture: DynamicTexture; uniforms?: any; bindings?: any}): boolean {
     // Run the shader passes and generate an output texture
     const outputTexture = this.renderToTexture(options);
     if (!outputTexture) {
@@ -127,7 +127,7 @@ void main() {
    * @returns null if the the sourceTexture has not yet been loaded
    */
   renderToTexture(options: {
-    sourceTexture: AsyncTexture;
+    sourceTexture: DynamicTexture;
     uniforms?: any;
     bindings?: any;
   }): Texture | null {

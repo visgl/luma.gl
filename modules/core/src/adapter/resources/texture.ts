@@ -103,7 +103,7 @@ const BASE_DIMENSIONS: Record<string, '1d' | '2d' | '3d'> = {
 
 /** Texture properties */
 export type TextureProps = ResourceProps & {
-  /** @deprecated Use AsyncTexture to create textures with data. */
+  /** @deprecated Use DynamicTexture to create textures with data. */
   data?: ExternalImage | TypedArray | null;
   /** Dimension of this texture. Defaults to '2d' */
   dimension?: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d';
@@ -171,7 +171,7 @@ export abstract class Texture extends Resource<TextureProps> {
   /** Default view for this texture */
   abstract view: TextureView;
 
-  /** "Time" of last update. Monotonically increasing timestamp. TODO move to AsyncTexture? */
+  /** "Time" of last update. Monotonically increasing timestamp. TODO move to DynamicTexture? */
   updateTimestamp: number;
 
   override get [Symbol.toStringTag](): string {
@@ -211,7 +211,7 @@ export abstract class Texture extends Resource<TextureProps> {
         this.height = 1;
         if (this.props.width === undefined || this.props.height === undefined) {
           log.warn(
-            `${this} created with undefined width or height. This is deprecated. Use AsyncTexture instead.`
+            `${this} created with undefined width or height. This is deprecated. Use DynamicTexture instead.`
           )();
         }
       }

@@ -1,50 +1,50 @@
-# AsyncTexture
+# DynamicTexture
 
 <p class="badges">
   <img src="https://img.shields.io/badge/From-v9.1-blue.svg?style=flat-square" alt="From-v9.1" />
 </p>
 
-The `AsyncTexture` class accepts promises that resolve to texture data (images or byte arrays). It postpones the creation of actual `Textures` until the supplied promise(s) resolve and data is available.
-- The `Model` class accepts `AsyncTextures` as bindings (where a `Texture` or `TextureView` would be accepted), and defers rendering (i.e. `Model.draw()` call execution) until the underlying texture has been created.
+The `DynamicTexture` class accepts promises that resolve to texture data (images or byte arrays). It postpones the creation of actual `Textures` until the supplied promise(s) resolve and data is available.
+- The `Model` class accepts `DynamicTextures` as bindings (where a `Texture` or `TextureView` would be accepted), and defers rendering (i.e. `Model.draw()` call execution) until the underlying texture has been created.
 
 ## Usage
 
 ```ts
-import {AsyncTexture, loadImage} from '@luma.gl/engine';
-const asyncTexture = new AsyncTexture({data: loadImage(url)});
-const model = new Model(device, {source, bindings: {texture: asyncTexture}});
+import {DynamicTexture, loadImage} from '@luma.gl/engine';
+const DynamicTexture = new DynamicTexture({data: loadImage(url)});
+const model = new Model(device, {source, bindings: {texture: DynamicTexture}});
 const renderPass = device.createRenderPass();
 model.draw(renderPass); // Doesn't draw
 ...
-await asyncTexture.ready; // Not necessary, just for illustration
+await DynamicTexture.ready; // Not necessary, just for illustration
 model.draw(renderPass); // Draws
 ```
 
 ## Types
 
 ```ts
-export type AsyncTextureProps = Omit<TextureProps, 'data'> & AsyncTextureDataProps;
+export type DynamicTextureProps = Omit<TextureProps, 'data'> & DynamicTextureDataProps;
 
-type AsyncTextureDataProps =
-  | AsyncTexture1DProps
-  | AsyncTexture2DProps
-  | AsyncTexture3DProps
-  | AsyncTextureArrayProps
-  | AsyncTextureCubeProps
-  | AsyncTextureCubeArrayProps;
+type DynamicTextureDataProps =
+  | DynamicTexture1DProps
+  | DynamicTexture2DProps
+  | DynamicTexture3DProps
+  | DynamicTextureArrayProps
+  | DynamicTextureCubeProps
+  | DynamicTextureCubeArrayProps;
 
-type AsyncTexture1DProps = {dimension: '1d'; data: Promise<Texture1DData> | Texture1DData | null};
-type AsyncTexture2DProps = {dimension?: '2d'; data: Promise<Texture2DData> | Texture2DData | null};
-type AsyncTexture3DProps = {dimension: '3d'; data: Promise<Texture3DData> | Texture3DData | null};
-type AsyncTextureArrayProps = {
+type DynamicTexture1DProps = {dimension: '1d'; data: Promise<Texture1DData> | Texture1DData | null};
+type DynamicTexture2DProps = {dimension?: '2d'; data: Promise<Texture2DData> | Texture2DData | null};
+type DynamicTexture3DProps = {dimension: '3d'; data: Promise<Texture3DData> | Texture3DData | null};
+type DynamicTextureArrayProps = {
   dimension: '2d-array';
   data: Promise<TextureArrayData> | TextureArrayData | null;
 };
-type AsyncTextureCubeProps = {
+type DynamicTextureCubeProps = {
   dimension: 'cube';
   data: Promise<TextureCubeData> | TextureCubeData | null;
 };
-type AsyncTextureCubeArrayProps = {
+type DynamicTextureCubeArrayProps = {
   dimension: 'cube-array';
   data: Promise<TextureCubeArrayData> | TextureCubeArrayData | null;
 };
@@ -68,11 +68,11 @@ A flag that indicates whether data loading / preparation has completed loading a
 isReady: boolean;
 ```
 
-Initial value is `false`. Once the `asyncTexture.ready` promise resolve successfully, the `asyncTexture.isReady` flag is guaranteed to be true.
+Initial value is `false`. Once the `DynamicTexture.ready` promise resolve successfully, the `DynamicTexture.isReady` flag is guaranteed to be true.
 
 ### `texture`
 
-It is an error to access this member if `asyncTexture.isReady` is not true).
+It is an error to access this member if `DynamicTexture.isReady` is not true).
 
 ```ts
 texture: Texture;
@@ -80,9 +80,9 @@ texture: Texture;
 
 ### `sampler`
 
-Shortcut to `asyncTexture.texture.sampler`.
+Shortcut to `DynamicTexture.texture.sampler`.
 
-It is an error to access this member if `asyncTexture.isReady` is not true).
+It is an error to access this member if `DynamicTexture.isReady` is not true).
 
 ```ts
 sampler: Sampler;
@@ -90,9 +90,9 @@ sampler: Sampler;
 
 ### `view`
 
-Shortcut to `asyncTexture.texture.view`.
+Shortcut to `DynamicTexture.texture.view`.
 
-It is an error to access this member if `asyncTexture.isReady` is not true).
+It is an error to access this member if `DynamicTexture.isReady` is not true).
 
 ```ts
 view: TextureView;
@@ -102,13 +102,13 @@ view: TextureView;
 
 ### constructor
 
-Creates a new `AsyncTexture`.
+Creates a new `DynamicTexture`.
 
 ```ts
-new AsyncTexture(device: Device, props: AsyncTextureProps);
+new DynamicTexture(device: Device, props: DynamicTextureProps);
 ```
 
 ## Remarks
 
 - As of v9.1, in order to streamline code across WebGL and WebGPU, `Textures` no longer accept promises (for e.g. `loadImage(url)` when setting data.
-- The AsyncTexture class can be seen as an optional convenience class that helps applications avoid tedious book keeping of texture data (image) loading.
+- The DynamicTexture class can be seen as an optional convenience class that helps applications avoid tedious book keeping of texture data (image) loading.

@@ -10,7 +10,7 @@ import {
   CubeGeometry,
   ShaderInputs,
   loadImageBitmap,
-  AsyncTexture
+  DynamicTexture
 } from '@luma.gl/engine';
 import {phongMaterial, lighting, ShaderModule} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
@@ -187,7 +187,7 @@ Drawing a phong-shaded cube
       }
     });
 
-    const texture = new AsyncTexture(device, {data: loadImageBitmap('vis-logo.png')});
+    const texture = new DynamicTexture(device, {data: loadImageBitmap('vis-logo.png')});
 
     this.model = new Model(device, {
       source: WGSL_SHADER,

@@ -7,7 +7,7 @@ The `Model` class is the centerpiece of the luma.gl API. It brings together all 
 - **attributes**
 - **bindings** these can reference textures and uniform buffers
 - **uniforms** WebGL only uniforms
-- **async texture handling** - Model can accept AsyncTextures as bindings, deferring rendering until textures have loaded.
+- **async texture handling** - Model can accept DynamicTextures as bindings, deferring rendering until textures have loaded.
 - **shader module injection**
 - **debugging** - Detailed debug logging of draw calls by setting `luma.log.level` in the browser console.
 

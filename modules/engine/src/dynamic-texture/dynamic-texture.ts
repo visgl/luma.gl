@@ -16,31 +16,31 @@ import {Texture, Sampler, log} from '@luma.gl/core';
 import {loadImageBitmap} from '../application-utils/load-file';
 import {uid} from '../utils/uid';
 
-type AsyncTextureDataProps =
-  | AsyncTexture1DProps
-  | AsyncTexture2DProps
-  | AsyncTexture3DProps
-  | AsyncTextureArrayProps
-  | AsyncTextureCubeProps
-  | AsyncTextureCubeArrayProps;
+type DynamicTextureDataProps =
+  | DynamicTexture1DProps
+  | DynamicTexture2DProps
+  | DynamicTexture3DProps
+  | DynamicTextureArrayProps
+  | DynamicTextureCubeProps
+  | DynamicTextureCubeArrayProps;
 
-type AsyncTexture1DProps = {dimension: '1d'; data: Promise<Texture1DData> | Texture1DData | null};
-type AsyncTexture2DProps = {dimension?: '2d'; data: Promise<Texture2DData> | Texture2DData | null};
-type AsyncTexture3DProps = {dimension: '3d'; data: Promise<Texture3DData> | Texture3DData | null};
-type AsyncTextureArrayProps = {
+type DynamicTexture1DProps = {dimension: '1d'; data: Promise<Texture1DData> | Texture1DData | null};
+type DynamicTexture2DProps = {dimension?: '2d'; data: Promise<Texture2DData> | Texture2DData | null};
+type DynamicTexture3DProps = {dimension: '3d'; data: Promise<Texture3DData> | Texture3DData | null};
+type DynamicTextureArrayProps = {
   dimension: '2d-array';
   data: Promise<TextureArrayData> | TextureArrayData | null;
 };
-type AsyncTextureCubeProps = {
+type DynamicTextureCubeProps = {
   dimension: 'cube';
   data: Promise<TextureCubeData> | TextureCubeData | null;
 };
-type AsyncTextureCubeArrayProps = {
+type DynamicTextureCubeArrayProps = {
   dimension: 'cube-array';
   data: Promise<TextureCubeArrayData> | TextureCubeArrayData | null;
 };
 
-type AsyncTextureData = AsyncTextureProps['data'];
+type DynamicTextureData = DynamicTextureProps['data'];
 
 /** Names of cube texture faces */
 export type TextureCubeFace = '+X' | '-X' | '+Y' | '-Y' | '+Z' | '-Z';
@@ -95,8 +95,8 @@ export type TextureCubeArrayData = Record<TextureCubeFace, TextureData>[];
 export const CubeFaces: TextureCubeFace[] = ['+X', '-X', '+Y', '-Y', '+Z', '-Z'];
 
 /** Properties for an async texture */
-export type AsyncTextureProps = Omit<TextureProps, 'data' | 'mipLevels' | 'width' | 'height'> &
-  AsyncTextureDataProps & {
+export type DynamicTextureProps = Omit<TextureProps, 'data' | 'mipLevels' | 'width' | 'height'> &
+  DynamicTextureDataProps & {
     /** Generate mipmaps after creating textures and setting data */
     mipmaps?: boolean;
     /** nipLevels can be set to 'auto' to generate max number of mipLevels */
@@ -113,10 +113,10 @@ export type AsyncTextureProps = Omit<TextureProps, 'data' | 'mipLevels' | 'width
  * fit with the immutable nature of WebGPU resources.
  * Instead, luma.gl offers async textures as a separate class.
  */
-export class AsyncTexture {
+export class DynamicTexture {
   readonly device: Device;
   readonly id: string;
-  props: Required<Omit<AsyncTextureProps, 'data'>>;
+  props: Required<Omit<DynamicTextureProps, 'data'>>;
 
   // TODO - should we type these as possibly `null`? It will make usage harder?
   // @ts-expect-error
@@ -134,23 +134,23 @@ export class AsyncTexture {
   protected rejectReady: (error: Error) => void = () => {};
 
   get [Symbol.toStringTag]() {
-    return 'AsyncTexture';
+    return 'DynamicTexture';
   }
 
   toString(): string {
-    return `AsyncTexture:"${this.id}"(${this.isReady ? 'ready' : 'loading'})`;
+    return `DynamicTexture:"${this.id}"(${this.isReady ? 'ready' : 'loading'})`;
   }
 
-  constructor(device: Device, props: AsyncTextureProps) {
+  constructor(device: Device, props: DynamicTextureProps) {
     this.device = device;
 
     // TODO - if we support URL strings as data...
-    const id = uid('async-texture'); // typeof props?.data === 'string' ? props.data.slice(-20) : uid('async-texture');
-    this.props = {...AsyncTexture.defaultProps, id, ...props};
+    const id = uid('dynamic-texture'); // typeof props?.data === 'string' ? props.data.slice(-20) : uid('dynamic-texture');
+    this.props = {...DynamicTexture.defaultProps, id, ...props};
     this.id = this.props.id;
 
     props = {...props};
-    // Signature: new AsyncTexture(device, {data: url})
+    // Signature: new DynamicTexture(device, {data: url})
     if (typeof props?.data === 'string' && props.dimension === '2d') {
       props.data = loadImageBitmap(props.data);
     }
@@ -171,8 +171,8 @@ export class AsyncTexture {
     this.initAsync(props);
   }
 
-  async initAsync(props: AsyncTextureProps): Promise<void> {
-    const asyncData: AsyncTextureData = props.data;
+  async initAsync(props: DynamicTextureProps): Promise<void> {
+    const asyncData: DynamicTextureData = props.data;
     // @ts-expect-error not clear how to convince TS that null will be returned
     const data: TextureData | null = await awaitAllPromises(asyncData).then(
       undefined,
@@ -465,7 +465,7 @@ export class AsyncTexture {
     return mipLevelArray;
   }
 
-  static defaultProps: Required<AsyncTextureProps> = {
+  static defaultProps: Required<DynamicTextureProps> = {
     ...Texture.defaultProps,
     data: null,
     mipmaps: false
