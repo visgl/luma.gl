@@ -8,8 +8,8 @@ import {Fence} from '@luma.gl/core';
 
 // Test basic fence functionality across supported devices
 
-// Only WebGL and WebGPU devices implement fences
-const DEVICE_TYPES = ['webgl', 'webgpu'] as const;
+// WebGL, WebGPU and Null devices implement fences
+const DEVICE_TYPES = ['null', 'webgl', 'webgpu'] as const;
 
 test('Fence#signaled/destroy', async t => {
   for (const device of await getTestDevices(DEVICE_TYPES)) {
