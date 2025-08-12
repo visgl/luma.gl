@@ -1,6 +1,10 @@
 # Fence
 
-A synchronization primitive that resolves when submitted GPU work is completed.
+A GPU->CPU synchronization primitive that signals / resolves when any GPU commands submitted prior to the Fence have completed.
+
+Remarks:
+- Fences can e.g. be useful in WebGL to avoid starting a synchronous GPU->CPU data readback until all GPU commands affecting the buffer in question have completed.
+- In contrast to WebGL 2, WebGPU does not provide an actual "GPUFence" primitive. Instead a function GPUDevice.onSubmittedWorkDone() is used. This means that the "fence" is inserted after the last submitted (completed) command buffer (render pass, compute pass etc), rather than into the stream of commands in a command buffer. 
 
 ## Members
 
