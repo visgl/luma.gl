@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {AttributeShaderType, ShaderLayout, log} from '@luma.gl/core';
-import {TypeInfo, WgslReflect} from 'wgsl_reflect';
+import {AttributeShaderType, ShaderLayout, TextureBindingLayout, log} from '@luma.gl/core';
+import {TypeInfo, VariableInfo, WgslReflect, ResourceType} from 'wgsl_reflect';
 
 /**
  * Parse a ShaderLayout from WGSL shader source code.
@@ -42,12 +42,15 @@ export function getShaderLayoutFromWGSL(source: string): ShaderLayout {
   }
 
   for (const texture of parsedWGSL.textures) {
-    shaderLayout.bindings.push({
+    const bindingDeclaration: TextureBindingLayout = {
       type: 'texture',
       name: texture.name,
       group: texture.group,
-      location: texture.binding
-    });
+      location: texture.binding,
+      ...getTextureBindingFromReflect(texture)
+    };
+
+    shaderLayout.bindings.push(bindingDeclaration);
   }
 
   for (const sampler of parsedWGSL.samplers) {
@@ -102,4 +105,52 @@ function parseWGSL(source: string): WgslReflect {
     }
     throw new Error(message, {cause: error});
   }
+}
+
+function getTextureBindingFromReflect(
+  v: VariableInfo, // VariableInfo for a texture
+  opts?: {format?: GPUTextureFormat} // optional: if you know the runtime format
+): {
+  viewDimension: GPUTextureViewDimension;
+  /** @note sampleType float vs unfilterable-float cannot be determined without checking texture format and features */
+  sampleType: GPUTextureSampleType;
+  multisampled: boolean;
+} {
+  if (v.resourceType !== ResourceType.Texture) {
+    throw new Error('Not a texture binding');
+  }
+
+  const typeName = v.type.name; // e.g. "texture_2d", "texture_cube_array", "texture_multisampled_2d"
+  // @ts-expect-error v.type.format is not always defined
+  const component = v.type.format?.name as 'f32' | 'i32' | 'u32' | undefined;
+
+  // viewDimension
+  const viewDimension: GPUTextureViewDimension = typeName.includes('cube_array')
+    ? 'cube-array'
+    : typeName.includes('cube')
+      ? 'cube'
+      : typeName.includes('2d_array')
+        ? '2d-array'
+        : typeName.includes('3d')
+          ? '3d'
+          : typeName.includes('1d')
+            ? '1d'
+            : '2d';
+
+  // multisampled
+  const multisampled = typeName === 'texture_multisampled_2d';
+
+  // sampleType
+  let sampleType: GPUTextureSampleType;
+  if (typeName.startsWith('texture_depth')) {
+    sampleType = 'depth';
+  } else if (component === 'i32') {
+    sampleType = 'sint';
+  } else if (component === 'u32') {
+    sampleType = 'uint';
+  } else {
+    sampleType = 'float'; // default to float
+  }
+
+  return {viewDimension, sampleType, multisampled};
 }
