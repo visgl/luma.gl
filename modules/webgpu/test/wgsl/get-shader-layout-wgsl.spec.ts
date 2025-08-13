@@ -140,7 +140,7 @@ TEST_CASES.push({
   }
 });
 
-test.only('WebGPU#getShaderLayoutFromWGSL', t => {
+test('WebGPU#getShaderLayoutFromWGSL', t => {
   for (const tc of TEST_CASES) {
     const shaderLayout = getShaderLayoutFromWGSL(tc.wgsl);
     t.deepEqual(shaderLayout, tc.shaderLayout, `correct ShaderLayout parsed ${tc.title || ''}`);
