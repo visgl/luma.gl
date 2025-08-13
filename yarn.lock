@@ -7948,6 +7948,7 @@ __metadata:
     "@luma.gl/webgl": "npm:9.2.0-alpha.6"
     "@luma.gl/webgpu": "npm:9.2.0-alpha.6"
     "@math.gl/core": "npm:^4.1.0"
+    "@math.gl/types": "npm:^4.1.0"
     typescript: "npm:^5.5.0"
     vite: "npm:^5.0.0"
   languageName: unknown

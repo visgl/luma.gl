@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Device, NumberArray3, NumberArray16} from '@luma.gl/core';
+import {NumberArray3, NumberArray16} from '@math.gl/types';
+import {Device} from '@luma.gl/core';
 import {
   AnimationLoopTemplate,
   AnimationProps,
@@ -30,7 +31,7 @@ const app: ShaderModule<AppUniforms, AppUniforms> = {
   uniformTypes: {
     modelMatrix: 'mat4x4<f32>',
     viewMatrix: 'mat4x4<f32>',
-    projectionMatrix: 'vec3<f32>',
+    projectionMatrix: 'mat4x4<f32>',
     eyePosition: 'vec3<f32>'
   }
 };
