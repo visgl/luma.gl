@@ -2,13 +2,13 @@
 
 The `Model` class is the centerpiece of the luma.gl API. It brings together all GPU functionality needed to run shaders and perform draw calls, in a single, easy-to-use interface.
 
-`Model` manages the following responsibilities:
-- **render pipeline creation** -
-- **attributes**
+`Model` manages a range of responsibilities including:
+- **render pipeline creation** - At its core, a model creates and maintains a render pipeline that can perform draw calls.
+- **attributes** - The model allows attributes (vertex buffer data) to be provided.
 - **bindings** these can reference textures and uniform buffers
-- **uniforms** WebGL only uniforms
-- **async texture handling** - Model can accept DynamicTextures as bindings, deferring rendering until textures have loaded.
-- **shader module injection**
+- **dynamic texture handling** - Model accepts `DynamicTextures` as bindings, allowing textures to be resized.
+- **async texture initialization** - Model accepts `DynamicTextures` as bindings, deferring rendering until textures have loaded.
+- **shader module injection** - Model integrates the shader module system and accepts a list of shader modules.
 - **debugging** - Detailed debug logging of draw calls by setting `luma.log.level` in the browser console.
 
 The `Model` class integrates:
