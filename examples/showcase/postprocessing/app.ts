@@ -6,7 +6,7 @@ import {
   AnimationLoopTemplate,
   AnimationProps,
   GroupNode,
-  AsyncTexture,
+  DynamicTexture,
   loadImageBitmap,
   ShaderPassRenderer
 } from '@luma.gl/engine';
@@ -30,7 +30,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   time: number = 0;
 
   shaderPassMap: Record<string, ShaderPass>;
-  imageTexture: AsyncTexture;
+  imageTexture: DynamicTexture;
   selector: HTMLSelectElement;
 
   shaderPassRenderer: ShaderPassRenderer;
@@ -40,7 +40,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     super();
 
     this.device = device;
-    this.imageTexture = new AsyncTexture(device, {
+    this.imageTexture = new DynamicTexture(device, {
       data: loadImageBitmap('./image.jpg'),
       flipY: true
     });

@@ -395,7 +395,7 @@ export class WEBGLTexture extends Texture {
   }
 
   /**
-   * @note - this is used by the AsyncTexture class to generate mipmaps on WebGL
+   * @note - this is used by the DynamicTexture class to generate mipmaps on WebGL
    */
   override generateMipmapsWebGL(options?: {force?: boolean}): void {
     const isFilterableAndRenderable =

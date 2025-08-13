@@ -47,7 +47,7 @@ resize(width: number, height: number);
 ### `renderToTexture()`
 
 ```ts
-renderToTexture(options: {sourceTexture: AsyncTexture; uniforms; bindings}): Texture | null;
+renderToTexture(options: {sourceTexture: DynamicTexture; uniforms; bindings}): Texture | null;
 ```
 A` ShaderPassRenderer` takes an source texture and applies a sequence of `ShaderPasses` and returns an output texture of the same size that can be rendered to the screen.
 

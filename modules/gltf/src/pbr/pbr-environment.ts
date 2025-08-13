@@ -3,15 +3,15 @@
 // Copyright (c) vis.gl contributors
 
 import {Device, SamplerProps} from '@luma.gl/core';
-import {AsyncTexture} from '@luma.gl/engine';
+import {DynamicTexture} from '@luma.gl/engine';
 import {loadImageTexture} from '@loaders.gl/textures';
 
 /** Environment textures for PBR module */
 export type PBREnvironment = {
   /** Bi-directional Reflectance Distribution Function (BRDF) lookup table */
-  brdfLutTexture: AsyncTexture;
-  diffuseEnvSampler: AsyncTexture;
-  specularEnvSampler: AsyncTexture;
+  brdfLutTexture: DynamicTexture;
+  diffuseEnvSampler: DynamicTexture;
+  specularEnvSampler: DynamicTexture;
 };
 
 export type PBREnvironmentProps = {
@@ -22,7 +22,7 @@ export type PBREnvironmentProps = {
 
 /** Loads textures for PBR environment */
 export function loadPBREnvironment(device: Device, props: PBREnvironmentProps): PBREnvironment {
-  const brdfLutTexture = new AsyncTexture(device, {
+  const brdfLutTexture = new DynamicTexture(device, {
     id: 'brdfLUT',
     sampler: {
       addressModeU: 'clamp-to-edge',
@@ -84,13 +84,13 @@ function makeCube(
     getTextureForFace: (dir: number) => Promise<any> | Promise<any>[];
     sampler: SamplerProps;
   }
-): AsyncTexture {
+): DynamicTexture {
   const data = {};
   FACES.forEach(face => {
     // @ts-ignore TODO
     data[String(face)] = getTextureForFace(face);
   });
-  return new AsyncTexture(device, {
+  return new DynamicTexture(device, {
     id,
     dimension: 'cube',
     mipmaps: false,

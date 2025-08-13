@@ -111,7 +111,7 @@
           "api-reference/engine/shader-inputs",
           "api-reference/engine/animation-loop",
           "api-reference/engine/animation-loop-template",
-          "api-reference/engine/async-texture",
+          "api-reference/engine/dynamic-texture",
           "api-reference/engine/load-image-bitmap",          
           "api-reference/engine/geometry/geometries",
           "api-reference/engine/geometry/geometry",

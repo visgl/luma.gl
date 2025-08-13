@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {Device, Texture} from '@luma.gl/core';
-import {AsyncTexture} from '../async-texture/async-texture';
+import {DynamicTexture} from '../dynamic-texture/dynamic-texture';
 import {ClipSpace} from './clip-space';
 
 const BACKGROUND_FS_WGSL = /* wgsl */ `\
@@ -51,7 +51,7 @@ export type BackgroundTextureModelProps = {
   /** id of this model */
   id?: string;
   /** The texture to render */
-  backgroundTexture: Texture | AsyncTexture;
+  backgroundTexture: Texture | DynamicTexture;
   /** If true, the texture is rendered into transparent areas of the screen only, i.e blended in where background alpha is small */
   blend?: boolean;
 };
@@ -87,7 +87,7 @@ export class BackgroundTextureModel extends ClipSpace {
     this.setTexture(props.backgroundTexture);
   }
 
-  setTexture(backgroundTexture: Texture | AsyncTexture): void {
+  setTexture(backgroundTexture: Texture | DynamicTexture): void {
     this.setBindings({
       backgroundTexture
     });
