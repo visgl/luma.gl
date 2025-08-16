@@ -3,191 +3,153 @@ import {HelloInstancingExample} from '@site/src/examples';
 
 # Hello Instancing
 
-In this tutorial, we'll work through how to do instanced drawing with luma.gl's high-level APIs. We'll also take this opportunity to introduce luma.gl shader modules. We'll begin with our [hello triangle](/docs/tutorials/hello-triangle) app and make some modifications. First let's create a shader module:
-
-:::caution
-The tutorial pages have not yet been updated for luma.gl v9. 
-:::
+This tutorial illustrates instanced drawing with luma.gl using both WGSL and GLSL shaders and a simple shader module to pass colors.
 
 <DeviceTabs />
 <HelloInstancingExample />
 
+The code below creates a `Model` with per-instance attributes to draw four colored triangles inside an `AnimationLoopTemplate`.
 
 ```typescript
-import {AnimationLoop, Model} from '@luma.gl/engine';
-import {clear} from '@luma.gl/webgl';
+import {Buffer} from '@luma.gl/core';
+import {AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine';
 
 const colorShaderModule = {
   name: 'color',
-  vs: `
-    out vec3 color_vColor;
+  source: /* wgsl */ `
+  // struct ColorVaryings {
+  //   color: vec3<f32>,
+  // };
 
-    void color_setColor(vec3 color) {
-      color_vColor = color;
-    }
+  // @vertex
+  // fn color_setColor(color: vec3f, input: ColorVaryings) -> ColorVaryings {
+  //   var output = input;
+  //   output.color = color;
+  //   return output;
+  // }
+
+  // @fragment
+  // fn color_getColor(input: ColorVaryings) -> vec4<f32> {
+  //   return vec4<f32>(input.color, 1.0);
+  // }
   `,
-  fs: `
-    in vec3 color_vColor;
+  vs: /* glsl */ `
+out vec3 color_vColor;
 
-    vec3 color_getColor() {
-      return color_vColor;
-    }
-  `
-};
-```
-
-A shader module essentially just contains some shader code fragments that will be inserted into our vertex and fragment shaders. They're usually used to define functions that implement generic functionality that can be reused in different programs. In this case, we're defining one to simply pass a color from the vertex shader to the fragment shader. This module also demonstrates a common convention in luma.gl to prefix function and variable names in a shader module with the name of the module to avoid name collisions.
-
-Now let's update our vertex and fragment shaders to use the module functions:
-
-```typescript
-const vs = `
-  attribute vec2 position;
-  attribute vec3 color;
-
-  void main() {
-    color_setColor(color);
-    gl_Position = vec4(position, 0.0, 1.0);
-  }
-`;
-
-const fs = `
-  void main() {
-    gl_FragColor = vec4(color_getColor(), 1.0);
-  }
-`;
-```
-
-Now we update the `Model` to use the module:
-
-```typescript
-const model = new Model(gl, {
-  vs,
-  fs,
-  modules: [colorShaderModule],
-  attributes: {
-    position: positionBuffer,
-    color: colorBuffer
-  },
-  vertexCount: 3
-});
-```
-
-If you rerun the app, it should render as it did before.
-
-Now let's add some instancing to this scene! First we'll modify the position and color buffers we created before, and add an offset buffer to set the position of each instance:
-
-```typescript
-const positionBuffer = device.createBuffer(new Float32Array([-0.2, -0.2, 0.2, -0.2, 0.0, 0.2]));
-
-const colorBuffer = device.createBuffer(new Float32Array([1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.0]));
-
-const offsetBuffer = device.createBuffer(new Float32Array([0.5, 0.5, -0.5, 0.5, 0.5, -0.5, -0.5, -0.5]));
-```
-
-For this scene, the positions are vertex attributes, while the colors and offsets are instance attributes.
-
-Now add the offsets to the vertex shader:
-
-```typescript
-const vs = `
-  attribute vec2 position;
-  attribute vec3 color;
-  attribute vec2 offset;
-
-  void main() {
-    color_setColor(color);
-    gl_Position = vec4(position + offset, 0.0, 1.0);
-  }
-`;
-```
-
-Finally, we need to add the new buffer to the `Model`, and describe the parameters of the instanced draw:
-
-```typescript
-const model = new Model(device, {
-  vs,
-  fs,
-  modules: [colorShaderModule],
-  attributes: {
-    position: positionBuffer,
-    color: [colorBuffer, {divisor: 1}],
-    offset: [offsetBuffer, {divisor: 1}]
-  },
-  vertexCount: 3,
-  instanceCount: 4
-});
-```
-
-Note the new syntax used for the attributes. The second element in each array is an `accessor` that describes how the buffer should be traversed during a draw. luma.gl will try to infer these parameters from the data or the shader when possible, but when it can't (or when we want to override the inferred values), we have to provide an explicit accessor. We also provide the model with the number of instances we want to draw.
-
-If all went well, running the app now should draw four triangles, each a different color.
-
-For reference the complete code is provided below:
-
-```typescript
-import {AnimationLoop, Model} from '@luma.gl/engine';
-import {clear} from '@luma.gl/webgl';
-
-const colorShaderModule = {
-  name: 'color',
-  vs: `
-    out vec3 color_vColor;
-
-    void color_setColor(vec3 color) {
-      color_vColor = color;
-    }
+void color_setColor(vec3 color) {
+  color_vColor = color;
+}
   `,
-  fs: `
-    in vec3 color_vColor;
+  fs: /* glsl */ `
+in vec3 color_vColor;
 
-    vec3 color_getColor() {
-      return color_vColor;
-    }
+vec3 color_getColor() {
+  return color_vColor;
+}
   `
 };
 
-const loop = new AnimationLoop({
-  override onInitialize({device}) {
-    const positionBuffer = device.createBuffer(new Float32Array([-0.2, -0.2, 0.2, -0.2, 0.0, 0.2]));
-    const colorBuffer = device.createBuffer(new Float32Array([1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.0]));
-    const offsetBuffer = device.createBuffer(new Float32Array([0.5, 0.5, -0.5, 0.5, 0.5, -0.5, -0.5, -0.5]));
+const source = /* wgsl */ `
+struct VertexInputs {
+  @location(0) position: vec2<f32>,
+  @location(1) instanceColor: vec3<f32>,
+  @location(2) instanceOffset: vec2<f32>,
+};
 
-    const model = new Model(device, {
-      vs: `
-        attribute vec2 position;
-        attribute vec3 color;
-        attribute vec2 offset;
+struct FragmentInputs {
+  @builtin(position) Position: vec4<f32>,
+  @location(0) color: vec3<f32>,
+}
 
-        void main() {
-          color_setColor(color);
-          gl_Position = vec4(position + offset, 0.0, 1.0);
-        }
-      `,
-      fs: `
-        void main() {
-          gl_FragColor = vec4(color_getColor(), 1.0);
-        }
-      `,
+@vertex
+fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
+  var outputs: FragmentInputs;
+  outputs.color = inputs.instanceColor;
+  outputs.Position = vec4<f32>(inputs.position + inputs.instanceOffset, 0.0, 1.0);
+  return outputs;
+}
+
+@fragment
+fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
+  return vec4<f32>(inputs.color, 1.0);
+}
+`;
+
+const vs = /* glsl */ `
+#version 300 es
+in vec2 position;
+in vec3 instanceColor;
+in vec2 instanceOffset;
+
+void main() {
+  color_setColor(instanceColor);
+  gl_Position = vec4(position + instanceOffset, 0.0, 1.0);
+}
+`;
+
+const fs = /* glsl */ `
+#version 300 es
+out vec4 fragColor;
+void main() {
+  fragColor = vec4(color_getColor(), 1.0);
+}
+`;
+
+export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
+  model: Model;
+  positionBuffer: Buffer;
+  colorBuffer: Buffer;
+  offsetBuffer: Buffer;
+
+  constructor({device}: AnimationProps) {
+    super();
+
+    this.positionBuffer = device.createBuffer(new Float32Array([-0.2, -0.2, 0.2, -0.2, 0.0, 0.2]));
+    this.colorBuffer = device.createBuffer(
+      new Float32Array([1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.0])
+    );
+    this.offsetBuffer = device.createBuffer(
+      new Float32Array([0.5, 0.5, -0.5, 0.5, 0.5, -0.5, -0.5, -0.5])
+    );
+
+    this.model = new Model(device, {
+      source,
+      vs,
+      fs,
       modules: [colorShaderModule],
+      bufferLayout: [
+        {name: 'position', format: 'float32x2'},
+        {name: 'instanceColor', format: 'float32x3', stepMode: 'instance'},
+        {name: 'instanceOffset', format: 'float32x2', stepMode: 'instance'}
+      ],
       attributes: {
-        position: positionBuffer,
-        color: [colorBuffer, {divisor: 1}],
-        offset: [offsetBuffer, {divisor: 1}]
+        position: this.positionBuffer,
+        instanceColor: this.colorBuffer,
+        instanceOffset: this.offsetBuffer
       },
       vertexCount: 3,
       instanceCount: 4,
-      instanced: true
+      parameters: {
+        depthWriteEnabled: true,
+        depthCompare: 'less-equal'
+      }
     });
-
-    return {model};
-  },
-
-  override onRender({device, model}) {
-    clear(device, {color: [0, 0, 0, 1]});
-    model.draw();
   }
-});
 
-loop.start();
+  onFinalize() {
+    this.model.destroy();
+    this.positionBuffer.destroy();
+    this.colorBuffer.destroy();
+    this.offsetBuffer.destroy();
+  }
+
+  onRender({device}: AnimationProps) {
+    const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
+    this.model.draw(renderPass);
+    renderPass.end();
+  }
+}
 ```
+
+Running the application will draw four colored triangles using instancing.
+
