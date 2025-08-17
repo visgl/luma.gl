@@ -365,7 +365,7 @@ export class DynamicTexture {
     for (let mipLevel = 0; mipLevel < lodArray.length; mipLevel++) {
       const imageData = lodArray[mipLevel];
       if (this.device.isExternalImage(imageData)) {
-        this.texture.copyExternalImage({image: imageData, depth, mipLevel, flipY: true});
+        this.texture.copyExternalImage({image: imageData, depth, mipLevel, flipY: false});
       } else {
         this.texture.copyImageData({data: imageData.data /* , depth */, mipLevel});
       }
