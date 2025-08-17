@@ -3,18 +3,20 @@
 The `Model` class is the centerpiece of the luma.gl API. It brings together all GPU functionality needed to run shaders and perform draw calls, in a single, easy-to-use interface.
 
 `Model` manages the following responsibilities:
-- **render pipeline creation** -
-- **attributes**
-- **bindings** these can reference textures and uniform buffers
-- **uniforms** WebGL only uniforms
-- **async texture handling** - Model can accept AsyncTextures as bindings, deferring rendering until textures have loaded.
-- **shader module injection**
-- **debugging** - Detailed debug logging of draw calls by setting `luma.log.level` in the browser console.
+
+- **Render pipeline creation and reuse** – builds GPU pipelines and recreates them when render state changes.
+- **Attributes** – manages vertex attributes and can create buffers from typed arrays.
+- **Bindings** – handles textures, samplers and uniform buffers.
+- **Uniforms** – supports WebGL-style uniforms and typed uniform buffers.
+- **Async texture handling** – accepts `AsyncTexture` bindings and defers rendering until textures have loaded.
+- **Shader module injection** – assembles GLSL or WGSL shaders from modules.
+- **Debugging** – detailed draw call logging and optional shader source display.
 
 The `Model` class integrates:
-- The `@luma.gl/shadertools` shader module system: [see `Shader Assembly`]( /docs/api-reference/shadertools/shader-assembler).
-- `ShaderInputs` for uniform and binding managment.
-- The `Geometry` classes - accepts a [`Mesh`] or a [`Geometry`](/docs/api-reference/engine/geometry) instance, plus any additional attributes for instanced rendering)
+
+- The `@luma.gl/shadertools` shader module system: [see `Shader Assembly`](/docs/api-reference/shadertools/shader-assembler).
+- `ShaderInputs` for uniform and binding management.
+- The geometry helpers – accepts a [`Geometry`](/docs/api-reference/engine/geometry) instance (or mesh) plus any additional attributes for instanced rendering.
 
 ## Usage
 
@@ -55,21 +57,19 @@ const model = new Model(device, {
     attributeName1: bufferObject,
     attributeName2: device.createBuffer(new Float32Array(...))
   },
-  uniforms: {uSampler: texture},
+  bindings: {uSampler: texture},
 })
 ```
 
-On each frame, call the `model.draw()` function after updating any uniforms (typically matrices).
+On each frame, update any uniform buffers or bindings and issue a draw call:
 
 ```ts
-model.setUniforms({
-  uPMatrix: currentProjectionMatrix,
-  uMVMatrix: current ModelViewMatrix
-});
-model.draw();
+model.setBindings({uSampler: texture});
+model.draw(renderPass);
 ```
 
 Debug shader source (even when shader successful)
+
 ```ts
 // construct the model.
 const model = new Model(device, {
@@ -79,127 +79,161 @@ const model = new Model(device, {
 });
 ```
 
+### Instanced rendering
+
+```ts
+model.setInstanceCount(numInstances);
+model.draw(renderPass);
+```
+
+### Async textures
+
+```ts
+const texture = new AsyncTexture(device, {url});
+const model = new Model(device, {
+  vs: VERTEX_SHADER,
+  fs: FRAGMENT_SHADER,
+  geometry: new CubeGeometry(),
+  bindings: {uSampler: texture}
+});
+```
+
 ## Types
 
 ### `ModelProps`
 
-| Property           | Type                                           | Description                                                                       |
-| ------------------ | ---------------------------------------------- | --------------------------------------------------------------------------------- |
-| `source`           | `Shader` \| _string_                           | A WGSL shader object, or WGSL source as a string.                                 |
-| `vs?`              | `Shader` \| _string_                           | A GLSL vertex shader object, or GLSL source as a string.                          |
-| `fs?`              | `Shader` \| _string_                           | A GLSL fragment shader object, or GLSL source as a string.                        |
-| `modules`          |                                                | shader modules to be applied (shadertools).                                       |
-| `shaderInputs?`    | `ShaderInputs`                                 | Pre-created, typed shaderInputs.                                                  |
-| `onBeforeRender?`  | `Function`                                     | function to be called before every time this model is drawn.                      |
-| `onAfterRender?`   | `Function`                                     | function to be called after every time this model is drawn.                       |
-| `debugShaders?`    | `'error' \| 'never' \| 'warnings' \| 'always'` | Specify in what triggers the display shader compilation log (default: `'error'`). |
+| Property | Type | Description |
+| --- | --- | --- |
+| `source` | `string` | WGSL source code containing both vertex and fragment stages. |
+| `vs?` | `string` | GLSL vertex shader source. |
+| `fs?` | `string` | GLSL fragment shader source. |
+| `modules` | `ShaderModule[]` | Shader modules to apply. |
+| `defines` | `Record<string, boolean>` | Module defines passed to shader assembler. |
+| `shaderInputs?` | `ShaderInputs` | Pre-created uniform/binding store. |
+| `bindings?` | `Record<string, Binding | AsyncTexture>` | Textures, samplers and uniform buffers. |
+| `parameters?` | `RenderPipelineParameters` | Pipeline parameters baked into the pipeline. |
+| `geometry?` | `Geometry` | Geometry or mesh providing attributes and indices. |
+| `isInstanced?` | `boolean` | Use instanced rendering (auto-detected). |
+| `instanceCount?` | `number` | Number of instances to render. |
+| `vertexCount?` | `number` | Number of vertices to render. |
+| `indexBuffer?` | `Buffer` | Index buffer for indexed rendering. |
+| `attributes?` | `Record<string, Buffer>` | Buffer-valued attributes. |
+| `constantAttributes?` | `Record<string, TypedArray>` | Constant attributes (WebGL only). |
+| `disableWarnings?` | `boolean` | Suppress warnings for unused attributes or bindings. |
+| `varyings?` | `string[]` | WebGL transform feedback varyings. |
+| `transformFeedback?` | `TransformFeedback` | WebGL transform feedback object. |
+| `debugShaders?` | `'never' | 'errors' | 'warnings' | 'always'` | Display shader sources for debugging. |
+| `pipelineFactory?` | `PipelineFactory` | Factory used to create `RenderPipeline` instances. |
+| `shaderFactory?` | `ShaderFactory` | Factory used to create `Shader` instances. |
+| `shaderAssembler?` | `ShaderAssembler` | Assembles GLSL or WGSL from modules. |
 
-Less commonly used properties:
+`ModelProps` also include [`RenderPipelineProps`](/docs/api-reference/core/resources/render-pipeline) such as `id`, `shaderLayout`, `bufferLayout`, `topology` and `userData`.
 
-| Property           | Type                                           | Description                                                                       |
-| ------------------ | ---------------------------------------------- | --------------------------------------------------------------------------------- |
-| `pipelineFactory?` |                                                | `PipelineFactory` to use for program creation and caching.                        |
-| `varyings?`        | `string[]`                                     | WebGL: Array of vertex shader output variables (used in TransformFeedback flow).  |
-| `bufferMode?`      |                                                | WebGL: Mode for recording vertex shader outputs (used in TransformFeedback flow). |
+## Properties
 
-`ModelProps` also include [`RenderPipelineProps`](/docs/api-reference/core/resources/render-pipeline), which are passed through to the `RenderPipeline` constructor, e.g:
+### `id: string`
+Model identifier.
 
-| Property          | Type                       | Description                                                                             |
-| ----------------- | -------------------------- | --------------------------------------------------------------------------------------- |
-| `layout`          | `ShaderLayout`             | Describes how shader attributes and bindings are laid out.                              |
-| `topology?`       |                            | `'point-list'`, `'line-list'`, `'line-strip'`, `'triangle-list'` or `'triangle-strip'`, |
-| `parameters?`     | `RenderPipelineParameters` |                                                                                         |
-| `vertexCount?`    | `number`                   |                                                                                         |
-| `instanceCount?`  | `number`                   |                                                                                         |
-| `moduleSettings?` | `Record<string, any>`      | any values required by shader modules (will be mapped to uniforms).                     |
-| `uniforms?`       | `Record<string, any>`      | any non-binding uniform values                                                          |
-| `bindings?`       | `Record<string, any>`      |                                                                                         |
-| `buffers?`        | `Record<string, Buffer>`   |                                                                                         |
+### `device: Device`
+Device that created this model.
 
+### `parameters: RenderPipelineParameters`
+Pipeline parameters such as blending and depth testing.
 
-## Fields
+### `topology: PrimitiveTopology`
+Primitive topology used when drawing.
 
-### `renderPipeline: RenderPipeline`
+### `bufferLayout: BufferLayout[]`
+Vertex buffer layout.
 
-The model's `RenderPipeline` instance
+### `isInstanced: boolean | undefined`
+Whether instanced rendering is enabled.
 
-### instanceCount: number
+### `instanceCount: number`
+Number of instances to draw.
 
-default value is 0.
+### `vertexCount: number`
+Number of vertices to draw.
 
-### vertexCount: number
+### `indexBuffer: Buffer | null`
+Index buffer used for indexed drawing.
 
-when not provided will be deduced from `geometry` object.
+### `bindings: Record<string, Binding | AsyncTexture>`
+Currently bound textures, samplers and uniform buffers.
+
+### `vertexArray: VertexArray`
+Vertex array object tracking attribute bindings.
+
+### `transformFeedback: TransformFeedback | null`
+Transform feedback object (WebGL2 only).
+
+### `pipeline: RenderPipeline`
+Underlying GPU pipeline.
+
+### `pipelineFactory: PipelineFactory`
+Factory used to create pipelines.
+
+### `shaderFactory: ShaderFactory`
+Factory used to create shaders.
+
+### `userData: Record<string, any>`
+Application-specific data.
 
 ## Methods
 
 ### `constructor(device: Device, props: ModelProps)`
-
-The constructor for the Model class. Use this to create a new Model.
+Create a new `Model`.
 
 ### `destroy(): void`
+Release GPU resources associated with the model.
 
-Free GPU resources associated with this model immediately, instead of waiting for garbage collection.
+### `needsRedraw(): boolean | string`
+Check whether the model requires drawing.
 
-### `draw(options: DrawOptions): boolean`
+### `setNeedsRedraw(reason: string): void`
+Mark the model as needing to be redrawn.
 
-Renders the model with provided uniforms, attributes and samplers
+### `predraw(): void`
+Update uniform buffers and pipeline state prior to drawing.
 
-```typescript
-model.draw({
-  renderPass,
-  moduleSettings = null,
-  uniforms = {},
-  attributes = {},
-  samplers = {},
-  parameters = {},
-  settings,
-  vertexArray = null,
-  transformFeedback = null
-});
-```
+### `draw(renderPass: RenderPass): boolean`
+Render the model once to the supplied render pass.
 
-`Model.draw()` calls `Program.draw()` but adds and extends the available parameters as follows:
+### `setGeometry(geometry: Geometry | GPUGeometry | null): void`
+Set the geometry for this model.
 
-- `moduleSettings`=`null` (Object) - any uniforms needed by shader modules.
-- `attributes`=`{}` (Object) - attribute definitions to be used for drawing. In additions to `Buffer` and constant values, `Model`s can also accept typed arrays and attribute descriptor objects which it converts to buffers.
-- `uniforms`=`{}` (Object) - uniform values to be used for drawing. In addition to normal uniform values, `Model` can also accept function valued uniforms which will be evaluated before every draw call.
-- `animationProps` (Object) - if any function valued uniforms are set on the `Model`, `animationProps` must be provided to the draw call. The `animationProps` are passed as parameter to the uniform functions.
+### `setTopology(topology: PrimitiveTopology): void`
+Update the primitive topology.
 
-The remaining draw options are passed directly to `Program.draw()`:
+### `setBufferLayout(bufferLayout: BufferLayout[]): void`
+Update the buffer layout.
 
-- `uniforms`=`{}` (Object) - uniform values to be used for drawing.
-- `samplers`=`{}` (Object) - texture mappings to be used for drawing.
-- `parameters`=`{}` (Object) - temporary gl settings to be applied to this draw call.
-- `framebuffer`=`null` (`Framebuffer`) - if provided, renders into the supplied framebuffer, otherwise renders to the default framebuffer.
-- `transformFeedback` - an instance `TranformFeedback` object, that gets activated for this rendering.
-- `vertexArray` - an instance of `VertexArray` object, that holds required buffer bindings for vertex shader inputs.
+### `setParameters(parameters: RenderPipelineParameters): void`
+Change render pipeline parameters.
 
-Returns
+### `setInstanceCount(instanceCount: number): void`
+Specify how many instances to render.
 
-- `boolean` - `true` if the model was drawn, `false` if not (normally because resources were still being loaded). If false is returned, then the application should attempt to draw again next frame.
+### `setVertexCount(vertexCount: number): void`
+Specify how many vertices to render.
 
-### `setVertexCount(): void`
+### `setShaderInputs(shaderInputs: ShaderInputs): void`
+Set the `ShaderInputs` instance.
 
-Sets the number of vertices
+### `updateShaderInputs(): void`
+Update internal uniform buffers and bindings from `shaderInputs`.
 
-### `setInstanceCount(); void`
+### `setBindings(bindings: Record<string, Binding | AsyncTexture>): void`
+Set textures, samplers and uniform buffers.
 
-How many instances will be rendered
+### `setTransformFeedback(transformFeedback: TransformFeedback | null): void`
+Attach an optional transform feedback object.
 
-### `setGeometry(); void`
+### `setIndexBuffer(indexBuffer: Buffer | null): void`
+Specify the index buffer.
 
-Use a `Geometry` instance to define attribute buffers
+### `setAttributes(buffers: Record<string, Buffer>, options?): void`
+Set buffer-valued attributes.
 
-### `setAttributes(attributes: object, options?): void`
-
-Sets map of attributes (via [VertexArray.setAttributes](/docs/api-reference/core/resources/vertex-array))
-
-- `attributes` (Object) - map of attribute names to values.
-- `options.ignoreMissingAttributes` (boolean) - if `true`, allows the function to silently ignore missing attributes.
-
-### `setUniforms(uniforms: object): void` (Deprecated)
-
-Global uniforms key, value. Only works on WebGL, for portable code, use uniform buffers and `model.setBindings()` instead.
-
-### `updateModuleSettings(moduleSettings: object): void` (Deprecated)
+### `setConstantAttributes(attributes: Record<string, TypedArray>, options?): void`
+Set constant-valued attributes (WebGL only).

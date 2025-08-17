@@ -103,12 +103,19 @@ export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs' | 'bindings'> & {
 };
 
 /**
- * v9 Model API
- * A model
- * - automatically reuses pipelines (programs) when possible
- * - automatically rebuilds pipelines if necessary to accommodate changed settings
- * shadertools integration
- * - accepts modules and performs shader transpilation
+ * High level draw API for luma.gl.
+ *
+ * A `Model` encapsulates shaders, geometry attributes, bindings and render
+ * pipeline state into a single object. It automatically reuses and rebuilds
+ * pipelines as render parameters change and exposes convenient hooks for
+ * updating uniforms and attributes.
+ *
+ * Features:
+ * - Reuses and lazily recompiles {@link RenderPipeline | pipelines} as needed.
+ * - Integrates with `@luma.gl/shadertools` to assemble GLSL or WGSL from shader modules.
+ * - Manages geometry attributes and buffer bindings.
+ * - Accepts textures, samplers and uniform buffers as bindings, including `AsyncTexture`.
+ * - Provides detailed debug logging and optional shader source inspection.
  */
 export class Model {
   static defaultProps: Required<ModelProps> = {
@@ -141,17 +148,25 @@ export class Model {
     disableWarnings: undefined!
   };
 
-  readonly device: Device;
-  readonly id: string;
-  // @ts-expect-error assigned in function called from constructor
-  readonly source: string;
-  // @ts-expect-error assigned in function called from constructor
-  readonly vs: string;
-  // @ts-expect-error assigned in function called from constructor
-  readonly fs: string;
-  readonly pipelineFactory: PipelineFactory;
-  readonly shaderFactory: ShaderFactory;
-  userData: {[key: string]: any} = {};
+    /** Device that created this model */
+    readonly device: Device;
+    /** Application provided identifier */
+    readonly id: string;
+    // @ts-expect-error assigned in function called from constructor
+    /** WGSL shader source when using unified shader */
+    readonly source: string;
+    // @ts-expect-error assigned in function called from constructor
+    /** GLSL vertex shader source */
+    readonly vs: string;
+    // @ts-expect-error assigned in function called from constructor
+    /** GLSL fragment shader source */
+    readonly fs: string;
+    /** Factory used to create render pipelines */
+    readonly pipelineFactory: PipelineFactory;
+    /** Factory used to create shaders */
+    readonly shaderFactory: ShaderFactory;
+    /** User-supplied per-model data */
+    userData: {[key: string]: any} = {};
 
   // Fixed properties (change can trigger pipeline rebuild)
 
@@ -372,6 +387,7 @@ export class Model {
     this._needsRedraw ||= reason;
   }
 
+  /** Update uniforms and pipeline state prior to drawing. */
   predraw(): void {
     // Update uniform buffers if needed
     this.updateShaderInputs();
@@ -379,6 +395,11 @@ export class Model {
     this.pipeline = this._updatePipeline();
   }
 
+  /**
+   * Issue one draw call.
+   * @param renderPass - render pass to draw into
+   * @returns `true` if the draw call was executed, `false` if resources were not ready.
+   */
   draw(renderPass: RenderPass): boolean {
     const loadingBinding = this._areBindingsLoading();
     if (loadingBinding) {
