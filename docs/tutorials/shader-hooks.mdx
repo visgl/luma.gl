@@ -3,176 +3,55 @@ import {ShaderHooksExample} from '@site/src/examples';
 
 # Shader Hooks
 
+Shader hooks let shader modules inject code into designated points in a shader. This example defines an `OFFSET_POSITION` hook that two modules use to shift geometry left or right.
+
 :::caution
-The tutorial pages have not yet been updated for luma.gl v9. 
+Tutorials are maintained on a best-effort basis and may not be fully up to date (contributions welcome).
 :::
 
-In this tutorial, we'll focus on a key feature of the shader module system:
-the ability to modify the behavior of the shaders that use the shader modules via **shader hooks**. 
-
-<DeviceTabs/>
+<DeviceTabs />
 <ShaderHooksExample />
 
-In the [previous tutorial](/docs/tutorials/shader-modules), we used shader modules 
-to insert re-usable functions into the shaders that use them. 
+It is assumed you've set up your development environment as described in [Setup](/docs/tutorials).
 
-A shader hook is simply a function inserted into a vertex or fragment shader. 
-By default, these functions will be no-ops, but they define entry points 
-into which shader modules can inject code. 
+Hooks act like named callbacks within shader code. The base vertex shader calls
+`OFFSET_POSITION`, and modules supply implementations that modify the position.
+By attaching different modules to each model, one triangle is nudged left while
+the other is pushed right.
 
-For high-level API usage, shader hooks are defined on a
-[PipelineFactory](/docs/api-reference/engine/pipeline-factory) 
-(we'll look at low-level shader hooks later):
+The complete source for this example is shown below:
 
 ```typescript
-const pipelineFactory = new PipelineFactory(device);
-pipelineFactory.addShaderHook('vs:MY_SHADER_HOOK(inout vec4 position)');
+import {Buffer, NumberArray, UniformStore} from '@luma.gl/core';
+import {AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine';
+import {ShaderAssembler} from '@luma.gl/shadertools';
+import {webgl2Adapter} from '@luma.gl/webgl';
+import {webgpuAdapter} from '@luma.gl/webgpu';
 
-const vs = `
-  attribute vec4 pos;
+// Base vertex and fragment shader code
+const vs = `\
+#version 300 es
 
-  void main() {
-    gl_Position = pos;
-    MY_SHADER_HOOK(gl_Position);
-  }
-`;
-```
+in vec2 position;
 
-Shader modules can then inject code into the hook via their `inject` property:
-
-```typescript
-const myShaderModule = {
-  name: 'my-shader-module',
-  inject: 'position.x -= 0.1;'
-};
-```
-
-We'll use these features to create a modified version of the previous tutorial, using shader hooks and modules to modify the behavior of a single set of vertex and fragment shaders.
-
-We'll start by setting up our imports and defining our base vertex and fragment shaders:
-
-```typescript
-import {AnimationLoop, Model, PipelineFactory} from '@luma.gl/engine';
-
-const vs = `
-  attribute vec2 position;
-
-  void main() {
-    gl_Position = vec4(position, 0.0, 1.0);
-    OFFSET_POSITION(gl_Position);
-  }
+void main() {
+  gl_Position = vec4(position, 0.0, 1.0);
+  OFFSET_POSITION(gl_Position);
+}
 `;
 
-const fs = `
-  uniform vec3 color;
+const fs = `\
+#version 300 es
 
-  void main() {
-    gl_FragColor = vec4(color, 1.0);
-  }
-`;
-```
+uniform appUniforms {  
+  vec3 color;
+} app;
 
-Here we have a shader hook function, `OFFSET_POSITION`, called in our vertex shader. Next we'll create two shader modules that insert code into the shader hook:
+out vec4 fragColor;
 
-```typescript
-const offsetLeftModule = {
-  name: 'offsetLeft',
-  inject: {
-    'vs:OFFSET_POSITION': 'position.x -= 0.5;'
-  }
-};
-
-const offsetRightModule = {
-  name: 'offsetRight',
-  inject: {
-    'vs:OFFSET_POSITION': 'position.x += 0.5;'
-  }
-};
-```
-
-These shader modules inject code into the shader hook that will modify the x-coordinate of the position passed in. The `inject` property maps shader hook names to the code to be injected into them. The `vs` prefix indicates that this is a vertex shader hook.
-
-The `onInitialize` method of our `AnimationLoop` will be somewhat different from the previous example. To create a shader hook, we need access to a `PipelineFactory` instance:
-
-```typescript
-  override onInitialize({device}) {
-    const pipelineFactory = new PipelineFactory(device);
-    pipelineFactory.addShaderHook('vs:OFFSET_POSITION(inout vec4 position)');
-
-    // ...
-  }
-```
-
-The shader hook definition is the function signature with a prefix indicating whether it is intended for the vertex shader (`vs`) or fragment shader (`fs`). Shader hooks are always `void` funtions so they must return values to the caller via `out` or `inout` argurments. The rest of `onInitialize` is similar to what we've seen before with the exception of using the new shader modules and the `PipelineFactory` to create our `Model`s:
-
-```typescript
-  override onInitialize({gl}) {
-    const pipelineFactory = new PipelineFactory(device);
-    pipelineFactory.addShaderHook('vs:OFFSET_POSITION(inout vec4 position)');
-
-    const positionBuffer = device.createBuffer(new Float32Array([
-      -0.3, -0.5,
-      0.3, -0.5,
-      0.0, 0.5
-    ]));
-
-    const model1 = new Model(device, {
-      vs,
-      fs,
-      pipelineFactory,
-      modules: [offsetLeftModule],
-      attributes: {
-        position: positionBuffer
-      },
-      uniforms: {
-        color: [1.0, 0.0, 0.0]
-      },
-      vertexCount: 3
-    });
-
-    const model2 = new Model(device, {
-      vs,
-      fs,
-      pipelineFactory,
-      modules: [offsetRightModule],
-      attributes: {
-        position: positionBuffer
-      },
-      uniforms: {
-        color: [0.0, 0.0, 1.0]
-      },
-      vertexCount: 3
-    });
-
-    return {model1, model2};
-  }
-```
-
-The `onRender` method is the same as before. If all went well, a blue trangle and a red triangle should be drawn side-by-side on the canvas. The code injected by the modules into the shader hook is what offsets each triangle to the left or right.
-
-Shader hooks allowed us to define our vertex and fragment shaders once and modify their behavior based on the shader module included.
-
-The entire application should look like the following:
-
-```typescript
-import {AnimationLoop, Model, PipelineFactory} from '@luma.gl/engine';
-import {clear} from '@luma.gl/webgl';
-
-const vs = `
-  attribute vec2 position;
-
-  void main() {
-    gl_Position = vec4(position, 0.0, 1.0);
-    OFFSET_POSITION(gl_Position);
-  }
-`;
-
-const fs = `
-  uniform vec3 color;
-
-  void main() {
-    gl_FragColor = vec4(color, 1.0);
-  }
+void main() {
+  fragColor = vec4(app.color, 1.0);
+}
 `;
 
 const offsetLeftModule = {
@@ -189,50 +68,104 @@ const offsetRightModule = {
   }
 };
 
-const loop = new AnimationLoop({
-  override onInitialize({device}) {
-    const pipelineFactory = new PipelineFactory(device);
-    pipelineFactory.addShaderHook('vs:OFFSET_POSITION(inout vec4 position)');
+class AppAnimationLoopTemplate extends AnimationLoopTemplate {
+  model1: Model;
+  model2: Model;
+  positionBuffer: Buffer;
+  uniformBuffer1: Buffer;
+  uniformBuffer2: Buffer;
 
-    const positionBuffer = device.createBuffer(new Float32Array([-0.3, -0.5, 0.3, -0.5, 0.0, 0.5]));
+  uniformStore = new UniformStore<{
+    app: {
+      color: NumberArray;
+    };
+  }>({
+    app: {
+      uniformTypes: {
+        color: 'vec3<f32>'
+      }
+    }
+  });
 
-    const model1 = new Model(device, {
+  constructor({device, animationLoop}: AnimationProps) {
+    super();
+
+    if (device.type !== 'webgl') {
+      throw new Error('This demo is only implemented for WebGL2');
+    }
+
+    const shaderAssembler = ShaderAssembler.getDefaultShaderAssembler();
+    shaderAssembler.addShaderHook('vs:OFFSET_POSITION(inout vec4 position)');
+
+    this.positionBuffer = device.createBuffer(new Float32Array([-0.3, -0.5, 0.3, -0.5, 0.0, 0.5]));
+
+    this.uniformBuffer1 = this.uniformStore.createUniformBuffer(device, 'app', {
+      app: {
+        color: [1, 0, 0]
+      }
+    });
+
+    const uniformBufferData = this.uniformStore.getUniformBufferData('app');
+    this.uniformBuffer1.write(uniformBufferData);
+
+    this.uniformBuffer2 = this.uniformStore.createUniformBuffer(device, 'app', {
+      app: {
+        color: [0, 0, 1]
+      }
+    });
+
+    this.model1 = new Model(device, {
       vs,
       fs,
-      pipelineFactory,
+      shaderAssembler, // Not needed, if not specified uses the default ShaderAssembler
       modules: [offsetLeftModule],
+      bufferLayout: [{name: 'position', format: 'float32x2'}],
       attributes: {
-        position: positionBuffer
+        position: this.positionBuffer
       },
-      uniforms: {
-        color: [1.0, 0.0, 0.0]
-      },
-      vertexCount: 3
+      vertexCount: 3,
+      bindings: {
+        app: this.uniformBuffer1
+      }
     });
 
-    const model2 = new Model(device, {
+    this.model2 = new Model(device, {
       vs,
       fs,
-      pipelineFactory,
+      shaderAssembler, // Not needed, if not specified uses the default ShaderAssembler
       modules: [offsetRightModule],
+      bufferLayout: [{name: 'position', format: 'float32x2'}],
+      vertexCount: 3,
       attributes: {
-        position: positionBuffer
+        position: this.positionBuffer
       },
-      uniforms: {
-        color: [0.0, 0.0, 1.0]
-      },
-      vertexCount: 3
+      bindings: {
+        app: this.uniformBuffer2
+      }
     });
-
-    return {model1, model2};
-  },
-
-  override onRender({device, model}) {
-    clear(gl, {color: [0, 0, 0, 1]});
-    model1.draw();
-    model2.draw();
   }
-});
 
-loop.start();
+  onFinalize() {
+    this.model1.destroy();
+    this.model2.destroy();
+    this.positionBuffer.destroy();
+    this.uniformStore.destroy();
+    this.uniformBuffer1.destroy();
+    this.uniformBuffer2.destroy();
+  }
+
+  onRender({device}: AnimationProps) {
+    const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
+    this.model1.draw(renderPass);
+    this.model2.draw(renderPass);
+    renderPass.end();
+  }
+}
+
+const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {adapters: [webgpuAdapter, webgl2Adapter]})
+animationLoop.start();
 ```
+
+The `ShaderAssembler` gathers hook implementations from attached modules and
+patches them into the base shader at build time. Hooks allow modules to customize
+behavior without modifying original shader sources.

@@ -106,7 +106,7 @@ The `Texture2DArray` class has been removed as its utility was limited and the s
 
 #### FenceSync Class Removed
 
-The `FenceSync` class has been removed as its utility was limited. It may be added back in the future if a clear use case arises. If required, syncing can be done directly through the `WebGLFenceSync` object.
+The old `FenceSync` class has been removed. Note that as of luma.gl v9.3, applications can use the new portable [`Fence`](/docs/api-reference/core/resources/fence) resource created via `device.createFence()` to wait for GPU work to complete.
 
 #### Framebuffer and Texture: Copy and Blit methods
 

@@ -68,6 +68,8 @@ export {TransformFeedback} from './adapter/resources/transform-feedback';
 export type {QuerySetProps} from './adapter/resources/query-set';
 export {QuerySet} from './adapter/resources/query-set';
 
+export {Fence, type FenceProps} from './adapter/resources/fence';
+
 export type {PipelineLayoutProps} from './adapter/resources/pipeline-layout';
 export {PipelineLayout} from './adapter/resources/pipeline-layout';
 
@@ -84,7 +86,9 @@ export type {ExternalImage} from './image-utils/image-types';
 
 export {
   type CopyExternalImageOptions,
-  type CopyImageDataOptions
+  type CopyImageDataOptions,
+  type TextureReadOptions,
+  type TextureWriteOptions
 } from './adapter/resources/texture';
 
 export type {Parameters, PrimitiveTopology, IndexFormat} from './adapter/types/parameters';
@@ -184,7 +188,8 @@ export {
   type TextureFormatDepthStencil,
   type TextureCompression,
   type TextureFormatInfo,
-  type TextureFormatCapabilities
+  type TextureFormatCapabilities,
+  type TextureMemoryLayout
 } from './shadertypes/textures/texture-formats';
 
 export {
@@ -192,6 +197,8 @@ export {
   textureFormatDecoder
 } from './shadertypes/textures/texture-format-decoder';
 
+export {getTextureImageView, setTextureImageData} from './shadertypes/textures/texture-layout';
+// export {TexturePacker} from './shadertypes/textures/texture-packer'
 export {type PixelData, readPixel, writePixel} from './shadertypes/textures/pixel-utils';
 
 // GENERAL EXPORTS - FOR APPLICATIONS

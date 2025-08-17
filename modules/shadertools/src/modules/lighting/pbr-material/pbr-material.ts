@@ -30,6 +30,17 @@ export type PBRMaterialBindings = {
   pbr_metallicRoughnessSampler?: Texture | null; // #ifdef HAS_METALROUGHNESSMAP
   pbr_occlusionSampler?: Texture | null; // #ifdef HAS_OCCLUSIONMAP
 
+  pbr_specularColorSampler?: Texture | null; // #ifdef HAS_SPECULARCOLORMAP
+  pbr_specularIntensitySampler?: Texture | null; // #ifdef HAS_SPECULARINTENSITYMAP
+  pbr_transmissionSampler?: Texture | null; // #ifdef HAS_TRANSMISSIONMAP
+
+  pbr_clearcoatSampler?: Texture | null; // #ifdef HAS_CLEARCOATMAP
+  pbr_clearcoatRoughnessSampler?: Texture | null; // #ifdef HAS_CLEARCOATMAP
+  pbr_sheenColorSampler?: Texture | null; // #ifdef HAS_SHEENCOLORMAP
+  pbr_sheenRoughnessSampler?: Texture | null; // #ifdef HAS_SHEENCOLORMAP
+  pbr_iridescenceSampler?: Texture | null; // #ifdef HAS_IRIDESCENCEMAP
+  pbr_anisotropySampler?: Texture | null; // #ifdef HAS_ANISOTROPYMAP
+
   // IBL Samplers
   pbr_diffuseEnvSampler?: Texture | null; // #ifdef USE_IBL (samplerCube)
   pbr_specularEnvSampler?: Texture | null; // #ifdef USE_IBL (samplerCube)
@@ -66,6 +77,41 @@ export type PBRMaterialUniforms = {
   // #ifdef PBR_DEBUG
   scaleDiffBaseMR?: Readonly<Vector4 | NumberArray4>;
   scaleFGDSpec?: Readonly<Vector4 | NumberArray4>;
+
+  // glTF material extensions
+  specularColorFactor?: Readonly<Vector3 | NumberArray3>;
+  specularIntensityFactor?: number;
+  specularColorMapEnabled?: boolean;
+  specularIntensityMapEnabled?: boolean;
+
+  ior?: number;
+
+  transmissionFactor?: number;
+  transmissionMapEnabled?: boolean;
+
+  thicknessFactor?: number;
+  attenuationDistance?: number;
+  attenuationColor?: Readonly<Vector3 | NumberArray3>;
+
+  clearcoatFactor?: number;
+  clearcoatRoughnessFactor?: number;
+  clearcoatMapEnabled?: boolean;
+
+  sheenColorFactor?: Readonly<Vector3 | NumberArray3>;
+  sheenRoughnessFactor?: number;
+  sheenColorMapEnabled?: boolean;
+
+  iridescenceFactor?: number;
+  iridescenceIor?: number;
+  iridescenceThicknessRange?: Readonly<Vector2 | NumberArray2>;
+  iridescenceMapEnabled?: boolean;
+
+  anisotropyStrength?: number;
+  anisotropyRotation?: number;
+  anisotropyDirection?: Readonly<Vector2 | NumberArray2>;
+  anisotropyMapEnabled?: boolean;
+
+  emissiveStrength?: number;
 };
 
 export type PBRMaterialProps = PBRMaterialBindings & PBRMaterialUniforms;
@@ -91,6 +137,13 @@ export const pbrMaterial = {
     HAS_OCCLUSIONMAP: false,
     HAS_BASECOLORMAP: false,
     HAS_METALROUGHNESSMAP: false,
+    HAS_SPECULARCOLORMAP: false,
+    HAS_SPECULARINTENSITYMAP: false,
+    HAS_TRANSMISSIONMAP: false,
+    HAS_CLEARCOATMAP: false,
+    HAS_SHEENCOLORMAP: false,
+    HAS_IRIDESCENCEMAP: false,
+    HAS_ANISOTROPYMAP: false,
     ALPHA_CUTOFF: false,
     USE_IBL: false,
     PBR_DEBUG: false
@@ -126,6 +179,40 @@ export const pbrMaterial = {
     // debugging flags used for shader output of intermediate PBR variables
     // #ifdef PBR_DEBUG
     scaleDiffBaseMR: 'vec4<f32>',
-    scaleFGDSpec: 'vec4<f32>'
+    scaleFGDSpec: 'vec4<f32>',
+
+    specularColorFactor: 'vec3<f32>',
+    specularIntensityFactor: 'f32',
+    specularColorMapEnabled: 'i32',
+    specularIntensityMapEnabled: 'i32',
+
+    ior: 'f32',
+
+    transmissionFactor: 'f32',
+    transmissionMapEnabled: 'i32',
+
+    thicknessFactor: 'f32',
+    attenuationDistance: 'f32',
+    attenuationColor: 'vec3<f32>',
+
+    clearcoatFactor: 'f32',
+    clearcoatRoughnessFactor: 'f32',
+    clearcoatMapEnabled: 'i32',
+
+    sheenColorFactor: 'vec3<f32>',
+    sheenRoughnessFactor: 'f32',
+    sheenColorMapEnabled: 'i32',
+
+    iridescenceFactor: 'f32',
+    iridescenceIor: 'f32',
+    iridescenceThicknessRange: 'vec2<f32>',
+    iridescenceMapEnabled: 'i32',
+
+    anisotropyStrength: 'f32',
+    anisotropyRotation: 'f32',
+    anisotropyDirection: 'vec2<f32>',
+    anisotropyMapEnabled: 'i32',
+
+    emissiveStrength: 'f32'
   }
 } as const satisfies ShaderModule<PBRMaterialProps, PBRMaterialUniforms, PBRMaterialBindings>;

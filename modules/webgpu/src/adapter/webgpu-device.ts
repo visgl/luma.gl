@@ -45,6 +45,9 @@ import {WebGPUCommandEncoder} from './resources/webgpu-command-encoder';
 import {WebGPUCommandBuffer} from './resources/webgpu-command-buffer';
 import {WebGPUQuerySet} from './resources/webgpu-query-set';
 import {WebGPUPipelineLayout} from './resources/webgpu-pipeline-layout';
+import {WebGPUFence} from './resources/webgpu-fence';
+
+import {getShaderLayoutFromWGSL} from '../wgsl/get-shader-layout-wgsl';
 
 /** WebGPU Device implementation */
 export class WebGPUDevice extends Device {
@@ -136,13 +139,13 @@ export class WebGPUDevice extends Device {
     return this._isLost;
   }
 
+  getShaderLayout(source: string) {
+    return getShaderLayoutFromWGSL(source);
+  }
+
   override isVertexFormatSupported(format: VertexFormat): boolean {
     const info = this.getVertexFormatInfo(format);
     return !info.webglOnly;
-  }
-
-  getTextureByteAlignment(): number {
-    return 1;
   }
 
   createBuffer(props: BufferProps | ArrayBuffer | ArrayBufferView): WebGPUBuffer {
@@ -194,6 +197,10 @@ export class WebGPUDevice extends Device {
 
   override createQuerySet(props: QuerySetProps): QuerySet {
     return new WebGPUQuerySet(this, props);
+  }
+
+  override createFence(): WebGPUFence {
+    return new WebGPUFence(this);
   }
 
   createCanvasContext(props: CanvasContextProps): WebGPUCanvasContext {
@@ -276,6 +283,14 @@ export class WebGPUDevice extends Device {
     // Some subsets of WebGPU extensions correspond to WebGL extensions
     if (features.has('texture-compression-bc')) {
       features.add('texture-compression-bc5-webgl');
+    }
+
+    if (this.handle.features.has('chromium-experimental-norm16-texture-formats')) {
+      features.add('norm16-renderable-webgl');
+    }
+
+    if (this.handle.features.has('chromium-experimental-snorm16-texture-formats')) {
+      features.add('snorm16-renderable-webgl');
     }
 
     const WEBGPU_ALWAYS_FEATURES: DeviceFeature[] = [

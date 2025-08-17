@@ -37,6 +37,7 @@ import {NullRenderPipeline} from './resources/null-render-pipeline';
 import {NullVertexArray} from './resources/null-vertex-array';
 import {NullTransformFeedback} from './resources/null-transform-feedback';
 import {NullQuerySet} from './resources/null-query-set';
+import {NullFence} from './resources/null-fence';
 
 /** Do-nothing device implementation for testing */
 export class NullDevice extends Device {
@@ -78,10 +79,6 @@ export class NullDevice extends Device {
   }
 
   // IMPLEMENTATION OF ABSTRACT DEVICE
-
-  getTextureByteAlignment(): number {
-    return 1;
-  }
 
   createCanvasContext(props: CanvasContextProps): NullCanvasContext {
     return new NullCanvasContext(this, props);
@@ -126,6 +123,10 @@ export class NullDevice extends Device {
 
   createQuerySet(props: QuerySetProps): NullQuerySet {
     return new NullQuerySet(this, props);
+  }
+
+  override createFence(): NullFence {
+    return new NullFence(this);
   }
 
   createRenderPipeline(props: RenderPipelineProps): NullRenderPipeline {

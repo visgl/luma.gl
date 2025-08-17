@@ -10,10 +10,11 @@ import {PrimitiveDataType, SignedDataType, NormalizedDataType, DataTypeInfo} fro
  * @returns underlying primitive / signed types, byte length, normalization, integer, signed flags
  */
 export function getDataTypeInfo(type: NormalizedDataType): DataTypeInfo {
-  const [signedType, primitiveType, byteLength] = NORMALIZED_TYPE_MAP[type];
   const normalized: boolean = type.includes('norm');
   const integer: boolean = !normalized && !type.startsWith('float');
   const signed: boolean = type.startsWith('s');
+  const typeInfo = NORMALIZED_TYPE_MAP[type];
+  const [signedType, primitiveType, byteLength] = typeInfo || ['uint8 ', 'i32', 1];
   return {
     signedType,
     primitiveType,

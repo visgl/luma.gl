@@ -90,10 +90,10 @@ export type {
   TextureCubeData,
   TextureArrayData,
   TextureCubeArrayData
-} from './async-texture/async-texture';
+} from './dynamic-texture/dynamic-texture';
 
-export type {AsyncTextureProps} from './async-texture/async-texture';
-export {AsyncTexture} from './async-texture/async-texture';
+export type {DynamicTextureProps} from './dynamic-texture/dynamic-texture';
+export {DynamicTexture} from './dynamic-texture/dynamic-texture';
 
 export {PickingManager} from './modules/picking/picking-manager';
 export {picking as indexPicking} from './modules/picking/index-picking';
@@ -107,3 +107,9 @@ export {
 // DEPRECATED
 
 export {LegacyPickingManager} from './modules/picking/legacy-picking-manager';
+
+import {DynamicTexture, type DynamicTextureProps} from './dynamic-texture/dynamic-texture';
+/** @deprecated use DynamicTexture */
+export const AsyncTexture = DynamicTexture;
+/** @deprecated use DynamicTextureProps */
+export type AsyncTextureProps = DynamicTextureProps;

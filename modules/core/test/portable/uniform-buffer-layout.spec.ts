@@ -1,3 +1,105 @@
+import test from 'tape-promise/tape';
+import {UniformBufferLayout} from '../../src';
+
+function almostEqual(a: number, b: number, eps = 1e-3): boolean {
+  return Math.abs(a - b) <= eps;
+}
+
+test('unaligned scalar forces padding before vec4', t => {
+  const uniformTypes = {
+    scalar: 'f32',
+    vector: 'vec4<f32>'
+  } as const;
+
+  const layout = new UniformBufferLayout(uniformTypes);
+
+  const data = layout.getData({
+    scalar: 42,
+    vector: [1, 2, 3, 4]
+  });
+
+  const view = new Float32Array(data.buffer);
+  t.equal(view[0], 42, 'scalar');
+  t.equal(view[1], 0, 'padding');
+  t.equal(view[2], 0, 'padding');
+  t.equal(view[3], 0, 'padding');
+  t.equal(view[4], 1, 'vector[0]');
+  t.equal(view[5], 2, 'vector[1]');
+  t.equal(view[6], 3, 'vector[2]');
+  t.equal(view[7], 4, 'vector[3]');
+  t.end();
+});
+
+test('nested struct layout (struct inside struct)', t => {
+  const uniformTypes = {
+    light: {
+      transform: {
+        position: 'vec3<f32>',
+        range: 'f32'
+      },
+      intensity: 'f32'
+    }
+  } as const;
+
+  const layout = new UniformBufferLayout(uniformTypes);
+
+  const data = layout.getData({
+    light: {
+      transform: {
+        position: [1, 2, 3],
+        range: 10
+      },
+      intensity: 0.8
+    }
+  });
+
+  const view = new Float32Array(data.buffer);
+
+  t.equal(view[0], 1, 'transform.position[0]');
+  t.equal(view[1], 2);
+  t.equal(view[2], 3);
+  t.equal(view[3], 10, 'transform.range');
+  t.ok(almostEqual(view[4], 0.8), 'light.intensity');
+  t.end();
+});
+
+test('array of structs layout', t => {
+  const uniformTypes = {
+    lights: [
+      {
+        position: 'vec3<f32>',
+        intensity: 'f32'
+      }
+    ]
+  } as const;
+
+  const layout = new UniformBufferLayout(uniformTypes);
+
+  const data = layout.getData({
+    lights: [
+      {position: [1, 2, 3], intensity: 0.5},
+      {position: [4, 5, 6], intensity: 1.0}
+    ]
+  });
+
+  const view = new Float32Array(data.buffer);
+
+  // First struct
+  t.equal(view[0], 1, 'lights[0].position[0]');
+  t.equal(view[1], 2, 'lights[0].position[1]');
+  t.equal(view[2], 3, 'lights[0].position[2]');
+  t.equal(view[3], 0.5, 'lights[0].intensity');
+
+  // Second struct
+  // TODO - the length of the array is not included in the layout
+  // t.equal(view[4], 4, 'lights[1].position[0]');
+  // t.equal(view[5], 5, 'lights[1].position[1]');
+  // t.equal(view[6], 6, 'lights[1].position[2]');
+  // t.equal(view[7], 1.0, 'lights[1].intensity');
+
+  t.end();
+});
+
 /*
 import test from 'tape-promise/tape';
 import {UniformBufferLayout, UniformBlock} from '@luma.gl/core';

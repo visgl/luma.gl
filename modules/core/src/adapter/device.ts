@@ -24,6 +24,7 @@ import type {CommandBuffer} from './resources/command-buffer';
 import type {VertexArray, VertexArrayProps} from './resources/vertex-array';
 import type {TransformFeedback, TransformFeedbackProps} from './resources/transform-feedback';
 import type {QuerySet, QuerySetProps} from './resources/query-set';
+import type {Fence} from './resources/fence';
 
 import {getVertexFormatInfo} from '../shadertypes/vertex-arrays/decode-vertex-format';
 import {textureFormatDecoder} from '../shadertypes/textures/texture-format-decoder';
@@ -451,9 +452,6 @@ export abstract class Device {
     return textureCaps;
   }
 
-  /** Return the implementation specific alignment for a texture format. 1 on WebGL, 256 on WebGPU */
-  abstract getTextureByteAlignment(): number;
-
   /** Calculates the number of mip levels for a texture of width, height and in case of 3d textures only, depth */
   getMipLevelCount(width: number, height: number, depth3d: number = 1): number {
     const maxSize = Math.max(width, height, depth3d);
@@ -548,7 +546,13 @@ export abstract class Device {
     const isHandled = this.props.onError(error, context);
     if (!isHandled) {
       // Note: Returns a function that must be called: `device.reportError(...)()`
-      return log.error(error.message, context, ...args);
+      return log.error(
+        this.type === 'webgl' ? '%cWebGL' : '%cWebGPU',
+        'color: white; background: red; padding: 2px 6px; border-radius: 3px;',
+        error.message,
+        context,
+        ...args
+      );
     }
     return () => {};
   }
@@ -621,6 +625,11 @@ or create a device with the 'debug: true' prop.`;
   abstract createTransformFeedback(props: TransformFeedbackProps): TransformFeedback;
 
   abstract createQuerySet(props: QuerySetProps): QuerySet;
+
+  /** Create a fence sync object */
+  createFence(): Fence {
+    throw new Error('createFence() not implemented');
+  }
 
   /** Create a RenderPass using the default CommandEncoder */
   beginRenderPass(props?: RenderPassProps): RenderPass {

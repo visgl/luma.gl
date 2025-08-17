@@ -7,8 +7,8 @@ The `Model` class is the centerpiece of the luma.gl API. It brings together all 
 - **Render pipeline creation and reuse** – builds GPU pipelines and recreates them when render state changes.
 - **Attributes** – manages vertex attributes and can create buffers from typed arrays.
 - **Bindings** – handles textures, samplers and uniform buffers.
-- **Uniforms** – supports WebGL-style uniforms and typed uniform buffers.
-- **Async texture handling** – accepts `AsyncTexture` bindings and defers rendering until textures have loaded.
+- **Uniforms** – supports typed uniform buffers.
+- **Async texture handling** – accepts `DynamicTexture` bindings and defers rendering until textures have loaded.
 - **Shader module injection** – assembles GLSL or WGSL shaders from modules.
 - **Debugging** – detailed draw call logging and optional shader source display.
 

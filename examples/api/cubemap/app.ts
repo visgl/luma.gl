@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Device, NumberArray3, NumberArray16} from '@luma.gl/core';
+import {NumberArray3, NumberArray16} from '@math.gl/types';
+import {Device} from '@luma.gl/core';
 import {
   AnimationLoopTemplate,
   AnimationProps,
@@ -10,7 +11,7 @@ import {
   Model,
   ModelProps,
   loadImageBitmap,
-  AsyncTexture,
+  DynamicTexture,
   ShaderInputs
 } from '@luma.gl/engine';
 import {ShaderModule} from '@luma.gl/shadertools';
@@ -30,7 +31,7 @@ const app: ShaderModule<AppUniforms, AppUniforms> = {
   uniformTypes: {
     modelMatrix: 'mat4x4<f32>',
     viewMatrix: 'mat4x4<f32>',
-    projectionMatrix: 'vec3<f32>',
+    projectionMatrix: 'mat4x4<f32>',
     eyePosition: 'vec3<f32>'
   }
 };
@@ -64,21 +65,21 @@ struct VertexInputs {
 
 struct FragmentInputs {
   @builtin(position) Position : vec4<f32>,
-  @location(0) position : vec3<f32>,
+  @location(0) dir : vec3<f32>,
 };
 
 @vertex 
 fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
   var outputs : FragmentInputs;
   outputs.Position = app.projectionMatrix * app.viewMatrix * app.modelMatrix * vec4<f32>(inputs.positions, 1.0);
-  outputs.position = inputs.positions;
+  outputs.dir = (app.modelMatrix * vec4<f32>(inputs.positions, 0.0)).xyz;
   return outputs;
 }
 
 @fragment 
 fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
   // The outer cube just samples the texture cube directly
-  return textureSample(cubeTexture, cubeTextureSampler, normalize(inputs.position));
+  return textureSample(cubeTexture, cubeTextureSampler, normalize(inputs.dir));
 }
   `;
 
@@ -230,7 +231,6 @@ void main(void) {
   vec4 color = texture(prismTexture, vec2(vUV.x, 1.0 - vUV.y));
   vec3 reflectedDir = reflect(normalize(vPosition - app.eyePosition), vNormal);
   vec4 reflectedColor = texture(cubeTexture, reflectedDir);
-
   fragColor = mix(color, reflectedColor, 0.8);
 }
   `;
@@ -255,7 +255,7 @@ Uses a luma.gl <code>TextureCube</code> to simulate a reflective surface
   constructor({device}: AnimationProps) {
     super();
 
-    const cubeTexture = new AsyncTexture(device, {
+    const cubeTexture = new DynamicTexture(device, {
       dimension: 'cube',
       mipmaps: true,
       // @ts-ignore
@@ -274,7 +274,7 @@ Uses a luma.gl <code>TextureCube</code> to simulate a reflective surface
       }
     });
 
-    const prismTexture = new AsyncTexture(device, {
+    const prismTexture = new DynamicTexture(device, {
       data: loadImageBitmap('vis-logo.png'),
       mipmaps: true,
       sampler: {
@@ -316,7 +316,19 @@ Uses a luma.gl <code>TextureCube</code> to simulate a reflective surface
   }
 
   onRender({device, aspect, tick}: AnimationProps): void {
-    const eyePosition = [5, -3, 5];
+    // const eyePosition = [5, -3, 5];
+
+    const radius = 7.0;
+    const speed = 0.01; // radians per tick (adjust for desired speed)
+    const angle = tick * speed;
+
+    // Simple horizontal rotation around origin
+    const eyeX = -Math.abs(Math.cos(angle)) * radius;
+    const eyeZ = -Math.abs(Math.sin(angle)) * radius;
+    const eyeY = -Math.abs(Math.sin(angle)) * radius * 2; // keep constant height
+
+    const eyePosition: [number, number, number] = [eyeX, eyeY, eyeZ];
+
     const view = new Matrix4().lookAt({eye: eyePosition});
     const projection = new Matrix4().perspective({
       fovy: radians(45),
@@ -344,7 +356,7 @@ Uses a luma.gl <code>TextureCube</code> to simulate a reflective surface
         eyePosition,
         viewMatrix: view,
         projectionMatrix: projection,
-        modelMatrix: new Matrix4().rotateX(tick * 0.01).rotateY(tick * 0.013)
+        modelMatrix: new Matrix4() // s.rotateX(tick * 0.01).rotateY(tick * 0.013)
       }
     });
     this.prism.draw(renderPass);
