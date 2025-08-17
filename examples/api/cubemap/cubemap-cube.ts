@@ -2,21 +2,15 @@
 // SPDX-License-Identifier: MIT
 // Copyright...
 
-import {
-  Model,
-  type ModelProps,
-  AsyncTexture,
-  CubeGeometry,
-  ShaderInputs,
-} from '@luma.gl/engine';
+import {Model, type ModelProps, AsyncTexture, CubeGeometry, ShaderInputs} from '@luma.gl/engine';
 import type {Device, Texture} from '@luma.gl/core';
 import {ShaderModule} from '@luma.gl/shadertools';
 import {NumberArray16} from '@math.gl/types';
 
 type AppUniforms = {
-  modelMatrix: NumberArray16;     // mat4x4<f32>
-  viewMatrix: NumberArray16;      // mat4x4<f32>
-  projectionMatrix: NumberArray16;// mat4x4<f32>
+  modelMatrix: NumberArray16; // mat4x4<f32>
+  viewMatrix: NumberArray16; // mat4x4<f32>
+  projectionMatrix: NumberArray16; // mat4x4<f32>
 };
 
 // Small helper module so you can set MVP once via ShaderInputs
@@ -29,7 +23,10 @@ const app: ShaderModule<AppUniforms, AppUniforms> = {
   }
 };
 
-export type CubemapCubeProps = Omit<ModelProps, 'vs' | 'fs' | 'source' | 'geometry' | 'bindings'> & {
+export type CubemapCubeProps = Omit<
+  ModelProps,
+  'vs' | 'fs' | 'source' | 'geometry' | 'bindings'
+> & {
   /** A cube-map texture (dimension: 'cube'). Provide either a Texture or Dynamic/AsyncTexture. */
   cubeTexture: Texture | AsyncTexture;
   /** Optional: pass your own ShaderInputs; otherwise one is created. */

@@ -271,7 +271,7 @@ Uses a luma.gl <code>TextureCube</code> to simulate a reflective surface
         magFilter: 'linear',
         minFilter: 'linear',
         mipmapFilter: 'nearest'
-      },
+      }
     });
 
     const prismTexture = new DynamicTexture(device, {
@@ -323,9 +323,9 @@ Uses a luma.gl <code>TextureCube</code> to simulate a reflective surface
     const angle = tick * speed;
 
     // Simple horizontal rotation around origin
-    const eyeX = - Math.abs(Math.cos(angle)) * radius;
-    const eyeZ = - Math.abs(Math.sin(angle)) * radius;
-    const eyeY = - Math.abs(Math.sin(angle)) * radius * 2; // keep constant height
+    const eyeX = -Math.abs(Math.cos(angle)) * radius;
+    const eyeZ = -Math.abs(Math.sin(angle)) * radius;
+    const eyeY = -Math.abs(Math.sin(angle)) * radius * 2; // keep constant height
 
     const eyePosition: [number, number, number] = [eyeX, eyeY, eyeZ];
 
