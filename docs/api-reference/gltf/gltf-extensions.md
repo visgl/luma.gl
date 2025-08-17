@@ -64,7 +64,7 @@ extend) the shorter table normally shown in the loaders.gl documentation.
 
 The loaders.gl GLTF loader handles most of the data manipulation (DRACO compression,
 BasisU textures, extracting textures, etc.) so luma.gl generally relies on the loader results.
-For some extensions—e.g. advanced material models—luma.gl does not yet provide specific
+For some extensions - e.g. advanced material models - luma.gl does not yet provide specific
 runtime support even if the loader can parse them.
 
 The table below is a superset of that list and collects the other officially

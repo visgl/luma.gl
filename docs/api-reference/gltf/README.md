@@ -1,7 +1,7 @@
 # Overview
 
 The `@luma.gl/gltf` modules utilities for turning glTF data into a
-[luma.gl](https://github.com/visgl/luma.gl) scenegraph.
+[luma.gl scenegraph](/docs/api-reference/engine/scenegraph/scenegraph-node) .
 
 ## Installing
 
@@ -64,9 +64,9 @@ createScenegraphsFromGLTF(device, gltf[, options])
 
 Creates scenegraph nodes and returns `{scenes, animator}`.
 
-- `device` – a Device instance created from @luma.gl/core.
-- `gltf` – a GLTFPostprocessed object (data returned by `@loaders.gl/gltf` when postProcess: true is enabled).
-- `options` – optional, see below.
+- `device`- a Device instance created from @luma.gl/core.
+- `gltf`- a GLTFPostprocessed object (data returned by `@loaders.gl/gltf` when postProcess: true is enabled).
+- `options`- optional, see below.
 
 The returned scenes array contains a GroupNode for each glTF scene
 in the file. The optional animator is an instance of GLTFAnimator
@@ -81,13 +81,13 @@ type ParseGLTFOptions = {
   useTangents?: boolean;
 };
 ```
-- `modelOptions` – additional options that will be passed when constructing any ModelNode instances for primitives in the glTF.
-- `pbrDebug `– set to true to enable extra PBR debugging information.
-- `imageBasedLightingEnvironment` – a PBREnvironment object (as returned by loadPBREnvironment()) to
+- `modelOptions`- additional options that will be passed when constructing any ModelNode instances for primitives in the glTF.
+- `pbrDebug ` - set to true to enable extra PBR debugging information.
+- `imageBasedLightingEnvironment`- a PBREnvironment object (as returned by loadPBREnvironment()) to
 supply textures for PBR image-based lighting.
-- `lights` – true by default. If false, lights declared in the glTF
+- `lights`- true by default. If false, lights declared in the glTF
 (KHR_lights_punctual) will not be instantiated.
-- `useTangents` – compute/propagate tangents when possible. Useful when the glTF contains normal-mapped materials.
+- `useTangents`- compute/propagate tangents when possible. Useful when the glTF contains normal-mapped materials.
 
 #### `GLTFAnimator`
 
@@ -98,8 +98,8 @@ and provides a simple API for advancing them:
 const { animator } = createScenegraphsFromGLTF(device, gltf);
 ```
 
-- animator.setTime(timeMs);  - timeMs is the current clock time in ms
-- .getAnimations() returns an array of internal animator objects if the application needs to manage them individually.
+- `animator.setTime(timeMs)`  - timeMs is the current clock time in ms
+- `.getAnimations()` returns an array of internal animator objects if the application needs to manage them individually.
 
 #### `loadPBREnvironment()`
 
@@ -120,11 +120,14 @@ loadPBREnvironment(device, props)
 Creates a set of textures suitable for physically based rendering:
 
 
+```ts
 const env = loadPBREnvironment(device, {
   brdfLutUrl: '/path/brdfLUT.png',
   getTexUrl: (name, face, mip) => `/env/${name}/${face}/${mip}.jpg`,
   specularMipLevels: 10
 });
+```
+
 The returned object:
 
 ```ts
