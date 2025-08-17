@@ -23,7 +23,7 @@ struct Uniforms {
 
 struct VertexInputs {
   // CUBE GEOMETRY
-  @location(0) positions : vec4<f32>,
+  @location(0) position : vec4<f32>,
 };
 
 struct FragmentInputs {
@@ -34,9 +34,9 @@ struct FragmentInputs {
 @vertex
 fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
   var outputs : FragmentInputs;
-  outputs.Position = app.mvpMatrix * inputs.positions;
-  outputs.fragUVW = inputs.positions.xyz;
-  // outputs.fragPosition = 0.5 * (inputs.positions + vec4(1.0, 1.0, 1.0, 1.0));
+  outputs.Position = app.mvpMatrix * inputs.position;
+  outputs.fragUVW = inputs.position.xyz;
+  // outputs.fragPosition = 0.5 * (inputs.position + vec4(1.0, 1.0, 1.0, 1.0));
   return outputs;
 }
 
@@ -134,22 +134,18 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     this.texture3d = device.createTexture({
       dimension: '3d',
+      data: textureData,
       width: TEXTURE_DIMENSIONS,
       height: TEXTURE_DIMENSIONS,
       depth: TEXTURE_DIMENSIONS,
       format: 'r8unorm',
+      mipmaps: true,
       sampler: {
         magFilter: 'nearest',
         minFilter: 'nearest',
-        mipmapFilter: 'none'
+        mipmapFilter: 'nearest'
       }
     });
-
-    this.texture3d.copyImageData({data: textureData});
-
-    // Debug to see what was actually set
-    // const pixels = device.readPixelsToArrayWebGL(this.texture3d);
-    // console.log('GETTING DATA', pixels);
 
     this.cloud = new Model(device, {
       source,
@@ -157,9 +153,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       fs,
       topology: 'point-list',
       vertexCount: positionData.length / 3,
-      bufferLayout: [{name: 'positions', format: 'float32x3'}],
+      bufferLayout: [{name: 'position', format: 'float32x3'}],
       attributes: {
-        positions: positionBuffer
+        position: positionBuffer
       },
       bindings: {
         uTexture: this.texture3d
