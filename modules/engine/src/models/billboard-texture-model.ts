@@ -5,7 +5,7 @@
 import {Device, Texture} from '@luma.gl/core';
 import type {ShaderModule} from '@luma.gl/shadertools';
 import {DynamicTexture} from '../dynamic-texture/dynamic-texture';
-import {ClipSpace} from './clip-space';
+import {ClipSpace, ClipSpaceProps} from './clip-space';
 
 const backgroundModule = {
   name: 'background',
@@ -62,7 +62,7 @@ void main(void) {
 /**
  * Props for a Model that renders a bitmap into the "background", i.e covering the screen
  */
-export type BackgroundTextureModelProps = {
+export type BackgroundTextureModelProps = ClipSpaceProps & {
   /** id of this model */
   id?: string;
   /** The texture to render */
@@ -75,6 +75,8 @@ export type BackgroundTextureModelProps = {
  * Model that renders a bitmap into the "background", i.e covering the screen
  */
 export class BackgroundTextureModel extends ClipSpace {
+  backgroundTexture: Texture = null!;
+
   constructor(device: Device, props: BackgroundTextureModelProps) {
     super(device, {
       id: props.id || 'background-texture-model',
@@ -100,37 +102,47 @@ export class BackgroundTextureModel extends ClipSpace {
     if (!props.backgroundTexture) {
       throw new Error('BackgroundTextureModel requires a backgroundTexture prop');
     }
-    this.setTexture(props.backgroundTexture);
+    this.setProps(props);
   }
 
-  setTexture(backgroundTexture: Texture | DynamicTexture): void {
-    this.setBindings({backgroundTexture});
-
-    this.shaderInputs.setProps({background: {scale: [1, 1]}});
-
-    backgroundTexture.ready.then(() => {
-      const [screenWidth, screenHeight] = this.device.getCanvasContext().getDrawingBufferSize();
-
-      const textureWidth = backgroundTexture.width;
-      const textureHeight = backgroundTexture.height;
-
-      const screenAspect = screenWidth / screenHeight;
-      const textureAspect = textureWidth / textureHeight;
-
-      let scaleX = 1;
-      let scaleY = 1;
-      if (screenAspect > textureAspect) {
-        scaleY = screenAspect / textureAspect;
-      } else {
-        scaleX = textureAspect / screenAspect;
-      }
-
-      this.shaderInputs.setProps({background: {scale: [scaleX, scaleY]}});
-    });
+  setProps(props: Partial<BackgroundTextureModelProps>): void {
+    const {backgroundTexture} = props;
+    if (backgroundTexture) {
+      this.setBindings({backgroundTexture});
+      backgroundTexture.ready.then(texture => {
+        this.backgroundTexture = texture;
+        this.updateScale(texture);
+      });
+    }
   }
 
   override predraw(): void {
-    this.shaderInputs.setProps({});
+    // this.updateScale(this.backgroundTexture);
     super.predraw();
+  }
+
+  updateScale(texture: Texture): void {
+    if (!texture) {
+      // Initial scale to avoid rendering issues before texture is loaded
+      this.shaderInputs.setProps({background: {scale: [1, 1]}});
+      return;
+    }
+    const [screenWidth, screenHeight] = this.device.getCanvasContext().getDrawingBufferSize();
+
+    const textureWidth = texture.width;
+    const textureHeight = texture.height;
+
+    const screenAspect = screenWidth / screenHeight;
+    const textureAspect = textureWidth / textureHeight;
+
+    let scaleX = 1;
+    let scaleY = 1;
+    if (screenAspect > textureAspect) {
+      scaleY = screenAspect / textureAspect;
+    } else {
+      scaleX = textureAspect / screenAspect;
+    }
+
+    this.shaderInputs.setProps({background: {scale: [scaleX, scaleY]}});
   }
 }

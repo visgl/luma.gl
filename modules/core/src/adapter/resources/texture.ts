@@ -171,8 +171,10 @@ export abstract class Texture extends Resource<TextureProps> {
   /** Default view for this texture */
   abstract view: TextureView;
 
-  ready = Promise.resolve();
-  isReady = true;
+  /** The ready promise is always resolved. It is provided for type compatibility with DynamicTexture. */
+  readonly ready: Promise<Texture> = Promise.resolve(this);
+  /** isReady is always true. It is provided for type compatibility with DynamicTexture. */
+  readonly isReady: boolean = true;
 
   /** "Time" of last update. Monotonically increasing timestamp. TODO move to DynamicTexture? */
   updateTimestamp: number;

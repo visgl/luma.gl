@@ -32,7 +32,8 @@ export async function createDevice(type: 'webgl' | 'webgpu'): Promise<Device> {
       height: 0,
       // @ts-expect-error
       createCanvasContext: {
-        container: getCanvasContainer()
+        container: getCanvasContainer(),
+        alphaMode: 'opaque',
       }
     });
   return await cachedDevice[type];
