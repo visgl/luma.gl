@@ -11,7 +11,7 @@ import {
   Model,
   ModelProps,
   loadImageBitmap,
-  AsyncTexture,
+  DynamicTexture,
   ShaderInputs
 } from '@luma.gl/engine';
 import {ShaderModule} from '@luma.gl/shadertools';
@@ -256,7 +256,7 @@ Uses a luma.gl <code>TextureCube</code> to simulate a reflective surface
   constructor({device}: AnimationProps) {
     super();
 
-    const cubeTexture = new AsyncTexture(device, {
+    const cubeTexture = new DynamicTexture(device, {
       dimension: 'cube',
       mipmaps: true,
       // @ts-ignore
@@ -275,7 +275,7 @@ Uses a luma.gl <code>TextureCube</code> to simulate a reflective surface
       }
     });
 
-    const prismTexture = new AsyncTexture(device, {
+    const prismTexture = new DynamicTexture(device, {
       data: loadImageBitmap('vis-logo.png'),
       mipmaps: true,
       sampler: {

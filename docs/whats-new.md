@@ -39,7 +39,7 @@ Production quality WebGPU backend
 
 **@luma.gl/engine**
 
-- `AsyncTexture` 
+- `DynamicTexture` 
   - now supports mipmap generation for WebGPU textures (in progress)
 
 **@luma.gl/effects**
@@ -101,7 +101,7 @@ Enhanced WebGPU support.
 
 - `makeAnimationLoopTemplate`
   - Accepts a new `.adapters` prop. (Avoids need for global registration of adapters).
-- `AsyncTexture`](/docs/api-reference/engine/async-texture)
+- `AsyncTexture`](/docs/api-reference/engine/dynamic-texture)
   - New class allows that applications to work withcreate textures from a Promise.
 - `ShaderPassRenderer`
   - New class that helps applications apply a `ShaderPass` list to a texture.
