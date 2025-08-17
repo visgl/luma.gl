@@ -134,7 +134,7 @@
       {
         "type": "category",
         "label": "@luma.gl/gltf",
-        "items": ["api-reference/gltf/README"]
+        "items": ["api-reference/gltf/README", "api-reference/gltf/gltf-extensions"]
       },
       {
         "type": "category",
