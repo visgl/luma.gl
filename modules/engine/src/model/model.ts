@@ -148,25 +148,25 @@ export class Model {
     disableWarnings: undefined!
   };
 
-    /** Device that created this model */
-    readonly device: Device;
-    /** Application provided identifier */
-    readonly id: string;
-    // @ts-expect-error assigned in function called from constructor
-    /** WGSL shader source when using unified shader */
-    readonly source: string;
-    // @ts-expect-error assigned in function called from constructor
-    /** GLSL vertex shader source */
-    readonly vs: string;
-    // @ts-expect-error assigned in function called from constructor
-    /** GLSL fragment shader source */
-    readonly fs: string;
-    /** Factory used to create render pipelines */
-    readonly pipelineFactory: PipelineFactory;
-    /** Factory used to create shaders */
-    readonly shaderFactory: ShaderFactory;
-    /** User-supplied per-model data */
-    userData: {[key: string]: any} = {};
+  /** Device that created this model */
+  readonly device: Device;
+  /** Application provided identifier */
+  readonly id: string;
+  // @ts-expect-error assigned in function called from constructor
+  /** WGSL shader source when using unified shader */
+  readonly source: string;
+  // @ts-expect-error assigned in function called from constructor
+  /** GLSL vertex shader source */
+  readonly vs: string;
+  // @ts-expect-error assigned in function called from constructor
+  /** GLSL fragment shader source */
+  readonly fs: string;
+  /** Factory used to create render pipelines */
+  readonly pipelineFactory: PipelineFactory;
+  /** Factory used to create shaders */
+  readonly shaderFactory: ShaderFactory;
+  /** User-supplied per-model data */
+  userData: {[key: string]: any} = {};
 
   // Fixed properties (change can trigger pipeline rebuild)
 
