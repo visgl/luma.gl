@@ -152,14 +152,14 @@ export class Model {
   readonly device: Device;
   /** Application provided identifier */
   readonly id: string;
-  // @ts-expect-error assigned in function called from constructor
   /** WGSL shader source when using unified shader */
+  // @ts-expect-error assigned in function called from constructor
   readonly source: string;
-  // @ts-expect-error assigned in function called from constructor
   /** GLSL vertex shader source */
-  readonly vs: string;
   // @ts-expect-error assigned in function called from constructor
+  readonly vs: string;
   /** GLSL fragment shader source */
+  // @ts-expect-error assigned in function called from constructor
   readonly fs: string;
   /** Factory used to create render pipelines */
   readonly pipelineFactory: PipelineFactory;
