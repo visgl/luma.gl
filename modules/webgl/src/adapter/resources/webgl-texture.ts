@@ -168,8 +168,8 @@ export class WEBGLTexture extends Texture {
     const {glFormat, glType} = this;
     const {image, depth, mipLevel, x, y, z, width, height} = options;
 
-    // WebGL cube maps specify faces by overriding target instead of using the depth parameter
-    const glTarget = getWebGLCubeFaceTarget(this.glTarget, this.dimension, depth);
+    // WebGL cube maps specify faces by overriding target instead of using the z parameter
+    const glTarget = getWebGLCubeFaceTarget(this.glTarget, this.dimension, z);
     const glParameters: GLValueParameters = options.flipY ? {[GL.UNPACK_FLIP_Y_WEBGL]: true} : {};
 
     this.gl.bindTexture(this.glTarget, this.handle);
@@ -200,10 +200,12 @@ export class WEBGLTexture extends Texture {
     const options = this._normalizeCopyImageDataOptions(options_);
 
     const typedArray = options.data as TypedArray;
-    const {width, height, depth} = this;
-    const {mipLevel = 0, byteOffset = 0, x = 0, y = 0, z = 0} = options;
+    const {width, height, depth, z = 0} = options;
+    const {mipLevel = 0, byteOffset = 0, x = 0, y = 0} = options;
     const {glFormat, glType, compressed} = this;
-    const glTarget = getWebGLCubeFaceTarget(this.glTarget, this.dimension, depth);
+
+    // Target used for face updates, but not for binding
+    const glTarget = getWebGLCubeFaceTarget(this.glTarget, this.dimension, z);
 
     const glParameters: GLValueParameters = !this.compressed
       ? {
@@ -212,7 +214,7 @@ export class WEBGLTexture extends Texture {
         }
       : {};
 
-    this.gl.bindTexture(glTarget, this.handle);
+    this.gl.bindTexture(this.glTarget, this.handle);
 
     withGLParameters(this.gl, glParameters, () => {
       switch (this.dimension) {
@@ -241,7 +243,7 @@ export class WEBGLTexture extends Texture {
       }
     });
 
-    this.gl.bindTexture(glTarget, null);
+    this.gl.bindTexture(this.glTarget, null);
   }
 
   readBuffer(options: TextureReadOptions = {}, buffer?: Buffer): Buffer {
