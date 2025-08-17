@@ -5,8 +5,14 @@ import {ShaderHooksExample} from '@site/src/examples';
 
 Shader hooks let shader modules inject code into designated points in a shader. This example defines an `OFFSET_POSITION` hook that two modules use to shift geometry left or right.
 
+:::caution
+Tutorials are maintained on a best-effort basis and may not be fully up to date (contributions welcome).
+:::
+
 <DeviceTabs />
 <ShaderHooksExample />
+
+It is assumed you've set up your development environment as described in [Setup](/docs/tutorials).
 
 Hooks act like named callbacks within shader code. The base vertex shader calls
 `OFFSET_POSITION`, and modules supply implementations that modify the position.
@@ -16,13 +22,11 @@ the other is pushed right.
 The complete source for this example is shown below:
 
 ```typescript
-// luma.gl
-// SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
-
 import {Buffer, NumberArray, UniformStore} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine';
 import {ShaderAssembler} from '@luma.gl/shadertools';
+import {webgl2Adapter} from '@luma.gl/webgl';
+import {webgpuAdapter} from '@luma.gl/webgpu';
 
 // Base vertex and fragment shader code
 const vs = `\
@@ -64,11 +68,7 @@ const offsetRightModule = {
   }
 };
 
-export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
-  static info = `
-Modifying shader behavior with shader hooks
-`;
-
+class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   model1: Model;
   model2: Model;
   positionBuffer: Buffer;
@@ -162,6 +162,8 @@ Modifying shader behavior with shader hooks
   }
 }
 
+const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {adapters: [webgpuAdapter, webgl2Adapter]})
+animationLoop.start();
 ```
 
 The `ShaderAssembler` gathers hook implementations from attached modules and

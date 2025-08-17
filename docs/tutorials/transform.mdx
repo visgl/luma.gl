@@ -5,8 +5,14 @@ import {TransformExample} from '@site/src/examples';
 
 This tutorial uses `BufferTransform` to update per-instance data on the GPU and render thousands of wandering triangles. The compute shader runs in a transform feedback pass before each draw.
 
+:::caution
+Tutorials are maintained on a best-effort basis and may not be fully up to date (contributions welcome).
+:::
+
 <DeviceTabs />
 <TransformExample />
+
+It is assumed you've set up your development environment as described in [Setup](/docs/tutorials).
 
 `BufferTransform` executes a small shader that reads from one set of buffers and
 writes results into another. By swapping those buffers each frame we can animate
@@ -16,10 +22,6 @@ positions to display thousands of triangles moving independently.
 The complete source for this example is shown below:
 
 ```typescript
-// luma.gl
-// SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
-
 import {Buffer, Framebuffer} from '@luma.gl/core';
 import {
   AnimationLoopTemplate,
@@ -30,6 +32,7 @@ import {
   makeRandomGenerator
 } from '@luma.gl/engine';
 import {picking} from '@luma.gl/shadertools';
+import {webgl2Adapter} from '@luma.gl/webgl';
 
 // Ensure repeatable rendertests
 const random = makeRandomGenerator();
@@ -146,17 +149,7 @@ void main()
 
 const NUM_INSTANCES = 1000;
 
-export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
-  static info = `
-<p>
-  Instanced triangles animated on the GPU using a luma.gl <code>BufferTransform</code> object.
-
-  This is a port of an example from
-  <a href="https://github.com/WebGLSamples/WebGL2Samples/blob/master/samples/transform_feedback_instanced.html">
-    WebGL2Samples
-  </a>
-`;
-
+class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   // Geometry of each object (a triangle)
   positionBuffer: Buffer;
 
@@ -289,50 +282,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
 
     this.renderModel.draw(renderPass);
-
-    // if (pickPosition) {
-    //   // use the center pixel location in device pixel range
-    //   const devicePixels = cssToDevicePixels(gl, pickPosition);
-    //   const deviceX = devicePixels.x + Math.floor(devicePixels.width / 2);
-    //   const deviceY = devicePixels.y + Math.floor(devicePixels.height / 2);
-    //   this.pickingFramebuffer.resize({width, height});
-    //   pickInstance(gl, deviceX, deviceY, this.renderModel, this.pickingFramebuffer);
-    // }
   }
 }
 
-/*
-function pickInstance(gl, pickX, pickY, model, framebuffer) {
-  if (framebuffer) {
-    framebuffer.clear({color: true, depth: true});
-  }
-  // Render picking colors
-  model.setUniforms({picking_uActive: 1});
-  model.draw({framebuffer});
-  model.setUniforms({picking_uActive: 0});
-
-  const color = readPixelsToArray(framebuffer, {
-    sourceX: pickX,
-    sourceY: pickY,
-    sourceWidth: 1,
-    sourceHeight: 1,
-    sourceFormat: GL.RGBA,
-    sourceType: GL.UNSIGNED_BYTE
-  });
-
-  if (color[0] + color[1] + color[2] > 0) {
-    model.updateModuleSettings({
-      pickingSelectedColor: color,
-      pickingHighlightColor: RED
-    });
-  } else {
-    model.updateModuleSettings({
-      pickingSelectedColor: null
-    });
-  }
-}
-*/
-
+const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {adapters: [webgl2Adapter]})
+animationLoop.start();
 ```
 
 Running the transform step entirely on the GPU lets the application animate large

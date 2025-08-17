@@ -5,8 +5,14 @@ import {LightingExample} from '@site/src/examples';
 
 Add Phong shading to a textured cube using luma.gl's shader module system.
 
+:::caution
+Tutorials are maintained on a best-effort basis and may not be fully up to date (contributions welcome).
+:::
+
 <DeviceTabs />
 <LightingExample />
+
+It is assumed you've set up your development environment as described in [Setup](/docs/tutorials).
 
 The base shaders handle geometry and texture sampling. Lighting calculations are
 delegated to shader modules which implement the Phong shading model and a
@@ -30,6 +36,8 @@ import {
 } from '@luma.gl/engine';
 import {lighting, phongMaterial, ShaderModule} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
+import {webgl2Adapter} from '@luma.gl/webgl';
+import {webgpuAdapter} from '@luma.gl/webgpu';
 
 const WGSL_SHADER = /* wgsl */ `
 struct Uniforms {
@@ -138,7 +146,7 @@ const app: ShaderModule<AppUniforms, AppUniforms> = {
 
 const eyePosition = [0, 0, 5];
 
-export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
+class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   model: Model;
   shaderInputs = new ShaderInputs<{
     app: typeof app.props;
@@ -195,6 +203,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     renderPass.end();
   }
 }
+
+const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {adapters: [webgpuAdapter, webgl2Adapter]})
+animationLoop.start();
 ```
 
 Each frame the animation loop updates the model and projection matrices, writes

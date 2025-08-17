@@ -8,6 +8,8 @@ This tutorial shows how to build reusable shader functionality with luma.gl's sh
 <DeviceTabs />
 <ShaderModulesExample />
 
+It is assumed you've set up your development environment as described in [Setup](/docs/tutorials).
+
 A shader module bundles reusable WGSL and GLSL snippets, plus any uniforms or
 functions it needs. The `color` module defined here converts HSV values to RGB
 and exposes a `setColor` helper. Two separate models import the module and supply
@@ -17,14 +19,12 @@ programs.
 The complete source for this example is shown below:
 
 ```typescript
-// luma.gl
-// SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
-
 import {NumberArray3} from '@math.gl/types';
 import {Buffer} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationProps, Model, ShaderInputs} from '@luma.gl/engine';
 import {ShaderModule} from '@luma.gl/shadertools';
+import {webgl2Adapter} from '@luma.gl/webgl';
+import {webgpuAdapter} from '@luma.gl/webgpu';
 
 // Base vertex and fragment shader code pairs
 
@@ -153,11 +153,7 @@ vec3 color_hsv2rgb(vec3 hsv) {
   }
 };
 
-export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
-  static info = `
-Re-using shader code with shader modules
-`;
-
+class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   model1: Model;
   shaderInputs1 = new ShaderInputs<{color: ColorModuleProps}>({color});
 
@@ -225,6 +221,8 @@ Re-using shader code with shader modules
   }
 }
 
+const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {adapters: [webgpuAdapter, webgl2Adapter]})
+animationLoop.start();
 ```
 
 Both triangles share the same base shaders while the `color` module handles HSV

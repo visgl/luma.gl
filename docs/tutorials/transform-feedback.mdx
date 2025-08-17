@@ -5,8 +5,14 @@ import {TransformFeedbackExample} from '@site/src/examples';
 
 This tutorial demonstrates animating geometry using transform feedback via the `BufferTransform` class. A compute shader rotates triangle vertices on the GPU each frame.
 
+:::caution
+Tutorials are maintained on a best-effort basis and may not be fully up to date (contributions welcome).
+:::
+
 <DeviceTabs />
 <TransformFeedbackExample />
+
+It is assumed you've set up your development environment as described in [Setup](/docs/tutorials).
 
 Two buffers store the triangle's positions. `BufferTransform` runs a small
 vertex shader that multiplies each position by a rotation matrix and writes the
@@ -66,11 +72,7 @@ void main() {
 }
 `;
 
-export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
-  static info = `
-Animation via transform feedback.
-`;
-
+class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   transform: BufferTransform;
   model: Model;
 
@@ -135,6 +137,8 @@ Animation via transform feedback.
   }
 }
 
+const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {adapters: [webgl2Adapter]})
+animationLoop.start();
 ```
 
 Keeping the rotation logic in a transform feedback pass avoids CPU involvement

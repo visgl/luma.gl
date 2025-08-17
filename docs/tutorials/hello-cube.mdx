@@ -5,8 +5,14 @@ import {HelloCubeExample} from '@site/src/examples';
 
 This tutorial demonstrates how to render a spinning textured cube using luma.gl's cross-platform rendering APIs.
 
+:::caution
+Tutorials are maintained on a best-effort basis and may not be fully up to date (contributions welcome). Working versions of these examples are found in the [`/examples/tutorials`](https://github.com/visgl/luma.gl/tree/master/examples/tutorials) directory of the luma.gl repository.
+:::
+
 <DeviceTabs />
 <HelloCubeExample />
+
+It is assumed you've set up your development environment as described in [Setup](/docs/tutorials).
 
 The cube shaders sample from a 2D texture and apply a model-view-projection
 matrix. A `UniformStore` tracks that matrix so it can be updated every frame as
@@ -20,14 +26,18 @@ inside an `AnimationLoopTemplate`.
 ```typescript
 import type {NumberArray, VariableShaderType} from '@luma.gl/core';
 import {Texture, UniformStore} from '@luma.gl/core';
-import type {AnimationProps} from '@luma.gl/engine';
 import {
   AnimationLoopTemplate,
+  makeAnimationLoop,
+  type AnimationProps,
   Model,
   CubeGeometry,
   loadImageBitmap,
   AsyncTexture
 } from '@luma.gl/engine';
+import {webgl2Adapter} from '@luma.gl/webgl';
+import {webgpuAdapter} from '@luma.gl/webgpu';
+
 import {Matrix4} from '@math.gl/core';
 
 const WGSL_SHADER = /* WGSL */ `
@@ -116,7 +126,7 @@ const app: {uniformTypes: Record<keyof AppUniforms, VariableShaderType>} = {
 
 const eyePosition = [0, 0, -4];
 
-export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
+class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   mvpMatrix = new Matrix4();
   viewMatrix = new Matrix4().lookAt({eye: eyePosition});
   model: Model;
@@ -175,6 +185,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     renderPass.end();
   }
 }
+
+const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {adapters: [webgpuAdapter, webgl2Adapter]})
+animationLoop.start();
 ```
 
 During rendering the animation loop recalculates the matrix, updates the uniform
@@ -182,4 +195,3 @@ buffer and draws the cube inside a render pass. The fragment shader samples the
 bound texture to shade each face.
 
 Running the application will display a rotating cube textured with the vis.gl logo.
-
