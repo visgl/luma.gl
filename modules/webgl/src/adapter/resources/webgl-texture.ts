@@ -203,6 +203,8 @@ export class WEBGLTexture extends Texture {
     const {width, height, depth, z = 0} = options;
     const {mipLevel = 0, byteOffset = 0, x = 0, y = 0} = options;
     const {glFormat, glType, compressed} = this;
+
+    // Target used for face updates, but not for binding
     const glTarget = getWebGLCubeFaceTarget(this.glTarget, this.dimension, z);
 
     const glParameters: GLValueParameters = !this.compressed
@@ -241,7 +243,7 @@ export class WEBGLTexture extends Texture {
       }
     });
 
-    this.gl.bindTexture(glTarget, null);
+    this.gl.bindTexture(this.glTarget, null);
   }
 
   readBuffer(options: TextureReadOptions = {}, buffer?: Buffer): Buffer {
