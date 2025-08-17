@@ -14,6 +14,7 @@ import './lib/pipeline-factory.spec';
 import './lib/shader-factory.spec';
 
 import './dynamic-texture/dynamic-texture.spec';
+import './dynamic-texture/mip-levels.spec';
 
 import './geometry/geometries.spec';
 import './geometry/geometry.spec';

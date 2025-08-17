@@ -202,8 +202,10 @@ export class DynamicTexture {
     // Auto-calculate the number of mip levels as a convenience
     // TODO - Should we clamp to 1-getMipLevelCount?
     const maxMips = this.device.getMipLevelCount(syncProps.width, syncProps.height);
-    syncProps.mipLevels =
-      this.props.mipLevels === 'auto' ? maxMips : Math.min(maxMips, this.props.mipLevels);
+    syncProps.mipLevels = Math.max(
+      1,
+      this.props.mipLevels === 'auto' ? maxMips : Math.min(maxMips, this.props.mipLevels)
+    );
 
     this.texture = this.device.createTexture(syncProps);
     this.sampler = this.texture.sampler;
