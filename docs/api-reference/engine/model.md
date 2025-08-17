@@ -102,30 +102,30 @@ const model = new Model(device, {
 
 ### `ModelProps`
 
-| Property              | Type                                    | Description                                                  |
-| --------------------- | --------------------------------------- | ------------------------------------------------------------ | ---------- | --------- | ------------------------------------- |
-| `source`              | `string`                                | WGSL source code containing both vertex and fragment stages. |
-| `vs?`                 | `string`                                | GLSL vertex shader source.                                   |
-| `fs?`                 | `string`                                | GLSL fragment shader source.                                 |
-| `modules`             | `ShaderModule[]`                        | Shader modules to apply.                                     |
-| `defines`             | `Record<string, boolean>`               | Module defines passed to shader assembler.                   |
-| `shaderInputs?`       | `ShaderInputs`                          | Pre-created uniform/binding store.                           |
-| `bindings?`           | `Record<string, Binding, AsyncTexture>` | Textures, samplers and uniform buffers.                      |
-| `parameters?`         | `RenderPipelineParameters`              | Pipeline parameters baked into the pipeline.                 |
-| `geometry?`           | `Geometry`                              | Geometry or mesh providing attributes and indices.           |
-| `isInstanced?`        | `boolean`                               | Use instanced rendering (auto-detected).                     |
-| `instanceCount?`      | `number`                                | Number of instances to render.                               |
-| `vertexCount?`        | `number`                                | Number of vertices to render.                                |
-| `indexBuffer?`        | `Buffer`                                | Index buffer for indexed rendering.                          |
-| `attributes?`         | `Record<string, Buffer>`                | Buffer-valued attributes.                                    |
-| `constantAttributes?` | `Record<string, TypedArray>`            | Constant attributes (WebGL only).                            |
-| `disableWarnings?`    | `boolean`                               | Suppress warnings for unused attributes or bindings.         |
-| `varyings?`           | `string[]`                              | WebGL transform feedback varyings.                           |
-| `transformFeedback?`  | `TransformFeedback`                     | WebGL transform feedback object.                             |
-| `debugShaders?`       | `'never'                                | 'errors'                                                     | 'warnings' | 'always'` | Display shader sources for debugging. |
-| `pipelineFactory?`    | `PipelineFactory`                       | Factory used to create `RenderPipeline` instances.           |
-| `shaderFactory?`      | `ShaderFactory`                         | Factory used to create `Shader` instances.                   |
-| `shaderAssembler?`    | `ShaderAssembler`                       | Assembles GLSL or WGSL from modules.                         |
+| Property              | Type                                            | Description                                                  |
+| --------------------- | ----------------------------------------------- | ------------------------------------------------------------ |
+| `source`              | `string`                                        | WGSL source code containing both vertex and fragment stages. |
+| `vs?`                 | `string`                                        | GLSL vertex shader source.                                   |
+| `fs?`                 | `string`                                        | GLSL fragment shader source.                                 |
+| `modules`             | `ShaderModule[]`                                | Shader modules to apply.                                     |
+| `defines`             | `Record<string, boolean>`                       | Module defines passed to shader assembler.                   |
+| `shaderInputs?`       | `ShaderInputs`                                  | Pre-created uniform/binding store.                           |
+| `bindings?`           | `Record<string, Binding, AsyncTexture>`         | Textures, samplers and uniform buffers.                      |
+| `parameters?`         | `RenderPipelineParameters`                      | Pipeline parameters baked into the pipeline.                 |
+| `geometry?`           | `Geometry`                                      | Geometry or mesh providing attributes and indices.           |
+| `isInstanced?`        | `boolean`                                       | Use instanced rendering (auto-detected).                     |
+| `instanceCount?`      | `number`                                        | Number of instances to render.                               |
+| `vertexCount?`        | `number`                                        | Number of vertices to render.                                |
+| `indexBuffer?`        | `Buffer`                                        | Index buffer for indexed rendering.                          |
+| `attributes?`         | `Record<string, Buffer>`                        | Buffer-valued attributes.                                    |
+| `constantAttributes?` | `Record<string, TypedArray>`                    | Constant attributes (WebGL only).                            |
+| `disableWarnings?`    | `boolean`                                       | Suppress warnings for unused attributes or bindings.         |
+| `varyings?`           | `string[]`                                      | WebGL transform feedback varyings.                           |
+| `transformFeedback?`  | `TransformFeedback`                             | WebGL transform feedback object.                             |
+| `debugShaders?`       | `'never' \| 'errors' \| 'warnings' \| 'always'` | Display shader sources for debugging.                        |
+| `pipelineFactory?`    | `PipelineFactory`                               | Factory used to create `RenderPipeline` instances.           |
+| `shaderFactory?`      | `ShaderFactory`                                 | Factory used to create `Shader` instances.                   |
+| `shaderAssembler?`    | `ShaderAssembler`                               | Assembles GLSL or WGSL from modules.                         |
 
 `ModelProps` also include [`RenderPipelineProps`](/docs/api-reference/core/resources/render-pipeline) such as `id`, `shaderLayout`, `bufferLayout`, `topology` and `userData`.
 
