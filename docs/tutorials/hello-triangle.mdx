@@ -3,182 +3,96 @@ import {HelloTriangleExample} from '@site/src/examples';
 
 # Hello Triangle
 
-This tutorial will demonstrate how to draw a triangle using luma.gl's high-level APIs.
+This tutorial demonstrates how to draw a triangle using luma.gl's cross-platform rendering APIs.
 
 :::caution
-The tutorial pages have not yet been updated for luma.gl v9. 
+Tutorials are maintained on a best-effort basis and may not be fully up to date (contributions welcome).
 :::
 
 <DeviceTabs />
 <HelloTriangleExample />
 
-It is assumed you've set up your development environment as described in
-[Getting Started](/docs/getting-started). Your `index.js` file should look like the following:
+It is assumed you've set up your development environment as described in [Setup](/docs/tutorials).
+
+We create a `Model` to render the triangle. This will be a recurring theme in all our tutorials. A `Model` can be thought of as gathering all the WebGL/WebGPU pieces necessary for a single draw call: render pipelines (shader programs), attribute buffers, uniforms, texture bindings etc. 
+
+The program uses a tiny vertex shader that relies on the built-in `vertex_index` to look up clip-space positions for the three vertices. A matching fragment shader fills the triangle with a solid color. Both WGSL and GLSL versions are provided so the example runs on WebGPU and WebGL without changes.
+
+The complete source for this example is shown below. It creates a `Model` with both WGSL and GLSL shaders and renders it inside an `AnimationLoopTemplate`. The animation loop simply opens a render pass, draws the model and ends the pass each frame.
 
 ```typescript
-import {AnimationLoop} from '@luma.gl/engine';
-import {clear} from '@luma.gl/webgl';
+import {AnimationLoopTemplate, AnimationProps, makeAnimationLoop, Model} from '@luma.gl/engine';
+import {webgl2Adapter} from '@luma.gl/webgl';
+import {webgpuAdapter} from '@luma.gl/webgpu';
 
-class AppAnimationLoop extends AnimationLoop ({
-  override onInitialize({device}) {
-    // Setup logic goes here
-  },
+const WGSL_SHADER = /* WGSL */ `
+@vertex
+fn vertexMain(@builtin(vertex_index) vertexIndex : u32) -> @builtin(position) vec4<f32> {
+  var positions = array<vec2<f32>, 3>(vec2(0.0, 0.5), vec2(-0.5, -0.5), vec2(0.5, -0.5));
+  return vec4<f32>(positions[vertexIndex], 0.0, 1.0);
+}
 
-  override onRender({device}) {
-    // Drawing logic goes here
-    clear(device, {color: [0, 0, 0, 1]});
-  }
-});
+@fragment
+fn fragmentMain() -> @location(0) vec4<f32> {
+  return vec4<f32>(1.0, 0.0, 0.0, 1.0);
+}
+`;
 
-const loop = new AppAnimationLoop();
-loop.start();
-```
+const VS_GLSL = /* glsl */ `
+#version 300 es
+const vec2 pos[3] = vec2[3](vec2(0.0f, 0.5f), vec2(-0.5f, -0.5f), vec2(0.5f, -0.5f));
+void main() {
+  gl_Position = vec4(pos[gl_VertexID], 0.0, 1.0);
+}
+`;
 
-First, we'll need to update our imports with the classes we'll be using, `Buffer` and `Model`:
+const FS_GLSL = /* glsl */ `
+#version 300 es
+precision highp float;
+layout(location = 0) out vec4 outColor;
+void main() {
+  outColor = vec4(1.0, 0.0, 0.0, 1.0);
+}
+`;
 
-```typescript
-import {AnimationLoop, Model} from '@luma.gl/engine';
-import {clear} from '@luma.gl/webgl';
-```
+class AppAnimationLoopTemplate extends AnimationLoopTemplate {
+  model: Model;
 
-Now let's create some buffers in the `onInitialize` method to hold our attribute data:
-
-```typescript
-  override onInitialize({device}) {
-    // Setup logic goes here
-    const positionBuffer = device.createBuffer(new Float32Array([
-      -0.5, -0.5,
-      0.5, -0.5,
-      0.0, 0.5
-    ]));
-
-    const colorBuffer = device.createBuffer(new Float32Array([
-      1.0, 0.0, 0.0,
-      0.0, 1.0, 0.0,
-      0.0, 0.0, 1.0
-    ]));
-  }
-```
-
-Next let's add the vertex and fragment shader code we'll be using to draw:
-
-```typescript
-  override onInitialize({device}) {
-    // Setup logic goes here
-
-    // Buffers...
-
-    const vs = `
-      attribute vec2 position;
-      attribute vec3 color;
-
-      out vec3 vColor;
-
-      void main() {
-        vColor = color;
-        gl_Position = vec4(position, 0.0, 1.0);
-      }
-    `;
-
-    const fs = `
-      in vec3 vColor;
-
-      void main() {
-        gl_FragColor = vec4(vColor, 1.0);
-      }
-    `;
-
-  }
-```
-
-As a final step in our initialization, we'll create a `Model` in `onInitialize`:
-
-```typescript
-  override onInitialize({device}) {
-    // Setup logic goes here
-
-    // Buffers...
-
-    // Shaders...
-
+  constructor({device}: AnimationProps) {
+    super();
     this.model = new Model(device, {
-      vs,
-      fs,
-      attributes: {
-        position: positionBuffer,
-        color: colorBuffer
+      source: WGSL_SHADER,
+      vs: VS_GLSL,
+      fs: FS_GLSL,
+      topology: 'triangle-list',
+      vertexCount: 3,
+      shaderLayout: {
+        attributes: [],
+        bindings: []
       },
-      vertexCount: 3
-    });
-
-    return {model};
-  }
-```
-
-A `Model` can be thought of as gathering all the WebGL pieces necessary for a single draw call: programs, attributes, uniforms. Also note that we return the `Model` instance we created. This will make it available to the `onRender` method.
-
-Our `onRender` method is comparitavely much simpler:
-
-```typescript
-  override onRender({device}) {
-    clear(device, {color: [0, 0, 0, 1]});
-    this.model.draw();
-  }
-```
-
-This clears the canvas and draws the `Model`. If all went well, you should see a tri-color triangle on a black background.
-
-The entire application should look like the following:
-
-```typescript
-import {AnimationLoop, Model} from '@luma.gl/engine';
-import {clear} from '@luma.gl/webgl';
-
-class AppAnimationLoop extends AnimationLoop {
-  override onInitialize({device}) {
-    const positionBuffer = device.createBuffer(new Float32Array([-0.5, -0.5, 0.5, -0.5, 0.0, 0.5]));
-
-    const colorBuffer = device.createBuffer(new Float32Array([1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]));
-
-    const vs = `
-      attribute vec2 position;
-      attribute vec3 color;
-
-      out vec3 vColor;
-
-      void main() {
-        vColor = color;
-        gl_Position = vec4(position, 0.0, 1.0);
+      parameters: {
+        depthFormat: 'depth24plus'
       }
-    `;
-
-    const fs = `
-      in vec3 vColor;
-
-      void main() {
-        gl_FragColor = vec4(vColor, 1.0);
-      }
-    `;
-
-    const model = new Model(device, {
-      vs,
-      fs,
-      attributes: {
-        position: positionBuffer,
-        color: colorBuffer
-      },
-      vertexCount: 3
     });
-
-    return {model};
-  },
-
-  override onRender({device, model}) {
-    clear(device, {color: [0, 0, 0, 1]});
-    model.draw();
   }
-};
 
-const loop = new AppAnimationLoop();
-loop.start();
+  override onFinalize() {
+    this.model.destroy();
+  }
+
+  override onRender({device}: AnimationProps) {
+    const renderPass = device.beginRenderPass({clearColor: [1, 1, 1, 1]});
+    this.model.draw(renderPass);
+    renderPass.end();
+  }
+}
+
+const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {adapters: [webgpuAdapter, webgl2Adapter]})
+animationLoop.start();
 ```
+
+The vertex shader uses built-in indices, so no vertex buffers are needed for this
+minimal example. The render loop clears the canvas and draws the model every
+frame.
+
+When the application runs you should see a red triangle rendered on a white background.

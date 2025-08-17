@@ -45,7 +45,8 @@ const webglDevice = luma.createDevice({type: 'webgl', createCanvasContext: {canv
 ```
 
 It is possible to register more than one device to create an application
-that can work in both WebGL and WebGPU environments. 
+that can work in both WebGL and WebGPU environments 
+(choosing what to use depending on what the current browser supports). 
 
 ```typescript
 import {luma} from '@luma.gl/core';
