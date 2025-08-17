@@ -204,9 +204,7 @@ export class DynamicTexture {
     const maxMips = this.device.getMipLevelCount(syncProps.width, syncProps.height);
     syncProps.mipLevels = Math.max(
       1,
-      this.props.mipLevels === 'auto'
-        ? maxMips
-        : Math.min(maxMips, this.props.mipLevels)
+      this.props.mipLevels === 'auto' ? maxMips : Math.min(maxMips, this.props.mipLevels)
     );
 
     this.texture = this.device.createTexture(syncProps);
