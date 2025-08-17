@@ -103,19 +103,19 @@ export class WebGPUTexture extends Texture {
       {
         source: options.image,
         origin: [options.sourceX, options.sourceY],
-        flipY: options.flipY
+        flipY: false // options.flipY
       },
       // destination: GPUImageCopyTextureTagged
       {
         texture: this.handle,
-        origin: [options.x, options.y, options.depth],
+        origin: [options.x, options.y, options.z],
         mipLevel: options.mipLevel,
         aspect: options.aspect,
         colorSpace: options.colorSpace,
         premultipliedAlpha: options.premultipliedAlpha
       },
       // copySize: GPUExtent3D
-      [options.width, options.height, 1] // depth is always 1 for 2D textures
+      [options.width, options.height, options.depth] // depth is always 1 for 2D textures
     );
     this.device.popErrorScope((error: GPUError) => {
       this.device.reportError(new Error(`copyExternalImage: ${error.message}`), this)();
