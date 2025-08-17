@@ -7,14 +7,16 @@ import {UniformStore, Framebuffer} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {
   AnimationLoopTemplate,
-  Geometry,
   SphereGeometry,
   Model,
   makeRandomGenerator,
   loadImageBitmap,
   AsyncTexture,
-  BackgroundTextureModel
+  BackgroundTextureModel,
+  ClipSpace,
+  getFragmentShaderForRenderPass
 } from '@luma.gl/engine';
+import {persistenceEffect} from './persistence-effect';
 import {Matrix4, Vector3, radians} from '@math.gl/core';
 
 // SPHERE SHADER
@@ -127,152 +129,6 @@ void main(void) {
 }
 `;
 
-// SCREEN QUAD SHADERS
-
-type ScreenQuadUniforms = {
-  resolution: NumberArray;
-};
-
-const screenQuad: {uniformTypes: Record<keyof ScreenQuadUniforms, VariableShaderType>} = {
-  uniformTypes: {
-    resolution: 'vec2<f32>'
-  }
-};
-
-const SCREEN_QUAD_MODULE_WGSL = /* WGSL */ `\
-fn getQuadVertex(vertexIndex : u32) -> vec2f {
-  // SCREEN QUAD
-  let positions = array(
-    // 1st triangle
-    vec2f( 0.0,  0.0),  // center
-    vec2f( 1.0,  0.0),  // right, center
-    vec2f( 0.0,  1.0),  // center, top
-    // 2st triangle
-    vec2f( 0.0,  1.0),  // center, top
-    vec2f( 1.0,  0.0),  // right, center
-    vec2f( 1.0,  1.0),  // right, top
-  );
-  return positions[vertexIndex];
-}
-`;
-
-const SCREEN_QUAD_WGSL = /* WGSL */ `\
-
-${SCREEN_QUAD_MODULE_WGSL}
-
-struct FragmentInputs {
-  @builtin(position) position: vec4f,
-  @location(0) texcoord: vec2f,
-};
-
-@vertex fn vertexMain(@builtin(vertex_index) vertexIndex : u32) -> FragmentInputs {
-  var outputs: FragmentInputs;
-  let xy = getQuadVertex(vertexIndex);
-  outputs.position = vec4f(xy, 0.0, 1.0);
-  outputs.texcoord = xy;
-  return outputs;
-}
-
-@group(0) @binding(0) var texture : texture_2d<f32>;
-@group(0) @binding(1) var sampler : sampler;
-
-@fragment fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4f {
-  return textureSample(texture, sampler, inputs.texcoord);
-}
-`;
-
-const SCREEN_QUAD_VS = /* glsl */ `\
-#version 300 es
-
-in vec2 aPosition;
-
-void main(void) {
-  gl_Position = vec4(aPosition, 0, 1);
-}
-`;
-
-const SCREEN_QUAD_FS = /* glsl */ `\
-#version 300 es
-
-precision highp float;
-
-uniform sampler2D uTexture;
-
-uniform screenQuadUniforms {
-  vec2 resolution;
-} screenQuad;
-
-out vec4 fragColor;
-
-void main(void) {
-  vec2 p = gl_FragCoord.xy/screenQuad.resolution.xy;
-  fragColor = texture(uTexture, p);
-}
-`;
-
-// PERSISTENCE SHADERS
-
-type PersistenceQuadUniforms = {
-  resolution: NumberArray;
-};
-
-const persistenceQuad: {uniformTypes: Record<keyof ScreenQuadUniforms, VariableShaderType>} = {
-  uniformTypes: {
-    resolution: 'vec2<f32>'
-  }
-};
-
-const PERSISTENCE_WGSL = /* WGSL */ `\
-
-${SCREEN_QUAD_MODULE_WGSL}
-
-struct FragmentInputs {
-  @builtin(position) position: vec4f,
-  @location(0) texcoord: vec2f,
-};
-
-@vertex fn vertexMain(@builtin(vertex_index) vertexIndex : u32) -> FragmentInputs {
-  var outputs: FragmentInputs;
-  let xy = getQuadVertex(vertexIndex);
-  outputs.position = vec4f(xy, 0.0, 1.0);
-  outputs.texcoord = xy;
-  return outputs;
-}
-
-@group(0) @binding(0) var sceneTexture : texture_2d<f32>;
-@group(0) @binding(1) var persistenceTexture : texture_2d<f32>;
-@group(0) @binding(2) var sampler : sampler;
-
-@fragment 
-fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4f {
-  let sceneColor = textureSample(sceneTexture, sampler, inputs.texcoord);
-  let persistenceColor = textureSample(persistenceTexture, sampler, inputs.texcoord);
-  return mix(sceneColor * 4.0, persistenceColor, 0.9);
-}
-`;
-
-const PERSISTENCE_FS = /* glsl */ `\
-#version 300 es
-
-precision highp float;
-
-uniform sampler2D uScene;
-uniform sampler2D uPersistence;
-
-uniform persistenceQuadUniforms {
-  vec2 resolution;
-} persistence;
-
-out vec4 fragColor;
-
-void main(void) {
-  vec2 p = gl_FragCoord.xy / persistence.resolution.xy;
-  vec4 cS = texture(uScene, p);
-  vec4 cP = texture(uPersistence, p);
-  fragColor = mix(cS*4.0, cP, 0.9);
-}
-`;
-
 const random = makeRandomGenerator();
 
 const CORE_COUNT = 64;
@@ -291,15 +147,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 </p>
 `;
 
-  // A single uniform store that manages uniforms for all our shaders
+  // A single uniform store that manages uniforms for our sphere shader
   uniformStore = new UniformStore<{
     sphere: SphereUniforms;
-    screenQuad: ScreenQuadUniforms;
-    persistenceQuad: PersistenceQuadUniforms;
   }>({
-    sphere,
-    screenQuad,
-    persistenceQuad
+    sphere
   });
 
   /** Model that renders a background texture into transparent areas of the screen */
@@ -312,8 +164,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   /** Model that  */
   mainFramebuffer: Framebuffer;
   pingpongFramebuffers: Framebuffer[];
-  screenQuad: Model;
-  persistenceQuad: Model;
+  screenPass: ClipSpace;
+  persistencePass: ClipSpace;
 
   constructor({device, width, height}: AnimationProps) {
     super();
@@ -377,50 +229,14 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       })
     ];
 
-    const QUAD_POSITIONS = [-1, -1, 1, -1, 1, 1, -1, -1, 1, 1, -1, 1];
-
-    const quadGeometry = new Geometry({
-      topology: 'triangle-list',
-      attributes: {
-        aPosition: {
-          value: new Float32Array(QUAD_POSITIONS),
-          size: 2
-        }
-      },
-      vertexCount: 6
+    const persistenceFS = getFragmentShaderForRenderPass({
+      shaderPass: persistenceEffect,
+      action: 'filter',
+      shadingLanguage: device.info.shadingLanguage
     });
 
-    this.screenQuad = new Model(device, {
-      id: 'quad',
-      source: SCREEN_QUAD_WGSL,
-      vs: SCREEN_QUAD_VS,
-      fs: SCREEN_QUAD_FS,
-      geometry: quadGeometry,
-      bindings: {
-        screenQuad: this.uniformStore.getManagedUniformBuffer(device, 'screenQuad')
-      },
-      parameters: {
-        depthWriteEnabled: true,
-        depthCompare: 'less-equal',
-        cullMode: 'back'
-      }
-    });
-
-    this.persistenceQuad = new Model(device, {
-      id: 'persistence-quad',
-      source: PERSISTENCE_WGSL,
-      vs: SCREEN_QUAD_VS,
-      fs: PERSISTENCE_FS,
-      geometry: quadGeometry,
-      bindings: {
-        persistenceQuad: this.uniformStore.getManagedUniformBuffer(device, 'persistenceQuad')
-      },
-      parameters: {
-        depthWriteEnabled: true,
-        depthCompare: 'less-equal',
-        cullMode: 'back'
-      }
-    });
+    this.screenPass = new ClipSpace(device, {});
+    this.persistencePass = new ClipSpace(device, {fs: persistenceFS, modules: [persistenceEffect]});
 
     const dt = 0.0125;
 
@@ -458,8 +274,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.mainFramebuffer.destroy();
     this.pingpongFramebuffers[0].destroy();
     this.pingpongFramebuffers[1].destroy();
-    this.screenQuad.destroy();
-    this.persistenceQuad.destroy();
+    this.screenPass.destroy();
+    this.persistencePass.destroy();
   }
 
   onRender({device, tick, width, height, aspect}: AnimationProps) {
@@ -534,25 +350,19 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       framebuffer: currentFramebuffer,
       clearColor: [0, 0, 0, 0]
     });
-    this.persistenceQuad.setBindings({
-      uScene: this.mainFramebuffer.colorAttachments[0],
-      uPersistence: nextFramebuffer.colorAttachments[0]
+    this.persistencePass.setBindings({
+      sourceTexture: this.mainFramebuffer.colorAttachments[0],
+      persistenceTexture: nextFramebuffer.colorAttachments[0]
     });
-    this.uniformStore.setUniforms({persistenceQuad: {resolution: [width, height]}});
-    this.uniformStore.updateUniformBuffers();
-
-    this.persistenceQuad.draw(persistenceRenderPass);
+    this.persistencePass.draw(persistenceRenderPass);
     persistenceRenderPass.end();
 
     // Copy the current framebuffer to screen
     const screenRenderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
-    this.screenQuad.setBindings({
-      uTexture: currentFramebuffer.colorAttachments[0]
+    this.screenPass.setBindings({
+      sourceTexture: currentFramebuffer.colorAttachments[0]
     });
-    this.uniformStore.setUniforms({screenQuad: {resolution: [width, height]}});
-    this.uniformStore.updateUniformBuffers();
-
-    this.screenQuad.draw(screenRenderPass);
+    this.screenPass.draw(screenRenderPass);
     this.backgroundTextureModel.draw(screenRenderPass);
     screenRenderPass.end();
   }
