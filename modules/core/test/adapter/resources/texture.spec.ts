@@ -63,10 +63,10 @@ test('Texture#copyImageData updates correct cubemap face on WebGL', async t => {
     height: 1
   });
 
-  const gl = (device as WebGLDevice).gl;
+  const gl = device.gl;
   const calls: number[] = [];
   const original = gl.texSubImage2D.bind(gl);
-  (gl as any).texSubImage2D = function(target: number, ...args: any[]) {
+  (gl as any).texSubImage2D = function (target: number, ...args: any[]) {
     calls.push(target);
     return original(target, ...args);
   };
