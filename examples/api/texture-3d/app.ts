@@ -61,7 +61,7 @@ out vec3 vUVW;
 void main() {
   vUVW = position.xyz + 0.5;
   gl_Position = app.mvpMatrix * vec4(position, 1.0);
-  gl_PointSize = 2.0;
+  gl_PointSize = 1.0;
 }`;
 
 const fs = /* glsl */ `\
@@ -139,12 +139,13 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       height: TEXTURE_DIMENSIONS,
       depth: TEXTURE_DIMENSIONS,
       format: 'r8unorm',
-      mipmaps: true,
       sampler: {
         magFilter: 'nearest',
         minFilter: 'nearest',
-        mipmapFilter: 'nearest'
-      }
+        mipmapFilter: 'nearest',
+        addressModeU: 'repeat',
+        addressModeV: 'repeat',
+        addressModeW: 'repeat'      }
     });
 
     this.cloud = new Model(device, {
