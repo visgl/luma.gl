@@ -104,26 +104,28 @@ export class BackgroundTextureModel extends ClipSpace {
   }
 
   setTexture(backgroundTexture: Texture | DynamicTexture): void {
-    const [screenWidth, screenHeight] = this.device
-      .getCanvasContext()
-      .getDrawingBufferSize();
-    const textureWidth = backgroundTexture.width;
-    const textureHeight = backgroundTexture.height;
-    const screenAspect = screenWidth / screenHeight;
-    const textureAspect = textureWidth / textureHeight;
+    this.setBindings({backgroundTexture});
 
-    let scaleX = 1;
-    let scaleY = 1;
-    if (screenAspect > textureAspect) {
-      scaleY = screenAspect / textureAspect;
-    } else {
-      scaleX = textureAspect / screenAspect;
-    }
+    this.shaderInputs.setProps({background: {scale: [1, 1]}});
 
-    this.shaderInputs.setProps({background: {scale: [scaleX, scaleY]}});
+    backgroundTexture.ready.then(() => {
+      const [screenWidth, screenHeight] = this.device.getCanvasContext().getDrawingBufferSize();
 
-    this.setBindings({
-      backgroundTexture
+      const textureWidth = backgroundTexture.width;
+      const textureHeight = backgroundTexture.height;
+
+      const screenAspect = screenWidth / screenHeight;
+      const textureAspect = textureWidth / textureHeight;
+
+      let scaleX = 1;
+      let scaleY = 1;
+      if (screenAspect > textureAspect) {
+        scaleY = screenAspect / textureAspect;
+      } else {
+        scaleX = textureAspect / screenAspect;
+      }
+
+      this.shaderInputs.setProps({background: {scale: [scaleX, scaleY]}});
     });
   }
 

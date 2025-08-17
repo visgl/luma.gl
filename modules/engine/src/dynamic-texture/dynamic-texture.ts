@@ -250,6 +250,13 @@ export class DynamicTexture {
     this.destroyed = true;
   }
 
+  get width(): number {
+    return this.texture?.width || 0;
+  }
+  get height(): number {
+    return this.texture?.height || 0;
+  }
+
   generateMipmaps(): void {
     // if (this.device.type === 'webgl') {
     this.texture.generateMipmapsWebGL();

@@ -171,6 +171,9 @@ export abstract class Texture extends Resource<TextureProps> {
   /** Default view for this texture */
   abstract view: TextureView;
 
+  ready = Promise.resolve();
+  isReady = true;
+
   /** "Time" of last update. Monotonically increasing timestamp. TODO move to DynamicTexture? */
   updateTimestamp: number;
 
