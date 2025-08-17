@@ -66,7 +66,7 @@ test('gltf#parseGLTFLights - point', t => {
   t.end();
 });
 
-test.only('gltf#parseGLTFLights - missing extension', t => {
+test('gltf#parseGLTFLights - missing extension', t => {
   const gltf: GLTFPostprocessed = {
     nodes: [],
     scenes: []
