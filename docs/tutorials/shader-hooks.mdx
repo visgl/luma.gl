@@ -8,6 +8,11 @@ Shader hooks let shader modules inject code into designated points in a shader. 
 <DeviceTabs />
 <ShaderHooksExample />
 
+Hooks act like named callbacks within shader code. The base vertex shader calls
+`OFFSET_POSITION`, and modules supply implementations that modify the position.
+By attaching different modules to each model, one triangle is nudged left while
+the other is pushed right.
+
 The complete source for this example is shown below:
 
 ```typescript
@@ -158,3 +163,7 @@ Modifying shader behavior with shader hooks
 }
 
 ```
+
+The `ShaderAssembler` gathers hook implementations from attached modules and
+patches them into the base shader at build time. Hooks allow modules to customize
+behavior without modifying original shader sources.

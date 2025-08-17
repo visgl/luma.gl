@@ -8,6 +8,11 @@ This tutorial uses `BufferTransform` to update per-instance data on the GPU and 
 <DeviceTabs />
 <TransformExample />
 
+`BufferTransform` executes a small shader that reads from one set of buffers and
+writes results into another. By swapping those buffers each frame we can animate
+attributes entirely on the GPU. The render shader then consumes the updated
+positions to display thousands of triangles moving independently.
+
 The complete source for this example is shown below:
 
 ```typescript
@@ -329,3 +334,6 @@ function pickInstance(gl, pickX, pickY, model, framebuffer) {
 */
 
 ```
+
+Running the transform step entirely on the GPU lets the application animate large
+numbers of instances without expensive CPU–GPU transfers.

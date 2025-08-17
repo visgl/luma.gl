@@ -8,7 +8,13 @@ This tutorial illustrates instanced drawing with luma.gl using both WGSL and GLS
 <DeviceTabs />
 <HelloInstancingExample />
 
-The code below creates a `Model` with per-instance attributes to draw four colored triangles inside an `AnimationLoopTemplate`.
+Instancing lets the GPU draw many copies of the same geometry with a single draw
+call. In this sample each triangle shares the same vertex data while per-instance
+attributes provide unique colors and offsets. A small `color` shader module passes
+those colors from the vertex shader to the fragment shader.
+
+The code below creates a `Model` with per-instance attributes to draw four colored
+triangles inside an `AnimationLoopTemplate`.
 
 ```typescript
 import {Buffer} from '@luma.gl/core';
@@ -150,6 +156,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 }
 ```
+
+Vertex positions are stored once in a buffer while two additional buffers supply
+per-instance colors and offsets. The buffer layout marks those attributes with
+`stepMode: 'instance'` so they advance once per triangle. A single draw call then
+renders four instances in different screen quadrants.
 
 Running the application will draw four colored triangles using instancing.
 

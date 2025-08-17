@@ -8,6 +8,12 @@ This tutorial shows how to build reusable shader functionality with luma.gl's sh
 <DeviceTabs />
 <ShaderModulesExample />
 
+A shader module bundles reusable WGSL and GLSL snippets, plus any uniforms or
+functions it needs. The `color` module defined here converts HSV values to RGB
+and exposes a `setColor` helper. Two separate models import the module and supply
+different HSV values, demonstrating how module code can be shared across
+programs.
+
 The complete source for this example is shown below:
 
 ```typescript
@@ -220,3 +226,7 @@ Re-using shader code with shader modules
 }
 
 ```
+
+Both triangles share the same base shaders while the `color` module handles HSV
+conversion and color passing. Modules keep shader logic organized and allow
+applications to compose effects from small, reusable pieces.

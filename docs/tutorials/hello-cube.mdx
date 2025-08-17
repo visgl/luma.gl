@@ -8,7 +8,14 @@ This tutorial demonstrates how to render a spinning textured cube using luma.gl'
 <DeviceTabs />
 <HelloCubeExample />
 
-The complete source for this example is shown below. It builds a `Model` with WGSL and GLSL shaders, manages uniforms with a `UniformStore`, and draws a `CubeGeometry` inside an `AnimationLoopTemplate`.
+The cube shaders sample from a 2D texture and apply a model-view-projection
+matrix. A `UniformStore` tracks that matrix so it can be updated every frame as
+the cube rotates. The texture is loaded asynchronously and bound through the
+model's `bindings` property along with the uniform buffer.
+
+The complete source for this example is shown below. It builds a `Model` with WGSL
+and GLSL shaders, manages uniforms with a `UniformStore`, and draws a `CubeGeometry`
+inside an `AnimationLoopTemplate`.
 
 ```typescript
 import type {NumberArray, VariableShaderType} from '@luma.gl/core';
@@ -169,6 +176,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 }
 ```
+
+During rendering the animation loop recalculates the matrix, updates the uniform
+buffer and draws the cube inside a render pass. The fragment shader samples the
+bound texture to shade each face.
 
 Running the application will display a rotating cube textured with the vis.gl logo.
 

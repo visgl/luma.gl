@@ -8,6 +8,11 @@ This tutorial demonstrates animating geometry using transform feedback via the `
 <DeviceTabs />
 <TransformFeedbackExample />
 
+Two buffers store the triangle's positions. `BufferTransform` runs a small
+vertex shader that multiplies each position by a rotation matrix and writes the
+result into the alternate buffer. After the transform step the buffers swap and
+the scene is rendered with the updated positions.
+
 The complete source for this example is shown below:
 
 ```typescript
@@ -131,3 +136,6 @@ Animation via transform feedback.
 }
 
 ```
+
+Keeping the rotation logic in a transform feedback pass avoids CPU involvement
+and lets the triangle animate smoothly as GPU buffers swap each frame.
