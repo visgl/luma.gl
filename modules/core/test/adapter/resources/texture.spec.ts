@@ -48,6 +48,39 @@ test('Texture#createView returns a TextureView', async t => {
 
 const RGBA8_DATA = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]);
 
+test('Texture#copyImageData updates correct cubemap face on WebGL', async t => {
+  const device = await getWebGLTestDevice();
+  if (!device) {
+    t.comment('WebGL not available');
+    t.end();
+    return;
+  }
+
+  const tex = device.createTexture({
+    dimension: 'cube',
+    format: 'rgba8unorm',
+    width: 1,
+    height: 1
+  });
+
+  const gl = (device as WebGLDevice).gl;
+  const calls: number[] = [];
+  const original = gl.texSubImage2D.bind(gl);
+  (gl as any).texSubImage2D = function(target: number, ...args: any[]) {
+    calls.push(target);
+    return original(target, ...args);
+  };
+
+  const data = new Uint8Array([0, 0, 0, 0]);
+  tex.copyImageData({data, z: 1});
+
+  (gl as any).texSubImage2D = original;
+  tex.destroy();
+
+  t.equal(calls[0], GL.TEXTURE_CUBE_MAP_NEGATIVE_X, 'updates specified face');
+  t.end();
+});
+
 test('Texture#writeData & readDataAsync round-trip', async t => {
   for (const device of await getTestDevices()) {
     t.comment(`Testing ${device.type}`);
