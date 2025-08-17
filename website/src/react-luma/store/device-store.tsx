@@ -30,7 +30,6 @@ export async function createDevice(type: 'webgl' | 'webgpu'): Promise<Device> {
       adapters: [webgl2Adapter, webgpuAdapter],
       type,
       height: 0,
-      // @ts-expect-error
       createCanvasContext: {
         container: getCanvasContainer()
       }
@@ -55,4 +54,4 @@ export const useStore = create<Store>(set => ({
 }));
 
 // Initialize store
-useStore.getState().setDeviceType('webgl');
+useStore.getState().setDeviceType('webgpu');
