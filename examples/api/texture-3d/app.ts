@@ -145,7 +145,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         mipmapFilter: 'nearest',
         addressModeU: 'repeat',
         addressModeV: 'repeat',
-        addressModeW: 'repeat'      }
+        addressModeW: 'repeat'
+      }
     });
 
     this.cloud = new Model(device, {
