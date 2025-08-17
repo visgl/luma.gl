@@ -177,6 +177,7 @@ fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
   let color = textureSample(prismTexture, prismTextureSampler, vec2(inputs.uv.x, 1.0 - inputs.uv.y));
   let reflectedDir = reflect(normalize(inputs.position - app.eyePosition), inputs.normal);
   let reflectedColor = textureSample(cubeTexture, cubeTextureSampler, reflectedDir);
+
   return mix(color, reflectedColor, 0.8);
 }
     `;
@@ -227,10 +228,10 @@ uniform sampler2D prismTexture;
 uniform samplerCube cubeTexture;
 
 void main(void) {
-  vec4 fragColor = texture(prismTexture, vec2(vUV.x, 1.0 - vUV.y));
-  // vec3 reflectedDir = reflect(normalize(vPosition - app.eyePosition), vNormal);
-  // vec4 reflectedColor = texture(cubeTexture, reflectedDir);
-  // fragColor = mix(fragColor, reflectedColor, 0.8);
+  vec4 color = texture(prismTexture, vec2(vUV.x, 1.0 - vUV.y));
+  vec3 reflectedDir = reflect(normalize(vPosition - app.eyePosition), vNormal);
+  vec4 reflectedColor = texture(cubeTexture, reflectedDir);
+  fragColor = mix(color, reflectedColor, 0.8);
 }
   `;
 }
