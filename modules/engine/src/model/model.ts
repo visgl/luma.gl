@@ -334,9 +334,6 @@ export class Model {
     if (props.transformFeedback) {
       this.transformFeedback = props.transformFeedback;
     }
-
-    // Catch any access to non-standard props
-    Object.seal(this);
   }
 
   destroy(): void {

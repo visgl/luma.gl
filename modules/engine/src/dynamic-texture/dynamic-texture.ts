@@ -129,7 +129,7 @@ export class DynamicTexture {
   // @ts-expect-error
   view: TextureView;
 
-  readonly ready: Promise<void>;
+  readonly ready: Promise<Texture>;
   isReady: boolean = false;
   destroyed: boolean = false;
 
@@ -163,10 +163,10 @@ export class DynamicTexture {
       props.mipLevels = 'auto';
     }
 
-    this.ready = new Promise<void>((resolve, reject) => {
+    this.ready = new Promise<Texture>((resolve, reject) => {
       this.resolveReady = () => {
         this.isReady = true;
-        resolve();
+        resolve(this.texture);
       };
       this.rejectReady = reject;
     });
