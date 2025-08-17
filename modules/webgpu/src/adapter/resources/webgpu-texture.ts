@@ -115,7 +115,7 @@ export class WebGPUTexture extends Texture {
         premultipliedAlpha: options.premultipliedAlpha
       },
       // copySize: GPUExtent3D
-      [options.width, options.height, 0] // options.depth
+      [options.width, options.height, 1] // depth is always 1 for 2D textures
     );
     this.device.popErrorScope((error: GPUError) => {
       this.device.reportError(new Error(`copyExternalImage: ${error.message}`), this)();
