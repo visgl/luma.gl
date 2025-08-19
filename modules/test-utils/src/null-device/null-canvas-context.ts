@@ -31,7 +31,7 @@ export class NullCanvasContext extends CanvasContext {
     this._updateDevice();
   }
 
-  getCurrentFramebuffer(): NullFramebuffer {
+  _getCurrentFramebuffer(): NullFramebuffer {
     // Setting handle to null returns a reference to the default framebuffer
     this._framebuffer = this._framebuffer || new NullFramebuffer(this.device, {handle: null});
     return this._framebuffer;

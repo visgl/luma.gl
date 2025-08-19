@@ -106,11 +106,18 @@ export abstract class CanvasContext {
   /** Height of drawing buffer: automatically tracks this.pixelHeight if props.autoResize is true */
   drawingBufferHeight: number;
 
+  /** Resolves when the canvas is initialized, i.e. when the ResizeObserver has updated the pixel size */
   protected _initializedResolvers = withResolvers<void>();
+  /** ResizeObserver to track canvas size changes */
   protected readonly _resizeObserver: ResizeObserver | undefined;
+  /** IntersectionObserver to track canvas visibility changes */
   protected readonly _intersectionObserver: IntersectionObserver | undefined;
-  protected _position: [number, number];
+  /** Position of the canvas in the document, updated by a timer */
+  protected _position: [number, number] = [0, 0];
+  /** Whether this canvas context has been destroyed */
   protected destroyed = false;
+  /** Whether the drawing buffer size needs to be resized (deferred resizing to avoid flicker) */
+  protected _needsDrawingBufferResize: boolean = true;
 
   abstract get [Symbol.toStringTag](): string;
 
@@ -200,11 +207,19 @@ export abstract class CanvasContext {
   }
 
   /** Returns a framebuffer with properly resized current 'swap chain' textures */
-  abstract getCurrentFramebuffer(options?: {
+  getCurrentFramebuffer(options?: {
     depthStencilFormat?: TextureFormatDepthStencil | false;
-  }): Framebuffer;
+  }): Framebuffer {
+    this._reizeDrawingBufferIfNeeded();
+    return this._getCurrentFramebuffer(options);
+  }
 
   // SIZE METHODS
+
+    /** Returns a framebuffer with properly resized current 'swap chain' textures */
+  abstract _getCurrentFramebuffer(options?: {
+    depthStencilFormat?: TextureFormatDepthStencil | false;
+  }): Framebuffer;
 
   /**
    * Returns the size covered by the canvas in CSS pixels
@@ -239,13 +254,30 @@ export abstract class CanvasContext {
     return [maxTextureDimension, maxTextureDimension];
   }
 
-  /** Update the canvas drawing buffer size. Called automatically if props.autoResize is true. */
+  /**
+   * Update the canvas drawing buffer size. 
+   * @note - Called automatically if props.autoResize is true. 
+   * @note - Defers update of drawing buffer size until framebuffer is requested to avoid flicker 
+   * (resizing clears the drawing buffer)!
+   */
   setDrawingBufferSize(width: number, height: number) {
-    this.canvas.width = width;
-    this.canvas.height = height;
+    // TODO(ib) - temporarily makes drawingBufferWidth/Height out of sync with canvas.width/height, could that cause issues?
+    this.drawingBufferWidth = Math.floor(width);
+    this.drawingBufferHeight = Math.floor(height);
+    this._needsDrawingBufferResize = true;
+  }
 
-    this.drawingBufferWidth = width;
-    this.drawingBufferHeight = height;
+  _reizeDrawingBufferIfNeeded() {
+    if (this._needsDrawingBufferResize) {
+      this._needsDrawingBufferResize = false;
+      const sizeChanged =
+         this.drawingBufferWidth !== this.canvas.width ||
+          this.drawingBufferHeight !== this.canvas.height;
+      if (sizeChanged) {
+        this.canvas.width = this.drawingBufferWidth;
+        this.canvas.height = this.drawingBufferHeight;
+      }
+    }
   }
 
   /**

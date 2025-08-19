@@ -48,13 +48,13 @@ export class WebGPUCanvasContext extends CanvasContext {
   }
 
   /** Update framebuffer with properly resized "swap chain" texture views */
-  getCurrentFramebuffer(
+  _getCurrentFramebuffer(
     options: {depthStencilFormat?: TextureFormatDepthStencil | false} = {
       depthStencilFormat: 'depth24plus'
     }
   ): WebGPUFramebuffer {
     // Wrap the current canvas context texture in a luma.gl texture
-    const currentColorAttachment = this.getCurrentTexture();
+    const currentColorAttachment = this._getCurrentTexture();
     // TODO - temporary debug code
     if (
       currentColorAttachment.width !== this.drawingBufferWidth ||
@@ -101,7 +101,7 @@ export class WebGPUCanvasContext extends CanvasContext {
   }
 
   /** Wrap the current canvas context texture in a luma.gl texture */
-  getCurrentTexture(): WebGPUTexture {
+  _getCurrentTexture(): WebGPUTexture {
     const handle = this.handle.getCurrentTexture();
     return this.device.createTexture({
       id: `${this.id}#color-texture`,
