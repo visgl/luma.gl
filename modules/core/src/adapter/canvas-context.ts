@@ -210,16 +210,11 @@ export abstract class CanvasContext {
   getCurrentFramebuffer(options?: {
     depthStencilFormat?: TextureFormatDepthStencil | false;
   }): Framebuffer {
-    this._reizeDrawingBufferIfNeeded();
+    this._resizeDrawingBufferIfNeeded();
     return this._getCurrentFramebuffer(options);
   }
 
   // SIZE METHODS
-
-    /** Returns a framebuffer with properly resized current 'swap chain' textures */
-  abstract _getCurrentFramebuffer(options?: {
-    depthStencilFormat?: TextureFormatDepthStencil | false;
-  }): Framebuffer;
 
   /**
    * Returns the size covered by the canvas in CSS pixels
@@ -255,9 +250,9 @@ export abstract class CanvasContext {
   }
 
   /**
-   * Update the canvas drawing buffer size. 
-   * @note - Called automatically if props.autoResize is true. 
-   * @note - Defers update of drawing buffer size until framebuffer is requested to avoid flicker 
+   * Update the canvas drawing buffer size.
+   * @note - Called automatically if props.autoResize is true.
+   * @note - Defers update of drawing buffer size until framebuffer is requested to avoid flicker
    * (resizing clears the drawing buffer)!
    */
   setDrawingBufferSize(width: number, height: number) {
@@ -265,19 +260,6 @@ export abstract class CanvasContext {
     this.drawingBufferWidth = Math.floor(width);
     this.drawingBufferHeight = Math.floor(height);
     this._needsDrawingBufferResize = true;
-  }
-
-  _reizeDrawingBufferIfNeeded() {
-    if (this._needsDrawingBufferResize) {
-      this._needsDrawingBufferResize = false;
-      const sizeChanged =
-         this.drawingBufferWidth !== this.canvas.width ||
-          this.drawingBufferHeight !== this.canvas.height;
-      if (sizeChanged) {
-        this.canvas.width = this.drawingBufferWidth;
-        this.canvas.height = this.drawingBufferHeight;
-      }
-    }
   }
 
   /**
@@ -343,7 +325,12 @@ export abstract class CanvasContext {
    * Can be called after changes to size or props,
    * to give implementation an opportunity to update configurations.
    */
-  protected abstract _updateDevice(): void;
+  protected abstract _configureDevice(): void;
+
+  /** Returns a framebuffer with properly resized current 'swap chain' textures */
+  protected abstract _getCurrentFramebuffer(options?: {
+    depthStencilFormat?: TextureFormatDepthStencil | false;
+  }): Framebuffer;
 
   // IMPLEMENTATION
 
@@ -411,6 +398,7 @@ export abstract class CanvasContext {
     this.device.props.onResize(this, {oldPixelSize});
   }
 
+  /** Initiate a deferred update for the canvas drawing buffer size */
   protected _updateDrawingBufferSize() {
     // Update the canvas drawing buffer size
     if (this.props.autoResize) {
@@ -422,9 +410,6 @@ export abstract class CanvasContext {
       } else {
         this.setDrawingBufferSize(this.cssWidth, this.cssHeight);
       }
-
-      // Inform the subclass
-      this._updateDevice();
     }
 
     // Resolve the initialized promise
@@ -432,6 +417,23 @@ export abstract class CanvasContext {
     this.isInitialized = true;
 
     this.updatePosition();
+  }
+
+  /** Perform a deferred resize of the drawing buffer if needed */
+  _resizeDrawingBufferIfNeeded() {
+    if (this._needsDrawingBufferResize) {
+      this._needsDrawingBufferResize = false;
+      const sizeChanged =
+        this.drawingBufferWidth !== this.canvas.width ||
+        this.drawingBufferHeight !== this.canvas.height;
+      if (sizeChanged) {
+        // Update the canvas size
+        this.canvas.width = this.drawingBufferWidth;
+        this.canvas.height = this.drawingBufferHeight;
+        // Inform the subclass: WebGPU needs to call canvascontext.configure()
+        this._configureDevice();
+      }
+    }
   }
 
   /** Monitor DPR changes */
