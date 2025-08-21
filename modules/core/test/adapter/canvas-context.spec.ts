@@ -24,7 +24,7 @@ class TestCanvasContext extends CanvasContext {
     throw new Error('test');
   }
   updateSize() {}
-  protected override _updateDevice(): void {
+  protected override _configureDevice(): void {
     // Mock update device
   }
 }

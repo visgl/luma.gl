@@ -33,7 +33,6 @@ v9.2 brings full WebGPU support. Some additional deprecations and breaking chang
 - `canvasContext.devicePixelWidth` and `canvasContext.devicePixelHeight` are now kept updated to exact device pixel size of underlying canvas. 
 - Instead `canvasContext.setDrawingBufferSize()` to explicitly control drawing buffer size, if not using `CanvasContextProps.autoResize` 
 - A new `DeviceProps.onResize` callback can be used to react to changes.
-- `CanvasContextProps.useDevicePixelRatio` no longer accepts `number`s, just a `boolean` value. 
 
 **Minor changes**
 - `core`: The shader types has been refactored, some shader type names have changed. These are typically not used directly by applications.
