@@ -1259,7 +1259,7 @@ ERROR: \'project_scale\' : no matching overloaded function found
 
 `;
 
-test.only('formatGLSLError', t => {
+test('formatGLSLError', t => {
   let formattedLog = formatCompilerLog(ERROR_LOG, SHADER_SOURCE, {showSourceCode: 'issues'});
   compareStrings(t, formattedLog, EXPECTED, 'formatGLSLError generated correct error');
   t.equal(formattedLog, EXPECTED, 'formatGLSLError generated correct error');
