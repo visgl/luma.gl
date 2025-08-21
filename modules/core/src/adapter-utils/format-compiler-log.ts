@@ -3,7 +3,6 @@
 // Copyright (c) vis.gl contributors
 
 import type {CompilerMessage} from '../adapter/types/compiler-message';
-import {assertDefined} from '../utils/assert';
 
 /** @returns annotated errors or warnings */
 export function formatCompilerLog(
@@ -24,24 +23,30 @@ export function formatCompilerLog(
       // Parse the error - note: browser and driver dependent
       let currentMessageIndex = 0;
       for (let lineNum = 1; lineNum <= lines.length; lineNum++) {
-        const line = assertDefined(lines[lineNum - 1]);
-        const currentMessage = assertDefined(log[currentMessageIndex]);
-        formattedLog += getNumberedLine(line, lineNum, options);
+        const line = lines[lineNum - 1];
+        const currentMessage = log[currentMessageIndex];
+        if (line && currentMessage) {
+          formattedLog += getNumberedLine(line, lineNum, options);
+        }
         while (log.length > currentMessageIndex && currentMessage.lineNum === lineNum) {
-          const message = assertDefined(log[currentMessageIndex++]);
-          formattedLog += formatCompilerMessage(message, lines, message.lineNum, {
-            ...options,
-            inlineSource: false
-          });
+          const message = log[currentMessageIndex++];
+          if (message) {
+            formattedLog += formatCompilerMessage(message, lines, message.lineNum, {
+              ...options,
+              inlineSource: false
+            });
+          }
         }
       }
       // Print any remaining messages
       while (log.length > currentMessageIndex) {
-        const message = assertDefined(log[currentMessageIndex++]);
-        formattedLog += formatCompilerMessage(message, [], 0, {
-          ...options,
-          inlineSource: false
-        });
+        const message = log[currentMessageIndex++];
+        if (message) {
+          formattedLog += formatCompilerMessage(message, [], 0, {
+            ...options,
+            inlineSource: false
+          });
+        }
       }
       return formattedLog;
 
