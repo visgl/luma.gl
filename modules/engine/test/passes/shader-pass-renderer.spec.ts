@@ -50,7 +50,11 @@ test('ShaderPassRenderer#renderToTexture', async t => {
   t.end();
 });
 
-async function readTexture(device: Device, texture: Texture, byteLength: number): Promise<Uint8Array> {
+async function readTexture(
+  device: Device,
+  texture: Texture,
+  byteLength: number
+): Promise<Uint8Array> {
   const buffer = device.createBuffer({byteLength});
   const encoder = device.createCommandEncoder();
   encoder.copyTextureToBuffer({sourceTexture: texture, destinationBuffer: buffer});
