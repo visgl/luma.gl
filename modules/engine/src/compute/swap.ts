@@ -41,14 +41,16 @@ export class SwapFramebuffers extends Swap<Framebuffer> {
   constructor(device: Device, props: FramebufferProps) {
     props = {...props};
 
+    const {width = 1, height = 1} = props;
+
     let colorAttachments = props.colorAttachments?.map(colorAttachment =>
       typeof colorAttachment !== 'string'
         ? colorAttachment
         : device.createTexture({
             format: colorAttachment,
             usage: Texture.SAMPLE | Texture.RENDER | Texture.COPY_SRC | Texture.COPY_DST,
-            width: 1,
-            height: 1
+            width,
+            height
           })
     );
 
@@ -61,8 +63,8 @@ export class SwapFramebuffers extends Swap<Framebuffer> {
             format: colorAttachment,
             usage:
               Texture.TEXTURE | Texture.COPY_SRC | Texture.COPY_DST | Texture.RENDER_ATTACHMENT,
-            width: 1,
-            height: 1
+            width,
+            height
           })
     );
 
