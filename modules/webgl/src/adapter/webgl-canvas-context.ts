@@ -32,11 +32,22 @@ export class WebGLCanvasContext extends CanvasContext {
 
   // IMPLEMENTATION OF ABSTRACT METHODS
 
-  _configureDevice(): void {}
+  _configureDevice(): void {
+    const shouldResize =
+      this.drawingBufferWidth !== this._framebuffer?.width ||
+      this.drawingBufferHeight !== this._framebuffer?.height;
+    if (shouldResize) {
+      this._framebuffer?.resize([this.drawingBufferWidth, this.drawingBufferHeight]);
+    }
+  }
 
   _getCurrentFramebuffer(): WEBGLFramebuffer {
-    // Setting handle to null returns a reference to the default framebuffer
-    this._framebuffer = this._framebuffer || new WEBGLFramebuffer(this.device, {handle: null});
+    this._framebuffer ||= new WEBGLFramebuffer(this.device, {
+      id: 'canvas-context-framebuffer',
+      handle: null, // Setting handle to null returns a reference to the default WebGL framebuffer
+      width: this.drawingBufferWidth,
+      height: this.drawingBufferHeight
+    });
     return this._framebuffer;
   }
 }

@@ -20,7 +20,7 @@ export type ShaderPassRendererProps = {
   /** List of ShaderPasses to apply to the sourceTexture */
   shaderPasses: ShaderPass[];
   /** Optional typed ShaderInputs object for setting uniforms */
-  shaderInputs: ShaderInputs;
+  shaderInputs?: ShaderInputs;
 };
 
 /** A pass that renders a given texture into screen space */
@@ -72,12 +72,10 @@ fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
 
 uniform sampler2D sourceTexture;
 in vec2 uv;
-in vec2 coordinate;
 out vec4 fragColor;
 
 void main() {
-  vec2 texCoord = coordinate;
-  fragColor = texture(sourceTexture, coordinate);
+  fragColor = texture(sourceTexture, uv);
 }
 `
     });
@@ -94,9 +92,9 @@ void main() {
     this.clipSpace.destroy();
   }
 
-  resize(width: number, height: number): void {
-    this.swapFramebuffers.resize({width, height});
-    // this.props.passes.forEach(pass => pass.resize(width, height));
+  resize(size?: [width: number, height: number]): void {
+    size ||= this.device.getCanvasContext().getDrawingBufferSize();
+    this.swapFramebuffers.resize({width: size[0], height: size[1]});
   }
 
   renderToScreen(options: {
@@ -118,7 +116,7 @@ void main() {
     const renderPass = this.device.beginRenderPass({
       id: 'shader-pass-renderer-to-screen',
       framebuffer,
-      clearColor: [0, 0, 0, 1],
+      // clearColor: [1, 1, 0, 1],
       clearDepth: 1
     });
     this.clipSpace.setBindings({sourceTexture: outputTexture});
@@ -140,6 +138,11 @@ void main() {
       return null;
     }
 
+    // If no shader passes are provided, just return the original texture
+    if (this.passRenderers.length === 0) {
+      return sourceTexture.texture;
+    }
+
     this.textureModel.destroy();
     this.textureModel = new BackgroundTextureModel(this.device, {
       backgroundTexture: sourceTexture
@@ -149,7 +152,7 @@ void main() {
     const clearTexturePass = this.device.beginRenderPass({
       id: 'shader-pass-renderer-clear-texture',
       framebuffer: this.swapFramebuffers.current,
-      clearColor: [0, 0, 0, 1]
+      clearColor: [1, 0, 0, 1]
     });
     this.textureModel.draw(clearTexturePass);
     clearTexturePass.end();
@@ -161,33 +164,33 @@ void main() {
     // });
     // commandEncoder.finish();
 
-    let first = true;
-    for (const passRenderer of this.passRenderers) {
-      for (const subPassRenderer of passRenderer.subPassRenderers) {
-        if (!first) {
-          this.swapFramebuffers.swap();
-        }
-        first = false;
+    // let first = true;
+    // for (const passRenderer of this.passRenderers) {
+    //   for (const subPassRenderer of passRenderer.subPassRenderers) {
+    //     if (!first) {
+    //       this.swapFramebuffers.swap();
+    //     }
+    //     first = false;
 
-        const swapBufferTexture = this.swapFramebuffers.current.colorAttachments[0].texture;
+    //     const swapBufferTexture = this.swapFramebuffers.current.colorAttachments[0].texture;
 
-        const bindings = {
-          sourceTexture: swapBufferTexture
-          // texSize: [sourceTextures.width, sourceTextures.height]
-        };
+    //     const bindings = {
+    //       sourceTexture: swapBufferTexture
+    //       // texSize: [sourceTextures.width, sourceTextures.height]
+    //     };
 
-        const renderPass = this.device.beginRenderPass({
-          id: 'shader-pass-renderer-run-pass',
-          framebuffer: this.swapFramebuffers.next,
-          clearColor: [0, 0, 0, 1],
-          clearDepth: 1
-        });
-        subPassRenderer.render({renderPass, bindings});
-        renderPass.end();
-      }
-    }
+    //     const renderPass = this.device.beginRenderPass({
+    //       id: 'shader-pass-renderer-run-pass',
+    //       framebuffer: this.swapFramebuffers.next,
+    //       clearColor: [0, 0, 0, 1],
+    //       clearDepth: 1
+    //     });
+    //     subPassRenderer.render({renderPass, bindings});
+    //     renderPass.end();
+    //   }
+    // }
 
-    this.swapFramebuffers.swap();
+    // this.swapFramebuffers.swap();
     const outputTexture = this.swapFramebuffers.current.colorAttachments[0].texture;
     return outputTexture;
   }

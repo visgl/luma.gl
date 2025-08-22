@@ -1359,7 +1359,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@luma.gl/effects@workspace:modules/effects":
+"@luma.gl/effects@npm:9.2.0-alpha.6, @luma.gl/effects@workspace:modules/effects":
   version: 0.0.0-use.local
   resolution: "@luma.gl/effects@workspace:modules/effects"
   dependencies:
@@ -8064,6 +8064,7 @@ __metadata:
     "@loaders.gl/core": "npm:^4.2.0"
     "@loaders.gl/gltf": "npm:^4.2.0"
     "@luma.gl/core": "npm:9.2.0-alpha.6"
+    "@luma.gl/effects": "npm:9.2.0-alpha.6"
     "@luma.gl/engine": "npm:9.2.0-alpha.6"
     "@luma.gl/gltf": "npm:9.2.0-alpha.6"
     "@luma.gl/shadertools": "npm:9.2.0-alpha.6"
