@@ -37,8 +37,8 @@ import {
   getTextureCubeArraySubresources
 } from './texture-data';
 
-/** 
- * Properties for a dynamic texture 
+/**
+ * Properties for a dynamic texture
  */
 export type DynamicTextureProps = Omit<TextureProps, 'data' | 'mipLevels' | 'width' | 'height'> &
   TextureDataAsyncProps & {
@@ -142,18 +142,18 @@ export class DynamicTexture {
 
       // Deduce size when not explicitly provided
       // TODO - what about depth?
-      const deduceSize = (): {width: number; height: number;} => {
+      const deduceSize = (): {width: number; height: number} => {
         if (this.props.width && this.props.height) {
           return {width: this.props.width, height: this.props.height};
         }
-         
+
         const size = getTextureSizeFromData(propsWithSyncData);
         if (size) {
           return size;
         }
 
         return {width: this.props.width || 1, height: this.props.height || 1};
-      }
+      };
 
       const size = deduceSize();
       if (!size || size.width <= 0 || size.height <= 0) {
@@ -216,7 +216,6 @@ export class DynamicTexture {
       this.resolveReady(this.texture);
 
       log.info(0, `${this} created`)();
-
     } catch (e) {
       const err = e instanceof Error ? e : new Error(String(e));
       this.rejectReady(err);
@@ -267,7 +266,7 @@ export class DynamicTexture {
     this._view = this.texture.view;
 
     prev.destroy();
-    log.info(`${this} resized`)
+    log.info(`${this} resized`);
     return true;
   }
 

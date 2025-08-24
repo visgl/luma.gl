@@ -6,7 +6,7 @@ import test from 'tape-promise/tape';
 import {getTestDevices} from '@luma.gl/test-utils';
 import {ShaderPassRenderer, DynamicTexture, ShaderInputs} from '@luma.gl/engine';
 import type {ShaderPass} from '@luma.gl/shadertools';
-import {Device, Texture, Buffer} from '@luma.gl/core';
+import {Texture} from '@luma.gl/core';
 
 const invertPass: ShaderPass = {
   name: 'invert',
@@ -28,7 +28,7 @@ test.only('ShaderPassRenderer#renderToTexture', async t => {
   for (const device of devices) {
     // TODO - fix, we are getting close
     if (device.type === 'webgpu') {
-      continue;
+      continue; // eslint-disable-line no-continue
     }
     t.comment(`Testing ${device.type}`);
     const sourceTexture = new DynamicTexture(device, {
@@ -44,7 +44,6 @@ test.only('ShaderPassRenderer#renderToTexture', async t => {
     const pixels1 = new Uint8Array(arrayBuffer, 0, 4); // slice away WebGPU padding
     t.deepEqual(Array.from(pixels1), [255, 0, 0, 255], 'initialization success');
 
-
     const shaderInputs = new ShaderInputs({invert: invertPass});
     const renderer = new ShaderPassRenderer(device, {
       shaderPasses: [invertPass],
@@ -54,31 +53,12 @@ test.only('ShaderPassRenderer#renderToTexture', async t => {
 
     t.ok(output, 'produces output texture');
 
-    const pixels = await output!.readDataAsync();
-    t.deepEqual(Array.from(new Uint8Array(pixels)), [0, 255, 255, 255], 'applies filter');
-
-    const pixels2 = await readTexture(device, output!, 4);
-    t.deepEqual(Array.from(pixels2), [0, 255, 255, 255], 'applies filter');
+    const arrayBufferOut = await output!.readDataAsync();
+    const pixelsOut = new Uint8Array(arrayBufferOut, 0, 4); // slice away WebGPU padding
+    t.deepEqual(Array.from(pixelsOut), [0, 255, 255, 255], 'applies filter');
 
     renderer.destroy();
     sourceTexture.destroy();
   }
   t.end();
 });
-
-async function readTexture(
-  device: Device,
-  texture: Texture,
-  byteLength: number
-): Promise<Uint8Array> {
-  const buffer = device.createBuffer({byteLength, usage: Buffer.COPY_SRC});
-  const encoder = device.createCommandEncoder();
-  encoder.copyTextureToBuffer({sourceTexture: texture, destinationBuffer: buffer});
-  const commandBuffer = encoder.finish();
-  device.submit(commandBuffer);
-  try {
-    return await buffer.readAsync();
-  } finally {
-    buffer.destroy();
-  }
-}

@@ -10,8 +10,7 @@ import {
   type TextureSliceData
 } from '../../src/dynamic-texture/texture-data';
 
-import type {
-} from '../../src/dynamic-texture/dynamic-texture';
+import type {} from '../../src/dynamic-texture/dynamic-texture';
 
 import {isExternalImage, getExternalImageSize} from '@luma.gl/core';
 

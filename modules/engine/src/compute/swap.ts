@@ -19,7 +19,7 @@ export class Swap<T extends Resource<any>> {
   /** The next resource - usually the target/destination for transforms / computations */
   next: T;
 
-  constructor(props: {current: T; next: T, id?: string}) {
+  constructor(props: {current: T; next: T; id?: string}) {
     this.id = props.id || 'swap';
     this.current = props.current;
     this.next = props.next;
@@ -66,7 +66,7 @@ export class SwapFramebuffers extends Swap<Framebuffer> {
         : device.createTexture({
             id: `${props.id}-texture-1`,
             format: colorAttachment,
-            usage: Texture.SAMPLE  | Texture.RENDER | Texture.COPY_SRC | Texture.COPY_DST,
+            usage: Texture.SAMPLE | Texture.RENDER | Texture.COPY_SRC | Texture.COPY_DST,
             width,
             height
           })
