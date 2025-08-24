@@ -220,7 +220,9 @@ test.skip('Texture#readBuffer & Buffer.readAsync round-trip', async t => {
     const tex = device.createTexture({width: 2, height: 1, format: 'rgba8unorm'});
     // initialize via writeData
     tex.writeData(RGBA8_DATA, {});
-    const buf = tex.readBuffer({});
+    const layout = tex.computeMemoryLayout({});
+    const buf = device.createBuffer({byteLength: layout.byteLength});
+    tex.readBuffer({}, buf);
     const arr = await buf.readAsync();
     const result = toUint8(arr);
     t.deepEquals(

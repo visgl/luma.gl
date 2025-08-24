@@ -24,7 +24,6 @@ import {WebGLDevice} from '../webgl-device';
 import {WEBGLBuffer} from './webgl-buffer';
 import {WEBGLTexture} from './webgl-texture';
 import {WEBGLFramebuffer} from './webgl-framebuffer';
-import {getTextureFormatWebGL} from '../converters/webgl-texture-table';
 
 type CopyBufferToBufferCommand = {
   name: 'copy-buffer-to-buffer';
@@ -131,94 +130,8 @@ function _copyBufferToTexture(device: WebGLDevice, options: CopyBufferToTextureO
  * NOTE: doesn't wait for copy to be complete
  */
 function _copyTextureToBuffer(device: WebGLDevice, options: CopyTextureToBufferOptions): void {
-  const {
-    /** Texture to copy to/from. */
-    sourceTexture,
-    /**  Mip-map level of the texture to copy to/from. (Default 0) */
-    mipLevel = 0,
-    /** Defines which aspects of the texture to copy to/from. */
-    aspect = 'all',
-
-    /** Width to copy */
-    width = options.sourceTexture.width,
-    /** Height to copy */
-    height = options.sourceTexture.height,
-    depthOrArrayLayers = 0,
-    /** Defines the origin of the copy - the minimum corner of the texture sub-region to copy to/from. */
-    origin = [0, 0],
-
-    /** Destination buffer */
-    destinationBuffer,
-    /** Offset, in bytes, from the beginning of the buffer to the start of the image data (default 0) */
-    byteOffset = 0,
-    /**
-     * The stride, in bytes, between the beginning of each block row and the subsequent block row.
-     * Required if there are multiple block rows (i.e. the copy height or depth is more than one block).
-     */
-    bytesPerRow,
-    /**
-     * Number of block rows per single image of the texture.
-     * rowsPerImage &times; bytesPerRow is the stride, in bytes, between the beginning of each image of data and the subsequent image.
-     * Required if there are multiple images (i.e. the copy depth is more than one).
-     */
-    rowsPerImage
-  } = options;
-
-  // TODO - Not possible to read just stencil or depth part in WebGL?
-  if (aspect !== 'all') {
-    throw new Error('aspect not supported in WebGL');
-  }
-
-  // TODO - mipLevels are set when attaching texture to framebuffer
-  if (mipLevel !== 0 || depthOrArrayLayers !== 0 || bytesPerRow || rowsPerImage) {
-    throw new Error('not implemented');
-  }
-
-  // Asynchronous read (PIXEL_PACK_BUFFER) is WebGL2 only feature
-  const {framebuffer, destroyFramebuffer} = getFramebuffer(sourceTexture);
-  let prevHandle: WebGLFramebuffer | null | undefined;
-  try {
-    const webglBuffer = destinationBuffer as WEBGLBuffer;
-    const sourceWidth = width || framebuffer.width;
-    const sourceHeight = height || framebuffer.height;
-    const sourceParams = getTextureFormatWebGL(
-      framebuffer.colorAttachments[0].texture.props.format
-    );
-    const sourceFormat = sourceParams.format;
-    const sourceType = sourceParams.type;
-
-    // if (!target) {
-    //   // Create new buffer with enough size
-    //   const components = glFormatToComponents(sourceFormat);
-    //   const byteCount = glTypeToBytes(sourceType);
-    //   const byteLength = byteOffset + sourceWidth * sourceHeight * components * byteCount;
-    //   target = device.createBuffer({byteLength});
-    // }
-
-    device.gl.bindBuffer(GL.PIXEL_PACK_BUFFER, webglBuffer.handle);
-    // @ts-expect-error native bindFramebuffer is overridden by our state tracker
-    prevHandle = device.gl.bindFramebuffer(GL.FRAMEBUFFER, framebuffer.handle);
-
-    device.gl.readPixels(
-      origin[0],
-      origin[1],
-      sourceWidth,
-      sourceHeight,
-      sourceFormat,
-      sourceType,
-      byteOffset
-    );
-  } finally {
-    device.gl.bindBuffer(GL.PIXEL_PACK_BUFFER, null);
-    // prevHandle may be unassigned if the try block failed before binding
-    if (prevHandle !== undefined) {
-      device.gl.bindFramebuffer(GL.FRAMEBUFFER, prevHandle);
-    }
-
-    if (destroyFramebuffer) {
-      framebuffer.destroy();
-    }
-  }
+  const {sourceTexture, destinationBuffer, ...readOptions} = options;
+  sourceTexture.readBuffer(readOptions as any, destinationBuffer);
 }
 
 /**

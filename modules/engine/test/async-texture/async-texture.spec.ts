@@ -6,7 +6,7 @@ import test from 'tape-promise/tape.js';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
 import {AsyncTexture} from '@luma.gl/engine';
 
-test('AsyncTexture#readDataAsync', async t => {
+test('AsyncTexture#readAsync', async t => {
   const device = await getWebGLTestDevice();
 
   const data = new Uint8Array([1, 2, 3, 4]);
@@ -18,7 +18,7 @@ test('AsyncTexture#readDataAsync', async t => {
   });
 
   await texture.ready;
-  const resultBuffer = await texture.readDataAsync();
+  const resultBuffer = await texture.readAsync();
   const result = new Uint8Array(resultBuffer);
   t.deepEqual(result, data, 'read back expected texture data');
 

@@ -83,7 +83,10 @@ export class NullTexture extends Texture {
   }
 
   override readBuffer(options: TextureReadOptions = {}, buffer?: Buffer): Buffer {
-    return this.device.createBuffer({});
+    if (!buffer) {
+      throw new Error('buffer required');
+    }
+    return buffer;
   }
 
   override async readDataAsync(options: TextureReadOptions = {}): Promise<ArrayBuffer> {

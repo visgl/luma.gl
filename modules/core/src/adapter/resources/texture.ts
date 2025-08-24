@@ -272,8 +272,8 @@ export abstract class Texture extends Resource<TextureProps> {
    *
    * @note The memory layout of the texture data is determined by the texture format and dimensions.
    * @note The application can call Texture.computeMemoryLayout() to compute the layout.
-   * @note The application can call Buffer.readAsync()
-   * @note If not supplied a buffer will be created and the application needs to call Buffer.destroy
+   * @note The application can call Buffer.readAsync() to read the returned buffer on the CPU.
+   * @note The `buffer` must be supplied and preallocated with sufficient size.
    */
   readBuffer(options?: TextureReadOptions, buffer?: Buffer): Buffer {
     throw new Error('readBuffer not implemented');

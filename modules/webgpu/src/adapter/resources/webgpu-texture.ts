@@ -173,7 +173,14 @@ export class WebGPUTexture extends Texture {
     };
   }
 
-  override readBuffer(options: TextureReadOptions = {}, buffer?: Buffer): Buffer {
+  override readBuffer(
+    options: TextureReadOptions & {byteOffset?: number} = {},
+    buffer?: Buffer
+  ): Buffer {
+    if (!buffer) {
+      throw new Error('buffer required');
+    }
+
     const {
       x = 0,
       y = 0,
@@ -182,46 +189,29 @@ export class WebGPUTexture extends Texture {
       height = this.height,
       depthOrArrayLayers = this.depth,
       mipLevel = 0,
-      aspect = 'all'
-    } = options;
+      aspect = 'all',
+      byteOffset = 0
+    } = options as any;
 
-    const layout = this.computeMemoryLayout(options);
+    const layout = this.computeMemoryLayout({width, height, depthOrArrayLayers});
+    const gpuReadBuffer = buffer.handle as GPUBuffer;
 
-    const {bytesPerRow, rowsPerImage, byteLength} = layout;
-
-    // Create a GPUBuffer to hold the copied pixel data.
-    const readBuffer =
-      buffer ||
-      this.device.createBuffer({
-        byteLength,
-        usage: Buffer.COPY_DST | Buffer.MAP_READ
-      });
-    const gpuReadBuffer = readBuffer.handle as GPUBuffer;
-
-    // Record commands to copy from the texture to the buffer.
     const gpuDevice = this.device.handle;
-
     this.device.pushErrorScope('validation');
     const commandEncoder = gpuDevice.createCommandEncoder();
     commandEncoder.copyTextureToBuffer(
-      // source
       {
         texture: this.handle,
         origin: {x, y, z},
-        // origin: [options.x, options.y, 0], // options.depth],
         mipLevel,
         aspect
-        // colorSpace: options.colorSpace,
-        // premultipliedAlpha: options.premultipliedAlpha
       },
-      // destination
       {
         buffer: gpuReadBuffer,
-        offset: 0,
-        bytesPerRow,
-        rowsPerImage
+        offset: byteOffset,
+        bytesPerRow: layout.bytesPerRow,
+        rowsPerImage: layout.rowsPerImage
       },
-      // copy size
       {
         width,
         height,
@@ -229,7 +219,6 @@ export class WebGPUTexture extends Texture {
       }
     );
 
-    // Submit the command.
     const commandBuffer = commandEncoder.finish();
     this.device.handle.queue.submit([commandBuffer]);
     this.device.popErrorScope((error: GPUError) => {
@@ -237,12 +226,22 @@ export class WebGPUTexture extends Texture {
       this.device.debug();
     });
 
-    return readBuffer;
+    return buffer;
   }
 
   override async readDataAsync(options: TextureReadOptions = {}): Promise<ArrayBuffer> {
-    const buffer = this.readBuffer(options);
-    const data = await buffer.readAsync();
+    const {
+      width = this.width,
+      height = this.height,
+      depthOrArrayLayers = this.depth
+    } = options;
+    const layout = this.computeMemoryLayout({width, height, depthOrArrayLayers});
+    const buffer = this.device.createBuffer({
+      byteLength: layout.byteLength,
+      usage: Buffer.COPY_DST | Buffer.MAP_READ
+    });
+    this.readBuffer({...options, width, height, depthOrArrayLayers}, buffer);
+    const data = await buffer.readAsync(0, layout.byteLength);
     buffer.destroy();
     return data.buffer as ArrayBuffer;
   }

@@ -26,7 +26,10 @@ export class NullCommandBuffer extends CommandBuffer {
 
   copyBufferToTexture(options: CopyBufferToTextureOptions) {}
 
-  copyTextureToBuffer(options: CopyTextureToBufferOptions): void {}
+  copyTextureToBuffer(options: CopyTextureToBufferOptions): void {
+    const {sourceTexture, destinationBuffer, ...readOptions} = options;
+    sourceTexture.readBuffer(readOptions as any, destinationBuffer);
+  }
 
   copyTextureToTexture(options: CopyTextureToTextureOptions): void {}
 

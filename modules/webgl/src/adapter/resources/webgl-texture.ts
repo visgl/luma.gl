@@ -36,6 +36,7 @@ import {convertSamplerParametersToWebGL} from '../converters/sampler-parameters'
 import {withGLParameters} from '../../context/state-tracker/with-parameters';
 import {WebGLDevice} from '../webgl-device';
 import {WEBGLFramebuffer} from './webgl-framebuffer';
+import {WEBGLBuffer} from './webgl-buffer';
 import {WEBGLSampler} from './webgl-sampler';
 import {WEBGLTextureView} from './webgl-texture-view';
 import {convertDataTypeToGLDataType} from '../converters/webgl-shadertypes';
@@ -244,8 +245,45 @@ export class WEBGLTexture extends Texture {
     this.gl.bindTexture(glTarget, null);
   }
 
-  readBuffer(options: TextureReadOptions = {}, buffer?: Buffer): Buffer {
-    throw new Error('readBuffer not implemented');
+  override readBuffer(options: TextureReadOptions & {byteOffset?: number} = {}, buffer?: Buffer): Buffer {
+    if (!buffer) {
+      throw new Error('buffer required');
+    }
+
+    const {
+      x = 0,
+      y = 0,
+      width = this.width,
+      height = this.height,
+      mipLevel = 0,
+      aspect = 'all',
+      byteOffset = 0
+    } = options as any;
+
+    if (aspect !== 'all') {
+      throw new Error('aspect not supported in WebGL');
+    }
+    if (mipLevel !== 0) {
+      throw new Error('mipLevel not supported in WebGL');
+    }
+
+    const framebuffer = this._getFramebuffer();
+    const webglBuffer = buffer as WEBGLBuffer;
+    const formatInfo = getTextureFormatWebGL(this.props.format);
+
+    this.gl.bindBuffer(GL.PIXEL_PACK_BUFFER, webglBuffer.handle);
+    // @ts-expect-error native bindFramebuffer is overridden by our state tracker
+    const prevHandle: WebGLFramebuffer | null = this.gl.bindFramebuffer(
+      GL.FRAMEBUFFER,
+      framebuffer.handle
+    );
+
+    this.gl.readPixels(x, y, width, height, formatInfo.format, formatInfo.type, byteOffset);
+
+    this.gl.bindBuffer(GL.PIXEL_PACK_BUFFER, null);
+    this.gl.bindFramebuffer(GL.FRAMEBUFFER, prevHandle);
+
+    return buffer;
   }
 
   async readDataAsync(options: TextureReadOptions = {}): Promise<ArrayBuffer> {

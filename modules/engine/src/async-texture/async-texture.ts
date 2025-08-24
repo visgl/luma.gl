@@ -291,7 +291,7 @@ export class AsyncTexture {
    * Copies the texture into a buffer, waits for GPU completion and
    * returns the buffer data.
    */
-  async readDataAsync(options: TextureReadOptions = {}): Promise<ArrayBuffer> {
+  async readBuffer(options: TextureReadOptions = {}): Promise<Buffer> {
     if (!this.isReady) {
       await this.ready;
     }
@@ -306,27 +306,31 @@ export class AsyncTexture {
       usage: Buffer.COPY_DST | Buffer.MAP_READ
     });
 
-    const encoder = this.device.createCommandEncoder({});
-    const copyOptions: any = {
-      sourceTexture: this.texture,
-      destinationBuffer: buffer,
-      origin: [options.x || 0, options.y || 0, options.z || 0],
-      width,
-      height,
-      depthOrArrayLayers
-    };
-    if (this.device.type === 'webgpu') {
-      copyOptions.bytesPerRow = layout.bytesPerRow;
-      copyOptions.rowsPerImage = layout.rowsPerImage;
-    }
-    encoder.copyTextureToBuffer(copyOptions);
-    const commandBuffer = encoder.finish();
-    this.device.submit(commandBuffer);
+    this.texture.readBuffer(
+      {
+        ...options,
+        width,
+        height,
+        depthOrArrayLayers
+      } as any,
+      buffer
+    );
 
     const fence = this.device.createFence();
     await fence.signaled;
-    const data = await buffer.readAsync(0, layout.byteLength);
     fence.destroy();
+
+    return buffer;
+  }
+
+  async readAsync(options: TextureReadOptions = {}): Promise<ArrayBuffer> {
+    const width = options.width ?? this.texture.width;
+    const height = options.height ?? this.texture.height;
+    const depthOrArrayLayers = options.depthOrArrayLayers ?? this.texture.depth;
+    const layout = this.texture.computeMemoryLayout({width, height, depthOrArrayLayers});
+
+    const buffer = await this.readBuffer(options);
+    const data = await buffer.readAsync(0, layout.byteLength);
     buffer.destroy();
     return data.buffer;
   }

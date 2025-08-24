@@ -122,14 +122,8 @@ export class WebGPUCommandEncoder extends CommandEncoder {
   }
 
   copyTextureToBuffer(options: CopyTextureToBufferOptions): void {
-    // this.handle.copyTextureToBuffer(
-    //   // source
-    //   {},
-    //   // destination
-    //   {},
-    //   // copySize
-    //   {}
-    // );
+    const {sourceTexture, destinationBuffer, ...readOptions} = options;
+    sourceTexture.readBuffer(readOptions as any, destinationBuffer);
   }
 
   copyTextureToTexture(options: CopyTextureToTextureOptions): void {
