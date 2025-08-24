@@ -69,11 +69,7 @@ test('SwapFramebuffers#resize', async t => {
     currentTexture,
     'current framebuffer texture unchanged'
   );
-  t.equal(
-    swap.next.colorAttachments[0].texture,
-    nextTexture,
-    'next framebuffer texture unchanged'
-  );
+  t.equal(swap.next.colorAttachments[0].texture, nextTexture, 'next framebuffer texture unchanged');
 
   resized = swap.resize({width: 8, height: 8});
   t.equal(resized, true, 'resize with new size returns true');
