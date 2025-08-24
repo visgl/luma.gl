@@ -46,6 +46,24 @@ test('Texture#createView returns a TextureView', async t => {
   t.end();
 });
 
+test('Texture#clone overrides size', async t => {
+  for (const device of await getTestDevices()) {
+    const tex = device.createTexture({format: 'rgba8unorm', width: 2, height: 2});
+
+    const cloned = tex.clone({width: 4, height: 4});
+
+    t.notEqual(cloned, tex, `${device.type}: clone returns a new texture`);
+    t.equal(cloned.width, 4, `${device.type}: cloned width is overridden`);
+    t.equal(cloned.height, 4, `${device.type}: cloned height is overridden`);
+    t.equal(tex.width, 2, `${device.type}: original width unchanged`);
+    t.equal(tex.height, 2, `${device.type}: original height unchanged`);
+
+    tex.destroy();
+    cloned.destroy();
+  }
+  t.end();
+});
+
 const RGBA8_DATA = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]);
 
 test('Texture#copyImageData updates correct cubemap face on WebGL', async t => {
