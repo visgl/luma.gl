@@ -23,7 +23,7 @@ vec4 invert_filterColor_ext(vec4 color, vec2 texSize, vec2 texCoord) {
   passes: [{filter: true}]
 };
 
-test.only('ShaderPassRenderer#renderToTexture', async t => {
+test('ShaderPassRenderer#renderToTexture', async t => {
   const devices = await getTestDevices();
   for (const device of devices) {
     // TODO - fix, we are getting close
