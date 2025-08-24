@@ -201,6 +201,8 @@ export {getTextureImageView, setTextureImageData} from './shadertypes/textures/t
 // export {TexturePacker} from './shadertypes/textures/texture-packer'
 export {type PixelData, readPixel, writePixel} from './shadertypes/textures/pixel-utils';
 
+export {isExternalImage, getExternalImageSize} from './image-utils/image-types';
+
 // GENERAL EXPORTS - FOR APPLICATIONS
 
 export type {StatsManager} from './utils/stats-manager'; // TODO - should this be moved to probe.gl?

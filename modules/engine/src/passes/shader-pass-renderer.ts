@@ -157,6 +157,7 @@ void main() {
     this.textureModel.draw(clearTexturePass);
     clearTexturePass.end();
 
+    // Copy the texture contents
     // const commandEncoder = this.device.createCommandEncoder();
     // commandEncoder.copyTextureToTexture({
     //   sourceTexture: sourceTexture.texture,
@@ -164,33 +165,33 @@ void main() {
     // });
     // commandEncoder.finish();
 
-    // let first = true;
-    // for (const passRenderer of this.passRenderers) {
-    //   for (const subPassRenderer of passRenderer.subPassRenderers) {
-    //     if (!first) {
-    //       this.swapFramebuffers.swap();
-    //     }
-    //     first = false;
+    let first = true;
+    for (const passRenderer of this.passRenderers) {
+      for (const subPassRenderer of passRenderer.subPassRenderers) {
+        if (!first) {
+          this.swapFramebuffers.swap();
+        }
+        first = false;
 
-    //     const swapBufferTexture = this.swapFramebuffers.current.colorAttachments[0].texture;
+        const swapBufferTexture = this.swapFramebuffers.current.colorAttachments[0].texture;
 
-    //     const bindings = {
-    //       sourceTexture: swapBufferTexture
-    //       // texSize: [sourceTextures.width, sourceTextures.height]
-    //     };
+        const bindings = {
+          sourceTexture: swapBufferTexture
+          // texSize: [sourceTextures.width, sourceTextures.height]
+        };
 
-    //     const renderPass = this.device.beginRenderPass({
-    //       id: 'shader-pass-renderer-run-pass',
-    //       framebuffer: this.swapFramebuffers.next,
-    //       clearColor: [0, 0, 0, 1],
-    //       clearDepth: 1
-    //     });
-    //     subPassRenderer.render({renderPass, bindings});
-    //     renderPass.end();
-    //   }
-    // }
+        const renderPass = this.device.beginRenderPass({
+          id: 'shader-pass-renderer-run-pass',
+          framebuffer: this.swapFramebuffers.next,
+          clearColor: [0, 0, 0, 1],
+          clearDepth: 1
+        });
+        subPassRenderer.render({renderPass, bindings});
+        renderPass.end();
+      }
+    }
 
-    // this.swapFramebuffers.swap();
+    this.swapFramebuffers.swap();
     const outputTexture = this.swapFramebuffers.current.colorAttachments[0].texture;
     return outputTexture;
   }
