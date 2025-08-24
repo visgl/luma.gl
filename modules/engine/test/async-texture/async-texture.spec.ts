@@ -2,6 +2,30 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+import test from 'tape-promise/tape.js';
+import {getWebGLTestDevice} from '@luma.gl/test-utils';
+import {AsyncTexture} from '@luma.gl/engine';
+
+test('AsyncTexture#readDataAsync', async t => {
+  const device = await getWebGLTestDevice();
+
+  const data = new Uint8Array([1, 2, 3, 4]);
+  const texture = new AsyncTexture(device, {
+    data,
+    width: 1,
+    height: 1,
+    format: 'rgba8unorm'
+  });
+
+  await texture.ready;
+  const resultBuffer = await texture.readDataAsync();
+  const result = new Uint8Array(resultBuffer);
+  t.deepEqual(result, data, 'read back expected texture data');
+
+  texture.destroy();
+  t.end();
+});
+
 // import test from 'tape-promise/tape';
 // import {getWebGLTestDevice} from '@luma.gl/test-utils';
 
@@ -72,3 +96,4 @@ test.skip('WebGL2#Texture resize', (t) => {
   t.end();
 });
 */
+

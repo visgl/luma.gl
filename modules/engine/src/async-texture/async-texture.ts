@@ -8,10 +8,11 @@ import type {
   Device,
   TypedArray,
   TextureFormat,
-  ExternalImage
+  ExternalImage,
+  TextureReadOptions
 } from '@luma.gl/core';
 
-import {Texture, Sampler, log} from '@luma.gl/core';
+import {Texture, Sampler, log, Buffer} from '@luma.gl/core';
 
 import {loadImageBitmap} from '../application-utils/load-file';
 import {uid} from '../utils/uid';
@@ -283,6 +284,51 @@ export class AsyncTexture {
     }
 
     return true;
+  }
+
+  /**
+   * Asynchronously reads the contents of this texture.
+   * Copies the texture into a buffer, waits for GPU completion and
+   * returns the buffer data.
+   */
+  async readDataAsync(options: TextureReadOptions = {}): Promise<ArrayBuffer> {
+    if (!this.isReady) {
+      await this.ready;
+    }
+
+    const width = options.width ?? this.texture.width;
+    const height = options.height ?? this.texture.height;
+    const depthOrArrayLayers = options.depthOrArrayLayers ?? this.texture.depth;
+    const layout = this.texture.computeMemoryLayout({width, height, depthOrArrayLayers});
+
+    const buffer = this.device.createBuffer({
+      byteLength: layout.byteLength,
+      usage: Buffer.COPY_DST | Buffer.MAP_READ
+    });
+
+    const encoder = this.device.createCommandEncoder({});
+    const copyOptions: any = {
+      sourceTexture: this.texture,
+      destinationBuffer: buffer,
+      origin: [options.x || 0, options.y || 0, options.z || 0],
+      width,
+      height,
+      depthOrArrayLayers
+    };
+    if (this.device.type === 'webgpu') {
+      copyOptions.bytesPerRow = layout.bytesPerRow;
+      copyOptions.rowsPerImage = layout.rowsPerImage;
+    }
+    encoder.copyTextureToBuffer(copyOptions);
+    const commandBuffer = encoder.finish();
+    this.device.submit(commandBuffer);
+
+    const fence = this.device.createFence();
+    await fence.signaled;
+    const data = await buffer.readAsync(0, layout.byteLength);
+    fence.destroy();
+    buffer.destroy();
+    return data.buffer;
   }
 
   /** Check if texture data is a typed array */
