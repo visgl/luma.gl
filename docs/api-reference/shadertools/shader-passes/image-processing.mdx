@@ -196,6 +196,14 @@ Blurs the image away from a certain point, which looks like radial motion blur.
   </tbody>
 </table>
 
+### bloom
+
+Adds a glow to bright areas of the image by averaging nearby high-luminance pixels and mixing them back with the original color.
+
+- `radius` Radius of the sampling kernel in pixels. Default value is `4`.
+- `threshold` Luminance threshold above which a pixel contributes to bloom. Default value is `0.8`.
+- `intensity` Strength of the bloom contribution. Default value is `1`.
+
 ### colorHalftone
 
 Simulates a CMYK halftone rendering of the image by multiplying pixel values with a four rotated 2D sine wave patterns, one each for cyan, magenta, yellow, and black.
