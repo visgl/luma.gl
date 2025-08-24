@@ -39,19 +39,23 @@ function getFilterShaderWGSL(func: string) {
 // Binding 0:1 is reserved for shader passes
 // @group(0) @binding(0) var<uniform> brightnessContrast : brightnessContrastUniforms;
 @group(0) @binding(1) var texture: texture_2d<f32>;
-@group(0) @binding(2) var sampler: sampler;
+@group(0) @binding(2) var textureSampler: sampler;
 
-struct FragmentInputs {
-  @location(0) fragUV: vec2f,
-  @location(1) fragPosition: vec4f,
-  @location(2) fragCoordinate: vec4f
-};
+// This needs to be aligned with
+// struct FragmentInputs {
+//   @location(0) fragUV: vec2f,
+//   @location(1) fragPosition: vec4f,
+//   @location(2) fragCoordinate: vec4f
+// };
 
 @fragment
 fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4f {
-  let texSize = textureDimensions(texture, 0);
-  var fragColor = textureSample(texture, sampler, fragUV);
-  fragColor = ${func}(gl_FragColor, texSize, texCoord);
+  let fragUV = inputs.uv;
+  let fragCoordinate = inputs.coordinate;
+  let texSize = vec2f(textureDimensions(texture, 0));
+
+  var fragColor = textureSample(texture, textureSampler, fragUV);
+  fragColor = ${func}(fragColor, texSize, fragCoordinate);
   return fragColor;
 }
 `;
@@ -73,9 +77,9 @@ struct FragmentInputs = {
 
 @fragment
 fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4f {
-  let texSize = textureDimensions(texture, 0);
+  let texSize = vec2f(textureDimensions(texture, 0));
   var fragColor = textureSample(texture, sampler, fragUV);
-  fragColor = ${func}(gl_FragColor, texSize, texCoord);
+  fragColor = ${func}(fragColor, texSize, texCoord);
   return fragColor;
 }
 `;

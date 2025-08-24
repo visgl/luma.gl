@@ -3,10 +3,10 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
-import {getWebGLTestDevice} from '@luma.gl/test-utils';
+import {getTestDevices} from '@luma.gl/test-utils';
 import {ShaderPassRenderer, DynamicTexture, ShaderInputs} from '@luma.gl/engine';
 import type {ShaderPass} from '@luma.gl/shadertools';
-import type {Device, Texture} from '@luma.gl/core';
+import {Device, Texture, Buffer} from '@luma.gl/core';
 
 const invertPass: ShaderPass = {
   name: 'invert',
@@ -23,30 +23,42 @@ vec4 invert_filterColor_ext(vec4 color, vec2 texSize, vec2 texCoord) {
   passes: [{filter: true}]
 };
 
-test('ShaderPassRenderer#renderToTexture', async t => {
-  const device = await getWebGLTestDevice();
+test.only('ShaderPassRenderer#renderToTexture', async t => {
+  const devices = await getTestDevices();
+  for (const device of devices) {
+    t.comment(`Testing ${device.type}`);
+    const sourceTexture = new DynamicTexture(device, {
+      id: 'source-texture',
+      usage: Texture.RENDER | Texture.COPY_SRC | Texture.COPY_DST,
+      dimension: '2d',
+      data: {data: new Uint8Array([255, 0, 0, 255]), width: 1, height: 1, format: 'rgba8unorm'}
+    });
+    await sourceTexture.ready;
 
-  const sourceTexture = new DynamicTexture(device, {
-    dimension: '2d',
-    data: {data: new Uint8Array([255, 0, 0, 255]), width: 1, height: 1, format: 'rgba8unorm'}
-  });
-  await sourceTexture.ready;
+    // Sanity check
+    const arrayBuffer = await sourceTexture.texture.readDataAsync();
+    const pixels1 = new Uint8Array(arrayBuffer, 0, 4); // slice away WebGPU padding
+    t.deepEqual(Array.from(pixels1), [255, 0, 0, 255], 'initialization success');
 
-  const shaderInputs = new ShaderInputs({invert: invertPass});
-  const renderer = new ShaderPassRenderer(device, {
-    shaderPasses: [invertPass],
-    shaderInputs
-  });
 
-  const output = renderer.renderToTexture({sourceTexture});
-  t.ok(output, 'produces output texture');
+    const shaderInputs = new ShaderInputs({invert: invertPass});
+    const renderer = new ShaderPassRenderer(device, {
+      shaderPasses: [invertPass],
+      shaderInputs
+    });
+    const output = renderer.renderToTexture({sourceTexture});
 
-  const pixels = await readTexture(device, output!, 4);
-  t.deepEqual(Array.from(pixels), [0, 255, 255, 255], 'applies filter');
+    t.ok(output, 'produces output texture');
 
-  renderer.destroy();
-  sourceTexture.destroy();
+    const pixels = await output!.readDataAsync();
+    t.deepEqual(Array.from(new Uint8Array(pixels)), [0, 255, 255, 255], 'applies filter');
 
+    const pixels2 = await readTexture(device, output!, 4);
+    t.deepEqual(Array.from(pixels2), [0, 255, 255, 255], 'applies filter');
+
+    renderer.destroy();
+    sourceTexture.destroy();
+  }
   t.end();
 });
 
@@ -55,7 +67,7 @@ async function readTexture(
   texture: Texture,
   byteLength: number
 ): Promise<Uint8Array> {
-  const buffer = device.createBuffer({byteLength});
+  const buffer = device.createBuffer({byteLength, usage: Buffer.COPY_SRC});
   const encoder = device.createCommandEncoder();
   encoder.copyTextureToBuffer({sourceTexture: texture, destinationBuffer: buffer});
   const commandBuffer = encoder.finish();
