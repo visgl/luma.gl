@@ -62,3 +62,34 @@ test('ShaderPassRenderer#renderToTexture', async t => {
   }
   t.end();
 });
+
+test('ShaderPassRenderer reuses BackgroundTextureModel', async t => {
+  const devices = await getTestDevices();
+  for (const device of devices) {
+    if (device.type === 'webgpu') {
+      continue; // eslint-disable-line no-continue
+    }
+    const sourceTexture = new DynamicTexture(device, {
+      id: 'source-texture',
+      usage: Texture.RENDER | Texture.COPY_SRC | Texture.COPY_DST,
+      dimension: '2d',
+      data: {data: new Uint8Array([255, 0, 0, 255]), width: 1, height: 1, format: 'rgba8unorm'}
+    });
+    await sourceTexture.ready;
+
+    const renderer = new ShaderPassRenderer(device, {
+      shaderPasses: [],
+      shaderInputs: new ShaderInputs({})
+    });
+    const firstModel = renderer.textureModel;
+
+    renderer.renderToTexture({sourceTexture});
+    renderer.renderToTexture({sourceTexture});
+
+    t.equal(renderer.textureModel, firstModel, 'reuses existing BackgroundTextureModel');
+
+    renderer.destroy();
+    sourceTexture.destroy();
+  }
+  t.end();
+});

@@ -41,3 +41,4 @@ import './compute/buffer-transform.spec';
 import './compute/texture-transform.spec';
 import './compute/computation.spec';
 import './passes/shader-pass-renderer.spec';
+import './models/background-texture-model.spec';
