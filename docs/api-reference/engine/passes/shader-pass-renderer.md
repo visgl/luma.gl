@@ -6,7 +6,6 @@ The primary purpose is to run postprocessing effects on rendered contents.
 
 Remarks:
 - A `ShaderPassRenderer` instance will create two textures of the same size as the input texture. For a high resolution, high DPI screen these textures can consume considerable memory, which is a potential concern for mobile applications.
-- A single internal `BackgroundTextureModel` is reused across renders, and the source texture is updated via `setProps` to avoid per-frame allocations.
 
 ## Usage
 
