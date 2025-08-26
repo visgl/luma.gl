@@ -90,6 +90,7 @@ void main() {
     }
     this.swapFramebuffers.destroy();
     this.clipSpace.destroy();
+    this.textureModel.destroy();
   }
 
   resize(size?: [width: number, height: number]): void {
@@ -143,10 +144,7 @@ void main() {
       return sourceTexture.texture;
     }
 
-    this.textureModel.destroy();
-    this.textureModel = new BackgroundTextureModel(this.device, {
-      backgroundTexture: sourceTexture
-    });
+    this.textureModel.setProps({backgroundTexture: sourceTexture});
 
     // Clear the current texture before we begin
     const clearTexturePass = this.device.beginRenderPass({

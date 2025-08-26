@@ -105,14 +105,25 @@ export class BackgroundTextureModel extends ClipSpace {
     this.setProps(props);
   }
 
+  /** Update the background texture */
   setProps(props: Partial<BackgroundTextureModelProps>): void {
     const {backgroundTexture} = props;
     if (backgroundTexture) {
       this.setBindings({backgroundTexture});
-      backgroundTexture.ready.then(texture => {
+
+      if (backgroundTexture.isReady) {
+        const texture =
+          backgroundTexture instanceof DynamicTexture
+            ? backgroundTexture.texture
+            : backgroundTexture;
         this.backgroundTexture = texture;
         this.updateScale(texture);
-      });
+      } else {
+        backgroundTexture.ready.then(texture => {
+          this.backgroundTexture = texture;
+          this.updateScale(texture);
+        });
+      }
     }
   }
 
