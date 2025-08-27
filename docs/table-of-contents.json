@@ -191,6 +191,7 @@
       "developer-guide/README",
       "developer-guide/installing",
       "developer-guide/debugging",
+      "developer-guide/redraw",
       "developer-guide/testing",
       "developer-guide/profiling",
       "developer-guide/bundling",
