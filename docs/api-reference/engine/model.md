@@ -205,13 +205,13 @@ Create a new `Model`.
 
 Release GPU resources associated with the model.
 
-### `needsRedraw(): boolean | string`
+### `needsRedraw(): false | string`
 
-Check whether the model requires drawing.
+Returns the reason string if the model has requested a redraw, or `false` if no redraw is needed. Calling this method clears the flag.
 
 ### `setNeedsRedraw(reason: string): void`
 
-Mark the model as needing to be redrawn.
+Mark the model as needing to be redrawn. The optional `reason` string is remembered until `needsRedraw()` is called.
 
 ### `predraw(): void`
 
