@@ -59,6 +59,10 @@
         "type": "category",
         "label": "Engine Programming",
         "items": [
+          "api-guide/engine/engine",
+          "api-guide/engine/redraw",
+          "api-guide/engine/interactivity",
+          "api-guide/engine/scenegraphs",
           "api-guide/engine/transforms"
         ]
       }
