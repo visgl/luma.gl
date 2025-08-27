@@ -14,6 +14,7 @@ When the framework (or the application) modifies a component in some way that me
 The intended usage is that when the application's `onRedraw()` callback is called, the application can call `.needsRedraw()` on all its components to determine if anything needs to be updated. If all components return `false`, rendering can be skipped for that frame.
 
 Notes
+
 - Reading a components redraw flag with `.needsRedraw()` automatically clears the redraw flag (sets it to `false`).
 - If `.setNeedsRedraw(reason)` is called multiple times before a clear, only the first reason is stored.
 - Typically, if any component does need to be redrawn, all components need to be redrawn.
@@ -43,7 +44,7 @@ loop.start();
 
 | Class                                                      | `setNeedsRedraw()` | `needsRedraw()` |
 | ---------------------------------------------------------- | ------------------ | --------------- |
-| [AnimationLoop](../api-reference/engine/animation-loop.md) | ✅                 | ✅              |
-| [Model](../api-reference/engine/model.md)                  | ✅                 | ✅              |
+| [AnimationLoop](/docs/api-reference/engine/animation-loop) | ✅                 | ✅              |
+| [Model](/docs/api-reference/engine/model)                  | ✅                 | ✅              |
 
 Additional classes may also use this pattern for internal state tracking.
