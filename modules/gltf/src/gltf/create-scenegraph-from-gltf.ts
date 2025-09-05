@@ -31,10 +31,18 @@ export function createScenegraphsFromGLTF(
     gltf,
     options
   );
-  
+
   const animations = parseGLTFAnimations(gltf, gltfNodeIndexToNodeMap);
   const animator = new GLTFAnimator({animations});
   const lights = parseGLTFLights(gltf);
 
-  return {scenes, animator, lights, gltfMeshIdToNodeMap, gltfNodeIdToNodeMap, gltfNodeIndexToNodeMap, gltf};
+  return {
+    scenes,
+    animator,
+    lights,
+    gltfMeshIdToNodeMap,
+    gltfNodeIdToNodeMap,
+    gltfNodeIndexToNodeMap,
+    gltf
+  };
 }
