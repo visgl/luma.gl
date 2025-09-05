@@ -163,13 +163,19 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       // TODO move to utility in gltf module
       let min = [Infinity, Infinity, Infinity];
       let max = [0, 0, 0];
+      debugger
       this.scenegraphsFromGLTF?.scenes[0].traverse(node => {
-        const {bounds} = node as ModelNode;
-        min = min.map((n, i) => Math.min(n, bounds[0][i], bounds[1][i]));
-        max = max.map((n, i) => Math.max(n, bounds[0][i], bounds[1][i]));
+        if (node instanceof ModelNode) {
+          const {bounds} = node;
+          if (bounds) {
+            min = min.map((n, i) => Math.min(n, bounds[0][i], bounds[1][i]));
+            max = max.map((n, i) => Math.max(n, bounds[0][i], bounds[1][i]));
+          }
+        }
       });
       this.cameraPos = [2 * (max[0] + max[2]), max[1], 2 * (max[0] + max[2])];
       this.center = [0.5 * (min[0] + max[0]), 0.5 * (min[1] + max[1]), 0.5 * (min[2] + max[2])];
+      console.log('Bounds, center', min, max, this.center);
 
       canvas.style.opacity = '1';
       showError();
