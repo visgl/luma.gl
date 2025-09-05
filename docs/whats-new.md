@@ -24,6 +24,7 @@ Production quality WebGPU backend
   - `Texture` class refactors complete, see upgrade guide. 
 - Shader type APIs have been improved.
 - `CommandEncoder`/`CommandBuffer` API improvements
+- `Fence` - New synchronization primitive created with `device.createFence()`
 - `CanvasContext` API simplifications (see upgrade guide).
 
 - [Texture Formats](/docs/api-reference/core/texture-formats). Adds support for the new texture formats added in Chrome 132 (currently require setting chrome://flags/#enable-unsafe-webgpu)
@@ -38,8 +39,15 @@ Production quality WebGPU backend
 
 **@luma.gl/engine**
 
-- `AsyncTexture` 
+- `DynamicTexture` 
   - now supports mipmap generation for WebGPU textures (in progress)
+
+**@luma.gl/gltf**
+
+- glTF Skeleton Animation Support  (in progress)
+- glTF Mesh Target Animation Support  (in progress)
+- glTF and PRB now supported on WebGPU (in progress)
+- Improved documentation
 
 **@luma.gl/effects**
 
@@ -49,9 +57,6 @@ Production quality WebGPU backend
 
 - All shader modules ported to WGSL (in progress)
 
-**@luma.gl/gltf**
-
-- glTF and PRB now supported on WebGPU (in progress)
 
 ## Version 9.1
 
@@ -100,7 +105,7 @@ Enhanced WebGPU support.
 
 - `makeAnimationLoopTemplate`
   - Accepts a new `.adapters` prop. (Avoids need for global registration of adapters).
-- `AsyncTexture`](/docs/api-reference/engine/async-texture)
+- `AsyncTexture`](/docs/api-reference/engine/dynamic-texture)
   - New class allows that applications to work withcreate textures from a Promise.
 - `ShaderPassRenderer`
   - New class that helps applications apply a `ShaderPass` list to a texture.

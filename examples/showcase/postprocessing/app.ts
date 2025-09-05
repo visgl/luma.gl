@@ -6,12 +6,12 @@ import {
   AnimationLoopTemplate,
   AnimationProps,
   GroupNode,
-  AsyncTexture,
+  DynamicTexture,
   loadImageBitmap,
   ShaderPassRenderer
 } from '@luma.gl/engine';
 import {Device} from '@luma.gl/core';
-import * as shaderModules from '@luma.gl/shadertools';
+import * as shaderModules from '@luma.gl/effects';
 import {ShaderPass} from '@luma.gl/shadertools';
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
@@ -30,19 +30,18 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   time: number = 0;
 
   shaderPassMap: Record<string, ShaderPass>;
-  imageTexture: AsyncTexture;
+  imageTexture: DynamicTexture;
   selector: HTMLSelectElement;
 
-  shaderPassRenderer: ShaderPassRenderer;
-  // shaderPasses: ShaderPass[];
+  shaderPassRenderer!: ShaderPassRenderer;
+  shaderPasses!: ShaderPass[];
 
   constructor({device}: AnimationProps) {
     super();
 
     this.device = device;
-    this.imageTexture = new AsyncTexture(device, {
-      data: loadImageBitmap('./image.jpg'),
-      flipY: true
+    this.imageTexture = new DynamicTexture(device, {
+      data: loadImageBitmap('./image2.png', {imageOrientation: 'flipY'})
     });
 
     this.shaderPassMap = getShaderPasses();
@@ -63,6 +62,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   onRender({device}: AnimationProps): void {
+    this.shaderPassRenderer?.resize();
     // Run the shader passes and generate an output texture
     /* const outputTexture = */ this.shaderPassRenderer.renderToScreen({
       sourceTexture: this.imageTexture
@@ -82,7 +82,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 function getShaderPasses(): Record<string, ShaderPass> {
   const passes: Record<string, ShaderPass> = {};
   Object.entries(shaderModules).forEach(([key, module]) => {
-    // @ts-expect-error
     if (module.passes && !key.startsWith('_')) {
       passes[key] = module as ShaderPass;
     }

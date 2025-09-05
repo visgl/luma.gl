@@ -23,8 +23,8 @@ export type CanvasContextProps = {
   height?: number;
   /** Visibility (only used if new canvas is created). */
   visible?: boolean;
-  /** Whether to size the drawing buffer to the pixel size during auto resize */
-  useDevicePixels?: boolean;
+  /** Whether to size the drawing buffer to the pixel size during auto resize. If a number is provided it is used as a static pixel ratio */
+  useDevicePixels?: boolean | number;
   /** Whether to track window resizes. */
   autoResize?: boolean;
   /** @see https://developer.mozilla.org/en-US/docs/Web/API/GPUCanvasContext/configure#alphamode */
@@ -33,6 +33,11 @@ export type CanvasContextProps = {
   colorSpace?: 'srgb'; // GPUPredefinedColorSpace
   /** Whether to track position changes. Calls this.device.onPositionChange */
   trackPosition?: boolean;
+};
+
+export type MutableCanvasContextProps = {
+  /** Whether to size the drawing buffer to the pixel size during auto resize. If a number is provided it is used as a static pixel ratio */
+  useDevicePixels?: boolean | number;
 };
 
 /**
@@ -101,11 +106,18 @@ export abstract class CanvasContext {
   /** Height of drawing buffer: automatically tracks this.pixelHeight if props.autoResize is true */
   drawingBufferHeight: number;
 
+  /** Resolves when the canvas is initialized, i.e. when the ResizeObserver has updated the pixel size */
   protected _initializedResolvers = withResolvers<void>();
+  /** ResizeObserver to track canvas size changes */
   protected readonly _resizeObserver: ResizeObserver | undefined;
+  /** IntersectionObserver to track canvas visibility changes */
   protected readonly _intersectionObserver: IntersectionObserver | undefined;
-  protected _position: [number, number];
+  /** Position of the canvas in the document, updated by a timer */
+  protected _position: [number, number] = [0, 0];
+  /** Whether this canvas context has been destroyed */
   protected destroyed = false;
+  /** Whether the drawing buffer size needs to be resized (deferred resizing to avoid flicker) */
+  protected _needsDrawingBufferResize: boolean = true;
 
   abstract get [Symbol.toStringTag](): string;
 
@@ -186,10 +198,21 @@ export abstract class CanvasContext {
     this.destroyed = true;
   }
 
+  setProps(props: MutableCanvasContextProps): this {
+    if ('useDevicePixels' in props) {
+      this.props.useDevicePixels = props.useDevicePixels || false;
+      this._updateDrawingBufferSize();
+    }
+    return this;
+  }
+
   /** Returns a framebuffer with properly resized current 'swap chain' textures */
-  abstract getCurrentFramebuffer(options?: {
+  getCurrentFramebuffer(options?: {
     depthStencilFormat?: TextureFormatDepthStencil | false;
-  }): Framebuffer;
+  }): Framebuffer {
+    this._resizeDrawingBufferIfNeeded();
+    return this._getCurrentFramebuffer(options);
+  }
 
   // SIZE METHODS
 
@@ -226,13 +249,17 @@ export abstract class CanvasContext {
     return [maxTextureDimension, maxTextureDimension];
   }
 
-  /** Update the canvas drawing buffer size. Called automatically if props.autoResize is true. */
+  /**
+   * Update the canvas drawing buffer size.
+   * @note - Called automatically if props.autoResize is true.
+   * @note - Defers update of drawing buffer size until framebuffer is requested to avoid flicker
+   * (resizing clears the drawing buffer)!
+   */
   setDrawingBufferSize(width: number, height: number) {
-    this.canvas.width = width;
-    this.canvas.height = height;
-
-    this.drawingBufferWidth = width;
-    this.drawingBufferHeight = height;
+    // TODO(ib) - temporarily makes drawingBufferWidth/Height out of sync with canvas.width/height, could that cause issues?
+    this.drawingBufferWidth = Math.floor(width);
+    this.drawingBufferHeight = Math.floor(height);
+    this._needsDrawingBufferResize = true;
   }
 
   /**
@@ -298,7 +325,12 @@ export abstract class CanvasContext {
    * Can be called after changes to size or props,
    * to give implementation an opportunity to update configurations.
    */
-  protected abstract _updateDevice(): void;
+  protected abstract _configureDevice(): void;
+
+  /** Returns a framebuffer with properly resized current 'swap chain' textures */
+  protected abstract _getCurrentFramebuffer(options?: {
+    depthStencilFormat?: TextureFormatDepthStencil | false;
+  }): Framebuffer;
 
   // IMPLEMENTATION
 
@@ -360,16 +392,24 @@ export abstract class CanvasContext {
     this.devicePixelWidth = Math.max(1, Math.min(devicePixelWidth, maxDevicePixelWidth));
     this.devicePixelHeight = Math.max(1, Math.min(devicePixelHeight, maxDevicePixelHeight));
 
+    this._updateDrawingBufferSize();
+
+    // Inform the device
+    this.device.props.onResize(this, {oldPixelSize});
+  }
+
+  /** Initiate a deferred update for the canvas drawing buffer size */
+  protected _updateDrawingBufferSize() {
     // Update the canvas drawing buffer size
     if (this.props.autoResize) {
-      if (this.props.useDevicePixels) {
+      if (typeof this.props.useDevicePixels === 'number') {
+        const dpr = this.props.useDevicePixels;
+        this.setDrawingBufferSize(this.cssWidth * dpr, this.cssHeight * dpr);
+      } else if (this.props.useDevicePixels) {
         this.setDrawingBufferSize(this.devicePixelWidth, this.devicePixelHeight);
       } else {
         this.setDrawingBufferSize(this.cssWidth, this.cssHeight);
       }
-
-      // Inform the subclass
-      this._updateDevice();
     }
 
     // Resolve the initialized promise
@@ -377,9 +417,23 @@ export abstract class CanvasContext {
     this.isInitialized = true;
 
     this.updatePosition();
+  }
 
-    // Inform the device
-    this.device.props.onResize(this, {oldPixelSize});
+  /** Perform a deferred resize of the drawing buffer if needed */
+  _resizeDrawingBufferIfNeeded() {
+    if (this._needsDrawingBufferResize) {
+      this._needsDrawingBufferResize = false;
+      const sizeChanged =
+        this.drawingBufferWidth !== this.canvas.width ||
+        this.drawingBufferHeight !== this.canvas.height;
+      if (sizeChanged) {
+        // Update the canvas size
+        this.canvas.width = this.drawingBufferWidth;
+        this.canvas.height = this.drawingBufferHeight;
+        // Inform the subclass: WebGPU needs to call canvascontext.configure()
+        this._configureDevice();
+      }
+    }
   }
 
   /** Monitor DPR changes */

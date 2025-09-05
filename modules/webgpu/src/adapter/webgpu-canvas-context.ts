@@ -38,7 +38,7 @@ export class WebGPUCanvasContext extends CanvasContext {
 
     // Base class constructor cannot access derived methods/fields, so we need to call these functions in the subclass constructor
     this._setAutoCreatedCanvasId(`${this.device.id}-canvas`);
-    this._updateDevice();
+    this._configureDevice();
   }
 
   /** Destroy any textures produced while configured and remove the context configuration. */
@@ -47,14 +47,34 @@ export class WebGPUCanvasContext extends CanvasContext {
     super.destroy();
   }
 
+  // IMPLEMENTATION OF ABSTRACT METHODS
+
+  /** @see https://www.w3.org/TR/webgpu/#canvas-configuration */
+  _configureDevice(): void {
+    if (this.depthStencilAttachment) {
+      this.depthStencilAttachment.destroy();
+      this.depthStencilAttachment = null;
+    }
+
+    // Reconfigure the canvas size.
+    this.handle.configure({
+      device: this.device.handle,
+      format: this.device.preferredColorFormat,
+      // Can be used to define e.g. -srgb views
+      // viewFormats: [...]
+      colorSpace: this.props.colorSpace,
+      alphaMode: this.props.alphaMode
+    });
+  }
+
   /** Update framebuffer with properly resized "swap chain" texture views */
-  getCurrentFramebuffer(
+  _getCurrentFramebuffer(
     options: {depthStencilFormat?: TextureFormatDepthStencil | false} = {
       depthStencilFormat: 'depth24plus'
     }
   ): WebGPUFramebuffer {
     // Wrap the current canvas context texture in a luma.gl texture
-    const currentColorAttachment = this.getCurrentTexture();
+    const currentColorAttachment = this._getCurrentTexture();
     // TODO - temporary debug code
     if (
       currentColorAttachment.width !== this.drawingBufferWidth ||
@@ -80,28 +100,10 @@ export class WebGPUCanvasContext extends CanvasContext {
     });
   }
 
-  // IMPLEMENTATION OF ABSTRACT METHODS
-
-  _updateDevice(): void {
-    if (this.depthStencilAttachment) {
-      this.depthStencilAttachment.destroy();
-      this.depthStencilAttachment = null;
-    }
-
-    // Reconfigure the canvas size.
-    // https://www.w3.org/TR/webgpu/#canvas-configuration
-    this.handle.configure({
-      device: this.device.handle,
-      format: this.device.preferredColorFormat,
-      // Can be used to define e.g. -srgb views
-      // viewFormats: [...]
-      colorSpace: this.props.colorSpace,
-      alphaMode: this.props.alphaMode
-    });
-  }
+  // PRIMARY METHODS
 
   /** Wrap the current canvas context texture in a luma.gl texture */
-  getCurrentTexture(): WebGPUTexture {
+  _getCurrentTexture(): WebGPUTexture {
     const handle = this.handle.getCurrentTexture();
     return this.device.createTexture({
       id: `${this.id}#color-texture`,

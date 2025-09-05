@@ -27,16 +27,27 @@ export class WebGLCanvasContext extends CanvasContext {
 
     // Base class constructor cannot access derived methods/fields, so we need to call these functions in the subclass constructor
     this._setAutoCreatedCanvasId(`${this.device.id}-canvas`);
-    this._updateDevice();
-  }
-
-  getCurrentFramebuffer(): WEBGLFramebuffer {
-    // Setting handle to null returns a reference to the default framebuffer
-    this._framebuffer = this._framebuffer || new WEBGLFramebuffer(this.device, {handle: null});
-    return this._framebuffer;
+    this._configureDevice();
   }
 
   // IMPLEMENTATION OF ABSTRACT METHODS
 
-  _updateDevice(): void {}
+  _configureDevice(): void {
+    const shouldResize =
+      this.drawingBufferWidth !== this._framebuffer?.width ||
+      this.drawingBufferHeight !== this._framebuffer?.height;
+    if (shouldResize) {
+      this._framebuffer?.resize([this.drawingBufferWidth, this.drawingBufferHeight]);
+    }
+  }
+
+  _getCurrentFramebuffer(): WEBGLFramebuffer {
+    this._framebuffer ||= new WEBGLFramebuffer(this.device, {
+      id: 'canvas-context-framebuffer',
+      handle: null, // Setting handle to null returns a reference to the default WebGL framebuffer
+      width: this.drawingBufferWidth,
+      height: this.drawingBufferHeight
+    });
+    return this._framebuffer;
+  }
 }

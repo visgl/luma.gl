@@ -37,18 +37,11 @@ fn tiltShift_sampleColor(sampler2D source, vec2 texSize, vec2 texCoord) -> vec4f
     float weight = 1.0 - abs(percent);
     vec4 offsetColor = texture(source, texCoord + tiltShift_getDelta(texSize) / texSize * percent * radius);
 
-    /* switch to pre-multiplied alpha to correctly blur transparent images */
-    offsetColor.rgb *= offsetColor.a;
-
     color += offsetColor * weight;
     total += weight;
   }
 
   color = color / total;
-
-  /* switch back from pre-multiplied alpha */
-  color.rgb /= color.a + 0.00001;
-
   return color;
 }
 `;
@@ -82,19 +75,11 @@ vec4 tiltShift_sampleColor(sampler2D source, vec2 texSize, vec2 texCoord) {
     float percent = (t + offset - 0.5) / 30.0;
     float weight = 1.0 - abs(percent);
     vec4 offsetColor = texture(source, texCoord + tiltShift_getDelta(texSize) / texSize * percent * radius);
-
-    /* switch to pre-multiplied alpha to correctly blur transparent images */
-    offsetColor.rgb *= offsetColor.a;
-
     color += offsetColor * weight;
     total += weight;
   }
 
   color = color / total;
-
-  /* switch back from pre-multiplied alpha */
-  color.rgb /= color.a + 0.00001;
-
   return color;
 }
 `;

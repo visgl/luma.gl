@@ -38,8 +38,8 @@ Depth and stencil buffers are also cleared to default values:
 ```typescript
   const renderPass = device.beginRenderPass({
     clearColor: [0, 0, 0, 1],
-    depthClearValue: 1,
-    stencilClearValue: 0
+    clearDepth: 1,
+    clearStencil: 0
   });
   renderPass.end();
   device.submit();
@@ -64,11 +64,11 @@ If no value for the `viewport` parameter is provided, the following defaults wil
 | `clearColor?`        | `number[] \| false`    | `[0, 0, 0, 0]` |                                                                                                           |
 | `loadOp`?            | `'load'`, `'clear'`    | `'clear'`      | Load operation to perform on texture prior to executing the render pass. Default: 'clear'.                |
 | `storeOp`?           | `'store'`, `'discard'` | `'store'`      | The store operation to perform on texture after executing the render pass. Default: 'store'.              |
-| `depthClearValue`?   | `number`               | `1`            | Value to clear depth component to prior to executing the render pass, if depthLoadOp is "clear". 0.0-1.0. |
+| `clearDepth`?   | `number`               | `1`            | Value to clear depth component to prior to executing the render pass, if depthLoadOp is "clear". 0.0-1.0. |
 | `depthLoadOp`?       | `'load'`, `'clear'`    |                | Load operation to perform on depth component prior to executing the render pass. Default 'clear'.         |
 | `depthStoreOp`?      | `'store'`, `'discard'` |                | Store operation` to perform on depth component after executing the render pass. Default 'store'.          |
 | `depthReadOnly`?     | `boolean`              |                | Depth component is read only.                                                                             |
-| `stencilClearValue`? | `number `              |                | Value to clear stencil component to prior to executing the render pass, if stencilLoadOp is "clear".      |
+| `clearStencil`? | `number `              |                | Value to clear stencil component to prior to executing the render pass, if stencilLoadOp is "clear".      |
 | `stencilLoadOp`?     | `'clear'`, `'load'`    |                | Load operation to perform on stencil component prior to executing the render pass. Prefer clearing.       |
 | `stencilStoreOp`?    | `'store'`, `'discard'` |                | Store operation to perform on stencil component after executing the render pass.                          |
 | `stencilReadOnly`?   | `boolean`              |                | Stencil component is read only.                                                                           |

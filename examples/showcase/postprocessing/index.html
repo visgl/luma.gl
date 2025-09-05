@@ -5,18 +5,6 @@
       background: black;
       margin: 0;
     }
-
-    canvas {
-      height: 100% !important;
-      width: 100% !important;
-      transition: opacity 1s ease-in-out;
-    }
-
-    #model-select {
-      position: absolute;
-      left: 10px;
-      top: 10px;
-    }
   </style>
 </head>
 <script type="module">
@@ -25,7 +13,7 @@
   import {webgpuAdapter} from '@luma.gl/webgpu';
   import {makeAnimationLoop} from '@luma.gl/engine';
   import AnimationLoopTemplate from './app.ts';
-  const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {adapters: [webgpuAdapter, webgl2Adapter]});
+  const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {adapters: [webgl2Adapter]});
   animationLoop.start();
 </script>
 <body>

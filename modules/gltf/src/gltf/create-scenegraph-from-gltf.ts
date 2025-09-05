@@ -5,7 +5,9 @@
 import {Device} from '@luma.gl/core';
 import {GroupNode} from '@luma.gl/engine';
 import {GLTFPostprocessed} from '@loaders.gl/gltf';
+import {Light} from '@luma.gl/shadertools';
 import {parseGLTF, type ParseGLTFOptions} from '../parsers/parse-gltf';
+import {parseGLTFLights} from '../parsers/parse-gltf-lights';
 import {GLTFAnimator} from './gltf-animator';
 import {parseGLTFAnimations} from '../parsers/parse-gltf-animations';
 
@@ -16,6 +18,7 @@ export function createScenegraphsFromGLTF(
 ): {
   scenes: GroupNode[];
   animator: GLTFAnimator;
+  lights: Light[];
 
   gltfMeshIdToNodeMap: Map<string, GroupNode>;
   gltfNodeIndexToNodeMap: Map<number, GroupNode>;
@@ -28,8 +31,10 @@ export function createScenegraphsFromGLTF(
     gltf,
     options
   );
+  
   const animations = parseGLTFAnimations(gltf, gltfNodeIndexToNodeMap);
   const animator = new GLTFAnimator({animations});
+  const lights = parseGLTFLights(gltf);
 
-  return {scenes, animator, gltfMeshIdToNodeMap, gltfNodeIdToNodeMap, gltfNodeIndexToNodeMap, gltf};
+  return {scenes, animator, lights, gltfMeshIdToNodeMap, gltfNodeIdToNodeMap, gltfNodeIndexToNodeMap, gltf};
 }

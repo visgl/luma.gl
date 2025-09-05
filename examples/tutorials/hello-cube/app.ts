@@ -10,7 +10,7 @@ import {
   Model,
   CubeGeometry,
   loadImageBitmap,
-  AsyncTexture
+  DynamicTexture
 } from '@luma.gl/engine';
 import {Matrix4} from '@math.gl/core';
 
@@ -131,7 +131,7 @@ Rendered using the luma.gl <code>Model</code>, <code>CubeGeometry</code> and <co
   constructor({device}: AnimationProps) {
     super();
 
-    const texture = new AsyncTexture(device, {
+    const texture = new DynamicTexture(device, {
       usage: Texture.TEXTURE | Texture.RENDER_ATTACHMENT | Texture.COPY_DST,
       data: loadImageBitmap('vis-logo.png'),
       flipY: true,

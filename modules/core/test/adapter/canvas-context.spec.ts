@@ -9,6 +9,8 @@ import {getTestDevices, getWebGLTestDevice} from '@luma.gl/test-utils';
 
 /** Mock CanvasContext */
 class TestCanvasContext extends CanvasContext {
+  handle = null;
+  [Symbol.toStringTag] = 'TestCanvasContext';
   // @ts-expect-error
   readonly device = {
     limits: {maxTextureDimension2D: 1024},
@@ -22,6 +24,9 @@ class TestCanvasContext extends CanvasContext {
     throw new Error('test');
   }
   updateSize() {}
+  protected override _configureDevice(): void {
+    // Mock update device
+  }
 }
 
 /** Mock function: Modify the canvas context to mock test conditions */

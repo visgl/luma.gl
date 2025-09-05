@@ -12,7 +12,7 @@ import {
   Model,
   makeRandomGenerator,
   loadImageBitmap,
-  AsyncTexture,
+  DynamicTexture,
   BackgroundTextureModel
 } from '@luma.gl/engine';
 import {Matrix4, Vector3, radians} from '@math.gl/core';
@@ -319,7 +319,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     super();
 
     this.backgroundTextureModel = new BackgroundTextureModel(device, {
-      backgroundTexture: new AsyncTexture(device, {data: loadImageBitmap('background.png')}),
+      backgroundTexture: new DynamicTexture(device, {data: loadImageBitmap('background.png')}),
       blend: true
     });
 
@@ -472,8 +472,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     const mainRenderPass = device.beginRenderPass({
       framebuffer: this.mainFramebuffer,
-      clearColor: [0, 0, 0, 0],
-      clearDepth: true
+      clearColor: [0, 0, 0, 1],
+      clearDepth: 1
     });
 
     // Render electrons to framebuffer

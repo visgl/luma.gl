@@ -132,6 +132,11 @@ Notes:
 - If called multiple times, the `reason` provided in the first call will be remembered.
 - `AnimationLoop` automatically sets this flag if the WebGL context's drawing buffer size changes.
 
+### needsRedraw()
+
+`animationLoop.needsRedraw(): false | string`
+
+Returns the current redraw reason string, or `false` if no redraw was requested. Calling this method clears the flag.
 
 ### attachTimeline()
 

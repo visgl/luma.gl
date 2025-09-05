@@ -76,7 +76,7 @@ test.skip('WebGLState#setGLParameters (Mixing enum and function style keys)', as
 });
 
 // TODO - restore asap
-test('WebGLState#setGLParameters (Argument expansion for ***SeperateFunc setters))', async t => {
+test('WebGLState#setGLParameters (Argument expansion for ***SeparateFunc setters))', async t => {
   const webglDevice = await getWebGLTestDevice();
 
   const expectedValues = {

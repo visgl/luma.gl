@@ -59,6 +59,11 @@
         "type": "category",
         "label": "Engine Programming",
         "items": [
+          "api-guide/engine/engine",
+          "api-guide/engine/redraw",
+          "api-guide/engine/shader-inputs",
+          "api-guide/engine/interactivity",
+          "api-guide/engine/scenegraph",
           "api-guide/engine/transforms"
         ]
       }
@@ -89,6 +94,7 @@
           "api-reference/core/resources/buffer",
           "api-reference/core/resources/compute-pass",
           "api-reference/core/resources/compute-pipeline",
+          "api-reference/core/resources/fence",
           "api-reference/core/resources/framebuffer",
           "api-reference/core/resources/render-pass",
           "api-reference/core/resources/render-pipeline",
@@ -110,7 +116,7 @@
           "api-reference/engine/shader-inputs",
           "api-reference/engine/animation-loop",
           "api-reference/engine/animation-loop-template",
-          "api-reference/engine/async-texture",
+          "api-reference/engine/dynamic-texture",
           "api-reference/engine/load-image-bitmap",          
           "api-reference/engine/geometry/geometries",
           "api-reference/engine/geometry/geometry",
@@ -133,7 +139,7 @@
       {
         "type": "category",
         "label": "@luma.gl/gltf",
-        "items": ["api-reference/gltf/README"]
+        "items": ["api-reference/gltf/README", "api-reference/gltf/gltf-extensions"]
       },
       {
         "type": "category",

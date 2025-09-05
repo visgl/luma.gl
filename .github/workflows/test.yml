@@ -15,18 +15,22 @@ jobs:
       matrix:
         node-version: [22]
 
+        
     steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
-      - uses: volta-cli/action@2d68418f32546fd191eb666e232b321d5726484d # v4.1.1
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Setup Node (with Corepack)
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-          cache: 'yarn'
+          cache: 'yarn' # or 'pnpm', 'npm' depending on your package manager
 
       - name: Install dependencies
-        run: |
-          yarn install
-        env:
-          YARN_ENABLE_IMMUTABLE_INSTALLS: false 
+        run: yarn install --frozen-lockfile  
   
       - name: Build code
         run: |

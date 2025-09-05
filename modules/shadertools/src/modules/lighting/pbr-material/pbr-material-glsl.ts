@@ -70,6 +70,40 @@ uniform pbrMaterialUniforms {
   
   bool alphaCutoffEnabled;
   float alphaCutoff; // #ifdef ALPHA_CUTOFF
+
+  vec3 specularColorFactor;
+  float specularIntensityFactor;
+  bool specularColorMapEnabled;
+  bool specularIntensityMapEnabled;
+
+  float ior;
+
+  float transmissionFactor;
+  bool transmissionMapEnabled;
+
+  float thicknessFactor;
+  float attenuationDistance;
+  vec3 attenuationColor;
+
+  float clearcoatFactor;
+  float clearcoatRoughnessFactor;
+  bool clearcoatMapEnabled;
+
+  vec3 sheenColorFactor;
+  float sheenRoughnessFactor;
+  bool sheenColorMapEnabled;
+
+  float iridescenceFactor;
+  float iridescenceIor;
+  vec2 iridescenceThicknessRange;
+  bool iridescenceMapEnabled;
+
+  float anisotropyStrength;
+  float anisotropyRotation;
+  vec2 anisotropyDirection;
+  bool anisotropyMapEnabled;
+
+  float emissiveStrength;
   
   // IBL
   bool IBLenabled;
@@ -97,6 +131,29 @@ uniform sampler2D pbr_metallicRoughnessSampler;
 #endif
 #ifdef HAS_OCCLUSIONMAP
 uniform sampler2D pbr_occlusionSampler;
+#endif
+#ifdef HAS_SPECULARCOLORMAP
+uniform sampler2D pbr_specularColorSampler;
+#endif
+#ifdef HAS_SPECULARINTENSITYMAP
+uniform sampler2D pbr_specularIntensitySampler;
+#endif
+#ifdef HAS_TRANSMISSIONMAP
+uniform sampler2D pbr_transmissionSampler;
+#endif
+#ifdef HAS_CLEARCOATMAP
+uniform sampler2D pbr_clearcoatSampler;
+uniform sampler2D pbr_clearcoatRoughnessSampler;
+#endif
+#ifdef HAS_SHEENCOLORMAP
+uniform sampler2D pbr_sheenColorSampler;
+uniform sampler2D pbr_sheenRoughnessSampler;
+#endif
+#ifdef HAS_IRIDESCENCEMAP
+uniform sampler2D pbr_iridescenceSampler;
+#endif
+#ifdef HAS_ANISOTROPYMAP
+uniform sampler2D pbr_anisotropySampler;
 #endif
 #ifdef USE_IBL
 uniform samplerCube pbr_diffuseEnvSampler;

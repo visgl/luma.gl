@@ -75,40 +75,44 @@ export class WebGLAdapter extends Adapter {
   async create(props: DeviceProps = {}): Promise<WebGLDevice> {
     const {WebGLDevice} = await import('./webgl-device');
 
-    log.groupCollapsed(LOG_LEVEL, 'WebGLDevice created')();
+    const promises: Promise<unknown>[] = [];
+
+    // Load webgl and spector debug scripts from CDN if requested
+    if (props.debugWebGL || props.debug) {
+      promises.push(loadWebGLDeveloperTools());
+    }
+
+    if (props.debugSpectorJS) {
+      promises.push(loadSpectorJS(props));
+    }
+
+    // Wait for all the loads to settle before creating the context.
+    // The Device.create() functions are async, so in contrast to the constructor, we can `await` here.
+    const results = await Promise.allSettled(promises);
+    for (const result of results) {
+      if (result.status === 'rejected') {
+        log.error(`Failed to initialize debug libraries ${result.reason}`)();
+      }
+    }
+
     try {
-      const promises: Promise<unknown>[] = [];
-
-      // Load webgl and spector debug scripts from CDN if requested
-      if (props.debugWebGL || props.debug) {
-        promises.push(loadWebGLDeveloperTools());
-      }
-
-      if (props.debugSpectorJS) {
-        promises.push(loadSpectorJS(props));
-      }
-
-      // Wait for all the loads to settle before creating the context.
-      // The Device.create() functions are async, so in contrast to the constructor, we can `await` here.
-      const results = await Promise.allSettled(promises);
-      for (const result of results) {
-        if (result.status === 'rejected') {
-          log.error(`Failed to initialize debug libraries ${result.reason}`)();
-        }
-      }
-
       const device = new WebGLDevice(props);
 
+      log.groupCollapsed(LOG_LEVEL, `WebGLDevice ${device.id} created`)();
       // Log some debug info about the newly created context
       const message = `\
 ${device._reused ? 'Reusing' : 'Created'} device with WebGL2 ${device.props.debug ? 'debug ' : ''}context: \
 ${device.info.vendor}, ${device.info.renderer} for canvas: ${device.canvasContext.id}`;
       log.probe(LOG_LEVEL, message)();
       log.table(LOG_LEVEL, device.info)();
-
       return device;
     } finally {
       log.groupEnd(LOG_LEVEL)();
+      log.info(
+        LOG_LEVEL,
+        `%cWebGL call tracing: luma.log.set('debug-webgl') `,
+        'color: white; background: blue; padding: 2px 6px; border-radius: 3px;'
+      )();
     }
   }
 }

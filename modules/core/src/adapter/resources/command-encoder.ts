@@ -113,7 +113,7 @@ export type ClearTextureOptions = {
 //   size?: number;
 // };
 
-// export type WriteTextureOptions = {
+// export type TextureWriteOptions = {
 //   destination: Texture;
 //   mipLevel?: number; //  = 0;
 //   origin?: [number, number, number] | number[];
@@ -166,7 +166,7 @@ export abstract class CommandEncoder extends Resource<CommandEncoderProps> {
   /** Add a command that clears a texture mip level. */
   // abstract clearTexture(options: ClearTextureOptions): void;
 
-  // abstract readTexture(options: ReadTextureOptions): Promise<TypedArray>;
+  // abstract readTexture(options: TextureReadOptions): Promise<TypedArray>;
 
   /** Reads results from a query set into a GPU buffer. Values are 64 bits so byteLength must be querySet.props.count * 8 */
   abstract resolveQuerySet(

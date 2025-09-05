@@ -12,15 +12,16 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 
 ## Upgrading to v9.2 (In Development)
 
-v9.2 brings full WebGPU support. Some additional deprecations and breaking changes have been necessary, but apart from the `Texture` -> `AsyncTexture` split, impact on most applications should be minimal. 
+v9.2 brings full WebGPU support. Some additional deprecations and breaking changes have been necessary, but apart from the `Texture` -> `DynamicTexture` split, impact on most applications should be minimal. 
 
 **New VertexFormats**
 - `VertexFormat` Replace `'unorm8-webgl'` with `'unorm8'`.
 
-**Texture and AsyncTexture**
-- The `Texture` class has been simplified to the minimum API required for GPU portability. The  `AsyncTexture` texture class provides a higher-level API and is recommended for most applications.
-- `device.createTexture()` no longer accepts `props.data`: Use `AsyncTexture` or call `texture.setImageData()`
-- `device.createTexture()` no longer accepts `props.mipmaps`: Use `AsyncTexture` (or call `texture.generateMipmapsWebGL()`)
+**Texture and DynamicTexture**
+- The `Texture` class has been simplified to the minimum API required for GPU portability. The `DynamicTexture` texture class provides a higher-level API and is recommended for most applications.
+- (`DynamicTexture` was called `AsyncTexture` in 9.1).
+- `device.createTexture()` no longer accepts `props.data`: Use `DynamicTexture` or call `texture.setImageData()`
+- `device.createTexture()` no longer accepts `props.mipmaps`: Use `DynamicTexture` (or call `texture.generateMipmapsWebGL()`)
 
 **Removal of WebGL uniform support**
 - The transition from uniforms to uniform buffers is complete, and remaining support for non-buffer uniforms has been removed.
@@ -32,7 +33,6 @@ v9.2 brings full WebGPU support. Some additional deprecations and breaking chang
 - `canvasContext.devicePixelWidth` and `canvasContext.devicePixelHeight` are now kept updated to exact device pixel size of underlying canvas. 
 - Instead `canvasContext.setDrawingBufferSize()` to explicitly control drawing buffer size, if not using `CanvasContextProps.autoResize` 
 - A new `DeviceProps.onResize` callback can be used to react to changes.
-- `CanvasContextProps.useDevicePixelRatio` no longer accepts `number`s, just a `boolean` value. 
 
 **Minor changes**
 - `core`: The shader types has been refactored, some shader type names have changed. These are typically not used directly by applications.

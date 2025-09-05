@@ -5,7 +5,9 @@ import './utils/uid.spec';
 import './shadertypes/decode-attribute-type.spec';
 import './shadertypes/decode-vertex-format.spec';
 import './shadertypes/vertex-format-from-attribute.spec';
-import './shadertypes/decode-texture-format.spec';
+
+import './shadertypes/textures/decode-texture-format.spec';
+import './shadertypes/textures/texture-layout.spec';
 
 // adapter utils
 import './adapter-utils/get-attribute-from-layout.spec';
@@ -41,6 +43,7 @@ import './adapter/resources/texture.spec';
 import './adapter/resources/framebuffer.spec';
 import './adapter/resources/vertex-array.spec';
 import './adapter/resources/query-set.spec';
+import './adapter/resources/fence.spec';
 
 // portable - uniform buffers
 import './portable/uniform-buffer-layout.spec';

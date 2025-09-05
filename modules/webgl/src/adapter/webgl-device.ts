@@ -57,6 +57,7 @@ import {WEBGLCommandBuffer} from './resources/webgl-command-buffer';
 import {WEBGLVertexArray} from './resources/webgl-vertex-array';
 import {WEBGLTransformFeedback} from './resources/webgl-transform-feedback';
 import {WEBGLQuerySet} from './resources/webgl-query-set';
+import {WEBGLFence} from './resources/webgl-fence';
 
 import {readPixelsToArray, readPixelsToBuffer} from './helpers/webgl-texture-utils';
 import {
@@ -232,15 +233,14 @@ export class WebGLDevice extends Device {
     });
     glState.trackState(this.gl, {copyState: false});
 
-    // DEBUG contexts: Add luma debug instrumentation to the context, force log level to at least 1
-    const debugWebGL = props.debugWebGL || props.debug;
-    const traceWebGL = props.debugWebGL;
-    if (debugWebGL) {
-      this.gl = makeDebugContext(this.gl, {debugWebGL, traceWebGL});
+    // props.debug - instrument the WebGL context with Khronos debug tools
+    // props.debugWebGL - activate WebGL context tracing, force log level to at least 1
+    if (props.debug || props.debugWebGL) {
+      this.gl = makeDebugContext(this.gl, {debugWebGL: true, traceWebGL: props.debugWebGL});
       log.warn('WebGL debug mode activated. Performance reduced.')();
-      if (props.debugWebGL) {
-        log.level = Math.max(log.level, 1);
-      }
+    }
+    if (props.debugWebGL) {
+      log.level = Math.max(log.level, 1);
     }
 
     this.commandEncoder = new WEBGLCommandEncoder(this, {id: `${this}-command-encoder`});
@@ -273,10 +273,6 @@ export class WebGLDevice extends Device {
   }
 
   // IMPLEMENTATION OF ABSTRACT DEVICE
-
-  getTextureByteAlignment(): number {
-    return 4;
-  }
 
   createCanvasContext(props?: CanvasContextProps): CanvasContext {
     throw new Error('WebGL only supports a single canvas');
@@ -317,6 +313,10 @@ export class WebGLDevice extends Device {
 
   createQuerySet(props: QuerySetProps): WEBGLQuerySet {
     return new WEBGLQuerySet(this, props);
+  }
+
+  override createFence(): WEBGLFence {
+    return new WEBGLFence(this);
   }
 
   createRenderPipeline(props: RenderPipelineProps): WEBGLRenderPipeline {

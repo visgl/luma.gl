@@ -62,15 +62,22 @@ export type VariableShaderTypeAlias =
 export type CompositeShaderType = VariableShaderType | StructShaderType | ArrayShaderType;
 
 /** Represents a struct in WGSL */
-export type StructShaderType = {
-  members: Record<string, CompositeShaderType>;
-};
+export type StructShaderType = Record<
+  string,
+  VariableShaderType | StructShaderType2 | ArrayShaderType
+>;
+export type StructShaderType2 = Record<
+  string,
+  VariableShaderType | StructShaderType3 | ArrayShaderType
+>;
+export type StructShaderType3 = Record<
+  string,
+  VariableShaderType | StructShaderType4 | ArrayShaderType
+>;
+export type StructShaderType4 = Record<string, VariableShaderType>;
 
 /** Represents an array in WGSL */
-export type ArrayShaderType = {
-  type: CompositeShaderType;
-  length: number;
-};
+export type ArrayShaderType = [type: CompositeShaderType, length: number];
 
 /** Information extracted from a AttributeShaderType constant */
 export type AttributeShaderTypeInfo = {

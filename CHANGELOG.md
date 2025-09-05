@@ -4,6 +4,22 @@
 
 Production WebGPU support
 
+### v9.2.0-alpha.6
+
+-   feature(core): CanvasContext.setProps({useDevicePixels}) (#2406)
+
+### v9.2.0-alpha.5
+
+- fix(core): Support number for useDevicePixels (#2405)
+- fix(lighting): Default to 3 MAX_LIGHTS (#2404)
+- fix(effects): Reinstate vignette GLSL shader (#2403)
+
+### v9.2.0-alpha.4
+
+- fix(engine): AsyncTexture correctly resolve Promise on data load (#2402)
+- fix(postprocessing): Remove pre-multiplied alpha (#2400)
+- fix uniform-buffer-layout size calculation and add support for arrays (#2398)
+
 ### v9.2.0-alpha.3
 
 ### v9.2.0-alpha.2
