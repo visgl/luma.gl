@@ -6,7 +6,7 @@ set -e
 
 BRANCH=`echo "$1-release"`
 VERSION=`echo "$1.0"`
-WEBSITE_EXAMPLES=website/src/components/luma-example-page.jsx
+WEBSITE_EXAMPLES=website/src/react-luma/components/luma-example.tsx
 
 echo "Updating branch to ${BRANCH}..."
 
