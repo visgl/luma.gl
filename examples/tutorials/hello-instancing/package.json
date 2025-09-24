@@ -1,6 +1,6 @@
 {
   "name": "luma.gl-examples-hello-instancing-high",
-  "version": "9.2.0-beta.2",
+  "version": "9.2.0",
   "private": true,
   "scripts": {
     "start": "vite",
@@ -8,10 +8,10 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@luma.gl/core": "9.2.0-beta.2",
-    "@luma.gl/engine": "9.2.0-beta.2",
-    "@luma.gl/shadertools": "9.2.0-beta.2",
-    "@luma.gl/webgl": "9.2.0-beta.2"
+    "@luma.gl/core": "9.2.0",
+    "@luma.gl/engine": "9.2.0",
+    "@luma.gl/shadertools": "9.2.0",
+    "@luma.gl/webgl": "9.2.0"
   },
   "devDependencies": {
     "typescript": "^5.5.0",
