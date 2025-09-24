@@ -13,7 +13,7 @@ import {webgpuAdapter} from '@luma.gl/webgpu';
 // import {VRDisplay} from '@luma.gl/experimental';
 import {useStore} from '../store/device-store';
 
-const GITHUB_TREE = 'https://github.com/visgl/luma.gl/tree/8.5-release';
+const GITHUB_TREE = 'https://github.com/visgl/luma.gl/tree/9.2-release';
 
 // WORKAROUND FOR luma.gl VRDisplay
 // if (!globalThis.navigator) {// eslint-disable-line
@@ -104,7 +104,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
 
       // Ensure the example can find its images
       // TODO - this only works for examples/tutorials
-      const RAW_GITHUB = 'https://raw.githubusercontent.com/visgl/luma.gl/master';
+      const RAW_GITHUB = 'https://raw.githubusercontent.com/visgl/luma.gl/9.2-release';
       if (props.directory) {
         setPathPrefix(`${RAW_GITHUB}/examples/${props.directory}/${props.id}/`);
       } else {
