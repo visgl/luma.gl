@@ -4,6 +4,10 @@
 
 Production WebGPU support
 
+### v9.2.0
+
+- Promote 9.2.0-beta.2 to 9.2.0
+
 ### v9.2.0-beta.2
 
 - Fix dependencies

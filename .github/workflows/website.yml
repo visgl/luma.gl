@@ -17,7 +17,16 @@ jobs:
       - name: Get version
         id: get_version
         run: |
-          packageFile=$(if [ -d modules ]; then ls modules/*/package.json | head -n 1; else echo package.json; fi)
+          if [ -d modules ]; then
+            # Find the first public (non-private) module
+            for packageFile in modules/*/package.json; do
+              if ! jq -e '.private // false' "$packageFile" > /dev/null; then
+                break
+              fi
+            done
+          else
+            packageFile=package.json
+          fi
           packageName=$(jq -r '.name' $packageFile)
           LATEST=$(npm show "${packageName}@latest" version | grep -o -E "^[0-9]+\.[0-9]+")
           echo "latest=${LATEST}-release" >> "$GITHUB_OUTPUT"
