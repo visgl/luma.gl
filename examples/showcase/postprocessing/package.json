@@ -10,6 +10,7 @@
   "dependencies": {
     "@loaders.gl/core": "^4.2.0",
     "@loaders.gl/gltf": "^4.2.0",
+    "@luma.gl/constants": "9.2.0",
     "@luma.gl/core": "9.2.0",
     "@luma.gl/engine": "9.2.0",
     "@luma.gl/gltf": "9.2.0",

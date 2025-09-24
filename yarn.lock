@@ -7974,6 +7974,7 @@ __metadata:
   dependencies:
     "@loaders.gl/core": "npm:^4.2.0"
     "@loaders.gl/gltf": "npm:^4.2.0"
+    "@luma.gl/constants": "npm:9.2.0"
     "@luma.gl/core": "npm:9.2.0"
     "@luma.gl/engine": "npm:9.2.0"
     "@luma.gl/gltf": "npm:9.2.0"
@@ -8063,6 +8064,7 @@ __metadata:
   dependencies:
     "@loaders.gl/core": "npm:^4.2.0"
     "@loaders.gl/gltf": "npm:^4.2.0"
+    "@luma.gl/constants": "npm:9.2.0"
     "@luma.gl/core": "npm:9.2.0"
     "@luma.gl/engine": "npm:9.2.0"
     "@luma.gl/gltf": "npm:9.2.0"
