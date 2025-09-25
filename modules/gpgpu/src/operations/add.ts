@@ -5,7 +5,7 @@
 import type {TypedArray} from '@math.gl/types';
 import { GPUTable } from "../operation/gpu-table";
 import { Operation } from "../operation/operation";
-import { deduceOutputProps } from './common/output';
+import { deduceOutputProps } from '../utils/output-props';
 
 class AddOperation extends Operation<{x: GPUTable, y: GPUTable}> {
   name = 'add';

@@ -20,7 +20,7 @@ export type GPUTableProps = {
   /** CPU buffer to fill the vector with, required unless `source` is supplied */
   value?: TypedArray;
   /** Operation whose output is used to fill the vector, required unless `value` is supplied */
-  source?: Operation | null;
+  source?: Operation | GPUTable | null;
   /** If all rows share the same value */
   isConstant?: boolean;
   /** Number of rows, can be omitted if `isConstant:true` or if `value` is supplied */
@@ -54,7 +54,7 @@ export class GPUTable {
   /** CPU buffer, either provided by the user or read back from the GPU */
   protected _value?: TypedArray;
   /** Operation whose output is used to fill the vector, required unless `value` is supplied */
-  protected _source: Operation | null = null;
+  protected _source: Operation | GPUTable | null = null;
   /** GPU buffer */
   private _buffer?: Buffer;
 
@@ -144,11 +144,17 @@ export class GPUTable {
       throw new Error(`GPUTable ${this} already destroyed`);
     }
     if (!this._buffer) {
-      const buffer = bufferPool.createOrReuse(device, this.byteLength);
-      if (this._value) {
-        buffer.write(this._value);
+      let buffer: Buffer;
+      if (this._source instanceof GPUTable) {
+        await this._source.evaluate(device);
+        buffer = this._source.buffer;
       } else {
-        await this._source!.execute(device, buffer);
+        buffer = bufferPool.createOrReuse(device, this.byteLength);
+        if (this._value) {
+          buffer.write(this._value);
+        } else {
+          await this._source!.execute(device, buffer);
+        }
       }
       // cache the result when successful
       this._buffer = buffer;

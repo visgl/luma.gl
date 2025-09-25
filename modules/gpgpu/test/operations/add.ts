@@ -4,7 +4,7 @@
 
 import test from 'tape-promise/tape';
 import {add} from '@luma.gl/gpgpu';
-import {getWebGLTestDevice} from '@luma.gl/test-utils';
+import {getTestDevices} from '@luma.gl/test-utils';
 import { TestData, makeTable, verifyTableShape, verifyTableValue } from './fixtures';
 
 const TEST_CASES: {
@@ -75,23 +75,27 @@ test('GPGPU#add#shape', t => {
   t.end();
 });
 
-test.only('GPGPU#add#webgl', async t => {
-  const webglDevice = await getWebGLTestDevice();
-  for (const {title, x, y, z, sum} of TEST_CASES) {
-    const tx = makeTable(x);
-    const ty = makeTable(y);
-    const tz = z && makeTable(z);
-    const ts = tz ? add(tx, ty, tz) : add(tx, ty);
+test.only('GPGPU#add#execute', async t => {
+  const devices = await getTestDevices();
+  for (const device of devices) {
+    if (device.type !== 'webgl') continue;
+    t.comment(device.type);
+    for (const {title, x, y, z, sum} of TEST_CASES) {
+      const tx = makeTable(x);
+      const ty = makeTable(y);
+      const tz = z && makeTable(z);
+      const ts = tz ? add(tx, ty, tz) : add(tx, ty);
+      
+      await ts.evaluate(device);
+      await ts.readValue();
+      t.is(verifyTableValue(ts, sum), null, title);
     
-    await ts.evaluate(webglDevice);
-    await ts.readValue();
-    t.is(verifyTableValue(ts, sum), null, title);
-  
-    // clean up
-    tx.destroy();
-    ty.destroy();
-    tz?.destroy();
-    ts.destroy();
+      // clean up
+      tx.destroy();
+      ty.destroy();
+      tz?.destroy();
+      ts.destroy();
+    }
   }
   t.end();
 });

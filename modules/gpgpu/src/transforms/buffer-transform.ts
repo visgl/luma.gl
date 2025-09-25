@@ -18,7 +18,7 @@ export type BufferTransformProps = Omit<ModelProps, 'fs'> & {
   /** bufferMode when binding varyings
    * https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/transformFeedbackVaryings
    */
-  bufferMode: 'interleaved' | 'separate';
+  bufferMode?: 'interleaved' | 'separate';
   /** A list of named outputs corresponding to shader declarations (varyings in WebGL) */
   outputs?: string[];
   /** @deprecated Use run({outputBuffers}) instead - Map of output buffers that the shaders will write results of computations to */
@@ -36,6 +36,7 @@ export class BufferTransform {
 
   static defaultProps: Required<BufferTransformProps> = {
     ...Model.defaultProps,
+    bufferMode: 'separate',
     outputs: undefined!,
     feedbackBuffers: undefined!
   };
