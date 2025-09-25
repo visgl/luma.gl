@@ -4,28 +4,14 @@
 
 import { OperationHandler } from "../../operation/operation";
 import { GPUTable } from "../../operation/gpu-table";
-import { runBufferTransform } from "./common";
-
-const vs = `\
-uint add(uint x, uint y) {
-  return x + y;
-}
-int add(int x, int y) {
-  return x + y;
-}
-float add(float x, float y) {
-  return x + y;
-}
-`;
+import { runComputation } from "./common";
 
 export const add: OperationHandler<{x: GPUTable, y: GPUTable}> = async ({
   inputs,
   output,
   target
 }) => {
-  runBufferTransform({
-    elementWise: true,
-    module: { name: 'add', vs },
+  runComputation({
     inputs,
     output,
     outputBuffer: target
