@@ -2,9 +2,20 @@
 
 _This page contains news for recent luma.gl releases. For older releases (through v8.5) refer to the [Legacy What's New](/docs/legacy/legacy-upgrade-guide) page._
 
-## Version 9.2 (In Development)
+## Version 9.3 (In Development)
 
-Target Date: Q2, 2025
+Target Date: TBD
+
+**@luma.gl/gltf**
+
+- glTF Skeleton Animation Support
+- glTF Mesh Target Animation Support
+- glTF and PRB now supported on WebGPU
+- Improved documentation
+
+## Version 9.2
+
+Release Date: Sep 24, 2025
 
 Production quality WebGPU backend
 
@@ -39,23 +50,16 @@ Production quality WebGPU backend
 
 **@luma.gl/engine**
 
-- `DynamicTexture` 
-  - now supports mipmap generation for WebGPU textures (in progress)
-
-**@luma.gl/gltf**
-
-- glTF Skeleton Animation Support  (in progress)
-- glTF Mesh Target Animation Support  (in progress)
-- glTF and PRB now supported on WebGPU (in progress)
-- Improved documentation
+- `DynamicTexture`
+  - now supports mipmap generation for WebGPU textures
 
 **@luma.gl/effects**
 
-- All postprocessing effects ported to WGSL (in progress)
+- More postprocessing effects ported to WGSL
 
 **@luma.gl/shadertools**
 
-- All shader modules ported to WGSL (in progress)
+- More shader modules ported to WGSL
 
 
 ## Version 9.1
