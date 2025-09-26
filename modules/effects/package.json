@@ -46,7 +46,7 @@
     "prepublishOnly": "npm run build-minified-bundle && npm run build-dev-bundle"
   },
   "peerDependencies": {
-    "@luma.gl/shadertools": "~9.2.0-beta.1"
+    "@luma.gl/shadertools": "~9.2.0"
   },
   "dependencies": {
     "@math.gl/core": "^4.1.0",
