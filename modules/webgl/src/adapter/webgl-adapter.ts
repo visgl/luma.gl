@@ -49,7 +49,7 @@ export class WebGLAdapter extends Adapter {
    * @param gl
    * @returns
    */
-  async attach(gl: Device | WebGL2RenderingContext): Promise<WebGLDevice> {
+  async attach(gl: Device | WebGL2RenderingContext, props: DeviceProps = {}): Promise<WebGLDevice> {
     const {WebGLDevice} = await import('./webgl-device');
     if (gl instanceof WebGLDevice) {
       return gl;
@@ -63,10 +63,13 @@ export class WebGLAdapter extends Adapter {
       throw new Error('Invalid WebGL2RenderingContext');
     }
 
+    const createCanvasContext = props.createCanvasContext === true ? {} : props.createCanvasContext;
+
     // We create a new device using the provided WebGL context and its canvas
     return new WebGLDevice({
+      ...props,
       _handle: gl,
-      createCanvasContext: {canvas: gl.canvas}
+      createCanvasContext: {canvas: gl.canvas, ...createCanvasContext}
     });
   }
 
