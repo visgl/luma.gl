@@ -4,6 +4,10 @@
 
 Production WebGPU support
 
+### v9.2.2
+
+- fix(webgl): WebGLAdapter.attach support passing DeviceProps (#2453)
+
 ### v9.2.1
 
 - Fix peer denpendencies for 9.2 release (#2451)
