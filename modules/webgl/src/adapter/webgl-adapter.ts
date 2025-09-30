@@ -46,6 +46,7 @@ export class WebGLAdapter extends Adapter {
   /**
    * Get a device instance from a GL context
    * Creates a WebGLCanvasContext against the contexts canvas
+   * @note autoResize will be disabled, assuming that whoever created the external context will be handling resizes.
    * @param gl
    * @returns
    */
@@ -66,10 +67,11 @@ export class WebGLAdapter extends Adapter {
     const createCanvasContext = props.createCanvasContext === true ? {} : props.createCanvasContext;
 
     // We create a new device using the provided WebGL context and its canvas
+    // Assume that whoever created the external context will be handling resizes.
     return new WebGLDevice({
       ...props,
       _handle: gl,
-      createCanvasContext: {canvas: gl.canvas, ...createCanvasContext}
+      createCanvasContext: {canvas: gl.canvas, autoResize: false, ...createCanvasContext}
     });
   }
 
