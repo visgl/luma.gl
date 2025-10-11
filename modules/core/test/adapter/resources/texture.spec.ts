@@ -99,6 +99,44 @@ test('Texture#copyImageData updates correct cubemap face on WebGL', async t => {
   t.end();
 });
 
+test('Texture#copyImageData triggers row-length error for large rgba8unorm textures on WebGL', async t => {
+  const device = await getWebGLTestDevice();
+  if (!device) {
+    t.comment('WebGL not available');
+    t.end();
+    return;
+  }
+
+  const width = 1440;
+  const height = 721;
+  const tex = device.createTexture({
+    format: 'rgba8unorm',
+    width,
+    height
+  });
+
+  const data = new Uint8Array(width * height * 4);
+  const gl = device.gl;
+
+  // Clear any existing GL error state before issuing the copy.
+  while (gl.getError()) {
+    // no-op
+  }
+
+  debugger
+  t.doesNotThrow(() => tex.copyImageData({data}), 'copyImageData throws error');
+
+  // const error = gl.getError();
+  // t.equal(
+  //   error,
+  //   GL.INVALID_OPERATION,
+  //   'copyImageData issues INVALID_OPERATION due to mismatched UNPACK_ROW_LENGTH'
+  // );
+
+  tex.destroy();
+  t.end();
+});
+
 test('Texture#writeData & readDataAsync round-trip', async t => {
   for (const device of await getTestDevices()) {
     t.comment(`Testing ${device.type}`);

@@ -209,7 +209,9 @@ export class WEBGLTexture extends Texture {
 
     const glParameters: GLValueParameters = !this.compressed
       ? {
-          [GL.UNPACK_ROW_LENGTH]: options.bytesPerRow,
+          // Describe the data being copied to the texture
+          // Note: This value is pixels per image, not bytes per image
+          [GL.UNPACK_ROW_LENGTH]: width,
           [GL.UNPACK_IMAGE_HEIGHT]: options.rowsPerImage
         }
       : {};
