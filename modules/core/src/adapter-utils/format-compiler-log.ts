@@ -21,24 +21,32 @@ export function formatCompilerLog(
   switch (options?.showSourceCode || 'no') {
     case 'all':
       // Parse the error - note: browser and driver dependent
-      let currentMessage = 0;
+      let currentMessageIndex = 0;
       for (let lineNum = 1; lineNum <= lines.length; lineNum++) {
-        formattedLog += getNumberedLine(lines[lineNum - 1], lineNum, options);
-        while (log.length > currentMessage && log[currentMessage].lineNum === lineNum) {
-          const message = log[currentMessage++];
-          formattedLog += formatCompilerMessage(message, lines, message.lineNum, {
+        const line = lines[lineNum - 1];
+        const currentMessage = log[currentMessageIndex];
+        if (line && currentMessage) {
+          formattedLog += getNumberedLine(line, lineNum, options);
+        }
+        while (log.length > currentMessageIndex && currentMessage.lineNum === lineNum) {
+          const message = log[currentMessageIndex++];
+          if (message) {
+            formattedLog += formatCompilerMessage(message, lines, message.lineNum, {
+              ...options,
+              inlineSource: false
+            });
+          }
+        }
+      }
+      // Print any remaining messages
+      while (log.length > currentMessageIndex) {
+        const message = log[currentMessageIndex++];
+        if (message) {
+          formattedLog += formatCompilerMessage(message, [], 0, {
             ...options,
             inlineSource: false
           });
         }
-      }
-      // Print any remaining messages
-      while (log.length > currentMessage) {
-        const message = log[currentMessage++];
-        formattedLog += formatCompilerMessage(message, [], 0, {
-          ...options,
-          inlineSource: false
-        });
       }
       return formattedLog;
 

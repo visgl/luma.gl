@@ -10,7 +10,7 @@ import type {
   VaryingBinding,
   AttributeShaderType
 } from '@luma.gl/core';
-import {getVariableShaderTypeInfo} from '@luma.gl/core';
+import {assertDefined, getVariableShaderTypeInfo} from '@luma.gl/core';
 
 import {GL, GLUniformType} from '@luma.gl/constants';
 import {
@@ -252,7 +252,8 @@ function readUniformBlocks(
     // ); // Array of GLint indicating the strides between columns of a column-major matrix or a row-major matrix.
     // const uniformRowMajor = gl.getActiveUniforms(program, uniformIndices, GL.UNIFORM_IS_ROW_MAJOR);
     for (let i = 0; i < blockInfo.uniformCount; ++i) {
-      const activeInfo = gl.getActiveUniform(program, uniformIndices[i]);
+      const uniformIndex = assertDefined(uniformIndices[i]);
+      const activeInfo = gl.getActiveUniform(program, uniformIndex);
       if (!activeInfo) {
         throw new Error('activeInfo');
       }
@@ -314,13 +315,11 @@ function parseUniformName(name: string): {name: string; length: number; isArray:
   // if array name then clean the array brackets
   const UNIFORM_NAME_REGEXP = /([^[]*)(\[[0-9]+\])?/;
   const matches = UNIFORM_NAME_REGEXP.exec(name);
-  if (!matches || matches.length < 2) {
-    throw new Error(`Failed to parse GLSL uniform name ${name}`);
-  }
-
+  const uniformName = assertDefined(matches?.[1], `Failed to parse GLSL uniform name ${name}`);
   return {
-    name: matches[1],
-    length: matches[2] ? 1 : 0,
-    isArray: Boolean(matches[2])
+    name: uniformName,
+    // TODO - is this a bug, shouldn't we return the value?
+    length: matches?.[2] ? 1 : 0,
+    isArray: Boolean(matches?.[2])
   };
 }

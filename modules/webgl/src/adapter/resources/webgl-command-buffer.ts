@@ -2,23 +2,19 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {
-  CopyBufferToBufferOptions,
-  CopyBufferToTextureOptions,
-  CopyTextureToBufferOptions,
-  CopyTextureToTextureOptions
-  // ClearTextureOptions,
-  // TextureReadOptions
-} from '@luma.gl/core';
-import {CommandBuffer, Texture, Framebuffer} from '@luma.gl/core';
 import {
-  GL,
-  GLTextureTarget,
-  GLTextureCubeMapTarget
-  // GLTexelDataFormat,
-  // GLPixelType,
-  // GLDataType
-} from '@luma.gl/constants';
+  type CopyBufferToBufferOptions,
+  type CopyBufferToTextureOptions,
+  type CopyTextureToBufferOptions,
+  type CopyTextureToTextureOptions,
+  // type ClearTextureOptions,
+  // type TextureReadOptions
+  CommandBuffer,
+  Texture,
+  Framebuffer,
+  assertDefined
+} from '@luma.gl/core';
+import {GL, type GLTextureTarget, type GLTextureCubeMapTarget} from '@luma.gl/constants';
 
 import {WebGLDevice} from '../webgl-device';
 import {WEBGLBuffer} from './webgl-buffer';
@@ -145,7 +141,7 @@ function _copyTextureToBuffer(device: WebGLDevice, options: CopyTextureToBufferO
     height = options.sourceTexture.height,
     depthOrArrayLayers = 0,
     /** Defines the origin of the copy - the minimum corner of the texture sub-region to copy to/from. */
-    origin = [0, 0],
+    origin = [0, 0, 0],
 
     /** Destination buffer */
     destinationBuffer,
@@ -181,9 +177,9 @@ function _copyTextureToBuffer(device: WebGLDevice, options: CopyTextureToBufferO
     const webglBuffer = destinationBuffer as WEBGLBuffer;
     const sourceWidth = width || framebuffer.width;
     const sourceHeight = height || framebuffer.height;
-    const sourceParams = getTextureFormatWebGL(
-      framebuffer.colorAttachments[0].texture.props.format
-    );
+    const colorAttachment0 = assertDefined(framebuffer.colorAttachments[0]);
+
+    const sourceParams = getTextureFormatWebGL(colorAttachment0.texture.props.format);
     const sourceFormat = sourceParams.format;
     const sourceType = sourceParams.type;
 
@@ -256,7 +252,7 @@ function _copyTextureToTexture(device: WebGLDevice, options: CopyTextureToTextur
     origin = [0, 0],
 
     /** Defines the origin of the copy - the minimum corner of the texture sub-region to copy to. */
-    destinationOrigin = [0, 0],
+    destinationOrigin = [0, 0, 0],
 
     /** Texture to copy to/from. */
     destinationTexture
@@ -275,7 +271,7 @@ function _copyTextureToTexture(device: WebGLDevice, options: CopyTextureToTextur
   } = options;
 
   const {framebuffer, destroyFramebuffer} = getFramebuffer(sourceTexture);
-  const [sourceX, sourceY] = origin;
+  const [sourceX = 0, sourceY = 0] = origin;
   const [destinationX, destinationY, destinationZ] = destinationOrigin;
 
   // @ts-expect-error native bindFramebuffer is overridden by our state tracker
