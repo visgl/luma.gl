@@ -4,6 +4,10 @@
 
 Production WebGPU support
 
+### v9.2.3
+
+- fix(webgl,webgpu): fix import parth error in published package (#2458)
+
 ### v9.2.2
 
 - fix(webgl): WebGLAdapter.attach support passing DeviceProps (#2453)
