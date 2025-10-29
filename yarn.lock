@@ -2602,9 +2602,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@vis.gl/dev-tools@npm:1.0.0-alpha.19":
-  version: 1.0.0-alpha.19
-  resolution: "@vis.gl/dev-tools@npm:1.0.0-alpha.19"
+"@vis.gl/dev-tools@npm:1.0.1":
+  version: 1.0.1
+  resolution: "@vis.gl/dev-tools@npm:1.0.1"
   dependencies:
     "@esbuild-plugins/node-globals-polyfill": "npm:^0.2.0"
     "@esbuild-plugins/node-modules-polyfill": "npm:^0.2.0"
@@ -2645,19 +2645,19 @@ __metadata:
     ocular-metrics: scripts/metrics.js
     ocular-publish: scripts/publish.js
     ocular-test: scripts/test.js
-  checksum: 10c0/7fc365a758603a5a87cf28e00d8aa7761301519fc09be1f62d344743525940b176ae3e3b997526639b5346ba4ee64f75bb2e7ac9bf7633420fa6b00859bbb271
+  checksum: 10c0/c1d63c38e3a7de574586c19669e8f8b155387beff56843604750fa1d2daa162ed5206f196c91d4c24c05833da20ed2ed55964606a7c4bb0f451a622184800d46
   languageName: node
   linkType: hard
 
-"@vis.gl/ts-plugins@npm:1.0.0-alpha.19":
-  version: 1.0.0-alpha.19
-  resolution: "@vis.gl/ts-plugins@npm:1.0.0-alpha.19"
+"@vis.gl/ts-plugins@npm:1.0.1":
+  version: 1.0.1
+  resolution: "@vis.gl/ts-plugins@npm:1.0.1"
   dependencies:
     "@luma.gl/constants": "npm:^9.0.0"
     minimatch: "npm:^3.0.0"
     ts-patch: "npm:^3.1.2"
     typescript: "npm:^5.2.2"
-  checksum: 10c0/967b8952c8a449da008db51a0b0cc8d0c50e9ac571d6c1379c4407d276e8bd34b634829ad001c7604412fe09c7d09bc88ae03dc4fe8a48bad4c81c19f61ba55b
+  checksum: 10c0/f2301af6e54170f1a16bb93779069d87ba8cdc871b169a73143ccaff527bdf0b847f058bd8d865dfafe11db426c467ab8141784f0ff4b6f14cac82460b645b70
   languageName: node
   linkType: hard
 
@@ -8213,8 +8213,8 @@ __metadata:
     "@probe.gl/test-utils": "npm:^4.0.8"
     "@types/offscreencanvas": "npm:^2019.6.4"
     "@types/tape-promise": "npm:^4.0.1 "
-    "@vis.gl/dev-tools": "npm:1.0.0-alpha.19"
-    "@vis.gl/ts-plugins": "npm:1.0.0-alpha.19"
+    "@vis.gl/dev-tools": "npm:1.0.1"
+    "@vis.gl/ts-plugins": "npm:1.0.1"
     eslint-plugin-tree-shaking: "npm:^1.9.2"
     nyc: "npm:^15.1.0"
     pre-commit: "npm:^1.2.2"
