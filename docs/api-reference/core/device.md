@@ -363,7 +363,7 @@ Creates a [`ComputePipeline`](./resources/compute-pipeline) (aka program). See [
 createFence(): Fence
 ```
 
-Creates a [`Fence`](./resources/fence) used to wait for completion of submitted GPU work.
+Creates a [`Fence`](./resources/fence) used to wait for completion of submitted GPU work. See [`FenceProps`](./resources/fence.md#fenceprops) for available options.
 
 ### beginRenderPass
 
@@ -371,7 +371,7 @@ Creates a [`Fence`](./resources/fence) used to wait for completion of submitted 
 beginRenderPass(props: RenderPassProps): RenderPass
 ```
 
-Creates a [`RenderPass`](./resources/render-pass).
+Creates a [`RenderPass`](./resources/render-pass). See [`RenderPassProps`](./resources/render-pass.md#renderpassprops) for available options.
 
 - `props.framebuffer` If omitted, renders into the default canvas context's default framebuffer.
 
@@ -381,7 +381,7 @@ Creates a [`RenderPass`](./resources/render-pass).
 beginComputePass(props?: ComputePassProps): ComputePass
 ```
 
-Creates a [`ComputePass`](./resources/compute-pass) which can be used to bind data and run compute operations using compute pipelines.
+Creates a [`ComputePass`](./resources/compute-pass) which can be used to bind data and run compute operations using compute pipelines. See [`ComputePassProps`](./resources/compute-pass.md#computepassprops) for available options.
 
 ### loseDevice
 
