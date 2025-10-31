@@ -304,7 +304,7 @@ createBuffer(props: BufferProps): Buffer
 createBuffer(data: ArrayBuffer | ArrayBufferView): Buffer
 ```
 
-Creates a [`Buffer`](./resources/buffer) used to manage memory on the GPU.
+Creates a [`Buffer`](./resources/buffer) used to manage memory on the GPU. See [`BufferProps`](./resources/buffer.md#bufferprops) for available options.
 
 Deduces `indexType` if usage.
 
@@ -315,7 +315,7 @@ createTexture(props: TextureProps): Texture
 createTexture(data: Promise<TextureData>): Texture
 ```
 
-Creates a [`Texture`](./resources/texture), used to manage image data memory on the GPU.
+Creates a [`Texture`](./resources/texture), used to manage image data memory on the GPU. See [`TextureProps`](./resources/texture.md#textureprops) for available options.
 
 ### createSampler
 
@@ -323,7 +323,7 @@ Creates a [`Texture`](./resources/texture), used to manage image data memory on 
 createSampler(props: SamplerProps): Sampler
 ```
 
-Creates a [`Sampler`](./resources/sampler).
+Creates a [`Sampler`](./resources/sampler). See [`SamplerProps`](./resources/sampler.md#samplerprops) for available options.
 
 ### createFramebuffer
 
@@ -331,7 +331,7 @@ Creates a [`Sampler`](./resources/sampler).
 createFramebuffer(props: FramebufferProps): Framebuffer
 ```
 
-Creates a [`Framebuffer`](./resources/framebuffer).
+Creates a [`Framebuffer`](./resources/framebuffer). See [`FramebufferProps`](./resources/framebuffer.md#framebufferprops) for available options.
 
 ### createShader
 
@@ -339,7 +339,7 @@ Creates a [`Framebuffer`](./resources/framebuffer).
 createShader(props: ShaderProps): Shader
 ```
 
-Creates a [`Shader`](./resources/shader).
+Creates a [`Shader`](./resources/shader). See [`ShaderProps`](./resources/shader.md#shaderprops) for available options.
 
 ### createRenderPipeline
 
@@ -347,7 +347,7 @@ Creates a [`Shader`](./resources/shader).
 createRenderPipeline(props: RenderPipelineProps): RenderPipeline
 ```
 
-Creates a [`RenderPipeline`](./resources/render-pipeline) (aka program)
+Creates a [`RenderPipeline`](./resources/render-pipeline) (aka program). See [`RenderPipelineProps`](./resources/render-pipeline.md#renderpipelineprops) for available options.
 
 ### createComputePipeline
 
@@ -355,7 +355,7 @@ Creates a [`RenderPipeline`](./resources/render-pipeline) (aka program)
 createComputePipeline(props: ComputePipelineProps): ComputePipeline
 ```
 
-Creates a [`ComputePipeline`](./resources/compute-pipeline) (aka program)
+Creates a [`ComputePipeline`](./resources/compute-pipeline) (aka program). See [`ComputePipelineProps`](./resources/compute-pipeline.md#computepipelineprops) for available options.
 
 ### createFence
 
