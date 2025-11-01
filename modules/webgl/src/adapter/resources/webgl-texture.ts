@@ -207,9 +207,23 @@ export class WEBGLTexture extends Texture {
     // Target used for face updates, but not for binding
     const glTarget = getWebGLCubeFaceTarget(this.glTarget, this.dimension, z);
 
+    let unpackRowLength: number | undefined;
+    if (!this.compressed) {
+      const {bytesPerPixel} = this.device.getTextureFormatInfo(this.format);
+      if (bytesPerPixel) {
+        if (options.bytesPerRow % bytesPerPixel !== 0) {
+          throw new Error(
+            `bytesPerRow (${options.bytesPerRow}) must be a multiple of bytesPerPixel (${bytesPerPixel}) for ${this.format}`
+          );
+        }
+        unpackRowLength = options.bytesPerRow / bytesPerPixel;
+      }
+    }
+
     const glParameters: GLValueParameters = !this.compressed
       ? {
-          [GL.UNPACK_ROW_LENGTH]: options.bytesPerRow,
+          [GL.UNPACK_ALIGNMENT]: this.byteAlignment,
+          ...(unpackRowLength !== undefined ? {[GL.UNPACK_ROW_LENGTH]: unpackRowLength} : {}),
           [GL.UNPACK_IMAGE_HEIGHT]: options.rowsPerImage
         }
       : {};
