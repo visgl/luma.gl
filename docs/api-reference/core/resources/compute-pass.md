@@ -50,9 +50,13 @@ const computedData = new Int32Array(await workBuffer.readAsync());
 
 ### `ComputePassProps`
 
-| Property | Type | Description |
-| -------- | ---- | ----------- |
-| N/A      |      |             |
+`ComputePassProps` extends [`ResourceProps`](../resource.md#resourceprops) and accepts the following fields.
+
+| Property               | Type            | Default     | Description |
+| ---------------------- | --------------- | ----------- | ----------- |
+| `timestampQuerySet?`   | `QuerySet`      | `undefined` | Query set that will receive timestamps at the beginning and end of the pass. |
+| `beginTimestampIndex?` | `number`        | `undefined` | Query set index that records the timestamp when the pass begins. No timestamp is written when omitted. |
+| `endTimestampIndex?`   | `number`        | `undefined` | Query set index that records the timestamp when the pass ends. No timestamp is written when omitted. |
 
 ## Members
 
@@ -66,9 +70,9 @@ const computedData = new Int32Array(await workBuffer.readAsync());
 
 `ComputePass` is an abstract class and cannot be instantiated directly. Create with `device.beginComputePass(...)`.
 
-### `endPass(): void`
+### `end(): void`
 
-Free up any GPU resources associated with this render pass.
+Free up any GPU resources associated with this compute pass.
 
 ### `pushDebugGroup(groupLabel: string): void`
 
