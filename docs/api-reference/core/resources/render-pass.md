@@ -24,7 +24,7 @@ To draw to the screen in luma.gl, simply create a `RenderPass` by calling
 
 ## Clearing the screen
 
-`Framebuffer` attachments are cleared by default when a RenderPass starts. More control is provided via the `clearColor` parameter, setting this will clear the attachments to the corresponding color. The default clear color is fully transparent `[0, 0, 0, 0]`. Clearing can also be disabled by setting `loadOp='load'`.
+`Framebuffer` attachments are cleared by default when a RenderPass starts. More control is provided via the `clearColor` parameter, setting this will clear the attachments to the corresponding color. The default clear color is `[0, 0, 0, 1]`. Clearing can also be disabled by setting `loadOp='load'`.
 
 ```typescript
   const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
@@ -57,25 +57,23 @@ If no value for the `viewport` parameter is provided, the following defaults wil
 
 ### `RenderPassProps`
 
-| Property             | Type                   | Default        | Description                                                                                               |
-| -------------------- | ---------------------- | -------------- | --------------------------------------------------------------------------------------------------------- |
-| `framebuffer?`       | `Framebuffer`          |  N/A              | Provides render target textures and depth/stencil texture                                                 |
-| `parameters?`        | `Parameters`           |                | GPU pipeline parameters                                                                                   |
-| `clearColor?`        | `number[] \| false`    | `[0, 0, 0, 0]` |                                                                                                           |
-| `loadOp`?            | `'load'`, `'clear'`    | `'clear'`      | Load operation to perform on texture prior to executing the render pass. Default: 'clear'.                |
-| `storeOp`?           | `'store'`, `'discard'` | `'store'`      | The store operation to perform on texture after executing the render pass. Default: 'store'.              |
-| `clearDepth`?   | `number`               | `1`            | Value to clear depth component to prior to executing the render pass, if depthLoadOp is "clear". 0.0-1.0. |
-| `depthLoadOp`?       | `'load'`, `'clear'`    |                | Load operation to perform on depth component prior to executing the render pass. Default 'clear'.         |
-| `depthStoreOp`?      | `'store'`, `'discard'` |                | Store operation` to perform on depth component after executing the render pass. Default 'store'.          |
-| `depthReadOnly`?     | `boolean`              |                | Depth component is read only.                                                                             |
-| `clearStencil`? | `number `              |                | Value to clear stencil component to prior to executing the render pass, if stencilLoadOp is "clear".      |
-| `stencilLoadOp`?     | `'clear'`, `'load'`    |                | Load operation to perform on stencil component prior to executing the render pass. Prefer clearing.       |
-| `stencilStoreOp`?    | `'store'`, `'discard'` |                | Store operation to perform on stencil component after executing the render pass.                          |
-| `stencilReadOnly`?   | `boolean`              |                | Stencil component is read only.                                                                           |
+`RenderPassProps` extends [`ResourceProps`](../resource.md#resourceprops) and accepts the following fields.
 
-- Clearing can be disabled by setting `loadOp='load'` however this may have a small performance cost as GPUs are optimized for clearing.
-- WebGL does not support setting `storeOp: 'discard'` for just some attachments, it is all or nothing.
-- Currently luma.gl doesn't support specifying per-rendertarget properties
+| Property               | Type                                  | Default        | Description |
+| ---------------------- | ------------------------------------- | -------------- | ----------- |
+| `framebuffer?`         | `Framebuffer \| null`                 | `null`         | Render target that receives the output of the pass. When omitted, the default canvas framebuffer is used. |
+| `parameters?`          | `RenderPassParameters`                | `undefined`    | Mutable pipeline parameters such as viewport, scissor rectangle, blend constant and stencil reference. |
+| `clearColor?`          | `NumberArray4 \| TypedArray \| false` | `[0, 0, 0, 1]` | Color used to clear the default color attachment. Set to `false` to preserve the previous value. |
+| `clearColors?`         | `(TypedArray \| false)[]`             | `undefined`    | Per-attachment clear values for multiple color attachments. Takes precedence over `clearColor` when provided. |
+| `clearDepth?`          | `number \| false`                     | `1`            | Depth value used when clearing the depth attachment. Set to `false` to preserve the previous depth. |
+| `clearStencil?`        | `number \| false`                     | `0`            | Stencil value used when clearing the stencil attachment. Set to `false` to preserve the previous stencil. |
+| `depthReadOnly?`       | `boolean`                             | `false`        | Marks the depth attachment as read-only for the duration of the pass. |
+| `stencilReadOnly?`     | `boolean`                             | `false`        | Marks the stencil attachment as read-only for the duration of the pass. |
+| `discard?`             | `boolean`                             | `false`        | Disables rasterization output when set to `true`. |
+| `occlusionQuerySet?`   | `QuerySet`                            | `undefined`    | Query set that records occlusion query results generated by the pass. |
+| `timestampQuerySet?`   | `QuerySet`                            | `undefined`    | Query set that will receive timestamps at the beginning and end of the pass. |
+| `beginTimestampIndex?` | `number`                              | `undefined`    | Query set index that records the timestamp when the pass begins. |
+| `endTimestampIndex?`   | `number`                              | `undefined`    | Query set index that records the timestamp when the pass ends. |
 
 ## Members
 
@@ -89,7 +87,7 @@ If no value for the `viewport` parameter is provided, the following defaults wil
 
 `RenderPass` is an abstract class and cannot be instantiated directly. Create with `device.beginRenderPass(...)`.
 
-### `endPass(): void`
+### `end(): void`
 
 Must be called after all draw calls have been completed to guarantee rendering. Frees up any GPU resources associated with this render pass.
 
