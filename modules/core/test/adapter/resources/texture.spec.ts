@@ -99,6 +99,59 @@ test('Texture#copyImageData updates correct cubemap face on WebGL', async t => {
   t.end();
 });
 
+test('Texture#copyImageData handles padded rows on WebGL', async t => {
+  const device = await getWebGLTestDevice();
+  if (!device) {
+    t.comment('WebGL not available');
+    t.end();
+    return;
+  }
+
+  const width = 2;
+  const height = 2;
+  const bytesPerPixel = 4;
+  const paddedBytesPerRow = 16;
+  const paddedData = new Uint8Array(paddedBytesPerRow * height);
+  const expected = new Uint8Array(width * height * bytesPerPixel);
+
+  for (let row = 0; row < height; row++) {
+    for (let col = 0; col < width; col++) {
+      const base = row * width + col;
+      const r = base + 1;
+      const g = base + 2;
+      const b = base + 3;
+      const a = base + 4;
+      const expectedOffset = (row * width + col) * bytesPerPixel;
+      expected[expectedOffset + 0] = r;
+      expected[expectedOffset + 1] = g;
+      expected[expectedOffset + 2] = b;
+      expected[expectedOffset + 3] = a;
+
+      const paddedOffset = row * paddedBytesPerRow + col * bytesPerPixel;
+      paddedData[paddedOffset + 0] = r;
+      paddedData[paddedOffset + 1] = g;
+      paddedData[paddedOffset + 2] = b;
+      paddedData[paddedOffset + 3] = a;
+    }
+  }
+
+  const texture = device.createTexture({width, height, format: 'rgba8unorm'});
+  texture.copyImageData({
+    data: paddedData,
+    width,
+    height,
+    bytesPerRow: paddedBytesPerRow,
+    rowsPerImage: height
+  });
+
+  const result = toUint8(texture.readDataSyncWebGL({width, height})).slice(0, expected.length);
+
+  t.deepEquals(result, expected, 'webgl: copyImageData uploads data with padded rows correctly');
+
+  texture.destroy();
+  t.end();
+});
+
 test('Texture#writeData & readDataAsync round-trip', async t => {
   for (const device of await getTestDevices()) {
     t.comment(`Testing ${device.type}`);
