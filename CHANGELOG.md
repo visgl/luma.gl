@@ -4,6 +4,11 @@
 
 Production WebGPU support
 
+### v9.2.4
+
+- fix(webgl): unpack row length handling for texture uploads (#2461)
+-  chore: Fix peer-deps (#2450)
+
 ### v9.2.3
 
 - fix(webgl,webgpu): fix import parth error in published package (#2458)
