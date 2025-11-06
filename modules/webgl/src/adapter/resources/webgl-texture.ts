@@ -145,12 +145,26 @@ export class WEBGLTexture extends Texture {
     const {width, height, depth} = this;
     const {mipLevel = 0, byteOffset = 0, x = 0, y = 0, z = 0} = options;
     const {glFormat, glType, compressed} = this;
-    const glTarget = getWebGLCubeFaceTarget(this.glTarget, this.dimension, depth);
 
-    // WebGL automatically ignores these for compressed textures, but we are careful
+    // Target used for face updates, but not for binding
+    const glTarget = getWebGLCubeFaceTarget(this.glTarget, this.dimension, z);
+
+    let unpackRowLength: number | undefined;
+    if (!this.compressed) {
+      const {bytesPerPixel} = this.device.getTextureFormatInfo(this.format);
+      if (bytesPerPixel) {
+        if (options.bytesPerRow % bytesPerPixel !== 0) {
+          throw new Error(
+            `bytesPerRow (${options.bytesPerRow}) must be a multiple of bytesPerPixel (${bytesPerPixel}) for ${this.format}`
+          );
+        }
+        unpackRowLength = options.bytesPerRow / bytesPerPixel;
+      }
+    }
+
     const glParameters: GLValueParameters = !this.compressed
       ? {
-          [GL.UNPACK_ROW_LENGTH]: options.bytesPerRow,
+          ...(unpackRowLength !== undefined ? {[GL.UNPACK_ROW_LENGTH]: unpackRowLength} : {}),
           [GL.UNPACK_IMAGE_HEIGHT]: options.rowsPerImage
         }
       : {};
