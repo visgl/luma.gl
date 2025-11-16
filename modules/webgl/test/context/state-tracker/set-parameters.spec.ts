@@ -8,6 +8,7 @@ import {stringifyTypedArray} from './context-state.spec';
 
 import {setGLParameters, getGLParameters, resetGLParameters} from '@luma.gl/webgl';
 
+import {RenderPass} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {GL_PARAMETER_DEFAULTS} from '@luma.gl/webgl/context/parameters/webgl-parameter-tables';
 import {ENUM_STYLE_SETTINGS_SET1_PRIMITIVE} from './data/sample-enum-settings';
@@ -72,6 +73,120 @@ test('WebGL#composite setter', async t => {
   t.end();
 });
 
+test('WebGL#setGLParameters per-face stencil state', async t => {
+  const webglDevice = await getWebGLTestDevice();
+
+  resetGLParameters(webglDevice.gl);
+
+  setGLParameters(webglDevice.gl, {
+    stencilFunc: [GL.GREATER, 1, 0x0f, GL.LESS, 2, 0xf0],
+    stencilOp: [GL.KEEP, GL.REPLACE, GL.INCR, GL.DECR, GL.INVERT, GL.ZERO],
+    stencilMask: [0x0f0f0f0f, 0x00ff00ff]
+  });
+
+  const stencilState = getGLParameters(webglDevice.gl, [
+    GL.STENCIL_FUNC,
+    GL.STENCIL_REF,
+    GL.STENCIL_VALUE_MASK,
+    GL.STENCIL_BACK_FUNC,
+    GL.STENCIL_BACK_REF,
+    GL.STENCIL_BACK_VALUE_MASK,
+    GL.STENCIL_FAIL,
+    GL.STENCIL_PASS_DEPTH_FAIL,
+    GL.STENCIL_PASS_DEPTH_PASS,
+    GL.STENCIL_BACK_FAIL,
+    GL.STENCIL_BACK_PASS_DEPTH_FAIL,
+    GL.STENCIL_BACK_PASS_DEPTH_PASS,
+    GL.STENCIL_WRITEMASK,
+    GL.STENCIL_BACK_WRITEMASK
+  ]);
+
+  t.deepEqual(
+    stencilState[GL.STENCIL_FUNC],
+    GL.GREATER,
+    `got expected stencil func ${stringifyTypedArray(stencilState[GL.STENCIL_FUNC])}`
+  );
+  t.deepEqual(
+    stencilState[GL.STENCIL_REF],
+    1,
+    `got expected stencil reference ${stringifyTypedArray(stencilState[GL.STENCIL_REF])}`
+  );
+  t.deepEqual(
+    stencilState[GL.STENCIL_VALUE_MASK],
+    0x0f,
+    `got expected stencil mask ${stringifyTypedArray(stencilState[GL.STENCIL_VALUE_MASK])}`
+  );
+  t.deepEqual(
+    stencilState[GL.STENCIL_BACK_FUNC],
+    GL.LESS,
+    `got expected back stencil func ${stringifyTypedArray(stencilState[GL.STENCIL_BACK_FUNC])}`
+  );
+  t.deepEqual(
+    stencilState[GL.STENCIL_BACK_REF],
+    2,
+    `got expected back stencil reference ${stringifyTypedArray(stencilState[GL.STENCIL_BACK_REF])}`
+  );
+  t.deepEqual(
+    stencilState[GL.STENCIL_BACK_VALUE_MASK],
+    0xf0,
+    `got expected back stencil mask ${stringifyTypedArray(stencilState[GL.STENCIL_BACK_VALUE_MASK])}`
+  );
+
+  t.deepEqual(
+    stencilState[GL.STENCIL_FAIL],
+    GL.KEEP,
+    `got expected stencil fail op ${stringifyTypedArray(stencilState[GL.STENCIL_FAIL])}`
+  );
+  t.deepEqual(
+    stencilState[GL.STENCIL_PASS_DEPTH_FAIL],
+    GL.REPLACE,
+    `got expected stencil depth fail op ${stringifyTypedArray(
+      stencilState[GL.STENCIL_PASS_DEPTH_FAIL]
+    )}`
+  );
+  t.deepEqual(
+    stencilState[GL.STENCIL_PASS_DEPTH_PASS],
+    GL.INCR,
+    `got expected stencil depth pass op ${stringifyTypedArray(
+      stencilState[GL.STENCIL_PASS_DEPTH_PASS]
+    )}`
+  );
+  t.deepEqual(
+    stencilState[GL.STENCIL_BACK_FAIL],
+    GL.DECR,
+    `got expected back stencil fail op ${stringifyTypedArray(stencilState[GL.STENCIL_BACK_FAIL])}`
+  );
+  t.deepEqual(
+    stencilState[GL.STENCIL_BACK_PASS_DEPTH_FAIL],
+    GL.INVERT,
+    `got expected back stencil depth fail op ${stringifyTypedArray(
+      stencilState[GL.STENCIL_BACK_PASS_DEPTH_FAIL]
+    )}`
+  );
+  t.deepEqual(
+    stencilState[GL.STENCIL_BACK_PASS_DEPTH_PASS],
+    GL.ZERO,
+    `got expected back stencil depth pass op ${stringifyTypedArray(
+      stencilState[GL.STENCIL_BACK_PASS_DEPTH_PASS]
+    )}`
+  );
+
+  t.deepEqual(
+    stencilState[GL.STENCIL_WRITEMASK],
+    0x0f0f0f0f,
+    `got expected stencil write mask ${stringifyTypedArray(stencilState[GL.STENCIL_WRITEMASK])}`
+  );
+  t.deepEqual(
+    stencilState[GL.STENCIL_BACK_WRITEMASK],
+    0x00ff00ff,
+    `got expected back stencil write mask ${stringifyTypedArray(
+      stencilState[GL.STENCIL_BACK_WRITEMASK]
+    )}`
+  );
+
+  t.end();
+});
+
 test('WebGLState#get all parameters', async t => {
   const webglDevice = await getWebGLTestDevice();
 
@@ -100,6 +215,50 @@ test('WebGLState#get all parameters', async t => {
         value
       )} after getGLParameters for ${webglDevice.getGLKey(key)}`
     );
+  }
+
+  t.end();
+});
+
+test('WebGLRenderPass#setParameters stencil reference', async t => {
+  const webglDevice = await getWebGLTestDevice();
+
+  resetGLParameters(webglDevice.gl);
+
+  const originalConsoleWarn = console.warn;
+  const warnings: unknown[] = [];
+  let renderPass: RenderPass | null = null;
+
+  console.warn = (...args) => {
+    warnings.push(args);
+  };
+
+  try {
+    renderPass = webglDevice.beginRenderPass({
+      parameters: {stencilReference: 5}
+    });
+
+    const stencilState = getGLParameters(webglDevice.gl, [
+      GL.STENCIL_REF,
+      GL.STENCIL_BACK_REF
+    ]);
+
+    t.deepEqual(
+      stencilState[GL.STENCIL_REF],
+      5,
+      `got expected stencil reference ${stringifyTypedArray(stencilState[GL.STENCIL_REF])}`
+    );
+    t.deepEqual(
+      stencilState[GL.STENCIL_BACK_REF],
+      5,
+      `got expected back stencil reference ${stringifyTypedArray(stencilState[GL.STENCIL_BACK_REF])}`
+    );
+    t.deepEqual(warnings, [], 'no warnings emitted for stencilReference');
+  } finally {
+    console.warn = originalConsoleWarn;
+    if (renderPass) {
+      renderPass.end();
+    }
   }
 
   t.end();
