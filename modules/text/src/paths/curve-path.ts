@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 // Adapted from THREE.js CurvePath (https://github.com/mrdoob/three.js/) under the MIT License.
 
-import {Curve} from './curves.ts'
+import {Curve} from './curves'
 
 /** Container for a sequence of curves that form a continuous path. */
 export class CurvePath<TPoint> extends Curve<TPoint> {

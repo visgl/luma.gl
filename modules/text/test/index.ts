@@ -12,5 +12,5 @@ process.on('uncaughtException', error => {
   process.exitCode = 1
 })
 
-import './text-geometry.spec.ts'
-import './paths.spec.ts'
+import './text-geometry.spec'
+import './paths.spec'

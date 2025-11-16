@@ -4,8 +4,8 @@
 // Adapted from THREE.js ShapePath (https://github.com/mrdoob/three.js/) under the MIT License.
 
 import {Vector2} from '@math.gl/core'
-import {Path, Shape} from './path.ts'
-import {ShapeUtils} from './shape-utils.ts'
+import {Path, Shape} from './path'
+import {ShapeUtils} from './shape-utils'
 
 /** Collects sub-paths that form a single glyph outline. */
 export class ShapePath {

@@ -4,11 +4,11 @@
 
 import test from 'tape-promise/tape.js'
 import {Vector2} from '@math.gl/core'
-import {CurvePath} from '../src/paths/curve-path.ts'
-import {CubicBezierCurve, LineCurve, QuadraticBezierCurve, SplineCurve} from '../src/paths/curves.ts'
-import {Path} from '../src/paths/path.ts'
-import {ShapePath} from '../src/paths/shape-path.ts'
-import {ShapeUtils} from '../src/paths/shape-utils.ts'
+import {CurvePath} from '../src/paths/curve-path'
+import {CubicBezierCurve, LineCurve, QuadraticBezierCurve, SplineCurve} from '../src/paths/curves'
+import {Path} from '../src/paths/path'
+import {ShapePath} from '../src/paths/shape-path'
+import {ShapeUtils} from '../src/paths/shape-utils'
 
 const unitSquare = [
   new Vector2(0, 0),

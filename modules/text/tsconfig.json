@@ -5,8 +5,7 @@
   "compilerOptions": {
     "composite": true,
     "rootDir": "src",
-    "outDir": "dist",
-    "allowImportingTsExtensions": true
+    "outDir": "dist"
   },
   "references": [
     {"path": "../engine"}

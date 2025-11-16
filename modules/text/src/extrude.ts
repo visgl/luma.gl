@@ -4,8 +4,8 @@
 // Adapted from THREE.js ExtrudeGeometry (https://github.com/mrdoob/three.js/) under the MIT License.
 
 import {Vector2, Vector3} from '@math.gl/core'
-import {Shape} from './paths/path.ts'
-import {ShapeUtils} from './paths/shape-utils.ts'
+import {Shape} from './paths/path'
+import {ShapeUtils} from './paths/shape-utils'
 
 /** Options for extruding 2D shapes into 3D meshes. */
 export type ExtrudeOptions = {

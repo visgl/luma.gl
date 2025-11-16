@@ -4,8 +4,8 @@
 // Adapted from THREE.js Path and Shape (https://github.com/mrdoob/three.js/) under the MIT License.
 
 import {Vector2} from '@math.gl/core'
-import {CurvePath} from './curve-path.ts'
-import {CubicBezierCurve, LineCurve, QuadraticBezierCurve, SplineCurve} from './curves.ts'
+import {CurvePath} from './curve-path'
+import {CubicBezierCurve, LineCurve, QuadraticBezierCurve, SplineCurve} from './curves'
 
 /** Represents an ordered set of connected curve segments. */
 export class Path extends CurvePath<Vector2> {

@@ -5,8 +5,8 @@
 
 // eslint-disable-next-line import/no-unresolved
 import {Geometry, type GeometryProps} from '@luma.gl/engine'
-import {extrudeShapes, type ExtrudeOptions} from './extrude.ts'
-import {Font} from './font.ts'
+import {extrudeShapes, type ExtrudeOptions} from './extrude'
+import {Font} from './font'
 
 export type TextGeometryOptions = ExtrudeOptions & {
   /** Typeface used to generate glyph shapes. */

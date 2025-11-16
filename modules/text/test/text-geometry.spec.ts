@@ -3,8 +3,8 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape.js'
-import {extrudeShapes, parseFont, TextGeometry} from '../src/index.ts'
-import {simpleFont} from './data/simple-font.ts'
+import {extrudeShapes, parseFont, TextGeometry} from '../src/index'
+import {simpleFont} from './data/simple-font'
 
 test('extrudeShapes outputs complete attribute arrays', t => {
   const font = parseFont(simpleFont)

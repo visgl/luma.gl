@@ -3,8 +3,8 @@
 // Copyright (c) vis.gl contributors
 // Adapted from THREE.js FontLoader (https://github.com/mrdoob/three.js/) under the MIT License.
 
-import {ShapePath} from './paths/shape-path.ts'
-import {Shape} from './paths/path.ts'
+import {ShapePath} from './paths/shape-path'
+import {Shape} from './paths/path'
 
 /** Command tokens found in the typeface outline. */
 type GlyphCommand = 'm' | 'l' | 'q' | 'b'
