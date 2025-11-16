@@ -238,10 +238,7 @@ test('WebGLRenderPass#setParameters stencil reference', async t => {
       parameters: {stencilReference: 5}
     });
 
-    const stencilState = getGLParameters(webglDevice.gl, [
-      GL.STENCIL_REF,
-      GL.STENCIL_BACK_REF
-    ]);
+    const stencilState = getGLParameters(webglDevice.gl, [GL.STENCIL_REF, GL.STENCIL_BACK_REF]);
 
     t.deepEqual(
       stencilState[GL.STENCIL_REF],
