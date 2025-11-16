@@ -9,6 +9,7 @@
 
 ## Before committing
 - Format code: `yarn lint fix`
+- Always run `yarn lint fix` before committing to avoid prettier formatting errors in CI
  
 ## Code style
 - TypeScript strict mode
