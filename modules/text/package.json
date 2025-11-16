@@ -1,0 +1,43 @@
+{
+  "name": "@luma.gl/text",
+  "version": "9.2.0-alpha.6",
+  "description": "3D text generation utilities for luma.gl",
+  "license": "MIT",
+  "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/visgl/luma.gl"
+  },
+  "keywords": [
+    "webgl",
+    "visualization",
+    "animation",
+    "3d",
+    "text"
+  ],
+  "types": "dist/index.d.ts",
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "src",
+    "dist",
+    "dist.min.js",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "dependencies": {
+    "@math.gl/core": "^4.1.0",
+    "@luma.gl/engine": "9.2.0-alpha.6",
+    "@math.gl/polygon": "^4.1.0"
+  }
+}

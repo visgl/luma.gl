@@ -1,0 +1,23 @@
+{
+  "name": "luma.gl-examples-text-3d",
+  "version": "9.2.0-alpha.6",
+  "private": true,
+  "scripts": {
+    "start": "vite",
+    "build": "tsc && vite build",
+    "serve": "vite preview"
+  },
+  "dependencies": {
+    "@luma.gl/core": "9.2.0-alpha.6",
+    "@luma.gl/engine": "9.2.0-alpha.6",
+    "@luma.gl/shadertools": "9.2.0-alpha.6",
+    "@luma.gl/webgl": "9.2.0-alpha.6",
+    "@luma.gl/webgpu": "9.2.0-alpha.6",
+    "@luma.gl/text": "9.2.0-alpha.6",
+    "@math.gl/core": "^4.1.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "vite": "^5.0.0"
+  }
+}
