@@ -51,6 +51,7 @@ export class WEBGLRenderPass extends RenderPass {
       );
       this.device.gl.drawBuffers(drawBuffers);
     } else if (!this.props.framebuffer) {
+      // Default framebuffer only supports GL.BACK/GL.NONE draw buffers
       this.device.gl.drawBuffers([GL.BACK]);
     }
 
