@@ -138,11 +138,12 @@ export default class TextAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = `
 <p>Extrudes text geometry using a typeface JSON font with beveling.</p>
 <p>The text scrolls into deep space in homage to the Star Wars opening crawl.</p>
+<p>Enable canvas antialiasing or increase bevel and curve segments if the edges shimmer.</p>
 `
 
   modelMatrix = new Matrix4()
   normalMatrix = new Matrix4()
-  viewMatrix = new Matrix4().lookAt({eye: [0, 60, 340], center: [0, 30, -180]})
+  viewMatrix = new Matrix4().lookAt({eye: [0, 90, 520], center: [0, 80, -420]})
   projectionMatrix = new Matrix4()
   shaderInputs = new ShaderInputs<{app: typeof app.props}>({app})
   model: Model
@@ -157,8 +158,8 @@ export default class TextAnimationLoopTemplate extends AnimationLoopTemplate {
       bevelEnabled: true,
       bevelThickness: 4,
       bevelSize: 6,
-      bevelSegments: 3,
-      curveSegments: 10
+      bevelSegments: 5,
+      curveSegments: 12
     })
 
     this.model = new Model(device, {
@@ -170,7 +171,8 @@ export default class TextAnimationLoopTemplate extends AnimationLoopTemplate {
       geometry,
       parameters: {
         depthWriteEnabled: true,
-        depthCompare: 'less-equal'
+        depthCompare: 'less-equal',
+        cullMode: 'back'
       }
     })
   }
@@ -185,12 +187,12 @@ export default class TextAnimationLoopTemplate extends AnimationLoopTemplate {
     this.modelMatrix
       .identity()
       .translate([0, verticalOffset, depthOffset])
-      .rotateX(0.92)
+      .rotateX(-0.9)
       .rotateZ(0.08)
-      .scale([1.08, 1.08, 1])
+      .scale([1.12, 1.12, 1])
 
     this.normalMatrix.copy(this.modelMatrix).invert().transpose()
-    this.projectionMatrix.perspective({fovy: Math.PI / 4.5, aspect, near: 0.1, far: 1000})
+    this.projectionMatrix.perspective({fovy: Math.PI / 4.5, aspect, near: 24, far: 3200})
 
     this.shaderInputs.setProps({
       app: {
