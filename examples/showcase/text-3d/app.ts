@@ -54,7 +54,7 @@ fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
 }
 `
 
-const VS_GLSL = /* glsl */ `
+const VS_GLSL = /* glsl */ `#version 300 es
 #define SHADER_NAME text-3d-vs
 
 uniform appUniforms {
@@ -70,15 +70,17 @@ layout(location=1) in vec3 normals;
 layout(location=2) in vec2 texCoords;
 
 out vec3 vNormal;
+out vec2 vTexCoord;
 
 void main() {
   vec4 worldPosition = app.modelMatrix * vec4(positions, 1.0);
   gl_Position = app.projectionMatrix * app.viewMatrix * worldPosition;
   vNormal = normalize((app.normalMatrix * vec4(normals, 0.0)).xyz);
+  vTexCoord = texCoords;
 }
 `
 
-const FS_GLSL = /* glsl */ `
+const FS_GLSL = /* glsl */ `#version 300 es
 #define SHADER_NAME text-3d-fs
 precision highp float;
 
@@ -91,14 +93,16 @@ uniform appUniforms {
 } app;
 
 in vec3 vNormal;
+in vec2 vTexCoord;
 layout(location=0) out vec4 fragColor;
 
 void main() {
   vec3 lightDirection = normalize(vec3(0.5, 1.0, 0.25));
   float diffuse = max(dot(lightDirection, normalize(vNormal)), 0.16);
   float glow = 0.1 + 0.07 * sin(app.time * 0.35);
-  vec3 baseColor = vec3(1.0, 0.9, 0.32);
-  fragColor = vec4(baseColor * (diffuse + glow), 1.0);
+  float crawlFade = smoothstep(0.0, 0.2, vTexCoord.y) * (1.0 - smoothstep(0.72, 1.0, vTexCoord.y));
+  vec3 baseColor = vec3(1.0, 0.9, 0.32) * (0.85 + 0.3 * (1.0 - vTexCoord.y));
+  fragColor = vec4(baseColor * (diffuse + glow) * crawlFade, 1.0);
 }
 `
 
