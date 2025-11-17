@@ -64,6 +64,8 @@ export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs' | 'bindings'> & {
   shaderInputs?: ShaderInputs;
   /** Bindings */
   bindings?: Record<string, Binding | DynamicTexture>;
+  /** WebGL-only uniforms */
+  uniforms?: Record<string, unknown>;
   /** Parameters that are built into the pipeline */
   parameters?: RenderPipelineParameters;
 

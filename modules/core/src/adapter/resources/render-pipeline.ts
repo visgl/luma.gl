@@ -50,6 +50,9 @@ export type RenderPipelineProps = ResourceProps & {
   /** Parameters that are controlled by pipeline */
   parameters?: RenderPipelineParameters;
 
+  /** Some applications intentionally supply unused attributes and bindings, and want to disable warnings */
+  disableWarnings?: boolean;
+
   // Dynamic bindings (TODO - pipelines should be immutable, move to RenderPass)
   /** Buffers, Textures, Samplers for the shader bindings */
   bindings?: Record<string, Binding>;
@@ -133,6 +136,7 @@ export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
     depthStencilAttachmentFormat: undefined!,
 
     parameters: {},
+    disableWarnings: false,
     bindings: undefined!
   };
 }
