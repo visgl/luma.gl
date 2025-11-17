@@ -20,6 +20,7 @@ struct AppUniforms {
   projectionMatrix : mat4x4<f32>,
   normalMatrix : mat4x4<f32>,
   time : f32,
+  fade : vec4<f32>,
 };
 
 @group(0) @binding(0) var<uniform> app : AppUniforms;
@@ -33,6 +34,8 @@ struct VertexInputs {
 struct FragmentInputs {
   @builtin(position) Position : vec4<f32>,
   @location(0) vNormal : vec3<f32>,
+  @location(1) vWorldY : f32,
+  @location(2) vTexCoord : vec2<f32>,
 };
 
 @vertex
@@ -41,6 +44,8 @@ fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
   let worldPosition = app.modelMatrix * vec4<f32>(inputs.positions, 1.0);
   outputs.Position = app.projectionMatrix * app.viewMatrix * worldPosition;
   outputs.vNormal = normalize((app.normalMatrix * vec4<f32>(inputs.normals, 0.0)).xyz);
+  outputs.vWorldY = worldPosition.y;
+  outputs.vTexCoord = inputs.texCoords;
   return outputs;
 }
 
@@ -49,8 +54,12 @@ fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
   let lightDirection = normalize(vec3<f32>(0.5, 1.0, 0.25));
   let diffuse = max(dot(lightDirection, normalize(inputs.vNormal)), 0.16);
   let glow = 0.1 + 0.07 * sin(app.time * 0.35);
+  let fadeIn = smoothstep(app.fade.x, app.fade.y, inputs.vWorldY);
+  let fadeOut = 1.0 - smoothstep(app.fade.z, app.fade.w, inputs.vWorldY);
+  let crawlFade = clamp(fadeIn * fadeOut, 0.0, 1.0);
+  let texBloom = 1.0 + 0.02 * sin(inputs.vTexCoord.x * 0.35);
   let baseColor = vec3<f32>(1.0, 0.9, 0.32);
-  return vec4<f32>(baseColor * (diffuse + glow), 1.0);
+  return vec4<f32>(baseColor * (diffuse + glow) * crawlFade * texBloom, 1.0);
 }
 `
 
@@ -63,6 +72,7 @@ uniform appUniforms {
   mat4 projectionMatrix;
   mat4 normalMatrix;
   float time;
+  vec4 fade;
 } app;
 
 layout(location=0) in vec3 positions;
@@ -71,12 +81,14 @@ layout(location=2) in vec2 texCoords;
 
 out vec3 vNormal;
 out vec2 vTexCoord;
+out float vWorldY;
 
 void main() {
   vec4 worldPosition = app.modelMatrix * vec4(positions, 1.0);
   gl_Position = app.projectionMatrix * app.viewMatrix * worldPosition;
   vNormal = normalize((app.normalMatrix * vec4(normals, 0.0)).xyz);
   vTexCoord = texCoords;
+  vWorldY = worldPosition.y;
 }
 `
 
@@ -90,18 +102,23 @@ uniform appUniforms {
   mat4 projectionMatrix;
   mat4 normalMatrix;
   float time;
+  vec4 fade;
 } app;
 
 in vec3 vNormal;
 in vec2 vTexCoord;
+in float vWorldY;
 layout(location=0) out vec4 fragColor;
 
 void main() {
   vec3 lightDirection = normalize(vec3(0.5, 1.0, 0.25));
   float diffuse = max(dot(lightDirection, normalize(vNormal)), 0.16);
   float glow = 0.1 + 0.07 * sin(app.time * 0.35);
-  float crawlFade = smoothstep(0.0, 0.2, vTexCoord.y) * (1.0 - smoothstep(0.72, 1.0, vTexCoord.y));
-  vec3 baseColor = vec3(1.0, 0.9, 0.32) * (0.85 + 0.3 * (1.0 - vTexCoord.y));
+  float fadeIn = smoothstep(app.fade.x, app.fade.y, vWorldY);
+  float fadeOut = 1.0 - smoothstep(app.fade.z, app.fade.w, vWorldY);
+  float crawlFade = clamp(fadeIn * fadeOut, 0.0, 1.0);
+  float texBloom = 1.0 + 0.02 * sin(vTexCoord.x * 0.35);
+  vec3 baseColor = vec3(1.0, 0.9, 0.32) * texBloom;
   fragColor = vec4(baseColor * (diffuse + glow) * crawlFade, 1.0);
 }
 `
@@ -112,6 +129,7 @@ type AppUniforms = {
   projectionMatrix: NumberArray
   normalMatrix: NumberArray
   time: number
+  fade: NumberArray
 }
 
 const app: ShaderModule<AppUniforms, AppUniforms> = {
@@ -121,7 +139,8 @@ const app: ShaderModule<AppUniforms, AppUniforms> = {
     viewMatrix: 'mat4x4<f32>',
     projectionMatrix: 'mat4x4<f32>',
     normalMatrix: 'mat4x4<f32>',
-    time: 'f32'
+    time: 'f32',
+    fade: 'vec4<f32>'
   }
 }
 
@@ -161,7 +180,8 @@ export default class TextAnimationLoopTemplate extends AnimationLoopTemplate {
         viewMatrix: this.viewMatrix,
         projectionMatrix: new Matrix4(),
         normalMatrix: new Matrix4(),
-        time: 0
+        time: 0,
+        fade: [0, 0, 0, 0]
       }
     })
 
@@ -220,7 +240,8 @@ export default class TextAnimationLoopTemplate extends AnimationLoopTemplate {
         viewMatrix: this.viewMatrix,
         projectionMatrix: this.projectionMatrix,
         normalMatrix: this.normalMatrix,
-        time: tick * 0.016
+        time: tick * 0.016,
+        fade: [-220, -80, 380, 620]
       }
     })
 
