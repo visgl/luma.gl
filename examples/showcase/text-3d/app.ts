@@ -11,7 +11,7 @@ import {parseFont, TextGeometry} from '@luma.gl/text'
 import {helvetiker} from './helvetiker-font'
 
 export const title = '3D Text'
-export const description = 'Extruded text geometry rendered with lighting.'
+export const description = 'Star Wars-style opening crawl built with extruded text geometry.'
 
 const WGSL_SHADER = /* wgsl */ `
 struct AppUniforms {
@@ -46,9 +46,9 @@ fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
 @fragment
 fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
   let lightDirection = normalize(vec3<f32>(0.5, 1.0, 0.25));
-  let diffuse = max(dot(lightDirection, normalize(inputs.vNormal)), 0.18);
-  let glow = 0.08 + 0.05 * sin(app.time * 0.5);
-  let baseColor = vec3<f32>(0.8, 0.45, 1.0);
+  let diffuse = max(dot(lightDirection, normalize(inputs.vNormal)), 0.16);
+  let glow = 0.1 + 0.07 * sin(app.time * 0.35);
+  let baseColor = vec3<f32>(1.0, 0.9, 0.32);
   return vec4<f32>(baseColor * (diffuse + glow), 1.0);
 }
 `
@@ -95,9 +95,9 @@ layout(location=0) out vec4 fragColor;
 
 void main() {
   vec3 lightDirection = normalize(vec3(0.5, 1.0, 0.25));
-  float diffuse = max(dot(lightDirection, normalize(vNormal)), 0.18);
-  float glow = 0.08 + 0.05 * sin(app.time * 0.5);
-  vec3 baseColor = vec3(0.8, 0.45, 1.0);
+  float diffuse = max(dot(lightDirection, normalize(vNormal)), 0.16);
+  float glow = 0.1 + 0.07 * sin(app.time * 0.35);
+  vec3 baseColor = vec3(1.0, 0.9, 0.32);
   fragColor = vec4(baseColor * (diffuse + glow), 1.0);
 }
 `
@@ -123,14 +123,26 @@ const app: ShaderModule<AppUniforms, AppUniforms> = {
 
 const font = parseFont(helvetiker)
 
+const crawlText = [
+  'EPISODE IV',
+  'A NEW HOPE',
+  '',
+  'It is a period of civil war.',
+  'Rebel spaceships, striking',
+  'from a hidden base, have won',
+  'their first victory against',
+  'the evil Galactic Empire.'
+].join('\n')
+
 export default class TextAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = `
 <p>Extrudes text geometry using a typeface JSON font with beveling.</p>
+<p>The text scrolls into deep space in homage to the Star Wars opening crawl.</p>
 `
 
   modelMatrix = new Matrix4()
   normalMatrix = new Matrix4()
-  viewMatrix = new Matrix4().lookAt({eye: [0, 140, 320], center: [0, 40, 0]})
+  viewMatrix = new Matrix4().lookAt({eye: [0, 60, 340], center: [0, 30, -180]})
   projectionMatrix = new Matrix4()
   shaderInputs = new ShaderInputs<{app: typeof app.props}>({app})
   model: Model
@@ -138,10 +150,10 @@ export default class TextAnimationLoopTemplate extends AnimationLoopTemplate {
   constructor({device}: AnimationProps) {
     super()
 
-    const geometry = new TextGeometry('luma.gl', {
+    const geometry = new TextGeometry(crawlText, {
       font,
-      size: 90,
-      depth: 28,
+      size: 86,
+      depth: 24,
       bevelEnabled: true,
       bevelThickness: 4,
       bevelSize: 6,
@@ -164,14 +176,21 @@ export default class TextAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   onRender({device, tick, aspect}: AnimationProps) {
+    const elapsedSeconds = tick * 0.016
+    const crawlDurationSeconds = 46
+    const crawlProgress = (elapsedSeconds % crawlDurationSeconds) / crawlDurationSeconds
+    const depthOffset = -120 - crawlProgress * 520
+    const verticalOffset = -220 + crawlProgress * 320
+
     this.modelMatrix
       .identity()
-      .translate([-110, -40, 0])
-      .rotateY(tick * 0.01)
-      .rotateX(0.15 + tick * 0.003)
+      .translate([0, verticalOffset, depthOffset])
+      .rotateX(0.92)
+      .rotateZ(0.08)
+      .scale([1.08, 1.08, 1])
 
     this.normalMatrix.copy(this.modelMatrix).invert().transpose()
-    this.projectionMatrix.perspective({fovy: Math.PI / 4, aspect, near: 0.1, far: 1000})
+    this.projectionMatrix.perspective({fovy: Math.PI / 4.5, aspect, near: 0.1, far: 1000})
 
     this.shaderInputs.setProps({
       app: {
@@ -183,7 +202,7 @@ export default class TextAnimationLoopTemplate extends AnimationLoopTemplate {
       }
     })
 
-    const renderPass = device.beginRenderPass({clearColor: [0.02, 0.02, 0.06, 1], clearDepth: true})
+    const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1], clearDepth: true})
     this.model.draw(renderPass)
     renderPass.end()
   }
