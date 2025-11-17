@@ -132,6 +132,7 @@ export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
     colorAttachmentFormats: undefined!,
     depthStencilAttachmentFormat: undefined!,
 
-    parameters: {}
+    parameters: {},
+    bindings: undefined!
   };
 }
