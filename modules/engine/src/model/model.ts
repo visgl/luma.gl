@@ -426,6 +426,7 @@ export class Model {
       // Any caching needs to be done inside the pipeline functions
       // TODO this is a busy initialized check for all bindings every frame
 
+      this.pipeline.uniforms = {...this.props.uniforms};
       const syncBindings = this._getBindings();
       this.pipeline.setBindings(syncBindings, {
         disableWarnings: this.props.disableWarnings

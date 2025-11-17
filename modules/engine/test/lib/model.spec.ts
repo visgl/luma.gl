@@ -265,20 +265,18 @@ test('Model#pipeline caching', async t => {
 
   const renderPass = webglDevice.beginRenderPass({clearColor: [0, 0, 0, 0]});
 
-  const uniforms: Record<string, unknown> = {};
-
   model1.draw(renderPass);
-  t.deepEqual(uniforms, {x: 0.5}, 'Pipeline uniforms set');
+  t.deepEqual(model1.pipeline.uniforms, {x: 0.5}, 'Pipeline uniforms set');
 
   model2.draw(renderPass);
-  t.deepEqual(uniforms, {x: -0.5}, 'Pipeline uniforms set');
+  t.deepEqual(model2.pipeline.uniforms, {x: -0.5}, 'Pipeline uniforms set');
 
   model2.setBufferLayout([{name: 'a', format: 'float32x3'}]);
   model2.predraw(); // Forces a pipeline update
   t.ok(model1.pipeline !== model2.pipeline, 'Pipeline updated');
 
   model2.draw(renderPass);
-  t.deepEqual(uniforms, {x: -0.5}, 'Pipeline uniforms set');
+  t.deepEqual(model2.pipeline.uniforms, {x: -0.5}, 'Pipeline uniforms set');
 
   renderPass.destroy();
 
