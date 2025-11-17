@@ -35,9 +35,9 @@ export class TextGeometry extends Geometry {
       id,
       topology: 'triangle-list',
       attributes: {
-        POSITION: {value: positions, size: 3},
-        NORMAL: {value: normals, size: 3},
-        TEXCOORD_0: {value: uvs, size: 2}
+        positions: {value: positions, size: 3},
+        normals: {value: normals, size: 3},
+        texCoords: {value: uvs, size: 2}
       }
     }
 

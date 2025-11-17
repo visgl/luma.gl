@@ -27,6 +27,7 @@ struct AppUniforms {
 struct VertexInputs {
   @location(0) positions : vec3<f32>,
   @location(1) normals : vec3<f32>,
+  @location(2) texCoords : vec2<f32>,
 };
 
 struct FragmentInputs {
@@ -54,7 +55,6 @@ fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
 `
 
 const VS_GLSL = /* glsl */ `
-#version 300 es
 #define SHADER_NAME text-3d-vs
 
 uniform appUniforms {
@@ -67,6 +67,7 @@ uniform appUniforms {
 
 layout(location=0) in vec3 positions;
 layout(location=1) in vec3 normals;
+layout(location=2) in vec2 texCoords;
 
 out vec3 vNormal;
 
@@ -78,7 +79,6 @@ void main() {
 `
 
 const FS_GLSL = /* glsl */ `
-#version 300 es
 #define SHADER_NAME text-3d-fs
 precision highp float;
 
@@ -151,6 +151,16 @@ export default class TextAnimationLoopTemplate extends AnimationLoopTemplate {
   constructor({device}: AnimationProps) {
     super()
 
+    this.shaderInputs.setProps({
+      app: {
+        modelMatrix: new Matrix4(),
+        viewMatrix: this.viewMatrix,
+        projectionMatrix: new Matrix4(),
+        normalMatrix: new Matrix4(),
+        time: 0
+      }
+    })
+
     // Reduced tessellation to stay well under default WebGPU buffer limits
     const geometry = new TextGeometry(crawlText, {
       font,
@@ -170,6 +180,11 @@ export default class TextAnimationLoopTemplate extends AnimationLoopTemplate {
       fs: FS_GLSL,
       shaderInputs: this.shaderInputs,
       geometry,
+      bufferLayout: [
+        {name: 'positions', format: 'float32x3'},
+        {name: 'normals', format: 'float32x3'},
+        {name: 'texCoords', format: 'float32x2'}
+      ],
       parameters: {
         depthWriteEnabled: true,
         depthCompare: 'less-equal',

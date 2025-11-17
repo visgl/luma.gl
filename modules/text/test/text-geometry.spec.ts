@@ -22,15 +22,15 @@ test('TextGeometry exposes luma.gl attribute layout', t => {
   const geometry = new TextGeometry('A', {font, size: 10, depth: 2, curveSegments: 2})
 
   t.equal(geometry.topology, 'triangle-list', 'topology matches expected primitive type')
-  t.ok(geometry.attributes.POSITION.value.length > 0, 'positions are populated')
+  t.ok(geometry.attributes.positions.value.length > 0, 'positions are populated')
   t.equal(
-    geometry.attributes.NORMAL.value.length,
-    geometry.attributes.POSITION.value.length,
+    geometry.attributes.normals.value.length,
+    geometry.attributes.positions.value.length,
     'normals align with position count'
   )
   t.equal(
-    geometry.attributes.TEXCOORD_0.value.length,
-    (geometry.attributes.POSITION.value.length / 3) * 2,
+    geometry.attributes.texCoords.value.length,
+    (geometry.attributes.positions.value.length / 3) * 2,
     'uvs match vertex count'
   )
   t.end()
