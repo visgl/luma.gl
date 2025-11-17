@@ -9,6 +9,7 @@
     "label": "Showcase",
     "items": [
       "showcase/instancing",
+      "showcase/text-3d",
       "showcase/persistence",
       "showcase/postprocessing"
     ]
