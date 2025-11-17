@@ -170,6 +170,8 @@ export default class TextAnimationLoopTemplate extends AnimationLoopTemplate {
   projectionMatrix = new Matrix4()
   shaderInputs = new ShaderInputs<{app: typeof app.props}>({app})
   model: Model
+  /** Horizontal translation that centers the generated text geometry. */
+  geometryOffset: [number, number, number]
 
   constructor({device}: AnimationProps) {
     super()
@@ -197,6 +199,23 @@ export default class TextAnimationLoopTemplate extends AnimationLoopTemplate {
       curveSegments: 6
     })
 
+    const geometryAttributes = geometry.getAttributes()
+    const positionAttribute = geometryAttributes.positions || geometryAttributes.POSITION
+    let minX = Number.POSITIVE_INFINITY
+    let maxX = Number.NEGATIVE_INFINITY
+
+    if (positionAttribute) {
+      const {value} = positionAttribute
+      for (let index = 0; index < value.length; index += 3) {
+        const positionX = value[index]
+        minX = Math.min(minX, positionX)
+        maxX = Math.max(maxX, positionX)
+      }
+    }
+
+    const centerX = Number.isFinite(minX) && Number.isFinite(maxX) ? (minX + maxX) / 2 : 0
+    this.geometryOffset = [-centerX, 0, 0]
+
     this.model = new Model(device, {
       id: 'text-geometry',
       source: WGSL_SHADER,
@@ -219,13 +238,14 @@ export default class TextAnimationLoopTemplate extends AnimationLoopTemplate {
 
   onRender({device, tick, aspect}: AnimationProps) {
     const elapsedSeconds = tick * 0.016
-    const crawlDurationSeconds = 46
+    const crawlDurationSeconds = 46 / 5
     const crawlProgress = (elapsedSeconds % crawlDurationSeconds) / crawlDurationSeconds
     const depthOffset = -120 - crawlProgress * 520
     const verticalOffset = -220 + crawlProgress * 320
 
     this.modelMatrix
       .identity()
+      .translate(this.geometryOffset)
       .translate([0, verticalOffset, depthOffset])
       .rotateX(-0.9)
       .rotateZ(0.08)
