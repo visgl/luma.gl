@@ -19,6 +19,9 @@ export class WebGPURenderPass extends RenderPass {
   /** Active pipeline */
   pipeline: WebGPURenderPipeline | null = null;
 
+  /** Latest bindings applied to this pass */
+  bindings: Record<string, Binding> = {};
+
   constructor(device: WebGPUDevice, props: RenderPassProps = {}) {
     super(device, props);
     this.device = device;
@@ -78,8 +81,8 @@ export class WebGPURenderPass extends RenderPass {
 
   /** Sets an array of bindings (uniform buffers, samplers, textures, ...) */
   setBindings(bindings: Record<string, Binding>): void {
-    this.pipeline?.setBindings(bindings);
-    const bindGroup = this.pipeline?._getBindGroup();
+    this.bindings = bindings;
+    const bindGroup = this.pipeline?._getBindGroup(bindings);
     if (bindGroup) {
       this.handle.setBindGroup(0, bindGroup);
     }

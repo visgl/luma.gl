@@ -2,13 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {
-  UniformValue,
-  RenderPipelineProps,
-  Binding,
-  RenderPass,
-  VertexArray
-} from '@luma.gl/core';
+import type {RenderPipelineProps, Binding, RenderPass, VertexArray} from '@luma.gl/core';
 import {RenderPipeline} from '@luma.gl/core';
 
 import type {NullDevice} from '../null-device';
@@ -21,9 +15,6 @@ export class NullRenderPipeline extends RenderPipeline {
 
   vs: NullShader;
   fs: NullShader;
-
-  uniforms: Record<string, UniformValue> = {};
-  bindings: Record<string, Binding> = {};
 
   constructor(device: NullDevice, props: RenderPipelineProps) {
     super(device, props);
@@ -39,15 +30,13 @@ export class NullRenderPipeline extends RenderPipeline {
     };
   }
 
-  setBindings(bindings: Record<string, Binding>): void {
-    Object.assign(this.bindings, bindings);
-  }
-
   draw(options: {
     renderPass: RenderPass;
     vertexArray: VertexArray;
     vertexCount?: number;
     instanceCount?: number;
+    bindings?: Record<string, Binding>;
+    uniforms?: Record<string, unknown>;
   }): boolean {
     const {renderPass, vertexArray} = options;
     vertexArray.bindBeforeRender(renderPass);

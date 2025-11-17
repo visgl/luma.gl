@@ -3,7 +3,6 @@
 // Copyright (c) vis.gl contributors
 
 import type {Device} from '../device';
-import type {UniformValue} from '../types/uniforms';
 import type {PrimitiveTopology, RenderPipelineParameters} from '../types/parameters';
 import type {ShaderLayout, Binding} from '../types/shader-layout';
 import type {BufferLayout} from '../types/buffer-layout';
@@ -52,11 +51,8 @@ export type RenderPipelineProps = ResourceProps & {
   parameters?: RenderPipelineParameters;
 
   // Dynamic bindings (TODO - pipelines should be immutable, move to RenderPass)
-
   /** Buffers, Textures, Samplers for the shader bindings */
   bindings?: Record<string, Binding>;
-  /** @deprecated uniforms (WebGL only) */
-  uniforms?: Record<string, UniformValue>;
 };
 
 /**
@@ -74,10 +70,6 @@ export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
   shaderLayout: ShaderLayout;
   /** Buffer map describing buffer interleaving etc */
   readonly bufferLayout: BufferLayout[];
-  /** WebGL-only uniforms map stored for shared pipelines */
-  uniforms: Record<string, UniformValue>;
-  /** Bindings map stored for shared pipelines */
-  bindings: Record<string, Binding>;
   /** The linking status of the pipeline. 'pending' if linking is asynchronous, and on production */
   linkStatus: 'pending' | 'success' | 'error' = 'pending';
   /** The hash of the pipeline */
@@ -87,15 +79,7 @@ export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
     super(device, props, RenderPipeline.defaultProps);
     this.shaderLayout = this.props.shaderLayout!;
     this.bufferLayout = this.props.bufferLayout || [];
-    this.uniforms = {...this.props.uniforms};
-    this.bindings = {...this.props.bindings};
   }
-
-  /** Set bindings (stored on pipeline and set before each call) */
-  abstract setBindings(
-    bindings: Record<string, Binding>,
-    options?: {disableWarnings?: boolean}
-  ): void;
 
   /** Draw call. Returns false if the draw call was aborted (due to resources still initializing) */
   abstract draw(options: {
@@ -124,6 +108,10 @@ export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
     baseVertex?: number;
     /** Transform feedback. WebGL only. */
     transformFeedback?: TransformFeedback;
+    /** Bindings applied for this draw (textures, samplers, uniform buffers) */
+    bindings?: Record<string, Binding>;
+    /** WebGL-only uniforms */
+    uniforms?: Record<string, unknown>;
   }): boolean;
 
   static override defaultProps: Required<RenderPipelineProps> = {
@@ -144,9 +132,6 @@ export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
     colorAttachmentFormats: undefined!,
     depthStencilAttachmentFormat: undefined!,
 
-    parameters: {},
-
-    bindings: {},
-    uniforms: {}
+    parameters: {}
   };
 }

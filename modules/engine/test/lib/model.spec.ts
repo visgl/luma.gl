@@ -265,18 +265,15 @@ test('Model#pipeline caching', async t => {
 
   const renderPass = webglDevice.beginRenderPass({clearColor: [0, 0, 0, 0]});
 
-  model1.draw(renderPass);
-  t.deepEqual(model1.pipeline.uniforms, {x: 0.5}, 'Pipeline uniforms set');
+  t.ok(model1.draw(renderPass), 'First model draw succeeded');
 
-  model2.draw(renderPass);
-  t.deepEqual(model2.pipeline.uniforms, {x: -0.5}, 'Pipeline uniforms set');
+  t.ok(model2.draw(renderPass), 'Second model draw succeeded');
 
   model2.setBufferLayout([{name: 'a', format: 'float32x3'}]);
   model2.predraw(); // Forces a pipeline update
   t.ok(model1.pipeline !== model2.pipeline, 'Pipeline updated');
 
-  model2.draw(renderPass);
-  t.deepEqual(model2.pipeline.uniforms, {x: -0.5}, 'Pipeline uniforms set');
+  t.ok(model2.draw(renderPass), 'Pipeline updates still draw');
 
   renderPass.destroy();
 

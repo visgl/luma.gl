@@ -46,10 +46,6 @@ export class WEBGLRenderPipeline extends RenderPipeline {
   /** The layout extracted from shader by WebGL introspection APIs */
   introspectedLayout: ShaderLayout;
 
-  /** Uniforms set on this model */
-  uniforms: Record<string, UniformValue> = {};
-  /** Bindings set on this model */
-  bindings: Record<string, Binding> = {};
   /** WebGL varyings */
   varyings: string[] | null = null;
 
@@ -104,68 +100,6 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     }
   }
 
-  /**
-   * Bindings include: textures, samplers and uniform buffers
-   * @todo needed for portable model
-   */
-  setBindings(bindings: Record<string, Binding>, options?: {disableWarnings?: boolean}): void {
-    // if (log.priority >= 2) {
-    //   checkUniformValues(uniforms, this.id, this._uniformSetters);
-    // }
-
-    for (const [name, value] of Object.entries(bindings)) {
-      // Accept both `xyz` and `xyzUniforms` as valid names for `xyzUniforms` uniform block
-      // This convention allows shaders to name uniform blocks as `uniform appUniforms {} app;`
-      // and reference them as `app` from both GLSL and JS.
-      // TODO - this is rather hacky - we could also remap the name directly in the shader layout.
-      const binding =
-        this.shaderLayout.bindings.find(binding_ => binding_.name === name) ||
-        this.shaderLayout.bindings.find(binding_ => binding_.name === `${name}Uniforms`);
-
-      if (!binding) {
-        const validBindings = this.shaderLayout.bindings
-          .map(binding_ => `"${binding_.name}"`)
-          .join(', ');
-        if (!options?.disableWarnings) {
-          log.warn(
-            `No binding "${name}" in render pipeline "${this.id}", expected one of ${validBindings}`,
-            value
-          )();
-        }
-        continue; // eslint-disable-line no-continue
-      }
-      if (!value) {
-        log.warn(`Unsetting binding "${name}" in render pipeline "${this.id}"`)();
-      }
-      switch (binding.type) {
-        case 'uniform':
-          // @ts-expect-error
-          if (!(value instanceof WEBGLBuffer) && !(value.buffer instanceof WEBGLBuffer)) {
-            throw new Error('buffer value');
-          }
-          break;
-        case 'texture':
-          if (
-            !(
-              value instanceof WEBGLTextureView ||
-              value instanceof WEBGLTexture ||
-              value instanceof WEBGLFramebuffer
-            )
-          ) {
-            throw new Error(`${this} Bad texture binding for ${name}`);
-          }
-          break;
-        case 'sampler':
-          log.warn(`Ignoring sampler ${name}`)();
-          break;
-        default:
-          throw new Error(binding.type);
-      }
-
-      this.bindings[name] = value;
-    }
-  }
-
   /** @todo needed for portable model
    * @note The WebGL API is offers many ways to draw things
    * This function unifies those ways into a single call using common parameters with sane defaults
@@ -184,6 +118,8 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     firstInstance?: number;
     baseVertex?: number;
     transformFeedback?: WEBGLTransformFeedback;
+    bindings?: Record<string, Binding>;
+    uniforms?: Record<string, UniformValue>;
   }): boolean {
     const {
       renderPass,
@@ -198,7 +134,9 @@ export class WEBGLRenderPipeline extends RenderPipeline {
       // firstIndex,
       // firstInstance,
       // baseVertex,
-      transformFeedback
+      transformFeedback,
+      bindings = {},
+      uniforms = {}
     } = options;
 
     const glDrawMode = getGLDrawMode(topology);
@@ -216,7 +154,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     // Note: async textures set as uniforms might still be loading.
     // Now that all uniforms have been updated, check if any texture
     // in the uniforms is not yet initialized, then we don't draw
-    if (!this._areTexturesRenderable()) {
+    if (!this._areTexturesRenderable(bindings)) {
       log.info(2, `RenderPipeline:${this.id}.draw() aborted - textures not yet loaded`)();
       //  Note: false means that the app needs to redraw the pipeline again.
       return false;
@@ -239,8 +177,8 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     }
 
     // We have to apply bindings before every draw call since other draw calls will overwrite
-    this._applyBindings();
-    this._applyUniforms();
+    this._applyBindings(bindings, {disableWarnings: this.props.disableWarnings});
+    this._applyUniforms(uniforms);
 
     const webglRenderPass = renderPass as WEBGLRenderPass;
 
@@ -402,14 +340,11 @@ export class WEBGLRenderPipeline extends RenderPipeline {
    * Update a texture if needed (e.g. from video)
    * Note: This is currently done before every draw call
    */
-  _areTexturesRenderable() {
+  _areTexturesRenderable(bindings: Record<string, Binding>) {
     let texturesRenderable = true;
 
     for (const bindingInfo of this.shaderLayout.bindings) {
-      if (
-        !this.bindings[bindingInfo.name] &&
-        !this.bindings[bindingInfo.name.replace(/Uniforms$/, '')]
-      ) {
+      if (!bindings[bindingInfo.name] && !bindings[bindingInfo.name.replace(/Uniforms$/, '')]) {
         log.warn(`Binding ${bindingInfo.name} not found in ${this.id}`)();
         texturesRenderable = false;
       }
@@ -426,7 +361,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
   }
 
   /** Apply any bindings (before each draw call) */
-  _applyBindings() {
+  _applyBindings(bindings: Record<string, Binding>, _options?: {disableWarnings?: boolean}) {
     // If we are using async linking, we need to wait until linking completes
     if (this.linkStatus !== 'success') {
       return;
@@ -439,8 +374,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     let uniformBufferIndex = 0;
     for (const binding of this.shaderLayout.bindings) {
       // Accept both `xyz` and `xyzUniforms` as valid names for `xyzUniforms` uniform block
-      const value =
-        this.bindings[binding.name] || this.bindings[binding.name.replace(/Uniforms$/, '')];
+      const value = bindings[binding.name] || bindings[binding.name.replace(/Uniforms$/, '')];
       if (!value) {
         throw new Error(`No value for binding ${binding.name} in ${this.id}`);
       }
@@ -519,10 +453,10 @@ export class WEBGLRenderPipeline extends RenderPipeline {
    * Due to program sharing, uniforms need to be reset before every draw call
    * (though caching will avoid redundant WebGL calls)
    */
-  _applyUniforms() {
+  _applyUniforms(uniforms: Record<string, UniformValue>) {
     for (const uniformLayout of this.shaderLayout.uniforms || []) {
       const {name, location, type, textureUnit} = uniformLayout;
-      const value = this.uniforms[name] ?? textureUnit;
+      const value = uniforms[name] ?? textureUnit;
       if (value !== undefined) {
         setUniform(this.device.gl, location, type, value);
       }
