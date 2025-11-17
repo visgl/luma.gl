@@ -80,7 +80,7 @@ export class ShapePath {
 
     for (let i = 0, l = subPaths.length; i < l; i++) {
       const tmpPath = subPaths[i]
-      const tmpPoints = tmpPath.getPoints()
+      const tmpPoints = closePath(tmpPath.getPoints())
       let solid = ShapeUtils.isClockWise(tmpPoints)
       solid = isCounterClockWise ? !solid : solid
 
@@ -135,6 +135,21 @@ export class ShapePath {
 
     return newShapes.map((entry) => entry!.s)
   }
+}
+
+/** Returns a closed copy of the provided polygon point list. */
+function closePath(points: Vector2[]): Vector2[] {
+  if (points.length === 0) {
+    return points
+  }
+
+  const firstPoint = points[0]
+  const lastPoint = points[points.length - 1]
+  if (firstPoint.equals(lastPoint)) {
+    return points
+  }
+
+  return [...points, firstPoint.clone()]
 }
 
 /** Finds the shape index that should contain the provided hole. */

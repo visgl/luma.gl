@@ -203,18 +203,24 @@ export default class TextAnimationLoopTemplate extends AnimationLoopTemplate {
     const positionAttribute = geometryAttributes.positions || geometryAttributes.POSITION
     let minX = Number.POSITIVE_INFINITY
     let maxX = Number.NEGATIVE_INFINITY
+    let minY = Number.POSITIVE_INFINITY
+    let maxY = Number.NEGATIVE_INFINITY
 
     if (positionAttribute) {
       const {value} = positionAttribute
       for (let index = 0; index < value.length; index += 3) {
         const positionX = value[index]
+        const positionY = value[index + 1]
         minX = Math.min(minX, positionX)
         maxX = Math.max(maxX, positionX)
+        minY = Math.min(minY, positionY)
+        maxY = Math.max(maxY, positionY)
       }
     }
 
     const centerX = Number.isFinite(minX) && Number.isFinite(maxX) ? (minX + maxX) / 2 : 0
-    this.geometryOffset = [-centerX, 0, 0]
+    const centerY = Number.isFinite(minY) && Number.isFinite(maxY) ? (minY + maxY) / 2 : 0
+    this.geometryOffset = [-centerX, -centerY, 0]
 
     this.model = new Model(device, {
       id: 'text-geometry',

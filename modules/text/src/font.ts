@@ -3,6 +3,7 @@
 // Copyright (c) vis.gl contributors
 // Adapted from THREE.js FontLoader (https://github.com/mrdoob/three.js/) under the MIT License.
 
+import {Vector2} from '@math.gl/core'
 import {ShapePath} from './paths/shape-path'
 import {Shape} from './paths/path'
 
@@ -163,9 +164,17 @@ function createPath(
       for (let i = 1; i < normalizedPoints.length; i++) {
         normalizedPath.lineTo(normalizedPoints[i].x, normalizedPoints[i].y)
       }
+      closeSubPath(normalizedPath, normalizedPoints[0], normalizedPoints[normalizedPoints.length - 1])
     }
     return {offsetX: glyph.ha * scale, path: normalizedPath}
   }
 
   return {offsetX: glyph.ha * scale, path}
+}
+
+/** Ensures the rebuilt sub-path is explicitly closed for triangulation. */
+function closeSubPath(path: ShapePath, start: Vector2, end: Vector2): void {
+  if (!start.equals(end)) {
+    path.lineTo(start.x, start.y)
+  }
 }
