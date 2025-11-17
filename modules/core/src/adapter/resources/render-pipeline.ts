@@ -74,6 +74,10 @@ export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
   shaderLayout: ShaderLayout;
   /** Buffer map describing buffer interleaving etc */
   readonly bufferLayout: BufferLayout[];
+  /** WebGL-only uniforms map stored for shared pipelines */
+  uniforms: Record<string, UniformValue>;
+  /** Bindings map stored for shared pipelines */
+  bindings: Record<string, Binding>;
   /** The linking status of the pipeline. 'pending' if linking is asynchronous, and on production */
   linkStatus: 'pending' | 'success' | 'error' = 'pending';
   /** The hash of the pipeline */
@@ -83,6 +87,8 @@ export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
     super(device, props, RenderPipeline.defaultProps);
     this.shaderLayout = this.props.shaderLayout!;
     this.bufferLayout = this.props.bufferLayout || [];
+    this.uniforms = {...this.props.uniforms};
+    this.bindings = {...this.props.bindings};
   }
 
   /** Set bindings (stored on pipeline and set before each call) */
