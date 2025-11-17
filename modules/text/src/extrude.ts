@@ -429,7 +429,7 @@ function computeVertexNormals(positions: number[]): Float32Array {
 
     vectorAB.set(bx - ax, by - ay, bz - az)
     vectorAC.set(cx - ax, cy - ay, cz - az)
-    normal.crossVectors(vectorAB, vectorAC).normalize()
+    normal.copy(vectorAB).cross(vectorAC).normalize()
 
     normals[i] = normal.x
     normals[i + 1] = normal.y
