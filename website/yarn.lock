@@ -1738,6 +1738,31 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@cmfcmf/docusaurus-search-local@npm:^2.0.0":
+  version: 2.0.1
+  resolution: "@cmfcmf/docusaurus-search-local@npm:2.0.1"
+  dependencies:
+    "@algolia/autocomplete-js": "npm:^1.8.2"
+    "@algolia/autocomplete-theme-classic": "npm:^1.8.2"
+    "@algolia/client-search": "npm:^4.12.0"
+    algoliasearch: "npm:^4.12.0"
+    cheerio: "npm:^1.0.0"
+    clsx: "npm:^2.0.0"
+    lunr-languages: "npm:^1.4.0"
+    mark.js: "npm:^8.11.1"
+    tslib: "npm:^2.6.3"
+  peerDependencies:
+    "@docusaurus/core": ^3.0.0
+    nodejieba: ^2.5.0 || ^3.0.0
+    react: ^18 || ^19
+    react-dom: ^18 || ^19
+  peerDependenciesMeta:
+    nodejieba:
+      optional: true
+  checksum: 10c0/c0986aeb26c8c50b1d9fcc88c379fd92ba4adc5627d66df09c404428b58963731e8568a3f539c78257902da1b98c1be401dc2a1432cb7477cc99226da2fc23cb
+  languageName: node
+  linkType: hard
+
 "@colors/colors@npm:1.5.0":
   version: 1.5.0
   resolution: "@colors/colors@npm:1.5.0"
@@ -13047,6 +13072,7 @@ __metadata:
   resolution: "website-docusaurus@workspace:."
   dependencies:
     "@algolia/autocomplete-js": "npm:^1.19.2"
+    "@cmfcmf/docusaurus-search-local": "npm:^2.0.0"
     "@docusaurus/core": "npm:^3.9.2"
     "@docusaurus/tsconfig": "npm:^3.9.2"
     "@vis.gl/docusaurus-website": "npm:1.0.0-alpha.21"

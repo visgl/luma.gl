@@ -36,6 +36,7 @@
     "zustand": "^4.1.5"
   },
   "devDependencies": {
+    "@cmfcmf/docusaurus-search-local": "^2.0.0",
     "@docusaurus/tsconfig": "^3.9.2",
     "docusaurus-mdx-checker": "^3.0.0"
   },
