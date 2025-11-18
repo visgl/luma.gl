@@ -15,3 +15,16 @@
   --ifm-color-primary-lightest: rgb(146, 224, 208);
   --ifm-code-font-size: 95%;
 }
+
+/* Ensure the search modal overlay is fully hidden when closed */
+.DocSearch-Container {
+  display: none;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.DocSearch--active .DocSearch-Container {
+  display: flex;
+  opacity: 1;
+  pointer-events: auto;
+}
