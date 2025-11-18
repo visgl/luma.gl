@@ -29,3 +29,4 @@ import './adapter/webgl-canvas-context.spec';
 // Resources, WebGL-specific APIs
 import './adapter/resources/webgl-vertex-array.spec';
 import './adapter/resources/webgl-transform-feedback.spec';
+import './adapter/resources/webgl-render-pass.spec';
