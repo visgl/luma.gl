@@ -8,6 +8,7 @@
 - Check website build `cd website; yarn; yarn build`
 
 ## Before committing
+- Format code: `yarn lint fix`
 - Always `yarn lint fix` after making changes to ensure that prettier formatting is maintained.
  
 ## Code style

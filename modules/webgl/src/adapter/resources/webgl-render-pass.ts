@@ -111,12 +111,9 @@ export class WEBGLRenderPass extends RenderPass {
     if (parameters.blendConstant) {
       glParameters.blendColor = parameters.blendConstant;
     }
-    if (parameters.stencilReference) {
-      // eslint-disable-next-line no-console
-      console.warn('RenderPassParameters.stencilReference not yet implemented in WebGL');
-      // parameters.stencilFunc = [func, ref, mask];
-      // Does this work?
+    if (parameters.stencilReference !== undefined) {
       glParameters[GL.STENCIL_REF] = parameters.stencilReference;
+      glParameters[GL.STENCIL_BACK_REF] = parameters.stencilReference;
     }
 
     if ('colorMask' in parameters) {
