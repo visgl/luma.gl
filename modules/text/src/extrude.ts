@@ -89,15 +89,11 @@ function addShape(shape: Shape, options: ExtrudeOptions, verticesArray: number[]
   if (reverse) {
     vertices = vertices.reverse()
     for (let h = 0; h < holes.length; h++) {
-      if (ShapeUtils.isClockWise(holes[h])) {
-        holes[h] = holes[h].reverse()
-      }
+      holes[h] = ShapeUtils.isClockWise(holes[h]) ? holes[h].reverse() : holes[h]
     }
   } else {
     for (let h = 0; h < holes.length; h++) {
-      if (!ShapeUtils.isClockWise(holes[h])) {
-        holes[h] = holes[h].reverse()
-      }
+      holes[h] = ShapeUtils.isClockWise(holes[h]) ? holes[h] : holes[h].reverse()
     }
   }
 

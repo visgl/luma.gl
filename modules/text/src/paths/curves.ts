@@ -132,9 +132,12 @@ export class SplineCurve extends Curve<Vector2> {
     const point2 = this.points[Math.min(baseIndex + 1, lastPointIndex)]
     const point3 = this.points[Math.min(baseIndex + 2, lastPointIndex)]
 
+    const atInteriorKnot = weight === 0 && baseIndex > 0 && baseIndex < lastPointIndex
+    const sampleWeight = atInteriorKnot ? 0.5 : weight
+
     target.set(
-      catmullRom(point0.x, point1.x, point2.x, point3.x, weight),
-      catmullRom(point0.y, point1.y, point2.y, point3.y, weight)
+      atInteriorKnot ? point1.x : catmullRom(point0.x, point1.x, point2.x, point3.x, sampleWeight),
+      catmullRom(point0.y, point1.y, point2.y, point3.y, sampleWeight)
     )
 
     return target
