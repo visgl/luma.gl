@@ -93,6 +93,12 @@ function addShape(shape: Shape, options: ExtrudeOptions, verticesArray: number[]
         holes[h] = holes[h].reverse()
       }
     }
+  } else {
+    for (let h = 0; h < holes.length; h++) {
+      if (!ShapeUtils.isClockWise(holes[h])) {
+        holes[h] = holes[h].reverse()
+      }
+    }
   }
 
   const faces = ShapeUtils.triangulateShape(vertices, holes)

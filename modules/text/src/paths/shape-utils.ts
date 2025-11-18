@@ -48,10 +48,19 @@ export const ShapeUtils = {
 
 /** Removes a duplicate endpoint if the contour is closed. */
 function removeDuplicateEndPoints(points: Vector2[]): Vector2[] {
-  if (points.length > 2 && points[points.length - 1].equals(points[0])) {
-    points.pop()
+  const cleaned: Vector2[] = []
+  for (const point of points) {
+    const previous = cleaned[cleaned.length - 1]
+    if (!previous || !point.equals(previous)) {
+      cleaned.push(point)
+    }
   }
-  return points
+
+  if (cleaned.length > 2 && cleaned[0].equals(cleaned[cleaned.length - 1])) {
+    cleaned.pop()
+  }
+
+  return cleaned
 }
 
 /** Writes contour coordinates into the earcut vertex array. */

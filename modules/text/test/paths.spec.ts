@@ -100,6 +100,52 @@ test('ShapeUtils triangulateShape handles holes', t => {
   t.end()
 })
 
+test('ShapeUtils triangulateShape drops duplicate vertices before earcut', t => {
+  const contour = [
+    new Vector2(-1, -1),
+    new Vector2(-1, -1),
+    new Vector2(1, -1),
+    new Vector2(1, 1),
+    new Vector2(-1, 1),
+    new Vector2(-1, 1),
+    new Vector2(-1, -1)
+  ]
+  const hole = [
+    new Vector2(-0.5, -0.5),
+    new Vector2(0.5, -0.5),
+    new Vector2(0.5, 0.5),
+    new Vector2(-0.5, 0.5),
+    new Vector2(-0.5, -0.5)
+  ]
+
+  const faces = ShapeUtils.triangulateShape(contour, [hole])
+  const cleanedContour = contour.filter((point, index, points) => index === 0 || !point.equals(points[index - 1]))
+  if (cleanedContour.length > 2 && cleanedContour[0].equals(cleanedContour[cleanedContour.length - 1])) {
+    cleanedContour.pop()
+  }
+  const cleanedHole = hole.filter((point, index, points) => index === 0 || !point.equals(points[index - 1]))
+  if (cleanedHole.length > 2 && cleanedHole[0].equals(cleanedHole[cleanedHole.length - 1])) {
+    cleanedHole.pop()
+  }
+  const vertexList = [...cleanedContour, ...cleanedHole]
+  const expectedArea = Math.abs(ShapeUtils.area(cleanedContour)) - Math.abs(ShapeUtils.area(cleanedHole))
+
+  const totalArea = faces.reduce((sum, face) => sum + faceArea(face, vertexList), 0)
+  t.ok(totalArea > 0, 'triangulation produced measurable area')
+  t.ok(Math.abs(totalArea - expectedArea) < expectedArea * 0.02, 'triangulation respects hole after deduplication')
+  t.end()
+})
+
+/** Computes the area of a single triangle from indexed vertices. */
+function faceArea(face: number[], vertices: Vector2[]): number {
+  const pointA = vertices[face[0]]
+  const pointB = vertices[face[1]]
+  const pointC = vertices[face[2]]
+  const area =
+    pointA.x * (pointB.y - pointC.y) + pointB.x * (pointC.y - pointA.y) + pointC.x * (pointA.y - pointB.y)
+  return Math.abs(area) * 0.5
+}
+
 test('ShapePath groups holes with their parent shape', t => {
   const shapePath = new ShapePath()
   shapePath.moveTo(0, 0).lineTo(2, 0).lineTo(2, 2).lineTo(0, 2).lineTo(0, 0)

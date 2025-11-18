@@ -250,7 +250,7 @@ export default class TextAnimationLoopTemplate extends AnimationLoopTemplate {
 
   onRender({device, tick, aspect}: AnimationProps) {
     const elapsedSeconds = tick * 0.016
-    const crawlDurationSeconds = 46 / 5
+    const crawlDurationSeconds = (46 / 5) * 3
     const crawlProgress = (elapsedSeconds % crawlDurationSeconds) / crawlDurationSeconds
     const depthOffset = -120 - crawlProgress * 520
     const verticalOffset = -220 + crawlProgress * 320
