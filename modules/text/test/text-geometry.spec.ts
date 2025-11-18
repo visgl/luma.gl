@@ -48,7 +48,7 @@ test('extrusion preserves holes in polygonal glyphs', t => {
   const expectedArea = expectedOuterWidth * expectedOuterWidth - expectedHoleWidth * expectedHoleWidth
 
   t.ok(frontFaceArea > 0, 'front face area was measured')
-  t.ok(Math.abs(frontFaceArea - expectedArea) < expectedArea * 0.2, 'triangulation honors inner hole')
+  t.ok(Math.abs(frontFaceArea - expectedArea) < expectedArea * 0.05, 'triangulation honors inner hole')
   t.end()
 })
 

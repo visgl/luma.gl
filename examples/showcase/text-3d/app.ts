@@ -204,23 +204,29 @@ export default class TextAnimationLoopTemplate extends AnimationLoopTemplate {
     let minX = Number.POSITIVE_INFINITY
     let maxX = Number.NEGATIVE_INFINITY
     let minY = Number.POSITIVE_INFINITY
+    let minZ = Number.POSITIVE_INFINITY
     let maxY = Number.NEGATIVE_INFINITY
+    let maxZ = Number.NEGATIVE_INFINITY
 
     if (positionAttribute) {
       const {value} = positionAttribute
       for (let index = 0; index < value.length; index += 3) {
         const positionX = value[index]
         const positionY = value[index + 1]
+        const positionZ = value[index + 2]
         minX = Math.min(minX, positionX)
         maxX = Math.max(maxX, positionX)
         minY = Math.min(minY, positionY)
         maxY = Math.max(maxY, positionY)
+        minZ = Math.min(minZ, positionZ)
+        maxZ = Math.max(maxZ, positionZ)
       }
     }
 
     const centerX = Number.isFinite(minX) && Number.isFinite(maxX) ? (minX + maxX) / 2 : 0
     const centerY = Number.isFinite(minY) && Number.isFinite(maxY) ? (minY + maxY) / 2 : 0
-    this.geometryOffset = [-centerX, -centerY, 0]
+    const centerZ = Number.isFinite(minZ) && Number.isFinite(maxZ) ? (minZ + maxZ) / 2 : 0
+    this.geometryOffset = [-centerX, -centerY, -centerZ]
 
     this.model = new Model(device, {
       id: 'text-geometry',
@@ -251,11 +257,11 @@ export default class TextAnimationLoopTemplate extends AnimationLoopTemplate {
 
     this.modelMatrix
       .identity()
-      .translate(this.geometryOffset)
       .translate([0, verticalOffset, depthOffset])
       .rotateX(-0.9)
       .rotateZ(0.08)
       .scale([1.12, 1.12, 1])
+      .translate(this.geometryOffset)
 
     this.normalMatrix.copy(this.modelMatrix).invert().transpose()
     this.projectionMatrix.perspective({fovy: Math.PI / 4.5, aspect, near: 24, far: 3200})

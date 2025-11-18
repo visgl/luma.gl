@@ -67,73 +67,27 @@ export class ShapePath {
       return [shape]
     }
 
-    let holesFirst = !ShapeUtils.isClockWise(subPaths[0].getPoints())
-    holesFirst = isCounterClockWise ? !holesFirst : holesFirst
+    const rings = subPaths.map((path) => {
+      const points = closePath(path.getPoints())
+      const orientedPoints = isCounterClockWise ? points.slice().reverse() : points
+      return {path, points: orientedPoints, area: Math.abs(ShapeUtils.area(orientedPoints))}
+    })
 
-    const betterShapeHoles: {h: Path; p: Vector2}[] = []
-    const newShapes: ({s: Shape; p: Vector2[] | undefined} | undefined)[] = []
-    const newShapeHoles: {h: Path; p: Vector2}[][] = []
-    let mainIndex = 0
+    rings.sort((firstRing, secondRing) => secondRing.area - firstRing.area)
 
-    newShapes[mainIndex] = undefined
-    newShapeHoles[mainIndex] = []
-
-    for (let i = 0, l = subPaths.length; i < l; i++) {
-      const tmpPath = subPaths[i]
-      const tmpPoints = closePath(tmpPath.getPoints())
-      let solid = ShapeUtils.isClockWise(tmpPoints)
-      solid = isCounterClockWise ? !solid : solid
-
-      if (solid) {
-        if (!holesFirst && newShapes[mainIndex]) {
-          mainIndex++
-        }
-        newShapes[mainIndex] = {s: new Shape(), p: tmpPoints}
-        newShapes[mainIndex]!.s.curves = tmpPath.curves
-
-        if (holesFirst) {
-          mainIndex++
-        }
-        newShapeHoles[mainIndex] = []
+    const shapes: Shape[] = []
+    for (const ring of rings) {
+      const container = shapes.find((shape) => isPointInsidePolygon(ring.points[0], shape.extractPoints().shape))
+      if (container) {
+        container.holes.push(ring.path)
       } else {
-        newShapeHoles[mainIndex].push({h: tmpPath, p: tmpPoints[0]})
+        const shape = new Shape()
+        shape.curves = ring.path.curves
+        shapes.push(shape)
       }
     }
 
-    if (!newShapes[mainIndex]) {
-      newShapes.splice(mainIndex, 1)
-    }
-    if (newShapeHoles[mainIndex].length === 0) {
-      newShapeHoles.splice(mainIndex, 1)
-    }
-
-    for (let i = 0, l = newShapes.length; i < l; i++) {
-      const baseShape = newShapes[i]!
-      const holes = newShapeHoles[i] ?? []
-      const holesForShape: Path[] = []
-      betterShapeHoles.push(...holes)
-
-      for (let j = 0, jl = holes.length; j < jl; j++) {
-        const hole = holes[j]
-        const cavity = hole.h
-        holesForShape.push(cavity)
-      }
-      baseShape.s.holes = holesForShape
-    }
-
-    if (holesFirst) {
-      return newShapes.map((entry) => entry!.s)
-    }
-
-    // Rearrange holes when they are not ordered first
-    for (const hole of betterShapeHoles) {
-      const placement = findShapePlacement(hole, newShapes)
-      if (placement >= 0) {
-        newShapes[placement]!.s.holes.push(hole.h)
-      }
-    }
-
-    return newShapes.map((entry) => entry!.s)
+    return shapes
   }
 }
 
@@ -150,17 +104,6 @@ function closePath(points: Vector2[]): Vector2[] {
   }
 
   return [...points, firstPoint.clone()]
-}
-
-/** Finds the shape index that should contain the provided hole. */
-function findShapePlacement(hole: {h: Path; p: Vector2}, shapes: ({s: Shape; p: Vector2[] | undefined} | undefined)[]): number {
-  for (let i = 0; i < shapes.length; i++) {
-    const shapePoints = shapes[i]?.p
-    if (shapePoints && isPointInsidePolygon(hole.p, shapePoints)) {
-      return i
-    }
-  }
-  return -1
 }
 
 /** Determines whether a point lies inside a polygon. */
