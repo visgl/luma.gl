@@ -122,26 +122,36 @@ export class SplineCurve extends Curve<Vector2> {
 
   /** Returns a point interpolated along the spline for the given t. */
   override getPoint(t: number, target = new Vector2()): Vector2 {
-    const lastPoint = this.points.length - 1
-    const realT = lastPoint * t
-    const point = Math.floor(realT)
-    const weight = realT - point
+    const lastPointIndex = this.points.length - 1
+    const scaledT = lastPointIndex * t
+    const baseIndex = Math.floor(scaledT)
+    const weight = scaledT - baseIndex
 
-    const point0 = this.points[point === 0 ? point : point - 1]
-    const point1 = this.points[point]
-    const point2 = this.points[Math.min(point + 1, lastPoint)]
-    const point3 = this.points[Math.min(point + 2, lastPoint)]
+    const point0 = this.points[baseIndex === 0 ? baseIndex : baseIndex - 1]
+    const point1 = this.points[baseIndex]
+    const point2 = this.points[Math.min(baseIndex + 1, lastPointIndex)]
+    const point3 = this.points[Math.min(baseIndex + 2, lastPointIndex)]
 
-    target.set(0, 0)
-    target.addScaledVector(point0, cubicInterpolation(-weight))
-    target.addScaledVector(point1, cubicInterpolation(1 - weight))
-    target.addScaledVector(point2, cubicInterpolation(weight))
-    target.addScaledVector(point3, cubicInterpolation(weight - 1))
+    target.set(
+      catmullRom(point0.x, point1.x, point2.x, point3.x, weight),
+      catmullRom(point0.y, point1.y, point2.y, point3.y, weight)
+    )
+
     return target
   }
 }
 
 /** Performs Catmull-Rom interpolation for a weight. */
-function cubicInterpolation(value: number): number {
-  return ((value * value * value - value * value) * 0.5)
+function catmullRom(point0: number, point1: number, point2: number, point3: number, t: number): number {
+  const velocity0 = (point2 - point0) * 0.5
+  const velocity1 = (point3 - point1) * 0.5
+  const tSquared = t * t
+  const tCubed = tSquared * t
+
+  return (
+    (2 * (point1 - point2) + velocity0 + velocity1) * tCubed +
+    (-3 * (point1 - point2) - 2 * velocity0 - velocity1) * tSquared +
+    velocity0 * t +
+    point1
+  )
 }

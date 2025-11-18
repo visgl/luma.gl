@@ -75,7 +75,7 @@ function computeFrontFaceArea(positions: Float32Array): number {
 
     vectorAB.set(bx - ax, by - ay, 0)
     vectorAC.set(cx - ax, cy - ay, 0)
-    area += vectorAB.cross(vectorAC).length() * 0.5
+    area += vectorAB.cross(vectorAC).len() * 0.5
   }
 
   return area
