@@ -11,9 +11,9 @@
     "@luma.gl/core": "9.2.0-alpha.6",
     "@luma.gl/engine": "9.2.0-alpha.6",
     "@luma.gl/shadertools": "9.2.0-alpha.6",
+    "@luma.gl/text": "9.2.0-alpha.6",
     "@luma.gl/webgl": "9.2.0-alpha.6",
     "@luma.gl/webgpu": "9.2.0-alpha.6",
-    "@luma.gl/text": "9.2.0-alpha.6",
     "@math.gl/core": "^4.1.0"
   },
   "devDependencies": {
