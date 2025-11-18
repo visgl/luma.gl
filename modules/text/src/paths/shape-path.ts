@@ -67,23 +67,34 @@ export class ShapePath {
       return [shape]
     }
 
-    const rings = subPaths.map((path) => {
-      const points = closePath(path.getPoints())
-      const orientedPoints = isCounterClockWise ? points.slice().reverse() : points
-      return {path, points: orientedPoints, area: Math.abs(ShapeUtils.area(orientedPoints))}
-    })
+    const outerIsClockWise = !(isCounterClockWise ?? false)
 
-    rings.sort((firstRing, secondRing) => secondRing.area - firstRing.area)
+    const rings = subPaths
+      .map((path) => {
+        const points = closePath(path.getPoints())
+        return {path, points, area: Math.abs(ShapeUtils.area(points))}
+      })
+      .sort((firstRing, secondRing) => secondRing.area - firstRing.area)
 
     const shapes: Shape[] = []
+    const boundaries: Vector2[][] = []
+
     for (const ring of rings) {
-      const container = shapes.find((shape) => isPointInsidePolygon(ring.points[0], shape.extractPoints().shape))
-      if (container) {
-        container.holes.push(ring.path)
-      } else {
-        const shape = new Shape()
-        shape.curves = ring.path.curves
-        shapes.push(shape)
+      if (ring.points.length > 0) {
+        const containerIndex = boundaries.findIndex((boundary) => isPointInsidePolygon(ring.points[0], boundary))
+        if (containerIndex >= 0) {
+          const containerShape = shapes[containerIndex]
+          containerShape.holes.push(ring.path)
+        } else {
+          const shape = new Shape()
+          shape.curves = ring.path.curves
+          shapes.push(shape)
+          const orientedBoundary =
+            ShapeUtils.isClockWise(ring.points) === outerIsClockWise
+              ? ring.points
+              : ring.points.slice().reverse()
+          boundaries.push(orientedBoundary)
+        }
       }
     }
 
