@@ -57,7 +57,7 @@ If no value for the `viewport` parameter is provided, the following defaults wil
 
 ### `RenderPassProps`
 
-`RenderPassProps` extends [`ResourceProps`](../resource.md#resourceprops) and accepts the following fields.
+`RenderPassProps` extends [`ResourceProps`](resource.md#resourceprops) and accepts the following fields.
 
 | Property               | Type                                  | Default        | Description |
 | ---------------------- | ------------------------------------- | -------------- | ----------- |
