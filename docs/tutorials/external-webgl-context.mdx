@@ -1,0 +1,96 @@
+# External WebGL Contexts with Mapbox
+
+This guide shows how to connect luma.gl to a WebGL context that is created and owned by [Mapbox GL JS](https://docs.mapbox.com/mapbox-gl-js/guides/). It uses the `webgl2Adapter.attach` API to wrap the map's context in a `WebGLDevice` and keep a `WebGLCanvasContext` synchronized with Mapbox's canvas.
+
+## Install dependencies
+
+Add Mapbox GL JS alongside luma.gl:
+
+```bash
+npm install @luma.gl/webgl @luma.gl/engine mapbox-gl
+```
+
+Mapbox requires an access token. Set `MAPBOX_ACCESS_TOKEN` (or inject `VITE_MAPBOX_ACCESS_TOKEN` when using Vite) before creating the map.
+
+## Attach luma.gl to Mapbox
+
+Create the map first so Mapbox owns the WebGL canvas, then attach the device to that context:
+
+```typescript
+import mapboxgl from 'mapbox-gl'
+import {Matrix4} from '@math.gl/core'
+import {webgl2Adapter} from '@luma.gl/webgl'
+import {Model} from '@luma.gl/engine'
+
+mapboxgl.accessToken = process.env.MAPBOX_ACCESS_TOKEN || ''
+
+const map = new mapboxgl.Map({
+  container: 'map',
+  style: 'mapbox://styles/mapbox/light-v11',
+  antialias: true,
+  pitch: 60,
+  zoom: 12
+})
+
+map.on('load', async () => {
+  const webglContext = map.getCanvas().getContext('webgl2') as WebGL2RenderingContext
+  const device = await webgl2Adapter.attach(webglContext, {createCanvasContext: {autoResize: false}})
+
+  // Keep the WebGLCanvasContext aligned with Mapbox's drawing buffer
+  device.canvasContext.resize({width: webglContext.drawingBufferWidth, height: webglContext.drawingBufferHeight})
+
+  const modelMatrix = new Matrix4()
+  const viewProjection = new Matrix4()
+
+  const overlay = new Model(device, {
+    id: 'mapbox-overlay',
+    vs: `...`,
+    fs: `...`,
+    shaderLayout: {
+      attributes: [
+        {name: 'positions', location: 0, format: 'float32x3'}
+      ],
+      bindings: [{name: 'app', type: 'uniform', location: 0}]
+    },
+    attributes: {
+      positions: new Float32Array([...])
+    },
+    vertexCount: 6,
+    bindings: {
+      app: /* uniform buffer */
+    }
+  })
+
+  map.addLayer({
+    id: 'luma-gl-overlay',
+    type: 'custom',
+    renderingMode: '3d',
+    render: (_, matrix) => {
+      viewProjection.fromArray(matrix as number[])
+      // Update uniforms and draw without clearing the map's buffers
+      const renderPass = device.beginRenderPass({clearColor: false, clearDepth: false})
+      overlay.draw(renderPass)
+      renderPass.end()
+      map.triggerRepaint()
+    }
+  })
+})
+```
+
+## Handle map resizes
+
+Because the context comes from Mapbox, luma.gl cannot resize it automatically. Listen for Mapbox `resize` events and keep the `WebGLCanvasContext` in sync:
+
+```typescript
+map.on('resize', () => {
+  const webglContext = map.getCanvas().getContext('webgl2') as WebGL2RenderingContext
+  device.canvasContext.resize({
+    width: webglContext.drawingBufferWidth,
+    height: webglContext.drawingBufferHeight
+  })
+})
+```
+
+## See it in action
+
+The revived [External WebGL Context example](/examples/api/external-webgl-context) renders a luma.gl overlay driven by Mapbox's WebGL render loop and uses the `webgl2Adapter.attach` API to keep both frameworks in sync.
