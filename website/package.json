@@ -41,8 +41,5 @@
     "docusaurus-mdx-checker": "^3.0.0"
   },
   "browserslist": {},
-  "volta": {
-    "node": "20.17.0",
-    "yarn": "4.4.1"
-  }
+  "packageManager": "yarn@4.11.0"
 }
