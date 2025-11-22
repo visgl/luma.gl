@@ -42,7 +42,10 @@ const config = {
     'test-browser': 'test/index.html',
     bench: 'test/bench/index.js',
     'bench-browser': 'test/bench/index.html',
-    size: 'test/size/import-nothing.js'
+    size: 'test/size/import-nothing.js',
+    'modules/webgl/test/context/create-context.spec.ts':
+      'modules/webgl/test/context/create-browser-context.spec.ts',
+    'modules/webgl/test/context/create-context.spec.ts-browser': 'test/index.html'
   }
 };
 

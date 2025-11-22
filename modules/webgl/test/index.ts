@@ -11,6 +11,7 @@ import './utils/fill-array.spec';
 import './adapter/helpers/parse-shader-compiler-log.spec';
 import './adapter/helpers/get-shader-layout.spec';
 import './adapter/helpers/webgl-topology-utils.spec';
+import './context/create-browser-context.spec';
 
 // Device pixels
 // import './context/device-pixels.spec';
