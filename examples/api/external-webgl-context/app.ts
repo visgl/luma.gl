@@ -113,7 +113,13 @@ function resolveAccessToken(options?: ExternalWebGLContextOptions): string {
     return viteToken
   }
 
-  return typeof process !== 'undefined' ? process.env.MAPBOX_ACCESS_TOKEN || '' : ''
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const globalMapboxToken = (globalThis as any)?.MAPBOX_ACCESS_TOKEN
+  if (typeof globalMapboxToken === 'string' && globalMapboxToken.length > 0) {
+    return globalMapboxToken
+  }
+
+  return ''
 }
 
 export async function initializeExternalWebGLContext(
@@ -232,7 +238,7 @@ export async function initializeExternalWebGLContext(
 
       rotation += 0.01
       modelMatrix.copy(baseModelMatrix).rotateX(radians(50)).rotateZ(rotation)
-      modelViewProjectionMatrix.fromArray(matrix as number[]).multiplyRight(modelMatrix)
+      modelViewProjectionMatrix.fromArray(matrix).multiplyRight(modelMatrix)
 
       uniformStore.setUniforms({
         app: {
