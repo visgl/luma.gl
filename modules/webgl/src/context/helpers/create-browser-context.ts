@@ -34,10 +34,13 @@ export function createBrowserContext(
   };
   canvas.addEventListener('webglcontextcreationerror', onCreateError, false);
 
+  const allowSoftwareRenderer = webglContextAttributes.failIfMajorPerformanceCaveat !== true;
+
   const webglProps: WebGLContextAttributes = {
     preserveDrawingBuffer: true,
-    // failIfMajorPerformanceCaveat: true,
-    ...webglContextAttributes
+    ...webglContextAttributes,
+    // Always start by requesting a high-performance context.
+    failIfMajorPerformanceCaveat: true
   };
 
   // Create the desired context
@@ -46,13 +49,13 @@ export function createBrowserContext(
   try {
     // Create a webgl2 context
     gl ||= canvas.getContext('webgl2', webglProps);
-    if (webglProps.failIfMajorPerformanceCaveat) {
+    if (!gl && webglProps.failIfMajorPerformanceCaveat) {
       errorMessage ||=
         'Only software GPU is available. Set `failIfMajorPerformanceCaveat: false` to allow.';
     }
 
     // Creation failed with failIfMajorPerformanceCaveat - Try a Software GPU
-    if (!gl && !webglContextAttributes.failIfMajorPerformanceCaveat) {
+    if (!gl && allowSoftwareRenderer) {
       webglProps.failIfMajorPerformanceCaveat = false;
       gl = canvas.getContext('webgl2', webglProps);
       if (gl) {
