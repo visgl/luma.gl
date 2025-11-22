@@ -1,11 +1,14 @@
 //
 
-import React from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import {LumaExample} from './react-luma';
 
 import AnimationApp from '../../examples/api/animation/app';
 import CubemapApp from '../../examples/api/cubemap/app';
 import Texture3DApp from '../../examples/api/texture-3d/app';
+import initializeExternalWebGLContext, {
+  ExternalWebGLContextHandle
+} from '../../examples/api/external-webgl-context/app';
 
 // import PerformanceApp from '../../examples/performance/stress-test/app';
 
@@ -95,6 +98,59 @@ export const Texture3DExample: React.FC = props => (
     {...props}
   />
 );
+
+export const ExternalWebGLContextExample: React.FC = () => {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return undefined;
+
+    let exampleHandle: ExternalWebGLContextHandle | null = null;
+
+    initializeExternalWebGLContext({container})
+      .then(instance => {
+        exampleHandle = instance;
+      })
+      .catch(caughtError => {
+        setError(caughtError.message);
+      });
+
+    return () => {
+      exampleHandle?.destroy();
+    };
+  }, []);
+
+  return (
+    <div style={{position: 'relative', width: '100%', minHeight: '640px'}}>
+      <div ref={containerRef} style={{position: 'absolute', inset: 0}} />
+      <div
+        style={{
+          position: 'absolute',
+          top: 16,
+          right: 16,
+          maxWidth: 320,
+          padding: 12,
+          background: 'rgba(255, 255, 255, 0.92)',
+          borderRadius: 8,
+          boxShadow: '0 2px 6px rgba(0, 0, 0, 0.25)'
+        }}
+      >
+        <h3>External WebGL Context</h3>
+        <p style={{marginTop: 0}}>
+          This example attaches a <code>WebGLDevice</code> to the WebGL2 context created by Mapbox GL JS and
+          renders a luma.gl overlay through the Mapbox render loop.
+        </p>
+        <p style={{marginBottom: 0}}>
+          Provide <code>MAPBOX_ACCESS_TOKEN</code> to see the basemap. The overlay uses the map view-projection
+          matrix so it stays anchored in world space.
+        </p>
+        {error && <p style={{color: '#b00020'}}>Error: {error}</p>}
+      </div>
+    </div>
+  );
+};
 
 // Tutorial Examples
 
