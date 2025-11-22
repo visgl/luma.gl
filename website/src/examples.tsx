@@ -13,6 +13,7 @@ import Texture3DApp from '../../examples/api/texture-3d/app';
 // import GeospatialApp from '../../examples/showcase/geospatial/app';
 // import GLTFApp from '../../examples/showcase/gltf/app';
 import InstancingApp from '../../examples/showcase/instancing/app';
+import Text3DApp from '../../examples/showcase/text-3d/app';
 import PersistenceApp from '../../examples/showcase/persistence/app';
 import PostprocessingApp from '../../examples/showcase/postprocessing/app';
 // import WanderingApp from '../../examples/showcase/wandering/app';
@@ -39,6 +40,16 @@ export const InstancingExample: React.FC = props => (
     id="instancing"
     directory="showcase"
     template={InstancingApp}
+    config={exampleConfig}
+    {...props}
+  />
+);
+
+export const Text3DExample: React.FC = props => (
+  <LumaExample
+    id="text-3d"
+    directory="showcase"
+    template={Text3DApp}
     config={exampleConfig}
     {...props}
   />
