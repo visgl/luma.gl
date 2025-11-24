@@ -1,4 +1,4 @@
-import maplibregl from 'maplibre-gl'
+import maplibregl, {CustomRenderMethodInput} from 'maplibre-gl'
 import {Matrix4, radians} from '@math.gl/core'
 import {UniformStore} from '@luma.gl/core'
 import type {Buffer} from '@luma.gl/core'
@@ -12,10 +12,6 @@ export const description = 'Attach luma.gl to a MapLibre-managed WebGL context.'
 
 type AppUniforms = {
   uModelViewProjection: Float32Array
-}
-
-type MaplibreCustomRenderInput = {
-  modelViewProjectionMatrix: number[]
 }
 
 type ExternalWebGLContextHandle = {
@@ -125,8 +121,8 @@ export async function initializeExternalWebGLContext(
   let colorsBuffer: Buffer | null = null
 
   const baseModelMatrix = new Matrix4()
-  const modelMatrix = new Matrix4()
   const modelViewProjectionMatrix = new Matrix4()
+  const modelMatrix = new Matrix4()
   let rotation = 0
 
   const maplibreMap = new maplibregl.Map({
@@ -182,13 +178,6 @@ export async function initializeExternalWebGLContext(
         source: WGSL_SHADER,
         vs: VS_GLSL,
         fs: FS_GLSL,
-        shaderLayout: {
-          attributes: [
-            {name: 'positions', location: 0, format: 'float32x3'},
-            {name: 'colors', location: 1, format: 'float32x3'}
-          ],
-          bindings: [{name: 'app', type: 'uniform', location: 0}]
-        },
         bufferLayout: [
           {name: 'positions', format: 'float32x3'},
           {name: 'colors', format: 'float32x3'}
@@ -203,20 +192,20 @@ export async function initializeExternalWebGLContext(
         },
         parameters: {
           depthWriteEnabled: false,
-          depthCompare: 'less-equal',
-          blend: true,
-          blendColor: [0, 0, 0, 0],
-          blendEquation: 'add',
-          blendFunc: {
-            srcRGB: 'src-alpha',
-            dstRGB: 'one-minus-src-alpha',
-            srcAlpha: 'src-alpha',
-            dstAlpha: 'one-minus-src-alpha'
-          }
+          depthCompare: 'always',
+          // blend: true,
+          // blendColor: [0, 0, 0, 0],
+          // blendEquation: 'add',
+          // blendFunc: {
+          //   srcRGB: 'src-alpha',
+          //   dstRGB: 'one-minus-src-alpha',
+          //   srcAlpha: 'src-alpha',
+          //   dstAlpha: 'one-minus-src-alpha'
+          // }
         }
       })
     },
-    render: (maplibreWebglContext, customRenderInput: MaplibreCustomRenderInput) => {
+    render: (maplibreWebglContext, customRenderInput: CustomRenderMethodInput) => {
       if (
         !(maplibreWebglContext instanceof WebGL2RenderingContext) ||
         !device ||
@@ -225,20 +214,20 @@ export async function initializeExternalWebGLContext(
         return
       }
 
-      const {modelViewProjectionMatrix: maplibreModelViewProjectionMatrix} = customRenderInput
-
+      const {modelViewProjectionMatrix: matrix} = customRenderInput
+      const maplibreModelViewProjectionMatrix = Array.from(matrix);
       if (maplibreModelViewProjectionMatrix.some(value => !Number.isFinite(value))) {
-        return
+        throw new Error('Invalid values in modelViewProjectionMatrix')
       }
 
       activeWebglContext = maplibreWebglContext
       resizeCanvasContext(maplibreWebglContext)
 
-      rotation += 0.01
-      modelMatrix.copy(baseModelMatrix).rotateX(radians(50)).rotateZ(rotation)
-      modelViewProjectionMatrix
-        .fromArray(maplibreModelViewProjectionMatrix)
-        .multiplyRight(modelMatrix)
+      // rotation += 0.01
+      // modelMatrix.copy(baseModelMatrix).rotateX(radians(50)).rotateZ(rotation)
+      // modelViewProjectionMatrix
+      //   .fromArray(maplibreModelViewProjectionMatrix)
+      //   .multiplyRight(modelMatrix)
 
       uniformStore.setUniforms({
         app: {
@@ -249,7 +238,7 @@ export async function initializeExternalWebGLContext(
 
       const renderPass = device.beginRenderPass({
         clearColor: false,
-        clearDepth: false
+        clearDepth: 1.0,
       })
       model.draw(renderPass)
       renderPass.end()
