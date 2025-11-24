@@ -1,44 +1,35 @@
-import maplibregl, {CustomRenderMethodInput} from 'maplibre-gl'
-import {Matrix4, radians} from '@math.gl/core'
-import {UniformStore} from '@luma.gl/core'
-import type {Buffer} from '@luma.gl/core'
-import {Model} from '@luma.gl/engine'
-import type {WebGLDevice} from '@luma.gl/webgl'
-import {webgl2Adapter} from '@luma.gl/webgl'
-import 'maplibre-gl/dist/maplibre-gl.css'
+import maplibregl, {CustomRenderMethodInput} from 'maplibre-gl';
+import {Matrix4, radians} from '@math.gl/core';
+import {UniformStore} from '@luma.gl/core';
+import type {Buffer} from '@luma.gl/core';
+import {Model} from '@luma.gl/engine';
+import type {WebGLDevice} from '@luma.gl/webgl';
+import {webgl2Adapter} from '@luma.gl/webgl';
+import 'maplibre-gl/dist/maplibre-gl.css';
 
-export const title = 'External WebGL Context'
-export const description = 'Attach luma.gl to a MapLibre-managed WebGL context.'
+export const title = 'External WebGL Context';
+export const description = 'Attach luma.gl to a MapLibre-managed WebGL context.';
 
 type AppUniforms = {
-  uModelViewProjection: Float32Array
-}
+  uModelViewProjection: Float32Array;
+};
 
 type ExternalWebGLContextHandle = {
-  destroy: () => void
-}
+  destroy: () => void;
+};
 
 type ExternalWebGLContextOptions = {
-  container?: HTMLElement | null
-}
+  container?: HTMLElement | null;
+};
 
 const POSITIONS = new Float32Array([
-  0.0, 0.15, 0.0,
-  -0.1, -0.15, 0.0,
-  0.1, -0.15, 0.0,
-  0.0, 0.15, 0.0,
-  0.1, -0.15, 0.0,
-  0.0, -0.35, 0.0
-])
+  0.0, 0.15, 0.0, -0.1, -0.15, 0.0, 0.1, -0.15, 0.0, 0.0, 0.15, 0.0, 0.1, -0.15, 0.0, 0.0, -0.35,
+  0.0
+]);
 
 const COLORS = new Float32Array([
-  0.0, 0.6, 1.0,
-  0.0, 0.4, 0.8,
-  0.0, 0.8, 0.8,
-  0.0, 0.6, 1.0,
-  0.0, 0.8, 0.8,
-  0.0, 0.4, 0.8
-])
+  0.0, 0.6, 1.0, 0.0, 0.4, 0.8, 0.0, 0.8, 0.8, 0.0, 0.6, 1.0, 0.0, 0.8, 0.8, 0.0, 0.4, 0.8
+]);
 
 const WGSL_SHADER = /* WGSL */ `\
 struct AppUniforms {
@@ -69,7 +60,7 @@ fn vertexMain(input : VertexInput) -> VertexOutput {
 fn fragmentMain(input : VertexOutput) -> @location(0) vec4<f32> {
   return vec4<f32>(input.colors, 0.8);
 }
-`
+`;
 
 const VS_GLSL = /* glsl */ `\
 #version 300 es
@@ -86,7 +77,7 @@ void main(void) {
   gl_Position = uModelViewProjection * vec4(positions, 1.0);
   vColor = colors;
 }
-`
+`;
 
 const FS_GLSL = /* glsl */ `\
 #version 300 es
@@ -99,12 +90,12 @@ out vec4 fragColor;
 void main(void) {
   fragColor = vec4(vColor, 0.8);
 }
-`
+`;
 
 export async function initializeExternalWebGLContext(
   options: ExternalWebGLContextOptions = {}
 ): Promise<ExternalWebGLContextHandle> {
-  const container = options.container || document.body
+  const container = options.container || document.body;
 
   const uniformStore = new UniformStore<{app: AppUniforms}>({
     app: {
@@ -112,18 +103,18 @@ export async function initializeExternalWebGLContext(
         uModelViewProjection: 'mat4x4<f32>'
       }
     }
-  })
+  });
 
-  let device: WebGLDevice | null = null
-  let model: Model | null = null
-  let activeWebglContext: WebGL2RenderingContext | null = null
-  let positionsBuffer: Buffer | null = null
-  let colorsBuffer: Buffer | null = null
+  let device: WebGLDevice | null = null;
+  let model: Model | null = null;
+  let activeWebglContext: WebGL2RenderingContext | null = null;
+  let positionsBuffer: Buffer | null = null;
+  let colorsBuffer: Buffer | null = null;
 
-  const baseModelMatrix = new Matrix4()
-  const modelViewProjectionMatrix = new Matrix4()
-  const modelMatrix = new Matrix4()
-  let rotation = 0
+  const baseModelMatrix = new Matrix4();
+  const modelViewProjectionMatrix = new Matrix4();
+  const modelMatrix = new Matrix4();
+  const rotation = 0;
 
   const maplibreMap = new maplibregl.Map({
     container,
@@ -132,16 +123,16 @@ export async function initializeExternalWebGLContext(
     pitch: 60,
     zoom: 12.5,
     antialias: true
-  })
+  });
 
   const resizeCanvasContext = (webglContext: WebGL2RenderingContext) => {
     if (device) {
       device.canvasContext.resize({
         width: webglContext.drawingBufferWidth,
         height: webglContext.drawingBufferHeight
-      })
+      });
     }
-  }
+  };
 
   const customLayer: maplibregl.CustomLayerInterface = {
     id: 'luma-gl-overlay',
@@ -149,17 +140,21 @@ export async function initializeExternalWebGLContext(
     renderingMode: '3d',
     onAdd: async (maplibreInstance, maplibreWebglContext) => {
       if (!(maplibreWebglContext instanceof WebGL2RenderingContext)) {
-        throw new Error('MapLibre needs to provide a WebGL2RenderingContext to attach a luma.gl device.')
+        throw new Error(
+          'MapLibre needs to provide a WebGL2RenderingContext to attach a luma.gl device.'
+        );
       }
 
-      activeWebglContext = maplibreWebglContext
-      device = await webgl2Adapter.attach(maplibreWebglContext, {createCanvasContext: {autoResize: false}})
+      activeWebglContext = maplibreWebglContext;
+      device = await webgl2Adapter.attach(maplibreWebglContext, {
+        createCanvasContext: {autoResize: false}
+      });
 
-      resizeCanvasContext(maplibreWebglContext)
+      resizeCanvasContext(maplibreWebglContext);
 
-      const mercator = maplibregl.MercatorCoordinate.fromLngLat(maplibreInstance.getCenter(), 250)
-      const meterScale = mercator.meterInMercatorCoordinateUnits()
-      const overlaySizeMeters = 800
+      const mercator = maplibregl.MercatorCoordinate.fromLngLat(maplibreInstance.getCenter(), 250);
+      const meterScale = mercator.meterInMercatorCoordinateUnits();
+      const overlaySizeMeters = 800;
 
       baseModelMatrix
         .identity()
@@ -168,10 +163,10 @@ export async function initializeExternalWebGLContext(
           meterScale * overlaySizeMeters,
           -meterScale * overlaySizeMeters,
           meterScale * overlaySizeMeters
-        ])
+        ]);
 
-      positionsBuffer = device.createBuffer({data: POSITIONS})
-      colorsBuffer = device.createBuffer({data: COLORS})
+      positionsBuffer = device.createBuffer({data: POSITIONS});
+      colorsBuffer = device.createBuffer({data: COLORS});
 
       model = new Model(device, {
         id: 'maplibre-overlay-model',
@@ -192,7 +187,7 @@ export async function initializeExternalWebGLContext(
         },
         parameters: {
           depthWriteEnabled: false,
-          depthCompare: 'always',
+          depthCompare: 'always'
           // blend: true,
           // blendColor: [0, 0, 0, 0],
           // blendEquation: 'add',
@@ -203,25 +198,21 @@ export async function initializeExternalWebGLContext(
           //   dstAlpha: 'one-minus-src-alpha'
           // }
         }
-      })
+      });
     },
     render: (maplibreWebglContext, customRenderInput: CustomRenderMethodInput) => {
-      if (
-        !(maplibreWebglContext instanceof WebGL2RenderingContext) ||
-        !device ||
-        !model
-      ) {
-        return
+      if (!(maplibreWebglContext instanceof WebGL2RenderingContext) || !device || !model) {
+        return;
       }
 
-      const {modelViewProjectionMatrix: matrix} = customRenderInput
+      const {modelViewProjectionMatrix: matrix} = customRenderInput;
       const maplibreModelViewProjectionMatrix = Array.from(matrix);
       if (maplibreModelViewProjectionMatrix.some(value => !Number.isFinite(value))) {
-        throw new Error('Invalid values in modelViewProjectionMatrix')
+        throw new Error('Invalid values in modelViewProjectionMatrix');
       }
 
-      activeWebglContext = maplibreWebglContext
-      resizeCanvasContext(maplibreWebglContext)
+      activeWebglContext = maplibreWebglContext;
+      resizeCanvasContext(maplibreWebglContext);
 
       // rotation += 0.01
       // modelMatrix.copy(baseModelMatrix).rotateX(radians(50)).rotateZ(rotation)
@@ -233,49 +224,49 @@ export async function initializeExternalWebGLContext(
         app: {
           uModelViewProjection: modelViewProjectionMatrix.toFloat32Array()
         }
-      })
-      uniformStore.updateUniformBuffers()
+      });
+      uniformStore.updateUniformBuffers();
 
       const renderPass = device.beginRenderPass({
         clearColor: false,
-        clearDepth: 1.0,
-      })
-      model.draw(renderPass)
-      renderPass.end()
+        clearDepth: 1.0
+      });
+      model.draw(renderPass);
+      renderPass.end();
 
-      maplibreMap.triggerRepaint()
+      maplibreMap.triggerRepaint();
     }
-  }
+  };
 
   const resizeHandler = () => {
     if (activeWebglContext) {
-      resizeCanvasContext(activeWebglContext)
+      resizeCanvasContext(activeWebglContext);
     }
-  }
+  };
 
   maplibreMap.on('load', () => {
-    maplibreMap.addLayer(customLayer)
-    resizeHandler()
-  })
-  maplibreMap.on('resize', resizeHandler)
+    maplibreMap.addLayer(customLayer);
+    resizeHandler();
+  });
+  maplibreMap.on('resize', resizeHandler);
 
   return {
     destroy: () => {
-      maplibreMap.off('resize', resizeHandler)
+      maplibreMap.off('resize', resizeHandler);
 
       if (maplibreMap.getLayer(customLayer.id)) {
-        maplibreMap.removeLayer(customLayer.id)
+        maplibreMap.removeLayer(customLayer.id);
       }
-      maplibreMap.remove()
+      maplibreMap.remove();
 
-      positionsBuffer?.destroy()
-      colorsBuffer?.destroy()
-      model?.destroy()
-      uniformStore.destroy()
-      device?.destroy()
+      positionsBuffer?.destroy();
+      colorsBuffer?.destroy();
+      model?.destroy();
+      uniformStore.destroy();
+      device?.destroy();
     }
-  }
+  };
 }
 
-export type {ExternalWebGLContextHandle, ExternalWebGLContextOptions}
-export default initializeExternalWebGLContext
+export type {ExternalWebGLContextHandle, ExternalWebGLContextOptions};
+export default initializeExternalWebGLContext;
