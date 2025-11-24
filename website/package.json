@@ -31,7 +31,7 @@
     "@docusaurus/core": "^3.9.2",
     "@vis.gl/docusaurus-website": "1.0.0-alpha.21",
     "clsx": "^1.1.1",
-    "mapbox-gl": "^3.9.2",
+    "maplibre-gl": "^5.13.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "zustand": "^4.1.5"

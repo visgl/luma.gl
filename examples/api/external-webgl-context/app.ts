@@ -1,13 +1,13 @@
-import mapboxgl from 'mapbox-gl'
+import maplibregl from 'maplibre-gl'
 import {Matrix4, radians} from '@math.gl/core'
 import {UniformStore} from '@luma.gl/core'
 import {Model} from '@luma.gl/engine'
 import type {WebGLDevice} from '@luma.gl/webgl'
 import {webgl2Adapter} from '@luma.gl/webgl'
-import 'mapbox-gl/dist/mapbox-gl.css'
+import 'maplibre-gl/dist/maplibre-gl.css'
 
 export const title = 'External WebGL Context'
-export const description = 'Attach luma.gl to a Mapbox-managed WebGL context.'
+export const description = 'Attach luma.gl to a MapLibre-managed WebGL context.'
 
 type AppUniforms = {
   uModelViewProjection: Matrix4
@@ -104,7 +104,6 @@ export async function initializeExternalWebGLContext(
   options: ExternalWebGLContextOptions = {}
 ): Promise<ExternalWebGLContextHandle> {
   const container = options.container || document.body
-  mapboxgl.accessToken = ''
 
   const uniformStore = new UniformStore<{app: AppUniforms}>({
     app: {
@@ -121,7 +120,7 @@ export async function initializeExternalWebGLContext(
   const modelViewProjectionMatrix = new Matrix4()
   let rotation = 0
 
-  const mapboxMap = new mapboxgl.Map({
+  const maplibreMap = new maplibregl.Map({
     container,
     style: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
     center: [-122.43, 37.77],
@@ -139,21 +138,21 @@ export async function initializeExternalWebGLContext(
     }
   }
 
-  const customLayer: mapboxgl.CustomLayerInterface = {
+  const customLayer: maplibregl.CustomLayerInterface = {
     id: 'luma-gl-overlay',
     type: 'custom',
     renderingMode: '3d',
-    onAdd: async (mapboxInstance, mapboxWebglContext) => {
-      if (!(mapboxWebglContext instanceof WebGL2RenderingContext)) {
-        throw new Error('Mapbox needs to provide a WebGL2RenderingContext to attach a luma.gl device.')
+    onAdd: async (maplibreInstance, maplibreWebglContext) => {
+      if (!(maplibreWebglContext instanceof WebGL2RenderingContext)) {
+        throw new Error('MapLibre needs to provide a WebGL2RenderingContext to attach a luma.gl device.')
       }
 
-      activeWebglContext = mapboxWebglContext
-      device = await webgl2Adapter.attach(mapboxWebglContext, {createCanvasContext: {autoResize: false}})
+      activeWebglContext = maplibreWebglContext
+      device = await webgl2Adapter.attach(maplibreWebglContext, {createCanvasContext: {autoResize: false}})
 
-      resizeCanvasContext(mapboxWebglContext)
+      resizeCanvasContext(maplibreWebglContext)
 
-      const mercator = mapboxgl.MercatorCoordinate.fromLngLat(mapboxInstance.getCenter(), 250)
+      const mercator = maplibregl.MercatorCoordinate.fromLngLat(maplibreInstance.getCenter(), 250)
       const meterScale = mercator.meterInMercatorCoordinateUnits()
 
       baseModelMatrix
@@ -162,7 +161,7 @@ export async function initializeExternalWebGLContext(
         .scale([meterScale * 800, meterScale * 800, meterScale * 800])
 
       model = new Model(device, {
-        id: 'mapbox-overlay-model',
+        id: 'maplibre-overlay-model',
         source: WGSL_SHADER,
         vs: VS_GLSL,
         fs: FS_GLSL,
@@ -196,17 +195,17 @@ export async function initializeExternalWebGLContext(
         }
       })
     },
-    render: (mapboxWebglContext, matrix) => {
+    render: (maplibreWebglContext, matrix) => {
       if (
-        !(mapboxWebglContext instanceof WebGL2RenderingContext) ||
+        !(maplibreWebglContext instanceof WebGL2RenderingContext) ||
         !device ||
         !model
       ) {
         return
       }
 
-      activeWebglContext = mapboxWebglContext
-      resizeCanvasContext(mapboxWebglContext)
+      activeWebglContext = maplibreWebglContext
+      resizeCanvasContext(maplibreWebglContext)
 
       rotation += 0.01
       modelMatrix.copy(baseModelMatrix).rotateX(radians(50)).rotateZ(rotation)
@@ -226,7 +225,7 @@ export async function initializeExternalWebGLContext(
       model.draw(renderPass)
       renderPass.end()
 
-      mapboxMap.triggerRepaint()
+      maplibreMap.triggerRepaint()
     }
   }
 
@@ -236,20 +235,20 @@ export async function initializeExternalWebGLContext(
     }
   }
 
-  mapboxMap.on('load', () => {
-    mapboxMap.addLayer(customLayer)
+  maplibreMap.on('load', () => {
+    maplibreMap.addLayer(customLayer)
     resizeHandler()
   })
-  mapboxMap.on('resize', resizeHandler)
+  maplibreMap.on('resize', resizeHandler)
 
   return {
     destroy: () => {
-      mapboxMap.off('resize', resizeHandler)
+      maplibreMap.off('resize', resizeHandler)
 
-      if (mapboxMap.getLayer(customLayer.id)) {
-        mapboxMap.removeLayer(customLayer.id)
+      if (maplibreMap.getLayer(customLayer.id)) {
+        maplibreMap.removeLayer(customLayer.id)
       }
-      mapboxMap.remove()
+      maplibreMap.remove()
 
       model?.destroy()
       uniformStore.destroy()

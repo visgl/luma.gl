@@ -12,7 +12,7 @@
     "@luma.gl/engine": "9.2.0-alpha.6",
     "@luma.gl/webgl": "9.2.0-alpha.6",
     "@math.gl/core": "^4.1.0",
-    "mapbox-gl": "^3.9.2"
+    "maplibre-gl": "^5.13.0"
   },
   "devDependencies": {
     "typescript": "^5.5.0",

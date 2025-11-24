@@ -139,8 +139,8 @@ export const ExternalWebGLContextExample: React.FC = () => {
       >
         <h3>External WebGL Context</h3>
         <p style={{marginTop: 0}}>
-          This example attaches a <code>WebGLDevice</code> to the WebGL2 context created by Mapbox GL JS and
-          renders a luma.gl overlay through the Mapbox render loop.
+          This example attaches a <code>WebGLDevice</code> to the WebGL2 context created by MapLibre GL JS and
+          renders a luma.gl overlay through the MapLibre render loop.
         </p>
         <p style={{marginBottom: 0}}>
           The map uses CARTO basemaps that do not require an access token. The overlay uses the map view-projection matrix so it
