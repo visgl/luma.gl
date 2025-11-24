@@ -11,7 +11,11 @@ export const title = 'External WebGL Context'
 export const description = 'Attach luma.gl to a MapLibre-managed WebGL context.'
 
 type AppUniforms = {
-  uModelViewProjection: Matrix4
+  uModelViewProjection: Float32Array
+}
+
+type MaplibreCustomRenderInput = {
+  modelViewProjectionMatrix: number[]
 }
 
 type ExternalWebGLContextHandle = {
@@ -108,7 +112,9 @@ export async function initializeExternalWebGLContext(
 
   const uniformStore = new UniformStore<{app: AppUniforms}>({
     app: {
-      uModelViewProjection: new Matrix4()
+      uniformTypes: {
+        uModelViewProjection: 'mat4x4<f32>'
+      }
     }
   })
 
@@ -210,7 +216,7 @@ export async function initializeExternalWebGLContext(
         }
       })
     },
-    render: (maplibreWebglContext, matrix) => {
+    render: (maplibreWebglContext, customRenderInput: MaplibreCustomRenderInput) => {
       if (
         !(maplibreWebglContext instanceof WebGL2RenderingContext) ||
         !device ||
@@ -219,7 +225,9 @@ export async function initializeExternalWebGLContext(
         return
       }
 
-      if (matrix.some(value => !Number.isFinite(value))) {
+      const {modelViewProjectionMatrix: maplibreModelViewProjectionMatrix} = customRenderInput
+
+      if (maplibreModelViewProjectionMatrix.some(value => !Number.isFinite(value))) {
         return
       }
 
@@ -228,11 +236,13 @@ export async function initializeExternalWebGLContext(
 
       rotation += 0.01
       modelMatrix.copy(baseModelMatrix).rotateX(radians(50)).rotateZ(rotation)
-      modelViewProjectionMatrix.fromArray(matrix).multiplyRight(modelMatrix)
+      modelViewProjectionMatrix
+        .fromArray(maplibreModelViewProjectionMatrix)
+        .multiplyRight(modelMatrix)
 
       uniformStore.setUniforms({
         app: {
-          uModelViewProjection: modelViewProjectionMatrix
+          uModelViewProjection: modelViewProjectionMatrix.toFloat32Array()
         }
       })
       uniformStore.updateUniformBuffers()
