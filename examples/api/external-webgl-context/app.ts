@@ -40,7 +40,7 @@ const COLORS = new Float32Array([
   0.0, 0.4, 0.8
 ])
 
-const WGSL_SHADER = /* WGSL */ `
+const WGSL_SHADER = /* WGSL */ `\
 struct AppUniforms {
   uModelViewProjection : mat4x4<f32>,
 }
@@ -71,7 +71,7 @@ fn fragmentMain(input : VertexOutput) -> @location(0) vec4<f32> {
 }
 `
 
-const VS_GLSL = /* glsl */ `
+const VS_GLSL = /* glsl */ `\
 #version 300 es
 layout(location = 0) in vec3 positions;
 layout(location = 1) in vec3 colors;
@@ -88,7 +88,7 @@ void main(void) {
 }
 `
 
-const FS_GLSL = /* glsl */ `
+const FS_GLSL = /* glsl */ `\
 #version 300 es
 precision highp float;
 
@@ -157,11 +157,16 @@ export async function initializeExternalWebGLContext(
 
       const mercator = maplibregl.MercatorCoordinate.fromLngLat(maplibreInstance.getCenter(), 250)
       const meterScale = mercator.meterInMercatorCoordinateUnits()
+      const overlaySizeMeters = 800
 
       baseModelMatrix
         .identity()
         .translate([mercator.x, mercator.y, mercator.z])
-        .scale([meterScale * 800, meterScale * 800, meterScale * 800])
+        .scale([
+          meterScale * overlaySizeMeters,
+          -meterScale * overlaySizeMeters,
+          meterScale * overlaySizeMeters
+        ])
 
       positionsBuffer = device.createBuffer({data: POSITIONS})
       colorsBuffer = device.createBuffer({data: COLORS})
