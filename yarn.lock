@@ -1262,6 +1262,16 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@luma.gl/text@npm:9.2.0-alpha.6, @luma.gl/text@workspace:modules/text":
+  version: 0.0.0-use.local
+  resolution: "@luma.gl/text@workspace:modules/text"
+  dependencies:
+    "@luma.gl/engine": "npm:9.2.0-alpha.6"
+    "@math.gl/core": "npm:^4.1.0"
+    "@math.gl/polygon": "npm:^4.1.0"
+  languageName: unknown
+  linkType: soft
+
 "@luma.gl/webgl@npm:9.2.0-alpha.6, @luma.gl/webgl@workspace:modules/webgl":
   version: 0.0.0-use.local
   resolution: "@luma.gl/webgl@workspace:modules/webgl"
@@ -7822,6 +7832,22 @@ __metadata:
     "@math.gl/types": "npm:^4.1.0"
     typescript: "npm:^5.5.0"
     vite: "npm:^7.2.2"
+  languageName: unknown
+  linkType: soft
+
+"luma.gl-examples-text-3d@workspace:examples/showcase/text-3d":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-text-3d@workspace:examples/showcase/text-3d"
+  dependencies:
+    "@luma.gl/core": "npm:9.2.0-alpha.6"
+    "@luma.gl/engine": "npm:9.2.0-alpha.6"
+    "@luma.gl/shadertools": "npm:9.2.0-alpha.6"
+    "@luma.gl/text": "npm:9.2.0-alpha.6"
+    "@luma.gl/webgl": "npm:9.2.0-alpha.6"
+    "@luma.gl/webgpu": "npm:9.2.0-alpha.6"
+    "@math.gl/core": "npm:^4.1.0"
+    typescript: "npm:^5.5.0"
+    vite: "npm:^5.0.0"
   languageName: unknown
   linkType: soft
 
