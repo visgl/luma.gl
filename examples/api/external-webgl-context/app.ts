@@ -1,6 +1,7 @@
 import maplibregl from 'maplibre-gl'
 import {Matrix4, radians} from '@math.gl/core'
 import {UniformStore} from '@luma.gl/core'
+import type {Buffer} from '@luma.gl/core'
 import {Model} from '@luma.gl/engine'
 import type {WebGLDevice} from '@luma.gl/webgl'
 import {webgl2Adapter} from '@luma.gl/webgl'
@@ -114,6 +115,8 @@ export async function initializeExternalWebGLContext(
   let device: WebGLDevice | null = null
   let model: Model | null = null
   let activeWebglContext: WebGL2RenderingContext | null = null
+  let positionsBuffer: Buffer | null = null
+  let colorsBuffer: Buffer | null = null
 
   const baseModelMatrix = new Matrix4()
   const modelMatrix = new Matrix4()
@@ -160,6 +163,9 @@ export async function initializeExternalWebGLContext(
         .translate([mercator.x, mercator.y, mercator.z])
         .scale([meterScale * 800, meterScale * 800, meterScale * 800])
 
+      positionsBuffer = device.createBuffer({data: POSITIONS})
+      colorsBuffer = device.createBuffer({data: COLORS})
+
       model = new Model(device, {
         id: 'maplibre-overlay-model',
         source: WGSL_SHADER,
@@ -172,9 +178,13 @@ export async function initializeExternalWebGLContext(
           ],
           bindings: [{name: 'app', type: 'uniform', location: 0}]
         },
+        bufferLayout: [
+          {name: 'positions', format: 'float32x3'},
+          {name: 'colors', format: 'float32x3'}
+        ],
         attributes: {
-          positions: POSITIONS,
-          colors: COLORS
+          positions: positionsBuffer,
+          colors: colorsBuffer
         },
         vertexCount: POSITIONS.length / 3,
         bindings: {
@@ -201,6 +211,10 @@ export async function initializeExternalWebGLContext(
         !device ||
         !model
       ) {
+        return
+      }
+
+      if (matrix.some(value => !Number.isFinite(value))) {
         return
       }
 
@@ -250,6 +264,8 @@ export async function initializeExternalWebGLContext(
       }
       maplibreMap.remove()
 
+      positionsBuffer?.destroy()
+      colorsBuffer?.destroy()
       model?.destroy()
       uniformStore.destroy()
       device?.destroy()
