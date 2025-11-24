@@ -10,7 +10,7 @@ Add Mapbox GL JS alongside luma.gl:
 npm install @luma.gl/webgl @luma.gl/engine mapbox-gl
 ```
 
-Mapbox requires an access token. Set `MAPBOX_ACCESS_TOKEN` (or inject `VITE_MAPBOX_ACCESS_TOKEN` when using Vite) before creating the map.
+This example uses [CARTO basemaps](https://github.com/CartoDB/basemap-styles) so you do not need a Mapbox access token, but you can still provide one if you use a Mapbox-hosted style elsewhere in your application.
 
 ## Attach luma.gl to Mapbox
 
@@ -22,11 +22,11 @@ import {Matrix4} from '@math.gl/core'
 import {webgl2Adapter} from '@luma.gl/webgl'
 import {Model} from '@luma.gl/engine'
 
-mapboxgl.accessToken = process.env.MAPBOX_ACCESS_TOKEN || ''
+mapboxgl.accessToken = ''
 
 const map = new mapboxgl.Map({
   container: 'map',
-  style: 'mapbox://styles/mapbox/light-v11',
+  style: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
   antialias: true,
   pitch: 60,
   zoom: 12

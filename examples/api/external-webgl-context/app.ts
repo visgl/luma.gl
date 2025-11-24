@@ -19,7 +19,6 @@ type ExternalWebGLContextHandle = {
 
 type ExternalWebGLContextOptions = {
   container?: HTMLElement | null
-  mapboxAccessToken?: string
 }
 
 const POSITIONS = new Float32Array([
@@ -101,38 +100,11 @@ void main(void) {
 }
 `
 
-function resolveAccessToken(options?: ExternalWebGLContextOptions): string {
-  if (options?.mapboxAccessToken) {
-    return options.mapboxAccessToken
-  }
-
-  // Vite-style env injection for the standalone example
-  // @ts-expect-error import.meta may not exist in every environment
-  const viteToken = typeof import.meta !== 'undefined' ? import.meta.env?.VITE_MAPBOX_ACCESS_TOKEN : null
-  if (viteToken) {
-    return viteToken
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const globalMapboxToken = (globalThis as any)?.MAPBOX_ACCESS_TOKEN
-  if (typeof globalMapboxToken === 'string' && globalMapboxToken.length > 0) {
-    return globalMapboxToken
-  }
-
-  return ''
-}
-
 export async function initializeExternalWebGLContext(
   options: ExternalWebGLContextOptions = {}
 ): Promise<ExternalWebGLContextHandle> {
   const container = options.container || document.body
-  const mapboxAccessToken = resolveAccessToken(options)
-
-  if (!mapboxAccessToken) {
-    throw new Error('Set MAPBOX_ACCESS_TOKEN or provide mapboxAccessToken to load the Mapbox basemap.')
-  }
-
-  mapboxgl.accessToken = mapboxAccessToken
+  mapboxgl.accessToken = ''
 
   const uniformStore = new UniformStore<{app: AppUniforms}>({
     app: {
@@ -151,7 +123,7 @@ export async function initializeExternalWebGLContext(
 
   const mapboxMap = new mapboxgl.Map({
     container,
-    style: 'mapbox://styles/mapbox/light-v11',
+    style: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
     center: [-122.43, 37.77],
     pitch: 60,
     zoom: 12.5,

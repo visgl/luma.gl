@@ -143,8 +143,8 @@ export const ExternalWebGLContextExample: React.FC = () => {
           renders a luma.gl overlay through the Mapbox render loop.
         </p>
         <p style={{marginBottom: 0}}>
-          Provide <code>MAPBOX_ACCESS_TOKEN</code> to see the basemap. The overlay uses the map view-projection
-          matrix so it stays anchored in world space.
+          The map uses CARTO basemaps that do not require an access token. The overlay uses the map view-projection matrix so it
+          stays anchored in world space.
         </p>
         {error && <p style={{color: '#b00020'}}>Error: {error}</p>}
       </div>
