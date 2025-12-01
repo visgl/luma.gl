@@ -166,15 +166,19 @@ If `props.autoResize` is true, then this value will always match `getDevicePixel
 
 _Note: For an `OffscreenCanvas` this function always returns the same value as `getDevicePixelSize()`_
 
-### `setDrawingBufferSize(size [number, number]): void`
+### `setDrawingBufferSize(width: number, height: number): void`
 
-Resize the drawing surface. Usually called after the window has been resized. 
+Update the canvas drawing buffer size.
 
 ```typescript
-canvasContext.setDrawingBufferSize([width: number, height: number]});
+canvasContext.setDrawingBufferSize(width, height);
 ```
 
-- **width**: New drawing surface width.
-- **height**: New drawing surface height.
+- **width**: The drawing buffer width in pixels.
+- **height**: The drawing buffer height in pixels.
+
+**Behavior:**
+- If `autoResize` is `true` (default): Canvas element will be resized when the framebuffer is requested. Called automatically on resize, but can also be called manually.
+- If `autoResize` is `false`: Only updates internal state without modifying the canvas element. Use this when the canvas is externally managed (e.g., by Mapbox, Google Maps).
 
 _Note: if `props.autoResize` is true, then automatic resizing is performed as size changes to the underlying canvas object are detected._

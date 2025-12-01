@@ -251,8 +251,11 @@ export abstract class CanvasContext {
 
   /**
    * Update the canvas drawing buffer size.
-   * @note - Called automatically if props.autoResize is true.
-   * @note - Defers update of drawing buffer size until framebuffer is requested to avoid flicker
+   * - If autoResize is true (default): Canvas element will be resized when framebuffer is requested.
+   *   Called automatically on resize, but can also be called manually.
+   * - If autoResize is false: Only updates internal state tracking. Canvas element is not modified.
+   *   Use this when the canvas is externally managed (e.g., by Mapbox, Google Maps).
+   * @note - Defers actual canvas resize until framebuffer is requested to avoid flicker
    * (resizing clears the drawing buffer)!
    */
   setDrawingBufferSize(width: number, height: number) {
@@ -427,9 +430,12 @@ export abstract class CanvasContext {
         this.drawingBufferWidth !== this.canvas.width ||
         this.drawingBufferHeight !== this.canvas.height;
       if (sizeChanged) {
-        // Update the canvas size
-        this.canvas.width = this.drawingBufferWidth;
-        this.canvas.height = this.drawingBufferHeight;
+        // Only modify canvas if we're managing it (autoResize !== false)
+        // When autoResize is false, the canvas is externally managed
+        if (this.props.autoResize !== false) {
+          this.canvas.width = this.drawingBufferWidth;
+          this.canvas.height = this.drawingBufferHeight;
+        }
         // Inform the subclass: WebGPU needs to call canvascontext.configure()
         this._configureDevice();
       }
