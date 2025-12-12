@@ -53,12 +53,15 @@ export class ShaderFactory {
       });
       this._cache[key] = cacheEntry = {shader, useCount: 1};
       if (this.debug) {
-        log.warn(`${this}: Created new shader ${shader.id}`)();
+        log.log(3, `${this}: Created new shader ${shader.id}`)();
       }
     } else {
       cacheEntry.useCount++;
       if (this.debug) {
-        log.warn(`${this}: Reusing shader ${cacheEntry.shader.id} count=${cacheEntry.useCount}`)();
+        log.log(
+          3,
+          `${this}: Reusing shader ${cacheEntry.shader.id} count=${cacheEntry.useCount}`
+        )();
       }
     }
 
@@ -81,13 +84,13 @@ export class ShaderFactory {
           delete this._cache[key];
           cacheEntry.shader.destroy();
           if (this.debug) {
-            log.warn(`${this}: Releasing shader ${shader.id}, destroyed`)();
+            log.log(3, `${this}: Releasing shader ${shader.id}, destroyed`)();
           }
         }
       } else if (cacheEntry.useCount < 0) {
         throw new Error(`ShaderFactory: Shader ${shader.id} released too many times`);
       } else if (this.debug) {
-        log.warn(`${this}: Releasing shader ${shader.id} count=${cacheEntry.useCount}`)();
+        log.log(3, `${this}: Releasing shader ${shader.id} count=${cacheEntry.useCount}`)();
       }
     }
   }
