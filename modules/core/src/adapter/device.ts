@@ -361,8 +361,8 @@ export abstract class Device {
     // Experimental
     _reuseDevices: false,
     _requestMaxLimits: true,
-    _cacheShaders: false,
-    _cachePipelines: false,
+    _cacheShaders: true,
+    _cachePipelines: true,
     _cacheDestroyPolicy: 'unused',
     // TODO - Change these after confirming things work as expected
     _initializeFeatures: true,
