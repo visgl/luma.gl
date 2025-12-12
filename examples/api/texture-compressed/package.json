@@ -1,6 +1,6 @@
 {
   "name": "luma.gl-examples-texture-compressed",
-  "version": "9.2.4",
+  "version": "9.2.5",
   "private": true,
   "scripts": {
     "start": "vite",
@@ -8,11 +8,11 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@luma.gl/core": "9.2.4",
-    "@luma.gl/engine": "9.2.4",
-    "@luma.gl/shadertools": "9.2.4",
-    "@luma.gl/webgl": "9.2.4",
-    "@luma.gl/webgpu": "9.2.4",
+    "@luma.gl/core": "9.2.5",
+    "@luma.gl/engine": "9.2.5",
+    "@luma.gl/shadertools": "9.2.5",
+    "@luma.gl/webgl": "9.2.5",
+    "@luma.gl/webgpu": "9.2.5",
     "@math.gl/core": "^4.1.0",
     "ktx-parse": "^0.7.1"
   },

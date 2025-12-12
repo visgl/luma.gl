@@ -4,6 +4,10 @@
 
 Production WebGPU support
 
+### v9.2.5
+
+- fix(engine): Factory warnings now level 3 logs (#2479)
+
 ### v9.2.4
 
 - fix(webgl): unpack row length handling for texture uploads (#2461)
