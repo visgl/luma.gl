@@ -69,12 +69,13 @@ export class PipelineFactory {
       pipeline.hash = hash;
       cache[hash] = {pipeline, useCount: 1};
       if (this.debug) {
-        log.warn(`${this}: ${pipeline} created, count=${cache[hash].useCount}`)();
+        log.log(3, `${this}: ${pipeline} created, count=${cache[hash].useCount}`)();
       }
     } else {
       cache[hash].useCount++;
       if (this.debug) {
-        log.warn(
+        log.log(
+          3,
           `${this}: ${cache[hash].pipeline} reused, count=${cache[hash].useCount}, (id=${props.id})`
         )();
       }
@@ -103,12 +104,13 @@ export class PipelineFactory {
       pipeline.hash = hash;
       cache[hash] = {pipeline, useCount: 1};
       if (this.debug) {
-        log.warn(`${this}: ${pipeline} created, count=${cache[hash].useCount}`)();
+        log.log(3, `${this}: ${pipeline} created, count=${cache[hash].useCount}`)();
       }
     } else {
       cache[hash].useCount++;
       if (this.debug) {
-        log.warn(
+        log.log(
+          3,
           `${this}: ${cache[hash].pipeline} reused, count=${cache[hash].useCount}, (id=${props.id})`
         )();
       }
@@ -130,13 +132,13 @@ export class PipelineFactory {
     if (cache[hash].useCount === 0) {
       this._destroyPipeline(pipeline);
       if (this.debug) {
-        log.warn(`${this}: ${pipeline} released and destroyed`)();
+        log.log(3, `${this}: ${pipeline} released and destroyed`)();
       }
     } else if (cache[hash].useCount < 0) {
       log.error(`${this}: ${pipeline} released, useCount < 0, resetting`)();
       cache[hash].useCount = 0;
     } else if (this.debug) {
-      log.warn(`${this}: ${pipeline} released, count=${cache[hash].useCount}`)();
+      log.log(3, `${this}: ${pipeline} released, count=${cache[hash].useCount}`)();
     }
   }
 
