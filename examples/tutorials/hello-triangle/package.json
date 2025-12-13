@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@luma.gl/core": "9.2.0-alpha.6",
+    "@luma.gl/experimental": "9.2.0-alpha.6",
     "@luma.gl/engine": "9.2.0-alpha.6",
     "@luma.gl/shadertools": "9.2.0-alpha.6",
     "@luma.gl/webgpu": "9.2.0-alpha.6",
