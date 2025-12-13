@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {Device, DeviceFeature, DeviceInfo} from '@luma.gl/core'
+import type {Device, DeviceInfo} from '@luma.gl/core'
 import type {WebGLDevice} from '@luma.gl/webgl'
 
 export type DeviceInfoPanelOptions = {
@@ -10,55 +10,243 @@ export type DeviceInfoPanelOptions = {
   accentColor?: string
   showExtensionsList?: boolean
   showFeaturesList?: boolean
+  theme?: 'light' | 'dark'
 }
+
+type ThemeName = NonNullable<DeviceInfoPanelOptions['theme']>
+
+const WEBGPU_LOGO_LIGHT = 'https://www.w3.org/2023/02/webgpu-logos/webgpu-horizontal.svg'
+const WEBGPU_LOGO_DARK =
+  'https://www.w3.org/2023/02/webgpu-logos/webgpu-horizontal-responsive.svg'
+const WEBGL_LOGO = 'https://www.logo.wine/a/logo/WebGL/WebGL-Logo.wine.svg'
+
+const defaultThemeStyles = `
+.luma-device-info-panel {
+  --device-panel-bg: #f9fafb;
+  --device-panel-text: #1b1b1b;
+  --device-panel-border: #e5e7eb;
+  --device-panel-card-bg: #ffffff;
+  --device-panel-subtle-bg: #f3f4f6;
+  --device-panel-muted: #6b7280;
+  --device-panel-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+  --device-panel-accent: #4b9dff;
+  font-family: 'Inter, Arial, sans-serif';
+  font-size: 14px;
+  color: var(--device-panel-text);
+  background: var(--device-panel-bg);
+  border: 1px solid var(--device-panel-border);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: var(--device-panel-shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.luma-device-info-panel.luma-theme-dark {
+  --device-panel-bg: #0f172a;
+  --device-panel-text: #e5e7eb;
+  --device-panel-border: #1f2937;
+  --device-panel-card-bg: #111827;
+  --device-panel-subtle-bg: #1f2937;
+  --device-panel-muted: #9ca3af;
+  --device-panel-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+  --device-panel-accent: #7dd3fc;
+}
+
+.luma-device-info-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.luma-device-info-title {
+  font-size: 16px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.luma-device-info-header-buttons {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.luma-device-info-badges {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.luma-device-info-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: var(--device-panel-subtle-bg);
+  color: var(--device-panel-text);
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 700;
+  border: 1px solid var(--device-panel-border);
+}
+
+.luma-device-info-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+}
+
+.luma-device-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 6px 10px;
+  background: var(--device-panel-card-bg);
+  border-radius: 8px;
+  border: 1px solid var(--device-panel-border);
+}
+
+.luma-device-info-row .label {
+  font-weight: 600;
+  color: var(--device-panel-muted);
+}
+
+.luma-device-info-row .value {
+  color: var(--device-panel-text);
+  text-align: right;
+}
+
+.luma-device-info-section-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--device-panel-accent);
+}
+
+.luma-device-info-section-box {
+  margin-top: 6px;
+  background: var(--device-panel-card-bg);
+  border: 1px solid var(--device-panel-border);
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.luma-device-info-summary {
+  font-weight: 600;
+  margin: 0;
+}
+
+.luma-device-info-list {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 6px;
+}
+
+.luma-device-info-list li {
+  background: var(--device-panel-subtle-bg);
+  border: 1px solid var(--device-panel-border);
+  border-radius: 6px;
+  padding: 4px 6px;
+  font-size: 12px;
+}
+
+.luma-device-info-list li.shader {
+  background: rgba(75, 157, 255, 0.1);
+  border-color: var(--device-panel-accent);
+}
+
+.luma-device-info-collapsible {
+  margin-top: 6px;
+}
+
+.luma-device-info-collapsible summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--device-panel-text);
+  padding: 10px;
+  background: var(--device-panel-card-bg);
+  border: 1px solid var(--device-panel-border);
+  border-radius: 8px;
+}
+
+.luma-device-info-collapsible summary::-webkit-details-marker {
+  display: none;
+}
+
+.luma-device-info-collapsible .chevron {
+  transition: transform 0.2s ease;
+}
+
+.luma-device-info-collapsible[open] .chevron {
+  transform: rotate(90deg);
+}
+
+.luma-device-info-button {
+  border: 1px solid var(--device-panel-border);
+  border-radius: 6px;
+  background: var(--device-panel-card-bg);
+  color: var(--device-panel-text);
+  padding: 6px 10px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.luma-device-info-button:hover {
+  border-color: var(--device-panel-accent);
+}
+`
 
 export function createDeviceInfoPanel(
   device: Device,
-  options: DeviceInfoPanelOptions = {}
+  options: DeviceInfoPanelOptions = {},
 ): HTMLElement {
-  const accentColor = options.accentColor || '#4b9dff'
+  const theme: ThemeName = options.theme === 'dark' ? 'dark' : 'light'
+  const accentColor = options.accentColor || (theme === 'dark' ? '#7dd3fc' : '#4b9dff')
+  ensureDeviceInfoPanelStyles()
+
   const panel = document.createElement('div')
-  Object.assign(panel.style, {
-    fontFamily: 'Inter, Arial, sans-serif',
-    fontSize: '14px',
-    color: '#1b1b1b',
-    background: '#f9fafb',
-    border: '1px solid #e5e7eb',
-    borderRadius: '12px',
-    padding: '16px',
-    width: options.width || '360px',
-    boxShadow: '0 4px 14px rgba(0,0,0,0.08)',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '12px'
-  })
+  panel.classList.add('luma-device-info-panel', `luma-theme-${theme}`)
+  panel.style.width = options.width || '360px'
+  panel.style.setProperty('--device-panel-accent', accentColor)
 
   const header = document.createElement('div')
-  Object.assign(header.style, {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: '8px'
-  })
+  header.className = 'luma-device-info-header'
 
   const title = document.createElement('div')
   title.textContent = 'GPU Device Info'
-  Object.assign(title.style, {
-    fontSize: '16px',
-    fontWeight: '700',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px'
+  title.className = 'luma-device-info-title'
+
+  const headerButtons = document.createElement('div')
+  headerButtons.className = 'luma-device-info-header-buttons'
+
+  const themeButton = document.createElement('button')
+  themeButton.className = 'luma-device-info-button'
+  themeButton.type = 'button'
+  themeButton.textContent = theme === 'dark' ? 'Light theme' : 'Dark theme'
+  themeButton.addEventListener('click', () => {
+    const nextTheme: ThemeName = panel.classList.contains('luma-theme-dark') ? 'light' : 'dark'
+    applyTheme(panel, nextTheme, options.accentColor)
+    updateBackendBadgeForTheme(panel, device.info, nextTheme)
+    themeButton.textContent = nextTheme === 'dark' ? 'Light theme' : 'Dark theme'
   })
+
+  headerButtons.appendChild(themeButton)
 
   const badges = document.createElement('div')
-  Object.assign(badges.style, {
-    display: 'flex',
-    gap: '6px',
-    alignItems: 'center'
-  })
+  badges.className = 'luma-device-info-badges'
 
-  badges.appendChild(createBackendBadge(device.info, accentColor))
+  badges.appendChild(createBackendBadge(device.info, theme))
   badges.appendChild(createGpuTypeBadge(device.info.gpuType))
   const vendorBadge = createVendorBadge(device.info)
   if (vendorBadge) {
@@ -66,15 +254,12 @@ export function createDeviceInfoPanel(
   }
 
   header.appendChild(title)
-  header.appendChild(badges)
+  header.appendChild(headerButtons)
   panel.appendChild(header)
+  panel.appendChild(badges)
 
   const infoGrid = document.createElement('div')
-  Object.assign(infoGrid.style, {
-    display: 'grid',
-    gridTemplateColumns: '1fr',
-    gap: '6px'
-  })
+  infoGrid.className = 'luma-device-info-grid'
 
   const infoFields: Array<[string, string | number | boolean | undefined]> = [
     ['Type', device.info.type],
@@ -87,7 +272,7 @@ export function createDeviceInfoPanel(
     ['GPU Architecture', device.info.gpuArchitecture],
     ['Fallback Adapter', device.info.fallback],
     ['Shading Language', device.info.shadingLanguage],
-    ['Shading Language Version', device.info.shadingLanguageVersion]
+    ['Shading Language Version', device.info.shadingLanguageVersion],
   ]
 
   for (const [label, value] of infoFields) {
@@ -97,76 +282,68 @@ export function createDeviceInfoPanel(
   panel.appendChild(infoGrid)
 
   if (isWebGLDevice(device)) {
-    const extensionSection = createExtensionSection(device, accentColor, options)
+    const extensionSection = createExtensionSection(device, options)
     panel.appendChild(extensionSection)
   } else {
-    const featureSection = createFeatureSection(device, accentColor, options)
+    const featureSection = createFeatureSection(device, options)
     panel.appendChild(featureSection)
   }
 
   return panel
 }
 
+function ensureDeviceInfoPanelStyles(): void {
+  if (typeof document === 'undefined') {
+    return
+  }
+  const styleId = 'luma-device-info-panel-styles'
+  if (document.getElementById(styleId)) {
+    return
+  }
+  const style = document.createElement('style')
+  style.id = styleId
+  style.textContent = defaultThemeStyles
+  document.head.appendChild(style)
+}
+
+function applyTheme(panel: HTMLElement, theme: ThemeName, customAccent?: string): void {
+  panel.classList.remove('luma-theme-light', 'luma-theme-dark')
+  panel.classList.add(`luma-theme-${theme}`)
+  const fallbackAccent = theme === 'dark' ? '#7dd3fc' : '#4b9dff'
+  panel.style.setProperty('--device-panel-accent', customAccent || fallbackAccent)
+}
+
 function createInfoRow(label: string, value: string | number | boolean): HTMLElement {
   const row = document.createElement('div')
-  Object.assign(row.style, {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'baseline',
-    padding: '6px 10px',
-    background: '#fff',
-    borderRadius: '8px',
-    border: '1px solid #eceff1'
-  })
+  row.className = 'luma-device-info-row'
 
   const labelElement = document.createElement('div')
   labelElement.textContent = label
-  Object.assign(labelElement.style, {
-    fontWeight: '600',
-    color: '#374151'
-  })
+  labelElement.className = 'label'
 
   const valueElement = document.createElement('div')
   valueElement.textContent = String(value)
-  Object.assign(valueElement.style, {
-    color: '#111827',
-    textAlign: 'right'
-  })
+  valueElement.className = 'value'
 
   row.appendChild(labelElement)
   row.appendChild(valueElement)
   return row
 }
 
-function createSectionHeader(title: string, accentColor: string): HTMLElement {
+function createSectionHeader(title: string): HTMLElement {
   const header = document.createElement('div')
   header.textContent = title
-  Object.assign(header.style, {
-    fontSize: '15px',
-    fontWeight: '700',
-    color: accentColor
-  })
+  header.className = 'luma-device-info-section-title'
   return header
 }
 
-function createBadge(text: string, background: string, title: string, svg?: SVGElement): HTMLElement {
+function createBadge(text: string, title: string, icon?: Element): HTMLElement {
   const badge = document.createElement('div')
   badge.title = title
-  Object.assign(badge.style, {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '6px',
-    padding: '6px 10px',
-    background,
-    color: '#0b1a2d',
-    borderRadius: '16px',
-    fontSize: '12px',
-    fontWeight: '700',
-    boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.04)'
-  })
+  badge.className = 'luma-device-info-badge'
 
-  if (svg) {
-    badge.appendChild(svg)
+  if (icon) {
+    badge.appendChild(icon)
   }
 
   const textNode = document.createElement('span')
@@ -175,46 +352,53 @@ function createBadge(text: string, background: string, title: string, svg?: SVGE
   return badge
 }
 
-function createBackendBadge(info: DeviceInfo, accentColor: string): HTMLElement {
+function createBackendBadge(info: DeviceInfo, theme: ThemeName): HTMLElement {
   const isWebGPU = info.type === 'webgpu'
   const isWebGL = info.type === 'webgl'
   const title = isWebGPU ? 'WebGPU device' : isWebGL ? 'WebGL2 device' : 'Unknown backend'
-  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
-  svg.setAttribute('width', '20')
-  svg.setAttribute('height', '20')
-  svg.setAttribute('viewBox', '0 0 20 20')
-  const rect = document.createElementNS(svg.namespaceURI, 'rect')
-  rect.setAttribute('x', '1')
-  rect.setAttribute('y', '1')
-  rect.setAttribute('width', '18')
-  rect.setAttribute('height', '18')
-  rect.setAttribute('rx', '4')
-  rect.setAttribute('fill', isWebGPU ? '#2a5bff' : isWebGL ? '#7ac143' : '#d1d5db')
-  svg.appendChild(rect)
-  const label = document.createElementNS(svg.namespaceURI, 'text')
-  label.setAttribute('x', '10')
-  label.setAttribute('y', '13')
-  label.setAttribute('text-anchor', 'middle')
-  label.setAttribute('font-size', '9')
-  label.setAttribute('fill', '#fff')
-  label.textContent = isWebGPU ? 'GPU' : isWebGL ? 'GL2' : '?'
-  svg.appendChild(label)
-  const titleElement = document.createElementNS(svg.namespaceURI, 'title')
-  titleElement.textContent = title
-  svg.appendChild(titleElement)
-  return createBadge(isWebGPU ? 'WebGPU' : isWebGL ? 'WebGL2' : 'Unknown', accentColor, title, svg)
+  const label = isWebGPU ? 'WebGPU' : isWebGL ? 'WebGL2' : 'Unknown'
+  const logo = document.createElement('img')
+  logo.alt = label
+  logo.width = 82
+  logo.height = 24
+  logo.loading = 'lazy'
+  logo.dataset.deviceBackendLogo = 'true'
+  logo.dataset.deviceBackendType = isWebGPU ? 'webgpu' : isWebGL ? 'webgl' : 'unknown'
+  logo.src = getBackendLogoSource(logo.dataset.deviceBackendType, theme)
+
+  return createBadge(label, title, logo)
+}
+
+function getBackendLogoSource(type: string | undefined, theme: ThemeName): string {
+  if (type === 'webgpu') {
+    return theme === 'dark' ? WEBGPU_LOGO_DARK : WEBGPU_LOGO_LIGHT
+  }
+  if (type === 'webgl') {
+    return WEBGL_LOGO
+  }
+  return WEBGL_LOGO
+}
+
+function updateBackendBadgeForTheme(panel: HTMLElement, info: DeviceInfo, theme: ThemeName): void {
+  const logo = panel.querySelector<HTMLImageElement>('[data-device-backend-logo]')
+  if (!logo) {
+    return
+  }
+  const type = info.type === 'webgpu' ? 'webgpu' : info.type === 'webgl' ? 'webgl' : 'unknown'
+  logo.dataset.deviceBackendType = type
+  logo.src = getBackendLogoSource(type, theme)
 }
 
 function createGpuTypeBadge(gpuType: DeviceInfo['gpuType']): HTMLElement {
-  let background = '#e0e7ff'
+  let background = 'var(--device-panel-subtle-bg)'
   let text = 'Integrated GPU'
   let title = 'Integrated or shared memory GPU'
   if (gpuType === 'discrete') {
-    background = '#fee2e2'
+    background = 'rgba(230, 55, 70, 0.12)'
     text = 'Discrete GPU'
     title = 'Dedicated graphics hardware'
   } else if (gpuType === 'cpu') {
-    background = '#fef3c7'
+    background = 'rgba(254, 243, 199, 0.6)'
     text = 'Software GPU'
     title = 'Software renderer or CPU fallback'
   }
@@ -236,7 +420,10 @@ function createGpuTypeBadge(gpuType: DeviceInfo['gpuType']): HTMLElement {
   const titleElement = document.createElementNS(svg.namespaceURI, 'title')
   titleElement.textContent = title
   svg.appendChild(titleElement)
-  return createBadge(text, background, title, svg)
+
+  const badge = createBadge(text, title, svg)
+  badge.style.background = background
+  return badge
 }
 
 function createVendorBadge(info: DeviceInfo): HTMLElement | null {
@@ -250,7 +437,7 @@ function createVendorBadge(info: DeviceInfo): HTMLElement | null {
     amd: {label: 'AMD', color: '#e63746', svg: createAmdSvg},
     apple: {label: 'Apple', color: '#111827', svg: createAppleSvg},
     intel: {label: 'Intel', color: '#0071c5', svg: createIntelSvg},
-    software: {label: 'Software', color: '#6b7280', svg: createSoftwareSvg}
+    software: {label: 'Software', color: '#6b7280', svg: createSoftwareSvg},
   }
 
   const match = Object.keys(knownVendors).find(key => vendor.includes(key))
@@ -263,118 +450,99 @@ function createVendorBadge(info: DeviceInfo): HTMLElement | null {
   const titleElement = document.createElementNS(svg.namespaceURI, 'title')
   titleElement.textContent = `${vendorInfo.label} GPU`
   svg.appendChild(titleElement)
-  return createBadge(vendorInfo.label, `${vendorInfo.color}20`, `${vendorInfo.label} vendor`, svg)
+
+  const badge = createBadge(vendorInfo.label, `${vendorInfo.label} vendor`, svg)
+  badge.style.background = `${vendorInfo.color}20`
+  badge.style.borderColor = `${vendorInfo.color}60`
+  return badge
 }
 
 function createExtensionSection(
   device: WebGLDevice,
-  accentColor: string,
-  options: DeviceInfoPanelOptions
+  options: DeviceInfoPanelOptions,
 ): HTMLElement {
   const section = document.createElement('div')
-  section.appendChild(createSectionHeader('WebGL Extensions', accentColor))
+  section.appendChild(createSectionHeader('WebGL Extensions'))
   const extensions = device.gl?.getSupportedExtensions?.() || []
-  const listContainer = document.createElement('div')
-  Object.assign(listContainer.style, {
-    marginTop: '6px',
-    background: '#fff',
-    border: '1px solid #e5e7eb',
-    borderRadius: '8px',
-    padding: '10px',
-    maxHeight: '180px',
-    overflow: 'auto'
-  })
 
-  const summary = document.createElement('div')
-  summary.textContent = `${extensions.length} extensions available`
-  Object.assign(summary.style, {
-    fontWeight: '600',
-    marginBottom: '6px'
-  })
-  listContainer.appendChild(summary)
+  const collapsible = document.createElement('details')
+  collapsible.className = 'luma-device-info-collapsible'
+  collapsible.open = false
 
-  if (options.showExtensionsList !== false) {
+  const summary = document.createElement('summary')
+  summary.className = 'luma-device-info-section-box'
+  const summaryText = document.createElement('p')
+  summaryText.className = 'luma-device-info-summary'
+  summaryText.textContent = `${extensions.length} extensions available`
+  const chevron = document.createElement('span')
+  chevron.className = 'chevron'
+  chevron.textContent = '›'
+  summary.appendChild(summaryText)
+  summary.appendChild(chevron)
+  collapsible.appendChild(summary)
+
+  if (options.showExtensionsList !== false && extensions.length > 0) {
+    const listBox = document.createElement('div')
+    listBox.className = 'luma-device-info-section-box'
     const list = document.createElement('ul')
-    Object.assign(list.style, {
-      listStyle: 'none',
-      padding: '0',
-      margin: '0',
-      display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-      gap: '4px'
-    })
+    list.className = 'luma-device-info-list'
     for (const extension of extensions) {
       const item = document.createElement('li')
       item.textContent = extension
-      Object.assign(item.style, {
-        background: '#f3f4f6',
-        borderRadius: '6px',
-        padding: '4px 6px',
-        fontSize: '12px'
-      })
       list.appendChild(item)
     }
-    listContainer.appendChild(list)
+    listBox.appendChild(list)
+    collapsible.appendChild(listBox)
   }
 
-  section.appendChild(listContainer)
+  section.appendChild(collapsible)
   return section
 }
 
 function createFeatureSection(
   device: Device,
-  accentColor: string,
-  options: DeviceInfoPanelOptions
+  options: DeviceInfoPanelOptions,
 ): HTMLElement {
   const section = document.createElement('div')
-  section.appendChild(createSectionHeader('Features', accentColor))
+  section.appendChild(createSectionHeader('Features'))
 
-  const featureList = Array.from((device.features as unknown as Iterable<DeviceFeature>) || [])
+  const featureList = Array.from(device.features ?? [])
   const shaderFeatures = featureList.filter(feature => feature.toLowerCase().includes('shader'))
 
-  const listContainer = document.createElement('div')
-  Object.assign(listContainer.style, {
-    marginTop: '6px',
-    background: '#fff',
-    border: '1px solid #e5e7eb',
-    borderRadius: '8px',
-    padding: '10px'
-  })
+  const collapsible = document.createElement('details')
+  collapsible.className = 'luma-device-info-collapsible'
+  collapsible.open = false
 
-  const summary = document.createElement('div')
-  summary.textContent = `${featureList.length} features, ${shaderFeatures.length} shader-related`
-  Object.assign(summary.style, {
-    fontWeight: '600',
-    marginBottom: '6px'
-  })
-  listContainer.appendChild(summary)
+  const summary = document.createElement('summary')
+  summary.className = 'luma-device-info-section-box'
+  const summaryText = document.createElement('p')
+  summaryText.className = 'luma-device-info-summary'
+  summaryText.textContent = `${featureList.length} features, ${shaderFeatures.length} shader-related`
+  const chevron = document.createElement('span')
+  chevron.className = 'chevron'
+  chevron.textContent = '›'
+  summary.appendChild(summaryText)
+  summary.appendChild(chevron)
+  collapsible.appendChild(summary)
 
   if (options.showFeaturesList !== false && featureList.length > 0) {
+    const listBox = document.createElement('div')
+    listBox.className = 'luma-device-info-section-box'
     const list = document.createElement('ul')
-    Object.assign(list.style, {
-      listStyle: 'none',
-      padding: '0',
-      margin: '0',
-      display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-      gap: '4px'
-    })
+    list.className = 'luma-device-info-list'
     for (const feature of featureList) {
       const item = document.createElement('li')
       item.textContent = feature
-      Object.assign(item.style, {
-        background: shaderFeatures.includes(feature) ? '#eef2ff' : '#f3f4f6',
-        borderRadius: '6px',
-        padding: '4px 6px',
-        fontSize: '12px',
-        border: shaderFeatures.includes(feature) ? `1px solid ${accentColor}` : '1px solid #e5e7eb'
-      })
+      if (shaderFeatures.includes(feature)) {
+        item.classList.add('shader')
+      }
       list.appendChild(item)
     }
-    listContainer.appendChild(list)
+    listBox.appendChild(list)
+    collapsible.appendChild(listBox)
   }
 
-  section.appendChild(listContainer)
+  section.appendChild(collapsible)
   return section
 }
 
@@ -386,7 +554,7 @@ function createNvidiaSvg(): SVGElement {
   const path = document.createElementNS(svg.namespaceURI, 'path')
   path.setAttribute(
     'd',
-    'M3 7c3-2 7-3 11-2 3 1 5 3 7 6-2 3-4 5-7 6-4 1-8 0-11-2l2-2c2 1 4 1 7 1 2-1 4-2 5-3-1-2-3-3-5-3-2 0-4 0-6 1l-2-2z'
+    'M3 7c3-2 7-3 11-2 3 1 5 3 7 6-2 3-4 5-7 6-4 1-8 0-11-2l2-2c2 1 4 1 7 1 2-1 4-2 5-3-1-2-3-3-5-3-2 0-4 0-6 1l-2-2z',
   )
   path.setAttribute('fill', '#76b900')
   svg.appendChild(path)
@@ -413,7 +581,7 @@ function createAppleSvg(): SVGElement {
   const path = document.createElementNS(svg.namespaceURI, 'path')
   path.setAttribute(
     'd',
-    'M16.5 2c0 1-0.8 2.2-1.6 3-0.7 0.7-1.9 1.4-2.9 1.3-0.1-1 0.5-2.2 1.3-3.1C14 2.5 15.3 2 16.5 2zM19 15c-0.4 0.9-0.6 1.3-1.1 2-0.7 1-1.7 2.1-2.9 2.1-1 0-1.3-0.7-2.8-0.7s-1.8 0.7-2.9 0.7c-1.2 0-2.1-1-2.9-2-1.4-1.8-2.5-5-1-7.3 0.9-1.4 2.5-2.2 4-2.2 1.1 0 2 0.7 2.8 0.7s1.9-0.8 3.3-0.7c0.6 0 2.3 0.2 3.4 1.7-0.1 0.1-2 1.2-2 3.4 0 2.7 2.6 3.5 2.7 3.5z'
+    'M16.5 2c0 1-0.8 2.2-1.6 3-0.7 0.7-1.9 1.4-2.9 1.3-0.1-1 0.5-2.2 1.3-3.1C14 2.5 15.3 2 16.5 2zM19 15c-0.4 0.9-0.6 1.3-1.1 2-0.7 1-1.7 2.1-2.9 2.1-1 0-1.3-0.7-2.8-0.7s-1.8 0.7-2.9 0.7c-1.2 0-2.1-1-2.9-2-1.4-1.8-2.5-5-1-7.3 0.9-1.4 2.5-2.2 4-2.2 1.1 0 2 0.7 2.8 0.7s1.9-0.8 3.3-0.7c0.6 0 2.3 0.2 3.4 1.7-0.1 0.1-2 1.2-2 3.4 0 2.7 2.6 3.5 2.7 3.5z',
   )
   path.setAttribute('fill', '#111827')
   svg.appendChild(path)
@@ -428,7 +596,7 @@ function createIntelSvg(): SVGElement {
   const path = document.createElementNS(svg.namespaceURI, 'path')
   path.setAttribute(
     'd',
-    'M4 10c0-3 2.5-5 6-5 3 0 5 1.4 6 3V5h3v9c0 3-2.5 5-6 5-3 0-6-2-6-5h3c0 1.3 1.3 2.5 3 2.5 1.8 0 3-1.2 3-2.5s-1.2-2.5-3-2.5c-3.5 0-6-2-6-5z'
+    'M4 10c0-3 2.5-5 6-5 3 0 5 1.4 6 3V5h3v9c0 3-2.5 5-6 5-3 0-6-2-6-5h3c0 1.3 1.3 2.5 3 2.5 1.8 0 3-1.2 3-2.5s-1.2-2.5-3-2.5c-3.5 0-6-2-6-5z',
   )
   path.setAttribute('fill', '#0071c5')
   svg.appendChild(path)
