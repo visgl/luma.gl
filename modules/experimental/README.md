@@ -8,3 +8,15 @@ Experimental features are not documented. Refer to comments in code.
 :::
 
 See [luma.gl](http://luma.gl) for documentation.
+
+## Device info panel
+
+Create a DOM-based GPU info panel and attach it to the current page:
+
+```ts
+import {createDeviceInfoPanel} from '@luma.gl/experimental'
+
+const device = await luma.createDevice()
+const panel = createDeviceInfoPanel(device, {width: '420px'})
+document.body.appendChild(panel)
+```
