@@ -24,7 +24,7 @@ Note that setting texture data from 8 bit RGBA arrays can also be done via `text
 
 ```ts
 const data = new ClampedUint8Array([...]);
-const imageData = new ImageData(data, width, height); 
+const imageData = new ImageData(data, width, height);
 texture.copyFromExternalImage({source: imageData});
 ```
 
@@ -110,7 +110,7 @@ Note that the allowed combinations are very limited, especially in WebGPU.
 ## TextureDimension
 
 | Dimension | WebGPU | WebGL2 | Description |
-| --------- | ------ | ------ || -------------------------------------------------------------------- |
+| --------- | ------ | ------ | -------------------------------------------------------------------- |
 | `1d`         | ✅      | ❌      | Contains a one dimensional texture (typically used for compute )     |
 | `2d`         | ✅      | ✅      | Contains a "normal" image texture                                    |
 | `2d-array`   | ✅      | ✅      | Holds an "array" of 2D textures.                                     |
@@ -124,6 +124,8 @@ Note that the allowed combinations are very limited, especially in WebGPU.
 luma.gl allows texture data to be initialized from a number of different CPU object that hold an image.
 These are referred to as external (to the GPU) images.
 
+| Type | Description |
+| ---- | ----------- |
 | `Image` (`HTMLImageElement`)   | image will be used to fill the texture. width and height will be deduced.                             |
 | `Canvas` (`HTMLCanvasElement`) | canvas will be used to fill the texture. width and height will be deduced.                            |
 | `Video` (`HTMLVideoElement`)   | video will be used to continously update the texture. width and height will be deduced.               |
@@ -221,7 +223,7 @@ WebGL References [gl.generateMipmap](https://developer.mozilla.org/en-US/docs/We
 
 ### `copyExternalImage()`
 
-Copy data from an image data into the texture. 
+Copy data from an image data into the texture.
 
 This function offers a highly granular control but can be called with just an `image` parameter and the remaining arguments will be deduced or set to canonical defaults.
 
