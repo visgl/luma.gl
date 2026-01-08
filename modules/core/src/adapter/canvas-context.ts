@@ -330,15 +330,7 @@ export abstract class CanvasContext {
 
   /** reacts to an observed intersection */
   protected _handleIntersection(entries: IntersectionObserverEntry[]) {
-    // Guard against callbacks firing after context is destroyed
-    if (this.destroyed) {
-      return;
-    }
-
-    // Guard against callbacks firing during construction before subclass sets this.device
-    if (!this.device) {
-      return;
-    }
+    if (this.destroyed || !this.device) return;
 
     const entry = entries.find(entry_ => entry_.target === this.canvas);
     if (!entry) {
@@ -358,17 +350,7 @@ export abstract class CanvasContext {
    * @see https://webgpufundamentals.org/webgpu/lessons/webgpu-resizing-the-canvas.html
    */
   protected _handleResize(entries: ResizeObserverEntry[]) {
-    // Guard against callbacks firing after context is destroyed
-    if (this.destroyed) {
-      return;
-    }
-
-    // Guard against callbacks firing during construction before subclass sets this.device
-    // The base CanvasContext constructor creates ResizeObserver before the subclass
-    // constructor (e.g., WebGLCanvasContext) has a chance to set this.device
-    if (!this.device) {
-      return;
-    }
+    if (this.destroyed || !this.device) return;
 
     const entry = entries.find(entry_ => entry_.target === this.canvas);
     if (!entry) {
@@ -435,7 +417,6 @@ export abstract class CanvasContext {
     this.updatePosition();
 
     // Inform the device
-    // Guard: This is deferred via setTimeout in constructor, but be defensive
     this.device?.props.onDevicePixelRatioChange?.(this, {oldRatio});
     // Set up a one time query against the current resolution.
     matchMedia(`(resolution: ${this.devicePixelRatio}dppx)`).addEventListener(
@@ -472,7 +453,6 @@ export abstract class CanvasContext {
       if (positionChanged) {
         const oldPosition = this._position;
         this._position = position;
-        // Guard: device may not be initialized during construction
         this.device?.props.onPositionChange?.(this, {oldPosition});
       }
     }
