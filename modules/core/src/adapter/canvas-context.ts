@@ -238,11 +238,6 @@ export abstract class CanvasContext {
 
   /** Returns the biggest allowed framebuffer size. @todo Allow the application to limit this? */
   getMaxDrawingBufferSize(): [number, number] {
-    // Guard against race condition where device may not be initialized yet or has been destroyed
-    if (!this.device?.limits) {
-      // Return a reasonable default max size (most devices support at least 4096x4096)
-      return [4096, 4096];
-    }
     const maxTextureDimension = this.device.limits.maxTextureDimension2D;
     return [maxTextureDimension, maxTextureDimension];
   }
@@ -340,6 +335,11 @@ export abstract class CanvasContext {
       return;
     }
 
+    // Guard against callbacks firing during construction before subclass sets this.device
+    if (!this.device) {
+      return;
+    }
+
     const entry = entries.find(entry_ => entry_.target === this.canvas);
     if (!entry) {
       return;
@@ -360,6 +360,13 @@ export abstract class CanvasContext {
   protected _handleResize(entries: ResizeObserverEntry[]) {
     // Guard against callbacks firing after context is destroyed
     if (this.destroyed) {
+      return;
+    }
+
+    // Guard against callbacks firing during construction before subclass sets this.device
+    // The base CanvasContext constructor creates ResizeObserver before the subclass
+    // constructor (e.g., WebGLCanvasContext) has a chance to set this.device
+    if (!this.device) {
       return;
     }
 
@@ -428,7 +435,8 @@ export abstract class CanvasContext {
     this.updatePosition();
 
     // Inform the device
-    this.device.props.onDevicePixelRatioChange(this, {oldRatio});
+    // Guard: This is deferred via setTimeout in constructor, but be defensive
+    this.device?.props.onDevicePixelRatioChange?.(this, {oldRatio});
     // Set up a one time query against the current resolution.
     matchMedia(`(resolution: ${this.devicePixelRatio}dppx)`).addEventListener(
       'change',
@@ -464,7 +472,8 @@ export abstract class CanvasContext {
       if (positionChanged) {
         const oldPosition = this._position;
         this._position = position;
-        this.device.props.onPositionChange?.(this, {oldPosition});
+        // Guard: device may not be initialized during construction
+        this.device?.props.onPositionChange?.(this, {oldPosition});
       }
     }
   }
