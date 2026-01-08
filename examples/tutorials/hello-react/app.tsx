@@ -185,9 +185,11 @@ function RotatingCube() {
 
     const init = async () => {
       try {
-        // Create device with canvas context
         device = await luma.createDevice({
           adapters: [webgl2Adapter],
+          // Enable _reuseDevices to handle React StrictMode double-mounting
+          // This is what deck.gl also does (core/src/lib/deck.ts)
+          _reuseDevices: true,
           createCanvasContext: {
             canvas: canvasRef.current!
           }
