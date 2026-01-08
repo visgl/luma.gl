@@ -189,6 +189,9 @@ export abstract class CanvasContext {
 
   destroy() {
     this.destroyed = true;
+    // Disconnect observers to prevent callbacks from firing after destruction
+    this._resizeObserver?.disconnect();
+    this._intersectionObserver?.disconnect();
   }
 
   setProps(props: MutableCanvasContextProps): this {
@@ -235,6 +238,11 @@ export abstract class CanvasContext {
 
   /** Returns the biggest allowed framebuffer size. @todo Allow the application to limit this? */
   getMaxDrawingBufferSize(): [number, number] {
+    // Guard against race condition where device may not be initialized yet or has been destroyed
+    if (!this.device?.limits) {
+      // Return a reasonable default max size (most devices support at least 4096x4096)
+      return [4096, 4096];
+    }
     const maxTextureDimension = this.device.limits.maxTextureDimension2D;
     return [maxTextureDimension, maxTextureDimension];
   }
@@ -327,6 +335,11 @@ export abstract class CanvasContext {
 
   /** reacts to an observed intersection */
   protected _handleIntersection(entries: IntersectionObserverEntry[]) {
+    // Guard against callbacks firing after context is destroyed
+    if (this.destroyed) {
+      return;
+    }
+
     const entry = entries.find(entry_ => entry_.target === this.canvas);
     if (!entry) {
       return;
@@ -345,6 +358,11 @@ export abstract class CanvasContext {
    * @see https://webgpufundamentals.org/webgpu/lessons/webgpu-resizing-the-canvas.html
    */
   protected _handleResize(entries: ResizeObserverEntry[]) {
+    // Guard against callbacks firing after context is destroyed
+    if (this.destroyed) {
+      return;
+    }
+
     const entry = entries.find(entry_ => entry_.target === this.canvas);
     if (!entry) {
       return;
