@@ -234,11 +234,12 @@ export class DynamicTexture {
   }
 
   generateMipmaps(): void {
-    // Only supported via WebGL helper (luma.gl path)
-    if (this.device.type === 'webgl') {
+    // Call the WebGL-style mipmap generation helper
+    // WebGL implementation generates mipmaps, WebGPU logs a warning
+if (this.device.type === 'webgl') {
       this.texture.generateMipmapsWebGL();
     } else {
-      throw new Error('Automatic mipmap generation not supported on this device');
+      log.warn('Mipmap generation not yet implemented on WebGPU: your texture data will not be correctly initialized');
     }
   }
 

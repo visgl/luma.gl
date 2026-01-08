@@ -161,6 +161,9 @@ export class WebGLDevice extends Device {
     if (props.powerPreference !== undefined) {
       webglContextAttributes.powerPreference = props.powerPreference;
     }
+    if (props.failIfMajorPerformanceCaveat !== undefined) {
+      webglContextAttributes.failIfMajorPerformanceCaveat = props.failIfMajorPerformanceCaveat;
+    }
 
     // Check if we should attach to an externally created context or create a new context
     const externalGLContext = this.props._handle as WebGL2RenderingContext | null;
