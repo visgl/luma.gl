@@ -3,9 +3,11 @@
 // Copyright (c) vis.gl contributors
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import type {GLTFPostprocessed} from '@loaders.gl/gltf';
-import {NullDevice} from '@luma.gl/test-utils';
-import type {PBREnvironment} from '@luma.gl/gltf';
+import {load} from '@loaders.gl/core';
+import {GLTFLoader, postProcessGLTF, type GLTFPostprocessed} from '@loaders.gl/gltf';
+import {createScenegraphsFromGLTF, type PBREnvironment} from '@luma.gl/gltf';
+import {GroupNode, ModelNode} from '@luma.gl/engine';
+import {NullDevice, getWebGLTestDevice} from '@luma.gl/test-utils';
 
 import {parseGLTF} from '@luma.gl/gltf/parsers/parse-gltf';
 
@@ -25,6 +27,118 @@ function makeCompressedImage() {
     ]
   };
 }
+
+function testGetVertexCount(attributes: any): number {
+  let vertexCount = Infinity;
+  for (const attribute of Object.values(attributes)) {
+    if (attribute) {
+      const {value, size, components} = attribute as any;
+      const attributeSize = size ?? components;
+      if (value?.length !== undefined && attributeSize >= 1) {
+        vertexCount = Math.min(vertexCount, value.length / attributeSize);
+      }
+    }
+  }
+
+  if (!Number.isFinite(vertexCount)) {
+    throw new Error('Could not determine vertex count from attributes');
+  }
+
+  return vertexCount;
+}
+
+function collectVertexCounts(scenes: GroupNode[]): number[] {
+  const vertexCounts: number[] = [];
+  for (const scene of scenes) {
+    scene.traverse(node => {
+      if (node instanceof ModelNode) {
+        vertexCounts.push(node.model.vertexCount);
+      }
+    });
+  }
+  return vertexCounts;
+}
+
+test('gltf#getVertexCount - single POSITION attribute', t => {
+  const attributes = {
+    POSITION: {
+      value: new Float32Array([1, 2, 3, 4, 5, 6, 7, 8, 9]),
+      size: 3
+    }
+  };
+
+  t.equals(testGetVertexCount(attributes), 3, 'Should calculate correct vertex count');
+  t.end();
+});
+
+test('gltf#getVertexCount - multiple attributes', t => {
+  const attributes = {
+    POSITION: {value: new Float32Array(12), size: 3},
+    NORMAL: {value: new Float32Array(12), size: 3}
+  };
+
+  t.equals(testGetVertexCount(attributes), 4, 'Should return consistent vertex count');
+  t.end();
+});
+
+test('gltf#getVertexCount - components instead of size', t => {
+  const attributes = {
+    POSITION: {value: new Float32Array(9), components: 3}
+  };
+
+  t.equals(testGetVertexCount(attributes), 3, 'Should handle components attribute');
+  t.end();
+});
+
+test('gltf#getVertexCount - quantized Uint16Array', t => {
+  const attributes = {
+    POSITION: {
+      value: new Uint16Array([0, 32767, 65535, 1000, 2000, 3000]),
+      size: 3
+    }
+  };
+
+  t.equals(testGetVertexCount(attributes), 2, 'Should handle quantized data');
+  t.end();
+});
+
+test('gltf#getVertexCount - empty attributes throws', t => {
+  t.throws(
+    () => testGetVertexCount({}),
+    /Could not determine vertex count from attributes/,
+    'Should throw for empty attributes'
+  );
+  t.end();
+});
+
+test('gltf#getVertexCount - null attributes skipped', t => {
+  t.throws(
+    () => testGetVertexCount({POSITION: null, NORMAL: undefined}),
+    /Could not determine vertex count from attributes/,
+    'Should throw when all attributes are null/undefined'
+  );
+  t.end();
+});
+
+test('gltf#parseGLTF - box.glb integration', async t => {
+  const webglDevice = await getWebGLTestDevice();
+
+  try {
+    const gltf = await load('data/box.glb', GLTFLoader);
+    const processedGLTF = gltf.json ? postProcessGLTF(gltf) : gltf;
+    const result = createScenegraphsFromGLTF(webglDevice, processedGLTF);
+    const vertexCounts = collectVertexCounts(result.scenes);
+
+    t.ok(result.scenes, 'Should create scenes');
+    t.ok(result.scenes.length > 0, 'Should have at least one scene');
+    t.ok(vertexCounts.length > 0, 'Should have at least one model');
+    t.equals(vertexCounts[0], 36, 'Vertex count should be 36 (from indices)');
+  } finally {
+    webglDevice.destroy();
+  }
+
+  t.end();
+});
 
 test('gltf#parseGLTF resolves extension textures for shared materials', t => {
   const material = {

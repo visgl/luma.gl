@@ -229,7 +229,7 @@ function createNodeForGLTFPrimitive({
 
   const modelNode = createGLTFModel(device, {
     id,
-    geometry: createGeometry(id, gltfPrimitive, topology),
+    geometry,
     material: gltfPrimitive.material
       ? gltfMaterialIdToMaterialMap.get(gltfPrimitive.material.id) || null
       : null,
@@ -247,7 +247,20 @@ function createNodeForGLTFPrimitive({
 
 /** Computes the vertex count for a primitive without indices. */
 function getVertexCount(attributes: any) {
-  throw new Error('getVertexCount not implemented');
+  let vertexCount = Infinity;
+  for (const attribute of Object.values(attributes)) {
+    if (attribute) {
+      const {value, size, components} = attribute as any;
+      const attributeSize = size ?? components;
+      if (value?.length !== undefined && attributeSize >= 1) {
+        vertexCount = Math.min(vertexCount, value.length / attributeSize);
+      }
+    }
+  }
+  if (!Number.isFinite(vertexCount)) {
+    throw new Error('Could not determine vertex count from attributes');
+  }
+  return vertexCount;
 }
 
 /** Converts glTF primitive attributes and indices into a luma.gl `Geometry`. */
