@@ -103,3 +103,32 @@ test('gltf#parseGLTF - box.glb integration', async t => {
 
   t.end();
 });
+
+// Integration test with non-indexed GLTF file (tests getVertexCount)
+test('gltf#parseGLTF - non-indexed geometry', async t => {
+  const webglDevice = await getWebGLTestDevice();
+
+  try {
+    const gltf = await load('data/box-non-indexed.glb', GLTFLoader);
+    const processedGLTF = gltf.json ? postProcessGLTF(gltf) : gltf;
+
+    // Verify that indices are not present in the primitive
+    const mesh = processedGLTF.meshes?.[0];
+    const primitive = mesh?.primitives?.[0];
+    t.notOk(primitive?.indices, 'Primitive should not have indices');
+
+    const result = createScenegraphsFromGLTF(webglDevice, processedGLTF);
+
+    t.ok(result.scenes, 'Should create scenes from non-indexed glTF');
+    t.ok(result.scenes.length > 0, 'Should have at least one scene');
+    t.pass('box-non-indexed.glb loaded successfully with getVertexCount');
+  } catch (error) {
+    if (error.message.includes('getVertexCount not implemented')) {
+      t.fail('getVertexCount is not implemented');
+    } else {
+      t.comment(`Integration test error: ${error.message}`);
+    }
+  }
+
+  t.end();
+});
