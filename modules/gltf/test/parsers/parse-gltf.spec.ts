@@ -140,6 +140,29 @@ test('gltf#parseGLTF - box.glb integration', async t => {
   t.end();
 });
 
+test('gltf#parseGLTF - non-indexed geometry', async t => {
+  const webglDevice = await getWebGLTestDevice();
+
+  try {
+    const gltf = await load('data/box-non-indexed.glb', GLTFLoader);
+    const processedGLTF = gltf.json ? postProcessGLTF(gltf) : gltf;
+    const mesh = processedGLTF.meshes?.[0];
+    const primitive = mesh?.primitives?.[0];
+    const result = createScenegraphsFromGLTF(webglDevice, processedGLTF);
+    const vertexCounts = collectVertexCounts(result.scenes);
+
+    t.notOk(primitive?.indices, 'Primitive should not have indices');
+    t.ok(result.scenes, 'Should create scenes from non-indexed glTF');
+    t.ok(result.scenes.length > 0, 'Should have at least one scene');
+    t.ok(vertexCounts.length > 0, 'Should have at least one model');
+    t.equals(vertexCounts[0], 24, 'Vertex count should be 24 (from POSITION attribute)');
+  } finally {
+    webglDevice.destroy();
+  }
+
+  t.end();
+});
+
 test('gltf#parseGLTF resolves extension textures for shared materials', t => {
   const material = {
     id: 'material-0',
