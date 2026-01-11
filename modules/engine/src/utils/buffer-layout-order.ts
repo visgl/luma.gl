@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {type BufferLayout, type ShaderLayout} from '@luma.gl/core';
+import {assertDefined, type BufferLayout, type ShaderLayout} from '@luma.gl/core';
 
 export function sortedBufferLayoutByShaderSourceLocations(
   shaderLayout: ShaderLayout,
@@ -16,8 +16,12 @@ export function sortedBufferLayoutByShaderSourceLocations(
   sortedLayout.sort((a, b) => {
     const attributeNamesA = a.attributes ? a.attributes.map(attr => attr.attribute) : [a.name];
     const attributeNamesB = b.attributes ? b.attributes.map(attr => attr.attribute) : [b.name];
-    const minLocationA = Math.min(...attributeNamesA.map(name => shaderLayoutMap[name]));
-    const minLocationB = Math.min(...attributeNamesB.map(name => shaderLayoutMap[name]));
+    const minLocationA = Math.min(
+      ...attributeNamesA.map(name => assertDefined(shaderLayoutMap[name]))
+    );
+    const minLocationB = Math.min(
+      ...attributeNamesB.map(name => assertDefined(shaderLayoutMap[name]))
+    );
 
     return minLocationA - minLocationB;
   });
