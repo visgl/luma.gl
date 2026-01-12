@@ -37,12 +37,16 @@ export type VertexFormat =
   | 'unorm16' // Chrome 133+
   | 'snorm16' // Chrome 133+
   | 'uint16x2'
+  | 'uint16x3-webgl' // Not in WebGPU
   | 'uint16x4'
   | 'sint16x2'
+  | 'sint16x3-webgl' // Not in WebGPU
   | 'sint16x4'
   | 'unorm16x2'
+  | 'unorm16x3-webgl' // Not in WebGPU
   | 'unorm16x4'
   | 'snorm16x2'
+  | 'snorm16x3-webgl' // Not in WebGPU
   | 'snorm16x4'
   // 32 bit integers
   | 'uint32'

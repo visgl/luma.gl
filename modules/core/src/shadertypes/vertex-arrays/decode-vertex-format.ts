@@ -48,7 +48,8 @@ export function makeVertexFormat(
     : signedDataType;
 
   switch (dataType) {
-    // TODO - Special cases for WebGL (not supported on WebGPU), overrides the check below
+    // Special cases for WebGL (not supported on WebGPU)
+    // 8-bit formats: WebGPU requires 16-bit alignment, but WebGL supports x3
     case 'unorm8':
       if (components === 1) {
         return 'unorm8';
@@ -59,14 +60,59 @@ export function makeVertexFormat(
       return `${dataType}x${components}`;
 
     case 'snorm8':
+      if (components === 1) {
+        return 'snorm8';
+      }
+      if (components === 3) {
+        return 'snorm8x3-webgl';
+      }
+      return `${dataType}x${components}`;
+
     case 'uint8':
     case 'sint8':
-    // WebGPU 8 bit formats must be aligned to 16 bit boundaries');
-    // fall through
+      // WebGPU 8 bit formats must be aligned to 16 bit boundaries
+      if (components === 1 || components === 3) {
+        throw new Error(`size: ${components}`);
+      }
+      return `${dataType}x${components}`;
+
+    // 16-bit formats: WebGPU requires 32-bit alignment, but WebGL supports x3
     case 'uint16':
+      if (components === 1) {
+        return 'uint16';
+      }
+      if (components === 3) {
+        return 'uint16x3-webgl';
+      }
+      return `${dataType}x${components}`;
+
     case 'sint16':
+      if (components === 1) {
+        return 'sint16';
+      }
+      if (components === 3) {
+        return 'sint16x3-webgl';
+      }
+      return `${dataType}x${components}`;
+
     case 'unorm16':
+      if (components === 1) {
+        return 'unorm16';
+      }
+      if (components === 3) {
+        return 'unorm16x3-webgl';
+      }
+      return `${dataType}x${components}`;
+
     case 'snorm16':
+      if (components === 1) {
+        return 'snorm16';
+      }
+      if (components === 3) {
+        return 'snorm16x3-webgl';
+      }
+      return `${dataType}x${components}`;
+
     case 'float16':
       // WebGPU 16 bit formats must be aligned to 32 bit boundaries
       if (components === 1 || components === 3) {
