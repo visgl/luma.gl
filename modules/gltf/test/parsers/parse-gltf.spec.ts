@@ -81,6 +81,8 @@ test('gltf#getVertexCount - multiple attributes', t => {
   t.end();
 });
 
+// loaders.gl uses 'components' (derived from glTF accessor.type: "VEC3" -> 3)
+// while luma.gl uses 'size'. This test ensures compatibility with loaders.gl output.
 test('gltf#getVertexCount - components instead of size', t => {
   const attributes = {
     POSITION: {value: new Float32Array(9), components: 3}
@@ -90,7 +92,7 @@ test('gltf#getVertexCount - components instead of size', t => {
   t.end();
 });
 
-test('gltf#getVertexCount - quantized Uint16Array', t => {
+test('gltf#getVertexCount - non-float typed array', t => {
   const attributes = {
     POSITION: {
       value: new Uint16Array([0, 32767, 65535, 1000, 2000, 3000]),
@@ -156,6 +158,40 @@ test('gltf#parseGLTF - non-indexed geometry', async t => {
     t.ok(result.scenes.length > 0, 'Should have at least one scene');
     t.ok(vertexCounts.length > 0, 'Should have at least one model');
     t.equals(vertexCounts[0], 24, 'Vertex count should be 24 (from POSITION attribute)');
+  } finally {
+    webglDevice.destroy();
+  }
+
+  t.end();
+});
+
+test('gltf#parseGLTF - KHR_mesh_quantization point cloud', async t => {
+  const webglDevice = await getWebGLTestDevice();
+
+  try {
+    const gltf = await load('data/quantized-point-cloud.glb', GLTFLoader);
+    const processedGLTF = gltf.json ? postProcessGLTF(gltf) : gltf;
+    const extensions = processedGLTF.extensionsUsed || [];
+    const mesh = processedGLTF.meshes?.[0];
+    const primitive = mesh?.primitives?.[0];
+    const positionAccessor = primitive?.attributes?.POSITION;
+    const result = createScenegraphsFromGLTF(webglDevice, processedGLTF);
+    const vertexCounts = collectVertexCounts(result.scenes);
+
+    t.ok(
+      extensions.includes('KHR_mesh_quantization'),
+      'File should use KHR_mesh_quantization extension'
+    );
+    t.ok(positionAccessor?.normalized, 'POSITION should be normalized');
+    t.ok(
+      positionAccessor?.value instanceof Uint16Array,
+      'POSITION should use Uint16Array (quantized)'
+    );
+    t.notOk(primitive?.indices, 'Point cloud should not have indices');
+    t.ok(result.scenes, 'Should create scenes from quantized glTF');
+    t.ok(result.scenes.length > 0, 'Should have at least one scene');
+    t.ok(vertexCounts.length > 0, 'Should have at least one model');
+    t.equals(vertexCounts[0], 69936, 'Vertex count should be 69936 (from POSITION attribute)');
   } finally {
     webglDevice.destroy();
   }
