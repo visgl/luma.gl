@@ -191,9 +191,9 @@ function getVertexCount(attributes: any): number {
 function createGeometry(id: string, gltfPrimitive: any, topology: PrimitiveTopology): Geometry {
   const attributes: Record<string, GeometryAttribute> = {};
   for (const [attributeName, attribute] of Object.entries(gltfPrimitive.attributes)) {
-    const {components, size, value} = attribute as GeometryAttribute;
+    const {components, size, value, normalized} = attribute as GeometryAttribute;
 
-    attributes[attributeName] = {size: size ?? components, value};
+    attributes[attributeName] = {size: size ?? components, value, normalized};
   }
 
   return new Geometry({
