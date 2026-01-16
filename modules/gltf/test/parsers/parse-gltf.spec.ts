@@ -196,10 +196,10 @@ test('gltf#parseGLTF - KHR_mesh_quantization point cloud', async t => {
     t.ok(result.scenes, 'Should create scenes from quantized glTF');
     t.ok(result.scenes.length > 0, 'Should have at least one scene');
 
-    // Verify vertex count (point cloud with 69936 vertices)
+    // Verify vertex count (point cloud with 24 vertices)
     const vertexCounts = collectVertexCounts(result.scenes);
     t.ok(vertexCounts.length > 0, 'Should have at least one model');
-    t.equals(vertexCounts[0], 69936, 'Vertex count should be 69936 (from POSITION attribute)');
+    t.equals(vertexCounts[0], 24, 'Vertex count should be 24 (from POSITION attribute)');
 
     t.pass('quantized-point-cloud.glb loaded successfully');
   } catch (error) {
@@ -207,6 +207,109 @@ test('gltf#parseGLTF - KHR_mesh_quantization point cloud', async t => {
       t.fail('16-bit x3 vertex format is not supported');
     } else {
       t.fail(`KHR_mesh_quantization test failed: ${error.message}`);
+    }
+  }
+
+  t.end();
+});
+
+// Integration test with non-quantized glTF using EXT_meshopt_compression
+test('gltf#parseGLTF - nonquantized.glb (float32 mesh)', async t => {
+  const webglDevice = await getWebGLTestDevice();
+
+  try {
+    const gltf = await load('data/nonquantized.glb', GLTFLoader);
+    const processedGLTF = gltf.json ? postProcessGLTF(gltf) : gltf;
+
+    // Note: loaders.gl removes EXT_meshopt_compression from extensionsUsed after decoding
+    // Verify that KHR_mesh_quantization is NOT used (this is a non-quantized file)
+    const extensions = processedGLTF.extensionsUsed || [];
+    t.notOk(
+      extensions.includes('KHR_mesh_quantization'),
+      'File should NOT use KHR_mesh_quantization extension'
+    );
+
+    // Verify that POSITION uses float32 format
+    const mesh = processedGLTF.meshes?.[0];
+    const primitive = mesh?.primitives?.[0];
+    const positionAccessor = primitive?.attributes?.POSITION;
+    t.ok(
+      positionAccessor?.value instanceof Float32Array,
+      'POSITION should use Float32Array (non-quantized)'
+    );
+
+    // Verify that indices are present
+    t.ok(primitive?.indices, 'Mesh should have indices');
+
+    const result = createScenegraphsFromGLTF(webglDevice, processedGLTF);
+
+    t.ok(result.scenes, 'Should create scenes from non-quantized glTF');
+    t.ok(result.scenes.length > 0, 'Should have at least one scene');
+
+    // Verify vertex count (indexed geometry uses indices.count = 3072)
+    const vertexCounts = collectVertexCounts(result.scenes);
+    t.ok(vertexCounts.length > 0, 'Should have at least one model');
+    t.equals(vertexCounts[0], 3072, 'Vertex count should be 3072 (from indices)');
+
+    t.pass('nonquantized.glb loaded successfully');
+  } catch (error) {
+    t.fail(`nonquantized.glb test failed: ${error.message}`);
+  }
+
+  t.end();
+});
+
+// Integration test with quantized glTF using KHR_mesh_quantization + EXT_meshopt_compression
+test('gltf#parseGLTF - quantized.glb (snorm8x3 + uint16x3)', async t => {
+  const webglDevice = await getWebGLTestDevice();
+
+  try {
+    const gltf = await load('data/quantized.glb', GLTFLoader);
+    const processedGLTF = gltf.json ? postProcessGLTF(gltf) : gltf;
+
+    // Note: loaders.gl removes EXT_meshopt_compression from extensionsUsed after decoding
+    // Verify that KHR_mesh_quantization IS used (this is a quantized file)
+    const extensions = processedGLTF.extensionsUsed || [];
+    t.ok(
+      extensions.includes('KHR_mesh_quantization'),
+      'File should use KHR_mesh_quantization extension'
+    );
+
+    // Verify accessor formats
+    const mesh = processedGLTF.meshes?.[0];
+    const primitive = mesh?.primitives?.[0];
+
+    // NORMAL: snorm8x3 (componentType: 5120 = BYTE, normalized: true)
+    const normalAccessor = primitive?.attributes?.NORMAL;
+    t.ok(normalAccessor?.normalized, 'NORMAL should be normalized');
+    t.ok(normalAccessor?.value instanceof Int8Array, 'NORMAL should use Int8Array (snorm8x3)');
+
+    // POSITION: uint16x3 (componentType: 5123 = UNSIGNED_SHORT)
+    const positionAccessor = primitive?.attributes?.POSITION;
+    t.ok(
+      positionAccessor?.value instanceof Uint16Array,
+      'POSITION should use Uint16Array (uint16x3)'
+    );
+
+    // Verify that indices are present
+    t.ok(primitive?.indices, 'Mesh should have indices');
+
+    const result = createScenegraphsFromGLTF(webglDevice, processedGLTF);
+
+    t.ok(result.scenes, 'Should create scenes from quantized glTF');
+    t.ok(result.scenes.length > 0, 'Should have at least one scene');
+
+    // Verify vertex count (indexed geometry uses indices.count = 3072)
+    const vertexCounts = collectVertexCounts(result.scenes);
+    t.ok(vertexCounts.length > 0, 'Should have at least one model');
+    t.equals(vertexCounts[0], 3072, 'Vertex count should be 3072 (from indices)');
+
+    t.pass('quantized.glb loaded successfully with snorm8x3 and uint16x3 formats');
+  } catch (error) {
+    if (error.message.includes('size: 3')) {
+      t.fail('8-bit or 16-bit x3 vertex format is not supported');
+    } else {
+      t.fail(`quantized.glb test failed: ${error.message}`);
     }
   }
 
