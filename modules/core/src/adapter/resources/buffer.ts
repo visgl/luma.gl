@@ -17,8 +17,8 @@ export type BufferProps = ResourceProps & {
   byteLength?: number;
   /** Byte offset into the newly created Buffer to store data at */
   byteOffset?: number;
-  /** If props.usage includes Buffer.INDEX */
-  indexType?: 'uint16' | 'uint32';
+  /** If props.usage includes Buffer.INDEX. Note: uint8 indices are automatically converted to uint16 for WebGPU compatibility */
+  indexType?: 'uint8' | 'uint16' | 'uint32';
   /** Data to initialize the buffer with. */
   data?: ArrayBuffer | ArrayBufferView | null;
   /** Callback to initialize data without copy */
@@ -50,8 +50,8 @@ export abstract class Buffer extends Resource<BufferProps> {
 
   /** The usage with which this buffer was created */
   readonly usage: number;
-  /** For index buffers, whether indices are 16 or 32 bit */
-  readonly indexType?: 'uint16' | 'uint32';
+  /** For index buffers, whether indices are 8, 16 or 32 bit. Note: uint8 indices are automatically converted to uint16 for WebGPU compatibility */
+  readonly indexType?: 'uint8' | 'uint16' | 'uint32';
   /** Length of buffer in bytes */
   abstract byteLength: number;
   /** "Time" of last update, can be used to check if redraw is needed */
@@ -66,6 +66,8 @@ export abstract class Buffer extends Resource<BufferProps> {
         deducedProps.indexType = 'uint32';
       } else if (props.data instanceof Uint16Array) {
         deducedProps.indexType = 'uint16';
+      } else if (props.data instanceof Uint8Array) {
+        deducedProps.indexType = 'uint8';
       }
     }
 
