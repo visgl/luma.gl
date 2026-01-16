@@ -1,6 +1,6 @@
 {
   "name": "luma.gl-examples-cubemap",
-  "version": "9.2.5",
+  "version": "9.2.6",
   "private": true,
   "scripts": {
     "start": "vite",
@@ -8,12 +8,12 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@luma.gl/constants": "9.2.5",
-    "@luma.gl/core": "9.2.5",
-    "@luma.gl/engine": "9.2.5",
-    "@luma.gl/shadertools": "9.2.5",
-    "@luma.gl/webgl": "9.2.5",
-    "@luma.gl/webgpu": "9.2.5",
+    "@luma.gl/constants": "9.2.6",
+    "@luma.gl/core": "9.2.6",
+    "@luma.gl/engine": "9.2.6",
+    "@luma.gl/shadertools": "9.2.6",
+    "@luma.gl/webgl": "9.2.6",
+    "@luma.gl/webgpu": "9.2.6",
     "@math.gl/core": "^4.1.0"
   },
   "devDependencies": {

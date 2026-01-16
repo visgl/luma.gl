@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/gltf",
-  "version": "9.2.5",
+  "version": "9.2.6",
   "description": "glTF support for luma.gl",
   "type": "module",
   "license": "MIT",

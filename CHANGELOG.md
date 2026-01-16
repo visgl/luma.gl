@@ -4,6 +4,10 @@
 
 Production WebGPU support
 
+### v9.2.6
+
+- fix(core): Auto-convert uint8 buffers to uint16 (#2486)
+
 ### v9.2.5
 
 - fix(engine): Factory warnings now level 3 logs (#2479)
