@@ -199,6 +199,75 @@ test('gltf#parseGLTF - KHR_mesh_quantization point cloud', async t => {
   t.end();
 });
 
+test('gltf#parseGLTF - nonquantized.glb (float32 mesh)', async t => {
+  const webglDevice = await getWebGLTestDevice();
+
+  try {
+    const gltf = await load('data/nonquantized.glb', GLTFLoader);
+    const processedGLTF = gltf.json ? postProcessGLTF(gltf) : gltf;
+    const extensions = processedGLTF.extensionsUsed || [];
+    const mesh = processedGLTF.meshes?.[0];
+    const primitive = mesh?.primitives?.[0];
+    const positionAccessor = primitive?.attributes?.POSITION;
+    const result = createScenegraphsFromGLTF(webglDevice, processedGLTF);
+    const vertexCounts = collectVertexCounts(result.scenes);
+
+    t.notOk(
+      extensions.includes('KHR_mesh_quantization'),
+      'File should NOT use KHR_mesh_quantization extension'
+    );
+    t.ok(
+      positionAccessor?.value instanceof Float32Array,
+      'POSITION should use Float32Array (non-quantized)'
+    );
+    t.ok(primitive?.indices, 'Mesh should have indices');
+    t.ok(result.scenes, 'Should create scenes from non-quantized glTF');
+    t.ok(result.scenes.length > 0, 'Should have at least one scene');
+    t.ok(vertexCounts.length > 0, 'Should have at least one model');
+    t.equals(vertexCounts[0], 3072, 'Vertex count should be 3072 (from indices)');
+  } finally {
+    webglDevice.destroy();
+  }
+
+  t.end();
+});
+
+test('gltf#parseGLTF - quantized.glb (snorm8x3 + uint16x3)', async t => {
+  const webglDevice = await getWebGLTestDevice();
+
+  try {
+    const gltf = await load('data/quantized.glb', GLTFLoader);
+    const processedGLTF = gltf.json ? postProcessGLTF(gltf) : gltf;
+    const extensions = processedGLTF.extensionsUsed || [];
+    const mesh = processedGLTF.meshes?.[0];
+    const primitive = mesh?.primitives?.[0];
+    const normalAccessor = primitive?.attributes?.NORMAL;
+    const positionAccessor = primitive?.attributes?.POSITION;
+    const result = createScenegraphsFromGLTF(webglDevice, processedGLTF);
+    const vertexCounts = collectVertexCounts(result.scenes);
+
+    t.ok(
+      extensions.includes('KHR_mesh_quantization'),
+      'File should use KHR_mesh_quantization extension'
+    );
+    t.ok(normalAccessor?.normalized, 'NORMAL should be normalized');
+    t.ok(normalAccessor?.value instanceof Int8Array, 'NORMAL should use Int8Array (snorm8x3)');
+    t.ok(
+      positionAccessor?.value instanceof Uint16Array,
+      'POSITION should use Uint16Array (uint16x3)'
+    );
+    t.ok(primitive?.indices, 'Mesh should have indices');
+    t.ok(result.scenes, 'Should create scenes from quantized glTF');
+    t.ok(result.scenes.length > 0, 'Should have at least one scene');
+    t.ok(vertexCounts.length > 0, 'Should have at least one model');
+    t.equals(vertexCounts[0], 3072, 'Vertex count should be 3072 (from indices)');
+  } finally {
+    webglDevice.destroy();
+  }
+
+  t.end();
+});
+
 test('gltf#parseGLTF resolves extension textures for shared materials', t => {
   const material = {
     id: 'material-0',
