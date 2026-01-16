@@ -756,6 +756,10 @@ or create a device with the 'debug: true' prop.`;
           newProps.indexType = 'uint32';
         } else if (props.data instanceof Uint16Array) {
           newProps.indexType = 'uint16';
+        } else if (props.data instanceof Uint8Array) {
+          // Convert uint8 to uint16 for WebGPU compatibility (WebGPU doesn't support uint8 indices)
+          newProps.data = new Uint16Array(props.data);
+          newProps.indexType = 'uint16';
         }
       }
       if (!newProps.indexType) {
