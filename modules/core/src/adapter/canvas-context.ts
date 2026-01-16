@@ -189,6 +189,9 @@ export abstract class CanvasContext {
 
   destroy() {
     this.destroyed = true;
+    // Disconnect observers to prevent callbacks from firing after destruction
+    this._resizeObserver?.disconnect();
+    this._intersectionObserver?.disconnect();
   }
 
   setProps(props: MutableCanvasContextProps): this {
@@ -327,6 +330,8 @@ export abstract class CanvasContext {
 
   /** reacts to an observed intersection */
   protected _handleIntersection(entries: IntersectionObserverEntry[]) {
+    if (this.destroyed || !this.device) return;
+
     const entry = entries.find(entry_ => entry_.target === this.canvas);
     if (!entry) {
       return;
@@ -345,6 +350,8 @@ export abstract class CanvasContext {
    * @see https://webgpufundamentals.org/webgpu/lessons/webgpu-resizing-the-canvas.html
    */
   protected _handleResize(entries: ResizeObserverEntry[]) {
+    if (this.destroyed || !this.device) return;
+
     const entry = entries.find(entry_ => entry_.target === this.canvas);
     if (!entry) {
       return;
@@ -410,7 +417,7 @@ export abstract class CanvasContext {
     this.updatePosition();
 
     // Inform the device
-    this.device.props.onDevicePixelRatioChange(this, {oldRatio});
+    this.device?.props.onDevicePixelRatioChange?.(this, {oldRatio});
     // Set up a one time query against the current resolution.
     matchMedia(`(resolution: ${this.devicePixelRatio}dppx)`).addEventListener(
       'change',
@@ -446,7 +453,7 @@ export abstract class CanvasContext {
       if (positionChanged) {
         const oldPosition = this._position;
         this._position = position;
-        this.device.props.onPositionChange?.(this, {oldPosition});
+        this.device?.props.onPositionChange?.(this, {oldPosition});
       }
     }
   }
