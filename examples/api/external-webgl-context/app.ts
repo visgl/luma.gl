@@ -1,11 +1,12 @@
 import maplibregl, {CustomRenderMethodInput} from 'maplibre-gl';
-import {Matrix4, radians} from '@math.gl/core';
+import 'maplibre-gl/dist/maplibre-gl.css';
+
+import {Matrix4} from '@math.gl/core';
 import {UniformStore} from '@luma.gl/core';
 import type {Buffer} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
 import type {WebGLDevice} from '@luma.gl/webgl';
 import {webgl2Adapter} from '@luma.gl/webgl';
-import 'maplibre-gl/dist/maplibre-gl.css';
 
 export const title = 'External WebGL Context';
 export const description = 'Attach luma.gl to a MapLibre-managed WebGL context.';
@@ -113,8 +114,6 @@ export async function initializeExternalWebGLContext(
 
   const baseModelMatrix = new Matrix4();
   const modelViewProjectionMatrix = new Matrix4();
-  const modelMatrix = new Matrix4();
-  const rotation = 0;
 
   const maplibreMap = new maplibregl.Map({
     container,

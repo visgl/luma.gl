@@ -225,10 +225,12 @@ test('WebGLRenderPass#setParameters stencil reference', async t => {
 
   resetGLParameters(webglDevice.gl);
 
+  // eslint-disable-next-line no-console
   const originalConsoleWarn = console.warn;
   const warnings: unknown[] = [];
   let renderPass: RenderPass | null = null;
 
+  // eslint-disable-next-line no-console
   console.warn = (...args) => {
     warnings.push(args);
   };
@@ -252,6 +254,7 @@ test('WebGLRenderPass#setParameters stencil reference', async t => {
     );
     t.deepEqual(warnings, [], 'no warnings emitted for stencilReference');
   } finally {
+    // eslint-disable-next-line no-console
     console.warn = originalConsoleWarn;
     if (renderPass) {
       renderPass.end();
