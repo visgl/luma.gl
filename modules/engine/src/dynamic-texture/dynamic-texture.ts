@@ -236,10 +236,12 @@ export class DynamicTexture {
   generateMipmaps(): void {
     // Call the WebGL-style mipmap generation helper
     // WebGL implementation generates mipmaps, WebGPU logs a warning
-if (this.device.type === 'webgl') {
+    if (this.device.type === 'webgl') {
       this.texture.generateMipmapsWebGL();
     } else {
-      log.warn('Mipmap generation not yet implemented on WebGPU: your texture data will not be correctly initialized');
+      log.warn(
+        'Mipmap generation not yet implemented on WebGPU: your texture data will not be correctly initialized'
+      );
     }
   }
 

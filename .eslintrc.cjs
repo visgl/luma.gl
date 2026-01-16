@@ -90,6 +90,14 @@ module.exports = getESLintConfig({
         }
       },
       {
+        // examples have their own dependencies defined in their package.json
+        files: ['**/examples/**/*.ts', '**/examples/**/*.js'],
+        rules: {
+          'import/no-unresolved': 0,
+          'import/no-extraneous-dependencies': 0
+        }
+      },
+      {
         files: ['**/modules/webgpu/**/*.ts', '**/modules/webgpu/**/*.js', "examples/webgpu/**/*.ts"],
         globals: {
           // TODO - find eslint definitions for WebGPU
