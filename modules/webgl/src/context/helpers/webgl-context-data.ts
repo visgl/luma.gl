@@ -7,7 +7,7 @@
  */
 export interface WebGLContextData {
   _polyfilled: boolean;
-  _extensions: Record<string, any>;
+  extensions: Record<string, any>;
 }
 
 /**
@@ -20,7 +20,7 @@ export function getWebGLContextData(gl: WebGL2RenderingContext): WebGLContextDat
   if (!luma) {
     const contextState: WebGLContextData = {
       _polyfilled: false,
-      _extensions: {}
+      extensions: {}
     };
     // @ts-expect-error
     gl.luma = contextState;
