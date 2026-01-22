@@ -312,7 +312,7 @@ test('Buffer#uint8 index buffer conversion', async t => {
   for (const device of await getTestDevices(DEVICE_TYPES)) {
     const uint8Indices = new Uint8Array([0, 1, 2, 3, 255]);
     const buffer = device.createBuffer({
-      usage: Buffer.INDEX,
+      usage: Buffer.INDEX | Buffer.COPY_SRC | Buffer.COPY_DST,
       data: uint8Indices
     });
 
@@ -326,7 +326,6 @@ test('Buffer#uint8 index buffer conversion', async t => {
       [0, 1, 2, 3, 255],
       `${device.type} uint8 data correctly converted to uint16`
     );
-
     buffer.destroy();
   }
   t.end();
