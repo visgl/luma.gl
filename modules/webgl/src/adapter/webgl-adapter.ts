@@ -125,8 +125,7 @@ function isWebGL(gl: any): gl is WebGL2RenderingContext {
   if (typeof WebGL2RenderingContext !== 'undefined' && gl instanceof WebGL2RenderingContext) {
     return true;
   }
-  // Look for debug contexts, headless gl etc
-  return Boolean(gl && Number.isFinite(gl._version));
+  return Boolean(gl && typeof gl.createVertexArray === 'function');
 }
 
 export const webgl2Adapter = new WebGLAdapter();
