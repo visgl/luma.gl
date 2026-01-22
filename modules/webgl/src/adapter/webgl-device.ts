@@ -220,7 +220,7 @@ export class WebGLDevice extends Device {
     (this.gl as any)._version = 2; // Update GL context: Store WebGL version field on gl context (HACK to identify debug contexts)
 
     const contextData = getWebGLContextData(this.gl);
-    this._extensions = contextData.extensions as GLExtensions;
+    this._extensions = contextData.extensions;
 
     // initialize luma Device fields
     this.info = getDeviceInfo(this.gl, this._extensions);

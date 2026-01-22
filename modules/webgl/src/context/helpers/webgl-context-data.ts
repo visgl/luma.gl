@@ -2,12 +2,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+import type {GLExtensions} from '@luma.gl/constants';
+
 /**
  * Stores luma.gl specific state associated with a context
  */
 export interface WebGLContextData {
   _polyfilled: boolean;
-  extensions: Record<string, any>;
+  extensions: GLExtensions;
 }
 
 /**
