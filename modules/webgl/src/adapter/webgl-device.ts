@@ -36,6 +36,7 @@ import {Device, CanvasContext, log} from '@luma.gl/core';
 import type {GLExtensions} from '@luma.gl/constants';
 import {WebGLStateTracker} from '../context/state-tracker/webgl-state-tracker';
 import {createBrowserContext} from '../context/helpers/create-browser-context';
+import {getWebGLContextData} from '../context/helpers/webgl-context-data';
 import {getDeviceInfo} from './device-helpers/webgl-device-info';
 import {WebGLDeviceFeatures} from './device-helpers/webgl-device-features';
 import {WebGLDeviceLimits} from './device-helpers/webgl-device-limits';
@@ -70,6 +71,13 @@ import {getWebGLExtension} from '../context/helpers/webgl-extensions';
 
 /** WebGPU style Device API for a WebGL context */
 export class WebGLDevice extends Device {
+  static getDeviceFromContext(gl: WebGL2RenderingContext | null): WebGLDevice | null {
+    if (!gl) {
+      return null
+    }
+    // @ts-expect-error Ingore WebGL2RenderingContext type
+    return gl.luma?.device ?? null
+  }
   // Public `Device` API
 
   /** type of this device */
@@ -190,8 +198,7 @@ export class WebGLDevice extends Device {
 
     // Note that the browser will only create one WebGL context per canvas.
     // This means that a newly created gl context may already have a device attached to it.
-    // @ts-expect-error luma.gl stores a device reference on the context.
-    device = gl.device;
+    device = WebGLDevice.getDeviceFromContext(gl);
     if (device) {
       if (props._reuseDevices) {
         log.log(
@@ -214,7 +221,8 @@ export class WebGLDevice extends Device {
     this.spectorJS = initializeSpectorJS({...this.props, gl: this.handle});
 
     // Instrument context
-    (this.gl as any).device = this; // Update GL context: Link webgl context back to device
+    const contextData = getWebGLContextData(this.gl);
+    contextData.device = this; // Update GL context: Link webgl context back to device
     // TODO - remove, this is only used to detect debug contexts.
     (this.gl as any)._version = 2; // Update GL context: Store WebGL version field on gl context (HACK to identify debug contexts)
 

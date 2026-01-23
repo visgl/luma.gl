@@ -4,6 +4,7 @@
 
 import {log} from '@luma.gl/core';
 import {loadScript} from '../../utils/load-script';
+import {getWebGLContextData} from '../helpers/webgl-context-data';
 
 import type {Spector} from './spector-types';
 
@@ -91,11 +92,12 @@ export function initializeSpectorJS(props: SpectorProps): Spector | null {
   if (props.gl) {
     // capture startup
     const gl = props.gl;
+    const contextData = getWebGLContextData(gl);
     // @ts-expect-error
-    const device = gl.device;
+    const device = contextData.device;
     spector?.startCapture(props.gl, 500); // 500 commands
     // @ts-expect-error
-    gl.device = device;
+    contextData.device = device;
 
     new Promise(resolve => setTimeout(resolve, 2000)).then(_ => {
       log.info('Spector capture stopped after 2 seconds')();
