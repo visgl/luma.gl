@@ -401,7 +401,7 @@ export abstract class Device {
   /** True if this device has been reused during device creation (app has multiple references) */
   _reused: boolean = false;
   /** Used by other luma.gl modules to store data on the device */
-  _lumaData: {[key: string]: unknown} = {};
+  private _moduleData: Record<string, Record<string, unknown>> = {};
 
   // Capabilities
 
@@ -719,6 +719,15 @@ or create a device with the 'debug: true' prop.`;
   resetWebGL(): void {
     throw new Error('not implemented');
   }
+
+  // INTERNAL LUMA.GL METHODS
+
+  getModuleData<ModuleDataT extends Record<string, unknown>>(moduleName: string): ModuleDataT {
+    this._moduleData[moduleName] ||= {};
+    return this._moduleData[moduleName] as ModuleDataT;
+  }
+
+  // INTERNAL HELPERS
 
   // IMPLEMENTATION
 
