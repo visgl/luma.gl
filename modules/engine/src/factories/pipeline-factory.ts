@@ -4,6 +4,7 @@
 
 import type {RenderPipelineProps, ComputePipelineProps} from '@luma.gl/core';
 import {Device, RenderPipeline, ComputePipeline, log} from '@luma.gl/core';
+import type {EngineModuleState} from '../types';
 import {uid} from '../utils/uid';
 
 export type PipelineFactoryProps = RenderPipelineProps;
@@ -19,9 +20,9 @@ export class PipelineFactory {
 
   /** Get the singleton default pipeline factory for the specified device */
   static getDefaultPipelineFactory(device: Device): PipelineFactory {
-    device._lumaData['defaultPipelineFactory'] =
-      device._lumaData['defaultPipelineFactory'] || new PipelineFactory(device);
-    return device._lumaData['defaultPipelineFactory'] as PipelineFactory;
+    const moduleData = device.getModuleData<EngineModuleState>('@luma.gl/engine');
+    moduleData.defaultPipelineFactory ||= new PipelineFactory(device);
+    return moduleData.defaultPipelineFactory;
   }
 
   readonly device: Device;
