@@ -10,6 +10,7 @@ import type {GLExtensions} from '@luma.gl/constants';
 export interface WebGLContextData {
   _polyfilled: boolean;
   extensions: GLExtensions;
+  softwareRenderer?: boolean;
 }
 
 /**
@@ -26,6 +27,9 @@ export function getWebGLContextData(gl: WebGL2RenderingContext): WebGLContextDat
     };
     // @ts-expect-error
     gl.luma = contextState;
+  } else {
+    luma._polyfilled ??= false;
+    luma.extensions ||= {};
   }
 
   // @ts-expect-error
