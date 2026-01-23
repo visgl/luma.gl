@@ -73,10 +73,10 @@ import {getWebGLExtension} from '../context/helpers/webgl-extensions';
 export class WebGLDevice extends Device {
   static getDeviceFromContext(gl: WebGL2RenderingContext | null): WebGLDevice | null {
     if (!gl) {
-      return null
+      return null;
     }
     // @ts-expect-error Ingore WebGL2RenderingContext type
-    return gl.luma?.device ?? null
+    return gl.luma?.device ?? null;
   }
   // Public `Device` API
 
@@ -149,7 +149,7 @@ export class WebGLDevice extends Device {
     // Note that this can be avoided in webgl2adapter.create() if
     // DeviceProps._reuseDevices is set.
     // @ts-expect-error device is attached to context
-    let device: WebGLDevice | undefined = canvasContextProps.canvas?.gl?.device;
+    let device: WebGLDevice | null = canvasContextProps.canvas?.gl?.device || null;
     if (device) {
       throw new Error(`WebGL context already attached to device ${device.id}`);
     }
