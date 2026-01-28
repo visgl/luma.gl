@@ -203,8 +203,9 @@ export class PipelineFactory {
     const {type} = this.device;
     switch (type) {
       case 'webgl':
-        // WebGL is more dynamic
-        return `${type}/R/${vsHash}/${fsHash}V${varyingHash}BL${bufferLayoutHash}`;
+        // WebGL is more dynamic but still needs to avoid sharing pipelines when render parameters differ
+        const webglParameterHash = this._getHash(JSON.stringify(props.parameters));
+        return `${type}/R/${vsHash}/${fsHash}V${varyingHash}P${webglParameterHash}BL${bufferLayoutHash}`;
 
       case 'webgpu':
       default:

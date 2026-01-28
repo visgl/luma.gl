@@ -26,9 +26,7 @@ export class WebGPURenderPipeline extends RenderPipeline {
   readonly fs: WebGPUShader | null = null;
 
   /** For internal use to create BindGroups */
-  private _bindings: Record<string, Binding>;
   private _bindGroupLayout: GPUBindGroupLayout | null = null;
-  private _bindGroup: GPUBindGroup | null = null;
 
   override get [Symbol.toStringTag]() {
     return 'WebGPURenderPipeline';
@@ -56,28 +54,12 @@ export class WebGPURenderPipeline extends RenderPipeline {
     // Note: Often the same shader in WebGPU
     this.vs = props.vs as WebGPUShader;
     this.fs = props.fs as WebGPUShader;
-
-    this._bindings = {...this.props.bindings};
   }
 
   override destroy(): void {
     // WebGPURenderPipeline has no destroy method.
     // @ts-expect-error
     this.handle = null;
-  }
-
-  /**
-   * @todo Use renderpass.setBindings() ?
-   * @todo Do we want to expose BindGroups in the API and remove this?
-   */
-  setBindings(bindings: Record<string, Binding>): void {
-    // Invalidate the cached bind group if any value has changed
-    for (const [name, binding] of Object.entries(bindings)) {
-      if (this._bindings[name] !== binding) {
-        this._bindGroup = null;
-      }
-    }
-    Object.assign(this._bindings, bindings);
   }
 
   /** @todo - should this be moved to renderpass? */
@@ -91,6 +73,8 @@ export class WebGPURenderPipeline extends RenderPipeline {
     firstIndex?: number;
     firstInstance?: number;
     baseVertex?: number;
+    bindings?: Record<string, Binding>;
+    uniforms?: Record<string, unknown>;
   }): boolean {
     const webgpuRenderPass = options.renderPass as WebGPURenderPass;
 
@@ -103,7 +87,7 @@ export class WebGPURenderPipeline extends RenderPipeline {
     });
 
     // Set bindings (uniform buffers, textures etc)
-    const bindGroup = this._getBindGroup();
+    const bindGroup = this._getBindGroup(options.bindings || {});
     if (bindGroup) {
       webgpuRenderPass.handle.setBindGroup(0, bindGroup);
     }
@@ -136,7 +120,7 @@ export class WebGPURenderPipeline extends RenderPipeline {
   }
 
   /** Return a bind group created by setBindings */
-  _getBindGroup() {
+  _getBindGroup(bindings: Record<string, Binding>) {
     if (this.shaderLayout.bindings.length === 0) {
       return null;
     }
@@ -145,12 +129,7 @@ export class WebGPURenderPipeline extends RenderPipeline {
     this._bindGroupLayout = this._bindGroupLayout || this.handle.getBindGroupLayout(0);
 
     // Set up the bindings
-    // TODO what if bindings change? We need to rebuild the bind group!
-    this._bindGroup =
-      this._bindGroup ||
-      getBindGroup(this.device.handle, this._bindGroupLayout, this.shaderLayout, this._bindings);
-
-    return this._bindGroup;
+    return getBindGroup(this.device.handle, this._bindGroupLayout, this.shaderLayout, bindings);
   }
 
   /**
