@@ -142,7 +142,7 @@ function createPrimitive(
   options: Required<ParseGLTFOptions>
 ): ModelNode {
   const id = gltfPrimitive.name || `${gltfMesh.name || gltfMesh.id}-primitive-${i}`;
-  const topology = convertGLDrawModeToTopology(gltfPrimitive.mode || 4);
+  const topology = convertGLDrawModeToTopology(gltfPrimitive.mode ?? 4);
   const vertexCount = gltfPrimitive.indices
     ? gltfPrimitive.indices.count
     : getVertexCount(gltfPrimitive.attributes);
