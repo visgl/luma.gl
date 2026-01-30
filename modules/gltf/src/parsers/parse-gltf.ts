@@ -215,7 +215,7 @@ function createNodeForGLTFPrimitive({
   options
 }: CreateNodeForGLTFPrimitiveOptions): ModelNode {
   const id = gltfPrimitive.name || `${gltfMesh.name || gltfMesh.id}-primitive-${primitiveIndex}`;
-  const topology = convertGLDrawModeToTopology(gltfPrimitive.mode || 4);
+  const topology = convertGLDrawModeToTopology(gltfPrimitive.mode ?? 4);
   const vertexCount = gltfPrimitive.indices
     ? gltfPrimitive.indices.count
     : getVertexCount(gltfPrimitive.attributes);
@@ -275,7 +275,7 @@ function createGeometry(id: string, gltfPrimitive: any, topology: PrimitiveTopol
   return new Geometry({
     id,
     topology,
-    indices: gltfPrimitive.indices.value,
+    indices: gltfPrimitive.indices?.value,
     attributes
   });
 }
