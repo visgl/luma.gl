@@ -106,6 +106,7 @@ export function parsePBRMaterial(
   if (attributes['NORMAL']) parsedMaterial.defines['HAS_NORMALS'] = true;
   if (attributes['TANGENT'] && options?.useTangents) parsedMaterial.defines['HAS_TANGENTS'] = true;
   if (attributes['TEXCOORD_0']) parsedMaterial.defines['HAS_UV'] = true;
+  if (attributes['COLOR_0']) parsedMaterial.defines['HAS_COLORS'] = true;
 
   if (options?.imageBasedLightingEnvironment) parsedMaterial.defines['USE_IBL'] = true;
   if (options?.lights) parsedMaterial.defines['USE_LIGHTS'] = true;
@@ -322,6 +323,7 @@ export class PBRMaterialParser {
     this.defineIfPresent(attributes.NORMAL, 'HAS_NORMALS');
     this.defineIfPresent(attributes.TANGENT && useTangents, 'HAS_TANGENTS');
     this.defineIfPresent(attributes.TEXCOORD_0, 'HAS_UV');
+    this.defineIfPresent(attributes.COLOR_0, 'HAS_COLORS');
 
     this.defineIfPresent(imageBasedLightingEnvironment, 'USE_IBL');
     this.defineIfPresent(lights, 'USE_LIGHTS');
