@@ -452,8 +452,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
           if ((location as GL) === GL.INVALID_INDEX) {
             throw new Error(`Invalid uniform block name ${name}`);
           }
-          gl.uniformBlockBinding(this.handle, uniformBufferIndex, location);
-          // console.debug(binding, location);
+          gl.uniformBlockBinding(this.handle, location, uniformBufferIndex);
           if (value instanceof WEBGLBuffer) {
             gl.bindBufferBase(GL.UNIFORM_BUFFER, uniformBufferIndex, value.handle);
           } else {
