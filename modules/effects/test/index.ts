@@ -7,6 +7,7 @@
 import './passes/image-blur-filters/tiltshift.spec';
 import './passes/image-blur-filters/triangleblur.spec';
 import './passes/image-blur-filters/zoomblur.spec';
+import './passes/image-blur-filters/bloom.spec';
 
 import './passes/image-adjust-filters/brightnesscontrast.spec';
 import './passes/image-adjust-filters/denoise.spec';

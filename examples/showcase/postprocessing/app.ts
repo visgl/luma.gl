@@ -81,6 +81,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 // Extract list of postprocessing-capable shader modules from the wildcard import
 function getShaderPasses(): Record<string, ShaderPass> {
   const passes: Record<string, ShaderPass> = {};
+  debugger
   Object.entries(shaderModules).forEach(([key, module]) => {
     if (module.passes && !key.startsWith('_')) {
       passes[key] = module as ShaderPass;
