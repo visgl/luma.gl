@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {luma, Device} from '@luma.gl/core';
+import {luma, Device, QuerySet} from '@luma.gl/core';
 import {
   requestAnimationFramePolyfill,
   cancelAnimationFramePolyfill
@@ -74,7 +74,8 @@ export class AnimationLoop {
   _cpuStartTime: number = 0;
   _error: Error | null = null;
 
-  // _gpuTimeQuery: Query | null = null;
+  /** GPU time query for measuring GPU execution time (WebGL only with EXT_disjoint_timer_query) */
+  _gpuTimeQuery: QuerySet | null = null;
 
   /*
    * @param {HTMLCanvasElement} canvas - if provided, width and height will be passed to context
@@ -106,6 +107,10 @@ export class AnimationLoop {
   destroy(): void {
     this.stop();
     this._setDisplay(null);
+    if (this._gpuTimeQuery) {
+      this._gpuTimeQuery.destroy();
+      this._gpuTimeQuery = null;
+    }
   }
 
   /** @deprecated Use .destroy() */
@@ -268,7 +273,15 @@ export class AnimationLoop {
     // Default viewport setup, in case onInitialize wants to render
     this._resizeViewport();
 
-    // this._gpuTimeQuery = Query.isSupported(this.gl, ['timers']) ? new Query(this.gl) : null;
+    // Initialize GPU time query if supported (WebGL with EXT_disjoint_timer_query_webgl2)
+    if (this.device?.features.has('timer-query-webgl')) {
+      try {
+        this._gpuTimeQuery = this.device.createQuerySet({type: 'timestamp', count: 1});
+      } catch {
+        // GPU timing not available - ignore
+        this._gpuTimeQuery = null;
+      }
+    }
   }
 
   _setDisplay(display: any): void {
@@ -507,20 +520,23 @@ export class AnimationLoop {
     this.frameRate.timeStart();
 
     // Check if timer for last frame has completed.
-    // GPU timer results are never available in the same
-    // frame they are captured.
-    // if (
-    //   this._gpuTimeQuery &&
-    //   this._gpuTimeQuery.isResultAvailable() &&
-    //   !this._gpuTimeQuery.isTimerDisjoint()
-    // ) {
-    //   this.stats.get('GPU Time').addTime(this._gpuTimeQuery.getTimerMilliseconds());
-    // }
+    // GPU timer results are never available in the same frame they are captured.
+    if (this._gpuTimeQuery) {
+      // WEBGLQuerySet has these methods for timer queries
+      const query = this._gpuTimeQuery as QuerySet & {
+        isResultAvailable(): boolean;
+        isTimerDisjoint(): boolean;
+        getTimerMilliseconds(): number;
+        beginTimestampQuery(): void;
+      };
 
-    // if (this._gpuTimeQuery) {
-    //   // GPU time query start
-    //   this._gpuTimeQuery.beginTimeElapsedQuery();
-    // }
+      if (query.isResultAvailable() && !query.isTimerDisjoint()) {
+        this.gpuTime.addTime(query.getTimerMilliseconds());
+      }
+
+      // Start GPU time query for this frame
+      query.beginTimestampQuery();
+    }
 
     this.cpuTime.timeStart();
   }
@@ -528,10 +544,11 @@ export class AnimationLoop {
   _endFrameTimers() {
     this.cpuTime.timeEnd();
 
-    // if (this._gpuTimeQuery) {
-    //   // GPU time query end. Results will be available on next frame.
-    //   this._gpuTimeQuery.end();
-    // }
+    // End GPU time query. Results will be available on next frame.
+    if (this._gpuTimeQuery) {
+      const query = this._gpuTimeQuery as QuerySet & {endTimestampQuery(): void};
+      query.endTimestampQuery();
+    }
   }
 
   // Event handling
