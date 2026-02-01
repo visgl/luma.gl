@@ -147,3 +147,30 @@ test('engine#AnimationLoop a start/stop/start should not call initialize again',
     t.end();
   }, 150);
 });
+
+test('engine#AnimationLoop GPU timing graceful fallback', async t => {
+  const device = await getWebGLTestDevice();
+
+  const animationLoop = new AnimationLoop({device});
+  await animationLoop.start();
+  await animationLoop.waitForRender();
+
+  // Stats should exist regardless of timer support
+  t.ok(animationLoop.gpuTime, 'gpuTime stat exists');
+  t.ok(animationLoop.cpuTime, 'cpuTime stat exists');
+
+  // _gpuTimeQuery should match feature availability
+  const hasTimerQuery = device.features.has('timer-query-webgl');
+  t.is(
+    animationLoop._gpuTimeQuery !== null,
+    hasTimerQuery,
+    `_gpuTimeQuery created when feature ${hasTimerQuery ? 'available' : 'unavailable'}`
+  );
+
+  // Destroy should not throw
+  animationLoop.stop();
+  animationLoop.destroy();
+  t.is(animationLoop._gpuTimeQuery, null, 'Query cleaned up on destroy');
+
+  t.end();
+});
