@@ -98,6 +98,15 @@ void main() {
     this.swapFramebuffers.resize({width: size[0], height: size[1]});
   }
 
+  /** Check if any internal models need to redraw */
+  needsRedraw(): string | false {
+    let redraw: string | false = this.clipSpace.needsRedraw() || this.textureModel.needsRedraw();
+    for (const passRenderer of this.passRenderers) {
+      redraw = redraw || passRenderer.needsRedraw();
+    }
+    return redraw;
+  }
+
   renderToScreen(options: {
     sourceTexture: DynamicTexture;
     uniforms?: any;
@@ -213,6 +222,14 @@ class PassRenderer {
     });
   }
 
+  needsRedraw(): string | false {
+    let redraw: string | false = false;
+    for (const subPassRenderer of this.subPassRenderers) {
+      redraw = redraw || subPassRenderer.needsRedraw();
+    }
+    return redraw;
+  }
+
   destroy() {
     for (const subPassRenderer of this.subPassRenderers) {
       subPassRenderer.destroy();
@@ -250,6 +267,10 @@ class SubPassRenderer {
 
   destroy() {
     this.model.destroy();
+  }
+
+  needsRedraw(): string | false {
+    return this.model.needsRedraw();
   }
 
   render(options: {renderPass: RenderPass; bindings: any}): void {
