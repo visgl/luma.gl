@@ -12,7 +12,7 @@ GPU picking is based on the conclusion that each pixel on the screen was generat
 
 ## Under the Hood
 
-Depending on the structure of the shader, each object can either correspond to an `instance` or a group of vertices.
+Depending on the structure of the shader, each object can either correspond to an `instance` or a group of vertexes.
 
 An additional consideration 
 

@@ -105,7 +105,7 @@ const pipeline = device.createRenderPipeline({vs, fs, varyings: ['gl_Position']}
 
 ### PrimitiveTopology
 
-Describes how primitives (points, lines or triangles) are formed from vertices.
+Describes how primitives (points, lines or triangles) are formed from vertexes.
 
 | Value                  | WebGL | WebGPU | Description                                                                                            |
 | ---------------------- | ----- | ------ | ------------------------------------------------------------------------------------------------------ |
