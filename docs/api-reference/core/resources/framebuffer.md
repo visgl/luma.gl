@@ -80,12 +80,12 @@ model2.draw({renderPass: screenRenderPass, ...});
 
 The following values can be provided for each attachment point
 
-- `Texture` - attaches at mipmapLevel 0 (the the supplied `Texture`'s default `TextureView`.
+- `Texture` - attaches at mipmapLevel 0 (the supplied `Texture`'s default `TextureView`.
 - `TextureView`
    - `2d`: attaches the specified mipmapLevel from the supplied `Texture`, or cubemap face. The second element in the array must be `0`.
-   - `cube`: face (depth), mipmapLevel=0 - attaches the specifed cubemap face from the `Texture`, at the specified mipmap level.
-   - `2d-array`, layer (number), mipmapLevel=0 (number)] - attaches the specifed layer from the `Texture`, at the specified mipmap level.
-   - `3d`, layer (number), mipmapLevel=0 (number)] - attaches the specifed layer from the `Texture3D`, at the specified mipmap level.
+   - `cube`: face (depth), mipmapLevel=0 - attaches the specified cubemap face from the `Texture`, at the specified mipmap level.
+   - `2d-array`, layer (number), mipmapLevel=0 (number)] - attaches the specified layer from the `Texture`, at the specified mipmap level.
+   - `3d`, layer (number), mipmapLevel=0 (number)] - attaches the specified layer from the `Texture3D`, at the specified mipmap level.
   
 ## Framebuffer Attachments
 
@@ -171,7 +171,7 @@ Note the `framebuffer.resize()` method has been designed so that it can be calle
 
 **WebGPU**
 - The `Framebuffer` class is a pure luma.gl class as this concept does not exist natively in WebGPU (attachment information has to be provided through the `GPURenderPassDescriptor` `colorAttachments` and the `depthStencilAttachment` fields every frame when a render pass is created).`.
-- `resize()` will destroy and recreate textures (meaning the the underlying `GPUTexture` / `GPUTextureView` handles are no longer the same after a `resize()`
+- `resize()` will destroy and recreate textures (meaning the underlying `GPUTexture` / `GPUTextureView` handles are no longer the same after a `resize()`
 
 **WebGL**
 - The `Framebuffer` class wraps the `WebGLFramebuffer` object, see e.g. [Framebuffer](https://www.khronos.org/opengl/wiki/Framebuffer)

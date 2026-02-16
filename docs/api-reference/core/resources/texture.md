@@ -128,7 +128,7 @@ These are referred to as external (to the GPU) images.
 | ---- | ----------- |
 | `Image` (`HTMLImageElement`)   | image will be used to fill the texture. width and height will be deduced.                             |
 | `Canvas` (`HTMLCanvasElement`) | canvas will be used to fill the texture. width and height will be deduced.                            |
-| `Video` (`HTMLVideoElement`)   | video will be used to continously update the texture. width and height will be deduced.               |
+| `Video` (`HTMLVideoElement`)   | video will be used to continuously update the texture. width and height will be deduced.               |
 | `ImageData`                    | `canvas.getImageData()` - Used to fill the texture. width and height will be deduced.                 |
 
 ## TextureData

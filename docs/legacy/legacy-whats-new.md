@@ -85,7 +85,7 @@ luma.gl v8.0 also brings with it a major simplification of the API and streamlin
 
 - Low-level
   - **constants**: WebGL 1 and 2 enums.
-  - **gltools**: Tools for polyfilling, intrumenting and tracking state for WebGL contexts.
+  - **gltools**: Tools for polyfilling, instrumenting and tracking state for WebGL contexts.
   - **shadertools**: Tools for creating and composing re-usable GLSL shader modules.
 - Mid-level
   - **webgl**: WebGL 1 and 2 wrapper classes.
@@ -231,7 +231,7 @@ Extensive metrics about frame CPU and GPU times, resource counts, and GPU memory
 
 #### Interleaved Attributes
 
-To improve support for interleaved attributes and glTF model loading, accessor objecs and the `Accessor` class now support a `buffer` field. In addition, attribute setting functions now accept accessor objects with the `buffer` field set. This allows multiple accessor objects referencing the same buffer:
+To improve support for interleaved attributes and glTF model loading, accessor objects and the `Accessor` class now support a `buffer` field. In addition, attribute setting functions now accept accessor objects with the `buffer` field set. This allows multiple accessor objects referencing the same buffer:
 
 ```
 const buffer = // "interleaved" vertex attributes: 3 floats for position followed by 4 bytes for RGBA
@@ -259,7 +259,7 @@ Physically-Based Rendering is now supported and the new `PBRMaterial` class can 
 
 #### Copy and Blit methods
 
-Several member function of `Framebuffer` and `Texture` classes are now replaced by global methods that peform copying data to and from `Framebuffer` objects. All methods that read from or write to a `Framebuffer` object, can now also accept a `Texture` object.
+Several member function of `Framebuffer` and `Texture` classes are now replaced by global methods that perform copying data to and from `Framebuffer` objects. All methods that read from or write to a `Framebuffer` object, can now also accept a `Texture` object.
 
 ## Version 6.3
 
@@ -276,7 +276,7 @@ Uniforms are now cached at `Program` object, which improves performance by elimi
 
 #### Offscreen Rendering (Experimental)
 
-A new experimental class `AnimationLoopProxy` supports running an `AnimationLoop` on a worker thread using the `OffscreenCanvas` API made official in Chrome 70. For more detatils, see the [example app](https://github.com/visgl/luma.gl/tree/master/test/apps/wip/worker).
+A new experimental class `AnimationLoopProxy` supports running an `AnimationLoop` on a worker thread using the `OffscreenCanvas` API made official in Chrome 70. For more details, see the [example app](https://github.com/visgl/luma.gl/tree/master/test/apps/wip/worker).
 
 ## Version 6.2
 
@@ -336,7 +336,7 @@ luma.gl now provides a composable multipass rendering framework, based on a `Mul
 
 #### Post-Processing Effects (Experimental)
 
-A number of classic WebGL/OpenGL post processing effects have been ported to luma.gl and packaged as composable render passes. For maxiumum flexibility, many of the underlying shaders have also been exposed as shader modules, allowing filtering features to be used either directly in existing shaders or applied as a post-processing filter.
+A number of classic WebGL/OpenGL post processing effects have been ported to luma.gl and packaged as composable render passes. For maximum flexibility, many of the underlying shaders have also been exposed as shader modules, allowing filtering features to be used either directly in existing shaders or applied as a post-processing filter.
 
 #### New loaders.gl Submodule (Experimental)
 
@@ -383,7 +383,7 @@ A new method `Model.transform` makes it easier to run basic transform feedback o
 
 #### Transform class (WebGL 2)
 
-`Transform` is now an officially supported luma.gl class. This new class provides an easy-to-use interface to Transform Feedback. This class hides complexity by internally creating and managing the supporing WebGL objects that are necessary to perform Transform Feedback operations.
+`Transform` is now an officially supported luma.gl class. This new class provides an easy-to-use interface to Transform Feedback. This class hides complexity by internally creating and managing the supporting WebGL objects that are necessary to perform Transform Feedback operations.
 
 #### GLSL Transpilation
 
@@ -521,7 +521,7 @@ A major release that brings full WebGL 2 support to luma.gl, as well as adding s
 luma.gl now exposes the complete WebGL 2 APIs:
 
 - New classes expose all the new WebGL 2 objects (`Query`, `Texture3D`, and `TransformFeedback`), together with a new `UniformBufferLayout` helper class to make uniform buffers easy to use.
-- Other existing WebGL classes with new functionalites under WebGL 2 have been updated.
+- Other existing WebGL classes with new functionalities under WebGL 2 have been updated.
 - Add new WebGL 2 texture formats and types support, including floating point textures, and multiple render targets.
 
 #### WebGL Capability Management
