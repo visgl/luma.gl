@@ -4,7 +4,7 @@
 Note that while **attributes** is a structured and performant mechanism to provide columnar data to shaders that works on both WebGPU and WebGL, they are rather rigid and have a number of limitations. In WebGPU a more significantly more flexible approach is to use [storage buffers](./gpu-storage-buffers).
 :::
 
-The traditional 3D GPU execution model is that shaders work on vertexes, each vertex having a number of unique values such as position, normal, texture coordinates etc. 
+The traditional 3D GPU execution model is that shaders work on vertices, each vertex having a number of unique values such as position, normal, texture coordinates etc. 
 
 In this model, the purpose of GPU vertex **attributes** is to 
 let the application provide arrays of vertex data
@@ -68,4 +68,4 @@ and the structure of the data in the buffers must also be communicated to the GP
 
 ## Index Buffers
 
-An index buffer can be provided to provide a list of indices into the vertex array attributes. This allows vertexes to be reordered, filtered out, or duplicated without copying / modifying any memory other than the index array.
+An index buffer can be provided to provide a list of indices into the vertex array attributes. This allows vertices to be reordered, filtered out, or duplicated without copying / modifying any memory other than the index array.
