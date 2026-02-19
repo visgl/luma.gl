@@ -64,6 +64,8 @@ export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs' | 'bindings'> & {
   shaderInputs?: ShaderInputs;
   /** Bindings */
   bindings?: Record<string, Binding | DynamicTexture>;
+  /** WebGL-only uniforms */
+  uniforms?: Record<string, unknown>;
   /** Parameters that are built into the pipeline */
   parameters?: RenderPipelineParameters;
 
@@ -132,6 +134,8 @@ export class Model {
     indexBuffer: null,
     attributes: {},
     constantAttributes: {},
+    bindings: {},
+    uniforms: {},
     varyings: [],
 
     isInstanced: undefined!,
@@ -422,14 +426,7 @@ export class Model {
       // Application can call Model.predraw() to avoid this.
       this.pipeline = this._updatePipeline();
 
-      // Set pipeline state, we may be sharing a pipeline so we need to set all state on every draw
-      // Any caching needs to be done inside the pipeline functions
-      // TODO this is a busy initialized check for all bindings every frame
-
       const syncBindings = this._getBindings();
-      this.pipeline.setBindings(syncBindings, {
-        disableWarnings: this.props.disableWarnings
-      });
 
       const {indexBuffer} = this.vertexArray;
       const indexCount = indexBuffer
@@ -444,6 +441,8 @@ export class Model {
         instanceCount: this.instanceCount,
         indexCount,
         transformFeedback: this.transformFeedback || undefined,
+        bindings: syncBindings,
+        uniforms: this.props.uniforms,
         // WebGL shares underlying cached pipelines even for models that have different parameters and topology,
         // so we must provide our unique parameters to each draw
         // (In WebGPU most parameters are encoded in the pipeline and cannot be changed per draw call)

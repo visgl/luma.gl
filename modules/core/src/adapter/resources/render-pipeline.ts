@@ -3,7 +3,6 @@
 // Copyright (c) vis.gl contributors
 
 import type {Device} from '../device';
-import type {UniformValue} from '../types/uniforms';
 import type {PrimitiveTopology, RenderPipelineParameters} from '../types/parameters';
 import type {ShaderLayout, Binding} from '../types/shader-layout';
 import type {BufferLayout} from '../types/buffer-layout';
@@ -51,12 +50,12 @@ export type RenderPipelineProps = ResourceProps & {
   /** Parameters that are controlled by pipeline */
   parameters?: RenderPipelineParameters;
 
-  // Dynamic bindings (TODO - pipelines should be immutable, move to RenderPass)
+  /** Some applications intentionally supply unused attributes and bindings, and want to disable warnings */
+  disableWarnings?: boolean;
 
+  // Dynamic bindings (TODO - pipelines should be immutable, move to RenderPass)
   /** Buffers, Textures, Samplers for the shader bindings */
   bindings?: Record<string, Binding>;
-  /** @deprecated uniforms (WebGL only) */
-  uniforms?: Record<string, UniformValue>;
 };
 
 /**
@@ -85,12 +84,6 @@ export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
     this.bufferLayout = this.props.bufferLayout || [];
   }
 
-  /** Set bindings (stored on pipeline and set before each call) */
-  abstract setBindings(
-    bindings: Record<string, Binding>,
-    options?: {disableWarnings?: boolean}
-  ): void;
-
   /** Draw call. Returns false if the draw call was aborted (due to resources still initializing) */
   abstract draw(options: {
     /** Render pass to draw into (targeting screen or framebuffer) */
@@ -118,6 +111,10 @@ export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
     baseVertex?: number;
     /** Transform feedback. WebGL only. */
     transformFeedback?: TransformFeedback;
+    /** Bindings applied for this draw (textures, samplers, uniform buffers) */
+    bindings?: Record<string, Binding>;
+    /** WebGL-only uniforms */
+    uniforms?: Record<string, unknown>;
   }): boolean;
 
   static override defaultProps: Required<RenderPipelineProps> = {
@@ -139,8 +136,7 @@ export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
     depthStencilAttachmentFormat: undefined!,
 
     parameters: {},
-
-    bindings: {},
-    uniforms: {}
+    disableWarnings: false,
+    bindings: undefined!
   };
 }
