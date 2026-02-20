@@ -41,9 +41,9 @@
   },
   "dependencies": {
     "@math.gl/types": "^4.1.0",
-    "@probe.gl/env": "^4.0.8",
-    "@probe.gl/log": "^4.0.8",
-    "@probe.gl/stats": "^4.0.8",
+    "@probe.gl/env": "^4.1.1",
+    "@probe.gl/log": "^4.1.1",
+    "@probe.gl/stats": "^4.1.1",
     "@types/offscreencanvas": "^2019.6.4"
   },
   "gitHead": "c636c34b8f1581eed163e94543a8eb1f4382ba8e"
