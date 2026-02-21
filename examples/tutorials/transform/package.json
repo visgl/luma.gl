@@ -1,6 +1,6 @@
 {
   "name": "luma.gl-examples-wandering",
-  "version": "9.2.0-alpha.6",
+  "version": "9.3.0-alpha.2",
   "private": true,
   "scripts": {
     "start": "vite",
@@ -8,10 +8,10 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@luma.gl/core": "9.2.0-alpha.6",
-    "@luma.gl/engine": "9.2.0-alpha.6",
-    "@luma.gl/shadertools": "9.2.0-alpha.6",
-    "@luma.gl/webgl": "9.2.0-alpha.6",
+    "@luma.gl/core": "9.3.0-alpha.2",
+    "@luma.gl/engine": "9.3.0-alpha.2",
+    "@luma.gl/shadertools": "9.3.0-alpha.2",
+    "@luma.gl/webgl": "9.3.0-alpha.2",
     "@probe.gl/log": "^4.0.8"
   },
   "devDependencies": {
