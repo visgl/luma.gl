@@ -138,11 +138,27 @@ export class WebGPUBuffer extends Buffer {
     byteOffset = 0,
     byteLength = this.byteLength - byteOffset
   ): Promise<T> {
-    if (byteOffset % 8 !== 0 || byteLength % 4 !== 0) {
-      throw new Error('byteOffset must be multiple of 8 and byteLength multiple of 4');
+    const requestedEnd = byteOffset + byteLength
+    if (requestedEnd > this.byteLength) {
+      throw new Error('Mapping range exceeds buffer size')
     }
-    if (byteOffset + byteLength > this.handle.size) {
-      throw new Error('Mapping range exceeds buffer size');
+
+    let mappedByteOffset = byteOffset
+    let mappedByteLength = byteLength
+    let sliceByteOffset = 0
+    let lifetime: 'mapped' | 'copied' = 'mapped'
+
+    // WebGPU mapAsync requires 8-byte offsets and 4-byte lengths.
+    if (byteOffset % 8 !== 0 || byteLength % 4 !== 0) {
+      mappedByteOffset = Math.floor(byteOffset / 8) * 8
+      const alignedEnd = Math.ceil(requestedEnd / 4) * 4
+      mappedByteLength = alignedEnd - mappedByteOffset
+      sliceByteOffset = byteOffset - mappedByteOffset
+      lifetime = 'copied'
+    }
+
+    if (mappedByteOffset + mappedByteLength > this.handle.size) {
+      throw new Error('Mapping range exceeds buffer size')
     }
 
     // Unless the application created and supplied a mappable buffer, a staging buffer is needed
@@ -158,14 +174,18 @@ export class WebGPUBuffer extends Buffer {
     try {
       await this.device.handle.queue.onSubmittedWorkDone();
       if (mappableBuffer) {
-        mappableBuffer._copyBuffer(this);
+        mappableBuffer._copyBuffer(this, mappedByteOffset, mappedByteLength)
       }
-      await readBuffer.handle.mapAsync(GPUMapMode.READ, byteOffset, byteLength);
-      const arrayBuffer = readBuffer.handle.getMappedRange(byteOffset, byteLength);
+      await readBuffer.handle.mapAsync(GPUMapMode.READ, mappedByteOffset, mappedByteLength)
+      const arrayBuffer = readBuffer.handle.getMappedRange(mappedByteOffset, mappedByteLength)
+      const mappedRange =
+        lifetime === 'mapped'
+          ? arrayBuffer
+          : arrayBuffer.slice(sliceByteOffset, sliceByteOffset + byteLength)
       // eslint-disable-next-line @typescript-eslint/await-thenable
-      const result = await callback(arrayBuffer, 'mapped');
-      readBuffer.handle.unmap();
-      return result;
+      const result = await callback(mappedRange, lifetime)
+      readBuffer.handle.unmap()
+      return result
     } finally {
       this.device.popErrorScope((error: GPUError) => {
         this.device.reportError(new Error(`${this}.mapAndReadAsync() ${error.message}`), this)();

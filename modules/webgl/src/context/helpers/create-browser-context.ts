@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+import {getWebGLContextData} from './webgl-context-data';
+
 /**
  * ContextProps
  * @param onContextLost
@@ -55,15 +57,11 @@ export function createBrowserContext(
     }
 
     // Creation failed with failIfMajorPerformanceCaveat - Try a Software GPU
+    let softwareRenderer = false;
     if (!gl && allowSoftwareRenderer) {
       webglProps.failIfMajorPerformanceCaveat = false;
       gl = canvas.getContext('webgl2', webglProps);
-      if (gl) {
-        // @ts-expect-error
-        gl.luma ||= {};
-        // @ts-expect-error
-        gl.luma.softwareRenderer = true;
-      }
+      softwareRenderer = true;
     }
 
     if (!gl) {
@@ -79,6 +77,10 @@ export function createBrowserContext(
       throw new Error(`Failed to create WebGL context: ${errorMessage}`);
     }
 
+    // Initialize luma.gl specific context data
+    const luma = getWebGLContextData(gl);
+    luma.softwareRenderer = softwareRenderer;
+
     // Carefully extract and wrap callbacks to prevent addEventListener from rebinding them.
     const {onContextLost, onContextRestored} = props;
     canvas.addEventListener('webglcontextlost', (event: Event) => onContextLost(event), false);
@@ -88,8 +90,6 @@ export function createBrowserContext(
       false
     );
 
-    // @ts-expect-error
-    gl.luma ||= {};
     return gl;
   } finally {
     canvas.removeEventListener('webglcontextcreationerror', onCreateError, false);
