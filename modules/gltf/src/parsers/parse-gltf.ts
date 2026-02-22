@@ -142,7 +142,7 @@ function createPrimitive(
   options: Required<ParseGLTFOptions>
 ): ModelNode {
   const id = gltfPrimitive.name || `${gltfMesh.name || gltfMesh.id}-primitive-${i}`;
-  const topology = convertGLDrawModeToTopology(gltfPrimitive.mode || 4);
+  const topology = convertGLDrawModeToTopology(gltfPrimitive.mode ?? 4);
   const vertexCount = gltfPrimitive.indices
     ? gltfPrimitive.indices.count
     : getVertexCount(gltfPrimitive.attributes);
@@ -158,7 +158,7 @@ function createPrimitive(
 
   const modelNode = createGLTFModel(device, {
     id,
-    geometry: createGeometry(id, gltfPrimitive, topology),
+    geometry,
     parsedPPBRMaterial,
     modelOptions: options.modelOptions,
     vertexCount
@@ -171,22 +171,35 @@ function createPrimitive(
   return modelNode;
 }
 
-function getVertexCount(attributes: any) {
-  throw new Error('getVertexCount not implemented');
+function getVertexCount(attributes: any): number {
+  let vertexCount = Infinity;
+  for (const attribute of Object.values(attributes)) {
+    if (attribute) {
+      const {value, size, components} = attribute as any;
+      const attributeSize = size ?? components;
+      if (value?.length !== undefined && attributeSize >= 1) {
+        vertexCount = Math.min(vertexCount, value.length / attributeSize);
+      }
+    }
+  }
+  if (!Number.isFinite(vertexCount)) {
+    throw new Error('Could not determine vertex count from attributes');
+  }
+  return vertexCount;
 }
 
 function createGeometry(id: string, gltfPrimitive: any, topology: PrimitiveTopology): Geometry {
   const attributes: Record<string, GeometryAttribute> = {};
   for (const [attributeName, attribute] of Object.entries(gltfPrimitive.attributes)) {
-    const {components, size, value} = attribute as GeometryAttribute;
+    const {components, size, value, normalized} = attribute as GeometryAttribute;
 
-    attributes[attributeName] = {size: size ?? components, value};
+    attributes[attributeName] = {size: size ?? components, value, normalized};
   }
 
   return new Geometry({
     id,
     topology,
-    indices: gltfPrimitive.indices.value,
+    indices: gltfPrimitive.indices?.value,
     attributes
   });
 }
