@@ -259,7 +259,11 @@ export abstract class CanvasContext {
     // TODO(ib) - temporarily makes drawingBufferWidth/Height out of sync with canvas.width/height, could that cause issues?
     this.drawingBufferWidth = Math.floor(width);
     this.drawingBufferHeight = Math.floor(height);
+    // Apply resize immediately - deferred resize via getCurrentFramebuffer() is not
+    // always triggered (e.g. WebGL rendering to default framebuffer), which can leave
+    // the canvas at its default 300x150 size indefinitely.
     this._needsDrawingBufferResize = true;
+    this._resizeDrawingBufferIfNeeded();
   }
 
   /**
