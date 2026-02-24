@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {CompilerMessage} from '@luma.gl/core';
+import {assert, type CompilerMessage} from '@luma.gl/core';
 
 /**
  * Parse a WebGL-format GLSL compilation log into an array of WebGPU style message records.
@@ -25,17 +25,19 @@ export function parseShaderCompilerLog(errLog: string): readonly CompilerMessage
     // Check for messages with no line information `ERROR: unsupported shader version`
     if (segments.length === 2) {
       const [messageType, message] = segments;
+      assert(messageType && message);
       messages.push({
         message: message.trim(),
         type: getMessageType(messageType),
         lineNum: 0,
         linePos: 0
       });
+
       continue; // eslint-disable-line no-continue
     }
 
     const [messageType, linePosition, lineNumber, ...rest] = segments;
-
+    assert(messageType && linePosition && lineNumber);
     let lineNum = parseInt(lineNumber, 10);
     if (isNaN(lineNum)) {
       lineNum = 0;

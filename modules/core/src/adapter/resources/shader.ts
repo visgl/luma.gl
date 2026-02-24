@@ -162,5 +162,5 @@ function getShaderIdFromProps(props: ShaderProps): string {
 function getShaderName(shader: string, defaultName: string = 'unnamed'): string {
   const SHADER_NAME_REGEXP = /#define[\s*]SHADER_NAME[\s*]([A-Za-z0-9_-]+)[\s*]/;
   const match = SHADER_NAME_REGEXP.exec(shader);
-  return match ? match[1] : defaultName;
+  return match?.[1] ?? defaultName;
 }

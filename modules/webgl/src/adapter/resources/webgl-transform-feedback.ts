@@ -69,8 +69,8 @@ export class WEBGLTransformFeedback extends TransformFeedback {
     this.unusedBuffers = {};
 
     this.bind(() => {
-      for (const bufferName in buffers) {
-        this.setBuffer(bufferName, buffers[bufferName]);
+      for (const [bufferName, buffer] of Object.entries(buffers)) {
+        this.setBuffer(bufferName, buffer);
       }
     });
   }
@@ -99,7 +99,7 @@ export class WEBGLTransformFeedback extends TransformFeedback {
       return this.buffers[locationOrName] || null;
     }
     const location = this._getVaryingIndex(locationOrName);
-    return location >= 0 ? this.buffers[location] : null;
+    return this.buffers[location] ?? null;
   }
 
   bind(funcOrHandle: (() => void) | WebGLTransformFeedback | null = this.handle) {
@@ -162,8 +162,8 @@ export class WEBGLTransformFeedback extends TransformFeedback {
    * cannot be bound to 'TRANSFORM_FEEDBACK_BUFFER' target.
    */
   protected _bindBuffers(): void {
-    for (const bufferIndex in this.buffers) {
-      const {buffer, byteLength, byteOffset} = this._getBufferRange(this.buffers[bufferIndex]);
+    for (const [bufferIndex, bufferEntry] of Object.entries(this.buffers)) {
+      const {buffer, byteLength, byteOffset} = this._getBufferRange(bufferEntry);
       this._bindBuffer(Number(bufferIndex), buffer, byteOffset, byteLength);
     }
   }

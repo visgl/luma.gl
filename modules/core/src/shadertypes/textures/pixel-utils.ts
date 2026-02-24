@@ -77,7 +77,7 @@ export function readPixel(
 
   // Extract each of the four channels.
   for (let i = 0; i < 4; i++) {
-    const bits = bitsPerChannel[i];
+    const bits = bitsPerChannel[i] ?? 0;
     // If a channel's bit width is zero or negative, consider it not present.
     if (bits <= 0) {
       channels.push(0);
@@ -88,7 +88,7 @@ export function readPixel(
     }
   }
 
-  return [channels[0], channels[1], channels[2], channels[3]];
+  return [channels[0] ?? 0, channels[1] ?? 0, channels[2] ?? 0, channels[3] ?? 0];
 }
 
 /**
@@ -130,10 +130,10 @@ export function writePixel(
 ): void {
   let currentBitOffset = bitOffset;
   for (let channel = 0; channel < 4; channel++) {
-    const bits = bitsPerChannel[channel];
+    const bits = bitsPerChannel[channel] ?? 0;
     // Clamp the channel value to the maximum allowed by the bit width.
     const maxValue = (1 << bits) - 1;
-    const channelValue = pixel[channel] & maxValue;
+    const channelValue = (pixel[channel] ?? 0) & maxValue;
     writeBitsToDataView(dataView, currentBitOffset, bits, channelValue);
     currentBitOffset += bits;
   }

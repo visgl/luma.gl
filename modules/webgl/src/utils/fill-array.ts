@@ -16,7 +16,7 @@ export function fillArray(options: {
   const total = count * length;
   let copied = 0;
   for (let i = start; copied < length; copied++) {
-    target[i++] = source[copied];
+    target[i++] = source[copied] ?? 0;
   }
 
   while (copied < total) {
