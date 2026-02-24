@@ -2,21 +2,23 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {GLTFNodePostprocessed} from '@loaders.gl/gltf';
+import {GroupNode} from '@luma.gl/engine';
 
 export type GLTFAnimation = {
   name: string;
   channels: GLTFAnimationChannel[];
 };
 
+export type GLTFAnimationPath = 'translation' | 'rotation' | 'scale' | 'weights';
+
 export type GLTFAnimationChannel = {
-  path: 'translation' | 'rotation' | 'scale' | 'weights';
+  path: GLTFAnimationPath;
   sampler: GLTFAnimationSampler;
-  target: GLTFNodePostprocessed;
+  target: GroupNode;
 };
 
 export type GLTFAnimationSampler = {
   input: number[];
   interpolation: string;
-  output: number[] | number[][];
+  output: number[][];
 };

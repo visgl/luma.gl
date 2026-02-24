@@ -2,10 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {GLTFNodePostprocessed} from '@loaders.gl/gltf';
 import {log} from '@luma.gl/core';
-import {GroupNode} from '@luma.gl/engine';
-import {Matrix4} from '@math.gl/core';
 import {GLTFAnimation} from './animations/animations';
 import {interpolate} from './animations/interpolate';
 
@@ -38,7 +35,6 @@ class GLTFSingleAnimator {
 
     this.animation.channels.forEach(({sampler, target, path}) => {
       interpolate(time, sampler, target, path);
-      applyTranslationRotationScale(target, (target as any)._node as GroupNode);
     });
   }
 }
@@ -71,25 +67,5 @@ export class GLTFAnimator {
 
   getAnimations() {
     return this.animations;
-  }
-}
-
-// TODO: share with GLTFInstantiator
-const scratchMatrix = new Matrix4();
-
-function applyTranslationRotationScale(gltfNode: GLTFNodePostprocessed, node: GroupNode) {
-  node.matrix.identity();
-
-  if (gltfNode.translation) {
-    node.matrix.translate(gltfNode.translation);
-  }
-
-  if (gltfNode.rotation) {
-    const rotationMatrix = scratchMatrix.fromQuaternion(gltfNode.rotation);
-    node.matrix.multiplyRight(rotationMatrix);
-  }
-
-  if (gltfNode.scale) {
-    node.matrix.scale(gltfNode.scale);
   }
 }
