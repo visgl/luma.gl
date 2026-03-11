@@ -55,6 +55,23 @@ export type ParsePBRMaterialOptions = {
   useTangents?: boolean;
   /** provide an image based (texture cube) lighting environment */
   imageBasedLightingEnvironment?: PBREnvironment;
+  /** Default sampler parameters when not specified in glTF */
+  defaultSamplerParameters?: Partial<GLTFSampler>;
+};
+
+export const DEFAULT_SAMPLER_PARAMETERS: Partial<GLTFSampler> = {
+  wrapS: 10497, // REPEAT S (U)
+  wrapT: 10497, // REPEAT T (V)
+  minFilter: 9729, // LINEAR
+  magFilter: 9729 // LINEAR
+};
+
+const defaultOptions: Required<ParsePBRMaterialOptions> = {
+  pbrDebug: false,
+  lights: true,
+  useTangents: false,
+  imageBasedLightingEnvironment: undefined!,
+  defaultSamplerParameters: DEFAULT_SAMPLER_PARAMETERS
 };
 
 /**
@@ -64,8 +81,9 @@ export function parsePBRMaterial(
   device: Device,
   material: GLTFPBRMaterial,
   attributes: Record<string, any>,
-  options: ParsePBRMaterialOptions
+  options_: ParsePBRMaterialOptions = {}
 ): ParsedPBRMaterial {
+  const options = {...defaultOptions, ...options_};
   const parsedMaterial: ParsedPBRMaterial = {
     defines: {
       // TODO: Use EXT_sRGB if available (Standard in WebGL 2.0)
@@ -107,13 +125,12 @@ export function parsePBRMaterial(
   if (attributes['NORMAL']) parsedMaterial.defines['HAS_NORMALS'] = true;
   if (attributes['TANGENT'] && options?.useTangents) parsedMaterial.defines['HAS_TANGENTS'] = true;
   if (attributes['TEXCOORD_0']) parsedMaterial.defines['HAS_UV'] = true;
-  if (attributes['COLOR_0']) parsedMaterial.defines['HAS_COLORS'] = true;
 
   if (options?.imageBasedLightingEnvironment) parsedMaterial.defines['USE_IBL'] = true;
   if (options?.lights) parsedMaterial.defines['USE_LIGHTS'] = true;
 
   if (material) {
-    parseMaterial(device, material, parsedMaterial);
+    parseMaterial(device, material, parsedMaterial, options);
   }
 
   return parsedMaterial;
@@ -123,12 +140,13 @@ export function parsePBRMaterial(
 function parseMaterial(
   device: Device,
   material: GLTFPBRMaterial,
-  parsedMaterial: ParsedPBRMaterial
+  parsedMaterial: ParsedPBRMaterial,
+  options: ParsePBRMaterialOptions
 ): void {
   parsedMaterial.uniforms.unlit = Boolean(material.unlit);
 
   if (material.pbrMetallicRoughness) {
-    parsePbrMetallicRoughness(device, material.pbrMetallicRoughness, parsedMaterial);
+    parsePbrMetallicRoughness(device, material.pbrMetallicRoughness, parsedMaterial, options);
   }
   if (material.normalTexture) {
     addTexture(
@@ -136,7 +154,8 @@ function parseMaterial(
       material.normalTexture,
       'pbr_normalSampler',
       'HAS_NORMALMAP',
-      parsedMaterial
+      parsedMaterial,
+      options
     );
 
     const {scale = 1} = material.normalTexture;
@@ -148,7 +167,8 @@ function parseMaterial(
       material.occlusionTexture,
       'pbr_occlusionSampler',
       'HAS_OCCLUSIONMAP',
-      parsedMaterial
+      parsedMaterial,
+      options
     );
 
     const {strength = 1} = material.occlusionTexture;
@@ -160,7 +180,8 @@ function parseMaterial(
       material.emissiveTexture,
       'pbr_emissiveSampler',
       'HAS_EMISSIVEMAP',
-      parsedMaterial
+      parsedMaterial,
+      options
     );
     parsedMaterial.uniforms.emissiveFactor = material.emissiveFactor || [0, 0, 0];
   }
@@ -204,7 +225,8 @@ function parseMaterial(
 function parsePbrMetallicRoughness(
   device: Device,
   pbrMetallicRoughness: GLTFPBRMetallicRoughness,
-  parsedMaterial: ParsedPBRMaterial
+  parsedMaterial: ParsedPBRMaterial,
+  options: ParsePBRMaterialOptions
 ): void {
   if (pbrMetallicRoughness.baseColorTexture) {
     addTexture(
@@ -212,7 +234,8 @@ function parsePbrMetallicRoughness(
       pbrMetallicRoughness.baseColorTexture,
       'pbr_baseColorSampler',
       'HAS_BASECOLORMAP',
-      parsedMaterial
+      parsedMaterial,
+      options
     );
   }
   parsedMaterial.uniforms.baseColorFactor = pbrMetallicRoughness.baseColorFactor || [1, 1, 1, 1];
@@ -223,7 +246,8 @@ function parsePbrMetallicRoughness(
       pbrMetallicRoughness.metallicRoughnessTexture,
       'pbr_metallicRoughnessSampler',
       'HAS_METALROUGHNESSMAP',
-      parsedMaterial
+      parsedMaterial,
+      options
     );
   }
   const {metallicFactor = 1, roughnessFactor = 1} = pbrMetallicRoughness;
@@ -236,7 +260,8 @@ function addTexture(
   gltfTexture: GLTFTexture,
   uniformName: keyof PBRMaterialBindings,
   define: string,
-  parsedMaterial: ParsedPBRMaterial
+  parsedMaterial: ParsedPBRMaterial,
+  options: ParsePBRMaterialOptions
 ): void {
   const image = gltfTexture.texture.source.image;
   let textureOptions;
@@ -249,10 +274,7 @@ function addTexture(
   }
 
   const gltfSampler = {
-    wrapS: 10497, // default REPEAT S (U) wrapping mode.
-    wrapT: 10497, // default REPEAT T (V) wrapping mode.
-    minFilter: 9729, // default LINEAR filtering
-    magFilter: 9729, // default LINEAR filtering
+    ...options.defaultSamplerParameters,
     ...gltfTexture?.texture?.sampler
   } as GLTFSampler;
 
@@ -326,7 +348,6 @@ export class PBRMaterialParser {
     this.defineIfPresent(attributes.NORMAL, 'HAS_NORMALS');
     this.defineIfPresent(attributes.TANGENT && useTangents, 'HAS_TANGENTS');
     this.defineIfPresent(attributes.TEXCOORD_0, 'HAS_UV');
-    this.defineIfPresent(attributes.COLOR_0, 'HAS_COLORS');
 
     this.defineIfPresent(imageBasedLightingEnvironment, 'USE_IBL');
     this.defineIfPresent(lights, 'USE_LIGHTS');

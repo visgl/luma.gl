@@ -8,7 +8,8 @@ import {Matrix4} from '@math.gl/core';
 import {
   type GLTFMeshPostprocessed,
   type GLTFNodePostprocessed,
-  type GLTFPostprocessed
+  type GLTFPostprocessed,
+  type GLTFSampler
 } from '@loaders.gl/gltf';
 import {type GLTFScenePostprocessed} from '@loaders.gl/gltf/dist/lib/types/gltf-postprocessed-schema';
 
@@ -16,7 +17,7 @@ import {type PBREnvironment} from '../pbr/pbr-environment';
 import {convertGLDrawModeToTopology} from '../webgl-to-webgpu/convert-webgl-topology';
 import {createGLTFModel} from '../gltf/create-gltf-model';
 
-import {parsePBRMaterial} from './parse-pbr-material';
+import {parsePBRMaterial, DEFAULT_SAMPLER_PARAMETERS} from './parse-pbr-material';
 
 export type ParseGLTFOptions = {
   modelOptions?: Partial<ModelProps>;
@@ -24,6 +25,7 @@ export type ParseGLTFOptions = {
   imageBasedLightingEnvironment?: PBREnvironment;
   lights?: boolean;
   useTangents?: boolean;
+  defaultSamplerParameters?: Partial<GLTFSampler>;
 };
 
 const defaultOptions: Required<ParseGLTFOptions> = {
@@ -31,7 +33,8 @@ const defaultOptions: Required<ParseGLTFOptions> = {
   pbrDebug: false,
   imageBasedLightingEnvironment: undefined!,
   lights: true,
-  useTangents: false
+  useTangents: false,
+  defaultSamplerParameters: DEFAULT_SAMPLER_PARAMETERS
 };
 
 /**
