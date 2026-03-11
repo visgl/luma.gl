@@ -326,7 +326,6 @@ test('Buffer#uint8 index buffer conversion', async t => {
       [0, 1, 2, 3, 255],
       `${device.type} uint8 data correctly converted to uint16`
     );
-
     buffer.destroy();
   }
   t.end();

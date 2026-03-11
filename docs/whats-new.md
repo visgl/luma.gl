@@ -11,7 +11,8 @@ Target Date: TBD
 - glTF Skeleton Animation Support
 - glTF Mesh Target Animation Support
 - glTF and PRB now supported on WebGPU
-- Improved documentation
+- Improved documentation of the glTF module
+- glTF texture filtering now defaults to `linear` instead of `nearest` for improved texture rendering.
 
 ## Version 9.2
 

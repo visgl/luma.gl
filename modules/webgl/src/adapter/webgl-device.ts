@@ -68,6 +68,7 @@ import {
 } from '../context/parameters/unified-parameter-api';
 import {withGLParameters} from '../context/state-tracker/with-parameters';
 import {getWebGLExtension} from '../context/helpers/webgl-extensions';
+import {getWebGLContextData} from '../context/helpers/webgl-context-data';
 
 /** WebGPU style Device API for a WebGL context */
 export class WebGLDevice extends Device {
@@ -108,7 +109,7 @@ export class WebGLDevice extends Device {
   _constants: (TypedArray | null)[];
 
   /** State used by luma.gl classes - TODO - not used? */
-  readonly _extensions: GLExtensions = {};
+  readonly _extensions!: GLExtensions;
   _polyfilled: boolean = false;
 
   /** Instance of Spector.js (if initialized) */
@@ -223,6 +224,9 @@ export class WebGLDevice extends Device {
     // Instrument context
     const contextData = getWebGLContextData(this.handle);
     contextData.device = this; // Update GL context: Link webgl context back to device
+
+    const contextData = getWebGLContextData(this.gl);
+    this._extensions = contextData.extensions || (contextData.extensions = {});
 
     // initialize luma Device fields
     this.info = getDeviceInfo(this.gl, this._extensions);

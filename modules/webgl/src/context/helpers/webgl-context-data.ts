@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+import type {GLExtensions} from '@luma.gl/constants';
+
 /**
  * Stores luma.gl specific state associated with a context
  */
@@ -9,7 +11,9 @@ export interface WebGLContextData {
   /** This type is used by lower level code that is not aware of the Device type */
   device?: unknown;
   _polyfilled: boolean;
-  _extensions: Record<string, any>;
+  extensions: GLExtensions;
+  /** Compatibility alias for older data objects */
+  _extensions?: GLExtensions;
   softwareRenderer?: boolean;
 }
 
@@ -19,22 +23,23 @@ export interface WebGLContextData {
  */
 export function getWebGLContextData(gl: WebGL2RenderingContext): WebGLContextData {
   // @ts-expect-error
-  let luma = gl.luma as WebGLContextData | null;
-
-  luma ||= {
+  const contextData = (gl.luma as WebGLContextData | null) || {
     _polyfilled: false,
-    _extensions: {},
-    device: null,
+    extensions: {},
     softwareRenderer: false
-  } satisfies WebGLContextData;
+  };
 
-  // @ts-expect-error
-  gl.luma = luma;
-
-  // Sanity check to make sure context data is properly initialized
-  if (!('_polyfilled' in luma && '_extensions' in luma && 'device' in luma)) {
-    throw new Error(`luma's WebGL context data is corrupted`);
+  if (!contextData.extensions && contextData._extensions) {
+    contextData.extensions = contextData._extensions;
+  }
+  contextData._polyfilled ??= false;
+  contextData.extensions ||= {};
+  if (contextData.extensions && !contextData._extensions) {
+    contextData._extensions = contextData.extensions;
   }
 
-  return luma;
+  // @ts-expect-error
+  gl.luma = contextData;
+
+  return contextData;
 }
