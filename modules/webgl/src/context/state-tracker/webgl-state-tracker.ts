@@ -21,7 +21,7 @@ import {
 export class WebGLStateTracker {
   static get(gl: WebGL2RenderingContext): WebGLStateTracker {
     // @ts-expect-error
-    return gl.state as WebGLStateTracker;
+    return gl.lumaState as WebGLStateTracker;
   }
 
   gl: WebGL2RenderingContext;
@@ -78,7 +78,7 @@ export class WebGLStateTracker {
     this.initialized = true;
 
     // @ts-expect-error
-    this.gl.state = this;
+    this.gl.lumaState = this;
 
     installProgramSpy(gl);
 

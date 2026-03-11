@@ -12,8 +12,6 @@ export interface WebGLContextData {
   device?: unknown;
   _polyfilled: boolean;
   extensions: GLExtensions;
-  /** Compatibility alias for older data objects */
-  _extensions?: GLExtensions;
   softwareRenderer?: boolean;
 }
 
@@ -29,14 +27,8 @@ export function getWebGLContextData(gl: WebGL2RenderingContext): WebGLContextDat
     softwareRenderer: false
   };
 
-  if (!contextData.extensions && contextData._extensions) {
-    contextData.extensions = contextData._extensions;
-  }
   contextData._polyfilled ??= false;
   contextData.extensions ||= {};
-  if (contextData.extensions && !contextData._extensions) {
-    contextData._extensions = contextData.extensions;
-  }
 
   // @ts-expect-error
   gl.luma = contextData;

@@ -5,7 +5,7 @@
 /* eslint-disable no-continue */
 
 import test from 'tape-promise/tape';
-import {getTestDevices, getWebGLTestDevice} from '@luma.gl/test-utils';
+import {getTestDevices, getWebGPUTestDevice, getWebGLTestDevice} from '@luma.gl/test-utils';
 
 import {TypedArray} from '@math.gl/types';
 import {Buffer} from '@luma.gl/core';
@@ -251,6 +251,113 @@ test('Buffer#mapAndReadAsync (full and partial)', async t => {
     buffer.destroy();
   }
 
+  t.end();
+});
+
+test('Buffer#mapAndReadAsync (WebGPU alignment cases)', async t => {
+  const webgpuDevice = await getWebGPUTestDevice();
+
+  if (!webgpuDevice) {
+    t.comment('WebGPU test device unavailable');
+    t.end();
+    return;
+  }
+
+  const initialData = new Uint8Array(32);
+  for (let index = 0; index < initialData.length; index++) {
+    initialData[index] = index;
+  }
+
+  const buffer = webgpuDevice.createBuffer({
+    data: initialData,
+    usage: Buffer.COPY_DST | Buffer.COPY_SRC
+  });
+
+  const alignmentCases: Array<{byteOffset: number; byteLength: number; expectedLifetime: 'mapped' | 'copied'}> = [
+    {byteOffset: 0, byteLength: 8, expectedLifetime: 'mapped'},
+    {byteOffset: 0, byteLength: 3, expectedLifetime: 'copied'},
+    {byteOffset: 2, byteLength: 4, expectedLifetime: 'copied'},
+    {byteOffset: 1, byteLength: 7, expectedLifetime: 'copied'},
+    {byteOffset: 8, byteLength: 4, expectedLifetime: 'mapped'},
+    {byteOffset: 14, byteLength: 2, expectedLifetime: 'copied'},
+    {byteOffset: 24, byteLength: 1, expectedLifetime: 'copied'}
+  ];
+
+  for (const alignmentCase of alignmentCases) {
+    const expected = initialData.slice(
+      alignmentCase.byteOffset,
+      alignmentCase.byteOffset + alignmentCase.byteLength
+    );
+    const result = await buffer.mapAndReadAsync((arrayBuffer, lifetime) => {
+      t.equal(arrayBuffer.byteLength, alignmentCase.byteLength, 'callback receives requested byte range');
+      t.equal(
+        lifetime,
+        alignmentCase.expectedLifetime,
+        `lifetime is ${alignmentCase.expectedLifetime} for offset ${alignmentCase.byteOffset}, length ${alignmentCase.byteLength}`
+      );
+      return new Uint8Array(arrayBuffer.slice());
+    }, alignmentCase.byteOffset, alignmentCase.byteLength);
+
+    t.deepEqual(
+      result,
+      expected,
+      `WebGPU buffer mapAndReadAsync returns exact slice (${alignmentCase.byteOffset}, ${alignmentCase.byteLength})`
+    );
+  }
+
+  buffer.destroy();
+  t.end();
+});
+
+test('Buffer#mapAndReadAsync (WebGPU invalid range)', async t => {
+  const webgpuDevice = await getWebGPUTestDevice();
+
+  if (!webgpuDevice) {
+    t.comment('WebGPU test device unavailable');
+    t.end();
+    return;
+  }
+
+  const buffer = webgpuDevice.createBuffer({
+    data: new Uint8Array([1, 2, 3, 4]),
+    usage: Buffer.COPY_DST | Buffer.COPY_SRC
+  });
+
+  let threw = false;
+  try {
+    await buffer.mapAndReadAsync(() => new Uint8Array(0), 2, 8);
+  } catch (error) {
+    threw = true;
+    t.match(String(error), /exceeds buffer size/, 'out-of-range map request throws');
+  }
+
+  t.ok(threw, 'invalid range throws');
+  buffer.destroy();
+  t.end();
+});
+
+test('WebGPUBuffer#paddedByteLength', async t => {
+  const webgpuDevice = await getWebGPUTestDevice();
+
+  if (!webgpuDevice) {
+    t.comment('WebGPU test device unavailable');
+    t.end();
+    return;
+  }
+
+  const buffer = webgpuDevice.createBuffer({
+    byteLength: 13,
+    usage: Buffer.COPY_DST | Buffer.COPY_SRC
+  });
+
+  t.equal(
+    (buffer as unknown as {paddedByteLength: number}).paddedByteLength,
+    16,
+    'WebGPUBuffer paddedByteLength is 4-byte aligned'
+  );
+  t.equal(buffer.byteLength, 13, 'webgpu buffer byteLength remains user requested');
+
+  buffer.destroy();
   t.end();
 });
 

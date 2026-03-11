@@ -239,3 +239,22 @@ test('WebGLStateTracker#not cached parameters', async t => {
   tex.destroy();
   t.end();
 });
+
+test('WebGLStateTracker#tracks metadata on gl.lumaState', async t => {
+  const device = await devicePromise;
+  const {gl} = device;
+
+  const state = WebGLStateTracker.get(gl);
+  t.ok(state, 'WebGLStateTracker.get returns a state tracker');
+  t.equal((gl as {lumaState?: WebGLStateTracker}).lumaState, state, 'tracker is stored on gl.lumaState');
+  // @ts-expect-error
+  t.equal((gl as {state?: unknown}).state, undefined, 'legacy gl.state metadata slot is not used');
+  t.equal(
+    // @ts-expect-error
+    typeof (gl.lumaState?.cache || null),
+    'object',
+    'lumaState has cache object'
+  );
+
+  t.end();
+});

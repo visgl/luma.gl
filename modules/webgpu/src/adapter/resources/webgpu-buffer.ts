@@ -15,16 +15,18 @@ export class WebGPUBuffer extends Buffer {
   readonly device: WebGPUDevice;
   readonly handle: GPUBuffer;
   readonly byteLength: number;
+  readonly paddedByteLength: number;
 
   constructor(device: WebGPUDevice, props: BufferProps) {
     super(device, props);
     this.device = device;
 
     this.byteLength = props.byteLength || props.data?.byteLength || 0;
+    this.paddedByteLength = Math.ceil(this.byteLength / 4) * 4;
     const mappedAtCreation = Boolean(this.props.onMapped || props.data);
 
     // WebGPU buffers must be aligned to 4 bytes
-    const size = Math.ceil(this.byteLength / 4) * 4;
+    const size = this.paddedByteLength;
 
     this.device.pushErrorScope('out-of-memory');
     this.device.pushErrorScope('validation');
@@ -102,7 +104,7 @@ export class WebGPUBuffer extends Buffer {
     // Unless the application created and supplied a mappable buffer, a staging buffer is needed
     const isMappable = (this.usage & Buffer.MAP_WRITE) !== 0;
     const mappableBuffer: WebGPUBuffer | null = !isMappable
-      ? this._getMappableBuffer(Buffer.MAP_WRITE | Buffer.COPY_SRC, 0, this.byteLength)
+      ? this._getMappableBuffer(Buffer.MAP_WRITE | Buffer.COPY_SRC, 0, this.paddedByteLength)
       : null;
 
     const writeBuffer = mappableBuffer || this;
@@ -166,14 +168,14 @@ export class WebGPUBuffer extends Buffer {
       lifetime = 'copied';
     }
 
-    if (mappedByteOffset + mappedByteLength > this.handle.size) {
+    if (mappedByteOffset + mappedByteLength > this.paddedByteLength) {
       throw new Error('Mapping range exceeds buffer size');
     }
 
     // Unless the application created and supplied a mappable buffer, a staging buffer is needed
     const isMappable = (this.usage & Buffer.MAP_READ) !== 0;
     const mappableBuffer: WebGPUBuffer | null = !isMappable
-      ? this._getMappableBuffer(Buffer.MAP_READ | Buffer.COPY_DST, 0, this.byteLength)
+      ? this._getMappableBuffer(Buffer.MAP_READ | Buffer.COPY_DST, 0, this.paddedByteLength)
       : null;
 
     const readBuffer = mappableBuffer || this;
