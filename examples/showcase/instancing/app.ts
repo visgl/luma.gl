@@ -64,7 +64,7 @@ fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
 
   // vec4 pickColor = vec4(0., instanceIndexes, 1.0);
   // picking_setPickingColor(0);
-  
+
   return outputs;
 }
 
@@ -257,7 +257,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
   onRender(animationProps: AnimationProps) {
     const {device, aspect, tick} = animationProps;
-    const {_mousePosition} = animationProps;
     const {timeChannel, eyeXChannel, eyeYChannel, eyeZChannel} = this.timelineChannels;
 
     this.shaderInputs.setProps({
@@ -284,9 +283,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       }
     });
 
-    this.pickInstance(_mousePosition);
+    // this.pickInstance(animationProps._mousePosition);
 
-    // Draw the cubes
     const renderPass = device.beginRenderPass({
       clearColor: [0, 0, 0, 1],
       clearDepth: 1

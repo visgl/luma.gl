@@ -55,4 +55,4 @@ export const useStore = create<Store>(set => ({
 }));
 
 // Initialize store
-useStore.getState().setDeviceType('webgpu');
+useStore.getState().setDeviceType('webgl');
