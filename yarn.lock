@@ -8331,9 +8331,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"luma.gl-examples-hello-react@workspace:examples/tutorials/hello-react":
+"luma.gl-examples-hello-react@workspace:examples/integrations/hello-react":
   version: 0.0.0-use.local
-  resolution: "luma.gl-examples-hello-react@workspace:examples/tutorials/hello-react"
+  resolution: "luma.gl-examples-hello-react@workspace:examples/integrations/hello-react"
   dependencies:
     "@luma.gl/core": "npm:9.2.5"
     "@luma.gl/engine": "npm:9.2.5"
