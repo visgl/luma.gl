@@ -5,7 +5,9 @@
 /** Throws if condition is true and narrows type */
 export function assert(condition: unknown, message?: string): asserts condition {
   if (!condition) {
-    throw new Error(message ?? 'luma.gl assertion failed.');
+    const error = new Error(message ?? 'luma.gl assertion failed.');
+    Error.captureStackTrace?.(error, assert);
+    throw error;
   }
 }
 

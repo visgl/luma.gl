@@ -10,7 +10,7 @@ import type {
   VaryingBinding,
   AttributeShaderType
 } from '@luma.gl/core';
-import {assertDefined, getVariableShaderTypeInfo} from '@luma.gl/core';
+import {getVariableShaderTypeInfo} from '@luma.gl/core';
 
 import {GL, GLUniformType} from '@luma.gl/constants';
 import {
@@ -252,7 +252,10 @@ function readUniformBlocks(
     // ); // Array of GLint indicating the strides between columns of a column-major matrix or a row-major matrix.
     // const uniformRowMajor = gl.getActiveUniforms(program, uniformIndices, GL.UNIFORM_IS_ROW_MAJOR);
     for (let i = 0; i < blockInfo.uniformCount; ++i) {
-      const uniformIndex = assertDefined(uniformIndices[i]);
+      const uniformIndex = uniformIndices[i];
+      if (uniformIndex === undefined) {
+        continue;
+      }
       const activeInfo = gl.getActiveUniform(program, uniformIndex);
       if (!activeInfo) {
         throw new Error('activeInfo');
