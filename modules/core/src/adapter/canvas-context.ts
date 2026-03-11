@@ -188,6 +188,9 @@ export abstract class CanvasContext {
   }
 
   destroy() {
+    if (this.destroyed) {
+      return;
+    }
     this.destroyed = true;
     // Disconnect observers to prevent callbacks from firing after destruction
     this._resizeObserver?.disconnect();

@@ -21,6 +21,7 @@ class TestCanvasContext extends CanvasContext {
   getCurrentFramebuffer(): Framebuffer {
     throw new Error('test');
   }
+  _updateDevice() {}
   updateSize() {}
 }
 
@@ -29,6 +30,26 @@ function configureCanvasContext(canvasContext_: CanvasContext, tc) {
   // @ts-expect-error read only
   canvasContext_._canvasSizeInfo = tc._canvasSizeInfo;
   canvasContext_.getDrawingBufferSize = () => [tc.drawingBufferWidth, tc.drawingBufferHeight];
+}
+
+function createCanvasContextSpyDevice() {
+  const calls = {onResize: 0, onVisibilityChange: 0};
+  return {
+    calls,
+    device: {
+      limits: {maxTextureDimension2D: 1024},
+      props: {
+        onResize: () => {
+          calls.onResize++;
+        },
+        onVisibilityChange: () => {
+          calls.onVisibilityChange++;
+        },
+        onDevicePixelRatioChange: () => {},
+        onPositionChange: () => {}
+      }
+    }
+  };
 }
 
 test('CanvasContext#defined', t => {
@@ -46,6 +67,119 @@ test('CanvasContext', t => {
     t.ok(canvasContext);
     t.deepEqual(canvasContext.getDevicePixelSize(), [800, 600]);
   }
+  t.end();
+});
+
+test('CanvasContext#_handleIntersection does not call callbacks when destroyed or without device', t => {
+  if (!isBrowser()) {
+    t.end();
+    return;
+  }
+
+  const {calls, device} = createCanvasContextSpyDevice();
+  const canvasContext = new TestCanvasContext();
+  // @ts-expect-error read only
+  canvasContext.device = device;
+
+  (canvasContext as any)._handleIntersection([{target: canvasContext.canvas, isIntersecting: false}]);
+
+  t.equal(calls.onVisibilityChange, 1, 'visibility change is observed when context is active');
+
+  calls.onVisibilityChange = 0;
+  // @ts-expect-error read only
+  canvasContext.destroyed = true;
+  (canvasContext as any)._handleIntersection([{target: canvasContext.canvas, isIntersecting: true}]);
+  t.equal(calls.onVisibilityChange, 0, 'destroyed context does not emit visibility events');
+
+  // @ts-expect-error read only
+  canvasContext.destroyed = false;
+  // @ts-expect-error read only
+  canvasContext.device = undefined;
+  (canvasContext as any)._handleIntersection([{target: canvasContext.canvas, isIntersecting: true}]);
+  t.equal(calls.onVisibilityChange, 0, 'uninitialized context does not emit visibility events');
+
+  t.end();
+});
+
+test('CanvasContext#_handleResize does not call callbacks when destroyed or without device', t => {
+  if (!isBrowser()) {
+    t.end();
+    return;
+  }
+
+  const {calls, device} = createCanvasContextSpyDevice();
+  const canvasContext = new TestCanvasContext();
+  // @ts-expect-error read only
+  canvasContext.device = device;
+
+  (canvasContext as any)._handleResize([
+    {
+      target: canvasContext.canvas,
+      contentBoxSize: [{inlineSize: 10, blockSize: 20}]
+    }
+  ]);
+
+  t.equal(calls.onResize, 1, 'resize is observed when context is active');
+
+  calls.onResize = 0;
+  // @ts-expect-error read only
+  canvasContext.destroyed = true;
+  (canvasContext as any)._handleResize([
+    {
+      target: canvasContext.canvas,
+      contentBoxSize: [{inlineSize: 20, blockSize: 40}]
+    }
+  ]);
+  t.equal(calls.onResize, 0, 'destroyed context does not emit resize events');
+
+  // @ts-expect-error read only
+  canvasContext.destroyed = false;
+  // @ts-expect-error read only
+  canvasContext.device = undefined;
+  (canvasContext as any)._handleResize([
+    {
+      target: canvasContext.canvas,
+      contentBoxSize: [{inlineSize: 20, blockSize: 40}]
+    }
+  ]);
+  t.equal(calls.onResize, 0, 'uninitialized context does not emit resize events');
+
+  t.end();
+});
+
+test('CanvasContext#destroy is idempotent', t => {
+  if (!isBrowser()) {
+    t.end();
+    return;
+  }
+
+  const calls = {resizeObserverDisconnect: 0, intersectionObserverDisconnect: 0};
+  const canvasContext = new TestCanvasContext();
+  // @ts-expect-error read only
+  canvasContext._resizeObserver = {
+    disconnect: () => {
+      calls.resizeObserverDisconnect++;
+    }
+  };
+  // @ts-expect-error read only
+  canvasContext._intersectionObserver = {
+    disconnect: () => {
+      calls.intersectionObserverDisconnect++;
+    }
+  };
+
+  t.doesNotThrow(() => {
+    canvasContext.destroy();
+    canvasContext.destroy();
+  }, 'destroying twice should be safe');
+
+  t.equal(calls.resizeObserverDisconnect, 1, 'resize observer disconnected exactly once');
+  t.equal(
+    calls.intersectionObserverDisconnect,
+    1,
+    'intersection observer disconnected exactly once'
+  );
+
   t.end();
 });
 
