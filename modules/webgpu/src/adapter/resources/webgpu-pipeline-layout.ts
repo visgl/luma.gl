@@ -47,8 +47,7 @@ export class WebGPUPipelineLayout extends PipelineLayout {
     // TODO (kaapp): This only supports the first group, but so does the rest of the code
     const bindGroupEntries: GPUBindGroupLayoutEntry[] = [];
 
-    for (let i = 0; i < this.props.shaderLayout.bindings.length; i++) {
-      const binding = this.props.shaderLayout.bindings[i];
+    for (const binding of this.props.shaderLayout.bindings) {
       const bindingTypeInfo: Omit<GPUBindGroupLayoutEntry, 'binding' | 'visibility'> = {};
 
       switch (binding.type) {
