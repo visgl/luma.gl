@@ -4,11 +4,12 @@
 
 import test from 'tape-promise/tape';
 
+import {Buffer} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
+import {WEBGLRenderPass} from '@luma.gl/webgl';
 
-// Shader with two uniform blocks to verify uniformBlockBinding argument order.
-const VS_TWO_UBOS = /* glsl */ `\
+const VS_THREE_UBOS = /* glsl */ `\
 #version 300 es
 layout(std140) uniform;
 
@@ -20,111 +21,121 @@ uniform BlockB {
   float valueB;
 } blockB;
 
-in float position;
+uniform BlockC {
+  float valueC;
+} blockC;
+
+const vec2 POSITIONS[3] = vec2[3](
+  vec2(0.0, 0.5),
+  vec2(-0.5, -0.5),
+  vec2(0.5, -0.5)
+);
 
 void main() {
-  gl_Position = vec4(blockA.valueA + blockB.valueB + position, 0.0, 0.0, 1.0);
+  float offset = blockA.valueA + blockB.valueB + blockC.valueC;
+  gl_Position = vec4(POSITIONS[gl_VertexID] + vec2(offset * 0.0), 0.0, 1.0);
 }
 `;
 
-const FS_TWO_UBOS = /* glsl */ `\
+const FS_THREE_UBOS = /* glsl */ `\
 #version 300 es
 precision highp float;
+
 out vec4 fragColor;
+
 void main() {
   fragColor = vec4(1.0);
 }
 `;
 
-/**
- * Verifies that gl.uniformBlockBinding is called with the correct argument order:
- *   uniformBlockBinding(program, uniformBlockIndex, uniformBlockBinding)
- *
- * The WebGL2 API signature is:
- *   - 2nd arg: uniformBlockIndex (from getUniformBlockIndex)
- *   - 3rd arg: uniformBlockBinding (the binding point number)
- *
- * Reference: https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/uniformBlockBinding
- * TypeScript: lib.dom.d.ts defines:
- *   uniformBlockBinding(program: WebGLProgram, uniformBlockIndex: GLuint, uniformBlockBinding: GLuint): void
- */
-test('WEBGLRenderPipeline#uniformBlockBinding argument order with multiple UBOs', async t => {
+async function waitForLinkStatus(renderPipeline: {
+  linkStatus: 'pending' | 'success' | 'error';
+}): Promise<'pending' | 'success' | 'error'> {
+  for (let iteration = 0; iteration < 50 && renderPipeline.linkStatus === 'pending'; iteration++) {
+    await new Promise(resolve => setTimeout(resolve, 10));
+  }
+
+  return renderPipeline.linkStatus;
+}
+
+test('WEBGLRenderPipeline#uniformBlockBinding applies block indices in the correct argument position', async t => {
   const device = await getWebGLTestDevice();
   const {gl} = device;
 
-  // Compile and link shader program with two uniform blocks
-  const vsShader = gl.createShader(GL.VERTEX_SHADER)!;
-  gl.shaderSource(vsShader, VS_TWO_UBOS);
-  gl.compileShader(vsShader);
-  if (!gl.getShaderParameter(vsShader, GL.COMPILE_STATUS)) {
-    t.fail(`Vertex shader compile error: ${gl.getShaderInfoLog(vsShader)}`);
+  const vs = device.createShader({stage: 'vertex', source: VS_THREE_UBOS});
+  const fs = device.createShader({stage: 'fragment', source: FS_THREE_UBOS});
+  const renderPipeline = device.createRenderPipeline({vs, fs, topology: 'triangle-list'});
+
+  const linkStatus = await waitForLinkStatus(renderPipeline);
+  t.equal(linkStatus, 'success', 'render pipeline linked successfully');
+  if (linkStatus !== 'success') {
+    renderPipeline.destroy();
+    vs.destroy();
+    fs.destroy();
+    device.destroy();
     t.end();
     return;
   }
 
-  const fsShader = gl.createShader(GL.FRAGMENT_SHADER)!;
-  gl.shaderSource(fsShader, FS_TWO_UBOS);
-  gl.compileShader(fsShader);
-  if (!gl.getShaderParameter(fsShader, GL.COMPILE_STATUS)) {
-    t.fail(`Fragment shader compile error: ${gl.getShaderInfoLog(fsShader)}`);
-    t.end();
-    return;
+  const blockIndexByName = {
+    BlockA: gl.getUniformBlockIndex(renderPipeline.handle, 'BlockA'),
+    BlockB: gl.getUniformBlockIndex(renderPipeline.handle, 'BlockB'),
+    BlockC: gl.getUniformBlockIndex(renderPipeline.handle, 'BlockC')
+  };
+
+  t.notEqual(blockIndexByName.BlockA, GL.INVALID_INDEX, `BlockA has valid index`);
+  t.notEqual(blockIndexByName.BlockB, GL.INVALID_INDEX, `BlockB has valid index`);
+  t.notEqual(blockIndexByName.BlockC, GL.INVALID_INDEX, `BlockC has valid index`);
+
+  // Reorder bindings to a 3-cycle so swapped uniformBlockBinding arguments produce different results.
+  renderPipeline.shaderLayout.bindings = [
+    renderPipeline.shaderLayout.bindings.find(binding => binding.name === 'BlockB')!,
+    renderPipeline.shaderLayout.bindings.find(binding => binding.name === 'BlockC')!,
+    renderPipeline.shaderLayout.bindings.find(binding => binding.name === 'BlockA')!
+  ];
+
+  const bufferA = device.createBuffer({usage: Buffer.UNIFORM, data: new Float32Array([1, 0, 0, 0])});
+  const bufferB = device.createBuffer({usage: Buffer.UNIFORM, data: new Float32Array([2, 0, 0, 0])});
+  const bufferC = device.createBuffer({usage: Buffer.UNIFORM, data: new Float32Array([3, 0, 0, 0])});
+
+  renderPipeline.setBindings({BlockA: bufferA, BlockB: bufferB, BlockC: bufferC});
+
+  const vertexArray = device.createVertexArray({
+    shaderLayout: renderPipeline.shaderLayout,
+    bufferLayout: renderPipeline.bufferLayout
+  });
+  const renderPass = new WEBGLRenderPass(device, {});
+
+  const didDraw = renderPipeline.draw({renderPass, vertexArray, vertexCount: 3});
+  t.ok(didDraw, 'draw triggers binding application');
+
+  const expectedBindingPointByName = {
+    BlockB: 0,
+    BlockC: 1,
+    BlockA: 2
+  };
+
+  for (const blockName of ['BlockA', 'BlockB', 'BlockC'] as const) {
+    const reportedBinding = gl.getActiveUniformBlockParameter(
+      renderPipeline.handle,
+      blockIndexByName[blockName],
+      GL.UNIFORM_BLOCK_BINDING
+    );
+    t.equal(
+      reportedBinding,
+      expectedBindingPointByName[blockName],
+      `${blockName} is bound to point ${expectedBindingPointByName[blockName]}`
+    );
   }
 
-  const program = gl.createProgram();
-  gl.attachShader(program, vsShader);
-  gl.attachShader(program, fsShader);
-  gl.linkProgram(program);
-  if (!gl.getProgramParameter(program, GL.LINK_STATUS)) {
-    t.fail(`Program link error: ${gl.getProgramInfoLog(program)}`);
-    t.end();
-    return;
-  }
-
-  t.pass('Shader program with two uniform blocks compiled and linked');
-
-  // Get GL-assigned block indices
-  const blockIndexA = gl.getUniformBlockIndex(program, 'BlockA');
-  const blockIndexB = gl.getUniformBlockIndex(program, 'BlockB');
-
-  t.notEqual(blockIndexA, GL.INVALID_INDEX, `BlockA has valid index: ${blockIndexA}`);
-  t.notEqual(blockIndexB, GL.INVALID_INDEX, `BlockB has valid index: ${blockIndexB}`);
-
-  // Assign distinct binding points (intentionally not 0 or 1 to avoid
-  // coincidental matches with GL-assigned block indices)
-  const bindingPointForA = 3;
-  const bindingPointForB = 7;
-
-  gl.uniformBlockBinding(program, blockIndexA, bindingPointForA);
-  gl.uniformBlockBinding(program, blockIndexB, bindingPointForB);
-
-  // Query back to verify the binding was applied correctly
-  const reportedBindingA = gl.getActiveUniformBlockParameter(
-    program,
-    blockIndexA,
-    GL.UNIFORM_BLOCK_BINDING
-  );
-  const reportedBindingB = gl.getActiveUniformBlockParameter(
-    program,
-    blockIndexB,
-    GL.UNIFORM_BLOCK_BINDING
-  );
-
-  t.equal(
-    reportedBindingA,
-    bindingPointForA,
-    `BlockA bound to point ${bindingPointForA} (got ${reportedBindingA})`
-  );
-  t.equal(
-    reportedBindingB,
-    bindingPointForB,
-    `BlockB bound to point ${bindingPointForB} (got ${reportedBindingB})`
-  );
-
-  // Cleanup
-  gl.deleteProgram(program);
-  gl.deleteShader(vsShader);
-  gl.deleteShader(fsShader);
+  renderPass.end();
+  vertexArray.destroy();
+  bufferA.destroy();
+  bufferB.destroy();
+  bufferC.destroy();
+  renderPipeline.destroy();
+  vs.destroy();
+  fs.destroy();
   device.destroy();
   t.end();
 });
