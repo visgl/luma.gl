@@ -218,7 +218,7 @@ export class WebGLDevice extends Device {
     (this.gl as any).device = this; // Update GL context: Link webgl context back to device
 
     const contextData = getWebGLContextData(this.gl);
-    this._extensions = (contextData.extensions || (contextData.extensions = {})) as GLExtensions;
+    this._extensions = contextData.extensions || (contextData.extensions = {});
 
     // initialize luma Device fields
     this.info = getDeviceInfo(this.gl, this._extensions);
