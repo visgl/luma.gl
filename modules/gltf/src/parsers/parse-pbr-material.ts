@@ -348,6 +348,7 @@ export class PBRMaterialParser {
     this.defineIfPresent(attributes.NORMAL, 'HAS_NORMALS');
     this.defineIfPresent(attributes.TANGENT && useTangents, 'HAS_TANGENTS');
     this.defineIfPresent(attributes.TEXCOORD_0, 'HAS_UV');
+    this.defineIfPresent(attributes.COLOR_0, 'HAS_COLORS');
 
     this.defineIfPresent(imageBasedLightingEnvironment, 'USE_IBL');
     this.defineIfPresent(lights, 'USE_LIGHTS');
