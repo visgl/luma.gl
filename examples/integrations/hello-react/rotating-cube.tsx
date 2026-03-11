@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {useEffect, useRef} from 'react';
-import {Device, luma} from '@luma.gl/core';
+import {Device, luma, log} from '@luma.gl/core';
 import {AnimationLoop, makeAnimationLoop} from '@luma.gl/engine';
 import {webgl2Adapter} from '@luma.gl/webgl';
 import {CubeAnimationLoopTemplate} from './cube-animation';
@@ -46,7 +46,7 @@ export function RotatingCube() {
         // Start rendering
         animationLoop.start();
       } catch (error) {
-        console.error('Failed to initialize cube:', error);
+        log.error(`Failed to initialize cube: ${error}`)();
       }
     };
 

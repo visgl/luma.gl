@@ -109,6 +109,7 @@ export abstract class CanvasContext {
   protected _initializedResolvers = withResolvers<void>();
   protected readonly _resizeObserver: ResizeObserver | undefined;
   protected readonly _intersectionObserver: IntersectionObserver | undefined;
+  private _observeDevicePixelRatioTimeout: ReturnType<typeof setTimeout> | null = null;
   protected _position: [number, number];
   protected destroyed = false;
 
@@ -178,7 +179,7 @@ export abstract class CanvasContext {
 
       // Track device pixel ratio changes.
       // Defer call to after construction completes to ensure `this.device` is available.
-      setTimeout(() => this._observeDevicePixelRatio(), 0);
+      this._observeDevicePixelRatioTimeout = setTimeout(() => this._observeDevicePixelRatio(), 0);
 
       // Track top/left position changes
       if (this.props.trackPosition) {
@@ -188,13 +189,18 @@ export abstract class CanvasContext {
   }
 
   destroy() {
-    if (this.destroyed) {
-      return;
+    if (!this.destroyed) {
+      this.destroyed = true;
+      if (this._observeDevicePixelRatioTimeout) {
+        clearTimeout(this._observeDevicePixelRatioTimeout);
+        this._observeDevicePixelRatioTimeout = null;
+      }
+      // @ts-expect-error Clear the device to make sure we don't access it after destruction.
+      this.device = null;
+      // Disconnect observers to prevent callbacks from firing after destruction
+      this._resizeObserver?.disconnect();
+      this._intersectionObserver?.disconnect();
     }
-    this.destroyed = true;
-    // Disconnect observers to prevent callbacks from firing after destruction
-    this._resizeObserver?.disconnect();
-    this._intersectionObserver?.disconnect();
   }
 
   setProps(props: MutableCanvasContextProps): this {
@@ -333,7 +339,9 @@ export abstract class CanvasContext {
 
   /** reacts to an observed intersection */
   protected _handleIntersection(entries: IntersectionObserverEntry[]) {
-    if (this.destroyed || !this.device) return;
+    if (this.destroyed) {
+      return;
+    }
 
     const entry = entries.find(entry_ => entry_.target === this.canvas);
     if (!entry) {
@@ -353,7 +361,9 @@ export abstract class CanvasContext {
    * @see https://webgpufundamentals.org/webgpu/lessons/webgpu-resizing-the-canvas.html
    */
   protected _handleResize(entries: ResizeObserverEntry[]) {
-    if (this.destroyed || !this.device) return;
+    if (this.destroyed) {
+      return;
+    }
 
     const entry = entries.find(entry_ => entry_.target === this.canvas);
     if (!entry) {
@@ -414,13 +424,16 @@ export abstract class CanvasContext {
 
   /** Monitor DPR changes */
   _observeDevicePixelRatio() {
+    if (this.destroyed) {
+      return;
+    }
     const oldRatio = this.devicePixelRatio;
     this.devicePixelRatio = window.devicePixelRatio;
 
     this.updatePosition();
 
     // Inform the device
-    this.device?.props.onDevicePixelRatioChange?.(this, {oldRatio});
+    this.device.props.onDevicePixelRatioChange?.(this, {oldRatio});
     // Set up a one time query against the current resolution.
     matchMedia(`(resolution: ${this.devicePixelRatio}dppx)`).addEventListener(
       'change',
@@ -446,6 +459,9 @@ export abstract class CanvasContext {
    * if called before browser has finished a reflow. Should not be the case here.
    */
   updatePosition() {
+    if (this.destroyed) {
+      return;
+    }
     const newRect = this.htmlCanvas?.getBoundingClientRect();
     if (newRect) {
       // We only track position since we rely on the more precise ResizeObserver for size
@@ -456,7 +472,7 @@ export abstract class CanvasContext {
       if (positionChanged) {
         const oldPosition = this._position;
         this._position = position;
-        this.device?.props.onPositionChange?.(this, {oldPosition});
+        this.device.props.onPositionChange?.(this, {oldPosition});
       }
     }
   }
