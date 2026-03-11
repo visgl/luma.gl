@@ -49,4 +49,4 @@ Takes an input texture, and generates a `Buffer` object with list of points that
 
 Returns an object with following fields.
 
-- `locationAndIndexBuffer` (`Buffer`): `Buffer` object contains coordinate data of generated points. Each point is represented 4 floats (XYZW). Where `X` contains x coordinate, `Y` contains y coordinate and `Z` contains local key-index and `W` contains key-index. x and y coordiantes of the point are with in ((0,0) to (width, height)] range, where `width` and `height` are dimensions of source texture object.
+- `locationAndIndexBuffer` (`Buffer`): `Buffer` object contains coordinate data of generated points. Each point is represented 4 floats (XYZW). Where `X` contains x coordinate, `Y` contains y coordinate and `Z` contains local key-index and `W` contains key-index. x and y coordinates of the point are with in ((0,0) to (width, height)] range, where `width` and `height` are dimensions of source texture object.

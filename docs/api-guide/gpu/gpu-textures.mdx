@@ -114,24 +114,24 @@ Notes:
 ### Mipmaps
 
 To improve sampling quality further when sampling from a distance (`minFilter`), mipmap filtering can be used.
-Mipmaps are a pyramid of lower resolution images that are stored for each text`ure image and used by the GPU when the texture is sampled at a distance.
+Mipmaps are a pyramid of lower resolution images that are stored for each texture image and used by the GPU when the texture is sampled at a distance.
 
-Using mipmap filtering requireds some extra setup. The texture being sampled must be created with the `mipLevels` property set the the appropriate number of mip levels,
+Using mipmap filtering requires some extra setup. The texture being sampled must be created with the `mipLevels` property set to the appropriate number of mip levels,
 and each mip level must be initialized with a scaled down version of the mip level 0 image.
 Note that mip levels can be generated automatically by luma.gl, or each mip level can be set explicitly by the application.
 
-Mipmap usage is controller via `SamplerProps.mipmapFilter`:
+Mipmap usage is controlled via `SamplerProps.mipmapFilter`:
 
 | `mipmapFilter` | `minFilter` | Description                                     | Linearity             | Speed   |
 | -------------- | ----------- | ----------------------------------------------- | --------------------- | ------- |
-| `none`         | `nearest`   | Mo filtering, no mipmaps                        | none                  |         |
+| `none`         | `nearest`   | No filtering, no mipmaps                        | none                  |         |
 | `none`         | `linear`    | Filtering, no mipmaps                           | bilinear              | slowest |
 | `nearest`      | `nearest`   | No filtering, sharp switching between mipmaps   | none                  |         |
 | `nearest`      | `linear`    | No filtering, smooth transition between mipmaps | linear                |         |
 | `linear`       | `nearest`   | Filtering, sharp switching between mipmaps      | bilinear with mipmaps | fastest |
 | `linear`       | `linear`    | Filtering, smooth transition between mipmaps    | trilinear             |         |
 
-In addition, the `anistropy` sampler property controls how many miplevels are used during sampling.
+In addition, the `anisotropy` sampler property controls how many miplevels are used during sampling.
 
 Notes:
 

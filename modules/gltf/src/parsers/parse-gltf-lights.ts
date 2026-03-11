@@ -14,10 +14,12 @@ export function parseGLTFLights(gltf: GLTFPostprocessed): Light[] {
   for (const node of gltf.nodes || []) {
     const nodeLight = node.extensions?.KHR_lights_punctual;
     if (!nodeLight || typeof nodeLight.light !== 'number') {
+      // eslint-disable-next-line no-continue
       continue;
     }
     const gltfLight = lightDefs[nodeLight.light];
     if (!gltfLight) {
+      // eslint-disable-next-line no-continue
       continue;
     }
 

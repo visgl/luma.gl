@@ -42,6 +42,7 @@ export class WEBGLBuffer extends Buffer {
     // - In WebGL2, we can use GL.COPY_READ_BUFFER which avoids locking the type here
     this.glTarget = getWebGLTarget(this.props.usage);
     this.glUsage = getWebGLUsage(this.props.usage);
+    // Note: uint8 indices are converted to uint16 during device normalization for WebGPU compatibility
     this.glIndexType = this.props.indexType === 'uint32' ? GL.UNSIGNED_INT : GL.UNSIGNED_SHORT;
 
     // Set data: (re)initializes the buffer

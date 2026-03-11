@@ -33,7 +33,6 @@ v9.2 brings full WebGPU support. Some additional deprecations and breaking chang
 - `canvasContext.devicePixelWidth` and `canvasContext.devicePixelHeight` are now kept updated to exact device pixel size of underlying canvas. 
 - Instead `canvasContext.setDrawingBufferSize()` to explicitly control drawing buffer size, if not using `CanvasContextProps.autoResize` 
 - A new `DeviceProps.onResize` callback can be used to react to changes.
-- `CanvasContextProps.useDevicePixelRatio` no longer accepts `number`s, just a `boolean` value. 
 
 **Minor changes**
 - `core`: The shader types has been refactored, some shader type names have changed. These are typically not used directly by applications.
@@ -62,7 +61,7 @@ v9.1 continues to build out WebGPU support. Some additional deprecations and bre
 | `luma.registerDevices()`      | Deprecated | [`luma.registerAdapters()`][adapters].       | Adapters provide a cleaner way to work with GPU backends.       |
 | `DeviceProps.canvas`          | Moved      | [`DeviceProps.createCanvasContext`][canvas]. | Move canvas related props to `props.createCanvasContext: {}`.   |
 | `DeviceProps.<webgl options>` | Moved      | [`DeviceProps.webgl.<options>`][webgl].      | Move canvas related props to `props.webgl: {}`.                 |
-| `DeviceProps.break`           | Removed    |                                              | Use an alterative [debugger][debugging]                         |
+| `DeviceProps.break`           | Removed    |                                              | Use an alternative [debugger][debugging]                         |
 | `TextureProps.data` (Promise) | Removed    | `AsyncTexture` class                         | `Texture` no longer accept promises. Use `AsyncTexture`         |
 | `Parameters.blend`            | New        |                                              | Explicit activation of color blending                           |
 | `triangle-fan-webgl` topology | Removed    | `triangle-strip`.                            | Reorganize your geometries                                      |

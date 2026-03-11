@@ -109,7 +109,7 @@ transform.run();
 
 ### Use case : Reading source data from texture object (Experimental)
 
-In addition to reading data from Buffer objects, Transform can read from texture objects. Transform allows to access texture data in the same way as buffer data and internally generates required texture co-ordinates and sample instructions.
+In addition to reading data from Buffer objects, Transform can read from texture objects. Transform allows to access texture data in the same way as buffer data and internally generates required texture coordinates and sample instructions.
 
 ```typescript
 // simple shader that adds data from a buffer and texture to generate new buffer.

@@ -61,7 +61,7 @@ The `onInitialize`, `onRender` and `onFinalize`callbacks will be called with an 
 | `needsRedraw`     | `String`                                 | Redraw flag (will be automatically set if drawingBuffer resizes)                    |
 | `time`            | `Number`                                 | Milliseconds since `AnimationLoopTemplate` was created (monotonic).                 |
 | `tick`            | `Number`                                 | Counter that updates for every frame rendered (monotonic).                          |
-| `renderPass`      | `RenderPass`                             | Availabel if `createFrameBuffer: true` was passed to the constructor.               |
+| `renderPass`      | `RenderPass`                             | Available if `createFrameBuffer: true` was passed to the constructor.               |
 | `_mousePosition`  | `[x, y]` or `null`                       | (**experimental**) Current mouse position over the canvas.                          |
 | `_timeline`       | `Timeline`                               | (**experimental**) `Timeline` object tracking the animation timeline and channels.  |
 
@@ -132,6 +132,11 @@ Notes:
 - If called multiple times, the `reason` provided in the first call will be remembered.
 - `AnimationLoop` automatically sets this flag if the WebGL context's drawing buffer size changes.
 
+### needsRedraw()
+
+`animationLoop.needsRedraw(): false | string`
+
+Returns the current redraw reason string, or `false` if no redraw was requested. Calling this method clears the flag.
 
 ### attachTimeline()
 

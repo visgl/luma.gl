@@ -14,7 +14,7 @@ luma.gl is packaged and published as a suite of composable npm modules, so that 
 
 \* At least one backend, either WebGL or WebGPU, must be installed to enable GPU resource creation.
 
-luma.gl also publishes a legacy moduls that should be avoided in new applications.
+luma.gl also publishes a legacy modules that should be avoided in new applications.
 
 | Legacy Module        | Status     | Description      | Replacement                   |
 | -------------------- | ---------- | ---------------- | ----------------------------- |

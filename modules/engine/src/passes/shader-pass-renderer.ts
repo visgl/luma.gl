@@ -20,7 +20,7 @@ export type ShaderPassRendererProps = {
   /** List of ShaderPasses to apply to the sourceTexture */
   shaderPasses: ShaderPass[];
   /** Optional typed ShaderInputs object for setting uniforms */
-  shaderInputs: ShaderInputs;
+  shaderInputs?: ShaderInputs;
 };
 
 /** A pass that renders a given texture into screen space */
@@ -72,12 +72,10 @@ fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
 
 uniform sampler2D sourceTexture;
 in vec2 uv;
-in vec2 coordinate;
 out vec4 fragColor;
 
 void main() {
-  vec2 texCoord = coordinate;
-  fragColor = texture(sourceTexture, coordinate);
+  fragColor = texture(sourceTexture, uv);
 }
 `
     });
@@ -92,11 +90,12 @@ void main() {
     }
     this.swapFramebuffers.destroy();
     this.clipSpace.destroy();
+    this.textureModel.destroy();
   }
 
-  resize(width: number, height: number): void {
-    this.swapFramebuffers.resize({width, height});
-    // this.props.passes.forEach(pass => pass.resize(width, height));
+  resize(size?: [width: number, height: number]): void {
+    size ||= this.device.getCanvasContext().getDrawingBufferSize();
+    this.swapFramebuffers.resize({width: size[0], height: size[1]});
   }
 
   renderToScreen(options: {
@@ -118,7 +117,7 @@ void main() {
     const renderPass = this.device.beginRenderPass({
       id: 'shader-pass-renderer-to-screen',
       framebuffer,
-      clearColor: [0, 0, 0, 1],
+      // clearColor: [1, 1, 0, 1],
       clearDepth: 1
     });
     this.clipSpace.setBindings({sourceTexture: outputTexture});
@@ -140,20 +139,23 @@ void main() {
       return null;
     }
 
-    this.textureModel.destroy();
-    this.textureModel = new BackgroundTextureModel(this.device, {
-      backgroundTexture: sourceTexture
-    });
+    // If no shader passes are provided, just return the original texture
+    if (this.passRenderers.length === 0) {
+      return sourceTexture.texture;
+    }
+
+    this.textureModel.setProps({backgroundTexture: sourceTexture});
 
     // Clear the current texture before we begin
     const clearTexturePass = this.device.beginRenderPass({
       id: 'shader-pass-renderer-clear-texture',
       framebuffer: this.swapFramebuffers.current,
-      clearColor: [0, 0, 0, 1]
+      clearColor: [1, 0, 0, 1]
     });
     this.textureModel.draw(clearTexturePass);
     clearTexturePass.end();
 
+    // Copy the texture contents
     // const commandEncoder = this.device.createCommandEncoder();
     // commandEncoder.copyTextureToTexture({
     //   sourceTexture: sourceTexture.texture,

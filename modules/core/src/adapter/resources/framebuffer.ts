@@ -56,7 +56,12 @@ export abstract class Framebuffer extends Resource<FramebufferProps> {
     const depthStencilAttachment =
       this.depthStencilAttachment && this.depthStencilAttachment.texture.clone(size);
 
-    return this.device.createFramebuffer({...this.props, colorAttachments, depthStencilAttachment});
+    return this.device.createFramebuffer({
+      ...this.props,
+      ...size,
+      colorAttachments,
+      depthStencilAttachment
+    });
   }
 
   /**

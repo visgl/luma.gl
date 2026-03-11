@@ -83,9 +83,9 @@ ${numberedLines}${positionIndicator}${message.type.toUpperCase()}: ${message.mes
 
 `;
   }
-  const color = message.type === 'error' ? 'red' : '#8B4000'; // dark orange
+  const color = message.type === 'error' ? 'red' : 'orange';
   return options?.html
-    ? `<div class='luma-compiler-log-error' style="color:${color};"><b> ${message.type.toUpperCase()}: ${
+    ? `<div class='luma-compiler-log-${message.type}' style="color:${color};"><b> ${message.type.toUpperCase()}: ${
         message.message
       }</b></div>`
     : `${message.type.toUpperCase()}: ${message.message}`;

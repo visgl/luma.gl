@@ -27,7 +27,7 @@ yarn start-local
 
 Any modifications made to the source or example code will cause the example to rebuild and the page to refresh, making quick iterations on code changes straightforward.
 
-Testing against the full website can be done by running `yarn start` in the the `website/`. This full website take longer to build but makes it easier to test against all examples. This can be helpful when making core changes to luma.gl. As with running the examples in development mode, a rebuild and page refresh will be triggered whenever source or website code is updated.
+Testing against the full website can be done by running `yarn start` in the `website/`. This full website take longer to build but makes it easier to test against all examples. This can be helpful when making core changes to luma.gl. As with running the examples in development mode, a rebuild and page refresh will be triggered whenever source or website code is updated.
 
 ## Testing
 

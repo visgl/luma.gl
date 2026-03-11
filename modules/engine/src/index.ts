@@ -83,14 +83,13 @@ export {Computation} from './compute/computation';
 export type {
   TextureCubeFace,
   TextureImageData,
-  TextureData,
   Texture1DData,
   Texture2DData,
   Texture3DData,
   TextureCubeData,
   TextureArrayData,
   TextureCubeArrayData
-} from './dynamic-texture/dynamic-texture';
+} from './dynamic-texture/texture-data';
 
 export type {DynamicTextureProps} from './dynamic-texture/dynamic-texture';
 export {DynamicTexture} from './dynamic-texture/dynamic-texture';

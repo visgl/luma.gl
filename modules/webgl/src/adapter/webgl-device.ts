@@ -67,6 +67,7 @@ import {
 } from '../context/parameters/unified-parameter-api';
 import {withGLParameters} from '../context/state-tracker/with-parameters';
 import {getWebGLExtension} from '../context/helpers/webgl-extensions';
+import {getWebGLContextData} from '../context/helpers/webgl-context-data';
 
 /** WebGPU style Device API for a WebGL context */
 export class WebGLDevice extends Device {
@@ -100,7 +101,7 @@ export class WebGLDevice extends Device {
   _constants: (TypedArray | null)[];
 
   /** State used by luma.gl classes - TODO - not used? */
-  readonly _extensions: GLExtensions = {};
+  readonly _extensions!: GLExtensions;
   _polyfilled: boolean = false;
 
   /** Instance of Spector.js (if initialized) */
@@ -161,6 +162,9 @@ export class WebGLDevice extends Device {
     if (props.powerPreference !== undefined) {
       webglContextAttributes.powerPreference = props.powerPreference;
     }
+    if (props.failIfMajorPerformanceCaveat !== undefined) {
+      webglContextAttributes.failIfMajorPerformanceCaveat = props.failIfMajorPerformanceCaveat;
+    }
 
     // Check if we should attach to an externally created context or create a new context
     const externalGLContext = this.props._handle as WebGL2RenderingContext | null;
@@ -212,8 +216,9 @@ export class WebGLDevice extends Device {
 
     // Instrument context
     (this.gl as any).device = this; // Update GL context: Link webgl context back to device
-    // TODO - remove, this is only used to detect debug contexts.
-    (this.gl as any)._version = 2; // Update GL context: Store WebGL version field on gl context (HACK to identify debug contexts)
+
+    const contextData = getWebGLContextData(this.gl);
+    this._extensions = contextData.extensions || (contextData.extensions = {});
 
     // initialize luma Device fields
     this.info = getDeviceInfo(this.gl, this._extensions);

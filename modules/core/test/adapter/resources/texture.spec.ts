@@ -46,6 +46,24 @@ test('Texture#createView returns a TextureView', async t => {
   t.end();
 });
 
+test('Texture#clone overrides size', async t => {
+  for (const device of await getTestDevices()) {
+    const tex = device.createTexture({format: 'rgba8unorm', width: 2, height: 2});
+
+    const cloned = tex.clone({width: 4, height: 4});
+
+    t.notEqual(cloned, tex, `${device.type}: clone returns a new texture`);
+    t.equal(cloned.width, 4, `${device.type}: cloned width is overridden`);
+    t.equal(cloned.height, 4, `${device.type}: cloned height is overridden`);
+    t.equal(tex.width, 2, `${device.type}: original width unchanged`);
+    t.equal(tex.height, 2, `${device.type}: original height unchanged`);
+
+    tex.destroy();
+    cloned.destroy();
+  }
+  t.end();
+});
+
 const RGBA8_DATA = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]);
 
 test('Texture#copyImageData updates correct cubemap face on WebGL', async t => {
@@ -78,6 +96,59 @@ test('Texture#copyImageData updates correct cubemap face on WebGL', async t => {
   tex.destroy();
 
   t.equal(calls[0], GL.TEXTURE_CUBE_MAP_NEGATIVE_X, 'updates specified face');
+  t.end();
+});
+
+test('Texture#copyImageData handles padded rows on WebGL', async t => {
+  const device = await getWebGLTestDevice();
+  if (!device) {
+    t.comment('WebGL not available');
+    t.end();
+    return;
+  }
+
+  const width = 2;
+  const height = 2;
+  const bytesPerPixel = 4;
+  const paddedBytesPerRow = 16;
+  const paddedData = new Uint8Array(paddedBytesPerRow * height);
+  const expected = new Uint8Array(width * height * bytesPerPixel);
+
+  for (let row = 0; row < height; row++) {
+    for (let col = 0; col < width; col++) {
+      const base = row * width + col;
+      const r = base + 1;
+      const g = base + 2;
+      const b = base + 3;
+      const a = base + 4;
+      const expectedOffset = (row * width + col) * bytesPerPixel;
+      expected[expectedOffset + 0] = r;
+      expected[expectedOffset + 1] = g;
+      expected[expectedOffset + 2] = b;
+      expected[expectedOffset + 3] = a;
+
+      const paddedOffset = row * paddedBytesPerRow + col * bytesPerPixel;
+      paddedData[paddedOffset + 0] = r;
+      paddedData[paddedOffset + 1] = g;
+      paddedData[paddedOffset + 2] = b;
+      paddedData[paddedOffset + 3] = a;
+    }
+  }
+
+  const texture = device.createTexture({width, height, format: 'rgba8unorm'});
+  texture.copyImageData({
+    data: paddedData,
+    width,
+    height,
+    bytesPerRow: paddedBytesPerRow,
+    rowsPerImage: height
+  });
+
+  const result = toUint8(texture.readDataSyncWebGL({width, height})).slice(0, expected.length);
+
+  t.deepEquals(result, expected, 'webgl: copyImageData uploads data with padded rows correctly');
+
+  texture.destroy();
   t.end();
 });
 

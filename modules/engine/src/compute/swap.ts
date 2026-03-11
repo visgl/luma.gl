@@ -12,12 +12,15 @@ import {Device, Resource, Buffer, Framebuffer, Texture} from '@luma.gl/core';
  * @note the two resources can be destroyed by calling `destroy()`
  */
 export class Swap<T extends Resource<any>> {
+  id: string;
+
   /** The current resource - usually the source for renders or computations */
   current: T;
   /** The next resource - usually the target/destination for transforms / computations */
   next: T;
 
-  constructor(props: {current: T; next: T}) {
+  constructor(props: {current: T; next: T; id?: string}) {
+    this.id = props.id || 'swap';
     this.current = props.current;
     this.next = props.next;
   }
@@ -41,14 +44,17 @@ export class SwapFramebuffers extends Swap<Framebuffer> {
   constructor(device: Device, props: FramebufferProps) {
     props = {...props};
 
+    const {width = 1, height = 1} = props;
+
     let colorAttachments = props.colorAttachments?.map(colorAttachment =>
       typeof colorAttachment !== 'string'
         ? colorAttachment
         : device.createTexture({
+            id: `${props.id}-texture-0`,
             format: colorAttachment,
             usage: Texture.SAMPLE | Texture.RENDER | Texture.COPY_SRC | Texture.COPY_DST,
-            width: 1,
-            height: 1
+            width,
+            height
           })
     );
 
@@ -58,11 +64,11 @@ export class SwapFramebuffers extends Swap<Framebuffer> {
       typeof colorAttachment !== 'string'
         ? colorAttachment
         : device.createTexture({
+            id: `${props.id}-texture-1`,
             format: colorAttachment,
-            usage:
-              Texture.TEXTURE | Texture.COPY_SRC | Texture.COPY_DST | Texture.RENDER_ATTACHMENT,
-            width: 1,
-            height: 1
+            usage: Texture.SAMPLE | Texture.RENDER | Texture.COPY_SRC | Texture.COPY_DST,
+            width,
+            height
           })
     );
 

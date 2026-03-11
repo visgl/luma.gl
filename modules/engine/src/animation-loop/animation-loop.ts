@@ -64,7 +64,7 @@ export class AnimationLoop {
 
   display: any;
 
-  needsRedraw: string | false = 'initialized';
+  private _needsRedraw: string | false = 'initialized';
 
   _initialized: boolean = false;
   _running: boolean = false;
@@ -120,8 +120,15 @@ export class AnimationLoop {
 
   /** Flags this animation loop as needing redraw */
   setNeedsRedraw(reason: string): this {
-    this.needsRedraw = this.needsRedraw || reason;
+    this._needsRedraw = this._needsRedraw || reason;
     return this;
+  }
+
+  /** Query redraw status. Clears the flag. */
+  needsRedraw(): false | string {
+    const reason = this._needsRedraw;
+    this._needsRedraw = false;
+    return reason;
   }
 
   setProps(props: MutableAnimationLoopProps): this {
@@ -333,7 +340,7 @@ export class AnimationLoop {
   }
 
   _clearNeedsRedraw(): void {
-    this.needsRedraw = false;
+    this._needsRedraw = false;
   }
 
   _setupFrame(): void {
@@ -406,7 +413,7 @@ export class AnimationLoop {
     this.animationProps.height = height;
     this.animationProps.aspect = aspect;
 
-    this.animationProps.needsRedraw = this.needsRedraw;
+    this.animationProps.needsRedraw = this._needsRedraw;
 
     // Update time properties
     this.animationProps.engineTime = Date.now() - this.animationProps.startTime;

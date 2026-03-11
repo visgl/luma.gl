@@ -401,7 +401,7 @@ export abstract class Device {
   /** True if this device has been reused during device creation (app has multiple references) */
   _reused: boolean = false;
   /** Used by other luma.gl modules to store data on the device */
-  _lumaData: {[key: string]: unknown} = {};
+  private _moduleData: Record<string, Record<string, unknown>> = {};
 
   // Capabilities
 
@@ -720,6 +720,15 @@ or create a device with the 'debug: true' prop.`;
     throw new Error('not implemented');
   }
 
+  // INTERNAL LUMA.GL METHODS
+
+  getModuleData<ModuleDataT extends Record<string, unknown>>(moduleName: string): ModuleDataT {
+    this._moduleData[moduleName] ||= {};
+    return this._moduleData[moduleName] as ModuleDataT;
+  }
+
+  // INTERNAL HELPERS
+
   // IMPLEMENTATION
 
   /** Helper to get the canvas context props */
@@ -764,6 +773,10 @@ or create a device with the 'debug: true' prop.`;
         if (props.data instanceof Uint32Array) {
           newProps.indexType = 'uint32';
         } else if (props.data instanceof Uint16Array) {
+          newProps.indexType = 'uint16';
+        } else if (props.data instanceof Uint8Array) {
+          // Convert uint8 to uint16 for WebGPU compatibility (WebGPU doesn't support uint8 indices)
+          newProps.data = new Uint16Array(props.data);
           newProps.indexType = 'uint16';
         }
       }

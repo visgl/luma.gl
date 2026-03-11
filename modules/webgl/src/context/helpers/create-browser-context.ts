@@ -26,63 +26,74 @@ export function createBrowserContext(
 ): WebGL2RenderingContext {
   // Try to extract any extra information about why context creation failed
   let errorMessage = '';
-  // const onCreateError = error => (errorMessage = error.statusMessage || errorMessage);
+  const onCreateError = (event: Event) => {
+    const statusMessage = (event as WebGLContextEvent).statusMessage;
+    if (statusMessage) {
+      errorMessage ||= statusMessage;
+    }
+  };
+  canvas.addEventListener('webglcontextcreationerror', onCreateError, false);
 
-  // Avoid multiple listeners?
-  // canvas.removeEventListener('webglcontextcreationerror', onCreateError, false);
-  // canvas.addEventListener('webglcontextcreationerror', onCreateError, false);
+  const allowSoftwareRenderer = webglContextAttributes.failIfMajorPerformanceCaveat !== true;
 
   const webglProps: WebGLContextAttributes = {
     preserveDrawingBuffer: true,
-    // failIfMajorPerformanceCaveat: true,
-    ...webglContextAttributes
+    ...webglContextAttributes,
+    // Always start by requesting a high-performance context.
+    failIfMajorPerformanceCaveat: true
   };
 
   // Create the desired context
   let gl: WebGL2RenderingContext | null = null;
 
-  // Create a webgl2 context
-  gl ||= canvas.getContext('webgl2', webglProps);
-  if (webglProps.failIfMajorPerformanceCaveat) {
-    errorMessage ||=
-      'Only software GPU is available. Set `failIfMajorPerformanceCaveat: false` to allow.';
-  }
+  try {
+    // Create a webgl2 context
+    gl ||= canvas.getContext('webgl2', webglProps);
+    if (!gl && webglProps.failIfMajorPerformanceCaveat) {
+      errorMessage ||=
+        'Only software GPU is available. Set `failIfMajorPerformanceCaveat: false` to allow.';
+    }
 
-  // Creation failed with failIfMajorPerformanceCaveat - Try a Software GPU
-  if (!gl && !webglContextAttributes.failIfMajorPerformanceCaveat) {
-    webglProps.failIfMajorPerformanceCaveat = false;
-    gl = canvas.getContext('webgl2', webglProps);
+    // Creation failed with failIfMajorPerformanceCaveat - Try a Software GPU
+    if (!gl && allowSoftwareRenderer) {
+      webglProps.failIfMajorPerformanceCaveat = false;
+      gl = canvas.getContext('webgl2', webglProps);
+      if (gl) {
+        // @ts-expect-error
+        gl.luma ||= {};
+        // @ts-expect-error
+        gl.luma.softwareRenderer = true;
+      }
+    }
+
+    if (!gl) {
+      gl = canvas.getContext('webgl', {}) as WebGL2RenderingContext;
+      if (gl) {
+        gl = null;
+        errorMessage ||= 'Your browser only supports WebGL1';
+      }
+    }
+
+    if (!gl) {
+      errorMessage ||= 'Your browser does not support WebGL';
+      throw new Error(`Failed to create WebGL context: ${errorMessage}`);
+    }
+
+    // Carefully extract and wrap callbacks to prevent addEventListener from rebinding them.
+    const {onContextLost, onContextRestored} = props;
+    canvas.addEventListener('webglcontextlost', (event: Event) => onContextLost(event), false);
+    canvas.addEventListener(
+      'webglcontextrestored',
+      (event: Event) => onContextRestored(event),
+      false
+    );
+
     // @ts-expect-error
     gl.luma ||= {};
-    // @ts-expect-error
-    gl.luma.softwareRenderer = true;
+    return gl;
+  } finally {
+    canvas.removeEventListener('webglcontextcreationerror', onCreateError, false);
   }
-
-  if (!gl) {
-    gl = canvas.getContext('webgl', {}) as WebGL2RenderingContext;
-    if (gl) {
-      gl = null;
-      errorMessage ||= 'Your browser only supports WebGL1';
-    }
-  }
-
-  if (!gl) {
-    errorMessage ||= 'Your browser does not support WebGL';
-    throw new Error(`Failed to create WebGL context: ${errorMessage}`);
-  }
-
-  // Carefully extract and wrap callbacks to prevent addEventListener from rebinding them.
-  const {onContextLost, onContextRestored} = props;
-  canvas.addEventListener('webglcontextlost', (event: Event) => onContextLost(event), false);
-  canvas.addEventListener(
-    'webglcontextrestored',
-    (event: Event) => onContextRestored(event),
-    false
-  );
-
-  // @ts-expect-error
-  gl.luma ||= {};
-  return gl;
 }
 
 /* TODO - can we call this asynchronously to catch the error events?

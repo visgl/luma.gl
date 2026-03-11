@@ -65,7 +65,7 @@ model.setUniforms({
 
 ### addChannel([props: Object]) : number
 
-Add a new channel to the timeline. Returns a handle to the channel that can be use for subsequent interactions. Valid propeties are:
+Add a new channel to the timeline. Returns a handle to the channel that can be use for subsequent interactions. Valid properties are:
 
 - `rate` the speed of the channel's time relative to timeline time.
 - `delay` offset into timeline time at which channel time starts elapsing, in timeline time units.
@@ -103,7 +103,7 @@ Reset timeline time to `0`.
 ### attachAnimation(animation: Object, [channelHandle : number]) : number
 
 Attach an animation object (can be any object with a `setTime` method, e.g. [KeyFrames](/docs/api-reference/engine/animation/key-frames), `GLTFAnimator`) to the timeline, optionally attached to a specific channel referenced by `channelHandle`.
-The animation object's time will be updated whenever the timeline updates. Returns a handle that can be used to reference the animation attachement.
+The animation object's time will be updated whenever the timeline updates. Returns a handle that can be used to reference the animation attachment.
 
 ### detachAnimation(handle : number)
 

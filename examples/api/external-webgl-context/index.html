@@ -1,0 +1,50 @@
+<!doctype html>
+<html>
+  <head>
+    <style>
+      html,
+      body,
+      #map-container {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+      }
+
+      #map-container {
+        position: absolute;
+        inset: 0;
+      }
+
+      #status {
+        position: absolute;
+        top: 12px;
+        left: 12px;
+        padding: 12px;
+        background: rgba(0, 0, 0, 0.65);
+        color: white;
+        font-family: Arial, sans-serif;
+        border-radius: 6px;
+        max-width: 320px;
+        z-index: 1;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="status">Connect luma.gl to the Mapbox WebGL context.</div>
+    <div id="map-container"></div>
+    <script type="module">
+      import initializeExternalWebGLContext from './app.ts'
+
+      initializeExternalWebGLContext({
+        container: document.getElementById('map-container')
+      }).catch(error => {
+        const status = document.getElementById('status')
+        if (status) {
+          status.textContent = error.message
+          status.style.background = 'rgba(128, 0, 0, 0.75)'
+        }
+      })
+    </script>
+  </body>
+</html>
