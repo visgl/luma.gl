@@ -268,9 +268,14 @@ export abstract class CanvasContext {
    * (resizing clears the drawing buffer)!
    */
   setDrawingBufferSize(width: number, height: number) {
+    width = Math.floor(width);
+    height = Math.floor(height);
+    if (this.drawingBufferWidth === width && this.drawingBufferHeight === height) {
+      return;
+    }
     // TODO(ib) - temporarily makes drawingBufferWidth/Height out of sync with canvas.width/height, could that cause issues?
-    this.drawingBufferWidth = Math.floor(width);
-    this.drawingBufferHeight = Math.floor(height);
+    this.drawingBufferWidth = width;
+    this.drawingBufferHeight = height;
     this._needsDrawingBufferResize = true;
   }
 

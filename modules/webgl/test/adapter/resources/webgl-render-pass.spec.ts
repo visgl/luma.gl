@@ -56,3 +56,31 @@ test('WEBGLRenderPass#drawBuffers for default framebuffer', async t => {
   device.destroy();
   t.end();
 });
+
+test('WEBGLRenderPass flushes deferred default canvas resize', async t => {
+  const device = await getWebGLTestDevice();
+  const canvasContext = device.getDefaultCanvasContext();
+  const canvas = canvasContext.canvas as HTMLCanvasElement;
+  const {gl} = device;
+
+  canvas.width = 300;
+  canvas.height = 150;
+  canvasContext.setDrawingBufferSize(640, 480);
+
+  t.equal(canvas.width, 300, 'canvas width is unchanged before default render pass');
+  t.equal(canvas.height, 150, 'canvas height is unchanged before default render pass');
+
+  const renderPass = new WEBGLRenderPass(device, {});
+
+  t.equal(canvas.width, 640, 'default render pass flushes deferred canvas width resize');
+  t.equal(canvas.height, 480, 'default render pass flushes deferred canvas height resize');
+  t.deepEqual(
+    gl.getParameter(GL.VIEWPORT),
+    new Int32Array([0, 0, 640, 480]),
+    'viewport uses flushed drawing buffer size'
+  );
+
+  renderPass.end();
+  device.destroy();
+  t.end();
+});
