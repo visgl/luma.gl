@@ -3,6 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {Device, Shader, ShaderProps, log} from '@luma.gl/core';
+import type {EngineModuleState} from '../types';
 
 /** Manages a cached pool of Shaders for reuse. */
 export class ShaderFactory {
@@ -10,8 +11,9 @@ export class ShaderFactory {
 
   /** Returns the default ShaderFactory for the given {@link Device}, creating one if necessary. */
   static getDefaultShaderFactory(device: Device): ShaderFactory {
-    device._lumaData['defaultShaderFactory'] ||= new ShaderFactory(device);
-    return device._lumaData['defaultShaderFactory'] as ShaderFactory;
+    const moduleData = device.getModuleData<EngineModuleState>('@luma.gl/engine');
+    moduleData.defaultShaderFactory ||= new ShaderFactory(device);
+    return moduleData.defaultShaderFactory;
   }
 
   public readonly device: Device;

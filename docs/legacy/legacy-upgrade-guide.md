@@ -116,10 +116,10 @@ Following member function of `Framebuffer` and `Texture` classes are no longer s
 | -------------------------------- | -------------------- |
 | `Framebuffer.readPixels`         | `readPixelsToArray`  |
 | `Framebuffer.readPixelsToBuffer` | `readPixelsToBuffer` |
-| `Frambuffer.copyToDataUrl`       | `copyToDataUrl`      |
-| `Frambuffer.copyToImage`         | `copyToImage`        |
-| `Frambuffer.copyToTexture`       | `copyToTexture`      |
-| `Frambuffer.blit`                | `blit`               |
+| `Framebuffer.copyToDataUrl`       | `copyToDataUrl`      |
+| `Framebuffer.copyToImage`         | `copyToImage`        |
+| `Framebuffer.copyToTexture`       | `copyToTexture`      |
+| `Framebuffer.blit`                | `blit`               |
 | `Texture.copyFramebuffer`        | `copyToTexture`      |
 
 Parameters have also changed in some cases, see separate section.
@@ -162,7 +162,7 @@ Additions:
 
 #### Geometry
 
-The `Geometry` class has been simplified and is now a conceptually "immutable" class that holds typed arrays and accessor metatadata describing attributes for a geometry.
+The `Geometry` class has been simplified and is now a conceptually "immutable" class that holds typed arrays and accessor metadata describing attributes for a geometry.
 
 | Removal                                               | Replacement               | Reason for Change                 |
 | ----------------------------------------------------- | ------------------------- | --------------------------------- |

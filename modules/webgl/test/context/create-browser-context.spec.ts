@@ -94,7 +94,7 @@ test('createBrowserContext falls back to software renderer', t => {
     (gl.luma as {softwareRenderer?: boolean} | undefined)?.softwareRenderer,
     true,
     'marks context as software renderer'
-  )
+  );
   t.equals(
     mock.getListenerCount('webglcontextcreationerror'),
     0,

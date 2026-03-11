@@ -61,7 +61,7 @@ v9.1 continues to build out WebGPU support. Some additional deprecations and bre
 | `luma.registerDevices()`      | Deprecated | [`luma.registerAdapters()`][adapters].       | Adapters provide a cleaner way to work with GPU backends.       |
 | `DeviceProps.canvas`          | Moved      | [`DeviceProps.createCanvasContext`][canvas]. | Move canvas related props to `props.createCanvasContext: {}`.   |
 | `DeviceProps.<webgl options>` | Moved      | [`DeviceProps.webgl.<options>`][webgl].      | Move canvas related props to `props.webgl: {}`.                 |
-| `DeviceProps.break`           | Removed    |                                              | Use an alterative [debugger][debugging]                         |
+| `DeviceProps.break`           | Removed    |                                              | Use an alternative [debugger][debugging]                         |
 | `TextureProps.data` (Promise) | Removed    | `AsyncTexture` class                         | `Texture` no longer accept promises. Use `AsyncTexture`         |
 | `Parameters.blend`            | New        |                                              | Explicit activation of color blending                           |
 | `triangle-fan-webgl` topology | Removed    | `triangle-strip`.                            | Reorganize your geometries                                      |

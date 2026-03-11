@@ -223,8 +223,6 @@ export class WebGLDevice extends Device {
     // Instrument context
     const contextData = getWebGLContextData(this.gl);
     contextData.device = this; // Update GL context: Link webgl context back to device
-    // TODO - remove, this is only used to detect debug contexts.
-    (this.gl as any)._version = 2; // Update GL context: Store WebGL version field on gl context (HACK to identify debug contexts)
 
     // initialize luma Device fields
     this.info = getDeviceInfo(this.gl, this._extensions);

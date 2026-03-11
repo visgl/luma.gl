@@ -13,6 +13,7 @@
  
 ## Code style
 - TypeScript strict mode
-- Single quotes, no semicolons
+- We end lines with semicolons
+- Single quotes
 - Never abbreviate variables, always type out the full name in camelCase (variables, functions, fields), PascalCase (types), CAPITAL_CASE (constant)
 - Prefer verbNoun structure for function and method names.
