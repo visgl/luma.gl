@@ -10,7 +10,7 @@ import type {
   VaryingBinding,
   AttributeShaderType
 } from '@luma.gl/core';
-import {getVariableShaderTypeInfo} from '@luma.gl/core';
+import {getVariableShaderTypeInfo, assertDefined} from '@luma.gl/core';
 
 import {GL, GLUniformType} from '@luma.gl/constants';
 import {
