@@ -104,6 +104,9 @@ function getDebugContext(
   // Store the debug context
   data.realContext = gl;
   data.debugContext = debugContext;
+  // Share the context metadata object with the debug context so lookups stay consistent.
+  // @ts-expect-error Accesses debug context internals
+  debugContext.luma = data;
   debugContext.debug = true;
 
   // Return it

@@ -221,7 +221,7 @@ export class WebGLDevice extends Device {
     this.spectorJS = initializeSpectorJS({...this.props, gl: this.handle});
 
     // Instrument context
-    const contextData = getWebGLContextData(this.gl);
+    const contextData = getWebGLContextData(this.handle);
     contextData.device = this; // Update GL context: Link webgl context back to device
 
     // initialize luma Device fields
@@ -273,7 +273,7 @@ export class WebGLDevice extends Device {
     // Therefore we must do nothing in destroy() if props._reuseDevices is true
     if (!this.props._reuseDevices && !this._reused) {
       // Delete the reference to the device that we store on the WebGL context
-      const contextData = getWebGLContextData(this.gl);
+      const contextData = getWebGLContextData(this.handle);
       contextData.device = null;
     }
   }
