@@ -230,11 +230,7 @@ export class WebGLDevice extends Device {
     // initialize luma Device fields
     this.info = getDeviceInfo(this.gl, this.extensions);
     this.limits = new WebGLDeviceLimits(this.gl);
-    this.features = new WebGLDeviceFeatures(
-      this.gl,
-      this.extensions,
-      this.props._disabledFeatures
-    );
+    this.features = new WebGLDeviceFeatures(this.gl, this.extensions, this.props._disabledFeatures);
     if (this.props._initializeFeatures) {
       this.features.initializeFeatures();
     }

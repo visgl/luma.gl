@@ -246,7 +246,11 @@ test('WebGLStateTracker#tracks metadata on gl.lumaState', async t => {
 
   const state = WebGLStateTracker.get(gl);
   t.ok(state, 'WebGLStateTracker.get returns a state tracker');
-  t.equal((gl as {lumaState?: WebGLStateTracker}).lumaState, state, 'tracker is stored on gl.lumaState');
+  t.equal(
+    (gl as {lumaState?: WebGLStateTracker}).lumaState,
+    state,
+    'tracker is stored on gl.lumaState'
+  );
   // @ts-expect-error
   t.equal((gl as {state?: unknown}).state, undefined, 'legacy gl.state metadata slot is not used');
   t.equal(

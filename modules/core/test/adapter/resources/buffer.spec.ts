@@ -273,7 +273,11 @@ test('Buffer#mapAndReadAsync (WebGPU alignment cases)', async t => {
     usage: Buffer.COPY_DST | Buffer.COPY_SRC
   });
 
-  const alignmentCases: Array<{byteOffset: number; byteLength: number; expectedLifetime: 'mapped' | 'copied'}> = [
+  const alignmentCases: Array<{
+    byteOffset: number;
+    byteLength: number;
+    expectedLifetime: 'mapped' | 'copied';
+  }> = [
     {byteOffset: 0, byteLength: 8, expectedLifetime: 'mapped'},
     {byteOffset: 0, byteLength: 3, expectedLifetime: 'copied'},
     {byteOffset: 2, byteLength: 4, expectedLifetime: 'copied'},
@@ -288,15 +292,23 @@ test('Buffer#mapAndReadAsync (WebGPU alignment cases)', async t => {
       alignmentCase.byteOffset,
       alignmentCase.byteOffset + alignmentCase.byteLength
     );
-    const result = await buffer.mapAndReadAsync((arrayBuffer, lifetime) => {
-      t.equal(arrayBuffer.byteLength, alignmentCase.byteLength, 'callback receives requested byte range');
-      t.equal(
-        lifetime,
-        alignmentCase.expectedLifetime,
-        `lifetime is ${alignmentCase.expectedLifetime} for offset ${alignmentCase.byteOffset}, length ${alignmentCase.byteLength}`
-      );
-      return new Uint8Array(arrayBuffer.slice());
-    }, alignmentCase.byteOffset, alignmentCase.byteLength);
+    const result = await buffer.mapAndReadAsync(
+      (arrayBuffer, lifetime) => {
+        t.equal(
+          arrayBuffer.byteLength,
+          alignmentCase.byteLength,
+          'callback receives requested byte range'
+        );
+        t.equal(
+          lifetime,
+          alignmentCase.expectedLifetime,
+          `lifetime is ${alignmentCase.expectedLifetime} for offset ${alignmentCase.byteOffset}, length ${alignmentCase.byteLength}`
+        );
+        return new Uint8Array(arrayBuffer.slice());
+      },
+      alignmentCase.byteOffset,
+      alignmentCase.byteLength
+    );
 
     t.deepEqual(
       result,
