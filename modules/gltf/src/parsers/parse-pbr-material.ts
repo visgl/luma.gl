@@ -255,6 +255,7 @@ function parsePbrMetallicRoughness(
 }
 
 /** Create a texture from a glTF texture/sampler/image combo and add it to bindings */
+// eslint-disable-next-line max-params
 function addTexture(
   device: Device,
   gltfTexture: GLTFTexture,
