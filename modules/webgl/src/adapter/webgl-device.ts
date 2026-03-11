@@ -195,6 +195,9 @@ export class WebGLDevice extends Device {
           `Not creating a new Device, instead returning a reference to Device ${device.id} already attached to WebGL context`,
           device
         )();
+        // Destroy the orphaned canvas context that was created above (line 149)
+        // to prevent its ResizeObserver from firing callbacks with undefined device
+        this.canvasContext.destroy();
         device._reused = true;
         return device;
       }
