@@ -3,6 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {Device, Texture} from '@luma.gl/core';
+import type {GLTFSampler} from '@loaders.gl/gltf';
 import {GL} from '@luma.gl/constants';
 
 import {log} from '@luma.gl/core';
@@ -250,8 +251,10 @@ function addTexture(
   const gltfSampler = {
     wrapS: 10497, // default REPEAT S (U) wrapping mode.
     wrapT: 10497, // default REPEAT T (V) wrapping mode.
+    minFilter: 9729, // default LINEAR filtering
+    magFilter: 9729, // default LINEAR filtering
     ...gltfTexture?.texture?.sampler
-  } as any;
+  } as GLTFSampler;
 
   const texture: Texture = device.createTexture({
     id: gltfTexture.uniformName || gltfTexture.id,
