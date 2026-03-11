@@ -15,16 +15,18 @@ export class WebGPUBuffer extends Buffer {
   readonly device: WebGPUDevice;
   readonly handle: GPUBuffer;
   readonly byteLength: number;
+  readonly paddedByteLength: number;
 
   constructor(device: WebGPUDevice, props: BufferProps) {
     super(device, props);
     this.device = device;
 
     this.byteLength = props.byteLength || props.data?.byteLength || 0;
+    this.paddedByteLength = Math.ceil(this.byteLength / 4) * 4;
     const mappedAtCreation = Boolean(this.props.onMapped || props.data);
 
     // WebGPU buffers must be aligned to 4 bytes
-    const size = Math.ceil(this.byteLength / 4) * 4;
+    const size = this.paddedByteLength;
 
     this.device.pushErrorScope('out-of-memory');
     this.device.pushErrorScope('validation');
@@ -102,7 +104,7 @@ export class WebGPUBuffer extends Buffer {
     // Unless the application created and supplied a mappable buffer, a staging buffer is needed
     const isMappable = (this.usage & Buffer.MAP_WRITE) !== 0;
     const mappableBuffer: WebGPUBuffer | null = !isMappable
-      ? this._getMappableBuffer(Buffer.MAP_WRITE | Buffer.COPY_SRC, 0, this.byteLength)
+      ? this._getMappableBuffer(Buffer.MAP_WRITE | Buffer.COPY_SRC, 0, this.paddedByteLength)
       : null;
 
     const writeBuffer = mappableBuffer || this;
@@ -147,18 +149,33 @@ export class WebGPUBuffer extends Buffer {
     byteOffset = 0,
     byteLength = this.byteLength - byteOffset
   ): Promise<T> {
-    if (byteOffset % 8 !== 0) {
-      throw new Error('byteOffset must be multiple of 8');
+    const requestedEnd = byteOffset + byteLength;
+    if (requestedEnd > this.byteLength) {
+      throw new Error('Mapping range exceeds buffer size');
     }
-    const alignedByteLength = Math.ceil(byteLength / 4) * 4;
-    if (byteOffset + alignedByteLength > this.handle.size) {
+
+    let mappedByteOffset = byteOffset;
+    let mappedByteLength = byteLength;
+    let sliceByteOffset = 0;
+    let lifetime: 'mapped' | 'copied' = 'mapped';
+
+    // WebGPU mapAsync requires 8-byte offsets and 4-byte lengths.
+    if (byteOffset % 8 !== 0 || byteLength % 4 !== 0) {
+      mappedByteOffset = Math.floor(byteOffset / 8) * 8;
+      const alignedEnd = Math.ceil(requestedEnd / 4) * 4;
+      mappedByteLength = alignedEnd - mappedByteOffset;
+      sliceByteOffset = byteOffset - mappedByteOffset;
+      lifetime = 'copied';
+    }
+
+    if (mappedByteOffset + mappedByteLength > this.paddedByteLength) {
       throw new Error('Mapping range exceeds buffer size');
     }
 
     // Unless the application created and supplied a mappable buffer, a staging buffer is needed
     const isMappable = (this.usage & Buffer.MAP_READ) !== 0;
     const mappableBuffer: WebGPUBuffer | null = !isMappable
-      ? this._getMappableBuffer(Buffer.MAP_READ | Buffer.COPY_DST, 0, this.byteLength)
+      ? this._getMappableBuffer(Buffer.MAP_READ | Buffer.COPY_DST, 0, this.paddedByteLength)
       : null;
 
     const readBuffer = mappableBuffer || this;
@@ -168,14 +185,16 @@ export class WebGPUBuffer extends Buffer {
     try {
       await this.device.handle.queue.onSubmittedWorkDone();
       if (mappableBuffer) {
-        mappableBuffer._copyBuffer(this, byteOffset, alignedByteLength);
+        mappableBuffer._copyBuffer(this, mappedByteOffset, mappedByteLength);
       }
-      await readBuffer.handle.mapAsync(GPUMapMode.READ, byteOffset, alignedByteLength);
-      const arrayBuffer = readBuffer.handle
-        .getMappedRange(byteOffset, alignedByteLength)
-        .slice(0, byteLength);
+      await readBuffer.handle.mapAsync(GPUMapMode.READ, mappedByteOffset, mappedByteLength);
+      const arrayBuffer = readBuffer.handle.getMappedRange(mappedByteOffset, mappedByteLength);
+      const mappedRange =
+        lifetime === 'mapped'
+          ? arrayBuffer
+          : arrayBuffer.slice(sliceByteOffset, sliceByteOffset + byteLength);
       // eslint-disable-next-line @typescript-eslint/await-thenable
-      const result = await callback(arrayBuffer, 'mapped');
+      const result = await callback(mappedRange, lifetime);
       readBuffer.handle.unmap();
       return result;
     } finally {

@@ -18,7 +18,7 @@ export type {GLParameters};
 /**
  * Sets any GL parameter regardless of function (gl.blendMode, ...)
  *
- * @note requires a `cache` object to be set on the context (gl.state.cache)
+ * @note requires a `cache` object to be set on the context (lumaState.cache)
  * This object is used to fill in any missing values for composite setter functions
  */
 export function setGLParameters(gl: WebGL2RenderingContext, parameters: GLParameters): void {
@@ -58,7 +58,7 @@ export function setGLParameters(gl: WebGL2RenderingContext, parameters: GLParame
   // But it is too inconvenient to always require a cache parameter here.
   // This is the ONLY external dependency in this module/
   // @ts-expect-error
-  const cache = gl.state && gl.state.cache;
+  const cache = gl.lumaState?.cache;
   if (cache) {
     for (const key in compositeSetters) {
       // TODO - avoid calling composite setters if values have not changed.

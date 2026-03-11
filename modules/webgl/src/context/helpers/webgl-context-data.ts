@@ -8,6 +8,8 @@ import type {GLExtensions} from '@luma.gl/constants';
  * Stores luma.gl specific state associated with a context
  */
 export interface WebGLContextData {
+  /** This type is used by lower level code that is not aware of the Device type */
+  device?: unknown;
   _polyfilled: boolean;
   extensions: GLExtensions;
   softwareRenderer?: boolean;
@@ -21,8 +23,10 @@ export function getWebGLContextData(gl: WebGL2RenderingContext): WebGLContextDat
   // @ts-expect-error
   const contextData = (gl.luma as WebGLContextData | null) || {
     _polyfilled: false,
-    extensions: {}
+    extensions: {},
+    softwareRenderer: false
   };
+
   contextData._polyfilled ??= false;
   contextData.extensions ||= {};
 
