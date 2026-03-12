@@ -391,7 +391,11 @@ export abstract class CanvasContext {
     }
 
     const entry = entries.find(entry_ => entry_.target === this.canvas);
-    const contentBoxSize = assertDefined(entry?.contentBoxSize?.[0]);
+    if (!entry) {
+      return;
+    }
+
+    const contentBoxSize = assertDefined(entry.contentBoxSize?.[0]);
     // Update CSS size using content box size
     this.cssWidth = contentBoxSize.inlineSize;
     this.cssHeight = contentBoxSize.blockSize;
@@ -402,12 +406,13 @@ export abstract class CanvasContext {
     // Use the most accurate drawing buffer size information the current browser can provide
     // Note: content box sizes are guaranteed to be integers
     // Note: Safari falls back to contentBoxSize
-    const devicePixelContentBoxSize = assertDefined(entry?.devicePixelContentBoxSize?.[0]);
     const devicePixelWidth =
-      devicePixelContentBoxSize.inlineSize || contentBoxSize.inlineSize * devicePixelRatio;
+      entry.devicePixelContentBoxSize?.[0]?.inlineSize ||
+      contentBoxSize.inlineSize * devicePixelRatio;
 
     const devicePixelHeight =
-      devicePixelContentBoxSize.blockSize || contentBoxSize.blockSize * devicePixelRatio;
+      entry.devicePixelContentBoxSize?.[0]?.blockSize ||
+      contentBoxSize.blockSize * devicePixelRatio;
 
     // Make sure we don't overflow the maximum supported texture size
     const [maxDevicePixelWidth, maxDevicePixelHeight] = this.getMaxDrawingBufferSize();

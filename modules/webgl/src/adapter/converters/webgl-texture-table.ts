@@ -308,6 +308,13 @@ export function getTextureFormatCapabilitiesWebGL(
     supported = supported && Boolean(getWebGLExtension(gl, webglFormatInfo.x, extensions));
   }
 
+  // WebGL2 exposes STENCIL_INDEX8 for renderbuffers, but standalone stencil textures are not
+  // valid texture storage targets. Report them as unsupported texture formats to avoid invalid
+  // constructor paths and misleading capability checks.
+  if (formatSupport.format === 'stencil8') {
+    supported = false;
+  }
+
   return {
     format: formatSupport.format,
     // @ts-ignore
