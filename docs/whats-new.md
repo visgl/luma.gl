@@ -53,6 +53,8 @@ Production quality WebGPU backend
 
 - `DynamicTexture`
   - now supports mipmap generation for WebGPU textures
+  - owns WebGPU mipmap generation for `2d`, `2d-array`, `cube`, `cube-array`, and `3d` textures
+  - throws explicit runtime errors when a WebGPU texture format does not support the required mipmap-generation capabilities
 
 **@luma.gl/effects**
 
