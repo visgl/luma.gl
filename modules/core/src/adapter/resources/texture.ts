@@ -6,7 +6,8 @@ import {type TypedArray} from '@math.gl/types';
 import {type Device} from '../device';
 import {
   type TextureFormat,
-  type TextureMemoryLayout
+  type TextureMemoryLayout,
+  type TextureFormatInfo
 } from '../../shadertypes/textures/texture-formats';
 import {type ExternalImage} from '../../image-utils/image-types';
 import {type TextureView, type TextureViewProps} from './texture-view';
@@ -475,6 +476,60 @@ export abstract class Texture extends Resource<TextureProps> {
       mipLevelSize.depthOrArrayLayers - options.z
     );
     return options;
+  }
+
+  protected _getSupportedColorReadOptions(
+    options_: TextureReadOptions
+  ): Required<TextureReadOptions> {
+    const options = this._normalizeTextureReadOptions(options_);
+    const formatInfo = textureFormatDecoder.getInfo(this.format);
+
+    this._validateColorReadAspect(options);
+    this._validateColorReadFormat(formatInfo);
+
+    switch (this.dimension) {
+      case '2d':
+      case 'cube':
+      case '2d-array':
+      case '3d':
+        return options;
+
+      default:
+        throw new Error(`${this} color readback does not support ${this.dimension} textures`);
+    }
+  }
+
+  protected _validateColorReadAspect(options: Required<TextureReadOptions>): void {
+    if (options.aspect !== 'all') {
+      throw new Error(`${this} color readback only supports aspect 'all'`);
+    }
+  }
+
+  protected _validateColorReadFormat(formatInfo: TextureFormatInfo): void {
+    if (formatInfo.compressed) {
+      throw new Error(
+        `${this} color readback does not support compressed formats (${this.format})`
+      );
+    }
+
+    switch (formatInfo.attachment) {
+      case 'color':
+        return;
+
+      case 'depth':
+        throw new Error(`${this} color readback does not support depth formats (${this.format})`);
+
+      case 'stencil':
+        throw new Error(`${this} color readback does not support stencil formats (${this.format})`);
+
+      case 'depth-stencil':
+        throw new Error(
+          `${this} color readback does not support depth-stencil formats (${this.format})`
+        );
+
+      default:
+        throw new Error(`${this} color readback does not support format ${this.format}`);
+    }
   }
 
   _normalizeTextureWriteOptions(options_: TextureWriteOptions): Required<TextureWriteOptions> {

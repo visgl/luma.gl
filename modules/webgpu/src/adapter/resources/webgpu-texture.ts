@@ -141,18 +141,10 @@ export class WebGPUTexture extends Texture {
   }
 
   override readBuffer(options: TextureReadOptions = {}, buffer?: Buffer): Buffer {
-    const {
-      x = 0,
-      y = 0,
-      z = 0,
-      width = this.width,
-      height = this.height,
-      depthOrArrayLayers = this.depth,
-      mipLevel = 0,
-      aspect = 'all'
-    } = options;
+    const {x, y, z, width, height, depthOrArrayLayers, mipLevel, aspect} =
+      this._getSupportedColorReadOptions(options);
 
-    const layout = this.computeMemoryLayout(options);
+    const layout = this.computeMemoryLayout({x, y, z, width, height, depthOrArrayLayers, mipLevel});
 
     const {bytesPerRow, rowsPerImage, byteLength} = layout;
 
@@ -163,6 +155,13 @@ export class WebGPUTexture extends Texture {
         byteLength,
         usage: Buffer.COPY_DST | Buffer.MAP_READ
       });
+
+    if (readBuffer.byteLength < byteLength) {
+      throw new Error(
+        `${this} readBuffer target is too small (${readBuffer.byteLength} < ${byteLength})`
+      );
+    }
+
     const gpuReadBuffer = readBuffer.handle as GPUBuffer;
 
     // Record commands to copy from the texture to the buffer.

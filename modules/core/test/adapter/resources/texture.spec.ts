@@ -461,6 +461,63 @@ test('Texture upload methods honor explicit byteOffset and bytesPerRow', async t
   t.end();
 });
 
+test('Texture upload methods interpret byteOffset as bytes for typed array uploads', async t => {
+  for (const device of await getTestDevices()) {
+    if (!device.isTextureFormatSupported('rgba16uint')) {
+      t.comment(`${device.type}: skipping rgba16uint byteOffset regression test`);
+      continue;
+    }
+
+    for (const method of TEXTURE_UPLOAD_METHODS) {
+      const texture = device.createTexture({
+        width: 1,
+        height: 1,
+        format: 'rgba16uint',
+        usage: Texture.COPY_DST | Texture.COPY_SRC
+      });
+      const sourceData = new Uint16Array([10, 0, 0, 65535, 20, 0, 0, 65535, 30, 0, 0, 65535]);
+      const options = createTextureWriteOptions({
+        width: 1,
+        height: 1,
+        byteOffset: 8
+      });
+
+      let uploadBuffer: Buffer | null = null;
+      switch (method) {
+        case 'writeData':
+          texture.writeData(sourceData, options);
+          break;
+
+        case 'copyImageData':
+          texture.copyImageData({data: sourceData, ...options});
+          break;
+
+        case 'writeBuffer':
+          uploadBuffer = device.createBuffer({data: sourceData, usage: Buffer.COPY_SRC});
+          texture.writeBuffer(uploadBuffer, options);
+          break;
+
+        default:
+          throw new Error(method);
+      }
+
+      const result = await readTexturePixels(texture, {width: 1, height: 1});
+      const pixel = Array.from(new Uint16Array(result.buffer, result.byteOffset, 4));
+
+      t.deepEquals(
+        pixel,
+        [20, 0, 0, 65535],
+        `${device.type}: ${method} converts byteOffset to typed-array element offset`
+      );
+
+      uploadBuffer?.destroy();
+      texture.destroy();
+    }
+  }
+
+  t.end();
+});
+
 test('Texture upload methods target cube faces and array layers consistently', async t => {
   for (const device of await getTestDevices()) {
     for (const method of TEXTURE_UPLOAD_METHODS) {
