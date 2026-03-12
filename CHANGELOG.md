@@ -1,6 +1,11 @@
 # luma.gl CHANGELOG
 
-## v9.2
+## v9.3
+
+### v9.3.0-alpha.4
+
+- feat(engine): Programmatic mipmap generation for WebGPU (#2272)
+- fix(core): Prevent crash in CanvasContext with undefined entry.contentBoxSize  (#2524)
 
 ### v9.3.0-alpha.3
 
