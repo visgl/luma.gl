@@ -130,8 +130,14 @@ export abstract class Buffer extends Resource<BufferProps> {
     byteOffset: number,
     byteLength: number
   ): void {
-    const arrayBufferView = ArrayBuffer.isView(data) ? data : null;
-    const arrayBuffer: ArrayBufferLike | null = arrayBufferView ? arrayBufferView.buffer : data;
+    let arrayBufferView: ArrayBufferView | null = null;
+    let arrayBuffer: ArrayBufferLike | null;
+    if (ArrayBuffer.isView(data)) {
+      arrayBufferView = data;
+      arrayBuffer = data.buffer;
+    } else {
+      arrayBuffer = data;
+    }
     const debugDataLength = Math.min(
       data ? data.byteLength : byteLength,
       Buffer.DEBUG_DATA_MAX_LENGTH
