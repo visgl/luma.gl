@@ -6,6 +6,7 @@ import {LumaExample} from './react-luma';
 import AnimationApp from '../../examples/api/animation/app';
 import CubemapApp from '../../examples/api/cubemap/app';
 import Texture3DApp from '../../examples/api/texture-3d/app';
+import {renderToDOM as renderTexturesExample} from '../../examples/api/textures/app';
 import initializeExternalWebGLContext, {
   ExternalWebGLContextHandle
 } from '../../examples/api/external-webgl-context/app';
@@ -98,6 +99,25 @@ export const Texture3DExample: React.FC = props => (
     {...props}
   />
 );
+
+export const TexturesExample: React.FC = () => {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) {
+      return undefined;
+    }
+
+    return renderTexturesExample(container);
+  }, []);
+
+  return (
+    <div style={{position: 'relative', width: '100%', minHeight: '720px'}}>
+      <div ref={containerRef} />
+    </div>
+  );
+};
 
 export const ExternalWebGLContextExample: React.FC = () => {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -273,4 +293,3 @@ export const TransformExample: React.FC = props => (
     {...props}
   />
 );
-

@@ -8,8 +8,17 @@ export type TextureFormatsInfo = {
   availability?: string;
   link?: string;
   codeSample?: string;
-  images: {format: string; src: string}[];
+  images: TextureImageInfo[];
 };
+
+export type TextureImageInfo = {
+  format?: string;
+  name?: string;
+  src: string;
+  useBasis?: boolean;
+};
+
+export type TextureSource = File | TextureImageInfo;
 
 export const IMAGES_DATA: TextureFormatsInfo[] = [
   {

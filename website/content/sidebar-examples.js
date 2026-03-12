@@ -19,7 +19,8 @@ const sidebars = {
       label: 'API',
       items: [
         'api/animation',
-        'api/cubemap'
+        'api/cubemap',
+        'api/textures'
         // 'api/texture-3d'
       ]
     },

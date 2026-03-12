@@ -1,30 +1,28 @@
-// loaders.gl
+// luma.gl
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
 import React from 'react';
-import {createRoot} from 'react-dom/client';
+import {createRoot, type Root} from 'react-dom/client';
 
-import {luma, Device} from '@luma.gl/core';
-import {WebGLDevice} from '@luma.gl/webgl';
+import {luma} from '@luma.gl/core';
+import {webgl2Adapter, WebGLDevice} from '@luma.gl/webgl';
 import {Model} from '@luma.gl/engine';
 
 import {IMAGES_DATA, TextureFormatsInfo} from './textures-data';
 import {CompressedTexture, createModel} from './components/compressed-texture';
 import {TextureUploader} from './components/textures-uploader';
 
-type AppProps = {};
+type AppProps = Record<string, never>;
 
 type AppState = {
   canvas: HTMLCanvasElement | null;
-  device: Device | null;
+  device: WebGLDevice | null;
   model: Model | null;
 };
 
 export default class App extends React.PureComponent<AppProps, AppState> {
-  device: Device;
-
-  constructor(props) {
+  constructor(props: AppProps) {
     super(props);
 
     this.state = {
@@ -35,34 +33,40 @@ export default class App extends React.PureComponent<AppProps, AppState> {
   }
 
   async componentDidMount() {
-    luma.registerDevices([WebGLDevice]);
-
-    // eslint-disable-next-line no-undef
     const canvas = document.createElement('canvas');
     canvas.width = 256;
     canvas.height = 256;
 
-    const device = await luma.createDevice({canvas, type: 'webgl'});
+    const device = (await luma.createDevice({
+      adapters: [webgl2Adapter],
+      type: 'webgl',
+      createCanvasContext: {canvas}
+    })) as WebGLDevice;
     const model = createModel(device);
     this.setState({canvas, device, model});
   }
 
+  componentWillUnmount() {
+    this.state.model?.destroy();
+    this.state.device?.destroy();
+  }
+
   render() {
     const {device, canvas, model} = this.state;
-    if (!device) {
+    if (!device || !canvas || !model) {
       return <div />;
     }
     return (
       <div style={{margin: 30}}>
         <Description />
-        {device && <TextureUploader canvas={canvas} device={device} model={model} />}
-        {device && <TexturesBlocks canvas={canvas} device={device} model={model} />}
+        <TextureUploader canvas={canvas} device={device} model={model} />
+        <TexturesBlocks canvas={canvas} device={device} model={model} />
       </div>
     );
   }
 }
 
-function TexturesBlocks(props: {device: Device; canvas: HTMLCanvasElement; model: Model}) {
+function TexturesBlocks(props: {device: WebGLDevice; canvas: HTMLCanvasElement; model: Model}) {
   const {device, canvas, model} = props;
 
   return IMAGES_DATA.map((imagesData, index) => {
@@ -122,7 +126,7 @@ function TexturesDescription(props: {imagesData: TextureFormatsInfo}) {
 }
 
 function TexturesList(props: {
-  device: Device;
+  device: WebGLDevice;
   canvas: HTMLCanvasElement;
   model: Model;
   images: TextureFormatsInfo['images'];
@@ -146,7 +150,7 @@ function Description() {
         <a href="https://luma.gl">
           <b>luma.gl</b>
         </a>{' '}
-        <code>Texture2D</code> class.
+        texture APIs.
       </p>
       <p>
         The <code>@loaders.gl/textures</code> &nbsp; module provides loaders for compressed textures
@@ -171,6 +175,8 @@ function Description() {
   );
 }
 
-export function renderToDOM(container) {
-  createRoot(container).render(<App />);
+export function renderToDOM(container: HTMLElement): () => void {
+  const root: Root = createRoot(container);
+  root.render(<App />);
+  return () => root.unmount();
 }

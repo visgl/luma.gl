@@ -1,47 +1,27 @@
-// loaders.gl
+// luma.gl
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import React from 'react';
-import styled from 'styled-components';
+import React, {type DragEvent} from 'react';
 import {CompressedTexture} from './compressed-texture';
-import {Device} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
-
-const Container = styled.div`
-  display: flex;
-  flex-flow: column nowrap;
-`;
-
-const TextureFrame = styled.div`
-  display: flex;
-  width: 256px;
-  height: 256px;
-  align-items: center;
-  justify-content: center;
-  border: 1px dashed black;
-`;
-
-const ImageContainer = styled.div`
-  display: flex;
-  flex-flow: column nowrap;
-  align-items: center;
-  width: 270px;
-`;
+import {WebGLDevice} from '@luma.gl/webgl';
 
 type TextureUploaderProps = {
-  canvas: HTMLCanvasElement | null;
-  device: Device;
-  model: Model | null;
+  canvas: HTMLCanvasElement;
+  device: WebGLDevice;
+  model: Model;
 };
 
-export class TextureUploader extends React.PureComponent<TextureUploaderProps> {
-  static defaultProps = {
-    canvas: null,
-    model: null
-  };
+type TextureUploaderState = {
+  uploadedImage: File | null;
+};
 
-  constructor(props) {
+export class TextureUploader extends React.PureComponent<
+  TextureUploaderProps,
+  TextureUploaderState
+> {
+  constructor(props: TextureUploaderProps) {
     super(props);
 
     this.state = {
@@ -52,10 +32,12 @@ export class TextureUploader extends React.PureComponent<TextureUploaderProps> {
     this.handleCleanTexture = this.handleCleanTexture.bind(this);
   }
 
-  handleLoadFile(event) {
-    const file = event.dataTransfer.files[0];
-    this.setState({uploadedImage: file});
+  handleLoadFile(event: DragEvent<HTMLDivElement>) {
     event.preventDefault();
+    const file = event.dataTransfer.files[0];
+    if (file) {
+      this.setState({uploadedImage: file});
+    }
   }
 
   handleCleanTexture() {
@@ -69,17 +51,32 @@ export class TextureUploader extends React.PureComponent<TextureUploaderProps> {
     return (
       <div>
         {!uploadedImage && (
-          <Container>
-            <TextureFrame
+          <div style={{display: 'flex', flexFlow: 'column nowrap'}}>
+            <div
+              style={{
+                display: 'flex',
+                width: 256,
+                height: 256,
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: '1px dashed black'
+              }}
               onDrop={event => this.handleLoadFile(event)}
-              onDragOver={event => event.preventDefault()}
+              onDragOver={(event: DragEvent<HTMLDivElement>) => event.preventDefault()}
             >
               Drag&Drop texture
-            </TextureFrame>
+            </div>
             <input style={{display: 'none'}} type="file" id="fileInput" />
-          </Container>
+          </div>
         )}
-        <ImageContainer>
+        <div
+          style={{
+            display: 'flex',
+            flexFlow: 'column nowrap',
+            alignItems: 'center',
+            width: 270
+          }}
+        >
           {uploadedImage && (
             <CompressedTexture
               image={uploadedImage}
@@ -89,7 +86,7 @@ export class TextureUploader extends React.PureComponent<TextureUploaderProps> {
             />
           )}
           {uploadedImage && <button onClick={() => this.handleCleanTexture()}>Clean</button>}
-        </ImageContainer>
+        </div>
       </div>
     );
   }

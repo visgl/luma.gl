@@ -1,11 +1,10 @@
-// loaders.gl
+// luma.gl
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
 import * as React from 'react';
-import styled from 'styled-components';
 
-import {load, registerLoaders, selectLoader, fetchFile, LoaderOptions} from '@loaders.gl/core';
+import {load, registerLoaders, selectLoader, fetchFile, type LoaderOptions} from '@loaders.gl/core';
 import {
   BasisLoader,
   CompressedTextureLoader,
@@ -14,10 +13,12 @@ import {
   getSupportedGPUTextureFormats,
   selectSupportedBasisFormat
 } from '@loaders.gl/textures';
-import {ImageLoader, ImageType} from '@loaders.gl/images';
+import {ImageLoader, type ImageType} from '@loaders.gl/images';
 
-import {Device, Texture} from '@luma.gl/core';
+import {Texture} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
+import {WebGLDevice} from '@luma.gl/webgl';
+import {type TextureSource} from '../textures-data';
 
 const {
   COMPRESSED_RGB_S3TC_DXT1_EXT,
@@ -61,7 +62,7 @@ const {
   COMPRESSED_SRGB8_ALPHA8_ASTC_12X10_KHR,
   COMPRESSED_SRGB8_ALPHA8_ASTC_12X12_KHR,
   COMPRESSED_R11_EAC,
-  COMPRESSED_SIGNED,
+  COMPRESSED_SIGNED_R11_EAC,
   COMPRESSED_RG11_EAC,
   COMPRESSED_SIGNED_RG11_EAC,
   COMPRESSED_RGB8_ETC2,
@@ -82,45 +83,6 @@ const {
 
 const TEXTURES_BASE_URL =
   'https://raw.githubusercontent.com/visgl/loaders.gl/master/modules/textures/test/data/';
-
-const TextureButton = styled.button`
-  height: 256px;
-  width: 256px;
-  border: 1px solid black;
-  margin: 1em;
-  position: relative;
-  margin-left: 0;
-`;
-
-const ImageFormatHeader = styled.h1`
-  position: absolute;
-  top: 0;
-  left: 0;
-  margin: 0;
-  color: white;
-  font-size: 16px;
-`;
-const ErrorFormatHeader = styled.h1`
-  color: red;
-  font-size: 16px;
-`;
-
-const TextureInfo = styled.ul`
-  position: absolute;
-  transition: opacity 0.2s;
-  top: 20px;
-  display: flex;
-  flex-flow: column nowrap;
-  align-items: flex-start;
-  padding: 10px;
-  opacity: 0.8;
-  background-color: black;
-  color: white;
-  border-radius: 5px;
-  min-width: 200px;
-  list-style: none;
-  font-size: 14px;
-`;
 
 registerLoaders([BasisLoader, CompressedTextureLoader, ImageLoader]);
 
@@ -156,7 +118,7 @@ void main() {
 `;
 
 /** Create a reusable model */
-export function createModel(device: Device): Model {
+export function createModel(device: WebGLDevice): Model {
   const data = new Float32Array([-1, -1, -1, 1, 1, -1, 1, 1]);
   const position = device.createBuffer({data});
 
@@ -171,31 +133,44 @@ export function createModel(device: Device): Model {
 }
 
 type CompressedTextureProps = {
-  device: Device;
+  device: WebGLDevice;
   canvas: HTMLCanvasElement;
-  image: ImageType;
+  image: TextureSource;
   model: Model;
+};
+
+type TextureStat = {
+  name: string;
+  value: number | string;
+  units: string;
 };
 
 type CompressedTextureState = {
   loadOptions: LoaderOptions;
-  textureError: Error | null;
+  textureError: string | null;
   showStats: boolean;
-  stats: any[];
+  stats: TextureStat[];
   dataUrl: string | null;
+};
+
+type LoadedTextureData = {
+  arrayBuffer: ArrayBuffer;
+  length: number;
+  src: string;
+  useBasis: boolean;
+};
+
+type CompressedImageData = {
+  format: number;
+  width: number;
+  height: number;
+  levelSize?: number;
 };
 
 export class CompressedTexture extends React.PureComponent<
   CompressedTextureProps,
   CompressedTextureState
 > {
-  static defaultProps = {
-    device: null,
-    canvas: null,
-    image: null,
-    model: null
-  };
-
   constructor(props: CompressedTextureProps) {
     super(props);
 
@@ -215,21 +190,7 @@ export class CompressedTexture extends React.PureComponent<
     this.setState({dataUrl});
   }
 
-  getExtension(name) {
-    const {device} = this.props;
-    const vendorPrefixes = ['', 'WEBKIT_', 'MOZ_'];
-    let ext = null;
-
-    for (const vendorPrefix of vendorPrefixes) {
-      ext = Boolean(device.getExtension(vendorPrefix + name));
-      if (ext) {
-        break;
-      }
-    }
-    return ext;
-  }
-
-  getLoadOptions() {
+  getLoadOptions(): LoaderOptions {
     return {
       basis: {
         format: selectSupportedBasisFormat()
@@ -238,26 +199,31 @@ export class CompressedTexture extends React.PureComponent<
   }
 
   // eslint-disable-next-line max-statements
-  async getTextureDataUrl(device: Device) {
+  async getTextureDataUrl(device: WebGLDevice): Promise<string> {
     const {loadOptions} = this.state;
     const {canvas, model, image} = this.props;
 
     try {
       const {arrayBuffer, length, src, useBasis} = await this.getLoadedData(image);
 
-      const options = {...loadOptions};
+      const options: LoaderOptions & {'compressed-texture'?: {useBasis: boolean}} = {
+        ...loadOptions
+      };
       if (useBasis) {
         options['compressed-texture'] = {useBasis: true};
       }
 
-      const loader = await selectLoader(src, [
+      const loader = (await selectLoader(src, [
         CompressedTextureLoader,
         CrunchWorkerLoader,
         BasisLoader,
         ImageLoader
-      ]);
+      ])) as {id: string; name: string} | null;
+      if (!loader) {
+        throw new Error(`No texture loader found for ${src}`);
+      }
 
-      const result = loader && (await load(arrayBuffer, loader, options));
+      const result = await load(arrayBuffer, loader as never, options);
 
       this.addStat('File Size', Math.floor(length / 1024), 'Kb');
 
@@ -265,36 +231,42 @@ export class CompressedTexture extends React.PureComponent<
         case 'crunch':
         case 'compressed-texture':
           this.renderEmptyTexture(device, model);
-          this.renderCompressedTexture(device, model, result, loader.name, src);
+          this.renderCompressedTexture(
+            device,
+            model,
+            result as CompressedImageData[],
+            loader.name,
+            src
+          );
           break;
         case 'image':
           this.renderEmptyTexture(device, model);
-          this.renderImageTexture(device, model, result);
+          this.renderImageTexture(device, model, result as ImageType);
           break;
-        case 'basis':
-          const basisTextures = result[0];
+        case 'basis': {
+          const basisTextures = Array.isArray(result) ? (result[0] as CompressedImageData[]) : null;
           this.renderEmptyTexture(device, model);
-          this.renderCompressedTexture(device, model, basisTextures, loader.name, src);
+          this.renderCompressedTexture(device, model, basisTextures || [], loader.name, src);
           break;
+        }
         default:
           throw new Error('Unknown texture loader');
       }
     } catch (error) {
       console.error(error); // eslint-disable-line
       this.renderEmptyTexture(device, model);
-      this.setState({textureError: error.message});
+      this.setState({textureError: error instanceof Error ? error.message : String(error)});
     }
 
     return canvas.toDataURL();
   }
 
-  async getLoadedData(image) {
+  async getLoadedData(image: TextureSource): Promise<LoadedTextureData> {
     let length = 0;
     let src = '';
     let useBasis = false;
     let arrayBuffer: ArrayBuffer;
 
-    // eslint-disable-next-line no-undef
     if (image instanceof File) {
       arrayBuffer = await image.arrayBuffer();
       length = image.size;
@@ -310,36 +282,24 @@ export class CompressedTexture extends React.PureComponent<
     return {arrayBuffer, length, src, useBasis};
   }
 
-  createCompressedTexture(device: Device, images: any): Texture {
+  createCompressedTexture(device: WebGLDevice, images: CompressedImageData[]): Texture {
     const texture = device.createTexture({
-      data: images,
+      data: images as never,
       compressed: true,
       mipmaps: false
-      // parameters: {
-      //   [gl.TEXTURE_MAG_FILTER]: gl.LINEAR,
-      //   [gl.TEXTURE_MIN_FILTER]: images.length > 1 ? gl.LINEAR_MIPMAP_NEAREST : gl.LINEAR,
-      //   [gl.TEXTURE_WRAP_S]: gl.CLAMP_TO_EDGE,
-      //   [gl.TEXTURE_WRAP_T]: gl.CLAMP_TO_EDGE
-      // }
-    });
+    } as any);
 
     return texture;
   }
 
-  renderEmptyTexture(device: Device, model: Model): Texture {
+  renderEmptyTexture(device: WebGLDevice, model: Model): Texture {
     const brownColor = new Uint8Array([68, 0, 0, 255]);
     const emptyTexture = device.createTexture({
       width: 1,
       height: 1,
       data: brownColor,
       mipmaps: true
-      // parameters: {
-      //   [gl.TEXTURE_MAG_FILTER]: gl.LINEAR,
-      //   [gl.TEXTURE_MIN_FILTER]: gl.LINEAR,
-      //   [gl.TEXTURE_WRAP_S]: gl.CLAMP_TO_EDGE,
-      //   [gl.TEXTURE_WRAP_T]: gl.CLAMP_TO_EDGE
-      // }
-    });
+    } as any);
 
     const renderPass = device.beginRenderPass();
     model.setBindings({uTexture: emptyTexture});
@@ -350,25 +310,18 @@ export class CompressedTexture extends React.PureComponent<
     return emptyTexture;
   }
 
-  renderImageTexture(device: Device, model: Model, image: any) {
+  renderImageTexture(device: WebGLDevice, model: Model, image: ImageType): void {
+    const startTime = performance.now();
     const texture = device.createTexture({
-      data: image
-      // parameters: {
-      //   [gl.TEXTURE_MAG_FILTER]: gl.LINEAR,
-      //   [gl.TEXTURE_MIN_FILTER]: gl.LINEAR,
-      //   [gl.TEXTURE_WRAP_S]: gl.CLAMP_TO_EDGE,
-      //   [gl.TEXTURE_WRAP_T]: gl.CLAMP_TO_EDGE
-      // }
-    });
+      data: image as never
+    } as any);
 
     const renderPass = device.beginRenderPass();
     model.setBindings({uTexture: texture});
     model.draw(renderPass);
     renderPass.end();
 
-    const startTime = new Date();
-
-    const uploadTime = Date.now() - startTime.getMilliseconds();
+    const uploadTime = performance.now() - startTime;
 
     this.addStat('Upload time', `${Math.floor(uploadTime)} ms`);
     this.addStat('Dimensions', `${image.width} x ${image.height}`);
@@ -379,7 +332,13 @@ export class CompressedTexture extends React.PureComponent<
     );
   }
 
-  renderCompressedTexture(device, model, images, loaderName, texturePath) {
+  renderCompressedTexture(
+    device: WebGLDevice,
+    model: Model,
+    images: CompressedImageData[],
+    loaderName: string,
+    texturePath: string
+  ): void {
     if (!images || !images.length) {
       throw new Error(`${loaderName} loader doesn't support texture ${texturePath} format`);
     }
@@ -390,7 +349,7 @@ export class CompressedTexture extends React.PureComponent<
       throw new Error(`Texture format ${format} not supported by this GPU`);
     }
 
-    const startTime = new Date();
+    const startTime = performance.now();
     const texture = this.createCompressedTexture(device, images);
 
     const renderPass = device.beginRenderPass();
@@ -398,7 +357,7 @@ export class CompressedTexture extends React.PureComponent<
     model.draw(renderPass);
     renderPass.end();
 
-    const uploadTime = Date.now() - startTime.getMilliseconds();
+    const uploadTime = performance.now() - startTime;
 
     this.addStat('Upload time', `${Math.floor(uploadTime)} ms`);
     this.addStat('Dimensions', `${width} x ${height}`);
@@ -408,11 +367,11 @@ export class CompressedTexture extends React.PureComponent<
   }
 
   // eslint-disable-next-line complexity
-  isFormatSupported(format: any): boolean {
+  isFormatSupported(format: number): boolean {
     if (typeof format !== 'number') {
       throw new Error('Invalid internal format of compressed texture');
     }
-    const supportedFormats = getSupportedGPUTextureFormats(this.props.gl);
+    const supportedFormats = getSupportedGPUTextureFormats(this.props.device.gl);
 
     switch (format) {
       case COMPRESSED_RGB_S3TC_DXT1_EXT:
@@ -466,7 +425,7 @@ export class CompressedTexture extends React.PureComponent<
         return supportedFormats.has('astc');
 
       case COMPRESSED_R11_EAC:
-      case COMPRESSED_SIGNED:
+      case COMPRESSED_SIGNED_R11_EAC:
       case COMPRESSED_RG11_EAC:
       case COMPRESSED_SIGNED_RG11_EAC:
       case COMPRESSED_RGB8_ETC2:
@@ -493,9 +452,14 @@ export class CompressedTexture extends React.PureComponent<
     }
   }
 
-  addStat(name, value, units = '') {
+  addStat(name: string, value: number | string, units = ''): void {
     const newStats = [...this.state.stats, {name, value, units}];
     this.setState({stats: newStats});
+  }
+
+  getTextureLabel(): string {
+    const {image} = this.props;
+    return image instanceof File ? image.name : image.format || image.name || image.src;
   }
 
   renderStats() {
@@ -511,26 +475,66 @@ export class CompressedTexture extends React.PureComponent<
         <li key={index}>{`${stats[index].name}: ${stats[index].value}${stats[index].units}`}</li>
       );
     }
-    return <TextureInfo style={{opacity: this.state.showStats ? 0.8 : 0}}>{infoList}</TextureInfo>;
+    return (
+      <ul
+        style={{
+          position: 'absolute',
+          transition: 'opacity 0.2s',
+          top: 20,
+          display: 'flex',
+          flexFlow: 'column nowrap',
+          alignItems: 'flex-start',
+          padding: 10,
+          opacity: this.state.showStats ? 0.8 : 0,
+          backgroundColor: 'black',
+          color: 'white',
+          borderRadius: 5,
+          minWidth: 200,
+          listStyle: 'none',
+          fontSize: 14
+        }}
+      >
+        {infoList}
+      </ul>
+    );
   }
 
   render() {
     const {dataUrl, textureError} = this.state;
-    const {format, name} = this.props.image;
+    const textureLabel = this.getTextureLabel();
 
     return dataUrl ? (
-      <TextureButton
-        style={{backgroundImage: `url(${dataUrl})`}}
+      <button
+        style={{
+          height: 256,
+          width: 256,
+          border: '1px solid black',
+          margin: '1em',
+          position: 'relative',
+          marginLeft: 0,
+          backgroundImage: `url(${dataUrl})`
+        }}
         onMouseEnter={() => this.setState({showStats: true})}
         onMouseLeave={() => this.setState({showStats: false})}
       >
         {!textureError ? (
-          <ImageFormatHeader>{format || name}</ImageFormatHeader>
+          <h1
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              margin: 0,
+              color: 'white',
+              fontSize: 16
+            }}
+          >
+            {textureLabel}
+          </h1>
         ) : (
-          <ErrorFormatHeader style={{color: 'red'}}>{textureError}</ErrorFormatHeader>
+          <h1 style={{color: 'red', fontSize: 16}}>{textureError}</h1>
         )}
         {this.renderStats()}
-      </TextureButton>
+      </button>
     ) : null;
   }
 }
