@@ -74,22 +74,42 @@ test('DynamicTexture WebGPU [render][rgba8unorm] 2d mipmaps', async t => {
   t.deepEqual(
     Array.from(manualBytes.slice(0, 4)),
     [0, 0, 0, 255],
-    createTestLabel('render', RENDER_MIPMAP_TEST_FORMAT, '2d', 'manual generate mip level 1: quadrant 1')
+    createTestLabel(
+      'render',
+      RENDER_MIPMAP_TEST_FORMAT,
+      '2d',
+      'manual generate mip level 1: quadrant 1'
+    )
   );
   t.deepEqual(
     Array.from(manualBytes.slice(4, 8)),
     [4, 0, 0, 255],
-    createTestLabel('render', RENDER_MIPMAP_TEST_FORMAT, '2d', 'manual generate mip level 1: quadrant 2')
+    createTestLabel(
+      'render',
+      RENDER_MIPMAP_TEST_FORMAT,
+      '2d',
+      'manual generate mip level 1: quadrant 2'
+    )
   );
   t.deepEqual(
     Array.from(manualBytes.slice(manualBytesPerRowLevel1, manualBytesPerRowLevel1 + 4)),
     [8, 0, 0, 255],
-    createTestLabel('render', RENDER_MIPMAP_TEST_FORMAT, '2d', 'manual generate mip level 1: quadrant 3')
+    createTestLabel(
+      'render',
+      RENDER_MIPMAP_TEST_FORMAT,
+      '2d',
+      'manual generate mip level 1: quadrant 3'
+    )
   );
   t.deepEqual(
     Array.from(manualBytes.slice(manualBytesPerRowLevel1 + 4, manualBytesPerRowLevel1 + 8)),
     [12, 0, 0, 255],
-    createTestLabel('render', RENDER_MIPMAP_TEST_FORMAT, '2d', 'manual generate mip level 1: quadrant 4')
+    createTestLabel(
+      'render',
+      RENDER_MIPMAP_TEST_FORMAT,
+      '2d',
+      'manual generate mip level 1: quadrant 4'
+    )
   );
 
   const manualArrayBuffer2 = await manualTexture.texture.readDataAsync({
