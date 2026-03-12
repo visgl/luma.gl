@@ -418,7 +418,7 @@ export class DynamicTexture {
 function getAlignedUploadData(
   texture: DynamicTexture['texture'],
   data: TextureImageData
-): ArrayBuffer | Uint8Array {
+): ArrayBuffer | ArrayBufferView {
   const {width, height, data: uploadData} = data;
   const {bytesPerPixel} = texture.device.getTextureFormatInfo(texture.format);
   const bytesPerRow = width * bytesPerPixel;
