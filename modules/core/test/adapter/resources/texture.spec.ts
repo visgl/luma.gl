@@ -1386,7 +1386,7 @@ test('Texture#readDataAsync reuses the cached WebGL read framebuffer', async t =
 
 test('Device#isTextureFormatSupported()', async t => {
   const UNSUPPORTED_FORMATS: Record<string, TextureFormat[]> = {
-    webgl: [],
+    webgl: ['stencil8'],
     webgpu: ['rgb32float-webgl']
   };
 
