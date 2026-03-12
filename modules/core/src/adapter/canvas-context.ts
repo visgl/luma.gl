@@ -407,10 +407,12 @@ export abstract class CanvasContext {
     // Note: content box sizes are guaranteed to be integers
     // Note: Safari falls back to contentBoxSize
     const devicePixelWidth =
-      entry.devicePixelContentBoxSize?.[0]?.inlineSize || contentBoxSize.inlineSize * devicePixelRatio;
+      entry.devicePixelContentBoxSize?.[0]?.inlineSize ||
+      contentBoxSize.inlineSize * devicePixelRatio;
 
     const devicePixelHeight =
-      entry.devicePixelContentBoxSize?.[0]?.blockSize || contentBoxSize.blockSize * devicePixelRatio;
+      entry.devicePixelContentBoxSize?.[0]?.blockSize ||
+      contentBoxSize.blockSize * devicePixelRatio;
 
     // Make sure we don't overflow the maximum supported texture size
     const [maxDevicePixelWidth, maxDevicePixelHeight] = this.getMaxDrawingBufferSize();
