@@ -1,6 +1,6 @@
 {
   "name": "luma.gl-examples-hello-react",
-  "version": "9.2.5",
+  "version": "9.3.0-alpha.3",
   "private": true,
   "scripts": {
     "start": "vite",
