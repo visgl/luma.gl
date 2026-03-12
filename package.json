@@ -61,5 +61,9 @@
     "@math.gl/types": "^4.1.0",
     "@types/offscreencanvas": "^2019.6.4"
   },
+  "volta": {
+    "node": "24.5.0",
+    "yarn": "4.13.0"
+  },
   "packageManager": "yarn@4.13.0"
 }
