@@ -294,7 +294,7 @@ export function getTextureCubeArraySubresources(data: TextureCubeArrayData): Tex
   data.forEach((cubeData, cubeIndex) => {
     for (const [face, faceData] of Object.entries(cubeData)) {
       const faceDepth = getCubeArrayFaceIndex(cubeIndex, face as TextureCubeFace);
-      getTexture2DSubresources(faceDepth, faceData);
+      subresources.push(...getTexture2DSubresources(faceDepth, faceData));
     }
   });
   return subresources;

@@ -120,6 +120,10 @@ Using mipmap filtering requires some extra setup. The texture being sampled must
 and each mip level must be initialized with a scaled down version of the mip level 0 image.
 Note that mip levels can be generated automatically by luma.gl, or each mip level can be set explicitly by the application.
 
+On WebGPU, automatic mipmap generation is provided by `DynamicTexture`.
+For non-3D textures luma.gl uses a render path, and for 3D textures it uses a compute path.
+If the texture format does not support the required capabilities, mipmap generation throws when it is requested.
+
 Mipmap usage is controlled via `SamplerProps.mipmapFilter`:
 
 | `mipmapFilter` | `minFilter` | Description                                     | Linearity             | Speed   |
@@ -173,7 +177,9 @@ luma provides `Device` methods to help applications determine the capabilities o
 
 Remarks
 
-- Mipmaps can only be auto created for formats that are both filterable and renderable.
+- On WebGPU, `DynamicTexture.generateMipmaps()` owns mipmap generation. `2d`, `2d-array`, `cube`, and `cube-array` require renderable and filterable formats; `3d` requires filterable formats with storage support.
+- `Texture.generateMipmapsWebGL()` is only the WebGL path. WebGPU applications should use `DynamicTexture` when mipmap generation is needed.
+- Mipmaps can only be auto created for formats that satisfy the capability requirements of the selected mipmap-generation path.
 - A renderable format is either a color renderable format, or a depth-or-stencil format
 - All depth/stencil formats are renderable.
 - Samplers always read a "vec4" regardless of which texture format is used. For formats with less than 4 components, missing red, green and blue components in the texture format are read as `0.0`, alpha as `1.0`/
