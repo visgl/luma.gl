@@ -185,10 +185,48 @@ Textures offer a set of methods to read and write texture data
 
 | Method | Description |
 | --- | --- |
-| `Texture.writeData()` | |
+| `Texture.writeData()` | Writes typed-array data into a texture subresource, including mip levels, array layers, depth slices, and optional row layout. |
 | `Texture.readDataAsync()` | |
-| `Texture.writeBuffer()` | |
+| `Texture.writeBuffer()` | Copies data from a GPU buffer into a texture subresource using the provided destination region and layout. |
 | `Texture.readBuffer()` | |
+
+`Texture.copyImageData()` remains available for compatibility, but it is a deprecated wrapper over `Texture.writeData()`.
+
+### Choosing a texture upload method
+
+Use the texture write method that matches your source data:
+
+- `copyExternalImage()`:
+  - for browser image-like sources such as `ImageBitmap`, `ImageData`, canvases, videos, and images
+- `writeData()`:
+  - for CPU-side typed-array or `ArrayBuffer` uploads
+- `writeBuffer()`:
+  - for uploads sourced from a GPU buffer
+
+`writeData()` and `writeBuffer()` use the same destination model:
+
+- `mipLevel` selects which mip to update
+- `x`, `y`, `z` select the origin inside that mip
+- `width`, `height`, `depthOrArrayLayers` define the written extent
+- `byteOffset`, `bytesPerRow`, `rowsPerImage` describe the source memory layout
+
+This means the difference between `writeData()` and `writeBuffer()` is the source, not the shape of the update.
+
+### Texture upload semantics
+
+For non-2D textures, `z` is interpreted by texture dimension:
+
+- `cube`: cube face index
+- `2d-array`: array layer index
+- `3d`: depth slice index
+
+If you omit layout fields for `writeData()`, luma.gl computes a tightly packed layout for the write region you requested. For example, when writing a lower mip, row stride defaults are computed from that mip's width, not from the base level width.
+
+Provide explicit layout fields when:
+
+- your rows are padded
+- multiple layers or slices are packed into the same source allocation
+- the source data begins after a nonzero byte offset
 
 ### WebGPU Texture Data Alignment
 

@@ -11,7 +11,6 @@ import {
   type Sampler,
   type SamplerProps,
   type CopyExternalImageOptions,
-  type CopyImageDataOptions,
   type TextureReadOptions,
   type TextureWriteOptions,
   type TextureFormat,
@@ -196,26 +195,94 @@ export class WEBGLTexture extends Texture {
     return {width: options.width, height: options.height};
   }
 
-  copyImageData(options_: CopyImageDataOptions): void {
-    const options = this._normalizeCopyImageDataOptions(options_);
+  override copyImageData(options_): void {
+    super.copyImageData(options_);
+  }
 
-    const typedArray = options.data as TypedArray;
-    const {width, height, depth, z = 0} = options;
-    const {mipLevel = 0, byteOffset = 0, x = 0, y = 0} = options;
+  readBuffer(options: TextureReadOptions = {}, buffer?: Buffer): Buffer {
+    throw new Error('readBuffer not implemented');
+  }
+
+  async readDataAsync(options: TextureReadOptions = {}): Promise<ArrayBuffer> {
+    return this.readDataSyncWebGL(options);
+  }
+
+  writeBuffer(buffer: Buffer, options_: TextureWriteOptions = {}) {
+    const options = this._normalizeTextureWriteOptions(options_);
+    const {width, height, depthOrArrayLayers, mipLevel, byteOffset, x, y, z} = options;
     const {glFormat, glType, compressed} = this;
+    const glTarget = getWebGLCubeFaceTarget(this.glTarget, this.dimension, z);
 
-    // Target used for face updates, but not for binding
+    if (compressed) {
+      throw new Error('writeBuffer for compressed textures is not implemented in WebGL');
+    }
+
+    const {bytesPerPixel} = this.device.getTextureFormatInfo(this.format);
+    const unpackRowLength = bytesPerPixel ? options.bytesPerRow / bytesPerPixel : undefined;
+    const glParameters: GLValueParameters = {
+      [GL.UNPACK_ALIGNMENT]: this.byteAlignment,
+      ...(unpackRowLength !== undefined ? {[GL.UNPACK_ROW_LENGTH]: unpackRowLength} : {}),
+      [GL.UNPACK_IMAGE_HEIGHT]: options.rowsPerImage
+    };
+
+    this.gl.bindTexture(this.glTarget, this.handle);
+    this.gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, buffer.handle);
+
+    withGLParameters(this.gl, glParameters, () => {
+      switch (this.dimension) {
+        case '2d':
+        case 'cube':
+          this.gl.texSubImage2D(
+            glTarget,
+            mipLevel,
+            x,
+            y,
+            width,
+            height,
+            glFormat,
+            glType,
+            byteOffset
+          );
+          break;
+        case '2d-array':
+        case '3d':
+          this.gl.texSubImage3D(
+            glTarget,
+            mipLevel,
+            x,
+            y,
+            z,
+            width,
+            height,
+            depthOrArrayLayers,
+            glFormat,
+            glType,
+            byteOffset
+          );
+          break;
+        default:
+      }
+    });
+
+    this.gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, null);
+    this.gl.bindTexture(this.glTarget, null);
+  }
+
+  writeData(
+    data: ArrayBuffer | SharedArrayBuffer | ArrayBufferView,
+    options_: TextureWriteOptions = {}
+  ): void {
+    const options = this._normalizeTextureWriteOptions(options_);
+
+    const typedArray = ArrayBuffer.isView(data) ? data : new Uint8Array(data);
+    const {width, height, depthOrArrayLayers, mipLevel, x, y, z, byteOffset} = options;
+    const {glFormat, glType, compressed} = this;
     const glTarget = getWebGLCubeFaceTarget(this.glTarget, this.dimension, z);
 
     let unpackRowLength: number | undefined;
-    if (!this.compressed) {
+    if (!compressed) {
       const {bytesPerPixel} = this.device.getTextureFormatInfo(this.format);
       if (bytesPerPixel) {
-        if (options.bytesPerRow % bytesPerPixel !== 0) {
-          throw new Error(
-            `bytesPerRow (${options.bytesPerRow}) must be a multiple of bytesPerPixel (${bytesPerPixel}) for ${this.format}`
-          );
-        }
         unpackRowLength = options.bytesPerRow / bytesPerPixel;
       }
     }
@@ -229,70 +296,6 @@ export class WEBGLTexture extends Texture {
       : {};
 
     this.gl.bindTexture(this.glTarget, this.handle);
-
-    withGLParameters(this.gl, glParameters, () => {
-      switch (this.dimension) {
-        case '2d':
-        case 'cube':
-          if (compressed) {
-            // prettier-ignore
-            this.gl.compressedTexSubImage2D(glTarget, mipLevel, x, y, width, height, glFormat, typedArray, byteOffset); // , byteLength
-          } else {
-            // prettier-ignore
-            this.gl.texSubImage2D(glTarget, mipLevel, x, y, width, height, glFormat, glType, typedArray, byteOffset); // , byteLength
-          }
-          break;
-        case '2d-array':
-        case '3d':
-          if (compressed) {
-            // prettier-ignore
-            this.gl.compressedTexSubImage3D(glTarget, mipLevel, x, y, z, width, height, depth, glFormat, typedArray, byteOffset); // , byteLength
-          } else {
-            // prettier-ignore
-            this.gl.texSubImage3D(glTarget, mipLevel, x, y, z, width, height, depth, glFormat, glType, typedArray, byteOffset); // , byteLength
-          }
-          break;
-        default:
-        // Can never happen in WebGL
-      }
-    });
-
-    this.gl.bindTexture(this.glTarget, null);
-  }
-
-  readBuffer(options: TextureReadOptions = {}, buffer?: Buffer): Buffer {
-    throw new Error('readBuffer not implemented');
-  }
-
-  async readDataAsync(options: TextureReadOptions = {}): Promise<ArrayBuffer> {
-    return this.readDataSyncWebGL(options);
-  }
-
-  writeBuffer(buffer: Buffer, options_: TextureWriteOptions = {}) {}
-
-  writeData(data: ArrayBuffer | ArrayBufferView, options_: TextureWriteOptions = {}): void {
-    const options = this._normalizeTextureWriteOptions(options_);
-
-    const typedArray = ArrayBuffer.isView(data) ? data : new Uint8Array(data);
-    const {} = this;
-    const {width, height, mipLevel, x, y, z} = options;
-    const {glFormat, glType, compressed} = this;
-    const depth = 0; // TODO - fix
-    const glTarget = getWebGLCubeFaceTarget(this.glTarget, this.dimension, depth);
-
-    // const byteOffset = 0;
-    // const {bytesPerRow, rowsPerImage} = this.computeMemoryLayout(options);
-
-    const glParameters: GLValueParameters = !this.compressed
-      ? {
-          // WebGL does not require byte alignment, but allows it to be specified
-          [GL.UNPACK_ALIGNMENT]: this.byteAlignment
-          // [GL.UNPACK_ROW_LENGTH]: bytesPerRow,
-          // [GL.UNPACK_IMAGE_HEIGHT]: rowsPerImage
-        }
-      : {};
-
-    this.gl.bindTexture(glTarget, this.handle);
     this.gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, null);
 
     withGLParameters(this.gl, glParameters, () => {
@@ -301,20 +304,20 @@ export class WEBGLTexture extends Texture {
         case 'cube':
           if (compressed) {
             // prettier-ignore
-            this.gl.compressedTexSubImage2D(glTarget, mipLevel, x, y, width, height, glFormat, typedArray);
+            this.gl.compressedTexSubImage2D(glTarget, mipLevel, x, y, width, height, glFormat, typedArray, byteOffset);
           } else {
             // prettier-ignore
-            this.gl.texSubImage2D(glTarget, mipLevel, x, y, width, height, glFormat, glType, typedArray);
+            this.gl.texSubImage2D(glTarget, mipLevel, x, y, width, height, glFormat, glType, typedArray, byteOffset);
           }
           break;
         case '2d-array':
         case '3d':
           if (compressed) {
             // prettier-ignore
-            this.gl.compressedTexSubImage3D(glTarget, mipLevel, x, y, z, width, height, depth, glFormat, typedArray);
+            this.gl.compressedTexSubImage3D(glTarget, mipLevel, x, y, z, width, height, depthOrArrayLayers, glFormat, typedArray, byteOffset);
           } else {
             // prettier-ignore
-            this.gl.texSubImage3D(glTarget, mipLevel, x, y, z, width, height, depth, glFormat, glType, typedArray);
+            this.gl.texSubImage3D(glTarget, mipLevel, x, y, z, width, height, depthOrArrayLayers, glFormat, glType, typedArray, byteOffset);
           }
           break;
         default:
@@ -322,7 +325,7 @@ export class WEBGLTexture extends Texture {
       }
     });
 
-    this.gl.bindTexture(glTarget, null);
+    this.gl.bindTexture(this.glTarget, null);
   }
 
   // IMPLEMENTATION SPECIFIC

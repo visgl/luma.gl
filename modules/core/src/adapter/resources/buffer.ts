@@ -137,10 +137,8 @@ export abstract class Buffer extends Resource<BufferProps> {
     );
     if (arrayBuffer === null) {
       this.debugData = new ArrayBuffer(debugDataLength);
-    } else if (byteOffset === 0 && byteLength === arrayBuffer.byteLength) {
-      this.debugData = arrayBuffer.slice(0, debugDataLength);
     } else {
-      this.debugData = arrayBuffer.slice(byteOffset, byteOffset + debugDataLength);
+      this.debugData = new Uint8Array(arrayBuffer, byteOffset, debugDataLength).slice().buffer;
     }
   }
 
