@@ -130,7 +130,8 @@ export abstract class Buffer extends Resource<BufferProps> {
     byteOffset: number,
     byteLength: number
   ): void {
-    const arrayBuffer: ArrayBufferLike | null = ArrayBuffer.isView(data) ? data.buffer : data;
+    const arrayBufferView = ArrayBuffer.isView(data) ? data : null;
+    const arrayBuffer: ArrayBufferLike | null = arrayBufferView ? arrayBufferView.buffer : data;
     const debugDataLength = Math.min(
       data ? data.byteLength : byteLength,
       Buffer.DEBUG_DATA_MAX_LENGTH
@@ -138,7 +139,13 @@ export abstract class Buffer extends Resource<BufferProps> {
     if (arrayBuffer === null) {
       this.debugData = new ArrayBuffer(debugDataLength);
     } else {
-      this.debugData = new Uint8Array(arrayBuffer, byteOffset, debugDataLength).slice().buffer;
+      const sourceByteOffset = Math.min(
+        arrayBufferView?.byteOffset || 0,
+        arrayBuffer.byteLength
+      );
+      const availableByteLength = Math.max(0, arrayBuffer.byteLength - sourceByteOffset);
+      const copyByteLength = Math.min(debugDataLength, availableByteLength);
+      this.debugData = new Uint8Array(arrayBuffer, sourceByteOffset, copyByteLength).slice().buffer;
     }
   }
 
