@@ -11,11 +11,9 @@ import {
   type Sampler,
   type SamplerProps,
   type CopyExternalImageOptions,
-  type CopyImageDataOptions,
   type TextureReadOptions,
   type TextureWriteOptions,
   type TextureFormat,
-  type TypedArray,
   Buffer,
   Texture,
   log
@@ -35,12 +33,12 @@ import {getTextureFormatWebGL} from '../converters/webgl-texture-table';
 import {convertSamplerParametersToWebGL} from '../converters/sampler-parameters';
 import {withGLParameters} from '../../context/state-tracker/with-parameters';
 import {WebGLDevice} from '../webgl-device';
+import {WEBGLBuffer} from './webgl-buffer';
 import {WEBGLFramebuffer} from './webgl-framebuffer';
 import {WEBGLSampler} from './webgl-sampler';
 import {WEBGLTextureView} from './webgl-texture-view';
-import {convertDataTypeToGLDataType} from '../converters/webgl-shadertypes';
 import {convertGLDataTypeToDataType} from '../converters/shader-formats';
-import {getTypedArrayConstructor, getDataType} from '@luma.gl/core';
+import {getTypedArrayConstructor} from '@luma.gl/core';
 
 /**
  * WebGL... the texture API from hell... hopefully made simpler
@@ -77,8 +75,10 @@ export class WEBGLTexture extends Texture {
   // state
   /** Texture binding slot - TODO - move to texture view? */
   _textureUnit: number = 0;
-  /** Chached framebuffer */
+  /** Cached framebuffer reused for color texture readback. */
   _framebuffer: WEBGLFramebuffer | null = null;
+  /** Cache key for the currently attached readback subresource `${mipLevel}:${layer}`. */
+  _framebufferAttachmentKey: string | null = null;
 
   constructor(device: Device, props: TextureProps) {
     // const byteAlignment = this._getRowByteAlignment(props.format, props.width);
@@ -137,6 +137,7 @@ export class WEBGLTexture extends Texture {
       // Destroy any cached framebuffer
       this._framebuffer?.destroy();
       this._framebuffer = null;
+      this._framebufferAttachmentKey = null;
 
       this.gl.deleteTexture(this.handle);
       this.removeStats();
@@ -196,26 +197,136 @@ export class WEBGLTexture extends Texture {
     return {width: options.width, height: options.height};
   }
 
-  copyImageData(options_: CopyImageDataOptions): void {
-    const options = this._normalizeCopyImageDataOptions(options_);
+  override copyImageData(options_): void {
+    super.copyImageData(options_);
+  }
 
-    const typedArray = options.data as TypedArray;
-    const {width, height, depth, z = 0} = options;
-    const {mipLevel = 0, byteOffset = 0, x = 0, y = 0} = options;
+  /**
+   * Reads a color texture subresource into a GPU buffer using `PIXEL_PACK_BUFFER`.
+   *
+   * @note Only first-pass color readback is supported. Unsupported formats and aspects throw
+   * before any WebGL calls are issued.
+   */
+  readBuffer(options: TextureReadOptions = {}, buffer?: Buffer): Buffer {
+    const normalizedOptions = this._getSupportedColorReadOptions(options);
+    const memoryLayout = this.computeMemoryLayout(normalizedOptions);
+    const readBuffer =
+      buffer ||
+      this.device.createBuffer({
+        byteLength: memoryLayout.byteLength,
+        usage: Buffer.COPY_DST | Buffer.MAP_READ
+      });
+
+    if (readBuffer.byteLength < memoryLayout.byteLength) {
+      throw new Error(
+        `${this} readBuffer target is too small (${readBuffer.byteLength} < ${memoryLayout.byteLength})`
+      );
+    }
+
+    const webglBuffer = readBuffer as WEBGLBuffer;
+    this.gl.bindBuffer(GL.PIXEL_PACK_BUFFER, webglBuffer.handle);
+    try {
+      this._readColorTextureLayers(normalizedOptions, memoryLayout, destinationByteOffset => {
+        this.gl.readPixels(
+          normalizedOptions.x,
+          normalizedOptions.y,
+          normalizedOptions.width,
+          normalizedOptions.height,
+          this.glFormat,
+          this.glType,
+          destinationByteOffset
+        );
+      });
+    } finally {
+      this.gl.bindBuffer(GL.PIXEL_PACK_BUFFER, null);
+    }
+
+    return readBuffer;
+  }
+
+  async readDataAsync(options: TextureReadOptions = {}): Promise<ArrayBuffer> {
+    const buffer = this.readBuffer(options);
+    const data = await buffer.readAsync();
+    buffer.destroy();
+    return data.buffer as ArrayBuffer;
+  }
+
+  writeBuffer(buffer: Buffer, options_: TextureWriteOptions = {}) {
+    const options = this._normalizeTextureWriteOptions(options_);
+    const {width, height, depthOrArrayLayers, mipLevel, byteOffset, x, y, z} = options;
     const {glFormat, glType, compressed} = this;
+    const glTarget = getWebGLCubeFaceTarget(this.glTarget, this.dimension, z);
 
-    // Target used for face updates, but not for binding
+    if (compressed) {
+      throw new Error('writeBuffer for compressed textures is not implemented in WebGL');
+    }
+
+    const {bytesPerPixel} = this.device.getTextureFormatInfo(this.format);
+    const unpackRowLength = bytesPerPixel ? options.bytesPerRow / bytesPerPixel : undefined;
+    const glParameters: GLValueParameters = {
+      [GL.UNPACK_ALIGNMENT]: this.byteAlignment,
+      ...(unpackRowLength !== undefined ? {[GL.UNPACK_ROW_LENGTH]: unpackRowLength} : {}),
+      [GL.UNPACK_IMAGE_HEIGHT]: options.rowsPerImage
+    };
+
+    this.gl.bindTexture(this.glTarget, this.handle);
+    this.gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, buffer.handle);
+
+    withGLParameters(this.gl, glParameters, () => {
+      switch (this.dimension) {
+        case '2d':
+        case 'cube':
+          this.gl.texSubImage2D(
+            glTarget,
+            mipLevel,
+            x,
+            y,
+            width,
+            height,
+            glFormat,
+            glType,
+            byteOffset
+          );
+          break;
+        case '2d-array':
+        case '3d':
+          this.gl.texSubImage3D(
+            glTarget,
+            mipLevel,
+            x,
+            y,
+            z,
+            width,
+            height,
+            depthOrArrayLayers,
+            glFormat,
+            glType,
+            byteOffset
+          );
+          break;
+        default:
+      }
+    });
+
+    this.gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, null);
+    this.gl.bindTexture(this.glTarget, null);
+  }
+
+  writeData(
+    data: ArrayBuffer | SharedArrayBuffer | ArrayBufferView,
+    options_: TextureWriteOptions = {}
+  ): void {
+    const options = this._normalizeTextureWriteOptions(options_);
+
+    const typedArray = ArrayBuffer.isView(data) ? data : new Uint8Array(data);
+    const {width, height, depthOrArrayLayers, mipLevel, x, y, z, byteOffset} = options;
+    const {glFormat, glType, compressed} = this;
     const glTarget = getWebGLCubeFaceTarget(this.glTarget, this.dimension, z);
 
     let unpackRowLength: number | undefined;
-    if (!this.compressed) {
+    if (!compressed) {
       const {bytesPerPixel} = this.device.getTextureFormatInfo(this.format);
       if (bytesPerPixel) {
-        if (options.bytesPerRow % bytesPerPixel !== 0) {
-          throw new Error(
-            `bytesPerRow (${options.bytesPerRow}) must be a multiple of bytesPerPixel (${bytesPerPixel}) for ${this.format}`
-          );
-        }
         unpackRowLength = options.bytesPerRow / bytesPerPixel;
       }
     }
@@ -227,72 +338,9 @@ export class WEBGLTexture extends Texture {
           [GL.UNPACK_IMAGE_HEIGHT]: options.rowsPerImage
         }
       : {};
+    const sourceElementOffset = getWebGLTextureSourceElementOffset(typedArray, byteOffset);
 
     this.gl.bindTexture(this.glTarget, this.handle);
-
-    withGLParameters(this.gl, glParameters, () => {
-      switch (this.dimension) {
-        case '2d':
-        case 'cube':
-          if (compressed) {
-            // prettier-ignore
-            this.gl.compressedTexSubImage2D(glTarget, mipLevel, x, y, width, height, glFormat, typedArray, byteOffset); // , byteLength
-          } else {
-            // prettier-ignore
-            this.gl.texSubImage2D(glTarget, mipLevel, x, y, width, height, glFormat, glType, typedArray, byteOffset); // , byteLength
-          }
-          break;
-        case '2d-array':
-        case '3d':
-          if (compressed) {
-            // prettier-ignore
-            this.gl.compressedTexSubImage3D(glTarget, mipLevel, x, y, z, width, height, depth, glFormat, typedArray, byteOffset); // , byteLength
-          } else {
-            // prettier-ignore
-            this.gl.texSubImage3D(glTarget, mipLevel, x, y, z, width, height, depth, glFormat, glType, typedArray, byteOffset); // , byteLength
-          }
-          break;
-        default:
-        // Can never happen in WebGL
-      }
-    });
-
-    this.gl.bindTexture(this.glTarget, null);
-  }
-
-  readBuffer(options: TextureReadOptions = {}, buffer?: Buffer): Buffer {
-    throw new Error('readBuffer not implemented');
-  }
-
-  async readDataAsync(options: TextureReadOptions = {}): Promise<ArrayBuffer> {
-    return this.readDataSyncWebGL(options);
-  }
-
-  writeBuffer(buffer: Buffer, options_: TextureWriteOptions = {}) {}
-
-  writeData(data: ArrayBuffer | ArrayBufferView, options_: TextureWriteOptions = {}): void {
-    const options = this._normalizeTextureWriteOptions(options_);
-
-    const typedArray = ArrayBuffer.isView(data) ? data : new Uint8Array(data);
-    const {} = this;
-    const {width, height, mipLevel, x, y, z} = options;
-    const {glFormat, glType, compressed} = this;
-    const depth = 0; // TODO - fix
-    const glTarget = getWebGLCubeFaceTarget(this.glTarget, this.dimension, depth);
-
-    // const byteOffset = 0;
-    // const {bytesPerRow, rowsPerImage} = this.computeMemoryLayout(options);
-
-    const glParameters: GLValueParameters = !this.compressed
-      ? {
-          // WebGL does not require byte alignment, but allows it to be specified
-          [GL.UNPACK_ALIGNMENT]: this.byteAlignment
-          // [GL.UNPACK_ROW_LENGTH]: bytesPerRow,
-          // [GL.UNPACK_IMAGE_HEIGHT]: rowsPerImage
-        }
-      : {};
-
-    this.gl.bindTexture(glTarget, this.handle);
     this.gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, null);
 
     withGLParameters(this.gl, glParameters, () => {
@@ -301,20 +349,20 @@ export class WEBGLTexture extends Texture {
         case 'cube':
           if (compressed) {
             // prettier-ignore
-            this.gl.compressedTexSubImage2D(glTarget, mipLevel, x, y, width, height, glFormat, typedArray);
+            this.gl.compressedTexSubImage2D(glTarget, mipLevel, x, y, width, height, glFormat, typedArray, byteOffset);
           } else {
             // prettier-ignore
-            this.gl.texSubImage2D(glTarget, mipLevel, x, y, width, height, glFormat, glType, typedArray);
+            this.gl.texSubImage2D(glTarget, mipLevel, x, y, width, height, glFormat, glType, typedArray, sourceElementOffset);
           }
           break;
         case '2d-array':
         case '3d':
           if (compressed) {
             // prettier-ignore
-            this.gl.compressedTexSubImage3D(glTarget, mipLevel, x, y, z, width, height, depth, glFormat, typedArray);
+            this.gl.compressedTexSubImage3D(glTarget, mipLevel, x, y, z, width, height, depthOrArrayLayers, glFormat, typedArray, byteOffset);
           } else {
             // prettier-ignore
-            this.gl.texSubImage3D(glTarget, mipLevel, x, y, z, width, height, depth, glFormat, glType, typedArray);
+            this.gl.texSubImage3D(glTarget, mipLevel, x, y, z, width, height, depthOrArrayLayers, glFormat, glType, typedArray, sourceElementOffset);
           }
           break;
         default:
@@ -322,7 +370,7 @@ export class WEBGLTexture extends Texture {
       }
     });
 
-    this.gl.bindTexture(glTarget, null);
+    this.gl.bindTexture(this.glTarget, null);
   }
 
   // IMPLEMENTATION SPECIFIC
@@ -357,57 +405,138 @@ export class WEBGLTexture extends Texture {
   // WEBGL SPECIFIC
 
   override readDataSyncWebGL(options_: TextureReadOptions = {}): ArrayBuffer {
-    const options = this._normalizeTextureReadOptions(options_);
-
+    const options = this._getSupportedColorReadOptions(options_);
     const memoryLayout = this.computeMemoryLayout(options);
 
     // const formatInfo = getTextureFormatInfo(format);
     // Allocate pixel array if not already available, using supplied type
     const shaderType = convertGLDataTypeToDataType(this.glType);
-
     const ArrayType = getTypedArrayConstructor(shaderType);
-    // const components = glFormatToComponents(this.glFormat);
-    // TODO - check for composite type (components = 1).
-
-    const targetArray = new ArrayType(memoryLayout.byteLength) as
+    const targetArray = new ArrayType(memoryLayout.byteLength / ArrayType.BYTES_PER_ELEMENT) as
       | Uint8Array
       | Uint16Array
-      | Float32Array;
+      | Float32Array
+      | Int8Array
+      | Int16Array
+      | Int32Array
+      | Uint32Array;
 
-    // Pixel array available, if necessary, deduce type from it.
-    const signedType = getDataType(targetArray);
-    const sourceType = convertDataTypeToGLDataType(signedType);
+    this._readColorTextureLayers(options, memoryLayout, destinationByteOffset => {
+      const layerView = new ArrayType(
+        targetArray.buffer,
+        targetArray.byteOffset + destinationByteOffset,
+        memoryLayout.bytesPerImage / ArrayType.BYTES_PER_ELEMENT
+      );
+      this.gl.readPixels(
+        options.x,
+        options.y,
+        options.width,
+        options.height,
+        this.glFormat,
+        this.glType,
+        layerView
+      );
+    });
 
-    // There is a lot of hedging in the WebGL2 spec about what formats are guaranteed to be readable
-    // (It should always be possible to read RGBA/UNSIGNED_BYTE, but most other combinations are not guaranteed)
-    // Querying is possible but expensive:
-    // const {device} = framebuffer;
-    // texture.glReadFormat ||= gl.getParameter(gl.IMPLEMENTATION_COLOR_READ_FORMAT);
-    // texture.glReadType ||= gl.getParameter(gl.IMPLEMENTATION_COLOR_READ_TYPE);
-    // console.log('params', device.getGLKey(texture.glReadFormat), device.getGLKey(texture.glReadType));
+    return targetArray.buffer as ArrayBuffer;
+  }
 
+  /**
+   * Iterates the requested mip/layer/slice range, reattaching the cached read framebuffer as
+   * needed before delegating the actual `readPixels()` call to the supplied callback.
+   */
+  private _readColorTextureLayers(
+    options: Required<TextureReadOptions>,
+    memoryLayout: ReturnType<Texture['computeMemoryLayout']>,
+    readLayer: (destinationByteOffset: number) => void
+  ): void {
     const framebuffer = this._getFramebuffer();
+    const packRowLength = memoryLayout.bytesPerRow / memoryLayout.bytesPerPixel;
+    const glParameters: GLValueParameters = {
+      [GL.PACK_ALIGNMENT]: this.byteAlignment,
+      ...(packRowLength !== options.width ? {[GL.PACK_ROW_LENGTH]: packRowLength} : {})
+    };
 
-    // Note: luma.gl overrides bindFramebuffer so that we can reliably restore the previous framebuffer (this is the only function for which we do that)
+    // Note: luma.gl overrides bindFramebuffer so that we can reliably restore the previous framebuffer.
+    const prevReadBuffer = this.gl.getParameter(GL.READ_BUFFER) as GL;
     const prevHandle = this.gl.bindFramebuffer(
       GL.FRAMEBUFFER,
       framebuffer.handle
     ) as unknown as WebGLFramebuffer | null;
 
-    // Select the color attachment to read from
-    this.gl.readBuffer(GL.COLOR_ATTACHMENT0);
-    this.gl.readPixels(
-      options.x,
-      options.y,
-      options.width,
-      options.height,
-      this.glFormat,
-      sourceType,
-      targetArray
-    );
-    this.gl.bindFramebuffer(GL.FRAMEBUFFER, prevHandle || null);
+    try {
+      this.gl.readBuffer(GL.COLOR_ATTACHMENT0);
+      withGLParameters(this.gl, glParameters, () => {
+        for (let layerIndex = 0; layerIndex < options.depthOrArrayLayers; layerIndex++) {
+          this._attachReadSubresource(framebuffer, options.mipLevel, options.z + layerIndex);
+          readLayer(layerIndex * memoryLayout.bytesPerImage);
+        }
+      });
+    } finally {
+      this.gl.bindFramebuffer(GL.FRAMEBUFFER, prevHandle || null);
+      this.gl.readBuffer(prevReadBuffer);
+    }
+  }
 
-    return targetArray.buffer as ArrayBuffer;
+  /**
+   * Attaches a single color subresource to the cached read framebuffer.
+   *
+   * @note Repeated attachments of the same `(mipLevel, layer)` tuple are skipped.
+   */
+  private _attachReadSubresource(
+    framebuffer: WEBGLFramebuffer,
+    mipLevel: number,
+    layer: number
+  ): void {
+    const attachmentKey = `${mipLevel}:${layer}`;
+    if (this._framebufferAttachmentKey === attachmentKey) {
+      return;
+    }
+
+    switch (this.dimension) {
+      case '2d':
+        this.gl.framebufferTexture2D(
+          GL.FRAMEBUFFER,
+          GL.COLOR_ATTACHMENT0,
+          GL.TEXTURE_2D,
+          this.handle,
+          mipLevel
+        );
+        break;
+
+      case 'cube':
+        this.gl.framebufferTexture2D(
+          GL.FRAMEBUFFER,
+          GL.COLOR_ATTACHMENT0,
+          getWebGLCubeFaceTarget(this.glTarget, this.dimension, layer),
+          this.handle,
+          mipLevel
+        );
+        break;
+
+      case '2d-array':
+      case '3d':
+        this.gl.framebufferTextureLayer(
+          GL.FRAMEBUFFER,
+          GL.COLOR_ATTACHMENT0,
+          this.handle,
+          mipLevel,
+          layer
+        );
+        break;
+
+      default:
+        throw new Error(`${this} color readback does not support ${this.dimension} textures`);
+    }
+
+    if (this.device.props.debug) {
+      const status = Number(this.gl.checkFramebufferStatus(GL.FRAMEBUFFER));
+      if (status !== Number(GL.FRAMEBUFFER_COMPLETE)) {
+        throw new Error(`${framebuffer} incomplete for ${this} readback (${status})`);
+      }
+    }
+
+    this._framebufferAttachmentKey = attachmentKey;
   }
 
   /**
@@ -512,6 +641,19 @@ export class WEBGLTexture extends Texture {
     gl.bindTexture(this.glTarget, null);
     return _textureUnit;
   }
+}
+
+function getWebGLTextureSourceElementOffset(
+  typedArray: ArrayBufferView,
+  byteOffset: number
+): number {
+  if (byteOffset % typedArray.BYTES_PER_ELEMENT !== 0) {
+    throw new Error(
+      `Texture byteOffset ${byteOffset} must align to typed array element size ${typedArray.BYTES_PER_ELEMENT}`
+    );
+  }
+
+  return byteOffset / typedArray.BYTES_PER_ELEMENT;
 }
 
 // INTERNAL HELPERS
