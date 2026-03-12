@@ -127,20 +127,21 @@ export abstract class Buffer extends Resource<BufferProps> {
   /** This doesn't handle partial non-zero offset updates correctly */
   protected _setDebugData(
     data: ArrayBufferView | ArrayBufferLike | null,
-    byteOffset: number,
+    _byteOffset: number,
     byteLength: number
   ): void {
     const arrayBuffer: ArrayBufferLike | null = ArrayBuffer.isView(data) ? data.buffer : data;
+    const dataByteOffset = ArrayBuffer.isView(data) ? data.byteOffset : 0;
     const debugDataLength = Math.min(
       data ? data.byteLength : byteLength,
       Buffer.DEBUG_DATA_MAX_LENGTH
     );
     if (arrayBuffer === null) {
       this.debugData = new ArrayBuffer(debugDataLength);
-    } else if (byteOffset === 0 && byteLength === arrayBuffer.byteLength) {
-      this.debugData = arrayBuffer.slice(0, debugDataLength);
     } else {
-      this.debugData = arrayBuffer.slice(byteOffset, byteOffset + debugDataLength);
+      const debugData = new Uint8Array(debugDataLength);
+      debugData.set(new Uint8Array(arrayBuffer, dataByteOffset, debugDataLength));
+      this.debugData = debugData.buffer;
     }
   }
 

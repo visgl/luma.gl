@@ -18,6 +18,22 @@ import type {WebGPUDevice} from '../webgpu-device';
 import {WebGPUSampler} from './webgpu-sampler';
 import {WebGPUTextureView} from './webgpu-texture-view';
 
+function getGPUTextureDataSource(
+  data: ArrayBuffer | SharedArrayBuffer | ArrayBufferView
+): BufferSource | SharedArrayBuffer {
+  if (!ArrayBuffer.isView(data)) {
+    return data;
+  }
+
+  if (typeof SharedArrayBuffer !== 'undefined' && data.buffer instanceof SharedArrayBuffer) {
+    const array = new Uint8Array(data.byteLength);
+    array.set(new Uint8Array(data.buffer, data.byteOffset, data.byteLength));
+    return array;
+  }
+
+  return new Uint8Array(data.buffer as ArrayBuffer, data.byteOffset, data.byteLength);
+}
+
 /** WebGPU implementation of the luma.gl core Texture resource */
 export class WebGPUTexture extends Texture {
   readonly device: WebGPUDevice;
@@ -142,7 +158,7 @@ export class WebGPUTexture extends Texture {
         origin: [options.x, options.y, options.z]
       },
       // data
-      options.data,
+      getGPUTextureDataSource(options.data),
       // dataLayout: GPUImageDataLayout
       {
         offset: options.byteOffset,
@@ -326,7 +342,7 @@ export class WebGPUTexture extends Texture {
         aspect,
         origin: {x, y, z}
       },
-      data,
+      getGPUTextureDataSource(data),
       {
         offset: 0,
         bytesPerRow,

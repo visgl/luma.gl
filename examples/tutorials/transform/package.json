@@ -12,10 +12,10 @@
     "@luma.gl/engine": "9.3.0-alpha.3",
     "@luma.gl/shadertools": "9.3.0-alpha.3",
     "@luma.gl/webgl": "9.3.0-alpha.3",
-    "@probe.gl/log": "^4.0.8"
+    "@probe.gl/log": "^4.1.1"
   },
   "devDependencies": {
-    "typescript": "^5.1.6",
-    "vite": "^7.2.2"
+    "typescript": "^5.9.3",
+    "vite": "^8.0.0"
   }
 }
