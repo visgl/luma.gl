@@ -260,3 +260,123 @@ copyExternalImage(options: {
 | `aspect?`             | `'all' \| 'stencil-only' \| 'depth-only'`; | When copying into depth stencil textures (default 'all') |
 | `colorSpace?`         | `'srgb'`                                   | Specific color space of image data                       |
 | `premultipliedAlpha?` | `boolean`                                  | premultiplied                                            |
+
+### `writeData()`
+
+Write typed-array data into a texture. This method supports full-texture uploads as well as partial updates to mip levels, cubemap faces, array layers, and 3D slices.
+
+On WebGPU this corresponds closely to `GPUQueue.writeTexture()`. On WebGL, luma.gl emulates the same destination and layout semantics.
+
+Use `writeData()` when the source data already lives on the CPU as a typed array or `ArrayBuffer`. The upload is defined by two things:
+
+- The destination texture subresource:
+  - `mipLevel`
+  - `x`, `y`, `z`
+  - `width`, `height`, `depthOrArrayLayers`
+- The source memory layout:
+  - `byteOffset`
+  - `bytesPerRow`
+  - `rowsPerImage`
+
+`z` follows the texture dimension:
+
+- for `2d`, it is always `0`
+- for `cube`, it selects the cube face (`0..5`)
+- for `2d-array`, it selects the first array layer
+- for `3d`, it selects the first depth slice
+
+If layout fields are omitted, luma.gl computes defaults for a tightly packed upload of the requested write region at the requested mip level. This matters for explicit mip uploads: row layout is based on the mip size being written, not the base texture size.
+
+Use explicit `bytesPerRow` and `rowsPerImage` when:
+
+- rows are padded
+- multiple layers or slices are packed into one source allocation
+- the source data starts at a nonzero `byteOffset`
+
+```ts
+writeData(
+  data: ArrayBuffer | ArrayBufferView,
+  options?: {
+    byteOffset?: number;
+    bytesPerRow?: number;
+    rowsPerImage?: number;
+    x?: number;
+    y?: number;
+    z?: number;
+    width?: number;
+    height?: number;
+    depthOrArrayLayers?: number;
+    mipLevel?: number;
+    aspect?: 'all' | 'stencil-only' | 'depth-only';
+  }
+): void
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `data` | `ArrayBuffer \| ArrayBufferView` | Source texel data. |
+| `byteOffset?` | `number` | Offset, in bytes, from the beginning of `data` to the first texel written. |
+| `bytesPerRow?` | `number` | Stride, in bytes, between successive texel rows. |
+| `rowsPerImage?` | `number` | Number of rows that make up one image when writing multiple layers or slices. |
+| `x?` | `number` | Destination x offset within the target subresource. |
+| `y?` | `number` | Destination y offset within the target subresource. |
+| `z?` | `number` | Destination array layer, cubemap face, or 3D slice offset. |
+| `width?` | `number` | Width of the region to write. Defaults to the target mip width. |
+| `height?` | `number` | Height of the region to write. Defaults to the target mip height. |
+| `depthOrArrayLayers?` | `number` | Number of array layers or depth slices to write. Defaults to `1`, or the full mip depth for 3D textures. |
+| `mipLevel?` | `number` | Destination mip level. |
+| `aspect?` | `'all' \| 'stencil-only' \| 'depth-only'` | Aspect to write for depth/stencil textures. |
+
+Example: write a padded `2x2` mip into `mipLevel: 1`
+
+```ts
+const data = new Uint8Array(256 * 2);
+
+texture.writeData(data, {
+  mipLevel: 1,
+  width: 2,
+  height: 2,
+  bytesPerRow: 256,
+  rowsPerImage: 2
+});
+```
+
+### `writeBuffer()`
+
+Copy data from a GPU buffer into a texture. This is the buffer-based counterpart to `writeData()`, using the same destination fields (`x`, `y`, `z`, `width`, `height`, `depthOrArrayLayers`, `mipLevel`, `aspect`) and the same layout fields (`byteOffset`, `bytesPerRow`, `rowsPerImage`).
+
+On WebGPU this corresponds closely to `copyBufferToTexture()`. On WebGL, luma.gl emulates the same mip, layer, depth-slice, and cubemap-face targeting behavior.
+
+Use `writeBuffer()` when the source data already lives in a GPU `Buffer`, or when your application wants to stage texture uploads through reusable upload buffers.
+
+`writeBuffer()` uses the same destination semantics as `writeData()`:
+
+- `mipLevel` selects the mip
+- `x`, `y`, `z` select the destination origin inside that mip
+- `width`, `height`, `depthOrArrayLayers` define the copied extent
+- `byteOffset`, `bytesPerRow`, `rowsPerImage` describe how texels are laid out in the source buffer
+
+In other words, `writeBuffer()` and `writeData()` differ by source type, not by destination behavior.
+
+Choose between them based on where the source data is:
+
+- CPU memory: `writeData()`
+- GPU buffer: `writeBuffer()`
+- Browser image/video/canvas source: `copyExternalImage()`
+
+Example: copy from a buffer into array layer `3`
+
+```ts
+texture.writeBuffer(uploadBuffer, {
+  z: 3,
+  width: 64,
+  height: 64,
+  depthOrArrayLayers: 1,
+  bytesPerRow: 256,
+  rowsPerImage: 64
+});
+```
+
+### `copyImageData()`
+
+Deprecated compatibility wrapper over `writeData()`. Existing code continues to work, but new code should call `writeData()` directly.

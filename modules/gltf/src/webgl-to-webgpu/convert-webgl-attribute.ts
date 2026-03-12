@@ -28,7 +28,7 @@ type GLTFAccessor = {
   componentType: number;
   type: string;
   count: number;
-  bufferView?: {data: {buffer: ArrayBuffer; byteOffset?: number}};
+  bufferView?: {data: {buffer: ArrayBufferLike; byteOffset?: number}};
   byteOffset?: number;
 };
 
