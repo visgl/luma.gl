@@ -18,6 +18,8 @@ export type TextureFormatInfo = {
   dataType?: NormalizedDataType;
   /** Number of bytes per pixel */
   bytesPerPixel: number;
+  /** Compressed formats only: Number of bytes per block */
+  bytesPerBlock?: number;
   /** Number of bits per channel (may be unreliable for packed formats) */
   bitsPerChannel: [number, number, number, number];
   /** If this is a packed data type */

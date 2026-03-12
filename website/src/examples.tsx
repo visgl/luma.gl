@@ -1,7 +1,7 @@
 //
 
 import React, {useEffect, useRef, useState} from 'react';
-import {LumaExample} from './react-luma';
+import {LumaExample, useStore} from './react-luma';
 
 import AnimationApp from '../../examples/api/animation/app';
 import CubemapApp from '../../examples/api/cubemap/app';
@@ -102,19 +102,29 @@ export const Texture3DExample: React.FC = props => (
 
 export const TexturesExample: React.FC = () => {
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const deviceType = useStore(store => store.deviceType);
 
   useEffect(() => {
     const container = containerRef.current;
-    if (!container) {
+    if (!container || !deviceType) {
       return undefined;
     }
 
-    return renderTexturesExample(container);
-  }, []);
+    return renderTexturesExample(container, {deviceType});
+  }, [deviceType]);
 
   return (
-    <div style={{position: 'relative', width: '100%', minHeight: '720px'}}>
-      <div ref={containerRef} />
+    <div
+      className="textures-example-page"
+      style={{
+        position: 'relative',
+        width: '100%',
+        height: 'calc(100vh - 8rem)',
+        overflowY: 'auto',
+        overflowX: 'hidden'
+      }}
+    >
+      <div key={deviceType ?? 'pending'} ref={containerRef} />
     </div>
   );
 };

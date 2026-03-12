@@ -107,17 +107,19 @@ export class WEBGLTexture extends Texture {
      */
     this.gl.bindTexture(this.glTarget, this.handle);
     const {dimension, width, height, depth, mipLevels, glTarget, glInternalFormat} = this;
-    switch (dimension) {
-      case '2d':
-      case 'cube':
-        this.gl.texStorage2D(glTarget, mipLevels, glInternalFormat, width, height);
-        break;
-      case '2d-array':
-      case '3d':
-        this.gl.texStorage3D(glTarget, mipLevels, glInternalFormat, width, height, depth);
-        break;
-      default:
-        throw new Error(dimension);
+    if (!this.compressed) {
+      switch (dimension) {
+        case '2d':
+        case 'cube':
+          this.gl.texStorage2D(glTarget, mipLevels, glInternalFormat, width, height);
+          break;
+        case '2d-array':
+        case '3d':
+          this.gl.texStorage3D(glTarget, mipLevels, glInternalFormat, width, height, depth);
+          break;
+        default:
+          throw new Error(dimension);
+      }
     }
     this.gl.bindTexture(this.glTarget, null);
 
@@ -199,9 +201,9 @@ export class WEBGLTexture extends Texture {
   copyImageData(options_: CopyImageDataOptions): void {
     const options = this._normalizeCopyImageDataOptions(options_);
 
-    const typedArray = options.data as TypedArray;
+    const typedArray = getArrayBufferView(options.data as TypedArray, options.byteOffset);
     const {width, height, depth, z = 0} = options;
-    const {mipLevel = 0, byteOffset = 0, x = 0, y = 0} = options;
+    const {mipLevel = 0, x = 0, y = 0} = options;
     const {glFormat, glType, compressed} = this;
 
     // Target used for face updates, but not for binding
@@ -236,20 +238,20 @@ export class WEBGLTexture extends Texture {
         case 'cube':
           if (compressed) {
             // prettier-ignore
-            this.gl.compressedTexSubImage2D(glTarget, mipLevel, x, y, width, height, glFormat, typedArray, byteOffset); // , byteLength
+            this.gl.compressedTexImage2D(glTarget, mipLevel, glFormat, width, height, 0, typedArray);
           } else {
             // prettier-ignore
-            this.gl.texSubImage2D(glTarget, mipLevel, x, y, width, height, glFormat, glType, typedArray, byteOffset); // , byteLength
+            this.gl.texSubImage2D(glTarget, mipLevel, x, y, width, height, glFormat, glType, typedArray, options.byteOffset); // , byteLength
           }
           break;
         case '2d-array':
         case '3d':
           if (compressed) {
             // prettier-ignore
-            this.gl.compressedTexSubImage3D(glTarget, mipLevel, x, y, z, width, height, depth, glFormat, typedArray, byteOffset); // , byteLength
+            this.gl.compressedTexImage3D(glTarget, mipLevel, glFormat, width, height, depth, 0, typedArray);
           } else {
             // prettier-ignore
-            this.gl.texSubImage3D(glTarget, mipLevel, x, y, z, width, height, depth, glFormat, glType, typedArray, byteOffset); // , byteLength
+            this.gl.texSubImage3D(glTarget, mipLevel, x, y, z, width, height, depth, glFormat, glType, typedArray, options.byteOffset); // , byteLength
           }
           break;
         default:
@@ -274,11 +276,10 @@ export class WEBGLTexture extends Texture {
     const options = this._normalizeTextureWriteOptions(options_);
 
     const typedArray = ArrayBuffer.isView(data) ? data : new Uint8Array(data);
-    const {} = this;
-    const {width, height, mipLevel, x, y, z} = options;
+    const {width, height, depthOrArrayLayers, mipLevel, x, y, z} = options;
     const {glFormat, glType, compressed} = this;
-    const depth = 0; // TODO - fix
-    const glTarget = getWebGLCubeFaceTarget(this.glTarget, this.dimension, depth);
+    const depth = depthOrArrayLayers;
+    const glTarget = getWebGLCubeFaceTarget(this.glTarget, this.dimension, z);
 
     // const byteOffset = 0;
     // const {bytesPerRow, rowsPerImage} = this.computeMemoryLayout(options);
@@ -301,7 +302,7 @@ export class WEBGLTexture extends Texture {
         case 'cube':
           if (compressed) {
             // prettier-ignore
-            this.gl.compressedTexSubImage2D(glTarget, mipLevel, x, y, width, height, glFormat, typedArray);
+            this.gl.compressedTexImage2D(glTarget, mipLevel, glFormat, width, height, 0, typedArray);
           } else {
             // prettier-ignore
             this.gl.texSubImage2D(glTarget, mipLevel, x, y, width, height, glFormat, glType, typedArray);
@@ -311,7 +312,7 @@ export class WEBGLTexture extends Texture {
         case '3d':
           if (compressed) {
             // prettier-ignore
-            this.gl.compressedTexSubImage3D(glTarget, mipLevel, x, y, z, width, height, depth, glFormat, typedArray);
+            this.gl.compressedTexImage3D(glTarget, mipLevel, glFormat, width, height, depth, 0, typedArray);
           } else {
             // prettier-ignore
             this.gl.texSubImage3D(glTarget, mipLevel, x, y, z, width, height, depth, glFormat, glType, typedArray);
@@ -512,6 +513,18 @@ export class WEBGLTexture extends Texture {
     gl.bindTexture(this.glTarget, null);
     return _textureUnit;
   }
+}
+
+function getArrayBufferView(typedArray: TypedArray, byteOffset = 0): TypedArray {
+  if (!byteOffset) {
+    return typedArray;
+  }
+
+  return new typedArray.constructor(
+    typedArray.buffer,
+    typedArray.byteOffset + byteOffset,
+    (typedArray.byteLength - byteOffset) / typedArray.BYTES_PER_ELEMENT
+  ) as TypedArray;
 }
 
 // INTERNAL HELPERS

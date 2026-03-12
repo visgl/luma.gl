@@ -4,12 +4,12 @@
 
 import React, {type DragEvent} from 'react';
 import {CompressedTexture} from './compressed-texture';
+import {type Device} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
-import {WebGLDevice} from '@luma.gl/webgl';
 
 type TextureUploaderProps = {
   canvas: HTMLCanvasElement;
-  device: WebGLDevice;
+  device: Device;
   model: Model;
 };
 

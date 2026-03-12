@@ -127,7 +127,6 @@ export class WebGPUTexture extends Texture {
   }
 
   copyImageData(options_: CopyImageDataOptions): void {
-    const {width, height, depth} = this;
     const options = this._normalizeCopyImageDataOptions(options_);
     this.device.pushErrorScope('validation');
 
@@ -150,7 +149,7 @@ export class WebGPUTexture extends Texture {
         rowsPerImage: options.rowsPerImage
       },
       // size: GPUExtent3D - extents of the content to write
-      [width, height, depth]
+      [options.width, options.height, options.depth]
     );
     this.device.popErrorScope((error: GPUError) => {
       this.device.reportError(new Error(`copyImageData: ${error.message}`), this)();
@@ -175,16 +174,8 @@ export class WebGPUTexture extends Texture {
   }
 
   override readBuffer(options: TextureReadOptions = {}, buffer?: Buffer): Buffer {
-    const {
-      x = 0,
-      y = 0,
-      z = 0,
-      width = this.width,
-      height = this.height,
-      depthOrArrayLayers = this.depth,
-      mipLevel = 0,
-      aspect = 'all'
-    } = options;
+    const normalizedOptions = this._normalizeTextureReadOptions(options);
+    const {x, y, z, width, height, depthOrArrayLayers, mipLevel, aspect} = normalizedOptions;
 
     const layout = this.computeMemoryLayout(options);
 
@@ -249,16 +240,8 @@ export class WebGPUTexture extends Texture {
   }
 
   override writeBuffer(buffer: Buffer, options: TextureWriteOptions = {}) {
-    const {
-      x = 0,
-      y = 0,
-      z = 0,
-      width = this.width,
-      height = this.height,
-      depthOrArrayLayers = this.depth,
-      mipLevel = 0,
-      aspect = 'all'
-    } = options;
+    const normalizedOptions = this._normalizeTextureWriteOptions(options);
+    const {x, y, z, width, height, depthOrArrayLayers, mipLevel, aspect} = normalizedOptions;
 
     const layout = this.computeMemoryLayout(options);
 
@@ -297,23 +280,15 @@ export class WebGPUTexture extends Texture {
   override writeData(data: ArrayBuffer | ArrayBufferView, options: TextureWriteOptions = {}): void {
     const device = this.device;
 
-    const {
-      x = 0,
-      y = 0,
-      z = 0,
-      width = this.width,
-      height = this.height,
-      depthOrArrayLayers = this.depth,
-      mipLevel = 0,
-      aspect = 'all'
-    } = options;
+    const normalizedOptions = this._normalizeTextureWriteOptions(options);
+    const {x, y, z, width, height, depthOrArrayLayers, mipLevel, aspect} = normalizedOptions;
 
     const layout = textureFormatDecoder.computeMemoryLayout({
       format: this.format,
-      width: this.width,
-      height: this.height,
-      depth: this.depth,
-      byteAlignment: this.byteAlignment
+      width,
+      height,
+      depth: depthOrArrayLayers,
+      byteAlignment: 1
     });
 
     const {bytesPerRow, rowsPerImage} = layout;

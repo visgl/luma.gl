@@ -94,9 +94,18 @@ test('WEBGLRenderPipeline#uniformBlockBinding applies block indices in the corre
     renderPipeline.shaderLayout.bindings.find(binding => binding.name === 'BlockA')!
   ];
 
-  const bufferA = device.createBuffer({usage: Buffer.UNIFORM, data: new Float32Array([1, 0, 0, 0])});
-  const bufferB = device.createBuffer({usage: Buffer.UNIFORM, data: new Float32Array([2, 0, 0, 0])});
-  const bufferC = device.createBuffer({usage: Buffer.UNIFORM, data: new Float32Array([3, 0, 0, 0])});
+  const bufferA = device.createBuffer({
+    usage: Buffer.UNIFORM,
+    data: new Float32Array([1, 0, 0, 0])
+  });
+  const bufferB = device.createBuffer({
+    usage: Buffer.UNIFORM,
+    data: new Float32Array([2, 0, 0, 0])
+  });
+  const bufferC = device.createBuffer({
+    usage: Buffer.UNIFORM,
+    data: new Float32Array([3, 0, 0, 0])
+  });
 
   renderPipeline.setBindings({BlockA: bufferA, BlockB: bufferB, BlockC: bufferC});
 

@@ -5,43 +5,59 @@
 import React from 'react';
 import {createRoot, type Root} from 'react-dom/client';
 
-import {luma} from '@luma.gl/core';
-import {webgl2Adapter, WebGLDevice} from '@luma.gl/webgl';
+import {type Device, luma} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
+import {webgl2Adapter} from '@luma.gl/webgl';
+import {webgpuAdapter} from '@luma.gl/webgpu';
 
 import {IMAGES_DATA, TextureFormatsInfo} from './textures-data';
 import {CompressedTexture, createModel} from './components/compressed-texture';
 import {TextureUploader} from './components/textures-uploader';
 
-type AppProps = Record<string, never>;
+export type DeviceType = 'webgl' | 'webgpu';
+
+type AppProps = {
+  deviceType?: DeviceType;
+};
 
 type AppState = {
-  canvas: HTMLCanvasElement | null;
-  device: WebGLDevice | null;
+  canvas: HTMLCanvasElement;
+  device: Device | null;
   model: Model | null;
 };
 
 export default class App extends React.PureComponent<AppProps, AppState> {
+  static defaultProps = {
+    deviceType: 'webgl' as DeviceType
+  };
+
   constructor(props: AppProps) {
     super(props);
 
     this.state = {
-      canvas: null,
+      canvas: document.createElement('canvas'),
       device: null,
       model: null
     };
   }
 
   async componentDidMount() {
-    const canvas = document.createElement('canvas');
+    const {deviceType = 'webgl'} = this.props;
+    const {canvas} = this.state;
     canvas.width = 256;
     canvas.height = 256;
 
-    const device = (await luma.createDevice({
-      adapters: [webgl2Adapter],
-      type: 'webgl',
-      createCanvasContext: {canvas}
-    })) as WebGLDevice;
+    const device = await luma.createDevice({
+      adapters: [webgl2Adapter, webgpuAdapter],
+      type: deviceType,
+      createCanvasContext: {
+        canvas,
+        width: 256,
+        height: 256,
+        autoResize: false,
+        useDevicePixels: false
+      }
+    });
     const model = createModel(device);
     this.setState({canvas, device, model});
   }
@@ -57,7 +73,7 @@ export default class App extends React.PureComponent<AppProps, AppState> {
       return <div />;
     }
     return (
-      <div style={{margin: 30}}>
+      <div>
         <Description />
         <TextureUploader canvas={canvas} device={device} model={model} />
         <TexturesBlocks canvas={canvas} device={device} model={model} />
@@ -66,7 +82,7 @@ export default class App extends React.PureComponent<AppProps, AppState> {
   }
 }
 
-function TexturesBlocks(props: {device: WebGLDevice; canvas: HTMLCanvasElement; model: Model}) {
+function TexturesBlocks(props: {device: Device; canvas: HTMLCanvasElement; model: Model}) {
   const {device, canvas, model} = props;
 
   return IMAGES_DATA.map((imagesData, index) => {
@@ -126,57 +142,61 @@ function TexturesDescription(props: {imagesData: TextureFormatsInfo}) {
 }
 
 function TexturesList(props: {
-  device: WebGLDevice;
+  device: Device;
   canvas: HTMLCanvasElement;
   model: Model;
   images: TextureFormatsInfo['images'];
 }) {
   const {device, canvas, model, images} = props;
-  return images.map((image, index) => (
-    <CompressedTexture key={index} image={image} device={device} canvas={canvas} model={model} />
-  ));
+  return (
+    <div style={{display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start'}}>
+      {images.map((image, index) => (
+        <CompressedTexture
+          key={index}
+          image={image}
+          device={device}
+          canvas={canvas}
+          model={model}
+        />
+      ))}
+    </div>
+  );
 }
 
 function Description() {
   return (
     <div>
-      <h1>Texture Loaders</h1>
       <p>
-        This page loads every &nbsp;
-        <a href="https://loaders.gl/modules/textures/docs/using-compressed-textures">
-          texture format
-        </a>{' '}
-        &nbsp; supported by loaders.gl and attempts to display them in WebGL using the{' '}
+        This page tests which compressed texture formats your current browser and GPU can render.
+        It uses <code>@loaders.gl/textures</code> to decode standard and compressed image assets,
+        then creates and draws the resulting textures with{' '}
         <a href="https://luma.gl">
           <b>luma.gl</b>
-        </a>{' '}
-        texture APIs.
+        </a>
+        . You can also drag and drop a local texture to test it.
       </p>
-      <p>
-        The <code>@loaders.gl/textures</code> &nbsp; module provides loaders for compressed textures
-        stored in <b>KTX</b>, <b>DDS</b> and <b>PVR</b> container files, plus <b>CRN</b> (Crunch),
-        and <b>Basis</b> supercompressed textures.
-      </p>
-      <p>This page also shows which compressed texture types your device and browser supports.</p>
       <p>
         <i>
-          Note that multiple textures on this page will fail to display due to lack of GPU support
-          (reported via WebGL extensions). For example: DXT formats are usually only supported on
-          Desktops while PVRTC is typically only available on mobile devices with PowerVR chipsets.
+          Unsupported formats are expected. For example, DXT formats are commonly available on
+          desktop GPUs, while PVRTC is usually limited to PowerVR-based mobile devices.
         </i>
       </p>
       <p>
         <i>
-          Inspired by toji's awesome{' '}
-          <a href="http://toji.github.io/texture-tester">texture-tester</a>
+          Inspired by toji&apos;s <a href="http://toji.github.io/texture-tester">texture-tester</a>
         </i>
       </p>
     </div>
   );
 }
 
-export function renderToDOM(container: HTMLElement): () => void {
+export function renderToDOM(
+  container: HTMLElement,
+  props: {deviceType?: DeviceType} = {}
+): () => void {
   const root: Root = createRoot(container);
-  root.render(<App />);
-  return () => root.unmount();
+  root.render(<App {...props} />);
+  return () => {
+    queueMicrotask(() => root.unmount());
+  };
 }

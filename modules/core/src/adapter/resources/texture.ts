@@ -58,6 +58,12 @@ export type CopyImageDataOptions = {
   bytesPerRow?: number;
   /** Number or rows per image (needed if multiple images are being set) */
   rowsPerImage?: number;
+  /** Copy width in texels (defaults to mip size) */
+  width?: number;
+  /** Copy height in texels (defaults to mip size) */
+  height?: number;
+  /** Copy depth or array layers (defaults to mip size/layer count) */
+  depth?: number;
   /** Start copying into offset x (default 0) */
   x?: number;
   /** Start copying into offset y (default 0) */
@@ -383,15 +389,19 @@ export abstract class Texture extends Resource<TextureProps> {
   }
 
   _normalizeCopyImageDataOptions(options_: CopyImageDataOptions): Required<CopyImageDataOptions> {
-    const {width, height, depth} = this;
+    const mipLevel = options_.mipLevel || 0;
+    const {width, height, depth} = this._getMipLevelExtent(mipLevel);
     const options = {...Texture.defaultCopyDataOptions, width, height, depth, ...options_};
+    const layout = textureFormatDecoder.computeMemoryLayout({
+      format: this.format,
+      width: options.width,
+      height: options.height,
+      depth: options.depth,
+      byteAlignment: 1
+    });
 
-    const info = this.device.getTextureFormatInfo(this.format);
-    if (!options_.bytesPerRow && !info.bytesPerPixel) {
-      throw new Error(`bytesPerRow must be provided for texture format ${this.format}`);
-    }
-    options.bytesPerRow = options_.bytesPerRow || width * (info.bytesPerPixel || 4);
-    options.rowsPerImage = options_.rowsPerImage || height;
+    options.bytesPerRow = options_.bytesPerRow || layout.bytesPerRow;
+    options.rowsPerImage = options_.rowsPerImage || layout.rowsPerImage;
 
     // WebGL will error if we try to copy outside the bounds of the texture
     // options.width = Math.min(options.width, this.width - options.x);
@@ -411,21 +421,43 @@ export abstract class Texture extends Resource<TextureProps> {
   }
 
   _normalizeTextureReadOptions(options_: TextureReadOptions): Required<TextureReadOptions> {
-    const {width, height} = this;
-    const options = {...Texture.defaultTextureReadOptions, width, height, ...options_};
+    const mipLevel = options_.mipLevel || 0;
+    const mipLevelExtent = this._getMipLevelExtent(mipLevel);
+    const options = {
+      ...Texture.defaultTextureReadOptions,
+      width: mipLevelExtent.width,
+      height: mipLevelExtent.height,
+      depthOrArrayLayers: mipLevelExtent.depth,
+      ...options_
+    };
     // WebGL will error if we try to copy outside the bounds of the texture
-    options.width = Math.min(options.width, this.width - options.x);
-    options.height = Math.min(options.height, this.height - options.y);
+    options.width = Math.min(options.width, mipLevelExtent.width - options.x);
+    options.height = Math.min(options.height, mipLevelExtent.height - options.y);
     return options;
   }
 
   _normalizeTextureWriteOptions(options_: TextureWriteOptions): Required<TextureWriteOptions> {
-    const {width, height} = this;
-    const options = {...Texture.defaultTextureReadOptions, width, height, ...options_};
+    const mipLevel = options_.mipLevel || 0;
+    const mipLevelExtent = this._getMipLevelExtent(mipLevel);
+    const options = {
+      ...Texture.defaultTextureReadOptions,
+      width: mipLevelExtent.width,
+      height: mipLevelExtent.height,
+      depthOrArrayLayers: mipLevelExtent.depth,
+      ...options_
+    };
     // WebGL will error if we try to copy outside the bounds of the texture
-    options.width = Math.min(options.width, this.width - options.x);
-    options.height = Math.min(options.height, this.height - options.y);
+    options.width = Math.min(options.width, mipLevelExtent.width - options.x);
+    options.height = Math.min(options.height, mipLevelExtent.height - options.y);
     return options;
+  }
+
+  protected _getMipLevelExtent(mipLevel: number): {width: number; height: number; depth: number} {
+    return {
+      width: Math.max(1, this.width >> mipLevel),
+      height: Math.max(1, this.height >> mipLevel),
+      depth: this.dimension === '3d' ? Math.max(1, this.depth >> mipLevel) : this.depth
+    };
   }
 
   static override defaultProps: Required<TextureProps> = {
@@ -448,6 +480,9 @@ export abstract class Texture extends Resource<TextureProps> {
     byteOffset: 0,
     bytesPerRow: undefined!,
     rowsPerImage: undefined!,
+    width: undefined!,
+    height: undefined!,
+    depth: 1,
     mipLevel: 0,
     x: 0,
     y: 0,

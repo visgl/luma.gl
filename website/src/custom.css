@@ -28,3 +28,20 @@
   opacity: 1;
   pointer-events: auto;
 }
+
+/* Let embedded example pages use the full docs content width instead of the prose column. */
+.container:has(> [class*='doc-item-component__DemoContainer']) {
+  max-width: none;
+  width: 100%;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+.container:has(.textures-example-page) {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.textures-example-page {
+  width: 100%;
+}
