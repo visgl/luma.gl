@@ -14,7 +14,6 @@ import {
   type TextureReadOptions,
   type TextureWriteOptions,
   type TextureFormat,
-  type TypedArray,
   Buffer,
   Texture,
   log
@@ -76,9 +75,9 @@ export class WEBGLTexture extends Texture {
   // state
   /** Texture binding slot - TODO - move to texture view? */
   _textureUnit: number = 0;
-  /** Chached framebuffer */
+  /** Cached framebuffer reused for color texture readback. */
   _framebuffer: WEBGLFramebuffer | null = null;
-  /** Cached read framebuffer attachment */
+  /** Cache key for the currently attached readback subresource `${mipLevel}:${layer}`. */
   _framebufferAttachmentKey: string | null = null;
 
   constructor(device: Device, props: TextureProps) {
@@ -202,6 +201,12 @@ export class WEBGLTexture extends Texture {
     super.copyImageData(options_);
   }
 
+  /**
+   * Reads a color texture subresource into a GPU buffer using `PIXEL_PACK_BUFFER`.
+   *
+   * @note Only first-pass color readback is supported. Unsupported formats and aspects throw
+   * before any WebGL calls are issued.
+   */
   readBuffer(options: TextureReadOptions = {}, buffer?: Buffer): Buffer {
     const normalizedOptions = this._getSupportedColorReadOptions(options);
     const memoryLayout = this.computeMemoryLayout(normalizedOptions);
@@ -436,6 +441,10 @@ export class WEBGLTexture extends Texture {
     return targetArray.buffer as ArrayBuffer;
   }
 
+  /**
+   * Iterates the requested mip/layer/slice range, reattaching the cached read framebuffer as
+   * needed before delegating the actual `readPixels()` call to the supplied callback.
+   */
   private _readColorTextureLayers(
     options: Required<TextureReadOptions>,
     memoryLayout: ReturnType<Texture['computeMemoryLayout']>,
@@ -469,6 +478,11 @@ export class WEBGLTexture extends Texture {
     }
   }
 
+  /**
+   * Attaches a single color subresource to the cached read framebuffer.
+   *
+   * @note Repeated attachments of the same `(mipLevel, layer)` tuple are skipped.
+   */
   private _attachReadSubresource(
     framebuffer: WEBGLFramebuffer,
     mipLevel: number,
@@ -516,8 +530,8 @@ export class WEBGLTexture extends Texture {
     }
 
     if (this.device.props.debug) {
-      const status = this.gl.checkFramebufferStatus(GL.FRAMEBUFFER);
-      if (status !== GL.FRAMEBUFFER_COMPLETE) {
+      const status = Number(this.gl.checkFramebufferStatus(GL.FRAMEBUFFER));
+      if (status !== Number(GL.FRAMEBUFFER_COMPLETE)) {
         throw new Error(`${framebuffer} incomplete for ${this} readback (${status})`);
       }
     }

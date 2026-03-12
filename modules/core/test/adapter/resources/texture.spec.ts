@@ -104,15 +104,84 @@ function createRgbaUploadData(options: {
   return data;
 }
 
-async function readTexturePixels(
+function createLayeredRgbaUploadData(options: {
+  width: number;
+  height: number;
+  pixels: Array<[number, number, number, number]>;
+  bytesPerRow?: number;
+  rowsPerImage?: number;
+  byteOffset?: number;
+}): Uint8Array {
+  const {
+    width,
+    height,
+    pixels,
+    bytesPerRow = width * 4,
+    rowsPerImage = height,
+    byteOffset = 0
+  } = options;
+
+  const data = new Uint8Array(byteOffset + bytesPerRow * rowsPerImage * pixels.length);
+  for (let layerIndex = 0; layerIndex < pixels.length; layerIndex++) {
+    const layerData = createRgbaUploadData({
+      width,
+      height,
+      bytesPerRow,
+      rowsPerImage,
+      byteOffset,
+      pixel: pixels[layerIndex]
+    });
+    const layerByteOffset = layerIndex * rowsPerImage * bytesPerRow;
+    data.set(
+      layerData.subarray(byteOffset, byteOffset + rowsPerImage * bytesPerRow),
+      layerByteOffset
+    );
+  }
+
+  return data;
+}
+
+function repeatRgbaPixel(pixel: [number, number, number, number], texelCount: number): Uint8Array {
+  const data = new Uint8Array(texelCount * 4);
+  for (let texelIndex = 0; texelIndex < texelCount; texelIndex++) {
+    data.set(pixel, texelIndex * 4);
+  }
+  return data;
+}
+
+function normalizeTextureReadOptionsForTest(
   texture: Texture,
   options: TextureReadOptions
-): Promise<Uint8Array> {
-  const arrayBuffer = await texture.readDataAsync(options);
+): Required<TextureReadOptions> {
+  const mipLevel = options.mipLevel ?? 0;
+  const x = options.x ?? 0;
+  const y = options.y ?? 0;
+  const z = options.z ?? 0;
+  const mipWidth = Math.max(1, texture.width >> mipLevel);
+  const mipHeight = texture.baseDimension === '1d' ? 1 : Math.max(1, texture.height >> mipLevel);
+  const mipDepthOrArrayLayers =
+    texture.dimension === '3d' ? Math.max(1, texture.depth >> mipLevel) : texture.depth;
+
+  return {
+    x,
+    y,
+    z,
+    width: Math.min(options.width ?? mipWidth, mipWidth - x),
+    height: Math.min(options.height ?? mipHeight, mipHeight - y),
+    depthOrArrayLayers: Math.min(options.depthOrArrayLayers ?? 1, mipDepthOrArrayLayers - z),
+    mipLevel,
+    aspect: options.aspect ?? 'all'
+  };
+}
+
+function compactTextureBytes(
+  texture: Texture,
+  arrayBuffer: ArrayBuffer | ArrayBufferView,
+  options: TextureReadOptions
+): Uint8Array {
   const layout = texture.computeMemoryLayout(options);
-  const width = options.width ?? texture.width;
-  const height = options.height ?? texture.height;
-  const depthOrArrayLayers = options.depthOrArrayLayers ?? 1;
+  const normalizedOptions = normalizeTextureReadOptionsForTest(texture, options);
+  const {width, height, depthOrArrayLayers} = normalizedOptions;
   const rowByteLength = width * layout.bytesPerPixel;
   const compact = new Uint8Array(rowByteLength * height * depthOrArrayLayers);
   const source = toUint8(arrayBuffer);
@@ -127,6 +196,31 @@ async function readTexturePixels(
   }
 
   return compact;
+}
+
+async function readTexturePixels(
+  texture: Texture,
+  options: TextureReadOptions
+): Promise<Uint8Array> {
+  const arrayBuffer = await texture.readDataAsync(options);
+  return compactTextureBytes(texture, arrayBuffer, options);
+}
+
+async function readTextureBufferPixels(
+  texture: Texture,
+  options: TextureReadOptions
+): Promise<Uint8Array> {
+  const buffer = texture.readBuffer(options);
+  try {
+    const arrayBufferView = await buffer.readAsync();
+    return compactTextureBytes(texture, arrayBufferView, options);
+  } finally {
+    buffer.destroy();
+  }
+}
+
+function readTexturePixelsSyncWebGL(texture: Texture, options: TextureReadOptions): Uint8Array {
+  return compactTextureBytes(texture, texture.readDataSyncWebGL(options), options);
 }
 
 function createTextureWriteOptions(options: {
@@ -180,71 +274,6 @@ function uploadTexture(
       throw new Error(method);
   }
 }
-
-function captureWebGLTexSubImageCalls(device: Device): {
-  calls: Array<{method: 'texSubImage2D' | 'texSubImage3D'; args: unknown[]}>;
-  restore: () => void;
-} | null {
-  if (device.type !== 'webgl') {
-    return null;
-  }
-
-  const gl = (device as WebGLDevice).gl;
-  const calls: Array<{method: 'texSubImage2D' | 'texSubImage3D'; args: unknown[]}> = [];
-  const originalTexSubImage2D = gl.texSubImage2D.bind(gl);
-  const originalTexSubImage3D = gl.texSubImage3D.bind(gl);
-
-  (gl as any).texSubImage2D = (...args: unknown[]) => {
-    calls.push({method: 'texSubImage2D', args});
-    return originalTexSubImage2D(...(args as Parameters<typeof gl.texSubImage2D>));
-  };
-
-  (gl as any).texSubImage3D = (...args: unknown[]) => {
-    calls.push({method: 'texSubImage3D', args});
-    return originalTexSubImage3D(...(args as Parameters<typeof gl.texSubImage3D>));
-  };
-
-  return {
-    calls,
-    restore: () => {
-      (gl as any).texSubImage2D = originalTexSubImage2D;
-      (gl as any).texSubImage3D = originalTexSubImage3D;
-    }
-  };
-}
-
-test('Texture#copyImageData updates correct cubemap face on WebGL', async t => {
-  const device = await getWebGLTestDevice();
-  if (!device) {
-    t.comment('WebGL not available');
-    t.end();
-    return;
-  }
-
-  const tex = device.createTexture({
-    dimension: 'cube',
-    format: 'rgba8unorm',
-    width: 1,
-    height: 1
-  });
-
-  const gl = device.gl;
-  const calls: number[] = [];
-  const original = gl.texSubImage2D.bind(gl);
-  (gl as any).texSubImage2D = function (target: number, ...args: any[]) {
-    calls.push(target);
-    return original(target, ...args);
-  };
-
-  const data = new Uint8Array([0, 0, 0, 0]);
-  tex.copyImageData({data, z: 1});
-
-  (gl as any).texSubImage2D = original;
-  tex.destroy();
-
-  t.equal(calls[0], GL.TEXTURE_CUBE_MAP_NEGATIVE_X, 'updates specified face');
-  t.end();
-});
 
 test('Texture#copyImageData handles padded rows on WebGL', async t => {
   const device = await getWebGLTestDevice();
@@ -324,6 +353,320 @@ test('Texture#writeData & readDataAsync round-trip', async t => {
   t.end();
 });
 
+test('Texture color read APIs support subresources and mip levels', async t => {
+  for (const device of await getTestDevices()) {
+    const twoDimensionalTexture = device.createTexture({
+      width: 2,
+      height: 2,
+      format: 'rgba8unorm',
+      usage: Texture.COPY_DST | Texture.COPY_SRC
+    });
+    twoDimensionalTexture.writeData(
+      createRgbaUploadData({
+        width: 2,
+        height: 2,
+        bytesPerRow: 256,
+        rowsPerImage: 2,
+        pixel: [1, 2, 3, 255]
+      }),
+      {width: 2, height: 2, bytesPerRow: 256, rowsPerImage: 2}
+    );
+    t.deepEquals(
+      await readTexturePixels(twoDimensionalTexture, {width: 2, height: 2}),
+      repeatRgbaPixel([1, 2, 3, 255], 4),
+      `${device.type}: readDataAsync reads 2d base level texels`
+    );
+    t.deepEquals(
+      await readTextureBufferPixels(twoDimensionalTexture, {width: 2, height: 2}),
+      repeatRgbaPixel([1, 2, 3, 255], 4),
+      `${device.type}: readBuffer matches 2d base level texels`
+    );
+    twoDimensionalTexture.destroy();
+
+    const mipTexture = device.createTexture({
+      width: 4,
+      height: 4,
+      mipLevels: 2,
+      format: 'rgba8unorm',
+      usage: Texture.COPY_DST | Texture.COPY_SRC
+    });
+    mipTexture.writeData(
+      createRgbaUploadData({
+        width: 2,
+        height: 2,
+        bytesPerRow: 256,
+        rowsPerImage: 2,
+        pixel: [4, 5, 6, 255]
+      }),
+      {width: 2, height: 2, mipLevel: 1, bytesPerRow: 256, rowsPerImage: 2}
+    );
+    t.deepEquals(
+      await readTexturePixels(mipTexture, {mipLevel: 1, width: 2, height: 2}),
+      repeatRgbaPixel([4, 5, 6, 255], 4),
+      `${device.type}: readDataAsync reads nonzero mip texels`
+    );
+    mipTexture.destroy();
+
+    const cubeTexture = device.createTexture({
+      dimension: 'cube',
+      width: 1,
+      height: 1,
+      format: 'rgba8unorm',
+      usage: Texture.COPY_DST | Texture.COPY_SRC
+    });
+    cubeTexture.writeData(
+      createRgbaUploadData({
+        width: 1,
+        height: 1,
+        bytesPerRow: 256,
+        pixel: [7, 8, 9, 255]
+      }),
+      {width: 1, height: 1, z: 5, bytesPerRow: 256}
+    );
+    t.deepEquals(
+      await readTexturePixels(cubeTexture, {width: 1, height: 1, z: 5}),
+      new Uint8Array([7, 8, 9, 255]),
+      `${device.type}: readDataAsync reads cube face texels`
+    );
+    cubeTexture.destroy();
+
+    const arrayTexture = device.createTexture({
+      dimension: '2d-array',
+      width: 1,
+      height: 1,
+      depth: 2,
+      format: 'rgba8unorm',
+      usage: Texture.COPY_DST | Texture.COPY_SRC
+    });
+    arrayTexture.writeData(
+      createRgbaUploadData({
+        width: 1,
+        height: 1,
+        bytesPerRow: 256,
+        pixel: [10, 11, 12, 255]
+      }),
+      {
+        width: 1,
+        height: 1,
+        z: 1,
+        depthOrArrayLayers: 1,
+        bytesPerRow: 256,
+        rowsPerImage: 1
+      }
+    );
+    t.deepEquals(
+      await readTexturePixels(arrayTexture, {width: 1, height: 1, z: 1, depthOrArrayLayers: 1}),
+      new Uint8Array([10, 11, 12, 255]),
+      `${device.type}: readDataAsync reads array layer texels`
+    );
+    arrayTexture.destroy();
+
+    const threeDimensionalTexture = device.createTexture({
+      dimension: '3d',
+      width: 1,
+      height: 1,
+      depth: 2,
+      format: 'rgba8unorm',
+      usage: Texture.COPY_DST | Texture.COPY_SRC
+    });
+    threeDimensionalTexture.writeData(
+      createRgbaUploadData({
+        width: 1,
+        height: 1,
+        bytesPerRow: 256,
+        pixel: [13, 14, 15, 255]
+      }),
+      {
+        width: 1,
+        height: 1,
+        z: 1,
+        depthOrArrayLayers: 1,
+        bytesPerRow: 256,
+        rowsPerImage: 1
+      }
+    );
+    t.deepEquals(
+      await readTexturePixels(threeDimensionalTexture, {
+        width: 1,
+        height: 1,
+        z: 1,
+        depthOrArrayLayers: 1
+      }),
+      new Uint8Array([13, 14, 15, 255]),
+      `${device.type}: readDataAsync reads 3d slice texels`
+    );
+    threeDimensionalTexture.destroy();
+  }
+
+  t.end();
+});
+
+test('Texture color read APIs pack multi-layer and multi-slice reads consistently', async t => {
+  for (const device of await getTestDevices()) {
+    const arrayTexture = device.createTexture({
+      dimension: '2d-array',
+      width: 1,
+      height: 1,
+      depth: 2,
+      format: 'rgba8unorm',
+      usage: Texture.COPY_DST | Texture.COPY_SRC
+    });
+    arrayTexture.writeData(
+      createLayeredRgbaUploadData({
+        width: 1,
+        height: 1,
+        bytesPerRow: 256,
+        rowsPerImage: 1,
+        pixels: [
+          [1, 10, 20, 255],
+          [2, 11, 21, 255]
+        ]
+      }),
+      {width: 1, height: 1, depthOrArrayLayers: 2, bytesPerRow: 256, rowsPerImage: 1}
+    );
+
+    t.deepEquals(
+      await readTexturePixels(arrayTexture, {width: 1, height: 1, depthOrArrayLayers: 2}),
+      new Uint8Array([1, 10, 20, 255, 2, 11, 21, 255]),
+      `${device.type}: multi-layer reads pack consecutive array layers`
+    );
+    arrayTexture.destroy();
+
+    const threeDimensionalTexture = device.createTexture({
+      dimension: '3d',
+      width: 1,
+      height: 1,
+      depth: 2,
+      format: 'rgba8unorm',
+      usage: Texture.COPY_DST | Texture.COPY_SRC
+    });
+    threeDimensionalTexture.writeData(
+      createLayeredRgbaUploadData({
+        width: 1,
+        height: 1,
+        bytesPerRow: 256,
+        rowsPerImage: 1,
+        pixels: [
+          [3, 12, 22, 255],
+          [4, 13, 23, 255]
+        ]
+      }),
+      {width: 1, height: 1, depthOrArrayLayers: 2, bytesPerRow: 256, rowsPerImage: 1}
+    );
+
+    t.deepEquals(
+      await readTexturePixels(threeDimensionalTexture, {
+        width: 1,
+        height: 1,
+        depthOrArrayLayers: 2
+      }),
+      new Uint8Array([3, 12, 22, 255, 4, 13, 23, 255]),
+      `${device.type}: multi-slice reads pack consecutive 3d slices`
+    );
+    threeDimensionalTexture.destroy();
+  }
+
+  t.end();
+});
+
+test('Texture color read APIs keep readBuffer and readDataAsync in parity', async t => {
+  for (const device of await getTestDevices()) {
+    const texture = device.createTexture({
+      dimension: '2d-array',
+      width: 1,
+      height: 1,
+      depth: 2,
+      format: 'rgba8unorm',
+      usage: Texture.COPY_DST | Texture.COPY_SRC
+    });
+    texture.writeData(
+      createLayeredRgbaUploadData({
+        width: 1,
+        height: 1,
+        bytesPerRow: 256,
+        rowsPerImage: 1,
+        pixels: [
+          [30, 31, 32, 255],
+          [40, 41, 42, 255]
+        ]
+      }),
+      {width: 1, height: 1, depthOrArrayLayers: 2, bytesPerRow: 256, rowsPerImage: 1}
+    );
+
+    const options = {width: 1, height: 1, depthOrArrayLayers: 2};
+    t.deepEquals(
+      await readTextureBufferPixels(texture, options),
+      await readTexturePixels(texture, options),
+      `${device.type}: readBuffer and readDataAsync return the same texel bytes`
+    );
+    texture.destroy();
+  }
+
+  t.end();
+});
+
+test('Texture#readDataSyncWebGL matches async color reads on WebGL subresources', async t => {
+  for (const device of await getTestDevices()) {
+    if (!(device instanceof WebGLDevice)) {
+      continue;
+    }
+
+    const mipTexture = device.createTexture({
+      width: 4,
+      height: 4,
+      mipLevels: 2,
+      format: 'rgba8unorm',
+      usage: Texture.COPY_DST | Texture.COPY_SRC
+    });
+    mipTexture.writeData(
+      createRgbaUploadData({
+        width: 2,
+        height: 2,
+        bytesPerRow: 256,
+        rowsPerImage: 2,
+        pixel: [50, 51, 52, 255]
+      }),
+      {width: 2, height: 2, mipLevel: 1, bytesPerRow: 256, rowsPerImage: 2}
+    );
+    t.deepEquals(
+      readTexturePixelsSyncWebGL(mipTexture, {mipLevel: 1, width: 2, height: 2}),
+      await readTexturePixels(mipTexture, {mipLevel: 1, width: 2, height: 2}),
+      'webgl: readDataSyncWebGL matches readDataAsync for lower mip reads'
+    );
+    mipTexture.destroy();
+
+    const arrayTexture = device.createTexture({
+      dimension: '2d-array',
+      width: 1,
+      height: 1,
+      depth: 2,
+      format: 'rgba8unorm',
+      usage: Texture.COPY_DST | Texture.COPY_SRC
+    });
+    arrayTexture.writeData(
+      createLayeredRgbaUploadData({
+        width: 1,
+        height: 1,
+        bytesPerRow: 256,
+        rowsPerImage: 1,
+        pixels: [
+          [60, 61, 62, 255],
+          [70, 71, 72, 255]
+        ]
+      }),
+      {width: 1, height: 1, depthOrArrayLayers: 2, bytesPerRow: 256, rowsPerImage: 1}
+    );
+    t.deepEquals(
+      readTexturePixelsSyncWebGL(arrayTexture, {width: 1, height: 1, depthOrArrayLayers: 2}),
+      await readTexturePixels(arrayTexture, {width: 1, height: 1, depthOrArrayLayers: 2}),
+      'webgl: readDataSyncWebGL matches readDataAsync for multi-layer reads'
+    );
+    arrayTexture.destroy();
+  }
+
+  t.end();
+});
+
 test('Texture upload methods round-trip through full-level uploads', async t => {
   for (const device of await getTestDevices()) {
     for (const method of TEXTURE_UPLOAD_METHODS) {
@@ -387,30 +730,15 @@ test('Texture upload methods support lower mip uploads', async t => {
         rowsPerImage: 2
       });
 
-      const webglCalls = captureWebGLTexSubImageCalls(device);
       const uploadBuffer = uploadTexture(device, texture, method, expected, options);
+      const result = await readTexturePixels(texture, {width: 2, height: 2, mipLevel: 1});
 
-      if (device.type === 'webgl') {
-        const call = webglCalls?.calls.at(-1);
-        t.equal(
-          call?.method,
-          'texSubImage2D',
-          `${device.type}: ${method} uses texSubImage2D for lower mip uploads`
-        );
-        t.equal(call?.args[1], 1, `${device.type}: ${method} targets mip level 1`);
-        t.equal(call?.args[4], 2, `${device.type}: ${method} uploads mip-sized width`);
-        t.equal(call?.args[5], 2, `${device.type}: ${method} uploads mip-sized height`);
-      } else {
-        const result = await readTexturePixels(texture, {width: 2, height: 2, mipLevel: 1});
+      t.deepEquals(
+        result,
+        repeatRgbaPixel([90, 80, 70, 255], 4),
+        `${device.type}: ${method} uploads lower mip subresources using mip-sized extents`
+      );
 
-        t.deepEquals(
-          result,
-          new Uint8Array([90, 80, 70, 255, 90, 80, 70, 255, 90, 80, 70, 255, 90, 80, 70, 255]),
-          `${device.type}: ${method} uploads lower mip subresources using mip-sized extents`
-        );
-      }
-
-      webglCalls?.restore();
       uploadBuffer?.destroy();
       texture.destroy();
     }
@@ -518,7 +846,7 @@ test('Texture upload methods interpret byteOffset as bytes for typed array uploa
   t.end();
 });
 
-test('Texture upload methods target cube faces and array layers consistently', async t => {
+test('Texture upload methods target cube faces, array layers, and 3d slices consistently', async t => {
   for (const device of await getTestDevices()) {
     for (const method of TEXTURE_UPLOAD_METHODS) {
       const cubeTexture = device.createTexture({
@@ -541,37 +869,20 @@ test('Texture upload methods target cube faces and array layers consistently', a
         bytesPerRow: 256
       });
 
-      const cubeCalls = captureWebGLTexSubImageCalls(device);
       const cubeUploadBuffer = uploadTexture(device, cubeTexture, method, cubeData, cubeOptions);
+      const cubePixels = await readTexturePixels(cubeTexture, {
+        width: 1,
+        height: 1,
+        z: 5,
+        depthOrArrayLayers: 1
+      });
 
-      if (device.type === 'webgl') {
-        const cubeCall = cubeCalls?.calls.at(-1);
-        t.equal(
-          cubeCall?.method,
-          'texSubImage2D',
-          `${device.type}: ${method} uses texSubImage2D for cube uploads`
-        );
-        t.equal(
-          cubeCall?.args[0],
-          GL.TEXTURE_CUBE_MAP_NEGATIVE_Z,
-          `${device.type}: ${method} targets the requested cube face`
-        );
-      } else {
-        const cubePixels = await readTexturePixels(cubeTexture, {
-          width: 1,
-          height: 1,
-          z: 5,
-          depthOrArrayLayers: 1
-        });
+      t.deepEquals(
+        cubePixels,
+        new Uint8Array([7, 8, 9, 255]),
+        `${device.type}: ${method} targets the requested cube face`
+      );
 
-        t.deepEquals(
-          cubePixels,
-          new Uint8Array([7, 8, 9, 255]),
-          `${device.type}: ${method} targets the requested cube face`
-        );
-      }
-
-      cubeCalls?.restore();
       cubeUploadBuffer?.destroy();
       cubeTexture.destroy();
 
@@ -597,7 +908,6 @@ test('Texture upload methods target cube faces and array layers consistently', a
         bytesPerRow: 256
       });
 
-      const arrayCalls = captureWebGLTexSubImageCalls(device);
       const arrayUploadBuffer = uploadTexture(
         device,
         arrayTexture,
@@ -605,34 +915,66 @@ test('Texture upload methods target cube faces and array layers consistently', a
         arrayData,
         arrayOptions
       );
+      const arrayPixels = await readTexturePixels(arrayTexture, {
+        width: 1,
+        height: 1,
+        z: 1,
+        depthOrArrayLayers: 1
+      });
 
-      if (device.type === 'webgl') {
-        const arrayCall = arrayCalls?.calls.at(-1);
-        t.equal(
-          arrayCall?.method,
-          'texSubImage3D',
-          `${device.type}: ${method} uses texSubImage3D for array uploads`
-        );
-        t.equal(arrayCall?.args[4], 1, `${device.type}: ${method} targets array layer 1`);
-        t.equal(arrayCall?.args[7], 1, `${device.type}: ${method} uploads one array layer`);
-      } else {
-        const arrayPixels = await readTexturePixels(arrayTexture, {
-          width: 1,
-          height: 1,
-          z: 1,
-          depthOrArrayLayers: 1
-        });
+      t.deepEquals(
+        arrayPixels,
+        new Uint8Array([21, 22, 23, 255]),
+        `${device.type}: ${method} targets the requested array layer`
+      );
 
-        t.deepEquals(
-          arrayPixels,
-          new Uint8Array([21, 22, 23, 255]),
-          `${device.type}: ${method} targets the requested array layer`
-        );
-      }
-
-      arrayCalls?.restore();
       arrayUploadBuffer?.destroy();
       arrayTexture.destroy();
+
+      const threeDimensionalTexture = device.createTexture({
+        dimension: '3d',
+        width: 1,
+        height: 1,
+        depth: 2,
+        format: 'rgba8unorm',
+        usage: Texture.COPY_DST | Texture.COPY_SRC
+      });
+      const threeDimensionalData = createRgbaUploadData({
+        width: 1,
+        height: 1,
+        bytesPerRow: 256,
+        pixel: [31, 32, 33, 255]
+      });
+      const threeDimensionalOptions = createTextureWriteOptions({
+        width: 1,
+        height: 1,
+        z: 1,
+        depthOrArrayLayers: 1,
+        bytesPerRow: 256
+      });
+
+      const threeDimensionalUploadBuffer = uploadTexture(
+        device,
+        threeDimensionalTexture,
+        method,
+        threeDimensionalData,
+        threeDimensionalOptions
+      );
+      const threeDimensionalPixels = await readTexturePixels(threeDimensionalTexture, {
+        width: 1,
+        height: 1,
+        z: 1,
+        depthOrArrayLayers: 1
+      });
+
+      t.deepEquals(
+        threeDimensionalPixels,
+        new Uint8Array([31, 32, 33, 255]),
+        `${device.type}: ${method} targets the requested 3d slice`
+      );
+
+      threeDimensionalUploadBuffer?.destroy();
+      threeDimensionalTexture.destroy();
     }
   }
 
@@ -915,6 +1257,128 @@ test('Texture#readDataSyncWebGL returns correct data on WebGL', async t => {
       tex.destroy();
     }
   }
+  t.end();
+});
+
+test('Texture color read APIs reject unsupported formats and aspects', async t => {
+  const compressedFormats: TextureFormat[] = [
+    'bc1-rgba-unorm',
+    'etc2-rgba8unorm',
+    'astc-4x4-unorm',
+    'bc1-rgb-unorm-webgl'
+  ];
+
+  for (const device of await getTestDevices()) {
+    const colorTexture = device.createTexture({width: 1, height: 1, format: 'rgba8unorm'});
+    t.throws(
+      () => colorTexture.readBuffer({aspect: 'depth-only'}),
+      /aspect 'all'/,
+      `${device.type}: color reads reject non-all aspects`
+    );
+    colorTexture.destroy();
+
+    const depthTexture = device.createTexture({width: 1, height: 1, format: 'depth16unorm'});
+    t.throws(
+      () => depthTexture.readBuffer({}),
+      /depth formats/,
+      `${device.type}: color reads reject depth formats`
+    );
+    depthTexture.destroy();
+
+    if (device.isTextureFormatSupported('stencil8')) {
+      try {
+        const stencilTexture = device.createTexture({width: 1, height: 1, format: 'stencil8'});
+        t.throws(
+          () => stencilTexture.readBuffer({}),
+          /stencil formats/,
+          `${device.type}: color reads reject stencil formats`
+        );
+        stencilTexture.destroy();
+      } catch (error) {
+        t.comment(`${device.type}: skipping stencil read guard test (${(error as Error).message})`);
+      }
+    }
+
+    const depthStencilTexture = device.createTexture({
+      width: 1,
+      height: 1,
+      format: 'depth24plus-stencil8'
+    });
+    t.throws(
+      () => depthStencilTexture.readBuffer({}),
+      /depth-stencil formats/,
+      `${device.type}: color reads reject depth-stencil formats`
+    );
+    depthStencilTexture.destroy();
+
+    const compressedFormat = compressedFormats.find(format =>
+      device.isTextureFormatSupported(format)
+    );
+    if (compressedFormat) {
+      const compressedTexture = device.createTexture({
+        width: 4,
+        height: 4,
+        format: compressedFormat
+      });
+      t.throws(
+        () => compressedTexture.readBuffer({}),
+        /compressed formats/,
+        `${device.type}: color reads reject compressed formats`
+      );
+      compressedTexture.destroy();
+    } else {
+      t.comment(
+        `${device.type}: skipping compressed read guard test (no supported compressed format)`
+      );
+    }
+  }
+
+  t.end();
+});
+
+test('Texture#readDataAsync reuses the cached WebGL read framebuffer', async t => {
+  const device = await getWebGLTestDevice();
+  if (!device) {
+    t.comment('WebGL not available');
+    t.end();
+    return;
+  }
+
+  const texture = device.createTexture({
+    dimension: '2d-array',
+    width: 1,
+    height: 1,
+    depth: 2,
+    format: 'rgba8unorm',
+    usage: Texture.COPY_DST | Texture.COPY_SRC
+  });
+  texture.writeData(
+    createLayeredRgbaUploadData({
+      width: 1,
+      height: 1,
+      bytesPerRow: 256,
+      rowsPerImage: 1,
+      pixels: [
+        [80, 81, 82, 255],
+        [90, 91, 92, 255]
+      ]
+    }),
+    {width: 1, height: 1, depthOrArrayLayers: 2, bytesPerRow: 256, rowsPerImage: 1}
+  );
+
+  await texture.readDataAsync({width: 1, height: 1, z: 0, depthOrArrayLayers: 1});
+  const firstFramebuffer = (texture as any)._framebuffer;
+  await texture.readDataAsync({width: 1, height: 1, z: 1, depthOrArrayLayers: 1});
+  const secondFramebuffer = (texture as any)._framebuffer;
+
+  t.ok(firstFramebuffer, 'webgl: first read creates a cached read framebuffer');
+  t.equal(
+    secondFramebuffer,
+    firstFramebuffer,
+    'webgl: subsequent reads reuse the cached read framebuffer'
+  );
+
+  texture.destroy();
   t.end();
 });
 

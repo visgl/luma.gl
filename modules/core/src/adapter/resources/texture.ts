@@ -478,6 +478,13 @@ export abstract class Texture extends Resource<TextureProps> {
     return options;
   }
 
+  /**
+   * Normalizes a texture read request and validates the color-only readback contract used by the
+   * current texture read APIs.
+   *
+   * @throws if the texture format, aspect, or dimension is not supported by the first-pass
+   * color-read implementation.
+   */
   protected _getSupportedColorReadOptions(
     options_: TextureReadOptions
   ): Required<TextureReadOptions> {
@@ -499,12 +506,14 @@ export abstract class Texture extends Resource<TextureProps> {
     }
   }
 
+  /** Validates that a read request targets the full color aspect of the texture. */
   protected _validateColorReadAspect(options: Required<TextureReadOptions>): void {
     if (options.aspect !== 'all') {
       throw new Error(`${this} color readback only supports aspect 'all'`);
     }
   }
 
+  /** Validates that a read request targets an uncompressed color-renderable texture format. */
   protected _validateColorReadFormat(formatInfo: TextureFormatInfo): void {
     if (formatInfo.compressed) {
       throw new Error(
