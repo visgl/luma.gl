@@ -480,7 +480,8 @@ export abstract class Texture extends Resource<TextureProps> {
 
   /**
    * Normalizes a texture read request and validates the color-only readback contract used by the
-   * current texture read APIs.
+   * current texture read APIs. Supported dimensions are `2d`, `cube`, `cube-array`,
+   * `2d-array`, and `3d`.
    *
    * @throws if the texture format, aspect, or dimension is not supported by the first-pass
    * color-read implementation.
@@ -497,6 +498,7 @@ export abstract class Texture extends Resource<TextureProps> {
     switch (this.dimension) {
       case '2d':
       case 'cube':
+      case 'cube-array':
       case '2d-array':
       case '3d':
         return options;
