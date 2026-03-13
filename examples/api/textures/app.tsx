@@ -177,8 +177,8 @@ function Description() {
       </p>
       <p>
         <i>
-          Unsupported formats are expected. For example, DXT formats are commonly available on
-          desktop GPUs, while PVRTC is usually limited to PowerVR-based mobile devices.
+          Some compressed texture formats are expected to be unsupported, depending on the GPU in
+          the device you are using to view this page.
         </i>
       </p>
       <p>
