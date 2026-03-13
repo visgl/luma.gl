@@ -253,7 +253,7 @@ function getCompressedTextureBlockSize(
   const matches = REGEX.exec(format as string);
   if (matches) {
     const [, blockWidth, blockHeight] = matches;
-      return {blockWidth: Number(blockWidth), blockHeight: Number(blockHeight)};
+    return {blockWidth: Number(blockWidth), blockHeight: Number(blockHeight)};
   }
 
   if (

@@ -167,9 +167,9 @@ function Description() {
   return (
     <div>
       <p>
-        This page tests which compressed texture formats your current browser and GPU can render.
-        It uses <code>@loaders.gl/textures</code> to decode standard and compressed image assets,
-        then creates and draws the resulting textures with{' '}
+        This page tests which compressed texture formats your current browser and GPU can render. It
+        uses <code>@loaders.gl/textures</code> to decode standard and compressed image assets, then
+        creates and draws the resulting textures with{' '}
         <a href="https://luma.gl">
           <b>luma.gl</b>
         </a>

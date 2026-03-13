@@ -14,7 +14,7 @@ import {
 } from '@loaders.gl/textures';
 import {ImageLoader, type ImageType} from '@loaders.gl/images';
 
-import {type Device, type TextureFormat, Texture} from '@luma.gl/core';
+import {type Device, type TextureFormat, Texture, textureFormatDecoder} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
 import {type TextureSource} from '../textures-data';
 
@@ -81,7 +81,7 @@ const {
 
 const TEXTURES_BASE_URL =
   'https://raw.githubusercontent.com/visgl/loaders.gl/master/modules/textures/test/data/';
-const LOADERS_GL_TEXTURES_LIBRARY_PATH = 'https://unpkg.com/@loaders.gl/textures@4.3.2/dist/libs/';
+const LOADERS_GL_TEXTURES_LIBRARY_PATH = `https://unpkg.com/@loaders.gl/textures@${CompressedTextureLoader.version}/dist/libs/`;
 
 registerLoaders([BasisLoader, CompressedTextureLoader, ImageLoader]);
 
@@ -229,16 +229,13 @@ export class CompressedTexture extends React.PureComponent<
       basis: {
         format: selectSupportedBasisFormat(),
         containerFormat: 'auto',
-        worker: false,
         module: 'transcoder',
         libraryPath: LOADERS_GL_TEXTURES_LIBRARY_PATH
       },
       crunch: {
-        worker: false,
         libraryPath: LOADERS_GL_TEXTURES_LIBRARY_PATH
       },
       'compressed-texture': {
-        worker: false,
         libraryPath: LOADERS_GL_TEXTURES_LIBRARY_PATH
       }
     };
@@ -346,6 +343,9 @@ export class CompressedTexture extends React.PureComponent<
 
     for (let mipLevel = 0; mipLevel < uploadLevels.length; mipLevel++) {
       const image = uploadLevels[mipLevel];
+      if (!canUploadCompressedTextureLevel(device, textureFormat, image)) {
+        break;
+      }
       texture.writeData(image.data, {
         width: image.width,
         height: image.height,
@@ -429,14 +429,21 @@ export class CompressedTexture extends React.PureComponent<
     const {format, width, height, levelSize} = images[0];
     const textureFormat = getTextureFormat(format);
 
-    if (!isCompressedImageFormatSupported(device, format) || !device.isTextureFormatSupported(textureFormat)) {
+    if (
+      !isCompressedImageFormatSupported(device, format) ||
+      !device.isTextureFormatSupported(textureFormat)
+    ) {
       throw new Error(`${textureFormat} is not supported by your GPU (${getDeviceLabel(device)})`);
     }
 
-    if (!isCompressedTextureRenderableOnDevice(device, textureFormat, width, height)) {
-      throw new Error(
-        `${textureFormat} cannot be previewed on ${device.type} at ${width} x ${height}`
-      );
+    const webgpuPreviewError = getCompressedTexturePreviewError(
+      device,
+      textureFormat,
+      width,
+      height
+    );
+    if (webgpuPreviewError) {
+      throw new Error(webgpuPreviewError);
     }
 
     const startTime = performance.now();
@@ -760,20 +767,6 @@ function isCompressedImageFormatSupported(device: Device, format: number): boole
   }
 }
 
-function isCompressedTextureRenderableOnDevice(
-  device: Device,
-  textureFormat: TextureFormat,
-  width: number,
-  height: number
-): boolean {
-  if (device.type !== 'webgpu') {
-    return true;
-  }
-
-  const {blockWidth = 1, blockHeight = 1} = device.getTextureFormatInfo(textureFormat);
-  return width % blockWidth === 0 && height % blockHeight === 0;
-}
-
 function getCompressedTextureUploadLevels(
   device: Device,
   textureFormat: TextureFormat,
@@ -783,18 +776,57 @@ function getCompressedTextureUploadLevels(
     return images;
   }
 
-  const {blockWidth = 1, blockHeight = 1} = device.getTextureFormatInfo(textureFormat);
   const uploadLevels: CompressedImageData[] = [];
 
   for (const image of images) {
-    const isBlockAligned = image.width % blockWidth === 0 && image.height % blockHeight === 0;
-    if (!isBlockAligned) {
+    if (!canUploadCompressedTextureLevel(device, textureFormat, image)) {
       break;
     }
     uploadLevels.push(image);
   }
 
   return uploadLevels;
+}
+
+function getCompressedTexturePreviewError(
+  device: Device,
+  textureFormat: TextureFormat,
+  width: number,
+  height: number
+): string | null {
+  if (device.type !== 'webgpu') {
+    return null;
+  }
+
+  const {blockWidth = 1, blockHeight = 1} = textureFormatDecoder.getInfo(textureFormat);
+  if (width % blockWidth === 0 && height % blockHeight === 0) {
+    return null;
+  }
+
+  const alignedWidth = Math.ceil(width / blockWidth) * blockWidth;
+  const alignedHeight = Math.ceil(height / blockHeight) * blockHeight;
+
+  return `${textureFormat} works in WebGL because drivers pad compressed textures to block boundaries, but WebGPU requires explicit ${blockWidth} x ${blockHeight} alignment. Round ${width} x ${height} up to ${alignedWidth} x ${alignedHeight} for WebGPU.`;
+}
+
+function canUploadCompressedTextureLevel(
+  device: Device,
+  textureFormat: TextureFormat,
+  image: CompressedImageData
+): boolean {
+  if (device.type !== 'webgpu') {
+    return true;
+  }
+
+  const layout = textureFormatDecoder.computeMemoryLayout({
+    format: textureFormat,
+    width: image.width,
+    height: image.height,
+    depth: 1,
+    byteAlignment: 1
+  });
+  const hasCompleteLevelData = image.data.byteLength >= layout.byteLength;
+  return hasCompleteLevelData;
 }
 
 function getDeviceLabel(device: Device): string {

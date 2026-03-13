@@ -8,7 +8,8 @@ import {
   type SamplerProps,
   Buffer,
   Texture,
-  log
+  log,
+  textureFormatDecoder
 } from '@luma.gl/core';
 
 import {getWebGPUTextureFormat} from '../helpers/convert-texture-format';
@@ -272,10 +273,31 @@ export class WebGPUTexture extends Texture {
       mipLevel,
       aspect,
       byteOffset,
-      bytesPerRow,
-      rowsPerImage
+      bytesPerRow: normalizedBytesPerRow,
+      rowsPerImage: normalizedRowsPerImage
     } = options;
     const source = data as GPUAllowSharedBufferSource;
+    const formatInfo = this.device.getTextureFormatInfo(this.format);
+    let bytesPerRow = normalizedBytesPerRow;
+    let rowsPerImage = normalizedRowsPerImage;
+    let copyWidth = width;
+    let copyHeight = height;
+
+    if (formatInfo.compressed) {
+      const blockWidth = formatInfo.blockWidth || 1;
+      const blockHeight = formatInfo.blockHeight || 1;
+      const sourceLayout = textureFormatDecoder.computeMemoryLayout({
+        format: this.format,
+        width,
+        height,
+        depth: depthOrArrayLayers,
+        byteAlignment: 1
+      });
+      bytesPerRow = options_.bytesPerRow ?? sourceLayout.bytesPerRow;
+      rowsPerImage = options_.rowsPerImage ?? sourceLayout.rowsPerImage;
+      copyWidth = Math.ceil(width / blockWidth) * blockWidth;
+      copyHeight = Math.ceil(height / blockHeight) * blockHeight;
+    }
 
     this.device.pushErrorScope('validation');
     device.handle.queue.writeTexture(
@@ -291,7 +313,7 @@ export class WebGPUTexture extends Texture {
         bytesPerRow,
         rowsPerImage
       },
-      {width, height, depthOrArrayLayers}
+      {width: copyWidth, height: copyHeight, depthOrArrayLayers}
     );
     this.device.popErrorScope((error: GPUError) => {
       this.device.reportError(new Error(`${this} writeData: ${error.message}`), this)();
