@@ -163,7 +163,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       // TODO move to utility in gltf module
       let min = [Infinity, Infinity, Infinity];
       let max = [0, 0, 0];
-      debugger
       this.scenegraphsFromGLTF?.scenes[0].traverse(node => {
         if (node instanceof ModelNode) {
           const {bounds} = node;
@@ -175,7 +174,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       });
       this.cameraPos = [2 * (max[0] + max[2]), max[1], 2 * (max[0] + max[2])];
       this.center = [0.5 * (min[0] + max[0]), 0.5 * (min[1] + max[1]), 0.5 * (min[2] + max[2])];
-      console.log('Bounds, center', min, max, this.center);
 
       canvas.style.opacity = '1';
       showError();
@@ -197,6 +195,10 @@ function setModelMenu(
   onMenuItemSelected: (item: string) => void
 ) {
   const modelSelector = document.getElementById('model-select') as HTMLSelectElement;
+  if (!modelSelector) {
+    return;
+  }
+
   modelSelector?.addEventListener('change', e => {
     const name = (e.target as HTMLSelectElement).value;
     onMenuItemSelected(name);
@@ -215,15 +217,21 @@ function setModelMenu(
 function setOptionsUI(options: Record<string, boolean>) {
   for (const id of Object.keys(options)) {
     const checkbox = document.getElementById(id) as HTMLInputElement;
-    checkbox.checked = options[id];
-    checkbox.addEventListener('change', e => {
-      options[id] = checkbox.checked;
-    });
+    if (checkbox) {
+      checkbox.checked = options[id];
+      checkbox.addEventListener('change', () => {
+        options[id] = checkbox.checked;
+      });
+    }
   }
 }
 
 function showError(error?: Error) {
   const errorDiv = document.getElementById('error') as HTMLDivElement;
+  if (!errorDiv) {
+    return;
+  }
+
   errorDiv.innerHTML = error ? `Error loading model ${error.message}` : '';
-  errorDiv.style.display = error ? 'block' : 'hidden';
+  errorDiv.style.display = error ? 'block' : 'none';
 }

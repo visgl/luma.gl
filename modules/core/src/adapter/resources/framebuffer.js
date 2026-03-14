@@ -1,0 +1,140 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+import { Resource } from './resource';
+import { Texture } from './texture';
+import { log } from '../../utils/log';
+/**
+ * Create new textures with correct size for all attachments.
+ * @note resize() destroys existing textures (if size has changed).
+ */
+export class Framebuffer extends Resource {
+    get [Symbol.toStringTag]() {
+        return 'Framebuffer';
+    }
+    /** Width of all attachments in this framebuffer */
+    width;
+    /** Height of all attachments in this framebuffer */
+    height;
+    constructor(device, props = {}) {
+        super(device, props, Framebuffer.defaultProps);
+        this.width = this.props.width;
+        this.height = this.props.height;
+    }
+    /**
+     * Create a copy of this framebuffer with new attached textures, with same props but of the specified size.
+     * @note Does not copy contents of the attached textures.
+     */
+    clone(size) {
+        const colorAttachments = this.colorAttachments.map(colorAttachment => colorAttachment.texture.clone(size));
+        const depthStencilAttachment = this.depthStencilAttachment && this.depthStencilAttachment.texture.clone(size);
+        return this.device.createFramebuffer({
+            ...this.props,
+            ...size,
+            colorAttachments,
+            depthStencilAttachment
+        });
+    }
+    resize(size) {
+        let updateSize = !size;
+        if (size) {
+            const [width, height] = Array.isArray(size) ? size : [size.width, size.height];
+            updateSize = updateSize || height !== this.height || width !== this.width;
+            this.width = width;
+            this.height = height;
+        }
+        if (updateSize) {
+            log.log(2, `Resizing framebuffer ${this.id} to ${this.width}x${this.height}`)();
+            this.resizeAttachments(this.width, this.height);
+        }
+    }
+    /** Auto creates any textures */
+    autoCreateAttachmentTextures() {
+        if (this.props.colorAttachments.length === 0 && !this.props.depthStencilAttachment) {
+            throw new Error('Framebuffer has noattachments');
+        }
+        this.colorAttachments = this.props.colorAttachments.map((attachment, index) => {
+            if (typeof attachment === 'string') {
+                const texture = this.createColorTexture(attachment, index);
+                this.attachResource(texture);
+                return texture.view;
+            }
+            if (attachment instanceof Texture) {
+                return attachment.view;
+            }
+            return attachment;
+        });
+        const attachment = this.props.depthStencilAttachment;
+        if (attachment) {
+            if (typeof attachment === 'string') {
+                const texture = this.createDepthStencilTexture(attachment);
+                this.attachResource(texture);
+                this.depthStencilAttachment = texture.view;
+            }
+            else if (attachment instanceof Texture) {
+                this.depthStencilAttachment = attachment.view;
+            }
+            else {
+                this.depthStencilAttachment = attachment;
+            }
+        }
+    }
+    /** Create a color texture */
+    createColorTexture(format, index) {
+        return this.device.createTexture({
+            id: `${this.id}-color-attachment-${index}`,
+            usage: Texture.RENDER_ATTACHMENT,
+            format,
+            width: this.width,
+            height: this.height,
+            // TODO deprecated? - luma.gl v8 compatibility
+            sampler: {
+                magFilter: 'linear',
+                minFilter: 'linear'
+            }
+        });
+    }
+    /** Create depth stencil texture */
+    createDepthStencilTexture(format) {
+        return this.device.createTexture({
+            id: `${this.id}-depth-stencil-attachment`,
+            usage: Texture.RENDER_ATTACHMENT,
+            format,
+            width: this.width,
+            height: this.height
+        });
+    }
+    /**
+     * Default implementation of resize
+     * Creates new textures with correct size for all attachments.
+     * and destroys existing textures if owned
+     */
+    resizeAttachments(width, height) {
+        this.colorAttachments.forEach((colorAttachment, i) => {
+            const resizedTexture = colorAttachment.texture.clone({
+                width,
+                height
+            });
+            this.destroyAttachedResource(colorAttachment);
+            this.colorAttachments[i] = resizedTexture.view;
+            this.attachResource(resizedTexture.view);
+        });
+        if (this.depthStencilAttachment) {
+            const resizedTexture = this.depthStencilAttachment.texture.clone({
+                width,
+                height
+            });
+            this.destroyAttachedResource(this.depthStencilAttachment);
+            this.depthStencilAttachment = resizedTexture.view;
+            this.attachResource(resizedTexture);
+        }
+        this.updateAttachments();
+    }
+    static defaultProps = {
+        ...Resource.defaultProps,
+        width: 1,
+        height: 1,
+        colorAttachments: [], // ['rgba8unorm'],
+        depthStencilAttachment: null // 'depth24plus-stencil8'
+    };
+}

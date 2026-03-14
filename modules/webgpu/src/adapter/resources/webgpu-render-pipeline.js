@@ -1,0 +1,197 @@
+// luma.gl MIT license
+import { RenderPipeline, log } from '@luma.gl/core';
+import { applyParametersToRenderPipelineDescriptor } from '../helpers/webgpu-parameters';
+import { getWebGPUTextureFormat } from '../helpers/convert-texture-format';
+import { getBindGroup } from '../helpers/get-bind-group';
+import { getVertexBufferLayout } from '../helpers/get-vertex-buffer-layout';
+// RENDER PIPELINE
+/** Creates a new render pipeline when parameters change */
+export class WebGPURenderPipeline extends RenderPipeline {
+    device;
+    handle;
+    vs;
+    fs = null;
+    /** For internal use to create BindGroups */
+    _bindings;
+    _bindGroupLayout = null;
+    _bindGroup = null;
+    get [Symbol.toStringTag]() {
+        return 'WebGPURenderPipeline';
+    }
+    constructor(device, props) {
+        super(device, props);
+        this.device = device;
+        this.handle = this.props.handle;
+        if (!this.handle) {
+            const descriptor = this._getRenderPipelineDescriptor();
+            log.groupCollapsed(1, `new WebGPURenderPipeline(${this.id})`)();
+            log.probe(1, JSON.stringify(descriptor, null, 2))();
+            log.groupEnd(1)();
+            this.device.pushErrorScope('validation');
+            this.handle = this.device.handle.createRenderPipeline(descriptor);
+            this.device.popErrorScope((error) => {
+                this.device.reportError(new Error(`${this} creation failed:\n"${error.message}"`), this)();
+                this.device.debug();
+            });
+        }
+        this.handle.label = this.props.id;
+        // Note: Often the same shader in WebGPU
+        this.vs = props.vs;
+        this.fs = props.fs;
+        this._bindings = { ...this.props.bindings };
+    }
+    destroy() {
+        // WebGPURenderPipeline has no destroy method.
+        // @ts-expect-error
+        this.handle = null;
+    }
+    /**
+     * @todo Use renderpass.setBindings() ?
+     * @todo Do we want to expose BindGroups in the API and remove this?
+     */
+    setBindings(bindings) {
+        // Invalidate the cached bind group if any value has changed
+        for (const [name, binding] of Object.entries(bindings)) {
+            if (this._bindings[name] !== binding) {
+                this._bindGroup = null;
+            }
+        }
+        Object.assign(this._bindings, bindings);
+    }
+    /** @todo - should this be moved to renderpass? */
+    draw(options) {
+        const webgpuRenderPass = options.renderPass;
+        // Set pipeline
+        this.device.pushErrorScope('validation');
+        webgpuRenderPass.handle.setPipeline(this.handle);
+        this.device.popErrorScope((error) => {
+            this.device.reportError(new Error(`${this} setPipeline failed:\n"${error.message}"`), this)();
+            this.device.debug();
+        });
+        // Set bindings (uniform buffers, textures etc)
+        const bindGroup = this._getBindGroup();
+        if (bindGroup) {
+            webgpuRenderPass.handle.setBindGroup(0, bindGroup);
+        }
+        // Set attributes
+        // Note: Rebinds constant attributes before each draw call
+        options.vertexArray.bindBeforeRender(options.renderPass);
+        // Draw
+        if (options.indexCount) {
+            webgpuRenderPass.handle.drawIndexed(options.indexCount, options.instanceCount, options.firstIndex, options.baseVertex, options.firstInstance);
+        }
+        else {
+            webgpuRenderPass.handle.draw(options.vertexCount || 0, options.instanceCount || 1, // If 0, nothing will be drawn
+            options.firstInstance);
+        }
+        // Note: Rebinds constant attributes before each draw call
+        options.vertexArray.unbindAfterRender(options.renderPass);
+        return true;
+    }
+    /** Return a bind group created by setBindings */
+    _getBindGroup() {
+        if (this.shaderLayout.bindings.length === 0) {
+            return null;
+        }
+        // Get hold of the bind group layout. We don't want to do this unless we know there is at least one bind group
+        this._bindGroupLayout = this._bindGroupLayout || this.handle.getBindGroupLayout(0);
+        // Set up the bindings
+        // TODO what if bindings change? We need to rebuild the bind group!
+        this._bindGroup =
+            this._bindGroup ||
+                getBindGroup(this.device.handle, this._bindGroupLayout, this.shaderLayout, this._bindings);
+        return this._bindGroup;
+    }
+    /**
+     * Populate the complex WebGPU GPURenderPipelineDescriptor
+     */
+    _getRenderPipelineDescriptor() {
+        // Set up the vertex stage
+        const vertex = {
+            module: this.props.vs.handle,
+            entryPoint: this.props.vertexEntryPoint || 'main',
+            buffers: getVertexBufferLayout(this.shaderLayout, this.props.bufferLayout)
+        };
+        // Populate color targets
+        // TODO - at the moment blend and write mask are only set on the first target
+        const targets = [];
+        if (this.props.colorAttachmentFormats) {
+            for (const format of this.props.colorAttachmentFormats) {
+                targets.push(format ? { format: getWebGPUTextureFormat(format) } : null);
+            }
+        }
+        else {
+            targets.push({ format: getWebGPUTextureFormat(this.device.preferredColorFormat) });
+        }
+        // Set up the fragment stage
+        const fragment = {
+            module: this.props.fs.handle,
+            entryPoint: this.props.fragmentEntryPoint || 'main',
+            targets
+        };
+        const layout = this.device.createPipelineLayout({
+            shaderLayout: this.shaderLayout
+        });
+        // Create a partially populated descriptor
+        const descriptor = {
+            vertex,
+            fragment,
+            primitive: {
+                topology: this.props.topology
+            },
+            layout: layout.handle
+        };
+        // Set depth format if required, defaulting to the preferred depth format
+        const depthFormat = this.props.depthStencilAttachmentFormat || this.device.preferredDepthFormat;
+        if (this.props.parameters.depthWriteEnabled) {
+            descriptor.depthStencil = {
+                format: getWebGPUTextureFormat(depthFormat)
+            };
+        }
+        // Set parameters on the descriptor
+        applyParametersToRenderPipelineDescriptor(descriptor, this.props.parameters);
+        return descriptor;
+    }
+}
+/**
+_setAttributeBuffers(webgpuRenderPass: WebGPURenderPass) {
+  if (this._indexBuffer) {
+    webgpuRenderPass.handle.setIndexBuffer(this._indexBuffer.handle, this._indexBuffer.props.indexType);
+  }
+
+  const buffers = this._getBuffers();
+  for (let i = 0; i < buffers.length; ++i) {
+    const buffer = cast<WebGPUBuffer>(buffers[i]);
+    if (!buffer) {
+      const attribute = this.shaderLayout.attributes.find(
+        (attribute) => attribute.location === i
+      );
+      throw new Error(
+        `No buffer provided for attribute '${attribute?.name || ''}' in Model '${this.props.id}'`
+      );
+    }
+    webgpuRenderPass.handle.setVertexBuffer(i, buffer.handle);
+  }
+
+  // TODO - HANDLE buffer maps
+  /*
+  for (const [bufferName, attributeMapping] of Object.entries(this.props.bufferLayout)) {
+    const buffer = cast<WebGPUBuffer>(this.props.attributes[bufferName]);
+    if (!buffer) {
+      log.warn(`Missing buffer for buffer map ${bufferName}`)();
+      continue;
+    }
+
+    if ('location' in attributeMapping) {
+      // @ts-expect-error TODO model must not depend on webgpu
+      renderPass.handle.setVertexBuffer(layout.location, buffer.handle);
+    } else {
+      for (const [bufferName, mapping] of Object.entries(attributeMapping)) {
+        // @ts-expect-error TODO model must not depend on webgpu
+        renderPass.handle.setVertexBuffer(field.location, buffer.handle);
+      }
+    }
+  }
+  *
+}
+*/

@@ -3,7 +3,6 @@
 // Copyright (c) vis.gl contributors
 
 import {type GLTFAccessorPostprocessed, type GLTFPostprocessed} from '@loaders.gl/gltf';
-import {GroupNode} from '@luma.gl/engine';
 import {
   GLTFAnimationPath,
   type GLTFAnimation,
@@ -13,10 +12,7 @@ import {
 
 import {accessorToTypedArray} from '..//webgl-to-webgpu/convert-webgl-attribute';
 
-export function parseGLTFAnimations(
-  gltf: GLTFPostprocessed,
-  gltfNodeIndexToNodeMap: Map<number, GroupNode>
-): GLTFAnimation[] {
+export function parseGLTFAnimations(gltf: GLTFPostprocessed): GLTFAnimation[] {
   const gltfAnimations = gltf.animations || [];
   const accessorCache1D = new Map<GLTFAccessorPostprocessed, number[]>();
   const accessorCache2D = new Map<GLTFAccessorPostprocessed, number[][]>();
@@ -32,13 +28,13 @@ export function parseGLTFAnimations(
     );
 
     const channels: GLTFAnimationChannel[] = animation.channels.map(({sampler, target}) => {
-      const targetNode = gltfNodeIndexToNodeMap.get(target.node ?? 0);
+      const targetNode = gltf.nodes[target.node ?? 0];
       if (!targetNode) {
         throw new Error(`Cannot find animation target ${target.node}`);
       }
       return {
         sampler: samplers[sampler],
-        target: targetNode,
+        targetNodeId: targetNode.id,
         path: target.path as GLTFAnimationPath
       };
     });

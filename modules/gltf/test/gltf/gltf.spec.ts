@@ -35,19 +35,22 @@ test('gltf#animator', async t => {
   const gltf = await load('data/BoxAnimated.glb', GLTFLoader);
   const processedGLTF = postProcessGLTF(gltf);
 
-  const {scenes, animator, gltfNodeIdToNodeMap} = createScenegraphsFromGLTF(webglDevice, processedGLTF);
+  const {scenes, animator, gltfNodeIdToNodeMap} = createScenegraphsFromGLTF(
+    webglDevice,
+    processedGLTF
+  );
 
   t.equals(scenes.length, 1, 'Should contain single scene');
   t.equals(animator.animations.length, 1, 'Should contain single animation');
 
   const {channels} = animator.animations[0].animation;
   t.equals(channels.length, 2, 'Should contain two animation channels');
-  const {target} = channels[0];
-  const node = gltfNodeIdToNodeMap.get(target.id);
-  t.ok(node, 'Should contain target node');
+  const {targetNodeId} = channels[0];
+  const targetNode = gltfNodeIdToNodeMap.get(targetNodeId);
+  t.ok(targetNode, 'Should contain target node');
 
   t.ok(
-    processedGLTF.nodes.every(node => !(node as any)._node),
+    processedGLTF.nodes.every(gltfNode => !(gltfNode as any)._node),
     'GLTF object is not mutated'
   );
 

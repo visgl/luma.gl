@@ -1,0 +1,99 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+import { Texture } from '@luma.gl/core';
+/**
+ * Helper class for working with repeated transformations / computations
+ * Primarily intended for GPU buffers `Swap<Buffer>` or textures `Swap<Texture>`)
+ * @note the two resources are expected to be structurally identical (same size, length, format, etc)
+ * @note the two resources can be destroyed by calling `destroy()`
+ */
+export class Swap {
+    id;
+    /** The current resource - usually the source for renders or computations */
+    current;
+    /** The next resource - usually the target/destination for transforms / computations */
+    next;
+    constructor(props) {
+        this.id = props.id || 'swap';
+        this.current = props.current;
+        this.next = props.next;
+    }
+    /** Destroys the two managed resources */
+    destroy() {
+        this.current?.destroy();
+        this.next?.destroy();
+    }
+    /** Make the next resource into the current resource, and reuse the current resource as the next resource */
+    swap() {
+        const current = this.current;
+        this.current = this.next;
+        this.next = current;
+    }
+}
+/** Helper for managing double-buffered framebuffers */
+export class SwapFramebuffers extends Swap {
+    constructor(device, props) {
+        props = { ...props };
+        const { width = 1, height = 1 } = props;
+        let colorAttachments = props.colorAttachments?.map(colorAttachment => typeof colorAttachment !== 'string'
+            ? colorAttachment
+            : device.createTexture({
+                id: `${props.id}-texture-0`,
+                format: colorAttachment,
+                usage: Texture.SAMPLE | Texture.RENDER | Texture.COPY_SRC | Texture.COPY_DST,
+                width,
+                height
+            }));
+        const current = device.createFramebuffer({ ...props, colorAttachments });
+        colorAttachments = props.colorAttachments?.map(colorAttachment => typeof colorAttachment !== 'string'
+            ? colorAttachment
+            : device.createTexture({
+                id: `${props.id}-texture-1`,
+                format: colorAttachment,
+                usage: Texture.SAMPLE | Texture.RENDER | Texture.COPY_SRC | Texture.COPY_DST,
+                width,
+                height
+            }));
+        const next = device.createFramebuffer({ ...props, colorAttachments });
+        super({ current, next });
+    }
+    /**
+     * Resizes the Framebuffers.
+     * @returns true if the size changed, otherwise exiting framebuffers were preserved
+     * @note any contents are not preserved!
+     */
+    resize(size) {
+        if (size.width === this.current.width && size.height === this.current.height) {
+            return false;
+        }
+        const { current, next } = this;
+        this.current = current.clone(size);
+        current.destroy();
+        this.next = next.clone(size);
+        next.destroy();
+        return true;
+    }
+}
+/** Helper for managing double-buffered GPU buffers */
+export class SwapBuffers extends Swap {
+    constructor(device, props) {
+        super({ current: device.createBuffer(props), next: device.createBuffer(props) });
+    }
+    /**
+     * Resizes the Buffers.
+     * @returns true if the size changed, otherwise exiting buffers were preserved.
+     * @note any contents are not preserved!
+     */
+    resize(props) {
+        if (props.byteLength === this.current.byteLength) {
+            return false;
+        }
+        const { current, next } = this;
+        this.current = current.clone(props);
+        current.destroy();
+        this.next = next.clone(props);
+        next.destroy();
+        return true;
+    }
+}

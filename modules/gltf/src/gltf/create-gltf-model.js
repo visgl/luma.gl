@@ -1,0 +1,155 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+import { log } from '@luma.gl/core';
+import { pbrMaterial, skin } from '@luma.gl/shadertools';
+import { Model, ModelNode } from '@luma.gl/engine';
+const SHADER = /* WGSL */ `
+layout(0) positions: vec4; // in vec4 POSITION;
+
+  #ifdef HAS_NORMALS
+    in vec4 normals; // in vec4 NORMAL;
+  #endif
+
+  #ifdef HAS_TANGENTS
+    in vec4 TANGENT;
+  #endif
+
+  #ifdef HAS_UV
+    // in vec2 TEXCOORD_0;
+    in vec2 texCoords;
+  #endif
+
+@vertex
+  void main(void) {
+    vec4 _NORMAL = vec4(0.);
+    vec4 _TANGENT = vec4(0.);
+    vec2 _TEXCOORD_0 = vec2(0.);
+
+    #ifdef HAS_NORMALS
+      _NORMAL = normals;
+    #endif
+
+    #ifdef HAS_TANGENTS
+      _TANGENT = TANGENT;
+    #endif
+
+    #ifdef HAS_UV
+      _TEXCOORD_0 = texCoords;
+    #endif
+
+    pbr_setPositionNormalTangentUV(positions, _NORMAL, _TANGENT, _TEXCOORD_0);
+    gl_Position = u_MVPMatrix * positions;
+  }
+
+@fragment
+  out vec4 fragmentColor;
+
+  void main(void) {
+    vec3 pos = pbr_vPosition;
+    fragmentColor = pbr_filterColor(vec4(1.0));
+  }
+`;
+// TODO rename attributes to POSITION/NORMAL etc
+// See gpu-geometry.ts: getAttributeBuffersFromGeometry()
+const vs = /* glsl */ `\
+#version 300 es
+
+  // in vec4 POSITION;
+  in vec4 positions;
+
+  #ifdef HAS_NORMALS
+    // in vec4 NORMAL;
+    in vec4 normals;
+  #endif
+
+  #ifdef HAS_TANGENTS
+    in vec4 TANGENT;
+  #endif
+
+  #ifdef HAS_UV
+    // in vec2 TEXCOORD_0;
+    in vec2 texCoords;
+  #endif
+
+  #ifdef HAS_SKIN
+    in uvec4 JOINTS_0;
+    in vec4 WEIGHTS_0;
+  #endif
+
+  void main(void) {
+    vec4 _NORMAL = vec4(0.);
+    vec4 _TANGENT = vec4(0.);
+    vec2 _TEXCOORD_0 = vec2(0.);
+
+    #ifdef HAS_NORMALS
+      _NORMAL = normals;
+    #endif
+
+    #ifdef HAS_TANGENTS
+      _TANGENT = TANGENT;
+    #endif
+
+    #ifdef HAS_UV
+      _TEXCOORD_0 = texCoords;
+    #endif
+
+    vec4 pos = positions;
+
+    #ifdef HAS_SKIN
+      mat4 skinMat = getSkinMatrix(WEIGHTS_0, JOINTS_0);
+      pos = skinMat * pos;
+    #endif
+
+    pbr_setPositionNormalTangentUV(positions, _NORMAL, _TANGENT, _TEXCOORD_0);
+    gl_Position = pbrProjection.modelViewProjectionMatrix * pos;
+  }
+`;
+const fs = /* glsl */ `\
+#version 300 es
+  out vec4 fragmentColor;
+
+  void main(void) {
+    vec3 pos = pbr_vPosition;
+    fragmentColor = pbr_filterColor(vec4(1.0));
+  }
+`;
+/** Creates a luma.gl Model from GLTF data*/
+export function createGLTFModel(device, options) {
+    const { id, geometry, parsedPPBRMaterial, vertexCount, modelOptions = {} } = options;
+    log.info(4, 'createGLTFModel defines: ', parsedPPBRMaterial.defines)();
+    // Calculate managedResources
+    // TODO: Implement resource management logic that will
+    // not deallocate resources/textures/buffers that are shared
+    const managedResources = [];
+    // managedResources.push(...parsedMaterial.generatedTextures);
+    // managedResources.push(...Object.values(attributes).map((attribute) => attribute.buffer));
+    const parameters = {
+        depthWriteEnabled: true,
+        depthCompare: 'less',
+        depthFormat: 'depth24plus',
+        cullMode: 'back'
+    };
+    const modelProps = {
+        id,
+        source: SHADER,
+        vs,
+        fs,
+        geometry,
+        topology: geometry.topology,
+        vertexCount,
+        modules: [pbrMaterial, skin],
+        ...modelOptions,
+        defines: { ...parsedPPBRMaterial.defines, ...modelOptions.defines },
+        parameters: { ...parameters, ...parsedPPBRMaterial.parameters, ...modelOptions.parameters }
+    };
+    const model = new Model(device, modelProps);
+    const { camera, ...pbrMaterialProps } = {
+        ...parsedPPBRMaterial.uniforms,
+        ...modelOptions.uniforms,
+        ...parsedPPBRMaterial.bindings,
+        ...modelOptions.bindings
+    };
+    model.shaderInputs.setProps({ pbrMaterial: pbrMaterialProps, pbrProjection: { camera } });
+    return new ModelNode({ managedResources, model });
+}

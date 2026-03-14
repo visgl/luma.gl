@@ -32,8 +32,8 @@ export function createScenegraphsFromGLTF(
     options
   );
 
-  const animations = parseGLTFAnimations(gltf, gltfNodeIndexToNodeMap);
-  const animator = new GLTFAnimator({animations});
+  const animations = parseGLTFAnimations(gltf);
+  const animator = new GLTFAnimator({animations, gltfNodeIdToNodeMap});
   const lights = parseGLTFLights(gltf);
 
   return {

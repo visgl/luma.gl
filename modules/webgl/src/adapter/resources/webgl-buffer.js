@@ -1,0 +1,184 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+import { Buffer } from '@luma.gl/core';
+import { GL } from '@luma.gl/constants';
+/** WebGL Buffer interface */
+export class WEBGLBuffer extends Buffer {
+    device;
+    gl;
+    handle;
+    /** Target in OpenGL defines the type of buffer */
+    glTarget;
+    /** Usage is a hint on how frequently the buffer will be updates */
+    glUsage;
+    /** Index type is needed when issuing draw calls, so we pre-compute it */
+    glIndexType = GL.UNSIGNED_SHORT;
+    /** Number of bytes allocated on the GPU for this buffer */
+    byteLength = 0;
+    /** Number of bytes used */
+    bytesUsed = 0;
+    constructor(device, props = {}) {
+        super(device, props);
+        this.device = device;
+        this.gl = this.device.gl;
+        const handle = typeof props === 'object' ? props.handle : undefined;
+        this.handle = handle || this.gl.createBuffer();
+        device._setWebGLDebugMetadata(this.handle, this, {
+            spector: { ...this.props, data: typeof this.props.data }
+        });
+        // - In WebGL1, need to make sure we use GL.ELEMENT_ARRAY_BUFFER when initializing element buffers
+        //   otherwise buffer type will lock to generic (non-element) buffer
+        // - In WebGL2, we can use GL.COPY_READ_BUFFER which avoids locking the type here
+        this.glTarget = getWebGLTarget(this.props.usage);
+        this.glUsage = getWebGLUsage(this.props.usage);
+        // Note: uint8 indices are converted to uint16 during device normalization for WebGPU compatibility
+        this.glIndexType = this.props.indexType === 'uint32' ? GL.UNSIGNED_INT : GL.UNSIGNED_SHORT;
+        // Set data: (re)initializes the buffer
+        if (props.data) {
+            this._initWithData(props.data, props.byteOffset, props.byteLength);
+        }
+        else {
+            this._initWithByteLength(props.byteLength || 0);
+        }
+    }
+    destroy() {
+        if (!this.destroyed && this.handle) {
+            this.removeStats();
+            this.trackDeallocatedMemory();
+            this.gl.deleteBuffer(this.handle);
+            this.destroyed = true;
+            // @ts-expect-error
+            this.handle = null;
+        }
+    }
+    /** Allocate a new buffer and initialize to contents of typed array */
+    _initWithData(data, byteOffset = 0, byteLength = data.byteLength + byteOffset) {
+        // const glTarget = this.device.isWebGL2 ? GL.COPY_WRITE_BUFFER : this.glTarget;
+        const glTarget = this.glTarget;
+        this.gl.bindBuffer(glTarget, this.handle);
+        this.gl.bufferData(glTarget, byteLength, this.glUsage);
+        this.gl.bufferSubData(glTarget, byteOffset, data);
+        this.gl.bindBuffer(glTarget, null);
+        this.bytesUsed = byteLength;
+        this.byteLength = byteLength;
+        this._setDebugData(data, byteOffset, byteLength);
+        this.trackAllocatedMemory(byteLength);
+    }
+    // Allocate a GPU buffer of specified size.
+    _initWithByteLength(byteLength) {
+        // assert(byteLength >= 0);
+        // Workaround needed for Safari (#291):
+        // gl.bufferData with size equal to 0 crashes. Instead create zero sized array.
+        let data = byteLength;
+        if (byteLength === 0) {
+            // @ts-expect-error
+            data = new Float32Array(0);
+        }
+        // const glTarget = this.device.isWebGL2 ? GL.COPY_WRITE_BUFFER : this.glTarget;
+        const glTarget = this.glTarget;
+        this.gl.bindBuffer(glTarget, this.handle);
+        this.gl.bufferData(glTarget, data, this.glUsage);
+        this.gl.bindBuffer(glTarget, null);
+        this.bytesUsed = byteLength;
+        this.byteLength = byteLength;
+        this._setDebugData(null, 0, byteLength);
+        this.trackAllocatedMemory(byteLength);
+        return this;
+    }
+    write(data, byteOffset = 0) {
+        const dataView = ArrayBuffer.isView(data) ? data : new Uint8Array(data);
+        const srcOffset = 0;
+        const byteLength = undefined; // data.byteLength;
+        // Create the buffer - binding it here for the first time locks the type
+        // In WebGL2, use GL.COPY_WRITE_BUFFER to avoid locking the type
+        const glTarget = GL.COPY_WRITE_BUFFER;
+        this.gl.bindBuffer(glTarget, this.handle);
+        // WebGL2: subData supports additional srcOffset and length parameters
+        if (srcOffset !== 0 || byteLength !== undefined) {
+            this.gl.bufferSubData(glTarget, byteOffset, dataView, srcOffset, byteLength);
+        }
+        else {
+            this.gl.bufferSubData(glTarget, byteOffset, dataView);
+        }
+        this.gl.bindBuffer(glTarget, null);
+        this._setDebugData(data, byteOffset, data.byteLength);
+    }
+    async mapAndWriteAsync(callback, byteOffset = 0, byteLength = this.byteLength - byteOffset) {
+        const arrayBuffer = new ArrayBuffer(byteLength);
+        // eslint-disable-next-line @typescript-eslint/await-thenable
+        await callback(arrayBuffer, 'copied');
+        this.write(arrayBuffer, byteOffset);
+    }
+    async readAsync(byteOffset = 0, byteLength) {
+        return this.readSyncWebGL(byteOffset, byteLength);
+    }
+    async mapAndReadAsync(callback, byteOffset = 0, byteLength) {
+        const data = await this.readAsync(byteOffset, byteLength);
+        // eslint-disable-next-line @typescript-eslint/await-thenable
+        return await callback(data.buffer, 'copied');
+    }
+    readSyncWebGL(byteOffset = 0, byteLength) {
+        byteLength = byteLength ?? this.byteLength - byteOffset;
+        const data = new Uint8Array(byteLength);
+        const dstOffset = 0;
+        // Use GL.COPY_READ_BUFFER to avoid disturbing other targets and locking type
+        this.gl.bindBuffer(GL.COPY_READ_BUFFER, this.handle);
+        this.gl.getBufferSubData(GL.COPY_READ_BUFFER, byteOffset, data, dstOffset, byteLength);
+        this.gl.bindBuffer(GL.COPY_READ_BUFFER, null);
+        // Update local `data` if offsets are 0
+        this._setDebugData(data, byteOffset, byteLength);
+        return data;
+    }
+}
+/**
+ * Returns a WebGL buffer target
+ *
+ * @param usage
+ * static MAP_READ = 0x01;
+ * static MAP_WRITE = 0x02;
+ * static COPY_SRC = 0x0004;
+ * static COPY_DST = 0x0008;
+ * static INDEX = 0x0010;
+ * static VERTEX = 0x0020;
+ * static UNIFORM = 0x0040;
+ * static STORAGE = 0x0080;
+ * static INDIRECT = 0x0100;
+ * static QUERY_RESOLVE = 0x0200;
+ *
+ * @returns WebGL buffer targe
+ *
+ * Buffer bind points in WebGL2
+ * gl.COPY_READ_BUFFER: Buffer for copying from one buffer object to another.
+ * gl.COPY_WRITE_BUFFER: Buffer for copying from one buffer object to another.
+ * gl.TRANSFORM_FEEDBACK_BUFFER: Buffer for transform feedback operations.
+ * gl.PIXEL_PACK_BUFFER: Buffer used for pixel transfer operations.
+ * gl.PIXEL_UNPACK_BUFFER: Buffer used for pixel transfer operations.
+ */
+function getWebGLTarget(usage) {
+    if (usage & Buffer.INDEX) {
+        return GL.ELEMENT_ARRAY_BUFFER;
+    }
+    if (usage & Buffer.VERTEX) {
+        return GL.ARRAY_BUFFER;
+    }
+    if (usage & Buffer.UNIFORM) {
+        return GL.UNIFORM_BUFFER;
+    }
+    // Binding a buffer for the first time locks the type
+    // In WebGL2, we can use GL.COPY_WRITE_BUFFER to avoid locking the type
+    return GL.ARRAY_BUFFER;
+}
+/** @todo usage is not passed correctly */
+function getWebGLUsage(usage) {
+    if (usage & Buffer.INDEX) {
+        return GL.STATIC_DRAW;
+    }
+    if (usage & Buffer.VERTEX) {
+        return GL.STATIC_DRAW;
+    }
+    if (usage & Buffer.UNIFORM) {
+        return GL.DYNAMIC_DRAW;
+    }
+    return GL.STATIC_DRAW;
+}

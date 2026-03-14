@@ -1,0 +1,102 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+/** @returns annotated errors or warnings */
+export function formatCompilerLog(shaderLog, source, options) {
+    let formattedLog = '';
+    const lines = source.split(/\r?\n/);
+    const log = shaderLog.slice().sort((a, b) => a.lineNum - b.lineNum);
+    switch (options?.showSourceCode || 'no') {
+        case 'all':
+            // Parse the error - note: browser and driver dependent
+            let currentMessageIndex = 0;
+            for (let lineNum = 1; lineNum <= lines.length; lineNum++) {
+                const line = lines[lineNum - 1];
+                const currentMessage = log[currentMessageIndex];
+                if (line && currentMessage) {
+                    formattedLog += getNumberedLine(line, lineNum, options);
+                }
+                while (log.length > currentMessageIndex && currentMessage.lineNum === lineNum) {
+                    const message = log[currentMessageIndex++];
+                    if (message) {
+                        formattedLog += formatCompilerMessage(message, lines, message.lineNum, {
+                            ...options,
+                            inlineSource: false
+                        });
+                    }
+                }
+            }
+            // Print any remaining messages
+            while (log.length > currentMessageIndex) {
+                const message = log[currentMessageIndex++];
+                if (message) {
+                    formattedLog += formatCompilerMessage(message, [], 0, {
+                        ...options,
+                        inlineSource: false
+                    });
+                }
+            }
+            return formattedLog;
+        case 'issues':
+        case 'no':
+            // Parse the error - note: browser and driver dependent
+            for (const message of shaderLog) {
+                formattedLog += formatCompilerMessage(message, lines, message.lineNum, {
+                    inlineSource: options?.showSourceCode !== 'no'
+                });
+            }
+            return formattedLog;
+    }
+}
+// Helpers
+/** Format one message */
+function formatCompilerMessage(message, lines, lineNum, options) {
+    if (options?.inlineSource) {
+        const numberedLines = getNumberedLines(lines, lineNum);
+        // If we got error position on line add a `^^^` indicator on next line
+        const positionIndicator = message.linePos > 0 ? `${' '.repeat(message.linePos + 5)}^^^\n` : '';
+        return `
+${numberedLines}${positionIndicator}${message.type.toUpperCase()}: ${message.message}
+
+`;
+    }
+    const color = message.type === 'error' ? 'red' : 'orange';
+    return options?.html
+        ? `<div class='luma-compiler-log-${message.type}' style="color:${color};"><b> ${message.type.toUpperCase()}: ${message.message}</b></div>`
+        : `${message.type.toUpperCase()}: ${message.message}`;
+}
+function getNumberedLines(lines, lineNum, options) {
+    let numberedLines = '';
+    for (let lineIndex = lineNum - 2; lineIndex <= lineNum; lineIndex++) {
+        const sourceLine = lines[lineIndex - 1];
+        if (sourceLine !== undefined) {
+            numberedLines += getNumberedLine(sourceLine, lineNum, options);
+        }
+    }
+    return numberedLines;
+}
+function getNumberedLine(line, lineNum, options) {
+    const escapedLine = options?.html ? escapeHTML(line) : line;
+    return `${padLeft(String(lineNum), 4)}: ${escapedLine}${options?.html ? '<br/>' : '\n'}`;
+}
+/**
+ * Pads a string with a number of spaces (space characters) to the left
+ * @param {String} string - string to pad
+ * @param {Number} digits - number of spaces to add
+ * @return {String} string - The padded string
+ */
+function padLeft(string, paddedLength) {
+    let result = '';
+    for (let i = string.length; i < paddedLength; ++i) {
+        result += ' ';
+    }
+    return result + string;
+}
+function escapeHTML(unsafe) {
+    return unsafe
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+}

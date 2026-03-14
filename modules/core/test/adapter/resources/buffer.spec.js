@@ -1,0 +1,267 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+/* eslint-disable no-continue */
+import test from 'tape-promise/tape';
+import { getTestDevices, getWebGPUTestDevice, getWebGLTestDevice } from '@luma.gl/test-utils';
+import { Buffer } from '@luma.gl/core';
+import { GL } from '@luma.gl/constants';
+const DEVICE_TYPES = ['webgpu', 'webgl', 'null'];
+test('Buffer#constructor/delete', async (t) => {
+    for (const device of await getTestDevices(DEVICE_TYPES)) {
+        const buffer = device.createBuffer({ usage: Buffer.VERTEX });
+        // @ts-ignore handle
+        t.ok(buffer.handle, `${device.type} Buffer construction successful`);
+        buffer.destroy();
+        // @ts-ignore handle
+        t.ok(!buffer.handle, `${device.type} Buffer.destroy() successful`);
+        buffer.destroy();
+        // @ts-ignore handle
+        t.ok(!buffer.handle, `${device.type} repeated Buffer.destroy() successful`);
+    }
+    t.end();
+});
+test('Buffer#constructor offset and size', async (t) => {
+    const data = new Float32Array([1, 2, 3]);
+    for (const device of await getTestDevices(DEVICE_TYPES)) {
+        if (device.type === 'webgpu') {
+            continue;
+        }
+        let buffer = device.createBuffer({ data, byteOffset: 8 });
+        let expectedData = new Float32Array([0, 0, 1, 2, 3]);
+        t.equal(buffer.byteLength, expectedData.byteLength, `${device.type} Buffer byteLength set properly`);
+        let receivedData = await buffer.readAsync();
+        t.deepEqual(new Float32Array(receivedData.buffer), expectedData, `${device.type} Buffer constructor offsets data`);
+        buffer.destroy();
+        buffer = device.createBuffer({ data, byteLength: data.byteLength + 12 });
+        expectedData = new Float32Array([1, 2, 3, 0, 0, 0]);
+        t.equal(buffer.byteLength, expectedData.byteLength, `${device.type} Buffer byteLength set properly`);
+        receivedData = await buffer.readAsync();
+        t.deepEqual(new Float32Array(receivedData.buffer), expectedData, `${device.type} Buffer constructor sets buffer data`);
+        buffer.destroy();
+        buffer = device.createBuffer({ data, byteOffset: 8, byteLength: data.byteLength + 12 });
+        expectedData = new Float32Array([0, 0, 1, 2, 3, 0]);
+        t.equal(buffer.byteLength, expectedData.byteLength, `${device.type} Buffer byteLength set properly`);
+        receivedData = await buffer.readAsync();
+        t.deepEqual(new Float32Array(receivedData.buffer), expectedData, `${device.type} Buffer constructor sets buffer byteLength and offsets data`);
+        buffer.destroy();
+    }
+    t.end();
+});
+test('Buffer#write', async (t) => {
+    const expectedData = new Float32Array([1, 2, 3]);
+    for (const device of await getTestDevices(DEVICE_TYPES)) {
+        const buffer = device.createBuffer({
+            usage: Buffer.VERTEX | Buffer.COPY_DST | Buffer.COPY_SRC,
+            byteLength: 12
+        });
+        buffer.write(expectedData);
+        const receivedData = await buffer.readAsync();
+        t.deepEqual(new Float32Array(receivedData.buffer), expectedData, `${device.type} Buffer.write(ARRAY_BUFFER) stores correct bytes`);
+        buffer.destroy();
+    }
+    t.end();
+});
+test('Buffer#readAsync', async (t) => {
+    for (const device of await getTestDevices(DEVICE_TYPES)) {
+        let data = new Float32Array([1, 2, 3, 4]);
+        let buffer = device.createBuffer({ data, usage: Buffer.COPY_SRC | Buffer.COPY_DST });
+        // Full read
+        let receivedData = await buffer.readAsync();
+        let f32Data = new Float32Array(receivedData.buffer);
+        let expectedData = new Float32Array([1, 2, 3, 4]);
+        t.deepEqual(f32Data, expectedData, `${device.type} Buffer.readAsync: default parameters successful`);
+        // Read with byteOffset (skip 1 float = 4 bytes)
+        receivedData = await buffer.readAsync(8);
+        f32Data = new Float32Array(receivedData.buffer);
+        expectedData = new Float32Array([3, 4]);
+        t.deepEqual(f32Data, expectedData, `${device.type} Buffer.readAsync: with byteOffset successful`);
+        // Read with byteOffset and byteLength (read 2 floats = 8 bytes starting from offset 4)
+        receivedData = await buffer.readAsync(8, 8);
+        f32Data = new Float32Array(receivedData.buffer);
+        expectedData = new Float32Array([3, 4]);
+        t.deepEqual(f32Data, expectedData, `${device.type} Buffer.readAsync: with byteOffset + byteLength successful`);
+        // Read 1 float starting at third float (offset 8)
+        receivedData = await buffer.readAsync(8, 4);
+        f32Data = new Float32Array(receivedData.buffer);
+        expectedData = new Float32Array([3]);
+        t.deepEqual(f32Data, expectedData, `${device.type} Buffer.readAsync: partial range successful`);
+        // Uint8Array test
+        data = new Uint8Array([128, 255, 1, 0]);
+        buffer = device.createBuffer({ data, usage: Buffer.COPY_SRC | Buffer.COPY_DST });
+        receivedData = await buffer.readAsync();
+        t.deepEqual(receivedData, data, `${device.type} Buffer.readAsync: Uint8Array input works correctly`);
+    }
+    t.end();
+});
+test('Buffer#mapAndWriteAsync (full and partial)', async (t) => {
+    for (const device of await getTestDevices(DEVICE_TYPES)) {
+        const isWebGPU = device.type === 'webgpu';
+        const mapped = isWebGPU ? 'mapped' : 'copied';
+        // Full write test
+        const buffer = device.createBuffer({ byteLength: 16, usage: Buffer.COPY_DST | Buffer.COPY_SRC });
+        await buffer.mapAndWriteAsync((arrayBuffer, lifetime) => {
+            t.ok(arrayBuffer instanceof ArrayBuffer, `${device.type} mapAndWriteAsync calls with ArrayBuffer`);
+            t.equal(arrayBuffer.byteLength, 16, `${device.type} mapAndWriteAsync calls with correct byteLength`);
+            t.equal(lifetime, mapped, `${device.type} mapAndWriteAsync calls with correct lifetime`);
+            new Float32Array(arrayBuffer).set([1, 2, 3, 4]);
+        });
+        const result = await buffer.readAsync(0, 16);
+        t.deepEqual(new Float32Array(result.buffer), new Float32Array([1, 2, 3, 4]), `${device.type} full mapAndWriteAsync writes correct data`);
+        // Partial write test (8 bytes = two floats)
+        await buffer.mapAndWriteAsync((arrayBuffer, lifetime) => {
+            t.equal(arrayBuffer.byteLength, 8, `${device.type} partial buffer is correct size`);
+            new Float32Array(arrayBuffer).set([9, 10]);
+        }, 8, 8);
+        const partial = await buffer.readAsync();
+        t.deepEqual(new Float32Array(partial.buffer), new Float32Array([1, 2, 9, 10]), `${device.type} partial mapAndWriteAsync writes correct slice`);
+        buffer.destroy();
+    }
+    t.end();
+});
+test('Buffer#mapAndReadAsync (full and partial)', async (t) => {
+    for (const device of await getTestDevices(DEVICE_TYPES)) {
+        const isWebGPU = device.type === 'webgpu';
+        const initialData = new Float32Array([10, 20, 30, 40]);
+        const buffer = device.createBuffer({
+            data: initialData,
+            usage: Buffer.COPY_DST | Buffer.COPY_SRC
+        });
+        // Test full map
+        const fullResult = await buffer.mapAndReadAsync((arrayBuffer, lifetime) => {
+            t.ok(arrayBuffer instanceof ArrayBuffer, `${device.type} full mapAndReadAsync returns ArrayBuffer`);
+            t.equal(lifetime, isWebGPU ? 'mapped' : 'copied', `${device.type} full mapAndReadAsync returns correct lifetime`);
+            return new Float32Array(arrayBuffer.slice());
+        });
+        t.deepEqual(fullResult, initialData, `${device.type} full mapAndReadAsync correct`);
+        // Test partial map (byteOffset: 8 bytes, byteLength: 8 bytes = [20, 30])
+        const expected = new Float32Array([30, 40]);
+        const result = await buffer.mapAndReadAsync(arrayBuffer => new Float32Array(arrayBuffer.slice()), 8, 8);
+        t.deepEqual(result, expected, `${device.type} partial mapAndReadAsync correct`);
+        buffer.destroy();
+    }
+    t.end();
+});
+test('Buffer#mapAndReadAsync (WebGPU alignment cases)', async (t) => {
+    const webgpuDevice = await getWebGPUTestDevice();
+    if (!webgpuDevice) {
+        t.comment('WebGPU test device unavailable');
+        t.end();
+        return;
+    }
+    const initialData = new Uint8Array(32);
+    for (let index = 0; index < initialData.length; index++) {
+        initialData[index] = index;
+    }
+    const buffer = webgpuDevice.createBuffer({
+        data: initialData,
+        usage: Buffer.COPY_DST | Buffer.COPY_SRC
+    });
+    const alignmentCases = [
+        { byteOffset: 0, byteLength: 8, expectedLifetime: 'mapped' },
+        { byteOffset: 0, byteLength: 3, expectedLifetime: 'copied' },
+        { byteOffset: 2, byteLength: 4, expectedLifetime: 'copied' },
+        { byteOffset: 1, byteLength: 7, expectedLifetime: 'copied' },
+        { byteOffset: 8, byteLength: 4, expectedLifetime: 'mapped' },
+        { byteOffset: 14, byteLength: 2, expectedLifetime: 'copied' },
+        { byteOffset: 24, byteLength: 1, expectedLifetime: 'copied' }
+    ];
+    for (const alignmentCase of alignmentCases) {
+        const expected = initialData.slice(alignmentCase.byteOffset, alignmentCase.byteOffset + alignmentCase.byteLength);
+        const result = await buffer.mapAndReadAsync((arrayBuffer, lifetime) => {
+            t.equal(arrayBuffer.byteLength, alignmentCase.byteLength, 'callback receives requested byte range');
+            t.equal(lifetime, alignmentCase.expectedLifetime, `lifetime is ${alignmentCase.expectedLifetime} for offset ${alignmentCase.byteOffset}, length ${alignmentCase.byteLength}`);
+            return new Uint8Array(arrayBuffer.slice());
+        }, alignmentCase.byteOffset, alignmentCase.byteLength);
+        t.deepEqual(result, expected, `WebGPU buffer mapAndReadAsync returns exact slice (${alignmentCase.byteOffset}, ${alignmentCase.byteLength})`);
+    }
+    buffer.destroy();
+    t.end();
+});
+test('Buffer#mapAndReadAsync (WebGPU invalid range)', async (t) => {
+    const webgpuDevice = await getWebGPUTestDevice();
+    if (!webgpuDevice) {
+        t.comment('WebGPU test device unavailable');
+        t.end();
+        return;
+    }
+    const buffer = webgpuDevice.createBuffer({
+        data: new Uint8Array([1, 2, 3, 4]),
+        usage: Buffer.COPY_DST | Buffer.COPY_SRC
+    });
+    let threw = false;
+    try {
+        await buffer.mapAndReadAsync(() => new Uint8Array(0), 2, 8);
+    }
+    catch (error) {
+        threw = true;
+        t.match(String(error), /exceeds buffer size/, 'out-of-range map request throws');
+    }
+    t.ok(threw, 'invalid range throws');
+    buffer.destroy();
+    t.end();
+});
+test('WebGPUBuffer#paddedByteLength', async (t) => {
+    const webgpuDevice = await getWebGPUTestDevice();
+    if (!webgpuDevice) {
+        t.comment('WebGPU test device unavailable');
+        t.end();
+        return;
+    }
+    const buffer = webgpuDevice.createBuffer({
+        byteLength: 13,
+        usage: Buffer.COPY_DST | Buffer.COPY_SRC
+    });
+    t.equal(buffer.paddedByteLength, 16, 'WebGPUBuffer paddedByteLength is 4-byte aligned');
+    t.equal(buffer.byteLength, 13, 'webgpu buffer byteLength remains user requested');
+    buffer.destroy();
+    t.end();
+});
+test('Buffer#debugData', async (t) => {
+    for (const device of await getTestDevices(DEVICE_TYPES)) {
+        // TODO - debugData not updated on WebGPU
+        if (device.type !== 'webgl') {
+            continue;
+        }
+        const buffer = device.createBuffer({ usage: Buffer.VERTEX, byteLength: 24 });
+        t.equal(buffer.debugData.byteLength, 24, `${device.type} Buffer.debugData is not null before write`);
+        const expectedData = new Float32Array([0, 0, 1, 2, 3]);
+        buffer.write(expectedData);
+        const f32Data = new Float32Array(buffer.debugData);
+        t.deepEqual(f32Data, expectedData, `${device.type} Buffer.debugData is null after write`);
+        // TODO - not a very useful test, should test that debugData is updated after read
+        await buffer.readAsync();
+        t.equal(buffer.debugData.byteLength, 24, `${device.type} Buffer.debugData is valid after read`);
+        buffer.destroy();
+    }
+    t.end();
+});
+// WEBGL specific tests
+test('WEBGLBuffer#construction', async (t) => {
+    const webglDevice = await getWebGLTestDevice();
+    let buffer;
+    buffer = webglDevice.createBuffer({ usage: Buffer.VERTEX, data: new Float32Array([1, 2, 3]) });
+    t.ok(buffer.glTarget === GL.ARRAY_BUFFER, `${webglDevice.info.type} Buffer(ARRAY_BUFFER) successful`);
+    buffer.destroy();
+    // TODO - buffer could check for integer ELEMENT_ARRAY_BUFFER types
+    buffer = webglDevice.createBuffer({ usage: Buffer.INDEX, data: new Uint32Array([1, 2, 3]) });
+    t.ok(buffer.glTarget === GL.ELEMENT_ARRAY_BUFFER, `${webglDevice.info.type} Buffer(ELEMENT_ARRAY_BUFFER) successful`);
+    buffer.destroy();
+    t.end();
+});
+test('Buffer#uint8 index buffer conversion', async (t) => {
+    for (const device of await getTestDevices(DEVICE_TYPES)) {
+        const uint8Indices = new Uint8Array([0, 1, 2, 3, 255]);
+        const buffer = device.createBuffer({
+            usage: Buffer.INDEX | Buffer.COPY_SRC | Buffer.COPY_DST,
+            data: uint8Indices
+        });
+        t.equal(buffer.indexType, 'uint16', `${device.type} uint8 indices converted to uint16`);
+        // Verify the data was correctly converted
+        const readData = await buffer.readAsync();
+        const uint16View = new Uint16Array(readData.buffer);
+        t.deepEqual(Array.from(uint16View), [0, 1, 2, 3, 255], `${device.type} uint8 data correctly converted to uint16`);
+        buffer.destroy();
+    }
+    t.end();
+});
