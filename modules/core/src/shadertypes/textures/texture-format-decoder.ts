@@ -84,11 +84,20 @@ function computeTextureMemoryLayout({
   depth,
   byteAlignment
 }: TextureMemoryLayoutOptions): TextureMemoryLayout {
-  const {bytesPerPixel} = textureFormatDecoder.getInfo(format);
-  // WebGPU requires bytesPerRow to be a multiple of 256.
-  const unpaddedBytesPerRow = width * bytesPerPixel;
+  const formatInfo = textureFormatDecoder.getInfo(format);
+  const {
+    bytesPerPixel,
+    bytesPerBlock = bytesPerPixel,
+    blockWidth = 1,
+    blockHeight = 1,
+    compressed = false
+  } = formatInfo;
+  const blockColumns = compressed ? Math.ceil(width / blockWidth) : width;
+  const blockRows = compressed ? Math.ceil(height / blockHeight) : height;
+  // byteAlignment comes from the backend/call site. WebGPU buffer copies use 256, queue.writeTexture uses 1.
+  const unpaddedBytesPerRow = blockColumns * bytesPerBlock;
   const bytesPerRow = Math.ceil(unpaddedBytesPerRow / byteAlignment) * byteAlignment;
-  const rowsPerImage = height;
+  const rowsPerImage = blockRows;
   const byteLength = bytesPerRow * rowsPerImage * depth;
 
   return {
@@ -143,6 +152,7 @@ export function getTextureFormatInfo(format: TextureFormat): TextureFormatInfo {
     formatInfo.bytesPerPixel = 1;
     formatInfo.srgb = false;
     formatInfo.compressed = true;
+    formatInfo.bytesPerBlock = getCompressedTextureBlockByteLength(format);
 
     const blockSize = getCompressedTextureBlockSize(format);
     if (blockSize) {
@@ -245,7 +255,61 @@ function getCompressedTextureBlockSize(
     const [, blockWidth, blockHeight] = matches;
     return {blockWidth: Number(blockWidth), blockHeight: Number(blockHeight)};
   }
+
+  if (
+    format.startsWith('bc') ||
+    format.startsWith('etc1') ||
+    format.startsWith('etc2') ||
+    format.startsWith('eac') ||
+    format.startsWith('atc')
+  ) {
+    return {blockWidth: 4, blockHeight: 4};
+  }
+
+  if (format.startsWith('pvrtc-rgb4') || format.startsWith('pvrtc-rgba4')) {
+    return {blockWidth: 4, blockHeight: 4};
+  }
+
+  if (format.startsWith('pvrtc-rgb2') || format.startsWith('pvrtc-rgba2')) {
+    return {blockWidth: 8, blockHeight: 4};
+  }
+
   return null;
+}
+
+function getCompressedTextureBlockByteLength(format: TextureFormatCompressed): number {
+  if (
+    format.startsWith('bc1') ||
+    format.startsWith('bc4') ||
+    format.startsWith('etc1') ||
+    format.startsWith('etc2-rgb8') ||
+    format.startsWith('etc2-rgb8a1') ||
+    format.startsWith('eac-r11') ||
+    format === 'atc-rgb-unorm-webgl'
+  ) {
+    return 8;
+  }
+
+  if (
+    format.startsWith('bc2') ||
+    format.startsWith('bc3') ||
+    format.startsWith('bc5') ||
+    format.startsWith('bc6h') ||
+    format.startsWith('bc7') ||
+    format.startsWith('etc2-rgba8') ||
+    format.startsWith('eac-rg11') ||
+    format.startsWith('astc') ||
+    format === 'atc-rgba-unorm-webgl' ||
+    format === 'atc-rgbai-unorm-webgl'
+  ) {
+    return 16;
+  }
+
+  if (format.startsWith('pvrtc')) {
+    return 8;
+  }
+
+  return 16;
 }
 
 /*
