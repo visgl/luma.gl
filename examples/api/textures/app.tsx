@@ -82,11 +82,7 @@ export default class App extends React.PureComponent<AppProps, AppState> {
   }
 }
 
-function TexturesBlocks(props: {
-  device: Device;
-  canvas: HTMLCanvasElement;
-  model: Model;
-}) {
+function TexturesBlocks(props: {device: Device; canvas: HTMLCanvasElement; model: Model}) {
   const {device, canvas, model} = props;
 
   return IMAGES_DATA.map((imagesData, index) => {
