@@ -213,7 +213,7 @@ test('WebGPUPresentationContext renders directly to its destination canvas', asy
 
   t.doesNotThrow(() => presentationContext.present(), 'present submits without copy step');
 
-presentationContext.destroy();
+  presentationContext.destroy();
   t.end();
 });
 

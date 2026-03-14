@@ -277,6 +277,26 @@ Creates a new [`CanvasContext`](./canvas-context).
 WebGPU only. WebGL devices can only render into the canvas they were created with.
 :::
 
+### createPresentationContext()
+
+<p class="badges">
+  <img src="https://img.shields.io/badge/From-v9.3-blue.svg?style=flat-square" alt="From-v9.3" />
+</p>
+
+```typescript
+createPresentationContext(props?: PresentationContextProps): PresentationContext
+```
+
+Creates a new [`PresentationContext`](./presentation-context) for multi-canvas presentation.
+
+:::info
+For portable WebGL and WebGPU multi-canvas rendering, create the device with a default `CanvasContext` backed by an `OffscreenCanvas`.
+:::
+
+:::info
+On WebGL, all `PresentationContext` instances on a device share the device's default `CanvasContext` as the actual GPU render target, so they must be used sequentially.
+:::
+
 ### getDefaultCanvasContext()
 
 ```typescript
