@@ -270,7 +270,7 @@ function getCompressedTextureBlockSize(
     return {blockWidth: 4, blockHeight: 4};
   }
 
-  if (format.startsWith('pvrtc-rbg2') || format.startsWith('pvrtc-rgba2')) {
+  if (format.startsWith('pvrtc-rgb2') || format.startsWith('pvrtc-rgba2')) {
     return {blockWidth: 8, blockHeight: 4};
   }
 

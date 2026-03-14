@@ -476,7 +476,7 @@ export class CompressedTexture extends React.PureComponent<
       {name: 'luma.gl Texture Format', value: textureFormat, units: ''},
       {name: 'Dimensions', value: `${image.width} x ${image.height}`, units: ''},
       {name: 'Size in memory (Total)', value: formatTextureByteSize(levelZeroByteSize), units: ''},
-      {name: 'Level 0', value: formatTextureByteSize(levelZeroByteSize), units: ''}
+      {name: 'Mip 0', value: formatTextureByteSize(levelZeroByteSize), units: ''}
     ]);
   }
 
@@ -535,7 +535,7 @@ export class CompressedTexture extends React.PureComponent<
         units: ''
       },
       ...mipLevelStats.levels.map(level => ({
-        name: `Level ${level.mipLevel}`,
+        name: `Mip ${level.mipLevel}`,
         value: formatTextureByteSize(level.byteSize),
         units: ''
       }))
@@ -562,12 +562,21 @@ export class CompressedTexture extends React.PureComponent<
       return null;
     }
 
-    const infoList = [];
-    for (let index = 0; index < stats.length; index++) {
-      infoList.push(
-        <li key={index}>{`${stats[index].name}: ${stats[index].value}${stats[index].units}`}</li>
-      );
-    }
+    const formatStat = stats.find(stat => stat.name === 'luma.gl Texture Format');
+    const dimensionsStat = stats.find(stat => stat.name === 'Dimensions');
+    const fileSizeStat = stats.find(stat => stat.name === 'File Size');
+    const uploadTimeStat = stats.find(stat => stat.name === 'Upload time');
+    const memorySizeStat = stats.find(stat => stat.name === 'Size in memory (Total)');
+    const mipStats = stats.filter(stat => stat.name.startsWith('Mip '));
+    const additionalStats = stats.filter(
+      stat =>
+        stat.name !== 'luma.gl Texture Format' &&
+        stat.name !== 'Dimensions' &&
+        stat.name !== 'File Size' &&
+        stat.name !== 'Upload time' &&
+        stat.name !== 'Size in memory (Total)' &&
+        !stat.name.startsWith('Mip ')
+    );
     return (
       <ul
         style={{
@@ -577,17 +586,131 @@ export class CompressedTexture extends React.PureComponent<
           display: 'flex',
           flexFlow: 'column nowrap',
           alignItems: 'flex-start',
-          padding: 10,
+          gap: 4,
+          padding: '8px 9px',
           opacity: this.state.showStats ? 0.8 : 0,
           backgroundColor: 'black',
           color: 'white',
           borderRadius: 5,
           minWidth: 200,
           listStyle: 'none',
-          fontSize: 14
+          fontSize: 12,
+          lineHeight: 1.1
         }}
       >
-        {infoList}
+        {formatStat ? (
+          <li
+            style={{
+              fontWeight: 700,
+              fontFamily: 'monospace',
+              marginBottom: 1
+            }}
+          >
+            {String(formatStat.value)}
+          </li>
+        ) : null}
+        {dimensionsStat ? (
+          <li>{`Dimensions: ${dimensionsStat.value}${dimensionsStat.units}`}</li>
+        ) : null}
+        {uploadTimeStat ? (
+          <li>{`Upload time: ${uploadTimeStat.value}${uploadTimeStat.units}`}</li>
+        ) : null}
+        <li>{`Mip levels: ${mipStats.length}`}</li>
+        <li style={{width: '100%'}}>
+          <table
+            style={{
+              width: '100%',
+              borderCollapse: 'collapse',
+              fontSize: 12,
+              lineHeight: 1.05
+            }}
+          >
+            <thead>
+              <tr>
+                <th
+                  style={{
+                    padding: '0 8px 1px 0',
+                    whiteSpace: 'nowrap',
+                    textAlign: 'left',
+                    fontWeight: 700
+                  }}
+                >
+                  Chunk
+                </th>
+                <th
+                  style={{
+                    padding: '0 0 1px 0',
+                    whiteSpace: 'nowrap',
+                    textAlign: 'right',
+                    fontWeight: 700
+                  }}
+                >
+                  Size
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {fileSizeStat ? (
+                <tr>
+                  <td style={{padding: '0 8px 1px 0', whiteSpace: 'nowrap', textAlign: 'left'}}>
+                    File Size
+                  </td>
+                  <td style={{padding: '0 0 1px 0', whiteSpace: 'nowrap', textAlign: 'right'}}>
+                    {`${fileSizeStat.value}${fileSizeStat.units}`}
+                  </td>
+                </tr>
+              ) : null}
+              {memorySizeStat ? (
+                <tr>
+                  <td style={{padding: '0 8px 1px 0', whiteSpace: 'nowrap', textAlign: 'left'}}>
+                    Memory Size
+                  </td>
+                  <td style={{padding: '0 0 1px 0', whiteSpace: 'nowrap', textAlign: 'right'}}>
+                    {`${memorySizeStat.value}${memorySizeStat.units}`}
+                  </td>
+                </tr>
+              ) : null}
+              {additionalStats.map(stat => (
+                <tr key={stat.name}>
+                  <td
+                    colSpan={2}
+                    style={{
+                      paddingTop: 1,
+                      whiteSpace: 'nowrap',
+                      textAlign: 'left'
+                    }}
+                  >
+                    {`${stat.name}: ${stat.value}${stat.units}`}
+                  </td>
+                </tr>
+              ))}
+              {mipStats.map(stat => (
+                <tr key={stat.name}>
+                  <td
+                    style={{
+                      padding: '0 8px 0 0',
+                      verticalAlign: 'top',
+                      whiteSpace: 'nowrap',
+                      textAlign: 'left'
+                    }}
+                  >
+                    {stat.name}
+                  </td>
+                  <td
+                    style={{
+                      padding: 0,
+                      verticalAlign: 'top',
+                      textAlign: 'right',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    {`${stat.value}${stat.units}`}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </li>
       </ul>
     );
   }
@@ -825,7 +948,7 @@ function getTextureFormatFromInternalFormat(format: number): TextureFormat {
     case COMPRESSED_RGBA_PVRTC_4BPPV1_IMG:
       return 'pvrtc-rgba4unorm-webgl';
     case COMPRESSED_RGB_PVRTC_2BPPV1_IMG:
-      return 'pvrtc-rbg2unorm-webgl';
+      return 'pvrtc-rgb2unorm-webgl';
     case COMPRESSED_RGBA_PVRTC_2BPPV1_IMG:
       return 'pvrtc-rgba2unorm-webgl';
     case COMPRESSED_RGB_ATC_WEBGL:

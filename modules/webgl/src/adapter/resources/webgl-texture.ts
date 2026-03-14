@@ -342,6 +342,14 @@ export class WEBGLTexture extends Texture {
       : {};
     const sourceElementOffset = getWebGLTextureSourceElementOffset(typedArray, byteOffset);
     const compressedData = compressed ? getArrayBufferView(typedArray, byteOffset) : typedArray;
+    const mipLevelSize = this._getMipLevelSize(mipLevel);
+    const isFullMipUpload =
+      x === 0 &&
+      y === 0 &&
+      z === 0 &&
+      width === mipLevelSize.width &&
+      height === mipLevelSize.height &&
+      depthOrArrayLayers === mipLevelSize.depthOrArrayLayers;
 
     this.gl.bindTexture(this.glTarget, this.handle);
     this.gl.bindBuffer(GL.PIXEL_UNPACK_BUFFER, null);
@@ -351,8 +359,13 @@ export class WEBGLTexture extends Texture {
         case '2d':
         case 'cube':
           if (compressed) {
-            // prettier-ignore
-            this.gl.compressedTexImage2D(glTarget, mipLevel, glFormat, width, height, 0, compressedData);
+            if (isFullMipUpload) {
+              // prettier-ignore
+              this.gl.compressedTexImage2D(glTarget, mipLevel, glFormat, width, height, 0, compressedData);
+            } else {
+              // prettier-ignore
+              this.gl.compressedTexSubImage2D(glTarget, mipLevel, x, y, width, height, glFormat, compressedData);
+            }
           } else {
             // prettier-ignore
             this.gl.texSubImage2D(glTarget, mipLevel, x, y, width, height, glFormat, glType, typedArray, sourceElementOffset);
@@ -361,17 +374,33 @@ export class WEBGLTexture extends Texture {
         case '2d-array':
         case '3d':
           if (compressed) {
-            // prettier-ignore
-            this.gl.compressedTexImage3D(
-              glTarget,
-              mipLevel,
-              glFormat,
-              width,
-              height,
-              depthOrArrayLayers,
-              0,
-              compressedData
-            );
+            if (isFullMipUpload) {
+              // prettier-ignore
+              this.gl.compressedTexImage3D(
+                glTarget,
+                mipLevel,
+                glFormat,
+                width,
+                height,
+                depthOrArrayLayers,
+                0,
+                compressedData
+              );
+            } else {
+              // prettier-ignore
+              this.gl.compressedTexSubImage3D(
+                glTarget,
+                mipLevel,
+                x,
+                y,
+                z,
+                width,
+                height,
+                depthOrArrayLayers,
+                glFormat,
+                compressedData
+              );
+            }
           } else {
             // prettier-ignore
             this.gl.texSubImage3D(glTarget, mipLevel, x, y, z, width, height, depthOrArrayLayers, glFormat, glType, typedArray, sourceElementOffset);
