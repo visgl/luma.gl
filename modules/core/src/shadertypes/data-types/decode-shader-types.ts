@@ -12,19 +12,30 @@ import type {
 } from './shader-types';
 
 /** Split a uniform type string into type and components */
-export function getVariableShaderTypeInfo(format: VariableShaderType): {
+export function getVariableShaderTypeInfo(
+  format: VariableShaderType | VariableShaderTypeAlias
+): {
   type: PrimitiveDataType;
   components: number;
 } {
-  const decoded = UNIFORM_FORMATS[format];
+  const resolvedFormat = resolveVariableShaderTypeAlias(format);
+  const decoded = UNIFORM_FORMATS[resolvedFormat];
+  if (!decoded) {
+    throw new Error(`Unsupported variable shader type: ${format}`);
+  }
   return decoded;
 }
 
 /** Decodes a vertex type, returning byte length and flags (integer, signed, normalized) */
 export function getAttributeShaderTypeInfo(
-  attributeType: AttributeShaderType
+  attributeType: AttributeShaderType | AttributeShaderTypeAlias
 ): AttributeShaderTypeInfo {
-  const [primitiveType, components] = TYPE_INFO[attributeType];
+  const resolvedAttributeType = resolveAttributeShaderTypeAlias(attributeType);
+  const decoded = TYPE_INFO[resolvedAttributeType];
+  if (!decoded) {
+    throw new Error(`Unsupported attribute shader type: ${attributeType}`);
+  }
+  const [primitiveType, components] = decoded;
   const integer: boolean = primitiveType === 'i32' || primitiveType === 'u32';
   const signed: boolean = primitiveType !== 'u32';
 

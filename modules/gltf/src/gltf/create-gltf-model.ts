@@ -8,50 +8,66 @@ import {Geometry, Model, ModelNode, type ModelProps} from '@luma.gl/engine';
 import {type ParsedPBRMaterial} from '../pbr/pbr-material';
 
 const SHADER = /* WGSL */ `
-layout(0) positions: vec4; // in vec4 POSITION;
+struct VertexInputs {
+  @location(0) positions: vec3f,
+#ifdef HAS_NORMALS
+  @location(1) normals: vec3f,
+#endif
+#ifdef HAS_TANGENTS
+  @location(2) TANGENT: vec4f,
+#endif
+#ifdef HAS_UV
+  @location(3) texCoords: vec2f,
+#endif
+};
 
-  #ifdef HAS_NORMALS
-    in vec4 normals; // in vec4 NORMAL;
-  #endif
-
-  #ifdef HAS_TANGENTS
-    in vec4 TANGENT;
-  #endif
-
-  #ifdef HAS_UV
-    // in vec2 TEXCOORD_0;
-    in vec2 texCoords;
-  #endif
+struct FragmentInputs {
+  @builtin(position) position: vec4f,
+  @location(0) pbrPosition: vec3f,
+  @location(1) pbrUV: vec2f,
+  @location(2) pbrNormal: vec3f,
+#ifdef HAS_TANGENTS
+  @location(3) pbrTangent: vec4f,
+#endif
+};
 
 @vertex
-  void main(void) {
-    vec4 _NORMAL = vec4(0.);
-    vec4 _TANGENT = vec4(0.);
-    vec2 _TEXCOORD_0 = vec2(0.);
+fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
+  var outputs: FragmentInputs;
+  var normal = vec3f(0.0, 0.0, 1.0);
+  var uv = vec2f(0.0, 0.0);
+  let worldPosition = pbrProjection.modelMatrix * vec4f(inputs.positions, 1.0);
 
-    #ifdef HAS_NORMALS
-      _NORMAL = normals;
-    #endif
+#ifdef HAS_NORMALS
+  normal = normalize((pbrProjection.normalMatrix * vec4f(inputs.normals, 0.0)).xyz);
+#endif
+#ifdef HAS_UV
+  uv = inputs.texCoords;
+#endif
+#ifdef HAS_TANGENTS
+  let tangent = normalize((pbrProjection.modelMatrix * vec4f(inputs.TANGENT.xyz, 0.0)).xyz);
+  outputs.pbrTangent = vec4f(tangent, inputs.TANGENT.w);
+#endif
 
-    #ifdef HAS_TANGENTS
-      _TANGENT = TANGENT;
-    #endif
-
-    #ifdef HAS_UV
-      _TEXCOORD_0 = texCoords;
-    #endif
-
-    pbr_setPositionNormalTangentUV(positions, _NORMAL, _TANGENT, _TEXCOORD_0);
-    gl_Position = u_MVPMatrix * positions;
-  }
+  outputs.position = pbrProjection.modelViewProjectionMatrix * vec4f(inputs.positions, 1.0);
+  outputs.pbrPosition = worldPosition.xyz / worldPosition.w;
+  outputs.pbrUV = uv;
+  outputs.pbrNormal = normal;
+  return outputs;
+}
 
 @fragment
-  out vec4 fragmentColor;
-
-  void main(void) {
-    vec3 pos = pbr_vPosition;
-    fragmentColor = pbr_filterColor(vec4(1.0));
-  }
+fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4f {
+  fragmentInputs.pbr_vPosition = inputs.pbrPosition;
+  fragmentInputs.pbr_vUV = inputs.pbrUV;
+  fragmentInputs.pbr_vNormal = inputs.pbrNormal;
+#ifdef HAS_TANGENTS
+  let tangent = normalize(inputs.pbrTangent.xyz);
+  let bitangent = normalize(cross(inputs.pbrNormal, tangent)) * inputs.pbrTangent.w;
+  fragmentInputs.pbr_vTBN = mat3x3f(tangent, bitangent, inputs.pbrNormal);
+#endif
+  return pbr_filterColor(vec4f(1.0));
+}
 `;
 
 // TODO rename attributes to POSITION/NORMAL etc

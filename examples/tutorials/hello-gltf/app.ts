@@ -78,10 +78,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     super();
     this.device = device;
 
-    if (device.type !== 'webgl') {
-      throw new Error('This demo is only implemented for WebGL2');
-    }
-
     window.localStorage['last-gltf-model'] ??= 'Avocado';
     this.loadGLTF(window.localStorage['last-gltf-model']);
 
@@ -167,7 +163,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       const {scenes, animator, lights} = createScenegraphsFromGLTF(this.device, processedGLTF, {
         lights: true,
         imageBasedLightingEnvironment: undefined,
-        pbrDebug: false
+        pbrDebug: false,
+        useTangents: true
       });
 
       destroyScenes(this.scenes);
@@ -175,15 +172,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       this.animator = animator;
       this.modelLights = lights;
 
-      // Calculate nice camera view
-      // TODO move to utility in gltf module
-      let min = [Infinity, Infinity, Infinity];
-      let max = [0, 0, 0];
-      this.scenes[0].traverse(node => {
-        const {bounds} = node as ModelNode;
-        min = min.map((n, i) => Math.min(n, bounds[0][i], bounds[1][i]));
-        max = max.map((n, i) => Math.max(n, bounds[0][i], bounds[1][i]));
-      });
+      // Calculate a camera framing from scenegraph bounds.
+      const sceneBounds = this.scenes[0]?.getBounds();
+      const min = sceneBounds?.[0] ?? [-1, -1, -1];
+      const max = sceneBounds?.[1] ?? [1, 1, 1];
       this.cameraPos = [2 * (max[0] + max[2]), max[1], 2 * (max[0] + max[2])];
       this.center = [0.5 * (min[0] + max[0]), 0.5 * (min[1] + max[1]), 0.5 * (min[2] + max[2])];
 
