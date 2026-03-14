@@ -276,6 +276,8 @@ export type TextureFormatCompressed =
   | 'astc-12x12-unorm'
   | 'astc-12x12-unorm-srgb';
 
+export type CompressedTextureFormat = TextureFormatCompressed;
+
 // Texture format helper types
 
 export type TextureFormatTypedArray<T extends TextureFormat> = DataTypeArray<

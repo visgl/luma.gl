@@ -6,12 +6,14 @@ import * as React from 'react';
 
 import {load, registerLoaders, selectLoader, fetchFile, type LoaderOptions} from '@loaders.gl/core';
 import {
+  BASIS_EXTERNAL_LIBRARIES,
   BasisLoader,
+  CRUNCH_EXTERNAL_LIBRARIES,
   CompressedTextureLoader,
   CrunchWorkerLoader,
-  GL_EXTENSIONS_CONSTANTS,
-  selectSupportedBasisFormat
+  GL_EXTENSIONS_CONSTANTS
 } from '@loaders.gl/textures';
+import type {GPUTextureFormat} from '@loaders.gl/schema';
 import {ImageLoader, type ImageType} from '@loaders.gl/images';
 
 import {type Device, type TextureFormat, Texture, textureFormatDecoder} from '@luma.gl/core';
@@ -81,7 +83,8 @@ const {
 
 const TEXTURES_BASE_URL =
   'https://raw.githubusercontent.com/visgl/loaders.gl/master/modules/textures/test/data/';
-const LOADERS_GL_TEXTURES_LIBRARY_PATH = `https://unpkg.com/@loaders.gl/textures@${CompressedTextureLoader.version}/dist/libs/`;
+const LOADERS_GL_VERSION = '4.4.0-alpha.17';
+const LOADERS_GL_TEXTURES_LIBRARY_PATH = `https://unpkg.com/@loaders.gl/textures@${LOADERS_GL_VERSION}/dist/libs/`;
 
 registerLoaders([BasisLoader, CompressedTextureLoader, ImageLoader]);
 
@@ -173,7 +176,7 @@ type TextureStat = {
 };
 
 type CompressedTextureState = {
-  loadOptions: LoaderOptions;
+  loadOptions: TextureLoaderOptions;
   textureError: string | null;
   showStats: boolean;
   stats: TextureStat[];
@@ -189,7 +192,8 @@ type LoadedTextureData = {
 
 type CompressedImageData = {
   data: Uint8Array;
-  format: number;
+  format?: number;
+  textureFormat?: string;
   width: number;
   height: number;
   levelSize?: number;
@@ -201,6 +205,18 @@ type ImageDataLike = {
   height: number;
 };
 
+type SupportedCompressedTextureDevice = Device & {
+  getSupportedCompressedTextureFormats(): string[];
+};
+
+type TextureLoaderOptions = LoaderOptions & {
+  modules?: Record<string, string>;
+  supportedTextureFormats?: GPUTextureFormat[];
+  'compressed-texture'?: {
+    useBasis?: boolean;
+  };
+};
+
 export class CompressedTexture extends React.PureComponent<
   CompressedTextureProps,
   CompressedTextureState
@@ -208,7 +224,7 @@ export class CompressedTexture extends React.PureComponent<
   constructor(props: CompressedTextureProps) {
     super(props);
 
-    const loadOptions = this.getLoadOptions();
+    const loadOptions = this.getLoadOptions(props.device);
 
     this.state = {
       loadOptions,
@@ -224,20 +240,28 @@ export class CompressedTexture extends React.PureComponent<
     this.setState({dataUrl});
   }
 
-  getLoadOptions(): LoaderOptions {
+  componentDidUpdate(previousProps: CompressedTextureProps): void {
+    if (previousProps.device !== this.props.device) {
+      this.setState({loadOptions: this.getLoadOptions(this.props.device)});
+    }
+  }
+
+  getLoadOptions(device: Device): TextureLoaderOptions {
     return {
+      modules: {
+        [BASIS_EXTERNAL_LIBRARIES.TRANSCODER]: `${LOADERS_GL_TEXTURES_LIBRARY_PATH}${BASIS_EXTERNAL_LIBRARIES.TRANSCODER}`,
+        [BASIS_EXTERNAL_LIBRARIES.TRANSCODER_WASM]: `${LOADERS_GL_TEXTURES_LIBRARY_PATH}${BASIS_EXTERNAL_LIBRARIES.TRANSCODER_WASM}`,
+        [BASIS_EXTERNAL_LIBRARIES.ENCODER]: `${LOADERS_GL_TEXTURES_LIBRARY_PATH}${BASIS_EXTERNAL_LIBRARIES.ENCODER}`,
+        [BASIS_EXTERNAL_LIBRARIES.ENCODER_WASM]: `${LOADERS_GL_TEXTURES_LIBRARY_PATH}${BASIS_EXTERNAL_LIBRARIES.ENCODER_WASM}`,
+        [CRUNCH_EXTERNAL_LIBRARIES.DECODER]: `${LOADERS_GL_TEXTURES_LIBRARY_PATH}${CRUNCH_EXTERNAL_LIBRARIES.DECODER}`
+      },
+      supportedTextureFormats: getSupportedGPUTextureFormatFamilies(device),
       basis: {
-        format: selectSupportedBasisFormat(),
+        format: 'auto',
         containerFormat: 'auto',
-        module: 'transcoder',
-        libraryPath: LOADERS_GL_TEXTURES_LIBRARY_PATH
+        module: 'transcoder'
       },
-      crunch: {
-        libraryPath: LOADERS_GL_TEXTURES_LIBRARY_PATH
-      },
-      'compressed-texture': {
-        libraryPath: LOADERS_GL_TEXTURES_LIBRARY_PATH
-      }
+      'compressed-texture': {}
     };
   }
 
@@ -249,7 +273,7 @@ export class CompressedTexture extends React.PureComponent<
     try {
       const {arrayBuffer, length, src, useBasis} = await this.getLoadedData(image);
 
-      const options: LoaderOptions & {'compressed-texture'?: {useBasis: boolean}} = {
+      const options: TextureLoaderOptions = {
         ...loadOptions
       };
       if (useBasis) {
@@ -331,7 +355,7 @@ export class CompressedTexture extends React.PureComponent<
 
   createCompressedTexture(device: Device, images: CompressedImageData[]): Texture {
     const baseLevel = images[0];
-    const textureFormat = getTextureFormat(baseLevel.format);
+    const textureFormat = resolveCompressedTextureFormat(baseLevel);
     const uploadLevels = getCompressedTextureUploadLevels(device, textureFormat, images);
     const texture = device.createTexture({
       width: baseLevel.width,
@@ -427,10 +451,10 @@ export class CompressedTexture extends React.PureComponent<
     }
     // We take the first image because it has main propeties of compressed image.
     const {format, width, height, levelSize} = images[0];
-    const textureFormat = getTextureFormat(format);
+    const textureFormat = resolveCompressedTextureFormat(images[0]);
 
     if (
-      !isCompressedImageFormatSupported(device, format) ||
+      (typeof format === 'number' && !isCompressedImageFormatSupported(device, format)) ||
       !device.isTextureFormatSupported(textureFormat)
     ) {
       throw new Error(`${textureFormat} is not supported by your GPU (${getDeviceLabel(device)})`);
@@ -569,6 +593,51 @@ function isImageDataLike(image: ImageType): image is ImageDataLike {
   );
 }
 
+function getSupportedGPUTextureFormatFamilies(device: Device): GPUTextureFormat[] {
+  const supportedFormats = new Set<GPUTextureFormat>();
+
+  for (const textureFormat of (
+    device as SupportedCompressedTextureDevice
+  ).getSupportedCompressedTextureFormats()) {
+    const gpuTextureFormat = getGPUTextureFormatFamily(textureFormat);
+    if (gpuTextureFormat) {
+      supportedFormats.add(gpuTextureFormat);
+    }
+  }
+
+  return [...supportedFormats];
+}
+
+function getGPUTextureFormatFamily(textureFormat: string): GPUTextureFormat | null {
+  if (textureFormat.startsWith('astc-')) {
+    return 'astc';
+  }
+  if (textureFormat.startsWith('pvrtc-')) {
+    return 'pvrtc';
+  }
+  if (textureFormat.startsWith('atc-')) {
+    return 'atc';
+  }
+  if (textureFormat.startsWith('etc1-')) {
+    return 'etc1';
+  }
+  if (textureFormat.startsWith('etc2-') || textureFormat.startsWith('eac-')) {
+    return 'etc2';
+  }
+  if (textureFormat.startsWith('bc4-') || textureFormat.startsWith('bc5-')) {
+    return 'rgtc';
+  }
+  if (
+    textureFormat.startsWith('bc1-') ||
+    textureFormat.startsWith('bc2-') ||
+    textureFormat.startsWith('bc3-')
+  ) {
+    return textureFormat.includes('-srgb') ? 'dxt-srgb' : 'dxt';
+  }
+
+  return null;
+}
+
 function beginPreviewRenderPass(device: Device) {
   const framebuffer = device
     .getDefaultCanvasContext()
@@ -577,7 +646,19 @@ function beginPreviewRenderPass(device: Device) {
   return device.beginRenderPass({framebuffer});
 }
 
-function getTextureFormat(format: number): TextureFormat {
+function resolveCompressedTextureFormat(image: CompressedImageData): TextureFormat {
+  if (image.textureFormat) {
+    return image.textureFormat as TextureFormat;
+  }
+
+  if (typeof image.format === 'number') {
+    return getTextureFormatFromInternalFormat(image.format);
+  }
+
+  throw new Error('Compressed texture level is missing both textureFormat and format');
+}
+
+function getTextureFormatFromInternalFormat(format: number): TextureFormat {
   switch (format) {
     case COMPRESSED_RGB_S3TC_DXT1_EXT:
       return 'bc1-rgb-unorm-webgl';
@@ -696,7 +777,9 @@ function getTextureFormat(format: number): TextureFormat {
     case COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT:
       return 'bc3-rgba-unorm-srgb';
     default:
-      throw new Error(`No luma.gl texture format mapping for internal format ${format}`);
+      throw new Error(
+        `No luma.gl texture format mapping for internal format ${format}. This loader result should provide textureFormat and the example should use that first.`
+      );
   }
 }
 

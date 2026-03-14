@@ -26,6 +26,33 @@ test('Device#isTextureFormatCompressed', async t => {
   t.end();
 });
 
+test('Device#getSupportedCompressedTextureFormats', async t => {
+  for (const device of await getTestDevices()) {
+    const formats = device.getSupportedCompressedTextureFormats();
+
+    t.ok(Array.isArray(formats), `${device.id} returns an array`);
+    t.equal(
+      new Set(formats).size,
+      formats.length,
+      `${device.id} does not return duplicate formats`
+    );
+
+    for (const format of formats) {
+      t.equal(
+        device.isTextureFormatCompressed(format),
+        true,
+        `${device.id} returns only compressed formats`
+      );
+      t.equal(
+        device.isTextureFormatSupported(format),
+        true,
+        `${device.id} returns only supported compressed formats`
+      );
+    }
+  }
+  t.end();
+});
+
 test.skip('WebGLDevice#lost (Promise)', async t => {
   const device = await luma.createDevice({});
 
