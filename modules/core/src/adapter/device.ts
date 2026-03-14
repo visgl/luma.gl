@@ -8,6 +8,7 @@ import {uid} from '../utils/uid';
 import type {VertexFormat, VertexFormatInfo} from '../shadertypes/vertex-arrays/vertex-formats';
 import type {TextureFormat, TextureFormatInfo} from '../shadertypes/textures/texture-formats';
 import type {CanvasContext, CanvasContextProps} from './canvas-context';
+import type {PresentationContext, PresentationContextProps} from './presentation-context';
 import type {BufferProps} from './resources/buffer';
 import {Buffer} from './resources/buffer';
 import type {RenderPipeline, RenderPipelineProps} from './resources/render-pipeline';
@@ -242,13 +243,22 @@ export type DeviceProps = {
   /** Error handler. If it returns a probe logger style function, it will be called at the site of the error to optimize console error links. */
   onError?: (error: Error, context?: unknown) => unknown;
   /** Called when the size of a CanvasContext's canvas changes */
-  onResize?: (ctx: CanvasContext, info: {oldPixelSize: [number, number]}) => unknown;
+  onResize?: (
+    ctx: CanvasContext | PresentationContext,
+    info: {oldPixelSize: [number, number]}
+  ) => unknown;
   /** Called when the absolute position of a CanvasContext's canvas changes. Must set `CanvasContextProps.trackPosition: true` */
-  onPositionChange?: (ctx: CanvasContext, info: {oldPosition: [number, number]}) => unknown;
+  onPositionChange?: (
+    ctx: CanvasContext | PresentationContext,
+    info: {oldPosition: [number, number]}
+  ) => unknown;
   /** Called when the visibility of a CanvasContext's canvas changes */
-  onVisibilityChange?: (ctx: CanvasContext) => unknown;
+  onVisibilityChange?: (ctx: CanvasContext | PresentationContext) => unknown;
   /** Called when the device pixel ratio of a CanvasContext's canvas changes */
-  onDevicePixelRatioChange?: (ctx: CanvasContext, info: {oldRatio: number}) => unknown;
+  onDevicePixelRatioChange?: (
+    ctx: CanvasContext | PresentationContext,
+    info: {oldRatio: number}
+  ) => unknown;
 
   // DEBUG SETTINGS
 
@@ -586,6 +596,9 @@ or create a device with the 'debug: true' prop.`;
 
   /** Creates a new CanvasContext (WebGPU only) */
   abstract createCanvasContext(props?: CanvasContextProps): CanvasContext;
+
+  /** Creates a presentation context that borrows the default canvas context for rendering. WebGL requires the default canvas context to use an OffscreenCanvas. */
+  abstract createPresentationContext(props?: PresentationContextProps): PresentationContext;
 
   /** Call after rendering a frame (necessary e.g. on WebGL OffscreenCanvas) */
   abstract submit(commandBuffer?: CommandBuffer): void;

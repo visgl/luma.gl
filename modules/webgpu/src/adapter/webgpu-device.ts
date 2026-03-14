@@ -12,6 +12,8 @@ import type {
   DeviceTextureFormatCapabilities,
   VertexFormat,
   CanvasContextProps,
+  PresentationContextProps,
+  PresentationContext,
   BufferProps,
   SamplerProps,
   ShaderProps,
@@ -205,6 +207,10 @@ export class WebGPUDevice extends Device {
 
   createCanvasContext(props: CanvasContextProps): WebGPUCanvasContext {
     return new WebGPUCanvasContext(this, this.adapter, props);
+  }
+
+  createPresentationContext(_props?: PresentationContextProps): PresentationContext {
+    throw new Error('PresentationContext is not supported on WebGPU devices');
   }
 
   createPipelineLayout(props: PipelineLayoutProps): WebGPUPipelineLayout {

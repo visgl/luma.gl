@@ -72,7 +72,9 @@ A `CanvasContext` holds a connection between the GPU `Device` and an HTML or off
 
 The most important method is `CanvasContext.getCurrentFramebuffer()` that is used to obtain fresh `Framebuffer` every render frame. This framebuffer contains a special texture `colorAttachment` that draws into to the canvas "drawing buffer" which will then be copied to the screen when then render pass ends.
 
-While there are ways to obtain multiple `CanvasContext` instances on WebGPU, the recommended portable way (that also works on WebGL) is to create a "default canvas context" by supplying the `createCanvasContext` prop to your `luma.createDevice({..., createCanvasContext: true})` call. The created canvas contest is available via `device.getDefaultCanvasContext()`.
+While there are ways to obtain multiple `CanvasContext` instances on WebGPU, the recommended portable way (that also works on WebGL) is to create a "default canvas context" by supplying the `createCanvasContext` prop to your `luma.createDevice({..., createCanvasContext: true})` call. The created canvas context is available via `device.getDefaultCanvasContext()`.
+
+When you need to present one WebGL device into multiple visible canvases, use `PresentationContext` instead of trying to create multiple WebGL canvas contexts. See the [Multiple Canvases](/docs/developer-guide/multiple-canvases) developer guide.
 
 ### Creating a RenderPipeline
 
@@ -266,4 +268,3 @@ void main(void) {
   gl_FragData[3] = vec4(1.0);
 }
 ```
-
