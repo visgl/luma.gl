@@ -15,7 +15,7 @@ type AppUniforms = {
   uModelViewProjection: Float32Array;
 };
 
-type ExternalWebGLContextHandle = {
+export type ExternalWebGLContextHandle = {
   destroy: () => void;
 };
 

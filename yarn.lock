@@ -8665,12 +8665,13 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"luma.gl-examples-external-webgl-context@workspace:examples/api/external-webgl-context":
+"luma.gl-examples-external-webgl-context@workspace:examples/integrations/external-context":
   version: 0.0.0-use.local
-  resolution: "luma.gl-examples-external-webgl-context@workspace:examples/api/external-webgl-context"
+  resolution: "luma.gl-examples-external-webgl-context@workspace:examples/integrations/external-context"
   dependencies:
     "@luma.gl/core": "npm:9.3.0-alpha.4"
     "@luma.gl/engine": "npm:9.3.0-alpha.4"
+    "@luma.gl/shadertools": "npm:9.3.0-alpha.4"
     "@luma.gl/webgl": "npm:9.3.0-alpha.4"
     "@math.gl/core": "npm:^4.1.0"
     maplibre-gl: "npm:^5.13.0"

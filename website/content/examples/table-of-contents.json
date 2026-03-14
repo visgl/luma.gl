@@ -9,8 +9,7 @@
     "label": "Showcase",
     "items": [
       "showcase/instancing",
-      "showcase/persistence",
-      "showcase/postprocessing"
+      "showcase/persistence"
     ]
   },
   {
@@ -21,8 +20,15 @@
       "api/cubemap",
       "api/texture-3d",
       "api/texture-tester",
-      "api/external-webgl-context",
       "api/multi-canvas"
+    ]
+  },
+  {
+    "type": "category",
+    "label": "Integrations",
+    "items": [
+      "integrations/external-context",
+      "integrations/react-strict-mode"
     ]
   },
   {

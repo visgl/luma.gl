@@ -265,7 +265,6 @@ test('WebGPUPresentationContext destroy() releases its depth attachment', async 
 
   t.end();
 });
-
 test('PresentationContext is unsupported on NullDevice', async t => {
   const nullDevice = await getNullTestDevice();
   t.throws(

@@ -10,7 +10,8 @@ import Texture3DApp from '../../examples/api/texture-3d/app';
 import {renderToDOM as renderTextureTesterExample} from '../../examples/api/texture-tester/app';
 import initializeExternalWebGLContext, {
   ExternalWebGLContextHandle
-} from '../../examples/api/external-webgl-context/app';
+} from '../../examples/integrations/external-context/app';
+import HelloReactApp from '../../examples/integrations/hello-react/app';
 
 // import PerformanceApp from '../../examples/performance/stress-test/app';
 
@@ -145,7 +146,9 @@ export const TextureTesterExample: React.FC = () => {
   );
 };
 
-export const ExternalWebGLContextExample: React.FC = () => {
+// Integration Examples
+
+export const ExternalContextExample: React.FC = () => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -169,7 +172,7 @@ export const ExternalWebGLContextExample: React.FC = () => {
   }, []);
 
   return (
-    <div style={{position: 'relative', width: '100%', minHeight: '640px'}}>
+    <div className="integration-example-page" style={{position: 'relative', width: '100%', minHeight: '640px'}}>
       <div ref={containerRef} style={{position: 'absolute', inset: 0}} />
       <div
         style={{
@@ -197,6 +200,14 @@ export const ExternalWebGLContextExample: React.FC = () => {
     </div>
   );
 };
+
+export const ReactStrictModeExample: React.FC = () => (
+  <div className="integration-example-page" style={{width: '100%', minHeight: '640px'}}>
+    <React.StrictMode>
+      <HelloReactApp />
+    </React.StrictMode>
+  </div>
+);
 
 // Tutorial Examples
 

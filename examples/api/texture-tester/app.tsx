@@ -30,6 +30,8 @@ export default class App extends React.PureComponent<AppProps, AppState> {
     deviceType: 'webgl' as DeviceType
   };
 
+  private isComponentMounted = false;
+
   constructor(props: AppProps) {
     super(props);
 
@@ -41,8 +43,8 @@ export default class App extends React.PureComponent<AppProps, AppState> {
   }
 
   async componentDidMount() {
+    this.isComponentMounted = true;
     const {deviceType = 'webgl'} = this.props;
-
     try {
       if (typeof OffscreenCanvas === 'undefined') {
         throw new Error('Texture tester requires OffscreenCanvas support');
@@ -61,15 +63,23 @@ export default class App extends React.PureComponent<AppProps, AppState> {
         }
       });
       const model = createModel(device);
+      if (!this.isComponentMounted) {
+        model.destroy();
+        device.destroy();
+        return;
+      }
       this.setState({device, model, initializationError: null});
     } catch (error) {
-      this.setState({
-        initializationError: error instanceof Error ? error.message : String(error)
-      });
+      if (this.isComponentMounted) {
+        this.setState({
+          initializationError: error instanceof Error ? error.message : String(error)
+        });
+      }
     }
   }
 
   componentWillUnmount() {
+    this.isComponentMounted = false;
     this.state.model?.destroy();
     this.state.device?.destroy();
   }
