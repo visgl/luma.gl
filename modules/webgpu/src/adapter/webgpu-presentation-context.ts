@@ -40,6 +40,10 @@ export class WebGPUPresentationContext extends PresentationContext {
   }
 
   override destroy(): void {
+    if (this.depthStencilAttachment) {
+      this.depthStencilAttachment.destroy();
+      this.depthStencilAttachment = null;
+    }
     this.handle.unconfigure();
     super.destroy();
   }

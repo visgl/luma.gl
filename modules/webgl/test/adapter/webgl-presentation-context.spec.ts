@@ -213,10 +213,58 @@ test('WebGPUPresentationContext renders directly to its destination canvas', asy
 
   t.doesNotThrow(() => presentationContext.present(), 'present submits without copy step');
 
-  presentationContext.destroy();
+presentationContext.destroy();
   t.end();
 });
 
+test('WebGPUPresentationContext destroy() releases its depth attachment', async t => {
+  const webgpuDevice = await getWebGPUTestDevice();
+  if (!webgpuDevice) {
+    t.pass('WebGPU unavailable, skipped WebGPU depth-attachment cleanup test');
+    t.end();
+    return;
+  }
+
+  const destinationCanvas = document.createElement('canvas');
+  destinationCanvas.width = 32;
+  destinationCanvas.height = 16;
+
+  const presentationContext = webgpuDevice.createPresentationContext({
+    canvas: destinationCanvas,
+    width: 32,
+    height: 16,
+    autoResize: false,
+    useDevicePixels: false
+  });
+
+  presentationContext.getCurrentFramebuffer();
+
+  const depthStencilAttachment = (presentationContext as any).depthStencilAttachment as {
+    destroy: () => void;
+  } | null;
+
+  t.ok(depthStencilAttachment, 'presentation context creates a depth attachment by default');
+
+  let destroyCallCount = 0;
+  if (depthStencilAttachment) {
+    const originalDestroy = depthStencilAttachment.destroy.bind(depthStencilAttachment);
+    depthStencilAttachment.destroy = () => {
+      destroyCallCount++;
+      originalDestroy();
+    };
+  }
+
+  presentationContext.destroy();
+
+  t.equal(destroyCallCount, 1, 'destroy releases the cached depth attachment');
+  t.equal(
+    (presentationContext as any).depthStencilAttachment,
+    null,
+    'destroy clears the cached depth attachment reference'
+  );
+
+  t.end();
+});
 test('PresentationContext is unsupported on NullDevice', async t => {
   const nullDevice = await getNullTestDevice();
   t.throws(

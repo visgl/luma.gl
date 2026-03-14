@@ -44,9 +44,7 @@ export default class App extends React.PureComponent<AppProps, AppState> {
 
   async componentDidMount() {
     this.isComponentMounted = true;
-
     const {deviceType = 'webgl'} = this.props;
-
     try {
       if (typeof OffscreenCanvas === 'undefined') {
         throw new Error('Texture tester requires OffscreenCanvas support');

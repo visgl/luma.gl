@@ -266,7 +266,6 @@ export class CompressedTexture extends React.PureComponent<
 
   async componentDidMount() {
     this.isComponentMounted = true;
-
     const canvas = this.canvasRef.current;
     if (!canvas) {
       return;

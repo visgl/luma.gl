@@ -8787,6 +8787,25 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"luma.gl-examples-multi-canvas@workspace:examples/api/multi-canvas":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-multi-canvas@workspace:examples/api/multi-canvas"
+  dependencies:
+    "@luma.gl/core": "npm:9.3.0-alpha.4"
+    "@luma.gl/engine": "npm:9.3.0-alpha.4"
+    "@luma.gl/shadertools": "npm:9.3.0-alpha.4"
+    "@luma.gl/webgl": "npm:9.3.0-alpha.4"
+    "@luma.gl/webgpu": "npm:9.3.0-alpha.4"
+    "@types/react": "npm:^18.2.0"
+    "@types/react-dom": "npm:^18.2.0"
+    "@vitejs/plugin-react": "npm:^4.0.0"
+    react: "npm:^18.2.0"
+    react-dom: "npm:^18.2.0"
+    typescript: "npm:^5.5.0"
+    vite: "npm:^7.2.2"
+  languageName: unknown
+  linkType: soft
+
 "luma.gl-examples-persistence@workspace:examples/showcase/persistence":
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-persistence@workspace:examples/showcase/persistence"
