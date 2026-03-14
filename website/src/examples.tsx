@@ -5,6 +5,7 @@ import {LumaExample, useStore} from './react-luma';
 
 import AnimationApp from '../../examples/api/animation/app';
 import CubemapApp from '../../examples/api/cubemap/app';
+import {renderToDOM as renderMultiCanvasExample} from '../../examples/api/multi-canvas/app';
 import Texture3DApp from '../../examples/api/texture-3d/app';
 import {renderToDOM as renderTextureTesterExample} from '../../examples/api/texture-tester/app';
 import initializeExternalWebGLContext, {
@@ -89,6 +90,22 @@ export const CubemapExample: React.FC = props => (
     {...props}
   />
 );
+
+export const MultiCanvasExample: React.FC = () => {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const deviceType = useStore(store => store.deviceType);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || !deviceType) {
+      return undefined;
+    }
+
+    return renderMultiCanvasExample(container, {deviceType});
+  }, [deviceType]);
+
+  return <div key={deviceType ?? 'pending'} ref={containerRef} />;
+};
 
 export const Texture3DExample: React.FC = props => (
   <LumaExample

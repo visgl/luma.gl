@@ -14,6 +14,10 @@ Target Date: TBD
 - Improved documentation of the glTF module
 - glTF texture filtering now defaults to `linear` instead of `nearest` for improved texture rendering.
 
+**@luma.gl/core**
+
+- luma.gl now supports multi-canvas rendering on both WebGL and WebGPU via [`device.createPresentationContext()`](/docs/api-reference/core/presentation-context). See the [Multiple Canvases](/docs/developer-guide/multiple-canvases) developer guide for setup details and backend-specific behavior.
+
 ## Version 9.2
 
 Release Date: Sep 24, 2025

@@ -5,43 +5,40 @@
 // prettier-ignore
 // / <reference types="@webgpu/types" />
 
-import type {TextureFormatDepthStencil, CanvasContextProps} from '@luma.gl/core';
-import {CanvasContext, Texture, log} from '@luma.gl/core';
-import {WebGPUDevice} from './webgpu-device';
+import type {PresentationContextProps, TextureFormatDepthStencil} from '@luma.gl/core';
+import {PresentationContext, Texture, log} from '@luma.gl/core';
+import type {WebGPUDevice} from './webgpu-device';
 import {WebGPUFramebuffer} from './resources/webgpu-framebuffer';
 import {WebGPUTexture} from './resources/webgpu-texture';
 
 /**
- * Holds a WebGPU Canvas Context
- * The primary job of the CanvasContext is to generate textures for rendering into the current canvas
- * It also manages canvas sizing calculations and resizing.
+ * A WebGPU PresentationContext renders directly into its destination canvas.
  */
-export class WebGPUCanvasContext extends CanvasContext {
+export class WebGPUPresentationContext extends PresentationContext {
   readonly device: WebGPUDevice;
   readonly handle: GPUCanvasContext;
 
   private depthStencilAttachment: WebGPUTexture | null = null;
 
   get [Symbol.toStringTag](): string {
-    return 'WebGPUCanvasContext';
+    return 'WebGPUPresentationContext';
   }
 
-  constructor(device: WebGPUDevice, adapter: GPUAdapter, props: CanvasContextProps) {
+  constructor(device: WebGPUDevice, props: PresentationContextProps = {}) {
     super(props);
+    const contextLabel = `${this[Symbol.toStringTag]}(${this.id})`;
 
     const context = this.canvas.getContext('webgpu');
     if (!context) {
-      throw new Error(`${this}: Failed to create WebGPU canvas context`);
+      throw new Error(`${contextLabel}: Failed to create WebGPU presentation context`);
     }
     this.device = device;
     this.handle = context;
 
-    // Base class constructor cannot access derived methods/fields, so we need to call these functions in the subclass constructor
-    this._setAutoCreatedCanvasId(`${this.device.id}-canvas`);
+    this._setAutoCreatedCanvasId(`${this.device.id}-presentation-canvas`);
     this._configureDevice();
   }
 
-  /** Destroy any textures produced while configured and remove the context configuration. */
   override destroy(): void {
     if (this.depthStencilAttachment) {
       this.depthStencilAttachment.destroy();
@@ -51,35 +48,30 @@ export class WebGPUCanvasContext extends CanvasContext {
     super.destroy();
   }
 
-  // IMPLEMENTATION OF ABSTRACT METHODS
+  present(): void {
+    this.device.submit();
+  }
 
-  /** @see https://www.w3.org/TR/webgpu/#canvas-configuration */
-  _configureDevice(): void {
+  protected override _configureDevice(): void {
     if (this.depthStencilAttachment) {
       this.depthStencilAttachment.destroy();
       this.depthStencilAttachment = null;
     }
 
-    // Reconfigure the canvas size.
     this.handle.configure({
       device: this.device.handle,
       format: this.device.preferredColorFormat,
-      // Can be used to define e.g. -srgb views
-      // viewFormats: [...]
       colorSpace: this.props.colorSpace,
       alphaMode: this.props.alphaMode
     });
   }
 
-  /** Update framebuffer with properly resized "swap chain" texture views */
-  _getCurrentFramebuffer(
+  protected override _getCurrentFramebuffer(
     options: {depthStencilFormat?: TextureFormatDepthStencil | false} = {
       depthStencilFormat: 'depth24plus'
     }
   ): WebGPUFramebuffer {
-    // Wrap the current canvas context texture in a luma.gl texture
     const currentColorAttachment = this._getCurrentTexture();
-    // TODO - temporary debug code
     if (
       currentColorAttachment.width !== this.drawingBufferWidth ||
       currentColorAttachment.height !== this.drawingBufferHeight
@@ -89,13 +81,12 @@ export class WebGPUCanvasContext extends CanvasContext {
       this.drawingBufferHeight = currentColorAttachment.height;
       log.log(
         1,
-        `${this}: Resized to compensate for initial canvas size mismatch ${oldWidth}x${oldHeight} => ${this.drawingBufferWidth}x${this.drawingBufferHeight}px`
+        `${this[Symbol.toStringTag]}(${this.id}): Resized to compensate for initial canvas size mismatch ${oldWidth}x${oldHeight} => ${this.drawingBufferWidth}x${this.drawingBufferHeight}px`
       )();
     }
 
-    // Resize the depth stencil attachment
     if (options?.depthStencilFormat) {
-      this._createDepthStencilAttachment(options?.depthStencilFormat);
+      this._createDepthStencilAttachment(options.depthStencilFormat);
     }
 
     return new WebGPUFramebuffer(this.device, {
@@ -104,10 +95,7 @@ export class WebGPUCanvasContext extends CanvasContext {
     });
   }
 
-  // PRIMARY METHODS
-
-  /** Wrap the current canvas context texture in a luma.gl texture */
-  _getCurrentTexture(): WebGPUTexture {
+  private _getCurrentTexture(): WebGPUTexture {
     const handle = this.handle.getCurrentTexture();
     return this.device.createTexture({
       id: `${this.id}#color-texture`,
@@ -118,8 +106,9 @@ export class WebGPUCanvasContext extends CanvasContext {
     });
   }
 
-  /** We build render targets on demand (i.e. not when size changes but when about to render) */
-  _createDepthStencilAttachment(depthStencilFormat: TextureFormatDepthStencil): WebGPUTexture {
+  private _createDepthStencilAttachment(
+    depthStencilFormat: TextureFormatDepthStencil
+  ): WebGPUTexture {
     if (!this.depthStencilAttachment) {
       this.depthStencilAttachment = this.device.createTexture({
         id: `${this.id}#depth-stencil-texture`,

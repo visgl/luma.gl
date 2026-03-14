@@ -16,7 +16,13 @@ import {
 import type {GPUTextureFormat} from '@loaders.gl/schema';
 import {ImageLoader, type ImageType} from '@loaders.gl/images';
 
-import {type Device, type TextureFormat, Texture, textureFormatDecoder} from '@luma.gl/core';
+import {
+  type Device,
+  type PresentationContext,
+  type TextureFormat,
+  Texture,
+  textureFormatDecoder
+} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
 import {type TextureSource} from '../textures-data';
 
@@ -182,7 +188,6 @@ export function createModel(device: Device): Model {
 
 type CompressedTextureProps = {
   device: Device;
-  canvas: HTMLCanvasElement;
   image: TextureSource;
   model: Model;
 };
@@ -199,7 +204,7 @@ type CompressedTextureState = {
   textureFormatLabel: string | null;
   showStats: boolean;
   stats: TextureStat[];
-  dataUrl: string | null;
+  isReady: boolean;
 };
 
 type LoadedTextureData = {
@@ -240,6 +245,9 @@ export class CompressedTexture extends React.PureComponent<
   CompressedTextureProps,
   CompressedTextureState
 > {
+  readonly canvasRef = React.createRef<HTMLCanvasElement>();
+  presentationContext: PresentationContext | null = null;
+
   constructor(props: CompressedTextureProps) {
     super(props);
 
@@ -251,23 +259,46 @@ export class CompressedTexture extends React.PureComponent<
       textureFormatLabel: null,
       showStats: false,
       stats: [],
-      dataUrl: null
+      isReady: false
     };
   }
 
   async componentDidMount() {
+    const canvas = this.canvasRef.current;
+    if (!canvas) {
+      return;
+    }
+
+    canvas.width = 256;
+    canvas.height = 256;
+    // Each visible texture tile owns one PresentationContext.
+    // The shared device renders into this context's current framebuffer
+    // and then `present()` displays the frame in the tile canvas.
+    this.presentationContext = this.props.device.createPresentationContext({
+      canvas,
+      width: 256,
+      height: 256,
+      autoResize: false,
+      useDevicePixels: false
+    });
+
     try {
-      const dataUrl = await this.getTextureDataUrl(this.props.device);
-      this.setState({dataUrl});
+      await this.renderTexturePreview(this.props.device);
+      this.setState({isReady: true});
     } catch (error) {
-      const {canvas, device, model} = this.props;
+      const {device, model} = this.props;
       this.renderEmptyTexture(device, model);
       this.setState({
-        dataUrl: canvas.toDataURL(),
+        isReady: true,
         textureError: error instanceof Error ? error.message : String(error),
         textureFormatLabel: null
       });
     }
+  }
+
+  componentWillUnmount(): void {
+    this.presentationContext?.destroy();
+    this.presentationContext = null;
   }
 
   componentDidUpdate(previousProps: CompressedTextureProps): void {
@@ -296,9 +327,9 @@ export class CompressedTexture extends React.PureComponent<
   }
 
   // eslint-disable-next-line max-statements
-  async getTextureDataUrl(device: Device): Promise<string> {
+  async renderTexturePreview(device: Device): Promise<void> {
     const {loadOptions} = this.state;
-    const {canvas, model, image} = this.props;
+    const {model, image} = this.props;
 
     try {
       const {arrayBuffer, length, src, useBasis} = await this.getLoadedData(image);
@@ -366,8 +397,6 @@ export class CompressedTexture extends React.PureComponent<
       this.renderEmptyTexture(device, model);
       this.setState({textureError: error instanceof Error ? error.message : String(error)});
     }
-
-    return canvas.toDataURL();
   }
 
   async getLoadedData(image: TextureSource): Promise<LoadedTextureData> {
@@ -427,13 +456,8 @@ export class CompressedTexture extends React.PureComponent<
       mipmaps: true
     } as any);
 
-    const renderPass = beginPreviewRenderPass(device);
-    model.setBindings({uTexture: emptyTexture});
-    model.draw(renderPass);
-    renderPass.end();
-    device.submit();
+    this.renderTextureToPresentationContext(device, model, emptyTexture);
 
-    // model.draw();
     return emptyTexture;
   }
 
@@ -462,11 +486,7 @@ export class CompressedTexture extends React.PureComponent<
       throw new Error('Unsupported image data returned by ImageLoader');
     }
 
-    const renderPass = beginPreviewRenderPass(device);
-    model.setBindings({uTexture: texture});
-    model.draw(renderPass);
-    renderPass.end();
-    device.submit();
+    this.renderTextureToPresentationContext(device, model, texture);
 
     const uploadTime = performance.now() - startTime;
 
@@ -515,11 +535,7 @@ export class CompressedTexture extends React.PureComponent<
     const uploadLevels = getCompressedTextureUploadLevels(device, textureFormat, images);
     const texture = this.createCompressedTexture(device, images);
 
-    const renderPass = beginPreviewRenderPass(device);
-    model.setBindings({uTexture: texture});
-    model.draw(renderPass);
-    renderPass.end();
-    device.submit();
+    this.renderTextureToPresentationContext(device, model, texture);
 
     const uploadTime = performance.now() - startTime;
     const mipLevelStats = getCompressedTextureLevelStats(textureFormat, uploadLevels);
@@ -716,10 +732,10 @@ export class CompressedTexture extends React.PureComponent<
   }
 
   render() {
-    const {dataUrl, textureError, textureFormatLabel} = this.state;
+    const {isReady, textureError, textureFormatLabel} = this.state;
     const textureLabel = this.getTextureLabel();
 
-    return dataUrl ? (
+    return (
       <button
         style={{
           display: 'flex',
@@ -733,13 +749,23 @@ export class CompressedTexture extends React.PureComponent<
           margin: '1em',
           position: 'relative',
           marginLeft: 0,
-          backgroundImage: `url(${dataUrl})`,
-          backgroundRepeat: 'no-repeat',
-          backgroundSize: 'cover'
+          padding: 0,
+          overflow: 'hidden'
         }}
         onMouseEnter={() => this.setState({showStats: true})}
         onMouseLeave={() => this.setState({showStats: false})}
       >
+        <canvas
+          ref={this.canvasRef}
+          width={256}
+          height={256}
+          style={{
+            display: 'block',
+            width: '100%',
+            height: '100%',
+            opacity: isReady ? 1 : 0
+          }}
+        />
         {!textureError ? (
           <>
             <div
@@ -780,11 +806,50 @@ export class CompressedTexture extends React.PureComponent<
             </div>
           </>
         ) : (
-          <h1 style={{color: 'red', fontSize: 16}}>{textureError}</h1>
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 12,
+              background: 'rgba(0, 0, 0, 0.55)'
+            }}
+          >
+            <h1
+              style={{
+                margin: 0,
+                color: 'red',
+                fontSize: 16,
+                lineHeight: 1.15,
+                textAlign: 'center'
+              }}
+            >
+              {textureError}
+            </h1>
+          </div>
         )}
         {this.renderStats()}
       </button>
-    ) : null;
+    );
+  }
+
+  private renderTextureToPresentationContext(device: Device, model: Model, texture: Texture): void {
+    if (!this.presentationContext) {
+      throw new Error('Presentation context is not initialized');
+    }
+
+    const framebuffer = this.presentationContext.getCurrentFramebuffer({
+      depthStencilFormat: false
+    });
+    const renderPass = device.beginRenderPass({framebuffer});
+
+    model.setBindings({uTexture: texture});
+    model.draw(renderPass);
+    renderPass.end();
+
+    this.presentationContext.present();
   }
 }
 
@@ -878,14 +943,6 @@ function getGPUTextureFormatFamily(textureFormat: string): GPUTextureFormat | nu
   }
 
   return null;
-}
-
-function beginPreviewRenderPass(device: Device) {
-  const framebuffer = device
-    .getDefaultCanvasContext()
-    .getCurrentFramebuffer({depthStencilFormat: false});
-
-  return device.beginRenderPass({framebuffer});
 }
 
 async function loadWithHandledBasisRuntimeRejections<T>(loadTexture: () => Promise<T>): Promise<T> {

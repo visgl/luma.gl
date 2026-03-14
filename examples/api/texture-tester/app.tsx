@@ -12,7 +12,6 @@ import {webgpuAdapter} from '@luma.gl/webgpu';
 
 import {IMAGES_DATA, TextureFormatsInfo} from './textures-data';
 import {CompressedTexture, createModel} from './components/compressed-texture';
-import {TextureUploader} from './components/textures-uploader';
 
 export type DeviceType = 'webgl' | 'webgpu';
 
@@ -21,9 +20,9 @@ type AppProps = {
 };
 
 type AppState = {
-  canvas: HTMLCanvasElement;
   device: Device | null;
   model: Model | null;
+  initializationError: string | null;
 };
 
 export default class App extends React.PureComponent<AppProps, AppState> {
@@ -35,31 +34,39 @@ export default class App extends React.PureComponent<AppProps, AppState> {
     super(props);
 
     this.state = {
-      canvas: document.createElement('canvas'),
       device: null,
-      model: null
+      model: null,
+      initializationError: null
     };
   }
 
   async componentDidMount() {
     const {deviceType = 'webgl'} = this.props;
-    const {canvas} = this.state;
-    canvas.width = 256;
-    canvas.height = 256;
 
-    const device = await luma.createDevice({
-      adapters: [webgl2Adapter, webgpuAdapter],
-      type: deviceType,
-      createCanvasContext: {
-        canvas,
-        width: 256,
-        height: 256,
-        autoResize: false,
-        useDevicePixels: false
+    try {
+      if (typeof OffscreenCanvas === 'undefined') {
+        throw new Error('Texture tester requires OffscreenCanvas support');
       }
-    });
-    const model = createModel(device);
-    this.setState({canvas, device, model});
+
+      const offscreenCanvas = new OffscreenCanvas(256, 256);
+      const device = await luma.createDevice({
+        adapters: [webgl2Adapter, webgpuAdapter],
+        type: deviceType,
+        createCanvasContext: {
+          canvas: offscreenCanvas,
+          width: 256,
+          height: 256,
+          autoResize: false,
+          useDevicePixels: false
+        }
+      });
+      const model = createModel(device);
+      this.setState({device, model, initializationError: null});
+    } catch (error) {
+      this.setState({
+        initializationError: error instanceof Error ? error.message : String(error)
+      });
+    }
   }
 
   componentWillUnmount() {
@@ -68,28 +75,31 @@ export default class App extends React.PureComponent<AppProps, AppState> {
   }
 
   render() {
-    const {device, canvas, model} = this.state;
-    if (!device || !canvas || !model) {
+    const {device, model, initializationError} = this.state;
+    if (initializationError) {
+      return <div>{initializationError}</div>;
+    }
+    if (!device || !model) {
       return <div />;
     }
     return (
       <div>
         <Description />
-        <TextureUploader canvas={canvas} device={device} model={model} />
-        <TexturesBlocks canvas={canvas} device={device} model={model} />
+        <TextureUploaderCard device={device} model={model} />
+        <TexturesBlocks device={device} model={model} />
       </div>
     );
   }
 }
 
-function TexturesBlocks(props: {device: Device; canvas: HTMLCanvasElement; model: Model}) {
-  const {device, canvas, model} = props;
+function TexturesBlocks(props: {device: Device; model: Model}) {
+  const {device, model} = props;
 
   return IMAGES_DATA.map((imagesData, index) => {
     return (
       <div key={index}>
         <TexturesHeader imagesData={imagesData} />
-        <TexturesList device={device} canvas={canvas} model={model} images={imagesData.images} />
+        <TexturesList device={device} model={model} images={imagesData.images} />
         <TexturesDescription imagesData={imagesData} />
       </div>
     );
@@ -141,23 +151,12 @@ function TexturesDescription(props: {imagesData: TextureFormatsInfo}) {
   );
 }
 
-function TexturesList(props: {
-  device: Device;
-  canvas: HTMLCanvasElement;
-  model: Model;
-  images: TextureFormatsInfo['images'];
-}) {
-  const {device, canvas, model, images} = props;
+function TexturesList(props: {device: Device; model: Model; images: TextureFormatsInfo['images']}) {
+  const {device, model, images} = props;
   return (
     <div style={{display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start'}}>
       {images.map((image, index) => (
-        <CompressedTexture
-          key={index}
-          image={image}
-          device={device}
-          canvas={canvas}
-          model={model}
-        />
+        <CompressedTexture key={index} image={image} device={device} model={model} />
       ))}
     </div>
   );
@@ -167,34 +166,94 @@ function Description() {
   return (
     <div>
       <p>
-        This page compares image and compressed texture uploads across WebGL and WebGPU. Some
-        compressed formats can appear to work on WebGL at non-block-aligned sizes because the driver
-        pads storage internally, while WebGPU requires the application to create and upload an
-        explicitly block-aligned backing texture. As a result, &quot;format supported&quot; does not
-        always mean &quot;every logical size can be created directly&quot; on both backends.
+        This example loads images and compressed textures using <code>@loaders.gl/textures</code>{' '}
+        and renders them using luma.gl on both WebGL and WebGPU. You can use this page to check
+        which compressed texture formats your current browser and GPU can render.
       </p>
-      <p>
-        This page tests which compressed texture formats your current browser and GPU can render. It
-        uses <code>@loaders.gl/textures</code> to decode standard and compressed image assets, then
-        creates and draws the resulting textures with{' '}
-        <a href="https://luma.gl">
-          <b>luma.gl</b>
-        </a>
-        . You can also drag and drop a local texture to test it.
-      </p>
-      <p>
-        <i>
-          Some compressed texture formats are expected to be unsupported, depending on the GPU in
-          the device you are using to view this page.
-        </i>
-      </p>
-      <p>
-        <i>
-          Inspired by toji&apos;s <a href="http://toji.github.io/texture-tester">texture-tester</a>
-        </i>
-      </p>
+      <p style={{marginBottom: 4, fontStyle: 'italic'}}>Notes:</p>
+      <ul style={{marginTop: 0, fontStyle: 'italic'}}>
+        <li>
+          Some compressed texture formats are expected to be unsupported, depending on the GPU you
+          are using to view this page.
+        </li>
+        <li>
+          This example uses a single shared luma.gl <code>Device</code> rendering into multiple
+          canvases managed by <code>PresentationContext</code>s.
+        </li>
+      </ul>
     </div>
   );
+}
+
+type TextureUploaderCardProps = {
+  device: Device;
+  model: Model;
+};
+
+type TextureUploaderCardState = {
+  uploadedImage: File | null;
+};
+
+class TextureUploaderCard extends React.PureComponent<
+  TextureUploaderCardProps,
+  TextureUploaderCardState
+> {
+  constructor(props: TextureUploaderCardProps) {
+    super(props);
+
+    this.state = {
+      uploadedImage: null
+    };
+  }
+
+  handleLoadFile(event: React.DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    const file = event.dataTransfer.files[0];
+    if (file) {
+      this.setState({uploadedImage: file});
+    }
+  }
+
+  render() {
+    const {device, model} = this.props;
+    const {uploadedImage} = this.state;
+
+    return (
+      <div>
+        {!uploadedImage ? (
+          <div style={{display: 'flex', flexFlow: 'column nowrap'}}>
+            <div
+              style={{
+                display: 'flex',
+                width: 256,
+                height: 256,
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: '1px dashed black'
+              }}
+              onDrop={event => this.handleLoadFile(event)}
+              onDragOver={(event: React.DragEvent<HTMLDivElement>) => event.preventDefault()}
+            >
+              Drag&Drop texture
+            </div>
+          </div>
+        ) : null}
+        {uploadedImage ? (
+          <div
+            style={{
+              display: 'flex',
+              flexFlow: 'column nowrap',
+              alignItems: 'center',
+              width: 270
+            }}
+          >
+            <CompressedTexture image={uploadedImage} device={device} model={model} />
+            <button onClick={() => this.setState({uploadedImage: null})}>Clean</button>
+          </div>
+        ) : null}
+      </div>
+    );
+  }
 }
 
 export function renderToDOM(

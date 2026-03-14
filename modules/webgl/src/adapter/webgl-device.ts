@@ -8,6 +8,8 @@ import type {
   DeviceInfo,
   DeviceTextureFormatCapabilities,
   CanvasContextProps,
+  PresentationContextProps,
+  PresentationContext,
   Buffer,
   Texture,
   Framebuffer,
@@ -41,6 +43,7 @@ import {getDeviceInfo} from './device-helpers/webgl-device-info';
 import {WebGLDeviceFeatures} from './device-helpers/webgl-device-features';
 import {WebGLDeviceLimits} from './device-helpers/webgl-device-limits';
 import {WebGLCanvasContext} from './webgl-canvas-context';
+import {WebGLPresentationContext} from './webgl-presentation-context';
 import type {Spector} from '../context/debug/spector-types';
 import {initializeSpectorJS} from '../context/debug/spector';
 import {makeDebugContext} from '../context/debug/webgl-developer-tools';
@@ -290,6 +293,10 @@ export class WebGLDevice extends Device {
     throw new Error('WebGL only supports a single canvas');
   }
 
+  createPresentationContext(props?: PresentationContextProps): PresentationContext {
+    return new WebGLPresentationContext(this, props || {});
+  }
+
   createBuffer(props: BufferProps | ArrayBuffer | ArrayBufferView): WEBGLBuffer {
     const newProps = this._normalizeBufferProps(props);
     return new WEBGLBuffer(this, newProps);
@@ -348,7 +355,7 @@ export class WebGLDevice extends Device {
    * https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/commit
    * Chrome's offscreen canvas does not require gl.commit
    */
-  submit(commandBuffer: WEBGLCommandBuffer): void {
+  submit(commandBuffer?: WEBGLCommandBuffer): void {
     if (!commandBuffer) {
       commandBuffer = this.commandEncoder.finish();
       this.commandEncoder.destroy();
