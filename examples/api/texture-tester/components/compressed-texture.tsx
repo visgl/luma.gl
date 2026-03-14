@@ -247,6 +247,7 @@ export class CompressedTexture extends React.PureComponent<
 > {
   readonly canvasRef = React.createRef<HTMLCanvasElement>();
   presentationContext: PresentationContext | null = null;
+  private isComponentMounted = false;
 
   constructor(props: CompressedTextureProps) {
     super(props);
@@ -264,6 +265,8 @@ export class CompressedTexture extends React.PureComponent<
   }
 
   async componentDidMount() {
+    this.isComponentMounted = true;
+
     const canvas = this.canvasRef.current;
     if (!canvas) {
       return;
@@ -284,19 +287,27 @@ export class CompressedTexture extends React.PureComponent<
 
     try {
       await this.renderTexturePreview(this.props.device);
-      this.setState({isReady: true});
+      if (this.isComponentMounted) {
+        this.setState({isReady: true});
+      }
     } catch (error) {
+      if (!this.isPresentationAvailable()) {
+        return;
+      }
       const {device, model} = this.props;
       this.renderEmptyTexture(device, model);
-      this.setState({
-        isReady: true,
-        textureError: error instanceof Error ? error.message : String(error),
-        textureFormatLabel: null
-      });
+      if (this.isComponentMounted) {
+        this.setState({
+          isReady: true,
+          textureError: error instanceof Error ? error.message : String(error),
+          textureFormatLabel: null
+        });
+      }
     }
   }
 
   componentWillUnmount(): void {
+    this.isComponentMounted = false;
     this.presentationContext?.destroy();
     this.presentationContext = null;
   }
@@ -333,6 +344,9 @@ export class CompressedTexture extends React.PureComponent<
 
     try {
       const {arrayBuffer, length, src, useBasis} = await this.getLoadedData(image);
+      if (!this.isPresentationAvailable()) {
+        return;
+      }
 
       const options: TextureLoaderOptions = {
         ...loadOptions
@@ -394,8 +408,13 @@ export class CompressedTexture extends React.PureComponent<
           throw new Error('Unknown texture loader');
       }
     } catch (error) {
+      if (!this.isPresentationAvailable()) {
+        return;
+      }
       this.renderEmptyTexture(device, model);
-      this.setState({textureError: error instanceof Error ? error.message : String(error)});
+      if (this.isComponentMounted) {
+        this.setState({textureError: error instanceof Error ? error.message : String(error)});
+      }
     }
   }
 
@@ -490,7 +509,9 @@ export class CompressedTexture extends React.PureComponent<
 
     const uploadTime = performance.now() - startTime;
 
-    this.setState({textureFormatLabel: textureFormat});
+    if (this.isComponentMounted) {
+      this.setState({textureFormatLabel: textureFormat});
+    }
     this.addStats([
       {name: 'Upload time', value: `${Math.floor(uploadTime)} ms`, units: ''},
       {name: 'luma.gl Texture Format', value: textureFormat, units: ''},
@@ -540,7 +561,9 @@ export class CompressedTexture extends React.PureComponent<
     const uploadTime = performance.now() - startTime;
     const mipLevelStats = getCompressedTextureLevelStats(textureFormat, uploadLevels);
 
-    this.setState({textureFormatLabel: textureFormat});
+    if (this.isComponentMounted) {
+      this.setState({textureFormatLabel: textureFormat});
+    }
     this.addStats([
       {name: 'Upload time', value: `${Math.floor(uploadTime)} ms`, units: ''},
       {name: 'luma.gl Texture Format', value: textureFormat, units: ''},
@@ -563,7 +586,9 @@ export class CompressedTexture extends React.PureComponent<
   }
 
   addStats(stats: TextureStat[]): void {
-    this.setState(previousState => ({stats: [...previousState.stats, ...stats]}));
+    if (this.isComponentMounted) {
+      this.setState(previousState => ({stats: [...previousState.stats, ...stats]}));
+    }
   }
 
   getTextureLabel(): string {
@@ -836,11 +861,12 @@ export class CompressedTexture extends React.PureComponent<
   }
 
   private renderTextureToPresentationContext(device: Device, model: Model, texture: Texture): void {
-    if (!this.presentationContext) {
-      throw new Error('Presentation context is not initialized');
+    if (!this.isPresentationAvailable()) {
+      return;
     }
 
-    const framebuffer = this.presentationContext.getCurrentFramebuffer({
+    const presentationContext = this.presentationContext;
+    const framebuffer = presentationContext.getCurrentFramebuffer({
       depthStencilFormat: false
     });
     const renderPass = device.beginRenderPass({framebuffer});
@@ -849,7 +875,17 @@ export class CompressedTexture extends React.PureComponent<
     model.draw(renderPass);
     renderPass.end();
 
-    this.presentationContext.present();
+    presentationContext.present();
+  }
+
+  private isPresentationAvailable(): boolean {
+    const canvas = this.canvasRef.current;
+    return Boolean(
+      this.isComponentMounted &&
+        this.presentationContext &&
+        canvas &&
+        (typeof canvas.isConnected !== 'boolean' || canvas.isConnected)
+    );
   }
 }
 
