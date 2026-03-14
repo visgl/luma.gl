@@ -167,6 +167,13 @@ function Description() {
   return (
     <div>
       <p>
+        This page compares image and compressed texture uploads across WebGL and WebGPU. Some
+        compressed formats can appear to work on WebGL at non-block-aligned sizes because the driver
+        pads storage internally, while WebGPU requires the application to create and upload an
+        explicitly block-aligned backing texture. As a result, &quot;format supported&quot; does not
+        always mean &quot;every logical size can be created directly&quot; on both backends.
+      </p>
+      <p>
         This page tests which compressed texture formats your current browser and GPU can render. It
         uses <code>@loaders.gl/textures</code> to decode standard and compressed image assets, then
         creates and draws the resulting textures with{' '}

@@ -42,6 +42,15 @@
   padding-right: 0;
 }
 
+.container:has(.textures-example-page) > [class*='doc-item-component__DemoContainer'] {
+  height: calc(100vh - var(--ifm-navbar-height));
+}
+
 .textures-example-page {
   width: 100%;
+}
+
+body:has(.luma-example-page) .theme-layout-footer,
+body:has(.textures-example-page) .theme-layout-footer {
+  display: none;
 }

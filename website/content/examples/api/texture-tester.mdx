@@ -5,6 +5,4 @@ import {TextureTesterExample} from '@site/src/examples';
 
 <DeviceTabs />
 
-This page compares image and compressed texture uploads across WebGL and WebGPU. Some compressed formats can appear to work on WebGL at non-block-aligned sizes because the driver pads storage internally, while WebGPU requires the application to create and upload an explicitly block-aligned backing texture. As a result, "format supported" does not always mean "every logical size can be created directly" on both backends.
-
 <TextureTesterExample />

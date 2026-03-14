@@ -196,6 +196,7 @@ type TextureStat = {
 type CompressedTextureState = {
   loadOptions: TextureLoaderOptions;
   textureError: string | null;
+  textureFormatLabel: string | null;
   showStats: boolean;
   stats: TextureStat[];
   dataUrl: string | null;
@@ -247,6 +248,7 @@ export class CompressedTexture extends React.PureComponent<
     this.state = {
       loadOptions,
       textureError: null,
+      textureFormatLabel: null,
       showStats: false,
       stats: [],
       dataUrl: null
@@ -254,8 +256,18 @@ export class CompressedTexture extends React.PureComponent<
   }
 
   async componentDidMount() {
-    const dataUrl = await this.getTextureDataUrl(this.props.device);
-    this.setState({dataUrl});
+    try {
+      const dataUrl = await this.getTextureDataUrl(this.props.device);
+      this.setState({dataUrl});
+    } catch (error) {
+      const {canvas, device, model} = this.props;
+      this.renderEmptyTexture(device, model);
+      this.setState({
+        dataUrl: canvas.toDataURL(),
+        textureError: error instanceof Error ? error.message : String(error),
+        textureFormatLabel: null
+      });
+    }
   }
 
   componentDidUpdate(previousProps: CompressedTextureProps): void {
@@ -427,10 +439,12 @@ export class CompressedTexture extends React.PureComponent<
 
   renderImageTexture(device: Device, model: Model, image: ImageType): void {
     const startTime = performance.now();
+    const textureFormat = 'rgba8unorm';
+    const levelZeroByteSize = image.width * image.height * 4;
     const texture = device.createTexture({
       width: image.width,
       height: image.height,
-      format: 'rgba8unorm'
+      format: textureFormat
     });
 
     if (device.isExternalImage(image)) {
@@ -456,13 +470,14 @@ export class CompressedTexture extends React.PureComponent<
 
     const uploadTime = performance.now() - startTime;
 
-    this.addStat('Upload time', `${Math.floor(uploadTime)} ms`);
-    this.addStat('Dimensions', `${image.width} x ${image.height}`);
-    this.addStat(
-      'Size in memory (Lvl 0)',
-      Math.floor((image.width * image.height * 4) / 1024),
-      'Kb'
-    );
+    this.setState({textureFormatLabel: textureFormat});
+    this.addStats([
+      {name: 'Upload time', value: `${Math.floor(uploadTime)} ms`, units: ''},
+      {name: 'luma.gl Texture Format', value: textureFormat, units: ''},
+      {name: 'Dimensions', value: `${image.width} x ${image.height}`, units: ''},
+      {name: 'Size in memory (Total)', value: formatTextureByteSize(levelZeroByteSize), units: ''},
+      {name: 'Level 0', value: formatTextureByteSize(levelZeroByteSize), units: ''}
+    ]);
   }
 
   renderCompressedTexture(
@@ -476,7 +491,7 @@ export class CompressedTexture extends React.PureComponent<
       throw new Error(`${loaderName} loader doesn't support texture ${texturePath} format`);
     }
     // We take the first image because it has main propeties of compressed image.
-    const {format, width, height, levelSize} = images[0];
+    const {format, width, height} = images[0];
     const textureFormat = resolveCompressedTextureFormat(images[0]);
 
     if (
@@ -497,6 +512,7 @@ export class CompressedTexture extends React.PureComponent<
     }
 
     const startTime = performance.now();
+    const uploadLevels = getCompressedTextureUploadLevels(device, textureFormat, images);
     const texture = this.createCompressedTexture(device, images);
 
     const renderPass = beginPreviewRenderPass(device);
@@ -506,17 +522,32 @@ export class CompressedTexture extends React.PureComponent<
     device.submit();
 
     const uploadTime = performance.now() - startTime;
+    const mipLevelStats = getCompressedTextureLevelStats(textureFormat, uploadLevels);
 
-    this.addStat('Upload time', `${Math.floor(uploadTime)} ms`);
-    this.addStat('Dimensions', `${width} x ${height}`);
-    if (levelSize) {
-      this.addStat('Size in memory (Lvl 0)', Math.floor(levelSize / 1024), 'Kb');
-    }
+    this.setState({textureFormatLabel: textureFormat});
+    this.addStats([
+      {name: 'Upload time', value: `${Math.floor(uploadTime)} ms`, units: ''},
+      {name: 'luma.gl Texture Format', value: textureFormat, units: ''},
+      {name: 'Dimensions', value: `${width} x ${height}`, units: ''},
+      {
+        name: 'Size in memory (Total)',
+        value: formatTextureByteSize(mipLevelStats.totalByteSize),
+        units: ''
+      },
+      ...mipLevelStats.levels.map(level => ({
+        name: `Level ${level.mipLevel}`,
+        value: formatTextureByteSize(level.byteSize),
+        units: ''
+      }))
+    ]);
   }
 
   addStat(name: string, value: number | string, units = ''): void {
-    const newStats = [...this.state.stats, {name, value, units}];
-    this.setState({stats: newStats});
+    this.addStats([{name, value, units}]);
+  }
+
+  addStats(stats: TextureStat[]): void {
+    this.setState(previousState => ({stats: [...previousState.stats, ...stats]}));
   }
 
   getTextureLabel(): string {
@@ -562,7 +593,7 @@ export class CompressedTexture extends React.PureComponent<
   }
 
   render() {
-    const {dataUrl, textureError} = this.state;
+    const {dataUrl, textureError, textureFormatLabel} = this.state;
     const textureLabel = this.getTextureLabel();
 
     return dataUrl ? (
@@ -587,18 +618,44 @@ export class CompressedTexture extends React.PureComponent<
         onMouseLeave={() => this.setState({showStats: false})}
       >
         {!textureError ? (
-          <h1
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              margin: 0,
-              color: 'white',
-              fontSize: 16
-            }}
-          >
-            {textureLabel}
-          </h1>
+          <>
+            <div
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'flex-start',
+                gap: 2,
+                padding: '2px 4px',
+                background: 'rgba(0, 0, 0, 0.45)'
+              }}
+            >
+              <h1
+                style={{
+                  margin: 0,
+                  color: 'white',
+                  fontSize: 16,
+                  lineHeight: 1.1
+                }}
+              >
+                {textureLabel}
+              </h1>
+              {textureFormatLabel ? (
+                <div
+                  style={{
+                    color: 'white',
+                    fontSize: 11,
+                    lineHeight: 1.1,
+                    fontFamily: 'monospace'
+                  }}
+                >
+                  {textureFormatLabel}
+                </div>
+              ) : null}
+            </div>
+          </>
         ) : (
           <h1 style={{color: 'red', fontSize: 16}}>{textureError}</h1>
         )}
@@ -632,6 +689,42 @@ function getSupportedGPUTextureFormatFamilies(device: Device): GPUTextureFormat[
   }
 
   return [...supportedFormats];
+}
+
+function formatTextureByteSize(byteSize: number): string {
+  if (byteSize >= 1024 * 1024) {
+    return `${(byteSize / (1024 * 1024)).toFixed(2)} MB`;
+  }
+  if (byteSize >= 1024) {
+    return `${(byteSize / 1024).toFixed(1)} KB`;
+  }
+  return `${byteSize} B`;
+}
+
+function getCompressedTextureLevelStats(
+  textureFormat: TextureFormat,
+  images: CompressedImageData[]
+): {
+  totalByteSize: number;
+  levels: Array<{mipLevel: number; byteSize: number}>;
+} {
+  const levels = images.map((image, mipLevel) => {
+    const levelByteSize =
+      image.levelSize ??
+      textureFormatDecoder.computeMemoryLayout({
+        format: textureFormat,
+        width: image.width,
+        height: image.height,
+        depth: 1,
+        byteAlignment: 1
+      }).byteLength;
+
+    return {mipLevel, byteSize: levelByteSize};
+  });
+
+  const totalByteSize = levels.reduce((total, level) => total + level.byteSize, 0);
+
+  return {totalByteSize, levels};
 }
 
 function getGPUTextureFormatFamily(textureFormat: string): GPUTextureFormat | null {

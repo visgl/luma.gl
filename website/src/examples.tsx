@@ -117,9 +117,8 @@ export const TextureTesterExample: React.FC = () => {
     <div
       className="textures-example-page"
       style={{
-        position: 'relative',
         width: '100%',
-        height: 'calc(100vh - 8rem)',
+        height: '100%',
         overflowY: 'auto',
         overflowX: 'hidden'
       }}
