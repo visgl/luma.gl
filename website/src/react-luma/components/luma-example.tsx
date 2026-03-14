@@ -87,7 +87,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
   containerName = props.container || `luma-example-container-${deviceType}`;
 
   useEffect(() => {
-    if (!canvas || usedCanvases.current.get(canvas)) return;
+    if (!canvas || !deviceType || usedCanvases.current.get(canvas)) return;
 
     usedCanvases.current.set(canvas, true);
 

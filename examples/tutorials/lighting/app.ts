@@ -24,8 +24,8 @@ struct Uniforms {
 };
 
 @binding(0) @group(0) var<uniform> app : Uniforms;
-@group(0) @binding(1) var uTexture : texture_2d<f32>;
-@group(0) @binding(2) var uTextureSampler : sampler;
+@group(0) @binding(3) var uTexture : texture_2d<f32>;
+@group(0) @binding(4) var uTextureSampler : sampler;
 
 struct VertexInputs {
   // CUBE GEOMETRY
@@ -44,7 +44,7 @@ struct FragmentInputs {
 @vertex
 fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
   var outputs : FragmentInputs;
-  outputs.Position = app.mvpMatrix * app.modelMatrix * vec4<f32>(inputs.positions, 1);
+  outputs.Position = app.mvpMatrix * vec4<f32>(inputs.positions, 1);
   outputs.fragUV = inputs.texCoords;
   outputs.fragPosition = (app.modelMatrix * vec4<f32>(inputs.positions, 1.0)).xyz;
   // NOTE: WGSL lacks conversion syntax: https://github.com/gpuweb/gpuweb/issues/2399
@@ -59,11 +59,14 @@ fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
 
 @fragment
 fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
-  // return inputs.fragPosition;
-  return textureSample(uTexture, uTextureSampler, inputs.fragUV);
-//   vec3 surfaceColor = texture(uTexture, vec2(vUV.x, 1.0 - vUV.y)).rgb;
-//   surfaceColor = lighting_getLightColor(surfaceColor, uApp.eyePosition, vPosition, normalize(vNormal));
-//   fragColor = vec4(surfaceColor, 1.0);
+  let surfaceColor = textureSample(uTexture, uTextureSampler, vec2<f32>(inputs.fragUV.x, 1.0 - inputs.fragUV.y)).rgb;
+  let litColor = lighting_getLightColor2(
+    surfaceColor,
+    app.eyePosition,
+    inputs.fragPosition,
+    normalize(inputs.fragNormal)
+  );
+  return vec4<f32>(litColor, 1.0);
 }
 `;
 
@@ -173,6 +176,9 @@ Drawing a phong-shaded cube
 
     // Set up static uniforms
     this.shaderInputs.setProps({
+      app: {
+        eyePosition
+      },
       lighting: {
         lights: [
           {type: 'ambient', color: [255, 255, 255]},
