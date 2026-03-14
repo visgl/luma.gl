@@ -12,9 +12,7 @@ import type {
 } from './shader-types';
 
 /** Split a uniform type string into type and components */
-export function getVariableShaderTypeInfo(
-  format: VariableShaderType | VariableShaderTypeAlias
-): {
+export function getVariableShaderTypeInfo(format: VariableShaderType | VariableShaderTypeAlias): {
   type: PrimitiveDataType;
   components: number;
 } {

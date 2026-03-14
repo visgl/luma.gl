@@ -168,7 +168,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     try {
       canvas.style.opacity = '0.1';
 
-      const gltf = await load(`${MODEL_DIRECTORY_URL}/${modelName}/glTF/${modelName}.gltf`, GLTFLoader);
+      const gltf = await load(
+        `${MODEL_DIRECTORY_URL}/${modelName}/glTF/${modelName}.gltf`,
+        GLTFLoader
+      );
       const processedGLTF = postProcessGLTF(gltf);
 
       const scenegraphsFromGLTF = createScenegraphsFromGLTF(this.device, processedGLTF, {

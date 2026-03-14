@@ -42,7 +42,8 @@ export function preprocess(source: string, options?: PreprocessorOptions): strin
       if (!currentConditional) {
         throw new Error('Encountered #else without matching #ifdef or #ifndef');
       }
-      currentConditional.active = currentConditional.parentActive && !currentConditional.branchTaken;
+      currentConditional.active =
+        currentConditional.parentActive && !currentConditional.branchTaken;
       currentConditional.branchTaken = true;
       conditional = currentConditional.active;
     } else if (matchEnd) {

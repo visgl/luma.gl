@@ -93,7 +93,8 @@ export class WebGPURenderPipeline extends RenderPipeline {
     baseVertex?: number;
   }): boolean {
     const webgpuRenderPass = options.renderPass as WebGPURenderPass;
-    const instanceCount = options.instanceCount && options.instanceCount > 0 ? options.instanceCount : 1;
+    const instanceCount =
+      options.instanceCount && options.instanceCount > 0 ? options.instanceCount : 1;
 
     // Set pipeline
     this.device.pushErrorScope('validation');
