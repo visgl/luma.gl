@@ -1,4 +1,4 @@
-import React, {FC, useEffect, useRef, useState} from 'react'; // eslint-disable-line
+import React, {CSSProperties, FC, useEffect, useRef, useState} from 'react'; // eslint-disable-line
 import {Device, luma} from '@luma.gl/core';
 import {
   AnimationLoopTemplate,
@@ -49,7 +49,7 @@ type LumaExampleProps = React.PropsWithChildren<{
   template: Function;
   config: unknown;
   directory?: string;
-  style?: CSSStyleDeclaration;
+  style?: CSSProperties;
   container?: string;
 }>;
 
@@ -60,6 +60,18 @@ const defaultProps = {
 const state = {
   supported: true,
   error: null
+};
+
+const EXAMPLE_CONTAINER_STYLE: CSSProperties = {
+  position: 'relative',
+  width: '100%',
+  minHeight: 'calc(100vh - var(--ifm-navbar-height) - 6rem)'
+};
+
+const EXAMPLE_CANVAS_STYLE: CSSProperties = {
+  display: 'block',
+  width: '100%',
+  height: '100%'
 };
 
 export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
@@ -140,8 +152,8 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
   const info = props.template?.info;
 
   return (
-    <div style={{position: 'relative'}}>
-      <canvas key={deviceType} ref={setCanvas} style={{width: '100%', height: '100%'}} />
+    <div className="luma-example-page" style={{...EXAMPLE_CONTAINER_STYLE, ...props.style}}>
+      <canvas key={deviceType} ref={setCanvas} style={EXAMPLE_CANVAS_STYLE} />
       <div
         style={{
           position: 'absolute',

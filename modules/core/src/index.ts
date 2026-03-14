@@ -188,6 +188,7 @@ export {
   type TextureFormat,
   type TextureFormatColor,
   type TextureFormatDepthStencil,
+  type CompressedTextureFormat,
   type TextureCompression,
   type TextureFormatInfo,
   type TextureFormatCapabilities,

@@ -1,11 +1,12 @@
 //
 
 import React, {useEffect, useRef, useState} from 'react';
-import {LumaExample} from './react-luma';
+import {LumaExample, useStore} from './react-luma';
 
 import AnimationApp from '../../examples/api/animation/app';
 import CubemapApp from '../../examples/api/cubemap/app';
 import Texture3DApp from '../../examples/api/texture-3d/app';
+import {renderToDOM as renderTextureTesterExample} from '../../examples/api/texture-tester/app';
 import initializeExternalWebGLContext, {
   ExternalWebGLContextHandle
 } from '../../examples/api/external-webgl-context/app';
@@ -98,6 +99,34 @@ export const Texture3DExample: React.FC = props => (
     {...props}
   />
 );
+
+export const TextureTesterExample: React.FC = () => {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const deviceType = useStore(store => store.deviceType);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || !deviceType) {
+      return undefined;
+    }
+
+    return renderTextureTesterExample(container, {deviceType});
+  }, [deviceType]);
+
+  return (
+    <div
+      className="textures-example-page"
+      style={{
+        width: '100%',
+        height: '100%',
+        overflowY: 'auto',
+        overflowX: 'hidden'
+      }}
+    >
+      <div key={deviceType ?? 'pending'} ref={containerRef} />
+    </div>
+  );
+};
 
 export const ExternalWebGLContextExample: React.FC = () => {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -273,4 +302,3 @@ export const TransformExample: React.FC = props => (
     {...props}
   />
 );
-

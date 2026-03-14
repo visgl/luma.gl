@@ -6,7 +6,11 @@ import {StatsManager, lumaStats} from '../utils/stats-manager';
 import {log} from '../utils/log';
 import {uid} from '../utils/uid';
 import type {VertexFormat, VertexFormatInfo} from '../shadertypes/vertex-arrays/vertex-formats';
-import type {TextureFormat, TextureFormatInfo} from '../shadertypes/textures/texture-formats';
+import type {
+  TextureFormat,
+  TextureFormatInfo,
+  CompressedTextureFormat
+} from '../shadertypes/textures/texture-formats';
 import type {CanvasContext, CanvasContextProps} from './canvas-context';
 import type {PresentationContext, PresentationContextProps} from './presentation-context';
 import type {BufferProps} from './resources/buffer';
@@ -29,6 +33,7 @@ import type {Fence} from './resources/fence';
 
 import {getVertexFormatInfo} from '../shadertypes/vertex-arrays/decode-vertex-format';
 import {textureFormatDecoder} from '../shadertypes/textures/texture-format-decoder';
+import {getTextureFormatTable} from '../shadertypes/textures/texture-format-table';
 import type {ExternalImage} from '../image-utils/image-types';
 import {isExternalImage, getExternalImageSize} from '../image-utils/image-types';
 
@@ -496,6 +501,19 @@ export abstract class Device {
   /** Check if a specific texture format is GPU compressed */
   isTextureFormatCompressed(format: TextureFormat): boolean {
     return textureFormatDecoder.isCompressed(format);
+  }
+
+  /** Returns the compressed texture formats that can be created and sampled on this device */
+  getSupportedCompressedTextureFormats(): CompressedTextureFormat[] {
+    const supportedFormats: CompressedTextureFormat[] = [];
+
+    for (const format of Object.keys(getTextureFormatTable()) as TextureFormat[]) {
+      if (this.isTextureFormatCompressed(format) && this.isTextureFormatSupported(format)) {
+        supportedFormats.push(format as CompressedTextureFormat);
+      }
+    }
+
+    return supportedFormats;
   }
 
   // DEBUG METHODS
