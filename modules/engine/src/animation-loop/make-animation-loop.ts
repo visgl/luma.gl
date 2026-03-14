@@ -63,8 +63,12 @@ export function makeAnimationLoop(
   return animationLoop;
 }
 
-function setError(device: Device, error: Error): void {
-  const canvas = device?.getDefaultCanvasContext().canvas;
+function setError(device: Device | null, error: Error): void {
+  if (!device) {
+    return;
+  }
+
+  const canvas = device.getDefaultCanvasContext().canvas;
   if (canvas instanceof HTMLCanvasElement) {
     canvas.style.overflow = 'visible';
     let errorDiv = document.getElementById('animation-loop-error');
@@ -82,7 +86,11 @@ function setError(device: Device, error: Error): void {
   }
 }
 
-function clearError(device: Device): void {
+function clearError(device: Device | null): void {
+  if (!device) {
+    return;
+  }
+
   const errorDiv = document.getElementById('animation-loop-error');
   if (errorDiv) {
     errorDiv.remove();
