@@ -155,11 +155,11 @@ fn pbr_setPositionNormalTangentUV(position: vec4f, normal: vec4f, tangent: vec4f
 #ifdef HAS_NORMALS
   let normalW: vec3f = normalize((pbrProjection.normalMatrix * vec4f(normal.xyz, 0.0)).xyz);
   fragmentInputs.pbr_vNormal = normalW;
-#endif
 #ifdef HAS_TANGENTS
   let tangentW: vec3f = normalize((pbrProjection.modelMatrix * vec4f(tangent.xyz, 0.0)).xyz);
   let bitangentW: vec3f = cross(normalW, tangentW) * tangent.w;
   fragmentInputs.pbr_vTBN = mat3x3f(tangentW, bitangentW, normalW);
+#endif
 #endif
 
 #ifdef HAS_UV
@@ -337,12 +337,9 @@ fn getIBLContribution(pbrInfo: PBRInfo, n: vec3f, reflection: vec3f) -> vec3f
   ).rgb;
 #endif
 
-  let diffuse = diffuseLight * pbrInfo.diffuseColor;
-  let specular = specularLight * (pbrInfo.specularColor * brdf.x + brdf.y);
-
-  // For presentation, this allows us to disable IBL terms
-  diffuse *= pbrMaterial.scaleIBLAmbient.x;
-  specular *= pbrMaterial.scaleIBLAmbient.y;
+  let diffuse = diffuseLight * pbrInfo.diffuseColor * pbrMaterial.scaleIBLAmbient.x;
+  let specular =
+    specularLight * (pbrInfo.specularColor * brdf.x + brdf.y) * pbrMaterial.scaleIBLAmbient.y;
 
   return diffuse + specular;
 }
