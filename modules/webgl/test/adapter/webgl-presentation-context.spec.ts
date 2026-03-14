@@ -239,9 +239,9 @@ test('WebGPUPresentationContext destroy() releases its depth attachment', async 
 
   presentationContext.getCurrentFramebuffer();
 
-  const depthStencilAttachment = (presentationContext as any).depthStencilAttachment as
-    | {destroy: () => void}
-    | null;
+  const depthStencilAttachment = (presentationContext as any).depthStencilAttachment as {
+    destroy: () => void;
+  } | null;
 
   t.ok(depthStencilAttachment, 'presentation context creates a depth attachment by default');
 
