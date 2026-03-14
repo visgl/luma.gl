@@ -15,6 +15,8 @@ import {Matrix4} from '@math.gl/core';
 const MODEL_DIRECTORY_URL =
   'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models';
 const MODEL_LIST_URL = `${MODEL_DIRECTORY_URL}/model-index.json`;
+const LAST_GLTF_MODEL_STORAGE_KEY = 'last-gltf-model';
+const GLTF_OPTIONS_STORAGE_KEY = 'hello-gltf-options';
 
 const lightSources = {
   ambientLight: {
@@ -75,20 +77,21 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   constructor({device}: AnimationProps) {
     super();
     this.device = device;
+    this.options = loadOptions(this.options);
 
-    window.localStorage['last-gltf-model'] ??= 'Avocado';
-    this.loadGLTF(window.localStorage['last-gltf-model']);
+    window.localStorage[LAST_GLTF_MODEL_STORAGE_KEY] ??= 'CesiumMan';
+    this.loadGLTF(window.localStorage[LAST_GLTF_MODEL_STORAGE_KEY]);
 
     setOptionsUI(this.options);
 
     this.fetchModelList().then(models => {
-      const currentModel = window.localStorage['last-gltf-model'];
+      const currentModel = window.localStorage[LAST_GLTF_MODEL_STORAGE_KEY];
       setModelMenu(
         models.map(model => model.name),
         currentModel,
         (modelName: string) => {
           this.loadGLTF(modelName);
-          window.localStorage['last-gltf-model'] = modelName;
+          window.localStorage[LAST_GLTF_MODEL_STORAGE_KEY] = modelName;
         }
       );
     });
@@ -240,8 +243,29 @@ function setOptionsUI(options: Record<string, boolean>) {
     checkbox.checked = options[id];
     checkbox.addEventListener('change', () => {
       options[id] = checkbox.checked;
+      saveOptions(options);
     });
   }
+}
+
+function loadOptions(defaultOptions: Record<string, boolean>): Record<string, boolean> {
+  const savedOptions = window.localStorage[GLTF_OPTIONS_STORAGE_KEY];
+  if (!savedOptions) {
+    return {...defaultOptions};
+  }
+
+  try {
+    const parsedOptions = JSON.parse(savedOptions) as Record<string, unknown>;
+    return Object.fromEntries(
+      Object.entries(defaultOptions).map(([key, value]) => [key, parsedOptions[key] ?? value])
+    ) as Record<string, boolean>;
+  } catch {
+    return {...defaultOptions};
+  }
+}
+
+function saveOptions(options: Record<string, boolean>) {
+  window.localStorage[GLTF_OPTIONS_STORAGE_KEY] = JSON.stringify(options);
 }
 
 function showError(error?: Error) {

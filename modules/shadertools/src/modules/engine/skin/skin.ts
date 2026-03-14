@@ -8,6 +8,21 @@ import {ShaderModule} from '../../../lib/shader-module/shader-module';
 
 const SKIN_MAX_JOINTS = 20;
 
+export const source = /* wgsl */ `
+struct skinUniforms {
+  jointMatrix: array<mat4x4<f32>, ${SKIN_MAX_JOINTS}>,
+};
+
+@binding(19) @group(0) var<uniform> skin: skinUniforms;
+
+fn getSkinMatrix(weights: vec4f, joints: vec4u) -> mat4x4<f32> {
+  return (weights.x * skin.jointMatrix[joints.x])
+       + (weights.y * skin.jointMatrix[joints.y])
+       + (weights.z * skin.jointMatrix[joints.z])
+       + (weights.w * skin.jointMatrix[joints.w]);
+}
+`;
+
 export const vs = /* glsl */ `\
 
 uniform skinUniforms {
@@ -40,7 +55,7 @@ export const skin = {
 
   name: 'skin',
   dependencies: [],
-  // source: '', // TODO: IMPLEMENT WEBGPU SHADER
+  source,
   vs,
   fs,
 
