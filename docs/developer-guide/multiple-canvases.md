@@ -1,16 +1,17 @@
 # Multiple Canvases
 
-This guide covers the recommended way to use luma.gl with more than one canvas when you need WebGL compatibility.
+This guide covers the recommended way to use luma.gl with more than one canvas.
 
 ## Overview
 
-WebGPU can create multiple real `CanvasContext` instances. WebGL cannot. A WebGL device is tied to one actual GPU-backed canvas.
+WebGPU can create multiple real GPU-backed canvases. WebGL cannot. A WebGL device is tied to one actual GPU-backed canvas.
 
-`PresentationContext` provides a portable workaround:
+`PresentationContext` provides the portable API:
 
-- the device renders into its default `CanvasContext`
-- each `PresentationContext` tracks a separate destination canvas
-- `present()` copies the rendered result into that destination canvas
+- on WebGL, the device renders into its default `CanvasContext` and `present()` copies into each destination canvas
+- on WebGPU, each `PresentationContext` renders directly into its own destination canvas
+
+To keep the application setup portable, create the device with a default `CanvasContext` backed by an `OffscreenCanvas` even when running on WebGPU.
 
 ## When To Use It
 
@@ -27,7 +28,9 @@ Do not use it when:
 
 ## Requirement
 
-For WebGL, `device.createPresentationContext()` only works when the device's default `CanvasContext` is backed by an `OffscreenCanvas`.
+For a portable app, create the device with a default `CanvasContext` backed by an `OffscreenCanvas`.
+
+On WebGL, `device.createPresentationContext()` requires that offscreen-backed default context. On WebGPU, presentation contexts do not borrow the default context, but using the same device setup keeps the app backend-agnostic.
 
 That default canvas is the real render target. The visible canvases are presentation targets that receive copied pixels.
 
@@ -35,8 +38,8 @@ That default canvas is the real render target. The visible canvases are presenta
 const offscreenCanvas = new OffscreenCanvas(1, 1);
 
 const device = await luma.createDevice({
-  type: 'webgl',
-  adapters: [webgl2Adapter],
+  type: 'best-available',
+  adapters: [webgl2Adapter, webgpuAdapter],
   createCanvasContext: {canvas: offscreenCanvas}
 });
 ```
@@ -62,6 +65,8 @@ rightPresentationContext.present();
 
 ## How It Works
 
+### WebGL
+
 Each call to `getCurrentFramebuffer()`:
 
 - resizes the device's default `CanvasContext` to match the presentation target
@@ -72,7 +77,21 @@ Each call to `present()`:
 - submits pending GPU commands
 - copies the default canvas contents into the destination canvas
 
-Because all presentation contexts share one default render target, they must be used sequentially.
+On WebGL, all presentation contexts share one default render target, so they must be used sequentially.
+
+### WebGPU
+
+Each `PresentationContext` creates a real `GPUCanvasContext` on its destination canvas.
+
+Each call to `getCurrentFramebuffer()`:
+
+- returns a framebuffer for that destination canvas
+
+Each call to `present()`:
+
+- submits pending GPU commands for that destination canvas
+
+On WebGPU, presentation contexts do not borrow the default canvas.
 
 ## Sizing
 
@@ -89,12 +108,13 @@ This means a presentation target can still use `autoResize` and `useDevicePixels
 
 - Create one device with an offscreen default canvas.
 - Create one `PresentationContext` per visible canvas.
-- Render and present each target in sequence during a frame.
+- On WebGL, render and present each target in sequence during a frame.
+- On WebGPU, render each target with its own presentation context and call `present()` explicitly.
 - Keep the default canvas hidden or offscreen. It is an implementation detail, not a user-facing surface.
 
 ## Limitations
 
-- v1 is WebGL-only.
-- `PresentationContext` is not supported on WebGPU or `NullDevice`.
-- Presentation is a copy step, not direct swap-chain presentation.
-- Multiple presentation targets share one default canvas, so they are not independent render surfaces.
+- `PresentationContext` is not supported on `NullDevice`.
+- On WebGL, presentation is a copy step.
+- On WebGPU, presentation is direct to the destination canvas.
+- On WebGL, multiple presentation targets share one default canvas, so they are not independent render surfaces.

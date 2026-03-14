@@ -186,25 +186,43 @@ test('WebGLPresentationContext fails when destination canvas has no 2d context',
   t.end();
 });
 
-test('PresentationContext is unsupported on NullDevice and WebGPUDevice', async t => {
+test('WebGPUPresentationContext renders directly to its destination canvas', async t => {
+  const webgpuDevice = await getWebGPUTestDevice();
+  if (!webgpuDevice) {
+    t.pass('WebGPU unavailable, skipped WebGPU presentation-context test');
+    t.end();
+    return;
+  }
+
+  const destinationCanvas = document.createElement('canvas');
+  destinationCanvas.width = 32;
+  destinationCanvas.height = 16;
+
+  const presentationContext = webgpuDevice.createPresentationContext({
+    canvas: destinationCanvas,
+    width: 32,
+    height: 16,
+    autoResize: false,
+    useDevicePixels: false
+  });
+  const framebuffer = presentationContext.getCurrentFramebuffer();
+
+  t.ok(framebuffer, 'WebGPU presentation context returns a framebuffer');
+  t.equal(destinationCanvas.width, 32, 'destination canvas width is preserved');
+  t.equal(destinationCanvas.height, 16, 'destination canvas height is preserved');
+
+  t.doesNotThrow(() => presentationContext.present(), 'present submits without copy step');
+
+  presentationContext.destroy();
+  t.end();
+});
+
+test('PresentationContext is unsupported on NullDevice', async t => {
   const nullDevice = await getNullTestDevice();
   t.throws(
     () => nullDevice.createPresentationContext({width: 1, height: 1}),
     /not supported/,
     'NullDevice rejects presentation contexts'
-  );
-
-  const webgpuDevice = await getWebGPUTestDevice();
-  if (!webgpuDevice) {
-    t.pass('WebGPU unavailable, skipped WebGPU unsupported presentation-context check');
-    t.end();
-    return;
-  }
-
-  t.throws(
-    () => webgpuDevice.createPresentationContext({width: 1, height: 1}),
-    /not supported/,
-    'WebGPUDevice rejects presentation contexts'
   );
 
   t.end();

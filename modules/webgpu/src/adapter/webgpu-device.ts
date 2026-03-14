@@ -43,6 +43,7 @@ import {WebGPUComputePipeline} from './resources/webgpu-compute-pipeline';
 import {WebGPUVertexArray} from './resources/webgpu-vertex-array';
 
 import {WebGPUCanvasContext} from './webgpu-canvas-context';
+import {WebGPUPresentationContext} from './webgpu-presentation-context';
 import {WebGPUCommandEncoder} from './resources/webgpu-command-encoder';
 import {WebGPUCommandBuffer} from './resources/webgpu-command-buffer';
 import {WebGPUQuerySet} from './resources/webgpu-query-set';
@@ -209,8 +210,8 @@ export class WebGPUDevice extends Device {
     return new WebGPUCanvasContext(this, this.adapter, props);
   }
 
-  createPresentationContext(_props?: PresentationContextProps): PresentationContext {
-    throw new Error('PresentationContext is not supported on WebGPU devices');
+  createPresentationContext(props?: PresentationContextProps): PresentationContext {
+    return new WebGPUPresentationContext(this, props);
   }
 
   createPipelineLayout(props: PipelineLayoutProps): WebGPUPipelineLayout {

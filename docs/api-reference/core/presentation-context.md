@@ -1,14 +1,18 @@
 # PresentationContext
 
-A `PresentationContext` tracks a destination canvas while borrowing a device's default `CanvasContext` as the actual GPU render target.
-
-- `PresentationContext` is intended for multi-canvas presentation workflows.
-- Rendering still happens into the device's default `CanvasContext`.
-- Calling `present()` copies the rendered image into the destination canvas tracked by the `PresentationContext`.
+`PresentationContext` is intended for multi-canvas presentation workflows that are portable across both WebGPU and WebGL.
 
 ## Usage
 
 ```ts
+const offscreenCanvas = new OffscreenCanvas(1, 1);
+
+const device = await luma.createDevice({
+  type: 'best-available',
+  adapters: [webgl2Adapter, webgpuAdapter],
+  createCanvasContext: {canvas: offscreenCanvas}
+});
+
 const presentationContext = device.createPresentationContext({canvas});
 const framebuffer = presentationContext.getCurrentFramebuffer();
 
@@ -21,10 +25,31 @@ presentationContext.present();
 
 ## Remarks
 
-- In v1, `PresentationContext` is only implemented on WebGL devices.
+- For a portable app, create the device with a default `CanvasContext` backed by an `OffscreenCanvas`.
 - On WebGL, `device.createPresentationContext()` requires the device's default `CanvasContext` to be backed by an `OffscreenCanvas`.
-- All `PresentationContext` instances on a device share that single default `CanvasContext`, so they must be used sequentially.
-- `present()` is explicit. Rendering is not copied into the destination canvas until `present()` is called.
+- On WebGL, all `PresentationContext` instances on a device share that single default `CanvasContext`, so they must be used sequentially.
+- On WebGPU, each `PresentationContext` owns its own destination `GPUCanvasContext`.
+- `present()` is explicit. On WebGL it performs the copy to the destination canvas. On WebGPU it submits the frame.
+
+## Backend Behavior
+
+WebGPU supports rendering into multiple canvases from a single `Device`, and `PresentationContext` works similarly to a normal `CanvasContext`.
+
+On WebGL, however, a `PresentationContext` tracks a destination canvas but renders under the hood using the device's default `CanvasContext` as the actual GPU render target and then copies the results into the `PresentationContext` canvas.
+
+### WebGPU
+
+1. `getCurrentFramebuffer()` returns a framebuffer backed by the destination canvas.
+2. Rendering happens directly into that destination canvas.
+3. `present()` submits work for that canvas.
+
+### WebGL
+
+1. `getCurrentFramebuffer()` resizes the default `CanvasContext` to the presentation size.
+2. Rendering happens into that default canvas.
+3. `present()` submits work and copies the rendered image into the destination canvas.
+
+Because of this design, WebGL presentation contexts are sequential and require the default canvas context to be backed by an `OffscreenCanvas`.
 
 ## Types
 
@@ -49,7 +74,7 @@ presentationContext.present();
 
 ### `canvas: HTMLCanvasElement | OffscreenCanvas`
 
-The destination canvas that receives the copied presentation result.
+The destination canvas associated with this presentation context.
 
 ### `initialized: Promise<void>`
 
@@ -71,11 +96,17 @@ Creates a presentation context associated with the device.
 
 ### `getCurrentFramebuffer(): Framebuffer`
 
-Returns the framebuffer that should be used for the current frame. On WebGL this delegates to the device's default `CanvasContext` after resizing it to the presentation context's drawing buffer size.
+Returns the framebuffer that should be used for the current frame.
+
+- On WebGL this delegates to the device's default `CanvasContext` after resizing it to the presentation context's drawing buffer size.
+- On WebGPU this returns a framebuffer for the destination canvas itself.
 
 ### `present(): void`
 
-Submits pending work and copies the rendered image from the device's default `CanvasContext` into the destination canvas.
+Completes presentation for the destination canvas.
+
+- On WebGL it submits pending work and copies the rendered image from the device's default `CanvasContext` into the destination canvas.
+- On WebGPU it submits pending work for the destination canvas.
 
 ### `getCSSSize(): [number, number]`
 

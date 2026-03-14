@@ -74,7 +74,7 @@ The most important method is `CanvasContext.getCurrentFramebuffer()` that is use
 
 While there are ways to obtain multiple `CanvasContext` instances on WebGPU, the recommended portable way (that also works on WebGL) is to create a "default canvas context" by supplying the `createCanvasContext` prop to your `luma.createDevice({..., createCanvasContext: true})` call. The created canvas context is available via `device.getDefaultCanvasContext()`.
 
-When you need to present one WebGL device into multiple visible canvases, use `PresentationContext` instead of trying to create multiple WebGL canvas contexts. See the [Multiple Canvases](/docs/developer-guide/multiple-canvases) developer guide.
+For portable multi-canvas rendering, see the [Multiple Canvases](/docs/developer-guide/multiple-canvases) developer guide.
 
 ### Creating a RenderPipeline
 

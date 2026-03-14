@@ -7,8 +7,9 @@ import {CanvasSurface} from './canvas-surface';
 export type {CanvasContextProps as PresentationContextProps} from './canvas-surface';
 
 /**
- * Tracks a destination canvas while rendering into the device's primary GPU-backed canvas.
- * Subclasses provide a copy-present step via `present()`.
+ * Tracks a destination canvas for presentation.
+ * Backend implementations either borrow the default GPU-backed canvas (WebGL)
+ * or render directly into the destination canvas (WebGPU).
  */
 export abstract class PresentationContext extends CanvasSurface {
   abstract present(): void;

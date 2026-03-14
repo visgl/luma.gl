@@ -615,7 +615,7 @@ or create a device with the 'debug: true' prop.`;
   /** Creates a new CanvasContext (WebGPU only) */
   abstract createCanvasContext(props?: CanvasContextProps): CanvasContext;
 
-  /** Creates a presentation context that borrows the default canvas context for rendering. WebGL requires the default canvas context to use an OffscreenCanvas. */
+  /** Creates a presentation context for a destination canvas. WebGL requires the default canvas context to use an OffscreenCanvas. */
   abstract createPresentationContext(props?: PresentationContextProps): PresentationContext;
 
   /** Call after rendering a frame (necessary e.g. on WebGL OffscreenCanvas) */
