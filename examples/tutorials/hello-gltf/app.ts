@@ -5,7 +5,7 @@
 import {AnimationLoopTemplate, AnimationProps, GroupNode, ModelNode} from '@luma.gl/engine';
 import {Device} from '@luma.gl/core';
 import {load} from '@loaders.gl/core';
-import {LightingProps} from '@luma.gl/shadertools';
+import {Light, LightingProps} from '@luma.gl/shadertools';
 import {createScenegraphsFromGLTF, GLTFAnimator} from '@luma.gl/gltf';
 import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
 import {Matrix4} from '@math.gl/core';
@@ -41,17 +41,37 @@ const lightSources = {
   ]
 } as const satisfies LightingProps;
 
+const INFO_HTML = `\
+<p>
+  Browse the Khronos sample asset catalog and inspect each model with luma.gl scene graph rendering.
+</p>
+<div id="model-options">
+  <div>
+    <label for="model-select">Model</label>
+    <select id="model-select"></select>
+  </div>
+  <div><label><input type="checkbox" id="useModelLights" />Use Model Lights</label></div>
+  <div><label><input type="checkbox" id="cameraAnimation" />Camera Animation</label></div>
+  <div><label><input type="checkbox" id="gltfAnimation" />glTF Animation</label></div>
+</div>
+<div id="model-light-indicator" style="margin-top: 8px;"></div>
+<div id="error" style="color: #b00020; margin-top: 8px;"></div>
+`;
+
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
+  static info = INFO_HTML;
+
   device: Device;
   scenes: GroupNode[] = [];
   animator?: GLTFAnimator;
+  modelLights: Light[] = [];
   center = [0, 0, 0];
   cameraPos = [0, 0, 0];
   time: number = 0;
   options: Record<string, boolean> = {
+    useModelLights: true,
     cameraAnimation: true,
-    gltfAnimation: false,
-    pbr: false
+    gltfAnimation: false
   };
 
   constructor({device, animationLoop}: AnimationProps) {
@@ -82,11 +102,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   onFinalize() {
-    this.scenes[0].traverse(node => (node as ModelNode).model.destroy());
+    destroyScenes(this.scenes);
   }
 
   onRender({aspect, device, time}: AnimationProps): void {
     if (!this.scenes?.length) return;
+    updateModelLightIndicator(this.modelLights, this.options['useModelLights']);
     const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1], clearDepth: 1});
 
     const far = 2 * this.cameraPos[0];
@@ -113,7 +134,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         .multiplyRight(modelMatrix);
 
       model.shaderInputs.setProps({
-        lighting: lightSources,
+        lighting: this.getLightingProps(),
         pbrProjection: {
           camera: cameraPos,
           modelViewProjectionMatrix,
@@ -143,14 +164,16 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       );
       const processedGLTF = postProcessGLTF(gltf);
 
-      const {scenes, animator} = createScenegraphsFromGLTF(this.device, processedGLTF, {
+      const {scenes, animator, lights} = createScenegraphsFromGLTF(this.device, processedGLTF, {
         lights: true,
         imageBasedLightingEnvironment: undefined,
         pbrDebug: false
       });
 
+      destroyScenes(this.scenes);
       this.scenes = scenes;
       this.animator = animator;
+      this.modelLights = lights;
 
       // Calculate nice camera view
       // TODO move to utility in gltf module
@@ -167,8 +190,18 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       canvas.style.opacity = '1';
       showError();
     } catch (error) {
+      const canvas = this.device.getDefaultCanvasContext().canvas as HTMLCanvasElement;
+      canvas.style.opacity = '1';
       showError(error as Error);
     }
+  }
+
+  getLightingProps(): LightingProps {
+    if (this.options['useModelLights'] && this.modelLights.length > 0) {
+      return {lights: this.modelLights};
+    }
+
+    return lightSources;
   }
 }
 
@@ -182,6 +215,11 @@ function setModelMenu(
   onMenuItemSelected: (item: string) => void
 ) {
   const modelSelector = document.getElementById('model-select') as HTMLSelectElement;
+  if (!modelSelector) {
+    return;
+  }
+
+  modelSelector.replaceChildren();
   modelSelector?.addEventListener('change', e => {
     const name = (e.target as HTMLSelectElement).value;
     onMenuItemSelected(name);
@@ -194,11 +232,16 @@ function setModelMenu(
   });
 
   modelSelector.append(...options);
+  modelSelector.value = currentItem;
 }
 
 function setOptionsUI(options: Record<string, boolean>) {
   for (const id of Object.keys(options)) {
     const checkbox = document.getElementById(id) as HTMLInputElement;
+    if (!checkbox) {
+      continue;
+    }
+
     checkbox.checked = options[id];
     checkbox.addEventListener('change', e => {
       options[id] = checkbox.checked;
@@ -208,6 +251,46 @@ function setOptionsUI(options: Record<string, boolean>) {
 
 function showError(error?: Error) {
   const errorDiv = document.getElementById('error') as HTMLDivElement;
-  errorDiv.innerHTML = error ? `Error loading model ${error.message}` : '';
-  errorDiv.style.display = error ? 'block' : 'hidden';
+  if (!errorDiv) {
+    return;
+  }
+
+  errorDiv.textContent = error ? `Error loading model: ${error.message}` : '';
+  errorDiv.style.display = error ? 'block' : 'none';
+}
+
+function updateModelLightIndicator(modelLights: Light[], useModelLights: boolean) {
+  const indicator = document.getElementById('model-light-indicator') as HTMLDivElement;
+  if (!indicator) {
+    return;
+  }
+
+  const summary = getModelLightSummary(modelLights);
+  const activeSource =
+    useModelLights && modelLights.length > 0 ? 'using model lights' : 'using fallback demo lights';
+  indicator.textContent = `Model lights: ${summary}; ${activeSource}.`;
+}
+
+function getModelLightSummary(modelLights: Light[]): string {
+  if (modelLights.length === 0) {
+    return 'none detected';
+  }
+
+  const lightCounts: Partial<Record<Light['type'], number>> = {};
+  for (const light of modelLights) {
+    lightCounts[light.type] = (lightCounts[light.type] ?? 0) + 1;
+  }
+
+  return Object.entries(lightCounts)
+    .map(([lightType, count]) => `${count} ${lightType}`)
+    .join(', ');
+}
+
+function destroyScenes(scenes: GroupNode[]) {
+  for (const scene of scenes) {
+    scene.traverse(node => {
+      const model = (node as Partial<ModelNode>).model;
+      model?.destroy();
+    });
+  }
 }

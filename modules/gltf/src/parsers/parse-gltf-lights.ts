@@ -4,7 +4,10 @@ import type {DirectionalLight, Light, PointLight} from '@luma.gl/shadertools';
 
 /** Parse KHR_lights_punctual extension into luma.gl light definitions */
 export function parseGLTFLights(gltf: GLTFPostprocessed): Light[] {
-  const lightDefs = gltf.extensions?.['KHR_lights_punctual']?.['lights'];
+  const lightDefs =
+    // `postProcessGLTF()` moves KHR_lights_punctual into `gltf.lights`.
+    (gltf as GLTFPostprocessed & {lights?: any[]}).lights ||
+    gltf.extensions?.['KHR_lights_punctual']?.['lights'];
   if (!lightDefs || !Array.isArray(lightDefs) || lightDefs.length === 0) {
     return [];
   }
@@ -12,12 +15,14 @@ export function parseGLTFLights(gltf: GLTFPostprocessed): Light[] {
   const lights: Light[] = [];
 
   for (const node of gltf.nodes || []) {
-    const nodeLight = node.extensions?.KHR_lights_punctual;
-    if (!nodeLight || typeof nodeLight.light !== 'number') {
+    const lightIndex =
+      (node as GLTFNodePostprocessed & {light?: number}).light ??
+      node.extensions?.KHR_lights_punctual?.light;
+    if (typeof lightIndex !== 'number') {
       // eslint-disable-next-line no-continue
       continue;
     }
-    const gltfLight = lightDefs[nodeLight.light];
+    const gltfLight = lightDefs[lightIndex];
     if (!gltfLight) {
       // eslint-disable-next-line no-continue
       continue;
@@ -52,9 +57,7 @@ function parsePointLight(
   intensity: number,
   range?: number
 ): PointLight {
-  const position: Readonly<[number, number, number]> = node.translation
-    ? ([...node.translation] as [number, number, number])
-    : ([0, 0, 0] as [number, number, number]);
+  const position = getNodePosition(node);
 
   let attenuation: Readonly<[number, number, number]> = [1, 0, 0];
   if (range !== undefined && range > 0) {
@@ -75,12 +78,7 @@ function parseDirectionalLight(
   color: [number, number, number],
   intensity: number
 ): DirectionalLight {
-  let direction: [number, number, number] = [0, 0, -1];
-
-  if (node.rotation) {
-    const orientation = new Matrix4().fromQuaternion(node.rotation);
-    direction = orientation.transformDirection([0, 0, -1]) as [number, number, number];
-  }
+  const direction = getNodeDirection(node);
 
   return {
     type: 'directional',
@@ -88,4 +86,32 @@ function parseDirectionalLight(
     color,
     intensity
   };
+}
+
+function getNodePosition(node: GLTFNodePostprocessed): [number, number, number] {
+  if (node.matrix) {
+    return new Matrix4(node.matrix).transformAsPoint([0, 0, 0]) as [number, number, number];
+  }
+
+  if (node.translation) {
+    return [...node.translation] as [number, number, number];
+  }
+
+  return [0, 0, 0];
+}
+
+function getNodeDirection(node: GLTFNodePostprocessed): [number, number, number] {
+  if (node.matrix) {
+    return new Matrix4(node.matrix).transformDirection([0, 0, -1]) as [number, number, number];
+  }
+
+  if (node.rotation) {
+    return new Matrix4().fromQuaternion(node.rotation).transformDirection([0, 0, -1]) as [
+      number,
+      number,
+      number
+    ];
+  }
+
+  return [0, 0, -1];
 }

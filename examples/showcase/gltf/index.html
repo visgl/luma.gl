@@ -1,0 +1,24 @@
+<!doctype html>
+<head>
+  <script type="module">
+    import {makeAnimationLoop} from '@luma.gl/engine';
+    import {webgl2Adapter} from '@luma.gl/webgl';
+    import AnimationLoopTemplate from './app.ts';
+
+    const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {adapters: [webgl2Adapter]});
+    animationLoop.start();
+  </script>
+  <style>
+    body {
+      background: black;
+      margin: 0;
+    }
+
+    canvas {
+      height: 100% !important;
+      width: 100% !important;
+      transition: opacity 1s ease-in-out;
+    }
+  </style>
+</head>
+<body></body>

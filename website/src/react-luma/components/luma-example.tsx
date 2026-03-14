@@ -157,13 +157,18 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
       <div
         style={{
           position: 'absolute',
-          boxShadow: '5px 5px 4px grey',
-          backgroundColor: '#F0F0F0F0',
+          boxSizing: 'border-box',
+          boxShadow: '0 12px 32px rgba(0, 0, 0, 0.28)',
+          backgroundColor: 'rgba(255, 255, 255, 0.96)',
+          borderRadius: 12,
+          color: '#111',
           top: 20,
           right: 20,
-          width: 200,
-          height: 250,
-          padding: 10
+          width: 320,
+          maxWidth: 'calc(100% - 40px)',
+          maxHeight: 'calc(100% - 40px)',
+          overflowY: 'auto',
+          padding: 16
         }}
       >
         <h3>{capitalizeFirstLetters(props.id)}</h3>
