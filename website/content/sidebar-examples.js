@@ -20,8 +20,8 @@ const sidebars = {
       items: [
         'api/animation',
         'api/cubemap',
-        'api/textures'
-        // 'api/texture-3d'
+        'api/texture-3d',
+        'api/texture-tester'
       ]
     },
     {

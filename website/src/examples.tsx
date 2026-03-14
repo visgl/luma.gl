@@ -6,7 +6,7 @@ import {LumaExample, useStore} from './react-luma';
 import AnimationApp from '../../examples/api/animation/app';
 import CubemapApp from '../../examples/api/cubemap/app';
 import Texture3DApp from '../../examples/api/texture-3d/app';
-import {renderToDOM as renderTexturesExample} from '../../examples/api/textures/app';
+import {renderToDOM as renderTextureTesterExample} from '../../examples/api/texture-tester/app';
 import initializeExternalWebGLContext, {
   ExternalWebGLContextHandle
 } from '../../examples/api/external-webgl-context/app';
@@ -100,7 +100,7 @@ export const Texture3DExample: React.FC = props => (
   />
 );
 
-export const TexturesExample: React.FC = () => {
+export const TextureTesterExample: React.FC = () => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const deviceType = useStore(store => store.deviceType);
 
@@ -110,7 +110,7 @@ export const TexturesExample: React.FC = () => {
       return undefined;
     }
 
-    return renderTexturesExample(container, {deviceType});
+    return renderTextureTesterExample(container, {deviceType});
   }, [deviceType]);
 
   return (

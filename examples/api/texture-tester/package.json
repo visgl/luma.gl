@@ -1,5 +1,5 @@
 {
-  "name": "luma.gl-examples-textures",
+  "name": "luma.gl-examples-texture-tester",
   "version": "9.3.0-alpha.2",
   "private": true,
   "scripts": {

@@ -8951,9 +8951,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"luma.gl-examples-textures@workspace:examples/api/textures":
+"luma.gl-examples-texture-tester@workspace:examples/api/texture-tester":
   version: 0.0.0-use.local
-  resolution: "luma.gl-examples-textures@workspace:examples/api/textures"
+  resolution: "luma.gl-examples-texture-tester@workspace:examples/api/texture-tester"
   dependencies:
     "@loaders.gl/core": "npm:4.4.0-alpha.18"
     "@loaders.gl/images": "npm:4.4.0-alpha.18"

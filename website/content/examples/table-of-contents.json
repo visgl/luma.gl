@@ -19,8 +19,8 @@
     "items": [
       "api/animation",
       "api/cubemap",
-      "api/textures",
       "api/texture-3d",
+      "api/texture-tester",
       "api/external-webgl-context"
     ]
   },
