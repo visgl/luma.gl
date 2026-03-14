@@ -52,4 +52,36 @@ const config = getDocusaurusConfig({
   ]
 });
 
-module.exports = config;
+const {
+  onBrokenMarkdownLinks,
+  plugins: basePlugins = [],
+  ...baseConfig
+} = config;
+
+module.exports = {
+  ...baseConfig,
+  plugins: basePlugins.map((plugin) => {
+    if (Array.isArray(plugin) && plugin[0] === '@cmfcmf/docusaurus-search-local') {
+      return [
+        plugin[0],
+        {
+          ...plugin[1],
+          indexDocs: true,
+          indexBlog: false,
+          indexPages: true
+        }
+      ];
+    }
+    return plugin;
+  }),
+  future: {
+    v4: true
+  },
+  markdown: {
+    ...(config.markdown || {}),
+    hooks: {
+      ...(config.markdown?.hooks || {}),
+      onBrokenMarkdownLinks: onBrokenMarkdownLinks || 'warn'
+    }
+  }
+};

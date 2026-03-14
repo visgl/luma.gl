@@ -78,8 +78,8 @@ export class NullTexture extends Texture {
     // ignore
   }
 
-  copyImageData(options: CopyImageDataOptions): void {
-    throw new Error('copyImageData not implemented');
+  override copyImageData(options: CopyImageDataOptions): void {
+    super.copyImageData(options);
   }
 
   override readBuffer(options: TextureReadOptions = {}, buffer?: Buffer): Buffer {
@@ -94,7 +94,10 @@ export class NullTexture extends Texture {
     // ignore
   }
 
-  override writeData(data: ArrayBuffer | ArrayBufferView, options: TextureWriteOptions = {}): void {
+  override writeData(
+    data: ArrayBuffer | SharedArrayBuffer | ArrayBufferView,
+    options: TextureWriteOptions = {}
+  ): void {
     // ignore
   }
 }

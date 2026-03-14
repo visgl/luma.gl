@@ -1,11 +1,17 @@
 //
 
-import React from 'react';
-import {LumaExample} from './react-luma';
+import React, {useEffect, useRef, useState} from 'react';
+import {LumaExample, useStore} from './react-luma';
 
 import AnimationApp from '../../examples/api/animation/app';
 import CubemapApp from '../../examples/api/cubemap/app';
+import {renderToDOM as renderMultiCanvasExample} from '../../examples/api/multi-canvas/app';
 import Texture3DApp from '../../examples/api/texture-3d/app';
+import {renderToDOM as renderTextureTesterExample} from '../../examples/api/texture-tester/app';
+import initializeExternalWebGLContext, {
+  ExternalWebGLContextHandle
+} from '../../examples/integrations/external-context/app';
+import HelloReactApp from '../../examples/integrations/hello-react/app';
 
 // import PerformanceApp from '../../examples/performance/stress-test/app';
 
@@ -86,6 +92,22 @@ export const CubemapExample: React.FC = props => (
   />
 );
 
+export const MultiCanvasExample: React.FC = () => {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const deviceType = useStore(store => store.deviceType);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || !deviceType) {
+      return undefined;
+    }
+
+    return renderMultiCanvasExample(container, {deviceType});
+  }, [deviceType]);
+
+  return <div key={deviceType ?? 'pending'} ref={containerRef} />;
+};
+
 export const Texture3DExample: React.FC = props => (
   <LumaExample
     id="texture-3d"
@@ -94,6 +116,97 @@ export const Texture3DExample: React.FC = props => (
     config={exampleConfig}
     {...props}
   />
+);
+
+export const TextureTesterExample: React.FC = () => {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const deviceType = useStore(store => store.deviceType);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || !deviceType) {
+      return undefined;
+    }
+
+    return renderTextureTesterExample(container, {deviceType});
+  }, [deviceType]);
+
+  return (
+    <div
+      className="textures-example-page"
+      style={{
+        width: '100%',
+        height: '100%',
+        overflowY: 'auto',
+        overflowX: 'hidden'
+      }}
+    >
+      <div key={deviceType ?? 'pending'} ref={containerRef} />
+    </div>
+  );
+};
+
+// Integration Examples
+
+export const ExternalContextExample: React.FC = () => {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return undefined;
+
+    let exampleHandle: ExternalWebGLContextHandle | null = null;
+
+    initializeExternalWebGLContext({container})
+      .then(instance => {
+        exampleHandle = instance;
+      })
+      .catch(caughtError => {
+        setError(caughtError.message);
+      });
+
+    return () => {
+      exampleHandle?.destroy();
+    };
+  }, []);
+
+  return (
+    <div className="integration-example-page" style={{position: 'relative', width: '100%', minHeight: '640px'}}>
+      <div ref={containerRef} style={{position: 'absolute', inset: 0}} />
+      <div
+        style={{
+          position: 'absolute',
+          top: 16,
+          right: 16,
+          maxWidth: 320,
+          padding: 12,
+          background: 'rgba(255, 255, 255, 0.92)',
+          borderRadius: 8,
+          boxShadow: '0 2px 6px rgba(0, 0, 0, 0.25)'
+        }}
+      >
+        <h3>External WebGL Context</h3>
+        <p style={{marginTop: 0}}>
+          This example attaches a <code>WebGLDevice</code> to the WebGL2 context created by MapLibre GL JS and
+          renders a luma.gl overlay through the MapLibre render loop.
+        </p>
+        <p style={{marginBottom: 0}}>
+          The map uses CARTO basemaps that do not require an access token. The overlay uses the map view-projection matrix so it
+          stays anchored in world space.
+        </p>
+        {error && <p style={{color: '#b00020'}}>Error: {error}</p>}
+      </div>
+    </div>
+  );
+};
+
+export const ReactStrictModeExample: React.FC = () => (
+  <div className="integration-example-page" style={{width: '100%', minHeight: '640px'}}>
+    <React.StrictMode>
+      <HelloReactApp />
+    </React.StrictMode>
+  </div>
 );
 
 // Tutorial Examples
@@ -217,4 +330,3 @@ export const TransformExample: React.FC = props => (
     {...props}
   />
 );
-

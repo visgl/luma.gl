@@ -1,6 +1,6 @@
 # TextureTransform
 
-`TextureTransform` is responsible for managing resources and state required for reading from and/or writing to `Texture` objects. It auto creates `Texture` objects when requested, creates `Framebuffer` objects. Maintains all texture bindings, when swapping is eanbled, two binding objects are created for easy switching of all WebGL resource binginds.
+`TextureTransform` is responsible for managing resources and state required for reading from and/or writing to `Texture` objects. It auto creates `Texture` objects when requested, creates `Framebuffer` objects. Maintains all texture bindings, when swapping is enabled, two binding objects are created for easy switching of all WebGL resource bindings.
 
 NOTE: In following sections 'texture transform' is used to refer to 'reading from and/or writing to `Texture` objects'.
 

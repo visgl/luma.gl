@@ -13,7 +13,7 @@ The `DynamicTexture` class module is designed to make it easier to work with tex
 | ---------------- | --------- | ---------- | ------------------------------------------------------------ |
 | ✅               | ❌        | Resize     | e.g updating textures to match changes in screen size        |
 | ✅               | ❌        | Async Init | avoids callbacks and conditional logic to defer texture init |
-| 🚧               | ❌        | Mipmaps    | Handles mipmap generation on WebGPU                          |
+| ✅               | ❌        | Mipmaps    | Handles mipmap generation on WebGPU                          |
 | ✅               | -         | `Model`    | `Model` class is `DynamicTexture` aware                      |
 
 - `DynamicTexture` can be resized.
@@ -28,8 +28,8 @@ The `DynamicTexture` class module is designed to make it easier to work with tex
 
 ```ts
 import {DynamicTexture, loadImage} from '@luma.gl/engine';
-const dynamicTexture = new DynamicTexture({data: loadImage(url)});
-const model = new Model(device, {source, bindings: {texture: DynamicTexture}});
+const dynamicTexture = new DynamicTexture(device, {data: loadImage(url)});
+const model = new Model(device, {source, bindings: {texture: dynamicTexture}});
 const renderPass = device.createRenderPass();
 model.draw(renderPass); // Doesn't draw
 ...
@@ -37,10 +37,33 @@ await dynamicTexture.ready; // Not necessary, just for illustration
 model.draw(renderPass); // Draws
 ```
 
+## WebGPU mipmaps
+
+On WebGPU, mipmap generation is owned by `DynamicTexture`.
+
+- `DynamicTexture.generateMipmaps()` is the supported entrypoint for WebGPU mipmap generation.
+- `2d`, `2d-array`, `cube`, and `cube-array` textures use a render-pass path.
+- `3d` textures use a compute-shader path.
+- If the texture format does not support the required capabilities, `generateMipmaps()` throws at runtime with an explicit error message.
+
+When `mipmaps: true` is requested on a WebGPU `DynamicTexture`, luma.gl adds the texture usage flags required by the selected mipmap-generation path.
+
+## Compressed textures
+
+`DynamicTexture` is a convenience layer for texture initialization and updates, but compressed texture rules still come from the underlying backend.
+
+For compressed texture alignment, WebGL vs WebGPU behavior, and asset-preparation guidance, see [Using GPU Textures](/docs/api-guide/gpu/gpu-textures#compressed-textures).
+
 ## Types
 
 ```ts
-export type DynamicTextureProps = Omit<TextureProps, 'data'> & DynamicTextureDataProps;
+export type DynamicTextureProps = Omit<TextureProps, 'data' | 'mipLevels' | 'width' | 'height'> &
+  DynamicTextureDataProps & {
+    mipmaps?: boolean;
+    mipLevels?: number | 'auto';
+    width?: number;
+    height?: number;
+  };
 
 type DynamicTextureDataProps =
   | DynamicTexture1DProps
@@ -77,7 +100,7 @@ type DynamicTextureCubeArrayProps = {
 A promise that resolves when the data has completed loading / preparation and the underlying GPU texture has been created and initialized, or rejects with an `Error` instance describing the failure.
 
 ```ts
-ready: Promise<void>;
+ready: Promise<Texture>;
 ```
 
 ### `isReady`

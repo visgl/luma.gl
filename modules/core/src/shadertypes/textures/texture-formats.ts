@@ -18,6 +18,8 @@ export type TextureFormatInfo = {
   dataType?: NormalizedDataType;
   /** Number of bytes per pixel */
   bytesPerPixel: number;
+  /** Compressed formats only: Number of bytes per block */
+  bytesPerBlock?: number;
   /** Number of bits per channel (may be unreliable for packed formats) */
   bitsPerChannel: [number, number, number, number];
   /** If this is a packed data type */
@@ -205,7 +207,7 @@ export type TextureFormatCompressed =
   | 'bc1-rgb-unorm-srgb-webgl'
   | 'pvrtc-rgb4unorm-webgl'
   | 'pvrtc-rgba4unorm-webgl'
-  | 'pvrtc-rbg2unorm-webgl'
+  | 'pvrtc-rgb2unorm-webgl'
   | 'pvrtc-rgba2unorm-webgl'
   | 'etc1-rbg-unorm-webgl'
   | 'atc-rgb-unorm-webgl'
@@ -273,6 +275,8 @@ export type TextureFormatCompressed =
   | 'astc-12x10-unorm-srgb'
   | 'astc-12x12-unorm'
   | 'astc-12x12-unorm-srgb';
+
+export type CompressedTextureFormat = TextureFormatCompressed;
 
 // Texture format helper types
 

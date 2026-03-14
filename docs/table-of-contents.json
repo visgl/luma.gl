@@ -14,6 +14,7 @@
       "tutorials/shader-modules",
       "tutorials/shader-hooks",
       "tutorials/transform-feedback",
+      "tutorials/external-webgl-context",
       "tutorials/whats-next"
     ]
   },
@@ -86,6 +87,7 @@
           "api-reference/core/device-features",
           "api-reference/core/device-limits",
           "api-reference/core/canvas-context",
+          "api-reference/core/presentation-context",
           "api-reference/core/parameters",
           "api-reference/core/bindings",
           "api-reference/core/shader-layout",
@@ -199,6 +201,7 @@
       "developer-guide/testing",
       "developer-guide/profiling",
       "developer-guide/bundling",
+      "developer-guide/multiple-canvases",
       "developer-guide/contributing"
     ]
   },

@@ -2,9 +2,47 @@
 
 _This page contains news for recent luma.gl releases. For older releases (through v8.5) refer to the [Legacy What's New](/docs/legacy/legacy-upgrade-guide) page._
 
-## Version 9.2 (In Development)
+## Version 9.3 (In Development)
 
-Target Date: Q2, 2025
+Target Date: April 2026
+
+**General**
+
+- **[Texture Tester Example](/examples/api/texture-tester)** - New example showing support for compressed textures on WebGL and WebGPU. Also implements multi-canvas rendering.
+- **[External Context Example](/examples/integrations/external-context)** - New example showing integration with external WebGL contexts.
+- **[React Strict Mode Example](/examples/integrations/react-strict-mode)** - Improved resource cleanup for better compatibility when using luma.gl in React `<StrictMode>` apps
+- **Typescript 5.9** - luma.gl code base is now TypeScript 5.9 clean.
+
+**@luma.gl/core**
+
+- **multi-canvas rendering** is now supported on both WebGL and WebGPU via [`device.createPresentationContext()`](/docs/api-reference/core/presentation-context). See the [Multiple Canvases](/docs/developer-guide/multiple-canvases) developer guide details.
+- **shader debugging** via improved shader compilation error modal.
+
+**@luma.gl/engine**
+
+- **WebGPU mipmap generation** now supported by [`DynamicTexture`](/docs/api-reference/engine/dynamic-texture).
+
+**@luma.gl/webgpu**
+
+- **compressed texture** support (but note that WebGPU is stricter than WebGL and requires block-aligned textures).
+- **texture readback** improvements
+
+**@luma.gl/webgl**
+
+- **texture support** overhaul of texture test suite.
+
+**@luma.gl/gltf**
+
+- glTF texture filtering now defaults to `linear` instead of `nearest` for improved texture rendering.
+- Improved documentation of the glTF module
+
+**@luma.gl/core**
+
+- luma.gl now supports multi-canvas rendering on both WebGL and WebGPU via [`device.createPresentationContext()`](/docs/api-reference/core/presentation-context). See the [Multiple Canvases](/docs/developer-guide/multiple-canvases) developer guide for setup details and backend-specific behavior.
+
+## Version 9.2
+
+Release Date: Sep 24, 2025
 
 Production quality WebGPU backend
 
@@ -39,23 +77,18 @@ Production quality WebGPU backend
 
 **@luma.gl/engine**
 
-- `DynamicTexture` 
-  - now supports mipmap generation for WebGPU textures (in progress)
-
-**@luma.gl/gltf**
-
-- glTF Skeleton Animation Support  (in progress)
-- glTF Mesh Target Animation Support  (in progress)
-- glTF and PRB now supported on WebGPU (in progress)
-- Improved documentation
+- `DynamicTexture`
+  - now supports mipmap generation for WebGPU textures
+  - owns WebGPU mipmap generation for `2d`, `2d-array`, `cube`, `cube-array`, and `3d` textures
+  - throws explicit runtime errors when a WebGPU texture format does not support the required mipmap-generation capabilities
 
 **@luma.gl/effects**
 
-- All postprocessing effects ported to WGSL (in progress)
+- More postprocessing effects ported to WGSL
 
 **@luma.gl/shadertools**
 
-- All shader modules ported to WGSL (in progress)
+- More shader modules ported to WGSL
 
 
 ## Version 9.1

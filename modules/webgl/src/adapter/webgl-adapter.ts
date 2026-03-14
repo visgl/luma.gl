@@ -50,25 +50,27 @@ export class WebGLAdapter extends Adapter {
    * @param gl
    * @returns
    */
-  async attach(gl: Device | WebGL2RenderingContext): Promise<WebGLDevice> {
+  async attach(gl: Device | WebGL2RenderingContext, props: DeviceProps = {}): Promise<WebGLDevice> {
     const {WebGLDevice} = await import('./webgl-device');
     if (gl instanceof WebGLDevice) {
       return gl;
     }
-    // @ts-expect-error
-    if (gl?.device instanceof WebGLDevice) {
-      // @ts-expect-error
-      return gl.device as WebGLDevice;
+    const existingDevice = WebGLDevice.getDeviceFromContext(gl as WebGL2RenderingContext | null);
+    if (existingDevice) {
+      return existingDevice;
     }
     if (!isWebGL(gl)) {
       throw new Error('Invalid WebGL2RenderingContext');
     }
 
+    const createCanvasContext = props.createCanvasContext === true ? {} : props.createCanvasContext;
+
     // We create a new device using the provided WebGL context and its canvas
     // Assume that whoever created the external context will be handling resizes.
     return new WebGLDevice({
+      ...props,
       _handle: gl,
-      createCanvasContext: {canvas: gl.canvas, autoResize: false}
+      createCanvasContext: {canvas: gl.canvas, autoResize: false, ...createCanvasContext}
     });
   }
 
@@ -122,8 +124,7 @@ function isWebGL(gl: any): gl is WebGL2RenderingContext {
   if (typeof WebGL2RenderingContext !== 'undefined' && gl instanceof WebGL2RenderingContext) {
     return true;
   }
-  // Look for debug contexts, headless gl etc
-  return Boolean(gl && Number.isFinite(gl._version));
+  return Boolean(gl && typeof gl.createVertexArray === 'function');
 }
 
 export const webgl2Adapter = new WebGLAdapter();

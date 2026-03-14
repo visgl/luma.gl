@@ -277,6 +277,26 @@ Creates a new [`CanvasContext`](./canvas-context).
 WebGPU only. WebGL devices can only render into the canvas they were created with.
 :::
 
+### createPresentationContext()
+
+<p class="badges">
+  <img src="https://img.shields.io/badge/From-v9.3-blue.svg?style=flat-square" alt="From-v9.3" />
+</p>
+
+```typescript
+createPresentationContext(props?: PresentationContextProps): PresentationContext
+```
+
+Creates a new [`PresentationContext`](./presentation-context) for multi-canvas presentation.
+
+:::info
+For portable WebGL and WebGPU multi-canvas rendering, create the device with a default `CanvasContext` backed by an `OffscreenCanvas`.
+:::
+
+:::info
+On WebGL, all `PresentationContext` instances on a device share the device's default `CanvasContext` as the actual GPU render target, so they must be used sequentially.
+:::
+
 ### getDefaultCanvasContext()
 
 ```typescript
@@ -304,7 +324,7 @@ createBuffer(props: BufferProps): Buffer
 createBuffer(data: ArrayBuffer | ArrayBufferView): Buffer
 ```
 
-Creates a [`Buffer`](./resources/buffer) used to manage memory on the GPU.
+Creates a [`Buffer`](./resources/buffer) used to manage memory on the GPU. See [`BufferProps`](./resources/buffer.md#bufferprops) for available options.
 
 Deduces `indexType` if usage.
 
@@ -315,7 +335,7 @@ createTexture(props: TextureProps): Texture
 createTexture(data: Promise<TextureData>): Texture
 ```
 
-Creates a [`Texture`](./resources/texture), used to manage image data memory on the GPU.
+Creates a [`Texture`](./resources/texture), used to manage image data memory on the GPU. See [`TextureProps`](./resources/texture.md#textureprops) for available options.
 
 ### createSampler
 
@@ -323,7 +343,7 @@ Creates a [`Texture`](./resources/texture), used to manage image data memory on 
 createSampler(props: SamplerProps): Sampler
 ```
 
-Creates a [`Sampler`](./resources/sampler).
+Creates a [`Sampler`](./resources/sampler). See [`SamplerProps`](./resources/sampler.md#samplerprops) for available options.
 
 ### createFramebuffer
 
@@ -331,7 +351,7 @@ Creates a [`Sampler`](./resources/sampler).
 createFramebuffer(props: FramebufferProps): Framebuffer
 ```
 
-Creates a [`Framebuffer`](./resources/framebuffer).
+Creates a [`Framebuffer`](./resources/framebuffer). See [`FramebufferProps`](./resources/framebuffer.md#framebufferprops) for available options.
 
 ### createShader
 
@@ -339,7 +359,7 @@ Creates a [`Framebuffer`](./resources/framebuffer).
 createShader(props: ShaderProps): Shader
 ```
 
-Creates a [`Shader`](./resources/shader).
+Creates a [`Shader`](./resources/shader). See [`ShaderProps`](./resources/shader.md#shaderprops) for available options.
 
 ### createRenderPipeline
 
@@ -347,7 +367,7 @@ Creates a [`Shader`](./resources/shader).
 createRenderPipeline(props: RenderPipelineProps): RenderPipeline
 ```
 
-Creates a [`RenderPipeline`](./resources/render-pipeline) (aka program)
+Creates a [`RenderPipeline`](./resources/render-pipeline) (aka program). See [`RenderPipelineProps`](./resources/render-pipeline.md#renderpipelineprops) for available options.
 
 ### createComputePipeline
 
@@ -355,7 +375,7 @@ Creates a [`RenderPipeline`](./resources/render-pipeline) (aka program)
 createComputePipeline(props: ComputePipelineProps): ComputePipeline
 ```
 
-Creates a [`ComputePipeline`](./resources/compute-pipeline) (aka program)
+Creates a [`ComputePipeline`](./resources/compute-pipeline) (aka program). See [`ComputePipelineProps`](./resources/compute-pipeline.md#computepipelineprops) for available options.
 
 ### createFence
 
@@ -363,7 +383,7 @@ Creates a [`ComputePipeline`](./resources/compute-pipeline) (aka program)
 createFence(): Fence
 ```
 
-Creates a [`Fence`](./resources/fence) used to wait for completion of submitted GPU work.
+Creates a [`Fence`](./resources/fence) used to wait for completion of submitted GPU work. See [`FenceProps`](./resources/fence.md#fenceprops) for available options.
 
 ### beginRenderPass
 
@@ -371,7 +391,7 @@ Creates a [`Fence`](./resources/fence) used to wait for completion of submitted 
 beginRenderPass(props: RenderPassProps): RenderPass
 ```
 
-Creates a [`RenderPass`](./resources/render-pass).
+Creates a [`RenderPass`](./resources/render-pass). See [`RenderPassProps`](./resources/render-pass.md#renderpassprops) for available options.
 
 - `props.framebuffer` If omitted, renders into the default canvas context's default framebuffer.
 
@@ -381,7 +401,7 @@ Creates a [`RenderPass`](./resources/render-pass).
 beginComputePass(props?: ComputePassProps): ComputePass
 ```
 
-Creates a [`ComputePass`](./resources/compute-pass) which can be used to bind data and run compute operations using compute pipelines.
+Creates a [`ComputePass`](./resources/compute-pass) which can be used to bind data and run compute operations using compute pipelines. See [`ComputePassProps`](./resources/compute-pass.md#computepassprops) for available options.
 
 ### loseDevice
 

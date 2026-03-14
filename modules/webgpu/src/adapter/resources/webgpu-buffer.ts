@@ -5,20 +5,28 @@
 import {log, Buffer, type BufferProps, type BufferMapCallback} from '@luma.gl/core';
 import {type WebGPUDevice} from '../webgpu-device';
 
+/**
+ * WebGPU implementation of Buffer
+ * For byte alignment requirements see:
+ * @see https://www.w3.org/TR/webgpu/#dom-gpubuffer-mapasync
+ * @see https://developer.mozilla.org/en-US/docs/Web/API/GPUBuffer/mapAsync
+ */
 export class WebGPUBuffer extends Buffer {
   readonly device: WebGPUDevice;
   readonly handle: GPUBuffer;
   readonly byteLength: number;
+  readonly paddedByteLength: number;
 
   constructor(device: WebGPUDevice, props: BufferProps) {
     super(device, props);
     this.device = device;
 
     this.byteLength = props.byteLength || props.data?.byteLength || 0;
+    this.paddedByteLength = Math.ceil(this.byteLength / 4) * 4;
     const mappedAtCreation = Boolean(this.props.onMapped || props.data);
 
     // WebGPU buffers must be aligned to 4 bytes
-    const size = Math.ceil(this.byteLength / 4) * 4;
+    const size = this.paddedByteLength;
 
     this.device.pushErrorScope('out-of-memory');
     this.device.pushErrorScope('validation');
@@ -92,10 +100,11 @@ export class WebGPUBuffer extends Buffer {
     byteOffset: number = 0,
     byteLength: number = this.byteLength - byteOffset
   ): Promise<void> {
+    const alignedByteLength = Math.ceil(byteLength / 4) * 4;
     // Unless the application created and supplied a mappable buffer, a staging buffer is needed
     const isMappable = (this.usage & Buffer.MAP_WRITE) !== 0;
     const mappableBuffer: WebGPUBuffer | null = !isMappable
-      ? this._getMappableBuffer(Buffer.MAP_WRITE | Buffer.COPY_SRC, 0, this.byteLength)
+      ? this._getMappableBuffer(Buffer.MAP_WRITE | Buffer.COPY_SRC, 0, this.paddedByteLength)
       : null;
 
     const writeBuffer = mappableBuffer || this;
@@ -105,13 +114,15 @@ export class WebGPUBuffer extends Buffer {
     this.device.pushErrorScope('validation');
     try {
       await this.device.handle.queue.onSubmittedWorkDone();
-      await writeBuffer.handle.mapAsync(GPUMapMode.WRITE, byteOffset, byteLength);
-      const arrayBuffer = writeBuffer.handle.getMappedRange(byteOffset, byteLength);
+      await writeBuffer.handle.mapAsync(GPUMapMode.WRITE, byteOffset, alignedByteLength);
+      const mappedRange = writeBuffer.handle.getMappedRange(byteOffset, alignedByteLength);
+      const arrayBuffer = mappedRange.slice(0, byteLength);
       // eslint-disable-next-line @typescript-eslint/await-thenable
       await callback(arrayBuffer, 'mapped');
+      new Uint8Array(mappedRange).set(new Uint8Array(arrayBuffer), 0);
       writeBuffer.handle.unmap();
       if (mappableBuffer) {
-        this._copyBuffer(mappableBuffer, byteOffset, byteLength);
+        this._copyBuffer(mappableBuffer, byteOffset, alignedByteLength);
       }
     } finally {
       this.device.popErrorScope((error: GPUError) => {
@@ -138,17 +149,33 @@ export class WebGPUBuffer extends Buffer {
     byteOffset = 0,
     byteLength = this.byteLength - byteOffset
   ): Promise<T> {
-    if (byteOffset % 8 !== 0 || byteLength % 4 !== 0) {
-      throw new Error('byteOffset must be multiple of 8 and byteLength multiple of 4');
+    const requestedEnd = byteOffset + byteLength;
+    if (requestedEnd > this.byteLength) {
+      throw new Error('Mapping range exceeds buffer size');
     }
-    if (byteOffset + byteLength > this.handle.size) {
+
+    let mappedByteOffset = byteOffset;
+    let mappedByteLength = byteLength;
+    let sliceByteOffset = 0;
+    let lifetime: 'mapped' | 'copied' = 'mapped';
+
+    // WebGPU mapAsync requires 8-byte offsets and 4-byte lengths.
+    if (byteOffset % 8 !== 0 || byteLength % 4 !== 0) {
+      mappedByteOffset = Math.floor(byteOffset / 8) * 8;
+      const alignedEnd = Math.ceil(requestedEnd / 4) * 4;
+      mappedByteLength = alignedEnd - mappedByteOffset;
+      sliceByteOffset = byteOffset - mappedByteOffset;
+      lifetime = 'copied';
+    }
+
+    if (mappedByteOffset + mappedByteLength > this.paddedByteLength) {
       throw new Error('Mapping range exceeds buffer size');
     }
 
     // Unless the application created and supplied a mappable buffer, a staging buffer is needed
     const isMappable = (this.usage & Buffer.MAP_READ) !== 0;
     const mappableBuffer: WebGPUBuffer | null = !isMappable
-      ? this._getMappableBuffer(Buffer.MAP_READ | Buffer.COPY_DST, 0, this.byteLength)
+      ? this._getMappableBuffer(Buffer.MAP_READ | Buffer.COPY_DST, 0, this.paddedByteLength)
       : null;
 
     const readBuffer = mappableBuffer || this;
@@ -158,12 +185,16 @@ export class WebGPUBuffer extends Buffer {
     try {
       await this.device.handle.queue.onSubmittedWorkDone();
       if (mappableBuffer) {
-        mappableBuffer._copyBuffer(this);
+        mappableBuffer._copyBuffer(this, mappedByteOffset, mappedByteLength);
       }
-      await readBuffer.handle.mapAsync(GPUMapMode.READ, byteOffset, byteLength);
-      const arrayBuffer = readBuffer.handle.getMappedRange(byteOffset, byteLength);
+      await readBuffer.handle.mapAsync(GPUMapMode.READ, mappedByteOffset, mappedByteLength);
+      const arrayBuffer = readBuffer.handle.getMappedRange(mappedByteOffset, mappedByteLength);
+      const mappedRange =
+        lifetime === 'mapped'
+          ? arrayBuffer
+          : arrayBuffer.slice(sliceByteOffset, sliceByteOffset + byteLength);
       // eslint-disable-next-line @typescript-eslint/await-thenable
-      const result = await callback(arrayBuffer, 'mapped');
+      const result = await callback(mappedRange, lifetime);
       readBuffer.handle.unmap();
       return result;
     } finally {

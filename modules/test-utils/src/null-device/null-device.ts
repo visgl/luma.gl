@@ -5,6 +5,8 @@
 import type {
   DeviceProps,
   CanvasContextProps,
+  PresentationContextProps,
+  PresentationContext,
   VertexArray,
   VertexArrayProps,
   BufferProps,
@@ -82,6 +84,10 @@ export class NullDevice extends Device {
 
   createCanvasContext(props: CanvasContextProps): NullCanvasContext {
     return new NullCanvasContext(this, props);
+  }
+
+  createPresentationContext(_props?: PresentationContextProps): PresentationContext {
+    throw new Error('PresentationContext is not supported on NullDevice');
   }
 
   createBuffer(props: BufferProps | ArrayBuffer | ArrayBufferView): NullBuffer {
