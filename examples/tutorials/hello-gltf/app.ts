@@ -2,20 +2,19 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {AnimationLoopTemplate, AnimationProps, GroupNode, ModelNode} from '@luma.gl/engine';
+import {AnimationLoopTemplate, AnimationProps, ModelNode} from '@luma.gl/engine';
 import {Device} from '@luma.gl/core';
 import {load} from '@loaders.gl/core';
 import {Light, LightingProps} from '@luma.gl/shadertools';
-import {createScenegraphsFromGLTF, GLTFAnimator} from '@luma.gl/gltf';
+import {createScenegraphsFromGLTF} from '@luma.gl/gltf';
 import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
 import {Matrix4} from '@math.gl/core';
 
 /* eslint-disable camelcase */
 
 const MODEL_DIRECTORY_URL =
-  'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/';
-const MODEL_LIST_URL =
-  'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/model-index.json';
+  'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models';
+const MODEL_LIST_URL = `${MODEL_DIRECTORY_URL}/model-index.json`;
 
 const lightSources = {
   ambientLight: {
@@ -62,19 +61,18 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = INFO_HTML;
 
   device: Device;
-  scenes: GroupNode[] = [];
-  animator?: GLTFAnimator;
+  scenegraphsFromGLTF?: ReturnType<typeof createScenegraphsFromGLTF>;
   modelLights: Light[] = [];
   center = [0, 0, 0];
   cameraPos = [0, 0, 0];
-  time: number = 0;
+  mouseCameraTime = 0;
   options: Record<string, boolean> = {
     useModelLights: true,
     cameraAnimation: true,
     gltfAnimation: false
   };
 
-  constructor({device, animationLoop}: AnimationProps) {
+  constructor({device}: AnimationProps) {
     super();
     this.device = device;
 
@@ -83,7 +81,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     setOptionsUI(this.options);
 
-    // Asynchronously fetch the model list and set up the model selector
     this.fetchModelList().then(models => {
       const currentModel = window.localStorage['last-gltf-model'];
       setModelMenu(
@@ -95,21 +92,31 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         }
       );
     });
+
+    this.device.getDefaultCanvasContext().canvas.addEventListener('mousemove', event => {
+      const mouseEvent = event as MouseEvent;
+      if (mouseEvent.buttons) {
+        this.mouseCameraTime -= mouseEvent.movementX * 3.5;
+      }
+    });
   }
 
   onFinalize() {
-    destroyScenes(this.scenes);
+    destroyScenegraphs(this.scenegraphsFromGLTF);
   }
 
   onRender({aspect, device, time}: AnimationProps): void {
-    if (!this.scenes?.length) return;
+    if (!this.scenegraphsFromGLTF?.scenes?.length) {
+      return;
+    }
+
     updateModelLightIndicator(this.modelLights, this.options['useModelLights']);
     const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1], clearDepth: 1});
 
     const far = 2 * this.cameraPos[0];
     const near = far / 1000;
     const projectionMatrix = new Matrix4().perspective({fovy: Math.PI / 3, aspect, near, far});
-    const cameraTime = this.options['cameraAnimation'] ? time : 0;
+    const cameraTime = this.options['cameraAnimation'] ? time : this.mouseCameraTime;
     const cameraPos = [
       this.cameraPos[0] * Math.sin(0.001 * cameraTime),
       this.cameraPos[1],
@@ -117,12 +124,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     ];
 
     if (this.options['gltfAnimation']) {
-      this.animator?.setTime(time);
+      this.scenegraphsFromGLTF.animator?.setTime(time);
     }
 
     const viewMatrix = new Matrix4().lookAt({eye: cameraPos, center: this.center});
 
-    this.scenes[0].traverse((node, {worldMatrix: modelMatrix}) => {
+    this.scenegraphsFromGLTF.scenes[0].traverse((node, {worldMatrix: modelMatrix}) => {
       const {model} = node as ModelNode;
 
       const modelViewProjectionMatrix = new Matrix4(projectionMatrix)
@@ -136,6 +143,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
           modelViewProjectionMatrix,
           modelMatrix,
           normalMatrix: new Matrix4(modelMatrix).invert().transpose()
+        },
+        skin: {
+          scenegraphsFromGLTF: this.scenegraphsFromGLTF
         }
       });
       model.draw(renderPass);
@@ -150,39 +160,35 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   async loadGLTF(modelName: string) {
+    const canvas = this.device.getDefaultCanvasContext().canvas as HTMLCanvasElement;
+
     try {
-      const canvas = this.device.getDefaultCanvasContext().canvas as HTMLCanvasElement;
       canvas.style.opacity = '0.1';
 
-      const gltf = await load(
-        `${MODEL_DIRECTORY_URL}/${modelName}/glTF/${modelName}.gltf`,
-        GLTFLoader
-      );
+      const gltf = await load(`${MODEL_DIRECTORY_URL}/${modelName}/glTF/${modelName}.gltf`, GLTFLoader);
       const processedGLTF = postProcessGLTF(gltf);
 
-      const {scenes, animator, lights} = createScenegraphsFromGLTF(this.device, processedGLTF, {
+      const scenegraphsFromGLTF = createScenegraphsFromGLTF(this.device, processedGLTF, {
         lights: true,
         imageBasedLightingEnvironment: undefined,
         pbrDebug: false,
         useTangents: true
       });
 
-      destroyScenes(this.scenes);
-      this.scenes = scenes;
-      this.animator = animator;
-      this.modelLights = lights;
+      destroyScenegraphs(this.scenegraphsFromGLTF);
+      this.scenegraphsFromGLTF = scenegraphsFromGLTF;
+      this.modelLights = scenegraphsFromGLTF.lights;
 
-      // Calculate a camera framing from scenegraph bounds.
-      const sceneBounds = this.scenes[0]?.getBounds();
+      const sceneBounds = scenegraphsFromGLTF.scenes[0]?.getBounds();
       const min = sceneBounds?.[0] ?? [-1, -1, -1];
       const max = sceneBounds?.[1] ?? [1, 1, 1];
+
       this.cameraPos = [2 * (max[0] + max[2]), max[1], 2 * (max[0] + max[2])];
       this.center = [0.5 * (min[0] + max[0]), 0.5 * (min[1] + max[1]), 0.5 * (min[2] + max[2])];
 
       canvas.style.opacity = '1';
       showError();
     } catch (error) {
-      const canvas = this.device.getDefaultCanvasContext().canvas as HTMLCanvasElement;
       canvas.style.opacity = '1';
       showError(error as Error);
     }
@@ -197,10 +203,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 }
 
-//
-// HTML helpers, can be cut if copying this code
-//
-
 function setModelMenu(
   items: string[],
   currentItem: string,
@@ -212,10 +214,11 @@ function setModelMenu(
   }
 
   modelSelector.replaceChildren();
-  modelSelector?.addEventListener('change', e => {
-    const name = (e.target as HTMLSelectElement).value;
+  modelSelector.addEventListener('change', event => {
+    const name = (event.target as HTMLSelectElement).value;
     onMenuItemSelected(name);
   });
+
   const options = items.map(item => {
     const option = document.createElement('option');
     option.value = item;
@@ -235,7 +238,7 @@ function setOptionsUI(options: Record<string, boolean>) {
     }
 
     checkbox.checked = options[id];
-    checkbox.addEventListener('change', e => {
+    checkbox.addEventListener('change', () => {
       options[id] = checkbox.checked;
     });
   }
@@ -278,8 +281,8 @@ function getModelLightSummary(modelLights: Light[]): string {
     .join(', ');
 }
 
-function destroyScenes(scenes: GroupNode[]) {
-  for (const scene of scenes) {
+function destroyScenegraphs(scenegraphsFromGLTF?: ReturnType<typeof createScenegraphsFromGLTF>) {
+  for (const scene of scenegraphsFromGLTF?.scenes || []) {
     scene.traverse(node => {
       const model = (node as Partial<ModelNode>).model;
       model?.destroy();

@@ -46,3 +46,4 @@ import './modules/lighting/gouraud-material.spec';
 
 // Engine
 import './modules/engine/picking.spec';
+import './modules/engine/skin.spec';
