@@ -8,9 +8,9 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@loaders.gl/core": "4.4.0-alpha.17",
-    "@loaders.gl/images": "4.4.0-alpha.17",
-    "@loaders.gl/textures": "4.4.0-alpha.17",
+    "@loaders.gl/core": "4.4.0-alpha.18",
+    "@loaders.gl/images": "4.4.0-alpha.18",
+    "@loaders.gl/textures": "4.4.0-alpha.18",
     "@luma.gl/core": "9.3.0-alpha.2",
     "@luma.gl/engine": "9.3.0-alpha.2",
     "@luma.gl/shadertools": "9.3.0-alpha.2",

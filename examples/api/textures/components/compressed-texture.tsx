@@ -83,8 +83,26 @@ const {
 
 const TEXTURES_BASE_URL =
   'https://raw.githubusercontent.com/visgl/loaders.gl/master/modules/textures/test/data/';
-const LOADERS_GL_VERSION = '4.4.0-alpha.17';
-const LOADERS_GL_TEXTURES_LIBRARY_PATH = `https://unpkg.com/@loaders.gl/textures@${LOADERS_GL_VERSION}/dist/libs/`;
+const BASIS_TRANSCODER_JS_URL = new URL(
+  '../../../../node_modules/@loaders.gl/textures/dist/libs/basis_transcoder.js',
+  import.meta.url
+).href;
+const BASIS_TRANSCODER_WASM_URL = new URL(
+  '../../../../node_modules/@loaders.gl/textures/dist/libs/basis_transcoder.wasm',
+  import.meta.url
+).href;
+const BASIS_ENCODER_JS_URL = new URL(
+  '../../../../node_modules/@loaders.gl/textures/dist/libs/basis_encoder.js',
+  import.meta.url
+).href;
+const BASIS_ENCODER_WASM_URL = new URL(
+  '../../../../node_modules/@loaders.gl/textures/dist/libs/basis_encoder.wasm',
+  import.meta.url
+).href;
+const CRUNCH_JS_URL = new URL(
+  '../../../../node_modules/@loaders.gl/textures/dist/libs/crunch.js',
+  import.meta.url
+).href;
 
 registerLoaders([BasisLoader, CompressedTextureLoader, ImageLoader]);
 
@@ -249,11 +267,11 @@ export class CompressedTexture extends React.PureComponent<
   getLoadOptions(device: Device): TextureLoaderOptions {
     return {
       modules: {
-        [BASIS_EXTERNAL_LIBRARIES.TRANSCODER]: `${LOADERS_GL_TEXTURES_LIBRARY_PATH}${BASIS_EXTERNAL_LIBRARIES.TRANSCODER}`,
-        [BASIS_EXTERNAL_LIBRARIES.TRANSCODER_WASM]: `${LOADERS_GL_TEXTURES_LIBRARY_PATH}${BASIS_EXTERNAL_LIBRARIES.TRANSCODER_WASM}`,
-        [BASIS_EXTERNAL_LIBRARIES.ENCODER]: `${LOADERS_GL_TEXTURES_LIBRARY_PATH}${BASIS_EXTERNAL_LIBRARIES.ENCODER}`,
-        [BASIS_EXTERNAL_LIBRARIES.ENCODER_WASM]: `${LOADERS_GL_TEXTURES_LIBRARY_PATH}${BASIS_EXTERNAL_LIBRARIES.ENCODER_WASM}`,
-        [CRUNCH_EXTERNAL_LIBRARIES.DECODER]: `${LOADERS_GL_TEXTURES_LIBRARY_PATH}${CRUNCH_EXTERNAL_LIBRARIES.DECODER}`
+        [BASIS_EXTERNAL_LIBRARIES.TRANSCODER]: BASIS_TRANSCODER_JS_URL,
+        [BASIS_EXTERNAL_LIBRARIES.TRANSCODER_WASM]: BASIS_TRANSCODER_WASM_URL,
+        [BASIS_EXTERNAL_LIBRARIES.ENCODER]: BASIS_ENCODER_JS_URL,
+        [BASIS_EXTERNAL_LIBRARIES.ENCODER_WASM]: BASIS_ENCODER_WASM_URL,
+        [CRUNCH_EXTERNAL_LIBRARIES.DECODER]: CRUNCH_JS_URL
       },
       supportedTextureFormats: getSupportedGPUTextureFormatFamilies(device),
       basis: {
@@ -276,26 +294,34 @@ export class CompressedTexture extends React.PureComponent<
       const options: TextureLoaderOptions = {
         ...loadOptions
       };
+      const usesBasisLoader = useBasis || src.endsWith('.basis');
+
       if (useBasis) {
         options['compressed-texture'] = {
           ...(options['compressed-texture'] || {}),
           useBasis: true
         };
       }
+      if (usesBasisLoader) {
+        options.worker = false;
+      }
 
-      const loader =
-        useBasis || src.endsWith('.basis')
-          ? BasisLoader
-          : ((await selectLoader(src, [
-              CompressedTextureLoader,
-              CrunchWorkerLoader,
-              ImageLoader
-            ])) as {id: string; name: string} | null);
+      const loader = usesBasisLoader
+        ? BasisLoader
+        : ((await selectLoader(src, [
+            CompressedTextureLoader,
+            CrunchWorkerLoader,
+            ImageLoader
+          ])) as {id: string; name: string} | null);
       if (!loader) {
         throw new Error(`No texture loader found for ${src}`);
       }
 
-      const result = await load(arrayBuffer, loader as never, options);
+      const result = usesBasisLoader
+        ? await loadWithHandledBasisRuntimeRejections(() =>
+            load(arrayBuffer, loader as never, options)
+          )
+        : await load(arrayBuffer, loader as never, options);
 
       this.addStat('File Size', Math.floor(length / 1024), 'Kb');
 
@@ -644,6 +670,39 @@ function beginPreviewRenderPass(device: Device) {
     .getCurrentFramebuffer({depthStencilFormat: false});
 
   return device.beginRenderPass({framebuffer});
+}
+
+async function loadWithHandledBasisRuntimeRejections<T>(loadTexture: () => Promise<T>): Promise<T> {
+  if (typeof window === 'undefined') {
+    return await loadTexture();
+  }
+
+  const handleUnhandledRejection = (event: PromiseRejectionEvent): void => {
+    if (isBasisRuntimeInitializationError(event.reason)) {
+      event.preventDefault();
+    }
+  };
+
+  window.addEventListener('unhandledrejection', handleUnhandledRejection);
+
+  try {
+    const result = await loadTexture();
+    await Promise.resolve();
+    return result;
+  } finally {
+    window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+  }
+}
+
+function isBasisRuntimeInitializationError(error: unknown): boolean {
+  const errorMessage = error instanceof Error ? error.message : String(error);
+
+  return (
+    errorMessage.includes('RuntimeError: null function') ||
+    errorMessage.includes('LinkError: WebAssembly.instantiate()') ||
+    errorMessage.includes('memory import has 256 pages') ||
+    errorMessage.includes('Failed to asynchronously prepare wasm')
+  );
 }
 
 function resolveCompressedTextureFormat(image: CompressedImageData): TextureFormat {
