@@ -28,6 +28,9 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'yarn' # or 'pnpm', 'npm' depending on your package manager
+          cache-dependency-path: |
+            yarn.lock
+            website/yarn.lock
 
       - name: Install dependencies
         run: yarn install --frozen-lockfile  
@@ -47,12 +50,42 @@ jobs:
       - name: Run lint
         run: |
           yarn lint
-  
-      - name: Test website build
-        run: |
-          yarn test-website
 
       - name: Upload coverage to Coveralls
         uses: coverallsapp/github-action@09b709cf6a16e30b0808ba050c7a6e8a5ef13f8d # v1.2.5
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
+
+  website:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    strategy:
+      matrix:
+        node-version: [22]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Setup Node (with Corepack)
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'yarn'
+          cache-dependency-path: |
+            yarn.lock
+            website/yarn.lock
+
+      - name: Install root dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Install website dependencies
+        run: yarn install --frozen-lockfile
+        working-directory: website
+
+      - name: Build website
+        run: yarn build
+        working-directory: website
