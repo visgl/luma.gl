@@ -137,23 +137,6 @@ const screenQuad: {uniformTypes: Record<keyof ScreenQuadUniforms, VariableShader
   }
 };
 
-const SCREEN_QUAD_MODULE_WGSL = /* WGSL */ `\
-fn getQuadVertex(vertexIndex : u32) -> vec2f {
-  // SCREEN QUAD
-  let positions = array(
-    // 1st triangle
-    vec2f( 0.0,  0.0),  // center
-    vec2f( 1.0,  0.0),  // right, center
-    vec2f( 0.0,  1.0),  // center, top
-    // 2st triangle
-    vec2f( 0.0,  1.0),  // center, top
-    vec2f( 1.0,  0.0),  // right, center
-    vec2f( 1.0,  1.0),  // right, top
-  );
-  return positions[vertexIndex];
-}
-`;
-
 const SCREEN_QUAD_WGSL = /* WGSL */ `\
 struct ScreenQuadUniforms {
   resolution: vec2<f32>,

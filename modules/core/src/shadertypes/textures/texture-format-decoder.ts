@@ -129,9 +129,10 @@ function getTextureFormatCapabilities(format: TextureFormat): TextureFormatCapab
   const isSigned = formatInfo?.signed;
   const isInteger = formatInfo?.integer;
   const isWebGLSpecific = formatInfo?.webgl;
+  const isCompressed = Boolean(formatInfo?.compressed);
 
-  // signed formats are not renderable
-  formatCapabilities.render &&= !isSigned;
+  // Only uncompressed color formats can be used as color-renderable attachments.
+  formatCapabilities.render &&= !isDepthStencil && !isCompressed;
   // signed and integer formats are not filterable
   formatCapabilities.filter &&= !isDepthStencil && !isSigned && !isInteger && !isWebGLSpecific;
 

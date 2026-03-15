@@ -127,7 +127,7 @@ export abstract class Buffer extends Resource<BufferProps> {
   /** This doesn't handle partial non-zero offset updates correctly */
   protected _setDebugData(
     data: ArrayBufferView | ArrayBufferLike | null,
-    byteOffset: number,
+    _byteOffset: number,
     byteLength: number
   ): void {
     let arrayBufferView: ArrayBufferView | null = null;
