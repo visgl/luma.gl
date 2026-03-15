@@ -1128,24 +1128,32 @@ test('Texture#writeData & readDataAsync round-trip for all formats and dimension
           '3d': {width: 2, height: 2, depthOrArrayLayers: 2}
         }[dimension];
 
-        const tex = device.createTexture({
-          ...texSize,
-          dimension,
-          format,
-          usage: Texture.COPY_SRC | Texture.COPY_DST
-        });
-
-        const {byteLength, bytesPerRow} = tex.computeMemoryLayout();
-        const ArrayType = getTypedArrayConstructor(info.dataType);
-        const arraySize = byteLength / ArrayType.BYTES_PER_ELEMENT;
-        const input = new ArrayType(arraySize);
-        for (let i = 0; i < texSize.height; i++)
-          for (let j = 0; j < texSize.width; j++)
-            input[i * bytesPerRow + j * info.components] = (i + j) % 251;
+        let texture: Texture | null = null;
 
         try {
-          tex.writeData(input);
-          const outputBuffer = await tex.readDataAsync();
+          texture = device.createTexture({
+            ...texSize,
+            dimension,
+            format,
+            usage: Texture.COPY_SRC | Texture.COPY_DST
+          });
+
+          const {byteLength, bytesPerRow} = texture.computeMemoryLayout();
+          const ArrayType = getTypedArrayConstructor(info.dataType);
+          const arraySize = byteLength / ArrayType.BYTES_PER_ELEMENT;
+          const input = new ArrayType(arraySize);
+          for (let i = 0; i < texSize.height; i++) {
+            for (let j = 0; j < texSize.width; j++) {
+              input[i * bytesPerRow + j * info.components] = (i + j) % 251;
+            }
+          }
+
+          texture.writeData(input);
+          const outputBuffer = await withTimeout(
+            texture.readDataAsync(),
+            5000,
+            `${device.type} ${format} ${dimension} readDataAsync timed out`
+          );
           const output = new ArrayType(outputBuffer).slice(0, input.length);
 
           const match =
@@ -1158,9 +1166,9 @@ test('Texture#writeData & readDataAsync round-trip for all formats and dimension
           t.ok(match, `${device.type} ${format} ${dimension} round-trip succeeded`);
         } catch (err) {
           t.fail(`${device.type} ${format} ${dimension} round-trip failed: ${err.message}`);
+        } finally {
+          texture?.destroy();
         }
-
-        tex.destroy();
       }
     }
   }
@@ -1180,6 +1188,26 @@ function almostEqual(a: Float32Array, b: Float32Array, epsilon = 1e-6): boolean 
     if (Math.abs(a[i] - b[i]) > epsilon) return false;
   }
   return true;
+}
+
+async function withTimeout<T>(
+  promise: Promise<T>,
+  milliseconds: number,
+  errorMessage: string
+): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timeoutId = setTimeout(() => reject(new Error(errorMessage)), milliseconds);
+      })
+    ]);
+  } finally {
+    if (timeoutId !== undefined) {
+      clearTimeout(timeoutId);
+    }
+  }
 }
 
 test.skip('Texture#copyImageData & readDataAsync round-trip', async t => {
@@ -1318,7 +1346,8 @@ test('Texture color read APIs reject unsupported formats and aspects', async t =
       const compressedTexture = device.createTexture({
         width: 4,
         height: 4,
-        format: compressedFormat
+        format: compressedFormat,
+        usage: Texture.SAMPLE | Texture.COPY_DST
       });
       t.throws(
         () => compressedTexture.readBuffer({}),
