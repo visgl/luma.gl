@@ -34,6 +34,14 @@ export type MutableAnimationLoopProps = {
   autoResizeViewport?: boolean;
 };
 
+type WebGLQuerySet = QuerySet & {
+  isResultAvailable(): boolean;
+  isTimerDisjoint(): boolean;
+  getTimerMilliseconds(): number;
+  beginTimestampQuery(): void;
+  endTimestampQuery(): void;
+};
+
 /** Convenient animation loop */
 export class AnimationLoop {
   static defaultAnimationLoopProps = {
@@ -521,14 +529,9 @@ export class AnimationLoop {
 
     // Check if timer for last frame has completed.
     // GPU timer results are never available in the same frame they are captured.
-    if (this._gpuTimeQuery) {
+    if (this.device?.type === 'webgl' && this._gpuTimeQuery) {
       // WEBGLQuerySet has these methods for timer queries
-      const query = this._gpuTimeQuery as QuerySet & {
-        isResultAvailable(): boolean;
-        isTimerDisjoint(): boolean;
-        getTimerMilliseconds(): number;
-        beginTimestampQuery(): void;
-      };
+      const query = this._gpuTimeQuery as WebGLQuerySet;
 
       if (query.isResultAvailable() && !query.isTimerDisjoint()) {
         this.gpuTime.addTime(query.getTimerMilliseconds());
@@ -546,7 +549,7 @@ export class AnimationLoop {
 
     // End GPU time query. Results will be available on next frame.
     if (this._gpuTimeQuery) {
-      const query = this._gpuTimeQuery as QuerySet & {endTimestampQuery(): void};
+      const query = this._gpuTimeQuery as WebGLQuerySet;
       query.endTimestampQuery();
     }
   }
