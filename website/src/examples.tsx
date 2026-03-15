@@ -17,7 +17,7 @@ import HelloReactApp from '../../examples/integrations/hello-react/app';
 
 // import DOFApp from '../../examples/showcase/dof/app';
 // import GeospatialApp from '../../examples/showcase/geospatial/app';
-// import GLTFApp from '../../examples/showcase/gltf/app';
+import GLTFApp from '../../examples/showcase/gltf/app';
 import InstancingApp from '../../examples/showcase/instancing/app';
 import PersistenceApp from '../../examples/showcase/persistence/app';
 import PostprocessingApp from '../../examples/showcase/postprocessing/app';
@@ -39,6 +39,16 @@ import TransformApp from '../../examples/tutorials/transform/app';
 const exampleConfig = {};
 
 // Showcase Examples
+
+export const GLTFExample: React.FC = props => (
+  <LumaExample
+    id="gltf"
+    directory="showcase"
+    template={GLTFApp}
+    config={exampleConfig}
+    {...props}
+  />
+);
 
 export const InstancingExample: React.FC = props => (
   <LumaExample

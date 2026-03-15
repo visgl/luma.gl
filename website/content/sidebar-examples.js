@@ -9,6 +9,7 @@ const sidebars = {
       type: 'category',
       label: 'Showcase',
       items: [
+        'showcase/gltf',
         'showcase/instancing',
         'showcase/persistence'
         // 'showcase/postprocessing'

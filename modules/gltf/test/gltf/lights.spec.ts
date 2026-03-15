@@ -75,3 +75,30 @@ test('gltf#parseGLTFLights - missing extension', t => {
   t.equal(lights.length, 0, 'no lights parsed');
   t.end();
 });
+
+test('gltf#parseGLTFLights - postprocessed lights with node matrix', t => {
+  const gltf: GLTFPostprocessed = {
+    nodes: [
+      {
+        id: 'n3',
+        light: 0,
+        matrix: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 4, 5, 6, 1]
+      } as any
+    ],
+    scenes: [],
+    lights: [
+      {
+        type: 'point',
+        intensity: 3
+      }
+    ]
+  } as any;
+
+  const lights = parseGLTFLights(gltf);
+  t.equal(lights.length, 1, 'one postprocessed light parsed');
+  const light = lights[0] as any;
+  t.equals(light.type, 'point');
+  t.deepEquals(light.position, [4, 5, 6]);
+  t.equals(light.intensity, 3);
+  t.end();
+});
