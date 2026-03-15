@@ -1,20 +1,23 @@
 //
 
 import React, {useEffect, useRef, useState} from 'react';
-import {LumaExample} from './react-luma';
+import {LumaExample, useStore} from './react-luma';
 
 import AnimationApp from '../../examples/api/animation/app';
 import CubemapApp from '../../examples/api/cubemap/app';
+import {renderToDOM as renderMultiCanvasExample} from '../../examples/api/multi-canvas/app';
 import Texture3DApp from '../../examples/api/texture-3d/app';
+import {renderToDOM as renderTextureTesterExample} from '../../examples/api/texture-tester/app';
 import initializeExternalWebGLContext, {
   ExternalWebGLContextHandle
-} from '../../examples/api/external-webgl-context/app';
+} from '../../examples/integrations/external-context/app';
+import HelloReactApp from '../../examples/integrations/hello-react/app';
 
 // import PerformanceApp from '../../examples/performance/stress-test/app';
 
 // import DOFApp from '../../examples/showcase/dof/app';
 // import GeospatialApp from '../../examples/showcase/geospatial/app';
-// import GLTFApp from '../../examples/showcase/gltf/app';
+import GLTFApp from '../../examples/showcase/gltf/app';
 import InstancingApp from '../../examples/showcase/instancing/app';
 import PersistenceApp from '../../examples/showcase/persistence/app';
 import PostprocessingApp from '../../examples/showcase/postprocessing/app';
@@ -36,6 +39,16 @@ import TransformApp from '../../examples/tutorials/transform/app';
 const exampleConfig = {};
 
 // Showcase Examples
+
+export const GLTFExample: React.FC = props => (
+  <LumaExample
+    id="gltf"
+    directory="showcase"
+    template={GLTFApp}
+    config={exampleConfig}
+    {...props}
+  />
+);
 
 export const InstancingExample: React.FC = props => (
   <LumaExample
@@ -89,6 +102,22 @@ export const CubemapExample: React.FC = props => (
   />
 );
 
+export const MultiCanvasExample: React.FC = () => {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const deviceType = useStore(store => store.deviceType);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || !deviceType) {
+      return undefined;
+    }
+
+    return renderMultiCanvasExample(container, {deviceType});
+  }, [deviceType]);
+
+  return <div key={deviceType ?? 'pending'} ref={containerRef} />;
+};
+
 export const Texture3DExample: React.FC = props => (
   <LumaExample
     id="texture-3d"
@@ -99,7 +128,37 @@ export const Texture3DExample: React.FC = props => (
   />
 );
 
-export const ExternalWebGLContextExample: React.FC = () => {
+export const TextureTesterExample: React.FC = () => {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const deviceType = useStore(store => store.deviceType);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || !deviceType) {
+      return undefined;
+    }
+
+    return renderTextureTesterExample(container, {deviceType});
+  }, [deviceType]);
+
+  return (
+    <div
+      className="textures-example-page"
+      style={{
+        width: '100%',
+        height: '100%',
+        overflowY: 'auto',
+        overflowX: 'hidden'
+      }}
+    >
+      <div key={deviceType ?? 'pending'} ref={containerRef} />
+    </div>
+  );
+};
+
+// Integration Examples
+
+export const ExternalContextExample: React.FC = () => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -123,7 +182,7 @@ export const ExternalWebGLContextExample: React.FC = () => {
   }, []);
 
   return (
-    <div style={{position: 'relative', width: '100%', minHeight: '640px'}}>
+    <div className="integration-example-page" style={{position: 'relative', width: '100%', minHeight: '640px'}}>
       <div ref={containerRef} style={{position: 'absolute', inset: 0}} />
       <div
         style={{
@@ -151,6 +210,14 @@ export const ExternalWebGLContextExample: React.FC = () => {
     </div>
   );
 };
+
+export const ReactStrictModeExample: React.FC = () => (
+  <div className="integration-example-page" style={{width: '100%', minHeight: '640px'}}>
+    <React.StrictMode>
+      <HelloReactApp />
+    </React.StrictMode>
+  </div>
+);
 
 // Tutorial Examples
 
@@ -273,4 +340,3 @@ export const TransformExample: React.FC = props => (
     {...props}
   />
 );
-

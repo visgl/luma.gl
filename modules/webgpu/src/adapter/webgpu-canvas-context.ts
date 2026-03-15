@@ -43,6 +43,10 @@ export class WebGPUCanvasContext extends CanvasContext {
 
   /** Destroy any textures produced while configured and remove the context configuration. */
   override destroy(): void {
+    if (this.depthStencilAttachment) {
+      this.depthStencilAttachment.destroy();
+      this.depthStencilAttachment = null;
+    }
     this.handle.unconfigure();
     super.destroy();
   }

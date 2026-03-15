@@ -3,55 +3,93 @@
 // Copyright (c) vis.gl contributors
 
 import {Device, type RenderPipelineParameters, log} from '@luma.gl/core';
-import {pbrMaterial, ShaderModule} from '@luma.gl/shadertools';
+import {pbrMaterial, skin} from '@luma.gl/shadertools';
 import {Geometry, Model, ModelNode, type ModelProps} from '@luma.gl/engine';
 import {type ParsedPBRMaterial} from '../pbr/pbr-material';
 
 const SHADER = /* WGSL */ `
-layout(0) positions: vec4; // in vec4 POSITION;
+struct VertexInputs {
+  @location(0) positions: vec3f,
+#ifdef HAS_NORMALS
+  @location(1) normals: vec3f,
+#endif
+#ifdef HAS_TANGENTS
+  @location(2) TANGENT: vec4f,
+#endif
+#ifdef HAS_UV
+  @location(3) texCoords: vec2f,
+#endif
+#ifdef HAS_SKIN
+  @location(4) JOINTS_0: vec4u,
+  @location(5) WEIGHTS_0: vec4f,
+#endif
+};
 
-  #ifdef HAS_NORMALS
-    in vec4 normals; // in vec4 NORMAL;
-  #endif
-
-  #ifdef HAS_TANGENTS
-    in vec4 TANGENT;
-  #endif
-
-  #ifdef HAS_UV
-    // in vec2 TEXCOORD_0;
-    in vec2 texCoords;
-  #endif
+struct FragmentInputs {
+  @builtin(position) position: vec4f,
+  @location(0) pbrPosition: vec3f,
+  @location(1) pbrUV: vec2f,
+  @location(2) pbrNormal: vec3f,
+#ifdef HAS_TANGENTS
+  @location(3) pbrTangent: vec4f,
+#endif
+};
 
 @vertex
-  void main(void) {
-    vec4 _NORMAL = vec4(0.);
-    vec4 _TANGENT = vec4(0.);
-    vec2 _TEXCOORD_0 = vec2(0.);
+fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
+  var outputs: FragmentInputs;
+  var position = vec4f(inputs.positions, 1.0);
+  var normal = vec3f(0.0, 0.0, 1.0);
+  var tangent = vec4f(1.0, 0.0, 0.0, 1.0);
+  var uv = vec2f(0.0, 0.0);
 
-    #ifdef HAS_NORMALS
-      _NORMAL = normals;
-    #endif
+#ifdef HAS_NORMALS
+  normal = inputs.normals;
+#endif
+#ifdef HAS_UV
+  uv = inputs.texCoords;
+#endif
+#ifdef HAS_TANGENTS
+  tangent = inputs.TANGENT;
+#endif
+#ifdef HAS_SKIN
+  let skinMatrix = getSkinMatrix(inputs.WEIGHTS_0, inputs.JOINTS_0);
+  position = skinMatrix * position;
+  normal = normalize((skinMatrix * vec4f(normal, 0.0)).xyz);
+#ifdef HAS_TANGENTS
+  tangent = vec4f(normalize((skinMatrix * vec4f(tangent.xyz, 0.0)).xyz), tangent.w);
+#endif
+#endif
 
-    #ifdef HAS_TANGENTS
-      _TANGENT = TANGENT;
-    #endif
+  let worldPosition = pbrProjection.modelMatrix * position;
 
-    #ifdef HAS_UV
-      _TEXCOORD_0 = texCoords;
-    #endif
+#ifdef HAS_NORMALS
+  normal = normalize((pbrProjection.normalMatrix * vec4f(normal, 0.0)).xyz);
+#endif
+#ifdef HAS_TANGENTS
+  let worldTangent = normalize((pbrProjection.modelMatrix * vec4f(tangent.xyz, 0.0)).xyz);
+  outputs.pbrTangent = vec4f(worldTangent, tangent.w);
+#endif
 
-    pbr_setPositionNormalTangentUV(positions, _NORMAL, _TANGENT, _TEXCOORD_0);
-    gl_Position = u_MVPMatrix * positions;
-  }
+  outputs.position = pbrProjection.modelViewProjectionMatrix * position;
+  outputs.pbrPosition = worldPosition.xyz / worldPosition.w;
+  outputs.pbrUV = uv;
+  outputs.pbrNormal = normal;
+  return outputs;
+}
 
 @fragment
-  out vec4 fragmentColor;
-
-  void main(void) {
-    vec3 pos = pbr_vPosition;
-    fragmentColor = pbr_filterColor(vec4(1.0));
-  }
+fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4f {
+  fragmentInputs.pbr_vPosition = inputs.pbrPosition;
+  fragmentInputs.pbr_vUV = inputs.pbrUV;
+  fragmentInputs.pbr_vNormal = inputs.pbrNormal;
+#ifdef HAS_TANGENTS
+  let tangent = normalize(inputs.pbrTangent.xyz);
+  let bitangent = normalize(cross(inputs.pbrNormal, tangent)) * inputs.pbrTangent.w;
+  fragmentInputs.pbr_vTBN = mat3x3f(tangent, bitangent, inputs.pbrNormal);
+#endif
+  return pbr_filterColor(vec4f(1.0));
+}
 `;
 
 // TODO rename attributes to POSITION/NORMAL etc
@@ -76,6 +114,11 @@ const vs = /* glsl */ `\
     in vec2 texCoords;
   #endif
 
+  #ifdef HAS_SKIN
+    in uvec4 JOINTS_0;
+    in vec4 WEIGHTS_0;
+  #endif
+
   void main(void) {
     vec4 _NORMAL = vec4(0.);
     vec4 _TANGENT = vec4(0.);
@@ -93,8 +136,17 @@ const vs = /* glsl */ `\
       _TEXCOORD_0 = texCoords;
     #endif
 
-    pbr_setPositionNormalTangentUV(positions, _NORMAL, _TANGENT, _TEXCOORD_0);
-    gl_Position = pbrProjection.modelViewProjectionMatrix * positions;
+    vec4 pos = positions;
+
+    #ifdef HAS_SKIN
+      mat4 skinMat = getSkinMatrix(WEIGHTS_0, JOINTS_0);
+      pos = skinMat * pos;
+      _NORMAL = skinMat * _NORMAL;
+      _TANGENT = vec4((skinMat * vec4(_TANGENT.xyz, 0.)).xyz, _TANGENT.w);
+    #endif
+
+    pbr_setPositionNormalTangentUV(pos, _NORMAL, _TANGENT, _TEXCOORD_0);
+    gl_Position = pbrProjection.modelViewProjectionMatrix * pos;
   }
 `;
 
@@ -144,7 +196,7 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
     geometry,
     topology: geometry.topology,
     vertexCount,
-    modules: [pbrMaterial as unknown as ShaderModule],
+    modules: [pbrMaterial, skin],
     ...modelOptions,
 
     defines: {...parsedPPBRMaterial.defines, ...modelOptions.defines},

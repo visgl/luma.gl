@@ -108,4 +108,20 @@ export class GroupNode extends ScenegraphNode {
       }
     }
   }
+
+  preorderTraversal(
+    visitor: (node: ScenegraphNode, context: {worldMatrix: Matrix4}) => void,
+    {worldMatrix = new Matrix4()} = {}
+  ) {
+    const modelMatrix = new Matrix4(worldMatrix).multiplyRight(this.matrix);
+    visitor(this, {worldMatrix: modelMatrix});
+
+    for (const child of this.children) {
+      if (child instanceof GroupNode) {
+        child.preorderTraversal(visitor, {worldMatrix: modelMatrix});
+      } else {
+        visitor(child, {worldMatrix: modelMatrix});
+      }
+    }
+  }
 }

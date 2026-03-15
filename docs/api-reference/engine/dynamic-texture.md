@@ -48,6 +48,12 @@ On WebGPU, mipmap generation is owned by `DynamicTexture`.
 
 When `mipmaps: true` is requested on a WebGPU `DynamicTexture`, luma.gl adds the texture usage flags required by the selected mipmap-generation path.
 
+## Compressed textures
+
+`DynamicTexture` is a convenience layer for texture initialization and updates, but compressed texture rules still come from the underlying backend.
+
+For compressed texture alignment, WebGL vs WebGPU behavior, and asset-preparation guidance, see [Using GPU Textures](/docs/api-guide/gpu/gpu-textures#compressed-textures).
+
 ## Types
 
 ```ts

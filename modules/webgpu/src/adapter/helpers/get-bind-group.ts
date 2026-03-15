@@ -75,7 +75,15 @@ function getBindGroupEntries(
   const entries: GPUBindGroupEntry[] = [];
 
   for (const [bindingName, value] of Object.entries(bindings)) {
-    let bindingLayout = getShaderLayoutBinding(shaderLayout, bindingName);
+    const exactBindingLayout = shaderLayout.bindings.find(binding => binding.name === bindingName);
+    let bindingLayout = exactBindingLayout || getShaderLayoutBinding(shaderLayout, bindingName);
+
+    // Mirror the WebGL path: when both `foo` and `fooUniforms` exist in the bindings map,
+    // prefer the exact shader binding name and ignore the alias entry.
+    if (!exactBindingLayout && bindingLayout && bindingLayout.name in bindings) {
+      continue;
+    }
+
     if (bindingLayout) {
       const entry = getBindGroupEntry(value, bindingLayout.location, undefined, bindingName);
       if (entry) {

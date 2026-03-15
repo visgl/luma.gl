@@ -1,4 +1,4 @@
-import React, {FC, useEffect, useRef, useState} from 'react'; // eslint-disable-line
+import React, {CSSProperties, FC, useEffect, useRef, useState} from 'react'; // eslint-disable-line
 import {Device, luma} from '@luma.gl/core';
 import {
   AnimationLoopTemplate,
@@ -49,7 +49,7 @@ type LumaExampleProps = React.PropsWithChildren<{
   template: Function;
   config: unknown;
   directory?: string;
-  style?: CSSStyleDeclaration;
+  style?: CSSProperties;
   container?: string;
 }>;
 
@@ -60,6 +60,18 @@ const defaultProps = {
 const state = {
   supported: true,
   error: null
+};
+
+const EXAMPLE_CONTAINER_STYLE: CSSProperties = {
+  position: 'relative',
+  width: '100%',
+  minHeight: 'calc(100vh - var(--ifm-navbar-height) - 6rem)'
+};
+
+const EXAMPLE_CANVAS_STYLE: CSSProperties = {
+  display: 'block',
+  width: '100%',
+  height: '100%'
 };
 
 export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
@@ -75,7 +87,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
   containerName = props.container || `luma-example-container-${deviceType}`;
 
   useEffect(() => {
-    if (!canvas || usedCanvases.current.get(canvas)) return;
+    if (!canvas || !deviceType || usedCanvases.current.get(canvas)) return;
 
     usedCanvases.current.set(canvas, true);
 
@@ -140,18 +152,23 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
   const info = props.template?.info;
 
   return (
-    <div style={{position: 'relative'}}>
-      <canvas key={deviceType} ref={setCanvas} style={{width: '100%', height: '100%'}} />
+    <div className="luma-example-page" style={{...EXAMPLE_CONTAINER_STYLE, ...props.style}}>
+      <canvas key={deviceType} ref={setCanvas} style={EXAMPLE_CANVAS_STYLE} />
       <div
         style={{
           position: 'absolute',
-          boxShadow: '5px 5px 4px grey',
-          backgroundColor: '#F0F0F0F0',
+          boxSizing: 'border-box',
+          boxShadow: '0 12px 32px rgba(0, 0, 0, 0.28)',
+          backgroundColor: 'rgba(255, 255, 255, 0.96)',
+          borderRadius: 12,
+          color: '#111',
           top: 20,
           right: 20,
-          width: 200,
-          height: 250,
-          padding: 10
+          width: 320,
+          maxWidth: 'calc(100% - 40px)',
+          maxHeight: 'calc(100% - 40px)',
+          overflowY: 'auto',
+          padding: 16
         }}
       >
         <h3>{capitalizeFirstLetters(props.id)}</h3>
