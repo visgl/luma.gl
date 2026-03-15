@@ -28,3 +28,37 @@
   opacity: 1;
   pointer-events: auto;
 }
+
+/* Let embedded example pages use the full docs content width instead of the prose column. */
+.container:has(> [class*='doc-item-component__DemoContainer']) {
+  max-width: none;
+  width: 100%;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+.container:has(.textures-example-page) {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.container:has(.integration-example-page) {
+  max-width: none;
+  width: 100%;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+.container:has(.textures-example-page) > [class*='doc-item-component__DemoContainer'] {
+  height: calc(100vh - var(--ifm-navbar-height));
+}
+
+.textures-example-page {
+  width: 100%;
+}
+
+body:has(.luma-example-page) .theme-layout-footer,
+body:has(.textures-example-page) .theme-layout-footer,
+body:has(.integration-example-page) .theme-layout-footer {
+  display: none;
+}

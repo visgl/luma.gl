@@ -6,7 +6,8 @@ import {type TypedArray} from '@math.gl/types';
 import {type Device} from '../device';
 import {
   type TextureFormat,
-  type TextureMemoryLayout
+  type TextureMemoryLayout,
+  type TextureFormatInfo
 } from '../../shadertypes/textures/texture-formats';
 import {type ExternalImage} from '../../image-utils/image-types';
 import {type TextureView, type TextureViewProps} from './texture-view';
@@ -58,6 +59,14 @@ export type CopyImageDataOptions = {
   bytesPerRow?: number;
   /** Number or rows per image (needed if multiple images are being set) */
   rowsPerImage?: number;
+  /** Width to copy */
+  width?: number;
+  /** Height to copy */
+  height?: number;
+  /** Copy depth or number of layers */
+  depthOrArrayLayers?: number;
+  /** @deprecated Use `depthOrArrayLayers` */
+  depth?: number;
   /** Start copying into offset x (default 0) */
   x?: number;
   /** Start copying into offset y (default 0) */
@@ -71,35 +80,57 @@ export type CopyImageDataOptions = {
 };
 
 export type TextureReadOptions = {
+  /** Start reading from offset x (default 0) */
   x?: number;
+  /** Start reading from offset y (default 0) */
   y?: number;
+  /** Start reading from layer / depth slice z (default 0) */
   z?: number;
+  /** Width of the region to read. Defaults to the mip width. */
   width?: number;
+  /** Height of the region to read. Defaults to the mip height. */
   height?: number;
+  /** Number of array layers or depth slices to read. Defaults to 1. */
   depthOrArrayLayers?: number;
+  /** Which mip-level to read from (default 0) */
   mipLevel?: number;
+  /** When reading from depth stencil textures (default 'all') */
   aspect?: 'all' | 'stencil-only' | 'depth-only';
 };
 
 export type TextureWriteOptions = {
+  /** Offset into the source data or buffer, in bytes. */
+  byteOffset?: number;
+  /** The stride, in bytes, between successive texel rows. */
+  bytesPerRow?: number;
+  /** The number of rows that make up one image when writing multiple layers or slices. */
+  rowsPerImage?: number;
+  /** Start writing into offset x (default 0) */
   x?: number;
+  /** Start writing into offset y (default 0) */
   y?: number;
+  /** Start writing into layer / depth slice z (default 0) */
   z?: number;
+  /** Width of the region to write. Defaults to the mip width. */
   width?: number;
+  /** Height of the region to write. Defaults to the mip height. */
   height?: number;
+  /** Number of array layers or depth slices to write. Defaults to 1, or the full mip depth for 3D textures. */
   depthOrArrayLayers?: number;
+  /** Which mip-level to write into (default 0) */
   mipLevel?: number;
+  /** When writing into depth stencil textures (default 'all') */
   aspect?: 'all' | 'stencil-only' | 'depth-only';
 };
 
-const BASE_DIMENSIONS: Record<string, '1d' | '2d' | '3d'> = {
+const BASE_DIMENSIONS = {
   '1d': '1d',
   '2d': '2d',
   '2d-array': '2d',
   cube: '2d',
   'cube-array': '2d',
   '3d': '3d'
-};
+} as const satisfies Record<string, '1d' | '2d' | '3d'>;
 
 /** Texture properties */
 export type TextureProps = ResourceProps & {
@@ -248,8 +279,18 @@ export abstract class Texture extends Resource<TextureProps> {
   /** Copy an image (e.g an ImageBitmap) into the texture */
   abstract copyExternalImage(options: CopyExternalImageOptions): {width: number; height: number};
 
-  /** Copy raw image data (bytes) into the texture */
-  abstract copyImageData(options: CopyImageDataOptions): void;
+  /**
+   * Copy raw image data (bytes) into the texture.
+   * @deprecated Use writeData()
+   */
+  copyImageData(options: CopyImageDataOptions): void {
+    const {data, depth, ...writeOptions} = options;
+    const normalizedWriteOptions = this._normalizeTextureWriteOptions({
+      ...writeOptions,
+      depthOrArrayLayers: writeOptions.depthOrArrayLayers ?? depth
+    });
+    this.writeData(data, normalizedWriteOptions);
+  }
 
   /**
    * Calculates the memory layout of the texture, required when reading and writing data.
@@ -298,6 +339,8 @@ export abstract class Texture extends Resource<TextureProps> {
   /**
    * Writes an GPU Buffer into a texture.
    *
+   * @param buffer - Source GPU buffer.
+   * @param options - Destination subresource, extent, and source layout options.
    * @note The memory layout of the texture data is determined by the texture format and dimensions.
    * @note The application can call Texture.computeMemoryLayout() to compute the layout.
    */
@@ -308,10 +351,15 @@ export abstract class Texture extends Resource<TextureProps> {
   /**
    * Writes an array buffer into a texture.
    *
+   * @param data - Source texel data.
+   * @param options - Destination subresource, extent, and source layout options.
    * @note The memory layout of the texture data is determined by the texture format and dimensions.
    * @note The application can call Texture.computeMemoryLayout() to compute the layout.
    */
-  writeData(data: ArrayBuffer | ArrayBufferView, options?: TextureWriteOptions): void {
+  writeData(
+    data: ArrayBuffer | SharedArrayBuffer | ArrayBufferView,
+    options?: TextureWriteOptions
+  ): void {
     throw new Error('readBuffer not implemented');
   }
 
@@ -383,49 +431,183 @@ export abstract class Texture extends Resource<TextureProps> {
   }
 
   _normalizeCopyImageDataOptions(options_: CopyImageDataOptions): Required<CopyImageDataOptions> {
-    const {width, height, depth} = this;
-    const options = {...Texture.defaultCopyDataOptions, width, height, depth, ...options_};
-
-    const info = this.device.getTextureFormatInfo(this.format);
-    if (!options_.bytesPerRow && !info.bytesPerPixel) {
-      throw new Error(`bytesPerRow must be provided for texture format ${this.format}`);
-    }
-    options.bytesPerRow = options_.bytesPerRow || width * (info.bytesPerPixel || 4);
-    options.rowsPerImage = options_.rowsPerImage || height;
-
-    // WebGL will error if we try to copy outside the bounds of the texture
-    // options.width = Math.min(options.width, this.width - options.x);
-    // options.height = Math.min(options.height, this.height - options.y);
-    return options;
+    const {data, depth, ...writeOptions} = options_;
+    const options = this._normalizeTextureWriteOptions({
+      ...writeOptions,
+      depthOrArrayLayers: writeOptions.depthOrArrayLayers ?? depth
+    });
+    return {data, depth: options.depthOrArrayLayers, ...options};
   }
 
   _normalizeCopyExternalImageOptions(
     options_: CopyExternalImageOptions
   ): Required<CopyExternalImageOptions> {
+    const optionsWithoutUndefined = Texture._omitUndefined(options_);
+    const mipLevel = optionsWithoutUndefined.mipLevel ?? 0;
+    const mipLevelSize = this._getMipLevelSize(mipLevel);
     const size = this.device.getExternalImageSize(options_.image);
-    const options = {...Texture.defaultCopyExternalImageOptions, ...size, ...options_};
+    const options = {
+      ...Texture.defaultCopyExternalImageOptions,
+      ...mipLevelSize,
+      ...size,
+      ...optionsWithoutUndefined
+    };
     // WebGL will error if we try to copy outside the bounds of the texture
-    options.width = Math.min(options.width, this.width - options.x);
-    options.height = Math.min(options.height, this.height - options.y);
+    options.width = Math.min(options.width, mipLevelSize.width - options.x);
+    options.height = Math.min(options.height, mipLevelSize.height - options.y);
+    options.depth = Math.min(options.depth, mipLevelSize.depthOrArrayLayers - options.z);
     return options;
   }
 
   _normalizeTextureReadOptions(options_: TextureReadOptions): Required<TextureReadOptions> {
-    const {width, height} = this;
-    const options = {...Texture.defaultTextureReadOptions, width, height, ...options_};
+    const optionsWithoutUndefined = Texture._omitUndefined(options_);
+    const mipLevel = optionsWithoutUndefined.mipLevel ?? 0;
+    const mipLevelSize = this._getMipLevelSize(mipLevel);
+    const options = {
+      ...Texture.defaultTextureReadOptions,
+      ...mipLevelSize,
+      ...optionsWithoutUndefined
+    };
     // WebGL will error if we try to copy outside the bounds of the texture
-    options.width = Math.min(options.width, this.width - options.x);
-    options.height = Math.min(options.height, this.height - options.y);
+    options.width = Math.min(options.width, mipLevelSize.width - options.x);
+    options.height = Math.min(options.height, mipLevelSize.height - options.y);
+    options.depthOrArrayLayers = Math.min(
+      options.depthOrArrayLayers,
+      mipLevelSize.depthOrArrayLayers - options.z
+    );
     return options;
   }
 
+  /**
+   * Normalizes a texture read request and validates the color-only readback contract used by the
+   * current texture read APIs. Supported dimensions are `2d`, `cube`, `cube-array`,
+   * `2d-array`, and `3d`.
+   *
+   * @throws if the texture format, aspect, or dimension is not supported by the first-pass
+   * color-read implementation.
+   */
+  protected _getSupportedColorReadOptions(
+    options_: TextureReadOptions
+  ): Required<TextureReadOptions> {
+    const options = this._normalizeTextureReadOptions(options_);
+    const formatInfo = textureFormatDecoder.getInfo(this.format);
+
+    this._validateColorReadAspect(options);
+    this._validateColorReadFormat(formatInfo);
+
+    switch (this.dimension) {
+      case '2d':
+      case 'cube':
+      case 'cube-array':
+      case '2d-array':
+      case '3d':
+        return options;
+
+      default:
+        throw new Error(`${this} color readback does not support ${this.dimension} textures`);
+    }
+  }
+
+  /** Validates that a read request targets the full color aspect of the texture. */
+  protected _validateColorReadAspect(options: Required<TextureReadOptions>): void {
+    if (options.aspect !== 'all') {
+      throw new Error(`${this} color readback only supports aspect 'all'`);
+    }
+  }
+
+  /** Validates that a read request targets an uncompressed color-renderable texture format. */
+  protected _validateColorReadFormat(formatInfo: TextureFormatInfo): void {
+    if (formatInfo.compressed) {
+      throw new Error(
+        `${this} color readback does not support compressed formats (${this.format})`
+      );
+    }
+
+    switch (formatInfo.attachment) {
+      case 'color':
+        return;
+
+      case 'depth':
+        throw new Error(`${this} color readback does not support depth formats (${this.format})`);
+
+      case 'stencil':
+        throw new Error(`${this} color readback does not support stencil formats (${this.format})`);
+
+      case 'depth-stencil':
+        throw new Error(
+          `${this} color readback does not support depth-stencil formats (${this.format})`
+        );
+
+      default:
+        throw new Error(`${this} color readback does not support format ${this.format}`);
+    }
+  }
+
   _normalizeTextureWriteOptions(options_: TextureWriteOptions): Required<TextureWriteOptions> {
-    const {width, height} = this;
-    const options = {...Texture.defaultTextureReadOptions, width, height, ...options_};
-    // WebGL will error if we try to copy outside the bounds of the texture
-    options.width = Math.min(options.width, this.width - options.x);
-    options.height = Math.min(options.height, this.height - options.y);
+    const optionsWithoutUndefined = Texture._omitUndefined(options_);
+    const mipLevel = optionsWithoutUndefined.mipLevel ?? 0;
+    const mipLevelSize = this._getMipLevelSize(mipLevel);
+    const options = {
+      ...Texture.defaultTextureWriteOptions,
+      ...mipLevelSize,
+      ...optionsWithoutUndefined
+    };
+
+    options.width = Math.min(options.width, mipLevelSize.width - options.x);
+    options.height = Math.min(options.height, mipLevelSize.height - options.y);
+    options.depthOrArrayLayers = Math.min(
+      options.depthOrArrayLayers,
+      mipLevelSize.depthOrArrayLayers - options.z
+    );
+
+    const layout = textureFormatDecoder.computeMemoryLayout({
+      format: this.format,
+      width: options.width,
+      height: options.height,
+      depth: options.depthOrArrayLayers,
+      byteAlignment: this.byteAlignment
+    });
+
+    const minimumBytesPerRow = layout.bytesPerPixel * options.width;
+    options.bytesPerRow = optionsWithoutUndefined.bytesPerRow ?? layout.bytesPerRow;
+    options.rowsPerImage = optionsWithoutUndefined.rowsPerImage ?? options.height;
+
+    if (options.bytesPerRow < minimumBytesPerRow) {
+      throw new Error(
+        `bytesPerRow (${options.bytesPerRow}) must be at least ${minimumBytesPerRow} for ${this.format}`
+      );
+    }
+    if (options.rowsPerImage < options.height) {
+      throw new Error(
+        `rowsPerImage (${options.rowsPerImage}) must be at least ${options.height} for ${this.format}`
+      );
+    }
+
+    const bytesPerPixel = this.device.getTextureFormatInfo(this.format).bytesPerPixel;
+    if (bytesPerPixel && options.bytesPerRow % bytesPerPixel !== 0) {
+      throw new Error(
+        `bytesPerRow (${options.bytesPerRow}) must be a multiple of bytesPerPixel (${bytesPerPixel}) for ${this.format}`
+      );
+    }
+
     return options;
+  }
+
+  protected _getMipLevelSize(
+    mipLevel: number
+  ): Required<Pick<TextureReadOptions, 'width' | 'height' | 'depthOrArrayLayers'>> {
+    const width = Math.max(1, this.width >> mipLevel);
+    const height = this.baseDimension === '1d' ? 1 : Math.max(1, this.height >> mipLevel);
+    const depthOrArrayLayers =
+      this.dimension === '3d' ? Math.max(1, this.depth >> mipLevel) : this.depth;
+
+    return {width, height, depthOrArrayLayers};
+  }
+
+  protected static _omitUndefined<T extends object>(options: T): Partial<T> {
+    return Object.fromEntries(
+      Object.entries(options).filter(([, value]) => value !== undefined)
+    ) as Partial<T>;
   }
 
   static override defaultProps: Required<TextureProps> = {
@@ -448,6 +630,10 @@ export abstract class Texture extends Resource<TextureProps> {
     byteOffset: 0,
     bytesPerRow: undefined!,
     rowsPerImage: undefined!,
+    width: undefined!,
+    height: undefined!,
+    depthOrArrayLayers: undefined!,
+    depth: 1,
     mipLevel: 0,
     x: 0,
     y: 0,
@@ -474,6 +660,20 @@ export abstract class Texture extends Resource<TextureProps> {
   };
 
   protected static defaultTextureReadOptions: Required<TextureReadOptions> = {
+    x: 0,
+    y: 0,
+    z: 0,
+    width: undefined!,
+    height: undefined!,
+    depthOrArrayLayers: 1,
+    mipLevel: 0,
+    aspect: 'all'
+  };
+
+  protected static defaultTextureWriteOptions: Required<TextureWriteOptions> = {
+    byteOffset: 0,
+    bytesPerRow: undefined!,
+    rowsPerImage: undefined!,
     x: 0,
     y: 0,
     z: 0,

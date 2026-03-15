@@ -24,6 +24,12 @@ export class WEBGLRenderPass extends RenderPass {
     super(device, props);
     this.device = device;
 
+    if (!props?.framebuffer) {
+      // Default-framebuffer rendering bypasses CanvasContext.getCurrentFramebuffer(),
+      // so flush any deferred canvas resize before deriving viewport state.
+      device.getDefaultCanvasContext()._resizeDrawingBufferIfNeeded();
+    }
+
     // If no viewport is provided, apply reasonably defaults
     let viewport: NumberArray4 | undefined;
     if (!props?.parameters?.viewport) {

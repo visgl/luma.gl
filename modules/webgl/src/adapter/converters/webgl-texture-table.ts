@@ -237,8 +237,8 @@ export const WEBGL_TEXTURE_FORMATS: Record<TextureFormat, WebGLFormatInfo> = {
   'astc-8x6-unorm-srgb': {gl: GL.COMPRESSED_SRGB8_ALPHA8_ASTC_8x6_KHR},
   'astc-8x8-unorm': {gl: GL.COMPRESSED_RGBA_ASTC_8x8_KHR},
   'astc-8x8-unorm-srgb': {gl: GL.COMPRESSED_SRGB8_ALPHA8_ASTC_8x8_KHR},
-  'astc-10x5-unorm': {gl: GL.COMPRESSED_RGBA_ASTC_10x10_KHR},
-  'astc-10x5-unorm-srgb': {gl: GL.COMPRESSED_SRGB8_ALPHA8_ASTC_10x10_KHR},
+  'astc-10x5-unorm': {gl: GL.COMPRESSED_RGBA_ASTC_10x5_KHR},
+  'astc-10x5-unorm-srgb': {gl: GL.COMPRESSED_SRGB8_ALPHA8_ASTC_10x5_KHR},
   'astc-10x6-unorm': {gl: GL.COMPRESSED_RGBA_ASTC_10x6_KHR},
   'astc-10x6-unorm-srgb': {gl: GL.COMPRESSED_SRGB8_ALPHA8_ASTC_10x6_KHR},
   'astc-10x8-unorm': {gl: GL.COMPRESSED_RGBA_ASTC_10x8_KHR},
@@ -254,7 +254,7 @@ export const WEBGL_TEXTURE_FORMATS: Record<TextureFormat, WebGLFormatInfo> = {
 
   'pvrtc-rgb4unorm-webgl': {gl: GL.COMPRESSED_RGB_PVRTC_4BPPV1_IMG},
   'pvrtc-rgba4unorm-webgl': {gl: GL.COMPRESSED_RGBA_PVRTC_4BPPV1_IMG},
-  'pvrtc-rbg2unorm-webgl': {gl: GL.COMPRESSED_RGB_PVRTC_2BPPV1_IMG},
+  'pvrtc-rgb2unorm-webgl': {gl: GL.COMPRESSED_RGB_PVRTC_2BPPV1_IMG},
   'pvrtc-rgba2unorm-webgl': {gl: GL.COMPRESSED_RGBA_PVRTC_2BPPV1_IMG},
 
   // WEBGL_compressed_texture_etc1
@@ -306,6 +306,13 @@ export function getTextureFormatCapabilitiesWebGL(
 
   if (webglFormatInfo?.x) {
     supported = supported && Boolean(getWebGLExtension(gl, webglFormatInfo.x, extensions));
+  }
+
+  // WebGL2 exposes STENCIL_INDEX8 for renderbuffers, but standalone stencil textures are not
+  // valid texture storage targets. Report them as unsupported texture formats to avoid invalid
+  // constructor paths and misleading capability checks.
+  if (formatSupport.format === 'stencil8') {
+    supported = false;
   }
 
   return {

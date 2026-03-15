@@ -107,6 +107,7 @@ export function parsePBRMaterial(
   if (attributes['NORMAL']) parsedMaterial.defines['HAS_NORMALS'] = true;
   if (attributes['TANGENT'] && options?.useTangents) parsedMaterial.defines['HAS_TANGENTS'] = true;
   if (attributes['TEXCOORD_0']) parsedMaterial.defines['HAS_UV'] = true;
+  if (attributes['JOINTS_0'] && attributes['WEIGHTS_0']) parsedMaterial.defines['HAS_SKIN'] = true;
   if (attributes['COLOR_0']) parsedMaterial.defines['HAS_COLORS'] = true;
 
   if (options?.imageBasedLightingEnvironment) parsedMaterial.defines['USE_IBL'] = true;

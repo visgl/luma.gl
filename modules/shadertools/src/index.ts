@@ -70,6 +70,7 @@ export {fp64, fp64arithmetic} from './modules/math/fp64/fp64';
 // export {projection} from './modules/engine/project/project';
 export type {PickingProps, PickingUniforms} from './modules/engine/picking/picking';
 export {picking} from './modules/engine/picking/picking';
+export {skin} from './modules/engine/skin/skin';
 
 // lighting
 export {

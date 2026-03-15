@@ -1,10 +1,25 @@
 # luma.gl CHANGELOG
 
-## v9.2
+## v9.3
+
+### v9.3.0-alpha.4
+
+- feat(engine): Programmatic mipmap generation for WebGPU (#2272)
+- fix(core): Prevent crash in CanvasContext with undefined entry.contentBoxSize  (#2524)
 
 ### v9.3.0-alpha.3
 
-- fix
+- chore: TypeScript noUncheckedIndexedAccess - partial fixes (#2383)
+- fix(webgl): Resize default framebuffer before rendering (#2523)
+- chore(webgl): Use WebGL context helper for device access and initialize device slot (#2500)
+- fix(engine): Prevent duplicate context creation in React (#2522)
+- Move WebGL extension cache to gl.luma.extensions (#2498)
+- fix(webgpu): WebGPUBuffer byteOffset handling (#2521)
+- fix(gltf): Default to LINEAR filtering (#2519)
+- fix(gltf): add HAS_COLORS define when COLOR_0 attribute is present (#2503)
+- chore: bump probe.gl (#2511)
+- fix(core): nicer debug modal (#2515)
+- fix: correct argument order for uniformBlockBinding in WEBGLRenderPipeline
 
 ### v9.3.0-alpha.2
 

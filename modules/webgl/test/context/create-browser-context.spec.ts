@@ -90,7 +90,11 @@ test('createBrowserContext falls back to software renderer', t => {
 
   t.equals(context, gl, 'returns context from second creation attempt');
   t.equals(creationCalls, 2, 'attempts creation twice before succeeding');
-  t.deepEquals(gl.luma, {softwareRenderer: true}, 'marks context as software renderer');
+  t.equals(
+    (gl.luma as {softwareRenderer?: boolean} | undefined)?.softwareRenderer,
+    true,
+    'marks context as software renderer'
+  );
   t.equals(
     mock.getListenerCount('webglcontextcreationerror'),
     0,

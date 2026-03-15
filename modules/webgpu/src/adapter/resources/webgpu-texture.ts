@@ -3,7 +3,6 @@ import {
   type TextureProps,
   type TextureViewProps,
   type CopyExternalImageOptions,
-  type CopyImageDataOptions,
   type TextureReadOptions,
   type TextureWriteOptions,
   type SamplerProps,
@@ -126,38 +125,6 @@ export class WebGPUTexture extends Texture {
     return {width: options.width, height: options.height};
   }
 
-  copyImageData(options_: CopyImageDataOptions): void {
-    const {width, height, depth} = this;
-    const options = this._normalizeCopyImageDataOptions(options_);
-    this.device.pushErrorScope('validation');
-
-    this.device.handle.queue.writeTexture(
-      // destination: GPUImageCopyTexture
-      {
-        // texture subresource
-        texture: this.handle,
-        mipLevel: options.mipLevel,
-        aspect: options.aspect,
-        // origin to write to
-        origin: [options.x, options.y, options.z]
-      },
-      // data
-      options.data,
-      // dataLayout: GPUImageDataLayout
-      {
-        offset: options.byteOffset,
-        bytesPerRow: options.bytesPerRow,
-        rowsPerImage: options.rowsPerImage
-      },
-      // size: GPUExtent3D - extents of the content to write
-      [width, height, depth]
-    );
-    this.device.popErrorScope((error: GPUError) => {
-      this.device.reportError(new Error(`copyImageData: ${error.message}`), this)();
-      this.device.debug();
-    });
-  }
-
   override generateMipmapsWebGL(): void {
     log.warn(`${this}: generateMipmaps not supported in WebGPU`)();
   }
@@ -175,18 +142,10 @@ export class WebGPUTexture extends Texture {
   }
 
   override readBuffer(options: TextureReadOptions = {}, buffer?: Buffer): Buffer {
-    const {
-      x = 0,
-      y = 0,
-      z = 0,
-      width = this.width,
-      height = this.height,
-      depthOrArrayLayers = this.depth,
-      mipLevel = 0,
-      aspect = 'all'
-    } = options;
+    const {x, y, z, width, height, depthOrArrayLayers, mipLevel, aspect} =
+      this._getSupportedColorReadOptions(options);
 
-    const layout = this.computeMemoryLayout(options);
+    const layout = this.computeMemoryLayout({x, y, z, width, height, depthOrArrayLayers, mipLevel});
 
     const {bytesPerRow, rowsPerImage, byteLength} = layout;
 
@@ -197,6 +156,13 @@ export class WebGPUTexture extends Texture {
         byteLength,
         usage: Buffer.COPY_DST | Buffer.MAP_READ
       });
+
+    if (readBuffer.byteLength < byteLength) {
+      throw new Error(
+        `${this} readBuffer target is too small (${readBuffer.byteLength} < ${byteLength})`
+      );
+    }
+
     const gpuReadBuffer = readBuffer.handle as GPUBuffer;
 
     // Record commands to copy from the texture to the buffer.
@@ -248,24 +214,21 @@ export class WebGPUTexture extends Texture {
     return data.buffer as ArrayBuffer;
   }
 
-  override writeBuffer(buffer: Buffer, options: TextureWriteOptions = {}) {
+  override writeBuffer(buffer: Buffer, options_: TextureWriteOptions = {}) {
+    const options = this._normalizeTextureWriteOptions(options_);
     const {
-      x = 0,
-      y = 0,
-      z = 0,
-      width = this.width,
-      height = this.height,
-      depthOrArrayLayers = this.depth,
-      mipLevel = 0,
-      aspect = 'all'
+      x,
+      y,
+      z,
+      width,
+      height,
+      depthOrArrayLayers,
+      mipLevel,
+      aspect,
+      byteOffset,
+      bytesPerRow,
+      rowsPerImage
     } = options;
-
-    const layout = this.computeMemoryLayout(options);
-
-    // Get the data on the CPU.
-    // await buffer.mapAndReadAsync();
-
-    const {bytesPerRow, rowsPerImage} = layout;
 
     const gpuDevice = this.device.handle;
 
@@ -274,7 +237,7 @@ export class WebGPUTexture extends Texture {
     commandEncoder.copyBufferToTexture(
       {
         buffer: buffer.handle as GPUBuffer,
-        offset: 0,
+        offset: byteOffset,
         bytesPerRow,
         rowsPerImage
       },
@@ -294,29 +257,47 @@ export class WebGPUTexture extends Texture {
     });
   }
 
-  override writeData(data: ArrayBuffer | ArrayBufferView, options: TextureWriteOptions = {}): void {
+  override writeData(
+    data: ArrayBuffer | SharedArrayBuffer | ArrayBufferView,
+    options_: TextureWriteOptions = {}
+  ): void {
     const device = this.device;
-
+    const options = this._normalizeTextureWriteOptions(options_);
     const {
-      x = 0,
-      y = 0,
-      z = 0,
-      width = this.width,
-      height = this.height,
-      depthOrArrayLayers = this.depth,
-      mipLevel = 0,
-      aspect = 'all'
+      x,
+      y,
+      z,
+      width,
+      height,
+      depthOrArrayLayers,
+      mipLevel,
+      aspect,
+      byteOffset,
+      bytesPerRow: normalizedBytesPerRow,
+      rowsPerImage: normalizedRowsPerImage
     } = options;
+    const source = data as GPUAllowSharedBufferSource;
+    const formatInfo = this.device.getTextureFormatInfo(this.format);
+    let bytesPerRow = normalizedBytesPerRow;
+    let rowsPerImage = normalizedRowsPerImage;
+    let copyWidth = width;
+    let copyHeight = height;
 
-    const layout = textureFormatDecoder.computeMemoryLayout({
-      format: this.format,
-      width: this.width,
-      height: this.height,
-      depth: this.depth,
-      byteAlignment: this.byteAlignment
-    });
-
-    const {bytesPerRow, rowsPerImage} = layout;
+    if (formatInfo.compressed) {
+      const blockWidth = formatInfo.blockWidth || 1;
+      const blockHeight = formatInfo.blockHeight || 1;
+      const sourceLayout = textureFormatDecoder.computeMemoryLayout({
+        format: this.format,
+        width,
+        height,
+        depth: depthOrArrayLayers,
+        byteAlignment: 1
+      });
+      bytesPerRow = options_.bytesPerRow ?? sourceLayout.bytesPerRow;
+      rowsPerImage = options_.rowsPerImage ?? sourceLayout.rowsPerImage;
+      copyWidth = Math.ceil(width / blockWidth) * blockWidth;
+      copyHeight = Math.ceil(height / blockHeight) * blockHeight;
+    }
 
     this.device.pushErrorScope('validation');
     device.handle.queue.writeTexture(
@@ -326,13 +307,13 @@ export class WebGPUTexture extends Texture {
         aspect,
         origin: {x, y, z}
       },
-      data,
+      source,
       {
-        offset: 0,
+        offset: byteOffset,
         bytesPerRow,
         rowsPerImage
       },
-      {width, height, depthOrArrayLayers}
+      {width: copyWidth, height: copyHeight, depthOrArrayLayers}
     );
     this.device.popErrorScope((error: GPUError) => {
       this.device.reportError(new Error(`${this} writeData: ${error.message}`), this)();

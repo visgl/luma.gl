@@ -8,6 +8,8 @@ import type {
   DeviceInfo,
   DeviceTextureFormatCapabilities,
   CanvasContextProps,
+  PresentationContextProps,
+  PresentationContext,
   Buffer,
   Texture,
   Framebuffer,
@@ -36,10 +38,12 @@ import {Device, CanvasContext, log} from '@luma.gl/core';
 import type {GLExtensions} from '@luma.gl/constants';
 import {WebGLStateTracker} from '../context/state-tracker/webgl-state-tracker';
 import {createBrowserContext} from '../context/helpers/create-browser-context';
+import {getWebGLContextData} from '../context/helpers/webgl-context-data';
 import {getDeviceInfo} from './device-helpers/webgl-device-info';
 import {WebGLDeviceFeatures} from './device-helpers/webgl-device-features';
 import {WebGLDeviceLimits} from './device-helpers/webgl-device-limits';
 import {WebGLCanvasContext} from './webgl-canvas-context';
+import {WebGLPresentationContext} from './webgl-presentation-context';
 import type {Spector} from '../context/debug/spector-types';
 import {initializeSpectorJS} from '../context/debug/spector';
 import {makeDebugContext} from '../context/debug/webgl-developer-tools';
@@ -70,6 +74,13 @@ import {getWebGLExtension} from '../context/helpers/webgl-extensions';
 
 /** WebGPU style Device API for a WebGL context */
 export class WebGLDevice extends Device {
+  static getDeviceFromContext(gl: WebGL2RenderingContext | null): WebGLDevice | null {
+    if (!gl) {
+      return null;
+    }
+    // @ts-expect-error Ingore WebGL2RenderingContext type
+    return gl.luma?.device ?? null;
+  }
   // Public `Device` API
 
   /** type of this device */
@@ -100,7 +111,7 @@ export class WebGLDevice extends Device {
   _constants: (TypedArray | null)[];
 
   /** State used by luma.gl classes - TODO - not used? */
-  readonly _extensions: GLExtensions = {};
+  readonly extensions!: GLExtensions;
   _polyfilled: boolean = false;
 
   /** Instance of Spector.js (if initialized) */
@@ -141,7 +152,8 @@ export class WebGLDevice extends Device {
     // Note that this can be avoided in webgl2adapter.create() if
     // DeviceProps._reuseDevices is set.
     // @ts-expect-error device is attached to context
-    let device: WebGLDevice | undefined = canvasContextProps.canvas?.gl?.device;
+    const existingContext = canvasContextProps.canvas?.gl ?? null;
+    let device: WebGLDevice | null = WebGLDevice.getDeviceFromContext(existingContext);
     if (device) {
       throw new Error(`WebGL context already attached to device ${device.id}`);
     }
@@ -190,8 +202,7 @@ export class WebGLDevice extends Device {
 
     // Note that the browser will only create one WebGL context per canvas.
     // This means that a newly created gl context may already have a device attached to it.
-    // @ts-expect-error luma.gl stores a device reference on the context.
-    device = gl.device;
+    device = WebGLDevice.getDeviceFromContext(gl);
     if (device) {
       if (props._reuseDevices) {
         log.log(
@@ -199,6 +210,9 @@ export class WebGLDevice extends Device {
           `Not creating a new Device, instead returning a reference to Device ${device.id} already attached to WebGL context`,
           device
         )();
+        // Destroy the orphaned canvas context that was created above (line 149)
+        // to prevent its ResizeObserver from firing callbacks with undefined device
+        this.canvasContext.destroy();
         device._reused = true;
         return device;
       }
@@ -214,16 +228,15 @@ export class WebGLDevice extends Device {
     this.spectorJS = initializeSpectorJS({...this.props, gl: this.handle});
 
     // Instrument context
-    (this.gl as any).device = this; // Update GL context: Link webgl context back to device
+    const contextData = getWebGLContextData(this.handle);
+    contextData.device = this; // Update GL context: Link webgl context back to device
+
+    this.extensions = contextData.extensions || (contextData.extensions = {});
 
     // initialize luma Device fields
-    this.info = getDeviceInfo(this.gl, this._extensions);
+    this.info = getDeviceInfo(this.gl, this.extensions);
     this.limits = new WebGLDeviceLimits(this.gl);
-    this.features = new WebGLDeviceFeatures(
-      this.gl,
-      this._extensions,
-      this.props._disabledFeatures
-    );
+    this.features = new WebGLDeviceFeatures(this.gl, this.extensions, this.props._disabledFeatures);
     if (this.props._initializeFeatures) {
       this.features.initializeFeatures();
     }
@@ -265,7 +278,8 @@ export class WebGLDevice extends Device {
     // Therefore we must do nothing in destroy() if props._reuseDevices is true
     if (!this.props._reuseDevices && !this._reused) {
       // Delete the reference to the device that we store on the WebGL context
-      delete (this.gl as any).device;
+      const contextData = getWebGLContextData(this.handle);
+      contextData.device = null;
     }
   }
 
@@ -277,6 +291,10 @@ export class WebGLDevice extends Device {
 
   createCanvasContext(props?: CanvasContextProps): CanvasContext {
     throw new Error('WebGL only supports a single canvas');
+  }
+
+  createPresentationContext(props?: PresentationContextProps): PresentationContext {
+    return new WebGLPresentationContext(this, props || {});
   }
 
   createBuffer(props: BufferProps | ArrayBuffer | ArrayBufferView): WEBGLBuffer {
@@ -337,7 +355,7 @@ export class WebGLDevice extends Device {
    * https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/commit
    * Chrome's offscreen canvas does not require gl.commit
    */
-  submit(commandBuffer: WEBGLCommandBuffer): void {
+  submit(commandBuffer?: WEBGLCommandBuffer): void {
     if (!commandBuffer) {
       commandBuffer = this.commandEncoder.finish();
       this.commandEncoder.destroy();
@@ -407,7 +425,7 @@ export class WebGLDevice extends Device {
   override _getDeviceSpecificTextureFormatCapabilities(
     capabilities: DeviceTextureFormatCapabilities
   ): DeviceTextureFormatCapabilities {
-    return getTextureFormatCapabilitiesWebGL(this.gl, capabilities, this._extensions);
+    return getTextureFormatCapabilitiesWebGL(this.gl, capabilities, this.extensions);
   }
 
   //
@@ -510,8 +528,8 @@ export class WebGLDevice extends Device {
 
   /** Ensure extensions are only requested once */
   getExtension(name: keyof GLExtensions): GLExtensions {
-    getWebGLExtension(this.gl, name, this._extensions);
-    return this._extensions;
+    getWebGLExtension(this.gl, name, this.extensions);
+    return this.extensions;
   }
 
   // INTERNAL SUPPORT METHODS FOR WEBGL RESOURCES

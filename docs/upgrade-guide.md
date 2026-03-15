@@ -22,6 +22,10 @@ v9.2 brings full WebGPU support. Some additional deprecations and breaking chang
 - (`DynamicTexture` was called `AsyncTexture` in 9.1).
 - `device.createTexture()` no longer accepts `props.data`: Use `DynamicTexture` or call `texture.setImageData()`
 - `device.createTexture()` no longer accepts `props.mipmaps`: Use `DynamicTexture` (or call `texture.generateMipmapsWebGL()`)
+- On WebGPU, mipmap generation now lives in `DynamicTexture.generateMipmaps()`, not in core `Texture`.
+- WebGPU `DynamicTexture` uses render passes for `2d`, `2d-array`, `cube`, and `cube-array`, and a compute path for `3d`.
+- Unsupported WebGPU formats now fail explicitly when mipmap generation is requested, instead of silently acting as a no-op.
+- `TextureFormat` Correct the PVRTC 2bpp RGB format spelling from `pvrtc-rbg2unorm-webgl` to `pvrtc-rgb2unorm-webgl`.
 
 **Removal of WebGL uniform support**
 - The transition from uniforms to uniform buffers is complete, and remaining support for non-buffer uniforms has been removed.

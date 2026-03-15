@@ -8,9 +8,9 @@
     "type": "category",
     "label": "Showcase",
     "items": [
+      "showcase/gltf",
       "showcase/instancing",
-      "showcase/persistence",
-      "showcase/postprocessing"
+      "showcase/persistence"
     ]
   },
   {
@@ -20,7 +20,16 @@
       "api/animation",
       "api/cubemap",
       "api/texture-3d",
-      "api/external-webgl-context"
+      "api/texture-tester",
+      "api/multi-canvas"
+    ]
+  },
+  {
+    "type": "category",
+    "label": "Integrations",
+    "items": [
+      "integrations/external-context",
+      "integrations/react-strict-mode"
     ]
   },
   {

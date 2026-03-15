@@ -225,7 +225,7 @@ const TEXTURE_FORMAT_COMPRESSED_TABLE: Readonly<Record<TextureFormatCompressed, 
 
   'pvrtc-rgb4unorm-webgl': {f: texture_compression_pvrtc_webgl},
   'pvrtc-rgba4unorm-webgl': {f: texture_compression_pvrtc_webgl},
-  'pvrtc-rbg2unorm-webgl': {f: texture_compression_pvrtc_webgl},
+  'pvrtc-rgb2unorm-webgl': {f: texture_compression_pvrtc_webgl},
   'pvrtc-rgba2unorm-webgl': {f: texture_compression_pvrtc_webgl},
 
   // WEBGL_compressed_texture_etc1
