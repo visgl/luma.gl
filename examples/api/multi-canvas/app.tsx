@@ -355,13 +355,15 @@ export default class App extends React.PureComponent<AppProps, AppState> {
       >
         <div>
           <p>
-            Rendering to two examples using one shared luma.gl <code>Device</code>.
+            Rendering to two canvases (`HTMLCanvasElement`) using one shared luma.gl <code>Device</code>.
           </p>
-          <p>
-            On WebGL rendering happens in an offscreen canvas, then results are copied into the
-            target canvases via two separate PresentationContexts using{' '}
-            <code>presentationContext.present()</code>.
-          </p>
+          <li>
+            <ul><i>
+              On WebGL rendering happens in an <code>OffscreenCanvas</code>, then results are copied into the
+              target canvases via two separate <code>PresentationContext</code>s using{' '}
+              <code>presentationContext.present()</code>.
+            </i></ul>
+          </li>
           {initializationError ? <p style={{color: '#b00020'}}>{initializationError}</p> : null}
         </div>
         <div

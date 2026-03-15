@@ -90,24 +90,7 @@ test('WebGPUDevice#generateMipmapsWebGPU generates a mip chain', async t => {
     usage: Texture.SAMPLE | Texture.RENDER | Texture.COPY_DST | Texture.COPY_SRC
   });
   texture.writeData(
-    new Uint8Array([
-      255,
-      0,
-      0,
-      255,
-      0,
-      255,
-      0,
-      255,
-      0,
-      0,
-      255,
-      255,
-      255,
-      255,
-      255,
-      255
-    ]),
+    new Uint8Array([255, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255, 255, 255, 255, 255]),
     {width: 2, height: 2}
   );
 

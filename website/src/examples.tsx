@@ -7,7 +7,7 @@ import AnimationApp from '../../examples/api/animation/app';
 import CubemapApp from '../../examples/api/cubemap/app';
 import {renderToDOM as renderMultiCanvasExample} from '../../examples/api/multi-canvas/app';
 import Texture3DApp from '../../examples/api/texture-3d/app';
-import {renderToDOM as renderTextureTesterExample} from '../../examples/api/texture-tester/app';
+import TextureTesterApp from '../../examples/api/texture-tester/app';
 import initializeExternalWebGLContext, {
   ExternalWebGLContextHandle
 } from '../../examples/integrations/external-context/app';
@@ -129,17 +129,9 @@ export const Texture3DExample: React.FC = props => (
 );
 
 export const TextureTesterExample: React.FC = () => {
-  const containerRef = useRef<HTMLDivElement | null>(null);
   const deviceType = useStore(store => store.deviceType);
-
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container || !deviceType) {
-      return undefined;
-    }
-
-    return renderTextureTesterExample(container, {deviceType});
-  }, [deviceType]);
+  const presentationDevice = useStore(store => store.presentationDevice);
+  const presentationDeviceError = useStore(store => store.presentationDeviceError);
 
   return (
     <div
@@ -151,7 +143,13 @@ export const TextureTesterExample: React.FC = () => {
         overflowX: 'hidden'
       }}
     >
-      <div key={deviceType ?? 'pending'} ref={containerRef} />
+      {presentationDeviceError ? (
+        <div>{presentationDeviceError}</div>
+      ) : deviceType && presentationDevice ? (
+        <TextureTesterApp deviceType={deviceType} presentationDevice={presentationDevice} />
+      ) : (
+        <div>Initializing device...</div>
+      )}
     </div>
   );
 };
