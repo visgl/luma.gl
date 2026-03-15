@@ -67,6 +67,75 @@ test('Texture#clone overrides size', async t => {
   t.end();
 });
 
+function getTextureMemoryStats(device: Device): {gpuMemory: number; textureMemory: number} {
+  const stats = device.statsManager.getStats('Resource Memory');
+  return {
+    gpuMemory: stats.get('GPU Memory').count,
+    textureMemory: stats.get('Texture Memory').count
+  };
+}
+
+function getExpectedTextureAllocation(texture: Texture): number {
+  let expectedAllocation = 0;
+
+  for (let mipLevel = 0; mipLevel < texture.mipLevels; mipLevel++) {
+    const width = Math.max(1, texture.width >> mipLevel);
+    const height = texture.baseDimension === '1d' ? 1 : Math.max(1, texture.height >> mipLevel);
+    const depthOrArrayLayers =
+      texture.dimension === '3d' ? Math.max(1, texture.depth >> mipLevel) : texture.depth;
+
+    expectedAllocation += textureFormatDecoder.computeMemoryLayout({
+      format: texture.format,
+      width,
+      height,
+      depth: depthOrArrayLayers,
+      byteAlignment: 1
+    }).byteLength;
+  }
+
+  return expectedAllocation * texture.samples;
+}
+
+test('Texture tracks GPU memory stats', async t => {
+  for (const device of await getTestDevices(['webgl', 'webgpu', 'null'])) {
+    const beforeStats = getTextureMemoryStats(device);
+    const texture = device.createTexture({
+      format: 'rgba8unorm',
+      width: 4,
+      height: 4,
+      mipLevels: 3
+    });
+    const expectedAllocation = getExpectedTextureAllocation(texture);
+    const afterCreateStats = getTextureMemoryStats(device);
+
+    t.equal(
+      afterCreateStats.gpuMemory - beforeStats.gpuMemory,
+      expectedAllocation,
+      `${device.type} Texture updates total GPU Memory`
+    );
+    t.equal(
+      afterCreateStats.textureMemory - beforeStats.textureMemory,
+      expectedAllocation,
+      `${device.type} Texture updates Texture Memory`
+    );
+
+    texture.destroy();
+
+    const afterDestroyStats = getTextureMemoryStats(device);
+    t.equal(
+      afterDestroyStats.gpuMemory,
+      beforeStats.gpuMemory,
+      `${device.type} Texture destroy restores total GPU Memory`
+    );
+    t.equal(
+      afterDestroyStats.textureMemory,
+      beforeStats.textureMemory,
+      `${device.type} Texture destroy restores Texture Memory`
+    );
+  }
+  t.end();
+});
+
 const RGBA8_DATA = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]);
 const TEXTURE_UPLOAD_METHODS = ['writeData', 'copyImageData', 'writeBuffer'] as const;
 type TextureUploadMethod = (typeof TEXTURE_UPLOAD_METHODS)[number];

@@ -82,12 +82,21 @@ export class WebGPUTexture extends Texture {
     // Set initial data
     // Texture base class strips out the data prop from this.props, so we need to handle it here
     this._initializeData(props.data);
+
+    if (!this.props.handle) {
+      this.trackAllocatedMemory(this.getAllocatedByteLength(), 'Texture');
+    }
   }
 
   override destroy(): void {
-    this.handle?.destroy();
-    // @ts-expect-error readonly
-    this.handle = null;
+    if (!this.destroyed && this.handle) {
+      this.removeStats();
+      this.trackDeallocatedMemory('Texture');
+      this.handle.destroy();
+      this.destroyed = true;
+      // @ts-expect-error readonly
+      this.handle = null;
+    }
   }
 
   createView(props: TextureViewProps): WebGPUTextureView {

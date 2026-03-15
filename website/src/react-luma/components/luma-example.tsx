@@ -8,9 +8,10 @@ import {
 } from '@luma.gl/engine';
 import {webgl2Adapter} from '@luma.gl/webgl';
 import {webgpuAdapter} from '@luma.gl/webgpu';
+import {StatsWidget} from '@probe.gl/stats-widget';
+import type {Stat} from '@probe.gl/stats';
 import {DeviceTabs} from './device-tabs';
 
-// import StatsWidget from '@probe.gl/stats-widget';
 // import {VRDisplay} from '@luma.gl/experimental';
 import {useStore} from '../store/device-store';
 
@@ -36,14 +37,27 @@ const STYLES = {
 };
 
 const STAT_STYLES = {
-  position: 'fixed',
+  position: 'relative',
   fontSize: '12px',
-  zIndex: 10000,
   color: '#fff',
   background: '#000',
   padding: '8px',
-  opacity: 0.8
+  opacity: 0.8,
+  borderRadius: '8px',
+  fontFamily: 'monospace'
 };
+
+const ANIMATION_STATS_FORMATTERS = {
+  'Frame Rate': (stat: Stat) => `${stat.name}: ${Math.round(stat.getSampleHz())}fps`,
+  'CPU Time': (stat: Stat) => `${stat.name}: ${stat.getSampleAverageTime().toFixed(2)}ms`,
+  'GPU Time': (stat: Stat) => `${stat.name}: ${stat.getSampleAverageTime().toFixed(2)}ms`
+} as const;
+
+const RESOURCE_STATS_FORMATTERS = {
+  'GPU Memory': 'memory',
+  'Buffer Memory': 'memory',
+  'Texture Memory': 'memory'
+} as const;
 
 type LumaExampleProps = React.PropsWithChildren<{
   id?: string;
@@ -55,6 +69,8 @@ type LumaExampleProps = React.PropsWithChildren<{
   sourcePath?: string;
   style?: CSSProperties;
   container?: string;
+  showStats?: boolean;
+  statsTitle?: string;
 }>;
 
 const defaultProps = {
@@ -247,6 +263,8 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
   const [canvas, setCanvas] = useState<HTMLCanvasElement | null>(null);
   const usedCanvases = useRef(new WeakMap<HTMLCanvasElement>());
   const currentTask = useRef<Promise<void> | null>(null);
+  const statsContainerRef = useRef<HTMLDivElement | null>(null);
+  const statsPanelRef = useRef<HTMLDivElement | null>(null);
 
   /** Type type of the device (WebGL, WebGPU, ...) */
   const deviceType = useStore(store => store.deviceType);
@@ -259,6 +277,8 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
 
     let animationLoop: AnimationLoop | null = null;
     let device: Device | null = null;
+    let statsWidgets: StatsWidget[] = [];
+    let statsIntervalId: number | null = null;
     const asyncCreateLoop = async () => {
       // canvas.style.width = '100%';
       // canvas.style.height = '100%';
@@ -276,6 +296,49 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
         autoResizeViewport: true,
         autoResizeDrawingBuffer: true
       });
+      animationLoop.frameRate.setSampleSize(30);
+      animationLoop.cpuTime.setSampleSize(30);
+      animationLoop.gpuTime.setSampleSize(30);
+
+      if (props.showStats && statsPanelRef.current) {
+        const resourceCounts = luma.stats.get('Resource Counts');
+        const resourceMemory = luma.stats.get('Resource Memory');
+        resourceMemory.get('GPU Memory');
+        resourceMemory.get('Buffer Memory');
+        resourceMemory.get('Texture Memory');
+
+        statsWidgets = [
+          new StatsWidget(animationLoop.stats, {
+            title: props.statsTitle || 'Example Stats',
+            container: statsPanelRef.current,
+            css: STAT_STYLES,
+            formatters: ANIMATION_STATS_FORMATTERS
+          }),
+          new StatsWidget(resourceCounts, {
+            title: 'luma.stats Resource Counts',
+            container: statsPanelRef.current,
+            css: STAT_STYLES
+          }),
+          new StatsWidget(resourceMemory, {
+            title: 'luma.stats Resource Memory',
+            container: statsPanelRef.current,
+            css: STAT_STYLES,
+            formatters: RESOURCE_STATS_FORMATTERS
+          })
+        ];
+        for (const statsWidget of statsWidgets) {
+          statsWidget.setCollapsed(true);
+        }
+
+        const updateStatsWidget = () => {
+          for (const statsWidget of statsWidgets) {
+            statsWidget.update();
+          }
+        };
+
+        updateStatsWidget();
+        statsIntervalId = window.setInterval(updateStatsWidget, 250);
+      }
 
       // Start the actual example
       animationLoop?.start();
@@ -299,6 +362,14 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
     return () => {
       currentTask.current = Promise.resolve(currentTask.current)
         .then(() => {
+          if (statsIntervalId !== null) {
+            window.clearInterval(statsIntervalId);
+            statsIntervalId = null;
+          }
+          for (const statsWidget of statsWidgets) {
+            statsWidget.remove();
+          }
+          statsWidgets = [];
           if (animationLoop) {
             animationLoop.destroy();
             animationLoop = null;
@@ -334,7 +405,25 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
       >
         {info ? <div dangerouslySetInnerHTML={{__html: info}} /> : null}
       </ExampleHeader>
-      <div style={{minHeight: 0}}>
+      <div ref={statsContainerRef} style={{minHeight: 0, position: 'relative'}}>
+        {props.showStats ? (
+          <div
+            ref={statsPanelRef}
+            style={{
+              position: 'absolute',
+              right: '12px',
+              bottom: '12px',
+              zIndex: 10,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px',
+              maxHeight: 'calc(100% - 24px)',
+              overflowY: 'auto',
+              overflowX: 'hidden',
+              alignItems: 'flex-end'
+            }}
+          />
+        ) : null}
         <canvas key={deviceType} ref={setCanvas} style={EXAMPLE_CANVAS_STYLE} />
       </div>
       {props.children}

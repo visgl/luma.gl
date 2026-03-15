@@ -88,6 +88,8 @@ export const AnimationExample: React.FC = props => (
     directory="api"
     template={AnimationApp}
     config={exampleConfig}
+    showStats
+    statsTitle="Animation Stats"
     {...props}
   />
 );

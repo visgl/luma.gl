@@ -195,6 +195,8 @@ export abstract class Texture extends Resource<TextureProps> {
   readonly depth: number;
   /** mip levels in this texture */
   readonly mipLevels: number;
+  /** sample count */
+  readonly samples: number;
   /** Rows are multiples of this length, padded with extra bytes if needed */
   readonly byteAlignment: number;
   /** Default sampler for this texture */
@@ -231,6 +233,7 @@ export abstract class Texture extends Resource<TextureProps> {
     this.height = this.props.height;
     this.depth = this.props.depth;
     this.mipLevels = this.props.mipLevels;
+    this.samples = this.props.samples || 1;
 
     if (this.dimension === 'cube') {
       this.depth = 6;
@@ -611,6 +614,23 @@ export abstract class Texture extends Resource<TextureProps> {
       this.dimension === '3d' ? Math.max(1, this.depth >> mipLevel) : this.depth;
 
     return {width, height, depthOrArrayLayers};
+  }
+
+  protected getAllocatedByteLength(): number {
+    let allocatedByteLength = 0;
+
+    for (let mipLevel = 0; mipLevel < this.mipLevels; mipLevel++) {
+      const {width, height, depthOrArrayLayers} = this._getMipLevelSize(mipLevel);
+      allocatedByteLength += textureFormatDecoder.computeMemoryLayout({
+        format: this.format,
+        width,
+        height,
+        depth: depthOrArrayLayers,
+        byteAlignment: 1
+      }).byteLength;
+    }
+
+    return allocatedByteLength * this.samples;
   }
 
   protected static _omitUndefined<T extends object>(options: T): Partial<T> {

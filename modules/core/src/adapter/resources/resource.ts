@@ -5,6 +5,9 @@
 import type {Device} from '../device';
 import {uid} from '../../utils/uid';
 
+const RESOURCE_COUNTS_STATS = 'Resource Counts';
+const RESOURCE_MEMORY_STATS = 'Resource Memory';
+
 export type ResourceProps = {
   /** Name of resource, mainly for debugging purposes. A unique name will be assigned if not provided */
   id?: string;
@@ -48,6 +51,8 @@ export abstract class Resource<Props extends ResourceProps> {
   destroyed: boolean = false;
   /** For resources that allocate GPU memory */
   private allocatedBytes: number = 0;
+  /** Stats bucket currently holding the tracked allocation */
+  private allocatedBytesName: string | null = null;
   /** Attached resources will be destroyed when this resource is destroyed. Tracks auto-created "sub" resources. */
   private _attachedResources = new Set<Resource<ResourceProps>>();
 
@@ -137,32 +142,45 @@ export abstract class Resource<Props extends ResourceProps> {
 
   /** Called by .destroy() to track object destruction. Subclass must call if overriding destroy() */
   protected removeStats(): void {
-    const stats = this._device.statsManager.getStats('Resource Counts');
+    const stats = this._device.statsManager.getStats(RESOURCE_COUNTS_STATS);
     const name = this[Symbol.toStringTag];
+    stats.get('Resources Active').decrementCount();
     stats.get(`${name}s Active`).decrementCount();
   }
 
   /** Called by subclass to track memory allocations */
   protected trackAllocatedMemory(bytes: number, name = this[Symbol.toStringTag]): void {
-    const stats = this._device.statsManager.getStats('Resource Counts');
+    const stats = this._device.statsManager.getStats(RESOURCE_MEMORY_STATS);
+    if (this.allocatedBytes > 0 && this.allocatedBytesName) {
+      stats.get('GPU Memory').subtractCount(this.allocatedBytes);
+      stats.get(`${this.allocatedBytesName} Memory`).subtractCount(this.allocatedBytes);
+    }
     stats.get('GPU Memory').addCount(bytes);
     stats.get(`${name} Memory`).addCount(bytes);
     this.allocatedBytes = bytes;
+    this.allocatedBytesName = name;
   }
 
   /** Called by subclass to track memory deallocations */
   protected trackDeallocatedMemory(name = this[Symbol.toStringTag]): void {
-    const stats = this._device.statsManager.getStats('Resource Counts');
+    if (this.allocatedBytes === 0) {
+      this.allocatedBytesName = null;
+      return;
+    }
+
+    const stats = this._device.statsManager.getStats(RESOURCE_MEMORY_STATS);
     stats.get('GPU Memory').subtractCount(this.allocatedBytes);
-    stats.get(`${name} Memory`).subtractCount(this.allocatedBytes);
+    stats.get(`${this.allocatedBytesName || name} Memory`).subtractCount(this.allocatedBytes);
     this.allocatedBytes = 0;
+    this.allocatedBytesName = null;
   }
 
   /** Called by resource constructor to track object creation */
   private addStats(): void {
-    const stats = this._device.statsManager.getStats('Resource Counts');
+    const stats = this._device.statsManager.getStats(RESOURCE_COUNTS_STATS);
     const name = this[Symbol.toStringTag];
     stats.get('Resources Created').incrementCount();
+    stats.get('Resources Active').incrementCount();
     stats.get(`${name}s Created`).incrementCount();
     stats.get(`${name}s Active`).incrementCount();
   }

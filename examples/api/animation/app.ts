@@ -258,12 +258,18 @@ Time: <input type="range" id="time" min="0" max="30000" step="1"><BR>
     }
   }
 
-  onRender({device}) {
+  onRender({device, aspect}: AnimationProps) {
     if (this.timeSlider) {
       this.timeSlider.value = this.timeline.getTime();
     }
 
     const modelMatrix = new Matrix4();
+    const projectionMatrix = new Matrix4().perspective({
+      fovy: radians(60),
+      aspect,
+      near: 1,
+      far: 20.0
+    });
 
     for (const cube of this.cubes) {
       const startRotation = cube.keyFrames.getStartData();
@@ -279,7 +285,8 @@ Time: <input type="range" id="time" min="0" max="30000" step="1"><BR>
 
       cube.uniformStore.setUniforms({
         app: {
-          uModel: modelMatrix
+          uModel: modelMatrix,
+          uProjection: projectionMatrix
         }
       });
 
