@@ -79,19 +79,20 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.device = device;
     this.options = loadOptions(this.options);
 
-    window.localStorage[LAST_GLTF_MODEL_STORAGE_KEY] ??= 'CesiumMan';
-    this.loadGLTF(window.localStorage[LAST_GLTF_MODEL_STORAGE_KEY]);
+    const modelStorageKey = this.getModelStorageKey();
+    window.localStorage[modelStorageKey] ??= this.getDefaultModelName();
+    this.loadGLTF(window.localStorage[modelStorageKey]);
 
     setOptionsUI(this.options);
 
     this.fetchModelList().then(models => {
-      const currentModel = window.localStorage[LAST_GLTF_MODEL_STORAGE_KEY];
+      const currentModel = window.localStorage[modelStorageKey];
       setModelMenu(
         models.map(model => model.name),
         currentModel,
         (modelName: string) => {
           this.loadGLTF(modelName);
-          window.localStorage[LAST_GLTF_MODEL_STORAGE_KEY] = modelName;
+          window.localStorage[modelStorageKey] = modelName;
         }
       );
     });
@@ -106,6 +107,14 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
   onFinalize() {
     destroyScenegraphs(this.scenegraphsFromGLTF);
+  }
+
+  getDefaultModelName(): string {
+    return 'CesiumMan';
+  }
+
+  getModelStorageKey(): string {
+    return LAST_GLTF_MODEL_STORAGE_KEY;
   }
 
   onRender({aspect, device, time}: AnimationProps): void {
