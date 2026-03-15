@@ -1,7 +1,23 @@
-import {ExternalContextExample} from '@site/src/examples'
+---
+title: External WebGL Context
+---
 
-# External Context
+import {ExampleHeader} from '@site/src/react-luma';
+import {ExternalContextExample} from '@site/src/examples';
 
-Connect MapLibre's WebGL canvas to luma.gl using the WebGL device attach API.
+<ExampleHeader
+  title="External WebGL Context"
+  sourcePath="examples/integrations/external-context"
+  devices={['webgl2']}
+>
+  <p>
+    This example attaches a <code>WebGLDevice</code> to the WebGL2 context created by MapLibre GL
+    JS and renders a luma.gl overlay through the MapLibre render loop.
+  </p>
+  <p style={{marginBottom: 0}}>
+    The map uses CARTO basemaps that do not require an access token. The overlay uses the map
+    view-projection matrix so it stays anchored in world space.
+  </p>
+</ExampleHeader>
 
 <ExternalContextExample />

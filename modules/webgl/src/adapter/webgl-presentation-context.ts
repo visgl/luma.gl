@@ -51,6 +51,20 @@ export class WebGLPresentationContext extends PresentationContext {
     const defaultCanvasContext = this.device.getDefaultCanvasContext();
     const [sourceWidth, sourceHeight] = defaultCanvasContext.getDrawingBufferSize();
 
+    // Responsive layouts can transiently collapse presentation canvases to 0x0 during reflow.
+    // In that case WebGL has nothing meaningful to present, and drawImage() would throw when the
+    // offscreen source canvas has zero width or height.
+    if (
+      this.drawingBufferWidth === 0 ||
+      this.drawingBufferHeight === 0 ||
+      sourceWidth === 0 ||
+      sourceHeight === 0 ||
+      defaultCanvasContext.canvas.width === 0 ||
+      defaultCanvasContext.canvas.height === 0
+    ) {
+      return;
+    }
+
     if (
       sourceWidth !== this.drawingBufferWidth ||
       sourceHeight !== this.drawingBufferHeight ||

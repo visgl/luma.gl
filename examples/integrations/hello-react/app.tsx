@@ -22,7 +22,6 @@ export default function App() {
   return (
     <div style={{fontFamily: 'sans-serif', padding: '20px'}}>
       <div style={{marginBottom: '20px'}}>
-        <h1 style={{margin: '0 0 20px 0'}}>Hello React</h1>
         <div style={{display: 'flex', gap: '10px', alignItems: 'center'}}>
           <button
             onClick={toggleCube}

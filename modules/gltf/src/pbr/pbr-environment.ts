@@ -10,13 +10,19 @@ import {loadImageTexture} from '@loaders.gl/textures';
 export type PBREnvironment = {
   /** Bi-directional Reflectance Distribution Function (BRDF) lookup table */
   brdfLutTexture: DynamicTexture;
+  /** Diffuse irradiance cubemap. */
   diffuseEnvSampler: DynamicTexture;
+  /** Specular reflection cubemap with mip chain. */
   specularEnvSampler: DynamicTexture;
 };
 
+/** Configuration used to load an image-based lighting environment. */
 export type PBREnvironmentProps = {
+  /** URL of the BRDF lookup texture. */
   brdfLutUrl: string;
+  /** Callback that returns the URL for a diffuse or specular cubemap face and mip level. */
   getTexUrl: (name: string, dir: number, level: number) => string;
+  /** Number of mip levels in the specular environment map. */
   specularMipLevels?: number;
 };
 
@@ -73,6 +79,7 @@ export function loadPBREnvironment(device: Device, props: PBREnvironmentProps): 
 // TODO put somewhere common
 const FACES = [0, 1, 2, 3, 4, 5];
 
+/** Construction props for an asynchronously loaded cubemap. */
 function makeCube(
   device: Device,
   {
@@ -80,8 +87,11 @@ function makeCube(
     getTextureForFace,
     sampler
   }: {
+    /** Debug id assigned to the created texture. */
     id: string;
+    /** Returns the image promise or mip-array promises for one cubemap face. */
     getTextureForFace: (dir: number) => Promise<any> | Promise<any>[];
+    /** Sampler configuration shared across faces. */
     sampler: SamplerProps;
   }
 ): DynamicTexture {

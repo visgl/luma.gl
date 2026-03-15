@@ -265,7 +265,7 @@ copyExternalImage(options: {
 
 Write typed-array data into a texture. This method supports full-texture uploads as well as partial updates to mip levels, cubemap faces, array layers, and 3D slices.
 
-On WebGPU this corresponds closely to `GPUQueue.writeTexture()`. On WebGL, luma.gl emulates the same destination and layout semantics.
+On WebGPU this corresponds closely to `GPUQueue.writeTexture()`. On WebGL, luma.gl emulates the same destination and layout semantics, including padded CPU-side source rows.
 
 Use `writeData()` when the source data already lives on the CPU as a typed array or `ArrayBuffer`. The upload is defined by two things:
 
@@ -287,11 +287,15 @@ Use `writeData()` when the source data already lives on the CPU as a typed array
 
 If layout fields are omitted, luma.gl computes defaults for a tightly packed upload of the requested write region at the requested mip level. This matters for explicit mip uploads: row layout is based on the mip size being written, not the base texture size.
 
+On WebGPU, this is intentionally different from buffer copy paths such as `writeBuffer()` and `readBuffer()`: `writeData()` follows `queue.writeTexture()` semantics and does not implicitly pad rows to `256` bytes.
+
 Use explicit `bytesPerRow` and `rowsPerImage` when:
 
 - rows are padded
 - multiple layers or slices are packed into one source allocation
 - the source data starts at a nonzero `byteOffset`
+
+On WebGL, those fields are also how you upload padded CPU data: luma.gl maps them onto WebGL unpack state so the same source layout can be used on both WebGL and WebGPU.
 
 ```ts
 writeData(
@@ -330,16 +334,28 @@ writeData(
 Example: write a padded `2x2` mip into `mipLevel: 1`
 
 ```ts
-const data = new Uint8Array(256 * 2);
+const data = new Uint8Array(16 * 2);
 
 texture.writeData(data, {
   mipLevel: 1,
   width: 2,
   height: 2,
-  bytesPerRow: 256,
+  bytesPerRow: 16,
   rowsPerImage: 2
 });
 ```
+
+### `readBuffer()`
+
+Copy texture contents into a GPU `Buffer`.
+
+On WebGPU this corresponds closely to `copyTextureToBuffer()`. On WebGL, luma.gl emulates the same subresource targeting semantics.
+
+Use `readBuffer()` when you want a GPU buffer containing texture data, typically for staging, readback pipelines, or explicit post-processing workflows.
+
+Unlike `readDataAsync()`, `readBuffer()` exposes the linear buffer layout directly. On WebGPU, that means the returned layout follows buffer-copy alignment rules rather than tightly packed CPU upload rules.
+
+If you need a matching layout, call `texture.computeMemoryLayout()` for the same region. On WebGPU, the returned `bytesPerRow` is padded for buffer copies, typically to a multiple of `256`.
 
 ### `writeBuffer()`
 
@@ -348,6 +364,10 @@ Copy data from a GPU buffer into a texture. This is the buffer-based counterpart
 On WebGPU this corresponds closely to `copyBufferToTexture()`. On WebGL, luma.gl emulates the same mip, layer, depth-slice, and cubemap-face targeting behavior.
 
 Use `writeBuffer()` when the source data already lives in a GPU `Buffer`, or when your application wants to stage texture uploads through reusable upload buffers.
+
+On WebGPU, `writeBuffer()` uses buffer-copy layout rules. In practice, `bytesPerRow` must satisfy WebGPU's row-alignment requirements, typically a multiple of `256`.
+
+On WebGL, no such `256`-byte rule applies, but the same `bytesPerRow` and `rowsPerImage` fields are still used to describe the source layout.
 
 `writeBuffer()` uses the same destination semantics as `writeData()`:
 
@@ -380,3 +400,5 @@ texture.writeBuffer(uploadBuffer, {
 ### `copyImageData()`
 
 Deprecated compatibility wrapper over `writeData()`. Existing code continues to work, but new code should call `writeData()` directly.
+
+`copyImageData()` inherits the same layout defaults and alignment rules as `writeData()`: tightly packed by default, explicit `bytesPerRow` and `rowsPerImage` only when the CPU-side source data is padded or layered. This applies on both WebGL and WebGPU.

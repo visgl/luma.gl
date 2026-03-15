@@ -2,9 +2,14 @@
 
 <p class="badges">
   <img src="https://img.shields.io/badge/From-v9.3-blue.svg?style=flat-square" alt="From-v9.3" />
+  <img src="https://img.shields.io/badge/Experimental-orange.svg?style=flat-square" alt="Experimental" />
 </p>
 
 `PresentationContext` is intended for multi-canvas presentation workflows that are portable across both WebGPU and WebGL.
+
+:::caution Experimental
+`PresentationContext` and `device.createPresentationContext()` are experimental APIs and may change in a future release.
+:::
 
 ## Usage
 
@@ -93,6 +98,10 @@ Becomes `true` once the initial size is known.
 ### `device.createPresentationContext(props?: PresentationContextProps): PresentationContext`
 
 Creates a presentation context associated with the device.
+
+:::caution Experimental
+This method is experimental and may change in a future release.
+:::
 
 :::info
 `PresentationContext` should not be constructed directly. Use `device.createPresentationContext(...)`.

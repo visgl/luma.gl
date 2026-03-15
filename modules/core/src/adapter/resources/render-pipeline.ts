@@ -79,6 +79,24 @@ export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
   /** The hash of the pipeline */
   hash: string = '';
 
+  /** Whether shader or pipeline compilation/linking is still in progress */
+  get isPending(): boolean {
+    return (
+      this.linkStatus === 'pending' ||
+      this.vs.compilationStatus === 'pending' ||
+      this.fs?.compilationStatus === 'pending'
+    );
+  }
+
+  /** Whether shader or pipeline compilation/linking has failed */
+  get isErrored(): boolean {
+    return (
+      this.linkStatus === 'error' ||
+      this.vs.compilationStatus === 'error' ||
+      this.fs?.compilationStatus === 'error'
+    );
+  }
+
   constructor(device: Device, props: RenderPipelineProps) {
     super(device, props, RenderPipeline.defaultProps);
     this.shaderLayout = this.props.shaderLayout!;

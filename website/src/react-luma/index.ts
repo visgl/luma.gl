@@ -20,4 +20,8 @@ export {
 } from './components/device-info';
 
 // Examples
+export {ExamplePage} from './components/luma-example';
+export {ExampleHeader} from './components/luma-example';
+export {InfoBox} from './components/luma-example';
 export {LumaExample} from './components/luma-example';
+export {ReactExample} from './components/luma-example';

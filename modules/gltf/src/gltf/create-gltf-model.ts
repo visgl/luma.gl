@@ -160,11 +160,17 @@ const fs = /* glsl */ `\
   }
 `;
 
+/** Options used to instantiate a `ModelNode` for one glTF primitive. */
 export type CreateGLTFModelOptions = {
+  /** Optional id assigned to the generated model. */
   id?: string;
+  /** Vertex count override for non-indexed primitives. */
   vertexCount?: number;
+  /** Geometry converted from the glTF primitive. */
   geometry: Geometry;
+  /** Parsed PBR material state for the primitive. */
   parsedPPBRMaterial: ParsedPBRMaterial;
+  /** Additional model props merged into the generated model. */
   modelOptions?: Partial<ModelProps>;
 };
 

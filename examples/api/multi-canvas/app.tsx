@@ -6,7 +6,14 @@ import React from 'react';
 import {createRoot, type Root} from 'react-dom/client';
 
 import {luma, type Device, type PresentationContext} from '@luma.gl/core';
-import {Model, ShaderInputs} from '@luma.gl/engine';
+import {
+  AnimationLoop,
+  AnimationLoopTemplate,
+  Model,
+  ShaderInputs,
+  makeAnimationLoop,
+  type AnimationProps
+} from '@luma.gl/engine';
 import type {ShaderModule} from '@luma.gl/shadertools';
 import {webgl2Adapter} from '@luma.gl/webgl';
 import {webgpuAdapter} from '@luma.gl/webgpu';
@@ -15,6 +22,7 @@ export type DeviceType = 'webgl' | 'webgpu';
 
 type AppProps = {
   deviceType?: DeviceType;
+  presentationDevice?: Device | null;
 };
 
 type AppState = {
@@ -22,34 +30,17 @@ type AppState = {
   isReady: boolean;
 };
 
-type VisualizationUniforms = {
+type AppUniforms = {
   resolution: [number, number];
   time: number;
   speed: number;
-};
-
-type VisualizationSpec = {
-  title: string;
-  description: string;
-  clearColor: [number, number, number, number];
-  fragmentShaderWGSL: string;
-  fragmentShaderGLSL: string;
-  speed: number;
-};
-
-type VisualizationRenderer = {
-  buffer: ReturnType<Device['createBuffer']>;
-  model: Model;
-  presentationContext: PresentationContext;
-  shaderInputs: ShaderInputs<{app: typeof appShaderModule.props}>;
-  spec: VisualizationSpec;
 };
 
 const CANVAS_WIDTH = 420;
 const CANVAS_HEIGHT = 280;
 const FULLSCREEN_POSITIONS = new Float32Array([-1, -1, -1, 1, 1, -1, 1, 1]);
 
-const appShaderModule: ShaderModule<VisualizationUniforms> = {
+const app: ShaderModule<AppUniforms> = {
   name: 'app',
   uniformTypes: {
     resolution: 'vec2<f32>',
@@ -58,13 +49,12 @@ const appShaderModule: ShaderModule<VisualizationUniforms> = {
   }
 };
 
-const VISUALIZATIONS: VisualizationSpec[] = [
-  {
-    title: 'Concentric Waves',
-    description: 'A radial shader rendered into its own PresentationContext-backed canvas.',
-    clearColor: [0.02, 0.03, 0.05, 1],
-    speed: 1.0,
-    fragmentShaderWGSL: /* wgsl */ `\
+const CONCENTRIC_WAVES_TITLE = 'Concentric Waves';
+const CONCENTRIC_WAVES_DESCRIPTION =
+  'A radial shader rendered into its own PresentationContext-backed canvas.';
+const CONCENTRIC_WAVES_CLEAR_COLOR: [number, number, number, number] = [0.02, 0.03, 0.05, 1];
+const CONCENTRIC_WAVES_SPEED = 1.0;
+const CONCENTRIC_WAVES_FRAGMENT_WGSL = /* wgsl */ `\
 @fragment
 fn fragmentMain(inputs: FragmentOutput) -> @location(0) vec4<f32> {
   var centered = inputs.uv * 2.0 - vec2<f32>(1.0, 1.0);
@@ -81,8 +71,8 @@ fn fragmentMain(inputs: FragmentOutput) -> @location(0) vec4<f32> {
 
   return vec4<f32>(color * vignette, 1.0);
 }
-`,
-    fragmentShaderGLSL: /* glsl */ `\
+`;
+const CONCENTRIC_WAVES_FRAGMENT_GLSL = /* glsl */ `\
 #version 300 es
 precision highp float;
 
@@ -110,15 +100,14 @@ void main(void) {
 
   fragColor = vec4(color * vignette, 1.0);
 }
-`
-  },
-  {
-    title: 'Animated Noise',
-    description:
-      'A second visualization presented through a different PresentationContext on the same Device.',
-    clearColor: [0.01, 0.02, 0.02, 1],
-    speed: 1.4,
-    fragmentShaderWGSL: /* wgsl */ `\
+`;
+
+const ANIMATED_NOISE_TITLE = 'Animated Noise';
+const ANIMATED_NOISE_DESCRIPTION =
+  'A second visualization presented through a different PresentationContext on the same Device.';
+const ANIMATED_NOISE_CLEAR_COLOR: [number, number, number, number] = [0.01, 0.02, 0.02, 1];
+const ANIMATED_NOISE_SPEED = 1.4;
+const ANIMATED_NOISE_FRAGMENT_WGSL = /* wgsl */ `\
 fn hash(point: vec2<f32>) -> f32 {
   return fract(sin(dot(point, vec2<f32>(127.1, 311.7))) * 43758.5453123);
 }
@@ -149,8 +138,8 @@ fn fragmentMain(inputs: FragmentOutput) -> @location(0) vec4<f32> {
   let color = baseColor * (0.55 + 0.45 * scan);
   return vec4<f32>(color, 1.0);
 }
-`,
-    fragmentShaderGLSL: /* glsl */ `\
+`;
+const ANIMATED_NOISE_FRAGMENT_GLSL = /* glsl */ `\
 #version 300 es
 precision highp float;
 
@@ -192,9 +181,7 @@ void main(void) {
   vec3 color = baseColor * (0.55 + 0.45 * scan);
   fragColor = vec4(color, 1.0);
 }
-`
-  }
-];
+`;
 
 const FULLSCREEN_SOURCE = /* wgsl */ `\
 struct AppUniforms {
@@ -235,49 +222,6 @@ void main(void) {
 }
 `;
 
-class MultiCanvasRenderer {
-  readonly device: Device;
-  readonly visualizations: VisualizationRenderer[];
-
-  animationFrame: number | null = null;
-  startTime = 0;
-
-  constructor(device: Device, canvases: HTMLCanvasElement[]) {
-    this.device = device;
-    this.visualizations = canvases.map((canvas, index) =>
-      createVisualizationRenderer(device, canvas, VISUALIZATIONS[index])
-    );
-  }
-
-  start(): void {
-    this.startTime = performance.now();
-    this.animationFrame = requestAnimationFrame(this.animate);
-  }
-
-  destroy(): void {
-    if (this.animationFrame !== null) {
-      cancelAnimationFrame(this.animationFrame);
-      this.animationFrame = null;
-    }
-
-    for (const visualization of this.visualizations) {
-      visualization.model.destroy();
-      visualization.buffer.destroy();
-      visualization.presentationContext.destroy();
-    }
-  }
-
-  private animate = (timestamp: number): void => {
-    const time = (timestamp - this.startTime) / 1000;
-
-    for (const visualization of this.visualizations) {
-      renderVisualization(this.device, visualization, time);
-    }
-
-    this.animationFrame = requestAnimationFrame(this.animate);
-  };
-}
-
 export default class App extends React.PureComponent<AppProps, AppState> {
   static defaultProps = {
     deviceType: 'webgl' as DeviceType
@@ -289,7 +233,10 @@ export default class App extends React.PureComponent<AppProps, AppState> {
   ];
 
   device: Device | null = null;
-  renderer: MultiCanvasRenderer | null = null;
+  animationLoop: AnimationLoop | null = null;
+  private ownsDevice = false;
+  private initializationGeneration = 0;
+  private isComponentMounted = false;
 
   constructor(props: AppProps) {
     super(props);
@@ -300,33 +247,74 @@ export default class App extends React.PureComponent<AppProps, AppState> {
     };
   }
 
-  async componentDidMount(): Promise<void> {
+  override async componentDidMount(): Promise<void> {
+    this.isComponentMounted = true;
+    await this.initialize();
+  }
+
+  override async componentDidUpdate(previousProps: AppProps): Promise<void> {
+    if (
+      previousProps.presentationDevice !== this.props.presentationDevice ||
+      (!this.props.presentationDevice && previousProps.deviceType !== this.props.deviceType)
+    ) {
+      await this.initialize();
+    }
+  }
+
+  override componentWillUnmount(): void {
+    this.isComponentMounted = false;
+    this.initializationGeneration++;
+    this.destroyResources();
+  }
+
+  async initialize(): Promise<void> {
     const {deviceType = 'webgl'} = this.props;
+    const initializationGeneration = ++this.initializationGeneration;
+    this.destroyResources();
+    this.setState({initializationError: null, isReady: false});
 
     try {
-      if (typeof OffscreenCanvas === 'undefined') {
-        throw new Error('This example requires OffscreenCanvas support.');
-      }
-
       const canvases = this.canvasRefs.map(ref => ref.current);
       if (canvases.some(canvas => !canvas)) {
         throw new Error('Multi-context canvases were not mounted.');
       }
 
-      this.device = await luma.createDevice({
-        adapters: [webgl2Adapter, webgpuAdapter],
-        type: deviceType,
-        createCanvasContext: {
-          canvas: new OffscreenCanvas(CANVAS_WIDTH, CANVAS_HEIGHT),
-          width: CANVAS_WIDTH,
-          height: CANVAS_HEIGHT,
-          autoResize: false,
-          useDevicePixels: false
-        }
-      });
+      const presentationDevice = this.props.presentationDevice;
+      const device = presentationDevice
+        ? presentationDevice
+        : await this.createOwnedDevice(deviceType);
+      const MultiCanvasAnimationLoopTemplate = createMultiCanvasAnimationLoopTemplate(
+        canvases as HTMLCanvasElement[]
+      );
+      const animationLoop = makeAnimationLoop(MultiCanvasAnimationLoopTemplate, {device});
 
-      this.renderer = new MultiCanvasRenderer(this.device, canvases as HTMLCanvasElement[]);
-      this.renderer.start();
+      if (
+        !this.isComponentMounted ||
+        this.initializationGeneration !== initializationGeneration ||
+        this.props.deviceType !== deviceType ||
+        this.props.presentationDevice !== presentationDevice
+      ) {
+        animationLoop.destroy();
+        if (!presentationDevice) {
+          device.destroy();
+        }
+        return;
+      }
+
+      this.device = device;
+      this.animationLoop = animationLoop;
+      this.ownsDevice = !presentationDevice;
+      await this.animationLoop.start();
+
+      if (
+        !this.isComponentMounted ||
+        this.initializationGeneration !== initializationGeneration ||
+        this.props.deviceType !== deviceType ||
+        this.props.presentationDevice !== presentationDevice
+      ) {
+        this.destroyResources();
+        return;
+      }
 
       this.setState({initializationError: null, isReady: true});
     } catch (error) {
@@ -337,12 +325,35 @@ export default class App extends React.PureComponent<AppProps, AppState> {
     }
   }
 
-  componentWillUnmount(): void {
-    this.renderer?.destroy();
-    this.device?.destroy();
+  destroyResources(): void {
+    this.animationLoop?.destroy();
+    this.animationLoop = null;
+    if (this.ownsDevice) {
+      this.device?.destroy();
+    }
+    this.device = null;
+    this.ownsDevice = false;
   }
 
-  render(): React.ReactNode {
+  async createOwnedDevice(deviceType: DeviceType): Promise<Device> {
+    if (typeof OffscreenCanvas === 'undefined') {
+      throw new Error('This example requires OffscreenCanvas support.');
+    }
+
+    return await luma.createDevice({
+      adapters: [webgl2Adapter, webgpuAdapter],
+      type: deviceType,
+      createCanvasContext: {
+        canvas: new OffscreenCanvas(CANVAS_WIDTH, CANVAS_HEIGHT),
+        width: CANVAS_WIDTH,
+        height: CANVAS_HEIGHT,
+        autoResize: false,
+        useDevicePixels: false
+      }
+    });
+  }
+
+  override render(): React.ReactNode {
     const {initializationError, isReady} = this.state;
 
     return (
@@ -350,140 +361,245 @@ export default class App extends React.PureComponent<AppProps, AppState> {
         style={{
           display: 'flex',
           flexDirection: 'column',
-          gap: 20
+          gap: 20,
+          padding: 20
         }}
       >
-        <div>
-          <p>
-            Rendering to two examples using one shared luma.gl <code>Device</code>.
-          </p>
-          <p>
-            On WebGL rendering happens in an offscreen canvas, then results are copied into the
-            target canvases via two separate PresentationContexts using{' '}
-            <code>presentationContext.present()</code>.
-          </p>
-          {initializationError ? <p style={{color: '#b00020'}}>{initializationError}</p> : null}
-        </div>
+        {initializationError ? (
+          <p style={{color: '#b00020', margin: 0}}>{initializationError}</p>
+        ) : null}
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+            gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+            gridTemplateRows: 'auto auto',
             gap: 20,
             alignItems: 'start'
           }}
         >
-          {VISUALIZATIONS.map((visualization, index) => (
-            <div
-              key={visualization.title}
-              style={{
-                display: 'grid',
-                gridTemplateRows: 'minmax(92px, auto) auto',
-                gap: 10
-              }}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'flex-start',
-                  paddingBottom: 2
-                }}
-              >
-                <h3 style={{marginTop: 0, marginBottom: 6}}>{visualization.title}</h3>
-                <p style={{margin: 0, lineHeight: 1.45}}>{visualization.description}</p>
-              </div>
-              <canvas
-                ref={this.canvasRefs[index]}
-                width={CANVAS_WIDTH}
-                height={CANVAS_HEIGHT}
-                style={{
-                  width: '100%',
-                  maxWidth: CANVAS_WIDTH,
-                  height: 'auto',
-                  aspectRatio: `${CANVAS_WIDTH} / ${CANVAS_HEIGHT}`,
-                  border: '1px solid #1f192c',
-                  background: '#000',
-                  opacity: isReady ? 1 : 0.5
-                }}
-              />
-            </div>
-          ))}
+          <ExamplePaneCopy
+            description={CONCENTRIC_WAVES_DESCRIPTION}
+            title={CONCENTRIC_WAVES_TITLE}
+          />
+          <ExamplePaneCopy description={ANIMATED_NOISE_DESCRIPTION} title={ANIMATED_NOISE_TITLE} />
+          <ExamplePaneCanvas canvasRef={this.canvasRefs[0]} isReady={isReady} />
+          <ExamplePaneCanvas canvasRef={this.canvasRefs[1]} isReady={isReady} />
         </div>
       </div>
     );
   }
 }
 
-function createVisualizationRenderer(
-  device: Device,
-  canvas: HTMLCanvasElement,
-  spec: VisualizationSpec
-): VisualizationRenderer {
-  const buffer = device.createBuffer({data: FULLSCREEN_POSITIONS});
-  const shaderInputs = new ShaderInputs<{app: typeof appShaderModule.props}>({
-    app: appShaderModule
-  });
-  const presentationContext = device.createPresentationContext({
-    canvas,
-    width: CANVAS_WIDTH,
-    height: CANVAS_HEIGHT,
-    autoResize: false,
-    useDevicePixels: false
-  });
-  const model = new Model(device, {
-    id: `${spec.title.toLowerCase().replace(/\s+/g, '-')}-model`,
-    source: `${FULLSCREEN_SOURCE}\n${spec.fragmentShaderWGSL}`,
-    vs: FULLSCREEN_VERTEX_SHADER,
-    fs: spec.fragmentShaderGLSL,
-    bufferLayout: [{name: 'position', format: 'float32x2'}],
-    attributes: {
-      position: buffer
-    },
-    vertexCount: 4,
-    topology: 'triangle-strip',
-    shaderInputs
-  });
-
-  return {buffer, model, presentationContext, shaderInputs, spec};
-}
-
-function renderVisualization(
-  device: Device,
-  visualization: VisualizationRenderer,
-  time: number
-): void {
-  const framebuffer = visualization.presentationContext.getCurrentFramebuffer({
-    depthStencilFormat: false
-  });
-  const [width, height] = visualization.presentationContext.getDrawingBufferSize();
-
-  visualization.shaderInputs.setProps({
-    app: {
-      resolution: [width, height],
-      time,
-      speed: visualization.spec.speed
-    }
-  });
-  visualization.model.updateShaderInputs();
-
-  const renderPass = device.beginRenderPass({
-    framebuffer,
-    clearColor: visualization.spec.clearColor
-  });
-
-  visualization.model.draw(renderPass);
-  renderPass.end();
-  visualization.presentationContext.present();
-}
-
 export function renderToDOM(
   container: HTMLElement,
-  props: {deviceType?: DeviceType} = {}
+  props: {deviceType?: DeviceType; presentationDevice?: Device | null} = {}
 ): () => void {
   const root: Root = createRoot(container);
   root.render(<App {...props} />);
 
   return () => {
-    queueMicrotask(() => root.unmount());
+    root.unmount();
   };
+}
+
+function createMultiCanvasAnimationLoopTemplate(canvases: HTMLCanvasElement[]) {
+  return class MultiCanvasAnimationLoopTemplate extends AnimationLoopTemplate {
+    concentricWavesBuffer: ReturnType<Device['createBuffer']>;
+    concentricWavesModel: Model;
+    concentricWavesPresentationContext: PresentationContext;
+    concentricWavesShaderInputs = new ShaderInputs<{app: typeof app.props}>({
+      app
+    });
+
+    animatedNoiseBuffer: ReturnType<Device['createBuffer']>;
+    animatedNoiseModel: Model;
+    animatedNoisePresentationContext: PresentationContext;
+    animatedNoiseShaderInputs = new ShaderInputs<{app: typeof app.props}>({
+      app
+    });
+
+    constructor({device}: AnimationProps) {
+      super();
+
+      this.concentricWavesBuffer = device.createBuffer({data: FULLSCREEN_POSITIONS});
+      this.concentricWavesPresentationContext = _createPresentationContext(device, canvases[0]);
+      this.concentricWavesModel = createFullscreenModel(device, {
+        buffer: this.concentricWavesBuffer,
+        fragmentShaderWGSL: CONCENTRIC_WAVES_FRAGMENT_WGSL,
+        fragmentShaderGLSL: CONCENTRIC_WAVES_FRAGMENT_GLSL,
+        id: 'concentric-waves-model',
+        shaderInputs: this.concentricWavesShaderInputs
+      });
+
+      this.animatedNoiseBuffer = device.createBuffer({data: FULLSCREEN_POSITIONS});
+      this.animatedNoisePresentationContext = _createPresentationContext(device, canvases[1]);
+      this.animatedNoiseModel = createFullscreenModel(device, {
+        buffer: this.animatedNoiseBuffer,
+        fragmentShaderWGSL: ANIMATED_NOISE_FRAGMENT_WGSL,
+        fragmentShaderGLSL: ANIMATED_NOISE_FRAGMENT_GLSL,
+        id: 'animated-noise-model',
+        shaderInputs: this.animatedNoiseShaderInputs
+      });
+    }
+
+    override onFinalize(): void {
+      this.concentricWavesModel.destroy();
+      this.concentricWavesBuffer.destroy();
+      this.concentricWavesPresentationContext.destroy();
+
+      this.animatedNoiseModel.destroy();
+      this.animatedNoiseBuffer.destroy();
+      this.animatedNoisePresentationContext.destroy();
+    }
+
+    override onRender({device, time}: AnimationProps): void {
+      const animationTimeSeconds = time / 1000;
+
+      renderFullscreenModel(device, {
+        clearColor: CONCENTRIC_WAVES_CLEAR_COLOR,
+        presentationContext: this.concentricWavesPresentationContext,
+        shaderInputs: this.concentricWavesShaderInputs,
+        model: this.concentricWavesModel,
+        speed: CONCENTRIC_WAVES_SPEED,
+        time: animationTimeSeconds
+      });
+
+      renderFullscreenModel(device, {
+        clearColor: ANIMATED_NOISE_CLEAR_COLOR,
+        presentationContext: this.animatedNoisePresentationContext,
+        shaderInputs: this.animatedNoiseShaderInputs,
+        model: this.animatedNoiseModel,
+        speed: ANIMATED_NOISE_SPEED,
+        time: animationTimeSeconds
+      });
+    }
+  };
+}
+
+function _createPresentationContext(
+  device: Device,
+  canvas: HTMLCanvasElement
+): PresentationContext {
+  return device.createPresentationContext({
+    canvas,
+    width: CANVAS_WIDTH,
+    height: CANVAS_HEIGHT,
+    autoResize: true,
+    useDevicePixels: false
+  });
+}
+
+function createFullscreenModel(
+  device: Device,
+  props: {
+    buffer: ReturnType<Device['createBuffer']>;
+    fragmentShaderGLSL: string;
+    fragmentShaderWGSL: string;
+    id: string;
+    shaderInputs: ShaderInputs<{app: typeof app.props}>;
+  }
+): Model {
+  return new Model(device, {
+    id: props.id,
+    source: `${FULLSCREEN_SOURCE}\n${props.fragmentShaderWGSL}`,
+    vs: FULLSCREEN_VERTEX_SHADER,
+    fs: props.fragmentShaderGLSL,
+    bufferLayout: [{name: 'position', format: 'float32x2'}],
+    attributes: {
+      position: props.buffer
+    },
+    vertexCount: 4,
+    topology: 'triangle-strip',
+    shaderInputs: props.shaderInputs
+  });
+}
+
+function renderFullscreenModel(
+  device: Device,
+  props: {
+    clearColor: [number, number, number, number];
+    model: Model;
+    presentationContext: PresentationContext;
+    shaderInputs: ShaderInputs<{app: typeof app.props}>;
+    speed: number;
+    time: number;
+  }
+): void {
+  const framebuffer = props.presentationContext.getCurrentFramebuffer({
+    depthStencilFormat: false
+  });
+  const [width, height] = props.presentationContext.getDrawingBufferSize();
+
+  props.shaderInputs.setProps({
+    app: {
+      resolution: [width, height],
+      time: props.time,
+      speed: props.speed
+    }
+  });
+  props.model.updateShaderInputs();
+
+  const renderPass = device.beginRenderPass({
+    framebuffer,
+    clearColor: props.clearColor
+  });
+
+  props.model.draw(renderPass);
+  renderPass.end();
+  props.presentationContext.present();
+}
+
+function ExamplePaneCopy(props: {description: string; title: string}): React.ReactNode {
+  const {description, title} = props;
+
+  return (
+    <div
+      style={{
+        minWidth: 0,
+        width: '100%'
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'flex-start',
+          paddingBottom: 2
+        }}
+      >
+        <h3 style={{marginTop: 0, marginBottom: 6}}>{title}</h3>
+        <p style={{margin: 0, lineHeight: 1.45}}>{description}</p>
+      </div>
+    </div>
+  );
+}
+
+function ExamplePaneCanvas(props: {
+  canvasRef: React.RefObject<HTMLCanvasElement>;
+  isReady: boolean;
+}): React.ReactNode {
+  const {canvasRef, isReady} = props;
+
+  return (
+    <div
+      style={{
+        minWidth: 0,
+        width: '100%'
+      }}
+    >
+      <canvas
+        ref={canvasRef}
+        width={CANVAS_WIDTH}
+        height={CANVAS_HEIGHT}
+        style={{
+          width: '100%',
+          height: 'auto',
+          aspectRatio: `${CANVAS_WIDTH} / ${CANVAS_HEIGHT}`,
+          border: '1px solid #1f192c',
+          background: '#000',
+          opacity: isReady ? 1 : 0.5
+        }}
+      />
+    </div>
+  );
 }

@@ -25,7 +25,8 @@ export class WebGPUTexture extends Texture {
   view: WebGPUTextureView;
 
   constructor(device: WebGPUDevice, props: TextureProps) {
-    super(device, props, {byteAlignment: 256}); // WebGPU requires row width to be a multiple of 256 bytes
+    // WebGPU buffer copies use 256-byte row alignment. queue.writeTexture() can use tightly packed rows.
+    super(device, props, {byteAlignment: 256});
     this.device = device;
 
     this.device.pushErrorScope('out-of-memory');
@@ -263,38 +264,25 @@ export class WebGPUTexture extends Texture {
   ): void {
     const device = this.device;
     const options = this._normalizeTextureWriteOptions(options_);
-    const {
-      x,
-      y,
-      z,
-      width,
-      height,
-      depthOrArrayLayers,
-      mipLevel,
-      aspect,
-      byteOffset,
-      bytesPerRow: normalizedBytesPerRow,
-      rowsPerImage: normalizedRowsPerImage
-    } = options;
+    const {x, y, z, width, height, depthOrArrayLayers, mipLevel, aspect, byteOffset} = options;
     const source = data as GPUAllowSharedBufferSource;
     const formatInfo = this.device.getTextureFormatInfo(this.format);
-    let bytesPerRow = normalizedBytesPerRow;
-    let rowsPerImage = normalizedRowsPerImage;
+    // queue.writeTexture() defaults to tightly packed rows, unlike WebGPU buffer copy paths.
+    const packedSourceLayout = textureFormatDecoder.computeMemoryLayout({
+      format: this.format,
+      width,
+      height,
+      depth: depthOrArrayLayers,
+      byteAlignment: 1
+    });
+    const bytesPerRow = options_.bytesPerRow ?? packedSourceLayout.bytesPerRow;
+    const rowsPerImage = options_.rowsPerImage ?? packedSourceLayout.rowsPerImage;
     let copyWidth = width;
     let copyHeight = height;
 
     if (formatInfo.compressed) {
       const blockWidth = formatInfo.blockWidth || 1;
       const blockHeight = formatInfo.blockHeight || 1;
-      const sourceLayout = textureFormatDecoder.computeMemoryLayout({
-        format: this.format,
-        width,
-        height,
-        depth: depthOrArrayLayers,
-        byteAlignment: 1
-      });
-      bytesPerRow = options_.bytesPerRow ?? sourceLayout.bytesPerRow;
-      rowsPerImage = options_.rowsPerImage ?? sourceLayout.rowsPerImage;
       copyWidth = Math.ceil(width / blockWidth) * blockWidth;
       copyHeight = Math.ceil(height / blockHeight) * blockHeight;
     }

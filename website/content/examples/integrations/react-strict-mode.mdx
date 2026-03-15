@@ -1,7 +1,19 @@
+---
+title: React Strict Mode
+---
+
+import {ExampleHeader} from '@site/src/react-luma';
 import {ReactStrictModeExample} from '@site/src/examples';
 
-# React Strict Mode
-
-Verify luma.gl device and animation-loop cleanup under React `StrictMode` remounting.
+<ExampleHeader
+  title="React Strict Mode"
+  sourcePath="examples/integrations/hello-react"
+  devices={['webgl2']}
+>
+  <p style={{margin: 0}}>
+    Verify luma.gl device and animation-loop cleanup under React <code>StrictMode</code>{' '}
+    remounting.
+  </p>
+</ExampleHeader>
 
 <ReactStrictModeExample />
