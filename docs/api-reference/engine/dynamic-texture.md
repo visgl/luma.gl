@@ -48,9 +48,45 @@ On WebGPU, mipmap generation is owned by `DynamicTexture`.
 
 When `mipmaps: true` is requested on a WebGPU `DynamicTexture`, luma.gl adds the texture usage flags required by the selected mipmap-generation path.
 
+## Explicit mip arrays
+
+`DynamicTexture` also accepts explicit mip chains as input data.
+
+- If multiple mip levels are supplied, `DynamicTexture` allocates enough `mipLevels` to hold the validated chain.
+- If explicit mip levels are supplied together with `mipmaps: true`, the supplied mip chain wins and auto-generation is skipped.
+- For array, cube, and 3d textures, the final texture uses the longest mip chain that is valid across every slice.
+
+For uncompressed textures, mip dimensions must follow the usual halving rule.
+
+For compressed textures, `DynamicTexture` also enforces block-compression limits:
+
+- per-level format must stay consistent across the mip chain
+- mip levels smaller than one compression block are ignored
+- later invalid mip levels truncate the chain instead of failing the entire texture
+
 ## Compressed textures
 
 `DynamicTexture` is a convenience layer for texture initialization and updates, but compressed texture rules still come from the underlying backend.
+
+Compressed mip levels can now be passed directly as texture data objects:
+
+```ts
+const texture = new DynamicTexture(device, {
+  dimension: '2d',
+  data: [
+    {data: level0, width: 512, height: 512, textureFormat: 'bc7-rgba-unorm'},
+    {data: level1, width: 256, height: 256, textureFormat: 'bc7-rgba-unorm'},
+    {data: level2, width: 128, height: 128, textureFormat: 'bc7-rgba-unorm'}
+  ]
+});
+```
+
+During the current transition, each mip-level object may provide either:
+
+- `textureFormat?: TextureFormat`
+- `format?: TextureFormat`
+
+If both are supplied, they must match. `textureFormat` is the preferred field name.
 
 For compressed texture alignment, WebGL vs WebGPU behavior, and asset-preparation guidance, see [Using GPU Textures](/docs/api-guide/gpu/gpu-textures#compressed-textures).
 
@@ -90,6 +126,14 @@ type DynamicTextureCubeProps = {
 type DynamicTextureCubeArrayProps = {
   dimension: 'cube-array';
   data: Promise<TextureCubeArrayData> | TextureCubeArrayData | null;
+};
+
+type TextureImageData = {
+  data: TypedArray;
+  width: number;
+  height: number;
+  textureFormat?: TextureFormat;
+  format?: TextureFormat;
 };
 ```
 

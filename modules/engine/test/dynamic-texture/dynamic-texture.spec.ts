@@ -3,8 +3,8 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import {Texture} from '@luma.gl/core';
+import {getNullTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {Texture, type TextureFormat} from '@luma.gl/core';
 import {DynamicTexture} from '../../src/index';
 
 const RENDER_MIPMAP_TEST_FORMAT = 'rgba8unorm';
@@ -695,6 +695,152 @@ test('DynamicTexture WebGPU [render][rgba8unorm] throws when render capabilities
   t.end();
 });
 
+test('DynamicTexture NullDevice accepts compressed mip arrays via textureFormat', async t => {
+  const device = await getNullTestDevice();
+
+  const texture = new DynamicTexture(device, {
+    dimension: '2d',
+    mipmaps: true,
+    data: [
+      makeMipLevel(16, 16, 'bc7-rgba-unorm'),
+      makeMipLevel(8, 8, 'bc7-rgba-unorm'),
+      makeMipLevel(4, 4, 'bc7-rgba-unorm')
+    ]
+  });
+  await texture.ready;
+
+  t.equal(texture.texture.format, 'bc7-rgba-unorm', 'texture format resolved from textureFormat');
+  t.equal(texture.texture.mipLevels, 3, 'all provided mip levels are allocated');
+  t.equal(
+    texture.texture.props.usage,
+    Texture.SAMPLE | Texture.COPY_DST,
+    'compressed textures do not inherit render attachment usage by default'
+  );
+
+  texture.destroy();
+  t.end();
+});
+
+test('DynamicTexture NullDevice accepts compressed mip arrays via format alias', async t => {
+  const device = await getNullTestDevice();
+
+  const texture = new DynamicTexture(device, {
+    dimension: '2d',
+    data: [
+      makeMipLevel(16, 16, undefined, 'bc7-rgba-unorm'),
+      makeMipLevel(8, 8, undefined, 'bc7-rgba-unorm')
+    ]
+  });
+  await texture.ready;
+
+  t.equal(texture.texture.format, 'bc7-rgba-unorm', 'texture format resolved from format alias');
+  t.equal(texture.texture.mipLevels, 2, 'format alias mip chain is preserved');
+
+  texture.destroy();
+  t.end();
+});
+
+test('DynamicTexture NullDevice accepts equal format and textureFormat fields', async t => {
+  const device = await getNullTestDevice();
+
+  const texture = new DynamicTexture(device, {
+    dimension: '2d',
+    data: [
+      {
+        data: new Uint8Array(16 * 16),
+        width: 16,
+        height: 16,
+        textureFormat: 'bc4-r-unorm',
+        format: 'bc4-r-unorm'
+      }
+    ]
+  });
+  await texture.ready;
+
+  t.equal(texture.texture.format, 'bc4-r-unorm', 'matching fields are accepted');
+
+  texture.destroy();
+  t.end();
+});
+
+test('DynamicTexture NullDevice rejects conflicting format and textureFormat fields', async t => {
+  const device = await getNullTestDevice();
+
+  const texture = new DynamicTexture(device, {
+    dimension: '2d',
+    data: [
+      {
+        data: new Uint8Array(16 * 16 * 4),
+        width: 16,
+        height: 16,
+        textureFormat: 'rgba8unorm',
+        format: 'rgba8unorm-srgb'
+      }
+    ]
+  });
+
+  try {
+    await texture.ready;
+    t.fail('expected texture.ready to reject');
+  } catch (error) {
+    t.match(String(error), /Conflicting texture formats/, 'rejects conflicting mip-level fields');
+  }
+
+  texture.destroy();
+  t.end();
+});
+
+test('DynamicTexture NullDevice truncates mismatched per-level formats', async t => {
+  const device = await getNullTestDevice();
+
+  const texture = new DynamicTexture(device, {
+    dimension: '2d',
+    data: [makeMipLevel(16, 16, 'bc7-rgba-unorm'), makeMipLevel(8, 8, 'etc2-rgb8unorm')]
+  });
+  await texture.ready;
+
+  t.equal(texture.texture.format, 'bc7-rgba-unorm', 'base level format wins');
+  t.equal(texture.texture.mipLevels, 1, 'chain truncates at mismatched level format');
+
+  texture.destroy();
+  t.end();
+});
+
+test('DynamicTexture NullDevice truncates invalid mip dimensions', async t => {
+  const device = await getNullTestDevice();
+
+  const texture = new DynamicTexture(device, {
+    dimension: '2d',
+    data: [makeMipLevel(16, 16, 'bc7-rgba-unorm'), makeMipLevel(9, 9, 'bc7-rgba-unorm')]
+  });
+  await texture.ready;
+
+  t.equal(
+    texture.texture.mipLevels,
+    1,
+    'chain truncates when mip dimensions do not halve correctly'
+  );
+
+  texture.destroy();
+  t.end();
+});
+
+test('DynamicTexture NullDevice caps compressed mip arrays at one block', async t => {
+  const device = await getNullTestDevice();
+
+  const texture = new DynamicTexture(device, {
+    dimension: '2d',
+    data: [makeMipLevel(16, 16, 'astc-10x10-unorm'), makeMipLevel(8, 8, 'astc-10x10-unorm')]
+  });
+  await texture.ready;
+
+  t.equal(texture.texture.format, 'astc-10x10-unorm', 'compressed format is preserved');
+  t.equal(texture.texture.mipLevels, 1, 'mip levels below one block are ignored');
+
+  texture.destroy();
+  t.end();
+});
+
 function makeSolidMipData(
   width: number,
   height: number,
@@ -736,6 +882,28 @@ function makeQuadrantMipData(
   }
 
   return {data, width, height};
+}
+
+function makeMipLevel(
+  width: number,
+  height: number,
+  textureFormat?: TextureFormat,
+  format?: TextureFormat
+): {
+  data: Uint8Array;
+  width: number;
+  height: number;
+  textureFormat?: TextureFormat;
+  format?: TextureFormat;
+} {
+  const bytesPerElement = textureFormat?.startsWith('bc4') || format?.startsWith('bc4') ? 1 : 4;
+  return {
+    data: new Uint8Array(Math.max(1, width * height * bytesPerElement)),
+    width,
+    height,
+    textureFormat,
+    format
+  };
 }
 
 function captureError(callback: () => void): Error | null {
