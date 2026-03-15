@@ -14,7 +14,7 @@ Tutorials are maintained on a best-effort basis and may not be fully up to date 
 
 It is assumed you've set up your development environment as described in [Setup](/docs/tutorials).
 
-We create a `Model` to render the triangle. This will be a recurring theme in all our tutorials. A `Model` can be thought of as gathering all the WebGL/WebGPU pieces necessary for a single draw call: render pipelines (shader programs), attribute buffers, uniforms, texture bindings etc. 
+We create a `Model` to render the triangle. This will be a recurring theme in all our tutorials. A `Model` can be thought of as gathering all the WebGL/WebGPU pieces necessary for a single draw call: render pipelines (shader programs), attribute buffers, uniforms, texture bindings etc.
 
 The program uses a tiny vertex shader that relies on the built-in `vertex_index` to look up clip-space positions for the three vertices. A matching fragment shader fills the triangle with a solid color. Both WGSL and GLSL versions are provided so the example runs on WebGPU and WebGL without changes.
 
@@ -87,7 +87,9 @@ class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 }
 
-const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {adapters: [webgpuAdapter, webgl2Adapter]})
+const animationLoop = makeAnimationLoop(AppAnimationLoopTemplate, {
+  adapters: [webgpuAdapter, webgl2Adapter]
+});
 animationLoop.start();
 ```
 

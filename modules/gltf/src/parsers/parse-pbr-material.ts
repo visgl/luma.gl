@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {Device, Texture, SamplerProps, TextureFormat, TypedArray} from '@luma.gl/core';
+import type {Device, SamplerProps, TextureFormat, TypedArray} from '@luma.gl/core';
+import {Texture, log, textureFormatDecoder} from '@luma.gl/core';
 import type {GLTFSampler} from '@loaders.gl/gltf';
 import {GL} from '@luma.gl/constants';
 
-import {log, textureFormatDecoder} from '@luma.gl/core';
 import {type ParsedPBRMaterial} from '../pbr/pbr-material';
 import {type PBREnvironment} from '../pbr/pbr-environment';
 import {type PBRMaterialBindings} from '@luma.gl/shadertools';
@@ -438,6 +438,7 @@ export function createCompressedTexture(
   const texture = device.createTexture({
     ...baseOptions,
     format,
+    usage: Texture.TEXTURE | Texture.COPY_DST,
     width: baseWidth,
     height: baseHeight,
     mipLevels: validLevelCount,

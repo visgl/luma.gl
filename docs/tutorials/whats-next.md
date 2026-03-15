@@ -1,23 +1,29 @@
 # What's Next?
 
-:::caution
-The tutorial pages have not yet been updated for luma.gl v9. 
-:::
+That concludes our **luma.gl** tutorial series. If you went through the full set
+of tutorials, you've taken a deep dive into some of **luma.gl**'s more powerful
+features, including instanced drawing, shader modules and composition, and
+transform feedback.
 
-That concludes our **luma.gl** tutorial series. If you went through the full set of tutorials, you've taken a deep dive into some of **luma.gl**'s more powerful features, including instanced drawing, shader modules and composition, and transform feedback. To dig deeper into **luma.gl**'s API, we recommend playing around with the examples in the [examples directory](https://github.com/visgl/luma.gl/tree/master/examples/core) of the repository, which demonstrate various parts of the API in more detail. They can also be browsed on the [website](https://luma.gl/examples).
+To dig deeper into the current API, browse the
+[`examples/tutorials`](https://github.com/visgl/luma.gl/tree/master/examples/tutorials),
+[`examples/api`](https://github.com/visgl/luma.gl/tree/master/examples/api), and
+[`examples/integrations`](https://github.com/visgl/luma.gl/tree/master/examples/integrations)
+directories in the repository. The same examples are also available on the
+[website](https://luma.gl/examples).
 
-To explore the examples, clone the **luma.gl** repo and run the following in a given example's directory:
+To run one of the examples locally, clone the **luma.gl** repo and start an
+example from its own directory:
 
 ```bash
-git clone git@github.com:uber/luma.gl.git
-cd luma.gl/examples/showcase/instancing
-git checkout 9.1-release
+git clone git@github.com:visgl/luma.gl.git
+cd luma.gl/examples/tutorials/hello-cube
 yarn
 yarn start
 ```
 
-This will start a local development server and open the page in your browser. The main application code is in `app.js` and the page will automatically refresh whenever it's updated.
-
-Note that we checkout the latest release branch here (`9.1-release` at the time this doc was updated), which can help avoid potential issues on `master` is the active development branch.
+This starts a local development server and opens the example in your browser.
+The main application code typically lives in `app.ts`, and Vite will reload the
+page automatically whenever you edit the source.
 
 Happy exploring!
