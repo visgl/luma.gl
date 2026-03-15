@@ -911,7 +911,10 @@ function compactTextureBytes(
     (texture.dimension === '3d' ? Math.max(1, texture.depth >> mipLevel) : texture.depth);
   const rowByteLength = width * layout.bytesPerPixel;
   const compact = new Uint8Array(rowByteLength * height * depthOrArrayLayers);
-  const source = arrayBuffer instanceof ArrayBuffer ? new Uint8Array(arrayBuffer) : new Uint8Array(arrayBuffer.buffer, arrayBuffer.byteOffset, arrayBuffer.byteLength);
+  const source =
+    arrayBuffer instanceof ArrayBuffer
+      ? new Uint8Array(arrayBuffer)
+      : new Uint8Array(arrayBuffer.buffer, arrayBuffer.byteOffset, arrayBuffer.byteLength);
 
   for (let layer = 0; layer < depthOrArrayLayers; layer++) {
     for (let row = 0; row < height; row++) {

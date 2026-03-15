@@ -265,9 +265,7 @@ function createPackedTextureData(
 
   for (let elementIndex = 0; elementIndex < elementCount; elementIndex++) {
     data[elementIndex] =
-      ArrayType === Float32Array
-        ? ((elementIndex % 23) + 1) / 32
-        : (elementIndex * 17 + 3) % 251;
+      ArrayType === Float32Array ? ((elementIndex % 23) + 1) / 32 : (elementIndex * 17 + 3) % 251;
   }
 
   return data;
