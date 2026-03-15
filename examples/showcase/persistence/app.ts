@@ -370,7 +370,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.mainFramebuffer = device.createFramebuffer({
       width,
       height,
-      colorAttachments: [createSampleableColorAttachment(device, 'main-framebuffer-color', width, height)],
+      colorAttachments: [
+        createSampleableColorAttachment(device, 'main-framebuffer-color', width, height)
+      ],
       depthStencilAttachment: 'depth24plus'
     });
 
