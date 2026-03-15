@@ -17,29 +17,48 @@ import {luma} from '@luma.gl/core';
 console.log(luma.stats.getTable());
 ```
 
-Resource allocation stats are collected in the `Resource Counts` stats bag:
+Resource allocation and timing stats are collected in these buckets:
 
 ```typescript
 import {luma} from '@luma.gl/core';
 
-const resourceStats = luma.stats.get('Resource Counts');
+const gpuTimeAndMemoryStats = luma.stats.get('GPU Time and Memory');
+const resourceStats = luma.stats.get('GPU Resource Counts');
+const resourceMemoryStats = luma.stats.get('Resource Memory');
 
+console.log('Frame rate', gpuTimeAndMemoryStats.get('Frame Rate').getSampleHz());
+console.log('CPU time', gpuTimeAndMemoryStats.get('CPU Time').getSampleAverageTime());
+console.log('GPU time', gpuTimeAndMemoryStats.get('GPU Time').getSampleAverageTime());
+console.log('Total GPU memory', gpuTimeAndMemoryStats.get('GPU Memory').count);
+console.log('Buffer memory', gpuTimeAndMemoryStats.get('Buffer Memory').count);
+console.log('Texture memory', gpuTimeAndMemoryStats.get('Texture Memory').count);
 console.log('Total resources created', resourceStats.get('Resources Created').count);
 console.log('Total resources active', resourceStats.get('Resources Active').count);
-console.log('Total GPU memory', resourceStats.get('GPU Memory').count);
 console.log('Buffers active', resourceStats.get('Buffers Active').count);
-console.log('Buffer memory', resourceStats.get('Buffer Memory').count);
 console.log('Textures active', resourceStats.get('Textures Active').count);
-console.log('Texture memory', resourceStats.get('Texture Memory').count);
+// Compatibility bucket (legacy): Resource Memory still tracks the same values.
+console.log('Legacy total GPU memory', resourceMemoryStats.get('GPU Memory').count);
 ```
 
-The `Resource Counts` bag includes:
+Notes:
+- `GPU Time and Memory` includes timing and memory counters and is the preferred bucket for most runtime telemetry.
+- `Resource Memory` is maintained as a compatibility alias for memory counters.
+- `GPU Resource Counts` includes only resource life-cycle and type counts.
+- `Resource Counts` is kept as an alias for backward compatibility.
+
+The `GPU Resource Counts` bag includes:
 
 - `Resources Created`: total number of luma.gl resources ever created.
 - `Resources Active`: total number of luma.gl resources currently alive.
-- `GPU Memory`: total tracked GPU memory across luma.gl resources.
 - `<ResourceType>s Created` and `<ResourceType>s Active`: lifetime and live counters for each resource class, for example `Buffers Created`, `Buffers Active`, `Textures Created`, and `Textures Active`.
-- `<ResourceType> Memory`: tracked GPU memory for a specific resource type, currently including `Buffer Memory` and `Texture Memory`.
+
+The `GPU Time and Memory` bag includes:
+
+- `Frame Rate`: frame rate sample from the active animation loop.
+- `CPU Time`: CPU time sample for frame rendering.
+- `GPU Time`: GPU time sample for frame rendering.
+- `GPU Memory`: total tracked GPU memory across luma.gl resources.
+- `<ResourceType> Memory`: tracked GPU memory for a specific resource type, including `Buffer Memory` and `Texture Memory`.
 
 ## Memory Profiling
 
@@ -55,7 +74,7 @@ however tracking allocations can help spot resource leaks or unnecessary work be
 
 ## Performance Profiling
 
-`QuerySet` can be used to capture GPU-side profiling data.
+[QuerySet](/docs/api-reference/core/resources/query-set) can be used to capture GPU-side profiling data.
 
 - Occlusion queries are available through `device.createQuerySet({type: 'occlusion', ...})`.
 - Timestamp queries require `device.features.has('timestamp-query')`.

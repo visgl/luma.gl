@@ -13,11 +13,19 @@ import {GL} from '@luma.gl/constants';
 
 const DEVICE_TYPES = ['webgpu', 'webgl', 'null'] as const;
 
-function getMemoryStats(device: Device): {gpuMemory: number; bufferMemory: number} {
+function getMemoryStats(device: Device): {
+  gpuMemory: number;
+  bufferMemory: number;
+  mergedGpuMemory: number;
+  mergedBufferMemory: number;
+} {
   const stats = device.statsManager.getStats('Resource Memory');
+  const mergedStats = device.statsManager.getStats('GPU Time and Memory');
   return {
     gpuMemory: stats.get('GPU Memory').count,
-    bufferMemory: stats.get('Buffer Memory').count
+    bufferMemory: stats.get('Buffer Memory').count,
+    mergedGpuMemory: mergedStats.get('GPU Memory').count,
+    mergedBufferMemory: mergedStats.get('Buffer Memory').count
   };
 }
 
@@ -27,12 +35,21 @@ function getResourceStats(device: Device): {
   buffersCreated: number;
   buffersActive: number;
 } {
-  const stats = device.statsManager.getStats('Resource Counts');
+  const stats = device.statsManager.getStats('GPU Resource Counts');
   return {
     resourcesCreated: stats.get('Resources Created').count,
     resourcesActive: stats.get('Resources Active').count,
     buffersCreated: stats.get('Buffers Created').count,
     buffersActive: stats.get('Buffers Active').count
+  };
+}
+
+function getLegacyResourceStats(device: Device) {
+  return {
+    resourcesCreated: device.statsManager.getStats('Resource Counts').get('Resources Created').count,
+    resourcesActive: device.statsManager.getStats('Resource Counts').get('Resources Active').count,
+    buffersCreated: device.statsManager.getStats('Resource Counts').get('Buffers Created').count,
+    buffersActive: device.statsManager.getStats('Resource Counts').get('Buffers Active').count
   };
 }
 
@@ -148,6 +165,17 @@ test('Buffer tracks GPU memory stats', async t => {
       `${device.type} Buffer updates Buffer Memory`
     );
 
+    t.equal(
+      afterCreateStats.mergedGpuMemory - beforeStats.mergedGpuMemory,
+      expectedAllocation,
+      `${device.type} Buffer updates merged GPU Memory`
+    );
+    t.equal(
+      afterCreateStats.mergedBufferMemory - beforeStats.mergedBufferMemory,
+      expectedAllocation,
+      `${device.type} Buffer updates merged Buffer Memory`
+    );
+
     buffer.destroy();
 
     const afterDestroyStats = getMemoryStats(device);
@@ -161,6 +189,17 @@ test('Buffer tracks GPU memory stats', async t => {
       beforeStats.bufferMemory,
       `${device.type} Buffer destroy restores Buffer Memory`
     );
+
+    t.equal(
+      afterDestroyStats.mergedGpuMemory,
+      beforeStats.mergedGpuMemory,
+      `${device.type} Buffer destroy restores merged GPU Memory`
+    );
+    t.equal(
+      afterDestroyStats.mergedBufferMemory,
+      beforeStats.mergedBufferMemory,
+      `${device.type} Buffer destroy restores merged Buffer Memory`
+    );
   }
 
   t.end();
@@ -169,8 +208,10 @@ test('Buffer tracks GPU memory stats', async t => {
 test('Buffer tracks resource counts in core stats', async t => {
   for (const device of await getTestDevices(DEVICE_TYPES)) {
     const beforeStats = getResourceStats(device);
+    const beforeLegacyStats = getLegacyResourceStats(device);
     const buffer = device.createBuffer({byteLength: 4, usage: Buffer.VERTEX});
     const afterCreateStats = getResourceStats(device);
+    const afterCreateLegacyStats = getLegacyResourceStats(device);
 
     t.equal(
       afterCreateStats.resourcesCreated - beforeStats.resourcesCreated,
@@ -192,10 +233,31 @@ test('Buffer tracks resource counts in core stats', async t => {
       1,
       `${device.type} Buffer increments Buffers Active`
     );
+    t.equal(
+      afterCreateStats.resourcesCreated - beforeStats.resourcesCreated,
+      afterCreateLegacyStats.resourcesCreated - beforeLegacyStats.resourcesCreated,
+      `${device.type} Resource Created counter matches legacy bucket`
+    );
+    t.equal(
+      afterCreateStats.resourcesActive - beforeStats.resourcesActive,
+      afterCreateLegacyStats.resourcesActive - beforeLegacyStats.resourcesActive,
+      `${device.type} Resource Active counter matches legacy bucket`
+    );
+    t.equal(
+      afterCreateStats.buffersCreated - beforeStats.buffersCreated,
+      afterCreateLegacyStats.buffersCreated - beforeLegacyStats.buffersCreated,
+      `${device.type} Buffer Created counter matches legacy bucket`
+    );
+    t.equal(
+      afterCreateStats.buffersActive - beforeStats.buffersActive,
+      afterCreateLegacyStats.buffersActive - beforeLegacyStats.buffersActive,
+      `${device.type} Buffer Active counter matches legacy bucket`
+    );
 
     buffer.destroy();
 
     const afterDestroyStats = getResourceStats(device);
+    const afterDestroyLegacyStats = getLegacyResourceStats(device);
     t.equal(
       afterDestroyStats.resourcesCreated,
       afterCreateStats.resourcesCreated,
@@ -212,9 +274,29 @@ test('Buffer tracks resource counts in core stats', async t => {
       `${device.type} Buffer destroy does not change Buffers Created`
     );
     t.equal(
+      afterDestroyStats.resourcesCreated,
+      afterDestroyLegacyStats.resourcesCreated,
+      `${device.type} Legacy and new buckets match on Resources Created`
+    );
+    t.equal(
       afterDestroyStats.buffersActive,
       beforeStats.buffersActive,
       `${device.type} Buffer destroy restores Buffers Active`
+    );
+    t.equal(
+      afterDestroyStats.resourcesActive,
+      afterDestroyLegacyStats.resourcesActive,
+      `${device.type} Legacy and new buckets match on Resources Active`
+    );
+    t.equal(
+      afterDestroyStats.buffersCreated,
+      afterDestroyLegacyStats.buffersCreated,
+      `${device.type} Legacy and new buckets match on Buffers Created`
+    );
+    t.equal(
+      afterDestroyStats.buffersActive,
+      afterDestroyLegacyStats.buffersActive,
+      `${device.type} Legacy and new buckets match on Buffers Active`
     );
   }
 

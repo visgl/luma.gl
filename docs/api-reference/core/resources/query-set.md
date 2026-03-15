@@ -2,6 +2,8 @@
 
 A `QuerySet` stores asynchronous GPU query results.
 
+For guidance on how this data is used for profiling in luma.gl, see [Performance Profiling](/docs/developer-guide/profiling).
+
 - Use `type: 'occlusion'` to count samples that pass depth/stencil tests.
 - Use `type: 'timestamp'` to profile GPU work durations.
 

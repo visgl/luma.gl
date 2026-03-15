@@ -4,6 +4,7 @@
 
 import test from 'tape-promise/tape';
 import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {luma} from '@luma.gl/core';
 
 import {AnimationLoop} from '@luma.gl/engine';
 
@@ -13,6 +14,39 @@ test('engine#AnimationLoop constructor', async t => {
   t.ok(AnimationLoop, 'AnimationLoop imported');
   const animationLoop = new AnimationLoop({device});
   t.ok(animationLoop, 'AnimationLoop constructor should not throw');
+  t.end();
+});
+
+test('engine#AnimationLoop uses provided stats object', async t => {
+  const device = await getWebGLTestDevice();
+  const customStats = luma.stats.get('GPU Time and Memory');
+  const frameRate = customStats.get('Frame Rate');
+  const beforeFrameRate = frameRate.lastSampleTime;
+  const beforeCpuTime = customStats.get('CPU Time').lastSampleTime;
+  const beforeGpuTime = customStats.get('GPU Time').lastSampleTime;
+
+  const animationLoop = new AnimationLoop({device, stats: customStats});
+  t.is(animationLoop.stats, customStats, 'AnimationLoop stores provided stats object');
+
+  await animationLoop.start();
+  await animationLoop.waitForRender();
+  await animationLoop.waitForRender();
+
+  t.ok(
+    frameRate.lastSampleTime > beforeFrameRate,
+    'Frame Rate updates on custom stats object'
+  );
+  t.ok(
+    customStats.get('CPU Time').lastSampleTime > beforeCpuTime,
+    'CPU Time updates on custom stats object'
+  );
+  t.ok(
+    customStats.get('GPU Time').lastSampleTime > beforeGpuTime,
+    'GPU Time updates on custom stats object'
+  );
+
+  animationLoop.stop();
+  animationLoop.destroy();
   t.end();
 });
 

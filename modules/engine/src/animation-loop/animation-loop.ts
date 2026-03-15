@@ -73,6 +73,7 @@ export class AnimationLoop {
   _resolveNextFrame: ((animationLoop: AnimationLoop) => void) | null = null;
   _cpuStartTime: number = 0;
   _error: Error | null = null;
+  _lastFrameTime: number = 0;
 
   /** GPU time query for measuring GPU execution time */
   _gpuTimeQuery: QuerySet | null = null;
@@ -90,9 +91,10 @@ export class AnimationLoop {
 
     // state
     this.stats = props.stats || new Stats({id: 'animation-loop-stats'});
+    this.frameRate = this.stats.get('Frame Rate');
+    this.frameRate.setSampleSize(1);
     this.cpuTime = this.stats.get('CPU Time');
     this.gpuTime = this.stats.get('GPU Time');
-    this.frameRate = this.stats.get('Frame Rate');
 
     this.setProps({autoResizeViewport: props.autoResizeViewport});
 
@@ -197,17 +199,18 @@ export class AnimationLoop {
       this._nextFramePromise = null;
       this._resolveNextFrame = null;
       this._running = false;
+      this._lastFrameTime = 0;
     }
     return this;
   }
 
   /** Explicitly draw a frame */
-  redraw(): this {
+  redraw(time?: number): this {
     if (this.device?.isLost || this._error) {
       return this;
     }
 
-    this._beginFrameTimers();
+    this._beginFrameTimers(time);
 
     this._setupFrame();
     this._updateAnimationProps();
@@ -331,11 +334,11 @@ export class AnimationLoop {
     this._animationFrameId = null;
   }
 
-  _animationFrame(): void {
+  _animationFrame(time: number): void {
     if (!this._running) {
       return;
     }
-    this.redraw();
+    this.redraw(time);
     this._requestAnimationFrame();
   }
 
@@ -519,9 +522,15 @@ export class AnimationLoop {
     }
   }
 
-  _beginFrameTimers() {
-    this.frameRate.timeEnd();
-    this.frameRate.timeStart();
+  _beginFrameTimers(time?: number) {
+    const now = time ?? (typeof performance !== 'undefined' ? performance.now() : Date.now());
+    if (this._lastFrameTime) {
+      const frameTime = now - this._lastFrameTime;
+      if (frameTime > 0) {
+        this.frameRate.addTime(frameTime);
+      }
+    }
+    this._lastFrameTime = now;
 
     if (this.device && this._gpuTimeQuery) {
       this._consumeEncodedGpuTime();

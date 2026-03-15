@@ -5,8 +5,10 @@
 import type {Device} from '../device';
 import {uid} from '../../utils/uid';
 
-const RESOURCE_COUNTS_STATS = 'Resource Counts';
+const RESOURCE_COUNTS_STATS = 'GPU Resource Counts';
+const LEGACY_RESOURCE_COUNTS_STATS = 'Resource Counts';
 const RESOURCE_MEMORY_STATS = 'Resource Memory';
+const GPU_TIME_AND_MEMORY_STATS = 'GPU Time and Memory';
 
 export type ResourceProps = {
   /** Name of resource, mainly for debugging purposes. A unique name will be assigned if not provided */
@@ -142,21 +144,32 @@ export abstract class Resource<Props extends ResourceProps> {
 
   /** Called by .destroy() to track object destruction. Subclass must call if overriding destroy() */
   protected removeStats(): void {
-    const stats = this._device.statsManager.getStats(RESOURCE_COUNTS_STATS);
+    const statsObjects = [
+      this._device.statsManager.getStats(RESOURCE_COUNTS_STATS),
+      this._device.statsManager.getStats(LEGACY_RESOURCE_COUNTS_STATS)
+    ];
     const name = this[Symbol.toStringTag];
-    stats.get('Resources Active').decrementCount();
-    stats.get(`${name}s Active`).decrementCount();
+    for (const stats of statsObjects) {
+      stats.get('Resources Active').decrementCount();
+      stats.get(`${name}s Active`).decrementCount();
+    }
   }
 
   /** Called by subclass to track memory allocations */
   protected trackAllocatedMemory(bytes: number, name = this[Symbol.toStringTag]): void {
-    const stats = this._device.statsManager.getStats(RESOURCE_MEMORY_STATS);
-    if (this.allocatedBytes > 0 && this.allocatedBytesName) {
-      stats.get('GPU Memory').subtractCount(this.allocatedBytes);
-      stats.get(`${this.allocatedBytesName} Memory`).subtractCount(this.allocatedBytes);
+    const statsObjects = [
+      this._device.statsManager.getStats(RESOURCE_MEMORY_STATS),
+      this._device.statsManager.getStats(GPU_TIME_AND_MEMORY_STATS)
+    ];
+
+    for (const stats of statsObjects) {
+      if (this.allocatedBytes > 0 && this.allocatedBytesName) {
+        stats.get('GPU Memory').subtractCount(this.allocatedBytes);
+        stats.get(`${this.allocatedBytesName} Memory`).subtractCount(this.allocatedBytes);
+      }
+      stats.get('GPU Memory').addCount(bytes);
+      stats.get(`${name} Memory`).addCount(bytes);
     }
-    stats.get('GPU Memory').addCount(bytes);
-    stats.get(`${name} Memory`).addCount(bytes);
     this.allocatedBytes = bytes;
     this.allocatedBytesName = name;
   }
@@ -168,21 +181,31 @@ export abstract class Resource<Props extends ResourceProps> {
       return;
     }
 
-    const stats = this._device.statsManager.getStats(RESOURCE_MEMORY_STATS);
-    stats.get('GPU Memory').subtractCount(this.allocatedBytes);
-    stats.get(`${this.allocatedBytesName || name} Memory`).subtractCount(this.allocatedBytes);
+    const statsObjects = [
+      this._device.statsManager.getStats(RESOURCE_MEMORY_STATS),
+      this._device.statsManager.getStats(GPU_TIME_AND_MEMORY_STATS)
+    ];
+    for (const stats of statsObjects) {
+      stats.get('GPU Memory').subtractCount(this.allocatedBytes);
+      stats.get(`${this.allocatedBytesName || name} Memory`).subtractCount(this.allocatedBytes);
+    }
     this.allocatedBytes = 0;
     this.allocatedBytesName = null;
   }
 
   /** Called by resource constructor to track object creation */
   private addStats(): void {
-    const stats = this._device.statsManager.getStats(RESOURCE_COUNTS_STATS);
+    const statsObjects = [
+      this._device.statsManager.getStats(RESOURCE_COUNTS_STATS),
+      this._device.statsManager.getStats(LEGACY_RESOURCE_COUNTS_STATS)
+    ];
     const name = this[Symbol.toStringTag];
-    stats.get('Resources Created').incrementCount();
-    stats.get('Resources Active').incrementCount();
-    stats.get(`${name}s Created`).incrementCount();
-    stats.get(`${name}s Active`).incrementCount();
+    for (const stats of statsObjects) {
+      stats.get('Resources Created').incrementCount();
+      stats.get('Resources Active').incrementCount();
+      stats.get(`${name}s Created`).incrementCount();
+      stats.get(`${name}s Active`).incrementCount();
+    }
   }
 }
 
