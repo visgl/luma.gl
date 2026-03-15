@@ -26,14 +26,6 @@
   },
   {
     "type": "category",
-    "label": "Integrations",
-    "items": [
-      "integrations/external-context",
-      "integrations/react-strict-mode"
-    ]
-  },
-  {
-    "type": "category",
     "label": "Tutorials",
     "items": [
       "tutorials/hello-triangle",
@@ -47,6 +39,14 @@
       "tutorials/shader-hooks",
       "tutorials/transform-feedback",
       "tutorials/transform"
+    ]
+  },
+  {
+    "type": "category",
+    "label": "Integrations",
+    "items": [
+      "integrations/external-context",
+      "integrations/react-strict-mode"
     ]
   }
 ]

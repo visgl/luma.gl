@@ -8,12 +8,13 @@ import {
 } from '@luma.gl/engine';
 import {webgl2Adapter} from '@luma.gl/webgl';
 import {webgpuAdapter} from '@luma.gl/webgpu';
+import {DeviceTabs} from './device-tabs';
 
 // import StatsWidget from '@probe.gl/stats-widget';
 // import {VRDisplay} from '@luma.gl/experimental';
 import {useStore} from '../store/device-store';
 
-const GITHUB_TREE = 'https://github.com/visgl/luma.gl/tree/8.5-release';
+const GITHUB_TREE = 'https://github.com/visgl/luma.gl/tree/master';
 
 // WORKAROUND FOR luma.gl VRDisplay
 // if (!globalThis.navigator) {// eslint-disable-line
@@ -46,9 +47,12 @@ const STAT_STYLES = {
 
 type LumaExampleProps = React.PropsWithChildren<{
   id?: string;
+  title?: string;
   template: Function;
   config: unknown;
   directory?: string;
+  sourceDirectory?: string;
+  sourcePath?: string;
   style?: CSSProperties;
   container?: string;
 }>;
@@ -65,6 +69,7 @@ const state = {
 const EXAMPLE_CONTAINER_STYLE: CSSProperties = {
   position: 'relative',
   width: '100%',
+  height: 'calc(100vh - var(--ifm-navbar-height) - 6rem)',
   minHeight: 'calc(100vh - var(--ifm-navbar-height) - 6rem)'
 };
 
@@ -73,6 +78,167 @@ const EXAMPLE_CANVAS_STYLE: CSSProperties = {
   width: '100%',
   height: '100%'
 };
+
+const EXAMPLE_HEADER_STYLE: CSSProperties = {
+  display: 'flex',
+  flexWrap: 'wrap',
+  alignItems: 'flex-start',
+  justifyContent: 'space-between',
+  gap: 20,
+  padding: '12px 20px'
+};
+
+const EXAMPLE_INFO_STYLE: CSSProperties = {
+  boxSizing: 'border-box',
+  boxShadow: '0 12px 32px rgba(0, 0, 0, 0.28)',
+  backgroundColor: 'rgba(255, 255, 255, 0.96)',
+  borderRadius: 12,
+  color: '#111',
+  width: 420,
+  maxWidth: 'min(420px, 100%)',
+  overflow: 'hidden',
+  padding: '10px 16px',
+  zIndex: 10
+};
+
+type ExampleInfoProps = {
+  directory?: string;
+  id?: string;
+  sourceDirectory?: string;
+  sourcePath?: string;
+  title?: string;
+};
+
+type InfoBoxProps = React.PropsWithChildren<
+  ExampleInfoProps & {
+    html?: string;
+    style?: CSSProperties;
+  }
+>;
+
+type ExamplePageProps = React.PropsWithChildren<{
+  className?: string;
+  style?: CSSProperties;
+}>;
+
+type ExampleHeaderProps = React.PropsWithChildren<
+  ExampleInfoProps & {
+    devices?: ('webgl2' | 'webgpu')[];
+    style?: CSSProperties;
+  }
+>;
+
+type ReactExampleProps<P> = {
+  component: React.ComponentType<P>;
+  componentProps: P;
+  className?: string;
+  style?: CSSProperties;
+};
+
+export const InfoBox: FC<InfoBoxProps> = (props: InfoBoxProps) => {
+  const sourceUrl = getExampleSourceUrl(props);
+  const title = getExampleTitle(props.id, props.title);
+  const [isCollapsed, setIsCollapsed] = useState(true);
+  const maxInfoHeight = 400;
+  const maxInfoContentHeight = 320;
+
+  return (
+    <div
+      style={{
+        ...EXAMPLE_INFO_STYLE,
+        display: 'flex',
+        flexDirection: 'column',
+        maxHeight: isCollapsed ? undefined : maxInfoHeight,
+        ...props.style
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'flex-start',
+          justifyContent: 'space-between',
+          gap: 12
+        }}
+      >
+        <div style={{minWidth: 0}}>
+          {title ? <h3 style={{marginTop: 0, marginBottom: 0}}>{title}</h3> : null}
+        </div>
+        <div style={{display: 'flex', alignItems: 'center', gap: 24, flexShrink: 0}}>
+          {sourceUrl ? (
+            <a href={sourceUrl} target="_blank" rel="noreferrer">
+              Source code
+            </a>
+          ) : null}
+          <button
+            type="button"
+            aria-label={isCollapsed ? 'Expand info box' : 'Collapse info box'}
+            onClick={() => setIsCollapsed(value => !value)}
+            style={{
+              flexShrink: 0,
+              border: '1px solid #d0d7de',
+              background: '#fff',
+              borderRadius: 999,
+              width: 28,
+              height: 28,
+              fontSize: 14,
+              lineHeight: 1,
+              cursor: 'pointer'
+            }}
+          >
+            {isCollapsed ? '▾' : '▴'}
+          </button>
+        </div>
+      </div>
+      {!isCollapsed ? (
+        <div
+          style={{
+            marginTop: 12,
+            maxHeight: maxInfoContentHeight,
+            overflowY: 'auto'
+          }}
+        >
+          {props.html ? <div dangerouslySetInnerHTML={{__html: props.html}} /> : null}
+          {props.children}
+        </div>
+      ) : null}
+    </div>
+  );
+};
+
+export const ExamplePage: FC<ExamplePageProps> = (props: ExamplePageProps) => {
+  return (
+    <div className={props.className || 'luma-example-page'} style={{...EXAMPLE_CONTAINER_STYLE, ...props.style}}>
+      {props.children}
+    </div>
+  );
+};
+
+export const ExampleHeader: FC<ExampleHeaderProps> = (props: ExampleHeaderProps) => {
+  return (
+    <div style={{...EXAMPLE_HEADER_STYLE, ...props.style}}>
+      <InfoBox
+        id={props.id}
+        title={props.title}
+        directory={props.directory}
+        sourceDirectory={props.sourceDirectory}
+        sourcePath={props.sourcePath}
+      >
+        {props.children}
+      </InfoBox>
+      <DeviceTabs devices={props.devices} style={{flexShrink: 0}} />
+    </div>
+  );
+};
+
+export function ReactExample<P>(props: ReactExampleProps<P>) {
+  const Component = props.component;
+
+  return (
+    <ExamplePage className={props.className} style={props.style}>
+      <Component {...props.componentProps} />
+    </ExamplePage>
+  );
+}
 
 export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
   let containerName = 'ssr';
@@ -152,38 +318,61 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
   const info = props.template?.info;
 
   return (
-    <div className="luma-example-page" style={{...EXAMPLE_CONTAINER_STYLE, ...props.style}}>
-      <canvas key={deviceType} ref={setCanvas} style={EXAMPLE_CANVAS_STYLE} />
-      <div
-        style={{
-          position: 'absolute',
-          boxSizing: 'border-box',
-          boxShadow: '0 12px 32px rgba(0, 0, 0, 0.28)',
-          backgroundColor: 'rgba(255, 255, 255, 0.96)',
-          borderRadius: 12,
-          color: '#111',
-          top: 20,
-          right: 20,
-          width: 320,
-          maxWidth: 'calc(100% - 40px)',
-          maxHeight: 'calc(100% - 40px)',
-          overflowY: 'auto',
-          padding: 16
-        }}
+    <ExamplePage
+      style={{
+        display: 'grid',
+        gridTemplateRows: 'auto minmax(0, 1fr)',
+        ...props.style
+      }}
+    >
+      <ExampleHeader
+        id={props.id}
+        title={props.title}
+        directory={props.directory}
+        sourceDirectory={props.sourceDirectory}
+        sourcePath={props.sourcePath}
       >
-        <h3>{capitalizeFirstLetters(props.id)}</h3>
-        {info && <div dangerouslySetInnerHTML={{__html: info}} />}
-        {props.children}
+        {info ? <div dangerouslySetInnerHTML={{__html: info}} /> : null}
+      </ExampleHeader>
+      <div style={{minHeight: 0}}>
+        <canvas key={deviceType} ref={setCanvas} style={EXAMPLE_CANVAS_STYLE} />
       </div>
-    </div>
+      {props.children}
+    </ExamplePage>
   );
 };
 
-function capitalizeFirstLetters(string) {
+function getExampleSourceUrl(props: {
+  directory?: string;
+  id?: string;
+  sourceDirectory?: string;
+  sourcePath?: string;
+}): string | null {
+  if (props.sourcePath) {
+    return `${GITHUB_TREE}/${props.sourcePath}`;
+  }
+  if (props.id && (props.sourceDirectory || props.directory)) {
+    const sourceDirectory = props.sourceDirectory || props.directory;
+    return `${GITHUB_TREE}/examples/${sourceDirectory}/${props.id}`;
+  }
+  return null;
+}
+
+function getExampleTitle(id?: string, title?: string): string {
+  if (title) {
+    return title;
+  }
+  if (id) {
+    return capitalizeFirstLetters(id);
+  }
+  return '';
+}
+
+function capitalizeFirstLetters(string: string) {
   const strings = string.split('-');
   return strings.map(capitalizeFirstLetter).join(' ');
 }
 
-function capitalizeFirstLetter(string) {
+function capitalizeFirstLetter(string: string) {
   return string.charAt(0).toUpperCase() + string.slice(1);
 }

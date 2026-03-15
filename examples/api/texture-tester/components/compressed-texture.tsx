@@ -192,6 +192,16 @@ type CompressedTexturePreviewSource = {
   texturePath: string;
 };
 
+// TODO(ibgreen): remove when fixed in loaders.gl
+const LEGACY_TEXTURE_FORMAT_ALIASES: Partial<Record<string, TextureFormat>> = {
+  'pvrtc-rbg2unorm-webgl': 'pvrtc-rgb2unorm-webgl'
+};
+
+const WEBGPU_TEXTURE_FORMAT_ALIASES: Partial<Record<string, TextureFormat>> = {
+  'bc1-rgb-unorm-webgl': 'bc1-rgba-unorm',
+  'bc1-rgb-unorm-srgb-webgl': 'bc1-rgba-unorm-srgb'
+};
+
 let basisLoadChain: Promise<void> = Promise.resolve();
 
 export class CompressedTexture extends React.PureComponent<
@@ -327,7 +337,9 @@ export class CompressedTexture extends React.PureComponent<
         return;
       }
 
-      const stats: TextureStat[] = [{name: 'File Size', value: Math.floor(length / 1024), units: 'Kb'}];
+      const stats: TextureStat[] = [
+        {name: 'File Size', value: Math.floor(length / 1024), units: 'Kb'}
+      ];
       let previewResult: TexturePreviewResult;
 
       switch (loader?.id) {
@@ -344,7 +356,12 @@ export class CompressedTexture extends React.PureComponent<
           break;
         case 'image':
           this.renderEmptyTexture(device, model);
-          previewResult = this.renderImageTexture(device, model, result as ImageType, previewGeneration);
+          previewResult = this.renderImageTexture(
+            device,
+            model,
+            result as ImageType,
+            previewGeneration
+          );
           break;
         case 'basis': {
           const basisTextures = Array.isArray(result) ? result[0] : null;
@@ -465,7 +482,11 @@ export class CompressedTexture extends React.PureComponent<
         {name: 'Upload time', value: `${Math.floor(uploadTime)} ms`, units: ''},
         {name: 'luma.gl Texture Format', value: textureFormat, units: ''},
         {name: 'Dimensions', value: `${image.width} x ${image.height}`, units: ''},
-        {name: 'Size in memory (Total)', value: formatTextureByteSize(levelZeroByteSize), units: ''},
+        {
+          name: 'Size in memory (Total)',
+          value: formatTextureByteSize(levelZeroByteSize),
+          units: ''
+        },
         {name: 'Mip 0', value: formatTextureByteSize(levelZeroByteSize), units: ''}
       ]
     };
@@ -479,6 +500,7 @@ export class CompressedTexture extends React.PureComponent<
     previewGeneration: number
   ): Promise<TexturePreviewResult> {
     const levels = getCompressedTextureLevels(
+      device.type,
       rawLevels,
       previewSource.loaderName,
       previewSource.texturePath
@@ -989,6 +1011,7 @@ function isBasisRuntimeInitializationError(error: unknown): boolean {
 }
 
 function getCompressedTextureLevels(
+  deviceType: Device['type'],
   rawLevels: unknown,
   loaderName: string,
   texturePath: string
@@ -998,12 +1021,13 @@ function getCompressedTextureLevels(
   }
 
   return rawLevels.map((rawLevel, mipLevel) =>
-    normalizeCompressedTextureLevel(rawLevel, loaderName, texturePath, mipLevel)
+    normalizeCompressedTextureLevel(rawLevel, deviceType, loaderName, texturePath, mipLevel)
   );
 }
 
 function normalizeCompressedTextureLevel(
   rawLevel: unknown,
+  deviceType: Device['type'],
   loaderName: string,
   texturePath: string,
   mipLevel: number
@@ -1021,11 +1045,24 @@ function normalizeCompressedTextureLevel(
 
   return {
     data,
-    textureFormat: textureFormat as TextureFormat,
+    textureFormat: normalizeTextureFormat(textureFormat, deviceType),
     width,
     height,
     levelSize
   };
+}
+
+function normalizeTextureFormat(textureFormat: string, deviceType: Device['type']): TextureFormat {
+  const legacyTextureFormat = LEGACY_TEXTURE_FORMAT_ALIASES[textureFormat];
+  if (legacyTextureFormat) {
+    return legacyTextureFormat;
+  }
+
+  if (deviceType === 'webgpu') {
+    return WEBGPU_TEXTURE_FORMAT_ALIASES[textureFormat] || (textureFormat as TextureFormat);
+  }
+
+  return textureFormat as TextureFormat;
 }
 
 function getCompressedTexturePreviewError(

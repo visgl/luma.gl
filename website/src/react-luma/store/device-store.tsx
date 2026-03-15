@@ -5,6 +5,7 @@ import {webgl2Adapter} from '@luma.gl/webgl';
 import {webgpuAdapter} from '@luma.gl/webgpu';
 
 const DEVICE_TYPE_STORAGE_KEY = 'luma-device-type';
+const DEFAULT_DEVICE_TYPE: 'webgl' | 'webgpu' = 'webgpu';
 
 export type Store = {
   device?: Device;
@@ -125,4 +126,4 @@ export const useStore = create<Store>(set => ({
 }));
 
 // Initialize store
-useStore.getState().setDeviceType(getStoredDeviceType() || 'webgl');
+useStore.getState().setDeviceType(getStoredDeviceType() || DEFAULT_DEVICE_TYPE);

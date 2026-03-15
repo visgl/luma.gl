@@ -221,8 +221,21 @@ Provide explicit layout fields when:
 
 ### WebGPU Texture Data Alignment
 
-It is worth noting, especially when working directly with buffers, that WebGPU requires that `bytesPerRow` must be a multiple of `256` for linear texture data
-(except for 1D textures which do not have alignment requirements).
+There are two different WebGPU texture upload paths, and they do **not** use the same default row layout:
+
+- `writeData()` maps to `GPUQueue.writeTexture()` and defaults to a tightly packed CPU-memory layout.
+- `writeBuffer()` and `readBuffer()` map to buffer copy operations and use linear GPU-buffer layouts.
+
+The `256`-byte rule applies to the second case: buffer copy layouts. It does **not** mean that every `writeData()` upload must be padded to `256` bytes per row.
+
+In practice:
+
+- `writeData()`:
+  - omit `bytesPerRow` / `rowsPerImage` for tightly packed typed-array uploads
+  - provide them only when your CPU-side source is already padded or packs multiple layers/slices into one allocation
+- `writeBuffer()` and `readBuffer()`:
+  - use WebGPU buffer-copy layout rules
+  - `bytesPerRow` must satisfy WebGPU's alignment requirements, typically a multiple of `256`
 
 This row-stride rule is different from compressed block alignment:
 
@@ -235,8 +248,7 @@ This is because most modern GPU architectures access texture data in large align
 - Require slower fallback modes or copies
 - May even crash or cause undefined behavior on some hardware
 
-So WebGPU enforces the strictest alignment across the board to avoid inconsistent behavior or costly driver fallbacks.
-It's not a limitation of a specific platform, but rather a lowest common denominator across vendors, including:
+The buffer-copy rule is not a limitation of a specific platform, but rather a lowest common denominator across vendors, including:
 
 | Platform / Vendor              | 256-byte alignment reason                                                                                 |
 | ------------------------------ | --------------------------------------------------------------------------------------------------------- |
@@ -245,18 +257,24 @@ It's not a limitation of a specific platform, but rather a lowest common denomin
 | Vulkan (Linux/Windows/Android) | vkCmdCopyBufferToImage requires bufferRowLength alignment for tight row packing.                          |
 | Mobile GPUs                    | Unified memory and tile-based rendering architectures strongly prefer 256-byte rows for coalesced access. |
 
-Why 256? It has been chose as a sweet spot between overhead and performance. 256 bytes is a power of two, making it a natural alignment boundary that fits well with:
+Why `256`? It is a practical alignment boundary for buffer-backed texture copies across current GPU APIs and drivers:
 
 - Cache line sizes
 - Tile sizes (especially on mobile GPUs)
 - SIMD vectorized memory access units (e.g., 32 or 64 bytes \* 4 or 8 lanes)
 
-Essentially, large enough for efficient DMA transfers, small enough not to waste too much memory.
+Essentially, large enough for efficient DMA transfers, small enough not to waste too much memory. But again, this applies to linear buffer copy layouts, not to the default `writeData()` packing.
 
 ### WebGL2 Texture Data Alignment
 
 WebGL2 accepts unaligned texture data, however there may be a small performance benefit in pre-aligning the data on 2, 4 or 8 byte boundaries.
 This is however unlikely to matter unless many large texture copies are being performed.
+
+For padded CPU uploads on WebGL, pass the real `bytesPerRow` and `rowsPerImage` values. luma.gl maps those fields onto WebGL's pixel unpack state so the same source data layout works on both backends:
+
+- tightly packed CPU data: omit layout fields
+- padded CPU data: pass explicit `bytesPerRow` and `rowsPerImage`
+- WebGPU buffer copy paths: use `writeBuffer()` / `readBuffer()` with `256`-aligned row strides
 
 ## Compressed Textures
 

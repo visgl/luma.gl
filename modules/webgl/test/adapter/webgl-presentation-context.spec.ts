@@ -111,6 +111,38 @@ test('WebGLPresentationContext supports sequential presentation contexts', async
   t.end();
 });
 
+test('WebGLPresentationContext skips present() for zero-sized destinations', async t => {
+  const device = await createOffscreenWebGLDevice();
+  if (!device) {
+    t.pass('OffscreenCanvas unavailable, skipped zero-size presentation-context test');
+    t.end();
+    return;
+  }
+
+  try {
+    const destinationCanvas = document.createElement('canvas');
+    destinationCanvas.width = 0;
+    destinationCanvas.height = 0;
+
+    const presentationContext = device.createPresentationContext({
+      canvas: destinationCanvas,
+      autoResize: false,
+      width: 0,
+      height: 0,
+      useDevicePixels: false
+    });
+
+    t.doesNotThrow(
+      () => presentationContext.present(),
+      'present is a no-op when the presentation canvas is zero-sized'
+    );
+  } finally {
+    device.destroy();
+  }
+
+  t.end();
+});
+
 test('WebGLPresentationContext fails without a default canvas context', async t => {
   const device = await createOffscreenWebGLDevice();
   if (!device) {

@@ -1058,6 +1058,37 @@ test('Texture#copyImageData is a compatibility wrapper over writeData', async t 
   t.end();
 });
 
+test('Texture#createTexture uploads tightly packed 3d texture data', async t => {
+  for (const device of await getTestDevices()) {
+    const texture = device.createTexture({
+      dimension: '3d',
+      width: 2,
+      height: 1,
+      depth: 2,
+      format: 'rgba8unorm',
+      usage: Texture.COPY_DST | Texture.COPY_SRC,
+      data: createLayeredRgbaUploadData({
+        width: 2,
+        height: 1,
+        pixels: [
+          [11, 12, 13, 255],
+          [21, 22, 23, 255]
+        ]
+      })
+    });
+
+    t.deepEquals(
+      await readTexturePixels(texture, {width: 2, height: 1, depthOrArrayLayers: 2}),
+      new Uint8Array([11, 12, 13, 255, 11, 12, 13, 255, 21, 22, 23, 255, 21, 22, 23, 255]),
+      `${device.type}: createTexture accepts tightly packed 3d upload data`
+    );
+
+    texture.destroy();
+  }
+
+  t.end();
+});
+
 test('Texture#writeData rejects invalid row layout', async t => {
   for (const device of await getTestDevices()) {
     const texture = device.createTexture({

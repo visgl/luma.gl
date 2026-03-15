@@ -133,18 +133,29 @@ export default class App extends React.PureComponent<AppProps, AppState> {
     const {device, model, initializationError} = this.state;
     return (
       <div>
-        <Description />
         {initializationError ? <div>{initializationError}</div> : null}
         {!initializationError && !device ? <div>Initializing device...</div> : null}
         {device && model ? (
           <>
-            <TextureUploaderCard device={device} model={model} />
             <TexturesBlocks device={device} model={model} />
+            <TextureUploaderCard device={device} model={model} />
           </>
         ) : null}
       </div>
     );
   }
+}
+
+export function renderToDOM(
+  container: HTMLElement,
+  props: {deviceType?: DeviceType; presentationDevice?: Device | null} = {}
+): () => void {
+  const root: Root = createRoot(container);
+  root.render(<App {...props} />);
+
+  return () => {
+    root.unmount();
+  };
 }
 
 type TextureUploaderCardProps = {
@@ -181,7 +192,8 @@ class TextureUploaderCard extends React.PureComponent<
     const {uploadedImage} = this.state;
 
     return (
-      <div>
+      <div style={{marginTop: 24}}>
+        <h2 style={{borderBottom: '1px solid black', marginBottom: 12}}>Upload Your Own Texture</h2>
         {!uploadedImage ? (
           <div style={{display: 'flex', flexFlow: 'column nowrap'}}>
             <div
@@ -225,35 +237,11 @@ function TexturesBlocks(props: {device: Device; model: Model}) {
     return (
       <div key={index}>
         <TexturesHeader imagesData={imagesData} />
-        <TexturesList device={device} model={model} images={imagesData.images} />
         <TexturesDescription imagesData={imagesData} />
+        <TexturesList device={device} model={model} images={imagesData.images} />
       </div>
     );
   });
-}
-
-function Description() {
-  return (
-    <div>
-      <p>
-        This example shows which compressed texture formats your current browser and GPU can render.
-      </p>
-      <ul style={{marginTop: 0, fontStyle: 'italic'}}>
-        <li>
-          Some compressed texture formats are expected to be unsupported, depending on the GPU you
-          are using to view this page.
-        </li>
-        <li>
-          This example loads images and compressed textures using <code>@loaders.gl/textures</code>{' '}
-          and renders them using luma.gl on both WebGL and WebGPU.
-        </li>
-        <li>
-          This example uses a single shared luma.gl <code>Device</code> rendering into multiple
-          canvases managed by <code>PresentationContext</code>s.
-        </li>
-      </ul>
-    </div>
-  );
 }
 
 function TexturesHeader(props: {imagesData: TextureFormatsInfo}) {
@@ -277,22 +265,23 @@ function TexturesHeader(props: {imagesData: TextureFormatsInfo}) {
 function TexturesDescription(props: {imagesData: TextureFormatsInfo}) {
   const {description, codeSample, availability} = props.imagesData;
   return (
-    <div>
+    <div style={{marginBottom: 8, lineHeight: 1.2}}>
       {description && (
-        <p>
+        <p style={{margin: '4px 0'}}>
           <b>{'Description: '}</b>
           {description}
         </p>
       )}
       {availability && (
-        <p>
+        <p style={{margin: '4px 0'}}>
           <b>{'Availability: '}</b>
           {availability}
         </p>
       )}
       {codeSample && (
-        <div>
-          <p>
+        <div style={{marginTop: 4}}>
+          <p style={{margin: 0}}>
+            <b>{'Loader: '}</b>
             <code>{codeSample}</code>
           </p>
         </div>
@@ -310,15 +299,4 @@ function TexturesList(props: {device: Device; model: Model; images: TextureForma
       ))}
     </div>
   );
-}
-
-export function renderToDOM(
-  container: HTMLElement,
-  props: {deviceType?: DeviceType; presentationDevice?: Device | null} = {}
-): () => void {
-  const root: Root = createRoot(container);
-  root.render(<App {...props} />);
-  return () => {
-    queueMicrotask(() => root.unmount());
-  };
 }
