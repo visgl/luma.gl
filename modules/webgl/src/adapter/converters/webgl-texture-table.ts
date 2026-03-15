@@ -121,8 +121,8 @@ type WebGLFormatInfo = {
   gl?: GL;
   /** compressed */
   x?: string;
-  /** color-renderable capability gate */
-  r?: DeviceFeature;
+  /** color-renderable capability gate. false means never color-renderable on WebGL. */
+  r?: DeviceFeature | false;
   types?: GLPixelType[];
   dataFormat?: GLTexelDataFormat;
   /** if depthTexture is set this is a depth/stencil format that can be set to a texture  */
@@ -193,8 +193,8 @@ export const WEBGL_TEXTURE_FORMATS: Record<TextureFormat, WebGLFormatInfo> = {
   'rgb10a2uint': {gl: GL.RGB10_A2UI, rb: true},
 
   // 48-bit formats
-  'rgb16unorm-webgl': {gl: GL.RGB16_EXT}, // rgb not renderable
-  'rgb16snorm-webgl': {gl: GL.RGB16_SNORM_EXT}, // rgb not renderable
+  'rgb16unorm-webgl': {gl: GL.RGB16_EXT, r: false}, // rgb not renderable
+  'rgb16snorm-webgl': {gl: GL.RGB16_SNORM_EXT, r: false}, // rgb not renderable
 
   // 64-bit formats
   'rg32uint': {gl: GL.RG32UI, rb: true},
@@ -358,7 +358,9 @@ export function getTextureFormatCapabilitiesWebGL(
   }
 
   const renderFeatureSupported =
-    webglFormatInfo?.r === undefined || checkTextureFeature(gl, webglFormatInfo.r, extensions);
+    webglFormatInfo?.r === false
+      ? false
+      : webglFormatInfo?.r === undefined || checkTextureFeature(gl, webglFormatInfo.r, extensions);
   const renderable =
     supported &&
     formatSupport.render &&
