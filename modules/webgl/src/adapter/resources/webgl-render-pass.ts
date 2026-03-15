@@ -66,8 +66,12 @@ export class WEBGLRenderPass extends RenderPass {
   }
 
   end(): void {
+    if (this.destroyed) {
+      return;
+    }
     this.device.popState();
     // should add commands to CommandEncoder.
+    this.destroy();
   }
 
   pushDebugGroup(groupLabel: string): void {}

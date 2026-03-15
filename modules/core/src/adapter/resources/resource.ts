@@ -3,10 +3,39 @@
 // Copyright (c) vis.gl contributors
 
 import type {Device} from '../device';
+import type {Stat, Stats} from '@probe.gl/stats';
 import {uid} from '../../utils/uid';
 
 const RESOURCE_COUNTS_STATS = 'Resource Counts';
 const RESOURCE_MEMORY_STATS = 'Resource Memory';
+const RESOURCE_COUNT_ORDER = [
+  'Resources',
+  'Buffers',
+  'Textures',
+  'Samplers',
+  'TextureViews',
+  'Shaders',
+  'RenderPipelines',
+  'ComputePipelines',
+  'PipelineLayouts',
+  'VertexArrays',
+  'RenderPasss',
+  'ComputePasss',
+  'Framebuffers',
+  'CommandEncoders',
+  'CommandBuffers'
+] as const;
+const RESOURCE_MEMORY_ORDER = [
+  'GPU Memory',
+  'Buffer Memory',
+  'Texture Memory',
+  'Referenced Buffer Memory',
+  'Referenced Texture Memory'
+] as const;
+const RESOURCE_COUNT_STAT_ORDER = RESOURCE_COUNT_ORDER.flatMap(resourceType => [
+  `${resourceType} Created`,
+  `${resourceType} Active`
+]);
 
 export type ResourceProps = {
   /** Name of resource, mainly for debugging purposes. A unique name will be assigned if not provided */
@@ -79,6 +108,9 @@ export abstract class Resource<Props extends ResourceProps> {
    * destroy can be called on any resource to release it before it is garbage collected.
    */
   destroy(): void {
+    if (this.destroyed) {
+      return;
+    }
     this.destroyResource();
   }
 
@@ -124,7 +156,7 @@ export abstract class Resource<Props extends ResourceProps> {
 
   /** Destroy all owned resources. Make sure the resources are no longer needed before calling. */
   destroyAttachedResources(): void {
-    for (const resource of Object.values(this._attachedResources)) {
+    for (const resource of this._attachedResources) {
       resource.destroy();
     }
     // don't remove while we are iterating
@@ -135,6 +167,9 @@ export abstract class Resource<Props extends ResourceProps> {
 
   /** Perform all destroy steps. Can be called by derived resources when overriding destroy() */
   protected destroyResource(): void {
+    if (this.destroyed) {
+      return;
+    }
     this.destroyAttachedResources();
     this.removeStats();
     this.destroyed = true;
@@ -143,6 +178,7 @@ export abstract class Resource<Props extends ResourceProps> {
   /** Called by .destroy() to track object destruction. Subclass must call if overriding destroy() */
   protected removeStats(): void {
     const stats = this._device.statsManager.getStats(RESOURCE_COUNTS_STATS);
+    initializeStats(stats, RESOURCE_COUNT_STAT_ORDER);
     const name = this[Symbol.toStringTag];
     stats.get('Resources Active').decrementCount();
     stats.get(`${name}s Active`).decrementCount();
@@ -151,6 +187,7 @@ export abstract class Resource<Props extends ResourceProps> {
   /** Called by subclass to track memory allocations */
   protected trackAllocatedMemory(bytes: number, name = this[Symbol.toStringTag]): void {
     const stats = this._device.statsManager.getStats(RESOURCE_MEMORY_STATS);
+    initializeStats(stats, RESOURCE_MEMORY_ORDER);
     if (this.allocatedBytes > 0 && this.allocatedBytesName) {
       stats.get('GPU Memory').subtractCount(this.allocatedBytes);
       stats.get(`${this.allocatedBytesName} Memory`).subtractCount(this.allocatedBytes);
@@ -161,6 +198,11 @@ export abstract class Resource<Props extends ResourceProps> {
     this.allocatedBytesName = name;
   }
 
+  /** Called by subclass to track handle-backed memory allocations separately from owned allocations */
+  protected trackReferencedMemory(bytes: number, name = this[Symbol.toStringTag]): void {
+    this.trackAllocatedMemory(bytes, `Referenced ${name}`);
+  }
+
   /** Called by subclass to track memory deallocations */
   protected trackDeallocatedMemory(name = this[Symbol.toStringTag]): void {
     if (this.allocatedBytes === 0) {
@@ -169,15 +211,22 @@ export abstract class Resource<Props extends ResourceProps> {
     }
 
     const stats = this._device.statsManager.getStats(RESOURCE_MEMORY_STATS);
+    initializeStats(stats, RESOURCE_MEMORY_ORDER);
     stats.get('GPU Memory').subtractCount(this.allocatedBytes);
     stats.get(`${this.allocatedBytesName || name} Memory`).subtractCount(this.allocatedBytes);
     this.allocatedBytes = 0;
     this.allocatedBytesName = null;
   }
 
+  /** Called by subclass to deallocate handle-backed memory tracked via trackReferencedMemory() */
+  protected trackDeallocatedReferencedMemory(name = this[Symbol.toStringTag]): void {
+    this.trackDeallocatedMemory(`Referenced ${name}`);
+  }
+
   /** Called by resource constructor to track object creation */
   private addStats(): void {
     const stats = this._device.statsManager.getStats(RESOURCE_COUNTS_STATS);
+    initializeStats(stats, RESOURCE_COUNT_STAT_ORDER);
     const name = this[Symbol.toStringTag];
     stats.get('Resources Created').incrementCount();
     stats.get('Resources Active').incrementCount();
@@ -200,4 +249,32 @@ function selectivelyMerge<Props>(props: Props, defaultProps: Required<Props>): R
     }
   }
   return mergedProps;
+}
+
+function initializeStats(stats: Stats, orderedStatNames: readonly string[]): void {
+  const statsMap = stats.stats;
+  for (const statName of orderedStatNames) {
+    stats.get(statName);
+  }
+
+  const reorderedStats: Record<string, Stat> = {};
+  const orderedStatNamesSet = new Set(orderedStatNames);
+
+  for (const statName of orderedStatNames) {
+    if (statsMap[statName]) {
+      reorderedStats[statName] = statsMap[statName];
+    }
+  }
+
+  for (const [statName, stat] of Object.entries(statsMap)) {
+    if (!orderedStatNamesSet.has(statName)) {
+      reorderedStats[statName] = stat;
+    }
+  }
+
+  for (const statName of Object.keys(statsMap)) {
+    delete statsMap[statName];
+  }
+
+  Object.assign(statsMap, reorderedStats);
 }

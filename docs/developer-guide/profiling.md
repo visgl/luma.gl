@@ -23,23 +23,29 @@ Resource allocation stats are collected in the `Resource Counts` stats bag:
 import {luma} from '@luma.gl/core';
 
 const resourceStats = luma.stats.get('Resource Counts');
+const memoryStats = luma.stats.get('Resource Memory');
 
 console.log('Total resources created', resourceStats.get('Resources Created').count);
 console.log('Total resources active', resourceStats.get('Resources Active').count);
-console.log('Total GPU memory', resourceStats.get('GPU Memory').count);
+console.log('Total GPU memory', memoryStats.get('GPU Memory').count);
 console.log('Buffers active', resourceStats.get('Buffers Active').count);
-console.log('Buffer memory', resourceStats.get('Buffer Memory').count);
+console.log('Buffer memory', memoryStats.get('Buffer Memory').count);
 console.log('Textures active', resourceStats.get('Textures Active').count);
-console.log('Texture memory', resourceStats.get('Texture Memory').count);
+console.log('Texture memory', memoryStats.get('Texture Memory').count);
 ```
 
 The `Resource Counts` bag includes:
 
 - `Resources Created`: total number of luma.gl resources ever created.
 - `Resources Active`: total number of luma.gl resources currently alive.
-- `GPU Memory`: total tracked GPU memory across luma.gl resources.
 - `<ResourceType>s Created` and `<ResourceType>s Active`: lifetime and live counters for each resource class, for example `Buffers Created`, `Buffers Active`, `Textures Created`, and `Textures Active`.
+
+The `Resource Memory` bag includes:
+
+- `GPU Memory`: total tracked GPU memory across luma.gl resources.
 - `<ResourceType> Memory`: tracked GPU memory for a specific resource type, currently including `Buffer Memory` and `Texture Memory`.
+
+Animation loop stats are mirrored into `luma.stats` under `Animation Loop`, exposing the latest updated loop's `Frame Rate`, `CPU Time`, and `GPU Time` values through the shared stats manager.
 
 ## Memory Profiling
 

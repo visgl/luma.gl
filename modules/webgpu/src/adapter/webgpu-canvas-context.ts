@@ -98,10 +98,12 @@ export class WebGPUCanvasContext extends CanvasContext {
       this._createDepthStencilAttachment(options?.depthStencilFormat);
     }
 
-    return new WebGPUFramebuffer(this.device, {
+    const framebuffer = new WebGPUFramebuffer(this.device, {
       colorAttachments: [currentColorAttachment],
       depthStencilAttachment: this.depthStencilAttachment
     });
+    framebuffer.attachResource(currentColorAttachment);
+    return framebuffer;
   }
 
   // PRIMARY METHODS

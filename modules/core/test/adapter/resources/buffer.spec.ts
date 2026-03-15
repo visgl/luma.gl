@@ -13,11 +13,16 @@ import {GL} from '@luma.gl/constants';
 
 const DEVICE_TYPES = ['webgpu', 'webgl', 'null'] as const;
 
-function getMemoryStats(device: Device): {gpuMemory: number; bufferMemory: number} {
+function getMemoryStats(device: Device): {
+  gpuMemory: number;
+  bufferMemory: number;
+  referencedBufferMemory: number;
+} {
   const stats = device.statsManager.getStats('Resource Memory');
   return {
     gpuMemory: stats.get('GPU Memory').count,
-    bufferMemory: stats.get('Buffer Memory').count
+    bufferMemory: stats.get('Buffer Memory').count,
+    referencedBufferMemory: stats.get('Referenced Buffer Memory').count
   };
 }
 
@@ -34,6 +39,10 @@ function getResourceStats(device: Device): {
     buffersCreated: stats.get('Buffers Created').count,
     buffersActive: stats.get('Buffers Active').count
   };
+}
+
+function getStatNames(device: Device, statsName: string): string[] {
+  return Object.keys(device.statsManager.getStats(statsName).stats);
 }
 
 test('Buffer#constructor/delete', async t => {
@@ -166,6 +175,55 @@ test('Buffer tracks GPU memory stats', async t => {
   t.end();
 });
 
+test('Handle-backed Buffer tracks referenced memory stats', async t => {
+  const device = await getWebGPUTestDevice();
+  const beforeStats = getMemoryStats(device);
+  const handle = device.handle.createBuffer({
+    size: 12,
+    usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST
+  });
+
+  const buffer = device.createBuffer({
+    handle,
+    byteLength: 12,
+    usage: Buffer.VERTEX | Buffer.COPY_DST
+  });
+  const afterCreateStats = getMemoryStats(device);
+
+  t.equal(
+    afterCreateStats.gpuMemory - beforeStats.gpuMemory,
+    12,
+    'webgpu handle-backed Buffer updates total GPU Memory'
+  );
+  t.equal(
+    afterCreateStats.bufferMemory - beforeStats.bufferMemory,
+    0,
+    'webgpu handle-backed Buffer does not update owned Buffer Memory'
+  );
+  t.equal(
+    afterCreateStats.referencedBufferMemory - beforeStats.referencedBufferMemory,
+    12,
+    'webgpu handle-backed Buffer updates Referenced Buffer Memory'
+  );
+
+  buffer.destroy();
+
+  const afterDestroyStats = getMemoryStats(device);
+  t.equal(
+    afterDestroyStats.gpuMemory,
+    beforeStats.gpuMemory,
+    'webgpu handle-backed Buffer destroy restores total GPU Memory'
+  );
+  t.equal(
+    afterDestroyStats.referencedBufferMemory,
+    beforeStats.referencedBufferMemory,
+    'webgpu handle-backed Buffer destroy restores Referenced Buffer Memory'
+  );
+
+  handle.destroy();
+  t.end();
+});
+
 test('Buffer tracks resource counts in core stats', async t => {
   for (const device of await getTestDevices(DEVICE_TYPES)) {
     const beforeStats = getResourceStats(device);
@@ -216,6 +274,45 @@ test('Buffer tracks resource counts in core stats', async t => {
       beforeStats.buffersActive,
       `${device.type} Buffer destroy restores Buffers Active`
     );
+  }
+
+  t.end();
+});
+
+test('Core stats use canonical resource ordering', async t => {
+  for (const device of await getTestDevices(['null'])) {
+    const buffer = device.createBuffer({byteLength: 4, usage: Buffer.VERTEX});
+
+    t.deepEqual(
+      getStatNames(device, 'Resource Counts').slice(0, 10),
+      [
+        'Resources Created',
+        'Resources Active',
+        'Buffers Created',
+        'Buffers Active',
+        'Textures Created',
+        'Textures Active',
+        'Samplers Created',
+        'Samplers Active',
+        'TextureViews Created',
+        'TextureViews Active'
+      ],
+      'core Resource Counts stats use canonical ordering'
+    );
+
+    t.deepEqual(
+      getStatNames(device, 'Resource Memory').slice(0, 5),
+      [
+        'GPU Memory',
+        'Buffer Memory',
+        'Texture Memory',
+        'Referenced Buffer Memory',
+        'Referenced Texture Memory'
+      ],
+      'core Resource Memory stats use canonical ordering'
+    );
+
+    buffer.destroy();
   }
 
   t.end();

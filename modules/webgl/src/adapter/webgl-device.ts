@@ -271,6 +271,7 @@ export class WebGLDevice extends Device {
    * browser API for destroying WebGL contexts.
    */
   destroy(): void {
+    this.commandEncoder?.destroy();
     // Note that deck.gl (especially in React strict mode) depends on being able
     // to asynchronously create a Device against the same canvas (i.e. WebGL context)
     // multiple times and getting the same device back. Since deck.gl is not aware
@@ -362,7 +363,11 @@ export class WebGLDevice extends Device {
       this.commandEncoder = this.createCommandEncoder({id: `${this.id}-default-encoder`});
     }
 
-    commandBuffer._executeCommands();
+    try {
+      commandBuffer._executeCommands();
+    } finally {
+      commandBuffer.destroy();
+    }
   }
 
   //

@@ -56,8 +56,31 @@ const ANIMATION_STATS_FORMATTERS = {
 const RESOURCE_STATS_FORMATTERS = {
   'GPU Memory': 'memory',
   'Buffer Memory': 'memory',
-  'Texture Memory': 'memory'
+  'Referenced Buffer Memory': 'memory',
+  'Texture Memory': 'memory',
+  'Referenced Texture Memory': 'memory',
+  'Swap Chain Texture': 'memory'
 } as const;
+
+function initializeResourceMemoryStats() {
+  const resourceMemory = luma.stats.get('Resource Memory');
+  const resourceMemoryStats = resourceMemory.stats as Record<string, Stat>;
+  delete resourceMemoryStats['Default Drawing Buffer'];
+  delete resourceMemoryStats['Default Canvas Color Texture'];
+  resourceMemory.get('Swap Chain Texture');
+  return resourceMemory;
+}
+
+function getDefaultCanvasColorTextureByteLength(device: Device): number {
+  const canvasContext = device.canvasContext;
+  if (!canvasContext) {
+    return 0;
+  }
+
+  const [width, height] = canvasContext.getDrawingBufferSize();
+  const formatInfo = device.getTextureFormatInfo(device.preferredColorFormat);
+  return width * height * (formatInfo.bytesPerPixel || 0);
+}
 
 type LumaExampleProps = React.PropsWithChildren<{
   id?: string;
@@ -224,7 +247,10 @@ export const InfoBox: FC<InfoBoxProps> = (props: InfoBoxProps) => {
 
 export const ExamplePage: FC<ExamplePageProps> = (props: ExamplePageProps) => {
   return (
-    <div className={props.className || 'luma-example-page'} style={{...EXAMPLE_CONTAINER_STYLE, ...props.style}}>
+    <div
+      className={props.className || 'luma-example-page'}
+      style={{...EXAMPLE_CONTAINER_STYLE, ...props.style}}
+    >
       {props.children}
     </div>
   );
@@ -256,20 +282,27 @@ export function ReactExample<P>(props: ReactExampleProps<P>) {
       return;
     }
 
+    const animationStats = luma.stats.get('Animation Loop');
     const resourceCounts = luma.stats.get('Resource Counts');
-    const resourceMemory = luma.stats.get('Resource Memory');
-    resourceMemory.get('GPU Memory');
-    resourceMemory.get('Buffer Memory');
-    resourceMemory.get('Texture Memory');
+    const resourceMemory = initializeResourceMemoryStats();
+    animationStats.get('Frame Rate');
+    animationStats.get('CPU Time');
+    animationStats.get('GPU Time');
 
     const statsWidgets = [
+      new StatsWidget(animationStats, {
+        title: 'luma.gl Animation Loop',
+        container: statsPanelRef.current,
+        css: STAT_STYLES,
+        formatters: ANIMATION_STATS_FORMATTERS
+      }),
       new StatsWidget(resourceCounts, {
-        title: 'luma.stats Resource Counts',
+        title: 'luma.gl Resource Counts',
         container: statsPanelRef.current,
         css: STAT_STYLES
       }),
       new StatsWidget(resourceMemory, {
-        title: 'luma.stats Resource Memory',
+        title: 'luma.gl Resource Memory',
         container: statsPanelRef.current,
         css: STAT_STYLES,
         formatters: RESOURCE_STATS_FORMATTERS
@@ -345,6 +378,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
     let device: Device | null = null;
     let statsWidgets: StatsWidget[] = [];
     let statsIntervalId: number | null = null;
+    let previousSwapChainTextureMemory = 0;
     const asyncCreateLoop = async () => {
       // canvas.style.width = '100%';
       // canvas.style.height = '100%';
@@ -367,26 +401,45 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
       animationLoop.gpuTime.setSampleSize(30);
 
       if (props.showStats !== false && statsPanelRef.current) {
+        const animationStats = luma.stats.get('Animation Loop');
         const resourceCounts = luma.stats.get('Resource Counts');
-        const resourceMemory = luma.stats.get('Resource Memory');
-        resourceMemory.get('GPU Memory');
-        resourceMemory.get('Buffer Memory');
-        resourceMemory.get('Texture Memory');
+        const resourceMemory = initializeResourceMemoryStats();
+        animationStats.get('Frame Rate');
+        animationStats.get('CPU Time');
+        animationStats.get('GPU Time');
+        const swapChainTextureStat = resourceMemory.get('Swap Chain Texture');
+        const gpuMemoryStat = resourceMemory.get('GPU Memory');
+
+        const updateSwapChainTextureMemory = (nextSwapChainTextureMemory: number) => {
+          const delta = nextSwapChainTextureMemory - previousSwapChainTextureMemory;
+          if (delta > 0) {
+            swapChainTextureStat.addCount(delta);
+            gpuMemoryStat.addCount(delta);
+          } else if (delta < 0) {
+            swapChainTextureStat.subtractCount(-delta);
+            gpuMemoryStat.subtractCount(-delta);
+          }
+          previousSwapChainTextureMemory = nextSwapChainTextureMemory;
+        };
+
+        if (device) {
+          updateSwapChainTextureMemory(getDefaultCanvasColorTextureByteLength(device));
+        }
 
         statsWidgets = [
-          new StatsWidget(animationLoop.stats, {
-            title: props.statsTitle || 'Example Stats',
+          new StatsWidget(animationStats, {
+            title: props.statsTitle || 'luma.gl Animation Loop',
             container: statsPanelRef.current,
             css: STAT_STYLES,
             formatters: ANIMATION_STATS_FORMATTERS
           }),
           new StatsWidget(resourceCounts, {
-            title: 'luma.stats Resource Counts',
+            title: 'luma.gl Resource Counts',
             container: statsPanelRef.current,
             css: STAT_STYLES
           }),
           new StatsWidget(resourceMemory, {
-            title: 'luma.stats Resource Memory',
+            title: 'luma.gl Resource Memory',
             container: statsPanelRef.current,
             css: STAT_STYLES,
             formatters: RESOURCE_STATS_FORMATTERS
@@ -397,6 +450,10 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
         }
 
         const updateStatsWidget = () => {
+          if (device) {
+            updateSwapChainTextureMemory(getDefaultCanvasColorTextureByteLength(device));
+          }
+
           for (const statsWidget of statsWidgets) {
             statsWidget.update();
           }
@@ -431,6 +488,12 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
           if (statsIntervalId !== null) {
             window.clearInterval(statsIntervalId);
             statsIntervalId = null;
+          }
+          if (previousSwapChainTextureMemory > 0) {
+            const resourceMemory = luma.stats.get('Resource Memory');
+            resourceMemory.get('Swap Chain Texture').subtractCount(previousSwapChainTextureMemory);
+            resourceMemory.get('GPU Memory').subtractCount(previousSwapChainTextureMemory);
+            previousSwapChainTextureMemory = 0;
           }
           for (const statsWidget of statsWidgets) {
             statsWidget.remove();

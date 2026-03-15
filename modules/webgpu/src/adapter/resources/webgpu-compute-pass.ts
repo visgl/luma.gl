@@ -40,10 +40,16 @@ export class WebGPUComputePass extends ComputePass {
   }
 
   /** @note no WebGPU destroy method, just gc */
-  override destroy(): void {}
+  override destroy(): void {
+    this.destroyResource();
+  }
 
   end(): void {
+    if (this.destroyed) {
+      return;
+    }
     this.handle.end();
+    this.destroy();
   }
 
   setPipeline(pipeline: ComputePipeline): void {

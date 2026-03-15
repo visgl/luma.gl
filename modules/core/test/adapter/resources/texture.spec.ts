@@ -1,7 +1,7 @@
 /* eslint-disable no-continue, max-depth */
 
 import test from 'tape-promise/tape';
-import {getWebGLTestDevice, getTestDevices} from '@luma.gl/test-utils';
+import {getWebGLTestDevice, getTestDevices, getWebGPUTestDevice} from '@luma.gl/test-utils';
 
 import {
   TypedArray,
@@ -67,11 +67,16 @@ test('Texture#clone overrides size', async t => {
   t.end();
 });
 
-function getTextureMemoryStats(device: Device): {gpuMemory: number; textureMemory: number} {
+function getTextureMemoryStats(device: Device): {
+  gpuMemory: number;
+  textureMemory: number;
+  referencedTextureMemory: number;
+} {
   const stats = device.statsManager.getStats('Resource Memory');
   return {
     gpuMemory: stats.get('GPU Memory').count,
-    textureMemory: stats.get('Texture Memory').count
+    textureMemory: stats.get('Texture Memory').count,
+    referencedTextureMemory: stats.get('Referenced Texture Memory').count
   };
 }
 
@@ -133,6 +138,61 @@ test('Texture tracks GPU memory stats', async t => {
       `${device.type} Texture destroy restores Texture Memory`
     );
   }
+  t.end();
+});
+
+test('Handle-backed Texture tracks referenced memory stats', async t => {
+  const device = await getWebGPUTestDevice();
+  const beforeStats = getTextureMemoryStats(device);
+  const handle = device.handle.createTexture({
+    size: {width: 4, height: 4, depthOrArrayLayers: 1},
+    usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
+    dimension: '2d',
+    format: 'rgba8unorm',
+    mipLevelCount: 1,
+    sampleCount: 1
+  });
+
+  const texture = device.createTexture({
+    handle,
+    format: 'rgba8unorm',
+    width: 4,
+    height: 4
+  });
+  const afterCreateStats = getTextureMemoryStats(device);
+  const expectedAllocation = getExpectedTextureAllocation(texture);
+
+  t.equal(
+    afterCreateStats.gpuMemory - beforeStats.gpuMemory,
+    expectedAllocation,
+    'webgpu handle-backed Texture updates total GPU Memory'
+  );
+  t.equal(
+    afterCreateStats.textureMemory - beforeStats.textureMemory,
+    0,
+    'webgpu handle-backed Texture does not update owned Texture Memory'
+  );
+  t.equal(
+    afterCreateStats.referencedTextureMemory - beforeStats.referencedTextureMemory,
+    expectedAllocation,
+    'webgpu handle-backed Texture updates Referenced Texture Memory'
+  );
+
+  texture.destroy();
+
+  const afterDestroyStats = getTextureMemoryStats(device);
+  t.equal(
+    afterDestroyStats.gpuMemory,
+    beforeStats.gpuMemory,
+    'webgpu handle-backed Texture destroy restores total GPU Memory'
+  );
+  t.equal(
+    afterDestroyStats.referencedTextureMemory,
+    beforeStats.referencedTextureMemory,
+    'webgpu handle-backed Texture destroy restores Referenced Texture Memory'
+  );
+
+  handle.destroy();
   t.end();
 });
 

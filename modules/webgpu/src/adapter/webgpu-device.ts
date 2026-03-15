@@ -137,6 +137,7 @@ export class WebGPUDevice extends Device {
   // this.glslang = glsl && await loadGlslangModule();
 
   destroy(): void {
+    this.commandEncoder?.destroy();
     this.handle.destroy();
   }
 
@@ -231,12 +232,16 @@ export class WebGPUDevice extends Device {
       this.commandEncoder = this.createCommandEncoder({id: `${this.id}-default-encoder`});
     }
 
-    this.pushErrorScope('validation');
-    this.handle.queue.submit([commandBuffer.handle]);
-    this.popErrorScope((error: GPUError) => {
-      this.reportError(new Error(`${this} command submission: ${error.message}`), this)();
-      this.debug();
-    });
+    try {
+      this.pushErrorScope('validation');
+      this.handle.queue.submit([commandBuffer.handle]);
+      this.popErrorScope((error: GPUError) => {
+        this.reportError(new Error(`${this} command submission: ${error.message}`), this)();
+        this.debug();
+      });
+    } finally {
+      commandBuffer.destroy();
+    }
   }
 
   // WebGPU specific

@@ -15,6 +15,7 @@ import {WebGPUFramebuffer} from './webgpu-framebuffer';
 export class WebGPURenderPass extends RenderPass {
   readonly device: WebGPUDevice;
   readonly handle: GPURenderPassEncoder;
+  readonly framebuffer: WebGPUFramebuffer;
 
   /** Active pipeline */
   pipeline: WebGPURenderPipeline | null = null;
@@ -22,10 +23,13 @@ export class WebGPURenderPass extends RenderPass {
   constructor(device: WebGPUDevice, props: RenderPassProps = {}) {
     super(device, props);
     this.device = device;
-    const framebuffer =
+    this.framebuffer =
       (props.framebuffer as WebGPUFramebuffer) || device.getCanvasContext().getCurrentFramebuffer();
+    if (!props.framebuffer) {
+      this.attachResource(this.framebuffer);
+    }
 
-    const renderPassDescriptor = this.getRenderPassDescriptor(framebuffer);
+    const renderPassDescriptor = this.getRenderPassDescriptor(this.framebuffer);
 
     const webgpuQuerySet = props.timestampQuerySet as WebGPUQuerySet;
     if (webgpuQuerySet) {
@@ -60,10 +64,16 @@ export class WebGPURenderPass extends RenderPass {
     log.groupEnd(3)();
   }
 
-  override destroy(): void {}
+  override destroy(): void {
+    this.destroyResource();
+  }
 
   end(): void {
+    if (this.destroyed) {
+      return;
+    }
     this.handle.end();
+    this.destroy();
   }
 
   setPipeline(pipeline: RenderPipeline): void {

@@ -14,7 +14,7 @@ import {WebGPURenderPass} from './webgpu-render-pass';
 /** VertexArrayObject wrapper */
 export class WebGPUVertexArray extends VertexArray {
   override get [Symbol.toStringTag](): string {
-    return 'WebGPUVertexArray';
+    return 'VertexArray';
   }
 
   readonly device: WebGPUDevice;

@@ -3,6 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {
+  CommandBufferProps,
   RenderPassProps,
   ComputePassProps,
   CopyTextureToTextureOptions,
@@ -34,9 +35,11 @@ export class WebGPUCommandEncoder extends CommandEncoder {
     this.handle.label = this.props.id;
   }
 
-  override destroy(): void {}
+  override destroy(): void {
+    this.destroyResource();
+  }
 
-  finish(props?: CommandEncoderProps): WebGPUCommandBuffer {
+  finish(props?: CommandBufferProps): WebGPUCommandBuffer {
     this.device.pushErrorScope('validation');
     const commandBuffer = new WebGPUCommandBuffer(this, {
       id: props?.id || 'unnamed-command-buffer'
@@ -46,6 +49,7 @@ export class WebGPUCommandEncoder extends CommandEncoder {
       this.device.reportError(new Error(message), this)();
       this.device.debug();
     });
+    this.destroy();
     return commandBuffer;
   }
 

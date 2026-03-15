@@ -56,8 +56,12 @@ export class WEBGLBuffer extends Buffer {
   override destroy(): void {
     if (!this.destroyed && this.handle) {
       this.removeStats();
-      this.trackDeallocatedMemory();
-      this.gl.deleteBuffer(this.handle);
+      if (!this.props.handle) {
+        this.trackDeallocatedMemory();
+        this.gl.deleteBuffer(this.handle);
+      } else {
+        this.trackDeallocatedReferencedMemory('Buffer');
+      }
       this.destroyed = true;
       // @ts-expect-error
       this.handle = null;
@@ -81,7 +85,11 @@ export class WEBGLBuffer extends Buffer {
     this.byteLength = byteLength;
 
     this._setDebugData(data, byteOffset, byteLength);
-    this.trackAllocatedMemory(byteLength);
+    if (!this.props.handle) {
+      this.trackAllocatedMemory(byteLength);
+    } else {
+      this.trackReferencedMemory(byteLength, 'Buffer');
+    }
   }
 
   // Allocate a GPU buffer of specified size.
@@ -107,7 +115,11 @@ export class WEBGLBuffer extends Buffer {
     this.byteLength = byteLength;
 
     this._setDebugData(null, 0, byteLength);
-    this.trackAllocatedMemory(byteLength);
+    if (!this.props.handle) {
+      this.trackAllocatedMemory(byteLength);
+    } else {
+      this.trackReferencedMemory(byteLength, 'Buffer');
+    }
 
     return this;
   }

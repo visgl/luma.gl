@@ -14,8 +14,8 @@ import {CommandBuffer} from '@luma.gl/core';
 import type {NullDevice} from '../null-device';
 
 export class NullCommandBuffer extends CommandBuffer {
-  device: NullDevice;
-  handle: null = null;
+  readonly device: NullDevice;
+  readonly handle: null = null;
 
   constructor(device: NullDevice, props: CommandBufferProps) {
     super(device, props);

@@ -70,14 +70,20 @@ export class WebGPUBuffer extends Buffer {
 
     if (!this.props.handle) {
       this.trackAllocatedMemory(size);
+    } else {
+      this.trackReferencedMemory(size, 'Buffer');
     }
   }
 
   override destroy(): void {
     if (!this.destroyed && this.handle) {
       this.removeStats();
-      this.trackDeallocatedMemory();
-      this.handle.destroy();
+      if (!this.props.handle) {
+        this.trackDeallocatedMemory();
+        this.handle.destroy();
+      } else {
+        this.trackDeallocatedReferencedMemory('Buffer');
+      }
       this.destroyed = true;
       // @ts-expect-error readonly
       this.handle = null;
