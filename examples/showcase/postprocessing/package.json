@@ -8,8 +8,8 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@loaders.gl/core": "^4.2.0",
-    "@loaders.gl/gltf": "^4.2.0",
+    "@loaders.gl/core": "4.4.0-alpha.18",
+    "@loaders.gl/gltf": "4.4.0-alpha.18",
     "@luma.gl/core": "9.3.0-alpha.4",
     "@luma.gl/effects": "9.3.0-alpha.4",
     "@luma.gl/engine": "9.3.0-alpha.4",
@@ -20,7 +20,7 @@
     "@math.gl/core": "^4.1.0"
   },
   "devDependencies": {
-    "typescript": "^5.5.0",
-    "vite": "^7.2.2"
+    "typescript": "^5.9.3",
+    "vite": "^8.0.0"
   }
 }

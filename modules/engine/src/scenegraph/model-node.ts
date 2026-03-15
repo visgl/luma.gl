@@ -9,12 +9,12 @@ import {Model} from '../model/model';
 export type ModelNodeProps = ScenegraphNodeProps & {
   model: Model;
   managedResources?: any[];
-  bounds?: [number[], number[]];
+  bounds?: [[number, number, number], [number, number, number]];
 };
 
 export class ModelNode extends ScenegraphNode {
   readonly model: Model;
-  bounds: [number[], number[]] | null = null;
+  bounds: [[number, number, number], [number, number, number]] | null = null;
   managedResources: any[];
 
   // TODO - is this used? override callbacks to make sure we call them with this

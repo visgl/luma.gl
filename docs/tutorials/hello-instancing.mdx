@@ -3,7 +3,7 @@ import {HelloInstancingExample} from '@site/src/examples';
 
 # Hello Instancing
 
-This tutorial illustrates *instanced* drawing with luma.gl using both WGSL and GLSL shaders and also shows how a custom luma.gl *shader module* can be used to pass colors.
+This tutorial illustrates _instanced_ drawing with luma.gl using both WGSL and GLSL shaders and also shows how a custom luma.gl _shader module_ can be used to pass colors.
 
 :::caution
 Tutorials are maintained on a best-effort basis and may not be fully up to date (contributions welcome).
@@ -14,7 +14,7 @@ Tutorials are maintained on a best-effort basis and may not be fully up to date 
 
 It is assumed you've set up your development environment as described in [Setup](/docs/tutorials).
 
-*Instancing* lets the GPU draw many copies of the same geometry with a single draw call. When rendering many similar geometries this can be significant speedups.
+_Instancing_ lets the GPU draw many copies of the same geometry with a single draw call. When rendering many similar geometries this can be significant speedups.
 
 In this sample, each triangle shares the same vertex data while per-instance
 attributes provide unique colors and offsets. A small `color` shader module passes
@@ -23,7 +23,7 @@ those colors from the vertex shader to the fragment shader.
 The code below creates a `Model` with per-instance attributes to draw four colored
 triangles inside an `AnimationLoopTemplate`.
 
-A luma.gl shader module essentially contains some shader code fragments that will be inserted into our vertex and fragment shaders. Shader modules usually define shader functions that implement generic functionality that can be reused in different shader programs. 
+A luma.gl shader module essentially contains some shader code fragments that will be inserted into our vertex and fragment shaders. Shader modules usually define shader functions that implement generic functionality that can be reused in different shader programs.
 
 In this case, we're defining a minimal shader module to pass a color from the vertex shader to the fragment shader. This module also demonstrates a common convention in luma.gl to prefix function and variable names in a shader module with the name of the module to avoid name collisions.
 
@@ -31,7 +31,7 @@ Now let's update our vertex and fragment shaders to use the shader module functi
 
 ```typescript
 import {Buffer} from '@luma.gl/core';
-import {AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine';
+import {AnimationLoopTemplate, AnimationProps, Model, makeAnimationLoop} from '@luma.gl/engine';
 import {webgl2Adapter} from '@luma.gl/webgl';
 import {webgpuAdapter} from '@luma.gl/webgpu';
 
@@ -172,7 +172,9 @@ class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 }
 
-const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {adapters: [webgpuAdapter, webgl2Adapter]})
+const animationLoop = makeAnimationLoop(AppAnimationLoopTemplate, {
+  adapters: [webgpuAdapter, webgl2Adapter]
+});
 animationLoop.start();
 ```
 

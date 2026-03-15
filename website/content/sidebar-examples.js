@@ -9,6 +9,7 @@ const sidebars = {
       type: 'category',
       label: 'Showcase',
       items: [
+        'showcase/gltf',
         'showcase/instancing',
         'showcase/persistence'
         // 'showcase/postprocessing'
@@ -19,8 +20,9 @@ const sidebars = {
       label: 'API',
       items: [
         'api/animation',
-        'api/cubemap'
-        // 'api/texture-3d'
+        'api/cubemap',
+        'api/texture-3d',
+        'api/texture-tester'
       ]
     },
     {

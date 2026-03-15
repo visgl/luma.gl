@@ -12,10 +12,13 @@ import type {
   DeviceTextureFormatCapabilities,
   VertexFormat,
   CanvasContextProps,
+  PresentationContextProps,
+  PresentationContext,
   BufferProps,
   SamplerProps,
   ShaderProps,
   TextureProps,
+  Texture,
   ExternalTextureProps,
   FramebufferProps,
   RenderPipelineProps,
@@ -41,6 +44,7 @@ import {WebGPUComputePipeline} from './resources/webgpu-compute-pipeline';
 import {WebGPUVertexArray} from './resources/webgpu-vertex-array';
 
 import {WebGPUCanvasContext} from './webgpu-canvas-context';
+import {WebGPUPresentationContext} from './webgpu-presentation-context';
 import {WebGPUCommandEncoder} from './resources/webgpu-command-encoder';
 import {WebGPUCommandBuffer} from './resources/webgpu-command-buffer';
 import {WebGPUQuerySet} from './resources/webgpu-query-set';
@@ -48,6 +52,7 @@ import {WebGPUPipelineLayout} from './resources/webgpu-pipeline-layout';
 import {WebGPUFence} from './resources/webgpu-fence';
 
 import {getShaderLayoutFromWGSL} from '../wgsl/get-shader-layout-wgsl';
+import {generateMipmapsWebGPU} from './helpers/generate-mipmaps-webgpu';
 
 /** WebGPU Device implementation */
 export class WebGPUDevice extends Device {
@@ -207,8 +212,16 @@ export class WebGPUDevice extends Device {
     return new WebGPUCanvasContext(this, this.adapter, props);
   }
 
+  createPresentationContext(props?: PresentationContextProps): PresentationContext {
+    return new WebGPUPresentationContext(this, props);
+  }
+
   createPipelineLayout(props: PipelineLayoutProps): WebGPUPipelineLayout {
     return new WebGPUPipelineLayout(this, props);
+  }
+
+  override generateMipmapsWebGPU(texture: Texture): void {
+    generateMipmapsWebGPU(this, texture);
   }
 
   submit(commandBuffer?: WebGPUCommandBuffer): void {

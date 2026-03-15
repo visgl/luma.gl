@@ -6,8 +6,13 @@ import {StatsManager, lumaStats} from '../utils/stats-manager';
 import {log} from '../utils/log';
 import {uid} from '../utils/uid';
 import type {VertexFormat, VertexFormatInfo} from '../shadertypes/vertex-arrays/vertex-formats';
-import type {TextureFormat, TextureFormatInfo} from '../shadertypes/textures/texture-formats';
+import type {
+  TextureFormat,
+  TextureFormatInfo,
+  CompressedTextureFormat
+} from '../shadertypes/textures/texture-formats';
 import type {CanvasContext, CanvasContextProps} from './canvas-context';
+import type {PresentationContext, PresentationContextProps} from './presentation-context';
 import type {BufferProps} from './resources/buffer';
 import {Buffer} from './resources/buffer';
 import type {RenderPipeline, RenderPipelineProps} from './resources/render-pipeline';
@@ -28,6 +33,7 @@ import type {Fence} from './resources/fence';
 
 import {getVertexFormatInfo} from '../shadertypes/vertex-arrays/decode-vertex-format';
 import {textureFormatDecoder} from '../shadertypes/textures/texture-format-decoder';
+import {getTextureFormatTable} from '../shadertypes/textures/texture-format-table';
 import type {ExternalImage} from '../image-utils/image-types';
 import {isExternalImage, getExternalImageSize} from '../image-utils/image-types';
 
@@ -188,6 +194,7 @@ export type WebGLDeviceFeature =
   | 'float16-renderable-webgl'
   | 'rgb9e5ufloat-renderable-webgl'
   | 'snorm8-renderable-webgl'
+  | 'norm16-webgl'
   | 'norm16-renderable-webgl'
   | 'snorm16-renderable-webgl'
 
@@ -242,13 +249,22 @@ export type DeviceProps = {
   /** Error handler. If it returns a probe logger style function, it will be called at the site of the error to optimize console error links. */
   onError?: (error: Error, context?: unknown) => unknown;
   /** Called when the size of a CanvasContext's canvas changes */
-  onResize?: (ctx: CanvasContext, info: {oldPixelSize: [number, number]}) => unknown;
+  onResize?: (
+    ctx: CanvasContext | PresentationContext,
+    info: {oldPixelSize: [number, number]}
+  ) => unknown;
   /** Called when the absolute position of a CanvasContext's canvas changes. Must set `CanvasContextProps.trackPosition: true` */
-  onPositionChange?: (ctx: CanvasContext, info: {oldPosition: [number, number]}) => unknown;
+  onPositionChange?: (
+    ctx: CanvasContext | PresentationContext,
+    info: {oldPosition: [number, number]}
+  ) => unknown;
   /** Called when the visibility of a CanvasContext's canvas changes */
-  onVisibilityChange?: (ctx: CanvasContext) => unknown;
+  onVisibilityChange?: (ctx: CanvasContext | PresentationContext) => unknown;
   /** Called when the device pixel ratio of a CanvasContext's canvas changes */
-  onDevicePixelRatioChange?: (ctx: CanvasContext, info: {oldRatio: number}) => unknown;
+  onDevicePixelRatioChange?: (
+    ctx: CanvasContext | PresentationContext,
+    info: {oldRatio: number}
+  ) => unknown;
 
   // DEBUG SETTINGS
 
@@ -488,6 +504,19 @@ export abstract class Device {
     return textureFormatDecoder.isCompressed(format);
   }
 
+  /** Returns the compressed texture formats that can be created and sampled on this device */
+  getSupportedCompressedTextureFormats(): CompressedTextureFormat[] {
+    const supportedFormats: CompressedTextureFormat[] = [];
+
+    for (const format of Object.keys(getTextureFormatTable()) as TextureFormat[]) {
+      if (this.isTextureFormatCompressed(format) && this.isTextureFormatSupported(format)) {
+        supportedFormats.push(format as CompressedTextureFormat);
+      }
+    }
+
+    return supportedFormats;
+  }
+
   // DEBUG METHODS
 
   pushDebugGroup(groupLabel: string): void {
@@ -587,6 +616,9 @@ or create a device with the 'debug: true' prop.`;
   /** Creates a new CanvasContext (WebGPU only) */
   abstract createCanvasContext(props?: CanvasContextProps): CanvasContext;
 
+  /** Creates a presentation context for a destination canvas. WebGL requires the default canvas context to use an OffscreenCanvas. */
+  abstract createPresentationContext(props?: PresentationContextProps): PresentationContext;
+
   /** Call after rendering a frame (necessary e.g. on WebGL OffscreenCanvas) */
   abstract submit(commandBuffer?: CommandBuffer): void;
 
@@ -639,6 +671,15 @@ or create a device with the 'debug: true' prop.`;
   /** Create a ComputePass using the default CommandEncoder*/
   beginComputePass(props?: ComputePassProps): ComputePass {
     return this.commandEncoder.beginComputePass(props);
+  }
+
+  /**
+   * Generate mipmaps for a WebGPU texture.
+   * WebGPU textures must be created up front with the required mip count, usage flags, and a format that supports the chosen generation path.
+   * WebGL uses `Texture.generateMipmapsWebGL()` directly because the backend manages mip generation on the texture object itself.
+   */
+  generateMipmapsWebGPU(_texture: Texture): void {
+    throw new Error('not implemented');
   }
 
   /**

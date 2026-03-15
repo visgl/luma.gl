@@ -33,7 +33,7 @@ import {
   Model,
   CubeGeometry,
   loadImageBitmap,
-  AsyncTexture
+  DynamicTexture
 } from '@luma.gl/engine';
 import {webgl2Adapter} from '@luma.gl/webgl';
 import {webgpuAdapter} from '@luma.gl/webgpu';
@@ -135,7 +135,7 @@ class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   constructor({device}: AnimationProps) {
     super();
 
-    const texture = new AsyncTexture(device, {
+    const texture = new DynamicTexture(device, {
       usage: Texture.TEXTURE | Texture.RENDER_ATTACHMENT | Texture.COPY_DST,
       data: loadImageBitmap('vis-logo.png'),
       flipY: true,
@@ -186,7 +186,9 @@ class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 }
 
-const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {adapters: [webgpuAdapter, webgl2Adapter]})
+const animationLoop = makeAnimationLoop(AppAnimationLoopTemplate, {
+  adapters: [webgpuAdapter, webgl2Adapter]
+});
 animationLoop.start();
 ```
 

@@ -29,6 +29,7 @@ import {
   Model,
   BufferTransform,
   Swap,
+  makeAnimationLoop,
   makeRandomGenerator
 } from '@luma.gl/engine';
 import {picking} from '@luma.gl/shadertools';
@@ -285,7 +286,9 @@ class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 }
 
-const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {adapters: [webgl2Adapter]})
+const animationLoop = makeAnimationLoop(AppAnimationLoopTemplate, {
+  adapters: [webgl2Adapter]
+});
 animationLoop.start();
 ```
 

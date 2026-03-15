@@ -134,51 +134,55 @@ export const source = /* wgsl */ `\
 struct PBRFragmentInputs {
   pbr_vPosition: vec3f,
   pbr_vUV: vec2f,
-  pbr_vTBN: mat3f,
+  pbr_vTBN: mat3x3f,
   pbr_vNormal: vec3f
 };
 
-var fragmentInputs: PBRFragmentInputs;
+var<private> fragmentInputs: PBRFragmentInputs;
 
 fn pbr_setPositionNormalTangentUV(position: vec4f, normal: vec4f, tangent: vec4f, uv: vec2f)
 {
   var pos: vec4f = pbrProjection.modelMatrix * position;
-  fragmentInputs.pbr_vPosition = vec3(pos.xyz) / pos.w;
+  fragmentInputs.pbr_vPosition = pos.xyz / pos.w;
+  fragmentInputs.pbr_vNormal = vec3f(0.0, 0.0, 1.0);
+  fragmentInputs.pbr_vTBN = mat3x3f(
+    vec3f(1.0, 0.0, 0.0),
+    vec3f(0.0, 1.0, 0.0),
+    vec3f(0.0, 0.0, 1.0)
+  );
+  fragmentInputs.pbr_vUV = vec2f(0.0, 0.0);
 
 #ifdef HAS_NORMALS
+  let normalW: vec3f = normalize((pbrProjection.normalMatrix * vec4f(normal.xyz, 0.0)).xyz);
+  fragmentInputs.pbr_vNormal = normalW;
 #ifdef HAS_TANGENTS
-  let normalW: vec3f = normalize(vec3(pbrProjection.normalMatrix * vec4(normal.xyz, 0.0)));
-  let tangentW: vec3f = normalize(vec3(pbrProjection.modelMatrix * vec4(tangent.xyz, 0.0)));
+  let tangentW: vec3f = normalize((pbrProjection.modelMatrix * vec4f(tangent.xyz, 0.0)).xyz);
   let bitangentW: vec3f = cross(normalW, tangentW) * tangent.w;
-  fragmentInputs.pbr_vTBN = mat3(tangentW, bitangentW, normalW);
-#else // HAS_TANGENTS != 1
-  fragmentInputs.pbr_vNormal = normalize(vec3(pbrProjection.modelMatrix * vec4(normal.xyz, 0.0)));
+  fragmentInputs.pbr_vTBN = mat3x3f(tangentW, bitangentW, normalW);
 #endif
 #endif
 
 #ifdef HAS_UV
   fragmentInputs.pbr_vUV = uv;
-#else
-  fragmentInputs.pbr_vUV = vec2(0.,0.);
 #endif
 }
 
 struct pbrMaterialUniforms {
   // Material is unlit
-  unlit: uint32,
+  unlit: u32,
 
   // Base color map
-  baseColorMapEnabled: uint32,
+  baseColorMapEnabled: u32,
   baseColorFactor: vec4f,
 
-  normalMapEnabled : uint32,
+  normalMapEnabled : u32,
   normalScale: f32,  // #ifdef HAS_NORMALMAP
 
-  emissiveMapEnabled: uint32,
+  emissiveMapEnabled: u32,
   emissiveFactor: vec3f, // #ifdef HAS_EMISSIVEMAP
 
   metallicRoughnessValues: vec2f,
-  metallicRoughnessMapEnabled: uint32,
+  metallicRoughnessMapEnabled: u32,
 
   occlusionMapEnabled: i32,
   occlusionStrength: f32, // #ifdef HAS_OCCLUSIONMAP
@@ -193,7 +197,7 @@ struct pbrMaterialUniforms {
   // debugging flags used for shader output of intermediate PBR variables
   // #ifdef PBR_DEBUG
   scaleDiffBaseMR: vec4f,
-  scaleFGDSpec: vec4f
+  scaleFGDSpec: vec4f,
   // #endif
 }
 
@@ -201,24 +205,32 @@ struct pbrMaterialUniforms {
 
 // Samplers
 #ifdef HAS_BASECOLORMAP
-uniform sampler2D pbr_baseColorSampler;
+@binding(3) @group(0) var pbr_baseColorSampler: texture_2d<f32>;
+@binding(4) @group(0) var pbr_baseColorSamplerSampler: sampler;
 #endif
 #ifdef HAS_NORMALMAP
-uniform sampler2D pbr_normalSampler;
+@binding(5) @group(0) var pbr_normalSampler: texture_2d<f32>;
+@binding(6) @group(0) var pbr_normalSamplerSampler: sampler;
 #endif
 #ifdef HAS_EMISSIVEMAP
-uniform sampler2D pbr_emissiveSampler;
+@binding(7) @group(0) var pbr_emissiveSampler: texture_2d<f32>;
+@binding(8) @group(0) var pbr_emissiveSamplerSampler: sampler;
 #endif
 #ifdef HAS_METALROUGHNESSMAP
-uniform sampler2D pbr_metallicRoughnessSampler;
+@binding(9) @group(0) var pbr_metallicRoughnessSampler: texture_2d<f32>;
+@binding(10) @group(0) var pbr_metallicRoughnessSamplerSampler: sampler;
 #endif
 #ifdef HAS_OCCLUSIONMAP
-uniform sampler2D pbr_occlusionSampler;
+@binding(11) @group(0) var pbr_occlusionSampler: texture_2d<f32>;
+@binding(12) @group(0) var pbr_occlusionSamplerSampler: sampler;
 #endif
 #ifdef USE_IBL
-uniform samplerCube pbr_diffuseEnvSampler;
-uniform samplerCube pbr_specularEnvSampler;
-uniform sampler2D pbr_brdfLUT;
+@binding(13) @group(0) var pbr_diffuseEnvSampler: texture_cube<f32>;
+@binding(14) @group(0) var pbr_diffuseEnvSamplerSampler: sampler;
+@binding(15) @group(0) var pbr_specularEnvSampler: texture_cube<f32>;
+@binding(16) @group(0) var pbr_specularEnvSamplerSampler: sampler;
+@binding(17) @group(0) var pbr_BrdfLUT: texture_2d<f32>;
+@binding(18) @group(0) var pbr_BrdfLUTSampler: sampler;
 #endif
 
 // Encapsulate the various inputs used by the various functions in the shading equation
@@ -246,17 +258,19 @@ const c_MinRoughness = 0.04;
 
 fn SRGBtoLINEAR(srgbIn: vec4f ) -> vec4f
 {
+  var linOut: vec3f = srgbIn.xyz;
 #ifdef MANUAL_SRGB
+  let bLess: vec3f = step(vec3f(0.04045), srgbIn.xyz);
+  linOut = mix(
+    srgbIn.xyz / vec3f(12.92),
+    pow((srgbIn.xyz + vec3f(0.055)) / vec3f(1.055), vec3f(2.4)),
+    bLess
+  );
 #ifdef SRGB_FAST_APPROXIMATION
-  var linOut: vec3f = pow(srgbIn.xyz,vec3(2.2));
-#else // SRGB_FAST_APPROXIMATION
-  var bLess: vec3f = step(vec3(0.04045),srgbIn.xyz);
-  var linOut: vec3f = mix( srgbIn.xyz/vec3(12.92), pow((srgbIn.xyz+vec3(0.055))/vec3(1.055),vec3(2.4)), bLess );
-#endif //SRGB_FAST_APPROXIMATION
-  return vec4f(linOut,srgbIn.w);;
-#else //MANUAL_SRGB
-  return srgbIn;
-#endif //MANUAL_SRGB
+  linOut = pow(srgbIn.xyz, vec3f(2.2));
+#endif
+#endif
+  return vec4f(linOut, srgbIn.w);
 }
 
 // Find the normal for this fragment, pulling either from a predefined normal map
@@ -264,32 +278,28 @@ fn SRGBtoLINEAR(srgbIn: vec4f ) -> vec4f
 fn getNormal() -> vec3f
 {
   // Retrieve the tangent space matrix
-#ifndef HAS_TANGENTS
-  var pos_dx: vec3f = dFdx(fragmentInputs.pbr_vPosition);
-  var pos_dy: vec3f = dFdy(fragmentInputs.pbr_vPosition);
-  var tex_dx: vec3f = dFdx(vec3(fragmentInputs.pbr_vUV, 0.0));
-  var tex_dy: vec3f = dFdy(vec3(fragmentInputs.pbr_vUV, 0.0));
-  var t: vec3f = (tex_dy.t * pos_dx - tex_dx.t * pos_dy) / (tex_dx.s * tex_dy.t - tex_dy.s * tex_dx.t);
+  let pos_dx: vec3f = dpdx(fragmentInputs.pbr_vPosition);
+  let pos_dy: vec3f = dpdy(fragmentInputs.pbr_vPosition);
+  let tex_dx: vec3f = dpdx(vec3f(fragmentInputs.pbr_vUV, 0.0));
+  let tex_dy: vec3f = dpdy(vec3f(fragmentInputs.pbr_vUV, 0.0));
+  var t: vec3f = (tex_dy.y * pos_dx - tex_dx.y * pos_dy) / (tex_dx.x * tex_dy.y - tex_dy.x * tex_dx.y);
 
-#ifdef HAS_NORMALS
-  var ng: vec3f = normalize(fragmentInputs.pbr_vNormal);
-#else
   var ng: vec3f = cross(pos_dx, pos_dy);
+#ifdef HAS_NORMALS
+  ng = normalize(fragmentInputs.pbr_vNormal);
 #endif
-
   t = normalize(t - ng * dot(ng, t));
   var b: vec3f = normalize(cross(ng, t));
-  var tbn: mat3f = mat3f(t, b, ng);
-#else // HAS_TANGENTS
-  var tbn: mat3f = fragmentInputs.pbr_vTBN;
+  var tbn: mat3x3f = mat3x3f(t, b, ng);
+#ifdef HAS_TANGENTS
+  tbn = fragmentInputs.pbr_vTBN;
 #endif
 
-#ifdef HAS_NORMALMAP
-  vec3 n = texture(pbr_normalSampler, fragmentInputs.pbr_vUV).rgb;
-  n = normalize(tbn * ((2.0 * n - 1.0) * vec3(pbrMaterial.normalScale, pbrMaterial.normalScale, 1.0)));
-#else
   // The tbn matrix is linearly interpolated, so we need to re-normalize
-  vec3 n = normalize(tbn[2].xyz);
+  var n: vec3f = normalize(tbn[2].xyz);
+#ifdef HAS_NORMALMAP
+  n = textureSample(pbr_normalSampler, pbr_normalSamplerSampler, fragmentInputs.pbr_vUV).rgb;
+  n = normalize(tbn * ((2.0 * n - 1.0) * vec3f(pbrMaterial.normalScale, pbrMaterial.normalScale, 1.0)));
 #endif
 
   return n;
@@ -299,27 +309,37 @@ fn getNormal() -> vec3f
 // Precomputed Environment Maps are required uniform inputs and are computed as outlined in [1].
 // See our README.md on Environment Maps [3] for additional discussion.
 #ifdef USE_IBL
-fn getIBLContribution(PBRInfo pbrInfo, vec3 n, vec3 reflection) -> vec3f
+fn getIBLContribution(pbrInfo: PBRInfo, n: vec3f, reflection: vec3f) -> vec3f
 {
-  float mipCount = 9.0; // resolution of 512x512
-  float lod = (pbrInfo.perceptualRoughness * mipCount);
+  let mipCount: f32 = 9.0; // resolution of 512x512
+  let lod: f32 = pbrInfo.perceptualRoughness * mipCount;
   // retrieve a scale and bias to F0. See [1], Figure 3
-  vec3 brdf = SRGBtoLINEAR(texture(pbr_brdfLUT,
-    vec2(pbrInfo.NdotV, 1.0 - pbrInfo.perceptualRoughness))).rgb;
-  vec3 diffuseLight = SRGBtoLINEAR(texture(pbr_diffuseEnvSampler, n)).rgb;
-
+  let brdf = SRGBtoLINEAR(
+    textureSample(
+      pbr_BrdfLUT,
+      pbr_BrdfLUTSampler,
+      vec2f(pbrInfo.NdotV, 1.0 - pbrInfo.perceptualRoughness)
+    )
+  ).rgb;
+  let diffuseLight =
+    SRGBtoLINEAR(textureSample(pbr_diffuseEnvSampler, pbr_diffuseEnvSamplerSampler, n)).rgb;
+  let specularLightDefault =
+    SRGBtoLINEAR(textureSample(pbr_specularEnvSampler, pbr_specularEnvSamplerSampler, reflection)).rgb;
+  var specularLight = specularLightDefault;
 #ifdef USE_TEX_LOD
-  vec3 specularLight = SRGBtoLINEAR(texture(pbr_specularEnvSampler, reflection, lod)).rgb;
-#else
-  vec3 specularLight = SRGBtoLINEAR(texture(pbr_specularEnvSampler, reflection)).rgb;
+  specularLight = SRGBtoLINEAR(
+    textureSampleLevel(
+      pbr_specularEnvSampler,
+      pbr_specularEnvSamplerSampler,
+      reflection,
+      lod
+    )
+  ).rgb;
 #endif
 
-  vec3 diffuse = diffuseLight * pbrInfo.diffuseColor;
-  vec3 specular = specularLight * (pbrInfo.specularColor * brdf.x + brdf.y);
-
-  // For presentation, this allows us to disable IBL terms
-  diffuse *= pbrMaterial.scaleIBLAmbient.x;
-  specular *= pbrMaterial.scaleIBLAmbient.y;
+  let diffuse = diffuseLight * pbrInfo.diffuseColor * pbrMaterial.scaleIBLAmbient.x;
+  let specular =
+    specularLight * (pbrInfo.specularColor * brdf.x + brdf.y) * pbrMaterial.scaleIBLAmbient.y;
 
   return diffuse + specular;
 }
@@ -363,7 +383,7 @@ fn geometricOcclusion(pbrInfo: PBRInfo) -> f32 {
 fn microfacetDistribution(pbrInfo: PBRInfo) -> f32 {
   let roughnessSq = pbrInfo.alphaRoughness * pbrInfo.alphaRoughness;
   let f = (pbrInfo.NdotH * roughnessSq - pbrInfo.NdotH) * pbrInfo.NdotH + 1.0;
-  return roughnessSq / (PI * f * f);
+  return roughnessSq / (M_PI * f * f);
 }
 
 fn PBRInfo_setAmbientLight(pbrInfo: ptr<function, PBRInfo>) {
@@ -405,11 +425,11 @@ fn calculateFinalColor(pbrInfo: PBRInfo, lightColor: vec3<f32>) -> vec3<f32> {
 
 fn pbr_filterColor(colorUnused: vec4<f32>) -> vec4<f32> {
   // The albedo may be defined from a base texture or a flat color
-  var baseColor: vec4<f32>;
+  var baseColor: vec4<f32> = pbrMaterial.baseColorFactor;
   #ifdef HAS_BASECOLORMAP
-  baseColor = SRGBtoLINEAR(textureSample(pbr_baseColorSampler, pbr_baseColorSampler, fragmentInputs.pbr_vUV)) * pbrMaterial.baseColorFactor;
-  #else
-  baseColor = pbrMaterial.baseColorFactor;
+  baseColor = SRGBtoLINEAR(
+    textureSample(pbr_baseColorSampler, pbr_baseColorSamplerSampler, fragmentInputs.pbr_vUV)
+  ) * pbrMaterial.baseColorFactor;
   #endif
 
   #ifdef ALPHA_CUTOFF
@@ -420,7 +440,7 @@ fn pbr_filterColor(colorUnused: vec4<f32>) -> vec4<f32> {
 
   var color = vec3<f32>(0.0, 0.0, 0.0);
 
-  if (pbrMaterial.unlit) {
+  if (pbrMaterial.unlit != 0u) {
     color = baseColor.rgb;
   } else {
     // Metallic and Roughness material properties are packed together
@@ -431,7 +451,11 @@ fn pbr_filterColor(colorUnused: vec4<f32>) -> vec4<f32> {
     #ifdef HAS_METALROUGHNESSMAP
     // Roughness is stored in the 'g' channel, metallic is stored in the 'b' channel.
     // This layout intentionally reserves the 'r' channel for (optional) occlusion map data
-    let mrSample = textureSample(pbr_metallicRoughnessSampler, pbr_metallicRoughnessSampler, fragmentInputs.pbr_vUV);
+    let mrSample = textureSample(
+      pbr_metallicRoughnessSampler,
+      pbr_metallicRoughnessSamplerSampler,
+      fragmentInputs.pbr_vUV
+    );
     perceptualRoughness = mrSample.g * perceptualRoughness;
     metallic = mrSample.b * metallic;
     #endif
@@ -508,22 +532,25 @@ fn pbr_filterColor(colorUnused: vec4<f32>) -> vec4<f32> {
 
     // Calculate lighting contribution from image based lighting source (IBL)
     #ifdef USE_IBL
-    if (pbrMaterial.IBLenabled) {
+    if (pbrMaterial.IBLenabled != 0) {
       color += getIBLContribution(pbrInfo, n, reflection);
     }
     #endif
 
     // Apply optional PBR terms for additional (optional) shading
     #ifdef HAS_OCCLUSIONMAP
-    if (pbrMaterial.occlusionMapEnabled) {
-      let ao = textureSample(pbr_occlusionSampler, pbr_occlusionSampler, fragmentInputs.pbr_vUV).r;
+    if (pbrMaterial.occlusionMapEnabled != 0) {
+      let ao =
+        textureSample(pbr_occlusionSampler, pbr_occlusionSamplerSampler, fragmentInputs.pbr_vUV).r;
       color = mix(color, color * ao, pbrMaterial.occlusionStrength);
     }
     #endif
 
     #ifdef HAS_EMISSIVEMAP
-    if (pbrMaterial.emissiveMapEnabled) {
-      let emissive = SRGBtoLINEAR(textureSample(pbr_emissiveSampler, pbr_emissiveSampler, fragmentInputs.pbr_vUV)).rgb * pbrMaterial.emissiveFactor;
+    if (pbrMaterial.emissiveMapEnabled != 0u) {
+      let emissive = SRGBtoLINEAR(
+        textureSample(pbr_emissiveSampler, pbr_emissiveSamplerSampler, fragmentInputs.pbr_vUV)
+      ).rgb * pbrMaterial.emissiveFactor;
       color += emissive;
     }
     #endif

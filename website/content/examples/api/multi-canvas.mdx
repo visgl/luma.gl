@@ -1,0 +1,33 @@
+---
+title: Multi Canvas
+---
+
+import {ExampleHeader} from '@site/src/react-luma';
+import {MultiCanvasExample} from '@site/src/examples';
+
+<ExampleHeader id="multi-canvas" directory="api">
+  <p>
+    Rendering to two canvases (<code>HTMLCanvasElement</code>) using one shared luma.gl{' '}
+    <code>Device</code>.
+  </p>
+  <ul style={{marginTop: 0, marginBottom: 0, fontStyle: 'italic'}}>
+    <li>
+      The example uses <code>makeAnimationLoop()</code> so its lifecycle matches the rest of the
+      examples.
+    </li>
+    <li>
+      Each frame draws into two <code>PresentationContext</code>s backed by the same shared{' '}
+      <code>Device</code>.
+    </li>
+    <li>
+      Resize the window to see each <code>PresentationContext</code> track the canvas size change
+      automatically.
+    </li>
+    <li>
+      On WebGL the shared device renders through an <code>OffscreenCanvas</code>, then presents
+      into the visible canvases.
+    </li>
+  </ul>
+</ExampleHeader>
+
+<MultiCanvasExample />

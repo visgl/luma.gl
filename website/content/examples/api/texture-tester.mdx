@@ -1,0 +1,28 @@
+---
+title: Texture Tester
+---
+
+import {ExampleHeader} from '@site/src/react-luma';
+import {TextureTesterExample} from '@site/src/examples';
+
+<ExampleHeader id="texture-tester" title="Texture Tester" directory="api">
+  <p>
+    This example shows which compressed texture formats your current browser and GPU can render.
+  </p>
+  <ul style={{marginTop: 0, marginBottom: 0, fontStyle: 'italic'}}>
+    <li>
+      Some compressed texture formats are expected to be unsupported, depending on the GPU you are
+      using to view this page.
+    </li>
+    <li>
+      This example loads images and compressed textures using <code>@loaders.gl/textures</code> and
+      renders them using luma.gl on both WebGL and WebGPU.
+    </li>
+    <li>
+      This example uses a single shared luma.gl <code>Device</code> rendering into multiple
+      canvases managed by <code>PresentationContext</code>s.
+    </li>
+  </ul>
+</ExampleHeader>
+
+<TextureTesterExample />

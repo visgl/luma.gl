@@ -2,21 +2,33 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {GLTFNodePostprocessed} from '@loaders.gl/gltf';
-
+/** Parsed glTF animation definition. */
 export type GLTFAnimation = {
+  /** Application-visible animation name. */
   name: string;
+  /** Channels that drive individual node properties. */
   channels: GLTFAnimationChannel[];
 };
 
+/** Supported glTF animation target paths. */
+export type GLTFAnimationPath = 'translation' | 'rotation' | 'scale' | 'weights';
+
+/** Parsed glTF animation channel. */
 export type GLTFAnimationChannel = {
-  path: 'translation' | 'rotation' | 'scale' | 'weights';
+  /** Node property written by this channel. */
+  path: GLTFAnimationPath;
+  /** Time/value sampler used to evaluate the channel. */
   sampler: GLTFAnimationSampler;
-  target: GLTFNodePostprocessed;
+  /** Target node identifier in the generated scenegraph. */
+  targetNodeId: string;
 };
 
+/** Parsed glTF animation sampler. */
 export type GLTFAnimationSampler = {
+  /** Keyframe times in seconds. */
   input: number[];
+  /** glTF interpolation mode. */
   interpolation: string;
-  output: number[] | number[][];
+  /** Keyframe values, already expanded into JS arrays. */
+  output: number[][];
 };

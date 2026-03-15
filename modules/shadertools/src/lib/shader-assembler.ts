@@ -87,9 +87,16 @@ export class ShaderAssembler {
       modules,
       hookFunctions
     });
+    const defines = {
+      ...modules.reduce<Record<string, boolean>>((accumulator, module) => {
+        Object.assign(accumulator, module.defines);
+        return accumulator;
+      }, {}),
+      ...props.defines
+    };
     // WGSL does not have built-in preprocessing support (just compile time constants)
     const preprocessedSource =
-      props.platformInfo.shaderLanguage === 'wgsl' ? preprocess(source) : source;
+      props.platformInfo.shaderLanguage === 'wgsl' ? preprocess(source, {defines}) : source;
     return {source: preprocessedSource, getUniforms, modules};
   }
 

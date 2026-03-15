@@ -10,7 +10,7 @@
     "items": [
       "showcase/instancing",
       "showcase/persistence",
-      "showcase/postprocessing"
+      "showcase/gltf"
     ]
   },
   {
@@ -20,7 +20,8 @@
       "api/animation",
       "api/cubemap",
       "api/texture-3d",
-      "api/external-webgl-context"
+      "api/texture-tester",
+      "api/multi-canvas"
     ]
   },
   {
@@ -38,6 +39,14 @@
       "tutorials/shader-hooks",
       "tutorials/transform-feedback",
       "tutorials/transform"
+    ]
+  },
+  {
+    "type": "category",
+    "label": "Integrations",
+    "items": [
+      "integrations/external-context",
+      "integrations/react-strict-mode"
     ]
   }
 ]

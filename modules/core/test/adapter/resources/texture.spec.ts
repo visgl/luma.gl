@@ -67,6 +67,75 @@ test('Texture#clone overrides size', async t => {
   t.end();
 });
 
+function getTextureMemoryStats(device: Device): {gpuMemory: number; textureMemory: number} {
+  const stats = device.statsManager.getStats('Resource Memory');
+  return {
+    gpuMemory: stats.get('GPU Memory').count,
+    textureMemory: stats.get('Texture Memory').count
+  };
+}
+
+function getExpectedTextureAllocation(texture: Texture): number {
+  let expectedAllocation = 0;
+
+  for (let mipLevel = 0; mipLevel < texture.mipLevels; mipLevel++) {
+    const width = Math.max(1, texture.width >> mipLevel);
+    const height = texture.baseDimension === '1d' ? 1 : Math.max(1, texture.height >> mipLevel);
+    const depthOrArrayLayers =
+      texture.dimension === '3d' ? Math.max(1, texture.depth >> mipLevel) : texture.depth;
+
+    expectedAllocation += textureFormatDecoder.computeMemoryLayout({
+      format: texture.format,
+      width,
+      height,
+      depth: depthOrArrayLayers,
+      byteAlignment: 1
+    }).byteLength;
+  }
+
+  return expectedAllocation * texture.samples;
+}
+
+test('Texture tracks GPU memory stats', async t => {
+  for (const device of await getTestDevices(['webgl', 'webgpu', 'null'])) {
+    const beforeStats = getTextureMemoryStats(device);
+    const texture = device.createTexture({
+      format: 'rgba8unorm',
+      width: 4,
+      height: 4,
+      mipLevels: 3
+    });
+    const expectedAllocation = getExpectedTextureAllocation(texture);
+    const afterCreateStats = getTextureMemoryStats(device);
+
+    t.equal(
+      afterCreateStats.gpuMemory - beforeStats.gpuMemory,
+      expectedAllocation,
+      `${device.type} Texture updates total GPU Memory`
+    );
+    t.equal(
+      afterCreateStats.textureMemory - beforeStats.textureMemory,
+      expectedAllocation,
+      `${device.type} Texture updates Texture Memory`
+    );
+
+    texture.destroy();
+
+    const afterDestroyStats = getTextureMemoryStats(device);
+    t.equal(
+      afterDestroyStats.gpuMemory,
+      beforeStats.gpuMemory,
+      `${device.type} Texture destroy restores total GPU Memory`
+    );
+    t.equal(
+      afterDestroyStats.textureMemory,
+      beforeStats.textureMemory,
+      `${device.type} Texture destroy restores Texture Memory`
+    );
+  }
+  t.end();
+});
+
 const RGBA8_DATA = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]);
 const TEXTURE_UPLOAD_METHODS = ['writeData', 'copyImageData', 'writeBuffer'] as const;
 type TextureUploadMethod = (typeof TEXTURE_UPLOAD_METHODS)[number];
@@ -202,7 +271,11 @@ async function readTexturePixels(
   texture: Texture,
   options: TextureReadOptions
 ): Promise<Uint8Array> {
-  const arrayBuffer = await texture.readDataAsync(options);
+  const arrayBuffer = await withTimeout(
+    texture.readDataAsync(options),
+    5000,
+    `${texture.device.type} ${texture.format} readDataAsync timed out`
+  );
   return compactTextureBytes(texture, arrayBuffer, options);
 }
 
@@ -247,6 +320,28 @@ function createTextureWriteOptions(options: {
     bytesPerRow: options.bytesPerRow,
     rowsPerImage: options.rowsPerImage
   };
+}
+
+function createPackedTextureData(
+  ArrayType: typeof Uint8Array | typeof Uint16Array | typeof Uint32Array | typeof Float32Array,
+  options: {
+    width: number;
+    height: number;
+    depthOrArrayLayers?: number;
+    componentCount: number;
+  }
+): TypedArray {
+  const {width, height, depthOrArrayLayers = 1, componentCount} = options;
+  const texelCount = width * height * depthOrArrayLayers;
+  const elementCount = texelCount * componentCount;
+  const data = new ArrayType(elementCount);
+
+  for (let elementIndex = 0; elementIndex < elementCount; elementIndex++) {
+    data[elementIndex] =
+      ArrayType === Float32Array ? ((elementIndex % 23) + 1) / 32 : (elementIndex * 17 + 3) % 251;
+  }
+
+  return data;
 }
 
 function uploadTexture(
@@ -1058,6 +1153,37 @@ test('Texture#copyImageData is a compatibility wrapper over writeData', async t 
   t.end();
 });
 
+test('Texture#createTexture uploads tightly packed 3d texture data', async t => {
+  for (const device of await getTestDevices()) {
+    const texture = device.createTexture({
+      dimension: '3d',
+      width: 2,
+      height: 1,
+      depth: 2,
+      format: 'rgba8unorm',
+      usage: Texture.COPY_DST | Texture.COPY_SRC,
+      data: createLayeredRgbaUploadData({
+        width: 2,
+        height: 1,
+        pixels: [
+          [11, 12, 13, 255],
+          [21, 22, 23, 255]
+        ]
+      })
+    });
+
+    t.deepEquals(
+      await readTexturePixels(texture, {width: 2, height: 1, depthOrArrayLayers: 2}),
+      new Uint8Array([11, 12, 13, 255, 11, 12, 13, 255, 21, 22, 23, 255, 21, 22, 23, 255]),
+      `${device.type}: createTexture accepts tightly packed 3d upload data`
+    );
+
+    texture.destroy();
+  }
+
+  t.end();
+});
+
 test('Texture#writeData rejects invalid row layout', async t => {
   for (const device of await getTestDevices()) {
     const texture = device.createTexture({
@@ -1125,8 +1251,9 @@ test('Texture#writeData & readDataAsync round-trip for all formats and dimension
         const texSize = {
           // '1d': {width: 8},
           '2d': {width: 4, height: 2},
-          '3d': {width: 2, height: 2, depthOrArrayLayers: 2}
+          '3d': {width: 2, height: 2, depth: 2}
         }[dimension];
+        const depthOrArrayLayers = 'depth' in texSize ? texSize.depth : 1;
 
         const tex = device.createTexture({
           ...texSize,
@@ -1135,26 +1262,29 @@ test('Texture#writeData & readDataAsync round-trip for all formats and dimension
           usage: Texture.COPY_SRC | Texture.COPY_DST
         });
 
-        const {byteLength, bytesPerRow} = tex.computeMemoryLayout();
         const ArrayType = getTypedArrayConstructor(info.dataType);
-        const arraySize = byteLength / ArrayType.BYTES_PER_ELEMENT;
-        const input = new ArrayType(arraySize);
-        for (let i = 0; i < texSize.height; i++)
-          for (let j = 0; j < texSize.width; j++)
-            input[i * bytesPerRow + j * info.components] = (i + j) % 251;
+        const input = createPackedTextureData(ArrayType, {
+          width: texSize.width,
+          height: texSize.height,
+          depthOrArrayLayers,
+          componentCount: info.components
+        });
 
         try {
           tex.writeData(input);
-          const outputBuffer = await tex.readDataAsync();
-          const output = new ArrayType(outputBuffer).slice(0, input.length);
+          const outputBytes = await readTexturePixels(tex, {
+            width: texSize.width,
+            height: texSize.height,
+            depthOrArrayLayers
+          });
+          const output = new ArrayType(
+            outputBytes.buffer,
+            outputBytes.byteOffset,
+            outputBytes.byteLength / ArrayType.BYTES_PER_ELEMENT
+          );
 
           const match =
             ArrayType === Float32Array ? almostEqual(output, input) : deepEqual(output, input);
-
-          if (!match) {
-            // eslint-disable-next-line no-debugger
-            debugger;
-          }
           t.ok(match, `${device.type} ${format} ${dimension} round-trip succeeded`);
         } catch (err) {
           t.fail(`${device.type} ${format} ${dimension} round-trip failed: ${err.message}`);
@@ -1180,6 +1310,26 @@ function almostEqual(a: Float32Array, b: Float32Array, epsilon = 1e-6): boolean 
     if (Math.abs(a[i] - b[i]) > epsilon) return false;
   }
   return true;
+}
+
+async function withTimeout<T>(
+  promise: Promise<T>,
+  milliseconds: number,
+  errorMessage: string
+): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timeoutId = setTimeout(() => reject(new Error(errorMessage)), milliseconds);
+      })
+    ]);
+  } finally {
+    if (timeoutId !== undefined) {
+      clearTimeout(timeoutId);
+    }
+  }
 }
 
 test.skip('Texture#copyImageData & readDataAsync round-trip', async t => {
@@ -1411,7 +1561,15 @@ test('Device#isTextureFormatSupported()', async t => {
 
 test('Device#isTextureFormatFilterable()', async t => {
   const UNSUPPORTED_FORMATS: Record<Device['type'], TextureFormat[]> = {
-    webgl: ['rgba8unorm', 'r32float', 'rg32float', 'rgb32float-webgl', 'rgba32float'],
+    webgl: [
+      'rgba8unorm',
+      'rgb16unorm-webgl',
+      'rgb16snorm-webgl',
+      'r32float',
+      'rg32float',
+      'rgb32float-webgl',
+      'rgba32float'
+    ],
     webgpu: []
   };
 

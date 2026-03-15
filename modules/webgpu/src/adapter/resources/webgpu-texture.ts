@@ -8,7 +8,8 @@ import {
   type SamplerProps,
   Buffer,
   Texture,
-  log
+  log,
+  textureFormatDecoder
 } from '@luma.gl/core';
 
 import {getWebGPUTextureFormat} from '../helpers/convert-texture-format';
@@ -24,7 +25,8 @@ export class WebGPUTexture extends Texture {
   view: WebGPUTextureView;
 
   constructor(device: WebGPUDevice, props: TextureProps) {
-    super(device, props, {byteAlignment: 256}); // WebGPU requires row width to be a multiple of 256 bytes
+    // WebGPU buffer copies use 256-byte row alignment. queue.writeTexture() can use tightly packed rows.
+    super(device, props, {byteAlignment: 256});
     this.device = device;
 
     this.device.pushErrorScope('out-of-memory');
@@ -80,12 +82,21 @@ export class WebGPUTexture extends Texture {
     // Set initial data
     // Texture base class strips out the data prop from this.props, so we need to handle it here
     this._initializeData(props.data);
+
+    if (!this.props.handle) {
+      this.trackAllocatedMemory(this.getAllocatedByteLength(), 'Texture');
+    }
   }
 
   override destroy(): void {
-    this.handle?.destroy();
-    // @ts-expect-error readonly
-    this.handle = null;
+    if (!this.destroyed && this.handle) {
+      this.removeStats();
+      this.trackDeallocatedMemory('Texture');
+      this.handle.destroy();
+      this.destroyed = true;
+      // @ts-expect-error readonly
+      this.handle = null;
+    }
   }
 
   createView(props: TextureViewProps): WebGPUTextureView {
@@ -262,20 +273,28 @@ export class WebGPUTexture extends Texture {
   ): void {
     const device = this.device;
     const options = this._normalizeTextureWriteOptions(options_);
-    const {
-      x,
-      y,
-      z,
+    const {x, y, z, width, height, depthOrArrayLayers, mipLevel, aspect, byteOffset} = options;
+    const source = data as GPUAllowSharedBufferSource;
+    const formatInfo = this.device.getTextureFormatInfo(this.format);
+    // queue.writeTexture() defaults to tightly packed rows, unlike WebGPU buffer copy paths.
+    const packedSourceLayout = textureFormatDecoder.computeMemoryLayout({
+      format: this.format,
       width,
       height,
-      depthOrArrayLayers,
-      mipLevel,
-      aspect,
-      byteOffset,
-      bytesPerRow,
-      rowsPerImage
-    } = options;
-    const source = data as GPUAllowSharedBufferSource;
+      depth: depthOrArrayLayers,
+      byteAlignment: 1
+    });
+    const bytesPerRow = options_.bytesPerRow ?? packedSourceLayout.bytesPerRow;
+    const rowsPerImage = options_.rowsPerImage ?? packedSourceLayout.rowsPerImage;
+    let copyWidth = width;
+    let copyHeight = height;
+
+    if (formatInfo.compressed) {
+      const blockWidth = formatInfo.blockWidth || 1;
+      const blockHeight = formatInfo.blockHeight || 1;
+      copyWidth = Math.ceil(width / blockWidth) * blockWidth;
+      copyHeight = Math.ceil(height / blockHeight) * blockHeight;
+    }
 
     this.device.pushErrorScope('validation');
     device.handle.queue.writeTexture(
@@ -291,7 +310,7 @@ export class WebGPUTexture extends Texture {
         bytesPerRow,
         rowsPerImage
       },
-      {width, height, depthOrArrayLayers}
+      {width: copyWidth, height: copyHeight, depthOrArrayLayers}
     );
     this.device.popErrorScope((error: GPUError) => {
       this.device.reportError(new Error(`${this} writeData: ${error.message}`), this)();

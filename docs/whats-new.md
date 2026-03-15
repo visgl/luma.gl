@@ -4,15 +4,41 @@ _This page contains news for recent luma.gl releases. For older releases (throug
 
 ## Version 9.3 (In Development)
 
-Target Date: TBD
+Target Date: April 2026
+
+**General**
+
+- **Typescript 5.9** - luma.gl code base is now TypeScript 5.9 clean.
+
+**Examples**
+
+- **[Texture Tester Example](/examples/api/texture-tester)** - New example showing support for compressed textures on WebGL and WebGPU. Also implements multi-canvas rendering.
+- **[Multi-Canvas Example](/examples/api/multi-canvas)** - New example showing rendering into multiple HTML canvas elements.
+- **[External Context Example](/examples/integrations/external-context)** - New example showing integration with external WebGL contexts.
+- **[React Strict Mode Example](/examples/integrations/react-strict-mode)** - Improved resource cleanup for better compatibility when using luma.gl in React `<StrictMode>` apps
+
+**@luma.gl/core**
+
+- **Multi-canvas rendering** is now supported on both WebGL and WebGPU via [`device.createPresentationContext()`](/docs/api-reference/core/presentation-context). See the [Multiple Canvases](/docs/developer-guide/multiple-canvases) developer guide details.
+
+**@luma.gl/engine**
+
+- **WebGPU mipmap generation** now supported by [`DynamicTexture`](/docs/api-reference/engine/dynamic-texture).
+- **Explicit mip chains** can now be passed to `DynamicTexture` for 2D, array, cube, and 3D uploads.
+- **Compressed mip uploads** are now validated and uploaded through `DynamicTexture`, including block-size-aware mip truncation.
+- **Mip-level format metadata** now accepts both `textureFormat` and `format` on texture data objects during the transition to loaders.gl `TextureLevel` naming.
+
+**@luma.gl/webgpu**
+
+- **compressed texture** support (but note that WebGPU is stricter than WebGL and requires block-aligned textures).
+- **texture readback** improvements
 
 **@luma.gl/gltf**
 
-- glTF Skeleton Animation Support
-- glTF Mesh Target Animation Support
-- glTF and PRB now supported on WebGPU
-- Improved documentation of the glTF module
-- glTF texture filtering now defaults to `linear` instead of `nearest` for improved texture rendering.
+- Improved documentation of the glTF module. In particular, `createScenegraphsFromGLTF()` and `GLTFScenegraphs` are now documented.
+- gltf module now creates `DynamicTexture` instances rather than raw `Texture`s.
+- **`linear` texture filtering** - default texture filtering is now `linear` instead of `nearest` for improved texture rendering.
+
 
 ## Version 9.2
 

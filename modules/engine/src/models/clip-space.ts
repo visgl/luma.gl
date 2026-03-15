@@ -10,9 +10,9 @@ import {uid} from '../utils/uid';
 
 const CLIPSPACE_VERTEX_SHADER_WGSL = /* wgsl */ `\
 struct VertexInputs {
-  @location(0) clipSpacePosition: vec2<f32>,
-  @location(1) texCoord: vec2<f32>,
-  @location(2) coordinate: vec2<f32>  
+  @location(0) clipSpacePositions: vec2<f32>,
+  @location(1) texCoords: vec2<f32>,
+  @location(2) coordinates: vec2<f32>
 }
 
 struct FragmentInputs {
@@ -25,10 +25,10 @@ struct FragmentInputs {
 @vertex
 fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
   var outputs: FragmentInputs;
-  outputs.Position = vec4(inputs.clipSpacePosition, 0., 1.);
-  outputs.position = inputs.clipSpacePosition;
-  outputs.coordinate = inputs.coordinate;
-  outputs.uv = inputs.texCoord;
+  outputs.Position = vec4(inputs.clipSpacePositions, 0., 1.);
+  outputs.position = inputs.clipSpacePositions;
+  outputs.coordinate = inputs.coordinates;
+  outputs.uv = inputs.texCoords;
   return outputs;
 }
 `;

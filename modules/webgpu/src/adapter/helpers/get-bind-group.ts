@@ -75,28 +75,31 @@ function getBindGroupEntries(
   const entries: GPUBindGroupEntry[] = [];
 
   for (const [bindingName, value] of Object.entries(bindings)) {
-    let bindingLayout = getShaderLayoutBinding(shaderLayout, bindingName);
-    if (bindingLayout) {
-      const entry = getBindGroupEntry(value, bindingLayout.location, undefined, bindingName);
+    const exactBindingLayout = shaderLayout.bindings.find(binding => binding.name === bindingName);
+    const bindingLayout = exactBindingLayout || getShaderLayoutBinding(shaderLayout, bindingName);
+    const isShadowedAlias =
+      !exactBindingLayout && bindingLayout ? bindingLayout.name in bindings : false;
+
+    // Mirror the WebGL path: when both `foo` and `fooUniforms` exist in the bindings map,
+    // prefer the exact shader binding name and ignore the alias entry.
+    if (!isShadowedAlias) {
+      const entry = bindingLayout
+        ? getBindGroupEntry(value, bindingLayout.location, undefined, bindingName)
+        : null;
       if (entry) {
         entries.push(entry);
       }
-    }
 
-    // TODO - hack to automatically bind samplers to supplied texture default samplers
-    if (value instanceof Texture) {
-      bindingLayout = getShaderLayoutBinding(shaderLayout, `${bindingName}Sampler`, {
-        ignoreWarnings: true
-      });
-      if (bindingLayout) {
-        const entry = getBindGroupEntry(
-          value,
-          bindingLayout.location,
-          {sampler: true},
-          bindingName
-        );
-        if (entry) {
-          entries.push(entry);
+      // TODO - hack to automatically bind samplers to supplied texture default samplers
+      if (value instanceof Texture) {
+        const samplerBindingLayout = getShaderLayoutBinding(shaderLayout, `${bindingName}Sampler`, {
+          ignoreWarnings: true
+        });
+        const samplerEntry = samplerBindingLayout
+          ? getBindGroupEntry(value, samplerBindingLayout.location, {sampler: true}, bindingName)
+          : null;
+        if (samplerEntry) {
+          entries.push(samplerEntry);
         }
       }
     }

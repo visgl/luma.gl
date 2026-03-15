@@ -19,6 +19,8 @@ export {Device, DeviceFeatures, DeviceLimits} from './adapter/device';
 
 export type {CanvasContextProps} from './adapter/canvas-context';
 export {CanvasContext} from './adapter/canvas-context';
+export type {PresentationContextProps} from './adapter/presentation-context';
+export {PresentationContext} from './adapter/presentation-context';
 
 // GPU RESOURCES
 export {Resource, type ResourceProps} from './adapter/resources/resource';
@@ -186,6 +188,7 @@ export {
   type TextureFormat,
   type TextureFormatColor,
   type TextureFormatDepthStencil,
+  type CompressedTextureFormat,
   type TextureCompression,
   type TextureFormatInfo,
   type TextureFormatCapabilities,

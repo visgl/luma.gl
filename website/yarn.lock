@@ -3401,6 +3401,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@probe.gl/stats-widget@npm:^4.1.1":
+  version: 4.1.1
+  resolution: "@probe.gl/stats-widget@npm:4.1.1"
+  peerDependencies:
+    "@probe.gl/stats": ^4.0.0
+  checksum: 10c0/d04a059ccfffb64df292ce6903d0e22cb1e46b6e932992f294889b525481634c6b94c4aa4cdd5e3ffd32d5ca94c63470941b283b505e5258492937f6df23926e
+  languageName: node
+  linkType: hard
+
 "@sideway/address@npm:^4.1.5":
   version: 4.1.5
   resolution: "@sideway/address@npm:4.1.5"
@@ -5040,9 +5049,9 @@ __metadata:
   linkType: hard
 
 "caniuse-lite@npm:^1.0.0, caniuse-lite@npm:^1.0.30001702, caniuse-lite@npm:^1.0.30001733":
-  version: 1.0.30001735
-  resolution: "caniuse-lite@npm:1.0.30001735"
-  checksum: 10c0/1cb74221f16f8835c903770c1cf88fb73a07298b8398396a2b97570136e8f691053ee5840eb589fe34b4ede14ab828c9421d893a67e43c26ef91ab052813cb8c
+  version: 1.0.30001779
+  resolution: "caniuse-lite@npm:1.0.30001779"
+  checksum: 10c0/6cae9492140722ebc6be76cf3057ff8d1b427c7d8c2588b92bba7979bb1ec7ece457c7d3578a099a757ec12cb01b893fe05f224ac8feb841072897f0c12de6cc
   languageName: node
   linkType: hard
 
@@ -13338,6 +13347,7 @@ __metadata:
     "@cmfcmf/docusaurus-search-local": "npm:^2.0.0"
     "@docusaurus/core": "npm:^3.9.2"
     "@docusaurus/tsconfig": "npm:^3.9.2"
+    "@probe.gl/stats-widget": "npm:^4.1.1"
     "@vis.gl/docusaurus-website": "npm:1.0.0-alpha.21"
     clsx: "npm:^1.1.1"
     docusaurus-mdx-checker: "npm:^3.0.0"
