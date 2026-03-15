@@ -271,7 +271,11 @@ async function readTexturePixels(
   texture: Texture,
   options: TextureReadOptions
 ): Promise<Uint8Array> {
-  const arrayBuffer = await texture.readDataAsync(options);
+  const arrayBuffer = await withTimeout(
+    texture.readDataAsync(options),
+    5000,
+    `${texture.device.type} ${texture.format} readDataAsync timed out`
+  );
   return compactTextureBytes(texture, arrayBuffer, options);
 }
 
@@ -1306,6 +1310,26 @@ function almostEqual(a: Float32Array, b: Float32Array, epsilon = 1e-6): boolean 
     if (Math.abs(a[i] - b[i]) > epsilon) return false;
   }
   return true;
+}
+
+async function withTimeout<T>(
+  promise: Promise<T>,
+  milliseconds: number,
+  errorMessage: string
+): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timeoutId = setTimeout(() => reject(new Error(errorMessage)), milliseconds);
+      })
+    ]);
+  } finally {
+    if (timeoutId !== undefined) {
+      clearTimeout(timeoutId);
+    }
+  }
 }
 
 test.skip('Texture#copyImageData & readDataAsync round-trip', async t => {
