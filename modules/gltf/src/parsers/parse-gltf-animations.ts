@@ -12,6 +12,7 @@ import {
 
 import {accessorToTypedArray} from '..//webgl-to-webgpu/convert-webgl-attribute';
 
+/** Parses glTF animation records into the runtime animation model used by `GLTFAnimator`. */
 export function parseGLTFAnimations(gltf: GLTFPostprocessed): GLTFAnimation[] {
   const gltfAnimations = gltf.animations || [];
   const accessorCache1D = new Map<GLTFAccessorPostprocessed, number[]>();
@@ -43,6 +44,7 @@ export function parseGLTFAnimations(gltf: GLTFPostprocessed): GLTFAnimation[] {
   });
 }
 
+/** Converts a scalar accessor into a cached JavaScript number array. */
 function accessorToJsArray1D(
   accessor: GLTFAccessorPostprocessed,
   accessorCache: Map<GLTFAccessorPostprocessed, number[]>
@@ -59,6 +61,7 @@ function accessorToJsArray1D(
   return result;
 }
 
+/** Converts a vector or matrix accessor into a cached JavaScript array-of-arrays. */
 function accessorToJsArray2D(
   accessor: GLTFAccessorPostprocessed,
   accessorCache: Map<GLTFAccessorPostprocessed, number[][]>
@@ -81,6 +84,7 @@ function accessorToJsArray2D(
   return result;
 }
 
+/** Throws when the supplied condition is false. */
 function assert(condition: boolean, message?: string): asserts condition {
   if (!condition) {
     throw new Error(message);

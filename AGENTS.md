@@ -17,3 +17,7 @@
 - Single quotes
 - Never abbreviate variables, always type out the full name in camelCase (variables, functions, fields), PascalCase (types), CAPITAL_CASE (constant)
 - Prefer verbNoun structure for function and method names.
+
+## Documentation
+- `docs/upgrade-guide.md` should focus on breaking changes and deprecations only.
+- Do not add new-feature bullets to the upgrade guide; put those in release notes such as `docs/whats-new.md`.

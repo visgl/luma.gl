@@ -16,11 +16,17 @@ import {createGLTFModel} from '../gltf/create-gltf-model';
 
 import {parsePBRMaterial} from './parse-pbr-material';
 
+/** Options that influence how a post-processed glTF is turned into a luma.gl scenegraph. */
 export type ParseGLTFOptions = {
+  /** Additional model props applied to each generated primitive model. */
   modelOptions?: Partial<ModelProps>;
+  /** Enables shader-level PBR debug output. */
   pbrDebug?: boolean;
+  /** Optional image-based lighting environment. */
   imageBasedLightingEnvironment?: PBREnvironment;
+  /** Enables punctual light extraction. */
   lights?: boolean;
+  /** Enables tangent usage when available. */
   useTangents?: boolean;
 };
 
@@ -41,9 +47,13 @@ export function parseGLTF(
   gltf: GLTFPostprocessed,
   options: ParseGLTFOptions = {}
 ): {
+  /** Scene roots generated from `gltf.scenes`. */
   scenes: GroupNode[];
+  /** Map from glTF mesh ids to generated mesh group nodes. */
   gltfMeshIdToNodeMap: Map<string, GroupNode>;
+  /** Map from glTF node indices to generated scenegraph nodes. */
   gltfNodeIndexToNodeMap: Map<number, GroupNode>;
+  /** Map from glTF node ids to generated scenegraph nodes. */
   gltfNodeIdToNodeMap: Map<string, GroupNode>;
 } {
   const combinedOptions = {...defaultOptions, ...options};
@@ -100,6 +110,7 @@ export function parseGLTF(
   return {scenes, gltfMeshIdToNodeMap, gltfNodeIdToNodeMap, gltfNodeIndexToNodeMap};
 }
 
+/** Creates a `GroupNode` for one glTF node transform. */
 function createNodeForGLTFNode(
   device: Device,
   gltfNode: GLTFNodePostprocessed,
@@ -115,6 +126,7 @@ function createNodeForGLTFNode(
   });
 }
 
+/** Creates a mesh group node containing one model node per glTF primitive. */
 function createNodeForGLTFMesh(
   device: Device,
   gltfMesh: GLTFMeshPostprocessed,
@@ -132,6 +144,7 @@ function createNodeForGLTFMesh(
   return mesh;
 }
 
+/** Creates a renderable model node for one glTF primitive. */
 function createNodeForGLTFPrimitive(
   device: Device,
   gltfPrimitive: any,
@@ -169,10 +182,12 @@ function createNodeForGLTFPrimitive(
   return modelNode;
 }
 
+/** Computes the vertex count for a primitive without indices. */
 function getVertexCount(attributes: any) {
   throw new Error('getVertexCount not implemented');
 }
 
+/** Converts glTF primitive attributes and indices into a luma.gl `Geometry`. */
 function createGeometry(id: string, gltfPrimitive: any, topology: PrimitiveTopology): Geometry {
   const attributes: Record<string, GeometryAttribute> = {};
   for (const [attributeName, attribute] of Object.entries(gltfPrimitive.attributes)) {
