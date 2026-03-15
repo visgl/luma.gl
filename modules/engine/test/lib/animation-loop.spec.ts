@@ -32,10 +32,7 @@ test('engine#AnimationLoop uses provided stats object', async t => {
   await animationLoop.waitForRender();
   await animationLoop.waitForRender();
 
-  t.ok(
-    frameRate.lastSampleTime > beforeFrameRate,
-    'Frame Rate updates on custom stats object'
-  );
+  t.ok(frameRate.lastSampleTime > beforeFrameRate, 'Frame Rate updates on custom stats object');
   t.ok(
     customStats.get('CPU Time').lastSampleTime > beforeCpuTime,
     'CPU Time updates on custom stats object'

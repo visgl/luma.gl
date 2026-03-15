@@ -87,5 +87,4 @@ export class WEBGLCommandEncoder extends CommandEncoder {
     const webglQuerySet = querySet as WEBGLQuerySet;
     webglQuerySet.writeTimestamp(queryIndex);
   }
-
 }

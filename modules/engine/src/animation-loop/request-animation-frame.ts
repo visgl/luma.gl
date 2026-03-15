@@ -31,8 +31,10 @@ export function cancelAnimationFramePolyfill(timerId: any): void {
   const browserCancelAnimationFrame =
     typeof window !== 'undefined'
       ? window.cancelAnimationFrame ||
-        (window as Window & {webkitCancelAnimationFrame?: (handle: number) => void}).webkitCancelAnimationFrame ||
-        (window as Window & {mozCancelAnimationFrame?: (handle: number) => void}).mozCancelAnimationFrame
+        (window as Window & {webkitCancelAnimationFrame?: (handle: number) => void})
+          .webkitCancelAnimationFrame ||
+        (window as Window & {mozCancelAnimationFrame?: (handle: number) => void})
+          .mozCancelAnimationFrame
       : null;
 
   if (browserCancelAnimationFrame) {

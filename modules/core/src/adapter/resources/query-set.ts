@@ -47,10 +47,7 @@ export abstract class QuerySet extends Resource<QuerySetProps> {
   abstract isResultAvailable(queryIndex?: number): boolean;
 
   /** Reads query results as 64-bit values. */
-  abstract readResults(options?: {
-    firstQuery?: number;
-    queryCount?: number;
-  }): Promise<bigint[]>;
+  abstract readResults(options?: {firstQuery?: number; queryCount?: number}): Promise<bigint[]>;
 
   /**
    * Reads a timestamp duration in milliseconds between a begin and end query index.

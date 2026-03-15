@@ -49,7 +49,9 @@ export class WebGPUQuerySet extends QuerySet {
       return false;
     }
 
-    return queryIndex === undefined ? true : queryIndex >= 0 && queryIndex < this._cachedResults.length;
+    return queryIndex === undefined
+      ? true
+      : queryIndex >= 0 && queryIndex < this._cachedResults.length;
   }
 
   async readResults(options?: {firstQuery?: number; queryCount?: number}): Promise<bigint[]> {
@@ -119,14 +121,14 @@ export class WebGPUQuerySet extends QuerySet {
       id: `${this.id}-resolve-buffer`,
       usage: Buffer.QUERY_RESOLVE | Buffer.COPY_SRC,
       byteLength
-    }) as WebGPUBuffer;
+    });
     this.attachResource(this._resolveBuffer);
 
     this._readBuffer = this.device.createBuffer({
       id: `${this.id}-read-buffer`,
       usage: Buffer.COPY_DST | Buffer.MAP_READ,
       byteLength
-    }) as WebGPUBuffer;
+    });
     this.attachResource(this._readBuffer);
   }
 }

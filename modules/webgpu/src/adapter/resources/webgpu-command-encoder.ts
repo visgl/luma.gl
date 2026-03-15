@@ -58,10 +58,7 @@ export class WebGPUCommandEncoder extends CommandEncoder {
   }
 
   beginComputePass(props: ComputePassProps): WebGPUComputePass {
-    return new WebGPUComputePass(
-      this.device,
-      this._applyTimeProfilingToPassProps(props)
-    );
+    return new WebGPUComputePass(this.device, this._applyTimeProfilingToPassProps(props));
   }
 
   // beginRenderPass(GPURenderPassDescriptor descriptor): GPURenderPassEncoder;
@@ -180,9 +177,11 @@ export class WebGPUCommandEncoder extends CommandEncoder {
 
   override writeTimestamp(querySet: WebGPUQuerySet, queryIndex: number): void {
     querySet._invalidateResults();
-    const writeTimestamp = (this.handle as GPUCommandEncoder & {
-      writeTimestamp?: (querySet: GPUQuerySet, queryIndex: number) => void;
-    }).writeTimestamp;
+    const writeTimestamp = (
+      this.handle as GPUCommandEncoder & {
+        writeTimestamp?: (querySet: GPUQuerySet, queryIndex: number) => void;
+      }
+    ).writeTimestamp;
 
     if (writeTimestamp) {
       writeTimestamp.call(this.handle, querySet.handle, queryIndex);
@@ -197,7 +196,6 @@ export class WebGPUCommandEncoder extends CommandEncoder {
     });
     computePass.end();
   }
-
 }
 
 /*

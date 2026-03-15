@@ -24,7 +24,10 @@ test('QuerySet timestamp duration', async t => {
     }
 
     const querySet = device.createQuerySet({type: 'timestamp', count: 2});
-    t.notOk(querySet.isResultAvailable(), `${device.type} timestamp result unavailable before recording`);
+    t.notOk(
+      querySet.isResultAvailable(),
+      `${device.type} timestamp result unavailable before recording`
+    );
 
     device.commandEncoder.writeTimestamp(querySet, 0);
     device.commandEncoder.writeTimestamp(querySet, 1);

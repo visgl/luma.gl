@@ -46,7 +46,8 @@ function getResourceStats(device: Device): {
 
 function getLegacyResourceStats(device: Device) {
   return {
-    resourcesCreated: device.statsManager.getStats('Resource Counts').get('Resources Created').count,
+    resourcesCreated: device.statsManager.getStats('Resource Counts').get('Resources Created')
+      .count,
     resourcesActive: device.statsManager.getStats('Resource Counts').get('Resources Active').count,
     buffersCreated: device.statsManager.getStats('Resource Counts').get('Buffers Created').count,
     buffersActive: device.statsManager.getStats('Resource Counts').get('Buffers Active').count

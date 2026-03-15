@@ -84,7 +84,9 @@ export class WEBGLQuerySet extends QuerySet {
   isResultAvailable(queryIndex?: number): boolean {
     if (this.props.type === 'timestamp') {
       if (queryIndex === undefined) {
-        return this._timestampPairs.some((_, pairIndex) => this._isTimestampPairAvailable(pairIndex));
+        return this._timestampPairs.some((_, pairIndex) =>
+          this._isTimestampPairAvailable(pairIndex)
+        );
       }
       return this._isTimestampPairAvailable(this._getTimestampPairIndex(queryIndex));
     }
@@ -241,14 +243,19 @@ export class WEBGLQuerySet extends QuerySet {
       return true;
     }
 
-    const resultAvailable = this.device.gl.getQueryParameter(query.handle, GL.QUERY_RESULT_AVAILABLE);
+    const resultAvailable = this.device.gl.getQueryParameter(
+      query.handle,
+      GL.QUERY_RESULT_AVAILABLE
+    );
     if (!resultAvailable) {
       return false;
     }
 
     const isDisjoint = Boolean(this.device.gl.getParameter(GL.GPU_DISJOINT_EXT));
     query.disjoint = isDisjoint;
-    query.result = isDisjoint ? 0n : BigInt(this.device.gl.getQueryParameter(query.handle, GL.QUERY_RESULT));
+    query.result = isDisjoint
+      ? 0n
+      : BigInt(this.device.gl.getQueryParameter(query.handle, GL.QUERY_RESULT));
     return true;
   }
 
