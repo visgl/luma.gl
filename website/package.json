@@ -29,6 +29,7 @@
   "dependencies": {
     "@algolia/autocomplete-js": "^1.19.2",
     "@docusaurus/core": "^3.9.2",
+    "@probe.gl/stats-widget": "^4.1.1",
     "@vis.gl/docusaurus-website": "1.0.0-alpha.21",
     "clsx": "^1.1.1",
     "maplibre-gl": "^5.13.0",

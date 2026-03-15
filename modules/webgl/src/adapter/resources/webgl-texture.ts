@@ -126,6 +126,10 @@ export class WEBGLTexture extends Texture {
     // Set data
     this._initializeData(props.data);
 
+    if (!this.props.handle) {
+      this.trackAllocatedMemory(this.getAllocatedByteLength(), 'Texture');
+    }
+
     // Set texture sampler parameters
     this.setSampler(this.props.sampler);
     // @ts-ignore TODO - fix types

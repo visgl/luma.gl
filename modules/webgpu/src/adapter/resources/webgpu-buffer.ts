@@ -67,12 +67,21 @@ export class WebGPUBuffer extends Buffer {
       this.device.reportError(new Error(`${this} creation failed ${error.message}`), this)();
       this.device.debug();
     });
+
+    if (!this.props.handle) {
+      this.trackAllocatedMemory(size);
+    }
   }
 
   override destroy(): void {
-    this.handle?.destroy();
-    // @ts-expect-error readonly
-    this.handle = null;
+    if (!this.destroyed && this.handle) {
+      this.removeStats();
+      this.trackDeallocatedMemory();
+      this.handle.destroy();
+      this.destroyed = true;
+      // @ts-expect-error readonly
+      this.handle = null;
+    }
   }
 
   write(data: ArrayBufferLike | ArrayBufferView | SharedArrayBuffer, byteOffset = 0) {
