@@ -175,7 +175,7 @@ export class WebGPUCommandEncoder extends CommandEncoder {
     );
   }
 
-  override writeTimestamp(querySet: WebGPUQuerySet, queryIndex: number): void {
+  writeTimestamp(querySet: WebGPUQuerySet, queryIndex: number): void {
     querySet._invalidateResults();
     const writeTimestamp = (
       this.handle as GPUCommandEncoder & {

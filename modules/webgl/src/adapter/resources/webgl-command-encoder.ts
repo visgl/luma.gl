@@ -83,7 +83,7 @@ export class WEBGLCommandEncoder extends CommandEncoder {
     }
   ): void {}
 
-  override writeTimestamp(querySet: QuerySet, queryIndex: number): void {
+  writeTimestamp(querySet: QuerySet, queryIndex: number): void {
     const webglQuerySet = querySet as WEBGLQuerySet;
     webglQuerySet.writeTimestamp(queryIndex);
   }
