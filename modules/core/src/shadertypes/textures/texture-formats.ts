@@ -118,6 +118,7 @@ export type TextureFeature =
   | 'float16-renderable-webgl'
   | 'rgb9e5ufloat-renderable-webgl'
   | 'snorm8-renderable-webgl'
+  | 'norm16-webgl'
   | 'norm16-renderable-webgl'
   | 'snorm16-renderable-webgl'
   | 'float32-filterable'

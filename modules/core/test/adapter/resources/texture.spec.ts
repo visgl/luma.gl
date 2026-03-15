@@ -1561,17 +1561,7 @@ test('Device#isTextureFormatSupported()', async t => {
 
 test('Device#isTextureFormatFilterable()', async t => {
   const UNSUPPORTED_FORMATS: Record<Device['type'], TextureFormat[]> = {
-    webgl: [
-      'rgba8unorm',
-      'r16unorm',
-      'r16snorm',
-      'rgb16unorm-webgl',
-      'rgb16snorm-webgl',
-      'r32float',
-      'rg32float',
-      'rgb32float-webgl',
-      'rgba32float'
-    ],
+    webgl: ['rgba8unorm', 'rgb16unorm-webgl', 'rgb16snorm-webgl', 'r32float', 'rg32float', 'rgb32float-webgl', 'rgba32float'],
     webgpu: []
   };
 
