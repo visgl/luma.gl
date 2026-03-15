@@ -93,14 +93,14 @@ const TEXTURE_FORMAT_COLOR_DEPTH_TABLE: Readonly<Record<TextureFormatColorUncomp
   'bgra8unorm-srgb': {},
 
 
-  'r16unorm': {f: norm16_renderable},
+  'r16unorm': {f: norm16_renderable, render: false},
   'rg16unorm': {render: norm16_renderable},
-  'rgb16unorm-webgl': {f: norm16_renderable}, // rgb not renderable
+  'rgb16unorm-webgl': {f: norm16_renderable, render: false}, // rgb not renderable
   'rgba16unorm': {render: norm16_renderable},
 
-  'r16snorm': {f: snorm16_renderable},
+  'r16snorm': {f: snorm16_renderable, render: false},
   'rg16snorm': {render: snorm16_renderable},
-  'rgb16snorm-webgl': {f: norm16_renderable}, // rgb not renderable
+  'rgb16snorm-webgl': {f: norm16_renderable, render: false}, // rgb not renderable
   'rgba16snorm': {render: snorm16_renderable},
 
   'r16uint': {},
