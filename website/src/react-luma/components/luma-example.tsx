@@ -149,6 +149,7 @@ type ReactExampleProps<P> = {
   componentProps: P;
   className?: string;
   style?: CSSProperties;
+  showStats?: boolean;
 };
 
 export const InfoBox: FC<InfoBoxProps> = (props: InfoBoxProps) => {
@@ -248,9 +249,74 @@ export const ExampleHeader: FC<ExampleHeaderProps> = (props: ExampleHeaderProps)
 
 export function ReactExample<P>(props: ReactExampleProps<P>) {
   const Component = props.component;
+  const statsPanelRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (props.showStats === false || !statsPanelRef.current) {
+      return;
+    }
+
+    const resourceCounts = luma.stats.get('Resource Counts');
+    const resourceMemory = luma.stats.get('Resource Memory');
+    resourceMemory.get('GPU Memory');
+    resourceMemory.get('Buffer Memory');
+    resourceMemory.get('Texture Memory');
+
+    const statsWidgets = [
+      new StatsWidget(resourceCounts, {
+        title: 'luma.stats Resource Counts',
+        container: statsPanelRef.current,
+        css: STAT_STYLES
+      }),
+      new StatsWidget(resourceMemory, {
+        title: 'luma.stats Resource Memory',
+        container: statsPanelRef.current,
+        css: STAT_STYLES,
+        formatters: RESOURCE_STATS_FORMATTERS
+      })
+    ];
+
+    for (const statsWidget of statsWidgets) {
+      statsWidget.setCollapsed(true);
+    }
+
+    const updateStatsWidget = () => {
+      for (const statsWidget of statsWidgets) {
+        statsWidget.update();
+      }
+    };
+
+    updateStatsWidget();
+    const statsIntervalId = window.setInterval(updateStatsWidget, 250);
+
+    return () => {
+      window.clearInterval(statsIntervalId);
+      for (const statsWidget of statsWidgets) {
+        statsWidget.remove();
+      }
+    };
+  }, [props.showStats]);
 
   return (
     <ExamplePage className={props.className} style={props.style}>
+      {props.showStats !== false ? (
+        <div
+          ref={statsPanelRef}
+          style={{
+            position: 'absolute',
+            right: '12px',
+            bottom: '12px',
+            zIndex: 10,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '8px',
+            maxHeight: 'calc(100% - 24px)',
+            overflowY: 'auto',
+            overflowX: 'hidden',
+            alignItems: 'flex-end'
+          }}
+        />
+      ) : null}
       <Component {...props.componentProps} />
     </ExamplePage>
   );
@@ -300,7 +366,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
       animationLoop.cpuTime.setSampleSize(30);
       animationLoop.gpuTime.setSampleSize(30);
 
-      if (props.showStats && statsPanelRef.current) {
+      if (props.showStats !== false && statsPanelRef.current) {
         const resourceCounts = luma.stats.get('Resource Counts');
         const resourceMemory = luma.stats.get('Resource Memory');
         resourceMemory.get('GPU Memory');
@@ -406,7 +472,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
         {info ? <div dangerouslySetInnerHTML={{__html: info}} /> : null}
       </ExampleHeader>
       <div ref={statsContainerRef} style={{minHeight: 0, position: 'relative'}}>
-        {props.showStats ? (
+        {props.showStats !== false ? (
           <div
             ref={statsPanelRef}
             style={{
