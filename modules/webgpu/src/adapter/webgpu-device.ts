@@ -18,6 +18,7 @@ import type {
   SamplerProps,
   ShaderProps,
   TextureProps,
+  Texture,
   ExternalTextureProps,
   FramebufferProps,
   RenderPipelineProps,
@@ -51,6 +52,7 @@ import {WebGPUPipelineLayout} from './resources/webgpu-pipeline-layout';
 import {WebGPUFence} from './resources/webgpu-fence';
 
 import {getShaderLayoutFromWGSL} from '../wgsl/get-shader-layout-wgsl';
+import {generateMipmapsWebGPU} from './helpers/generate-mipmaps-webgpu';
 
 /** WebGPU Device implementation */
 export class WebGPUDevice extends Device {
@@ -216,6 +218,10 @@ export class WebGPUDevice extends Device {
 
   createPipelineLayout(props: PipelineLayoutProps): WebGPUPipelineLayout {
     return new WebGPUPipelineLayout(this, props);
+  }
+
+  override generateMipmapsWebGPU(texture: Texture): void {
+    generateMipmapsWebGPU(this, texture);
   }
 
   submit(commandBuffer?: WebGPUCommandBuffer): void {

@@ -5,10 +5,19 @@
 // Forked from https://github.com/greggman/webgpu-utils under MIT license
 // Copyright (c) 2022 Gregg Tavares
 
-import type {Device, Texture, TextureFormat, TextureFormatColor} from '@luma.gl/core';
+import type {
+  Texture,
+  TextureFormat,
+  TextureFormatColor,
+  TextureBindingLayout,
+  StorageTextureBindingLayout,
+  UniformBufferBindingLayout,
+  SamplerBindingLayout
+} from '@luma.gl/core';
 import {Buffer, textureFormatDecoder} from '@luma.gl/core';
-import {Model} from '../model/model';
-import {Computation} from '../compute/computation';
+import type {WebGPUDevice} from '../webgpu-device';
+import type {WebGPUComputePass} from '../resources/webgpu-compute-pass';
+import type {WebGPURenderPass} from '../resources/webgpu-render-pass';
 
 type RenderTextureViewDimension = '2d' | '2d-array' | 'cube' | 'cube-array';
 type TextureCapability = 'render' | 'filter' | 'store';
@@ -27,18 +36,35 @@ const WORKGROUP_SIZE = {
   z: 4
 } as const;
 
+const RENDER_SOURCE_SAMPLER_LAYOUT: SamplerBindingLayout = {
+  type: 'sampler',
+  name: 'sourceSampler',
+  group: 0,
+  location: 0
+};
+
+const COMPUTE_SOURCE_TEXTURE_LAYOUT: TextureBindingLayout = {
+  type: 'texture',
+  name: 'sourceTexture',
+  group: 0,
+  location: 0,
+  viewDimension: '3d',
+  sampleType: 'float'
+};
+
+const COMPUTE_UNIFORMS_LAYOUT: UniformBufferBindingLayout = {
+  type: 'uniform',
+  name: 'uniforms',
+  group: 0,
+  location: 2
+};
+
 /**
- * Generates mip levels from level 0 to the last mip for an existing texture.
+ * Generates mip levels from level 0 to the last mip for an existing WebGPU texture.
  */
-export function generateMipmap(device: Device, texture: Texture): void {
+export function generateMipmapsWebGPU(device: WebGPUDevice, texture: Texture): void {
   if (texture.mipLevels <= 1) {
     return;
-  }
-
-  if (device.type !== 'webgpu') {
-    throw new Error(
-      `Cannot generate mipmaps on device type "${device.type}". Use generateMipmapsWebGL for WebGL devices.`
-    );
   }
 
   if (texture.dimension === '3d') {
@@ -56,7 +82,7 @@ export function generateMipmap(device: Device, texture: Texture): void {
   );
 }
 
-function generateMipmapsRender(device: Device, texture: Texture): void {
+function generateMipmapsRender(device: WebGPUDevice, texture: Texture): void {
   validateFormatCapabilities(device, texture, ['render', 'filter'], 'render');
   const colorAttachmentFormat = getColorAttachmentFormat(
     texture.format,
@@ -65,39 +91,50 @@ function generateMipmapsRender(device: Device, texture: Texture): void {
   );
 
   const viewDimension = texture.dimension as RenderTextureViewDimension;
-  const shader = getRenderMipmapWGSL(viewDimension);
+  const shaderSource = getRenderMipmapWGSL(viewDimension);
   const sampler = device.createSampler({minFilter: 'linear', magFilter: 'linear'});
-  const uniformValues = new Uint32Array(1);
   const uniformsBuffer = device.createBuffer({
     byteLength: 16,
     usage: Buffer.UNIFORM | Buffer.COPY_DST
   });
-
-  const model = new Model(device, {
-    source: shader,
+  const uniformValues = new Uint32Array(1);
+  const sourceTextureLayout: TextureBindingLayout = {
+    type: 'texture',
+    name: 'sourceTexture',
+    group: 0,
+    location: 1,
+    viewDimension,
+    sampleType: 'float'
+  };
+  const uniformsLayout: UniformBufferBindingLayout = {
+    type: 'uniform',
+    name: 'uniforms',
+    group: 0,
+    location: 2
+  };
+  const renderShaderLayout = {
+    attributes: [],
+    bindings: [RENDER_SOURCE_SAMPLER_LAYOUT, sourceTextureLayout, uniformsLayout]
+  };
+  const vertexShader = device.createShader({
+    id: 'mipmap-generation-render-vs',
+    source: shaderSource,
+    language: 'wgsl',
+    stage: 'vertex'
+  });
+  const fragmentShader = device.createShader({
+    id: 'mipmap-generation-render-fs',
+    source: shaderSource,
+    language: 'wgsl',
+    stage: 'fragment'
+  });
+  const renderPipeline = device.createRenderPipeline({
+    id: `mipmap-generation-render:${texture.dimension}:${texture.format}`,
+    vs: vertexShader,
+    fs: fragmentShader,
+    shaderLayout: renderShaderLayout,
     colorAttachmentFormats: [colorAttachmentFormat],
-    topology: 'triangle-list',
-    vertexCount: 3,
-    shaderLayout: {
-      attributes: [],
-      bindings: [
-        {type: 'sampler', name: 'sourceSampler', group: 0, location: 0},
-        {
-          type: 'texture',
-          name: 'sourceTexture',
-          group: 0,
-          location: 1,
-          viewDimension,
-          sampleType: 'float'
-        },
-        {type: 'uniform', name: 'uniforms', group: 0, location: 2}
-      ]
-    },
-    bindings: {
-      sourceSampler: sampler,
-      sourceTexture: texture,
-      uniforms: uniformsBuffer
-    }
+    topology: 'triangle-list'
   });
 
   let sourceWidth = texture.width;
@@ -118,44 +155,62 @@ function generateMipmapsRender(device: Device, texture: Texture): void {
         baseArrayLayer: 0,
         arrayLayerCount: texture.depth
       });
-      model.setBindings({sourceTexture: sourceView});
+      renderPipeline.setBindings({
+        sourceSampler: sampler,
+        sourceTexture: sourceView,
+        uniforms: uniformsBuffer
+      });
 
-      for (let baseArrayLayer = 0; baseArrayLayer < layerCount; ++baseArrayLayer) {
-        uniformValues[0] = baseArrayLayer;
-        uniformsBuffer.write(uniformValues);
+      try {
+        for (let baseArrayLayer = 0; baseArrayLayer < layerCount; ++baseArrayLayer) {
+          uniformValues[0] = baseArrayLayer;
+          uniformsBuffer.write(uniformValues);
 
-        const destinationView = texture.createView({
-          dimension: '2d',
-          baseMipLevel,
-          mipLevelCount: 1,
-          baseArrayLayer,
-          arrayLayerCount: 1
-        });
-        const framebuffer = device.createFramebuffer({
-          colorAttachments: [destinationView]
-        });
-        const renderPass = device.beginRenderPass({
-          id: `mipmap-generation:${texture.format}:${baseMipLevel}:${baseArrayLayer}`,
-          framebuffer
-        });
-        renderPass.setParameters({
-          viewport: [0, 0, destinationWidth, destinationHeight, 0, 1],
-          scissorRect: [0, 0, destinationWidth, destinationHeight]
-        });
-        model.draw(renderPass);
-        renderPass.end();
-        device.submit();
+          const destinationView = texture.createView({
+            dimension: '2d',
+            baseMipLevel,
+            mipLevelCount: 1,
+            baseArrayLayer,
+            arrayLayerCount: 1
+          });
+          const framebuffer = device.createFramebuffer({
+            colorAttachments: [destinationView]
+          });
+          const renderPass = device.beginRenderPass({
+            id: `mipmap-generation:${texture.format}:${baseMipLevel}:${baseArrayLayer}`,
+            framebuffer
+          }) as WebGPURenderPass;
 
-        destinationView.destroy();
-        framebuffer.destroy();
+          try {
+            renderPass.setPipeline(renderPipeline);
+            renderPass.setBindings({
+              sourceSampler: sampler,
+              sourceTexture: sourceView,
+              uniforms: uniformsBuffer
+            });
+            renderPass.setParameters({
+              viewport: [0, 0, destinationWidth, destinationHeight, 0, 1],
+              scissorRect: [0, 0, destinationWidth, destinationHeight]
+            });
+            renderPass.draw({vertexCount: 3});
+            renderPass.end();
+            device.submit();
+          } finally {
+            destinationView.destroy();
+            framebuffer.destroy();
+          }
+        }
+      } finally {
+        sourceView.destroy();
       }
-      sourceView.destroy();
 
       sourceWidth = destinationWidth;
       sourceHeight = destinationHeight;
     }
   } finally {
-    model.destroy();
+    renderPipeline.destroy();
+    vertexShader.destroy();
+    fragmentShader.destroy();
     sampler.destroy();
     uniformsBuffer.destroy();
   }
@@ -178,11 +233,33 @@ function getColorAttachmentFormat(
   );
 }
 
-function generateMipmaps3D(device: Device, texture: Texture): void {
+function generateMipmaps3D(device: WebGPUDevice, texture: Texture): void {
   validateFormatCapabilities(device, texture, ['filter', 'store'], 'compute');
   const format = getColorAttachmentFormat(texture.format, 'compute', texture.dimension);
-
   const shaderSource = get3DComputeMipmapWGSL(format);
+  const destinationTextureLayout: StorageTextureBindingLayout = {
+    type: 'storage',
+    name: 'destinationTexture',
+    group: 0,
+    location: 1,
+    format,
+    viewDimension: '3d',
+    access: 'write-only'
+  };
+  const computeShaderLayout = {
+    bindings: [COMPUTE_SOURCE_TEXTURE_LAYOUT, destinationTextureLayout, COMPUTE_UNIFORMS_LAYOUT]
+  };
+  const computeShader = device.createShader({
+    id: 'mipmap-generation-compute',
+    source: shaderSource,
+    language: 'wgsl',
+    stage: 'compute'
+  });
+  const computePipeline = device.createComputePipeline({
+    id: `mipmap-generation-compute:${texture.format}`,
+    shader: computeShader,
+    shaderLayout: computeShaderLayout
+  });
   const uniformsBuffer = device.createBuffer({
     byteLength: 32,
     usage: Buffer.UNIFORM | Buffer.COPY_DST
@@ -220,7 +297,6 @@ function generateMipmaps3D(device: Device, texture: Texture): void {
         baseArrayLayer: 0,
         arrayLayerCount: 1
       });
-
       const destinationView = texture.createView({
         dimension: '3d',
         baseMipLevel: destinationMipLevel,
@@ -228,62 +304,40 @@ function generateMipmaps3D(device: Device, texture: Texture): void {
         baseArrayLayer: 0,
         arrayLayerCount: 1
       });
-
-      const computation = new Computation(device, {
-        source: shaderSource,
-        shaderLayout: {
-          bindings: [
-            {
-              type: 'texture',
-              name: 'sourceTexture',
-              group: 0,
-              location: 0,
-              viewDimension: '3d',
-              sampleType: 'float'
-            },
-            {
-              type: 'storage',
-              name: 'destinationTexture',
-              group: 0,
-              location: 1,
-              format,
-              viewDimension: '3d',
-              access: 'write-only'
-            },
-            {type: 'uniform', name: 'uniforms', group: 0, location: 2}
-          ]
-        },
-        bindings: {
-          sourceTexture: sourceView,
-          destinationTexture: destinationView,
-          uniforms: uniformsBuffer
-        }
+      computePipeline.setBindings({
+        sourceTexture: sourceView,
+        destinationTexture: destinationView,
+        uniforms: uniformsBuffer
       });
 
-      const workgroupsX = Math.ceil(destinationWidth / WORKGROUP_SIZE.x);
-      const workgroupsY = Math.ceil(destinationHeight / WORKGROUP_SIZE.y);
-      const workgroupsZ = Math.ceil(destinationDepth / WORKGROUP_SIZE.z);
+      try {
+        const workgroupsX = Math.ceil(destinationWidth / WORKGROUP_SIZE.x);
+        const workgroupsY = Math.ceil(destinationHeight / WORKGROUP_SIZE.y);
+        const workgroupsZ = Math.ceil(destinationDepth / WORKGROUP_SIZE.z);
+        const computePass = device.beginComputePass({}) as WebGPUComputePass;
 
-      const computePass = device.beginComputePass({});
-      computation.dispatch(computePass, workgroupsX, workgroupsY, workgroupsZ);
-      computePass.end();
-      device.submit();
-
-      computation.destroy();
-      sourceView.destroy();
-      destinationView.destroy();
+        computePass.setPipeline(computePipeline);
+        computePass.dispatch(workgroupsX, workgroupsY, workgroupsZ);
+        computePass.end();
+        device.submit();
+      } finally {
+        sourceView.destroy();
+        destinationView.destroy();
+      }
 
       sourceWidth = destinationWidth;
       sourceHeight = destinationHeight;
       sourceDepth = destinationDepth;
     }
   } finally {
+    computePipeline.destroy();
+    computeShader.destroy();
     uniformsBuffer.destroy();
   }
 }
 
 function validateFormatCapabilities(
-  device: Device,
+  device: WebGPUDevice,
   texture: Texture,
   requiredCapabilities: ReadonlyArray<TextureCapability>,
   path: MipmapPath

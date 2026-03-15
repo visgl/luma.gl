@@ -38,7 +38,6 @@ import {
   getTextureArraySubresources,
   getTextureCubeArraySubresources
 } from './texture-data';
-import {generateMipmap} from './mipmaps';
 
 /**
  * Properties for a dynamic texture
@@ -253,7 +252,7 @@ export class DynamicTexture {
     if (this.device.type === 'webgl') {
       this.texture.generateMipmapsWebGL();
     } else if (this.device.type === 'webgpu') {
-      generateMipmap(this.device, this.texture);
+      this.device.generateMipmapsWebGPU(this.texture);
     } else {
       log.warn(`${this} mipmaps not supported on ${this.device.type}`);
     }
@@ -348,7 +347,7 @@ export class DynamicTexture {
   }
 
   /** Cube array: multiple cubes (faces×layers), each face may carry multiple mips */
-  private setTextureCubeArrayData(data: TextureCubeArrayData): void {
+  setTextureCubeArrayData(data: TextureCubeArrayData): void {
     if (this.texture.props.dimension !== 'cube-array') {
       throw new Error(`${this} is not cube-array`);
     }

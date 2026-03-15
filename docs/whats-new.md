@@ -13,7 +13,7 @@ Target Date: April 2026
 **Examples**
 
 - **[Texture Tester Example](/examples/api/texture-tester)** - New example showing support for compressed textures on WebGL and WebGPU. Also implements multi-canvas rendering.
-- **[Multi Canvas Example](/examples/api/multi-canvas)** - New example showing rendering into multiple HTML canvas elements.
+- **[Multi-Canvas Example](/examples/api/multi-canvas)** - New example showing rendering into multiple HTML canvas elements.
 - **[External Context Example](/examples/integrations/external-context)** - New example showing integration with external WebGL contexts.
 - **[React Strict Mode Example](/examples/integrations/react-strict-mode)** - Improved resource cleanup for better compatibility when using luma.gl in React `<StrictMode>` apps
 
