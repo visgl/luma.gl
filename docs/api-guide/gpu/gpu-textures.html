@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="generator" content="Docusaurus v3.9.2">
 <title data-rh="true">Using GPU Textures | luma.gl</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://luma.gl/docs/api-guide/gpu/gpu-textures"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-default-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-rh="true" property="og:title" content="Using GPU Textures | luma.gl"><meta data-rh="true" name="description" content="While the idea behind textures is simple in principle (a grid of pixels stored on GPU memory), GPU Textures are surprisingly complex objects."><meta data-rh="true" property="og:description" content="While the idea behind textures is simple in principle (a grid of pixels stored on GPU memory), GPU Textures are surprisingly complex objects."><link data-rh="true" rel="icon" href="/favicon.png"><link data-rh="true" rel="canonical" href="https://luma.gl/docs/api-guide/gpu/gpu-textures"><link data-rh="true" rel="alternate" href="https://luma.gl/docs/api-guide/gpu/gpu-textures" hreflang="en"><link data-rh="true" rel="alternate" href="https://luma.gl/docs/api-guide/gpu/gpu-textures" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Using GPU Textures","item":"https://luma.gl/docs/api-guide/gpu/gpu-textures"}]}</script><link rel="stylesheet" href="/assets/css/styles.001c07d2.css">
-<script src="/assets/js/runtime~main.2b2b7290.js" defer="defer"></script>
-<script src="/assets/js/main.4a16e2d2.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.550b6ba0.js" defer="defer"></script>
+<script src="/assets/js/main.10d86352.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg style="display: none;"><defs>
@@ -157,8 +157,27 @@ luma provides <code>Device</code> methods to help applications determine the cap
 <li class="">the source data begins after a nonzero byte offset</li>
 </ul>
 <h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="webgpu-texture-data-alignment">WebGPU Texture Data Alignment<a href="#webgpu-texture-data-alignment" class="hash-link" aria-label="Direct link to WebGPU Texture Data Alignment" title="Direct link to WebGPU Texture Data Alignment" translate="no">​</a></h3>
-<p>It is worth noting, especially when working directly with buffers, that WebGPU requires that <code>bytesPerRow</code> must be a multiple of <code>256</code> for linear texture data
-(except for 1D textures which do not have alignment requirements).</p>
+<p>There are two different WebGPU texture upload paths, and they do <strong>not</strong> use the same default row layout:</p>
+<ul>
+<li class=""><code>writeData()</code> maps to <code>GPUQueue.writeTexture()</code> and defaults to a tightly packed CPU-memory layout.</li>
+<li class=""><code>writeBuffer()</code> and <code>readBuffer()</code> map to buffer copy operations and use linear GPU-buffer layouts.</li>
+</ul>
+<p>The <code>256</code>-byte rule applies to the second case: buffer copy layouts. It does <strong>not</strong> mean that every <code>writeData()</code> upload must be padded to <code>256</code> bytes per row.</p>
+<p>In practice:</p>
+<ul>
+<li class=""><code>writeData()</code>:<!-- -->
+<ul>
+<li class="">omit <code>bytesPerRow</code> / <code>rowsPerImage</code> for tightly packed typed-array uploads</li>
+<li class="">provide them only when your CPU-side source is already padded or packs multiple layers/slices into one allocation</li>
+</ul>
+</li>
+<li class=""><code>writeBuffer()</code> and <code>readBuffer()</code>:<!-- -->
+<ul>
+<li class="">use WebGPU buffer-copy layout rules</li>
+<li class=""><code>bytesPerRow</code> must satisfy WebGPU&#x27;s alignment requirements, typically a multiple of <code>256</code></li>
+</ul>
+</li>
+</ul>
 <p>This row-stride rule is different from compressed block alignment:</p>
 <ul>
 <li class=""><code>bytesPerRow</code> alignment applies to linear buffer layouts</li>
@@ -170,19 +189,24 @@ luma provides <code>Device</code> methods to help applications determine the cap
 <li class="">Require slower fallback modes or copies</li>
 <li class="">May even crash or cause undefined behavior on some hardware</li>
 </ul>
-<p>So WebGPU enforces the strictest alignment across the board to avoid inconsistent behavior or costly driver fallbacks.
-It&#x27;s not a limitation of a specific platform, but rather a lowest common denominator across vendors, including:</p>
+<p>The buffer-copy rule is not a limitation of a specific platform, but rather a lowest common denominator across vendors, including:</p>
 <table><thead><tr><th>Platform / Vendor</th><th>256-byte alignment reason</th></tr></thead><tbody><tr><td>Apple / Metal</td><td>Metal requires row strides aligned to 256 bytes for optimal performance and correctness.</td></tr><tr><td>Direct3D 12 (Windows)</td><td>D3D12 has alignment requirements for D3D12_TEXTURE_COPY_LOCATION buffer layouts.</td></tr><tr><td>Vulkan (Linux/Windows/Android)</td><td>vkCmdCopyBufferToImage requires bufferRowLength alignment for tight row packing.</td></tr><tr><td>Mobile GPUs</td><td>Unified memory and tile-based rendering architectures strongly prefer 256-byte rows for coalesced access.</td></tr></tbody></table>
-<p>Why 256? It has been chose as a sweet spot between overhead and performance. 256 bytes is a power of two, making it a natural alignment boundary that fits well with:</p>
+<p>Why <code>256</code>? It is a practical alignment boundary for buffer-backed texture copies across current GPU APIs and drivers:</p>
 <ul>
 <li class="">Cache line sizes</li>
 <li class="">Tile sizes (especially on mobile GPUs)</li>
 <li class="">SIMD vectorized memory access units (e.g., 32 or 64 bytes * 4 or 8 lanes)</li>
 </ul>
-<p>Essentially, large enough for efficient DMA transfers, small enough not to waste too much memory.</p>
+<p>Essentially, large enough for efficient DMA transfers, small enough not to waste too much memory. But again, this applies to linear buffer copy layouts, not to the default <code>writeData()</code> packing.</p>
 <h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="webgl2-texture-data-alignment">WebGL2 Texture Data Alignment<a href="#webgl2-texture-data-alignment" class="hash-link" aria-label="Direct link to WebGL2 Texture Data Alignment" title="Direct link to WebGL2 Texture Data Alignment" translate="no">​</a></h3>
 <p>WebGL2 accepts unaligned texture data, however there may be a small performance benefit in pre-aligning the data on 2, 4 or 8 byte boundaries.
 This is however unlikely to matter unless many large texture copies are being performed.</p>
+<p>For padded CPU uploads on WebGL, pass the real <code>bytesPerRow</code> and <code>rowsPerImage</code> values. luma.gl maps those fields onto WebGL&#x27;s pixel unpack state so the same source data layout works on both backends:</p>
+<ul>
+<li class="">tightly packed CPU data: omit layout fields</li>
+<li class="">padded CPU data: pass explicit <code>bytesPerRow</code> and <code>rowsPerImage</code></li>
+<li class="">WebGPU buffer copy paths: use <code>writeBuffer()</code> / <code>readBuffer()</code> with <code>256</code>-aligned row strides</li>
+</ul>
 <h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="compressed-textures">Compressed Textures<a href="#compressed-textures" class="hash-link" aria-label="Direct link to Compressed Textures" title="Direct link to Compressed Textures" translate="no">​</a></h2>
 <p>Compressed textures refers to textures that are compressed in a way that can be decompressed performantly on the GPU during sampling.
 Such textures do not need to be decompressed fully (neither on CPU or GPU) but can be uploaded directly to the GPU in their compressed format, and will remain compressed there.

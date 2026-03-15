@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="generator" content="Docusaurus v3.9.2">
 <title data-rh="true">What&#x27;s New | luma.gl</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://luma.gl/docs/whats-new"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-default-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-rh="true" property="og:title" content="What&#x27;s New | luma.gl"><meta data-rh="true" name="description" content="This page contains news for recent luma.gl releases. For older releases (through v8.5) refer to the Legacy What&#x27;s New page."><meta data-rh="true" property="og:description" content="This page contains news for recent luma.gl releases. For older releases (through v8.5) refer to the Legacy What&#x27;s New page."><link data-rh="true" rel="icon" href="/favicon.png"><link data-rh="true" rel="canonical" href="https://luma.gl/docs/whats-new"><link data-rh="true" rel="alternate" href="https://luma.gl/docs/whats-new" hreflang="en"><link data-rh="true" rel="alternate" href="https://luma.gl/docs/whats-new" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"What's New","item":"https://luma.gl/docs/whats-new"}]}</script><link rel="stylesheet" href="/assets/css/styles.001c07d2.css">
-<script src="/assets/js/runtime~main.2b2b7290.js" defer="defer"></script>
-<script src="/assets/js/main.4a16e2d2.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.550b6ba0.js" defer="defer"></script>
+<script src="/assets/js/main.10d86352.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg style="display: none;"><defs>
@@ -17,37 +17,36 @@
 <p>Target Date: April 2026</p>
 <p><strong>General</strong></p>
 <ul>
+<li class=""><strong>Typescript 5.9</strong> - luma.gl code base is now TypeScript 5.9 clean.</li>
+</ul>
+<p><strong>Examples</strong></p>
+<ul>
 <li class=""><strong><a class="" href="/examples/api/texture-tester">Texture Tester Example</a></strong> - New example showing support for compressed textures on WebGL and WebGPU. Also implements multi-canvas rendering.</li>
+<li class=""><strong><a class="" href="/examples/api/multi-canvas">Multi-Canvas Example</a></strong> - New example showing rendering into multiple HTML canvas elements.</li>
 <li class=""><strong><a class="" href="/examples/integrations/external-context">External Context Example</a></strong> - New example showing integration with external WebGL contexts.</li>
 <li class=""><strong><a class="" href="/examples/integrations/react-strict-mode">React Strict Mode Example</a></strong> - Improved resource cleanup for better compatibility when using luma.gl in React <code>&lt;StrictMode&gt;</code> apps</li>
-<li class=""><strong>Typescript 5.9</strong> - luma.gl code base is now TypeScript 5.9 clean.</li>
 </ul>
 <p><strong>@luma.gl/core</strong></p>
 <ul>
-<li class=""><strong>multi-canvas rendering</strong> is now supported on both WebGL and WebGPU via <a class="" href="/docs/api-reference/core/presentation-context"><code>device.createPresentationContext()</code></a>. See the <a class="" href="/docs/developer-guide/multiple-canvases">Multiple Canvases</a> developer guide details.</li>
-<li class=""><strong>shader debugging</strong> via improved shader compilation error modal.</li>
+<li class=""><strong>Multi-canvas rendering</strong> is now supported on both WebGL and WebGPU via <a class="" href="/docs/api-reference/core/presentation-context"><code>device.createPresentationContext()</code></a>. See the <a class="" href="/docs/developer-guide/multiple-canvases">Multiple Canvases</a> developer guide details.</li>
 </ul>
 <p><strong>@luma.gl/engine</strong></p>
 <ul>
 <li class=""><strong>WebGPU mipmap generation</strong> now supported by <a class="" href="/docs/api-reference/engine/dynamic-texture"><code>DynamicTexture</code></a>.</li>
+<li class=""><strong>Explicit mip chains</strong> can now be passed to <code>DynamicTexture</code> for 2D, array, cube, and 3D uploads.</li>
+<li class=""><strong>Compressed mip uploads</strong> are now validated and uploaded through <code>DynamicTexture</code>, including block-size-aware mip truncation.</li>
+<li class=""><strong>Mip-level format metadata</strong> now accepts both <code>textureFormat</code> and <code>format</code> on texture data objects during the transition to loaders.gl <code>TextureLevel</code> naming.</li>
 </ul>
 <p><strong>@luma.gl/webgpu</strong></p>
 <ul>
 <li class=""><strong>compressed texture</strong> support (but note that WebGPU is stricter than WebGL and requires block-aligned textures).</li>
 <li class=""><strong>texture readback</strong> improvements</li>
 </ul>
-<p><strong>@luma.gl/webgl</strong></p>
-<ul>
-<li class=""><strong>texture support</strong> overhaul of texture test suite.</li>
-</ul>
 <p><strong>@luma.gl/gltf</strong></p>
 <ul>
-<li class="">glTF texture filtering now defaults to <code>linear</code> instead of <code>nearest</code> for improved texture rendering.</li>
-<li class="">Improved documentation of the glTF module</li>
-</ul>
-<p><strong>@luma.gl/core</strong></p>
-<ul>
-<li class="">luma.gl now supports multi-canvas rendering on both WebGL and WebGPU via <a class="" href="/docs/api-reference/core/presentation-context"><code>device.createPresentationContext()</code></a>. See the <a class="" href="/docs/developer-guide/multiple-canvases">Multiple Canvases</a> developer guide for setup details and backend-specific behavior.</li>
+<li class="">Improved documentation of the glTF module. In particular, <code>createScenegraphsFromGLTF()</code> and <code>GLTFScenegraphs</code> are now documented.</li>
+<li class="">gltf module now creates <code>DynamicTexture</code> instances rather than raw <code>Texture</code>s.</li>
+<li class=""><strong><code>linear</code> texture filtering</strong> - default texture filtering is now <code>linear</code> instead of <code>nearest</code> for improved texture rendering.</li>
 </ul>
 <h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="version-92">Version 9.2<a href="#version-92" class="hash-link" aria-label="Direct link to Version 9.2" title="Direct link to Version 9.2" translate="no">​</a></h2>
 <p>Release Date: Sep 24, 2025</p>
