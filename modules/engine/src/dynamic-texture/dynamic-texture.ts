@@ -26,7 +26,6 @@ import {
   type TextureArrayData,
   type TextureCubeArrayData,
   type TextureCubeData,
-  type TextureImageData,
 
   // Helpers
   getTextureSizeFromData,
@@ -378,7 +377,7 @@ export class DynamicTexture {
               `${this} mip level ${mipLevel} uses format "${textureFormat}" but texture format is "${this.texture.format}"`
             );
           }
-          this.texture.writeData(getAlignedUploadData(this.texture, data), {
+          this.texture.writeData(data.data, {
             x: 0,
             y: 0,
             z,
@@ -421,42 +420,6 @@ export class DynamicTexture {
     data: null,
     mipmaps: false
   };
-}
-
-function getAlignedUploadData(
-  texture: DynamicTexture['texture'],
-  data: TextureImageData
-): ArrayBuffer | Uint8Array {
-  // Compressed uploads are already block-packed and must not go through row padding.
-  if (texture.device.isTextureFormatCompressed(texture.format)) {
-    return data.data;
-  }
-  const {width, height, data: uploadData} = data;
-  const {bytesPerPixel} = texture.device.getTextureFormatInfo(texture.format);
-  const bytesPerRow = width * bytesPerPixel;
-  const alignedBytesPerRow = Math.ceil(bytesPerRow / texture.byteAlignment) * texture.byteAlignment;
-
-  if (alignedBytesPerRow === bytesPerRow) {
-    return uploadData;
-  }
-
-  const sourceBytes = new Uint8Array(
-    uploadData.buffer,
-    uploadData.byteOffset,
-    uploadData.byteLength
-  );
-  const paddedBytes = new Uint8Array(alignedBytesPerRow * height);
-
-  for (let row = 0; row < height; row++) {
-    const sourceOffset = row * bytesPerRow;
-    const destinationOffset = row * alignedBytesPerRow;
-    paddedBytes.set(
-      sourceBytes.subarray(sourceOffset, sourceOffset + bytesPerRow),
-      destinationOffset
-    );
-  }
-
-  return paddedBytes;
 }
 
 type TextureSubresourceAnalysis = {

@@ -293,16 +293,12 @@ function generateMipmaps3D(device: WebGPUDevice, texture: Texture): void {
       const sourceView = texture.createView({
         dimension: '3d',
         baseMipLevel: destinationMipLevel - 1,
-        mipLevelCount: 1,
-        baseArrayLayer: 0,
-        arrayLayerCount: 1
+        mipLevelCount: 1
       });
       const destinationView = texture.createView({
         dimension: '3d',
         baseMipLevel: destinationMipLevel,
-        mipLevelCount: 1,
-        baseArrayLayer: 0,
-        arrayLayerCount: 1
+        mipLevelCount: 1
       });
       computePipeline.setBindings({
         sourceTexture: sourceView,

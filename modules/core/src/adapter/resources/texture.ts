@@ -290,11 +290,10 @@ export abstract class Texture extends Resource<TextureProps> {
    */
   copyImageData(options: CopyImageDataOptions): void {
     const {data, depth, ...writeOptions} = options;
-    const normalizedWriteOptions = this._normalizeTextureWriteOptions({
+    this.writeData(data, {
       ...writeOptions,
       depthOrArrayLayers: writeOptions.depthOrArrayLayers ?? depth
     });
-    this.writeData(data, normalizedWriteOptions);
   }
 
   /**

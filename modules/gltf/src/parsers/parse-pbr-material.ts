@@ -259,8 +259,11 @@ function addTexture(
   if (image.compressed) {
     texture = createCompressedTexture(device, image, baseOptions);
   } else {
+    const {width, height} = device.getExternalImageSize(image);
     texture = device.createTexture({
       ...baseOptions,
+      width,
+      height,
       data: image
     });
   }

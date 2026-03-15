@@ -4,7 +4,7 @@
 
 import {Device} from '@luma.gl/core';
 import {GroupNode} from '@luma.gl/engine';
-import {GLTF, GLTFPostprocessed} from '@loaders.gl/gltf';
+import {GLTFPostprocessed} from '@loaders.gl/gltf';
 import {Light} from '@luma.gl/shadertools';
 import {parseGLTF, type ParseGLTFOptions} from '../parsers/parse-gltf';
 import {parseGLTFLights} from '../parsers/parse-gltf-lights';

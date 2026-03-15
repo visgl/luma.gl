@@ -70,7 +70,6 @@ test('Device#generateMipmapsWebGPU throws on non-WebGPU devices', async t => {
   );
 
   texture.destroy();
-  device.destroy();
   t.end();
 });
 
@@ -105,7 +104,6 @@ test('WebGPUDevice#generateMipmapsWebGPU generates a mip chain', async t => {
   );
 
   texture.destroy();
-  device.destroy();
   t.end();
 });
 
