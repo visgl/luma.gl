@@ -34,14 +34,6 @@ export type MutableAnimationLoopProps = {
   autoResizeViewport?: boolean;
 };
 
-type WebGLQuerySet = QuerySet & {
-  isResultAvailable(): boolean;
-  isTimerDisjoint(): boolean;
-  getTimerMilliseconds(): number;
-  beginTimestampQuery(): void;
-  endTimestampQuery(): void;
-};
-
 /** Convenient animation loop */
 export class AnimationLoop {
   static defaultAnimationLoopProps = {
@@ -82,7 +74,7 @@ export class AnimationLoop {
   _cpuStartTime: number = 0;
   _error: Error | null = null;
 
-  /** GPU time query for measuring GPU execution time (WebGL only with EXT_disjoint_timer_query) */
+  /** GPU time query for measuring GPU execution time */
   _gpuTimeQuery: QuerySet | null = null;
 
   /*
@@ -281,10 +273,14 @@ export class AnimationLoop {
     // Default viewport setup, in case onInitialize wants to render
     this._resizeViewport();
 
-    // Initialize GPU time query if supported (WebGL with EXT_disjoint_timer_query_webgl2)
-    if (this.device?.features.has('timer-query-webgl')) {
+    // Initialize GPU time query if supported by the active adapter.
+    if (this._hasTimestampQuerySupport()) {
       try {
-        this._gpuTimeQuery = this.device.createQuerySet({type: 'timestamp', count: 1});
+        this._gpuTimeQuery = this.device.createQuerySet({type: 'timestamp', count: 256});
+        this.device.commandEncoder = this.device.createCommandEncoder({
+          id: this.device.commandEncoder.props.id,
+          timeProfilingQuerySet: this._gpuTimeQuery
+        });
       } catch {
         // GPU timing not available - ignore
         this._gpuTimeQuery = null;
@@ -527,31 +523,39 @@ export class AnimationLoop {
     this.frameRate.timeEnd();
     this.frameRate.timeStart();
 
-    // Check if timer for last frame has completed.
-    // GPU timer results are never available in the same frame they are captured.
-    if (this.device?.type === 'webgl' && this._gpuTimeQuery) {
-      // WEBGLQuerySet has these methods for timer queries
-      const query = this._gpuTimeQuery as WebGLQuerySet;
-
-      if (query.isResultAvailable() && !query.isTimerDisjoint()) {
-        this.gpuTime.addTime(query.getTimerMilliseconds());
-      }
-
-      // Start GPU time query for this frame
-      query.beginTimestampQuery();
+    if (this.device && this._gpuTimeQuery) {
+      this._consumeEncodedGpuTime();
     }
 
     this.cpuTime.timeStart();
   }
 
   _endFrameTimers() {
-    this.cpuTime.timeEnd();
-
-    // End GPU time query. Results will be available on next frame.
-    if (this._gpuTimeQuery) {
-      const query = this._gpuTimeQuery as WebGLQuerySet;
-      query.endTimestampQuery();
+    if (this.device && this._gpuTimeQuery) {
+      this._consumeEncodedGpuTime();
     }
+
+    this.cpuTime.timeEnd();
+  }
+
+  _consumeEncodedGpuTime(): void {
+    if (!this.device) {
+      return;
+    }
+
+    const gpuTimeMs = this.device.commandEncoder._gpuTimeMs;
+    if (gpuTimeMs !== undefined) {
+      this.gpuTime.addTime(gpuTimeMs);
+      this.device.commandEncoder._gpuTimeMs = undefined;
+    }
+  }
+
+  _hasTimestampQuerySupport(): boolean {
+    if (!this.device) {
+      return false;
+    }
+
+    return this.device.features.has('timestamp-query');
   }
 
   // Event handling

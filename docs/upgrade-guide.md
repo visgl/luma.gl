@@ -10,6 +10,12 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 
 *For detailed commit level logs that include alpha and beta releases, see the [CHANGELOG](https://github.com/visgl/luma.gl/blob/master/CHANGELOG.md) in the github repository.*
 
+## Upgrading to v9.4
+
+**Potentially breaking behavior**
+- The legacy feature flag `timer-query-webgl` has been removed.
+- Replace checks for `timer-query-webgl` with `timestamp-query` for GPU timestamp/query support on both WebGPU and WebGL.
+
 ## Upgrading to v9.3
 
 **Potentially breaking behavior**

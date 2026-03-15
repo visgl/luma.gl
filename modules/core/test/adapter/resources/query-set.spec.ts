@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
-import {getTestDevices} from '@luma.gl/test-utils';
+import {getTestDevices, getWebGLTestDevice} from '@luma.gl/test-utils';
 import {QuerySet} from '@luma.gl/core';
 
 test('QuerySet construct/delete', async t => {
@@ -13,6 +13,59 @@ test('QuerySet construct/delete', async t => {
     querySet.destroy();
     t.pass('QuerySet delete successful');
   }
+  t.end();
+});
+
+test('QuerySet timestamp duration', async t => {
+  for (const device of await getTestDevices()) {
+    if (!device.features.has('timestamp-query')) {
+      t.comment(`${device.type} does not support timestamp queries`);
+      continue;
+    }
+
+    const querySet = device.createQuerySet({type: 'timestamp', count: 2});
+    t.notOk(querySet.isResultAvailable(), `${device.type} timestamp result unavailable before recording`);
+
+    device.commandEncoder.writeTimestamp(querySet, 0);
+    device.commandEncoder.writeTimestamp(querySet, 1);
+    device.submit();
+
+    const duration = await querySet.readTimestampDuration(0, 1);
+    t.ok(duration >= 0, `${device.type} timestamp duration is non-negative`);
+
+    querySet.destroy();
+  }
+  t.end();
+});
+
+test('WebGL QuerySet timestamp pair validation', async t => {
+  const device = await getWebGLTestDevice();
+  if (!device.features.has('timestamp-query')) {
+    t.comment('WebGL timestamp queries are not supported');
+    t.end();
+    return;
+  }
+
+  const querySet = device.createQuerySet({type: 'timestamp', count: 2});
+  t.throws(
+    () => device.commandEncoder.writeTimestamp(querySet, 1),
+    /started/,
+    'ending before starting throws'
+  );
+
+  device.commandEncoder.writeTimestamp(querySet, 0);
+  t.throws(
+    () => device.commandEncoder.writeTimestamp(querySet, 0),
+    /active/,
+    'starting the same timestamp pair twice throws'
+  );
+  device.commandEncoder.writeTimestamp(querySet, 1);
+  device.submit();
+
+  const duration = await querySet.readTimestampDuration(0, 1);
+  t.ok(duration >= 0, 'completed WebGL timestamp pair is readable');
+
+  querySet.destroy();
   t.end();
 });
 

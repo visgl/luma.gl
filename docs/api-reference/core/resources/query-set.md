@@ -1,81 +1,90 @@
 # QuerySet
 
-:::caution
-This page is incomplete.
-:::
+A `QuerySet` stores asynchronous GPU query results.
 
-A `QuerySet` object provides an API for using asynchronous GPU queries of the following types
-- timer queries.
-- 'Occlusion' 
-- 'Transform Feedback'
+- Use `type: 'occlusion'` to count samples that pass depth/stencil tests.
+- Use `type: 'timestamp'` to profile GPU work durations.
 
-A `QuerySet` holds a number of 64 bit values. 
-
-Timer queries are available if the `timestamp-query` extension is available. (On WebGL 2 this is equivalent to the 
-[`EXT_disjoint_timer_query_webgl2`](https://www.khronos.org/registry/webgl/extensions/EXT_disjoint_timer_query_webgl2/)
-being supported on the current browser.
-
-Note that even when supported, timer queries can fail whenever a change in the GPU occurs that will make the values returned by this extension unusable for performance metrics, for example if the GPU is throttled mid-frame. 
+Timestamp queries are portable when `device.features.has('timestamp-query')` is `true`.
+On WebGL this is backed by
+[`EXT_disjoint_timer_query_webgl2`](https://www.khronos.org/registry/webgl/extensions/EXT_disjoint_timer_query_webgl2/).
 
 ## Usage
 
 Create a timestamp query set:
 
 ```typescript
-import {QuerySet} from '@luma.gl/core';
-...
-const timestampQuery = device.createQuerySet({type: 'timestamp'}});
+const querySet = device.createQuerySet({type: 'timestamp', count: 2});
 ```
+
+Record timestamps through the command stream:
+
+```typescript
+device.commandEncoder.writeTimestamp(querySet, 0);
+// encode GPU work here
+device.commandEncoder.writeTimestamp(querySet, 1);
+device.submit();
+```
+
+`luma.gl` can also apply timestamps automatically on render/compute passes when a pass does not already specify
+`timestampQuerySet`, `beginTimestampIndex`, or `endTimestampIndex`:
+
+```typescript
+const querySet = device.createQuerySet({type: 'timestamp', count: 256});
+const commandEncoder = device.createCommandEncoder({timeProfilingQuerySet: querySet});
+commandEncoder.beginRenderPass({});
+// ... encode passes ...
+device.submit();
+```
+
+Read the duration asynchronously:
+
+```typescript
+const milliseconds = await querySet.readTimestampDuration(0, 1);
+```
+
+You can also read all timestamps in one call:
+
+```typescript
+const timestamps = await querySet.readResults();
+```
+
+### Related API Surfaces
+
+- [RenderPass props](./render-pass.md#renderpassprops): pass query sets through `timestampQuerySet`, `beginTimestampIndex`, `endTimestampIndex`, or `occlusionQuerySet`.
+- [ComputePass props](./compute-pass.md#computepassprops): pass `timestampQuerySet`, `beginTimestampIndex`, and `endTimestampIndex`.
+- [Command encoding](./command-encoder.md): use `CommandEncoder.writeTimestamp()` for manual timestamp capture.
 
 ## Types
 
-### `QueryProps`
+### `QuerySetProps`
 
-- `type`: `occlusion` | `timestamp` - type of timer
-- `count`: `number` - number of query results held by this `QuerySet`
+- `type`: `'occlusion' | 'timestamp'`
+- `count`: `number`
 
-| Query Type                               | Usage                                        | Description                                                                |
-| ---------------------------------------- | -------------------------------------------- | -------------------------------------------------------------------------- |
-| `timestamp` (`RenderPass begin/end`)     | `beginRenderPass({timestampQuery: ...})`     | Time taken by GPU to execute RenderPass commands                           |
-| `timestamp`  (`ComputePass begin/end`)   | `beginComputePass({timestampQuery: ...})`    | Time taken by GPU to execute ComputePass commands                          |
-| `occlusion`                              | `beginOcclusionQuery({conservative: false})` | Occlusion query how many fragment samples pass tests (depth, stencil, ...) |
-| `occlusion`                              | `beginOcclusionQuery({conservative: true})`  | Same as above above, but less accurate and faster                          | 
-| `transform-feedback` (Not yet supported) | `beginTransformFeedbackQuery()`              | Number of primitives that are written to transform feedback buffers.       |
-
-In addition to above queries, Query object also provides `getTimeStamp` which returns GPU time stamp at the time this query is executed by GPU. Two sets of these methods can be used to calculate time taken by GPU for a set of GL commands.
-
-## DeviceFeatures
-
-`timestamp-query`: Whether `QuerySet` can be created with type `timestamp`.
+For timestamp duration profiling, use adjacent begin/end indices such as `(0, 1)` or `(2, 3)`.
 
 ## Methods
 
+### `isResultAvailable(queryIndex?: number): boolean`
 
+Returns `true` when the requested result can be read without blocking.
+Backends may implement this conservatively.
 
-### `constructor(device: Device, props: Object)`
+### `readResults(options?: {firstQuery?: number; queryCount?: number}): Promise<bigint[]>`
 
-`new Query(gl, {})`
-- options.timers=false Object - If true, checks if 'TIME_ELAPSED_EXT' queries are supported
+Reads 64-bit query values asynchronously.
+
+### `readTimestampDuration(beginIndex: number, endIndex: number): Promise<number>`
+
+Reads a timestamp duration in milliseconds.
 
 ### `destroy()`
 
-Destroys the WebGL object. Rejects any pending query.
+Destroys the underlying query resources.
 
-- return Query - returns itself, to enable chaining of calls.
+## Remarks
 
-
-### beginTimeElapsedQuery()
-
-Shortcut for timer query (dependent on extension in both WebGL 1 and 2)
-
-## RenderPass
-
-
-### `RenderPass.beginOcclusionQuery({conservative = false})`
-
-Shortcut for occlusion query (dependent on WebGL 2)
-
-### `RenderPass.beginTransformFeedbackQuery()`
-
-WebGL 2 only. not yet implemented.
-
+- `QuerySet` is a passive container. Record timestamps with `CommandEncoder.writeTimestamp()`, pass timestamp descriptors to render/compute passes, or let `AnimationLoop` inject pass-level profiling by constructing command encoders with `timeProfilingQuerySet`.
+- Query results are asynchronous and are typically not available in the same frame they are recorded.
+- On WebGL, timestamp results may be invalidated by disjoint timer events. Handle rejected reads when profiling long-running sessions.

@@ -225,10 +225,15 @@ export class WebGPUDevice extends Device {
   }
 
   submit(commandBuffer?: WebGPUCommandBuffer): void {
+    let submittedCommandEncoder: WebGPUCommandEncoder | null = null;
     if (!commandBuffer) {
-      commandBuffer = this.commandEncoder.finish();
+      submittedCommandEncoder = this.commandEncoder;
+      commandBuffer = submittedCommandEncoder.finish();
       this.commandEncoder.destroy();
-      this.commandEncoder = this.createCommandEncoder({id: `${this.id}-default-encoder`});
+      this.commandEncoder = this.createCommandEncoder({
+        id: submittedCommandEncoder.props.id,
+        timeProfilingQuerySet: submittedCommandEncoder.getTimeProfilingQuerySet()
+      });
     }
 
     this.pushErrorScope('validation');
@@ -237,6 +242,12 @@ export class WebGPUDevice extends Device {
       this.reportError(new Error(`${this} command submission: ${error.message}`), this)();
       this.debug();
     });
+
+    if (submittedCommandEncoder) {
+      void submittedCommandEncoder.resolveTimeProfilingQuerySet().then(() => {
+        this.commandEncoder._gpuTimeMs = submittedCommandEncoder._gpuTimeMs;
+      });
+    }
   }
 
   // WebGPU specific
@@ -307,7 +318,6 @@ export class WebGPUDevice extends Device {
     }
 
     const WEBGPU_ALWAYS_FEATURES: DeviceFeature[] = [
-      'timer-query-webgl',
       'compilation-status-async-webgl',
       'float32-renderable-webgl',
       'float16-renderable-webgl',

@@ -63,9 +63,18 @@ export class WEBGLRenderPass extends RenderPass {
 
     // Hack - for now WebGL draws in "immediate mode" (instead of queueing the operations)...
     this.clear();
+
+    if (this.props.timestampQuerySet && this.props.beginTimestampIndex !== undefined) {
+      const webglQuerySet = this.props.timestampQuerySet as WEBGLQuerySet;
+      webglQuerySet.writeTimestamp(this.props.beginTimestampIndex);
+    }
   }
 
   end(): void {
+    if (this.props.timestampQuerySet && this.props.endTimestampIndex !== undefined) {
+      const webglQuerySet = this.props.timestampQuerySet as WEBGLQuerySet;
+      webglQuerySet.writeTimestamp(this.props.endTimestampIndex);
+    }
     this.device.popState();
     // should add commands to CommandEncoder.
   }

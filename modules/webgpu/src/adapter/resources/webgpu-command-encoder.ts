@@ -54,11 +54,14 @@ export class WebGPUCommandEncoder extends CommandEncoder {
    * @todo need to support a "Framebuffer" equivalent (aka preconfigured RenderPassDescriptors?).
    */
   beginRenderPass(props: RenderPassProps): WebGPURenderPass {
-    return new WebGPURenderPass(this.device, props);
+    return new WebGPURenderPass(this.device, this._applyTimeProfilingToPassProps(props));
   }
 
   beginComputePass(props: ComputePassProps): WebGPUComputePass {
-    return new WebGPUComputePass(this.device, props);
+    return new WebGPUComputePass(
+      this.device,
+      this._applyTimeProfilingToPassProps(props)
+    );
   }
 
   // beginRenderPass(GPURenderPassDescriptor descriptor): GPURenderPassEncoder;
@@ -174,6 +177,27 @@ export class WebGPUCommandEncoder extends CommandEncoder {
       options?.destinationOffset || 0
     );
   }
+
+  override writeTimestamp(querySet: WebGPUQuerySet, queryIndex: number): void {
+    querySet._invalidateResults();
+    const writeTimestamp = (this.handle as GPUCommandEncoder & {
+      writeTimestamp?: (querySet: GPUQuerySet, queryIndex: number) => void;
+    }).writeTimestamp;
+
+    if (writeTimestamp) {
+      writeTimestamp.call(this.handle, querySet.handle, queryIndex);
+      return;
+    }
+
+    const computePass = this.handle.beginComputePass({
+      timestampWrites: {
+        querySet: querySet.handle,
+        beginningOfPassWriteIndex: queryIndex
+      }
+    });
+    computePass.end();
+  }
+
 }
 
 /*

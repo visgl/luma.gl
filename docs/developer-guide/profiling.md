@@ -55,12 +55,53 @@ however tracking allocations can help spot resource leaks or unnecessary work be
 
 ## Performance Profiling
 
-`device.createQuerySet()` can be used to create GPU queries that 
+`QuerySet` can be used to capture GPU-side profiling data.
 
-- Occlusion Queries always supported.
-- Timestamp Queries are supported if the `timestamp-query` feature is available, check with `device.features.has('timestamp-query')`.
+- Occlusion queries are available through `device.createQuerySet({type: 'occlusion', ...})`.
+- Timestamp queries require `device.features.has('timestamp-query')`.
 
-`QuerySet` instances can be supplied when creating `RenderPass` and `ComputePass` instances.
+### Profiling With QuerySet
 
-Results are available through
-`commandEncoder.resolveQuerySet()`
+Create a timestamp query set with enough slots for all the passes you want to profile:
+
+```typescript
+const querySet = device.createQuerySet({type: 'timestamp', count: 256});
+```
+
+Record timestamps through the command encoder:
+
+```typescript
+device.commandEncoder.writeTimestamp(querySet, 0);
+// encode GPU work here
+device.commandEncoder.writeTimestamp(querySet, 1);
+device.submit();
+```
+
+Most engines can also use automatic per-pass profiling by constructing a command encoder with
+the profiling query set:
+
+```typescript
+const commandEncoder = device.createCommandEncoder({timeProfilingQuerySet: querySet});
+const pass = commandEncoder.beginRenderPass({});
+// no need to manually write begin/end timestamps
+pass.end();
+device.submit();
+```
+
+Read the duration asynchronously:
+
+```typescript
+try {
+  const gpuMilliseconds = await querySet.readTimestampDuration(0, 1);
+  console.log(`GPU work took ${gpuMilliseconds.toFixed(3)}ms`);
+} catch (error) {
+  console.warn('GPU timing was invalid', error);
+}
+```
+
+Notes:
+
+- Query results are asynchronous. They are usually not available in the same frame they are recorded.
+- `querySet.isResultAvailable()` can be used as a non-blocking poll before starting a read.
+- On WebGL, timestamp queries are backed by `EXT_disjoint_timer_query_webgl2`. Reads may be rejected when the GPU enters a disjoint state, for example after throttling or a reset.
+- `QuerySet` can also be supplied to render and compute passes through `timestampQuerySet`, `beginTimestampIndex`, and `endTimestampIndex`.

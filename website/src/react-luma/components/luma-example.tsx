@@ -331,6 +331,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
   const currentTask = useRef<Promise<void> | null>(null);
   const statsContainerRef = useRef<HTMLDivElement | null>(null);
   const statsPanelRef = useRef<HTMLDivElement | null>(null);
+  const statsWidgetCollapsedState = useRef<Record<string, boolean>>({});
 
   /** Type type of the device (WebGL, WebGPU, ...) */
   const deviceType = useStore(store => store.deviceType);
@@ -372,10 +373,11 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
         resourceMemory.get('GPU Memory');
         resourceMemory.get('Buffer Memory');
         resourceMemory.get('Texture Memory');
+        const animationStatsTitle = props.statsTitle || 'Example Stats';
 
         statsWidgets = [
           new StatsWidget(animationLoop.stats, {
-            title: props.statsTitle || 'Example Stats',
+            title: animationStatsTitle,
             container: statsPanelRef.current,
             css: STAT_STYLES,
             formatters: ANIMATION_STATS_FORMATTERS
@@ -393,7 +395,8 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
           })
         ];
         for (const statsWidget of statsWidgets) {
-          statsWidget.setCollapsed(true);
+          const collapsed = statsWidget.title ? statsWidgetCollapsedState.current[statsWidget.title] : undefined;
+          statsWidget.setCollapsed(collapsed ?? true);
         }
 
         const updateStatsWidget = () => {
@@ -433,6 +436,9 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
             statsIntervalId = null;
           }
           for (const statsWidget of statsWidgets) {
+            if (statsWidget.title) {
+              statsWidgetCollapsedState.current[statsWidget.title] = statsWidget.collapsed;
+            }
             statsWidget.remove();
           }
           statsWidgets = [];

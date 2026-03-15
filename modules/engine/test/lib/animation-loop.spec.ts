@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
-import {getWebGLTestDevice} from '@luma.gl/test-utils';
+import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 
 import {AnimationLoop} from '@luma.gl/engine';
 
@@ -160,11 +160,16 @@ test('engine#AnimationLoop GPU timing graceful fallback', async t => {
   t.ok(animationLoop.cpuTime, 'cpuTime stat exists');
 
   // _gpuTimeQuery should match feature availability
-  const hasTimerQuery = device.features.has('timer-query-webgl');
+  const hasTimerQuery = device.features.has('timestamp-query');
   t.is(
     animationLoop._gpuTimeQuery !== null,
     hasTimerQuery,
     `_gpuTimeQuery created when feature ${hasTimerQuery ? 'available' : 'unavailable'}`
+  );
+  t.is(
+    animationLoop._gpuTimeQuery?.props.count || 0,
+    hasTimerQuery ? 256 : 0,
+    'timestamp query set pre-allocates slots for profiling passes'
   );
 
   // Destroy should not throw
@@ -172,5 +177,30 @@ test('engine#AnimationLoop GPU timing graceful fallback', async t => {
   animationLoop.destroy();
   t.is(animationLoop._gpuTimeQuery, null, 'Query cleaned up on destroy');
 
+  t.end();
+});
+
+test('engine#AnimationLoop WebGPU timing path avoids backend casts', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const animationLoop = new AnimationLoop({device});
+  await animationLoop.start();
+  await animationLoop.waitForRender();
+
+  t.ok(animationLoop.gpuTime, 'gpuTime stat exists');
+  t.ok(animationLoop.cpuTime, 'cpuTime stat exists');
+  t.is(
+    animationLoop._gpuTimeQuery !== null,
+    device.features.has('timestamp-query'),
+    '_gpuTimeQuery follows timestamp-query support'
+  );
+
+  animationLoop.stop();
+  animationLoop.destroy();
   t.end();
 });
