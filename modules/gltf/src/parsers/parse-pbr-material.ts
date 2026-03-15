@@ -6,7 +6,7 @@ import type {Device, Texture, SamplerProps, TextureFormat, TypedArray} from '@lu
 import type {GLTFSampler} from '@loaders.gl/gltf';
 import {GL} from '@luma.gl/constants';
 
-import {log} from '@luma.gl/core';
+import {log, textureFormatDecoder} from '@luma.gl/core';
 import {type ParsedPBRMaterial} from '../pbr/pbr-material';
 import {type PBREnvironment} from '../pbr/pbr-environment';
 import {type PBRMaterialBindings} from '@luma.gl/shadertools';
@@ -261,9 +261,7 @@ function addTexture(
   } else {
     texture = device.createTexture({
       ...baseOptions,
-      data: image,
-      width: image.width,
-      height: image.height
+      data: image
     });
   }
 
@@ -277,24 +275,14 @@ export type CompressedMipLevel = {
   data: TypedArray;
   width: number;
   height: number;
-  format?: TextureFormat | number;
-  compressed?: boolean;
-};
-
-/** Compressed image from loaders.gl < 4.2 (flat format) */
-export type CompressedImageFlat = {
-  compressed: true;
-  format: TextureFormat | number;
-  data: TypedArray;
-  width: number;
-  height: number;
+  textureFormat?: TextureFormat;
 };
 
 /**
- * Compressed image from loaders.gl >= 4.3 (actual format observed in 4.3.4).
+ * Compressed image from current loaders.gl releases.
  * - `mipmaps` is a boolean (true), NOT an array
- * - `data` is an Array of mip-level objects
- * - Per-level `format` is a GL enum number (e.g. 37808 = COMPRESSED_RGBA_ASTC_4x4_KHR)
+ * - `data` is an Array of TextureLevel-like objects
+ * - Per-level `textureFormat` is already a luma.gl TextureFormat
  * - Top-level `width`/`height` may be undefined
  */
 export type CompressedImageDataArray = {
@@ -302,7 +290,6 @@ export type CompressedImageDataArray = {
   mipmaps?: boolean;
   width?: number;
   height?: number;
-  format?: TextureFormat | number;
   data: CompressedMipLevel[];
 };
 
@@ -314,104 +301,27 @@ export type CompressedImageMipmapArray = {
   compressed: true;
   width?: number;
   height?: number;
-  format?: TextureFormat | number;
   mipmaps: CompressedMipLevel[];
 };
 
 /** Union of all known loaders.gl compressed image shapes */
-export type CompressedImage =
-  | CompressedImageFlat
-  | CompressedImageDataArray
-  | CompressedImageMipmapArray;
+export type CompressedImage = CompressedImageDataArray | CompressedImageMipmapArray;
 
-/** GL enum → luma.gl TextureFormat string for compressed formats */
-const GL_COMPRESSED_TEXTURE_FORMAT: Record<number, TextureFormat> = {
-  // S3TC / BC1-BC3
-  [GL.COMPRESSED_RGB_S3TC_DXT1_EXT]: 'bc1-rgb-unorm-webgl',
-  [GL.COMPRESSED_RGBA_S3TC_DXT1_EXT]: 'bc1-rgba-unorm',
-  [GL.COMPRESSED_RGBA_S3TC_DXT3_EXT]: 'bc2-rgba-unorm',
-  [GL.COMPRESSED_RGBA_S3TC_DXT5_EXT]: 'bc3-rgba-unorm',
-  [GL.COMPRESSED_SRGB_S3TC_DXT1_EXT]: 'bc1-rgb-unorm-srgb-webgl',
-  [GL.COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT]: 'bc1-rgba-unorm-srgb',
-  [GL.COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT]: 'bc2-rgba-unorm-srgb',
-  [GL.COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT]: 'bc3-rgba-unorm-srgb',
-  // RGTC / BC4-BC5
-  [GL.COMPRESSED_RED_RGTC1_EXT]: 'bc4-r-unorm',
-  [GL.COMPRESSED_SIGNED_RED_RGTC1_EXT]: 'bc4-r-snorm',
-  [GL.COMPRESSED_RED_GREEN_RGTC2_EXT]: 'bc5-rg-unorm',
-  [GL.COMPRESSED_SIGNED_RED_GREEN_RGTC2_EXT]: 'bc5-rg-snorm',
-  // BPTC / BC6-BC7
-  [GL.COMPRESSED_RGBA_BPTC_UNORM_EXT]: 'bc7-rgba-unorm',
-  [GL.COMPRESSED_SRGB_ALPHA_BPTC_UNORM_EXT]: 'bc7-rgba-unorm-srgb',
-  [GL.COMPRESSED_RGB_BPTC_SIGNED_FLOAT_EXT]: 'bc6h-rgb-float',
-  [GL.COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT_EXT]: 'bc6h-rgb-ufloat',
-  // ETC2 / EAC
-  [GL.COMPRESSED_R11_EAC]: 'eac-r11unorm',
-  [GL.COMPRESSED_SIGNED_R11_EAC]: 'eac-r11snorm',
-  [GL.COMPRESSED_RG11_EAC]: 'eac-rg11unorm',
-  [GL.COMPRESSED_SIGNED_RG11_EAC]: 'eac-rg11snorm',
-  [GL.COMPRESSED_RGB8_ETC2]: 'etc2-rgb8unorm',
-  [GL.COMPRESSED_SRGB8_ETC2]: 'etc2-rgb8unorm-srgb',
-  [GL.COMPRESSED_RGB8_PUNCHTHROUGH_ALPHA1_ETC2]: 'etc2-rgb8a1unorm',
-  [GL.COMPRESSED_SRGB8_PUNCHTHROUGH_ALPHA1_ETC2]: 'etc2-rgb8a1unorm-srgb',
-  [GL.COMPRESSED_RGBA8_ETC2_EAC]: 'etc2-rgba8unorm',
-  [GL.COMPRESSED_SRGB8_ALPHA8_ETC2_EAC]: 'etc2-rgba8unorm-srgb',
-  // ASTC
-  [GL.COMPRESSED_RGBA_ASTC_4x4_KHR]: 'astc-4x4-unorm',
-  [GL.COMPRESSED_RGBA_ASTC_5x4_KHR]: 'astc-5x4-unorm',
-  [GL.COMPRESSED_RGBA_ASTC_5x5_KHR]: 'astc-5x5-unorm',
-  [GL.COMPRESSED_RGBA_ASTC_6x5_KHR]: 'astc-6x5-unorm',
-  [GL.COMPRESSED_RGBA_ASTC_6x6_KHR]: 'astc-6x6-unorm',
-  [GL.COMPRESSED_RGBA_ASTC_8x5_KHR]: 'astc-8x5-unorm',
-  [GL.COMPRESSED_RGBA_ASTC_8x6_KHR]: 'astc-8x6-unorm',
-  [GL.COMPRESSED_RGBA_ASTC_8x8_KHR]: 'astc-8x8-unorm',
-  [GL.COMPRESSED_RGBA_ASTC_10x5_KHR]: 'astc-10x5-unorm',
-  [GL.COMPRESSED_RGBA_ASTC_10x6_KHR]: 'astc-10x6-unorm',
-  [GL.COMPRESSED_RGBA_ASTC_10x8_KHR]: 'astc-10x8-unorm',
-  [GL.COMPRESSED_RGBA_ASTC_10x10_KHR]: 'astc-10x10-unorm',
-  [GL.COMPRESSED_RGBA_ASTC_12x10_KHR]: 'astc-12x10-unorm',
-  [GL.COMPRESSED_RGBA_ASTC_12x12_KHR]: 'astc-12x12-unorm',
-  [GL.COMPRESSED_SRGB8_ALPHA8_ASTC_4x4_KHR]: 'astc-4x4-unorm-srgb',
-  [GL.COMPRESSED_SRGB8_ALPHA8_ASTC_5x4_KHR]: 'astc-5x4-unorm-srgb',
-  [GL.COMPRESSED_SRGB8_ALPHA8_ASTC_5x5_KHR]: 'astc-5x5-unorm-srgb',
-  [GL.COMPRESSED_SRGB8_ALPHA8_ASTC_6x5_KHR]: 'astc-6x5-unorm-srgb',
-  [GL.COMPRESSED_SRGB8_ALPHA8_ASTC_6x6_KHR]: 'astc-6x6-unorm-srgb',
-  [GL.COMPRESSED_SRGB8_ALPHA8_ASTC_8x5_KHR]: 'astc-8x5-unorm-srgb',
-  [GL.COMPRESSED_SRGB8_ALPHA8_ASTC_8x6_KHR]: 'astc-8x6-unorm-srgb',
-  [GL.COMPRESSED_SRGB8_ALPHA8_ASTC_8x8_KHR]: 'astc-8x8-unorm-srgb',
-  [GL.COMPRESSED_SRGB8_ALPHA8_ASTC_10x5_KHR]: 'astc-10x5-unorm-srgb',
-  [GL.COMPRESSED_SRGB8_ALPHA8_ASTC_10x6_KHR]: 'astc-10x6-unorm-srgb',
-  [GL.COMPRESSED_SRGB8_ALPHA8_ASTC_10x8_KHR]: 'astc-10x8-unorm-srgb',
-  [GL.COMPRESSED_SRGB8_ALPHA8_ASTC_10x10_KHR]: 'astc-10x10-unorm-srgb',
-  [GL.COMPRESSED_SRGB8_ALPHA8_ASTC_12x10_KHR]: 'astc-12x10-unorm-srgb',
-  [GL.COMPRESSED_SRGB8_ALPHA8_ASTC_12x12_KHR]: 'astc-12x12-unorm-srgb'
-};
-
-/** Resolve a format that may be a GL enum number to a TextureFormat string */
-function resolveCompressedTextureFormat(
-  format: TextureFormat | number | undefined
-): TextureFormat | undefined {
-  if (format === undefined) return undefined;
-  if (typeof format === 'string') return format;
-  return GL_COMPRESSED_TEXTURE_FORMAT[format];
+function createCompressedTextureFallback(
+  device: Device,
+  baseOptions: {id: string; sampler: SamplerProps}
+): Texture {
+  return device.createTexture({
+    ...baseOptions,
+    format: 'rgba8unorm',
+    width: 1,
+    height: 1,
+    mipLevels: 1
+  });
 }
 
-/**
- * Return the block dimensions [width, height] for a compressed texture format.
- * Block-compressed formats cannot represent mip levels smaller than one block.
- * - BC1–BC7, ETC2, EAC: 4×4
- * - ASTC: varies (parsed from format name, e.g. 'astc-10x6-unorm' → [10, 6])
- */
-function getCompressedFormatBlockSize(format: TextureFormat): [number, number] {
-  const astcMatch = format.match(/^astc-(\d+)x(\d+)/);
-  if (astcMatch) {
-    return [Number(astcMatch[1]), Number(astcMatch[2])];
-  }
-  // BC1-BC7, ETC2, EAC all use 4×4 blocks
-  if (format.startsWith('bc') || format.startsWith('etc2') || format.startsWith('eac')) {
-    return [4, 4];
-  }
-  return [1, 1];
+function resolveCompressedTextureFormat(level: CompressedMipLevel): TextureFormat | undefined {
+  return level.textureFormat;
 }
 
 /**
@@ -425,12 +335,12 @@ function getMaxCompressedMipLevels(
   baseHeight: number,
   format: TextureFormat
 ): number {
-  const [blockW, blockH] = getCompressedFormatBlockSize(format);
+  const {blockWidth = 1, blockHeight = 1} = textureFormatDecoder.getInfo(format);
   let count = 1;
   for (let i = 1; ; i++) {
     const w = Math.max(1, baseWidth >> i);
     const h = Math.max(1, baseHeight >> i);
-    if (w < blockW || h < blockH) break;
+    if (w < blockWidth || h < blockHeight) break;
     count++;
   }
   return count;
@@ -438,11 +348,10 @@ function getMaxCompressedMipLevels(
 
 /**
  * Create a texture from compressed image data produced by loaders.gl.
- * Handles three known loaders.gl compressed image layouts:
+ * Handles current loaders.gl compressed image layouts:
  *
- *   v4.2 flat:    {compressed, format: "astc-4x4-unorm", data: Uint8Array, width, height}
- *   v4.3 actual:  {compressed, mipmaps: true, data: [{data, width, height, format: 37808}, ...]}
- *   v4.3 mipmaps: {compressed, mipmaps: [{data, width, height, format}, ...]}  (forward compat)
+ *   current:      {compressed, mipmaps: true, data: [{data, width, height, textureFormat}, ...]}
+ *   forward:      {compressed, mipmaps: [{data, width, height, textureFormat}, ...]}
  */
 export function createCompressedTexture(
   device: Device,
@@ -453,15 +362,11 @@ export function createCompressedTexture(
   let levels: CompressedMipLevel[];
 
   if (Array.isArray((image as any).data) && (image as any).data[0]?.data) {
-    // loaders.gl 4.3 actual format: image.data is Array of mip-level objects
+    // loaders.gl current format: image.data is Array of mip-level objects
     levels = (image as CompressedImageDataArray).data;
   } else if ('mipmaps' in image && Array.isArray((image as CompressedImageMipmapArray).mipmaps)) {
     // Hypothetical future format: image.mipmaps is an Array
     levels = (image as CompressedImageMipmapArray).mipmaps;
-  } else if ((image as any).data && (image as CompressedImageFlat).width) {
-    // loaders.gl <4.3 flat format: image.data is a TypedArray
-    const flat = image as CompressedImageFlat;
-    levels = [{data: flat.data, width: flat.width, height: flat.height, format: flat.format}];
   } else {
     levels = [];
   }
@@ -470,13 +375,7 @@ export function createCompressedTexture(
     log.warn(
       'createCompressedTexture: compressed image has no valid mip levels, creating fallback'
     )();
-    return device.createTexture({
-      ...baseOptions,
-      format: 'rgba8unorm',
-      width: 1,
-      height: 1,
-      mipLevels: 1
-    });
+    return createCompressedTextureFallback(device, baseOptions);
   }
 
   const baseLevel = levels[0];
@@ -485,31 +384,14 @@ export function createCompressedTexture(
 
   if (baseWidth <= 0 || baseHeight <= 0) {
     log.warn('createCompressedTexture: base level has invalid dimensions, creating fallback')();
-    return device.createTexture({
-      ...baseOptions,
-      format: 'rgba8unorm',
-      width: 1,
-      height: 1,
-      mipLevels: 1
-    });
+    return createCompressedTextureFallback(device, baseOptions);
   }
 
-  // Resolve format — may be a GL enum number from loaders.gl 4.3
-  const format =
-    resolveCompressedTextureFormat(baseLevel.format) ||
-    resolveCompressedTextureFormat(image.format);
+  const format = resolveCompressedTextureFormat(baseLevel);
 
   if (!format) {
-    log.warn(
-      `createCompressedTexture: unknown texture format (${baseLevel.format ?? image.format}), creating fallback`
-    )();
-    return device.createTexture({
-      ...baseOptions,
-      format: 'rgba8unorm',
-      width: 1,
-      height: 1,
-      mipLevels: 1
-    });
+    log.warn('createCompressedTexture: compressed image has no textureFormat, creating fallback')();
+    return createCompressedTextureFallback(device, baseOptions);
   }
 
   // Validate mip levels: truncate chain at first invalid level.
@@ -531,7 +413,7 @@ export function createCompressedTexture(
       log.warn(`createCompressedTexture: mip level ${i} has invalid data/dimensions, truncating`)();
       break;
     }
-    const levelFormat = resolveCompressedTextureFormat(level.format);
+    const levelFormat = resolveCompressedTextureFormat(level);
     if (levelFormat && levelFormat !== format) {
       log.warn(
         `createCompressedTexture: mip level ${i} format '${levelFormat}' differs from base '${format}', truncating`
