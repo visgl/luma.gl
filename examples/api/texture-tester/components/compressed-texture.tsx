@@ -10,8 +10,7 @@ import {
   BasisLoader,
   CRUNCH_EXTERNAL_LIBRARIES,
   CompressedTextureLoader,
-  CrunchWorkerLoader,
-  GL_EXTENSIONS_CONSTANTS
+  CrunchWorkerLoader
 } from '@loaders.gl/textures';
 import type {GPUTextureFormat} from '@loaders.gl/schema';
 import {ImageLoader, type ImageType} from '@loaders.gl/images';
@@ -19,73 +18,12 @@ import {ImageLoader, type ImageType} from '@loaders.gl/images';
 import {
   type Device,
   type PresentationContext,
+  type Texture,
   type TextureFormat,
-  Texture,
   textureFormatDecoder
 } from '@luma.gl/core';
-import {Model} from '@luma.gl/engine';
+import {DynamicTexture, Model} from '@luma.gl/engine';
 import {type TextureSource} from '../textures-data';
-
-const {
-  COMPRESSED_RGB_S3TC_DXT1_EXT,
-  COMPRESSED_RGBA_S3TC_DXT1_EXT,
-  COMPRESSED_RGBA_S3TC_DXT3_EXT,
-  COMPRESSED_RGBA_S3TC_DXT5_EXT,
-  COMPRESSED_RGB_PVRTC_4BPPV1_IMG,
-  COMPRESSED_RGBA_PVRTC_4BPPV1_IMG,
-  COMPRESSED_RGB_PVRTC_2BPPV1_IMG,
-  COMPRESSED_RGBA_PVRTC_2BPPV1_IMG,
-  COMPRESSED_RGB_ATC_WEBGL,
-  COMPRESSED_RGBA_ATC_EXPLICIT_ALPHA_WEBGL,
-  COMPRESSED_RGBA_ATC_INTERPOLATED_ALPHA_WEBGL,
-  COMPRESSED_RGB_ETC1_WEBGL,
-  COMPRESSED_RGBA_ASTC_4X4_KHR,
-  COMPRESSED_RGBA_ASTC_5X4_KHR,
-  COMPRESSED_RGBA_ASTC_5X5_KHR,
-  COMPRESSED_RGBA_ASTC_6X5_KHR,
-  COMPRESSED_RGBA_ASTC_6X6_KHR,
-  COMPRESSED_RGBA_ASTC_8X5_KHR,
-  COMPRESSED_RGBA_ASTC_8X6_KHR,
-  COMPRESSED_RGBA_ASTC_8X8_KHR,
-  COMPRESSED_RGBA_ASTC_10X5_KHR,
-  COMPRESSED_RGBA_ASTC_10X6_KHR,
-  COMPRESSED_RGBA_ASTC_10X8_KHR,
-  COMPRESSED_RGBA_ASTC_10X10_KHR,
-  COMPRESSED_RGBA_ASTC_12X10_KHR,
-  COMPRESSED_RGBA_ASTC_12X12_KHR,
-  COMPRESSED_SRGB8_ALPHA8_ASTC_4X4_KHR,
-  COMPRESSED_SRGB8_ALPHA8_ASTC_5X4_KHR,
-  COMPRESSED_SRGB8_ALPHA8_ASTC_5X5_KHR,
-  COMPRESSED_SRGB8_ALPHA8_ASTC_6X5_KHR,
-  COMPRESSED_SRGB8_ALPHA8_ASTC_6X6_KHR,
-  COMPRESSED_SRGB8_ALPHA8_ASTC_8X5_KHR,
-  COMPRESSED_SRGB8_ALPHA8_ASTC_8X6_KHR,
-  COMPRESSED_SRGB8_ALPHA8_ASTC_8X8_KHR,
-  COMPRESSED_SRGB8_ALPHA8_ASTC_10X5_KHR,
-  COMPRESSED_SRGB8_ALPHA8_ASTC_10X6_KHR,
-  COMPRESSED_SRGB8_ALPHA8_ASTC_10X8_KHR,
-  COMPRESSED_SRGB8_ALPHA8_ASTC_10X10_KHR,
-  COMPRESSED_SRGB8_ALPHA8_ASTC_12X10_KHR,
-  COMPRESSED_SRGB8_ALPHA8_ASTC_12X12_KHR,
-  COMPRESSED_R11_EAC,
-  COMPRESSED_SIGNED_R11_EAC,
-  COMPRESSED_RG11_EAC,
-  COMPRESSED_SIGNED_RG11_EAC,
-  COMPRESSED_RGB8_ETC2,
-  COMPRESSED_RGBA8_ETC2_EAC,
-  COMPRESSED_SRGB8_ETC2,
-  COMPRESSED_SRGB8_ALPHA8_ETC2_EAC,
-  COMPRESSED_RGB8_PUNCHTHROUGH_ALPHA1_ETC2,
-  COMPRESSED_SRGB8_PUNCHTHROUGH_ALPHA1_ETC2,
-  COMPRESSED_RED_RGTC1_EXT,
-  COMPRESSED_SIGNED_RED_RGTC1_EXT,
-  COMPRESSED_RED_GREEN_RGTC2_EXT,
-  COMPRESSED_SIGNED_RED_GREEN_RGTC2_EXT,
-  COMPRESSED_SRGB_S3TC_DXT1_EXT,
-  COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT,
-  COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT,
-  COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT
-} = GL_EXTENSIONS_CONSTANTS;
 
 const TEXTURES_BASE_URL =
   'https://raw.githubusercontent.com/visgl/loaders.gl/master/modules/textures/test/data/';
@@ -214,13 +152,16 @@ type LoadedTextureData = {
   useBasis: boolean;
 };
 
-type CompressedImageData = {
+type RawCompressedTextureLevel = {
   data: Uint8Array;
-  format?: number;
   textureFormat?: string;
   width: number;
   height: number;
   levelSize?: number;
+};
+
+type CompressedTextureLevel = RawCompressedTextureLevel & {
+  textureFormat: TextureFormat;
 };
 
 type ImageDataLike = {
@@ -241,6 +182,28 @@ type TextureLoaderOptions = LoaderOptions & {
   };
 };
 
+type TexturePreviewResult = {
+  textureFormatLabel: string;
+  stats: TextureStat[];
+};
+
+type CompressedTexturePreviewSource = {
+  loaderName: string;
+  texturePath: string;
+};
+
+// TODO(ibgreen): remove when fixed in loaders.gl
+const LEGACY_TEXTURE_FORMAT_ALIASES: Partial<Record<string, TextureFormat>> = {
+  'pvrtc-rbg2unorm-webgl': 'pvrtc-rgb2unorm-webgl'
+};
+
+const WEBGPU_TEXTURE_FORMAT_ALIASES: Partial<Record<string, TextureFormat>> = {
+  'bc1-rgb-unorm-webgl': 'bc1-rgba-unorm',
+  'bc1-rgb-unorm-srgb-webgl': 'bc1-rgba-unorm-srgb'
+};
+
+let basisLoadChain: Promise<void> = Promise.resolve();
+
 export class CompressedTexture extends React.PureComponent<
   CompressedTextureProps,
   CompressedTextureState
@@ -248,6 +211,7 @@ export class CompressedTexture extends React.PureComponent<
   readonly canvasRef = React.createRef<HTMLCanvasElement>();
   presentationContext: PresentationContext | null = null;
   private isComponentMounted = false;
+  private previewGeneration = 0;
 
   constructor(props: CompressedTextureProps) {
     super(props);
@@ -284,29 +248,12 @@ export class CompressedTexture extends React.PureComponent<
       useDevicePixels: false
     });
 
-    try {
-      await this.renderTexturePreview(this.props.device);
-      if (this.isComponentMounted) {
-        this.setState({isReady: true});
-      }
-    } catch (error) {
-      if (!this.isPresentationAvailable()) {
-        return;
-      }
-      const {device, model} = this.props;
-      this.renderEmptyTexture(device, model);
-      if (this.isComponentMounted) {
-        this.setState({
-          isReady: true,
-          textureError: error instanceof Error ? error.message : String(error),
-          textureFormatLabel: null
-        });
-      }
-    }
+    await this.renderTexturePreview(this.props.device);
   }
 
   componentWillUnmount(): void {
     this.isComponentMounted = false;
+    this.previewGeneration++;
     this.presentationContext?.destroy();
     this.presentationContext = null;
   }
@@ -338,12 +285,22 @@ export class CompressedTexture extends React.PureComponent<
 
   // eslint-disable-next-line max-statements
   async renderTexturePreview(device: Device): Promise<void> {
+    const previewGeneration = ++this.previewGeneration;
     const {loadOptions} = this.state;
     const {model, image} = this.props;
 
+    if (this.isComponentMounted) {
+      this.setState({
+        isReady: false,
+        textureError: null,
+        textureFormatLabel: null,
+        stats: []
+      });
+    }
+
     try {
       const {arrayBuffer, length, src, useBasis} = await this.getLoadedData(image);
-      if (!this.isPresentationAvailable()) {
+      if (!this.isPreviewActive(previewGeneration)) {
         return;
       }
 
@@ -374,46 +331,75 @@ export class CompressedTexture extends React.PureComponent<
       }
 
       const result = usesBasisLoader
-        ? await loadWithHandledBasisRuntimeRejections(() =>
-            load(arrayBuffer, loader as never, options)
-          )
+        ? await loadBasisTextureSerially(() => load(arrayBuffer, loader as never, options))
         : await load(arrayBuffer, loader as never, options);
+      if (!this.isPreviewActive(previewGeneration)) {
+        return;
+      }
 
-      this.addStat('File Size', Math.floor(length / 1024), 'Kb');
+      const stats: TextureStat[] = [
+        {name: 'File Size', value: Math.floor(length / 1024), units: 'Kb'}
+      ];
+      let previewResult: TexturePreviewResult;
 
       switch (loader?.id) {
         case 'crunch':
         case 'compressed-texture':
           this.renderEmptyTexture(device, model);
-          this.renderCompressedTexture(
+          previewResult = await this.renderCompressedTexture(
             device,
             model,
-            result as CompressedImageData[],
-            loader.name,
-            src
+            result,
+            {loaderName: loader.name, texturePath: src},
+            previewGeneration
           );
           break;
         case 'image':
           this.renderEmptyTexture(device, model);
-          this.renderImageTexture(device, model, result as ImageType);
+          previewResult = this.renderImageTexture(
+            device,
+            model,
+            result as ImageType,
+            previewGeneration
+          );
           break;
         case 'basis': {
-          const basisTextures = Array.isArray(result) ? (result[0] as CompressedImageData[]) : null;
+          const basisTextures = Array.isArray(result) ? result[0] : null;
           this.renderEmptyTexture(device, model);
-          this.renderCompressedTexture(device, model, basisTextures || [], loader.name, src);
+          previewResult = await this.renderCompressedTexture(
+            device,
+            model,
+            basisTextures || [],
+            {loaderName: loader.name, texturePath: src},
+            previewGeneration
+          );
           break;
         }
         default:
           throw new Error('Unknown texture loader');
       }
+
+      if (!this.isPreviewActive(previewGeneration)) {
+        return;
+      }
+
+      this.setState({
+        isReady: true,
+        textureError: null,
+        textureFormatLabel: previewResult.textureFormatLabel,
+        stats: [...stats, ...previewResult.stats]
+      });
     } catch (error) {
-      if (!this.isPresentationAvailable()) {
+      if (!this.isPreviewActive(previewGeneration)) {
         return;
       }
       this.renderEmptyTexture(device, model);
-      if (this.isComponentMounted) {
-        this.setState({textureError: error instanceof Error ? error.message : String(error)});
-      }
+      this.setState({
+        isReady: true,
+        textureError: error instanceof Error ? error.message : String(error),
+        textureFormatLabel: null,
+        stats: []
+      });
     }
   }
 
@@ -438,33 +424,6 @@ export class CompressedTexture extends React.PureComponent<
     return {arrayBuffer, length, src, useBasis};
   }
 
-  createCompressedTexture(device: Device, images: CompressedImageData[]): Texture {
-    const baseLevel = images[0];
-    const textureFormat = resolveCompressedTextureFormat(baseLevel);
-    const uploadLevels = getCompressedTextureUploadLevels(device, textureFormat, images);
-    const texture = device.createTexture({
-      width: baseLevel.width,
-      height: baseLevel.height,
-      format: textureFormat,
-      mipLevels: uploadLevels.length,
-      usage: Texture.SAMPLE | Texture.COPY_DST
-    });
-
-    for (let mipLevel = 0; mipLevel < uploadLevels.length; mipLevel++) {
-      const image = uploadLevels[mipLevel];
-      if (!canUploadCompressedTextureLevel(device, textureFormat, image)) {
-        break;
-      }
-      texture.writeData(image.data, {
-        width: image.width,
-        height: image.height,
-        mipLevel
-      });
-    }
-
-    return texture;
-  }
-
   renderEmptyTexture(device: Device, model: Model): Texture {
     const brownColor = new Uint8Array([68, 0, 0, 255]);
     const emptyTexture = device.createTexture({
@@ -479,7 +438,12 @@ export class CompressedTexture extends React.PureComponent<
     return emptyTexture;
   }
 
-  renderImageTexture(device: Device, model: Model, image: ImageType): void {
+  renderImageTexture(
+    device: Device,
+    model: Model,
+    image: ImageType,
+    previewGeneration: number
+  ): TexturePreviewResult {
     const startTime = performance.now();
     const textureFormat = 'rgba8unorm';
     const levelZeroByteSize = image.width * image.height * 4;
@@ -504,40 +468,46 @@ export class CompressedTexture extends React.PureComponent<
       throw new Error('Unsupported image data returned by ImageLoader');
     }
 
+    if (!this.isPreviewActive(previewGeneration)) {
+      throw new Error('Texture preview was interrupted');
+    }
+
     this.renderTextureToPresentationContext(device, model, texture);
 
     const uploadTime = performance.now() - startTime;
 
-    if (this.isComponentMounted) {
-      this.setState({textureFormatLabel: textureFormat});
-    }
-    this.addStats([
-      {name: 'Upload time', value: `${Math.floor(uploadTime)} ms`, units: ''},
-      {name: 'luma.gl Texture Format', value: textureFormat, units: ''},
-      {name: 'Dimensions', value: `${image.width} x ${image.height}`, units: ''},
-      {name: 'Size in memory (Total)', value: formatTextureByteSize(levelZeroByteSize), units: ''},
-      {name: 'Mip 0', value: formatTextureByteSize(levelZeroByteSize), units: ''}
-    ]);
+    return {
+      textureFormatLabel: textureFormat,
+      stats: [
+        {name: 'Upload time', value: `${Math.floor(uploadTime)} ms`, units: ''},
+        {name: 'luma.gl Texture Format', value: textureFormat, units: ''},
+        {name: 'Dimensions', value: `${image.width} x ${image.height}`, units: ''},
+        {
+          name: 'Size in memory (Total)',
+          value: formatTextureByteSize(levelZeroByteSize),
+          units: ''
+        },
+        {name: 'Mip 0', value: formatTextureByteSize(levelZeroByteSize), units: ''}
+      ]
+    };
   }
 
-  renderCompressedTexture(
+  async renderCompressedTexture(
     device: Device,
     model: Model,
-    images: CompressedImageData[],
-    loaderName: string,
-    texturePath: string
-  ): void {
-    if (!images || !images.length) {
-      throw new Error(`${loaderName} loader doesn't support texture ${texturePath} format`);
-    }
-    // We take the first image because it has main propeties of compressed image.
-    const {format, width, height} = images[0];
-    const textureFormat = resolveCompressedTextureFormat(images[0]);
+    rawLevels: unknown,
+    previewSource: CompressedTexturePreviewSource,
+    previewGeneration: number
+  ): Promise<TexturePreviewResult> {
+    const levels = getCompressedTextureLevels(
+      device.type,
+      rawLevels,
+      previewSource.loaderName,
+      previewSource.texturePath
+    );
+    const [{textureFormat, width, height}] = levels;
 
-    if (
-      (typeof format === 'number' && !isCompressedImageFormatSupported(device, format)) ||
-      !device.isTextureFormatSupported(textureFormat)
-    ) {
+    if (!device.isTextureFormatSupported(textureFormat)) {
       throw new Error(`${textureFormat} is not supported by your GPU (${getDeviceLabel(device)})`);
     }
 
@@ -552,42 +522,41 @@ export class CompressedTexture extends React.PureComponent<
     }
 
     const startTime = performance.now();
-    const uploadLevels = getCompressedTextureUploadLevels(device, textureFormat, images);
-    const texture = this.createCompressedTexture(device, images);
+    const texture = new DynamicTexture(device, {
+      data: levels,
+      format: textureFormat,
+      mipmaps: false
+    });
+    await texture.ready;
+    if (!this.isPreviewActive(previewGeneration)) {
+      throw new Error('Texture preview was interrupted');
+    }
+
+    const uploadedLevels = levels.slice(0, texture.texture.mipLevels);
 
     this.renderTextureToPresentationContext(device, model, texture);
 
     const uploadTime = performance.now() - startTime;
-    const mipLevelStats = getCompressedTextureLevelStats(textureFormat, uploadLevels);
+    const mipLevelStats = getCompressedTextureLevelStats(textureFormat, uploadedLevels);
 
-    if (this.isComponentMounted) {
-      this.setState({textureFormatLabel: textureFormat});
-    }
-    this.addStats([
-      {name: 'Upload time', value: `${Math.floor(uploadTime)} ms`, units: ''},
-      {name: 'luma.gl Texture Format', value: textureFormat, units: ''},
-      {name: 'Dimensions', value: `${width} x ${height}`, units: ''},
-      {
-        name: 'Size in memory (Total)',
-        value: formatTextureByteSize(mipLevelStats.totalByteSize),
-        units: ''
-      },
-      ...mipLevelStats.levels.map(level => ({
-        name: `Mip ${level.mipLevel}`,
-        value: formatTextureByteSize(level.byteSize),
-        units: ''
-      }))
-    ]);
-  }
-
-  addStat(name: string, value: number | string, units = ''): void {
-    this.addStats([{name, value, units}]);
-  }
-
-  addStats(stats: TextureStat[]): void {
-    if (this.isComponentMounted) {
-      this.setState(previousState => ({stats: [...previousState.stats, ...stats]}));
-    }
+    return {
+      textureFormatLabel: textureFormat,
+      stats: [
+        {name: 'Upload time', value: `${Math.floor(uploadTime)} ms`, units: ''},
+        {name: 'luma.gl Texture Format', value: textureFormat, units: ''},
+        {name: 'Dimensions', value: `${width} x ${height}`, units: ''},
+        {
+          name: 'Size in memory (Total)',
+          value: formatTextureByteSize(mipLevelStats.totalByteSize),
+          units: ''
+        },
+        ...mipLevelStats.levels.map(level => ({
+          name: `Mip ${level.mipLevel}`,
+          value: formatTextureByteSize(level.byteSize),
+          units: ''
+        }))
+      ]
+    };
   }
 
   getTextureLabel(): string {
@@ -710,8 +679,8 @@ export class CompressedTexture extends React.PureComponent<
                   </td>
                 </tr>
               ) : null}
-              {additionalStats.map(stat => (
-                <tr key={stat.name}>
+              {additionalStats.map((stat, index) => (
+                <tr key={`${stat.name}-${index}`}>
                   <td
                     colSpan={2}
                     style={{
@@ -724,8 +693,8 @@ export class CompressedTexture extends React.PureComponent<
                   </td>
                 </tr>
               ))}
-              {mipStats.map(stat => (
-                <tr key={stat.name}>
+              {mipStats.map((stat, index) => (
+                <tr key={`${stat.name}-${index}`}>
                   <td
                     style={{
                       padding: '0 8px 0 0',
@@ -859,12 +828,19 @@ export class CompressedTexture extends React.PureComponent<
     );
   }
 
-  private renderTextureToPresentationContext(device: Device, model: Model, texture: Texture): void {
+  private renderTextureToPresentationContext(
+    device: Device,
+    model: Model,
+    texture: Texture | DynamicTexture
+  ): void {
     if (!this.isPresentationAvailable()) {
       return;
     }
 
     const presentationContext = this.presentationContext;
+    if (!presentationContext) {
+      return;
+    }
     const framebuffer = presentationContext.getCurrentFramebuffer({
       depthStencilFormat: false
     });
@@ -885,6 +861,10 @@ export class CompressedTexture extends React.PureComponent<
         canvas &&
         (typeof canvas.isConnected !== 'boolean' || canvas.isConnected)
     );
+  }
+
+  private isPreviewActive(previewGeneration: number): boolean {
+    return this.previewGeneration === previewGeneration && this.isPresentationAvailable();
   }
 }
 
@@ -926,7 +906,7 @@ function formatTextureByteSize(byteSize: number): string {
 
 function getCompressedTextureLevelStats(
   textureFormat: TextureFormat,
-  images: CompressedImageData[]
+  images: CompressedTextureLevel[]
 ): {
   totalByteSize: number;
   levels: Array<{mipLevel: number; byteSize: number}>;
@@ -1002,6 +982,23 @@ async function loadWithHandledBasisRuntimeRejections<T>(loadTexture: () => Promi
   }
 }
 
+async function loadBasisTextureSerially<T>(loadTexture: () => Promise<T>): Promise<T> {
+  const previousBasisLoad = basisLoadChain.catch(() => {});
+  let releaseBasisLoad = () => {};
+  basisLoadChain = new Promise<void>(resolve => {
+    releaseBasisLoad = resolve;
+  });
+
+  // Basis startup is sensitive to many tiles kicking off transcoding at once.
+  await previousBasisLoad;
+
+  try {
+    return await loadWithHandledBasisRuntimeRejections(loadTexture);
+  } finally {
+    releaseBasisLoad();
+  }
+}
+
 function isBasisRuntimeInitializationError(error: unknown): boolean {
   const errorMessage = error instanceof Error ? error.message : String(error);
 
@@ -1013,229 +1010,59 @@ function isBasisRuntimeInitializationError(error: unknown): boolean {
   );
 }
 
-function resolveCompressedTextureFormat(image: CompressedImageData): TextureFormat {
-  if (image.textureFormat) {
-    return image.textureFormat as TextureFormat;
+function getCompressedTextureLevels(
+  deviceType: Device['type'],
+  rawLevels: unknown,
+  loaderName: string,
+  texturePath: string
+): CompressedTextureLevel[] {
+  if (!Array.isArray(rawLevels) || rawLevels.length === 0) {
+    throw new Error(`${loaderName} loader doesn't support texture ${texturePath} format`);
   }
 
-  if (typeof image.format === 'number') {
-    return getTextureFormatFromInternalFormat(image.format);
-  }
-
-  throw new Error('Compressed texture level is missing both textureFormat and format');
+  return rawLevels.map((rawLevel, mipLevel) =>
+    normalizeCompressedTextureLevel(rawLevel, deviceType, loaderName, texturePath, mipLevel)
+  );
 }
 
-function getTextureFormatFromInternalFormat(format: number): TextureFormat {
-  switch (format) {
-    case COMPRESSED_RGB_S3TC_DXT1_EXT:
-      return 'bc1-rgb-unorm-webgl';
-    case COMPRESSED_RGBA_S3TC_DXT1_EXT:
-      return 'bc1-rgba-unorm';
-    case COMPRESSED_RGBA_S3TC_DXT3_EXT:
-      return 'bc2-rgba-unorm';
-    case COMPRESSED_RGBA_S3TC_DXT5_EXT:
-      return 'bc3-rgba-unorm';
-    case COMPRESSED_RGB_PVRTC_4BPPV1_IMG:
-      return 'pvrtc-rgb4unorm-webgl';
-    case COMPRESSED_RGBA_PVRTC_4BPPV1_IMG:
-      return 'pvrtc-rgba4unorm-webgl';
-    case COMPRESSED_RGB_PVRTC_2BPPV1_IMG:
-      return 'pvrtc-rgb2unorm-webgl';
-    case COMPRESSED_RGBA_PVRTC_2BPPV1_IMG:
-      return 'pvrtc-rgba2unorm-webgl';
-    case COMPRESSED_RGB_ATC_WEBGL:
-      return 'atc-rgb-unorm-webgl';
-    case COMPRESSED_RGBA_ATC_EXPLICIT_ALPHA_WEBGL:
-      return 'atc-rgba-unorm-webgl';
-    case COMPRESSED_RGBA_ATC_INTERPOLATED_ALPHA_WEBGL:
-      return 'atc-rgbai-unorm-webgl';
-    case COMPRESSED_RGB_ETC1_WEBGL:
-      return 'etc1-rbg-unorm-webgl';
-    case COMPRESSED_RGBA_ASTC_4X4_KHR:
-      return 'astc-4x4-unorm';
-    case COMPRESSED_RGBA_ASTC_5X4_KHR:
-      return 'astc-5x4-unorm';
-    case COMPRESSED_RGBA_ASTC_5X5_KHR:
-      return 'astc-5x5-unorm';
-    case COMPRESSED_RGBA_ASTC_6X5_KHR:
-      return 'astc-6x5-unorm';
-    case COMPRESSED_RGBA_ASTC_6X6_KHR:
-      return 'astc-6x6-unorm';
-    case COMPRESSED_RGBA_ASTC_8X5_KHR:
-      return 'astc-8x5-unorm';
-    case COMPRESSED_RGBA_ASTC_8X6_KHR:
-      return 'astc-8x6-unorm';
-    case COMPRESSED_RGBA_ASTC_8X8_KHR:
-      return 'astc-8x8-unorm';
-    case COMPRESSED_RGBA_ASTC_10X5_KHR:
-      return 'astc-10x5-unorm';
-    case COMPRESSED_RGBA_ASTC_10X6_KHR:
-      return 'astc-10x6-unorm';
-    case COMPRESSED_RGBA_ASTC_10X8_KHR:
-      return 'astc-10x8-unorm';
-    case COMPRESSED_RGBA_ASTC_10X10_KHR:
-      return 'astc-10x10-unorm';
-    case COMPRESSED_RGBA_ASTC_12X10_KHR:
-      return 'astc-12x10-unorm';
-    case COMPRESSED_RGBA_ASTC_12X12_KHR:
-      return 'astc-12x12-unorm';
-    case COMPRESSED_SRGB8_ALPHA8_ASTC_4X4_KHR:
-      return 'astc-4x4-unorm-srgb';
-    case COMPRESSED_SRGB8_ALPHA8_ASTC_5X4_KHR:
-      return 'astc-5x4-unorm-srgb';
-    case COMPRESSED_SRGB8_ALPHA8_ASTC_5X5_KHR:
-      return 'astc-5x5-unorm-srgb';
-    case COMPRESSED_SRGB8_ALPHA8_ASTC_6X5_KHR:
-      return 'astc-6x5-unorm-srgb';
-    case COMPRESSED_SRGB8_ALPHA8_ASTC_6X6_KHR:
-      return 'astc-6x6-unorm-srgb';
-    case COMPRESSED_SRGB8_ALPHA8_ASTC_8X5_KHR:
-      return 'astc-8x5-unorm-srgb';
-    case COMPRESSED_SRGB8_ALPHA8_ASTC_8X6_KHR:
-      return 'astc-8x6-unorm-srgb';
-    case COMPRESSED_SRGB8_ALPHA8_ASTC_8X8_KHR:
-      return 'astc-8x8-unorm-srgb';
-    case COMPRESSED_SRGB8_ALPHA8_ASTC_10X5_KHR:
-      return 'astc-10x5-unorm-srgb';
-    case COMPRESSED_SRGB8_ALPHA8_ASTC_10X6_KHR:
-      return 'astc-10x6-unorm-srgb';
-    case COMPRESSED_SRGB8_ALPHA8_ASTC_10X8_KHR:
-      return 'astc-10x8-unorm-srgb';
-    case COMPRESSED_SRGB8_ALPHA8_ASTC_10X10_KHR:
-      return 'astc-10x10-unorm-srgb';
-    case COMPRESSED_SRGB8_ALPHA8_ASTC_12X10_KHR:
-      return 'astc-12x10-unorm-srgb';
-    case COMPRESSED_SRGB8_ALPHA8_ASTC_12X12_KHR:
-      return 'astc-12x12-unorm-srgb';
-    case COMPRESSED_R11_EAC:
-      return 'eac-r11unorm';
-    case COMPRESSED_SIGNED_R11_EAC:
-      return 'eac-r11snorm';
-    case COMPRESSED_RG11_EAC:
-      return 'eac-rg11unorm';
-    case COMPRESSED_SIGNED_RG11_EAC:
-      return 'eac-rg11snorm';
-    case COMPRESSED_RGB8_ETC2:
-      return 'etc2-rgb8unorm';
-    case COMPRESSED_RGBA8_ETC2_EAC:
-      return 'etc2-rgba8unorm';
-    case COMPRESSED_SRGB8_ETC2:
-      return 'etc2-rgb8unorm-srgb';
-    case COMPRESSED_SRGB8_ALPHA8_ETC2_EAC:
-      return 'etc2-rgba8unorm-srgb';
-    case COMPRESSED_RGB8_PUNCHTHROUGH_ALPHA1_ETC2:
-      return 'etc2-rgb8a1unorm';
-    case COMPRESSED_SRGB8_PUNCHTHROUGH_ALPHA1_ETC2:
-      return 'etc2-rgb8a1unorm-srgb';
-    case COMPRESSED_RED_RGTC1_EXT:
-      return 'bc4-r-unorm';
-    case COMPRESSED_SIGNED_RED_RGTC1_EXT:
-      return 'bc4-r-snorm';
-    case COMPRESSED_RED_GREEN_RGTC2_EXT:
-      return 'bc5-rg-unorm';
-    case COMPRESSED_SIGNED_RED_GREEN_RGTC2_EXT:
-      return 'bc5-rg-snorm';
-    case COMPRESSED_SRGB_S3TC_DXT1_EXT:
-      return 'bc1-rgb-unorm-srgb-webgl';
-    case COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT:
-      return 'bc1-rgba-unorm-srgb';
-    case COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT:
-      return 'bc2-rgba-unorm-srgb';
-    case COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT:
-      return 'bc3-rgba-unorm-srgb';
-    default:
-      throw new Error(
-        `No luma.gl texture format mapping for internal format ${format}. This loader result should provide textureFormat and the example should use that first.`
-      );
+function normalizeCompressedTextureLevel(
+  rawLevel: unknown,
+  deviceType: Device['type'],
+  loaderName: string,
+  texturePath: string,
+  mipLevel: number
+): CompressedTextureLevel {
+  if (!rawLevel || typeof rawLevel !== 'object' || !('data' in rawLevel)) {
+    throw new Error(`${loaderName} loader returned invalid mip ${mipLevel} for ${texturePath}`);
   }
+
+  const {data, textureFormat, width, height, levelSize} = rawLevel as RawCompressedTextureLevel;
+  if (!textureFormat) {
+    throw new Error(
+      `${loaderName} loader returned mip ${mipLevel} for ${texturePath} without textureFormat`
+    );
+  }
+
+  return {
+    data,
+    textureFormat: normalizeTextureFormat(textureFormat, deviceType),
+    width,
+    height,
+    levelSize
+  };
 }
 
-function isCompressedImageFormatSupported(device: Device, format: number): boolean {
-  switch (format) {
-    case COMPRESSED_RGB_S3TC_DXT1_EXT:
-    case COMPRESSED_RGBA_S3TC_DXT1_EXT:
-    case COMPRESSED_RGBA_S3TC_DXT3_EXT:
-    case COMPRESSED_RGBA_S3TC_DXT5_EXT:
-    case COMPRESSED_SRGB_S3TC_DXT1_EXT:
-    case COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT:
-    case COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT:
-    case COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT:
-      return device.features.has('texture-compression-bc');
-
-    case COMPRESSED_RED_RGTC1_EXT:
-    case COMPRESSED_SIGNED_RED_RGTC1_EXT:
-    case COMPRESSED_RED_GREEN_RGTC2_EXT:
-    case COMPRESSED_SIGNED_RED_GREEN_RGTC2_EXT:
-      return device.features.has('texture-compression-bc5-webgl');
-
-    case COMPRESSED_RGBA_ASTC_4X4_KHR:
-    case COMPRESSED_RGBA_ASTC_5X4_KHR:
-    case COMPRESSED_RGBA_ASTC_5X5_KHR:
-    case COMPRESSED_RGBA_ASTC_6X5_KHR:
-    case COMPRESSED_RGBA_ASTC_6X6_KHR:
-    case COMPRESSED_RGBA_ASTC_8X5_KHR:
-    case COMPRESSED_RGBA_ASTC_8X6_KHR:
-    case COMPRESSED_RGBA_ASTC_8X8_KHR:
-    case COMPRESSED_RGBA_ASTC_10X5_KHR:
-    case COMPRESSED_RGBA_ASTC_10X6_KHR:
-    case COMPRESSED_RGBA_ASTC_10X8_KHR:
-    case COMPRESSED_RGBA_ASTC_10X10_KHR:
-    case COMPRESSED_RGBA_ASTC_12X10_KHR:
-    case COMPRESSED_RGBA_ASTC_12X12_KHR:
-    case COMPRESSED_SRGB8_ALPHA8_ASTC_4X4_KHR:
-    case COMPRESSED_SRGB8_ALPHA8_ASTC_5X4_KHR:
-    case COMPRESSED_SRGB8_ALPHA8_ASTC_5X5_KHR:
-    case COMPRESSED_SRGB8_ALPHA8_ASTC_6X5_KHR:
-    case COMPRESSED_SRGB8_ALPHA8_ASTC_6X6_KHR:
-    case COMPRESSED_SRGB8_ALPHA8_ASTC_8X5_KHR:
-    case COMPRESSED_SRGB8_ALPHA8_ASTC_8X6_KHR:
-    case COMPRESSED_SRGB8_ALPHA8_ASTC_8X8_KHR:
-    case COMPRESSED_SRGB8_ALPHA8_ASTC_10X5_KHR:
-    case COMPRESSED_SRGB8_ALPHA8_ASTC_10X6_KHR:
-    case COMPRESSED_SRGB8_ALPHA8_ASTC_10X8_KHR:
-    case COMPRESSED_SRGB8_ALPHA8_ASTC_10X10_KHR:
-    case COMPRESSED_SRGB8_ALPHA8_ASTC_12X10_KHR:
-    case COMPRESSED_SRGB8_ALPHA8_ASTC_12X12_KHR:
-      return device.features.has('texture-compression-astc');
-
-    case COMPRESSED_RGB_PVRTC_4BPPV1_IMG:
-    case COMPRESSED_RGBA_PVRTC_4BPPV1_IMG:
-    case COMPRESSED_RGB_PVRTC_2BPPV1_IMG:
-    case COMPRESSED_RGBA_PVRTC_2BPPV1_IMG:
-      return device.features.has('texture-compression-pvrtc-webgl');
-
-    case COMPRESSED_RGB_ETC1_WEBGL:
-      return device.features.has('texture-compression-etc1-webgl');
-
-    case COMPRESSED_RGB_ATC_WEBGL:
-    case COMPRESSED_RGBA_ATC_EXPLICIT_ALPHA_WEBGL:
-    case COMPRESSED_RGBA_ATC_INTERPOLATED_ALPHA_WEBGL:
-      return device.features.has('texture-compression-atc-webgl');
-
-    default:
-      return true;
-  }
-}
-
-function getCompressedTextureUploadLevels(
-  device: Device,
-  textureFormat: TextureFormat,
-  images: CompressedImageData[]
-): CompressedImageData[] {
-  if (device.type !== 'webgpu') {
-    return images;
+function normalizeTextureFormat(textureFormat: string, deviceType: Device['type']): TextureFormat {
+  const legacyTextureFormat = LEGACY_TEXTURE_FORMAT_ALIASES[textureFormat];
+  if (legacyTextureFormat) {
+    return legacyTextureFormat;
   }
 
-  const uploadLevels: CompressedImageData[] = [];
-
-  for (const image of images) {
-    if (!canUploadCompressedTextureLevel(device, textureFormat, image)) {
-      break;
-    }
-    uploadLevels.push(image);
+  if (deviceType === 'webgpu') {
+    return WEBGPU_TEXTURE_FORMAT_ALIASES[textureFormat] || (textureFormat as TextureFormat);
   }
 
-  return uploadLevels;
+  return textureFormat as TextureFormat;
 }
 
 function getCompressedTexturePreviewError(
@@ -1257,26 +1084,6 @@ function getCompressedTexturePreviewError(
   const alignedHeight = Math.ceil(height / blockHeight) * blockHeight;
 
   return `${textureFormat} works in WebGL because drivers pad compressed textures to block boundaries, but WebGPU requires explicit ${blockWidth} x ${blockHeight} alignment. Round ${width} x ${height} up to ${alignedWidth} x ${alignedHeight} for WebGPU.`;
-}
-
-function canUploadCompressedTextureLevel(
-  device: Device,
-  textureFormat: TextureFormat,
-  image: CompressedImageData
-): boolean {
-  if (device.type !== 'webgpu') {
-    return true;
-  }
-
-  const layout = textureFormatDecoder.computeMemoryLayout({
-    format: textureFormat,
-    width: image.width,
-    height: image.height,
-    depth: 1,
-    byteAlignment: 1
-  });
-  const hasCompleteLevelData = image.data.byteLength >= layout.byteLength;
-  return hasCompleteLevelData;
 }
 
 function getDeviceLabel(device: Device): string {

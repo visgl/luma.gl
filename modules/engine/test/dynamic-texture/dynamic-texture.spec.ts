@@ -3,8 +3,8 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import {Texture} from '@luma.gl/core';
+import {getNullTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {Texture, type TextureFormat} from '@luma.gl/core';
 import {DynamicTexture} from '../../src/index';
 
 const RENDER_MIPMAP_TEST_FORMAT = 'rgba8unorm';
@@ -63,14 +63,11 @@ test('DynamicTexture WebGPU [render][rgba8unorm] 2d mipmaps', async t => {
 
   manualTexture.generateMipmaps();
 
-  const manualArrayBuffer = await manualTexture.texture.readDataAsync({
+  const manualBytes = await readTextureBytes(manualTexture.texture, {
     mipLevel: 1,
     width: 2,
     height: 2
   });
-  const manualBytes = new Uint8Array(manualArrayBuffer);
-  const manualBytesPerRowLevel1 =
-    Math.ceil((2 * 4) / manualTexture.texture.byteAlignment) * manualTexture.texture.byteAlignment;
   t.deepEqual(
     Array.from(manualBytes.slice(0, 4)),
     [0, 0, 0, 255],
@@ -92,7 +89,7 @@ test('DynamicTexture WebGPU [render][rgba8unorm] 2d mipmaps', async t => {
     )
   );
   t.deepEqual(
-    Array.from(manualBytes.slice(manualBytesPerRowLevel1, manualBytesPerRowLevel1 + 4)),
+    Array.from(manualBytes.slice(8, 12)),
     [8, 0, 0, 255],
     createTestLabel(
       'render',
@@ -102,7 +99,7 @@ test('DynamicTexture WebGPU [render][rgba8unorm] 2d mipmaps', async t => {
     )
   );
   t.deepEqual(
-    Array.from(manualBytes.slice(manualBytesPerRowLevel1 + 4, manualBytesPerRowLevel1 + 8)),
+    Array.from(manualBytes.slice(12, 16)),
     [12, 0, 0, 255],
     createTestLabel(
       'render',
@@ -112,12 +109,11 @@ test('DynamicTexture WebGPU [render][rgba8unorm] 2d mipmaps', async t => {
     )
   );
 
-  const manualArrayBuffer2 = await manualTexture.texture.readDataAsync({
+  const manualBytesLevel2 = await readTextureBytes(manualTexture.texture, {
     mipLevel: 2,
     width: 1,
     height: 1
   });
-  const manualBytesLevel2 = new Uint8Array(manualArrayBuffer2);
   t.deepEqual(
     Array.from(manualBytesLevel2.slice(0, 4)),
     [6, 0, 0, 255],
@@ -125,15 +121,11 @@ test('DynamicTexture WebGPU [render][rgba8unorm] 2d mipmaps', async t => {
   );
   manualTexture.destroy();
 
-  const bytesPerRowLevel1 =
-    Math.ceil((2 * 4) / texture.texture.byteAlignment) * texture.texture.byteAlignment;
-
-  const arrayBuffer = await texture.texture.readDataAsync({
+  const bytes = await readTextureBytes(texture.texture, {
     mipLevel: 1,
     width: 2,
     height: 2
   });
-  const bytes = new Uint8Array(arrayBuffer);
   t.deepEqual(
     Array.from(bytes.slice(0, 4)),
     [0, 0, 0, 255],
@@ -145,22 +137,21 @@ test('DynamicTexture WebGPU [render][rgba8unorm] 2d mipmaps', async t => {
     createTestLabel('render', RENDER_MIPMAP_TEST_FORMAT, '2d', 'mip level 1: quadrant 2')
   );
   t.deepEqual(
-    Array.from(bytes.slice(bytesPerRowLevel1, bytesPerRowLevel1 + 4)),
+    Array.from(bytes.slice(8, 12)),
     [8, 0, 0, 255],
     createTestLabel('render', RENDER_MIPMAP_TEST_FORMAT, '2d', 'mip level 1: quadrant 3')
   );
   t.deepEqual(
-    Array.from(bytes.slice(bytesPerRowLevel1 + 4, bytesPerRowLevel1 + 8)),
+    Array.from(bytes.slice(12, 16)),
     [12, 0, 0, 255],
     createTestLabel('render', RENDER_MIPMAP_TEST_FORMAT, '2d', 'mip level 1: quadrant 4')
   );
 
-  const arrayBuffer2 = await texture.texture.readDataAsync({
+  const bytesLevel2 = await readTextureBytes(texture.texture, {
     mipLevel: 2,
     width: 1,
     height: 1
   });
-  const bytesLevel2 = new Uint8Array(arrayBuffer2);
   t.deepEqual(
     Array.from(bytesLevel2.slice(0, 4)),
     [6, 0, 0, 255],
@@ -191,23 +182,19 @@ test('DynamicTexture WebGPU [render][rgba8unorm] 2d-array mipmaps', async t => {
   });
   await texture.ready;
 
-  const bytesPerRow =
-    Math.ceil((1 * 4) / texture.texture.byteAlignment) * texture.texture.byteAlignment;
-  const bytesPerLayer = Number(bytesPerRow);
-  const arrayBuffer = await texture.texture.readDataAsync({
+  const bytes = await readTextureBytes(texture.texture, {
     mipLevel: 1,
     width: 1,
     height: 1,
     depthOrArrayLayers: 2
   });
-  const bytes = new Uint8Array(arrayBuffer);
   t.deepEqual(
     Array.from(bytes.slice(0, 4)),
     [255, 0, 0, 255],
     createTestLabel('render', RENDER_MIPMAP_TEST_FORMAT, '2d-array', 'layer 0 mip level 1')
   );
   t.deepEqual(
-    Array.from(bytes.slice(bytesPerLayer, bytesPerLayer + 4)),
+    Array.from(bytes.slice(4, 8)),
     [0, 255, 0, 255],
     createTestLabel('render', RENDER_MIPMAP_TEST_FORMAT, '2d-array', 'layer 1 mip level 1')
   );
@@ -242,16 +229,12 @@ test('DynamicTexture WebGPU [render][rgba8unorm] cube mipmaps', async t => {
   });
   await texture.ready;
 
-  const bytesPerRow =
-    Math.ceil((1 * 4) / texture.texture.byteAlignment) * texture.texture.byteAlignment;
-  const bytesPerLayer = Number(bytesPerRow);
-  const arrayBuffer = await texture.texture.readDataAsync({
+  const bytes = await readTextureBytes(texture.texture, {
     mipLevel: 1,
     width: 1,
     height: 1,
     depthOrArrayLayers: 6
   });
-  const bytes = new Uint8Array(arrayBuffer);
 
   const cubeExpected: number[][] = [
     [255, 0, 0, 255],
@@ -263,7 +246,7 @@ test('DynamicTexture WebGPU [render][rgba8unorm] cube mipmaps', async t => {
   ];
   cubeExpected.forEach((expectedValues, layer) => {
     t.deepEqual(
-      Array.from(bytes.slice(layer * bytesPerLayer, layer * bytesPerLayer + 4)),
+      Array.from(bytes.slice(layer * 4, layer * 4 + 4)),
       expectedValues,
       createTestLabel('render', RENDER_MIPMAP_TEST_FORMAT, 'cube', `layer ${layer} mip level 1`)
     );
@@ -311,20 +294,16 @@ test('DynamicTexture WebGPU [render][rgba8unorm] cube-array mipmaps', async t =>
   });
   await texture.ready;
 
-  const bytesPerRow =
-    Math.ceil((1 * 4) / texture.texture.byteAlignment) * texture.texture.byteAlignment;
-  const bytesPerLayer = Number(bytesPerRow);
-  const arrayBuffer = await texture.texture.readDataAsync({
+  const bytes = await readTextureBytes(texture.texture, {
     mipLevel: 1,
     width: 1,
     height: 1,
     depthOrArrayLayers: 12
   });
-  const bytes = new Uint8Array(arrayBuffer);
 
   for (let layer = 0; layer < 6; ++layer) {
     t.deepEqual(
-      Array.from(bytes.slice(layer * bytesPerLayer, layer * bytesPerLayer + 4)),
+      Array.from(bytes.slice(layer * 4, layer * 4 + 4)),
       [255, 0, 0, 255],
       createTestLabel(
         'render',
@@ -336,7 +315,7 @@ test('DynamicTexture WebGPU [render][rgba8unorm] cube-array mipmaps', async t =>
   }
   for (let layer = 6; layer < 12; ++layer) {
     t.deepEqual(
-      Array.from(bytes.slice(layer * bytesPerLayer, layer * bytesPerLayer + 4)),
+      Array.from(bytes.slice(layer * 4, layer * 4 + 4)),
       [0, 255, 0, 255],
       createTestLabel(
         'render',
@@ -394,34 +373,29 @@ test('DynamicTexture WebGPU [compute][rgba8unorm] 3d mipmaps', async t => {
   });
   await texture.ready;
 
-  const bytesPerRow =
-    Math.ceil((2 * 4) / texture.texture.byteAlignment) * texture.texture.byteAlignment;
-  const bytesPerLayer = bytesPerRow * 2;
-  const arrayBuffer = await texture.texture.readDataAsync({
+  const bytes = await readTextureBytes(texture.texture, {
     mipLevel: 1,
     width: 2,
     height: 2,
     depthOrArrayLayers: 2
   });
-  const bytes = new Uint8Array(arrayBuffer);
   t.deepEqual(
     Array.from(bytes.slice(0, 4)),
     [127, 0, 0, 255],
     createTestLabel('compute', COMPUTE_MIPMAP_TEST_FORMAT, '3d', 'mip level 1: first voxel')
   );
   t.deepEqual(
-    Array.from(bytes.slice(bytesPerLayer, bytesPerLayer + 4)),
+    Array.from(bytes.slice(16, 20)),
     [127, 0, 0, 255],
     createTestLabel('compute', COMPUTE_MIPMAP_TEST_FORMAT, '3d', 'mip level 1: cross-layer voxel')
   );
 
-  const arrayBuffer2 = await texture.texture.readDataAsync({
+  const bytesLevel2 = await readTextureBytes(texture.texture, {
     mipLevel: 2,
     width: 1,
     height: 1,
     depthOrArrayLayers: 1
   });
-  const bytesLevel2 = new Uint8Array(arrayBuffer2);
   t.deepEqual(
     Array.from(bytesLevel2.slice(0, 4)),
     [127, 0, 0, 255],
@@ -695,6 +669,152 @@ test('DynamicTexture WebGPU [render][rgba8unorm] throws when render capabilities
   t.end();
 });
 
+test('DynamicTexture NullDevice accepts compressed mip arrays via textureFormat', async t => {
+  const device = await getNullTestDevice();
+
+  const texture = new DynamicTexture(device, {
+    dimension: '2d',
+    mipmaps: true,
+    data: [
+      makeMipLevel(16, 16, 'bc7-rgba-unorm'),
+      makeMipLevel(8, 8, 'bc7-rgba-unorm'),
+      makeMipLevel(4, 4, 'bc7-rgba-unorm')
+    ]
+  });
+  await texture.ready;
+
+  t.equal(texture.texture.format, 'bc7-rgba-unorm', 'texture format resolved from textureFormat');
+  t.equal(texture.texture.mipLevels, 3, 'all provided mip levels are allocated');
+  t.equal(
+    texture.texture.props.usage,
+    Texture.SAMPLE | Texture.COPY_DST,
+    'compressed textures do not inherit render attachment usage by default'
+  );
+
+  texture.destroy();
+  t.end();
+});
+
+test('DynamicTexture NullDevice accepts compressed mip arrays via format alias', async t => {
+  const device = await getNullTestDevice();
+
+  const texture = new DynamicTexture(device, {
+    dimension: '2d',
+    data: [
+      makeMipLevel(16, 16, undefined, 'bc7-rgba-unorm'),
+      makeMipLevel(8, 8, undefined, 'bc7-rgba-unorm')
+    ]
+  });
+  await texture.ready;
+
+  t.equal(texture.texture.format, 'bc7-rgba-unorm', 'texture format resolved from format alias');
+  t.equal(texture.texture.mipLevels, 2, 'format alias mip chain is preserved');
+
+  texture.destroy();
+  t.end();
+});
+
+test('DynamicTexture NullDevice accepts equal format and textureFormat fields', async t => {
+  const device = await getNullTestDevice();
+
+  const texture = new DynamicTexture(device, {
+    dimension: '2d',
+    data: [
+      {
+        data: new Uint8Array(16 * 16),
+        width: 16,
+        height: 16,
+        textureFormat: 'bc4-r-unorm',
+        format: 'bc4-r-unorm'
+      }
+    ]
+  });
+  await texture.ready;
+
+  t.equal(texture.texture.format, 'bc4-r-unorm', 'matching fields are accepted');
+
+  texture.destroy();
+  t.end();
+});
+
+test('DynamicTexture NullDevice rejects conflicting format and textureFormat fields', async t => {
+  const device = await getNullTestDevice();
+
+  const texture = new DynamicTexture(device, {
+    dimension: '2d',
+    data: [
+      {
+        data: new Uint8Array(16 * 16 * 4),
+        width: 16,
+        height: 16,
+        textureFormat: 'rgba8unorm',
+        format: 'rgba8unorm-srgb'
+      }
+    ]
+  });
+
+  try {
+    await texture.ready;
+    t.fail('expected texture.ready to reject');
+  } catch (error) {
+    t.match(String(error), /Conflicting texture formats/, 'rejects conflicting mip-level fields');
+  }
+
+  texture.destroy();
+  t.end();
+});
+
+test('DynamicTexture NullDevice truncates mismatched per-level formats', async t => {
+  const device = await getNullTestDevice();
+
+  const texture = new DynamicTexture(device, {
+    dimension: '2d',
+    data: [makeMipLevel(16, 16, 'bc7-rgba-unorm'), makeMipLevel(8, 8, 'etc2-rgb8unorm')]
+  });
+  await texture.ready;
+
+  t.equal(texture.texture.format, 'bc7-rgba-unorm', 'base level format wins');
+  t.equal(texture.texture.mipLevels, 1, 'chain truncates at mismatched level format');
+
+  texture.destroy();
+  t.end();
+});
+
+test('DynamicTexture NullDevice truncates invalid mip dimensions', async t => {
+  const device = await getNullTestDevice();
+
+  const texture = new DynamicTexture(device, {
+    dimension: '2d',
+    data: [makeMipLevel(16, 16, 'bc7-rgba-unorm'), makeMipLevel(9, 9, 'bc7-rgba-unorm')]
+  });
+  await texture.ready;
+
+  t.equal(
+    texture.texture.mipLevels,
+    1,
+    'chain truncates when mip dimensions do not halve correctly'
+  );
+
+  texture.destroy();
+  t.end();
+});
+
+test('DynamicTexture NullDevice caps compressed mip arrays at one block', async t => {
+  const device = await getNullTestDevice();
+
+  const texture = new DynamicTexture(device, {
+    dimension: '2d',
+    data: [makeMipLevel(16, 16, 'astc-10x10-unorm'), makeMipLevel(8, 8, 'astc-10x10-unorm')]
+  });
+  await texture.ready;
+
+  t.equal(texture.texture.format, 'astc-10x10-unorm', 'compressed format is preserved');
+  t.equal(texture.texture.mipLevels, 1, 'mip levels below one block are ignored');
+
+  texture.destroy();
+  t.end();
+});
+
 function makeSolidMipData(
   width: number,
   height: number,
@@ -738,6 +858,28 @@ function makeQuadrantMipData(
   return {data, width, height};
 }
 
+function makeMipLevel(
+  width: number,
+  height: number,
+  textureFormat?: TextureFormat,
+  format?: TextureFormat
+): {
+  data: Uint8Array;
+  width: number;
+  height: number;
+  textureFormat?: TextureFormat;
+  format?: TextureFormat;
+} {
+  const bytesPerElement = textureFormat?.startsWith('bc4') || format?.startsWith('bc4') ? 1 : 4;
+  return {
+    data: new Uint8Array(Math.max(1, width * height * bytesPerElement)),
+    width,
+    height,
+    textureFormat,
+    format
+  };
+}
+
 function captureError(callback: () => void): Error | null {
   try {
     callback();
@@ -745,4 +887,43 @@ function captureError(callback: () => void): Error | null {
   } catch (error) {
     return error instanceof Error ? error : new Error(String(error));
   }
+}
+
+async function readTextureBytes(
+  texture: Texture,
+  options: {mipLevel?: number; width?: number; height?: number; depthOrArrayLayers?: number}
+): Promise<Uint8Array> {
+  const arrayBuffer = await texture.readDataAsync(options);
+  return compactTextureBytes(texture, arrayBuffer, options);
+}
+
+function compactTextureBytes(
+  texture: Texture,
+  arrayBuffer: ArrayBuffer | ArrayBufferView,
+  options: {mipLevel?: number; width?: number; height?: number; depthOrArrayLayers?: number}
+): Uint8Array {
+  const layout = texture.computeMemoryLayout(options);
+  const mipLevel = options.mipLevel ?? 0;
+  const width = options.width ?? Math.max(1, texture.width >> mipLevel);
+  const height = options.height ?? Math.max(1, texture.height >> mipLevel);
+  const depthOrArrayLayers =
+    options.depthOrArrayLayers ??
+    (texture.dimension === '3d' ? Math.max(1, texture.depth >> mipLevel) : texture.depth);
+  const rowByteLength = width * layout.bytesPerPixel;
+  const compact = new Uint8Array(rowByteLength * height * depthOrArrayLayers);
+  const source =
+    arrayBuffer instanceof ArrayBuffer
+      ? new Uint8Array(arrayBuffer)
+      : new Uint8Array(arrayBuffer.buffer, arrayBuffer.byteOffset, arrayBuffer.byteLength);
+
+  for (let layer = 0; layer < depthOrArrayLayers; layer++) {
+    for (let row = 0; row < height; row++) {
+      const sourceOffset =
+        layer * layout.rowsPerImage * layout.bytesPerRow + row * layout.bytesPerRow;
+      const destinationOffset = layer * height * rowByteLength + row * rowByteLength;
+      compact.set(source.slice(sourceOffset, sourceOffset + rowByteLength), destinationOffset);
+    }
+  }
+
+  return compact;
 }

@@ -8,6 +8,7 @@ import {PrimitiveTopology} from '@luma.gl/core';
 // `@luma.gl/constants`. Locally we use `GLEnum` instead of `GL` to avoid
 // conflicts with the `babel-plugin-inline-webgl-constants` plugin.
 // eslint-disable-next-line no-shadow
+/** Minimal WebGL draw-mode enum subset used by the glTF converter. */
 export enum GLEnum {
   POINTS = 0x0,
   LINES = 0x1,
@@ -18,6 +19,7 @@ export enum GLEnum {
   TRIANGLE_FAN = 0x6
 }
 
+/** Converts a WebGL draw mode into a luma.gl primitive topology string. */
 export function convertGLDrawModeToTopology(
   drawMode:
     | GLEnum.POINTS

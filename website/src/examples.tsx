@@ -1,13 +1,13 @@
 //
 
 import React, {useEffect, useRef, useState} from 'react';
-import {LumaExample, useStore} from './react-luma';
+import {ExamplePage, LumaExample, ReactExample, useStore} from './react-luma';
 
 import AnimationApp from '../../examples/api/animation/app';
 import CubemapApp from '../../examples/api/cubemap/app';
-import {renderToDOM as renderMultiCanvasExample} from '../../examples/api/multi-canvas/app';
+import MultiCanvasApp from '../../examples/api/multi-canvas/app';
 import Texture3DApp from '../../examples/api/texture-3d/app';
-import {renderToDOM as renderTextureTesterExample} from '../../examples/api/texture-tester/app';
+import TextureTesterApp from '../../examples/api/texture-tester/app';
 import initializeExternalWebGLContext, {
   ExternalWebGLContextHandle
 } from '../../examples/integrations/external-context/app';
@@ -88,6 +88,8 @@ export const AnimationExample: React.FC = props => (
     directory="api"
     template={AnimationApp}
     config={exampleConfig}
+    showStats
+    statsTitle="Animation Stats"
     {...props}
   />
 );
@@ -103,25 +105,33 @@ export const CubemapExample: React.FC = props => (
 );
 
 export const MultiCanvasExample: React.FC = () => {
-  const containerRef = useRef<HTMLDivElement | null>(null);
   const deviceType = useStore(store => store.deviceType);
+  const presentationDevice = useStore(store => store.presentationDevice);
+  const presentationDeviceError = useStore(store => store.presentationDeviceError);
 
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container || !deviceType) {
-      return undefined;
-    }
+  if (presentationDeviceError) {
+    return <div>{presentationDeviceError}</div>;
+  }
 
-    return renderMultiCanvasExample(container, {deviceType});
-  }, [deviceType]);
-
-  return <div key={deviceType ?? 'pending'} ref={containerRef} />;
+  return (
+    deviceType && presentationDevice ? (
+      <ReactExample
+        component={MultiCanvasApp}
+        componentProps={{deviceType, presentationDevice}}
+      />
+    ) : (
+      <ExamplePage>
+        <div>Initializing device...</div>
+      </ExamplePage>
+    )
+  );
 };
 
 export const Texture3DExample: React.FC = props => (
   <LumaExample
     id="texture-3d"
     directory="api-3d"
+    sourceDirectory="api"
     template={Texture3DApp}
     config={exampleConfig}
     {...props}
@@ -129,21 +139,12 @@ export const Texture3DExample: React.FC = props => (
 );
 
 export const TextureTesterExample: React.FC = () => {
-  const containerRef = useRef<HTMLDivElement | null>(null);
   const deviceType = useStore(store => store.deviceType);
-
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container || !deviceType) {
-      return undefined;
-    }
-
-    return renderTextureTesterExample(container, {deviceType});
-  }, [deviceType]);
+  const presentationDevice = useStore(store => store.presentationDevice);
+  const presentationDeviceError = useStore(store => store.presentationDeviceError);
 
   return (
-    <div
-      className="textures-example-page"
+    <ExamplePage
       style={{
         width: '100%',
         height: '100%',
@@ -151,8 +152,14 @@ export const TextureTesterExample: React.FC = () => {
         overflowX: 'hidden'
       }}
     >
-      <div key={deviceType ?? 'pending'} ref={containerRef} />
-    </div>
+      {presentationDeviceError ? (
+        <div>{presentationDeviceError}</div>
+      ) : deviceType && presentationDevice ? (
+        <TextureTesterApp deviceType={deviceType} presentationDevice={presentationDevice} />
+      ) : (
+        <div>Initializing device...</div>
+      )}
+    </ExamplePage>
   );
 };
 
@@ -182,32 +189,12 @@ export const ExternalContextExample: React.FC = () => {
   }, []);
 
   return (
-    <div className="integration-example-page" style={{position: 'relative', width: '100%', minHeight: '640px'}}>
-      <div ref={containerRef} style={{position: 'absolute', inset: 0}} />
-      <div
-        style={{
-          position: 'absolute',
-          top: 16,
-          right: 16,
-          maxWidth: 320,
-          padding: 12,
-          background: 'rgba(255, 255, 255, 0.92)',
-          borderRadius: 8,
-          boxShadow: '0 2px 6px rgba(0, 0, 0, 0.25)'
-        }}
-      >
-        <h3>External WebGL Context</h3>
-        <p style={{marginTop: 0}}>
-          This example attaches a <code>WebGLDevice</code> to the WebGL2 context created by MapLibre GL JS and
-          renders a luma.gl overlay through the MapLibre render loop.
-        </p>
-        <p style={{marginBottom: 0}}>
-          The map uses CARTO basemaps that do not require an access token. The overlay uses the map view-projection matrix so it
-          stays anchored in world space.
-        </p>
-        {error && <p style={{color: '#b00020'}}>Error: {error}</p>}
+    <ExamplePage style={{minHeight: '640px'}}>
+      <div className="integration-example-page" style={{position: 'relative', width: '100%', minHeight: '640px'}}>
+        <div ref={containerRef} style={{position: 'absolute', inset: 0}} />
       </div>
-    </div>
+      {error ? <p style={{color: '#b00020', marginTop: 12}}>{error}</p> : null}
+    </ExamplePage>
   );
 };
 

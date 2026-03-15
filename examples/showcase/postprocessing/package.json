@@ -8,8 +8,8 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@loaders.gl/core": "^4.3.4",
-    "@loaders.gl/gltf": "^4.3.4",
+    "@loaders.gl/core": "4.4.0-alpha.18",
+    "@loaders.gl/gltf": "4.4.0-alpha.18",
     "@luma.gl/core": "9.3.0-alpha.4",
     "@luma.gl/effects": "9.3.0-alpha.4",
     "@luma.gl/engine": "9.3.0-alpha.4",

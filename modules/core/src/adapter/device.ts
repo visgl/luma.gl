@@ -673,6 +673,15 @@ or create a device with the 'debug: true' prop.`;
   }
 
   /**
+   * Generate mipmaps for a WebGPU texture.
+   * WebGPU textures must be created up front with the required mip count, usage flags, and a format that supports the chosen generation path.
+   * WebGL uses `Texture.generateMipmapsWebGL()` directly because the backend manages mip generation on the texture object itself.
+   */
+  generateMipmapsWebGPU(_texture: Texture): void {
+    throw new Error('not implemented');
+  }
+
+  /**
    * Determines what operations are supported on a texture format, checking against supported device features
    * Subclasses override to apply additional checks
    */

@@ -8,10 +8,33 @@ import test from 'tape-promise/tape';
 import {getTestDevices, getWebGPUTestDevice, getWebGLTestDevice} from '@luma.gl/test-utils';
 
 import {TypedArray} from '@math.gl/types';
-import {Buffer} from '@luma.gl/core';
+import {Buffer, Device} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 
 const DEVICE_TYPES = ['webgpu', 'webgl', 'null'] as const;
+
+function getMemoryStats(device: Device): {gpuMemory: number; bufferMemory: number} {
+  const stats = device.statsManager.getStats('Resource Memory');
+  return {
+    gpuMemory: stats.get('GPU Memory').count,
+    bufferMemory: stats.get('Buffer Memory').count
+  };
+}
+
+function getResourceStats(device: Device): {
+  resourcesCreated: number;
+  resourcesActive: number;
+  buffersCreated: number;
+  buffersActive: number;
+} {
+  const stats = device.statsManager.getStats('Resource Counts');
+  return {
+    resourcesCreated: stats.get('Resources Created').count,
+    resourcesActive: stats.get('Resources Active').count,
+    buffersCreated: stats.get('Buffers Created').count,
+    buffersActive: stats.get('Buffers Active').count
+  };
+}
 
 test('Buffer#constructor/delete', async t => {
   for (const device of await getTestDevices(DEVICE_TYPES)) {
@@ -104,6 +127,97 @@ test('Buffer#write', async t => {
     );
     buffer.destroy();
   }
+  t.end();
+});
+
+test('Buffer tracks GPU memory stats', async t => {
+  for (const device of await getTestDevices(DEVICE_TYPES)) {
+    const beforeStats = getMemoryStats(device);
+    const buffer = device.createBuffer({byteLength: 6, usage: Buffer.VERTEX});
+    const expectedAllocation = device.type === 'webgpu' ? 8 : 6;
+    const afterCreateStats = getMemoryStats(device);
+
+    t.equal(
+      afterCreateStats.gpuMemory - beforeStats.gpuMemory,
+      expectedAllocation,
+      `${device.type} Buffer updates total GPU Memory`
+    );
+    t.equal(
+      afterCreateStats.bufferMemory - beforeStats.bufferMemory,
+      expectedAllocation,
+      `${device.type} Buffer updates Buffer Memory`
+    );
+
+    buffer.destroy();
+
+    const afterDestroyStats = getMemoryStats(device);
+    t.equal(
+      afterDestroyStats.gpuMemory,
+      beforeStats.gpuMemory,
+      `${device.type} Buffer destroy restores total GPU Memory`
+    );
+    t.equal(
+      afterDestroyStats.bufferMemory,
+      beforeStats.bufferMemory,
+      `${device.type} Buffer destroy restores Buffer Memory`
+    );
+  }
+
+  t.end();
+});
+
+test('Buffer tracks resource counts in core stats', async t => {
+  for (const device of await getTestDevices(DEVICE_TYPES)) {
+    const beforeStats = getResourceStats(device);
+    const buffer = device.createBuffer({byteLength: 4, usage: Buffer.VERTEX});
+    const afterCreateStats = getResourceStats(device);
+
+    t.equal(
+      afterCreateStats.resourcesCreated - beforeStats.resourcesCreated,
+      1,
+      `${device.type} Buffer increments total resources created`
+    );
+    t.equal(
+      afterCreateStats.resourcesActive - beforeStats.resourcesActive,
+      1,
+      `${device.type} Buffer increments total resources active`
+    );
+    t.equal(
+      afterCreateStats.buffersCreated - beforeStats.buffersCreated,
+      1,
+      `${device.type} Buffer increments Buffers Created`
+    );
+    t.equal(
+      afterCreateStats.buffersActive - beforeStats.buffersActive,
+      1,
+      `${device.type} Buffer increments Buffers Active`
+    );
+
+    buffer.destroy();
+
+    const afterDestroyStats = getResourceStats(device);
+    t.equal(
+      afterDestroyStats.resourcesCreated,
+      afterCreateStats.resourcesCreated,
+      `${device.type} Buffer destroy does not change total resources created`
+    );
+    t.equal(
+      afterDestroyStats.resourcesActive,
+      beforeStats.resourcesActive,
+      `${device.type} Buffer destroy restores total resources active`
+    );
+    t.equal(
+      afterDestroyStats.buffersCreated,
+      afterCreateStats.buffersCreated,
+      `${device.type} Buffer destroy does not change Buffers Created`
+    );
+    t.equal(
+      afterDestroyStats.buffersActive,
+      beforeStats.buffersActive,
+      `${device.type} Buffer destroy restores Buffers Active`
+    );
+  }
+
   t.end();
 });
 

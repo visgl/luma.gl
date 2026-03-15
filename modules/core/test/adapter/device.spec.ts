@@ -3,7 +3,8 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
-import {getTestDevices} from '@luma.gl/test-utils';
+import {Texture} from '@luma.gl/core';
+import {getNullTestDevice, getTestDevices, getWebGPUTestDevice} from '@luma.gl/test-utils';
 
 // import {luma} from '@luma.gl/core';
 
@@ -50,6 +51,59 @@ test('Device#getSupportedCompressedTextureFormats', async t => {
       );
     }
   }
+  t.end();
+});
+
+test('Device#generateMipmapsWebGPU throws on non-WebGPU devices', async t => {
+  const device = await getNullTestDevice();
+  const texture = device.createTexture({
+    width: 2,
+    height: 2,
+    format: 'rgba8unorm',
+    mipLevels: 2
+  });
+
+  t.throws(
+    () => device.generateMipmapsWebGPU(texture),
+    /not implemented/,
+    'base Device stub throws on unsupported device types'
+  );
+
+  texture.destroy();
+  t.end();
+});
+
+test('WebGPUDevice#generateMipmapsWebGPU generates a mip chain', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU device not available');
+    t.end();
+    return;
+  }
+
+  const texture = device.createTexture({
+    width: 2,
+    height: 2,
+    format: 'rgba8unorm',
+    mipLevels: 2,
+    usage: Texture.SAMPLE | Texture.RENDER | Texture.COPY_DST | Texture.COPY_SRC
+  });
+  texture.writeData(
+    new Uint8Array([255, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255, 255, 255, 255, 255]),
+    {width: 2, height: 2}
+  );
+
+  device.generateMipmapsWebGPU(texture);
+
+  const mipLevelArrayBuffer = await texture.readDataAsync({mipLevel: 1, width: 1, height: 1});
+  const mipLevelBytes = new Uint8Array(mipLevelArrayBuffer);
+  t.deepEqual(
+    Array.from(mipLevelBytes.slice(0, 4)),
+    [128, 128, 128, 255],
+    'WebGPU device method generates level 1 mip data'
+  );
+
+  texture.destroy();
   t.end();
 });
 

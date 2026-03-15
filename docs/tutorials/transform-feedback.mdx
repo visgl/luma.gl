@@ -21,7 +21,6 @@ vertex shader that multiplies each position by a rotation matrix and writes the
 result into the alternate buffer. After the transform step the buffers swap and
 the scene is rendered with the updated positions.
 
-
 The complete source for this example is shown below:
 
 ```typescript
@@ -30,7 +29,14 @@ The complete source for this example is shown below:
 // Copyright (c) vis.gl contributors
 
 import {Buffer} from '@luma.gl/core';
-import {AnimationLoopTemplate, AnimationProps, Model, Swap, BufferTransform} from '@luma.gl/engine';
+import {
+  AnimationLoopTemplate,
+  AnimationProps,
+  Model,
+  Swap,
+  BufferTransform,
+  makeAnimationLoop
+} from '@luma.gl/engine';
 
 const transformVs = /* glsl */ `\
 #version 300 es
@@ -140,7 +146,9 @@ class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 }
 
-const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {adapters: [webgl2Adapter]})
+const animationLoop = makeAnimationLoop(AppAnimationLoopTemplate, {
+  adapters: [webgl2Adapter]
+});
 animationLoop.start();
 ```
 

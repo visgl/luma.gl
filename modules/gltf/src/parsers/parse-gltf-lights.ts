@@ -51,6 +51,9 @@ export function parseGLTFLights(gltf: GLTFPostprocessed): Light[] {
   return lights;
 }
 
+/**
+ * Converts a glTF punctual light attached to a node into a point light.
+ */
 function parsePointLight(
   node: GLTFNodePostprocessed,
   color: [number, number, number],
@@ -73,6 +76,9 @@ function parsePointLight(
   };
 }
 
+/**
+ * Converts a glTF punctual light attached to a node into a directional light.
+ */
 function parseDirectionalLight(
   node: GLTFNodePostprocessed,
   color: [number, number, number],
@@ -88,6 +94,9 @@ function parseDirectionalLight(
   };
 }
 
+/**
+ * Resolves the world-space position of a glTF node from its matrix or translation.
+ */
 function getNodePosition(node: GLTFNodePostprocessed): [number, number, number] {
   if (node.matrix) {
     return new Matrix4(node.matrix).transformAsPoint([0, 0, 0]) as [number, number, number];
@@ -100,6 +109,9 @@ function getNodePosition(node: GLTFNodePostprocessed): [number, number, number] 
   return [0, 0, 0];
 }
 
+/**
+ * Resolves the forward direction of a glTF node from its matrix or rotation.
+ */
 function getNodeDirection(node: GLTFNodePostprocessed): [number, number, number] {
   if (node.matrix) {
     return new Matrix4(node.matrix).transformDirection([0, 0, -1]) as [number, number, number];

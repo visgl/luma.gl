@@ -281,6 +281,7 @@ WebGPU only. WebGL devices can only render into the canvas they were created wit
 
 <p class="badges">
   <img src="https://img.shields.io/badge/From-v9.3-blue.svg?style=flat-square" alt="From-v9.3" />
+  <img src="https://img.shields.io/badge/Experimental-orange.svg?style=flat-square" alt="Experimental" />
 </p>
 
 ```typescript
@@ -288,6 +289,10 @@ createPresentationContext(props?: PresentationContextProps): PresentationContext
 ```
 
 Creates a new [`PresentationContext`](./presentation-context) for multi-canvas presentation.
+
+:::caution Experimental
+`createPresentationContext()` is experimental and may change in a future release.
+:::
 
 :::info
 For portable WebGL and WebGPU multi-canvas rendering, create the device with a default `CanvasContext` backed by an `OffscreenCanvas`.

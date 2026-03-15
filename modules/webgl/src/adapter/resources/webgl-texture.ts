@@ -108,27 +108,27 @@ export class WEBGLTexture extends Texture {
     this.gl.bindTexture(this.glTarget, this.handle);
     const {dimension, width, height, depth, mipLevels, glTarget, glInternalFormat} = this;
     if (!this.compressed) {
-      if (this._canUseImmutableStorage()) {
-        switch (dimension) {
-          case '2d':
-          case 'cube':
-            this.gl.texStorage2D(glTarget, mipLevels, glInternalFormat, width, height);
-            break;
-          case '2d-array':
-          case '3d':
-            this.gl.texStorage3D(glTarget, mipLevels, glInternalFormat, width, height, depth);
-            break;
-          default:
-            throw new Error(dimension);
-        }
-      } else {
-        this._initializeMutableStorage();
+      switch (dimension) {
+        case '2d':
+        case 'cube':
+          this.gl.texStorage2D(glTarget, mipLevels, glInternalFormat, width, height);
+          break;
+        case '2d-array':
+        case '3d':
+          this.gl.texStorage3D(glTarget, mipLevels, glInternalFormat, width, height, depth);
+          break;
+        default:
+          throw new Error(dimension);
       }
     }
     this.gl.bindTexture(this.glTarget, null);
 
     // Set data
     this._initializeData(props.data);
+
+    if (!this.props.handle) {
+      this.trackAllocatedMemory(this.getAllocatedByteLength(), 'Texture');
+    }
 
     // Set texture sampler parameters
     this.setSampler(this.props.sampler);
@@ -431,84 +431,6 @@ export class WEBGLTexture extends Texture {
     // if (rowByteLength % 4 === 0) return 4;
     // if (rowByteLength % 2 === 0) return 2;
     return 1;
-  }
-
-  /**
-   * EXT_texture_norm16 formats are valid with texImage* but not texStorage*.
-   * Fall back to mutable storage allocation for those formats.
-   */
-  private _canUseImmutableStorage(): boolean {
-    switch (this.glInternalFormat) {
-      case GL.R16_EXT:
-      case GL.RG16_EXT:
-      case GL.RGB16_EXT:
-      case GL.RGBA16_EXT:
-      case GL.R16_SNORM_EXT:
-      case GL.RG16_SNORM_EXT:
-      case GL.RGB16_SNORM_EXT:
-      case GL.RGBA16_SNORM_EXT:
-        return false;
-
-      default:
-        return true;
-    }
-  }
-
-  private _initializeMutableStorage(): void {
-    for (let mipLevel = 0; mipLevel < this.mipLevels; mipLevel++) {
-      const {width, height, depthOrArrayLayers} = this._getMipLevelSize(mipLevel);
-
-      switch (this.dimension) {
-        case '2d':
-          this.gl.texImage2D(
-            this.glTarget,
-            mipLevel,
-            this.glInternalFormat,
-            width,
-            height,
-            0,
-            this.glFormat,
-            this.glType,
-            null
-          );
-          break;
-
-        case 'cube':
-          for (let layer = 0; layer < depthOrArrayLayers; layer++) {
-            this.gl.texImage2D(
-              getWebGLCubeFaceTarget(this.glTarget, this.dimension, layer),
-              mipLevel,
-              this.glInternalFormat,
-              width,
-              height,
-              0,
-              this.glFormat,
-              this.glType,
-              null
-            );
-          }
-          break;
-
-        case '2d-array':
-        case '3d':
-          this.gl.texImage3D(
-            this.glTarget,
-            mipLevel,
-            this.glInternalFormat,
-            width,
-            height,
-            depthOrArrayLayers,
-            0,
-            this.glFormat,
-            this.glType,
-            null
-          );
-          break;
-
-        default:
-          throw new Error(this.dimension);
-      }
-    }
   }
 
   /**

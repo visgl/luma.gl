@@ -52,9 +52,9 @@ export const IMAGES_DATA: TextureFormatsInfo[] = [
     formatName: 'KTX',
     codeSample: 'load(url, CompressedTextureLoader)',
     images: [
-      {format: 'DXT1', src: 'shannon-dxt1.ktx2'},
+      {format: 'DXT5', src: 'shannon-dxt5.ktx2'},
       {format: 'DXT3', src: 'shannon-dxt3.ktx2'},
-      {format: 'DXT5', src: 'shannon-dxt5.ktx2'}
+      {format: 'DXT1', src: 'shannon-dxt1.ktx2'}
     ]
   },
   {
@@ -94,7 +94,7 @@ export const IMAGES_DATA: TextureFormatsInfo[] = [
         src: 'shannon-pvrtc-4bpp-rgb.pvr'
       },
       {
-        format: 'PVRTC (2BPP RGBA)',
+        format: 'PVRTC (4BPP RGBA)',
         src: 'shannon-pvrtc-4bpp-rgba.pvr'
       }
     ]

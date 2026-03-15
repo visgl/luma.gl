@@ -55,9 +55,9 @@ export type CopyImageDataOptions = {
   data: ArrayBuffer | SharedArrayBuffer | ArrayBufferView;
   /** Offset into the data (in addition to any offset built-in to the ArrayBufferView) */
   byteOffset?: number;
-  /** The stride, in bytes, between the beginning of each texel block row and the subsequent texel block row. Required if there are multiple texel block rows (i.e. the copy height or depth is more than one block). */
+  /** The stride, in bytes, between successive texel rows in the CPU source data. Tightly packed uploads can omit this. */
   bytesPerRow?: number;
-  /** Number or rows per image (needed if multiple images are being set) */
+  /** Number of rows that make up one image when uploading multiple layers or depth slices from CPU memory. */
   rowsPerImage?: number;
   /** Width to copy */
   width?: number;
@@ -101,7 +101,7 @@ export type TextureReadOptions = {
 export type TextureWriteOptions = {
   /** Offset into the source data or buffer, in bytes. */
   byteOffset?: number;
-  /** The stride, in bytes, between successive texel rows. */
+  /** The stride, in bytes, between successive texel rows in the source data or buffer. */
   bytesPerRow?: number;
   /** The number of rows that make up one image when writing multiple layers or slices. */
   rowsPerImage?: number;
@@ -195,6 +195,8 @@ export abstract class Texture extends Resource<TextureProps> {
   readonly depth: number;
   /** mip levels in this texture */
   readonly mipLevels: number;
+  /** sample count */
+  readonly samples: number;
   /** Rows are multiples of this length, padded with extra bytes if needed */
   readonly byteAlignment: number;
   /** Default sampler for this texture */
@@ -231,6 +233,7 @@ export abstract class Texture extends Resource<TextureProps> {
     this.height = this.props.height;
     this.depth = this.props.depth;
     this.mipLevels = this.props.mipLevels;
+    this.samples = this.props.samples || 1;
 
     if (this.dimension === 'cube') {
       this.depth = 6;
@@ -281,20 +284,24 @@ export abstract class Texture extends Resource<TextureProps> {
 
   /**
    * Copy raw image data (bytes) into the texture.
+   *
+   * @note Deprecated compatibility wrapper over {@link writeData}.
+   * @note Uses the same layout defaults and alignment rules as {@link writeData}.
+   * @note Tightly packed CPU uploads can omit `bytesPerRow` and `rowsPerImage`.
+   * @note If the CPU source rows are padded, pass explicit `bytesPerRow` and `rowsPerImage`.
    * @deprecated Use writeData()
    */
   copyImageData(options: CopyImageDataOptions): void {
     const {data, depth, ...writeOptions} = options;
-    const normalizedWriteOptions = this._normalizeTextureWriteOptions({
+    this.writeData(data, {
       ...writeOptions,
       depthOrArrayLayers: writeOptions.depthOrArrayLayers ?? depth
     });
-    this.writeData(data, normalizedWriteOptions);
   }
 
   /**
    * Calculates the memory layout of the texture, required when reading and writing data.
-   * @return the memory layout of the texture, in particular bytesPerRow which includes required padding
+   * @return the backend-aligned linear layout, in particular bytesPerRow which includes any required padding for buffer copy/read paths
    */
   computeMemoryLayout(options_: TextureReadOptions = {}): TextureMemoryLayout {
     const options = this._normalizeTextureReadOptions(options_);
@@ -317,9 +324,11 @@ export abstract class Texture extends Resource<TextureProps> {
    * @returns A Buffer containing the texture data.
    *
    * @note The memory layout of the texture data is determined by the texture format and dimensions.
-   * @note The application can call Texture.computeMemoryLayout() to compute the layout.
+   * @note The application can call Texture.computeMemoryLayout() to compute the backend-aligned layout.
    * @note The application can call Buffer.readAsync()
    * @note If not supplied a buffer will be created and the application needs to call Buffer.destroy
+   * @note On WebGPU this corresponds to a texture-to-buffer copy and uses buffer-copy alignment rules.
+   * @note On WebGL, luma.gl emulates the same logical readback behavior.
    */
   readBuffer(options?: TextureReadOptions, buffer?: Buffer): Buffer {
     throw new Error('readBuffer not implemented');
@@ -337,12 +346,14 @@ export abstract class Texture extends Resource<TextureProps> {
   }
 
   /**
-   * Writes an GPU Buffer into a texture.
+   * Writes a GPU Buffer into a texture.
    *
    * @param buffer - Source GPU buffer.
    * @param options - Destination subresource, extent, and source layout options.
    * @note The memory layout of the texture data is determined by the texture format and dimensions.
-   * @note The application can call Texture.computeMemoryLayout() to compute the layout.
+   * @note The application can call Texture.computeMemoryLayout() to compute the backend-aligned layout.
+   * @note On WebGPU this corresponds to a buffer-to-texture copy and uses buffer-copy alignment rules.
+   * @note On WebGL, luma.gl emulates the same destination and layout semantics.
    */
   writeBuffer(buffer: Buffer, options?: TextureWriteOptions): void {
     throw new Error('readBuffer not implemented');
@@ -353,8 +364,9 @@ export abstract class Texture extends Resource<TextureProps> {
    *
    * @param data - Source texel data.
    * @param options - Destination subresource, extent, and source layout options.
-   * @note The memory layout of the texture data is determined by the texture format and dimensions.
-   * @note The application can call Texture.computeMemoryLayout() to compute the layout.
+   * @note If `bytesPerRow` and `rowsPerImage` are omitted, luma.gl computes a tightly packed CPU-memory layout for the requested region.
+   * @note On WebGPU this corresponds to `GPUQueue.writeTexture()` and does not implicitly pad rows to 256 bytes.
+   * @note On WebGL, padded CPU data is supported via the same `bytesPerRow` and `rowsPerImage` options.
    */
   writeData(
     data: ArrayBuffer | SharedArrayBuffer | ArrayBufferView,
@@ -602,6 +614,23 @@ export abstract class Texture extends Resource<TextureProps> {
       this.dimension === '3d' ? Math.max(1, this.depth >> mipLevel) : this.depth;
 
     return {width, height, depthOrArrayLayers};
+  }
+
+  protected getAllocatedByteLength(): number {
+    let allocatedByteLength = 0;
+
+    for (let mipLevel = 0; mipLevel < this.mipLevels; mipLevel++) {
+      const {width, height, depthOrArrayLayers} = this._getMipLevelSize(mipLevel);
+      allocatedByteLength += textureFormatDecoder.computeMemoryLayout({
+        format: this.format,
+        width,
+        height,
+        depth: depthOrArrayLayers,
+        byteAlignment: 1
+      }).byteLength;
+    }
+
+    return allocatedByteLength * this.samples;
   }
 
   protected static _omitUndefined<T extends object>(options: T): Partial<T> {

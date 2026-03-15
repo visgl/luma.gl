@@ -3,6 +3,7 @@ import {Quaternion} from '@math.gl/core';
 import {GLTFAnimationPath, GLTFAnimationSampler} from './animations';
 import {GroupNode} from '@luma.gl/engine';
 
+/** Applies an evaluated animation value to a scenegraph node. */
 function updateTargetPath(
   target: GroupNode,
   path: GLTFAnimationPath,
@@ -24,6 +25,7 @@ function updateTargetPath(
   }
 }
 
+/** Evaluates a glTF animation sampler at the supplied time and applies the result to a node. */
 export function interpolate(
   time: number,
   {input, interpolation, output}: GLTFAnimationSampler,
@@ -71,6 +73,7 @@ export function interpolate(
   }
 }
 
+/** Applies linear interpolation between two keyframes. */
 function linearInterpolate(
   target: GroupNode,
   path: GLTFAnimationPath,
@@ -91,6 +94,7 @@ function linearInterpolate(
   }
 }
 
+/** Applies glTF cubic spline interpolation between two keyframes. */
 function cubicsplineInterpolate(
   target: GroupNode,
   path: GLTFAnimationPath,
@@ -124,6 +128,7 @@ function cubicsplineInterpolate(
   updateTargetPath(target, path, newVal);
 }
 
+/** Applies step interpolation by copying the current keyframe value. */
 function stepInterpolate(target: GroupNode, path: GLTFAnimationPath, value: number[]) {
   updateTargetPath(target, path, value);
 }

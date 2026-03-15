@@ -46,6 +46,8 @@ export class NullTexture extends Texture {
       arrayLayerCount: 1
     });
 
+    this.trackAllocatedMemory(this.getAllocatedByteLength(), 'Texture');
+
     Object.seal(this);
   }
 
@@ -61,16 +63,6 @@ export class NullTexture extends Texture {
   }
 
   copyExternalImage(options: CopyExternalImageOptions): {width: number; height: number} {
-    this.trackDeallocatedMemory('Texture');
-
-    // const {image: data} = options;
-    // if (data && data.byteLength) {
-    //   this.trackAllocatedMemory(data.byteLength, 'Texture');
-    // } else {
-    const bytesPerPixel = 4;
-    this.trackAllocatedMemory(this.width * this.height * bytesPerPixel, 'Texture');
-    // }
-
     return {width: this.width, height: this.height};
   }
 

@@ -24,4 +24,12 @@ const INFO_HTML = `\
 
 export default class AppAnimationLoopTemplate extends HelloGLTFApp {
   static info = INFO_HTML;
+
+  getDefaultModelName(): string {
+    return 'DamagedHelmet';
+  }
+
+  getModelStorageKey(): string {
+    return 'showcase-last-gltf-model';
+  }
 }

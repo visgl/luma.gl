@@ -10,7 +10,13 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 
 *For detailed commit level logs that include alpha and beta releases, see the [CHANGELOG](https://github.com/visgl/luma.gl/blob/master/CHANGELOG.md) in the github repository.*
 
-## Upgrading to v9.2 (In Development)
+## Upgrading to v9.3
+
+**Potentially breaking behavior**
+- glTF texture sampling now defaults to linear filtering when a glTF sampler omits explicit filter settings.
+- Applications relying on the previous nearest-neighbor default should verify visual output and set sampler filters explicitly when nearest sampling is required.
+
+## Upgrading to v9.2
 
 v9.2 brings full WebGPU support. Some additional deprecations and breaking changes have been necessary, but apart from the `Texture` -> `DynamicTexture` split, impact on most applications should be minimal. 
 
