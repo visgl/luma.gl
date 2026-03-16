@@ -24,7 +24,6 @@ import {luma} from '@luma.gl/core';
 
 const gpuTimeAndMemoryStats = luma.stats.get('GPU Time and Memory');
 const resourceStats = luma.stats.get('GPU Resource Counts');
-const resourceMemoryStats = luma.stats.get('Resource Memory');
 
 console.log('Frame rate', gpuTimeAndMemoryStats.get('Frame Rate').getSampleHz());
 console.log('CPU time', gpuTimeAndMemoryStats.get('CPU Time').getSampleAverageTime());
@@ -36,13 +35,10 @@ console.log('Total resources created', resourceStats.get('Resources Created').co
 console.log('Total resources active', resourceStats.get('Resources Active').count);
 console.log('Buffers active', resourceStats.get('Buffers Active').count);
 console.log('Textures active', resourceStats.get('Textures Active').count);
-// Compatibility bucket (legacy): Resource Memory still tracks the same values.
-console.log('Legacy total GPU memory', resourceMemoryStats.get('GPU Memory').count);
 ```
 
 Notes:
 - `GPU Time and Memory` includes timing and memory counters and is the preferred bucket for most runtime telemetry.
-- `Resource Memory` is maintained as a compatibility alias for memory counters.
 - `GPU Resource Counts` includes only resource life-cycle and type counts.
 - `Resource Counts` is kept as an alias for backward compatibility.
 
@@ -59,6 +55,8 @@ The `GPU Time and Memory` bag includes:
 - `GPU Time`: GPU time sample for frame rendering.
 - `GPU Memory`: total tracked GPU memory across luma.gl resources.
 - `<ResourceType> Memory`: tracked GPU memory for a specific resource type, including `Buffer Memory` and `Texture Memory`.
+
+Animation loop stats are mirrored into `luma.stats` under `Animation Loop`, exposing the latest updated loop's `Frame Rate`, `CPU Time`, and `GPU Time` values through the shared stats manager.
 
 ## Memory Profiling
 

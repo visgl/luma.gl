@@ -31,7 +31,7 @@ export class WebGPURenderPipeline extends RenderPipeline {
   private _bindGroup: GPUBindGroup | null = null;
 
   override get [Symbol.toStringTag]() {
-    return 'WebGPURenderPipeline';
+    return 'RenderPipeline';
   }
 
   constructor(device: WebGPUDevice, props: RenderPipelineProps) {

@@ -128,6 +128,8 @@ export class WEBGLTexture extends Texture {
 
     if (!this.props.handle) {
       this.trackAllocatedMemory(this.getAllocatedByteLength(), 'Texture');
+    } else {
+      this.trackReferencedMemory(this.getAllocatedByteLength(), 'Texture');
     }
 
     // Set texture sampler parameters
@@ -145,9 +147,13 @@ export class WEBGLTexture extends Texture {
       this._framebuffer = null;
       this._framebufferAttachmentKey = null;
 
-      this.gl.deleteTexture(this.handle);
       this.removeStats();
-      this.trackDeallocatedMemory('Texture');
+      if (!this.props.handle) {
+        this.gl.deleteTexture(this.handle);
+        this.trackDeallocatedMemory('Texture');
+      } else {
+        this.trackDeallocatedReferencedMemory('Texture');
+      }
       // this.handle = null;
       this.destroyed = true;
     }

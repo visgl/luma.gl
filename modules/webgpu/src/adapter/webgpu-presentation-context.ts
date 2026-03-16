@@ -64,6 +64,8 @@ export class WebGPUPresentationContext extends PresentationContext {
       colorSpace: this.props.colorSpace,
       alphaMode: this.props.alphaMode
     });
+
+    this._createDepthStencilAttachment(this.device.preferredDepthFormat);
   }
 
   protected override _getCurrentFramebuffer(

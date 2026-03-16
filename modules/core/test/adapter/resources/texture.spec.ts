@@ -1,7 +1,7 @@
 /* eslint-disable no-continue, max-depth */
 
 import test from 'tape-promise/tape';
-import {getWebGLTestDevice, getTestDevices} from '@luma.gl/test-utils';
+import {getWebGLTestDevice, getTestDevices, getWebGPUTestDevice} from '@luma.gl/test-utils';
 
 import {
   TypedArray,
@@ -70,16 +70,13 @@ test('Texture#clone overrides size', async t => {
 function getTextureMemoryStats(device: Device): {
   gpuMemory: number;
   textureMemory: number;
-  mergedGpuMemory: number;
-  mergedTextureMemory: number;
+  referencedTextureMemory: number;
 } {
-  const stats = device.statsManager.getStats('Resource Memory');
-  const mergedStats = device.statsManager.getStats('GPU Time and Memory');
+  const stats = device.statsManager.getStats('GPU Time and Memory');
   return {
     gpuMemory: stats.get('GPU Memory').count,
     textureMemory: stats.get('Texture Memory').count,
-    mergedGpuMemory: mergedStats.get('GPU Memory').count,
-    mergedTextureMemory: mergedStats.get('Texture Memory').count
+    referencedTextureMemory: stats.get('Referenced Texture Memory').count
   };
 }
 
@@ -127,17 +124,6 @@ test('Texture tracks GPU memory stats', async t => {
       `${device.type} Texture updates Texture Memory`
     );
 
-    t.equal(
-      afterCreateStats.mergedGpuMemory - beforeStats.mergedGpuMemory,
-      expectedAllocation,
-      `${device.type} Texture updates merged GPU Memory`
-    );
-    t.equal(
-      afterCreateStats.mergedTextureMemory - beforeStats.mergedTextureMemory,
-      expectedAllocation,
-      `${device.type} Texture updates merged Texture Memory`
-    );
-
     texture.destroy();
 
     const afterDestroyStats = getTextureMemoryStats(device);
@@ -151,18 +137,67 @@ test('Texture tracks GPU memory stats', async t => {
       beforeStats.textureMemory,
       `${device.type} Texture destroy restores Texture Memory`
     );
-
-    t.equal(
-      afterDestroyStats.mergedGpuMemory,
-      beforeStats.mergedGpuMemory,
-      `${device.type} Texture destroy restores merged GPU Memory`
-    );
-    t.equal(
-      afterDestroyStats.mergedTextureMemory,
-      beforeStats.mergedTextureMemory,
-      `${device.type} Texture destroy restores merged Texture Memory`
-    );
   }
+  t.end();
+});
+
+test('Handle-backed Texture tracks referenced memory stats', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+  const beforeStats = getTextureMemoryStats(device);
+  const handle = device.handle.createTexture({
+    size: {width: 4, height: 4, depthOrArrayLayers: 1},
+    usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
+    dimension: '2d',
+    format: 'rgba8unorm',
+    mipLevelCount: 1,
+    sampleCount: 1
+  });
+
+  const texture = device.createTexture({
+    handle,
+    format: 'rgba8unorm',
+    width: 4,
+    height: 4
+  });
+  const afterCreateStats = getTextureMemoryStats(device);
+  const expectedAllocation = getExpectedTextureAllocation(texture);
+
+  t.equal(
+    afterCreateStats.gpuMemory - beforeStats.gpuMemory,
+    expectedAllocation,
+    'webgpu handle-backed Texture updates total GPU Memory'
+  );
+  t.equal(
+    afterCreateStats.textureMemory - beforeStats.textureMemory,
+    0,
+    'webgpu handle-backed Texture does not update owned Texture Memory'
+  );
+  t.equal(
+    afterCreateStats.referencedTextureMemory - beforeStats.referencedTextureMemory,
+    expectedAllocation,
+    'webgpu handle-backed Texture updates Referenced Texture Memory'
+  );
+
+  texture.destroy();
+
+  const afterDestroyStats = getTextureMemoryStats(device);
+  t.equal(
+    afterDestroyStats.gpuMemory,
+    beforeStats.gpuMemory,
+    'webgpu handle-backed Texture destroy restores total GPU Memory'
+  );
+  t.equal(
+    afterDestroyStats.referencedTextureMemory,
+    beforeStats.referencedTextureMemory,
+    'webgpu handle-backed Texture destroy restores Referenced Texture Memory'
+  );
+
+  handle.destroy();
   t.end();
 });
 

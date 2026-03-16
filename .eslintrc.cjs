@@ -91,14 +91,28 @@ module.exports = getESLintConfig({
       },
       {
         // these package source files import workspace packages through tsconfig path aliases during source lint
-        files: ['modules/gltf/src/**/*.ts', 'modules/gltf/src/**/*.js', 'modules/test-utils/src/**/*.ts', 'modules/test-utils/src/**/*.js'],
+        files: [
+          'modules/effects/src/**/*.ts',
+          'modules/effects/src/**/*.js',
+          'modules/engine/src/**/*.ts',
+          'modules/engine/src/**/*.js',
+          'modules/gltf/src/**/*.ts',
+          'modules/gltf/src/**/*.js',
+          'modules/test-utils/src/**/*.ts',
+          'modules/test-utils/src/**/*.js'
+        ],
         rules: {
           'import/no-unresolved': 0
         }
       },
       {
         // examples have their own dependencies defined in their package.json
-        files: ['**/examples/**/*.ts', '**/examples/**/*.js'],
+        files: [
+          '**/examples/**/*.ts',
+          '**/examples/**/*.tsx',
+          '**/examples/**/*.js',
+          '**/examples/**/*.jsx'
+        ],
         rules: {
           'import/no-unresolved': 0,
           'import/no-extraneous-dependencies': 0

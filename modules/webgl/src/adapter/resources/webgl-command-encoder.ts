@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {CommandEncoder, CommandEncoderProps} from '@luma.gl/core';
+import {CommandBufferProps, CommandEncoder, CommandEncoderProps} from '@luma.gl/core';
 import type {
   RenderPassProps,
   ComputePass,
@@ -31,20 +31,29 @@ export class WEBGLCommandEncoder extends CommandEncoder {
   constructor(device: WebGLDevice, props: CommandEncoderProps) {
     super(device, props);
     this.device = device;
-    this.commandBuffer = new WEBGLCommandBuffer(device);
+    this.commandBuffer = new WEBGLCommandBuffer(device, {
+      id: `${this.props.id}-command-buffer`
+    });
   }
 
-  override destroy(): void {}
+  override destroy(): void {
+    this.destroyResource();
+  }
 
-  override finish(): WEBGLCommandBuffer {
+  override finish(props?: CommandBufferProps): WEBGLCommandBuffer {
+    if (props?.id && this.commandBuffer.id !== props.id) {
+      this.commandBuffer.id = props.id;
+      this.commandBuffer.props.id = props.id;
+    }
+    this.destroy();
     return this.commandBuffer;
   }
 
-  beginRenderPass(props: RenderPassProps): WEBGLRenderPass {
+  beginRenderPass(props: RenderPassProps = {}): WEBGLRenderPass {
     return new WEBGLRenderPass(this.device, this._applyTimeProfilingToPassProps(props));
   }
 
-  beginComputePass(props: ComputePassProps): ComputePass {
+  beginComputePass(props: ComputePassProps = {}): ComputePass {
     throw new Error('ComputePass not supported in WebGL');
   }
 

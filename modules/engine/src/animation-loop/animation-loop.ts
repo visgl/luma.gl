@@ -12,6 +12,7 @@ import {AnimationProps} from './animation-props';
 import {Stats, Stat} from '@probe.gl/stats';
 
 let statIdCounter = 0;
+const ANIMATION_LOOP_STATS = 'Animation Loop';
 
 /** AnimationLoop properties */
 export type AnimationLoopProps = {
@@ -45,7 +46,7 @@ export class AnimationLoop {
     onFinalize: () => {},
     onError: error => console.error(error), // eslint-disable-line no-console
 
-    stats: luma.stats.get(`animation-loop-${statIdCounter++}`),
+    stats: undefined!,
 
     // view parameters
     autoResizeViewport: false
@@ -58,6 +59,7 @@ export class AnimationLoop {
   animationProps: AnimationProps | null = null;
   timeline: Timeline | null = null;
   stats: Stats;
+  sharedStats: Stats;
   cpuTime: Stat;
   gpuTime: Stat;
   frameRate: Stat;
@@ -90,7 +92,8 @@ export class AnimationLoop {
     }
 
     // state
-    this.stats = props.stats || new Stats({id: 'animation-loop-stats'});
+    this.stats = props.stats || new Stats({id: `animation-loop-${statIdCounter++}`});
+    this.sharedStats = luma.stats.get(ANIMATION_LOOP_STATS);
     this.frameRate = this.stats.get('Frame Rate');
     this.frameRate.setSampleSize(1);
     this.cpuTime = this.stats.get('CPU Time');
@@ -109,6 +112,15 @@ export class AnimationLoop {
   destroy(): void {
     this.stop();
     this._setDisplay(null);
+    if (
+      this.device &&
+      this._gpuTimeQuery &&
+      this.device.commandEncoder.getTimeProfilingQuerySet() === this._gpuTimeQuery
+    ) {
+      this.device.commandEncoder = this.device.createCommandEncoder({
+        id: this.device.commandEncoder.props.id
+      });
+    }
     if (this._gpuTimeQuery) {
       this._gpuTimeQuery.destroy();
       this._gpuTimeQuery = null;
@@ -550,6 +562,7 @@ export class AnimationLoop {
     }
 
     this.cpuTime.timeEnd();
+    this._updateSharedStats();
   }
 
   _consumeEncodedGpuTime(): void {
@@ -570,6 +583,34 @@ export class AnimationLoop {
     }
 
     return this.device.features.has('timestamp-query');
+  }
+
+  _updateSharedStats(): void {
+    if (this.stats === this.sharedStats) {
+      return;
+    }
+
+    for (const name of Object.keys(this.sharedStats.stats)) {
+      if (!this.stats.stats[name]) {
+        delete this.sharedStats.stats[name];
+      }
+    }
+
+    this.stats.forEach(sourceStat => {
+      const targetStat = this.sharedStats.get(sourceStat.name, sourceStat.type);
+      targetStat.sampleSize = sourceStat.sampleSize;
+      targetStat.time = sourceStat.time;
+      targetStat.count = sourceStat.count;
+      targetStat.samples = sourceStat.samples;
+      targetStat.lastTiming = sourceStat.lastTiming;
+      targetStat.lastSampleTime = sourceStat.lastSampleTime;
+      targetStat.lastSampleCount = sourceStat.lastSampleCount;
+      targetStat._count = sourceStat._count;
+      targetStat._time = sourceStat._time;
+      targetStat._samples = sourceStat._samples;
+      targetStat._startTime = sourceStat._startTime;
+      targetStat._timerPending = sourceStat._timerPending;
+    });
   }
 
   // Event handling

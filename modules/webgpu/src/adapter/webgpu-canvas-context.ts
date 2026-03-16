@@ -69,6 +69,8 @@ export class WebGPUCanvasContext extends CanvasContext {
       colorSpace: this.props.colorSpace,
       alphaMode: this.props.alphaMode
     });
+
+    this._createDepthStencilAttachment(this.device.preferredDepthFormat);
   }
 
   /** Update framebuffer with properly resized "swap chain" texture views */
@@ -98,10 +100,12 @@ export class WebGPUCanvasContext extends CanvasContext {
       this._createDepthStencilAttachment(options?.depthStencilFormat);
     }
 
-    return new WebGPUFramebuffer(this.device, {
+    const framebuffer = new WebGPUFramebuffer(this.device, {
       colorAttachments: [currentColorAttachment],
       depthStencilAttachment: this.depthStencilAttachment
     });
+    framebuffer.attachResource(currentColorAttachment);
+    return framebuffer;
   }
 
   // PRIMARY METHODS

@@ -15,6 +15,7 @@ import {WebGPUFramebuffer} from './webgpu-framebuffer';
 export class WebGPURenderPass extends RenderPass {
   readonly device: WebGPUDevice;
   readonly handle: GPURenderPassEncoder;
+  readonly framebuffer: WebGPUFramebuffer;
 
   /** Active pipeline */
   pipeline: WebGPURenderPipeline | null = null;
@@ -22,24 +23,31 @@ export class WebGPURenderPass extends RenderPass {
   constructor(device: WebGPUDevice, props: RenderPassProps = {}) {
     super(device, props);
     this.device = device;
-    const framebuffer =
-      (props.framebuffer as WebGPUFramebuffer) || device.getCanvasContext().getCurrentFramebuffer();
-
-    const renderPassDescriptor = this.getRenderPassDescriptor(framebuffer);
-
-    if (props.occlusionQuerySet) {
-      renderPassDescriptor.occlusionQuerySet = (props.occlusionQuerySet as WebGPUQuerySet).handle;
+    const {props: renderPassProps} = this;
+    this.framebuffer =
+      (renderPassProps.framebuffer as WebGPUFramebuffer) ||
+      device.getCanvasContext().getCurrentFramebuffer();
+    if (!renderPassProps.framebuffer) {
+      this.attachResource(this.framebuffer);
     }
 
-    if (device.features.has('timestamp-query')) {
-      const webgpuTSQuerySet = props.timestampQuerySet as WebGPUQuerySet;
+    const renderPassDescriptor = this.getRenderPassDescriptor(this.framebuffer);
+
+    if (renderPassProps.occlusionQuerySet) {
+      renderPassDescriptor.occlusionQuerySet = (
+        renderPassProps.occlusionQuerySet as WebGPUQuerySet
+      ).handle;
+    }
+
+    if (renderPassProps.timestampQuerySet) {
+      const webgpuTSQuerySet = renderPassProps.timestampQuerySet as WebGPUQuerySet;
       webgpuTSQuerySet?._invalidateResults();
       renderPassDescriptor.timestampWrites = webgpuTSQuerySet
         ? ({
             querySet: webgpuTSQuerySet.handle,
-            beginningOfPassWriteIndex: props.beginTimestampIndex,
-            endOfPassWriteIndex: props.endTimestampIndex
-          } as GPUComputePassTimestampWrites)
+            beginningOfPassWriteIndex: renderPassProps.beginTimestampIndex,
+            endOfPassWriteIndex: renderPassProps.endTimestampIndex
+          } as GPURenderPassTimestampWrites)
         : undefined;
     }
 
@@ -60,10 +68,16 @@ export class WebGPURenderPass extends RenderPass {
     log.groupEnd(3)();
   }
 
-  override destroy(): void {}
+  override destroy(): void {
+    this.destroyResource();
+  }
 
   end(): void {
+    if (this.destroyed) {
+      return;
+    }
     this.handle.end();
+    this.destroy();
   }
 
   setPipeline(pipeline: RenderPipeline): void {

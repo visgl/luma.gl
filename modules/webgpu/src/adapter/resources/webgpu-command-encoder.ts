@@ -3,6 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {
+  CommandBufferProps,
   RenderPassProps,
   ComputePassProps,
   CopyTextureToTextureOptions,
@@ -34,9 +35,11 @@ export class WebGPUCommandEncoder extends CommandEncoder {
     this.handle.label = this.props.id;
   }
 
-  override destroy(): void {}
+  override destroy(): void {
+    this.destroyResource();
+  }
 
-  finish(props?: CommandEncoderProps): WebGPUCommandBuffer {
+  finish(props?: CommandBufferProps): WebGPUCommandBuffer {
     this.device.pushErrorScope('validation');
     const commandBuffer = new WebGPUCommandBuffer(this, {
       id: props?.id || 'unnamed-command-buffer'
@@ -46,6 +49,7 @@ export class WebGPUCommandEncoder extends CommandEncoder {
       this.device.reportError(new Error(message), this)();
       this.device.debug();
     });
+    this.destroy();
     return commandBuffer;
   }
 
@@ -53,11 +57,11 @@ export class WebGPUCommandEncoder extends CommandEncoder {
    * Allows a render pass to begin against a canvas context
    * @todo need to support a "Framebuffer" equivalent (aka preconfigured RenderPassDescriptors?).
    */
-  beginRenderPass(props: RenderPassProps): WebGPURenderPass {
+  beginRenderPass(props: RenderPassProps = {}): WebGPURenderPass {
     return new WebGPURenderPass(this.device, this._applyTimeProfilingToPassProps(props));
   }
 
-  beginComputePass(props: ComputePassProps): WebGPUComputePass {
+  beginComputePass(props: ComputePassProps = {}): WebGPUComputePass {
     return new WebGPUComputePass(this.device, this._applyTimeProfilingToPassProps(props));
   }
 

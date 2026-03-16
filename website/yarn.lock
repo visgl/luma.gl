@@ -3410,6 +3410,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@probe.gl/stats@npm:^4.1.1":
+  version: 4.1.1
+  resolution: "@probe.gl/stats@npm:4.1.1"
+  checksum: 10c0/7fd49d891e5ecfc82330c0db9180cc6a3fae0f78062570fabdc1860f79f09b612c53af08b9d6e2bb701b79fb7156ec2c9c0ddf53e5dba12b0560c7bbc957afc7
+  languageName: node
+  linkType: hard
+
 "@sideway/address@npm:^4.1.5":
   version: 4.1.5
   resolution: "@sideway/address@npm:4.1.5"
@@ -13347,6 +13354,7 @@ __metadata:
     "@cmfcmf/docusaurus-search-local": "npm:^2.0.0"
     "@docusaurus/core": "npm:^3.9.2"
     "@docusaurus/tsconfig": "npm:^3.9.2"
+    "@probe.gl/stats": "npm:^4.1.1"
     "@probe.gl/stats-widget": "npm:^4.1.1"
     "@vis.gl/docusaurus-website": "npm:1.0.0-alpha.21"
     clsx: "npm:^1.1.1"

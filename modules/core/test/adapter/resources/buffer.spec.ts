@@ -16,16 +16,13 @@ const DEVICE_TYPES = ['webgpu', 'webgl', 'null'] as const;
 function getMemoryStats(device: Device): {
   gpuMemory: number;
   bufferMemory: number;
-  mergedGpuMemory: number;
-  mergedBufferMemory: number;
+  referencedBufferMemory: number;
 } {
-  const stats = device.statsManager.getStats('Resource Memory');
-  const mergedStats = device.statsManager.getStats('GPU Time and Memory');
+  const stats = device.statsManager.getStats('GPU Time and Memory');
   return {
     gpuMemory: stats.get('GPU Memory').count,
     bufferMemory: stats.get('Buffer Memory').count,
-    mergedGpuMemory: mergedStats.get('GPU Memory').count,
-    mergedBufferMemory: mergedStats.get('Buffer Memory').count
+    referencedBufferMemory: stats.get('Referenced Buffer Memory').count
   };
 }
 
@@ -44,6 +41,9 @@ function getResourceStats(device: Device): {
   };
 }
 
+function getStatNames(device: Device, statsName: string): string[] {
+  return Object.keys(device.statsManager.getStats(statsName).stats);
+}
 function getLegacyResourceStats(device: Device) {
   return {
     resourcesCreated: device.statsManager.getStats('Resource Counts').get('Resources Created')
@@ -166,17 +166,6 @@ test('Buffer tracks GPU memory stats', async t => {
       `${device.type} Buffer updates Buffer Memory`
     );
 
-    t.equal(
-      afterCreateStats.mergedGpuMemory - beforeStats.mergedGpuMemory,
-      expectedAllocation,
-      `${device.type} Buffer updates merged GPU Memory`
-    );
-    t.equal(
-      afterCreateStats.mergedBufferMemory - beforeStats.mergedBufferMemory,
-      expectedAllocation,
-      `${device.type} Buffer updates merged Buffer Memory`
-    );
-
     buffer.destroy();
 
     const afterDestroyStats = getMemoryStats(device);
@@ -190,19 +179,62 @@ test('Buffer tracks GPU memory stats', async t => {
       beforeStats.bufferMemory,
       `${device.type} Buffer destroy restores Buffer Memory`
     );
-
-    t.equal(
-      afterDestroyStats.mergedGpuMemory,
-      beforeStats.mergedGpuMemory,
-      `${device.type} Buffer destroy restores merged GPU Memory`
-    );
-    t.equal(
-      afterDestroyStats.mergedBufferMemory,
-      beforeStats.mergedBufferMemory,
-      `${device.type} Buffer destroy restores merged Buffer Memory`
-    );
   }
 
+  t.end();
+});
+
+test('Handle-backed Buffer tracks referenced memory stats', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+  const beforeStats = getMemoryStats(device);
+  const handle = device.handle.createBuffer({
+    size: 12,
+    usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST
+  });
+
+  const buffer = device.createBuffer({
+    handle,
+    byteLength: 12,
+    usage: Buffer.VERTEX | Buffer.COPY_DST
+  });
+  const afterCreateStats = getMemoryStats(device);
+
+  t.equal(
+    afterCreateStats.gpuMemory - beforeStats.gpuMemory,
+    12,
+    'webgpu handle-backed Buffer updates total GPU Memory'
+  );
+  t.equal(
+    afterCreateStats.bufferMemory - beforeStats.bufferMemory,
+    0,
+    'webgpu handle-backed Buffer does not update owned Buffer Memory'
+  );
+  t.equal(
+    afterCreateStats.referencedBufferMemory - beforeStats.referencedBufferMemory,
+    12,
+    'webgpu handle-backed Buffer updates Referenced Buffer Memory'
+  );
+
+  buffer.destroy();
+
+  const afterDestroyStats = getMemoryStats(device);
+  t.equal(
+    afterDestroyStats.gpuMemory,
+    beforeStats.gpuMemory,
+    'webgpu handle-backed Buffer destroy restores total GPU Memory'
+  );
+  t.equal(
+    afterDestroyStats.referencedBufferMemory,
+    beforeStats.referencedBufferMemory,
+    'webgpu handle-backed Buffer destroy restores Referenced Buffer Memory'
+  );
+
+  handle.destroy();
   t.end();
 });
 
@@ -299,6 +331,52 @@ test('Buffer tracks resource counts in core stats', async t => {
       afterDestroyLegacyStats.buffersActive,
       `${device.type} Legacy and new buckets match on Buffers Active`
     );
+  }
+
+  t.end();
+});
+
+test('Core stats use canonical resource ordering', async t => {
+  for (const device of await getTestDevices(['null'])) {
+    const buffer = device.createBuffer({byteLength: 4, usage: Buffer.VERTEX});
+
+    t.deepEqual(
+      getStatNames(device, 'Resource Counts').slice(0, 10),
+      [
+        'Resources Created',
+        'Resources Active',
+        'Buffers Created',
+        'Buffers Active',
+        'Textures Created',
+        'Textures Active',
+        'Samplers Created',
+        'Samplers Active',
+        'TextureViews Created',
+        'TextureViews Active'
+      ],
+      'core Resource Counts stats use canonical ordering'
+    );
+
+    t.deepEqual(
+      getStatNames(device, 'GPU Time and Memory').slice(0, 12),
+      [
+        'Adapter',
+        'GPU',
+        'GPU Type',
+        'GPU Backend',
+        'Frame Rate',
+        'CPU Time',
+        'GPU Time',
+        'GPU Memory',
+        'Buffer Memory',
+        'Texture Memory',
+        'Referenced Buffer Memory',
+        'Referenced Texture Memory'
+      ],
+      'GPU Time and Memory stats use canonical ordering'
+    );
+
+    buffer.destroy();
   }
 
   t.end();

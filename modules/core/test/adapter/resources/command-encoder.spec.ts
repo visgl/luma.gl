@@ -4,10 +4,158 @@
 
 import test, {Test} from 'tape-promise/tape';
 import {Buffer, Device, TextureFormat} from '@luma.gl/core';
-import {getWebGLTestDevice} from '@luma.gl/test-utils';
+import {getTestDevices, getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 
 const EPSILON = 1e-6;
 const {abs} = Math;
+
+function getResourceStats(device: Device): Record<string, number> {
+  const stats = device.statsManager.getStats('Resource Counts');
+  return {
+    resourcesActive: stats.get('Resources Active').count,
+    commandEncodersActive: stats.get('CommandEncoders Active').count,
+    commandBuffersActive: stats.get('CommandBuffers Active').count,
+    renderPasssActive: stats.get('RenderPasss Active').count,
+    computePasssActive: stats.get('ComputePasss Active').count,
+    framebuffersActive: stats.get('Framebuffers Active').count,
+    texturesActive: stats.get('Textures Active').count,
+    samplersActive: stats.get('Samplers Active').count,
+    textureViewsActive: stats.get('TextureViews Active').count
+  };
+}
+
+test('Transient command resources release core stats', async t => {
+  for (const device of await getTestDevices(['webgl', 'webgpu', 'null'])) {
+    const beforeStats = getResourceStats(device);
+
+    const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 0]});
+    const duringRenderPassStats = getResourceStats(device);
+    t.equal(
+      duringRenderPassStats.renderPasssActive - beforeStats.renderPasssActive,
+      1,
+      `${device.type} beginRenderPass increments RenderPasss Active`
+    );
+
+    renderPass.end();
+
+    const afterRenderPassStats = getResourceStats(device);
+    t.equal(
+      afterRenderPassStats.renderPasssActive,
+      beforeStats.renderPasssActive,
+      `${device.type} RenderPass.end restores RenderPasss Active`
+    );
+
+    const commandEncoder = device.createCommandEncoder();
+    const afterCommandEncoderStats = getResourceStats(device);
+    t.equal(
+      afterCommandEncoderStats.commandEncodersActive - afterRenderPassStats.commandEncodersActive,
+      1,
+      `${device.type} createCommandEncoder increments CommandEncoders Active`
+    );
+
+    const commandBuffer = commandEncoder.finish();
+    const afterFinishStats = getResourceStats(device);
+    t.equal(
+      afterFinishStats.commandEncodersActive,
+      afterRenderPassStats.commandEncodersActive,
+      `${device.type} CommandEncoder.finish restores CommandEncoders Active`
+    );
+    t.equal(
+      afterFinishStats.commandBuffersActive - afterRenderPassStats.commandBuffersActive,
+      1,
+      `${device.type} CommandEncoder.finish increments CommandBuffers Active`
+    );
+
+    device.submit(commandBuffer);
+
+    const afterSubmitStats = getResourceStats(device);
+    t.equal(
+      afterSubmitStats.commandBuffersActive,
+      afterRenderPassStats.commandBuffersActive,
+      `${device.type} Device.submit restores CommandBuffers Active`
+    );
+    t.equal(
+      afterSubmitStats.resourcesActive,
+      beforeStats.resourcesActive,
+      `${device.type} transient command resources restore total Resources Active`
+    );
+  }
+
+  const webgpuDevice = await getWebGPUTestDevice();
+  if (!webgpuDevice) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+  const beforeStats = getResourceStats(webgpuDevice);
+  const computePass = webgpuDevice.beginComputePass({});
+  const duringComputePassStats = getResourceStats(webgpuDevice);
+  t.equal(
+    duringComputePassStats.computePasssActive - beforeStats.computePasssActive,
+    1,
+    'webgpu beginComputePass increments ComputePasss Active'
+  );
+
+  computePass.end();
+
+  const afterComputePassStats = getResourceStats(webgpuDevice);
+  t.equal(
+    afterComputePassStats.computePasssActive,
+    beforeStats.computePasssActive,
+    'webgpu ComputePass.end restores ComputePasss Active'
+  );
+
+  const beforeCanvasStats = getResourceStats(webgpuDevice);
+  const defaultFramebufferRenderPass = webgpuDevice.beginRenderPass({clearColor: [0, 0, 0, 1]});
+  const duringCanvasStats = getResourceStats(webgpuDevice);
+  t.equal(
+    duringCanvasStats.framebuffersActive - beforeCanvasStats.framebuffersActive,
+    1,
+    'webgpu default render pass allocates one transient framebuffer wrapper'
+  );
+  t.equal(
+    duringCanvasStats.texturesActive - beforeCanvasStats.texturesActive,
+    1,
+    'webgpu default render pass allocates one transient swapchain texture wrapper'
+  );
+  t.equal(
+    duringCanvasStats.samplersActive - beforeCanvasStats.samplersActive,
+    1,
+    'webgpu default render pass allocates one transient sampler wrapper'
+  );
+  t.equal(
+    duringCanvasStats.textureViewsActive - beforeCanvasStats.textureViewsActive,
+    1,
+    'webgpu default render pass allocates one transient texture view wrapper'
+  );
+
+  defaultFramebufferRenderPass.end();
+  webgpuDevice.submit();
+
+  const afterCanvasStats = getResourceStats(webgpuDevice);
+  t.equal(
+    afterCanvasStats.framebuffersActive,
+    beforeCanvasStats.framebuffersActive,
+    'webgpu default render pass releases framebuffer wrapper stats'
+  );
+  t.equal(
+    afterCanvasStats.texturesActive,
+    beforeCanvasStats.texturesActive,
+    'webgpu default render pass releases texture wrapper stats'
+  );
+  t.equal(
+    afterCanvasStats.samplersActive,
+    beforeCanvasStats.samplersActive,
+    'webgpu default render pass releases sampler wrapper stats'
+  );
+  t.equal(
+    afterCanvasStats.textureViewsActive,
+    beforeCanvasStats.textureViewsActive,
+    'webgpu default render pass releases texture view wrapper stats'
+  );
+
+  t.end();
+});
 
 test('CommandBuffer#copyBufferToBuffer', async t => {
   const device = await getWebGLTestDevice();

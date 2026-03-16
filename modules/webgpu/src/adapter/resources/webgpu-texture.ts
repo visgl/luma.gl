@@ -66,10 +66,12 @@ export class WebGPUTexture extends Texture {
       this.height = this.handle.height;
     }
 
-    this.sampler =
-      props.sampler instanceof WebGPUSampler
-        ? props.sampler
-        : new WebGPUSampler(this.device, (props.sampler as SamplerProps) || {});
+    if (props.sampler instanceof WebGPUSampler) {
+      this.sampler = props.sampler;
+    } else {
+      this.sampler = new WebGPUSampler(this.device, (props.sampler as SamplerProps) || {});
+      this.attachResource(this.sampler);
+    }
 
     this.view = new WebGPUTextureView(this.device, {
       ...this.props,
@@ -78,6 +80,7 @@ export class WebGPUTexture extends Texture {
       // Note: arrayLayerCount controls the view of array textures, but does not apply to 3d texture depths
       arrayLayerCount: this.dimension !== '3d' ? this.depth : 1
     });
+    this.attachResource(this.view);
 
     // Set initial data
     // Texture base class strips out the data prop from this.props, so we need to handle it here
@@ -85,18 +88,26 @@ export class WebGPUTexture extends Texture {
 
     if (!this.props.handle) {
       this.trackAllocatedMemory(this.getAllocatedByteLength(), 'Texture');
+    } else {
+      this.trackReferencedMemory(this.getAllocatedByteLength(), 'Texture');
     }
   }
 
   override destroy(): void {
-    if (!this.destroyed && this.handle) {
-      this.removeStats();
+    if (this.destroyed) {
+      return;
+    }
+
+    if (!this.props.handle && this.handle) {
       this.trackDeallocatedMemory('Texture');
       this.handle.destroy();
-      this.destroyed = true;
-      // @ts-expect-error readonly
-      this.handle = null;
+    } else if (this.handle) {
+      this.trackDeallocatedReferencedMemory('Texture');
     }
+
+    this.destroyResource();
+    // @ts-expect-error readonly
+    this.handle = null;
   }
 
   createView(props: TextureViewProps): WebGPUTextureView {

@@ -71,12 +71,16 @@ export class WEBGLRenderPass extends RenderPass {
   }
 
   end(): void {
+    if (this.destroyed) {
+      return;
+    }
     if (this.props.timestampQuerySet && this.props.endTimestampIndex !== undefined) {
       const webglQuerySet = this.props.timestampQuerySet as WEBGLQuerySet;
       webglQuerySet.writeTimestamp(this.props.endTimestampIndex);
     }
     this.device.popState();
     // should add commands to CommandEncoder.
+    this.destroy();
   }
 
   pushDebugGroup(groupLabel: string): void {}
