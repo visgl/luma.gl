@@ -278,10 +278,15 @@ export class AnimationLoop {
 
     // Initialize GPU time query if supported by the active adapter.
     if (this._hasTimestampQuerySupport()) {
+      const device = this.device;
       try {
-        this._gpuTimeQuery = this.device.createQuerySet({type: 'timestamp', count: 256});
-        this.device.commandEncoder = this.device.createCommandEncoder({
-          id: this.device.commandEncoder.props.id,
+        if (!device) {
+          return;
+        }
+
+        this._gpuTimeQuery = device.createQuerySet({type: 'timestamp', count: 256});
+        device.commandEncoder = device.createCommandEncoder({
+          id: device.commandEncoder.props.id,
           timeProfilingQuerySet: this._gpuTimeQuery
         });
       } catch {
