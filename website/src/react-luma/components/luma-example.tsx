@@ -95,7 +95,9 @@ function getGpuBackendLabel(device: Device | null): string {
   return device?.info.gpuBackend || 'unknown';
 }
 
-function getGpuTimeAndMemoryStatFormatters(device: Device | null): Record<string, string | StatFormatter> {
+function getGpuTimeAndMemoryStatFormatters(
+  device: Device | null
+): Record<string, string | StatFormatter> {
   return {
     ...GPU_TIME_AND_MEMORY_STATS_FORMATTERS,
     Adapter: () => `Adapter: ${getAdapterLabel(device)}`,
@@ -142,8 +144,8 @@ const state = {
 const EXAMPLE_CONTAINER_STYLE: CSSProperties = {
   position: 'relative',
   width: '100%',
-  height: 'calc(100vh - var(--ifm-navbar-height) - 6rem)',
-  minHeight: 'calc(100vh - var(--ifm-navbar-height) - 6rem)'
+  height: 'calc(100vh - var(--ifm-navbar-height))',
+  minHeight: 'calc(100vh - var(--ifm-navbar-height))'
 };
 
 const EXAMPLE_CANVAS_STYLE: CSSProperties = {
@@ -158,7 +160,13 @@ const EXAMPLE_HEADER_STYLE: CSSProperties = {
   alignItems: 'flex-start',
   justifyContent: 'space-between',
   gap: 20,
-  padding: '12px 20px'
+  padding: '12px 20px',
+  position: 'absolute',
+  top: 0,
+  right: 0,
+  left: 0,
+  zIndex: 20,
+  pointerEvents: 'none'
 };
 
 const EXAMPLE_INFO_STYLE: CSSProperties = {
@@ -252,29 +260,31 @@ export const InfoBox: FC<InfoBoxProps> = (props: InfoBoxProps) => {
               border: '1px solid #d0d7de',
               background: '#fff',
               borderRadius: 999,
-              width: 28,
+              minWidth: 56,
+              padding: '0 12px',
               height: 28,
               fontSize: 14,
               lineHeight: 1,
+              whiteSpace: 'nowrap',
               cursor: 'pointer'
             }}
           >
-            {isCollapsed ? '▾' : '▴'}
+            {isCollapsed ? 'Info' : 'Hide'}
           </button>
         </div>
       </div>
-      {!isCollapsed ? (
-        <div
-          style={{
-            marginTop: 12,
-            maxHeight: maxInfoContentHeight,
-            overflowY: 'auto'
-          }}
-        >
-          {props.html ? <div dangerouslySetInnerHTML={{__html: props.html}} /> : null}
-          {props.children}
-        </div>
-      ) : null}
+      <div
+        hidden={isCollapsed}
+        aria-hidden={isCollapsed}
+        style={{
+          marginTop: isCollapsed ? 0 : 12,
+          maxHeight: maxInfoContentHeight,
+          overflowY: 'auto'
+        }}
+      >
+        {props.html ? <div dangerouslySetInnerHTML={{__html: props.html}} /> : null}
+        {props.children}
+      </div>
     </div>
   );
 };
@@ -299,10 +309,11 @@ export const ExampleHeader: FC<ExampleHeaderProps> = (props: ExampleHeaderProps)
         directory={props.directory}
         sourceDirectory={props.sourceDirectory}
         sourcePath={props.sourcePath}
+        style={{pointerEvents: 'auto'}}
       >
         {props.children}
       </InfoBox>
-      <DeviceTabs devices={props.devices} style={{flexShrink: 0}} />
+      <DeviceTabs devices={props.devices} style={{flexShrink: 0, pointerEvents: 'auto'}} />
     </div>
   );
 };
@@ -465,7 +476,9 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
           })
         ];
         for (const statsWidget of statsWidgets) {
-          const collapsed = statsWidget.title ? statsWidgetCollapsedState.current[statsWidget.title] : undefined;
+          const collapsed = statsWidget.title
+            ? statsWidgetCollapsedState.current[statsWidget.title]
+            : undefined;
           statsWidget.setCollapsed(collapsed ?? true);
         }
 
@@ -546,8 +559,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
   return (
     <ExamplePage
       style={{
-        display: 'grid',
-        gridTemplateRows: showHeader ? 'auto minmax(0, 1fr)' : 'minmax(0, 1fr)',
+        overflow: 'hidden',
         ...props.style
       }}
     >
@@ -562,7 +574,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
           {info ? <div dangerouslySetInnerHTML={{__html: info}} /> : null}
         </ExampleHeader>
       ) : null}
-      <div ref={statsContainerRef} style={{minHeight: 0, position: 'relative'}}>
+      <div ref={statsContainerRef} style={{minHeight: 0, position: 'absolute', inset: 0}}>
         {showStats ? (
           <div
             ref={statsPanelRef}

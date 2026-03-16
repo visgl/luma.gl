@@ -42,6 +42,12 @@
   padding-right: 0;
 }
 
+.container:has(.luma-example-page) {
+  max-width: none;
+  width: 100%;
+  padding: 0;
+}
+
 .container:has(.integration-example-page) {
   max-width: none;
   width: 100%;
@@ -49,12 +55,22 @@
   padding-right: 1rem;
 }
 
+.container:has(.luma-example-page) > [class*='doc-item-component__DemoContainer'],
 .container:has(.textures-example-page) > [class*='doc-item-component__DemoContainer'] {
   height: calc(100vh - var(--ifm-navbar-height));
 }
 
 .textures-example-page {
   width: 100%;
+}
+
+body:has(.luma-example-page) .theme-doc-sidebar-container {
+  display: none;
+}
+
+body:has(.luma-example-page) .theme-doc-sidebar-container + main {
+  width: 100%;
+  max-width: none;
 }
 
 body:has(.luma-example-page) .theme-layout-footer,
