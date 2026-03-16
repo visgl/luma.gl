@@ -28,7 +28,11 @@ test('WebGPU default canvas context reuses framebuffer wrappers', async t => {
   const firstFramebuffer = canvasContext.getCurrentFramebuffer();
   const secondFramebuffer = canvasContext.getCurrentFramebuffer();
 
-  t.equal(secondFramebuffer, firstFramebuffer, 'WebGPU canvas context reuses its framebuffer wrapper');
+  t.equal(
+    secondFramebuffer,
+    firstFramebuffer,
+    'WebGPU canvas context reuses its framebuffer wrapper'
+  );
   t.equal(
     secondFramebuffer.colorAttachments[0],
     firstFramebuffer.colorAttachments[0],

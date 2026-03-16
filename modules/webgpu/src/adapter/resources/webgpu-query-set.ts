@@ -5,13 +5,10 @@
 import {Buffer, QuerySet, QuerySetProps} from '@luma.gl/core';
 import {WebGPUDevice} from '../webgpu-device';
 import {WebGPUBuffer} from './webgpu-buffer';
-
-const CPU_HOTSPOT_SUBMIT_REASON = 'cpu-hotspot-submit-reason';
-
-export type QuerySetProps2 = {
-  type: 'occlusion' | 'timestamp';
-  count: number;
-};
+import {
+  getCpuHotspotSubmitReason,
+  setCpuHotspotSubmitReason
+} from '../helpers/cpu-hotspot-profiler';
 
 /**
  * Immutable
@@ -119,12 +116,12 @@ export class WebGPUQuerySet extends QuerySet {
           destinationBuffer: this._readBuffer!,
           size: this._resolveBuffer!.byteLength
         });
-        const previousSubmitReason = this.device.userData[CPU_HOTSPOT_SUBMIT_REASON];
-        this.device.userData[CPU_HOTSPOT_SUBMIT_REASON] = 'query-readback';
+        const previousSubmitReason = getCpuHotspotSubmitReason(this.device) || undefined;
+        setCpuHotspotSubmitReason(this.device, 'query-readback');
         try {
           this.device.submit();
         } finally {
-          this.device.userData[CPU_HOTSPOT_SUBMIT_REASON] = previousSubmitReason;
+          setCpuHotspotSubmitReason(this.device, previousSubmitReason);
         }
       }
 

@@ -691,7 +691,9 @@ or create a device with the 'debug: true' prop.`;
    * collected for this device.
    */
   _supportsDebugGPUTime(): boolean {
-    return this.features.has('timestamp-query') && Boolean(this.props.debug || this.props.debugGPUTime);
+    return (
+      this.features.has('timestamp-query') && Boolean(this.props.debug || this.props.debugGPUTime)
+    );
   }
 
   /**
@@ -916,9 +918,11 @@ function getDefaultDebugValue(): boolean {
 }
 
 function getNodeEnv(): string | undefined {
-  const processObject = (globalThis as typeof globalThis & {
-    process?: {env?: Record<string, string | undefined>};
-  }).process;
+  const processObject = (
+    globalThis as typeof globalThis & {
+      process?: {env?: Record<string, string | undefined>};
+    }
+  ).process;
   if (!processObject?.env) {
     return undefined;
   }

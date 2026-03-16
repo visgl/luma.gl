@@ -32,7 +32,10 @@ const RESOURCE_COUNT_STAT_ORDER = RESOURCE_COUNT_ORDER.flatMap(resourceType => [
   `${resourceType} Created`,
   `${resourceType} Active`
 ]);
-const ORDERED_STATS_CACHE = new WeakMap<Stats, {orderedStatNames: readonly string[]; statCount: number}>();
+const ORDERED_STATS_CACHE = new WeakMap<
+  Stats,
+  {orderedStatNames: readonly string[]; statCount: number}
+>();
 const ORDERED_STAT_NAME_SET_CACHE = new WeakMap<readonly string[], Set<string>>();
 const RESOURCE_COUNT_STATS_INITIALIZED = new WeakSet<Stats>();
 
@@ -306,7 +309,10 @@ function selectivelyMerge<Props>(props: Props, defaultProps: Required<Props>): R
 }
 
 function initializeStats(stats: Stats, orderedStatNames: readonly string[]): void {
-  if (orderedStatNames === RESOURCE_COUNT_STAT_ORDER && RESOURCE_COUNT_STATS_INITIALIZED.has(stats)) {
+  if (
+    orderedStatNames === RESOURCE_COUNT_STAT_ORDER &&
+    RESOURCE_COUNT_STATS_INITIALIZED.has(stats)
+  ) {
     return;
   }
 

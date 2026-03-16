@@ -5,14 +5,7 @@
 import {TextureView, TextureViewProps} from '@luma.gl/core';
 import type {WebGPUDevice} from '../webgpu-device';
 import type {WebGPUTexture} from './webgpu-texture';
-
-const CPU_HOTSPOT_PROFILER_MODULE = 'cpu-hotspot-profiler';
-
-type CpuHotspotProfiler = {
-  enabled?: boolean;
-  textureViewReinitializeCount?: number;
-  textureViewReinitializeTimeMs?: number;
-};
+import {getCpuHotspotProfiler, getTimestamp} from '../helpers/cpu-hotspot-profiler';
 
 /*
   // type = sampler
@@ -111,13 +104,4 @@ export class WebGPUTextureView extends TextureView {
     // @ts-expect-error readonly
     this.handle = handle;
   }
-}
-
-function getCpuHotspotProfiler(device: WebGPUDevice): CpuHotspotProfiler | null {
-  const profiler = device.userData[CPU_HOTSPOT_PROFILER_MODULE] as CpuHotspotProfiler | undefined;
-  return profiler?.enabled ? profiler : null;
-}
-
-function getTimestamp(): number {
-  return globalThis.performance?.now?.() ?? Date.now();
 }

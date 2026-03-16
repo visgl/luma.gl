@@ -57,9 +57,7 @@ test('WebGPU CPU hotspot benchmark distinguishes default canvas and explicit fra
   const webglDevice = await getWebGLTestDevice();
   const webgpuDevice = await getWebGPUTestDevice();
 
-  const webglDefaultSummary = measureScenario(webglDevice, () =>
-    renderEmptyFrame(webglDevice, {})
-  );
+  const webglDefaultSummary = measureScenario(webglDevice, () => renderEmptyFrame(webglDevice, {}));
   t.comment(formatSummary('webgl default canvas', webglDefaultSummary));
 
   if (!webgpuDevice) {
@@ -205,7 +203,9 @@ test('WebGPU error-scope profiler only records scoped validation in debug mode',
   }
 
   const debugSummary = measureScenario(debugDevice, () => renderEmptyFrame(debugDevice, {}));
-  const nonDebugSummary = measureScenario(nonDebugDevice, () => renderEmptyFrame(nonDebugDevice, {}));
+  const nonDebugSummary = measureScenario(nonDebugDevice, () =>
+    renderEmptyFrame(nonDebugDevice, {})
+  );
 
   t.ok(
     (debugSummary.profiler.errorScopePushCount || 0) > 0,
@@ -288,14 +288,12 @@ function formatSummary(name: string, summary: BenchmarkSummary): string {
   return [
     name,
     `avgFrame=${summary.averageFrameTimeMs.toFixed(3)}ms`,
-    `acquire=${average(
-      profiler.framebufferAcquireTimeMs,
-      profiler.framebufferAcquireCount
-    ).toFixed(3)}ms`,
-    `renderPass=${average(
-      profiler.renderPassSetupTimeMs,
-      profiler.renderPassSetupCount
-    ).toFixed(3)}ms`,
+    `acquire=${average(profiler.framebufferAcquireTimeMs, profiler.framebufferAcquireCount).toFixed(
+      3
+    )}ms`,
+    `renderPass=${average(profiler.renderPassSetupTimeMs, profiler.renderPassSetupCount).toFixed(
+      3
+    )}ms`,
     `submit=${average(profiler.submitTimeMs, profiler.submitCount).toFixed(3)}ms`,
     `queueSubmit=${average(profiler.queueSubmitTimeMs, profiler.queueSubmitCount).toFixed(3)}ms`,
     `submitResolve=${average(
@@ -306,10 +304,9 @@ function formatSummary(name: string, summary: BenchmarkSummary): string {
       profiler.commandBufferDestroyTimeMs,
       profiler.commandBufferDestroyCount
     ).toFixed(3)}ms`,
-    `stats=${average(
-      profiler.statsBookkeepingTimeMs,
-      profiler.statsBookkeepingCalls
-    ).toFixed(3)}ms`,
+    `stats=${average(profiler.statsBookkeepingTimeMs, profiler.statsBookkeepingCalls).toFixed(
+      3
+    )}ms`,
     `errorScopes=${averageErrorScopeTime(profiler).toFixed(3)}ms`,
     `transient=${profiler.transientCanvasResourceCreates || 0}`
   ].join(' ');
@@ -320,8 +317,7 @@ function average(total = 0, count = 0): number {
 }
 
 function averageErrorScopeTime(profiler: CpuHotspotProfiler): number {
-  const totalScopeCalls =
-    (profiler.errorScopePushCount || 0) + (profiler.errorScopePopCount || 0);
+  const totalScopeCalls = (profiler.errorScopePushCount || 0) + (profiler.errorScopePopCount || 0);
   return average(profiler.errorScopeTimeMs, totalScopeCalls);
 }
 

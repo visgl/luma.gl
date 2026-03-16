@@ -67,6 +67,7 @@ declare global {
 let cpuHotspotProfilerTargets: CpuHotspotProfilerTargets = {};
 let isCpuHotspotProfilerEnabled = false;
 
+/** Installs the website-only `window.lumaCpuHotspotProfiler` console helper once. */
 export function installCpuHotspotProfilerApi(): void {
   if (typeof window === 'undefined' || window.lumaCpuHotspotProfiler) {
     return;
@@ -116,6 +117,7 @@ export function installCpuHotspotProfilerApi(): void {
   };
 }
 
+/** Updates the shared website devices targeted by the console profiler helper. */
 export function updateCpuHotspotProfilerTargets(targets: {
   device?: Device;
   presentationDevice?: Device;
@@ -131,6 +133,7 @@ export function updateCpuHotspotProfilerTargets(targets: {
   }
 }
 
+/** Points the profiler helper at the currently rendered example device. */
 export function setActiveCpuHotspotProfilerDevice(device: Device | null): void {
   cpuHotspotProfilerTargets.exampleDevice = device;
   if (isCpuHotspotProfilerEnabled) {
@@ -138,6 +141,7 @@ export function setActiveCpuHotspotProfilerDevice(device: Device | null): void {
   }
 }
 
+/** Clears the example device target when that device is torn down. */
 export function clearActiveCpuHotspotProfilerDevice(device: Device | null): void {
   if (cpuHotspotProfilerTargets.exampleDevice === device) {
     cpuHotspotProfilerTargets.exampleDevice = null;

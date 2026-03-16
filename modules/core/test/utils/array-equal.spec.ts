@@ -27,7 +27,10 @@ test('arrayEqual avoids element-wise comparison for large arrays unless referenc
 
   t.ok(arrayEqual(largeArray, largeArray), 'same large array reference compares equal');
   t.notOk(
-    arrayEqual(largeArray, Array.from({length: 17}, (_, index) => index)),
+    arrayEqual(
+      largeArray,
+      Array.from({length: 17}, (_, index) => index)
+    ),
     'distinct large arrays do not trigger element-wise comparison by default'
   );
   t.notOk(

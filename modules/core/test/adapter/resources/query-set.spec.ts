@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
-import {getTestDevices, getWebGLTestDevice} from '@luma.gl/test-utils';
+import {getTestDevices, getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {QuerySet} from '@luma.gl/core';
 
 test('QuerySet construct/delete', async t => {
@@ -70,7 +70,11 @@ test('WebGPU QuerySet defers inline resolve when a readback is already in flight
   });
 
   t.notOk(encoded, 'webgpu skips inline resolve while a readback is already in flight');
-  t.equal(resolveQuerySetCallCount, 0, 'webgpu does not encode resolveQuerySet while readback is active');
+  t.equal(
+    resolveQuerySetCallCount,
+    0,
+    'webgpu does not encode resolveQuerySet while readback is active'
+  );
   t.equal(
     copyBufferToBufferCallCount,
     0,

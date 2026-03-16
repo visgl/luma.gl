@@ -77,7 +77,10 @@ test('ComputePipeline#compute', async t => {
 
 test('ComputePipeline bind-group creation respects WebGPU debug-scoped validation gating', async t => {
   const debugDevice = await getWebGPUTestDevice();
-  const nonDebugDevice = await makeWebGPUComputeTestDevice('webgpu-compute-test-device-nondebug', false);
+  const nonDebugDevice = await makeWebGPUComputeTestDevice(
+    'webgpu-compute-test-device-nondebug',
+    false
+  );
 
   if (!debugDevice || !nonDebugDevice) {
     t.comment('WebGPU is not available');
@@ -150,7 +153,11 @@ test('ComputePipeline bind-group cache only invalidates when binding identities 
   );
 
   computePipeline.setBindings({data: secondBuffer});
-  t.equal((computePipeline as any)._bindGroup, null, 'compute bind group cache is cleared on change');
+  t.equal(
+    (computePipeline as any)._bindGroup,
+    null,
+    'compute bind group cache is cleared on change'
+  );
   const thirdBindGroup = (computePipeline as any)._getBindGroup();
   t.notEqual(
     thirdBindGroup,

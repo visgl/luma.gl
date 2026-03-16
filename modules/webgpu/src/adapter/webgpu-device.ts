@@ -53,28 +53,11 @@ import {WebGPUFence} from './resources/webgpu-fence';
 
 import {getShaderLayoutFromWGSL} from '../wgsl/get-shader-layout-wgsl';
 import {generateMipmapsWebGPU} from './helpers/generate-mipmaps-webgpu';
-
-const CPU_HOTSPOT_PROFILER_MODULE = 'cpu-hotspot-profiler';
-const CPU_HOTSPOT_SUBMIT_REASON = 'cpu-hotspot-submit-reason';
-
-type CpuHotspotProfiler = {
-  enabled?: boolean;
-  submitCount?: number;
-  submitTimeMs?: number;
-  queueSubmitCount?: number;
-  queueSubmitTimeMs?: number;
-  submitResolveKickoffCount?: number;
-  submitResolveKickoffTimeMs?: number;
-  commandBufferDestroyCount?: number;
-  commandBufferDestroyTimeMs?: number;
-  defaultSubmitCount?: number;
-  defaultSubmitTimeMs?: number;
-  queryReadbackSubmitCount?: number;
-  queryReadbackSubmitTimeMs?: number;
-  errorScopePushCount?: number;
-  errorScopePopCount?: number;
-  errorScopeTimeMs?: number;
-};
+import {
+  getCpuHotspotProfiler as getWebGPUCpuHotspotProfiler,
+  getCpuHotspotSubmitReason as getWebGPUCpuHotspotSubmitReason,
+  getTimestamp
+} from './helpers/cpu-hotspot-profiler';
 
 /** WebGPU Device implementation */
 export class WebGPUDevice extends Device {
@@ -279,9 +262,9 @@ export class WebGPUDevice extends Device {
       });
     }
 
-    const profiler = getCpuHotspotProfiler(this);
+    const profiler = getWebGPUCpuHotspotProfiler(this);
     const startTime = profiler ? getTimestamp() : 0;
-    const submitReason = getCpuHotspotSubmitReason(this);
+    const submitReason = getWebGPUCpuHotspotSubmitReason(this);
     try {
       this.pushErrorScope('validation');
       const queueSubmitStartTime = profiler ? getTimestamp() : 0;
@@ -320,9 +303,7 @@ export class WebGPUDevice extends Device {
         const reasonCountKey =
           submitReason === 'query-readback' ? 'queryReadbackSubmitCount' : 'defaultSubmitCount';
         const reasonTimeKey =
-          submitReason === 'query-readback'
-            ? 'queryReadbackSubmitTimeMs'
-            : 'defaultSubmitTimeMs';
+          submitReason === 'query-readback' ? 'queryReadbackSubmitTimeMs' : 'defaultSubmitTimeMs';
         profiler[reasonCountKey] = (profiler[reasonCountKey] || 0) + 1;
         profiler[reasonTimeKey] = (profiler[reasonTimeKey] || 0) + (getTimestamp() - startTime);
       }
@@ -343,13 +324,12 @@ export class WebGPUDevice extends Device {
     if (!this.props.debug) {
       return;
     }
-    const profiler = getCpuHotspotProfiler(this);
+    const profiler = getWebGPUCpuHotspotProfiler(this);
     const startTime = profiler ? getTimestamp() : 0;
     this.handle.pushErrorScope(scope);
     if (profiler) {
       profiler.errorScopePushCount = (profiler.errorScopePushCount || 0) + 1;
-      profiler.errorScopeTimeMs =
-        (profiler.errorScopeTimeMs || 0) + (getTimestamp() - startTime);
+      profiler.errorScopeTimeMs = (profiler.errorScopeTimeMs || 0) + (getTimestamp() - startTime);
     }
   }
 
@@ -357,7 +337,7 @@ export class WebGPUDevice extends Device {
     if (!this.props.debug) {
       return;
     }
-    const profiler = getCpuHotspotProfiler(this);
+    const profiler = getWebGPUCpuHotspotProfiler(this);
     const startTime = profiler ? getTimestamp() : 0;
     this.handle.popErrorScope().then((error: GPUError | null) => {
       if (error) {
@@ -366,8 +346,7 @@ export class WebGPUDevice extends Device {
     });
     if (profiler) {
       profiler.errorScopePopCount = (profiler.errorScopePopCount || 0) + 1;
-      profiler.errorScopeTimeMs =
-        (profiler.errorScopeTimeMs || 0) + (getTimestamp() - startTime);
+      profiler.errorScopeTimeMs = (profiler.errorScopeTimeMs || 0) + (getTimestamp() - startTime);
     }
   }
 
@@ -451,25 +430,12 @@ export class WebGPUDevice extends Device {
   }
 }
 
-function getCpuHotspotProfiler(
-  device: WebGPUDevice
-): CpuHotspotProfiler | null {
-  const profiler = device.userData[CPU_HOTSPOT_PROFILER_MODULE] as CpuHotspotProfiler | undefined;
-  return profiler?.enabled ? profiler : null;
-}
-
-function getCpuHotspotSubmitReason(device: WebGPUDevice): string | null {
-  return (device.userData[CPU_HOTSPOT_SUBMIT_REASON] as string | undefined) || null;
-}
-
-function getTimestamp(): number {
-  return globalThis.performance?.now?.() ?? Date.now();
-}
-
 function scheduleMicrotask(callback: () => void): void {
   if (globalThis.queueMicrotask) {
     globalThis.queueMicrotask(callback);
     return;
   }
-  Promise.resolve().then(callback).catch(() => {});
+  Promise.resolve()
+    .then(callback)
+    .catch(() => {});
 }

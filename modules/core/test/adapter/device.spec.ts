@@ -109,11 +109,31 @@ test('WebGPUDevice#generateMipmapsWebGPU generates a mip chain', async t => {
 });
 
 test('Device debug default helper respects log debug before NODE_ENV', t => {
-  t.equal(_getDefaultDebugValue(true, 'production'), true, 'log debug true overrides production NODE_ENV');
-  t.equal(_getDefaultDebugValue(false, 'development'), false, 'log debug false overrides development NODE_ENV');
-  t.equal(_getDefaultDebugValue(undefined, 'production'), false, 'production NODE_ENV defaults debug to false');
-  t.equal(_getDefaultDebugValue(undefined, 'development'), true, 'non-production NODE_ENV defaults debug to true');
-  t.equal(_getDefaultDebugValue(undefined, undefined), false, 'missing NODE_ENV defaults debug to false');
+  t.equal(
+    _getDefaultDebugValue(true, 'production'),
+    true,
+    'log debug true overrides production NODE_ENV'
+  );
+  t.equal(
+    _getDefaultDebugValue(false, 'development'),
+    false,
+    'log debug false overrides development NODE_ENV'
+  );
+  t.equal(
+    _getDefaultDebugValue(undefined, 'production'),
+    false,
+    'production NODE_ENV defaults debug to false'
+  );
+  t.equal(
+    _getDefaultDebugValue(undefined, 'development'),
+    true,
+    'non-production NODE_ENV defaults debug to true'
+  );
+  t.equal(
+    _getDefaultDebugValue(undefined, undefined),
+    false,
+    'missing NODE_ENV defaults debug to false'
+  );
   t.end();
 });
 
@@ -130,7 +150,11 @@ test('Device manages debug GPU timing through a single API', async t => {
 
   const querySet = device._enableDebugGPUTime();
   const shouldEnable = device._supportsDebugGPUTime();
-  t.equal(device._isDebugGPUTimeEnabled(), shouldEnable, 'enableDebugGPUTime follows device policy');
+  t.equal(
+    device._isDebugGPUTimeEnabled(),
+    shouldEnable,
+    'enableDebugGPUTime follows device policy'
+  );
   t.equal(
     device.commandEncoder.getTimeProfilingQuerySet(),
     querySet,
@@ -138,7 +162,11 @@ test('Device manages debug GPU timing through a single API', async t => {
   );
 
   device._disableDebugGPUTime();
-  t.equal(device._isDebugGPUTimeEnabled(), false, 'disableDebugGPUTime clears the device timing query');
+  t.equal(
+    device._isDebugGPUTimeEnabled(),
+    false,
+    'disableDebugGPUTime clears the device timing query'
+  );
   t.equal(
     device.commandEncoder.getTimeProfilingQuerySet(),
     null,

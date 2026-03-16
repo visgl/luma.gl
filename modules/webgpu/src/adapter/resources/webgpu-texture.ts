@@ -388,5 +388,4 @@ export class WebGPUTexture extends Texture {
     }
     this.view._reinitialize(this);
   }
-
 }

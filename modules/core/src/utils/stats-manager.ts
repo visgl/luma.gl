@@ -20,7 +20,10 @@ const GPU_TIME_AND_MEMORY_STAT_ORDER = [
   'Referenced Texture Memory',
   'Swap Chain Texture'
 ] as const;
-const ORDERED_STATS_CACHE = new WeakMap<Stats, {orderedStatNames: readonly string[]; statCount: number}>();
+const ORDERED_STATS_CACHE = new WeakMap<
+  Stats,
+  {orderedStatNames: readonly string[]; statCount: number}
+>();
 const ORDERED_STAT_NAME_SET_CACHE = new WeakMap<readonly string[], Set<string>>();
 
 /**

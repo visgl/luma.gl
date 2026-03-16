@@ -10,17 +10,7 @@ import {CanvasContext, Texture, log} from '@luma.gl/core';
 import {WebGPUDevice} from './webgpu-device';
 import {WebGPUFramebuffer} from './resources/webgpu-framebuffer';
 import {WebGPUTexture} from './resources/webgpu-texture';
-
-const CPU_HOTSPOT_PROFILER_MODULE = 'cpu-hotspot-profiler';
-
-type CpuHotspotProfiler = {
-  enabled?: boolean;
-  framebufferAcquireCount?: number;
-  framebufferAcquireTimeMs?: number;
-  currentTextureAcquireCount?: number;
-  currentTextureAcquireTimeMs?: number;
-  activeDefaultFramebufferAcquireDepth?: number;
-};
+import {getCpuHotspotProfiler, getTimestamp} from './helpers/cpu-hotspot-profiler';
 
 /**
  * Holds a WebGPU Canvas Context
@@ -179,7 +169,7 @@ export class WebGPUCanvasContext extends CanvasContext {
       width: handle.width,
       height: handle.height
     });
-    return this.colorAttachment!;
+    return this.colorAttachment;
   }
 
   /** We build render targets on demand (i.e. not when size changes but when about to render) */
@@ -201,13 +191,4 @@ export class WebGPUCanvasContext extends CanvasContext {
     }
     return this.depthStencilAttachment!;
   }
-}
-
-function getCpuHotspotProfiler(device: WebGPUDevice): CpuHotspotProfiler | null {
-  const profiler = device.userData[CPU_HOTSPOT_PROFILER_MODULE] as CpuHotspotProfiler | undefined;
-  return profiler?.enabled ? profiler : null;
-}
-
-function getTimestamp(): number {
-  return globalThis.performance?.now?.() ?? Date.now();
 }

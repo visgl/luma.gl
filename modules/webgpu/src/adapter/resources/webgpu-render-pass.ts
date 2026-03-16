@@ -11,20 +11,7 @@ import {WebGPUBuffer} from './webgpu-buffer';
 import {WebGPURenderPipeline} from './webgpu-render-pipeline';
 import {WebGPUQuerySet} from './webgpu-query-set';
 import {WebGPUFramebuffer} from './webgpu-framebuffer';
-
-const CPU_HOTSPOT_PROFILER_MODULE = 'cpu-hotspot-profiler';
-
-type CpuHotspotProfiler = {
-  enabled?: boolean;
-  defaultFramebufferRenderPassCount?: number;
-  explicitFramebufferRenderPassCount?: number;
-  renderPassSetupCount?: number;
-  renderPassSetupTimeMs?: number;
-  renderPassDescriptorAssemblyCount?: number;
-  renderPassDescriptorAssemblyTimeMs?: number;
-  renderPassBeginCount?: number;
-  renderPassBeginTimeMs?: number;
-};
+import {getCpuHotspotProfiler, getTimestamp} from '../helpers/cpu-hotspot-profiler';
 
 export class WebGPURenderPass extends RenderPass {
   readonly device: WebGPUDevice;
@@ -44,8 +31,9 @@ export class WebGPURenderPass extends RenderPass {
 
     const profiler = getCpuHotspotProfiler(this.device);
     if (profiler) {
-      const counterName: 'explicitFramebufferRenderPassCount' | 'defaultFramebufferRenderPassCount' =
-        renderPassProps.framebuffer
+      const counterName:
+        | 'explicitFramebufferRenderPassCount'
+        | 'defaultFramebufferRenderPassCount' = renderPassProps.framebuffer
         ? 'explicitFramebufferRenderPassCount'
         : 'defaultFramebufferRenderPassCount';
       profiler[counterName] = (profiler[counterName] || 0) + 1;
@@ -293,15 +281,4 @@ export class WebGPURenderPass extends RenderPass {
 
 function convertColor(color: TypedArray | NumberArray4): GPUColor {
   return {r: color[0], g: color[1], b: color[2], a: color[3]};
-}
-
-function getCpuHotspotProfiler(
-  device: WebGPUDevice
-): CpuHotspotProfiler | null {
-  const profiler = device.userData[CPU_HOTSPOT_PROFILER_MODULE] as CpuHotspotProfiler | undefined;
-  return profiler?.enabled ? profiler : null;
-}
-
-function getTimestamp(): number {
-  return globalThis.performance?.now?.() ?? Date.now();
 }

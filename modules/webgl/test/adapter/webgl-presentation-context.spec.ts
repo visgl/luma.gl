@@ -241,7 +241,11 @@ test('WebGPUPresentationContext renders directly to its destination canvas', asy
   const secondFramebuffer = presentationContext.getCurrentFramebuffer() as any;
 
   t.ok(framebuffer, 'WebGPU presentation context returns a framebuffer');
-  t.equal(secondFramebuffer, framebuffer, 'WebGPU presentation context reuses its framebuffer wrapper');
+  t.equal(
+    secondFramebuffer,
+    framebuffer,
+    'WebGPU presentation context reuses its framebuffer wrapper'
+  );
   t.equal(
     secondFramebuffer.colorAttachments[0],
     framebuffer.colorAttachments[0],
@@ -286,7 +290,9 @@ test('WebGPUPresentationContext destroy() releases its depth attachment', async 
   const depthStencilAttachment = (presentationContext as any).depthStencilAttachment as {
     destroy: () => void;
   } | null;
-  const colorAttachment = (presentationContext as any).colorAttachment as {destroy: () => void} | null;
+  const colorAttachment = (presentationContext as any).colorAttachment as {
+    destroy: () => void;
+  } | null;
   const framebuffer = (presentationContext as any).framebuffer as {destroy: () => void} | null;
 
   t.ok(depthStencilAttachment, 'presentation context creates a depth attachment by default');

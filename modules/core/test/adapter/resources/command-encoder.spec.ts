@@ -213,7 +213,9 @@ test('Transient command resources release core stats', async t => {
   );
 
   const beforeCanvasStats = getResourceStats(webgpuDevice);
-  const firstDefaultFramebufferRenderPass = webgpuDevice.beginRenderPass({clearColor: [0, 0, 0, 1]});
+  const firstDefaultFramebufferRenderPass = webgpuDevice.beginRenderPass({
+    clearColor: [0, 0, 0, 1]
+  });
   const duringFirstCanvasStats = getResourceStats(webgpuDevice);
   t.equal(
     duringFirstCanvasStats.samplersActive - beforeCanvasStats.samplersActive,
@@ -246,7 +248,9 @@ test('Transient command resources release core stats', async t => {
     'webgpu cached texture view wrapper remains active after submit'
   );
 
-  const secondDefaultFramebufferRenderPass = webgpuDevice.beginRenderPass({clearColor: [0, 0, 0, 1]});
+  const secondDefaultFramebufferRenderPass = webgpuDevice.beginRenderPass({
+    clearColor: [0, 0, 0, 1]
+  });
   const duringSecondCanvasStats = getResourceStats(webgpuDevice);
   t.equal(
     duringSecondCanvasStats.framebuffersActive,
@@ -277,13 +281,21 @@ test('CommandEncoder resolves time profiling with a single bulk query read', asy
 
   await commandEncoder.resolveTimeProfilingQuerySet();
 
-  t.equal(querySet.readResultsCallCount, 1, 'resolveTimeProfilingQuerySet uses one bulk readResults call');
+  t.equal(
+    querySet.readResultsCallCount,
+    1,
+    'resolveTimeProfilingQuerySet uses one bulk readResults call'
+  );
   t.equal(
     querySet.readTimestampDurationCallCount,
     0,
     'resolveTimeProfilingQuerySet does not call readTimestampDuration per pair'
   );
-  t.equal(commandEncoder._gpuTimeMs, 0.00004, 'resolveTimeProfilingQuerySet sums durations from bulk results');
+  t.equal(
+    commandEncoder._gpuTimeMs,
+    0.00004,
+    'resolveTimeProfilingQuerySet sums durations from bulk results'
+  );
 
   commandEncoder.destroy();
   querySet.destroy();

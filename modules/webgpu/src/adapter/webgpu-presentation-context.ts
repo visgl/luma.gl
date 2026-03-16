@@ -10,16 +10,7 @@ import {PresentationContext, Texture, log} from '@luma.gl/core';
 import type {WebGPUDevice} from './webgpu-device';
 import {WebGPUFramebuffer} from './resources/webgpu-framebuffer';
 import {WebGPUTexture} from './resources/webgpu-texture';
-
-const CPU_HOTSPOT_PROFILER_MODULE = 'cpu-hotspot-profiler';
-
-type CpuHotspotProfiler = {
-  enabled?: boolean;
-  framebufferAcquireCount?: number;
-  framebufferAcquireTimeMs?: number;
-  currentTextureAcquireCount?: number;
-  currentTextureAcquireTimeMs?: number;
-};
+import {getCpuHotspotProfiler, getTimestamp} from './helpers/cpu-hotspot-profiler';
 
 /**
  * A WebGPU PresentationContext renders directly into its destination canvas.
@@ -162,7 +153,7 @@ export class WebGPUPresentationContext extends PresentationContext {
       width: handle.width,
       height: handle.height
     });
-    return this.colorAttachment!;
+    return this.colorAttachment;
   }
 
   private _createDepthStencilAttachment(
@@ -185,13 +176,4 @@ export class WebGPUPresentationContext extends PresentationContext {
     }
     return this.depthStencilAttachment!;
   }
-}
-
-function getCpuHotspotProfiler(device: WebGPUDevice): CpuHotspotProfiler | null {
-  const profiler = device.userData[CPU_HOTSPOT_PROFILER_MODULE] as CpuHotspotProfiler | undefined;
-  return profiler?.enabled ? profiler : null;
-}
-
-function getTimestamp(): number {
-  return globalThis.performance?.now?.() ?? Date.now();
 }

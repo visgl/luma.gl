@@ -312,7 +312,10 @@ test('WebGPU Texture reuses the shared default sampler when sampler is omitted',
   );
 
   firstTextureWithoutSampler.destroy();
-  t.notOk(sharedSampler.destroyed, 'webgpu shared default sampler remains alive after texture destroy');
+  t.notOk(
+    sharedSampler.destroyed,
+    'webgpu shared default sampler remains alive after texture destroy'
+  );
   t.equal(
     secondTextureWithoutSampler.sampler,
     sharedSampler,
@@ -346,7 +349,10 @@ test('WebGPU Texture reuses the shared default sampler when sampler is omitted',
   );
 
   textureWithExplicitSampler.destroy();
-  t.notOk(explicitSampler.destroyed, 'webgpu explicit sampler instance is not destroyed with texture');
+  t.notOk(
+    explicitSampler.destroyed,
+    'webgpu explicit sampler instance is not destroyed with texture'
+  );
 
   secondTextureWithoutSampler.destroy();
   textureWithSamplerProps.destroy();
