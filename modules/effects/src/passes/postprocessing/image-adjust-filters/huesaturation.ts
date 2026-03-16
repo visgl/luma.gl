@@ -5,45 +5,39 @@
 import type {ShaderPass} from '@luma.gl/shadertools';
 
 const source = /* wgsl */ `\
-
 struct hueSaturationUniforms {
   hue: f32,
   saturation: f32,
 };
 
-@group(0), @binding(1) var<uniform> hueSaturation: hueSaturationUniforms;
+@group(0) @binding(1) var<uniform> hueSaturation: hueSaturationUniforms;
 
-fn hueSaturation_filterColor(color: vec4<f32>) -> vec4<f32> {
-	let angle: f32 = hueSaturation.hue * 3.1415927;
-	let s: f32 = sin(angle);
-	let c: f32 = cos(angle);
-	let weights: vec3<f32> = (vec3<f32>(2. * c, -sqrt(3.) * s - c, sqrt(3.) * s - c) + 1.) / 3.;
-	let len: f32 = length(color.rgb);
-	var colorrgb = color.rgb;
-	colorrgb = vec3<f32>(dot(color.rgb, weights.xyz), dot(color.rgb, weights.zxy), dot(color.rgb, weights.yzx));
-	color.r = colorrgb.x;
-	color.g = colorrgb.y;
-	color.b = colorrgb.z;
-	let average: f32 = (color.r + color.g + color.b) / 3.;
-	if (hueSaturation.saturation > 0.) {
-		var colorrgb = color.rgb;
-	colorrgb = color.rgb + ((average - color.rgb) * (1. - 1. / (1.001 - hueSaturation.saturation)));
-	color.r = colorrgb.x;
-	color.g = colorrgb.y;
-	color.b = colorrgb.z;
-	} else { 
-		var colorrgb = color.rgb;
-	colorrgb = color.rgb + ((average - color.rgb) * -hueSaturation.saturation);
-	color.r = colorrgb.x;
-	color.g = colorrgb.y;
-	color.b = colorrgb.z;
-	}
-	return color;
-} 
+fn hueSaturation_filterColor(color: vec4f) -> vec4f {
+  let angle = hueSaturation.hue * 3.14159265;
+  let s = sin(angle);
+  let c = cos(angle);
+  let weights = (vec3f(2.0 * c, -sqrt(3.0) * s - c, sqrt(3.0) * s - c) + vec3f(1.0)) / 3.0;
 
-fn hueSaturation_filterColor_ext(color: vec4<f32>, texSize: vec2<f32>, texCoord: vec2<f32>) -> vec4<f32> {
-	return hueSaturation_filterColor(color);
-} 
+  var result = color;
+  result.rgb = vec3f(
+    dot(result.rgb, weights.xyz),
+    dot(result.rgb, weights.zxy),
+    dot(result.rgb, weights.yzx)
+  );
+
+  let average = (result.r + result.g + result.b) / 3.0;
+  if (hueSaturation.saturation > 0.0) {
+    result.rgb += (vec3f(average) - result.rgb) * (1.0 - 1.0 / (1.001 - hueSaturation.saturation));
+  } else {
+    result.rgb += (vec3f(average) - result.rgb) * (-hueSaturation.saturation);
+  }
+
+  return result;
+}
+
+fn hueSaturation_filterColor_ext(color: vec4f, texSize: vec2f, texCoord: vec2f) -> vec4f {
+  return hueSaturation_filterColor(color);
+}
 `;
 
 const fs = /* glsl */ `\

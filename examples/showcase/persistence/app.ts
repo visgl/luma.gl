@@ -307,6 +307,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   pingpongFramebuffers: Framebuffer[];
   screenQuad: Model;
   persistenceQuad: Model;
+  persistenceFramebufferSize: [number, number] | null = null;
 
   constructor({device, width, height}: AnimationProps) {
     super();
@@ -465,16 +466,26 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   onRender({device, tick, width, height, aspect}: AnimationProps) {
+    const needsPersistenceReset =
+      !this.persistenceFramebufferSize ||
+      this.persistenceFramebufferSize[0] !== width ||
+      this.persistenceFramebufferSize[1] !== height;
+
     this.mainFramebuffer.resize({width, height});
     this.pingpongFramebuffers[0].resize({width, height});
     this.pingpongFramebuffers[1].resize({width, height});
+
+    if (needsPersistenceReset) {
+      this.clearPersistenceFramebuffers(device);
+      this.persistenceFramebufferSize = [width, height];
+    }
 
     const projectionMatrix = new Matrix4().perspective({fovy: radians(75), aspect});
     const viewMatrix = new Matrix4().lookAt({eye: [0, 0, 4]});
 
     const mainRenderPass = device.beginRenderPass({
       framebuffer: this.mainFramebuffer,
-      clearColor: [0, 0, 0, 1],
+      clearColor: [0, 0, 0, 0],
       clearDepth: 1
     });
 
@@ -557,6 +568,16 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.screenQuad.draw(screenRenderPass);
     this.backgroundTextureModel.draw(screenRenderPass);
     screenRenderPass.end();
+  }
+
+  clearPersistenceFramebuffers(device: AnimationProps['device']) {
+    for (const framebuffer of this.pingpongFramebuffers) {
+      const renderPass = device.beginRenderPass({
+        framebuffer,
+        clearColor: [0, 0, 0, 0]
+      });
+      renderPass.end();
+    }
   }
 }
 

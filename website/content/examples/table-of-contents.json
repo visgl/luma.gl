@@ -10,7 +10,8 @@
     "items": [
       "showcase/instancing",
       "showcase/persistence",
-      "showcase/gltf"
+      "showcase/gltf",
+      "showcase/postprocessing"
     ]
   },
   {
@@ -44,9 +45,6 @@
   {
     "type": "category",
     "label": "Integrations",
-    "items": [
-      "integrations/external-context",
-      "integrations/react-strict-mode"
-    ]
+    "items": ["integrations/external-context", "integrations/react-strict-mode"]
   }
 ]

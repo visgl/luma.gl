@@ -11,19 +11,14 @@ const sidebars = {
       items: [
         'showcase/gltf',
         'showcase/instancing',
-        'showcase/persistence'
-        // 'showcase/postprocessing'
+        'showcase/persistence',
+        'showcase/postprocessing'
       ]
     },
     {
       type: 'category',
       label: 'API',
-      items: [
-        'api/animation',
-        'api/cubemap',
-        'api/texture-3d',
-        'api/texture-tester'
-      ]
+      items: ['api/animation', 'api/cubemap', 'api/texture-3d', 'api/texture-tester']
     },
     {
       type: 'category',

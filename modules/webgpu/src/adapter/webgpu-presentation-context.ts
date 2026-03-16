@@ -93,7 +93,7 @@ export class WebGPUPresentationContext extends PresentationContext {
 
     return new WebGPUFramebuffer(this.device, {
       colorAttachments: [currentColorAttachment],
-      depthStencilAttachment: this.depthStencilAttachment
+      depthStencilAttachment: options?.depthStencilFormat ? this.depthStencilAttachment : null
     });
   }
 

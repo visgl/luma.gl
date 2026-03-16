@@ -94,13 +94,21 @@ export class WebGPUQuerySet extends QuerySet {
     this._ensureBuffers();
 
     try {
-      this.device.commandEncoder.resolveQuerySet(this, this._resolveBuffer!);
-      this.device.commandEncoder.copyBufferToBuffer({
+      // Use a dedicated encoder so async profiling reads cannot flush or replace the
+      // device's active frame encoder while application rendering is in flight.
+      const commandEncoder = this.device.createCommandEncoder({
+        id: `${this.id}-read-results`
+      });
+      commandEncoder.resolveQuerySet(this, this._resolveBuffer!);
+      commandEncoder.copyBufferToBuffer({
         sourceBuffer: this._resolveBuffer!,
         destinationBuffer: this._readBuffer!,
         size: this._resolveBuffer!.byteLength
       });
-      this.device.submit();
+      const commandBuffer = commandEncoder.finish({
+        id: `${this.id}-read-results-command-buffer`
+      });
+      this.device.submit(commandBuffer);
 
       const data = await this._readBuffer!.readAsync(0, this._readBuffer!.byteLength);
       const resultView = new BigUint64Array(data.buffer, data.byteOffset, this.props.count);

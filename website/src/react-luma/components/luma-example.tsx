@@ -16,6 +16,7 @@ import {DeviceTabs} from './device-tabs';
 import {useStore} from '../store/device-store';
 
 const GITHUB_TREE = 'https://github.com/visgl/luma.gl/tree/master';
+let isInfoBoxCollapsedByDefault = true;
 
 // WORKAROUND FOR luma.gl VRDisplay
 // if (!globalThis.navigator) {// eslint-disable-line
@@ -117,6 +118,7 @@ function getDefaultCanvasColorTextureByteLength(device: Device): number {
   const formatInfo = device.getTextureFormatInfo(device.preferredColorFormat);
   return width * height * (formatInfo.bytesPerPixel || 0);
 }
+
 type LumaExampleProps = React.PropsWithChildren<{
   id?: string;
   title?: string;
@@ -220,9 +222,13 @@ type ReactExampleProps<P> = {
 export const InfoBox: FC<InfoBoxProps> = (props: InfoBoxProps) => {
   const sourceUrl = getExampleSourceUrl(props);
   const title = getExampleTitle(props.id, props.title);
-  const [isCollapsed, setIsCollapsed] = useState(true);
+  const [isCollapsed, setIsCollapsed] = useState(() => isInfoBoxCollapsedByDefault);
   const maxInfoHeight = 400;
   const maxInfoContentHeight = 320;
+
+  useEffect(() => {
+    isInfoBoxCollapsedByDefault = isCollapsed;
+  }, [isCollapsed]);
 
   return (
     <div
