@@ -186,6 +186,11 @@ test('Buffer tracks GPU memory stats', async t => {
 
 test('Handle-backed Buffer tracks referenced memory stats', async t => {
   const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
   const beforeStats = getMemoryStats(device);
   const handle = device.handle.createBuffer({
     size: 12,

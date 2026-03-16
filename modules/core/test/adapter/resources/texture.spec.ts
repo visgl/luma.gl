@@ -143,6 +143,11 @@ test('Texture tracks GPU memory stats', async t => {
 
 test('Handle-backed Texture tracks referenced memory stats', async t => {
   const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
   const beforeStats = getTextureMemoryStats(device);
   const handle = device.handle.createTexture({
     size: {width: 4, height: 4, depthOrArrayLayers: 1},

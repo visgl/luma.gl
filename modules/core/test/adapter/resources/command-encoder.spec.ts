@@ -82,6 +82,11 @@ test('Transient command resources release core stats', async t => {
   }
 
   const webgpuDevice = await getWebGPUTestDevice();
+  if (!webgpuDevice) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
   const beforeStats = getResourceStats(webgpuDevice);
   const computePass = webgpuDevice.beginComputePass({});
   const duringComputePassStats = getResourceStats(webgpuDevice);
