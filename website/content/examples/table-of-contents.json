@@ -9,9 +9,9 @@
     "label": "Showcase",
     "items": [
       "showcase/instancing",
-      "showcase/persistence",
       "showcase/gltf",
-      "showcase/postprocessing"
+      "showcase/postprocessing",
+      "showcase/persistence"
     ]
   },
   {

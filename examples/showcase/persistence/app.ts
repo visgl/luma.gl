@@ -12,8 +12,7 @@ import {
   Model,
   makeRandomGenerator,
   loadImageBitmap,
-  DynamicTexture,
-  BackgroundTextureModel
+  DynamicTexture
 } from '@luma.gl/engine';
 import {Matrix4, Vector3, radians} from '@math.gl/core';
 
@@ -145,6 +144,8 @@ struct ScreenQuadUniforms {
 @group(0) @binding(0) var<uniform> screenQuad : ScreenQuadUniforms;
 @group(0) @binding(1) var uTexture : texture_2d<f32>;
 @group(0) @binding(2) var uTextureSampler : sampler;
+@group(0) @binding(3) var uBackground : texture_2d<f32>;
+@group(0) @binding(4) var uBackgroundSampler : sampler;
 
 struct VertexInputs {
   @location(0) aPosition: vec2<f32>,
@@ -162,8 +163,30 @@ struct FragmentInputs {
   return outputs;
 }
 
+fn getBackgroundTextureUV(uv: vec2<f32>) -> vec2<f32> {
+  let backgroundSize = vec2<f32>(textureDimensions(uBackground));
+  let screenAspect = screenQuad.resolution.x / screenQuad.resolution.y;
+  let backgroundAspect = backgroundSize.x / backgroundSize.y;
+  var scale = vec2<f32>(1.0, 1.0);
+  if (screenAspect > backgroundAspect) {
+    scale.y = screenAspect / backgroundAspect;
+  } else {
+    scale.x = backgroundAspect / screenAspect;
+  }
+  return (uv - vec2<f32>(0.5, 0.5)) / scale + vec2<f32>(0.5, 0.5);
+}
+
+fn getCoverage(color: vec4f) -> f32 {
+  return max(color.a, max(color.r, max(color.g, color.b)));
+}
+
 @fragment fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4f {
-  return textureSample(uTexture, uTextureSampler, inputs.texcoord);
+  let persistenceColor = textureSample(uTexture, uTextureSampler, inputs.texcoord);
+  let backgroundTextureUV = getBackgroundTextureUV(inputs.texcoord);
+  let backgroundColor = textureSample(uBackground, uBackgroundSampler, backgroundTextureUV);
+  let coverage = getCoverage(persistenceColor);
+  let compositeColor = persistenceColor.rgb + backgroundColor.rgb * (1.0 - coverage);
+  return vec4f(min(compositeColor, vec3<f32>(1.0, 1.0, 1.0)), 1.0);
 }
 `;
 
@@ -183,6 +206,7 @@ const SCREEN_QUAD_FS = /* glsl */ `\
 precision highp float;
 
 uniform sampler2D uTexture;
+uniform sampler2D uBackground;
 
 uniform screenQuadUniforms {
   vec2 resolution;
@@ -190,9 +214,33 @@ uniform screenQuadUniforms {
 
 out vec4 fragColor;
 
+vec2 getBackgroundTextureUV(vec2 uv) {
+  vec2 backgroundSize = vec2(textureSize(uBackground, 0));
+  float screenAspect = screenQuad.resolution.x / screenQuad.resolution.y;
+  float backgroundAspect = backgroundSize.x / backgroundSize.y;
+  vec2 scale = vec2(1.0);
+  if (screenAspect > backgroundAspect) {
+    scale.y = screenAspect / backgroundAspect;
+  } else {
+    scale.x = backgroundAspect / screenAspect;
+  }
+  return (uv - 0.5) / scale + 0.5;
+}
+
+float getCoverage(vec4 color) {
+  return max(color.a, max(color.r, max(color.g, color.b)));
+}
+
 void main(void) {
-  vec2 p = gl_FragCoord.xy/screenQuad.resolution.xy;
-  fragColor = texture(uTexture, p);
+  vec2 uv = gl_FragCoord.xy / screenQuad.resolution.xy;
+  vec4 persistenceColor = texture(uTexture, uv);
+  vec4 backgroundColor = texture(uBackground, getBackgroundTextureUV(uv));
+  float coverage = getCoverage(persistenceColor);
+  vec3 compositeColor = min(
+    persistenceColor.rgb + backgroundColor.rgb * (1.0 - coverage),
+    vec3(1.0)
+  );
+  fragColor = vec4(compositeColor, 1.0);
 }
 `;
 
@@ -235,11 +283,17 @@ struct FragmentInputs {
   return outputs;
 }
 
+fn getCoverage(color: vec4f) -> f32 {
+  return max(color.a, max(color.r, max(color.g, color.b)));
+}
+
 @fragment 
 fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4f {
   let sceneColor = textureSample(uScene, uSceneSampler, inputs.texcoord);
   let persistenceColor = textureSample(uPersistence, uPersistenceSampler, inputs.texcoord);
-  return mix(sceneColor * 4.0, persistenceColor, 0.9);
+  let accumulatedColor = mix(sceneColor.rgb * 4.0, persistenceColor.rgb, vec3<f32>(0.9, 0.9, 0.9));
+  let accumulatedAlpha = max(getCoverage(sceneColor), persistenceColor.a * 0.9);
+  return vec4f(accumulatedColor, accumulatedAlpha);
 }
 `;
 
@@ -257,11 +311,17 @@ uniform persistenceQuadUniforms {
 
 out vec4 fragColor;
 
+float getCoverage(vec4 color) {
+  return max(color.a, max(color.r, max(color.g, color.b)));
+}
+
 void main(void) {
   vec2 p = gl_FragCoord.xy / persistence.resolution.xy;
   vec4 cS = texture(uScene, p);
   vec4 cP = texture(uPersistence, p);
-  fragColor = mix(cS*4.0, cP, 0.9);
+  vec3 accumulatedColor = mix(cS.rgb * 4.0, cP.rgb, vec3(0.9));
+  float accumulatedAlpha = max(getCoverage(cS), cP.a * 0.9);
+  fragColor = vec4(accumulatedColor, accumulatedAlpha);
 }
 `;
 
@@ -295,8 +355,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     persistenceQuad
   });
 
-  /** Model that renders a background texture into transparent areas of the screen */
-  backgroundTextureModel: BackgroundTextureModel;
+  /** Background texture for final screen compositing */
+  backgroundTexture: DynamicTexture;
   /** Electron model, will be drawn multiple times */
   electron: Model;
   /** Nucleon model, will be drawn multiple times */
@@ -312,10 +372,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   constructor({device, width, height}: AnimationProps) {
     super();
 
-    this.backgroundTextureModel = new BackgroundTextureModel(device, {
-      backgroundTexture: new DynamicTexture(device, {data: loadImageBitmap('background.png')}),
-      blend: true
-    });
+    this.backgroundTexture = new DynamicTexture(device, {data: loadImageBitmap('background.png')});
 
     this.electron = new Model(device, {
       id: 'electron',
@@ -366,16 +423,14 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         height,
         colorAttachments: [
           createSampleableColorAttachment(device, 'persistence-framebuffer-0-color', width, height)
-        ],
-        depthStencilAttachment: 'depth24plus'
+        ]
       }),
       device.createFramebuffer({
         width,
         height,
         colorAttachments: [
           createSampleableColorAttachment(device, 'persistence-framebuffer-1-color', width, height)
-        ],
-        depthStencilAttachment: 'depth24plus'
+        ]
       })
     ];
 
@@ -402,8 +457,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         screenQuad: this.uniformStore.getManagedUniformBuffer(device, 'screenQuad')
       },
       parameters: {
-        depthWriteEnabled: true,
-        depthCompare: 'less-equal',
         cullMode: 'back'
       }
     });
@@ -419,8 +472,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         persistenceQuad: this.uniformStore.getManagedUniformBuffer(device, 'persistenceQuad')
       },
       parameters: {
-        depthWriteEnabled: true,
-        depthCompare: 'less-equal',
         cullMode: 'back'
       }
     });
@@ -455,6 +506,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   onFinalize(animationProps: AnimationProps): void {
+    this.backgroundTexture.destroy();
     this.electron.destroy();
     this.nucleon.destroy();
 
@@ -558,15 +610,23 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     persistenceRenderPass.end();
 
     // Copy the current framebuffer to screen
-    const screenRenderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
+    const screenFramebuffer = device
+      .getDefaultCanvasContext()
+      // @ts-expect-error TODO - remove after republish
+      .getCurrentFramebuffer({depthStencilFormat: false});
+    const screenRenderPass = device.beginRenderPass({
+      framebuffer: screenFramebuffer,
+      clearColor: [0, 0, 0, 1],
+      clearDepth: false
+    });
     this.screenQuad.setBindings({
-      uTexture: currentFramebuffer.colorAttachments[0].texture
+      uTexture: currentFramebuffer.colorAttachments[0].texture,
+      uBackground: this.backgroundTexture
     });
     this.uniformStore.setUniforms({screenQuad: {resolution: [width, height]}});
     this.uniformStore.updateUniformBuffers();
 
     this.screenQuad.draw(screenRenderPass);
-    this.backgroundTextureModel.draw(screenRenderPass);
     screenRenderPass.end();
   }
 

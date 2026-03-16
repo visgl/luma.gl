@@ -16,10 +16,10 @@ import {ShaderPass} from '@luma.gl/shadertools';
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = `\
-<div class="contents">Copyright 2011 <a href="http://madebyevan.com">Evan Wallace</a>
-  <br><br>This application is powered by <a href="http://evanw.github.com/glfx.js/">glfx.js</a>, 
-  an open-source image effect library that uses WebGL.&nbsp; The source code for this application is 
-  also <a href="http://github.com/evanw/webgl-filter/">available on GitHub</a>.
+<div>
+  This example demonstrates how to use luma.gl's postprocessing utilities to apply shader effects to an image.
+  <br>
+  Many luma.gl effects were inspired by Evan Wallace's landmark <a href="http://github.com/evanw/webgl-filter/">glfx.js / WebGL Filter</a> application.
 </div>
 <div style="margin-top: 16px; padding: 14px 16px; border: 1px solid rgba(208, 215, 222, 0.9); border-radius: 16px; background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(246, 248, 250, 0.96) 100%); box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);">
   <label for="postprocessing-selector" style="display: block; margin-bottom: 8px; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #57606a;">Effect</label>
