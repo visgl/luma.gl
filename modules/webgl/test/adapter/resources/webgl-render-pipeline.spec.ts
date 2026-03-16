@@ -48,6 +48,35 @@ void main() {
 }
 `;
 
+const VS_MIXED_SAMPLERS = /* glsl */ `\
+#version 300 es
+
+void main() {
+  vec2 positions[3] = vec2[3](
+    vec2(0.0, 0.5),
+    vec2(-0.5, -0.5),
+    vec2(0.5, -0.5)
+  );
+  gl_Position = vec4(positions[gl_VertexID], 0.0, 1.0);
+}
+`;
+
+const FS_MIXED_SAMPLERS = /* glsl */ `\
+#version 300 es
+precision highp float;
+
+uniform sampler2D colorTexture;
+uniform samplerCube cubeTexture;
+
+out vec4 fragColor;
+
+void main() {
+  vec4 color = texture(colorTexture, vec2(0.5, 0.5));
+  vec4 environment = texture(cubeTexture, normalize(vec3(0.2, 0.3, 1.0)));
+  fragColor = mix(color, environment, 0.5);
+}
+`;
+
 async function waitForLinkStatus(renderPipeline: {
   linkStatus: 'pending' | 'success' | 'error';
 }): Promise<'pending' | 'success' | 'error'> {
@@ -142,6 +171,27 @@ test('WEBGLRenderPipeline#uniformBlockBinding applies block indices in the corre
   bufferA.destroy();
   bufferB.destroy();
   bufferC.destroy();
+  renderPipeline.destroy();
+  vs.destroy();
+  fs.destroy();
+  device.destroy();
+  t.end();
+});
+
+test('WEBGLRenderPipeline initializes mixed sampler uniforms before validation', async t => {
+  const device = await getWebGLTestDevice();
+
+  const vs = device.createShader({stage: 'vertex', source: VS_MIXED_SAMPLERS});
+  const fs = device.createShader({stage: 'fragment', source: FS_MIXED_SAMPLERS});
+  const renderPipeline = device.createRenderPipeline({vs, fs, topology: 'triangle-list'});
+
+  const linkStatus = await waitForLinkStatus(renderPipeline);
+  t.equal(
+    linkStatus,
+    'success',
+    'render pipeline with sampler2D and samplerCube links successfully'
+  );
+
   renderPipeline.destroy();
   vs.destroy();
   fs.destroy();

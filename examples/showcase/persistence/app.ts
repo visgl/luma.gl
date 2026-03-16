@@ -339,6 +339,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = `
 <p>
   Electron trails renderings persist across multiple frames.
+</p>
 <p>
   Uses multiple luma.gl <code>Framebuffer</code>s to hold previously rendered data between frames.
 </p>

@@ -137,6 +137,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   <a href="https://github.com/WebGLSamples/WebGL2Samples/blob/master/samples/transform_feedback_instanced.html">
     WebGL2Samples
   </a>
+</p>
 `;
 
   // Geometry of each object (a triangle)

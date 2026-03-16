@@ -84,7 +84,6 @@ export class ShaderPassRenderer {
 
     const framebuffer = this.device
       .getDefaultCanvasContext()
-      // @ts-expect-error TODO - remove after republish
       .getCurrentFramebuffer({depthStencilFormat: false});
     const renderPass = this.device.beginRenderPass({
       id: 'shader-pass-renderer-to-screen',
