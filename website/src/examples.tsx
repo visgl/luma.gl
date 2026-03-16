@@ -213,6 +213,8 @@ export const HelloTriangleExample: React.FC = props => (
     directory="tutorials"
     template={HelloTriangleApp}
     config={exampleConfig}
+    showHeader={false}
+    showStats={false}
     {...props}
   />
 );
@@ -223,6 +225,8 @@ export const HelloTriangleGeometryExample: React.FC = props => (
     directory="tutorials"
     template={HelloTriangleGeometryApp}
     config={exampleConfig}
+    showHeader={false}
+    showStats={false}
     {...props}
   />
 );
@@ -233,6 +237,8 @@ export const HelloCubeExample: React.FC = props => (
     directory="tutorials"
     template={HelloCubeApp}
     config={exampleConfig}
+    showHeader={false}
+    showStats={false}
     {...props}
   />
 );
@@ -243,6 +249,8 @@ export const InstancedCubesExample: React.FC = props => (
     directory="tutorials"
     template={InstancedCubesApp}
     config={exampleConfig}
+    showHeader={false}
+    showStats={false}
     {...props}
   />
 );
@@ -253,6 +261,8 @@ export const TwoCubesExample: React.FC = props => (
     directory="tutorials"
     template={TwoCubesApp}
     config={exampleConfig}
+    showHeader={false}
+    showStats={false}
     {...props}
   />
 );
@@ -263,6 +273,8 @@ export const LightingExample: React.FC = props => (
     directory="tutorials"
     template={LightingApp}
     config={exampleConfig}
+    showHeader={false}
+    showStats={false}
     {...props}
   />
 );
@@ -273,6 +285,8 @@ export const HelloGLTFExample: React.FC = props => (
     directory="tutorials"
     template={HelloGLTFApp}
     config={exampleConfig}
+    showHeader={false}
+    showStats={false}
     {...props}
   />
 );
@@ -283,6 +297,8 @@ export const HelloInstancingExample: React.FC = props => (
     directory="tutorials"
     template={HelloInstancingApp}
     config={exampleConfig}
+    showHeader={false}
+    showStats={false}
     {...props}
   />
 );
@@ -293,6 +309,8 @@ export const ShaderHooksExample: React.FC = props => (
     directory="tutorials"
     template={ShaderHooksApp}
     config={exampleConfig}
+    showHeader={false}
+    showStats={false}
     {...props}
   />
 );
@@ -303,6 +321,8 @@ export const ShaderModulesExample: React.FC = props => (
     directory="tutorials"
     template={ShaderModulesApp}
     config={exampleConfig}
+    showHeader={false}
+    showStats={false}
     {...props}
   />
 );
@@ -313,6 +333,8 @@ export const TransformFeedbackExample: React.FC = props => (
     directory="tutorials"
     template={TransformFeedbackApp}
     config={exampleConfig}
+    showHeader={false}
+    showStats={false}
     {...props}
   />
 );
@@ -323,6 +345,8 @@ export const TransformExample: React.FC = props => (
     directory="tutorials"
     template={TransformApp}
     config={exampleConfig}
+    showHeader={false}
+    showStats={false}
     {...props}
   />
 );
