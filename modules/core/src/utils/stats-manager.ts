@@ -20,6 +20,11 @@ const GPU_TIME_AND_MEMORY_STAT_ORDER = [
   'Referenced Texture Memory',
   'Swap Chain Texture'
 ] as const;
+const ORDERED_STATS_CACHE = new WeakMap<
+  Stats,
+  {orderedStatNames: readonly string[]; statCount: number}
+>();
+const ORDERED_STAT_NAME_SET_CACHE = new WeakMap<readonly string[], Set<string>>();
 
 /**
  * Helper class managing a collection of probe.gl stats objects
@@ -50,12 +55,30 @@ export const lumaStats: StatsManager = new StatsManager();
 
 function initializeStats(stats: Stats, orderedStatNames: readonly string[]): void {
   const statsMap = stats.stats;
+  let addedOrderedStat = false;
   for (const statName of orderedStatNames) {
-    stats.get(statName);
+    if (!statsMap[statName]) {
+      stats.get(statName);
+      addedOrderedStat = true;
+    }
+  }
+
+  const statCount = Object.keys(statsMap).length;
+  const cachedStats = ORDERED_STATS_CACHE.get(stats);
+  if (
+    !addedOrderedStat &&
+    cachedStats?.orderedStatNames === orderedStatNames &&
+    cachedStats.statCount === statCount
+  ) {
+    return;
   }
 
   const reorderedStats: Record<string, Stat> = {};
-  const orderedStatNamesSet = new Set(orderedStatNames);
+  let orderedStatNamesSet = ORDERED_STAT_NAME_SET_CACHE.get(orderedStatNames);
+  if (!orderedStatNamesSet) {
+    orderedStatNamesSet = new Set(orderedStatNames);
+    ORDERED_STAT_NAME_SET_CACHE.set(orderedStatNames, orderedStatNamesSet);
+  }
 
   for (const statName of orderedStatNames) {
     if (statsMap[statName]) {
@@ -74,4 +97,5 @@ function initializeStats(stats: Stats, orderedStatNames: readonly string[]): voi
   }
 
   Object.assign(statsMap, reorderedStats);
+  ORDERED_STATS_CACHE.set(stats, {orderedStatNames, statCount});
 }

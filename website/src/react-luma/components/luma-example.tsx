@@ -11,6 +11,10 @@ import {webgpuAdapter} from '@luma.gl/webgpu';
 import {StatsWidget} from '@probe.gl/stats-widget';
 import type {Stat, Stats} from '@probe.gl/stats';
 import {DeviceTabs} from './device-tabs';
+import {
+  clearActiveCpuHotspotProfilerDevice,
+  setActiveCpuHotspotProfilerDevice
+} from '../debug/luma-cpu-hotspot-profiler';
 
 // import {VRDisplay} from '@luma.gl/experimental';
 import {useStore} from '../store/device-store';
@@ -431,11 +435,13 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
       device = await luma.createDevice({
         adapters: [webgl2Adapter, webgpuAdapter],
         type: deviceType,
+        debugGPUTime: true,
         createCanvasContext: {
           canvas,
           container: containerName
         }
       });
+      setActiveCpuHotspotProfilerDevice(device);
 
       animationLoop = makeAnimationLoop(props.template as unknown as typeof AnimationLoopTemplate, {
         stats: luma.stats.get('GPU Time and Memory'),
@@ -550,6 +556,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
           }
 
           if (device) {
+            clearActiveCpuHotspotProfilerDevice(device);
             device.destroy();
           }
         })

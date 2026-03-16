@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {luma, Device, QuerySet} from '@luma.gl/core';
+import {luma, Device} from '@luma.gl/core';
 import {
   requestAnimationFramePolyfill,
   cancelAnimationFramePolyfill
@@ -77,9 +77,6 @@ export class AnimationLoop {
   _error: Error | null = null;
   _lastFrameTime: number = 0;
 
-  /** GPU time query for measuring GPU execution time */
-  _gpuTimeQuery: QuerySet | null = null;
-
   /*
    * @param {HTMLCanvasElement} canvas - if provided, width and height will be passed to context
    */
@@ -112,19 +109,7 @@ export class AnimationLoop {
   destroy(): void {
     this.stop();
     this._setDisplay(null);
-    if (
-      this.device &&
-      this._gpuTimeQuery &&
-      this.device.commandEncoder.getTimeProfilingQuerySet() === this._gpuTimeQuery
-    ) {
-      this.device.commandEncoder = this.device.createCommandEncoder({
-        id: this.device.commandEncoder.props.id
-      });
-    }
-    if (this._gpuTimeQuery) {
-      this._gpuTimeQuery.destroy();
-      this._gpuTimeQuery = null;
-    }
+    this.device?._disableDebugGPUTime();
   }
 
   /** @deprecated Use .destroy() */
@@ -288,24 +273,7 @@ export class AnimationLoop {
     // Default viewport setup, in case onInitialize wants to render
     this._resizeViewport();
 
-    // Initialize GPU time query if supported by the active adapter.
-    if (this._hasTimestampQuerySupport()) {
-      const device = this.device;
-      try {
-        if (!device) {
-          return;
-        }
-
-        this._gpuTimeQuery = device.createQuerySet({type: 'timestamp', count: 256});
-        device.commandEncoder = device.createCommandEncoder({
-          id: device.commandEncoder.props.id,
-          timeProfilingQuerySet: this._gpuTimeQuery
-        });
-      } catch {
-        // GPU timing not available - ignore
-        this._gpuTimeQuery = null;
-      }
-    }
+    this.device?._enableDebugGPUTime();
   }
 
   _setDisplay(display: any): void {
@@ -539,7 +507,7 @@ export class AnimationLoop {
     }
     this._lastFrameTime = now;
 
-    if (this.device && this._gpuTimeQuery) {
+    if (this.device?._isDebugGPUTimeEnabled()) {
       this._consumeEncodedGpuTime();
     }
 
@@ -547,7 +515,7 @@ export class AnimationLoop {
   }
 
   _endFrameTimers() {
-    if (this.device && this._gpuTimeQuery) {
+    if (this.device?._isDebugGPUTimeEnabled()) {
       this._consumeEncodedGpuTime();
     }
 
@@ -565,14 +533,6 @@ export class AnimationLoop {
       this.gpuTime.addTime(gpuTimeMs);
       this.device.commandEncoder._gpuTimeMs = undefined;
     }
-  }
-
-  _hasTimestampQuerySupport(): boolean {
-    if (!this.device) {
-      return false;
-    }
-
-    return this.device.features.has('timestamp-query');
   }
 
   _updateSharedStats(): void {

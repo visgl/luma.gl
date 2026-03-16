@@ -7,6 +7,8 @@ import {getBindGroup} from '../helpers/get-bind-group';
 import {WebGPUDevice} from '../webgpu-device';
 import {WebGPUShader} from './webgpu-shader';
 
+const EMPTY_BINDINGS: Record<string, Binding> = {};
+
 // COMPUTE PIPELINE
 
 /** Creates a new compute pipeline when parameters change */
@@ -18,7 +20,7 @@ export class WebGPUComputePipeline extends ComputePipeline {
   private _bindGroupLayout: GPUBindGroupLayout | null = null;
   private _bindGroup: GPUBindGroup | null = null;
   /** For internal use to create BindGroups */
-  private _bindings: Record<string, Binding> = {};
+  private _bindings: Record<string, Binding>;
 
   constructor(device: WebGPUDevice, props: ComputePipelineProps) {
     super(device, props);
@@ -37,6 +39,8 @@ export class WebGPUComputePipeline extends ComputePipeline {
         },
         layout: 'auto'
       });
+
+    this._bindings = EMPTY_BINDINGS;
   }
 
   /**
@@ -44,12 +48,21 @@ export class WebGPUComputePipeline extends ComputePipeline {
    * @todo Do we want to expose BindGroups in the API and remove this?
    */
   setBindings(bindings: Record<string, Binding>): void {
+    let bindingsChanged = false;
     for (const [name, binding] of Object.entries(bindings)) {
       if (this._bindings[name] !== binding) {
-        this._bindGroup = null;
+        if (!bindingsChanged) {
+          if (this._bindings === EMPTY_BINDINGS) {
+            this._bindings = {};
+          }
+          bindingsChanged = true;
+        }
+        this._bindings[name] = binding;
       }
     }
-    Object.assign(this._bindings, bindings);
+    if (bindingsChanged) {
+      this._bindGroup = null;
+    }
   }
 
   /** Return a bind group created by setBindings */
@@ -60,7 +73,7 @@ export class WebGPUComputePipeline extends ComputePipeline {
     // Set up the bindings
     this._bindGroup =
       this._bindGroup ||
-      getBindGroup(this.device.handle, this._bindGroupLayout, this.shaderLayout, this._bindings);
+      getBindGroup(this.device, this._bindGroupLayout, this.shaderLayout, this._bindings);
 
     return this._bindGroup;
   }
