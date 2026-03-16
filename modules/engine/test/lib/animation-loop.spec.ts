@@ -5,6 +5,7 @@
 import test from 'tape-promise/tape';
 import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {luma} from '@luma.gl/core';
+import {webgpuAdapter, type WebGPUDevice} from '@luma.gl/webgpu';
 
 import {AnimationLoop} from '@luma.gl/engine';
 
@@ -195,15 +196,15 @@ test('engine#AnimationLoop GPU timing graceful fallback', async t => {
   t.ok(animationLoop.gpuTime, 'gpuTime stat exists');
   t.ok(animationLoop.cpuTime, 'cpuTime stat exists');
 
-  // _gpuTimeQuery should match feature availability
-  const hasTimerQuery = device.features.has('timestamp-query');
+  // Device-managed GPU timing should match feature availability
+  const hasTimerQuery = device.features.has('timestamp-query') && Boolean(device.props.debug);
   t.is(
-    animationLoop._gpuTimeQuery !== null,
+    device._isDebugGPUTimeEnabled(),
     hasTimerQuery,
-    `_gpuTimeQuery created when feature ${hasTimerQuery ? 'available' : 'unavailable'}`
+    `device GPU timing enabled when feature ${hasTimerQuery ? 'available' : 'unavailable'}`
   );
   t.is(
-    animationLoop._gpuTimeQuery?.props.count || 0,
+    device.commandEncoder.getTimeProfilingQuerySet()?.props.count || 0,
     hasTimerQuery ? 256 : 0,
     'timestamp query set pre-allocates slots for profiling passes'
   );
@@ -211,7 +212,7 @@ test('engine#AnimationLoop GPU timing graceful fallback', async t => {
   // Destroy should not throw
   animationLoop.stop();
   animationLoop.destroy();
-  t.is(animationLoop._gpuTimeQuery, null, 'Query cleaned up on destroy');
+  t.is(device._isDebugGPUTimeEnabled(), false, 'Query cleaned up on destroy');
 
   t.end();
 });
@@ -231,12 +232,49 @@ test('engine#AnimationLoop WebGPU timing path avoids backend casts', async t => 
   t.ok(animationLoop.gpuTime, 'gpuTime stat exists');
   t.ok(animationLoop.cpuTime, 'cpuTime stat exists');
   t.is(
-    animationLoop._gpuTimeQuery !== null,
-    device.features.has('timestamp-query'),
-    '_gpuTimeQuery follows timestamp-query support'
+    device._isDebugGPUTimeEnabled(),
+    device.features.has('timestamp-query') && Boolean(device.props.debug),
+    'device GPU timing follows timestamp-query support and debug flags'
   );
 
   animationLoop.stop();
   animationLoop.destroy();
+  t.end();
+});
+
+test('engine#AnimationLoop debugGPUTime enables GPU timing without full debug', async t => {
+  let device: WebGPUDevice | null = null;
+  try {
+    device = (await luma.createDevice({
+      id: 'webgpu-animation-loop-debug-gpu-time',
+      type: 'webgpu',
+      adapters: [webgpuAdapter],
+      createCanvasContext: {width: 1, height: 1},
+      debug: false,
+      debugGPUTime: true
+    })) as WebGPUDevice;
+  } catch {
+    // Handled below.
+  }
+
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const animationLoop = new AnimationLoop({device});
+  await animationLoop.start();
+  await animationLoop.waitForRender();
+
+  t.is(
+    device._isDebugGPUTimeEnabled(),
+    device.features.has('timestamp-query'),
+    'debugGPUTime enables GPU timing query setup when the feature is available'
+  );
+
+  animationLoop.stop();
+  animationLoop.destroy();
+  device.destroy();
   t.end();
 });

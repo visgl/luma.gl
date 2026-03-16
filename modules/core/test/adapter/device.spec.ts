@@ -5,6 +5,7 @@
 import test from 'tape-promise/tape';
 import {Texture} from '@luma.gl/core';
 import {getNullTestDevice, getTestDevices, getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {_getDefaultDebugValue} from '../../src/adapter/device';
 
 // import {luma} from '@luma.gl/core';
 
@@ -104,6 +105,46 @@ test('WebGPUDevice#generateMipmapsWebGPU generates a mip chain', async t => {
   );
 
   texture.destroy();
+  t.end();
+});
+
+test('Device debug default helper respects log debug before NODE_ENV', t => {
+  t.equal(_getDefaultDebugValue(true, 'production'), true, 'log debug true overrides production NODE_ENV');
+  t.equal(_getDefaultDebugValue(false, 'development'), false, 'log debug false overrides development NODE_ENV');
+  t.equal(_getDefaultDebugValue(undefined, 'production'), false, 'production NODE_ENV defaults debug to false');
+  t.equal(_getDefaultDebugValue(undefined, 'development'), true, 'non-production NODE_ENV defaults debug to true');
+  t.equal(_getDefaultDebugValue(undefined, undefined), false, 'missing NODE_ENV defaults debug to false');
+  t.end();
+});
+
+test('Device manages debug GPU timing through a single API', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU device not available');
+    t.end();
+    return;
+  }
+
+  device._disableDebugGPUTime();
+  t.equal(device._isDebugGPUTimeEnabled(), false, 'GPU timing starts disabled');
+
+  const querySet = device._enableDebugGPUTime();
+  const shouldEnable = device._supportsDebugGPUTime();
+  t.equal(device._isDebugGPUTimeEnabled(), shouldEnable, 'enableDebugGPUTime follows device policy');
+  t.equal(
+    device.commandEncoder.getTimeProfilingQuerySet(),
+    querySet,
+    'command encoder picks up the device-managed timing query set'
+  );
+
+  device._disableDebugGPUTime();
+  t.equal(device._isDebugGPUTimeEnabled(), false, 'disableDebugGPUTime clears the device timing query');
+  t.equal(
+    device.commandEncoder.getTimeProfilingQuerySet(),
+    null,
+    'disableDebugGPUTime removes the profiling query set from the command encoder'
+  );
+
   t.end();
 });
 

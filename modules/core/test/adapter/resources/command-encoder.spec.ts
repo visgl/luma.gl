@@ -3,8 +3,24 @@
 // Copyright (c) vis.gl contributors
 
 import test, {Test} from 'tape-promise/tape';
-import {Buffer, Device, TextureFormat} from '@luma.gl/core';
-import {getTestDevices, getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {
+  Buffer,
+  CommandBuffer,
+  CommandBufferProps,
+  CommandEncoder,
+  ComputePass,
+  Device,
+  QuerySet,
+  QuerySetProps,
+  RenderPass,
+  TextureFormat
+} from '@luma.gl/core';
+import {
+  getNullTestDevice,
+  getTestDevices,
+  getWebGLTestDevice,
+  getWebGPUTestDevice
+} from '@luma.gl/test-utils';
 
 const EPSILON = 1e-6;
 const {abs} = Math;
@@ -24,11 +40,100 @@ function getResourceStats(device: Device): Record<string, number> {
   };
 }
 
+class TestCommandBuffer extends CommandBuffer {
+  readonly device: Device;
+  readonly handle = null;
+
+  constructor(device: Device, props: CommandBufferProps = {}) {
+    super(device, props);
+    this.device = device;
+  }
+}
+
+class TestQuerySet extends QuerySet {
+  readonly device: Device;
+  readonly handle = null;
+  readResultsCallCount = 0;
+  readTimestampDurationCallCount = 0;
+
+  constructor(device: Device, props: QuerySetProps) {
+    super(device, props);
+    this.device = device;
+  }
+
+  isResultAvailable(_queryIndex?: number): boolean {
+    return true;
+  }
+
+  async readResults(options?: {firstQuery?: number; queryCount?: number}): Promise<bigint[]> {
+    this.readResultsCallCount++;
+    const firstQuery = options?.firstQuery || 0;
+    const queryCount = options?.queryCount || this.props.count - firstQuery;
+    return [10n, 20n, 100n, 130n].slice(firstQuery, firstQuery + queryCount);
+  }
+
+  async readTimestampDuration(_beginIndex: number, _endIndex: number): Promise<number> {
+    this.readTimestampDurationCallCount++;
+    throw new Error('resolveTimeProfilingQuerySet should use bulk readResults');
+  }
+}
+
+class TestCommandEncoder extends CommandEncoder {
+  readonly device: Device;
+  readonly handle = null;
+
+  constructor(device: Device, querySet: QuerySet) {
+    super(device, {timeProfilingQuerySet: querySet});
+    this.device = device;
+    this._timeProfilingSlotCount = 4;
+  }
+
+  finish(_props?: CommandBufferProps): CommandBuffer {
+    return new TestCommandBuffer(this.device, {});
+  }
+
+  beginRenderPass(): RenderPass {
+    throw new Error('not implemented');
+  }
+
+  beginComputePass(): ComputePass {
+    throw new Error('not implemented');
+  }
+
+  copyBufferToBuffer(): void {
+    throw new Error('not implemented');
+  }
+
+  copyBufferToTexture(): void {
+    throw new Error('not implemented');
+  }
+
+  copyTextureToBuffer(): void {
+    throw new Error('not implemented');
+  }
+
+  copyTextureToTexture(): void {
+    throw new Error('not implemented');
+  }
+
+  resolveQuerySet(): void {
+    throw new Error('not implemented');
+  }
+}
+
 test('Transient command resources release core stats', async t => {
   for (const device of await getTestDevices(['webgl', 'webgpu', 'null'])) {
+    const framebuffer =
+      device.type === 'webgpu'
+        ? device.createFramebuffer({
+            width: 1,
+            height: 1,
+            colorAttachments: ['rgba8unorm']
+          })
+        : undefined;
     const beforeStats = getResourceStats(device);
 
-    const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 0]});
+    const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 0], framebuffer});
     const duringRenderPassStats = getResourceStats(device);
     t.equal(
       duringRenderPassStats.renderPasssActive - beforeStats.renderPasssActive,
@@ -79,6 +184,8 @@ test('Transient command resources release core stats', async t => {
       beforeStats.resourcesActive,
       `${device.type} transient command resources restore total Resources Active`
     );
+
+    framebuffer?.destroy();
   }
 
   const webgpuDevice = await getWebGPUTestDevice();
@@ -106,54 +213,80 @@ test('Transient command resources release core stats', async t => {
   );
 
   const beforeCanvasStats = getResourceStats(webgpuDevice);
-  const defaultFramebufferRenderPass = webgpuDevice.beginRenderPass({clearColor: [0, 0, 0, 1]});
-  const duringCanvasStats = getResourceStats(webgpuDevice);
+  const firstDefaultFramebufferRenderPass = webgpuDevice.beginRenderPass({clearColor: [0, 0, 0, 1]});
+  const duringFirstCanvasStats = getResourceStats(webgpuDevice);
   t.equal(
-    duringCanvasStats.framebuffersActive - beforeCanvasStats.framebuffersActive,
-    1,
-    'webgpu default render pass allocates one transient framebuffer wrapper'
-  );
-  t.equal(
-    duringCanvasStats.texturesActive - beforeCanvasStats.texturesActive,
-    1,
-    'webgpu default render pass allocates one transient swapchain texture wrapper'
-  );
-  t.equal(
-    duringCanvasStats.samplersActive - beforeCanvasStats.samplersActive,
-    1,
-    'webgpu default render pass allocates one transient sampler wrapper'
-  );
-  t.equal(
-    duringCanvasStats.textureViewsActive - beforeCanvasStats.textureViewsActive,
-    1,
-    'webgpu default render pass allocates one transient texture view wrapper'
+    duringFirstCanvasStats.samplersActive - beforeCanvasStats.samplersActive,
+    0,
+    'webgpu default render pass reuses the shared default sampler wrapper'
   );
 
-  defaultFramebufferRenderPass.end();
+  firstDefaultFramebufferRenderPass.end();
   webgpuDevice.submit();
 
-  const afterCanvasStats = getResourceStats(webgpuDevice);
+  const afterFirstCanvasStats = getResourceStats(webgpuDevice);
   t.equal(
-    afterCanvasStats.framebuffersActive,
-    beforeCanvasStats.framebuffersActive,
-    'webgpu default render pass releases framebuffer wrapper stats'
+    afterFirstCanvasStats.framebuffersActive,
+    duringFirstCanvasStats.framebuffersActive,
+    'webgpu cached framebuffer wrapper remains active after submit'
   );
   t.equal(
-    afterCanvasStats.texturesActive,
-    beforeCanvasStats.texturesActive,
-    'webgpu default render pass releases texture wrapper stats'
+    afterFirstCanvasStats.texturesActive,
+    duringFirstCanvasStats.texturesActive,
+    'webgpu cached swapchain texture wrapper remains active after submit'
   );
   t.equal(
-    afterCanvasStats.samplersActive,
-    beforeCanvasStats.samplersActive,
-    'webgpu default render pass releases sampler wrapper stats'
+    afterFirstCanvasStats.samplersActive,
+    duringFirstCanvasStats.samplersActive,
+    'webgpu cached default framebuffer path does not add sampler wrappers after submit'
   );
   t.equal(
-    afterCanvasStats.textureViewsActive,
-    beforeCanvasStats.textureViewsActive,
-    'webgpu default render pass releases texture view wrapper stats'
+    afterFirstCanvasStats.textureViewsActive,
+    duringFirstCanvasStats.textureViewsActive,
+    'webgpu cached texture view wrapper remains active after submit'
   );
 
+  const secondDefaultFramebufferRenderPass = webgpuDevice.beginRenderPass({clearColor: [0, 0, 0, 1]});
+  const duringSecondCanvasStats = getResourceStats(webgpuDevice);
+  t.equal(
+    duringSecondCanvasStats.framebuffersActive,
+    afterFirstCanvasStats.framebuffersActive,
+    'webgpu second default render pass reuses cached framebuffer wrapper'
+  );
+  t.equal(
+    duringSecondCanvasStats.texturesActive,
+    afterFirstCanvasStats.texturesActive,
+    'webgpu second default render pass reuses cached texture wrapper'
+  );
+  t.equal(
+    duringSecondCanvasStats.textureViewsActive,
+    afterFirstCanvasStats.textureViewsActive,
+    'webgpu second default render pass reuses cached texture view wrapper'
+  );
+
+  secondDefaultFramebufferRenderPass.end();
+  webgpuDevice.submit();
+
+  t.end();
+});
+
+test('CommandEncoder resolves time profiling with a single bulk query read', async t => {
+  const device = await getNullTestDevice();
+  const querySet = new TestQuerySet(device, {type: 'timestamp', count: 4});
+  const commandEncoder = new TestCommandEncoder(device, querySet);
+
+  await commandEncoder.resolveTimeProfilingQuerySet();
+
+  t.equal(querySet.readResultsCallCount, 1, 'resolveTimeProfilingQuerySet uses one bulk readResults call');
+  t.equal(
+    querySet.readTimestampDurationCallCount,
+    0,
+    'resolveTimeProfilingQuerySet does not call readTimestampDuration per pair'
+  );
+  t.equal(commandEncoder._gpuTimeMs, 0.00004, 'resolveTimeProfilingQuerySet sums durations from bulk results');
+
+  commandEncoder.destroy();
+  querySet.destroy();
   t.end();
 });
 

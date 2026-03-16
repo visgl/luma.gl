@@ -11,6 +11,10 @@ import {webgpuAdapter} from '@luma.gl/webgpu';
 import {StatsWidget} from '@probe.gl/stats-widget';
 import type {Stat, Stats} from '@probe.gl/stats';
 import {DeviceTabs} from './device-tabs';
+import {
+  clearActiveCpuHotspotProfilerDevice,
+  setActiveCpuHotspotProfilerDevice
+} from '../debug/luma-cpu-hotspot-profiler';
 
 // import {VRDisplay} from '@luma.gl/experimental';
 import {useStore} from '../store/device-store';
@@ -125,6 +129,8 @@ type LumaExampleProps = React.PropsWithChildren<{
   sourcePath?: string;
   style?: CSSProperties;
   container?: string;
+  panel?: boolean;
+  showHeader?: boolean;
   showStats?: boolean;
 }>;
 
@@ -316,6 +322,7 @@ export function ReactExample<P>(props: ReactExampleProps<P>) {
 
     const resourceCounts = luma.stats.get('GPU Resource Counts');
     const gpuTimeAndMemoryStats = initializeGpuTimeAndMemoryStats();
+    statsPanelRef.current.replaceChildren();
 
     const statsWidgets = [
       new StatsWidget(gpuTimeAndMemoryStats, {
@@ -349,6 +356,7 @@ export function ReactExample<P>(props: ReactExampleProps<P>) {
       for (const statsWidget of statsWidgets) {
         statsWidget.remove();
       }
+      statsPanelRef.current?.replaceChildren();
     };
   }, [props.showStats]);
 
@@ -379,6 +387,8 @@ export function ReactExample<P>(props: ReactExampleProps<P>) {
 
 export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
   let containerName = 'ssr';
+  const showStats = props.showStats !== false && props.panel !== false;
+  const showHeader = props.showHeader !== false && props.panel !== false;
 
   /** Each example maintains an animation loop */
   const [canvas, setCanvas] = useState<HTMLCanvasElement | null>(null);
@@ -408,11 +418,13 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
       device = await luma.createDevice({
         adapters: [webgl2Adapter, webgpuAdapter],
         type: deviceType,
+        debugGPUTime: true,
         createCanvasContext: {
           canvas,
           container: containerName
         }
       });
+      setActiveCpuHotspotProfilerDevice(device);
 
       animationLoop = makeAnimationLoop(props.template as unknown as typeof AnimationLoopTemplate, {
         stats: luma.stats.get('GPU Time and Memory'),
@@ -422,11 +434,12 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
       });
       animationLoop.frameRate.setSampleSize(1);
 
-      if (props.showStats !== false && statsPanelRef.current) {
+      if (showStats && statsPanelRef.current) {
         const resourceCounts = luma.stats.get('GPU Resource Counts');
         const gpuTimeAndMemoryStats = initializeGpuTimeAndMemoryStats();
         const swapChainTextureStat = gpuTimeAndMemoryStats.get('Swap Chain Texture');
         const gpuMemoryStat = gpuTimeAndMemoryStats.get('GPU Memory');
+        statsPanelRef.current.replaceChildren();
 
         const updateSwapChainTextureMemory = (nextSwapChainTextureMemory: number) => {
           const delta = nextSwapChainTextureMemory - previousSwapChainTextureMemory;
@@ -516,6 +529,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
             }
             statsWidget.remove();
           }
+          statsPanelRef.current?.replaceChildren();
           statsWidgets = [];
           if (animationLoop) {
             animationLoop.destroy();
@@ -523,6 +537,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
           }
 
           if (device) {
+            clearActiveCpuHotspotProfilerDevice(device);
             device.destroy();
           }
         })
@@ -530,7 +545,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
           console.error(`unmounting ${deviceType} failed`, error);
         });
     };
-  }, [deviceType, canvas]);
+  }, [deviceType, canvas, showStats]);
 
   // @ts-expect-error Intentionally accessing undeclared field info
   const info = props.template?.info;
@@ -539,21 +554,23 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
     <ExamplePage
       style={{
         display: 'grid',
-        gridTemplateRows: 'auto minmax(0, 1fr)',
+        gridTemplateRows: showHeader ? 'auto minmax(0, 1fr)' : 'minmax(0, 1fr)',
         ...props.style
       }}
     >
-      <ExampleHeader
-        id={props.id}
-        title={props.title}
-        directory={props.directory}
-        sourceDirectory={props.sourceDirectory}
-        sourcePath={props.sourcePath}
-      >
-        {info ? <div dangerouslySetInnerHTML={{__html: info}} /> : null}
-      </ExampleHeader>
+      {showHeader ? (
+        <ExampleHeader
+          id={props.id}
+          title={props.title}
+          directory={props.directory}
+          sourceDirectory={props.sourceDirectory}
+          sourcePath={props.sourcePath}
+        >
+          {info ? <div dangerouslySetInnerHTML={{__html: info}} /> : null}
+        </ExampleHeader>
+      ) : null}
       <div ref={statsContainerRef} style={{minHeight: 0, position: 'relative'}}>
-        {props.showStats !== false ? (
+        {showStats ? (
           <div
             ref={statsPanelRef}
             style={{

@@ -6,6 +6,8 @@ import {Buffer, QuerySet, QuerySetProps} from '@luma.gl/core';
 import {WebGPUDevice} from '../webgpu-device';
 import {WebGPUBuffer} from './webgpu-buffer';
 
+const CPU_HOTSPOT_SUBMIT_REASON = 'cpu-hotspot-submit-reason';
+
 export type QuerySetProps2 = {
   type: 'occlusion' | 'timestamp';
   count: number;
@@ -22,6 +24,7 @@ export class WebGPUQuerySet extends QuerySet {
   protected _readBuffer: WebGPUBuffer | null = null;
   protected _cachedResults: bigint[] | null = null;
   protected _readResultsPromise: Promise<bigint[]> | null = null;
+  protected _resultsPendingResolution: boolean = false;
 
   constructor(device: WebGPUDevice, props: QuerySetProps) {
     super(device, props);
@@ -62,12 +65,24 @@ export class WebGPUQuerySet extends QuerySet {
       throw new Error('Query read range is out of bounds');
     }
 
-    if (!this._readResultsPromise) {
-      this._readResultsPromise = this._readAllResults();
+    let needsFreshResults = true;
+    while (needsFreshResults) {
+      if (!this._readResultsPromise) {
+        this._readResultsPromise = this._readAllResults();
+      }
+
+      const readResultsPromise = this._readResultsPromise;
+      const results = await readResultsPromise;
+
+      // A later submit may have invalidated the query set while this read was in flight.
+      // Retry so each caller observes the freshest resolved results instead of stale data.
+      needsFreshResults = this._resultsPendingResolution;
+      if (!needsFreshResults) {
+        return results.slice(firstQuery, firstQuery + queryCount);
+      }
     }
 
-    const results = await this._readResultsPromise;
-    return results.slice(firstQuery, firstQuery + queryCount);
+    throw new Error('Query read unexpectedly failed to resolve');
   }
 
   async readTimestampDuration(beginIndex: number, endIndex: number): Promise<number> {
@@ -88,23 +103,35 @@ export class WebGPUQuerySet extends QuerySet {
   /** Marks any cached query results as stale after new writes have been encoded. */
   _invalidateResults(): void {
     this._cachedResults = null;
+    this._resultsPendingResolution = true;
   }
 
   protected async _readAllResults(): Promise<bigint[]> {
     this._ensureBuffers();
 
     try {
-      this.device.commandEncoder.resolveQuerySet(this, this._resolveBuffer!);
-      this.device.commandEncoder.copyBufferToBuffer({
-        sourceBuffer: this._resolveBuffer!,
-        destinationBuffer: this._readBuffer!,
-        size: this._resolveBuffer!.byteLength
-      });
-      this.device.submit();
+      if (this._resultsPendingResolution) {
+        // If main submit could not resolve into the shared read buffer because a previous
+        // readback was still mapping it, fall back to the older explicit resolve/copy submit here.
+        this.device.commandEncoder.resolveQuerySet(this, this._resolveBuffer!);
+        this.device.commandEncoder.copyBufferToBuffer({
+          sourceBuffer: this._resolveBuffer!,
+          destinationBuffer: this._readBuffer!,
+          size: this._resolveBuffer!.byteLength
+        });
+        const previousSubmitReason = this.device.userData[CPU_HOTSPOT_SUBMIT_REASON];
+        this.device.userData[CPU_HOTSPOT_SUBMIT_REASON] = 'query-readback';
+        try {
+          this.device.submit();
+        } finally {
+          this.device.userData[CPU_HOTSPOT_SUBMIT_REASON] = previousSubmitReason;
+        }
+      }
 
       const data = await this._readBuffer!.readAsync(0, this._readBuffer!.byteLength);
       const resultView = new BigUint64Array(data.buffer, data.byteOffset, this.props.count);
       this._cachedResults = Array.from(resultView, value => value);
+      this._resultsPendingResolution = false;
       return this._cachedResults;
     } finally {
       this._readResultsPromise = null;
@@ -130,5 +157,54 @@ export class WebGPUQuerySet extends QuerySet {
       byteLength
     });
     this.attachResource(this._readBuffer);
+  }
+
+  _encodeResolveToReadBuffer(
+    commandEncoder: {
+      resolveQuerySet: (
+        querySet: WebGPUQuerySet,
+        destination: WebGPUBuffer,
+        options?: {firstQuery?: number; queryCount?: number; destinationOffset?: number}
+      ) => void;
+      copyBufferToBuffer: (options: {
+        sourceBuffer: WebGPUBuffer;
+        destinationBuffer: WebGPUBuffer;
+        sourceOffset?: number;
+        destinationOffset?: number;
+        size?: number;
+      }) => void;
+    },
+    options?: {firstQuery?: number; queryCount?: number}
+  ): boolean {
+    if (!this._resultsPendingResolution) {
+      return false;
+    }
+
+    // If a readback is already mapping the shared read buffer, defer to the fallback read path.
+    // That path will submit resolve/copy commands once the current read has completed.
+    if (this._readResultsPromise) {
+      return false;
+    }
+
+    this._ensureBuffers();
+    const firstQuery = options?.firstQuery || 0;
+    const queryCount = options?.queryCount || this.props.count - firstQuery;
+    const byteLength = queryCount * BigUint64Array.BYTES_PER_ELEMENT;
+    const byteOffset = firstQuery * BigUint64Array.BYTES_PER_ELEMENT;
+
+    commandEncoder.resolveQuerySet(this, this._resolveBuffer!, {
+      firstQuery,
+      queryCount,
+      destinationOffset: byteOffset
+    });
+    commandEncoder.copyBufferToBuffer({
+      sourceBuffer: this._resolveBuffer!,
+      sourceOffset: byteOffset,
+      destinationBuffer: this._readBuffer!,
+      destinationOffset: byteOffset,
+      size: byteLength
+    });
+    this._resultsPendingResolution = false;
+    return true;
   }
 }

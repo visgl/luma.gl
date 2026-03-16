@@ -2,97 +2,93 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-/*
 import test from 'tape-promise/tape';
-import {RenderPipeline, Buffer, VertexArray} from '@luma.gl/webgl-legacy';
+import {Buffer} from '@luma.gl/core';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 
-import {webglDevice,getWebGLTestDevices} from '@luma.gl/test-utils';
+const RENDER_SOURCE = /* WGSL */ `
+struct ColorUniforms {
+  color: vec4<f32>
+};
 
-const vs = `
-attribute vec3 positions;
-uniform mat4 uMVMatrix[2];
-uniform mat4 uPMatrix;
-varying vec3 vPosition;
+@group(0) @binding(0) var<uniform> colorUniforms: ColorUniforms;
 
-void main(void) {
-  gl_Position = uPMatrix * uMVMatrix[0] * vec4(positions, 1.0);
-  vPosition = positions;
+@vertex fn vertexMain(@builtin(vertex_index) vertexIndex: u32) -> @builtin(position) vec4<f32> {
+  var positions = array<vec2<f32>, 3>(
+    vec2<f32>(0.0, 0.5),
+    vec2<f32>(-0.5, -0.5),
+    vec2<f32>(0.5, -0.5)
+  );
+  let position = positions[vertexIndex];
+  return vec4<f32>(position, 0.0, 1.0);
+}
+
+@fragment fn fragmentMain() -> @location(0) vec4<f32> {
+  return colorUniforms.color;
 }
 `;
 
-const fs = `
-out vec4 fragColor;
-void main(void) {
-  fragColor = vec4(1.0, 1.0, 1.0, 1.0);
-}
-`;
+test('RenderPipeline bind-group cache only invalidates when binding identities change', async t => {
+  const webgpuDevice = await getWebGPUTestDevice();
 
-const BUFFER_DATA = new Float32Array([0, 1, 0, -1, -1, 0, 1, -1, 0]);
+  if (!webgpuDevice) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
 
-test('WebGL#RenderPipeline construct/delete', (t) => {
-  // @ts-expect-error
-  t.throws(() => webglDevice.createRenderPipeline( 'RenderPipeline throws on missing shader');
-
-  const renderPipeline = webglDevice.createRenderPipeline({vs, fs});
-  t.ok(renderPipeline instanceof RenderPipeline, 'RenderPipeline construction successful');
-
-  renderPipeline.destroy();
-  t.ok(renderPipeline instanceof RenderPipeline, 'RenderPipeline delete successful');
-
-  renderPipeline.destroy();
-  t.ok(renderPipeline instanceof RenderPipeline, 'RenderPipeline repeated delete successful');
-
-  t.end();
-});
-
-test('WebGL#RenderPipeline draw', (t) => {
-  const renderPipeline = webglDevice.createRenderPipeline({fs, vs});
-
-  const vertexArray = webglDevice.createVertexArray{renderPipeline});
-  vertexArray.setAttributes({
-    positions: new Buffer(gl, {data: BUFFER_DATA, accessor: {size: 3}}),
-    unusedAttributeName: new Buffer(gl, {data: BUFFER_DATA, accessor: {size: 3}})
+  const shader = webgpuDevice.createShader({source: RENDER_SOURCE});
+  const renderPipeline = webgpuDevice.createRenderPipeline({
+    vs: shader,
+    fs: shader,
+    shaderLayout: {
+      attributes: [],
+      bindings: [{name: 'colorUniforms', type: 'uniform', group: 0, location: 0}]
+    }
   });
-  t.ok(vertexArray instanceof VertexArray, 'VertexArray set buffers successful');
 
-  renderPipeline.draw({vertexArray, vertexCount: 3});
-  t.ok(renderPipeline instanceof RenderPipeline, 'RenderPipeline draw successful');
+  const firstBuffer = webgpuDevice.createBuffer({
+    id: 'first-uniform-buffer',
+    byteLength: 16,
+    usage: Buffer.UNIFORM | Buffer.COPY_DST
+  });
+  const secondBuffer = webgpuDevice.createBuffer({
+    id: 'second-uniform-buffer',
+    byteLength: 16,
+    usage: Buffer.UNIFORM | Buffer.COPY_DST
+  });
 
-  let didDraw = renderPipeline.draw({vertexArray, vertexCount: 3, parameters: {blend: true}});
-  t.ok(renderPipeline instanceof RenderPipeline, 'RenderPipeline draw with parameters is successful');
-  t.ok(didDraw, 'RenderPipeline draw successful');
+  renderPipeline.setBindings({colorUniforms: firstBuffer});
+  const firstBindGroup = (renderPipeline as any)._getBindGroup();
 
-  didDraw = renderPipeline.draw({vertexArray, vertexCount: 0});
-  t.notOk(didDraw, 'RenderPipeline draw succesfully skipped');
+  renderPipeline.setBindings({colorUniforms: firstBuffer});
+  const secondBindGroup = (renderPipeline as any)._getBindGroup();
+  t.equal(
+    secondBindGroup,
+    firstBindGroup,
+    'render bind group is reused when binding object identities are unchanged'
+  );
 
-  didDraw = renderPipeline.draw({vertexArray, vertexCount: 3, instanceCount: 0, isInstanced: true});
-  t.notOk(didDraw, 'Instanced RenderPipeline draw succesfully skipped');
+  renderPipeline.setBindings({colorUniforms: secondBuffer});
+  t.equal((renderPipeline as any)._bindGroup, null, 'render bind group cache is cleared on change');
+  const thirdBindGroup = (renderPipeline as any)._getBindGroup();
+  t.notEqual(
+    thirdBindGroup,
+    firstBindGroup,
+    'render bind group is rebuilt when a binding object identity changes'
+  );
 
+  renderPipeline.setBindings({colorUniforms: secondBuffer});
+  const fourthBindGroup = (renderPipeline as any)._getBindGroup();
+  t.equal(
+    fourthBindGroup,
+    thirdBindGroup,
+    'render bind group is reused again after the rebuilt group is cached'
+  );
+
+  secondBuffer.destroy();
+  firstBuffer.destroy();
+  renderPipeline.destroy();
+  shader.destroy();
   t.end();
 });
-
-test('WebGL#RenderPipeline caching', (t) => {
-  const renderPipeline = webglDevice.createRenderPipeline({fs, vs});
-
-  renderPipeline._isCached = true;
-  renderPipeline.destroy();
-  t.ok(!renderPipeline.destroyed, 'RenderPipeline should not be deleted');
-
-  renderPipeline._isCached = false;
-  renderPipeline.destroy();
-  t.ok(renderPipeline.destroyed, 'RenderPipeline should be deleted');
-
-  t.end();
-});
-
-test('WebGL#RenderPipeline uniform array', (t) => {
-  const renderPipeline = webglDevice.createRenderPipeline({vs, fs});
-
-  t.ok(renderPipeline._uniformSetters.uMVMatrix, 'uniform array is ok');
-  t.ok(renderPipeline._uniformSetters['uMVMatrix[0]'], 'uniform array is ok');
-  t.ok(renderPipeline._uniformSetters['uMVMatrix[1]'], 'uniform array is ok');
-
-  renderPipeline.destroy();
-  t.end();
-});
-*/

@@ -40,6 +40,49 @@ test('QuerySet timestamp duration', async t => {
   t.end();
 });
 
+test('WebGPU QuerySet defers inline resolve when a readback is already in flight', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  if (!device.features.has('timestamp-query')) {
+    t.comment('WebGPU timestamp queries are not supported');
+    t.end();
+    return;
+  }
+
+  const querySet = device.createQuerySet({type: 'timestamp', count: 2}) as any;
+  querySet._resultsPendingResolution = true;
+  querySet._readResultsPromise = new Promise<bigint[]>(() => {});
+
+  let resolveQuerySetCallCount = 0;
+  let copyBufferToBufferCallCount = 0;
+  const encoded = querySet._encodeResolveToReadBuffer({
+    resolveQuerySet: () => {
+      resolveQuerySetCallCount++;
+    },
+    copyBufferToBuffer: () => {
+      copyBufferToBufferCallCount++;
+    }
+  });
+
+  t.notOk(encoded, 'webgpu skips inline resolve while a readback is already in flight');
+  t.equal(resolveQuerySetCallCount, 0, 'webgpu does not encode resolveQuerySet while readback is active');
+  t.equal(
+    copyBufferToBufferCallCount,
+    0,
+    'webgpu does not encode copyBufferToBuffer while readback is active'
+  );
+  t.ok(querySet._resultsPendingResolution, 'webgpu keeps results pending for fallback resolution');
+
+  querySet._readResultsPromise = null;
+  querySet.destroy();
+  t.end();
+});
+
 test('WebGL QuerySet timestamp pair validation', async t => {
   const device = await getWebGLTestDevice();
   if (!device.features.has('timestamp-query')) {

@@ -26,7 +26,7 @@ export default class AppAnimationLoopTemplate extends HelloGLTFApp {
   static info = INFO_HTML;
 
   getDefaultModelName(): string {
-    return 'DamagedHelmet';
+    return 'CesiumMan';
   }
 
   getModelStorageKey(): string {
