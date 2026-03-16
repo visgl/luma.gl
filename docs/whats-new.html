@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="generator" content="Docusaurus v3.9.2">
-<title data-rh="true">What&#x27;s New | luma.gl</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://luma.gl/docs/whats-new"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-default-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-rh="true" property="og:title" content="What&#x27;s New | luma.gl"><meta data-rh="true" name="description" content="This page contains news for recent luma.gl releases. For older releases (through v8.5) refer to the Legacy What&#x27;s New page."><meta data-rh="true" property="og:description" content="This page contains news for recent luma.gl releases. For older releases (through v8.5) refer to the Legacy What&#x27;s New page."><link data-rh="true" rel="icon" href="/favicon.png"><link data-rh="true" rel="canonical" href="https://luma.gl/docs/whats-new"><link data-rh="true" rel="alternate" href="https://luma.gl/docs/whats-new" hreflang="en"><link data-rh="true" rel="alternate" href="https://luma.gl/docs/whats-new" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"What's New","item":"https://luma.gl/docs/whats-new"}]}</script><link rel="stylesheet" href="/assets/css/styles.001c07d2.css">
-<script src="/assets/js/runtime~main.d5622660.js" defer="defer"></script>
-<script src="/assets/js/main.1869955d.js" defer="defer"></script>
+<title data-rh="true">What&#x27;s New | luma.gl</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://luma.gl/docs/whats-new"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-default-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-rh="true" property="og:title" content="What&#x27;s New | luma.gl"><meta data-rh="true" name="description" content="This page contains news for recent luma.gl releases. For older releases (through v8.5) refer to the Legacy What&#x27;s New page."><meta data-rh="true" property="og:description" content="This page contains news for recent luma.gl releases. For older releases (through v8.5) refer to the Legacy What&#x27;s New page."><link data-rh="true" rel="icon" href="/favicon.png"><link data-rh="true" rel="canonical" href="https://luma.gl/docs/whats-new"><link data-rh="true" rel="alternate" href="https://luma.gl/docs/whats-new" hreflang="en"><link data-rh="true" rel="alternate" href="https://luma.gl/docs/whats-new" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"What's New","item":"https://luma.gl/docs/whats-new"}]}</script><link rel="stylesheet" href="/assets/css/styles.cb5c6c31.css">
+<script src="/assets/js/runtime~main.8bc73d5b.js" defer="defer"></script>
+<script src="/assets/js/main.e96e6e2f.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg style="display: none;"><defs>
@@ -44,9 +44,18 @@
 </ul>
 <p><strong>@luma.gl/gltf</strong></p>
 <ul>
-<li class="">Improved documentation of the glTF module. In particular, <code>createScenegraphsFromGLTF()</code> and <code>GLTFScenegraphs</code> are now documented.</li>
-<li class="">gltf module now creates <code>DynamicTexture</code> instances rather than raw <code>Texture</code>s.</li>
+<li class=""><strong>WebGPU support</strong> - glTF models can now be rendered in WebGPU.</li>
+<li class=""><strong>Joint/Skin Animations</strong> - Support for glTF animations now include joint and skin animations.</li>
+<li class=""><strong>Lighting</strong> - luma.gl Light definitions are now extracted if the <code>KHR_lights_punctual</code> glTF extension is present in the glTF file.</li>
 <li class=""><strong><code>linear</code> texture filtering</strong> - default texture filtering is now <code>linear</code> instead of <code>nearest</code> for improved texture rendering.</li>
+</ul>
+<p><strong>@luma.gl/shadertools</strong></p>
+<ul>
+<li class=""><code>WGSL shader modules</code> - most notably, the [<code>pbrMaterial</code>] module is now supported in WebGPU.</li>
+</ul>
+<p><strong>@luma.gl/effects</strong></p>
+<ul>
+<li class=""><strong>WebGPU/WGSL effects</strong> - Effects now have WGSL shader implementations and work under WebGPU.</li>
 </ul>
 <h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="version-92">Version 9.2<a href="#version-92" class="hash-link" aria-label="Direct link to Version 9.2" title="Direct link to Version 9.2" translate="no">​</a></h2>
 <p>Release Date: Sep 24, 2025</p>
