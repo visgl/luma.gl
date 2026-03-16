@@ -613,15 +613,7 @@ export class ClassicAnimationLoop {
     const width = this.gl.drawingBufferWidth;
     const height = this.gl.drawingBufferHeight;
 
-    // https://webglfundamentals.org/webgl/lessons/webgl-anti-patterns.html
-    let aspect = 1;
-
-    const canvas = getHTMLCanvasElement(this.gl.canvas);
-    if (canvas && canvas.clientHeight) {
-      aspect = canvas.clientWidth / canvas.clientHeight;
-    } else if (width > 0 && height > 0) {
-      aspect = width / height;
-    }
+    const aspect = width > 0 && height > 0 ? width / height : 1;
 
     return {width, height, aspect};
   }

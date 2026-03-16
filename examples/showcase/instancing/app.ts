@@ -211,7 +211,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   <p>
   A luma.gl <code>Cube</code>, rendering 65,536 instances in a
   single GPU draw call using instanced vertex attributes.
-  </P>
+  </p>
   `;
 
   static props = {createFramebuffer: true, debug: true};

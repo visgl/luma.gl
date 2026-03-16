@@ -40,6 +40,39 @@ test('QuerySet timestamp duration', async t => {
   t.end();
 });
 
+test('WebGPU QuerySet reads do not replace the active command encoder', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  if (!device.features.has('timestamp-query')) {
+    t.comment('WebGPU timestamp queries are not supported');
+    t.end();
+    return;
+  }
+
+  const querySet = device.createQuerySet({type: 'timestamp', count: 2});
+  device.commandEncoder.writeTimestamp(querySet, 0);
+  device.commandEncoder.writeTimestamp(querySet, 1);
+  device.submit();
+
+  const activeCommandEncoder = device.commandEncoder;
+  const duration = await querySet.readTimestampDuration(0, 1);
+
+  t.ok(duration >= 0, 'WebGPU timestamp duration remains readable');
+  t.equal(
+    device.commandEncoder,
+    activeCommandEncoder,
+    'WebGPU query reads keep the active command encoder intact'
+  );
+
+  querySet.destroy();
+  t.end();
+});
+
 test('WebGPU QuerySet defers inline resolve when a readback is already in flight', async t => {
   const device = await getWebGPUTestDevice();
   if (!device) {

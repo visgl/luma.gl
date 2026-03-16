@@ -35,10 +35,18 @@ Target Date: April 2026
 
 **@luma.gl/gltf**
 
-- Improved documentation of the glTF module. In particular, `createScenegraphsFromGLTF()` and `GLTFScenegraphs` are now documented.
-- gltf module now creates `DynamicTexture` instances rather than raw `Texture`s.
+- **WebGPU support** - glTF models can now be rendered in WebGPU.
+- **Joint/Skin Animations** - Support for glTF animations now include joint and skin animations.
+- **Lighting** - luma.gl Light definitions are now extracted if the `KHR_lights_punctual` glTF extension is present in the glTF file. 
 - **`linear` texture filtering** - default texture filtering is now `linear` instead of `nearest` for improved texture rendering.
 
+**@luma.gl/shadertools**
+
+- `WGSL shader modules` - most notably, the [`pbrMaterial`] module is now supported in WebGPU.
+
+**@luma.gl/effects**
+
+- **WebGPU/WGSL effects** - Effects now have WGSL shader implementations and work under WebGPU.
 
 ## Version 9.2
 

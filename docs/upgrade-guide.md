@@ -10,19 +10,13 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 
 *For detailed commit level logs that include alpha and beta releases, see the [CHANGELOG](https://github.com/visgl/luma.gl/blob/master/CHANGELOG.md) in the github repository.*
 
-## Upgrading to v9.4
-
-**Potentially breaking behavior**
-- The legacy feature flag `timer-query-webgl` has been removed.
-- Replace checks for `timer-query-webgl` with `timestamp-query` for GPU timestamp/query support on both WebGPU and WebGL.
-
 ## Upgrading to v9.3
 
 **Potentially breaking behavior**
-
-- glTF texture sampling now defaults to `linear` filtering when a glTF sampler omits explicit filter settings. Applications relying on the previous nearest-neighbor default should verify visual output and set sampler filters explicitly when nearest sampling is required.
+- Scenegraph creation API has been improved, see [`createScenegraphsFromGLTF()`](/docs/api-reference/gltf).
+- gltf module now creates `DynamicTexture` instances rather than raw `Texture`s.
+- glTF texture sampling now defaults to linear filtering when a glTF sampler omits explicit filter settings. Applications relying on the previous nearest-neighbor default should verify visual output and set sampler filters explicitly when nearest sampling is required.
 - The legacy feature flag `timer-query-webgl` has been removed. Replace checks for `timer-query-webgl` with `timestamp-query` for GPU timestamp/query support on both WebGPU and WebGL.
-
 
 ## Upgrading to v9.2
 

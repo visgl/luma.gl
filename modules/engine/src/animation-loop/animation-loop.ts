@@ -472,20 +472,10 @@ export class AnimationLoop {
     if (!this.device) {
       return {width: 1, height: 1, aspect: 1};
     }
-    // https://webglfundamentals.org/webgl/lessons/webgl-resizing-the-canvas.html
-    const [width, height] = this.device?.getDefaultCanvasContext().getDevicePixelSize() || [1, 1];
-
-    // https://webglfundamentals.org/webgl/lessons/webgl-anti-patterns.html
-    let aspect = 1;
-    const canvas = this.device?.getDefaultCanvasContext().canvas;
-
-    // @ts-expect-error
-    if (canvas && canvas.clientHeight) {
-      // @ts-expect-error
-      aspect = canvas.clientWidth / canvas.clientHeight;
-    } else if (width > 0 && height > 0) {
-      aspect = width / height;
-    }
+    // Match projection setup to the actual render target dimensions, which may
+    // differ from the CSS size when device-pixel scaling or backend clamping applies.
+    const [width, height] = this.device.getDefaultCanvasContext().getDrawingBufferSize();
+    const aspect = width > 0 && height > 0 ? width / height : 1;
 
     return {width, height, aspect};
   }

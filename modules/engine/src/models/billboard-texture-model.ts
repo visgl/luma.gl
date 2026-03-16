@@ -86,17 +86,16 @@ export class BackgroundTextureModel extends ClipSpace {
       modules: [...(props.modules || []), backgroundModule],
       parameters: {
         depthWriteEnabled: false,
-        depthCompare: 'less-equal',
         ...(props.parameters || {}),
         ...(props.blend
           ? {
               blend: true,
               blendColorOperation: 'add',
               blendAlphaOperation: 'add',
-              blendColorSrcFactor: 'one',
-              blendColorDstFactor: 'one-minus-src',
-              blendAlphaSrcFactor: 'one',
-              blendAlphaDstFactor: 'one-minus-src-alpha'
+              blendColorSrcFactor: 'one-minus-dst-alpha',
+              blendColorDstFactor: 'one',
+              blendAlphaSrcFactor: 'one-minus-dst-alpha',
+              blendAlphaDstFactor: 'one'
             }
           : {})
       }

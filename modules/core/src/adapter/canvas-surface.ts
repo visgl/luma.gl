@@ -274,10 +274,10 @@ export abstract class CanvasSurface {
     return this.getDevicePixelSize();
   }
 
-  /** @deprecated - TODO which values should we use for aspect */
+  /** @deprecated Use the current drawing buffer size for projection setup. */
   getAspect(): number {
-    const [width, height] = this.getDevicePixelSize();
-    return width / height;
+    const [width, height] = this.getDrawingBufferSize();
+    return width > 0 && height > 0 ? width / height : 1;
   }
 
   /** @deprecated Returns multiplier need to convert CSS size to Device size */

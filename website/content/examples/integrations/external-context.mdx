@@ -10,14 +10,16 @@ import {ExternalContextExample} from '@site/src/examples';
   sourcePath="examples/integrations/external-context"
   devices={['webgl2']}
 >
-  <p>
-    This example attaches a <code>WebGLDevice</code> to the WebGL2 context created by MapLibre GL
-    JS and renders a luma.gl overlay through the MapLibre render loop.
-  </p>
-  <p style={{marginBottom: 0}}>
-    The map uses CARTO basemaps that do not require an access token. The overlay uses the map
-    view-projection matrix so it stays anchored in world space.
-  </p>
+  <div>
+    <div style={{marginBottom: 12}}>
+      This example attaches a <code>WebGLDevice</code> to the WebGL2 context created by MapLibre GL
+      JS and renders a luma.gl overlay through the MapLibre render loop.
+    </div>
+    <div>
+      The map uses CARTO basemaps that do not require an access token. The overlay uses the map
+      view-projection matrix so it stays anchored in world space.
+    </div>
+  </div>
 </ExampleHeader>
 
 <ExternalContextExample />

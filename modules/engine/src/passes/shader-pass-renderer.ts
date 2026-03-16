@@ -29,8 +29,6 @@ export class ShaderPassRenderer {
   shaderInputs: ShaderInputs;
   passRenderers: PassRenderer[];
   swapFramebuffers: SwapFramebuffers;
-  /** For rendering to the screen */
-  clipSpace: ClipSpace;
   textureModel: BackgroundTextureModel;
 
   constructor(device: Device, props: ShaderPassRendererProps) {
@@ -55,31 +53,6 @@ export class ShaderPassRenderer {
       backgroundTexture: this.swapFramebuffers.current.colorAttachments[0].texture
     });
 
-    this.clipSpace = new ClipSpace(device, {
-      source: /* wgsl */ `\
-  @group(0) @binding(0) var sourceTexture: texture_2d<f32>;
-  @group(0) @binding(1) var sourceTextureSampler: sampler;
-
-@fragment
-fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
-	let texCoord: vec2<f32> = inputs.coordinate;
-	return textureSample(sourceTexture, sourceTextureSampler, texCoord);
-}
-`,
-
-      fs: /* glsl */ `\
-#version 300 es
-
-uniform sampler2D sourceTexture;
-in vec2 uv;
-out vec4 fragColor;
-
-void main() {
-  fragColor = texture(sourceTexture, uv);
-}
-`
-    });
-
     this.passRenderers = props.shaderPasses.map(shaderPass => new PassRenderer(device, shaderPass));
   }
 
@@ -89,7 +62,6 @@ void main() {
       subPassRenderer.destroy();
     }
     this.swapFramebuffers.destroy();
-    this.clipSpace.destroy();
     this.textureModel.destroy();
   }
 
@@ -112,16 +84,15 @@ void main() {
 
     const framebuffer = this.device
       .getDefaultCanvasContext()
-      // @ts-expect-error TODO - remove after republish
-      .getCurrentFramebuffer({depthStencilAttachment: false});
+      .getCurrentFramebuffer({depthStencilFormat: false});
     const renderPass = this.device.beginRenderPass({
       id: 'shader-pass-renderer-to-screen',
       framebuffer,
       // clearColor: [1, 1, 0, 1],
-      clearDepth: 1
+      clearDepth: false
     });
-    this.clipSpace.setBindings({sourceTexture: outputTexture});
-    this.clipSpace.draw(renderPass);
+    this.textureModel.setProps({backgroundTexture: outputTexture});
+    this.textureModel.draw(renderPass);
     renderPass.end();
     return true;
   }

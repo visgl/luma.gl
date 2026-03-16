@@ -9,8 +9,9 @@
     "label": "Showcase",
     "items": [
       "showcase/instancing",
-      "showcase/persistence",
-      "showcase/gltf"
+      "showcase/gltf",
+      "showcase/postprocessing",
+      "showcase/persistence"
     ]
   },
   {
@@ -18,11 +19,15 @@
     "label": "API",
     "items": [
       "api/animation",
-      "api/cubemap",
-      "api/texture-3d",
-      "api/texture-tester",
-      "api/multi-canvas"
+      "api/multi-canvas",
+      "integrations/external-context",
+      "integrations/react-strict-mode"
     ]
+  },
+  {
+    "type": "category",
+    "label": "Textures",
+    "items": ["api/cubemap", "api/texture-3d", "api/texture-tester"]
   },
   {
     "type": "category",
@@ -39,14 +44,6 @@
       "tutorials/shader-hooks",
       "tutorials/transform-feedback",
       "tutorials/transform"
-    ]
-  },
-  {
-    "type": "category",
-    "label": "Integrations",
-    "items": [
-      "integrations/external-context",
-      "integrations/react-strict-mode"
     ]
   }
 ]

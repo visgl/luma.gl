@@ -11,8 +11,8 @@ const sidebars = {
       items: [
         'showcase/gltf',
         'showcase/instancing',
+        'showcase/postprocessing',
         'showcase/persistence'
-        // 'showcase/postprocessing'
       ]
     },
     {
@@ -20,10 +20,15 @@ const sidebars = {
       label: 'API',
       items: [
         'api/animation',
-        'api/cubemap',
-        'api/texture-3d',
-        'api/texture-tester'
+        'api/multi-canvas',
+        'integrations/external-context',
+        'integrations/react-strict-mode'
       ]
+    },
+    {
+      type: 'category',
+      label: 'Textures',
+      items: ['api/cubemap', 'api/texture-3d', 'api/texture-tester']
     },
     {
       type: 'category',

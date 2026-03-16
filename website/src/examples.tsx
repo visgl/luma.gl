@@ -96,6 +96,7 @@ export const AnimationExample: React.FC = props => (
 export const CubemapExample: React.FC = props => (
   <LumaExample
     id="cubemap"
+    title="Texture Cube"
     directory="api"
     template={CubemapApp}
     config={exampleConfig}
@@ -112,17 +113,12 @@ export const MultiCanvasExample: React.FC = () => {
     return <div>{presentationDeviceError}</div>;
   }
 
-  return (
-    deviceType && presentationDevice ? (
-      <ReactExample
-        component={MultiCanvasApp}
-        componentProps={{deviceType, presentationDevice}}
-      />
-    ) : (
-      <ExamplePage>
-        <div>Initializing device...</div>
-      </ExamplePage>
-    )
+  return deviceType && presentationDevice ? (
+    <ReactExample component={MultiCanvasApp} componentProps={{deviceType, presentationDevice}} />
+  ) : (
+    <ExamplePage>
+      <div>Initializing device...</div>
+    </ExamplePage>
   );
 };
 
@@ -189,7 +185,10 @@ export const ExternalContextExample: React.FC = () => {
 
   return (
     <ExamplePage style={{minHeight: '640px'}}>
-      <div className="integration-example-page" style={{position: 'relative', width: '100%', minHeight: '640px'}}>
+      <div
+        className="integration-example-page"
+        style={{position: 'relative', width: '100%', minHeight: '640px'}}
+      >
         <div ref={containerRef} style={{position: 'absolute', inset: 0}} />
       </div>
       {error ? <p style={{color: '#b00020', marginTop: 12}}>{error}</p> : null}

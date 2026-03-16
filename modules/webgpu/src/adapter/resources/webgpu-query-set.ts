@@ -107,19 +107,25 @@ export class WebGPUQuerySet extends QuerySet {
     this._ensureBuffers();
 
     try {
+      // Use a dedicated encoder so async profiling reads cannot flush or replace the
+      // device's active frame encoder while application rendering is in flight.
       if (this._resultsPendingResolution) {
-        // If main submit could not resolve into the shared read buffer because a previous
-        // readback was still mapping it, fall back to the older explicit resolve/copy submit here.
-        this.device.commandEncoder.resolveQuerySet(this, this._resolveBuffer!);
-        this.device.commandEncoder.copyBufferToBuffer({
+        const commandEncoder = this.device.createCommandEncoder({
+          id: `${this.id}-read-results`
+        });
+        commandEncoder.resolveQuerySet(this, this._resolveBuffer!);
+        commandEncoder.copyBufferToBuffer({
           sourceBuffer: this._resolveBuffer!,
           destinationBuffer: this._readBuffer!,
           size: this._resolveBuffer!.byteLength
         });
+        const commandBuffer = commandEncoder.finish({
+          id: `${this.id}-read-results-command-buffer`
+        });
         const previousSubmitReason = getCpuHotspotSubmitReason(this.device) || undefined;
         setCpuHotspotSubmitReason(this.device, 'query-readback');
         try {
-          this.device.submit();
+          this.device.submit(commandBuffer);
         } finally {
           setCpuHotspotSubmitReason(this.device, previousSubmitReason);
         }

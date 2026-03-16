@@ -17,6 +17,7 @@ import {RenderPipeline, log} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 
 import {getShaderLayoutFromGLSL} from '../helpers/get-shader-layout-from-glsl';
+import {isGLSamplerType} from '../converters/webgl-shadertypes';
 import {withDeviceAndGLParameters} from '../converters/device-parameters';
 import {setUniform} from '../helpers/set-uniform';
 // import {copyUniform, checkUniformValues} from '../../classes/uniforms';
@@ -365,6 +366,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
       return 'link-error';
     }
 
+    this._initializeSamplerUniforms();
     gl.validateProgram(this.handle);
     const validated = gl.getProgramParameter(this.handle, GL.VALIDATE_STATUS);
     if (!validated) {
@@ -374,6 +376,47 @@ export class WEBGLRenderPipeline extends RenderPipeline {
 
     this.linkStatus = 'success';
     return 'success';
+  }
+
+  _initializeSamplerUniforms(): void {
+    const {gl} = this.device;
+    gl.useProgram(this.handle);
+
+    let textureUnit = 0;
+    const uniformCount = gl.getProgramParameter(this.handle, GL.ACTIVE_UNIFORMS);
+    for (let uniformIndex = 0; uniformIndex < uniformCount; uniformIndex++) {
+      const activeInfo = gl.getActiveUniform(this.handle, uniformIndex);
+      if (activeInfo && isGLSamplerType(activeInfo.type)) {
+        const isArray = activeInfo.name.endsWith('[0]');
+        const uniformName = isArray ? activeInfo.name.slice(0, -3) : activeInfo.name;
+        const location = gl.getUniformLocation(this.handle, uniformName);
+
+        if (location !== null) {
+          textureUnit = this._assignSamplerUniform(location, activeInfo, isArray, textureUnit);
+        }
+      }
+    }
+  }
+
+  _assignSamplerUniform(
+    location: WebGLUniformLocation,
+    activeInfo: WebGLActiveInfo,
+    isArray: boolean,
+    textureUnit: number
+  ): number {
+    const {gl} = this.device;
+
+    if (isArray && activeInfo.size > 1) {
+      const textureUnits = Int32Array.from(
+        {length: activeInfo.size},
+        (_, arrayIndex) => textureUnit + arrayIndex
+      );
+      gl.uniform1iv(location, textureUnits);
+      return textureUnit + activeInfo.size;
+    }
+
+    gl.uniform1i(location, textureUnit);
+    return textureUnit + 1;
   }
 
   /** Use KHR_parallel_shader_compile extension if available */
