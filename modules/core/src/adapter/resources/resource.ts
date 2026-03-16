@@ -6,8 +6,9 @@ import type {Device} from '../device';
 import type {Stat, Stats} from '@probe.gl/stats';
 import {uid} from '../../utils/uid';
 
-const RESOURCE_COUNTS_STATS = 'Resource Counts';
-const RESOURCE_MEMORY_STATS = 'Resource Memory';
+const RESOURCE_COUNTS_STATS = 'GPU Resource Counts';
+const LEGACY_RESOURCE_COUNTS_STATS = 'Resource Counts';
+const GPU_TIME_AND_MEMORY_STATS = 'GPU Time and Memory';
 const RESOURCE_COUNT_ORDER = [
   'Resources',
   'Buffers',
@@ -25,7 +26,7 @@ const RESOURCE_COUNT_ORDER = [
   'CommandEncoders',
   'CommandBuffers'
 ] as const;
-const RESOURCE_MEMORY_ORDER = [
+const GPU_MEMORY_STAT_ORDER = [
   'GPU Memory',
   'Buffer Memory',
   'Texture Memory',
@@ -36,6 +37,16 @@ const RESOURCE_COUNT_STAT_ORDER = RESOURCE_COUNT_ORDER.flatMap(resourceType => [
   `${resourceType} Created`,
   `${resourceType} Active`
 ]);
+const GPU_TIME_AND_MEMORY_STAT_ORDER = [
+  'Adapter',
+  'GPU',
+  'GPU Type',
+  'GPU Backend',
+  'Frame Rate',
+  'CPU Time',
+  'GPU Time',
+  ...GPU_MEMORY_STAT_ORDER
+] as const;
 
 export type ResourceProps = {
   /** Name of resource, mainly for debugging purposes. A unique name will be assigned if not provided */
@@ -177,21 +188,31 @@ export abstract class Resource<Props extends ResourceProps> {
 
   /** Called by .destroy() to track object destruction. Subclass must call if overriding destroy() */
   protected removeStats(): void {
-    const stats = this._device.statsManager.getStats(RESOURCE_COUNTS_STATS);
-    initializeStats(stats, RESOURCE_COUNT_STAT_ORDER);
+    const statsObjects = [
+      this._device.statsManager.getStats(RESOURCE_COUNTS_STATS),
+      this._device.statsManager.getStats(LEGACY_RESOURCE_COUNTS_STATS)
+    ];
+    for (const stats of statsObjects) {
+      initializeStats(stats, RESOURCE_COUNT_STAT_ORDER);
+    }
+
     const name = this[Symbol.toStringTag];
-    stats.get('Resources Active').decrementCount();
-    stats.get(`${name}s Active`).decrementCount();
+    for (const stats of statsObjects) {
+      stats.get('Resources Active').decrementCount();
+      stats.get(`${name}s Active`).decrementCount();
+    }
   }
 
   /** Called by subclass to track memory allocations */
   protected trackAllocatedMemory(bytes: number, name = this[Symbol.toStringTag]): void {
-    const stats = this._device.statsManager.getStats(RESOURCE_MEMORY_STATS);
-    initializeStats(stats, RESOURCE_MEMORY_ORDER);
+    const stats = this._device.statsManager.getStats(GPU_TIME_AND_MEMORY_STATS);
+    initializeStats(stats, GPU_TIME_AND_MEMORY_STAT_ORDER);
+
     if (this.allocatedBytes > 0 && this.allocatedBytesName) {
       stats.get('GPU Memory').subtractCount(this.allocatedBytes);
       stats.get(`${this.allocatedBytesName} Memory`).subtractCount(this.allocatedBytes);
     }
+
     stats.get('GPU Memory').addCount(bytes);
     stats.get(`${name} Memory`).addCount(bytes);
     this.allocatedBytes = bytes;
@@ -210,8 +231,8 @@ export abstract class Resource<Props extends ResourceProps> {
       return;
     }
 
-    const stats = this._device.statsManager.getStats(RESOURCE_MEMORY_STATS);
-    initializeStats(stats, RESOURCE_MEMORY_ORDER);
+    const stats = this._device.statsManager.getStats(GPU_TIME_AND_MEMORY_STATS);
+    initializeStats(stats, GPU_TIME_AND_MEMORY_STAT_ORDER);
     stats.get('GPU Memory').subtractCount(this.allocatedBytes);
     stats.get(`${this.allocatedBytesName || name} Memory`).subtractCount(this.allocatedBytes);
     this.allocatedBytes = 0;
@@ -225,13 +246,21 @@ export abstract class Resource<Props extends ResourceProps> {
 
   /** Called by resource constructor to track object creation */
   private addStats(): void {
-    const stats = this._device.statsManager.getStats(RESOURCE_COUNTS_STATS);
-    initializeStats(stats, RESOURCE_COUNT_STAT_ORDER);
+    const statsObjects = [
+      this._device.statsManager.getStats(RESOURCE_COUNTS_STATS),
+      this._device.statsManager.getStats(LEGACY_RESOURCE_COUNTS_STATS)
+    ];
+    for (const stats of statsObjects) {
+      initializeStats(stats, RESOURCE_COUNT_STAT_ORDER);
+    }
+
     const name = this[Symbol.toStringTag];
-    stats.get('Resources Created').incrementCount();
-    stats.get('Resources Active').incrementCount();
-    stats.get(`${name}s Created`).incrementCount();
-    stats.get(`${name}s Active`).incrementCount();
+    for (const stats of statsObjects) {
+      stats.get('Resources Created').incrementCount();
+      stats.get('Resources Active').incrementCount();
+      stats.get(`${name}s Created`).incrementCount();
+      stats.get(`${name}s Active`).incrementCount();
+    }
   }
 }
 

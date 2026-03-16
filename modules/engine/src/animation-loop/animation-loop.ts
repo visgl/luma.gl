@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {luma, Device} from '@luma.gl/core';
+import {luma, Device, QuerySet} from '@luma.gl/core';
 import {
   requestAnimationFramePolyfill,
   cancelAnimationFramePolyfill
@@ -75,8 +75,10 @@ export class AnimationLoop {
   _resolveNextFrame: ((animationLoop: AnimationLoop) => void) | null = null;
   _cpuStartTime: number = 0;
   _error: Error | null = null;
+  _lastFrameTime: number = 0;
 
-  // _gpuTimeQuery: Query | null = null;
+  /** GPU time query for measuring GPU execution time */
+  _gpuTimeQuery: QuerySet | null = null;
 
   /*
    * @param {HTMLCanvasElement} canvas - if provided, width and height will be passed to context
@@ -92,9 +94,10 @@ export class AnimationLoop {
     // state
     this.stats = props.stats || new Stats({id: `animation-loop-${statIdCounter++}`});
     this.sharedStats = luma.stats.get(ANIMATION_LOOP_STATS);
+    this.frameRate = this.stats.get('Frame Rate');
+    this.frameRate.setSampleSize(1);
     this.cpuTime = this.stats.get('CPU Time');
     this.gpuTime = this.stats.get('GPU Time');
-    this.frameRate = this.stats.get('Frame Rate');
 
     this.setProps({autoResizeViewport: props.autoResizeViewport});
 
@@ -109,6 +112,10 @@ export class AnimationLoop {
   destroy(): void {
     this.stop();
     this._setDisplay(null);
+    if (this._gpuTimeQuery) {
+      this._gpuTimeQuery.destroy();
+      this._gpuTimeQuery = null;
+    }
   }
 
   /** @deprecated Use .destroy() */
@@ -195,17 +202,18 @@ export class AnimationLoop {
       this._nextFramePromise = null;
       this._resolveNextFrame = null;
       this._running = false;
+      this._lastFrameTime = 0;
     }
     return this;
   }
 
   /** Explicitly draw a frame */
-  redraw(): this {
+  redraw(time?: number): this {
     if (this.device?.isLost || this._error) {
       return this;
     }
 
-    this._beginFrameTimers();
+    this._beginFrameTimers(time);
 
     this._setupFrame();
     this._updateAnimationProps();
@@ -271,7 +279,24 @@ export class AnimationLoop {
     // Default viewport setup, in case onInitialize wants to render
     this._resizeViewport();
 
-    // this._gpuTimeQuery = Query.isSupported(this.gl, ['timers']) ? new Query(this.gl) : null;
+    // Initialize GPU time query if supported by the active adapter.
+    if (this._hasTimestampQuerySupport()) {
+      const device = this.device;
+      try {
+        if (!device) {
+          return;
+        }
+
+        this._gpuTimeQuery = device.createQuerySet({type: 'timestamp', count: 256});
+        device.commandEncoder = device.createCommandEncoder({
+          id: device.commandEncoder.props.id,
+          timeProfilingQuerySet: this._gpuTimeQuery
+        });
+      } catch {
+        // GPU timing not available - ignore
+        this._gpuTimeQuery = null;
+      }
+    }
   }
 
   _setDisplay(display: any): void {
@@ -317,11 +342,11 @@ export class AnimationLoop {
     this._animationFrameId = null;
   }
 
-  _animationFrame(): void {
+  _animationFrame(time: number): void {
     if (!this._running) {
       return;
     }
-    this.redraw();
+    this.redraw(time);
     this._requestAnimationFrame();
   }
 
@@ -505,37 +530,50 @@ export class AnimationLoop {
     }
   }
 
-  _beginFrameTimers() {
-    this.frameRate.timeEnd();
-    this.frameRate.timeStart();
+  _beginFrameTimers(time?: number) {
+    const now = time ?? (typeof performance !== 'undefined' ? performance.now() : Date.now());
+    if (this._lastFrameTime) {
+      const frameTime = now - this._lastFrameTime;
+      if (frameTime > 0) {
+        this.frameRate.addTime(frameTime);
+      }
+    }
+    this._lastFrameTime = now;
 
-    // Check if timer for last frame has completed.
-    // GPU timer results are never available in the same
-    // frame they are captured.
-    // if (
-    //   this._gpuTimeQuery &&
-    //   this._gpuTimeQuery.isResultAvailable() &&
-    //   !this._gpuTimeQuery.isTimerDisjoint()
-    // ) {
-    //   this.stats.get('GPU Time').addTime(this._gpuTimeQuery.getTimerMilliseconds());
-    // }
-
-    // if (this._gpuTimeQuery) {
-    //   // GPU time query start
-    //   this._gpuTimeQuery.beginTimeElapsedQuery();
-    // }
+    if (this.device && this._gpuTimeQuery) {
+      this._consumeEncodedGpuTime();
+    }
 
     this.cpuTime.timeStart();
   }
 
   _endFrameTimers() {
+    if (this.device && this._gpuTimeQuery) {
+      this._consumeEncodedGpuTime();
+    }
+
     this.cpuTime.timeEnd();
     this._updateSharedStats();
+  }
 
-    // if (this._gpuTimeQuery) {
-    //   // GPU time query end. Results will be available on next frame.
-    //   this._gpuTimeQuery.end();
-    // }
+  _consumeEncodedGpuTime(): void {
+    if (!this.device) {
+      return;
+    }
+
+    const gpuTimeMs = this.device.commandEncoder._gpuTimeMs;
+    if (gpuTimeMs !== undefined) {
+      this.gpuTime.addTime(gpuTimeMs);
+      this.device.commandEncoder._gpuTimeMs = undefined;
+    }
+  }
+
+  _hasTimestampQuerySupport(): boolean {
+    if (!this.device) {
+      return false;
+    }
+
+    return this.device.features.has('timestamp-query');
   }
 
   _updateSharedStats(): void {

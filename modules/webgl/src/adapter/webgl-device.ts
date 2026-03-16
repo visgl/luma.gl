@@ -357,14 +357,25 @@ export class WebGLDevice extends Device {
    * Chrome's offscreen canvas does not require gl.commit
    */
   submit(commandBuffer?: WEBGLCommandBuffer): void {
+    let submittedCommandEncoder: WEBGLCommandEncoder | null = null;
     if (!commandBuffer) {
-      commandBuffer = this.commandEncoder.finish();
+      submittedCommandEncoder = this.commandEncoder;
+      commandBuffer = submittedCommandEncoder.finish();
       this.commandEncoder.destroy();
-      this.commandEncoder = this.createCommandEncoder({id: `${this.id}-default-encoder`});
+      this.commandEncoder = this.createCommandEncoder({
+        id: submittedCommandEncoder.props.id,
+        timeProfilingQuerySet: submittedCommandEncoder.getTimeProfilingQuerySet()
+      });
     }
 
     try {
       commandBuffer._executeCommands();
+
+      if (submittedCommandEncoder) {
+        void submittedCommandEncoder.resolveTimeProfilingQuerySet().then(() => {
+          this.commandEncoder._gpuTimeMs = submittedCommandEncoder._gpuTimeMs;
+        });
+      }
     } finally {
       commandBuffer.destroy();
     }

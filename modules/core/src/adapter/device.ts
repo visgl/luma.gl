@@ -179,7 +179,6 @@ export type WebGPUDeviceFeature =
 
 export type WebGLDeviceFeature =
   // webgl extension features
-  | 'timer-query-webgl' // unify with WebGPU timestamp-query?
   | 'compilation-status-async-webgl' // Non-blocking shader compile/link status query available
   | 'provoking-vertex-webgl' // parameters.provokingVertex
   | 'polygon-mode-webgl' // parameters.polygonMode and parameters.polygonOffsetLine
@@ -194,6 +193,7 @@ export type WebGLDeviceFeature =
   | 'float16-renderable-webgl'
   | 'rgb9e5ufloat-renderable-webgl'
   | 'snorm8-renderable-webgl'
+  | 'norm16-webgl'
   | 'norm16-renderable-webgl'
   | 'snorm16-renderable-webgl'
 

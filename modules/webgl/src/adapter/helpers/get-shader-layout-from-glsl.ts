@@ -253,26 +253,25 @@ function readUniformBlocks(
     // const uniformRowMajor = gl.getActiveUniforms(program, uniformIndices, GL.UNIFORM_IS_ROW_MAJOR);
     for (let i = 0; i < blockInfo.uniformCount; ++i) {
       const uniformIndex = uniformIndices[i];
-      if (uniformIndex === undefined) {
-        continue;
-      }
-      const activeInfo = gl.getActiveUniform(program, uniformIndex);
-      if (!activeInfo) {
-        throw new Error('activeInfo');
-      }
+      if (uniformIndex !== undefined) {
+        const activeInfo = gl.getActiveUniform(program, uniformIndex);
+        if (!activeInfo) {
+          throw new Error('activeInfo');
+        }
 
-      const format = convertGLUniformTypeToShaderVariableType(uniformType[i]);
+        const format = convertGLUniformTypeToShaderVariableType(uniformType[i]);
 
-      blockInfo.uniforms.push({
-        name: activeInfo.name,
-        format,
-        type: uniformType[i],
-        arrayLength: uniformArrayLength[i],
-        byteOffset: uniformOffset[i],
-        byteStride: uniformStride[i]
-        // matrixStride: uniformStride[i],
-        // rowMajor: uniformRowMajor[i]
-      });
+        blockInfo.uniforms.push({
+          name: activeInfo.name,
+          format,
+          type: uniformType[i],
+          arrayLength: uniformArrayLength[i],
+          byteOffset: uniformOffset[i],
+          byteStride: uniformStride[i]
+          // matrixStride: uniformStride[i],
+          // rowMajor: uniformRowMajor[i]
+        });
+      }
     }
 
     uniformBlocks.push(blockInfo);

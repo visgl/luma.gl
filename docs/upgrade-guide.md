@@ -13,8 +13,10 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 ## Upgrading to v9.3
 
 **Potentially breaking behavior**
-- glTF texture sampling now defaults to linear filtering when a glTF sampler omits explicit filter settings.
-- Applications relying on the previous nearest-neighbor default should verify visual output and set sampler filters explicitly when nearest sampling is required.
+
+- glTF texture sampling now defaults to `linear` filtering when a glTF sampler omits explicit filter settings. Applications relying on the previous nearest-neighbor default should verify visual output and set sampler filters explicitly when nearest sampling is required.
+- The legacy feature flag `timer-query-webgl` has been removed. Replace checks for `timer-query-webgl` with `timestamp-query` for GPU timestamp/query support on both WebGPU and WebGL.
+
 
 ## Upgrading to v9.2
 

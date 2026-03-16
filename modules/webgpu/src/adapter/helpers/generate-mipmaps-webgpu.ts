@@ -7,6 +7,7 @@
 
 import type {
   Texture,
+  TextureView,
   TextureFormat,
   TextureFormatColor,
   TextureBindingLayout,
@@ -141,6 +142,51 @@ function generateMipmapsRender(device: WebGPUDevice, texture: Texture): void {
   let sourceHeight = texture.height;
   const layerCount = texture.dimension === '2d' ? 1 : texture.depth;
 
+  function renderMipmapLayer(
+    sourceView: TextureView,
+    baseMipLevel: number,
+    baseArrayLayer: number,
+    destinationWidth: number,
+    destinationHeight: number
+  ): void {
+    uniformValues[0] = baseArrayLayer;
+    uniformsBuffer.write(uniformValues);
+
+    const destinationView = texture.createView({
+      dimension: '2d',
+      baseMipLevel,
+      mipLevelCount: 1,
+      baseArrayLayer,
+      arrayLayerCount: 1
+    });
+    const framebuffer = device.createFramebuffer({
+      colorAttachments: [destinationView]
+    });
+    const renderPass = device.beginRenderPass({
+      id: `mipmap-generation:${texture.format}:${baseMipLevel}:${baseArrayLayer}`,
+      framebuffer
+    }) as WebGPURenderPass;
+
+    try {
+      renderPass.setPipeline(renderPipeline);
+      renderPass.setBindings({
+        sourceSampler: sampler,
+        sourceTexture: sourceView,
+        uniforms: uniformsBuffer
+      });
+      renderPass.setParameters({
+        viewport: [0, 0, destinationWidth, destinationHeight, 0, 1],
+        scissorRect: [0, 0, destinationWidth, destinationHeight]
+      });
+      renderPass.draw({vertexCount: 3});
+      renderPass.end();
+      device.submit();
+    } finally {
+      destinationView.destroy();
+      framebuffer.destroy();
+    }
+  }
+
   try {
     for (let baseMipLevel = 1; baseMipLevel < texture.mipLevels; ++baseMipLevel) {
       validateFormatCapabilities(device, texture, ['render', 'filter'], 'render');
@@ -163,42 +209,13 @@ function generateMipmapsRender(device: WebGPUDevice, texture: Texture): void {
 
       try {
         for (let baseArrayLayer = 0; baseArrayLayer < layerCount; ++baseArrayLayer) {
-          uniformValues[0] = baseArrayLayer;
-          uniformsBuffer.write(uniformValues);
-
-          const destinationView = texture.createView({
-            dimension: '2d',
+          renderMipmapLayer(
+            sourceView,
             baseMipLevel,
-            mipLevelCount: 1,
             baseArrayLayer,
-            arrayLayerCount: 1
-          });
-          const framebuffer = device.createFramebuffer({
-            colorAttachments: [destinationView]
-          });
-          const renderPass = device.beginRenderPass({
-            id: `mipmap-generation:${texture.format}:${baseMipLevel}:${baseArrayLayer}`,
-            framebuffer
-          }) as WebGPURenderPass;
-
-          try {
-            renderPass.setPipeline(renderPipeline);
-            renderPass.setBindings({
-              sourceSampler: sampler,
-              sourceTexture: sourceView,
-              uniforms: uniformsBuffer
-            });
-            renderPass.setParameters({
-              viewport: [0, 0, destinationWidth, destinationHeight, 0, 1],
-              scissorRect: [0, 0, destinationWidth, destinationHeight]
-            });
-            renderPass.draw({vertexCount: 3});
-            renderPass.end();
-            device.submit();
-          } finally {
-            destinationView.destroy();
-            framebuffer.destroy();
-          }
+            destinationWidth,
+            destinationHeight
+          );
         }
       } finally {
         sourceView.destroy();

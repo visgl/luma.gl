@@ -17,33 +17,44 @@ import {luma} from '@luma.gl/core';
 console.log(luma.stats.getTable());
 ```
 
-Resource allocation stats are collected in the `Resource Counts` stats bag:
+Resource allocation and timing stats are collected in these buckets:
 
 ```typescript
 import {luma} from '@luma.gl/core';
 
-const resourceStats = luma.stats.get('Resource Counts');
-const memoryStats = luma.stats.get('Resource Memory');
+const gpuTimeAndMemoryStats = luma.stats.get('GPU Time and Memory');
+const resourceStats = luma.stats.get('GPU Resource Counts');
 
+console.log('Frame rate', gpuTimeAndMemoryStats.get('Frame Rate').getSampleHz());
+console.log('CPU time', gpuTimeAndMemoryStats.get('CPU Time').getSampleAverageTime());
+console.log('GPU time', gpuTimeAndMemoryStats.get('GPU Time').getSampleAverageTime());
+console.log('Total GPU memory', gpuTimeAndMemoryStats.get('GPU Memory').count);
+console.log('Buffer memory', gpuTimeAndMemoryStats.get('Buffer Memory').count);
+console.log('Texture memory', gpuTimeAndMemoryStats.get('Texture Memory').count);
 console.log('Total resources created', resourceStats.get('Resources Created').count);
 console.log('Total resources active', resourceStats.get('Resources Active').count);
-console.log('Total GPU memory', memoryStats.get('GPU Memory').count);
 console.log('Buffers active', resourceStats.get('Buffers Active').count);
-console.log('Buffer memory', memoryStats.get('Buffer Memory').count);
 console.log('Textures active', resourceStats.get('Textures Active').count);
-console.log('Texture memory', memoryStats.get('Texture Memory').count);
 ```
 
-The `Resource Counts` bag includes:
+Notes:
+- `GPU Time and Memory` includes timing and memory counters and is the preferred bucket for most runtime telemetry.
+- `GPU Resource Counts` includes only resource life-cycle and type counts.
+- `Resource Counts` is kept as an alias for backward compatibility.
+
+The `GPU Resource Counts` bag includes:
 
 - `Resources Created`: total number of luma.gl resources ever created.
 - `Resources Active`: total number of luma.gl resources currently alive.
 - `<ResourceType>s Created` and `<ResourceType>s Active`: lifetime and live counters for each resource class, for example `Buffers Created`, `Buffers Active`, `Textures Created`, and `Textures Active`.
 
-The `Resource Memory` bag includes:
+The `GPU Time and Memory` bag includes:
 
+- `Frame Rate`: frame rate sample from the active animation loop.
+- `CPU Time`: CPU time sample for frame rendering.
+- `GPU Time`: GPU time sample for frame rendering.
 - `GPU Memory`: total tracked GPU memory across luma.gl resources.
-- `<ResourceType> Memory`: tracked GPU memory for a specific resource type, currently including `Buffer Memory` and `Texture Memory`.
+- `<ResourceType> Memory`: tracked GPU memory for a specific resource type, including `Buffer Memory` and `Texture Memory`.
 
 Animation loop stats are mirrored into `luma.stats` under `Animation Loop`, exposing the latest updated loop's `Frame Rate`, `CPU Time`, and `GPU Time` values through the shared stats manager.
 
@@ -61,12 +72,53 @@ however tracking allocations can help spot resource leaks or unnecessary work be
 
 ## Performance Profiling
 
-`device.createQuerySet()` can be used to create GPU queries that 
+[QuerySet](/docs/api-reference/core/resources/query-set) can be used to capture GPU-side profiling data.
 
-- Occlusion Queries always supported.
-- Timestamp Queries are supported if the `timestamp-query` feature is available, check with `device.features.has('timestamp-query')`.
+- Occlusion queries are available through `device.createQuerySet({type: 'occlusion', ...})`.
+- Timestamp queries require `device.features.has('timestamp-query')`.
 
-`QuerySet` instances can be supplied when creating `RenderPass` and `ComputePass` instances.
+### Profiling With QuerySet
 
-Results are available through
-`commandEncoder.resolveQuerySet()`
+Create a timestamp query set with enough slots for all the passes you want to profile:
+
+```typescript
+const querySet = device.createQuerySet({type: 'timestamp', count: 256});
+```
+
+Record timestamps through the command encoder:
+
+```typescript
+device.commandEncoder.writeTimestamp(querySet, 0);
+// encode GPU work here
+device.commandEncoder.writeTimestamp(querySet, 1);
+device.submit();
+```
+
+Most engines can also use automatic per-pass profiling by constructing a command encoder with
+the profiling query set:
+
+```typescript
+const commandEncoder = device.createCommandEncoder({timeProfilingQuerySet: querySet});
+const pass = commandEncoder.beginRenderPass({});
+// no need to manually write begin/end timestamps
+pass.end();
+device.submit();
+```
+
+Read the duration asynchronously:
+
+```typescript
+try {
+  const gpuMilliseconds = await querySet.readTimestampDuration(0, 1);
+  console.log(`GPU work took ${gpuMilliseconds.toFixed(3)}ms`);
+} catch (error) {
+  console.warn('GPU timing was invalid', error);
+}
+```
+
+Notes:
+
+- Query results are asynchronous. They are usually not available in the same frame they are recorded.
+- `querySet.isResultAvailable()` can be used as a non-blocking poll before starting a read.
+- On WebGL, timestamp queries are backed by `EXT_disjoint_timer_query_webgl2`. Reads may be rejected when the GPU enters a disjoint state, for example after throttling or a reset.
+- `QuerySet` can also be supplied to render and compute passes through `timestampQuerySet`, `beginTimestampIndex`, and `endTimestampIndex`.

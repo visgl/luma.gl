@@ -295,10 +295,8 @@ export class WebGPUTexture extends Texture {
       depth: depthOrArrayLayers,
       byteAlignment: 1
     });
-    const bytesPerRow =
-      options_.bytesPerRow ?? options.bytesPerRow ?? packedSourceLayout.bytesPerRow;
-    const rowsPerImage =
-      options_.rowsPerImage ?? options.rowsPerImage ?? packedSourceLayout.rowsPerImage;
+    const bytesPerRow = options_.bytesPerRow ?? packedSourceLayout.bytesPerRow;
+    const rowsPerImage = options_.rowsPerImage ?? packedSourceLayout.rowsPerImage;
     let copyWidth = width;
     let copyHeight = height;
 

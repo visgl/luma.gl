@@ -72,7 +72,7 @@ function getTextureMemoryStats(device: Device): {
   textureMemory: number;
   referencedTextureMemory: number;
 } {
-  const stats = device.statsManager.getStats('Resource Memory');
+  const stats = device.statsManager.getStats('GPU Time and Memory');
   return {
     gpuMemory: stats.get('GPU Memory').count,
     textureMemory: stats.get('Texture Memory').count,
@@ -331,7 +331,11 @@ async function readTexturePixels(
   texture: Texture,
   options: TextureReadOptions
 ): Promise<Uint8Array> {
-  const arrayBuffer = await texture.readDataAsync(options);
+  const arrayBuffer = await withTimeout(
+    texture.readDataAsync(options),
+    5000,
+    `${texture.device.type} ${texture.format} readDataAsync timed out`
+  );
   return compactTextureBytes(texture, arrayBuffer, options);
 }
 
@@ -1368,6 +1372,26 @@ function almostEqual(a: Float32Array, b: Float32Array, epsilon = 1e-6): boolean 
   return true;
 }
 
+async function withTimeout<T>(
+  promise: Promise<T>,
+  milliseconds: number,
+  errorMessage: string
+): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timeoutId = setTimeout(() => reject(new Error(errorMessage)), milliseconds);
+      })
+    ]);
+  } finally {
+    if (timeoutId !== undefined) {
+      clearTimeout(timeoutId);
+    }
+  }
+}
+
 test.skip('Texture#copyImageData & readDataAsync round-trip', async t => {
   for (const device of await getTestDevices()) {
     const tex = device.createTexture({width: 2, height: 1, format: 'rgba8unorm'});
@@ -1597,7 +1621,15 @@ test('Device#isTextureFormatSupported()', async t => {
 
 test('Device#isTextureFormatFilterable()', async t => {
   const UNSUPPORTED_FORMATS: Record<Device['type'], TextureFormat[]> = {
-    webgl: ['rgba8unorm', 'r32float', 'rg32float', 'rgb32float-webgl', 'rgba32float'],
+    webgl: [
+      'rgba8unorm',
+      'rgb16unorm-webgl',
+      'rgb16snorm-webgl',
+      'r32float',
+      'rg32float',
+      'rgb32float-webgl',
+      'rgba32float'
+    ],
     webgpu: []
   };
 

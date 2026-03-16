@@ -20,6 +20,7 @@ import type {
 import {WEBGLCommandBuffer} from './webgl-command-buffer';
 import {WEBGLRenderPass} from './webgl-render-pass';
 import {WebGLDevice} from '../webgl-device';
+import {WEBGLQuerySet} from './webgl-query-set';
 
 export class WEBGLCommandEncoder extends CommandEncoder {
   readonly device: WebGLDevice;
@@ -49,7 +50,7 @@ export class WEBGLCommandEncoder extends CommandEncoder {
   }
 
   beginRenderPass(props: RenderPassProps): WEBGLRenderPass {
-    return new WEBGLRenderPass(this.device, props);
+    return new WEBGLRenderPass(this.device, this._applyTimeProfilingToPassProps(props));
   }
 
   beginComputePass(props: ComputePassProps): ComputePass {
@@ -90,4 +91,9 @@ export class WEBGLCommandEncoder extends CommandEncoder {
       destinationOffset?: number;
     }
   ): void {}
+
+  writeTimestamp(querySet: QuerySet, queryIndex: number): void {
+    const webglQuerySet = querySet as WEBGLQuerySet;
+    webglQuerySet.writeTimestamp(queryIndex);
+  }
 }

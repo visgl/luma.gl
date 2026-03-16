@@ -248,15 +248,13 @@ function setModelMenu(
 function setOptionsUI(options: Record<string, boolean>) {
   for (const id of Object.keys(options)) {
     const checkbox = document.getElementById(id) as HTMLInputElement;
-    if (!checkbox) {
-      continue;
+    if (checkbox) {
+      checkbox.checked = options[id];
+      checkbox.addEventListener('change', () => {
+        options[id] = checkbox.checked;
+        saveOptions(options);
+      });
     }
-
-    checkbox.checked = options[id];
-    checkbox.addEventListener('change', () => {
-      options[id] = checkbox.checked;
-      saveOptions(options);
-    });
   }
 }
 

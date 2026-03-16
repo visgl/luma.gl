@@ -23,6 +23,7 @@ export class WebGPUComputePass extends ComputePass {
     if (device.features.has('timestamp-query')) {
       const webgpuQuerySet = props.timestampQuerySet as WebGPUQuerySet;
       if (webgpuQuerySet) {
+        webgpuQuerySet._invalidateResults();
         timestampWrites = {
           querySet: webgpuQuerySet.handle,
           beginningOfPassWriteIndex: props.beginTimestampIndex,
