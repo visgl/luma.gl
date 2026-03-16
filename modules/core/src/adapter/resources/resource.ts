@@ -195,7 +195,6 @@ export abstract class Resource<Props extends ResourceProps> {
     for (const stats of statsObjects) {
       initializeStats(stats, RESOURCE_COUNT_STAT_ORDER);
     }
-
     const name = this[Symbol.toStringTag];
     for (const stats of statsObjects) {
       stats.get('Resources Active').decrementCount();
@@ -253,7 +252,6 @@ export abstract class Resource<Props extends ResourceProps> {
     for (const stats of statsObjects) {
       initializeStats(stats, RESOURCE_COUNT_STAT_ORDER);
     }
-
     const name = this[Symbol.toStringTag];
     for (const stats of statsObjects) {
       stats.get('Resources Created').incrementCount();

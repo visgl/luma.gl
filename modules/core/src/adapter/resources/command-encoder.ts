@@ -230,28 +230,30 @@ export abstract class CommandEncoder extends Resource<CommandEncoderProps> {
   }
 
   /** Internal helper for auto-assigning timestamp slots to render/compute passes on this encoder. */
-  protected _applyTimeProfilingToPassProps<P extends PassWithTimestamps>(props: P): P {
+  protected _applyTimeProfilingToPassProps<P extends PassWithTimestamps>(props?: P): P {
+    const passProps = (props || {}) as P;
+
     if (!this._supportsTimestampQueries() || !this._timeProfilingQuerySet) {
-      return props;
+      return passProps;
     }
 
     if (
-      props.timestampQuerySet !== undefined ||
-      props.beginTimestampIndex !== undefined ||
-      props.endTimestampIndex !== undefined
+      passProps.timestampQuerySet !== undefined ||
+      passProps.beginTimestampIndex !== undefined ||
+      passProps.endTimestampIndex !== undefined
     ) {
-      return props;
+      return passProps;
     }
 
     const beginTimestampIndex = this._timeProfilingSlotCount;
     if (beginTimestampIndex + 1 >= this._timeProfilingQuerySet.props.count) {
-      return props;
+      return passProps;
     }
 
     this._timeProfilingSlotCount += 2;
 
     return {
-      ...props,
+      ...passProps,
       timestampQuerySet: this._timeProfilingQuerySet,
       beginTimestampIndex,
       endTimestampIndex: beginTimestampIndex + 1

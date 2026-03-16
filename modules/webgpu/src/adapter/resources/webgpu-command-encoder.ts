@@ -57,11 +57,11 @@ export class WebGPUCommandEncoder extends CommandEncoder {
    * Allows a render pass to begin against a canvas context
    * @todo need to support a "Framebuffer" equivalent (aka preconfigured RenderPassDescriptors?).
    */
-  beginRenderPass(props: RenderPassProps): WebGPURenderPass {
+  beginRenderPass(props: RenderPassProps = {}): WebGPURenderPass {
     return new WebGPURenderPass(this.device, this._applyTimeProfilingToPassProps(props));
   }
 
-  beginComputePass(props: ComputePassProps): WebGPUComputePass {
+  beginComputePass(props: ComputePassProps = {}): WebGPUComputePass {
     return new WebGPUComputePass(this.device, this._applyTimeProfilingToPassProps(props));
   }
 

@@ -44,7 +44,6 @@ function getResourceStats(device: Device): {
 function getStatNames(device: Device, statsName: string): string[] {
   return Object.keys(device.statsManager.getStats(statsName).stats);
 }
-
 function getLegacyResourceStats(device: Device) {
   return {
     resourcesCreated: device.statsManager.getStats('Resource Counts').get('Resources Created')

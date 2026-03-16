@@ -49,11 +49,11 @@ export class WEBGLCommandEncoder extends CommandEncoder {
     return this.commandBuffer;
   }
 
-  beginRenderPass(props: RenderPassProps): WEBGLRenderPass {
+  beginRenderPass(props: RenderPassProps = {}): WEBGLRenderPass {
     return new WEBGLRenderPass(this.device, this._applyTimeProfilingToPassProps(props));
   }
 
-  beginComputePass(props: ComputePassProps): ComputePass {
+  beginComputePass(props: ComputePassProps = {}): ComputePass {
     throw new Error('ComputePass not supported in WebGL');
   }
 

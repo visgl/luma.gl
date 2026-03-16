@@ -60,7 +60,6 @@ const GPU_TIME_AND_MEMORY_STATS_FORMATTERS = {
 } as const;
 
 type StatFormatter = (stat: Stat) => string;
-
 function getStatsTitle(stats: Stats): string {
   const title = stats.id;
   if (title === 'GPU Time and Memory') {
@@ -116,7 +115,6 @@ function getDefaultCanvasColorTextureByteLength(device: Device): number {
   const formatInfo = device.getTextureFormatInfo(device.preferredColorFormat);
   return width * height * (formatInfo.bytesPerPixel || 0);
 }
-
 type LumaExampleProps = React.PropsWithChildren<{
   id?: string;
   title?: string;
@@ -128,7 +126,6 @@ type LumaExampleProps = React.PropsWithChildren<{
   style?: CSSProperties;
   container?: string;
   showStats?: boolean;
-  statsTitle?: string;
 }>;
 
 const defaultProps = {
@@ -449,7 +446,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
 
         statsWidgets = [
           new StatsWidget(gpuTimeAndMemoryStats, {
-            title: props.statsTitle || getStatsTitle(gpuTimeAndMemoryStats),
+            title: getStatsTitle(gpuTimeAndMemoryStats),
             container: statsPanelRef.current,
             css: STAT_STYLES,
             formatters: getGpuTimeAndMemoryStatFormatters(device)
