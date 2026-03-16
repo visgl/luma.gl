@@ -269,6 +269,8 @@ export type DeviceProps = {
 
   /** Turn on implementation defined checks that slow down execution but help break where errors occur */
   debug?: boolean;
+  /** Enable GPU timestamp collection without enabling all debug validation paths. */
+  debugGPUTime?: boolean;
   /** Show shader source in browser? The default is `'error'`, meaning that logs are shown when shader compilation has errors */
   debugShaders?: 'never' | 'errors' | 'warnings' | 'always';
   /** Renders a small version of updated Framebuffers into the primary canvas context. Can be set in console luma.log.set('debug-framebuffers', true) */
@@ -365,7 +367,8 @@ export abstract class Device {
       log.log(1, `${context} DPR changed ${info.oldRatio} => ${context.devicePixelRatio}`)(),
 
     // Debug flags
-    debug: log.get('debug') || undefined!,
+    debug: getDefaultDebugValue(),
+    debugGPUTime: false,
     debugShaders: log.get('debug-shaders') || undefined!,
     debugFramebuffers: Boolean(log.get('debug-framebuffers')),
     debugFactories: Boolean(log.get('debug-factories')),
@@ -435,6 +438,8 @@ export abstract class Device {
   abstract preferredDepthFormat: 'depth16' | 'depth24plus' | 'depth32float';
 
   protected _textureCaps: Partial<Record<TextureFormat, DeviceTextureFormatCapabilities>> = {};
+  /** Internal timestamp query set used when GPU timing collection is enabled for this device. */
+  protected _debugGPUTimeQuery: QuerySet | null = null;
 
   constructor(props: DeviceProps) {
     this.props = {...Device.defaultProps, ...props};
@@ -682,6 +687,69 @@ or create a device with the 'debug: true' prop.`;
   }
 
   /**
+   * Internal helper that returns `true` when timestamp-query GPU timing should be
+   * collected for this device.
+   */
+  _supportsDebugGPUTime(): boolean {
+    return (
+      this.features.has('timestamp-query') && Boolean(this.props.debug || this.props.debugGPUTime)
+    );
+  }
+
+  /**
+   * Internal helper that enables device-managed GPU timing collection on the
+   * default command encoder. Reuses the existing query set if timing is already enabled.
+   *
+   * @param queryCount - Number of timestamp slots reserved for profiled passes.
+   * @returns The device-managed timestamp QuerySet, or `null` when timing is not supported or could not be enabled.
+   */
+  _enableDebugGPUTime(queryCount: number = 256): QuerySet | null {
+    if (!this._supportsDebugGPUTime()) {
+      return null;
+    }
+
+    if (this._debugGPUTimeQuery) {
+      return this._debugGPUTimeQuery;
+    }
+
+    try {
+      this._debugGPUTimeQuery = this.createQuerySet({type: 'timestamp', count: queryCount});
+      this.commandEncoder = this.createCommandEncoder({
+        id: this.commandEncoder.props.id,
+        timeProfilingQuerySet: this._debugGPUTimeQuery
+      });
+    } catch {
+      this._debugGPUTimeQuery = null;
+    }
+
+    return this._debugGPUTimeQuery;
+  }
+
+  /**
+   * Internal helper that disables device-managed GPU timing collection and restores
+   * the default command encoder to an unprofiled state.
+   */
+  _disableDebugGPUTime(): void {
+    if (!this._debugGPUTimeQuery) {
+      return;
+    }
+
+    if (this.commandEncoder.getTimeProfilingQuerySet() === this._debugGPUTimeQuery) {
+      this.commandEncoder = this.createCommandEncoder({
+        id: this.commandEncoder.props.id
+      });
+    }
+
+    this._debugGPUTimeQuery.destroy();
+    this._debugGPUTimeQuery = null;
+  }
+
+  /** Internal helper that returns `true` when device-managed GPU timing is currently active. */
+  _isDebugGPUTimeEnabled(): boolean {
+    return this._debugGPUTimeQuery !== null;
+  }
+
+  /**
    * Determines what operations are supported on a texture format, checking against supported device features
    * Subclasses override to apply additional checks
    */
@@ -827,4 +895,37 @@ or create a device with the 'debug: true' prop.`;
 
     return newProps;
   }
+}
+
+/**
+ * Internal helper for resolving the default `debug` prop.
+ * Precedence is: explicit log debug value first, then `NODE_ENV`, then `false`.
+ */
+export function _getDefaultDebugValue(logDebugValue: unknown, nodeEnv?: string): boolean {
+  if (logDebugValue !== undefined && logDebugValue !== null) {
+    return Boolean(logDebugValue);
+  }
+
+  if (nodeEnv !== undefined) {
+    return nodeEnv !== 'production';
+  }
+
+  return false;
+}
+
+function getDefaultDebugValue(): boolean {
+  return _getDefaultDebugValue(log.get('debug'), getNodeEnv());
+}
+
+function getNodeEnv(): string | undefined {
+  const processObject = (
+    globalThis as typeof globalThis & {
+      process?: {env?: Record<string, string | undefined>};
+    }
+  ).process;
+  if (!processObject?.env) {
+    return undefined;
+  }
+
+  return processObject.env['NODE_ENV'];
 }

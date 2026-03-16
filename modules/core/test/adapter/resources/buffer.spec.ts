@@ -341,7 +341,7 @@ test('Core stats use canonical resource ordering', async t => {
     const buffer = device.createBuffer({byteLength: 4, usage: Buffer.VERTEX});
 
     t.deepEqual(
-      getStatNames(device, 'Resource Counts').slice(0, 10),
+      getStatNames(device, 'Resource Counts').slice(0, 14),
       [
         'Resources Created',
         'Resources Active',
@@ -352,7 +352,11 @@ test('Core stats use canonical resource ordering', async t => {
         'Samplers Created',
         'Samplers Active',
         'TextureViews Created',
-        'TextureViews Active'
+        'TextureViews Active',
+        'Framebuffers Created',
+        'Framebuffers Active',
+        'QuerySets Created',
+        'QuerySets Active'
       ],
       'core Resource Counts stats use canonical ordering'
     );

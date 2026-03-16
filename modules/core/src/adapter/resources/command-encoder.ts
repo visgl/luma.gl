@@ -209,15 +209,18 @@ export abstract class CommandEncoder extends Resource<CommandEncoderProps> {
       return;
     }
 
-    const passDurations = await Promise.all(
-      Array.from({length: pairCount}, (_, passIndex) =>
-        this._timeProfilingQuerySet!.readTimestampDuration(passIndex * 2, passIndex * 2 + 1).catch(
-          () => 0
-        )
-      )
-    );
+    const queryCount = pairCount * 2;
+    const results = await this._timeProfilingQuerySet.readResults({
+      firstQuery: 0,
+      queryCount
+    });
 
-    this._gpuTimeMs = passDurations.reduce((sum, value) => sum + value, 0);
+    let totalDurationNanoseconds = 0n;
+    for (let queryIndex = 0; queryIndex < queryCount; queryIndex += 2) {
+      totalDurationNanoseconds += results[queryIndex + 1] - results[queryIndex];
+    }
+
+    this._gpuTimeMs = Number(totalDurationNanoseconds) / 1e6;
   }
 
   /** Returns the number of query slots consumed by automatic pass profiling on this encoder. */

@@ -23,11 +23,21 @@ export class WebGPUTexture extends Texture {
   readonly handle: GPUTexture;
   sampler: WebGPUSampler;
   view: WebGPUTextureView;
+  private _allocatedByteLength: number = 0;
 
   constructor(device: WebGPUDevice, props: TextureProps) {
     // WebGPU buffer copies use 256-byte row alignment. queue.writeTexture() can use tightly packed rows.
     super(device, props, {byteAlignment: 256});
     this.device = device;
+
+    if (props.sampler instanceof WebGPUSampler) {
+      this.sampler = props.sampler;
+    } else if (props.sampler === undefined) {
+      this.sampler = this.device.getDefaultSampler();
+    } else {
+      this.sampler = new WebGPUSampler(this.device, (props.sampler as SamplerProps) || {});
+      this.attachResource(this.sampler);
+    }
 
     this.device.pushErrorScope('out-of-memory');
     this.device.pushErrorScope('validation');
@@ -56,21 +66,12 @@ export class WebGPUTexture extends Texture {
       this.device.debug();
     });
 
-    // Update props if external handle was supplied - used mainly by CanvasContext.getDefaultFramebuffer()
-    // TODO - Read all properties directly from the supplied handle?
     if (this.props.handle) {
       this.handle.label ||= this.id;
       // @ts-expect-error readonly
       this.width = this.handle.width;
       // @ts-expect-error readonly
       this.height = this.handle.height;
-    }
-
-    if (props.sampler instanceof WebGPUSampler) {
-      this.sampler = props.sampler;
-    } else {
-      this.sampler = new WebGPUSampler(this.device, (props.sampler as SamplerProps) || {});
-      this.attachResource(this.sampler);
     }
 
     this.view = new WebGPUTextureView(this.device, {
@@ -86,10 +87,12 @@ export class WebGPUTexture extends Texture {
     // Texture base class strips out the data prop from this.props, so we need to handle it here
     this._initializeData(props.data);
 
+    this._allocatedByteLength = this.getAllocatedByteLength();
+
     if (!this.props.handle) {
-      this.trackAllocatedMemory(this.getAllocatedByteLength(), 'Texture');
+      this.trackAllocatedMemory(this._allocatedByteLength, 'Texture');
     } else {
-      this.trackReferencedMemory(this.getAllocatedByteLength(), 'Texture');
+      this.trackReferencedMemory(this._allocatedByteLength, 'Texture');
     }
   }
 
@@ -327,5 +330,62 @@ export class WebGPUTexture extends Texture {
       this.device.reportError(new Error(`${this} writeData: ${error.message}`), this)();
       this.device.debug();
     });
+  }
+
+  /**
+   * Internal-only hook for the cached CanvasContext/PresentationContext swapchain path.
+   * Rebinds this handle-backed texture wrapper to the current per-frame canvas texture
+   * without allocating a new luma.gl Texture or TextureView wrapper.
+   */
+  _reinitialize(handle: GPUTexture, props?: Partial<TextureProps>): void {
+    const nextWidth = props?.width ?? handle.width ?? this.width;
+    const nextHeight = props?.height ?? handle.height ?? this.height;
+    const nextDepth = props?.depth ?? this.depth;
+    const nextFormat = props?.format ?? this.format;
+    const allocationMayHaveChanged =
+      nextWidth !== this.width ||
+      nextHeight !== this.height ||
+      nextDepth !== this.depth ||
+      nextFormat !== this.format;
+    handle.label ||= this.id;
+
+    // @ts-expect-error readonly
+    this.handle = handle;
+    // @ts-expect-error readonly
+    this.width = nextWidth;
+    // @ts-expect-error readonly
+    this.height = nextHeight;
+
+    if (props?.depth !== undefined) {
+      // @ts-expect-error readonly
+      this.depth = nextDepth;
+    }
+    if (props?.format !== undefined) {
+      // @ts-expect-error readonly
+      this.format = nextFormat;
+    }
+
+    this.props.handle = handle;
+    if (props?.width !== undefined) {
+      this.props.width = props.width;
+    }
+    if (props?.height !== undefined) {
+      this.props.height = props.height;
+    }
+    if (props?.depth !== undefined) {
+      this.props.depth = props.depth;
+    }
+    if (props?.format !== undefined) {
+      this.props.format = props.format;
+    }
+
+    if (allocationMayHaveChanged) {
+      const nextAllocation = this.getAllocatedByteLength();
+      if (nextAllocation !== this._allocatedByteLength) {
+        this._allocatedByteLength = nextAllocation;
+        this.trackReferencedMemory(nextAllocation, 'Texture');
+      }
+    }
+    this.view._reinitialize(this);
   }
 }

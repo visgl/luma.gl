@@ -3,6 +3,10 @@ import {create} from 'zustand';
 import {luma, Device} from '@luma.gl/core';
 import {webgl2Adapter} from '@luma.gl/webgl';
 import {webgpuAdapter} from '@luma.gl/webgpu';
+import {
+  installCpuHotspotProfilerApi,
+  updateCpuHotspotProfilerTargets
+} from '../debug/luma-cpu-hotspot-profiler';
 
 const DEVICE_TYPE_STORAGE_KEY = 'luma-device-type';
 const DEFAULT_DEVICE_TYPE: 'webgl' | 'webgpu' = 'webgpu';
@@ -36,6 +40,7 @@ export async function createDevice(type: 'webgl' | 'webgpu'): Promise<Device> {
     luma.createDevice({
       adapters: [webgl2Adapter, webgpuAdapter],
       type,
+      debugGPUTime: true,
       createCanvasContext: {
         container: getCanvasContainer(),
         alphaMode: 'opaque',
@@ -54,6 +59,7 @@ export async function createPresentationDevice(type: 'webgl' | 'webgpu'): Promis
     luma.createDevice({
       adapters: [webgl2Adapter, webgpuAdapter],
       type,
+      debugGPUTime: true,
       createCanvasContext: {
         canvas: new OffscreenCanvas(1, 1),
         width: 1,
@@ -114,6 +120,9 @@ export const useStore = create<Store>(set => ({
     if (requestGeneration !== deviceRequestGeneration) {
       return;
     }
+
+    installCpuHotspotProfilerApi();
+    updateCpuHotspotProfilerTargets({device, presentationDevice});
 
     return set(() => ({
       deviceType,

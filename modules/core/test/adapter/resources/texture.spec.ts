@@ -80,6 +80,17 @@ function getTextureMemoryStats(device: Device): {
   };
 }
 
+function getTextureResourceCountStats(device: Device): {
+  texturesCreated: number;
+  textureViewsCreated: number;
+} {
+  const stats = device.statsManager.getStats('GPU Resource Counts');
+  return {
+    texturesCreated: stats.get('Textures Created').count,
+    textureViewsCreated: stats.get('TextureViews Created').count
+  };
+}
+
 function getExpectedTextureAllocation(texture: Texture): number {
   let expectedAllocation = 0;
 
@@ -198,6 +209,154 @@ test('Handle-backed Texture tracks referenced memory stats', async t => {
   );
 
   handle.destroy();
+  t.end();
+});
+
+test('WebGPU handle-backed Texture reinitialize updates referenced memory stats', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const beforeStats = getTextureMemoryStats(device);
+  const firstHandle = device.handle.createTexture({
+    size: {width: 4, height: 4, depthOrArrayLayers: 1},
+    usage: GPUTextureUsage.RENDER_ATTACHMENT,
+    dimension: '2d',
+    format: 'rgba8unorm',
+    mipLevelCount: 1,
+    sampleCount: 1
+  });
+  const secondHandle = device.handle.createTexture({
+    size: {width: 8, height: 8, depthOrArrayLayers: 1},
+    usage: GPUTextureUsage.RENDER_ATTACHMENT,
+    dimension: '2d',
+    format: 'rgba8unorm',
+    mipLevelCount: 1,
+    sampleCount: 1
+  });
+
+  const texture = device.createTexture({
+    handle: firstHandle,
+    format: 'rgba8unorm',
+    width: 4,
+    height: 4
+  }) as any;
+  const afterCreateStats = getTextureMemoryStats(device);
+  const afterCreateResourceStats = getTextureResourceCountStats(device);
+  const initialAllocation = getExpectedTextureAllocation(texture);
+
+  texture._reinitialize(secondHandle, {
+    handle: secondHandle,
+    format: 'rgba8unorm',
+    width: 8,
+    height: 8
+  });
+  const afterReinitializeStats = getTextureMemoryStats(device);
+  const afterReinitializeResourceStats = getTextureResourceCountStats(device);
+  const resizedAllocation = getExpectedTextureAllocation(texture);
+
+  t.equal(
+    afterCreateStats.referencedTextureMemory - beforeStats.referencedTextureMemory,
+    initialAllocation,
+    'webgpu handle-backed Texture initially tracks referenced memory'
+  );
+  t.equal(
+    afterReinitializeStats.referencedTextureMemory - beforeStats.referencedTextureMemory,
+    resizedAllocation,
+    'webgpu handle-backed Texture reinitialize updates referenced memory'
+  );
+  t.equal(
+    afterReinitializeResourceStats.texturesCreated,
+    afterCreateResourceStats.texturesCreated,
+    'webgpu handle-backed Texture reinitialize does not increment Textures Created'
+  );
+  t.equal(
+    afterReinitializeResourceStats.textureViewsCreated,
+    afterCreateResourceStats.textureViewsCreated,
+    'webgpu handle-backed Texture reinitialize does not increment TextureViews Created'
+  );
+
+  texture.destroy();
+
+  const afterDestroyStats = getTextureMemoryStats(device);
+  t.equal(
+    afterDestroyStats.referencedTextureMemory,
+    beforeStats.referencedTextureMemory,
+    'webgpu handle-backed Texture destroy restores referenced memory after reinitialize'
+  );
+
+  firstHandle.destroy();
+  secondHandle.destroy();
+  t.end();
+});
+
+test('WebGPU Texture reuses the shared default sampler when sampler is omitted', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const firstTextureWithoutSampler = device.createTexture({width: 4, height: 4});
+  const secondTextureWithoutSampler = device.createTexture({width: 4, height: 4});
+  const sharedSampler = firstTextureWithoutSampler.sampler;
+
+  t.equal(
+    secondTextureWithoutSampler.sampler,
+    sharedSampler,
+    'webgpu textures without sampler props reuse the shared default sampler'
+  );
+
+  firstTextureWithoutSampler.destroy();
+  t.notOk(
+    sharedSampler.destroyed,
+    'webgpu shared default sampler remains alive after texture destroy'
+  );
+  t.equal(
+    secondTextureWithoutSampler.sampler,
+    sharedSampler,
+    'webgpu remaining texture still references the shared default sampler'
+  );
+
+  const textureWithSamplerProps = device.createTexture({
+    width: 4,
+    height: 4,
+    sampler: {}
+  });
+  t.notEqual(
+    textureWithSamplerProps.sampler,
+    sharedSampler,
+    'webgpu explicit sampler props create a dedicated sampler'
+  );
+
+  const explicitSampler = device.createSampler({
+    minFilter: 'nearest',
+    magFilter: 'nearest'
+  });
+  const textureWithExplicitSampler = device.createTexture({
+    width: 4,
+    height: 4,
+    sampler: explicitSampler
+  });
+  t.equal(
+    textureWithExplicitSampler.sampler,
+    explicitSampler,
+    'webgpu explicit sampler instance is used unchanged'
+  );
+
+  textureWithExplicitSampler.destroy();
+  t.notOk(
+    explicitSampler.destroyed,
+    'webgpu explicit sampler instance is not destroyed with texture'
+  );
+
+  secondTextureWithoutSampler.destroy();
+  textureWithSamplerProps.destroy();
+  explicitSampler.destroy();
   t.end();
 });
 

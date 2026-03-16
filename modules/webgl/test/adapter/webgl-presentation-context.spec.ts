@@ -237,9 +237,25 @@ test('WebGPUPresentationContext renders directly to its destination canvas', asy
     autoResize: false,
     useDevicePixels: false
   });
-  const framebuffer = presentationContext.getCurrentFramebuffer();
+  const framebuffer = presentationContext.getCurrentFramebuffer() as any;
+  const secondFramebuffer = presentationContext.getCurrentFramebuffer() as any;
 
   t.ok(framebuffer, 'WebGPU presentation context returns a framebuffer');
+  t.equal(
+    secondFramebuffer,
+    framebuffer,
+    'WebGPU presentation context reuses its framebuffer wrapper'
+  );
+  t.equal(
+    secondFramebuffer.colorAttachments[0],
+    framebuffer.colorAttachments[0],
+    'WebGPU presentation context reuses its texture view wrapper'
+  );
+  t.equal(
+    secondFramebuffer.colorAttachments[0].texture,
+    framebuffer.colorAttachments[0].texture,
+    'WebGPU presentation context reuses its texture wrapper'
+  );
   t.equal(destinationCanvas.width, 32, 'destination canvas width is preserved');
   t.equal(destinationCanvas.height, 16, 'destination canvas height is preserved');
 
@@ -274,8 +290,14 @@ test('WebGPUPresentationContext destroy() releases its depth attachment', async 
   const depthStencilAttachment = (presentationContext as any).depthStencilAttachment as {
     destroy: () => void;
   } | null;
+  const colorAttachment = (presentationContext as any).colorAttachment as {
+    destroy: () => void;
+  } | null;
+  const framebuffer = (presentationContext as any).framebuffer as {destroy: () => void} | null;
 
   t.ok(depthStencilAttachment, 'presentation context creates a depth attachment by default');
+  t.ok(colorAttachment, 'presentation context caches a color attachment wrapper');
+  t.ok(framebuffer, 'presentation context caches a framebuffer wrapper');
 
   let destroyCallCount = 0;
   if (depthStencilAttachment) {
@@ -285,14 +307,42 @@ test('WebGPUPresentationContext destroy() releases its depth attachment', async 
       originalDestroy();
     };
   }
+  let colorDestroyCallCount = 0;
+  if (colorAttachment) {
+    const originalDestroy = colorAttachment.destroy.bind(colorAttachment);
+    colorAttachment.destroy = () => {
+      colorDestroyCallCount++;
+      originalDestroy();
+    };
+  }
+  let framebufferDestroyCallCount = 0;
+  if (framebuffer) {
+    const originalDestroy = framebuffer.destroy.bind(framebuffer);
+    framebuffer.destroy = () => {
+      framebufferDestroyCallCount++;
+      originalDestroy();
+    };
+  }
 
   presentationContext.destroy();
 
   t.equal(destroyCallCount, 1, 'destroy releases the cached depth attachment');
+  t.equal(colorDestroyCallCount, 1, 'destroy releases the cached color attachment wrapper');
+  t.equal(framebufferDestroyCallCount, 1, 'destroy releases the cached framebuffer wrapper');
   t.equal(
     (presentationContext as any).depthStencilAttachment,
     null,
     'destroy clears the cached depth attachment reference'
+  );
+  t.equal(
+    (presentationContext as any).colorAttachment,
+    null,
+    'destroy clears the cached color attachment reference'
+  );
+  t.equal(
+    (presentationContext as any).framebuffer,
+    null,
+    'destroy clears the cached framebuffer reference'
   );
 
   t.end();

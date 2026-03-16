@@ -4,6 +4,7 @@
 
 import type {ComputeShaderLayout, BindingDeclaration, Binding} from '@luma.gl/core';
 import {Buffer, Sampler, Texture, TextureView, log} from '@luma.gl/core';
+import type {WebGPUDevice} from '../webgpu-device';
 import type {WebGPUBuffer} from '../resources/webgpu-buffer';
 import type {WebGPUSampler} from '../resources/webgpu-sampler';
 import type {WebGPUTexture} from '../resources/webgpu-texture';
@@ -29,21 +30,19 @@ export function makeBindGroupLayout(
  * Create a WebGPU "bind group" from an array of luma.gl bindings
  */
 export function getBindGroup(
-  device: GPUDevice,
+  device: WebGPUDevice,
   bindGroupLayout: GPUBindGroupLayout,
   shaderLayout: ComputeShaderLayout,
   bindings: Record<string, Binding>
 ): GPUBindGroup {
   const entries = getBindGroupEntries(bindings, shaderLayout);
   device.pushErrorScope('validation');
-  const bindGroup = device.createBindGroup({
+  const bindGroup = device.handle.createBindGroup({
     layout: bindGroupLayout,
     entries
   });
-  device.popErrorScope().then((error: GPUError | null) => {
-    if (error) {
-      log.error(`bindGroup creation: ${error.message}`, bindGroup)();
-    }
+  device.popErrorScope((error: GPUError) => {
+    log.error(`bindGroup creation: ${error.message}`, bindGroup)();
   });
   return bindGroup;
 }
