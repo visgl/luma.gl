@@ -14,20 +14,21 @@ export class WebGPUComputePass extends ComputePass {
 
   _webgpuPipeline: WebGPUComputePipeline | null = null;
 
-  constructor(device: WebGPUDevice, props: ComputePassProps) {
+  constructor(device: WebGPUDevice, props: ComputePassProps = {}) {
     super(device, props);
     this.device = device;
+    const {props: computePassProps} = this;
 
     // Set up queries
     let timestampWrites: GPUComputePassTimestampWrites | undefined;
-    if (device.features.has('timestamp-query')) {
-      const webgpuQuerySet = props.timestampQuerySet as WebGPUQuerySet;
+    if (computePassProps.timestampQuerySet) {
+      const webgpuQuerySet = computePassProps.timestampQuerySet as WebGPUQuerySet;
       if (webgpuQuerySet) {
         webgpuQuerySet._invalidateResults();
         timestampWrites = {
           querySet: webgpuQuerySet.handle,
-          beginningOfPassWriteIndex: props.beginTimestampIndex,
-          endOfPassWriteIndex: props.endTimestampIndex
+          beginningOfPassWriteIndex: computePassProps.beginTimestampIndex,
+          endOfPassWriteIndex: computePassProps.endTimestampIndex
         };
       }
     }

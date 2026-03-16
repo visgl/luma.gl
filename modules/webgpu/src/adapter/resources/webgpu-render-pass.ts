@@ -23,27 +23,31 @@ export class WebGPURenderPass extends RenderPass {
   constructor(device: WebGPUDevice, props: RenderPassProps = {}) {
     super(device, props);
     this.device = device;
+    const {props: renderPassProps} = this;
     this.framebuffer =
-      (props.framebuffer as WebGPUFramebuffer) || device.getCanvasContext().getCurrentFramebuffer();
-    if (!props.framebuffer) {
+      (renderPassProps.framebuffer as WebGPUFramebuffer) ||
+      device.getCanvasContext().getCurrentFramebuffer();
+    if (!renderPassProps.framebuffer) {
       this.attachResource(this.framebuffer);
     }
 
     const renderPassDescriptor = this.getRenderPassDescriptor(this.framebuffer);
 
-    if (props.occlusionQuerySet) {
-      renderPassDescriptor.occlusionQuerySet = (props.occlusionQuerySet as WebGPUQuerySet).handle;
+    if (renderPassProps.occlusionQuerySet) {
+      renderPassDescriptor.occlusionQuerySet = (
+        renderPassProps.occlusionQuerySet as WebGPUQuerySet
+      ).handle;
     }
 
-    if (device.features.has('timestamp-query')) {
-      const webgpuTSQuerySet = props.timestampQuerySet as WebGPUQuerySet;
+    if (renderPassProps.timestampQuerySet) {
+      const webgpuTSQuerySet = renderPassProps.timestampQuerySet as WebGPUQuerySet;
       webgpuTSQuerySet?._invalidateResults();
       renderPassDescriptor.timestampWrites = webgpuTSQuerySet
         ? ({
             querySet: webgpuTSQuerySet.handle,
-            beginningOfPassWriteIndex: props.beginTimestampIndex,
-            endOfPassWriteIndex: props.endTimestampIndex
-          } as GPUComputePassTimestampWrites)
+            beginningOfPassWriteIndex: renderPassProps.beginTimestampIndex,
+            endOfPassWriteIndex: renderPassProps.endTimestampIndex
+          } as GPURenderPassTimestampWrites)
         : undefined;
     }
 

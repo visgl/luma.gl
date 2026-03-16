@@ -406,8 +406,9 @@ function isColorRenderableTextureFormat(
   }
 
   // Isolate the probe from any prior driver errors so the result reflects only this format.
-  let error = gl.getError();
-  while (error !== GL.NO_ERROR) {
+  const noError = Number(GL.NO_ERROR);
+  let error = Number(gl.getError());
+  while (error !== noError) {
     error = gl.getError();
   }
 
@@ -415,7 +416,7 @@ function isColorRenderableTextureFormat(
   try {
     gl.bindTexture(GL.TEXTURE_2D, texture);
     gl.texStorage2D(GL.TEXTURE_2D, 1, internalFormat, 1, 1);
-    if (gl.getError() !== GL.NO_ERROR) {
+    if (Number(gl.getError()) !== noError) {
       return false;
     }
 
@@ -423,7 +424,7 @@ function isColorRenderableTextureFormat(
     gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, GL.TEXTURE_2D, texture, 0);
     renderable =
       gl.checkFramebufferStatus(GL.FRAMEBUFFER) === GL.FRAMEBUFFER_COMPLETE &&
-      gl.getError() === GL.NO_ERROR;
+      Number(gl.getError()) === noError;
   } finally {
     gl.bindFramebuffer(GL.FRAMEBUFFER, previousFramebuffer);
     gl.deleteFramebuffer(framebuffer);

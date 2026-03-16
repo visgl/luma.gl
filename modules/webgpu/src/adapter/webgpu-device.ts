@@ -246,9 +246,12 @@ export class WebGPUDevice extends Device {
       });
 
       if (submittedCommandEncoder) {
-        void submittedCommandEncoder.resolveTimeProfilingQuerySet().then(() => {
-          this.commandEncoder._gpuTimeMs = submittedCommandEncoder._gpuTimeMs;
-        });
+        submittedCommandEncoder
+          .resolveTimeProfilingQuerySet()
+          .then(() => {
+            this.commandEncoder._gpuTimeMs = submittedCommandEncoder._gpuTimeMs;
+          })
+          .catch(() => {});
       }
     } finally {
       commandBuffer.destroy();

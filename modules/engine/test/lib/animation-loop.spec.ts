@@ -19,8 +19,8 @@ test('engine#AnimationLoop constructor', async t => {
 
 test('engine#AnimationLoop uses provided stats object', async t => {
   const device = await getWebGLTestDevice();
-  const hasTimestampQuery = device.features.has('timestamp-query');
   const customStats = luma.stats.get('GPU Time and Memory');
+  customStats.reset();
   const frameRate = customStats.get('Frame Rate');
   const beforeFrameRate = frameRate.lastSampleTime;
   const beforeCpuTime = customStats.get('CPU Time').lastSampleTime;
@@ -33,26 +33,19 @@ test('engine#AnimationLoop uses provided stats object', async t => {
   await animationLoop.waitForRender();
   await animationLoop.waitForRender();
 
-  let gpuTimeUpdated = customStats.get('GPU Time').lastSampleTime > beforeGpuTime;
-  for (let attempt = 0; hasTimestampQuery && !gpuTimeUpdated && attempt < 8; attempt++) {
+  let cpuTimeUpdated = customStats.get('CPU Time').lastSampleTime > beforeCpuTime;
+  for (let attempt = 0; !cpuTimeUpdated && attempt < 8; attempt++) {
     await new Promise(resolve => setTimeout(resolve, 16));
     await animationLoop.waitForRender();
-    gpuTimeUpdated = customStats.get('GPU Time').lastSampleTime > beforeGpuTime;
+    cpuTimeUpdated = customStats.get('CPU Time').lastSampleTime > beforeCpuTime;
   }
   t.ok(frameRate.lastSampleTime > beforeFrameRate, 'Frame Rate updates on custom stats object');
-  t.ok(
-    customStats.get('CPU Time').lastSampleTime > beforeCpuTime,
-    'CPU Time updates on custom stats object'
+  t.ok(cpuTimeUpdated, 'CPU Time updates on custom stats object');
+  t.equal(
+    customStats.get('GPU Time').lastSampleTime,
+    beforeGpuTime,
+    'GPU Time remains unchanged when no profiled passes are encoded'
   );
-  if (hasTimestampQuery) {
-    t.ok(gpuTimeUpdated, 'GPU Time updates on custom stats object');
-  } else {
-    t.equal(
-      customStats.get('GPU Time').lastSampleTime,
-      beforeGpuTime,
-      'GPU Time remains unchanged when timestamp queries are unavailable'
-    );
-  }
 
   animationLoop.stop();
   animationLoop.destroy();

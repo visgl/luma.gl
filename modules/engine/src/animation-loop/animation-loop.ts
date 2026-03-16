@@ -112,6 +112,15 @@ export class AnimationLoop {
   destroy(): void {
     this.stop();
     this._setDisplay(null);
+    if (
+      this.device &&
+      this._gpuTimeQuery &&
+      this.device.commandEncoder.getTimeProfilingQuerySet() === this._gpuTimeQuery
+    ) {
+      this.device.commandEncoder = this.device.createCommandEncoder({
+        id: this.device.commandEncoder.props.id
+      });
+    }
     if (this._gpuTimeQuery) {
       this._gpuTimeQuery.destroy();
       this._gpuTimeQuery = null;

@@ -20,23 +20,22 @@ test('QuerySet timestamp duration', async t => {
   for (const device of await getTestDevices()) {
     if (!device.features.has('timestamp-query')) {
       t.comment(`${device.type} does not support timestamp queries`);
-      continue;
+    } else {
+      const querySet = device.createQuerySet({type: 'timestamp', count: 2});
+      t.notOk(
+        querySet.isResultAvailable(),
+        `${device.type} timestamp result unavailable before recording`
+      );
+
+      device.commandEncoder.writeTimestamp(querySet, 0);
+      device.commandEncoder.writeTimestamp(querySet, 1);
+      device.submit();
+
+      const duration = await querySet.readTimestampDuration(0, 1);
+      t.ok(duration >= 0, `${device.type} timestamp duration is non-negative`);
+
+      querySet.destroy();
     }
-
-    const querySet = device.createQuerySet({type: 'timestamp', count: 2});
-    t.notOk(
-      querySet.isResultAvailable(),
-      `${device.type} timestamp result unavailable before recording`
-    );
-
-    device.commandEncoder.writeTimestamp(querySet, 0);
-    device.commandEncoder.writeTimestamp(querySet, 1);
-    device.submit();
-
-    const duration = await querySet.readTimestampDuration(0, 1);
-    t.ok(duration >= 0, `${device.type} timestamp duration is non-negative`);
-
-    querySet.destroy();
   }
   t.end();
 });

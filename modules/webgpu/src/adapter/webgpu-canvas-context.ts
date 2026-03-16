@@ -69,6 +69,8 @@ export class WebGPUCanvasContext extends CanvasContext {
       colorSpace: this.props.colorSpace,
       alphaMode: this.props.alphaMode
     });
+
+    this._createDepthStencilAttachment(this.device.preferredDepthFormat);
   }
 
   /** Update framebuffer with properly resized "swap chain" texture views */
