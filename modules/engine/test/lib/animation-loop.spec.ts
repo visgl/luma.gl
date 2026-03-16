@@ -3,7 +3,8 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
-import {getWebGLTestDevice} from '@luma.gl/test-utils';
+import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {luma} from '@luma.gl/core';
 
 import {AnimationLoop} from '@luma.gl/engine';
 
@@ -13,6 +14,49 @@ test('engine#AnimationLoop constructor', async t => {
   t.ok(AnimationLoop, 'AnimationLoop imported');
   const animationLoop = new AnimationLoop({device});
   t.ok(animationLoop, 'AnimationLoop constructor should not throw');
+  t.end();
+});
+
+test('engine#AnimationLoop uses provided stats object', async t => {
+  const device = await getWebGLTestDevice();
+  const hasTimestampQuery = device.features.has('timestamp-query');
+  const customStats = luma.stats.get('GPU Time and Memory');
+  const frameRate = customStats.get('Frame Rate');
+  const beforeFrameRate = frameRate.lastSampleTime;
+  const beforeCpuTime = customStats.get('CPU Time').lastSampleTime;
+  const beforeGpuTime = customStats.get('GPU Time').lastSampleTime;
+
+  const animationLoop = new AnimationLoop({device, stats: customStats});
+  t.is(animationLoop.stats, customStats, 'AnimationLoop stores provided stats object');
+
+  await animationLoop.start();
+  await animationLoop.waitForRender();
+  await animationLoop.waitForRender();
+
+  let gpuTimeUpdated = customStats.get('GPU Time').lastSampleTime > beforeGpuTime;
+  for (let attempt = 0; hasTimestampQuery && !gpuTimeUpdated && attempt < 8; attempt++) {
+    await new Promise(resolve => setTimeout(resolve, 16));
+    await animationLoop.waitForRender();
+    gpuTimeUpdated = customStats.get('GPU Time').lastSampleTime > beforeGpuTime;
+  }
+
+  t.ok(frameRate.lastSampleTime > beforeFrameRate, 'Frame Rate updates on custom stats object');
+  t.ok(
+    customStats.get('CPU Time').lastSampleTime > beforeCpuTime,
+    'CPU Time updates on custom stats object'
+  );
+  if (hasTimestampQuery) {
+    t.ok(gpuTimeUpdated, 'GPU Time updates on custom stats object');
+  } else {
+    t.equal(
+      customStats.get('GPU Time').lastSampleTime,
+      beforeGpuTime,
+      'GPU Time remains unchanged when timestamp queries are unavailable'
+    );
+  }
+
+  animationLoop.stop();
+  animationLoop.destroy();
   t.end();
 });
 
@@ -146,4 +190,61 @@ test('engine#AnimationLoop a start/stop/start should not call initialize again',
     animationLoop.stop();
     t.end();
   }, 150);
+});
+
+test('engine#AnimationLoop GPU timing graceful fallback', async t => {
+  const device = await getWebGLTestDevice();
+
+  const animationLoop = new AnimationLoop({device});
+  await animationLoop.start();
+  await animationLoop.waitForRender();
+
+  // Stats should exist regardless of timer support
+  t.ok(animationLoop.gpuTime, 'gpuTime stat exists');
+  t.ok(animationLoop.cpuTime, 'cpuTime stat exists');
+
+  // _gpuTimeQuery should match feature availability
+  const hasTimerQuery = device.features.has('timestamp-query');
+  t.is(
+    animationLoop._gpuTimeQuery !== null,
+    hasTimerQuery,
+    `_gpuTimeQuery created when feature ${hasTimerQuery ? 'available' : 'unavailable'}`
+  );
+  t.is(
+    animationLoop._gpuTimeQuery?.props.count || 0,
+    hasTimerQuery ? 256 : 0,
+    'timestamp query set pre-allocates slots for profiling passes'
+  );
+
+  // Destroy should not throw
+  animationLoop.stop();
+  animationLoop.destroy();
+  t.is(animationLoop._gpuTimeQuery, null, 'Query cleaned up on destroy');
+
+  t.end();
+});
+
+test('engine#AnimationLoop WebGPU timing path avoids backend casts', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const animationLoop = new AnimationLoop({device});
+  await animationLoop.start();
+  await animationLoop.waitForRender();
+
+  t.ok(animationLoop.gpuTime, 'gpuTime stat exists');
+  t.ok(animationLoop.cpuTime, 'cpuTime stat exists');
+  t.is(
+    animationLoop._gpuTimeQuery !== null,
+    device.features.has('timestamp-query'),
+    '_gpuTimeQuery follows timestamp-query support'
+  );
+
+  animationLoop.stop();
+  animationLoop.destroy();
+  t.end();
 });

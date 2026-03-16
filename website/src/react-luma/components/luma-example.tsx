@@ -9,7 +9,7 @@ import {
 import {webgl2Adapter} from '@luma.gl/webgl';
 import {webgpuAdapter} from '@luma.gl/webgpu';
 import {StatsWidget} from '@probe.gl/stats-widget';
-import type {Stat} from '@probe.gl/stats';
+import type {Stat, Stats} from '@probe.gl/stats';
 import {DeviceTabs} from './device-tabs';
 
 // import {VRDisplay} from '@luma.gl/experimental';
@@ -47,10 +47,13 @@ const STAT_STYLES = {
   fontFamily: 'monospace'
 };
 
-const ANIMATION_STATS_FORMATTERS = {
+const GPU_TIME_AND_MEMORY_STATS_FORMATTERS = {
   'Frame Rate': (stat: Stat) => `${stat.name}: ${Math.round(stat.getSampleHz())}fps`,
   'CPU Time': (stat: Stat) => `${stat.name}: ${stat.getSampleAverageTime().toFixed(2)}ms`,
-  'GPU Time': (stat: Stat) => `${stat.name}: ${stat.getSampleAverageTime().toFixed(2)}ms`
+  'GPU Time': (stat: Stat) => `${stat.name}: ${stat.getSampleAverageTime().toFixed(2)}ms`,
+  'GPU Memory': 'memory',
+  'Buffer Memory': 'memory',
+  'Texture Memory': 'memory'
 } as const;
 
 const RESOURCE_STATS_FORMATTERS = {
@@ -58,6 +61,14 @@ const RESOURCE_STATS_FORMATTERS = {
   'Buffer Memory': 'memory',
   'Texture Memory': 'memory'
 } as const;
+
+function getStatsTitle(stats: Stats): string {
+  const title = stats.id;
+  if (title === 'GPU Time and Memory') {
+    return 'GPU Time & Memory';
+  }
+  return title;
+}
 
 type LumaExampleProps = React.PropsWithChildren<{
   id?: string;
@@ -70,7 +81,6 @@ type LumaExampleProps = React.PropsWithChildren<{
   style?: CSSProperties;
   container?: string;
   showStats?: boolean;
-  statsTitle?: string;
 }>;
 
 const defaultProps = {
@@ -256,23 +266,23 @@ export function ReactExample<P>(props: ReactExampleProps<P>) {
       return;
     }
 
-    const resourceCounts = luma.stats.get('Resource Counts');
+    const resourceCounts = luma.stats.get('GPU Resource Counts');
     const resourceMemory = luma.stats.get('Resource Memory');
     resourceMemory.get('GPU Memory');
     resourceMemory.get('Buffer Memory');
     resourceMemory.get('Texture Memory');
 
     const statsWidgets = [
-      new StatsWidget(resourceCounts, {
-        title: 'luma.stats Resource Counts',
-        container: statsPanelRef.current,
-        css: STAT_STYLES
-      }),
       new StatsWidget(resourceMemory, {
-        title: 'luma.stats Resource Memory',
+        title: getStatsTitle(resourceMemory),
         container: statsPanelRef.current,
         css: STAT_STYLES,
         formatters: RESOURCE_STATS_FORMATTERS
+      }),
+      new StatsWidget(resourceCounts, {
+        title: getStatsTitle(resourceCounts),
+        container: statsPanelRef.current,
+        css: STAT_STYLES
       })
     ];
 
@@ -331,6 +341,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
   const currentTask = useRef<Promise<void> | null>(null);
   const statsContainerRef = useRef<HTMLDivElement | null>(null);
   const statsPanelRef = useRef<HTMLDivElement | null>(null);
+  const statsWidgetCollapsedState = useRef<Record<string, boolean>>({});
 
   /** Type type of the device (WebGL, WebGPU, ...) */
   const deviceType = useStore(store => store.deviceType);
@@ -358,42 +369,40 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
       });
 
       animationLoop = makeAnimationLoop(props.template as unknown as typeof AnimationLoopTemplate, {
+        stats: luma.stats.get('GPU Time and Memory'),
         device,
         autoResizeViewport: true,
         autoResizeDrawingBuffer: true
       });
-      animationLoop.frameRate.setSampleSize(30);
-      animationLoop.cpuTime.setSampleSize(30);
-      animationLoop.gpuTime.setSampleSize(30);
+      animationLoop.frameRate.setSampleSize(1);
 
       if (props.showStats !== false && statsPanelRef.current) {
-        const resourceCounts = luma.stats.get('Resource Counts');
-        const resourceMemory = luma.stats.get('Resource Memory');
-        resourceMemory.get('GPU Memory');
-        resourceMemory.get('Buffer Memory');
-        resourceMemory.get('Texture Memory');
+        const resourceCounts = luma.stats.get('GPU Resource Counts');
+        const gpuTimeAndMemoryStats = luma.stats.get('GPU Time and Memory');
+        gpuTimeAndMemoryStats.get('Frame Rate');
+        gpuTimeAndMemoryStats.get('CPU Time');
+        gpuTimeAndMemoryStats.get('GPU Time');
+        gpuTimeAndMemoryStats.get('GPU Memory');
+        gpuTimeAndMemoryStats.get('Buffer Memory');
+        gpuTimeAndMemoryStats.get('Texture Memory');
+        const animationStatsTitle = getStatsTitle(gpuTimeAndMemoryStats);
 
         statsWidgets = [
-          new StatsWidget(animationLoop.stats, {
-            title: props.statsTitle || 'Example Stats',
+          new StatsWidget(gpuTimeAndMemoryStats, {
+            title: animationStatsTitle,
             container: statsPanelRef.current,
             css: STAT_STYLES,
-            formatters: ANIMATION_STATS_FORMATTERS
+            formatters: GPU_TIME_AND_MEMORY_STATS_FORMATTERS
           }),
           new StatsWidget(resourceCounts, {
-            title: 'luma.stats Resource Counts',
+            title: getStatsTitle(resourceCounts),
             container: statsPanelRef.current,
             css: STAT_STYLES
-          }),
-          new StatsWidget(resourceMemory, {
-            title: 'luma.stats Resource Memory',
-            container: statsPanelRef.current,
-            css: STAT_STYLES,
-            formatters: RESOURCE_STATS_FORMATTERS
           })
         ];
         for (const statsWidget of statsWidgets) {
-          statsWidget.setCollapsed(true);
+          const collapsed = statsWidget.title ? statsWidgetCollapsedState.current[statsWidget.title] : undefined;
+          statsWidget.setCollapsed(collapsed ?? true);
         }
 
         const updateStatsWidget = () => {
@@ -433,6 +442,9 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
             statsIntervalId = null;
           }
           for (const statsWidget of statsWidgets) {
+            if (statsWidget.title) {
+              statsWidgetCollapsedState.current[statsWidget.title] = statsWidget.collapsed;
+            }
             statsWidget.remove();
           }
           statsWidgets = [];

@@ -5,9 +5,9 @@
 // import type {TypedArray} from '@math.gl/types';
 import {Device} from '../device';
 import {Resource, ResourceProps} from './resource';
+import {QuerySet} from './query-set';
 import {Buffer} from './buffer';
 import {Texture} from './texture';
-import {QuerySet} from './query-set';
 import type {RenderPass, RenderPassProps} from './render-pass';
 import type {ComputePass, ComputePassProps} from './compute-pass';
 import type {CommandBuffer, CommandBufferProps} from './command-buffer';
@@ -128,6 +128,13 @@ export type ClearTextureOptions = {
 
 export type CommandEncoderProps = ResourceProps & {
   measureExecutionTime?: boolean;
+  timeProfilingQuerySet?: QuerySet | null;
+};
+
+type PassWithTimestamps = {
+  timestampQuerySet?: QuerySet;
+  beginTimestampIndex?: number;
+  endTimestampIndex?: number;
 };
 
 /**
@@ -138,8 +145,15 @@ export abstract class CommandEncoder extends Resource<CommandEncoderProps> {
     return 'CommandEncoder';
   }
 
+  protected _timeProfilingQuerySet: QuerySet | null = null;
+  protected _timeProfilingSlotCount: number = 0;
+  _gpuTimeMs?: number;
+
   constructor(device: Device, props: CommandEncoderProps) {
     super(device, props, CommandEncoder.defaultProps);
+    this._timeProfilingQuerySet = props.timeProfilingQuerySet ?? null;
+    this._timeProfilingSlotCount = 0;
+    this._gpuTimeMs = undefined;
   }
 
   /** Completes recording of the commands sequence */
@@ -179,6 +193,75 @@ export abstract class CommandEncoder extends Resource<CommandEncoderProps> {
     }
   ): void;
 
+  /**
+   * Reads all resolved timestamp pairs on the current profiler query set and caches the sum
+   * as milliseconds on this encoder.
+   */
+  async resolveTimeProfilingQuerySet(): Promise<void> {
+    this._gpuTimeMs = undefined;
+
+    if (!this._timeProfilingQuerySet) {
+      return;
+    }
+
+    const pairCount = Math.floor(this._timeProfilingSlotCount / 2);
+    if (pairCount <= 0) {
+      return;
+    }
+
+    const passDurations = await Promise.all(
+      Array.from({length: pairCount}, (_, passIndex) =>
+        this._timeProfilingQuerySet!.readTimestampDuration(passIndex * 2, passIndex * 2 + 1).catch(
+          () => 0
+        )
+      )
+    );
+
+    this._gpuTimeMs = passDurations.reduce((sum, value) => sum + value, 0);
+  }
+
+  /** Returns the number of query slots consumed by automatic pass profiling on this encoder. */
+  getTimeProfilingSlotCount(): number {
+    return this._timeProfilingSlotCount;
+  }
+
+  getTimeProfilingQuerySet(): QuerySet | null {
+    return this._timeProfilingQuerySet;
+  }
+
+  /** Internal helper for auto-assigning timestamp slots to render/compute passes on this encoder. */
+  protected _applyTimeProfilingToPassProps<P extends PassWithTimestamps>(props: P): P {
+    if (!this._supportsTimestampQueries() || !this._timeProfilingQuerySet) {
+      return props;
+    }
+
+    if (
+      props.timestampQuerySet !== undefined ||
+      props.beginTimestampIndex !== undefined ||
+      props.endTimestampIndex !== undefined
+    ) {
+      return props;
+    }
+
+    const beginTimestampIndex = this._timeProfilingSlotCount;
+    if (beginTimestampIndex + 1 >= this._timeProfilingQuerySet.props.count) {
+      return props;
+    }
+
+    this._timeProfilingSlotCount += 2;
+
+    return {
+      ...props,
+      timestampQuerySet: this._timeProfilingQuerySet,
+      beginTimestampIndex,
+      endTimestampIndex: beginTimestampIndex + 1
+    };
+  }
+
+  protected _supportsTimestampQueries(): boolean {
+    return this.device.features.has('timestamp-query');
+  }
+
   /** Begins a labeled debug group containing subsequent commands */
   abstract pushDebugGroup(groupLabel: string): void;
   /** Ends the labeled debug group most recently started by pushDebugGroup() */
@@ -192,6 +275,7 @@ export abstract class CommandEncoder extends Resource<CommandEncoderProps> {
 
   static override defaultProps: Required<CommandEncoderProps> = {
     ...Resource.defaultProps,
-    measureExecutionTime: undefined!
+    measureExecutionTime: undefined!,
+    timeProfilingQuerySet: undefined!
   };
 }

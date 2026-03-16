@@ -262,7 +262,7 @@ Feature constants have been changed to match the WebGPU API and will need to be 
 | ------------------------------------------- | -------------------------------------- | ----------------------------------------------------------------------------- |
 | **General WebGL Features**                  |                                        |                                                                               |
 | `FEATURES.WEBGL2`                           | `webgl`                                | True for WebGL Contexts                                                       |
-| `FEATURES.TIMER_QUERY`                      | `timer-query-webgl`                    | [`Query`][/]ocs/api-reference/webgl/query) for asynchronous GPU timings       |
+| `FEATURES.TIMER_QUERY`                      | `timestamp-query`                      | [`QuerySet`](/docs/api-reference/core/resources/query-set) for asynchronous GPU timings |
 | `FEATURES.INSTANCED_RENDERING`              | N/A (always true)                      | Instanced rendering (via instanced vertex attributes)                         |
 | `FEATURES.VERTEX_ARRAY_OBJECT`              | N/A (always true)                      | `VertexArrayObjects` can be created                                           |
 | `FEATURES.ELEMENT_INDEX_UINT32`             | N/A (always true)                      | 32 bit indices available for `GL.ELEMENT_ARRAY_BUFFER`s                       |

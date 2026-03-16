@@ -31,9 +31,8 @@ Each device has a `device.features` field that holds a `DeviceFeatures` object w
 | **WebGPU Extensions**                      |
 | `depth-clip-control`                       | <F f="depth-clip-control"/>                       | Disable depth clipping via `unclippedDepth`  | `WEBGL_depth_texture`                                                          |
 | `indirect-first-instance`                  | <F f="indirect-first-instance"/>                  | Specify instance index via GPU buffer        | N/A                                                                            |
-| `timestamp-query`                          | <F f="timestamp-query"/>                          | GPU timer query support                      | N/A                                                                            |
+| `timestamp-query`                          | <F f="timestamp-query"/>                          | GPU timer query support                      | `EXT_disjoint_timer_query_webgl2`                                              |
 | **WebGL Extensions**                       |
-| `timer-query-webgl`                        | <F f="timer-query-webgl"/>                        | GPU timer support                            | `EXT_disjoint_timer_query`                                                     |
 | `compilation-status-async-webgl`           | <F f="compilation-status-async-webgl"/>           | Non-blocking compile/link status             | `KHR_parallel_shader_compile`                                                  |
 | `polygon-mode-webgl`                       | <F f="polygon-mode-webgl"/>                       | Wireframe rendering parameters (debug only)  | `WEBGL_polygon_mode`                                                           |
 | `provoking-vertex-webgl`                   | <F f="provoking-vertex-webgl"/>                   | Primitive vertex used for flat shading       | `WEBGL_provoking_vertex`                                                       |
@@ -80,8 +79,8 @@ You can open this page in different browsers and on different machines to compar
 An example of feature detection
 
 ```ts
-// Checks if `Query` objects can do async queries of GPU timings
-if (device.features.has('timer-query-webgl')) {
+// Checks if `QuerySet` objects can do GPU timing
+if (device.features.has('timestamp-query')) {
    ...
 }
 // Alternatively - do the same query using raw WebGL extensions

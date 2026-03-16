@@ -163,9 +163,9 @@ export class ClassicAnimationLoop {
     this.gl = (this.device && this.device.gl) || props.gl;
 
     this.stats = props.stats;
+    this.frameRate = this.stats.get('Frame Rate');
     this.cpuTime = this.stats.get('CPU Time');
     this.gpuTime = this.stats.get('GPU Time');
-    this.frameRate = this.stats.get('Frame Rate');
 
     this.setProps({
       autoResizeViewport: props.autoResizeViewport,

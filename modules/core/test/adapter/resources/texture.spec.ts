@@ -67,11 +67,19 @@ test('Texture#clone overrides size', async t => {
   t.end();
 });
 
-function getTextureMemoryStats(device: Device): {gpuMemory: number; textureMemory: number} {
+function getTextureMemoryStats(device: Device): {
+  gpuMemory: number;
+  textureMemory: number;
+  mergedGpuMemory: number;
+  mergedTextureMemory: number;
+} {
   const stats = device.statsManager.getStats('Resource Memory');
+  const mergedStats = device.statsManager.getStats('GPU Time and Memory');
   return {
     gpuMemory: stats.get('GPU Memory').count,
-    textureMemory: stats.get('Texture Memory').count
+    textureMemory: stats.get('Texture Memory').count,
+    mergedGpuMemory: mergedStats.get('GPU Memory').count,
+    mergedTextureMemory: mergedStats.get('Texture Memory').count
   };
 }
 
@@ -119,6 +127,17 @@ test('Texture tracks GPU memory stats', async t => {
       `${device.type} Texture updates Texture Memory`
     );
 
+    t.equal(
+      afterCreateStats.mergedGpuMemory - beforeStats.mergedGpuMemory,
+      expectedAllocation,
+      `${device.type} Texture updates merged GPU Memory`
+    );
+    t.equal(
+      afterCreateStats.mergedTextureMemory - beforeStats.mergedTextureMemory,
+      expectedAllocation,
+      `${device.type} Texture updates merged Texture Memory`
+    );
+
     texture.destroy();
 
     const afterDestroyStats = getTextureMemoryStats(device);
@@ -131,6 +150,17 @@ test('Texture tracks GPU memory stats', async t => {
       afterDestroyStats.textureMemory,
       beforeStats.textureMemory,
       `${device.type} Texture destroy restores Texture Memory`
+    );
+
+    t.equal(
+      afterDestroyStats.mergedGpuMemory,
+      beforeStats.mergedGpuMemory,
+      `${device.type} Texture destroy restores merged GPU Memory`
+    );
+    t.equal(
+      afterDestroyStats.mergedTextureMemory,
+      beforeStats.mergedTextureMemory,
+      `${device.type} Texture destroy restores merged Texture Memory`
     );
   }
   t.end();

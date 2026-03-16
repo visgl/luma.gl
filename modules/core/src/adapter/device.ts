@@ -179,7 +179,6 @@ export type WebGPUDeviceFeature =
 
 export type WebGLDeviceFeature =
   // webgl extension features
-  | 'timer-query-webgl' // unify with WebGPU timestamp-query?
   | 'compilation-status-async-webgl' // Non-blocking shader compile/link status query available
   | 'provoking-vertex-webgl' // parameters.provokingVertex
   | 'polygon-mode-webgl' // parameters.polygonMode and parameters.polygonOffsetLine
