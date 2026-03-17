@@ -171,8 +171,15 @@ Returns an object containing all the uniforms defined for the program. Returns `
 
 - On WebGL, `PipelineFactory` may return different cached `RenderPipeline` wrappers that share one linked `WebGLProgram`.
 - Wrapper caching still respects pipeline-level defaults such as `topology`, `parameters`, and layout-related props.
+- WebGL link-time props such as `varyings` and `bufferMode` are also respected when determining whether shared programs can be reused.
 - This lets WebGL reduce shader-link overhead without changing the per-pipeline behavior seen by direct `RenderPipeline.draw()` callers.
 - Device props can tune this behavior:
   - `_cachePipelines` enables wrapper caching.
   - `_sharePipelines` enables shared WebGL program reuse across compatible wrappers.
-  - `_destroyPipelines` controls whether unused cached pipelines are destroyed when their reference count reaches zero.
+  - `_destroyPipelines` controls whether unused cached pipelines are destroyed when their reference count reaches zero. The default is `false` so repeated create/destroy cycles can still benefit from the cache; turn it on only if the application creates enough distinct pipelines that cache growth becomes a problem.
+
+## Eviction
+
+By default, `PipelineFactory` keeps unused cached pipelines alive after their reference count reaches zero. This is intentional: applications often create and destroy the same pipeline shapes repeatedly, and retaining them allows later requests to hit the cache instead of recompiling or relinking pipeline state.
+
+If an application creates very large numbers of distinct pipelines and cache growth becomes a memory concern, set `device.props._destroyPipelines` to `true`. In that mode, `PipelineFactory.release()` will evict cached pipelines once they become unused, trading memory usage for more frequent pipeline recreation work.

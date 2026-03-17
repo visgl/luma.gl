@@ -297,13 +297,21 @@ export type DeviceProps = {
   _initializeFeatures?: boolean;
   /** Enable shader caching (via ShaderFactory) */
   _cacheShaders?: boolean;
-  /** Destroy cached shaders when they become unused. */
+  /**
+   * Destroy cached shaders when they become unused.
+   * Defaults to `false` so repeated create/destroy cycles can still reuse cached shaders.
+   * Enable this if the application creates very large numbers of distinct shaders and needs cache eviction.
+   */
   _destroyShaders?: boolean;
-  /** Enable shader caching (via PipelineFactory) */
+  /** Enable pipeline caching (via PipelineFactory) */
   _cachePipelines?: boolean;
   /** Enable sharing of backend render-pipeline implementations when caching is enabled. Currently used by WebGL. */
   _sharePipelines?: boolean;
-  /** Destroy cached pipelines when they become unused. */
+  /**
+   * Destroy cached pipelines when they become unused.
+   * Defaults to `false` so repeated create/destroy cycles can still reuse cached pipelines.
+   * Enable this if the application creates very large numbers of distinct pipelines and needs cache eviction.
+   */
   _destroyPipelines?: boolean;
 
   /** @deprecated Internal, Do not use directly! Use `luma.attachDevice()` to attach to pre-created contexts/devices. */
@@ -385,10 +393,10 @@ export abstract class Device {
     _reuseDevices: false,
     _requestMaxLimits: true,
     _cacheShaders: true,
-    _destroyShaders: true,
+    _destroyShaders: false,
     _cachePipelines: true,
     _sharePipelines: true,
-    _destroyPipelines: true,
+    _destroyPipelines: false,
     // TODO - Change these after confirming things work as expected
     _initializeFeatures: true,
     _disabledFeatures: {

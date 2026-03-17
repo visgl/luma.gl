@@ -79,28 +79,31 @@ const pipeline = device.createRenderPipeline({vs, fs, varyings: ['gl_Position']}
 
 ### RenderPipelineProps
 
-| Property              | Type                       | Default | Mutable? | Description                                                              |
-| --------------------- | -------------------------- | ------- | -------- | ------------------------------------------------------------------------ |
+| Property              | Type                       | Default | Mutable? | Description                                                               |
+| --------------------- | -------------------------- | ------- | -------- | ------------------------------------------------------------------------- |
 | Shader                |
-| `vs?`                 | `Shader`                   | `null`  | No       | Compiled vertex shader                                                   |
-| `vertexEntryPoint?`   | `string`                   | -       | No       | Vertex shader entry point (defaults to 'main'). WGSL only                |
-| `vsConstants?`        | `Record<string, number>`   |         | No       | Constants to apply to compiled vertex shader (WGSL only)                 |
-| `fs?`                 | `Shader`                   | `null`  | No       | Compiled fragment shader                                                 |
-| `fragmentEntryPoint?` | `stringy`                  |         | No       | Fragment shader entry point (defaults to 'main'). WGSL only              |
-| `fsConstants?`        | ` Record<string, number>`  |         | No       | Constants to apply to compiled fragment shader (WGSL only)               |
+| `vs?`                 | `Shader`                   | `null`  | No       | Compiled vertex shader                                                    |
+| `vertexEntryPoint?`   | `string`                   | -       | No       | Vertex shader entry point (defaults to 'main'). WGSL only                 |
+| `vsConstants?`        | `Record<string, number>`   |         | No       | Constants to apply to compiled vertex shader (WGSL only)                  |
+| `fs?`                 | `Shader`                   | `null`  | No       | Compiled fragment shader                                                  |
+| `fragmentEntryPoint?` | `stringy`                  |         | No       | Fragment shader entry point (defaults to 'main'). WGSL only               |
+| `fsConstants?`        | ` Record<string, number>`  |         | No       | Constants to apply to compiled fragment shader (WGSL only)                |
 | ShaderLayout          |
-| `topology?`           | `PrimitiveTopology;`       |         |          | Determines how vertices are read from the 'vertex' attributes            |
-| `shaderLayout?`       | `ShaderLayout`             | `null`  |          | Describes the attributes and bindings exposed by the pipeline shader(s). |
-| `bufferLayout?`       | `BufferLayout`             |         |          |                                                                          |
+| `topology?`           | `PrimitiveTopology;`       |         |          | Determines how vertices are read from the 'vertex' attributes             |
+| `shaderLayout?`       | `ShaderLayout`             | `null`  |          | Describes the attributes and bindings exposed by the pipeline shader(s).  |
+| `bufferLayout?`       | `BufferLayout`             |         |          |                                                                           |
 | GPU Parameters        |
-| `parameters?`         | `RenderPipelineParameters` |         |          | Parameters that are controlled by pipeline                               |
+| `parameters?`         | `RenderPipelineParameters` |         |          | Parameters that are controlled by pipeline                                |
+| Backend-dependent     |
+| `varyings?`           | `string[]`                 |         |          | Transform feedback varyings captured when linking a WebGL render pipeline |
+| `bufferMode?`         | `number`                   |         |          | Transform feedback buffer mode used when linking a WebGL render pipeline  |
 | Dynamic settings      |
-| `vertexCount?`        | `number`                   |         |          | Number of "rows" in 'vertex' buffers                                     |
-| `instanceCount?`      | `number`                   |         |          | Number of "rows" in 'instance' buffers                                   |
-| `indices?`            | `Buffer`                   | `null`  |          | Optional index buffer                                                    |
-| `attributes?`         | `Record<string, Buffer>`   |         |          | Buffers for attributes                                                   |
-| `bindings?`           | `Record<string, Binding>`  |         |          | Buffers, Textures, Samplers for the shader bindings                      |
-| `uniforms?`           | `Record<string, any>`      |         |          | uniforms (WebGL only)                                                    |
+| `vertexCount?`        | `number`                   |         |          | Number of "rows" in 'vertex' buffers                                      |
+| `instanceCount?`      | `number`                   |         |          | Number of "rows" in 'instance' buffers                                    |
+| `indices?`            | `Buffer`                   | `null`  |          | Optional index buffer                                                     |
+| `attributes?`         | `Record<string, Buffer>`   |         |          | Buffers for attributes                                                    |
+| `bindings?`           | `Record<string, Binding>`  |         |          | Buffers, Textures, Samplers for the shader bindings                       |
+| `uniforms?`           | `Record<string, any>`      |         |          | uniforms (WebGL only)                                                     |
 
 - A default mapping of one buffer per attribute is always created.
 - @note interleaving attributes into the same buffer does not increase the number of attributes
@@ -154,6 +157,7 @@ const pipeline = device.createRenderPipeline({
 - `vs` (`VertexShader`|`String`) - A vertex shader object, or source as a string.
 - `fs` (`FragmentShader`|`String`) - A fragment shader object, or source as a string.
 - `varyings` WebGL (`String[]`) - a list of names of varyings.
+- `bufferMode` WebGL (`number`) - transform feedback buffer mode, defaults to `GL.SEPARATE_ATTRIBS`.
 
 WebGL References [WebGLProgram](https://developer.mozilla.org/en-US/docs/Web/API/WebGLProgram), [gl.createProgram](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/createProgram)
 
@@ -258,5 +262,6 @@ Additional WebGL behavior:
 - Compatible WebGL `RenderPipeline` instances may share the same linked `WebGLProgram` internally.
 - Shared program reuse is an optimization only. Each `RenderPipeline` still keeps its own default `topology` and `parameters`, which are used when `draw()` does not receive explicit overrides.
 - In practice this means pipeline wrapper identity and underlying `WebGLProgram` identity are not always the same on WebGL.
+- WebGL-specific linking props such as `varyings` and `bufferMode` are part of `RenderPipelineProps`, but they are backend-dependent and only affect WebGL transform feedback pipelines.
   [gl.drawElementsInstancedANGLE](https://developer.mozilla.org/en-US/docs/Web/API/ANGLE_instanced_arrays/drawElementsInstancedANGLE),
   [gl.drawArraysInstancedANGLE](https://developer.mozilla.org/en-US/docs/Web/API/ANGLE_instanced_arrays/drawArraysInstancedANGLE)

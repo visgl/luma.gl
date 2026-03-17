@@ -51,6 +51,11 @@ export type RenderPipelineProps = ResourceProps & {
   /** Parameters that are controlled by pipeline */
   parameters?: RenderPipelineParameters;
 
+  /** Transform feedback varyings captured when linking a WebGL render pipeline. WebGL only. */
+  varyings?: string[];
+  /** Transform feedback buffer mode used when linking a WebGL render pipeline. WebGL only. */
+  bufferMode?: number;
+
   /** Some applications intentionally supply unused attributes and bindings, and want to disable warnings */
   disableWarnings?: boolean;
 
@@ -81,8 +86,6 @@ export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
   linkStatus: 'pending' | 'success' | 'error' = 'pending';
   /** The hash of the pipeline */
   hash: string = '';
-  /** Optional lower-level implementation hash for shared backend pipeline state */
-  implementationHash: string = '';
   /** Optional shared backend implementation */
   sharedRenderPipeline: SharedRenderPipeline | null = null;
 
@@ -163,6 +166,8 @@ export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
     depthStencilAttachmentFormat: undefined!,
 
     parameters: {},
+    varyings: undefined!,
+    bufferMode: undefined!,
     disableWarnings: false,
     _sharedRenderPipeline: undefined!,
     bindings: undefined!

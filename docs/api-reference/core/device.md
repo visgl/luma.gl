@@ -87,13 +87,13 @@ Learn more GPU debugging in our [Debugging](../../developer-guide/debugging.md) 
 
 These props are primarily intended for internal tuning and testing of factory-managed resource reuse.
 
-| Property                      | Default | Description                                                                                                         |
-| ----------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------- |
-| `_cacheShaders?: boolean`     | `true`  | Enable shader caching through `ShaderFactory`.                                                                      |
-| `_destroyShaders?: boolean`   | `true`  | Destroy cached shaders when their factory reference count reaches zero.                                             |
-| `_cachePipelines?: boolean`   | `true`  | Enable `PipelineFactory` wrapper caching.                                                                           |
-| `_sharePipelines?: boolean`   | `true`  | When pipeline caching is enabled, allow compatible WebGL render-pipeline wrappers to share a linked `WebGLProgram`. |
-| `_destroyPipelines?: boolean` | `true`  | Destroy cached pipelines when their factory reference count reaches zero.                                           |
+| Property                      | Default | Description                                                                                                                                                                                                                                                                   |
+| ----------------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `_cacheShaders?: boolean`     | `true`  | Enable shader caching through `ShaderFactory`.                                                                                                                                                                                                                                |
+| `_destroyShaders?: boolean`   | `false` | Destroy cached shaders when their factory reference count reaches zero. Keep this `false` by default so repeated create/destroy cycles can still hit the shader cache; enable it when an application creates very large numbers of distinct shaders and needs eviction.       |
+| `_cachePipelines?: boolean`   | `true`  | Enable `PipelineFactory` wrapper caching.                                                                                                                                                                                                                                     |
+| `_sharePipelines?: boolean`   | `true`  | When pipeline caching is enabled, allow compatible WebGL render-pipeline wrappers to share a linked `WebGLProgram`.                                                                                                                                                           |
+| `_destroyPipelines?: boolean` | `false` | Destroy cached pipelines when their factory reference count reaches zero. Keep this `false` by default so repeated create/destroy cycles can still hit the pipeline cache; enable it when an application creates very large numbers of distinct pipelines and needs eviction. |
 
 #### WebGLContextAttributes
 

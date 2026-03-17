@@ -83,7 +83,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     if (this.destroyed) {
       return;
     }
-    if (this.sharedRenderPipeline && !this.implementationHash) {
+    if (this.sharedRenderPipeline && !this.props._sharedRenderPipeline) {
       this.sharedRenderPipeline.destroy();
     }
     this.destroyResource();

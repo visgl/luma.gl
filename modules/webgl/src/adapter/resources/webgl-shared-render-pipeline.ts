@@ -3,7 +3,12 @@
 // Copyright (c) vis.gl contributors
 
 import {GL} from '@luma.gl/constants';
-import {SharedRenderPipeline, log, type ResourceProps, type ShaderLayout} from '@luma.gl/core';
+import {
+  SharedRenderPipeline,
+  log,
+  type ShaderLayout,
+  type SharedRenderPipelineProps
+} from '@luma.gl/core';
 
 import {getShaderLayoutFromGLSL} from '../helpers/get-shader-layout-from-glsl';
 import {isGLSamplerType} from '../converters/webgl-shadertypes';
@@ -22,12 +27,10 @@ export class WEBGLSharedRenderPipeline extends SharedRenderPipeline {
 
   constructor(
     device: WebGLDevice,
-    props: ResourceProps & {
+    props: SharedRenderPipelineProps & {
       handle?: WebGLProgram;
       vs: WEBGLShader;
       fs: WEBGLShader;
-      varyings?: string[];
-      bufferMode?: number;
     }
   ) {
     super(device, props);

@@ -95,7 +95,6 @@ test('PipelineFactory#release', async t => {
   }
 
   const pipelineFactory = new PipelineFactory(webglDevice);
-  const initialSharedRenderPipelineCount = getSharedRenderPipelineCount(webglDevice);
 
   const vs = webglDevice.createShader({stage: 'vertex', source: vsSource});
   const fs = webglDevice.createShader({stage: 'fragment', source: fsSource});
