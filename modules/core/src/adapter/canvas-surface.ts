@@ -214,6 +214,11 @@ export abstract class CanvasSurface {
   }
 
   getMaxDrawingBufferSize(): [number, number] {
+    // Guard against device being null (post-destroy) or limits not yet initialized.
+    // Fall back to current drawing buffer dimensions as a safe default.
+    if (!this.device?.limits) {
+      return [this.drawingBufferWidth, this.drawingBufferHeight];
+    }
     const maxTextureDimension = this.device.limits.maxTextureDimension2D;
     return [maxTextureDimension, maxTextureDimension];
   }

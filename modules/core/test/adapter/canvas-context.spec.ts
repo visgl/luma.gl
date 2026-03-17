@@ -327,6 +327,33 @@ test('CanvasContext#destroy nulls device to catch later access', t => {
   t.end();
 });
 
+test('CanvasContext#getMaxDrawingBufferSize returns fallback after destroy', t => {
+  if (!isBrowser()) {
+    t.end();
+    return;
+  }
+
+  const canvasContext = new TestCanvasContext();
+  // Record the drawing buffer size before destruction
+  const [expectedW, expectedH] = canvasContext.getDrawingBufferSize();
+
+  canvasContext.destroy();
+
+  // After destroy, device is null — must not throw
+  let result: [number, number] | undefined;
+  t.doesNotThrow(() => {
+    result = canvasContext.getMaxDrawingBufferSize();
+  }, 'getMaxDrawingBufferSize should not throw after destroy');
+
+  t.deepEqual(
+    result,
+    [expectedW, expectedH],
+    'getMaxDrawingBufferSize returns drawing buffer dimensions as fallback'
+  );
+
+  t.end();
+});
+
 test('CanvasContext#getDevicePixelRatio', async t => {
   const windowPixelRatio = (typeof window !== 'undefined' && window.devicePixelRatio) || 1;
   const TEST_CASES = [
