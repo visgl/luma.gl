@@ -91,15 +91,17 @@ uniform pickingUniforms {
 
 export const WGSL_UNIFORMS = /* wgsl */ `\
 struct pickingUniforms {
-  isActive: int32;
-  indexMode: int32;
-  batchIndex: int32;
+  isActive: i32,
+  indexMode: i32,
+  batchIndex: i32,
 
-  isHighlightActive: int32;
-  highlightedBatchIndex: int32;
-  highlightedObjectIndex: int32;
-  highlightColor: vec4<f32>;
-} picking;
+  isHighlightActive: i32,
+  highlightedBatchIndex: i32,
+  highlightedObjectIndex: i32,
+  highlightColor: vec4<f32>,
+};
+
+@group(0) @binding(2) var<uniform> picking: pickingUniforms;
 `;
 
 function getUniforms(props: PickingProps = {}, prevUniforms?: PickingUniforms): PickingUniforms {

@@ -4,87 +4,103 @@
 
 import type {ShaderModule} from '@luma.gl/shadertools';
 
-import type {PickingProps, PickingUniforms, PickingBindings} from './picking-uniforms';
-import {pickingUniforms, GLSL_UNIFORMS, WGSL_UNIFORMS} from './picking-uniforms';
+import type {PickingBindings, PickingProps, PickingUniforms} from './picking-uniforms';
+import {pickingUniforms, GLSL_UNIFORMS, WGSL_UNIFORMS, INVALID_INDEX} from './picking-uniforms';
 
 const source = /* wgsl */ `\
 ${WGSL_UNIFORMS}
+
+const INDEX_PICKING_MODE_INSTANCE = 0;
+const INDEX_PICKING_MODE_CUSTOM = 1;
+const COLOR_PICKING_INVALID_INDEX = ${INVALID_INDEX};
+const COLOR_PICKING_MAX_OBJECT_INDEX = 16777214;
+const COLOR_PICKING_MAX_BATCH_INDEX = 254;
+
+fn picking_setObjectIndex(objectIndex: i32) -> i32 {
+  return objectIndex;
+}
+
+fn picking_isObjectHighlighted(objectIndex: i32) -> bool {
+  return
+    picking.isHighlightActive != 0 &&
+    picking.highlightedBatchIndex == picking.batchIndex &&
+    picking.highlightedObjectIndex == objectIndex;
+}
+
+fn picking_filterHighlightColor(color: vec4<f32>, objectIndex: i32) -> vec4<f32> {
+  if (picking.isActive != 0 || !picking_isObjectHighlighted(objectIndex)) {
+    return color;
+  }
+
+  let highLightAlpha = picking.highlightColor.a;
+  let blendedAlpha = highLightAlpha + color.a * (1.0 - highLightAlpha);
+  if (blendedAlpha == 0.0) {
+    return vec4<f32>(color.rgb, 0.0);
+  }
+
+  let highLightRatio = highLightAlpha / blendedAlpha;
+  let blendedRGB = mix(color.rgb, picking.highlightColor.rgb, highLightRatio);
+  return vec4<f32>(blendedRGB, blendedAlpha);
+}
+
+fn picking_canEncodePickInfo(objectIndex: i32) -> bool {
+  return
+    objectIndex != COLOR_PICKING_INVALID_INDEX &&
+    objectIndex >= 0 &&
+    objectIndex <= COLOR_PICKING_MAX_OBJECT_INDEX &&
+    picking.batchIndex >= 0 &&
+    picking.batchIndex <= COLOR_PICKING_MAX_BATCH_INDEX;
+}
+
+fn picking_getPickingColor(objectIndex: i32) -> vec4<f32> {
+  if (!picking_canEncodePickInfo(objectIndex)) {
+    return vec4<f32>(0.0, 0.0, 0.0, 0.0);
+  }
+
+  let encodedObjectIndex = objectIndex + 1;
+  let red = encodedObjectIndex % 256;
+  let green = (encodedObjectIndex / 256) % 256;
+  let blue = (encodedObjectIndex / 65536) % 256;
+  let alpha = picking.batchIndex + 1;
+
+  return vec4<f32>(
+    f32(red) / 255.0,
+    f32(green) / 255.0,
+    f32(blue) / 255.0,
+    f32(alpha) / 255.0
+  );
+}
+
+fn picking_filterPickingColor(color: vec4<f32>, objectIndex: i32) -> vec4<f32> {
+  if (picking.isActive != 0) {
+    if (!picking_canEncodePickInfo(objectIndex)) {
+      discard;
+    }
+    return picking_getPickingColor(objectIndex);
+  }
+
+  return color;
+}
 `;
 
 const vs = /* glsl */ `\
 ${GLSL_UNIFORMS}
-out vec4 picking_vRGBcolor_Avalid;
 
-// Normalize unsigned byte color to 0-1 range
-vec3 picking_normalizeColor(vec3 color) {
-  return picking.useFloatColors > 0.5 ? color : color / 255.0;
-}
+const int INDEX_PICKING_MODE_INSTANCE = 0;
+const int INDEX_PICKING_MODE_CUSTOM = 1;
 
-// Normalize unsigned byte color to 0-1 range
-vec4 picking_normalizeColor(vec4 color) {
-  return picking.useFloatColors > 0.5 ? color : color / 255.0;
-}
+const int COLOR_PICKING_INVALID_INDEX = ${INVALID_INDEX};
 
-bool picking_isColorZero(vec3 color) {
-  return dot(color, vec3(1.0)) < 0.00001;
-}
+flat out int picking_objectIndex;
 
-bool picking_isColorValid(vec3 color) {
-  return dot(color, vec3(1.0)) > 0.00001;
-}
-
-// Check if this vertex is highlighted 
-bool isVertexHighlighted(vec3 vertexColor) {
-  vec3 highlightedObjectColor = picking_normalizeColor(picking.highlightedObjectColor);
-  return
-    bool(picking.isHighlightActive) && picking_isColorZero(abs(vertexColor - highlightedObjectColor));
-}
-
-// Set the current picking color
-void picking_setPickingColor(vec3 pickingColor) {
-  pickingColor = picking_normalizeColor(pickingColor);
-
-  if (bool(picking.isActive)) {
-    // Use alpha as the validity flag. If pickingColor is [0, 0, 0] fragment is non-pickable
-    picking_vRGBcolor_Avalid.a = float(picking_isColorValid(pickingColor));
-
-    if (!bool(picking.isAttribute)) {
-      // Stores the picking color so that the fragment shader can render it during picking
-      picking_vRGBcolor_Avalid.rgb = pickingColor;
-    }
-  } else {
-    // Do the comparison with selected item color in vertex shader as it should mean fewer compares
-    picking_vRGBcolor_Avalid.a = float(isVertexHighlighted(pickingColor));
-  }
-}
-
-void picking_setObjectIndex(uint objectIndex) {
-  if (bool(picking.isActive)) {
-    uint index = objectIndex;
-    if (picking.indexMode == PICKING_INDEX_MODE_INSTANCE) {
-      index = uint(gl_InstanceID);
-    }
-    picking_vRGBcolor_Avalid.r = float(index % 255) / 255.0;
-    picking_vRGBcolor_Avalid.g = float((index / 255) % 255) / 255.0;
-    picking_vRGBcolor_Avalid.b = float((index / 255 / 255) %255) / 255.0;
-  }
-}
-
-void picking_setPickingAttribute(float value) {
-  if (bool(picking.isAttribute)) {
-    picking_vRGBcolor_Avalid.r = value;
-  }
-}
-
-void picking_setPickingAttribute(vec2 value) {
-  if (bool(picking.isAttribute)) {
-    picking_vRGBcolor_Avalid.rg = value;
-  }
-}
-
-void picking_setPickingAttribute(vec3 value) {
-  if (bool(picking.isAttribute)) {
-    picking_vRGBcolor_Avalid.rgb = value;
+void picking_setObjectIndex(int objectIndex) {
+  switch (picking.indexMode) {
+    case INDEX_PICKING_MODE_INSTANCE:
+      picking_objectIndex = gl_InstanceID;
+      break;
+    case INDEX_PICKING_MODE_CUSTOM:
+      picking_objectIndex = objectIndex;
+      break;
   }
 }
 `;
@@ -92,61 +108,81 @@ void picking_setPickingAttribute(vec3 value) {
 const fs = /* glsl */ `\
 ${GLSL_UNIFORMS}
 
-in vec4 picking_vRGBcolor_Avalid;
+const int COLOR_PICKING_INVALID_INDEX = ${INVALID_INDEX};
+const int COLOR_PICKING_MAX_OBJECT_INDEX = 16777214;
+const int COLOR_PICKING_MAX_BATCH_INDEX = 254;
 
-/*
- * Returns highlight color if this item is selected.
- */
-vec4 picking_filterHighlightColor(vec4 color) {
-  // If we are still picking, we don't highlight
-  if (picking.isActive > 0.5) {
-    return color;
-  }
+flat in int picking_objectIndex;
 
-  bool selected = bool(picking_vRGBcolor_Avalid.a);
-
-  if (selected) {
-    // Blend in highlight color based on its alpha value
-    float highLightAlpha = picking.highlightColor.a;
-    float blendedAlpha = highLightAlpha + color.a * (1.0 - highLightAlpha);
-    float highLightRatio = highLightAlpha / blendedAlpha;
-
-    vec3 blendedRGB = mix(color.rgb, picking.highlightColor.rgb, highLightRatio);
-    return vec4(blendedRGB, blendedAlpha);
-  } else {
-    return color;
-  }
+bool picking_isFragmentHighlighted() {
+  return
+    bool(picking.isHighlightActive) &&
+    picking.highlightedBatchIndex == picking.batchIndex &&
+    picking.highlightedObjectIndex == picking_objectIndex
+    ;
 }
 
-/*
- * Returns picking color if picking enabled else unmodified argument.
- */
+vec4 picking_filterHighlightColor(vec4 color) {
+  if (bool(picking.isActive)) {
+    return color;
+  }
+
+  if (!picking_isFragmentHighlighted()) {
+    return color;
+  }
+
+  float highLightAlpha = picking.highlightColor.a;
+  float blendedAlpha = highLightAlpha + color.a * (1.0 - highLightAlpha);
+  float highLightRatio = highLightAlpha / blendedAlpha;
+
+  vec3 blendedRGB = mix(color.rgb, picking.highlightColor.rgb, highLightRatio);
+  return vec4(blendedRGB, blendedAlpha);
+}
+
+bool picking_canEncodePickInfo(int objectIndex) {
+  return
+    objectIndex != COLOR_PICKING_INVALID_INDEX &&
+    objectIndex >= 0 &&
+    objectIndex <= COLOR_PICKING_MAX_OBJECT_INDEX &&
+    picking.batchIndex >= 0 &&
+    picking.batchIndex <= COLOR_PICKING_MAX_BATCH_INDEX;
+}
+
+vec4 picking_getPickingColor() {
+  if (!picking_canEncodePickInfo(picking_objectIndex)) {
+    return vec4(0.0);
+  }
+
+  int encodedObjectIndex = picking_objectIndex + 1;
+  int red = encodedObjectIndex % 256;
+  int green = (encodedObjectIndex / 256) % 256;
+  int blue = (encodedObjectIndex / 65536) % 256;
+  int alpha = picking.batchIndex + 1;
+
+  return vec4(float(red), float(green), float(blue), float(alpha)) / 255.0;
+}
+
 vec4 picking_filterPickingColor(vec4 color) {
   if (bool(picking.isActive)) {
-    if (picking_vRGBcolor_Avalid.a == 0.0) {
+    if (!picking_canEncodePickInfo(picking_objectIndex)) {
       discard;
     }
-    return picking_vRGBcolor_Avalid;
+    return picking_getPickingColor();
   }
+
   return color;
 }
 
-/*
- * Returns picking color if picking is enabled if not
- * highlight color if this item is selected, otherwise unmodified argument.
- */
 vec4 picking_filterColor(vec4 color) {
-  vec4 highlightColor = picking_filterHighlightColor(color);
-  return picking_filterPickingColor(highlightColor);
+  vec4 outColor = color;
+  outColor = picking_filterHighlightColor(outColor);
+  outColor = picking_filterPickingColor(outColor);
+  return outColor;
 }
 `;
 
 /**
- * Provides support for color-coding-based picking and highlighting.
- * In particular, supports picking a specific instance in an instanced
- * draw call and highlighting an instance based on its picking color,
- * and correspondingly, supports picking and highlighting groups of
- * primitives with the same picking color in non-instanced draw-calls
+ * Provides support for object-index based color picking and highlighting.
  */
 export const picking = {
   ...pickingUniforms,
@@ -155,36 +191,3 @@ export const picking = {
   vs,
   fs
 } as const satisfies ShaderModule<PickingProps, PickingUniforms, PickingBindings>;
-
-// function getUniforms(opts: PickingProps = {}, prevUniforms?: PickingUniforms): PickingUniforms {
-//   const uniforms = {} as PickingUniforms;
-
-//   if (opts.highlightedObjectColor === undefined) {
-//     // Unless highlightedObjectColor explicitly null or set, do not update state
-//   } else if (opts.highlightedObjectColor === null) {
-//     uniforms.isHighlightActive = false;
-//   } else {
-//     uniforms.isHighlightActive = true;
-//     const highlightedObjectColor = opts.highlightedObjectColor.slice(0, 3);
-//     uniforms.highlightedObjectColor = highlightedObjectColor;
-//   }
-
-//   if (opts.highlightColor) {
-//     const color = Array.from(opts.highlightColor, x => x / 255);
-//     if (!Number.isFinite(color[3])) {
-//       color[3] = 1;
-//     }
-//     uniforms.highlightColor = color;
-//   }
-
-//   if (opts.isActive !== undefined) {
-//     uniforms.isActive = Boolean(opts.isActive);
-//     uniforms.isAttribute = Boolean(opts.isAttribute);
-//   }
-
-//   if (opts.useFloatColors !== undefined) {
-//     uniforms.useFloatColors = Boolean(opts.useFloatColors);
-//   }
-
-//   return uniforms;
-// }

@@ -239,9 +239,15 @@ export class PipelineFactory {
       default:
         // On WebGPU we need to rebuild the pipeline if topology, parameters or bufferLayout change
         const parameterHash = this._getHash(JSON.stringify(props.parameters));
+        const colorAttachmentFormatsHash = this._getHash(
+          JSON.stringify(props.colorAttachmentFormats || [])
+        );
+        const depthStencilAttachmentFormatHash = this._getHash(
+          JSON.stringify(props.depthStencilAttachmentFormat || null)
+        );
         // TODO - Can json.stringify() generate different strings for equivalent objects if order of params is different?
         // create a deepHash() to deduplicate?
-        return `${type}/R/${vsHash}/${fsHash}V${varyingHash}T${props.topology}P${parameterHash}BL${bufferLayoutHash}`;
+        return `${type}/R/${vsHash}/${fsHash}V${varyingHash}T${props.topology}P${parameterHash}BL${bufferLayoutHash}CA${colorAttachmentFormatsHash}DA${depthStencilAttachmentFormatHash}`;
     }
   }
 

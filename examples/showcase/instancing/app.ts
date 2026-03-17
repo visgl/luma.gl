@@ -2,11 +2,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Device} from '@luma.gl/core';
+import {Buffer, Device} from '@luma.gl/core';
 import type {AnimationProps, ModelProps} from '@luma.gl/engine';
 import {
   AnimationLoopTemplate,
   CubeGeometry,
+  Geometry,
   Timeline,
   Model,
   ShaderInputs,
@@ -36,19 +37,26 @@ struct AppUniforms {
 @group(0) @binding(0) var<uniform> app : AppUniforms;
 
 struct VertexInputs {
+  @builtin(instance_index) instanceIndex : u32,
   // CUBE GEOMETRY
   @location(0) positions : vec4<f32>,
   @location(1) normals : vec3<f32>,
   // INSTANCED ATTRIBUTES
   @location(2) instanceOffsets : vec2<f32>,
   @location(3) instanceColors : vec4<f32>,
-  @location(4) instanceIndexes : i32,
 }
 
 struct FragmentInputs {
   @builtin(position) Position : vec4<f32>,
   @location(0) normal : vec3<f32>,
   @location(1) color : vec4<f32>,
+  @interpolate(flat)
+  @location(2) objectIndex : i32,
+}
+
+struct PickingFragmentOutputs {
+  @location(0) fragColor : vec4<f32>,
+  @location(1) pickingColor : vec2<i32>,
 }
 
 @vertex
@@ -63,9 +71,7 @@ fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
 
   outputs.normal = dirlight_setNormal((app.modelMatrix * vec4<f32>(inputs.normals, 0.0)).xyz);
   outputs.color = inputs.instanceColors;
-
-  // vec4 pickColor = vec4(0., instanceIndexes, 1.0);
-  // picking_setPickingColor(0);
+  outputs.objectIndex = i32(inputs.instanceIndex);
 
   return outputs;
 }
@@ -74,7 +80,16 @@ fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
 fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
   var fragColor = inputs.color;
   fragColor = dirlight_filterColor(fragColor, DirlightInputs(inputs.normal));
+  fragColor = picking_filterHighlightColor(fragColor, inputs.objectIndex);
   return fragColor;
+}
+
+@fragment
+fn fragmentPicking(inputs: FragmentInputs) -> PickingFragmentOutputs {
+  var outputs: PickingFragmentOutputs;
+  outputs.fragColor = vec4<f32>(0.0, 0.0, 0.0, 0.0);
+  outputs.pickingColor = picking_getPickingColor(inputs.objectIndex);
+  return outputs;
 }
 `;
 
@@ -90,7 +105,6 @@ in vec3 normals;
 
 in vec2 instanceOffsets;
 in vec3 instanceColors;
-in int instanceIndexes;
 
 uniform appUniforms {
   mat4 modelMatrix;
@@ -107,7 +121,7 @@ void main(void) {
 
   vec3 normal = vec3(app.modelMatrix * vec4(normals, 1.0));
   dirlight_setNormal(normal);
-  picking_setObjectIndex(instanceIndexes);
+  picking_setObjectIndex(0);
 
   // Vertex position (z coordinate undulates with time), and model rotates around center
   float delta = length(instanceOffsets);
@@ -175,6 +189,8 @@ function storeInstanceSide(instanceSide: number): void {
 // Make a cube with 65K instances and attributes to control offset and color of each instance
 class InstancedCube extends Model {
   // uniformBuffer: Buffer;
+  instanceOffsetsBuffer: Buffer;
+  instanceColorsBuffer: Buffer;
 
   constructor(device: Device, instanceSide: number, props?: Partial<ModelProps>) {
     const instanceCount = instanceSide * instanceSide;
@@ -199,14 +215,8 @@ class InstancedCube extends Model {
       colors[colorIndex + 3] = 255;
     }
 
-    const indexes = new Int32Array(instanceCount);
-    for (let instanceIndex = 0; instanceIndex < indexes.length; instanceIndex++) {
-      indexes[instanceIndex] = instanceIndex;
-    }
-
     const offsetsBuffer = device.createBuffer(offsets);
     const colorsBuffer = device.createBuffer(colors);
-    const indexesBuffer = device.createBuffer(indexes);
 
     // Model
     super(device, {
@@ -215,20 +225,59 @@ class InstancedCube extends Model {
       vs: VS_GLSL,
       fs: FS_GLSL,
       // @ts-expect-error Remove once npm package updated with new types
-      modules: device.info.type !== 'webgpu' ? [dirlight, picking] : [dirlight],
+      modules: [dirlight, picking],
       instanceCount,
       geometry: new CubeGeometry({indices: true}),
       bufferLayout: [
         {name: 'instanceOffsets', format: 'float32x2'},
-        {name: 'instanceColors', format: 'unorm8x4'},
-        {name: 'instanceIndexes', format: 'sint32'}
+        {name: 'instanceColors', format: 'unorm8x4'}
       ],
       attributes: {
         // instanceSizes: device.createBuffer(new Float32Array([1])), // Constant attribute
         instanceOffsets: offsetsBuffer,
-        instanceColors: colorsBuffer,
-        instanceIndexes: indexesBuffer
+        instanceColors: colorsBuffer
       },
+      parameters: {
+        depthWriteEnabled: true,
+        depthCompare: 'less-equal'
+      }
+    });
+
+    this.instanceOffsetsBuffer = offsetsBuffer;
+    this.instanceColorsBuffer = colorsBuffer;
+  }
+
+  createPickingModel(props?: Partial<ModelProps>): Model {
+    const instanceBufferLayout = this.bufferLayout.filter(layout => layout.name.startsWith('instance'));
+    const instanceAttributes = {
+      instanceOffsets: this.instanceOffsetsBuffer,
+      instanceColors: this.instanceColorsBuffer
+    };
+    const cubeGeometry = new CubeGeometry({indices: true});
+    const pickingGeometry = new Geometry({
+      topology: 'triangle-list',
+      indices: cubeGeometry.indices!,
+      attributes: {
+        POSITION: cubeGeometry.attributes.POSITION!,
+        NORMAL: cubeGeometry.attributes.NORMAL!
+      }
+    });
+
+    return new Model(this.device, {
+      ...props,
+      id: `${this.id}-picking`,
+      source: WGSL_SHADER,
+      vs: VS_GLSL,
+      fs: FS_GLSL,
+      fragmentEntryPoint: 'fragmentPicking',
+      // @ts-expect-error Remove once npm package updated with new types
+      modules: [dirlight, picking],
+      bufferLayout: instanceBufferLayout,
+      instanceCount: this.instanceCount,
+      geometry: pickingGeometry,
+      attributes: instanceAttributes,
+      colorAttachmentFormats: ['rgba8unorm', 'rg32sint'],
+      depthStencilAttachmentFormat: 'depth24plus',
       parameters: {
         depthWriteEnabled: true,
         depthCompare: 'less-equal'
@@ -275,6 +324,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
   device: Device;
   cube: InstancedCube;
+  pickingCube: Model | null = null;
   instanceSide = loadStoredInstanceSide();
   timeline: Timeline;
   timelineChannels: Record<string, number>;
@@ -307,6 +357,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     };
 
     this.cube = this.createCube();
+    this.pickingCube = this.createPickingCube();
 
     this.picker = new PickingManager(device, {
       shaderInputs: this.shaderInputs
@@ -347,8 +398,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         modelMatrix: new Matrix4().rotateX(tick * 0.01).rotateY(tick * 0.013)
       }
     });
-
-    // this.pickInstance(animationProps._mousePosition);
+    this.shaderInputs.setProps({picking: {isActive: false}});
 
     const renderPass = device.beginRenderPass({
       clearColor: [0, 0, 0, 1],
@@ -357,11 +407,15 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     this.cube.draw(renderPass);
     renderPass.end();
+
+    this.pickInstance(animationProps._mousePosition);
   }
 
   onFinalize(animationProps: AnimationProps): void {
     this.selector?.removeEventListener('change', this.handleInstanceCountChange);
     this.selector = null;
+    this.picker.destroy();
+    this.pickingCube?.destroy();
     this.cube.destroy();
   }
 
@@ -370,17 +424,29 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       this.picker.clearPickState();
       return;
     }
+
+    const pickingCube = this.pickingCube || this.cube;
     const pickingPass = this.picker.beginRenderPass();
-    this.cube.draw(pickingPass);
+    pickingCube.draw(pickingPass);
     pickingPass.end();
 
-    if (this.picker.device.type !== 'webgl') {
-      this.picker.getPickInfo(mousePosition as [number, number]);
-    }
+    this.shaderInputs.setProps({picking: {isActive: false}});
+    this.picker.updatePickInfo(mousePosition as [number, number]);
   }
 
   createCube(): InstancedCube {
     return new InstancedCube(this.device, this.instanceSide, {
+      // @ts-ignore
+      shaderInputs: this.shaderInputs
+    });
+  }
+
+  createPickingCube(): Model | null {
+    if (this.device.type !== 'webgpu') {
+      return null;
+    }
+
+    return this.cube.createPickingModel({
       // @ts-ignore
       shaderInputs: this.shaderInputs
     });
@@ -402,8 +468,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     this.instanceSide = instanceSide;
     storeInstanceSide(instanceSide);
+    this.pickingCube?.destroy();
     this.cube.destroy();
     this.cube = this.createCube();
+    this.pickingCube = this.createPickingCube();
   };
 }
 
