@@ -15,7 +15,7 @@ import {
 } from '@luma.gl/engine';
 
 const GEOMETRY_TESTS = [
-  {name: 'ConeGeometry', Geometry: ConeGeometry},
+  {name: 'ConeGeometry', Geometry: ConeGeometry, props: [{height: 2}, {verticalAxis: 'z'}]},
   {name: 'CubeGeometry', Geometry: CubeGeometry},
   {
     name: 'CylinderGeometry',
