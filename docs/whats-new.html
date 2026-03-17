@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="generator" content="Docusaurus v3.9.2">
 <title data-rh="true">What&#x27;s New | luma.gl</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://luma.gl/docs/whats-new"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-default-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-rh="true" property="og:title" content="What&#x27;s New | luma.gl"><meta data-rh="true" name="description" content="This page contains news for recent luma.gl releases. For older releases (through v8.5) refer to the Legacy What&#x27;s New page."><meta data-rh="true" property="og:description" content="This page contains news for recent luma.gl releases. For older releases (through v8.5) refer to the Legacy What&#x27;s New page."><link data-rh="true" rel="icon" href="/favicon.png"><link data-rh="true" rel="canonical" href="https://luma.gl/docs/whats-new"><link data-rh="true" rel="alternate" href="https://luma.gl/docs/whats-new" hreflang="en"><link data-rh="true" rel="alternate" href="https://luma.gl/docs/whats-new" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"What's New","item":"https://luma.gl/docs/whats-new"}]}</script><link rel="stylesheet" href="/assets/css/styles.cb5c6c31.css">
-<script src="/assets/js/runtime~main.f9ec631a.js" defer="defer"></script>
-<script src="/assets/js/main.e96e6e2f.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.007d1c95.js" defer="defer"></script>
+<script src="/assets/js/main.19864271.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg style="display: none;"><defs>
@@ -41,6 +41,10 @@
 <ul>
 <li class=""><strong>compressed texture</strong> support (but note that WebGPU is stricter than WebGL and requires block-aligned textures).</li>
 <li class=""><strong>texture readback</strong> improvements</li>
+</ul>
+<p><strong>@luma.gl/webgl</strong></p>
+<ul>
+<li class=""><strong>RenderPipeline optimization</strong> - Compatible WebGL render pipelines now share linked <code>WebGLProgram</code>s, reducing pipeline creation overhead while preserving per-pipeline defaults.</li>
 </ul>
 <p><strong>@luma.gl/gltf</strong></p>
 <ul>
@@ -136,7 +140,7 @@
 <ul>
 <li class="">GPU backend management is streamlined via the new <code>Adapter</code> API.</li>
 <li class="">GPU connection to HTML DOM (via <code>canvas</code> elements) improved via <code>CanvasContext</code> API changes.</li>
-<li class=""><code>Texture</code>s are now immutable, however a new <code>AsyncTexture</code> class offers a higher-level, mutable texture API.</li>
+<li class=""><code>Texture</code>s are now immutable, however a new <code>DynamicTexture</code> class offers a higher-level, mutable texture API.</li>
 <li class=""><code>ShaderModule</code> type safety improvements (shader uniforms can now be strictly typed in JavaScript)</li>
 </ul>
 <p><strong>@luma.gl/core</strong></p>
@@ -172,7 +176,7 @@
 </li>
 <li class=""><code>Texture</code>
 <ul>
-<li class="">Textures are now immutable and synchronous. See upgrade guide, and the new <code>AsyncTexture</code> class in <code>@luma.gl/engine</code>.</li>
+<li class="">Textures are now immutable and synchronous. See upgrade guide, and the new <code>DynamicTexture</code> class in <code>@luma.gl/engine</code>.</li>
 <li class=""><code>Texture.copyExternalImage()</code> New function that works on both WebGPU and WebGL.</li>
 <li class=""><code>Texture.copyImageData()</code> New function that works on both WebGPU and WebGL.</li>
 </ul>
@@ -200,7 +204,7 @@
 <li class="">Accepts a new <code>.adapters</code> prop. (Avoids need for global registration of adapters).</li>
 </ul>
 </li>
-<li class=""><code>AsyncTexture</code>](/docs/api-reference/engine/dynamic-texture)<!-- -->
+<li class=""><a class="" href="/docs/api-reference/engine/dynamic-texture"><code>DynamicTexture</code></a>
 <ul>
 <li class="">New class allows that applications to work withcreate textures from a Promise.</li>
 </ul>
