@@ -2,6 +2,34 @@
 
 ## v9.3
 
+### v9.3.0-alpha.5
+
+- fix(webgl): Enable deep sharing of WebGLPrograms (#2465)
+- chore(core); Break out CanvasObserver helper (#2548)
+- feat: instancing example has big grid option (#2547)
+- docs: Engine docs discoverability and refresh (#2545)
+- fix(engine) ConeGeometry props (#2544)
+- fix(engine): CylinderProps (#2543)
+- chore: Add Adapter tests (#2542)
+- chore: Migrate from volta to corepack
+- fix: ResizeObserver fires before Device initialized (#2540)
+- fix: More website polish (#2539)
+- chore(webgpu): Optimize WebGPU per-frame CPU overhead (#2538)
+- fix: website (#2537)
+- chore: Improve luma stats (#2536)
+- fix(engine): Re-enable GPU timing metrics in AnimationLoop (#2505)
+- chore: Parallel CI (#2535)
+- core: yarn@4.13, fresh lock files (#2525)
+- fix: Resource and Memory stats (#2534)
+- chore: Refresh tutorial docs (#2533)
+- fix: Fixes compressed texture loading and updates website (#2532)
+- feat(gltf): WebGPU glTF support (#2531)
+- Refactor conversion of glTF nodes to luma.gl nodes, add skin capability (#2391)
+- chore: 9.3 release notes (#2530)
+- feat(core): PresentationContext enabling WebGL to render into multiple canvases (#2529)
+- feat: Add Texture Tester example (#2527)
+- fix: Texture write APIs (#2526)
+
 ### v9.3.0-alpha.4
 
 - feat(engine): Programmatic mipmap generation for WebGPU (#2272)
