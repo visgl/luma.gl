@@ -156,19 +156,15 @@ function createContextSuite(
       return;
     }
 
-    const calls = {resizeObserverDisconnect: 0, intersectionObserverDisconnect: 0};
+    const calls = {stop: 0};
     const canvasContext = createContext();
     // @ts-expect-error read only
-    canvasContext._resizeObserver = {
-      disconnect: () => {
-        calls.resizeObserverDisconnect++;
-      }
-    };
-    // @ts-expect-error read only
-    canvasContext._intersectionObserver = {
-      disconnect: () => {
-        calls.intersectionObserverDisconnect++;
-      }
+    canvasContext._canvasObserver = {
+      start: () => {},
+      stop: () => {
+        calls.stop++;
+      },
+      started: true
     };
 
     t.doesNotThrow(() => {
@@ -176,12 +172,7 @@ function createContextSuite(
       canvasContext.destroy();
     }, 'destroying twice should be safe');
 
-    t.equal(calls.resizeObserverDisconnect, 1, 'resize observer disconnected exactly once');
-    t.equal(
-      calls.intersectionObserverDisconnect,
-      1,
-      'intersection observer disconnected exactly once'
-    );
+    t.equal(calls.stop, 1, 'canvas observer stopped exactly once');
 
     t.end();
   });
@@ -301,6 +292,122 @@ test('CanvasContext#_startObservers defers DOM observation until explicitly star
   } finally {
     globalScope.ResizeObserver = originalResizeObserver;
     globalScope.IntersectionObserver = originalIntersectionObserver;
+  }
+
+  t.end();
+});
+
+test('CanvasContext#_startObservers is idempotent', t => {
+  if (!isBrowser()) {
+    t.end();
+    return;
+  }
+
+  const globalScope = globalThis as any;
+  const originalResizeObserver = globalScope.ResizeObserver;
+  const originalIntersectionObserver = globalScope.IntersectionObserver;
+  const originalSetTimeout = globalScope.setTimeout;
+
+  const calls = {
+    resizeObserverObserve: 0,
+    intersectionObserverObserve: 0,
+    setTimeout: 0
+  };
+
+  globalScope.ResizeObserver = class {
+    constructor(_callback: ResizeObserverCallback) {}
+    observe() {
+      calls.resizeObserverObserve++;
+    }
+    disconnect() {}
+  };
+  globalScope.IntersectionObserver = class {
+    constructor(_callback: IntersectionObserverCallback) {}
+    observe() {
+      calls.intersectionObserverObserve++;
+    }
+    disconnect() {}
+  };
+  globalScope.setTimeout = (callback: () => void) => {
+    calls.setTimeout++;
+    return originalSetTimeout(callback, 0);
+  };
+
+  try {
+    const canvasContext = new TestCanvasContext({}, false);
+    canvasContext._startObservers();
+    canvasContext._startObservers();
+
+    t.equal(calls.resizeObserverObserve, 1, 'resize observer only starts once');
+    t.equal(calls.intersectionObserverObserve, 1, 'intersection observer only starts once');
+    t.equal(calls.setTimeout, 1, 'deferred DPR observation is only scheduled once');
+
+    canvasContext.destroy();
+  } finally {
+    globalScope.ResizeObserver = originalResizeObserver;
+    globalScope.IntersectionObserver = originalIntersectionObserver;
+    globalScope.setTimeout = originalSetTimeout;
+  }
+
+  t.end();
+});
+
+test('CanvasContext#trackPosition polling stops on destroy', t => {
+  if (!isBrowser()) {
+    t.end();
+    return;
+  }
+
+  const globalScope = globalThis as any;
+  const originalResizeObserver = globalScope.ResizeObserver;
+  const originalIntersectionObserver = globalScope.IntersectionObserver;
+  const originalSetInterval = globalScope.setInterval;
+  const originalClearInterval = globalScope.clearInterval;
+
+  let intervalCallback: (() => void) | null = null;
+  let clearIntervalCalls = 0;
+
+  globalScope.ResizeObserver = class {
+    constructor(_callback: ResizeObserverCallback) {}
+    observe() {}
+    disconnect() {}
+  };
+  globalScope.IntersectionObserver = class {
+    constructor(_callback: IntersectionObserverCallback) {}
+    observe() {}
+    disconnect() {}
+  };
+  globalScope.setInterval = (callback: () => void) => {
+    intervalCallback = callback;
+    return 1 as ReturnType<typeof setInterval>;
+  };
+  globalScope.clearInterval = (_id: ReturnType<typeof setInterval>) => {
+    clearIntervalCalls++;
+  };
+
+  try {
+    const canvasContext = new TestCanvasContext({trackPosition: true}, false);
+    let updatePositionCalls = 0;
+    canvasContext.updatePosition = () => {
+      updatePositionCalls++;
+    };
+
+    canvasContext._startObservers();
+
+    t.ok(intervalCallback, 'position polling interval is scheduled');
+    intervalCallback?.();
+    t.equal(updatePositionCalls, 1, 'position polling calls updatePosition while active');
+
+    canvasContext.destroy();
+    t.equal(clearIntervalCalls, 1, 'position polling interval is cleared on destroy');
+
+    intervalCallback?.();
+    t.equal(updatePositionCalls, 1, 'position polling no longer updates after destroy');
+  } finally {
+    globalScope.ResizeObserver = originalResizeObserver;
+    globalScope.IntersectionObserver = originalIntersectionObserver;
+    globalScope.setInterval = originalSetInterval;
+    globalScope.clearInterval = originalClearInterval;
   }
 
   t.end();
