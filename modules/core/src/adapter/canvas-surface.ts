@@ -112,10 +112,14 @@ export abstract class CanvasSurface {
   /** Resolves when the canvas is initialized, i.e. when the ResizeObserver has updated the pixel size */
   protected _initializedResolvers = withResolvers<void>();
   /** ResizeObserver to track canvas size changes */
-  protected readonly _resizeObserver: ResizeObserver | undefined;
+  protected _resizeObserver: ResizeObserver | undefined;
   /** IntersectionObserver to track canvas visibility changes */
-  protected readonly _intersectionObserver: IntersectionObserver | undefined;
+  protected _intersectionObserver: IntersectionObserver | undefined;
   private _observeDevicePixelRatioTimeout: ReturnType<typeof setTimeout> | null = null;
+  private _observeDevicePixelRatioMediaQuery: MediaQueryList | null = null;
+  private readonly _handleDevicePixelRatioChange = () => this._observeDevicePixelRatio();
+  private _trackPositionInterval: ReturnType<typeof setInterval> | null = null;
+  private _observersStarted = false;
   /** Position of the canvas in the document, updated by a timer */
   protected _position: [number, number] = [0, 0];
   /** Whether this canvas context has been destroyed */
@@ -166,39 +170,14 @@ export abstract class CanvasSurface {
     this.drawingBufferHeight = this.canvas.height;
     this.devicePixelRatio = globalThis.devicePixelRatio || 1;
     this._position = [0, 0];
-
-    if (CanvasSurface.isHTMLCanvas(this.canvas)) {
-      this._intersectionObserver = new IntersectionObserver(entries =>
-        this._handleIntersection(entries)
-      );
-      this._intersectionObserver.observe(this.canvas);
-
-      this._resizeObserver = new ResizeObserver(entries => this._handleResize(entries));
-      try {
-        this._resizeObserver.observe(this.canvas, {box: 'device-pixel-content-box'});
-      } catch {
-        this._resizeObserver.observe(this.canvas, {box: 'content-box'});
-      }
-
-      this._observeDevicePixelRatioTimeout = setTimeout(() => this._observeDevicePixelRatio(), 0);
-
-      if (this.props.trackPosition) {
-        this._trackPosition();
-      }
-    }
   }
 
   destroy() {
     if (!this.destroyed) {
       this.destroyed = true;
-      if (this._observeDevicePixelRatioTimeout) {
-        clearTimeout(this._observeDevicePixelRatioTimeout);
-        this._observeDevicePixelRatioTimeout = null;
-      }
+      this._stopObservers();
       // @ts-expect-error Clear the device to make sure we don't access it after destruction.
       this.device = null;
-      this._resizeObserver?.disconnect();
-      this._intersectionObserver?.disconnect();
     }
   }
 
@@ -308,6 +287,72 @@ export abstract class CanvasSurface {
     }
   }
 
+  /**
+   * Starts DOM observation after the derived context and its device are fully initialized.
+   *
+   * `CanvasSurface` construction runs before subclasses can assign `this.device`, and the
+   * default WebGL canvas context is created before `WebGLDevice` has initialized `limits`,
+   * `features`, and the rest of its runtime state. Deferring observer startup avoids early
+   * `ResizeObserver` and DPR callbacks running against a partially initialized device.
+   */
+  _startObservers(): void {
+    if (this.destroyed || this._observersStarted || !CanvasSurface.isHTMLCanvas(this.canvas)) {
+      return;
+    }
+
+    this._observersStarted = true;
+    this._intersectionObserver ||= new IntersectionObserver(entries =>
+      this._handleIntersection(entries)
+    );
+    this._resizeObserver ||= new ResizeObserver(entries => this._handleResize(entries));
+
+    this._intersectionObserver.observe(this.canvas);
+    try {
+      this._resizeObserver.observe(this.canvas, {box: 'device-pixel-content-box'});
+    } catch {
+      this._resizeObserver.observe(this.canvas, {box: 'content-box'});
+    }
+
+    this._observeDevicePixelRatioTimeout = setTimeout(() => this._observeDevicePixelRatio(), 0);
+
+    if (this.props.trackPosition) {
+      this._trackPosition();
+    }
+  }
+
+  /**
+   * Stops all DOM observation and timers associated with a canvas surface.
+   *
+   * This pairs with `_startObservers()` so teardown uses the same lifecycle whether a context is
+   * explicitly destroyed, abandoned during device reuse, or temporarily has not started observing
+   * yet. Centralizing shutdown here keeps resize/DPR/position watchers from surviving past the
+   * lifetime of the owning device.
+   */
+  _stopObservers(): void {
+    this._observersStarted = false;
+
+    if (this._observeDevicePixelRatioTimeout) {
+      clearTimeout(this._observeDevicePixelRatioTimeout);
+      this._observeDevicePixelRatioTimeout = null;
+    }
+
+    if (this._observeDevicePixelRatioMediaQuery) {
+      this._observeDevicePixelRatioMediaQuery.removeEventListener(
+        'change',
+        this._handleDevicePixelRatioChange
+      );
+      this._observeDevicePixelRatioMediaQuery = null;
+    }
+
+    if (this._trackPositionInterval) {
+      clearInterval(this._trackPositionInterval);
+      this._trackPositionInterval = null;
+    }
+
+    this._resizeObserver?.disconnect();
+    this._intersectionObserver?.disconnect();
+  }
+
   protected _handleIntersection(entries: IntersectionObserverEntry[]) {
     if (this.destroyed) {
       return;
@@ -393,7 +438,7 @@ export abstract class CanvasSurface {
   }
 
   _observeDevicePixelRatio() {
-    if (this.destroyed) {
+    if (this.destroyed || !this._observersStarted) {
       return;
     }
     const oldRatio = this.devicePixelRatio;
@@ -404,17 +449,32 @@ export abstract class CanvasSurface {
     this.device.props.onDevicePixelRatioChange?.(this as CanvasContext | PresentationContext, {
       oldRatio
     });
-    matchMedia(`(resolution: ${this.devicePixelRatio}dppx)`).addEventListener(
+
+    this._observeDevicePixelRatioMediaQuery?.removeEventListener(
       'change',
-      () => this._observeDevicePixelRatio(),
+      this._handleDevicePixelRatioChange
+    );
+    this._observeDevicePixelRatioMediaQuery = matchMedia(
+      `(resolution: ${this.devicePixelRatio}dppx)`
+    );
+    this._observeDevicePixelRatioMediaQuery.addEventListener(
+      'change',
+      this._handleDevicePixelRatioChange,
       {once: true}
     );
   }
 
   _trackPosition(intervalMs: number = 100): void {
-    const intervalId = setInterval(() => {
-      if (this.destroyed) {
-        clearInterval(intervalId);
+    if (this._trackPositionInterval) {
+      return;
+    }
+
+    this._trackPositionInterval = setInterval(() => {
+      if (this.destroyed || !this._observersStarted) {
+        if (this._trackPositionInterval) {
+          clearInterval(this._trackPositionInterval);
+          this._trackPositionInterval = null;
+        }
       } else {
         this.updatePosition();
       }

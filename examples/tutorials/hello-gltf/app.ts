@@ -53,7 +53,7 @@ const INFO_HTML = `\
   </div>
   <div><label><input type="checkbox" id="useModelLights" />Use Model Lights</label></div>
   <div><label><input type="checkbox" id="cameraAnimation" />Camera Animation</label></div>
-  <div><label><input type="checkbox" id="gltfAnimation" />glTF Animation</label></div>
+  <div><label><input type="checkbox" id="gltfAnimation" checked />glTF Animation</label></div>
 </div>
 <div id="model-light-indicator" style="margin-top: 8px;"></div>
 <div id="error" style="color: #b00020; margin-top: 8px;"></div>
@@ -71,7 +71,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   options: Record<string, boolean> = {
     useModelLights: true,
     cameraAnimation: true,
-    gltfAnimation: false
+    gltfAnimation: true
   };
 
   constructor({device}: AnimationProps) {

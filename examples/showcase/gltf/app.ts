@@ -15,7 +15,7 @@ const INFO_HTML = `\
   </div>
   <div><label><input type="checkbox" id="useModelLights" />Use Model Lights</label></div>
   <div><label><input type="checkbox" id="cameraAnimation" />Camera Animation</label></div>
-  <div><label><input type="checkbox" id="gltfAnimation" />glTF Animation</label></div>
+  <div><label><input type="checkbox" id="gltfAnimation" checked />glTF Animation</label></div>
 </div>
 <p style="margin-top: 8px;">Drag to orbit. Use the mouse wheel or trackpad to zoom.</p>
 <div id="model-light-indicator" style="margin-top: 8px;"></div>

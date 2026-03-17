@@ -42,6 +42,7 @@ export class WebGPUCanvasContext extends CanvasContext {
     // Base class constructor cannot access derived methods/fields, so we need to call these functions in the subclass constructor
     this._setAutoCreatedCanvasId(`${this.device.id}-canvas`);
     this._configureDevice();
+    this._startObservers();
   }
 
   /** Destroy any textures produced while configured and remove the context configuration. */

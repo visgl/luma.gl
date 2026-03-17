@@ -258,6 +258,7 @@ export class WebGLDevice extends Device {
     }
 
     this.commandEncoder = new WEBGLCommandEncoder(this, {id: `${this}-command-encoder`});
+    this.canvasContext._startObservers();
   }
 
   /**

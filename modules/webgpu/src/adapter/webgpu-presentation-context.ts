@@ -40,6 +40,7 @@ export class WebGPUPresentationContext extends PresentationContext {
 
     this._setAutoCreatedCanvasId(`${this.device.id}-presentation-canvas`);
     this._configureDevice();
+    this._startObservers();
   }
 
   override destroy(): void {
