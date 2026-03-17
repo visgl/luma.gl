@@ -1,8 +1,29 @@
 # BufferTransform
 
-![WebGPU not supported](https://img.shields.io/badge/webgpu-no-red.svg?style=flat-square")
+`BufferTransform` is the engine wrapper for WebGL transform-feedback workflows.
+It internally builds a [`Model`](/docs/api-reference/engine/model) plus a `TransformFeedback` object and uses them to run buffer-to-buffer transforms.
 
-`BufferTransform` manages resources and state required for doing TransformFeedback based GPU computations reading from and/or writing to `Buffer` objects. 
+`BufferTransform` is only supported on WebGL devices.
+
+## Usage
+
+```typescript
+import {BufferTransform} from '@luma.gl/engine';
+
+const transform = new BufferTransform(device, {
+  vs: VERTEX_SHADER,
+  outputs: ['outValue'],
+  attributes: {
+    inValue: sourceBuffer
+  }
+});
+
+transform.run({
+  outputBuffers: {
+    outValue: targetBuffer
+  }
+});
+```
 
 ## Types
 
@@ -10,52 +31,66 @@
 
 ```ts
 export type BufferTransformProps = Omit<ModelProps, 'fs'> & {
-  fs?: ModelProps['fs']; // override as optional
+  fs?: ModelProps['fs'];
+  outputs?: string[];
   feedbackBuffers?: Record<string, Buffer | BufferRange>;
 };
 ```
 
-- `props.feedbackBuffers` (`Object`, Optional) - Map of output buffers that the shaders will write to. Key and value pairs, where key is the name of vertex shader varying and value is the corresponding `Buffer` object or buffer params object. If a buffer params object is specified, it will contain following fields, these can be used to capture data into the buffer at particular offset and size.
-    - `buffer`=(Buffer) - Buffer object to be bound.
-    - `byteOffset`=(Number, default: 0) - Byte offset that is used to start recording the data in the buffer.
-    - `byteSize`=(Number, default: remaining buffer size) - Size in bytes that is used for recording the data.
-  
+`feedbackBuffers` is deprecated in favor of `run({outputBuffers})`.
+
+## Properties
+
+### `device`
+
+Owning device.
+
+### `model`
+
+Internal model used to run the transform-feedback draw.
+
+### `transformFeedback`
+
+Internal transform-feedback object.
+
 ## Methods
 
-### constructor
+### `BufferTransform.isSupported(device: Device): boolean`
+
+Returns `true` when the device is WebGL-backed.
+
+### `constructor(device: Device, props?: BufferTransformProps)`
+
+Creates the internal model and transform-feedback objects. Throws on unsupported devices.
+
+### `destroy(): void`
+
+Destroys the internal model.
+
+### `delete(): void`
+
+Deprecated alias for `destroy()`.
+
+### `run(options?): void`
+
+Runs one transform-feedback pass.
 
 ```ts
-new BufferTransform(device: Device, props: BufferTransformProps)
+run(options?: RenderPassProps & {
+  inputBuffers?: Record<string, Buffer>;
+  outputBuffers?: Record<string, Buffer>;
+}): void
 ```
 
-- `device` (`Device`) - device
-- `props.feedbackBuffers` - Map of output buffers that the shaders will write to. Key and value pairs, where key is the name of vertex shader varying and value is the corresponding `Buffer` object or buffer params object. If a buffer params object is specified, it will contain following fields, these can be used to capture data into the buffer at particular offset and size.
-  - `buffer`=(Buffer) - Buffer object to be bound.
-  - `byteOffset`=(Number, default: 0) - Byte offset that is used to start recording the data in the buffer.
-  - `byteSize`=(Number, default: remaining buffer size) - Size in bytes that is used for recording the data.
-- `props.sourceBuffers` (`Object`, Optional) - key and value pairs, where key is the name of vertex shader attribute and value is the corresponding `Attribute`, `Buffer` or attribute descriptor object.
-- `props.varyings` (`Array`, Optional) - Array of vertex shader varyings names. When not provided this can be deduced from `feedbackBuffers`.
+### `getBuffer(varyingName: string): Buffer | BufferRange | null`
 
+Deprecated accessor for one named transform-feedback output.
 
-### `run(props: RenderPassProps)`
+### `readAsync(varyingName: string): Promise<Uint8Array>`
 
-Updates buffer bindings for one or more source or feedback buffers.
+Deprecated helper for reading back one named output.
 
-- `props` (`Object`) - contains following data.
-  - `sourceBuffers` (`Object`, Optional) - key and value pairs, where key is the name of vertex shader attribute and value is the corresponding `Attribute`, `Buffer` or attribute descriptor object.
-  - `feedbackBuffers` (`Object`, Optional) - key and value pairs, where key is the name of vertex shader varying and value is the corresponding `Buffer` object or buffer params object. If a buffer params object is specified, it will contain following fields, these can be used to capture data into the buffer at particular offset and size.
-    - `buffer`=(Buffer) - Buffer object to be bound.
-    - `byteOffset`=(Number, default: 0) - Byte offset that is used to start recording the data in the buffer.
-    - `byteSize`=(Number, default: remaining buffer size) - Size in bytes that is used for recording the data.
+## Remarks
 
-### `getBuffer(varyingName : String) : Buffer`
-
-Returns current feedback buffer corresponding to given varying name.
-
-- `varyingName` (`String`) - varying name.
-
-### `readAsync(varyingName: string) : Promise<Uint8Array>`
-
-Reads and returns data from current feedback buffer corresponding to the given varying name.
-
-- `varyingName` - when specified, first checks if there is a corresponding feedback buffer, if so reads data from this buffer and returns. When not specified, there must be target texture and data is read from this texture and returned.
+- `BufferTransform` defaults the fragment shader to a passthrough implementation because transform feedback typically only needs vertex output.
+- Prefer `run({inputBuffers, outputBuffers})` for explicit buffer management.

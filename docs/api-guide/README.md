@@ -37,5 +37,5 @@ It is also possible for developers to create new reusable shader modules.
 
 ## Engine API
 
-The engine API provides higher level classes like `Model`, `AnimationLoop` and `Transform`s.
-glTF support is available through `@luma.gl/gltxf`.
+The engine API provides higher level classes like `Model`, `AnimationLoop`, `BufferTransform`, `TextureTransform`, and `Computation`.
+glTF support is available through `@luma.gl/gltf`.

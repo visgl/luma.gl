@@ -1,20 +1,47 @@
 # ModelNode
 
-`ModelNode` is simply a `ScenegraphNode` that contains a `Model` for drawing.
+`ModelNode` extends [`ScenegraphNode`](/docs/api-reference/engine/scenegraph/scenegraph-node) with a [`Model`](/docs/api-reference/engine/model) and optional bounds / managed resources.
 
-## Constructor
+## Types
 
-`ModelNode(webglContextOrModel, props: Object)`
+### `ModelNodeProps`
 
-- If a WebGL context is passed, a `Model` will be created internally, otherwise the passed `Model` will be used.
-- `props` is the same props as `Model`, plus `props.managedResources`, an array of resources that this model owns.
+```ts
+export type ModelNodeProps = ScenegraphNodeProps & {
+  model: Model;
+  managedResources?: any[];
+  bounds?: [[number, number, number], [number, number, number]];
+};
+```
+
+## Properties
+
+### `model`
+
+The model drawn by this node.
+
+### `bounds`
+
+Optional bounds returned by `getBounds()`.
+
+### `managedResources`
+
+Additional resources destroyed with the node.
 
 ## Methods
 
-`ModelNode` wraps the following `Model` method and simply proxies them to its internal `Model`:
+### `constructor(props: ModelNodeProps)`
 
-- `draw`
-- `setUniforms`
-- `setAttributes`
-- `updateModuleSettings`
-- `delete` (calls `Model.delete` and also deletes managed resource)
+Creates a node around an existing `Model`.
+
+### `destroy(): void`
+
+Destroys the model and any managed resources.
+
+### `getBounds(): [number[], number[]] | null`
+
+Returns the configured bounds.
+
+### `draw(renderPass: RenderPass): boolean`
+
+Delegates drawing to the contained model.
