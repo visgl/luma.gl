@@ -94,7 +94,14 @@ export type {
 export type {DynamicTextureProps} from './dynamic-texture/dynamic-texture';
 export {DynamicTexture} from './dynamic-texture/dynamic-texture';
 
+export type {
+  PickInfo,
+  PickingBackend,
+  PickingManagerProps,
+  ResolvedPickingBackend
+} from './modules/picking/picking-manager';
 export {PickingManager} from './modules/picking/picking-manager';
+export {picking} from './modules/picking/picking';
 export {picking as indexPicking} from './modules/picking/index-picking';
 export {picking as colorPicking} from './modules/picking/color-picking';
 
@@ -106,6 +113,7 @@ export {
 // DEPRECATED
 
 export {LegacyPickingManager} from './modules/picking/legacy-picking-manager';
+export {legacyColorPicking} from './modules/picking/legacy-color-picking';
 
 import {DynamicTexture, type DynamicTextureProps} from './dynamic-texture/dynamic-texture';
 /** @deprecated use DynamicTexture */

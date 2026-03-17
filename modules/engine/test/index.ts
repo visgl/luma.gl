@@ -12,6 +12,7 @@ import './lib/model.spec';
 import './lib/animation-loop.spec';
 import './lib/pipeline-factory.spec';
 import './lib/shader-factory.spec';
+import './lib/picking-manager.spec';
 
 import './dynamic-texture/dynamic-texture.spec';
 import './dynamic-texture/mip-levels.spec';
