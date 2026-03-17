@@ -16,8 +16,6 @@ import {RenderPipeline, log} from '@luma.gl/core';
 // import {getAttributeInfosFromLayouts} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 
-import {getShaderLayoutFromGLSL} from '../helpers/get-shader-layout-from-glsl';
-import {isGLSamplerType} from '../converters/webgl-shadertypes';
 import {withDeviceAndGLParameters} from '../converters/device-parameters';
 import {setUniform} from '../helpers/set-uniform';
 // import {copyUniform, checkUniformValues} from '../../classes/uniforms';
@@ -31,8 +29,7 @@ import {WEBGLTextureView} from './webgl-texture-view';
 import {WEBGLRenderPass} from './webgl-render-pass';
 import {WEBGLTransformFeedback} from './webgl-transform-feedback';
 import {getGLDrawMode} from '../helpers/webgl-topology-utils';
-
-const LOG_PROGRAM_PERF_PRIORITY = 4;
+import {WEBGLSharedRenderPipeline} from './webgl-shared-render-pipeline';
 
 /** Creates a new render pipeline */
 export class WEBGLRenderPipeline extends RenderPipeline {
@@ -47,10 +44,10 @@ export class WEBGLRenderPipeline extends RenderPipeline {
   /** The layout extracted from shader by WebGL introspection APIs */
   introspectedLayout: ShaderLayout;
 
-  /** Uniforms set on this model */
-  uniforms: Record<string, UniformValue> = {};
-  /** Bindings set on this model */
+  /** Compatibility path for direct pipeline.setBindings() usage */
   bindings: Record<string, Binding> = {};
+  /** Compatibility path for direct pipeline.uniforms usage */
+  uniforms: Record<string, UniformValue> = {};
   /** WebGL varyings */
   varyings: string[] | null = null;
 
@@ -64,27 +61,17 @@ export class WEBGLRenderPipeline extends RenderPipeline {
   constructor(device: WebGLDevice, props: RenderPipelineProps) {
     super(device, props);
     this.device = device;
-    this.handle = this.props.handle || this.device.gl.createProgram();
+    const webglSharedRenderPipeline =
+      (this.sharedRenderPipeline as WEBGLSharedRenderPipeline | null) ||
+      (this.device._createSharedRenderPipelineWebGL(props) as WEBGLSharedRenderPipeline);
+
+    this.sharedRenderPipeline = webglSharedRenderPipeline;
+    this.handle = webglSharedRenderPipeline.handle;
+    this.vs = webglSharedRenderPipeline.vs;
+    this.fs = webglSharedRenderPipeline.fs;
+    this.linkStatus = webglSharedRenderPipeline.linkStatus;
+    this.introspectedLayout = webglSharedRenderPipeline.introspectedLayout;
     this.device._setWebGLDebugMetadata(this.handle, this, {spector: {id: this.props.id}});
-
-    // Create shaders if needed
-    this.vs = props.vs as WEBGLShader;
-    this.fs = props.fs as WEBGLShader;
-    // assert(this.vs.stage === 'vertex');
-    // assert(this.fs.stage === 'fragment');
-
-    // Setup varyings if supplied
-    // @ts-expect-error WebGL only
-    const {varyings, bufferMode = GL.SEPARATE_ATTRIBS} = props;
-    if (varyings && varyings.length > 0) {
-      this.varyings = varyings;
-      this.device.gl.transformFeedbackVaryings(this.handle, varyings, bufferMode);
-    }
-
-    this._linkShaders();
-    log.time(3, `RenderPipeline ${this.id} - shaderLayout introspection`)();
-    this.introspectedLayout = getShaderLayoutFromGLSL(this.device.gl, this.handle);
-    log.timeEnd(3, `RenderPipeline ${this.id} - shaderLayout introspection`)();
 
     // Merge provided layout with introspected layout
     this.shaderLayout = props.shaderLayout
@@ -93,32 +80,21 @@ export class WEBGLRenderPipeline extends RenderPipeline {
   }
 
   override destroy(): void {
-    if (this.handle) {
-      // log.error(`Deleting program ${this.id}`)();
-      this.device.gl.useProgram(null);
-      this.device.gl.deleteProgram(this.handle);
-      this.destroyed = true;
-      // @ts-expect-error
-      this.handle.destroyed = true;
-      // @ts-ignore
-      this.handle = null;
+    if (this.destroyed) {
+      return;
     }
+    if (this.sharedRenderPipeline && !this.props._sharedRenderPipeline) {
+      this.sharedRenderPipeline.destroy();
+    }
+    this.destroyResource();
   }
 
   /**
-   * Bindings include: textures, samplers and uniform buffers
-   * @todo needed for portable model
+   * Compatibility shim for code paths that still set bindings on the pipeline.
+   * Shared-model draws pass bindings per draw and do not rely on this state.
    */
   setBindings(bindings: Record<string, Binding>, options?: {disableWarnings?: boolean}): void {
-    // if (log.priority >= 2) {
-    //   checkUniformValues(uniforms, this.id, this._uniformSetters);
-    // }
-
     for (const [name, value] of Object.entries(bindings)) {
-      // Accept both `xyz` and `xyzUniforms` as valid names for `xyzUniforms` uniform block
-      // This convention allows shaders to name uniform blocks as `uniform appUniforms {} app;`
-      // and reference them as `app` from both GLSL and JS.
-      // TODO - this is rather hacky - we could also remap the name directly in the shader layout.
       const binding =
         this.shaderLayout.bindings.find(binding_ => binding_.name === name) ||
         this.shaderLayout.bindings.find(binding_ => binding_.name === `${name}Uniforms`);
@@ -133,7 +109,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
             value
           )();
         }
-        continue; // eslint-disable-line no-continue
+        continue;
       }
       if (!value) {
         log.warn(`Unsetting binding "${name}" in render pipeline "${this.id}"`)();
@@ -185,7 +161,11 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     firstInstance?: number;
     baseVertex?: number;
     transformFeedback?: WEBGLTransformFeedback;
+    bindings?: Record<string, Binding>;
+    uniforms?: Record<string, UniformValue>;
   }): boolean {
+    this._syncLinkStatus();
+
     const {
       renderPass,
       parameters = this.props.parameters,
@@ -199,7 +179,9 @@ export class WEBGLRenderPipeline extends RenderPipeline {
       // firstIndex,
       // firstInstance,
       // baseVertex,
-      transformFeedback
+      transformFeedback,
+      bindings = this.bindings,
+      uniforms = this.uniforms
     } = options;
 
     const glDrawMode = getGLDrawMode(topology);
@@ -217,7 +199,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     // Note: async textures set as uniforms might still be loading.
     // Now that all uniforms have been updated, check if any texture
     // in the uniforms is not yet initialized, then we don't draw
-    if (!this._areTexturesRenderable()) {
+    if (!this._areTexturesRenderable(bindings)) {
       log.info(2, `RenderPipeline:${this.id}.draw() aborted - textures not yet loaded`)();
       //  Note: false means that the app needs to redraw the pipeline again.
       return false;
@@ -240,8 +222,8 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     }
 
     // We have to apply bindings before every draw call since other draw calls will overwrite
-    this._applyBindings();
-    this._applyUniforms();
+    this._applyBindings(bindings, {disableWarnings: this.props.disableWarnings});
+    this._applyUniforms(uniforms);
 
     const webglRenderPass = renderPass as WEBGLRenderPass;
 
@@ -279,180 +261,16 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     return true;
   }
 
-  // PRIVATE METHODS
-
-  // setAttributes(attributes: Record<string, Buffer>): void {}
-  // setBindings(bindings: Record<string, Binding>): void {}
-
-  protected async _linkShaders() {
-    const {gl} = this.device;
-    gl.attachShader(this.handle, this.vs.handle);
-    gl.attachShader(this.handle, this.fs.handle);
-    log.time(LOG_PROGRAM_PERF_PRIORITY, `linkProgram for ${this.id}`)();
-    gl.linkProgram(this.handle);
-    log.timeEnd(LOG_PROGRAM_PERF_PRIORITY, `linkProgram for ${this.id}`)();
-
-    // TODO Avoid checking program linking error in production
-    if (log.level === 0) {
-      // return;
-    }
-
-    if (!this.device.features.has('compilation-status-async-webgl')) {
-      const status = this._getLinkStatus();
-      this._reportLinkStatus(status);
-      return;
-    }
-
-    // async case
-    log.once(1, 'RenderPipeline linking is asynchronous')();
-    await this._waitForLinkComplete();
-    log.info(2, `RenderPipeline ${this.id} - async linking complete: ${this.linkStatus}`)();
-    const status = this._getLinkStatus();
-    this._reportLinkStatus(status);
-  }
-
-  /** Report link status. First, check for shader compilation failures if linking fails */
-  async _reportLinkStatus(status: 'success' | 'link-error' | 'validation-error'): Promise<void> {
-    switch (status) {
-      case 'success':
-        return;
-
-      default:
-        const errorType = status === 'link-error' ? 'Link error' : 'Validation error';
-        // First check for shader compilation failures if linking fails
-        switch (this.vs.compilationStatus) {
-          case 'error':
-            this.vs.debugShader();
-            throw new Error(`${this} ${errorType} during compilation of ${this.vs}`);
-          case 'pending':
-            await this.vs.asyncCompilationStatus;
-            this.vs.debugShader();
-            break;
-          case 'success':
-            break;
-        }
-
-        switch (this.fs?.compilationStatus) {
-          case 'error':
-            this.fs.debugShader();
-            throw new Error(`${this} ${errorType} during compilation of ${this.fs}`);
-          case 'pending':
-            await this.fs.asyncCompilationStatus;
-            this.fs.debugShader();
-            break;
-          case 'success':
-            break;
-        }
-
-        const linkErrorLog = this.device.gl.getProgramInfoLog(this.handle);
-        this.device.reportError(
-          new Error(`${errorType} during ${status}: ${linkErrorLog}`),
-          this
-        )();
-        this.device.debug();
-    }
-  }
-
-  /**
-   * Get the shader compilation status
-   * TODO - Load log even when no error reported, to catch warnings?
-   * https://gamedev.stackexchange.com/questions/30429/how-to-detect-glsl-warnings
-   */
-  _getLinkStatus(): 'success' | 'link-error' | 'validation-error' {
-    const {gl} = this.device;
-    const linked = gl.getProgramParameter(this.handle, GL.LINK_STATUS);
-    if (!linked) {
-      this.linkStatus = 'error';
-      return 'link-error';
-    }
-
-    this._initializeSamplerUniforms();
-    gl.validateProgram(this.handle);
-    const validated = gl.getProgramParameter(this.handle, GL.VALIDATE_STATUS);
-    if (!validated) {
-      this.linkStatus = 'error';
-      return 'validation-error';
-    }
-
-    this.linkStatus = 'success';
-    return 'success';
-  }
-
-  _initializeSamplerUniforms(): void {
-    const {gl} = this.device;
-    gl.useProgram(this.handle);
-
-    let textureUnit = 0;
-    const uniformCount = gl.getProgramParameter(this.handle, GL.ACTIVE_UNIFORMS);
-    for (let uniformIndex = 0; uniformIndex < uniformCount; uniformIndex++) {
-      const activeInfo = gl.getActiveUniform(this.handle, uniformIndex);
-      if (activeInfo && isGLSamplerType(activeInfo.type)) {
-        const isArray = activeInfo.name.endsWith('[0]');
-        const uniformName = isArray ? activeInfo.name.slice(0, -3) : activeInfo.name;
-        const location = gl.getUniformLocation(this.handle, uniformName);
-
-        if (location !== null) {
-          textureUnit = this._assignSamplerUniform(location, activeInfo, isArray, textureUnit);
-        }
-      }
-    }
-  }
-
-  _assignSamplerUniform(
-    location: WebGLUniformLocation,
-    activeInfo: WebGLActiveInfo,
-    isArray: boolean,
-    textureUnit: number
-  ): number {
-    const {gl} = this.device;
-
-    if (isArray && activeInfo.size > 1) {
-      const textureUnits = Int32Array.from(
-        {length: activeInfo.size},
-        (_, arrayIndex) => textureUnit + arrayIndex
-      );
-      gl.uniform1iv(location, textureUnits);
-      return textureUnit + activeInfo.size;
-    }
-
-    gl.uniform1i(location, textureUnit);
-    return textureUnit + 1;
-  }
-
-  /** Use KHR_parallel_shader_compile extension if available */
-  async _waitForLinkComplete(): Promise<void> {
-    const waitMs = async (ms: number) => await new Promise(resolve => setTimeout(resolve, ms));
-    const DELAY_MS = 10; // Shader compilation is typically quite fast (with some exceptions)
-
-    // If status polling is not available, we can't wait for completion. Just wait a little to minimize blocking
-    if (!this.device.features.has('compilation-status-async-webgl')) {
-      await waitMs(DELAY_MS);
-      return;
-    }
-
-    const {gl} = this.device;
-    for (;;) {
-      const complete = gl.getProgramParameter(this.handle, GL.COMPLETION_STATUS_KHR);
-      if (complete) {
-        return;
-      }
-      await waitMs(DELAY_MS);
-    }
-  }
-
   /**
    * Checks if all texture-values uniforms are renderable (i.e. loaded)
    * Update a texture if needed (e.g. from video)
    * Note: This is currently done before every draw call
    */
-  _areTexturesRenderable() {
+  _areTexturesRenderable(bindings: Record<string, Binding>) {
     let texturesRenderable = true;
 
     for (const bindingInfo of this.shaderLayout.bindings) {
-      if (
-        !this.bindings[bindingInfo.name] &&
-        !this.bindings[bindingInfo.name.replace(/Uniforms$/, '')]
-      ) {
+      if (!bindings[bindingInfo.name] && !bindings[bindingInfo.name.replace(/Uniforms$/, '')]) {
         log.warn(`Binding ${bindingInfo.name} not found in ${this.id}`)();
         texturesRenderable = false;
       }
@@ -469,7 +287,9 @@ export class WEBGLRenderPipeline extends RenderPipeline {
   }
 
   /** Apply any bindings (before each draw call) */
-  _applyBindings() {
+  _applyBindings(bindings: Record<string, Binding>, _options?: {disableWarnings?: boolean}) {
+    this._syncLinkStatus();
+
     // If we are using async linking, we need to wait until linking completes
     if (this.linkStatus !== 'success') {
       return;
@@ -482,8 +302,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     let uniformBufferIndex = 0;
     for (const binding of this.shaderLayout.bindings) {
       // Accept both `xyz` and `xyzUniforms` as valid names for `xyzUniforms` uniform block
-      const value =
-        this.bindings[binding.name] || this.bindings[binding.name.replace(/Uniforms$/, '')];
+      const value = bindings[binding.name] || bindings[binding.name.replace(/Uniforms$/, '')];
       if (!value) {
         throw new Error(`No value for binding ${binding.name} in ${this.id}`);
       }
@@ -561,14 +380,18 @@ export class WEBGLRenderPipeline extends RenderPipeline {
    * Due to program sharing, uniforms need to be reset before every draw call
    * (though caching will avoid redundant WebGL calls)
    */
-  _applyUniforms() {
+  _applyUniforms(uniforms: Record<string, UniformValue>) {
     for (const uniformLayout of this.shaderLayout.uniforms || []) {
       const {name, location, type, textureUnit} = uniformLayout;
-      const value = this.uniforms[name] ?? textureUnit;
+      const value = uniforms[name] ?? textureUnit;
       if (value !== undefined) {
         setUniform(this.device.gl, location, type, value);
       }
     }
+  }
+
+  private _syncLinkStatus(): void {
+    this.linkStatus = (this.sharedRenderPipeline as WEBGLSharedRenderPipeline).linkStatus;
   }
 }
 

@@ -13,7 +13,9 @@ export abstract class Fence extends Resource<FenceProps> {
     ...Resource.defaultProps
   };
 
-  [Symbol.toStringTag]: string = 'WEBGLFence';
+  override get [Symbol.toStringTag](): string {
+    return 'Fence';
+  }
 
   /** Promise that resolves when the fence is signaled */
   abstract readonly signaled: Promise<void>;

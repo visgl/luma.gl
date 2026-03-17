@@ -25,7 +25,7 @@ let cachedPresentationDevice: Record<string, Promise<Device>> = {};
 let deviceRequestGeneration = 0;
 
 let cachedContainer: HTMLDivElement | undefined;
-function getCanvasContainer() {
+export function getCanvasContainer() {
   if (!cachedContainer) {
     cachedContainer = document.createElement('div');
     cachedContainer.style.display = 'none';
@@ -43,13 +43,17 @@ export async function createDevice(type: 'webgl' | 'webgpu'): Promise<Device> {
       debugGPUTime: true,
       createCanvasContext: {
         container: getCanvasContainer(),
-        alphaMode: 'opaque',
+        alphaMode: 'opaque'
       }
     });
   return await cachedDevice[type];
 }
 
 export async function createPresentationDevice(type: 'webgl' | 'webgpu'): Promise<Device> {
+  if (type === 'webgpu') {
+    return await createDevice(type);
+  }
+
   if (typeof OffscreenCanvas === 'undefined') {
     throw new Error('Presentation devices require OffscreenCanvas support');
   }

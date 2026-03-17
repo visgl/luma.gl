@@ -3,7 +3,6 @@
 // Copyright (c) vis.gl contributors
 
 import type {Device} from '../device';
-import type {UniformValue} from '../types/uniforms';
 import type {PrimitiveTopology, RenderPipelineParameters} from '../types/parameters';
 import type {ShaderLayout, Binding} from '../types/shader-layout';
 import type {BufferLayout} from '../types/buffer-layout';
@@ -12,6 +11,7 @@ import type {
   TextureFormatDepthStencil
 } from '@luma.gl/core/shadertypes/textures/texture-formats';
 import type {Shader} from './shader';
+import type {SharedRenderPipeline} from './shared-render-pipeline';
 import type {RenderPass} from './render-pass';
 import {Resource, ResourceProps} from './resource';
 import {VertexArray} from './vertex-array';
@@ -51,12 +51,20 @@ export type RenderPipelineProps = ResourceProps & {
   /** Parameters that are controlled by pipeline */
   parameters?: RenderPipelineParameters;
 
-  // Dynamic bindings (TODO - pipelines should be immutable, move to RenderPass)
+  /** Transform feedback varyings captured when linking a WebGL render pipeline. WebGL only. */
+  varyings?: string[];
+  /** Transform feedback buffer mode used when linking a WebGL render pipeline. WebGL only. */
+  bufferMode?: number;
 
+  /** Some applications intentionally supply unused attributes and bindings, and want to disable warnings */
+  disableWarnings?: boolean;
+
+  /** Internal hook for backend-specific shared pipeline implementations. */
+  _sharedRenderPipeline?: SharedRenderPipeline;
+
+  // Dynamic bindings (TODO - pipelines should be immutable, move to RenderPass)
   /** Buffers, Textures, Samplers for the shader bindings */
   bindings?: Record<string, Binding>;
-  /** @deprecated uniforms (WebGL only) */
-  uniforms?: Record<string, UniformValue>;
 };
 
 /**
@@ -78,6 +86,8 @@ export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
   linkStatus: 'pending' | 'success' | 'error' = 'pending';
   /** The hash of the pipeline */
   hash: string = '';
+  /** Optional shared backend implementation */
+  sharedRenderPipeline: SharedRenderPipeline | null = null;
 
   /** Whether shader or pipeline compilation/linking is still in progress */
   get isPending(): boolean {
@@ -101,13 +111,8 @@ export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
     super(device, props, RenderPipeline.defaultProps);
     this.shaderLayout = this.props.shaderLayout!;
     this.bufferLayout = this.props.bufferLayout || [];
+    this.sharedRenderPipeline = this.props._sharedRenderPipeline || null;
   }
-
-  /** Set bindings (stored on pipeline and set before each call) */
-  abstract setBindings(
-    bindings: Record<string, Binding>,
-    options?: {disableWarnings?: boolean}
-  ): void;
 
   /** Draw call. Returns false if the draw call was aborted (due to resources still initializing) */
   abstract draw(options: {
@@ -136,6 +141,10 @@ export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
     baseVertex?: number;
     /** Transform feedback. WebGL only. */
     transformFeedback?: TransformFeedback;
+    /** Bindings applied for this draw (textures, samplers, uniform buffers) */
+    bindings?: Record<string, Binding>;
+    /** WebGL-only uniforms */
+    uniforms?: Record<string, unknown>;
   }): boolean;
 
   static override defaultProps: Required<RenderPipelineProps> = {
@@ -157,8 +166,10 @@ export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
     depthStencilAttachmentFormat: undefined!,
 
     parameters: {},
-
-    bindings: {},
-    uniforms: {}
+    varyings: undefined!,
+    bufferMode: undefined!,
+    disableWarnings: false,
+    _sharedRenderPipeline: undefined!,
+    bindings: undefined!
   };
 }

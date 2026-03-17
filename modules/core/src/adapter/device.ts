@@ -16,6 +16,7 @@ import type {PresentationContext, PresentationContextProps} from './presentation
 import type {BufferProps} from './resources/buffer';
 import {Buffer} from './resources/buffer';
 import type {RenderPipeline, RenderPipelineProps} from './resources/render-pipeline';
+import type {SharedRenderPipeline} from './resources/shared-render-pipeline';
 import type {ComputePipeline, ComputePipelineProps} from './resources/compute-pipeline';
 import type {Sampler, SamplerProps} from './resources/sampler';
 import type {Shader, ShaderProps} from './resources/shader';
@@ -296,10 +297,22 @@ export type DeviceProps = {
   _initializeFeatures?: boolean;
   /** Enable shader caching (via ShaderFactory) */
   _cacheShaders?: boolean;
-  /** Enable shader caching (via PipelineFactory) */
+  /**
+   * Destroy cached shaders when they become unused.
+   * Defaults to `false` so repeated create/destroy cycles can still reuse cached shaders.
+   * Enable this if the application creates very large numbers of distinct shaders and needs cache eviction.
+   */
+  _destroyShaders?: boolean;
+  /** Enable pipeline caching (via PipelineFactory) */
   _cachePipelines?: boolean;
-  /** Never destroy cached shaders and pipelines */
-  _cacheDestroyPolicy?: 'unused' | 'never';
+  /** Enable sharing of backend render-pipeline implementations when caching is enabled. Currently used by WebGL. */
+  _sharePipelines?: boolean;
+  /**
+   * Destroy cached pipelines when they become unused.
+   * Defaults to `false` so repeated create/destroy cycles can still reuse cached pipelines.
+   * Enable this if the application creates very large numbers of distinct pipelines and needs cache eviction.
+   */
+  _destroyPipelines?: boolean;
 
   /** @deprecated Internal, Do not use directly! Use `luma.attachDevice()` to attach to pre-created contexts/devices. */
   _handle?: unknown; // WebGL2RenderingContext | GPUDevice | null;
@@ -379,9 +392,11 @@ export abstract class Device {
     // Experimental
     _reuseDevices: false,
     _requestMaxLimits: true,
-    _cacheShaders: false,
-    _cachePipelines: false,
-    _cacheDestroyPolicy: 'unused',
+    _cacheShaders: true,
+    _destroyShaders: false,
+    _cachePipelines: true,
+    _sharePipelines: true,
+    _destroyPipelines: false,
     // TODO - Change these after confirming things work as expected
     _initializeFeatures: true,
     _disabledFeatures: {
@@ -684,6 +699,11 @@ or create a device with the 'debug: true' prop.`;
    */
   generateMipmapsWebGPU(_texture: Texture): void {
     throw new Error('not implemented');
+  }
+
+  /** Internal helper for creating a shareable WebGL render-pipeline implementation. */
+  _createSharedRenderPipelineWebGL(_props: RenderPipelineProps): SharedRenderPipeline {
+    throw new Error('_createSharedRenderPipelineWebGL() not implemented');
   }
 
   /**

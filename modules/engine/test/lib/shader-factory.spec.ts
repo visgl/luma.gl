@@ -82,15 +82,15 @@ test('ShaderFactory#release', async t => {
   factory.release(shader3);
   t.deepEqual(
     [shader1.destroyed, shader2.destroyed, shader3.destroyed],
-    [false, false, true],
-    'Keeps used shaders'
+    [false, false, false],
+    'Released shaders remain cached by default'
   );
 
   factory.release(shader1);
   t.deepEqual(
     [shader1.destroyed, shader2.destroyed, shader3.destroyed],
-    [true, true, true],
-    'Destroys unused shaders'
+    [false, false, false],
+    'Unused shaders remain cached by default'
   );
 
   t.end();
