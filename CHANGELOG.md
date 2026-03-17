@@ -2,6 +2,10 @@
 
 ## v9.3
 
+### v9.3.0-alpha.6
+
+- chore: Enable corepack in release workflow
+
 ### v9.3.0-alpha.5
 
 - fix(webgl): Enable deep sharing of WebGLPrograms (#2465)
