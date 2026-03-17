@@ -2,13 +2,18 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+import type {TruncatedConeGeometryProps} from './truncated-cone-geometry';
 import {TruncatedConeGeometry} from './truncated-cone-geometry';
 import {uid} from '../utils/uid';
 
-export type ConeGeometryProps = {
+export type ConeGeometryProps = Omit<
+  TruncatedConeGeometryProps,
+  'topRadius' | 'bottomRadius' | 'topCap' | 'bottomCap'
+> & {
   id?: string;
   radius?: number;
   cap?: boolean;
+  attributes?: any;
 };
 
 export class ConeGeometry extends TruncatedConeGeometry {
