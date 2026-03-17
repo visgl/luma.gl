@@ -120,6 +120,7 @@ test('PipelineFactory#caching with parameters', async t => {
   }
 
   const pipelineFactory = new PipelineFactory(webglDevice);
+  const initialSharedRenderPipelineCount = getSharedRenderPipelineCount(webglDevice);
 
   const vs = webglDevice.createShader({stage: 'vertex', source: vsSource});
   const fs = webglDevice.createShader({stage: 'fragment', source: fsSource});
@@ -315,6 +316,7 @@ test('PipelineFactory#sharing can be disabled independently from wrapper caching
     })) as WebGLDevice;
 
     const pipelineFactory = new PipelineFactory(webglDevice);
+    const initialSharedRenderPipelineCount = getSharedRenderPipelineCount(webglDevice);
 
     const vs = webglDevice.createShader({stage: 'vertex', source: vsSource});
     const fs = webglDevice.createShader({stage: 'fragment', source: fsSource});
@@ -337,15 +339,15 @@ test('PipelineFactory#sharing can be disabled independently from wrapper caching
       pipeline2,
       'Still creates distinct wrapper pipelines when parameters differ'
     );
-    t.equal(
+    t.notEqual(
       pipeline1.sharedRenderPipeline,
-      null,
-      'Does not attach a shared render pipeline when sharing is disabled'
+      pipeline2.sharedRenderPipeline,
+      'Creates distinct shared render pipeline resources when sharing is disabled'
     );
     t.equal(
-      pipeline2.sharedRenderPipeline,
-      null,
-      'Does not attach a shared render pipeline when sharing is disabled'
+      getSharedRenderPipelineCount(webglDevice),
+      initialSharedRenderPipelineCount + 2,
+      'Tracks separate shared render pipeline resources for each wrapper when sharing is disabled'
     );
     t.notEqual(
       pipeline1.handle,
@@ -355,6 +357,11 @@ test('PipelineFactory#sharing can be disabled independently from wrapper caching
 
     pipelineFactory.release(pipeline1);
     pipelineFactory.release(pipeline2);
+    t.equal(
+      getSharedRenderPipelineCount(webglDevice),
+      initialSharedRenderPipelineCount,
+      'Shared render pipeline resource count returns to baseline after release'
+    );
   } finally {
     webglDevice?.destroy();
   }

@@ -223,7 +223,7 @@ export abstract class Resource<Props extends ResourceProps> {
     for (const stats of statsObjects) {
       initializeStats(stats, orderedStatNames);
     }
-    const name = this[Symbol.toStringTag];
+    const name = this.getStatsName();
     for (const stats of statsObjects) {
       stats.get('Resources Active').decrementCount();
       stats.get(`${name}s Active`).decrementCount();
@@ -236,7 +236,7 @@ export abstract class Resource<Props extends ResourceProps> {
   }
 
   /** Called by subclass to track memory allocations */
-  protected trackAllocatedMemory(bytes: number, name = this[Symbol.toStringTag]): void {
+  protected trackAllocatedMemory(bytes: number, name = this.getStatsName()): void {
     const profiler = getCpuHotspotProfiler(this._device);
     const startTime = profiler ? getTimestamp() : 0;
     const stats = this._device.statsManager.getStats(GPU_TIME_AND_MEMORY_STATS);
@@ -258,12 +258,12 @@ export abstract class Resource<Props extends ResourceProps> {
   }
 
   /** Called by subclass to track handle-backed memory allocations separately from owned allocations */
-  protected trackReferencedMemory(bytes: number, name = this[Symbol.toStringTag]): void {
+  protected trackReferencedMemory(bytes: number, name = this.getStatsName()): void {
     this.trackAllocatedMemory(bytes, `Referenced ${name}`);
   }
 
   /** Called by subclass to track memory deallocations */
-  protected trackDeallocatedMemory(name = this[Symbol.toStringTag]): void {
+  protected trackDeallocatedMemory(name = this.getStatsName()): void {
     if (this.allocatedBytes === 0) {
       this.allocatedBytesName = null;
       return;
@@ -284,13 +284,13 @@ export abstract class Resource<Props extends ResourceProps> {
   }
 
   /** Called by subclass to deallocate handle-backed memory tracked via trackReferencedMemory() */
-  protected trackDeallocatedReferencedMemory(name = this[Symbol.toStringTag]): void {
+  protected trackDeallocatedReferencedMemory(name = this.getStatsName()): void {
     this.trackDeallocatedMemory(`Referenced ${name}`);
   }
 
   /** Called by resource constructor to track object creation */
   private addStats(): void {
-    const name = this[Symbol.toStringTag];
+    const name = this.getStatsName();
     const profiler = getCpuHotspotProfiler(this._device);
     const startTime = profiler ? getTimestamp() : 0;
     const statsObjects = [
@@ -313,6 +313,11 @@ export abstract class Resource<Props extends ResourceProps> {
         (profiler.statsBookkeepingTimeMs || 0) + (getTimestamp() - startTime);
     }
     recordTransientCanvasResourceCreate(this._device, name);
+  }
+
+  /** Canonical resource name used for stats buckets. */
+  protected getStatsName(): string {
+    return getCanonicalResourceName(this);
   }
 }
 
@@ -418,4 +423,33 @@ function recordTransientCanvasResourceCreate(device: Device, name: string): void
     default:
       break;
   }
+}
+
+function getCanonicalResourceName(resource: Resource<any>): string {
+  let prototype = Object.getPrototypeOf(resource);
+
+  while (prototype) {
+    const parentPrototype = Object.getPrototypeOf(prototype);
+    if (!parentPrototype || parentPrototype === Resource.prototype) {
+      return (
+        getPrototypeToStringTag(prototype) ||
+        resource[Symbol.toStringTag] ||
+        resource.constructor.name
+      );
+    }
+    prototype = parentPrototype;
+  }
+
+  return resource[Symbol.toStringTag] || resource.constructor.name;
+}
+
+function getPrototypeToStringTag(prototype: object): string | null {
+  const descriptor = Object.getOwnPropertyDescriptor(prototype, Symbol.toStringTag);
+  if (typeof descriptor?.get === 'function') {
+    return descriptor.get.call(prototype);
+  }
+  if (typeof descriptor?.value === 'string') {
+    return descriptor.value;
+  }
+  return null;
 }

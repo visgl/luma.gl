@@ -20,10 +20,6 @@ export class WEBGLSharedRenderPipeline extends SharedRenderPipeline {
   introspectedLayout: ShaderLayout = {attributes: [], bindings: [], uniforms: []};
   linkStatus: 'pending' | 'success' | 'error' = 'pending';
 
-  override get [Symbol.toStringTag](): string {
-    return 'WEBGLSharedRenderPipeline';
-  }
-
   constructor(
     device: WebGLDevice,
     props: ResourceProps & {
@@ -119,7 +115,10 @@ export class WEBGLSharedRenderPipeline extends SharedRenderPipeline {
         }
 
         const linkErrorLog = this.device.gl.getProgramInfoLog(this.handle);
-        this.device.reportError(new Error(`${errorType} during ${status}: ${linkErrorLog}`), this)();
+        this.device.reportError(
+          new Error(`${errorType} during ${status}: ${linkErrorLog}`),
+          this
+        )();
         this.device.debug();
     }
   }
