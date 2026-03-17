@@ -19,6 +19,10 @@ const config = getDocusaurusConfig({
       label: 'Tutorials'
     },
     {
+      to: '/docs/api-reference',
+      label: 'API Reference'
+    },
+    {
       to: 'https://medium.com/vis-gl',
       label: 'Blog'
     }

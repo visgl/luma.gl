@@ -114,6 +114,7 @@
         "type": "category",
         "label": "@luma.gl/engine",
         "items": [
+          "api-reference/engine/README",
           "api-reference/engine/model",
           "api-reference/engine/shader-inputs",
           "api-reference/engine/animation-loop",
