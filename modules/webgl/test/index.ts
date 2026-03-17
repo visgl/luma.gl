@@ -8,6 +8,7 @@ import './utils/fill-array.spec';
 // Note that we do two test runs on luma.gl, with and without headless-gl
 // This file imports tests that should run *with* headless-gl included
 
+import './adapter/webgl-adapter.spec';
 import './adapter/helpers/parse-shader-compiler-log.spec';
 import './adapter/helpers/get-shader-layout.spec';
 import './adapter/helpers/webgl-texture-table.spec';
