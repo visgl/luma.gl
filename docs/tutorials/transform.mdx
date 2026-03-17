@@ -5,12 +5,8 @@ import {TransformExample} from '@site/src/examples';
 
 This tutorial uses `BufferTransform` to update per-instance data on the GPU and render thousands of wandering triangles. The compute shader runs in a transform feedback pass before each draw.
 
-:::caution
-Tutorials are maintained on a best-effort basis and may not be fully up to date (contributions welcome).
-:::
-
 <DeviceTabs />
-<TransformExample />
+<TransformExample showHeader={false} showStats={false} />
 
 It is assumed you've set up your development environment as described in [Setup](/docs/tutorials).
 
@@ -29,6 +25,7 @@ import {
   Model,
   BufferTransform,
   Swap,
+  makeAnimationLoop,
   makeRandomGenerator
 } from '@luma.gl/engine';
 import {picking} from '@luma.gl/shadertools';
@@ -285,7 +282,9 @@ class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 }
 
-const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {adapters: [webgl2Adapter]})
+const animationLoop = makeAnimationLoop(AppAnimationLoopTemplate, {
+  adapters: [webgl2Adapter]
+});
 animationLoop.start();
 ```
 

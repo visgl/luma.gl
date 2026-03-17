@@ -7,7 +7,7 @@ import {luma} from '@luma.gl/core';
 import {Model, PipelineFactory, ShaderFactory} from '@luma.gl/engine';
 import {getWebGLTestDevice, getTestDevices} from '@luma.gl/test-utils';
 
-const stats = luma.stats.get('Resource Counts');
+const stats = luma.stats.get('GPU Resource Counts');
 
 const DUMMY_WGSL = /* WGSL */ `
 @vertex fn vertexMain() -> @builtin(position) vec4<f32> {

@@ -9,6 +9,8 @@ export type TextureImageSource = ExternalImage;
  * additional optional fields can describe compressed texture data.
  */
 export type TextureImageData = {
+  /** Preferred WebGPU style format string. */
+  textureFormat?: TextureFormat;
   /** WebGPU style format string. Defaults to 'rgba8unorm' */
   format?: TextureFormat;
   /** Typed Array with the bytes of the image. @note beware row byte alignment requirements */
@@ -104,6 +106,7 @@ export type TextureSubresource = {
   | {
       type: 'texture-data';
       data: TextureImageData;
+      textureFormat?: TextureFormat;
     }
 );
 
@@ -184,6 +187,16 @@ function isTextureImageData(data: TextureMipLevelData): data is TextureImageData
   );
 }
 
+export function resolveTextureImageFormat(data: TextureImageData): TextureFormat | undefined {
+  const {textureFormat, format} = data;
+  if (textureFormat && format && textureFormat !== format) {
+    throw new Error(
+      `Conflicting texture formats "${textureFormat}" and "${format}" provided for the same mip level`
+    );
+  }
+  return textureFormat ?? format;
+}
+
 /** Resolve size for a single mip-level datum */
 // function getTextureMipLevelSizeFromData(data: TextureMipLevelData): {
 //   width: number;
@@ -249,6 +262,7 @@ export function getTexture2DSubresources(
       subresources.push({
         type: 'texture-data',
         data: imageData,
+        textureFormat: resolveTextureImageFormat(imageData),
         z,
         mipLevel
       });
@@ -294,7 +308,7 @@ export function getTextureCubeArraySubresources(data: TextureCubeArrayData): Tex
   data.forEach((cubeData, cubeIndex) => {
     for (const [face, faceData] of Object.entries(cubeData)) {
       const faceDepth = getCubeArrayFaceIndex(cubeIndex, face as TextureCubeFace);
-      getTexture2DSubresources(faceDepth, faceData);
+      subresources.push(...getTexture2DSubresources(faceDepth, faceData));
     }
   });
   return subresources;

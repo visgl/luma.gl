@@ -41,6 +41,7 @@ import './adapter/resources/compute-pipeline.spec';
 import './adapter/resources/sampler.spec';
 import './adapter/resources/texture.spec';
 import './adapter/resources/framebuffer.spec';
+import './adapter/resources/webgpu-cpu-hotspots.spec';
 import './adapter/resources/vertex-array.spec';
 import './adapter/resources/query-set.spec';
 import './adapter/resources/fence.spec';

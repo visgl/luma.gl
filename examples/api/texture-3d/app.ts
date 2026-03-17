@@ -111,8 +111,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = `\
   <p>
   Volumetric 3D noise visualized using a <b>3D texture</b>.
+  </p>
   <p>
   Uses the luma.gl <code>Texture3D</code> class.
+  </p>
   `;
   static props = {useDevicePixels: true};
 

@@ -5,22 +5,17 @@ import {TransformFeedbackExample} from '@site/src/examples';
 
 This tutorial demonstrates animating geometry using transform feedback via the `BufferTransform` class. A compute shader rotates triangle vertices on the GPU each frame.
 
-:::caution
-Tutorials are maintained on a best-effort basis and may not be fully up to date (contributions welcome).
-:::
-
 <DeviceTabs />
-<TransformFeedbackExample />
+<TransformFeedbackExample showHeader={false} showStats={false} />
 
 It is assumed you've set up your development environment as described in [Setup](/docs/tutorials).
 
-Transform feedback allows us to capture vertex shader results from one pass and use them in subsequent passes. It is a powerful tool that can be used to set up massively parrallelized animations or data transformations. Note that transform feedback can only be used with WebGL 2.
+Transform feedback allows us to capture vertex shader results from one pass and use them in subsequent passes. It is a powerful tool that can be used to set up massively parallelized animations or data transformations. Note that transform feedback can only be used with WebGL 2.
 
 Two buffers store the triangle's positions. `BufferTransform` runs a small
 vertex shader that multiplies each position by a rotation matrix and writes the
 result into the alternate buffer. After the transform step the buffers swap and
 the scene is rendered with the updated positions.
-
 
 The complete source for this example is shown below:
 
@@ -30,7 +25,14 @@ The complete source for this example is shown below:
 // Copyright (c) vis.gl contributors
 
 import {Buffer} from '@luma.gl/core';
-import {AnimationLoopTemplate, AnimationProps, Model, Swap, BufferTransform} from '@luma.gl/engine';
+import {
+  AnimationLoopTemplate,
+  AnimationProps,
+  Model,
+  Swap,
+  BufferTransform,
+  makeAnimationLoop
+} from '@luma.gl/engine';
 
 const transformVs = /* glsl */ `\
 #version 300 es
@@ -140,7 +142,9 @@ class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 }
 
-const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {adapters: [webgl2Adapter]})
+const animationLoop = makeAnimationLoop(AppAnimationLoopTemplate, {
+  adapters: [webgl2Adapter]
+});
 animationLoop.start();
 ```
 

@@ -6,7 +6,7 @@ import type {ShaderPass} from '@luma.gl/shadertools';
 import {random} from '@luma.gl/shadertools';
 
 const source = /* wgsl */ `
-uniform zoomBlurUniforms {
+struct zoomBlurUniforms {
   center: vec2f,
   strength: f32,
 };
@@ -14,23 +14,32 @@ uniform zoomBlurUniforms {
 @group(0) @binding(1) var<uniform> zoomBlur : zoomBlurUniforms;
 
 
-fn zoomBlur_sampleColor(sampler2D source, vec2 texSize, vec2 texCoord) -> vec4f {
-  vec4 color = vec4(0.0);
-  float total = 0.0;
-  vec2 toCenter = zoomBlur.center * texSize - texCoord * texSize;
+fn zoomBlur_sampleColor(
+  sourceTexture: texture_2d<f32>,
+  sourceTextureSampler: sampler,
+  texSize: vec2f,
+  texCoord: vec2f
+) -> vec4f {
+  var color = vec4f(0.0);
+  var total = 0.0;
+  let toCenter = zoomBlur.center * texSize - texCoord * texSize;
 
   /* randomize the lookup values to hide the fixed number of samples */
-  float offset = random(vec3(12.9898, 78.233, 151.7182), 0.0);
+  let offset = random(vec3f(12.9898, 78.233, 151.7182), 0.0);
 
-  for (float t = 0.0; t <= 40.0; t++) {
-    float percent = (t + offset) / 40.0;
-    float weight = 4.0 * (percent - percent * percent);
-    vec4 offsetColor = texture(source, texCoord + toCenter * percent * zoomBlur.strength / texSize);
+  for (var t = 0.0; t <= 40.0; t += 1.0) {
+    let percent = (t + offset) / 40.0;
+    let weight = 4.0 * (percent - percent * percent);
+    let offsetColor = textureSample(
+      sourceTexture,
+      sourceTextureSampler,
+      texCoord + toCenter * percent * zoomBlur.strength / texSize
+    );
     color += offsetColor * weight;
     total += weight;
   }
 
-  color = color / total;
+  color /= total;
   return color;
 }
 `;

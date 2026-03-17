@@ -22,15 +22,15 @@ struct backgroundUniforms {
 };
 @group(0) @binding(2) var<uniform> background: backgroundUniforms;
 
-fn billboardTexture_getTextureUV(coordinates: vec2<f32>) -> vec2<f32> {
+fn billboardTexture_getTextureUV(uv: vec2<f32>) -> vec2<f32> {
         let scale: vec2<f32> = background.scale;
-        var position: vec2<f32> = (coordinates - vec2<f32>(0.5, 0.5)) / scale + vec2<f32>(0.5, 0.5);
+        var position: vec2<f32> = (uv - vec2<f32>(0.5, 0.5)) / scale + vec2<f32>(0.5, 0.5);
         return position;
 }
 
 @fragment
 fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
-        let position: vec2<f32> = billboardTexture_getTextureUV(inputs.coordinate);
+        let position: vec2<f32> = billboardTexture_getTextureUV(inputs.uv);
         return textureSample(backgroundTexture, backgroundTextureSampler, position);
 }
 `;
@@ -79,21 +79,23 @@ export class BackgroundTextureModel extends ClipSpace {
 
   constructor(device: Device, props: BackgroundTextureModelProps) {
     super(device, {
+      ...props,
       id: props.id || 'background-texture-model',
       source: BACKGROUND_FS_WGSL,
       fs: BACKGROUND_FS,
-      modules: [backgroundModule],
+      modules: [...(props.modules || []), backgroundModule],
       parameters: {
         depthWriteEnabled: false,
+        ...(props.parameters || {}),
         ...(props.blend
           ? {
               blend: true,
               blendColorOperation: 'add',
               blendAlphaOperation: 'add',
-              blendColorSrcFactor: 'one',
-              blendColorDstFactor: 'one-minus-src',
-              blendAlphaSrcFactor: 'one',
-              blendAlphaDstFactor: 'one-minus-src-alpha'
+              blendColorSrcFactor: 'one-minus-dst-alpha',
+              blendColorDstFactor: 'one',
+              blendAlphaSrcFactor: 'one-minus-dst-alpha',
+              blendAlphaDstFactor: 'one'
             }
           : {})
       }

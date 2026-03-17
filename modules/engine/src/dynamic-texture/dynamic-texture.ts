@@ -1,7 +1,7 @@
 // luma.gl, MIT license
 // Copyright (c) vis.gl contributors
 
-import type {TextureProps, SamplerProps, TextureView, Device} from '@luma.gl/core';
+import type {TextureProps, SamplerProps, TextureView, Device, TextureFormat} from '@luma.gl/core';
 
 import {Texture, Sampler, log} from '@luma.gl/core';
 
@@ -29,6 +29,7 @@ import {
 
   // Helpers
   getTextureSizeFromData,
+  resolveTextureImageFormat,
   getTexture1DSubresources,
   getTexture2DSubresources,
   getTexture3DSubresources,
@@ -129,7 +130,7 @@ export class DynamicTexture {
   }
 
   /** @note Fire and forget; caller can await `ready` */
-  async initAsync(originalPropsWithAsyncData: TextureDataAsyncProps): Promise<void> {
+  async initAsync(originalPropsWithAsyncData: DynamicTextureProps): Promise<void> {
     try {
       // TODO - Accept URL string for 2D: turn into ExternalImage promise
       // const dataProps =
@@ -139,6 +140,11 @@ export class DynamicTexture {
 
       const propsWithSyncData = await this._loadAllData(originalPropsWithAsyncData);
       this._checkNotDestroyed();
+      const subresources = propsWithSyncData.data ? getTextureSubresources(propsWithSyncData) : [];
+      const userProvidedFormat =
+        'format' in originalPropsWithAsyncData && originalPropsWithAsyncData.format !== undefined;
+      const userProvidedUsage =
+        'usage' in originalPropsWithAsyncData && originalPropsWithAsyncData.usage !== undefined;
 
       // Deduce size when not explicitly provided
       // TODO - what about depth?
@@ -160,18 +166,44 @@ export class DynamicTexture {
         throw new Error(`${this} size could not be determined or was zero`);
       }
 
+      // Normalize caller-provided subresources into one validated mip chain description.
+      const textureData = analyzeTextureSubresources(this.device, subresources, size, {
+        format: userProvidedFormat ? originalPropsWithAsyncData.format : undefined
+      });
+      const resolvedFormat = textureData.format ?? this.props.format;
+
       // Create a minimal TextureProps and validate via `satisfies`
       const baseTextureProps = {
         ...this.props,
         ...size,
+        format: resolvedFormat,
         mipLevels: 1, // temporary; updated below
         data: undefined
       } satisfies TextureProps;
 
+      if (this.device.isTextureFormatCompressed(resolvedFormat) && !userProvidedUsage) {
+        baseTextureProps.usage = Texture.SAMPLE | Texture.COPY_DST;
+      }
+
+      // Explicit mip arrays take ownership of the mip chain; otherwise we may auto-generate it.
+      const shouldGenerateMipmaps =
+        this.props.mipmaps &&
+        !textureData.hasExplicitMipChain &&
+        !this.device.isTextureFormatCompressed(resolvedFormat);
+
+      if (this.device.type === 'webgpu' && shouldGenerateMipmaps) {
+        const requiredUsage =
+          this.props.dimension === '3d'
+            ? Texture.SAMPLE | Texture.STORAGE | Texture.COPY_DST | Texture.COPY_SRC
+            : Texture.SAMPLE | Texture.RENDER | Texture.COPY_DST | Texture.COPY_SRC;
+        baseTextureProps.usage |= requiredUsage;
+      }
+
       // Compute mip levels (auto clamps to max)
       const maxMips = this.device.getMipLevelCount(baseTextureProps.width, baseTextureProps.height);
-      const desired =
-        this.props.mipLevels === 'auto'
+      const desired = textureData.hasExplicitMipChain
+        ? textureData.mipLevels
+        : this.props.mipLevels === 'auto'
           ? maxMips
           : Math.max(1, Math.min(maxMips, this.props.mipLevels ?? 1));
 
@@ -182,33 +214,15 @@ export class DynamicTexture {
       this._view = this.texture.view;
 
       // Upload data if provided
-      if (propsWithSyncData.data) {
-        switch (propsWithSyncData.dimension) {
-          case '1d':
-            this.setTexture1DData(propsWithSyncData.data);
-            break;
-          case '2d':
-            this.setTexture2DData(propsWithSyncData.data);
-            break;
-          case '3d':
-            this.setTexture3DData(propsWithSyncData.data);
-            break;
-          case '2d-array':
-            this.setTextureArrayData(propsWithSyncData.data);
-            break;
-          case 'cube':
-            this.setTextureCubeData(propsWithSyncData.data);
-            break;
-          case 'cube-array':
-            this.setTextureCubeArrayData(propsWithSyncData.data);
-            break;
-          default: {
-            throw new Error(`Unhandled dimension ${propsWithSyncData.dimension}`);
-          }
-        }
+      if (textureData.subresources.length) {
+        this._setTextureSubresources(textureData.subresources);
       }
 
-      if (this.props.mipmaps) {
+      if (this.props.mipmaps && !textureData.hasExplicitMipChain && !shouldGenerateMipmaps) {
+        log.warn(`${this} skipping auto-generated mipmaps for compressed texture format`)();
+      }
+
+      if (shouldGenerateMipmaps) {
         this.generateMipmaps();
       }
 
@@ -234,11 +248,12 @@ export class DynamicTexture {
   }
 
   generateMipmaps(): void {
-    // Only supported via WebGL helper (luma.gl path)
     if (this.device.type === 'webgl') {
       this.texture.generateMipmapsWebGL();
+    } else if (this.device.type === 'webgpu') {
+      this.device.generateMipmapsWebGPU(this.texture);
     } else {
-      throw new Error('Automatic mipmap generation not supported on this device');
+      log.warn(`${this} mipmaps not supported on ${this.device.type}`);
     }
   }
 
@@ -331,7 +346,7 @@ export class DynamicTexture {
   }
 
   /** Cube array: multiple cubes (faces×layers), each face may carry multiple mips */
-  private setTextureCubeArrayData(data: TextureCubeArrayData): void {
+  setTextureCubeArrayData(data: TextureCubeArrayData): void {
     if (this.texture.props.dimension !== 'cube-array') {
       throw new Error(`${this} is not cube-array`);
     }
@@ -356,10 +371,21 @@ export class DynamicTexture {
           this.texture.copyExternalImage({image, z, mipLevel, flipY});
           break;
         case 'texture-data':
-          const {data} = subresource;
-          // TODO - we are throwing away some of the info in data.
-          // Did we not need it in the first place? Can we use it to validate?
-          this.texture.copyImageData({data: data.data, z, mipLevel});
+          const {data, textureFormat} = subresource;
+          if (textureFormat && textureFormat !== this.texture.format) {
+            throw new Error(
+              `${this} mip level ${mipLevel} uses format "${textureFormat}" but texture format is "${this.texture.format}"`
+            );
+          }
+          this.texture.writeData(data.data, {
+            x: 0,
+            y: 0,
+            z,
+            width: data.width,
+            height: data.height,
+            depthOrArrayLayers: 1,
+            mipLevel
+          });
           break;
         default:
           throw new Error('Unsupported 2D mip-level payload');
@@ -394,6 +420,192 @@ export class DynamicTexture {
     data: null,
     mipmaps: false
   };
+}
+
+type TextureSubresourceAnalysis = {
+  readonly subresources: TextureSubresource[];
+  readonly mipLevels: number;
+  readonly format?: TextureFormat;
+  readonly hasExplicitMipChain: boolean;
+};
+
+// Flatten dimension-specific texture data into one list of uploadable subresources.
+function getTextureSubresources(props: TextureDataProps): TextureSubresource[] {
+  if (!props.data) {
+    return [];
+  }
+
+  switch (props.dimension) {
+    case '1d':
+      return getTexture1DSubresources(props.data);
+    case '2d':
+      return getTexture2DSubresources(0, props.data);
+    case '3d':
+      return getTexture3DSubresources(props.data);
+    case '2d-array':
+      return getTextureArraySubresources(props.data);
+    case 'cube':
+      return getTextureCubeSubresources(props.data);
+    case 'cube-array':
+      return getTextureCubeArraySubresources(props.data);
+    default:
+      throw new Error(`Unhandled dimension ${(props as TextureDataProps).dimension}`);
+  }
+}
+
+// Resolve a consistent texture format and the longest mip chain valid across all slices.
+function analyzeTextureSubresources(
+  device: Device,
+  subresources: TextureSubresource[],
+  size: {width: number; height: number},
+  options: {format?: TextureFormat}
+): TextureSubresourceAnalysis {
+  if (subresources.length === 0) {
+    return {
+      subresources,
+      mipLevels: 1,
+      format: options.format,
+      hasExplicitMipChain: false
+    };
+  }
+
+  const groupedSubresources = new Map<number, TextureSubresource[]>();
+  for (const subresource of subresources) {
+    const group = groupedSubresources.get(subresource.z) ?? [];
+    group.push(subresource);
+    groupedSubresources.set(subresource.z, group);
+  }
+
+  const hasExplicitMipChain = subresources.some(subresource => subresource.mipLevel > 0);
+  let resolvedFormat = options.format;
+  let resolvedMipLevels = Number.POSITIVE_INFINITY;
+  const validSubresources: TextureSubresource[] = [];
+
+  for (const [z, sliceSubresources] of groupedSubresources) {
+    // Validate each slice independently, then keep only the mip levels that are valid everywhere.
+    const sortedSubresources = [...sliceSubresources].sort(
+      (left, right) => left.mipLevel - right.mipLevel
+    );
+    const baseLevel = sortedSubresources[0];
+    if (!baseLevel || baseLevel.mipLevel !== 0) {
+      throw new Error(`DynamicTexture: slice ${z} is missing mip level 0`);
+    }
+
+    const baseSize = getTextureSubresourceSize(device, baseLevel);
+    if (baseSize.width !== size.width || baseSize.height !== size.height) {
+      throw new Error(
+        `DynamicTexture: slice ${z} base level dimensions ${baseSize.width}x${baseSize.height} do not match expected ${size.width}x${size.height}`
+      );
+    }
+
+    const baseFormat = getTextureSubresourceFormat(baseLevel);
+    if (baseFormat) {
+      if (resolvedFormat && resolvedFormat !== baseFormat) {
+        throw new Error(
+          `DynamicTexture: slice ${z} base level format "${baseFormat}" does not match texture format "${resolvedFormat}"`
+        );
+      }
+      resolvedFormat = baseFormat;
+    }
+
+    const mipLevelLimit =
+      resolvedFormat && device.isTextureFormatCompressed(resolvedFormat)
+        ? // Block-compressed formats cannot have mips smaller than a single compression block.
+          getMaxCompressedMipLevels(device, baseSize.width, baseSize.height, resolvedFormat)
+        : device.getMipLevelCount(baseSize.width, baseSize.height);
+
+    let validMipLevelsForSlice = 0;
+    for (
+      let expectedMipLevel = 0;
+      expectedMipLevel < sortedSubresources.length;
+      expectedMipLevel++
+    ) {
+      const subresource = sortedSubresources[expectedMipLevel];
+      // Stop at the first gap so callers can provide extra trailing data without breaking creation.
+      if (!subresource || subresource.mipLevel !== expectedMipLevel) {
+        break;
+      }
+      if (expectedMipLevel >= mipLevelLimit) {
+        break;
+      }
+
+      const subresourceSize = getTextureSubresourceSize(device, subresource);
+      const expectedWidth = Math.max(1, baseSize.width >> expectedMipLevel);
+      const expectedHeight = Math.max(1, baseSize.height >> expectedMipLevel);
+      if (subresourceSize.width !== expectedWidth || subresourceSize.height !== expectedHeight) {
+        break;
+      }
+
+      const subresourceFormat = getTextureSubresourceFormat(subresource);
+      if (subresourceFormat) {
+        if (!resolvedFormat) {
+          resolvedFormat = subresourceFormat;
+        }
+        // Later mip levels must stay on the same format as the validated base level.
+        if (subresourceFormat !== resolvedFormat) {
+          break;
+        }
+      }
+
+      validMipLevelsForSlice++;
+      validSubresources.push(subresource);
+    }
+
+    resolvedMipLevels = Math.min(resolvedMipLevels, validMipLevelsForSlice);
+  }
+
+  const mipLevels = Number.isFinite(resolvedMipLevels) ? Math.max(1, resolvedMipLevels) : 1;
+
+  return {
+    // Keep every slice trimmed to the same mip count so the texture shape stays internally consistent.
+    subresources: validSubresources.filter(subresource => subresource.mipLevel < mipLevels),
+    mipLevels,
+    format: resolvedFormat,
+    hasExplicitMipChain
+  };
+}
+
+// Read the per-level format using the transitional textureFormat -> format fallback rules.
+function getTextureSubresourceFormat(subresource: TextureSubresource): TextureFormat | undefined {
+  if (subresource.type !== 'texture-data') {
+    return undefined;
+  }
+  return subresource.textureFormat ?? resolveTextureImageFormat(subresource.data);
+}
+
+// Resolve dimensions from either raw bytes or external-image subresources.
+function getTextureSubresourceSize(
+  device: Device,
+  subresource: TextureSubresource
+): {width: number; height: number} {
+  switch (subresource.type) {
+    case 'external-image':
+      return device.getExternalImageSize(subresource.image);
+    case 'texture-data':
+      return {width: subresource.data.width, height: subresource.data.height};
+    default:
+      throw new Error('Unsupported texture subresource');
+  }
+}
+
+// Count the mip levels that stay at or above one compression block in each dimension.
+function getMaxCompressedMipLevels(
+  device: Device,
+  baseWidth: number,
+  baseHeight: number,
+  format: TextureFormat
+): number {
+  const {blockWidth = 1, blockHeight = 1} = device.getTextureFormatInfo(format);
+  let mipLevels = 1;
+  for (let mipLevel = 1; ; mipLevel++) {
+    const width = Math.max(1, baseWidth >> mipLevel);
+    const height = Math.max(1, baseHeight >> mipLevel);
+    if (width < blockWidth || height < blockHeight) {
+      break;
+    }
+    mipLevels++;
+  }
+  return mipLevels;
 }
 
 // HELPERS

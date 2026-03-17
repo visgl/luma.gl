@@ -24,6 +24,12 @@ export class WEBGLRenderPass extends RenderPass {
     super(device, props);
     this.device = device;
 
+    if (!props?.framebuffer) {
+      // Default-framebuffer rendering bypasses CanvasContext.getCurrentFramebuffer(),
+      // so flush any deferred canvas resize before deriving viewport state.
+      device.getDefaultCanvasContext()._resizeDrawingBufferIfNeeded();
+    }
+
     // If no viewport is provided, apply reasonably defaults
     let viewport: NumberArray4 | undefined;
     if (!props?.parameters?.viewport) {
@@ -50,17 +56,31 @@ export class WEBGLRenderPass extends RenderPass {
         (_, i) => GL.COLOR_ATTACHMENT0 + i
       );
       this.device.gl.drawBuffers(drawBuffers);
-    } else {
+    } else if (!this.props.framebuffer) {
+      // Default framebuffer only supports GL.BACK/GL.NONE draw buffers
       this.device.gl.drawBuffers([GL.BACK]);
     }
 
     // Hack - for now WebGL draws in "immediate mode" (instead of queueing the operations)...
     this.clear();
+
+    if (this.props.timestampQuerySet && this.props.beginTimestampIndex !== undefined) {
+      const webglQuerySet = this.props.timestampQuerySet as WEBGLQuerySet;
+      webglQuerySet.writeTimestamp(this.props.beginTimestampIndex);
+    }
   }
 
   end(): void {
+    if (this.destroyed) {
+      return;
+    }
+    if (this.props.timestampQuerySet && this.props.endTimestampIndex !== undefined) {
+      const webglQuerySet = this.props.timestampQuerySet as WEBGLQuerySet;
+      webglQuerySet.writeTimestamp(this.props.endTimestampIndex);
+    }
     this.device.popState();
     // should add commands to CommandEncoder.
+    this.destroy();
   }
 
   pushDebugGroup(groupLabel: string): void {}
@@ -110,12 +130,9 @@ export class WEBGLRenderPass extends RenderPass {
     if (parameters.blendConstant) {
       glParameters.blendColor = parameters.blendConstant;
     }
-    if (parameters.stencilReference) {
-      // eslint-disable-next-line no-console
-      console.warn('RenderPassParameters.stencilReference not yet implemented in WebGL');
-      // parameters.stencilFunc = [func, ref, mask];
-      // Does this work?
+    if (parameters.stencilReference !== undefined) {
       glParameters[GL.STENCIL_REF] = parameters.stencilReference;
+      glParameters[GL.STENCIL_BACK_REF] = parameters.stencilReference;
     }
 
     if ('colorMask' in parameters) {

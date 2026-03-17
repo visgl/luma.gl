@@ -5,12 +5,8 @@ import {HelloCubeExample} from '@site/src/examples';
 
 This tutorial demonstrates how to render a spinning textured cube using luma.gl's cross-platform rendering APIs.
 
-:::caution
-Tutorials are maintained on a best-effort basis and may not be fully up to date (contributions welcome). Working versions of these examples are found in the [`/examples/tutorials`](https://github.com/visgl/luma.gl/tree/master/examples/tutorials) directory of the luma.gl repository.
-:::
-
 <DeviceTabs />
-<HelloCubeExample />
+<HelloCubeExample showHeader={false} showStats={false} />
 
 It is assumed you've set up your development environment as described in [Setup](/docs/tutorials).
 
@@ -33,7 +29,7 @@ import {
   Model,
   CubeGeometry,
   loadImageBitmap,
-  AsyncTexture
+  DynamicTexture
 } from '@luma.gl/engine';
 import {webgl2Adapter} from '@luma.gl/webgl';
 import {webgpuAdapter} from '@luma.gl/webgpu';
@@ -135,7 +131,7 @@ class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   constructor({device}: AnimationProps) {
     super();
 
-    const texture = new AsyncTexture(device, {
+    const texture = new DynamicTexture(device, {
       usage: Texture.TEXTURE | Texture.RENDER_ATTACHMENT | Texture.COPY_DST,
       data: loadImageBitmap('vis-logo.png'),
       flipY: true,
@@ -186,7 +182,9 @@ class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 }
 
-const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {adapters: [webgpuAdapter, webgl2Adapter]})
+const animationLoop = makeAnimationLoop(AppAnimationLoopTemplate, {
+  adapters: [webgpuAdapter, webgl2Adapter]
+});
 animationLoop.start();
 ```
 

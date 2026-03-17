@@ -16,12 +16,6 @@ const INDEX_PICKING_MODE_INSTANCE = 0;
 const INDEX_PICKING_MODE_CUSTOM = 1;
 const INDEX_PICKING_INVALID_INDEX = ${INVALID_INDEX}; // 2^32 - 1
 
-struct indexPickingFragmentInputs = {
-  objectIndex: int32;
-};
-
-let indexPickingFragmentInputs: indexPickingFragmentInputs;
-
 /**
  * Vertex shaders should call this function to set the object index.
  * If using instance or vertex mode, argument will be ignored, 0 can be supplied.

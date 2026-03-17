@@ -15,6 +15,17 @@ uniform pbrProjectionUniforms {
 } pbrProjection;
 `;
 
+const wgslUniformBlock = /* wgsl */ `\
+struct pbrProjectionUniforms {
+  modelViewProjectionMatrix: mat4x4<f32>,
+  modelMatrix: mat4x4<f32>,
+  normalMatrix: mat4x4<f32>,
+  camera: vec3<f32>
+};
+
+@binding(0) @group(0) var<uniform> pbrProjection: pbrProjectionUniforms;
+`;
+
 export type PBRProjectionProps = {
   modelViewProjectionMatrix: NumberArray16;
   modelMatrix: NumberArray16;
@@ -24,6 +35,7 @@ export type PBRProjectionProps = {
 
 export const pbrProjection: ShaderModule<PBRProjectionProps> = {
   name: 'pbrProjection',
+  source: wgslUniformBlock,
   vs: uniformBlock,
   fs: uniformBlock,
   // TODO why is this needed?
@@ -32,6 +44,6 @@ export const pbrProjection: ShaderModule<PBRProjectionProps> = {
     modelViewProjectionMatrix: 'mat4x4<f32>',
     modelMatrix: 'mat4x4<f32>',
     normalMatrix: 'mat4x4<f32>',
-    camera: 'vec3<i32>'
+    camera: 'vec3<f32>'
   }
 };

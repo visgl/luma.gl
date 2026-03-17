@@ -5,6 +5,8 @@
 import type {
   DeviceProps,
   CanvasContextProps,
+  PresentationContextProps,
+  PresentationContext,
   VertexArray,
   VertexArrayProps,
   BufferProps,
@@ -22,6 +24,7 @@ import type {
   QuerySetProps
 } from '@luma.gl/core';
 import {Device, DeviceFeatures} from '@luma.gl/core';
+import type {NullCommandBuffer} from './resources/null-command-buffer';
 
 import {NullDeviceInfo} from './null-device-info';
 import {NullDeviceLimits} from './null-device-features';
@@ -72,7 +75,9 @@ export class NullDevice extends Device {
    * Destroys the context
    * @note Has no effect for null contexts
    */
-  destroy(): void {}
+  destroy(): void {
+    this.commandEncoder?.destroy();
+  }
 
   get isLost(): boolean {
     return false;
@@ -82,6 +87,10 @@ export class NullDevice extends Device {
 
   createCanvasContext(props: CanvasContextProps): NullCanvasContext {
     return new NullCanvasContext(this, props);
+  }
+
+  createPresentationContext(_props?: PresentationContextProps): PresentationContext {
+    throw new Error('PresentationContext is not supported on NullDevice');
   }
 
   createBuffer(props: BufferProps | ArrayBuffer | ArrayBufferView): NullBuffer {
@@ -141,7 +150,15 @@ export class NullDevice extends Device {
     return new NullCommandEncoder(this, props);
   }
 
-  submit(): void {}
+  submit(commandBuffer?: NullCommandBuffer): void {
+    if (!commandBuffer) {
+      commandBuffer = this.commandEncoder.finish({id: `${this.id}-default-command-buffer`});
+      this.commandEncoder.destroy();
+      this.commandEncoder = this.createCommandEncoder({id: `${this.id}-default-command-encoder`});
+    }
+
+    commandBuffer.destroy();
+  }
 
   override setParametersWebGL(parameters: any): void {}
 

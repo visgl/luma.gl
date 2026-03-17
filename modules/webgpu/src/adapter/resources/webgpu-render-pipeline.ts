@@ -77,6 +77,8 @@ export class WebGPURenderPipeline extends RenderPipeline {
     uniforms?: Record<string, unknown>;
   }): boolean {
     const webgpuRenderPass = options.renderPass as WebGPURenderPass;
+    const instanceCount =
+      options.instanceCount && options.instanceCount > 0 ? options.instanceCount : 1;
 
     // Set pipeline
     this.device.pushErrorScope('validation');
@@ -100,16 +102,17 @@ export class WebGPURenderPipeline extends RenderPipeline {
     if (options.indexCount) {
       webgpuRenderPass.handle.drawIndexed(
         options.indexCount,
-        options.instanceCount,
-        options.firstIndex,
-        options.baseVertex,
-        options.firstInstance
+        instanceCount,
+        options.firstIndex || 0,
+        options.baseVertex || 0,
+        options.firstInstance || 0
       );
     } else {
       webgpuRenderPass.handle.draw(
         options.vertexCount || 0,
-        options.instanceCount || 1, // If 0, nothing will be drawn
-        options.firstInstance
+        instanceCount,
+        options.firstVertex || 0,
+        options.firstInstance || 0
       );
     }
 
@@ -129,7 +132,7 @@ export class WebGPURenderPipeline extends RenderPipeline {
     this._bindGroupLayout = this._bindGroupLayout || this.handle.getBindGroupLayout(0);
 
     // Set up the bindings
-    return getBindGroup(this.device.handle, this._bindGroupLayout, this.shaderLayout, bindings);
+    return getBindGroup(this.device, this._bindGroupLayout, this.shaderLayout, bindings);
   }
 
   /**

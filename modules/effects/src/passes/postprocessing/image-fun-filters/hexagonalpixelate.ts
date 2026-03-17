@@ -12,42 +12,54 @@ struct hexagonalPixelateUniforms {
 
 @group(0) @binding(1) var<uniform> hexagonalPixelate: hexagonalPixelateUniforms;
 
-fn hexagonalPixelate_sampleColor(sampler2D source, vec2 texSize, vec2 texCoord) -> vec4f {
-  vec2 tex = (texCoord * texSize - hexagonalPixelate.center * texSize) / hexagonalPixelate.scale;
+fn hexagonalPixelate_sampleColor(
+  sourceTexture: texture_2d<f32>,
+  sourceTextureSampler: sampler,
+  texSize: vec2f,
+  texCoord: vec2f
+) -> vec4f {
+  var tex = (texCoord * texSize - hexagonalPixelate.center * texSize) / hexagonalPixelate.scale;
   tex.y /= 0.866025404;
   tex.x -= tex.y * 0.5;
 
-  vec2 a;
+  var a = vec2f(0.0);
   if (tex.x + tex.y - floor(tex.x) - floor(tex.y) < 1.0) {
-    a = vec2(floor(tex.x), floor(tex.y));
-  }
-  else a = vec2(ceil(tex.x), ceil(tex.y));
-  vec2 b = vec2(ceil(tex.x), floor(tex.y));
-  vec2 c = vec2(floor(tex.x), ceil(tex.y));
-
-  vec3 TEX = vec3(tex.x, tex.y, 1.0 - tex.x - tex.y);
-  vec3 A = vec3(a.x, a.y, 1.0 - a.x - a.y);
-  vec3 B = vec3(b.x, b.y, 1.0 - b.x - b.y);
-  vec3 C = vec3(c.x, c.y, 1.0 - c.x - c.y);
-
-  float alen = length(TEX - A);
-  float blen = length(TEX - B);
-  float clen = length(TEX - C);
-
-  vec2 choice;
-  if (alen < blen) {
-    if (alen < clen) choice = a;
-    else choice = c;
+    a = vec2f(floor(tex.x), floor(tex.y));
   } else {
-    if (blen < clen) choice = b;
-    else choice = c;
+    a = vec2f(ceil(tex.x), ceil(tex.y));
+  }
+  let b = vec2f(ceil(tex.x), floor(tex.y));
+  let c = vec2f(floor(tex.x), ceil(tex.y));
+
+  let texBarycentric = vec3f(tex.x, tex.y, 1.0 - tex.x - tex.y);
+  let aBarycentric = vec3f(a.x, a.y, 1.0 - a.x - a.y);
+  let bBarycentric = vec3f(b.x, b.y, 1.0 - b.x - b.y);
+  let cBarycentric = vec3f(c.x, c.y, 1.0 - c.x - c.y);
+
+  let aLength = length(texBarycentric - aBarycentric);
+  let bLength = length(texBarycentric - bBarycentric);
+  let cLength = length(texBarycentric - cBarycentric);
+
+  var choice = vec2f(0.0);
+  if (aLength < bLength) {
+    if (aLength < cLength) {
+      choice = a;
+    } else {
+      choice = c;
+    }
+  } else {
+    if (bLength < cLength) {
+      choice = b;
+    } else {
+      choice = c;
+    }
   }
 
   choice.x += choice.y * 0.5;
   choice.y *= 0.866025404;
   choice *= hexagonalPixelate.scale / texSize;
 
-  return texture(source, choice + hexagonalPixelate.center);
+  return textureSample(sourceTexture, sourceTextureSampler, choice + hexagonalPixelate.center);
 }
 `;
 

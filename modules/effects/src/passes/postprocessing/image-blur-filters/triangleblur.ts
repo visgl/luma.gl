@@ -6,26 +6,35 @@ import type {ShaderPass} from '@luma.gl/shadertools';
 import {random} from '@luma.gl/shadertools';
 
 const source = /* wgsl */ `\
-uniform triangleBlurUniforms {
+struct triangleBlurUniforms {
   radius: f32,
   delta: vec2f,
-}
+};
 
 @group(0) @binding(1) var<uniform> triangleBlur: triangleBlurUniforms;
 
-vec4 triangleBlur_sampleColor(sampler2D source, vec2 texSize, vec2 texCoord) {
-  vec2 adjustedDelta = triangleBlur.delta * triangleBlur.radius / texSize;
+fn triangleBlur_sampleColor(
+  sourceTexture: texture_2d<f32>,
+  sourceTextureSampler: sampler,
+  texSize: vec2f,
+  texCoord: vec2f
+) -> vec4f {
+  let adjustedDelta = triangleBlur.delta * triangleBlur.radius / texSize;
 
-  vec4 color = vec4(0.0);
-  float total = 0.0;
+  var color = vec4f(0.0);
+  var total = 0.0;
 
   /* randomize the lookup values to hide the fixed number of samples */
-  float offset = random(vec3(12.9898, 78.233, 151.7182), 0.0);
+  let offset = random(vec3f(12.9898, 78.233, 151.7182), 0.0);
 
-  for (float t = -30.0; t <= 30.0; t++) {
-    float percent = (t + offset - 0.5) / 30.0;
-    float weight = 1.0 - abs(percent);
-    vec4 offsetColor = texture(source, texCoord + adjustedDelta * percent);
+  for (var t = -30.0; t <= 30.0; t += 1.0) {
+    let percent = (t + offset - 0.5) / 30.0;
+    let weight = 1.0 - abs(percent);
+    var offsetColor = textureSample(
+      sourceTexture,
+      sourceTextureSampler,
+      texCoord + adjustedDelta * percent
+    );
 
     /* switch to pre-multiplied alpha to correctly blur transparent images */
     offsetColor.rgb *= offsetColor.a;
@@ -34,7 +43,7 @@ vec4 triangleBlur_sampleColor(sampler2D source, vec2 texSize, vec2 texCoord) {
     total += weight;
   }
 
-  color = color / total;
+  color /= total;
 
   /* switch back from pre-multiplied alpha */
   color.rgb /= color.a + 0.00001;

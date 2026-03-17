@@ -7,10 +7,15 @@
 import type {SamplerProps} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 
+/** Minimal glTF sampler representation used during conversion. */
 type GLTFSampler = {
+  /** Horizontal wrap mode. */
   wrapS?: GL.CLAMP_TO_EDGE | GL.REPEAT | GL.MIRRORED_REPEAT;
+  /** Vertical wrap mode. */
   wrapT?: GL.CLAMP_TO_EDGE | GL.REPEAT | GL.MIRRORED_REPEAT;
+  /** Magnification filter. */
   magFilter?: GL.NEAREST | GL.LINEAR;
+  /** Minification and mip filter combination. */
   minFilter?:
     | GL.NEAREST
     | GL.LINEAR
@@ -20,6 +25,7 @@ type GLTFSampler = {
     | GL.LINEAR_MIPMAP_LINEAR;
 };
 
+/** Converts a glTF sampler into luma.gl sampler props. */
 export function convertSampler(gltfSampler: GLTFSampler): SamplerProps {
   return {
     addressModeU: convertSamplerWrapMode(gltfSampler.wrapS),
@@ -29,6 +35,7 @@ export function convertSampler(gltfSampler: GLTFSampler): SamplerProps {
   };
 }
 
+/** Converts a glTF wrap enum into a luma.gl address mode. */
 function convertSamplerWrapMode(
   mode: GL.CLAMP_TO_EDGE | GL.REPEAT | GL.MIRRORED_REPEAT | undefined
 ): 'clamp-to-edge' | 'repeat' | 'mirror-repeat' | undefined {
@@ -44,6 +51,7 @@ function convertSamplerWrapMode(
   }
 }
 
+/** Converts a glTF mag filter enum into a luma.gl mag filter. */
 function convertSamplerMagFilter(
   mode: GL.NEAREST | GL.LINEAR | undefined
 ): 'nearest' | 'linear' | undefined {
@@ -57,6 +65,7 @@ function convertSamplerMagFilter(
   }
 }
 
+/** Converts a glTF min filter enum into luma.gl minification and mipmap filters. */
 function convertSamplerMinFilter(
   mode:
     | GL.NEAREST

@@ -12,6 +12,7 @@ import {AnimationProps} from './animation-props';
 import {Stats, Stat} from '@probe.gl/stats';
 
 let statIdCounter = 0;
+const ANIMATION_LOOP_STATS = 'Animation Loop';
 
 /** AnimationLoop properties */
 export type AnimationLoopProps = {
@@ -45,7 +46,7 @@ export class AnimationLoop {
     onFinalize: () => {},
     onError: error => console.error(error), // eslint-disable-line no-console
 
-    stats: luma.stats.get(`animation-loop-${statIdCounter++}`),
+    stats: undefined!,
 
     // view parameters
     autoResizeViewport: false
@@ -58,6 +59,7 @@ export class AnimationLoop {
   animationProps: AnimationProps | null = null;
   timeline: Timeline | null = null;
   stats: Stats;
+  sharedStats: Stats;
   cpuTime: Stat;
   gpuTime: Stat;
   frameRate: Stat;
@@ -73,8 +75,7 @@ export class AnimationLoop {
   _resolveNextFrame: ((animationLoop: AnimationLoop) => void) | null = null;
   _cpuStartTime: number = 0;
   _error: Error | null = null;
-
-  // _gpuTimeQuery: Query | null = null;
+  _lastFrameTime: number = 0;
 
   /*
    * @param {HTMLCanvasElement} canvas - if provided, width and height will be passed to context
@@ -88,10 +89,12 @@ export class AnimationLoop {
     }
 
     // state
-    this.stats = props.stats || new Stats({id: 'animation-loop-stats'});
+    this.stats = props.stats || new Stats({id: `animation-loop-${statIdCounter++}`});
+    this.sharedStats = luma.stats.get(ANIMATION_LOOP_STATS);
+    this.frameRate = this.stats.get('Frame Rate');
+    this.frameRate.setSampleSize(1);
     this.cpuTime = this.stats.get('CPU Time');
     this.gpuTime = this.stats.get('GPU Time');
-    this.frameRate = this.stats.get('Frame Rate');
 
     this.setProps({autoResizeViewport: props.autoResizeViewport});
 
@@ -106,6 +109,7 @@ export class AnimationLoop {
   destroy(): void {
     this.stop();
     this._setDisplay(null);
+    this.device?._disableDebugGPUTime();
   }
 
   /** @deprecated Use .destroy() */
@@ -192,17 +196,18 @@ export class AnimationLoop {
       this._nextFramePromise = null;
       this._resolveNextFrame = null;
       this._running = false;
+      this._lastFrameTime = 0;
     }
     return this;
   }
 
   /** Explicitly draw a frame */
-  redraw(): this {
+  redraw(time?: number): this {
     if (this.device?.isLost || this._error) {
       return this;
     }
 
-    this._beginFrameTimers();
+    this._beginFrameTimers(time);
 
     this._setupFrame();
     this._updateAnimationProps();
@@ -268,7 +273,7 @@ export class AnimationLoop {
     // Default viewport setup, in case onInitialize wants to render
     this._resizeViewport();
 
-    // this._gpuTimeQuery = Query.isSupported(this.gl, ['timers']) ? new Query(this.gl) : null;
+    this.device?._enableDebugGPUTime();
   }
 
   _setDisplay(display: any): void {
@@ -314,11 +319,11 @@ export class AnimationLoop {
     this._animationFrameId = null;
   }
 
-  _animationFrame(): void {
+  _animationFrame(time: number): void {
     if (!this._running) {
       return;
     }
-    this.redraw();
+    this.redraw(time);
     this._requestAnimationFrame();
   }
 
@@ -467,20 +472,10 @@ export class AnimationLoop {
     if (!this.device) {
       return {width: 1, height: 1, aspect: 1};
     }
-    // https://webglfundamentals.org/webgl/lessons/webgl-resizing-the-canvas.html
-    const [width, height] = this.device?.getDefaultCanvasContext().getDevicePixelSize() || [1, 1];
-
-    // https://webglfundamentals.org/webgl/lessons/webgl-anti-patterns.html
-    let aspect = 1;
-    const canvas = this.device?.getDefaultCanvasContext().canvas;
-
-    // @ts-expect-error
-    if (canvas && canvas.clientHeight) {
-      // @ts-expect-error
-      aspect = canvas.clientWidth / canvas.clientHeight;
-    } else if (width > 0 && height > 0) {
-      aspect = width / height;
-    }
+    // Match projection setup to the actual render target dimensions, which may
+    // differ from the CSS size when device-pixel scaling or backend clamping applies.
+    const [width, height] = this.device.getDefaultCanvasContext().getDrawingBufferSize();
+    const aspect = width > 0 && height > 0 ? width / height : 1;
 
     return {width, height, aspect};
   }
@@ -502,36 +497,70 @@ export class AnimationLoop {
     }
   }
 
-  _beginFrameTimers() {
-    this.frameRate.timeEnd();
-    this.frameRate.timeStart();
+  _beginFrameTimers(time?: number) {
+    const now = time ?? (typeof performance !== 'undefined' ? performance.now() : Date.now());
+    if (this._lastFrameTime) {
+      const frameTime = now - this._lastFrameTime;
+      if (frameTime > 0) {
+        this.frameRate.addTime(frameTime);
+      }
+    }
+    this._lastFrameTime = now;
 
-    // Check if timer for last frame has completed.
-    // GPU timer results are never available in the same
-    // frame they are captured.
-    // if (
-    //   this._gpuTimeQuery &&
-    //   this._gpuTimeQuery.isResultAvailable() &&
-    //   !this._gpuTimeQuery.isTimerDisjoint()
-    // ) {
-    //   this.stats.get('GPU Time').addTime(this._gpuTimeQuery.getTimerMilliseconds());
-    // }
-
-    // if (this._gpuTimeQuery) {
-    //   // GPU time query start
-    //   this._gpuTimeQuery.beginTimeElapsedQuery();
-    // }
+    if (this.device?._isDebugGPUTimeEnabled()) {
+      this._consumeEncodedGpuTime();
+    }
 
     this.cpuTime.timeStart();
   }
 
   _endFrameTimers() {
-    this.cpuTime.timeEnd();
+    if (this.device?._isDebugGPUTimeEnabled()) {
+      this._consumeEncodedGpuTime();
+    }
 
-    // if (this._gpuTimeQuery) {
-    //   // GPU time query end. Results will be available on next frame.
-    //   this._gpuTimeQuery.end();
-    // }
+    this.cpuTime.timeEnd();
+    this._updateSharedStats();
+  }
+
+  _consumeEncodedGpuTime(): void {
+    if (!this.device) {
+      return;
+    }
+
+    const gpuTimeMs = this.device.commandEncoder._gpuTimeMs;
+    if (gpuTimeMs !== undefined) {
+      this.gpuTime.addTime(gpuTimeMs);
+      this.device.commandEncoder._gpuTimeMs = undefined;
+    }
+  }
+
+  _updateSharedStats(): void {
+    if (this.stats === this.sharedStats) {
+      return;
+    }
+
+    for (const name of Object.keys(this.sharedStats.stats)) {
+      if (!this.stats.stats[name]) {
+        delete this.sharedStats.stats[name];
+      }
+    }
+
+    this.stats.forEach(sourceStat => {
+      const targetStat = this.sharedStats.get(sourceStat.name, sourceStat.type);
+      targetStat.sampleSize = sourceStat.sampleSize;
+      targetStat.time = sourceStat.time;
+      targetStat.count = sourceStat.count;
+      targetStat.samples = sourceStat.samples;
+      targetStat.lastTiming = sourceStat.lastTiming;
+      targetStat.lastSampleTime = sourceStat.lastSampleTime;
+      targetStat.lastSampleCount = sourceStat.lastSampleCount;
+      targetStat._count = sourceStat._count;
+      targetStat._time = sourceStat._time;
+      targetStat._samples = sourceStat._samples;
+      targetStat._startTime = sourceStat._startTime;
+      targetStat._timerPending = sourceStat._timerPending;
+    });
   }
 
   // Event handling

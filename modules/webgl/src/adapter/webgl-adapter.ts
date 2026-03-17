@@ -55,10 +55,9 @@ export class WebGLAdapter extends Adapter {
     if (gl instanceof WebGLDevice) {
       return gl;
     }
-    // @ts-expect-error
-    if (gl?.device instanceof WebGLDevice) {
-      // @ts-expect-error
-      return gl.device as WebGLDevice;
+    const existingDevice = WebGLDevice.getDeviceFromContext(gl as WebGL2RenderingContext | null);
+    if (existingDevice) {
+      return existingDevice;
     }
     if (!isWebGL(gl)) {
       throw new Error('Invalid WebGL2RenderingContext');
@@ -125,8 +124,7 @@ function isWebGL(gl: any): gl is WebGL2RenderingContext {
   if (typeof WebGL2RenderingContext !== 'undefined' && gl instanceof WebGL2RenderingContext) {
     return true;
   }
-  // Look for debug contexts, headless gl etc
-  return Boolean(gl && Number.isFinite(gl._version));
+  return Boolean(gl && typeof gl.createVertexArray === 'function');
 }
 
 export const webgl2Adapter = new WebGLAdapter();

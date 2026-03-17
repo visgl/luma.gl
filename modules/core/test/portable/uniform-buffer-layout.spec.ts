@@ -100,6 +100,28 @@ test('array of structs layout', t => {
   t.end();
 });
 
+test('uniform layout accepts WGSL alias types', t => {
+  const layout = new UniformBufferLayout({
+    camera: 'vec3f',
+    modelMatrix: 'mat4x4f'
+  } as any);
+
+  const data = layout.getData({
+    camera: [1, 2, 3],
+    modelMatrix: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]
+  });
+
+  const view = new Float32Array(data.buffer);
+  t.equal(view[0], 1, 'camera[0]');
+  t.equal(view[1], 2, 'camera[1]');
+  t.equal(view[2], 3, 'camera[2]');
+  t.equal(view[4], 1, 'modelMatrix[0]');
+  t.equal(view[9], 1, 'modelMatrix[5]');
+  t.equal(view[14], 1, 'modelMatrix[10]');
+  t.equal(view[19], 1, 'modelMatrix[15]');
+  t.end();
+});
+
 /*
 import test from 'tape-promise/tape';
 import {UniformBufferLayout, UniformBlock} from '@luma.gl/core';

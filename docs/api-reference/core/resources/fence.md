@@ -10,7 +10,7 @@ Remarks:
 
 ### `FenceProps`
 
-`FenceProps` extends [`ResourceProps`](../resource.md#resourceprops) and accepts the following fields.
+`FenceProps` extends [`ResourceProps`](resource.md#resourceprops) and accepts the following fields.
 
 | Property    | Type                  | Default       | Description                                                   |
 | ----------- | --------------------- | ------------- | ------------------------------------------------------------- |

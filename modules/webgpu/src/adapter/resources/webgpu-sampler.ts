@@ -40,6 +40,11 @@ export class WebGPUSampler extends Sampler {
   }
 
   override destroy(): void {
+    if (this.destroyed) {
+      return;
+    }
+
+    this.destroyResource();
     // GPUSampler does not have a destroy method
     // this.handle.destroy();
     // @ts-expect-error readonly

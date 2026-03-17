@@ -10,22 +10,50 @@ import {parseGLTF, type ParseGLTFOptions} from '../parsers/parse-gltf';
 import {parseGLTFLights} from '../parsers/parse-gltf-lights';
 import {GLTFAnimator} from './gltf-animator';
 import {parseGLTFAnimations} from '../parsers/parse-gltf-animations';
-import {deepCopy} from '../utils/deep-copy';
 
+/** Scenegraph bundle returned from a parsed glTF asset. */
+export type GLTFScenegraphs = {
+  /** Scene roots produced from the glTF scenes array. */
+  scenes: GroupNode[];
+  /** Animation controller for glTF animations. */
+  animator: GLTFAnimator;
+  /** Parsed punctual lights from the asset. */
+  lights: Light[];
+
+  /** Map from glTF mesh ids to generated mesh group nodes. */
+  gltfMeshIdToNodeMap: Map<string, GroupNode>;
+  /** Map from glTF node indices to generated scenegraph nodes. */
+  gltfNodeIndexToNodeMap: Map<number, GroupNode>;
+  /** Map from glTF node ids to generated scenegraph nodes. */
+  gltfNodeIdToNodeMap: Map<string, GroupNode>;
+
+  /** Original post-processed glTF document. */
+  gltf: GLTFPostprocessed;
+};
+
+/** Converts a post-processed glTF asset into luma.gl scenegraph nodes and animation helpers. */
 export function createScenegraphsFromGLTF(
   device: Device,
   gltf: GLTFPostprocessed,
   options?: ParseGLTFOptions
-): {
-  scenes: GroupNode[];
-  animator: GLTFAnimator;
-  lights: Light[];
-} {
-  gltf = deepCopy(gltf);
-  const scenes = parseGLTF(device, gltf, options);
-  // Note: There is a nasty dependency on injected nodes in the glTF
+): GLTFScenegraphs {
+  const {scenes, gltfMeshIdToNodeMap, gltfNodeIdToNodeMap, gltfNodeIndexToNodeMap} = parseGLTF(
+    device,
+    gltf,
+    options
+  );
+
   const animations = parseGLTFAnimations(gltf);
-  const animator = new GLTFAnimator({animations});
+  const animator = new GLTFAnimator({animations, gltfNodeIdToNodeMap});
   const lights = parseGLTFLights(gltf);
-  return {scenes, animator, lights};
+
+  return {
+    scenes,
+    animator,
+    lights,
+    gltfMeshIdToNodeMap,
+    gltfNodeIdToNodeMap,
+    gltfNodeIndexToNodeMap,
+    gltf
+  };
 }

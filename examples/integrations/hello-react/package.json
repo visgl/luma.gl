@@ -1,0 +1,26 @@
+{
+  "name": "luma.gl-examples-hello-react",
+  "version": "9.3.0-alpha.4",
+  "private": true,
+  "scripts": {
+    "start": "vite",
+    "build": "tsc && vite build",
+    "serve": "vite preview"
+  },
+  "dependencies": {
+    "@luma.gl/core": "9.3.0-alpha.4",
+    "@luma.gl/engine": "9.3.0-alpha.4",
+    "@luma.gl/shadertools": "9.3.0-alpha.4",
+    "@luma.gl/webgl": "9.3.0-alpha.4",
+    "@math.gl/core": "^4.1.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.0",
+    "typescript": "^5.9.3",
+    "vite": "^8.0.0"
+  }
+}

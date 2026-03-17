@@ -5,12 +5,8 @@ import {ShaderHooksExample} from '@site/src/examples';
 
 Shader hooks let shader modules inject code into designated points in a shader. This example defines an `OFFSET_POSITION` hook that two modules use to shift geometry left or right.
 
-:::caution
-Tutorials are maintained on a best-effort basis and may not be fully up to date (contributions welcome).
-:::
-
 <DeviceTabs />
-<ShaderHooksExample />
+<ShaderHooksExample showHeader={false} showStats={false} />
 
 It is assumed you've set up your development environment as described in [Setup](/docs/tutorials).
 
@@ -23,7 +19,7 @@ The complete source for this example is shown below:
 
 ```typescript
 import {Buffer, NumberArray, UniformStore} from '@luma.gl/core';
-import {AnimationLoopTemplate, AnimationProps, Model} from '@luma.gl/engine';
+import {AnimationLoopTemplate, AnimationProps, Model, makeAnimationLoop} from '@luma.gl/engine';
 import {ShaderAssembler} from '@luma.gl/shadertools';
 import {webgl2Adapter} from '@luma.gl/webgl';
 import {webgpuAdapter} from '@luma.gl/webgpu';
@@ -162,7 +158,9 @@ class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 }
 
-const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {adapters: [webgpuAdapter, webgl2Adapter]})
+const animationLoop = makeAnimationLoop(AppAnimationLoopTemplate, {
+  adapters: [webgpuAdapter, webgl2Adapter]
+});
 animationLoop.start();
 ```
 

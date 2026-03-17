@@ -104,6 +104,8 @@ function getDebugContext(
   // Store the debug context
   data.realContext = gl;
   data.debugContext = debugContext;
+  // Share the context metadata object with the debug context so lookups stay consistent.
+  (debugContext as {luma?: unknown}).luma = data;
   debugContext.debug = true;
 
   // Return it

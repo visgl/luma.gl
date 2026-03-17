@@ -13,7 +13,7 @@ export class WebGPUCommandBuffer extends CommandBuffer {
   readonly handle: GPUCommandBuffer;
 
   constructor(commandEncoder: WebGPUCommandEncoder, props: CommandBufferProps) {
-    super(commandEncoder.device, {});
+    super(commandEncoder.device, props);
     this.device = commandEncoder.device;
     this.handle =
       this.props.handle ||

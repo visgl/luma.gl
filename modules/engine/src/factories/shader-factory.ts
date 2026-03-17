@@ -3,6 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {Device, Shader, ShaderProps, log} from '@luma.gl/core';
+import type {EngineModuleState} from '../types';
 
 /** Manages a cached pool of Shaders for reuse. */
 export class ShaderFactory {
@@ -10,8 +11,9 @@ export class ShaderFactory {
 
   /** Returns the default ShaderFactory for the given {@link Device}, creating one if necessary. */
   static getDefaultShaderFactory(device: Device): ShaderFactory {
-    device._lumaData['defaultShaderFactory'] ||= new ShaderFactory(device);
-    return device._lumaData['defaultShaderFactory'] as ShaderFactory;
+    const moduleData = device.getModuleData<EngineModuleState>('@luma.gl/engine');
+    moduleData.defaultShaderFactory ||= new ShaderFactory(device);
+    return moduleData.defaultShaderFactory;
   }
 
   public readonly device: Device;
@@ -53,12 +55,15 @@ export class ShaderFactory {
       });
       this._cache[key] = cacheEntry = {shader, useCount: 1};
       if (this.debug) {
-        log.warn(`${this}: Created new shader ${shader.id}`)();
+        log.log(3, `${this}: Created new shader ${shader.id}`)();
       }
     } else {
       cacheEntry.useCount++;
       if (this.debug) {
-        log.warn(`${this}: Reusing shader ${cacheEntry.shader.id} count=${cacheEntry.useCount}`)();
+        log.log(
+          3,
+          `${this}: Reusing shader ${cacheEntry.shader.id} count=${cacheEntry.useCount}`
+        )();
       }
     }
 
@@ -81,13 +86,13 @@ export class ShaderFactory {
           delete this._cache[key];
           cacheEntry.shader.destroy();
           if (this.debug) {
-            log.warn(`${this}: Releasing shader ${shader.id}, destroyed`)();
+            log.log(3, `${this}: Releasing shader ${shader.id}, destroyed`)();
           }
         }
       } else if (cacheEntry.useCount < 0) {
         throw new Error(`ShaderFactory: Shader ${shader.id} released too many times`);
       } else if (this.debug) {
-        log.warn(`${this}: Releasing shader ${shader.id} count=${cacheEntry.useCount}`)();
+        log.log(3, `${this}: Releasing shader ${shader.id} count=${cacheEntry.useCount}`)();
       }
     }
   }
