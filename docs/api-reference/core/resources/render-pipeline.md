@@ -5,6 +5,7 @@ A `RenderPipeline` contains a matched pair of vertex and fragment [shaders](/doc
 A RenderPipeline controls the vertex and fragment shader stages, and can be used in GPURenderPassEncoder as well as GPURenderBundleEncoder.
 
 Render pipeline inputs are:
+
 - bindings, according to the given bindingLayout
 - vertex and index buffers
 - the color attachments, Framebuffer
@@ -12,12 +13,14 @@ Render pipeline inputs are:
 - parameters
 
 Render pipeline outputs are:
+
 - buffer bindings with a type of "storage"
 - storageTexture bindings with a access of "write-only"
 - the color attachments, described by Framebuffer
 - the depth-stencil optional attachment, described by Framebuffer
 
 A render pipeline is comprised of the following render stages:
+
 - Vertex fetch, from the buffers buffers
 - Vertex shader, props.vs
 - Primitive assembly, controlled by
@@ -76,45 +79,44 @@ const pipeline = device.createRenderPipeline({vs, fs, varyings: ['gl_Position']}
 
 ### RenderPipelineProps
 
-| Property         | Type                       | Default | Mutable? | Description                                                              |
-| ---------------- | -------------------------- | ------- | -------- | ------------------------------------------------------------------------ |
-| Shader           |
-| `vs?`            | `Shader`                   | `null`  | No       | Compiled vertex shader                                                   |
-| `vertexEntryPoint?`  | `string`                   | -       | No       | Vertex shader entry point (defaults to 'main'). WGSL only                |
-| `vsConstants?`   | `Record<string, number>`   |         | No       | Constants to apply to compiled vertex shader (WGSL only)                 |
-| `fs?`            | `Shader`                   | `null`  | No       | Compiled fragment shader                                                 |
-| `fragmentEntryPoint?`  | `stringy`                  |         | No       | Fragment shader entry point (defaults to 'main'). WGSL only              |
-| `fsConstants?`   | ` Record<string, number>`  |         | No       | Constants to apply to compiled fragment shader (WGSL only)               |
-| ShaderLayout     |
-| `topology?`      | `PrimitiveTopology;`       |         |          | Determines how vertices are read from the 'vertex' attributes            |
-| `shaderLayout?`  | `ShaderLayout`             | `null`  |          | Describes the attributes and bindings exposed by the pipeline shader(s). |
-| `bufferLayout?`  | `BufferLayout`             |         |          |                                                                          |
-| GPU Parameters   |
-| `parameters?`    | `RenderPipelineParameters` |         |          | Parameters that are controlled by pipeline                               |
-| Dynamic settings |
-| `vertexCount?`   | `number`                   |         |          | Number of "rows" in 'vertex' buffers                                     |
-| `instanceCount?` | `number`                   |         |          | Number of "rows" in 'instance' buffers                                   |
-| `indices?`       | `Buffer`                   | `null`  |          | Optional index buffer                                                    |
-| `attributes?`    | `Record<string, Buffer>`   |         |          | Buffers for attributes                                                   |
-| `bindings?`      | `Record<string, Binding>`  |         |          | Buffers, Textures, Samplers for the shader bindings                      |
-| `uniforms?`      | `Record<string, any>`      |         |          | uniforms (WebGL only)                                                    |
+| Property              | Type                       | Default | Mutable? | Description                                                              |
+| --------------------- | -------------------------- | ------- | -------- | ------------------------------------------------------------------------ |
+| Shader                |
+| `vs?`                 | `Shader`                   | `null`  | No       | Compiled vertex shader                                                   |
+| `vertexEntryPoint?`   | `string`                   | -       | No       | Vertex shader entry point (defaults to 'main'). WGSL only                |
+| `vsConstants?`        | `Record<string, number>`   |         | No       | Constants to apply to compiled vertex shader (WGSL only)                 |
+| `fs?`                 | `Shader`                   | `null`  | No       | Compiled fragment shader                                                 |
+| `fragmentEntryPoint?` | `stringy`                  |         | No       | Fragment shader entry point (defaults to 'main'). WGSL only              |
+| `fsConstants?`        | ` Record<string, number>`  |         | No       | Constants to apply to compiled fragment shader (WGSL only)               |
+| ShaderLayout          |
+| `topology?`           | `PrimitiveTopology;`       |         |          | Determines how vertices are read from the 'vertex' attributes            |
+| `shaderLayout?`       | `ShaderLayout`             | `null`  |          | Describes the attributes and bindings exposed by the pipeline shader(s). |
+| `bufferLayout?`       | `BufferLayout`             |         |          |                                                                          |
+| GPU Parameters        |
+| `parameters?`         | `RenderPipelineParameters` |         |          | Parameters that are controlled by pipeline                               |
+| Dynamic settings      |
+| `vertexCount?`        | `number`                   |         |          | Number of "rows" in 'vertex' buffers                                     |
+| `instanceCount?`      | `number`                   |         |          | Number of "rows" in 'instance' buffers                                   |
+| `indices?`            | `Buffer`                   | `null`  |          | Optional index buffer                                                    |
+| `attributes?`         | `Record<string, Buffer>`   |         |          | Buffers for attributes                                                   |
+| `bindings?`           | `Record<string, Binding>`  |         |          | Buffers, Textures, Samplers for the shader bindings                      |
+| `uniforms?`           | `Record<string, any>`      |         |          | uniforms (WebGL only)                                                    |
 
-   * A default mapping of one buffer per attribute is always created.
-   * @note interleaving attributes into the same buffer does not increase the number of attributes
-   * that can be used in a shader (16 on many systems).
+- A default mapping of one buffer per attribute is always created.
+- @note interleaving attributes into the same buffer does not increase the number of attributes
+- that can be used in a shader (16 on many systems).
 
 ### PrimitiveTopology
 
 Describes how primitives (points, lines or triangles) are formed from vertexes.
 
-| Value                  | WebGL | WebGPU | Description                                                                                            |
-| ---------------------- | ----- | ------ | ------------------------------------------------------------------------------------------------------ |
-| `'point-list'`         | ✅     | ✅      | Each vertex defines a point primitive.                                                                 |
-| `'line-list'`          | ✅     | ✅      | Each consecutive pair of two vertices defines a line primitive.                                        |
-| `'line-strip'`         | ✅     | ✅      | Each vertex after the first defines a line primitive between it and the previous vertex.               |
-| `'triangle-list'`      | ✅     | ✅      | Each consecutive triplet of three vertices defines a triangle primitive.                               |
-| `'triangle-strip'`     | ✅     | ✅      | Each vertex after the first two defines a triangle primitive between it and the previous two vertices. |
-
+| Value              | WebGL | WebGPU | Description                                                                                            |
+| ------------------ | ----- | ------ | ------------------------------------------------------------------------------------------------------ |
+| `'point-list'`     | ✅    | ✅     | Each vertex defines a point primitive.                                                                 |
+| `'line-list'`      | ✅    | ✅     | Each consecutive pair of two vertices defines a line primitive.                                        |
+| `'line-strip'`     | ✅    | ✅     | Each vertex after the first defines a line primitive between it and the previous vertex.               |
+| `'triangle-list'`  | ✅    | ✅     | Each consecutive triplet of three vertices defines a triangle primitive.                               |
+| `'triangle-strip'` | ✅    | ✅     | Each vertex after the first two defines a triangle primitive between it and the previous two vertices. |
 
 ## Members
 
@@ -122,7 +124,6 @@ Describes how primitives (points, lines or triangles) are formed from vertexes.
 - `device`: `Device` - holds a reference to the `Device` that created this `Buffer`.
 - `handle`: `unknown` - holds the underlying WebGL or WebGPU shader object
 - `props`: `BufferProps` - holds a copy of the `BufferProps` used to create this `Buffer`.
-
 
 ## Methods
 
@@ -140,7 +141,6 @@ Creates a new pipeline using the supplied vertex and fragment shaders. The shade
 const pipeline = device.createRenderPipeline(props: RenderProps);
 ```
 
-
 ```ts
 const pipeline = device.createRenderPipeline({
   id: 'my-identifier',
@@ -155,13 +155,11 @@ const pipeline = device.createRenderPipeline({
 - `fs` (`FragmentShader`|`String`) - A fragment shader object, or source as a string.
 - `varyings` WebGL (`String[]`) - a list of names of varyings.
 
-
 WebGL References [WebGLProgram](https://developer.mozilla.org/en-US/docs/Web/API/WebGLProgram), [gl.createProgram](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/createProgram)
 
 ### destroy()
 
 Deletes resources held by pipeline. Note: Does not currently delete shaders (to enable shader sharing and caching).
-
 
 ### draw(opts) : RenderPipeline
 
@@ -208,6 +206,7 @@ Parameters for drawing a limited range
 - `end` - hint to GPU, activates `gl.drawElementsRange`
 
 Returns:
+
 - `true` if successful, `false` if draw call is blocked due to resources (the pipeline itself or textures) not yet being initialized.
 
 Notes:
@@ -217,6 +216,21 @@ Notes:
 - If a `TransformFeedback` object is supplied, `transformFeedback.begin()` and `transformFeedback.end()` will be called before and after the draw call.
 - A `Sampler` will only be bound if there is a matching Texture with the same key in the supplied `uniforms` object.
 - Once a uniform is set, it's size should not be changed. This is only a concern for array uniforms.
+
+## Performance
+
+Creating render pipelines is relatively expensive because it can trigger shader compilation, linking, and backend-specific pipeline setup. Reusing compatible pipelines is therefore important for both startup time and dynamic workloads that build models or materials on demand.
+
+For application code, prefer using `PipelineFactory` instead of calling `device.createRenderPipeline()` directly:
+
+```ts
+import {PipelineFactory} from '@luma.gl/engine';
+
+const pipelineFactory = PipelineFactory.getDefaultPipelineFactory(device);
+const pipeline = pipelineFactory.createRenderPipeline({vs, fs, ...});
+```
+
+This lets luma.gl cache compatible wrapper pipelines, and on WebGL it can also share the linked `WebGLProgram` across compatible `RenderPipeline` instances.
 
 The following WebGL APIs are called in this function:
 
@@ -238,5 +252,11 @@ The following WebGL APIs are called by the WEBGLRenderPipeline:
 [gl.drawElementsInstanced](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/drawElementsInstanced),
 [gl.drawArraysInstanced](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/drawArraysInstanced),
 [gl.getExtension](https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/getExtension), [ANGLE_instanced_arrays](https://developer.mozilla.org/en-US/docs/Web/API/ANGLE_instanced_arrays),
-[gl.drawElementsInstancedANGLE](https://developer.mozilla.org/en-US/docs/Web/API/ANGLE_instanced_arrays/drawElementsInstancedANGLE),
-[gl.drawArraysInstancedANGLE](https://developer.mozilla.org/en-US/docs/Web/API/ANGLE_instanced_arrays/drawArraysInstancedANGLE)
+
+Additional WebGL behavior:
+
+- Compatible WebGL `RenderPipeline` instances may share the same linked `WebGLProgram` internally.
+- Shared program reuse is an optimization only. Each `RenderPipeline` still keeps its own default `topology` and `parameters`, which are used when `draw()` does not receive explicit overrides.
+- In practice this means pipeline wrapper identity and underlying `WebGLProgram` identity are not always the same on WebGL.
+  [gl.drawElementsInstancedANGLE](https://developer.mozilla.org/en-US/docs/Web/API/ANGLE_instanced_arrays/drawElementsInstancedANGLE),
+  [gl.drawArraysInstancedANGLE](https://developer.mozilla.org/en-US/docs/Web/API/ANGLE_instanced_arrays/drawArraysInstancedANGLE)

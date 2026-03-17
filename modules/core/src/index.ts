@@ -45,6 +45,7 @@ export {Framebuffer} from './adapter/resources/framebuffer';
 
 export type {RenderPipelineProps} from './adapter/resources/render-pipeline';
 export {RenderPipeline} from './adapter/resources/render-pipeline';
+export {SharedRenderPipeline} from './adapter/resources/shared-render-pipeline';
 
 export type {RenderPassProps} from './adapter/resources/render-pass';
 export {RenderPass} from './adapter/resources/render-pass';

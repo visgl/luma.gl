@@ -441,6 +441,9 @@ export class Model {
         instanceCount: this.instanceCount,
         indexCount,
         transformFeedback: this.transformFeedback || undefined,
+        // Pipelines may be shared across models when caching is enabled, so bindings
+        // and WebGL uniforms must be supplied on every draw instead of being stored
+        // on the pipeline instance.
         bindings: syncBindings,
         uniforms: this.props.uniforms,
         // WebGL shares underlying cached pipelines even for models that have different parameters and topology,

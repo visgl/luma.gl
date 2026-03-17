@@ -25,6 +25,7 @@ import type {
   FramebufferProps,
   // RenderPipeline,
   RenderPipelineProps,
+  SharedRenderPipeline,
   ComputePipeline,
   ComputePipelineProps,
   // CommandEncoder,
@@ -56,6 +57,7 @@ import {WEBGLSampler} from './resources/webgl-sampler';
 import {WEBGLTexture} from './resources/webgl-texture';
 import {WEBGLFramebuffer} from './resources/webgl-framebuffer';
 import {WEBGLRenderPipeline} from './resources/webgl-render-pipeline';
+import {WEBGLSharedRenderPipeline} from './resources/webgl-shared-render-pipeline';
 import {WEBGLCommandEncoder} from './resources/webgl-command-encoder';
 import {WEBGLCommandBuffer} from './resources/webgl-command-buffer';
 import {WEBGLVertexArray} from './resources/webgl-vertex-array';
@@ -342,6 +344,13 @@ export class WebGLDevice extends Device {
 
   createRenderPipeline(props: RenderPipelineProps): WEBGLRenderPipeline {
     return new WEBGLRenderPipeline(this, props);
+  }
+
+  override _createSharedRenderPipelineWebGL(props: RenderPipelineProps): SharedRenderPipeline {
+    return new WEBGLSharedRenderPipeline(
+      this,
+      props as RenderPipelineProps & {vs: WEBGLShader; fs: WEBGLShader}
+    );
   }
 
   createComputePipeline(props?: ComputePipelineProps): ComputePipeline {

@@ -1,6 +1,6 @@
 # PipelineFactory
 
-The `PipelineFactory` class provides a `createRenderPipeline()` method that caches and reuses render pipelines.
+The `PipelineFactory` class provides `createRenderPipeline()` and `createComputePipeline()` methods that cache and reuse pipelines.
 
 The purpose of the pipeline factory is to speed up applications that tend to create multiple render pipelines with the same shaders and other properties. By returning the same cached pipeline, and when used alongside a `ShaderFactory`, the pipeline factory minimizes the amount of time spent in shader compilation and linking.
 
@@ -12,9 +12,6 @@ The `PipelineFactory` will return the requested pipeline, creating it the first 
 should consider replacing normal pipeline creation.
 
 It is possible to create multiple pipeline factories, but normally applications rely on the default pipeline factory that is created for each device.
-
-Limitations:
-- `ComputePipeline` caching is not currently supported.
 
 ## Usage
 
@@ -133,7 +130,7 @@ While it is possible to create multiple factories, most applications will use th
 
 ### createRenderPipeline()
 
-Get a program that fits the parameters provided. 
+Get a program that fits the parameters provided.
 
 ```typescript
 createRenderPipeline(props: RenderPipelineProps): RenderPipeline
@@ -148,15 +145,34 @@ If one is already cached, return it, otherwise create and cache a new one.
 - `modules`: Array of module objects to include in the shaders.
 - `inject`: Object of hook injections to include in the shaders.
 
+### createComputePipeline()
+
+Get a compute pipeline that fits the parameters provided.
+
+```typescript
+createComputePipeline(props: ComputePipelineProps): ComputePipeline
+```
+
+If one is already cached, return it, otherwise create and cache a new one.
+
 ### release()
 
 ```typescript
-release(pipeline: RenderPipeline): void
+release(pipeline: RenderPipeline | ComputePipeline): void
 ```
 
-Indicates that a pipeline is no longer in use. Each call to `createRenderPipeline()` increments a reference count, and only when all references to a pipeline are released, the pipeline is destroyed and deleted from the cache.
-
+Indicates that a pipeline is no longer in use. Each call to `createRenderPipeline()` or `createComputePipeline()` increments a reference count, and only when all references to a pipeline are released, the pipeline is destroyed and deleted from the cache.
 
 ### getUniforms(program: Program): Object
 
 Returns an object containing all the uniforms defined for the program. Returns `null` if `program` isn't managed by the `PipelineFactory`.
+
+## WebGL notes
+
+- On WebGL, `PipelineFactory` may return different cached `RenderPipeline` wrappers that share one linked `WebGLProgram`.
+- Wrapper caching still respects pipeline-level defaults such as `topology`, `parameters`, and layout-related props.
+- This lets WebGL reduce shader-link overhead without changing the per-pipeline behavior seen by direct `RenderPipeline.draw()` callers.
+- Device props can tune this behavior:
+  - `_cachePipelines` enables wrapper caching.
+  - `_sharePipelines` enables shared WebGL program reuse across compatible wrappers.
+  - `_destroyPipelines` controls whether unused cached pipelines are destroyed when their reference count reaches zero.

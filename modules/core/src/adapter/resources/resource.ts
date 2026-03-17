@@ -10,7 +10,7 @@ const CPU_HOTSPOT_PROFILER_MODULE = 'cpu-hotspot-profiler';
 const RESOURCE_COUNTS_STATS = 'GPU Resource Counts';
 const LEGACY_RESOURCE_COUNTS_STATS = 'Resource Counts';
 const GPU_TIME_AND_MEMORY_STATS = 'GPU Time and Memory';
-const RESOURCE_COUNT_ORDER = [
+const BASE_RESOURCE_COUNT_ORDER = [
   'Resources',
   'Buffers',
   'Textures',
@@ -28,7 +28,30 @@ const RESOURCE_COUNT_ORDER = [
   'CommandEncoders',
   'CommandBuffers'
 ] as const;
-const RESOURCE_COUNT_STAT_ORDER = RESOURCE_COUNT_ORDER.flatMap(resourceType => [
+const WEBGL_RESOURCE_COUNT_ORDER = [
+  'Resources',
+  'Buffers',
+  'Textures',
+  'Samplers',
+  'TextureViews',
+  'Framebuffers',
+  'QuerySets',
+  'Shaders',
+  'RenderPipelines',
+  'SharedRenderPipelines',
+  'ComputePipelines',
+  'PipelineLayouts',
+  'VertexArrays',
+  'RenderPasss',
+  'ComputePasss',
+  'CommandEncoders',
+  'CommandBuffers'
+] as const;
+const BASE_RESOURCE_COUNT_STAT_ORDER = BASE_RESOURCE_COUNT_ORDER.flatMap(resourceType => [
+  `${resourceType} Created`,
+  `${resourceType} Active`
+]);
+const WEBGL_RESOURCE_COUNT_STAT_ORDER = WEBGL_RESOURCE_COUNT_ORDER.flatMap(resourceType => [
   `${resourceType} Created`,
   `${resourceType} Active`
 ]);
@@ -37,7 +60,6 @@ const ORDERED_STATS_CACHE = new WeakMap<
   {orderedStatNames: readonly string[]; statCount: number}
 >();
 const ORDERED_STAT_NAME_SET_CACHE = new WeakMap<readonly string[], Set<string>>();
-const RESOURCE_COUNT_STATS_INITIALIZED = new WeakSet<Stats>();
 
 type CpuHotspotProfiler = {
   enabled?: boolean;
@@ -197,8 +219,9 @@ export abstract class Resource<Props extends ResourceProps> {
       this._device.statsManager.getStats(RESOURCE_COUNTS_STATS),
       this._device.statsManager.getStats(LEGACY_RESOURCE_COUNTS_STATS)
     ];
+    const orderedStatNames = getResourceCountStatOrder(this._device);
     for (const stats of statsObjects) {
-      initializeStats(stats, RESOURCE_COUNT_STAT_ORDER);
+      initializeStats(stats, orderedStatNames);
     }
     const name = this[Symbol.toStringTag];
     for (const stats of statsObjects) {
@@ -274,8 +297,9 @@ export abstract class Resource<Props extends ResourceProps> {
       this._device.statsManager.getStats(RESOURCE_COUNTS_STATS),
       this._device.statsManager.getStats(LEGACY_RESOURCE_COUNTS_STATS)
     ];
+    const orderedStatNames = getResourceCountStatOrder(this._device);
     for (const stats of statsObjects) {
-      initializeStats(stats, RESOURCE_COUNT_STAT_ORDER);
+      initializeStats(stats, orderedStatNames);
     }
     for (const stats of statsObjects) {
       stats.get('Resources Created').incrementCount();
@@ -309,13 +333,6 @@ function selectivelyMerge<Props>(props: Props, defaultProps: Required<Props>): R
 }
 
 function initializeStats(stats: Stats, orderedStatNames: readonly string[]): void {
-  if (
-    orderedStatNames === RESOURCE_COUNT_STAT_ORDER &&
-    RESOURCE_COUNT_STATS_INITIALIZED.has(stats)
-  ) {
-    return;
-  }
-
   const statsMap = stats.stats;
   let addedOrderedStat = false;
   for (const statName of orderedStatNames) {
@@ -360,9 +377,10 @@ function initializeStats(stats: Stats, orderedStatNames: readonly string[]): voi
 
   Object.assign(statsMap, reorderedStats);
   ORDERED_STATS_CACHE.set(stats, {orderedStatNames, statCount});
-  if (orderedStatNames === RESOURCE_COUNT_STAT_ORDER) {
-    RESOURCE_COUNT_STATS_INITIALIZED.add(stats);
-  }
+}
+
+function getResourceCountStatOrder(device: Device): readonly string[] {
+  return device.type === 'webgl' ? WEBGL_RESOURCE_COUNT_STAT_ORDER : BASE_RESOURCE_COUNT_STAT_ORDER;
 }
 
 function getCpuHotspotProfiler(device: Device): CpuHotspotProfiler | null {

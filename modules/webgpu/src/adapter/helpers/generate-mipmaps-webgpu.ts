@@ -201,11 +201,6 @@ function generateMipmapsRender(device: WebGPUDevice, texture: Texture): void {
         baseArrayLayer: 0,
         arrayLayerCount: texture.depth
       });
-      renderPipeline.setBindings({
-        sourceSampler: sampler,
-        sourceTexture: sourceView,
-        uniforms: uniformsBuffer
-      });
 
       try {
         for (let baseArrayLayer = 0; baseArrayLayer < layerCount; ++baseArrayLayer) {

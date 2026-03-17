@@ -15,6 +15,8 @@ import type {WebGPUDevice} from '../webgpu-device';
 import type {WebGPUShader} from './webgpu-shader';
 import type {WebGPURenderPass} from './webgpu-render-pass';
 
+const EMPTY_BINDINGS: Record<string, Binding> = {};
+
 // RENDER PIPELINE
 
 /** Creates a new render pipeline when parameters change */
@@ -25,8 +27,11 @@ export class WebGPURenderPipeline extends RenderPipeline {
   readonly vs: WebGPUShader;
   readonly fs: WebGPUShader | null = null;
 
+  /** Compatibility path for direct pipeline.setBindings() usage */
+  private _bindings: Record<string, Binding>;
   /** For internal use to create BindGroups */
   private _bindGroupLayout: GPUBindGroupLayout | null = null;
+  private _bindGroup: GPUBindGroup | null = null;
 
   override get [Symbol.toStringTag]() {
     return 'WebGPURenderPipeline';
@@ -54,12 +59,35 @@ export class WebGPURenderPipeline extends RenderPipeline {
     // Note: Often the same shader in WebGPU
     this.vs = props.vs as WebGPUShader;
     this.fs = props.fs as WebGPUShader;
+    this._bindings = props.bindings || EMPTY_BINDINGS;
   }
 
   override destroy(): void {
     // WebGPURenderPipeline has no destroy method.
     // @ts-expect-error
     this.handle = null;
+  }
+
+  /**
+   * Compatibility shim for code paths that still set bindings on the pipeline.
+   * The shared-model path passes bindings per draw and does not rely on this state.
+   */
+  setBindings(bindings: Record<string, Binding>): void {
+    let bindingsChanged = false;
+    for (const [name, binding] of Object.entries(bindings)) {
+      if (this._bindings[name] !== binding) {
+        if (!bindingsChanged) {
+          if (this._bindings === this.props.bindings || this._bindings === EMPTY_BINDINGS) {
+            this._bindings = {...this._bindings};
+          }
+          bindingsChanged = true;
+        }
+        this._bindings[name] = binding;
+      }
+    }
+    if (bindingsChanged) {
+      this._bindGroup = null;
+    }
   }
 
   /** @todo - should this be moved to renderpass? */
@@ -89,7 +117,7 @@ export class WebGPURenderPipeline extends RenderPipeline {
     });
 
     // Set bindings (uniform buffers, textures etc)
-    const bindGroup = this._getBindGroup(options.bindings || {});
+    const bindGroup = this._getBindGroup(options.bindings);
     if (bindGroup) {
       webgpuRenderPass.handle.setBindGroup(0, bindGroup);
     }
@@ -123,7 +151,7 @@ export class WebGPURenderPipeline extends RenderPipeline {
   }
 
   /** Return a bind group created by setBindings */
-  _getBindGroup(bindings: Record<string, Binding>) {
+  _getBindGroup(bindings?: Record<string, Binding>) {
     if (this.shaderLayout.bindings.length === 0) {
       return null;
     }
@@ -131,8 +159,15 @@ export class WebGPURenderPipeline extends RenderPipeline {
     // Get hold of the bind group layout. We don't want to do this unless we know there is at least one bind group
     this._bindGroupLayout = this._bindGroupLayout || this.handle.getBindGroupLayout(0);
 
-    // Set up the bindings
-    return getBindGroup(this.device, this._bindGroupLayout, this.shaderLayout, bindings);
+    if (bindings) {
+      return getBindGroup(this.device, this._bindGroupLayout, this.shaderLayout, bindings);
+    }
+
+    this._bindGroup =
+      this._bindGroup ||
+      getBindGroup(this.device, this._bindGroupLayout, this.shaderLayout, this._bindings);
+
+    return this._bindGroup;
   }
 
   /**

@@ -11,6 +11,7 @@ import type {
   TextureFormatDepthStencil
 } from '@luma.gl/core/shadertypes/textures/texture-formats';
 import type {Shader} from './shader';
+import type {SharedRenderPipeline} from './shared-render-pipeline';
 import type {RenderPass} from './render-pass';
 import {Resource, ResourceProps} from './resource';
 import {VertexArray} from './vertex-array';
@@ -53,6 +54,9 @@ export type RenderPipelineProps = ResourceProps & {
   /** Some applications intentionally supply unused attributes and bindings, and want to disable warnings */
   disableWarnings?: boolean;
 
+  /** Internal hook for backend-specific shared pipeline implementations. */
+  _sharedRenderPipeline?: SharedRenderPipeline;
+
   // Dynamic bindings (TODO - pipelines should be immutable, move to RenderPass)
   /** Buffers, Textures, Samplers for the shader bindings */
   bindings?: Record<string, Binding>;
@@ -77,6 +81,10 @@ export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
   linkStatus: 'pending' | 'success' | 'error' = 'pending';
   /** The hash of the pipeline */
   hash: string = '';
+  /** Optional lower-level implementation hash for shared backend pipeline state */
+  implementationHash: string = '';
+  /** Optional shared backend implementation */
+  sharedRenderPipeline: SharedRenderPipeline | null = null;
 
   /** Whether shader or pipeline compilation/linking is still in progress */
   get isPending(): boolean {
@@ -100,6 +108,7 @@ export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
     super(device, props, RenderPipeline.defaultProps);
     this.shaderLayout = this.props.shaderLayout!;
     this.bufferLayout = this.props.bufferLayout || [];
+    this.sharedRenderPipeline = this.props._sharedRenderPipeline || null;
   }
 
   /** Draw call. Returns false if the draw call was aborted (due to resources still initializing) */
@@ -155,6 +164,7 @@ export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
 
     parameters: {},
     disableWarnings: false,
+    _sharedRenderPipeline: undefined!,
     bindings: undefined!
   };
 }

@@ -33,11 +33,15 @@ Target Date: April 2026
 - **compressed texture** support (but note that WebGPU is stricter than WebGL and requires block-aligned textures).
 - **texture readback** improvements
 
+**@luma.gl/webgl**
+
+- **RenderPipeline optimization** - Compatible WebGL render pipelines now share linked `WebGLProgram`s, reducing pipeline creation overhead while preserving per-pipeline defaults.
+
 **@luma.gl/gltf**
 
 - **WebGPU support** - glTF models can now be rendered in WebGPU.
 - **Joint/Skin Animations** - Support for glTF animations now include joint and skin animations.
-- **Lighting** - luma.gl Light definitions are now extracted if the `KHR_lights_punctual` glTF extension is present in the glTF file. 
+- **Lighting** - luma.gl Light definitions are now extracted if the `KHR_lights_punctual` glTF extension is present in the glTF file.
 - **`linear` texture filtering** - default texture filtering is now `linear` instead of `nearest` for improved texture rendering.
 
 **@luma.gl/shadertools**
@@ -67,19 +71,20 @@ Production quality WebGPU backend
   - [`Buffer.mapAndReadAsync()`] New method that reads directly from buffer memory without performing a copy.
   - [`Buffer.mapAndWriteAsync()`] New method that writes directly to buffer memory.
 - [`Texture`]
-  - `Texture` class refactors complete, see upgrade guide. 
+  - `Texture` class refactors complete, see upgrade guide.
 - Shader type APIs have been improved.
 - `CommandEncoder`/`CommandBuffer` API improvements
 - `Fence` - New synchronization primitive created with `device.createFence()`
 - `CanvasContext` API simplifications (see upgrade guide).
 
 - [Texture Formats](/docs/api-reference/core/texture-formats). Adds support for the new texture formats added in Chrome 132 (currently require setting chrome://flags/#enable-unsafe-webgpu)
+
   - `'r16unorm'`, `'rg16unorm'`, `'rgba16unorm'` (feature `'chromium-experimental-unorm16-texture-formats'`)
   - `'r16snorm'`, `'rg16snorm'`, `'rgba16snorm'` (feature `'chromium-experimental-snorm16-texture-formats'`)
 
 - [Vertex Formats](/docs/api-reference/core/vertex-formats) (added in Chrome v133 and v119)
   - Single component 8 and 16 bit formats are now supported by WebGPU: `'uint8'`, `'sint8'`, `'unorm8'`, `'snorm8'`, `'uint16'`, `'sint16'`, `'unorm16'`, `'snorm16'`, and `'float16'`.
-  - Note: 3 component formats are still missing in WebGPU. 
+  - Note: 3 component formats are still missing in WebGPU.
   - `'unorm8x4-bgra'` - WebGPU only. Simplifies working with BGRA data.
   - `'unorm10-10-10-2` - Exposed since available in all WebGPU backends. Also supported by WebGL2.
 
@@ -97,7 +102,6 @@ Production quality WebGPU backend
 **@luma.gl/shadertools**
 
 - More shader modules ported to WGSL
-
 
 ## Version 9.1
 

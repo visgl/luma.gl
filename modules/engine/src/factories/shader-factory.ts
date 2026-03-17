@@ -35,7 +35,7 @@ export class ShaderFactory {
   constructor(device: Device) {
     this.device = device;
     this.cachingEnabled = device.props._cacheShaders;
-    this.destroyPolicy = device.props._cacheDestroyPolicy;
+    this.destroyPolicy = device.props._destroyShaders ? 'unused' : 'never';
     this.debug = true; // device.props.debugFactories;
   }
 
