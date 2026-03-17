@@ -132,9 +132,9 @@ The returned object:
 
 ```ts
 type PBREnvironment = {
-  brdfLutTexture: AsyncTexture;
-  diffuseEnvSampler: AsyncTexture;
-  specularEnvSampler: AsyncTexture;
+  brdfLutTexture: DynamicTexture;
+  diffuseEnvSampler: DynamicTexture;
+  specularEnvSampler: DynamicTexture;
 };
 ```
 

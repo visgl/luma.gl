@@ -113,7 +113,7 @@ Enhanced WebGPU support.
 
 - GPU backend management is streamlined via the new `Adapter` API.
 - GPU connection to HTML DOM (via `canvas` elements) improved via `CanvasContext` API changes.
-- `Texture`s are now immutable, however a new `AsyncTexture` class offers a higher-level, mutable texture API.
+- `Texture`s are now immutable, however a new `DynamicTexture` class offers a higher-level, mutable texture API.
 - `ShaderModule` type safety improvements (shader uniforms can now be strictly typed in JavaScript)
 
 **@luma.gl/core**
@@ -136,7 +136,7 @@ Enhanced WebGPU support.
   - Now calculates exact "device pixel content box" size enabling pixel perfect sized drawing buffers (no moire etc).
   - Now tracks size, visibility and DPR changes (see the new `DeviceProps` callbacks).
 - `Texture`
-  - Textures are now immutable and synchronous. See upgrade guide, and the new `AsyncTexture` class in `@luma.gl/engine`.
+  - Textures are now immutable and synchronous. See upgrade guide, and the new `DynamicTexture` class in `@luma.gl/engine`.
   - `Texture.copyExternalImage()` New function that works on both WebGPU and WebGL.
   - `Texture.copyImageData()` New function that works on both WebGPU and WebGL.
 - `Sampler`
@@ -150,7 +150,7 @@ Enhanced WebGPU support.
 
 - `makeAnimationLoopTemplate`
   - Accepts a new `.adapters` prop. (Avoids need for global registration of adapters).
-- `AsyncTexture`](/docs/api-reference/engine/dynamic-texture)
+- [`DynamicTexture`](/docs/api-reference/engine/dynamic-texture)
   - New class allows that applications to work withcreate textures from a Promise.
 - `ShaderPassRenderer`
   - New class that helps applications apply a `ShaderPass` list to a texture.
