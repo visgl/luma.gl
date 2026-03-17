@@ -1,13 +1,6 @@
 import React, {CSSProperties, FC, useEffect, useRef, useState} from 'react'; // eslint-disable-line
 import {Device, luma} from '@luma.gl/core';
-import {
-  AnimationLoopTemplate,
-  AnimationLoop,
-  makeAnimationLoop,
-  setPathPrefix
-} from '@luma.gl/engine';
-import {webgl2Adapter} from '@luma.gl/webgl';
-import {webgpuAdapter} from '@luma.gl/webgpu';
+import {AnimationLoopTemplate, AnimationLoop, makeAnimationLoop, setPathPrefix} from '@luma.gl/engine';
 import {StatsWidget} from '@probe.gl/stats-widget';
 import type {Stat, Stats} from '@probe.gl/stats';
 import {DeviceTabs} from './device-tabs';
@@ -17,10 +10,11 @@ import {
 } from '../debug/luma-cpu-hotspot-profiler';
 
 // import {VRDisplay} from '@luma.gl/experimental';
-import {useStore} from '../store/device-store';
+import {getCanvasContainer, useStore} from '../store/device-store';
 
 const GITHUB_TREE = 'https://github.com/visgl/luma.gl/tree/master';
 let isInfoBoxCollapsedByDefault = true;
+const statsWidgetCollapsedStateByTitle: Record<string, boolean> = {};
 
 // WORKAROUND FOR luma.gl VRDisplay
 // if (!globalThis.navigator) {// eslint-disable-line
@@ -75,6 +69,16 @@ function getStatsTitle(stats: Stats): string {
 
 function initializeGpuTimeAndMemoryStats() {
   return luma.stats.get('GPU Time and Memory');
+}
+
+function getStatsWidgetCollapsedState(statsWidget: StatsWidget): boolean {
+  return statsWidget.title ? (statsWidgetCollapsedStateByTitle[statsWidget.title] ?? true) : true;
+}
+
+function storeStatsWidgetCollapsedState(statsWidget: StatsWidget): void {
+  if (statsWidget.title) {
+    statsWidgetCollapsedStateByTitle[statsWidget.title] = statsWidget.collapsed;
+  }
 }
 
 function getAdapterLabel(device: Device | null): string {
@@ -356,7 +360,7 @@ export function ReactExample<P>(props: ReactExampleProps<P>) {
     ];
 
     for (const statsWidget of statsWidgets) {
-      statsWidget.setCollapsed(true);
+      statsWidget.setCollapsed(getStatsWidgetCollapsedState(statsWidget));
     }
 
     const updateStatsWidget = () => {
@@ -371,6 +375,7 @@ export function ReactExample<P>(props: ReactExampleProps<P>) {
     return () => {
       window.clearInterval(statsIntervalId);
       for (const statsWidget of statsWidgets) {
+        storeStatsWidgetCollapsedState(statsWidget);
         statsWidget.remove();
       }
       statsPanelRef.current?.replaceChildren();
@@ -403,44 +408,39 @@ export function ReactExample<P>(props: ReactExampleProps<P>) {
 }
 
 export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
-  let containerName = 'ssr';
   const showStats = props.showStats !== false && props.panel !== false;
   const showHeader = props.showHeader !== false && props.panel !== false;
 
   /** Each example maintains an animation loop */
-  const [canvas, setCanvas] = useState<HTMLCanvasElement | null>(null);
-  const usedCanvases = useRef(new WeakMap<HTMLCanvasElement>());
+  const canvasContainerRef = useRef<HTMLDivElement | null>(null);
   const currentTask = useRef<Promise<void> | null>(null);
   const statsContainerRef = useRef<HTMLDivElement | null>(null);
   const statsPanelRef = useRef<HTMLDivElement | null>(null);
-  const statsWidgetCollapsedState = useRef<Record<string, boolean>>({});
 
   /** Type type of the device (WebGL, WebGPU, ...) */
   const deviceType = useStore(store => store.deviceType);
-  containerName = props.container || `luma-example-container-${deviceType}`;
+  const device = useStore(store => store.device);
 
   useEffect(() => {
-    if (!canvas || !deviceType || usedCanvases.current.get(canvas)) return;
-
-    usedCanvases.current.set(canvas, true);
+    if (!canvasContainerRef.current || !deviceType || !device) {
+      return;
+    }
 
     let animationLoop: AnimationLoop | null = null;
-    let device: Device | null = null;
     let statsWidgets: StatsWidget[] = [];
     let statsIntervalId: number | null = null;
     let previousSwapChainTextureMemory = 0;
+    const defaultCanvasContext = device.getDefaultCanvasContext();
+    const deviceCanvas = defaultCanvasContext.canvas;
     const asyncCreateLoop = async () => {
-      // canvas.style.width = '100%';
-      // canvas.style.height = '100%';
-      device = await luma.createDevice({
-        adapters: [webgl2Adapter, webgpuAdapter],
-        type: deviceType,
-        debugGPUTime: true,
-        createCanvasContext: {
-          canvas,
-          container: containerName
-        }
-      });
+      if (!(deviceCanvas instanceof HTMLCanvasElement)) {
+        throw new Error('Website examples require the shared device canvas to be an HTMLCanvasElement');
+      }
+
+      deviceCanvas.style.display = EXAMPLE_CANVAS_STYLE.display;
+      deviceCanvas.style.width = EXAMPLE_CANVAS_STYLE.width;
+      deviceCanvas.style.height = EXAMPLE_CANVAS_STYLE.height;
+      canvasContainerRef.current?.replaceChildren(deviceCanvas);
       setActiveCpuHotspotProfilerDevice(device);
 
       animationLoop = makeAnimationLoop(props.template as unknown as typeof AnimationLoopTemplate, {
@@ -488,10 +488,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
           })
         ];
         for (const statsWidget of statsWidgets) {
-          const collapsed = statsWidget.title
-            ? statsWidgetCollapsedState.current[statsWidget.title]
-            : undefined;
-          statsWidget.setCollapsed(collapsed ?? true);
+          statsWidget.setCollapsed(getStatsWidgetCollapsedState(statsWidget));
         }
 
         const updateStatsWidget = () => {
@@ -543,9 +540,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
             previousSwapChainTextureMemory = 0;
           }
           for (const statsWidget of statsWidgets) {
-            if (statsWidget.title) {
-              statsWidgetCollapsedState.current[statsWidget.title] = statsWidget.collapsed;
-            }
+            storeStatsWidgetCollapsedState(statsWidget);
             statsWidget.remove();
           }
           statsPanelRef.current?.replaceChildren();
@@ -555,16 +550,15 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
             animationLoop = null;
           }
 
-          if (device) {
-            clearActiveCpuHotspotProfilerDevice(device);
-            device.destroy();
-          }
+          clearActiveCpuHotspotProfilerDevice(device);
+          canvasContainerRef.current?.replaceChildren();
+          getCanvasContainer().appendChild(deviceCanvas);
         })
         .catch(error => {
           console.error(`unmounting ${deviceType} failed`, error);
         });
     };
-  }, [deviceType, canvas, showStats]);
+  }, [deviceType, device, showStats, props.template, props.directory, props.id]);
 
   // @ts-expect-error Intentionally accessing undeclared field info
   const info = props.template?.info;
@@ -606,7 +600,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
             }}
           />
         ) : null}
-        <canvas key={deviceType} ref={setCanvas} style={EXAMPLE_CANVAS_STYLE} />
+        <div key={deviceType} ref={canvasContainerRef} style={EXAMPLE_CANVAS_STYLE} />
       </div>
       {props.children}
     </ExamplePage>

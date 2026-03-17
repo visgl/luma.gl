@@ -15,6 +15,7 @@ export type DeviceType = 'webgl' | 'webgpu';
 
 type AppProps = {
   deviceType?: DeviceType;
+  device?: Device | null;
   presentationDevice?: Device | null;
 };
 
@@ -64,8 +65,11 @@ export default class App extends React.PureComponent<AppProps, AppState> {
 
   override async componentDidUpdate(previousProps: AppProps): Promise<void> {
     if (
+      previousProps.device !== this.props.device ||
       previousProps.presentationDevice !== this.props.presentationDevice ||
-      (!this.props.presentationDevice && previousProps.deviceType !== this.props.deviceType)
+      (!this.props.device &&
+        !this.props.presentationDevice &&
+        previousProps.deviceType !== this.props.deviceType)
     ) {
       await this.initialize();
     }
@@ -89,20 +93,21 @@ export default class App extends React.PureComponent<AppProps, AppState> {
         throw new Error('Multi-context canvases were not mounted.');
       }
 
-      const presentationDevice = this.props.presentationDevice;
-      const device = presentationDevice
-        ? presentationDevice
-        : await this.createOwnedDevice(deviceType);
+      const externalDevice = this.props.device || this.props.presentationDevice;
+      const device = externalDevice ? externalDevice : await this.createOwnedDevice(deviceType);
       const renderer = new MultiCanvasRenderer(device, canvases as HTMLCanvasElement[]);
 
       if (
         !this.isComponentMounted ||
         this.initializationGeneration !== initializationGeneration ||
         this.props.deviceType !== deviceType ||
-        this.props.presentationDevice !== presentationDevice
+        (externalDevice !== null &&
+          externalDevice !== undefined &&
+          this.props.device !== externalDevice &&
+          this.props.presentationDevice !== externalDevice)
       ) {
         renderer.destroy();
-        if (!presentationDevice) {
+        if (!externalDevice) {
           device.destroy();
         }
         return;
@@ -110,14 +115,17 @@ export default class App extends React.PureComponent<AppProps, AppState> {
 
       this.device = device;
       this.renderer = renderer;
-      this.ownsDevice = !presentationDevice;
+      this.ownsDevice = !externalDevice;
       this.renderer.start();
 
       if (
         !this.isComponentMounted ||
         this.initializationGeneration !== initializationGeneration ||
         this.props.deviceType !== deviceType ||
-        this.props.presentationDevice !== presentationDevice
+        (externalDevice !== null &&
+          externalDevice !== undefined &&
+          this.props.device !== externalDevice &&
+          this.props.presentationDevice !== externalDevice)
       ) {
         this.destroyResources();
         return;
@@ -199,7 +207,7 @@ export default class App extends React.PureComponent<AppProps, AppState> {
 
 export function renderToDOM(
   container: HTMLElement,
-  props: {deviceType?: DeviceType; presentationDevice?: Device | null} = {}
+  props: {deviceType?: DeviceType; device?: Device | null; presentationDevice?: Device | null} = {}
 ): () => void {
   const root: Root = createRoot(container);
   root.render(<App {...props} />);

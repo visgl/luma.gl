@@ -17,6 +17,7 @@ export type DeviceType = 'webgl' | 'webgpu';
 
 type AppProps = {
   deviceType?: DeviceType;
+  device?: Device | null;
   presentationDevice?: Device | null;
 };
 
@@ -52,8 +53,11 @@ export default class App extends React.PureComponent<AppProps, AppState> {
 
   async componentDidUpdate(previousProps: AppProps) {
     if (
+      previousProps.device !== this.props.device ||
       previousProps.presentationDevice !== this.props.presentationDevice ||
-      (!this.props.presentationDevice && previousProps.deviceType !== this.props.deviceType)
+      (!this.props.device &&
+        !this.props.presentationDevice &&
+        previousProps.deviceType !== this.props.deviceType)
     ) {
       await this.initializeDevice();
     }
@@ -72,26 +76,24 @@ export default class App extends React.PureComponent<AppProps, AppState> {
     this.setState({device: null, model: null, initializationError: null});
 
     try {
-      const presentationDevice = this.props.presentationDevice;
-      const device = presentationDevice
-        ? presentationDevice
-        : await this.createOwnedDevice(deviceType);
+      const externalDevice = this.props.device || this.props.presentationDevice;
+      const device = externalDevice ? externalDevice : await this.createOwnedDevice(deviceType);
       const model = createModel(device);
 
       if (
         !this.isComponentMounted ||
         this.initializationGeneration !== initializationGeneration ||
         this.props.deviceType !== deviceType ||
-        this.props.presentationDevice !== presentationDevice
+        (this.props.device !== externalDevice && this.props.presentationDevice !== externalDevice)
       ) {
         model.destroy();
-        if (!presentationDevice) {
+        if (!externalDevice) {
           device.destroy();
         }
         return;
       }
 
-      this.ownsDevice = !presentationDevice;
+      this.ownsDevice = !externalDevice;
       this.setState({device, model, initializationError: null});
     } catch (error) {
       if (this.isComponentMounted && this.initializationGeneration === initializationGeneration) {
@@ -148,7 +150,7 @@ export default class App extends React.PureComponent<AppProps, AppState> {
 
 export function renderToDOM(
   container: HTMLElement,
-  props: {deviceType?: DeviceType; presentationDevice?: Device | null} = {}
+  props: {deviceType?: DeviceType; device?: Device | null; presentationDevice?: Device | null} = {}
 ): () => void {
   const root: Root = createRoot(container);
   root.render(<App {...props} />);
