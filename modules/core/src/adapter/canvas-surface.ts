@@ -5,6 +5,7 @@
 import {isBrowser} from '@probe.gl/env';
 import type {Device} from './device';
 import type {CanvasContext} from './canvas-context';
+import {CanvasObserver} from './canvas-observer';
 import type {PresentationContext} from './presentation-context';
 import type {Framebuffer} from './resources/framebuffer';
 import type {TextureFormatDepthStencil} from '../shadertypes/textures/texture-formats';
@@ -111,15 +112,7 @@ export abstract class CanvasSurface {
 
   /** Resolves when the canvas is initialized, i.e. when the ResizeObserver has updated the pixel size */
   protected _initializedResolvers = withResolvers<void>();
-  /** ResizeObserver to track canvas size changes */
-  protected _resizeObserver: ResizeObserver | undefined;
-  /** IntersectionObserver to track canvas visibility changes */
-  protected _intersectionObserver: IntersectionObserver | undefined;
-  private _observeDevicePixelRatioTimeout: ReturnType<typeof setTimeout> | null = null;
-  private _observeDevicePixelRatioMediaQuery: MediaQueryList | null = null;
-  private readonly _handleDevicePixelRatioChange = () => this._observeDevicePixelRatio();
-  private _trackPositionInterval: ReturnType<typeof setInterval> | null = null;
-  private _observersStarted = false;
+  protected _canvasObserver: CanvasObserver;
   /** Position of the canvas in the document, updated by a timer */
   protected _position: [number, number] = [0, 0];
   /** Whether this canvas context has been destroyed */
@@ -170,6 +163,14 @@ export abstract class CanvasSurface {
     this.drawingBufferHeight = this.canvas.height;
     this.devicePixelRatio = globalThis.devicePixelRatio || 1;
     this._position = [0, 0];
+    this._canvasObserver = new CanvasObserver({
+      canvas: this.htmlCanvas,
+      trackPosition: this.props.trackPosition,
+      onResize: entries => this._handleResize(entries),
+      onIntersection: entries => this._handleIntersection(entries),
+      onDevicePixelRatioChange: () => this._observeDevicePixelRatio(),
+      onPositionChange: () => this.updatePosition()
+    });
   }
 
   destroy() {
@@ -296,28 +297,10 @@ export abstract class CanvasSurface {
    * `ResizeObserver` and DPR callbacks running against a partially initialized device.
    */
   _startObservers(): void {
-    if (this.destroyed || this._observersStarted || !CanvasSurface.isHTMLCanvas(this.canvas)) {
+    if (this.destroyed) {
       return;
     }
-
-    this._observersStarted = true;
-    this._intersectionObserver ||= new IntersectionObserver(entries =>
-      this._handleIntersection(entries)
-    );
-    this._resizeObserver ||= new ResizeObserver(entries => this._handleResize(entries));
-
-    this._intersectionObserver.observe(this.canvas);
-    try {
-      this._resizeObserver.observe(this.canvas, {box: 'device-pixel-content-box'});
-    } catch {
-      this._resizeObserver.observe(this.canvas, {box: 'content-box'});
-    }
-
-    this._observeDevicePixelRatioTimeout = setTimeout(() => this._observeDevicePixelRatio(), 0);
-
-    if (this.props.trackPosition) {
-      this._trackPosition();
-    }
+    this._canvasObserver.start();
   }
 
   /**
@@ -329,28 +312,7 @@ export abstract class CanvasSurface {
    * lifetime of the owning device.
    */
   _stopObservers(): void {
-    this._observersStarted = false;
-
-    if (this._observeDevicePixelRatioTimeout) {
-      clearTimeout(this._observeDevicePixelRatioTimeout);
-      this._observeDevicePixelRatioTimeout = null;
-    }
-
-    if (this._observeDevicePixelRatioMediaQuery) {
-      this._observeDevicePixelRatioMediaQuery.removeEventListener(
-        'change',
-        this._handleDevicePixelRatioChange
-      );
-      this._observeDevicePixelRatioMediaQuery = null;
-    }
-
-    if (this._trackPositionInterval) {
-      clearInterval(this._trackPositionInterval);
-      this._trackPositionInterval = null;
-    }
-
-    this._resizeObserver?.disconnect();
-    this._intersectionObserver?.disconnect();
+    this._canvasObserver.stop();
   }
 
   protected _handleIntersection(entries: IntersectionObserverEntry[]) {
@@ -438,7 +400,7 @@ export abstract class CanvasSurface {
   }
 
   _observeDevicePixelRatio() {
-    if (this.destroyed || !this._observersStarted) {
+    if (this.destroyed || !this._canvasObserver.started) {
       return;
     }
     const oldRatio = this.devicePixelRatio;
@@ -449,36 +411,6 @@ export abstract class CanvasSurface {
     this.device.props.onDevicePixelRatioChange?.(this as CanvasContext | PresentationContext, {
       oldRatio
     });
-
-    this._observeDevicePixelRatioMediaQuery?.removeEventListener(
-      'change',
-      this._handleDevicePixelRatioChange
-    );
-    this._observeDevicePixelRatioMediaQuery = matchMedia(
-      `(resolution: ${this.devicePixelRatio}dppx)`
-    );
-    this._observeDevicePixelRatioMediaQuery.addEventListener(
-      'change',
-      this._handleDevicePixelRatioChange,
-      {once: true}
-    );
-  }
-
-  _trackPosition(intervalMs: number = 100): void {
-    if (this._trackPositionInterval) {
-      return;
-    }
-
-    this._trackPositionInterval = setInterval(() => {
-      if (this.destroyed || !this._observersStarted) {
-        if (this._trackPositionInterval) {
-          clearInterval(this._trackPositionInterval);
-          this._trackPositionInterval = null;
-        }
-      } else {
-        this.updatePosition();
-      }
-    }, intervalMs);
   }
 
   updatePosition() {
