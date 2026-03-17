@@ -51,9 +51,13 @@ test('Model#construct/destruct', async t => {
   t.ok(model, 'Model constructor does not throw errors');
   t.ok(model.id, 'Model has an id');
   t.ok(model.pipeline, 'Created pipeline');
+  t.false(model.pipeline.destroyed, 'Pipeline starts alive');
 
   model.destroy();
-  t.true(model.pipeline.destroyed, 'Deleted pipeline');
+  t.false(
+    model.pipeline.destroyed,
+    'Pipeline wrapper remains cached by default after last release'
+  );
 
   t.end();
 });
@@ -82,7 +86,7 @@ test('Model#multiple delete', async t => {
   model1.destroy();
   t.ok(model2.pipeline.destroyed === false, 'program still in use');
   model2.destroy();
-  t.ok(model2.pipeline.destroyed === true, 'program is released');
+  t.ok(model2.pipeline.destroyed === false, 'program remains cached after last release by default');
 
   t.end();
 });

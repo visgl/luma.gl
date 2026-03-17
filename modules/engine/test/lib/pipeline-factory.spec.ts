@@ -105,7 +105,7 @@ test('PipelineFactory#release', async t => {
   t.ok(!pipeline1.destroyed, 'Pipeline not deleted when still referenced.');
 
   pipelineFactory.release(pipeline2);
-  t.ok(pipeline2.destroyed, 'Pipeline deleted when all references released.');
+  t.ok(!pipeline2.destroyed, 'Pipeline remains cached after all references are released.');
 
   t.end();
 });
@@ -166,18 +166,18 @@ test('PipelineFactory#caching with parameters', async t => {
     'Shared program remains alive while another wrapper uses it'
   );
   pipelineFactory.release(pipeline3);
-  t.ok(
-    isProgramDestroyed(pipeline3.handle),
-    'Shared program is deleted after the last wrapper is released'
-  );
-  t.ok(
-    pipeline3.sharedRenderPipeline?.destroyed,
-    'Shared render pipeline resource is deleted after the last wrapper is released'
-  );
   t.equal(
     getSharedRenderPipelineCount(webglDevice),
-    initialSharedRenderPipelineCount,
-    'Shared render pipeline resource count returns to baseline after release'
+    initialSharedRenderPipelineCount + 1,
+    'Shared render pipeline resource remains cached after release'
+  );
+  t.notOk(
+    isProgramDestroyed(pipeline3.handle),
+    'Shared program remains cached after the last wrapper is released'
+  );
+  t.notOk(
+    pipeline3.sharedRenderPipeline?.destroyed,
+    'Shared render pipeline resource remains cached after the last wrapper is released'
   );
 
   t.end();
@@ -358,8 +358,8 @@ test('PipelineFactory#sharing can be disabled independently from wrapper caching
     pipelineFactory.release(pipeline2);
     t.equal(
       getSharedRenderPipelineCount(webglDevice),
-      initialSharedRenderPipelineCount,
-      'Shared render pipeline resource count returns to baseline after release'
+      initialSharedRenderPipelineCount + 2,
+      'Shared render pipeline resources remain cached after release'
     );
   } finally {
     webglDevice?.destroy();

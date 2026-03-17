@@ -361,7 +361,7 @@ export class Model {
       this.pipelineFactory.release(this.pipeline);
       // Release the shaders
       this.shaderFactory.release(this.pipeline.vs);
-      if (this.pipeline.fs) {
+      if (this.pipeline.fs && this.pipeline.fs !== this.pipeline.vs) {
         this.shaderFactory.release(this.pipeline.fs);
       }
       this._uniformStore.destroy();
@@ -829,7 +829,9 @@ export class Model {
       );
 
       if (prevShaderVs) this.shaderFactory.release(prevShaderVs);
-      if (prevShaderFs) this.shaderFactory.release(prevShaderFs);
+      if (prevShaderFs && prevShaderFs !== prevShaderVs) {
+        this.shaderFactory.release(prevShaderFs);
+      }
     }
     return this.pipeline;
   }
