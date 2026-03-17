@@ -11,10 +11,12 @@ import {WebGPUBuffer} from './webgpu-buffer';
 import {WebGPURenderPipeline} from './webgpu-render-pipeline';
 import {WebGPUQuerySet} from './webgpu-query-set';
 import {WebGPUFramebuffer} from './webgpu-framebuffer';
+import {getCpuHotspotProfiler, getTimestamp} from '../helpers/cpu-hotspot-profiler';
 
 export class WebGPURenderPass extends RenderPass {
   readonly device: WebGPUDevice;
   readonly handle: GPURenderPassEncoder;
+  readonly framebuffer: WebGPUFramebuffer;
 
   /** Active pipeline */
   pipeline: WebGPURenderPipeline | null = null;
@@ -22,48 +24,91 @@ export class WebGPURenderPass extends RenderPass {
   constructor(device: WebGPUDevice, props: RenderPassProps = {}) {
     super(device, props);
     this.device = device;
-    const framebuffer =
-      (props.framebuffer as WebGPUFramebuffer) || device.getCanvasContext().getCurrentFramebuffer();
+    const {props: renderPassProps} = this;
+    this.framebuffer =
+      (renderPassProps.framebuffer as WebGPUFramebuffer) ||
+      device.getCanvasContext().getCurrentFramebuffer();
 
-    const renderPassDescriptor = this.getRenderPassDescriptor(framebuffer);
-
-    const webgpuQuerySet = props.timestampQuerySet as WebGPUQuerySet;
-    if (webgpuQuerySet) {
-      renderPassDescriptor.occlusionQuerySet = webgpuQuerySet.handle;
+    const profiler = getCpuHotspotProfiler(this.device);
+    if (profiler) {
+      const counterName:
+        | 'explicitFramebufferRenderPassCount'
+        | 'defaultFramebufferRenderPassCount' = renderPassProps.framebuffer
+        ? 'explicitFramebufferRenderPassCount'
+        : 'defaultFramebufferRenderPassCount';
+      profiler[counterName] = (profiler[counterName] || 0) + 1;
     }
 
-    if (device.features.has('timestamp-query')) {
-      const webgpuTSQuerySet = props.timestampQuerySet as WebGPUQuerySet;
-      renderPassDescriptor.timestampWrites = webgpuTSQuerySet
-        ? ({
-            querySet: webgpuTSQuerySet.handle,
-            beginningOfPassWriteIndex: props.beginTimestampIndex,
-            endOfPassWriteIndex: props.endTimestampIndex
-          } as GPUComputePassTimestampWrites)
-        : undefined;
-    }
+    const startTime = profiler ? getTimestamp() : 0;
+    try {
+      const descriptorAssemblyStartTime = profiler ? getTimestamp() : 0;
+      const renderPassDescriptor = this.getRenderPassDescriptor(this.framebuffer);
 
-    if (!device.commandEncoder) {
-      throw new Error('commandEncoder not available');
-    }
+      if (renderPassProps.occlusionQuerySet) {
+        renderPassDescriptor.occlusionQuerySet = (
+          renderPassProps.occlusionQuerySet as WebGPUQuerySet
+        ).handle;
+      }
 
-    this.device.pushErrorScope('validation');
-    this.handle =
-      this.props.handle || device.commandEncoder.handle.beginRenderPass(renderPassDescriptor);
-    this.device.popErrorScope((error: GPUError) => {
-      this.device.reportError(new Error(`${this} creation failed:\n"${error.message}"`), this)();
-      this.device.debug();
-    });
-    this.handle.label = this.props.id;
-    log.groupCollapsed(3, `new WebGPURenderPass(${this.id})`)();
-    log.probe(3, JSON.stringify(renderPassDescriptor, null, 2))();
-    log.groupEnd(3)();
+      if (renderPassProps.timestampQuerySet) {
+        const webgpuTSQuerySet = renderPassProps.timestampQuerySet as WebGPUQuerySet;
+        webgpuTSQuerySet?._invalidateResults();
+        renderPassDescriptor.timestampWrites = webgpuTSQuerySet
+          ? ({
+              querySet: webgpuTSQuerySet.handle,
+              beginningOfPassWriteIndex: renderPassProps.beginTimestampIndex,
+              endOfPassWriteIndex: renderPassProps.endTimestampIndex
+            } as GPURenderPassTimestampWrites)
+          : undefined;
+      }
+      if (profiler) {
+        profiler.renderPassDescriptorAssemblyCount =
+          (profiler.renderPassDescriptorAssemblyCount || 0) + 1;
+        profiler.renderPassDescriptorAssemblyTimeMs =
+          (profiler.renderPassDescriptorAssemblyTimeMs || 0) +
+          (getTimestamp() - descriptorAssemblyStartTime);
+      }
+
+      if (!device.commandEncoder) {
+        throw new Error('commandEncoder not available');
+      }
+
+      this.device.pushErrorScope('validation');
+      const beginRenderPassStartTime = profiler ? getTimestamp() : 0;
+      this.handle =
+        this.props.handle || device.commandEncoder.handle.beginRenderPass(renderPassDescriptor);
+      if (profiler) {
+        profiler.renderPassBeginCount = (profiler.renderPassBeginCount || 0) + 1;
+        profiler.renderPassBeginTimeMs =
+          (profiler.renderPassBeginTimeMs || 0) + (getTimestamp() - beginRenderPassStartTime);
+      }
+      this.device.popErrorScope((error: GPUError) => {
+        this.device.reportError(new Error(`${this} creation failed:\n"${error.message}"`), this)();
+        this.device.debug();
+      });
+      this.handle.label = this.props.id;
+      log.groupCollapsed(3, `new WebGPURenderPass(${this.id})`)();
+      log.probe(3, JSON.stringify(renderPassDescriptor, null, 2))();
+      log.groupEnd(3)();
+    } finally {
+      if (profiler) {
+        profiler.renderPassSetupCount = (profiler.renderPassSetupCount || 0) + 1;
+        profiler.renderPassSetupTimeMs =
+          (profiler.renderPassSetupTimeMs || 0) + (getTimestamp() - startTime);
+      }
+    }
   }
 
-  override destroy(): void {}
+  override destroy(): void {
+    this.destroyResource();
+  }
 
   end(): void {
+    if (this.destroyed) {
+      return;
+    }
     this.handle.end();
+    this.destroy();
   }
 
   setPipeline(pipeline: RenderPipeline): void {

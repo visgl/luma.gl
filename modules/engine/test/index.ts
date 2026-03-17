@@ -13,7 +13,9 @@ import './lib/animation-loop.spec';
 import './lib/pipeline-factory.spec';
 import './lib/shader-factory.spec';
 
-import './async-texture/async-texture.spec';
+import './dynamic-texture/dynamic-texture.spec';
+import './dynamic-texture/mip-levels.spec';
+import './dynamic-texture/texture-data.spec';
 
 import './geometry/geometries.spec';
 import './geometry/geometry.spec';
@@ -38,3 +40,5 @@ import './compute/swap.spec';
 import './compute/buffer-transform.spec';
 import './compute/texture-transform.spec';
 import './compute/computation.spec';
+import './passes/shader-pass-renderer.spec';
+import './models/background-texture-model.spec';

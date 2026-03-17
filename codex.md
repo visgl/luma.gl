@@ -3,3 +3,4 @@
 - The webgl and webgpu folders contain implementations of the general API, that will actually run during the tests,
 but the tests do not need to be aware of that.
 - The documentation is in markdown in the docs folder, with each modules reference docs in docs/api-reference/<module-name>
+- Run the `yarn lint fix` script to format the code (using prettier) before committing.

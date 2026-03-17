@@ -1,53 +1,66 @@
 # GroupNode
 
-A `GroupNode` is a subclass of `ScenegraphNode` that holds a list of `ScenegraphNode` children. Since . A `GroupNode` can be a child of another `GroupNode` and thus be used to create hierarchical scene graphs.
+`GroupNode` extends [`ScenegraphNode`](/docs/api-reference/engine/scenegraph/scenegraph-node) with child-node management and traversal helpers.
 
 ## Usage
 
-Add a moon and a box models to the group.
-
 ```typescript
-// Add objects to the group
-group.add(moon, box);
+import {GroupNode} from '@luma.gl/engine';
+
+const group = new GroupNode();
+group.add(childNodeA, childNodeB);
 ```
 
-Add a moon and a box models to the group. Then remove them.
+## Types
 
-```typescript
-// Add objects to the group
-group.add(moon, box);
-// Remove the moon
-group.remove(moon);
+### `GroupNodeProps`
+
+```ts
+export type GroupNodeProps = ScenegraphNodeProps & {
+  children?: ScenegraphNode[];
+};
 ```
 
 ## Properties
 
-`Model` extends the `ScenegraphNode` class and inherits the transformation matrix properties from that class.
+### `children`
 
-### children : ScenegraphNode[]
+The current list of child nodes.
 
 ## Methods
 
-### constructor(props : Object)
+### `constructor(children: ScenegraphNode[])`
 
-Create an instance of `GroupNode`.
+Creates a group from an initial child list.
 
-### setProps(props : Object)
+### `constructor(props?: GroupNodeProps)`
 
-Updates properties.
+Creates a group from node props plus optional children.
 
-### add(node : ScenegraphNode [, ...])
+### `getBounds(): [number[], number[]] | null`
 
-Add one or more `ScenegraphNode` objects to the `GroupNode`.
+Returns world-space bounds aggregated from all descendants that provide bounds.
 
-`group.add(model);`
+### `destroy(): void`
 
-A variable argument list of [ScenegraphNode](/docs/api-reference/engine/scenegraph/scenegraph-node) instances.
+Destroys all children and clears the child list.
 
-### remove(node: Node)
+### `add(...children): this`
 
-Removes an [ScenegraphNode](/docs/api-reference/engine/scenegraph/scenegraph-node) object from the GroupNode.
+Adds one or more children. Nested arrays are unpacked recursively.
 
-    group.remove(model);
+### `remove(child: ScenegraphNode): this`
 
-- model - (_object_) The scene graph node to be removed.
+Removes one child.
+
+### `removeAll(): this`
+
+Clears all children.
+
+### `traverse(visitor, {worldMatrix} = {})`
+
+Traverses descendants depth-first and calls the visitor for non-group leaf nodes.
+
+### `preorderTraversal(visitor, {worldMatrix} = {})`
+
+Traverses the group and its descendants in preorder, including the group itself.

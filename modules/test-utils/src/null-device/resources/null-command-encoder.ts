@@ -27,8 +27,14 @@ export class NullCommandEncoder extends CommandEncoder {
     this.device = device;
   }
 
-  finish(props: CommandBufferProps): NullCommandBuffer {
-    return new NullCommandBuffer(this.device, props);
+  override destroy(): void {
+    this.destroyResource();
+  }
+
+  finish(props: CommandBufferProps = {}): NullCommandBuffer {
+    const commandBuffer = new NullCommandBuffer(this.device, props);
+    this.destroy();
+    return commandBuffer;
   }
 
   beginRenderPass(props: RenderPassProps): NullRenderPass {
@@ -44,8 +50,31 @@ export class NullCommandEncoder extends CommandEncoder {
   copyBufferToTexture(options: CopyBufferToTextureOptions) {}
 
   copyTextureToBuffer(options: CopyTextureToBufferOptions): void {
-    const {sourceTexture, destinationBuffer, ...readOptions} = options;
-    sourceTexture.readBuffer(readOptions as any, destinationBuffer);
+    const {
+      sourceTexture,
+      destinationBuffer,
+      origin = [0, 0, 0],
+      byteOffset = 0,
+      width,
+      height,
+      depthOrArrayLayers,
+      mipLevel,
+      aspect
+    } = options;
+    sourceTexture.readBuffer(
+      {
+        x: origin[0] ?? 0,
+        y: origin[1] ?? 0,
+        z: origin[2] ?? 0,
+        width,
+        height,
+        depthOrArrayLayers,
+        mipLevel,
+        aspect,
+        byteOffset
+      } as any,
+      destinationBuffer
+    );
   }
 
   copyTextureToTexture(options: CopyTextureToTextureOptions): void {}

@@ -14,8 +14,8 @@ import {CommandBuffer} from '@luma.gl/core';
 import type {NullDevice} from '../null-device';
 
 export class NullCommandBuffer extends CommandBuffer {
-  device: NullDevice;
-  handle: null = null;
+  readonly device: NullDevice;
+  readonly handle: null = null;
 
   constructor(device: NullDevice, props: CommandBufferProps) {
     super(device, props);
@@ -27,8 +27,31 @@ export class NullCommandBuffer extends CommandBuffer {
   copyBufferToTexture(options: CopyBufferToTextureOptions) {}
 
   copyTextureToBuffer(options: CopyTextureToBufferOptions): void {
-    const {sourceTexture, destinationBuffer, ...readOptions} = options;
-    sourceTexture.readBuffer(readOptions as any, destinationBuffer);
+    const {
+      sourceTexture,
+      destinationBuffer,
+      origin = [0, 0, 0],
+      byteOffset = 0,
+      width,
+      height,
+      depthOrArrayLayers,
+      mipLevel,
+      aspect
+    } = options;
+    sourceTexture.readBuffer(
+      {
+        x: origin[0] ?? 0,
+        y: origin[1] ?? 0,
+        z: origin[2] ?? 0,
+        width,
+        height,
+        depthOrArrayLayers,
+        mipLevel,
+        aspect,
+        byteOffset
+      } as any,
+      destinationBuffer
+    );
   }
 
   copyTextureToTexture(options: CopyTextureToTextureOptions): void {}

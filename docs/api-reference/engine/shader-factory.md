@@ -1,68 +1,48 @@
 # ShaderFactory
 
-The `ShaderFactory` class provides a `createShader()` method that caches and reuses `Shader` resources.
+`ShaderFactory` caches and reuses [`Shader`](/docs/api-reference/core/resources/shader) resources for a device.
 
-Compiling shaders is costly, and may block the render pipeline on some devices. Using a shader factory allows applications to more easily consolidate shaders with identical properties, minimizing the amount of time spent compiling shaders.
-
-The `ShaderFactory` will return the requested shader, creating it the first time, and then re-using a cached version if it is requested more than once. An application that tends to create multiple identical `Shader` instances should consider replacing calls to `device.createShader(...)` with calls to `shaderFactory.createShader(...)`.
-
-It is possible to create multiple shader factories, but normally applications rely on the default factory that is created for each device.
+This is useful when multiple pipelines or models compile the same shader source repeatedly. Reusing a cached `Shader` reduces compilation overhead and complements [`PipelineFactory`](/docs/api-reference/engine/pipeline-factory).
 
 ## Usage
 
-An application that tends to create multiple identical `Shader` instances
-should consider replacing calls to `device.createShader(...)` with calls to `shaderFactory.createShader(...)`.
-
-To deduplicate `Shader` instances, simply replace existing shader creation
-
-```typescript
-const shader = device.createShader({stage: 'vertex', source: '...'}));
-```
-
-with similar calls to the default shader factory
-
 ```typescript
 import {ShaderFactory} from '@luma.gl/engine';
+
 const shaderFactory = ShaderFactory.getDefaultShaderFactory(device);
 const shader = shaderFactory.createShader({stage: 'vertex', source: '...'});
-```
-
-To prevent the cache from growing too big, an optional `release()` method is also available.
-
-```typescript
 shaderFactory.release(shader);
 ```
 
-Shaders are destroyed by the factory automatically after all users of the shader have released their references. To clean up unused shaders and avoid memory leaks, every call to `createShader` must be paired with a corresponding call to `release` at some later time.
+## Properties
 
-## Static Methods
+### `device: Device`
 
-### ShaderFactory.getDefaultShaderFactory()
+Device that owns the cached shaders.
 
-Returns the default shader factory for a device.
+### `cachingEnabled: boolean`
 
-```typescript
-ShaderFactory.getDefaultShaderFactory(device: Device): ShaderFactory
-```
-
-While it is possible to create multiple factories, most applications will use the default factory.
+Whether shader reuse is enabled for the current device configuration.
 
 ## Methods
 
-### createShader()
+### `ShaderFactory.getDefaultShaderFactory(device: Device): ShaderFactory`
 
-Returns a `Shader` configured with the properties specified.
+Returns the default singleton factory stored on the device's engine module state.
 
-```typescript
-createShader(props: ShaderProps): Shader
-```
+### `constructor(device: Device)`
 
-If one is already cached, return it, otherwise create and cache a new one.
+Creates a factory for one device.
 
-### release()
+### `createShader(props: ShaderProps): Shader`
 
-```typescript
-release(shader: Shader): void
-```
+Returns a shader. If caching is enabled and an equivalent shader was already requested, the cached instance is reused and its internal reference count is incremented.
 
-Indicates that a shader is no longer in use. Each call to `createShader()` increments a reference count, and only when all references to a shader are released, the shader is destroyed and deleted from the cache.
+### `release(shader: Shader): void`
+
+Releases a previously requested shader. When the reference count reaches zero, the shader is either destroyed or retained depending on the device destroy policy.
+
+## Remarks
+
+- Cache identity is based on `stage` and shader `source`.
+- As with `PipelineFactory`, callers that use cached shader creation should pair `createShader()` with `release()`.

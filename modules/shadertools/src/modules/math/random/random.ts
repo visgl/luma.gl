@@ -5,9 +5,8 @@
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
 
 const source = /* wgsl */ `\
-fn random(scale: vec3f, seed: float) -> f32 {
-  /* use the fragment position for a different seed per-pixel */
-  return fract(sin(dot(gl_FragCoord.xyz + seed, scale)) * 43758.5453 + seed);
+fn random(scale: vec3f, seed: f32) -> f32 {
+  return fract(sin(dot(scale + vec3f(seed), vec3f(12.9898, 78.233, 151.7182))) * 43758.5453 + seed);
 }
 `;
 

@@ -237,7 +237,7 @@ After the GPU completes stencil tests, depth tests and writes are performed. The
 
 ### Stencil Test
 
-After the fragment shader runs, optional stencil tests are performed, with resulting operations on the the stencil buffer.
+After the fragment shader runs, optional stencil tests are performed, with resulting operations on the stencil buffer.
 
 | Function                    | Type               | Default            | Description                            |
 | --------------------------- | ------------------ | ------------------ | -------------------------------------- |

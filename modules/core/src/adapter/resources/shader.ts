@@ -106,38 +106,38 @@ export abstract class Shader extends Resource<ShaderProps> {
 
     const shaderName: string = shaderId; // getShaderName(this.source) || ;
     const shaderTitle: string = `${this.stage} shader "${shaderName}"`;
-    let htmlLog = formatCompilerLog(messages, this.source, {showSourceCode: 'all', html: true});
+    const htmlLog = formatCompilerLog(messages, this.source, {showSourceCode: 'all', html: true});
     // Show translated source if available
     const translatedSource = this.getTranslatedSource();
+
+    const container = document.createElement('div');
+    container.innerHTML = `\
+<h1>Compilation error in ${shaderTitle}</h1>
+<div style="display:flex;position:fixed;top:10px;right:20px;gap:2px;">
+<button id="copy">Copy source</button><br/>
+<button id="close">Close</button>
+</div>
+<code><pre>${htmlLog}</pre></code>`;
     if (translatedSource) {
-      htmlLog += `<br /><br /><h1>Translated Source</h1><br /><br /><code style="user-select:text;"><pre>${translatedSource}</pre></code>`;
+      container.innerHTML += `<br /><h1>Translated Source</h1><br /><br /><code><pre>${translatedSource}</pre></code>`;
     }
-    // Make it clickable so we can copy to clipboard
-    const button = document.createElement('Button');
-    button.innerHTML = `
-<h1>Compilation error in ${shaderTitle}</h1><br /><br />
-<code style="user-select:text;"><pre>
-${htmlLog}
-</pre></code>`;
-    button.style.top = '10px';
-    button.style.left = '10px';
-    button.style.position = 'absolute';
-    button.style.zIndex = '9999';
-    button.style.width = '100%';
-    button.style.textAlign = 'left';
-    document.body.appendChild(button);
-
-    const errors = document.getElementsByClassName('luma-compiler-log-error');
-    errors[0]?.scrollIntoView();
-
-    // TODO - add a small embedded copy button (instead of main button)
-    button.onclick = () => {
-      // const source = this.source.replaceAll('\n', '<br />');
-      const dataURI = `data:text/plain,${encodeURIComponent(this.source)}`;
-      navigator.clipboard.writeText(dataURI);
+    container.style.top = '0';
+    container.style.left = '0';
+    container.style.background = 'white';
+    container.style.position = 'fixed';
+    container.style.zIndex = '9999';
+    container.style.maxWidth = '100vw';
+    container.style.maxHeight = '100vh';
+    container.style.overflowY = 'auto';
+    document.body.appendChild(container);
+    const error = container.querySelector('.luma-compiler-log-error');
+    error?.scrollIntoView();
+    (container.querySelector('button#close') as HTMLButtonElement).onclick = () => {
+      container.remove();
     };
-
-    // TODO - add a small embedded close button
+    (container.querySelector('button#copy') as HTMLButtonElement).onclick = () => {
+      navigator.clipboard.writeText(this.source);
+    };
   }
 
   static override defaultProps: Required<ShaderProps> = {
@@ -162,5 +162,5 @@ function getShaderIdFromProps(props: ShaderProps): string {
 function getShaderName(shader: string, defaultName: string = 'unnamed'): string {
   const SHADER_NAME_REGEXP = /#define[\s*]SHADER_NAME[\s*]([A-Za-z0-9_-]+)[\s*]/;
   const match = SHADER_NAME_REGEXP.exec(shader);
-  return match ? match[1] : defaultName;
+  return match?.[1] ?? defaultName;
 }

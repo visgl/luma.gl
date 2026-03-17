@@ -106,7 +106,7 @@ The `Texture2DArray` class has been removed as its utility was limited and the s
 
 #### FenceSync Class Removed
 
-The old `FenceSync` class has been removed. Applications can use the new portable [`Fence`](/docs/api-reference/core/resources/fence) resource created via `device.createFence()` to wait for GPU work to complete.
+The old `FenceSync` class has been removed. Note that as of luma.gl v9.3, applications can use the new portable [`Fence`](/docs/api-reference/core/resources/fence) resource created via `device.createFence()` to wait for GPU work to complete.
 
 #### Framebuffer and Texture: Copy and Blit methods
 
@@ -116,10 +116,10 @@ Following member function of `Framebuffer` and `Texture` classes are no longer s
 | -------------------------------- | -------------------- |
 | `Framebuffer.readPixels`         | `readPixelsToArray`  |
 | `Framebuffer.readPixelsToBuffer` | `readPixelsToBuffer` |
-| `Frambuffer.copyToDataUrl`       | `copyToDataUrl`      |
-| `Frambuffer.copyToImage`         | `copyToImage`        |
-| `Frambuffer.copyToTexture`       | `copyToTexture`      |
-| `Frambuffer.blit`                | `blit`               |
+| `Framebuffer.copyToDataUrl`       | `copyToDataUrl`      |
+| `Framebuffer.copyToImage`         | `copyToImage`        |
+| `Framebuffer.copyToTexture`       | `copyToTexture`      |
+| `Framebuffer.blit`                | `blit`               |
 | `Texture.copyFramebuffer`        | `copyToTexture`      |
 
 Parameters have also changed in some cases, see separate section.
@@ -162,7 +162,7 @@ Additions:
 
 #### Geometry
 
-The `Geometry` class has been simplified and is now a conceptually "immutable" class that holds typed arrays and accessor metatadata describing attributes for a geometry.
+The `Geometry` class has been simplified and is now a conceptually "immutable" class that holds typed arrays and accessor metadata describing attributes for a geometry.
 
 | Removal                                               | Replacement               | Reason for Change                 |
 | ----------------------------------------------------- | ------------------------- | --------------------------------- |

@@ -96,4 +96,3 @@ test.skip('WebGL2#Texture resize', (t) => {
   t.end();
 });
 */
-

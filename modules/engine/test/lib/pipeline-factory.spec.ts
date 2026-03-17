@@ -65,3 +65,47 @@ test('PipelineFactory#release', async t => {
 
   t.end();
 });
+
+test('PipelineFactory#caching with parameters', async t => {
+  const webglDevice = await getWebGLTestDevice();
+  if (!webglDevice.props._cachePipelines) {
+    t.comment('Pipeline caching not enabled');
+    t.end();
+    return;
+  }
+
+  const pipelineFactory = new PipelineFactory(webglDevice);
+
+  const vs = webglDevice.createShader({stage: 'vertex', source: vsSource});
+  const fs = webglDevice.createShader({stage: 'fragment', source: fsSource});
+
+  const paramsA = {cullMode: 'back'};
+  const pipeline1 = pipelineFactory.createRenderPipeline({
+    vs,
+    fs,
+    topology: 'triangle-list',
+    parameters: paramsA
+  });
+  const pipeline2 = pipelineFactory.createRenderPipeline({
+    vs,
+    fs,
+    topology: 'triangle-list',
+    parameters: paramsA
+  });
+  t.isEqual(pipeline1, pipeline2, 'Caches identical pipelines');
+
+  const paramsB = {cullMode: 'front'};
+  const pipeline3 = pipelineFactory.createRenderPipeline({
+    vs,
+    fs,
+    topology: 'triangle-list',
+    parameters: paramsB
+  });
+  t.notEqual(pipeline1, pipeline3, 'Does not cache pipelines with different parameters');
+
+  pipelineFactory.release(pipeline1);
+  pipelineFactory.release(pipeline2);
+  pipelineFactory.release(pipeline3);
+
+  t.end();
+});

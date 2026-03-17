@@ -19,6 +19,8 @@ export {Device, DeviceFeatures, DeviceLimits} from './adapter/device';
 
 export type {CanvasContextProps} from './adapter/canvas-context';
 export {CanvasContext} from './adapter/canvas-context';
+export type {PresentationContextProps} from './adapter/presentation-context';
+export {PresentationContext} from './adapter/presentation-context';
 
 // GPU RESOURCES
 export {Resource, type ResourceProps} from './adapter/resources/resource';
@@ -186,6 +188,7 @@ export {
   type TextureFormat,
   type TextureFormatColor,
   type TextureFormatDepthStencil,
+  type CompressedTextureFormat,
   type TextureCompression,
   type TextureFormatInfo,
   type TextureFormatCapabilities,
@@ -200,6 +203,8 @@ export {
 export {getTextureImageView, setTextureImageData} from './shadertypes/textures/texture-layout';
 // export {TexturePacker} from './shadertypes/textures/texture-packer'
 export {type PixelData, readPixel, writePixel} from './shadertypes/textures/pixel-utils';
+
+export {isExternalImage, getExternalImageSize} from './image-utils/image-types';
 
 // GENERAL EXPORTS - FOR APPLICATIONS
 
@@ -216,6 +221,7 @@ export type {
 
 // INTERNAL UTILS - for use in other luma.gl modules only
 export {log} from './utils/log';
+export {assert, assertDefined} from './utils/assert';
 export {getScratchArray} from './utils/array-utils-flat';
 export type {AttributeInfo} from './adapter-utils/get-attribute-from-layouts';
 export {getAttributeInfosFromLayouts} from './adapter-utils/get-attribute-from-layouts';

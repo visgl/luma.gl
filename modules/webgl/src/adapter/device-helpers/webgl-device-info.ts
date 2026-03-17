@@ -99,6 +99,8 @@ function identifyGPUType(
 
   const gpuVendor = identifyGPUVendor(vendor, renderer);
   switch (gpuVendor) {
+    case 'apple':
+      return isAppleSiliconGPU(vendor, renderer) ? 'integrated' : 'unknown';
     case 'intel':
       return 'integrated';
     case 'software':
@@ -108,4 +110,8 @@ function identifyGPUType(
     default:
       return 'discrete';
   }
+}
+
+function isAppleSiliconGPU(vendor: string, renderer: string): boolean {
+  return /Apple (M\d|A\d|GPU)/i.test(`${vendor} ${renderer}`);
 }

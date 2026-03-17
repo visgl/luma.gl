@@ -65,13 +65,21 @@ export {fp64, fp64arithmetic} from './modules/math/fp64/fp64';
 
 // engine shader modules
 
-// // projection
+//  projection
 // export type {ProjectionUniforms} from './modules/engine/project/project';
 // export {projection} from './modules/engine/project/project';
 export type {PickingProps, PickingUniforms} from './modules/engine/picking/picking';
 export {picking} from './modules/engine/picking/picking';
+export {skin} from './modules/engine/skin/skin';
 
-// // lighting
+// lighting
+export {
+  type Light,
+  type AmbientLight,
+  type PointLight,
+  type DirectionalLight
+} from './modules/lighting/lights/lighting';
+
 export type {LightingProps, LightingUniforms} from './modules/lighting/lights/lighting';
 export {lighting} from './modules/lighting/lights/lighting';
 export {dirlight} from './modules/lighting/no-material/dirlight';

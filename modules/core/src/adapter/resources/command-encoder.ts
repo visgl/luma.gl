@@ -5,9 +5,9 @@
 // import type {TypedArray} from '@math.gl/types';
 import {Device} from '../device';
 import {Resource, ResourceProps} from './resource';
+import {QuerySet} from './query-set';
 import {Buffer} from './buffer';
 import {Texture} from './texture';
-import {QuerySet} from './query-set';
 import type {RenderPass, RenderPassProps} from './render-pass';
 import type {ComputePass, ComputePassProps} from './compute-pass';
 import type {CommandBuffer, CommandBufferProps} from './command-buffer';
@@ -27,11 +27,11 @@ export type CopyBufferToTextureOptions = {
   byteOffset?: number;
   destinationTexture: Texture;
   mipLevel?: number; //  = 0;
-  origin?: [number, number, number] | number[];
+  origin?: [number, number, number];
   aspect?: 'all' | 'stencil-only' | 'depth-only';
   bytesPerRow: number;
   rowsPerImage: number;
-  size: [number, number, number] | number[];
+  size: [number, number, number];
 };
 
 export type CopyTextureToBufferOptions = {
@@ -49,7 +49,7 @@ export type CopyTextureToBufferOptions = {
   width?: number;
   height?: number;
   depthOrArrayLayers?: number;
-  origin?: number[];
+  origin?: [number, number, number];
 
   /** Destination buffer */
   destinationBuffer: Buffer;
@@ -74,7 +74,7 @@ export type CopyTextureToTextureOptions = {
   /**  Mip-map level of the texture to copy to/from. (Default 0) */
   mipLevel?: number;
   /** Defines the origin of the copy - the minimum corner of the texture sub-region to copy from. */
-  origin?: number[];
+  origin?: [number, number, number];
   /** Defines which aspects of the {@link GPUImageCopyTexture#texture} to copy to/from. */
   aspect?: 'all' | 'stencil-only' | 'depth-only';
 
@@ -83,7 +83,7 @@ export type CopyTextureToTextureOptions = {
   /**  Mip-map level of the texture to copy to/from. (Default 0) */
   destinationMipLevel?: number;
   /** Defines the origin of the copy - the minimum corner of the texture sub-region to copy to. */
-  destinationOrigin?: number[];
+  destinationOrigin?: [number, number, number];
   /** Defines which aspects of the {@link GPUImageCopyTexture#texture} to copy to/from. */
   destinationAspect?: 'all' | 'stencil-only' | 'depth-only';
 
@@ -128,6 +128,13 @@ export type ClearTextureOptions = {
 
 export type CommandEncoderProps = ResourceProps & {
   measureExecutionTime?: boolean;
+  timeProfilingQuerySet?: QuerySet | null;
+};
+
+type PassWithTimestamps = {
+  timestampQuerySet?: QuerySet;
+  beginTimestampIndex?: number;
+  endTimestampIndex?: number;
 };
 
 /**
@@ -138,8 +145,15 @@ export abstract class CommandEncoder extends Resource<CommandEncoderProps> {
     return 'CommandEncoder';
   }
 
+  protected _timeProfilingQuerySet: QuerySet | null = null;
+  protected _timeProfilingSlotCount: number = 0;
+  _gpuTimeMs?: number;
+
   constructor(device: Device, props: CommandEncoderProps) {
     super(device, props, CommandEncoder.defaultProps);
+    this._timeProfilingQuerySet = props.timeProfilingQuerySet ?? null;
+    this._timeProfilingSlotCount = 0;
+    this._gpuTimeMs = undefined;
   }
 
   /** Completes recording of the commands sequence */
@@ -179,6 +193,80 @@ export abstract class CommandEncoder extends Resource<CommandEncoderProps> {
     }
   ): void;
 
+  /**
+   * Reads all resolved timestamp pairs on the current profiler query set and caches the sum
+   * as milliseconds on this encoder.
+   */
+  async resolveTimeProfilingQuerySet(): Promise<void> {
+    this._gpuTimeMs = undefined;
+
+    if (!this._timeProfilingQuerySet) {
+      return;
+    }
+
+    const pairCount = Math.floor(this._timeProfilingSlotCount / 2);
+    if (pairCount <= 0) {
+      return;
+    }
+
+    const queryCount = pairCount * 2;
+    const results = await this._timeProfilingQuerySet.readResults({
+      firstQuery: 0,
+      queryCount
+    });
+
+    let totalDurationNanoseconds = 0n;
+    for (let queryIndex = 0; queryIndex < queryCount; queryIndex += 2) {
+      totalDurationNanoseconds += results[queryIndex + 1] - results[queryIndex];
+    }
+
+    this._gpuTimeMs = Number(totalDurationNanoseconds) / 1e6;
+  }
+
+  /** Returns the number of query slots consumed by automatic pass profiling on this encoder. */
+  getTimeProfilingSlotCount(): number {
+    return this._timeProfilingSlotCount;
+  }
+
+  getTimeProfilingQuerySet(): QuerySet | null {
+    return this._timeProfilingQuerySet;
+  }
+
+  /** Internal helper for auto-assigning timestamp slots to render/compute passes on this encoder. */
+  protected _applyTimeProfilingToPassProps<P extends PassWithTimestamps>(props?: P): P {
+    const passProps = (props || {}) as P;
+
+    if (!this._supportsTimestampQueries() || !this._timeProfilingQuerySet) {
+      return passProps;
+    }
+
+    if (
+      passProps.timestampQuerySet !== undefined ||
+      passProps.beginTimestampIndex !== undefined ||
+      passProps.endTimestampIndex !== undefined
+    ) {
+      return passProps;
+    }
+
+    const beginTimestampIndex = this._timeProfilingSlotCount;
+    if (beginTimestampIndex + 1 >= this._timeProfilingQuerySet.props.count) {
+      return passProps;
+    }
+
+    this._timeProfilingSlotCount += 2;
+
+    return {
+      ...passProps,
+      timestampQuerySet: this._timeProfilingQuerySet,
+      beginTimestampIndex,
+      endTimestampIndex: beginTimestampIndex + 1
+    };
+  }
+
+  protected _supportsTimestampQueries(): boolean {
+    return this.device.features.has('timestamp-query');
+  }
+
   /** Begins a labeled debug group containing subsequent commands */
   abstract pushDebugGroup(groupLabel: string): void;
   /** Ends the labeled debug group most recently started by pushDebugGroup() */
@@ -192,6 +280,7 @@ export abstract class CommandEncoder extends Resource<CommandEncoderProps> {
 
   static override defaultProps: Required<CommandEncoderProps> = {
     ...Resource.defaultProps,
-    measureExecutionTime: undefined!
+    measureExecutionTime: undefined!,
+    timeProfilingQuerySet: undefined!
   };
 }

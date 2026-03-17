@@ -2,24 +2,22 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {
-  CopyBufferToBufferOptions,
-  CopyBufferToTextureOptions,
-  CopyTextureToBufferOptions,
-  CopyTextureToTextureOptions
-  // ClearTextureOptions,
-  // TextureReadOptions
-} from '@luma.gl/core';
-import {CommandBuffer, Texture, Framebuffer} from '@luma.gl/core';
 import {
-  GL,
-  GLTextureTarget,
-  GLTextureCubeMapTarget
-  // GLTexelDataFormat,
-  // GLPixelType,
-  // GLDataType
-} from '@luma.gl/constants';
+  type CommandBufferProps,
+  type CopyBufferToBufferOptions,
+  type CopyBufferToTextureOptions,
+  type CopyTextureToBufferOptions,
+  type CopyTextureToTextureOptions,
+  type TextureReadOptions,
+  // type ClearTextureOptions,
+  CommandBuffer,
+  Texture,
+  Framebuffer,
+  assertDefined
+} from '@luma.gl/core';
+import {GL, type GLTextureTarget, type GLTextureCubeMapTarget} from '@luma.gl/constants';
 
+import {getTextureFormatWebGL} from '../converters/webgl-texture-table';
 import {WebGLDevice} from '../webgl-device';
 import {WEBGLBuffer} from './webgl-buffer';
 import {WEBGLTexture} from './webgl-texture';
@@ -68,8 +66,8 @@ export class WEBGLCommandBuffer extends CommandBuffer {
   readonly handle = null;
   commands: Command[] = [];
 
-  constructor(device: WebGLDevice) {
-    super(device, {});
+  constructor(device: WebGLDevice, props: CommandBufferProps = {}) {
+    super(device, props);
     this.device = device;
   }
 
@@ -130,8 +128,93 @@ function _copyBufferToTexture(device: WebGLDevice, options: CopyBufferToTextureO
  * NOTE: doesn't wait for copy to be complete
  */
 function _copyTextureToBuffer(device: WebGLDevice, options: CopyTextureToBufferOptions): void {
-  const {sourceTexture, destinationBuffer, ...readOptions} = options;
-  sourceTexture.readBuffer(readOptions as any, destinationBuffer);
+  const {
+    sourceTexture,
+    mipLevel = 0,
+    aspect = 'all',
+    width = options.sourceTexture.width,
+    height = options.sourceTexture.height,
+    depthOrArrayLayers,
+    origin = [0, 0, 0],
+    destinationBuffer,
+    byteOffset = 0,
+    bytesPerRow,
+    rowsPerImage
+  } = options;
+
+  if (sourceTexture instanceof Texture) {
+    sourceTexture.readBuffer(
+      {
+        x: origin[0] ?? 0,
+        y: origin[1] ?? 0,
+        z: origin[2] ?? 0,
+        width,
+        height,
+        depthOrArrayLayers,
+        mipLevel,
+        aspect,
+        byteOffset
+      } as TextureReadOptions & {byteOffset?: number},
+      destinationBuffer
+    );
+    return;
+  }
+
+  // TODO - Not possible to read just stencil or depth part in WebGL?
+  if (aspect !== 'all') {
+    throw new Error('aspect not supported in WebGL');
+  }
+
+  // TODO - mipLevels are set when attaching texture to framebuffer
+  if (mipLevel !== 0 || depthOrArrayLayers !== undefined || bytesPerRow || rowsPerImage) {
+    throw new Error('not implemented');
+  }
+
+  // Asynchronous read (PIXEL_PACK_BUFFER) is WebGL2 only feature
+  const {framebuffer, destroyFramebuffer} = getFramebuffer(sourceTexture);
+  let prevHandle: WebGLFramebuffer | null | undefined;
+  try {
+    const webglBuffer = destinationBuffer as WEBGLBuffer;
+    const sourceWidth = width || framebuffer.width;
+    const sourceHeight = height || framebuffer.height;
+    const colorAttachment0 = assertDefined(framebuffer.colorAttachments[0]);
+
+    const sourceParams = getTextureFormatWebGL(colorAttachment0.texture.props.format);
+    const sourceFormat = sourceParams.format;
+    const sourceType = sourceParams.type;
+
+    // if (!target) {
+    //   // Create new buffer with enough size
+    //   const components = glFormatToComponents(sourceFormat);
+    //   const byteCount = glTypeToBytes(sourceType);
+    //   const byteLength = byteOffset + sourceWidth * sourceHeight * components * byteCount;
+    //   target = device.createBuffer({byteLength});
+    // }
+
+    device.gl.bindBuffer(GL.PIXEL_PACK_BUFFER, webglBuffer.handle);
+    // @ts-expect-error native bindFramebuffer is overridden by our state tracker
+    prevHandle = device.gl.bindFramebuffer(GL.FRAMEBUFFER, framebuffer.handle);
+
+    device.gl.readPixels(
+      origin[0],
+      origin[1],
+      sourceWidth,
+      sourceHeight,
+      sourceFormat,
+      sourceType,
+      byteOffset
+    );
+  } finally {
+    device.gl.bindBuffer(GL.PIXEL_PACK_BUFFER, null);
+    // prevHandle may be unassigned if the try block failed before binding
+    if (prevHandle !== undefined) {
+      device.gl.bindFramebuffer(GL.FRAMEBUFFER, prevHandle);
+    }
+
+    if (destroyFramebuffer) {
+      framebuffer.destroy();
+    }
+  }
 }
 
 /**
@@ -169,7 +252,7 @@ function _copyTextureToTexture(device: WebGLDevice, options: CopyTextureToTextur
     origin = [0, 0],
 
     /** Defines the origin of the copy - the minimum corner of the texture sub-region to copy to. */
-    destinationOrigin = [0, 0],
+    destinationOrigin = [0, 0, 0],
 
     /** Texture to copy to/from. */
     destinationTexture
@@ -188,7 +271,7 @@ function _copyTextureToTexture(device: WebGLDevice, options: CopyTextureToTextur
   } = options;
 
   const {framebuffer, destroyFramebuffer} = getFramebuffer(sourceTexture);
-  const [sourceX, sourceY] = origin;
+  const [sourceX = 0, sourceY = 0] = origin;
   const [destinationX, destinationY, destinationZ] = destinationOrigin;
 
   // @ts-expect-error native bindFramebuffer is overridden by our state tracker

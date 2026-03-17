@@ -14,7 +14,9 @@ import {
 
 function assert(condition: boolean, message?: string): asserts condition {
   if (!condition) {
-    throw new Error(message);
+    const error = new Error(message);
+    Error.captureStackTrace?.(error, assert);
+    throw error;
   }
 }
 

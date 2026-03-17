@@ -3,6 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {
+  CommandBufferProps,
   RenderPassProps,
   ComputePassProps,
   CopyTextureToTextureOptions,
@@ -34,9 +35,11 @@ export class WebGPUCommandEncoder extends CommandEncoder {
     this.handle.label = this.props.id;
   }
 
-  override destroy(): void {}
+  override destroy(): void {
+    this.destroyResource();
+  }
 
-  finish(props?: CommandEncoderProps): WebGPUCommandBuffer {
+  finish(props?: CommandBufferProps): WebGPUCommandBuffer {
     this.device.pushErrorScope('validation');
     const commandBuffer = new WebGPUCommandBuffer(this, {
       id: props?.id || 'unnamed-command-buffer'
@@ -46,6 +49,7 @@ export class WebGPUCommandEncoder extends CommandEncoder {
       this.device.reportError(new Error(message), this)();
       this.device.debug();
     });
+    this.destroy();
     return commandBuffer;
   }
 
@@ -53,12 +57,12 @@ export class WebGPUCommandEncoder extends CommandEncoder {
    * Allows a render pass to begin against a canvas context
    * @todo need to support a "Framebuffer" equivalent (aka preconfigured RenderPassDescriptors?).
    */
-  beginRenderPass(props: RenderPassProps): WebGPURenderPass {
-    return new WebGPURenderPass(this.device, props);
+  beginRenderPass(props: RenderPassProps = {}): WebGPURenderPass {
+    return new WebGPURenderPass(this.device, this._applyTimeProfilingToPassProps(props));
   }
 
-  beginComputePass(props: ComputePassProps): WebGPUComputePass {
-    return new WebGPUComputePass(this.device, props);
+  beginComputePass(props: ComputePassProps = {}): WebGPUComputePass {
+    return new WebGPUComputePass(this.device, this._applyTimeProfilingToPassProps(props));
   }
 
   // beginRenderPass(GPURenderPassDescriptor descriptor): GPURenderPassEncoder;
@@ -122,8 +126,31 @@ export class WebGPUCommandEncoder extends CommandEncoder {
   }
 
   copyTextureToBuffer(options: CopyTextureToBufferOptions): void {
-    const {sourceTexture, destinationBuffer, ...readOptions} = options;
-    sourceTexture.readBuffer(readOptions as any, destinationBuffer);
+    const {
+      sourceTexture,
+      destinationBuffer,
+      origin = [0, 0, 0],
+      byteOffset = 0,
+      width,
+      height,
+      depthOrArrayLayers,
+      mipLevel,
+      aspect
+    } = options;
+    sourceTexture.readBuffer(
+      {
+        x: origin[0] ?? 0,
+        y: origin[1] ?? 0,
+        z: origin[2] ?? 0,
+        width,
+        height,
+        depthOrArrayLayers,
+        mipLevel,
+        aspect,
+        byteOffset
+      } as any,
+      destinationBuffer
+    );
   }
 
   copyTextureToTexture(options: CopyTextureToTextureOptions): void {
@@ -167,6 +194,28 @@ export class WebGPUCommandEncoder extends CommandEncoder {
       webgpuBuffer.handle,
       options?.destinationOffset || 0
     );
+  }
+
+  writeTimestamp(querySet: WebGPUQuerySet, queryIndex: number): void {
+    querySet._invalidateResults();
+    const writeTimestamp = (
+      this.handle as GPUCommandEncoder & {
+        writeTimestamp?: (querySet: GPUQuerySet, queryIndex: number) => void;
+      }
+    ).writeTimestamp;
+
+    if (writeTimestamp) {
+      writeTimestamp.call(this.handle, querySet.handle, queryIndex);
+      return;
+    }
+
+    const computePass = this.handle.beginComputePass({
+      timestampWrites: {
+        querySet: querySet.handle,
+        beginningOfPassWriteIndex: queryIndex
+      }
+    });
+    computePass.end();
   }
 }
 

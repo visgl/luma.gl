@@ -6,7 +6,7 @@ import {Device, RenderPass, Texture} from '@luma.gl/core';
 import type {ShaderPass} from '@luma.gl/shadertools';
 import {initializeShaderModule} from '@luma.gl/shadertools';
 import {ShaderInputs} from '../shader-inputs';
-import {AsyncTexture} from '../async-texture/async-texture';
+import {DynamicTexture} from '../dynamic-texture/dynamic-texture';
 import {ClipSpace} from '../models/clip-space';
 import {SwapFramebuffers} from '../compute/swap';
 import {BackgroundTextureModel} from '../models/billboard-texture-model';
@@ -20,7 +20,7 @@ export type ShaderPassRendererProps = {
   /** List of ShaderPasses to apply to the sourceTexture */
   shaderPasses: ShaderPass[];
   /** Optional typed ShaderInputs object for setting uniforms */
-  shaderInputs: ShaderInputs;
+  shaderInputs?: ShaderInputs;
 };
 
 /** A pass that renders a given texture into screen space */
@@ -29,8 +29,6 @@ export class ShaderPassRenderer {
   shaderInputs: ShaderInputs;
   passRenderers: PassRenderer[];
   swapFramebuffers: SwapFramebuffers;
-  /** For rendering to the screen */
-  clipSpace: ClipSpace;
   textureModel: BackgroundTextureModel;
 
   constructor(device: Device, props: ShaderPassRendererProps) {
@@ -55,33 +53,6 @@ export class ShaderPassRenderer {
       backgroundTexture: this.swapFramebuffers.current.colorAttachments[0].texture
     });
 
-    this.clipSpace = new ClipSpace(device, {
-      source: /* wgsl */ `\
-  @group(0) @binding(0) var sourceTexture: texture_2d<f32>;
-  @group(0) @binding(1) var sourceTextureSampler: sampler;
-
-@fragment
-fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
-	let texCoord: vec2<f32> = inputs.coordinate;
-	return textureSample(sourceTexture, sourceTextureSampler, texCoord);
-}
-`,
-
-      fs: /* glsl */ `\
-#version 300 es
-
-uniform sampler2D sourceTexture;
-in vec2 uv;
-in vec2 coordinate;
-out vec4 fragColor;
-
-void main() {
-  vec2 texCoord = coordinate;
-  fragColor = texture(sourceTexture, coordinate);
-}
-`
-    });
-
     this.passRenderers = props.shaderPasses.map(shaderPass => new PassRenderer(device, shaderPass));
   }
 
@@ -91,15 +62,19 @@ void main() {
       subPassRenderer.destroy();
     }
     this.swapFramebuffers.destroy();
-    this.clipSpace.destroy();
+    this.textureModel.destroy();
   }
 
-  resize(width: number, height: number): void {
-    this.swapFramebuffers.resize({width, height});
-    // this.props.passes.forEach(pass => pass.resize(width, height));
+  resize(size?: [width: number, height: number]): void {
+    size ||= this.device.getCanvasContext().getDrawingBufferSize();
+    this.swapFramebuffers.resize({width: size[0], height: size[1]});
   }
 
-  renderToScreen(options: {sourceTexture: AsyncTexture; uniforms?: any; bindings?: any}): boolean {
+  renderToScreen(options: {
+    sourceTexture: DynamicTexture;
+    uniforms?: any;
+    bindings?: any;
+  }): boolean {
     // Run the shader passes and generate an output texture
     const outputTexture = this.renderToTexture(options);
     if (!outputTexture) {
@@ -109,16 +84,15 @@ void main() {
 
     const framebuffer = this.device
       .getDefaultCanvasContext()
-      // @ts-expect-error TODO - remove after republish
-      .getCurrentFramebuffer({depthStencilAttachment: false});
+      .getCurrentFramebuffer({depthStencilFormat: false});
     const renderPass = this.device.beginRenderPass({
       id: 'shader-pass-renderer-to-screen',
       framebuffer,
-      clearColor: [0, 0, 0, 1],
-      clearDepth: 1
+      // clearColor: [1, 1, 0, 1],
+      clearDepth: false
     });
-    this.clipSpace.setBindings({sourceTexture: outputTexture});
-    this.clipSpace.draw(renderPass);
+    this.textureModel.setProps({backgroundTexture: outputTexture});
+    this.textureModel.draw(renderPass);
     renderPass.end();
     return true;
   }
@@ -127,7 +101,7 @@ void main() {
    * @returns null if the the sourceTexture has not yet been loaded
    */
   renderToTexture(options: {
-    sourceTexture: AsyncTexture;
+    sourceTexture: DynamicTexture;
     uniforms?: any;
     bindings?: any;
   }): Texture | null {
@@ -136,20 +110,23 @@ void main() {
       return null;
     }
 
-    this.textureModel.destroy();
-    this.textureModel = new BackgroundTextureModel(this.device, {
-      backgroundTexture: sourceTexture
-    });
+    // If no shader passes are provided, just return the original texture
+    if (this.passRenderers.length === 0) {
+      return sourceTexture.texture;
+    }
+
+    this.textureModel.setProps({backgroundTexture: sourceTexture});
 
     // Clear the current texture before we begin
     const clearTexturePass = this.device.beginRenderPass({
       id: 'shader-pass-renderer-clear-texture',
       framebuffer: this.swapFramebuffers.current,
-      clearColor: [0, 0, 0, 1]
+      clearColor: [1, 0, 0, 1]
     });
     this.textureModel.draw(clearTexturePass);
     clearTexturePass.end();
 
+    // Copy the texture contents
     // const commandEncoder = this.device.createCommandEncoder();
     // commandEncoder.copyTextureToTexture({
     //   sourceTexture: sourceTexture.texture,

@@ -12,10 +12,13 @@ import type {
   DeviceTextureFormatCapabilities,
   VertexFormat,
   CanvasContextProps,
+  PresentationContextProps,
+  PresentationContext,
   BufferProps,
   SamplerProps,
   ShaderProps,
   TextureProps,
+  Texture,
   ExternalTextureProps,
   FramebufferProps,
   RenderPipelineProps,
@@ -41,6 +44,7 @@ import {WebGPUComputePipeline} from './resources/webgpu-compute-pipeline';
 import {WebGPUVertexArray} from './resources/webgpu-vertex-array';
 
 import {WebGPUCanvasContext} from './webgpu-canvas-context';
+import {WebGPUPresentationContext} from './webgpu-presentation-context';
 import {WebGPUCommandEncoder} from './resources/webgpu-command-encoder';
 import {WebGPUCommandBuffer} from './resources/webgpu-command-buffer';
 import {WebGPUQuerySet} from './resources/webgpu-query-set';
@@ -48,6 +52,12 @@ import {WebGPUPipelineLayout} from './resources/webgpu-pipeline-layout';
 import {WebGPUFence} from './resources/webgpu-fence';
 
 import {getShaderLayoutFromWGSL} from '../wgsl/get-shader-layout-wgsl';
+import {generateMipmapsWebGPU} from './helpers/generate-mipmaps-webgpu';
+import {
+  getCpuHotspotProfiler as getWebGPUCpuHotspotProfiler,
+  getCpuHotspotSubmitReason as getWebGPUCpuHotspotSubmitReason,
+  getTimestamp
+} from './helpers/cpu-hotspot-profiler';
 
 /** WebGPU Device implementation */
 export class WebGPUDevice extends Device {
@@ -75,6 +85,7 @@ export class WebGPUDevice extends Device {
   override canvasContext: WebGPUCanvasContext | null = null;
 
   private _isLost: boolean = false;
+  private _defaultSampler: WebGPUSampler | null = null;
   commandEncoder: WebGPUCommandEncoder;
 
   override get [Symbol.toStringTag](): string {
@@ -132,6 +143,9 @@ export class WebGPUDevice extends Device {
   // this.glslang = glsl && await loadGlslangModule();
 
   destroy(): void {
+    this.commandEncoder?.destroy();
+    this._defaultSampler?.destroy();
+    this._defaultSampler = null;
     this.handle.destroy();
   }
 
@@ -167,6 +181,13 @@ export class WebGPUDevice extends Device {
 
   createSampler(props: SamplerProps): WebGPUSampler {
     return new WebGPUSampler(this, props);
+  }
+
+  getDefaultSampler(): WebGPUSampler {
+    this._defaultSampler ||= new WebGPUSampler(this, {
+      id: `${this.id}-default-sampler`
+    });
+    return this._defaultSampler;
   }
 
   createRenderPipeline(props: RenderPipelineProps): WebGPURenderPipeline {
@@ -207,37 +228,126 @@ export class WebGPUDevice extends Device {
     return new WebGPUCanvasContext(this, this.adapter, props);
   }
 
+  createPresentationContext(props?: PresentationContextProps): PresentationContext {
+    return new WebGPUPresentationContext(this, props);
+  }
+
   createPipelineLayout(props: PipelineLayoutProps): WebGPUPipelineLayout {
     return new WebGPUPipelineLayout(this, props);
   }
 
+  override generateMipmapsWebGPU(texture: Texture): void {
+    generateMipmapsWebGPU(this, texture);
+  }
+
   submit(commandBuffer?: WebGPUCommandBuffer): void {
+    let submittedCommandEncoder: WebGPUCommandEncoder | null = null;
     if (!commandBuffer) {
-      commandBuffer = this.commandEncoder.finish();
+      submittedCommandEncoder = this.commandEncoder;
+      if (
+        submittedCommandEncoder.getTimeProfilingSlotCount() > 0 &&
+        submittedCommandEncoder.getTimeProfilingQuerySet() instanceof WebGPUQuerySet
+      ) {
+        const querySet = submittedCommandEncoder.getTimeProfilingQuerySet() as WebGPUQuerySet;
+        querySet._encodeResolveToReadBuffer(submittedCommandEncoder, {
+          firstQuery: 0,
+          queryCount: submittedCommandEncoder.getTimeProfilingSlotCount()
+        });
+      }
+      commandBuffer = submittedCommandEncoder.finish();
       this.commandEncoder.destroy();
-      this.commandEncoder = this.createCommandEncoder({id: `${this.id}-default-encoder`});
+      this.commandEncoder = this.createCommandEncoder({
+        id: submittedCommandEncoder.props.id,
+        timeProfilingQuerySet: submittedCommandEncoder.getTimeProfilingQuerySet()
+      });
     }
 
-    this.pushErrorScope('validation');
-    this.handle.queue.submit([commandBuffer.handle]);
-    this.popErrorScope((error: GPUError) => {
-      this.reportError(new Error(`${this} command submission: ${error.message}`), this)();
-      this.debug();
-    });
+    const profiler = getWebGPUCpuHotspotProfiler(this);
+    const startTime = profiler ? getTimestamp() : 0;
+    const submitReason = getWebGPUCpuHotspotSubmitReason(this);
+    try {
+      this.pushErrorScope('validation');
+      const queueSubmitStartTime = profiler ? getTimestamp() : 0;
+      this.handle.queue.submit([commandBuffer.handle]);
+      if (profiler) {
+        profiler.queueSubmitCount = (profiler.queueSubmitCount || 0) + 1;
+        profiler.queueSubmitTimeMs =
+          (profiler.queueSubmitTimeMs || 0) + (getTimestamp() - queueSubmitStartTime);
+      }
+      this.popErrorScope((error: GPUError) => {
+        this.reportError(new Error(`${this} command submission: ${error.message}`), this)();
+        this.debug();
+      });
+
+      if (submittedCommandEncoder) {
+        const submitResolveKickoffStartTime = profiler ? getTimestamp() : 0;
+        scheduleMicrotask(() => {
+          submittedCommandEncoder
+            .resolveTimeProfilingQuerySet()
+            .then(() => {
+              this.commandEncoder._gpuTimeMs = submittedCommandEncoder._gpuTimeMs;
+            })
+            .catch(() => {});
+        });
+        if (profiler) {
+          profiler.submitResolveKickoffCount = (profiler.submitResolveKickoffCount || 0) + 1;
+          profiler.submitResolveKickoffTimeMs =
+            (profiler.submitResolveKickoffTimeMs || 0) +
+            (getTimestamp() - submitResolveKickoffStartTime);
+        }
+      }
+    } finally {
+      if (profiler) {
+        profiler.submitCount = (profiler.submitCount || 0) + 1;
+        profiler.submitTimeMs = (profiler.submitTimeMs || 0) + (getTimestamp() - startTime);
+        const reasonCountKey =
+          submitReason === 'query-readback' ? 'queryReadbackSubmitCount' : 'defaultSubmitCount';
+        const reasonTimeKey =
+          submitReason === 'query-readback' ? 'queryReadbackSubmitTimeMs' : 'defaultSubmitTimeMs';
+        profiler[reasonCountKey] = (profiler[reasonCountKey] || 0) + 1;
+        profiler[reasonTimeKey] = (profiler[reasonTimeKey] || 0) + (getTimestamp() - startTime);
+      }
+      const commandBufferDestroyStartTime = profiler ? getTimestamp() : 0;
+      commandBuffer.destroy();
+      if (profiler) {
+        profiler.commandBufferDestroyCount = (profiler.commandBufferDestroyCount || 0) + 1;
+        profiler.commandBufferDestroyTimeMs =
+          (profiler.commandBufferDestroyTimeMs || 0) +
+          (getTimestamp() - commandBufferDestroyStartTime);
+      }
+    }
   }
 
   // WebGPU specific
 
   pushErrorScope(scope: 'validation' | 'out-of-memory'): void {
+    if (!this.props.debug) {
+      return;
+    }
+    const profiler = getWebGPUCpuHotspotProfiler(this);
+    const startTime = profiler ? getTimestamp() : 0;
     this.handle.pushErrorScope(scope);
+    if (profiler) {
+      profiler.errorScopePushCount = (profiler.errorScopePushCount || 0) + 1;
+      profiler.errorScopeTimeMs = (profiler.errorScopeTimeMs || 0) + (getTimestamp() - startTime);
+    }
   }
 
   popErrorScope(handler: (error: GPUError) => void): void {
+    if (!this.props.debug) {
+      return;
+    }
+    const profiler = getWebGPUCpuHotspotProfiler(this);
+    const startTime = profiler ? getTimestamp() : 0;
     this.handle.popErrorScope().then((error: GPUError | null) => {
       if (error) {
         handler(error);
       }
     });
+    if (profiler) {
+      profiler.errorScopePopCount = (profiler.errorScopePopCount || 0) + 1;
+      profiler.errorScopeTimeMs = (profiler.errorScopeTimeMs || 0) + (getTimestamp() - startTime);
+    }
   }
 
   // PRIVATE METHODS
@@ -294,7 +404,6 @@ export class WebGPUDevice extends Device {
     }
 
     const WEBGPU_ALWAYS_FEATURES: DeviceFeature[] = [
-      'timer-query-webgl',
       'compilation-status-async-webgl',
       'float32-renderable-webgl',
       'float16-renderable-webgl',
@@ -319,4 +428,14 @@ export class WebGPUDevice extends Device {
     }
     return capabilities;
   }
+}
+
+function scheduleMicrotask(callback: () => void): void {
+  if (globalThis.queueMicrotask) {
+    globalThis.queueMicrotask(callback);
+    return;
+  }
+  Promise.resolve()
+    .then(callback)
+    .catch(() => {});
 }

@@ -4,6 +4,7 @@
 
 import type {RenderPipelineProps, ComputePipelineProps} from '@luma.gl/core';
 import {Device, RenderPipeline, ComputePipeline, log} from '@luma.gl/core';
+import type {EngineModuleState} from '../types';
 import {uid} from '../utils/uid';
 
 export type PipelineFactoryProps = RenderPipelineProps;
@@ -19,9 +20,9 @@ export class PipelineFactory {
 
   /** Get the singleton default pipeline factory for the specified device */
   static getDefaultPipelineFactory(device: Device): PipelineFactory {
-    device._lumaData['defaultPipelineFactory'] =
-      device._lumaData['defaultPipelineFactory'] || new PipelineFactory(device);
-    return device._lumaData['defaultPipelineFactory'] as PipelineFactory;
+    const moduleData = device.getModuleData<EngineModuleState>('@luma.gl/engine');
+    moduleData.defaultPipelineFactory ||= new PipelineFactory(device);
+    return moduleData.defaultPipelineFactory;
   }
 
   readonly device: Device;
@@ -69,12 +70,13 @@ export class PipelineFactory {
       pipeline.hash = hash;
       cache[hash] = {pipeline, useCount: 1};
       if (this.debug) {
-        log.warn(`${this}: ${pipeline} created, count=${cache[hash].useCount}`)();
+        log.log(3, `${this}: ${pipeline} created, count=${cache[hash].useCount}`)();
       }
     } else {
       cache[hash].useCount++;
       if (this.debug) {
-        log.warn(
+        log.log(
+          3,
           `${this}: ${cache[hash].pipeline} reused, count=${cache[hash].useCount}, (id=${props.id})`
         )();
       }
@@ -103,12 +105,13 @@ export class PipelineFactory {
       pipeline.hash = hash;
       cache[hash] = {pipeline, useCount: 1};
       if (this.debug) {
-        log.warn(`${this}: ${pipeline} created, count=${cache[hash].useCount}`)();
+        log.log(3, `${this}: ${pipeline} created, count=${cache[hash].useCount}`)();
       }
     } else {
       cache[hash].useCount++;
       if (this.debug) {
-        log.warn(
+        log.log(
+          3,
           `${this}: ${cache[hash].pipeline} reused, count=${cache[hash].useCount}, (id=${props.id})`
         )();
       }
@@ -130,13 +133,13 @@ export class PipelineFactory {
     if (cache[hash].useCount === 0) {
       this._destroyPipeline(pipeline);
       if (this.debug) {
-        log.warn(`${this}: ${pipeline} released and destroyed`)();
+        log.log(3, `${this}: ${pipeline} released and destroyed`)();
       }
     } else if (cache[hash].useCount < 0) {
       log.error(`${this}: ${pipeline} released, useCount < 0, resetting`)();
       cache[hash].useCount = 0;
     } else if (this.debug) {
-      log.warn(`${this}: ${pipeline} released, count=${cache[hash].useCount}`)();
+      log.log(3, `${this}: ${pipeline} released, count=${cache[hash].useCount}`)();
     }
   }
 

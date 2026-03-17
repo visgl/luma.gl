@@ -6,20 +6,27 @@ import {
   AnimationLoopTemplate,
   AnimationProps,
   GroupNode,
-  AsyncTexture,
+  DynamicTexture,
   loadImageBitmap,
   ShaderPassRenderer
 } from '@luma.gl/engine';
 import {Device} from '@luma.gl/core';
-import * as shaderModules from '@luma.gl/shadertools';
+import * as shaderModules from '@luma.gl/effects';
 import {ShaderPass} from '@luma.gl/shadertools';
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = `\
-<div class="contents">Copyright 2011 <a href="http://madebyevan.com">Evan Wallace</a>
-  <br><br>This application is powered by <a href="http://evanw.github.com/glfx.js/">glfx.js</a>, 
-  an open-source image effect library that uses WebGL.&nbsp; The source code for this application is 
-  also <a href="http://github.com/evanw/webgl-filter/">available on GitHub</a>.
+<div>
+  This example demonstrates how to use luma.gl's postprocessing utilities to apply shader effects to an image.
+  <br>
+  Many luma.gl effects were inspired by Evan Wallace's landmark <a href="http://github.com/evanw/webgl-filter/">glfx.js / WebGL Filter</a> application.
+</div>
+<div style="margin-top: 16px; padding: 14px 16px; border: 1px solid rgba(208, 215, 222, 0.9); border-radius: 16px; background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(246, 248, 250, 0.96) 100%); box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);">
+  <label for="postprocessing-selector" style="display: block; margin-bottom: 8px; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #57606a;">Effect</label>
+  <div style="position: relative;">
+    <select id="postprocessing-selector" style="display: block; width: 100%; margin: 0; padding: 10px 42px 10px 14px; border: 1px solid #c9d1d9; border-radius: 12px; background: rgba(255, 255, 255, 0.95); color: #0f172a; font-size: 15px; font-weight: 500; line-height: 1.2; appearance: none; -webkit-appearance: none; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);"></select>
+    <span aria-hidden="true" style="position: absolute; right: 14px; top: 50%; width: 9px; height: 9px; border-right: 2px solid #57606a; border-bottom: 2px solid #57606a; transform: translateY(-65%) rotate(45deg); pointer-events: none;"></span>
+  </div>
 </div>
 `;
 
@@ -30,19 +37,18 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   time: number = 0;
 
   shaderPassMap: Record<string, ShaderPass>;
-  imageTexture: AsyncTexture;
-  selector: HTMLSelectElement;
+  imageTexture: DynamicTexture;
+  selector: HTMLSelectElement | null = null;
 
-  shaderPassRenderer: ShaderPassRenderer;
-  // shaderPasses: ShaderPass[];
+  shaderPassRenderer!: ShaderPassRenderer;
+  shaderPasses!: ShaderPass[];
 
   constructor({device}: AnimationProps) {
     super();
 
     this.device = device;
-    this.imageTexture = new AsyncTexture(device, {
-      data: loadImageBitmap('./image.jpg'),
-      flipY: true
+    this.imageTexture = new DynamicTexture(device, {
+      data: loadImageBitmap('./image2.png', {imageOrientation: 'flipY'})
     });
 
     this.shaderPassMap = getShaderPasses();
@@ -50,7 +56,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     const NO_EFFECT = 'No effect';
     const shaderPassNames = [NO_EFFECT, ...Object.keys(this.shaderPassMap)];
-    this.selector = createSelector(document.body, shaderPassNames, passName => {
+    this.selector = initializeSelector('postprocessing-selector', shaderPassNames, passName => {
       const shaderPasses: ShaderPass[] = this.shaderPassMap[passName]
         ? [this.shaderPassMap[passName]]
         : [];
@@ -63,6 +69,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   onRender({device}: AnimationProps): void {
+    this.shaderPassRenderer?.resize();
     // Run the shader passes and generate an output texture
     /* const outputTexture = */ this.shaderPassRenderer.renderToScreen({
       sourceTexture: this.imageTexture
@@ -82,7 +89,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 function getShaderPasses(): Record<string, ShaderPass> {
   const passes: Record<string, ShaderPass> = {};
   Object.entries(shaderModules).forEach(([key, module]) => {
-    // @ts-expect-error
     if (module.passes && !key.startsWith('_')) {
       passes[key] = module as ShaderPass;
     }
@@ -90,17 +96,18 @@ function getShaderPasses(): Record<string, ShaderPass> {
   return passes;
 }
 
-/** Create an HTML selector for the shader passes */
-function createSelector(
-  parent: HTMLElement,
+/** Initialize an existing HTML selector for the shader passes */
+function initializeSelector(
+  id: string,
   array: string[],
   onChange: (key: string) => void
-): HTMLSelectElement {
-  // Create and append select list
-  const selectList = document.createElement('select');
-  selectList.id = 'selector';
-  parent.appendChild(selectList);
-  selectList.style.cssText = 'position: absolute; top: 0; right: 0; margin: 20px; z-index: 1000;';
+): HTMLSelectElement | null {
+  const selectList = document.getElementById(id) as HTMLSelectElement | null;
+  if (!selectList) {
+    return null;
+  }
+
+  selectList.replaceChildren();
 
   // Create and append the options
   for (const key of array) {

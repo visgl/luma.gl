@@ -2,9 +2,55 @@
 
 _This page contains news for recent luma.gl releases. For older releases (through v8.5) refer to the [Legacy What's New](/docs/legacy/legacy-upgrade-guide) page._
 
-## Version 9.2 (In Development)
+## Version 9.3 (In Development)
 
-Target Date: Q2, 2025
+Target Date: April 2026
+
+**General**
+
+- **Typescript 5.9** - luma.gl code base is now TypeScript 5.9 clean.
+
+**Examples**
+
+- **[Texture Tester Example](/examples/api/texture-tester)** - New example showing support for compressed textures on WebGL and WebGPU. Also implements multi-canvas rendering.
+- **[Multi-Canvas Example](/examples/api/multi-canvas)** - New example showing rendering into multiple HTML canvas elements.
+- **[External Context Example](/examples/integrations/external-context)** - New example showing integration with external WebGL contexts.
+- **[React Strict Mode Example](/examples/integrations/react-strict-mode)** - Improved resource cleanup for better compatibility when using luma.gl in React `<StrictMode>` apps
+
+**@luma.gl/core**
+
+- **Multi-canvas rendering** is now supported on both WebGL and WebGPU via [`device.createPresentationContext()`](/docs/api-reference/core/presentation-context). See the [Multiple Canvases](/docs/developer-guide/multiple-canvases) developer guide details.
+
+**@luma.gl/engine**
+
+- **WebGPU mipmap generation** now supported by [`DynamicTexture`](/docs/api-reference/engine/dynamic-texture).
+- **Explicit mip chains** can now be passed to `DynamicTexture` for 2D, array, cube, and 3D uploads.
+- **Compressed mip uploads** are now validated and uploaded through `DynamicTexture`, including block-size-aware mip truncation.
+- **Mip-level format metadata** now accepts both `textureFormat` and `format` on texture data objects during the transition to loaders.gl `TextureLevel` naming.
+
+**@luma.gl/webgpu**
+
+- **compressed texture** support (but note that WebGPU is stricter than WebGL and requires block-aligned textures).
+- **texture readback** improvements
+
+**@luma.gl/gltf**
+
+- **WebGPU support** - glTF models can now be rendered in WebGPU.
+- **Joint/Skin Animations** - Support for glTF animations now include joint and skin animations.
+- **Lighting** - luma.gl Light definitions are now extracted if the `KHR_lights_punctual` glTF extension is present in the glTF file. 
+- **`linear` texture filtering** - default texture filtering is now `linear` instead of `nearest` for improved texture rendering.
+
+**@luma.gl/shadertools**
+
+- `WGSL shader modules` - most notably, the [`pbrMaterial`] module is now supported in WebGPU.
+
+**@luma.gl/effects**
+
+- **WebGPU/WGSL effects** - Effects now have WGSL shader implementations and work under WebGPU.
+
+## Version 9.2
+
+Release Date: Sep 24, 2025
 
 Production quality WebGPU backend
 
@@ -39,20 +85,19 @@ Production quality WebGPU backend
 
 **@luma.gl/engine**
 
-- `AsyncTexture` 
-  - now supports mipmap generation for WebGPU textures (in progress)
+- `DynamicTexture`
+  - now supports mipmap generation for WebGPU textures
+  - owns WebGPU mipmap generation for `2d`, `2d-array`, `cube`, `cube-array`, and `3d` textures
+  - throws explicit runtime errors when a WebGPU texture format does not support the required mipmap-generation capabilities
 
 **@luma.gl/effects**
 
-- All postprocessing effects ported to WGSL (in progress)
+- More postprocessing effects ported to WGSL
 
 **@luma.gl/shadertools**
 
-- All shader modules ported to WGSL (in progress)
+- More shader modules ported to WGSL
 
-**@luma.gl/gltf**
-
-- glTF and PRB now supported on WebGPU (in progress)
 
 ## Version 9.1
 
@@ -64,7 +109,7 @@ Enhanced WebGPU support.
 
 - GPU backend management is streamlined via the new `Adapter` API.
 - GPU connection to HTML DOM (via `canvas` elements) improved via `CanvasContext` API changes.
-- `Texture`s are now immutable, however a new `AsyncTexture` class offers a higher-level, mutable texture API.
+- `Texture`s are now immutable, however a new `DynamicTexture` class offers a higher-level, mutable texture API.
 - `ShaderModule` type safety improvements (shader uniforms can now be strictly typed in JavaScript)
 
 **@luma.gl/core**
@@ -87,7 +132,7 @@ Enhanced WebGPU support.
   - Now calculates exact "device pixel content box" size enabling pixel perfect sized drawing buffers (no moire etc).
   - Now tracks size, visibility and DPR changes (see the new `DeviceProps` callbacks).
 - `Texture`
-  - Textures are now immutable and synchronous. See upgrade guide, and the new `AsyncTexture` class in `@luma.gl/engine`.
+  - Textures are now immutable and synchronous. See upgrade guide, and the new `DynamicTexture` class in `@luma.gl/engine`.
   - `Texture.copyExternalImage()` New function that works on both WebGPU and WebGL.
   - `Texture.copyImageData()` New function that works on both WebGPU and WebGL.
 - `Sampler`
@@ -101,7 +146,7 @@ Enhanced WebGPU support.
 
 - `makeAnimationLoopTemplate`
   - Accepts a new `.adapters` prop. (Avoids need for global registration of adapters).
-- `AsyncTexture`](/docs/api-reference/engine/async-texture)
+- [`DynamicTexture`](/docs/api-reference/engine/dynamic-texture)
   - New class allows that applications to work withcreate textures from a Promise.
 - `ShaderPassRenderer`
   - New class that helps applications apply a `ShaderPass` list to a texture.

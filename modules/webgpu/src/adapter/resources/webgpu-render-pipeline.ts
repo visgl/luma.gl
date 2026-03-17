@@ -15,6 +15,8 @@ import type {WebGPUDevice} from '../webgpu-device';
 import type {WebGPUShader} from './webgpu-shader';
 import type {WebGPURenderPass} from './webgpu-render-pass';
 
+const EMPTY_BINDINGS: Record<string, Binding> = {};
+
 // RENDER PIPELINE
 
 /** Creates a new render pipeline when parameters change */
@@ -31,7 +33,7 @@ export class WebGPURenderPipeline extends RenderPipeline {
   private _bindGroup: GPUBindGroup | null = null;
 
   override get [Symbol.toStringTag]() {
-    return 'WebGPURenderPipeline';
+    return 'RenderPipeline';
   }
 
   constructor(device: WebGPUDevice, props: RenderPipelineProps) {
@@ -57,7 +59,7 @@ export class WebGPURenderPipeline extends RenderPipeline {
     this.vs = props.vs as WebGPUShader;
     this.fs = props.fs as WebGPUShader;
 
-    this._bindings = {...this.props.bindings};
+    this._bindings = props.bindings || EMPTY_BINDINGS;
   }
 
   override destroy(): void {
@@ -71,13 +73,21 @@ export class WebGPURenderPipeline extends RenderPipeline {
    * @todo Do we want to expose BindGroups in the API and remove this?
    */
   setBindings(bindings: Record<string, Binding>): void {
-    // Invalidate the cached bind group if any value has changed
+    let bindingsChanged = false;
     for (const [name, binding] of Object.entries(bindings)) {
       if (this._bindings[name] !== binding) {
-        this._bindGroup = null;
+        if (!bindingsChanged) {
+          if (this._bindings === this.props.bindings || this._bindings === EMPTY_BINDINGS) {
+            this._bindings = {...this._bindings};
+          }
+          bindingsChanged = true;
+        }
+        this._bindings[name] = binding;
       }
     }
-    Object.assign(this._bindings, bindings);
+    if (bindingsChanged) {
+      this._bindGroup = null;
+    }
   }
 
   /** @todo - should this be moved to renderpass? */
@@ -93,6 +103,8 @@ export class WebGPURenderPipeline extends RenderPipeline {
     baseVertex?: number;
   }): boolean {
     const webgpuRenderPass = options.renderPass as WebGPURenderPass;
+    const instanceCount =
+      options.instanceCount && options.instanceCount > 0 ? options.instanceCount : 1;
 
     // Set pipeline
     this.device.pushErrorScope('validation');
@@ -116,16 +128,17 @@ export class WebGPURenderPipeline extends RenderPipeline {
     if (options.indexCount) {
       webgpuRenderPass.handle.drawIndexed(
         options.indexCount,
-        options.instanceCount,
-        options.firstIndex,
-        options.baseVertex,
-        options.firstInstance
+        instanceCount,
+        options.firstIndex || 0,
+        options.baseVertex || 0,
+        options.firstInstance || 0
       );
     } else {
       webgpuRenderPass.handle.draw(
         options.vertexCount || 0,
-        options.instanceCount || 1, // If 0, nothing will be drawn
-        options.firstInstance
+        instanceCount,
+        options.firstVertex || 0,
+        options.firstInstance || 0
       );
     }
 
@@ -148,7 +161,7 @@ export class WebGPURenderPipeline extends RenderPipeline {
     // TODO what if bindings change? We need to rebuild the bind group!
     this._bindGroup =
       this._bindGroup ||
-      getBindGroup(this.device.handle, this._bindGroupLayout, this.shaderLayout, this._bindings);
+      getBindGroup(this.device, this._bindGroupLayout, this.shaderLayout, this._bindings);
 
     return this._bindGroup;
   }

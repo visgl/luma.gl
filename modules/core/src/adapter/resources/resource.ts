@@ -3,7 +3,53 @@
 // Copyright (c) vis.gl contributors
 
 import type {Device} from '../device';
+import type {Stat, Stats} from '@probe.gl/stats';
 import {uid} from '../../utils/uid';
+
+const CPU_HOTSPOT_PROFILER_MODULE = 'cpu-hotspot-profiler';
+const RESOURCE_COUNTS_STATS = 'GPU Resource Counts';
+const LEGACY_RESOURCE_COUNTS_STATS = 'Resource Counts';
+const GPU_TIME_AND_MEMORY_STATS = 'GPU Time and Memory';
+const RESOURCE_COUNT_ORDER = [
+  'Resources',
+  'Buffers',
+  'Textures',
+  'Samplers',
+  'TextureViews',
+  'Framebuffers',
+  'QuerySets',
+  'Shaders',
+  'RenderPipelines',
+  'ComputePipelines',
+  'PipelineLayouts',
+  'VertexArrays',
+  'RenderPasss',
+  'ComputePasss',
+  'CommandEncoders',
+  'CommandBuffers'
+] as const;
+const RESOURCE_COUNT_STAT_ORDER = RESOURCE_COUNT_ORDER.flatMap(resourceType => [
+  `${resourceType} Created`,
+  `${resourceType} Active`
+]);
+const ORDERED_STATS_CACHE = new WeakMap<
+  Stats,
+  {orderedStatNames: readonly string[]; statCount: number}
+>();
+const ORDERED_STAT_NAME_SET_CACHE = new WeakMap<readonly string[], Set<string>>();
+const RESOURCE_COUNT_STATS_INITIALIZED = new WeakSet<Stats>();
+
+type CpuHotspotProfiler = {
+  enabled?: boolean;
+  activeDefaultFramebufferAcquireDepth?: number;
+  statsBookkeepingTimeMs?: number;
+  statsBookkeepingCalls?: number;
+  transientCanvasResourceCreates?: number;
+  transientCanvasTextureCreates?: number;
+  transientCanvasTextureViewCreates?: number;
+  transientCanvasSamplerCreates?: number;
+  transientCanvasFramebufferCreates?: number;
+};
 
 export type ResourceProps = {
   /** Name of resource, mainly for debugging purposes. A unique name will be assigned if not provided */
@@ -48,6 +94,8 @@ export abstract class Resource<Props extends ResourceProps> {
   destroyed: boolean = false;
   /** For resources that allocate GPU memory */
   private allocatedBytes: number = 0;
+  /** Stats bucket currently holding the tracked allocation */
+  private allocatedBytesName: string | null = null;
   /** Attached resources will be destroyed when this resource is destroyed. Tracks auto-created "sub" resources. */
   private _attachedResources = new Set<Resource<ResourceProps>>();
 
@@ -74,6 +122,9 @@ export abstract class Resource<Props extends ResourceProps> {
    * destroy can be called on any resource to release it before it is garbage collected.
    */
   destroy(): void {
+    if (this.destroyed) {
+      return;
+    }
     this.destroyResource();
   }
 
@@ -119,7 +170,7 @@ export abstract class Resource<Props extends ResourceProps> {
 
   /** Destroy all owned resources. Make sure the resources are no longer needed before calling. */
   destroyAttachedResources(): void {
-    for (const resource of Object.values(this._attachedResources)) {
+    for (const resource of this._attachedResources) {
       resource.destroy();
     }
     // don't remove while we are iterating
@@ -130,6 +181,9 @@ export abstract class Resource<Props extends ResourceProps> {
 
   /** Perform all destroy steps. Can be called by derived resources when overriding destroy() */
   protected destroyResource(): void {
+    if (this.destroyed) {
+      return;
+    }
     this.destroyAttachedResources();
     this.removeStats();
     this.destroyed = true;
@@ -137,34 +191,104 @@ export abstract class Resource<Props extends ResourceProps> {
 
   /** Called by .destroy() to track object destruction. Subclass must call if overriding destroy() */
   protected removeStats(): void {
-    const stats = this._device.statsManager.getStats('Resource Counts');
+    const profiler = getCpuHotspotProfiler(this._device);
+    const startTime = profiler ? getTimestamp() : 0;
+    const statsObjects = [
+      this._device.statsManager.getStats(RESOURCE_COUNTS_STATS),
+      this._device.statsManager.getStats(LEGACY_RESOURCE_COUNTS_STATS)
+    ];
+    for (const stats of statsObjects) {
+      initializeStats(stats, RESOURCE_COUNT_STAT_ORDER);
+    }
     const name = this[Symbol.toStringTag];
-    stats.get(`${name}s Active`).decrementCount();
+    for (const stats of statsObjects) {
+      stats.get('Resources Active').decrementCount();
+      stats.get(`${name}s Active`).decrementCount();
+    }
+    if (profiler) {
+      profiler.statsBookkeepingCalls = (profiler.statsBookkeepingCalls || 0) + 1;
+      profiler.statsBookkeepingTimeMs =
+        (profiler.statsBookkeepingTimeMs || 0) + (getTimestamp() - startTime);
+    }
   }
 
   /** Called by subclass to track memory allocations */
   protected trackAllocatedMemory(bytes: number, name = this[Symbol.toStringTag]): void {
-    const stats = this._device.statsManager.getStats('Resource Counts');
+    const profiler = getCpuHotspotProfiler(this._device);
+    const startTime = profiler ? getTimestamp() : 0;
+    const stats = this._device.statsManager.getStats(GPU_TIME_AND_MEMORY_STATS);
+
+    if (this.allocatedBytes > 0 && this.allocatedBytesName) {
+      stats.get('GPU Memory').subtractCount(this.allocatedBytes);
+      stats.get(`${this.allocatedBytesName} Memory`).subtractCount(this.allocatedBytes);
+    }
+
     stats.get('GPU Memory').addCount(bytes);
     stats.get(`${name} Memory`).addCount(bytes);
+    if (profiler) {
+      profiler.statsBookkeepingCalls = (profiler.statsBookkeepingCalls || 0) + 1;
+      profiler.statsBookkeepingTimeMs =
+        (profiler.statsBookkeepingTimeMs || 0) + (getTimestamp() - startTime);
+    }
     this.allocatedBytes = bytes;
+    this.allocatedBytesName = name;
+  }
+
+  /** Called by subclass to track handle-backed memory allocations separately from owned allocations */
+  protected trackReferencedMemory(bytes: number, name = this[Symbol.toStringTag]): void {
+    this.trackAllocatedMemory(bytes, `Referenced ${name}`);
   }
 
   /** Called by subclass to track memory deallocations */
   protected trackDeallocatedMemory(name = this[Symbol.toStringTag]): void {
-    const stats = this._device.statsManager.getStats('Resource Counts');
+    if (this.allocatedBytes === 0) {
+      this.allocatedBytesName = null;
+      return;
+    }
+
+    const profiler = getCpuHotspotProfiler(this._device);
+    const startTime = profiler ? getTimestamp() : 0;
+    const stats = this._device.statsManager.getStats(GPU_TIME_AND_MEMORY_STATS);
     stats.get('GPU Memory').subtractCount(this.allocatedBytes);
-    stats.get(`${name} Memory`).subtractCount(this.allocatedBytes);
+    stats.get(`${this.allocatedBytesName || name} Memory`).subtractCount(this.allocatedBytes);
+    if (profiler) {
+      profiler.statsBookkeepingCalls = (profiler.statsBookkeepingCalls || 0) + 1;
+      profiler.statsBookkeepingTimeMs =
+        (profiler.statsBookkeepingTimeMs || 0) + (getTimestamp() - startTime);
+    }
     this.allocatedBytes = 0;
+    this.allocatedBytesName = null;
+  }
+
+  /** Called by subclass to deallocate handle-backed memory tracked via trackReferencedMemory() */
+  protected trackDeallocatedReferencedMemory(name = this[Symbol.toStringTag]): void {
+    this.trackDeallocatedMemory(`Referenced ${name}`);
   }
 
   /** Called by resource constructor to track object creation */
   private addStats(): void {
-    const stats = this._device.statsManager.getStats('Resource Counts');
     const name = this[Symbol.toStringTag];
-    stats.get('Resources Created').incrementCount();
-    stats.get(`${name}s Created`).incrementCount();
-    stats.get(`${name}s Active`).incrementCount();
+    const profiler = getCpuHotspotProfiler(this._device);
+    const startTime = profiler ? getTimestamp() : 0;
+    const statsObjects = [
+      this._device.statsManager.getStats(RESOURCE_COUNTS_STATS),
+      this._device.statsManager.getStats(LEGACY_RESOURCE_COUNTS_STATS)
+    ];
+    for (const stats of statsObjects) {
+      initializeStats(stats, RESOURCE_COUNT_STAT_ORDER);
+    }
+    for (const stats of statsObjects) {
+      stats.get('Resources Created').incrementCount();
+      stats.get('Resources Active').incrementCount();
+      stats.get(`${name}s Created`).incrementCount();
+      stats.get(`${name}s Active`).incrementCount();
+    }
+    if (profiler) {
+      profiler.statsBookkeepingCalls = (profiler.statsBookkeepingCalls || 0) + 1;
+      profiler.statsBookkeepingTimeMs =
+        (profiler.statsBookkeepingTimeMs || 0) + (getTimestamp() - startTime);
+    }
+    recordTransientCanvasResourceCreate(this._device, name);
   }
 }
 
@@ -182,4 +306,98 @@ function selectivelyMerge<Props>(props: Props, defaultProps: Required<Props>): R
     }
   }
   return mergedProps;
+}
+
+function initializeStats(stats: Stats, orderedStatNames: readonly string[]): void {
+  if (
+    orderedStatNames === RESOURCE_COUNT_STAT_ORDER &&
+    RESOURCE_COUNT_STATS_INITIALIZED.has(stats)
+  ) {
+    return;
+  }
+
+  const statsMap = stats.stats;
+  let addedOrderedStat = false;
+  for (const statName of orderedStatNames) {
+    if (!statsMap[statName]) {
+      stats.get(statName);
+      addedOrderedStat = true;
+    }
+  }
+
+  const statCount = Object.keys(statsMap).length;
+  const cachedStats = ORDERED_STATS_CACHE.get(stats);
+  if (
+    !addedOrderedStat &&
+    cachedStats?.orderedStatNames === orderedStatNames &&
+    cachedStats.statCount === statCount
+  ) {
+    return;
+  }
+
+  const reorderedStats: Record<string, Stat> = {};
+  let orderedStatNamesSet = ORDERED_STAT_NAME_SET_CACHE.get(orderedStatNames);
+  if (!orderedStatNamesSet) {
+    orderedStatNamesSet = new Set(orderedStatNames);
+    ORDERED_STAT_NAME_SET_CACHE.set(orderedStatNames, orderedStatNamesSet);
+  }
+
+  for (const statName of orderedStatNames) {
+    if (statsMap[statName]) {
+      reorderedStats[statName] = statsMap[statName];
+    }
+  }
+
+  for (const [statName, stat] of Object.entries(statsMap)) {
+    if (!orderedStatNamesSet.has(statName)) {
+      reorderedStats[statName] = stat;
+    }
+  }
+
+  for (const statName of Object.keys(statsMap)) {
+    delete statsMap[statName];
+  }
+
+  Object.assign(statsMap, reorderedStats);
+  ORDERED_STATS_CACHE.set(stats, {orderedStatNames, statCount});
+  if (orderedStatNames === RESOURCE_COUNT_STAT_ORDER) {
+    RESOURCE_COUNT_STATS_INITIALIZED.add(stats);
+  }
+}
+
+function getCpuHotspotProfiler(device: Device): CpuHotspotProfiler | null {
+  const profiler = device.userData[CPU_HOTSPOT_PROFILER_MODULE] as CpuHotspotProfiler | undefined;
+  return profiler?.enabled ? profiler : null;
+}
+
+function getTimestamp(): number {
+  return globalThis.performance?.now?.() ?? Date.now();
+}
+
+function recordTransientCanvasResourceCreate(device: Device, name: string): void {
+  const profiler = getCpuHotspotProfiler(device);
+  if (!profiler || !profiler.activeDefaultFramebufferAcquireDepth) {
+    return;
+  }
+
+  profiler.transientCanvasResourceCreates = (profiler.transientCanvasResourceCreates || 0) + 1;
+
+  switch (name) {
+    case 'Texture':
+      profiler.transientCanvasTextureCreates = (profiler.transientCanvasTextureCreates || 0) + 1;
+      break;
+    case 'TextureView':
+      profiler.transientCanvasTextureViewCreates =
+        (profiler.transientCanvasTextureViewCreates || 0) + 1;
+      break;
+    case 'Sampler':
+      profiler.transientCanvasSamplerCreates = (profiler.transientCanvasSamplerCreates || 0) + 1;
+      break;
+    case 'Framebuffer':
+      profiler.transientCanvasFramebufferCreates =
+        (profiler.transientCanvasFramebufferCreates || 0) + 1;
+      break;
+    default:
+      break;
+  }
 }

@@ -6,7 +6,7 @@ import type {ShaderPass} from '@luma.gl/shadertools';
 
 const source = /* wgsl */ `\
 struct noiseUniforms {
-  amount: f32
+  amount: f32,
 };
 
 @group(0) @binding(1) var<uniform> noise: noiseUniforms;
@@ -16,12 +16,13 @@ fn rand(co: vec2f) -> f32 {
 } 
 
 fn noise_filterColor_ext(color: vec4f, texSize: vec2f, texCoord: vec2f) -> vec4f {
-	let diff: f32 = (rand(texCoord) - 0.5) * noise.amount;
-	color.r = color.r + (diff);
-	color.g = color.g + (diff);
-	color.b = color.b + (diff);
-	return color;
-} 
+  let diff = (rand(texCoord) - 0.5) * noise.amount;
+  var result = color;
+  result.r += diff;
+  result.g += diff;
+  result.b += diff;
+  return result;
+}
 `;
 
 const fs = /* glsl */ `\

@@ -46,6 +46,8 @@ export class NullTexture extends Texture {
       arrayLayerCount: 1
     });
 
+    this.trackAllocatedMemory(this.getAllocatedByteLength(), 'Texture');
+
     Object.seal(this);
   }
 
@@ -61,16 +63,6 @@ export class NullTexture extends Texture {
   }
 
   copyExternalImage(options: CopyExternalImageOptions): {width: number; height: number} {
-    this.trackDeallocatedMemory('Texture');
-
-    // const {image: data} = options;
-    // if (data && data.byteLength) {
-    //   this.trackAllocatedMemory(data.byteLength, 'Texture');
-    // } else {
-    const bytesPerPixel = 4;
-    this.trackAllocatedMemory(this.width * this.height * bytesPerPixel, 'Texture');
-    // }
-
     return {width: this.width, height: this.height};
   }
 
@@ -78,8 +70,8 @@ export class NullTexture extends Texture {
     // ignore
   }
 
-  copyImageData(options: CopyImageDataOptions): void {
-    throw new Error('copyImageData not implemented');
+  override copyImageData(options: CopyImageDataOptions): void {
+    super.copyImageData(options);
   }
 
   override readBuffer(options: TextureReadOptions = {}, buffer?: Buffer): Buffer {
@@ -97,7 +89,10 @@ export class NullTexture extends Texture {
     // ignore
   }
 
-  override writeData(data: ArrayBuffer | ArrayBufferView, options: TextureWriteOptions = {}): void {
+  override writeData(
+    data: ArrayBuffer | SharedArrayBuffer | ArrayBufferView,
+    options: TextureWriteOptions = {}
+  ): void {
     // ignore
   }
 }
