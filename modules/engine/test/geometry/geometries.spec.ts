@@ -20,7 +20,7 @@ const GEOMETRY_TESTS = [
   {
     name: 'CylinderGeometry',
     Geometry: CylinderGeometry,
-    props: [{verticalAxis: 'z'}, {topCap: true, bottomCap: true}]
+    props: [{verticalAxis: 'z'}, {topCap: true, bottomCap: true}, {height: 2}]
   },
   {
     name: 'IcoSphereGeometry',
