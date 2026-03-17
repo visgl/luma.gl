@@ -2,7 +2,9 @@
 
 A `Texture` are GPU objects that contain one or more images that all have the same image format, that can be accessed from shaders.
 
-While the idea behind textures is simple in principle (a grid of pixels stored on GPU memory), GPU Textures are surprisingly complex objects. It can be helpful to read the [API Guide section on textures](http://localhost:3000/docs/api-guide/gpu/gpu-textures) to make sure you have a full picture.
+While the idea behind textures is simple in principle (a grid of pixels stored on GPU memory), GPU Textures are surprisingly complex objects. It can be helpful to read the [API Guide section on textures](/docs/api-guide/gpu/gpu-textures) to make sure you have a full picture.
+
+For upload and readback strategy, also see [GPU Commands](/docs/api-guide/gpu/gpu-commands).
 
 
 ## Usage

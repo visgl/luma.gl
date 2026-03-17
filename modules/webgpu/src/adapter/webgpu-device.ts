@@ -243,23 +243,7 @@ export class WebGPUDevice extends Device {
   submit(commandBuffer?: WebGPUCommandBuffer): void {
     let submittedCommandEncoder: WebGPUCommandEncoder | null = null;
     if (!commandBuffer) {
-      submittedCommandEncoder = this.commandEncoder;
-      if (
-        submittedCommandEncoder.getTimeProfilingSlotCount() > 0 &&
-        submittedCommandEncoder.getTimeProfilingQuerySet() instanceof WebGPUQuerySet
-      ) {
-        const querySet = submittedCommandEncoder.getTimeProfilingQuerySet() as WebGPUQuerySet;
-        querySet._encodeResolveToReadBuffer(submittedCommandEncoder, {
-          firstQuery: 0,
-          queryCount: submittedCommandEncoder.getTimeProfilingSlotCount()
-        });
-      }
-      commandBuffer = submittedCommandEncoder.finish();
-      this.commandEncoder.destroy();
-      this.commandEncoder = this.createCommandEncoder({
-        id: submittedCommandEncoder.props.id,
-        timeProfilingQuerySet: submittedCommandEncoder.getTimeProfilingQuerySet()
-      });
+      ({submittedCommandEncoder, commandBuffer} = this._finalizeDefaultCommandEncoderForSubmit());
     }
 
     const profiler = getWebGPUCpuHotspotProfiler(this);
@@ -316,6 +300,32 @@ export class WebGPUDevice extends Device {
           (getTimestamp() - commandBufferDestroyStartTime);
       }
     }
+  }
+
+  private _finalizeDefaultCommandEncoderForSubmit(): {
+    submittedCommandEncoder: WebGPUCommandEncoder;
+    commandBuffer: WebGPUCommandBuffer;
+  } {
+    const submittedCommandEncoder = this.commandEncoder;
+    if (
+      submittedCommandEncoder.getTimeProfilingSlotCount() > 0 &&
+      submittedCommandEncoder.getTimeProfilingQuerySet() instanceof WebGPUQuerySet
+    ) {
+      const querySet = submittedCommandEncoder.getTimeProfilingQuerySet() as WebGPUQuerySet;
+      querySet._encodeResolveToReadBuffer(submittedCommandEncoder, {
+        firstQuery: 0,
+        queryCount: submittedCommandEncoder.getTimeProfilingSlotCount()
+      });
+    }
+
+    const commandBuffer = submittedCommandEncoder.finish();
+    this.commandEncoder.destroy();
+    this.commandEncoder = this.createCommandEncoder({
+      id: submittedCommandEncoder.props.id,
+      timeProfilingQuerySet: submittedCommandEncoder.getTimeProfilingQuerySet()
+    });
+
+    return {submittedCommandEncoder, commandBuffer};
   }
 
   // WebGPU specific

@@ -302,6 +302,44 @@ test('CommandEncoder resolves time profiling with a single bulk query read', asy
   t.end();
 });
 
+test('CommandEncoder default submit rolls over to a fresh default encoder', async t => {
+  for (const device of await getTestDevices(['webgl', 'webgpu'])) {
+    const sourceBuffer = device.createBuffer({data: new Float32Array([1, 2, 3])});
+    const destinationBuffer = device.createBuffer({data: new Float32Array([0, 0, 0])});
+
+    device.commandEncoder.copyBufferToBuffer({
+      sourceBuffer,
+      destinationBuffer,
+      size: 3 * Float32Array.BYTES_PER_ELEMENT
+    });
+    device.submit();
+
+    let receivedData = await readAsyncF32(destinationBuffer);
+    t.deepEqual(
+      Array.from(receivedData),
+      [1, 2, 3],
+      `${device.type} default encoder submits recorded commands`
+    );
+
+    sourceBuffer.write(new Float32Array([4, 5, 6]));
+    device.commandEncoder.copyBufferToBuffer({
+      sourceBuffer,
+      destinationBuffer,
+      size: 3 * Float32Array.BYTES_PER_ELEMENT
+    });
+    device.submit();
+
+    receivedData = await readAsyncF32(destinationBuffer);
+    t.deepEqual(
+      Array.from(receivedData),
+      [4, 5, 6],
+      `${device.type} default encoder is replaced and remains usable after submit`
+    );
+  }
+
+  t.end();
+});
+
 test('CommandBuffer#copyBufferToBuffer', async t => {
   const device = await getWebGLTestDevice();
 
@@ -418,6 +456,126 @@ test('CommandBuffer#copyTextureToBuffer', async t => {
       title: `${fixture.title} + framebuffer`
     });
   }
+
+  t.end();
+});
+
+test('CommandEncoder#copyTextureToBuffer honors origin and byteOffset across backends', async t => {
+  for (const device of await getTestDevices(['webgl', 'webgpu'])) {
+    const sourceTexture = device.createTexture({
+      data: new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]),
+      width: 2,
+      height: 1,
+      format: 'rgba8unorm',
+      mipmaps: false
+    });
+    const destinationBuffer = device.createBuffer({
+      data: new Uint8Array(8),
+      usage: Buffer.COPY_DST | Buffer.MAP_READ
+    });
+
+    const commandEncoder = device.createCommandEncoder();
+    commandEncoder.copyTextureToBuffer({
+      sourceTexture,
+      origin: [1, 0, 0],
+      width: 1,
+      height: 1,
+      destinationBuffer,
+      byteOffset: 4
+    });
+    const commandBuffer = commandEncoder.finish();
+    device.submit(commandBuffer);
+
+    const color = await readAsyncU8(destinationBuffer);
+    t.deepEqual(
+      Array.from(color.slice(0, 8)),
+      [0, 0, 0, 0, 5, 6, 7, 8],
+      `${device.type} copyTextureToBuffer uses canonical origin/byteOffset semantics`
+    );
+  }
+
+  t.end();
+});
+
+test('WebGPU custom CommandEncoder render pass records on the owning encoder', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const framebuffer = device.createFramebuffer({
+    width: 1,
+    height: 1,
+    colorAttachments: ['rgba8unorm']
+  });
+  const colorTexture = framebuffer.colorAttachments[0].texture;
+  const commandEncoder = device.createCommandEncoder({id: 'custom-renderpass-owner'});
+  const renderPass = commandEncoder.beginRenderPass({
+    framebuffer,
+    clearColor: [1, 0, 0, 1]
+  });
+  renderPass.end();
+
+  const commandBuffer = commandEncoder.finish();
+  device.submit(commandBuffer);
+
+  const pixelData = new Uint8Array(await colorTexture.readDataAsync(), 0, 4);
+  t.deepEqual(
+    Array.from(pixelData),
+    [255, 0, 0, 255],
+    'custom WebGPU encoder owns the render pass it creates'
+  );
+
+  framebuffer.destroy();
+  t.end();
+});
+
+test('WebGPU CommandEncoder#copyTextureToBuffer does not submit before finish/submit', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const sourceTexture = device.createTexture({
+    data: new Uint8Array([9, 8, 7, 6]),
+    width: 1,
+    height: 1,
+    format: 'rgba8unorm',
+    mipmaps: false
+  });
+  const destinationBuffer = device.createBuffer({
+    data: new Uint8Array([0, 0, 0, 0]),
+    usage: Buffer.COPY_DST | Buffer.MAP_READ
+  });
+
+  const commandEncoder = device.createCommandEncoder();
+  commandEncoder.copyTextureToBuffer({
+    sourceTexture,
+    width: 1,
+    height: 1,
+    destinationBuffer
+  });
+
+  const preSubmitData = await readAsyncU8(destinationBuffer);
+  t.deepEqual(
+    Array.from(preSubmitData.slice(0, 4)),
+    [0, 0, 0, 0],
+    'copyTextureToBuffer leaves the destination buffer unchanged until submit'
+  );
+
+  const commandBuffer = commandEncoder.finish();
+  device.submit(commandBuffer);
+
+  const postSubmitData = await readAsyncU8(destinationBuffer);
+  t.deepEqual(
+    Array.from(postSubmitData.slice(0, 4)),
+    [9, 8, 7, 6],
+    'copyTextureToBuffer writes into the destination buffer after submit'
+  );
 
   t.end();
 });
@@ -665,6 +823,54 @@ test('WebGL1#CopyAndBlit readPixelsToArray', async t => {
   for (const device of getWebGLTestDevices()) {
     testCopyToArray(t, device);
   }
+  t.end();
+});
+
+test('Unsupported command encoder operations fail explicitly', async t => {
+  const webglDevice = await getWebGLTestDevice();
+  const webglCommandEncoder = webglDevice.createCommandEncoder();
+  t.throws(
+    () => webglCommandEncoder.resolveQuerySet(null as unknown as QuerySet, null as unknown as Buffer),
+    /resolveQuerySet is not supported in WebGL/,
+    'WebGL resolveQuerySet fails explicitly'
+  );
+
+  const sourceBuffer = webglDevice.createBuffer({data: new Uint8Array([255, 0, 0, 255])});
+  const destinationTexture = webglDevice.createTexture({
+    width: 1,
+    height: 1,
+    format: 'rgba8unorm',
+    mipmaps: false
+  });
+  const webglCopyEncoder = webglDevice.createCommandEncoder();
+  webglCopyEncoder.copyBufferToTexture({
+    sourceBuffer,
+    destinationTexture,
+    byteOffset: 0,
+    bytesPerRow: 4,
+    rowsPerImage: 1,
+    size: [1, 1, 1]
+  });
+  const webglCopyCommandBuffer = webglCopyEncoder.finish();
+  t.throws(
+    () => webglDevice.submit(webglCopyCommandBuffer),
+    /copyBufferToTexture is not supported in WebGL/,
+    'WebGL copyBufferToTexture fails explicitly on submit'
+  );
+
+  const nullDevice = await getNullTestDevice();
+  const nullCommandEncoder = nullDevice.createCommandEncoder();
+  t.throws(
+    () => nullCommandEncoder.beginComputePass({}),
+    /ComputePass is not supported on NullDevice/,
+    'NullDevice beginComputePass fails explicitly'
+  );
+  t.throws(
+    () => nullCommandEncoder.resolveQuerySet(null as unknown as QuerySet, null as unknown as Buffer),
+    /resolveQuerySet is not supported on NullDevice/,
+    'NullDevice resolveQuerySet fails explicitly'
+  );
+
   t.end();
 });
 

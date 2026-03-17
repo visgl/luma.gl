@@ -142,8 +142,8 @@ export class NullDevice extends Device {
     return new NullRenderPipeline(this, props);
   }
 
-  createComputePipeline(props?: ComputePipelineProps): ComputePipeline {
-    throw new Error('ComputePipeline not supported in WebGL');
+  createComputePipeline(_props?: ComputePipelineProps): ComputePipeline {
+    throw new Error('ComputePipeline is not supported on NullDevice');
   }
 
   override createCommandEncoder(props: CommandEncoderProps = {}): NullCommandEncoder {

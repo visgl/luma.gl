@@ -6,10 +6,11 @@ import type {
   CommandBufferProps,
   RenderPassProps,
   ComputePassProps,
+  CopyBufferToTextureOptions,
   CopyTextureToTextureOptions,
   CopyTextureToBufferOptions
 } from '@luma.gl/core';
-import {CommandEncoder, CommandEncoderProps, Buffer, Texture} from '@luma.gl/core';
+import {CommandEncoder, CommandEncoderProps, Buffer} from '@luma.gl/core';
 import {WebGPUDevice} from '../webgpu-device';
 import {WebGPUCommandBuffer} from './webgpu-command-buffer';
 import {WebGPUBuffer} from './webgpu-buffer';
@@ -58,18 +59,25 @@ export class WebGPUCommandEncoder extends CommandEncoder {
    * @todo need to support a "Framebuffer" equivalent (aka preconfigured RenderPassDescriptors?).
    */
   beginRenderPass(props: RenderPassProps = {}): WebGPURenderPass {
-    return new WebGPURenderPass(this.device, this._applyTimeProfilingToPassProps(props));
+    return new WebGPURenderPass(
+      this.device,
+      this._applyTimeProfilingToPassProps(props),
+      this.handle
+    );
   }
 
   beginComputePass(props: ComputePassProps = {}): WebGPUComputePass {
-    return new WebGPUComputePass(this.device, this._applyTimeProfilingToPassProps(props));
+    return new WebGPUComputePass(
+      this.device,
+      this._applyTimeProfilingToPassProps(props),
+      this.handle
+    );
   }
 
   // beginRenderPass(GPURenderPassDescriptor descriptor): GPURenderPassEncoder;
   // beginComputePass(optional GPUComputePassDescriptor descriptor = {}): GPUComputePassEncoder;
 
-  copyBufferToBuffer(options: // CopyBufferToBufferOptions
-  {
+  copyBufferToBuffer(options: {
     sourceBuffer: Buffer;
     sourceOffset?: number;
     destinationBuffer: Buffer;
@@ -77,50 +85,42 @@ export class WebGPUCommandEncoder extends CommandEncoder {
     size?: number;
   }): void {
     const webgpuSourceBuffer = options.sourceBuffer as WebGPUBuffer;
-    const WebGPUDestinationBuffer = options.destinationBuffer as WebGPUBuffer;
+    const webgpuDestinationBuffer = options.destinationBuffer as WebGPUBuffer;
     this.handle.copyBufferToBuffer(
       webgpuSourceBuffer.handle,
       options.sourceOffset ?? 0,
-      WebGPUDestinationBuffer.handle,
+      webgpuDestinationBuffer.handle,
       options.destinationOffset ?? 0,
       options.size ?? 0
     );
   }
 
-  copyBufferToTexture(options: // CopyBufferToTextureOptions
-  {
-    sourceBuffer: Buffer;
-    offset?: number;
-    bytesPerRow: number;
-    rowsPerImage: number;
-
-    destinationTexture: Texture;
-    mipLevel?: number;
-    aspect?: 'all' | 'stencil-only' | 'depth-only';
-
-    origin?: number[] | [number, number, number];
-    extent?: number[] | [number, number, number];
-  }): void {
+  copyBufferToTexture(options: CopyBufferToTextureOptions): void {
     const webgpuSourceBuffer = options.sourceBuffer as WebGPUBuffer;
-    const WebGPUDestinationTexture = options.destinationTexture as WebGPUTexture;
+    const webgpuDestinationTexture = options.destinationTexture as WebGPUTexture;
+    const copyOrigin = options.origin ?? [0, 0, 0];
+    const copySize = options.size;
     this.handle.copyBufferToTexture(
       {
         buffer: webgpuSourceBuffer.handle,
-        offset: options.offset ?? 0,
+        offset: options.byteOffset ?? 0,
         bytesPerRow: options.bytesPerRow,
         rowsPerImage: options.rowsPerImage
       },
       {
-        texture: WebGPUDestinationTexture.handle,
+        texture: webgpuDestinationTexture.handle,
         mipLevel: options.mipLevel ?? 0,
-        origin: options.origin ?? {}
-        // aspect: options.aspect
+        origin: {
+          x: copyOrigin[0] ?? 0,
+          y: copyOrigin[1] ?? 0,
+          z: copyOrigin[2] ?? 0
+        },
+        aspect: options.aspect
       },
       {
-        // @ts-ignore
-        width: options.extent?.[0],
-        height: options.extent?.[1],
-        depthOrArrayLayers: options.extent?.[2]
+        width: copySize[0],
+        height: copySize[1],
+        depthOrArrayLayers: copySize[2]
       }
     );
   }
@@ -137,7 +137,9 @@ export class WebGPUCommandEncoder extends CommandEncoder {
       mipLevel,
       aspect
     } = options;
-    sourceTexture.readBuffer(
+    const webgpuSourceTexture = sourceTexture as WebGPUTexture;
+    webgpuSourceTexture.copyToBuffer(
+      this.handle,
       {
         x: origin[0] ?? 0,
         y: origin[1] ?? 0,
@@ -147,21 +149,55 @@ export class WebGPUCommandEncoder extends CommandEncoder {
         depthOrArrayLayers,
         mipLevel,
         aspect,
-        byteOffset
-      } as any,
+        byteOffset,
+        bytesPerRow: options.bytesPerRow,
+        rowsPerImage: options.rowsPerImage
+      },
       destinationBuffer
     );
   }
 
   copyTextureToTexture(options: CopyTextureToTextureOptions): void {
-    // this.handle.copyTextureToTexture(
-    //   // source
-    //   {},
-    //   // destination
-    //   {},
-    //   // copySize
-    //   {}
-    // );
+    const webgpuSourceTexture = options.sourceTexture as WebGPUTexture;
+    const webgpuDestinationTexture = options.destinationTexture as WebGPUTexture;
+    const sourceRegion = webgpuSourceTexture._normalizeTextureReadOptions({
+      x: options.origin?.[0] ?? 0,
+      y: options.origin?.[1] ?? 0,
+      z: options.origin?.[2] ?? 0,
+      width: options.width,
+      height: options.height,
+      depthOrArrayLayers: options.depthOrArrayLayers,
+      mipLevel: options.mipLevel ?? 0,
+      aspect: options.aspect ?? 'all'
+    });
+
+    this.handle.copyTextureToTexture(
+      {
+        texture: webgpuSourceTexture.handle,
+        mipLevel: sourceRegion.mipLevel,
+        origin: {
+          x: sourceRegion.x,
+          y: sourceRegion.y,
+          z: sourceRegion.z
+        },
+        aspect: sourceRegion.aspect
+      },
+      {
+        texture: webgpuDestinationTexture.handle,
+        mipLevel: options.destinationMipLevel ?? 0,
+        origin: {
+          x: options.destinationOrigin?.[0] ?? 0,
+          y: options.destinationOrigin?.[1] ?? 0,
+          z: options.destinationOrigin?.[2] ?? 0
+        },
+        aspect: options.destinationAspect ?? sourceRegion.aspect
+      },
+      {
+        width: sourceRegion.width,
+        height: sourceRegion.height,
+        depthOrArrayLayers: sourceRegion.depthOrArrayLayers
+      }
+    );
   }
 
   override pushDebugGroup(groupLabel: string): void {

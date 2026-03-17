@@ -83,14 +83,16 @@ export class WEBGLCommandEncoder extends CommandEncoder {
   override insertDebugMarker(markerLabel: string): void {}
 
   override resolveQuerySet(
-    querySet: QuerySet,
-    destination: Buffer,
-    options?: {
+    _querySet: QuerySet,
+    _destination: Buffer,
+    _options?: {
       firstQuery?: number;
       queryCount?: number;
       destinationOffset?: number;
     }
-  ): void {}
+  ): void {
+    throw new Error('resolveQuerySet is not supported in WebGL');
+  }
 
   writeTimestamp(querySet: QuerySet, queryIndex: number): void {
     const webglQuerySet = querySet as WEBGLQuerySet;

@@ -369,13 +369,7 @@ export class WebGLDevice extends Device {
   submit(commandBuffer?: WEBGLCommandBuffer): void {
     let submittedCommandEncoder: WEBGLCommandEncoder | null = null;
     if (!commandBuffer) {
-      submittedCommandEncoder = this.commandEncoder;
-      commandBuffer = submittedCommandEncoder.finish();
-      this.commandEncoder.destroy();
-      this.commandEncoder = this.createCommandEncoder({
-        id: submittedCommandEncoder.props.id,
-        timeProfilingQuerySet: submittedCommandEncoder.getTimeProfilingQuerySet()
-      });
+      ({submittedCommandEncoder, commandBuffer} = this._finalizeDefaultCommandEncoderForSubmit());
     }
 
     try {
@@ -392,6 +386,20 @@ export class WebGLDevice extends Device {
     } finally {
       commandBuffer.destroy();
     }
+  }
+
+  private _finalizeDefaultCommandEncoderForSubmit(): {
+    submittedCommandEncoder: WEBGLCommandEncoder;
+    commandBuffer: WEBGLCommandBuffer;
+  } {
+    const submittedCommandEncoder = this.commandEncoder;
+    const commandBuffer = submittedCommandEncoder.finish();
+    this.commandEncoder.destroy();
+    this.commandEncoder = this.createCommandEncoder({
+      id: submittedCommandEncoder.props.id,
+      timeProfilingQuerySet: submittedCommandEncoder.getTimeProfilingQuerySet()
+    });
+    return {submittedCommandEncoder, commandBuffer};
   }
 
   //

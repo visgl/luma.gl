@@ -335,6 +335,8 @@ submit(): void
 The application should call `device.submit()` after rendering of a frame is complete
 to ensure that the generated command queue is submitted to the GPU.
 
+See [GPU Commands](/docs/api-guide/gpu/gpu-commands) for when `submit()` is required, how it relates to `CommandEncoder.finish()`, and why WebGL and WebGPU differ here.
+
 ### createBuffer
 
 ```typescript
@@ -412,6 +414,7 @@ beginRenderPass(props: RenderPassProps): RenderPass
 Creates a [`RenderPass`](./resources/render-pass). See [`RenderPassProps`](./resources/render-pass.md#renderpassprops) for available options.
 
 - `props.framebuffer` If omitted, renders into the default canvas context's default framebuffer.
+- See [GPU Commands](/docs/api-guide/gpu/gpu-commands) for the difference between pass recording on WebGPU and best-effort immediate behavior on WebGL.
 
 ### beginComputePass
 
@@ -420,6 +423,8 @@ beginComputePass(props?: ComputePassProps): ComputePass
 ```
 
 Creates a [`ComputePass`](./resources/compute-pass) which can be used to bind data and run compute operations using compute pipelines. See [`ComputePassProps`](./resources/compute-pass.md#computepassprops) for available options.
+
+See [GPU Commands](/docs/api-guide/gpu/gpu-commands) for how compute work is recorded and submitted.
 
 ### loseDevice
 

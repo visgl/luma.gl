@@ -14,7 +14,11 @@ export class WebGPUComputePass extends ComputePass {
 
   _webgpuPipeline: WebGPUComputePipeline | null = null;
 
-  constructor(device: WebGPUDevice, props: ComputePassProps = {}) {
+  constructor(
+    device: WebGPUDevice,
+    props: ComputePassProps = {},
+    commandEncoder: GPUCommandEncoder = device.commandEncoder.handle
+  ) {
     super(device, props);
     this.device = device;
     const {props: computePassProps} = this;
@@ -35,7 +39,7 @@ export class WebGPUComputePass extends ComputePass {
 
     this.handle =
       this.props.handle ||
-      device.commandEncoder.handle.beginComputePass({
+      commandEncoder.beginComputePass({
         label: this.props.id,
         timestampWrites
       });

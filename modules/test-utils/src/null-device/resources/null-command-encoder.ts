@@ -41,45 +41,29 @@ export class NullCommandEncoder extends CommandEncoder {
     return new NullRenderPass(this.device, props);
   }
 
-  beginComputePass(props: ComputePassProps): ComputePass {
-    throw new Error('ComputePass not supported in WebGL');
+  beginComputePass(_props: ComputePassProps): ComputePass {
+    throw new Error('ComputePass is not supported on NullDevice');
   }
 
-  copyBufferToBuffer(options: CopyBufferToBufferOptions): void {}
-
-  copyBufferToTexture(options: CopyBufferToTextureOptions) {}
-
-  copyTextureToBuffer(options: CopyTextureToBufferOptions): void {
-    const {
-      sourceTexture,
-      destinationBuffer,
-      origin = [0, 0, 0],
-      byteOffset = 0,
-      width,
-      height,
-      depthOrArrayLayers,
-      mipLevel,
-      aspect
-    } = options;
-    sourceTexture.readBuffer(
-      {
-        x: origin[0] ?? 0,
-        y: origin[1] ?? 0,
-        z: origin[2] ?? 0,
-        width,
-        height,
-        depthOrArrayLayers,
-        mipLevel,
-        aspect,
-        byteOffset
-      } as any,
-      destinationBuffer
-    );
+  copyBufferToBuffer(_options: CopyBufferToBufferOptions): void {
+    throw new Error('copyBufferToBuffer is not supported on NullDevice');
   }
 
-  copyTextureToTexture(options: CopyTextureToTextureOptions): void {}
+  copyBufferToTexture(_options: CopyBufferToTextureOptions) {
+    throw new Error('copyBufferToTexture is not supported on NullDevice');
+  }
 
-  resolveQuerySet(querySet: QuerySet): void {}
+  copyTextureToBuffer(_options: CopyTextureToBufferOptions): void {
+    throw new Error('copyTextureToBuffer is not supported on NullDevice');
+  }
+
+  copyTextureToTexture(_options: CopyTextureToTextureOptions): void {
+    throw new Error('copyTextureToTexture is not supported on NullDevice');
+  }
+
+  resolveQuerySet(_querySet: QuerySet): void {
+    throw new Error('resolveQuerySet is not supported on NullDevice');
+  }
 
   pushDebugGroup(groupLabel: string): void {}
   popDebugGroup() {}

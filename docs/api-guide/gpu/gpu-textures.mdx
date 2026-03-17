@@ -2,6 +2,8 @@ import {DeviceTabs, Format as Ft, Filter as L, Render as R} from '@site/src/reac
 
 # Using GPU Textures
 
+See also [GPU Commands](/docs/api-guide/gpu/gpu-commands) for the difference between immediate texture helpers such as `writeData()` and explicit `CommandEncoder` copy operations.
+
 While the idea behind textures is simple in principle (a grid of pixels stored on GPU memory), GPU Textures are surprisingly complex objects.
 
 Capabilities
@@ -144,7 +146,7 @@ In WebGPU/WGSL, textures can be used with compute shaders through storage bindin
 
 ## Copying Textures
 
-Texture data can be copied between GPU and CPU and vice versa, via GPU Buffers. See `CommandEncoder` for more information.
+Texture data can be copied between GPU and CPU and vice versa, via GPU Buffers. See [GPU Commands](/docs/api-guide/gpu/gpu-commands) for when those copies should be recorded explicitly versus issued through resource-level convenience methods.
 
 ## Texture Format Capabilities
 

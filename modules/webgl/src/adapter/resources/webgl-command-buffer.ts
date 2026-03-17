@@ -119,8 +119,8 @@ function _copyBufferToBuffer(device: WebGLDevice, options: CopyBufferToBufferOpt
  * Copies data from a Buffer object into a Texture object
  * NOTE: doesn't wait for copy to be complete
  */
-function _copyBufferToTexture(device: WebGLDevice, options: CopyBufferToTextureOptions): void {
-  throw new Error('Not implemented');
+function _copyBufferToTexture(_device: WebGLDevice, _options: CopyBufferToTextureOptions): void {
+  throw new Error('copyBufferToTexture is not supported in WebGL');
 }
 
 /**
