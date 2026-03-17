@@ -12,16 +12,19 @@ function createMockGL(options: {
   version?: string;
 }): WebGL2RenderingContext {
   const {vendor, renderer, version = 'WebGL 2.0'} = options;
+  const vendorParameter = Number(GL.VENDOR);
+  const rendererParameter = Number(GL.RENDERER);
+  const versionParameter = Number(GL.VERSION);
 
   return {
     getExtension: () => null,
     getParameter: (parameter: number) => {
       switch (parameter) {
-        case GL.VENDOR:
+        case vendorParameter:
           return vendor;
-        case GL.RENDERER:
+        case rendererParameter:
           return renderer;
-        case GL.VERSION:
+        case versionParameter:
           return version;
         default:
           return null;

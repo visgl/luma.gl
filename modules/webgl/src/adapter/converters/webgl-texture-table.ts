@@ -423,7 +423,7 @@ function isColorRenderableTextureFormat(
     gl.bindFramebuffer(GL.FRAMEBUFFER, framebuffer);
     gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, GL.TEXTURE_2D, texture, 0);
     renderable =
-      gl.checkFramebufferStatus(GL.FRAMEBUFFER) === GL.FRAMEBUFFER_COMPLETE &&
+      Number(gl.checkFramebufferStatus(GL.FRAMEBUFFER)) === Number(GL.FRAMEBUFFER_COMPLETE) &&
       Number(gl.getError()) === noError;
   } finally {
     gl.bindFramebuffer(GL.FRAMEBUFFER, previousFramebuffer);
