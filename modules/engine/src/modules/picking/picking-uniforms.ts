@@ -9,6 +9,7 @@ import type {ShaderModule} from '@luma.gl/shadertools';
 const DEFAULT_HIGHLIGHT_COLOR: NumberArray4 = [0, 1, 1, 1];
 
 export const INVALID_INDEX = -1;
+export type PickingPayloadMode = 'instance' | 'attribute';
 
 /**
  * Props for the picking module, which depending on mode renders picking colors or highlighted item.
@@ -19,15 +20,15 @@ export const INVALID_INDEX = -1;
 export type PickingProps = {
   /** Are we picking? I.e. rendering picking colors? */
   isActive?: boolean;
-  /** Whether to use instance_index (built-in) or a custom application supplied index (usually from an attribute) */
-  indexMode?: 'instance' | 'custom';
-  /** Batch index (used when rendering multiple models to identify which model was picked), defaults to 0 */
-  batchIndex?: number;
+  /** Whether the payload is sourced from the builtin instance index or a custom integer attribute */
+  payloadMode?: PickingPayloadMode;
+  /** Identifier of the draw call currently being rendered */
+  drawCallIndex?: number;
 
-  /** Index of the highlighted batch, defaults to 0 */
-  highlightedBatchIndex?: number | null;
-  /** Set an index to highlight that item, or `null` to explicitly clear **/
-  highlightedObjectIndex?: number | null;
+  /** Identifier of the highlighted draw call, defaults to 0 */
+  highlightedDrawCallIndex?: number | null;
+  /** Set the highlighted payload, or `null` to explicitly clear **/
+  highlightedPayload?: number | null;
   /** Color of visual highlight of "selected" item () */
   highlightColor?: NumberArray4;
 };
@@ -43,19 +44,19 @@ export type PickingUniforms = {
    * When false, renders normal colors, with the exception of selected object which is rendered with highlight
    */
   isActive: boolean;
-  /** Set to true when picking an attribute value instead of object index */
-  indexMode: 0 | 1;
-  /** Index of batch currently being rendered */
-  batchIndex: number;
+  /** Whether the current payload comes from instance_index or a custom integer attribute */
+  payloadMode: 0 | 1;
+  /** Identifier of the draw call currently being rendered */
+  drawCallIndex: number;
 
   /** Do we have a highlighted item? */
   isHighlightActive: boolean;
   /** Color of visual highlight of "selected" item. Note: RGBA components must in the range 0-1 */
   highlightColor: NumberArray4;
-  /** Indicates which batch to visually highlight an item in (defaults to 0) */
-  highlightedBatchIndex: number;
-  /** Indicates which index in the batch to highlight an item in */
-  highlightedObjectIndex: number;
+  /** Indicates which draw call to visually highlight an item in (defaults to 0) */
+  highlightedDrawCallIndex: number;
+  /** Indicates which payload in the draw call to highlight */
+  highlightedPayload: number;
 };
 
 export type PickingBindings = {};
@@ -64,12 +65,12 @@ export type PickingBindings = {};
 
 const uniformTypes: Required<ShaderModule<PickingProps, PickingUniforms>>['uniformTypes'] = {
   isActive: 'i32',
-  indexMode: 'i32',
-  batchIndex: 'i32',
+  payloadMode: 'i32',
+  drawCallIndex: 'i32',
 
   isHighlightActive: 'i32',
-  highlightedBatchIndex: 'i32',
-  highlightedObjectIndex: 'i32',
+  highlightedDrawCallIndex: 'i32',
+  highlightedPayload: 'i32',
   highlightColor: 'vec4<f32>'
 };
 
@@ -79,12 +80,12 @@ precision highp int;
 
 uniform pickingUniforms {
   int isActive;
-  int indexMode;
-  int batchIndex;
+  int payloadMode;
+  int drawCallIndex;
 
   int isHighlightActive;
-  int highlightedBatchIndex;
-  int highlightedObjectIndex;
+  int highlightedDrawCallIndex;
+  int highlightedPayload;
   vec4 highlightColor;
 } picking;
 `;
@@ -92,12 +93,12 @@ uniform pickingUniforms {
 export const WGSL_UNIFORMS = /* wgsl */ `\
 struct pickingUniforms {
   isActive: i32,
-  indexMode: i32,
-  batchIndex: i32,
+  payloadMode: i32,
+  drawCallIndex: i32,
 
   isHighlightActive: i32,
-  highlightedBatchIndex: i32,
-  highlightedObjectIndex: i32,
+  highlightedDrawCallIndex: i32,
+  highlightedPayload: i32,
   highlightColor: vec4<f32>,
 };
 
@@ -112,11 +113,11 @@ function getUniforms(props: PickingProps = {}, prevUniforms?: PickingUniforms): 
     uniforms.isActive = Boolean(props.isActive);
   }
 
-  switch (props.indexMode) {
+  switch (props.payloadMode) {
     case 'instance':
       uniforms.indexMode = 0;
       break;
-    case 'custom':
+    case 'attribute':
       uniforms.indexMode = 1;
       break;
     case undefined:
@@ -124,22 +125,34 @@ function getUniforms(props: PickingProps = {}, prevUniforms?: PickingUniforms): 
       break;
   }
 
-  switch (props.highlightedObjectIndex) {
+  if (typeof props.drawCallIndex === 'number') {
+    uniforms.drawCallIndex = props.drawCallIndex;
+  }
+
+  switch (props.highlightedPayload) {
     case undefined:
-      // Unless highlightedObjectColor explicitly null or set, do not update state
+      // Unless highlighted payload explicitly null or set, do not update state
       break;
     case null:
       // Clear highlight
       uniforms.isHighlightActive = false;
-      uniforms.highlightedObjectIndex = INVALID_INDEX;
+      uniforms.highlightedPayload = INVALID_INDEX;
       break;
     default:
       uniforms.isHighlightActive = true;
-      uniforms.highlightedObjectIndex = props.highlightedObjectIndex;
+      uniforms.highlightedPayload = props.highlightedPayload;
   }
 
-  if (typeof props.highlightedBatchIndex === 'number') {
-    uniforms.highlightedBatchIndex = props.highlightedBatchIndex;
+  switch (props.highlightedDrawCallIndex) {
+    case undefined:
+      break;
+    case null:
+      uniforms.isHighlightActive = false;
+      uniforms.highlightedDrawCallIndex = INVALID_INDEX;
+      break;
+    default:
+      uniforms.isHighlightActive = true;
+      uniforms.highlightedDrawCallIndex = props.highlightedDrawCallIndex;
   }
 
   if (props.highlightColor) {
@@ -169,11 +182,11 @@ export const pickingUniforms = {
   uniformTypes,
   defaultUniforms: {
     isActive: false,
-    indexMode: 0,
-    batchIndex: 0,
-    isHighlightActive: true,
-    highlightedBatchIndex: INVALID_INDEX,
-    highlightedObjectIndex: INVALID_INDEX,
+    payloadMode: 0,
+    drawCallIndex: 0,
+    isHighlightActive: false,
+    highlightedDrawCallIndex: INVALID_INDEX,
+    highlightedPayload: INVALID_INDEX,
     highlightColor: DEFAULT_HIGHLIGHT_COLOR
   },
 
