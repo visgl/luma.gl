@@ -42,6 +42,7 @@ export class WebGLPresentationContext extends PresentationContext {
 
     this._setAutoCreatedCanvasId(`${this.device.id}-presentation-canvas`);
     this._configureDevice();
+    this._startObservers();
   }
 
   present(): void {

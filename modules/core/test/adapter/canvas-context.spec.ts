@@ -3,6 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
+import type {CanvasContextProps, PresentationContextProps} from '@luma.gl/core';
 import {CanvasContext, PresentationContext, Framebuffer} from '@luma.gl/core';
 import {isBrowser} from '@probe.gl/env';
 import {getTestDevices, getWebGLTestDevice} from '@luma.gl/test-utils';
@@ -21,6 +22,12 @@ class TestCanvasContext extends CanvasContext {
       onPositionChange: () => {}
     }
   };
+  constructor(props: CanvasContextProps = {}, startObservers = true) {
+    super(props);
+    if (startObservers) {
+      this._startObservers();
+    }
+  }
   protected override _getCurrentFramebuffer(): Framebuffer {
     throw new Error('test');
   }
@@ -42,6 +49,12 @@ class TestPresentationContext extends PresentationContext {
       onPositionChange: () => {}
     }
   };
+  constructor(props: PresentationContextProps = {}, startObservers = true) {
+    super(props);
+    if (startObservers) {
+      this._startObservers();
+    }
+  }
   present(): void {}
   protected override _getCurrentFramebuffer(): Framebuffer {
     throw new Error('test');
@@ -235,6 +248,61 @@ test('CanvasContext', t => {
     t.ok(canvasContext);
     t.deepEqual(canvasContext.getDevicePixelSize(), [800, 600]);
   }
+  t.end();
+});
+
+test('CanvasContext#_startObservers defers DOM observation until explicitly started', t => {
+  if (!isBrowser()) {
+    t.end();
+    return;
+  }
+
+  const globalScope = globalThis as any;
+  const originalResizeObserver = globalScope.ResizeObserver;
+  const originalIntersectionObserver = globalScope.IntersectionObserver;
+
+  const calls = {resizeObserverObserve: 0, intersectionObserverObserve: 0};
+
+  globalScope.ResizeObserver = class {
+    constructor(_callback: ResizeObserverCallback) {}
+    observe() {
+      calls.resizeObserverObserve++;
+    }
+    disconnect() {}
+  };
+  globalScope.IntersectionObserver = class {
+    constructor(_callback: IntersectionObserverCallback) {}
+    observe() {
+      calls.intersectionObserverObserve++;
+    }
+    disconnect() {}
+  };
+
+  try {
+    const canvasContext = new TestCanvasContext({}, false);
+
+    t.equal(calls.resizeObserverObserve, 0, 'resize observer is not started during construction');
+    t.equal(
+      calls.intersectionObserverObserve,
+      0,
+      'intersection observer is not started during construction'
+    );
+
+    canvasContext._startObservers();
+
+    t.equal(calls.resizeObserverObserve, 1, 'resize observer starts after explicit initialization');
+    t.equal(
+      calls.intersectionObserverObserve,
+      1,
+      'intersection observer starts after explicit initialization'
+    );
+
+    canvasContext.destroy();
+  } finally {
+    globalScope.ResizeObserver = originalResizeObserver;
+    globalScope.IntersectionObserver = originalIntersectionObserver;
+  }
+
   t.end();
 });
 
