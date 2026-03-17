@@ -1,8 +1,27 @@
 # TextureTransform
 
-`TextureTransform` is responsible for managing resources and state required for reading from and/or writing to `Texture` objects. It auto creates `Texture` objects when requested, creates `Framebuffer` objects. Maintains all texture bindings, when swapping is enabled, two binding objects are created for easy switching of all WebGL resource bindings.
+`TextureTransform` is the engine helper for texture-to-texture transform passes.
+It builds an internal [`Model`](/docs/api-reference/engine/model), manages a framebuffer for the target texture, and renders into that texture.
 
-NOTE: In following sections 'texture transform' is used to refer to 'reading from and/or writing to `Texture` objects'.
+`TextureTransform` is currently exported but marked deprecated in source.
+
+## Usage
+
+```typescript
+import {TextureTransform} from '@luma.gl/engine';
+
+const transform = new TextureTransform(device, {
+  vs: VERTEX_SHADER,
+  targetTexture,
+  targetTextureChannels: 4,
+  targetTextureVarying: 'outColor',
+  sourceTextures: {
+    sourceTexture
+  }
+});
+
+transform.run();
+```
 
 ## Types
 
@@ -10,81 +29,56 @@ NOTE: In following sections 'texture transform' is used to refer to 'reading fro
 
 ```ts
 export type TextureTransformProps = Omit<ModelProps, 'fs'> & {
-  fs?: ModelProps['fs']; // override as optional
+  fs?: ModelProps['fs'];
+  inject?: Record<string, string>;
+  framebuffer?: Framebuffer;
+  sourceBuffers?: Record<string, Buffer>;
+  sourceTextures?: Record<string, Texture>;
   targetTexture: Texture;
   targetTextureChannels: 1 | 2 | 3 | 4;
   targetTextureVarying: string;
-
-  /** @deprecated TODO(donmccurdy): Needed? */
-  inject?: Record<string, string>;
-  /** @deprecated TODO(donmccurdy): Needed? */
-  framebuffer?: Framebuffer;
-  /** @deprecated TODO(donmccurdy): Model already handles this? */
-  sourceBuffers?: Record<string, Buffer>;
-  /** @deprecated TODO(donmccurdy): Model already handles this? */
-  sourceTextures?: Record<string, Texture>;
 };
 ```
 
-### `TextureBinding`
+`inject`, `framebuffer`, `sourceBuffers`, and `sourceTextures` are retained mainly for backward compatibility and are marked deprecated in source comments.
 
-```ts
-type TextureBinding = {
-  sourceBuffers: Record<string, Buffer>;
-  sourceTextures: Record<string, Texture>;
-  targetTexture: Texture;
-  framebuffer?: Framebuffer;
-};
-```
+## Properties
+
+### `device`, `model`, `sampler`
+
+Owning device, internal fullscreen model, and sampler used for source textures.
+
+### `bindings`
+
+Internal binding state for the active transform setup.
 
 ## Methods
 
-### `constructor`
+### `constructor(device: Device, props: TextureTransformProps)`
 
-`new TextureTransform(device: Device, props: TextureTransformProps)`
+Creates the internal model and framebuffer binding state.
 
-- `device` - Device
-- `props.sourceTextures` (`Object`, Optional) - key and value pairs, where key is the name of vertex shader attribute and value is the corresponding `Texture` object.
-- `props.targetTexture` (`Texture`|`String`, Optional) - `props.Texture` object to which data to be written. When it is a `String`, it must be one of the source texture attributes name, a new texture object is cloned from it.
-- `props.targetTextureVarying` : varying name used in vertex shader who's data should go into target texture.
-- `props.swapTexture` : source texture attribute name, that is swapped with target texture every time `swap()` is called.
-- `props.fs`  - fragment shader string, when rendering to a texture, fragments can be processed using this custom shader, when not specified, pass through fragment shader will be used.
+### `destroy(): void`
 
-### getDrawOptions(opts: Object) : Object
+Destroys the internal model and any owned framebuffers.
 
-Returns options required when performing `Model.draw()` options.
+### `delete(): void`
 
-- `opts` (`Object`) - Any existing `opts.attributes` , `opts.parameters`, and `opts.uniforms` will be merged with new values.
+Deprecated alias for `destroy()`.
 
-Returns an Object : attributes, framebuffer, uniforms, discard, parameters
+### `run(options?: RenderPassProps): void`
 
-### updateModelProps(props: Object) : Object
+Renders one pass into the current target texture framebuffer.
 
-Updates input `props` object used to build `Model` object, with data required for texture transform.
+### `getTargetTexture(): Texture`
 
-- `props` (`Object`) - props for building `Model` object, it will updated with required options (`{vs, fs, modules, uniforms, inject}`) for texture transform.
+Returns the current output texture.
 
-Returns updated object.
+### `getFramebuffer(): Framebuffer | undefined`
 
-### run(props: Object)
+Returns the framebuffer currently used as the render target.
 
-Updates bindings for source and target texture.
+## Remarks
 
-- `props` (`Object`) - contains following data.
-  - `sourceTextures` (`Object`, Optional) - key and value pairs, where key is the name of vertex shader attribute and value is the corresponding `Texture` object.
-  - `targetTexture` (`Texture`|`String`, Optional) - `Texture` object to which data to be written. When it is a `String`, it must be one of the source texture attributes name, a new texture object is cloned from it.
-
-
-### getTargetTexture() : Texture
-
-Returns current target texture object.
-
-### getData([options : Object]) : ArrayBufferView
-
-Reads and returns data from current target texture.
-
-- `options.packed` (Boolean, Optional, Default: false) - When true, data is packed to the actual size varyings. When false return array contains 4 values (R, G, B and A) for each element. Un-used element value will be 0 for R, G and B and 1 for A channel.
-
-### getFramebuffer() : Framebuffer
-
-Returns current `Framebuffer` object.
+- The default fragment shader is automatically synthesized from `targetTextureVarying` and `targetTextureChannels` when `fs` is omitted.
+- For new work, prefer more explicit render-pass or compute abstractions when possible.

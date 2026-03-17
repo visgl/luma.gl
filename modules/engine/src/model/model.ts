@@ -114,7 +114,7 @@ export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs' | 'bindings'> & {
  * - Reuses and lazily recompiles {@link RenderPipeline | pipelines} as needed.
  * - Integrates with `@luma.gl/shadertools` to assemble GLSL or WGSL from shader modules.
  * - Manages geometry attributes and buffer bindings.
- * - Accepts textures, samplers and uniform buffers as bindings, including `AsyncTexture`.
+ * - Accepts textures, samplers and uniform buffers as bindings, including `DynamicTexture`.
  * - Provides detailed debug logging and optional shader source inspection.
  */
 export class Model {
