@@ -1,6 +1,6 @@
 {
   "name": "luma.gl-examples-gltf-showcase",
-  "version": "9.3.0-alpha.4",
+  "version": "9.3.0-alpha.6",
   "private": true,
   "scripts": {
     "start": "vite",
@@ -10,12 +10,12 @@
   "dependencies": {
     "@loaders.gl/core": "4.4.0-alpha.18",
     "@loaders.gl/gltf": "4.4.0-alpha.18",
-    "@luma.gl/core": "9.3.0-alpha.4",
-    "@luma.gl/engine": "9.3.0-alpha.4",
-    "@luma.gl/gltf": "9.3.0-alpha.4",
-    "@luma.gl/shadertools": "9.3.0-alpha.4",
-    "@luma.gl/webgl": "9.3.0-alpha.4",
-    "@luma.gl/webgpu": "9.3.0-alpha.4",
+    "@luma.gl/core": "9.3.0-alpha.6",
+    "@luma.gl/engine": "9.3.0-alpha.6",
+    "@luma.gl/gltf": "9.3.0-alpha.6",
+    "@luma.gl/shadertools": "9.3.0-alpha.6",
+    "@luma.gl/webgl": "9.3.0-alpha.6",
+    "@luma.gl/webgpu": "9.3.0-alpha.6",
     "@math.gl/core": "^4.1.0"
   },
   "devDependencies": {

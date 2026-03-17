@@ -1,13 +1,6 @@
 import React, {CSSProperties, FC, useEffect, useRef, useState} from 'react'; // eslint-disable-line
 import {Device, luma} from '@luma.gl/core';
-import {
-  AnimationLoopTemplate,
-  AnimationLoop,
-  makeAnimationLoop,
-  setPathPrefix
-} from '@luma.gl/engine';
-import {webgl2Adapter} from '@luma.gl/webgl';
-import {webgpuAdapter} from '@luma.gl/webgpu';
+import {AnimationLoopTemplate, AnimationLoop, makeAnimationLoop, setPathPrefix} from '@luma.gl/engine';
 import {StatsWidget} from '@probe.gl/stats-widget';
 import type {Stat, Stats} from '@probe.gl/stats';
 import {DeviceTabs} from './device-tabs';
@@ -17,10 +10,11 @@ import {
 } from '../debug/luma-cpu-hotspot-profiler';
 
 // import {VRDisplay} from '@luma.gl/experimental';
-import {useStore} from '../store/device-store';
+import {getCanvasContainer, useStore} from '../store/device-store';
 
 const GITHUB_TREE = 'https://github.com/visgl/luma.gl/tree/master';
 let isInfoBoxCollapsedByDefault = true;
+const statsWidgetCollapsedStateByTitle: Record<string, boolean> = {};
 
 // WORKAROUND FOR luma.gl VRDisplay
 // if (!globalThis.navigator) {// eslint-disable-line
@@ -53,7 +47,6 @@ const STAT_STYLES = {
 };
 
 const GPU_TIME_AND_MEMORY_STATS_FORMATTERS = {
-  'Frame Rate': (stat: Stat) => `${stat.name}: ${Math.round(stat.getSampleHz())}fps`,
   'CPU Time': (stat: Stat) => `${stat.name}: ${stat.getSampleAverageTime().toFixed(2)}ms`,
   'GPU Time': (stat: Stat) => `${stat.name}: ${stat.getSampleAverageTime().toFixed(2)}ms`,
   'GPU Memory': 'memory',
@@ -65,6 +58,15 @@ const GPU_TIME_AND_MEMORY_STATS_FORMATTERS = {
 } as const;
 
 type StatFormatter = (stat: Stat) => string;
+type FrameRateController = {
+  formatFrameRate: StatFormatter;
+  start: () => void;
+  stop: () => void;
+  update: () => void;
+};
+
+const FRAME_RATE_SAMPLE_COUNT = 60;
+
 function getStatsTitle(stats: Stats): string {
   const title = stats.id;
   if (title === 'GPU Time and Memory') {
@@ -75,6 +77,16 @@ function getStatsTitle(stats: Stats): string {
 
 function initializeGpuTimeAndMemoryStats() {
   return luma.stats.get('GPU Time and Memory');
+}
+
+function getStatsWidgetCollapsedState(statsWidget: StatsWidget): boolean {
+  return statsWidget.title ? (statsWidgetCollapsedStateByTitle[statsWidget.title] ?? true) : true;
+}
+
+function storeStatsWidgetCollapsedState(statsWidget: StatsWidget): void {
+  if (statsWidget.title) {
+    statsWidgetCollapsedStateByTitle[statsWidget.title] = statsWidget.collapsed;
+  }
 }
 
 function getAdapterLabel(device: Device | null): string {
@@ -101,14 +113,94 @@ function getGpuBackendLabel(device: Device | null): string {
 }
 
 function getGpuTimeAndMemoryStatFormatters(
-  device: Device | null
+  device: Device | null,
+  frameRateFormatter?: StatFormatter
 ): Record<string, string | StatFormatter> {
   return {
+    'Frame Rate':
+      frameRateFormatter || ((stat: Stat) => `${stat.name}: ${Math.round(stat.count)}fps`),
     ...GPU_TIME_AND_MEMORY_STATS_FORMATTERS,
     Adapter: () => `Adapter: ${getAdapterLabel(device)}`,
     GPU: () => `GPU: ${getGpuLabel(device)}`,
     'GPU Type': () => `GPU Type: ${getGpuTypeLabel(device)}`,
     'GPU Backend': () => `GPU Backend: ${getGpuBackendLabel(device)}`
+  };
+}
+
+function createFrameRateController(stats: Stats): FrameRateController {
+  const frameRateStat = stats.get('Frame Rate');
+  const cpuTimeStat = stats.get('CPU Time');
+  const gpuTimeStat = stats.get('GPU Time');
+  const frameDurations: number[] = [];
+  let frameDurationTotal = 0;
+  let previousFrameTimestamp = 0;
+  let currentFrameRate = 0;
+  let animationFrameId: number | null = null;
+
+  const reset = () => {
+    frameDurations.length = 0;
+    frameDurationTotal = 0;
+    previousFrameTimestamp = 0;
+    currentFrameRate = 0;
+    frameRateStat.reset();
+  };
+
+  const getAverageFrameDuration = () =>
+    frameDurations.length > 0 ? frameDurationTotal / frameDurations.length : 0;
+
+  const getStatDuration = (stat: Stat) => {
+    const sampleAverageTime = stat.getSampleAverageTime();
+    if (sampleAverageTime > 0) {
+      return sampleAverageTime;
+    }
+
+    return stat.getAverageTime();
+  };
+
+  const updateFrameRateStat = () => {
+    const estimatedFrameDuration = Math.max(
+      getAverageFrameDuration(),
+      getStatDuration(cpuTimeStat),
+      getStatDuration(gpuTimeStat)
+    );
+    currentFrameRate = estimatedFrameDuration > 0 ? 1000 / estimatedFrameDuration : 0;
+    frameRateStat.count = currentFrameRate;
+    frameRateStat.lastTiming = estimatedFrameDuration;
+    frameRateStat.lastSampleTime = estimatedFrameDuration;
+    frameRateStat.lastSampleCount = currentFrameRate;
+  };
+
+  const trackFrame = (timestamp: number) => {
+    if (previousFrameTimestamp > 0) {
+      const frameDuration = timestamp - previousFrameTimestamp;
+      if (frameDuration > 0) {
+        frameDurations.push(frameDuration);
+        frameDurationTotal += frameDuration;
+        if (frameDurations.length > FRAME_RATE_SAMPLE_COUNT) {
+          frameDurationTotal -= frameDurations.shift() || 0;
+        }
+      }
+    }
+
+    previousFrameTimestamp = timestamp;
+    animationFrameId = window.requestAnimationFrame(trackFrame);
+  };
+
+  return {
+    formatFrameRate: stat =>
+      `${stat.name}: ${currentFrameRate.toFixed(currentFrameRate >= 10 ? 0 : 1)}fps`,
+    start: () => {
+      reset();
+      animationFrameId = window.requestAnimationFrame(trackFrame);
+    },
+    stop: () => {
+      if (animationFrameId !== null) {
+        window.cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+      }
+      reset();
+    },
+    update: updateFrameRateStat
   };
 }
 
@@ -229,6 +321,7 @@ export const InfoBox: FC<InfoBoxProps> = (props: InfoBoxProps) => {
   const [isCollapsed, setIsCollapsed] = useState(() => isInfoBoxCollapsedByDefault);
   const maxInfoHeight = 400;
   const maxInfoContentHeight = 320;
+  const toggleCollapsed = () => setIsCollapsed(value => !value);
 
   useEffect(() => {
     isInfoBoxCollapsedByDefault = isCollapsed;
@@ -252,9 +345,23 @@ export const InfoBox: FC<InfoBoxProps> = (props: InfoBoxProps) => {
           gap: 12
         }}
       >
-        <div style={{minWidth: 0}}>
+        <button
+          type="button"
+          aria-label={isCollapsed ? 'Expand info box' : 'Collapse info box'}
+          onClick={toggleCollapsed}
+          style={{
+            minWidth: 0,
+            flex: '1 1 auto',
+            padding: 0,
+            border: 'none',
+            background: 'transparent',
+            textAlign: 'left',
+            cursor: 'pointer',
+            color: 'inherit'
+          }}
+        >
           {title ? <h3 style={{marginTop: 0, marginBottom: 0}}>{title}</h3> : null}
-        </div>
+        </button>
         <div style={{display: 'flex', alignItems: 'center', gap: 24, flexShrink: 0}}>
           {sourceUrl ? (
             <a href={sourceUrl} target="_blank" rel="noreferrer">
@@ -264,7 +371,7 @@ export const InfoBox: FC<InfoBoxProps> = (props: InfoBoxProps) => {
           <button
             type="button"
             aria-label={isCollapsed ? 'Expand info box' : 'Collapse info box'}
-            onClick={() => setIsCollapsed(value => !value)}
+            onClick={toggleCollapsed}
             style={{
               flexShrink: 0,
               border: '1px solid #d0d7de',
@@ -339,14 +446,16 @@ export function ReactExample<P>(props: ReactExampleProps<P>) {
 
     const resourceCounts = luma.stats.get('GPU Resource Counts');
     const gpuTimeAndMemoryStats = initializeGpuTimeAndMemoryStats();
+    const frameRateController = createFrameRateController(gpuTimeAndMemoryStats);
     statsPanelRef.current.replaceChildren();
+    frameRateController.start();
 
     const statsWidgets = [
       new StatsWidget(gpuTimeAndMemoryStats, {
         title: getStatsTitle(gpuTimeAndMemoryStats),
         container: statsPanelRef.current,
         css: STAT_STYLES,
-        formatters: getGpuTimeAndMemoryStatFormatters(null)
+        formatters: getGpuTimeAndMemoryStatFormatters(null, frameRateController.formatFrameRate)
       }),
       new StatsWidget(resourceCounts, {
         title: getStatsTitle(resourceCounts),
@@ -356,10 +465,11 @@ export function ReactExample<P>(props: ReactExampleProps<P>) {
     ];
 
     for (const statsWidget of statsWidgets) {
-      statsWidget.setCollapsed(true);
+      statsWidget.setCollapsed(getStatsWidgetCollapsedState(statsWidget));
     }
 
     const updateStatsWidget = () => {
+      frameRateController.update();
       for (const statsWidget of statsWidgets) {
         statsWidget.update();
       }
@@ -370,7 +480,9 @@ export function ReactExample<P>(props: ReactExampleProps<P>) {
 
     return () => {
       window.clearInterval(statsIntervalId);
+      frameRateController.stop();
       for (const statsWidget of statsWidgets) {
+        storeStatsWidgetCollapsedState(statsWidget);
         statsWidget.remove();
       }
       statsPanelRef.current?.replaceChildren();
@@ -403,44 +515,40 @@ export function ReactExample<P>(props: ReactExampleProps<P>) {
 }
 
 export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
-  let containerName = 'ssr';
   const showStats = props.showStats !== false && props.panel !== false;
   const showHeader = props.showHeader !== false && props.panel !== false;
 
   /** Each example maintains an animation loop */
-  const [canvas, setCanvas] = useState<HTMLCanvasElement | null>(null);
-  const usedCanvases = useRef(new WeakMap<HTMLCanvasElement>());
+  const canvasContainerRef = useRef<HTMLDivElement | null>(null);
   const currentTask = useRef<Promise<void> | null>(null);
   const statsContainerRef = useRef<HTMLDivElement | null>(null);
   const statsPanelRef = useRef<HTMLDivElement | null>(null);
-  const statsWidgetCollapsedState = useRef<Record<string, boolean>>({});
 
   /** Type type of the device (WebGL, WebGPU, ...) */
   const deviceType = useStore(store => store.deviceType);
-  containerName = props.container || `luma-example-container-${deviceType}`;
+  const device = useStore(store => store.device);
 
   useEffect(() => {
-    if (!canvas || !deviceType || usedCanvases.current.get(canvas)) return;
-
-    usedCanvases.current.set(canvas, true);
+    if (!canvasContainerRef.current || !deviceType || !device) {
+      return;
+    }
 
     let animationLoop: AnimationLoop | null = null;
-    let device: Device | null = null;
     let statsWidgets: StatsWidget[] = [];
     let statsIntervalId: number | null = null;
     let previousSwapChainTextureMemory = 0;
+    const defaultCanvasContext = device.getDefaultCanvasContext();
+    const deviceCanvas = defaultCanvasContext.canvas;
+    let frameRateController: FrameRateController | null = null;
     const asyncCreateLoop = async () => {
-      // canvas.style.width = '100%';
-      // canvas.style.height = '100%';
-      device = await luma.createDevice({
-        adapters: [webgl2Adapter, webgpuAdapter],
-        type: deviceType,
-        debugGPUTime: true,
-        createCanvasContext: {
-          canvas,
-          container: containerName
-        }
-      });
+      if (!(deviceCanvas instanceof HTMLCanvasElement)) {
+        throw new Error('Website examples require the shared device canvas to be an HTMLCanvasElement');
+      }
+
+      deviceCanvas.style.display = EXAMPLE_CANVAS_STYLE.display;
+      deviceCanvas.style.width = EXAMPLE_CANVAS_STYLE.width;
+      deviceCanvas.style.height = EXAMPLE_CANVAS_STYLE.height;
+      canvasContainerRef.current?.replaceChildren(deviceCanvas);
       setActiveCpuHotspotProfilerDevice(device);
 
       animationLoop = makeAnimationLoop(props.template as unknown as typeof AnimationLoopTemplate, {
@@ -456,7 +564,9 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
         const gpuTimeAndMemoryStats = initializeGpuTimeAndMemoryStats();
         const swapChainTextureStat = gpuTimeAndMemoryStats.get('Swap Chain Texture');
         const gpuMemoryStat = gpuTimeAndMemoryStats.get('GPU Memory');
+        frameRateController = createFrameRateController(gpuTimeAndMemoryStats);
         statsPanelRef.current.replaceChildren();
+        frameRateController.start();
 
         const updateSwapChainTextureMemory = (nextSwapChainTextureMemory: number) => {
           const delta = nextSwapChainTextureMemory - previousSwapChainTextureMemory;
@@ -479,7 +589,10 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
             title: getStatsTitle(gpuTimeAndMemoryStats),
             container: statsPanelRef.current,
             css: STAT_STYLES,
-            formatters: getGpuTimeAndMemoryStatFormatters(device)
+            formatters: getGpuTimeAndMemoryStatFormatters(
+              device,
+              frameRateController.formatFrameRate
+            )
           }),
           new StatsWidget(resourceCounts, {
             title: getStatsTitle(resourceCounts),
@@ -488,16 +601,15 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
           })
         ];
         for (const statsWidget of statsWidgets) {
-          const collapsed = statsWidget.title
-            ? statsWidgetCollapsedState.current[statsWidget.title]
-            : undefined;
-          statsWidget.setCollapsed(collapsed ?? true);
+          statsWidget.setCollapsed(getStatsWidgetCollapsedState(statsWidget));
         }
 
         const updateStatsWidget = () => {
           if (device) {
             updateSwapChainTextureMemory(getDefaultCanvasColorTextureByteLength(device));
           }
+
+          frameRateController?.update();
 
           for (const statsWidget of statsWidgets) {
             statsWidget.update();
@@ -534,6 +646,8 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
             window.clearInterval(statsIntervalId);
             statsIntervalId = null;
           }
+          frameRateController?.stop();
+          frameRateController = null;
           if (previousSwapChainTextureMemory > 0) {
             const gpuTimeAndMemoryStats = luma.stats.get('GPU Time and Memory');
             gpuTimeAndMemoryStats
@@ -543,9 +657,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
             previousSwapChainTextureMemory = 0;
           }
           for (const statsWidget of statsWidgets) {
-            if (statsWidget.title) {
-              statsWidgetCollapsedState.current[statsWidget.title] = statsWidget.collapsed;
-            }
+            storeStatsWidgetCollapsedState(statsWidget);
             statsWidget.remove();
           }
           statsPanelRef.current?.replaceChildren();
@@ -555,16 +667,15 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
             animationLoop = null;
           }
 
-          if (device) {
-            clearActiveCpuHotspotProfilerDevice(device);
-            device.destroy();
-          }
+          clearActiveCpuHotspotProfilerDevice(device);
+          canvasContainerRef.current?.replaceChildren();
+          getCanvasContainer().appendChild(deviceCanvas);
         })
         .catch(error => {
           console.error(`unmounting ${deviceType} failed`, error);
         });
     };
-  }, [deviceType, canvas, showStats]);
+  }, [deviceType, device, showStats, props.template, props.directory, props.id]);
 
   // @ts-expect-error Intentionally accessing undeclared field info
   const info = props.template?.info;
@@ -606,7 +717,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
             }}
           />
         ) : null}
-        <canvas key={deviceType} ref={setCanvas} style={EXAMPLE_CANVAS_STYLE} />
+        <div key={deviceType} ref={canvasContainerRef} style={EXAMPLE_CANVAS_STYLE} />
       </div>
       {props.children}
     </ExamplePage>

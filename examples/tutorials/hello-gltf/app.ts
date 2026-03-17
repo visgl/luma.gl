@@ -73,6 +73,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     cameraAnimation: true,
     gltfAnimation: false
   };
+  isFinalized: boolean = false;
+  gltfLoadGeneration: number = 0;
+  cleanupCallbacks: Array<() => void> = [];
 
   constructor({device}: AnimationProps) {
     super();
@@ -83,11 +86,14 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     window.localStorage[modelStorageKey] ??= this.getDefaultModelName();
     this.loadGLTF(window.localStorage[modelStorageKey]);
 
-    setOptionsUI(this.options);
+    this.cleanupCallbacks.push(...setOptionsUI(this.options));
 
     this.fetchModelList().then(models => {
+      if (this.isFinalized) {
+        return;
+      }
       const currentModel = window.localStorage[modelStorageKey];
-      setModelMenu(
+      const cleanupModelMenu = setModelMenu(
         models.map(model => model.name),
         currentModel,
         (modelName: string) => {
@@ -95,18 +101,30 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
           window.localStorage[modelStorageKey] = modelName;
         }
       );
+      this.cleanupCallbacks.push(cleanupModelMenu);
     });
 
-    this.device.getDefaultCanvasContext().canvas.addEventListener('mousemove', event => {
+    const mouseMoveHandler = (event: Event) => {
       const mouseEvent = event as MouseEvent;
       if (mouseEvent.buttons) {
         this.mouseCameraTime -= mouseEvent.movementX * 3.5;
       }
-    });
+    };
+    const canvas = this.device.getDefaultCanvasContext().canvas;
+    canvas.addEventListener('mousemove', mouseMoveHandler);
+    this.cleanupCallbacks.push(() => canvas.removeEventListener('mousemove', mouseMoveHandler));
   }
 
   onFinalize() {
+    this.isFinalized = true;
+    this.gltfLoadGeneration++;
+    for (const cleanupCallback of this.cleanupCallbacks) {
+      cleanupCallback();
+    }
+    this.cleanupCallbacks = [];
     destroyScenegraphs(this.scenegraphsFromGLTF);
+    this.scenegraphsFromGLTF = undefined;
+    this.modelLights = [];
   }
 
   getDefaultModelName(): string {
@@ -172,6 +190,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   async loadGLTF(modelName: string) {
+    const loadGeneration = ++this.gltfLoadGeneration;
     const canvas = this.device.getDefaultCanvasContext().canvas as HTMLCanvasElement;
 
     try {
@@ -190,6 +209,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         useTangents: true
       });
 
+      if (this.isFinalized || loadGeneration !== this.gltfLoadGeneration) {
+        destroyScenegraphs(scenegraphsFromGLTF);
+        return;
+      }
+
       destroyScenegraphs(this.scenegraphsFromGLTF);
       this.scenegraphsFromGLTF = scenegraphsFromGLTF;
       this.modelLights = scenegraphsFromGLTF.lights;
@@ -204,6 +228,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       canvas.style.opacity = '1';
       showError();
     } catch (error) {
+      if (this.isFinalized || loadGeneration !== this.gltfLoadGeneration) {
+        return;
+      }
       canvas.style.opacity = '1';
       showError(error as Error);
     }
@@ -222,17 +249,18 @@ function setModelMenu(
   items: string[],
   currentItem: string,
   onMenuItemSelected: (item: string) => void
-) {
+): () => void {
   const modelSelector = document.getElementById('model-select') as HTMLSelectElement;
   if (!modelSelector) {
-    return;
+    return () => {};
   }
 
   modelSelector.replaceChildren();
-  modelSelector.addEventListener('change', event => {
+  const changeHandler = (event: Event) => {
     const name = (event.target as HTMLSelectElement).value;
     onMenuItemSelected(name);
-  });
+  };
+  modelSelector.addEventListener('change', changeHandler);
 
   const options = items.map(item => {
     const option = document.createElement('option');
@@ -243,19 +271,25 @@ function setModelMenu(
 
   modelSelector.append(...options);
   modelSelector.value = currentItem;
+
+  return () => modelSelector.removeEventListener('change', changeHandler);
 }
 
-function setOptionsUI(options: Record<string, boolean>) {
+function setOptionsUI(options: Record<string, boolean>): Array<() => void> {
+  const cleanupCallbacks: Array<() => void> = [];
   for (const id of Object.keys(options)) {
     const checkbox = document.getElementById(id) as HTMLInputElement;
     if (checkbox) {
       checkbox.checked = options[id];
-      checkbox.addEventListener('change', () => {
+      const changeHandler = () => {
         options[id] = checkbox.checked;
         saveOptions(options);
-      });
+      };
+      checkbox.addEventListener('change', changeHandler);
+      cleanupCallbacks.push(() => checkbox.removeEventListener('change', changeHandler));
     }
   }
+  return cleanupCallbacks;
 }
 
 function loadOptions(defaultOptions: Record<string, boolean>): Record<string, boolean> {

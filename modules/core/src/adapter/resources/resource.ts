@@ -10,7 +10,7 @@ const CPU_HOTSPOT_PROFILER_MODULE = 'cpu-hotspot-profiler';
 const RESOURCE_COUNTS_STATS = 'GPU Resource Counts';
 const LEGACY_RESOURCE_COUNTS_STATS = 'Resource Counts';
 const GPU_TIME_AND_MEMORY_STATS = 'GPU Time and Memory';
-const RESOURCE_COUNT_ORDER = [
+const BASE_RESOURCE_COUNT_ORDER = [
   'Resources',
   'Buffers',
   'Textures',
@@ -28,7 +28,30 @@ const RESOURCE_COUNT_ORDER = [
   'CommandEncoders',
   'CommandBuffers'
 ] as const;
-const RESOURCE_COUNT_STAT_ORDER = RESOURCE_COUNT_ORDER.flatMap(resourceType => [
+const WEBGL_RESOURCE_COUNT_ORDER = [
+  'Resources',
+  'Buffers',
+  'Textures',
+  'Samplers',
+  'TextureViews',
+  'Framebuffers',
+  'QuerySets',
+  'Shaders',
+  'RenderPipelines',
+  'SharedRenderPipelines',
+  'ComputePipelines',
+  'PipelineLayouts',
+  'VertexArrays',
+  'RenderPasss',
+  'ComputePasss',
+  'CommandEncoders',
+  'CommandBuffers'
+] as const;
+const BASE_RESOURCE_COUNT_STAT_ORDER = BASE_RESOURCE_COUNT_ORDER.flatMap(resourceType => [
+  `${resourceType} Created`,
+  `${resourceType} Active`
+]);
+const WEBGL_RESOURCE_COUNT_STAT_ORDER = WEBGL_RESOURCE_COUNT_ORDER.flatMap(resourceType => [
   `${resourceType} Created`,
   `${resourceType} Active`
 ]);
@@ -37,7 +60,6 @@ const ORDERED_STATS_CACHE = new WeakMap<
   {orderedStatNames: readonly string[]; statCount: number}
 >();
 const ORDERED_STAT_NAME_SET_CACHE = new WeakMap<readonly string[], Set<string>>();
-const RESOURCE_COUNT_STATS_INITIALIZED = new WeakSet<Stats>();
 
 type CpuHotspotProfiler = {
   enabled?: boolean;
@@ -197,10 +219,11 @@ export abstract class Resource<Props extends ResourceProps> {
       this._device.statsManager.getStats(RESOURCE_COUNTS_STATS),
       this._device.statsManager.getStats(LEGACY_RESOURCE_COUNTS_STATS)
     ];
+    const orderedStatNames = getResourceCountStatOrder(this._device);
     for (const stats of statsObjects) {
-      initializeStats(stats, RESOURCE_COUNT_STAT_ORDER);
+      initializeStats(stats, orderedStatNames);
     }
-    const name = this[Symbol.toStringTag];
+    const name = this.getStatsName();
     for (const stats of statsObjects) {
       stats.get('Resources Active').decrementCount();
       stats.get(`${name}s Active`).decrementCount();
@@ -213,7 +236,7 @@ export abstract class Resource<Props extends ResourceProps> {
   }
 
   /** Called by subclass to track memory allocations */
-  protected trackAllocatedMemory(bytes: number, name = this[Symbol.toStringTag]): void {
+  protected trackAllocatedMemory(bytes: number, name = this.getStatsName()): void {
     const profiler = getCpuHotspotProfiler(this._device);
     const startTime = profiler ? getTimestamp() : 0;
     const stats = this._device.statsManager.getStats(GPU_TIME_AND_MEMORY_STATS);
@@ -235,12 +258,12 @@ export abstract class Resource<Props extends ResourceProps> {
   }
 
   /** Called by subclass to track handle-backed memory allocations separately from owned allocations */
-  protected trackReferencedMemory(bytes: number, name = this[Symbol.toStringTag]): void {
+  protected trackReferencedMemory(bytes: number, name = this.getStatsName()): void {
     this.trackAllocatedMemory(bytes, `Referenced ${name}`);
   }
 
   /** Called by subclass to track memory deallocations */
-  protected trackDeallocatedMemory(name = this[Symbol.toStringTag]): void {
+  protected trackDeallocatedMemory(name = this.getStatsName()): void {
     if (this.allocatedBytes === 0) {
       this.allocatedBytesName = null;
       return;
@@ -261,21 +284,22 @@ export abstract class Resource<Props extends ResourceProps> {
   }
 
   /** Called by subclass to deallocate handle-backed memory tracked via trackReferencedMemory() */
-  protected trackDeallocatedReferencedMemory(name = this[Symbol.toStringTag]): void {
+  protected trackDeallocatedReferencedMemory(name = this.getStatsName()): void {
     this.trackDeallocatedMemory(`Referenced ${name}`);
   }
 
   /** Called by resource constructor to track object creation */
   private addStats(): void {
-    const name = this[Symbol.toStringTag];
+    const name = this.getStatsName();
     const profiler = getCpuHotspotProfiler(this._device);
     const startTime = profiler ? getTimestamp() : 0;
     const statsObjects = [
       this._device.statsManager.getStats(RESOURCE_COUNTS_STATS),
       this._device.statsManager.getStats(LEGACY_RESOURCE_COUNTS_STATS)
     ];
+    const orderedStatNames = getResourceCountStatOrder(this._device);
     for (const stats of statsObjects) {
-      initializeStats(stats, RESOURCE_COUNT_STAT_ORDER);
+      initializeStats(stats, orderedStatNames);
     }
     for (const stats of statsObjects) {
       stats.get('Resources Created').incrementCount();
@@ -289,6 +313,11 @@ export abstract class Resource<Props extends ResourceProps> {
         (profiler.statsBookkeepingTimeMs || 0) + (getTimestamp() - startTime);
     }
     recordTransientCanvasResourceCreate(this._device, name);
+  }
+
+  /** Canonical resource name used for stats buckets. */
+  protected getStatsName(): string {
+    return getCanonicalResourceName(this);
   }
 }
 
@@ -309,13 +338,6 @@ function selectivelyMerge<Props>(props: Props, defaultProps: Required<Props>): R
 }
 
 function initializeStats(stats: Stats, orderedStatNames: readonly string[]): void {
-  if (
-    orderedStatNames === RESOURCE_COUNT_STAT_ORDER &&
-    RESOURCE_COUNT_STATS_INITIALIZED.has(stats)
-  ) {
-    return;
-  }
-
   const statsMap = stats.stats;
   let addedOrderedStat = false;
   for (const statName of orderedStatNames) {
@@ -360,9 +382,10 @@ function initializeStats(stats: Stats, orderedStatNames: readonly string[]): voi
 
   Object.assign(statsMap, reorderedStats);
   ORDERED_STATS_CACHE.set(stats, {orderedStatNames, statCount});
-  if (orderedStatNames === RESOURCE_COUNT_STAT_ORDER) {
-    RESOURCE_COUNT_STATS_INITIALIZED.add(stats);
-  }
+}
+
+function getResourceCountStatOrder(device: Device): readonly string[] {
+  return device.type === 'webgl' ? WEBGL_RESOURCE_COUNT_STAT_ORDER : BASE_RESOURCE_COUNT_STAT_ORDER;
 }
 
 function getCpuHotspotProfiler(device: Device): CpuHotspotProfiler | null {
@@ -400,4 +423,33 @@ function recordTransientCanvasResourceCreate(device: Device, name: string): void
     default:
       break;
   }
+}
+
+function getCanonicalResourceName(resource: Resource<any>): string {
+  let prototype = Object.getPrototypeOf(resource);
+
+  while (prototype) {
+    const parentPrototype = Object.getPrototypeOf(prototype);
+    if (!parentPrototype || parentPrototype === Resource.prototype) {
+      return (
+        getPrototypeToStringTag(prototype) ||
+        resource[Symbol.toStringTag] ||
+        resource.constructor.name
+      );
+    }
+    prototype = parentPrototype;
+  }
+
+  return resource[Symbol.toStringTag] || resource.constructor.name;
+}
+
+function getPrototypeToStringTag(prototype: object): string | null {
+  const descriptor = Object.getOwnPropertyDescriptor(prototype, Symbol.toStringTag);
+  if (typeof descriptor?.get === 'function') {
+    return descriptor.get.call(prototype);
+  }
+  if (typeof descriptor?.value === 'string') {
+    return descriptor.value;
+  }
+  return null;
 }

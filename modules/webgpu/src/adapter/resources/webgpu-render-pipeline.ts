@@ -27,13 +27,14 @@ export class WebGPURenderPipeline extends RenderPipeline {
   readonly vs: WebGPUShader;
   readonly fs: WebGPUShader | null = null;
 
-  /** For internal use to create BindGroups */
+  /** Compatibility path for direct pipeline.setBindings() usage */
   private _bindings: Record<string, Binding>;
+  /** For internal use to create BindGroups */
   private _bindGroupLayout: GPUBindGroupLayout | null = null;
   private _bindGroup: GPUBindGroup | null = null;
 
   override get [Symbol.toStringTag]() {
-    return 'RenderPipeline';
+    return 'WebGPURenderPipeline';
   }
 
   constructor(device: WebGPUDevice, props: RenderPipelineProps) {
@@ -58,7 +59,6 @@ export class WebGPURenderPipeline extends RenderPipeline {
     // Note: Often the same shader in WebGPU
     this.vs = props.vs as WebGPUShader;
     this.fs = props.fs as WebGPUShader;
-
     this._bindings = props.bindings || EMPTY_BINDINGS;
   }
 
@@ -69,8 +69,8 @@ export class WebGPURenderPipeline extends RenderPipeline {
   }
 
   /**
-   * @todo Use renderpass.setBindings() ?
-   * @todo Do we want to expose BindGroups in the API and remove this?
+   * Compatibility shim for code paths that still set bindings on the pipeline.
+   * The shared-model path passes bindings per draw and does not rely on this state.
    */
   setBindings(bindings: Record<string, Binding>): void {
     let bindingsChanged = false;
@@ -101,6 +101,8 @@ export class WebGPURenderPipeline extends RenderPipeline {
     firstIndex?: number;
     firstInstance?: number;
     baseVertex?: number;
+    bindings?: Record<string, Binding>;
+    uniforms?: Record<string, unknown>;
   }): boolean {
     const webgpuRenderPass = options.renderPass as WebGPURenderPass;
     const instanceCount =
@@ -115,7 +117,7 @@ export class WebGPURenderPipeline extends RenderPipeline {
     });
 
     // Set bindings (uniform buffers, textures etc)
-    const bindGroup = this._getBindGroup();
+    const bindGroup = this._getBindGroup(options.bindings);
     if (bindGroup) {
       webgpuRenderPass.handle.setBindGroup(0, bindGroup);
     }
@@ -149,7 +151,7 @@ export class WebGPURenderPipeline extends RenderPipeline {
   }
 
   /** Return a bind group created by setBindings */
-  _getBindGroup() {
+  _getBindGroup(bindings?: Record<string, Binding>) {
     if (this.shaderLayout.bindings.length === 0) {
       return null;
     }
@@ -157,8 +159,10 @@ export class WebGPURenderPipeline extends RenderPipeline {
     // Get hold of the bind group layout. We don't want to do this unless we know there is at least one bind group
     this._bindGroupLayout = this._bindGroupLayout || this.handle.getBindGroupLayout(0);
 
-    // Set up the bindings
-    // TODO what if bindings change? We need to rebuild the bind group!
+    if (bindings) {
+      return getBindGroup(this.device, this._bindGroupLayout, this.shaderLayout, bindings);
+    }
+
     this._bindGroup =
       this._bindGroup ||
       getBindGroup(this.device, this._bindGroupLayout, this.shaderLayout, this._bindings);

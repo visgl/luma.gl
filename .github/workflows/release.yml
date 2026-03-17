@@ -47,7 +47,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24.5.0'
-          cache: 'yarn'
 
       - name: Enable Corepack / Yarn 4
         run: |
@@ -56,7 +55,7 @@ jobs:
           yarn -v
 
       - name: Install dependencies
-        run: yarn
+        run: yarn install --immutable
 
       - name: Build packages
         run: npm run build
