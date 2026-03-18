@@ -3,6 +3,13 @@
 // Copyright (c) vis.gl contributors
 
 export const fp64arithmeticWGSL = /* wgsl */ `\
+struct Fp64ArithmeticUniforms {
+  ONE: f32,
+  SPLIT: f32,
+};
+
+@group(0) @binding(0) var<uniform> fp64arithmetic : Fp64ArithmeticUniforms;
+
 fn fp64_nan(seed: f32) -> f32 {
   let nanBits = 0x7fc00000u | select(0u, 1u, seed < 0.0);
   return bitcast<f32>(nanBits);

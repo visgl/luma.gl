@@ -897,13 +897,7 @@ struct Mandelbrot64Uniforms {
   iterationLimit: f32,
 };
 
-struct Fp64ArithmeticUniforms {
-  ONE: f32,
-  SPLIT: f32,
-};
-
 @group(0) @binding(0) var<uniform> mandelbrot64 : Mandelbrot64Uniforms;
-@group(0) @binding(1) var<uniform> fp64arithmetic : Fp64ArithmeticUniforms;
 
 const MAX_ITERATIONS: i32 = 2048;
 const ESCAPE_RADIUS_SQUARED: f32 = 256.0;
