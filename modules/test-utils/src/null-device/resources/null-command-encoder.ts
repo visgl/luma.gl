@@ -27,8 +27,14 @@ export class NullCommandEncoder extends CommandEncoder {
     this.device = device;
   }
 
-  finish(props: CommandBufferProps): NullCommandBuffer {
-    return new NullCommandBuffer(this.device, props);
+  override destroy(): void {
+    this.destroyResource();
+  }
+
+  finish(props: CommandBufferProps = {}): NullCommandBuffer {
+    const commandBuffer = new NullCommandBuffer(this.device, props);
+    this.destroy();
+    return commandBuffer;
   }
 
   beginRenderPass(props: RenderPassProps): NullRenderPass {

@@ -155,7 +155,7 @@ luma.gl v9 upgrades tooling and packaging to latest JavaScript ecosystem standar
 
 **`@luma.gl/webgl`**
 
-- While the webgl module still contains the WebGL 2 classes, these classes can no longer be imported directly. Instead the application should use `Device` create methods (`device.createBuffer()`, `device.createTexture()` etc to create these ojects in a portable way).
+- While the webgl module still contains the WebGL 2 classes, these classes can no longer be imported directly. Instead the application should use `Device` create methods (`device.createBuffer()`, `device.createTexture()` etc to create these objects in a portable way).
 
 **`@luma.gl/constants`** (INTERNAL)
 
@@ -262,7 +262,7 @@ Feature constants have been changed to match the WebGPU API and will need to be 
 | ------------------------------------------- | -------------------------------------- | ----------------------------------------------------------------------------- |
 | **General WebGL Features**                  |                                        |                                                                               |
 | `FEATURES.WEBGL2`                           | `webgl`                                | True for WebGL Contexts                                                       |
-| `FEATURES.TIMER_QUERY`                      | `timer-query-webgl`                    | [`Query`][/]ocs/api-reference/webgl/query) for asynchronous GPU timings       |
+| `FEATURES.TIMER_QUERY`                      | `timestamp-query`                      | [`QuerySet`](/docs/api-reference/core/resources/query-set) for asynchronous GPU timings |
 | `FEATURES.INSTANCED_RENDERING`              | N/A (always true)                      | Instanced rendering (via instanced vertex attributes)                         |
 | `FEATURES.VERTEX_ARRAY_OBJECT`              | N/A (always true)                      | `VertexArrayObjects` can be created                                           |
 | `FEATURES.ELEMENT_INDEX_UINT32`             | N/A (always true)                      | 32 bit indices available for `GL.ELEMENT_ARRAY_BUFFER`s                       |
@@ -370,7 +370,7 @@ TODO - this section needs updating
 - **Depth Bias** - Sometimes referred to as "polygon offset". Adds small offset to fragment depth values (by factor × DZ + r × units). Usually used as a heuristic to avoid z-fighting, but can also be used for effects like applying decals to surfaces, and for rendering solids with highlighted edges. The semantics of polygon offsets are loosely specified by the WebGL standard and results can thus be driver dependent.
 
 
-After the fragment shader runs, optional stencil tests are performed, with resulting operations on the the stencil buffer.
+After the fragment shader runs, optional stencil tests are performed, with resulting operations on the stencil buffer.
 
 | V8/WebGL Function           | Description                            | Values                         |                  |
 | --------------------------- | -------------------------------------- | ------------------------------ | ---------------- |

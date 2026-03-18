@@ -1,15 +1,20 @@
 # ShaderPassRenderer
 
-A` ShaderPassRenderer` takes an source texture and applies a sequence of `ShaderPasses` and returns an output texture that can be rendered to the screen.
+`ShaderPassRenderer` applies one or more `ShaderPass` definitions to a source texture and either renders the result back to a texture or draws it to the screen.
 
-The primary purpose is to run postprocessing effects on rendered contents.
-
-Remarks:
-- A `ShaderPassRenderer` instance will create two textures of the same size as the input texture. For a high resolution, high DPI screen these textures can consume considerable memory, which is a potential concern for mobile applications.
+Internally it uses [`ClipSpace`](/docs/api-reference/engine/clip-space), [`BackgroundTextureModel`](/docs/api-reference/engine/background-texture-model), and [`SwapFramebuffers`](/docs/api-reference/engine/compute/swap) to manage the pass chain.
 
 ## Usage
 
-TBA
+```typescript
+import {ShaderPassRenderer} from '@luma.gl/engine';
+
+const renderer = new ShaderPassRenderer(device, {
+  shaderPasses: [myShaderPass]
+});
+
+const outputTexture = renderer.renderToTexture({sourceTexture});
+```
 
 ## Types
 
@@ -17,38 +22,66 @@ TBA
 
 ```ts
 export type ShaderPassRendererProps = {
-  /** List of ShaderPasses to apply to the sourceTexture */
   shaderPasses: ShaderPass[];
-  /** Optional typed ShaderInputs object for setting uniforms */
-  shaderInputs: ShaderInputs;
+  shaderInputs?: ShaderInputs;
 };
-``
+```
+
+## Properties
+
+### `shaderInputs`
+
+Shader-input manager used to store pass uniforms.
+
+### `swapFramebuffers`
+
+Double-buffered framebuffer pair used while running the pass chain.
+
+### `textureModel`
+
+Fullscreen background-texture model used when copying or presenting results.
 
 ## Methods
 
-### constructor
+### `constructor(device: Device, props: ShaderPassRendererProps)`
+
+Initializes the shader passes, shader inputs, swap framebuffers, and presentation model.
+
+### `destroy(): void`
+
+Destroys owned pass renderers, swap framebuffers, and texture model.
+
+### `resize(size?: [number, number]): void`
+
+Resizes the internal swap framebuffers to match the provided size or the current canvas size.
+
+### `renderToScreen(options): boolean`
+
+Runs the pass chain and then draws the result into the device's current framebuffer.
 
 ```ts
-new ShaderPassRenderer(device: Device, props: ShaderPassRendererProps);
+renderToScreen(options: {
+  sourceTexture: DynamicTexture;
+  uniforms?: any;
+  bindings?: any;
+}): boolean
 ```
 
-###  `destroy()`
+Returns `false` when the source texture is not ready yet.
 
-Destroys any resources created by the `ShaderPassRenderer` (the two textures)
+### `renderToTexture(options): Texture | null`
 
-### `resize()`
-
-Resizes the internal textures.
+Runs the pass chain and returns the output texture.
 
 ```ts
-resize(width: number, height: number);
+renderToTexture(options: {
+  sourceTexture: DynamicTexture;
+  uniforms?: any;
+  bindings?: any;
+}): Texture | null
 ```
 
-### `renderToTexture()`
+## Remarks
 
-```ts
-renderToTexture(options: {sourceTexture: AsyncTexture; uniforms; bindings}): Texture | null;
-```
-A` ShaderPassRenderer` takes an source texture and applies a sequence of `ShaderPasses` and returns an output texture of the same size that can be rendered to the screen.
-
-Returns: the rendered `Texture` which can now be rendered to the screen, or `null` if the initial texture is an async texture that has not yet been loaded.
+- The current implementation expects `sourceTexture` to be a `DynamicTexture`.
+- Two internal framebuffers are used for ping-pong rendering through the pass sequence.

@@ -4,23 +4,35 @@
 
 import {isNumberArray} from './is-array';
 
-/** Test if two arrays are deep equal, with a length limit that defaults to 16 */
+const MAX_ELEMENTWISE_ARRAY_COMPARE_LENGTH = 128;
+
+/** Test if two arrays are deep equal, with a small-array length limit that defaults to 16 */
 export function arrayEqual(a: unknown, b: unknown, limit: number = 16) {
-  if (a !== b) {
-    return false;
+  if (a === b) {
+    return true;
   }
+
   const arrayA = a;
   const arrayB = b;
-  if (!isNumberArray(arrayA)) {
+  if (!isNumberArray(arrayA) || !isNumberArray(arrayB)) {
     return false;
   }
-  if (isNumberArray(arrayB) && arrayA.length === arrayB.length) {
-    for (let i = 0; i < arrayA.length; ++i) {
-      if (arrayB[i] !== arrayA[i]) {
-        return false;
-      }
+
+  if (arrayA.length !== arrayB.length) {
+    return false;
+  }
+
+  const maxCompareLength = Math.min(limit, MAX_ELEMENTWISE_ARRAY_COMPARE_LENGTH);
+  if (arrayA.length > maxCompareLength) {
+    return false;
+  }
+
+  for (let i = 0; i < arrayA.length; ++i) {
+    if (arrayB[i] !== arrayA[i]) {
+      return false;
     }
   }
+
   return true;
 }
 

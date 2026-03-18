@@ -30,47 +30,89 @@ export type AttributeShaderTypeInfo = {
   signed: boolean;
 };
 
+/** Split a uniform type string into type and components */
+export function getVariableShaderTypeInfo(
+  format: VariableShaderType | VariableShaderTypeAlias
+): VariableShaderTypeInfo {
+  const resolvedFormat = resolveVariableShaderTypeAlias(format);
+  const decoded = UNIFORM_FORMATS[resolvedFormat];
+  if (!decoded) {
+    throw new Error(`Unsupported variable shader type: ${format}`);
+  }
+  return decoded;
+}
+
+/** Decodes a vertex type, returning byte length and flags (integer, signed, normalized) */
+export function getAttributeShaderTypeInfo(
+  attributeType: AttributeShaderType | AttributeShaderTypeAlias
+): AttributeShaderTypeInfo {
+  const resolvedAttributeType = resolveAttributeShaderTypeAlias(attributeType);
+  const decoded = TYPE_INFO[resolvedAttributeType];
+  if (!decoded) {
+    throw new Error(`Unsupported attribute shader type: ${attributeType}`);
+  }
+  const [primitiveType, components] = decoded;
+  const integer: boolean = primitiveType === 'i32' || primitiveType === 'u32';
+  const signed: boolean = primitiveType !== 'u32';
+
+  const byteLength = PRIMITIVE_TYPE_SIZES[primitiveType] * components;
+  return {
+    primitiveType,
+    components,
+    byteLength,
+    integer,
+    signed
+  };
+}
+
 export class ShaderTypeDecoder {
-  /** Split a uniform type string into type and components */
-  getVariableShaderTypeInfo(format: VariableShaderType): VariableShaderTypeInfo {
-    const decoded = UNIFORM_FORMATS[format];
-    return decoded;
+  getVariableShaderTypeInfo(format: VariableShaderType | VariableShaderTypeAlias): VariableShaderTypeInfo {
+    return getVariableShaderTypeInfo(format);
   }
 
-  /** Decodes a vertex type, returning byte length and flags (integer, signed, normalized) */
-  getAttributeShaderTypeInfo(attributeType: AttributeShaderType): AttributeShaderTypeInfo {
-    const [primitiveType, components] = TYPE_INFO[attributeType];
-    const integer: boolean = primitiveType === 'i32' || primitiveType === 'u32';
-    const signed: boolean = primitiveType !== 'u32';
-
-    const byteLength = PRIMITIVE_TYPE_SIZES[primitiveType] * components;
-    return {
-      primitiveType,
-      components,
-      byteLength,
-      integer,
-      signed
-    };
+  getAttributeShaderTypeInfo(
+    attributeType: AttributeShaderType | AttributeShaderTypeAlias
+  ): AttributeShaderTypeInfo {
+    return getAttributeShaderTypeInfo(attributeType);
   }
 
   makeShaderAttributeType(
     primitiveType: PrimitiveDataType,
     components: 1 | 2 | 3 | 4
   ): AttributeShaderType {
-    return components === 1 ? primitiveType : `vec${components}<${primitiveType}>`;
+    return makeShaderAttributeType(primitiveType, components);
   }
 
   resolveAttributeShaderTypeAlias(
     alias: AttributeShaderTypeAlias | AttributeShaderType
   ): AttributeShaderType {
-    return WGSL_ATTRIBUTE_TYPE_ALIAS_MAP[alias as AttributeShaderTypeAlias] || alias;
+    return resolveAttributeShaderTypeAlias(alias);
   }
 
   resolveVariableShaderTypeAlias(
     alias: VariableShaderTypeAlias | VariableShaderType
   ): VariableShaderType {
-    return WGSL_VARIABLE_TYPE_ALIAS_MAP[alias as VariableShaderTypeAlias] || alias;
+    return resolveVariableShaderTypeAlias(alias);
   }
+}
+
+export function makeShaderAttributeType(
+  primitiveType: PrimitiveDataType,
+  components: 1 | 2 | 3 | 4
+): AttributeShaderType {
+  return components === 1 ? primitiveType : `vec${components}<${primitiveType}>`;
+}
+
+export function resolveAttributeShaderTypeAlias(
+  alias: AttributeShaderTypeAlias | AttributeShaderType
+): AttributeShaderType {
+  return WGSL_ATTRIBUTE_TYPE_ALIAS_MAP[alias as AttributeShaderTypeAlias] || alias;
+}
+
+export function resolveVariableShaderTypeAlias(
+  alias: VariableShaderTypeAlias | VariableShaderType
+): VariableShaderType {
+  return WGSL_VARIABLE_TYPE_ALIAS_MAP[alias as VariableShaderTypeAlias] || alias;
 }
 
 /** Decoder for luma.gl shader types */
@@ -187,7 +229,18 @@ export const WGSL_ATTRIBUTE_TYPE_ALIAS_MAP: Record<AttributeShaderTypeAlias, Att
 
 /** @todo These tables are quite big, consider parsing alias strings instead */
 export const WGSL_VARIABLE_TYPE_ALIAS_MAP: Record<VariableShaderTypeAlias, VariableShaderType> = {
-  ...WGSL_ATTRIBUTE_TYPE_ALIAS_MAP,
+  vec2i: 'vec2<i32>',
+  vec3i: 'vec3<i32>',
+  vec4i: 'vec4<i32>',
+  vec2u: 'vec2<u32>',
+  vec3u: 'vec3<u32>',
+  vec4u: 'vec4<u32>',
+  vec2f: 'vec2<f32>',
+  vec3f: 'vec3<f32>',
+  vec4f: 'vec4<f32>',
+  vec2h: 'vec2<f16>',
+  vec3h: 'vec3<f16>',
+  vec4h: 'vec4<f16>',
   mat2x2f: 'mat2x2<f32>',
   mat2x3f: 'mat2x3<f32>',
   mat2x4f: 'mat2x4<f32>',

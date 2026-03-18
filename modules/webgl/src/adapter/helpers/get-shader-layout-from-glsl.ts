@@ -10,7 +10,7 @@ import type {
   VaryingBinding,
   AttributeShaderType
 } from '@luma.gl/core';
-import {shaderTypeDecoder} from '@luma.gl/core';
+import {getVariableShaderTypeInfo, assertDefined} from '@luma.gl/core';
 
 import {GL, GLUniformType} from '@luma.gl/constants';
 import {
@@ -153,7 +153,7 @@ function readVaryings(gl: WebGL2RenderingContext, program: WebGLProgram): Varyin
     }
     const {name, type: glUniformType, size} = activeInfo;
     const uniformType = convertGLUniformTypeToShaderVariableType(glUniformType as GLUniformType);
-    const {type, components} = shaderTypeDecoder.getVariableShaderTypeInfo(uniformType);
+    const {type, components} = getVariableShaderTypeInfo(uniformType);
     varyings.push({location, name, type, size: size * components});
   }
 
@@ -252,23 +252,26 @@ function readUniformBlocks(
     // ); // Array of GLint indicating the strides between columns of a column-major matrix or a row-major matrix.
     // const uniformRowMajor = gl.getActiveUniforms(program, uniformIndices, GL.UNIFORM_IS_ROW_MAJOR);
     for (let i = 0; i < blockInfo.uniformCount; ++i) {
-      const activeInfo = gl.getActiveUniform(program, uniformIndices[i]);
-      if (!activeInfo) {
-        throw new Error('activeInfo');
+      const uniformIndex = uniformIndices[i];
+      if (uniformIndex !== undefined) {
+        const activeInfo = gl.getActiveUniform(program, uniformIndex);
+        if (!activeInfo) {
+          throw new Error('activeInfo');
+        }
+
+        const format = convertGLUniformTypeToShaderVariableType(uniformType[i]);
+
+        blockInfo.uniforms.push({
+          name: activeInfo.name,
+          format,
+          type: uniformType[i],
+          arrayLength: uniformArrayLength[i],
+          byteOffset: uniformOffset[i],
+          byteStride: uniformStride[i]
+          // matrixStride: uniformStride[i],
+          // rowMajor: uniformRowMajor[i]
+        });
       }
-
-      const format = convertGLUniformTypeToShaderVariableType(uniformType[i]);
-
-      blockInfo.uniforms.push({
-        name: activeInfo.name,
-        format,
-        type: uniformType[i],
-        arrayLength: uniformArrayLength[i],
-        byteOffset: uniformOffset[i],
-        byteStride: uniformStride[i]
-        // matrixStride: uniformStride[i],
-        // rowMajor: uniformRowMajor[i]
-      });
     }
 
     uniformBlocks.push(blockInfo);
@@ -314,13 +317,11 @@ function parseUniformName(name: string): {name: string; length: number; isArray:
   // if array name then clean the array brackets
   const UNIFORM_NAME_REGEXP = /([^[]*)(\[[0-9]+\])?/;
   const matches = UNIFORM_NAME_REGEXP.exec(name);
-  if (!matches || matches.length < 2) {
-    throw new Error(`Failed to parse GLSL uniform name ${name}`);
-  }
-
+  const uniformName = assertDefined(matches?.[1], `Failed to parse GLSL uniform name ${name}`);
   return {
-    name: matches[1],
-    length: matches[2] ? 1 : 0,
-    isArray: Boolean(matches[2])
+    name: uniformName,
+    // TODO - is this a bug, shouldn't we return the value?
+    length: matches?.[2] ? 1 : 0,
+    isArray: Boolean(matches?.[2])
   };
 }

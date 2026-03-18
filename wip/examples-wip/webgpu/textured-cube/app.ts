@@ -5,7 +5,7 @@ import {
   CubeGeometry,
   AnimationLoopTemplate,
   loadImageBitmap,
-  AsyncTexture
+  DynamicTexture
 } from '@luma.gl/engine';
 import {Matrix4} from '@math.gl/core';
 
@@ -101,7 +101,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   constructor({device}: AnimationProps) {
     super();
     // Fetch the image and upload it into a GPUTexture.
-    const texture = new AsyncTexture(device, {
+    const texture = new DynamicTexture(device, {
       data: loadImageBitmap(TEXTURE_URL),
       // usage: Texture.TEXTURE | Texture.COPY_DST | Texture.RENDER_ATTACHMENT,
       mipmaps: true, // Create mipmaps

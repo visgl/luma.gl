@@ -2,7 +2,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {NormalizedDataType} from '../data-types/data-types';
+import type {
+  NormalizedDataType,
+  TypedArrayConstructorT,
+  NormalizedTypedArrayConstructorT
+} from '../data-types/data-types';
 
 /** Information about the structure of a texture format */
 export type TextureFormatInfo = {
@@ -18,6 +22,8 @@ export type TextureFormatInfo = {
   dataType?: NormalizedDataType;
   /** Number of bytes per pixel */
   bytesPerPixel: number;
+  /** Compressed formats only: Number of bytes per block */
+  bytesPerBlock?: number;
   /** Number of bits per channel (may be unreliable for packed formats) */
   bitsPerChannel: [number, number, number, number];
   /** If this is a packed data type */
@@ -59,6 +65,33 @@ export type TextureFormatCapabilities = {
 };
 
 /**
+ * Memory layout for reading/writing data to a texture's memory.
+ *
+ * @note Due to alignment, GPU texture data is typically not contiguous.
+ *
+ * @note  GPU texure data must be accessed according to this layout.
+ * - On CPU, only the range of rows that are actually read or written need to be allocated.
+ * - However, space for the full, padded/aligned rows must be allocated in the buffer,
+ *   even if just a partial horizontal range `{x, width}` is actually read or written.
+ *
+ * @note byteLength = bytesPerRow * rowsPerImage * depthOrArrayLayers.
+ */
+export type TextureMemoryLayout = {
+  /** Total length in bytes */
+  byteLength: number;
+  /** Number of images */
+  depthOrArrayLayers: number;
+  /** Stride between successive images (Use when depthOrArrayLayers > 1) */
+  bytesPerImage: number;
+  /** Number of rows per image */
+  rowsPerImage: number;
+  /** Number of bytes per row (padded) */
+  bytesPerRow: number;
+  /** Number of bytes per pixel */
+  bytesPerPixel: number;
+};
+
+/**
  * These represent the main compressed texture formats
  * Each format typically has a number of more specific subformats
  */
@@ -89,6 +122,7 @@ export type TextureFeature =
   | 'float16-renderable-webgl'
   | 'rgb9e5ufloat-renderable-webgl'
   | 'snorm8-renderable-webgl'
+  | 'norm16-webgl'
   | 'norm16-renderable-webgl'
   | 'snorm16-renderable-webgl'
   | 'float32-filterable'
@@ -133,7 +167,7 @@ export type TextureFormatColorUncompressed =
   | TextureFormatPacked16
   | TextureFormatPacked32;
 
-type TextureFormatUnorm8 =
+export type TextureFormatUnorm8 =
   | 'r8unorm'
   | 'rg8unorm'
   | 'rgb8unorm-webgl'
@@ -142,12 +176,42 @@ type TextureFormatUnorm8 =
   | 'bgra8unorm'
   | 'bgra8unorm-srgb';
 
+export type TextureFormatSnorm8 = 'r8snorm' | 'rg8snorm' | 'rgb8snorm-webgl' | 'rgba8snorm';
+
+export type TextureFormatUint8 = 'r8uint' | 'rg8uint' | 'rgba8uint';
+
+export type TextureFormatSint8 = 'r8sint' | 'rg8sint' | 'rgba8sint';
+
+export type TextureFormatUnorm16 = 'r16unorm' | 'rg16unorm' | 'rgb16unorm-webgl' | 'rgba16unorm';
+
+export type TextureFormatSnorm16 = 'r16snorm' | 'rg16snorm' | 'rgb16snorm-webgl' | 'rgba16snorm';
+
+export type TextureFormatUint16 = 'r16uint' | 'rg16uint' | 'rgba16uint';
+
+export type TextureFormatSint16 = 'r16sint' | 'rg16sint' | 'rgba16sint';
+
+export type TextureFormatFloat16 = 'r16float' | 'rg16float' | 'rgba16float';
+
+// 96-bit formats (deprecated!)
+export type TextureFormatUint32 = 'r32uint' | 'rg32uint' | 'rgba32uint';
+
+export type TextureFormatSint32 = 'r32sint' | 'rg32sint' | 'rgba32sint';
+
+export type TextureFormatFloat32 = 'r32float' | 'rg32float' | 'rgb32float-webgl' | 'rgba32float';
+
+export type TextureFormatPacked16 = 'rgba4unorm-webgl' | 'rgb565unorm-webgl' | 'rgb5a1unorm-webgl';
+
+export type TextureFormatPacked32 =
+  | 'rgb9e5ufloat'
+  | 'rg11b10ufloat'
+  | 'rgb10a2unorm'
+  | 'rgb10a2uint';
 export type TextureFormatCompressed =
   | 'bc1-rgb-unorm-webgl'
   | 'bc1-rgb-unorm-srgb-webgl'
   | 'pvrtc-rgb4unorm-webgl'
   | 'pvrtc-rgba4unorm-webgl'
-  | 'pvrtc-rbg2unorm-webgl'
+  | 'pvrtc-rgb2unorm-webgl'
   | 'pvrtc-rgba2unorm-webgl'
   | 'etc1-rbg-unorm-webgl'
   | 'atc-rgb-unorm-webgl'
@@ -216,9 +280,19 @@ export type TextureFormatCompressed =
   | 'astc-12x12-unorm'
   | 'astc-12x12-unorm-srgb';
 
+export type CompressedTextureFormat = TextureFormatCompressed;
+
 // Texture format helper types
 
-export type TextureFormatDataTypeT<T extends TextureFormat> = T extends TextureFormatUint8
+export type TextureFormatTypedArray<T extends TextureFormat> = DataTypeArray<
+  TextureFormatDataType<T>
+>;
+
+export type TextureFormatNormalizedTypedArray<T extends TextureFormat> = NormalizedDataTypeArray<
+  TextureFormatDataType<T>
+>;
+
+export type TextureFormatDataType<T extends TextureFormat> = T extends TextureFormatUint8
   ? 'uint8'
   : T extends TextureFormatSint8
     ? 'sint8'
@@ -252,21 +326,14 @@ export type TextureFormatDataTypeT<T extends TextureFormat> = T extends TextureF
                                 ? 'uint32'
                                 : never;
 
-// HELPER TYPES
+export type TextureFormatDataTypeT<T extends TextureFormat> = TextureFormatDataType<T>;
 
-type TextureFormatSnorm8 = 'r8snorm' | 'rg8snorm' | 'rgb8snorm-webgl' | 'rgba8snorm';
-type TextureFormatUint8 = 'r8uint' | 'rg8uint' | 'rgba8uint';
-type TextureFormatSint8 = 'r8sint' | 'rg8sint' | 'rgba8sint';
-type TextureFormatUnorm16 = 'r16unorm' | 'rg16unorm' | 'rgb16unorm-webgl' | 'rgba16unorm';
-type TextureFormatSnorm16 = 'r16snorm' | 'rg16snorm' | 'rgb16snorm-webgl' | 'rgba16snorm';
-type TextureFormatUint16 = 'r16uint' | 'rg16uint' | 'rgba16uint';
-type TextureFormatSint16 = 'r16sint' | 'rg16sint' | 'rgba16sint';
-type TextureFormatFloat16 = 'r16float' | 'rg16float' | 'rgba16float';
-type TextureFormatUint32 = 'r32uint' | 'rg32uint' | 'rgba32uint';
-type TextureFormatSint32 = 'r32sint' | 'rg32sint' | 'rgba32sint';
-type TextureFormatFloat32 = 'r32float' | 'rg32float' | 'rgb32float-webgl' | 'rgba32float';
-type TextureFormatPacked16 = 'rgba4unorm-webgl' | 'rgb565unorm-webgl' | 'rgb5a1unorm-webgl';
-type TextureFormatPacked32 = 'rgb9e5ufloat' | 'rg11b10ufloat' | 'rgb10a2unorm' | 'rgb10a2uint';
+type DataTypeArray<T extends NormalizedDataType> = InstanceType<TypedArrayConstructorT<T>>;
+type NormalizedDataTypeArray<T extends NormalizedDataType> = InstanceType<
+  NormalizedTypedArrayConstructorT<T>
+>;
+
+// HELPER TYPES
 
 /*
 export type TextureFormatColorWebGPU =

@@ -36,6 +36,38 @@ layout(location = 0) in vec4 position;
 layout(location = 1) in vec3 normals;
 layout(location = 3) in vec2 texCoords;
 `
+  },
+  {
+    title: 'ifndef and else with comments',
+    options: {defines: {USE_NORMALS: false}},
+    source: `\
+#ifndef USE_NORMALS // fallback
+layout(location = 1) in vec3 generatedNormals;
+#else // defined
+layout(location = 1) in vec3 normals;
+#endif // USE_NORMALS
+`,
+    result: `\
+layout(location = 1) in vec3 generatedNormals;
+`
+  },
+  {
+    title: 'nested conditionals',
+    options: {defines: {USE_LIGHTING: true, USE_IBL: false}},
+    source: `\
+#ifdef USE_LIGHTING
+var direct = 1;
+#ifdef USE_IBL
+var ibl = 1;
+#else
+var ibl = 0;
+#endif
+#endif
+`,
+    result: `\
+var direct = 1;
+var ibl = 0;
+`
   }
 ];
 

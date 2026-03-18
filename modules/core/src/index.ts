@@ -19,6 +19,8 @@ export {Device, DeviceFeatures, DeviceLimits} from './adapter/device';
 
 export type {CanvasContextProps} from './adapter/canvas-context';
 export {CanvasContext} from './adapter/canvas-context';
+export type {PresentationContextProps} from './adapter/presentation-context';
+export {PresentationContext} from './adapter/presentation-context';
 
 // GPU RESOURCES
 export {Resource, type ResourceProps} from './adapter/resources/resource';
@@ -43,6 +45,10 @@ export {Framebuffer} from './adapter/resources/framebuffer';
 
 export type {RenderPipelineProps} from './adapter/resources/render-pipeline';
 export {RenderPipeline} from './adapter/resources/render-pipeline';
+export {
+  SharedRenderPipeline,
+  type SharedRenderPipelineProps
+} from './adapter/resources/shared-render-pipeline';
 
 export type {RenderPassProps} from './adapter/resources/render-pass';
 export {RenderPass} from './adapter/resources/render-pass';
@@ -68,6 +74,8 @@ export {TransformFeedback} from './adapter/resources/transform-feedback';
 export type {QuerySetProps} from './adapter/resources/query-set';
 export {QuerySet} from './adapter/resources/query-set';
 
+export {Fence, type FenceProps} from './adapter/resources/fence';
+
 export type {PipelineLayoutProps} from './adapter/resources/pipeline-layout';
 export {PipelineLayout} from './adapter/resources/pipeline-layout';
 
@@ -84,7 +92,9 @@ export type {ExternalImage} from './shadertypes/image-types/image-types';
 
 export {
   type CopyExternalImageOptions,
-  type CopyImageDataOptions
+  type CopyImageDataOptions,
+  type TextureReadOptions,
+  type TextureWriteOptions
 } from './adapter/resources/texture';
 
 export type {Parameters, PrimitiveTopology, IndexFormat} from './adapter/types/parameters';
@@ -163,6 +173,8 @@ export {
 } from './shadertypes/shader-types/shader-types';
 export {
   shaderTypeDecoder,
+  getAttributeShaderTypeInfo,
+  getVariableShaderTypeInfo,
   type AttributeShaderTypeInfo
 } from './shadertypes/shader-types/shader-type-decoder';
 
@@ -181,9 +193,11 @@ export {
   type TextureFormat,
   type TextureFormatColor,
   type TextureFormatDepthStencil,
+  type CompressedTextureFormat,
   type TextureCompression,
   type TextureFormatInfo,
-  type TextureFormatCapabilities
+  type TextureFormatCapabilities,
+  type TextureMemoryLayout
 } from './shadertypes/texture-types/texture-formats';
 export {type TextureFormatDataTypeT} from './shadertypes/texture-types/texture-format-generics';
 
@@ -192,7 +206,10 @@ export {
   textureFormatDecoder
 } from './shadertypes/texture-types/texture-format-decoder';
 
+export {getTextureImageView, setTextureImageData} from './shadertypes/texture-types/texture-layout';
 export {type PixelData, readPixel, writePixel} from './shadertypes/texture-types/pixel-utils';
+
+export {isExternalImage, getExternalImageSize} from './shadertypes/image-types/image-types';
 
 // GENERAL EXPORTS - FOR APPLICATIONS
 
@@ -209,6 +226,7 @@ export type {
 
 // INTERNAL UTILS - for use in other luma.gl modules only
 export {log} from './utils/log';
+export {assert, assertDefined} from './utils/assert';
 export {getScratchArray} from './utils/array-utils-flat';
 export type {AttributeInfo} from './adapter-utils/get-attribute-from-layouts';
 export {getAttributeInfosFromLayouts} from './adapter-utils/get-attribute-from-layouts';

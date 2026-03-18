@@ -1,8 +1,137 @@
 # luma.gl CHANGELOG
 
+## v9.3
+
+### v9.3.0-alpha.6
+
+- chore: Enable corepack in release workflow
+
+### v9.3.0-alpha.5
+
+- fix(webgl): Enable deep sharing of WebGLPrograms (#2465)
+- chore(core); Break out CanvasObserver helper (#2548)
+- feat: instancing example has big grid option (#2547)
+- docs: Engine docs discoverability and refresh (#2545)
+- fix(engine) ConeGeometry props (#2544)
+- fix(engine): CylinderProps (#2543)
+- chore: Add Adapter tests (#2542)
+- chore: Migrate from volta to corepack
+- fix: ResizeObserver fires before Device initialized (#2540)
+- fix: More website polish (#2539)
+- chore(webgpu): Optimize WebGPU per-frame CPU overhead (#2538)
+- fix: website (#2537)
+- chore: Improve luma stats (#2536)
+- fix(engine): Re-enable GPU timing metrics in AnimationLoop (#2505)
+- chore: Parallel CI (#2535)
+- core: yarn@4.13, fresh lock files (#2525)
+- fix: Resource and Memory stats (#2534)
+- chore: Refresh tutorial docs (#2533)
+- fix: Fixes compressed texture loading and updates website (#2532)
+- feat(gltf): WebGPU glTF support (#2531)
+- Refactor conversion of glTF nodes to luma.gl nodes, add skin capability (#2391)
+- chore: 9.3 release notes (#2530)
+- feat(core): PresentationContext enabling WebGL to render into multiple canvases (#2529)
+- feat: Add Texture Tester example (#2527)
+- fix: Texture write APIs (#2526)
+
+### v9.3.0-alpha.4
+
+- feat(engine): Programmatic mipmap generation for WebGPU (#2272)
+- fix(core): Prevent crash in CanvasContext with undefined entry.contentBoxSize  (#2524)
+
+### v9.3.0-alpha.3
+
+- chore: TypeScript noUncheckedIndexedAccess - partial fixes (#2383)
+- fix(webgl): Resize default framebuffer before rendering (#2523)
+- chore(webgl): Use WebGL context helper for device access and initialize device slot (#2500)
+- fix(engine): Prevent duplicate context creation in React (#2522)
+- Move WebGL extension cache to gl.luma.extensions (#2498)
+- fix(webgpu): WebGPUBuffer byteOffset handling (#2521)
+- fix(gltf): Default to LINEAR filtering (#2519)
+- fix(gltf): add HAS_COLORS define when COLOR_0 attribute is present (#2503)
+- chore: bump probe.gl (#2511)
+- fix(core): nicer debug modal (#2515)
+- fix: correct argument order for uniformBlockBinding in WEBGLRenderPipeline
+
+### v9.3.0-alpha.2
+
+- fix
+
+### v9.3.0-alpha.1
+
+- fix: typos in docs (#2509)
+- Fix markdown table formatting (#2481)
+- fix typo in parameters.md (#2493)
+- chore(core/engine): Device.getModuleData / EngineModuleState (#2499)
+- chore(webgl): Remove WebGL version tagging (#2497)
+- fix(core): Auto-convert uint8 buffers to uint16 (#2486) (#2491)
+- fix(engine): Avoid crash in generateMipmaps() (#2484)
+- fix(engine): Factory warnings now level 3 logs (#2479)
+- examples: Add external WebGL context example (#2474)
+- fix(webgl) More robust WebGL context creation error handling (#2475)
+- chore: upgrade to docusaurus@3.9.2 (#2470)
+- fix(webgl): Support stencil reference, add tests (#2463)
+- chore: update vite to 7.2.2 (#2469)
+- fix(webgl) draw buffer selection for default WebGL framebuffer (#2468)
+- fix(webgl): unpack row length handling for texture uploads (#2461)
+- docs: link device resource creators to props (#2460)
+- docs: document texture props comprehensively (#2459)
+- Bump @vis.gl/ts-plugins (#2458)
+- fix(webgl): WebGLAdapter.attach support passing DeviceProps (#2453) (#2454)
+- docs: Update whats-new with 9.3 section (#2447)
+- Document redraw detection and expose needsRedraw on AnimationLoop (#2443)
+- Create AGENTS.md
+- Reuse BackgroundTextureModel in ShaderPassRenderer (#2441)
+- test(engine): add ShaderPassRenderer test (#2437)
+- test: add clone and swap framebuffer tests (#2438)
+- fix: Various framebuffer/texture resize related fixes (#2436)
+- feat(core): Fix flicker when resizing CanvasContext (#2435)
+- (ib/fix-resize-flicker) docs: Improve Model docs (#2429)
+- fix(engine): clamp mipLevels to minimum (#2431)
+- feat(engine): stretch background texture (#2433)
+- test(engine): verify pipeline factory parameter caching (#2430)
+- fix: correct test description spelling (#2432)
+- webgpu default in website (#2428)
+- fix(webgl): correct cube texture face updates (#2426)
+- fix(examples): initialize 3D texture data (#2427)
+- fix: cubemap example and textures in WebGPU (#2425)
+- feat(gltf): Support KHR_lights_punctual extension (#2392)
+- docs(gltf): Add glTF docs (#2390)
+- chore: Rename AsyncTexture to DynamicTexture (#2419)
+- docs: refresh tutorial suite (#2424)
+- feat(core): Support struct and array uniforms (#2414)
+- chore: Update CI to use corepack instead of volta (#2418)
+- fix(webgpu): Extract texture dim,sampleType,multisample from WGSL declarations (#2423)
+- chore(core): add tests for Fence class (#2422)
+- feat: add new Fence GPU-CPU synchronization primitive (#2420)
+- feat: add Fence resource docs (#2421)
+- chore: Move wgsl_reflect dependency into WebGPU module (#2417)
+- chore(deps-dev): bump vite from 5.4.18 to 5.4.19 (#2387)
+- fix(shadertools): pbrMaterial WGSL fixes (#2393)
+- chore(shadertools); Add uniforms for pbrMaterial extensions (#2394)
+- chore: Tests for texture reads (#2416)
+- feat(webgpu): Read pixels (#2415)
+- chore(shadertools): Bump wgsl_reflect@^1.2.1 (#2410)
+
 ## v9.2
 
 Production WebGPU support
+
+### v9.2.0-alpha.6
+
+-   feature(core): CanvasContext.setProps({useDevicePixels}) (#2406)
+
+### v9.2.0-alpha.5
+
+- fix(core): Support number for useDevicePixels (#2405)
+- fix(lighting): Default to 3 MAX_LIGHTS (#2404)
+- fix(effects): Reinstate vignette GLSL shader (#2403)
+
+### v9.2.0-alpha.4
+
+- fix(engine): AsyncTexture correctly resolve Promise on data load (#2402)
+- fix(postprocessing): Remove pre-multiplied alpha (#2400)
+- fix uniform-buffer-layout size calculation and add support for arrays (#2398)
 
 ### v9.2.0-alpha.3
 

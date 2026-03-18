@@ -12,7 +12,7 @@ uniform phongMaterialUniforms {
 `;
 
 export const PHONG_FS = /* glsl */ `\
-#define MAX_LIGHTS 1
+#define MAX_LIGHTS 3
 
 uniform phongMaterialUniforms {
   uniform float ambient;

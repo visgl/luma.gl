@@ -9,7 +9,7 @@ import {
   makePropValidators,
   getValidatedProperties
 } from '../filters/prop-types';
-import type {UniformTypes, UniformValue} from '../utils/uniform-types';
+import type {UniformSizes, UniformTypes, UniformValue} from '../utils/uniform-types';
 import {ShaderInjection, normalizeInjections} from '../shader-assembly/shader-injections';
 
 // To avoid dependency on core module, do not import `Binding` type.
@@ -58,6 +58,8 @@ export type ShaderModule<
 
   /** Uniform shader types @note: Both order and types MUST match uniform block declarations in shader */
   uniformTypes?: Required<UniformTypes<UniformsT>>; // Record<keyof UniformsT, UniformFormat>;
+  /** Uniform shader array sizes (default 1) */
+  uniformSizes?: Required<UniformSizes<UniformsT>>;
   /** Uniform JS prop types  */
   propTypes?: Record<keyof UniformsT, UniformInfo>;
   /** Default uniform values */
@@ -69,7 +71,7 @@ export type ShaderModule<
     prevUniforms?: UniformsT
   ) => Partial<UniformsT & BindingsT>;
 
-  defines?: Record<string, boolean>;
+  defines?: Record<string, boolean | number>;
   /** Injections */
   inject?: Record<string, string | {injection: string; order: number}>;
   dependencies?: ShaderModule<any, any>[];

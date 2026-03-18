@@ -3,10 +3,12 @@
 // Copyright (c) vis.gl contributors
 
 import type {ComputeShaderLayout, BindingDeclaration, Binding} from '@luma.gl/core';
-import {Buffer, Sampler, Texture, log} from '@luma.gl/core';
+import {Buffer, Sampler, Texture, TextureView, log} from '@luma.gl/core';
+import type {WebGPUDevice} from '../webgpu-device';
 import type {WebGPUBuffer} from '../resources/webgpu-buffer';
 import type {WebGPUSampler} from '../resources/webgpu-sampler';
 import type {WebGPUTexture} from '../resources/webgpu-texture';
+import type {WebGPUTextureView} from '../resources/webgpu-texture-view';
 
 /**
  * Create a WebGPU "bind group layout" from an array of luma.gl bindings
@@ -28,21 +30,19 @@ export function makeBindGroupLayout(
  * Create a WebGPU "bind group" from an array of luma.gl bindings
  */
 export function getBindGroup(
-  device: GPUDevice,
+  device: WebGPUDevice,
   bindGroupLayout: GPUBindGroupLayout,
   shaderLayout: ComputeShaderLayout,
   bindings: Record<string, Binding>
 ): GPUBindGroup {
   const entries = getBindGroupEntries(bindings, shaderLayout);
   device.pushErrorScope('validation');
-  const bindGroup = device.createBindGroup({
+  const bindGroup = device.handle.createBindGroup({
     layout: bindGroupLayout,
     entries
   });
-  device.popErrorScope().then((error: GPUError | null) => {
-    if (error) {
-      log.error(`bindGroup creation: ${error.message}`, bindGroup)();
-    }
+  device.popErrorScope((error: GPUError) => {
+    log.error(`bindGroup creation: ${error.message}`, bindGroup)();
   });
   return bindGroup;
 }
@@ -74,23 +74,31 @@ function getBindGroupEntries(
   const entries: GPUBindGroupEntry[] = [];
 
   for (const [bindingName, value] of Object.entries(bindings)) {
-    let bindingLayout = getShaderLayoutBinding(shaderLayout, bindingName);
-    if (bindingLayout) {
-      const entry = getBindGroupEntry(value, bindingLayout.location);
+    const exactBindingLayout = shaderLayout.bindings.find(binding => binding.name === bindingName);
+    const bindingLayout = exactBindingLayout || getShaderLayoutBinding(shaderLayout, bindingName);
+    const isShadowedAlias =
+      !exactBindingLayout && bindingLayout ? bindingLayout.name in bindings : false;
+
+    // Mirror the WebGL path: when both `foo` and `fooUniforms` exist in the bindings map,
+    // prefer the exact shader binding name and ignore the alias entry.
+    if (!isShadowedAlias) {
+      const entry = bindingLayout
+        ? getBindGroupEntry(value, bindingLayout.location, undefined, bindingName)
+        : null;
       if (entry) {
         entries.push(entry);
       }
-    }
 
-    // TODO - hack to automatically bind samplers to supplied texture default samplers
-    if (value instanceof Texture) {
-      bindingLayout = getShaderLayoutBinding(shaderLayout, `${bindingName}Sampler`, {
-        ignoreWarnings: true
-      });
-      if (bindingLayout) {
-        const entry = getBindGroupEntry(value, bindingLayout.location, {sampler: true});
-        if (entry) {
-          entries.push(entry);
+      // TODO - hack to automatically bind samplers to supplied texture default samplers
+      if (value instanceof Texture) {
+        const samplerBindingLayout = getShaderLayoutBinding(shaderLayout, `${bindingName}Sampler`, {
+          ignoreWarnings: true
+        });
+        const samplerEntry = samplerBindingLayout
+          ? getBindGroupEntry(value, samplerBindingLayout.location, {sampler: true}, bindingName)
+          : null;
+        if (samplerEntry) {
+          entries.push(samplerEntry);
         }
       }
     }
@@ -102,7 +110,8 @@ function getBindGroupEntries(
 function getBindGroupEntry(
   binding: Binding,
   index: number,
-  options?: {sampler?: boolean}
+  options?: {sampler?: boolean},
+  bindingName: string = 'unknown'
 ): GPUBindGroupEntry | null {
   if (binding instanceof Buffer) {
     return {
@@ -118,6 +127,12 @@ function getBindGroupEntry(
       resource: (binding as WebGPUSampler).handle
     };
   }
+  if (binding instanceof TextureView) {
+    return {
+      binding: index,
+      resource: (binding as WebGPUTextureView).handle
+    };
+  }
   if (binding instanceof Texture) {
     if (options?.sampler) {
       return {
@@ -130,6 +145,6 @@ function getBindGroupEntry(
       resource: (binding as WebGPUTexture).view.handle
     };
   }
-  log.warn(`invalid binding ${name}`, binding);
+  log.warn(`invalid binding ${bindingName}`, binding);
   return null;
 }

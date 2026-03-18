@@ -15,12 +15,12 @@ import {
 } from '@luma.gl/engine';
 
 const GEOMETRY_TESTS = [
-  {name: 'ConeGeometry', Geometry: ConeGeometry},
+  {name: 'ConeGeometry', Geometry: ConeGeometry, props: [{height: 2}, {verticalAxis: 'z'}]},
   {name: 'CubeGeometry', Geometry: CubeGeometry},
   {
     name: 'CylinderGeometry',
     Geometry: CylinderGeometry,
-    props: [{verticalAxis: 'z'}, {topCap: true, bottomCap: true}]
+    props: [{verticalAxis: 'z'}, {topCap: true, bottomCap: true}, {height: 2}]
   },
   {
     name: 'IcoSphereGeometry',

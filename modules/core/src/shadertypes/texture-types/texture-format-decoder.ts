@@ -10,78 +10,142 @@ import type {
   TextureFormatInfo,
   TextureFormatCapabilities,
   TextureFormatColor,
+  TextureMemoryLayout,
   TextureFormatDepthStencil
 } from './texture-formats';
 import {getTextureFormatDefinition} from './texture-format-table';
 
+const RGB_FORMAT_REGEX = /^(r|rg|rgb|rgba|bgra)([0-9]*)([a-z]*)(-srgb)?(-webgl)?$/;
+const COLOR_FORMAT_PREFIXES = ['rgb', 'rgba', 'bgra'];
+const DEPTH_FORMAT_PREFIXES = ['depth', 'stencil'];
 // prettier-ignore
 const COMPRESSED_TEXTURE_FORMAT_PREFIXES = [
   'bc1', 'bc2', 'bc3', 'bc4', 'bc5', 'bc6', 'bc7', 'etc1', 'etc2', 'eac', 'atc', 'astc', 'pvrtc'
 ];
 
-const RGB_FORMAT_REGEX = /^(r|rg|rgb|rgba|bgra)([0-9]*)([a-z]*)(-srgb)?(-webgl)?$/;
+// HELPERS - MEMORY LAYOUT
 
+/** Options to calculate a texture layout */
+export type TextureMemoryLayoutOptions = {
+  /** Number of bytes per pixel */
+  format: TextureFormat;
+  /** Width of the texture in pixels */
+  width: number;
+  /** Height of the texture in pixels */
+  height: number;
+  /** Number of images in the texture */
+  depth: number;
+  /** Alignment of each row */
+  byteAlignment: number;
+};
+
+/** Class that helps applications work with texture formats */
 export class TextureFormatDecoder {
-  /** Returns information about a texture format, e.g. attatchment type, components, byte length and flags (integer, signed, normalized) */
-  getInfo(format: TextureFormat): TextureFormatInfo {
-    return getTextureFormatInfo(format);
-  }
-
   /** Checks if a texture format is color */
   isColor(format: TextureFormat): format is TextureFormatColor {
-    return format.startsWith('rgba') || format.startsWith('bgra') || format.startsWith('rgb');
+    return COLOR_FORMAT_PREFIXES.some(prefix => format.startsWith(prefix));
   }
 
   /** Checks if a texture format is depth or stencil */
   isDepthStencil(format: TextureFormat): format is TextureFormatDepthStencil {
-    return format.startsWith('depth') || format.startsWith('stencil');
+    return DEPTH_FORMAT_PREFIXES.some(prefix => format.startsWith(prefix));
   }
 
   /** Checks if a texture format is compressed */
   isCompressed(format: TextureFormat): format is TextureFormatCompressed {
-    return COMPRESSED_TEXTURE_FORMAT_PREFIXES.some(prefix => (format as string).startsWith(prefix));
+    return COMPRESSED_TEXTURE_FORMAT_PREFIXES.some(prefix => format.startsWith(prefix));
   }
 
-  /**
-   * Returns the "static" capabilities of a texture format.
-   * @note Needs to be checked against current device
-   */
+  /** Returns information about a texture format, e.g. attachment type, components, byte length and flags (integer, signed, normalized) */
+  getInfo(format: TextureFormat): TextureFormatInfo {
+    return getTextureFormatInfo(format);
+  }
+
+  /**  "static" capabilities of a texture format. @note Needs to be adjusted against current device */
   getCapabilities(format: TextureFormat): TextureFormatCapabilities {
-    const info = getTextureFormatDefinition(format);
+    return getTextureFormatCapabilities(format);
+  }
 
-    const formatCapabilities: Required<TextureFormatCapabilities> = {
-      format,
-      create: info.f ?? true,
-      render: info.render ?? true,
-      filter: info.filter ?? true,
-      blend: info.blend ?? true,
-      store: info.store ?? true
-    };
-
-    const formatInfo = getTextureFormatInfo(format);
-    const isDepthStencil = format.startsWith('depth') || format.startsWith('stencil');
-    const isSigned = formatInfo?.signed;
-    const isInteger = formatInfo?.integer;
-    const isWebGLSpecific = formatInfo?.webgl;
-
-    // signed formats are not renderable
-    formatCapabilities.render &&= !isSigned;
-    // signed and integer formats are not filterable
-    formatCapabilities.filter &&= !isDepthStencil && !isSigned && !isInteger && !isWebGLSpecific;
-
-    return formatCapabilities;
+  /** Computes the memory layout for a texture, in particular including row byte alignment */
+  computeMemoryLayout(opts: TextureMemoryLayoutOptions): TextureMemoryLayout {
+    return computeTextureMemoryLayout(opts);
   }
 }
 
 /** Decoder for luma.gl texture types */
 export const textureFormatDecoder = new TextureFormatDecoder();
 
-// HELPERS
+// HELPERS - MEMORY LAYOUT
+
+/** Get the memory layout of a texture */
+function computeTextureMemoryLayout({
+  format,
+  width,
+  height,
+  depth,
+  byteAlignment
+}: TextureMemoryLayoutOptions): TextureMemoryLayout {
+  const formatInfo = textureFormatDecoder.getInfo(format);
+  const {
+    bytesPerPixel,
+    bytesPerBlock = bytesPerPixel,
+    blockWidth = 1,
+    blockHeight = 1,
+    compressed = false
+  } = formatInfo;
+  const blockColumns = compressed ? Math.ceil(width / blockWidth) : width;
+  const blockRows = compressed ? Math.ceil(height / blockHeight) : height;
+  // byteAlignment comes from the backend/call site. WebGPU buffer copies use 256, queue.writeTexture uses 1.
+  const unpaddedBytesPerRow = blockColumns * bytesPerBlock;
+  const bytesPerRow = Math.ceil(unpaddedBytesPerRow / byteAlignment) * byteAlignment;
+  const rowsPerImage = blockRows;
+  const byteLength = bytesPerRow * rowsPerImage * depth;
+
+  return {
+    bytesPerPixel,
+    bytesPerRow,
+    rowsPerImage,
+    depthOrArrayLayers: depth,
+    bytesPerImage: bytesPerRow * rowsPerImage,
+    byteLength
+  };
+}
+
+// HELPERS - CAPABILITIES
+
+function getTextureFormatCapabilities(format: TextureFormat): TextureFormatCapabilities {
+  const info = getTextureFormatDefinition(format);
+
+  const formatCapabilities: Required<TextureFormatCapabilities> = {
+    format,
+    create: info.f ?? true,
+    render: info.render ?? true,
+    filter: info.filter ?? true,
+    blend: info.blend ?? true,
+    store: info.store ?? true
+  };
+
+  const formatInfo = getTextureFormatInfo(format);
+  const isDepthStencil = format.startsWith('depth') || format.startsWith('stencil');
+  const isSigned = formatInfo?.signed;
+  const isInteger = formatInfo?.integer;
+  const isWebGLSpecific = formatInfo?.webgl;
+  const isCompressed = Boolean(formatInfo?.compressed);
+
+  // Only uncompressed color formats can be used as color-renderable attachments.
+  formatCapabilities.render &&= !isDepthStencil && !isCompressed;
+  // signed and integer formats are not filterable
+  formatCapabilities.filter &&= !isDepthStencil && !isSigned && !isInteger && !isWebGLSpecific;
+
+  return formatCapabilities;
+}
+
+// HELPER - FORMAT INFO
 
 /**
  * Decodes a texture format, returning e.g. attatchment type, components, byte length and flags (integer, signed, normalized)
  */
-function getTextureFormatInfo(format: TextureFormat): TextureFormatInfo {
+export function getTextureFormatInfo(format: TextureFormat): TextureFormatInfo {
   let formatInfo: TextureFormatInfo = getTextureFormatInfoUsingTable(format);
 
   if (textureFormatDecoder.isCompressed(format)) {
@@ -90,6 +154,7 @@ function getTextureFormatInfo(format: TextureFormat): TextureFormatInfo {
     formatInfo.bytesPerPixel = 1;
     formatInfo.srgb = false;
     formatInfo.compressed = true;
+    formatInfo.bytesPerBlock = getCompressedTextureBlockByteLength(format);
 
     const blockSize = getCompressedTextureBlockSize(format);
     if (blockSize) {
@@ -105,7 +170,7 @@ function getTextureFormatInfo(format: TextureFormat): TextureFormatInfo {
     const dataType = `${type}${length}` as NormalizedDataType;
     const decodedType = dataTypeDecoder.getDataTypeInfo(dataType);
     const bits = decodedType.byteLength * 8;
-    const components = channels.length as 1 | 2 | 3 | 4;
+    const components = (channels?.length ?? 1) as 1 | 2 | 3 | 4;
     const bitsPerChannel: [number, number, number, number] = [
       bits,
       components >= 2 ? bits : 0,
@@ -123,7 +188,7 @@ function getTextureFormatInfo(format: TextureFormat): TextureFormatInfo {
       signed: decodedType.signed,
       normalized: decodedType.normalized,
       bitsPerChannel,
-      bytesPerPixel: decodedType.byteLength * channels.length,
+      bytesPerPixel: decodedType.byteLength * components,
       packed: formatInfo.packed,
       srgb: formatInfo.srgb
     };
@@ -192,7 +257,61 @@ function getCompressedTextureBlockSize(
     const [, blockWidth, blockHeight] = matches;
     return {blockWidth: Number(blockWidth), blockHeight: Number(blockHeight)};
   }
+
+  if (
+    format.startsWith('bc') ||
+    format.startsWith('etc1') ||
+    format.startsWith('etc2') ||
+    format.startsWith('eac') ||
+    format.startsWith('atc')
+  ) {
+    return {blockWidth: 4, blockHeight: 4};
+  }
+
+  if (format.startsWith('pvrtc-rgb4') || format.startsWith('pvrtc-rgba4')) {
+    return {blockWidth: 4, blockHeight: 4};
+  }
+
+  if (format.startsWith('pvrtc-rgb2') || format.startsWith('pvrtc-rgba2')) {
+    return {blockWidth: 8, blockHeight: 4};
+  }
+
   return null;
+}
+
+function getCompressedTextureBlockByteLength(format: TextureFormatCompressed): number {
+  if (
+    format.startsWith('bc1') ||
+    format.startsWith('bc4') ||
+    format.startsWith('etc1') ||
+    format.startsWith('etc2-rgb8') ||
+    format.startsWith('etc2-rgb8a1') ||
+    format.startsWith('eac-r11') ||
+    format === 'atc-rgb-unorm-webgl'
+  ) {
+    return 8;
+  }
+
+  if (
+    format.startsWith('bc2') ||
+    format.startsWith('bc3') ||
+    format.startsWith('bc5') ||
+    format.startsWith('bc6h') ||
+    format.startsWith('bc7') ||
+    format.startsWith('etc2-rgba8') ||
+    format.startsWith('eac-rg11') ||
+    format.startsWith('astc') ||
+    format === 'atc-rgba-unorm-webgl' ||
+    format === 'atc-rgbai-unorm-webgl'
+  ) {
+    return 16;
+  }
+
+  if (format.startsWith('pvrtc')) {
+    return 8;
+  }
+
+  return 16;
 }
 
 /*

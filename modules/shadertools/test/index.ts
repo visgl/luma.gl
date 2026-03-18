@@ -11,9 +11,6 @@ import './lib/shader-module/shader-module-dependencies.spec';
 import './lib/glsl-utils/get-shader-info.spec';
 import './lib/glsl-utils/shader-utils.spec';
 
-// WGSL parsing
-import './lib/wgsl/get-shader-layout-wgsl.spec';
-
 // shader transpilation
 import './lib/preprocessor/preprocessor.spec';
 import './lib/shader-transpiler/transpile-shader.spec';
@@ -49,3 +46,4 @@ import './modules/lighting/gouraud-material.spec';
 
 // Engine
 import './modules/engine/picking.spec';
+import './modules/engine/skin.spec';

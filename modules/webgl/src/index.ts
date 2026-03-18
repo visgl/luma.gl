@@ -26,6 +26,7 @@ export {WEBGLTexture} from './adapter/resources/webgl-texture';
 export {WEBGLShader} from './adapter/resources/webgl-shader';
 export {WEBGLSampler} from './adapter/resources/webgl-sampler';
 export {WEBGLFramebuffer} from './adapter/resources/webgl-framebuffer';
+export {WEBGLFence} from './adapter/resources/webgl-fence';
 
 export {WEBGLRenderPipeline} from './adapter/resources/webgl-render-pipeline';
 // export {WEBGLComputePipeline} from './adapter/resources/webgl-compute-pipeline';

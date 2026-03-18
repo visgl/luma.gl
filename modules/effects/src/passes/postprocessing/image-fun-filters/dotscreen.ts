@@ -5,29 +5,29 @@
 import type {ShaderPass} from '@luma.gl/shadertools';
 
 const source = /* wgsl */ `\
-uniform dotScreenUniforms {
+struct dotScreenUniforms {
   center: vec2f,
   angle: f32,
   size: f32,
 };
 
-@group(0) @binding(1) dotScreen: dotScreenUniforms;
+@group(0) @binding(1) var<uniform> dotScreen: dotScreenUniforms;
 
 fn pattern(texSize: vec2f, texCoord: vec2f) -> f32 {
-  let scale: f32 = 3.1415 / dotScreen.size;
-
-  let s: f32 = sin(dotScreen.angle), c = cos(dotScreen.angle);
-  tex: vec2f = texCoord * texSize - dotScreen.center * texSize;
-  point = vec2f( 
-    c: * tex.x - s * tex.y,
+  let scale = 3.1415 / dotScreen.size;
+  let s = sin(dotScreen.angle);
+  let c = cos(dotScreen.angle);
+  let tex = texCoord * texSize - dotScreen.center * texSize;
+  let point = vec2f(
+    c * tex.x - s * tex.y,
     s * tex.x + c * tex.y
   ) * scale;
   return (sin(point.x) * sin(point.y)) * 4.0;
 }
 
-fn dotScreen_filterColor_ext(vec4 color, texSize: vec2f, texCoord: vec2f) -> vec4f {
-  let average: f32 = (color.r + color.g + color.b) / 3.0;
-  return vec4(vec3(average * 10.0 - 5.0 + pattern(texSize, texCoord)), color.a);
+fn dotScreen_filterColor_ext(color: vec4f, texSize: vec2f, texCoord: vec2f) -> vec4f {
+  let average = (color.r + color.g + color.b) / 3.0;
+  return vec4f(vec3f(average * 10.0 - 5.0 + pattern(texSize, texCoord)), color.a);
 }
 `;
 

@@ -24,6 +24,7 @@ const float32_renderable: TextureFeature = 'float32-renderable-webgl';
 const float16_renderable: TextureFeature = 'float16-renderable-webgl';
 const rgb9e5ufloat_renderable: TextureFeature = 'rgb9e5ufloat-renderable-webgl';
 const snorm8_renderable: TextureFeature = 'snorm8-renderable-webgl';
+const norm16_webgl: TextureFeature = 'norm16-webgl';
 const norm16_renderable: TextureFeature = 'norm16-renderable-webgl';
 const snorm16_renderable: TextureFeature = 'snorm16-renderable-webgl';
 
@@ -93,15 +94,15 @@ const TEXTURE_FORMAT_COLOR_DEPTH_TABLE: Readonly<Record<TextureFormatColorUncomp
   'bgra8unorm-srgb': {},
 
 
-  'r16unorm': {f: norm16_renderable},
-  'rg16unorm': {render: norm16_renderable},
-  'rgb16unorm-webgl': {f: norm16_renderable}, // rgb not renderable
-  'rgba16unorm': {render: norm16_renderable},
+  'r16unorm': {f: norm16_webgl, render: norm16_renderable},
+  'rg16unorm': {f: norm16_webgl, render: norm16_renderable},
+  'rgb16unorm-webgl': {f: norm16_webgl, render: false}, // rgb not renderable
+  'rgba16unorm': {f: norm16_webgl, render: norm16_renderable},
 
-  'r16snorm': {f: snorm16_renderable},
-  'rg16snorm': {render: snorm16_renderable},
-  'rgb16snorm-webgl': {f: norm16_renderable}, // rgb not renderable
-  'rgba16snorm': {render: snorm16_renderable},
+  'r16snorm': {f: norm16_webgl, render: snorm16_renderable},
+  'rg16snorm': {f: norm16_webgl, render: snorm16_renderable},
+  'rgb16snorm-webgl': {f: norm16_webgl, render: false}, // rgb not renderable
+  'rgba16snorm': {f: norm16_webgl, render: snorm16_renderable},
 
   'r16uint': {},
   'rg16uint': {},
@@ -225,7 +226,7 @@ const TEXTURE_FORMAT_COMPRESSED_TABLE: Readonly<Record<TextureFormatCompressed, 
 
   'pvrtc-rgb4unorm-webgl': {f: texture_compression_pvrtc_webgl},
   'pvrtc-rgba4unorm-webgl': {f: texture_compression_pvrtc_webgl},
-  'pvrtc-rbg2unorm-webgl': {f: texture_compression_pvrtc_webgl},
+  'pvrtc-rgb2unorm-webgl': {f: texture_compression_pvrtc_webgl},
   'pvrtc-rgba2unorm-webgl': {f: texture_compression_pvrtc_webgl},
 
   // WEBGL_compressed_texture_etc1

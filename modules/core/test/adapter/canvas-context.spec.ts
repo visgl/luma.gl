@@ -3,32 +3,225 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
-import {CanvasContext, Framebuffer} from '@luma.gl/core';
+import type {CanvasContextProps, PresentationContextProps} from '@luma.gl/core';
+import {CanvasContext, PresentationContext, Framebuffer} from '@luma.gl/core';
 import {isBrowser} from '@probe.gl/env';
 import {getTestDevices, getWebGLTestDevice} from '@luma.gl/test-utils';
 
 /** Mock CanvasContext */
 class TestCanvasContext extends CanvasContext {
+  handle = null;
+  [Symbol.toStringTag] = 'TestCanvasContext';
   // @ts-expect-error
   readonly device = {
     limits: {maxTextureDimension2D: 1024},
     props: {
       onResize: () => {},
       onDevicePixelRatioChange: () => {},
-      onVisibilityChange: () => {}
+      onVisibilityChange: () => {},
+      onPositionChange: () => {}
     }
   };
-  getCurrentFramebuffer(): Framebuffer {
+  constructor(props: CanvasContextProps = {}, startObservers = true) {
+    super(props);
+    if (startObservers) {
+      this._startObservers();
+    }
+  }
+  protected override _getCurrentFramebuffer(): Framebuffer {
     throw new Error('test');
   }
-  updateSize() {}
+  protected override _configureDevice(): void {
+    // Mock update device
+  }
 }
 
-/** Mock function: Modify the canvas context to mock test conditions */
-function configureCanvasContext(canvasContext_: CanvasContext, tc) {
-  // @ts-expect-error read only
-  canvasContext_._canvasSizeInfo = tc._canvasSizeInfo;
-  canvasContext_.getDrawingBufferSize = () => [tc.drawingBufferWidth, tc.drawingBufferHeight];
+/** Mock PresentationContext */
+class TestPresentationContext extends PresentationContext {
+  [Symbol.toStringTag] = 'TestPresentationContext';
+  // @ts-expect-error
+  readonly device = {
+    limits: {maxTextureDimension2D: 1024},
+    props: {
+      onResize: () => {},
+      onDevicePixelRatioChange: () => {},
+      onVisibilityChange: () => {},
+      onPositionChange: () => {}
+    }
+  };
+  constructor(props: PresentationContextProps = {}, startObservers = true) {
+    super(props);
+    if (startObservers) {
+      this._startObservers();
+    }
+  }
+  present(): void {}
+  protected override _getCurrentFramebuffer(): Framebuffer {
+    throw new Error('test');
+  }
+  protected override _configureDevice(): void {
+    // Mock update device
+  }
+}
+
+function createCanvasContextSpyDevice() {
+  const calls = {onResize: 0, onVisibilityChange: 0};
+  return {
+    calls,
+    device: {
+      limits: {maxTextureDimension2D: 1024},
+      props: {
+        onResize: () => {
+          calls.onResize++;
+        },
+        onVisibilityChange: () => {
+          calls.onVisibilityChange++;
+        },
+        onDevicePixelRatioChange: () => {},
+        onPositionChange: () => {}
+      }
+    }
+  };
+}
+
+function createContextSuite(
+  label: string,
+  createContext: () => CanvasContext | PresentationContext
+) {
+  test(`${label}#_handleIntersection does not call callbacks when destroyed`, t => {
+    if (!isBrowser()) {
+      t.end();
+      return;
+    }
+
+    const {calls, device} = createCanvasContextSpyDevice();
+    const canvasContext = createContext();
+    // @ts-expect-error read only
+    canvasContext.device = device;
+
+    (canvasContext as any)._handleIntersection([
+      {target: canvasContext.canvas, isIntersecting: false}
+    ]);
+
+    t.equal(calls.onVisibilityChange, 1, 'visibility change is observed when context is active');
+
+    calls.onVisibilityChange = 0;
+    // @ts-expect-error read only
+    canvasContext.destroyed = true;
+    (canvasContext as any)._handleIntersection([
+      {target: canvasContext.canvas, isIntersecting: true}
+    ]);
+    t.equal(calls.onVisibilityChange, 0, 'destroyed context does not emit visibility events');
+
+    t.end();
+  });
+
+  test(`${label}#_handleResize does not call callbacks when destroyed`, t => {
+    if (!isBrowser()) {
+      t.end();
+      return;
+    }
+
+    const {calls, device} = createCanvasContextSpyDevice();
+    const canvasContext = createContext();
+    // @ts-expect-error read only
+    canvasContext.device = device;
+
+    (canvasContext as any)._handleResize([
+      {
+        target: canvasContext.canvas,
+        contentBoxSize: [{inlineSize: 10, blockSize: 20}]
+      }
+    ]);
+
+    t.equal(calls.onResize, 1, 'resize is observed when context is active');
+
+    calls.onResize = 0;
+    // @ts-expect-error read only
+    canvasContext.destroyed = true;
+    (canvasContext as any)._handleResize([
+      {
+        target: canvasContext.canvas,
+        contentBoxSize: [{inlineSize: 20, blockSize: 40}]
+      }
+    ]);
+    t.equal(calls.onResize, 0, 'destroyed context does not emit resize events');
+
+    t.end();
+  });
+
+  test(`${label}#destroy is idempotent`, t => {
+    if (!isBrowser()) {
+      t.end();
+      return;
+    }
+
+    const calls = {stop: 0};
+    const canvasContext = createContext();
+    // @ts-expect-error read only
+    canvasContext._canvasObserver = {
+      start: () => {},
+      stop: () => {
+        calls.stop++;
+      },
+      started: true
+    };
+
+    t.doesNotThrow(() => {
+      canvasContext.destroy();
+      canvasContext.destroy();
+    }, 'destroying twice should be safe');
+
+    t.equal(calls.stop, 1, 'canvas observer stopped exactly once');
+
+    t.end();
+  });
+
+  test(`${label}#destroy cancels deferred DPR timer`, t => {
+    if (!isBrowser()) {
+      t.end();
+      return;
+    }
+
+    const globalScope = globalThis as any;
+    const originalSetTimeout = globalScope.setTimeout;
+    const originalClearTimeout = globalScope.clearTimeout;
+
+    let capturedTimeoutId: ReturnType<typeof setTimeout> | null = null;
+    let capturedCallback: (() => void) | null = null;
+    let clearTimeoutCalls = 0;
+
+    globalScope.setTimeout = (callback: () => void) => {
+      capturedCallback = callback;
+      capturedTimeoutId = 1 as ReturnType<typeof setTimeout>;
+      return capturedTimeoutId;
+    };
+    globalScope.clearTimeout = (id: ReturnType<typeof setTimeout>) => {
+      clearTimeoutCalls++;
+      t.equal(id, capturedTimeoutId, 'clearTimeout called with deferred DPR timer id');
+    };
+
+    try {
+      const canvasContext = createContext();
+      canvasContext.destroy();
+
+      t.equal(clearTimeoutCalls, 1, 'deferred DPR timer is canceled on destroy');
+      if (capturedCallback) {
+        t.doesNotThrow(() => capturedCallback(), 'DPR callback after destroy should not crash');
+      } else {
+        t.fail('DPR callback should be scheduled by constructor');
+      }
+
+      t.doesNotThrow(() => {
+        canvasContext.destroy();
+      }, 'destroy can still be called after callback has been handled');
+    } finally {
+      globalScope.setTimeout = originalSetTimeout;
+      globalScope.clearTimeout = originalClearTimeout;
+    }
+
+    t.end();
+  });
 }
 
 test('CanvasContext#defined', t => {
@@ -46,6 +239,198 @@ test('CanvasContext', t => {
     t.ok(canvasContext);
     t.deepEqual(canvasContext.getDevicePixelSize(), [800, 600]);
   }
+  t.end();
+});
+
+test('CanvasContext#_startObservers defers DOM observation until explicitly started', t => {
+  if (!isBrowser()) {
+    t.end();
+    return;
+  }
+
+  const globalScope = globalThis as any;
+  const originalResizeObserver = globalScope.ResizeObserver;
+  const originalIntersectionObserver = globalScope.IntersectionObserver;
+
+  const calls = {resizeObserverObserve: 0, intersectionObserverObserve: 0};
+
+  globalScope.ResizeObserver = class {
+    constructor(_callback: ResizeObserverCallback) {}
+    observe() {
+      calls.resizeObserverObserve++;
+    }
+    disconnect() {}
+  };
+  globalScope.IntersectionObserver = class {
+    constructor(_callback: IntersectionObserverCallback) {}
+    observe() {
+      calls.intersectionObserverObserve++;
+    }
+    disconnect() {}
+  };
+
+  try {
+    const canvasContext = new TestCanvasContext({}, false);
+
+    t.equal(calls.resizeObserverObserve, 0, 'resize observer is not started during construction');
+    t.equal(
+      calls.intersectionObserverObserve,
+      0,
+      'intersection observer is not started during construction'
+    );
+
+    canvasContext._startObservers();
+
+    t.equal(calls.resizeObserverObserve, 1, 'resize observer starts after explicit initialization');
+    t.equal(
+      calls.intersectionObserverObserve,
+      1,
+      'intersection observer starts after explicit initialization'
+    );
+
+    canvasContext.destroy();
+  } finally {
+    globalScope.ResizeObserver = originalResizeObserver;
+    globalScope.IntersectionObserver = originalIntersectionObserver;
+  }
+
+  t.end();
+});
+
+test('CanvasContext#_startObservers is idempotent', t => {
+  if (!isBrowser()) {
+    t.end();
+    return;
+  }
+
+  const globalScope = globalThis as any;
+  const originalResizeObserver = globalScope.ResizeObserver;
+  const originalIntersectionObserver = globalScope.IntersectionObserver;
+  const originalSetTimeout = globalScope.setTimeout;
+
+  const calls = {
+    resizeObserverObserve: 0,
+    intersectionObserverObserve: 0,
+    setTimeout: 0
+  };
+
+  globalScope.ResizeObserver = class {
+    constructor(_callback: ResizeObserverCallback) {}
+    observe() {
+      calls.resizeObserverObserve++;
+    }
+    disconnect() {}
+  };
+  globalScope.IntersectionObserver = class {
+    constructor(_callback: IntersectionObserverCallback) {}
+    observe() {
+      calls.intersectionObserverObserve++;
+    }
+    disconnect() {}
+  };
+  globalScope.setTimeout = (callback: () => void) => {
+    calls.setTimeout++;
+    return originalSetTimeout(callback, 0);
+  };
+
+  try {
+    const canvasContext = new TestCanvasContext({}, false);
+    canvasContext._startObservers();
+    canvasContext._startObservers();
+
+    t.equal(calls.resizeObserverObserve, 1, 'resize observer only starts once');
+    t.equal(calls.intersectionObserverObserve, 1, 'intersection observer only starts once');
+    t.equal(calls.setTimeout, 1, 'deferred DPR observation is only scheduled once');
+
+    canvasContext.destroy();
+  } finally {
+    globalScope.ResizeObserver = originalResizeObserver;
+    globalScope.IntersectionObserver = originalIntersectionObserver;
+    globalScope.setTimeout = originalSetTimeout;
+  }
+
+  t.end();
+});
+
+test('CanvasContext#trackPosition polling stops on destroy', t => {
+  if (!isBrowser()) {
+    t.end();
+    return;
+  }
+
+  const globalScope = globalThis as any;
+  const originalResizeObserver = globalScope.ResizeObserver;
+  const originalIntersectionObserver = globalScope.IntersectionObserver;
+  const originalSetInterval = globalScope.setInterval;
+  const originalClearInterval = globalScope.clearInterval;
+
+  let intervalCallback: (() => void) | null = null;
+  let clearIntervalCalls = 0;
+
+  globalScope.ResizeObserver = class {
+    constructor(_callback: ResizeObserverCallback) {}
+    observe() {}
+    disconnect() {}
+  };
+  globalScope.IntersectionObserver = class {
+    constructor(_callback: IntersectionObserverCallback) {}
+    observe() {}
+    disconnect() {}
+  };
+  globalScope.setInterval = (callback: () => void) => {
+    intervalCallback = callback;
+    return 1 as ReturnType<typeof setInterval>;
+  };
+  globalScope.clearInterval = (_id: ReturnType<typeof setInterval>) => {
+    clearIntervalCalls++;
+  };
+
+  try {
+    const canvasContext = new TestCanvasContext({trackPosition: true}, false);
+    let updatePositionCalls = 0;
+    canvasContext.updatePosition = () => {
+      updatePositionCalls++;
+    };
+
+    canvasContext._startObservers();
+
+    t.ok(intervalCallback, 'position polling interval is scheduled');
+    intervalCallback?.();
+    t.equal(updatePositionCalls, 1, 'position polling calls updatePosition while active');
+
+    canvasContext.destroy();
+    t.equal(clearIntervalCalls, 1, 'position polling interval is cleared on destroy');
+
+    intervalCallback?.();
+    t.equal(updatePositionCalls, 1, 'position polling no longer updates after destroy');
+  } finally {
+    globalScope.ResizeObserver = originalResizeObserver;
+    globalScope.IntersectionObserver = originalIntersectionObserver;
+    globalScope.setInterval = originalSetInterval;
+    globalScope.clearInterval = originalClearInterval;
+  }
+
+  t.end();
+});
+
+test('PresentationContext#defined', t => {
+  t.ok(PresentationContext, 'PresentationContext defined');
+  t.end();
+});
+
+createContextSuite('CanvasContext', () => new TestCanvasContext());
+createContextSuite('PresentationContext', () => new TestPresentationContext());
+
+test('CanvasContext#destroy nulls device to catch later access', t => {
+  if (!isBrowser()) {
+    t.end();
+    return;
+  }
+
+  const canvasContext = new TestCanvasContext();
+  canvasContext.destroy();
+  // @ts-expect-error
+  t.equal(canvasContext.device, null, 'destroyed context device should be null');
   t.end();
 });
 

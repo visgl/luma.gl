@@ -1,52 +1,54 @@
 # Swap
 
-`Swap` is a helper class to support buffer and texture management when doing repeated transformations or computations on a block of data (memory). `Swap` enables a sequence of repeated / successive data transformations to be run by reusing just two resources (two buffers or two textures), effectively supporting a simple double buffering techniques.
-
-`Swap` is primarily intended to manage pairs of GPU memory resources, such as
-- a pair of GPU buffers (`Swap<Buffer>`)
-- a pair of GPU textures (`Swap<Texture>`).
-
-The two resources are expected to be structurally identical (same size, length, format, etc).
+`Swap` is a small double-buffering helper for pairs of GPU resources.
+It is used by higher-level engine utilities such as [`ShaderPassRenderer`](/docs/api-reference/engine/passes/shader-pass-renderer) and is also exported directly for application code.
 
 ## Usage
 
-```ts
-const swapBuffers = new Swap({
-  current: 
-})
+```typescript
+import {SwapBuffers} from '@luma.gl/engine';
 
-## Members
-
-### `current`
-
-```ts
-swap.current: T 
+const swapBuffers = new SwapBuffers(device, {byteLength: 1024});
+swapBuffers.swap();
 ```
 
-Get the current resource - usually the source for renders or computations.
+## Classes
 
-### `next`
+### `Swap<T extends Resource>`
 
-```ts
-swap.next: T
-```
+Generic double-buffer helper for two structurally compatible resources.
 
-Get the next resource - usually the target/destination for transforms / computations.
+#### Properties
 
-## Methods
+- `id`
+- `current`
+- `next`
 
-### `constructor`
+#### Methods
 
-```ts
-new Swap<T>(props: {current: T, next: T})
-```
+- `constructor({current, next, id?})`
+- `destroy()`
+- `swap()`
 
-### `destroy()`
+### `SwapFramebuffers`
 
-Destroys the two managed resources.
+Specialized `Swap` that creates and manages two framebuffers with matching attachments.
 
-### `swap()`
+#### Methods
 
-Make the next resource into the "current" resource, and the current resource becomes the "next" resource
+- `constructor(device: Device, props: FramebufferProps)`
+- `resize(size: {width: number; height: number}): boolean`
 
-Typically this reuses the previously current resource as the next resource.
+### `SwapBuffers`
+
+Specialized `Swap` that creates and manages two buffers with matching props.
+
+#### Methods
+
+- `constructor(device: Device, props: BufferProps)`
+- `resize(props: {byteLength: number}): boolean`
+
+## Remarks
+
+- `Swap.swap()` simply exchanges `current` and `next`; it does not copy data.
+- The specialized subclasses destroy the old resources when resizing.

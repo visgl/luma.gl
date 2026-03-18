@@ -10,11 +10,12 @@ import {
 } from '@luma.gl/core';
 
 // prettier-ignore
-const TEST_CASES: {format: AttributeShaderType, result: AttributeShaderTypeInfo}[] = [
+const TEST_CASES: {format: AttributeShaderType | string, result: AttributeShaderTypeInfo}[] = [
   {format: 'f32', result: {primitiveType: 'f32', components: 1, byteLength: 1 * 4, integer: false, signed: true}},
   {format: 'vec2<f32>', result: {primitiveType: 'f32', components: 2, byteLength: 2 * 4, integer: false, signed: true}},
   {format: 'vec3<f32>', result: {primitiveType: 'f32', components: 3, byteLength: 3 * 4, integer: false, signed: true}},
   {format: 'vec4<f32>', result: {primitiveType: 'f32', components: 4, byteLength: 4 * 4, integer: false, signed: true}},
+  {format: 'vec3f', result: {primitiveType: 'f32', components: 3, byteLength: 3 * 4, integer: false, signed: true}},
   {format: 'i32', result: {primitiveType: 'i32', components: 1, byteLength: 1 * 4, integer: true, signed: true}},
   {format: 'vec2<i32>', result: {primitiveType: 'i32', components: 2, byteLength: 2 * 4, integer: true, signed: true}},
   {format: 'vec3<i32>', result: {primitiveType: 'i32', components: 3, byteLength: 3 * 4, integer: true, signed: true}},

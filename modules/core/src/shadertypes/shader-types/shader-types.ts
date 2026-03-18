@@ -59,7 +59,7 @@ export type ArrayShaderType = {
 // Alias types
 
 /** @type Shorthand type aliases recognized by WGSL */
-type AttributeShaderTypeAlias = keyof AttributeShaderTypeAliasMap;
+export type AttributeShaderTypeAlias = keyof AttributeShaderTypeAliasMap;
 
 /** @note work around for lack of type narrowing in conditional generics */
 // prettier-ignore
