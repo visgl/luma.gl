@@ -97,8 +97,14 @@ vec2 twoProd(float a, float b) {
   float prod = a * b;
   vec2 a_fp64 = split(a);
   vec2 b_fp64 = split(b);
+#if defined(LUMA_FP64_CODE_ELIMINATION_WORKAROUND)
+  float err = ((a_fp64.x * b_fp64.x - prod) * fp64.ONE + a_fp64.x * b_fp64.y *
+    fp64.ONE * fp64.ONE + a_fp64.y * b_fp64.x * fp64.ONE * fp64.ONE * fp64.ONE) +
+    a_fp64.y * b_fp64.y * fp64.ONE * fp64.ONE * fp64.ONE * fp64.ONE;
+#else
   float err = ((a_fp64.x * b_fp64.x - prod) + a_fp64.x * b_fp64.y +
     a_fp64.y * b_fp64.x) + a_fp64.y * b_fp64.y;
+#endif
   return vec2(prod, err);
 }
 

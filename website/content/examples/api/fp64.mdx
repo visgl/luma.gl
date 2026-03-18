@@ -1,0 +1,35 @@
+---
+title: FP64
+---
+
+import {ExampleHeader} from '@site/src/react-luma';
+import {FP64Example} from '@site/src/examples';
+
+<ExampleHeader id="fp64" directory="api" devices={['webgl2']}>
+  <div>
+    <div style={{marginBottom: 12}}>
+      Two fragment shaders follow the same Mandelbrot zoom path. The left canvas uses float32
+      arithmetic, while the right canvas uses the fp64 arithmetic helpers from shadertools.
+    </div>
+    <ul style={{marginTop: 0, marginBottom: 0, fontStyle: 'italic'}}>
+      <li>
+        Both canvases share one WebGL <code>Device</code> and render into separate{' '}
+        <code>PresentationContext</code>s.
+      </li>
+      <li>
+        This debug version is a fixed Seahorse snapshot: both canvases use the same center and the
+        same scale, with no camera fly-in.
+      </li>
+      <li>
+        The coordinate and scale are rendered directly on top of each canvas so the two paths can
+        be compared without guessing what is being drawn.
+      </li>
+      <li>
+        The fp64 canvas uses a fragment-stage copy of the arithmetic module because the stock fp64
+        module is currently vertex-only.
+      </li>
+    </ul>
+  </div>
+</ExampleHeader>
+
+<FP64Example />

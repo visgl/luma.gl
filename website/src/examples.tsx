@@ -5,6 +5,7 @@ import {ExamplePage, LumaExample, ReactExample, useStore} from './react-luma';
 
 import AnimationApp from '../../examples/api/animation/app';
 import CubemapApp from '../../examples/api/cubemap/app';
+import FP64App from '../../examples/api/fp64/app';
 import MultiCanvasApp from '../../examples/api/multi-canvas/app';
 import Texture3DApp from '../../examples/api/texture-3d/app';
 import TextureTesterApp from '../../examples/api/texture-tester/app';
@@ -121,6 +122,10 @@ export const MultiCanvasExample: React.FC = () => {
     </ExamplePage>
   );
 };
+
+export const FP64Example: React.FC = () => (
+  <ReactExample component={FP64App} showStats={false} />
+);
 
 export const Texture3DExample: React.FC = props => (
   <LumaExample
