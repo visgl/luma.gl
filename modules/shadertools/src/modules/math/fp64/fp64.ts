@@ -33,6 +33,7 @@ const defaultUniforms: FP64Uniforms = {
 export const fp64arithmetic: ShaderModule<FP64Props, FP64Uniforms, FP64Bindings> & FP64Utilities = {
   name: 'fp64arithmetic',
   source: fp64arithmeticWGSL,
+  fs: fp64arithmeticShader,
   vs: fp64arithmeticShader,
   defaultUniforms,
   uniformTypes: {ONE: 'f32', SPLIT: 'f32'},

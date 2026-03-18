@@ -7,11 +7,9 @@ import {createRoot, type Root} from 'react-dom/client';
 
 import {luma, type Device, type PresentationContext} from '@luma.gl/core';
 import {Model, ShaderInputs} from '@luma.gl/engine';
-import type {ShaderModule} from '@luma.gl/shadertools';
+import {fp64arithmetic, type ShaderModule} from '@luma.gl/shadertools';
 import {webgl2Adapter} from '@luma.gl/webgl';
 import {webgpuAdapter} from '@luma.gl/webgpu';
-import {fp64arithmeticShader} from '../../../modules/shadertools/src/modules/math/fp64/fp64-arithmetic-glsl';
-import {fp64arithmeticWGSL} from '../../../modules/shadertools/src/modules/math/fp64/fp64-arithmetic-wgsl';
 
 type AppProps = {
   device?: Device | null;
@@ -49,11 +47,6 @@ type Mandelbrot64Uniforms = {
   aspectRatio: number;
   time: number;
   iterationLimit: number;
-};
-
-type FP64ArithmeticUniforms = {
-  ONE: number;
-  SPLIT: number;
 };
 
 type VisualizationSpec = {
@@ -419,7 +412,7 @@ function createVisualizationRenderer(
   const shaderInputs =
     spec.kind === 'fp64'
       ? new ShaderInputs({
-          fp64arithmetic: fp64arithmeticFragmentModule,
+          fp64arithmetic,
           mandelbrot64
         })
       : new ShaderInputs({
@@ -431,7 +424,7 @@ function createVisualizationRenderer(
     source: `${FULLSCREEN_SOURCE}\n${spec.fragmentShaderWGSL}`,
     vs: FULLSCREEN_VERTEX_SHADER,
     fs: spec.fragmentShaderGLSL,
-    modules: spec.kind === 'fp64' ? [fp64arithmeticFragmentModule] : [],
+    modules: spec.kind === 'fp64' ? [fp64arithmetic] : [],
     bufferLayout: [{name: 'position', format: 'float32x2'}],
     attributes: {
       position: buffer
@@ -620,23 +613,9 @@ const mandelbrot32: ShaderModule<Mandelbrot32Uniforms> = {
   }
 };
 
-const fp64arithmeticFragmentModule: ShaderModule<{}, FP64ArithmeticUniforms> = {
-  name: 'fp64arithmetic',
-  source: fp64arithmeticWGSL,
-  fs: fp64arithmeticShader,
-  defaultUniforms: {
-    ONE: 1.0,
-    SPLIT: 4097.0
-  },
-  uniformTypes: {
-    ONE: 'f32',
-    SPLIT: 'f32'
-  }
-};
-
 const mandelbrot64: ShaderModule<Mandelbrot64Uniforms> = {
   name: 'mandelbrot64',
-  dependencies: [fp64arithmeticFragmentModule],
+  dependencies: [fp64arithmetic],
   uniformTypes: {
     resolution: 'vec2<f32>',
     centerX: 'vec2<f32>',
