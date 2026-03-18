@@ -8342,6 +8342,25 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"luma.gl-examples-fp64@workspace:examples/api/fp64":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-fp64@workspace:examples/api/fp64"
+  dependencies:
+    "@luma.gl/core": "npm:9.3.0-alpha.6"
+    "@luma.gl/engine": "npm:9.3.0-alpha.6"
+    "@luma.gl/shadertools": "npm:9.3.0-alpha.6"
+    "@luma.gl/webgl": "npm:9.3.0-alpha.6"
+    "@luma.gl/webgpu": "npm:9.3.0-alpha.6"
+    "@types/react": "npm:^18.2.0"
+    "@types/react-dom": "npm:^18.2.0"
+    "@vitejs/plugin-react": "npm:^4.0.0"
+    react: "npm:^18.2.0"
+    react-dom: "npm:^18.2.0"
+    typescript: "npm:^5.5.0"
+    vite: "npm:^7.2.2"
+  languageName: unknown
+  linkType: soft
+
 "luma.gl-examples-gltf-showcase@workspace:examples/showcase/gltf":
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-gltf-showcase@workspace:examples/showcase/gltf"
