@@ -8350,6 +8350,7 @@ __metadata:
     "@luma.gl/engine": "npm:9.3.0-alpha.6"
     "@luma.gl/shadertools": "npm:9.3.0-alpha.6"
     "@luma.gl/webgl": "npm:9.3.0-alpha.6"
+    "@luma.gl/webgpu": "npm:9.3.0-alpha.6"
     "@types/react": "npm:^18.2.0"
     "@types/react-dom": "npm:^18.2.0"
     "@vitejs/plugin-react": "npm:^4.0.0"

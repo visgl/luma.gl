@@ -194,6 +194,7 @@ export default class App extends React.PureComponent<AppProps, AppState> {
     const {initializationError, isReady, selectedPresetId} = this.state;
     const selectedPreset = ZOOM_PRESETS[selectedPresetId];
     const overlayLines = getOverlayLines(selectedPreset);
+    const visualizationSpecs = getVisualizationSpecs();
 
     return (
       <div
@@ -216,7 +217,7 @@ export default class App extends React.PureComponent<AppProps, AppState> {
             alignItems: 'start'
           }}
         >
-          {VISUALIZATIONS.map((visualization, index) => (
+          {visualizationSpecs.map((visualization, index) => (
             <ExamplePaneCopy
               control={
                 index === 0 ? (
@@ -259,7 +260,7 @@ export default class App extends React.PureComponent<AppProps, AppState> {
             <ExamplePaneCanvas
               canvasRef={canvasRef}
               isReady={isReady}
-              key={`${VISUALIZATIONS[index].kind}-canvas`}
+              key={`${visualizationSpecs[index].kind}-canvas`}
               overlayLines={overlayLines}
             />
           ))}
@@ -329,7 +330,7 @@ class MultiCanvasRenderer {
     this.device = device;
     this.zoomPreset = zoomPreset;
     this.fullscreenBuffer = device.createBuffer({data: FULLSCREEN_POSITIONS});
-    this.visualizations = VISUALIZATIONS.map((spec, index) => {
+    this.visualizations = getVisualizationSpecs().map((spec, index) => {
       try {
         return createVisualizationRenderer(device, canvases[index], this.fullscreenBuffer, spec);
       } catch (error) {
@@ -626,27 +627,6 @@ const mandelbrot64: ShaderModule<Mandelbrot64Uniforms> = {
     iterationLimit: 'f32'
   }
 };
-
-const VISUALIZATIONS: VisualizationSpec[] = [
-  {
-    clearColor: [0.02, 0.015, 0.04, 1],
-    description:
-      'Single-precision Mandelbrot fragment shader. The view starts on the Seahorse target and zooms in from there.',
-    fragmentShaderGLSL: MANDELBROT32_FRAGMENT_SHADER,
-    fragmentShaderWGSL: MANDELBROT32_FRAGMENT_WGSL,
-    kind: 'fp32',
-    title: 'Mandelbrot FP32'
-  },
-  {
-    clearColor: [0.01, 0.015, 0.03, 1],
-    description:
-      'FP64 Mandelbrot fragment shader using the same zoom path, with center and scale split into hi/lo parts before upload.',
-    fragmentShaderGLSL: MANDELBROT64_FRAGMENT_SHADER,
-    fragmentShaderWGSL: MANDELBROT64_FRAGMENT_WGSL,
-    kind: 'fp64',
-    title: 'Mandelbrot FP64'
-  }
-];
 
 const FULLSCREEN_SOURCE = /* wgsl */ `\
 struct VertexInput {
@@ -959,3 +939,26 @@ fn fragmentMain(inputs: FragmentOutput) -> @location(0) vec4<f32> {
   return vec4<f32>(color, 1.0);
 }
 `;
+
+function getVisualizationSpecs(): VisualizationSpec[] {
+  return [
+    {
+      clearColor: [0.02, 0.015, 0.04, 1],
+      description:
+        'Single-precision Mandelbrot fragment shader. The view starts on the Seahorse target and zooms in from there.',
+      fragmentShaderGLSL: MANDELBROT32_FRAGMENT_SHADER,
+      fragmentShaderWGSL: MANDELBROT32_FRAGMENT_WGSL,
+      kind: 'fp32',
+      title: 'Mandelbrot FP32'
+    },
+    {
+      clearColor: [0.01, 0.015, 0.03, 1],
+      description:
+        'FP64 Mandelbrot fragment shader using the same zoom path, with center and scale split into hi/lo parts before upload.',
+      fragmentShaderGLSL: MANDELBROT64_FRAGMENT_SHADER,
+      fragmentShaderWGSL: MANDELBROT64_FRAGMENT_WGSL,
+      kind: 'fp64',
+      title: 'Mandelbrot FP64'
+    }
+  ];
+}
