@@ -123,9 +123,27 @@ export const MultiCanvasExample: React.FC = () => {
   );
 };
 
-export const FP64Example: React.FC = () => (
-  <ReactExample component={FP64App} showStats={false} />
-);
+export const FP64Example: React.FC = () => {
+  const deviceType = useStore(store => store.deviceType);
+  const presentationDevice = useStore(store => store.presentationDevice);
+  const presentationDeviceError = useStore(store => store.presentationDeviceError);
+
+  if (presentationDeviceError) {
+    return <div>{presentationDeviceError}</div>;
+  }
+
+  return deviceType && presentationDevice ? (
+    <ReactExample
+      component={FP64App}
+      componentProps={{presentationDevice}}
+      showStats={false}
+    />
+  ) : (
+    <ExamplePage>
+      <div>Initializing device...</div>
+    </ExamplePage>
+  );
+};
 
 export const Texture3DExample: React.FC = props => (
   <LumaExample

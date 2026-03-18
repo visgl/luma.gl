@@ -2,11 +2,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-const IFDEF_REGEXP = /^\s*\#\s*ifdef\s*([a-zA-Z_]+)\s*$/;
-const IFNDEF_REGEXP = /^\s*\#\s*ifndef\s*([a-zA-Z_]+)\s*(?:\/\/.*)?$/;
+const DEFINE_NAME_PATTERN = '([a-zA-Z_][a-zA-Z0-9_]*)';
+const IFDEF_REGEXP = new RegExp(`^\\s*\\#\\s*ifdef\\s*${DEFINE_NAME_PATTERN}\\s*$`);
+const IFNDEF_REGEXP = new RegExp(`^\\s*\\#\\s*ifndef\\s*${DEFINE_NAME_PATTERN}\\s*(?:\\/\\/.*)?$`);
 const ELSE_REGEXP = /^\s*\#\s*else\s*(?:\/\/.*)?$/;
 const ENDIF_REGEXP = /^\s*\#\s*endif\s*$/;
-const IFDEF_WITH_COMMENT_REGEXP = /^\s*\#\s*ifdef\s*([a-zA-Z_]+)\s*(?:\/\/.*)?$/;
+const IFDEF_WITH_COMMENT_REGEXP = new RegExp(
+  `^\\s*\\#\\s*ifdef\\s*${DEFINE_NAME_PATTERN}\\s*(?:\\/\\/.*)?$`
+);
 const ENDIF_WITH_COMMENT_REGEXP = /^\s*\#\s*endif\s*(?:\/\/.*)?$/;
 
 export type PreprocessorOptions = {

@@ -20,7 +20,6 @@ const sidebars = {
       label: 'API',
       items: [
         'api/animation',
-        'api/fp64',
         'api/multi-canvas',
         'integrations/external-context',
         'integrations/react-strict-mode'

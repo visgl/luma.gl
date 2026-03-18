@@ -6,6 +6,7 @@ export const fp64arithmeticShader = /* glsl */ `\
 
 uniform fp64arithmeticUniforms {
   uniform float ONE;
+  uniform float SPLIT;
 } fp64;
 
 /*
@@ -15,6 +16,12 @@ The purpose of this workaround is to prevent shader compilers from
 optimizing away necessary arithmetic operations by swapping their sequences
 or transform the equation to some 'equivalent' form.
 
+These helpers implement Dekker/Veltkamp-style error tracking. If the compiler
+folds constants or reassociates the arithmetic, the high/low split can stop
+tracking the rounding error correctly. That failure mode tends to look fine in
+simple coordinate setup, but then breaks down inside iterative arithmetic such
+as fp64 Mandelbrot loops.
+
 The method is to multiply an artifical variable, ONE, which will be known to
 the compiler to be 1 only at runtime. The whole expression is then represented
 as a polynomial with respective to ONE. In the coefficients of all terms, only one a
@@ -23,17 +30,23 @@ and one b should appear
 err = (a + b) * ONE^6 - a * ONE^5 - (a + b) * ONE^4 + a * ONE^3 - b - (a + b) * ONE^2 + a * ONE
 */
 
+float prevent_fp64_optimization(float value) {
+#if defined(LUMA_FP64_CODE_ELIMINATION_WORKAROUND)
+  return value + fp64.ONE * 0.0;
+#else
+  return value;
+#endif
+}
+
 // Divide float number to high and low floats to extend fraction bits
 vec2 split(float a) {
-  const float SPLIT = 4097.0;
-  float t = a * SPLIT;
-#if defined(LUMA_FP64_CODE_ELIMINATION_WORKAROUND)
-  float a_hi = t * fp64.ONE - (t - a);
-  float a_lo = a * fp64.ONE - a_hi;
-#else
-  float a_hi = t - (t - a);
+  // Keep SPLIT as a runtime uniform so the compiler cannot fold the Dekker
+  // split into a constant expression and reassociate the recovery steps.
+  float split = prevent_fp64_optimization(fp64.SPLIT);
+  float t = prevent_fp64_optimization(a * split);
+  float temp = t - a;
+  float a_hi = t - temp;
   float a_lo = a - a_hi;
-#endif
   return vec2(a_hi, a_lo);
 }
 
@@ -97,14 +110,26 @@ vec2 twoProd(float a, float b) {
   float prod = a * b;
   vec2 a_fp64 = split(a);
   vec2 b_fp64 = split(b);
+  // twoProd is especially sensitive because mul_fp64 and div_fp64 both depend
+  // on the split terms and cross terms staying in the original evaluation
+  // order. If the compiler folds or reassociates them, the low part tends to
+  // collapse to zero or NaN on some drivers.
+  float highProduct = prevent_fp64_optimization(a_fp64.x * b_fp64.x);
+  float crossProduct1 = prevent_fp64_optimization(a_fp64.x * b_fp64.y);
+  float crossProduct2 = prevent_fp64_optimization(a_fp64.y * b_fp64.x);
+  float lowProduct = prevent_fp64_optimization(a_fp64.y * b_fp64.y);
 #if defined(LUMA_FP64_CODE_ELIMINATION_WORKAROUND)
-  float err = ((a_fp64.x * b_fp64.x - prod) * fp64.ONE + a_fp64.x * b_fp64.y *
-    fp64.ONE * fp64.ONE + a_fp64.y * b_fp64.x * fp64.ONE * fp64.ONE * fp64.ONE) +
-    a_fp64.y * b_fp64.y * fp64.ONE * fp64.ONE * fp64.ONE * fp64.ONE;
+  float err1 = (highProduct - prod) * fp64.ONE;
+  float err2 = crossProduct1 * fp64.ONE * fp64.ONE;
+  float err3 = crossProduct2 * fp64.ONE * fp64.ONE * fp64.ONE;
+  float err4 = lowProduct * fp64.ONE * fp64.ONE * fp64.ONE * fp64.ONE;
 #else
-  float err = ((a_fp64.x * b_fp64.x - prod) + a_fp64.x * b_fp64.y +
-    a_fp64.y * b_fp64.x) + a_fp64.y * b_fp64.y;
+  float err1 = highProduct - prod;
+  float err2 = crossProduct1;
+  float err3 = crossProduct2;
+  float err4 = lowProduct;
 #endif
+  float err = ((err1 + err2) + err3) + err4;
   return vec2(prod, err);
 }
 

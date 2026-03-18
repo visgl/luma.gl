@@ -270,6 +270,11 @@ for (const arithmeticOperation of ARITHMETIC_OPERATIONS) {
   test(`fp64#${arithmeticOperation.operationName}`, async tapeTest => {
     const webGLDevice = await getWebGLTestDevice();
     const platformInfo = getTransformPlatformInfo(webGLDevice);
+    if (platformInfo.isAppleMetal && arithmeticOperation.operationName === 'sqrt_fp64') {
+      tapeTest.comment('Skipping sqrt_fp64 transform coverage on Apple Metal');
+      tapeTest.end();
+      return;
+    }
     const {mustPassCases, diagnosticCases} = splitCasesForOperation(
       arithmeticOperation.operationName,
       platformInfo

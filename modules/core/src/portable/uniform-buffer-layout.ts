@@ -62,6 +62,7 @@ export class UniformBufferLayout {
   /** Get the data for the complete buffer */
   getData(uniformValues: Readonly<UniformValues>): Uint8Array {
     const buffer = getScratchArrayBuffer(this.byteLength);
+    new Uint8Array(buffer, 0, this.byteLength).fill(0);
     const typedArrays = {
       i32: new Int32Array(buffer),
       u32: new Uint32Array(buffer),

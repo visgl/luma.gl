@@ -6,10 +6,11 @@ import {ShaderModule} from '../../../lib/shader-module/shader-module';
 
 import {fp64ify, fp64LowPart, fp64ifyMatrix4} from '../../../modules/math/fp64/fp64-utils';
 import {fp64arithmeticShader} from './fp64-arithmetic-glsl';
+import {fp64arithmeticWGSL} from './fp64-arithmetic-wgsl';
 import {fp64functionShader} from './fp64-functions-glsl';
 
 type FP64Props = {};
-type FP64Uniforms = {ONE: number};
+type FP64Uniforms = {ONE: number; SPLIT: number};
 type FP64Bindings = {};
 
 type FP64Utilities = {
@@ -20,7 +21,10 @@ type FP64Utilities = {
 
 const defaultUniforms: FP64Uniforms = {
   // Used in LUMA_FP64_CODE_ELIMINATION_WORKAROUND
-  ONE: 1.0
+  ONE: 1.0,
+  // Runtime split factor for Dekker splitting. Keeping this as a uniform helps
+  // prevent aggressive constant folding in shader compilers.
+  SPLIT: 4097.0
 };
 
 /**
@@ -28,9 +32,10 @@ const defaultUniforms: FP64Uniforms = {
  */
 export const fp64arithmetic: ShaderModule<FP64Props, FP64Uniforms, FP64Bindings> & FP64Utilities = {
   name: 'fp64arithmetic',
+  source: fp64arithmeticWGSL,
   vs: fp64arithmeticShader,
   defaultUniforms,
-  uniformTypes: {ONE: 'f32'},
+  uniformTypes: {ONE: 'f32', SPLIT: 'f32'},
 
   // Additional Functions
   fp64ify,
