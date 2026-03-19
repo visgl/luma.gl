@@ -9,7 +9,12 @@ import {
   makePropValidators,
   getValidatedProperties
 } from '../filters/prop-types';
-import type {UniformSizes, UniformTypes, UniformValue} from '../utils/uniform-types';
+import type {
+  ShaderModuleUniformValue,
+  UniformSizes,
+  UniformTypes,
+  UniformValue
+} from '../utils/uniform-types';
 import {ShaderInjection, normalizeInjections} from '../shader-assembly/shader-injections';
 
 // To avoid dependency on core module, do not import `Binding` type.
@@ -37,7 +42,7 @@ export type PickUniforms<T> = {[K in UniformKeys<Required<T>>]: T[K]};
  */
 export type ShaderModule<
   PropsT extends Record<string, any> = Record<string, any>,
-  UniformsT extends Record<string, UniformValue> = PickUniforms<PropsT>,
+  UniformsT extends Record<string, ShaderModuleUniformValue> = PickUniforms<PropsT>,
   BindingsT extends Record<string, Binding> = PickBindings<PropsT>
 > = {
   /** Used for type inference not for values */
@@ -152,12 +157,15 @@ export function initializeShaderModule(module: ShaderModule): void {
 
 /** Convert module props to uniforms */
 export function getShaderModuleUniforms<
-  ShaderModuleT extends ShaderModule<Record<string, unknown>, Record<string, UniformValue>>
+  ShaderModuleT extends ShaderModule<
+    Record<string, unknown>,
+    Record<string, ShaderModuleUniformValue>
+  >
 >(
   module: ShaderModuleT,
   props?: ShaderModuleT['props'],
   oldUniforms?: ShaderModuleT['uniforms']
-): Record<string, Binding | UniformValue> {
+): Record<string, Binding | ShaderModuleUniformValue> {
   initializeShaderModule(module);
 
   const uniforms = oldUniforms || {...module.defaultUniforms};

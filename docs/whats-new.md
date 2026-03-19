@@ -20,6 +20,7 @@ Target Date: April 2026
 **@luma.gl/core**
 
 - **Multi-canvas rendering** is now supported on both WebGL and WebGPU via [`device.createPresentationContext()`](/docs/api-reference/core/presentation-context). See the [Multiple Canvases](/docs/developer-guide/multiple-canvases) developer guide details.
+- **Composite uniform buffer layouts** now support nested structs and fixed-size arrays in [`UniformBufferLayout`](/docs/api-reference/core/uniform-buffer-layout) and [`UniformStore`](/docs/api-reference/core/uniform-store), while preserving nested JavaScript values at the API boundary.
 
 **@luma.gl/engine**
 
@@ -47,6 +48,8 @@ Target Date: April 2026
 **@luma.gl/shadertools**
 
 - `WGSL shader modules` - most notably, the [`pbrMaterial`] module is now supported in WebGPU.
+- `ShaderModule uniformTypes` now support nested structs and fixed-size arrays. See [`ShaderModule`](/docs/api-reference/shadertools/shader-module).
+- `SpotLight` support has been added to the [`lighting`](/docs/api-reference/shadertools/shader-modules/lighting) shader module.
 
 **@luma.gl/effects**
 

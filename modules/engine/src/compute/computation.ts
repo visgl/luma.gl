@@ -15,11 +15,7 @@ import {
   log,
   dataTypeDecoder
 } from '@luma.gl/core';
-import {
-  type ShaderModule,
-  type PlatformInfo,
-  ShaderAssembler
-} from '@luma.gl/shadertools';
+import {type ShaderModule, type PlatformInfo, ShaderAssembler} from '@luma.gl/shadertools';
 import {type TypedArray, isNumericArray} from '@math.gl/types';
 import {ShaderInputs} from '../shader-inputs';
 import {PipelineFactory} from '../factories/pipeline-factory';

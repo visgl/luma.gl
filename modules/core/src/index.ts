@@ -140,6 +140,11 @@ export type {
 } from './adapter/types/shader-layout';
 
 export type {UniformValue} from './adapter/types/uniforms';
+export type {
+  CompositeUniformValue,
+  CompositeUniformValueArray,
+  CompositeUniformValueStruct
+} from './adapter/types/uniforms';
 
 // TYPED ARRAY TYPES
 
@@ -164,10 +169,14 @@ export {
   type NormalizedTypedArrayConstructorT
 } from './shadertypes/data-types/data-types';
 export {dataTypeDecoder} from './shadertypes/data-types/data-type-decoder';
+export {getTypedArrayConstructor} from './shadertypes/data-types/decode-data-types';
 
 export {
   type AttributeShaderTypeT,
   type AttributeShaderType,
+  type ArrayShaderType,
+  type CompositeShaderType,
+  type StructShaderType,
   type VariableShaderTypeT,
   type VariableShaderType
 } from './shadertypes/shader-types/shader-types';

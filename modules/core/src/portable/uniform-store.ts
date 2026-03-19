@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {VariableShaderType} from '../shadertypes/shader-types/shader-types';
-import type {UniformValue} from '../adapter/types/uniforms';
+import type {CompositeShaderType} from '../shadertypes/shader-types/shader-types';
+import type {CompositeUniformValue} from '../adapter/types/uniforms';
 import type {Device} from '../adapter/device';
 import {Buffer} from '../adapter/resources/buffer';
 import {log} from '../utils/log';
@@ -38,10 +38,10 @@ export class UniformStore<
     blocks: Record<
       keyof TPropGroups,
       {
-        uniformTypes?: Record<string, VariableShaderType>;
+        uniformTypes?: Record<string, CompositeShaderType>;
         uniformSizes?: Record<string, number>;
         defaultProps?: Record<string, unknown>;
-        defaultUniforms?: Record<string, UniformValue>;
+        defaultUniforms?: Record<string, CompositeUniformValue>;
       }
     >
   ) {
@@ -57,7 +57,9 @@ export class UniformStore<
 
       // Create a Uniform block to store the uniforms for each buffer.
       const uniformBlock = new UniformBlock({name: bufferName});
-      uniformBlock.setUniforms(block.defaultUniforms || {});
+      uniformBlock.setUniforms(
+        uniformBufferLayout.getFlatUniformValues(block.defaultUniforms || {})
+      );
       this.uniformBlocks.set(uniformBufferName, uniformBlock);
     }
   }
@@ -77,7 +79,12 @@ export class UniformStore<
     uniforms: Partial<{[group in keyof TPropGroups]: Partial<TPropGroups[group]>}>
   ): void {
     for (const [blockName, uniformValues] of Object.entries(uniforms)) {
-      this.uniformBlocks.get(blockName)?.setUniforms(uniformValues);
+      const uniformBufferName = blockName as keyof TPropGroups;
+      const uniformBufferLayout = this.uniformBufferLayouts.get(uniformBufferName);
+      const flattenedUniforms = uniformBufferLayout?.getFlatUniformValues(
+        (uniformValues || {}) as Record<string, CompositeUniformValue>
+      );
+      this.uniformBlocks.get(uniformBufferName)?.setUniforms(flattenedUniforms || {});
       // We leverage logging in updateUniformBuffers(), even though slightly less efficient
       // this.updateUniformBuffer(blockName);
     }

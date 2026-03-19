@@ -16,6 +16,22 @@ Shader Modules
 - A props to uniforms mapping system
 - A selection of shader modules and shader passes
 
+## Built-in Shader Modules
+
+The API reference contains pages for the built-in shader modules exported by `@luma.gl/shadertools`:
+
+- [`random`](/docs/api-reference/shadertools/shader-modules/random)
+- [`fp32`](/docs/api-reference/shadertools/shader-modules/fp32)
+- [`fp64`](/docs/api-reference/shadertools/shader-modules/fp64)
+- [`fp64arithmetic`](/docs/api-reference/shadertools/shader-modules/fp64-arithmetic)
+- [`picking`](/docs/api-reference/shadertools/shader-modules/picking)
+- [`skin`](/docs/api-reference/shadertools/shader-modules/skin)
+- [`lighting`](/docs/api-reference/shadertools/shader-modules/lighting)
+- [`dirlight`](/docs/api-reference/shadertools/shader-modules/dirlight)
+- [`gouraudMaterial`](/docs/api-reference/shadertools/shader-modules/gouraud-material)
+- [`phongMaterial`](/docs/api-reference/shadertools/shader-modules/phong-material)
+- [`pbrMaterial`](/docs/api-reference/shadertools/shader-modules/pbr-material)
+
 ### Shader Injections
 
 A number of shader injection points are defined by the system, letting applications inject custom code into shaders.

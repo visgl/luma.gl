@@ -66,7 +66,9 @@ export function getAttributeShaderTypeInfo(
 }
 
 export class ShaderTypeDecoder {
-  getVariableShaderTypeInfo(format: VariableShaderType | VariableShaderTypeAlias): VariableShaderTypeInfo {
+  getVariableShaderTypeInfo(
+    format: VariableShaderType | VariableShaderTypeAlias
+  ): VariableShaderTypeInfo {
     return getVariableShaderTypeInfo(format);
   }
 

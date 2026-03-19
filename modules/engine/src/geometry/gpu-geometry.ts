@@ -127,7 +127,9 @@ export function getAttributeBuffersFromGeometry(
         id: `${attributeName}-buffer`
       });
       const {value, size, normalized} = attribute;
-      // @ts-expect-error
+      if (size === undefined) {
+        throw new Error(`Attribute ${attributeName} is missing a size`);
+      }
       bufferLayout.push({
         name,
         format: vertexFormatDecoder.getVertexFormatFromAttribute(value, size, normalized)

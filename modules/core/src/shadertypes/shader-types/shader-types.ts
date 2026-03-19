@@ -47,14 +47,11 @@ export type CompositeShaderType = VariableShaderType | StructShaderType | ArrayS
 
 /** @type Represents a struct in WGSL */
 export type StructShaderType = {
-  members: Record<string, CompositeShaderType>;
+  [memberName: string]: CompositeShaderType;
 };
 
 /** @type Represents an array in WGSL */
-export type ArrayShaderType = {
-  type: CompositeShaderType;
-  length: number;
-};
+export type ArrayShaderType = readonly [type: CompositeShaderType, length: number];
 
 // Alias types
 

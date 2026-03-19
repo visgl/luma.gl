@@ -6,7 +6,7 @@ import {log} from '@luma.gl/core';
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
 import {lightingUniformsGLSL} from './lighting-glsl';
 import {lightingUniformsWGSL} from './lighting-wgsl';
-import type {NumberArray3} from '@math.gl/core';
+import type {NumberArray2, NumberArray3} from '@math.gl/core';
 
 /** Max number of supported lights (in addition to ambient light */
 const MAX_LIGHTS = 5;
@@ -14,16 +14,9 @@ const MAX_LIGHTS = 5;
 /** Whether to divide */
 const COLOR_FACTOR = 255.0;
 
-/** Shader type field for lights */
-// eslint-disable-next-line no-shadow
-export enum LIGHT_TYPE {
-  POINT = 0,
-  DIRECTIONAL = 1
-}
-
 /** Lighting helper types */
 
-export type Light = AmbientLight | PointLight | DirectionalLight;
+export type Light = AmbientLight | PointLight | SpotLight | DirectionalLight;
 
 export type AmbientLight = {
   type: 'ambient';
@@ -46,6 +39,17 @@ export type DirectionalLight = {
   intensity?: number;
 };
 
+export type SpotLight = {
+  type: 'spot';
+  position: Readonly<NumberArray3>;
+  direction: Readonly<NumberArray3>;
+  color?: Readonly<NumberArray3>;
+  intensity?: number;
+  attenuation?: Readonly<NumberArray3>;
+  innerConeAngle?: number;
+  outerConeAngle?: number;
+};
+
 export type LightingProps = {
   enabled?: boolean;
   lights?: Light[];
@@ -54,36 +58,35 @@ export type LightingProps = {
   /** @deprecated */
   pointLights?: PointLight[];
   /** @deprecated */
+  spotLights?: SpotLight[];
+  /** @deprecated */
   directionalLights?: DirectionalLight[];
+};
+
+export type LightingLightUniform = {
+  color: Readonly<NumberArray3>;
+  position: Readonly<NumberArray3>;
+  direction: Readonly<NumberArray3>;
+  attenuation: Readonly<NumberArray3>;
+  coneCos: Readonly<NumberArray2>;
 };
 
 export type LightingUniforms = {
   enabled: number;
-  ambientColor: Readonly<NumberArray3>;
   directionalLightCount: number;
   pointLightCount: number;
-  lightType: number; // [];
-  lightColor0: Readonly<NumberArray3>;
-  lightPosition0: Readonly<NumberArray3>;
-  lightDirection0: Readonly<NumberArray3>;
-  lightAttenuation0: Readonly<NumberArray3>;
-  lightColor1: Readonly<NumberArray3>;
-  lightPosition1: Readonly<NumberArray3>;
-  lightDirection1: Readonly<NumberArray3>;
-  lightAttenuation1: Readonly<NumberArray3>;
-  lightColor2: Readonly<NumberArray3>;
-  lightPosition2: Readonly<NumberArray3>;
-  lightDirection2: Readonly<NumberArray3>;
-  lightAttenuation2: Readonly<NumberArray3>;
-  lightColor3: Readonly<NumberArray3>;
-  lightPosition3: Readonly<NumberArray3>;
-  lightDirection3: Readonly<NumberArray3>;
-  lightAttenuation3: Readonly<NumberArray3>;
-  lightColor4: Readonly<NumberArray3>;
-  lightPosition4: Readonly<NumberArray3>;
-  lightDirection4: Readonly<NumberArray3>;
-  lightAttenuation4: Readonly<NumberArray3>;
+  spotLightCount: number;
+  ambientColor: Readonly<NumberArray3>;
+  lights: ReadonlyArray<LightingLightUniform>;
 };
+
+const LIGHT_UNIFORM_TYPE = {
+  color: 'vec3<f32>',
+  position: 'vec3<f32>',
+  direction: 'vec3<f32>',
+  attenuation: 'vec3<f32>',
+  coneCos: 'vec2<f32>'
+} as const;
 
 /** UBO ready lighting module */
 export const lighting = {
@@ -98,71 +101,14 @@ export const lighting = {
 
   uniformTypes: {
     enabled: 'i32',
-    lightType: 'i32',
-
     directionalLightCount: 'i32',
     pointLightCount: 'i32',
-
+    spotLightCount: 'i32',
     ambientColor: 'vec3<f32>',
-
-    // TODO define as arrays once we have appropriate uniformTypes
-    lightColor0: 'vec3<f32>',
-    lightPosition0: 'vec3<f32>',
-    // TODO - could combine direction and attenuation
-    lightDirection0: 'vec3<f32>',
-    lightAttenuation0: 'vec3<f32>',
-
-    lightColor1: 'vec3<f32>',
-    lightPosition1: 'vec3<f32>',
-    lightDirection1: 'vec3<f32>',
-    lightAttenuation1: 'vec3<f32>',
-    lightColor2: 'vec3<f32>',
-    lightPosition2: 'vec3<f32>',
-    lightDirection2: 'vec3<f32>',
-    lightAttenuation2: 'vec3<f32>',
-
-    lightColor3: 'vec3<f32>',
-    lightPosition3: 'vec3<f32>',
-    lightDirection3: 'vec3<f32>',
-    lightAttenuation3: 'vec3<f32>',
-
-    lightColor4: 'vec3<f32>',
-    lightPosition4: 'vec3<f32>',
-    lightDirection4: 'vec3<f32>',
-    lightAttenuation4: 'vec3<f32>'
+    lights: [LIGHT_UNIFORM_TYPE, MAX_LIGHTS]
   },
 
-  defaultUniforms: {
-    enabled: 1,
-    lightType: LIGHT_TYPE.POINT,
-
-    directionalLightCount: 0,
-    pointLightCount: 0,
-
-    ambientColor: [0.1, 0.1, 0.1],
-    lightColor0: [1, 1, 1],
-    lightPosition0: [1, 1, 2],
-    // TODO - could combine direction and attenuation
-    lightDirection0: [1, 1, 1],
-    lightAttenuation0: [1, 0, 0],
-
-    lightColor1: [1, 1, 1],
-    lightPosition1: [1, 1, 2],
-    lightDirection1: [1, 1, 1],
-    lightAttenuation1: [1, 0, 0],
-    lightColor2: [1, 1, 1],
-    lightPosition2: [1, 1, 2],
-    lightDirection2: [1, 1, 1],
-    lightAttenuation2: [1, 0, 0],
-    lightColor3: [1, 1, 1],
-    lightPosition3: [1, 1, 2],
-    lightDirection3: [1, 1, 1],
-    lightAttenuation3: [1, 0, 0],
-    lightColor4: [1, 1, 1],
-    lightPosition4: [1, 1, 2],
-    lightDirection4: [1, 1, 1],
-    lightAttenuation4: [1, 0, 0]
-  },
+  defaultUniforms: createDefaultLightingUniforms(),
   source: lightingUniformsWGSL,
   vs: lightingUniformsGLSL,
   fs: lightingUniformsGLSL,
@@ -172,14 +118,14 @@ export const lighting = {
 
 function getUniforms(
   props?: LightingProps,
-  prevUniforms: Partial<LightingUniforms> = {}
+  _prevUniforms: Partial<LightingUniforms> = {}
 ): LightingUniforms {
   // Copy props so we can modify
   props = props ? {...props} : props;
 
   // TODO legacy
   if (!props) {
-    return {...lighting.defaultUniforms};
+    return createDefaultLightingUniforms();
   }
   // Support for array of lights. Type of light is detected by type field
   if (props.lights) {
@@ -187,21 +133,24 @@ function getUniforms(
   }
 
   // Specify lights separately
-  const {ambientLight, pointLights, directionalLights} = props || {};
+  const {ambientLight, pointLights, spotLights, directionalLights} = props || {};
   const hasLights =
     ambientLight ||
     (pointLights && pointLights.length > 0) ||
+    (spotLights && spotLights.length > 0) ||
     (directionalLights && directionalLights.length > 0);
 
   // TODO - this may not be the correct decision
   if (!hasLights) {
-    return {...lighting.defaultUniforms, enabled: 0};
+    return {
+      ...createDefaultLightingUniforms(),
+      enabled: 0
+    };
   }
 
   const uniforms = {
-    ...lighting.defaultUniforms,
-    ...prevUniforms,
-    ...getLightSourceUniforms({ambientLight, pointLights, directionalLights})
+    ...createDefaultLightingUniforms(),
+    ...getLightSourceUniforms({ambientLight, pointLights, spotLights, directionalLights})
   };
 
   if (props.enabled !== undefined) {
@@ -214,55 +163,77 @@ function getUniforms(
 function getLightSourceUniforms({
   ambientLight,
   pointLights = [],
+  spotLights = [],
   directionalLights = []
-}: LightingProps): Partial<LightingUniforms> {
-  const lightSourceUniforms: Partial<LightingUniforms> = {};
-
-  lightSourceUniforms.ambientColor = convertColor(ambientLight);
+}: LightingProps): Omit<LightingUniforms, 'enabled'> {
+  const lights = createDefaultLightUniforms();
 
   let currentLight = 0;
   let pointLightCount = 0;
+  let spotLightCount = 0;
   let directionalLightCount = 0;
 
   for (const pointLight of pointLights) {
     if (currentLight >= MAX_LIGHTS) {
       break;
     }
-    lightSourceUniforms.lightType = LIGHT_TYPE.POINT;
 
-    const i = currentLight as 0 | 1 | 2 | 3 | 4;
-    lightSourceUniforms[`lightColor${i}`] = convertColor(pointLight);
-    lightSourceUniforms[`lightPosition${i}`] = pointLight.position;
-    lightSourceUniforms[`lightAttenuation${i}`] = pointLight.attenuation || [1, 0, 0];
+    lights[currentLight] = {
+      ...lights[currentLight],
+      color: convertColor(pointLight),
+      position: pointLight.position,
+      attenuation: pointLight.attenuation || [1, 0, 0]
+    };
     currentLight++;
     pointLightCount++;
+  }
+
+  for (const spotLight of spotLights) {
+    if (currentLight >= MAX_LIGHTS) {
+      break;
+    }
+
+    lights[currentLight] = {
+      ...lights[currentLight],
+      color: convertColor(spotLight),
+      position: spotLight.position,
+      direction: spotLight.direction,
+      attenuation: spotLight.attenuation || [1, 0, 0],
+      coneCos: getSpotConeCos(spotLight)
+    };
+    currentLight++;
+    spotLightCount++;
   }
 
   for (const directionalLight of directionalLights) {
     if (currentLight >= MAX_LIGHTS) {
       break;
     }
-    lightSourceUniforms.lightType = LIGHT_TYPE.DIRECTIONAL;
 
-    const i = currentLight as 0 | 1 | 2 | 3 | 4;
-    lightSourceUniforms[`lightColor${i}`] = convertColor(directionalLight);
-    lightSourceUniforms[`lightDirection${i}`] = directionalLight.direction;
+    lights[currentLight] = {
+      ...lights[currentLight],
+      color: convertColor(directionalLight),
+      direction: directionalLight.direction
+    };
     currentLight++;
     directionalLightCount++;
   }
 
-  if (pointLights.length + directionalLights.length > MAX_LIGHTS) {
+  if (pointLights.length + spotLights.length + directionalLights.length > MAX_LIGHTS) {
     log.warn(`MAX_LIGHTS exceeded, truncating to ${MAX_LIGHTS}`)();
   }
 
-  lightSourceUniforms.directionalLightCount = directionalLightCount;
-  lightSourceUniforms.pointLightCount = pointLightCount;
-
-  return lightSourceUniforms;
+  return {
+    ambientColor: convertColor(ambientLight),
+    directionalLightCount,
+    pointLightCount,
+    spotLightCount,
+    lights
+  };
 }
 
 function extractLightTypes(lights: Light[]): LightingProps {
-  const lightSources: LightingProps = {pointLights: [], directionalLights: []};
+  const lightSources: LightingProps = {pointLights: [], spotLights: [], directionalLights: []};
   for (const light of lights || []) {
     switch (light.type) {
       case 'ambient':
@@ -275,6 +246,9 @@ function extractLightTypes(lights: Light[]): LightingProps {
         break;
       case 'point':
         lightSources.pointLights?.push(light);
+        break;
+      case 'spot':
+        lightSources.spotLights?.push(light);
         break;
       default:
       // eslint-disable-next-line
@@ -290,4 +264,35 @@ function convertColor(
 ): NumberArray3 {
   const {color = [0, 0, 0], intensity = 1.0} = colorDef;
   return color.map(component => (component * intensity) / COLOR_FACTOR) as NumberArray3;
+}
+
+function createDefaultLightingUniforms(): LightingUniforms {
+  return {
+    enabled: 1,
+    directionalLightCount: 0,
+    pointLightCount: 0,
+    spotLightCount: 0,
+    ambientColor: [0.1, 0.1, 0.1],
+    lights: createDefaultLightUniforms()
+  };
+}
+
+function createDefaultLightUniforms(): LightingLightUniform[] {
+  return Array.from({length: MAX_LIGHTS}, () => createDefaultLightUniform());
+}
+
+function createDefaultLightUniform(): LightingLightUniform {
+  return {
+    color: [1, 1, 1],
+    position: [1, 1, 2],
+    direction: [1, 1, 1],
+    attenuation: [1, 0, 0],
+    coneCos: [1, 0]
+  };
+}
+
+function getSpotConeCos(spotLight: SpotLight): NumberArray2 {
+  const innerConeAngle = spotLight.innerConeAngle ?? 0;
+  const outerConeAngle = spotLight.outerConeAngle ?? Math.PI / 4;
+  return [Math.cos(innerConeAngle), Math.cos(outerConeAngle)];
 }
