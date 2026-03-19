@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {NumberArray16, NumberArray3, NumberArray4} from '@math.gl/core';
-import type {ShaderModule, UniformTypes} from '@luma.gl/shadertools';
+import type {ShaderModule, UniformTypes} from '../../src/index';
 
 type CompositeUniforms = {
   light: {
@@ -55,6 +55,35 @@ export const tupleUniformTypes = {
   modelMatrix: 'mat4x4<f32>'
 } as const satisfies Required<UniformTypes<Pick<CompositeUniforms, 'color' | 'modelMatrix'>>>;
 
+type NestedCompositeUniforms = {
+  cluster: {
+    keyLight: {
+      color: NumberArray4;
+      direction: NumberArray3;
+    };
+    fillLights: {
+      position: NumberArray3;
+      intensity: number;
+    }[];
+  };
+};
+
+export const nestedCompositeUniformTypes = {
+  cluster: {
+    keyLight: {
+      color: 'vec4<f32>',
+      direction: 'vec3<f32>'
+    },
+    fillLights: [
+      {
+        position: 'vec3<f32>',
+        intensity: 'f32'
+      },
+      4
+    ]
+  }
+} as const satisfies Required<UniformTypes<NestedCompositeUniforms>>;
+
 export const invalidCompositeModule = {
   name: 'invalid-composite',
   uniformTypes: {
@@ -65,3 +94,25 @@ export const invalidCompositeModule = {
     }
   }
 } as const satisfies ShaderModule<{}, Pick<CompositeUniforms, 'light'>>;
+
+export const invalidArrayElementModule = {
+  name: 'invalid-array-element',
+  uniformTypes: {
+    // @ts-expect-error jointMatrix arrays must keep mat4x4 element descriptors
+    jointMatrix: ['f32', 64]
+  }
+} as const satisfies ShaderModule<{}, Pick<CompositeUniforms, 'jointMatrix'>>;
+
+export const invalidStructArrayModule = {
+  name: 'invalid-struct-array',
+  uniformTypes: {
+    // @ts-expect-error intensity must remain an f32 descriptor
+    lights: [
+      {
+        position: 'vec3<f32>',
+        intensity: 'vec2<f32>'
+      },
+      2
+    ]
+  }
+} as const satisfies ShaderModule<{}, Pick<CompositeUniforms, 'lights'>>;

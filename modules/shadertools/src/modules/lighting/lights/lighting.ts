@@ -14,69 +14,120 @@ const MAX_LIGHTS = 5;
 /** Whether to divide */
 const COLOR_FACTOR = 255.0;
 
-/** Lighting helper types */
-
+/** Supported light source descriptions accepted by the lighting shader module. */
 export type Light = AmbientLight | PointLight | SpotLight | DirectionalLight;
 
+/** Ambient light contribution shared across the entire scene. */
 export type AmbientLight = {
+  /** Discriminator used to identify ambient lights in `lights: Light[]`. */
   type: 'ambient';
+  /** RGB light color in the existing `0..255` convention used by luma.gl materials. */
   color?: Readonly<NumberArray3>;
+  /** Scalar intensity multiplier applied to the light color. */
   intensity?: number;
 };
 
+/** Omnidirectional point light emitted from a world-space position. */
 export type PointLight = {
+  /** Discriminator used to identify point lights in `lights: Light[]`. */
   type: 'point';
+  /** World-space light position. */
   position: Readonly<NumberArray3>;
+  /** RGB light color in the existing `0..255` convention used by luma.gl materials. */
   color?: Readonly<NumberArray3>;
+  /** Scalar intensity multiplier applied to the light color. */
   intensity?: number;
+  /** Constant, linear, and quadratic attenuation coefficients. */
   attenuation?: Readonly<NumberArray3>;
 };
 
+/** Directional light defined only by its incoming world-space direction. */
 export type DirectionalLight = {
+  /** Discriminator used to identify directional lights in `lights: Light[]`. */
   type: 'directional';
+  /** World-space light direction. */
   direction: Readonly<NumberArray3>;
+  /** RGB light color in the existing `0..255` convention used by luma.gl materials. */
   color?: Readonly<NumberArray3>;
+  /** Scalar intensity multiplier applied to the light color. */
   intensity?: number;
 };
 
+/** Cone-shaped light emitted from a position and focused along a direction. */
 export type SpotLight = {
+  /** Discriminator used to identify spot lights in `lights: Light[]`. */
   type: 'spot';
+  /** World-space light position. */
   position: Readonly<NumberArray3>;
+  /** World-space light direction. */
   direction: Readonly<NumberArray3>;
+  /** RGB light color in the existing `0..255` convention used by luma.gl materials. */
   color?: Readonly<NumberArray3>;
+  /** Scalar intensity multiplier applied to the light color. */
   intensity?: number;
+  /** Constant, linear, and quadratic attenuation coefficients. */
   attenuation?: Readonly<NumberArray3>;
+  /** Inner spotlight cone angle in radians. */
   innerConeAngle?: number;
+  /** Outer spotlight cone angle in radians. */
   outerConeAngle?: number;
 };
 
+/** Public JavaScript props accepted by the `lighting` shader module. */
 export type LightingProps = {
+  /** Enables or disables lighting calculations for the module. */
   enabled?: boolean;
+  /** Preferred API for supplying mixed ambient, point, spot, and directional lights. */
   lights?: Light[];
-  /** @deprecated */
+  /**
+   * Legacy ambient-light prop.
+   * @deprecated Use `lights` with `{type: 'ambient', ...}` entries instead.
+   */
   ambientLight?: AmbientLight;
-  /** @deprecated */
+  /**
+   * Legacy point-light prop.
+   * @deprecated Use `lights` with `{type: 'point', ...}` entries instead.
+   */
   pointLights?: PointLight[];
-  /** @deprecated */
+  /**
+   * Legacy spot-light prop.
+   * @deprecated Use `lights` with `{type: 'spot', ...}` entries instead.
+   */
   spotLights?: SpotLight[];
-  /** @deprecated */
+  /**
+   * Legacy directional-light prop.
+   * @deprecated Use `lights` with `{type: 'directional', ...}` entries instead.
+   */
   directionalLights?: DirectionalLight[];
 };
 
+/** Packed per-light data written into the module's fixed-size uniform array. */
 export type LightingLightUniform = {
+  /** Light color converted to normalized shader-space RGB. */
   color: Readonly<NumberArray3>;
+  /** World-space light position or a default placeholder for non-positional lights. */
   position: Readonly<NumberArray3>;
+  /** World-space light direction or a default placeholder for positional lights. */
   direction: Readonly<NumberArray3>;
+  /** Constant, linear, and quadratic attenuation coefficients. */
   attenuation: Readonly<NumberArray3>;
+  /** Cosines of the inner and outer spotlight cone angles. */
   coneCos: Readonly<NumberArray2>;
 };
 
+/** Fully normalized uniform values produced by the `lighting` shader module. */
 export type LightingUniforms = {
+  /** `1` when lighting is enabled, otherwise `0`. */
   enabled: number;
+  /** Number of packed directional lights in the `lights` array. */
   directionalLightCount: number;
+  /** Number of packed point lights in the `lights` array. */
   pointLightCount: number;
+  /** Number of packed spot lights in the `lights` array. */
   spotLightCount: number;
+  /** Accumulated ambient color converted to normalized shader-space RGB. */
   ambientColor: Readonly<NumberArray3>;
+  /** Packed trailing array of non-ambient light structs. */
   lights: ReadonlyArray<LightingLightUniform>;
 };
 
@@ -88,7 +139,12 @@ const LIGHT_UNIFORM_TYPE = {
   coneCos: 'vec2<f32>'
 } as const;
 
-/** UBO ready lighting module */
+/**
+ * Portable lighting shader module shared by the Phong, Gouraud, and PBR material modules.
+ *
+ * The public JavaScript API accepts `lights: Light[]`, while the uniform buffer packs
+ * non-ambient lights into a fixed-size trailing array for portability across WebGL2 and WebGPU.
+ */
 export const lighting = {
   props: {} as LightingProps,
   uniforms: {} as LightingUniforms,

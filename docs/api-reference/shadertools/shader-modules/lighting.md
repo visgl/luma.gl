@@ -2,9 +2,10 @@
 
 The `lighting` shader module collects scene lighting into a single uniform block
 that can be shared across draw calls. It is the common light source module used
-by [`phongMaterial`](/docs/api-reference/shadertools/shader-modules/phong-material),
-[`gouraudMaterial`](/docs/api-reference/shadertools/shader-modules/gouraud-material),
-and [`pbrMaterial`](/docs/api-reference/shadertools/shader-modules/pbr-material).
+by 
+- [`phongMaterial`](/docs/api-reference/shadertools/shader-modules/phong-material),
+- [`gouraudMaterial`](/docs/api-reference/shadertools/shader-modules/gouraud-material),
+- [`pbrMaterial`](/docs/api-reference/shadertools/shader-modules/pbr-material).
 
 ## Props
 
@@ -18,10 +19,11 @@ Preferred API for supplying lights. The array can contain:
 
 - `AmbientLight`
 - `PointLight`
+- `SpotLight`
 - `DirectionalLight`
 
-Ambient lights contribute to `ambientColor`. Point and directional lights are
-packed into a fixed-size light array in the module's uniform block.
+Ambient lights contribute to `ambientColor`. Point, spot, and directional
+lights are packed into a fixed-size light array in the module's uniform block.
 
 ### Legacy props
 
@@ -30,6 +32,7 @@ uniform layout:
 
 - `ambientLight?: AmbientLight`
 - `pointLights?: PointLight[]`
+- `spotLights?: SpotLight[]`
 - `directionalLights?: DirectionalLight[]`
 
 ## Light Types
@@ -53,6 +56,21 @@ type PointLight = {
   color?: [number, number, number];
   intensity?: number;
   attenuation?: [number, number, number];
+};
+```
+
+### `SpotLight`
+
+```ts
+type SpotLight = {
+  type: 'spot';
+  position: [number, number, number];
+  direction: [number, number, number];
+  color?: [number, number, number];
+  intensity?: number;
+  attenuation?: [number, number, number];
+  innerConeAngle?: number;
+  outerConeAngle?: number;
 };
 ```
 
@@ -80,13 +98,15 @@ module uses a fixed-size, portable uniform buffer layout:
   enabled: 'i32',
   directionalLightCount: 'i32',
   pointLightCount: 'i32',
+  spotLightCount: 'i32',
   ambientColor: 'vec3<f32>',
   lights: [
     {
       color: 'vec3<f32>',
       position: 'vec3<f32>',
       direction: 'vec3<f32>',
-      attenuation: 'vec3<f32>'
+      attenuation: 'vec3<f32>',
+      coneCos: 'vec2<f32>'
     },
     5
   ]
@@ -97,6 +117,7 @@ This gives the shader a trailing array of `5` light structs. The counts tell
 the shader how many entries are active:
 
 - Point lights occupy `lights[0..pointLightCount-1]`
+- Spot lights occupy the next `spotLightCount` entries
 - Directional lights occupy the next `directionalLightCount` entries
 - Ambient lights do not consume array slots
 
@@ -115,6 +136,14 @@ shaderInputs.setProps({
     lights: [
       {type: 'ambient', color: [255, 255, 255], intensity: 0.1},
       {type: 'point', color: [255, 120, 10], position: [2, 4, 3]},
+      {
+        type: 'spot',
+        color: [80, 160, 255],
+        position: [-3, -2, 2],
+        direction: [3, 2, -2],
+        innerConeAngle: 0.2,
+        outerConeAngle: 0.6
+      },
       {type: 'directional', color: [255, 255, 255], direction: [0, -1, 0]}
     ]
   }
@@ -131,6 +160,10 @@ portable std140 packing.
 
 Returns the packed point light at `index`.
 
+### `lighting_getSpotLight(index)`
+
+Returns the packed spot light at `index`.
+
 ### `lighting_getDirectionalLight(index)`
 
 Returns the packed directional light at `index`.
@@ -138,6 +171,10 @@ Returns the packed directional light at `index`.
 ### `getPointLightAttenuation(pointLight, distance)`
 
 Returns the attenuation factor for a point light.
+
+### `getSpotLightAttenuation(spotLight, positionWorldspace)`
+
+Returns the attenuation factor for a spot light, including cone falloff.
 
 ## Remarks
 

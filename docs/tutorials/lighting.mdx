@@ -20,7 +20,8 @@ their own binding slots in the generated pipeline layout.
 The built-in `lighting` module accepts `lights: Light[]` on the JavaScript side,
 but packs those values into a fixed-size, trailing array of light structs inside
 its uniform block for portability across WebGL2 and WebGPU. The shader reads the
-active portion of that array using `pointLightCount` and `directionalLightCount`.
+active portion of that array using `pointLightCount`, `spotLightCount`, and
+`directionalLightCount`.
 
 The example below introduces the `lighting` and `phongMaterial` shader modules. A
 `ShaderInputs` instance manages uniform blocks and module settings, while the
