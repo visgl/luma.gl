@@ -36,6 +36,28 @@ test('shadertype#textureFormatDecoder.getInfo', t => {
   t.end();
 });
 
+test('shadertype#textureFormatDecoder.getInfo packed WebGL formats', t => {
+  const testCases = [
+    {format: 'rgba4unorm-webgl' as const, channels: 'rgba', bitsPerChannel: [4, 4, 4, 4] as const},
+    {format: 'rgb565unorm-webgl' as const, channels: 'rgb', bitsPerChannel: [5, 6, 5, 0] as const},
+    {format: 'rgb5a1unorm-webgl' as const, channels: 'rgba', bitsPerChannel: [5, 5, 5, 1] as const}
+  ];
+
+  for (const tc of testCases) {
+    const decoded = textureFormatDecoder.getInfo(tc.format);
+    t.equal(decoded.packed, true, `${tc.format} remains packed`);
+    t.equal(decoded.webgl, true, `${tc.format} remains webgl-specific`);
+    t.equal(decoded.channels, tc.channels, `${tc.format} keeps channels`);
+    t.deepEqual(
+      decoded.bitsPerChannel,
+      tc.bitsPerChannel,
+      `${tc.format} keeps packed channel bit sizes`
+    );
+  }
+
+  t.end();
+});
+
 // prettier-ignore
 const TEST_CASES_CAPABILITIES: {format: TextureFormat, result: Omit<TextureFormatCapabilities, 'format'>}[] = [
   // 8-bit formats

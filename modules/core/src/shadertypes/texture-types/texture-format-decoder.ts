@@ -164,7 +164,7 @@ export function getTextureFormatInfo(format: TextureFormat): TextureFormatInfo {
   }
 
   // Fill in missing information that can be derived from the format string
-  const matches = RGB_FORMAT_REGEX.exec(format as string);
+  const matches = !formatInfo.packed ? RGB_FORMAT_REGEX.exec(format as string) : null;
   if (matches) {
     const [, channels, length, type, srgb, suffix] = matches;
     const dataType = `${type}${length}` as NormalizedDataType;
