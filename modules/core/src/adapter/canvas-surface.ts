@@ -8,7 +8,7 @@ import type {CanvasContext} from './canvas-context';
 import {CanvasObserver} from './canvas-observer';
 import type {PresentationContext} from './presentation-context';
 import type {Framebuffer} from './resources/framebuffer';
-import type {TextureFormatDepthStencil} from '../shadertypes/textures/texture-formats';
+import type {TextureFormatDepthStencil} from '../shadertypes/texture-types/texture-formats';
 import {uid} from '../utils/uid';
 import {withResolvers} from '../utils/promise-utils';
 import {assertDefined} from '../utils/assert';

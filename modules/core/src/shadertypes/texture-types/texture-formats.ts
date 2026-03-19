@@ -2,7 +2,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {NormalizedDataType, DataTypeArray, NormalizedDataTypeArray} from '../data-types/data-types';
+import type {
+  NormalizedDataType,
+  TypedArrayConstructorT,
+  NormalizedTypedArrayConstructorT
+} from '../data-types/data-types';
 
 /** Information about the structure of a texture format */
 export type TextureFormatInfo = {
@@ -202,7 +206,6 @@ export type TextureFormatPacked32 =
   | 'rg11b10ufloat'
   | 'rgb10a2unorm'
   | 'rgb10a2uint';
-
 export type TextureFormatCompressed =
   | 'bc1-rgb-unorm-webgl'
   | 'bc1-rgb-unorm-srgb-webgl'
@@ -322,6 +325,15 @@ export type TextureFormatDataType<T extends TextureFormat> = T extends TextureFo
                               : T extends TextureFormatPacked32
                                 ? 'uint32'
                                 : never;
+
+export type TextureFormatDataTypeT<T extends TextureFormat> = TextureFormatDataType<T>;
+
+type DataTypeArray<T extends NormalizedDataType> = InstanceType<TypedArrayConstructorT<T>>;
+type NormalizedDataTypeArray<T extends NormalizedDataType> = InstanceType<
+  NormalizedTypedArrayConstructorT<T>
+>;
+
+// HELPER TYPES
 
 /*
 export type TextureFormatColorWebGPU =

@@ -36,3 +36,10 @@ const buffer = device.createBuffer(...);
 const texture = device.createTexture(...);
 const renderPass = device.beginRenderPass(...);
 ```
+
+## Related Pages
+
+- [Shader Types](/docs/api-reference/core/shader-types)
+- [Shader Layout](/docs/api-reference/core/shader-layout)
+- [Vertex Formats](/docs/api-reference/core/vertex-formats)
+- [Texture Formats](/docs/api-reference/core/texture-formats)

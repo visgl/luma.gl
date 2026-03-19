@@ -410,6 +410,11 @@ fn PBRInfo_setPointLight(pbrInfo: ptr<function, PBRInfo>, pointLight: PointLight
   PBRInfo_setDirectionalLight(pbrInfo, light_direction);
 }
 
+fn PBRInfo_setSpotLight(pbrInfo: ptr<function, PBRInfo>, spotLight: SpotLight) {
+  let light_direction = normalize(spotLight.position - fragmentInputs.pbr_vPosition);
+  PBRInfo_setDirectionalLight(pbrInfo, light_direction);
+}
+
 fn calculateFinalColor(pbrInfo: PBRInfo, lightColor: vec3<f32>) -> vec3<f32> {
   // Calculate the shading terms for the microfacet specular shading model
   let F = specularReflection(pbrInfo);
@@ -526,6 +531,14 @@ fn pbr_filterColor(colorUnused: vec4<f32>) -> vec4<f32> {
           distance(lighting_getPointLight(i).position, fragmentInputs.pbr_vPosition)
         );
         color += calculateFinalColor(pbrInfo, lighting_getPointLight(i).color / attenuation);
+      }
+    }
+
+    for (var i = 0; i < lighting.spotLightCount; i++) {
+      if (i < lighting.spotLightCount) {
+        PBRInfo_setSpotLight(&pbrInfo, lighting_getSpotLight(i));
+        let attenuation = getSpotLightAttenuation(lighting_getSpotLight(i), fragmentInputs.pbr_vPosition);
+        color += calculateFinalColor(pbrInfo, lighting_getSpotLight(i).color / attenuation);
       }
     }
     #endif

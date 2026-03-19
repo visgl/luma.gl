@@ -51,8 +51,21 @@ fn lighting_getLightColor2(surfaceColor: vec3<f32>, cameraPosition: vec3<f32>, p
     );
   }
 
-  let totalLights = min(MAX_LIGHTS, lighting.pointLightCount + lighting.directionalLightCount);
-  for (var i: i32 = lighting.pointLightCount; i < totalLights; i++) {
+  for (var i: i32 = 0; i < lighting.spotLightCount; i++) {
+    let spotLight: SpotLight = lighting_getSpotLight(i);
+    let light_position_worldspace: vec3<f32> = spotLight.position;
+    let light_direction: vec3<f32> = normalize(light_position_worldspace - position_worldspace);
+    let light_attenuation = getSpotLightAttenuation(spotLight, position_worldspace);
+    lightColor += lighting_getLightColor(
+      surfaceColor,
+      light_direction,
+      view_direction,
+      normal_worldspace,
+      spotLight.color / light_attenuation
+    );
+  }
+
+  for (var i: i32 = 0; i < lighting.directionalLightCount; i++) {
     let directionalLight: DirectionalLight = lighting_getDirectionalLight(i);
     lightColor += lighting_getLightColor(surfaceColor, -directionalLight.direction, view_direction, normal_worldspace, directionalLight.color);
   }  
@@ -84,8 +97,21 @@ fn lighting_getSpecularLightColor(cameraPosition: vec3<f32>, position_worldspace
       );
     }
 
-    let totalLights = min(MAX_LIGHTS, lighting.pointLightCount + lighting.directionalLightCount);
-    for (var i: i32 = lighting.pointLightCount; i < totalLights; i++) {
+    for (var i: i32 = 0; i < lighting.spotLightCount; i++) {
+      let spotLight: SpotLight = lighting_getSpotLight(i);
+      let light_position_worldspace: vec3<f32> = spotLight.position;
+      let light_direction: vec3<f32> = normalize(light_position_worldspace - position_worldspace);
+      let light_attenuation = getSpotLightAttenuation(spotLight, position_worldspace);
+      lightColor += lighting_getLightColor(
+        surfaceColor,
+        light_direction,
+        view_direction,
+        normal_worldspace,
+        spotLight.color / light_attenuation
+      );
+    }
+
+    for (var i: i32 = 0; i < lighting.directionalLightCount; i++) {
         let directionalLight: DirectionalLight = lighting_getDirectionalLight(i);
         lightColor += lighting_getLightColor(surfaceColor, -directionalLight.direction, view_direction, normal_worldspace, directionalLight.color);
     }

@@ -53,6 +53,7 @@
         "type": "category",
         "label": "Shader Programming",
         "items": [
+          "api-guide/shaders/shader-types",
           "api-guide/shaders/shader-modules"
         ]
       },
@@ -91,6 +92,7 @@
           "api-reference/core/parameters",
           "api-reference/core/bindings",
           "api-reference/core/shader-layout",
+          "api-reference/core/shader-types",
           "api-reference/core/vertex-formats",
           "api-reference/core/texture-formats",
           "api-reference/core/resources/buffer",

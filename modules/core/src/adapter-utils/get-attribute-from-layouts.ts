@@ -4,13 +4,10 @@
 
 import {log} from '../utils/log';
 import type {PrimitiveDataType, NormalizedDataType} from '../shadertypes/data-types/data-types';
-import type {AttributeShaderType} from '../shadertypes/data-types/shader-types';
-import type {VertexFormat} from '../shadertypes/vertex-arrays/vertex-formats';
-import {getAttributeShaderTypeInfo} from '../shadertypes/data-types/decode-shader-types';
-import {
-  getVertexFormatInfo,
-  getCompatibleVertexFormat
-} from '../shadertypes/vertex-arrays/decode-vertex-format';
+import type {AttributeShaderType} from '../shadertypes/shader-types/shader-types';
+import type {VertexFormat} from '../shadertypes/vertex-types/vertex-formats';
+import {shaderTypeDecoder} from '../shadertypes/shader-types/shader-type-decoder';
+import {vertexFormatDecoder} from '../shadertypes/vertex-types/vertex-format-decoder';
 import type {ShaderLayout, AttributeDeclaration} from '../adapter/types/shader-layout';
 import type {BufferLayout} from '../adapter/types/buffer-layout';
 
@@ -112,10 +109,10 @@ function getAttributeInfoFromLayouts(
     return null;
   }
 
-  const attributeTypeInfo = getAttributeShaderTypeInfo(shaderDeclaration.type);
-  const defaultVertexFormat = getCompatibleVertexFormat(attributeTypeInfo);
+  const attributeTypeInfo = shaderTypeDecoder.getAttributeShaderTypeInfo(shaderDeclaration.type);
+  const defaultVertexFormat = vertexFormatDecoder.getCompatibleVertexFormat(attributeTypeInfo);
   const vertexFormat = bufferMapping?.vertexFormat || defaultVertexFormat;
-  const vertexFormatInfo = getVertexFormatInfo(vertexFormat);
+  const vertexFormatInfo = vertexFormatDecoder.getVertexFormatInfo(vertexFormat);
 
   return {
     attributeName: bufferMapping?.attributeName || shaderDeclaration.name,
@@ -217,7 +214,7 @@ function getAttributeFromAttributesList(
     // Calculate a default byte stride if not provided
     if (typeof bufferLayout.byteStride !== 'number') {
       for (const attributeMapping of bufferLayout.attributes || []) {
-        const info = getVertexFormatInfo(attributeMapping.format);
+        const info = vertexFormatDecoder.getVertexFormatInfo(attributeMapping.format);
         // @ts-ignore
         byteStride += info.byteLength;
       }
