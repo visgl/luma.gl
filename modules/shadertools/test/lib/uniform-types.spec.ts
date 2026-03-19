@@ -40,13 +40,10 @@ export const compositeModule = {
   uniformTypes: compositeUniformTypes
 } as const satisfies ShaderModule<{}, Omit<CompositeUniforms, 'jointMatrix'>>;
 
-export const legacyArrayModule = {
-  name: 'legacy-array',
+export const arrayModule = {
+  name: 'array',
   uniformTypes: {
-    jointMatrix: 'mat4x4<f32>'
-  },
-  uniformSizes: {
-    jointMatrix: 64
+    jointMatrix: ['mat4x4<f32>', 64]
   }
 } as const satisfies ShaderModule<{}, Pick<CompositeUniforms, 'jointMatrix'>>;
 
@@ -106,10 +103,10 @@ export const invalidArrayElementModule = {
 export const invalidStructArrayModule = {
   name: 'invalid-struct-array',
   uniformTypes: {
-    // @ts-expect-error intensity must remain an f32 descriptor
     lights: [
       {
         position: 'vec3<f32>',
+        // @ts-expect-error intensity must remain an f32 descriptor
         intensity: 'vec2<f32>'
       },
       2

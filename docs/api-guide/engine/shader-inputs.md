@@ -15,7 +15,7 @@ which returned values are uniforms and how nested composite values should be
 merged.
 
 For the descriptor syntax and the TypeScript inference rules behind
-`uniformTypes`, see [Shader Types](/docs/api-guide/shaders/shader-types).
+`uniformTypes`, see [Core Shader Types](/docs/api-reference/core/shader-types).
 
 ## Composite Uniforms
 
@@ -29,7 +29,7 @@ fixed-size trailing array of light structs.
 
 ## Related Pages
 
-- [Shader Types](/docs/api-guide/shaders/shader-types)
+- [Core Shader Types](/docs/api-reference/core/shader-types)
 - [Shader Modules](/docs/api-guide/shaders/shader-modules)
 - [ShaderInputs Reference](/docs/api-reference/engine/shader-inputs)
 - [UniformStore](/docs/api-reference/core/uniform-store)

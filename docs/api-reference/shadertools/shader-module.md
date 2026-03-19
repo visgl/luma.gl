@@ -54,9 +54,9 @@ luma.gl also supports composite uniform descriptors:
 - structs use object literals
 - fixed-size arrays use `[elementType, length]`
 
-See [Shader Types](/docs/api-guide/shaders/shader-types) for the descriptor
-syntax, TypeScript inference, array handling, and how nested values flow
-through `ShaderInputs` and uniform-buffer packing.
+See [Core Shader Types](/docs/api-reference/core/shader-types) for the
+descriptor syntax, TypeScript inference, array handling, and how nested values
+flow through `ShaderInputs` and uniform-buffer packing.
 
 #### `uniformPropTypes` (_Object_) - Uniform JS prop types
 

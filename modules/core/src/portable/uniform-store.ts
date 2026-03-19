@@ -39,7 +39,6 @@ export class UniformStore<
       keyof TPropGroups,
       {
         uniformTypes?: Record<string, CompositeShaderType>;
-        uniformSizes?: Record<string, number>;
         defaultProps?: Record<string, unknown>;
         defaultUniforms?: Record<string, CompositeUniformValue>;
       }
@@ -49,10 +48,7 @@ export class UniformStore<
       const uniformBufferName = bufferName as keyof TPropGroups;
 
       // Create a layout object to help us generate correctly formatted binary uniform buffers
-      const uniformBufferLayout = new UniformBufferLayout(
-        block.uniformTypes ?? {},
-        block.uniformSizes ?? {}
-      );
+      const uniformBufferLayout = new UniformBufferLayout(block.uniformTypes ?? {});
       this.uniformBufferLayouts.set(uniformBufferName, uniformBufferLayout);
 
       // Create a Uniform block to store the uniforms for each buffer.

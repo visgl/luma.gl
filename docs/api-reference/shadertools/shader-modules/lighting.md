@@ -10,7 +10,7 @@ by
 ## Props
 
 For the uniform descriptor syntax behind the module's packed light array, see
-[Shader Types](/docs/api-guide/shaders/shader-types).
+[Core Shader Types](/docs/api-reference/core/shader-types).
 
 ### `enabled?: boolean`
 
@@ -163,8 +163,9 @@ shaderInputs.setProps({
 
 `ShaderInputs` preserves the nested `lights` array shape at the module API
 boundary. `UniformStore` and `UniformBufferLayout` flatten it internally for
-portable std140 packing. See [Shader Types](/docs/api-guide/shaders/shader-types)
-for the general rules behind that flow.
+portable std140 packing. See
+[Core Shader Types](/docs/api-reference/core/shader-types) for the general
+rules behind that flow.
 
 ## Shader Functions
 

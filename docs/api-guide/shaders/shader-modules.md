@@ -76,6 +76,6 @@ For details see the [`ShaderModule`](/docs/api-reference/shadertools/shader-modu
 
 For the uniform descriptor syntax used by `uniformTypes`, including structs,
 fixed-size arrays, and TypeScript inference, see
-[Shader Types](/docs/api-guide/shaders/shader-types).
+[Core Shader Types](/docs/api-reference/core/shader-types).
 
 Several functions are also available to initialize and use shader modules.

@@ -16,11 +16,9 @@ The module exposes a joint matrix palette:
 
 ```ts
 {
-  jointMatrix: 'mat4x4<f32>'
+  jointMatrix: ['mat4x4<f32>', 20]
 }
 ```
-
-with a legacy top-level array size of `20` matrices via `uniformSizes`.
 
 ## Usage
 
@@ -37,8 +35,5 @@ indices and weights.
 ## Remarks
 
 - The current module packs up to `20` joints into the uniform block.
-- `jointMatrix` uses the legacy top-level array form internally
-  (`uniformTypes.jointMatrix` plus `uniformSizes.jointMatrix`), which remains
-  supported for compatibility.
 - The module is designed around glTF skin data and expects the first skin in the
   supplied `scenegraphsFromGLTF` structure.

@@ -231,8 +231,12 @@ test('DirectionalLightModel falls back to unit scene without positional lights',
   const position = Array.from(
     (directionalLightModel as any)._instanceData.instancePositions.slice(0, 3)
   );
+  const expectedUnitSceneScale = Math.sqrt(3);
 
-  t.ok(almostEqual(position[0], -0.35), 'unit scene fallback anchor uses default scale');
+  t.ok(
+    almostEqual(position[0], -expectedUnitSceneScale * 0.35),
+    'unit scene fallback anchor uses default scale'
+  );
   t.ok(almostEqual(position[1], 0), 'unit scene fallback anchor keeps y at origin');
   t.ok(almostEqual(position[2], 0), 'unit scene fallback anchor keeps z at origin');
 

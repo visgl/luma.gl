@@ -82,15 +82,10 @@ test('array of primitives uses std140 stride', t => {
   t.end();
 });
 
-test('legacy uniformSizes arrays accept packed values', t => {
-  const layout = new UniformBufferLayout(
-    {
-      jointMatrix: 'mat4x4<f32>'
-    },
-    {
-      jointMatrix: 2
-    }
-  );
+test('array of matrices accepts packed values', t => {
+  const layout = new UniformBufferLayout({
+    jointMatrix: ['mat4x4<f32>', 2]
+  });
 
   const data = layout.getData({
     jointMatrix: new Float32Array([
@@ -188,25 +183,6 @@ test('partial nested updates preserve unspecified leaves', t => {
 
   t.end();
 });
-
-test('mismatched array descriptor and uniformSizes throws', t => {
-  t.throws(
-    () =>
-      new UniformBufferLayout(
-        {
-          lights: ['f32', 2]
-        },
-        {
-          lights: 3
-        }
-      ),
-    /uniformSizes\.lights/,
-    'mismatch throws'
-  );
-
-  t.end();
-});
-
 test('uniform layout accepts WGSL alias types', t => {
   const layout = new UniformBufferLayout({
     camera: 'vec3f',

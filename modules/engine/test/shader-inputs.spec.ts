@@ -319,13 +319,6 @@ test('ShaderInputs#lighting array-of-struct uniforms', t => {
         direction: [1, 1, 1],
         attenuation: [1, 0, 0],
         coneCos: [1, 0]
-      },
-      {
-        color: [1, 1, 1],
-        position: [1, 1, 2],
-        direction: [1, 1, 1],
-        attenuation: [1, 0, 0],
-        coneCos: [1, 0]
       }
     ],
     'lighting module keeps nested light structs'

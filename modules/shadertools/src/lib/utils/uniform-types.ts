@@ -78,28 +78,8 @@ type UniformType<ValueT> = ValueT extends UniformValue
       ? {[name in keyof ValueT]-?: UniformType<NonNullable<ValueT[name]>>}
       : never;
 
-type UniformTypeWithLegacySize<ValueT> =
-  UniformType<ValueT> extends readonly [infer ElementType, number]
-    ? ElementType extends CompositeShaderType
-      ? ElementType | UniformType<ValueT>
-      : UniformType<ValueT>
-    : UniformType<ValueT>;
-
 type UniformProps = Record<string, unknown>;
 
-type UniformArrayKeys<PropsT extends UniformProps> = {
-  [name in keyof PropsT]-?: NonNullable<PropsT[name]> extends UniformValue
-    ? never
-    : NonNullable<PropsT[name]> extends ReadonlyArray<unknown>
-      ? name
-      : never;
-}[keyof PropsT];
-
 export type UniformTypes<PropsT extends UniformProps> = {
-  [name in keyof PropsT]-?: UniformTypeWithLegacySize<NonNullable<PropsT[name]>> &
-    CompositeShaderType;
-};
-
-export type UniformSizes<PropsT extends UniformProps> = {
-  [name in UniformArrayKeys<PropsT>]: number;
+  [name in keyof PropsT]-?: UniformType<NonNullable<PropsT[name]>> & CompositeShaderType;
 };

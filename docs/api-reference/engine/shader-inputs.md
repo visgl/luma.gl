@@ -19,7 +19,7 @@ shaderInputs.setProps({
 ```
 
 For the `uniformTypes` descriptor syntax that drives nested uniform handling,
-see [Shader Types](/docs/api-guide/shaders/shader-types).
+see [Core Shader Types](/docs/api-reference/core/shader-types).
 
 ## Types
 

@@ -7,6 +7,7 @@ import {UniformBufferLayout} from '@luma.gl/core';
 import {lighting, type LightingProps, type LightingUniforms} from '../../../src/index';
 
 const lightingUniformTypecheck: LightingUniforms = lighting.defaultUniforms;
+const FLOAT32_EPSILON = 1e-6;
 
 test('shadertools#lighting uses a trailing struct array uniform block', t => {
   t.ok(lightingUniformTypecheck, 'lighting uniforms are typed');
@@ -80,9 +81,8 @@ test('shadertools#lighting uses a trailing struct array uniform block', t => {
     -1,
     'spot light direction packed'
   );
-  t.equal(
-    floatView[layout.get('lights[1].coneCos')!.offset],
-    Math.cos(0.25),
+  t.ok(
+    Math.abs(floatView[layout.get('lights[1].coneCos')!.offset] - Math.cos(0.25)) < FLOAT32_EPSILON,
     'spot light cone packed'
   );
   t.equal(

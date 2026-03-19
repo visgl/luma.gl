@@ -108,9 +108,6 @@ export const skin = {
   },
 
   uniformTypes: {
-    jointMatrix: 'mat4x4<f32>'
-  },
-  uniformSizes: {
-    jointMatrix: SKIN_MAX_JOINTS
+    jointMatrix: ['mat4x4<f32>', SKIN_MAX_JOINTS]
   }
 } as const satisfies ShaderModule<SkinProps, SkinUniforms>;

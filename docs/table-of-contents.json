@@ -92,6 +92,7 @@
           "api-reference/core/parameters",
           "api-reference/core/bindings",
           "api-reference/core/shader-layout",
+          "api-reference/core/shader-types",
           "api-reference/core/vertex-formats",
           "api-reference/core/texture-formats",
           "api-reference/core/resources/buffer",

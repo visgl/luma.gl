@@ -48,11 +48,8 @@ export class UniformBufferLayout {
   readonly byteLength: number;
 
   /** Create a new UniformBufferLayout given a map of attributes. */
-  constructor(
-    uniformTypes: Readonly<Record<string, CompositeShaderType>>,
-    uniformSizes: Readonly<Record<string, number>> = {}
-  ) {
-    this.uniformTypes = normalizeUniformTypes(uniformTypes, uniformSizes);
+  constructor(uniformTypes: Readonly<Record<string, CompositeShaderType>>) {
+    this.uniformTypes = {...uniformTypes};
 
     let size = 0;
 
@@ -278,47 +275,6 @@ export class UniformBufferLayout {
       }
     }
   }
-}
-
-function normalizeUniformTypes(
-  uniformTypes: Readonly<Record<string, CompositeShaderType>>,
-  uniformSizes: Readonly<Record<string, number>>
-): Record<string, CompositeShaderType> {
-  const normalizedUniformTypes: Record<string, CompositeShaderType> = {};
-
-  for (const [name, uniformType] of Object.entries(uniformTypes)) {
-    const uniformSize = uniformSizes[name];
-
-    if (uniformSize === undefined) {
-      normalizedUniformTypes[name] = uniformType;
-      continue;
-    }
-
-    if (Array.isArray(uniformType)) {
-      if (uniformType[1] !== uniformSize) {
-        throw new Error(
-          `uniformSizes.${name} (${uniformSize}) does not match uniformTypes.${name} (${uniformType[1]})`
-        );
-      }
-      normalizedUniformTypes[name] = uniformType;
-      continue;
-    }
-
-    if (typeof uniformType === 'string') {
-      normalizedUniformTypes[name] = [uniformType, uniformSize];
-      continue;
-    }
-
-    throw new Error(`uniformSizes is only supported for top-level primitive arrays: ${name}`);
-  }
-
-  for (const name of Object.keys(uniformSizes)) {
-    if (!(name in normalizedUniformTypes)) {
-      throw new Error(`uniformSizes.${name} does not have a matching uniformTypes entry`);
-    }
-  }
-
-  return normalizedUniformTypes;
 }
 
 function getTypeSize(type: CompositeShaderType): number {
