@@ -4,6 +4,9 @@
 - a shader module system that enables applications to compose portable shaders from libraries of shader modules
 - together with a core library of shader modules that applications can add to their own shaders to add features such as lighting, picking, image processing and more.
 
+For the uniform descriptor syntax used by shader modules, see
+[Shader Types](/docs/api-guide/shaders/shader-types).
+
 :::info
 The `@luma.gl/shadertools` module only performs textual processing on shader source code. It does not use or depend on the WebGL or WebGPU APIs or any other luma.gl module.
 :::

@@ -9,11 +9,18 @@ by
 
 ## Props
 
+For the uniform descriptor syntax behind the module's packed light array, see
+[Shader Types](/docs/api-guide/shaders/shader-types).
+
 ### `enabled?: boolean`
 
 Enables or disables lighting calculations for the module.
 
 ### `lights?: Light[]`
+
+<p class="badges">
+  <img src="https://img.shields.io/badge/From-v9.3-blue.svg?style=flat-square" alt="From-v9.3" />
+</p>
 
 Preferred API for supplying lights. The array can contain:
 
@@ -60,6 +67,10 @@ type PointLight = {
 ```
 
 ### `SpotLight`
+
+<p class="badges">
+  <img src="https://img.shields.io/badge/From-v9.3-blue.svg?style=flat-square" alt="From-v9.3" />
+</p>
 
 ```ts
 type SpotLight = {
@@ -152,7 +163,8 @@ shaderInputs.setProps({
 
 `ShaderInputs` preserves the nested `lights` array shape at the module API
 boundary. `UniformStore` and `UniformBufferLayout` flatten it internally for
-portable std140 packing.
+portable std140 packing. See [Shader Types](/docs/api-guide/shaders/shader-types)
+for the general rules behind that flow.
 
 ## Shader Functions
 
@@ -161,6 +173,10 @@ portable std140 packing.
 Returns the packed point light at `index`.
 
 ### `lighting_getSpotLight(index)`
+
+<p class="badges">
+  <img src="https://img.shields.io/badge/From-v9.3-blue.svg?style=flat-square" alt="From-v9.3" />
+</p>
 
 Returns the packed spot light at `index`.
 
@@ -173,6 +189,10 @@ Returns the packed directional light at `index`.
 Returns the attenuation factor for a point light.
 
 ### `getSpotLightAttenuation(spotLight, positionWorldspace)`
+
+<p class="badges">
+  <img src="https://img.shields.io/badge/From-v9.3-blue.svg?style=flat-square" alt="From-v9.3" />
+</p>
 
 Returns the attenuation factor for a spot light, including cone falloff.
 

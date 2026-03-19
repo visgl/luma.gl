@@ -53,6 +53,7 @@
         "type": "category",
         "label": "Shader Programming",
         "items": [
+          "api-guide/shaders/shader-types",
           "api-guide/shaders/shader-modules"
         ]
       },
