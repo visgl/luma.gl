@@ -3,8 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'test/utils/vitest-tape';
-import {Texture} from '@luma.gl/core';
-import {luma} from '@luma.gl/core';
+import {Texture, luma} from '@luma.gl/core';
 import {
   getNullTestDevice,
   getTestDevices,
