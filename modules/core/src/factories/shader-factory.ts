@@ -2,8 +2,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Device, Shader, ShaderProps, log} from '@luma.gl/core';
-import type {EngineModuleState} from '../types';
+import {Device} from '../adapter/device';
+import {Shader, type ShaderProps} from '../adapter/resources/shader';
+import {log} from '../utils/log';
+import type {CoreModuleState} from './core-module-state';
 
 type CacheItem = {resource: Shader; useCount: number};
 
@@ -13,7 +15,7 @@ export class ShaderFactory {
 
   /** Returns the default ShaderFactory for the given {@link Device}, creating one if necessary. */
   static getDefaultShaderFactory(device: Device): ShaderFactory {
-    const moduleData = device.getModuleData<EngineModuleState>('@luma.gl/engine');
+    const moduleData = device.getModuleData<CoreModuleState>('@luma.gl/core');
     moduleData.defaultShaderFactory ||= new ShaderFactory(device);
     return moduleData.defaultShaderFactory;
   }

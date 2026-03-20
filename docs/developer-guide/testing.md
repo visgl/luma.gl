@@ -4,17 +4,17 @@ The primary test runner is Vitest.
 
 ## Commands
 
-- `yarn test-node` runs the Node-safe test suite.
+- `yarn test-node` runs the Node-only test suite.
 - `yarn test-browser` runs browser-backed tests in headed Chromium for local development.
 - `yarn test-headless` runs the browser-backed suite in headless Chromium for CI.
 - `yarn test` runs `test-node` and then `test-browser`.
-- `yarn test-fast` runs linting and the Node suite.
-- `yarn test-coverage` runs the Node suite plus the headless browser suite with coverage enabled.
+- `yarn test-fast` runs linting and the Node-only suite.
+- `yarn test-coverage` runs the Node-only suite plus the headless browser suite with coverage enabled.
 
 Vitest discovers tests directly from spec files:
 
-- Use `*.spec.ts` / `*.spec.js` for Node-safe tests.
-- Use `*.browser.spec.ts` / `*.browser.spec.js` for tests that require browser APIs or GPU access.
+- Use `*.spec.ts` / `*.spec.js` for the default browser-backed test path.
+- Use `*.node.spec.ts` / `*.node.spec.js` only for tests that must stay in the Node project.
 
 ## Test device creation
 

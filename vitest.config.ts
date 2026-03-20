@@ -23,10 +23,10 @@ const EXCLUDE_PATTERNS = [
   'modules/arrow/test/arrow/get-arrow-data.spec.ts',
   'modules/core/test/shadertypes/shader-types.spec.ts',
   'modules/engine/test/shader-inputs-types.spec.ts',
-  'modules/engine/test/geometry/gpu-geometry.browser.spec.ts',
+  'modules/engine/test/geometry/gpu-geometry.spec.ts',
   'modules/shadertools/test/lib/uniform-types.spec.ts',
   'modules/shadertools/test/modules/lighting/dirlight.spec.ts',
-  'modules/webgl/test/adapter/helpers/get-shader-layout.browser.spec.ts',
+  'modules/webgl/test/adapter/helpers/get-shader-layout.spec.ts',
   'test/browser.ts',
   'test/index.ts',
   'test/modules.ts',
@@ -44,8 +44,8 @@ export default defineConfig({
           name: 'node',
           color: 'blue',
           environment: 'node',
-          include: ['modules/**/*.spec.{ts,js}', 'test/dev-modules/**/*.spec.{ts,js}'],
-          exclude: ['modules/**/*.browser.spec.{ts,js}', ...EXCLUDE_PATTERNS],
+          include: ['modules/**/*.node.spec.{ts,js}', 'test/**/*.node.spec.{ts,js}'],
+          exclude: EXCLUDE_PATTERNS,
           browser: {
             enabled: false
           }
@@ -58,8 +58,8 @@ export default defineConfig({
           color: 'green',
           environment: 'node',
           testTimeout: 60000,
-          include: ['modules/**/*.browser.spec.{ts,js}', 'test/**/*.browser.spec.{ts,js}'],
-          exclude: EXCLUDE_PATTERNS,
+          include: ['modules/**/*.spec.{ts,js}', 'test/**/*.spec.{ts,js}'],
+          exclude: ['modules/**/*.node.spec.{ts,js}', 'test/**/*.node.spec.{ts,js}', ...EXCLUDE_PATTERNS],
           browser: {
             enabled: true,
             provider: createPlaywrightProvider(),
@@ -74,8 +74,8 @@ export default defineConfig({
           color: 'cyan',
           environment: 'node',
           testTimeout: 60000,
-          include: ['modules/**/*.browser.spec.{ts,js}', 'test/**/*.browser.spec.{ts,js}'],
-          exclude: EXCLUDE_PATTERNS,
+          include: ['modules/**/*.spec.{ts,js}', 'test/**/*.spec.{ts,js}'],
+          exclude: ['modules/**/*.node.spec.{ts,js}', 'test/**/*.node.spec.{ts,js}', ...EXCLUDE_PATTERNS],
           browser: {
             enabled: true,
             provider: createPlaywrightProvider(),

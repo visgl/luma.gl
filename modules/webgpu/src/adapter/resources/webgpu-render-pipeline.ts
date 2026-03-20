@@ -23,6 +23,7 @@ const EMPTY_BINDINGS: Record<string, Binding> = {};
 export class WebGPURenderPipeline extends RenderPipeline {
   readonly device: WebGPUDevice;
   readonly handle: GPURenderPipeline;
+  readonly descriptor: GPURenderPipelineDescriptor | null;
 
   readonly vs: WebGPUShader;
   readonly fs: WebGPUShader | null = null;
@@ -41,8 +42,9 @@ export class WebGPURenderPipeline extends RenderPipeline {
     super(device, props);
     this.device = device;
     this.handle = this.props.handle as GPURenderPipeline;
+    let descriptor: GPURenderPipelineDescriptor | null = null;
     if (!this.handle) {
-      const descriptor = this._getRenderPipelineDescriptor();
+      descriptor = this._getRenderPipelineDescriptor();
       log.groupCollapsed(1, `new WebGPURenderPipeline(${this.id})`)();
       log.probe(1, JSON.stringify(descriptor, null, 2))();
       log.groupEnd(1)();
@@ -54,6 +56,7 @@ export class WebGPURenderPipeline extends RenderPipeline {
         this.device.debug();
       });
     }
+    this.descriptor = descriptor;
     this.handle.label = this.props.id;
 
     // Note: Often the same shader in WebGPU

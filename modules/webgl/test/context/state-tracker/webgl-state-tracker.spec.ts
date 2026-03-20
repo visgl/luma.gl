@@ -17,7 +17,7 @@ import {
   WebGLStateTracker
 } from '@luma.gl/webgl';
 
-import {stringifyTypedArray} from './context-state.browser.spec';
+import {stringifyTypedArray} from './context-state.spec';
 
 import {ENUM_STYLE_SETTINGS_SET1, ENUM_STYLE_SETTINGS_SET2} from './data/sample-enum-settings';
 

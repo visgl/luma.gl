@@ -2,10 +2,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {RenderPipelineProps, ComputePipelineProps, SharedRenderPipeline} from '@luma.gl/core';
-import {Device, RenderPipeline, ComputePipeline, Resource, log} from '@luma.gl/core';
-import type {EngineModuleState} from '../types';
+import {Device} from '../adapter/device';
+import {ComputePipeline, type ComputePipelineProps} from '../adapter/resources/compute-pipeline';
+import {RenderPipeline, type RenderPipelineProps} from '../adapter/resources/render-pipeline';
+import {Resource} from '../adapter/resources/resource';
+import type {SharedRenderPipeline} from '../adapter/resources/shared-render-pipeline';
+import {log} from '../utils/log';
 import {uid} from '../utils/uid';
+import type {CoreModuleState} from './core-module-state';
 
 export type PipelineFactoryProps = RenderPipelineProps;
 
@@ -19,7 +23,7 @@ export class PipelineFactory {
 
   /** Get the singleton default pipeline factory for the specified device */
   static getDefaultPipelineFactory(device: Device): PipelineFactory {
-    const moduleData = device.getModuleData<EngineModuleState>('@luma.gl/engine');
+    const moduleData = device.getModuleData<CoreModuleState>('@luma.gl/core');
     moduleData.defaultPipelineFactory ||= new PipelineFactory(device);
     return moduleData.defaultPipelineFactory;
   }
@@ -44,6 +48,18 @@ export class PipelineFactory {
     this.device = device;
   }
 
+  /**
+   * WebGL has two cache layers with different priorities:
+   * - `_sharedRenderPipelineCache` owns `WEBGLSharedRenderPipeline` / `WebGLProgram` reuse.
+   * - `_renderPipelineCache` owns `RenderPipeline` wrapper reuse.
+   *
+   * Shared WebGL program reuse is the hard requirement. Wrapper reuse is beneficial,
+   * but wrapper cache misses are acceptable if that keeps the cache logic simple and
+   * prevents incorrect cache hits.
+   *
+   * In particular, wrapper hash logic must never force program creation or linked-program
+   * introspection just to decide whether a shared WebGL program can be reused.
+   */
   /** Return a RenderPipeline matching supplied props. Reuses an equivalent pipeline if already created. */
   createRenderPipeline(props: RenderPipelineProps): RenderPipeline {
     if (!this.device.props._cachePipelines) {
@@ -222,9 +238,22 @@ export class PipelineFactory {
 
   /** Calculate a hash based on all the inputs for a render pipeline */
   private _hashRenderPipeline(props: RenderPipelineProps): string {
+    // Backend-specific hashing requirements:
+    // - WebGPU hash keys must include every immutable descriptor-shaping input that can
+    //   change the created `GPURenderPipeline`, including attachment formats.
+    // - WebGL hash keys only govern wrapper reuse. They must remain compatible with
+    //   shared-program reuse and must not depend on linked-program introspection just
+    //   to decide whether a shared `WebGLProgram` can be reused.
+    //
+    // General exclusions:
+    // - `id`, `handle`: resource identity / caller-supplied handles, not cache shape
+    // - `bindings`: mutable per-pipeline compatibility state
+    // - `disableWarnings`: logging only, no rendering impact
+    // - `vsConstants`, `fsConstants`: currently unused by pipeline creation
     const vsHash = props.vs ? this._getHash(props.vs.source) : 0;
     const fsHash = props.fs ? this._getHash(props.fs.source) : 0;
     const varyingHash = this._getWebGLVaryingHash(props);
+    const shaderLayoutHash = this._getHash(JSON.stringify(props.shaderLayout));
     const bufferLayoutHash = this._getHash(JSON.stringify(props.bufferLayout));
 
     const {type} = this.device;
@@ -232,19 +261,35 @@ export class PipelineFactory {
       case 'webgl':
         // WebGL wrappers preserve default topology and parameter semantics for direct
         // callers, even though the underlying linked program may be shared separately.
+        // Future WebGL-only additions here must not turn wrapper reuse into a prerequisite
+        // for shared `WebGLProgram` reuse.
         const webglParameterHash = this._getHash(JSON.stringify(props.parameters));
-        return `${type}/R/${vsHash}/${fsHash}V${varyingHash}T${props.topology}P${webglParameterHash}BL${bufferLayoutHash}`;
+        return `${type}/R/${vsHash}/${fsHash}V${varyingHash}T${props.topology}P${webglParameterHash}SL${shaderLayoutHash}BL${bufferLayoutHash}`;
 
       case 'webgpu':
       default:
-        // On WebGPU we need to rebuild the pipeline if topology, parameters or bufferLayout change
+        // On WebGPU we need to rebuild the pipeline if topology, entry points,
+        // shader/layout data, parameters, bufferLayout or attachment formats change.
+        // Attachment formats must stay in the key so screen and offscreen passes do not
+        // accidentally alias the same cached `GPURenderPipeline`.
+        const entryPointHash = this._getHash(
+          JSON.stringify({
+            vertexEntryPoint: props.vertexEntryPoint,
+            fragmentEntryPoint: props.fragmentEntryPoint
+          })
+        );
         const parameterHash = this._getHash(JSON.stringify(props.parameters));
+        const attachmentHash = this._getWebGPUAttachmentHash(props);
         // TODO - Can json.stringify() generate different strings for equivalent objects if order of params is different?
         // create a deepHash() to deduplicate?
-        return `${type}/R/${vsHash}/${fsHash}V${varyingHash}T${props.topology}P${parameterHash}BL${bufferLayoutHash}`;
+        return `${type}/R/${vsHash}/${fsHash}V${varyingHash}T${props.topology}EP${entryPointHash}P${parameterHash}SL${shaderLayoutHash}BL${bufferLayoutHash}A${attachmentHash}`;
     }
   }
 
+  // This is the only gate for shared `WebGLProgram` reuse.
+  // Only include inputs that affect program linking or transform-feedback linkage.
+  // Wrapper-only concerns such as topology, parameters, attachment formats and layout
+  // overrides must not be added here.
   private _hashSharedRenderPipeline(props: RenderPipelineProps): string {
     const vsHash = props.vs ? this._getHash(props.vs.source) : 0;
     const fsHash = props.fs ? this._getHash(props.fs.source) : 0;
@@ -262,5 +307,21 @@ export class PipelineFactory {
   private _getWebGLVaryingHash(props: RenderPipelineProps): number {
     const {varyings = [], bufferMode = null} = props;
     return this._getHash(JSON.stringify({varyings, bufferMode}));
+  }
+
+  private _getWebGPUAttachmentHash(props: RenderPipelineProps): number {
+    const colorAttachmentFormats = props.colorAttachmentFormats ?? [
+      this.device.preferredColorFormat
+    ];
+    const depthStencilAttachmentFormat = props.parameters?.depthWriteEnabled
+      ? props.depthStencilAttachmentFormat || this.device.preferredDepthFormat
+      : null;
+
+    return this._getHash(
+      JSON.stringify({
+        colorAttachmentFormats,
+        depthStencilAttachmentFormat
+      })
+    );
   }
 }
