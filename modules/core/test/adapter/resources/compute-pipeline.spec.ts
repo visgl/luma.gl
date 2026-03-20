@@ -20,7 +20,7 @@ const source = /* WGSL*/ `\
 }
 `;
 
-test.skip('ComputePipeline#construct/delete', async t => {
+test('ComputePipeline#construct/delete', async t => {
   const webgpuDevice = await getWebGPUTestDevice();
 
   if (webgpuDevice) {

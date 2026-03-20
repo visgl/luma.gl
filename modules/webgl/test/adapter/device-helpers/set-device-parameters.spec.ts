@@ -10,6 +10,19 @@ import {WebGLDevice, setDeviceParameters, getGLParameters, resetGLParameters} fr
 
 // Settings test, could be beneficial to not reuse a context
 
+const getOrSkipWebGLTestDevice = async (t: {
+  comment: (...messages: unknown[]) => void;
+  end: () => void;
+}): Promise<WebGLDevice | null> => {
+  const device = await getWebGLTestDevice();
+  if (!device || !device.gl || device.isLost) {
+    t.comment('WebGL device not available');
+    t.end();
+    return null;
+  }
+  return device;
+};
+
 // const stringify = (v) => JSON.stringify(ArrayBuffer.isView(v) ? Array.apply([], v) : v);
 
 const getGLParameter = (device: WebGLDevice, parameter: keyof GLParameters): any => {
@@ -18,7 +31,10 @@ const getGLParameter = (device: WebGLDevice, parameter: keyof GLParameters): any
 };
 
 test('setDeviceParameters#cullMode', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getOrSkipWebGLTestDevice(t);
+  if (!device) {
+    return;
+  }
 
   resetGLParameters(device.gl);
 
@@ -39,7 +55,10 @@ test('setDeviceParameters#cullMode', async t => {
 });
 
 test('setDeviceParameters#frontFace', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getOrSkipWebGLTestDevice(t);
+  if (!device) {
+    return;
+  }
 
   resetGLParameters(device.gl);
 
@@ -55,7 +74,10 @@ test('setDeviceParameters#frontFace', async t => {
 });
 
 test('setDeviceParameters#depthWriteEnabled', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getOrSkipWebGLTestDevice(t);
+  if (!device) {
+    return;
+  }
 
   resetGLParameters(device.gl);
 
@@ -71,7 +93,10 @@ test('setDeviceParameters#depthWriteEnabled', async t => {
 });
 
 test('setDeviceParameters#blending', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getOrSkipWebGLTestDevice(t);
+  if (!device) {
+    return;
+  }
 
   resetGLParameters(device.gl);
 
@@ -133,7 +158,10 @@ test('setDeviceParameters#blending', async t => {
 });
 
 test('setDeviceParameters#depthCompare', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await getOrSkipWebGLTestDevice(t);
+  if (!device) {
+    return;
+  }
   resetGLParameters(device.gl);
 
   t.equal(getGLParameter(device, GL.DEPTH_TEST), false, 'GL.DEPTH_TEST = false');
@@ -149,16 +177,18 @@ test('setDeviceParameters#depthCompare', async t => {
   t.end();
 });
 
-test.skip('setDeviceParameters#depthClearValue', async t => {
-  // let value = getGLParameters(gl, [GL.DEPTH_CLEAR_VALUE])[GL.DEPTH_CLEAR_VALUE];
-  // t.is(value, 1, `got expected value ${stringify(value)}`);
+test('setDeviceParameters#depthClearValue', async t => {
+  const device = await getOrSkipWebGLTestDevice(t);
+  if (!device) {
+    return;
+  }
+  const gl = device.gl;
 
-  // // setDeviceParameters(gl, {[GL.DEPTH_CLEAR_VALUE]: -1});
-  // value = getGLParameters(gl, [GL.DEPTH_CLEAR_VALUE])[GL.DEPTH_CLEAR_VALUE];
-  // t.is(value, -1, `got expected value ${stringify(value)}`);
+  resetGLParameters(gl);
+  t.deepEqual(getGLParameter(device, GL.DEPTH_CLEAR_VALUE), 1, 'got expected clear depth');
 
-  // // @ts-expect-error
-  // t.throws(() => setDeviceParameters({}), 'throws with non WebGL context');
+  setDeviceParameters(device, {clearDepth: 0});
+  t.deepEqual(getGLParameter(device, GL.DEPTH_CLEAR_VALUE), 0, 'set clear depth works');
 
   t.end();
 });

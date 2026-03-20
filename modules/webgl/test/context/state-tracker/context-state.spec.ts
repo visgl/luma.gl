@@ -56,7 +56,7 @@ test('WebGLState#getGLParameters (WebGL)', async t => {
 });
 
 // TODO - restore asap
-test.skip('WebGLState#setGLParameters (Mixing enum and function style keys)', async t => {
+test('WebGLState#setGLParameters (Mixing enum and function style keys)', async t => {
   const webglDevice = await getWebGLTestDevice();
 
   resetGLParameters(webglDevice.gl);

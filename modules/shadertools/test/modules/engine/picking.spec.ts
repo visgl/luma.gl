@@ -7,7 +7,6 @@ import {getWebGLTestDevice} from '@luma.gl/test-utils';
 
 import {BufferTransform} from '@luma.gl/engine';
 import {picking, getShaderModuleUniforms} from '@luma.gl/shadertools';
-import {UniformValue} from '@luma.gl/core';
 
 const TEST_DATA = {
   vertexColorData: new Float32Array([
@@ -119,8 +118,7 @@ test('picking#getUniforms', async t => {
   t.end();
 });
 
-// TODO(v9): Restore picking tests.
-test.skip('picking#isVertexPicked(highlightedObjectColor invalid)', async t => {
+test('picking#highlightedObjectColor', async t => {
   const device = await getWebGLTestDevice();
 
   if (!BufferTransform.isSupported(device)) {
@@ -129,116 +127,90 @@ test.skip('picking#isVertexPicked(highlightedObjectColor invalid)', async t => {
     return;
   }
 
-  const VS = `\
-  in vec3 vertexColor;
-  out float isPicked;
-
-  void main()
-  {
-    isPicked = float(isVertexPicked(vertexColor));
-  }
-  `;
   const vertexColorData = TEST_DATA.vertexColorData;
-
   const vertexCount = vertexColorData.length / 3;
-  const vertexColor = device.createBuffer(vertexColorData);
-  const isPicked = device.createBuffer({byteLength: vertexCount * 4});
+  const transform = createPickingAlphaTransform(device, vertexColorData, vertexCount);
 
-  const transform = new BufferTransform(device, {
-    // @ts-expect-error
-    sourceBuffers: {
-      vertexColor
-    },
-    feedbackBuffers: {
-      isPicked
-    },
-    vs: VS,
-    varyings: ['isPicked'],
-    modules: [picking],
-    vertexCount
-  });
-
-  await Promise.all(
-    TEST_CASES.map(async testCase => {
-      // @ts-expect-error
-      const uniforms = module.getUniforms({
+  for (const testCase of TEST_CASES) {
+    transform.model.shaderInputs.setProps({
+      picking: {
         highlightedObjectColor: testCase.highlightedObjectColor
-      });
+      }
+    });
+    transform.run();
 
-      // @ts-ignore
-      transform.model.setUniforms(uniforms);
-      transform.run();
+    const outData = await readTransformOutput(transform, 'isPicked', vertexCount);
+    t.deepEqual(Array.from(outData), testCase.isPicked, 'Vertex should correctly get picked');
+  }
 
-      const expectedData = testCase.isPicked;
-      const outData = await transform.readAsync('isPicked');
+  transform.destroy();
+  t.end();
+});
 
-      t.deepEqual(outData, expectedData, 'Vertex should correctly get picked');
-    })
+test('picking#picking_setPickingColor', async t => {
+  const device = await getWebGLTestDevice();
+
+  if (!BufferTransform.isSupported(device)) {
+    t.comment('Transform not available, skipping tests');
+    t.end();
+    return;
+  }
+  const vertexColorData = TEST_DATA.vertexColorData;
+  const vertexCount = vertexColorData.length / 3;
+  const transform = createPickingAlphaTransform(device, vertexColorData, vertexCount);
+
+  transform.model.shaderInputs.setProps({
+    picking: {
+      isActive: true
+    }
+  });
+  transform.run();
+
+  const outData = await readTransformOutput(transform, 'isPicked', vertexCount);
+  t.deepEqual(
+    Array.from(outData),
+    [0, 1, 1, 1, 1, 1, 1, 1, 1],
+    'Zero picking color is marked invalid and all non-zero colors are pickable'
   );
+
+  transform.destroy();
 
   t.end();
 });
 
-// TODO(v9): Restore picking tests.
-/* eslint-disable max-nested-callbacks */
-test.skip('picking#picking_setPickingColor', async t => {
-  const device = await getWebGLTestDevice();
+function createPickingAlphaTransform(
+  device,
+  vertexColorData: Float32Array,
+  vertexCount: number
+): BufferTransform {
+  const vertexColor = device.createBuffer({data: vertexColorData});
+  const isPicked = device.createBuffer({byteLength: vertexCount * Float32Array.BYTES_PER_ELEMENT});
 
-  if (!BufferTransform.isSupported(device)) {
-    t.comment('Transform not available, skipping tests');
-    t.end();
-    return;
-  }
-  const VS = `\
-  in vec3 vertexColor;
-  out float rgbColorASelected;
+  return new BufferTransform(device, {
+    vs: `\
+    #version 300 es
+    in vec3 vertexColor;
+    out float isPicked;
 
-  void main()
-  {
-    picking_setPickingColor(vertexColor);
-    rgbColorASelected = picking_vRGBcolor_Avalid.a;
-  }
-  `;
-
-  const vertexColorData = TEST_DATA.vertexColorData;
-
-  const vertexCount = vertexColorData.length / 3;
-  const vertexColor = device.createBuffer(vertexColorData);
-  const rgbColorASelected = device.createBuffer({byteLength: vertexCount * 4});
-
-  const transform = new BufferTransform(device, {
-    vs: VS,
-    bufferLayout: [{name: 'vertexColor', format: 'float32'}],
-    outputs: ['rgbColorASelected'],
+    void main() {
+      picking_setPickingColor(vertexColor);
+      isPicked = picking_vRGBcolor_Avalid.a;
+    }
+    `,
+    bufferLayout: [{name: 'vertexColor', format: 'float32x3'}],
+    outputs: ['isPicked'],
     modules: [picking],
     vertexCount,
     attributes: {vertexColor},
-    feedbackBuffers: {rgbColorASelected}
+    feedbackBuffers: {isPicked}
   });
+}
 
-  await Promise.all(
-    TEST_CASES.map(async testCase => {
-      const uniforms = getShaderModuleUniforms(
-        picking,
-        {
-          highlightedObjectColor: testCase.highlightedObjectColor,
-          // @ts-expect-error
-          pickingThreshold: testCase.pickingThreshold
-        },
-        {}
-      ) as Record<string, UniformValue>;
-
-      // @ts-ignore
-      transform.model.setUniforms(uniforms);
-      transform.run();
-
-      const outData = await transform.readAsync('rgbColorASelected');
-
-      t.deepEqual(outData, testCase.isPicked, 'Vertex should correctly get picked');
-    })
-  );
-  t.ok(true, 'picking_setPickingColor successful');
-
-  t.end();
-});
-/* eslint-enable max-nested-callbacks */
+async function readTransformOutput(
+  transform: BufferTransform,
+  varyingName: string,
+  vertexCount: number
+): Promise<Float32Array> {
+  const bytes = await transform.readAsync(varyingName);
+  return new Float32Array(bytes.buffer, bytes.byteOffset, vertexCount);
+}

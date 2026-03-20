@@ -18,7 +18,7 @@ const source = /* WGSL*/ `\
 }
 `;
 
-test.skip('Computation#construct/delete', async t => {
+test('Computation#construct/delete', async t => {
   const webgpuDevice = await getWebGPUTestDevice();
   if (webgpuDevice) {
     const computation = new Computation(webgpuDevice, {source});

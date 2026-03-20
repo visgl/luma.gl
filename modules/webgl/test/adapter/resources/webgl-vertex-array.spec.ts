@@ -8,12 +8,17 @@ import {getWebGLTestDevice} from '@luma.gl/test-utils';
 import {GL} from '@luma.gl/constants';
 import {WEBGLBuffer, WEBGLVertexArray} from '@luma.gl/webgl';
 
-// TODO(v9): Fix and re-enable test.
-test.skip('WEBGLVertexArray#divisors', async t => {
+function createVertexArray(device): WEBGLVertexArray {
+  return device.createVertexArray({
+    shaderLayout: {attributes: [], bindings: []},
+    bufferLayout: []
+  }) as WEBGLVertexArray;
+}
+
+test('WEBGLVertexArray#divisors', async t => {
   const device = await getWebGLTestDevice();
 
-  // @ts-ignore
-  const vertexArray = new WEBGLVertexArray(device);
+  const vertexArray = createVertexArray(device);
 
   const maxVertexAttributes = device.limits.maxVertexAttributes;
 
@@ -30,13 +35,10 @@ test.skip('WEBGLVertexArray#divisors', async t => {
   t.end();
 });
 
-// TODO(v9): Fix and re-enable test. NOTE this is a dupe of core?
-test.skip('WEBGLVertexArray#enable', async t => {
+test('WEBGLVertexArray#enable', async t => {
   const device = await getWebGLTestDevice();
 
-  const renderPipeline = device.createRenderPipeline({});
-  // @ts-ignore
-  const vertexArray = device.createVertexArray({renderPipeline}) as WEBGLVertexArray;
+  const vertexArray = createVertexArray(device);
 
   const maxVertexAttributes = device.limits.maxVertexAttributes;
   t.ok(maxVertexAttributes >= 8, 'maxVertexAttributes >= 8');
@@ -79,26 +81,32 @@ test.skip('WEBGLVertexArray#enable', async t => {
   }
 
   vertexArray.destroy();
-  renderPipeline.destroy();
 
   t.end();
 });
 
-// TODO(v9): Fix and re-enable test.
-test.skip('WEBGLVertexArray#getConstantBuffer', async t => {
+test('WEBGLVertexArray#getConstantBuffer', async t => {
   const device = await getWebGLTestDevice();
 
-  // @ts-ignore
-  const vertexArray = new WEBGLVertexArray(device);
+  const vertexArray = createVertexArray(device);
 
-  let buffer = vertexArray.getConstantBuffer(100, new Float32Array([5, 4, 3])) as WEBGLBuffer;
+  const buffer = vertexArray.getConstantBuffer(100, new Float32Array([5, 4, 3])) as WEBGLBuffer;
 
   t.equal(buffer.byteLength, 1200, 'byteLength should match');
   t.equal(buffer.bytesUsed, 1200, 'bytesUsed should match');
 
-  buffer = vertexArray.getConstantBuffer(5, new Float32Array([5, 3, 2])) as WEBGLBuffer;
-  t.equal(buffer.byteLength, 1200, 'byteLength should be unchanged');
-  t.equal(buffer.bytesUsed, 60, 'bytesUsed should have changed');
+  const reusedBuffer = vertexArray.getConstantBuffer(
+    100,
+    new Float32Array([5, 3, 2])
+  ) as WEBGLBuffer;
+  t.equal(reusedBuffer, buffer, 'buffer should be reused when element count is unchanged');
+  t.equal(reusedBuffer.byteLength, 1200, 'byteLength should be unchanged');
+  t.equal(reusedBuffer.bytesUsed, 1200, 'bytesUsed should reflect the fixed backing allocation');
+
+  t.throws(
+    () => vertexArray.getConstantBuffer(5, new Float32Array([5, 3, 2])),
+    'changing element count should throw because the backing buffer size is immutable'
+  );
 
   vertexArray.destroy();
 
