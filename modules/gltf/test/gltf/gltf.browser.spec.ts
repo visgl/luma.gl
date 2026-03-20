@@ -9,7 +9,7 @@ import '@loaders.gl/polyfills';
 import {load} from '@loaders.gl/core';
 import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
 
-import {Texture} from '@luma.gl/core';
+import {DynamicTexture} from '@luma.gl/engine';
 import {createScenegraphsFromGLTF, loadPBREnvironment} from '@luma.gl/gltf';
 
 test('gltf#loading', async t => {
@@ -56,7 +56,7 @@ test('gltf#animator', async t => {
   t.end();
 });
 
-test.skip('gltf#environment', async t => {
+test('gltf#environment', async t => {
   const webglDevice = await getWebGLTestDevice();
 
   const environment = loadPBREnvironment(webglDevice, {
@@ -65,9 +65,18 @@ test.skip('gltf#environment', async t => {
     specularMipLevels: 9
   });
 
-  t.ok(environment.brdfLutTexture instanceof Texture, 'BRDF lookup texture created');
-  t.ok(environment.diffuseEnvSampler instanceof Texture, 'Diffuse environment map created');
-  t.ok(environment.specularEnvSampler instanceof Texture, 'Specular environment map created');
+  await Promise.all([
+    environment.brdfLutTexture.ready,
+    environment.diffuseEnvSampler.ready,
+    environment.specularEnvSampler.ready
+  ]);
+
+  t.ok(environment.brdfLutTexture instanceof DynamicTexture, 'BRDF lookup texture created');
+  t.ok(environment.diffuseEnvSampler instanceof DynamicTexture, 'Diffuse environment map created');
+  t.ok(
+    environment.specularEnvSampler instanceof DynamicTexture,
+    'Specular environment map created'
+  );
 
   t.end();
 });

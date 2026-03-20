@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {Device, SamplerProps} from '@luma.gl/core';
-import {DynamicTexture} from '@luma.gl/engine';
+import {DynamicTexture, type TextureCubeFace} from '@luma.gl/engine';
 import {loadImageTexture} from '@loaders.gl/textures';
 
 /** Environment textures for PBR module */
@@ -42,7 +42,7 @@ export function loadPBREnvironment(device: Device, props: PBREnvironmentProps): 
 
   const diffuseEnvSampler = makeCube(device, {
     id: 'DiffuseEnvSampler',
-    getTextureForFace: dir => loadImageTexture(props.getTexUrl('diffuse', dir, 0)),
+    getTextureForFace: face => loadImageTexture(props.getTexUrl('diffuse', FACES.indexOf(face), 0)),
     sampler: {
       addressModeU: 'clamp-to-edge',
       addressModeV: 'clamp-to-edge',
@@ -53,13 +53,14 @@ export function loadPBREnvironment(device: Device, props: PBREnvironmentProps): 
 
   const specularEnvSampler = makeCube(device, {
     id: 'SpecularEnvSampler',
-    getTextureForFace: (dir: number) => {
+    getTextureForFace: (face: TextureCubeFace) => {
       const imageArray: Promise<any>[] = [];
+      const direction = FACES.indexOf(face);
       // @ts-ignore
       for (let lod = 0; lod <= props.specularMipLevels - 1; lod++) {
-        imageArray.push(loadImageTexture(props.getTexUrl('specular', dir, lod)));
+        imageArray.push(loadImageTexture(props.getTexUrl('specular', direction, lod)));
       }
-      return imageArray;
+      return Promise.all(imageArray);
     },
     sampler: {
       addressModeU: 'clamp-to-edge',
@@ -77,7 +78,7 @@ export function loadPBREnvironment(device: Device, props: PBREnvironmentProps): 
 }
 
 // TODO put somewhere common
-const FACES = [0, 1, 2, 3, 4, 5];
+const FACES: TextureCubeFace[] = ['+X', '-X', '+Y', '-Y', '+Z', '-Z'];
 
 /** Construction props for an asynchronously loaded cubemap. */
 function makeCube(
@@ -89,23 +90,21 @@ function makeCube(
   }: {
     /** Debug id assigned to the created texture. */
     id: string;
-    /** Returns the image promise or mip-array promises for one cubemap face. */
-    getTextureForFace: (dir: number) => Promise<any> | Promise<any>[];
+    /** Returns the image or mip-array promise for one cubemap face. */
+    getTextureForFace: (face: TextureCubeFace) => Promise<any>;
     /** Sampler configuration shared across faces. */
     sampler: SamplerProps;
   }
 ): DynamicTexture {
-  const data = {};
+  const data = {} as Record<TextureCubeFace, Promise<any>>;
   FACES.forEach(face => {
-    // @ts-ignore TODO
-    data[String(face)] = getTextureForFace(face);
+    data[face] = getTextureForFace(face);
   });
   return new DynamicTexture(device, {
     id,
     dimension: 'cube',
     mipmaps: false,
     sampler,
-    // @ts-expect-error
     data
   });
 }

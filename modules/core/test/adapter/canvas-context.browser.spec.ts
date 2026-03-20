@@ -748,7 +748,26 @@ const MAP_TEST_CASES = [
   }
 ];
 
-test.skip('WebGLCanvasContext#cssToDevicePixels', async t => {
+function configureCanvasContext(
+  canvasContext: CanvasContext,
+  testCase: {
+    clientWidth: number;
+    clientHeight: number;
+    drawingBufferWidth: number;
+    drawingBufferHeight: number;
+  }
+): void {
+  canvasContext.cssWidth = testCase.clientWidth;
+  canvasContext.cssHeight = testCase.clientHeight;
+  canvasContext.devicePixelWidth = testCase.drawingBufferWidth;
+  canvasContext.devicePixelHeight = testCase.drawingBufferHeight;
+  canvasContext.drawingBufferWidth = testCase.drawingBufferWidth;
+  canvasContext.drawingBufferHeight = testCase.drawingBufferHeight;
+  canvasContext.canvas.width = testCase.drawingBufferWidth;
+  canvasContext.canvas.height = testCase.drawingBufferHeight;
+}
+
+test('WebGLCanvasContext#cssToDevicePixels', async t => {
   // Create a fresh device since are going to modify it
   const canvasContextDevice = await getWebGLTestDevice();
   const canvasContext = canvasContextDevice?.canvasContext;
@@ -776,7 +795,7 @@ test.skip('WebGLCanvasContext#cssToDevicePixels', async t => {
   t.end();
 });
 
-test.skip('WebGLCanvasContext#cssToDeviceRatio', async t => {
+test('WebGLCanvasContext#cssToDeviceRatio', async t => {
   const canvasContextDevice = await getWebGLTestDevice();
   const canvasContext = canvasContextDevice?.canvasContext;
 
