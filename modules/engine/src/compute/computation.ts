@@ -11,6 +11,8 @@ import {
   Buffer,
   ComputePipeline,
   ComputePass,
+  PipelineFactory,
+  ShaderFactory,
   UniformStore,
   log,
   dataTypeDecoder
@@ -18,8 +20,6 @@ import {
 import {type ShaderModule, type PlatformInfo, ShaderAssembler} from '@luma.gl/shadertools';
 import {type TypedArray, isNumericArray} from '@math.gl/types';
 import {ShaderInputs} from '../shader-inputs';
-import {PipelineFactory} from '../factories/pipeline-factory';
-import {ShaderFactory} from '../factories/shader-factory';
 import {uid} from '../utils/uid';
 // import {getDebugTableForShaderLayout} from '../debug/debug-shader-layout';
 

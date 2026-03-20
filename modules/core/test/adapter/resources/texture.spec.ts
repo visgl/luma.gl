@@ -20,7 +20,7 @@ import {
 import {GL} from '@luma.gl/constants';
 import {WebGLDevice} from '@luma.gl/webgl';
 
-import {SAMPLER_PARAMETERS} from './sampler.browser.spec';
+import {SAMPLER_PARAMETERS} from './sampler.spec';
 
 // Utility to compare TypedArray contents
 function toUint8(arr: ArrayBuffer | ArrayBufferView): Uint8Array {

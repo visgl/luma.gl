@@ -5,7 +5,7 @@
 import test from 'test/utils/vitest-tape';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
 
-import {ShaderFactory} from '@luma.gl/engine';
+import {ShaderFactory} from '@luma.gl/core';
 
 const vs1 = /* glsl */ `\
 void main(void) {

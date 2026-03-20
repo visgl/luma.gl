@@ -22,6 +22,8 @@ import {
   Sampler,
   RenderPipeline,
   RenderPass,
+  PipelineFactory,
+  ShaderFactory,
   UniformStore,
   log,
   dataTypeDecoder,
@@ -33,8 +35,6 @@ import {ShaderAssembler} from '@luma.gl/shadertools';
 
 import type {Geometry} from '../geometry/geometry';
 import {GPUGeometry, makeGPUGeometry} from '../geometry/gpu-geometry';
-import {PipelineFactory} from '../factories/pipeline-factory';
-import {ShaderFactory} from '../factories/shader-factory';
 import {getDebugTableForShaderLayout} from '../debug/debug-shader-layout';
 import {debugFramebuffer} from '../debug/debug-framebuffer';
 import {deepEqual} from '../utils/deep-equal';

@@ -26,9 +26,6 @@ export {BufferTransform} from './compute/buffer-transform';
 export type {TextureTransformProps} from './compute/texture-transform';
 export {TextureTransform} from './compute/texture-transform';
 
-export {PipelineFactory} from './factories/pipeline-factory';
-export {ShaderFactory} from './factories/shader-factory';
-
 // Models
 export type {ClipSpaceProps} from './models/clip-space';
 export {ClipSpace} from './models/clip-space';

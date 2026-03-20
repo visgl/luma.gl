@@ -49,6 +49,9 @@ export {
   SharedRenderPipeline,
   type SharedRenderPipelineProps
 } from './adapter/resources/shared-render-pipeline';
+export type {PipelineFactoryProps} from './factories/pipeline-factory';
+export {PipelineFactory} from './factories/pipeline-factory';
+export {ShaderFactory} from './factories/shader-factory';
 
 export type {RenderPassProps} from './adapter/resources/render-pass';
 export {RenderPass} from './adapter/resources/render-pass';

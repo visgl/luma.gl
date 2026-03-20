@@ -4,7 +4,7 @@
 
 import test from 'test/utils/vitest-tape';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
-import {stringifyTypedArray} from './context-state.browser.spec';
+import {stringifyTypedArray} from './context-state.spec';
 
 import {setGLParameters, getGLParameters, resetGLParameters} from '@luma.gl/webgl';
 

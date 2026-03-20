@@ -6,7 +6,7 @@ import test from 'test/utils/vitest-tape';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
 import {GroupNode, ScenegraphNode, ModelNode, Model} from '@luma.gl/engine';
 import {Matrix4} from '@math.gl/core';
-import {DUMMY_VS, DUMMY_FS} from './model-node.browser.spec';
+import {DUMMY_VS, DUMMY_FS} from './model-node.spec';
 
 test('GroupNode#construction', async t => {
   const grandChild = new ScenegraphNode();

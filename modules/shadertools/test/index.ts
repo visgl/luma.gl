@@ -14,23 +14,23 @@ import './lib/uniform-types.spec';
 
 // shader transpilation
 import './lib/preprocessor/preprocessor.spec';
-import './lib/shader-transpiler/transpile-shader.browser.spec';
+import './lib/shader-transpiler/transpile-shader.spec';
 
 // shader generation
 import './lib/generator/generate-shader.spec';
 
 // SHADER ASSEMBLY
 
-import './lib/shader-assembly/inject-shader.browser.spec';
-import './lib/shader-assembly/assemble-shaders.browser.spec';
+import './lib/shader-assembly/inject-shader.spec';
+import './lib/shader-assembly/assemble-shaders.spec';
 import './lib/shader-assembler.spec';
 
 // SHADER MODULE LIBRARY
 
 // Data utilities
 import './modules/math/fp16-utils.spec';
-import './modules/math/fp64-arithmetic-compute.browser.spec';
-import './modules/math/fp64-arithmetic-transform.browser.spec';
+import './modules/math/fp64-arithmetic-compute.spec';
+import './modules/math/fp64-arithmetic-transform.spec';
 import './modules/math/fp64-utils.spec';
 
 // General modules tests
@@ -47,5 +47,5 @@ import './modules/lighting/gouraud-material.spec';
 // import './modules/lighting/pbr-material.spec';
 
 // Engine
-import './modules/engine/picking.browser.spec';
+import './modules/engine/picking.spec';
 import './modules/engine/skin.spec';
