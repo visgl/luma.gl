@@ -163,24 +163,24 @@ test('WebGL QuerySet destroy cancels pending RAF polling', async t => {
     return;
   }
 
-  const originalRequestAnimationFrame = globalThis.requestAnimationFrame;
-  const originalCancelAnimationFrame = globalThis.cancelAnimationFrame;
+  const originalRequestAnimationFrame = querySet._requestAnimationFrame.bind(querySet);
+  const originalCancelAnimationFrame = querySet._cancelAnimationFrame.bind(querySet);
 
   let scheduledCallback: FrameRequestCallback | null = null;
   let cancelAnimationFrameCallCount = 0;
 
   try {
-    globalThis.requestAnimationFrame = ((callback: FrameRequestCallback): number => {
+    querySet._requestAnimationFrame = (callback: FrameRequestCallback): number => {
       scheduledCallback = callback;
       return 1;
-    }) as typeof requestAnimationFrame;
+    };
 
-    globalThis.cancelAnimationFrame = ((requestId: number): void => {
+    querySet._cancelAnimationFrame = (requestId: number): void => {
       if (requestId === 1) {
         cancelAnimationFrameCallCount++;
         scheduledCallback = null;
       }
-    }) as typeof cancelAnimationFrame;
+    };
 
     querySet._timestampPairs[0].completedQueries.push({
       handle: queryHandle,
@@ -201,13 +201,18 @@ test('WebGL QuerySet destroy cancels pending RAF polling', async t => {
     );
 
     querySet.destroy();
-    const duration = await durationPromise;
+    const duration = await Promise.race([
+      durationPromise,
+      new Promise<number>((_, reject) =>
+        setTimeout(() => reject(new Error('Timed out waiting for pending query cancellation')), 1000)
+      )
+    ]);
 
     t.equal(cancelAnimationFrameCallCount, 1, 'destroy cancels the pending RAF poll');
     t.equal(duration, 0, 'destroy resolves the pending timestamp read with a neutral duration');
   } finally {
-    globalThis.requestAnimationFrame = originalRequestAnimationFrame;
-    globalThis.cancelAnimationFrame = originalCancelAnimationFrame;
+    querySet._requestAnimationFrame = originalRequestAnimationFrame;
+    querySet._cancelAnimationFrame = originalCancelAnimationFrame;
   }
 
   t.end();

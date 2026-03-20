@@ -3,6 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {WgslReflect} from 'wgsl_reflect';
 import {
   brightnessContrast,
@@ -83,12 +84,13 @@ const SHADER_PASSES = [
   swirl
 ] as const;
 
+const WGSL_COMPILATION_TIMEOUT_MS = 2000;
+
 async function getOptionalWebGPUDevice() {
   if (typeof navigator === 'undefined' || !('gpu' in navigator)) {
     return null;
   }
 
-  const {getWebGPUTestDevice} = await import('../../../test-utils/src/create-test-device');
   return getWebGPUTestDevice();
 }
 
@@ -112,6 +114,25 @@ function formatCompilationErrors(compilationMessages: {type: string; message: st
     .filter(compilationMessage => compilationMessage.type === 'error')
     .map(compilationMessage => compilationMessage.message)
     .join('\n');
+}
+
+async function getCompilationInfoWithTimeout(shader: {
+  getCompilationInfo: () => Promise<{type: string; message: string}[] | readonly {type: string; message: string}[]>;
+}): Promise<readonly {type: string; message: string}[]> {
+  return await Promise.race([
+    shader.getCompilationInfo(),
+    new Promise<never>((_, reject) =>
+      setTimeout(
+        () =>
+          reject(
+            new Error(
+              `Timed out waiting ${WGSL_COMPILATION_TIMEOUT_MS}ms for WebGPU shader compilation info`
+            )
+          ),
+        WGSL_COMPILATION_TIMEOUT_MS
+      )
+    )
+  ]);
 }
 
 test('postprocessing WGSL#assemble/compile', async testCase => {
@@ -157,13 +178,15 @@ test('postprocessing WGSL#assemble/compile', async testCase => {
           source: assembledSource
         });
         try {
-          const compilationMessages = await shader.getCompilationInfo();
+          const compilationMessages = await getCompilationInfoWithTimeout(shader);
           const compilationErrors = formatCompilationErrors(compilationMessages);
           testCase.equal(
             compilationErrors,
             '',
             `${shaderPass.name} ${action} compiles as WebGPU WGSL${compilationErrors ? `\n${compilationErrors}` : ''}`
           );
+        } catch (error) {
+          testCase.fail(`${shaderPass.name} ${action} WebGPU compilation check failed: ${String(error)}`);
         } finally {
           shader.destroy();
         }

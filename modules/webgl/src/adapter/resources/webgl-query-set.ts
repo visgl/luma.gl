@@ -315,7 +315,7 @@ export class WEBGLQuerySet extends QuerySet {
         }
 
         if (!this._pollQueryAvailability(query)) {
-          query.pollRequestId = requestAnimationFrame(poll);
+          query.pollRequestId = this._requestAnimationFrame(poll);
           return;
         }
 
@@ -338,7 +338,7 @@ export class WEBGLQuerySet extends QuerySet {
   protected _cancelPendingQuery(query: WebGLPendingQuery): void {
     query.cancelled = true;
     if (query.pollRequestId !== null) {
-      cancelAnimationFrame(query.pollRequestId);
+      this._cancelAnimationFrame(query.pollRequestId);
       query.pollRequestId = null;
     }
     if (query.resolve) {
@@ -348,5 +348,13 @@ export class WEBGLQuerySet extends QuerySet {
       query.reject = null;
       resolve(0n);
     }
+  }
+
+  protected _requestAnimationFrame(callback: FrameRequestCallback): number {
+    return requestAnimationFrame(callback);
+  }
+
+  protected _cancelAnimationFrame(requestId: number): void {
+    cancelAnimationFrame(requestId);
   }
 }
