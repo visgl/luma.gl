@@ -156,6 +156,9 @@ export class AnimationLoop {
         // Create the WebGL context
         await this._initDevice();
         this._initialize();
+        if (!this._running) {
+          return null;
+        }
 
         // Note: onIntialize can return a promise (e.g. in case app needs to load resources)
         await this.props.onInitialize(this._getAnimationProps());

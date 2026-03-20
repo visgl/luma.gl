@@ -18,10 +18,18 @@ test('Shader', async t => {
   // Only test WebGL, WebGPU is not able to detect shader failures synchronously, but require polling.
   for (const device of await getTestDevices()) {
     if (device.type === 'webgl') {
-      t.throws(
-        () => device.createShader({stage: 'vertex', source: BAD_SHADER_SOURCE}),
-        `${device.type} device.createShader throws on bad shader source`
-      );
+      const createBadShader = () => device.createShader({stage: 'vertex', source: BAD_SHADER_SOURCE});
+      if (device.features.has('compilation-status-async-webgl')) {
+        const badShader = createBadShader();
+        const compilationStatus = await badShader.asyncCompilationStatus;
+        t.equal(
+          compilationStatus,
+          'error',
+          `${device.type} device.createShader reports async compilation error`
+        );
+      } else {
+        t.throws(createBadShader, `${device.type} device.createShader throws on bad shader source`);
+      }
     } else {
       t.comment(`${device.type}: shader compilation is asynchronous`);
     }

@@ -137,6 +137,15 @@ export class WEBGLFramebuffer extends Framebuffer {
 
     gl.bindTexture(texture.glTarget, null);
   }
+
+  /** Default framebuffer cannot be resized. */
+  protected override resizeAttachments(width: number, height: number): void {
+    if (this.handle === null) {
+      throw new Error('Cannot resize default framebuffer');
+    }
+
+    super.resizeAttachments(width, height);
+  }
 }
 
 // Helper functions

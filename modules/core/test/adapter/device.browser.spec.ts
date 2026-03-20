@@ -4,12 +4,14 @@
 
 import test from 'test/utils/vitest-tape';
 import {Texture} from '@luma.gl/core';
+import {luma} from '@luma.gl/core';
 import {
   getNullTestDevice,
   getTestDevices,
   getWebGPUTestDevice,
   getWebGLTestDevice
 } from '@luma.gl/test-utils';
+import {webgl2Adapter} from '@luma.gl/webgl';
 import {_getDefaultDebugValue} from '../../src/adapter/device';
 
 // import {luma} from '@luma.gl/core';
@@ -182,7 +184,13 @@ test('Device manages debug GPU timing through a single API', async t => {
 });
 
 test('WebGLDevice#lost (Promise)', async t => {
-  const device = await getWebGLTestDevice();
+  const device = await luma.createDevice({
+    id: 'webgl-test-device-lost',
+    type: 'webgl',
+    adapters: [webgl2Adapter],
+    createCanvasContext: {width: 1, height: 1},
+    debug: false
+  });
 
   await new Promise<void>(resolve => {
     setTimeout(async () => {
