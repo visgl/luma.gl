@@ -83,20 +83,8 @@ export default defineConfig({
       }
     ],
     coverage: {
-      all: true,
       provider: 'v8',
-      reporter: ['text', 'lcov'],
-      include: ['modules/**/src/**/*.{ts,js}'],
-      exclude: [
-        '**/deprecated/**',
-        '**/bundle.ts',
-        '**/*.spec.{ts,js}',
-        '**/*.browser.spec.{ts,js}',
-        'examples/**',
-        'modules/constants/**',
-        'modules/shadertools/src/libs/**',
-        'modules/test-utils/**'
-      ]
+      reporter: ['text', 'lcov']
     }
   }
 });

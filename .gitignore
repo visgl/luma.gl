@@ -10,6 +10,7 @@ dist.min.js
 _docs/
 .nyc_output/
 coverage/
+coverage-*/
 node_modules/
 npm-debug.log
 stats.json
@@ -48,4 +49,3 @@ TODO
 
 # editor files
 .idea
-

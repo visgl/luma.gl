@@ -45,7 +45,11 @@ jobs:
         run: |
           yarn build
   
-      - name: Run tests and generate coverage
+      - name: Run node tests
+        run: |
+          yarn test-node
+
+      - name: Run headless tests and generate coverage
         run: |
           yarn test-coverage
 
