@@ -5,7 +5,7 @@
 import test from 'test/utils/vitest-tape';
 import {luma, PipelineFactory, ShaderFactory} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
-import {getWebGLTestDevice, getTestDevices} from '@luma.gl/test-utils';
+import {getWebGLTestDevice, getWebGPUTestDevice, getTestDevices} from '@luma.gl/test-utils';
 
 const stats = luma.stats.get('GPU Resource Counts');
 
@@ -27,6 +27,22 @@ const DUMMY_FS = `#version 300 es
   precision highp float;
   out vec4 fragColor;
   void main() { fragColor = vec4(1.0); }
+`;
+
+const INVALID_PIPELINE_WGSL = /* WGSL */ `
+@vertex fn wrongVertexMain(@builtin(vertex_index) vertexIndex: u32) -> @builtin(position) vec4<f32> {
+  var positions = array<vec2<f32>, 3>(
+    vec2<f32>(0.0, 0.5),
+    vec2<f32>(-0.5, -0.5),
+    vec2<f32>(0.5, -0.5)
+  );
+  let position = positions[vertexIndex];
+  return vec4<f32>(position, 0.0, 1.0);
+}
+
+@fragment fn fragmentMain() -> @location(0) vec4<f32> {
+  return vec4<f32>(1.0, 0.0, 0.0, 1.0);
+}
 `;
 
 const mockModule = {
@@ -189,6 +205,40 @@ test('Model#draw', async t => {
   t.end();
 });
 
+test('Model#draw skips WebGPU render pipelines that failed init', async t => {
+  const webgpuDevice = await getWebGPUTestDevice();
+
+  if (!webgpuDevice) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const model = new Model(webgpuDevice, {
+    id: 'errored-webgpu-model-test',
+    source: INVALID_PIPELINE_WGSL,
+    vertexCount: 3
+  });
+
+  const linkStatus = await waitForPipelineError(model.pipeline);
+  t.equal(linkStatus, 'error', 'model render pipeline is marked errored');
+  t.ok(model.pipeline.isErrored, 'model render pipeline reports errored state');
+
+  const framebuffer = webgpuDevice
+    .getDefaultCanvasContext()
+    .getCurrentFramebuffer({depthStencilFormat: false});
+  const renderPass = webgpuDevice.beginRenderPass({framebuffer, clearColor: [0, 0, 0, 0]});
+
+  t.equal(model.draw(renderPass), false, 'first draw is skipped when the pipeline is errored');
+  t.equal(model.draw(renderPass), false, 'repeated draws remain skipped');
+  t.equal(model.needsRedraw(), 'render pipeline initialization failed', 'model keeps failure reason');
+
+  renderPass.end();
+  renderPass.destroy();
+  model.destroy();
+  t.end();
+});
+
 test('Model#topology', async t => {
   for (const device of await getTestDevices()) {
     const model = new Model(device, {
@@ -233,6 +283,15 @@ test('Model#topology', async t => {
 
   t.end();
 });
+
+async function waitForPipelineError(pipeline: {
+  linkStatus: 'pending' | 'success' | 'error';
+}): Promise<'pending' | 'success' | 'error'> {
+  for (let iteration = 0; iteration < 50 && pipeline.linkStatus !== 'error'; iteration++) {
+    await new Promise(resolve => setTimeout(resolve, 10));
+  }
+  return pipeline.linkStatus;
+}
 
 test('Model#pipeline caching', async t => {
   const webglDevice = await getWebGLTestDevice();

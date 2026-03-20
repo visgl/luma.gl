@@ -46,6 +46,7 @@ import {DynamicTexture} from '../dynamic-texture/dynamic-texture';
 
 const LOG_DRAW_PRIORITY = 2;
 const LOG_DRAW_TIMEOUT = 10000;
+const PIPELINE_INITIALIZATION_FAILED = 'render pipeline initialization failed';
 
 export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs' | 'bindings'> & {
   source?: string;
@@ -415,6 +416,7 @@ export class Model {
     }
 
     let drawSuccess: boolean;
+    let pipelineErrored = this.pipeline.isErrored;
     try {
       renderPass.pushDebugGroup(`${this}.draw(${renderPass})`);
       this._logDrawCallStart();
@@ -423,6 +425,16 @@ export class Model {
       // TODO - inside RenderPass is likely the worst place to do this from performance perspective.
       // Application can call Model.predraw() to avoid this.
       this.pipeline = this._updatePipeline();
+      pipelineErrored = this.pipeline.isErrored;
+
+      if (pipelineErrored) {
+        log.info(
+          LOG_DRAW_PRIORITY,
+          `>>> DRAWING ABORTED ${this.id}: ${PIPELINE_INITIALIZATION_FAILED}`
+        )();
+        drawSuccess = false;
+        return drawSuccess;
+      }
 
       const syncBindings = this._getBindings();
 
@@ -460,6 +472,8 @@ export class Model {
     if (drawSuccess) {
       this._lastDrawTimestamp = this.device.timestamp;
       this._needsRedraw = false;
+    } else if (pipelineErrored) {
+      this._needsRedraw = PIPELINE_INITIALIZATION_FAILED;
     } else {
       this._needsRedraw = 'waiting for resource initialization';
     }

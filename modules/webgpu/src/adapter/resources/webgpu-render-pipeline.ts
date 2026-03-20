@@ -51,12 +51,14 @@ export class WebGPURenderPipeline extends RenderPipeline {
       this.device.pushErrorScope('validation');
       this.handle = this.device.handle.createRenderPipeline(descriptor);
       this.device.popErrorScope((error: GPUError) => {
+        this.linkStatus = 'error';
         this.device.reportError(new Error(`${this} creation failed:\n"${error.message}"`), this)();
         this.device.debug();
       });
     }
     this.descriptor = descriptor;
     this.handle.label = this.props.id;
+    this.linkStatus = 'success';
 
     // Note: Often the same shader in WebGPU
     this.vs = props.vs as WebGPUShader;
@@ -106,6 +108,11 @@ export class WebGPURenderPipeline extends RenderPipeline {
     bindings?: Record<string, Binding>;
     uniforms?: Record<string, unknown>;
   }): boolean {
+    if (this.isErrored) {
+      log.info(2, `RenderPipeline:${this.id}.draw() aborted - pipeline initialization failed`)();
+      return false;
+    }
+
     const webgpuRenderPass = options.renderPass as WebGPURenderPass;
     const instanceCount =
       options.instanceCount && options.instanceCount > 0 ? options.instanceCount : 1;

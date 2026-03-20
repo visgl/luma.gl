@@ -14,10 +14,8 @@ import {
   loadImageBitmap,
   DynamicTexture,
   BackgroundTextureModel,
-  ClipSpace,
-  getFragmentShaderForRenderPass
+  ClipSpace
 } from '@luma.gl/engine';
-import {persistenceEffect} from './persistence-effect';
 import {Matrix4, Vector3, radians} from '@math.gl/core';
 
 // SPHERE SHADER
@@ -125,6 +123,78 @@ void main(void) {
     attenuation = dot(normal, light);
   }
   fragColor = vec4(sphere.color * attenuation, 1);
+}
+`;
+
+const PERSISTENCE_WGSL = /* WGSL */ `\
+@group(0) @binding(1) var sourceTexture : texture_2d<f32>;
+@group(0) @binding(2) var sourceTextureSampler : sampler;
+@group(0) @binding(3) var persistenceTexture : texture_2d<f32>;
+@group(0) @binding(4) var persistenceTextureSampler : sampler;
+
+@fragment
+fn fragmentMain(
+  @location(2) uv: vec2<f32>
+) -> @location(0) vec4f {
+  let sceneColor = textureSample(sourceTexture, sourceTextureSampler, uv);
+  let persistenceColor = textureSample(persistenceTexture, persistenceTextureSampler, uv);
+  let accumulatedColor = mix(sceneColor.rgb * 4.0, persistenceColor.rgb, vec3<f32>(0.9, 0.9, 0.9));
+  let accumulatedAlpha = max(
+    max(sceneColor.a, max(sceneColor.r, max(sceneColor.g, sceneColor.b))),
+    persistenceColor.a * 0.9
+  );
+  return vec4f(accumulatedColor, accumulatedAlpha);
+}
+`;
+
+const PERSISTENCE_FS = /* glsl */ `\
+#version 300 es
+
+precision highp float;
+
+uniform sampler2D sourceTexture;
+uniform sampler2D persistenceTexture;
+
+in vec2 uv;
+out vec4 fragColor;
+
+void main(void) {
+  vec2 p = uv;
+  vec4 sceneColor = texture(sourceTexture, p);
+  vec4 persistenceColor = texture(persistenceTexture, p);
+  vec3 accumulatedColor = mix(sceneColor.rgb * 4.0, persistenceColor.rgb, vec3(0.9));
+  float accumulatedAlpha = max(
+    max(sceneColor.a, max(sceneColor.r, max(sceneColor.g, sceneColor.b))),
+    persistenceColor.a * 0.9
+  );
+  fragColor = vec4(accumulatedColor, accumulatedAlpha);
+}
+`;
+
+const SCREEN_WGSL = /* WGSL */ `\
+@group(0) @binding(1) var sourceTexture: texture_2d<f32>;
+@group(0) @binding(2) var sourceTextureSampler: sampler;
+
+@fragment
+fn fragmentMain(
+  @location(2) uv: vec2<f32>
+) -> @location(0) vec4f {
+  return textureSample(sourceTexture, sourceTextureSampler, uv);
+}
+`;
+
+const SCREEN_FS = /* glsl */ `\
+#version 300 es
+
+precision highp float;
+
+uniform sampler2D sourceTexture;
+
+in vec2 uv;
+out vec4 fragColor;
+
+void main(void) {
+  fragColor = texture(sourceTexture, uv);
 }
 `;
 
@@ -239,14 +309,41 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       })
     ];
 
-    const persistenceFS = getFragmentShaderForRenderPass({
-      shaderPass: persistenceEffect,
-      action: 'filter',
-      shadingLanguage: device.info.shadingLanguage
-    });
-
-    this.screenPass = new ClipSpace(device, {});
-    this.persistencePass = new ClipSpace(device, {fs: persistenceFS, modules: [persistenceEffect]});
+    this.screenPass = new ClipSpace(
+      device,
+      device.info.shadingLanguage === 'wgsl'
+        ? {
+            source: SCREEN_WGSL,
+            colorAttachmentFormats: [device.preferredColorFormat],
+            parameters: {
+              blend: true,
+              blendColorOperation: 'add',
+              blendAlphaOperation: 'add',
+              blendColorSrcFactor: 'src-alpha',
+              blendColorDstFactor: 'one-minus-src-alpha',
+              blendAlphaSrcFactor: 'one',
+              blendAlphaDstFactor: 'one-minus-src-alpha'
+            }
+          }
+        : {
+            fs: SCREEN_FS,
+            parameters: {
+              blend: true,
+              blendColorOperation: 'add',
+              blendAlphaOperation: 'add',
+              blendColorSrcFactor: 'src-alpha',
+              blendColorDstFactor: 'one-minus-src-alpha',
+              blendAlphaSrcFactor: 'one',
+              blendAlphaDstFactor: 'one-minus-src-alpha'
+            }
+          }
+    );
+    this.persistencePass = new ClipSpace(
+      device,
+      device.info.shadingLanguage === 'wgsl'
+        ? {source: PERSISTENCE_WGSL, colorAttachmentFormats: [OFFSCREEN_COLOR_FORMAT]}
+        : {fs: PERSISTENCE_FS}
+    );
 
     const dt = 0.0125;
 
@@ -376,19 +473,22 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       clearStencil: false
     });
     this.persistencePass.setBindings({
-      sourceTexture: this.mainFramebuffer.colorAttachments[0],
-      persistenceTexture: nextFramebuffer.colorAttachments[0]
+      sourceTexture: this.mainFramebuffer.colorAttachments[0].texture,
+      persistenceTexture: nextFramebuffer.colorAttachments[0].texture
     });
     this.persistencePass.draw(persistenceRenderPass);
     persistenceRenderPass.end();
 
     // Copy the current framebuffer to screen
-    const screenRenderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
+    const screenRenderPass = device.beginRenderPass({
+      framebuffer: device.getDefaultCanvasContext().getCurrentFramebuffer({depthStencilFormat: false}),
+      clearColor: [0, 0, 0, 0]
+    });
+    this.backgroundTextureModel.draw(screenRenderPass);
     this.screenPass.setBindings({
-      sourceTexture: currentFramebuffer.colorAttachments[0]
+      sourceTexture: currentFramebuffer.colorAttachments[0].texture
     });
     this.screenPass.draw(screenRenderPass);
-    this.backgroundTextureModel.draw(screenRenderPass);
     screenRenderPass.end();
   }
 
