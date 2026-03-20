@@ -17,6 +17,7 @@ type AppProps = {
 };
 
 type AppState = {
+  currentZoomLabel: string;
   initializationError: string | null;
   isReady: boolean;
   selectedPresetId: ZoomPresetId;
@@ -104,6 +105,7 @@ export default class App extends React.PureComponent<AppProps, AppState> {
     super(props);
 
     this.state = {
+      currentZoomLabel: formatZoomScale(INITIAL_PIXEL_SCALE),
       initializationError: null,
       isReady: false,
       selectedPresetId: DEFAULT_PRESET_ID
@@ -141,7 +143,11 @@ export default class App extends React.PureComponent<AppProps, AppState> {
   async initialize(): Promise<void> {
     const initializationGeneration = ++this.initializationGeneration;
     this.destroyResources();
-    this.setState({initializationError: null, isReady: false});
+    this.setState({
+      currentZoomLabel: formatZoomScale(INITIAL_PIXEL_SCALE),
+      initializationError: null,
+      isReady: false
+    });
 
     try {
       const canvases = this.canvasRefs.map(reference => reference.current);
@@ -154,7 +160,8 @@ export default class App extends React.PureComponent<AppProps, AppState> {
       const renderer = new MultiCanvasRenderer(
         device,
         canvases as HTMLCanvasElement[],
-        ZOOM_PRESETS[this.state.selectedPresetId]
+        ZOOM_PRESETS[this.state.selectedPresetId],
+        this.handleFrame
       );
 
       if (!this.isReadyForInitialization(initializationGeneration)) {
@@ -191,9 +198,9 @@ export default class App extends React.PureComponent<AppProps, AppState> {
   }
 
   override render(): React.ReactNode {
-    const {initializationError, isReady, selectedPresetId} = this.state;
+    const {currentZoomLabel, initializationError, isReady, selectedPresetId} = this.state;
     const selectedPreset = ZOOM_PRESETS[selectedPresetId];
-    const overlayLines = getOverlayLines(selectedPreset);
+    const overlayLines = getOverlayLines(selectedPreset, currentZoomLabel);
     const visualizationSpecs = getVisualizationSpecs();
 
     return (
@@ -202,7 +209,7 @@ export default class App extends React.PureComponent<AppProps, AppState> {
           display: 'flex',
           flexDirection: 'column',
           gap: 20,
-          padding: 20
+          padding: '72px 20px 20px'
         }}
       >
         {initializationError ? (
@@ -303,6 +310,13 @@ export default class App extends React.PureComponent<AppProps, AppState> {
   private handlePresetChange = (event: React.ChangeEvent<HTMLSelectElement>): void => {
     this.setState({selectedPresetId: event.target.value as ZoomPresetId});
   };
+
+  private handleFrame = (pixelScale: number): void => {
+    const currentZoomLabel = formatZoomScale(pixelScale);
+    if (currentZoomLabel !== this.state.currentZoomLabel) {
+      this.setState({currentZoomLabel});
+    }
+  };
 }
 
 export function renderToDOM(
@@ -320,14 +334,21 @@ export function renderToDOM(
 class MultiCanvasRenderer {
   readonly device: Device;
   readonly fullscreenBuffer: ReturnType<Device['createBuffer']>;
+  readonly onFrame?: (pixelScale: number) => void;
   readonly visualizations: VisualizationRenderer[];
 
   animationFrame: number | null = null;
   startTime = 0;
   zoomPreset: ZoomPreset;
 
-  constructor(device: Device, canvases: HTMLCanvasElement[], zoomPreset: ZoomPreset) {
+  constructor(
+    device: Device,
+    canvases: HTMLCanvasElement[],
+    zoomPreset: ZoomPreset,
+    onFrame?: (pixelScale: number) => void
+  ) {
     this.device = device;
+    this.onFrame = onFrame;
     this.zoomPreset = zoomPreset;
     this.fullscreenBuffer = device.createBuffer({data: FULLSCREEN_POSITIONS});
     this.visualizations = getVisualizationSpecs().map((spec, index) => {
@@ -387,6 +408,9 @@ class MultiCanvasRenderer {
 
   private animate = (timestamp: number): void => {
     const time = (timestamp - this.startTime) / 1000;
+    const pixelScale = getPixelScale(time);
+
+    this.onFrame?.(pixelScale);
 
     for (const visualization of this.visualizations) {
       renderVisualization(this.device, visualization, time, this.zoomPreset);
@@ -453,10 +477,9 @@ function renderVisualization(
   });
   const [width, height] = visualization.presentationContext.getDrawingBufferSize();
   const aspectRatio = width / Math.max(height, 1);
-  const cycleTime = elapsedTime % ZOOM_CYCLE_DURATION;
   const centerX = zoomPreset.centerX;
   const centerY = zoomPreset.centerY;
-  const scale = INITIAL_PIXEL_SCALE * Math.pow(0.5, cycleTime * ZOOM_RATE);
+  const scale = getPixelScale(elapsedTime);
   const fp64CenterX = split64(centerX);
   const fp64CenterY = split64(centerY);
   const fp64Scale = split64(scale);
@@ -510,12 +533,22 @@ function computeIterationLimit(pixelScale: number): number {
   return Math.min(FIXED_ITERATION_LIMIT, Math.round(220 + zoomDepth * 28));
 }
 
-function getOverlayLines(zoomPreset: ZoomPreset): string[] {
+function getPixelScale(elapsedTime: number): number {
+  const cycleTime = elapsedTime % ZOOM_CYCLE_DURATION;
+  return INITIAL_PIXEL_SCALE * Math.pow(0.5, cycleTime * ZOOM_RATE);
+}
+
+function formatZoomScale(pixelScale: number): string {
+  return pixelScale.toExponential(3);
+}
+
+function getOverlayLines(zoomPreset: ZoomPreset, currentZoomLabel: string): string[] {
   return [
     'mode = mandelbrot zoom',
     `target = ${zoomPreset.label}`,
     `x = ${zoomPreset.centerX}`,
     `y = ${zoomPreset.centerY}`,
+    `scale = ${currentZoomLabel}`,
     `zoom = ${INITIAL_PIXEL_SCALE} -> ${MIN_PIXEL_SCALE}`,
     'iterations = adaptive'
   ];
@@ -877,7 +910,7 @@ struct Mandelbrot64Uniforms {
   iterationLimit: f32,
 };
 
-@group(0) @binding(0) var<uniform> mandelbrot64 : Mandelbrot64Uniforms;
+@group(0) @binding(1) var<uniform> mandelbrot64 : Mandelbrot64Uniforms;
 
 const MAX_ITERATIONS: i32 = 2048;
 const ESCAPE_RADIUS_SQUARED: f32 = 256.0;

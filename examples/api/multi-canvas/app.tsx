@@ -6,7 +6,14 @@ import React from 'react';
 import {createRoot, type Root} from 'react-dom/client';
 
 import {luma, type Device, type PresentationContext} from '@luma.gl/core';
-import {Model, ShaderInputs} from '@luma.gl/engine';
+import {
+  AnimationLoop,
+  AnimationLoopTemplate,
+  type AnimationProps,
+  makeAnimationLoop,
+  Model,
+  ShaderInputs
+} from '@luma.gl/engine';
 import type {ShaderModule} from '@luma.gl/shadertools';
 import {webgl2Adapter} from '@luma.gl/webgl';
 import {webgpuAdapter} from '@luma.gl/webgpu';
@@ -33,6 +40,8 @@ type AppUniforms = {
 const CANVAS_WIDTH = 420;
 const CANVAS_HEIGHT = 280;
 
+// React components
+
 export default class App extends React.PureComponent<AppProps, AppState> {
   static defaultProps = {
     deviceType: 'webgl' as DeviceType
@@ -44,8 +53,7 @@ export default class App extends React.PureComponent<AppProps, AppState> {
   ];
 
   device: Device | null = null;
-  renderer: MultiCanvasRenderer | null = null;
-  private ownsDevice = false;
+  animationLoop: AnimationLoop | null = null;
   private initializationGeneration = 0;
   private isComponentMounted = false;
 
@@ -93,40 +101,39 @@ export default class App extends React.PureComponent<AppProps, AppState> {
         throw new Error('Multi-context canvases were not mounted.');
       }
 
-      const externalDevice = this.props.device || this.props.presentationDevice;
-      const device = externalDevice ? externalDevice : await this.createOwnedDevice(deviceType);
-      const renderer = new MultiCanvasRenderer(device, canvases as HTMLCanvasElement[]);
+      const providedDevice = this.props.device || this.props.presentationDevice || null;
+      if (!providedDevice && typeof OffscreenCanvas === 'undefined') {
+        throw new Error('This example requires OffscreenCanvas support.');
+      }
+      const device =
+        providedDevice ||
+        (await luma.createDevice({
+          adapters: [webgl2Adapter, webgpuAdapter],
+          type: deviceType,
+          createCanvasContext: {
+            canvas: new OffscreenCanvas(CANVAS_WIDTH, CANVAS_HEIGHT),
+            width: CANVAS_WIDTH,
+            height: CANVAS_HEIGHT,
+            autoResize: false,
+            useDevicePixels: false
+          }
+        }));
+      multiCanvasAnimationLoopCanvases = canvases as HTMLCanvasElement[];
+      const animationLoop = makeAnimationLoop(MultiCanvasAnimationLoopTemplate, {device});
 
-      if (
-        !this.isComponentMounted ||
-        this.initializationGeneration !== initializationGeneration ||
-        this.props.deviceType !== deviceType ||
-        (externalDevice !== null &&
-          externalDevice !== undefined &&
-          this.props.device !== externalDevice &&
-          this.props.presentationDevice !== externalDevice)
-      ) {
-        renderer.destroy();
-        if (!externalDevice) {
+      if (!this.isReadyForInitialization(initializationGeneration)) {
+        animationLoop.destroy();
+        if (!providedDevice) {
           device.destroy();
         }
         return;
       }
 
       this.device = device;
-      this.renderer = renderer;
-      this.ownsDevice = !externalDevice;
-      this.renderer.start();
+      this.animationLoop = animationLoop;
+      this.animationLoop.start();
 
-      if (
-        !this.isComponentMounted ||
-        this.initializationGeneration !== initializationGeneration ||
-        this.props.deviceType !== deviceType ||
-        (externalDevice !== null &&
-          externalDevice !== undefined &&
-          this.props.device !== externalDevice &&
-          this.props.presentationDevice !== externalDevice)
-      ) {
+      if (!this.isReadyForInitialization(initializationGeneration)) {
         this.destroyResources();
         return;
       }
@@ -141,31 +148,16 @@ export default class App extends React.PureComponent<AppProps, AppState> {
   }
 
   destroyResources(): void {
-    this.renderer?.destroy();
-    this.renderer = null;
-    if (this.ownsDevice) {
+    this.animationLoop?.destroy();
+    this.animationLoop = null;
+    if (!this.props.device && !this.props.presentationDevice) {
       this.device?.destroy();
     }
     this.device = null;
-    this.ownsDevice = false;
   }
 
-  async createOwnedDevice(deviceType: DeviceType): Promise<Device> {
-    if (typeof OffscreenCanvas === 'undefined') {
-      throw new Error('This example requires OffscreenCanvas support.');
-    }
-
-    return await luma.createDevice({
-      adapters: [webgl2Adapter, webgpuAdapter],
-      type: deviceType,
-      createCanvasContext: {
-        canvas: new OffscreenCanvas(CANVAS_WIDTH, CANVAS_HEIGHT),
-        width: CANVAS_WIDTH,
-        height: CANVAS_HEIGHT,
-        autoResize: false,
-        useDevicePixels: false
-      }
-    });
+  private isReadyForInitialization(initializationGeneration: number): boolean {
+    return this.isComponentMounted && this.initializationGeneration === initializationGeneration;
   }
 
   override render(): React.ReactNode {
@@ -177,7 +169,7 @@ export default class App extends React.PureComponent<AppProps, AppState> {
           display: 'flex',
           flexDirection: 'column',
           gap: 20,
-          padding: 20
+          padding: '72px 20px 20px'
         }}
       >
         {initializationError ? (
@@ -205,6 +197,61 @@ export default class App extends React.PureComponent<AppProps, AppState> {
   }
 }
 
+function ExamplePaneCopy(props: {description: string; title: string}): React.ReactNode {
+  const {description, title} = props;
+
+  return (
+    <div
+      style={{
+        minWidth: 0,
+        width: '100%'
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'flex-start',
+          paddingBottom: 2
+        }}
+      >
+        <h3 style={{marginTop: 0, marginBottom: 6}}>{title}</h3>
+        <p style={{margin: 0, lineHeight: 1.45}}>{description}</p>
+      </div>
+    </div>
+  );
+}
+
+function ExamplePaneCanvas(props: {
+  canvasRef: React.RefObject<HTMLCanvasElement>;
+  isReady: boolean;
+}): React.ReactNode {
+  const {canvasRef, isReady} = props;
+
+  return (
+    <div
+      style={{
+        minWidth: 0,
+        width: '100%'
+      }}
+    >
+      <canvas
+        ref={canvasRef}
+        width={CANVAS_WIDTH}
+        height={CANVAS_HEIGHT}
+        style={{
+          width: '100%',
+          height: 'auto',
+          aspectRatio: `${CANVAS_WIDTH} / ${CANVAS_HEIGHT}`,
+          border: '1px solid #1f192c',
+          background: '#000',
+          opacity: isReady ? 1 : 0.5
+        }}
+      />
+    </div>
+  );
+}
+
 export function renderToDOM(
   container: HTMLElement,
   props: {deviceType?: DeviceType; device?: Device | null; presentationDevice?: Device | null} = {}
@@ -216,6 +263,104 @@ export function renderToDOM(
     root.unmount();
   };
 }
+
+// luma.gl
+
+type VisualizationSpec = {
+  title: string;
+  description: string;
+  clearColor: [number, number, number, number];
+  fragmentShaderWGSL: string;
+  fragmentShaderGLSL: string;
+  speed: number;
+};
+
+type VisualizationRenderer = {
+  buffer: ReturnType<Device['createBuffer']>;
+  model: Model;
+  presentationContext: PresentationContext;
+  shaderInputs: ShaderInputs<{app: typeof app.props}>;
+  spec: VisualizationSpec;
+};
+
+class MultiCanvasAnimationLoopTemplate extends AnimationLoopTemplate {
+  readonly device: Device;
+  readonly fullscreenBuffer: ReturnType<Device['createBuffer']>;
+  readonly visualizations: VisualizationRenderer[];
+
+  constructor({device}: AnimationProps) {
+    super();
+    this.device = device;
+    this.fullscreenBuffer = device.createBuffer({data: FULLSCREEN_POSITIONS});
+    this.visualizations = getVisualizationSpecs().map((spec, index) => {
+      const shaderInputs = new ShaderInputs<{app: typeof app.props}>({
+        app
+      });
+      const presentationContext = device.createPresentationContext({
+        canvas: multiCanvasAnimationLoopCanvases[index],
+        width: CANVAS_WIDTH,
+        height: CANVAS_HEIGHT,
+        autoResize: false,
+        useDevicePixels: false
+      });
+      const model = createFullscreenModel(device, {
+        buffer: this.fullscreenBuffer,
+        fragmentShaderWGSL: spec.fragmentShaderWGSL,
+        fragmentShaderGLSL: spec.fragmentShaderGLSL,
+        id: `${spec.title.toLowerCase().replace(/\s+/g, '-')}-model`,
+        shaderInputs
+      });
+
+      return {
+        buffer: this.fullscreenBuffer,
+        model,
+        presentationContext,
+        shaderInputs,
+        spec
+      };
+    });
+  }
+
+  override onFinalize(): void {
+    for (const visualization of this.visualizations) {
+      visualization.model.destroy();
+      visualization.presentationContext.destroy();
+    }
+
+    this.fullscreenBuffer.destroy();
+  }
+
+  override onRender({device, time}: AnimationProps): void {
+    const elapsedSeconds = time / 1000;
+
+    for (const visualization of this.visualizations) {
+      const framebuffer = visualization.presentationContext.getCurrentFramebuffer({
+        depthStencilFormat: false
+      });
+      const [width, height] = visualization.presentationContext.getDrawingBufferSize();
+
+      visualization.shaderInputs.setProps({
+        app: {
+          resolution: [width, height],
+          time: elapsedSeconds,
+          speed: visualization.spec.speed
+        }
+      });
+      visualization.model.updateShaderInputs();
+
+      const renderPass = device.beginRenderPass({
+        framebuffer,
+        clearColor: visualization.spec.clearColor
+      });
+
+      visualization.model.draw(renderPass);
+      renderPass.end();
+      visualization.presentationContext.present();
+    }
+  }
+}
+
+let multiCanvasAnimationLoopCanvases: HTMLCanvasElement[] = [];
 
 const FULLSCREEN_POSITIONS = new Float32Array([-1, -1, -1, 1, 1, -1, 1, 1]);
 
@@ -401,113 +546,25 @@ void main(void) {
 }
 `;
 
-type VisualizationSpec = {
-  title: string;
-  description: string;
-  clearColor: [number, number, number, number];
-  fragmentShaderWGSL: string;
-  fragmentShaderGLSL: string;
-  speed: number;
-};
-
-type VisualizationRenderer = {
-  buffer: ReturnType<Device['createBuffer']>;
-  model: Model;
-  presentationContext: PresentationContext;
-  shaderInputs: ShaderInputs<{app: typeof app.props}>;
-  spec: VisualizationSpec;
-};
-
-class MultiCanvasRenderer {
-  readonly device: Device;
-  readonly visualizations: VisualizationRenderer[];
-
-  animationFrame: number | null = null;
-  startTime = 0;
-
-  constructor(device: Device, canvases: HTMLCanvasElement[]) {
-    this.device = device;
-    this.visualizations = [
-      createVisualizationRenderer(device, canvases[0], {
-        title: CONCENTRIC_WAVES_TITLE,
-        description: CONCENTRIC_WAVES_DESCRIPTION,
-        clearColor: CONCENTRIC_WAVES_CLEAR_COLOR,
-        fragmentShaderWGSL: CONCENTRIC_WAVES_FRAGMENT_WGSL,
-        fragmentShaderGLSL: CONCENTRIC_WAVES_FRAGMENT_GLSL,
-        speed: CONCENTRIC_WAVES_SPEED
-      }),
-      createVisualizationRenderer(device, canvases[1], {
-        title: ANIMATED_NOISE_TITLE,
-        description: ANIMATED_NOISE_DESCRIPTION,
-        clearColor: ANIMATED_NOISE_CLEAR_COLOR,
-        fragmentShaderWGSL: ANIMATED_NOISE_FRAGMENT_WGSL,
-        fragmentShaderGLSL: ANIMATED_NOISE_FRAGMENT_GLSL,
-        speed: ANIMATED_NOISE_SPEED
-      })
-    ];
-  }
-
-  start(): void {
-    this.startTime = performance.now();
-    this.animationFrame = requestAnimationFrame(this.animate);
-  }
-
-  destroy(): void {
-    if (this.animationFrame !== null) {
-      cancelAnimationFrame(this.animationFrame);
-      this.animationFrame = null;
+function getVisualizationSpecs(): VisualizationSpec[] {
+  return [
+    {
+      title: CONCENTRIC_WAVES_TITLE,
+      description: CONCENTRIC_WAVES_DESCRIPTION,
+      clearColor: CONCENTRIC_WAVES_CLEAR_COLOR,
+      fragmentShaderWGSL: CONCENTRIC_WAVES_FRAGMENT_WGSL,
+      fragmentShaderGLSL: CONCENTRIC_WAVES_FRAGMENT_GLSL,
+      speed: CONCENTRIC_WAVES_SPEED
+    },
+    {
+      title: ANIMATED_NOISE_TITLE,
+      description: ANIMATED_NOISE_DESCRIPTION,
+      clearColor: ANIMATED_NOISE_CLEAR_COLOR,
+      fragmentShaderWGSL: ANIMATED_NOISE_FRAGMENT_WGSL,
+      fragmentShaderGLSL: ANIMATED_NOISE_FRAGMENT_GLSL,
+      speed: ANIMATED_NOISE_SPEED
     }
-
-    for (const visualization of this.visualizations) {
-      visualization.model.destroy();
-      visualization.buffer.destroy();
-      visualization.presentationContext.destroy();
-    }
-  }
-
-  private animate = (timestamp: number): void => {
-    const time = (timestamp - this.startTime) / 1000;
-
-    for (const visualization of this.visualizations) {
-      renderVisualization(this.device, visualization, time);
-    }
-
-    this.animationFrame = requestAnimationFrame(this.animate);
-  };
-}
-
-function _createPresentationContext(
-  device: Device,
-  canvas: HTMLCanvasElement
-): PresentationContext {
-  return device.createPresentationContext({
-    canvas,
-    width: CANVAS_WIDTH,
-    height: CANVAS_HEIGHT,
-    autoResize: false,
-    useDevicePixels: false
-  });
-}
-
-function createVisualizationRenderer(
-  device: Device,
-  canvas: HTMLCanvasElement,
-  spec: VisualizationSpec
-): VisualizationRenderer {
-  const buffer = device.createBuffer({data: FULLSCREEN_POSITIONS});
-  const shaderInputs = new ShaderInputs<{app: typeof app.props}>({
-    app
-  });
-  const presentationContext = _createPresentationContext(device, canvas);
-  const model = createFullscreenModel(device, {
-    buffer,
-    fragmentShaderWGSL: spec.fragmentShaderWGSL,
-    fragmentShaderGLSL: spec.fragmentShaderGLSL,
-    id: `${spec.title.toLowerCase().replace(/\s+/g, '-')}-model`,
-    shaderInputs
-  });
-
-  return {buffer, model, presentationContext, shaderInputs, spec};
+  ];
 }
 
 function createFullscreenModel(
@@ -533,88 +590,4 @@ function createFullscreenModel(
     topology: 'triangle-strip',
     shaderInputs: props.shaderInputs
   });
-}
-
-function renderVisualization(
-  device: Device,
-  visualization: VisualizationRenderer,
-  time: number
-): void {
-  const framebuffer = visualization.presentationContext.getCurrentFramebuffer({
-    depthStencilFormat: false
-  });
-  const [width, height] = visualization.presentationContext.getDrawingBufferSize();
-
-  visualization.shaderInputs.setProps({
-    app: {
-      resolution: [width, height],
-      time,
-      speed: visualization.spec.speed
-    }
-  });
-  visualization.model.updateShaderInputs();
-
-  const renderPass = device.beginRenderPass({
-    framebuffer,
-    clearColor: visualization.spec.clearColor
-  });
-
-  visualization.model.draw(renderPass);
-  renderPass.end();
-  visualization.presentationContext.present();
-}
-
-function ExamplePaneCopy(props: {description: string; title: string}): React.ReactNode {
-  const {description, title} = props;
-
-  return (
-    <div
-      style={{
-        minWidth: 0,
-        width: '100%'
-      }}
-    >
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'flex-start',
-          paddingBottom: 2
-        }}
-      >
-        <h3 style={{marginTop: 0, marginBottom: 6}}>{title}</h3>
-        <p style={{margin: 0, lineHeight: 1.45}}>{description}</p>
-      </div>
-    </div>
-  );
-}
-
-function ExamplePaneCanvas(props: {
-  canvasRef: React.RefObject<HTMLCanvasElement>;
-  isReady: boolean;
-}): React.ReactNode {
-  const {canvasRef, isReady} = props;
-
-  return (
-    <div
-      style={{
-        minWidth: 0,
-        width: '100%'
-      }}
-    >
-      <canvas
-        ref={canvasRef}
-        width={CANVAS_WIDTH}
-        height={CANVAS_HEIGHT}
-        style={{
-          width: '100%',
-          height: 'auto',
-          aspectRatio: `${CANVAS_WIDTH} / ${CANVAS_HEIGHT}`,
-          border: '1px solid #1f192c',
-          background: '#000',
-          opacity: isReady ? 1 : 0.5
-        }}
-      />
-    </div>
-  );
 }

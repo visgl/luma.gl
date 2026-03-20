@@ -23,7 +23,8 @@ function getWebGPUVertexFormat(format: VertexFormat): GPUVertexFormat {
  */
 export function getVertexBufferLayout(
   shaderLayout: ShaderLayout,
-  bufferLayout: BufferLayout[]
+  bufferLayout: BufferLayout[],
+  options?: {pipelineId?: string}
 ): GPUVertexBufferLayout[] {
   const vertexBufferLayouts: GPUVertexBufferLayout[] = [];
   const usedAttributes = new Set<string>();
@@ -44,7 +45,12 @@ export function getVertexBufferLayout(
       // const arrayStride = mapping.byteStride; TODO
       for (const attributeMapping of mapping.attributes) {
         const attributeName = attributeMapping.attribute;
-        const attributeLayout = findAttributeLayout(shaderLayout, attributeName, usedAttributes);
+        const attributeLayout = findAttributeLayout(
+          shaderLayout,
+          attributeName,
+          usedAttributes,
+          options
+        );
 
         // @ts-ignore
         const location: number = attributeLayout?.location;
@@ -63,7 +69,12 @@ export function getVertexBufferLayout(
       }
       // non-interleaved mapping (just set offset and stride)
     } else {
-      const attributeLayout = findAttributeLayout(shaderLayout, mapping.name, usedAttributes);
+      const attributeLayout = findAttributeLayout(
+        shaderLayout,
+        mapping.name,
+        usedAttributes,
+        options
+      );
       if (!attributeLayout) {
         continue; // eslint-disable-line no-continue
       }
@@ -159,11 +170,17 @@ export function getBufferSlots(
 function findAttributeLayout(
   shaderLayout: ShaderLayout,
   name: string,
-  attributeNames?: Set<string>
+  attributeNames?: Set<string>,
+  options?: {pipelineId?: string}
 ): AttributeDeclaration | null {
   const attribute = shaderLayout.attributes.find(attribute_ => attribute_.name === name);
   if (!attribute) {
-    log.warn(`Supplied attribute not present in shader layout: ${name}`)();
+    const pipelineContext = options?.pipelineId
+      ? `RenderPipeline(${options.pipelineId})`
+      : 'RenderPipeline';
+    log.warn(
+      `${pipelineContext}: Ignoring "${name}" attribute, since it is not present in shader layout.`
+    )();
     return null;
   }
   if (attributeNames) {
