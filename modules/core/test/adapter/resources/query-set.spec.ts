@@ -151,6 +151,68 @@ test('WebGL QuerySet timestamp pair validation', async t => {
   t.end();
 });
 
+test('WebGL QuerySet destroy cancels pending RAF polling', async t => {
+  const device = await getWebGLTestDevice();
+  const querySet = device.createQuerySet({type: 'timestamp', count: 2}) as any;
+  const queryHandle = device.gl.createQuery();
+
+  t.ok(queryHandle, 'created a WebGL query handle for the pending poll test');
+  if (!queryHandle) {
+    querySet.destroy();
+    t.end();
+    return;
+  }
+
+  const originalRequestAnimationFrame = globalThis.requestAnimationFrame;
+  const originalCancelAnimationFrame = globalThis.cancelAnimationFrame;
+
+  let scheduledCallback: FrameRequestCallback | null = null;
+  let cancelAnimationFrameCallCount = 0;
+
+  try {
+    globalThis.requestAnimationFrame = ((callback: FrameRequestCallback): number => {
+      scheduledCallback = callback;
+      return 1;
+    }) as typeof requestAnimationFrame;
+
+    globalThis.cancelAnimationFrame = ((requestId: number): void => {
+      if (requestId === 1) {
+        cancelAnimationFrameCallCount++;
+        scheduledCallback = null;
+      }
+    }) as typeof cancelAnimationFrame;
+
+    querySet._timestampPairs[0].completedQueries.push({
+      handle: queryHandle,
+      promise: null,
+      result: null,
+      disjoint: false,
+      cancelled: false,
+      pollRequestId: null,
+      resolve: null,
+      reject: null
+    });
+    querySet._pollQueryAvailability = () => false;
+
+    const durationPromise = querySet.readTimestampDuration(0, 1);
+    t.ok(
+      scheduledCallback,
+      'readTimestampDuration schedules an RAF poll when results are unavailable'
+    );
+
+    querySet.destroy();
+    const duration = await durationPromise;
+
+    t.equal(cancelAnimationFrameCallCount, 1, 'destroy cancels the pending RAF poll');
+    t.equal(duration, 0, 'destroy resolves the pending timestamp read with a neutral duration');
+  } finally {
+    globalThis.requestAnimationFrame = originalRequestAnimationFrame;
+    globalThis.cancelAnimationFrame = originalCancelAnimationFrame;
+  }
+
+  t.end();
+});
+
 /*
 test('Query construct/delete', (t) => {
   const ext = gl.getExtension('EXT_disjoint_timer_query');
