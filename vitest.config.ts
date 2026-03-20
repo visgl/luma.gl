@@ -42,6 +42,7 @@ export default defineConfig({
         plugins: [createTsconfigPathsPlugin()],
         test: {
           name: 'node',
+          color: 'blue',
           environment: 'node',
           include: ['modules/**/*.spec.{ts,js}', 'test/dev-modules/**/*.spec.{ts,js}'],
           exclude: ['modules/**/*.browser.spec.{ts,js}', ...EXCLUDE_PATTERNS],
@@ -54,6 +55,7 @@ export default defineConfig({
         plugins: [createTsconfigPathsPlugin()],
         test: {
           name: 'browser',
+          color: 'green',
           environment: 'node',
           include: ['modules/**/*.browser.spec.{ts,js}', 'test/**/*.browser.spec.{ts,js}'],
           exclude: EXCLUDE_PATTERNS,
@@ -68,6 +70,7 @@ export default defineConfig({
         plugins: [createTsconfigPathsPlugin()],
         test: {
           name: 'headless',
+          color: 'cyan',
           environment: 'node',
           include: ['modules/**/*.browser.spec.{ts,js}', 'test/**/*.browser.spec.{ts,js}'],
           exclude: EXCLUDE_PATTERNS,

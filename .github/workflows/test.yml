@@ -49,6 +49,38 @@ jobs:
         run: |
           yarn test-coverage
 
+      - name: Sanitize lcov for Coveralls
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const coveragePath = 'coverage/lcov.info';
+          const lines = fs.readFileSync(coveragePath, 'utf8').split(/\r?\n/);
+          const records = [];
+          let currentRecord = [];
+
+          for (const line of lines) {
+            currentRecord.push(line);
+            if (line === 'end_of_record') {
+              const sourceFileLine = currentRecord.find(recordLine => recordLine.startsWith('SF:'));
+              const sourceFile = sourceFileLine ? sourceFileLine.slice(3).trim() : '';
+              if (sourceFile) {
+                records.push(currentRecord.join('\n'));
+              }
+              currentRecord = [];
+            }
+          }
+
+          if (currentRecord.length) {
+            const sourceFileLine = currentRecord.find(recordLine => recordLine.startsWith('SF:'));
+            const sourceFile = sourceFileLine ? sourceFileLine.slice(3).trim() : '';
+            if (sourceFile) {
+              records.push(currentRecord.join('\n'));
+            }
+          }
+
+          fs.writeFileSync(coveragePath, `${records.join('\n')}\n`);
+          NODE
+
       - name: Run lint
         run: |
           yarn lint
