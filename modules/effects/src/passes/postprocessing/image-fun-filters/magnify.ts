@@ -24,13 +24,18 @@ fn magnify_sampleColor(
   let pos = vec2f(magnify.screenXY.x, 1.0 - magnify.screenXY.y);
   let dist = distance(texCoord * texSize, pos * texSize);
   if (dist < magnify.radiusPixels) {
-    return textureSample(sourceTexture, sourceTextureSampler, (texCoord - pos) / magnify.zoom + pos);
+    return textureSampleLevel(
+      sourceTexture,
+      sourceTextureSampler,
+      (texCoord - pos) / magnify.zoom + pos,
+      0.0
+    );
   }
 
   if (dist <= magnify.radiusPixels + magnify.borderWidthPixels) {
     return magnify.borderColor;
   }
-  return textureSample(sourceTexture, sourceTextureSampler, texCoord);
+  return textureSampleLevel(sourceTexture, sourceTextureSampler, texCoord, 0.0);
 }
 `;
 

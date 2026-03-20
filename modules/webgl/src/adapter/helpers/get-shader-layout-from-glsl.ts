@@ -10,7 +10,7 @@ import type {
   VaryingBinding,
   AttributeShaderType
 } from '@luma.gl/core';
-import {getVariableShaderTypeInfo, assertDefined} from '@luma.gl/core';
+import {getVariableShaderTypeInfo, assertDefined, log} from '@luma.gl/core';
 
 import {GL, GLUniformType} from '@luma.gl/constants';
 import {
@@ -272,6 +272,25 @@ function readUniformBlocks(
           // rowMajor: uniformRowMajor[i]
         });
       }
+    }
+
+    const uniformInstancePrefixes = new Set(
+      blockInfo.uniforms
+        .map(uniform => uniform.name.split('.')[0])
+        .filter((instanceName): instanceName is string => Boolean(instanceName))
+    );
+    const blockAlias = blockInfo.name.replace(/Uniforms$/, '');
+    if (
+      uniformInstancePrefixes.size === 1 &&
+      !uniformInstancePrefixes.has(blockInfo.name) &&
+      !uniformInstancePrefixes.has(blockAlias)
+    ) {
+      const [instanceName] = uniformInstancePrefixes;
+      log.warn(
+        `Uniform block "${blockInfo.name}" uses GLSL instance "${instanceName}". ` +
+          `luma.gl binds uniform buffers by block name ("${blockInfo.name}") and alias ("${blockAlias}"). ` +
+          'Prefer matching the instance name to one of those to avoid confusing silent mismatches.'
+      )();
     }
 
     uniformBlocks.push(blockInfo);
