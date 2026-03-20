@@ -60,6 +60,10 @@ Shows the shader log in a popup in the canvas if the debug condition is met `'er
 Shows errors inline with the source code. If translated source is available (`getTranslatedSource()`), shows the translated source after the original source.
 Note that translated source is only available if shader compilation succeeds.
 
+## Performance
+
+Compiling shaders is usually cheaper than creating complete pipelines, but applications that repeatedly request the same shader source should still prefer [`ShaderFactory`](/docs/api-reference/core/shader-factory) over calling `device.createShader()` directly.
+
 ## Remarks
 
 - Shader compilation is fairly fast, in particular compared to Pipeline linking.

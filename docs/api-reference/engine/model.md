@@ -49,8 +49,8 @@ renderPass.end();
 | `varyings?` | `string[]` | WebGL transform-feedback varyings. |
 | `transformFeedback?` | `TransformFeedback` | Optional transform feedback object. |
 | `debugShaders?` | `'never' \| 'errors' \| 'warnings' \| 'always'` | Debug shader output policy. |
-| `pipelineFactory?` | `PipelineFactory` | Factory used to create cached pipelines. |
-| `shaderFactory?` | `ShaderFactory` | Factory used to create cached shaders. |
+| `pipelineFactory?` | `PipelineFactory` | Factory from `@luma.gl/core` used to create cached pipelines. |
+| `shaderFactory?` | `ShaderFactory` | Factory from `@luma.gl/core` used to create cached shaders. |
 | `shaderAssembler?` | `ShaderAssembler` | Shader assembler override. |
 
 `ModelProps` also includes the standard [`RenderPipelineProps`](/docs/api-reference/core/resources/render-pipeline), except that `bindings`, `vs`, and `fs` are specialized for engine usage.
@@ -67,7 +67,7 @@ The assembled WGSL source or the GLSL stage sources used to create the current p
 
 ### `pipelineFactory`, `shaderFactory`
 
-Factories used to reuse cached pipelines and shaders.
+Factories from `@luma.gl/core` used to reuse cached pipelines and shaders.
 
 ### `parameters`, `topology`, `bufferLayout`
 

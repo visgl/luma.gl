@@ -101,4 +101,5 @@ Sets the resource bindings used for subsequent dispatches.
 ## Remarks
 
 - `Computation` is compute-only and does not expose draw-style geometry or render-pass APIs.
-- For shader-module-based resource management, `Computation` follows the same `ShaderInputs` pattern as `Model`.
+- For shader-module-based resource management, `Computation` follows the same `ShaderInputs` pattern as [`Model`](/docs/api-reference/engine/model).
+- `Computation` uses [`PipelineFactory`](/docs/api-reference/core/pipeline-factory) and [`ShaderFactory`](/docs/api-reference/core/shader-factory) from `@luma.gl/core` unless you provide custom factory instances.

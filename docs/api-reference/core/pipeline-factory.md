@@ -1,8 +1,10 @@
 # PipelineFactory
 
-`PipelineFactory` caches and reuses [`RenderPipeline`](/docs/api-reference/core/resources/render-pipeline) and `ComputePipeline` instances for one device.
+`PipelineFactory` caches and reuses [`RenderPipeline`](/docs/api-reference/core/resources/render-pipeline) and [`ComputePipeline`](/docs/api-reference/core/resources/compute-pipeline) instances for one device.
 
 It is primarily useful when many models or computations assemble identical pipelines. Reusing those pipelines reduces redundant pipeline creation and works well together with [`ShaderFactory`](/docs/api-reference/core/shader-factory).
+
+If you use [`Model`](/docs/api-reference/engine/model) or [`Computation`](/docs/api-reference/engine/compute/computation), those engine wrappers already use core factories by default. Create a `PipelineFactory` directly when you want explicit cache ownership or when application code creates pipelines without going through engine wrappers.
 
 :::info
 Pipeline creation involves shader compilation and backend-specific linking work. That cost can become noticeable during startup and whenever applications repeatedly assemble equivalent pipelines on demand.
@@ -38,7 +40,7 @@ Creates a factory for one device.
 
 ### `createRenderPipeline(props: RenderPipelineProps): RenderPipeline`
 
-Returns a render pipeline. If caching is enabled and an equivalent pipeline was already requested, the cached instance is reused and its internal reference count is incremented.
+Returns a render pipeline. If caching is enabled and an equivalent cached wrapper was already requested, the cached instance is reused and its internal reference count is incremented.
 
 ### `createComputePipeline(props: ComputePipelineProps): ComputePipeline`
 
@@ -51,6 +53,7 @@ Releases a previously requested pipeline. When the reference count reaches zero,
 ## WebGL Notes
 
 - On WebGL, `PipelineFactory` may return different cached `RenderPipeline` wrappers that share one linked `WebGLProgram`.
+- Shared `WebGLProgram` reuse is the primary optimization on WebGL; exact wrapper reuse is secondary.
 - Wrapper caching still respects pipeline-level defaults such as `topology`, `parameters`, and layout-related props.
 - WebGL link-time props such as `varyings` and `bufferMode` are also respected when determining whether shared programs can be reused.
 - This lets WebGL reduce shader-link overhead without changing the per-pipeline behavior seen by direct `RenderPipeline.draw()` callers.
@@ -68,4 +71,6 @@ If an application creates very large numbers of distinct pipelines and cache gro
 ## Remarks
 
 - `PipelineFactory` hashing is based on pipeline inputs and device type, not just object identity.
+- WebGPU render-pipeline caching tracks immutable descriptor-shaping inputs such as shader sources, entry points, layouts, parameters, topology, buffer layout, and attachment formats.
 - Callers that use `createRenderPipeline()` or `createComputePipeline()` directly should pair those calls with `release()` to avoid leaking cached references.
+- The exported `PipelineFactoryProps` type is currently an alias of [`RenderPipelineProps`](/docs/api-reference/core/resources/render-pipeline#renderpipelineprops).

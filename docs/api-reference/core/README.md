@@ -39,6 +39,8 @@ const renderPass = device.beginRenderPass(...);
 
 ## Related Pages
 
+- [PipelineFactory](/docs/api-reference/core/pipeline-factory)
+- [ShaderFactory](/docs/api-reference/core/shader-factory)
 - [Shader Types](/docs/api-reference/core/shader-types)
 - [Shader Layout](/docs/api-reference/core/shader-layout)
 - [Vertex Formats](/docs/api-reference/core/vertex-formats)
