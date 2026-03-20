@@ -62,6 +62,7 @@
       "@luma.gl/webgl/test/*": ["modules/webgl/test/*"],
       "@luma.gl/webgpu/*": ["modules/webgpu/src/*"],
       "@luma.gl/webgpu/test/*": ["modules/webgpu/test/*"],
+      "dev-modules/*": ["dev-modules/*"],
       "test/*": ["test/*"]
     },
     "plugins": [

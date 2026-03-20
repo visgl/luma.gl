@@ -4,7 +4,7 @@
 
 import {triangleBlur} from '@luma.gl/effects';
 import {getShaderModuleUniforms} from '@luma.gl/shadertools';
-import test from 'tape-promise/tape';
+import test from 'test/utils/vitest-tape';
 
 test('triangleBlur#build/uniform', t => {
   const uniforms = getShaderModuleUniforms(triangleBlur, {}, {});

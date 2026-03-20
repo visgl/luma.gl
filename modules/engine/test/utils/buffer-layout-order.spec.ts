@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from 'tape-promise/tape';
+import test from 'test/utils/vitest-tape';
 import {type ShaderLayout, type BufferLayout} from '@luma.gl/core';
 import {sortedBufferLayoutByShaderSourceLocations} from '@luma.gl/engine/utils/buffer-layout-order';
 

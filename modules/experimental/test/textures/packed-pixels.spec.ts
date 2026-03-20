@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from 'tape';
+import test from 'test/utils/vitest-tape';
 import {RGBADecoder, TEXTURE_FORMAT_PIXEL_DECODERS} from '@luma.gl/experimental';
 
 const rgbaDecoder = new RGBADecoder({tables: [TEXTURE_FORMAT_PIXEL_DECODERS]});

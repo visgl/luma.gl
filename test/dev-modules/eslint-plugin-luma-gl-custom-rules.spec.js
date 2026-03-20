@@ -1,5 +1,5 @@
-import test from 'tape-promise/tape';
-import customRulesPlugin from 'dev-modules/eslint-plugin-luma-gl-custom-rules/index.js';
+import test from 'test/utils/vitest-tape';
+import customRulesPlugin from '../../dev-modules/eslint-plugin-luma-gl-custom-rules/index.cjs';
 import {RuleTester} from 'eslint';
 
 const ruleTester = new RuleTester();
