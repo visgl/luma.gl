@@ -27,6 +27,7 @@ export class WEBGLQuerySet extends QuerySet {
   readonly handle: WebGLQuery | null;
 
   protected _timestampPairs: WebGLTimestampPair[] = [];
+  protected _pendingReads: Set<WebGLPendingQuery> = new Set();
   protected _occlusionQuery: WebGLPendingQuery | null = null;
   protected _occlusionActive = false;
 
@@ -83,6 +84,10 @@ export class WEBGLQuerySet extends QuerySet {
     if (this._occlusionQuery) {
       this._cancelPendingQuery(this._occlusionQuery);
       this.device.gl.deleteQuery(this._occlusionQuery.handle);
+    }
+
+    for (const query of Array.from(this._pendingReads)) {
+      this._cancelPendingQuery(query);
     }
 
     this.destroyResource();
@@ -299,6 +304,7 @@ export class WEBGLQuerySet extends QuerySet {
       return query.promise;
     }
 
+    this._pendingReads.add(query);
     query.promise = new Promise((resolve, reject) => {
       query.resolve = resolve;
       query.reject = reject;
@@ -307,6 +313,7 @@ export class WEBGLQuerySet extends QuerySet {
         query.pollRequestId = null;
 
         if (query.cancelled || this.destroyed) {
+          this._pendingReads.delete(query);
           query.promise = null;
           query.resolve = null;
           query.reject = null;
@@ -319,6 +326,7 @@ export class WEBGLQuerySet extends QuerySet {
           return;
         }
 
+        this._pendingReads.delete(query);
         query.promise = null;
         query.resolve = null;
         query.reject = null;
@@ -336,6 +344,7 @@ export class WEBGLQuerySet extends QuerySet {
   }
 
   protected _cancelPendingQuery(query: WebGLPendingQuery): void {
+    this._pendingReads.delete(query);
     query.cancelled = true;
     if (query.pollRequestId !== null) {
       this._cancelAnimationFrame(query.pollRequestId);
