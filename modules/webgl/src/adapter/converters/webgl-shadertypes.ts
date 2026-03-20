@@ -15,14 +15,6 @@ export function convertDataTypeToGLDataType(normalizedType: NormalizedDataType):
   return NORMALIZED_SHADER_TYPE_TO_WEBGL[normalizedType];
 }
 
-/** Converts to a luma shadertype to a GL data type (GL.BYTE, GL.FLOAT32 etc)  */
-export function convertShaderVariableTypeToGLDataType(
-  normalizedType: VariableShaderType
-): GLDataType {
-  // @ts-ignore TODO
-  return NORMALIZED_SHADER_TYPE_TO_WEBGL[normalizedType];
-}
-
 /** Convert a WebGL "compisite type (e.g. GL.VEC3) into the corresponding luma shader uniform type */
 export function convertGLUniformTypeToShaderVariableType(
   glUniformType: GLUniformType

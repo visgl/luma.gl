@@ -7,7 +7,6 @@ import {getWebGPUTextureFormat} from '../helpers/convert-texture-format';
 import {getBindGroup} from '../helpers/get-bind-group';
 import {getVertexBufferLayout} from '../helpers/get-vertex-buffer-layout';
 // import {convertAttributesVertexBufferToLayout} from '../helpers/get-vertex-buffer-layout';
-// import {mapAccessorToWebGPUFormat} from './helpers/accessor-to-format';
 // import type {BufferAccessors} from './webgpu-pipeline';
 
 import type {WebGPUDevice} from '../webgpu-device';
