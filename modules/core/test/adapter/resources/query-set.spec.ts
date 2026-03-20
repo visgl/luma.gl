@@ -163,19 +163,20 @@ test('WebGL QuerySet destroy cancels pending RAF polling', async t => {
     return;
   }
 
-  const originalRequestAnimationFrame = querySet._requestAnimationFrame.bind(querySet);
-  const originalCancelAnimationFrame = querySet._cancelAnimationFrame.bind(querySet);
+  const querySetPrototype = Object.getPrototypeOf(querySet);
+  const originalRequestAnimationFrame = querySetPrototype._requestAnimationFrame;
+  const originalCancelAnimationFrame = querySetPrototype._cancelAnimationFrame;
 
   let scheduledCallback: FrameRequestCallback | null = null;
   let cancelAnimationFrameCallCount = 0;
 
   try {
-    querySet._requestAnimationFrame = (callback: FrameRequestCallback): number => {
+    querySetPrototype._requestAnimationFrame = (callback: FrameRequestCallback): number => {
       scheduledCallback = callback;
       return 1;
     };
 
-    querySet._cancelAnimationFrame = (requestId: number): void => {
+    querySetPrototype._cancelAnimationFrame = (requestId: number): void => {
       if (requestId === 1) {
         cancelAnimationFrameCallCount++;
         scheduledCallback = null;
@@ -204,15 +205,18 @@ test('WebGL QuerySet destroy cancels pending RAF polling', async t => {
     const duration = await Promise.race([
       durationPromise,
       new Promise<number>((_, reject) =>
-        setTimeout(() => reject(new Error('Timed out waiting for pending query cancellation')), 1000)
+        setTimeout(
+          () => reject(new Error('Timed out waiting for pending query cancellation')),
+          1000
+        )
       )
     ]);
 
     t.equal(cancelAnimationFrameCallCount, 1, 'destroy cancels the pending RAF poll');
     t.equal(duration, 0, 'destroy resolves the pending timestamp read with a neutral duration');
   } finally {
-    querySet._requestAnimationFrame = originalRequestAnimationFrame;
-    querySet._cancelAnimationFrame = originalCancelAnimationFrame;
+    querySetPrototype._requestAnimationFrame = originalRequestAnimationFrame;
+    querySetPrototype._cancelAnimationFrame = originalCancelAnimationFrame;
   }
 
   t.end();

@@ -117,7 +117,9 @@ function formatCompilationErrors(compilationMessages: {type: string; message: st
 }
 
 async function getCompilationInfoWithTimeout(shader: {
-  getCompilationInfo: () => Promise<{type: string; message: string}[] | readonly {type: string; message: string}[]>;
+  getCompilationInfo: () => Promise<
+    {type: string; message: string}[] | readonly {type: string; message: string}[]
+  >;
 }): Promise<readonly {type: string; message: string}[]> {
   return await Promise.race([
     shader.getCompilationInfo(),
@@ -186,7 +188,9 @@ test('postprocessing WGSL#assemble/compile', async testCase => {
             `${shaderPass.name} ${action} compiles as WebGPU WGSL${compilationErrors ? `\n${compilationErrors}` : ''}`
           );
         } catch (error) {
-          testCase.fail(`${shaderPass.name} ${action} WebGPU compilation check failed: ${String(error)}`);
+          testCase.fail(
+            `${shaderPass.name} ${action} WebGPU compilation check failed: ${String(error)}`
+          );
         } finally {
           shader.destroy();
         }
