@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from 'tape-promise/tape';
+import test from 'test/utils/vitest-tape';
 import {Texture} from '../../core/src/index';
 import {lighting, picking, ShaderModule} from '../../shadertools/src/index';
 import type {LightingProps} from '../../shadertools/src/index';

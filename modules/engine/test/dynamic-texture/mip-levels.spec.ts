@@ -1,7 +1,7 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
 
-import test from 'tape-promise/tape';
+import test from 'test/utils/vitest-tape';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
 import {DynamicTexture} from '../../src/index';
 

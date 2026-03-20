@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from 'tape-promise/tape';
+import test from 'test/utils/vitest-tape';
 import {createBrowserContext} from '@luma.gl/webgl/context/helpers/create-browser-context';
 
 type ListenerMap = Record<string, Set<EventListener>>;

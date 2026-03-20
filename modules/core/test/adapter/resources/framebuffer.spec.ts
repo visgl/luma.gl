@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 /* eslint-disable max-len */
-import test from 'tape-promise/tape';
+import test from 'test/utils/vitest-tape';
 import {getTestDevices} from '@luma.gl/test-utils';
 import {Framebuffer} from '@luma.gl/core';
 

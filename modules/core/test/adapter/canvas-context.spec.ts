@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from 'tape-promise/tape';
+import test from 'test/utils/vitest-tape';
 import type {CanvasContextProps, PresentationContextProps} from '@luma.gl/core';
 import {CanvasContext, PresentationContext, Framebuffer} from '@luma.gl/core';
 import {isBrowser} from '@probe.gl/env';

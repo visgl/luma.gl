@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 /* eslint-disable camelcase, no-console, no-undef */
-import test from 'tape-promise/tape';
+import test from 'test/utils/vitest-tape';
 import {Device} from '@luma.gl/core';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
 import {assembleGLSLShaderPair, PlatformInfo} from '@luma.gl/shadertools';

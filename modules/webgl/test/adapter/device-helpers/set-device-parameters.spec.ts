@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from 'tape-promise/tape';
+import test from 'test/utils/vitest-tape';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
 
 import {GL, GLParameters} from '@luma.gl/constants';
@@ -77,7 +77,11 @@ test('setDeviceParameters#blending', async t => {
 
   t.equal(getGLParameter(device, GL.BLEND), false, 'blending disabled');
 
-  setDeviceParameters(device, {blendColorOperation: 'add', blendAlphaOperation: 'subtract'});
+  setDeviceParameters(device, {
+    blend: true,
+    blendColorOperation: 'add',
+    blendAlphaOperation: 'subtract'
+  });
 
   t.equal(getGLParameter(device, GL.BLEND), true, 'GL.BLEND = true');
   t.equal(
@@ -96,6 +100,7 @@ test('setDeviceParameters#blending', async t => {
   t.equal(getGLParameter(device, GL.BLEND_DST_ALPHA), GL.ZERO, 'GL.BLEND_DST_ALPHA = GL.ZERO');
 
   setDeviceParameters(device, {
+    blend: true,
     blendColorOperation: 'max',
     blendAlphaOperation: 'min',
     blendColorSrcFactor: 'src-alpha',

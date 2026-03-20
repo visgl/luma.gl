@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from 'tape-promise/tape';
+import test from 'test/utils/vitest-tape';
 import {deepArrayEqual} from '@luma.gl/webgl/context/state-tracker/deep-array-equal';
 
 test('WebGLState#deepArrayEqual', t => {

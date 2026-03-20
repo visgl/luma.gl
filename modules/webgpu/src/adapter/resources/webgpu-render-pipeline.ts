@@ -181,7 +181,9 @@ export class WebGPURenderPipeline extends RenderPipeline {
     const vertex: GPUVertexState = {
       module: (this.props.vs as WebGPUShader).handle,
       entryPoint: this.props.vertexEntryPoint || 'main',
-      buffers: getVertexBufferLayout(this.shaderLayout, this.props.bufferLayout)
+      buffers: getVertexBufferLayout(this.shaderLayout, this.props.bufferLayout, {
+        pipelineId: this.id
+      })
     };
 
     // Populate color targets

@@ -15,9 +15,8 @@ fn vibrance_filterColor(color: vec4f) -> vec4f {
   let average = (color.r + color.g + color.b) / 3.0;
   let mx = max(color.r, max(color.g, color.b));
   let amt = (mx - average) * (-vibrance.amount * 3.0);
-  var result = color;
-  result.rgb = mix(result.rgb, vec3f(mx), amt);
-  return result;
+  let resultRgb = mix(color.rgb, vec3f(mx), amt);
+  return vec4f(resultRgb, color.a);
 }
 
 fn vibrance_filterColor_ext(color: vec4f, texSize: vec2f, texCoord: vec2f) -> vec4f {

@@ -1,4 +1,4 @@
-import test from 'tape';
+import test from 'test/utils/vitest-tape';
 
 import {
   isTextureSliceData,

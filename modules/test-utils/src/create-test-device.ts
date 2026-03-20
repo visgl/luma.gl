@@ -12,11 +12,11 @@ import {NullDevice} from './null-device/null-device';
 const DEFAULT_CANVAS_CONTEXT_PROPS: CanvasContextProps = {width: 1, height: 1};
 
 /** A null device intended for testing - @note Only available after getTestDevices() has completed */
-let nullDevicePromise = makeNullTestDevice();
+let nullDevicePromise: Promise<NullDevice> | null = null;
 /** This WebGL Device can be used directly but will not have WebGL debugging initialized */
-const webglDevicePromise = makeWebGLTestDevice();
+let webglDevicePromise: Promise<WebGLDevice> | null = null;
 /** A WebGL 2 Device intended for testing - @note Only available after getTestDevices() has completed */
-const webgpuDevicePromise = makeWebGPUTestDevice();
+let webgpuDevicePromise: Promise<WebGPUDevice | null> | null = null;
 
 /** Includes WebGPU device if available */
 export async function getTestDevices(
@@ -32,11 +32,11 @@ export async function getTestDevice(
 ): Promise<Device | null> {
   switch (type) {
     case 'webgl':
-      return webglDevicePromise;
+      return getOrCreateWebGLTestDevicePromise();
     case 'webgpu':
-      return webgpuDevicePromise;
+      return getOrCreateWebGPUTestDevicePromise();
     case 'null':
-      return nullDevicePromise;
+      return getOrCreateNullTestDevicePromise();
     case 'unknown':
       return null;
   }
@@ -44,16 +44,31 @@ export async function getTestDevice(
 
 /** returns WebGPU device promise, if available */
 export function getWebGPUTestDevice(): Promise<WebGPUDevice | null> {
-  return webgpuDevicePromise;
+  return getOrCreateWebGPUTestDevicePromise();
 }
 
 /** returns WebGL device promise, if available */
 export async function getWebGLTestDevice(): Promise<WebGLDevice> {
-  return webglDevicePromise;
+  return getOrCreateWebGLTestDevicePromise();
 }
 
 /** returns null device promise, if available */
 export async function getNullTestDevice(): Promise<NullDevice> {
+  return getOrCreateNullTestDevicePromise();
+}
+
+function getOrCreateWebGPUTestDevicePromise(): Promise<WebGPUDevice | null> {
+  webgpuDevicePromise ||= makeWebGPUTestDevice();
+  return webgpuDevicePromise;
+}
+
+function getOrCreateWebGLTestDevicePromise(): Promise<WebGLDevice> {
+  webglDevicePromise ||= makeWebGLTestDevice();
+  return webglDevicePromise;
+}
+
+function getOrCreateNullTestDevicePromise(): Promise<NullDevice> {
+  nullDevicePromise ||= makeNullTestDevice();
   return nullDevicePromise;
 }
 

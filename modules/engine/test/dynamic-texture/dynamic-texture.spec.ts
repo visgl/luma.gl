@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from 'tape-promise/tape';
+import test from 'test/utils/vitest-tape';
 import {getNullTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {Texture, type TextureFormat} from '@luma.gl/core';
 import {DynamicTexture} from '../../src/index';

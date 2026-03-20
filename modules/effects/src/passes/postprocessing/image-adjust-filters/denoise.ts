@@ -44,12 +44,12 @@ fn denoise_sampleColor(
 `;
 
 const fs = /* glsl */ `\
-uniform dedenoiseUniforms {
+uniform denoiseUniforms {
   float strength;
 } denoise;
 
-vec4 dedenoise_sampleColor(sampler2D source, vec2 texSize, vec2 texCoord) {
-  float adjustedExponent = 3. + 200. * pow(1. - noise.strength, 4.);
+vec4 denoise_sampleColor(sampler2D source, vec2 texSize, vec2 texCoord) {
+  float adjustedExponent = 3. + 200. * pow(1. - denoise.strength, 4.);
 
   vec4 center = texture(source, texCoord);
   vec4 color = vec4(0.0);

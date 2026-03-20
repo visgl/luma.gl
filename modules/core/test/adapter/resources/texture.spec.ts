@@ -1,6 +1,6 @@
 /* eslint-disable no-continue, max-depth */
 
-import test from 'tape-promise/tape';
+import test from 'test/utils/vitest-tape';
 import {getWebGLTestDevice, getTestDevices, getWebGPUTestDevice} from '@luma.gl/test-utils';
 
 import {
@@ -1436,6 +1436,8 @@ test('Texture#writeData rejects invalid row layout', async t => {
 });
 
 test('Texture#writeData & readDataAsync round-trip for all formats and dimensions', async t => {
+  t.timeoutAfter(60000);
+
   for (const device of await getTestDevices()) {
     t.comment(`Testing device: ${device.type}`);
     const formatTable = _getTextureFormatTable(device);

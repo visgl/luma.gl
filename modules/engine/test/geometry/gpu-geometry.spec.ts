@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 /*
-import test from 'tape-promise/tape';
+import test from 'test/utils/vitest-tape';
 import {GPUGeometry, Geometry, GeometryProps} from '@luma.gl/engine';
 import {TypedArray} from '@luma.gl/core';
 import { getWebGLTestDevices } from '@luma.gl/test-utils';
