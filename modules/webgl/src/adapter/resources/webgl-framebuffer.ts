@@ -138,10 +138,12 @@ export class WEBGLFramebuffer extends Framebuffer {
     gl.bindTexture(texture.glTarget, null);
   }
 
-  /** Default framebuffer cannot be resized. */
+  /** Default framebuffer resize is managed by canvas size and should be a no-op. */
   protected override resizeAttachments(width: number, height: number): void {
     if (this.handle === null) {
-      throw new Error('Cannot resize default framebuffer');
+      this.width = width;
+      this.height = height;
+      return;
     }
 
     super.resizeAttachments(width, height);

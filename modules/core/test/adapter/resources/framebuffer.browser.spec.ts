@@ -227,10 +227,12 @@ test('Framebuffer#getDefaultFramebuffer', async t => {
       const framebuffer = testDevice.getDefaultCanvasContext().getCurrentFramebuffer();
       t.ok(framebuffer instanceof Framebuffer, 'getDefaultFramebuffer successful');
 
-      t.throws(
+      t.doesNotThrow(
         () => framebuffer.resize({width: 1000, height: 1000}),
-        'defaultFramebuffer.resize({width, height}) throws'
+        'defaultFramebuffer.resize({width, height}) updates size'
       );
+      t.equal(framebuffer.width, 1000, 'defaultFramebuffer width updates');
+      t.equal(framebuffer.height, 1000, 'defaultFramebuffer height updates');
     }
   }
 
