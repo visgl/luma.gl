@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from 'tape-promise/tape';
+import test from 'test/utils/vitest-tape';
 import {deepEqual} from '@luma.gl/engine/utils/deep-equal';
 
 const obj = {longitude: -70, latitude: 40.7, zoom: 12};

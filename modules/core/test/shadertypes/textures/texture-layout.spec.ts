@@ -1,5 +1,5 @@
 // test/texture-memory-layout.tape.ts
-import test from 'tape';
+import test from 'test/utils/vitest-tape';
 import {getTextureImageView, setTextureImageData, textureFormatDecoder} from '../../../src'; // '@luma.gl/core';
 
 const ALIGN_256 = 256;

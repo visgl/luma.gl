@@ -4,7 +4,7 @@
 
 import {edgeWork} from '@luma.gl/effects';
 import {getShaderModuleUniforms} from '@luma.gl/shadertools';
-import test from 'tape-promise/tape';
+import test from 'test/utils/vitest-tape';
 
 test('edgeWork#build/uniform', t => {
   const uniforms = getShaderModuleUniforms(edgeWork, {}, {});

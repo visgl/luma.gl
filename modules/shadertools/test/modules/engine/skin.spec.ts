@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from 'tape-promise/tape';
+import test from 'test/utils/vitest-tape';
 import {Matrix4} from '@math.gl/core';
 import {GroupNode} from '@luma.gl/engine';
 import {skin} from '@luma.gl/shadertools';

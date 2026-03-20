@@ -16,9 +16,14 @@ const DEFAULT_CANVAS_CONTEXT_PROPS: CanvasContextProps = {
  * @deprecated Use getWebGLTestDevice().
  */
 export function createTestDevice(): WebGLDevice | null {
+  if (webglDevice) {
+    return webglDevice;
+  }
+
   try {
     // TODO - We do not use luma.createDevice since createTestDevice currently expect WebGL context to be created synchronously
-    return new WebGLDevice({createCanvasContext: DEFAULT_CANVAS_CONTEXT_PROPS});
+    webglDevice = new WebGLDevice({createCanvasContext: DEFAULT_CANVAS_CONTEXT_PROPS});
+    return webglDevice;
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error(`Failed to created device: ${(error as Error).message}`);
@@ -32,4 +37,4 @@ export function createTestDevice(): WebGLDevice | null {
  * @note This WebGL Device is create synchronously and can be used directly but will not have WebGL debugging initialized
  * @deprecated Use getWebGLTestDevice().
  */
-export const webglDevice = createTestDevice();
+export let webglDevice: WebGLDevice | null = null;

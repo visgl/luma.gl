@@ -233,7 +233,6 @@ export class DynamicTexture {
     } catch (e) {
       const err = e instanceof Error ? e : new Error(String(e));
       this.rejectReady(err);
-      throw err;
     }
   }
 

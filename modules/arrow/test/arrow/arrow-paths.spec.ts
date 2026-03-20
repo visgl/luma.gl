@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from 'tape-promise/tape';
+import test from 'test/utils/vitest-tape';
 import {ARROW_TABLES} from '@luma.gl/arrow/test/data/arrow/make-arrow-tables';
 
 import {getArrowPaths, getArrowDataByPath} from '@luma.gl/arrow';

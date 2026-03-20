@@ -1,53 +1,53 @@
 # Testing
 
-Testing webgl programs can be tricky...
+The primary test runner is Vitest.
 
-- test-utils
-- probe
-- headless gl
-- puppeteer
-- ...
+## Commands
+
+- `yarn test-node` runs the Node-safe test suite.
+- `yarn test-browser` runs browser-backed tests in headed Chromium for local development.
+- `yarn test-headless` runs the browser-backed suite in headless Chromium for CI.
+- `yarn test` runs `test-node` and then `test-browser`.
+- `yarn test-fast` runs linting and the Node suite.
+- `yarn test-coverage` runs the Node suite plus the headless browser suite with coverage enabled.
+
+Vitest discovers tests directly from spec files:
+
+- Use `*.spec.ts` / `*.spec.js` for Node-safe tests.
+- Use `*.browser.spec.ts` / `*.browser.spec.js` for tests that require browser APIs or GPU access.
 
 ## Test device creation
 
-A small but still annoying issue is that creating too many devices in tests can 
-lead to problems with context loss etc as the test scripts grow. 
-`@luma.gl/test-utils` exports reusable test devices for WebGL and WebGPU.
+Creating too many GPU devices in one run can cause context loss and other instability. `@luma.gl/test-utils` exports reusable test devices for WebGL and WebGPU.
 
-## Accessing GPU in Node.js and CI environments
+## Accessing GPU in CI
 
-A frequent problem with WebGL and WebGPU libraries is that they are supported in browsers, 
-but tests typically run on CI machines in the cloud that often do not even have a GPU.
+Browser-backed tests run through Vitest Browser Mode with Playwright/Chromium. This is the default path for active WebGL and WebGPU tests in CI.
 
-luma.gl has integrations with headless gl and puppeteer that allows tests to be run outside of browser.s
+## Legacy render and perf tests
 
-## Render Tests
-
-A powerful way to test GPU programs is to render into a texture and compare against a golden image.
-luma.gl provides a library that handles complications like waiting for resources to load before rendering the image,
-and doing pixel diffs that accept a small error tolerance.
+`test/render/**` snapshot tests and `test/perf/**` benchmarks are still on the legacy browser harness in this phase of the migration. They are excluded from Vitest and continue to rely on `BrowserTestDriver` utilities.
 
 ## SnapshotTestRunner
 
-`@luma.gl/test-utils` provides this client-side utility for browser-based WebGL render tests.
+`@luma.gl/test-utils` provides `SnapshotTestRunner` for browser-based WebGL render tests.
 
-This class is intended to be used with `BrowserTestDriver` from `@probe.gl/test-utils`. Together they support the following workflow:
+This utility is still intended to be used with `BrowserTestDriver` from `@probe.gl/test-utils`:
 
-- Launch a Puppeteer instance (headless or non-headless) to run a test application
-- In the test application, create a canvas and `WebGLContext`.
-- For each test case, render something to the `WebGLContext`, take a screenshot, and perform pixel-diffing with a pre-defined "golden image". Report the matching result.
-- Proceed to the next test case until done.
+- Launch a browser test application.
+- Create a canvas and WebGL context in the browser page.
+- Render a frame, capture it, and compare against a golden image.
+- Repeat for each test case.
 
 ## Example
 
-In your node.js start script:
+In your Node.js start script:
 
 ```typescript
-// This is the script that runs in Node.js and starts the browser
 const {BrowserTestDriver} = require('@probe.gl/test-utils');
+
 new BrowserTestDriver().run({
   server: {
-    // Bundles and serves the browser script
     command: 'webpack-dev-server',
     arguments: ['--env.render-test']
   },
@@ -55,7 +55,7 @@ new BrowserTestDriver().run({
 });
 ```
 
-In your script that is run on the browser:
+In the browser test script:
 
 ```typescript
 const {SnapshotTestRunner} = require('@luma.gl/test-utils');
@@ -64,18 +64,16 @@ const {Cube} = require('@luma.gl/engine');
 const TEST_CASES = [
   {
     name: 'Render A Cube',
-    // `onRender` receives animation props from the AnimationLoop
     onRender: ({gl, done}) => {
       const model = new Cube(gl);
       model.draw(...);
-      // ready for capture and diffing
       done();
     },
     goldenImage: './test/render/golden-images/cube.png'
   }
 ];
 
-new TestRender({width: 800, height: 600})
+new SnapshotTestRunner({width: 800, height: 600})
   .add(TEST_CASES)
   .run({
     onTestFail: window.browserTestDriver_fail

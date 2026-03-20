@@ -42,13 +42,9 @@ jobs:
         run: |
           yarn build
   
-      - name: Run tests in Puppeteer and generage Coverage
+      - name: Run tests and generate coverage
         run: |
-          yarn test cover
-
-      - name: Run tests on Node
-        run: |
-          yarn test node
+          yarn test-coverage
 
       - name: Run lint
         run: |

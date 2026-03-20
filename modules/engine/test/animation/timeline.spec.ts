@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {Timeline} from '@luma.gl/engine';
-import test from 'tape-promise/tape';
+import test from 'test/utils/vitest-tape';
 
 // NOTE(Tarek): This is for the x * CHANNEL1_RATE
 // lines, which are important for clarity.

@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {KeyFrames} from '@luma.gl/engine';
-import test from 'tape-promise/tape';
+import test from 'test/utils/vitest-tape';
 
 test('Animation#KeyFrames', t => {
   const keyFrames = new KeyFrames([

@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {splitUniformsAndBindings} from '@luma.gl/engine/model/split-uniforms-and-bindings';
-import test from 'tape-promise/tape';
+import test from 'test/utils/vitest-tape';
 
 test('splitUniformsAndBindings', t => {
   const mixed: Parameters<typeof splitUniformsAndBindings>[0] = {
