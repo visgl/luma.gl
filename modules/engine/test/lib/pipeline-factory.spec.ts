@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
-import {getWebGLTestDevice} from '@luma.gl/test-utils';
+import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 
 import {luma} from '@luma.gl/core';
 import {PipelineFactory} from '@luma.gl/engine';
@@ -54,6 +54,30 @@ in vec4 positions;
 
 void main(void) {
   gl_Position = positions + vec4(0.0, 0.0, 0.0, 0.0);
+}
+`;
+
+const webgpuRenderSource = /* wgsl */ `
+@vertex fn vertexMain(@builtin(vertex_index) vertexIndex: u32) -> @builtin(position) vec4<f32> {
+  var positions = array<vec2<f32>, 3>(
+    vec2<f32>(0.0, 0.5),
+    vec2<f32>(-0.5, -0.5),
+    vec2<f32>(0.5, -0.5)
+  );
+  let position = positions[vertexIndex];
+  return vec4<f32>(position, 0.0, 1.0);
+}
+
+@fragment fn fragmentMain() -> @location(0) vec4<f32> {
+  return vec4<f32>(1.0, 1.0, 1.0, 1.0);
+}
+
+@vertex fn vertexAlternateMain(@builtin(vertex_index) vertexIndex: u32) -> @builtin(position) vec4<f32> {
+  return vertexMain(vertexIndex);
+}
+
+@fragment fn fragmentAlternateMain() -> @location(0) vec4<f32> {
+  return fragmentMain();
 }
 `;
 
@@ -263,6 +287,128 @@ test('PipelineFactory#caching with bufferLayout on webgl', async t => {
 
   pipelineFactory.release(trianglePipeline);
   pipelineFactory.release(interleavedPipeline);
+
+  t.end();
+});
+
+test('PipelineFactory#caching with WebGPU attachment formats', async t => {
+  const webgpuDevice = await getWebGPUTestDevice();
+  if (!webgpuDevice) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+  if (!webgpuDevice.props._cachePipelines) {
+    t.comment('Pipeline caching not enabled');
+    t.end();
+    return;
+  }
+
+  const pipelineFactory = new PipelineFactory(webgpuDevice);
+  const shader = webgpuDevice.createShader({source: webgpuRenderSource});
+
+  const preferredFormatsPipeline = pipelineFactory.createRenderPipeline({
+    vs: shader,
+    fs: shader,
+    topology: 'triangle-list',
+    parameters: {depthWriteEnabled: true}
+  });
+  const repeatedPreferredFormatsPipeline = pipelineFactory.createRenderPipeline({
+    vs: shader,
+    fs: shader,
+    topology: 'triangle-list',
+    parameters: {depthWriteEnabled: true}
+  });
+  const explicitFormatsPipeline = pipelineFactory.createRenderPipeline({
+    vs: shader,
+    fs: shader,
+    topology: 'triangle-list',
+    colorAttachmentFormats: ['rgba8unorm'],
+    depthStencilAttachmentFormat: 'depth16unorm',
+    parameters: {depthWriteEnabled: true}
+  });
+  const screenFormatsPipeline = pipelineFactory.createRenderPipeline({
+    vs: shader,
+    fs: shader,
+    topology: 'triangle-list',
+    vertexEntryPoint: 'vertexAlternateMain',
+    fragmentEntryPoint: 'fragmentAlternateMain',
+    colorAttachmentFormats: ['bgra8unorm'],
+    depthStencilAttachmentFormat: 'depth24plus',
+    parameters: {depthWriteEnabled: true}
+  });
+
+  t.equal(
+    preferredFormatsPipeline,
+    repeatedPreferredFormatsPipeline,
+    'Caches identical WebGPU pipelines when effective attachment formats match'
+  );
+  t.notEqual(
+    explicitFormatsPipeline,
+    screenFormatsPipeline,
+    'Does not cache WebGPU pipelines with different color and depth attachment formats'
+  );
+  t.notEqual(
+    preferredFormatsPipeline,
+    explicitFormatsPipeline,
+    'Does not reuse a pipeline when switching from preferred to explicit attachment formats'
+  );
+  t.notEqual(
+    explicitFormatsPipeline,
+    screenFormatsPipeline,
+    'Does not cache WebGPU pipelines with different entry points'
+  );
+
+  pipelineFactory.release(preferredFormatsPipeline);
+  pipelineFactory.release(repeatedPreferredFormatsPipeline);
+  pipelineFactory.release(explicitFormatsPipeline);
+  pipelineFactory.release(screenFormatsPipeline);
+  shader.destroy();
+
+  t.end();
+});
+
+test('PipelineFactory#caching with shaderLayout on webgl', async t => {
+  const webglDevice = await getWebGLTestDevice();
+  if (!webglDevice.props._cachePipelines) {
+    t.comment('Pipeline caching not enabled');
+    t.end();
+    return;
+  }
+
+  const pipelineFactory = new PipelineFactory(webglDevice);
+
+  const vs = webglDevice.createShader({stage: 'vertex', source: vsSource});
+  const fs = webglDevice.createShader({stage: 'fragment', source: fsSource});
+
+  const defaultPipeline = pipelineFactory.createRenderPipeline({
+    vs,
+    fs,
+    topology: 'triangle-list'
+  });
+  const overrideLayoutPipeline = pipelineFactory.createRenderPipeline({
+    vs,
+    fs,
+    topology: 'triangle-list',
+    shaderLayout: {
+      bindings: [],
+      attributes: [{name: 'positions', location: 0, type: 'vec4<f32>', stepMode: 'instance'}]
+    }
+  });
+
+  t.notEqual(
+    defaultPipeline,
+    overrideLayoutPipeline,
+    'Does not cache wrapper pipelines with different shader layout overrides'
+  );
+  t.equal(
+    defaultPipeline.handle,
+    overrideLayoutPipeline.handle,
+    'Reuses the underlying WebGLProgram across shader layout variants'
+  );
+
+  pipelineFactory.release(defaultPipeline);
+  pipelineFactory.release(overrideLayoutPipeline);
 
   t.end();
 });

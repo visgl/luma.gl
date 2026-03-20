@@ -222,9 +222,21 @@ export class PipelineFactory {
 
   /** Calculate a hash based on all the inputs for a render pipeline */
   private _hashRenderPipeline(props: RenderPipelineProps): string {
+    // RenderPipeline cache keys must cover every immutable prop that can change the
+    // created backend pipeline or the wrapper's effective static layout:
+    // - shader identity (`vs`, `fs`)
+    // - stage entry points (`vertexEntryPoint`, `fragmentEntryPoint`) on WebGPU
+    // - static interface/layout (`shaderLayout`, `bufferLayout`, WebGL varyings)
+    // - fixed pipeline state (`topology`, `parameters`, attachment formats)
+    // Intentionally excluded:
+    // - `id`, `handle`: resource identity / caller-supplied handles, not cache shape
+    // - `bindings`: mutable per-pipeline compatibility state
+    // - `disableWarnings`: logging only, no rendering impact
+    // - `vsConstants`, `fsConstants`: currently unused by pipeline creation
     const vsHash = props.vs ? this._getHash(props.vs.source) : 0;
     const fsHash = props.fs ? this._getHash(props.fs.source) : 0;
     const varyingHash = this._getWebGLVaryingHash(props);
+    const shaderLayoutHash = this._getHash(JSON.stringify(props.shaderLayout));
     const bufferLayoutHash = this._getHash(JSON.stringify(props.bufferLayout));
 
     const {type} = this.device;
@@ -233,15 +245,23 @@ export class PipelineFactory {
         // WebGL wrappers preserve default topology and parameter semantics for direct
         // callers, even though the underlying linked program may be shared separately.
         const webglParameterHash = this._getHash(JSON.stringify(props.parameters));
-        return `${type}/R/${vsHash}/${fsHash}V${varyingHash}T${props.topology}P${webglParameterHash}BL${bufferLayoutHash}`;
+        return `${type}/R/${vsHash}/${fsHash}V${varyingHash}T${props.topology}P${webglParameterHash}SL${shaderLayoutHash}BL${bufferLayoutHash}`;
 
       case 'webgpu':
       default:
-        // On WebGPU we need to rebuild the pipeline if topology, parameters or bufferLayout change
+        // On WebGPU we need to rebuild the pipeline if topology, entry points,
+        // shader/layout data, parameters, bufferLayout or attachment formats change.
+        const entryPointHash = this._getHash(
+          JSON.stringify({
+            vertexEntryPoint: props.vertexEntryPoint,
+            fragmentEntryPoint: props.fragmentEntryPoint
+          })
+        );
         const parameterHash = this._getHash(JSON.stringify(props.parameters));
+        const attachmentHash = this._getWebGPUAttachmentHash(props);
         // TODO - Can json.stringify() generate different strings for equivalent objects if order of params is different?
         // create a deepHash() to deduplicate?
-        return `${type}/R/${vsHash}/${fsHash}V${varyingHash}T${props.topology}P${parameterHash}BL${bufferLayoutHash}`;
+        return `${type}/R/${vsHash}/${fsHash}V${varyingHash}T${props.topology}EP${entryPointHash}P${parameterHash}SL${shaderLayoutHash}BL${bufferLayoutHash}A${attachmentHash}`;
     }
   }
 
@@ -262,5 +282,21 @@ export class PipelineFactory {
   private _getWebGLVaryingHash(props: RenderPipelineProps): number {
     const {varyings = [], bufferMode = null} = props;
     return this._getHash(JSON.stringify({varyings, bufferMode}));
+  }
+
+  private _getWebGPUAttachmentHash(props: RenderPipelineProps): number {
+    const colorAttachmentFormats = props.colorAttachmentFormats ?? [
+      this.device.preferredColorFormat
+    ];
+    const depthStencilAttachmentFormat = props.parameters?.depthWriteEnabled
+      ? props.depthStencilAttachmentFormat || this.device.preferredDepthFormat
+      : null;
+
+    return this._getHash(
+      JSON.stringify({
+        colorAttachmentFormats,
+        depthStencilAttachmentFormat
+      })
+    );
   }
 }
