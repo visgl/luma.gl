@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {PipelineFactory} from './factories/pipeline-factory';
-import type {ShaderFactory} from './factories/shader-factory';
+import type {PipelineFactory} from './pipeline-factory';
+import type {ShaderFactory} from './shader-factory';
 
-export type EngineModuleState = {
+export type CoreModuleState = {
   defaultPipelineFactory?: PipelineFactory;
   defaultShaderFactory?: ShaderFactory;
 };

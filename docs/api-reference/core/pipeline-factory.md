@@ -2,7 +2,7 @@
 
 `PipelineFactory` caches and reuses [`RenderPipeline`](/docs/api-reference/core/resources/render-pipeline) and `ComputePipeline` instances for one device.
 
-It is primarily useful when many models or computations assemble identical pipelines. Reusing those pipelines reduces redundant pipeline creation and works well together with [`ShaderFactory`](/docs/api-reference/engine/shader-factory).
+It is primarily useful when many models or computations assemble identical pipelines. Reusing those pipelines reduces redundant pipeline creation and works well together with [`ShaderFactory`](/docs/api-reference/core/shader-factory).
 
 :::info
 Pipeline creation involves shader compilation and backend-specific linking work. That cost can become noticeable during startup and whenever applications repeatedly assemble equivalent pipelines on demand.
@@ -11,7 +11,7 @@ Pipeline creation involves shader compilation and backend-specific linking work.
 ## Usage
 
 ```typescript
-import {PipelineFactory} from '@luma.gl/engine';
+import {PipelineFactory} from '@luma.gl/core';
 
 const pipelineFactory = PipelineFactory.getDefaultPipelineFactory(device);
 const pipeline = pipelineFactory.createRenderPipeline({vs, fs, topology: 'triangle-list'});
@@ -30,7 +30,7 @@ Device that owns the cached pipelines.
 
 ### `PipelineFactory.getDefaultPipelineFactory(device: Device): PipelineFactory`
 
-Returns the default singleton factory stored on the device's engine module state.
+Returns the default singleton factory stored on the device's core module state.
 
 ### `constructor(device: Device)`
 

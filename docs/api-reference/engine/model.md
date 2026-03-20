@@ -185,5 +185,5 @@ Sets constant-valued attributes.
 
 ## Remarks
 
-- `Model` integrates with [`ShaderInputs`](/docs/api-reference/engine/shader-inputs), [`PipelineFactory`](/docs/api-reference/engine/pipeline-factory), and [`ShaderFactory`](/docs/api-reference/engine/shader-factory) by default.
+- `Model` integrates with [`ShaderInputs`](/docs/api-reference/engine/shader-inputs), [`PipelineFactory`](/docs/api-reference/core/pipeline-factory), and [`ShaderFactory`](/docs/api-reference/core/shader-factory) by default.
 - `DynamicTexture` bindings are supported directly. `Model.draw()` defers rendering until those textures are ready.

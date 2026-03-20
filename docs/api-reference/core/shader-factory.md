@@ -2,12 +2,12 @@
 
 `ShaderFactory` caches and reuses [`Shader`](/docs/api-reference/core/resources/shader) resources for a device.
 
-This is useful when multiple pipelines or models compile the same shader source repeatedly. Reusing a cached `Shader` reduces compilation overhead and complements [`PipelineFactory`](/docs/api-reference/engine/pipeline-factory).
+This is useful when multiple pipelines or models compile the same shader source repeatedly. Reusing a cached `Shader` reduces compilation overhead and complements [`PipelineFactory`](/docs/api-reference/core/pipeline-factory).
 
 ## Usage
 
 ```typescript
-import {ShaderFactory} from '@luma.gl/engine';
+import {ShaderFactory} from '@luma.gl/core';
 
 const shaderFactory = ShaderFactory.getDefaultShaderFactory(device);
 const shader = shaderFactory.createShader({stage: 'vertex', source: '...'});
@@ -28,7 +28,7 @@ Whether shader reuse is enabled for the current device configuration.
 
 ### `ShaderFactory.getDefaultShaderFactory(device: Device): ShaderFactory`
 
-Returns the default singleton factory stored on the device's engine module state.
+Returns the default singleton factory stored on the device's core module state.
 
 ### `constructor(device: Device)`
 

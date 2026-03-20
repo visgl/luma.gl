@@ -5,8 +5,7 @@
 import test from 'tape-promise/tape';
 import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 
-import {luma} from '@luma.gl/core';
-import {PipelineFactory} from '@luma.gl/engine';
+import {luma, PipelineFactory} from '@luma.gl/core';
 import {webgl2Adapter, type WebGLDevice} from '@luma.gl/webgl';
 
 const vsSource = /* glsl */ `\

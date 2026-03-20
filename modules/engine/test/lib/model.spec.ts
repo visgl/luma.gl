@@ -3,8 +3,8 @@
 // Copyright (c) vis.gl contributors
 
 import test from 'tape-promise/tape';
-import {luma} from '@luma.gl/core';
-import {Model, PipelineFactory, ShaderFactory} from '@luma.gl/engine';
+import {luma, PipelineFactory, ShaderFactory} from '@luma.gl/core';
+import {Model} from '@luma.gl/engine';
 import {getWebGLTestDevice, getTestDevices} from '@luma.gl/test-utils';
 
 const stats = luma.stats.get('GPU Resource Counts');
