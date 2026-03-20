@@ -6,7 +6,7 @@ import {Device} from '@luma.gl/core';
 import {BufferTransform} from '@luma.gl/engine';
 import {fp64} from '@luma.gl/shadertools';
 import {equals, config} from '@math.gl/core';
-import type {Test} from 'tape-promise/tape';
+import type {Test} from 'test/utils/vitest-tape';
 
 const {fp64ify} = fp64;
 

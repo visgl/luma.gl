@@ -4,6 +4,6 @@
 
 import './webgl-to-webgpu/convert-webgl-sampler.spec';
 
-import './gltf/gltf.spec';
+import './gltf/gltf.browser.spec';
 import './gltf/lights.spec';
 import './parsers/parse-pbr-compressed-texture.spec';

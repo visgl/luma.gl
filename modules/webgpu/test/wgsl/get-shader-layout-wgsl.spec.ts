@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from 'tape-promise/tape';
+import test from 'test/utils/vitest-tape';
 import {ShaderLayout} from '@luma.gl/core';
 import {getShaderLayoutFromWGSL} from '@luma.gl/webgpu';
 

@@ -37,18 +37,53 @@ jobs:
 
       - name: Install dependencies
         run: yarn install --frozen-lockfile  
+
+      - name: Install Playwright Chromium
+        run: yarn playwright install chromium
   
       - name: Build code
         run: |
           yarn build
   
-      - name: Run tests in Puppeteer and generage Coverage
+      - name: Run node tests
         run: |
-          yarn test cover
+          yarn test-node
 
-      - name: Run tests on Node
+      - name: Run headless tests and generate coverage
         run: |
-          yarn test node
+          yarn test-coverage
+
+      - name: Sanitize lcov for Coveralls
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const coveragePath = 'coverage/lcov.info';
+          const lines = fs.readFileSync(coveragePath, 'utf8').split(/\r?\n/);
+          const records = [];
+          let currentRecord = [];
+
+          for (const line of lines) {
+            currentRecord.push(line);
+            if (line === 'end_of_record') {
+              const sourceFileLine = currentRecord.find(recordLine => recordLine.startsWith('SF:'));
+              const sourceFile = sourceFileLine ? sourceFileLine.slice(3).trim() : '';
+              if (sourceFile) {
+                records.push(currentRecord.join('\n'));
+              }
+              currentRecord = [];
+            }
+          }
+
+          if (currentRecord.length) {
+            const sourceFileLine = currentRecord.find(recordLine => recordLine.startsWith('SF:'));
+            const sourceFile = sourceFileLine ? sourceFileLine.slice(3).trim() : '';
+            if (sourceFile) {
+              records.push(currentRecord.join('\n'));
+            }
+          }
+
+          fs.writeFileSync(coveragePath, `${records.join('\n')}\n`);
+          NODE
 
       - name: Run lint
         run: |

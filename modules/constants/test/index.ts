@@ -2,4 +2,4 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import './webgl-constants.spec';
+import './webgl-constants.browser.spec';
