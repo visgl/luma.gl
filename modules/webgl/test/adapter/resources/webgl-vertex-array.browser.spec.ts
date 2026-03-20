@@ -95,7 +95,10 @@ test('WEBGLVertexArray#getConstantBuffer', async t => {
   t.equal(buffer.byteLength, 1200, 'byteLength should match');
   t.equal(buffer.bytesUsed, 1200, 'bytesUsed should match');
 
-  const reusedBuffer = vertexArray.getConstantBuffer(100, new Float32Array([5, 3, 2])) as WEBGLBuffer;
+  const reusedBuffer = vertexArray.getConstantBuffer(
+    100,
+    new Float32Array([5, 3, 2])
+  ) as WEBGLBuffer;
   t.equal(reusedBuffer, buffer, 'buffer should be reused when element count is unchanged');
   t.equal(reusedBuffer.byteLength, 1200, 'byteLength should be unchanged');
   t.equal(reusedBuffer.bytesUsed, 1200, 'bytesUsed should reflect the fixed backing allocation');

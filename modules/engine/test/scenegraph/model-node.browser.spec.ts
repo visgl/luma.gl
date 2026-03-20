@@ -37,7 +37,11 @@ test('ModelNode#setProps', async t => {
   const modelNode = new ModelNode({model});
 
   modelNode.setProps({position: [1, 2, 3]});
-  t.deepEqual(Array.from(modelNode.position), [1, 2, 3], 'setProps updates position on scenegraph node');
+  t.deepEqual(
+    Array.from(modelNode.position),
+    [1, 2, 3],
+    'setProps updates position on scenegraph node'
+  );
 
   t.end();
 });

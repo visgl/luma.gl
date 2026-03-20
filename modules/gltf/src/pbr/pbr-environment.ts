@@ -3,7 +3,12 @@
 // Copyright (c) vis.gl contributors
 
 import {Device, SamplerProps} from '@luma.gl/core';
-import {DynamicTexture, type TextureCubeFace} from '@luma.gl/engine';
+import {
+  DynamicTexture,
+  type Texture2DData,
+  type TextureCubeData,
+  type TextureCubeFace
+} from '@luma.gl/engine';
 import {loadImageTexture} from '@loaders.gl/textures';
 
 /** Environment textures for PBR module */
@@ -42,7 +47,10 @@ export function loadPBREnvironment(device: Device, props: PBREnvironmentProps): 
 
   const diffuseEnvSampler = makeCube(device, {
     id: 'DiffuseEnvSampler',
-    getTextureForFace: face => loadImageTexture(props.getTexUrl('diffuse', FACES.indexOf(face), 0)),
+    getTextureForFace: face =>
+      loadImageTexture(
+        props.getTexUrl('diffuse', FACES.indexOf(face), 0)
+      ) as Promise<Texture2DData>,
     sampler: {
       addressModeU: 'clamp-to-edge',
       addressModeV: 'clamp-to-edge',
@@ -54,13 +62,13 @@ export function loadPBREnvironment(device: Device, props: PBREnvironmentProps): 
   const specularEnvSampler = makeCube(device, {
     id: 'SpecularEnvSampler',
     getTextureForFace: (face: TextureCubeFace) => {
-      const imageArray: Promise<any>[] = [];
+      const specularMipLevels = props.specularMipLevels ?? 1;
+      const imageArray: Array<Promise<unknown>> = [];
       const direction = FACES.indexOf(face);
-      // @ts-ignore
-      for (let lod = 0; lod <= props.specularMipLevels - 1; lod++) {
+      for (let lod = 0; lod < specularMipLevels; lod++) {
         imageArray.push(loadImageTexture(props.getTexUrl('specular', direction, lod)));
       }
-      return Promise.all(imageArray);
+      return Promise.all(imageArray) as Promise<Texture2DData>;
     },
     sampler: {
       addressModeU: 'clamp-to-edge',
@@ -91,14 +99,19 @@ function makeCube(
     /** Debug id assigned to the created texture. */
     id: string;
     /** Returns the image or mip-array promise for one cubemap face. */
-    getTextureForFace: (face: TextureCubeFace) => Promise<any>;
+    getTextureForFace: (face: TextureCubeFace) => Promise<Texture2DData>;
     /** Sampler configuration shared across faces. */
     sampler: SamplerProps;
   }
 ): DynamicTexture {
-  const data = {} as Record<TextureCubeFace, Promise<any>>;
-  FACES.forEach(face => {
-    data[face] = getTextureForFace(face);
+  const data: Promise<TextureCubeData> = Promise.all(
+    FACES.map(face => getTextureForFace(face))
+  ).then(faceDataArray => {
+    const cubeData = {} as TextureCubeData;
+    FACES.forEach((face, index) => {
+      cubeData[face] = faceDataArray[index];
+    });
+    return cubeData;
   });
   return new DynamicTexture(device, {
     id,
