@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from 'tape-promise/tape';
+import test from 'test/utils/vitest-tape';
 import {fillArray} from '@luma.gl/webgl/utils/fill-array';
 
 const FILL_ARRAY_TEST_CASES = [

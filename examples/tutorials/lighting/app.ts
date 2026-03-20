@@ -10,7 +10,7 @@ import {
   CubeGeometry,
   ShaderInputs,
   loadImageBitmap,
-  AsyncTexture
+  DynamicTexture
 } from '@luma.gl/engine';
 import {phongMaterial, lighting, ShaderModule} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
@@ -24,8 +24,8 @@ struct Uniforms {
 };
 
 @binding(0) @group(0) var<uniform> app : Uniforms;
-@group(0) @binding(1) var uTexture : texture_2d<f32>;
-@group(0) @binding(2) var uTextureSampler : sampler;
+@group(0) @binding(3) var uTexture : texture_2d<f32>;
+@group(0) @binding(4) var uTextureSampler : sampler;
 
 struct VertexInputs {
   // CUBE GEOMETRY
@@ -44,7 +44,7 @@ struct FragmentInputs {
 @vertex
 fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
   var outputs : FragmentInputs;
-  outputs.Position = app.mvpMatrix * app.modelMatrix * vec4<f32>(inputs.positions, 1);
+  outputs.Position = app.mvpMatrix * vec4<f32>(inputs.positions, 1);
   outputs.fragUV = inputs.texCoords;
   outputs.fragPosition = (app.modelMatrix * vec4<f32>(inputs.positions, 1.0)).xyz;
   // NOTE: WGSL lacks conversion syntax: https://github.com/gpuweb/gpuweb/issues/2399
@@ -59,11 +59,14 @@ fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
 
 @fragment
 fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
-  // return inputs.fragPosition;
-  return textureSample(uTexture, uTextureSampler, inputs.fragUV);
-//   vec3 surfaceColor = texture(uTexture, vec2(vUV.x, 1.0 - vUV.y)).rgb;
-//   surfaceColor = lighting_getLightColor(surfaceColor, uApp.eyePosition, vPosition, normalize(vNormal));
-//   fragColor = vec4(surfaceColor, 1.0);
+  let surfaceColor = textureSample(uTexture, uTextureSampler, vec2<f32>(inputs.fragUV.x, 1.0 - inputs.fragUV.y)).rgb;
+  let litColor = lighting_getLightColor2(
+    surfaceColor,
+    app.eyePosition,
+    inputs.fragPosition,
+    normalize(inputs.fragNormal)
+  );
+  return vec4<f32>(litColor, 1.0);
 }
 `;
 
@@ -151,7 +154,7 @@ const eyePosition = [0, 0, 5];
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = `\
 <p>
-Drawing a phong-shaded cube
+Drawing a phong-shaded cube with multiple colored spot lights aimed at the cube
 </p>
 `;
 
@@ -173,12 +176,45 @@ Drawing a phong-shaded cube
 
     // Set up static uniforms
     this.shaderInputs.setProps({
+      app: {
+        eyePosition
+      },
       lighting: {
         lights: [
-          {type: 'ambient', color: [255, 255, 255]},
-          {type: 'point', color: [255, 120, 10], position: [2, 4, 3]},
-          {type: 'point', color: [0, 255, 10], position: [-2, 1, 3]}
-          // {type: 'directional', color: [0, 0, 255], direction: [-1, 0, -1]}
+          {type: 'ambient', color: [255, 255, 255], intensity: 0.15},
+          {
+            type: 'spot',
+            color: [255, 120, 10],
+            position: [2, 4, 3],
+            direction: [-2, -4, -3],
+            innerConeAngle: 0.2,
+            outerConeAngle: 0.55
+          },
+          {
+            type: 'spot',
+            color: [0, 255, 10],
+            position: [-2, 1, 3],
+            direction: [2, -1, -3],
+            innerConeAngle: 0.2,
+            outerConeAngle: 0.5
+          },
+          {
+            type: 'spot',
+            color: [80, 160, 255],
+            position: [-3, -2, 2],
+            direction: [3, 2, -2],
+            innerConeAngle: 0.2,
+            outerConeAngle: 0.6
+          },
+          {
+            type: 'spot',
+            color: [255, 80, 180],
+            position: [3, -3, 2],
+            direction: [-3, 3, -2],
+            innerConeAngle: 0.25,
+            outerConeAngle: 0.7
+          },
+          {type: 'directional', color: [255, 255, 220], direction: [-1, -0.5, -1]}
         ]
       },
       phongMaterial: {
@@ -187,7 +223,7 @@ Drawing a phong-shaded cube
       }
     });
 
-    const texture = new AsyncTexture(device, {data: loadImageBitmap('vis-logo.png')});
+    const texture = new DynamicTexture(device, {data: loadImageBitmap('vis-logo.png')});
 
     this.model = new Model(device, {
       source: WGSL_SHADER,

@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from 'tape-promise/tape';
+import test from 'test/utils/vitest-tape';
 import {webgl2Adapter} from '@luma.gl/webgl';
 
 // TODO - duplicates core spec?
 test('WebGLDevice#lost (Promise)', async t => {
-  const device = await webgl2Adapter.create({createCanvasContext: true});
+  const device = await webgl2Adapter.create({createCanvasContext: true, debug: false});
 
   // Wrap in a promise to make sure tape waits for us
   await new Promise<void>(async resolve => {

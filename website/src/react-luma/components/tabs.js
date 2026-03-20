@@ -2,35 +2,45 @@ import React, {Children, useState} from 'react';
 import styled from 'styled-components';
 
 const Header = styled.div`
-  display: flex;
+  display: inline-flex;
   flex-direction: row;
-
-  & > * + * {
-    margin-left: 2px;
-  }
+  align-items: stretch;
+  overflow: hidden;
+  min-height: 48px;
+  background-color: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
+  border-radius: 12px;
 `;
 
 const HeaderItem = styled.div(
   props => `
   cursor: pointer;
-  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  padding: 4px 20px;
   font-weight: bold;
+  font-size: 18px;
+  border-bottom: 4px solid transparent;
+  transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
   &:hover {
-    background-color: #eeefef;
+    background-color: rgba(238, 239, 239, 0.9);
   }
   ${
     props.isSelected
       ? `
     color: #276EF1;
     border-bottom: 4px solid #276EF1;
+    background-color: rgba(39, 110, 241, 0.06);
   `
-      : ''
+      : `
+    color: #111;
+  `
   }
 `
 );
 
 const Body = styled.div`
-  background-color: rgb(250, 248, 245);
+  margin-top: 0;
 `;
 
 export const Tabs = props => {

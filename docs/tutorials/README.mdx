@@ -1,8 +1,8 @@
 # Setup
 
-:::caution
-The tutorial pages have not yet been updated for luma.gl v9. 
-:::
+These tutorials use the current luma.gl v9.3 API. The runnable sources in
+[`examples/tutorials`](https://github.com/visgl/luma.gl/tree/master/examples/tutorials)
+remain the canonical reference for the code shown on these pages.
 
 This tutorial will walk you through setting up a basic development project for luma.gl applications using [Vite](https://vitejs.dev/) tooling. Later tutorials will build on this one, so we recommend going through it first.
 
@@ -10,59 +10,47 @@ This tutorial will walk you through setting up a basic development project for l
 
 ## A Minimal Application
 
-Create a new folder on your file system to store your new project. 
+Create a new folder on your file system to store your new project.
 Then let's create a file `app.ts` in the project root folder and add the following to it:
 
 ```typescript
 import type {AnimationProps} from '@luma.gl/engine';
-import {AnimationLoop} from '@luma.gl/engine';
+import {AnimationLoopTemplate} from '@luma.gl/engine';
 
-const loop = new AnimationLoop({
-  override onInitialize({device}: AnimationProps) {
-    // Setup logic goes here
-  },
-
-  override onFinalize({device}: AnimationProps) {
-    // Teardown logic goes here
-  },
-
+export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   override onRender({device}: AnimationProps) {
-    // Drawing logic goes here
+    const renderPass = device.beginRenderPass({
+      clearColor: [0, 0, 0, 1],
+      clearDepth: 1
+    });
+    renderPass.end();
   }
-});
-
-loop.start();
+}
 ```
 
-This will be the basic structure of most luma.gl applications. 
-To make sure everything works, let's add a draw command:
+This will be the basic structure of most luma.gl applications. `AnimationLoopTemplate`
+provides the lifecycle hooks, while the page entry point chooses the rendering
+backend and starts the loop.
 
-```typescript
-import {AnimationLoop} from '@luma.gl/engine';
-import {clear} from '@luma.gl/webgl';
-
-const loop = new AnimationLoop({
-  override onRender({device}) {
-    // Drawing logic goes here
-    clear(device, {color: [0, 0, 0, 1]});
-  }
-});
-
-loop.start();
-```
-
-Since this is a web application, you will also want to create a minimal `index.html` web page to start the app:
+Now create an `index.html` file to bootstrap the application:
 
 ```html
 <!doctype html>
 <script type="module">
-  import './app.ts';
+  import {makeAnimationLoop} from '@luma.gl/engine';
+  import {webgpuAdapter} from '@luma.gl/webgpu';
+  import {webgl2Adapter} from '@luma.gl/webgl';
+  import AppAnimationLoopTemplate from './app.ts';
+
+  makeAnimationLoop(AppAnimationLoopTemplate, {
+    adapters: [webgpuAdapter, webgl2Adapter]
+  }).start();
 </script>
-<body style="margin: 0;">
-  <canvas id="canvas" style="width: 100vw; height: 100vh;"></canvas>
-</body>
+<body style="margin: 0;"></body>
 ```
 
+When the page loads, luma.gl will try `webgpuAdapter` first and fall back to
+`webgl2Adapter` when WebGPU is unavailable.
 
 ## Build Tooling
 
@@ -88,7 +76,7 @@ to set up our project directory and initialize npm.
 Next run
 
 ```bash
-npm i @luma.gl/engine @luma.gl/webgl
+npm i @luma.gl/engine @luma.gl/webgl @luma.gl/webgpu
 npm i -D vite typescript
 ```
 
@@ -100,15 +88,17 @@ Open the file `package.json` (created when we initialized npm), and add the foll
 {
   "scripts": {
     "start": "vite",
+    "build": "tsc && vite build",
     "serve": "vite preview"
   },
   "dependencies": {
-    "@luma.gl/engine": "9.2.0-alpha.1",
-    "@luma.gl/webgl": "9.2.0-alpha.1",
+    "@luma.gl/engine": "9.3.0-alpha.6",
+    "@luma.gl/webgl": "9.3.0-alpha.6",
+    "@luma.gl/webgpu": "9.3.0-alpha.6"
   },
   "devDependencies": {
     "typescript": "^5.5.0",
-    "vite": "^5.0.0"
+    "vite": "^7.2.2"
   }
 }
 ```
@@ -119,34 +109,32 @@ The full contents of the `package.json` should be the following (dependency vers
 {
   "name": "luma-demo",
   "version": "1.0.0",
-  "description": "",
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "main": "index.js",
+  "private": true,
   "scripts": {
     "start": "vite",
+    "build": "tsc && vite build",
     "serve": "vite preview"
   },
   "dependencies": {
-    "@luma.gl/engine": "9.2.0-alpha.1",
-    "@luma.gl/webgl": "9.2.0-alpha.1",
+    "@luma.gl/engine": "9.3.0-alpha.6",
+    "@luma.gl/webgl": "9.3.0-alpha.6",
+    "@luma.gl/webgpu": "9.3.0-alpha.6"
   },
   "devDependencies": {
     "typescript": "^5.5.0",
-    "vite": "^5.0.0"
+    "vite": "^7.2.2"
   }
 }
 ```
 
-Create a file [`vite.config.js`](https://vitejs.dev/config/) in the project root and add the following to it:
+Create a file [`vite.config.ts`](https://vitejs.dev/config/) in the project root and add the following to it:
 
 ```typescript
-import { defineConfig } from 'vite'
+import {defineConfig} from 'vite';
 
 export default defineConfig({
   server: {open: true}
-})
+});
 ```
 
 and run
@@ -155,5 +143,5 @@ and run
 npm start
 ```
 
-from the command line. If all went well, a tab should open in your default browser, 
-and you should see a black rectangle at the top left of your screen.
+from the command line. If all went well, a tab should open in your default browser,
+and you should see a black canvas fill the page.

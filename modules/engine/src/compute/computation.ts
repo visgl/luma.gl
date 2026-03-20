@@ -2,22 +2,24 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {DeviceFeature, ComputePipelineProps, Shader, Binding} from '@luma.gl/core';
 import {
+  type DeviceFeature,
+  type ComputePipelineProps,
+  type Shader,
+  type Binding,
   Device,
   Buffer,
   ComputePipeline,
   ComputePass,
+  PipelineFactory,
+  ShaderFactory,
   UniformStore,
   log,
-  getTypedArrayConstructor
+  dataTypeDecoder
 } from '@luma.gl/core';
-import type {ShaderModule, PlatformInfo} from '@luma.gl/shadertools';
-import {ShaderAssembler, getShaderLayoutFromWGSL} from '@luma.gl/shadertools';
-import {TypedArray, isNumericArray} from '@math.gl/types';
+import {type ShaderModule, type PlatformInfo, ShaderAssembler} from '@luma.gl/shadertools';
+import {type TypedArray, isNumericArray} from '@math.gl/types';
 import {ShaderInputs} from '../shader-inputs';
-import {PipelineFactory} from '../factories/pipeline-factory';
-import {ShaderFactory} from '../factories/shader-factory';
 import {uid} from '../utils/uid';
 // import {getDebugTableForShaderLayout} from '../debug/debug-shader-layout';
 
@@ -133,7 +135,8 @@ export class Computation {
 
     // Support WGSL shader layout introspection
     // TODO - Don't modify props!!
-    this.props.shaderLayout ||= getShaderLayoutFromWGSL(this.props.source);
+    // @ts-expect-error method on WebGPUDevice
+    this.props.shaderLayout ||= device.getShaderLayout(this.props.source);
 
     // Setup shader assembler
     const platformInfo = getPlatformInfo(device);
@@ -340,7 +343,7 @@ export class Computation {
 
   // TODO - fix typing of luma data types
   _getBufferOrConstantValues(attribute: Buffer | TypedArray, dataType: any): string {
-    const TypedArrayConstructor = getTypedArrayConstructor(dataType);
+    const TypedArrayConstructor = dataTypeDecoder.getTypedArrayConstructor(dataType);
     const typedArray =
       attribute instanceof Buffer ? new TypedArrayConstructor(attribute.debugData) : attribute;
     return typedArray.toString();

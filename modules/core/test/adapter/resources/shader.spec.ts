@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from 'tape-promise/tape';
+import test from 'test/utils/vitest-tape';
 import {getTestDevices} from '@luma.gl/test-utils';
 
 const BAD_SHADER_SOURCE = `\
@@ -14,12 +14,26 @@ vec4 goggledygook = 100;
 `;
 
 // TODO - sync shader compilation checks and throws are now a debug-only feature
-test.skip('Shader', async t => {
+test('Shader', async t => {
   // Only test WebGL, WebGPU is not able to detect shader failures synchronously, but require polling.
   for (const device of await getTestDevices()) {
-    t.throws(
-      () => device.createShader({stage: 'vertex', source: BAD_SHADER_SOURCE}),
-      `${device.type} device.createShader throws on bad shader source`
-    );
+    if (device.type === 'webgl') {
+      const createBadShader = () =>
+        device.createShader({stage: 'vertex', source: BAD_SHADER_SOURCE});
+      if (device.features.has('compilation-status-async-webgl')) {
+        const badShader = createBadShader();
+        const compilationStatus = await badShader.asyncCompilationStatus;
+        t.equal(
+          compilationStatus,
+          'error',
+          `${device.type} device.createShader reports async compilation error`
+        );
+      } else {
+        t.throws(createBadShader, `${device.type} device.createShader throws on bad shader source`);
+      }
+    } else {
+      t.comment(`${device.type}: shader compilation is asynchronous`);
+    }
   }
+  t.end();
 });

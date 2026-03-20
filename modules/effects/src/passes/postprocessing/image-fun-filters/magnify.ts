@@ -5,27 +5,37 @@
 import type {ShaderPass} from '@luma.gl/shadertools';
 
 const source = /* wgsl */ `\
-uniform magnifyUniforms {
-  screenXY: vec2f;
-  radiusPixels: f32;
-  zoom: f32;
-  borderWidthPixels: f32;
-  borderColor: vec4f;
+struct magnifyUniforms {
+  screenXY: vec2f,
+  radiusPixels: f32,
+  zoom: f32,
+  borderWidthPixels: f32,
+  borderColor: vec4f,
 };
 
 @group(0) @binding(1) var<uniform> magnify: magnifyUniforms;
 
-fn magnify_sampleColor(sampler2D source, vec2 texSize, vec2 texCoord) -> vec4f {
-  vec2 pos = vec2(magnify.screenXY.x, 1.0 - magnify.screenXY.y);
-  float dist = distance(texCoord * texSize, pos * texSize);
+fn magnify_sampleColor(
+  sourceTexture: texture_2d<f32>,
+  sourceTextureSampler: sampler,
+  texSize: vec2f,
+  texCoord: vec2f
+) -> vec4f {
+  let pos = vec2f(magnify.screenXY.x, 1.0 - magnify.screenXY.y);
+  let dist = distance(texCoord * texSize, pos * texSize);
   if (dist < magnify.radiusPixels) {
-    return texture(source, (texCoord - pos) / magnify.zoom + pos);
+    return textureSampleLevel(
+      sourceTexture,
+      sourceTextureSampler,
+      (texCoord - pos) / magnify.zoom + pos,
+      0.0
+    );
   }
 
   if (dist <= magnify.radiusPixels + magnify.borderWidthPixels) {
     return magnify.borderColor;
   }
-  return texture(source, texCoord);
+  return textureSampleLevel(sourceTexture, sourceTextureSampler, texCoord, 0.0);
 }
 `;
 

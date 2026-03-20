@@ -5,7 +5,7 @@ The main GPU resources that luma.gl applications will typically be creating dire
 `Buffer` and `Texture` objects. 
 
 However there is a number of other GPU resource objects. These are usually created 
-automatically behind the scenes, e.g. by the `Model` and `Transform` classes, but can
+automatically behind the scenes, e.g. by the `Model`, `BufferTransform`, `TextureTransform`, and `Computation` classes, but can
 be created directly if needed.
 
 ## Types of GPU Resources

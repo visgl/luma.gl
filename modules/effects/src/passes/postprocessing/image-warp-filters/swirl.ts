@@ -6,23 +6,23 @@ import type {ShaderPass} from '@luma.gl/shadertools';
 import {warp} from './warp';
 
 const source = /* wgsl */ `\
-uniform swirlUniforms {
+struct swirlUniforms {
   radius: f32,
   angle: f32,
   center: vec2f,
 };
 
-@group(0) @binding(1) swirl: swirlUniforms;
+@group(0) @binding(1) var<uniform> swirl: swirlUniforms;
 
-fn swirl_warp(vec2 coord, vec2 texCenter) -> vec2f {
-  coord -= texCenter;
-  float distance = length(coord);
+fn swirl_warp(coordIn: vec2f, texCenter: vec2f) -> vec2f {
+  var coord = coordIn - texCenter;
+  let distance = length(coord);
   if (distance < swirl.radius) {
-    float percent = (swirl.radius - distance) / swirl.radius;
-    float theta = percent * percent * swirl.angle;
-    float s = sin(theta);
-    float c = cos(theta);
-    coord = vec2(
+    let percent = (swirl.radius - distance) / swirl.radius;
+    let theta = percent * percent * swirl.angle;
+    let s = sin(theta);
+    let c = cos(theta);
+    coord = vec2f(
       coord.x * c - coord.y * s,
       coord.x * s + coord.y * c
     );
@@ -31,10 +31,15 @@ fn swirl_warp(vec2 coord, vec2 texCenter) -> vec2f {
   return coord;
 }
 
-fn swirl_sampleColor(sampler2D source, vec2 texSize, vec2 texCoord) -> vec4f {
-  vec2 coord = texCoord * texSize;
+fn swirl_sampleColor(
+  sourceTexture: texture_2d<f32>,
+  sourceTextureSampler: sampler,
+  texSize: vec2f,
+  texCoord: vec2f
+) -> vec4f {
+  var coord = texCoord * texSize;
   coord = swirl_warp(coord, swirl.center * texSize);
-  return warp_sampleColor(source, texSize, coord);
+  return warp_sampleColor(sourceTexture, sourceTextureSampler, texSize, coord);
 }
 `;
 

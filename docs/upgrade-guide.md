@@ -10,17 +10,31 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 
 *For detailed commit level logs that include alpha and beta releases, see the [CHANGELOG](https://github.com/visgl/luma.gl/blob/master/CHANGELOG.md) in the github repository.*
 
-## Upgrading to v9.2 (In Development)
+## Upgrading to v9.3
 
-v9.2 brings full WebGPU support. Some additional deprecations and breaking changes have been necessary, but apart from the `Texture` -> `AsyncTexture` split, impact on most applications should be minimal. 
+**Potentially breaking behavior**
+- Scenegraph creation API has been improved, see [`createScenegraphsFromGLTF()`](/docs/api-reference/gltf).
+- gltf module now creates `DynamicTexture` instances rather than raw `Texture`s.
+- glTF texture sampling now defaults to linear filtering when a glTF sampler omits explicit filter settings. Applications relying on the previous nearest-neighbor default should verify visual output and set sampler filters explicitly when nearest sampling is required.
+- The legacy feature flag `timer-query-webgl` has been removed. Replace checks for `timer-query-webgl` with `timestamp-query` for GPU timestamp/query support on both WebGPU and WebGL.
+- `PipelineFactory` and `ShaderFactory` now import from `@luma.gl/core` instead of `@luma.gl/engine`.
+
+## Upgrading to v9.2
+
+v9.2 brings full WebGPU support. Some additional deprecations and breaking changes have been necessary, but apart from the `Texture` -> `DynamicTexture` split, impact on most applications should be minimal. 
 
 **New VertexFormats**
 - `VertexFormat` Replace `'unorm8-webgl'` with `'unorm8'`.
 
-**Texture and AsyncTexture**
-- The `Texture` class has been simplified to the minimum API required for GPU portability. The  `AsyncTexture` texture class provides a higher-level API and is recommended for most applications.
-- `device.createTexture()` no longer accepts `props.data`: Use `AsyncTexture` or call `texture.setImageData()`
-- `device.createTexture()` no longer accepts `props.mipmaps`: Use `AsyncTexture` (or call `texture.generateMipmapsWebGL()`)
+**Texture and DynamicTexture**
+- The `Texture` class has been simplified to the minimum API required for GPU portability. The `DynamicTexture` texture class provides a higher-level API and is recommended for most applications.
+- (`DynamicTexture` was called `AsyncTexture` in 9.1).
+- `device.createTexture()` no longer accepts `props.data`: Use `DynamicTexture` or call `texture.setImageData()`
+- `device.createTexture()` no longer accepts `props.mipmaps`: Use `DynamicTexture` (or call `texture.generateMipmapsWebGL()`)
+- On WebGPU, mipmap generation now lives in `DynamicTexture.generateMipmaps()`, not in core `Texture`.
+- WebGPU `DynamicTexture` uses render passes for `2d`, `2d-array`, `cube`, and `cube-array`, and a compute path for `3d`.
+- Unsupported WebGPU formats now fail explicitly when mipmap generation is requested, instead of silently acting as a no-op.
+- `TextureFormat` Correct the PVRTC 2bpp RGB format spelling from `pvrtc-rbg2unorm-webgl` to `pvrtc-rgb2unorm-webgl`.
 
 **Removal of WebGL uniform support**
 - The transition from uniforms to uniform buffers is complete, and remaining support for non-buffer uniforms has been removed.
@@ -32,7 +46,6 @@ v9.2 brings full WebGPU support. Some additional deprecations and breaking chang
 - `canvasContext.devicePixelWidth` and `canvasContext.devicePixelHeight` are now kept updated to exact device pixel size of underlying canvas. 
 - Instead `canvasContext.setDrawingBufferSize()` to explicitly control drawing buffer size, if not using `CanvasContextProps.autoResize` 
 - A new `DeviceProps.onResize` callback can be used to react to changes.
-- `CanvasContextProps.useDevicePixelRatio` no longer accepts `number`s, just a `boolean` value. 
 
 **Minor changes**
 - `core`: The shader types has been refactored, some shader type names have changed. These are typically not used directly by applications.
@@ -61,7 +74,7 @@ v9.1 continues to build out WebGPU support. Some additional deprecations and bre
 | `luma.registerDevices()`      | Deprecated | [`luma.registerAdapters()`][adapters].       | Adapters provide a cleaner way to work with GPU backends.       |
 | `DeviceProps.canvas`          | Moved      | [`DeviceProps.createCanvasContext`][canvas]. | Move canvas related props to `props.createCanvasContext: {}`.   |
 | `DeviceProps.<webgl options>` | Moved      | [`DeviceProps.webgl.<options>`][webgl].      | Move canvas related props to `props.webgl: {}`.                 |
-| `DeviceProps.break`           | Removed    |                                              | Use an alterative [debugger][debugging]                         |
+| `DeviceProps.break`           | Removed    |                                              | Use an alternative [debugger][debugging]                         |
 | `TextureProps.data` (Promise) | Removed    | `AsyncTexture` class                         | `Texture` no longer accept promises. Use `AsyncTexture`         |
 | `Parameters.blend`            | New        |                                              | Explicit activation of color blending                           |
 | `triangle-fan-webgl` topology | Removed    | `triangle-strip`.                            | Reorganize your geometries                                      |

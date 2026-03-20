@@ -1,0 +1,22 @@
+---
+title: FP64
+---
+
+import {ExampleHeader} from '@site/src/react-luma';
+import {FP64Example} from '@site/src/examples';
+
+<ExampleHeader id="fp64" directory="api" devices={['webgl2', 'webgpu']}>
+  <div>
+    <div style={{marginBottom: 12}}>
+      Two fragment shaders following the same Mandelbrot zoom path. The left canvas uses float32
+      arithmetic, while the right canvas uses the `fp64` shader module from `@luma.gl/shadertools`.
+    </div>
+    <div style={{marginBottom: 12}}>
+      Note that fp64 support in shaders relies on some unspecified behavior and is thus GPU dependent. 
+      In particular, Apple GPUs are hard to support. In this case, fp64 does not provide additional precision
+      over standard float32 math.
+    </div>
+  </div>
+</ExampleHeader>
+
+<FP64Example />

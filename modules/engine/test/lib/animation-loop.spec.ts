@@ -2,8 +2,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from 'tape-promise/tape';
-import {getWebGLTestDevice} from '@luma.gl/test-utils';
+import test from 'test/utils/vitest-tape';
+import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {luma} from '@luma.gl/core';
+import {webgpuAdapter, type WebGPUDevice} from '@luma.gl/webgpu';
 
 import {AnimationLoop} from '@luma.gl/engine';
 
@@ -13,6 +15,41 @@ test('engine#AnimationLoop constructor', async t => {
   t.ok(AnimationLoop, 'AnimationLoop imported');
   const animationLoop = new AnimationLoop({device});
   t.ok(animationLoop, 'AnimationLoop constructor should not throw');
+  t.end();
+});
+
+test('engine#AnimationLoop uses provided stats object', async t => {
+  const device = await getWebGLTestDevice();
+  const customStats = luma.stats.get('GPU Time and Memory');
+  customStats.reset();
+  const frameRate = customStats.get('Frame Rate');
+  const beforeFrameRate = frameRate.lastSampleTime;
+  const beforeCpuTime = customStats.get('CPU Time').lastSampleTime;
+  const beforeGpuTime = customStats.get('GPU Time').lastSampleTime;
+
+  const animationLoop = new AnimationLoop({device, stats: customStats});
+  t.is(animationLoop.stats, customStats, 'AnimationLoop stores provided stats object');
+
+  await animationLoop.start();
+  await animationLoop.waitForRender();
+  await animationLoop.waitForRender();
+
+  let cpuTimeUpdated = customStats.get('CPU Time').lastSampleTime > beforeCpuTime;
+  for (let attempt = 0; !cpuTimeUpdated && attempt < 8; attempt++) {
+    await new Promise(resolve => setTimeout(resolve, 16));
+    await animationLoop.waitForRender();
+    cpuTimeUpdated = customStats.get('CPU Time').lastSampleTime > beforeCpuTime;
+  }
+  t.ok(frameRate.lastSampleTime > beforeFrameRate, 'Frame Rate updates on custom stats object');
+  t.ok(cpuTimeUpdated, 'CPU Time updates on custom stats object');
+  t.equal(
+    customStats.get('GPU Time').lastSampleTime,
+    beforeGpuTime,
+    'GPU Time remains unchanged when no profiled passes are encoded'
+  );
+
+  animationLoop.stop();
+  animationLoop.destroy();
   t.end();
 });
 
@@ -108,7 +145,7 @@ test('engine#AnimationLoop two start()s should only run one loop', async t => {
   t.end();
 });
 
-test.skip('engine#AnimationLoop start followed immediately by stop() should stop', async t => {
+test('engine#AnimationLoop start followed immediately by stop() should stop', async t => {
   const device = await getWebGLTestDevice();
 
   let initializeCalled = 0;
@@ -121,10 +158,9 @@ test.skip('engine#AnimationLoop start followed immediately by stop() should stop
   });
   animationLoop.start();
   animationLoop.stop();
-  setTimeout(() => {
-    t.is(initializeCalled, 0, 'onInitialize called');
-    t.end();
-  }, 100);
+  await new Promise<void>(resolve => setTimeout(resolve, 100));
+  t.is(initializeCalled, 0, 'onInitialize called');
+  t.end();
 });
 
 test('engine#AnimationLoop a start/stop/start should not call initialize again', async t => {
@@ -146,4 +182,98 @@ test('engine#AnimationLoop a start/stop/start should not call initialize again',
     animationLoop.stop();
     t.end();
   }, 150);
+});
+
+test('engine#AnimationLoop GPU timing graceful fallback', async t => {
+  const device = await getWebGLTestDevice();
+
+  const animationLoop = new AnimationLoop({device});
+  await animationLoop.start();
+  await animationLoop.waitForRender();
+
+  // Stats should exist regardless of timer support
+  t.ok(animationLoop.gpuTime, 'gpuTime stat exists');
+  t.ok(animationLoop.cpuTime, 'cpuTime stat exists');
+
+  // Device-managed GPU timing should match feature availability
+  const hasTimerQuery = device.features.has('timestamp-query') && Boolean(device.props.debug);
+  t.is(
+    device._isDebugGPUTimeEnabled(),
+    hasTimerQuery,
+    `device GPU timing enabled when feature ${hasTimerQuery ? 'available' : 'unavailable'}`
+  );
+  t.is(
+    device.commandEncoder.getTimeProfilingQuerySet()?.props.count || 0,
+    hasTimerQuery ? 256 : 0,
+    'timestamp query set pre-allocates slots for profiling passes'
+  );
+
+  // Destroy should not throw
+  animationLoop.stop();
+  animationLoop.destroy();
+  t.is(device._isDebugGPUTimeEnabled(), false, 'Query cleaned up on destroy');
+
+  t.end();
+});
+
+test('engine#AnimationLoop WebGPU timing path avoids backend casts', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const animationLoop = new AnimationLoop({device});
+  await animationLoop.start();
+  await animationLoop.waitForRender();
+
+  t.ok(animationLoop.gpuTime, 'gpuTime stat exists');
+  t.ok(animationLoop.cpuTime, 'cpuTime stat exists');
+  t.is(
+    device._isDebugGPUTimeEnabled(),
+    device.features.has('timestamp-query') && Boolean(device.props.debug),
+    'device GPU timing follows timestamp-query support and debug flags'
+  );
+
+  animationLoop.stop();
+  animationLoop.destroy();
+  t.end();
+});
+
+test('engine#AnimationLoop debugGPUTime enables GPU timing without full debug', async t => {
+  let device: WebGPUDevice | null = null;
+  try {
+    device = (await luma.createDevice({
+      id: 'webgpu-animation-loop-debug-gpu-time',
+      type: 'webgpu',
+      adapters: [webgpuAdapter],
+      createCanvasContext: {width: 1, height: 1},
+      debug: false,
+      debugGPUTime: true
+    })) as WebGPUDevice;
+  } catch {
+    // Handled below.
+  }
+
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const animationLoop = new AnimationLoop({device});
+  await animationLoop.start();
+  await animationLoop.waitForRender();
+
+  t.is(
+    device._isDebugGPUTimeEnabled(),
+    device.features.has('timestamp-query'),
+    'debugGPUTime enables GPU timing query setup when the feature is available'
+  );
+
+  animationLoop.stop();
+  animationLoop.destroy();
+  device.destroy();
+  t.end();
 });

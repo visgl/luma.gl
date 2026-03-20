@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 /* eslint-disable max-len */
-import test from 'tape-promise/tape';
+import test from 'test/utils/vitest-tape';
 import {getTestDevices} from '@luma.gl/test-utils';
 import {Framebuffer} from '@luma.gl/core';
 
@@ -84,6 +84,45 @@ test('WebGLDevice.createFramebuffer()', async t => {
 
     framebuffer.destroy();
     t.ok(framebuffer instanceof Framebuffer, 'Framebuffer repeated delete successful');
+  }
+  t.end();
+});
+
+test('Framebuffer#clone overrides size', async t => {
+  for (const device of await getTestDevices()) {
+    const framebuffer = device.createFramebuffer({
+      width: 2,
+      height: 2,
+      colorAttachments: ['rgba8unorm'],
+      depthStencilAttachment: 'depth16unorm'
+    });
+
+    const cloned = framebuffer.clone({width: 4, height: 4});
+
+    t.notEqual(cloned, framebuffer, `${device.type}: clone returns new framebuffer`);
+    t.equal(cloned.width, 4, `${device.type}: cloned width is overridden`);
+    t.equal(cloned.height, 4, `${device.type}: cloned height is overridden`);
+    t.equal(
+      cloned.colorAttachments[0].texture.width,
+      4,
+      `${device.type}: cloned color attachment width overridden`
+    );
+    t.equal(
+      cloned.colorAttachments[0].texture.height,
+      4,
+      `${device.type}: cloned color attachment height overridden`
+    );
+    t.notEqual(
+      cloned.colorAttachments[0].texture,
+      framebuffer.colorAttachments[0].texture,
+      `${device.type}: cloned color attachment is new texture`
+    );
+
+    t.equal(framebuffer.width, 2, `${device.type}: original width unchanged`);
+    t.equal(framebuffer.height, 2, `${device.type}: original height unchanged`);
+
+    framebuffer.destroy();
+    cloned.destroy();
   }
   t.end();
 });
@@ -182,19 +221,23 @@ test('WebGLFramebuffer contents', async t => {
   t.end();
 });
 
-/*
-test.skip('Framebuffer#getDefaultFramebuffer', (t) => {
-  const framebuffer = webglDevice.getDefaultCanvasContext().getCurrentFramebuffer();
-  t.ok(framebuffer instanceof Framebuffer, 'getDefaultFramebuffer successful');
+test('Framebuffer#getDefaultFramebuffer', async t => {
+  for (const testDevice of await getTestDevices()) {
+    if (testDevice.type === 'webgl') {
+      const framebuffer = testDevice.getDefaultCanvasContext().getCurrentFramebuffer();
+      t.ok(framebuffer instanceof Framebuffer, 'getDefaultFramebuffer successful');
 
-  t.throws(
-    () => framebuffer.resize(1000, 1000),
-    'defaultFramebuffer.resize({width, height}) throws'
-  );
+      t.doesNotThrow(
+        () => framebuffer.resize({width: 1000, height: 1000}),
+        'defaultFramebuffer.resize({width, height}) updates size'
+      );
+      t.equal(framebuffer.width, 1000, 'defaultFramebuffer width updates');
+      t.equal(framebuffer.height, 1000, 'defaultFramebuffer height updates');
+    }
+  }
 
   t.end();
 });
-*/
 
 /*
 

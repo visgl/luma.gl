@@ -6,42 +6,50 @@ import type {ShaderPass} from '@luma.gl/shadertools';
 
 // Do a 9x9 bilateral box filter
 const source = /* wgsl */ `\
-
 struct denoiseUniforms {
-  strength: f32
+  strength: f32,
 };
 
-@group(0), @binding(1) var<uniform> denoise: denoiseUniforms;
+@group(0) @binding(1) var<uniform> denoise: denoiseUniforms;
 
-fn denoise_sampleColor(source: sampler2D, texSize: vec2<f32>, texCoord: vec2<f32>) -> vec4<f32> {
-	let adjustedExponent: f32 = 3. + 200. * pow(1. - denoise.strength, 4.);
-	let center: vec4<f32> = sample_texture(BUFFER_source, texCoord);
-	var color: vec4<f32> = vec4<f32>(0.);
-	var total: f32 = 0.;
+fn denoise_sampleColor(
+  sourceTexture: texture_2d<f32>,
+  sourceTextureSampler: sampler,
+  texSize: vec2f,
+  texCoord: vec2f
+) -> vec4f {
+  let adjustedExponent = 3.0 + 200.0 * pow(1.0 - denoise.strength, 4.0);
+  let center = textureSample(sourceTexture, sourceTextureSampler, texCoord);
+  var color = vec4f(0.0);
+  var total = 0.0;
 
-	for (var x: f32 = -4.; x <= 4.; x = x + (1.)) {
+  for (var x = -4.0; x <= 4.0; x += 1.0) {
+    for (var y = -4.0; y <= 4.0; y += 1.0) {
+      let offsetColor = textureSample(
+        sourceTexture,
+        sourceTextureSampler,
+        texCoord + vec2f(x, y) / texSize
+      );
+      let weight = pow(
+        1.0 - abs(dot(offsetColor.rgb - center.rgb, vec3f(0.25))),
+        adjustedExponent
+      );
+      color += offsetColor * weight;
+      total += weight;
+    }
+  }
 
-		for (var y: f32 = -4.; y <= 4.; y = y + (1.)) {
-			let offsetColor: vec4<f32> = sample_texture(BUFFER_source, texCoord + vec2<f32>(x, y) / texSize);
-			var weight: f32 = 1. - abs(dot(offsetColor.rgb - center.rgb, vec3<f32>(0.25)));
-			weight = pow(weight, adjustedExponent);
-			color = color + (offsetColor * weight);
-			total = total + (weight);
-		}
-
-	}
-
-	return color / total;
-} 
+  return color / total;
+}
 `;
 
 const fs = /* glsl */ `\
-uniform dedenoiseUniforms {
+uniform denoiseUniforms {
   float strength;
 } denoise;
 
-vec4 dedenoise_sampleColor(sampler2D source, vec2 texSize, vec2 texCoord) {
-  float adjustedExponent = 3. + 200. * pow(1. - noise.strength, 4.);
+vec4 denoise_sampleColor(sampler2D source, vec2 texSize, vec2 texCoord) {
+  float adjustedExponent = 3. + 200. * pow(1. - denoise.strength, 4.);
 
   vec4 center = texture(source, texCoord);
   vec4 color = vec4(0.0);

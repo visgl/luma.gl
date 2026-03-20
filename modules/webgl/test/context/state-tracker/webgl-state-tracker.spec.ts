@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from 'tape-promise/tape';
+import test from 'test/utils/vitest-tape';
 import {
   GL_PARAMETER_DEFAULTS,
   GL_PARAMETER_SETTERS
@@ -237,5 +237,28 @@ test('WebGLStateTracker#not cached parameters', async t => {
   t.is(gl.getParameter(gl.TEXTURE_BINDING_2D), null, 'no binding for texture0');
 
   tex.destroy();
+  t.end();
+});
+
+test('WebGLStateTracker#tracks metadata on gl.lumaState', async t => {
+  const device = await devicePromise;
+  const {gl} = device;
+
+  const state = WebGLStateTracker.get(gl);
+  t.ok(state, 'WebGLStateTracker.get returns a state tracker');
+  t.equal(
+    (gl as {lumaState?: WebGLStateTracker}).lumaState,
+    state,
+    'tracker is stored on gl.lumaState'
+  );
+  // @ts-expect-error
+  t.equal((gl as {state?: unknown}).state, undefined, 'legacy gl.state metadata slot is not used');
+  t.equal(
+    // @ts-expect-error
+    typeof (gl.lumaState?.cache || null),
+    'object',
+    'lumaState has cache object'
+  );
+
   t.end();
 });

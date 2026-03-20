@@ -3,19 +3,17 @@
 // Copyright (c) vis.gl contributors
 
 // A lot of imports, but then Model is where it all comes together...
-import type {TypedArray} from '@math.gl/types';
-import type {
-  RenderPipelineProps,
-  RenderPipelineParameters,
-  BufferLayout,
-  Shader,
-  VertexArray,
-  TransformFeedback,
-  AttributeInfo,
-  Binding,
-  PrimitiveTopology
-} from '@luma.gl/core';
+import {type TypedArray} from '@math.gl/types';
 import {
+  type RenderPipelineProps,
+  type RenderPipelineParameters,
+  type BufferLayout,
+  type Shader,
+  type VertexArray,
+  type TransformFeedback,
+  type AttributeInfo,
+  type Binding,
+  type PrimitiveTopology,
   Device,
   DeviceFeature,
   Buffer,
@@ -24,19 +22,19 @@ import {
   Sampler,
   RenderPipeline,
   RenderPass,
+  PipelineFactory,
+  ShaderFactory,
   UniformStore,
   log,
-  getTypedArrayConstructor,
+  dataTypeDecoder,
   getAttributeInfosFromLayouts
 } from '@luma.gl/core';
 
 import type {ShaderModule, PlatformInfo} from '@luma.gl/shadertools';
-import {ShaderAssembler, getShaderLayoutFromWGSL} from '@luma.gl/shadertools';
+import {ShaderAssembler} from '@luma.gl/shadertools';
 
 import type {Geometry} from '../geometry/geometry';
 import {GPUGeometry, makeGPUGeometry} from '../geometry/gpu-geometry';
-import {PipelineFactory} from '../factories/pipeline-factory';
-import {ShaderFactory} from '../factories/shader-factory';
 import {getDebugTableForShaderLayout} from '../debug/debug-shader-layout';
 import {debugFramebuffer} from '../debug/debug-framebuffer';
 import {deepEqual} from '../utils/deep-equal';
@@ -44,7 +42,7 @@ import {BufferLayoutHelper} from '../utils/buffer-layout-helper';
 import {sortedBufferLayoutByShaderSourceLocations} from '../utils/buffer-layout-order';
 import {uid} from '../utils/uid';
 import {ShaderInputs} from '../shader-inputs';
-import {AsyncTexture} from '../async-texture/async-texture';
+import {DynamicTexture} from '../dynamic-texture/dynamic-texture';
 
 const LOG_DRAW_PRIORITY = 2;
 const LOG_DRAW_TIMEOUT = 10000;
@@ -63,7 +61,9 @@ export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs' | 'bindings'> & {
   /** Shader inputs, used to generated uniform buffers and bindings */
   shaderInputs?: ShaderInputs;
   /** Bindings */
-  bindings?: Record<string, Binding | AsyncTexture>;
+  bindings?: Record<string, Binding | DynamicTexture>;
+  /** WebGL-only uniforms */
+  uniforms?: Record<string, unknown>;
   /** Parameters that are built into the pipeline */
   parameters?: RenderPipelineParameters;
 
@@ -103,12 +103,19 @@ export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs' | 'bindings'> & {
 };
 
 /**
- * v9 Model API
- * A model
- * - automatically reuses pipelines (programs) when possible
- * - automatically rebuilds pipelines if necessary to accommodate changed settings
- * shadertools integration
- * - accepts modules and performs shader transpilation
+ * High level draw API for luma.gl.
+ *
+ * A `Model` encapsulates shaders, geometry attributes, bindings and render
+ * pipeline state into a single object. It automatically reuses and rebuilds
+ * pipelines as render parameters change and exposes convenient hooks for
+ * updating uniforms and attributes.
+ *
+ * Features:
+ * - Reuses and lazily recompiles {@link RenderPipeline | pipelines} as needed.
+ * - Integrates with `@luma.gl/shadertools` to assemble GLSL or WGSL from shader modules.
+ * - Manages geometry attributes and buffer bindings.
+ * - Accepts textures, samplers and uniform buffers as bindings, including `DynamicTexture`.
+ * - Provides detailed debug logging and optional shader source inspection.
  */
 export class Model {
   static defaultProps: Required<ModelProps> = {
@@ -125,6 +132,8 @@ export class Model {
     indexBuffer: null,
     attributes: {},
     constantAttributes: {},
+    bindings: {},
+    uniforms: {},
     varyings: [],
 
     isInstanced: undefined!,
@@ -141,16 +150,24 @@ export class Model {
     disableWarnings: undefined!
   };
 
+  /** Device that created this model */
   readonly device: Device;
+  /** Application provided identifier */
   readonly id: string;
+  /** WGSL shader source when using unified shader */
   // @ts-expect-error assigned in function called from constructor
   readonly source: string;
+  /** GLSL vertex shader source */
   // @ts-expect-error assigned in function called from constructor
   readonly vs: string;
+  /** GLSL fragment shader source */
   // @ts-expect-error assigned in function called from constructor
   readonly fs: string;
+  /** Factory used to create render pipelines */
   readonly pipelineFactory: PipelineFactory;
+  /** Factory used to create shaders */
   readonly shaderFactory: ShaderFactory;
+  /** User-supplied per-model data */
   userData: {[key: string]: any} = {};
 
   // Fixed properties (change can trigger pipeline rebuild)
@@ -179,7 +196,7 @@ export class Model {
   /** Constant-valued attributes */
   constantAttributes: Record<string, TypedArray> = {};
   /** Bindings (textures, samplers, uniform buffers) */
-  bindings: Record<string, Binding | AsyncTexture> = {};
+  bindings: Record<string, Binding | DynamicTexture> = {};
 
   /**
    * VertexArray
@@ -262,7 +279,8 @@ export class Model {
       // @ts-expect-error
       this._getModuleUniforms = getUniforms;
       // Extract shader layout after modules have been added to WGSL source, to include any bindings added by modules
-      this.props.shaderLayout ||= getShaderLayoutFromWGSL(this.source);
+      // @ts-expect-error Method on WebGPUDevice
+      this.props.shaderLayout ||= device.getShaderLayout(this.source);
     } else {
       // GLSL
       const {vs, fs, getUniforms} = this.props.shaderAssembler.assembleGLSLShaderPair({
@@ -333,9 +351,6 @@ export class Model {
     if (props.transformFeedback) {
       this.transformFeedback = props.transformFeedback;
     }
-
-    // Catch any access to non-standard props
-    Object.seal(this);
   }
 
   destroy(): void {
@@ -344,7 +359,7 @@ export class Model {
       this.pipelineFactory.release(this.pipeline);
       // Release the shaders
       this.shaderFactory.release(this.pipeline.vs);
-      if (this.pipeline.fs) {
+      if (this.pipeline.fs && this.pipeline.fs !== this.pipeline.vs) {
         this.shaderFactory.release(this.pipeline.fs);
       }
       this._uniformStore.destroy();
@@ -372,6 +387,7 @@ export class Model {
     this._needsRedraw ||= reason;
   }
 
+  /** Update uniforms and pipeline state prior to drawing. */
   predraw(): void {
     // Update uniform buffers if needed
     this.updateShaderInputs();
@@ -379,6 +395,11 @@ export class Model {
     this.pipeline = this._updatePipeline();
   }
 
+  /**
+   * Issue one draw call.
+   * @param renderPass - render pass to draw into
+   * @returns `true` if the draw call was executed, `false` if resources were not ready.
+   */
   draw(renderPass: RenderPass): boolean {
     const loadingBinding = this._areBindingsLoading();
     if (loadingBinding) {
@@ -403,14 +424,7 @@ export class Model {
       // Application can call Model.predraw() to avoid this.
       this.pipeline = this._updatePipeline();
 
-      // Set pipeline state, we may be sharing a pipeline so we need to set all state on every draw
-      // Any caching needs to be done inside the pipeline functions
-      // TODO this is a busy initialized check for all bindings every frame
-
       const syncBindings = this._getBindings();
-      this.pipeline.setBindings(syncBindings, {
-        disableWarnings: this.props.disableWarnings
-      });
 
       const {indexBuffer} = this.vertexArray;
       const indexCount = indexBuffer
@@ -425,6 +439,11 @@ export class Model {
         instanceCount: this.instanceCount,
         indexCount,
         transformFeedback: this.transformFeedback || undefined,
+        // Pipelines may be shared across models when caching is enabled, so bindings
+        // and WebGL uniforms must be supplied on every draw instead of being stored
+        // on the pipeline instance.
+        bindings: syncBindings,
+        uniforms: this.props.uniforms,
         // WebGL shares underlying cached pipelines even for models that have different parameters and topology,
         // so we must provide our unique parameters to each draw
         // (In WebGPU most parameters are encoded in the pipeline and cannot be changed per draw call)
@@ -571,7 +590,7 @@ export class Model {
   /**
    * Sets bindings (textures, samplers, uniform buffers)
    */
-  setBindings(bindings: Record<string, Binding | AsyncTexture>): void {
+  setBindings(bindings: Record<string, Binding | DynamicTexture>): void {
     Object.assign(this.bindings, bindings);
     this.setNeedsRedraw('bindings');
   }
@@ -678,7 +697,7 @@ export class Model {
   /** Check that bindings are loaded. Returns id of first binding that is still loading. */
   _areBindingsLoading(): string | false {
     for (const binding of Object.values(this.bindings)) {
-      if (binding instanceof AsyncTexture && !binding.isReady) {
+      if (binding instanceof DynamicTexture && !binding.isReady) {
         return binding.id;
       }
     }
@@ -690,7 +709,7 @@ export class Model {
     const validBindings: Record<string, Binding> = {};
 
     for (const [name, binding] of Object.entries(this.bindings)) {
-      if (binding instanceof AsyncTexture) {
+      if (binding instanceof DynamicTexture) {
         // Check that async textures are loaded
         if (binding.isReady) {
           validBindings[name] = binding.texture;
@@ -711,7 +730,7 @@ export class Model {
         timestamp = Math.max(timestamp, binding.texture.updateTimestamp);
       } else if (binding instanceof Buffer || binding instanceof Texture) {
         timestamp = Math.max(timestamp, binding.updateTimestamp);
-      } else if (binding instanceof AsyncTexture) {
+      } else if (binding instanceof DynamicTexture) {
         timestamp = binding.texture
           ? Math.max(timestamp, binding.texture.updateTimestamp)
           : // The texture will become available in the future
@@ -808,7 +827,9 @@ export class Model {
       );
 
       if (prevShaderVs) this.shaderFactory.release(prevShaderVs);
-      if (prevShaderFs) this.shaderFactory.release(prevShaderFs);
+      if (prevShaderFs && prevShaderFs !== prevShaderVs) {
+        this.shaderFactory.release(prevShaderFs);
+      }
     }
     return this.pipeline;
   }
@@ -896,7 +917,7 @@ export class Model {
 
   // TODO - fix typing of luma data types
   _getBufferOrConstantValues(attribute: Buffer | TypedArray, dataType: any): string {
-    const TypedArrayConstructor = getTypedArrayConstructor(dataType);
+    const TypedArrayConstructor = dataTypeDecoder.getTypedArrayConstructor(dataType);
     const typedArray =
       attribute instanceof Buffer ? new TypedArrayConstructor(attribute.debugData) : attribute;
     return typedArray.toString();

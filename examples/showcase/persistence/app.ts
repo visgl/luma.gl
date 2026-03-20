@@ -3,7 +3,8 @@
 // Copyright (c) vis.gl contributors
 
 import type {NumberArray, VariableShaderType} from '@luma.gl/core';
-import {UniformStore, Framebuffer} from '@luma.gl/core';
+import type {NumericArray} from '@math.gl/types';
+import {UniformStore, Framebuffer, Texture} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {
   AnimationLoopTemplate,
@@ -11,7 +12,7 @@ import {
   Model,
   makeRandomGenerator,
   loadImageBitmap,
-  AsyncTexture,
+  DynamicTexture,
   BackgroundTextureModel,
   ClipSpace,
   getFragmentShaderForRenderPass
@@ -34,48 +35,46 @@ const sphere: {uniformTypes: Record<keyof SphereUniforms, VariableShaderType>} =
     color: 'vec3<f32>',
     lighting: 'f32',
     modelViewMatrix: 'mat4x4<f32>',
-    projectionMatrix: 'mat4x3<f32>'
+    projectionMatrix: 'mat4x4<f32>'
   }
 };
 
 const SPHERE_WGSL = /* WGSL */ `\
-#version 300 es
+struct SphereUniforms {
+  color: vec3<f32>,
+  lighting: f32,
+  modelViewMatrix: mat4x4<f32>,
+  projectionMatrix: mat4x4<f32>,
+};
+
+@group(0) @binding(0) var<uniform> sphere : SphereUniforms;
 
 struct VertexInputs {
-  positions: vec3<f32>;
-  normals: vec3<f32>;
-}
+  @location(0) positions: vec3<f32>,
+  @location(1) normals: vec3<f32>,
+};
 
-struct FragmentInputs {
-  @builtin(position) position: vec4<f32>;
-  normal: vec3<f32>;
-}
-
-uniform sphereUniforms {
-  // fragment shader
-  color: vec3<f32>;
-  lighting: bool;
-  // vertex shader
-  modelViewMatrix: mat4<f32>;
-  projectionMatrix: mat4<f32>;
-} sphere;
+struct VertexOutputs {
+  @builtin(position) position: vec4<f32>,
+  @location(0) normal: vec3<f32>,
+};
 
 @vertex
-fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
-  const outputs: VertexOutputs;
-  gl_Position = sphere.projectionMatrix * sphere.modelViewMatrix * vec4(inputs.positions, 1.0);
-  outputs.normal = vec3((sphere.modelViewMatrix * vec4(inputs.normals, 0.0)));
+fn vertexMain(inputs: VertexInputs) -> VertexOutputs {
+  var outputs: VertexOutputs;
+  outputs.position = sphere.projectionMatrix * sphere.modelViewMatrix * vec4(inputs.positions, 1.0);
+  outputs.normal = vec3((sphere.modelViewMatrix * vec4(inputs.normals, 0.0)).xyz);
   return outputs;
 }
 
 @fragment
-fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
-  let attenuation = 1.0;
-  if (sphere.lighting) {
-    light = normalize(vec3(1,1,2));
-    attenuation = dot(normal, light);
+fn fragmentMain(inputs: VertexOutputs) -> @location(0) vec4<f32> {
+  var attenuation = 1.0;
+  if (sphere.lighting > 0.5) {
+    let light = normalize(vec3(1.0, 1.0, 2.0));
+    attenuation = max(dot(normalize(inputs.normal), light), 0.0);
   }
-  return vec4(sphere.color * attenuation, 1);
+  return vec4(sphere.color * attenuation, 1.0);
 }
 `;
 
@@ -130,18 +129,20 @@ void main(void) {
 `;
 
 const random = makeRandomGenerator();
+const OFFSCREEN_COLOR_FORMAT = 'rgba8unorm';
 
 const CORE_COUNT = 64;
 const ELECTRON_COUNT = 64;
-const electronPosition = [];
-const electronRotation = [];
-const nucleonPosition = [];
+const electronPosition: NumericArray[] = [];
+const electronRotation: Matrix4[] = [];
+const nucleonPosition: NumericArray[] = [];
 
 /* eslint-disable max-statements */
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = `
 <p>
   Electron trails renderings persist across multiple frames.
+</p>
 <p>
   Uses multiple luma.gl <code>Framebuffer</code>s to hold previously rendered data between frames.
 </p>
@@ -154,7 +155,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     sphere
   });
 
-  /** Model that renders a background texture into transparent areas of the screen */
+  /** Background texture used for final screen compositing */
+  backgroundTexture: DynamicTexture;
   backgroundTextureModel: BackgroundTextureModel;
   /** Electron model, will be drawn multiple times */
   electron: Model;
@@ -166,12 +168,14 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   pingpongFramebuffers: Framebuffer[];
   screenPass: ClipSpace;
   persistencePass: ClipSpace;
+  persistenceFramebufferSize: [number, number] | null = null;
 
   constructor({device, width, height}: AnimationProps) {
     super();
 
+    this.backgroundTexture = new DynamicTexture(device, {data: loadImageBitmap('background.png')});
     this.backgroundTextureModel = new BackgroundTextureModel(device, {
-      backgroundTexture: new AsyncTexture(device, {data: loadImageBitmap('background.png')}),
+      backgroundTexture: this.backgroundTexture,
       blend: true
     });
 
@@ -180,6 +184,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       source: SPHERE_WGSL,
       vs: SPHERE_VS,
       fs: SPHERE_FS,
+      colorAttachmentFormats: [OFFSCREEN_COLOR_FORMAT],
       geometry: new SphereGeometry({nlat: 20, nlong: 30}), // To test that sphere generation is working properly.
       bindings: {
         sphere: this.uniformStore.getManagedUniformBuffer(device, 'sphere')
@@ -196,6 +201,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       source: SPHERE_WGSL,
       vs: SPHERE_VS,
       fs: SPHERE_FS,
+      colorAttachmentFormats: [OFFSCREEN_COLOR_FORMAT],
       geometry: new SphereGeometry({nlat: 20, nlong: 30}),
       parameters: {
         depthWriteEnabled: true,
@@ -210,7 +216,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.mainFramebuffer = device.createFramebuffer({
       width,
       height,
-      colorAttachments: ['rgba8unorm'],
+      colorAttachments: [
+        createOffscreenColorAttachment(device, 'main-framebuffer-color', width, height)
+      ],
       depthStencilAttachment: 'depth24plus'
     });
 
@@ -218,14 +226,16 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       device.createFramebuffer({
         width,
         height,
-        colorAttachments: ['rgba8unorm'],
-        depthStencilAttachment: 'depth24plus'
+        colorAttachments: [
+          createOffscreenColorAttachment(device, 'persistence-framebuffer-0-color', width, height)
+        ]
       }),
       device.createFramebuffer({
         width,
         height,
-        colorAttachments: ['rgba8unorm'],
-        depthStencilAttachment: 'depth24plus'
+        colorAttachments: [
+          createOffscreenColorAttachment(device, 'persistence-framebuffer-1-color', width, height)
+        ]
       })
     ];
 
@@ -268,6 +278,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   onFinalize(animationProps: AnimationProps): void {
+    this.backgroundTexture.destroy();
+    this.backgroundTextureModel.destroy();
     this.electron.destroy();
     this.nucleon.destroy();
 
@@ -279,9 +291,19 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   onRender({device, tick, width, height, aspect}: AnimationProps) {
+    const needsPersistenceReset =
+      !this.persistenceFramebufferSize ||
+      this.persistenceFramebufferSize[0] !== width ||
+      this.persistenceFramebufferSize[1] !== height;
+
     this.mainFramebuffer.resize({width, height});
     this.pingpongFramebuffers[0].resize({width, height});
     this.pingpongFramebuffers[1].resize({width, height});
+
+    if (needsPersistenceReset) {
+      this.clearPersistenceFramebuffers(device);
+      this.persistenceFramebufferSize = [width, height];
+    }
 
     const projectionMatrix = new Matrix4().perspective({fovy: radians(75), aspect});
     const viewMatrix = new Matrix4().lookAt({eye: [0, 0, 4]});
@@ -289,7 +311,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const mainRenderPass = device.beginRenderPass({
       framebuffer: this.mainFramebuffer,
       clearColor: [0, 0, 0, 0],
-      clearDepth: true
+      clearDepth: 1,
+      clearStencil: false
     });
 
     // Render electrons to framebuffer
@@ -348,7 +371,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     // Accumulate in persistence buffer
     const persistenceRenderPass = device.beginRenderPass({
       framebuffer: currentFramebuffer,
-      clearColor: [0, 0, 0, 0]
+      clearColor: [0, 0, 0, 0],
+      clearDepth: false,
+      clearStencil: false
     });
     this.persistencePass.setBindings({
       sourceTexture: this.mainFramebuffer.colorAttachments[0],
@@ -366,4 +391,40 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.backgroundTextureModel.draw(screenRenderPass);
     screenRenderPass.end();
   }
+
+  clearPersistenceFramebuffers(device: AnimationProps['device']) {
+    for (const framebuffer of this.pingpongFramebuffers) {
+      const renderPass = device.beginRenderPass({
+        framebuffer,
+        clearColor: [0, 0, 0, 0],
+        clearDepth: false,
+        clearStencil: false
+      });
+      renderPass.end();
+    }
+  }
+}
+
+function createOffscreenColorAttachment(
+  device: AnimationProps['device'],
+  id: string,
+  width: number,
+  height: number
+) {
+  if (device.type !== 'webgpu') {
+    return OFFSCREEN_COLOR_FORMAT;
+  }
+
+  return device.createTexture({
+    id,
+    format: OFFSCREEN_COLOR_FORMAT,
+    width,
+    height,
+    usage: Texture.SAMPLE | Texture.RENDER,
+    sampler: {
+      magFilter: 'linear',
+      minFilter: 'linear',
+      mipmapFilter: 'none'
+    }
+  });
 }

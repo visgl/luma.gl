@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from 'tape-promise/tape';
+import test from 'test/utils/vitest-tape';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
 
 import type {TypedArray} from '@math.gl/types';
@@ -56,7 +56,7 @@ test('WebGLState#getGLParameters (WebGL)', async t => {
 });
 
 // TODO - restore asap
-test.skip('WebGLState#setGLParameters (Mixing enum and function style keys)', async t => {
+test('WebGLState#setGLParameters (Mixing enum and function style keys)', async t => {
   const webglDevice = await getWebGLTestDevice();
 
   resetGLParameters(webglDevice.gl);
@@ -76,7 +76,7 @@ test.skip('WebGLState#setGLParameters (Mixing enum and function style keys)', as
 });
 
 // TODO - restore asap
-test('WebGLState#setGLParameters (Argument expansion for ***SeperateFunc setters))', async t => {
+test('WebGLState#setGLParameters (Argument expansion for ***SeparateFunc setters))', async t => {
   const webglDevice = await getWebGLTestDevice();
 
   const expectedValues = {

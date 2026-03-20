@@ -1,110 +1,105 @@
 # Computation
 
-The `Computation` class is a high-level class in the luma.gl API. It brings together all GPU functionality needed to run GPU compute shaders, in a single, easy-to-use interface.
+`Computation` is the engine-level wrapper around WebGPU compute shaders.
+It plays the same role for compute work that [`Model`](/docs/api-reference/engine/model) plays for rendering: it assembles shaders, manages shader inputs and bindings, reuses cached pipelines, and dispatches work through a [`ComputePass`](/docs/api-reference/core/resources/compute-pass).
 
-`Computation` manages the following responsibilities:
-- **bindings** these can reference textures and uniform buffers
-- **shader module injection**
-- **debugging** - Detailed debug logging of draw calls
-
-The `Computation` class integrates with 
-- The `@luma.gl/shadertools` shader module system: [see `Shader Assembly`]( /docs/api-reference/shadertools/shader-assembler).
+`Computation` is only supported on WebGPU devices.
 
 ## Usage
 
 ```typescript
-import {Computation} from `@luma.gl/engine`;
-```
+import {Computation} from '@luma.gl/engine';
 
-One of the simplest way to provide attribute data is by using a Geometry object.
-
-Create model object by passing shaders, uniforms, geometry and render it by passing updated uniforms.
-
-```typescript
-import {Computation} from `@luma.gl/engine`;
-// construct the model.
-const model = new Computation(device, {
-  source: COMPUTE_SHADER,
+const computation = new Computation(device, {
+  source: COMPUTE_SHADER_SOURCE,
   bindings: {
-    uSampler: texture
-  },
-})
-```
-
-### Provide attribute data using Buffer
-
-When using `Buffer` objects, data remains on GPU and same `Buffer` object can be shared between multiple models.
-
-```typescript
-// construct the model.
-const model = new Computation(device, {
-  source: COMPUTE_SHADER,
-  attributes: {
-    attributeName1: bufferObject,
-    attributeName2: device.createBuffer(new Float32Array(...))
-  },
-  uniforms: {uSampler: texture},
-})
-```
-
-On each frame, call the `model.draw()` function after updating any uniforms (typically matrices).
-
-```ts
-model.setUniforms({
-  uPMatrix: currentProjectionMatrix,
-  uMVMatrix: current ComputationViewMatrix
+    inputBuffer,
+    outputBuffer
+  }
 });
-model.draw();
-```
 
-Debug shader source (even when shader successful)
-```ts
-// construct the model.
-const model = new Computation(device, {
-  source: COMPUTE_SHADER,
-  debugShaders: 'always'
-});
+const computePass = device.beginComputePass();
+computation.predraw();
+computation.dispatch(computePass, 64, 1, 1);
+computePass.end();
 ```
 
 ## Types
 
 ### `ComputationProps`
 
-| Property           | Type                                           | Description                                                                       |
-| ------------------ | ---------------------------------------------- | --------------------------------------------------------------------------------- |
-| `source`               | `Shader` \| _string_                           | A vertex shader object, or source as a string.                                    |
-| `modules`          |                                                | shader modules to be applied (shadertools).                                       |
-| `pipelineFactory?` |                                                | `PipelineFactory` to use for program creation and caching.                        |
-| `debugShaders?`    | `'error' \| 'never' \| 'warnings' \| 'always'` | Specify in what triggers the display shader compilation log (default: `'error'`). |
+| Property | Type | Description |
+| --- | --- | --- |
+| `source?` | `string` | WGSL source code for the compute shader. |
+| `modules?` | `ShaderModule[]` | Shader modules to assemble into the shader. |
+| `defines?` | `Record<string, boolean>` | Shader module defines passed to the assembler. |
+| `shaderInputs?` | `ShaderInputs` | Pre-created shader input manager. |
+| `bindings?` | `Record<string, Binding>` | Bound textures, samplers, storage buffers, or uniform buffers. |
+| `pipelineFactory?` | `PipelineFactory` | Factory from `@luma.gl/core` used to create cached compute pipelines. |
+| `shaderFactory?` | `ShaderFactory` | Factory from `@luma.gl/core` used to create cached shader resources. |
+| `shaderAssembler?` | `ShaderAssembler` | WGSL shader assembler to use. |
+| `debugShaders?` | `'never' \| 'errors' \| 'warnings' \| 'always'` | Debug shader output policy. |
 
-`ComputationProps` also include `ComputePipelineProps`, which are passed through to the `ComputePipeline` constructor, e.g:
+`ComputationProps` also includes the standard `ComputePipelineProps` supported by `device.createComputePipeline(...)`.
 
-| Property          | Type                       | Description                                                                             |
-| ----------------- | -------------------------- | --------------------------------------------------------------------------------------- |
-| `layout`          | `ShaderLayout`             | Describes how shader attributes and bindings are laid out.                              |
-| `bindings?`       | `Record<string, any>`      |                                                                                         |
+## Properties
 
+### `device`, `id`
 
-## Fields
+Device and application-provided identifier.
 
 ### `pipeline: ComputePipeline`
 
-The model's `ComputePipeline` instance
+Current compute pipeline.
+
+### `shader`
+
+Compiled compute shader resource.
+
+### `source`
+
+Assembled WGSL source.
+
+### `shaderInputs`
+
+Current `ShaderInputs` instance.
 
 ## Methods
 
 ### `constructor(device: Device, props: ComputationProps)`
 
-The constructor for the Computation class. Use this to create a new Computation.
+Creates a computation wrapper for one WebGPU device. Throws on non-WebGPU devices.
 
 ### `destroy(): void`
 
-Free GPU resources associated with this model immediately, instead of waiting for garbage collection.
+Releases the cached pipeline and shader and destroys the internal uniform store.
 
-### `dispatch(pass: ComputePass, x, y, z)`
+### `predraw(): void`
 
-Renders the model with provided uniforms, attributes and samplers
+Updates uniform buffers from the current `ShaderInputs` state.
 
-```typescript
-computation.dispatch(computePass, 1);
-```
+### `dispatch(computePass: ComputePass, x: number, y?: number, z?: number): void`
+
+Binds the current pipeline and bindings and dispatches compute workgroups.
+
+### `setShaderInputs(shaderInputs: ShaderInputs): void`
+
+Replaces the active `ShaderInputs` instance and rebuilds the managed uniform-buffer bindings.
+
+### `setShaderModuleProps(props: Record<string, any>): void`
+
+Updates module props through the shader assembler's generated module-uniform helper.
+
+### `updateShaderInputs(): void`
+
+Flushes current `ShaderInputs` values into the internal uniform store.
+
+### `setBindings(bindings: Record<string, Binding>): void`
+
+Sets the resource bindings used for subsequent dispatches.
+
+## Remarks
+
+- `Computation` is compute-only and does not expose draw-style geometry or render-pass APIs.
+- For shader-module-based resource management, `Computation` follows the same `ShaderInputs` pattern as [`Model`](/docs/api-reference/engine/model).
+- `Computation` uses [`PipelineFactory`](/docs/api-reference/core/pipeline-factory) and [`ShaderFactory`](/docs/api-reference/core/shader-factory) from `@luma.gl/core` unless you provide custom factory instances.

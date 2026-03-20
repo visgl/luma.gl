@@ -16,64 +16,70 @@ struct PointLight {
   vec3 attenuation; // 2nd order x:Constant-y:Linear-z:Exponential
 };
 
+struct SpotLight {
+  vec3 color;
+  vec3 position;
+  vec3 direction;
+  vec3 attenuation;
+  vec2 coneCos;
+};
+
 struct DirectionalLight {
   vec3 color;
   vec3 direction;
 };
 
+struct UniformLight {
+  vec3 color;
+  vec3 position;
+  vec3 direction;
+  vec3 attenuation;
+  vec2 coneCos;
+};
+
 uniform lightingUniforms {
   int enabled;
-  int lightType;
-
   int directionalLightCount;
   int pointLightCount;
-
+  int spotLightCount;
   vec3 ambientColor;
-
-  vec3 lightColor0;
-  vec3 lightPosition0;
-  vec3 lightDirection0;
-  vec3 lightAttenuation0;
-
-  vec3 lightColor1;
-  vec3 lightPosition1;
-  vec3 lightDirection1;
-  vec3 lightAttenuation1;
-
-  vec3 lightColor2;
-  vec3 lightPosition2;
-  vec3 lightDirection2;
-  vec3 lightAttenuation2;
+  UniformLight lights[5];
 } lighting;
 
 PointLight lighting_getPointLight(int index) {
-  switch (index) {
-    case 0:
-      return PointLight(lighting.lightColor0, lighting.lightPosition0, lighting.lightAttenuation0);
-    case 1:
-      return PointLight(lighting.lightColor1, lighting.lightPosition1, lighting.lightAttenuation1);
-    case 2:
-    default:  
-      return PointLight(lighting.lightColor2, lighting.lightPosition2, lighting.lightAttenuation2);
-  }
+  UniformLight light = lighting.lights[index];
+  return PointLight(light.color, light.position, light.attenuation);
+}
+
+SpotLight lighting_getSpotLight(int index) {
+  UniformLight light = lighting.lights[lighting.pointLightCount + index];
+  return SpotLight(light.color, light.position, light.direction, light.attenuation, light.coneCos);
 }
 
 DirectionalLight lighting_getDirectionalLight(int index) {
-  switch (index) {
-    case 0:
-      return DirectionalLight(lighting.lightColor0, lighting.lightDirection0);
-    case 1:
-      return DirectionalLight(lighting.lightColor1, lighting.lightDirection1);
-    case 2:
-    default:   
-      return DirectionalLight(lighting.lightColor2, lighting.lightDirection2);
-  }
-} 
+  UniformLight light =
+    lighting.lights[lighting.pointLightCount + lighting.spotLightCount + index];
+  return DirectionalLight(light.color, light.direction);
+}
 
 float getPointLightAttenuation(PointLight pointLight, float distance) {
   return pointLight.attenuation.x
        + pointLight.attenuation.y * distance
        + pointLight.attenuation.z * distance * distance;
+}
+
+float getSpotLightAttenuation(SpotLight spotLight, vec3 positionWorldspace) {
+  vec3 light_direction = normalize(positionWorldspace - spotLight.position);
+  float coneFactor = smoothstep(
+    spotLight.coneCos.y,
+    spotLight.coneCos.x,
+    dot(normalize(spotLight.direction), light_direction)
+  );
+  float distanceAttenuation = getPointLightAttenuation(
+    PointLight(spotLight.color, spotLight.position, spotLight.attenuation),
+    distance(spotLight.position, positionWorldspace)
+  );
+  return distanceAttenuation / max(coneFactor, 0.0001);
 }
 
 // #endif

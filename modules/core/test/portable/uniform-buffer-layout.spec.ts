@@ -1,5 +1,212 @@
+import test from 'test/utils/vitest-tape';
+import {UniformBufferLayout, UniformStore} from '../../src';
+
+function almostEqual(a: number, b: number, eps = 1e-3): boolean {
+  return Math.abs(a - b) <= eps;
+}
+
+test('unaligned scalar forces padding before vec4', t => {
+  const uniformTypes = {
+    scalar: 'f32',
+    vector: 'vec4<f32>'
+  } as const;
+
+  const layout = new UniformBufferLayout(uniformTypes);
+
+  const data = layout.getData({
+    scalar: 42,
+    vector: [1, 2, 3, 4]
+  });
+
+  const view = new Float32Array(data.buffer);
+  t.equal(view[0], 42, 'scalar');
+  t.equal(view[1], 0, 'padding');
+  t.equal(view[2], 0, 'padding');
+  t.equal(view[3], 0, 'padding');
+  t.equal(view[4], 1, 'vector[0]');
+  t.equal(view[5], 2, 'vector[1]');
+  t.equal(view[6], 3, 'vector[2]');
+  t.equal(view[7], 4, 'vector[3]');
+  t.end();
+});
+
+test('nested struct layout (struct inside struct)', t => {
+  const uniformTypes = {
+    light: {
+      transform: {
+        position: 'vec3<f32>',
+        range: 'f32'
+      },
+      intensity: 'f32'
+    }
+  } as const;
+
+  const layout = new UniformBufferLayout(uniformTypes);
+
+  const data = layout.getData({
+    light: {
+      transform: {
+        position: [1, 2, 3],
+        range: 10
+      },
+      intensity: 0.8
+    }
+  });
+
+  const view = new Float32Array(data.buffer);
+
+  t.equal(view[0], 1, 'transform.position[0]');
+  t.equal(view[1], 2);
+  t.equal(view[2], 3);
+  t.equal(view[3], 0, 'vec3 padding');
+  t.equal(view[4], 10, 'transform.range');
+  t.ok(almostEqual(view[8], 0.8), 'light.intensity');
+  t.end();
+});
+
+test('array of primitives uses std140 stride', t => {
+  const uniformTypes = {
+    thresholds: ['f32', 3]
+  } as const;
+
+  const layout = new UniformBufferLayout(uniformTypes);
+
+  const data = layout.getData({
+    thresholds: [1, 2, 3]
+  });
+
+  const view = new Float32Array(data.buffer);
+  t.equal(view[0], 1, 'thresholds[0]');
+  t.equal(view[4], 2, 'thresholds[1]');
+  t.equal(view[8], 3, 'thresholds[2]');
+  t.end();
+});
+
+test('array of matrices accepts packed values', t => {
+  const layout = new UniformBufferLayout({
+    jointMatrix: ['mat4x4<f32>', 2]
+  });
+
+  const data = layout.getData({
+    jointMatrix: new Float32Array([
+      1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 2, 0, 0, 0, 0, 2, 0, 0, 0, 0, 2, 0, 0, 0, 0, 2
+    ])
+  });
+
+  const view = new Float32Array(data.buffer);
+  t.equal(view[0], 1, 'jointMatrix[0][0]');
+  t.equal(view[15], 1, 'jointMatrix[0][15]');
+  t.equal(view[16], 2, 'jointMatrix[1][0]');
+  t.equal(view[31], 2, 'jointMatrix[1][15]');
+  t.end();
+});
+
+test('array of structs layout', t => {
+  const uniformTypes = {
+    lights: [
+      {
+        position: 'vec3<f32>',
+        intensity: 'f32'
+      },
+      2
+    ]
+  } as const;
+
+  const layout = new UniformBufferLayout(uniformTypes);
+
+  const data = layout.getData({
+    lights: [
+      {position: [1, 2, 3], intensity: 0.5},
+      {position: [4, 5, 6], intensity: 1.0}
+    ]
+  });
+
+  const view = new Float32Array(data.buffer);
+
+  // First struct
+  t.equal(view[0], 1, 'lights[0].position[0]');
+  t.equal(view[1], 2, 'lights[0].position[1]');
+  t.equal(view[2], 3, 'lights[0].position[2]');
+  t.equal(view[3], 0, 'lights[0] vec3 padding');
+  t.equal(view[4], 0.5, 'lights[0].intensity');
+
+  // Second struct
+  t.equal(view[8], 4, 'lights[1].position[0]');
+  t.equal(view[9], 5, 'lights[1].position[1]');
+  t.equal(view[10], 6, 'lights[1].position[2]');
+  t.equal(view[11], 0, 'lights[1] vec3 padding');
+  t.equal(view[12], 1.0, 'lights[1].intensity');
+
+  t.end();
+});
+
+test('partial nested updates preserve unspecified leaves', t => {
+  const uniformStore = new UniformStore({
+    lighting: {
+      uniformTypes: {
+        light: {
+          transform: {
+            position: 'vec3<f32>',
+            range: 'f32'
+          },
+          intensity: 'f32'
+        }
+      },
+      defaultUniforms: {
+        light: {
+          transform: {
+            position: [1, 2, 3],
+            range: 10
+          },
+          intensity: 0.5
+        }
+      }
+    }
+  });
+
+  uniformStore.setUniforms({
+    lighting: {
+      light: {
+        intensity: 0.8
+      }
+    }
+  });
+
+  const data = uniformStore.getUniformBufferData('lighting');
+  const view = new Float32Array(data.buffer);
+
+  t.equal(view[0], 1, 'default position[0] preserved');
+  t.equal(view[1], 2, 'default position[1] preserved');
+  t.equal(view[2], 3, 'default position[2] preserved');
+  t.equal(view[4], 10, 'default range preserved');
+  t.ok(almostEqual(view[8], 0.8), 'updated intensity written');
+
+  t.end();
+});
+test('uniform layout accepts WGSL alias types', t => {
+  const layout = new UniformBufferLayout({
+    camera: 'vec3f',
+    modelMatrix: 'mat4x4f'
+  } as any);
+
+  const data = layout.getData({
+    camera: [1, 2, 3],
+    modelMatrix: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]
+  });
+
+  const view = new Float32Array(data.buffer);
+  t.equal(view[0], 1, 'camera[0]');
+  t.equal(view[1], 2, 'camera[1]');
+  t.equal(view[2], 3, 'camera[2]');
+  t.equal(view[4], 1, 'modelMatrix[0]');
+  t.equal(view[9], 1, 'modelMatrix[5]');
+  t.equal(view[14], 1, 'modelMatrix[10]');
+  t.equal(view[19], 1, 'modelMatrix[15]');
+  t.end();
+});
+
 /*
-import test from 'tape-promise/tape';
+import test from 'test/utils/vitest-tape';
 import {UniformBufferLayout, UniformBlock} from '@luma.gl/core';
 import {fixture} from 'test/setup';
 

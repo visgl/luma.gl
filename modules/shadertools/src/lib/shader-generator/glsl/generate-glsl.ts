@@ -32,7 +32,13 @@ function generateGLSLUniformDeclarations(
   }
 
   for (const [uniformName, uniformFormat] of Object.entries(module.uniformTypes || {})) {
-    const glslUniformType = getGLSLUniformType(uniformFormat);
+    if (typeof uniformFormat !== 'string') {
+      throw new Error(
+        `Composite uniform types are not supported by GLSL shader generation: ${module.name}.${uniformName}`
+      );
+    }
+
+    const glslUniformType = getGLSLUniformType(uniformFormat as UniformFormat);
     switch (options.uniforms) {
       case 'scoped-interface-blocks':
         // => uniform UniformBlockName {

@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from 'tape-promise/tape';
-import {luma} from '@luma.gl/core';
-import {Model, PipelineFactory, ShaderFactory} from '@luma.gl/engine';
+import test from 'test/utils/vitest-tape';
+import {luma, PipelineFactory, ShaderFactory} from '@luma.gl/core';
+import {Model} from '@luma.gl/engine';
 import {getWebGLTestDevice, getTestDevices} from '@luma.gl/test-utils';
 
-const stats = luma.stats.get('Resource Counts');
+const stats = luma.stats.get('GPU Resource Counts');
 
 const DUMMY_WGSL = /* WGSL */ `
 @vertex fn vertexMain() -> @builtin(position) vec4<f32> {
@@ -51,9 +51,13 @@ test('Model#construct/destruct', async t => {
   t.ok(model, 'Model constructor does not throw errors');
   t.ok(model.id, 'Model has an id');
   t.ok(model.pipeline, 'Created pipeline');
+  t.false(model.pipeline.destroyed, 'Pipeline starts alive');
 
   model.destroy();
-  t.true(model.pipeline.destroyed, 'Deleted pipeline');
+  t.false(
+    model.pipeline.destroyed,
+    'Pipeline wrapper remains cached by default after last release'
+  );
 
   t.end();
 });
@@ -82,7 +86,7 @@ test('Model#multiple delete', async t => {
   model1.destroy();
   t.ok(model2.pipeline.destroyed === false, 'program still in use');
   model2.destroy();
-  t.ok(model2.pipeline.destroyed === true, 'program is released');
+  t.ok(model2.pipeline.destroyed === false, 'program remains cached after last release by default');
 
   t.end();
 });
@@ -265,20 +269,15 @@ test('Model#pipeline caching', async t => {
 
   const renderPass = webglDevice.beginRenderPass({clearColor: [0, 0, 0, 0]});
 
-  const uniforms: Record<string, unknown> = {};
+  t.ok(model1.draw(renderPass), 'First model draw succeeded');
 
-  model1.draw(renderPass);
-  t.deepEqual(uniforms, {x: 0.5}, 'Pipeline uniforms set');
-
-  model2.draw(renderPass);
-  t.deepEqual(uniforms, {x: -0.5}, 'Pipeline uniforms set');
+  t.ok(model2.draw(renderPass), 'Second model draw succeeded');
 
   model2.setBufferLayout([{name: 'a', format: 'float32x3'}]);
   model2.predraw(); // Forces a pipeline update
   t.ok(model1.pipeline !== model2.pipeline, 'Pipeline updated');
 
-  model2.draw(renderPass);
-  t.deepEqual(uniforms, {x: -0.5}, 'Pipeline uniforms set');
+  t.ok(model2.draw(renderPass), 'Pipeline updates still draw');
 
   renderPass.destroy();
 

@@ -2,16 +2,18 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {
-  TextureProps,
-  TextureViewProps,
-  CopyExternalImageOptions,
-  CopyImageDataOptions,
-  Sampler,
-  SamplerProps
+import {
+  type TextureProps,
+  type TextureViewProps,
+  type CopyExternalImageOptions,
+  type CopyImageDataOptions,
+  type TextureReadOptions,
+  type TextureWriteOptions,
+  type Sampler,
+  type SamplerProps,
+  Buffer,
+  Texture
 } from '@luma.gl/core';
-
-import {Texture} from '@luma.gl/core';
 import {NullDevice} from '../null-device';
 import {NullSampler} from './null-sampler';
 import {NullTextureView} from './null-texture-view';
@@ -44,6 +46,8 @@ export class NullTexture extends Texture {
       arrayLayerCount: 1
     });
 
+    this.trackAllocatedMemory(this.getAllocatedByteLength(), 'Texture');
+
     Object.seal(this);
   }
 
@@ -59,35 +63,33 @@ export class NullTexture extends Texture {
   }
 
   copyExternalImage(options: CopyExternalImageOptions): {width: number; height: number} {
-    this.trackDeallocatedMemory('Texture');
-
-    const {image: data} = options;
-
-    // if (data && data.byteLength) {
-    //   this.trackAllocatedMemory(data.byteLength, 'Texture');
-    // } else {
-    const bytesPerPixel = 4;
-    this.trackAllocatedMemory(this.width * this.height * bytesPerPixel, 'Texture');
-    // }
-
-    const width = options.width ?? (data as ImageBitmap).width;
-    const height = options.height ?? (data as ImageBitmap).height;
-
-    this.width = width;
-    this.height = height;
-
-    return {width, height};
+    return {width: this.width, height: this.height};
   }
 
   override setSampler(sampler?: Sampler | SamplerProps): void {
     // ignore
   }
 
-  copyImageData(options: CopyImageDataOptions): void {
-    throw new Error('copyImageData not implemented');
+  override copyImageData(options: CopyImageDataOptions): void {
+    super.copyImageData(options);
   }
 
-  generateMipmapsWebGL(): void {
+  override readBuffer(options: TextureReadOptions = {}, buffer?: Buffer): Buffer {
+    return this.device.createBuffer({});
+  }
+
+  override async readDataAsync(options: TextureReadOptions = {}): Promise<ArrayBuffer> {
+    return new ArrayBuffer(0);
+  }
+
+  override writeBuffer(buffer: Buffer, options: TextureWriteOptions = {}) {
+    // ignore
+  }
+
+  override writeData(
+    data: ArrayBuffer | SharedArrayBuffer | ArrayBufferView,
+    options: TextureWriteOptions = {}
+  ): void {
     // ignore
   }
 }

@@ -4,7 +4,7 @@
 
 import {isUniformValue} from '@luma.gl/core/adapter-utils/is-uniform-value';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
-import test from 'tape-promise/tape';
+import test from 'test/utils/vitest-tape';
 
 test('isUniformValue', async t => {
   const device = await getWebGLTestDevice();

@@ -12,7 +12,7 @@ A `ComputePipeline` holds a compiled and linked compute shader.
 Create and run a compute shader that multiplies an array of numbers by 2.
 
 ```ts
-const source = /*WGSL*/`\
+const source = /*WGSL*/ `\
 @group(0) @binding(0) var<storage, read_write> data: array<i32>;
 @compute @workgroup_size(1) fn main(@builtin(global_invocation_id) id: vec3<u32>) {
   let i = id.x;
@@ -29,7 +29,7 @@ const computePipeline = webgpuDevice.createComputePipeline({
 
 const workBuffer = webgpuDevice.createBuffer({
   byteLength: 4,
-  usage: Buffer.STORAGE | Buffer.COPY_SRC | Buffer.COPY_DST,
+  usage: Buffer.STORAGE | Buffer.COPY_SRC | Buffer.COPY_DST
 });
 
 workBuffer.write(new Int32Array([2]));
@@ -63,7 +63,7 @@ const computedData = new Int32Array(await workBuffer.readAsync());
 
 ### `constructor()`
 
-`ComputePipeline` is an abstract class and cannot be instantiated directly. Create with 
+`ComputePipeline` is an abstract class and cannot be instantiated directly. Create with
 
 ```typescript
 const computePipeline = device.createComputePipeline({...})
@@ -74,4 +74,21 @@ const computePipeline = device.createComputePipeline({...})
 ```typescript
 destroy(): void
 ```
+
 Free up any GPU resources associated with this compute pipeline immediately (instead of waiting for garbage collection).
+
+## Performance
+
+Creating compute pipelines can be expensive because it may trigger shader compilation and backend pipeline creation work. Applications that may request the same compute pipeline more than once should prefer `PipelineFactory` over calling `device.createComputePipeline()` directly.
+
+```ts
+import {PipelineFactory} from '@luma.gl/core';
+
+const pipelineFactory = PipelineFactory.getDefaultPipelineFactory(device);
+const computePipeline = pipelineFactory.createComputePipeline({
+  shader,
+  shaderLayout
+});
+```
+
+Using `PipelineFactory` allows compatible compute pipelines to be cached and reused instead of recreated.

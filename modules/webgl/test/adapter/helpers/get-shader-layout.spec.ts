@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 /*
-import test from 'tape-promise/tape';
+import test from 'test/utils/vitest-tape';
 import {getWebGLTestDevices} from '@luma.gl/test-utils';
 import {GL} from '@luma.gl/constants';
 import {Program} from '@luma.gl/webgl-legacy';

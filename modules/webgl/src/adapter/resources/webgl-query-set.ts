@@ -1,175 +1,369 @@
-// WebGL2 Query (also handles disjoint timer extensions)
+// WebGL2 QuerySet (also handles disjoint timer extensions)
 import {QuerySet, QuerySetProps} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 import {WebGLDevice} from '../webgl-device';
+
+type WebGLPendingQuery = {
+  handle: WebGLQuery;
+  promise: Promise<bigint> | null;
+  result: bigint | null;
+  disjoint: boolean;
+  cancelled: boolean;
+  pollRequestId: number | null;
+  resolve: ((value: bigint) => void) | null;
+  reject: ((error: Error) => void) | null;
+};
+
+type WebGLTimestampPair = {
+  activeQuery: WebGLPendingQuery | null;
+  completedQueries: WebGLPendingQuery[];
+};
 
 /**
  * Asynchronous queries for different kinds of information
  */
 export class WEBGLQuerySet extends QuerySet {
   readonly device: WebGLDevice;
-  readonly handle: WebGLQuery;
+  readonly handle: WebGLQuery | null;
 
-  target: number | null = null;
-  _queryPending = false;
-  _pollingPromise: Promise<any> | null = null;
+  protected _timestampPairs: WebGLTimestampPair[] = [];
+  protected _pendingReads: Set<WebGLPendingQuery> = new Set();
+  protected _occlusionQuery: WebGLPendingQuery | null = null;
+  protected _occlusionActive = false;
 
   override get [Symbol.toStringTag](): string {
-    return 'Query';
+    return 'QuerySet';
   }
 
-  // Create a query class
   constructor(device: WebGLDevice, props: QuerySetProps) {
     super(device, props);
     this.device = device;
 
-    if (props.count > 1) {
-      throw new Error('WebGL QuerySet can only have one value');
+    if (props.type === 'timestamp') {
+      if (props.count < 2) {
+        throw new Error('Timestamp QuerySet requires at least two query slots');
+      }
+      this._timestampPairs = new Array(Math.ceil(props.count / 2))
+        .fill(null)
+        .map(() => ({activeQuery: null, completedQueries: []}));
+      this.handle = null;
+    } else {
+      if (props.count > 1) {
+        throw new Error('WebGL occlusion QuerySet can only have one value');
+      }
+      const handle = this.device.gl.createQuery();
+      if (!handle) {
+        throw new Error('WebGL query not supported');
+      }
+      this.handle = handle;
     }
 
-    const handle = this.device.gl.createQuery();
-    if (!handle) {
-      throw new Error('WebGL query not supported');
-    }
-    this.handle = handle;
     Object.seal(this);
   }
 
-  override destroy() {
-    this.device.gl.deleteQuery(this.handle);
-  }
-
-  // FOR RENDER PASS AND COMMAND ENCODER
-
-  /**
-   * Shortcut for timer query (dependent on extension in both WebGL1 and 2)
-   * Measures GPU time delta between this call and a matching `end` call in the
-   * GPU instruction stream.
-   */
-  beginTimestampQuery(): void {
-    return this._begin(GL.TIME_ELAPSED_EXT);
-  }
-
-  endTimestampQuery(): void {
-    this._end();
-  }
-
-  // Shortcut for occlusion queries
-  beginOcclusionQuery(options?: {conservative?: boolean}): void {
-    return this._begin(
-      options?.conservative ? GL.ANY_SAMPLES_PASSED_CONSERVATIVE : GL.ANY_SAMPLES_PASSED
-    );
-  }
-
-  endOcclusionQuery() {
-    this._end();
-  }
-
-  // Shortcut for transformFeedbackQuery
-  beginTransformFeedbackQuery(): void {
-    return this._begin(GL.TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN);
-  }
-
-  endTransformFeedbackQuery(): void {
-    this._end();
-  }
-
-  async resolveQuery(): Promise<bigint[]> {
-    const value = await this.pollQuery();
-    return [value];
-  }
-
-  // PRIVATE METHODS
-
-  /**
-   * Due to OpenGL API limitations, after calling `begin()` on one Query
-   * instance, `end()` must be called on that same instance before
-   * calling `begin()` on another query. While there can be multiple
-   * outstanding queries representing disjoint `begin()`/`end()` intervals.
-   * It is not possible to interleave or overlap `begin` and `end` calls.
-   */
-  protected _begin(target: number): void {
-    // Don't start a new query if one is already active.
-    if (this._queryPending) {
+  override destroy(): void {
+    if (this.destroyed) {
       return;
     }
 
-    this.target = target;
-    this.device.gl.beginQuery(this.target, this.handle);
-
-    return;
-  }
-
-  // ends the current query
-  protected _end(): void {
-    // Can't end a new query if the last one hasn't been resolved.
-    if (this._queryPending) {
-      return;
+    if (this.handle) {
+      this.device.gl.deleteQuery(this.handle);
     }
 
-    if (this.target) {
-      this.device.gl.endQuery(this.target);
-      this.target = null;
-      this._queryPending = true;
+    for (const pair of this._timestampPairs) {
+      if (pair.activeQuery) {
+        this._cancelPendingQuery(pair.activeQuery);
+        this.device.gl.deleteQuery(pair.activeQuery.handle);
+      }
+      for (const query of pair.completedQueries) {
+        this._cancelPendingQuery(query);
+        this.device.gl.deleteQuery(query.handle);
+      }
     }
-    return;
+
+    if (this._occlusionQuery) {
+      this._cancelPendingQuery(this._occlusionQuery);
+      this.device.gl.deleteQuery(this._occlusionQuery.handle);
+    }
+
+    for (const query of Array.from(this._pendingReads)) {
+      this._cancelPendingQuery(query);
+    }
+
+    this.destroyResource();
   }
 
-  // Returns true if the query result is available
-  isResultAvailable(): boolean {
-    if (!this._queryPending) {
+  isResultAvailable(queryIndex?: number): boolean {
+    if (this.props.type === 'timestamp') {
+      if (queryIndex === undefined) {
+        return this._timestampPairs.some((_, pairIndex) =>
+          this._isTimestampPairAvailable(pairIndex)
+        );
+      }
+      return this._isTimestampPairAvailable(this._getTimestampPairIndex(queryIndex));
+    }
+
+    if (!this._occlusionQuery) {
       return false;
     }
 
+    return this._pollQueryAvailability(this._occlusionQuery);
+  }
+
+  async readResults(options?: {firstQuery?: number; queryCount?: number}): Promise<bigint[]> {
+    const firstQuery = options?.firstQuery || 0;
+    const queryCount = options?.queryCount || this.props.count - firstQuery;
+    this._validateRange(firstQuery, queryCount);
+
+    if (this.props.type === 'timestamp') {
+      const results = new Array<bigint>(queryCount).fill(0n);
+      const startPairIndex = Math.floor(firstQuery / 2);
+      const endPairIndex = Math.floor((firstQuery + queryCount - 1) / 2);
+
+      for (let pairIndex = startPairIndex; pairIndex <= endPairIndex; pairIndex++) {
+        const duration = await this._consumeTimestampPairResult(pairIndex);
+        const beginSlot = pairIndex * 2;
+        const endSlot = beginSlot + 1;
+
+        if (beginSlot >= firstQuery && beginSlot < firstQuery + queryCount) {
+          results[beginSlot - firstQuery] = 0n;
+        }
+        if (endSlot >= firstQuery && endSlot < firstQuery + queryCount) {
+          results[endSlot - firstQuery] = duration;
+        }
+      }
+
+      return results;
+    }
+
+    if (!this._occlusionQuery) {
+      throw new Error('Occlusion query has not been started');
+    }
+
+    return [await this._consumeQueryResult(this._occlusionQuery)];
+  }
+
+  async readTimestampDuration(beginIndex: number, endIndex: number): Promise<number> {
+    if (this.props.type !== 'timestamp') {
+      throw new Error('Timestamp durations require a timestamp QuerySet');
+    }
+    if (beginIndex < 0 || endIndex >= this.props.count || endIndex <= beginIndex) {
+      throw new Error('Timestamp duration range is out of bounds');
+    }
+    if (beginIndex % 2 !== 0 || endIndex !== beginIndex + 1) {
+      throw new Error('WebGL timestamp durations require adjacent even/odd query indices');
+    }
+
+    const result = await this._consumeTimestampPairResult(this._getTimestampPairIndex(beginIndex));
+    return Number(result) / 1e6;
+  }
+
+  beginOcclusionQuery(): void {
+    if (this.props.type !== 'occlusion') {
+      throw new Error('Occlusion queries require an occlusion QuerySet');
+    }
+    if (!this.handle) {
+      throw new Error('WebGL occlusion query is not available');
+    }
+    if (this._occlusionActive) {
+      throw new Error('Occlusion query is already active');
+    }
+
+    this.device.gl.beginQuery(GL.ANY_SAMPLES_PASSED, this.handle);
+    this._occlusionQuery = {
+      handle: this.handle,
+      promise: null,
+      result: null,
+      disjoint: false,
+      cancelled: false,
+      pollRequestId: null,
+      resolve: null,
+      reject: null
+    };
+    this._occlusionActive = true;
+  }
+
+  endOcclusionQuery(): void {
+    if (!this._occlusionActive) {
+      throw new Error('Occlusion query is not active');
+    }
+
+    this.device.gl.endQuery(GL.ANY_SAMPLES_PASSED);
+    this._occlusionActive = false;
+  }
+
+  writeTimestamp(queryIndex: number): void {
+    if (this.props.type !== 'timestamp') {
+      throw new Error('Timestamp writes require a timestamp QuerySet');
+    }
+
+    const pairIndex = this._getTimestampPairIndex(queryIndex);
+    const pair = this._timestampPairs[pairIndex];
+
+    if (queryIndex % 2 === 0) {
+      if (pair.activeQuery) {
+        throw new Error('Timestamp query pair is already active');
+      }
+
+      const handle = this.device.gl.createQuery();
+      if (!handle) {
+        throw new Error('WebGL query not supported');
+      }
+
+      const query: WebGLPendingQuery = {
+        handle,
+        promise: null,
+        result: null,
+        disjoint: false,
+        cancelled: false,
+        pollRequestId: null,
+        resolve: null,
+        reject: null
+      };
+
+      this.device.gl.beginQuery(GL.TIME_ELAPSED_EXT, handle);
+      pair.activeQuery = query;
+      return;
+    }
+
+    if (!pair.activeQuery) {
+      throw new Error('Timestamp query pair was ended before it was started');
+    }
+
+    this.device.gl.endQuery(GL.TIME_ELAPSED_EXT);
+    pair.completedQueries.push(pair.activeQuery);
+    pair.activeQuery = null;
+  }
+
+  protected _validateRange(firstQuery: number, queryCount: number): void {
+    if (firstQuery < 0 || queryCount < 0 || firstQuery + queryCount > this.props.count) {
+      throw new Error('Query read range is out of bounds');
+    }
+  }
+
+  protected _getTimestampPairIndex(queryIndex: number): number {
+    if (queryIndex < 0 || queryIndex >= this.props.count) {
+      throw new Error('Query index is out of bounds');
+    }
+
+    return Math.floor(queryIndex / 2);
+  }
+
+  protected _isTimestampPairAvailable(pairIndex: number): boolean {
+    const pair = this._timestampPairs[pairIndex];
+    if (!pair || pair.completedQueries.length === 0) {
+      return false;
+    }
+
+    return this._pollQueryAvailability(pair.completedQueries[0]);
+  }
+
+  protected _pollQueryAvailability(query: WebGLPendingQuery): boolean {
+    if (query.cancelled || this.destroyed) {
+      query.result = 0n;
+      return true;
+    }
+
+    if (query.result !== null || query.disjoint) {
+      return true;
+    }
+
     const resultAvailable = this.device.gl.getQueryParameter(
-      this.handle,
+      query.handle,
       GL.QUERY_RESULT_AVAILABLE
     );
-    if (resultAvailable) {
-      this._queryPending = false;
-    }
-    return resultAvailable;
-  }
-
-  // Timing query is disjoint, i.e. results are invalid
-  isTimerDisjoint(): boolean {
-    return this.device.gl.getParameter(GL.GPU_DISJOINT_EXT);
-  }
-
-  // Returns query result.
-  getResult(): any {
-    return this.device.gl.getQueryParameter(this.handle, GL.QUERY_RESULT);
-  }
-
-  // Returns the query result, converted to milliseconds to match JavaScript conventions.
-  getTimerMilliseconds() {
-    return this.getResult() / 1e6;
-  }
-
-  // Polls the query
-  pollQuery(limit: number = Number.POSITIVE_INFINITY): Promise<any> {
-    if (this._pollingPromise) {
-      return this._pollingPromise;
+    if (!resultAvailable) {
+      return false;
     }
 
-    let counter = 0;
+    const isDisjoint = Boolean(this.device.gl.getParameter(GL.GPU_DISJOINT_EXT));
+    query.disjoint = isDisjoint;
+    query.result = isDisjoint
+      ? 0n
+      : BigInt(this.device.gl.getQueryParameter(query.handle, GL.QUERY_RESULT));
+    return true;
+  }
 
-    this._pollingPromise = new Promise((resolve, reject) => {
+  protected async _consumeTimestampPairResult(pairIndex: number): Promise<bigint> {
+    const pair = this._timestampPairs[pairIndex];
+    if (!pair || pair.completedQueries.length === 0) {
+      throw new Error('Timestamp query pair has no completed result');
+    }
+
+    const query = pair.completedQueries.shift()!;
+
+    try {
+      return await this._consumeQueryResult(query);
+    } finally {
+      this.device.gl.deleteQuery(query.handle);
+    }
+  }
+
+  protected _consumeQueryResult(query: WebGLPendingQuery): Promise<bigint> {
+    if (query.promise) {
+      return query.promise;
+    }
+
+    this._pendingReads.add(query);
+    query.promise = new Promise((resolve, reject) => {
+      query.resolve = resolve;
+      query.reject = reject;
+
       const poll = () => {
-        if (this.isResultAvailable()) {
-          resolve(this.getResult());
-          this._pollingPromise = null;
-        } else if (counter++ > limit) {
-          reject('Timed out');
-          this._pollingPromise = null;
+        query.pollRequestId = null;
+
+        if (query.cancelled || this.destroyed) {
+          this._pendingReads.delete(query);
+          query.promise = null;
+          query.resolve = null;
+          query.reject = null;
+          resolve(0n);
+          return;
+        }
+
+        if (!this._pollQueryAvailability(query)) {
+          query.pollRequestId = this._requestAnimationFrame(poll);
+          return;
+        }
+
+        this._pendingReads.delete(query);
+        query.promise = null;
+        query.resolve = null;
+        query.reject = null;
+        if (query.disjoint) {
+          reject(new Error('GPU timestamp query was invalidated by a disjoint event'));
         } else {
-          requestAnimationFrame(poll);
+          resolve(query.result || 0n);
         }
       };
 
-      requestAnimationFrame(poll);
+      poll();
     });
 
-    return this._pollingPromise;
+    return query.promise;
+  }
+
+  protected _cancelPendingQuery(query: WebGLPendingQuery): void {
+    this._pendingReads.delete(query);
+    query.cancelled = true;
+    if (query.pollRequestId !== null) {
+      this._cancelAnimationFrame(query.pollRequestId);
+      query.pollRequestId = null;
+    }
+    if (query.resolve) {
+      const resolve = query.resolve;
+      query.promise = null;
+      query.resolve = null;
+      query.reject = null;
+      resolve(0n);
+    }
+  }
+
+  protected _requestAnimationFrame(callback: FrameRequestCallback): number {
+    return requestAnimationFrame(callback);
+  }
+
+  protected _cancelAnimationFrame(requestId: number): void {
+    cancelAnimationFrame(requestId);
   }
 }

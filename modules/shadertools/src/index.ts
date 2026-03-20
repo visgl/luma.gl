@@ -14,7 +14,7 @@ export type {PlatformInfo} from './lib/shader-assembly/platform-info';
 
 export type {ShaderModule} from './lib/shader-module/shader-module';
 export type {ShaderPass} from './lib/shader-module/shader-pass';
-export type {UniformTypes} from './lib/utils/uniform-types';
+export type {ShaderModuleUniformValue, UniformTypes} from './lib/utils/uniform-types';
 
 export {initializeShaderModule, initializeShaderModules} from './lib/shader-module/shader-module';
 export {getShaderModuleUniforms} from './lib/shader-module/shader-module';
@@ -53,9 +53,6 @@ export {preprocess} from './lib/preprocessor/preprocessor';
 export {assembleGLSLShaderPair} from './lib/shader-assembly/assemble-shaders';
 export {combineInjects} from './lib/shader-assembly/shader-injections';
 
-// EXPERIMENTAL WGSL
-export {getShaderLayoutFromWGSL} from './lib/wgsl/get-shader-layout-wgsl';
-
 // data utils
 export {toHalfFloat, fromHalfFloat} from './modules/math/fp16/fp16-utils';
 export {fp64ify, fp64LowPart, fp64ifyMatrix4} from './modules/math/fp64/fp64-utils';
@@ -68,13 +65,23 @@ export {fp64, fp64arithmetic} from './modules/math/fp64/fp64';
 
 // engine shader modules
 
-// // projection
+//  projection
 // export type {ProjectionUniforms} from './modules/engine/project/project';
 // export {projection} from './modules/engine/project/project';
 export type {PickingProps, PickingUniforms} from './modules/engine/picking/picking';
 export {picking} from './modules/engine/picking/picking';
+export {skin} from './modules/engine/skin/skin';
 
-// // lighting
+// lighting
+export {
+  type Light,
+  type AmbientLight,
+  type PointLight,
+  type SpotLight,
+  type DirectionalLight,
+  type LightingLightUniform
+} from './modules/lighting/lights/lighting';
+
 export type {LightingProps, LightingUniforms} from './modules/lighting/lights/lighting';
 export {lighting} from './modules/lighting/lights/lighting';
 export {dirlight} from './modules/lighting/no-material/dirlight';

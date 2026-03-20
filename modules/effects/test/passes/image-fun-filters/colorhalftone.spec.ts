@@ -4,7 +4,7 @@
 
 import {colorHalftone} from '@luma.gl/effects';
 import {getShaderModuleUniforms} from '@luma.gl/shadertools';
-import test from 'tape-promise/tape';
+import test from 'test/utils/vitest-tape';
 
 test('colorHalftone#build/uniform', t => {
   const uniforms = getShaderModuleUniforms(colorHalftone, {}, {});

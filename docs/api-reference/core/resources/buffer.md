@@ -6,13 +6,13 @@ Holds a block of GPU memory. The length of a buffer cannot be changed after crea
 
 ### `BufferProps`
 
-| Property      | Type                             | Description                                                                  |
-| ------------- | -------------------------------- | ---------------------------------------------------------------------------- |
-| `usage?`      | `number`                         | Bit mask of Usage flags                                                      |
-| `byteLength?` | `number`                         | Length of buffer (cannot be changed after creation).                         |
-| `data?`       | `ArrayBuffer \| ArrayBufferView` | Data to be copied into buffer. `byteLength` will be deduced if not supplied. |
-| `byteOffset?` | `number`                         | Offset for `data`                                                            |
-| `indexType?`  | `'uint16' \| 'uint32'`           | If props.usage & Buffer.INDEX                                                |
+| Property      | Type                                      | Description                                                                  |
+| ------------- | ----------------------------------------- | ---------------------------------------------------------------------------- |
+| `usage?`      | `number`                                  | Bit mask of Usage flags                                                      |
+| `byteLength?` | `number`                                  | Length of buffer (cannot be changed after creation).                         |
+| `data?`       | `ArrayBuffer \| ArrayBufferView`          | Data to be copied into buffer. `byteLength` will be deduced if not supplied. |
+| `byteOffset?` | `number`                                  | Offset for `data`                                                            |
+| `indexType?`  | `'uint8' \| 'uint16' \| 'uint32'`         | If props.usage & Buffer.INDEX. uint8 is auto-converted to uint16 for WebGPU compatibility |
 
 ### Usage
 
@@ -20,9 +20,9 @@ Usage expresses two things: The type of buffer and what operations can be perfor
 
 Note that the allowed combinations are very limited, especially in WebGPU.
 
-| Usage Flag             | Value  | Description                                              |
-| ---------------------- | ------ | -------------------------------------------------------- |
-| `Buffer.INDEX`         | 0x0010 | An index buffer (array of 16 or 32 bit unsigned integers |
+| Usage Flag             | Value  | Description                                                         |
+| ---------------------- | ------ | ------------------------------------------------------------------- |
+| `Buffer.INDEX`         | 0x0010 | An index buffer (array of 8, 16 or 32 bit unsigned integers)        |
 | `Buffer.VERTEX`        | 0x0020 | A vertex buffer (a binary column)                        |
 | `Buffer.UNIFORM`       | 0x0040 | A uniform buffer                                         |
 | `Buffer.STORAGE`       | 0x0080 | A storage buffer                                         |

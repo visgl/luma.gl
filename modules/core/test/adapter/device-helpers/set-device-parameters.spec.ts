@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test, {Test} from 'tape-promise/tape';
+import test, {Test} from 'test/utils/vitest-tape';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
 
 import {Parameters} from '@luma.gl/core';
@@ -108,16 +108,15 @@ test('setDeviceParameters#depthWriteEnabled', async t => {
   t.end();
 });
 
-test.skip('setDeviceParameters#depthClearValue', t => {
-  // let value = getGLParameters(gl, [GL.DEPTH_CLEAR_VALUE])[GL.DEPTH_CLEAR_VALUE];
-  // t.is(value, 1, `got expected value ${stringify(value)}`);
+test('setDeviceParameters#depthClearValue', async t => {
+  const webglDevice = await getWebGLTestDevice();
+  const gl = webglDevice.gl;
 
-  // // setDeviceParameters(gl, {[GL.DEPTH_CLEAR_VALUE]: -1});
-  // value = getGLParameters(gl, [GL.DEPTH_CLEAR_VALUE])[GL.DEPTH_CLEAR_VALUE];
-  // t.is(value, -1, `got expected value ${stringify(value)}`);
+  resetGLParameters(gl);
+  t.deepEqual(getGLParameter(gl, GL.DEPTH_CLEAR_VALUE), 1, 'got expected clear depth');
 
-  // // @ts-expect-error
-  // t.throws(() => setDeviceParameters({}), 'throws with non WebGL context');
+  setDeviceParameters(webglDevice, {clearDepth: 0});
+  t.deepEqual(getGLParameter(gl, GL.DEPTH_CLEAR_VALUE), 0, 'set clear depth works');
 
   t.end();
 });

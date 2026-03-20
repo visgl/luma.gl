@@ -26,14 +26,20 @@ export {BufferTransform} from './compute/buffer-transform';
 export type {TextureTransformProps} from './compute/texture-transform';
 export {TextureTransform} from './compute/texture-transform';
 
-export {PipelineFactory} from './factories/pipeline-factory';
-export {ShaderFactory} from './factories/shader-factory';
-
 // Models
 export type {ClipSpaceProps} from './models/clip-space';
 export {ClipSpace} from './models/clip-space';
 export type {BackgroundTextureModelProps} from './models/billboard-texture-model';
 export {BackgroundTextureModel} from './models/billboard-texture-model';
+export type {
+  BaseLightModelProps,
+  PointLightModelProps,
+  SpotLightModelProps,
+  DirectionalLightModelProps
+} from './models/light-model-utils';
+export {PointLightModel} from './models/point-light-model';
+export {SpotLightModel} from './models/spot-light-model';
+export {DirectionalLightModel} from './models/directional-light-model';
 
 // Scenegraph Core nodes
 export {ScenegraphNode} from './scenegraph/scenegraph-node';
@@ -83,17 +89,16 @@ export {Computation} from './compute/computation';
 export type {
   TextureCubeFace,
   TextureImageData,
-  TextureData,
   Texture1DData,
   Texture2DData,
   Texture3DData,
   TextureCubeData,
   TextureArrayData,
   TextureCubeArrayData
-} from './async-texture/async-texture';
+} from './dynamic-texture/texture-data';
 
-export type {AsyncTextureProps} from './async-texture/async-texture';
-export {AsyncTexture} from './async-texture/async-texture';
+export type {DynamicTextureProps} from './dynamic-texture/dynamic-texture';
+export {DynamicTexture} from './dynamic-texture/dynamic-texture';
 
 export {PickingManager} from './modules/picking/picking-manager';
 export {picking as indexPicking} from './modules/picking/index-picking';
@@ -107,3 +112,9 @@ export {
 // DEPRECATED
 
 export {LegacyPickingManager} from './modules/picking/legacy-picking-manager';
+
+import {DynamicTexture, type DynamicTextureProps} from './dynamic-texture/dynamic-texture';
+/** @deprecated use DynamicTexture */
+export const AsyncTexture = DynamicTexture;
+/** @deprecated use DynamicTextureProps */
+export type AsyncTextureProps = DynamicTextureProps;
