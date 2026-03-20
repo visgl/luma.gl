@@ -166,6 +166,7 @@ test('WebGL QuerySet destroy cancels pending RAF polling', async t => {
   const querySetPrototype = Object.getPrototypeOf(querySet);
   const originalRequestAnimationFrame = querySetPrototype._requestAnimationFrame;
   const originalCancelAnimationFrame = querySetPrototype._cancelAnimationFrame;
+  const originalPollQueryAvailability = querySetPrototype._pollQueryAvailability;
 
   let scheduledCallback: FrameRequestCallback | null = null;
   let cancelAnimationFrameCallCount = 0;
@@ -193,7 +194,7 @@ test('WebGL QuerySet destroy cancels pending RAF polling', async t => {
       resolve: null,
       reject: null
     });
-    querySet._pollQueryAvailability = () => false;
+    querySetPrototype._pollQueryAvailability = () => false;
 
     const durationPromise = querySet.readTimestampDuration(0, 1);
     t.ok(
@@ -217,6 +218,7 @@ test('WebGL QuerySet destroy cancels pending RAF polling', async t => {
   } finally {
     querySetPrototype._requestAnimationFrame = originalRequestAnimationFrame;
     querySetPrototype._cancelAnimationFrame = originalCancelAnimationFrame;
+    querySetPrototype._pollQueryAvailability = originalPollQueryAvailability;
   }
 
   t.end();
