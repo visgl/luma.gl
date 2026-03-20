@@ -25,7 +25,7 @@
     "bootstrap": "yarn && ocular-bootstrap && yarn build",
     "start": "open https://luma.gl/docs/getting-started",
     "build": "ocular-clean && (cd modules/constants && yarn pre-build) && ocular-build",
-    "lint": "ocular-lint",
+    "lint": "ocular-lint --max-warnings=0",
     "publish-beta": "ocular-publish version-only-beta",
     "publish-prod": "ocular-publish version-only-prod",
     "test": "yarn test-node && yarn test-browser",

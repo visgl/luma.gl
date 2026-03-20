@@ -181,28 +181,29 @@ export class UniformBufferLayout {
 
       for (let index = 0; index < Math.min(value.length, length); index++) {
         const elementValue = value[index];
-        if (elementValue === undefined) {
-          continue;
+        if (elementValue !== undefined) {
+          this._flattenCompositeValue(
+            flattenedUniformValues,
+            `${baseName}[${index}]`,
+            elementType,
+            elementValue
+          );
         }
-
-        this._flattenCompositeValue(
-          flattenedUniformValues,
-          `${baseName}[${index}]`,
-          elementType,
-          elementValue
-        );
       }
       return;
     }
 
     if (isCompositeShaderTypeStruct(uniformType) && isCompositeUniformObject(value)) {
       for (const [key, subValue] of Object.entries(value)) {
-        if (subValue === undefined) {
-          continue;
+        if (subValue !== undefined) {
+          const nestedName = `${baseName}.${key}`;
+          this._flattenCompositeValue(
+            flattenedUniformValues,
+            nestedName,
+            uniformType[key],
+            subValue
+          );
         }
-
-        const nestedName = `${baseName}.${key}`;
-        this._flattenCompositeValue(flattenedUniformValues, nestedName, uniformType[key], subValue);
       }
       return;
     }

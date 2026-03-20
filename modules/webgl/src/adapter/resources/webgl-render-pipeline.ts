@@ -112,37 +112,37 @@ export class WEBGLRenderPipeline extends RenderPipeline {
             value
           )();
         }
-        continue;
-      }
-      if (!value) {
-        log.warn(`Unsetting binding "${name}" in render pipeline "${this.id}"`)();
-      }
-      switch (binding.type) {
-        case 'uniform':
-          // @ts-expect-error
-          if (!(value instanceof WEBGLBuffer) && !(value.buffer instanceof WEBGLBuffer)) {
-            throw new Error('buffer value');
-          }
-          break;
-        case 'texture':
-          if (
-            !(
-              value instanceof WEBGLTextureView ||
-              value instanceof WEBGLTexture ||
-              value instanceof WEBGLFramebuffer
-            )
-          ) {
-            throw new Error(`${this} Bad texture binding for ${name}`);
-          }
-          break;
-        case 'sampler':
-          log.warn(`Ignoring sampler ${name}`)();
-          break;
-        default:
-          throw new Error(binding.type);
-      }
+      } else {
+        if (!value) {
+          log.warn(`Unsetting binding "${name}" in render pipeline "${this.id}"`)();
+        }
+        switch (binding.type) {
+          case 'uniform':
+            // @ts-expect-error
+            if (!(value instanceof WEBGLBuffer) && !(value.buffer instanceof WEBGLBuffer)) {
+              throw new Error('buffer value');
+            }
+            break;
+          case 'texture':
+            if (
+              !(
+                value instanceof WEBGLTextureView ||
+                value instanceof WEBGLTexture ||
+                value instanceof WEBGLFramebuffer
+              )
+            ) {
+              throw new Error(`${this} Bad texture binding for ${name}`);
+            }
+            break;
+          case 'sampler':
+            log.warn(`Ignoring sampler ${name}`)();
+            break;
+          default:
+            throw new Error(binding.type);
+        }
 
-      this.bindings[name] = value;
+        this.bindings[name] = value;
+      }
     }
   }
 
