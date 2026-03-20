@@ -131,19 +131,17 @@ test('picking#highlightedObjectColor', async t => {
   const vertexCount = vertexColorData.length / 3;
   const transform = createPickingAlphaTransform(device, vertexColorData, vertexCount);
 
-  await Promise.all(
-    TEST_CASES.map(async testCase => {
-      transform.model.shaderInputs.setProps({
-        picking: {
-          highlightedObjectColor: testCase.highlightedObjectColor
-        }
-      });
-      transform.run();
+  for (const testCase of TEST_CASES) {
+    transform.model.shaderInputs.setProps({
+      picking: {
+        highlightedObjectColor: testCase.highlightedObjectColor
+      }
+    });
+    transform.run();
 
-      const outData = await readTransformOutput(transform, 'isPicked', vertexCount);
-      t.deepEqual(Array.from(outData), testCase.isPicked, 'Vertex should correctly get picked');
-    })
-  );
+    const outData = await readTransformOutput(transform, 'isPicked', vertexCount);
+    t.deepEqual(Array.from(outData), testCase.isPicked, 'Vertex should correctly get picked');
+  }
 
   transform.destroy();
   t.end();

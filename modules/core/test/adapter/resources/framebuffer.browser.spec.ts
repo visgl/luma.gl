@@ -221,19 +221,21 @@ test('WebGLFramebuffer contents', async t => {
   t.end();
 });
 
-/*
-test.skip('Framebuffer#getDefaultFramebuffer', (t) => {
-  const framebuffer = webglDevice.getDefaultCanvasContext().getCurrentFramebuffer();
-  t.ok(framebuffer instanceof Framebuffer, 'getDefaultFramebuffer successful');
+test('Framebuffer#getDefaultFramebuffer', async t => {
+  for (const testDevice of await getTestDevices()) {
+    if (testDevice.type === 'webgl') {
+      const framebuffer = testDevice.getDefaultCanvasContext().getCurrentFramebuffer();
+      t.ok(framebuffer instanceof Framebuffer, 'getDefaultFramebuffer successful');
 
-  t.throws(
-    () => framebuffer.resize(1000, 1000),
-    'defaultFramebuffer.resize({width, height}) throws'
-  );
+      t.throws(
+        () => framebuffer.resize({width: 1000, height: 1000}),
+        'defaultFramebuffer.resize({width, height}) throws'
+      );
+    }
+  }
 
   t.end();
 });
-*/
 
 /*
 

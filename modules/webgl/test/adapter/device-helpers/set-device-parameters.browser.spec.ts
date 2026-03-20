@@ -149,16 +149,15 @@ test('setDeviceParameters#depthCompare', async t => {
   t.end();
 });
 
-test.skip('setDeviceParameters#depthClearValue', async t => {
-  // let value = getGLParameters(gl, [GL.DEPTH_CLEAR_VALUE])[GL.DEPTH_CLEAR_VALUE];
-  // t.is(value, 1, `got expected value ${stringify(value)}`);
+test('setDeviceParameters#depthClearValue', async t => {
+  const device = await getWebGLTestDevice();
+  const gl = device.gl;
 
-  // // setDeviceParameters(gl, {[GL.DEPTH_CLEAR_VALUE]: -1});
-  // value = getGLParameters(gl, [GL.DEPTH_CLEAR_VALUE])[GL.DEPTH_CLEAR_VALUE];
-  // t.is(value, -1, `got expected value ${stringify(value)}`);
+  resetGLParameters(gl);
+  t.deepEqual(getGLParameter(gl, GL.DEPTH_CLEAR_VALUE), 1, 'got expected clear depth');
 
-  // // @ts-expect-error
-  // t.throws(() => setDeviceParameters({}), 'throws with non WebGL context');
+  setDeviceParameters(device, {clearDepth: 0});
+  t.deepEqual(getGLParameter(gl, GL.DEPTH_CLEAR_VALUE), 0, 'set clear depth works');
 
   t.end();
 });
