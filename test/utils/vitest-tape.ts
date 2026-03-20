@@ -79,6 +79,10 @@ function normalizeThrowsArgs(
   };
 }
 
+function usesExplicitEndSignal(callback: TestCallback): boolean {
+  return /\.end\s*\(/.test(callback.toString());
+}
+
 export interface Test {
   comment(...messages: unknown[]): void;
   deepEqual(actual: unknown, expected: unknown, message?: string): void;
@@ -111,9 +115,18 @@ export interface Test {
 
 class VitestTape implements Test {
   private actualAssertionCount: number = 0;
+  private endPromise: Promise<void>;
+  private endResolver: (() => void) | null = null;
+  private hasEnded: boolean = false;
   private plannedAssertionCount?: number;
   private teardownCallbacks: Array<() => void | Promise<void>> = [];
   private timeoutMilliseconds?: number;
+
+  constructor() {
+    this.endPromise = new Promise(resolve => {
+      this.endResolver = resolve;
+    });
+  }
 
   comment(...messages: unknown[]): void {
     const message = formatMessage(messages);
@@ -137,7 +150,14 @@ class VitestTape implements Test {
     expect(callback, message).not.toThrow();
   }
 
-  end(): void {}
+  end(): void {
+    if (this.hasEnded) {
+      return;
+    }
+
+    this.hasEnded = true;
+    this.endResolver?.();
+  }
 
   equal(actual: unknown, expected: unknown, message?: string): void {
     this.countAssertion();
@@ -238,6 +258,8 @@ class VitestTape implements Test {
 
   async run(callback: TestCallback): Promise<void> {
     try {
+      const waitsForEnd = usesExplicitEndSignal(callback);
+
       if (this.timeoutMilliseconds === undefined) {
         await callback(this);
       } else {
@@ -250,6 +272,22 @@ class VitestTape implements Test {
             )
           )
         ]);
+      }
+
+      if (waitsForEnd) {
+        if (this.timeoutMilliseconds === undefined) {
+          await this.endPromise;
+        } else {
+          await Promise.race([
+            this.endPromise,
+            new Promise((_, reject) =>
+              setTimeout(
+                () => reject(new Error(`Test timed out after ${this.timeoutMilliseconds}ms`)),
+                this.timeoutMilliseconds
+              )
+            )
+          ]);
+        }
       }
 
       if (this.plannedAssertionCount !== undefined) {
