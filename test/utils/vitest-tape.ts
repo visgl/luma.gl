@@ -305,7 +305,7 @@ class VitestTape implements Test {
   }
 }
 
-type TapeTestFunction = {
+export type TapeTestFunction = {
   (name: string, callback: TestCallback): ReturnType<typeof vitestTest>;
   only: (name: string, callback: TestCallback) => ReturnType<typeof vitestTest.only>;
   skip: (name: string, callback?: TestCallback) => ReturnType<typeof vitestTest.skip>;

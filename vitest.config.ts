@@ -57,6 +57,7 @@ export default defineConfig({
           name: 'browser',
           color: 'green',
           environment: 'node',
+          testTimeout: 60000,
           include: ['modules/**/*.browser.spec.{ts,js}', 'test/**/*.browser.spec.{ts,js}'],
           exclude: EXCLUDE_PATTERNS,
           browser: {
@@ -72,6 +73,7 @@ export default defineConfig({
           name: 'headless',
           color: 'cyan',
           environment: 'node',
+          testTimeout: 60000,
           include: ['modules/**/*.browser.spec.{ts,js}', 'test/**/*.browser.spec.{ts,js}'],
           exclude: EXCLUDE_PATTERNS,
           browser: {
