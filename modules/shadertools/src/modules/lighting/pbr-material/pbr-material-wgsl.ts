@@ -55,10 +55,12 @@ uniform pbrMaterialUniforms {
   float clearcoatFactor;
   float clearcoatRoughnessFactor;
   bool clearcoatMapEnabled;
+  bool clearcoatRoughnessMapEnabled;
 
   vec3 sheenColorFactor;
   float sheenRoughnessFactor;
   bool sheenColorMapEnabled;
+  bool sheenRoughnessMapEnabled;
 
   float iridescenceFactor;
   float iridescenceIor;
@@ -189,6 +191,42 @@ struct pbrMaterialUniforms {
   
   alphaCutoffEnabled: i32,
   alphaCutoff: f32, // #ifdef ALPHA_CUTOFF
+
+  specularColorFactor: vec3f,
+  specularIntensityFactor: f32,
+  specularColorMapEnabled: i32,
+  specularIntensityMapEnabled: i32,
+
+  ior: f32,
+
+  transmissionFactor: f32,
+  transmissionMapEnabled: i32,
+
+  thicknessFactor: f32,
+  attenuationDistance: f32,
+  attenuationColor: vec3f,
+
+  clearcoatFactor: f32,
+  clearcoatRoughnessFactor: f32,
+  clearcoatMapEnabled: i32,
+  clearcoatRoughnessMapEnabled: i32,
+
+  sheenColorFactor: vec3f,
+  sheenRoughnessFactor: f32,
+  sheenColorMapEnabled: i32,
+  sheenRoughnessMapEnabled: i32,
+
+  iridescenceFactor: f32,
+  iridescenceIor: f32,
+  iridescenceThicknessRange: vec2f,
+  iridescenceMapEnabled: i32,
+
+  anisotropyStrength: f32,
+  anisotropyRotation: f32,
+  anisotropyDirection: vec2f,
+  anisotropyMapEnabled: i32,
+
+  emissiveStrength: f32,
   
   // IBL
   IBLenabled: i32,
@@ -224,13 +262,49 @@ struct pbrMaterialUniforms {
 @binding(11) @group(0) var pbr_occlusionSampler: texture_2d<f32>;
 @binding(12) @group(0) var pbr_occlusionSamplerSampler: sampler;
 #endif
+#ifdef HAS_SPECULARCOLORMAP
+@binding(20) @group(0) var pbr_specularColorSampler: texture_2d<f32>;
+@binding(21) @group(0) var pbr_specularColorSamplerSampler: sampler;
+#endif
+#ifdef HAS_SPECULARINTENSITYMAP
+@binding(22) @group(0) var pbr_specularIntensitySampler: texture_2d<f32>;
+@binding(23) @group(0) var pbr_specularIntensitySamplerSampler: sampler;
+#endif
+#ifdef HAS_TRANSMISSIONMAP
+@binding(24) @group(0) var pbr_transmissionSampler: texture_2d<f32>;
+@binding(25) @group(0) var pbr_transmissionSamplerSampler: sampler;
+#endif
+#ifdef HAS_CLEARCOATMAP
+@binding(26) @group(0) var pbr_clearcoatSampler: texture_2d<f32>;
+@binding(27) @group(0) var pbr_clearcoatSamplerSampler: sampler;
+#endif
+#ifdef HAS_CLEARCOATROUGHNESSMAP
+@binding(28) @group(0) var pbr_clearcoatRoughnessSampler: texture_2d<f32>;
+@binding(29) @group(0) var pbr_clearcoatRoughnessSamplerSampler: sampler;
+#endif
+#ifdef HAS_SHEENCOLORMAP
+@binding(30) @group(0) var pbr_sheenColorSampler: texture_2d<f32>;
+@binding(31) @group(0) var pbr_sheenColorSamplerSampler: sampler;
+#endif
+#ifdef HAS_SHEENROUGHNESSMAP
+@binding(32) @group(0) var pbr_sheenRoughnessSampler: texture_2d<f32>;
+@binding(33) @group(0) var pbr_sheenRoughnessSamplerSampler: sampler;
+#endif
+#ifdef HAS_IRIDESCENCEMAP
+@binding(34) @group(0) var pbr_iridescenceSampler: texture_2d<f32>;
+@binding(35) @group(0) var pbr_iridescenceSamplerSampler: sampler;
+#endif
+#ifdef HAS_ANISOTROPYMAP
+@binding(36) @group(0) var pbr_anisotropySampler: texture_2d<f32>;
+@binding(37) @group(0) var pbr_anisotropySamplerSampler: sampler;
+#endif
 #ifdef USE_IBL
 @binding(13) @group(0) var pbr_diffuseEnvSampler: texture_cube<f32>;
 @binding(14) @group(0) var pbr_diffuseEnvSamplerSampler: sampler;
 @binding(15) @group(0) var pbr_specularEnvSampler: texture_cube<f32>;
 @binding(16) @group(0) var pbr_specularEnvSamplerSampler: sampler;
-@binding(17) @group(0) var pbr_BrdfLUT: texture_2d<f32>;
-@binding(18) @group(0) var pbr_BrdfLUTSampler: sampler;
+@binding(17) @group(0) var pbr_brdfLUT: texture_2d<f32>;
+@binding(18) @group(0) var pbr_brdfLUTSampler: sampler;
 #endif
 
 // Encapsulate the various inputs used by the various functions in the shading equation
@@ -273,11 +347,9 @@ fn SRGBtoLINEAR(srgbIn: vec4f ) -> vec4f
   return vec4f(linOut, srgbIn.w);
 }
 
-// Find the normal for this fragment, pulling either from a predefined normal map
-// or from the interpolated mesh normal and tangent attributes.
-fn getNormal() -> vec3f
+// Build the tangent basis from interpolated attributes or screen-space derivatives.
+fn getTBN() -> mat3x3f
 {
-  // Retrieve the tangent space matrix
   let pos_dx: vec3f = dpdx(fragmentInputs.pbr_vPosition);
   let pos_dy: vec3f = dpdy(fragmentInputs.pbr_vPosition);
   let tex_dx: vec3f = dpdx(vec3f(fragmentInputs.pbr_vUV, 0.0));
@@ -295,6 +367,13 @@ fn getNormal() -> vec3f
   tbn = fragmentInputs.pbr_vTBN;
 #endif
 
+  return tbn;
+}
+
+// Find the normal for this fragment, pulling either from a predefined normal map
+// or from the interpolated mesh normal and tangent attributes.
+fn getNormal(tbn: mat3x3f) -> vec3f
+{
   // The tbn matrix is linearly interpolated, so we need to re-normalize
   var n: vec3f = normalize(tbn[2].xyz);
 #ifdef HAS_NORMALMAP
@@ -316,8 +395,8 @@ fn getIBLContribution(pbrInfo: PBRInfo, n: vec3f, reflection: vec3f) -> vec3f
   // retrieve a scale and bias to F0. See [1], Figure 3
   let brdf = SRGBtoLINEAR(
     textureSample(
-      pbr_BrdfLUT,
-      pbr_BrdfLUTSampler,
+      pbr_brdfLUT,
+      pbr_brdfLUTSampler,
       vec2f(pbrInfo.NdotV, 1.0 - pbrInfo.perceptualRoughness)
     )
   ).rgb;
@@ -386,6 +465,164 @@ fn microfacetDistribution(pbrInfo: PBRInfo) -> f32 {
   return roughnessSq / (M_PI * f * f);
 }
 
+fn maxComponent(value: vec3f) -> f32 {
+  return max(max(value.r, value.g), value.b);
+}
+
+fn getDielectricF0(ior: f32) -> f32 {
+  let clampedIor = max(ior, 1.0);
+  let ratio = (clampedIor - 1.0) / (clampedIor + 1.0);
+  return ratio * ratio;
+}
+
+fn normalizeDirection(direction: vec2f) -> vec2f {
+  let directionLength = length(direction);
+  if (directionLength > 0.0001) {
+    return direction / directionLength;
+  }
+
+  return vec2f(1.0, 0.0);
+}
+
+fn rotateDirection(direction: vec2f, rotation: f32) -> vec2f {
+  let s = sin(rotation);
+  let c = cos(rotation);
+  return vec2f(direction.x * c - direction.y * s, direction.x * s + direction.y * c);
+}
+
+fn getIridescenceTint(iridescence: f32, thickness: f32, NdotV: f32) -> vec3f {
+  if (iridescence <= 0.0) {
+    return vec3f(1.0);
+  }
+
+  let phase = 0.015 * thickness * pbrMaterial.iridescenceIor + (1.0 - NdotV) * 6.0;
+  let thinFilmTint =
+    0.5 +
+    0.5 *
+    cos(vec3f(phase, phase + 2.0943951, phase + 4.1887902));
+  return mix(vec3f(1.0), thinFilmTint, iridescence);
+}
+
+fn getVolumeAttenuation(thickness: f32) -> vec3f {
+  if (thickness <= 0.0) {
+    return vec3f(1.0);
+  }
+
+  let attenuationCoefficient =
+    -log(max(pbrMaterial.attenuationColor, vec3f(0.0001))) /
+    max(pbrMaterial.attenuationDistance, 0.0001);
+  return exp(-attenuationCoefficient * thickness);
+}
+
+fn createClearcoatPBRInfo(basePBRInfo: PBRInfo, clearcoatRoughness: f32) -> PBRInfo {
+  let perceptualRoughness = clamp(clearcoatRoughness, c_MinRoughness, 1.0);
+  let alphaRoughness = perceptualRoughness * perceptualRoughness;
+
+  return PBRInfo(
+    basePBRInfo.NdotL,
+    basePBRInfo.NdotV,
+    basePBRInfo.NdotH,
+    basePBRInfo.LdotH,
+    basePBRInfo.VdotH,
+    perceptualRoughness,
+    0.0,
+    vec3f(0.04),
+    vec3f(1.0),
+    alphaRoughness,
+    vec3f(0.0),
+    vec3f(0.04),
+    basePBRInfo.n,
+    basePBRInfo.v
+  );
+}
+
+fn calculateClearcoatContribution(
+  pbrInfo: PBRInfo,
+  lightColor: vec3f,
+  clearcoatFactor: f32,
+  clearcoatRoughness: f32
+) -> vec3f {
+  if (clearcoatFactor <= 0.0) {
+    return vec3f(0.0);
+  }
+
+  let clearcoatPBRInfo = createClearcoatPBRInfo(pbrInfo, clearcoatRoughness);
+  return calculateFinalColor(clearcoatPBRInfo, lightColor) * clearcoatFactor;
+}
+
+#ifdef USE_IBL
+fn calculateClearcoatIBLContribution(
+  pbrInfo: PBRInfo,
+  n: vec3f,
+  reflection: vec3f,
+  clearcoatFactor: f32,
+  clearcoatRoughness: f32
+) -> vec3f {
+  if (clearcoatFactor <= 0.0) {
+    return vec3f(0.0);
+  }
+
+  let clearcoatPBRInfo = createClearcoatPBRInfo(pbrInfo, clearcoatRoughness);
+  return getIBLContribution(clearcoatPBRInfo, n, reflection) * clearcoatFactor;
+}
+#endif
+
+fn calculateSheenContribution(
+  pbrInfo: PBRInfo,
+  lightColor: vec3f,
+  sheenColor: vec3f,
+  sheenRoughness: f32
+) -> vec3f {
+  if (maxComponent(sheenColor) <= 0.0) {
+    return vec3f(0.0);
+  }
+
+  let sheenFresnel = pow(clamp(1.0 - pbrInfo.VdotH, 0.0, 1.0), 5.0);
+  let sheenVisibility = mix(1.0, pbrInfo.NdotL * pbrInfo.NdotV, sheenRoughness);
+  return pbrInfo.NdotL *
+    lightColor *
+    sheenColor *
+    (0.25 + 0.75 * sheenFresnel) *
+    sheenVisibility *
+    (1.0 - pbrInfo.metalness);
+}
+
+fn calculateAnisotropyBoost(
+  pbrInfo: PBRInfo,
+  anisotropyTangent: vec3f,
+  anisotropyStrength: f32
+) -> f32 {
+  if (anisotropyStrength <= 0.0) {
+    return 1.0;
+  }
+
+  let anisotropyBitangent = normalize(cross(pbrInfo.n, anisotropyTangent));
+  let bitangentViewAlignment = abs(dot(pbrInfo.v, anisotropyBitangent));
+  return mix(1.0, 0.65 + 0.7 * bitangentViewAlignment, anisotropyStrength);
+}
+
+fn calculateMaterialLightColor(
+  pbrInfo: PBRInfo,
+  lightColor: vec3f,
+  clearcoatFactor: f32,
+  clearcoatRoughness: f32,
+  sheenColor: vec3f,
+  sheenRoughness: f32,
+  anisotropyTangent: vec3f,
+  anisotropyStrength: f32
+) -> vec3f {
+  let anisotropyBoost = calculateAnisotropyBoost(pbrInfo, anisotropyTangent, anisotropyStrength);
+  var color = calculateFinalColor(pbrInfo, lightColor) * anisotropyBoost;
+  color += calculateClearcoatContribution(
+    pbrInfo,
+    lightColor,
+    clearcoatFactor,
+    clearcoatRoughness
+  );
+  color += calculateSheenContribution(pbrInfo, lightColor, sheenColor, sheenRoughness);
+  return color;
+}
+
 fn PBRInfo_setAmbientLight(pbrInfo: ptr<function, PBRInfo>) {
   (*pbrInfo).NdotL = 1.0;
   (*pbrInfo).NdotH = 0.0;
@@ -444,6 +681,7 @@ fn pbr_filterColor(colorUnused: vec4<f32>) -> vec4<f32> {
   #endif
 
   var color = vec3<f32>(0.0, 0.0, 0.0);
+  var transmission = 0.0;
 
   if (pbrMaterial.unlit != 0u) {
     color = baseColor.rgb;
@@ -466,14 +704,288 @@ fn pbr_filterColor(colorUnused: vec4<f32>) -> vec4<f32> {
     #endif
     perceptualRoughness = clamp(perceptualRoughness, c_MinRoughness, 1.0);
     metallic = clamp(metallic, 0.0, 1.0);
+    let tbn = getTBN();
+    let n = getNormal(tbn);                          // normal at surface point
+    let v = normalize(pbrProjection.camera - fragmentInputs.pbr_vPosition);  // Vector from surface point to camera
+    let NdotV = clamp(abs(dot(n, v)), 0.001, 1.0);
+    var useExtendedPBR = false;
+    #ifdef USE_MATERIAL_EXTENSIONS
+    useExtendedPBR =
+      pbrMaterial.specularColorMapEnabled != 0 ||
+      pbrMaterial.specularIntensityMapEnabled != 0 ||
+      abs(pbrMaterial.specularIntensityFactor - 1.0) > 0.0001 ||
+      maxComponent(abs(pbrMaterial.specularColorFactor - vec3f(1.0))) > 0.0001 ||
+      abs(pbrMaterial.ior - 1.5) > 0.0001 ||
+      pbrMaterial.transmissionMapEnabled != 0 ||
+      pbrMaterial.transmissionFactor > 0.0001 ||
+      pbrMaterial.clearcoatMapEnabled != 0 ||
+      pbrMaterial.clearcoatRoughnessMapEnabled != 0 ||
+      pbrMaterial.clearcoatFactor > 0.0001 ||
+      pbrMaterial.clearcoatRoughnessFactor > 0.0001 ||
+      pbrMaterial.sheenColorMapEnabled != 0 ||
+      pbrMaterial.sheenRoughnessMapEnabled != 0 ||
+      maxComponent(pbrMaterial.sheenColorFactor) > 0.0001 ||
+      pbrMaterial.sheenRoughnessFactor > 0.0001 ||
+      pbrMaterial.iridescenceMapEnabled != 0 ||
+      pbrMaterial.iridescenceFactor > 0.0001 ||
+      abs(pbrMaterial.iridescenceIor - 1.3) > 0.0001 ||
+      abs(pbrMaterial.iridescenceThicknessRange.x - 100.0) > 0.0001 ||
+      abs(pbrMaterial.iridescenceThicknessRange.y - 400.0) > 0.0001 ||
+      pbrMaterial.anisotropyMapEnabled != 0 ||
+      pbrMaterial.anisotropyStrength > 0.0001 ||
+      abs(pbrMaterial.anisotropyRotation) > 0.0001 ||
+      length(pbrMaterial.anisotropyDirection - vec2f(1.0, 0.0)) > 0.0001;
+    #endif
+
+    if (!useExtendedPBR) {
+      let alphaRoughness = perceptualRoughness * perceptualRoughness;
+
+      let f0 = vec3<f32>(0.04);
+      var diffuseColor = baseColor.rgb * (vec3<f32>(1.0) - f0);
+      diffuseColor *= 1.0 - metallic;
+      let specularColor = mix(f0, baseColor.rgb, metallic);
+
+      let reflectance = max(max(specularColor.r, specularColor.g), specularColor.b);
+      let reflectance90 = clamp(reflectance * 25.0, 0.0, 1.0);
+      let specularEnvironmentR0 = specularColor;
+      let specularEnvironmentR90 = vec3<f32>(1.0, 1.0, 1.0) * reflectance90;
+      let reflection = -normalize(reflect(v, n));
+
+      var pbrInfo = PBRInfo(
+        0.0, // NdotL
+        NdotV,
+        0.0, // NdotH
+        0.0, // LdotH
+        0.0, // VdotH
+        perceptualRoughness,
+        metallic,
+        specularEnvironmentR0,
+        specularEnvironmentR90,
+        alphaRoughness,
+        diffuseColor,
+        specularColor,
+        n,
+        v
+      );
+
+      #ifdef USE_LIGHTS
+      PBRInfo_setAmbientLight(&pbrInfo);
+      color += calculateFinalColor(pbrInfo, lighting.ambientColor);
+
+      for (var i = 0; i < lighting.directionalLightCount; i++) {
+        if (i < lighting.directionalLightCount) {
+          PBRInfo_setDirectionalLight(&pbrInfo, lighting_getDirectionalLight(i).direction);
+          color += calculateFinalColor(pbrInfo, lighting_getDirectionalLight(i).color);
+        }
+      }
+
+      for (var i = 0; i < lighting.pointLightCount; i++) {
+        if (i < lighting.pointLightCount) {
+          PBRInfo_setPointLight(&pbrInfo, lighting_getPointLight(i));
+          let attenuation = getPointLightAttenuation(
+            lighting_getPointLight(i),
+            distance(lighting_getPointLight(i).position, fragmentInputs.pbr_vPosition)
+          );
+          color += calculateFinalColor(pbrInfo, lighting_getPointLight(i).color / attenuation);
+        }
+      }
+
+      for (var i = 0; i < lighting.spotLightCount; i++) {
+        if (i < lighting.spotLightCount) {
+          PBRInfo_setSpotLight(&pbrInfo, lighting_getSpotLight(i));
+          let attenuation = getSpotLightAttenuation(
+            lighting_getSpotLight(i),
+            fragmentInputs.pbr_vPosition
+          );
+          color += calculateFinalColor(pbrInfo, lighting_getSpotLight(i).color / attenuation);
+        }
+      }
+      #endif
+
+      #ifdef USE_IBL
+      if (pbrMaterial.IBLenabled != 0) {
+        color += getIBLContribution(pbrInfo, n, reflection);
+      }
+      #endif
+
+      #ifdef HAS_OCCLUSIONMAP
+      if (pbrMaterial.occlusionMapEnabled != 0) {
+        let ao =
+          textureSample(pbr_occlusionSampler, pbr_occlusionSamplerSampler, fragmentInputs.pbr_vUV).r;
+        color = mix(color, color * ao, pbrMaterial.occlusionStrength);
+      }
+      #endif
+
+      var emissive = pbrMaterial.emissiveFactor;
+      #ifdef HAS_EMISSIVEMAP
+      if (pbrMaterial.emissiveMapEnabled != 0u) {
+        emissive *= SRGBtoLINEAR(
+          textureSample(pbr_emissiveSampler, pbr_emissiveSamplerSampler, fragmentInputs.pbr_vUV)
+        ).rgb;
+      }
+      #endif
+      color += emissive * pbrMaterial.emissiveStrength;
+
+      #ifdef PBR_DEBUG
+      color = mix(color, baseColor.rgb, pbrMaterial.scaleDiffBaseMR.y);
+      color = mix(color, vec3<f32>(metallic), pbrMaterial.scaleDiffBaseMR.z);
+      color = mix(color, vec3<f32>(perceptualRoughness), pbrMaterial.scaleDiffBaseMR.w);
+      #endif
+
+      return vec4<f32>(pow(color, vec3<f32>(1.0 / 2.2)), baseColor.a);
+    }
+
+    var specularIntensity = pbrMaterial.specularIntensityFactor;
+    #ifdef HAS_SPECULARINTENSITYMAP
+    if (pbrMaterial.specularIntensityMapEnabled != 0) {
+      specularIntensity *= textureSample(
+        pbr_specularIntensitySampler,
+        pbr_specularIntensitySamplerSampler,
+        fragmentInputs.pbr_vUV
+      ).a;
+    }
+    #endif
+
+    var specularFactor = pbrMaterial.specularColorFactor;
+    #ifdef HAS_SPECULARCOLORMAP
+    if (pbrMaterial.specularColorMapEnabled != 0) {
+      specularFactor *= SRGBtoLINEAR(
+        textureSample(
+          pbr_specularColorSampler,
+          pbr_specularColorSamplerSampler,
+          fragmentInputs.pbr_vUV
+        )
+      ).rgb;
+    }
+    #endif
+
+    transmission = pbrMaterial.transmissionFactor;
+    #ifdef HAS_TRANSMISSIONMAP
+    if (pbrMaterial.transmissionMapEnabled != 0) {
+      transmission *= textureSample(
+        pbr_transmissionSampler,
+        pbr_transmissionSamplerSampler,
+        fragmentInputs.pbr_vUV
+      ).r;
+    }
+    #endif
+    transmission = clamp(transmission * (1.0 - metallic), 0.0, 1.0);
+
+    var clearcoatFactor = pbrMaterial.clearcoatFactor;
+    var clearcoatRoughness = pbrMaterial.clearcoatRoughnessFactor;
+    #ifdef HAS_CLEARCOATMAP
+    if (pbrMaterial.clearcoatMapEnabled != 0) {
+      clearcoatFactor *= textureSample(
+        pbr_clearcoatSampler,
+        pbr_clearcoatSamplerSampler,
+        fragmentInputs.pbr_vUV
+      ).r;
+    }
+    #endif
+    #ifdef HAS_CLEARCOATROUGHNESSMAP
+    if (pbrMaterial.clearcoatRoughnessMapEnabled != 0) {
+      clearcoatRoughness *= textureSample(
+        pbr_clearcoatRoughnessSampler,
+        pbr_clearcoatRoughnessSamplerSampler,
+        fragmentInputs.pbr_vUV
+      ).g;
+    }
+    #endif
+    clearcoatFactor = clamp(clearcoatFactor, 0.0, 1.0);
+    clearcoatRoughness = clamp(clearcoatRoughness, c_MinRoughness, 1.0);
+
+    var sheenColor = pbrMaterial.sheenColorFactor;
+    var sheenRoughness = pbrMaterial.sheenRoughnessFactor;
+    #ifdef HAS_SHEENCOLORMAP
+    if (pbrMaterial.sheenColorMapEnabled != 0) {
+      sheenColor *= SRGBtoLINEAR(
+        textureSample(
+          pbr_sheenColorSampler,
+          pbr_sheenColorSamplerSampler,
+          fragmentInputs.pbr_vUV
+        )
+      ).rgb;
+    }
+    #endif
+    #ifdef HAS_SHEENROUGHNESSMAP
+    if (pbrMaterial.sheenRoughnessMapEnabled != 0) {
+      sheenRoughness *= textureSample(
+        pbr_sheenRoughnessSampler,
+        pbr_sheenRoughnessSamplerSampler,
+        fragmentInputs.pbr_vUV
+      ).a;
+    }
+    #endif
+    sheenRoughness = clamp(sheenRoughness, c_MinRoughness, 1.0);
+
+    var iridescence = pbrMaterial.iridescenceFactor;
+    #ifdef HAS_IRIDESCENCEMAP
+    if (pbrMaterial.iridescenceMapEnabled != 0) {
+      iridescence *= textureSample(
+        pbr_iridescenceSampler,
+        pbr_iridescenceSamplerSampler,
+        fragmentInputs.pbr_vUV
+      ).r;
+    }
+    #endif
+    iridescence = clamp(iridescence, 0.0, 1.0);
+    let iridescenceThickness = mix(
+      pbrMaterial.iridescenceThicknessRange.x,
+      pbrMaterial.iridescenceThicknessRange.y,
+      0.5
+    );
+
+    var anisotropyStrength = clamp(pbrMaterial.anisotropyStrength, 0.0, 1.0);
+    var anisotropyDirection = normalizeDirection(pbrMaterial.anisotropyDirection);
+    #ifdef HAS_ANISOTROPYMAP
+    if (pbrMaterial.anisotropyMapEnabled != 0) {
+      let anisotropySample = textureSample(
+        pbr_anisotropySampler,
+        pbr_anisotropySamplerSampler,
+        fragmentInputs.pbr_vUV
+      ).rgb;
+      anisotropyStrength *= anisotropySample.b;
+      let mappedDirection = anisotropySample.rg * 2.0 - 1.0;
+      if (length(mappedDirection) > 0.0001) {
+        anisotropyDirection = normalize(mappedDirection);
+      }
+    }
+    #endif
+    anisotropyDirection = rotateDirection(anisotropyDirection, pbrMaterial.anisotropyRotation);
+    var anisotropyTangent =
+      normalize(tbn[0] * anisotropyDirection.x + tbn[1] * anisotropyDirection.y);
+    if (length(anisotropyTangent) < 0.0001) {
+      anisotropyTangent = normalize(tbn[0]);
+    }
+    let anisotropyViewAlignment = abs(dot(v, anisotropyTangent));
+    perceptualRoughness = mix(
+      perceptualRoughness,
+      clamp(perceptualRoughness * (1.0 - 0.6 * anisotropyViewAlignment), c_MinRoughness, 1.0),
+      anisotropyStrength
+    );
+
     // Roughness is authored as perceptual roughness; as is convention,
     // convert to material roughness by squaring the perceptual roughness [2].
     let alphaRoughness = perceptualRoughness * perceptualRoughness;
 
-    let f0 = vec3<f32>(0.04);
-    var diffuseColor = baseColor.rgb * (vec3<f32>(1.0) - f0);
-    diffuseColor *= 1.0 - metallic;
-    let specularColor = mix(f0, baseColor.rgb, metallic);
+    let dielectricF0 = getDielectricF0(pbrMaterial.ior);
+    var dielectricSpecularF0 = min(
+      vec3f(dielectricF0) * specularFactor * specularIntensity,
+      vec3f(1.0)
+    );
+    let iridescenceTint = getIridescenceTint(iridescence, iridescenceThickness, NdotV);
+    dielectricSpecularF0 = mix(
+      dielectricSpecularF0,
+      dielectricSpecularF0 * iridescenceTint,
+      iridescence
+    );
+    var diffuseColor = baseColor.rgb * (vec3f(1.0) - dielectricSpecularF0);
+    diffuseColor *= (1.0 - metallic) * (1.0 - transmission);
+    var specularColor = mix(dielectricSpecularF0, baseColor.rgb, metallic);
+
+    let baseLayerEnergy = 1.0 - clearcoatFactor * 0.25;
+    diffuseColor *= baseLayerEnergy;
+    specularColor *= baseLayerEnergy;
 
     // Compute reflectance.
     let reflectance = max(max(specularColor.r, specularColor.g), specularColor.b);
@@ -485,11 +997,6 @@ fn pbr_filterColor(colorUnused: vec4<f32>) -> vec4<f32> {
     let reflectance90 = clamp(reflectance * 25.0, 0.0, 1.0);
     let specularEnvironmentR0 = specularColor;
     let specularEnvironmentR90 = vec3<f32>(1.0, 1.0, 1.0) * reflectance90;
-
-    let n = getNormal();                          // normal at surface point
-    let v = normalize(pbrProjection.camera - fragmentInputs.pbr_vPosition);  // Vector from surface point to camera
-
-    let NdotV = clamp(abs(dot(n, v)), 0.001, 1.0);
     let reflection = -normalize(reflect(v, n));
 
     var pbrInfo = PBRInfo(
@@ -512,13 +1019,31 @@ fn pbr_filterColor(colorUnused: vec4<f32>) -> vec4<f32> {
     #ifdef USE_LIGHTS
     // Apply ambient light
     PBRInfo_setAmbientLight(&pbrInfo);
-    color += calculateFinalColor(pbrInfo, lighting.ambientColor);
+    color += calculateMaterialLightColor(
+      pbrInfo,
+      lighting.ambientColor,
+      clearcoatFactor,
+      clearcoatRoughness,
+      sheenColor,
+      sheenRoughness,
+      anisotropyTangent,
+      anisotropyStrength
+    );
 
     // Apply directional light
     for (var i = 0; i < lighting.directionalLightCount; i++) {
       if (i < lighting.directionalLightCount) {
         PBRInfo_setDirectionalLight(&pbrInfo, lighting_getDirectionalLight(i).direction);
-        color += calculateFinalColor(pbrInfo, lighting_getDirectionalLight(i).color);
+        color += calculateMaterialLightColor(
+          pbrInfo,
+          lighting_getDirectionalLight(i).color,
+          clearcoatFactor,
+          clearcoatRoughness,
+          sheenColor,
+          sheenRoughness,
+          anisotropyTangent,
+          anisotropyStrength
+        );
       }
     }
 
@@ -530,7 +1055,16 @@ fn pbr_filterColor(colorUnused: vec4<f32>) -> vec4<f32> {
           lighting_getPointLight(i),
           distance(lighting_getPointLight(i).position, fragmentInputs.pbr_vPosition)
         );
-        color += calculateFinalColor(pbrInfo, lighting_getPointLight(i).color / attenuation);
+        color += calculateMaterialLightColor(
+          pbrInfo,
+          lighting_getPointLight(i).color / attenuation,
+          clearcoatFactor,
+          clearcoatRoughness,
+          sheenColor,
+          sheenRoughness,
+          anisotropyTangent,
+          anisotropyStrength
+        );
       }
     }
 
@@ -538,7 +1072,16 @@ fn pbr_filterColor(colorUnused: vec4<f32>) -> vec4<f32> {
       if (i < lighting.spotLightCount) {
         PBRInfo_setSpotLight(&pbrInfo, lighting_getSpotLight(i));
         let attenuation = getSpotLightAttenuation(lighting_getSpotLight(i), fragmentInputs.pbr_vPosition);
-        color += calculateFinalColor(pbrInfo, lighting_getSpotLight(i).color / attenuation);
+        color += calculateMaterialLightColor(
+          pbrInfo,
+          lighting_getSpotLight(i).color / attenuation,
+          clearcoatFactor,
+          clearcoatRoughness,
+          sheenColor,
+          sheenRoughness,
+          anisotropyTangent,
+          anisotropyStrength
+        );
       }
     }
     #endif
@@ -546,7 +1089,16 @@ fn pbr_filterColor(colorUnused: vec4<f32>) -> vec4<f32> {
     // Calculate lighting contribution from image based lighting source (IBL)
     #ifdef USE_IBL
     if (pbrMaterial.IBLenabled != 0) {
-      color += getIBLContribution(pbrInfo, n, reflection);
+      color += getIBLContribution(pbrInfo, n, reflection) *
+        calculateAnisotropyBoost(pbrInfo, anisotropyTangent, anisotropyStrength);
+      color += calculateClearcoatIBLContribution(
+        pbrInfo,
+        n,
+        reflection,
+        clearcoatFactor,
+        clearcoatRoughness
+      );
+      color += sheenColor * pbrMaterial.scaleIBLAmbient.x * (1.0 - sheenRoughness) * 0.25;
     }
     #endif
 
@@ -559,14 +1111,19 @@ fn pbr_filterColor(colorUnused: vec4<f32>) -> vec4<f32> {
     }
     #endif
 
+    var emissive = pbrMaterial.emissiveFactor;
     #ifdef HAS_EMISSIVEMAP
     if (pbrMaterial.emissiveMapEnabled != 0u) {
-      let emissive = SRGBtoLINEAR(
+      emissive *= SRGBtoLINEAR(
         textureSample(pbr_emissiveSampler, pbr_emissiveSamplerSampler, fragmentInputs.pbr_vUV)
-      ).rgb * pbrMaterial.emissiveFactor;
-      color += emissive;
+      ).rgb;
     }
     #endif
+    color += emissive * pbrMaterial.emissiveStrength;
+
+    if (transmission > 0.0) {
+      color = mix(color, color * getVolumeAttenuation(pbrMaterial.thicknessFactor), transmission);
+    }
 
     // This section uses mix to override final color for reference app visualization
     // of various parameters in the lighting equation.
@@ -585,6 +1142,7 @@ fn pbr_filterColor(colorUnused: vec4<f32>) -> vec4<f32> {
     #endif
   }
 
-  return vec4<f32>(pow(color, vec3<f32>(1.0 / 2.2)), baseColor.a);
+  let alpha = clamp(baseColor.a * (1.0 - transmission), 0.0, 1.0);
+  return vec4<f32>(pow(color, vec3<f32>(1.0 / 2.2)), alpha);
 }
 `;

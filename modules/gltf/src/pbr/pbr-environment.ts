@@ -28,6 +28,8 @@ export type PBREnvironmentProps = {
 
 /** Loads textures for PBR environment */
 export function loadPBREnvironment(device: Device, props: PBREnvironmentProps): PBREnvironment {
+  const specularMipLevels = props.specularMipLevels ?? 1;
+
   const brdfLutTexture = new DynamicTexture(device, {
     id: 'brdfLUT',
     sampler: {
@@ -55,8 +57,7 @@ export function loadPBREnvironment(device: Device, props: PBREnvironmentProps): 
     id: 'SpecularEnvSampler',
     getTextureForFace: (dir: number) => {
       const imageArray: Promise<any>[] = [];
-      // @ts-ignore
-      for (let lod = 0; lod <= props.specularMipLevels - 1; lod++) {
+      for (let lod = 0; lod < specularMipLevels; lod++) {
         imageArray.push(loadImageTexture(props.getTexUrl('specular', dir, lod)));
       }
       return imageArray;
@@ -78,6 +79,7 @@ export function loadPBREnvironment(device: Device, props: PBREnvironmentProps): 
 
 // TODO put somewhere common
 const FACES = [0, 1, 2, 3, 4, 5];
+const CUBE_FACE_NAMES = ['+X', '-X', '+Y', '-Y', '+Z', '-Z'] as const;
 
 /** Construction props for an asynchronously loaded cubemap. */
 function makeCube(
@@ -95,10 +97,9 @@ function makeCube(
     sampler: SamplerProps;
   }
 ): DynamicTexture {
-  const data = {};
+  const data = {} as Record<(typeof CUBE_FACE_NAMES)[number], Promise<any> | Promise<any>[]>;
   FACES.forEach(face => {
-    // @ts-ignore TODO
-    data[String(face)] = getTextureForFace(face);
+    data[CUBE_FACE_NAMES[face]] = getTextureForFace(face);
   });
   return new DynamicTexture(device, {
     id,

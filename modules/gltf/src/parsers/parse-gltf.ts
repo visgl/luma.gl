@@ -60,7 +60,7 @@ export function parseGLTF(
 
   const gltfMeshIdToNodeMap = new Map<string, GroupNode>();
   gltf.meshes.forEach((gltfMesh, idx) => {
-    const newMesh = createNodeForGLTFMesh(device, gltfMesh, combinedOptions);
+    const newMesh = createNodeForGLTFMesh(device, gltfMesh, gltf, combinedOptions);
     gltfMeshIdToNodeMap.set(gltfMesh.id, newMesh);
   });
 
@@ -130,11 +130,12 @@ function createNodeForGLTFNode(
 function createNodeForGLTFMesh(
   device: Device,
   gltfMesh: GLTFMeshPostprocessed,
+  gltf: GLTFPostprocessed,
   options: Required<ParseGLTFOptions>
 ): GroupNode {
   const gltfPrimitives = gltfMesh.primitives || [];
   const primitives = gltfPrimitives.map((gltfPrimitive, i) =>
-    createNodeForGLTFPrimitive(device, gltfPrimitive, i, gltfMesh, options)
+    createNodeForGLTFPrimitive(device, gltfPrimitive, i, {gltfMesh, gltf, options})
   );
   const mesh = new GroupNode({
     id: gltfMesh.name || gltfMesh.id,
@@ -149,8 +150,15 @@ function createNodeForGLTFPrimitive(
   device: Device,
   gltfPrimitive: any,
   i: number,
-  gltfMesh: GLTFMeshPostprocessed,
-  options: Required<ParseGLTFOptions>
+  {
+    gltfMesh,
+    gltf,
+    options
+  }: {
+    gltfMesh: GLTFMeshPostprocessed;
+    gltf: GLTFPostprocessed;
+    options: Required<ParseGLTFOptions>;
+  }
 ): ModelNode {
   const id = gltfPrimitive.name || `${gltfMesh.name || gltfMesh.id}-primitive-${i}`;
   const topology = convertGLDrawModeToTopology(gltfPrimitive.mode || 4);
@@ -160,12 +168,10 @@ function createNodeForGLTFPrimitive(
 
   const geometry = createGeometry(id, gltfPrimitive, topology);
 
-  const parsedPPBRMaterial = parsePBRMaterial(
-    device,
-    gltfPrimitive.material,
-    geometry.attributes,
-    options
-  );
+  const parsedPPBRMaterial = parsePBRMaterial(device, gltfPrimitive.material, geometry.attributes, {
+    ...options,
+    gltf
+  });
 
   const modelNode = createGLTFModel(device, {
     id,

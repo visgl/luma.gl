@@ -618,7 +618,7 @@ async function awaitAllPromises(x: any): Promise<any> {
   }
   if (x && typeof x === 'object' && x.constructor === Object) {
     const object: Record<string, any> = x;
-    const values = await Promise.all(Object.values(object));
+    const values = await Promise.all(Object.values(object).map(awaitAllPromises));
     const keys = Object.keys(object);
     const resolvedObject: Record<string, any> = {};
     for (let i = 0; i < keys.length; i++) {
