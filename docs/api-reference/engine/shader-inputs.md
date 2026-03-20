@@ -18,6 +18,9 @@ shaderInputs.setProps({
 });
 ```
 
+For the `uniformTypes` descriptor syntax that drives nested uniform handling,
+see [Core Shader Types](/docs/api-reference/core/shader-types).
+
 ## Types
 
 ### `ShaderInputsOptions`
@@ -56,6 +59,14 @@ Currently a no-op placeholder for symmetry with other engine resource managers.
 
 Updates one or more modules by calling each module's `getUniforms()` function and splitting the result into uniforms and bindings.
 
+<p class="badges">
+  <img src="https://img.shields.io/badge/From-v9.3-blue.svg?style=flat-square" alt="From-v9.3" />
+</p>
+
+If a module declares composite `uniformTypes`, `setProps()` preserves nested
+struct and array shapes at the module boundary and merges partial updates by the
+declared schema.
+
 ### `getModules(): ShaderModule[]`
 
 Returns the registered modules, including resolved dependencies.
@@ -76,3 +87,5 @@ Returns a table-like object that is useful with `console.table()` or luma loggin
 
 - `ShaderInputs` does not upload GPU buffers by itself. Engine classes use it together with an internal `UniformStore`.
 - Unknown module names are ignored and warn by default unless `disableWarnings` is enabled.
+- Composite uniform values stay nested in `ShaderInputs`, while `UniformStore`
+  and `UniformBufferLayout` flatten them internally for packing.

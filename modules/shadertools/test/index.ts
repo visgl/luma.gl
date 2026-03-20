@@ -10,6 +10,7 @@ import './lib/shader-module/shader-module-dependencies.spec';
 // utils
 import './lib/glsl-utils/get-shader-info.spec';
 import './lib/glsl-utils/shader-utils.spec';
+import './lib/uniform-types.spec';
 
 // shader transpilation
 import './lib/preprocessor/preprocessor.spec';
@@ -39,7 +40,7 @@ import './modules/modules.spec';
 import './modules/utils/random.spec';
 
 // Lighting
-// import './modules/lights/lights.spec';
+import './modules/lighting/lights.spec';
 import './modules/lighting/dirlight.spec';
 import './modules/lighting/phong-material.spec';
 import './modules/lighting/gouraud-material.spec';

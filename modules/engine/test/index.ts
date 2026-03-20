@@ -36,9 +36,11 @@ import './debug/get-debug-table-from-shader-layout.spec';
 
 // Experimental
 import './shader-inputs.spec';
+import './shader-inputs-types.spec';
 import './compute/swap.spec';
 import './compute/buffer-transform.spec';
 import './compute/texture-transform.spec';
 import './compute/computation.spec';
 import './passes/shader-pass-renderer.spec';
 import './models/background-texture-model.spec';
+import './models/light-models.spec';

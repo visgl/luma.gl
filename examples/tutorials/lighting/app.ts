@@ -154,7 +154,7 @@ const eyePosition = [0, 0, 5];
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = `\
 <p>
-Drawing a phong-shaded cube
+Drawing a phong-shaded cube with multiple colored spot lights aimed at the cube
 </p>
 `;
 
@@ -181,10 +181,40 @@ Drawing a phong-shaded cube
       },
       lighting: {
         lights: [
-          {type: 'ambient', color: [255, 255, 255]},
-          {type: 'point', color: [255, 120, 10], position: [2, 4, 3]},
-          {type: 'point', color: [0, 255, 10], position: [-2, 1, 3]}
-          // {type: 'directional', color: [0, 0, 255], direction: [-1, 0, -1]}
+          {type: 'ambient', color: [255, 255, 255], intensity: 0.15},
+          {
+            type: 'spot',
+            color: [255, 120, 10],
+            position: [2, 4, 3],
+            direction: [-2, -4, -3],
+            innerConeAngle: 0.2,
+            outerConeAngle: 0.55
+          },
+          {
+            type: 'spot',
+            color: [0, 255, 10],
+            position: [-2, 1, 3],
+            direction: [2, -1, -3],
+            innerConeAngle: 0.2,
+            outerConeAngle: 0.5
+          },
+          {
+            type: 'spot',
+            color: [80, 160, 255],
+            position: [-3, -2, 2],
+            direction: [3, 2, -2],
+            innerConeAngle: 0.2,
+            outerConeAngle: 0.6
+          },
+          {
+            type: 'spot',
+            color: [255, 80, 180],
+            position: [3, -3, 2],
+            direction: [-3, 3, -2],
+            innerConeAngle: 0.25,
+            outerConeAngle: 0.7
+          },
+          {type: 'directional', color: [255, 255, 220], direction: [-1, -0.5, -1]}
         ]
       },
       phongMaterial: {

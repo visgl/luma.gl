@@ -347,6 +347,11 @@ void PBRInfo_setPointLight(inout PBRInfo pbrInfo, PointLight pointLight) {
   PBRInfo_setDirectionalLight(pbrInfo, light_direction);
 }
 
+void PBRInfo_setSpotLight(inout PBRInfo pbrInfo, SpotLight spotLight) {
+  vec3 light_direction = normalize(spotLight.position - pbr_vPosition);
+  PBRInfo_setDirectionalLight(pbrInfo, light_direction);
+}
+
 vec3 calculateFinalColor(PBRInfo pbrInfo, vec3 lightColor) {
   // Calculate the shading terms for the microfacet specular shading model
   vec3 F = specularReflection(pbrInfo);
@@ -458,6 +463,14 @@ vec4 pbr_filterColor(vec4 colorUnused)
         PBRInfo_setPointLight(pbrInfo, lighting_getPointLight(i));
         float attenuation = getPointLightAttenuation(lighting_getPointLight(i), distance(lighting_getPointLight(i).position, pbr_vPosition));
         color += calculateFinalColor(pbrInfo, lighting_getPointLight(i).color / attenuation);
+      }
+    }
+
+    for(int i = 0; i < lighting.spotLightCount; i++) {
+      if (i < lighting.spotLightCount) {
+        PBRInfo_setSpotLight(pbrInfo, lighting_getSpotLight(i));
+        float attenuation = getSpotLightAttenuation(lighting_getSpotLight(i), pbr_vPosition);
+        color += calculateFinalColor(pbrInfo, lighting_getSpotLight(i).color / attenuation);
       }
     }
 #endif

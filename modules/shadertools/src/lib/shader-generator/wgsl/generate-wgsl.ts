@@ -23,6 +23,12 @@ export function generateWGSLUniformDeclarations(
   wgsl.push(`struct ${capitalize(module.name)} {`);
 
   for (const [uniformName, uniformFormat] of Object.entries(module?.uniformTypes || {})) {
+    if (typeof uniformFormat !== 'string') {
+      throw new Error(
+        `Composite uniform types are not supported by WGSL shader generation: ${module.name}.${uniformName}`
+      );
+    }
+
     const wgslUniformType = uniformFormat;
     wgsl.push(`  ${uniformName} : ${wgslUniformType};`);
   }

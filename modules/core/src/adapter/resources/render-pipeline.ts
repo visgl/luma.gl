@@ -9,7 +9,7 @@ import type {BufferLayout} from '../types/buffer-layout';
 import type {
   TextureFormatColor,
   TextureFormatDepthStencil
-} from '@luma.gl/core/shadertypes/textures/texture-formats';
+} from '@luma.gl/core/shadertypes/texture-types/texture-formats';
 import type {Shader} from './shader';
 import type {SharedRenderPipeline} from './shared-render-pipeline';
 import type {RenderPass} from './render-pass';

@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {NormalizedDataType} from '../data-types/data-types';
-import {getDataTypeInfo} from '../data-types/decode-data-types';
+import {dataTypeDecoder} from '../data-types/data-type-decoder';
 import type {
   TextureFormat,
   TextureFormatCompressed,
@@ -72,6 +72,7 @@ export class TextureFormatDecoder {
   }
 }
 
+/** Decoder for luma.gl texture types */
 export const textureFormatDecoder = new TextureFormatDecoder();
 
 // HELPERS - MEMORY LAYOUT
@@ -163,11 +164,11 @@ export function getTextureFormatInfo(format: TextureFormat): TextureFormatInfo {
   }
 
   // Fill in missing information that can be derived from the format string
-  const matches = RGB_FORMAT_REGEX.exec(format as string);
+  const matches = !formatInfo.packed ? RGB_FORMAT_REGEX.exec(format as string) : null;
   if (matches) {
     const [, channels, length, type, srgb, suffix] = matches;
     const dataType = `${type}${length}` as NormalizedDataType;
-    const decodedType = getDataTypeInfo(dataType);
+    const decodedType = dataTypeDecoder.getDataTypeInfo(dataType);
     const bits = decodedType.byteLength * 8;
     const components = (channels?.length ?? 1) as 1 | 2 | 3 | 4;
     const bitsPerChannel: [number, number, number, number] = [
