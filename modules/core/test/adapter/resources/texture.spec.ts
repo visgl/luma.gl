@@ -495,9 +495,12 @@ async function readTexturePixels(
   texture: Texture,
   options: TextureReadOptions
 ): Promise<Uint8Array> {
+  // Browser CI runs with coverage and a software GPU can make async texture readback noticeably
+  // slower, especially for WebGPU 3d textures. Keep the helper timeout comfortably below the
+  // enclosing test timeout, but high enough to avoid false negatives from backend latency.
   const arrayBuffer = await withTimeout(
     texture.readDataAsync(options),
-    5000,
+    15000,
     `${texture.device.type} ${texture.format} readDataAsync timed out`
   );
   return compactTextureBytes(texture, arrayBuffer, options);

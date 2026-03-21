@@ -68,6 +68,8 @@ const config = {
     },
     // Local Vitest configuration layered on top of the reusable config factory.
     vitest: {
+      // Force Chromium browser projects onto SwiftShader for more deterministic CI rendering.
+      softwareGpu: true,
       // Repo-owned exclusions that should not live in reusable devtools code.
       excludePatterns: [
         '**/*.disabled.*',
