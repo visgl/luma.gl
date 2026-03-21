@@ -15,7 +15,8 @@ export class WebGPUFence extends Fence {
   constructor(device: WebGPUDevice, props: FenceProps = {}) {
     super(device, {});
     this.device = device;
-    this.signaled = device.handle.queue.onSubmittedWorkDone()
+    this.signaled = device.handle.queue
+      .onSubmittedWorkDone()
       .then(() => {
         this._signaled = true;
       })

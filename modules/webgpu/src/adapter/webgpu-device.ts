@@ -407,7 +407,10 @@ export class WebGPUDevice extends Device {
     return (
       errorMessage.includes('Instance dropped') &&
       (!operation || errorMessage.includes(operation)) &&
-      (this._isLost || this.info.gpu === 'software' || this.info.gpuType === 'cpu' || Boolean(this.info.fallback))
+      (this._isLost ||
+        this.info.gpu === 'software' ||
+        this.info.gpuType === 'cpu' ||
+        Boolean(this.info.fallback))
     );
   }
 

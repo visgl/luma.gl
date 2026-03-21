@@ -576,9 +576,7 @@ function testCopyToTexture(
 
 function isSoftwareBackedDevice(device: Device): boolean {
   return (
-    device.info.gpu === 'software' ||
-    device.info.gpuType === 'cpu' ||
-    Boolean(device.info.fallback)
+    device.info.gpu === 'software' || device.info.gpuType === 'cpu' || Boolean(device.info.fallback)
   );
 }
 

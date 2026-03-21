@@ -135,7 +135,12 @@ function formatErrorLogValue(value: unknown): unknown {
   if (value === undefined) {
     return undefined;
   }
-  if (value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+  if (
+    value === null ||
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'boolean'
+  ) {
     return value;
   }
   if (value instanceof Error) {
@@ -170,9 +175,7 @@ function hasCustomToString(value: object): boolean {
   );
 }
 
-function looksLikeGPUCompilationMessage(
-  value: object
-): value is {
+function looksLikeGPUCompilationMessage(value: object): value is {
   message?: unknown;
   type?: unknown;
   lineNum?: unknown;
