@@ -15,9 +15,16 @@ export class WebGPUFence extends Fence {
   constructor(device: WebGPUDevice, props: FenceProps = {}) {
     super(device, {});
     this.device = device;
-    this.signaled = device.handle.queue.onSubmittedWorkDone().then(() => {
-      this._signaled = true;
-    });
+    this.signaled = device.handle.queue.onSubmittedWorkDone()
+      .then(() => {
+        this._signaled = true;
+      })
+      .catch(error => {
+        if (this.device.shouldIgnoreDroppedInstanceError(error)) {
+          return;
+        }
+        throw error;
+      });
   }
 
   isSignaled(): boolean {

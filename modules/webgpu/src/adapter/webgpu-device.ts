@@ -347,7 +347,7 @@ export class WebGPUDevice extends Device {
         }
       })
       .catch((error: unknown) => {
-        if (this._shouldIgnorePopErrorScopeRejection(error)) {
+        if (this.shouldIgnoreDroppedInstanceError(error, 'popErrorScope')) {
           return;
         }
 
@@ -402,10 +402,11 @@ export class WebGPUDevice extends Device {
     };
   }
 
-  private _shouldIgnorePopErrorScopeRejection(error: unknown): boolean {
+  shouldIgnoreDroppedInstanceError(error: unknown, operation?: string): boolean {
     const errorMessage = error instanceof Error ? error.message : String(error);
     return (
-      errorMessage.includes('Instance dropped in popErrorScope') &&
+      errorMessage.includes('Instance dropped') &&
+      (!operation || errorMessage.includes(operation)) &&
       (this._isLost || this.info.gpu === 'software' || this.info.gpuType === 'cpu' || Boolean(this.info.fallback))
     );
   }

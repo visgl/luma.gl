@@ -71,7 +71,15 @@ export class WebGPUShader extends Shader {
     if (!handle) {
       return [];
     }
-    const compilationInfo = await handle.getCompilationInfo();
+    let compilationInfo;
+    try {
+      compilationInfo = await handle.getCompilationInfo();
+    } catch (error) {
+      if (this.device.shouldIgnoreDroppedInstanceError(error, 'getCompilationInfo')) {
+        return [];
+      }
+      throw error;
+    }
     return compilationInfo.messages;
   }
 }
