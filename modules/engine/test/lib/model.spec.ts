@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {luma, PipelineFactory, ShaderFactory} from '@luma.gl/core';
+import {Device, luma, PipelineFactory, ShaderFactory} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
 import {getWebGLTestDevice, getTestDevices} from '@luma.gl/test-utils';
 
@@ -236,6 +236,11 @@ test('Model#topology', async t => {
 
 test('Model#pipeline caching', async t => {
   const webglDevice = await getWebGLTestDevice();
+  if (isSoftwareBackedDevice(webglDevice)) {
+    t.comment('Skipping WebGL pipeline caching test on a software-backed adapter');
+    t.end();
+    return;
+  }
   if (!webglDevice.props._cachePipelines) {
     t.comment('Pipeline caching is disabled');
     t.end();
@@ -289,6 +294,11 @@ test('Model#pipeline caching', async t => {
 
 test('Model#pipeline caching with defines and modules', async t => {
   const webglDevice = await getWebGLTestDevice();
+  if (isSoftwareBackedDevice(webglDevice)) {
+    t.comment('Skipping WebGL pipeline caching-with-modules test on a software-backed adapter');
+    t.end();
+    return;
+  }
   if (!webglDevice.props._cachePipelines) {
     t.comment('Pipeline caching is disabled');
     t.end();
@@ -390,6 +400,14 @@ test('Model#pipeline caching with defines and modules', async t => {
 
   t.end();
 });
+
+function isSoftwareBackedDevice(device: Device): boolean {
+  return (
+    device.info.gpu === 'software' ||
+    device.info.gpuType === 'cpu' ||
+    Boolean(device.info.fallback)
+  );
+}
 
 /*
 import {dirlight, picking} from '@luma.gl/shadertools';

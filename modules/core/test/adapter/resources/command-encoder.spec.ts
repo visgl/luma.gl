@@ -304,6 +304,11 @@ test('CommandEncoder resolves time profiling with a single bulk query read', asy
 
 test('CommandBuffer#copyBufferToBuffer', async t => {
   const device = await getWebGLTestDevice();
+  if (isSoftwareBackedDevice(device)) {
+    t.comment('Skipping WebGL buffer copy test on a software-backed adapter');
+    t.end();
+    return;
+  }
 
   const sourceData = new Float32Array([1, 2, 3]);
   const sourceBuffer = device.createBuffer({data: sourceData});
@@ -409,6 +414,11 @@ const COPY_TEXTURE_TO_BUFFER_FIXTURES: CopyTextureToBufferFixture[] = [
 
 test('CommandBuffer#copyTextureToBuffer', async t => {
   const device = await getWebGLTestDevice();
+  if (isSoftwareBackedDevice(device)) {
+    t.comment('Skipping WebGL texture-to-buffer copy test on a software-backed adapter');
+    t.end();
+    return;
+  }
 
   for (const fixture of COPY_TEXTURE_TO_BUFFER_FIXTURES) {
     await testCopyTextureToBuffer(t, device, {...fixture});
@@ -485,6 +495,11 @@ async function readAsyncF32(source: Buffer): Promise<Float32Array> {
 
 test('CommandEncoder#copyTextureToTexture', async t => {
   const device = await getWebGLTestDevice();
+  if (isSoftwareBackedDevice(device)) {
+    t.comment('Skipping WebGL texture-to-texture copy test on a software-backed adapter');
+    t.end();
+    return;
+  }
 
   // for (const device of await getTestDevices()) {
   testCopyToTexture(t, device, {isSubCopy: false, sourceIsFramebuffer: false});
@@ -557,6 +572,14 @@ function testCopyToTexture(
   // );
 
   t.end();
+}
+
+function isSoftwareBackedDevice(device: Device): boolean {
+  return (
+    device.info.gpu === 'software' ||
+    device.info.gpuType === 'cpu' ||
+    Boolean(device.info.fallback)
+  );
 }
 
 /*
