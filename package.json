@@ -56,7 +56,6 @@
     "@vis.gl/ts-plugins": "^1.0.2",
     "eslint-plugin-tree-shaking": "^1.12.2",
     "pre-commit": "^1.2.2",
-    "puppeteer": "^24.39.0",
     "vite": "^8.0.0",
     "vitest": "^4.0.18"
   },
