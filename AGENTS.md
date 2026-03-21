@@ -7,6 +7,18 @@
 - Run tests: `yarm test`
 - Check website build `cd website; yarn; yarn build`
 
+## LLM-friendly test setup
+- Use the repo root scripts as the stable interface:
+  - `yarn test-node`
+  - `yarn test-browser`
+  - `yarn test-headless`
+  - `yarn test-coverage`
+  - `yarn playwright`
+- Those commands delegate into the local `@luma.gl/devtools` workspace.
+- Reusable Vitest and Playwright wiring lives under [`devtools`](/Users/ibgreen/code/luma.gl/devtools).
+- Repo-specific overrides for that tooling live in [`\.ocularrc.js`](/Users/ibgreen/code/luma.gl/.ocularrc.js).
+- For details, see [devtools/docs/llm-friendly-test-setup.md](/Users/ibgreen/code/luma.gl/devtools/docs/llm-friendly-test-setup.md).
+
 ## Before committing
 - Format code: `yarn lint fix`
 - Always `yarn lint fix` after making changes to ensure that prettier formatting is maintained.
