@@ -31,7 +31,7 @@ jobs:
             website/yarn.lock
 
       - name: Install dependencies
-        run: yarn install --frozen-lockfile  
+        run: yarn install --immutable
 
       - name: Install Playwright Chromium
         run: yarn playwright:install
@@ -112,10 +112,10 @@ jobs:
             website/yarn.lock
 
       - name: Install root dependencies
-        run: yarn install --frozen-lockfile
+        run: yarn install --immutable
 
       - name: Install website dependencies
-        run: yarn install --frozen-lockfile
+        run: yarn install --immutable
         working-directory: website
 
       - name: Build website
