@@ -21,14 +21,14 @@ export type PickingProps = {
   /** Are we picking? I.e. rendering picking colors? */
   isActive?: boolean;
   /** Whether the payload is sourced from the builtin instance index or a custom integer attribute */
-  payloadMode?: PickingPayloadMode;
-  /** Identifier of the draw call currently being rendered */
-  drawCallIndex?: number;
+  indexMode?: PickingPayloadMode;
+  /** Identifier of the batch currently being rendered */
+  batchIndex?: number;
 
-  /** Identifier of the highlighted draw call, defaults to 0 */
-  highlightedDrawCallIndex?: number | null;
-  /** Set the highlighted payload, or `null` to explicitly clear **/
-  highlightedPayload?: number | null;
+  /** Identifier of the highlighted batch */
+  highlightedBatchIndex?: number | null;
+  /** Set the highlighted object index, or `null` to explicitly clear **/
+  highlightedObjectIndex?: number | null;
   /** Color of visual highlight of "selected" item () */
   highlightColor?: NumberArray4;
 };
@@ -45,18 +45,18 @@ export type PickingUniforms = {
    */
   isActive: boolean;
   /** Whether the current payload comes from instance_index or a custom integer attribute */
-  payloadMode: 0 | 1;
-  /** Identifier of the draw call currently being rendered */
-  drawCallIndex: number;
+  indexMode: 0 | 1;
+  /** Identifier of the batch currently being rendered */
+  batchIndex: number;
 
   /** Do we have a highlighted item? */
   isHighlightActive: boolean;
   /** Color of visual highlight of "selected" item. Note: RGBA components must in the range 0-1 */
   highlightColor: NumberArray4;
-  /** Indicates which draw call to visually highlight an item in (defaults to 0) */
-  highlightedDrawCallIndex: number;
-  /** Indicates which payload in the draw call to highlight */
-  highlightedPayload: number;
+  /** Indicates which batch to visually highlight an item in */
+  highlightedBatchIndex: number;
+  /** Indicates which object index in the batch to highlight */
+  highlightedObjectIndex: number;
 };
 
 export type PickingBindings = {};
@@ -65,12 +65,12 @@ export type PickingBindings = {};
 
 const uniformTypes: Required<ShaderModule<PickingProps, PickingUniforms>>['uniformTypes'] = {
   isActive: 'i32',
-  payloadMode: 'i32',
-  drawCallIndex: 'i32',
+  indexMode: 'i32',
+  batchIndex: 'i32',
 
   isHighlightActive: 'i32',
-  highlightedDrawCallIndex: 'i32',
-  highlightedPayload: 'i32',
+  highlightedBatchIndex: 'i32',
+  highlightedObjectIndex: 'i32',
   highlightColor: 'vec4<f32>'
 };
 
@@ -80,12 +80,12 @@ precision highp int;
 
 uniform pickingUniforms {
   int isActive;
-  int payloadMode;
-  int drawCallIndex;
+  int indexMode;
+  int batchIndex;
 
   int isHighlightActive;
-  int highlightedDrawCallIndex;
-  int highlightedPayload;
+  int highlightedBatchIndex;
+  int highlightedObjectIndex;
   vec4 highlightColor;
 } picking;
 `;
@@ -93,12 +93,12 @@ uniform pickingUniforms {
 export const WGSL_UNIFORMS = /* wgsl */ `\
 struct pickingUniforms {
   isActive: i32,
-  payloadMode: i32,
-  drawCallIndex: i32,
+  indexMode: i32,
+  batchIndex: i32,
 
   isHighlightActive: i32,
-  highlightedDrawCallIndex: i32,
-  highlightedPayload: i32,
+  highlightedBatchIndex: i32,
+  highlightedObjectIndex: i32,
   highlightColor: vec4<f32>,
 };
 
@@ -113,7 +113,7 @@ function getUniforms(props: PickingProps = {}, prevUniforms?: PickingUniforms): 
     uniforms.isActive = Boolean(props.isActive);
   }
 
-  switch (props.payloadMode) {
+  switch (props.indexMode) {
     case 'instance':
       uniforms.indexMode = 0;
       break;
@@ -125,34 +125,34 @@ function getUniforms(props: PickingProps = {}, prevUniforms?: PickingUniforms): 
       break;
   }
 
-  if (typeof props.drawCallIndex === 'number') {
-    uniforms.drawCallIndex = props.drawCallIndex;
+  if (typeof props.batchIndex === 'number') {
+    uniforms.batchIndex = props.batchIndex;
   }
 
-  switch (props.highlightedPayload) {
+  switch (props.highlightedObjectIndex) {
     case undefined:
       // Unless highlighted payload explicitly null or set, do not update state
       break;
     case null:
       // Clear highlight
       uniforms.isHighlightActive = false;
-      uniforms.highlightedPayload = INVALID_INDEX;
+      uniforms.highlightedObjectIndex = INVALID_INDEX;
       break;
     default:
       uniforms.isHighlightActive = true;
-      uniforms.highlightedPayload = props.highlightedPayload;
+      uniforms.highlightedObjectIndex = props.highlightedObjectIndex;
   }
 
-  switch (props.highlightedDrawCallIndex) {
+  switch (props.highlightedBatchIndex) {
     case undefined:
       break;
     case null:
       uniforms.isHighlightActive = false;
-      uniforms.highlightedDrawCallIndex = INVALID_INDEX;
+      uniforms.highlightedBatchIndex = INVALID_INDEX;
       break;
     default:
       uniforms.isHighlightActive = true;
-      uniforms.highlightedDrawCallIndex = props.highlightedDrawCallIndex;
+      uniforms.highlightedBatchIndex = props.highlightedBatchIndex;
   }
 
   if (props.highlightColor) {
@@ -182,11 +182,11 @@ export const pickingUniforms = {
   uniformTypes,
   defaultUniforms: {
     isActive: false,
-    payloadMode: 0,
-    drawCallIndex: 0,
+    indexMode: 0,
+    batchIndex: 0,
     isHighlightActive: false,
-    highlightedDrawCallIndex: INVALID_INDEX,
-    highlightedPayload: INVALID_INDEX,
+    highlightedBatchIndex: INVALID_INDEX,
+    highlightedObjectIndex: INVALID_INDEX,
     highlightColor: DEFAULT_HIGHLIGHT_COLOR
   },
 
