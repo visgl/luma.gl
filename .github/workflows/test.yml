@@ -34,7 +34,7 @@ jobs:
         run: yarn install --frozen-lockfile  
 
       - name: Install Playwright Chromium
-        run: yarn playwright install chromium
+        run: yarn playwright:install
   
       - name: Build code
         run: |
