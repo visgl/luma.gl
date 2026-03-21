@@ -30,25 +30,25 @@ fn triangleBlur_sampleColor(
   for (var t = -30.0; t <= 30.0; t += 1.0) {
     let percent = (t + offset - 0.5) / 30.0;
     let weight = 1.0 - abs(percent);
-    var offsetColor = textureSample(
+    let offsetColor = textureSample(
       sourceTexture,
       sourceTextureSampler,
       texCoord + adjustedDelta * percent
     );
 
     /* switch to pre-multiplied alpha to correctly blur transparent images */
-    offsetColor.rgb *= offsetColor.a;
+    let premultipliedOffsetColor = vec4f(offsetColor.rgb * vec3f(offsetColor.a), offsetColor.a);
 
-    color += offsetColor * weight;
+    color += premultipliedOffsetColor * weight;
     total += weight;
   }
 
   color /= total;
 
   /* switch back from pre-multiplied alpha */
-  color.rgb /= color.a + 0.00001;
+  let unpremultipliedRgb = color.rgb / vec3f(color.a + 0.00001);
 
-  return color;
+  return vec4f(unpremultipliedRgb, color.a);
 }
 `;
 

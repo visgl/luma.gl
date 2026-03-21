@@ -82,7 +82,7 @@ Free up any GPU resources associated with this compute pipeline immediately (ins
 Creating compute pipelines can be expensive because it may trigger shader compilation and backend pipeline creation work. Applications that may request the same compute pipeline more than once should prefer `PipelineFactory` over calling `device.createComputePipeline()` directly.
 
 ```ts
-import {PipelineFactory} from '@luma.gl/engine';
+import {PipelineFactory} from '@luma.gl/core';
 
 const pipelineFactory = PipelineFactory.getDefaultPipelineFactory(device);
 const computePipeline = pipelineFactory.createComputePipeline({

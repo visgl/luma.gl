@@ -2,9 +2,15 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from 'tape-promise/tape';
-import {Texture} from '@luma.gl/core';
-import {getNullTestDevice, getTestDevices, getWebGPUTestDevice} from '@luma.gl/test-utils';
+import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import {Texture, luma} from '@luma.gl/core';
+import {
+  getNullTestDevice,
+  getTestDevices,
+  getWebGPUTestDevice,
+  getWebGLTestDevice
+} from '@luma.gl/test-utils';
+import {webgl2Adapter} from '@luma.gl/webgl';
 import {_getDefaultDebugValue} from '../../src/adapter/device';
 
 // import {luma} from '@luma.gl/core';
@@ -177,14 +183,18 @@ test('Device manages debug GPU timing through a single API', async t => {
 });
 
 test.skip('WebGLDevice#lost (Promise)', async t => {
-  const device = await luma.createDevice({});
+  const device = await luma.createDevice({
+    id: 'webgl-test-device-lost',
+    type: 'webgl',
+    adapters: [webgl2Adapter],
+    createCanvasContext: {width: 1, height: 1},
+    debug: false
+  });
 
-  // Wrap in a promise to make sure tape waits for us
-  await new Promise<void>(async resolve => {
+  await new Promise<void>(resolve => {
     setTimeout(async () => {
       const cause = await device.lost;
       t.equal(cause.reason, 'destroyed', `Context lost: ${cause.message}`);
-      t.end();
       resolve();
     }, 0);
     device.loseDevice();

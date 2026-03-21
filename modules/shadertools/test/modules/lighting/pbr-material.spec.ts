@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from 'tape-promise/tape';
+import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {UniformBufferLayout, UniformStore} from '@luma.gl/core';
 import {
   getShaderModuleUniformBlockFields,
@@ -10,7 +10,7 @@ import {
   getShaderModuleUniforms,
   pbrMaterial,
   type PBRMaterialUniforms
-} from '../../../src/index';
+} from '@luma.gl/shadertools';
 
 const FLOAT32_EPSILON = 1e-6;
 

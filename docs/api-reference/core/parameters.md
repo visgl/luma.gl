@@ -92,7 +92,7 @@ renderPass.setParameters({
 })
 ```
 
-However, parameters are set on the `RenderPipeline` and are immutable. (luma.gl provides a `RenderPipelineFactory` to help applications work around this limitation.)
+However, parameters are set on the `RenderPipeline` and are immutable. (luma.gl provides a [`PipelineFactory`](/docs/api-reference/core/pipeline-factory) to help applications work around this limitation.)
 
 ## Usage
 
@@ -159,7 +159,7 @@ Most luma.gl parameters are stored on `RenderPipeline` or `RenderPass` objects, 
 
 Workarounds
 
-- luma.gl provides a `RenderPipelineFactory` to help applications work around this limitation.
+- luma.gl provides a [`PipelineFactory`](/docs/api-reference/core/pipeline-factory) to help applications work around this limitation.
 - It is obviously not too hard to create new RenderPass though it can require some management to end and run them in order.
 
 ## Dynamic RenderPass Parameters

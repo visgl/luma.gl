@@ -7,7 +7,6 @@ import {getWebGPUTextureFormat} from '../helpers/convert-texture-format';
 import {getBindGroup} from '../helpers/get-bind-group';
 import {getVertexBufferLayout} from '../helpers/get-vertex-buffer-layout';
 // import {convertAttributesVertexBufferToLayout} from '../helpers/get-vertex-buffer-layout';
-// import {mapAccessorToWebGPUFormat} from './helpers/accessor-to-format';
 // import type {BufferAccessors} from './webgpu-pipeline';
 
 import type {WebGPUDevice} from '../webgpu-device';
@@ -23,6 +22,7 @@ const EMPTY_BINDINGS: Record<string, Binding> = {};
 export class WebGPURenderPipeline extends RenderPipeline {
   readonly device: WebGPUDevice;
   readonly handle: GPURenderPipeline;
+  readonly descriptor: GPURenderPipelineDescriptor | null;
 
   readonly vs: WebGPUShader;
   readonly fs: WebGPUShader | null = null;
@@ -40,9 +40,14 @@ export class WebGPURenderPipeline extends RenderPipeline {
   constructor(device: WebGPUDevice, props: RenderPipelineProps) {
     super(device, props);
     this.device = device;
+    this.shaderLayout ||= this.device.getShaderLayout((props.vs as WebGPUShader).source) || {
+      attributes: [],
+      bindings: []
+    };
     this.handle = this.props.handle as GPURenderPipeline;
+    let descriptor: GPURenderPipelineDescriptor | null = null;
     if (!this.handle) {
-      const descriptor = this._getRenderPipelineDescriptor();
+      descriptor = this._getRenderPipelineDescriptor();
       log.groupCollapsed(1, `new WebGPURenderPipeline(${this.id})`)();
       log.probe(1, JSON.stringify(descriptor, null, 2))();
       log.groupEnd(1)();
@@ -54,6 +59,7 @@ export class WebGPURenderPipeline extends RenderPipeline {
         this.device.debug();
       });
     }
+    this.descriptor = descriptor;
     this.handle.label = this.props.id;
 
     // Note: Often the same shader in WebGPU
@@ -178,7 +184,9 @@ export class WebGPURenderPipeline extends RenderPipeline {
     const vertex: GPUVertexState = {
       module: (this.props.vs as WebGPUShader).handle,
       entryPoint: this.props.vertexEntryPoint || 'main',
-      buffers: getVertexBufferLayout(this.shaderLayout, this.props.bufferLayout)
+      buffers: getVertexBufferLayout(this.shaderLayout, this.props.bufferLayout, {
+        pipelineId: this.id
+      })
     };
 
     // Populate color targets

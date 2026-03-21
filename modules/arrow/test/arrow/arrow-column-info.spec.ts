@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-// import test from 'tape-promise/tape';
+// import test from '@luma.gl/devtools-extensions/tape-test-utils';
 // import * as arrow from 'apache-arrow';
 // import {getArrowDataByPath} from '@luma.gl/arrow';
 // import { expandArrayToCoords } from "../src/utils.js";

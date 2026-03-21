@@ -25,3 +25,4 @@ import './passes/image-fun-filters/ink.spec';
 import './passes/image-warp-filters/bulgepinch.spec';
 import './passes/image-warp-filters/swirl.spec';
 import './passes/image-warp-filters/warp.spec';
+import './passes/postprocessing-wgsl.spec';

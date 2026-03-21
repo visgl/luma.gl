@@ -73,7 +73,10 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     this.introspectedLayout = webglSharedRenderPipeline.introspectedLayout;
     this.device._setWebGLDebugMetadata(this.handle, this, {spector: {id: this.props.id}});
 
-    // Merge provided layout with introspected layout
+    // WebGL only honors shaderLayout overrides for attributes that already exist in the
+    // linked program, and only the `type` / `stepMode` fields participate in the merge.
+    // Bindings and unknown attributes are ignored. If WebGL cache keys ever depend on
+    // `shaderLayout`, they need to match these merge semantics rather than the raw prop.
     this.shaderLayout = props.shaderLayout
       ? mergeShaderLayout(this.introspectedLayout, props.shaderLayout)
       : this.introspectedLayout;

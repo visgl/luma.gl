@@ -53,7 +53,7 @@ function destroyParsedTextures(parsedMaterial: ReturnType<typeof parsePBRMateria
 
 function captureWarnings(runTestCase: () => void): string[] {
   const warnings: string[] = [];
-  const originalWarn = log.warn;
+  const originalWarn = log.warn.bind(log);
 
   log.warn = ((message: string) => {
     return () => {

@@ -8,6 +8,10 @@ type WebGLPendingQuery = {
   promise: Promise<bigint> | null;
   result: bigint | null;
   disjoint: boolean;
+  cancelled: boolean;
+  pollRequestId: number | null;
+  resolve: ((value: bigint) => void) | null;
+  reject: ((error: Error) => void) | null;
 };
 
 type WebGLTimestampPair = {
@@ -23,6 +27,7 @@ export class WEBGLQuerySet extends QuerySet {
   readonly handle: WebGLQuery | null;
 
   protected _timestampPairs: WebGLTimestampPair[] = [];
+  protected _pendingReads: Set<WebGLPendingQuery> = new Set();
   protected _occlusionQuery: WebGLPendingQuery | null = null;
   protected _occlusionActive = false;
 
@@ -67,15 +72,22 @@ export class WEBGLQuerySet extends QuerySet {
 
     for (const pair of this._timestampPairs) {
       if (pair.activeQuery) {
+        this._cancelPendingQuery(pair.activeQuery);
         this.device.gl.deleteQuery(pair.activeQuery.handle);
       }
       for (const query of pair.completedQueries) {
+        this._cancelPendingQuery(query);
         this.device.gl.deleteQuery(query.handle);
       }
     }
 
     if (this._occlusionQuery) {
+      this._cancelPendingQuery(this._occlusionQuery);
       this.device.gl.deleteQuery(this._occlusionQuery.handle);
+    }
+
+    for (const query of Array.from(this._pendingReads)) {
+      this._cancelPendingQuery(query);
     }
 
     this.destroyResource();
@@ -162,7 +174,11 @@ export class WEBGLQuerySet extends QuerySet {
       handle: this.handle,
       promise: null,
       result: null,
-      disjoint: false
+      disjoint: false,
+      cancelled: false,
+      pollRequestId: null,
+      resolve: null,
+      reject: null
     };
     this._occlusionActive = true;
   }
@@ -198,7 +214,11 @@ export class WEBGLQuerySet extends QuerySet {
         handle,
         promise: null,
         result: null,
-        disjoint: false
+        disjoint: false,
+        cancelled: false,
+        pollRequestId: null,
+        resolve: null,
+        reject: null
       };
 
       this.device.gl.beginQuery(GL.TIME_ELAPSED_EXT, handle);
@@ -239,6 +259,11 @@ export class WEBGLQuerySet extends QuerySet {
   }
 
   protected _pollQueryAvailability(query: WebGLPendingQuery): boolean {
+    if (query.cancelled || this.destroyed) {
+      query.result = 0n;
+      return true;
+    }
+
     if (query.result !== null || query.disjoint) {
       return true;
     }
@@ -279,14 +304,32 @@ export class WEBGLQuerySet extends QuerySet {
       return query.promise;
     }
 
+    this._pendingReads.add(query);
     query.promise = new Promise((resolve, reject) => {
+      query.resolve = resolve;
+      query.reject = reject;
+
       const poll = () => {
-        if (!this._pollQueryAvailability(query)) {
-          requestAnimationFrame(poll);
+        query.pollRequestId = null;
+
+        if (query.cancelled || this.destroyed) {
+          this._pendingReads.delete(query);
+          query.promise = null;
+          query.resolve = null;
+          query.reject = null;
+          resolve(0n);
           return;
         }
 
+        if (!this._pollQueryAvailability(query)) {
+          query.pollRequestId = this._requestAnimationFrame(poll);
+          return;
+        }
+
+        this._pendingReads.delete(query);
         query.promise = null;
+        query.resolve = null;
+        query.reject = null;
         if (query.disjoint) {
           reject(new Error('GPU timestamp query was invalidated by a disjoint event'));
         } else {
@@ -298,5 +341,29 @@ export class WEBGLQuerySet extends QuerySet {
     });
 
     return query.promise;
+  }
+
+  protected _cancelPendingQuery(query: WebGLPendingQuery): void {
+    this._pendingReads.delete(query);
+    query.cancelled = true;
+    if (query.pollRequestId !== null) {
+      this._cancelAnimationFrame(query.pollRequestId);
+      query.pollRequestId = null;
+    }
+    if (query.resolve) {
+      const resolve = query.resolve;
+      query.promise = null;
+      query.resolve = null;
+      query.reject = null;
+      resolve(0n);
+    }
+  }
+
+  protected _requestAnimationFrame(callback: FrameRequestCallback): number {
+    return requestAnimationFrame(callback);
+  }
+
+  protected _cancelAnimationFrame(requestId: number): void {
+    cancelAnimationFrame(requestId);
   }
 }

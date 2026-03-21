@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from 'tape-promise/tape';
+import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {Geometry, GeometryProps} from '@luma.gl/engine';
 import {TypedArray} from '@math.gl/types';
 

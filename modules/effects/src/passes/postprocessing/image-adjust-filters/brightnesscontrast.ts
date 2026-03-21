@@ -14,14 +14,13 @@ struct brightnessContrastUniforms {
 @group(0) @binding(1) var<uniform> brightnessContrast : brightnessContrastUniforms;
 
 fn brightnessContrast_filterColor_ext(color: vec4f, texSize: vec2<f32>, texCoords: vec2<f32>) -> vec4f {
-  var result = color;
-  result.rgb += vec3f(brightnessContrast.brightness);
+  var resultRgb = color.rgb + vec3f(brightnessContrast.brightness);
   if (brightnessContrast.contrast > 0.0) {
-    result.rgb = (result.rgb - vec3f(0.5)) / (1.0 - brightnessContrast.contrast) + vec3f(0.5);
+    resultRgb = (resultRgb - vec3f(0.5)) / (1.0 - brightnessContrast.contrast) + vec3f(0.5);
   } else {
-    result.rgb = (result.rgb - vec3f(0.5)) * (1.0 + brightnessContrast.contrast) + vec3f(0.5);
+    resultRgb = (resultRgb - vec3f(0.5)) * (1.0 + brightnessContrast.contrast) + vec3f(0.5);
   }
-  return result;
+  return vec4f(resultRgb, color.a);
 }
 `;
 

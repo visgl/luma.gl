@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from 'tape-promise/tape';
+import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import type {CanvasContextProps, PresentationContextProps} from '@luma.gl/core';
 import {CanvasContext, PresentationContext, Framebuffer} from '@luma.gl/core';
 import {isBrowser} from '@probe.gl/env';
@@ -748,47 +748,94 @@ const MAP_TEST_CASES = [
   }
 ];
 
-test.skip('WebGLCanvasContext#cssToDevicePixels', async t => {
+function configureCanvasContext(
+  canvasContext: CanvasContext,
+  testCase: {
+    clientWidth: number;
+    clientHeight: number;
+    drawingBufferWidth: number;
+    drawingBufferHeight: number;
+  }
+): () => void {
+  const originalCanvasWidth = canvasContext.canvas.width;
+  const originalCanvasHeight = canvasContext.canvas.height;
+  const originalCssWidth = canvasContext.cssWidth;
+  const originalCssHeight = canvasContext.cssHeight;
+  const originalDevicePixelWidth = canvasContext.devicePixelWidth;
+  const originalDevicePixelHeight = canvasContext.devicePixelHeight;
+  const originalDrawingBufferWidth = canvasContext.drawingBufferWidth;
+  const originalDrawingBufferHeight = canvasContext.drawingBufferHeight;
+
+  canvasContext.cssWidth = testCase.clientWidth;
+  canvasContext.cssHeight = testCase.clientHeight;
+  canvasContext.devicePixelWidth = testCase.drawingBufferWidth;
+  canvasContext.devicePixelHeight = testCase.drawingBufferHeight;
+  canvasContext.drawingBufferWidth = testCase.drawingBufferWidth;
+  canvasContext.drawingBufferHeight = testCase.drawingBufferHeight;
+  canvasContext.canvas.width = testCase.drawingBufferWidth;
+  canvasContext.canvas.height = testCase.drawingBufferHeight;
+
+  return () => {
+    canvasContext.cssWidth = originalCssWidth;
+    canvasContext.cssHeight = originalCssHeight;
+    canvasContext.devicePixelWidth = originalDevicePixelWidth;
+    canvasContext.devicePixelHeight = originalDevicePixelHeight;
+    canvasContext.drawingBufferWidth = originalDrawingBufferWidth;
+    canvasContext.drawingBufferHeight = originalDrawingBufferHeight;
+    canvasContext.canvas.width = originalCanvasWidth;
+    canvasContext.canvas.height = originalCanvasHeight;
+  };
+}
+
+test('WebGLCanvasContext#cssToDevicePixels', async t => {
   // Create a fresh device since are going to modify it
   const canvasContextDevice = await getWebGLTestDevice();
   const canvasContext = canvasContextDevice?.canvasContext;
 
   MAP_TEST_CASES.forEach(tc => {
     if (canvasContext) {
-      configureCanvasContext(canvasContext, tc);
+      const restoreCanvasContext = configureCanvasContext(canvasContext, tc);
+      try {
+        tc.windowPositions.forEach((wPos, i) => {
+          // by default yInvert is true
+          t.deepEqual(
+            canvasContext?.cssToDevicePixels(tc.windowPositions[i]),
+            tc.devicePositionsInverted[i],
+            `${tc.name}(yInvert=true): device pixel should be ${JSON.stringify(
+              tc.devicePositionsInverted[i]
+            )} for window position ${tc.windowPositions[i]}`
+          );
+          t.deepEqual(
+            canvasContext?.cssToDevicePixels(tc.windowPositions[i], false),
+            tc.devicePositions[i],
+            `${tc.name}(yInvert=false): device pixel should match`
+          );
+        });
+      } finally {
+        restoreCanvasContext();
+      }
     }
-    tc.windowPositions.forEach((wPos, i) => {
-      // by default yInvert is true
-      t.deepEqual(
-        canvasContext?.cssToDevicePixels(tc.windowPositions[i]),
-        tc.devicePositionsInverted[i],
-        `${tc.name}(yInvert=true): device pixel should be ${JSON.stringify(
-          tc.devicePositionsInverted[i]
-        )} for window position ${tc.windowPositions[i]}`
-      );
-      t.deepEqual(
-        canvasContext?.cssToDevicePixels(tc.windowPositions[i], false),
-        tc.devicePositions[i],
-        `${tc.name}(yInvert=false): device pixel should match`
-      );
-    });
   });
   t.end();
 });
 
-test.skip('WebGLCanvasContext#cssToDeviceRatio', async t => {
+test('WebGLCanvasContext#cssToDeviceRatio', async t => {
   const canvasContextDevice = await getWebGLTestDevice();
   const canvasContext = canvasContextDevice?.canvasContext;
 
   MAP_TEST_CASES.forEach(tc => {
     if (canvasContext) {
-      configureCanvasContext(canvasContext, tc);
+      const restoreCanvasContext = configureCanvasContext(canvasContext, tc);
+      try {
+        t.equal(
+          canvasContext?.cssToDeviceRatio(),
+          tc.ratio,
+          'cssToDeviceRatio should return correct value'
+        );
+      } finally {
+        restoreCanvasContext();
+      }
     }
-    t.equal(
-      canvasContext?.cssToDeviceRatio(),
-      tc.ratio,
-      'cssToDeviceRatio should return correct value'
-    );
   });
 
   t.end();

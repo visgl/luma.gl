@@ -18,21 +18,20 @@ fn hueSaturation_filterColor(color: vec4f) -> vec4f {
   let c = cos(angle);
   let weights = (vec3f(2.0 * c, -sqrt(3.0) * s - c, sqrt(3.0) * s - c) + vec3f(1.0)) / 3.0;
 
-  var result = color;
-  result.rgb = vec3f(
-    dot(result.rgb, weights.xyz),
-    dot(result.rgb, weights.zxy),
-    dot(result.rgb, weights.yzx)
+  var resultRgb = vec3f(
+    dot(color.rgb, weights.xyz),
+    dot(color.rgb, weights.zxy),
+    dot(color.rgb, weights.yzx)
   );
 
-  let average = (result.r + result.g + result.b) / 3.0;
+  let average = (resultRgb.r + resultRgb.g + resultRgb.b) / 3.0;
   if (hueSaturation.saturation > 0.0) {
-    result.rgb += (vec3f(average) - result.rgb) * (1.0 - 1.0 / (1.001 - hueSaturation.saturation));
+    resultRgb += (vec3f(average) - resultRgb) * (1.0 - 1.0 / (1.001 - hueSaturation.saturation));
   } else {
-    result.rgb += (vec3f(average) - result.rgb) * (-hueSaturation.saturation);
+    resultRgb += (vec3f(average) - resultRgb) * (-hueSaturation.saturation);
   }
 
-  return result;
+  return vec4f(resultRgb, color.a);
 }
 
 fn hueSaturation_filterColor_ext(color: vec4f, texSize: vec2f, texCoord: vec2f) -> vec4f {

@@ -4,7 +4,7 @@
 
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
 import {transpileGLSLShader} from '@luma.gl/shadertools/lib/shader-transpiler/transpile-glsl-shader';
-import test, {Test} from 'tape-promise/tape';
+import test, {Test} from '@luma.gl/devtools-extensions/tape-test-utils';
 
 import {GL} from '@luma.gl/constants';
 import {TRANSPILATION_TEST_CASES, COMPILATION_TEST_CASES} from './transpile-shader-cases';
@@ -30,19 +30,15 @@ test('transpileGLSLShader#import', async t => {
   t.end();
 });
 
-test.skip('transpileGLSLShader', async t => {
+test('transpileGLSLShader', async t => {
   for (const tc of TRANSPILATION_TEST_CASES) {
     const {title, stage, GLSL_300} = tc;
 
-    t.throws(
-      // @ts-ignore - deliberate unsupported GLSL version
-      () => transpileGLSLShader(GLSL_300, stage),
-      `${title} unknown glsl version`
+    t.equal(
+      transpileGLSLShader(GLSL_300, stage).startsWith('#version 300 es'),
+      true,
+      `${title} preserves version`
     );
-
-    // let assembleResult;
-    // assembleResult = transpileGLSLShader(GLSL_300, 100, stage);
-    // compareStrings(t, assembleResult, GLSL_100, `3.00 => 1.00: ${title}`);
   }
   t.end();
 });

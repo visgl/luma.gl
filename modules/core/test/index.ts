@@ -31,6 +31,8 @@ import './adapter/helpers/parse-shader-compiler-log.spec';
 import './adapter/device.spec';
 import './adapter/canvas-context.spec';
 import './adapter/luma.spec';
+import './factories/pipeline-factory.spec';
+import './factories/shader-factory.spec';
 
 // Resources
 import './adapter/texture-formats.spec';

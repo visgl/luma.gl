@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from 'tape-promise/tape';
+import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {luma} from '@luma.gl/core';
 import {webgpuAdapter, type WebGPUDevice} from '@luma.gl/webgpu';
@@ -145,7 +145,7 @@ test('engine#AnimationLoop two start()s should only run one loop', async t => {
   t.end();
 });
 
-test.skip('engine#AnimationLoop start followed immediately by stop() should stop', async t => {
+test('engine#AnimationLoop start followed immediately by stop() should stop', async t => {
   const device = await getWebGLTestDevice();
 
   let initializeCalled = 0;
@@ -158,10 +158,9 @@ test.skip('engine#AnimationLoop start followed immediately by stop() should stop
   });
   animationLoop.start();
   animationLoop.stop();
-  setTimeout(() => {
-    t.is(initializeCalled, 0, 'onInitialize called');
-    t.end();
-  }, 100);
+  await new Promise<void>(resolve => setTimeout(resolve, 100));
+  t.is(initializeCalled, 0, 'onInitialize called');
+  t.end();
 });
 
 test('engine#AnimationLoop a start/stop/start should not call initialize again', async t => {

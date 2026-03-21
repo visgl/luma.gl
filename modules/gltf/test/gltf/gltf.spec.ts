@@ -2,20 +2,19 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from 'tape-promise/tape';
+import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
 
 import '@loaders.gl/polyfills';
 import {load} from '@loaders.gl/core';
 import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
 
-import {Texture} from '@luma.gl/core';
+import {DynamicTexture} from '@luma.gl/engine';
 import {createScenegraphsFromGLTF, loadPBREnvironment} from '@luma.gl/gltf';
 
 test('gltf#loading', async t => {
   const webglDevice = await getWebGLTestDevice();
-  // path is relative to /test/index.html
-  const gltf = await load('data/box.glb', GLTFLoader);
+  const gltf = await load('test/data/box.glb', GLTFLoader);
 
   const processedGLTF = postProcessGLTF(gltf);
 
@@ -39,7 +38,7 @@ test('gltf#loading', async t => {
 test('gltf#animator', async t => {
   const webglDevice = await getWebGLTestDevice();
 
-  const gltf = await load('data/BoxAnimated.glb', GLTFLoader);
+  const gltf = await load('test/data/BoxAnimated.glb', GLTFLoader);
   const processedGLTF = postProcessGLTF(gltf);
 
   const {scenes, animator, gltfNodeIdToNodeMap} = createScenegraphsFromGLTF(
@@ -64,18 +63,27 @@ test('gltf#animator', async t => {
   t.end();
 });
 
-test.skip('gltf#environment', async t => {
+test('gltf#environment', async t => {
   const webglDevice = await getWebGLTestDevice();
 
   const environment = loadPBREnvironment(webglDevice, {
-    brdfLutUrl: 'data/webgl-logo-0.png',
+    brdfLutUrl: 'test/data/webgl-logo-0.png',
     getTexUrl: (type, dir, mipLevel) => `test/data/webgl-logo-${mipLevel}.png`,
     specularMipLevels: 9
   });
 
-  t.ok(environment.brdfLutTexture instanceof Texture, 'BRDF lookup texture created');
-  t.ok(environment.diffuseEnvSampler instanceof Texture, 'Diffuse environment map created');
-  t.ok(environment.specularEnvSampler instanceof Texture, 'Specular environment map created');
+  await Promise.all([
+    environment.brdfLutTexture.ready,
+    environment.diffuseEnvSampler.ready,
+    environment.specularEnvSampler.ready
+  ]);
+
+  t.ok(environment.brdfLutTexture instanceof DynamicTexture, 'BRDF lookup texture created');
+  t.ok(environment.diffuseEnvSampler instanceof DynamicTexture, 'Diffuse environment map created');
+  t.ok(
+    environment.specularEnvSampler instanceof DynamicTexture,
+    'Specular environment map created'
+  );
 
   t.end();
 });

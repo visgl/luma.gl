@@ -35,8 +35,8 @@ computePass.end();
 | `defines?` | `Record<string, boolean>` | Shader module defines passed to the assembler. |
 | `shaderInputs?` | `ShaderInputs` | Pre-created shader input manager. |
 | `bindings?` | `Record<string, Binding>` | Bound textures, samplers, storage buffers, or uniform buffers. |
-| `pipelineFactory?` | `PipelineFactory` | Factory used to create cached compute pipelines. |
-| `shaderFactory?` | `ShaderFactory` | Factory used to create cached shader resources. |
+| `pipelineFactory?` | `PipelineFactory` | Factory from `@luma.gl/core` used to create cached compute pipelines. |
+| `shaderFactory?` | `ShaderFactory` | Factory from `@luma.gl/core` used to create cached shader resources. |
 | `shaderAssembler?` | `ShaderAssembler` | WGSL shader assembler to use. |
 | `debugShaders?` | `'never' \| 'errors' \| 'warnings' \| 'always'` | Debug shader output policy. |
 
@@ -101,4 +101,5 @@ Sets the resource bindings used for subsequent dispatches.
 ## Remarks
 
 - `Computation` is compute-only and does not expose draw-style geometry or render-pass APIs.
-- For shader-module-based resource management, `Computation` follows the same `ShaderInputs` pattern as `Model`.
+- For shader-module-based resource management, `Computation` follows the same `ShaderInputs` pattern as [`Model`](/docs/api-reference/engine/model).
+- `Computation` uses [`PipelineFactory`](/docs/api-reference/core/pipeline-factory) and [`ShaderFactory`](/docs/api-reference/core/shader-factory) from `@luma.gl/core` unless you provide custom factory instances.

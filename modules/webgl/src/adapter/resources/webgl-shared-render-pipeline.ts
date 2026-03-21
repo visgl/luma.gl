@@ -48,6 +48,9 @@ export class WEBGLSharedRenderPipeline extends SharedRenderPipeline {
     }
 
     this._linkShaders();
+    // Introspection happens after linking to build wrapper-facing layout metadata.
+    // It is not a prerequisite for deciding whether a shared `WebGLProgram` can be
+    // reused; that decision must remain based on the shared-pipeline cache key alone.
     log.time(3, `RenderPipeline ${this.id} - shaderLayout introspection`)();
     this.introspectedLayout = getShaderLayoutFromGLSL(this.device.gl, this.handle);
     log.timeEnd(3, `RenderPipeline ${this.id} - shaderLayout introspection`)();

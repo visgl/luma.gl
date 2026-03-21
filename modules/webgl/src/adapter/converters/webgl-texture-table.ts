@@ -312,26 +312,6 @@ export const WEBGL_TEXTURE_FORMATS: Record<TextureFormat, WebGLFormatInfo> = {
 
 // FUNCTIONS
 
-/** Checks if a texture format is supported */
-export function isWebGLTextureFormatCapabilitiesed(
-  gl: WebGL2RenderingContext,
-  format: TextureFormat,
-  extensions: GLExtensions
-): boolean {
-  const webglTextureInfo = WEBGL_TEXTURE_FORMATS[format];
-  // Check that we have a GL constant
-  if (!webglTextureInfo?.gl) {
-    return false;
-  }
-
-  // Check extensions
-  const extension = webglTextureInfo.x;
-  if (extension) {
-    return Boolean(getWebGLExtension(gl, extension, extensions));
-  }
-  return true;
-}
-
 /** Checks if a texture format is supported, renderable, filterable etc */
 export function getTextureFormatCapabilitiesWebGL(
   gl: WebGL2RenderingContext,

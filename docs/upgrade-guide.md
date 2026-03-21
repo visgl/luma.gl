@@ -17,6 +17,7 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 - gltf module now creates `DynamicTexture` instances rather than raw `Texture`s.
 - glTF texture sampling now defaults to linear filtering when a glTF sampler omits explicit filter settings. Applications relying on the previous nearest-neighbor default should verify visual output and set sampler filters explicitly when nearest sampling is required.
 - The legacy feature flag `timer-query-webgl` has been removed. Replace checks for `timer-query-webgl` with `timestamp-query` for GPU timestamp/query support on both WebGPU and WebGL.
+- `PipelineFactory` and `ShaderFactory` now import from `@luma.gl/core` instead of `@luma.gl/engine`.
 
 ## Upgrading to v9.2
 

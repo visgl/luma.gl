@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from 'tape-promise/tape';
+import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {Buffer} from '@luma.gl/core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 
@@ -27,6 +27,46 @@ struct ColorUniforms {
   return colorUniforms.color;
 }
 `;
+
+const BUILTIN_ONLY_RENDER_SOURCE = /* WGSL */ `
+@vertex fn vertexMain(@builtin(vertex_index) vertexIndex: u32) -> @builtin(position) vec4<f32> {
+  var positions = array<vec2<f32>, 3>(
+    vec2<f32>(0.0, 0.5),
+    vec2<f32>(-0.5, -0.5),
+    vec2<f32>(0.5, -0.5)
+  );
+  let position = positions[vertexIndex];
+  return vec4<f32>(position, 0.0, 1.0);
+}
+
+@fragment fn fragmentMain() -> @location(0) vec4<f32> {
+  return vec4<f32>(1.0, 1.0, 1.0, 1.0);
+}
+`;
+
+test('RenderPipeline can infer an empty shader layout for builtin-only WGSL shaders', async t => {
+  const webgpuDevice = await getWebGPUTestDevice();
+
+  if (!webgpuDevice) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const shader = webgpuDevice.createShader({source: BUILTIN_ONLY_RENDER_SOURCE});
+  const renderPipeline = webgpuDevice.createRenderPipeline({
+    vs: shader,
+    fs: shader,
+    topology: 'triangle-list'
+  });
+
+  t.deepEqual(renderPipeline.shaderLayout.attributes, [], 'builtin-only WGSL infers no attributes');
+  t.deepEqual(renderPipeline.shaderLayout.bindings, [], 'builtin-only WGSL infers no bindings');
+
+  renderPipeline.destroy();
+  shader.destroy();
+  t.end();
+});
 
 test('RenderPipeline bind-group cache only invalidates when binding identities change', async t => {
   const webgpuDevice = await getWebGPUTestDevice();
