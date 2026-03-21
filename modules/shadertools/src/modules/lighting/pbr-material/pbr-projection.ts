@@ -35,6 +35,7 @@ export type PBRProjectionProps = {
 
 export const pbrProjection: ShaderModule<PBRProjectionProps> = {
   name: 'pbrProjection',
+  bindingLayout: [{name: 'pbrProjection', group: 0}],
   source: wgslUniformBlock,
   vs: uniformBlock,
   fs: uniformBlock,

@@ -47,7 +47,7 @@ struct lightingUniforms {
 };
 
 // Binding 0:1 is reserved for lighting (Note: could go into separate bind group as it is stable across draw calls)
-@binding(1) @group(0) var<uniform> lighting : lightingUniforms;
+@binding(0) @group(2) var<uniform> lighting : lightingUniforms;
 
 fn lighting_getPointLight(index: i32) -> PointLight {
   let light = lighting.lights[index];

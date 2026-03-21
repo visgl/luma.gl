@@ -21,6 +21,7 @@ export const gouraudMaterial: ShaderModule<GouraudMaterialProps> = {
   props: {} as GouraudMaterialProps,
 
   name: 'gouraudMaterial',
+  bindingLayout: [{name: 'gouraudMaterial', group: 3}],
   // Note these are switched between phong and gouraud
   vs: PHONG_FS.replace('phongMaterial', 'gouraudMaterial'),
   fs: PHONG_VS.replace('phongMaterial', 'gouraudMaterial'),

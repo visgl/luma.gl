@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {ComputeShaderLayout, BindingDeclaration, Binding} from '@luma.gl/core';
-import {Buffer, Sampler, Texture, TextureView, log} from '@luma.gl/core';
+import type {Binding, Bindings, ComputeShaderLayout} from '@luma.gl/core';
+import {Buffer, Sampler, Texture, TextureView, getShaderLayoutBinding, log} from '@luma.gl/core';
 import type {WebGPUDevice} from '../webgpu-device';
 import type {WebGPUBuffer} from '../resources/webgpu-buffer';
 import type {WebGPUSampler} from '../resources/webgpu-sampler';
@@ -17,7 +17,7 @@ import type {WebGPUTextureView} from '../resources/webgpu-texture-view';
 export function makeBindGroupLayout(
   device: GPUDevice,
   layout: GPUBindGroupLayout,
-  bindings: Binding[]
+  bindings: Bindings
 ): GPUBindGroupLayout {
   throw new Error('not implemented');
   // return device.createBindGroupLayout({
@@ -33,9 +33,13 @@ export function getBindGroup(
   device: WebGPUDevice,
   bindGroupLayout: GPUBindGroupLayout,
   shaderLayout: ComputeShaderLayout,
-  bindings: Record<string, Binding>
-): GPUBindGroup {
-  const entries = getBindGroupEntries(bindings, shaderLayout);
+  bindings: Bindings,
+  group: number
+): GPUBindGroup | null {
+  const entries = getBindGroupEntries(bindings, shaderLayout, group);
+  if (entries.length === 0) {
+    return null;
+  }
   device.pushErrorScope('validation');
   const bindGroup = device.handle.createBindGroup({
     layout: bindGroupLayout,
@@ -47,29 +51,14 @@ export function getBindGroup(
   return bindGroup;
 }
 
-export function getShaderLayoutBinding(
-  shaderLayout: ComputeShaderLayout,
-  bindingName: string,
-  options?: {ignoreWarnings?: boolean}
-): BindingDeclaration | null {
-  const bindingLayout = shaderLayout.bindings.find(
-    binding =>
-      binding.name === bindingName ||
-      `${binding.name.toLocaleLowerCase()}uniforms` === bindingName.toLocaleLowerCase()
-  );
-  if (!bindingLayout && !options?.ignoreWarnings) {
-    log.warn(`Binding ${bindingName} not set: Not found in shader layout.`)();
-  }
-  return bindingLayout || null;
-}
-
 /**
  * @param bindings
  * @returns
  */
 function getBindGroupEntries(
-  bindings: Record<string, Binding>,
-  shaderLayout: ComputeShaderLayout
+  bindings: Bindings,
+  shaderLayout: ComputeShaderLayout,
+  group: number
 ): GPUBindGroupEntry[] {
   const entries: GPUBindGroupEntry[] = [];
 
@@ -81,7 +70,7 @@ function getBindGroupEntries(
 
     // Mirror the WebGL path: when both `foo` and `fooUniforms` exist in the bindings map,
     // prefer the exact shader binding name and ignore the alias entry.
-    if (!isShadowedAlias) {
+    if (!isShadowedAlias && bindingLayout?.group === group) {
       const entry = bindingLayout
         ? getBindGroupEntry(value, bindingLayout.location, undefined, bindingName)
         : null;
@@ -95,7 +84,9 @@ function getBindGroupEntries(
           ignoreWarnings: true
         });
         const samplerEntry = samplerBindingLayout
-          ? getBindGroupEntry(value, samplerBindingLayout.location, {sampler: true}, bindingName)
+          ? samplerBindingLayout.group === group
+            ? getBindGroupEntry(value, samplerBindingLayout.location, {sampler: true}, bindingName)
+            : null
           : null;
         if (samplerEntry) {
           entries.push(samplerEntry);

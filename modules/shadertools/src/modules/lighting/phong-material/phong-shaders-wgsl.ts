@@ -10,7 +10,7 @@ struct phongMaterialUniforms {
   specularColor: vec3<f32>,
 };
 
-@binding(2) @group(0) var<uniform> phongMaterial : phongMaterialUniforms;
+@binding(0) @group(3) var<uniform> phongMaterial : phongMaterialUniforms;
 
 fn lighting_getLightColor(surfaceColor: vec3<f32>, light_direction: vec3<f32>, view_direction: vec3<f32>, normal_worldspace: vec3<f32>, color: vec3<f32>) -> vec3<f32> {
   let halfway_direction: vec3<f32> = normalize(light_direction + view_direction);

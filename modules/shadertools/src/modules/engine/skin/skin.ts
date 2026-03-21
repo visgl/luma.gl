@@ -54,6 +54,7 @@ export const skin = {
   uniforms: {} as SkinUniforms,
 
   name: 'skin',
+  bindingLayout: [{name: 'skin', group: 0}],
   dependencies: [],
   source,
   vs,

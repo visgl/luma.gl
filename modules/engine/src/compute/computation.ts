@@ -20,6 +20,10 @@ import {
 import {type ShaderModule, type PlatformInfo, ShaderAssembler} from '@luma.gl/shadertools';
 import {type TypedArray, isNumericArray} from '@math.gl/types';
 import {ShaderInputs} from '../shader-inputs';
+import {
+  mergeShaderModuleBindingsIntoLayout,
+  shaderModuleHasUniforms
+} from '../utils/shader-module-utils';
 import {uid} from '../utils/uid';
 // import {getDebugTableForShaderLayout} from '../debug/debug-shader-layout';
 
@@ -133,17 +137,15 @@ export class Computation {
     this.shaderInputs = props.shaderInputs || new ShaderInputs(moduleMap);
     this.setShaderInputs(this.shaderInputs);
 
-    // Support WGSL shader layout introspection
-    // TODO - Don't modify props!!
-    // @ts-expect-error method on WebGPUDevice
-    this.props.shaderLayout ||= device.getShaderLayout(this.props.source);
-
     // Setup shader assembler
     const platformInfo = getPlatformInfo(device);
 
     // Extract modules from shader inputs if not supplied
     const modules =
       (this.props.modules?.length > 0 ? this.props.modules : this.shaderInputs?.getModules()) || [];
+
+    this.props.shaderLayout =
+      mergeShaderModuleBindingsIntoLayout(this.props.shaderLayout, modules) || null;
 
     this.pipelineFactory =
       props.pipelineFactory || PipelineFactory.getDefaultPipelineFactory(this.device);
@@ -158,6 +160,14 @@ export class Computation {
     this.source = source;
     // @ts-ignore
     this._getModuleUniforms = getUniforms;
+    const inferredShaderLayout = (
+      device as Device & {getShaderLayout?: (source: string) => any}
+    ).getShaderLayout?.(this.source);
+    this.props.shaderLayout =
+      mergeShaderModuleBindingsIntoLayout(
+        this.props.shaderLayout || inferredShaderLayout || null,
+        modules
+      ) || null;
 
     // Create the pipeline
     // @note order is important
@@ -200,7 +210,7 @@ export class Computation {
       this.pipeline.setBindings(this.bindings);
       computePass.setPipeline(this.pipeline);
       // @ts-expect-error
-      computePass.setBindings([]);
+      computePass.setBindings({});
 
       computePass.dispatch(x, y, z);
     } finally {
@@ -232,9 +242,11 @@ export class Computation {
     this.shaderInputs = shaderInputs;
     this._uniformStore = new UniformStore(this.shaderInputs.modules);
     // Create uniform buffer bindings for all modules
-    for (const moduleName of Object.keys(this.shaderInputs.modules)) {
-      const uniformBuffer = this._uniformStore.getManagedUniformBuffer(this.device, moduleName);
-      this.bindings[`${moduleName}Uniforms`] = uniformBuffer;
+    for (const [moduleName, module] of Object.entries(this.shaderInputs.modules)) {
+      if (shaderModuleHasUniforms(module)) {
+        const uniformBuffer = this._uniformStore.getManagedUniformBuffer(this.device, moduleName);
+        this.bindings[`${moduleName}Uniforms`] = uniformBuffer;
+      }
     }
   }
 

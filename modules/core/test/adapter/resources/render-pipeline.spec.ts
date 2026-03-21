@@ -11,7 +11,7 @@ struct ColorUniforms {
   color: vec4<f32>
 };
 
-@group(0) @binding(0) var<uniform> colorUniforms: ColorUniforms;
+@group(3) @binding(0) var<uniform> colorUniforms: ColorUniforms;
 
 @vertex fn vertexMain(@builtin(vertex_index) vertexIndex: u32) -> @builtin(position) vec4<f32> {
   var positions = array<vec2<f32>, 3>(
@@ -83,7 +83,7 @@ test('RenderPipeline bind-group cache only invalidates when binding identities c
     fs: shader,
     shaderLayout: {
       attributes: [],
-      bindings: [{name: 'colorUniforms', type: 'uniform', group: 0, location: 0}]
+      bindings: [{name: 'colorUniforms', type: 'uniform', group: 3, location: 0}]
     }
   });
 
@@ -99,10 +99,10 @@ test('RenderPipeline bind-group cache only invalidates when binding identities c
   });
 
   renderPipeline.setBindings({colorUniforms: firstBuffer});
-  const firstBindGroup = (renderPipeline as any)._getBindGroup();
+  const firstBindGroup = (renderPipeline as any)._getBindGroup(undefined, 3);
 
   renderPipeline.setBindings({colorUniforms: firstBuffer});
-  const secondBindGroup = (renderPipeline as any)._getBindGroup();
+  const secondBindGroup = (renderPipeline as any)._getBindGroup(undefined, 3);
   t.equal(
     secondBindGroup,
     firstBindGroup,
@@ -110,8 +110,12 @@ test('RenderPipeline bind-group cache only invalidates when binding identities c
   );
 
   renderPipeline.setBindings({colorUniforms: secondBuffer});
-  t.equal((renderPipeline as any)._bindGroup, null, 'render bind group cache is cleared on change');
-  const thirdBindGroup = (renderPipeline as any)._getBindGroup();
+  t.equal(
+    (renderPipeline as any)._bindGroups[3],
+    null,
+    'render bind group cache is cleared on change'
+  );
+  const thirdBindGroup = (renderPipeline as any)._getBindGroup(undefined, 3);
   t.notEqual(
     thirdBindGroup,
     firstBindGroup,
@@ -119,7 +123,7 @@ test('RenderPipeline bind-group cache only invalidates when binding identities c
   );
 
   renderPipeline.setBindings({colorUniforms: secondBuffer});
-  const fourthBindGroup = (renderPipeline as any)._getBindGroup();
+  const fourthBindGroup = (renderPipeline as any)._getBindGroup(undefined, 3);
   t.equal(
     fourthBindGroup,
     thirdBindGroup,

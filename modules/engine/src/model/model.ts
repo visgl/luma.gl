@@ -40,6 +40,10 @@ import {debugFramebuffer} from '../debug/debug-framebuffer';
 import {deepEqual} from '../utils/deep-equal';
 import {BufferLayoutHelper} from '../utils/buffer-layout-helper';
 import {sortedBufferLayoutByShaderSourceLocations} from '../utils/buffer-layout-order';
+import {
+  mergeShaderModuleBindingsIntoLayout,
+  shaderModuleHasUniforms
+} from '../utils/shader-module-utils';
 import {uid} from '../utils/uid';
 import {ShaderInputs} from '../shader-inputs';
 import {DynamicTexture} from '../dynamic-texture/dynamic-texture';
@@ -263,6 +267,9 @@ export class Model {
       // @ts-ignore shaderInputs is assigned in setShaderInputs above.
       (this.props.modules?.length > 0 ? this.props.modules : this.shaderInputs?.getModules()) || [];
 
+    this.props.shaderLayout =
+      mergeShaderModuleBindingsIntoLayout(this.props.shaderLayout, modules) || null;
+
     const isWebGPU = this.device.type === 'webgpu';
 
     // WebGPU
@@ -279,8 +286,14 @@ export class Model {
       // @ts-expect-error
       this._getModuleUniforms = getUniforms;
       // Extract shader layout after modules have been added to WGSL source, to include any bindings added by modules
-      // @ts-expect-error Method on WebGPUDevice
-      this.props.shaderLayout ||= device.getShaderLayout(this.source);
+      const inferredShaderLayout = (
+        device as Device & {getShaderLayout?: (source: string) => any}
+      ).getShaderLayout?.(this.source);
+      this.props.shaderLayout =
+        mergeShaderModuleBindingsIntoLayout(
+          this.props.shaderLayout || inferredShaderLayout || null,
+          modules
+        ) || null;
     } else {
       // GLSL
       const {vs, fs, getUniforms} = this.props.shaderAssembler.assembleGLSLShaderPair({
@@ -924,10 +937,6 @@ export class Model {
   }
 }
 
-function shaderModuleHasUniforms(module: ShaderModule): boolean {
-  return Boolean(module.uniformTypes && !isObjectEmpty(module.uniformTypes));
-}
-
 // HELPERS
 
 /** Create a shadertools platform info from the Device */
@@ -940,14 +949,4 @@ export function getPlatformInfo(device: Device): PlatformInfo {
     // HACK - we pretend that the DeviceFeatures is a Set, it has a similar API
     features: device.features as unknown as Set<DeviceFeature>
   };
-}
-
-/** Returns true if given object is empty, false otherwise. */
-function isObjectEmpty(obj: object): boolean {
-  // @ts-ignore key is unused
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  for (const key in obj) {
-    return false;
-  }
-  return true;
 }

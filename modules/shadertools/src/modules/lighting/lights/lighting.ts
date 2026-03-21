@@ -165,6 +165,7 @@ export const lighting = {
   },
 
   defaultUniforms: createDefaultLightingUniforms(),
+  bindingLayout: [{name: 'lighting', group: 2}],
   source: lightingUniformsWGSL,
   vs: lightingUniformsGLSL,
   fs: lightingUniformsGLSL,

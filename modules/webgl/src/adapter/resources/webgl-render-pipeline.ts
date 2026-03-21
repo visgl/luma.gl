@@ -8,11 +8,12 @@ import type {
   PrimitiveTopology,
   ShaderLayout,
   UniformValue,
-  Binding,
+  Bindings,
+  BindingsByGroup,
   RenderPass,
   VertexArray
 } from '@luma.gl/core';
-import {RenderPipeline, log} from '@luma.gl/core';
+import {RenderPipeline, flattenBindingsByGroup, log, normalizeBindingsByGroup} from '@luma.gl/core';
 // import {getAttributeInfosFromLayouts} from '@luma.gl/core';
 import {GL} from '@luma.gl/constants';
 
@@ -45,7 +46,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
   introspectedLayout: ShaderLayout;
 
   /** Compatibility path for direct pipeline.setBindings() usage */
-  bindings: Record<string, Binding> = {};
+  bindings: Bindings = {};
   /** Compatibility path for direct pipeline.uniforms usage */
   uniforms: Record<string, UniformValue> = {};
   /** WebGL varyings */
@@ -96,8 +97,11 @@ export class WEBGLRenderPipeline extends RenderPipeline {
    * Compatibility shim for code paths that still set bindings on the pipeline.
    * Shared-model draws pass bindings per draw and do not rely on this state.
    */
-  setBindings(bindings: Record<string, Binding>, options?: {disableWarnings?: boolean}): void {
-    for (const [name, value] of Object.entries(bindings)) {
+  setBindings(bindings: Bindings | BindingsByGroup, options?: {disableWarnings?: boolean}): void {
+    const flatBindings = flattenBindingsByGroup(
+      normalizeBindingsByGroup(this.shaderLayout, bindings)
+    );
+    for (const [name, value] of Object.entries(flatBindings)) {
       const binding =
         this.shaderLayout.bindings.find(binding_ => binding_.name === name) ||
         this.shaderLayout.bindings.find(binding_ => binding_.name === `${name}Uniforms`);
@@ -164,7 +168,8 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     firstInstance?: number;
     baseVertex?: number;
     transformFeedback?: WEBGLTransformFeedback;
-    bindings?: Record<string, Binding>;
+    bindings?: Bindings;
+    bindGroups?: BindingsByGroup;
     uniforms?: Record<string, UniformValue>;
   }): boolean {
     this._syncLinkStatus();
@@ -183,7 +188,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
       // firstInstance,
       // baseVertex,
       transformFeedback,
-      bindings = this.bindings,
+      bindings = options.bindGroups ? flattenBindingsByGroup(options.bindGroups) : this.bindings,
       uniforms = this.uniforms
     } = options;
 
@@ -269,7 +274,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
    * Update a texture if needed (e.g. from video)
    * Note: This is currently done before every draw call
    */
-  _areTexturesRenderable(bindings: Record<string, Binding>) {
+  _areTexturesRenderable(bindings: Bindings) {
     let texturesRenderable = true;
 
     for (const bindingInfo of this.shaderLayout.bindings) {
@@ -290,7 +295,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
   }
 
   /** Apply any bindings (before each draw call) */
-  _applyBindings(bindings: Record<string, Binding>, _options?: {disableWarnings?: boolean}) {
+  _applyBindings(bindings: Bindings, _options?: {disableWarnings?: boolean}) {
     this._syncLinkStatus();
 
     // If we are using async linking, we need to wait until linking completes
@@ -321,15 +326,13 @@ export class WEBGLRenderPipeline extends RenderPipeline {
           if (value instanceof WEBGLBuffer) {
             gl.bindBufferBase(GL.UNIFORM_BUFFER, uniformBufferIndex, value.handle);
           } else {
+            const bufferBinding = value as {buffer: WEBGLBuffer; offset?: number; size?: number};
             gl.bindBufferRange(
               GL.UNIFORM_BUFFER,
               uniformBufferIndex,
-              // @ts-expect-error
-              value.buffer.handle,
-              // @ts-expect-error
-              value.offset || 0,
-              // @ts-expect-error
-              value.size || value.buffer.byteLength - value.offset
+              bufferBinding.buffer.handle,
+              bufferBinding.offset || 0,
+              bufferBinding.size || bufferBinding.buffer.byteLength - (bufferBinding.offset || 0)
             );
           }
           uniformBufferIndex += 1;
@@ -408,7 +411,8 @@ function mergeShaderLayout(baseLayout: ShaderLayout, overrideLayout: ShaderLayou
   // Deep clone the base layout
   const mergedLayout: ShaderLayout = {
     ...baseLayout,
-    attributes: baseLayout.attributes.map(attribute => ({...attribute}))
+    attributes: baseLayout.attributes.map(attribute => ({...attribute})),
+    bindings: baseLayout.bindings.map(binding => ({...binding}))
   };
   // Merge the attributes
   for (const attribute of overrideLayout?.attributes || []) {
@@ -419,6 +423,15 @@ function mergeShaderLayout(baseLayout: ShaderLayout, overrideLayout: ShaderLayou
       baseAttribute.type = attribute.type || baseAttribute.type;
       baseAttribute.stepMode = attribute.stepMode || baseAttribute.stepMode;
     }
+  }
+
+  for (const binding of overrideLayout?.bindings || []) {
+    const baseBinding = mergedLayout.bindings.find(base => base.name === binding.name);
+    if (!baseBinding) {
+      log.warn(`shader layout binding ${binding.name} not present in shader`);
+      continue;
+    }
+    Object.assign(baseBinding, binding);
   }
   return mergedLayout;
 }
