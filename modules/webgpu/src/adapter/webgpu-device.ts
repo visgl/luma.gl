@@ -339,11 +339,22 @@ export class WebGPUDevice extends Device {
     }
     const profiler = getWebGPUCpuHotspotProfiler(this);
     const startTime = profiler ? getTimestamp() : 0;
-    this.handle.popErrorScope().then((error: GPUError | null) => {
-      if (error) {
-        handler(error);
-      }
-    });
+    this.handle
+      .popErrorScope()
+      .then((error: GPUError | null) => {
+        if (error) {
+          handler(error);
+        }
+      })
+      .catch((error: unknown) => {
+        if (this._shouldIgnorePopErrorScopeRejection(error)) {
+          return;
+        }
+
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        this.reportError(new Error(`${this} popErrorScope failed: ${errorMessage}`), this)();
+        this.debug();
+      });
     if (profiler) {
       profiler.errorScopePopCount = (profiler.errorScopePopCount || 0) + 1;
       profiler.errorScopeTimeMs = (profiler.errorScopeTimeMs || 0) + (getTimestamp() - startTime);
@@ -389,6 +400,14 @@ export class WebGPUDevice extends Device {
       shadingLanguage: 'wgsl',
       shadingLanguageVersion: 100
     };
+  }
+
+  private _shouldIgnorePopErrorScopeRejection(error: unknown): boolean {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return (
+      errorMessage.includes('Instance dropped in popErrorScope') &&
+      (this._isLost || this.info.gpu === 'software' || this.info.gpuType === 'cpu' || Boolean(this.info.fallback))
+    );
   }
 
   protected _getFeatures(): DeviceFeatures {
