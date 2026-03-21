@@ -28,6 +28,7 @@ export function getVertexBufferLayout(
 ): GPUVertexBufferLayout[] {
   const vertexBufferLayouts: GPUVertexBufferLayout[] = [];
   const usedAttributes = new Set<string>();
+  const shaderAttributes = shaderLayout.attributes || [];
 
   // First handle any buffers mentioned in `bufferLayout`
   for (const mapping of bufferLayout) {
@@ -100,7 +101,7 @@ export function getVertexBufferLayout(
   }
 
   // Add any non-mapped attributes - TODO - avoid hardcoded types
-  for (const attribute of shaderLayout.attributes) {
+  for (const attribute of shaderAttributes) {
     if (!usedAttributes.has(attribute.name)) {
       vertexBufferLayouts.push({
         arrayStride: vertexFormatDecoder.getVertexFormatInfo('float32x3').byteLength,
@@ -135,6 +136,7 @@ export function getBufferSlots(
   bufferLayout: BufferLayout[]
 ): Record<string, number> {
   const usedAttributes = new Set<string>();
+  const shaderAttributes = shaderLayout.attributes || [];
   let bufferSlot = 0;
   const bufferSlots: Record<string, number> = {};
 
@@ -153,7 +155,7 @@ export function getBufferSlots(
   }
 
   // Add any non-mapped attributes
-  for (const attribute of shaderLayout.attributes) {
+  for (const attribute of shaderAttributes) {
     if (!usedAttributes.has(attribute.name)) {
       bufferSlots[attribute.name] = bufferSlot++;
     }
@@ -173,7 +175,7 @@ function findAttributeLayout(
   attributeNames?: Set<string>,
   options?: {pipelineId?: string}
 ): AttributeDeclaration | null {
-  const attribute = shaderLayout.attributes.find(attribute_ => attribute_.name === name);
+  const attribute = shaderLayout.attributes?.find(attribute_ => attribute_.name === name);
   if (!attribute) {
     const pipelineContext = options?.pipelineId
       ? `RenderPipeline(${options.pipelineId})`

@@ -40,6 +40,10 @@ export class WebGPURenderPipeline extends RenderPipeline {
   constructor(device: WebGPUDevice, props: RenderPipelineProps) {
     super(device, props);
     this.device = device;
+    this.shaderLayout ||= this.device.getShaderLayout((props.vs as WebGPUShader).source) || {
+      attributes: [],
+      bindings: []
+    };
     this.handle = this.props.handle as GPURenderPipeline;
     let descriptor: GPURenderPipelineDescriptor | null = null;
     if (!this.handle) {

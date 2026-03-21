@@ -1,6 +1,6 @@
 import babel from '@babel/core';
 import plugin from '../../dev-modules/babel-plugin-inline-webgl-constants/index.js';
-import test from 'test/utils/vitest-tape';
+import test from '@luma.gl/devtools-extensions/tape-test-utils';
 
 const ES6_ENV = {
   targets: {chrome: '60'},

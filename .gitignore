@@ -16,6 +16,7 @@ npm-debug.log
 stats.json
 .reify-cache
 .cache
+.playwright-artifacts/
 jscpd-report.md
 
 tsconfig.tsbuildinfo

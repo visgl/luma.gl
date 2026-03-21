@@ -5,7 +5,7 @@
 import {convertSampler} from '@luma.gl/gltf/webgl-to-webgpu/convert-webgl-sampler';
 import {GLEnum} from '@luma.gl/gltf/webgl-to-webgpu/gltf-webgl-constants';
 import {convertSamplerParametersToWebGL} from '@luma.gl/webgl/adapter/converters/sampler-parameters';
-import type {TapeTestFunction} from 'test/utils/vitest-tape';
+import type {TapeTestFunction} from '@luma.gl/devtools-extensions/tape-test-utils';
 
 export function registerConvertWebGLSamplerTests(test: TapeTestFunction): void {
   test('pbr#convertSampler#minFilter', async t => {

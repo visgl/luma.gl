@@ -104,6 +104,7 @@
   // Note: an "include": [] section dramatically limits coverage.
   // Better to explicitly exclude things.
   "include": [
+    "devtools/**/*",
     "modules/*/src",
     "modules/*/test",
     "examples/**/*",
