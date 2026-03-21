@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {splitUniformsAndBindings} from '@luma.gl/engine/model/split-uniforms-and-bindings';
-import type {TapeTestFunction} from 'test/utils/vitest-tape';
+import type {TapeTestFunction} from '@luma.gl/devtools-extensions/tape-test-utils';
 
 export function registerSplitUniformsAndBindingsTests(test: TapeTestFunction): void {
   test('splitUniformsAndBindings', t => {

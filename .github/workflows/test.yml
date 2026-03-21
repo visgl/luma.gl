@@ -11,11 +11,6 @@ jobs:
   test:
     runs-on: ubuntu-22.04
     timeout-minutes: 15
-    strategy:
-      matrix:
-        node-version: [22]
-
-        
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -29,17 +24,17 @@ jobs:
       - name: Setup Node (with Corepack)
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version-file: '.nvmrc'
           cache: 'yarn' # or 'pnpm', 'npm' depending on your package manager
           cache-dependency-path: |
             yarn.lock
             website/yarn.lock
 
       - name: Install dependencies
-        run: yarn install --frozen-lockfile  
+        run: yarn install --immutable
 
       - name: Install Playwright Chromium
-        run: yarn playwright install chromium
+        run: yarn playwright:install
   
       - name: Build code
         run: |
@@ -97,10 +92,6 @@ jobs:
   website:
     runs-on: ubuntu-22.04
     timeout-minutes: 15
-    strategy:
-      matrix:
-        node-version: [22]
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -114,17 +105,17 @@ jobs:
       - name: Setup Node (with Corepack)
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version-file: '.nvmrc'
           cache: 'yarn'
           cache-dependency-path: |
             yarn.lock
             website/yarn.lock
 
       - name: Install root dependencies
-        run: yarn install --frozen-lockfile
+        run: yarn install --immutable
 
       - name: Install website dependencies
-        run: yarn install --frozen-lockfile
+        run: yarn install --immutable
         working-directory: website
 
       - name: Build website

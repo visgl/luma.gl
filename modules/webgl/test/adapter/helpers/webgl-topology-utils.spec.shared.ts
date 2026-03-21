@@ -10,7 +10,7 @@ import {
   getPrimitiveDrawMode,
   getVertexCount
 } from '@luma.gl/webgl/adapter/helpers/webgl-topology-utils';
-import type {TapeTestFunction} from 'test/utils/vitest-tape';
+import type {TapeTestFunction} from '@luma.gl/devtools-extensions/tape-test-utils';
 
 export function registerWebGLTopologyUtilsTests(test: TapeTestFunction): void {
   test('getPrimitiveDrawMode', t => {

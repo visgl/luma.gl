@@ -4,7 +4,7 @@
 
 import type {UniformValue} from '@luma.gl/core';
 import {gouraudMaterial} from '@luma.gl/shadertools';
-import type {TapeTestFunction} from 'test/utils/vitest-tape';
+import type {TapeTestFunction} from '@luma.gl/devtools-extensions/tape-test-utils';
 
 export function registerGouraudMaterialTests(test: TapeTestFunction): void {
   test('shadertools#gouraudMaterial', t => {

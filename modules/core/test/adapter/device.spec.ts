@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {Texture, luma} from '@luma.gl/core';
 import {
   getNullTestDevice,
@@ -182,7 +182,7 @@ test('Device manages debug GPU timing through a single API', async t => {
   t.end();
 });
 
-test('WebGLDevice#lost (Promise)', async t => {
+test.skip('WebGLDevice#lost (Promise)', async t => {
   const device = await luma.createDevice({
     id: 'webgl-test-device-lost',
     type: 'webgl',

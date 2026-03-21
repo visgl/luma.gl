@@ -1,11 +1,24 @@
 # AGENTS.md
  
 ## Setup commands
+- Select Node version: `nvm use`
 - Install deps: `yarn install`
 - Check types: `yarn build`
 - Check lint and formatting: `yarn lint`
 - Run tests: `yarm test`
 - Check website build `cd website; yarn; yarn build`
+
+## LLM-friendly test setup
+- Use the repo root scripts as the stable interface:
+  - `yarn test-node`
+  - `yarn test-browser`
+  - `yarn test-headless`
+  - `yarn test-coverage`
+  - `yarn website-debug`
+- Those commands delegate into the local `@luma.gl/devtools-extensions` workspace.
+- Reusable Vitest and Playwright wiring lives under [`dev-modules/devtools-extensions`](/Users/ibgreen/code/luma.gl/dev-modules/devtools-extensions).
+- Repo-specific overrides for that tooling live in [`\.ocularrc.js`](/Users/ibgreen/code/luma.gl/.ocularrc.js).
+- For details, see [dev-modules/devtools-extensions/docs/llm-friendly-test-setup.md](/Users/ibgreen/code/luma.gl/dev-modules/devtools-extensions/docs/llm-friendly-test-setup.md).
 
 ## Before committing
 - Format code: `yarn lint fix`
