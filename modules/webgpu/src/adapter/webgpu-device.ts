@@ -359,11 +359,22 @@ export class WebGPUDevice extends Device {
     const vendor = this.adapterInfo.vendor || this.adapter.__brand || 'unknown';
     const renderer = driver || '';
     const version = driverVersion || '';
+    const fallback = Boolean(
+      (this.adapterInfo as any).isFallbackAdapter ??
+        (this.adapter as any).isFallbackAdapter ??
+        false
+    );
+    const softwareRenderer = /SwiftShader/i.test(
+      `${vendor} ${renderer} ${this.adapterInfo.architecture || ''}`
+    );
 
-    const gpu = vendor === 'apple' ? 'apple' : 'unknown'; // 'nvidia' | 'amd' | 'intel' | 'apple' | 'unknown',
+    const gpu =
+      vendor === 'apple' ? 'apple' : softwareRenderer || fallback ? 'software' : 'unknown'; // 'nvidia' | 'amd' | 'intel' | 'apple' | 'unknown',
     const gpuArchitecture = this.adapterInfo.architecture || 'unknown';
     const gpuBackend = (this.adapterInfo as any).backend || 'unknown';
-    const gpuType = ((this.adapterInfo as any).type || '').split(' ')[0].toLowerCase() || 'unknown';
+    const gpuType =
+      ((this.adapterInfo as any).type || '').split(' ')[0].toLowerCase() ||
+      (softwareRenderer || fallback ? 'cpu' : 'unknown');
 
     return {
       type: 'webgpu',
@@ -374,6 +385,7 @@ export class WebGPUDevice extends Device {
       gpuType,
       gpuBackend,
       gpuArchitecture,
+      fallback,
       shadingLanguage: 'wgsl',
       shadingLanguageVersion: 100
     };

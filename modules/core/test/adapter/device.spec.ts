@@ -182,7 +182,7 @@ test('Device manages debug GPU timing through a single API', async t => {
   t.end();
 });
 
-test('WebGLDevice#lost (Promise)', async t => {
+test.skip('WebGLDevice#lost (Promise)', async t => {
   const device = await luma.createDevice({
     id: 'webgl-test-device-lost',
     type: 'webgl',

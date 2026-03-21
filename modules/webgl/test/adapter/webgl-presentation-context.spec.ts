@@ -4,7 +4,12 @@
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 
-import {getNullTestDevice, getPresentationWebGLTestDevice, getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {
+  getNullTestDevice,
+  getPresentationWebGLTestDevice,
+  getWebGLTestDevice,
+  getWebGPUTestDevice
+} from '@luma.gl/test-utils';
 
 test('WebGLPresentationContext delegates framebuffer sizing and present()', async t => {
   const device = await getPresentationWebGLTestDevice();
@@ -22,10 +27,7 @@ test('WebGLPresentationContext delegates framebuffer sizing and present()', asyn
 
   const originalGetContext = destinationCanvas.getContext.bind(destinationCanvas);
   const drawImageCalls: unknown[][] = [];
-  destinationCanvas.getContext = ((
-    contextId: '2d',
-    options?: CanvasRenderingContext2DSettings
-  ) => {
+  destinationCanvas.getContext = ((contextId: '2d', options?: CanvasRenderingContext2DSettings) => {
     const context = originalGetContext(contextId, options);
     if (contextId === '2d' && context) {
       const originalDrawImage = context.drawImage.bind(context);

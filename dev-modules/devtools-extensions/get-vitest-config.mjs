@@ -20,6 +20,7 @@ export async function getVitestConfig(options = {}) {
   const excludePatterns = vitestConfig.excludePatterns || [];
   const browserName = vitestConfig.browserName || 'chromium';
   const testTimeout = vitestConfig.testTimeout || 60_000;
+  const softwareGpu = Boolean(vitestConfig.softwareGpu);
   const tsconfigAliases = getTsconfigAliases(tsconfigProjects);
 
   const createPlaywrightProvider = () =>
@@ -27,7 +28,7 @@ export async function getVitestConfig(options = {}) {
       launchOptions: getPlaywrightLaunchOptions({
         ocularConfig,
         channel: vitestConfig.channel,
-        softwareGpu: vitestConfig.softwareGpu,
+        softwareGpu,
         launchOptions: vitestConfig.launchOptions
       })
     });

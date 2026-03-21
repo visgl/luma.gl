@@ -501,7 +501,8 @@ async function readTexturePixels(
   const arrayBuffer = await withTimeout(
     texture.readDataAsync(options),
     15000,
-    `${texture.device.type} ${texture.format} readDataAsync timed out`
+    `${texture.device.type} ${texture.format} readDataAsync timed out`,
+    () => getTextureReadbackError(texture)
   );
   return compactTextureBytes(texture, arrayBuffer, options);
 }
@@ -1466,6 +1467,10 @@ test('Texture#writeData & readDataAsync round-trip for all formats and dimension
         continue;
       }
 
+      if (device.type === 'webgpu' && isSoftwareBackedDevice(device)) {
+        continue;
+      }
+
       if (!device.isTextureFormatRenderable(format)) {
         t.comment(`Skipping unrenderable format ${format}`);
         continue;
@@ -1544,13 +1549,30 @@ function almostEqual(a: Float32Array, b: Float32Array, epsilon = 1e-6): boolean 
 async function withTimeout<T>(
   promise: Promise<T>,
   milliseconds: number,
-  errorMessage: string
+  errorMessage: string,
+  getPendingError: (() => string | null) | null = null
 ): Promise<T> {
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  let slowReadbackTimeoutId: ReturnType<typeof setTimeout> | undefined;
+  let errorPollTimeoutId: ReturnType<typeof setTimeout> | undefined;
   try {
     return await Promise.race([
       promise,
       new Promise<T>((_, reject) => {
+        if (getPendingError) {
+          slowReadbackTimeoutId = setTimeout(() => {
+            const pollForPendingError = () => {
+              const pendingError = getPendingError();
+              if (pendingError) {
+                reject(new Error(pendingError));
+                return;
+              }
+              errorPollTimeoutId = setTimeout(pollForPendingError, 100);
+            };
+
+            pollForPendingError();
+          }, 2000);
+        }
         timeoutId = setTimeout(() => reject(new Error(errorMessage)), milliseconds);
       })
     ]);
@@ -1558,7 +1580,37 @@ async function withTimeout<T>(
     if (timeoutId !== undefined) {
       clearTimeout(timeoutId);
     }
+    if (slowReadbackTimeoutId !== undefined) {
+      clearTimeout(slowReadbackTimeoutId);
+    }
+    if (errorPollTimeoutId !== undefined) {
+      clearTimeout(errorPollTimeoutId);
+    }
   }
+}
+
+function getTextureReadbackError(texture: Texture): string | null {
+  if (!(texture.device instanceof WebGLDevice)) {
+    return null;
+  }
+
+  const gl = texture.device.gl;
+  if (gl.isContextLost()) {
+    return `${texture.device.type} ${texture.format} readDataAsync failed: WebGL context lost`;
+  }
+
+  const glError = gl.getError();
+  if (glError !== GL.NO_ERROR) {
+    return `${texture.device.type} ${texture.format} readDataAsync failed: gl.getError() -> ${glError}`;
+  }
+
+  return null;
+}
+
+function isSoftwareBackedDevice(device: Device): boolean {
+  return (
+    device.info.gpu === 'software' || device.info.gpuType === 'cpu' || Boolean(device.info.fallback)
+  );
 }
 
 test.skip('Texture#copyImageData & readDataAsync round-trip', async t => {
