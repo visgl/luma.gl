@@ -66,11 +66,10 @@ export async function runWebsiteExample(options = {}) {
           ocularConfig
         });
 
-    const page =
-      (await findTargetPage(browserHandle.browser, targetTab)) ||
-      (await createPage(browserHandle.browser, targetUrl));
+    const matchedPage = await findTargetPage(browserHandle.browser, targetTab);
+    const page = matchedPage || (await createPage(browserHandle.browser, targetUrl));
 
-    if (page.url() !== targetUrl) {
+    if (!usingAttachMode && page.url() !== targetUrl) {
       await page.goto(targetUrl, {waitUntil: 'networkidle'});
     }
 
