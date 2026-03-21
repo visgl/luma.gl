@@ -2404,6 +2404,20 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@luma.gl/devtools@workspace:devtools":
+  version: 0.0.0-use.local
+  resolution: "@luma.gl/devtools@workspace:devtools"
+  dependencies:
+    "@vitest/browser": "npm:^4.0.18"
+    "@vitest/browser-playwright": "npm:^4.0.18"
+    "@vitest/coverage-v8": "npm:^4.0.18"
+    playwright: "npm:^1.56.1"
+    vite: "npm:^7.3.1"
+    vite-tsconfig-paths: "npm:^5.1.4"
+    vitest: "npm:^4.0.18"
+  languageName: unknown
+  linkType: soft
+
 "@luma.gl/effects@npm:9.3.0-alpha.6, @luma.gl/effects@workspace:modules/effects":
   version: 0.0.0-use.local
   resolution: "@luma.gl/effects@workspace:modules/effects"
@@ -10170,16 +10184,9 @@ __metadata:
     "@types/tape-promise": "npm:^4.0.6"
     "@vis.gl/dev-tools": "npm:^1.0.2"
     "@vis.gl/ts-plugins": "npm:^1.0.2"
-    "@vitest/browser": "npm:^4.0.18"
-    "@vitest/browser-playwright": "npm:^4.0.18"
-    "@vitest/coverage-v8": "npm:^4.0.18"
     eslint-plugin-tree-shaking: "npm:^1.12.2"
-    playwright: "npm:^1.56.1"
     pre-commit: "npm:^1.2.2"
     puppeteer: "npm:^24.39.0"
-    vite: "npm:^7.3.1"
-    vite-tsconfig-paths: "npm:^5.1.4"
-    vitest: "npm:^4.0.18"
   languageName: unknown
   linkType: soft
 
