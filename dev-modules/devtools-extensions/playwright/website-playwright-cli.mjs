@@ -5,7 +5,7 @@ import {loadOcularConfig} from '../load-ocular-config.mjs';
 import {runWebsiteExample} from './run-website-example.mjs';
 
 const DEFAULT_BASE_URL = 'http://127.0.0.1:3000';
-const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 
 export async function runWebsitePlaywrightCli(argv = process.argv.slice(2)) {
   const options = parseArguments(argv);

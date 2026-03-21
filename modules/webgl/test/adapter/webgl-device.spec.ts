@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {webgl2Adapter} from '@luma.gl/webgl';
 
 // TODO - duplicates core spec?

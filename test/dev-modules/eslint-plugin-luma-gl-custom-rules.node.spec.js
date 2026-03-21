@@ -1,4 +1,4 @@
-import test from 'test/utils/vitest-tape';
+import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import customRulesPlugin from '../../dev-modules/eslint-plugin-luma-gl-custom-rules/index.cjs';
 import {RuleTester} from 'eslint';
 

@@ -28,7 +28,7 @@ const config = {
   },
 
   // Local extensions for the in-repo devtools workspace.
-  // Reusable logic lives under `devtools/`; repo-specific policy belongs here.
+  // Reusable logic lives under `dev-modules/devtools-extensions/`; repo-specific policy belongs here.
   devtools: {
     // Local Playwright configuration layered on top of the reusable runner.
     playwright: {

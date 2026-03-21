@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {TapeTestFunction} from 'test/utils/vitest-tape';
+import type {TapeTestFunction} from '@luma.gl/devtools-extensions/tape-test-utils';
 import {parseShaderCompilerLog} from '@luma.gl/webgl/adapter/helpers/parse-shader-compiler-log';
 
 const ERROR_LOG = `\

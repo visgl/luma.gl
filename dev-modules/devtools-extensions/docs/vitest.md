@@ -29,5 +29,5 @@ Project assumptions:
 - node-only tests are matched by `*.node.spec.*`
 
 Tape-style compatibility:
-- the canonical helper now lives at `devtools/vitest/vitest-tape.ts`
-- `test/utils/vitest-tape.ts` remains a compatibility shim that re-exports from `devtools`
+- the canonical helper now lives at `dev-modules/devtools-extensions/vitest/vitest-tape.ts`
+- `test/utils/vitest-tape.ts` remains a compatibility shim that re-exports from `@luma.gl/devtools-extensions/tape-test-utils`

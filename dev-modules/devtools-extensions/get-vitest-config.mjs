@@ -1,9 +1,10 @@
+import fs from 'node:fs';
 import path from 'node:path';
 import {createRequire} from 'node:module';
 
 import {defineConfig} from 'vitest/config';
 import {playwright} from '@vitest/browser-playwright';
-import tsconfigPaths from 'vite-tsconfig-paths';
+import ts from 'typescript';
 
 import {getPlaywrightLaunchOptions} from './get-playwright-launch-options.mjs';
 import {loadOcularConfig} from './load-ocular-config.mjs';
@@ -19,12 +20,7 @@ export async function getVitestConfig(options = {}) {
   const excludePatterns = vitestConfig.excludePatterns || [];
   const browserName = vitestConfig.browserName || 'chromium';
   const testTimeout = vitestConfig.testTimeout || 60_000;
-
-  const createTsconfigPathsPlugin = () =>
-    tsconfigPaths({
-      projects: tsconfigProjects,
-      ignoreConfigErrors: true
-    });
+  const tsconfigAliases = getTsconfigAliases(tsconfigProjects);
 
   const createPlaywrightProvider = () =>
     playwright({
@@ -37,18 +33,17 @@ export async function getVitestConfig(options = {}) {
     });
 
   return defineConfig({
-    plugins: [createTsconfigPathsPlugin()],
     resolve: {
       alias: [
-        {find: /^vitest\/internal\/browser$/, replacement: VITEST_INTERNAL_BROWSER_PATH},
-        {find: /^vitest\/(.+)$/, replacement: `${VITEST_PACKAGE_ROOT}/$1`},
-        {find: /^vitest$/, replacement: VITEST_PACKAGE_ROOT}
+        ...tsconfigAliases,
+        {find: /^vitest\/internal\/browser$/, replacement: VITEST_INTERNAL_BROWSER_PATH}
       ]
     },
     test: {
+      alias: tsconfigAliases,
       projects: [
         {
-          plugins: [createTsconfigPathsPlugin()],
+          extends: true,
           test: {
             name: 'node',
             color: 'blue',
@@ -61,7 +56,7 @@ export async function getVitestConfig(options = {}) {
           }
         },
         {
-          plugins: [createTsconfigPathsPlugin()],
+          extends: true,
           test: {
             name: 'browser',
             color: 'green',
@@ -77,7 +72,7 @@ export async function getVitestConfig(options = {}) {
           }
         },
         {
-          plugins: [createTsconfigPathsPlugin()],
+          extends: true,
           test: {
             name: 'headless',
             color: 'cyan',
@@ -99,4 +94,59 @@ export async function getVitestConfig(options = {}) {
       }
     }
   });
+}
+
+function getTsconfigAliases(tsconfigProjects) {
+  const aliasEntries = [];
+
+  for (const tsconfigProject of tsconfigProjects) {
+    const tsconfigPath = path.resolve(tsconfigProject);
+    if (!fs.existsSync(tsconfigPath)) {
+      continue;
+    }
+
+    const {config, error} = ts.readConfigFile(tsconfigPath, ts.sys.readFile);
+    if (error || !config?.compilerOptions?.paths) {
+      continue;
+    }
+
+    const baseUrl = config.compilerOptions.baseUrl || '.';
+    const configDirectory = path.dirname(tsconfigPath);
+
+    for (const [aliasPattern, targets] of Object.entries(config.compilerOptions.paths)) {
+      const firstTarget = Array.isArray(targets) ? targets[0] : undefined;
+      if (!firstTarget) {
+        continue;
+      }
+
+      if (aliasPattern.endsWith('/*') && firstTarget.endsWith('/*')) {
+        const escapedPrefix = escapeRegExp(aliasPattern.slice(0, -2));
+        const replacementPrefix = path
+          .resolve(configDirectory, baseUrl, firstTarget.slice(0, -2))
+          .replace(/\\/g, '/');
+        aliasEntries.push({
+          key: aliasPattern,
+          alias: {
+            find: new RegExp(`^${escapedPrefix}/(.+)$`),
+            replacement: `${replacementPrefix}/$1`
+          }
+        });
+      } else {
+        aliasEntries.push({
+          key: aliasPattern,
+          alias: {
+            find: aliasPattern,
+            replacement: path.resolve(configDirectory, baseUrl, firstTarget).replace(/\\/g, '/')
+          }
+        });
+      }
+    }
+  }
+
+  aliasEntries.sort((left, right) => right.key.length - left.key.length);
+  return aliasEntries.map(entry => entry.alias);
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }

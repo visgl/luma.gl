@@ -1,6 +1,6 @@
 import {describe, expect, test} from 'vitest';
 
-import {scorePageTargetCandidate} from '../../devtools/playwright/find-target-page.mjs';
+import {scorePageTargetCandidate} from '../../dev-modules/devtools-extensions/playwright/find-target-page.mjs';
 
 describe('scorePageTargetCandidate', () => {
   test('prefers exact URL matches', () => {

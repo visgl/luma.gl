@@ -4,7 +4,7 @@
 
 import type {CompilerMessage} from '@luma.gl/core';
 import {formatCompilerLog} from '@luma.gl/core/adapter-utils/format-compiler-log';
-import type {TapeTestFunction} from 'test/utils/vitest-tape';
+import type {TapeTestFunction} from '@luma.gl/devtools-extensions/tape-test-utils';
 
 const ERROR_LOG: CompilerMessage[] = [
   {

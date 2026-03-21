@@ -4,7 +4,7 @@
 
 // Forked from THREE.js under MIT license
 
-import test from 'test/utils/vitest-tape';
+import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {toHalfFloat, fromHalfFloat} from '@luma.gl/shadertools';
 
 test('fp16#toHalfFloat', t => {

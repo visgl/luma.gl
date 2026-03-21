@@ -4,7 +4,7 @@
 
 import {UniformBufferLayout} from '@luma.gl/core';
 import {lighting, type LightingUniforms} from '../../../src/index';
-import type {TapeTestFunction} from 'test/utils/vitest-tape';
+import type {TapeTestFunction} from '@luma.gl/devtools-extensions/tape-test-utils';
 
 const lightingUniformTypecheck: LightingUniforms = lighting.defaultUniforms;
 const FLOAT32_EPSILON = 1e-6;

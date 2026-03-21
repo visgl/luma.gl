@@ -3,7 +3,7 @@ import {describe, expect, test} from 'vitest';
 import {
   resolveExamplePath,
   resolveExampleUrl
-} from '../../devtools/playwright/resolve-example-url.mjs';
+} from '../../dev-modules/devtools-extensions/playwright/resolve-example-url.mjs';
 
 describe('resolveExamplePath', () => {
   test('uses repo alias mappings from ocular config', () => {

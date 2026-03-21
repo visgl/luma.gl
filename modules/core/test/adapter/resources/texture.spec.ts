@@ -1,6 +1,6 @@
 /* eslint-disable no-continue, max-depth */
 
-import test from 'test/utils/vitest-tape';
+import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {getWebGLTestDevice, getTestDevices, getWebGPUTestDevice} from '@luma.gl/test-utils';
 
 import {

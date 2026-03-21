@@ -64,7 +64,14 @@ export class WebGPUShader extends Shader {
 
   /** Returns compilation info for this shader */
   async getCompilationInfo(): Promise<readonly CompilerMessage[]> {
-    const compilationInfo = await this.handle.getCompilationInfo();
+    // `_checkCompilationError()` runs asynchronously after construction, so the shader can be
+    // destroyed before we await compilation info. Snapshot the handle and treat a destroyed shader
+    // as having no compiler messages instead of dereferencing `null`.
+    const handle = this.handle;
+    if (!handle) {
+      return [];
+    }
+    const compilationInfo = await handle.getCompilationInfo();
     return compilationInfo.messages;
   }
 }

@@ -1,3 +1,3 @@
-import {getVitestConfig} from './devtools/index.mjs';
+import {getVitestConfig} from './dev-modules/devtools-extensions/index.mjs';
 
 export default getVitestConfig();

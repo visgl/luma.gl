@@ -41,6 +41,15 @@ export function getShaderLayoutFromWGSL(source: string): ShaderLayout {
     });
   }
 
+  for (const storageBuffer of parsedWGSL.storage) {
+    shaderLayout.bindings.push({
+      type: storageBuffer.access === 'read' ? 'read-only-storage' : 'storage',
+      name: storageBuffer.name,
+      group: storageBuffer.group,
+      location: storageBuffer.binding
+    });
+  }
+
   for (const texture of parsedWGSL.textures) {
     const bindingDeclaration: TextureBindingLayout = {
       type: 'texture',

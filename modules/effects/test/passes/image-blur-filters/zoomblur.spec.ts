@@ -4,7 +4,7 @@
 
 import {zoomBlur} from '@luma.gl/effects';
 import {getShaderModuleUniforms} from '@luma.gl/shadertools';
-import test from 'test/utils/vitest-tape';
+import test from '@luma.gl/devtools-extensions/tape-test-utils';
 
 test('zoomBlur#build/uniform', t => {
   const uniforms = getShaderModuleUniforms(zoomBlur, {}, {});

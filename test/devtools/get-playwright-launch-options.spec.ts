@@ -1,6 +1,6 @@
 import {describe, expect, test} from 'vitest';
 
-import {getPlaywrightLaunchOptions} from '../../devtools/get-playwright-launch-options.mjs';
+import {getPlaywrightLaunchOptions} from '../../dev-modules/devtools-extensions/get-playwright-launch-options.mjs';
 
 describe('getPlaywrightLaunchOptions', () => {
   test('merges reusable defaults with repo overrides', () => {

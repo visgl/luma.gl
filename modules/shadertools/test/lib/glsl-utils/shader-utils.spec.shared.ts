@@ -9,7 +9,7 @@ import {
   typeToChannelSuffix,
   typeToChannelCount
 } from '@luma.gl/shadertools';
-import type {TapeTestFunction} from 'test/utils/vitest-tape';
+import type {TapeTestFunction} from '@luma.gl/devtools-extensions/tape-test-utils';
 
 type ChannelCount = 1 | 2 | 3 | 4;
 

@@ -1,4 +1,4 @@
-import test from 'test/utils/vitest-tape';
+import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {UniformBufferLayout, UniformStore} from '../../src';
 
 function almostEqual(a: number, b: number, eps = 1e-3): boolean {
@@ -206,7 +206,7 @@ test('uniform layout accepts WGSL alias types', t => {
 });
 
 /*
-import test from 'test/utils/vitest-tape';
+import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {UniformBufferLayout, UniformBlock} from '@luma.gl/core';
 import {fixture} from 'test/setup';
 

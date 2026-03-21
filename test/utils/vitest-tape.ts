@@ -1,2 +1,2 @@
-export {default} from '../../devtools/vitest/vitest-tape';
-export type {TapeTestFunction, Test} from '../../devtools/vitest/vitest-tape';
+export {default} from '@luma.gl/devtools-extensions/tape-test-utils';
+export type {TapeTestFunction, Test} from '@luma.gl/devtools-extensions/tape-test-utils';

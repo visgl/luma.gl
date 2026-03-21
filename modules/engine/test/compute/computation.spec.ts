@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {Buffer} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
