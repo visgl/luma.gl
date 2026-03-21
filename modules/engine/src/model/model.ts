@@ -894,12 +894,11 @@ export class Model {
       // } || (this._drawCount++ > 3 && this._drawCount % 60)) {
       return;
     }
-    // TODO - display framebuffer output in debug window
     const framebuffer = renderPass.props.framebuffer;
-    if (framebuffer) {
-      debugFramebuffer(framebuffer, {id: framebuffer.id, minimap: true});
-      // log.image({logLevel: LOG_DRAW_PRIORITY, message: `${framebuffer.id} %c sup?`, image})();
-    }
+    debugFramebuffer(renderPass, framebuffer, {
+      id: framebuffer?.id || `${this.id}-framebuffer`,
+      minimap: true
+    });
   }
 
   _getAttributeDebugTable(): Record<string, Record<string, unknown>> {
