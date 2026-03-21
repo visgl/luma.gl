@@ -5,12 +5,12 @@
 import {StatsManager, lumaStats} from '../utils/stats-manager';
 import {log} from '../utils/log';
 import {uid} from '../utils/uid';
-import type {VertexFormat, VertexFormatInfo} from '../shadertypes/vertex-arrays/vertex-formats';
+import type {VertexFormat, VertexFormatInfo} from '../shadertypes/vertex-types/vertex-formats';
 import type {
   TextureFormat,
   TextureFormatInfo,
   CompressedTextureFormat
-} from '../shadertypes/textures/texture-formats';
+} from '../shadertypes/texture-types/texture-formats';
 import type {CanvasContext, CanvasContextProps} from './canvas-context';
 import type {PresentationContext, PresentationContextProps} from './presentation-context';
 import type {BufferProps} from './resources/buffer';
@@ -32,11 +32,11 @@ import type {TransformFeedback, TransformFeedbackProps} from './resources/transf
 import type {QuerySet, QuerySetProps} from './resources/query-set';
 import type {Fence} from './resources/fence';
 
-import {getVertexFormatInfo} from '../shadertypes/vertex-arrays/decode-vertex-format';
-import {textureFormatDecoder} from '../shadertypes/textures/texture-format-decoder';
-import {getTextureFormatTable} from '../shadertypes/textures/texture-format-table';
-import type {ExternalImage} from '../image-utils/image-types';
-import {isExternalImage, getExternalImageSize} from '../image-utils/image-types';
+import {vertexFormatDecoder} from '../shadertypes/vertex-types/vertex-format-decoder';
+import {textureFormatDecoder} from '../shadertypes/texture-types/texture-format-decoder';
+import type {ExternalImage} from '../shadertypes/image-types/image-types';
+import {isExternalImage, getExternalImageSize} from '../shadertypes/image-types/image-types';
+import {getTextureFormatTable} from '../shadertypes/texture-types/texture-format-table';
 
 /**
  * Identifies the GPU vendor and driver.
@@ -123,6 +123,84 @@ export abstract class DeviceLimits {
   abstract maxComputeWorkgroupSizeZ: number;
   /** max ComputeWorkgroupsPerDimension */
   abstract maxComputeWorkgroupsPerDimension: number;
+}
+
+function formatErrorLogArguments(context: unknown, args: unknown[]): unknown[] {
+  const formattedContext = formatErrorLogValue(context);
+  const formattedArgs = args.map(formatErrorLogValue).filter(arg => arg !== undefined);
+  return [formattedContext, ...formattedArgs].filter(arg => arg !== undefined);
+}
+
+function formatErrorLogValue(value: unknown): unknown {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (
+    value === null ||
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'boolean'
+  ) {
+    return value;
+  }
+  if (value instanceof Error) {
+    return value.message;
+  }
+  if (Array.isArray(value)) {
+    return value.map(formatErrorLogValue);
+  }
+  if (typeof value === 'object') {
+    if (hasCustomToString(value)) {
+      const stringValue = String(value);
+      if (stringValue !== '[object Object]') {
+        return stringValue;
+      }
+    }
+
+    if (looksLikeGPUCompilationMessage(value)) {
+      return formatGPUCompilationMessage(value);
+    }
+
+    return value.constructor?.name || 'Object';
+  }
+
+  return String(value);
+}
+
+function hasCustomToString(value: object): boolean {
+  return (
+    'toString' in value &&
+    typeof value.toString === 'function' &&
+    value.toString !== Object.prototype.toString
+  );
+}
+
+function looksLikeGPUCompilationMessage(value: object): value is {
+  message?: unknown;
+  type?: unknown;
+  lineNum?: unknown;
+  linePos?: unknown;
+} {
+  return 'message' in value && 'type' in value;
+}
+
+function formatGPUCompilationMessage(value: {
+  message?: unknown;
+  type?: unknown;
+  lineNum?: unknown;
+  linePos?: unknown;
+}): string {
+  const type = typeof value.type === 'string' ? value.type : 'message';
+  const message = typeof value.message === 'string' ? value.message : '';
+  const lineNum = typeof value.lineNum === 'number' ? value.lineNum : null;
+  const linePos = typeof value.linePos === 'number' ? value.linePos : null;
+  const location =
+    lineNum !== null && linePos !== null
+      ? ` @ ${lineNum}:${linePos}`
+      : lineNum !== null
+        ? ` @ ${lineNum}`
+        : '';
+  return `${type}${location}: ${message}`.trim();
 }
 
 /** Set-like class for features (lets apps check for WebGL / WebGPU extensions) */
@@ -463,8 +541,10 @@ export abstract class Device {
 
   abstract destroy(): void;
 
+  // TODO - just expose the shadertypes decoders?
+
   getVertexFormatInfo(format: VertexFormat): VertexFormatInfo {
-    return getVertexFormatInfo(format);
+    return vertexFormatDecoder.getVertexFormatInfo(format);
   }
 
   isVertexFormatSupported(format: VertexFormat): boolean {
@@ -593,13 +673,13 @@ export abstract class Device {
     // Call the error handler
     const isHandled = this.props.onError(error, context);
     if (!isHandled) {
+      const logArguments = formatErrorLogArguments(context, args);
       // Note: Returns a function that must be called: `device.reportError(...)()`
       return log.error(
         this.type === 'webgl' ? '%cWebGL' : '%cWebGPU',
         'color: white; background: red; padding: 2px 6px; border-radius: 3px;',
         error.message,
-        context,
-        ...args
+        ...logArguments
       );
     }
     return () => {};

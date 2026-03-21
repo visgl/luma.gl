@@ -12,7 +12,7 @@ Shader modules are built around a set of well-defined uniform interface blocks.
 | Interface Block    | Binding (Group) | Description                                                                           | Usage                                                                 |
 | ------------------ | --------------- | ------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
 | **project**        | 0 (0)           | camera world position, view and projection matrices                                   | Usually static for a view render cycle                                |
-| **lighting**       | 1 (0)           | ambient light color, directional light array, point light color array                 | Usually static for a scene                                            |
+| **lighting**       | 1 (0)           | ambient light color, point and directional light counts, trailing fixed-size light struct array | Usually static for a scene                                            |
 | **material**       | 2 (1)           | PBR parameters, base color, ...                                                       | Uniform buffer can be pre-calculated for each material and swapped in |
 | **postprocessing** | 3               | parameters for current post processing effect (often independent of other interfaces) |
 

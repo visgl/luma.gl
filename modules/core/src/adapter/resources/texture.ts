@@ -8,14 +8,14 @@ import {
   type TextureFormat,
   type TextureMemoryLayout,
   type TextureFormatInfo
-} from '../../shadertypes/textures/texture-formats';
-import {type ExternalImage} from '../../image-utils/image-types';
+} from '../../shadertypes/texture-types/texture-formats';
+import {type ExternalImage} from '../../shadertypes/image-types/image-types';
 import {type TextureView, type TextureViewProps} from './texture-view';
 import {Resource, type ResourceProps} from './resource';
 import {Sampler, type SamplerProps} from './sampler';
 import {Buffer} from './buffer';
 import {log} from '../../utils/log';
-import {textureFormatDecoder} from '../../shadertypes/textures/texture-format-decoder';
+import {textureFormatDecoder} from '../../shadertypes/texture-types/texture-format-decoder';
 
 /** Options for Texture.copyExternalImage */
 export type CopyExternalImageOptions = {

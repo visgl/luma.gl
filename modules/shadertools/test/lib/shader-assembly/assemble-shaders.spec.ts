@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from 'tape-promise/tape';
+import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {Device} from '@luma.gl/core';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
 import {
@@ -92,6 +92,34 @@ out vec4 fragmentColor;
 
 void main(void) {
   fragmentColor = texture(tex, vUV) * vec4(vNormal, 1.0);
+}
+`;
+
+const VS_GLSL_300_FP64 = /* glsl */ `\
+#version 300 es
+
+in vec2 positions64xy;
+
+out float resultValue;
+
+void main(void) {
+  vec2 position64xy = sum_fp64(positions64xy, vec2(0.5, 1.0e-7));
+  gl_Position = vec4(position64xy.x, position64xy.y, 0.0, 1.0);
+  resultValue = position64xy.x + position64xy.y;
+}
+`;
+
+const FS_GLSL_300_FP64 = /* glsl */ `\
+#version 300 es
+
+precision highp float;
+
+in float resultValue;
+
+out vec4 fragmentColor;
+
+void main(void) {
+  fragmentColor = vec4(resultValue, resultValue, resultValue, 1.0);
 }
 `;
 
@@ -353,6 +381,63 @@ test('assembleGLSLShaderPair#defines', async t => {
 
   t.ok(assembleResult.vs.indexOf('#define IS_TEST true') > 0, 'has application defines');
   t.ok(assembleResult.fs.indexOf('#define IS_TEST true') > 0, 'has application defines');
+
+  t.end();
+});
+
+test('assembleGLSLShaderPair#fp64 platform defines compile', async t => {
+  const webglDevice = await getWebGLTestDevice();
+  const basePlatformInfo = getInfo(webglDevice);
+  const platformTestCases = [
+    {
+      label: 'apple',
+      platformInfo: {...basePlatformInfo, gpu: 'apple'},
+      expectedDefines: [
+        '#define APPLE_GPU',
+        '#define LUMA_FP64_CODE_ELIMINATION_WORKAROUND 1',
+        '#define LUMA_FP64_HIGH_BITS_OVERFLOW_WORKAROUND 1'
+      ]
+    },
+    {
+      label: 'intel',
+      platformInfo: {...basePlatformInfo, gpu: 'intel'},
+      expectedDefines: [
+        '#define INTEL_GPU',
+        '#define LUMA_FP64_CODE_ELIMINATION_WORKAROUND 1',
+        '#define LUMA_FP64_HIGH_BITS_OVERFLOW_WORKAROUND 1'
+      ]
+    },
+    {
+      label: 'unknown',
+      platformInfo: {...basePlatformInfo, gpu: 'unknown'},
+      expectedDefines: [
+        '#define DEFAULT_GPU',
+        '#define LUMA_FP64_CODE_ELIMINATION_WORKAROUND 1',
+        '#define LUMA_FP64_HIGH_BITS_OVERFLOW_WORKAROUND 1'
+      ]
+    }
+  ];
+
+  for (const platformTestCase of platformTestCases) {
+    const assembleResult = assembleGLSLShaderPair({
+      platformInfo: platformTestCase.platformInfo,
+      vs: VS_GLSL_300_FP64,
+      fs: FS_GLSL_300_FP64,
+      modules: [fp64]
+    });
+
+    for (const expectedDefine of platformTestCase.expectedDefines) {
+      t.ok(
+        assembleResult.vs.includes(expectedDefine),
+        `${platformTestCase.label} includes ${expectedDefine}`
+      );
+    }
+
+    t.ok(
+      compileAndLinkShaders(t, webglDevice, assembleResult),
+      `${platformTestCase.label} fp64 assembly compiles and links`
+    );
+  }
 
   t.end();
 });

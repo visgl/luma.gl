@@ -12,6 +12,7 @@ export {
   getTestDevices,
   getTestDevice,
   getWebGLTestDevice,
+  getPresentationWebGLTestDevice,
   getWebGPUTestDevice,
   getNullTestDevice
 } from './create-test-device';

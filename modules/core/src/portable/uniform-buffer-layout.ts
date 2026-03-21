@@ -3,19 +3,32 @@
 // Copyright (c) vis.gl contributors
 
 import type {PrimitiveDataType} from '../shadertypes/data-types/data-types';
-import type {CompositeShaderType} from '../shadertypes/data-types/shader-types';
+import type {
+  CompositeShaderType,
+  VariableShaderType
+} from '../shadertypes/shader-types/shader-types';
 import {alignTo} from '../shadertypes/data-types/decode-data-types';
-import {getVariableShaderTypeInfo} from '../shadertypes/data-types/decode-shader-types';
+import {
+  getVariableShaderTypeInfo,
+  resolveVariableShaderTypeAlias
+} from '../shadertypes/shader-types/shader-type-decoder';
 
-import type {UniformValue} from '../adapter/types/uniforms';
+import type {CompositeUniformValue, UniformValue} from '../adapter/types/uniforms';
 import {getScratchArrayBuffer} from '../utils/array-utils-flat';
+import {isNumberArray} from '../utils/is-array';
 import {log} from '../utils/log';
 
-export type UniformValues = Record<string, UniformValue | UniformValueStruct | UniformValueArray>;
-type UniformValueStruct = Record<string, UniformValue | UniformValueStruct2 | UniformValueArray>;
-type UniformValueStruct2 = Record<string, UniformValue | UniformValueStruct3 | UniformValueArray>;
-type UniformValueStruct3 = Record<string, UniformValue | UniformValueArray>;
-type UniformValueArray = (UniformValue | UniformValueStruct)[];
+type UniformLayoutEntry = {
+  offset: number;
+  size: number;
+  components: number;
+  columns: number;
+  rows: number;
+  shaderType: VariableShaderType;
+  type: PrimitiveDataType;
+};
+
+export type UniformValues = Record<string, CompositeUniformValue>;
 
 /**
  * Smallest buffer size that can be used for uniform buffers.
@@ -28,23 +41,23 @@ const minBufferSize: number = 1024;
  * Supports manual listing of uniforms
  */
 export class UniformBufferLayout {
-  readonly layout: Record<string, {offset: number; size: number; type: PrimitiveDataType}> = {};
+  readonly layout: Record<string, UniformLayoutEntry> = {};
+  readonly uniformTypes: Record<string, CompositeShaderType>;
 
   /** number of bytes needed for buffer allocation */
   readonly byteLength: number;
 
   /** Create a new UniformBufferLayout given a map of attributes. */
-  constructor(
-    uniformTypes: Readonly<Record<string, CompositeShaderType>>,
-    uniformSizes: Readonly<Record<string, number>> = {}
-  ) {
+  constructor(uniformTypes: Readonly<Record<string, CompositeShaderType>>) {
+    this.uniformTypes = {...uniformTypes};
+
     let size = 0;
 
-    for (const [key, uniformType] of Object.entries(uniformTypes)) {
-      size = this._addToLayout(key, uniformType, size, uniformSizes?.[key]);
+    for (const [key, uniformType] of Object.entries(this.uniformTypes)) {
+      size = this._addToLayout(key, uniformType, size);
     }
 
-    size += (4 - (size % 4)) % 4;
+    size = alignTo(size, 4);
     this.byteLength = Math.max(size * 4, minBufferSize);
   }
 
@@ -59,9 +72,26 @@ export class UniformBufferLayout {
     return layout;
   }
 
+  /** Flatten nested uniform values into leaf-path values understood by UniformBlock. */
+  getFlatUniformValues(uniformValues: Readonly<UniformValues>): Record<string, UniformValue> {
+    const flattenedUniformValues: Record<string, UniformValue> = {};
+
+    for (const [name, value] of Object.entries(uniformValues)) {
+      const uniformType = this.uniformTypes[name];
+      if (uniformType) {
+        this._flattenCompositeValue(flattenedUniformValues, name, uniformType, value);
+      } else if (this.layout[name]) {
+        flattenedUniformValues[name] = value as UniformValue;
+      }
+    }
+
+    return flattenedUniformValues;
+  }
+
   /** Get the data for the complete buffer */
   getData(uniformValues: Readonly<UniformValues>): Uint8Array {
     const buffer = getScratchArrayBuffer(this.byteLength);
+    new Uint8Array(buffer, 0, this.byteLength).fill(0);
     const typedArrays = {
       i32: new Int32Array(buffer),
       u32: new Uint32Array(buffer),
@@ -69,84 +99,110 @@ export class UniformBufferLayout {
       f16: new Uint16Array(buffer)
     };
 
-    for (const [name, value] of Object.entries(uniformValues)) {
-      this._writeCompositeValue(typedArrays, name, value);
+    const flattenedUniformValues = this.getFlatUniformValues(uniformValues);
+    for (const [name, value] of Object.entries(flattenedUniformValues)) {
+      this._writeLeafValue(typedArrays, name, value);
     }
 
     return new Uint8Array(buffer, 0, this.byteLength);
   }
 
   // Recursively add a uniform to the layout
-  private _addToLayout(
-    name: string,
-    type: CompositeShaderType,
-    offset: number,
-    count: number = 1
-  ): number {
+  private _addToLayout(name: string, type: CompositeShaderType, offset: number): number {
     if (typeof type === 'string') {
-      // Primitive case
-      const info = getVariableShaderTypeInfo(type);
-      const sizeInSlots = info.components * count;
-      const alignedOffset = alignTo(offset, info.components);
+      const info = getLeafLayoutInfo(type);
+      const alignedOffset = alignTo(offset, info.alignment);
       this.layout[name] = {
         offset: alignedOffset,
-        size: sizeInSlots,
-        type: info.type
+        ...info
       };
-      return alignedOffset + sizeInSlots;
+      return alignedOffset + info.size;
     }
 
     if (Array.isArray(type)) {
-      // Array of structs or primitives
-      const elementType = type[0];
-      // Use count if provided, otherwise default to 1
-      const length = count > 1 ? count : type.length > 1 ? type[1] : 1;
-      let arrayOffset = alignTo(offset, 4); // std140: arrays aligned to 16 bytes
+      if (Array.isArray(type[0])) {
+        throw new Error(`Nested arrays are not supported for ${name}`);
+      }
+
+      const elementType = type[0] as CompositeShaderType;
+      const length = type[1] as number;
+      const stride = alignTo(getTypeSize(elementType), 4);
+      const arrayOffset = alignTo(offset, 4);
 
       for (let i = 0; i < length; i++) {
-        arrayOffset = this._addToLayout(`${name}[${i}]`, elementType, arrayOffset);
+        this._addToLayout(`${name}[${i}]`, elementType, arrayOffset + i * stride);
       }
-      return arrayOffset;
+      return arrayOffset + stride * length;
     }
 
-    if (typeof type === 'object') {
-      // Struct case
-      let structOffset = alignTo(offset, 4); // std140: structs aligned to 16 bytes
+    if (isCompositeShaderTypeStruct(type)) {
+      let structOffset = alignTo(offset, 4);
       for (const [memberName, memberType] of Object.entries(type)) {
         structOffset = this._addToLayout(`${name}.${memberName}`, memberType, structOffset);
       }
-      return structOffset;
+      return alignTo(structOffset, 4);
     }
 
     throw new Error(`Unsupported CompositeShaderType for ${name}`);
   }
 
-  private _writeCompositeValue(
-    typedArrays: Record<string, any>,
+  private _flattenCompositeValue(
+    flattenedUniformValues: Record<string, UniformValue>,
     baseName: string,
-    value: any
+    uniformType: CompositeShaderType,
+    value: CompositeUniformValue | undefined
   ): void {
-    if (this.layout[baseName]) {
-      // Primitive or flat vector/matrix
-      this._writeToBuffer(typedArrays, baseName, value);
+    if (value === undefined) {
       return;
     }
 
-    if (Array.isArray(value)) {
-      // Array of values: write each index
-      for (let i = 0; i < value.length; i++) {
-        const element = value[i];
-        const indexedName = `${baseName}[${i}]`;
-        this._writeCompositeValue(typedArrays, indexedName, element);
+    if (typeof uniformType === 'string' || this.layout[baseName]) {
+      flattenedUniformValues[baseName] = value as UniformValue;
+      return;
+    }
+
+    if (Array.isArray(uniformType)) {
+      const elementType = uniformType[0] as CompositeShaderType;
+      const length = uniformType[1] as number;
+
+      if (Array.isArray(elementType)) {
+        throw new Error(`Nested arrays are not supported for ${baseName}`);
+      }
+
+      if (typeof elementType === 'string' && isNumberArray(value)) {
+        this._flattenPackedArray(flattenedUniformValues, baseName, elementType, length, value);
+        return;
+      }
+
+      if (!Array.isArray(value)) {
+        log.warn(`Unsupported uniform array value for ${baseName}:`, value)();
+        return;
+      }
+
+      for (let index = 0; index < Math.min(value.length, length); index++) {
+        const elementValue = value[index];
+        if (elementValue === undefined) {
+          continue;
+        }
+
+        this._flattenCompositeValue(
+          flattenedUniformValues,
+          `${baseName}[${index}]`,
+          elementType,
+          elementValue
+        );
       }
       return;
     }
 
-    if (typeof value === 'object' && value !== null) {
-      // Struct: write each member
+    if (isCompositeShaderTypeStruct(uniformType) && isCompositeUniformObject(value)) {
       for (const [key, subValue] of Object.entries(value)) {
+        if (subValue === undefined) {
+          continue;
+        }
+
         const nestedName = `${baseName}.${key}`;
-        this._writeCompositeValue(typedArrays, nestedName, subValue);
+        this._flattenCompositeValue(flattenedUniformValues, nestedName, uniformType[key], subValue);
       }
       return;
     }
@@ -154,7 +210,36 @@ export class UniformBufferLayout {
     log.warn(`Unsupported uniform value for ${baseName}:`, value)();
   }
 
-  private _writeToBuffer(
+  private _flattenPackedArray(
+    flattenedUniformValues: Record<string, UniformValue>,
+    baseName: string,
+    elementType: VariableShaderType,
+    length: number,
+    value: UniformValue
+  ): void {
+    const numericValue = value as Readonly<ArrayLike<number>>;
+    const elementLayout = getLeafLayoutInfo(elementType);
+    const packedElementLength = elementLayout.components;
+
+    for (let index = 0; index < length; index++) {
+      const start = index * packedElementLength;
+      if (start >= numericValue.length) {
+        break;
+      }
+
+      if (packedElementLength === 1) {
+        flattenedUniformValues[`${baseName}[${index}]`] = Number(numericValue[start]);
+      } else {
+        flattenedUniformValues[`${baseName}[${index}]`] = sliceNumericArray(
+          value,
+          start,
+          start + packedElementLength
+        ) as UniformValue;
+      }
+    }
+  }
+
+  private _writeLeafValue(
     typedArrays: Record<string, any>,
     name: string,
     value: UniformValue
@@ -165,13 +250,135 @@ export class UniformBufferLayout {
       return;
     }
 
-    const {type, size, offset} = layout;
+    const {type, components, columns, rows, offset} = layout;
     const array = typedArrays[type];
 
-    if (size === 1) {
+    if (components === 1) {
       array[offset] = Number(value);
-    } else {
-      array.set(value as number[], offset);
+      return;
+    }
+
+    const sourceValue = value as Readonly<ArrayLike<number>>;
+
+    if (columns === 1) {
+      for (let componentIndex = 0; componentIndex < components; componentIndex++) {
+        array[offset + componentIndex] = Number(sourceValue[componentIndex] ?? 0);
+      }
+      return;
+    }
+
+    let sourceIndex = 0;
+    for (let columnIndex = 0; columnIndex < columns; columnIndex++) {
+      const columnOffset = offset + columnIndex * 4;
+      for (let rowIndex = 0; rowIndex < rows; rowIndex++) {
+        array[columnOffset + rowIndex] = Number(sourceValue[sourceIndex++] ?? 0);
+      }
     }
   }
+}
+
+function getTypeSize(type: CompositeShaderType): number {
+  if (typeof type === 'string') {
+    return getLeafLayoutInfo(type).size;
+  }
+
+  if (Array.isArray(type)) {
+    const elementType = type[0] as CompositeShaderType;
+    const length = type[1] as number;
+
+    if (Array.isArray(elementType)) {
+      throw new Error('Nested arrays are not supported');
+    }
+
+    return alignTo(getTypeSize(elementType), 4) * length;
+  }
+
+  let size = 0;
+  for (const memberType of Object.values(type)) {
+    const compositeMemberType = memberType as CompositeShaderType;
+    size = alignTo(size, getTypeAlignment(compositeMemberType));
+    size += getTypeSize(compositeMemberType);
+  }
+
+  return alignTo(size, 4);
+}
+
+function getTypeAlignment(type: CompositeShaderType): 1 | 2 | 4 {
+  if (typeof type === 'string') {
+    return getLeafLayoutInfo(type).alignment;
+  }
+
+  if (Array.isArray(type)) {
+    return 4;
+  }
+
+  return 4;
+}
+
+function getLeafLayoutInfo(
+  type: VariableShaderType
+): Omit<UniformLayoutEntry, 'offset'> & {alignment: 1 | 2 | 4} {
+  const resolvedType = resolveVariableShaderTypeAlias(type);
+  const decodedType = getVariableShaderTypeInfo(resolvedType);
+  const matrixMatch = /^mat(\d)x(\d)<.+>$/.exec(resolvedType);
+
+  if (matrixMatch) {
+    const columns = Number(matrixMatch[1]);
+    const rows = Number(matrixMatch[2]);
+
+    return {
+      alignment: 4,
+      size: columns * 4,
+      components: columns * rows,
+      columns,
+      rows,
+      shaderType: resolvedType,
+      type: decodedType.type
+    };
+  }
+
+  const vectorMatch = /^vec(\d)<.+>$/.exec(resolvedType);
+  if (vectorMatch) {
+    const components = Number(vectorMatch[1]) as 2 | 3 | 4;
+    return {
+      alignment: components === 2 ? 2 : 4,
+      size: components === 3 ? 4 : components,
+      components,
+      columns: 1,
+      rows: components,
+      shaderType: resolvedType,
+      type: decodedType.type
+    };
+  }
+
+  return {
+    alignment: 1,
+    size: 1,
+    components: 1,
+    columns: 1,
+    rows: 1,
+    shaderType: resolvedType,
+    type: decodedType.type
+  };
+}
+
+function isCompositeShaderTypeStruct(
+  value: CompositeShaderType
+): value is Record<string, CompositeShaderType> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function isCompositeUniformObject(
+  value: CompositeUniformValue
+): value is Record<string, CompositeUniformValue | undefined> {
+  return (
+    Boolean(value) &&
+    typeof value === 'object' &&
+    !Array.isArray(value) &&
+    !ArrayBuffer.isView(value)
+  );
+}
+
+function sliceNumericArray(value: UniformValue, start: number, end: number): number[] {
+  return Array.prototype.slice.call(value, start, end) as number[];
 }

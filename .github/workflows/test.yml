@@ -11,11 +11,6 @@ jobs:
   test:
     runs-on: ubuntu-22.04
     timeout-minutes: 15
-    strategy:
-      matrix:
-        node-version: [22]
-
-        
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -29,26 +24,61 @@ jobs:
       - name: Setup Node (with Corepack)
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version-file: '.nvmrc'
           cache: 'yarn' # or 'pnpm', 'npm' depending on your package manager
           cache-dependency-path: |
             yarn.lock
             website/yarn.lock
 
       - name: Install dependencies
-        run: yarn install --frozen-lockfile  
+        run: yarn install --immutable
+
+      - name: Install Playwright Chromium
+        run: yarn playwright:install
   
       - name: Build code
         run: |
           yarn build
   
-      - name: Run tests in Puppeteer and generage Coverage
+      - name: Run node tests
         run: |
-          yarn test cover
+          yarn test-node
 
-      - name: Run tests on Node
+      - name: Run headless tests and generate coverage
         run: |
-          yarn test node
+          yarn test-coverage
+
+      - name: Sanitize lcov for Coveralls
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const coveragePath = 'coverage/lcov.info';
+          const lines = fs.readFileSync(coveragePath, 'utf8').split(/\r?\n/);
+          const records = [];
+          let currentRecord = [];
+
+          for (const line of lines) {
+            currentRecord.push(line);
+            if (line === 'end_of_record') {
+              const sourceFileLine = currentRecord.find(recordLine => recordLine.startsWith('SF:'));
+              const sourceFile = sourceFileLine ? sourceFileLine.slice(3).trim() : '';
+              if (sourceFile) {
+                records.push(currentRecord.join('\n'));
+              }
+              currentRecord = [];
+            }
+          }
+
+          if (currentRecord.length) {
+            const sourceFileLine = currentRecord.find(recordLine => recordLine.startsWith('SF:'));
+            const sourceFile = sourceFileLine ? sourceFileLine.slice(3).trim() : '';
+            if (sourceFile) {
+              records.push(currentRecord.join('\n'));
+            }
+          }
+
+          fs.writeFileSync(coveragePath, `${records.join('\n')}\n`);
+          NODE
 
       - name: Run lint
         run: |
@@ -62,10 +92,6 @@ jobs:
   website:
     runs-on: ubuntu-22.04
     timeout-minutes: 15
-    strategy:
-      matrix:
-        node-version: [22]
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -79,17 +105,17 @@ jobs:
       - name: Setup Node (with Corepack)
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version-file: '.nvmrc'
           cache: 'yarn'
           cache-dependency-path: |
             yarn.lock
             website/yarn.lock
 
       - name: Install root dependencies
-        run: yarn install --frozen-lockfile
+        run: yarn install --immutable
 
       - name: Install website dependencies
-        run: yarn install --frozen-lockfile
+        run: yarn install --immutable
         working-directory: website
 
       - name: Build website

@@ -23,19 +23,21 @@ export class WEBGLRenderPass extends RenderPass {
   constructor(device: WebGLDevice, props: RenderPassProps) {
     super(device, props);
     this.device = device;
+    const webglFramebuffer = this.props.framebuffer as WEBGLFramebuffer | null;
+    const isDefaultFramebuffer = !webglFramebuffer || webglFramebuffer.handle === null;
 
-    if (!props?.framebuffer) {
-      // Default-framebuffer rendering bypasses CanvasContext.getCurrentFramebuffer(),
-      // so flush any deferred canvas resize before deriving viewport state.
+    if (isDefaultFramebuffer) {
+      // Treat an explicit wrapper around the default framebuffer the same as the
+      // implicit default path so draw buffer and viewport state stay valid.
       device.getDefaultCanvasContext()._resizeDrawingBufferIfNeeded();
     }
 
     // If no viewport is provided, apply reasonably defaults
     let viewport: NumberArray4 | undefined;
     if (!props?.parameters?.viewport) {
-      if (props?.framebuffer) {
+      if (!isDefaultFramebuffer) {
         // Set the viewport to the size of the framebuffer
-        const {width, height} = props.framebuffer;
+        const {width, height} = webglFramebuffer;
         viewport = [0, 0, width, height];
       } else {
         // Instead of using our own book-keeping, we can just read the values from the WebGL context
@@ -49,15 +51,13 @@ export class WEBGLRenderPass extends RenderPass {
     this.setParameters({viewport, ...this.props.parameters});
 
     // Specify mapping of draw buffer locations to color attachments
-    const webglFramebuffer = this.props.framebuffer as WEBGLFramebuffer;
     // Default framebuffers can only be set to GL.BACK or GL.NONE
-    if (this.props.framebuffer && webglFramebuffer?.handle) {
-      const drawBuffers = this.props.framebuffer.colorAttachments.map(
-        (_, i) => GL.COLOR_ATTACHMENT0 + i
-      );
+    if (!isDefaultFramebuffer) {
+      const drawBuffers = webglFramebuffer.colorAttachments.map((_, i) => GL.COLOR_ATTACHMENT0 + i);
       this.device.gl.drawBuffers(drawBuffers);
-    } else if (!this.props.framebuffer) {
-      // Default framebuffer only supports GL.BACK/GL.NONE draw buffers
+    } else {
+      // Default framebuffer only supports GL.BACK/GL.NONE draw buffers, even when
+      // passed through an explicit framebuffer wrapper.
       this.device.gl.drawBuffers([GL.BACK]);
     }
 

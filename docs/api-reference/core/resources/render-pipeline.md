@@ -228,7 +228,7 @@ Creating render pipelines is relatively expensive because it can trigger shader 
 For application code, prefer using `PipelineFactory` instead of calling `device.createRenderPipeline()` directly:
 
 ```ts
-import {PipelineFactory} from '@luma.gl/engine';
+import {PipelineFactory} from '@luma.gl/core';
 
 const pipelineFactory = PipelineFactory.getDefaultPipelineFactory(device);
 const pipeline = pipelineFactory.createRenderPipeline({vs, fs, ...});

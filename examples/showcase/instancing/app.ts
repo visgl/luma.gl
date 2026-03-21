@@ -248,7 +248,9 @@ class InstancedCube extends Model {
   }
 
   createPickingModel(props?: Partial<ModelProps>): Model {
-    const instanceBufferLayout = this.bufferLayout.filter(layout => layout.name.startsWith('instance'));
+    const instanceBufferLayout = this.bufferLayout.filter(layout =>
+      layout.name.startsWith('instance')
+    );
     const instanceAttributes = {
       instanceOffsets: this.instanceOffsetsBuffer,
       instanceColors: this.instanceColorsBuffer
@@ -258,8 +260,8 @@ class InstancedCube extends Model {
       topology: 'triangle-list',
       indices: cubeGeometry.indices!,
       attributes: {
-        POSITION: cubeGeometry.attributes.POSITION!,
-        NORMAL: cubeGeometry.attributes.NORMAL!
+        POSITION: cubeGeometry.attributes.POSITION,
+        NORMAL: cubeGeometry.attributes.NORMAL
       }
     });
 

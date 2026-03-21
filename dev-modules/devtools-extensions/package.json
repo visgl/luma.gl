@@ -1,0 +1,31 @@
+{
+  "name": "@luma.gl/devtools-extensions",
+  "private": true,
+  "type": "module",
+  "version": "0.0.0",
+  "exports": {
+    ".": "./index.mjs",
+    "./tape-test-utils": {
+      "types": "./tape-test-utils.d.ts",
+      "import": "./tape-test-utils.mjs",
+      "default": "./tape-test-utils.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "website-debug": "node ./playwright/website-playwright.mjs",
+    "playwright:install": "playwright install chromium",
+    "test-node": "cd ../.. && vitest run --config vitest.config.ts --project node",
+    "test-browser": "cd ../.. && vitest run --config vitest.config.ts --project browser",
+    "test-headless": "cd ../.. && vitest run --config vitest.config.ts --project headless",
+    "test-coverage": "cd ../.. && vitest run --config vitest.config.ts --coverage --project headless"
+  },
+  "dependencies": {
+    "@vitest/browser": "^4.0.18",
+    "@vitest/browser-playwright": "^4.0.18",
+    "@vitest/coverage-v8": "^4.0.18",
+    "playwright": "^1.56.1",
+    "vite": "^8.0.0",
+    "vitest": "^4.0.18"
+  }
+}

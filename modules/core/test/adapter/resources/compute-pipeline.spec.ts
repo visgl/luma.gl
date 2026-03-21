@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from 'tape-promise/tape';
+import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import {luma, ComputePipeline, Buffer, type Device} from '@luma.gl/core';
+import {luma, ComputePipeline, Buffer, PipelineFactory, type Device} from '@luma.gl/core';
 import {webgpuAdapter, type WebGPUDevice} from '@luma.gl/webgpu';
 
 const CPU_HOTSPOT_PROFILER_MODULE = 'cpu-hotspot-profiler';
@@ -20,7 +20,7 @@ const source = /* WGSL*/ `\
 }
 `;
 
-test.skip('ComputePipeline#construct/delete', async t => {
+test('ComputePipeline#construct/delete', async t => {
   const webgpuDevice = await getWebGPUTestDevice();
 
   if (webgpuDevice) {
@@ -176,6 +176,43 @@ test('ComputePipeline bind-group cache only invalidates when binding identities 
   secondBuffer.destroy();
   firstBuffer.destroy();
   computePipeline.destroy();
+  shader.destroy();
+  t.end();
+});
+
+test('ComputePipeline cache differentiates explicit shader layouts for identical WGSL source', async t => {
+  const webgpuDevice = await getWebGPUTestDevice();
+
+  if (!webgpuDevice) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const pipelineFactory = new PipelineFactory(webgpuDevice);
+  const shader = webgpuDevice.createShader({source});
+
+  const firstPipeline = pipelineFactory.createComputePipeline({
+    shader,
+    shaderLayout: {
+      bindings: [{name: 'data', type: 'storage', group: 0, location: 0}]
+    }
+  });
+  const secondPipeline = pipelineFactory.createComputePipeline({
+    shader,
+    shaderLayout: {
+      bindings: [{name: 'alternateData', type: 'storage', group: 0, location: 0}]
+    }
+  });
+
+  t.notEqual(
+    firstPipeline,
+    secondPipeline,
+    'compute pipeline cache does not alias different explicit shader layouts'
+  );
+
+  pipelineFactory.release(firstPipeline);
+  pipelineFactory.release(secondPipeline);
   shader.destroy();
   t.end();
 });

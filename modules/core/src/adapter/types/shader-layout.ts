@@ -2,15 +2,15 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {TextureFormat} from '../../shadertypes/textures/texture-formats';
-import type {
-  VariableShaderType,
-  AttributeShaderType
-} from '../../shadertypes/data-types/shader-types';
-import type {Buffer} from '../resources/buffer';
-import type {Sampler} from '../resources/sampler';
-import type {Texture} from '../resources/texture';
-import type {TextureView} from '../resources/texture-view';
+import {type TextureFormat} from '../../shadertypes/texture-types/texture-formats';
+import {
+  type VariableShaderType,
+  type AttributeShaderType
+} from '../../shadertypes/shader-types/shader-types';
+import {type Buffer} from '../resources/buffer';
+import {type Sampler} from '../resources/sampler';
+import {type Texture} from '../resources/texture';
+import {type TextureView} from '../resources/texture-view';
 
 /**
  * Describes all shader binding points for a `RenderPipeline` or `ComputePipeline`

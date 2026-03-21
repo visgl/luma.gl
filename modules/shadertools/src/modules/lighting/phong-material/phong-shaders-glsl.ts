@@ -12,8 +12,6 @@ uniform phongMaterialUniforms {
 `;
 
 export const PHONG_FS = /* glsl */ `\
-#define MAX_LIGHTS 3
-
 uniform phongMaterialUniforms {
   uniform float ambient;
   uniform float diffuse;
@@ -51,8 +49,15 @@ vec3 lighting_getLightColor(vec3 surfaceColor, vec3 cameraPosition, vec3 positio
     lightColor += lighting_getLightColor(surfaceColor, light_direction, view_direction, normal_worldspace, pointLight.color / light_attenuation);
   }
 
-  int totalLights = min(MAX_LIGHTS, lighting.pointLightCount + lighting.directionalLightCount);
-  for (int i = lighting.pointLightCount; i < totalLights; i++) {
+  for (int i = 0; i < lighting.spotLightCount; i++) {
+    SpotLight spotLight = lighting_getSpotLight(i);
+    vec3 light_position_worldspace = spotLight.position;
+    vec3 light_direction = normalize(light_position_worldspace - position_worldspace);
+    float light_attenuation = getSpotLightAttenuation(spotLight, position_worldspace);
+    lightColor += lighting_getLightColor(surfaceColor, light_direction, view_direction, normal_worldspace, spotLight.color / light_attenuation);
+  }
+
+  for (int i = 0; i < lighting.directionalLightCount; i++) {
     DirectionalLight directionalLight = lighting_getDirectionalLight(i);
     lightColor += lighting_getLightColor(surfaceColor, -directionalLight.direction, view_direction, normal_worldspace, directionalLight.color);
   }

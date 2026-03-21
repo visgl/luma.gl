@@ -2,12 +2,15 @@
 import './utils/uid.spec';
 
 // type utils
-import './shadertypes/decode-attribute-type.spec';
-import './shadertypes/decode-vertex-format.spec';
-import './shadertypes/vertex-format-from-attribute.spec';
+import './shadertypes/data-type-decoder.spec';
 
-import './shadertypes/textures/decode-texture-format.spec';
+import './shadertypes/shader-types.spec';
+import './shadertypes/shader-type-decoder.spec';
+
+import './shadertypes/texture-format-decoder.spec';
 import './shadertypes/textures/texture-layout.spec';
+
+import './shadertypes/vertex-format-decoder.spec';
 
 // adapter utils
 import './adapter-utils/get-attribute-from-layout.spec';
@@ -28,6 +31,8 @@ import './adapter/helpers/parse-shader-compiler-log.spec';
 import './adapter/device.spec';
 import './adapter/canvas-context.spec';
 import './adapter/luma.spec';
+import './factories/pipeline-factory.spec';
+import './factories/shader-factory.spec';
 
 // Resources
 import './adapter/texture-formats.spec';

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from 'tape-promise/tape';
+import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {isBrowser} from '@probe.gl/env';
 import {CanvasObserver} from '../../src/adapter/canvas-observer';
 
@@ -75,11 +75,11 @@ test('CanvasObserver#start is idempotent and stop is idempotent', t => {
   } as typeof IntersectionObserver;
   globalScope.setTimeout = (callback: TimerHandler, delay?: number) => {
     calls.setTimeout++;
-    return originals.setTimeout(callback, delay);
+    return originals.setTimeout.call(globalScope, callback, delay);
   };
   globalScope.clearTimeout = (timeoutId: number | undefined) => {
     calls.clearTimeout++;
-    return originals.clearTimeout(timeoutId);
+    return originals.clearTimeout.call(globalScope, timeoutId);
   };
 
   try {
@@ -134,7 +134,7 @@ test('CanvasObserver#trackPosition polling stops after stop', t => {
     disconnect() {}
   } as typeof IntersectionObserver;
   globalScope.setTimeout = (callback: TimerHandler, delay?: number) =>
-    originals.setTimeout(callback, delay);
+    originals.setTimeout.call(globalScope, callback, delay);
   globalScope.setInterval = (callback: TimerHandler) => {
     intervalCallback = callback as () => void;
     return 1 as ReturnType<typeof setInterval>;
@@ -203,7 +203,7 @@ test('CanvasObserver#start is a no-op without an HTML canvas', t => {
   } as typeof IntersectionObserver;
   globalScope.setTimeout = (callback: TimerHandler, delay?: number) => {
     calls.setTimeout++;
-    return originals.setTimeout(callback, delay);
+    return originals.setTimeout.call(globalScope, callback, delay);
   };
 
   try {

@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 /* eslint-disable max-len */
-import test from 'tape-promise/tape';
+import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {getTestDevices} from '@luma.gl/test-utils';
 import {Framebuffer} from '@luma.gl/core';
 
@@ -221,19 +221,23 @@ test('WebGLFramebuffer contents', async t => {
   t.end();
 });
 
-/*
-test.skip('Framebuffer#getDefaultFramebuffer', (t) => {
-  const framebuffer = webglDevice.getDefaultCanvasContext().getCurrentFramebuffer();
-  t.ok(framebuffer instanceof Framebuffer, 'getDefaultFramebuffer successful');
+test('Framebuffer#getDefaultFramebuffer', async t => {
+  for (const testDevice of await getTestDevices()) {
+    if (testDevice.type === 'webgl') {
+      const framebuffer = testDevice.getDefaultCanvasContext().getCurrentFramebuffer();
+      t.ok(framebuffer instanceof Framebuffer, 'getDefaultFramebuffer successful');
 
-  t.throws(
-    () => framebuffer.resize(1000, 1000),
-    'defaultFramebuffer.resize({width, height}) throws'
-  );
+      t.doesNotThrow(
+        () => framebuffer.resize({width: 1000, height: 1000}),
+        'defaultFramebuffer.resize({width, height}) updates size'
+      );
+      t.equal(framebuffer.width, 1000, 'defaultFramebuffer width updates');
+      t.equal(framebuffer.height, 1000, 'defaultFramebuffer height updates');
+    }
+  }
 
   t.end();
 });
-*/
 
 /*
 

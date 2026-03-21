@@ -54,6 +54,7 @@
         "type": "category",
         "label": "Shader Programming",
         "items": [
+          "api-guide/shaders/shader-types",
           "api-guide/shaders/shader-modules"
         ]
       },
@@ -90,8 +91,11 @@
           "api-reference/core/canvas-context",
           "api-reference/core/presentation-context",
           "api-reference/core/parameters",
+          "api-reference/core/pipeline-factory",
+          "api-reference/core/shader-factory",
           "api-reference/core/bindings",
           "api-reference/core/shader-layout",
+          "api-reference/core/shader-types",
           "api-reference/core/vertex-formats",
           "api-reference/core/texture-formats",
           "api-reference/core/resources/buffer",
@@ -133,8 +137,6 @@
           "api-reference/engine/scenegraph/group-node",
           "api-reference/engine/scenegraph/model-node",
           "api-reference/engine/scenegraph/scenegraph-node",
-          "api-reference/engine/pipeline-factory",
-          "api-reference/engine/shader-factory",
           "api-reference/engine/picking-manager",
           "api-reference/engine/passes/shader-pass-renderer",
           "api-reference/engine/compute/swap",

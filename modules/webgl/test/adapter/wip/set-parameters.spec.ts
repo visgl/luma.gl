@@ -1,4 +1,4 @@
-import test from 'tape-promise/tape';
+import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {createTestContext} from '@luma.gl/test-utils';
 
 import GL from '@luma.gl/constants';

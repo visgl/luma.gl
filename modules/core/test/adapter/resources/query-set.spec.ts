@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from 'tape-promise/tape';
+import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {getTestDevices, getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {QuerySet} from '@luma.gl/core';
 
@@ -148,6 +148,79 @@ test('WebGL QuerySet timestamp pair validation', async t => {
   t.ok(duration >= 0, 'completed WebGL timestamp pair is readable');
 
   querySet.destroy();
+  t.end();
+});
+
+test('WebGL QuerySet destroy cancels pending RAF polling', async t => {
+  const device = await getWebGLTestDevice();
+  const querySet = device.createQuerySet({type: 'timestamp', count: 2}) as any;
+  const queryHandle = device.gl.createQuery();
+
+  t.ok(queryHandle, 'created a WebGL query handle for the pending poll test');
+  if (!queryHandle) {
+    querySet.destroy();
+    t.end();
+    return;
+  }
+
+  const querySetPrototype = Object.getPrototypeOf(querySet);
+  const originalRequestAnimationFrame = querySetPrototype._requestAnimationFrame;
+  const originalCancelAnimationFrame = querySetPrototype._cancelAnimationFrame;
+  const originalPollQueryAvailability = querySetPrototype._pollQueryAvailability;
+
+  let scheduledCallback: FrameRequestCallback | null = null;
+  let cancelAnimationFrameCallCount = 0;
+
+  try {
+    querySetPrototype._requestAnimationFrame = (callback: FrameRequestCallback): number => {
+      scheduledCallback = callback;
+      return 1;
+    };
+
+    querySetPrototype._cancelAnimationFrame = (requestId: number): void => {
+      if (requestId === 1) {
+        cancelAnimationFrameCallCount++;
+        scheduledCallback = null;
+      }
+    };
+
+    querySet._timestampPairs[0].completedQueries.push({
+      handle: queryHandle,
+      promise: null,
+      result: null,
+      disjoint: false,
+      cancelled: false,
+      pollRequestId: null,
+      resolve: null,
+      reject: null
+    });
+    querySetPrototype._pollQueryAvailability = () => false;
+
+    const durationPromise = querySet.readTimestampDuration(0, 1);
+    t.ok(
+      scheduledCallback,
+      'readTimestampDuration schedules an RAF poll when results are unavailable'
+    );
+
+    querySet.destroy();
+    const duration = await Promise.race([
+      durationPromise,
+      new Promise<number>((_, reject) =>
+        setTimeout(
+          () => reject(new Error('Timed out waiting for pending query cancellation')),
+          1000
+        )
+      )
+    ]);
+
+    t.equal(cancelAnimationFrameCallCount, 1, 'destroy cancels the pending RAF poll');
+    t.equal(duration, 0, 'destroy resolves the pending timestamp read with a neutral duration');
+  } finally {
+    querySetPrototype._requestAnimationFrame = originalRequestAnimationFrame;
+    querySetPrototype._cancelAnimationFrame = originalCancelAnimationFrame;
+    querySetPrototype._pollQueryAvailability = originalPollQueryAvailability;
+  }
+
   t.end();
 });
 

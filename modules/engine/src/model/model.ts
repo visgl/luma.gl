@@ -3,19 +3,17 @@
 // Copyright (c) vis.gl contributors
 
 // A lot of imports, but then Model is where it all comes together...
-import type {TypedArray} from '@math.gl/types';
-import type {
-  RenderPipelineProps,
-  RenderPipelineParameters,
-  BufferLayout,
-  Shader,
-  VertexArray,
-  TransformFeedback,
-  AttributeInfo,
-  Binding,
-  PrimitiveTopology
-} from '@luma.gl/core';
+import {type TypedArray} from '@math.gl/types';
 import {
+  type RenderPipelineProps,
+  type RenderPipelineParameters,
+  type BufferLayout,
+  type Shader,
+  type VertexArray,
+  type TransformFeedback,
+  type AttributeInfo,
+  type Binding,
+  type PrimitiveTopology,
   Device,
   DeviceFeature,
   Buffer,
@@ -24,9 +22,11 @@ import {
   Sampler,
   RenderPipeline,
   RenderPass,
+  PipelineFactory,
+  ShaderFactory,
   UniformStore,
   log,
-  getTypedArrayConstructor,
+  dataTypeDecoder,
   getAttributeInfosFromLayouts
 } from '@luma.gl/core';
 
@@ -35,8 +35,6 @@ import {ShaderAssembler} from '@luma.gl/shadertools';
 
 import type {Geometry} from '../geometry/geometry';
 import {GPUGeometry, makeGPUGeometry} from '../geometry/gpu-geometry';
-import {PipelineFactory} from '../factories/pipeline-factory';
-import {ShaderFactory} from '../factories/shader-factory';
 import {getDebugTableForShaderLayout} from '../debug/debug-shader-layout';
 import {debugFramebuffer} from '../debug/debug-framebuffer';
 import {deepEqual} from '../utils/deep-equal';
@@ -919,7 +917,7 @@ export class Model {
 
   // TODO - fix typing of luma data types
   _getBufferOrConstantValues(attribute: Buffer | TypedArray, dataType: any): string {
-    const TypedArrayConstructor = getTypedArrayConstructor(dataType);
+    const TypedArrayConstructor = dataTypeDecoder.getTypedArrayConstructor(dataType);
     const typedArray =
       attribute instanceof Buffer ? new TypedArrayConstructor(attribute.debugData) : attribute;
     return typedArray.toString();

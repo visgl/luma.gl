@@ -3,6 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {NumberArray, VariableShaderType} from '@luma.gl/core';
+import type {NumericArray} from '@math.gl/types';
 import {UniformStore, Framebuffer, Texture} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {
@@ -12,7 +13,8 @@ import {
   Model,
   makeRandomGenerator,
   loadImageBitmap,
-  DynamicTexture
+  DynamicTexture,
+  BackgroundTextureModel
 } from '@luma.gl/engine';
 import {Matrix4, Vector3, radians} from '@math.gl/core';
 
@@ -144,8 +146,6 @@ struct ScreenQuadUniforms {
 @group(0) @binding(0) var<uniform> screenQuad : ScreenQuadUniforms;
 @group(0) @binding(1) var uTexture : texture_2d<f32>;
 @group(0) @binding(2) var uTextureSampler : sampler;
-@group(0) @binding(3) var uBackground : texture_2d<f32>;
-@group(0) @binding(4) var uBackgroundSampler : sampler;
 
 struct VertexInputs {
   @location(0) aPosition: vec2<f32>,
@@ -163,30 +163,8 @@ struct FragmentInputs {
   return outputs;
 }
 
-fn getBackgroundTextureUV(uv: vec2<f32>) -> vec2<f32> {
-  let backgroundSize = vec2<f32>(textureDimensions(uBackground));
-  let screenAspect = screenQuad.resolution.x / screenQuad.resolution.y;
-  let backgroundAspect = backgroundSize.x / backgroundSize.y;
-  var scale = vec2<f32>(1.0, 1.0);
-  if (screenAspect > backgroundAspect) {
-    scale.y = screenAspect / backgroundAspect;
-  } else {
-    scale.x = backgroundAspect / screenAspect;
-  }
-  return (uv - vec2<f32>(0.5, 0.5)) / scale + vec2<f32>(0.5, 0.5);
-}
-
-fn getCoverage(color: vec4f) -> f32 {
-  return max(color.a, max(color.r, max(color.g, color.b)));
-}
-
 @fragment fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4f {
-  let persistenceColor = textureSample(uTexture, uTextureSampler, inputs.texcoord);
-  let backgroundTextureUV = getBackgroundTextureUV(inputs.texcoord);
-  let backgroundColor = textureSample(uBackground, uBackgroundSampler, backgroundTextureUV);
-  let coverage = getCoverage(persistenceColor);
-  let compositeColor = persistenceColor.rgb + backgroundColor.rgb * (1.0 - coverage);
-  return vec4f(min(compositeColor, vec3<f32>(1.0, 1.0, 1.0)), 1.0);
+  return textureSample(uTexture, uTextureSampler, inputs.texcoord);
 }
 `;
 
@@ -206,7 +184,6 @@ const SCREEN_QUAD_FS = /* glsl */ `\
 precision highp float;
 
 uniform sampler2D uTexture;
-uniform sampler2D uBackground;
 
 uniform screenQuadUniforms {
   vec2 resolution;
@@ -214,33 +191,9 @@ uniform screenQuadUniforms {
 
 out vec4 fragColor;
 
-vec2 getBackgroundTextureUV(vec2 uv) {
-  vec2 backgroundSize = vec2(textureSize(uBackground, 0));
-  float screenAspect = screenQuad.resolution.x / screenQuad.resolution.y;
-  float backgroundAspect = backgroundSize.x / backgroundSize.y;
-  vec2 scale = vec2(1.0);
-  if (screenAspect > backgroundAspect) {
-    scale.y = screenAspect / backgroundAspect;
-  } else {
-    scale.x = backgroundAspect / screenAspect;
-  }
-  return (uv - 0.5) / scale + 0.5;
-}
-
-float getCoverage(vec4 color) {
-  return max(color.a, max(color.r, max(color.g, color.b)));
-}
-
 void main(void) {
-  vec2 uv = gl_FragCoord.xy / screenQuad.resolution.xy;
-  vec4 persistenceColor = texture(uTexture, uv);
-  vec4 backgroundColor = texture(uBackground, getBackgroundTextureUV(uv));
-  float coverage = getCoverage(persistenceColor);
-  vec3 compositeColor = min(
-    persistenceColor.rgb + backgroundColor.rgb * (1.0 - coverage),
-    vec3(1.0)
-  );
-  fragColor = vec4(compositeColor, 1.0);
+  vec2 p = gl_FragCoord.xy / screenQuad.resolution.xy;
+  fragColor = texture(uTexture, p);
 }
 `;
 
@@ -307,7 +260,7 @@ uniform sampler2D uPersistence;
 
 uniform persistenceQuadUniforms {
   vec2 resolution;
-} persistence;
+} persistenceQuad;
 
 out vec4 fragColor;
 
@@ -316,7 +269,7 @@ float getCoverage(vec4 color) {
 }
 
 void main(void) {
-  vec2 p = gl_FragCoord.xy / persistence.resolution.xy;
+  vec2 p = gl_FragCoord.xy / persistenceQuad.resolution.xy;
   vec4 cS = texture(uScene, p);
   vec4 cP = texture(uPersistence, p);
   vec3 accumulatedColor = mix(cS.rgb * 4.0, cP.rgb, vec3(0.9));
@@ -330,9 +283,9 @@ const OFFSCREEN_COLOR_FORMAT = 'rgba8unorm';
 
 const CORE_COUNT = 64;
 const ELECTRON_COUNT = 64;
-const electronPosition = [];
-const electronRotation = [];
-const nucleonPosition = [];
+const electronPosition: NumericArray[] = [];
+const electronRotation: Matrix4[] = [];
+const nucleonPosition: NumericArray[] = [];
 
 /* eslint-disable max-statements */
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
@@ -356,8 +309,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     persistenceQuad
   });
 
-  /** Background texture for final screen compositing */
+  /** Background texture used for final screen compositing */
   backgroundTexture: DynamicTexture;
+  backgroundTextureModel: BackgroundTextureModel;
   /** Electron model, will be drawn multiple times */
   electron: Model;
   /** Nucleon model, will be drawn multiple times */
@@ -374,6 +328,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     super();
 
     this.backgroundTexture = new DynamicTexture(device, {data: loadImageBitmap('background.png')});
+    this.backgroundTextureModel = new BackgroundTextureModel(device, {
+      backgroundTexture: this.backgroundTexture,
+      blend: true
+    });
 
     this.electron = new Model(device, {
       id: 'electron',
@@ -413,7 +371,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       width,
       height,
       colorAttachments: [
-        createSampleableColorAttachment(device, 'main-framebuffer-color', width, height)
+        createOffscreenColorAttachment(device, 'main-framebuffer-color', width, height)
       ],
       depthStencilAttachment: 'depth24plus'
     });
@@ -423,14 +381,14 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         width,
         height,
         colorAttachments: [
-          createSampleableColorAttachment(device, 'persistence-framebuffer-0-color', width, height)
+          createOffscreenColorAttachment(device, 'persistence-framebuffer-0-color', width, height)
         ]
       }),
       device.createFramebuffer({
         width,
         height,
         colorAttachments: [
-          createSampleableColorAttachment(device, 'persistence-framebuffer-1-color', width, height)
+          createOffscreenColorAttachment(device, 'persistence-framebuffer-1-color', width, height)
         ]
       })
     ];
@@ -508,6 +466,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
   onFinalize(animationProps: AnimationProps): void {
     this.backgroundTexture.destroy();
+    this.backgroundTextureModel.destroy();
     this.electron.destroy();
     this.nucleon.destroy();
 
@@ -539,7 +498,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const mainRenderPass = device.beginRenderPass({
       framebuffer: this.mainFramebuffer,
       clearColor: [0, 0, 0, 0],
-      clearDepth: 1
+      clearDepth: 1,
+      clearStencil: false
     });
 
     // Render electrons to framebuffer
@@ -598,7 +558,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     // Accumulate in persistence buffer
     const persistenceRenderPass = device.beginRenderPass({
       framebuffer: currentFramebuffer,
-      clearColor: [0, 0, 0, 0]
+      clearColor: [0, 0, 0, 0],
+      clearDepth: false,
+      clearStencil: false
     });
     this.persistenceQuad.setBindings({
       uScene: this.mainFramebuffer.colorAttachments[0].texture,
@@ -613,21 +575,21 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     // Copy the current framebuffer to screen
     const screenFramebuffer = device
       .getDefaultCanvasContext()
-      // @ts-expect-error TODO - remove after republish
       .getCurrentFramebuffer({depthStencilFormat: false});
     const screenRenderPass = device.beginRenderPass({
       framebuffer: screenFramebuffer,
       clearColor: [0, 0, 0, 1],
-      clearDepth: false
+      clearDepth: false,
+      clearStencil: false
     });
     this.screenQuad.setBindings({
-      uTexture: currentFramebuffer.colorAttachments[0].texture,
-      uBackground: this.backgroundTexture
+      uTexture: currentFramebuffer.colorAttachments[0].texture
     });
     this.uniformStore.setUniforms({screenQuad: {resolution: [width, height]}});
     this.uniformStore.updateUniformBuffers();
 
     this.screenQuad.draw(screenRenderPass);
+    this.backgroundTextureModel.draw(screenRenderPass);
     screenRenderPass.end();
   }
 
@@ -635,24 +597,35 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     for (const framebuffer of this.pingpongFramebuffers) {
       const renderPass = device.beginRenderPass({
         framebuffer,
-        clearColor: [0, 0, 0, 0]
+        clearColor: [0, 0, 0, 0],
+        clearDepth: false,
+        clearStencil: false
       });
       renderPass.end();
     }
   }
 }
 
-function createSampleableColorAttachment(
+function createOffscreenColorAttachment(
   device: AnimationProps['device'],
   id: string,
   width: number,
   height: number
 ) {
+  if (device.type !== 'webgpu') {
+    return OFFSCREEN_COLOR_FORMAT;
+  }
+
   return device.createTexture({
     id,
     format: OFFSCREEN_COLOR_FORMAT,
     width,
     height,
-    usage: Texture.SAMPLE | Texture.RENDER
+    usage: Texture.SAMPLE | Texture.RENDER,
+    sampler: {
+      magFilter: 'linear',
+      minFilter: 'linear',
+      mipmapFilter: 'none'
+    }
   });
 }

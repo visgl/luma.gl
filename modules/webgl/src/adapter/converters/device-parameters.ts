@@ -232,6 +232,10 @@ export function setDeviceParameters(device: Device, parameters: Parameters) {
     gl.depthFunc(convertCompareFunction('depthCompare', parameters.depthCompare));
   }
 
+  if (parameters.clearDepth !== undefined) {
+    gl.clearDepth(parameters.clearDepth);
+  }
+
   if (parameters.stencilWriteMask) {
     const mask = parameters.stencilWriteMask;
     gl.stencilMaskSeparate(GL.FRONT, mask);

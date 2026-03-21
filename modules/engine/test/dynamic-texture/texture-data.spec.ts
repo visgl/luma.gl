@@ -1,4 +1,4 @@
-import test from 'tape';
+import test from '@luma.gl/devtools-extensions/tape-test-utils';
 
 import {
   isTextureSliceData,

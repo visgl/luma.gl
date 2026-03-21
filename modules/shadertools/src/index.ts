@@ -14,7 +14,7 @@ export type {PlatformInfo} from './lib/shader-assembly/platform-info';
 
 export type {ShaderModule} from './lib/shader-module/shader-module';
 export type {ShaderPass} from './lib/shader-module/shader-pass';
-export type {UniformTypes} from './lib/utils/uniform-types';
+export type {ShaderModuleUniformValue, UniformTypes} from './lib/utils/uniform-types';
 
 export {initializeShaderModule, initializeShaderModules} from './lib/shader-module/shader-module';
 export {getShaderModuleUniforms} from './lib/shader-module/shader-module';
@@ -77,7 +77,9 @@ export {
   type Light,
   type AmbientLight,
   type PointLight,
-  type DirectionalLight
+  type SpotLight,
+  type DirectionalLight,
+  type LightingLightUniform
 } from './modules/lighting/lights/lighting';
 
 export type {LightingProps, LightingUniforms} from './modules/lighting/lights/lighting';

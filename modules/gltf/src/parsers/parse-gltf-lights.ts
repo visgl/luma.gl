@@ -1,6 +1,8 @@
 import {Matrix4} from '@math.gl/core';
 import type {GLTFNodePostprocessed, GLTFPostprocessed} from '@loaders.gl/gltf';
-import type {DirectionalLight, Light, PointLight} from '@luma.gl/shadertools';
+import type {DirectionalLight, Light, PointLight, SpotLight} from '@luma.gl/shadertools';
+
+const GLTF_COLOR_FACTOR = 255;
 
 /** Parse KHR_lights_punctual extension into luma.gl light definitions */
 export function parseGLTFLights(gltf: GLTFPostprocessed): Light[] {
@@ -13,6 +15,8 @@ export function parseGLTFLights(gltf: GLTFPostprocessed): Light[] {
   }
 
   const lights: Light[] = [];
+  const parentNodeById = createParentNodeMap(gltf.nodes || []);
+  const worldMatrixByNodeId = new Map<string, Matrix4>();
 
   for (const node of gltf.nodes || []) {
     const lightIndex =
@@ -28,19 +32,22 @@ export function parseGLTFLights(gltf: GLTFPostprocessed): Light[] {
       continue;
     }
 
-    const color = (gltfLight.color || [1, 1, 1]) as [number, number, number];
+    const color = normalizeGLTFLightColor(
+      (gltfLight.color || [1, 1, 1]) as [number, number, number]
+    );
     const intensity = gltfLight.intensity ?? 1;
     const range = gltfLight.range;
+    const worldMatrix = getNodeWorldMatrix(node, parentNodeById, worldMatrixByNodeId);
 
     switch (gltfLight.type) {
       case 'directional':
-        lights.push(parseDirectionalLight(node, color, intensity));
+        lights.push(parseDirectionalLight(worldMatrix, color, intensity));
         break;
       case 'point':
-        lights.push(parsePointLight(node, color, intensity, range));
+        lights.push(parsePointLight(worldMatrix, color, intensity, range));
         break;
       case 'spot':
-        lights.push(parsePointLight(node, color, intensity, range));
+        lights.push(parseSpotLight(worldMatrix, color, intensity, range, gltfLight.spot));
         break;
       default:
         // Unsupported light type
@@ -52,15 +59,22 @@ export function parseGLTFLights(gltf: GLTFPostprocessed): Light[] {
 }
 
 /**
+ * Converts glTF colors from the 0-1 spec range to luma.gl's 0-255 light convention.
+ */
+function normalizeGLTFLightColor(color: [number, number, number]): [number, number, number] {
+  return color.map(component => component * GLTF_COLOR_FACTOR) as [number, number, number];
+}
+
+/**
  * Converts a glTF punctual light attached to a node into a point light.
  */
 function parsePointLight(
-  node: GLTFNodePostprocessed,
+  worldMatrix: Matrix4,
   color: [number, number, number],
   intensity: number,
   range?: number
 ): PointLight {
-  const position = getNodePosition(node);
+  const position = getLightPosition(worldMatrix);
 
   let attenuation: Readonly<[number, number, number]> = [1, 0, 0];
   if (range !== undefined && range > 0) {
@@ -80,11 +94,11 @@ function parsePointLight(
  * Converts a glTF punctual light attached to a node into a directional light.
  */
 function parseDirectionalLight(
-  node: GLTFNodePostprocessed,
+  worldMatrix: Matrix4,
   color: [number, number, number],
   intensity: number
 ): DirectionalLight {
-  const direction = getNodeDirection(node);
+  const direction = getLightDirection(worldMatrix);
 
   return {
     type: 'directional',
@@ -95,35 +109,110 @@ function parseDirectionalLight(
 }
 
 /**
- * Resolves the world-space position of a glTF node from its matrix or translation.
+ * Converts a glTF punctual light attached to a node into a spot light.
  */
-function getNodePosition(node: GLTFNodePostprocessed): [number, number, number] {
-  if (node.matrix) {
-    return new Matrix4(node.matrix).transformAsPoint([0, 0, 0]) as [number, number, number];
+function parseSpotLight(
+  worldMatrix: Matrix4,
+  color: [number, number, number],
+  intensity: number,
+  range?: number,
+  spot: {innerConeAngle?: number; outerConeAngle?: number} = {}
+): SpotLight {
+  const position = getLightPosition(worldMatrix);
+  const direction = getLightDirection(worldMatrix);
+
+  let attenuation: Readonly<[number, number, number]> = [1, 0, 0];
+  if (range !== undefined && range > 0) {
+    attenuation = [1, 0, 1 / (range * range)] as [number, number, number];
   }
 
-  if (node.translation) {
-    return [...node.translation] as [number, number, number];
-  }
-
-  return [0, 0, 0];
+  return {
+    type: 'spot',
+    position,
+    direction,
+    color,
+    intensity,
+    attenuation,
+    innerConeAngle: spot.innerConeAngle ?? 0,
+    outerConeAngle: spot.outerConeAngle ?? Math.PI / 4
+  };
 }
 
 /**
- * Resolves the forward direction of a glTF node from its matrix or rotation.
+ * Builds a parent lookup so punctual lights can be resolved in world space.
  */
-function getNodeDirection(node: GLTFNodePostprocessed): [number, number, number] {
+function createParentNodeMap(nodes: GLTFNodePostprocessed[]): Map<string, GLTFNodePostprocessed> {
+  const parentNodeById = new Map<string, GLTFNodePostprocessed>();
+
+  for (const node of nodes) {
+    for (const childNode of node.children || []) {
+      parentNodeById.set(childNode.id, node);
+    }
+  }
+
+  return parentNodeById;
+}
+
+/**
+ * Resolves a glTF node's world matrix from its local transform and parent chain.
+ */
+function getNodeWorldMatrix(
+  node: GLTFNodePostprocessed,
+  parentNodeById: Map<string, GLTFNodePostprocessed>,
+  worldMatrixByNodeId: Map<string, Matrix4>
+): Matrix4 {
+  const cachedWorldMatrix = worldMatrixByNodeId.get(node.id);
+  if (cachedWorldMatrix) {
+    return cachedWorldMatrix;
+  }
+
+  const localMatrix = getNodeLocalMatrix(node);
+  const parentNode = parentNodeById.get(node.id);
+  const worldMatrix = parentNode
+    ? new Matrix4(
+        getNodeWorldMatrix(parentNode, parentNodeById, worldMatrixByNodeId)
+      ).multiplyRight(localMatrix)
+    : localMatrix;
+
+  worldMatrixByNodeId.set(node.id, worldMatrix);
+  return worldMatrix;
+}
+
+/**
+ * Resolves a glTF node's local matrix from its matrix or TRS components.
+ */
+function getNodeLocalMatrix(node: GLTFNodePostprocessed): Matrix4 {
   if (node.matrix) {
-    return new Matrix4(node.matrix).transformDirection([0, 0, -1]) as [number, number, number];
+    return new Matrix4(node.matrix);
+  }
+
+  const matrix = new Matrix4();
+
+  if (node.translation) {
+    matrix.translate(node.translation);
   }
 
   if (node.rotation) {
-    return new Matrix4().fromQuaternion(node.rotation).transformDirection([0, 0, -1]) as [
-      number,
-      number,
-      number
-    ];
+    matrix.multiplyRight(new Matrix4().fromQuaternion(node.rotation));
   }
 
-  return [0, 0, -1];
+  if (node.scale) {
+    matrix.scale(node.scale);
+  }
+
+  return matrix;
+}
+
+/**
+ * Resolves the world-space position of a glTF light node.
+ */
+function getLightPosition(worldMatrix: Matrix4): [number, number, number] {
+  return worldMatrix.transformAsPoint([0, 0, 0]) as [number, number, number];
+}
+
+/**
+ * Resolves the world-space forward direction of a glTF light node.
+ */
+function getLightDirection(worldMatrix: Matrix4): [number, number, number] {
+  return worldMatrix.transformDirection([0, 0, -1]) as [number, number, number];
 }
