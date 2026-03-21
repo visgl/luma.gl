@@ -17,7 +17,7 @@ import {
   TextureView,
   getTypedArrayConstructor
 } from '@luma.gl/core';
-import {GL} from '@luma.gl/constants';
+import {GL} from '@luma.gl/webgl/constants';
 import {WebGLDevice} from '@luma.gl/webgl';
 
 import {SAMPLER_PARAMETERS} from './sampler.spec';

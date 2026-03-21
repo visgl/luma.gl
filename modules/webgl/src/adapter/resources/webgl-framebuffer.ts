@@ -4,7 +4,7 @@
 
 import type {FramebufferProps} from '@luma.gl/core';
 import {Framebuffer} from '@luma.gl/core';
-import {GL} from '@luma.gl/constants';
+import {GL} from '@luma.gl/webgl/constants';
 import {WebGLDevice} from '../webgl-device';
 import {WEBGLTexture} from './webgl-texture';
 import {WEBGLTextureView} from './webgl-texture-view';

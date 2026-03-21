@@ -4,7 +4,7 @@
 
 // SAMPLER FILTERS
 import {SamplerProps} from '@luma.gl/core';
-import {GL, GLSamplerParameters} from '@luma.gl/constants';
+import {GL, GLSamplerParameters} from '@luma.gl/webgl/constants';
 import {convertCompareFunction} from './device-parameters';
 
 /**

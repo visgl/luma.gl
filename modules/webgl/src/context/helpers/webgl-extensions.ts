@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {GLExtensions} from '@luma.gl/constants';
+import {GLExtensions} from '@luma.gl/webgl/constants';
 
 /** Ensure extensions are only requested once */
 export function getWebGLExtension(

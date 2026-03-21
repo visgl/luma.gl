@@ -9,7 +9,7 @@ import {stringifyTypedArray} from './context-state.spec';
 import {setGLParameters, getGLParameters, resetGLParameters} from '@luma.gl/webgl';
 
 import {RenderPass} from '@luma.gl/core';
-import {GL} from '@luma.gl/constants';
+import {GL} from '@luma.gl/webgl/constants';
 import {GL_PARAMETER_DEFAULTS} from '@luma.gl/webgl/context/parameters/webgl-parameter-tables';
 import {ENUM_STYLE_SETTINGS_SET1_PRIMITIVE} from './data/sample-enum-settings';
 

@@ -5,7 +5,7 @@
 import test from 'test/utils/vitest-tape';
 
 import {Buffer} from '@luma.gl/core';
-import {GL} from '@luma.gl/constants';
+import {GL} from '@luma.gl/webgl/constants';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
 import {WEBGLRenderPass} from '@luma.gl/webgl';
 

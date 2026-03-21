@@ -6,7 +6,7 @@ import test, {Test} from 'test/utils/vitest-tape';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
 
 import {Parameters} from '@luma.gl/core';
-import {GL, GLParameters} from '@luma.gl/constants';
+import {GL, GLParameters} from '@luma.gl/webgl/constants';
 import {setDeviceParameters, getGLParameters, resetGLParameters, WebGLDevice} from '@luma.gl/webgl';
 
 // const stringify = (v) => JSON.stringify(ArrayBuffer.isView(v) ? Array.apply([], v) : v);

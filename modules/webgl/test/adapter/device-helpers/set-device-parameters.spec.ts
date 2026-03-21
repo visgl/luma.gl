@@ -5,7 +5,7 @@
 import test from 'test/utils/vitest-tape';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
 
-import {GL, GLParameters} from '@luma.gl/constants';
+import {GL, GLParameters} from '@luma.gl/webgl/constants';
 import {WebGLDevice, setDeviceParameters, getGLParameters, resetGLParameters} from '@luma.gl/webgl';
 
 // Settings test, could be beneficial to not reuse a context

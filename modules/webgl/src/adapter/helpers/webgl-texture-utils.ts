@@ -13,7 +13,7 @@ import {
   GLTexelDataFormat,
   GLPixelType,
   GLDataType
-} from '@luma.gl/constants';
+} from '@luma.gl/webgl/constants';
 
 import {convertDataTypeToGLDataType} from '../converters/webgl-shadertypes';
 import {WEBGLFramebuffer} from '../resources/webgl-framebuffer';

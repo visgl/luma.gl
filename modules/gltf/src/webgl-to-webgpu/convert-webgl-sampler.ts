@@ -5,24 +5,24 @@
 // TODO: convert in loaders.gl?
 
 import type {SamplerProps} from '@luma.gl/core';
-import {GL} from '@luma.gl/constants';
+import {GLEnum} from './gltf-webgl-constants';
 
 /** Minimal glTF sampler representation used during conversion. */
 type GLTFSampler = {
   /** Horizontal wrap mode. */
-  wrapS?: GL.CLAMP_TO_EDGE | GL.REPEAT | GL.MIRRORED_REPEAT;
+  wrapS?: GLEnum.CLAMP_TO_EDGE | GLEnum.REPEAT | GLEnum.MIRRORED_REPEAT;
   /** Vertical wrap mode. */
-  wrapT?: GL.CLAMP_TO_EDGE | GL.REPEAT | GL.MIRRORED_REPEAT;
+  wrapT?: GLEnum.CLAMP_TO_EDGE | GLEnum.REPEAT | GLEnum.MIRRORED_REPEAT;
   /** Magnification filter. */
-  magFilter?: GL.NEAREST | GL.LINEAR;
+  magFilter?: GLEnum.NEAREST | GLEnum.LINEAR;
   /** Minification and mip filter combination. */
   minFilter?:
-    | GL.NEAREST
-    | GL.LINEAR
-    | GL.NEAREST_MIPMAP_NEAREST
-    | GL.LINEAR_MIPMAP_NEAREST
-    | GL.NEAREST_MIPMAP_LINEAR
-    | GL.LINEAR_MIPMAP_LINEAR;
+    | GLEnum.NEAREST
+    | GLEnum.LINEAR
+    | GLEnum.NEAREST_MIPMAP_NEAREST
+    | GLEnum.LINEAR_MIPMAP_NEAREST
+    | GLEnum.NEAREST_MIPMAP_LINEAR
+    | GLEnum.LINEAR_MIPMAP_LINEAR;
 };
 
 /** Converts a glTF sampler into luma.gl sampler props. */
@@ -37,14 +37,14 @@ export function convertSampler(gltfSampler: GLTFSampler): SamplerProps {
 
 /** Converts a glTF wrap enum into a luma.gl address mode. */
 function convertSamplerWrapMode(
-  mode: GL.CLAMP_TO_EDGE | GL.REPEAT | GL.MIRRORED_REPEAT | undefined
+  mode: GLEnum.CLAMP_TO_EDGE | GLEnum.REPEAT | GLEnum.MIRRORED_REPEAT | undefined
 ): 'clamp-to-edge' | 'repeat' | 'mirror-repeat' | undefined {
   switch (mode) {
-    case GL.CLAMP_TO_EDGE:
+    case GLEnum.CLAMP_TO_EDGE:
       return 'clamp-to-edge';
-    case GL.REPEAT:
+    case GLEnum.REPEAT:
       return 'repeat';
-    case GL.MIRRORED_REPEAT:
+    case GLEnum.MIRRORED_REPEAT:
       return 'mirror-repeat';
     default:
       return undefined;
@@ -53,12 +53,12 @@ function convertSamplerWrapMode(
 
 /** Converts a glTF mag filter enum into a luma.gl mag filter. */
 function convertSamplerMagFilter(
-  mode: GL.NEAREST | GL.LINEAR | undefined
+  mode: GLEnum.NEAREST | GLEnum.LINEAR | undefined
 ): 'nearest' | 'linear' | undefined {
   switch (mode) {
-    case GL.NEAREST:
+    case GLEnum.NEAREST:
       return 'nearest';
-    case GL.LINEAR:
+    case GLEnum.LINEAR:
       return 'linear';
     default:
       return undefined;
@@ -68,26 +68,26 @@ function convertSamplerMagFilter(
 /** Converts a glTF min filter enum into luma.gl minification and mipmap filters. */
 function convertSamplerMinFilter(
   mode:
-    | GL.NEAREST
-    | GL.LINEAR
-    | GL.NEAREST_MIPMAP_NEAREST
-    | GL.LINEAR_MIPMAP_NEAREST
-    | GL.NEAREST_MIPMAP_LINEAR
-    | GL.LINEAR_MIPMAP_LINEAR
+    | GLEnum.NEAREST
+    | GLEnum.LINEAR
+    | GLEnum.NEAREST_MIPMAP_NEAREST
+    | GLEnum.LINEAR_MIPMAP_NEAREST
+    | GLEnum.NEAREST_MIPMAP_LINEAR
+    | GLEnum.LINEAR_MIPMAP_LINEAR
     | undefined
 ): {minFilter?: 'nearest' | 'linear'; mipmapFilter?: 'nearest' | 'linear'} {
   switch (mode) {
-    case GL.NEAREST:
+    case GLEnum.NEAREST:
       return {minFilter: 'nearest'};
-    case GL.LINEAR:
+    case GLEnum.LINEAR:
       return {minFilter: 'linear'};
-    case GL.NEAREST_MIPMAP_NEAREST:
+    case GLEnum.NEAREST_MIPMAP_NEAREST:
       return {minFilter: 'nearest', mipmapFilter: 'nearest'};
-    case GL.LINEAR_MIPMAP_NEAREST:
+    case GLEnum.LINEAR_MIPMAP_NEAREST:
       return {minFilter: 'linear', mipmapFilter: 'nearest'};
-    case GL.NEAREST_MIPMAP_LINEAR:
+    case GLEnum.NEAREST_MIPMAP_LINEAR:
       return {minFilter: 'nearest', mipmapFilter: 'linear'};
-    case GL.LINEAR_MIPMAP_LINEAR:
+    case GLEnum.LINEAR_MIPMAP_LINEAR:
       return {minFilter: 'linear', mipmapFilter: 'linear'};
     default:
       return {};

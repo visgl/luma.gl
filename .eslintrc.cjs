@@ -190,6 +190,9 @@ module.exports = getESLintConfig({
       'import/resolver': {
         node: {
           extensions: ['.js', '.jsx', '.mjs', '.ts', '.tsx']
+        },
+        typescript: {
+          project: './tsconfig.json'
         }
       }
     }

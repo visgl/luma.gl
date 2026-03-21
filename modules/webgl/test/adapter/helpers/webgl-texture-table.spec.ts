@@ -4,7 +4,7 @@
 
 import test from 'test/utils/vitest-tape';
 
-import {GL} from '@luma.gl/constants';
+import {GL} from '@luma.gl/webgl/constants';
 import {WEBGL_TEXTURE_FORMATS} from '../../../src/adapter/converters/webgl-texture-table';
 
 test('WEBGL_TEXTURE_FORMATS maps ASTC 10x5 formats correctly', t => {

@@ -6,8 +6,8 @@ import test from 'test/utils/vitest-tape';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
 
 import type {TypedArray} from '@math.gl/types';
-import type {GLParameters} from '@luma.gl/constants';
-import {GL} from '@luma.gl/constants';
+import type {GLParameters} from '@luma.gl/webgl/constants';
+import {GL} from '@luma.gl/webgl/constants';
 
 import {
   getGLParameters,

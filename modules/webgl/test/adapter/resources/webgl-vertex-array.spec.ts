@@ -5,7 +5,7 @@
 import test from 'test/utils/vitest-tape';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
 
-import {GL} from '@luma.gl/constants';
+import {GL} from '@luma.gl/webgl/constants';
 import {WEBGLBuffer, WEBGLVertexArray} from '@luma.gl/webgl';
 
 function createVertexArray(device): WEBGLVertexArray {
