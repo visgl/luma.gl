@@ -7,7 +7,7 @@
 Launch a Playwright-managed browser with a remote debugging port:
 
 ```sh
-yarn playwright --example showcase/persistence --debug-port 9222
+yarn website-debug --example showcase/persistence --debug-port 9222
 ```
 
 This is the most reliable mode for automation.
@@ -17,7 +17,7 @@ This is the most reliable mode for automation.
 Attach to an already-running Chrome or Chromium that was started with a remote debugging port:
 
 ```sh
-yarn playwright --attach=http://127.0.0.1:9222 --target-tab persistence
+yarn website-debug --attach=http://127.0.0.1:9222 --target-tab persistence
 ```
 
 Attach mode requirements:

@@ -9,7 +9,7 @@ This repo keeps the Vitest and Playwright wiring in the local `@luma.gl/devtools
   - `yarn test-browser`
   - `yarn test-headless`
   - `yarn test-coverage`
-  - `yarn playwright`
+  - `yarn website-debug`
   - `yarn playwright:install`
 - Those commands delegate into the `@luma.gl/devtools` workspace.
 - The reusable configuration and helpers live under `devtools/`.
@@ -35,7 +35,7 @@ This repo keeps the Vitest and Playwright wiring in the local `@luma.gl/devtools
 
 ## Playwright behavior
 
-- `yarn playwright` runs the thin CLI wrapper in `devtools/playwright`.
+- `yarn website-debug` runs the thin CLI wrapper in `devtools/playwright`.
 - Example aliases and defaults come from `.ocularrc.js`.
 - The runner can:
   - open any website example by route or alias

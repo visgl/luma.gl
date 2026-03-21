@@ -23,20 +23,20 @@
     "fs": false
   },
   "scripts": {
-    "bootstrap": "yarn && ocular-bootstrap && yarn build",
+    "bootstrap": "bash ./scripts/bootstrap.sh",
     "start": "open https://luma.gl/docs/getting-started",
     "build": "ocular-clean && (cd modules/constants && yarn pre-build) && ocular-build",
     "lint": "ocular-lint",
     "publish-beta": "ocular-publish version-only-beta",
     "publish-prod": "ocular-publish version-only-prod",
-    "test": "yarn test-node && yarn test-browser",
+    "test": "yarn test-node && yarn test-headless",
     "test-node": "yarn workspace @luma.gl/devtools test-node",
     "test-browser": "yarn workspace @luma.gl/devtools test-browser",
     "test-headless": "yarn workspace @luma.gl/devtools test-headless",
     "test-coverage": "yarn workspace @luma.gl/devtools test-coverage",
     "test-fast": "yarn lint && yarn test-node",
     "test-website": "cd website && yarn && yarn build && cd ..",
-    "playwright": "yarn workspace @luma.gl/devtools playwright",
+    "website-debug": "yarn workspace @luma.gl/devtools website-debug",
     "playwright:install": "yarn workspace @luma.gl/devtools playwright:install",
     "metrics": "./scripts/metrics.sh && ocular-metrics"
   },
@@ -54,7 +54,9 @@
     "@vis.gl/ts-plugins": "^1.0.2",
     "eslint-plugin-tree-shaking": "^1.12.2",
     "pre-commit": "^1.2.2",
-    "puppeteer": "^24.39.0"
+    "puppeteer": "^24.39.0",
+    "vite": "^8.0.0",
+    "vitest": "^4.0.18"
   },
   "resolutions": {
     "typescript": "^5.8.3",

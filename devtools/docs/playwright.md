@@ -5,7 +5,7 @@ The Playwright support in `devtools` is split into reusable modules plus a thin 
 Supported capabilities:
 - launch a Chromium-family browser with repo-configured options
 - resolve website examples from aliases or route segments
-- open any website example with `yarn playwright --example ...`
+- open any website example with `yarn website-debug --example ...`
 - select `WebGPU` or `WebGL2`
 - collect console logs, page errors, and failed requests
 - capture screenshots and probe WebGPU availability
@@ -13,10 +13,10 @@ Supported capabilities:
 CLI examples:
 
 ```sh
-yarn playwright --example showcase/persistence
-yarn playwright --example api/animation --backend webgpu
-yarn playwright --example persistence --backend webgl2
-yarn playwright --attach=http://127.0.0.1:9222 --target-tab persistence
+yarn website-debug --example showcase/persistence
+yarn website-debug --example api/animation --backend webgpu
+yarn website-debug --example persistence --backend webgl2
+yarn website-debug --attach=http://127.0.0.1:9222 --target-tab persistence
 ```
 
 Example resolution rules:

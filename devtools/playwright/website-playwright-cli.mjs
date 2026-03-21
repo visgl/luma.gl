@@ -190,9 +190,9 @@ function parseArguments(argv) {
 function printHelp() {
   console.log(`
 Usage:
-  yarn playwright --example showcase/persistence
-  yarn playwright --example persistence --backend webgl2
-  yarn playwright --attach=http://127.0.0.1:9222 --target-tab persistence
+  yarn website-debug --example showcase/persistence
+  yarn website-debug --example persistence --backend webgl2
+  yarn website-debug --attach=http://127.0.0.1:9222 --target-tab persistence
 
 Options:
   --example <value>         Example alias or route segment

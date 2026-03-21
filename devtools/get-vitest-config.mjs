@@ -1,9 +1,16 @@
+import path from 'node:path';
+import {createRequire} from 'node:module';
+
 import {defineConfig} from 'vitest/config';
 import {playwright} from '@vitest/browser-playwright';
 import tsconfigPaths from 'vite-tsconfig-paths';
 
 import {getPlaywrightLaunchOptions} from './get-playwright-launch-options.mjs';
 import {loadOcularConfig} from './load-ocular-config.mjs';
+
+const require = createRequire(import.meta.url);
+const VITEST_PACKAGE_ROOT = path.dirname(require.resolve('vitest/package.json'));
+const VITEST_INTERNAL_BROWSER_PATH = require.resolve('vitest/internal/browser');
 
 export async function getVitestConfig(options = {}) {
   const ocularConfig = options.ocularConfig || (await loadOcularConfig(options));
@@ -31,6 +38,13 @@ export async function getVitestConfig(options = {}) {
 
   return defineConfig({
     plugins: [createTsconfigPathsPlugin()],
+    resolve: {
+      alias: [
+        {find: /^vitest\/internal\/browser$/, replacement: VITEST_INTERNAL_BROWSER_PATH},
+        {find: /^vitest\/(.+)$/, replacement: `${VITEST_PACKAGE_ROOT}/$1`},
+        {find: /^vitest$/, replacement: VITEST_PACKAGE_ROOT}
+      ]
+    },
     test: {
       projects: [
         {

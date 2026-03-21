@@ -1,6 +1,7 @@
 # AGENTS.md
  
 ## Setup commands
+- Select Node version: `nvm use`
 - Install deps: `yarn install`
 - Check types: `yarn build`
 - Check lint and formatting: `yarn lint`
@@ -13,7 +14,7 @@
   - `yarn test-browser`
   - `yarn test-headless`
   - `yarn test-coverage`
-  - `yarn playwright`
+  - `yarn website-debug`
 - Those commands delegate into the local `@luma.gl/devtools` workspace.
 - Reusable Vitest and Playwright wiring lives under [`devtools`](/Users/ibgreen/code/luma.gl/devtools).
 - Repo-specific overrides for that tooling live in [`\.ocularrc.js`](/Users/ibgreen/code/luma.gl/.ocularrc.js).
