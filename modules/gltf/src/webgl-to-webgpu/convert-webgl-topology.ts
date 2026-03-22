@@ -3,21 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {PrimitiveTopology} from '@luma.gl/core';
-
-// NOTE: Modules other than `@luma.gl/webgl` should not import `GL` from
-// `@luma.gl/constants`. Locally we use `GLEnum` instead of `GL` to avoid
-// conflicts with the `babel-plugin-inline-webgl-constants` plugin.
-// eslint-disable-next-line no-shadow
-/** Minimal WebGL draw-mode enum subset used by the glTF converter. */
-export enum GLEnum {
-  POINTS = 0x0,
-  LINES = 0x1,
-  LINE_LOOP = 0x2,
-  LINE_STRIP = 0x3,
-  TRIANGLES = 0x4,
-  TRIANGLE_STRIP = 0x5,
-  TRIANGLE_FAN = 0x6
-}
+import {GLEnum} from './gltf-webgl-constants';
 
 /** Converts a WebGL draw mode into a luma.gl primitive topology string. */
 export function convertGLDrawModeToTopology(

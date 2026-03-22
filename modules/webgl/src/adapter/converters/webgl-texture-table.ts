@@ -9,7 +9,7 @@ import type {
   DeviceTextureFormatCapabilities
 } from '@luma.gl/core';
 import {textureFormatDecoder} from '@luma.gl/core';
-import {GL, GLPixelType, GLExtensions, GLTexelDataFormat} from '@luma.gl/constants';
+import {GL, GLPixelType, GLExtensions, GLTexelDataFormat} from '@luma.gl/webgl/constants';
 import {getWebGLExtension} from '../../context/helpers/webgl-extensions';
 import {getGLFromVertexType} from './webgl-vertex-formats';
 

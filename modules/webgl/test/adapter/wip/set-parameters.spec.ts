@@ -1,7 +1,7 @@
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {createTestContext} from '@luma.gl/test-utils';
 
-import GL from '@luma.gl/constants';
+import {GL} from '@luma.gl/webgl/constants';
 import {Framebuffer, getKey} from '@luma.gl/webgl';
 import {setParameters, getParameters, resetParameters} from '@luma.gl/webgl';
 import {GL_PARAMETER_DEFAULTS} from '@luma.gl/webgl/context/parameters/webgl-parameter-tables';

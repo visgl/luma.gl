@@ -15,7 +15,7 @@ import {
   Framebuffer,
   assertDefined
 } from '@luma.gl/core';
-import {GL, type GLTextureTarget, type GLTextureCubeMapTarget} from '@luma.gl/constants';
+import {GL, type GLTextureTarget, type GLTextureCubeMapTarget} from '@luma.gl/webgl/constants';
 
 import {WebGLDevice} from '../webgl-device';
 import {WEBGLBuffer} from './webgl-buffer';

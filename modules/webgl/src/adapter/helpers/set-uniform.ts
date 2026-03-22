@@ -6,7 +6,7 @@
 
 // Uniforms
 import type {UniformValue} from '@luma.gl/core';
-import {GL, GLUniformType, GLSamplerType} from '@luma.gl/constants';
+import {GL, GLUniformType, GLSamplerType} from '@luma.gl/webgl/constants';
 
 /** Set a raw uniform (without type conversion and caching) */
 /* eslint-disable max-len */

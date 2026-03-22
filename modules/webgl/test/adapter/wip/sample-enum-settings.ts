@@ -1,5 +1,5 @@
 /** @typedef {import('@luma.gl/webgl').GLParameters} GLParameters  */
-import GL from '@luma.gl/constants';
+import {GL} from '@luma.gl/webgl/constants';
 
 // eslint-disable-next-line
 // NOTE: These settings should be in sync with FUNCTION_STYLE_SETTINGS_SET1
