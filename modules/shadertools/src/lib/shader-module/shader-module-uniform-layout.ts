@@ -20,6 +20,9 @@ type Logger = {
   error?: (...args: unknown[]) => () => unknown;
 };
 
+const GLSL_UNIFORM_BLOCK_FIELD_REGEXP =
+  /^(?:uniform\s+)?(?:(?:lowp|mediump|highp)\s+)?[A-Za-z0-9_]+(?:<[^>]+>)?\s+([A-Za-z0-9_]+)(?:\s*\[[^\]]+\])?\s*;/;
+
 export function getShaderModuleUniformBlockName(module: ShaderModule): string {
   return `${module.name}Uniforms`;
 }
@@ -115,9 +118,7 @@ function extractShaderUniformBlockFieldNames(
     const fieldMatch =
       language === 'wgsl'
         ? line.match(/^([A-Za-z0-9_]+)\s*:/)
-        : line.match(
-            /^(?:uniform\s+)?[A-Za-z0-9_]+(?:<[^>]+>)?\s+([A-Za-z0-9_]+)(?:\s*\[[^\]]+\])?\s*;/
-          );
+        : line.match(GLSL_UNIFORM_BLOCK_FIELD_REGEXP);
 
     if (fieldMatch) {
       fieldNames.push(fieldMatch[1]);

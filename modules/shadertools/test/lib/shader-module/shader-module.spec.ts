@@ -8,7 +8,9 @@ import {
   initializeShaderModule,
   checkShaderModuleDeprecations,
   getShaderModuleUniforms,
-  getShaderModuleSource
+  getShaderModuleSource,
+  getShaderModuleUniformBlockFields,
+  getShaderModuleUniformLayoutValidationResult
 } from '@luma.gl/shadertools';
 
 test('ShaderModule', t => {
@@ -126,6 +128,36 @@ test('initializeShaderModule', t => {
   t.throws(() => getShaderModuleUniforms(module, {strength: -1}), 'invalid uniform');
   t.throws(() => getShaderModuleUniforms(module, {strength: 2}), 'invalid uniform');
   t.throws(() => getShaderModuleUniforms(module, {center: 0.5}), 'invalid uniform');
+
+  t.end();
+});
+
+test('ShaderModule uniform block validation parses GLSL precision-qualified fields', t => {
+  const shaderModule: ShaderModule = {
+    name: 'precisionQualified',
+    uniformTypes: {
+      textureUnit: 'i32',
+      opacity: 'f32',
+      offsets: 'vec2<f32>'
+    },
+    fs: `\
+uniform precisionQualifiedUniforms {
+  highp int textureUnit;
+  mediump float opacity;
+  vec2 offsets;
+} precisionQualified;
+`
+  };
+
+  t.deepEqual(
+    getShaderModuleUniformBlockFields(shaderModule, 'fragment'),
+    ['textureUnit', 'opacity', 'offsets'],
+    'extracts precision-qualified GLSL uniform block fields'
+  );
+  t.ok(
+    getShaderModuleUniformLayoutValidationResult(shaderModule, 'fragment')?.matches,
+    'validation accepts precision-qualified GLSL uniform block fields'
+  );
 
   t.end();
 });
