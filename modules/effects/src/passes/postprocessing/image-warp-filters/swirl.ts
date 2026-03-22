@@ -12,7 +12,7 @@ struct swirlUniforms {
   center: vec2f,
 };
 
-@group(0) @binding(1) var<uniform> swirl: swirlUniforms;
+@group(0) @binding(auto) var<uniform> swirl: swirlUniforms;
 
 fn swirl_warp(coordIn: vec2f, texCenter: vec2f) -> vec2f {
   var coord = coordIn - texCenter;

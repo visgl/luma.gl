@@ -23,7 +23,7 @@ struct pbrProjectionUniforms {
   camera: vec3<f32>
 };
 
-@binding(0) @group(0) var<uniform> pbrProjection: pbrProjectionUniforms;
+@group(0) @binding(auto) var<uniform> pbrProjection: pbrProjectionUniforms;
 `;
 
 export type PBRProjectionProps = {

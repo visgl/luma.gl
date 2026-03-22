@@ -9,6 +9,7 @@
  * Install https://marketplace.visualstudio.com/items?itemName=boyswan.glsl-literal
  */
 export type {PlatformInfo} from './lib/shader-assembly/platform-info';
+export type {ShaderBindingDebugRow} from './lib/shader-assembly/wgsl-binding-debug';
 
 // ShaderModules
 

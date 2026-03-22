@@ -19,6 +19,12 @@ Shader Modules
 - A props to uniforms mapping system
 - A selection of shader modules and shader passes
 
+Additional reference pages:
+
+- [`ShaderAssembler`](/docs/api-reference/shadertools/shader-assembler)
+- [`WGSL Support`](/docs/api-reference/shadertools/wgsl-support)
+- [`Shader Module Conventions`](/docs/api-reference/shadertools/shader-conventions)
+
 ## Built-in Shader Modules
 
 The API reference contains pages for the built-in shader modules exported by `@luma.gl/shadertools`:

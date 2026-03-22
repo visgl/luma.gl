@@ -32,7 +32,7 @@ import {
   normalizeBindingsByGroup
 } from '@luma.gl/core';
 
-import type {ShaderModule, PlatformInfo} from '@luma.gl/shadertools';
+import type {ShaderBindingDebugRow, ShaderModule, PlatformInfo} from '@luma.gl/shadertools';
 import {ShaderAssembler} from '@luma.gl/shadertools';
 
 import type {Geometry} from '../geometry/geometry';
@@ -238,6 +238,7 @@ export class Model {
 
   /** "Time" of last draw. Monotonically increasing timestamp */
   _lastDrawTimestamp: number = -1;
+  private _bindingTable: ShaderBindingDebugRow[] = [];
 
   get [Symbol.toStringTag](): string {
     return 'Model';
@@ -286,14 +287,16 @@ export class Model {
     // TODO - this is wrong, compile a single shader
     if (isWebGPU && this.props.source) {
       // WGSL
-      const {source, getUniforms} = this.props.shaderAssembler.assembleWGSLShader({
-        platformInfo,
-        ...this.props,
-        modules
-      });
+      const {source, getUniforms, bindingTable} =
+        this.props.shaderAssembler.assembleWGSLShader({
+          platformInfo,
+          ...this.props,
+          modules
+        });
       this.source = source;
       // @ts-expect-error
       this._getModuleUniforms = getUniforms;
+      this._bindingTable = bindingTable;
       // Extract shader layout after modules have been added to WGSL source, to include any bindings added by modules
       const inferredShaderLayout = (
         device as Device & {getShaderLayout?: (source: string) => any}
@@ -315,6 +318,7 @@ export class Model {
       this.fs = fs;
       // @ts-expect-error
       this._getModuleUniforms = getUniforms;
+      this._bindingTable = [];
     }
 
     this.vertexCount = this.props.vertexCount;
@@ -407,6 +411,11 @@ export class Model {
   /** Mark the model as needing a redraw */
   setNeedsRedraw(reason: string): void {
     this._needsRedraw ||= reason;
+  }
+
+  /** Returns WGSL binding debug rows for the assembled shader. Returns an empty array for GLSL models. */
+  getBindingDebugTable(): readonly ShaderBindingDebugRow[] {
+    return this._bindingTable;
   }
 
   /** Update uniforms and pipeline state prior to drawing. */

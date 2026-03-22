@@ -9,7 +9,7 @@ struct vibranceUniforms {
   amount: f32,
 };
 
-@group(0) @binding(1) var<uniform> vibrance: vibranceUniforms;
+@group(0) @binding(auto) var<uniform> vibrance: vibranceUniforms;
 
 fn vibrance_filterColor(color: vec4f) -> vec4f {
   let average = (color.r + color.g + color.b) / 3.0;

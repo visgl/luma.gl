@@ -9,7 +9,7 @@ struct noiseUniforms {
   amount: f32,
 };
 
-@group(0) @binding(1) var<uniform> noise: noiseUniforms;
+@group(0) @binding(auto) var<uniform> noise: noiseUniforms;
 
 fn rand(co: vec2f) -> f32 {
 	return fract(sin(dot(co.xy, vec2f(12.9898, 78.233))) * 43758.547);

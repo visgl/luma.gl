@@ -10,6 +10,7 @@ import {
   assembleWGSLShader,
   assembleGLSLShaderPair
 } from './shader-assembly/assemble-shaders';
+import {getShaderBindingDebugRowsFromWGSL, type ShaderBindingDebugRow} from './shader-assembly/wgsl-binding-debug';
 import {preprocess} from './preprocessor/preprocessor';
 
 /**
@@ -23,6 +24,8 @@ export class ShaderAssembler {
   private readonly _hookFunctions: any[] = [];
   /** Shader modules */
   private _defaultModules: ShaderModule[] = [];
+  /** Stable per-run WGSL auto-binding assignments keyed by group/module/binding. */
+  private readonly _wgslBindingRegistry = new Map<string, number>();
 
   /**
    * A default shader assembler instance - the natural place to register default modules and hooks
@@ -77,13 +80,16 @@ export class ShaderAssembler {
     source: string;
     getUniforms: GetUniformsFunc;
     modules: ShaderModule[];
+    bindingAssignments: {moduleName: string; name: string; group: number; location: number}[];
+    bindingTable: ShaderBindingDebugRow[];
   } {
     const modules = this._getModuleList(props.modules); // Combine with default modules
     const hookFunctions = this._hookFunctions; // TODO - combine with default hook functions
-    const {source, getUniforms} = assembleWGSLShader({
+    const {source, getUniforms, bindingAssignments} = assembleWGSLShader({
       ...props,
       // @ts-expect-error
       source: props.source,
+      _bindingRegistry: this._wgslBindingRegistry,
       modules,
       hookFunctions
     });
@@ -97,7 +103,13 @@ export class ShaderAssembler {
     // WGSL does not have built-in preprocessing support (just compile time constants)
     const preprocessedSource =
       props.platformInfo.shaderLanguage === 'wgsl' ? preprocess(source, {defines}) : source;
-    return {source: preprocessedSource, getUniforms, modules};
+    return {
+      source: preprocessedSource,
+      getUniforms,
+      modules,
+      bindingAssignments,
+      bindingTable: getShaderBindingDebugRowsFromWGSL(preprocessedSource, bindingAssignments)
+    };
   }
 
   /**

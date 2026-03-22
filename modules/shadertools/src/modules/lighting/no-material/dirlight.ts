@@ -4,7 +4,6 @@
 
 import type {NumberArray3} from '@math.gl/core';
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
-import {GROUP_2_DIRLIGHT_BINDING} from '../group-2-bindings';
 
 export type DirlightProps = {
   lightDirection?: NumberArray3;
@@ -24,7 +23,7 @@ struct DirlightInputs {
   normal: DirlightNormal,
 };
 
-@binding(${GROUP_2_DIRLIGHT_BINDING}) @group(2) var<uniform> dirlight : dirlightUniforms;
+@group(2) @binding(auto) var<uniform> dirlight : dirlightUniforms;
 
 // For vertex
 fn dirlight_setNormal(normal: vec3<f32>) -> DirlightNormal {
@@ -72,6 +71,7 @@ export const dirlight = {
 
   name: 'dirlight',
   bindingLayout: [{name: 'dirlight', group: 2}],
+  firstBindingSlot: 16,
   dependencies: [],
   source: SOURCE_WGSL,
   vs: VS_GLSL,

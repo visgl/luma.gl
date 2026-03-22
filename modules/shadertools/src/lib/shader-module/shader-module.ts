@@ -53,6 +53,8 @@ export type ShaderModule<
   bindings?: BindingsT;
   /** Logical bind-group assignment for bindings declared by this module */
   bindingLayout?: readonly ShaderModuleBindingLayout[];
+  /** Preferred starting binding slot for this module's WGSL `@binding(auto)` declarations. */
+  firstBindingSlot?: number;
 
   name: string;
 
