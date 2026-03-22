@@ -19,6 +19,12 @@ Shader Modules
 - A props to uniforms mapping system
 - A selection of shader modules and shader passes
 
+Additional reference pages:
+
+- [`ShaderAssembler`](/docs/api-reference/shadertools/shader-assembler)
+- [`WGSL Support`](/docs/api-reference/shadertools/wgsl-support)
+- [`Shader Module Conventions`](/docs/api-reference/shadertools/shader-conventions)
+
 ## Built-in Shader Modules
 
 The API reference contains pages for the built-in shader modules exported by `@luma.gl/shadertools`:
@@ -31,6 +37,7 @@ The API reference contains pages for the built-in shader modules exported by `@l
 - [`skin`](/docs/api-reference/shadertools/shader-modules/skin)
 - [`lighting`](/docs/api-reference/shadertools/shader-modules/lighting)
 - [`dirlight`](/docs/api-reference/shadertools/shader-modules/dirlight)
+- [`lambertMaterial`](/docs/api-reference/shadertools/shader-modules/lambert-material)
 - [`gouraudMaterial`](/docs/api-reference/shadertools/shader-modules/gouraud-material)
 - [`phongMaterial`](/docs/api-reference/shadertools/shader-modules/phong-material)
 - [`pbrMaterial`](/docs/api-reference/shadertools/shader-modules/pbr-material)

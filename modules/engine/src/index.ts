@@ -19,6 +19,10 @@ export {makeAnimationLoop} from './animation-loop/make-animation-loop';
 
 export type {ModelProps} from './model/model';
 export {Model} from './model/model';
+export type {MaterialProps} from './material/material';
+export {Material} from './material/material';
+export type {MaterialFactoryProps} from './material/material-factory';
+export {MaterialFactory} from './material/material-factory';
 
 // Transforms
 export type {BufferTransformProps} from './compute/buffer-transform';

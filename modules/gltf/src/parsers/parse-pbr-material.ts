@@ -156,6 +156,8 @@ export type ParsePBRMaterialOptions = {
   imageBasedLightingEnvironment?: PBREnvironment;
   /** parent post-processed glTF, used to resolve extension texture infos */
   gltf?: GLTFPostprocessed;
+  /** run primitive-attribute diagnostics such as missing TEXCOORD_0 / NORMAL */
+  validateAttributes?: boolean;
 };
 
 /**
@@ -216,7 +218,9 @@ export function parsePBRMaterial(
   if (options?.lights) parsedMaterial.defines['USE_LIGHTS'] = true;
 
   if (material) {
-    warnOnMissingExpectedAttributes(material, attributes);
+    if (options.validateAttributes !== false) {
+      warnOnMissingExpectedAttributes(material, attributes);
+    }
     parseMaterial(device, material, parsedMaterial, options.gltf);
   }
 

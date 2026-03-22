@@ -16,6 +16,7 @@ import type {
 
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
 import {lighting} from '../lights/lighting';
+import {ibl} from '../ibl/ibl';
 
 import {vs, fs} from './pbr-material-glsl';
 import {source} from './pbr-material-wgsl';
@@ -40,11 +41,6 @@ export type PBRMaterialBindings = {
   pbr_sheenRoughnessSampler?: Texture | null; // #ifdef HAS_SHEENROUGHNESSMAP
   pbr_iridescenceSampler?: Texture | null; // #ifdef HAS_IRIDESCENCEMAP
   pbr_anisotropySampler?: Texture | null; // #ifdef HAS_ANISOTROPYMAP
-
-  // IBL Samplers
-  pbr_diffuseEnvSampler?: Texture | null; // #ifdef USE_IBL (samplerCube)
-  pbr_specularEnvSampler?: Texture | null; // #ifdef USE_IBL (samplerCube)
-  pbr_brdfLUT?: Texture | null; // #ifdef USE_IBL
 };
 
 export type PBRMaterialUniforms = {
@@ -190,7 +186,24 @@ export const pbrMaterial = {
   } as Required<PBRMaterialUniforms>,
 
   name: 'pbrMaterial',
-  dependencies: [lighting, pbrProjection],
+  bindingLayout: [
+    {name: 'pbrMaterial', group: 3},
+    {name: 'pbr_baseColorSampler', group: 3},
+    {name: 'pbr_normalSampler', group: 3},
+    {name: 'pbr_emissiveSampler', group: 3},
+    {name: 'pbr_metallicRoughnessSampler', group: 3},
+    {name: 'pbr_occlusionSampler', group: 3},
+    {name: 'pbr_specularColorSampler', group: 3},
+    {name: 'pbr_specularIntensitySampler', group: 3},
+    {name: 'pbr_transmissionSampler', group: 3},
+    {name: 'pbr_clearcoatSampler', group: 3},
+    {name: 'pbr_clearcoatRoughnessSampler', group: 3},
+    {name: 'pbr_sheenColorSampler', group: 3},
+    {name: 'pbr_sheenRoughnessSampler', group: 3},
+    {name: 'pbr_iridescenceSampler', group: 3},
+    {name: 'pbr_anisotropySampler', group: 3}
+  ],
+  dependencies: [lighting, ibl, pbrProjection],
   source,
   vs,
   fs,

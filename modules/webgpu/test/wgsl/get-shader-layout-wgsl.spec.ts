@@ -173,6 +173,67 @@ TEST_CASES.push({
   }
 });
 
+const MULTI_GROUP_SHADER = /* WGSL */ `\
+struct SceneUniforms {
+  exposure: f32,
+};
+
+struct MaterialUniforms {
+  baseColor: vec4<f32>,
+};
+
+@group(2) @binding(0) var<uniform> scene: SceneUniforms;
+@group(3) @binding(0) var<uniform> material: MaterialUniforms;
+@group(3) @binding(1) var materialTexture: texture_2d<f32>;
+@group(3) @binding(2) var materialSampler: sampler;
+
+@fragment
+fn main() -> @location(0) vec4<f32> {
+  return material.baseColor * scene.exposure;
+}
+`;
+
+TEST_CASES.push({
+  title: 'multi-group bindings',
+  wgsl: MULTI_GROUP_SHADER,
+  shaderLayout: {
+    attributes: [],
+    bindings: [
+      {
+        type: 'uniform',
+        name: 'scene',
+        group: 2,
+        location: 0,
+        // @ts-expect-error
+        members: [{name: 'exposure', type: 'f32'}]
+      },
+      {
+        type: 'uniform',
+        name: 'material',
+        group: 3,
+        location: 0,
+        // @ts-expect-error
+        members: [{name: 'baseColor', type: 'vec4<f32>'}]
+      },
+      {
+        type: 'texture',
+        name: 'materialTexture',
+        group: 3,
+        location: 1,
+        viewDimension: '2d',
+        sampleType: 'float',
+        multisampled: false
+      },
+      {
+        type: 'sampler',
+        name: 'materialSampler',
+        group: 3,
+        location: 2
+      }
+    ]
+  }
+});
+
 test('WebGPU#getShaderLayoutFromWGSL', t => {
   for (const tc of TEST_CASES) {
     const shaderLayout = getShaderLayoutFromWGSL(tc.wgsl);

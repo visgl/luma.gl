@@ -266,6 +266,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     const viewMatrix = new Matrix4().lookAt({eye: cameraPos, center: this.center});
 
+    const pbrMaterialProps = this.getPBRMaterialProps();
+    const hasPBRMaterialProps = Object.keys(pbrMaterialProps).length > 0;
+
     this.scenegraphsFromGLTF.scenes[0].traverse((node, {worldMatrix: modelMatrix}) => {
       const {model} = node as ModelNode;
 
@@ -273,9 +276,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         .multiplyRight(viewMatrix)
         .multiplyRight(modelMatrix);
 
-      model.shaderInputs.setProps({
+      const sceneShaderInputProps: Record<string, unknown> = {
         lighting: this.getLightingProps(),
-        pbrMaterial: this.getPBRMaterialProps(),
         pbrProjection: {
           camera: cameraPos,
           modelViewProjectionMatrix,
@@ -285,7 +287,17 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         skin: {
           scenegraphsFromGLTF: this.scenegraphsFromGLTF
         }
-      });
+      };
+
+      if (hasPBRMaterialProps) {
+        if (model.material?.ownsModule('pbrMaterial')) {
+          model.material.setProps({pbrMaterial: pbrMaterialProps});
+        } else {
+          sceneShaderInputProps.pbrMaterial = pbrMaterialProps;
+        }
+      }
+
+      model.shaderInputs.setProps(sceneShaderInputProps);
       model.draw(renderPass);
     });
     renderPass.end();

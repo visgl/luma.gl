@@ -11,7 +11,7 @@ struct zoomBlurUniforms {
   strength: f32,
 };
 
-@group(0) @binding(1) var<uniform> zoomBlur : zoomBlurUniforms;
+@group(0) @binding(auto) var<uniform> zoomBlur : zoomBlurUniforms;
 
 
 fn zoomBlur_sampleColor(

@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {Device} from '@luma.gl/core';
-import {GroupNode} from '@luma.gl/engine';
+import {GroupNode, Material} from '@luma.gl/engine';
 import {GLTFPostprocessed} from '@loaders.gl/gltf';
 import {Light} from '@luma.gl/shadertools';
 import {parseGLTF, type ParseGLTFOptions} from '../parsers/parse-gltf';
@@ -29,6 +29,8 @@ export type GLTFScenegraphBounds = {
 export type GLTFScenegraphs = {
   /** Scene roots produced from the glTF scenes array. */
   scenes: GroupNode[];
+  /** Materials aligned with the source glTF `materials` array. */
+  materials: Material[];
   /** Animation controller for glTF animations. */
   animator: GLTFAnimator;
   /** Parsed punctual lights from the asset. */
@@ -57,11 +59,8 @@ export function createScenegraphsFromGLTF(
   gltf: GLTFPostprocessed,
   options?: ParseGLTFOptions
 ): GLTFScenegraphs {
-  const {scenes, gltfMeshIdToNodeMap, gltfNodeIdToNodeMap, gltfNodeIndexToNodeMap} = parseGLTF(
-    device,
-    gltf,
-    options
-  );
+  const {scenes, materials, gltfMeshIdToNodeMap, gltfNodeIdToNodeMap, gltfNodeIndexToNodeMap} =
+    parseGLTF(device, gltf, options);
 
   const animations = parseGLTFAnimations(gltf);
   const animator = new GLTFAnimator({animations, gltfNodeIdToNodeMap});
@@ -72,6 +71,7 @@ export function createScenegraphsFromGLTF(
 
   return {
     scenes,
+    materials,
     animator,
     lights,
     extensionSupport,

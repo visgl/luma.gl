@@ -407,3 +407,24 @@ test('gltf#parsePBRMaterial warns when lit materials are missing NORMAL', t => {
 
   t.end();
 });
+
+test('gltf#parsePBRMaterial can suppress attribute warnings for shared material parsing', t => {
+  const warnings = captureWarnings(() => {
+    const parsedMaterial = parsePBRMaterial(
+      device,
+      {
+        pbrMetallicRoughness: {
+          baseColorTexture: makeCompressedTextureInfo('base-color')
+        },
+        normalTexture: makeCompressedTextureInfo('normal')
+      },
+      {},
+      {validateAttributes: false}
+    );
+    destroyParsedTextures(parsedMaterial);
+  });
+
+  t.deepEqual(warnings, [], 'shared material parsing can skip primitive attribute diagnostics');
+
+  t.end();
+});

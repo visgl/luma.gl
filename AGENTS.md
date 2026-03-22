@@ -6,7 +6,7 @@
 - Check types: `yarn build`
 - Check lint and formatting: `yarn lint`
 - Run tests: `yarm test`
-- Check website build `cd website; yarn; yarn build`
+- Check website build `yarn website:build`
 
 ## LLM-friendly test setup
 - Use the repo root scripts as the stable interface:
