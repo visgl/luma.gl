@@ -13,6 +13,7 @@ import {
   type TransformFeedback,
   type AttributeInfo,
   type Binding,
+  type BindingsByGroup,
   type PrimitiveTopology,
   Device,
   DeviceFeature,
@@ -27,7 +28,8 @@ import {
   UniformStore,
   log,
   dataTypeDecoder,
-  getAttributeInfosFromLayouts
+  getAttributeInfosFromLayouts,
+  normalizeBindingsByGroup
 } from '@luma.gl/core';
 
 import type {ShaderModule, PlatformInfo} from '@luma.gl/shadertools';
@@ -47,6 +49,7 @@ import {
 import {uid} from '../utils/uid';
 import {ShaderInputs} from '../shader-inputs';
 import {DynamicTexture} from '../dynamic-texture/dynamic-texture';
+import {Material} from '../material/material';
 
 const LOG_DRAW_PRIORITY = 2;
 const LOG_DRAW_TIMEOUT = 10000;
@@ -64,6 +67,8 @@ export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs' | 'bindings'> & {
 
   /** Shader inputs, used to generated uniform buffers and bindings */
   shaderInputs?: ShaderInputs;
+  /** Material-owned group-3 bindings */
+  material?: Material;
   /** Bindings */
   bindings?: Record<string, Binding | DynamicTexture>;
   /** WebGL-only uniforms */
@@ -145,6 +150,7 @@ export class Model {
     vertexCount: 0,
 
     shaderInputs: undefined!,
+    material: undefined!,
     pipelineFactory: undefined!,
     shaderFactory: undefined!,
     transformFeedback: undefined!,
@@ -218,6 +224,7 @@ export class Model {
   /** ShaderInputs instance */
   // @ts-expect-error Assigned in function called by constructor
   shaderInputs: ShaderInputs;
+  material: Material | null = null;
   // @ts-expect-error Assigned in function called by constructor
   _uniformStore: UniformStore;
 
@@ -247,6 +254,8 @@ export class Model {
     this.device = device;
 
     Object.assign(this.userData, props.userData);
+
+    this.material = props.material || null;
 
     // Setup shader module inputs
     const moduleMap = Object.fromEntries(
@@ -438,6 +447,7 @@ export class Model {
       this.pipeline = this._updatePipeline();
 
       const syncBindings = this._getBindings();
+      const syncBindGroups = this._getBindGroups();
 
       const {indexBuffer} = this.vertexArray;
       const indexCount = indexBuffer
@@ -456,6 +466,8 @@ export class Model {
         // and WebGL uniforms must be supplied on every draw instead of being stored
         // on the pipeline instance.
         bindings: syncBindings,
+        bindGroups: syncBindGroups,
+        _bindGroupCacheKeys: this._getBindGroupCacheKeys(),
         uniforms: this.props.uniforms,
         // WebGL shares underlying cached pipelines even for models that have different parameters and topology,
         // so we must provide our unique parameters to each draw
@@ -584,7 +596,7 @@ export class Model {
     this._uniformStore = new UniformStore(this.shaderInputs.modules);
     // Create uniform buffer bindings for all modules that actually have uniforms
     for (const [moduleName, module] of Object.entries(this.shaderInputs.modules)) {
-      if (shaderModuleHasUniforms(module)) {
+      if (shaderModuleHasUniforms(module) && !this.material?.ownsModule(moduleName)) {
         const uniformBuffer = this._uniformStore.getManagedUniformBuffer(this.device, moduleName);
         this.bindings[`${moduleName}Uniforms`] = uniformBuffer;
       }
@@ -592,10 +604,15 @@ export class Model {
     this.setNeedsRedraw('shaderInputs');
   }
 
+  setMaterial(material: Material | null): void {
+    this.material = material;
+    this.setNeedsRedraw('material');
+  }
+
   /** Update uniform buffers from the model's shader inputs */
   updateShaderInputs(): void {
     this._uniformStore.setUniforms(this.shaderInputs.getUniformValues());
-    this.setBindings(this.shaderInputs.getBindingValues());
+    this.setBindings(this._getNonMaterialBindings(this.shaderInputs.getBindingValues()));
     // TODO - this is already tracked through buffer/texture update times?
     this.setNeedsRedraw('shaderInputs');
   }
@@ -714,6 +731,11 @@ export class Model {
         return binding.id;
       }
     }
+    for (const binding of Object.values(this.material?.bindings || {})) {
+      if (binding instanceof DynamicTexture && !binding.isReady) {
+        return binding.id;
+      }
+    }
     return false;
   }
 
@@ -735,6 +757,32 @@ export class Model {
     return validBindings;
   }
 
+  _getBindGroups(): BindingsByGroup {
+    const shaderLayout = this.pipeline?.shaderLayout || this.props.shaderLayout || {bindings: []};
+    const bindGroups = shaderLayout.bindings.length
+      ? normalizeBindingsByGroup(shaderLayout, this._getBindings())
+      : {0: this._getBindings()};
+
+    if (!this.material) {
+      return bindGroups;
+    }
+
+    for (const [groupKey, groupBindings] of Object.entries(this.material.getBindingsByGroup())) {
+      const group = Number(groupKey);
+      bindGroups[group] = {
+        ...(bindGroups[group] || {}),
+        ...groupBindings
+      };
+    }
+
+    return bindGroups;
+  }
+
+  _getBindGroupCacheKeys(): Partial<Record<number, object>> {
+    const bindGroupCacheKey = this.material?.getBindGroupCacheKey(3);
+    return bindGroupCacheKey ? {3: bindGroupCacheKey} : {};
+  }
+
   /** Get the timestamp of the latest updated bound GPU memory resource (buffer/texture). */
   _getBindingsUpdateTimestamp(): number {
     let timestamp = 0;
@@ -752,7 +800,7 @@ export class Model {
         timestamp = Math.max(timestamp, binding.buffer.updateTimestamp);
       }
     }
-    return timestamp;
+    return Math.max(timestamp, this.material?.getBindingsUpdateTimestamp() || 0);
   }
 
   /**
@@ -824,12 +872,11 @@ export class Model {
 
       this.pipeline = this.pipelineFactory.createRenderPipeline({
         ...this.props,
+        bindings: undefined,
         bufferLayout: this.bufferLayout,
         topology: this.topology,
         parameters: this.parameters,
-        // TODO - why set bindings here when we reset them every frame?
-        // Should we expose a BindGroup abstraction?
-        bindings: this._getBindings(),
+        bindGroups: this._getBindGroups(),
         vs,
         fs
       });
@@ -934,6 +981,22 @@ export class Model {
     const typedArray =
       attribute instanceof Buffer ? new TypedArrayConstructor(attribute.debugData) : attribute;
     return typedArray.toString();
+  }
+
+  private _getNonMaterialBindings(
+    bindings: Record<string, Binding | DynamicTexture>
+  ): Record<string, Binding | DynamicTexture> {
+    if (!this.material) {
+      return bindings;
+    }
+
+    const filteredBindings: Record<string, Binding | DynamicTexture> = {};
+    for (const [name, binding] of Object.entries(bindings)) {
+      if (!this.material.ownsBinding(name)) {
+        filteredBindings[name] = binding;
+      }
+    }
+    return filteredBindings;
   }
 }
 

@@ -102,9 +102,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
       normalizeBindingsByGroup(this.shaderLayout, bindings)
     );
     for (const [name, value] of Object.entries(flatBindings)) {
-      const binding =
-        this.shaderLayout.bindings.find(binding_ => binding_.name === name) ||
-        this.shaderLayout.bindings.find(binding_ => binding_.name === `${name}Uniforms`);
+      const binding = getShaderLayoutBindingByName(this.shaderLayout, name);
 
       if (!binding) {
         const validBindings = this.shaderLayout.bindings
@@ -170,9 +168,13 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     transformFeedback?: WEBGLTransformFeedback;
     bindings?: Bindings;
     bindGroups?: BindingsByGroup;
+    _bindGroupCacheKeys?: Partial<Record<number, object>>;
     uniforms?: Record<string, UniformValue>;
   }): boolean {
     this._syncLinkStatus();
+    const drawBindings = options.bindGroups
+      ? flattenBindingsByGroup(options.bindGroups)
+      : options.bindings || this.bindings;
 
     const {
       renderPass,
@@ -188,7 +190,6 @@ export class WEBGLRenderPipeline extends RenderPipeline {
       // firstInstance,
       // baseVertex,
       transformFeedback,
-      bindings = options.bindGroups ? flattenBindingsByGroup(options.bindGroups) : this.bindings,
       uniforms = this.uniforms
     } = options;
 
@@ -207,7 +208,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     // Note: async textures set as uniforms might still be loading.
     // Now that all uniforms have been updated, check if any texture
     // in the uniforms is not yet initialized, then we don't draw
-    if (!this._areTexturesRenderable(bindings)) {
+    if (!this._areTexturesRenderable(drawBindings)) {
       log.info(2, `RenderPipeline:${this.id}.draw() aborted - textures not yet loaded`)();
       //  Note: false means that the app needs to redraw the pipeline again.
       return false;
@@ -230,7 +231,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     }
 
     // We have to apply bindings before every draw call since other draw calls will overwrite
-    this._applyBindings(bindings, {disableWarnings: this.props.disableWarnings});
+    this._applyBindings(drawBindings, {disableWarnings: this.props.disableWarnings});
     this._applyUniforms(uniforms);
 
     const webglRenderPass = renderPass as WEBGLRenderPass;
@@ -278,7 +279,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     let texturesRenderable = true;
 
     for (const bindingInfo of this.shaderLayout.bindings) {
-      if (!bindings[bindingInfo.name] && !bindings[bindingInfo.name.replace(/Uniforms$/, '')]) {
+      if (!getBindingValueForLayoutBinding(bindings, bindingInfo.name)) {
         log.warn(`Binding ${bindingInfo.name} not found in ${this.id}`)();
         texturesRenderable = false;
       }
@@ -309,8 +310,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     let textureUnit = 0;
     let uniformBufferIndex = 0;
     for (const binding of this.shaderLayout.bindings) {
-      // Accept both `xyz` and `xyzUniforms` as valid names for `xyzUniforms` uniform block
-      const value = bindings[binding.name] || bindings[binding.name.replace(/Uniforms$/, '')];
+      const value = getBindingValueForLayoutBinding(bindings, binding.name);
       if (!value) {
         throw new Error(`No value for binding ${binding.name} in ${this.id}`);
       }
@@ -426,7 +426,7 @@ function mergeShaderLayout(baseLayout: ShaderLayout, overrideLayout: ShaderLayou
   }
 
   for (const binding of overrideLayout?.bindings || []) {
-    const baseBinding = mergedLayout.bindings.find(base => base.name === binding.name);
+    const baseBinding = getShaderLayoutBindingByName(mergedLayout, binding.name);
     if (!baseBinding) {
       log.warn(`shader layout binding ${binding.name} not present in shader`);
       continue;
@@ -434,4 +434,27 @@ function mergeShaderLayout(baseLayout: ShaderLayout, overrideLayout: ShaderLayou
     Object.assign(baseBinding, binding);
   }
   return mergedLayout;
+}
+
+function getShaderLayoutBindingByName(
+  shaderLayout: ShaderLayout,
+  bindingName: string
+): ShaderLayout['bindings'][number] | undefined {
+  return shaderLayout.bindings.find(
+    binding =>
+      binding.name === bindingName ||
+      binding.name === `${bindingName}Uniforms` ||
+      `${binding.name}Uniforms` === bindingName
+  );
+}
+
+function getBindingValueForLayoutBinding(
+  bindings: Bindings,
+  bindingName: string
+): Bindings[string] | undefined {
+  return (
+    bindings[bindingName] ||
+    bindings[`${bindingName}Uniforms`] ||
+    bindings[bindingName.replace(/Uniforms$/, '')]
+  );
 }

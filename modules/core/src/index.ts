@@ -52,6 +52,7 @@ export {
 export type {PipelineFactoryProps} from './factories/pipeline-factory';
 export {PipelineFactory} from './factories/pipeline-factory';
 export {ShaderFactory} from './factories/shader-factory';
+export {_getDefaultBindGroupFactory} from './factories/bind-group-factory';
 
 export type {RenderPassProps} from './adapter/resources/render-pass';
 export {RenderPass} from './adapter/resources/render-pass';

@@ -4,6 +4,7 @@
 
 export const PHONG_WGSL = /* wgsl */ `\
 struct phongMaterialUniforms {
+  unlit: u32,
   ambient: f32,
   diffuse: f32,
   shininess: f32,
@@ -26,6 +27,10 @@ fn lighting_getLightColor(surfaceColor: vec3<f32>, light_direction: vec3<f32>, v
 
 fn lighting_getLightColor2(surfaceColor: vec3<f32>, cameraPosition: vec3<f32>, position_worldspace: vec3<f32>, normal_worldspace: vec3<f32>) -> vec3<f32> {
   var lightColor: vec3<f32> = surfaceColor;
+
+  if (phongMaterial.unlit != 0u) {
+    return surfaceColor;
+  }
 
   if (lighting.enabled == 0) {
     return lightColor;

@@ -27,7 +27,10 @@ export function mergeShaderModuleBindingsIntoLayout<TShaderLayout extends AnySha
   for (const module of modules) {
     for (const bindingLayout of module.bindingLayout || []) {
       const binding = mergedLayout.bindings.find(
-        candidate => candidate.name === bindingLayout.name
+        candidate =>
+          candidate.name === bindingLayout.name ||
+          candidate.name === `${bindingLayout.name}Uniforms` ||
+          `${candidate.name}Uniforms` === bindingLayout.name
       );
       if (binding) {
         if (binding.group === 0) {

@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {Buffer} from '@luma.gl/core';
+import {Buffer, _getDefaultBindGroupFactory} from '@luma.gl/core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 
 const RENDER_SOURCE = /* WGSL */ `
@@ -99,10 +99,19 @@ test('RenderPipeline bind-group cache only invalidates when binding identities c
   });
 
   renderPipeline.setBindings({colorUniforms: firstBuffer});
-  const firstBindGroup = (renderPipeline as any)._getBindGroup(undefined, 3);
+  const bindGroupFactory = _getDefaultBindGroupFactory(webgpuDevice);
+  const firstBindGroup = bindGroupFactory.getBindGroups(
+    renderPipeline as any,
+    (renderPipeline as any)._getBindingsByGroupWebGPU(),
+    (renderPipeline as any)._getBindGroupCacheKeysWebGPU()
+  )[3];
 
   renderPipeline.setBindings({colorUniforms: firstBuffer});
-  const secondBindGroup = (renderPipeline as any)._getBindGroup(undefined, 3);
+  const secondBindGroup = bindGroupFactory.getBindGroups(
+    renderPipeline as any,
+    (renderPipeline as any)._getBindingsByGroupWebGPU(),
+    (renderPipeline as any)._getBindGroupCacheKeysWebGPU()
+  )[3];
   t.equal(
     secondBindGroup,
     firstBindGroup,
@@ -110,12 +119,11 @@ test('RenderPipeline bind-group cache only invalidates when binding identities c
   );
 
   renderPipeline.setBindings({colorUniforms: secondBuffer});
-  t.equal(
-    (renderPipeline as any)._bindGroups[3],
-    null,
-    'render bind group cache is cleared on change'
-  );
-  const thirdBindGroup = (renderPipeline as any)._getBindGroup(undefined, 3);
+  const thirdBindGroup = bindGroupFactory.getBindGroups(
+    renderPipeline as any,
+    (renderPipeline as any)._getBindingsByGroupWebGPU(),
+    (renderPipeline as any)._getBindGroupCacheKeysWebGPU()
+  )[3];
   t.notEqual(
     thirdBindGroup,
     firstBindGroup,
@@ -123,7 +131,11 @@ test('RenderPipeline bind-group cache only invalidates when binding identities c
   );
 
   renderPipeline.setBindings({colorUniforms: secondBuffer});
-  const fourthBindGroup = (renderPipeline as any)._getBindGroup(undefined, 3);
+  const fourthBindGroup = bindGroupFactory.getBindGroups(
+    renderPipeline as any,
+    (renderPipeline as any)._getBindingsByGroupWebGPU(),
+    (renderPipeline as any)._getBindGroupCacheKeysWebGPU()
+  )[3];
   t.equal(
     fourthBindGroup,
     thirdBindGroup,

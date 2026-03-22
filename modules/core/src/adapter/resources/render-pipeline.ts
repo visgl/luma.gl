@@ -147,6 +147,8 @@ export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
     bindings?: Bindings;
     /** Bindings grouped by bind-group index */
     bindGroups?: BindingsByGroup;
+    /** Optional stable cache keys for backend bind-group reuse */
+    _bindGroupCacheKeys?: Partial<Record<number, object>>;
     /** WebGL-only uniforms */
     uniforms?: Record<string, unknown>;
   }): boolean;

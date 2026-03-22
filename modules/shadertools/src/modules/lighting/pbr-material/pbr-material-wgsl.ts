@@ -260,15 +260,6 @@ struct pbrMaterialUniforms {
 @binding(27) @group(3) var pbr_anisotropySampler: texture_2d<f32>;
 @binding(28) @group(3) var pbr_anisotropySamplerSampler: sampler;
 #endif
-#ifdef USE_IBL
-@binding(29) @group(3) var pbr_diffuseEnvSampler: texture_cube<f32>;
-@binding(30) @group(3) var pbr_diffuseEnvSamplerSampler: sampler;
-@binding(31) @group(3) var pbr_specularEnvSampler: texture_cube<f32>;
-@binding(32) @group(3) var pbr_specularEnvSamplerSampler: sampler;
-@binding(33) @group(3) var pbr_brdfLUT: texture_2d<f32>;
-@binding(34) @group(3) var pbr_brdfLUTSampler: sampler;
-#endif
-
 // Encapsulate the various inputs used by the various functions in the shading equation
 // We store values in this struct to simplify the integration of alternative implementations
 // of the shading terms, outlined in the Readme.MD Appendix.

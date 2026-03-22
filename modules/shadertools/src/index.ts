@@ -84,7 +84,11 @@ export {
 
 export type {LightingProps, LightingUniforms} from './modules/lighting/lights/lighting';
 export {lighting} from './modules/lighting/lights/lighting';
+export type {IBLBindings} from './modules/lighting/ibl/ibl';
+export {ibl} from './modules/lighting/ibl/ibl';
 export {dirlight} from './modules/lighting/no-material/dirlight';
+export type {LambertMaterialProps} from './modules/lighting/lambert-material/lambert-material';
+export {lambertMaterial} from './modules/lighting/lambert-material/lambert-material';
 export type {GouraudMaterialProps} from './modules/lighting/gouraud-material/gouraud-material';
 export {gouraudMaterial} from './modules/lighting/gouraud-material/gouraud-material';
 export type {PhongMaterialProps} from './modules/lighting/phong-material/phong-material';

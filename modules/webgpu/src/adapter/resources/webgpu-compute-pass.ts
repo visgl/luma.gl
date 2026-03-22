@@ -8,7 +8,8 @@ import {
   ComputePipeline,
   Buffer,
   Bindings,
-  BindingsByGroup
+  BindingsByGroup,
+  _getDefaultBindGroupFactory
 } from '@luma.gl/core';
 import {WebGPUDevice} from '../webgpu-device';
 import {WebGPUBuffer} from './webgpu-buffer';
@@ -65,10 +66,14 @@ export class WebGPUComputePass extends ComputePass {
     const wgpuPipeline = pipeline as WebGPUComputePipeline;
     this.handle.setPipeline(wgpuPipeline.handle);
     this._webgpuPipeline = wgpuPipeline;
-    const bindGroups = this._webgpuPipeline._getBindGroups();
+    const bindGroups = _getDefaultBindGroupFactory(this.device).getBindGroups(
+      this._webgpuPipeline,
+      this._webgpuPipeline._getBindingsByGroupWebGPU(),
+      this._webgpuPipeline._getBindGroupCacheKeysWebGPU()
+    );
     for (const [group, bindGroup] of Object.entries(bindGroups)) {
       if (bindGroup) {
-        this.handle.setBindGroup(Number(group), bindGroup);
+        this.handle.setBindGroup(Number(group), bindGroup as GPUBindGroup);
       }
     }
   }
@@ -78,10 +83,13 @@ export class WebGPUComputePass extends ComputePass {
    * TODO - still some API confusion - does this method go here or on the pipeline?
    */
   setBindings(bindings: Bindings | BindingsByGroup): void {
-    const bindGroups = this._webgpuPipeline?._getBindGroups(bindings) || {};
+    const bindGroups =
+      (this._webgpuPipeline &&
+        _getDefaultBindGroupFactory(this.device).getBindGroups(this._webgpuPipeline, bindings)) ||
+      {};
     for (const [group, bindGroup] of Object.entries(bindGroups)) {
       if (bindGroup) {
-        this.handle.setBindGroup(Number(group), bindGroup);
+        this.handle.setBindGroup(Number(group), bindGroup as GPUBindGroup);
       }
     }
   }

@@ -1,10 +1,15 @@
 // luma.gl MIT license
 
 import type {Bindings, BindingsByGroup, RenderPass, VertexArray} from '@luma.gl/core';
-import {RenderPipeline, RenderPipelineProps, log, normalizeBindingsByGroup} from '@luma.gl/core';
+import {
+  RenderPipeline,
+  RenderPipelineProps,
+  _getDefaultBindGroupFactory,
+  log,
+  normalizeBindingsByGroup
+} from '@luma.gl/core';
 import {applyParametersToRenderPipelineDescriptor} from '../helpers/webgpu-parameters';
 import {getWebGPUTextureFormat} from '../helpers/convert-texture-format';
-import {getBindGroup} from '../helpers/get-bind-group';
 import {getVertexBufferLayout} from '../helpers/get-vertex-buffer-layout';
 // import {convertAttributesVertexBufferToLayout} from '../helpers/get-vertex-buffer-layout';
 // import type {BufferAccessors} from './webgpu-pipeline';
@@ -27,9 +32,7 @@ export class WebGPURenderPipeline extends RenderPipeline {
 
   /** Compatibility path for direct pipeline.setBindings() usage */
   private _bindingsByGroup: BindingsByGroup;
-  /** For internal use to create BindGroups */
-  private _bindGroupLayouts: Partial<Record<number, GPUBindGroupLayout>> = {};
-  private _bindGroups: Partial<Record<number, GPUBindGroup | null>> = {};
+  private _bindGroupCacheKeysByGroup: Partial<Record<number, object>> = {};
 
   override get [Symbol.toStringTag]() {
     return 'WebGPURenderPipeline';
@@ -65,6 +68,7 @@ export class WebGPURenderPipeline extends RenderPipeline {
     this.fs = props.fs as WebGPUShader;
     this._bindingsByGroup =
       props.bindGroups || normalizeBindingsByGroup(this.shaderLayout, props.bindings);
+    this._bindGroupCacheKeysByGroup = createBindGroupCacheKeys(this._bindingsByGroup);
   }
 
   override destroy(): void {
@@ -91,7 +95,7 @@ export class WebGPURenderPipeline extends RenderPipeline {
             this._bindingsByGroup[group] = {...currentGroupBindings};
           }
           this._bindingsByGroup[group][name] = binding;
-          this._bindGroups[group] = null;
+          this._bindGroupCacheKeysByGroup[group] = {};
         }
       }
     }
@@ -110,6 +114,7 @@ export class WebGPURenderPipeline extends RenderPipeline {
     baseVertex?: number;
     bindings?: Bindings;
     bindGroups?: BindingsByGroup;
+    _bindGroupCacheKeys?: Partial<Record<number, object>>;
     uniforms?: Record<string, unknown>;
   }): boolean {
     const webgpuRenderPass = options.renderPass as WebGPURenderPass;
@@ -125,10 +130,15 @@ export class WebGPURenderPipeline extends RenderPipeline {
     });
 
     // Set bindings (uniform buffers, textures etc)
-    const bindGroups = this._getBindGroups(options.bindGroups || options.bindings);
+    const hasExplicitBindings = Boolean(options.bindGroups || options.bindings);
+    const bindGroups = _getDefaultBindGroupFactory(this.device).getBindGroups(
+      this,
+      hasExplicitBindings ? options.bindGroups || options.bindings : this._bindingsByGroup,
+      hasExplicitBindings ? options._bindGroupCacheKeys : this._bindGroupCacheKeysByGroup
+    );
     for (const [group, bindGroup] of Object.entries(bindGroups)) {
       if (bindGroup) {
-        webgpuRenderPass.handle.setBindGroup(Number(group), bindGroup);
+        webgpuRenderPass.handle.setBindGroup(Number(group), bindGroup as GPUBindGroup);
       }
     }
 
@@ -160,75 +170,12 @@ export class WebGPURenderPipeline extends RenderPipeline {
     return true;
   }
 
-  /** Return a bind group created by setBindings */
-  _getBindGroups(
-    bindings?: Bindings | BindingsByGroup
-  ): Partial<Record<number, GPUBindGroup | null>> {
-    if (this.shaderLayout.bindings.length === 0) {
-      return {};
-    }
-
-    const bindGroups = bindings
-      ? normalizeBindingsByGroup(this.shaderLayout, bindings)
-      : this._bindingsByGroup;
-    const groups = getBindGroupIndicesUpToMax(this.shaderLayout.bindings);
-    const resolvedBindGroups: Partial<Record<number, GPUBindGroup | null>> = {};
-
-    for (const group of groups) {
-      const groupBindings = bindGroups[group];
-      this._bindGroupLayouts[group] ||= this.handle.getBindGroupLayout(group);
-
-      if (!groupBindings || Object.keys(groupBindings).length === 0) {
-        if (!hasBindingsInGroup(this.shaderLayout.bindings, group)) {
-          resolvedBindGroups[group] = this._getEmptyBindGroup(group);
-        }
-        continue;
-      }
-
-      if (bindings) {
-        resolvedBindGroups[group] = getBindGroup(
-          this.device,
-          this._bindGroupLayouts[group],
-          this.shaderLayout,
-          groupBindings,
-          group
-        );
-      } else {
-        this._bindGroups[group] =
-          this._bindGroups[group] ||
-          getBindGroup(
-            this.device,
-            this._bindGroupLayouts[group],
-            this.shaderLayout,
-            groupBindings,
-            group
-          );
-        resolvedBindGroups[group] = this._bindGroups[group];
-      }
-    }
-
-    return resolvedBindGroups;
+  _getBindingsByGroupWebGPU(): BindingsByGroup {
+    return this._bindingsByGroup;
   }
 
-  _getBindGroup(bindings?: Bindings | BindingsByGroup, group: number = 0): GPUBindGroup | null {
-    return this._getBindGroups(bindings)[group] || null;
-  }
-
-  private _getEmptyBindGroup(group: number): GPUBindGroup {
-    const cachedBindGroup = this._bindGroups[group];
-    if (cachedBindGroup) {
-      return cachedBindGroup;
-    }
-
-    const bindGroupLayout = this._bindGroupLayouts[group] || this.handle.getBindGroupLayout(group);
-    this._bindGroupLayouts[group] = bindGroupLayout;
-    const bindGroup = this.device.handle.createBindGroup({
-      label: `${this.id}-empty-bind-group-${group}`,
-      layout: bindGroupLayout,
-      entries: []
-    });
-    this._bindGroups[group] = bindGroup;
-    return bindGroup;
+  _getBindGroupCacheKeysWebGPU(): Partial<Record<number, object>> {
+    return this._bindGroupCacheKeysByGroup;
   }
 
   /**
@@ -292,21 +239,16 @@ export class WebGPURenderPipeline extends RenderPipeline {
   }
 }
 
-function getBindGroupIndicesUpToMax(
-  bindings: RenderPipeline['shaderLayout']['bindings']
-): number[] {
-  const maxGroup = bindings.reduce(
-    (highestGroup, binding) => Math.max(highestGroup, binding.group),
-    -1
-  );
-  return Array.from({length: maxGroup + 1}, (_, group) => group);
-}
-
-function hasBindingsInGroup(
-  bindings: RenderPipeline['shaderLayout']['bindings'],
-  group: number
-): boolean {
-  return bindings.some(binding => binding.group === group);
+function createBindGroupCacheKeys(
+  bindingsByGroup: BindingsByGroup
+): Partial<Record<number, object>> {
+  const bindGroupCacheKeys: Partial<Record<number, object>> = {};
+  for (const [groupKey, groupBindings] of Object.entries(bindingsByGroup)) {
+    if (groupBindings && Object.keys(groupBindings).length > 0) {
+      bindGroupCacheKeys[Number(groupKey)] = {};
+    }
+  }
+  return bindGroupCacheKeys;
 }
 /**
 _setAttributeBuffers(webgpuRenderPass: WebGPURenderPass) {

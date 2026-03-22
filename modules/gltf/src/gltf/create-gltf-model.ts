@@ -2,9 +2,26 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Device, type RenderPipelineParameters, log} from '@luma.gl/core';
+import {
+  Buffer,
+  Device,
+  Sampler,
+  Texture,
+  TextureView,
+  type Binding,
+  type RenderPipelineParameters,
+  log
+} from '@luma.gl/core';
+import {DynamicTexture} from '@luma.gl/engine';
 import {pbrMaterial, skin} from '@luma.gl/shadertools';
-import {Geometry, Model, ModelNode, type ModelProps} from '@luma.gl/engine';
+import {
+  Geometry,
+  Material,
+  MaterialFactory,
+  Model,
+  ModelNode,
+  type ModelProps
+} from '@luma.gl/engine';
 import {type ParsedPBRMaterial} from '../pbr/pbr-material';
 
 const SHADER = /* WGSL */ `
@@ -170,9 +187,39 @@ export type CreateGLTFModelOptions = {
   geometry: Geometry;
   /** Parsed PBR material state for the primitive. */
   parsedPPBRMaterial: ParsedPBRMaterial;
+  /** Pre-created material aligned with the source glTF material entry, when available. */
+  material?: Material | null;
   /** Additional model props merged into the generated model. */
   modelOptions?: Partial<ModelProps>;
 };
+
+export type CreateGLTFMaterialOptions = {
+  id?: string;
+  parsedPPBRMaterial: ParsedPBRMaterial;
+  materialFactory?: MaterialFactory;
+};
+
+export function createGLTFMaterial(device: Device, options: CreateGLTFMaterialOptions): Material {
+  const materialFactory =
+    options.materialFactory || new MaterialFactory(device, {modules: [pbrMaterial]});
+  const material = materialFactory.createMaterial({id: options.id});
+
+  const pbrMaterialProps = {...options.parsedPPBRMaterial.uniforms};
+  delete pbrMaterialProps.camera;
+  const materialBindings = Object.fromEntries(
+    Object.entries({
+      ...pbrMaterialProps,
+      ...options.parsedPPBRMaterial.bindings
+    }).filter(
+      ([name, value]) => material.ownsBinding(name) && isMaterialBindingResource(value)
+    )
+  ) as Record<string, Binding | DynamicTexture>;
+
+  material.setProps({pbrMaterial: pbrMaterialProps});
+  material.setResources(materialBindings);
+
+  return material;
+}
 
 /** Creates a luma.gl Model from GLTF data*/
 export function createGLTFModel(device: Device, options: CreateGLTFModelOptions): ModelNode {
@@ -209,6 +256,14 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
     parameters: {...parameters, ...parsedPPBRMaterial.parameters, ...modelOptions.parameters}
   };
 
+  const material =
+    options.material ||
+    createGLTFMaterial(device, {
+      id: id ? `${id}-material` : undefined,
+      parsedPPBRMaterial
+    });
+  modelProps.material = material;
+
   const model = new Model(device, modelProps);
 
   const {camera, ...pbrMaterialProps} = {
@@ -218,6 +273,20 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
     ...modelOptions.bindings
   };
 
-  model.shaderInputs.setProps({pbrMaterial: pbrMaterialProps, pbrProjection: {camera}});
+  const iblBindings = Object.fromEntries(
+    Object.entries(pbrMaterialProps).filter(([name]) => !material.ownsBinding(name))
+  );
+
+  model.shaderInputs.setProps({ibl: iblBindings, pbrProjection: {camera}});
   return new ModelNode({managedResources, model});
+}
+
+function isMaterialBindingResource(value: unknown): boolean {
+  return (
+    value instanceof Buffer ||
+    value instanceof DynamicTexture ||
+    value instanceof Sampler ||
+    value instanceof Texture ||
+    value instanceof TextureView
+  );
 }

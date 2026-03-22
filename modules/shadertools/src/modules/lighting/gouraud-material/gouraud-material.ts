@@ -9,6 +9,7 @@ import {PHONG_VS, PHONG_FS} from '../phong-material/phong-shaders-glsl';
 import {PHONG_WGSL} from '../phong-material/phong-shaders-wgsl';
 
 export type GouraudMaterialProps = {
+  unlit?: boolean;
   ambient?: number;
   diffuse?: number;
   /** Specularity exponent */
@@ -31,12 +32,14 @@ export const gouraudMaterial: ShaderModule<GouraudMaterialProps> = {
   },
   dependencies: [lighting],
   uniformTypes: {
+    unlit: 'i32',
     ambient: 'f32',
     diffuse: 'f32',
     shininess: 'f32',
     specularColor: 'vec3<f32>'
   },
   defaultUniforms: {
+    unlit: false,
     ambient: 0.35,
     diffuse: 0.6,
     shininess: 32,

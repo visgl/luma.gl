@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {Binding, Bindings, ComputeShaderLayout} from '@luma.gl/core';
+import type {Binding, Bindings, ComputeShaderLayout, ShaderLayout} from '@luma.gl/core';
 import {Buffer, Sampler, Texture, TextureView, getShaderLayoutBinding, log} from '@luma.gl/core';
 import type {WebGPUDevice} from '../webgpu-device';
 import type {WebGPUBuffer} from '../resources/webgpu-buffer';
@@ -32,7 +32,7 @@ export function makeBindGroupLayout(
 export function getBindGroup(
   device: WebGPUDevice,
   bindGroupLayout: GPUBindGroupLayout,
-  shaderLayout: ComputeShaderLayout,
+  shaderLayout: ShaderLayout | ComputeShaderLayout,
   bindings: Bindings,
   group: number
 ): GPUBindGroup | null {
@@ -57,7 +57,7 @@ export function getBindGroup(
  */
 function getBindGroupEntries(
   bindings: Bindings,
-  shaderLayout: ComputeShaderLayout,
+  shaderLayout: ShaderLayout | ComputeShaderLayout,
   group: number
 ): GPUBindGroupEntry[] {
   const entries: GPUBindGroupEntry[] = [];

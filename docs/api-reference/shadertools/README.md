@@ -31,6 +31,7 @@ The API reference contains pages for the built-in shader modules exported by `@l
 - [`skin`](/docs/api-reference/shadertools/shader-modules/skin)
 - [`lighting`](/docs/api-reference/shadertools/shader-modules/lighting)
 - [`dirlight`](/docs/api-reference/shadertools/shader-modules/dirlight)
+- [`lambertMaterial`](/docs/api-reference/shadertools/shader-modules/lambert-material)
 - [`gouraudMaterial`](/docs/api-reference/shadertools/shader-modules/gouraud-material)
 - [`phongMaterial`](/docs/api-reference/shadertools/shader-modules/phong-material)
 - [`pbrMaterial`](/docs/api-reference/shadertools/shader-modules/pbr-material)

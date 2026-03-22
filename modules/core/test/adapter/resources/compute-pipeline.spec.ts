@@ -4,7 +4,14 @@
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import {luma, ComputePipeline, Buffer, PipelineFactory, type Device} from '@luma.gl/core';
+import {
+  luma,
+  ComputePipeline,
+  Buffer,
+  PipelineFactory,
+  _getDefaultBindGroupFactory,
+  type Device
+} from '@luma.gl/core';
 import {webgpuAdapter, type WebGPUDevice} from '@luma.gl/webgpu';
 
 const CPU_HOTSPOT_PROFILER_MODULE = 'cpu-hotspot-profiler';
@@ -142,10 +149,19 @@ test('ComputePipeline bind-group cache only invalidates when binding identities 
   });
 
   computePipeline.setBindings({data: firstBuffer});
-  const firstBindGroup = (computePipeline as any)._getBindGroup(undefined, 2);
+  const bindGroupFactory = _getDefaultBindGroupFactory(webgpuDevice);
+  const firstBindGroup = bindGroupFactory.getBindGroups(
+    computePipeline as any,
+    (computePipeline as any)._getBindingsByGroupWebGPU(),
+    (computePipeline as any)._getBindGroupCacheKeysWebGPU()
+  )[2];
 
   computePipeline.setBindings({data: firstBuffer});
-  const secondBindGroup = (computePipeline as any)._getBindGroup(undefined, 2);
+  const secondBindGroup = bindGroupFactory.getBindGroups(
+    computePipeline as any,
+    (computePipeline as any)._getBindingsByGroupWebGPU(),
+    (computePipeline as any)._getBindGroupCacheKeysWebGPU()
+  )[2];
   t.equal(
     secondBindGroup,
     firstBindGroup,
@@ -153,12 +169,11 @@ test('ComputePipeline bind-group cache only invalidates when binding identities 
   );
 
   computePipeline.setBindings({data: secondBuffer});
-  t.equal(
-    (computePipeline as any)._bindGroups[2],
-    null,
-    'compute bind group cache is cleared on change'
-  );
-  const thirdBindGroup = (computePipeline as any)._getBindGroup(undefined, 2);
+  const thirdBindGroup = bindGroupFactory.getBindGroups(
+    computePipeline as any,
+    (computePipeline as any)._getBindingsByGroupWebGPU(),
+    (computePipeline as any)._getBindGroupCacheKeysWebGPU()
+  )[2];
   t.notEqual(
     thirdBindGroup,
     firstBindGroup,
@@ -166,7 +181,11 @@ test('ComputePipeline bind-group cache only invalidates when binding identities 
   );
 
   computePipeline.setBindings({data: secondBuffer});
-  const fourthBindGroup = (computePipeline as any)._getBindGroup(undefined, 2);
+  const fourthBindGroup = bindGroupFactory.getBindGroups(
+    computePipeline as any,
+    (computePipeline as any)._getBindingsByGroupWebGPU(),
+    (computePipeline as any)._getBindGroupCacheKeysWebGPU()
+  )[2];
   t.equal(
     fourthBindGroup,
     thirdBindGroup,
