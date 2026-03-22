@@ -15,40 +15,75 @@ import {
   MaterialFactory
 } from './material-factory';
 
-type MaterialModuleProps = Record<string, Record<string, unknown>>;
+type MaterialModuleProps = Partial<Record<string, Record<string, unknown>>>;
+type MaterialBindings = Record<string, Binding | DynamicTexture>;
+type MaterialPropsUpdate<TModuleProps extends MaterialModuleProps> = Partial<{
+  [P in keyof TModuleProps]?: Partial<TModuleProps[P]>;
+}>;
 
-export type MaterialProps = {
+/** Construction props for one typed {@link Material}. */
+export type MaterialProps<
+  TModuleProps extends MaterialModuleProps = MaterialModuleProps,
+  TBindings extends MaterialBindings = MaterialBindings
+> = {
+  /** Optional application-provided identifier. */
   id?: string;
-  factory?: MaterialFactory;
-  shaderInputs?: ShaderInputs;
+  /** Factory that owns the material schema. */
+  factory?: MaterialFactory<TModuleProps, TBindings>;
+  /** Optional pre-created shader inputs for the material modules. */
+  shaderInputs?: ShaderInputs<TModuleProps>;
+  /** Shader modules used when a factory is not supplied. */
   modules?: ShaderModule[];
-  bindings?: Record<string, Binding | DynamicTexture>;
+  /** Initial material-owned resource bindings. */
+  bindings?: Partial<TBindings>;
 };
 
-export type MaterialCloneProps = {
+/** Structural overrides applied when cloning a {@link Material}. */
+export type MaterialCloneProps<
+  TModuleProps extends MaterialModuleProps = MaterialModuleProps,
+  TBindings extends MaterialBindings = MaterialBindings
+> = {
+  /** Optional identifier for the cloned material. */
   id?: string;
-  bindings?: Record<string, Binding | DynamicTexture>;
-  moduleProps?: MaterialModuleProps;
-  shaderInputs?: ShaderInputs;
+  /** Replacement material-owned resource bindings. */
+  bindings?: Partial<TBindings>;
+  /** Additional uniform/module props applied to the clone. */
+  moduleProps?: MaterialPropsUpdate<TModuleProps>;
+  /** Optional full replacement shader-input store. */
+  shaderInputs?: ShaderInputs<TModuleProps>;
 };
 
-export class Material {
+/**
+ * Material owns bind group `3` resources and uniforms for one material instance.
+ *
+ * `setProps()` mutates uniform values in place. Structural resource changes are
+ * expressed through `clone({...})`, which creates a new material identity.
+ */
+export class Material<
+  TModuleProps extends MaterialModuleProps = MaterialModuleProps,
+  TBindings extends MaterialBindings = MaterialBindings
+> {
+  /** Application-provided identifier. */
   readonly id: string;
+  /** Device that owns the material resources. */
   readonly device: Device;
-  readonly factory: MaterialFactory;
-  readonly shaderInputs: ShaderInputs;
+  /** Factory that defines the material schema. */
+  readonly factory: MaterialFactory<TModuleProps, TBindings>;
+  /** Shader inputs for the material-owned modules. */
+  readonly shaderInputs: ShaderInputs<TModuleProps>;
+  /** Internal binding store including uniform buffers and resource bindings. */
   readonly bindings: Record<string, Binding | DynamicTexture> = {};
 
   private _uniformStore: UniformStore;
   private _bindGroupCacheToken: object = {};
 
-  constructor(device: Device, props: MaterialProps = {}) {
+  constructor(device: Device, props: MaterialProps<TModuleProps, TBindings> = {}) {
     this.id = props.id || uid('material');
     this.device = device;
 
     this.factory =
       props.factory ||
-      new MaterialFactory(device, {
+      new MaterialFactory<TModuleProps, TBindings>(device, {
         modules: props.modules || props.shaderInputs?.getModules() || []
       });
 
@@ -57,8 +92,8 @@ export class Material {
         module.name,
         module
       ])
-    );
-    this.shaderInputs = props.shaderInputs || new ShaderInputs(moduleMap);
+    ) as {[P in keyof TModuleProps]?: ShaderModule[] extends never ? never : any};
+    this.shaderInputs = props.shaderInputs || new ShaderInputs<TModuleProps>(moduleMap);
     this._uniformStore = new UniformStore(this.shaderInputs.modules);
 
     for (const [moduleName, module] of Object.entries(this.shaderInputs.modules)) {
@@ -70,53 +105,54 @@ export class Material {
 
     this.updateShaderInputs();
     if (props.bindings) {
-      this.setResources(props.bindings);
+      this._replaceOwnedBindings(props.bindings);
     }
   }
 
+  /** Destroys managed uniform-buffer resources owned by this material. */
   destroy(): void {
     this._uniformStore.destroy();
   }
 
-  clone(props: MaterialCloneProps = {}): Material {
-    const material = this.factory.createMaterial({id: props.id, shaderInputs: props.shaderInputs});
-    material.setProps(this.shaderInputs.getUniformValues() as MaterialModuleProps);
-    material.setResources(this.getResourceBindings());
+  /** Creates a new material variant with optional structural and uniform overrides. */
+  clone(
+    props: MaterialCloneProps<TModuleProps, TBindings> = {}
+  ): Material<TModuleProps, TBindings> {
+    const material = this.factory.createMaterial({
+      id: props.id,
+      shaderInputs: props.shaderInputs,
+      bindings: {
+        ...this.getResourceBindings(),
+        ...props.bindings
+      }
+    });
 
+    if (!props.shaderInputs) {
+      material.setProps(this.shaderInputs.getUniformValues() as MaterialPropsUpdate<TModuleProps>);
+    }
     if (props.moduleProps) {
       material.setProps(props.moduleProps);
     }
-    if (props.bindings) {
-      material.setResources(props.bindings);
-    }
-
     return material;
   }
 
+  /** Returns `true` if this material owns the supplied binding name. */
   ownsBinding(bindingName: string): boolean {
     return this.factory.ownsBinding(bindingName);
   }
 
+  /** Returns `true` if this material owns the supplied shader module. */
   ownsModule(moduleName: string): boolean {
     return this.factory.ownsModule(moduleName);
   }
 
-  setProps(props: MaterialModuleProps): void {
+  /** Updates material uniform/module props in place without changing material identity. */
+  setProps(props: MaterialPropsUpdate<TModuleProps>): void {
     this.shaderInputs.setProps(props);
     this.updateShaderInputs();
   }
 
-  setBindings(bindings: Record<string, Binding | DynamicTexture>): void {
-    this.setResources(bindings);
-  }
-
-  setResources(bindings: Record<string, Binding | DynamicTexture>): void {
-    const didChange = this._setOwnedBindings(bindings);
-    if (didChange) {
-      this._bindGroupCacheToken = {};
-    }
-  }
-
+  /** Updates managed uniform buffers and shader-input-owned bindings. */
   updateShaderInputs(): void {
     this._uniformStore.setUniforms(this.shaderInputs.getUniformValues());
     const didChange = this._setOwnedBindings(this.shaderInputs.getBindingValues());
@@ -125,42 +161,49 @@ export class Material {
     }
   }
 
-  getResourceBindings(): Record<string, Binding | DynamicTexture> {
-    const resourceBindings: Record<string, Binding | DynamicTexture> = {};
+  /** Returns the material-owned resource bindings without internal uniform buffers. */
+  getResourceBindings(): Partial<TBindings> {
+    const resourceBindings = {} as Partial<TBindings>;
 
     for (const [name, binding] of Object.entries(this.bindings)) {
       if (!getModuleNameFromUniformBinding(name)) {
-        resourceBindings[name] = binding;
+        (resourceBindings as Record<string, Binding | DynamicTexture>)[name] = binding;
       }
     }
 
     return resourceBindings;
   }
 
-  getBindings(): Record<string, Binding> {
-    const validBindings: Record<string, Binding> = {};
+  /** Returns the resolved bindings, including internal uniform buffers and ready textures. */
+  getBindings(): Partial<{[K in keyof TBindings]: Binding}> & Record<string, Binding> {
+    const validBindings = {} as Partial<{[K in keyof TBindings]: Binding}> &
+      Record<string, Binding>;
+    const validBindingsMap = validBindings as Record<string, Binding>;
 
     for (const [name, binding] of Object.entries(this.bindings)) {
       if (binding instanceof DynamicTexture) {
         if (binding.isReady) {
-          validBindings[name] = binding.texture;
+          validBindingsMap[name] = binding.texture;
         }
       } else {
-        validBindings[name] = binding;
+        validBindingsMap[name] = binding;
       }
     }
 
     return validBindings;
   }
 
+  /** Packages resolved material bindings into logical bind group `3`. */
   getBindingsByGroup(): BindingsByGroup {
     return this.factory.getBindingsByGroup(this.getBindings());
   }
 
+  /** Returns the stable bind-group cache token for the requested bind group. */
   getBindGroupCacheKey(group: number): object | null {
     return group === MATERIAL_BIND_GROUP ? this._bindGroupCacheToken : null;
   }
 
+  /** Returns the latest update timestamp across material-owned resources. */
   getBindingsUpdateTimestamp(): number {
     let timestamp = 0;
     for (const binding of Object.values(this.bindings)) {
@@ -179,10 +222,23 @@ export class Material {
     return timestamp;
   }
 
-  private _setOwnedBindings(bindings: Record<string, Binding | DynamicTexture>): boolean {
+  /** Replaces owned resource bindings and invalidates the material cache identity when needed. */
+  private _replaceOwnedBindings(bindings: Partial<TBindings>): void {
+    const didChange = this._setOwnedBindings(bindings);
+    if (didChange) {
+      this._bindGroupCacheToken = {};
+    }
+  }
+
+  private _setOwnedBindings(
+    bindings: Partial<TBindings> | Record<string, Binding | DynamicTexture>
+  ): boolean {
     let didChange = false;
 
     for (const [name, binding] of Object.entries(bindings)) {
+      if (binding === undefined) {
+        continue;
+      }
       if (!this.ownsBinding(name)) {
         continue;
       }

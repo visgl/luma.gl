@@ -202,7 +202,6 @@ export type CreateGLTFMaterialOptions = {
 export function createGLTFMaterial(device: Device, options: CreateGLTFMaterialOptions): Material {
   const materialFactory =
     options.materialFactory || new MaterialFactory(device, {modules: [pbrMaterial]});
-  const material = materialFactory.createMaterial({id: options.id});
 
   const pbrMaterialProps = {...options.parsedPPBRMaterial.uniforms};
   delete pbrMaterialProps.camera;
@@ -211,12 +210,15 @@ export function createGLTFMaterial(device: Device, options: CreateGLTFMaterialOp
       ...pbrMaterialProps,
       ...options.parsedPPBRMaterial.bindings
     }).filter(
-      ([name, value]) => material.ownsBinding(name) && isMaterialBindingResource(value)
+      ([name, value]) => materialFactory.ownsBinding(name) && isMaterialBindingResource(value)
     )
   ) as Record<string, Binding | DynamicTexture>;
 
+  const material = materialFactory.createMaterial({
+    id: options.id,
+    bindings: materialBindings
+  });
   material.setProps({pbrMaterial: pbrMaterialProps});
-  material.setResources(materialBindings);
 
   return material;
 }

@@ -287,12 +287,11 @@ export class Model {
     // TODO - this is wrong, compile a single shader
     if (isWebGPU && this.props.source) {
       // WGSL
-      const {source, getUniforms, bindingTable} =
-        this.props.shaderAssembler.assembleWGSLShader({
-          platformInfo,
-          ...this.props,
-          modules
-        });
+      const {source, getUniforms, bindingTable} = this.props.shaderAssembler.assembleWGSLShader({
+        platformInfo,
+        ...this.props,
+        modules
+      });
       this.source = source;
       // @ts-expect-error
       this._getModuleUniforms = getUniforms;

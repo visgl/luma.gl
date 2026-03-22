@@ -177,7 +177,11 @@ test('assembleWGSLShader#relocates stock group 0 auto bindings', t => {
   );
 
   const shaderLayout = getShaderLayoutFromWGSL(assembledSource);
-  t.equal(shaderLayout.bindings.find(binding => binding.name === 'appFrame')?.location, 0, 'app binding kept at location 0');
+  t.equal(
+    shaderLayout.bindings.find(binding => binding.name === 'appFrame')?.location,
+    0,
+    'app binding kept at location 0'
+  );
   t.equal(
     shaderLayout.bindings.find(binding => binding.name === 'pbrProjection')?.location,
     100,
@@ -329,8 +333,16 @@ test('assembleWGSLShader#relocates stock group 2 auto bindings in deterministic 
   );
 
   const shaderLayout = getShaderLayoutFromWGSL(assembledSource);
-  t.equal(shaderLayout.bindings.find(binding => binding.name === 'lighting')?.location, 0, 'lighting reflected at location 0');
-  t.equal(shaderLayout.bindings.find(binding => binding.name === 'dirlight')?.location, 16, 'dirlight reflected at location 16');
+  t.equal(
+    shaderLayout.bindings.find(binding => binding.name === 'lighting')?.location,
+    0,
+    'lighting reflected at location 0'
+  );
+  t.equal(
+    shaderLayout.bindings.find(binding => binding.name === 'dirlight')?.location,
+    16,
+    'dirlight reflected at location 16'
+  );
   t.equal(
     shaderLayout.bindings.find(binding => binding.name === 'pbr_diffuseEnvSampler')?.location,
     32,

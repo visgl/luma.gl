@@ -164,14 +164,14 @@ function createNodeForGLTFMesh(
 ): GroupNode {
   const gltfPrimitives = gltfMesh.primitives || [];
   const primitives = gltfPrimitives.map((gltfPrimitive, i) =>
-    createNodeForGLTFPrimitive(
+    createNodeForGLTFPrimitive({
       device,
       gltfPrimitive,
-      i,
+      primitiveIndex: i,
       gltfMesh,
       gltfMaterialIdToMaterialMap,
       options
-    )
+    })
   );
   const mesh = new GroupNode({
     id: gltfMesh.name || gltfMesh.id,
@@ -181,16 +181,26 @@ function createNodeForGLTFMesh(
   return mesh;
 }
 
+/** Input options for creating one renderable glTF primitive model node. */
+type CreateNodeForGLTFPrimitiveOptions = {
+  device: Device;
+  gltfPrimitive: any;
+  primitiveIndex: number;
+  gltfMesh: GLTFMeshPostprocessed;
+  gltfMaterialIdToMaterialMap: Map<string, Material>;
+  options: Required<ParseGLTFOptions>;
+};
+
 /** Creates a renderable model node for one glTF primitive. */
-function createNodeForGLTFPrimitive(
-  device: Device,
-  gltfPrimitive: any,
-  i: number,
-  gltfMesh: GLTFMeshPostprocessed,
-  gltfMaterialIdToMaterialMap: Map<string, Material>,
-  options: Required<ParseGLTFOptions>
-): ModelNode {
-  const id = gltfPrimitive.name || `${gltfMesh.name || gltfMesh.id}-primitive-${i}`;
+function createNodeForGLTFPrimitive({
+  device,
+  gltfPrimitive,
+  primitiveIndex,
+  gltfMesh,
+  gltfMaterialIdToMaterialMap,
+  options
+}: CreateNodeForGLTFPrimitiveOptions): ModelNode {
+  const id = gltfPrimitive.name || `${gltfMesh.name || gltfMesh.id}-primitive-${primitiveIndex}`;
   const topology = convertGLDrawModeToTopology(gltfPrimitive.mode || 4);
   const vertexCount = gltfPrimitive.indices
     ? gltfPrimitive.indices.count

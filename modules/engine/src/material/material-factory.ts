@@ -9,7 +9,10 @@ import type {Material, MaterialProps} from './material';
 import {Material as MaterialClass} from './material';
 
 type MaterialModuleProps = Partial<Record<string, Record<string, unknown>>>;
-type MaterialBindings = Record<string, Binding | import('../dynamic-texture/dynamic-texture').DynamicTexture>;
+type MaterialBindings = Record<
+  string,
+  Binding | import('../dynamic-texture/dynamic-texture').DynamicTexture
+>;
 
 /** Logical bind-group slot reserved for material-owned bindings. */
 export const MATERIAL_BIND_GROUP = 3;
@@ -83,10 +86,10 @@ export class MaterialFactory<
   createMaterial(
     props: Omit<MaterialProps<TModuleProps, TBindings>, 'factory' | 'modules'> = {}
   ): Material<TModuleProps, TBindings> {
-    return new MaterialClass(this.device, {
+    return new MaterialClass<TModuleProps, TBindings>(this.device, {
       ...props,
       factory: this
-    }) as Material<TModuleProps, TBindings>;
+    });
   }
 
   /** Returns the logical material-owned resource binding names. */

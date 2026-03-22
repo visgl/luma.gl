@@ -260,15 +260,11 @@ export function assembleShaderWGSL(
     if (log) {
       checkShaderModuleDeprecations(module, coreSource, log);
     }
-    const relocation = relocateWGSLModuleBindings(
-      getShaderModuleSource(module, 'wgsl'),
-      module,
-      {
-        usedBindingsByGroup,
-        bindingRegistry: options._bindingRegistry,
-        reservedBindingKeysByGroup
-      }
-    );
+    const relocation = relocateWGSLModuleBindings(getShaderModuleSource(module, 'wgsl'), module, {
+      usedBindingsByGroup,
+      bindingRegistry: options._bindingRegistry,
+      reservedBindingKeysByGroup
+    });
     bindingAssignments.push(...relocation.bindingAssignments);
     const moduleSource = relocation.source;
     // Add the module source, and a #define that declares it presence
@@ -589,7 +585,12 @@ function getUsedBindingsByGroupFromApplicationWGSL(source: string): Map<number, 
       const name = match[4];
 
       validateApplicationWGSLBinding(group, location, name);
-      registerUsedBindingLocation(usedBindingsByGroup, group, location, `application binding "${name}"`);
+      registerUsedBindingLocation(
+        usedBindingsByGroup,
+        group,
+        location,
+        `application binding "${name}"`
+      );
     }
   }
 
@@ -811,7 +812,9 @@ function registerUsedBindingLocation(
 ): void {
   const usedBindings = usedBindingsByGroup.get(group) || new Set<number>();
   if (usedBindings.has(location)) {
-    throw new Error(`Duplicate WGSL binding assignment for ${label}: group ${group}, binding ${location}.`);
+    throw new Error(
+      `Duplicate WGSL binding assignment for ${label}: group ${group}, binding ${location}.`
+    );
   }
   usedBindings.add(location);
   usedBindingsByGroup.set(group, usedBindings);

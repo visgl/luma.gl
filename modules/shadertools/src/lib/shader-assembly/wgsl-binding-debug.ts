@@ -57,7 +57,11 @@ export function getShaderBindingDebugRowsFromWGSL(
   const assignmentMap = new Map<string, string>();
   for (const bindingAssignment of bindingAssignments) {
     assignmentMap.set(
-      getBindingAssignmentKey(bindingAssignment.name, bindingAssignment.group, bindingAssignment.location),
+      getBindingAssignmentKey(
+        bindingAssignment.name,
+        bindingAssignment.group,
+        bindingAssignment.location
+      ),
       bindingAssignment.moduleName
     );
   }

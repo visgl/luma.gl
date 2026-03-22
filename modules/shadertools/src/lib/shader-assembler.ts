@@ -10,7 +10,10 @@ import {
   assembleWGSLShader,
   assembleGLSLShaderPair
 } from './shader-assembly/assemble-shaders';
-import {getShaderBindingDebugRowsFromWGSL, type ShaderBindingDebugRow} from './shader-assembly/wgsl-binding-debug';
+import {
+  getShaderBindingDebugRowsFromWGSL,
+  type ShaderBindingDebugRow
+} from './shader-assembly/wgsl-binding-debug';
 import {preprocess} from './preprocessor/preprocessor';
 
 /**
