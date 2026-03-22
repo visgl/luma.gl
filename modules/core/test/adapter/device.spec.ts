@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {Texture, luma} from '@luma.gl/core';
+import {Buffer, Texture, luma} from '@luma.gl/core';
 import {
   getNullTestDevice,
   getTestDevices,
@@ -102,14 +102,20 @@ test('WebGPUDevice#generateMipmapsWebGPU generates a mip chain', async t => {
 
   device.generateMipmapsWebGPU(texture);
 
-  const mipLevelArrayBuffer = await texture.readDataAsync({mipLevel: 1, width: 1, height: 1});
-  const mipLevelBytes = new Uint8Array(mipLevelArrayBuffer);
+  const layout = texture.computeMemoryLayout({mipLevel: 1, width: 1, height: 1});
+  const readBuffer = device.createBuffer({
+    byteLength: layout.byteLength,
+    usage: Buffer.COPY_DST | Buffer.MAP_READ
+  });
+  texture.readBuffer({mipLevel: 1, width: 1, height: 1}, readBuffer);
+  const mipLevelBytes = new Uint8Array(await readBuffer.readAsync(0, layout.byteLength));
   t.deepEqual(
     Array.from(mipLevelBytes.slice(0, 4)),
     [128, 128, 128, 255],
     'WebGPU device method generates level 1 mip data'
   );
 
+  readBuffer.destroy();
   texture.destroy();
   t.end();
 });

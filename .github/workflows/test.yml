@@ -34,17 +34,13 @@ jobs:
       - name: Install Playwright Chromium
         run: yarn playwright:install
   
-      - name: Build code
-        run: |
-          yarn build
-  
-      - name: Run node tests
-        run: |
-          yarn test-node
-
       - name: Run headless tests and generate coverage
         run: |
           yarn test-coverage
+
+      - name: Run node tests
+        run: |
+          yarn test-node
 
       - name: Sanitize lcov for Coveralls
         run: |
@@ -77,6 +73,10 @@ jobs:
 
           fs.writeFileSync(coveragePath, `${records.join('\n')}\n`);
           NODE
+
+      - name: Build code
+        run: |
+          yarn build
 
       - name: Run lint
         run: |

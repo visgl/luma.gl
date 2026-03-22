@@ -2,6 +2,8 @@
 
 Holds a block of GPU memory. The length of a buffer cannot be changed after creation.
 
+See also [Using GPU Buffers](/docs/api-guide/gpu/gpu-buffers) and [GPU Commands](/docs/api-guide/gpu/gpu-commands) for when buffer operations should use direct resource methods versus explicit command encoding.
+
 ## Types
 
 ### `BufferProps`

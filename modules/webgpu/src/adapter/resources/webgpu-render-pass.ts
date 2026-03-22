@@ -24,7 +24,11 @@ export class WebGPURenderPass extends RenderPass {
   /** Latest bindings applied to this pass */
   bindings: Bindings | BindingsByGroup = {};
 
-  constructor(device: WebGPUDevice, props: RenderPassProps = {}) {
+  constructor(
+    device: WebGPUDevice,
+    props: RenderPassProps = {},
+    commandEncoder: GPUCommandEncoder = device.commandEncoder.handle
+  ) {
     super(device, props);
     this.device = device;
     const {props: renderPassProps} = this;
@@ -72,14 +76,9 @@ export class WebGPURenderPass extends RenderPass {
           (getTimestamp() - descriptorAssemblyStartTime);
       }
 
-      if (!device.commandEncoder) {
-        throw new Error('commandEncoder not available');
-      }
-
       this.device.pushErrorScope('validation');
       const beginRenderPassStartTime = profiler ? getTimestamp() : 0;
-      this.handle =
-        this.props.handle || device.commandEncoder.handle.beginRenderPass(renderPassDescriptor);
+      this.handle = this.props.handle || commandEncoder.beginRenderPass(renderPassDescriptor);
       if (profiler) {
         profiler.renderPassBeginCount = (profiler.renderPassBeginCount || 0) + 1;
         profiler.renderPassBeginTimeMs =

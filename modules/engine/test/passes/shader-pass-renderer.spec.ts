@@ -6,7 +6,7 @@ import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {getTestDevices} from '@luma.gl/test-utils';
 import {ShaderPassRenderer, DynamicTexture, ShaderInputs} from '@luma.gl/engine';
 import type {ShaderPass} from '@luma.gl/shadertools';
-import {Texture} from '@luma.gl/core';
+import {Buffer, Texture} from '@luma.gl/core';
 
 const invertPass: ShaderPass = {
   name: 'invert',
@@ -40,8 +40,7 @@ test('ShaderPassRenderer#renderToTexture', async t => {
     await sourceTexture.ready;
 
     // Sanity check
-    const arrayBuffer = await sourceTexture.texture.readDataAsync();
-    const pixels1 = new Uint8Array(arrayBuffer, 0, 4); // slice away WebGPU padding
+    const pixels1 = await readPixels(sourceTexture.texture);
     t.deepEqual(Array.from(pixels1), [255, 0, 0, 255], 'initialization success');
 
     const shaderInputs = new ShaderInputs({invert: invertPass});
@@ -53,8 +52,7 @@ test('ShaderPassRenderer#renderToTexture', async t => {
 
     t.ok(output, 'produces output texture');
 
-    const arrayBufferOut = await output!.readDataAsync();
-    const pixelsOut = new Uint8Array(arrayBufferOut, 0, 4); // slice away WebGPU padding
+    const pixelsOut = await readPixels(output!);
     t.deepEqual(Array.from(pixelsOut), [0, 255, 255, 255], 'applies filter');
 
     renderer.destroy();
@@ -62,6 +60,21 @@ test('ShaderPassRenderer#renderToTexture', async t => {
   }
   t.end();
 });
+
+async function readPixels(texture: Texture): Promise<Uint8Array> {
+  const layout = texture.computeMemoryLayout({width: 1, height: 1});
+  const buffer = texture.device.createBuffer({
+    byteLength: layout.byteLength,
+    usage: Buffer.COPY_DST | Buffer.MAP_READ
+  });
+  try {
+    texture.readBuffer({width: 1, height: 1}, buffer);
+    const arrayBufferView = await buffer.readAsync(0, layout.byteLength);
+    return new Uint8Array(arrayBufferView.buffer, arrayBufferView.byteOffset, 4);
+  } finally {
+    buffer.destroy();
+  }
+}
 
 test('ShaderPassRenderer reuses BackgroundTextureModel', async t => {
   const devices = await getTestDevices();

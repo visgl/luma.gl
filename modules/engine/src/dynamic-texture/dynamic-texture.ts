@@ -1,9 +1,16 @@
 // luma.gl, MIT license
 // Copyright (c) vis.gl contributors
 
-import type {TextureProps, SamplerProps, TextureView, Device, TextureFormat} from '@luma.gl/core';
+import type {
+  TextureProps,
+  SamplerProps,
+  TextureView,
+  Device,
+  TextureFormat,
+  TextureReadOptions
+} from '@luma.gl/core';
 
-import {Texture, Sampler, log} from '@luma.gl/core';
+import {Buffer, Texture, Sampler, log} from '@luma.gl/core';
 
 // import {loadImageBitmap} from '../application-utils/load-file';
 import {uid} from '../utils/uid';
@@ -140,7 +147,14 @@ export class DynamicTexture {
 
       const propsWithSyncData = await this._loadAllData(originalPropsWithAsyncData);
       this._checkNotDestroyed();
-      const subresources = propsWithSyncData.data ? getTextureSubresources(propsWithSyncData) : [];
+      const subresources = propsWithSyncData.data
+        ? getTextureSubresources({
+            ...propsWithSyncData,
+            width: originalPropsWithAsyncData.width,
+            height: originalPropsWithAsyncData.height,
+            format: originalPropsWithAsyncData.format
+          })
+        : [];
       const userProvidedFormat =
         'format' in originalPropsWithAsyncData && originalPropsWithAsyncData.format !== undefined;
       const userProvidedUsage =
@@ -262,6 +276,59 @@ export class DynamicTexture {
     const s = sampler instanceof Sampler ? sampler : this.device.createSampler(sampler);
     this.texture.setSampler(s);
     this._sampler = s;
+  }
+
+  /**
+   * Copies texture contents into a GPU buffer and waits until the copy is complete.
+   * The caller owns the returned buffer and must destroy it when finished.
+   */
+  async readBuffer(options: TextureReadOptions = {}): Promise<Buffer> {
+    if (!this.isReady) {
+      await this.ready;
+    }
+
+    const width = options.width ?? this.texture.width;
+    const height = options.height ?? this.texture.height;
+    const depthOrArrayLayers = options.depthOrArrayLayers ?? this.texture.depth;
+    const layout = this.texture.computeMemoryLayout({width, height, depthOrArrayLayers});
+
+    const buffer = this.device.createBuffer({
+      byteLength: layout.byteLength,
+      usage: Buffer.COPY_DST | Buffer.MAP_READ
+    });
+
+    this.texture.readBuffer(
+      {
+        ...options,
+        width,
+        height,
+        depthOrArrayLayers
+      },
+      buffer
+    );
+
+    const fence = this.device.createFence();
+    await fence.signaled;
+    fence.destroy();
+
+    return buffer;
+  }
+
+  /** Reads texture contents back to CPU memory. */
+  async readAsync(options: TextureReadOptions = {}): Promise<ArrayBuffer> {
+    if (!this.isReady) {
+      await this.ready;
+    }
+
+    const width = options.width ?? this.texture.width;
+    const height = options.height ?? this.texture.height;
+    const depthOrArrayLayers = options.depthOrArrayLayers ?? this.texture.depth;
+    const layout = this.texture.computeMemoryLayout({width, height, depthOrArrayLayers});
+
+    const buffer = await this.readBuffer(options);
+    const data = await buffer.readAsync(0, layout.byteLength);
+    buffer.destroy();
+    return data.buffer;
   }
 
   /**
@@ -429,16 +496,22 @@ type TextureSubresourceAnalysis = {
 };
 
 // Flatten dimension-specific texture data into one list of uploadable subresources.
-function getTextureSubresources(props: TextureDataProps): TextureSubresource[] {
+function getTextureSubresources(
+  props: TextureDataProps & Partial<Pick<TextureProps, 'width' | 'height' | 'format'>>
+): TextureSubresource[] {
   if (!props.data) {
     return [];
   }
+
+  const baseLevelSize =
+    props.width && props.height ? {width: props.width, height: props.height} : undefined;
+  const textureFormat = 'format' in props ? props.format : undefined;
 
   switch (props.dimension) {
     case '1d':
       return getTexture1DSubresources(props.data);
     case '2d':
-      return getTexture2DSubresources(0, props.data);
+      return getTexture2DSubresources(0, props.data, baseLevelSize, textureFormat);
     case '3d':
       return getTexture3DSubresources(props.data);
     case '2d-array':

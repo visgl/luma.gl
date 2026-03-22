@@ -138,7 +138,9 @@ type PassWithTimestamps = {
 };
 
 /**
- * Encodes commands to queue that can be executed later
+ * Records commands onto a single backend command encoder and can finish them into one command
+ * buffer. Resource helpers invoked through a CommandEncoder must record onto that encoder rather
+ * than allocating hidden encoders or submitting work eagerly.
  */
 export abstract class CommandEncoder extends Resource<CommandEncoderProps> {
   override get [Symbol.toStringTag](): string {

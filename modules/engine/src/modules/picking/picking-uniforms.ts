@@ -9,6 +9,7 @@ import type {ShaderModule} from '@luma.gl/shadertools';
 const DEFAULT_HIGHLIGHT_COLOR: NumberArray4 = [0, 1, 1, 1];
 
 export const INVALID_INDEX = -1;
+export type PickingPayloadMode = 'instance' | 'attribute';
 
 /**
  * Props for the picking module, which depending on mode renders picking colors or highlighted item.
@@ -19,14 +20,14 @@ export const INVALID_INDEX = -1;
 export type PickingProps = {
   /** Are we picking? I.e. rendering picking colors? */
   isActive?: boolean;
-  /** Whether to use instance_index (built-in) or a custom application supplied index (usually from an attribute) */
-  indexMode?: 'instance' | 'custom';
-  /** Batch index (used when rendering multiple models to identify which model was picked), defaults to 0 */
+  /** Whether the payload is sourced from the builtin instance index or a custom integer attribute */
+  indexMode?: PickingPayloadMode;
+  /** Identifier of the batch currently being rendered */
   batchIndex?: number;
 
-  /** Index of the highlighted batch, defaults to 0 */
+  /** Identifier of the highlighted batch */
   highlightedBatchIndex?: number | null;
-  /** Set an index to highlight that item, or `null` to explicitly clear **/
+  /** Set the highlighted object index, or `null` to explicitly clear **/
   highlightedObjectIndex?: number | null;
   /** Color of visual highlight of "selected" item () */
   highlightColor?: NumberArray4;
@@ -43,18 +44,18 @@ export type PickingUniforms = {
    * When false, renders normal colors, with the exception of selected object which is rendered with highlight
    */
   isActive: boolean;
-  /** Set to true when picking an attribute value instead of object index */
+  /** Whether the current payload comes from instance_index or a custom integer attribute */
   indexMode: 0 | 1;
-  /** Index of batch currently being rendered */
+  /** Identifier of the batch currently being rendered */
   batchIndex: number;
 
   /** Do we have a highlighted item? */
   isHighlightActive: boolean;
   /** Color of visual highlight of "selected" item. Note: RGBA components must in the range 0-1 */
   highlightColor: NumberArray4;
-  /** Indicates which batch to visually highlight an item in (defaults to 0) */
+  /** Indicates which batch to visually highlight an item in */
   highlightedBatchIndex: number;
-  /** Indicates which index in the batch to highlight an item in */
+  /** Indicates which object index in the batch to highlight */
   highlightedObjectIndex: number;
 };
 
@@ -91,15 +92,17 @@ uniform pickingUniforms {
 
 export const WGSL_UNIFORMS = /* wgsl */ `\
 struct pickingUniforms {
-  isActive: int32;
-  indexMode: int32;
-  batchIndex: int32;
+  isActive: i32,
+  indexMode: i32,
+  batchIndex: i32,
 
-  isHighlightActive: int32;
-  highlightedBatchIndex: int32;
-  highlightedObjectIndex: int32;
-  highlightColor: vec4<f32>;
-} picking;
+  isHighlightActive: i32,
+  highlightedBatchIndex: i32,
+  highlightedObjectIndex: i32,
+  highlightColor: vec4<f32>,
+};
+
+@group(0) @binding(auto) var<uniform> picking: pickingUniforms;
 `;
 
 function getUniforms(props: PickingProps = {}, prevUniforms?: PickingUniforms): PickingUniforms {
@@ -114,7 +117,7 @@ function getUniforms(props: PickingProps = {}, prevUniforms?: PickingUniforms): 
     case 'instance':
       uniforms.indexMode = 0;
       break;
-    case 'custom':
+    case 'attribute':
       uniforms.indexMode = 1;
       break;
     case undefined:
@@ -122,9 +125,13 @@ function getUniforms(props: PickingProps = {}, prevUniforms?: PickingUniforms): 
       break;
   }
 
+  if (typeof props.batchIndex === 'number') {
+    uniforms.batchIndex = props.batchIndex;
+  }
+
   switch (props.highlightedObjectIndex) {
     case undefined:
-      // Unless highlightedObjectColor explicitly null or set, do not update state
+      // Unless highlighted payload explicitly null or set, do not update state
       break;
     case null:
       // Clear highlight
@@ -136,8 +143,16 @@ function getUniforms(props: PickingProps = {}, prevUniforms?: PickingUniforms): 
       uniforms.highlightedObjectIndex = props.highlightedObjectIndex;
   }
 
-  if (typeof props.highlightedBatchIndex === 'number') {
-    uniforms.highlightedBatchIndex = props.highlightedBatchIndex;
+  switch (props.highlightedBatchIndex) {
+    case undefined:
+      break;
+    case null:
+      uniforms.isHighlightActive = false;
+      uniforms.highlightedBatchIndex = INVALID_INDEX;
+      break;
+    default:
+      uniforms.isHighlightActive = true;
+      uniforms.highlightedBatchIndex = props.highlightedBatchIndex;
   }
 
   if (props.highlightColor) {
@@ -169,7 +184,7 @@ export const pickingUniforms = {
     isActive: false,
     indexMode: 0,
     batchIndex: 0,
-    isHighlightActive: true,
+    isHighlightActive: false,
     highlightedBatchIndex: INVALID_INDEX,
     highlightedObjectIndex: INVALID_INDEX,
     highlightColor: DEFAULT_HIGHLIGHT_COLOR

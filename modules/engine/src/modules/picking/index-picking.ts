@@ -17,18 +17,44 @@ const INDEX_PICKING_MODE_CUSTOM = 1;
 const INDEX_PICKING_INVALID_INDEX = ${INVALID_INDEX}; // 2^32 - 1
 
 /**
- * Vertex shaders should call this function to set the object index.
- * If using instance or vertex mode, argument will be ignored, 0 can be supplied.
+ * WGSL shaders need to carry the returned object index through their own stage outputs.
  */
-fn picking_setObjectIndex(objectIndex: int32) {
-  switch (picking.indexMode) {
-    case INDEX_PICKING_MODE_INSTANCE, default: {
-      picking_objectIndex = instance_index;
-    };
-    case INDEX_PICKING_MODE_CUSTOM: {
-      picking_objectIndex = objectIndex;
-    };
+fn picking_setObjectIndex(objectIndex: i32) -> i32 {
+  return objectIndex;
+}
+
+fn picking_isObjectHighlighted(objectIndex: i32) -> bool {
+  return
+    picking.isHighlightActive != 0 &&
+    picking.highlightedBatchIndex == picking.batchIndex &&
+    picking.highlightedObjectIndex == objectIndex;
+}
+
+fn picking_filterHighlightColor(color: vec4<f32>, objectIndex: i32) -> vec4<f32> {
+  if (picking.isActive != 0 || !picking_isObjectHighlighted(objectIndex)) {
+    return color;
   }
+
+  let highLightAlpha = picking.highlightColor.a;
+  let blendedAlpha = highLightAlpha + color.a * (1.0 - highLightAlpha);
+  if (blendedAlpha == 0.0) {
+    return vec4<f32>(color.rgb, 0.0);
+  }
+
+  let highLightRatio = highLightAlpha / blendedAlpha;
+  let blendedRGB = mix(color.rgb, picking.highlightColor.rgb, highLightRatio);
+  return vec4<f32>(blendedRGB, blendedAlpha);
+}
+
+fn picking_filterPickingColor(color: vec4<f32>, objectIndex: i32) -> vec4<f32> {
+  if (picking.isActive != 0 && objectIndex == INDEX_PICKING_INVALID_INDEX) {
+    discard;
+  }
+  return color;
+}
+
+fn picking_getPickingColor(objectIndex: i32) -> vec2<i32> {
+  return vec2<i32>(objectIndex, picking.batchIndex);
 }
 
 `;

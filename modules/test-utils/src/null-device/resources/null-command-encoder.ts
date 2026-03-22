@@ -41,19 +41,29 @@ export class NullCommandEncoder extends CommandEncoder {
     return new NullRenderPass(this.device, props);
   }
 
-  beginComputePass(props: ComputePassProps): ComputePass {
-    throw new Error('ComputePass not supported in WebGL');
+  beginComputePass(_props: ComputePassProps): ComputePass {
+    throw new Error('ComputePass is not supported on NullDevice');
   }
 
-  copyBufferToBuffer(options: CopyBufferToBufferOptions): void {}
+  copyBufferToBuffer(_options: CopyBufferToBufferOptions): void {
+    throw new Error('copyBufferToBuffer is not supported on NullDevice');
+  }
 
-  copyBufferToTexture(options: CopyBufferToTextureOptions) {}
+  copyBufferToTexture(_options: CopyBufferToTextureOptions) {
+    throw new Error('copyBufferToTexture is not supported on NullDevice');
+  }
 
-  copyTextureToBuffer(options: CopyTextureToBufferOptions): void {}
+  copyTextureToBuffer(_options: CopyTextureToBufferOptions): void {
+    throw new Error('copyTextureToBuffer is not supported on NullDevice');
+  }
 
-  copyTextureToTexture(options: CopyTextureToTextureOptions): void {}
+  copyTextureToTexture(_options: CopyTextureToTextureOptions): void {
+    throw new Error('copyTextureToTexture is not supported on NullDevice');
+  }
 
-  resolveQuerySet(querySet: QuerySet): void {}
+  resolveQuerySet(_querySet: QuerySet): void {
+    throw new Error('resolveQuerySet is not supported on NullDevice');
+  }
 
   pushDebugGroup(groupLabel: string): void {}
   popDebugGroup() {}

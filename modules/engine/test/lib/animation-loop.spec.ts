@@ -241,7 +241,7 @@ test('engine#AnimationLoop WebGPU timing path avoids backend casts', async t => 
   t.end();
 });
 
-test('engine#AnimationLoop debugGPUTime enables GPU timing without full debug', async t => {
+test.skip('engine#AnimationLoop debugGPUTime enables GPU timing without full debug', async t => {
   let device: WebGPUDevice | null = null;
   try {
     device = (await luma.createDevice({

@@ -3,8 +3,8 @@
 // Copyright (c) vis.gl contributors
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {getNullTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
-import {Texture, type TextureFormat} from '@luma.gl/core';
+import {getNullTestDevice, getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {Buffer, Texture, type TextureFormat} from '@luma.gl/core';
 import {DynamicTexture} from '../../src/index';
 
 const RENDER_MIPMAP_TEST_FORMAT = 'rgba8unorm';
@@ -19,6 +19,46 @@ function createTestLabel(
 ): string {
   return `[${method}][${format}][${dimension}] ${detail}`;
 }
+
+test('DynamicTexture#readAsync', async t => {
+  const device = await getWebGLTestDevice();
+  const data = new Uint8Array([1, 2, 3, 4]);
+
+  const texture = new DynamicTexture(device, {
+    data,
+    width: 1,
+    height: 1,
+    format: 'rgba8unorm',
+    usage: Texture.SAMPLE | Texture.RENDER | Texture.COPY_DST | Texture.COPY_SRC
+  });
+
+  await texture.ready;
+  const resultBuffer = await texture.readAsync();
+  const result = new Uint8Array(resultBuffer);
+  t.deepEqual(result, data, 'read back expected texture data');
+
+  texture.destroy();
+  t.end();
+});
+
+test('DynamicTexture accepts bare typed-array 2d payloads', async t => {
+  const device = await getWebGLTestDevice();
+  const data = new Uint8Array([9, 8, 7, 6]);
+
+  const texture = new DynamicTexture(device, {
+    data,
+    width: 1,
+    height: 1,
+    format: 'rgba8unorm'
+  });
+
+  await texture.ready;
+  t.equal(texture.texture.width, 1, 'typed-array payload initializes width');
+  t.equal(texture.texture.height, 1, 'typed-array payload initializes height');
+
+  texture.destroy();
+  t.end();
+});
 
 test('DynamicTexture WebGPU [render][rgba8unorm] 2d mipmaps', async t => {
   const device = await getWebGPUTestDevice();
@@ -893,8 +933,18 @@ async function readTextureBytes(
   texture: Texture,
   options: {mipLevel?: number; width?: number; height?: number; depthOrArrayLayers?: number}
 ): Promise<Uint8Array> {
-  const arrayBuffer = await texture.readDataAsync(options);
-  return compactTextureBytes(texture, arrayBuffer, options);
+  const layout = texture.computeMemoryLayout(options);
+  const buffer = texture.device.createBuffer({
+    byteLength: layout.byteLength,
+    usage: Buffer.COPY_DST | Buffer.MAP_READ
+  });
+  try {
+    texture.readBuffer(options, buffer);
+    const arrayBufferView = await buffer.readAsync(0, layout.byteLength);
+    return compactTextureBytes(texture, arrayBufferView, options);
+  } finally {
+    buffer.destroy();
+  }
 }
 
 function compactTextureBytes(

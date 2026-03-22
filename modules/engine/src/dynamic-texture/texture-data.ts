@@ -176,8 +176,8 @@ function getTextureMipLevelSize(data: TextureMipLevelData): {width: number; heig
   throw new Error('Unsupported mip-level data');
 }
 
-/** Type guard: is a mip-level `TextureImageData` (vs ExternalImage) */
-function isTextureImageData(data: TextureMipLevelData): data is TextureImageData {
+/** Type guard: is a mip-level `TextureImageData` (vs ExternalImage or bare typed array) */
+function isTextureImageData(data: unknown): data is TextureImageData {
   return (
     typeof data === 'object' &&
     data !== null &&
@@ -185,6 +185,10 @@ function isTextureImageData(data: TextureMipLevelData): data is TextureImageData
     'width' in data &&
     'height' in data
   );
+}
+
+function isTypedArrayMipLevelData(data: unknown): data is TypedArray {
+  return ArrayBuffer.isView(data);
 }
 
 export function resolveTextureImageFormat(data: TextureImageData): TextureFormat | undefined {
@@ -235,14 +239,18 @@ export function getTexture1DSubresources(data: Texture1DData): TextureSubresourc
 }
 
 /** Normalize 2D layer payload into an array of mip-level items */
-function _normalizeTexture2DData(data: Texture2DData): (TextureImageData | ExternalImage)[] {
+function _normalizeTexture2DData(
+  data: Texture2DData
+): (TextureImageData | ExternalImage | TypedArray)[] {
   return Array.isArray(data) ? data : [data];
 }
 
 /** Experimental: Set multiple mip levels (2D), optionally at `z` (depth/array index) */
 export function getTexture2DSubresources(
   slice: number,
-  lodData: Texture2DData
+  lodData: Texture2DData,
+  baseLevelSize?: {width: number; height: number},
+  textureFormat?: TextureFormat
 ): TextureSubresource[] {
   const lodArray = _normalizeTexture2DData(lodData);
   const z = slice;
@@ -263,6 +271,19 @@ export function getTexture2DSubresources(
         type: 'texture-data',
         data: imageData,
         textureFormat: resolveTextureImageFormat(imageData),
+        z,
+        mipLevel
+      });
+    } else if (isTypedArrayMipLevelData(imageData) && baseLevelSize) {
+      subresources.push({
+        type: 'texture-data',
+        data: {
+          data: imageData,
+          width: Math.max(1, baseLevelSize.width >> mipLevel),
+          height: Math.max(1, baseLevelSize.height >> mipLevel),
+          ...(textureFormat ? {format: textureFormat} : {})
+        },
+        textureFormat,
         z,
         mipLevel
       });

@@ -183,6 +183,9 @@ vec4 picking_filterColor(vec4 color) {
 `;
 
 /**
+ * Deprecated legacy picking module retained for compatibility with existing
+ * shadertools users such as deck.gl. Keep the shader contract stable.
+ *
  * Provides support for color-coding-based picking and highlighting.
  * In particular, supports picking a specific instance in an instanced
  * draw call and highlighting an instance based on its picking color,
