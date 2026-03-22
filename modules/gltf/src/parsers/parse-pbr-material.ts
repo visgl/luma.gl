@@ -469,7 +469,7 @@ function parseMaterialExtensions(
   parseSpecularExtension(device, extensions.KHR_materials_specular, parsedMaterial, gltf);
   parseIorExtension(extensions.KHR_materials_ior, parsedMaterial);
   parseTransmissionExtension(device, extensions.KHR_materials_transmission, parsedMaterial, gltf);
-  parseVolumeExtension(extensions.KHR_materials_volume, parsedMaterial);
+  parseVolumeExtension(device, extensions.KHR_materials_volume, parsedMaterial, gltf);
   parseClearcoatExtension(device, extensions.KHR_materials_clearcoat, parsedMaterial, gltf);
   parseSheenExtension(device, extensions.KHR_materials_sheen, parsedMaterial, gltf);
   parseIridescenceExtension(device, extensions.KHR_materials_iridescence, parsedMaterial, gltf);
@@ -567,8 +567,10 @@ function parseTransmissionExtension(
 }
 
 function parseVolumeExtension(
+  device: Device,
   extension: GLTFMaterialVolumeExtension | undefined,
-  parsedMaterial: ParsedPBRMaterial
+  parsedMaterial: ParsedPBRMaterial,
+  gltf?: GLTFPostprocessed
 ): void {
   if (!extension) {
     return;
@@ -576,6 +578,14 @@ function parseVolumeExtension(
 
   if (extension.thicknessFactor !== undefined) {
     parsedMaterial.uniforms.thicknessFactor = extension.thicknessFactor;
+  }
+  if (extension.thicknessTexture) {
+    addTexture(device, extension.thicknessTexture, 'pbr_thicknessSampler', parsedMaterial, {
+      featureOptions: {
+        define: 'HAS_THICKNESSMAP'
+      },
+      gltf
+    });
   }
   if (extension.attenuationDistance !== undefined) {
     parsedMaterial.uniforms.attenuationDistance = extension.attenuationDistance;
@@ -620,6 +630,20 @@ function parseClearcoatExtension(
         featureOptions: {
           define: 'HAS_CLEARCOATROUGHNESSMAP',
           enabledUniformName: 'clearcoatRoughnessMapEnabled'
+        },
+        gltf
+      }
+    );
+  }
+  if (extension.clearcoatNormalTexture) {
+    addTexture(
+      device,
+      extension.clearcoatNormalTexture,
+      'pbr_clearcoatNormalSampler',
+      parsedMaterial,
+      {
+        featureOptions: {
+          define: 'HAS_CLEARCOATNORMALMAP'
         },
         gltf
       }
@@ -702,6 +726,20 @@ function parseIridescenceExtension(
       },
       gltf
     });
+  }
+  if (extension.iridescenceThicknessTexture) {
+    addTexture(
+      device,
+      extension.iridescenceThicknessTexture,
+      'pbr_iridescenceThicknessSampler',
+      parsedMaterial,
+      {
+        featureOptions: {
+          define: 'HAS_IRIDESCENCETHICKNESSMAP'
+        },
+        gltf
+      }
+    );
   }
 }
 

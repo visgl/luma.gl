@@ -143,11 +143,17 @@ uniform sampler2D pbr_specularIntensitySampler;
 #ifdef HAS_TRANSMISSIONMAP
 uniform sampler2D pbr_transmissionSampler;
 #endif
+#ifdef HAS_THICKNESSMAP
+uniform sampler2D pbr_thicknessSampler;
+#endif
 #ifdef HAS_CLEARCOATMAP
 uniform sampler2D pbr_clearcoatSampler;
 #endif
 #ifdef HAS_CLEARCOATROUGHNESSMAP
 uniform sampler2D pbr_clearcoatRoughnessSampler;
+#endif
+#ifdef HAS_CLEARCOATNORMALMAP
+uniform sampler2D pbr_clearcoatNormalSampler;
 #endif
 #ifdef HAS_SHEENCOLORMAP
 uniform sampler2D pbr_sheenColorSampler;
@@ -157,6 +163,9 @@ uniform sampler2D pbr_sheenRoughnessSampler;
 #endif
 #ifdef HAS_IRIDESCENCEMAP
 uniform sampler2D pbr_iridescenceSampler;
+#endif
+#ifdef HAS_IRIDESCENCETHICKNESSMAP
+uniform sampler2D pbr_iridescenceThicknessSampler;
 #endif
 #ifdef HAS_ANISOTROPYMAP
 uniform sampler2D pbr_anisotropySampler;
@@ -242,17 +251,31 @@ mat3 getTBN()
 
 // Find the normal for this fragment, pulling either from a predefined normal map
 // or from the interpolated mesh normal and tangent attributes.
+vec3 getMappedNormal(sampler2D normalSampler, mat3 tbn, float normalScale)
+{
+  vec3 n = texture(normalSampler, pbr_vUV).rgb;
+  return normalize(tbn * ((2.0 * n - 1.0) * vec3(normalScale, normalScale, 1.0)));
+}
+
 vec3 getNormal(mat3 tbn)
 {
 #ifdef HAS_NORMALMAP
-  vec3 n = texture(pbr_normalSampler, pbr_vUV).rgb;
-  n = normalize(tbn * ((2.0 * n - 1.0) * vec3(pbrMaterial.normalScale, pbrMaterial.normalScale, 1.0)));
+  vec3 n = getMappedNormal(pbr_normalSampler, tbn, pbrMaterial.normalScale);
 #else
   // The tbn matrix is linearly interpolated, so we need to re-normalize
   vec3 n = normalize(tbn[2].xyz);
 #endif
 
   return n;
+}
+
+vec3 getClearcoatNormal(mat3 tbn, vec3 baseNormal)
+{
+#ifdef HAS_CLEARCOATNORMALMAP
+  return getMappedNormal(pbr_clearcoatNormalSampler, tbn, 1.0);
+#else
+  return baseNormal;
+#endif
 }
 
 // Calculation of the lighting contribution from an optional Image Based Light source.
@@ -379,14 +402,15 @@ vec3 getVolumeAttenuation(float thickness)
   return exp(-attenuationCoefficient * thickness);
 }
 
-PBRInfo createClearcoatPBRInfo(PBRInfo basePBRInfo, float clearcoatRoughness)
+PBRInfo createClearcoatPBRInfo(PBRInfo basePBRInfo, vec3 clearcoatNormal, float clearcoatRoughness)
 {
   float perceptualRoughness = clamp(clearcoatRoughness, c_MinRoughness, 1.0);
   float alphaRoughness = perceptualRoughness * perceptualRoughness;
+  float NdotV = clamp(abs(dot(clearcoatNormal, basePBRInfo.v)), 0.001, 1.0);
 
   return PBRInfo(
     basePBRInfo.NdotL,
-    basePBRInfo.NdotV,
+    NdotV,
     basePBRInfo.NdotH,
     basePBRInfo.LdotH,
     basePBRInfo.VdotH,
@@ -397,7 +421,7 @@ PBRInfo createClearcoatPBRInfo(PBRInfo basePBRInfo, float clearcoatRoughness)
     alphaRoughness,
     vec3(0.0),
     vec3(0.04),
-    basePBRInfo.n,
+    clearcoatNormal,
     basePBRInfo.v
   );
 }
@@ -405,6 +429,7 @@ PBRInfo createClearcoatPBRInfo(PBRInfo basePBRInfo, float clearcoatRoughness)
 vec3 calculateClearcoatContribution(
   PBRInfo pbrInfo,
   vec3 lightColor,
+  vec3 clearcoatNormal,
   float clearcoatFactor,
   float clearcoatRoughness
 ) {
@@ -412,14 +437,14 @@ vec3 calculateClearcoatContribution(
     return vec3(0.0);
   }
 
-  PBRInfo clearcoatPBRInfo = createClearcoatPBRInfo(pbrInfo, clearcoatRoughness);
+  PBRInfo clearcoatPBRInfo = createClearcoatPBRInfo(pbrInfo, clearcoatNormal, clearcoatRoughness);
   return calculateFinalColor(clearcoatPBRInfo, lightColor) * clearcoatFactor;
 }
 
 #ifdef USE_IBL
 vec3 calculateClearcoatIBLContribution(
   PBRInfo pbrInfo,
-  vec3 n,
+  vec3 clearcoatNormal,
   vec3 reflection,
   float clearcoatFactor,
   float clearcoatRoughness
@@ -428,8 +453,8 @@ vec3 calculateClearcoatIBLContribution(
     return vec3(0.0);
   }
 
-  PBRInfo clearcoatPBRInfo = createClearcoatPBRInfo(pbrInfo, clearcoatRoughness);
-  return getIBLContribution(clearcoatPBRInfo, n, reflection) * clearcoatFactor;
+  PBRInfo clearcoatPBRInfo = createClearcoatPBRInfo(pbrInfo, clearcoatNormal, clearcoatRoughness);
+  return getIBLContribution(clearcoatPBRInfo, clearcoatNormal, reflection) * clearcoatFactor;
 }
 #endif
 
@@ -470,6 +495,7 @@ float calculateAnisotropyBoost(
 vec3 calculateMaterialLightColor(
   PBRInfo pbrInfo,
   vec3 lightColor,
+  vec3 clearcoatNormal,
   float clearcoatFactor,
   float clearcoatRoughness,
   vec3 sheenColor,
@@ -482,6 +508,7 @@ vec3 calculateMaterialLightColor(
   color += calculateClearcoatContribution(
     pbrInfo,
     lightColor,
+    clearcoatNormal,
     clearcoatFactor,
     clearcoatRoughness
   );
@@ -713,6 +740,10 @@ vec4 pbr_filterColor(vec4 colorUnused)
     }
 #endif
     transmission = clamp(transmission * (1.0 - metallic), 0.0, 1.0);
+    float thickness = max(pbrMaterial.thicknessFactor, 0.0);
+#ifdef HAS_THICKNESSMAP
+    thickness *= texture(pbr_thicknessSampler, pbr_vUV).g;
+#endif
 
     float clearcoatFactor = pbrMaterial.clearcoatFactor;
     float clearcoatRoughness = pbrMaterial.clearcoatRoughnessFactor;
@@ -728,6 +759,7 @@ vec4 pbr_filterColor(vec4 colorUnused)
 #endif
     clearcoatFactor = clamp(clearcoatFactor, 0.0, 1.0);
     clearcoatRoughness = clamp(clearcoatRoughness, c_MinRoughness, 1.0);
+    vec3 clearcoatNormal = getClearcoatNormal(tbn, n);
 
     vec3 sheenColor = pbrMaterial.sheenColorFactor;
     float sheenRoughness = pbrMaterial.sheenRoughnessFactor;
@@ -755,6 +787,13 @@ vec4 pbr_filterColor(vec4 colorUnused)
       pbrMaterial.iridescenceThicknessRange.y,
       0.5
     );
+#ifdef HAS_IRIDESCENCETHICKNESSMAP
+    iridescenceThickness = mix(
+      pbrMaterial.iridescenceThicknessRange.x,
+      pbrMaterial.iridescenceThicknessRange.y,
+      texture(pbr_iridescenceThicknessSampler, pbr_vUV).g
+    );
+#endif
 
     float anisotropyStrength = clamp(pbrMaterial.anisotropyStrength, 0.0, 1.0);
     vec2 anisotropyDirection = normalizeDirection(pbrMaterial.anisotropyDirection);
@@ -839,6 +878,7 @@ vec4 pbr_filterColor(vec4 colorUnused)
     color += calculateMaterialLightColor(
       pbrInfo,
       lighting.ambientColor,
+      clearcoatNormal,
       clearcoatFactor,
       clearcoatRoughness,
       sheenColor,
@@ -854,6 +894,7 @@ vec4 pbr_filterColor(vec4 colorUnused)
         color += calculateMaterialLightColor(
           pbrInfo,
           lighting_getDirectionalLight(i).color,
+          clearcoatNormal,
           clearcoatFactor,
           clearcoatRoughness,
           sheenColor,
@@ -872,6 +913,7 @@ vec4 pbr_filterColor(vec4 colorUnused)
         color += calculateMaterialLightColor(
           pbrInfo,
           lighting_getPointLight(i).color / attenuation,
+          clearcoatNormal,
           clearcoatFactor,
           clearcoatRoughness,
           sheenColor,
@@ -889,6 +931,7 @@ vec4 pbr_filterColor(vec4 colorUnused)
         color += calculateMaterialLightColor(
           pbrInfo,
           lighting_getSpotLight(i).color / attenuation,
+          clearcoatNormal,
           clearcoatFactor,
           clearcoatRoughness,
           sheenColor,
@@ -907,8 +950,8 @@ vec4 pbr_filterColor(vec4 colorUnused)
         calculateAnisotropyBoost(pbrInfo, anisotropyTangent, anisotropyStrength);
       color += calculateClearcoatIBLContribution(
         pbrInfo,
-        n,
-        reflection,
+        clearcoatNormal,
+        -normalize(reflect(v, clearcoatNormal)),
         clearcoatFactor,
         clearcoatRoughness
       );
@@ -933,7 +976,7 @@ vec4 pbr_filterColor(vec4 colorUnused)
     color += emissive * pbrMaterial.emissiveStrength;
 
     if (transmission > 0.0) {
-      color = mix(color, color * getVolumeAttenuation(pbrMaterial.thicknessFactor), transmission);
+      color = mix(color, color * getVolumeAttenuation(thickness), transmission);
     }
 
     // This section uses mix to override final color for reference app visualization

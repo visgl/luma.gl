@@ -145,6 +145,7 @@ test('gltf#parsePBRMaterial parses KHR_materials extensions', t => {
         },
         KHR_materials_volume: {
           thicknessFactor: 0.4,
+          thicknessTexture: makeCompressedTextureInfo('thickness'),
           attenuationDistance: 12,
           attenuationColor: [0.7, 0.8, 0.9]
         },
@@ -152,7 +153,8 @@ test('gltf#parsePBRMaterial parses KHR_materials extensions', t => {
           clearcoatFactor: 0.8,
           clearcoatTexture: makeCompressedTextureInfo('clearcoat'),
           clearcoatRoughnessFactor: 0.2,
-          clearcoatRoughnessTexture: makeCompressedTextureInfo('clearcoat-roughness')
+          clearcoatRoughnessTexture: makeCompressedTextureInfo('clearcoat-roughness'),
+          clearcoatNormalTexture: makeCompressedTextureInfo('clearcoat-normal')
         },
         KHR_materials_sheen: {
           sheenColorFactor: [0.15, 0.25, 0.35],
@@ -165,7 +167,8 @@ test('gltf#parsePBRMaterial parses KHR_materials extensions', t => {
           iridescenceTexture: makeCompressedTextureInfo('iridescence'),
           iridescenceIor: 1.4,
           iridescenceThicknessMinimum: 50,
-          iridescenceThicknessMaximum: 350
+          iridescenceThicknessMaximum: 350,
+          iridescenceThicknessTexture: makeCompressedTextureInfo('iridescence-thickness')
         },
         KHR_materials_anisotropy: {
           anisotropyStrength: 0.65,
@@ -197,6 +200,7 @@ test('gltf#parsePBRMaterial parses KHR_materials extensions', t => {
   t.equal(parsedMaterial.uniforms.transmissionFactor, 0.6, 'transmission factor parsed');
   t.equal(parsedMaterial.uniforms.transmissionMapEnabled, true, 'transmission map enabled');
   t.equal(parsedMaterial.uniforms.thicknessFactor, 0.4, 'volume thickness parsed');
+  t.ok(parsedMaterial.bindings.pbr_thicknessSampler, 'thickness binding created');
   t.equal(parsedMaterial.uniforms.attenuationDistance, 12, 'attenuation distance parsed');
   t.deepEqual(
     parsedMaterial.uniforms.attenuationColor,
@@ -215,6 +219,7 @@ test('gltf#parsePBRMaterial parses KHR_materials extensions', t => {
     true,
     'clearcoat roughness map enabled'
   );
+  t.ok(parsedMaterial.bindings.pbr_clearcoatNormalSampler, 'clearcoat normal binding created');
   t.deepEqual(
     parsedMaterial.uniforms.sheenColorFactor,
     [0.15, 0.25, 0.35],
@@ -231,6 +236,10 @@ test('gltf#parsePBRMaterial parses KHR_materials extensions', t => {
     'iridescence thickness range parsed'
   );
   t.equal(parsedMaterial.uniforms.iridescenceMapEnabled, true, 'iridescence map enabled');
+  t.ok(
+    parsedMaterial.bindings.pbr_iridescenceThicknessSampler,
+    'iridescence thickness binding created'
+  );
   t.equal(parsedMaterial.uniforms.anisotropyStrength, 0.65, 'anisotropy strength parsed');
   t.equal(parsedMaterial.uniforms.anisotropyRotation, 0.75, 'anisotropy rotation parsed');
   t.equal(parsedMaterial.uniforms.anisotropyMapEnabled, true, 'anisotropy map enabled');
@@ -239,11 +248,14 @@ test('gltf#parsePBRMaterial parses KHR_materials extensions', t => {
   t.ok(parsedMaterial.defines['HAS_SPECULARCOLORMAP'], 'specular color define added');
   t.ok(parsedMaterial.defines['HAS_SPECULARINTENSITYMAP'], 'specular intensity define added');
   t.ok(parsedMaterial.defines['HAS_TRANSMISSIONMAP'], 'transmission define added');
+  t.ok(parsedMaterial.defines['HAS_THICKNESSMAP'], 'thickness define added');
   t.ok(parsedMaterial.defines['HAS_CLEARCOATMAP'], 'clearcoat define added');
   t.ok(parsedMaterial.defines['HAS_CLEARCOATROUGHNESSMAP'], 'clearcoat roughness define added');
+  t.ok(parsedMaterial.defines['HAS_CLEARCOATNORMALMAP'], 'clearcoat normal define added');
   t.ok(parsedMaterial.defines['HAS_SHEENCOLORMAP'], 'sheen define added');
   t.ok(parsedMaterial.defines['HAS_SHEENROUGHNESSMAP'], 'sheen roughness define added');
   t.ok(parsedMaterial.defines['HAS_IRIDESCENCEMAP'], 'iridescence define added');
+  t.ok(parsedMaterial.defines['HAS_IRIDESCENCETHICKNESSMAP'], 'iridescence thickness define added');
   t.ok(parsedMaterial.defines['HAS_ANISOTROPYMAP'], 'anisotropy define added');
   t.ok(
     parsedMaterial.defines['USE_MATERIAL_EXTENSIONS'],

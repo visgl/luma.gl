@@ -110,16 +110,29 @@ uniform sampler2D u_SpecularIntensitySampler;
 #ifdef HAS_TRANSMISSIONMAP
 uniform sampler2D u_TransmissionSampler;
 #endif
+#ifdef HAS_THICKNESSMAP
+uniform sampler2D u_ThicknessSampler;
+#endif
 #ifdef HAS_CLEARCOATMAP
 uniform sampler2D u_ClearcoatSampler;
+#endif
+#ifdef HAS_CLEARCOATROUGHNESSMAP
 uniform sampler2D u_ClearcoatRoughnessSampler;
+#endif
+#ifdef HAS_CLEARCOATNORMALMAP
+uniform sampler2D u_ClearcoatNormalSampler;
 #endif
 #ifdef HAS_SHEENCOLORMAP
 uniform sampler2D u_SheenColorSampler;
+#endif
+#ifdef HAS_SHEENROUGHNESSMAP
 uniform sampler2D u_SheenRoughnessSampler;
 #endif
 #ifdef HAS_IRIDESCENCEMAP
 uniform sampler2D u_IridescenceSampler;
+#endif
+#ifdef HAS_IRIDESCENCETHICKNESSMAP
+uniform sampler2D u_IridescenceThicknessSampler;
 #endif
 #ifdef HAS_ANISOTROPYMAP
 uniform sampler2D u_AnisotropySampler;
@@ -274,6 +287,10 @@ struct pbrMaterialUniforms {
 @group(3) @binding(15) var pbr_transmissionSampler: texture_2d<f32>;
 @group(3) @binding(16) var pbr_transmissionSamplerSampler: sampler;
 #endif
+#ifdef HAS_THICKNESSMAP
+@group(3) @binding(29) var pbr_thicknessSampler: texture_2d<f32>;
+@group(3) @binding(30) var pbr_thicknessSamplerSampler: sampler;
+#endif
 #ifdef HAS_CLEARCOATMAP
 @group(3) @binding(17) var pbr_clearcoatSampler: texture_2d<f32>;
 @group(3) @binding(18) var pbr_clearcoatSamplerSampler: sampler;
@@ -281,6 +298,10 @@ struct pbrMaterialUniforms {
 #ifdef HAS_CLEARCOATROUGHNESSMAP
 @group(3) @binding(19) var pbr_clearcoatRoughnessSampler: texture_2d<f32>;
 @group(3) @binding(20) var pbr_clearcoatRoughnessSamplerSampler: sampler;
+#endif
+#ifdef HAS_CLEARCOATNORMALMAP
+@group(3) @binding(31) var pbr_clearcoatNormalSampler: texture_2d<f32>;
+@group(3) @binding(32) var pbr_clearcoatNormalSamplerSampler: sampler;
 #endif
 #ifdef HAS_SHEENCOLORMAP
 @group(3) @binding(21) var pbr_sheenColorSampler: texture_2d<f32>;
@@ -293,6 +314,10 @@ struct pbrMaterialUniforms {
 #ifdef HAS_IRIDESCENCEMAP
 @group(3) @binding(25) var pbr_iridescenceSampler: texture_2d<f32>;
 @group(3) @binding(26) var pbr_iridescenceSamplerSampler: sampler;
+#endif
+#ifdef HAS_IRIDESCENCETHICKNESSMAP
+@group(3) @binding(33) var pbr_iridescenceThicknessSampler: texture_2d<f32>;
+@group(3) @binding(34) var pbr_iridescenceThicknessSamplerSampler: sampler;
 #endif
 #ifdef HAS_ANISOTROPYMAP
 @group(3) @binding(27) var pbr_anisotropySampler: texture_2d<f32>;
@@ -363,16 +388,45 @@ fn getTBN() -> mat3x3f
 
 // Find the normal for this fragment, pulling either from a predefined normal map
 // or from the interpolated mesh normal and tangent attributes.
+fn getMappedNormal(
+  normalSampler: texture_2d<f32>,
+  normalSamplerBinding: sampler,
+  tbn: mat3x3f,
+  normalScale: f32
+) -> vec3f
+{
+  let n = textureSample(normalSampler, normalSamplerBinding, fragmentInputs.pbr_vUV).rgb;
+  return normalize(tbn * ((2.0 * n - 1.0) * vec3f(normalScale, normalScale, 1.0)));
+}
+
 fn getNormal(tbn: mat3x3f) -> vec3f
 {
   // The tbn matrix is linearly interpolated, so we need to re-normalize
   var n: vec3f = normalize(tbn[2].xyz);
 #ifdef HAS_NORMALMAP
-  n = textureSample(pbr_normalSampler, pbr_normalSamplerSampler, fragmentInputs.pbr_vUV).rgb;
-  n = normalize(tbn * ((2.0 * n - 1.0) * vec3f(pbrMaterial.normalScale, pbrMaterial.normalScale, 1.0)));
+  n = getMappedNormal(
+    pbr_normalSampler,
+    pbr_normalSamplerSampler,
+    tbn,
+    pbrMaterial.normalScale
+  );
 #endif
 
   return n;
+}
+
+fn getClearcoatNormal(tbn: mat3x3f, baseNormal: vec3f) -> vec3f
+{
+#ifdef HAS_CLEARCOATNORMALMAP
+  return getMappedNormal(
+    pbr_clearcoatNormalSampler,
+    pbr_clearcoatNormalSamplerSampler,
+    tbn,
+    1.0
+  );
+#else
+  return baseNormal;
+#endif
 }
 
 // Calculation of the lighting contribution from an optional Image Based Light source.
@@ -513,13 +567,18 @@ fn getVolumeAttenuation(thickness: f32) -> vec3f {
   return exp(-attenuationCoefficient * thickness);
 }
 
-fn createClearcoatPBRInfo(basePBRInfo: PBRInfo, clearcoatRoughness: f32) -> PBRInfo {
+fn createClearcoatPBRInfo(
+  basePBRInfo: PBRInfo,
+  clearcoatNormal: vec3f,
+  clearcoatRoughness: f32
+) -> PBRInfo {
   let perceptualRoughness = clamp(clearcoatRoughness, c_MinRoughness, 1.0);
   let alphaRoughness = perceptualRoughness * perceptualRoughness;
+  let NdotV = clamp(abs(dot(clearcoatNormal, basePBRInfo.v)), 0.001, 1.0);
 
   return PBRInfo(
     basePBRInfo.NdotL,
-    basePBRInfo.NdotV,
+    NdotV,
     basePBRInfo.NdotH,
     basePBRInfo.LdotH,
     basePBRInfo.VdotH,
@@ -530,7 +589,7 @@ fn createClearcoatPBRInfo(basePBRInfo: PBRInfo, clearcoatRoughness: f32) -> PBRI
     alphaRoughness,
     vec3f(0.0),
     vec3f(0.04),
-    basePBRInfo.n,
+    clearcoatNormal,
     basePBRInfo.v
   );
 }
@@ -538,6 +597,7 @@ fn createClearcoatPBRInfo(basePBRInfo: PBRInfo, clearcoatRoughness: f32) -> PBRI
 fn calculateClearcoatContribution(
   pbrInfo: PBRInfo,
   lightColor: vec3f,
+  clearcoatNormal: vec3f,
   clearcoatFactor: f32,
   clearcoatRoughness: f32
 ) -> vec3f {
@@ -545,14 +605,14 @@ fn calculateClearcoatContribution(
     return vec3f(0.0);
   }
 
-  let clearcoatPBRInfo = createClearcoatPBRInfo(pbrInfo, clearcoatRoughness);
+  let clearcoatPBRInfo = createClearcoatPBRInfo(pbrInfo, clearcoatNormal, clearcoatRoughness);
   return calculateFinalColor(clearcoatPBRInfo, lightColor) * clearcoatFactor;
 }
 
 #ifdef USE_IBL
 fn calculateClearcoatIBLContribution(
   pbrInfo: PBRInfo,
-  n: vec3f,
+  clearcoatNormal: vec3f,
   reflection: vec3f,
   clearcoatFactor: f32,
   clearcoatRoughness: f32
@@ -561,8 +621,8 @@ fn calculateClearcoatIBLContribution(
     return vec3f(0.0);
   }
 
-  let clearcoatPBRInfo = createClearcoatPBRInfo(pbrInfo, clearcoatRoughness);
-  return getIBLContribution(clearcoatPBRInfo, n, reflection) * clearcoatFactor;
+  let clearcoatPBRInfo = createClearcoatPBRInfo(pbrInfo, clearcoatNormal, clearcoatRoughness);
+  return getIBLContribution(clearcoatPBRInfo, clearcoatNormal, reflection) * clearcoatFactor;
 }
 #endif
 
@@ -603,6 +663,7 @@ fn calculateAnisotropyBoost(
 fn calculateMaterialLightColor(
   pbrInfo: PBRInfo,
   lightColor: vec3f,
+  clearcoatNormal: vec3f,
   clearcoatFactor: f32,
   clearcoatRoughness: f32,
   sheenColor: vec3f,
@@ -615,6 +676,7 @@ fn calculateMaterialLightColor(
   color += calculateClearcoatContribution(
     pbrInfo,
     lightColor,
+    clearcoatNormal,
     clearcoatFactor,
     clearcoatRoughness
   );
@@ -869,6 +931,14 @@ fn pbr_filterColor(colorUnused: vec4<f32>) -> vec4<f32> {
     }
     #endif
     transmission = clamp(transmission * (1.0 - metallic), 0.0, 1.0);
+    var thickness = max(pbrMaterial.thicknessFactor, 0.0);
+    #ifdef HAS_THICKNESSMAP
+    thickness *= textureSample(
+      pbr_thicknessSampler,
+      pbr_thicknessSamplerSampler,
+      fragmentInputs.pbr_vUV
+    ).g;
+    #endif
 
     var clearcoatFactor = pbrMaterial.clearcoatFactor;
     var clearcoatRoughness = pbrMaterial.clearcoatRoughnessFactor;
@@ -892,6 +962,7 @@ fn pbr_filterColor(colorUnused: vec4<f32>) -> vec4<f32> {
     #endif
     clearcoatFactor = clamp(clearcoatFactor, 0.0, 1.0);
     clearcoatRoughness = clamp(clearcoatRoughness, c_MinRoughness, 1.0);
+    let clearcoatNormal = getClearcoatNormal(tbn, n);
 
     var sheenColor = pbrMaterial.sheenColorFactor;
     var sheenRoughness = pbrMaterial.sheenRoughnessFactor;
@@ -928,11 +999,22 @@ fn pbr_filterColor(colorUnused: vec4<f32>) -> vec4<f32> {
     }
     #endif
     iridescence = clamp(iridescence, 0.0, 1.0);
-    let iridescenceThickness = mix(
+    var iridescenceThickness = mix(
       pbrMaterial.iridescenceThicknessRange.x,
       pbrMaterial.iridescenceThicknessRange.y,
       0.5
     );
+    #ifdef HAS_IRIDESCENCETHICKNESSMAP
+    iridescenceThickness = mix(
+      pbrMaterial.iridescenceThicknessRange.x,
+      pbrMaterial.iridescenceThicknessRange.y,
+      textureSample(
+        pbr_iridescenceThicknessSampler,
+        pbr_iridescenceThicknessSamplerSampler,
+        fragmentInputs.pbr_vUV
+      ).g
+    );
+    #endif
 
     var anisotropyStrength = clamp(pbrMaterial.anisotropyStrength, 0.0, 1.0);
     var anisotropyDirection = normalizeDirection(pbrMaterial.anisotropyDirection);
@@ -1021,6 +1103,7 @@ fn pbr_filterColor(colorUnused: vec4<f32>) -> vec4<f32> {
     color += calculateMaterialLightColor(
       pbrInfo,
       lighting.ambientColor,
+      clearcoatNormal,
       clearcoatFactor,
       clearcoatRoughness,
       sheenColor,
@@ -1036,6 +1119,7 @@ fn pbr_filterColor(colorUnused: vec4<f32>) -> vec4<f32> {
         color += calculateMaterialLightColor(
           pbrInfo,
           lighting_getDirectionalLight(i).color,
+          clearcoatNormal,
           clearcoatFactor,
           clearcoatRoughness,
           sheenColor,
@@ -1057,6 +1141,7 @@ fn pbr_filterColor(colorUnused: vec4<f32>) -> vec4<f32> {
         color += calculateMaterialLightColor(
           pbrInfo,
           lighting_getPointLight(i).color / attenuation,
+          clearcoatNormal,
           clearcoatFactor,
           clearcoatRoughness,
           sheenColor,
@@ -1074,6 +1159,7 @@ fn pbr_filterColor(colorUnused: vec4<f32>) -> vec4<f32> {
         color += calculateMaterialLightColor(
           pbrInfo,
           lighting_getSpotLight(i).color / attenuation,
+          clearcoatNormal,
           clearcoatFactor,
           clearcoatRoughness,
           sheenColor,
@@ -1092,8 +1178,8 @@ fn pbr_filterColor(colorUnused: vec4<f32>) -> vec4<f32> {
         calculateAnisotropyBoost(pbrInfo, anisotropyTangent, anisotropyStrength);
       color += calculateClearcoatIBLContribution(
         pbrInfo,
-        n,
-        reflection,
+        clearcoatNormal,
+        -normalize(reflect(v, clearcoatNormal)),
         clearcoatFactor,
         clearcoatRoughness
       );
@@ -1121,7 +1207,7 @@ fn pbr_filterColor(colorUnused: vec4<f32>) -> vec4<f32> {
     color += emissive * pbrMaterial.emissiveStrength;
 
     if (transmission > 0.0) {
-      color = mix(color, color * getVolumeAttenuation(pbrMaterial.thicknessFactor), transmission);
+      color = mix(color, color * getVolumeAttenuation(thickness), transmission);
     }
 
     // This section uses mix to override final color for reference app visualization
