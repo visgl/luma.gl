@@ -2,24 +2,38 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from 'tape-promise/tape';
+import test from '@luma.gl/devtools-extensions/tape-test-utils';
 
 import {
   decodeColorPickInfo,
   decodeIndexPickInfo,
-  resolvePickingBackend
+  resolvePickingMode,
+  supportsIndexPicking
 } from '../../src/modules/picking/picking-manager';
+import {getNullTestDevice} from '@luma.gl/test-utils';
 
-test('PickingManager#resolvePickingBackend', t => {
-  t.equal(resolvePickingBackend('webgl', 'auto'), 'color', 'WebGL auto-selects color picking');
-  t.equal(resolvePickingBackend('webgpu', 'auto'), 'index', 'WebGPU auto-selects index picking');
-  t.equal(resolvePickingBackend('webgpu', 'color'), 'color', 'explicit color override honored');
-  t.equal(resolvePickingBackend('webgpu', 'index'), 'index', 'explicit index override honored');
-  t.throws(
-    () => resolvePickingBackend('webgl', 'index'),
-    /only supported on WebGPU/,
-    'forcing index on WebGL fails clearly'
+test('PickingManager#resolvePickingMode', t => {
+  t.equal(resolvePickingMode('webgl'), 'color', 'color is the default mode');
+  t.equal(resolvePickingMode('webgl', 'auto'), 'color', 'WebGL auto-selects color picking');
+  t.equal(resolvePickingMode('webgpu', 'auto'), 'index', 'WebGPU auto-selects index picking');
+  t.equal(resolvePickingMode('webgpu', 'color'), 'color', 'explicit color override honored');
+  t.equal(resolvePickingMode('webgpu', 'index'), 'index', 'explicit index override honored');
+  t.equal(
+    resolvePickingMode('webgl', 'index', true),
+    'index',
+    'explicit index override is allowed on capable WebGL devices'
   );
+  t.throws(
+    () => resolvePickingMode('webgl', 'index', false),
+    /requires WebGPU or a WebGL device that supports renderable rg32sint textures/,
+    'forcing index on unsupported WebGL fails clearly'
+  );
+  t.end();
+});
+
+test('PickingManager#supportsIndexPicking', t => {
+  const device = getNullTestDevice();
+  t.equal(supportsIndexPicking(device), false, 'NullDevice does not support index picking');
   t.end();
 });
 

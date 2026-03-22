@@ -17,32 +17,51 @@ export type PickInfo = {
   objectIndex: number | null;
 };
 
-export type PickingBackend = 'auto' | 'index' | 'color';
-export type ResolvedPickingBackend = Exclude<PickingBackend, 'auto'>;
+export type PickingMode = 'auto' | 'index' | 'color';
+export type ResolvedPickingMode = Exclude<PickingMode, 'auto'>;
+/** @deprecated Use `PickingMode`. */
+export type PickingBackend = PickingMode;
+/** @deprecated Use `ResolvedPickingMode`. */
+export type ResolvedPickingBackend = ResolvedPickingMode;
 
 export type PickingManagerProps = {
   /** Shader inputs from models to pick */
   shaderInputs?: ShaderInputs<{picking: typeof pickingUniforms.props}>;
   /** Callback */
   onObjectPicked?: (info: PickInfo) => void;
-  /** Select a picking backend or let the manager choose one automatically */
+  /** Select a picking mode. Defaults to `color`. Use `auto` to prefer `index` when supported. */
+  mode?: PickingMode;
+  /** @deprecated Use `mode`. */
   backend?: PickingBackend;
 };
 
-export function resolvePickingBackend(
+export function resolvePickingMode(
   deviceType: Device['type'],
-  backend: PickingBackend = 'auto'
-): ResolvedPickingBackend {
-  if (backend === 'auto') {
-    return deviceType === 'webgpu' ? 'index' : 'color';
+  mode: PickingMode = 'color',
+  indexPickingSupported: boolean = deviceType === 'webgpu'
+): ResolvedPickingMode {
+  if (mode === 'auto') {
+    return indexPickingSupported ? 'index' : 'color';
   }
 
-  if (backend === 'index' && deviceType !== 'webgpu') {
-    throw new Error(`Picking backend "${backend}" is only supported on WebGPU.`);
+  if (mode === 'index' && !indexPickingSupported) {
+    throw new Error(
+      `Picking mode "${mode}" requires WebGPU or a WebGL device that supports renderable rg32sint textures.`
+    );
   }
 
-  return backend;
+  return mode;
 }
+
+export function supportsIndexPicking(device: Device): boolean {
+  return (
+    device.type === 'webgpu' ||
+    (device.type === 'webgl' && device.isTextureFormatRenderable('rg32sint'))
+  );
+}
+
+/** @deprecated Use `resolvePickingMode`. */
+export const resolvePickingBackend = resolvePickingMode;
 
 export function decodeIndexPickInfo(pixelData: Int32Array): PickInfo {
   return {
@@ -72,7 +91,7 @@ export function decodeColorPickInfo(pixelData: Uint8Array): PickInfo {
 export class PickingManager {
   device: Device;
   props: Required<PickingManagerProps>;
-  backend: ResolvedPickingBackend;
+  mode: ResolvedPickingMode;
   /** Info from latest pick operation */
   pickInfo: PickInfo = {batchIndex: null, objectIndex: null};
   /** Framebuffer used for picking */
@@ -81,13 +100,21 @@ export class PickingManager {
   static defaultProps: Required<PickingManagerProps> = {
     shaderInputs: undefined!,
     onObjectPicked: () => {},
-    backend: 'auto'
+    mode: 'color',
+    backend: 'color'
   };
 
   constructor(device: Device, props: PickingManagerProps) {
     this.device = device;
     this.props = {...PickingManager.defaultProps, ...props};
-    this.backend = resolvePickingBackend(this.device.type, this.props.backend);
+    const requestedMode = props.mode ?? props.backend ?? PickingManager.defaultProps.mode;
+    this.props.mode = requestedMode;
+    this.props.backend = requestedMode;
+    this.mode = resolvePickingMode(
+      this.device.type,
+      requestedMode,
+      supportsIndexPicking(this.device)
+    );
   }
 
   destroy() {
@@ -98,7 +125,7 @@ export class PickingManager {
   getFramebuffer() {
     if (!this.framebuffer) {
       this.framebuffer =
-        this.backend === 'index' ? this.createIndexFramebuffer() : this.createColorFramebuffer();
+        this.mode === 'index' ? this.createIndexFramebuffer() : this.createColorFramebuffer();
     }
     return this.framebuffer;
   }
@@ -115,7 +142,7 @@ export class PickingManager {
 
     this.setPickingProps({isActive: true});
 
-    return this.backend === 'index'
+    return this.mode === 'index'
       ? this.device.beginRenderPass({
           framebuffer,
           clearColors: [new Float32Array([0, 0, 0, 0]), INDEX_PICKING_CLEAR_COLOR],
@@ -206,7 +233,7 @@ export class PickingManager {
     framebuffer: Framebuffer,
     pickPosition: [number, number]
   ): Promise<PickInfo | null> {
-    return this.backend === 'index'
+    return this.mode === 'index'
       ? this.readIndexPickInfo(framebuffer, pickPosition)
       : this.readColorPickInfo(framebuffer, pickPosition);
   }

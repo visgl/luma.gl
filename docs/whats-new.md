@@ -61,6 +61,7 @@ Target Date: April 2026
 - New [`lambertMaterial`](/docs/api-reference/shadertools/shader-modules/lambert-material) shader module adds a diffuse-only matte material model.
 - Built-in material shader modules now support `unlit`, allowing applications to disable lighting without changing material families.
 - `lighting` and `pbrMaterial` documentation now describes the current bind-group conventions used by those modules.
+- The deprecated [`picking`](/docs/api-reference/shadertools/shader-modules/picking) shader module remains available and behaviorally stable as a legacy compatibility path, but new picking features continue to land only in `@luma.gl/engine`.
 
 **@luma.gl/effects**
 

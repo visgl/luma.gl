@@ -5,7 +5,9 @@
 </p>
 
 :::caution
-The `picking` shader module in `@luma.gl/shadertools` is deprecated. Use the picking modules in `@luma.gl/engine` instead.
+The `picking` shader module in `@luma.gl/shadertools` is deprecated.
+It is retained as a legacy compatibility path for existing applications such as deck.gl, but it is frozen and will not gain new engine picking features.
+Applications that need the new index/color backend model should use the picking modules in `@luma.gl/engine`.
 :::
 
 Provides support for color-based picking. 
@@ -16,12 +18,22 @@ The `picking` modules supports picking and highlighting for both instanced and n
 - pick "group of primitives" with the same picking color in non-instanced draw-calls
 - highlight "group of primitives" with the same picking color in non-instanced draw-calls
 
+This module preserves the legacy color-picking contract:
+- the application supplies the picking color
+- the shader writes that picking color to the picking buffer
+- highlighting is keyed by `highlightedObjectColor`
+
+It does not adopt the newer engine `objectIndex` / `batchIndex` payload model.
+
 Color based picking lets the application draw a primitive with a color that can later be used to index this specific primitive.
 
 Highlighting allows application to specify a picking color corresponding to an object that need to be highlighted and the highlight color to be used.
 
 
 ## Usage
+
+This page documents the legacy `@luma.gl/shadertools` module.
+For new applications, prefer the `@luma.gl/engine` `picking`, `colorPicking`, and `indexPicking` modules instead.
 
 In your vertex shader, your inform the picking module what object we are currently rendering by supplying a picking color, perhaps from an attribute.
 
@@ -33,16 +45,14 @@ main() {
 }
 ```
 
-In your fragment shader, you simply apply (call) the `picking_filterColor` filter function at the very end of the shader. This will return the normal color, or the highlight color, or the picking color, as appropriate.
+In your fragment shader, apply `picking_filterColor` or `picking_filterPickingColor` at the very end of the shader. The picking color written by this legacy module must not be modified after that point.
 
 ```ts
 main() {
   gl_FragColor = ...
-  gl_FragColor = picking_filterPickingColor(gl_FragColor);
+  gl_FragColor = picking_filterColor(gl_FragColor);
 }
 ```
-
-In your fragment shader, you simply apply (call) the `picking_filterPickingColor` filter function at the very end of the shader. This will return the normal color, or the highlight color, or the picking color, as appropriate.
 
 ```glsl
 main() {
@@ -131,7 +141,6 @@ Sets the attribute value that needs to be picked.
 ### picking_filterColor
 
 ```ts
-fn picking_filterColor(color: vec4<f32>) -> vec4<f32>
 vec4 picking_filterColor(vec4 color)
 ```
 
@@ -141,15 +150,13 @@ vec4 picking_filterColor(vec4 color)
 | ❌               | ✅                | Returns the current highlight color (to show this item as "selected") |
 | ❌               | ❌                | returns the original color (unmodified `color` argument)              |
 
-### picking_filterPickingColor()
+### picking_filterHighlightColor()
 
 ```ts
-vec4 picking_filterPickingColor(vec4 color)
+vec4 picking_filterHighlightColor(vec4 color)
 ```
 
-If picking active, returns the current vertex's picking color set by `picking_setPickingColor`, otherwise returns its argument unmodified.
-
-Returns picking highlight color if the pixel belongs to currently selected model, otherwise returns its argument unmodified.
+Returns the highlight color blend when the current fragment matches `highlightedObjectColor`, otherwise returns its argument unmodified.
 
 
 ### picking_filterPickingColor()
@@ -161,4 +168,4 @@ If picking active, returns the current vertex's picking color set by `picking_se
 ## Remarks
 
 - It is recommended that `picking_filterPickingColor()` is called last in a fragment shader, as the picking color (returned when picking is enabled) must not be modified in any way (and alpha must remain 1) or picking results will not be correct.
-
+- This legacy module is kept stable for compatibility. New picking backends and framebuffer-management APIs are available in `@luma.gl/engine`, not here.

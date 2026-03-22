@@ -102,7 +102,7 @@ struct pickingUniforms {
   highlightColor: vec4<f32>,
 };
 
-@group(0) @binding(2) var<uniform> picking: pickingUniforms;
+@group(0) @binding(auto) var<uniform> picking: pickingUniforms;
 `;
 
 function getUniforms(props: PickingProps = {}, prevUniforms?: PickingUniforms): PickingUniforms {

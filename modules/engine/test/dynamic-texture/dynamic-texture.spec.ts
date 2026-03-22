@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {getNullTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {getNullTestDevice, getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {Texture, type TextureFormat} from '@luma.gl/core';
 import {DynamicTexture} from '../../src/index';
 
@@ -19,6 +19,26 @@ function createTestLabel(
 ): string {
   return `[${method}][${format}][${dimension}] ${detail}`;
 }
+
+test('DynamicTexture#readAsync', async t => {
+  const device = await getWebGLTestDevice();
+  const data = new Uint8Array([1, 2, 3, 4]);
+
+  const texture = new DynamicTexture(device, {
+    data,
+    width: 1,
+    height: 1,
+    format: 'rgba8unorm'
+  });
+
+  await texture.ready;
+  const resultBuffer = await texture.readAsync();
+  const result = new Uint8Array(resultBuffer);
+  t.deepEqual(result, data, 'read back expected texture data');
+
+  texture.destroy();
+  t.end();
+});
 
 test('DynamicTexture WebGPU [render][rgba8unorm] 2d mipmaps', async t => {
   const device = await getWebGPUTestDevice();

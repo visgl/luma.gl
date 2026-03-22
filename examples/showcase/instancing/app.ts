@@ -13,7 +13,10 @@ import {
   ShaderInputs,
   makeRandomGenerator,
   PickingManager,
-  indexPicking as picking
+  supportsIndexPicking,
+  picking,
+  colorPicking,
+  indexPicking
 } from '@luma.gl/engine';
 import {dirlight, ShaderModule} from '@luma.gl/shadertools';
 import {Matrix4, radians} from '@math.gl/core';
@@ -137,12 +140,9 @@ precision highp float;
 precision highp int;
 
 in vec3 color;
-layout(location=0) out vec4 fragColor;
-layout(location=1) out ivec4 pickingColor;
+out vec4 fragColor;
 
 void main(void) {
-  pickingColor = picking_getPickingColor();
-
   fragColor = vec4(color, 1.);
   fragColor = dirlight_filterColor(fragColor);
   fragColor = picking_filterColor(fragColor);
@@ -225,7 +225,7 @@ class InstancedCube extends Model {
       vs: VS_GLSL,
       fs: FS_GLSL,
       // @ts-expect-error Remove once npm package updated with new types
-      modules: [dirlight, picking],
+      modules: [dirlight, device.type === 'webgpu' ? indexPicking : colorPicking],
       instanceCount,
       geometry: new CubeGeometry({indices: true}),
       bufferLayout: [
@@ -273,7 +273,7 @@ class InstancedCube extends Model {
       fs: FS_GLSL,
       fragmentEntryPoint: 'fragmentPicking',
       // @ts-expect-error Remove once npm package updated with new types
-      modules: [dirlight, picking],
+      modules: [dirlight, indexPicking],
       bufferLayout: instanceBufferLayout,
       instanceCount: this.instanceCount,
       geometry: pickingGeometry,
@@ -362,7 +362,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.pickingCube = this.createPickingCube();
 
     this.picker = new PickingManager(device, {
-      shaderInputs: this.shaderInputs
+      shaderInputs: this.shaderInputs,
+      mode: 'auto'
     });
 
     this.initializeSelector();
@@ -444,7 +445,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   createPickingCube(): Model | null {
-    if (this.device.type !== 'webgpu') {
+    if (!supportsIndexPicking(this.device)) {
       return null;
     }
 

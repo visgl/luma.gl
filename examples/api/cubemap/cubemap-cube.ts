@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright...
 
-import {Model, type ModelProps, AsyncTexture, CubeGeometry, ShaderInputs} from '@luma.gl/engine';
+import {Model, type ModelProps, DynamicTexture, CubeGeometry, ShaderInputs} from '@luma.gl/engine';
 import type {Device, Texture} from '@luma.gl/core';
 import {ShaderModule} from '@luma.gl/shadertools';
 import {NumberArray16} from '@math.gl/types';
@@ -27,8 +27,8 @@ export type CubemapCubeProps = Omit<
   ModelProps,
   'vs' | 'fs' | 'source' | 'geometry' | 'bindings'
 > & {
-  /** A cube-map texture (dimension: 'cube'). Provide either a Texture or Dynamic/AsyncTexture. */
-  cubeTexture: Texture | AsyncTexture;
+  /** A cube-map texture (dimension: 'cube'). Provide either a Texture or DynamicTexture. */
+  cubeTexture: Texture | DynamicTexture;
   /** Optional: pass your own ShaderInputs; otherwise one is created. */
   shaderInputs?: ShaderInputs<{app: typeof app.props}>;
 };
