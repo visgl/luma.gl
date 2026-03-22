@@ -550,9 +550,9 @@ test('WebGPU custom CommandEncoder render pass records on the owning encoder', a
   device.submit(commandBuffer);
 
   colorTexture.readBuffer({width: 1, height: 1}, readBuffer);
-  const pixelData = new Uint8Array(await readBuffer.readAsync(0, layout.byteLength), 0, 4);
+  const pixelData = new Uint8Array(await readBuffer.readAsync(0, layout.byteLength));
   t.deepEqual(
-    Array.from(pixelData),
+    Array.from(pixelData.slice(0, 4)),
     [255, 0, 0, 255],
     'custom WebGPU encoder owns the render pass it creates'
   );

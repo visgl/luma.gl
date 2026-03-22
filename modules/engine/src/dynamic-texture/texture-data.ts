@@ -176,8 +176,8 @@ function getTextureMipLevelSize(data: TextureMipLevelData): {width: number; heig
   throw new Error('Unsupported mip-level data');
 }
 
-/** Type guard: is a mip-level `TextureImageData` (vs ExternalImage) */
-function isTextureImageData(data: TextureMipLevelData): data is TextureImageData {
+/** Type guard: is a mip-level `TextureImageData` (vs ExternalImage or bare typed array) */
+function isTextureImageData(data: unknown): data is TextureImageData {
   return (
     typeof data === 'object' &&
     data !== null &&

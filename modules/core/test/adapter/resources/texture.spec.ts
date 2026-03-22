@@ -1728,9 +1728,13 @@ test('Texture color read APIs reject unsupported formats and aspects', async t =
   ];
 
   for (const device of await getTestDevices()) {
+    const readBuffer = device.createBuffer({
+      byteLength: 4,
+      usage: Buffer.COPY_DST | Buffer.MAP_READ
+    });
     const colorTexture = device.createTexture({width: 1, height: 1, format: 'rgba8unorm'});
     t.throws(
-      () => colorTexture.readBuffer({aspect: 'depth-only'}),
+      () => colorTexture.readBuffer({aspect: 'depth-only'}, readBuffer),
       /aspect 'all'/,
       `${device.type}: color reads reject non-all aspects`
     );
@@ -1738,7 +1742,7 @@ test('Texture color read APIs reject unsupported formats and aspects', async t =
 
     const depthTexture = device.createTexture({width: 1, height: 1, format: 'depth16unorm'});
     t.throws(
-      () => depthTexture.readBuffer({}),
+      () => depthTexture.readBuffer({}, readBuffer),
       /depth formats/,
       `${device.type}: color reads reject depth formats`
     );
@@ -1748,7 +1752,7 @@ test('Texture color read APIs reject unsupported formats and aspects', async t =
       try {
         const stencilTexture = device.createTexture({width: 1, height: 1, format: 'stencil8'});
         t.throws(
-          () => stencilTexture.readBuffer({}),
+          () => stencilTexture.readBuffer({}, readBuffer),
           /stencil formats/,
           `${device.type}: color reads reject stencil formats`
         );
@@ -1764,7 +1768,7 @@ test('Texture color read APIs reject unsupported formats and aspects', async t =
       format: 'depth24plus-stencil8'
     });
     t.throws(
-      () => depthStencilTexture.readBuffer({}),
+      () => depthStencilTexture.readBuffer({}, readBuffer),
       /depth-stencil formats/,
       `${device.type}: color reads reject depth-stencil formats`
     );
@@ -1780,7 +1784,7 @@ test('Texture color read APIs reject unsupported formats and aspects', async t =
         format: compressedFormat
       });
       t.throws(
-        () => compressedTexture.readBuffer({}),
+        () => compressedTexture.readBuffer({}, readBuffer),
         /compressed formats/,
         `${device.type}: color reads reject compressed formats`
       );
@@ -1790,6 +1794,8 @@ test('Texture color read APIs reject unsupported formats and aspects', async t =
         `${device.type}: skipping compressed read guard test (no supported compressed format)`
       );
     }
+
+    readBuffer.destroy();
   }
 
   t.end();
@@ -1825,14 +1831,14 @@ test('Texture#readBuffer reuses the cached WebGL read framebuffer', async t => {
     {width: 1, height: 1, depthOrArrayLayers: 2, bytesPerRow: 256, rowsPerImage: 1}
   );
 
-  const firstReadBuffer = webglDevice.createBuffer({
+  const firstReadBuffer = device.createBuffer({
     byteLength: texture.computeMemoryLayout({width: 1, height: 1, z: 0, depthOrArrayLayers: 1})
       .byteLength,
     usage: Buffer.COPY_DST | Buffer.MAP_READ
   });
   texture.readBuffer({width: 1, height: 1, z: 0, depthOrArrayLayers: 1}, firstReadBuffer);
   const firstFramebuffer = (texture as any)._framebuffer;
-  const secondReadBuffer = webglDevice.createBuffer({
+  const secondReadBuffer = device.createBuffer({
     byteLength: texture.computeMemoryLayout({width: 1, height: 1, z: 1, depthOrArrayLayers: 1})
       .byteLength,
     usage: Buffer.COPY_DST | Buffer.MAP_READ
