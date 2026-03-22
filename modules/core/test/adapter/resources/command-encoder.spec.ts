@@ -13,6 +13,7 @@ import {
   QuerySet,
   QuerySetProps,
   RenderPass,
+  Texture,
   TextureFormat
 } from '@luma.gl/core';
 import {

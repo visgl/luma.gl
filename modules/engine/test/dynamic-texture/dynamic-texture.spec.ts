@@ -28,7 +28,8 @@ test('DynamicTexture#readAsync', async t => {
     data,
     width: 1,
     height: 1,
-    format: 'rgba8unorm'
+    format: 'rgba8unorm',
+    usage: Texture.SAMPLE | Texture.RENDER | Texture.COPY_DST | Texture.COPY_SRC
   });
 
   await texture.ready;

@@ -147,7 +147,14 @@ export class DynamicTexture {
 
       const propsWithSyncData = await this._loadAllData(originalPropsWithAsyncData);
       this._checkNotDestroyed();
-      const subresources = propsWithSyncData.data ? getTextureSubresources(propsWithSyncData) : [];
+      const subresources = propsWithSyncData.data
+        ? getTextureSubresources({
+            ...propsWithSyncData,
+            width: originalPropsWithAsyncData.width,
+            height: originalPropsWithAsyncData.height,
+            format: originalPropsWithAsyncData.format
+          })
+        : [];
       const userProvidedFormat =
         'format' in originalPropsWithAsyncData && originalPropsWithAsyncData.format !== undefined;
       const userProvidedUsage =
@@ -489,7 +496,9 @@ type TextureSubresourceAnalysis = {
 };
 
 // Flatten dimension-specific texture data into one list of uploadable subresources.
-function getTextureSubresources(props: TextureDataProps): TextureSubresource[] {
+function getTextureSubresources(
+  props: TextureDataProps & Partial<Pick<TextureProps, 'width' | 'height' | 'format'>>
+): TextureSubresource[] {
   if (!props.data) {
     return [];
   }
