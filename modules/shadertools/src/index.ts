@@ -21,6 +21,16 @@ export {initializeShaderModule, initializeShaderModules} from './lib/shader-modu
 export {getShaderModuleUniforms} from './lib/shader-module/shader-module';
 export {getShaderModuleDependencies} from './lib/shader-module/shader-module-dependencies';
 export {checkShaderModuleDeprecations} from './lib/shader-module/shader-module';
+export type {
+  ShaderModuleUniformLayoutStage,
+  ShaderModuleUniformLayoutValidationResult
+} from './lib/shader-module/shader-module-uniform-layout';
+export {
+  getShaderModuleUniformBlockFields,
+  getShaderModuleUniformBlockName,
+  getShaderModuleUniformLayoutValidationResult,
+  validateShaderModuleUniformLayout
+} from './lib/shader-module/shader-module-uniform-layout';
 
 export {getShaderModuleSource} from './lib/shader-assembly/assemble-shaders';
 

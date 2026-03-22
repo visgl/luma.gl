@@ -1,0 +1,249 @@
+---
+sidebar_label: Extension Support
+---
+
+export const GLTF_EXTENSION_SPEC_BASE_URL =
+  'https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0';
+
+export const getExtensionSpecUrl = extensionName => {
+  const extensionPrefix = extensionName.split('_')[0];
+  const extensionDirectory = extensionPrefix === 'KHR' ? 'Khronos' : 'Vendor';
+  return `${GLTF_EXTENSION_SPEC_BASE_URL}/${extensionDirectory}/${extensionName}`;
+};
+
+export const FromVersionBadge = ({version}) => (
+  <span
+    style={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      borderRadius: '4px',
+      overflow: 'hidden',
+      whiteSpace: 'nowrap',
+      boxShadow: 'inset 0 0 0 1px rgba(0, 0, 0, 0.12)'
+    }}
+  >
+    <span
+      style={{
+        background: '#595959',
+        color: '#ffffff',
+        fontSize: '0.9rem',
+        lineHeight: 1,
+        padding: '0.35rem 0.55rem'
+      }}
+    >
+      From
+    </span>
+    <span
+      style={{
+        background: '#0078d4',
+        color: '#ffffff',
+        fontSize: '0.9rem',
+        lineHeight: 1,
+        padding: '0.35rem 0.55rem'
+      }}
+    >
+      v{version}
+    </span>
+  </span>
+);
+
+export const ExtensionCell = ({name, fromVersion}) => (
+  <div
+    style={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: '0.75rem',
+      width: '100%',
+      minWidth: 0
+    }}
+  >
+    <a
+      href={getExtensionSpecUrl(name)}
+      rel="noreferrer"
+      style={{minWidth: 0}}
+      target="_blank"
+      title={`Open the official ${name} extension specification`}
+    >
+      <code style={{whiteSpace: 'nowrap', flex: '0 1 auto'}}>{name}</code>
+    </a>
+    {fromVersion ? (
+      <span style={{flex: '0 0 auto'}}>
+        <FromVersionBadge version={fromVersion} />
+      </span>
+    ) : null}
+  </div>
+);
+
+export const SupportRow = ({name, support, fromVersion, children}) => (
+  <tr>
+    <td style={{width: '39%', verticalAlign: 'top'}}>
+      <ExtensionCell name={name} fromVersion={fromVersion} />
+    </td>
+    <td style={{width: '10%', verticalAlign: 'top', whiteSpace: 'nowrap'}}>{support}</td>
+    <td style={{verticalAlign: 'top'}}>{children}</td>
+  </tr>
+);
+
+# glTF Extension Support
+
+<p className="badges">
+  <FromVersionBadge version="9.3" />
+</p>
+
+This page summarizes the glTF extensions that `@luma.gl/gltf` handles in its
+default loader-to-scenegraph path.
+Each extension name links to its official Khronos-managed specification page in
+the glTF extension registry repository.
+
+Status meanings:
+
+- `✅`: works end-to-end in the default luma.gl glTF pipeline.
+- `✅ *️⃣`: works in the default pipeline, with low-level decoding handled by
+  `@loaders.gl/gltf` during load.
+- `🚧`: work in progress for this release; implemented paths are still under active
+  validation.
+- `*️⃣`: extension data is preserved or exposed, but applications still need to
+  decide how to use it at runtime.
+- `App`: applications are responsible for selecting and applying the feature.
+- `❌`: no built-in handling today.
+
+<table style={{width: '100%'}}>
+  <thead>
+    <tr>
+      <th>Extension</th>
+      <th>Support</th>
+      <th>Notes</th>
+    </tr>
+  </thead>
+  <tbody>
+    <SupportRow name="KHR_draco_mesh_compression" support="✅ *️⃣">
+      <code>@loaders.gl/gltf</code> decompresses Draco meshes and converts them to
+      regular glTF meshes.
+    </SupportRow>
+    <SupportRow name="EXT_meshopt_compression" support="✅ *️⃣">
+      Meshopt-compressed primitives are decoded during load and converted to regular
+      glTF meshes.
+    </SupportRow>
+    <SupportRow name="KHR_mesh_quantization" support="✅ *️⃣">
+      Quantized accessors are unpacked during load before geometry creation.
+    </SupportRow>
+    <SupportRow name="EXT_mesh_gpu_instancing" support="❌">
+      GPU instancing data is not yet converted into luma.gl instanced draw setup.
+    </SupportRow>
+    <SupportRow name="KHR_lights_punctual" support="✅">
+      Punctual lights are parsed and exposed as an array of luma.gl <code>lighting</code>
+      {' '}module lights.
+    </SupportRow>
+    <SupportRow name="KHR_materials_unlit" support="✅">
+      Unlit materials bypass the default lighting calculations.
+    </SupportRow>
+    <SupportRow name="KHR_materials_emissive_strength" support="✅ 🚧" fromVersion="9.3">
+      Emissive strength now multiplies the emissive contribution in the stock PBR
+      shader.
+    </SupportRow>
+    <SupportRow name="KHR_materials_specular" support="✅ 🚧" fromVersion="9.3">
+      The stock shader now applies specular intensity and color factors and textures
+      to the dielectric F0 term.
+    </SupportRow>
+    <SupportRow name="KHR_materials_ior" support="✅ 🚧" fromVersion="9.3">
+      The stock shader now drives dielectric reflectance from the glTF IOR value.
+    </SupportRow>
+    <SupportRow name="KHR_materials_transmission" support="✅ 🚧" fromVersion="9.3">
+      The stock shader now applies transmission to the base layer and exposes
+      transparency through alpha, without a scene-color refraction buffer.
+    </SupportRow>
+    <SupportRow name="KHR_materials_diffuse_transmission" support="❌">
+      Diffuse-transmission shading is not implemented in the stock PBR shader.
+    </SupportRow>
+    <SupportRow name="KHR_materials_volume" support="✅ 🚧" fromVersion="9.3">
+      Thickness factor plus attenuation color and distance now tint transmitted light
+      in the stock shader.
+    </SupportRow>
+    <SupportRow name="KHR_materials_dispersion" support="❌">
+      Chromatic dispersion is not implemented in the stock PBR shader.
+    </SupportRow>
+    <SupportRow name="KHR_materials_volume_scatter" support="❌">
+      Volume scattering is not implemented in the stock PBR shader.
+    </SupportRow>
+    <SupportRow name="KHR_materials_clearcoat" support="✅ 🚧" fromVersion="9.3">
+      The stock shader now adds a secondary clearcoat lobe from the clearcoat and
+      clearcoat-roughness inputs.
+    </SupportRow>
+    <SupportRow name="KHR_materials_sheen" support="✅ 🚧" fromVersion="9.3">
+      The stock shader now adds a sheen lobe using the sheen color and roughness
+      inputs.
+    </SupportRow>
+    <SupportRow name="KHR_materials_iridescence" support="✅ 🚧" fromVersion="9.3">
+      The stock shader now tints specular response with a view-dependent thin-film
+      iridescence approximation driven by the extension inputs.
+    </SupportRow>
+    <SupportRow name="KHR_materials_anisotropy" support="✅ 🚧" fromVersion="9.3">
+      The stock shader now shapes highlights and IBL response with an
+      anisotropy-direction approximation.
+    </SupportRow>
+    <SupportRow name="KHR_materials_pbrSpecularGlossiness" support="*️⃣">
+      loaders.gl can preserve the extension data, but <code>@luma.gl/gltf</code> does
+      not translate it into the default metallic-roughness shader path.
+    </SupportRow>
+    <SupportRow name="KHR_materials_variants" support="App">
+      Variant metadata can be loaded, but applications must choose and apply variants
+      themselves.
+    </SupportRow>
+    <SupportRow name="KHR_texture_basisu" support="✅ *️⃣">
+      BasisU / KTX2 textures are passed through as compressed textures when supported
+      by the device.
+    </SupportRow>
+    <SupportRow name="EXT_texture_webp" support="✅ *️⃣">
+      <code>@loaders.gl/gltf</code> resolves the texture source; runtime support still
+      depends on browser and device decode support.
+    </SupportRow>
+    <SupportRow name="EXT_texture_avif" support="✅ *️⃣">
+      Same as WebP: the source is resolved during load, with final support depending on
+      decode support.
+    </SupportRow>
+    <SupportRow name="KHR_texture_transform" support="✅">
+      loaders.gl rewrites the core material UV sets during load before luma.gl creates
+      geometry.
+    </SupportRow>
+    <SupportRow name="KHR_animation_pointer" support="❌">
+      luma.gl does not currently map animation pointers onto runtime scenegraph updates.
+    </SupportRow>
+    <SupportRow name="KHR_node_visibility" support="❌">
+      Node-visibility animations and toggles are not mapped onto runtime scenegraph
+      state.
+    </SupportRow>
+    <SupportRow name="KHR_xmp" support="❌">
+      Metadata payloads remain in the loaded glTF, but luma.gl does not interpret
+      them.
+    </SupportRow>
+    <SupportRow name="KHR_xmp_json_ld" support="❌">
+      Metadata is available in the loaded glTF, but luma.gl does not interpret it.
+    </SupportRow>
+    <SupportRow name="EXT_lights_image_based" support="❌">
+      Use <code>loadPBREnvironment()</code> or custom environment setup instead of
+      relying on automatic extension handling. The current Khronos sample-asset
+      catalog does not include an official <code>EXT_lights_image_based</code>{' '}
+      sample.
+    </SupportRow>
+    <SupportRow name="EXT_texture_video" support="❌">
+      Video textures are not created automatically by the glTF pipeline.
+    </SupportRow>
+    <SupportRow name="MSFT_lod" support="❌">
+      Level-of-detail switching is not implemented in the stock scenegraph loader.
+    </SupportRow>
+  </tbody>
+</table>
+
+## Notes
+
+- The built-in material extension rows are implemented in the stock `pbrMaterial`
+  shader. Some of the more advanced effects, such as transmission, iridescence,
+  and anisotropy, use pragmatic approximations because the default pipeline does
+  not maintain a scene-color refraction buffer or a more specialized anisotropic
+  BRDF.
+- Some extensions have partial field coverage. For example, luma.gl currently
+  wires the main textures and factors for several `KHR_materials_*` extensions,
+  but does not yet implement every auxiliary texture path in the stock shader.
+- `@luma.gl/gltf` relies on `@loaders.gl/gltf` for low-level extension decoding,
+  decompression, and glTF post-processing.

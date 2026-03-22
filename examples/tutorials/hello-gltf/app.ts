@@ -3,59 +3,46 @@
 // Copyright (c) vis.gl contributors
 
 import {AnimationLoopTemplate, AnimationProps, ModelNode} from '@luma.gl/engine';
-import {Device} from '@luma.gl/core';
+import {Color, Device, log} from '@luma.gl/core';
 import {load} from '@loaders.gl/core';
-import {Light, LightingProps} from '@luma.gl/shadertools';
-import {createScenegraphsFromGLTF} from '@luma.gl/gltf';
 import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
+import {createScenegraphsFromGLTF} from '@luma.gl/gltf';
+import {Light, LightingProps} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
 
-/* eslint-disable camelcase */
-
-const MODEL_DIRECTORY_URL =
-  'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models';
-const MODEL_LIST_URL = `${MODEL_DIRECTORY_URL}/model-index.json`;
-const LAST_GLTF_MODEL_STORAGE_KEY = 'last-gltf-model';
-const GLTF_OPTIONS_STORAGE_KEY = 'hello-gltf-options';
+const MODEL_URL =
+  'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/CesiumMan/glTF/CesiumMan.gltf';
+const MAX_CAMERA_TILT = 0.6;
+const CAMERA_TILT_HEIGHT_FACTOR = 0.35;
 
 const lightSources = {
   ambientLight: {
-    color: [255, 133, 133],
-    intensity: 1,
+    color: [255, 255, 255],
+    intensity: 0.35,
     type: 'ambient'
   },
   directionalLights: [
     {
-      color: [222, 244, 255],
-      direction: [1, -0.5, 0.5],
-      intensity: 10,
+      color: [255, 244, 235],
+      direction: [0.6, -0.7, 0.5],
+      intensity: 2.4,
       type: 'directional'
-    }
-  ],
-  pointLights: [
+    },
     {
-      color: [255, 222, 222],
-      position: [3, 10, 0],
-      intensity: 5,
-      type: 'point'
+      color: [214, 232, 255],
+      direction: [-0.45, -0.35, -0.7],
+      intensity: 0.8,
+      type: 'directional'
     }
   ]
 } as const satisfies LightingProps;
 
 const INFO_HTML = `\
 <p>
-  Browse the Khronos sample asset catalog and inspect each model with luma.gl scene graph rendering.
+  Minimal glTF loading example using <code>@loaders.gl/gltf</code> and
+  <code>@luma.gl/gltf</code>.
 </p>
-<div id="model-options">
-  <div>
-    <label for="model-select">Model</label>
-    <select id="model-select"></select>
-  </div>
-  <div><label><input type="checkbox" id="useModelLights" />Use Model Lights</label></div>
-  <div><label><input type="checkbox" id="cameraAnimation" />Camera Animation</label></div>
-  <div><label><input type="checkbox" id="gltfAnimation" />glTF Animation</label></div>
-</div>
-<div id="model-light-indicator" style="margin-top: 8px;"></div>
+<p>Drag to orbit. Use the mouse wheel or trackpad to zoom.</p>
 <div id="error" style="color: #b00020; margin-top: 8px;"></div>
 `;
 
@@ -66,108 +53,159 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   scenegraphsFromGLTF?: ReturnType<typeof createScenegraphsFromGLTF>;
   modelLights: Light[] = [];
   center = [0, 0, 0];
-  cameraPos = [0, 0, 0];
-  mouseCameraTime = 0;
-  options: Record<string, boolean> = {
-    useModelLights: true,
-    cameraAnimation: true,
-    gltfAnimation: false
-  };
-  isFinalized: boolean = false;
-  gltfLoadGeneration: number = 0;
+  cameraHeight = 0;
+  cameraOrbitDistance = 2;
+  minCameraOrbitDistance = 0.05;
+  maxCameraOrbitDistance = 40;
+  sceneRadius = 1;
+  mouseCameraAngle = Math.PI / 4;
+  mouseCameraTilt = 0.18;
   cleanupCallbacks: Array<() => void> = [];
+  isFinalized = false;
 
   constructor({device}: AnimationProps) {
     super();
     this.device = device;
-    this.options = loadOptions(this.options);
 
-    const modelStorageKey = this.getModelStorageKey();
-    window.localStorage[modelStorageKey] ??= this.getDefaultModelName();
-    this.loadGLTF(window.localStorage[modelStorageKey]);
-
-    this.cleanupCallbacks.push(...setOptionsUI(this.options));
-
-    this.fetchModelList().then(models => {
-      if (this.isFinalized) {
-        return;
-      }
-      const currentModel = window.localStorage[modelStorageKey];
-      const cleanupModelMenu = setModelMenu(
-        models.map(model => model.name),
-        currentModel,
-        (modelName: string) => {
-          this.loadGLTF(modelName);
-          window.localStorage[modelStorageKey] = modelName;
-        }
-      );
-      this.cleanupCallbacks.push(cleanupModelMenu);
-    });
+    const canvas = this.device.getDefaultCanvasContext().canvas as HTMLCanvasElement;
+    canvas.style.cursor = 'grab';
 
     const mouseMoveHandler = (event: Event) => {
       const mouseEvent = event as MouseEvent;
-      if (mouseEvent.buttons) {
-        this.mouseCameraTime -= mouseEvent.movementX * 3.5;
+      if (!mouseEvent.buttons) {
+        return;
       }
+
+      this.mouseCameraAngle -= mouseEvent.movementX * 0.01;
+      this.mouseCameraTilt = clampNumber(
+        this.mouseCameraTilt - mouseEvent.movementY * 0.01,
+        -MAX_CAMERA_TILT,
+        MAX_CAMERA_TILT
+      );
     };
-    const canvas = this.device.getDefaultCanvasContext().canvas;
+
+    const mouseWheelHandler = (event: Event) => {
+      const wheelEvent = event as WheelEvent;
+      wheelEvent.preventDefault();
+      const zoomFactor = Math.exp(clampNumber(wheelEvent.deltaY, -240, 240) * 0.0015);
+      this.cameraOrbitDistance = clampNumber(
+        this.cameraOrbitDistance * zoomFactor,
+        this.minCameraOrbitDistance,
+        this.maxCameraOrbitDistance
+      );
+    };
+
     canvas.addEventListener('mousemove', mouseMoveHandler);
+    canvas.addEventListener('wheel', mouseWheelHandler, {passive: false});
+
     this.cleanupCallbacks.push(() => canvas.removeEventListener('mousemove', mouseMoveHandler));
+    this.cleanupCallbacks.push(() =>
+      canvas.removeEventListener('wheel', mouseWheelHandler as EventListener)
+    );
+
+    this.loadGLTF();
   }
 
-  onFinalize() {
+  onFinalize(): void {
     this.isFinalized = true;
-    this.gltfLoadGeneration++;
+
     for (const cleanupCallback of this.cleanupCallbacks) {
       cleanupCallback();
     }
     this.cleanupCallbacks = [];
+
     destroyScenegraphs(this.scenegraphsFromGLTF);
     this.scenegraphsFromGLTF = undefined;
     this.modelLights = [];
   }
 
-  getDefaultModelName(): string {
-    return 'CesiumMan';
+  getClearColor(): Color {
+    return [0.95, 0.95, 0.97, 1];
   }
 
-  getModelStorageKey(): string {
-    return LAST_GLTF_MODEL_STORAGE_KEY;
+  async loadGLTF(): Promise<void> {
+    const canvas = this.device.getDefaultCanvasContext().canvas as HTMLCanvasElement;
+
+    try {
+      log.log(0, 'Starting tutorial glTF load', {modelUrl: MODEL_URL})();
+      showError();
+      canvas.style.opacity = '0.2';
+
+      const gltf = await load(MODEL_URL, GLTFLoader);
+      const processedGLTF = postProcessGLTF(gltf);
+      const scenegraphsFromGLTF = createScenegraphsFromGLTF(this.device, processedGLTF, {
+        lights: true,
+        pbrDebug: false,
+        useTangents: true
+      });
+
+      if (this.isFinalized) {
+        destroyScenegraphs(scenegraphsFromGLTF);
+        return;
+      }
+
+      destroyScenegraphs(this.scenegraphsFromGLTF);
+      this.scenegraphsFromGLTF = scenegraphsFromGLTF;
+      this.modelLights = scenegraphsFromGLTF.lights;
+
+      const sceneBounds = scenegraphsFromGLTF.sceneBounds[0] || scenegraphsFromGLTF.modelBounds;
+      this.center = [...sceneBounds.center];
+      this.sceneRadius = sceneBounds.radius;
+      this.cameraHeight = this.center[1] + this.sceneRadius * 0.3;
+      this.minCameraOrbitDistance = Math.max(this.sceneRadius * 0.08, 0.025);
+      this.maxCameraOrbitDistance = Math.max(this.sceneRadius * 32, 12);
+      this.cameraOrbitDistance = clampNumber(
+        sceneBounds.recommendedOrbitDistance,
+        this.minCameraOrbitDistance,
+        this.maxCameraOrbitDistance
+      );
+
+      canvas.style.opacity = '1';
+      showError();
+    } catch (error) {
+      if (this.isFinalized) {
+        return;
+      }
+
+      log.error('Failed to load tutorial glTF model', error)();
+      canvas.style.opacity = '1';
+      showError(error);
+    }
   }
 
   onRender({aspect, device, time}: AnimationProps): void {
+    const renderPass = device.beginRenderPass({clearColor: this.getClearColor(), clearDepth: 1});
+
     if (!this.scenegraphsFromGLTF?.scenes?.length) {
+      renderPass.end();
       return;
     }
 
-    updateModelLightIndicator(this.modelLights, this.options['useModelLights']);
-    const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1], clearDepth: 1});
+    this.scenegraphsFromGLTF.animator?.setTime(time);
 
-    const far = 2 * this.cameraPos[0];
-    const near = far / 1000;
+    const orbitDistance = this.cameraOrbitDistance;
+    const far = Math.max(orbitDistance + this.sceneRadius * 8, 10);
+    const near = Math.max(this.sceneRadius / 1000, 0.01);
     const projectionMatrix = new Matrix4().perspective({fovy: Math.PI / 3, aspect, near, far});
-    const cameraTime = this.options['cameraAnimation'] ? time : this.mouseCameraTime;
+    const horizontalOrbitScale = Math.cos(this.mouseCameraTilt);
+    const verticalOrbitOffset =
+      orbitDistance * CAMERA_TILT_HEIGHT_FACTOR * Math.sin(this.mouseCameraTilt);
     const cameraPos = [
-      this.cameraPos[0] * Math.sin(0.001 * cameraTime),
-      this.cameraPos[1],
-      this.cameraPos[2] * Math.cos(0.001 * cameraTime)
+      orbitDistance * horizontalOrbitScale * Math.sin(this.mouseCameraAngle),
+      this.cameraHeight + verticalOrbitOffset,
+      orbitDistance * horizontalOrbitScale * Math.cos(this.mouseCameraAngle)
     ];
-
-    if (this.options['gltfAnimation']) {
-      this.scenegraphsFromGLTF.animator?.setTime(time);
-    }
-
     const viewMatrix = new Matrix4().lookAt({eye: cameraPos, center: this.center});
+    const lighting = this.modelLights.length > 0 ? {lights: this.modelLights} : lightSources;
 
     this.scenegraphsFromGLTF.scenes[0].traverse((node, {worldMatrix: modelMatrix}) => {
       const {model} = node as ModelNode;
-
       const modelViewProjectionMatrix = new Matrix4(projectionMatrix)
         .multiplyRight(viewMatrix)
         .multiplyRight(modelMatrix);
 
       model.shaderInputs.setProps({
-        lighting: this.getLightingProps(),
+        lighting,
         pbrProjection: {
           camera: cameraPos,
           modelViewProjectionMatrix,
@@ -180,173 +218,31 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       });
       model.draw(renderPass);
     });
+
     renderPass.end();
   }
-
-  async fetchModelList(): Promise<{name: string}[]> {
-    const response = await fetch(MODEL_LIST_URL);
-    const models = await response.json();
-    return models;
-  }
-
-  async loadGLTF(modelName: string) {
-    const loadGeneration = ++this.gltfLoadGeneration;
-    const canvas = this.device.getDefaultCanvasContext().canvas as HTMLCanvasElement;
-
-    try {
-      canvas.style.opacity = '0.1';
-
-      const gltf = await load(
-        `${MODEL_DIRECTORY_URL}/${modelName}/glTF/${modelName}.gltf`,
-        GLTFLoader
-      );
-      const processedGLTF = postProcessGLTF(gltf);
-
-      const scenegraphsFromGLTF = createScenegraphsFromGLTF(this.device, processedGLTF, {
-        lights: true,
-        imageBasedLightingEnvironment: undefined,
-        pbrDebug: false,
-        useTangents: true
-      });
-
-      if (this.isFinalized || loadGeneration !== this.gltfLoadGeneration) {
-        destroyScenegraphs(scenegraphsFromGLTF);
-        return;
-      }
-
-      destroyScenegraphs(this.scenegraphsFromGLTF);
-      this.scenegraphsFromGLTF = scenegraphsFromGLTF;
-      this.modelLights = scenegraphsFromGLTF.lights;
-
-      const sceneBounds = scenegraphsFromGLTF.scenes[0]?.getBounds();
-      const min = sceneBounds?.[0] ?? [-1, -1, -1];
-      const max = sceneBounds?.[1] ?? [1, 1, 1];
-
-      this.cameraPos = [2 * (max[0] + max[2]), max[1], 2 * (max[0] + max[2])];
-      this.center = [0.5 * (min[0] + max[0]), 0.5 * (min[1] + max[1]), 0.5 * (min[2] + max[2])];
-
-      canvas.style.opacity = '1';
-      showError();
-    } catch (error) {
-      if (this.isFinalized || loadGeneration !== this.gltfLoadGeneration) {
-        return;
-      }
-      canvas.style.opacity = '1';
-      showError(error as Error);
-    }
-  }
-
-  getLightingProps(): LightingProps {
-    if (this.options['useModelLights'] && this.modelLights.length > 0) {
-      return {lights: this.modelLights};
-    }
-
-    return lightSources;
-  }
 }
 
-function setModelMenu(
-  items: string[],
-  currentItem: string,
-  onMenuItemSelected: (item: string) => void
-): () => void {
-  const modelSelector = document.getElementById('model-select') as HTMLSelectElement;
-  if (!modelSelector) {
-    return () => {};
-  }
-
-  modelSelector.replaceChildren();
-  const changeHandler = (event: Event) => {
-    const name = (event.target as HTMLSelectElement).value;
-    onMenuItemSelected(name);
-  };
-  modelSelector.addEventListener('change', changeHandler);
-
-  const options = items.map(item => {
-    const option = document.createElement('option');
-    option.value = item;
-    option.textContent = item;
-    return option;
-  });
-
-  modelSelector.append(...options);
-  modelSelector.value = currentItem;
-
-  return () => modelSelector.removeEventListener('change', changeHandler);
+function clampNumber(value: number, minValue: number, maxValue: number): number {
+  return Math.min(maxValue, Math.max(minValue, value));
 }
 
-function setOptionsUI(options: Record<string, boolean>): Array<() => void> {
-  const cleanupCallbacks: Array<() => void> = [];
-  for (const id of Object.keys(options)) {
-    const checkbox = document.getElementById(id) as HTMLInputElement;
-    if (checkbox) {
-      checkbox.checked = options[id];
-      const changeHandler = () => {
-        options[id] = checkbox.checked;
-        saveOptions(options);
-      };
-      checkbox.addEventListener('change', changeHandler);
-      cleanupCallbacks.push(() => checkbox.removeEventListener('change', changeHandler));
-    }
-  }
-  return cleanupCallbacks;
-}
-
-function loadOptions(defaultOptions: Record<string, boolean>): Record<string, boolean> {
-  const savedOptions = window.localStorage[GLTF_OPTIONS_STORAGE_KEY];
-  if (!savedOptions) {
-    return {...defaultOptions};
-  }
-
-  try {
-    const parsedOptions = JSON.parse(savedOptions) as Record<string, unknown>;
-    return Object.fromEntries(
-      Object.entries(defaultOptions).map(([key, value]) => [key, parsedOptions[key] ?? value])
-    ) as Record<string, boolean>;
-  } catch {
-    return {...defaultOptions};
-  }
-}
-
-function saveOptions(options: Record<string, boolean>) {
-  window.localStorage[GLTF_OPTIONS_STORAGE_KEY] = JSON.stringify(options);
-}
-
-function showError(error?: Error) {
-  const errorDiv = document.getElementById('error') as HTMLDivElement;
+function showError(error?: unknown): void {
+  const errorDiv = document.getElementById('error') as HTMLDivElement | null;
   if (!errorDiv) {
     return;
   }
 
-  errorDiv.textContent = error ? `Error loading model: ${error.message}` : '';
+  errorDiv.textContent = error ? `Error loading model: ${getErrorMessage(error)}` : '';
   errorDiv.style.display = error ? 'block' : 'none';
 }
 
-function updateModelLightIndicator(modelLights: Light[], useModelLights: boolean) {
-  const indicator = document.getElementById('model-light-indicator') as HTMLDivElement;
-  if (!indicator) {
-    return;
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
   }
 
-  const summary = getModelLightSummary(modelLights);
-  const activeSource =
-    useModelLights && modelLights.length > 0 ? 'using model lights' : 'using fallback demo lights';
-  indicator.textContent = `Model lights: ${summary}; ${activeSource}.`;
-}
-
-function getModelLightSummary(modelLights: Light[]): string {
-  if (modelLights.length === 0) {
-    return 'none detected';
-  }
-
-  const lightCounts: Partial<Record<Light['type'], number>> = {};
-  for (const light of modelLights) {
-    lightCounts[light.type] = (lightCounts[light.type] ?? 0) + 1;
-  }
-
-  return Object.entries(lightCounts)
-    .map(([lightType, count]) => `${count} ${lightType}`)
-    .join(', ');
+  return String(error);
 }
 
 function destroyScenegraphs(scenegraphsFromGLTF?: ReturnType<typeof createScenegraphsFromGLTF>) {

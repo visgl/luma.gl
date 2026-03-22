@@ -73,7 +73,16 @@ export function parseGLTF(
   const materials = (gltf.materials || []).map((gltfMaterial, materialIndex) =>
     createGLTFMaterial(device, {
       id: getGLTFMaterialId(gltfMaterial, materialIndex),
-      parsedPPBRMaterial: parsePBRMaterial(device, gltfMaterial as any, {}, combinedOptions),
+      parsedPPBRMaterial: parsePBRMaterial(
+        device,
+        gltfMaterial as any,
+        {},
+        {
+          ...combinedOptions,
+          gltf,
+          validateAttributes: false
+        }
+      ),
       materialFactory
     })
   );
@@ -87,6 +96,7 @@ export function parseGLTF(
     const newMesh = createNodeForGLTFMesh(
       device,
       gltfMesh,
+      gltf,
       gltfMaterialIdToMaterialMap,
       combinedOptions
     );
@@ -159,6 +169,7 @@ function createNodeForGLTFNode(
 function createNodeForGLTFMesh(
   device: Device,
   gltfMesh: GLTFMeshPostprocessed,
+  gltf: GLTFPostprocessed,
   gltfMaterialIdToMaterialMap: Map<string, Material>,
   options: Required<ParseGLTFOptions>
 ): GroupNode {
@@ -169,6 +180,7 @@ function createNodeForGLTFMesh(
       gltfPrimitive,
       primitiveIndex: i,
       gltfMesh,
+      gltf,
       gltfMaterialIdToMaterialMap,
       options
     })
@@ -187,6 +199,7 @@ type CreateNodeForGLTFPrimitiveOptions = {
   gltfPrimitive: any;
   primitiveIndex: number;
   gltfMesh: GLTFMeshPostprocessed;
+  gltf: GLTFPostprocessed;
   gltfMaterialIdToMaterialMap: Map<string, Material>;
   options: Required<ParseGLTFOptions>;
 };
@@ -197,6 +210,7 @@ function createNodeForGLTFPrimitive({
   gltfPrimitive,
   primitiveIndex,
   gltfMesh,
+  gltf,
   gltfMaterialIdToMaterialMap,
   options
 }: CreateNodeForGLTFPrimitiveOptions): ModelNode {
@@ -208,12 +222,10 @@ function createNodeForGLTFPrimitive({
 
   const geometry = createGeometry(id, gltfPrimitive, topology);
 
-  const parsedPPBRMaterial = parsePBRMaterial(
-    device,
-    gltfPrimitive.material,
-    geometry.attributes,
-    options
-  );
+  const parsedPPBRMaterial = parsePBRMaterial(device, gltfPrimitive.material, geometry.attributes, {
+    ...options,
+    gltf
+  });
 
   const modelNode = createGLTFModel(device, {
     id,

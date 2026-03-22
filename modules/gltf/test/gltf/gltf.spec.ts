@@ -22,8 +22,15 @@ test('gltf#loading', async t => {
 
   t.ok(result.hasOwnProperty('scenes'), 'Should contain scenes property');
   t.ok(result.hasOwnProperty('animator'), 'Should contain animator property');
+  t.ok(result.hasOwnProperty('extensionSupport'), 'Should contain extensionSupport property');
+  t.ok(result.hasOwnProperty('sceneBounds'), 'Should contain sceneBounds property');
+  t.ok(result.hasOwnProperty('modelBounds'), 'Should contain modelBounds property');
   t.equals(result.scenes.length, 1, 'Should contain single scene');
   t.deepEquals(result.animator.animations, [], 'Should not contain animations');
+  t.equal(result.extensionSupport.size, 0, 'Should contain empty extension support map for Box');
+  t.deepEqual(result.sceneBounds[0].center, [0, 0, 0], 'scene bounds expose scene center');
+  t.ok(result.sceneBounds[0].recommendedOrbitDistance > 0, 'scene bounds expose camera distance');
+  t.deepEqual(result.modelBounds.center, [0, 0, 0], 'model bounds expose model center');
 
   t.end();
 });

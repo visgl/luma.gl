@@ -6,5 +6,14 @@ export {parsePBRMaterial, type ParsePBRMaterialOptions} from './parsers/parse-pb
 export {parseGLTFLights} from './parsers/parse-gltf-lights';
 
 // glTF Scenegraph Instantiator
-export {createScenegraphsFromGLTF, type GLTFScenegraphs} from './gltf/create-scenegraph-from-gltf';
+export {
+  createScenegraphsFromGLTF,
+  type GLTFScenegraphBounds,
+  type GLTFScenegraphs
+} from './gltf/create-scenegraph-from-gltf';
+export {
+  getGLTFExtensionSupport,
+  type GLTFExtensionSupport,
+  type GLTFExtensionSupportLevel
+} from './gltf/gltf-extension-support';
 export {GLTFAnimator} from './gltf/gltf-animator';

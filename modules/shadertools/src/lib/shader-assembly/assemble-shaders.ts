@@ -8,6 +8,7 @@ import {getPlatformShaderDefines} from './platform-defines';
 import {injectShader, DECLARATION_INJECT_MARKER} from './shader-injections';
 import {transpileGLSLShader} from '../shader-transpiler/transpile-glsl-shader';
 import {checkShaderModuleDeprecations} from '../shader-module/shader-module';
+import {validateShaderModuleUniformLayout} from '../shader-module/shader-module-uniform-layout';
 import type {ShaderInjection} from './shader-injections';
 import type {ShaderModule} from '../shader-module/shader-module';
 import {ShaderHook, normalizeShaderHooks, getShaderHooks} from './shader-hooks';
@@ -260,11 +261,15 @@ export function assembleShaderWGSL(
     if (log) {
       checkShaderModuleDeprecations(module, coreSource, log);
     }
-    const relocation = relocateWGSLModuleBindings(getShaderModuleSource(module, 'wgsl'), module, {
-      usedBindingsByGroup,
-      bindingRegistry: options._bindingRegistry,
-      reservedBindingKeysByGroup
-    });
+    const relocation = relocateWGSLModuleBindings(
+      getShaderModuleSource(module, 'wgsl', log),
+      module,
+      {
+        usedBindingsByGroup,
+        bindingRegistry: options._bindingRegistry,
+        reservedBindingKeysByGroup
+      }
+    );
     bindingAssignments.push(...relocation.bindingAssignments);
     const moduleSource = relocation.source;
     // Add the module source, and a #define that declares it presence
@@ -417,7 +422,7 @@ ${getApplicationDefines(allDefines)}
     if (log) {
       checkShaderModuleDeprecations(module, coreSource, log);
     }
-    const moduleSource = getShaderModuleSource(module, stage);
+    const moduleSource = getShaderModuleSource(module, stage, log);
     // Add the module source, and a #define that declares it presence
     assembledSource += moduleSource;
 
@@ -514,7 +519,8 @@ function getApplicationDefines(defines: Record<string, boolean> = {}): string {
 /** Extracts the source code chunk for the specified shader type from the named shader module */
 export function getShaderModuleSource(
   module: ShaderModule,
-  stage: 'vertex' | 'fragment' | 'wgsl'
+  stage: 'vertex' | 'fragment' | 'wgsl',
+  log?: any
 ): string {
   let moduleSource;
   switch (stage) {
@@ -534,6 +540,9 @@ export function getShaderModuleSource(
   if (!module.name) {
     throw new Error('Shader module must have a name');
   }
+
+  validateShaderModuleUniformLayout(module, stage, {log});
+
   const moduleName = module.name.toUpperCase().replace(/[^0-9a-z]/gi, '_');
   let source = `\
 // ----- MODULE ${module.name} ---------------

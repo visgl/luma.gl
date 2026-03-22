@@ -34,12 +34,15 @@ export type PBRMaterialBindings = {
   pbr_specularColorSampler?: Texture | null; // #ifdef HAS_SPECULARCOLORMAP
   pbr_specularIntensitySampler?: Texture | null; // #ifdef HAS_SPECULARINTENSITYMAP
   pbr_transmissionSampler?: Texture | null; // #ifdef HAS_TRANSMISSIONMAP
+  pbr_thicknessSampler?: Texture | null; // #ifdef HAS_THICKNESSMAP
 
   pbr_clearcoatSampler?: Texture | null; // #ifdef HAS_CLEARCOATMAP
-  pbr_clearcoatRoughnessSampler?: Texture | null; // #ifdef HAS_CLEARCOATMAP
+  pbr_clearcoatRoughnessSampler?: Texture | null; // #ifdef HAS_CLEARCOATROUGHNESSMAP
+  pbr_clearcoatNormalSampler?: Texture | null; // #ifdef HAS_CLEARCOATNORMALMAP
   pbr_sheenColorSampler?: Texture | null; // #ifdef HAS_SHEENCOLORMAP
-  pbr_sheenRoughnessSampler?: Texture | null; // #ifdef HAS_SHEENCOLORMAP
+  pbr_sheenRoughnessSampler?: Texture | null; // #ifdef HAS_SHEENROUGHNESSMAP
   pbr_iridescenceSampler?: Texture | null; // #ifdef HAS_IRIDESCENCEMAP
+  pbr_iridescenceThicknessSampler?: Texture | null; // #ifdef HAS_IRIDESCENCETHICKNESSMAP
   pbr_anisotropySampler?: Texture | null; // #ifdef HAS_ANISOTROPYMAP
 };
 
@@ -92,10 +95,12 @@ export type PBRMaterialUniforms = {
   clearcoatFactor?: number;
   clearcoatRoughnessFactor?: number;
   clearcoatMapEnabled?: boolean;
+  clearcoatRoughnessMapEnabled?: boolean;
 
   sheenColorFactor?: Readonly<Vector3 | NumberArray3>;
   sheenRoughnessFactor?: number;
   sheenColorMapEnabled?: boolean;
+  sheenRoughnessMapEnabled?: boolean;
 
   iridescenceFactor?: number;
   iridescenceIor?: number;
@@ -119,8 +124,72 @@ export type PBRMaterialProps = PBRMaterialBindings & PBRMaterialUniforms;
 export const pbrMaterial = {
   props: {} as PBRMaterialProps,
   uniforms: {} as PBRMaterialUniforms,
+  defaultUniforms: {
+    unlit: false,
+
+    baseColorMapEnabled: false,
+    baseColorFactor: [1, 1, 1, 1],
+
+    normalMapEnabled: false,
+    normalScale: 1,
+
+    emissiveMapEnabled: false,
+    emissiveFactor: [0, 0, 0],
+
+    metallicRoughnessValues: [1, 1],
+    metallicRoughnessMapEnabled: false,
+
+    occlusionMapEnabled: false,
+    occlusionStrength: 1,
+
+    alphaCutoffEnabled: false,
+    alphaCutoff: 0.5,
+
+    IBLenabled: false,
+    scaleIBLAmbient: [1, 1],
+
+    scaleDiffBaseMR: [0, 0, 0, 0],
+    scaleFGDSpec: [0, 0, 0, 0],
+
+    specularColorFactor: [1, 1, 1],
+    specularIntensityFactor: 1,
+    specularColorMapEnabled: false,
+    specularIntensityMapEnabled: false,
+
+    ior: 1.5,
+
+    transmissionFactor: 0,
+    transmissionMapEnabled: false,
+
+    thicknessFactor: 0,
+    attenuationDistance: 1e9,
+    attenuationColor: [1, 1, 1],
+
+    clearcoatFactor: 0,
+    clearcoatRoughnessFactor: 0,
+    clearcoatMapEnabled: false,
+    clearcoatRoughnessMapEnabled: false,
+
+    sheenColorFactor: [0, 0, 0],
+    sheenRoughnessFactor: 0,
+    sheenColorMapEnabled: false,
+    sheenRoughnessMapEnabled: false,
+
+    iridescenceFactor: 0,
+    iridescenceIor: 1.3,
+    iridescenceThicknessRange: [100, 400],
+    iridescenceMapEnabled: false,
+
+    anisotropyStrength: 0,
+    anisotropyRotation: 0,
+    anisotropyDirection: [1, 0],
+    anisotropyMapEnabled: false,
+
+    emissiveStrength: 1
+  } as Required<PBRMaterialUniforms>,
 
   name: 'pbrMaterial',
+  firstBindingSlot: 0,
   bindingLayout: [
     {name: 'pbrMaterial', group: 3},
     {name: 'pbr_baseColorSampler', group: 3},
@@ -131,11 +200,14 @@ export const pbrMaterial = {
     {name: 'pbr_specularColorSampler', group: 3},
     {name: 'pbr_specularIntensitySampler', group: 3},
     {name: 'pbr_transmissionSampler', group: 3},
+    {name: 'pbr_thicknessSampler', group: 3},
     {name: 'pbr_clearcoatSampler', group: 3},
     {name: 'pbr_clearcoatRoughnessSampler', group: 3},
+    {name: 'pbr_clearcoatNormalSampler', group: 3},
     {name: 'pbr_sheenColorSampler', group: 3},
     {name: 'pbr_sheenRoughnessSampler', group: 3},
     {name: 'pbr_iridescenceSampler', group: 3},
+    {name: 'pbr_iridescenceThicknessSampler', group: 3},
     {name: 'pbr_anisotropySampler', group: 3}
   ],
   dependencies: [lighting, ibl, pbrProjection],
@@ -153,10 +225,16 @@ export const pbrMaterial = {
     HAS_SPECULARCOLORMAP: false,
     HAS_SPECULARINTENSITYMAP: false,
     HAS_TRANSMISSIONMAP: false,
+    HAS_THICKNESSMAP: false,
     HAS_CLEARCOATMAP: false,
+    HAS_CLEARCOATROUGHNESSMAP: false,
+    HAS_CLEARCOATNORMALMAP: false,
     HAS_SHEENCOLORMAP: false,
+    HAS_SHEENROUGHNESSMAP: false,
     HAS_IRIDESCENCEMAP: false,
+    HAS_IRIDESCENCETHICKNESSMAP: false,
     HAS_ANISOTROPYMAP: false,
+    USE_MATERIAL_EXTENSIONS: false,
     ALPHA_CUTOFF: false,
     USE_IBL: false,
     PBR_DEBUG: false
@@ -185,15 +263,6 @@ export const pbrMaterial = {
     alphaCutoffEnabled: 'i32',
     alphaCutoff: 'f32', // #ifdef ALPHA_CUTOFF
 
-    // IBL
-    IBLenabled: 'i32',
-    scaleIBLAmbient: 'vec2<f32>', // #ifdef USE_IBL
-
-    // debugging flags used for shader output of intermediate PBR variables
-    // #ifdef PBR_DEBUG
-    scaleDiffBaseMR: 'vec4<f32>',
-    scaleFGDSpec: 'vec4<f32>',
-
     specularColorFactor: 'vec3<f32>',
     specularIntensityFactor: 'f32',
     specularColorMapEnabled: 'i32',
@@ -211,10 +280,12 @@ export const pbrMaterial = {
     clearcoatFactor: 'f32',
     clearcoatRoughnessFactor: 'f32',
     clearcoatMapEnabled: 'i32',
+    clearcoatRoughnessMapEnabled: 'i32',
 
     sheenColorFactor: 'vec3<f32>',
     sheenRoughnessFactor: 'f32',
     sheenColorMapEnabled: 'i32',
+    sheenRoughnessMapEnabled: 'i32',
 
     iridescenceFactor: 'f32',
     iridescenceIor: 'f32',
@@ -226,6 +297,15 @@ export const pbrMaterial = {
     anisotropyDirection: 'vec2<f32>',
     anisotropyMapEnabled: 'i32',
 
-    emissiveStrength: 'f32'
+    emissiveStrength: 'f32',
+
+    // IBL
+    IBLenabled: 'i32',
+    scaleIBLAmbient: 'vec2<f32>', // #ifdef USE_IBL
+
+    // debugging flags used for shader output of intermediate PBR variables
+    // #ifdef PBR_DEBUG
+    scaleDiffBaseMR: 'vec4<f32>',
+    scaleFGDSpec: 'vec4<f32>'
   }
 } as const satisfies ShaderModule<PBRMaterialProps, PBRMaterialUniforms, PBRMaterialBindings>;

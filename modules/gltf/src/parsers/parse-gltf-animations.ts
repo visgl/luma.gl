@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+import {log} from '@luma.gl/core';
 import {type GLTFAccessorPostprocessed, type GLTFPostprocessed} from '@loaders.gl/gltf';
 import {
   GLTFAnimationPath,
@@ -18,30 +19,53 @@ export function parseGLTFAnimations(gltf: GLTFPostprocessed): GLTFAnimation[] {
   const accessorCache1D = new Map<GLTFAccessorPostprocessed, number[]>();
   const accessorCache2D = new Map<GLTFAccessorPostprocessed, number[][]>();
 
-  return gltfAnimations.map((animation, index) => {
+  return gltfAnimations.flatMap((animation, index) => {
     const name = animation.name || `Animation-${index}`;
-    const samplers: GLTFAnimationSampler[] = animation.samplers.map(
-      ({input, interpolation = 'LINEAR', output}) => ({
-        input: accessorToJsArray1D(gltf.accessors[input], accessorCache1D),
-        interpolation,
-        output: accessorToJsArray2D(gltf.accessors[output], accessorCache2D)
-      })
-    );
+    const samplerCache = new Map<number, GLTFAnimationSampler>();
+    const channels: GLTFAnimationChannel[] = animation.channels.flatMap(({sampler, target}) => {
+      const path = getSupportedAnimationPath(target.path);
+      if (!path) {
+        return [];
+      }
 
-    const channels: GLTFAnimationChannel[] = animation.channels.map(({sampler, target}) => {
       const targetNode = gltf.nodes[target.node ?? 0];
       if (!targetNode) {
         throw new Error(`Cannot find animation target ${target.node}`);
       }
+
+      let parsedSampler = samplerCache.get(sampler);
+      if (!parsedSampler) {
+        const gltfSampler = animation.samplers[sampler];
+        if (!gltfSampler) {
+          throw new Error(`Cannot find animation sampler ${sampler}`);
+        }
+        const {input, interpolation = 'LINEAR', output} = gltfSampler;
+        parsedSampler = {
+          input: accessorToJsArray1D(gltf.accessors[input], accessorCache1D),
+          interpolation,
+          output: accessorToJsArray2D(gltf.accessors[output], accessorCache2D)
+        };
+        samplerCache.set(sampler, parsedSampler);
+      }
+
       return {
-        sampler: samplers[sampler],
+        sampler: parsedSampler,
         targetNodeId: targetNode.id,
-        path: target.path as GLTFAnimationPath
+        path
       };
     });
 
-    return {name, channels};
+    return channels.length ? [{name, channels}] : [];
   });
+}
+
+function getSupportedAnimationPath(path: string): GLTFAnimationPath | null {
+  if (path === 'pointer') {
+    log.warn('KHR_animation_pointer channels are not supported and will be skipped')();
+    return null;
+  }
+
+  return path as GLTFAnimationPath;
 }
 
 /** Converts a scalar accessor into a cached JavaScript number array. */
@@ -61,7 +85,7 @@ function accessorToJsArray1D(
   return result;
 }
 
-/** Converts a vector or matrix accessor into a cached JavaScript array-of-arrays. */
+/** Converts a scalar, vector, or matrix accessor into a cached JavaScript array-of-arrays. */
 function accessorToJsArray2D(
   accessor: GLTFAccessorPostprocessed,
   accessorCache: Map<GLTFAccessorPostprocessed, number[][]>
@@ -71,7 +95,7 @@ function accessorToJsArray2D(
   }
 
   const {typedArray: array, components} = accessorToTypedArray(accessor);
-  assert(components > 1, 'accessorToJsArray2D must have more than 1 component');
+  assert(components >= 1, 'accessorToJsArray2D must have at least 1 component');
 
   const result = [];
 

@@ -44,6 +44,7 @@ const exampleConfig = {};
 export const GLTFExample: React.FC = props => (
   <LumaExample
     id="gltf"
+    title="glTF"
     directory="showcase"
     template={GLTFApp}
     config={exampleConfig}

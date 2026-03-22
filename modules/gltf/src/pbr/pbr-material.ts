@@ -6,6 +6,11 @@ import {
   PBRProjectionProps
 } from '@luma.gl/shadertools';
 
+type ParsedPBRMaterialUniforms = Partial<PBRProjectionProps & PBRMaterialUniforms> & {
+  clearcoatRoughnessMapEnabled?: boolean;
+  sheenRoughnessMapEnabled?: boolean;
+};
+
 /** Material state extracted from a glTF primitive for consumption by the PBR shader module. */
 export type ParsedPBRMaterial = {
   /** Shader defines inferred from geometry and material features. */
@@ -13,7 +18,7 @@ export type ParsedPBRMaterial = {
   /** Texture and sampler bindings for the PBR shader module. */
   readonly bindings: Partial<PBRMaterialBindings & IBLBindings>;
   /** Uniform values for the projection and PBR shader modules. */
-  readonly uniforms: Partial<PBRProjectionProps & PBRMaterialUniforms>;
+  readonly uniforms: ParsedPBRMaterialUniforms;
   /** Render pipeline parameters derived from the glTF material. */
   readonly parameters: Parameters;
   /** @deprecated Use parameters */

@@ -268,18 +268,18 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
 
   const model = new Model(device, modelProps);
 
-  const {camera, ...pbrMaterialProps} = {
+  const sceneShaderInputValues = {
     ...parsedPPBRMaterial.uniforms,
     ...modelOptions.uniforms,
     ...parsedPPBRMaterial.bindings,
     ...modelOptions.bindings
   };
-
-  const iblBindings = Object.fromEntries(
-    Object.entries(pbrMaterialProps).filter(([name]) => !material.ownsBinding(name))
+  const sceneShaderInputProps = getSceneShaderInputProps(
+    model.shaderInputs.getModules(),
+    material,
+    sceneShaderInputValues
   );
-
-  model.shaderInputs.setProps({ibl: iblBindings, pbrProjection: {camera}});
+  model.shaderInputs.setProps(sceneShaderInputProps);
   return new ModelNode({managedResources, model});
 }
 
@@ -291,4 +291,41 @@ function isMaterialBindingResource(value: unknown): boolean {
     value instanceof Texture ||
     value instanceof TextureView
   );
+}
+
+function getSceneShaderInputProps(
+  modules: Array<{
+    name: string;
+    uniformTypes?: Readonly<Record<string, unknown>>;
+    bindingLayout?: ReadonlyArray<{name: string}>;
+  }>,
+  material: Material,
+  shaderInputValues: Record<string, unknown>
+): Record<string, Record<string, unknown>> {
+  const propertyToModuleNameMap = new Map<string, string>();
+  for (const module of modules) {
+    for (const uniformName of Object.keys(module.uniformTypes || {})) {
+      propertyToModuleNameMap.set(uniformName, module.name);
+    }
+    for (const binding of module.bindingLayout || []) {
+      propertyToModuleNameMap.set(binding.name, module.name);
+    }
+  }
+
+  const sceneShaderInputProps: Record<string, Record<string, unknown>> = {};
+  for (const [propertyName, value] of Object.entries(shaderInputValues)) {
+    if (value === undefined) {
+      continue;
+    }
+
+    const moduleName = propertyToModuleNameMap.get(propertyName);
+    if (!moduleName || material.ownsModule(moduleName)) {
+      continue;
+    }
+
+    sceneShaderInputProps[moduleName] ||= {};
+    sceneShaderInputProps[moduleName][propertyName] = value;
+  }
+
+  return sceneShaderInputProps;
 }
