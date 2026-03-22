@@ -4,6 +4,7 @@
 
 import type {Texture} from '@luma.gl/core';
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
+import {GROUP_2_IBL_BASE_BINDING} from '../group-2-bindings';
 
 export type IBLBindings = {
   pbr_diffuseEnvSampler?: Texture | null;
@@ -13,12 +14,12 @@ export type IBLBindings = {
 
 export const iblWGSL = /* wgsl */ `\
 #ifdef USE_IBL
-@binding(29) @group(2) var pbr_diffuseEnvSampler: texture_cube<f32>;
-@binding(30) @group(2) var pbr_diffuseEnvSamplerSampler: sampler;
-@binding(31) @group(2) var pbr_specularEnvSampler: texture_cube<f32>;
-@binding(32) @group(2) var pbr_specularEnvSamplerSampler: sampler;
-@binding(33) @group(2) var pbr_brdfLUT: texture_2d<f32>;
-@binding(34) @group(2) var pbr_brdfLUTSampler: sampler;
+@binding(${GROUP_2_IBL_BASE_BINDING}) @group(2) var pbr_diffuseEnvSampler: texture_cube<f32>;
+@binding(${GROUP_2_IBL_BASE_BINDING + 1}) @group(2) var pbr_diffuseEnvSamplerSampler: sampler;
+@binding(${GROUP_2_IBL_BASE_BINDING + 2}) @group(2) var pbr_specularEnvSampler: texture_cube<f32>;
+@binding(${GROUP_2_IBL_BASE_BINDING + 3}) @group(2) var pbr_specularEnvSamplerSampler: sampler;
+@binding(${GROUP_2_IBL_BASE_BINDING + 4}) @group(2) var pbr_brdfLUT: texture_2d<f32>;
+@binding(${GROUP_2_IBL_BASE_BINDING + 5}) @group(2) var pbr_brdfLUTSampler: sampler;
 #endif
 `;
 

@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+import {GROUP_2_LIGHTING_BINDING} from '../group-2-bindings';
+
 export const lightingUniformsWGSL = /* wgsl */ `\
 // #if (defined(SHADER_TYPE_FRAGMENT) && defined(LIGHTING_FRAGMENT)) || (defined(SHADER_TYPE_VERTEX) && defined(LIGHTING_VERTEX))
 const MAX_LIGHTS: i32 = 5;
@@ -46,8 +48,8 @@ struct lightingUniforms {
   lights: array<UniformLight, 5>,
 };
 
-// Binding 0:1 is reserved for lighting (Note: could go into separate bind group as it is stable across draw calls)
-@binding(0) @group(2) var<uniform> lighting : lightingUniforms;
+// Group 2 reserves 0..15 for scene uniform blocks. Lighting uses the first slot.
+@binding(${GROUP_2_LIGHTING_BINDING}) @group(2) var<uniform> lighting : lightingUniforms;
 
 fn lighting_getPointLight(index: i32) -> PointLight {
   let light = lighting.lights[index];
