@@ -95,25 +95,18 @@ function extractShaderUniformBlockFieldNames(
   language: 'glsl' | 'wgsl',
   uniformBlockName: string
 ): string[] | null {
-  const sourceMatch =
+  const sourceBody =
     language === 'wgsl'
-      ? shaderSource.match(
-          new RegExp(`struct\\s+${uniformBlockName}\\s*\\{([\\s\\S]*?)\\}\\s*;`, 'm')
-        )
-      : shaderSource.match(
-          new RegExp(
-            `uniform\\s+${uniformBlockName}\\s*\\{([\\s\\S]*?)\\}\\s*[A-Za-z0-9_]+\\s*;`,
-            'm'
-          )
-        );
+      ? extractWGSLStructBody(shaderSource, uniformBlockName)
+      : extractGLSLUniformBlockBody(shaderSource, uniformBlockName);
 
-  if (!sourceMatch) {
+  if (!sourceBody) {
     return null;
   }
 
   const fieldNames: string[] = [];
 
-  for (const sourceLine of sourceMatch[1].split('\n')) {
+  for (const sourceLine of sourceBody.split('\n')) {
     const line = sourceLine.replace(/\/\/.*$/, '').trim();
     if (!line || line.startsWith('#')) {
       continue;
@@ -132,6 +125,48 @@ function extractShaderUniformBlockFieldNames(
   }
 
   return fieldNames;
+}
+
+function extractWGSLStructBody(shaderSource: string, uniformBlockName: string): string | null {
+  const structMatch = new RegExp(`\\bstruct\\s+${uniformBlockName}\\b`, 'm').exec(shaderSource);
+  if (!structMatch) {
+    return null;
+  }
+
+  const openBraceIndex = shaderSource.indexOf('{', structMatch.index);
+  if (openBraceIndex < 0) {
+    return null;
+  }
+
+  let braceDepth = 0;
+  for (let index = openBraceIndex; index < shaderSource.length; index++) {
+    const character = shaderSource[index];
+    if (character === '{') {
+      braceDepth++;
+      continue;
+    }
+    if (character !== '}') {
+      continue;
+    }
+
+    braceDepth--;
+    if (braceDepth === 0) {
+      return shaderSource.slice(openBraceIndex + 1, index);
+    }
+  }
+
+  return null;
+}
+
+function extractGLSLUniformBlockBody(
+  shaderSource: string,
+  uniformBlockName: string
+): string | null {
+  const sourceMatch = shaderSource.match(
+    new RegExp(`uniform\\s+${uniformBlockName}\\s*\\{([\\s\\S]*?)\\}\\s*[A-Za-z0-9_]+\\s*;`, 'm')
+  );
+
+  return sourceMatch?.[1] || null;
 }
 
 function areStringArraysEqual(leftValues: string[], rightValues: string[]): boolean {
