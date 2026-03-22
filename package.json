@@ -17,7 +17,8 @@
   "workspaces": [
     "dev-modules/*",
     "modules/*",
-    "examples/**/*"
+    "examples/**/*",
+    "website"
   ],
   "browser": {
     "fs": false
@@ -35,7 +36,9 @@
     "test-headless": "yarn workspace @luma.gl/devtools-extensions test-headless",
     "test-coverage": "yarn workspace @luma.gl/devtools-extensions test-coverage",
     "test-fast": "yarn lint && yarn test-node",
-    "test-website": "cd website && yarn && yarn build && cd ..",
+    "test-website": "yarn website:build",
+    "website:build": "yarn workspace website-docusaurus build",
+    "website:start": "yarn workspace website-docusaurus start",
     "website-debug": "yarn workspace @luma.gl/devtools-extensions website-debug",
     "playwright:install": "yarn workspace @luma.gl/devtools-extensions playwright:install",
     "metrics": "./scripts/metrics.sh && ocular-metrics"
@@ -60,6 +63,10 @@
     "vitest": "^4.0.18"
   },
   "resolutions": {
+    "@docusaurus/plugin-client-redirects": "^3.9.2",
+    "@docusaurus/plugin-content-docs": "^3.9.2",
+    "@docusaurus/preset-classic": "^3.9.2",
+    "cheerio": "1.0.0-rc.9",
     "typescript": "^5.8.3",
     "tsconfig-paths": "^3.9.0",
     "ts-patch": "^3.3.0"
