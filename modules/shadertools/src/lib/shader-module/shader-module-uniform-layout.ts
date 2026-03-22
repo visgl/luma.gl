@@ -98,7 +98,7 @@ function extractShaderUniformBlockFieldNames(
   const sourceMatch =
     language === 'wgsl'
       ? shaderSource.match(
-          new RegExp(`struct\\s+${uniformBlockName}\\s*\\{([\\s\\S]*?)\\}\\s*@binding`, 'm')
+          new RegExp(`struct\\s+${uniformBlockName}\\s*\\{([\\s\\S]*?)\\}\\s*;`, 'm')
         )
       : shaderSource.match(
           new RegExp(

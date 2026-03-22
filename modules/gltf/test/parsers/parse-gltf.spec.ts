@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from 'tape-promise/tape';
+import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import type {GLTFPostprocessed} from '@loaders.gl/gltf';
 import {NullDevice} from '@luma.gl/test-utils';
 import type {PBREnvironment} from '@luma.gl/gltf';
@@ -200,22 +200,20 @@ test('gltf#parseGLTF routes IBL bindings onto model shader inputs', t => {
     }
   });
 
+  const bindingValues = firstModelNode?.model.shaderInputs.getBindingValues();
+
   t.ok(firstModelNode, 'scene contains a model node');
   t.equal(
-    firstModelNode.model.bindings.pbr_diffuseEnvSampler,
+    bindingValues.pbr_diffuseEnvSampler,
     diffuseTexture,
     'diffuse IBL texture is routed to model bindings'
   );
   t.equal(
-    firstModelNode.model.bindings.pbr_specularEnvSampler,
+    bindingValues.pbr_specularEnvSampler,
     specularTexture,
     'specular IBL texture is routed to model bindings'
   );
-  t.equal(
-    firstModelNode.model.bindings.pbr_brdfLUT,
-    brdfTexture,
-    'BRDF LUT is routed to model bindings'
-  );
+  t.equal(bindingValues.pbr_brdfLUT, brdfTexture, 'BRDF LUT is routed to model bindings');
   t.notOk(
     materials[0].getBindings().pbr_diffuseEnvSampler,
     'IBL bindings are not stranded on the material bind group'
