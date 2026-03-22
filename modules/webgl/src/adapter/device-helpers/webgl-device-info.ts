@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {DeviceInfo} from '@luma.gl/core';
-import {GL, GLExtensions} from '@luma.gl/constants';
+import {GL, GLExtensions} from '@luma.gl/webgl/constants';
 import {getWebGLExtension} from '../../context/helpers/webgl-extensions';
 
 /** @returns strings identifying the GPU vendor and driver. */

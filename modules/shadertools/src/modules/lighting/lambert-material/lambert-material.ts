@@ -17,6 +17,7 @@ export type LambertMaterialProps = {
 /** A matte material model that applies diffuse-only Lambert lighting per fragment. */
 export const lambertMaterial: ShaderModule<LambertMaterialProps> = {
   name: 'lambertMaterial',
+  firstBindingSlot: 0,
   bindingLayout: [{name: 'lambertMaterial', group: 3}],
   dependencies: [lighting],
   source: LAMBERT_WGSL,

@@ -4,7 +4,7 @@
 
 import type {BufferMapCallback, BufferProps} from '@luma.gl/core';
 import {Buffer} from '@luma.gl/core';
-import {GL} from '@luma.gl/constants';
+import {GL} from '@luma.gl/webgl/constants';
 import {WebGLDevice} from '../webgl-device';
 
 /** WebGL Buffer interface */

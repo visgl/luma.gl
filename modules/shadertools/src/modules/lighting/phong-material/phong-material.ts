@@ -20,6 +20,7 @@ export type PhongMaterialProps = {
 /** In Phong shading, the normal vector is linearly interpolated across the surface of the polygon from the polygon's vertex normals. */
 export const phongMaterial: ShaderModule<PhongMaterialProps> = {
   name: 'phongMaterial',
+  firstBindingSlot: 0,
   bindingLayout: [{name: 'phongMaterial', group: 3}],
   dependencies: [lighting],
   // Note these are switched between phong and gouraud

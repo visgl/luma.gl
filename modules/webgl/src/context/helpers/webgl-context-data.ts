@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {GLExtensions} from '@luma.gl/constants';
+import type {GLExtensions} from '@luma.gl/webgl/constants';
 
 /**
  * Stores luma.gl specific state associated with a context

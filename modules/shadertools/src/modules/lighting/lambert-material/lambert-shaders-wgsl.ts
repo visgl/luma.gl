@@ -9,7 +9,7 @@ struct lambertMaterialUniforms {
   diffuse: f32,
 };
 
-@group(3) @binding(0) var<uniform> lambertMaterial : lambertMaterialUniforms;
+@group(3) @binding(auto) var<uniform> lambertMaterial : lambertMaterialUniforms;
 
 fn lighting_getLightColor(surfaceColor: vec3<f32>, light_direction: vec3<f32>, normal_worldspace: vec3<f32>, color: vec3<f32>) -> vec3<f32> {
   let lambertian: f32 = max(dot(light_direction, normal_worldspace), 0.0);

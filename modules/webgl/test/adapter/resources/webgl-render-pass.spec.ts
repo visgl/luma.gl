@@ -4,7 +4,7 @@
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 
-import {GL} from '@luma.gl/constants';
+import {GL} from '@luma.gl/webgl/constants';
 import {WEBGLRenderPass} from '@luma.gl/webgl';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
 

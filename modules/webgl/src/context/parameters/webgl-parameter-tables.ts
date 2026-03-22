@@ -5,7 +5,7 @@
 // @ts-nocheck TODO fix
 
 // Tables describing WebGL parameters
-import {GL, GLParameters} from '@luma.gl/constants';
+import {GL, GLParameters} from '@luma.gl/webgl/constants';
 
 // DEFAULT SETTINGS - FOR FAST CACHE INITIALIZATION AND CONTEXT RESETS
 

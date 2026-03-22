@@ -18,6 +18,7 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 - glTF texture sampling now defaults to linear filtering when a glTF sampler omits explicit filter settings. Applications relying on the previous nearest-neighbor default should verify visual output and set sampler filters explicitly when nearest sampling is required.
 - The legacy feature flag `timer-query-webgl` has been removed. Replace checks for `timer-query-webgl` with `timestamp-query` for GPU timestamp/query support on both WebGPU and WebGL.
 - `PipelineFactory` and `ShaderFactory` now import from `@luma.gl/core` instead of `@luma.gl/engine`.
+- `@luma.gl/constants` has been removed. If raw numeric WebGL enums are still needed, import them from `@luma.gl/webgl/constants`.
 
 ## Upgrading to v9.2
 

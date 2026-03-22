@@ -189,6 +189,7 @@ export const pbrMaterial = {
   } as Required<PBRMaterialUniforms>,
 
   name: 'pbrMaterial',
+  firstBindingSlot: 0,
   bindingLayout: [
     {name: 'pbrMaterial', group: 3},
     {name: 'pbr_baseColorSampler', group: 3},

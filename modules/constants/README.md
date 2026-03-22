@@ -2,9 +2,9 @@
 
 ## Overview
 
-Exports an object with all WebGL2 constants.
+Compatibility wrapper for the WebGL constants now exported by `@luma.gl/webgl/constants`.
 
-Note: This file is framework independent and can be used by any webgl application.
+Prefer importing from `@luma.gl/webgl/constants` in new code.
 
 ## About luma.gl
 

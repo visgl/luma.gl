@@ -6,9 +6,11 @@ import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
 
 import {GL} from '@luma.gl/constants';
+import {GL as GLDeep} from '@luma.gl/constants/webgl-constants';
 
 test('@luma.gl/constants', t => {
   t.equal(typeof GL, 'object', '@luma.gl/constants is an object');
+  t.equal(GL, GLDeep, 'deep compatibility export matches root export');
   t.end();
 });
 

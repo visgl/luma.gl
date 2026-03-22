@@ -9,13 +9,21 @@ be created using `luma.createDevice(props)`. See [`CreateDeviceProps`](/docs/api
 
 ```typescript
 import {luma} from '@luma.gl/core';
-import {webgl2Adapter}'@luma.gl/webgl';
+import {webgl2Adapter} from '@luma.gl/webgl';
 
-const device = await luma.createDevice({adapters: [webgl2Adapter], createCanvasContext: {width: 800: height: 600}});
+const device = await luma.createDevice({
+  adapters: [webgl2Adapter],
+  createCanvasContext: {width: 800, height: 600}
+});
 
 // Resources can now be created
 const buffer = device.createBuffer(...);
 ```
+
+## WebGL Constants
+
+When raw numeric WebGL enums are still needed, import them from
+[`@luma.gl/webgl/constants`](/docs/api-reference/webgl/constants).
 
 ## Using with the "raw" WebGL API
 
@@ -23,7 +31,7 @@ To use a luma.gl WebGL `Device` with raw WebGL calls, the application can access
 the underlying WebGL handles (`WebGL2RenderingContext`, `WebGLBuffer`, ...) using the `.handle` properties:
 
 ```typescript
-import type {WebGLDevice} from '@luma.gl/webgl`;
+import type {WebGLDevice} from '@luma.gl/webgl';
 
 const webglDevice = device as WebGLDevice;
 const gpuDevice: WebGL2RenderingContext = webglDevice.handle;

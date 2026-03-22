@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {GL, GLPrimitiveTopology, GLPrimitive} from '@luma.gl/constants';
+import {GL, GLPrimitiveTopology, GLPrimitive} from '@luma.gl/webgl/constants';
 import {PrimitiveTopology} from '@luma.gl/core';
 
 // Counts the number of complete primitives given a number of vertices and a drawMode

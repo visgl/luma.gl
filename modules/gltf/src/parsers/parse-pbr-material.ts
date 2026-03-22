@@ -5,11 +5,11 @@
 import type {Device, SamplerProps, TextureFormat, TypedArray} from '@luma.gl/core';
 import {Texture, log, textureFormatDecoder} from '@luma.gl/core';
 import type {GLTFPostprocessed, GLTFSampler} from '@loaders.gl/gltf';
-import {GL} from '@luma.gl/constants';
 
 import {type ParsedPBRMaterial} from '../pbr/pbr-material';
 import {type PBREnvironment} from '../pbr/pbr-environment';
 import {type PBRMaterialBindings} from '@luma.gl/shadertools';
+import {GLEnum} from '../webgl-to-webgpu/gltf-webgl-constants';
 import {convertSampler} from '../webgl-to-webgpu/convert-webgl-sampler';
 
 // TODO - synchronize the GLTF... types with loaders.gl
@@ -379,12 +379,12 @@ function applyAlphaBlendParameters(parsedMaterial: ParsedPBRMaterial): void {
   parsedMaterial.parameters.blendAlphaDstFactor = 'one-minus-src-alpha';
 
   parsedMaterial.glParameters['blend'] = true;
-  parsedMaterial.glParameters['blendEquation'] = GL.FUNC_ADD;
+  parsedMaterial.glParameters['blendEquation'] = GLEnum.FUNC_ADD;
   parsedMaterial.glParameters['blendFunc'] = [
-    GL.SRC_ALPHA,
-    GL.ONE_MINUS_SRC_ALPHA,
-    GL.ONE,
-    GL.ONE_MINUS_SRC_ALPHA
+    GLEnum.SRC_ALPHA,
+    GLEnum.ONE_MINUS_SRC_ALPHA,
+    GLEnum.ONE,
+    GLEnum.ONE_MINUS_SRC_ALPHA
   ];
 }
 
@@ -400,12 +400,12 @@ function applyTransmissionBlendApproximation(parsedMaterial: ParsedPBRMaterial):
 
   parsedMaterial.glParameters['blend'] = true;
   parsedMaterial.glParameters['depthMask'] = false;
-  parsedMaterial.glParameters['blendEquation'] = GL.FUNC_ADD;
+  parsedMaterial.glParameters['blendEquation'] = GLEnum.FUNC_ADD;
   parsedMaterial.glParameters['blendFunc'] = [
-    GL.ONE,
-    GL.ONE_MINUS_SRC_ALPHA,
-    GL.ONE,
-    GL.ONE_MINUS_SRC_ALPHA
+    GLEnum.ONE,
+    GLEnum.ONE_MINUS_SRC_ALPHA,
+    GLEnum.ONE,
+    GLEnum.ONE_MINUS_SRC_ALPHA
   ];
 }
 
@@ -1161,8 +1161,13 @@ export class PBRMaterialParser {
       log.warn('BLEND alphaMode might not work well because it requires mesh sorting')();
       Object.assign(this.parameters, {
         blend: true,
-        blendEquation: GL.FUNC_ADD,
-        blendFunc: [GL.SRC_ALPHA, GL.ONE_MINUS_SRC_ALPHA, GL.ONE, GL.ONE_MINUS_SRC_ALPHA]
+        blendEquation: GLEnum.FUNC_ADD,
+        blendFunc: [
+          GLEnum.SRC_ALPHA,
+          GLEnum.ONE_MINUS_SRC_ALPHA,
+          GLEnum.ONE,
+          GLEnum.ONE_MINUS_SRC_ALPHA
+        ]
       });
     }
   }
@@ -1199,7 +1204,8 @@ export class PBRMaterialParser {
     if (image.compressed) {
       textureOptions = image;
       specialTextureParameters = {
-        [GL.TEXTURE_MIN_FILTER]: image.data.length > 1 ? GL.LINEAR_MIPMAP_NEAREST : GL.LINEAR
+        [GLEnum.TEXTURE_MIN_FILTER]:
+          image.data.length > 1 ? GLEnum.LINEAR_MIPMAP_NEAREST : GLEnum.LINEAR
       };
     } else {
       // Texture2D accepts a promise that returns an image as data (Async Textures)
@@ -1213,7 +1219,7 @@ export class PBRMaterialParser {
         ...specialTextureParameters
       },
       pixelStore: {
-        [GL.UNPACK_FLIP_Y_WEBGL]: false
+        [GLEnum.UNPACK_FLIP_Y_WEBGL]: false
       },
       ...textureOptions
     });

@@ -27,7 +27,7 @@ import {
   GLTextureCubeMapTarget,
   GLTexelDataFormat,
   GLPixelType
-} from '@luma.gl/constants';
+} from '@luma.gl/webgl/constants';
 
 import {getTextureFormatWebGL} from '../converters/webgl-texture-table';
 import {convertSamplerParametersToWebGL} from '../converters/sampler-parameters';

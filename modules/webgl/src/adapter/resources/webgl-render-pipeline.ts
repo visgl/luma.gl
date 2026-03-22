@@ -15,7 +15,7 @@ import type {
 } from '@luma.gl/core';
 import {RenderPipeline, flattenBindingsByGroup, log, normalizeBindingsByGroup} from '@luma.gl/core';
 // import {getAttributeInfosFromLayouts} from '@luma.gl/core';
-import {GL} from '@luma.gl/constants';
+import {GL} from '@luma.gl/webgl/constants';
 
 import {withDeviceAndGLParameters} from '../converters/device-parameters';
 import {setUniform} from '../helpers/set-uniform';

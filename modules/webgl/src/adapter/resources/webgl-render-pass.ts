@@ -5,7 +5,7 @@
 import {NumericArray, NumberArray4} from '@math.gl/types';
 import {RenderPass, RenderPassProps, RenderPassParameters} from '@luma.gl/core';
 import {WebGLDevice} from '../webgl-device';
-import {GL, GLParameters} from '@luma.gl/constants';
+import {GL, GLParameters} from '@luma.gl/webgl/constants';
 import {withGLParameters} from '../../context/state-tracker/with-parameters';
 import {setGLParameters} from '../../context/parameters/unified-parameter-api';
 import {WEBGLQuerySet} from './webgl-query-set';
