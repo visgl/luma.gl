@@ -26,14 +26,11 @@ export function mergeShaderModuleBindingsIntoLayout<TShaderLayout extends AnySha
 
   for (const module of modules) {
     for (const bindingLayout of module.bindingLayout || []) {
-      const binding = mergedLayout.bindings.find(
-        candidate =>
-          candidate.name === bindingLayout.name ||
-          candidate.name === `${bindingLayout.name}Uniforms` ||
-          `${candidate.name}Uniforms` === bindingLayout.name
-      );
-      if (binding) {
-        if (binding.group === 0) {
+      for (const relatedBindingName of getRelatedBindingNames(bindingLayout.name)) {
+        const binding = mergedLayout.bindings.find(
+          candidate => candidate.name === relatedBindingName
+        );
+        if (binding?.group === 0) {
           binding.group = bindingLayout.group;
         }
       }
@@ -45,6 +42,17 @@ export function mergeShaderModuleBindingsIntoLayout<TShaderLayout extends AnySha
 
 export function shaderModuleHasUniforms(module: ShaderModule): boolean {
   return Boolean(module.uniformTypes && !isObjectEmpty(module.uniformTypes));
+}
+
+/** Returns binding-name aliases that should share the module-declared bind group. */
+function getRelatedBindingNames(bindingName: string): string[] {
+  const bindingNames = new Set<string>([bindingName, `${bindingName}Uniforms`]);
+
+  if (!bindingName.endsWith('Uniforms')) {
+    bindingNames.add(`${bindingName}Sampler`);
+  }
+
+  return [...bindingNames];
 }
 
 function isObjectEmpty(obj: object): boolean {
