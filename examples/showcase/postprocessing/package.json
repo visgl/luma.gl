@@ -1,6 +1,6 @@
 {
   "name": "luma.gl-examples-postprocessing",
-  "version": "9.3.0-alpha.6",
+  "version": "9.3.0-alpha.7",
   "private": true,
   "scripts": {
     "start": "vite",
@@ -10,14 +10,14 @@
   "dependencies": {
     "@loaders.gl/core": "4.4.0-alpha.18",
     "@loaders.gl/gltf": "4.4.0-alpha.18",
-    "@luma.gl/constants": "9.3.0-alpha.6",
-    "@luma.gl/core": "9.3.0-alpha.6",
-    "@luma.gl/effects": "9.3.0-alpha.6",
-    "@luma.gl/engine": "9.3.0-alpha.6",
-    "@luma.gl/gltf": "9.3.0-alpha.6",
-    "@luma.gl/shadertools": "9.3.0-alpha.6",
-    "@luma.gl/webgl": "9.3.0-alpha.6",
-    "@luma.gl/webgpu": "9.3.0-alpha.6",
+    "@luma.gl/constants": "9.3.0-alpha.7",
+    "@luma.gl/core": "9.3.0-alpha.7",
+    "@luma.gl/effects": "9.3.0-alpha.7",
+    "@luma.gl/engine": "9.3.0-alpha.7",
+    "@luma.gl/gltf": "9.3.0-alpha.7",
+    "@luma.gl/shadertools": "9.3.0-alpha.7",
+    "@luma.gl/webgl": "9.3.0-alpha.7",
+    "@luma.gl/webgpu": "9.3.0-alpha.7",
     "@math.gl/core": "^4.1.0"
   },
   "devDependencies": {
