@@ -94,6 +94,11 @@ async function makeWebGPUTestDevice(): Promise<WebGPUDevice | null> {
       createCanvasContext: DEFAULT_CANVAS_CONTEXT_PROPS,
       debug: true
     })) as unknown as WebGPUDevice;
+    webgpuDevice.lost.finally(() => {
+      if (webgpuDevicePromise === webgpuDeviceResolvers.promise) {
+        webgpuDevicePromise = null;
+      }
+    });
     webgpuDeviceResolvers.resolve(webgpuDevice);
   } catch (error) {
     log.error(String(error))();
