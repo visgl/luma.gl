@@ -2,6 +2,10 @@
 
 ## v9.3
 
+### v9.3.0-alpha.9
+
+- fix: GLSL parser supports precision specifiers (#2563)
+
 ### v9.3.0-alpha.8
 
 - chore: Update release workflow (#2562)
