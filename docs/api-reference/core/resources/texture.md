@@ -355,9 +355,17 @@ On WebGPU this corresponds closely to `copyTextureToBuffer()`. On WebGL, luma.gl
 
 Use `readBuffer()` when you want a GPU buffer containing texture data, typically for staging, readback pipelines, or explicit post-processing workflows.
 
-Unlike `readDataAsync()`, `readBuffer()` exposes the linear buffer layout directly. On WebGPU, that means the returned layout follows buffer-copy alignment rules rather than tightly packed CPU upload rules.
+`readBuffer()` requires a caller-supplied destination buffer. This keeps the core `Texture` API explicit about allocation and ownership.
+
+Compared to the deprecated `readDataAsync()` helper, `readBuffer()` exposes the linear buffer layout directly. On WebGPU, that means the returned layout follows buffer-copy alignment rules rather than tightly packed CPU upload rules.
 
 If you need a matching layout, call `texture.computeMemoryLayout()` for the same region. On WebGPU, the returned `bytesPerRow` is padded for buffer copies, typically to a multiple of `256`.
+
+### `readDataAsync()`
+
+Deprecated convenience API.
+
+Use `readBuffer()` with an explicit destination buffer, or engine [`DynamicTexture`](/docs/api-reference/engine/dynamic-texture) when you want convenience readback that allocates temporary buffers for you.
 
 ### `writeBuffer()`
 

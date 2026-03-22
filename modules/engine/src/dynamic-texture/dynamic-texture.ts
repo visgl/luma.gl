@@ -494,11 +494,15 @@ function getTextureSubresources(props: TextureDataProps): TextureSubresource[] {
     return [];
   }
 
+  const baseLevelSize =
+    props.width && props.height ? {width: props.width, height: props.height} : undefined;
+  const textureFormat = 'format' in props ? props.format : undefined;
+
   switch (props.dimension) {
     case '1d':
       return getTexture1DSubresources(props.data);
     case '2d':
-      return getTexture2DSubresources(0, props.data);
+      return getTexture2DSubresources(0, props.data, baseLevelSize, textureFormat);
     case '3d':
       return getTexture3DSubresources(props.data);
     case '2d-array':

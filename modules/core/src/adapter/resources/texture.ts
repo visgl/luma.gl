@@ -326,8 +326,7 @@ export abstract class Texture extends Resource<TextureProps> {
    * @note The memory layout of the texture data is determined by the texture format and dimensions.
    * @note The application can call Texture.computeMemoryLayout() to compute the backend-aligned layout.
    * @note The application can call Buffer.readAsync() to read the returned buffer on the CPU.
-   * @note If not supplied a buffer will be created and the application needs to call Buffer.destroy().
-   * @note If a buffer is supplied it must be large enough for the requested region.
+   * @note The destination buffer must be supplied by the caller and must be large enough for the requested region.
    * @note On WebGPU this corresponds to a texture-to-buffer copy and uses buffer-copy alignment rules.
    * @note On WebGL, luma.gl emulates the same logical readback behavior.
    */
@@ -341,6 +340,7 @@ export abstract class Texture extends Resource<TextureProps> {
    *
    * @note The memory layout of the texture data is determined by the texture format and dimensions.
    * @note The application can call Texture.computeMemoryLayout() to compute the layout.
+   * @deprecated Use Texture.readBuffer() with an explicit destination buffer, or DynamicTexture.readAsync() for convenience readback.
    */
   readDataAsync(options?: TextureReadOptions): Promise<ArrayBuffer> {
     throw new Error('readBuffer not implemented');
@@ -645,7 +645,7 @@ export abstract class Texture extends Resource<TextureProps> {
     data: null,
     dimension: '2d',
     format: 'rgba8unorm',
-    usage: Texture.SAMPLE | Texture.RENDER | Texture.COPY_DST,
+    usage: Texture.SAMPLE | Texture.RENDER | Texture.COPY_DST | Texture.COPY_SRC,
     width: undefined!,
     height: undefined!,
     depth: 1,

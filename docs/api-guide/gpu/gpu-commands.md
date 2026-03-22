@@ -18,7 +18,7 @@ These methods perform a complete operation from the call site:
 - `Texture.copyExternalImage()`
 - `Texture.writeData()`
 - `Texture.readBuffer()`
-- `Texture.readDataAsync()`
+- `Texture.readDataAsync()` (deprecated convenience wrapper)
 - `Texture.writeBuffer()`
 
 These APIs are convenient because they do not require you to create a `CommandEncoder`, finish it, or submit it yourself.
@@ -145,10 +145,14 @@ Use `CommandEncoder` copy methods when:
 - multiple copies and passes must execute in a specific order
 - you want one explicit submission boundary for a group of operations
 
-Use `Texture.readBuffer()` or `Texture.readDataAsync()` when:
+Use `Texture.readBuffer()` when:
 
-- you want a simple standalone readback helper
+- you want a simple standalone readback helper with an explicit destination buffer
 - you do not need that readback to be manually integrated into a larger command stream
+
+Use engine `DynamicTexture.readAsync()` when:
+
+- you want a convenience readback helper that allocates a temporary buffer and returns CPU bytes directly
 
 ## Performance guidance
 

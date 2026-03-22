@@ -37,6 +37,7 @@ export type DynamicTextureProps =
 ```
 
 `DynamicTextureProps` combines normal texture props with async-friendly texture data props from `texture-data.ts`.
+For simple `2d` textures, `data` may still be provided as a bare typed array when `width` and `height` are supplied.
 
 ## Properties
 
@@ -81,6 +82,14 @@ Generates mipmaps for the current texture. Uses the appropriate WebGL or WebGPU 
 ### `setSampler(sampler: Sampler | SamplerProps = {}): void`
 
 Sets a sampler on the underlying texture.
+
+### `readBuffer(options?: TextureReadOptions): Promise<Buffer>`
+
+Allocates a temporary GPU readback buffer, copies the requested region into it, waits for GPU completion, and returns the ready-to-read buffer. The caller owns the returned buffer and must destroy it.
+
+### `readAsync(options?: TextureReadOptions): Promise<ArrayBuffer>`
+
+Convenience readback built on `readBuffer()`. Allocates a temporary buffer, copies the requested region, maps it, returns the bytes as an `ArrayBuffer`, and destroys the temporary buffer.
 
 ### `resize(size: {width: number; height: number}): boolean`
 

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Device, Framebuffer, Texture} from '@luma.gl/core';
+import {Buffer, Device, Framebuffer, Texture} from '@luma.gl/core';
 import {ShaderInputs} from '../../shader-inputs';
 import {pickingUniforms, INVALID_INDEX} from './picking-uniforms';
 
@@ -248,14 +248,26 @@ export class PickingManager {
         return null;
       }
 
-      const pickData = await pickTexture.readDataAsync({
-        x: pickX,
-        y: pickY,
-        width: 1,
-        height: 1
+      const layout = pickTexture.computeMemoryLayout({width: 1, height: 1});
+      const readBuffer = this.device.createBuffer({
+        byteLength: layout.byteLength,
+        usage: Buffer.COPY_DST | Buffer.MAP_READ
       });
-
-      return decodeIndexPickInfo(new Int32Array(pickData, 0, 2));
+      try {
+        pickTexture.readBuffer(
+          {
+            x: pickX,
+            y: pickY,
+            width: 1,
+            height: 1
+          },
+          readBuffer
+        );
+        const pickDataView = await readBuffer.readAsync(0, layout.byteLength);
+        return decodeIndexPickInfo(new Int32Array(pickDataView.buffer, pickDataView.byteOffset, 2));
+      } finally {
+        readBuffer.destroy();
+      }
     }
 
     const pixelData = this.device.readPixelsToArrayWebGL(framebuffer, {
@@ -281,14 +293,26 @@ export class PickingManager {
         return null;
       }
 
-      const pickData = await pickTexture.readDataAsync({
-        x: pickX,
-        y: pickY,
-        width: 1,
-        height: 1
+      const layout = pickTexture.computeMemoryLayout({width: 1, height: 1});
+      const readBuffer = this.device.createBuffer({
+        byteLength: layout.byteLength,
+        usage: Buffer.COPY_DST | Buffer.MAP_READ
       });
-
-      return decodeColorPickInfo(new Uint8Array(pickData, 0, 4));
+      try {
+        pickTexture.readBuffer(
+          {
+            x: pickX,
+            y: pickY,
+            width: 1,
+            height: 1
+          },
+          readBuffer
+        );
+        const pickDataView = await readBuffer.readAsync(0, layout.byteLength);
+        return decodeColorPickInfo(new Uint8Array(pickDataView.buffer, pickDataView.byteOffset, 4));
+      } finally {
+        readBuffer.destroy();
+      }
     }
 
     const pixelData = this.device.readPixelsToArrayWebGL(framebuffer, {

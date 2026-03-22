@@ -52,7 +52,7 @@ export class WebGPUTexture extends Texture {
           height: this.height,
           depthOrArrayLayers: this.depth
         },
-        usage: this.props.usage || Texture.TEXTURE | Texture.COPY_DST,
+        usage: this.props.usage || Texture.TEXTURE | Texture.COPY_DST | Texture.COPY_SRC,
         dimension: this.baseDimension,
         format: getWebGPUTextureFormat(this.format),
         mipLevelCount: this.mipLevels,
@@ -170,6 +170,9 @@ export class WebGPUTexture extends Texture {
     options: TextureReadOptions & {byteOffset?: number} = {},
     buffer?: Buffer
   ): Buffer {
+    if (!buffer) {
+      throw new Error(`${this} readBuffer requires a destination buffer`);
+    }
     const {x, y, z, width, height, depthOrArrayLayers, mipLevel, aspect} =
       this._getSupportedColorReadOptions(options);
     const byteOffset = options.byteOffset ?? 0;
@@ -178,16 +181,9 @@ export class WebGPUTexture extends Texture {
 
     const {byteLength} = layout;
 
-    const readBuffer =
-      buffer ||
-      this.device.createBuffer({
-        byteLength,
-        usage: Buffer.COPY_DST | Buffer.MAP_READ
-      });
-
-    if (readBuffer.byteLength < byteOffset + byteLength) {
+    if (buffer.byteLength < byteOffset + byteLength) {
       throw new Error(
-        `${this} readBuffer target is too small (${readBuffer.byteLength} < ${byteOffset + byteLength})`
+        `${this} readBuffer target is too small (${buffer.byteLength} < ${byteOffset + byteLength})`
       );
     }
 
@@ -197,7 +193,7 @@ export class WebGPUTexture extends Texture {
     this.copyToBuffer(
       commandEncoder,
       {x, y, z, width, height, depthOrArrayLayers, mipLevel, aspect, byteOffset},
-      readBuffer
+      buffer
     );
 
     const commandBuffer = commandEncoder.finish();
@@ -207,20 +203,13 @@ export class WebGPUTexture extends Texture {
       this.device.debug();
     });
 
-    return readBuffer;
+    return buffer;
   }
 
   override async readDataAsync(options: TextureReadOptions = {}): Promise<ArrayBuffer> {
-    const {width = this.width, height = this.height, depthOrArrayLayers = this.depth} = options;
-    const layout = this.computeMemoryLayout({width, height, depthOrArrayLayers});
-    const buffer = this.device.createBuffer({
-      byteLength: layout.byteLength,
-      usage: Buffer.COPY_DST | Buffer.MAP_READ
-    });
-    this.readBuffer({...options, width, height, depthOrArrayLayers}, buffer);
-    const data = await buffer.readAsync(0, layout.byteLength);
-    buffer.destroy();
-    return data.buffer as ArrayBuffer;
+    throw new Error(
+      `${this} readDataAsync is deprecated; use readBuffer() with an explicit destination buffer or DynamicTexture.readAsync()`
+    );
   }
 
   copyToBuffer(

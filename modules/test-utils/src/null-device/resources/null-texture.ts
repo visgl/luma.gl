@@ -82,7 +82,9 @@ export class NullTexture extends Texture {
   }
 
   override async readDataAsync(options: TextureReadOptions = {}): Promise<ArrayBuffer> {
-    return new ArrayBuffer(0);
+    throw new Error(
+      `${this} readDataAsync is deprecated; use readBuffer() with an explicit destination buffer or DynamicTexture.readAsync()`
+    );
   }
 
   override writeBuffer(buffer: Buffer, options: TextureWriteOptions = {}) {

@@ -179,7 +179,7 @@ Textures offer a set of methods to read and write texture data
 | Method | Description |
 | --- | --- |
 | `Texture.writeData()` | Writes typed-array data into a texture subresource, including mip levels, array layers, depth slices, and optional row layout. |
-| `Texture.readDataAsync()` | |
+| `Texture.readDataAsync()` | Deprecated convenience wrapper. Prefer `Texture.readBuffer()` or `DynamicTexture.readAsync()`. |
 | `Texture.writeBuffer()` | Copies data from a GPU buffer into a texture subresource using the provided destination region and layout. |
 | `Texture.readBuffer()` | |
 

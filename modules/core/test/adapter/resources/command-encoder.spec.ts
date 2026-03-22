@@ -304,8 +304,14 @@ test('CommandEncoder resolves time profiling with a single bulk query read', asy
 
 test('CommandEncoder default submit rolls over to a fresh default encoder', async t => {
   for (const device of await getTestDevices(['webgl', 'webgpu'])) {
-    const sourceBuffer = device.createBuffer({data: new Float32Array([1, 2, 3])});
-    const destinationBuffer = device.createBuffer({data: new Float32Array([0, 0, 0])});
+    const sourceBuffer = device.createBuffer({
+      data: new Float32Array([1, 2, 3]),
+      usage: Buffer.COPY_SRC | Buffer.COPY_DST
+    });
+    const destinationBuffer = device.createBuffer({
+      data: new Float32Array([0, 0, 0]),
+      usage: Buffer.COPY_DST | Buffer.COPY_SRC
+    });
 
     device.commandEncoder.copyBufferToBuffer({
       sourceBuffer,
@@ -521,6 +527,11 @@ test('WebGPU custom CommandEncoder render pass records on the owning encoder', a
     colorAttachments: ['rgba8unorm']
   });
   const colorTexture = framebuffer.colorAttachments[0].texture;
+  const layout = colorTexture.computeMemoryLayout({width: 1, height: 1});
+  const readBuffer = device.createBuffer({
+    byteLength: layout.byteLength,
+    usage: Buffer.COPY_DST | Buffer.MAP_READ
+  });
   const commandEncoder = device.createCommandEncoder({id: 'custom-renderpass-owner'});
   const renderPass = commandEncoder.beginRenderPass({
     framebuffer,
@@ -531,13 +542,15 @@ test('WebGPU custom CommandEncoder render pass records on the owning encoder', a
   const commandBuffer = commandEncoder.finish();
   device.submit(commandBuffer);
 
-  const pixelData = new Uint8Array(await colorTexture.readDataAsync(), 0, 4);
+  colorTexture.readBuffer({width: 1, height: 1}, readBuffer);
+  const pixelData = new Uint8Array(await readBuffer.readAsync(0, layout.byteLength), 0, 4);
   t.deepEqual(
     Array.from(pixelData),
     [255, 0, 0, 255],
     'custom WebGPU encoder owns the render pass it creates'
   );
 
+  readBuffer.destroy();
   framebuffer.destroy();
   t.end();
 });

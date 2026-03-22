@@ -220,23 +220,20 @@ export class WEBGLTexture extends Texture {
    * before any WebGL calls are issued.
    */
   readBuffer(options: TextureReadOptions & {byteOffset?: number} = {}, buffer?: Buffer): Buffer {
+    if (!buffer) {
+      throw new Error(`${this} readBuffer requires a destination buffer`);
+    }
     const normalizedOptions = this._getSupportedColorReadOptions(options);
     const byteOffset = options.byteOffset ?? 0;
     const memoryLayout = this.computeMemoryLayout(normalizedOptions);
-    const readBuffer =
-      buffer ||
-      this.device.createBuffer({
-        byteLength: memoryLayout.byteLength,
-        usage: Buffer.COPY_DST | Buffer.MAP_READ
-      });
 
-    if (readBuffer.byteLength < byteOffset + memoryLayout.byteLength) {
+    if (buffer.byteLength < byteOffset + memoryLayout.byteLength) {
       throw new Error(
-        `${this} readBuffer target is too small (${readBuffer.byteLength} < ${byteOffset + memoryLayout.byteLength})`
+        `${this} readBuffer target is too small (${buffer.byteLength} < ${byteOffset + memoryLayout.byteLength})`
       );
     }
 
-    const webglBuffer = readBuffer as WEBGLBuffer;
+    const webglBuffer = buffer as WEBGLBuffer;
     this.gl.bindBuffer(GL.PIXEL_PACK_BUFFER, webglBuffer.handle);
     try {
       this._readColorTextureLayers(normalizedOptions, memoryLayout, destinationByteOffset => {
@@ -254,14 +251,13 @@ export class WEBGLTexture extends Texture {
       this.gl.bindBuffer(GL.PIXEL_PACK_BUFFER, null);
     }
 
-    return readBuffer;
+    return buffer;
   }
 
   async readDataAsync(options: TextureReadOptions = {}): Promise<ArrayBuffer> {
-    const buffer = this.readBuffer(options);
-    const data = await buffer.readAsync();
-    buffer.destroy();
-    return data.buffer as ArrayBuffer;
+    throw new Error(
+      `${this} readDataAsync is deprecated; use readBuffer() with an explicit destination buffer or DynamicTexture.readAsync()`
+    );
   }
 
   writeBuffer(buffer: Buffer, options_: TextureWriteOptions = {}) {
