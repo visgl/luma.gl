@@ -1,32 +1,29 @@
+import {expect, test} from 'vitest';
 import babel from '@babel/core';
 import plugin from '../../dev-modules/babel-plugin-inline-webgl-constants/index.js';
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
-
 const ES6_ENV = {
-  targets: {chrome: '60'},
+  targets: {
+    chrome: '60'
+  },
   modules: false
 };
-
-const TEST_CASES = [
-  {
-    title: 'simple',
-    input: 'const x = gl.FLOAT;',
-    output: 'const x = 5126;'
-  },
-  {
-    title: 'undefined constant',
-    input: 'const x = gl.FLOAT32;',
-    error: true
-  },
-  {
-    title: 'complex',
-    input: `
+const TEST_CASES = [{
+  title: 'simple',
+  input: 'const x = gl.FLOAT;',
+  output: 'const x = 5126;'
+}, {
+  title: 'undefined constant',
+  input: 'const x = gl.FLOAT32;',
+  error: true
+}, {
+  title: 'complex',
+  input: `
       const TEXTURE_FORMATS = {
         [GL.RGBA]: {dataFormat: GL.RGBA, types: [GL.UNSIGNED_BYTE, GL.UNSIGNED_SHORT_4_4_4_4, GL.UNSIGNED_SHORT_5_5_5_1]},
       };
       gl.texImage2D(0, 0, GL.RGBA, TEXTURE_FORMATS[GL.RGBA].dataFormat, TEXTURE_FORMATS[GL.RGBA].type, data);
     `,
-    output: `
+  output: `
       const TEXTURE_FORMATS = {
         [6408]: {
           dataFormat: 6408,
@@ -35,49 +32,46 @@ const TEST_CASES = [
       };
       gl.texImage2D(0, 0, 6408, TEXTURE_FORMATS[6408].dataFormat, TEXTURE_FORMATS[6408].type, data);
     `
-  },
-  {
-    title: 'remove import',
-    input: `
+}, {
+  title: 'remove import',
+  input: `
       import {GL} from '@luma.gl/constants';
       const x = GL.FLOAT;
     `,
-    output: 'const x = 5126;'
-  },
-  {
-    title: 'remove import specifier',
-    input: `
+  output: 'const x = 5126;'
+}, {
+  title: 'remove import specifier',
+  input: `
       import {GL, UnknownItem} from '@luma.gl/constants';
       const x = GL.FLOAT;
     `,
-    output: `
+  output: `
       import { UnknownItem } from '@luma.gl/constants';
       const x = 5126;
     `
-  }
-];
+}];
 
 // Remove whitespace before comparing
 function clean(code) {
   return code.replace('"use strict";', '').replace(/\n\s+/g, '\n').trim();
 }
-
-test('InlineGLSLConstants Babel Plugin', t => {
+test('InlineGLSLConstants Babel Plugin', () => {
   TEST_CASES.forEach(testCase => {
-    const transform = () =>
-      babel.transform(testCase.input, {
-        presets: [['@babel/env', ES6_ENV]],
-        plugins: [[plugin, {debug: true}]],
-        filename: 'test.js',
-        configFile: false
-      });
+    const transform = () => babel.transform(testCase.input, {
+      presets: [['@babel/env', ES6_ENV]],
+      plugins: [[plugin, {
+        debug: true
+      }]],
+      filename: 'test.js',
+      configFile: false
+    });
     if (testCase.error) {
-      t.throws(transform, testCase.title);
+      expect(transform).toThrow(testCase.title);
     } else {
-      const {code} = transform();
-      t.is(clean(code), clean(testCase.output), testCase.title);
+      const {
+        code
+      } = transform();
+      expect(clean(code), testCase.title).toBe(clean(testCase.output));
     }
   });
-
-  t.end();
 });

@@ -1,26 +1,21 @@
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import { test } from 'vitest';
 import customRulesPlugin from '../../dev-modules/eslint-plugin-luma-gl-custom-rules/index.cjs';
-import {RuleTester} from 'eslint';
-
+import { RuleTester } from 'eslint';
 const ruleTester = new RuleTester();
-const {rules} = customRulesPlugin;
+const {
+  rules
+} = customRulesPlugin;
 
 // TODO - RESTORE
-test.skip('EslintCustomRules#check-log-call', t => {
+test.skip('EslintCustomRules#check-log-call', () => {
   ruleTester.run('check-log-call', rules['check-log-call'], {
     valid: ['log.log(1, "initialized")();', 'log.assert(gl, "error");', 'someObject.method();'],
-    invalid: [
-      {
-        code: 'log.error("error");',
-        errors: [
-          {
-            line: 1
-          }
-        ],
-        output: 'log.error("error")();'
-      }
-    ]
+    invalid: [{
+      code: 'log.error("error");',
+      errors: [{
+        line: 1
+      }],
+      output: 'log.error("error")();'
+    }]
   });
-
-  t.end();
 });

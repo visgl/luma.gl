@@ -1,16 +1,13 @@
+import {expect, test} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {edgeWork} from '@luma.gl/effects';
-import {getShaderModuleUniforms} from '@luma.gl/shadertools';
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
-
-test('edgeWork#build/uniform', t => {
+import { edgeWork } from '@luma.gl/effects';
+import { getShaderModuleUniforms } from '@luma.gl/shadertools';
+test('edgeWork#build/uniform', () => {
   const uniforms = getShaderModuleUniforms(edgeWork, {}, {});
-
-  t.ok(uniforms, 'edgeWork module build is ok');
-  t.equal(uniforms.radius, 2, 'edgeWork radius uniform is ok');
-  t.deepEqual(uniforms.mode, 0, 'edgeWork mode uniform is ok');
-  t.end();
+  expect(uniforms, 'edgeWork module build is ok').toBeTruthy();
+  expect(uniforms.radius, 'edgeWork radius uniform is ok').toBe(2);
+  expect(uniforms.mode, 'edgeWork mode uniform is ok').toEqual(0);
 });

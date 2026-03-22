@@ -1,11 +1,6 @@
-// luma.gl
-// SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
-
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {GL} from '@luma.gl/constants';
-import {getTestDevices} from '@luma.gl/test-utils';
-
+import {expect, test} from 'vitest';
+import { GL } from '@luma.gl/constants';
+import { getTestDevices } from '@luma.gl/test-utils';
 const DEVICE_LIMITS = {
   maxTextureDimension1D: true,
   maxTextureDimension2D: true,
@@ -50,7 +45,6 @@ export const WEBGL_LIMITS = {
   [GL.MAX_VERTEX_UNIFORM_VECTORS]: true,
   [GL.MAX_FRAGMENT_UNIFORM_VECTORS]: true,
   [GL.MAX_VIEWPORT_DIMS]: false,
-
   // Extensions
   // [GL.MAX_TEXTURE_MAX_ANISOTROPY_EXT]: true,
 
@@ -85,17 +79,15 @@ export const WEBGL_LIMITS = {
   [GL.MAX_PROGRAM_TEXEL_OFFSET]: true,
   [GL.UNIFORM_BUFFER_OFFSET_ALIGNMENT]: true
 };
-
-test('Device#limits (WebGPU style limits)', async t => {
+test('Device#limits (WebGPU style limits)', async () => {
   for (const testDevice of await getTestDevices()) {
     for (const [limit, numeric] of Object.entries(DEVICE_LIMITS)) {
       const actual = testDevice.limits[limit as keyof typeof DEVICE_LIMITS];
       if (numeric) {
-        t.ok(Number.isFinite(actual), `device.limits.${limit} returns a number: ${actual}`);
+        expect(Number.isFinite(actual), `device.limits.${limit} returns a number: ${actual}`).toBeTruthy();
       } else {
-        t.ok(actual !== undefined, `device.limits.${limit} returns a value: ${actual}`);
+        expect(actual !== undefined, `device.limits.${limit} returns a value: ${actual}`).toBeTruthy();
       }
     }
   }
-  t.end();
 });

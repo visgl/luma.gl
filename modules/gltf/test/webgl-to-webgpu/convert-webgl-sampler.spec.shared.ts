@@ -1,77 +1,59 @@
+import {expect, test} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {GL} from '@luma.gl/constants/webgl-constants';
-import {convertSampler} from '@luma.gl/gltf/webgl-to-webgpu/convert-webgl-sampler';
-import {convertSamplerParametersToWebGL} from '@luma.gl/webgl/adapter/converters/sampler-parameters';
-import type {TapeTestFunction} from '@luma.gl/devtools-extensions/tape-test-utils';
-
-export function registerConvertWebGLSamplerTests(test: TapeTestFunction): void {
-  test('pbr#convertSampler#minFilter', async t => {
-    [
-      GL.NEAREST,
-      GL.LINEAR,
-      GL.NEAREST_MIPMAP_NEAREST,
-      GL.LINEAR_MIPMAP_NEAREST,
-      GL.NEAREST_MIPMAP_LINEAR,
-      GL.LINEAR_MIPMAP_LINEAR
-    ].forEach(minFilter => {
-      const props = convertSampler({minFilter});
+import { GL } from '@luma.gl/constants/webgl-constants';
+import { convertSampler } from '@luma.gl/gltf/webgl-to-webgpu/convert-webgl-sampler';
+import { convertSamplerParametersToWebGL } from '@luma.gl/webgl/adapter/converters/sampler-parameters';
+export function registerConvertWebGLSamplerTests(): void {
+  test('pbr#convertSampler#minFilter', async () => {
+    [GL.NEAREST, GL.LINEAR, GL.NEAREST_MIPMAP_NEAREST, GL.LINEAR_MIPMAP_NEAREST, GL.NEAREST_MIPMAP_LINEAR, GL.LINEAR_MIPMAP_LINEAR].forEach(minFilter => {
+      const props = convertSampler({
+        minFilter
+      });
       const gl = convertSamplerParametersToWebGL(props);
       const glValues = Object.values(gl);
-
-      t.equals(glValues.length, 1, 'Should return 1 value');
-      t.equals(glValues[0], minFilter, 'Value matches minFilter');
+      expect(glValues.length, 'Should return 1 value').toBe(1);
+      expect(glValues[0], 'Value matches minFilter').toBe(minFilter);
     });
-
-    t.deepEqual(convertSampler({}), {}, 'undefined sampler values are omitted');
-
-    t.end();
+    expect(convertSampler({}), 'undefined sampler values are omitted').toEqual({});
   });
-
-  test('pbr#convertSampler#magFilter', async t => {
+  test('pbr#convertSampler#magFilter', async () => {
     [GL.NEAREST, GL.LINEAR].forEach(magFilter => {
-      const props = convertSampler({magFilter});
+      const props = convertSampler({
+        magFilter
+      });
       const gl = convertSamplerParametersToWebGL(props);
       const glValues = Object.values(gl);
-
-      t.equals(glValues.length, 1, 'Should return 1 value');
-      t.equals(glValues[0], magFilter, 'Value matches magFilter');
+      expect(glValues.length, 'Should return 1 value').toBe(1);
+      expect(glValues[0], 'Value matches magFilter').toBe(magFilter);
     });
-
-    t.end();
   });
-
-  test('pbr#convertSampler#wrap', async t => {
+  test('pbr#convertSampler#wrap', async () => {
     [GL.CLAMP_TO_EDGE, GL.REPEAT, GL.MIRRORED_REPEAT].forEach(wrap => {
-      const props = convertSampler({wrapS: wrap, wrapT: wrap});
+      const props = convertSampler({
+        wrapS: wrap,
+        wrapT: wrap
+      });
       const gl = convertSamplerParametersToWebGL(props);
       const glValues = Object.values(gl);
-
-      t.equals(glValues.length, 2, 'Should return 2 values');
-      t.equals(glValues[0], wrap, 'Value matches wrapT');
-      t.equals(glValues[1], wrap, 'Value matches wrapS');
+      expect(glValues.length, 'Should return 2 values').toBe(2);
+      expect(glValues[0], 'Value matches wrapT').toBe(wrap);
+      expect(glValues[1], 'Value matches wrapS').toBe(wrap);
     });
-
     const mixed = convertSampler({
       wrapS: GL.REPEAT,
       wrapT: GL.CLAMP_TO_EDGE,
       minFilter: GL.LINEAR_MIPMAP_LINEAR,
       magFilter: GL.LINEAR
     });
-    t.deepEqual(
-      mixed,
-      {
-        addressModeU: 'repeat',
-        addressModeV: 'clamp-to-edge',
-        minFilter: 'linear',
-        mipmapFilter: 'linear',
-        magFilter: 'linear'
-      },
-      'mixed sampler props are converted without dropping fields'
-    );
-
-    t.end();
+    expect(mixed, 'mixed sampler props are converted without dropping fields').toEqual({
+      addressModeU: 'repeat',
+      addressModeV: 'clamp-to-edge',
+      minFilter: 'linear',
+      mipmapFilter: 'linear',
+      magFilter: 'linear'
+    });
   });
 }

@@ -1,15 +1,12 @@
+import {expect, test} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {sepia} from '@luma.gl/effects';
-import {getShaderModuleUniforms} from '@luma.gl/shadertools';
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
-
-test('sepia#build/uniform', t => {
+import { sepia } from '@luma.gl/effects';
+import { getShaderModuleUniforms } from '@luma.gl/shadertools';
+test('sepia#build/uniform', () => {
   const uniforms = getShaderModuleUniforms(sepia, {}, {});
-
-  t.ok(uniforms, 'sepia module build is ok');
-  t.equal(uniforms.amount, 0.5, 'sepia amount uniform is ok');
-  t.end();
+  expect(uniforms, 'sepia module build is ok').toBeTruthy();
+  expect(uniforms.amount, 'sepia amount uniform is ok').toBe(0.5);
 });

@@ -1,18 +1,8 @@
-// luma.gl
-// SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
-
-/* eslint-disable camelcase, no-console, no-undef */
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {Device} from '@luma.gl/core';
-import {getWebGLTestDevice} from '@luma.gl/test-utils';
-import {assembleGLSLShaderPair, PlatformInfo} from '@luma.gl/shadertools';
-import {
-  injectShader,
-  combineInjects,
-  DECLARATION_INJECT_MARKER
-} from '@luma.gl/shadertools/lib/shader-assembly/shader-injections';
-
+import {expect, test} from 'vitest';
+import { Device } from '@luma.gl/core';
+import { getWebGLTestDevice } from '@luma.gl/test-utils';
+import { assembleGLSLShaderPair, PlatformInfo } from '@luma.gl/shadertools';
+import { injectShader, combineInjects, DECLARATION_INJECT_MARKER } from '@luma.gl/shadertools/lib/shader-assembly/shader-injections';
 function getInfo(device: Device): PlatformInfo {
   return {
     type: device.type,
@@ -22,7 +12,6 @@ function getInfo(device: Device): PlatformInfo {
     features: new Set(device.features)
   };
 }
-
 const VS_GLSL_TEMPLATE = `\
 #version 300 es
 
@@ -38,10 +27,8 @@ void main(void) {
   vColor = vec4(1., 0., 0., 1.);
 }
 `;
-
 const VS_GLSL_RESOLVED_DECL = 'uniform float uNewUniform';
-
-const VS_GLSL_RESOLVED_MAIN = /* glsl */ `\
+const VS_GLSL_RESOLVED_MAIN = /* glsl */`\
 void main(void) {
   vNew = uNewUniform;
   gl_Position = positions;
@@ -49,7 +36,6 @@ void main(void) {
   picking_setPickColor(color);
 }
 `;
-
 const FS_GLSL_TEMPLATE = `\
 #version 300 es
 
@@ -66,17 +52,14 @@ void main(void) {
   fragmentColor = vColor;
 }
 `;
-
 const FS_GLSL_RESOLVED_DECL = 'uniform bool uDiscard';
-
-const FS_GLSL_RESOLVED_MAIN = /* glsl */ `\
+const FS_GLSL_RESOLVED_MAIN = /* glsl */`\
 void main(void) {
   if (uDiscard} { discard } else {
   fragmentColor = vColor;
   }
 }
 `;
-
 const INJECT = {
   'vs:#decl': 'uniform float uNewUniform;\n',
   'vs:#main-start': 'vNew = uNewUniform;\n',
@@ -85,20 +68,17 @@ const INJECT = {
   'fs:#main-start': '  if (uDiscard} { discard } else {\n',
   'fs:#main-end': '  }\n'
 };
-
 const INJECT1 = {
   'vs:#decl': 'uniform float uNewUniform;\n',
   'fs:#decl': 'uniform bool uDiscard;\n',
   'fs:#main-start': '  if (uDiscard} { discard } else {\n',
   'fs:#main-end': '  }\n'
 };
-
 const INJECT2 = {
   'vs:#decl': 'uniform float uNewUniform2;\n',
   'fs:#main-start': '  uNewUniform2 = uNewUniform + 1.;\n',
   'vs:#main-start': ' uNewUniform = uNewUniform2;\n'
 };
-
 const COMBINED_INJECT = {
   'vs:#decl': 'uniform float uNewUniform;\n\nuniform float uNewUniform2;\n',
   'fs:#decl': 'uniform bool uDiscard;\n',
@@ -106,43 +86,22 @@ const COMBINED_INJECT = {
   'fs:#main-end': '  }\n',
   'vs:#main-start': ' uNewUniform = uNewUniform2;\n'
 };
-
-test('injectShader#import', async t => {
-  t.ok(injectShader !== undefined, 'injectShader import successful');
-  t.end();
+test('injectShader#import', async () => {
+  expect(injectShader !== undefined, 'injectShader import successful').toBeTruthy();
 });
-
-test('injectShader#injectShader', async t => {
+test('injectShader#injectShader', async () => {
   let injectResult;
-
   injectResult = injectShader(VS_GLSL_TEMPLATE, 'vertex', injectionData(INJECT), true);
-  t.ok(
-    fuzzySubstring(injectResult, VS_GLSL_RESOLVED_DECL),
-    'declarations correctly injected in vertex shader'
-  );
-  t.ok(
-    fuzzySubstring(injectResult, VS_GLSL_RESOLVED_MAIN),
-    'main correctly injected in vertex shader'
-  );
-  t.ok(/#endif\s*$/.test(injectResult), 'standard stubs injected');
-
+  expect(fuzzySubstring(injectResult, VS_GLSL_RESOLVED_DECL), 'declarations correctly injected in vertex shader').toBeTruthy();
+  expect(fuzzySubstring(injectResult, VS_GLSL_RESOLVED_MAIN), 'main correctly injected in vertex shader').toBeTruthy();
+  expect(/#endif\s*$/.test(injectResult), 'standard stubs injected').toBeTruthy();
   injectResult = injectShader(FS_GLSL_TEMPLATE, 'fragment', injectionData(INJECT), true);
-  t.ok(
-    fuzzySubstring(injectResult, FS_GLSL_RESOLVED_DECL),
-    'declarations correctly injected in vertex shader'
-  );
-  t.ok(
-    fuzzySubstring(injectResult, FS_GLSL_RESOLVED_MAIN),
-    'main correctly injected in vertex shader'
-  );
-  t.ok(/#endif\s*$/.test(injectResult), 'standard stubs injected');
-
-  t.end();
+  expect(fuzzySubstring(injectResult, FS_GLSL_RESOLVED_DECL), 'declarations correctly injected in vertex shader').toBeTruthy();
+  expect(fuzzySubstring(injectResult, FS_GLSL_RESOLVED_MAIN), 'main correctly injected in vertex shader').toBeTruthy();
+  expect(/#endif\s*$/.test(injectResult), 'standard stubs injected').toBeTruthy();
 });
-
-test('injectShader#assembleGLSLShaderPair', async t => {
+test('injectShader#assembleGLSLShaderPair', async () => {
   const webglDevice = await getWebGLTestDevice();
-
   const assembleResult = assembleGLSLShaderPair({
     platformInfo: getInfo(webglDevice),
     vs: VS_GLSL_TEMPLATE,
@@ -150,41 +109,24 @@ test('injectShader#assembleGLSLShaderPair', async t => {
     inject: INJECT,
     prologue: false
   });
-  t.ok(
-    fuzzySubstring(assembleResult.vs, VS_GLSL_RESOLVED_DECL),
-    'declarations correctly assembled in vertex shader'
-  );
-  t.ok(
-    fuzzySubstring(assembleResult.vs, VS_GLSL_RESOLVED_MAIN),
-    'main correctly assembled in vertex shader'
-  );
-
-  t.ok(
-    fuzzySubstring(assembleResult.fs, FS_GLSL_RESOLVED_DECL),
-    'declarations correctly assembled in vertex shader'
-  );
-
-  t.ok(
-    fuzzySubstring(assembleResult.fs, FS_GLSL_RESOLVED_MAIN),
-    'main correctly assembled in vertex shader'
-  );
-
-  t.end();
+  expect(fuzzySubstring(assembleResult.vs, VS_GLSL_RESOLVED_DECL), 'declarations correctly assembled in vertex shader').toBeTruthy();
+  expect(fuzzySubstring(assembleResult.vs, VS_GLSL_RESOLVED_MAIN), 'main correctly assembled in vertex shader').toBeTruthy();
+  expect(fuzzySubstring(assembleResult.fs, FS_GLSL_RESOLVED_DECL), 'declarations correctly assembled in vertex shader').toBeTruthy();
+  expect(fuzzySubstring(assembleResult.fs, FS_GLSL_RESOLVED_MAIN), 'main correctly assembled in vertex shader').toBeTruthy();
 });
-
-test('injectShader#combineInjects', async t => {
-  t.deepEqual(combineInjects([INJECT1, INJECT2]), COMBINED_INJECT, 'injects correctly combined');
-  t.end();
+test('injectShader#combineInjects', async () => {
+  expect(combineInjects([INJECT1, INJECT2]), 'injects correctly combined').toEqual(COMBINED_INJECT);
 });
-
 function injectionData(data) {
   const result = {};
   for (const key in data) {
-    result[key] = [{injection: data[key], order: 0}];
+    result[key] = [{
+      injection: data[key],
+      order: 0
+    }];
   }
   return result;
 }
-
 function fuzzySubstring(string1, string2) {
   return string1.replace(/\s/g, '').indexOf(string2.replace(/\s/g, '')) > -1;
 }

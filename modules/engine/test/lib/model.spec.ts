@@ -1,17 +1,11 @@
-// luma.gl
-// SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
-
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {Device, luma, PipelineFactory, ShaderFactory} from '@luma.gl/core';
-import {Model} from '@luma.gl/engine';
-import {getWebGLTestDevice, getWebGPUTestDevice, getTestDevices} from '@luma.gl/test-utils';
-import {skin} from '@luma.gl/shadertools';
-import {pbrProjection} from '../../../shadertools/src/modules/lighting/pbr-material/pbr-projection';
-
+import {expect, test} from 'vitest';
+import { Device, luma, PipelineFactory, ShaderFactory } from '@luma.gl/core';
+import { Model } from '@luma.gl/engine';
+import { getWebGLTestDevice, getWebGPUTestDevice, getTestDevices } from '@luma.gl/test-utils';
+import { skin } from '@luma.gl/shadertools';
+import { pbrProjection } from '../../../shadertools/src/modules/lighting/pbr-material/pbr-projection';
 const stats = luma.stats.get('GPU Resource Counts');
-
-const DUMMY_WGSL = /* WGSL */ `
+const DUMMY_WGSL = /* WGSL */`
 @vertex fn vertexMain() -> @builtin(position) vec4<f32> {
   return vec4<f32>(0.0, 0.0, 0.0, 1.0);
 }
@@ -20,8 +14,7 @@ const DUMMY_WGSL = /* WGSL */ `
   return vec4<f32>(coord_in.x, coord_in.y, 0.0, 1.0);
 }
 `;
-
-const DUMMY_WGSL_WITH_BINDING = /* wgsl */ `
+const DUMMY_WGSL_WITH_BINDING = /* wgsl */`
 struct AppFrameUniforms {
   scale: f32
 };
@@ -36,17 +29,14 @@ struct AppFrameUniforms {
   return vec4<f32>(coord_in.x, coord_in.y, 0.0, 1.0);
 }
 `;
-
 const DUMMY_VS = `#version 300 es
   void main() { gl_Position = vec4(1.0); }
 `;
-
 const DUMMY_FS = `#version 300 es
   precision highp float;
   out vec4 fragColor;
   void main() { fragColor = vec4(1.0); }
 `;
-
 const mockModule = {
   name: 'test-module',
   vs: '',
@@ -54,10 +44,8 @@ const mockModule = {
   getUniforms: (opts, context) => ({}),
   dependencies: []
 };
-
-test('Model#construct/destruct', async t => {
+test('Model#construct/destruct', async () => {
   const webglDevice = await getWebGLTestDevice();
-
   const model = new Model(webglDevice, {
     id: 'construct-destruct-test',
     topology: 'point-list',
@@ -65,24 +53,15 @@ test('Model#construct/destruct', async t => {
     vs: DUMMY_VS,
     fs: DUMMY_FS
   });
-
-  t.ok(model, 'Model constructor does not throw errors');
-  t.ok(model.id, 'Model has an id');
-  t.ok(model.pipeline, 'Created pipeline');
-  t.false(model.pipeline.destroyed, 'Pipeline starts alive');
-
+  expect(model, 'Model constructor does not throw errors').toBeTruthy();
+  expect(model.id, 'Model has an id').toBeTruthy();
+  expect(model.pipeline, 'Created pipeline').toBeTruthy();
+  expect(model.pipeline.destroyed, 'Pipeline starts alive').toBe(false);
   model.destroy();
-  t.false(
-    model.pipeline.destroyed,
-    'Pipeline wrapper remains cached by default after last release'
-  );
-
-  t.end();
+  expect(model.pipeline.destroyed, 'Pipeline wrapper remains cached by default after last release').toBe(false);
 });
-
-test('Model#multiple delete', async t => {
+test('Model#multiple delete', async () => {
   const webglDevice = await getWebGLTestDevice();
-
   const model1 = new Model(webglDevice, {
     id: 'multiple-delete-test-1',
     topology: 'point-list',
@@ -90,7 +69,6 @@ test('Model#multiple delete', async t => {
     vs: DUMMY_VS,
     fs: DUMMY_FS
   });
-
   const model2 = new Model(webglDevice, {
     id: 'multiple-delete-test-2',
     topology: 'point-list',
@@ -98,25 +76,22 @@ test('Model#multiple delete', async t => {
     vs: DUMMY_VS,
     fs: DUMMY_FS
   });
-
   model1.destroy();
-  t.ok(model2.pipeline.destroyed === false, 'program still in use');
+  expect(model2.pipeline.destroyed === false, 'program still in use').toBeTruthy();
   model1.destroy();
-  t.ok(model2.pipeline.destroyed === false, 'program still in use');
+  expect(model2.pipeline.destroyed === false, 'program still in use').toBeTruthy();
   model2.destroy();
-  t.ok(model2.pipeline.destroyed === false, 'program remains cached after last release by default');
-
-  t.end();
+  expect(model2.pipeline.destroyed === false, 'program remains cached after last release by default').toBeTruthy();
 });
-
-test('Model#setAttributes', async t => {
+test('Model#setAttributes', async () => {
   const webglDevice = await getWebGLTestDevice();
-
-  const buffer1 = webglDevice.createBuffer({data: new Float32Array(9).fill(0)});
-  const buffer2 = webglDevice.createBuffer({data: new Float32Array(9).fill(1)});
-
+  const buffer1 = webglDevice.createBuffer({
+    data: new Float32Array(9).fill(0)
+  });
+  const buffer2 = webglDevice.createBuffer({
+    data: new Float32Array(9).fill(1)
+  });
   const initialActiveBuffers = stats.get('Buffers Active').count;
-
   const model = new Model(webglDevice, {
     id: 'set-attributes-test',
     vs: `#version 300 es
@@ -126,37 +101,36 @@ test('Model#setAttributes', async t => {
 `,
     fs: DUMMY_FS,
     attributes: {
-      positions: webglDevice.createBuffer({data: new Float32Array(12).fill(2)}),
-      normals: webglDevice.createBuffer({data: new Float32Array(12).fill(3)})
+      positions: webglDevice.createBuffer({
+        data: new Float32Array(12).fill(2)
+      }),
+      normals: webglDevice.createBuffer({
+        data: new Float32Array(12).fill(3)
+      })
     },
-    bufferLayout: [
-      {name: 'positions', format: 'float32x3'},
-      {name: 'normals', format: 'float32x3'},
-      {name: 'texCoords', format: 'float32x2'}
-    ]
+    bufferLayout: [{
+      name: 'positions',
+      format: 'float32x3'
+    }, {
+      name: 'normals',
+      format: 'float32x3'
+    }, {
+      name: 'texCoords',
+      format: 'float32x2'
+    }]
   });
-
-  t.is(
-    stats.get('Buffers Active').count - initialActiveBuffers,
-    2,
-    'Created new buffers for attributes'
-  );
-
-  model.setAttributes({positions: buffer1, normals: buffer2});
-
-  t.deepEqual(model.bufferAttributes, {}, 'no longer stores local attributes');
-
-  t.is(stats.get('Buffers Active').count - initialActiveBuffers, 2, 'Did not create new buffers');
-
+  expect(stats.get('Buffers Active').count - initialActiveBuffers, 'Created new buffers for attributes').toBe(2);
+  model.setAttributes({
+    positions: buffer1,
+    normals: buffer2
+  });
+  expect(model.bufferAttributes, 'no longer stores local attributes').toEqual({});
+  expect(stats.get('Buffers Active').count - initialActiveBuffers, 'Did not create new buffers').toBe(2);
   model.destroy();
-
   buffer1.destroy();
   buffer2.destroy();
-
-  t.end();
 });
-
-test('Model#setters, getters', async t => {
+test('Model#setters, getters', async () => {
   const webglDevice = await getWebGLTestDevice();
   const model = new Model(webglDevice, {
     id: 'setters-getters-test',
@@ -164,100 +138,80 @@ test('Model#setters, getters', async t => {
     vs: DUMMY_VS,
     fs: DUMMY_FS
   });
-
   model.setVertexCount(12);
-  t.is(model.vertexCount, 12, 'set vertex count');
-
+  expect(model.vertexCount, 'set vertex count').toBe(12);
   model.setInstanceCount(4);
-  t.is(model.instanceCount, 4, 'set instance count');
-
+  expect(model.instanceCount, 'set instance count').toBe(4);
   model.setTopology('triangle-list');
-  t.is(model.topology, 'triangle-list', 'set topology');
-
+  expect(model.topology, 'set topology').toBe('triangle-list');
   model.destroy();
-
-  t.end();
 });
-
-test('Model#draw', async t => {
+test('Model#draw', async () => {
   const webglDevice = await getWebGLTestDevice();
-
   const model = new Model(webglDevice, {
     id: 'draw-test',
     vs: DUMMY_VS,
     fs: DUMMY_FS,
     attributes: {
-      positions: webglDevice.createBuffer({data: new Float32Array(12).fill(2)}),
-      normals: webglDevice.createBuffer({data: new Float32Array(12).fill(3)})
+      positions: webglDevice.createBuffer({
+        data: new Float32Array(12).fill(2)
+      }),
+      normals: webglDevice.createBuffer({
+        data: new Float32Array(12).fill(3)
+      })
     },
-    bufferLayout: [
-      {name: 'positions', format: 'float32x3'},
-      {name: 'normals', format: 'float32x3'}
-    ]
+    bufferLayout: [{
+      name: 'positions',
+      format: 'float32x3'
+    }, {
+      name: 'normals',
+      format: 'float32x3'
+    }]
   });
-
-  const renderPass = webglDevice.beginRenderPass({clearColor: [0, 0, 0, 0]});
-
+  const renderPass = webglDevice.beginRenderPass({
+    clearColor: [0, 0, 0, 0]
+  });
   model.draw(renderPass);
-
   renderPass.destroy();
-
   model.destroy();
-
-  t.end();
 });
-
-test('Model#getBindingDebugTable', async t => {
+test('Model#getBindingDebugTable', async () => {
   const webgpuDevice = await getWebGPUTestDevice();
   if (!webgpuDevice) {
-    t.comment('WebGPU unavailable, skipping binding debug table test');
-    t.end();
     return;
   }
-
   const wgslModel = new Model(webgpuDevice, {
     id: 'binding-debug-table-test',
     source: DUMMY_WGSL_WITH_BINDING,
     modules: [pbrProjection, skin],
     vertexCount: 3
   });
-
-  t.deepEqual(
-    wgslModel.getBindingDebugTable().map(row => ({
-      name: row.name,
-      group: row.group,
-      binding: row.binding,
-      owner: row.owner,
-      moduleName: row.moduleName
-    })),
-    [
-      {
-        name: 'appFrame',
-        group: 0,
-        binding: 0,
-        owner: 'application',
-        moduleName: undefined
-      },
-      {
-        name: 'pbrProjection',
-        group: 0,
-        binding: 100,
-        owner: 'module',
-        moduleName: 'pbrProjection'
-      },
-      {
-        name: 'skin',
-        group: 0,
-        binding: 101,
-        owner: 'module',
-        moduleName: 'skin'
-      }
-    ],
-    'WGSL model exposes assembled binding debug rows before draw'
-  );
-
+  expect(wgslModel.getBindingDebugTable().map(row => ({
+    name: row.name,
+    group: row.group,
+    binding: row.binding,
+    owner: row.owner,
+    moduleName: row.moduleName
+  })), 'WGSL model exposes assembled binding debug rows before draw').toEqual([{
+    name: 'appFrame',
+    group: 0,
+    binding: 0,
+    owner: 'application',
+    moduleName: undefined
+  }, {
+    name: 'pbrProjection',
+    group: 0,
+    binding: 100,
+    owner: 'module',
+    moduleName: 'pbrProjection'
+  }, {
+    name: 'skin',
+    group: 0,
+    binding: 101,
+    owner: 'module',
+    moduleName: 'skin'
+  }]);
   wgslModel.destroy();
-
   const webglDevice = await getWebGLTestDevice();
   const glslModel = new Model(webglDevice, {
     id: 'binding-debug-table-glsl-test',
@@ -265,15 +219,10 @@ test('Model#getBindingDebugTable', async t => {
     fs: DUMMY_FS,
     vertexCount: 3
   });
-
-  t.deepEqual(glslModel.getBindingDebugTable(), [], 'GLSL model reports no WGSL binding rows');
-
+  expect(glslModel.getBindingDebugTable(), 'GLSL model reports no WGSL binding rows').toEqual([]);
   glslModel.destroy();
-
-  t.end();
 });
-
-test('Model#topology', async t => {
+test('Model#topology', async () => {
   for (const device of await getTestDevices()) {
     const model = new Model(device, {
       id: 'topology-test',
@@ -284,56 +233,41 @@ test('Model#topology', async t => {
       fragmentEntryPoint: 'fragmentMain',
       vertexCount: 3
     });
-
-    t.equal(model.topology, 'triangle-list', 'Pipeline has triangle-list topology');
+    expect(model.topology, 'Pipeline has triangle-list topology').toBe('triangle-list');
     if (device.type === 'webgpu') {
       // Cached model in WebGL can have a different topology
-      t.equal(
-        model.pipeline.props.topology,
-        'triangle-list',
-        'Pipeline has triangle-list topology'
-      );
+      expect(model.pipeline.props.topology, 'Pipeline has triangle-list topology').toBe('triangle-list');
     }
-
     model.setTopology('line-strip');
-
-    const framebuffer = device
-      .getDefaultCanvasContext()
-      .getCurrentFramebuffer({depthStencilFormat: false});
-    const renderPass = device.beginRenderPass({framebuffer, clearColor: [0, 0, 0, 0]});
+    const framebuffer = device.getDefaultCanvasContext().getCurrentFramebuffer({
+      depthStencilFormat: false
+    });
+    const renderPass = device.beginRenderPass({
+      framebuffer,
+      clearColor: [0, 0, 0, 0]
+    });
     model.draw(renderPass);
-
-    t.equal(model.topology, 'line-strip', 'Pipeline has line-strip topology');
+    expect(model.topology, 'Pipeline has line-strip topology').toBe('line-strip');
     if (device.type === 'webgpu') {
       // Cached model in WebGL can have a different topology
-      t.equal(model.pipeline.props.topology, 'line-strip', 'Pipeline has triangle-list topology');
+      expect(model.pipeline.props.topology, 'Pipeline has triangle-list topology').toBe('line-strip');
     }
-
     renderPass.end();
     device.submit();
     renderPass.destroy();
     model.destroy();
   }
-
-  t.end();
 });
-
-test('Model#pipeline caching', async t => {
+test('Model#pipeline caching', async () => {
   const webglDevice = await getWebGLTestDevice();
   if (isSoftwareBackedDevice(webglDevice)) {
-    t.comment('Skipping WebGL pipeline caching test on a software-backed adapter');
-    t.end();
     return;
   }
   if (!webglDevice.props._cachePipelines) {
-    t.comment('Pipeline caching is disabled');
-    t.end();
     return;
   }
-
   const pipelineFactory = new PipelineFactory(webglDevice);
   const shaderFactory = new ShaderFactory(webglDevice);
-
   const model1 = new Model(webglDevice, {
     id: 'pipeline-caching-test-1',
     pipelineFactory,
@@ -341,9 +275,10 @@ test('Model#pipeline caching', async t => {
     topology: 'point-list',
     vs: DUMMY_VS,
     fs: DUMMY_FS,
-    uniforms: {x: 0.5}
+    uniforms: {
+      x: 0.5
+    }
   });
-
   const model2 = new Model(webglDevice, {
     id: 'pipeline-caching-test-2',
     pipelineFactory,
@@ -351,44 +286,35 @@ test('Model#pipeline caching', async t => {
     topology: 'point-list',
     vs: DUMMY_VS,
     fs: DUMMY_FS,
-    uniforms: {x: -0.5}
+    uniforms: {
+      x: -0.5
+    }
   });
-
-  t.ok(model1.pipeline === model2.pipeline, 'Pipelines are shared.');
-
-  const renderPass = webglDevice.beginRenderPass({clearColor: [0, 0, 0, 0]});
-
-  t.ok(model1.draw(renderPass), 'First model draw succeeded');
-
-  t.ok(model2.draw(renderPass), 'Second model draw succeeded');
-
-  model2.setBufferLayout([{name: 'a', format: 'float32x3'}]);
+  expect(model1.pipeline === model2.pipeline, 'Pipelines are shared.').toBeTruthy();
+  const renderPass = webglDevice.beginRenderPass({
+    clearColor: [0, 0, 0, 0]
+  });
+  expect(model1.draw(renderPass), 'First model draw succeeded').toBeTruthy();
+  expect(model2.draw(renderPass), 'Second model draw succeeded').toBeTruthy();
+  model2.setBufferLayout([{
+    name: 'a',
+    format: 'float32x3'
+  }]);
   model2.predraw(); // Forces a pipeline update
-  t.ok(model1.pipeline !== model2.pipeline, 'Pipeline updated');
-
-  t.ok(model2.draw(renderPass), 'Pipeline updates still draw');
-
+  expect(model1.pipeline !== model2.pipeline, 'Pipeline updated').toBeTruthy();
+  expect(model2.draw(renderPass), 'Pipeline updates still draw').toBeTruthy();
   renderPass.destroy();
-
   model1.destroy();
   model2.destroy();
-
-  t.end();
 });
-
-test('Model#pipeline caching with defines and modules', async t => {
+test('Model#pipeline caching with defines and modules', async () => {
   const webglDevice = await getWebGLTestDevice();
   if (isSoftwareBackedDevice(webglDevice)) {
-    t.comment('Skipping WebGL pipeline caching-with-modules test on a software-backed adapter');
-    t.end();
     return;
   }
   if (!webglDevice.props._cachePipelines) {
-    t.comment('Pipeline caching is disabled');
-    t.end();
     return;
   }
-
   const pipelineFactory = PipelineFactory.getDefaultPipelineFactory(webglDevice);
   const shaderFactory = ShaderFactory.getDefaultShaderFactory(webglDevice);
   const model1 = new Model(webglDevice, {
@@ -397,37 +323,43 @@ test('Model#pipeline caching with defines and modules', async t => {
     vs: DUMMY_VS,
     fs: DUMMY_FS
   });
-
-  t.ok(model1.pipeline, 'Got a pipeline');
+  expect(model1.pipeline, 'Got a pipeline').toBeTruthy();
 
   // reuse assembled shaders; this cache is already tested in shader-factory.spec.ts.
-  const vs = shaderFactory.createShader({stage: 'vertex', source: model1.vs});
-  const fs = shaderFactory.createShader({stage: 'fragment', source: model1.fs});
-
-  const pipeline2 = pipelineFactory.createRenderPipeline({vs, fs, topology: 'triangle-list'});
-
-  t.ok(model1.pipeline === pipeline2, 'Got cached pipeline');
-
+  const vs = shaderFactory.createShader({
+    stage: 'vertex',
+    source: model1.vs
+  });
+  const fs = shaderFactory.createShader({
+    stage: 'fragment',
+    source: model1.fs
+  });
+  const pipeline2 = pipelineFactory.createRenderPipeline({
+    vs,
+    fs,
+    topology: 'triangle-list'
+  });
+  expect(model1.pipeline === pipeline2, 'Got cached pipeline').toBeTruthy();
   const defineModel1 = new Model(webglDevice, {
     id: 'caching-with-modules-test-2',
     topology: 'triangle-list',
     vs: DUMMY_VS,
     fs: DUMMY_FS,
-    defines: {MY_DEFINE: true}
+    defines: {
+      MY_DEFINE: true
+    }
   });
-
-  t.ok(model1.pipeline !== defineModel1.pipeline, 'Define triggers new pipeline');
-
+  expect(model1.pipeline !== defineModel1.pipeline, 'Define triggers new pipeline').toBeTruthy();
   const defineModel2 = new Model(webglDevice, {
     id: 'caching-with-modules-test-3',
     topology: 'triangle-list',
     vs: DUMMY_VS,
     fs: DUMMY_FS,
-    defines: {MY_DEFINE: true}
+    defines: {
+      MY_DEFINE: true
+    }
   });
-
-  t.ok(defineModel1.pipeline === defineModel2.pipeline, 'Got cached pipeline with defines');
-
+  expect(defineModel1.pipeline === defineModel2.pipeline, 'Got cached pipeline with defines').toBeTruthy();
   const moduleModel1 = new Model(webglDevice, {
     id: 'caching-with-modules-test-4',
     topology: 'triangle-list',
@@ -435,10 +367,8 @@ test('Model#pipeline caching with defines and modules', async t => {
     fs: DUMMY_FS,
     modules: [mockModule]
   });
-
-  t.ok(model1.pipeline !== moduleModel1.pipeline, 'Module triggers new pipeline');
-  t.ok(defineModel1.pipeline !== moduleModel1.pipeline, 'Module triggers new pipeline');
-
+  expect(model1.pipeline !== moduleModel1.pipeline, 'Module triggers new pipeline').toBeTruthy();
+  expect(defineModel1.pipeline !== moduleModel1.pipeline, 'Module triggers new pipeline').toBeTruthy();
   const moduleModel2 = new Model(webglDevice, {
     id: 'caching-with-modules-test-5',
     topology: 'triangle-list',
@@ -446,49 +376,34 @@ test('Model#pipeline caching with defines and modules', async t => {
     fs: DUMMY_FS,
     modules: [mockModule]
   });
-
-  t.ok(moduleModel1.pipeline === moduleModel2.pipeline, 'Got cached pipeline with modules');
-
+  expect(moduleModel1.pipeline === moduleModel2.pipeline, 'Got cached pipeline with modules').toBeTruthy();
   const defineModuleModel1 = new Model(webglDevice, {
     id: 'caching-with-modules-test-6',
     vs: DUMMY_VS,
     fs: DUMMY_FS,
     topology: 'triangle-list',
     modules: [mockModule],
-    defines: {MY_DEFINE: true}
+    defines: {
+      MY_DEFINE: true
+    }
   });
-
-  t.ok(pipeline2 !== defineModuleModel1.pipeline, 'Module and define triggers new pipeline');
-  t.ok(
-    defineModel1.pipeline !== defineModuleModel1.pipeline,
-    'Module and define triggers new pipeline'
-  );
-  t.ok(
-    moduleModel1.pipeline !== defineModuleModel1.pipeline,
-    'Module and define triggers new pipeline'
-  );
-
+  expect(pipeline2 !== defineModuleModel1.pipeline, 'Module and define triggers new pipeline').toBeTruthy();
+  expect(defineModel1.pipeline !== defineModuleModel1.pipeline, 'Module and define triggers new pipeline').toBeTruthy();
+  expect(moduleModel1.pipeline !== defineModuleModel1.pipeline, 'Module and define triggers new pipeline').toBeTruthy();
   const defineModuleModel2 = new Model(webglDevice, {
     id: 'caching-with-modules-test-7',
     vs: DUMMY_VS,
     fs: DUMMY_FS,
     topology: 'triangle-list',
     modules: [mockModule],
-    defines: {MY_DEFINE: true}
+    defines: {
+      MY_DEFINE: true
+    }
   });
-
-  t.ok(
-    defineModuleModel1.pipeline === defineModuleModel2.pipeline,
-    'Got cached pipeline with modules and defines'
-  );
-
-  t.end();
+  expect(defineModuleModel1.pipeline === defineModuleModel2.pipeline, 'Got cached pipeline with modules and defines').toBeTruthy();
 });
-
 function isSoftwareBackedDevice(device: Device): boolean {
-  return (
-    device.info.gpu === 'software' || device.info.gpuType === 'cpu' || Boolean(device.info.fallback)
-  );
+  return device.info.gpu === 'software' || device.info.gpuType === 'cpu' || Boolean(device.info.fallback);
 }
 
 /*

@@ -1,16 +1,13 @@
+import {expect, test} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {brightnessContrast} from '@luma.gl/effects';
-import {getShaderModuleUniforms} from '@luma.gl/shadertools';
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
-
-test('brightnessContrast#build/uniform', t => {
+import { brightnessContrast } from '@luma.gl/effects';
+import { getShaderModuleUniforms } from '@luma.gl/shadertools';
+test('brightnessContrast#build/uniform', () => {
   const uniforms = getShaderModuleUniforms(brightnessContrast, {}, {});
-
-  t.ok(uniforms, 'brightnessContrast module build is ok');
-  t.equal(uniforms.brightness, 0, 'brightnessContrast brightness uniform is ok');
-  t.equal(uniforms.contrast, 0, 'brightnessContrast contrast uniform is ok');
-  t.end();
+  expect(uniforms, 'brightnessContrast module build is ok').toBeTruthy();
+  expect(uniforms.brightness, 'brightnessContrast brightness uniform is ok').toBe(0);
+  expect(uniforms.contrast, 'brightnessContrast contrast uniform is ok').toBe(0);
 });

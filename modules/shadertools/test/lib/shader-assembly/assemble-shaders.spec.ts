@@ -1,20 +1,9 @@
-// luma.gl
-// SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
-
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {Device} from '@luma.gl/core';
-import {getWebGLTestDevice} from '@luma.gl/test-utils';
-import {
-  assembleGLSLShaderPair,
-  picking,
-  fp64,
-  pbrMaterial,
-  PlatformInfo
-} from '@luma.gl/shadertools';
-import type {WebGLDevice} from '@luma.gl/webgl';
-import {isBrowser} from '@probe.gl/env';
-
+import {expect, test} from 'vitest';
+import { Device } from '@luma.gl/core';
+import { getWebGLTestDevice } from '@luma.gl/test-utils';
+import { assembleGLSLShaderPair, picking, fp64, pbrMaterial, PlatformInfo } from '@luma.gl/shadertools';
+import type { WebGLDevice } from '@luma.gl/webgl';
+import { isBrowser } from '@probe.gl/env';
 function getInfo(device: Device): PlatformInfo {
   return {
     type: device.type,
@@ -24,8 +13,7 @@ function getInfo(device: Device): PlatformInfo {
     features: new Set(device.features)
   };
 }
-
-const VS_GLSL_300 = /* glsl */ `\
+const VS_GLSL_300 = /* glsl */`\
 #version 300 es
 
 in vec4 positions;
@@ -34,8 +22,7 @@ void main(void) {
   gl_Position = positions;
 }
 `;
-
-const FS_GLSL_300 = /* glsl */ `\
+const FS_GLSL_300 = /* glsl */`\
 #version 300 es
 
 precision highp float;
@@ -46,8 +33,7 @@ void main(void) {
   fragmentColor = vec4(1.0, 1.0, 1.0, 1.0);
 }
 `;
-
-const VS_GLSL_300_2 = /* glsl */ `\
+const VS_GLSL_300_2 = /* glsl */`\
 #version 300 es
 
 in vec4 positions;
@@ -77,8 +63,7 @@ void main(void) {
   setPosition2(positions, gl_Position);
 }
 `;
-
-const FS_GLSL_300_2 = /* glsl */ `\
+const FS_GLSL_300_2 = /* glsl */`\
 #version 300 es
 
 precision highp float;
@@ -94,8 +79,7 @@ void main(void) {
   fragmentColor = texture(tex, vUV) * vec4(vNormal, 1.0);
 }
 `;
-
-const VS_GLSL_300_FP64 = /* glsl */ `\
+const VS_GLSL_300_FP64 = /* glsl */`\
 #version 300 es
 
 in vec2 positions64xy;
@@ -108,8 +92,7 @@ void main(void) {
   resultValue = position64xy.x + position64xy.y;
 }
 `;
-
-const FS_GLSL_300_FP64 = /* glsl */ `\
+const FS_GLSL_300_FP64 = /* glsl */`\
 #version 300 es
 
 precision highp float;
@@ -126,7 +109,7 @@ void main(void) {
 // deck.gl mesh layer shaders
 // TODO - broken tests
 
-const VS_GLSL_300_DECK = /* glsl */ `\
+const VS_GLSL_300_DECK = /* glsl */`\
 #version 300 es
 #define SHADER_NAME simple-mesh-layer-vs
 
@@ -170,8 +153,7 @@ void main(void) {
   }
 }
 `;
-
-const FS_GLSL_300_DECK = /* glsl */ `\
+const FS_GLSL_300_DECK = /* glsl */`\
 #version 300 es
 #define SHADER_NAME simple-mesh-layer-fs
 
@@ -203,8 +185,7 @@ void main(void) {
   fragColor = vec4(lightColor, color.a * opacity);
 }
 `;
-
-const VS_GLSL_300_GLTF = /* glsl */ `\
+const VS_GLSL_300_GLTF = /* glsl */`\
 #version 300 es
 
 #if (__VERSION__ < 300)
@@ -248,8 +229,7 @@ const VS_GLSL_300_GLTF = /* glsl */ `\
     gl_Position = u_MVPMatrix * POSITION;
   }
 `;
-
-const FS_GLSL_300_GLTF = /* glsl */ `\
+const FS_GLSL_300_GLTF = /* glsl */`\
 #version 300 es
 
   out vec4 fragmentColor;
@@ -258,21 +238,18 @@ const FS_GLSL_300_GLTF = /* glsl */ `\
     fragmentColor = pbr_filterColor(vec4(0));
   }
 `;
-
 const TEST_MODULE = {
   name: 'TEST_MODULE',
   inject: {
     'vs:#decl': 'uniform float vsFloat;',
     // Hook function has access to injected variable
     'vs:HOOK_FUNCTION': 'value = vsFloat;',
-
     'fs:#decl': 'uniform vec4 fsVec4;',
     // Hook function has access to injected variable
     'fs:HOOK_FUNCTION': 'value = fsVec4;'
   }
 };
-
-const VS_GLSL_300_MODULES = /* glsl */ `\
+const VS_GLSL_300_MODULES = /* glsl */`\
 #version 300 es
 
 in float floatAttribute;
@@ -283,8 +260,7 @@ void main(void) {
   HOOK_FUNCTION(floatVarying);
 }
 `;
-
-const FS_GLSL_300_MODULES = /* glsl */ `\
+const FS_GLSL_300_MODULES = /* glsl */`\
 #version 300 es
 precision highp float;
 
@@ -296,15 +272,11 @@ void main(void) {
   HOOK_FUNCTION(fragmentColor);
 }
 `;
-
-test('assembleGLSLShaderPair#import', async t => {
-  t.ok(assembleGLSLShaderPair !== undefined, 'assembleGLSLShaderPair import successful');
-  t.end();
+test('assembleGLSLShaderPair#import', async () => {
+  expect(assembleGLSLShaderPair !== undefined, 'assembleGLSLShaderPair import successful').toBeTruthy();
 });
-
-test('assembleGLSLShaderPair#version_directive', async t => {
+test('assembleGLSLShaderPair#version_directive', async () => {
   const webglDevice = await getWebGLTestDevice();
-
   const assembleResult = assembleGLSLShaderPair({
     platformInfo: getInfo(webglDevice),
     vs: VS_GLSL_300,
@@ -312,20 +284,10 @@ test('assembleGLSLShaderPair#version_directive', async t => {
     modules: [picking]
   });
   // Verify version directive remains as first line.
-  t.equal(
-    assembleResult.vs.indexOf('#version 300'),
-    0,
-    'version directive should be first statement'
-  );
-  t.equal(
-    assembleResult.fs.indexOf('#version 300'),
-    0,
-    'version directive should be first statement'
-  );
-  t.end();
+  expect(assembleResult.vs.indexOf('#version 300'), 'version directive should be first statement').toBe(0);
+  expect(assembleResult.fs.indexOf('#version 300'), 'version directive should be first statement').toBe(0);
 });
-
-test('assembleGLSLShaderPair#getUniforms', async t => {
+test('assembleGLSLShaderPair#getUniforms', async () => {
   const webglDevice = await getWebGLTestDevice();
 
   // inject spy into the picking module's getUniforms
@@ -341,7 +303,7 @@ test('assembleGLSLShaderPair#getUniforms', async t => {
     fs: FS_GLSL_300
   });
   // Verify getUniforms is function
-  t.is(typeof assembleResult.getUniforms, 'function', 'getUniforms should be function');
+  expect(typeof assembleResult.getUniforms, 'getUniforms should be function').toBe('function');
 
   // With shader modules
   const testModule = {
@@ -350,12 +312,11 @@ test('assembleGLSLShaderPair#getUniforms', async t => {
     fs: '',
     getUniforms: (opts, context) => {
       // Check a uniform generated by its dependency
-      t.ok(context.picking_uActive, 'module getUniforms is called with correct context');
+      expect(context.picking_uActive, 'module getUniforms is called with correct context').toBeTruthy();
       return {};
     },
     dependencies: [picking]
   };
-
   assembleResult = assembleGLSLShaderPair({
     platformInfo: getInfo(webglDevice),
     vs: VS_GLSL_300,
@@ -364,60 +325,46 @@ test('assembleGLSLShaderPair#getUniforms', async t => {
   });
 
   // Verify getUniforms is function
-  t.is(typeof assembleResult.getUniforms, 'function', 'getUniforms should be function');
-
-  t.end();
+  expect(typeof assembleResult.getUniforms, 'getUniforms should be function').toBe('function');
 });
-
-test('assembleGLSLShaderPair#defines', async t => {
+test('assembleGLSLShaderPair#defines', async () => {
   const webglDevice = await getWebGLTestDevice();
-
   const assembleResult = assembleGLSLShaderPair({
     platformInfo: getInfo(webglDevice),
     vs: VS_GLSL_300,
     fs: FS_GLSL_300,
-    defines: {IS_TEST: true}
+    defines: {
+      IS_TEST: true
+    }
   });
-
-  t.ok(assembleResult.vs.indexOf('#define IS_TEST true') > 0, 'has application defines');
-  t.ok(assembleResult.fs.indexOf('#define IS_TEST true') > 0, 'has application defines');
-
-  t.end();
+  expect(assembleResult.vs.indexOf('#define IS_TEST true') > 0, 'has application defines').toBeTruthy();
+  expect(assembleResult.fs.indexOf('#define IS_TEST true') > 0, 'has application defines').toBeTruthy();
 });
-
-test('assembleGLSLShaderPair#fp64 platform defines compile', async t => {
+test('assembleGLSLShaderPair#fp64 platform defines compile', async () => {
   const webglDevice = await getWebGLTestDevice();
   const basePlatformInfo = getInfo(webglDevice);
-  const platformTestCases = [
-    {
-      label: 'apple',
-      platformInfo: {...basePlatformInfo, gpu: 'apple'},
-      expectedDefines: [
-        '#define APPLE_GPU',
-        '#define LUMA_FP64_CODE_ELIMINATION_WORKAROUND 1',
-        '#define LUMA_FP64_HIGH_BITS_OVERFLOW_WORKAROUND 1'
-      ]
+  const platformTestCases = [{
+    label: 'apple',
+    platformInfo: {
+      ...basePlatformInfo,
+      gpu: 'apple'
     },
-    {
-      label: 'intel',
-      platformInfo: {...basePlatformInfo, gpu: 'intel'},
-      expectedDefines: [
-        '#define INTEL_GPU',
-        '#define LUMA_FP64_CODE_ELIMINATION_WORKAROUND 1',
-        '#define LUMA_FP64_HIGH_BITS_OVERFLOW_WORKAROUND 1'
-      ]
+    expectedDefines: ['#define APPLE_GPU', '#define LUMA_FP64_CODE_ELIMINATION_WORKAROUND 1', '#define LUMA_FP64_HIGH_BITS_OVERFLOW_WORKAROUND 1']
+  }, {
+    label: 'intel',
+    platformInfo: {
+      ...basePlatformInfo,
+      gpu: 'intel'
     },
-    {
-      label: 'unknown',
-      platformInfo: {...basePlatformInfo, gpu: 'unknown'},
-      expectedDefines: [
-        '#define DEFAULT_GPU',
-        '#define LUMA_FP64_CODE_ELIMINATION_WORKAROUND 1',
-        '#define LUMA_FP64_HIGH_BITS_OVERFLOW_WORKAROUND 1'
-      ]
-    }
-  ];
-
+    expectedDefines: ['#define INTEL_GPU', '#define LUMA_FP64_CODE_ELIMINATION_WORKAROUND 1', '#define LUMA_FP64_HIGH_BITS_OVERFLOW_WORKAROUND 1']
+  }, {
+    label: 'unknown',
+    platformInfo: {
+      ...basePlatformInfo,
+      gpu: 'unknown'
+    },
+    expectedDefines: ['#define DEFAULT_GPU', '#define LUMA_FP64_CODE_ELIMINATION_WORKAROUND 1', '#define LUMA_FP64_HIGH_BITS_OVERFLOW_WORKAROUND 1']
+  }];
   for (const platformTestCase of platformTestCases) {
     const assembleResult = assembleGLSLShaderPair({
       platformInfo: platformTestCase.platformInfo,
@@ -425,21 +372,11 @@ test('assembleGLSLShaderPair#fp64 platform defines compile', async t => {
       fs: FS_GLSL_300_FP64,
       modules: [fp64]
     });
-
     for (const expectedDefine of platformTestCase.expectedDefines) {
-      t.ok(
-        assembleResult.vs.includes(expectedDefine),
-        `${platformTestCase.label} includes ${expectedDefine}`
-      );
+      expect(assembleResult.vs.includes(expectedDefine), `${platformTestCase.label} includes ${expectedDefine}`).toBeTruthy();
     }
-
-    t.ok(
-      compileAndLinkShaders(t, webglDevice, assembleResult),
-      `${platformTestCase.label} fp64 assembly compiles and links`
-    );
+    expect(compileAndLinkShaders(t, webglDevice, assembleResult), `${platformTestCase.label} fp64 assembly compiles and links`).toBeTruthy();
   }
-
-  t.end();
 });
 
 /** Note that */
@@ -455,26 +392,19 @@ const pickingInject = {
     'fs:#main-end': 'fragmentColor = picking_filterColor(fragmentColor);'
   }
 };
-
-test('assembleGLSLShaderPair#shaderhooks', async t => {
+test('assembleGLSLShaderPair#shaderhooks', async () => {
   const webglDevice = await getWebGLTestDevice();
-
-  const hookFunctions = [
-    'vs:LUMAGL_pickColor(inout vec4 color)',
-    {
-      hook: 'fs:LUMAGL_fragmentColor(inout vec4 color)',
-      header: 'if (color.a == 0.0) discard;\n',
-      footer: 'color.a *= 1.2;\n'
-    }
-  ];
-
+  const hookFunctions = ['vs:LUMAGL_pickColor(inout vec4 color)', {
+    hook: 'fs:LUMAGL_fragmentColor(inout vec4 color)',
+    header: 'if (color.a == 0.0) discard;\n',
+    footer: 'color.a *= 1.2;\n'
+  }];
   const testInject = {
     name: 'test-injection',
     inject: {
       'fs:LUMAGL_fragmentColor': 'color.r = 1.0;'
     }
   };
-
   let assembleResult = assembleGLSLShaderPair({
     platformInfo: getInfo(webglDevice),
     vs: VS_GLSL_300,
@@ -482,32 +412,12 @@ test('assembleGLSLShaderPair#shaderhooks', async t => {
     hookFunctions
   });
   // Verify version directive remains as first line.
-  t.ok(
-    assembleResult.vs.indexOf('LUMAGL_pickColor') > -1,
-    'hook function injected into vertex shader'
-  );
-  t.ok(
-    assembleResult.fs.indexOf('LUMAGL_fragmentColor') > -1,
-    'hook function injected into fragment shader'
-  );
-  t.ok(
-    assembleResult.fs.indexOf('if (color.a == 0.0) discard;') > -1,
-    'hook header injected into fragment shader'
-  );
-  t.ok(
-    assembleResult.vs.indexOf('picking_setPickingColor(color.rgb)') === -1,
-    'injection code not included in vertex shader without module'
-  );
-  t.ok(
-    assembleResult.fs.indexOf('color = picking_filterColor(color)') === -1,
-    'injection code not included in fragment shader without module'
-  );
-
-  t.ok(
-    assembleResult.fs.indexOf('fragmentColor = picking_filterColor(fragmentColor)') === -1,
-    'regex injection code not included in fragment shader without module'
-  );
-
+  expect(assembleResult.vs.indexOf('LUMAGL_pickColor') > -1, 'hook function injected into vertex shader').toBeTruthy();
+  expect(assembleResult.fs.indexOf('LUMAGL_fragmentColor') > -1, 'hook function injected into fragment shader').toBeTruthy();
+  expect(assembleResult.fs.indexOf('if (color.a == 0.0) discard;') > -1, 'hook header injected into fragment shader').toBeTruthy();
+  expect(assembleResult.vs.indexOf('picking_setPickingColor(color.rgb)') === -1, 'injection code not included in vertex shader without module').toBeTruthy();
+  expect(assembleResult.fs.indexOf('color = picking_filterColor(color)') === -1, 'injection code not included in fragment shader without module').toBeTruthy();
+  expect(assembleResult.fs.indexOf('fragmentColor = picking_filterColor(fragmentColor)') === -1, 'regex injection code not included in fragment shader without module').toBeTruthy();
   assembleResult = assembleGLSLShaderPair({
     platformInfo: getInfo(webglDevice),
     vs: VS_GLSL_300,
@@ -516,34 +426,12 @@ test('assembleGLSLShaderPair#shaderhooks', async t => {
     hookFunctions
   });
   // Verify version directive remains as first line.
-  t.ok(
-    assembleResult.vs.indexOf('LUMAGL_pickColor') > -1,
-    'hook function injected into vertex shader'
-  );
-  t.ok(
-    assembleResult.fs.indexOf('LUMAGL_fragmentColor') > -1,
-    'hook function injected into fragment shader'
-  );
-
-  t.ok(
-    assembleResult.vs.indexOf('picking_setPickingColor(color.rgb)') > -1,
-    'injection code included in vertex shader with module'
-  );
-  t.ok(
-    assembleResult.fs.indexOf('color = picking_filterColor(color)') > -1,
-    'injection code included in fragment shader with module'
-  );
-  t.ok(
-    assembleResult.fs.indexOf('color.a *= 1.2;') >
-      assembleResult.fs.indexOf('color = picking_filterColor(color)'),
-    'hook footer injected after injection code'
-  );
-
-  t.ok(
-    assembleResult.fs.indexOf('fragmentColor = picking_filterColor(fragmentColor)') > -1,
-    'regex injection code included in fragment shader with module'
-  );
-
+  expect(assembleResult.vs.indexOf('LUMAGL_pickColor') > -1, 'hook function injected into vertex shader').toBeTruthy();
+  expect(assembleResult.fs.indexOf('LUMAGL_fragmentColor') > -1, 'hook function injected into fragment shader').toBeTruthy();
+  expect(assembleResult.vs.indexOf('picking_setPickingColor(color.rgb)') > -1, 'injection code included in vertex shader with module').toBeTruthy();
+  expect(assembleResult.fs.indexOf('color = picking_filterColor(color)') > -1, 'injection code included in fragment shader with module').toBeTruthy();
+  expect(assembleResult.fs.indexOf('color.a *= 1.2;') > assembleResult.fs.indexOf('color = picking_filterColor(color)'), 'hook footer injected after injection code').toBeTruthy();
+  expect(assembleResult.fs.indexOf('fragmentColor = picking_filterColor(fragmentColor)') > -1, 'regex injection code included in fragment shader with module').toBeTruthy();
   assembleResult = assembleGLSLShaderPair({
     platformInfo: getInfo(webglDevice),
     vs: VS_GLSL_300,
@@ -555,21 +443,9 @@ test('assembleGLSLShaderPair#shaderhooks', async t => {
     modules: [pickingInject],
     hookFunctions
   });
-
-  t.ok(
-    assembleResult.vs.indexOf('color *= 0.1') > -1,
-    'argument injection code included in shader hook'
-  );
-  t.ok(
-    assembleResult.fs.indexOf('color += 0.1') > -1,
-    'argument injection code included in shader hook'
-  );
-  t.ok(
-    assembleResult.fs.indexOf('color += 0.1') <
-      assembleResult.fs.indexOf('color = picking_filterColor(color)'),
-    'argument injection code injected in the correct order'
-  );
-
+  expect(assembleResult.vs.indexOf('color *= 0.1') > -1, 'argument injection code included in shader hook').toBeTruthy();
+  expect(assembleResult.fs.indexOf('color += 0.1') > -1, 'argument injection code included in shader hook').toBeTruthy();
+  expect(assembleResult.fs.indexOf('color += 0.1') < assembleResult.fs.indexOf('color = picking_filterColor(color)'), 'argument injection code injected in the correct order').toBeTruthy();
   assembleResult = assembleGLSLShaderPair({
     platformInfo: getInfo(webglDevice),
     vs: VS_GLSL_300,
@@ -577,17 +453,8 @@ test('assembleGLSLShaderPair#shaderhooks', async t => {
     modules: [pickingInject, testInject],
     hookFunctions
   });
-
-  t.ok(
-    assembleResult.fs.indexOf('color.r = 1.0') > -1,
-    'module injection code included in shader hook'
-  );
-  t.ok(
-    assembleResult.fs.indexOf('color.r = 1.0') <
-      assembleResult.fs.indexOf('color = picking_filterColor(color)'),
-    'module injection code injected in the correct order'
-  );
-
+  expect(assembleResult.fs.indexOf('color.r = 1.0') > -1, 'module injection code included in shader hook').toBeTruthy();
+  expect(assembleResult.fs.indexOf('color.r = 1.0') < assembleResult.fs.indexOf('color = picking_filterColor(color)'), 'module injection code injected in the correct order').toBeTruthy();
   assembleResult = assembleGLSLShaderPair({
     platformInfo: getInfo(webglDevice),
     vs: VS_GLSL_300,
@@ -597,18 +464,10 @@ test('assembleGLSLShaderPair#shaderhooks', async t => {
     },
     hookFunctions
   });
-
-  t.ok(
-    assembleResult.fs.indexOf('fragmentColor -= 0.1;') > -1,
-    'regex injection code included in shader hook'
-  );
-
-  t.end();
+  expect(assembleResult.fs.indexOf('fragmentColor -= 0.1;') > -1, 'regex injection code included in shader hook').toBeTruthy();
 });
-
-test('assembleGLSLShaderPair#injection order', async t => {
+test('assembleGLSLShaderPair#injection order', async () => {
   const webglDevice = await getWebGLTestDevice();
-
   let assembleResult = assembleGLSLShaderPair({
     platformInfo: getInfo(webglDevice),
     vs: VS_GLSL_300_MODULES,
@@ -617,19 +476,13 @@ test('assembleGLSLShaderPair#injection order', async t => {
       'vs:#decl': 'uniform float vsFloat;',
       // Hook function has access to injected variable
       'vs:HOOK_FUNCTION': 'value = vsFloat;',
-
       'fs:#decl': 'uniform vec4 fsVec4;',
       // Hook function has access to injected variable
       'fs:HOOK_FUNCTION': 'value = fsVec4;'
     },
     hookFunctions: ['vs:HOOK_FUNCTION(inout float value)', 'fs:HOOK_FUNCTION(inout vec4 value)']
   });
-
-  t.ok(
-    compileAndLinkShaders(t, webglDevice, assembleResult),
-    'Hook functions have access to injected variables.'
-  );
-
+  expect(compileAndLinkShaders(t, webglDevice, assembleResult), 'Hook functions have access to injected variables.').toBeTruthy();
   assembleResult = assembleGLSLShaderPair({
     platformInfo: getInfo(webglDevice),
     vs: VS_GLSL_300_MODULES,
@@ -637,78 +490,47 @@ test('assembleGLSLShaderPair#injection order', async t => {
     modules: [TEST_MODULE],
     hookFunctions: ['vs:HOOK_FUNCTION(inout float value)', 'fs:HOOK_FUNCTION(inout vec4 value)']
   });
-
-  t.ok(
-    compileAndLinkShaders(t, webglDevice, assembleResult),
-    'Hook functions have access to injected variables through modules.'
-  );
-
-  t.end();
+  expect(compileAndLinkShaders(t, webglDevice, assembleResult), 'Hook functions have access to injected variables through modules.').toBeTruthy();
 });
 
 // TODO - restore if we ever support transpilation of uniform blocks
-test.skip('assembleGLSLShaderPair#transpilation', async t => {
+test.skip('assembleGLSLShaderPair#transpilation', async () => {
   const webglDevice = await getWebGLTestDevice();
-
   let assembleResult = assembleGLSLShaderPair({
     platformInfo: getInfo(webglDevice),
     vs: VS_GLSL_300,
     fs: FS_GLSL_300,
     modules: [picking]
   });
-
-  t.ok(assembleResult.vs.indexOf('#version 300 es') === -1, 'es 3.0 version directive removed');
-  t.ok(!/\bin vec4\b/.exec(assembleResult.vs), '"in" keyword removed');
-
-  t.ok(assembleResult.fs.indexOf('#version 300 es') === -1, 'es 3.0 version directive removed');
-  t.ok(!/\bout vec4\b/.exec(assembleResult.fs), '"out" keyword removed');
-
-  t.ok(
-    compileAndLinkShaders(t, webglDevice, assembleResult),
-    'assemble GLSL300 + picking and transpile to GLSL100'
-  );
-
+  expect(assembleResult.vs.indexOf('#version 300 es') === -1, 'es 3.0 version directive removed').toBeTruthy();
+  expect(!/\bin vec4\b/.exec(assembleResult.vs), '"in" keyword removed').toBeTruthy();
+  expect(assembleResult.fs.indexOf('#version 300 es') === -1, 'es 3.0 version directive removed').toBeTruthy();
+  expect(!/\bout vec4\b/.exec(assembleResult.fs), '"out" keyword removed').toBeTruthy();
+  expect(compileAndLinkShaders(t, webglDevice, assembleResult), 'assemble GLSL300 + picking and transpile to GLSL100').toBeTruthy();
   assembleResult = assembleGLSLShaderPair({
     platformInfo: getInfo(webglDevice),
     vs: VS_GLSL_300_2,
     fs: FS_GLSL_300_2,
     modules: [picking]
   });
-
-  t.ok(
-    compileAndLinkShaders(t, webglDevice, assembleResult),
-    'assemble GLSL300 + picking and transpile to GLSL100'
-  );
-
+  expect(compileAndLinkShaders(t, webglDevice, assembleResult), 'assemble GLSL300 + picking and transpile to GLSL100').toBeTruthy();
   const extension = webglDevice.gl.getExtension('OES_standard_derivatives');
   // TODO - this doesn't work in headless gl
   if (isBrowser() && extension) {
-    t.comment(JSON.stringify(extension));
     assembleResult = assembleGLSLShaderPair({
       platformInfo: getInfo(webglDevice),
       vs: VS_GLSL_300_DECK,
       fs: FS_GLSL_300_DECK
     });
-
-    t.ok(
-      compileAndLinkShaders(t, webglDevice, assembleResult),
-      'Deck shaders transpile 300 to 100 valid program'
-    );
+    expect(compileAndLinkShaders(t, webglDevice, assembleResult), 'Deck shaders transpile 300 to 100 valid program').toBeTruthy();
   }
-
   assembleResult = assembleGLSLShaderPair({
     platformInfo: getInfo(webglDevice),
     vs: VS_GLSL_300_GLTF,
     fs: FS_GLSL_300_GLTF,
     modules: [pbrMaterial]
   });
-
-  t.ok(
-    compileAndLinkShaders(t, webglDevice, assembleResult),
-    'assemble GLSL300 + PBR assemble, WebGL2'
-  );
-
-  t.end();
+  expect(compileAndLinkShaders(t, webglDevice, assembleResult), 'assemble GLSL300 + PBR assemble, WebGL2').toBeTruthy();
 });
 
 // HELPERS
@@ -725,7 +547,6 @@ function compileAndLinkShaders(t, device: WebGLDevice, assembleResult) {
     t.comment(`VS COMPILATION FAILED LOG: ${infoLog}`);
     return false;
   }
-
   const fShader = gl.createShader(gl.FRAGMENT_SHADER);
   gl.shaderSource(fShader, assembleResult.fs);
   gl.compileShader(fShader);
@@ -735,22 +556,18 @@ function compileAndLinkShaders(t, device: WebGLDevice, assembleResult) {
     t.comment(`FS COMPILATION FAILED, LOG: ${infoLog}`);
     return false;
   }
-
   const program = gl.createProgram();
   gl.attachShader(program, vShader);
   gl.attachShader(program, fShader);
   gl.linkProgram(program);
-
   const linkStatus = gl.getProgramParameter(program, gl.LINK_STATUS);
   if (!linkStatus) {
     const infoLog = gl.getProgramInfoLog(program);
     t.comment(`LINK FAILED, LOG ${infoLog}`);
     // t.comment(assembleResult.fs.slice(1000))
   }
-
   gl.deleteShader(vShader);
   gl.deleteShader(fShader);
   gl.deleteProgram(program);
-
   return linkStatus;
 }

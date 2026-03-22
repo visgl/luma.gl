@@ -1,30 +1,10 @@
-// luma.gl
-// SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
-
-import test, {Test} from '@luma.gl/devtools-extensions/tape-test-utils';
-import {
-  Buffer,
-  CommandBuffer,
-  CommandBufferProps,
-  CommandEncoder,
-  ComputePass,
-  Device,
-  QuerySet,
-  QuerySetProps,
-  RenderPass,
-  TextureFormat
-} from '@luma.gl/core';
-import {
-  getNullTestDevice,
-  getTestDevices,
-  getWebGLTestDevice,
-  getWebGPUTestDevice
-} from '@luma.gl/test-utils';
-
+import {expect, test} from 'vitest';
+import { Buffer, CommandBuffer, CommandBufferProps, CommandEncoder, ComputePass, Device, QuerySet, QuerySetProps, RenderPass, TextureFormat } from '@luma.gl/core';
+import { getNullTestDevice, getTestDevices, getWebGLTestDevice, getWebGPUTestDevice } from '@luma.gl/test-utils';
 const EPSILON = 1e-6;
-const {abs} = Math;
-
+const {
+  abs
+} = Math;
 function getResourceStats(device: Device): Record<string, number> {
   const stats = device.statsManager.getStats('Resource Counts');
   return {
@@ -39,286 +19,169 @@ function getResourceStats(device: Device): Record<string, number> {
     textureViewsActive: stats.get('TextureViews Active').count
   };
 }
-
 class TestCommandBuffer extends CommandBuffer {
   readonly device: Device;
   readonly handle = null;
-
   constructor(device: Device, props: CommandBufferProps = {}) {
     super(device, props);
     this.device = device;
   }
 }
-
 class TestQuerySet extends QuerySet {
   readonly device: Device;
   readonly handle = null;
   readResultsCallCount = 0;
   readTimestampDurationCallCount = 0;
-
   constructor(device: Device, props: QuerySetProps) {
     super(device, props);
     this.device = device;
   }
-
   isResultAvailable(_queryIndex?: number): boolean {
     return true;
   }
-
-  async readResults(options?: {firstQuery?: number; queryCount?: number}): Promise<bigint[]> {
+  async readResults(options?: {
+    firstQuery?: number;
+    queryCount?: number;
+  }): Promise<bigint[]> {
     this.readResultsCallCount++;
     const firstQuery = options?.firstQuery || 0;
     const queryCount = options?.queryCount || this.props.count - firstQuery;
     return [10n, 20n, 100n, 130n].slice(firstQuery, firstQuery + queryCount);
   }
-
   async readTimestampDuration(_beginIndex: number, _endIndex: number): Promise<number> {
     this.readTimestampDurationCallCount++;
     throw new Error('resolveTimeProfilingQuerySet should use bulk readResults');
   }
 }
-
 class TestCommandEncoder extends CommandEncoder {
   readonly device: Device;
   readonly handle = null;
-
   constructor(device: Device, querySet: QuerySet) {
-    super(device, {timeProfilingQuerySet: querySet});
+    super(device, {
+      timeProfilingQuerySet: querySet
+    });
     this.device = device;
     this._timeProfilingSlotCount = 4;
   }
-
   finish(_props?: CommandBufferProps): CommandBuffer {
     return new TestCommandBuffer(this.device, {});
   }
-
   beginRenderPass(): RenderPass {
     throw new Error('not implemented');
   }
-
   beginComputePass(): ComputePass {
     throw new Error('not implemented');
   }
-
   copyBufferToBuffer(): void {
     throw new Error('not implemented');
   }
-
   copyBufferToTexture(): void {
     throw new Error('not implemented');
   }
-
   copyTextureToBuffer(): void {
     throw new Error('not implemented');
   }
-
   copyTextureToTexture(): void {
     throw new Error('not implemented');
   }
-
   resolveQuerySet(): void {
     throw new Error('not implemented');
   }
 }
-
-test('Transient command resources release core stats', async t => {
+test('Transient command resources release core stats', async () => {
   for (const device of await getTestDevices(['webgl', 'webgpu', 'null'])) {
-    const framebuffer =
-      device.type === 'webgpu'
-        ? device.createFramebuffer({
-            width: 1,
-            height: 1,
-            colorAttachments: ['rgba8unorm']
-          })
-        : undefined;
+    const framebuffer = device.type === 'webgpu' ? device.createFramebuffer({
+      width: 1,
+      height: 1,
+      colorAttachments: ['rgba8unorm']
+    }) : undefined;
     const beforeStats = getResourceStats(device);
-
-    const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 0], framebuffer});
+    const renderPass = device.beginRenderPass({
+      clearColor: [0, 0, 0, 0],
+      framebuffer
+    });
     const duringRenderPassStats = getResourceStats(device);
-    t.equal(
-      duringRenderPassStats.renderPasssActive - beforeStats.renderPasssActive,
-      1,
-      `${device.type} beginRenderPass increments RenderPasss Active`
-    );
-
+    expect(duringRenderPassStats.renderPasssActive - beforeStats.renderPasssActive, `${device.type} beginRenderPass increments RenderPasss Active`).toBe(1);
     renderPass.end();
-
     const afterRenderPassStats = getResourceStats(device);
-    t.equal(
-      afterRenderPassStats.renderPasssActive,
-      beforeStats.renderPasssActive,
-      `${device.type} RenderPass.end restores RenderPasss Active`
-    );
-
+    expect(afterRenderPassStats.renderPasssActive, `${device.type} RenderPass.end restores RenderPasss Active`).toBe(beforeStats.renderPasssActive);
     const commandEncoder = device.createCommandEncoder();
     const afterCommandEncoderStats = getResourceStats(device);
-    t.equal(
-      afterCommandEncoderStats.commandEncodersActive - afterRenderPassStats.commandEncodersActive,
-      1,
-      `${device.type} createCommandEncoder increments CommandEncoders Active`
-    );
-
+    expect(afterCommandEncoderStats.commandEncodersActive - afterRenderPassStats.commandEncodersActive, `${device.type} createCommandEncoder increments CommandEncoders Active`).toBe(1);
     const commandBuffer = commandEncoder.finish();
     const afterFinishStats = getResourceStats(device);
-    t.equal(
-      afterFinishStats.commandEncodersActive,
-      afterRenderPassStats.commandEncodersActive,
-      `${device.type} CommandEncoder.finish restores CommandEncoders Active`
-    );
-    t.equal(
-      afterFinishStats.commandBuffersActive - afterRenderPassStats.commandBuffersActive,
-      1,
-      `${device.type} CommandEncoder.finish increments CommandBuffers Active`
-    );
-
+    expect(afterFinishStats.commandEncodersActive, `${device.type} CommandEncoder.finish restores CommandEncoders Active`).toBe(afterRenderPassStats.commandEncodersActive);
+    expect(afterFinishStats.commandBuffersActive - afterRenderPassStats.commandBuffersActive, `${device.type} CommandEncoder.finish increments CommandBuffers Active`).toBe(1);
     device.submit(commandBuffer);
-
     const afterSubmitStats = getResourceStats(device);
-    t.equal(
-      afterSubmitStats.commandBuffersActive,
-      afterRenderPassStats.commandBuffersActive,
-      `${device.type} Device.submit restores CommandBuffers Active`
-    );
-    t.equal(
-      afterSubmitStats.resourcesActive,
-      beforeStats.resourcesActive,
-      `${device.type} transient command resources restore total Resources Active`
-    );
-
+    expect(afterSubmitStats.commandBuffersActive, `${device.type} Device.submit restores CommandBuffers Active`).toBe(afterRenderPassStats.commandBuffersActive);
+    expect(afterSubmitStats.resourcesActive, `${device.type} transient command resources restore total Resources Active`).toBe(beforeStats.resourcesActive);
     framebuffer?.destroy();
   }
-
   const webgpuDevice = await getWebGPUTestDevice();
   if (!webgpuDevice) {
-    t.comment('WebGPU is not available');
-    t.end();
     return;
   }
   const beforeStats = getResourceStats(webgpuDevice);
   const computePass = webgpuDevice.beginComputePass({});
   const duringComputePassStats = getResourceStats(webgpuDevice);
-  t.equal(
-    duringComputePassStats.computePasssActive - beforeStats.computePasssActive,
-    1,
-    'webgpu beginComputePass increments ComputePasss Active'
-  );
-
+  expect(duringComputePassStats.computePasssActive - beforeStats.computePasssActive, 'webgpu beginComputePass increments ComputePasss Active').toBe(1);
   computePass.end();
-
   const afterComputePassStats = getResourceStats(webgpuDevice);
-  t.equal(
-    afterComputePassStats.computePasssActive,
-    beforeStats.computePasssActive,
-    'webgpu ComputePass.end restores ComputePasss Active'
-  );
-
+  expect(afterComputePassStats.computePasssActive, 'webgpu ComputePass.end restores ComputePasss Active').toBe(beforeStats.computePasssActive);
   const beforeCanvasStats = getResourceStats(webgpuDevice);
   const firstDefaultFramebufferRenderPass = webgpuDevice.beginRenderPass({
     clearColor: [0, 0, 0, 1]
   });
   const duringFirstCanvasStats = getResourceStats(webgpuDevice);
-  t.equal(
-    duringFirstCanvasStats.samplersActive - beforeCanvasStats.samplersActive,
-    0,
-    'webgpu default render pass reuses the shared default sampler wrapper'
-  );
-
+  expect(duringFirstCanvasStats.samplersActive - beforeCanvasStats.samplersActive, 'webgpu default render pass reuses the shared default sampler wrapper').toBe(0);
   firstDefaultFramebufferRenderPass.end();
   webgpuDevice.submit();
-
   const afterFirstCanvasStats = getResourceStats(webgpuDevice);
-  t.equal(
-    afterFirstCanvasStats.framebuffersActive,
-    duringFirstCanvasStats.framebuffersActive,
-    'webgpu cached framebuffer wrapper remains active after submit'
-  );
-  t.equal(
-    afterFirstCanvasStats.texturesActive,
-    duringFirstCanvasStats.texturesActive,
-    'webgpu cached swapchain texture wrapper remains active after submit'
-  );
-  t.equal(
-    afterFirstCanvasStats.samplersActive,
-    duringFirstCanvasStats.samplersActive,
-    'webgpu cached default framebuffer path does not add sampler wrappers after submit'
-  );
-  t.equal(
-    afterFirstCanvasStats.textureViewsActive,
-    duringFirstCanvasStats.textureViewsActive,
-    'webgpu cached texture view wrapper remains active after submit'
-  );
-
+  expect(afterFirstCanvasStats.framebuffersActive, 'webgpu cached framebuffer wrapper remains active after submit').toBe(duringFirstCanvasStats.framebuffersActive);
+  expect(afterFirstCanvasStats.texturesActive, 'webgpu cached swapchain texture wrapper remains active after submit').toBe(duringFirstCanvasStats.texturesActive);
+  expect(afterFirstCanvasStats.samplersActive, 'webgpu cached default framebuffer path does not add sampler wrappers after submit').toBe(duringFirstCanvasStats.samplersActive);
+  expect(afterFirstCanvasStats.textureViewsActive, 'webgpu cached texture view wrapper remains active after submit').toBe(duringFirstCanvasStats.textureViewsActive);
   const secondDefaultFramebufferRenderPass = webgpuDevice.beginRenderPass({
     clearColor: [0, 0, 0, 1]
   });
   const duringSecondCanvasStats = getResourceStats(webgpuDevice);
-  t.equal(
-    duringSecondCanvasStats.framebuffersActive,
-    afterFirstCanvasStats.framebuffersActive,
-    'webgpu second default render pass reuses cached framebuffer wrapper'
-  );
-  t.equal(
-    duringSecondCanvasStats.texturesActive,
-    afterFirstCanvasStats.texturesActive,
-    'webgpu second default render pass reuses cached texture wrapper'
-  );
-  t.equal(
-    duringSecondCanvasStats.textureViewsActive,
-    afterFirstCanvasStats.textureViewsActive,
-    'webgpu second default render pass reuses cached texture view wrapper'
-  );
-
+  expect(duringSecondCanvasStats.framebuffersActive, 'webgpu second default render pass reuses cached framebuffer wrapper').toBe(afterFirstCanvasStats.framebuffersActive);
+  expect(duringSecondCanvasStats.texturesActive, 'webgpu second default render pass reuses cached texture wrapper').toBe(afterFirstCanvasStats.texturesActive);
+  expect(duringSecondCanvasStats.textureViewsActive, 'webgpu second default render pass reuses cached texture view wrapper').toBe(afterFirstCanvasStats.textureViewsActive);
   secondDefaultFramebufferRenderPass.end();
   webgpuDevice.submit();
-
-  t.end();
 });
-
-test('CommandEncoder resolves time profiling with a single bulk query read', async t => {
+test('CommandEncoder resolves time profiling with a single bulk query read', async () => {
   const device = await getNullTestDevice();
-  const querySet = new TestQuerySet(device, {type: 'timestamp', count: 4});
+  const querySet = new TestQuerySet(device, {
+    type: 'timestamp',
+    count: 4
+  });
   const commandEncoder = new TestCommandEncoder(device, querySet);
-
   await commandEncoder.resolveTimeProfilingQuerySet();
-
-  t.equal(
-    querySet.readResultsCallCount,
-    1,
-    'resolveTimeProfilingQuerySet uses one bulk readResults call'
-  );
-  t.equal(
-    querySet.readTimestampDurationCallCount,
-    0,
-    'resolveTimeProfilingQuerySet does not call readTimestampDuration per pair'
-  );
-  t.equal(
-    commandEncoder._gpuTimeMs,
-    0.00004,
-    'resolveTimeProfilingQuerySet sums durations from bulk results'
-  );
-
+  expect(querySet.readResultsCallCount, 'resolveTimeProfilingQuerySet uses one bulk readResults call').toBe(1);
+  expect(querySet.readTimestampDurationCallCount, 'resolveTimeProfilingQuerySet does not call readTimestampDuration per pair').toBe(0);
+  expect(commandEncoder._gpuTimeMs, 'resolveTimeProfilingQuerySet sums durations from bulk results').toBe(0.00004);
   commandEncoder.destroy();
   querySet.destroy();
-  t.end();
 });
-
-test('CommandBuffer#copyBufferToBuffer', async t => {
+test('CommandBuffer#copyBufferToBuffer', async () => {
   const device = await getWebGLTestDevice();
   if (isSoftwareBackedDevice(device)) {
-    t.comment('Skipping WebGL buffer copy test on a software-backed adapter');
-    t.end();
     return;
   }
-
   const sourceData = new Float32Array([1, 2, 3]);
-  const sourceBuffer = device.createBuffer({data: sourceData});
+  const sourceBuffer = device.createBuffer({
+    data: sourceData
+  });
   const destinationData = new Float32Array([4, 5, 6]);
-  const destinationBuffer = device.createBuffer({data: destinationData});
-
+  const destinationBuffer = device.createBuffer({
+    data: destinationData
+  });
   let receivedData = await readAsyncF32(destinationBuffer);
   let expectedData = new Float32Array([4, 5, 6]);
-  t.deepEqual(receivedData, expectedData, 'copyBufferToBuffer: default parameters successful');
-
+  expect(receivedData, 'copyBufferToBuffer: default parameters successful').toEqual(expectedData);
   let commandEncoder = device.createCommandEncoder();
   commandEncoder.copyBufferToBuffer({
     sourceBuffer,
@@ -327,11 +190,9 @@ test('CommandBuffer#copyBufferToBuffer', async t => {
   });
   let commandBuffer = commandEncoder.finish();
   device.submit(commandBuffer);
-
   receivedData = await readAsyncF32(destinationBuffer);
   expectedData = new Float32Array([1, 2, 6]);
-  t.deepEqual(receivedData, expectedData, 'copyBufferToBuffer: with size successful');
-
+  expect(receivedData, 'copyBufferToBuffer: with size successful').toEqual(expectedData);
   commandEncoder = device.createCommandEncoder();
   commandEncoder.copyBufferToBuffer({
     sourceBuffer,
@@ -342,14 +203,10 @@ test('CommandBuffer#copyBufferToBuffer', async t => {
   });
   commandBuffer = commandEncoder.finish();
   device.submit(commandBuffer);
-
   receivedData = await readAsyncF32(destinationBuffer);
   expectedData = new Float32Array([1, 2, 2]);
-  t.deepEqual(receivedData, expectedData, 'copyBufferToBuffer: with size and offsets successful');
-
-  t.end();
+  expect(receivedData, 'copyBufferToBuffer: with size and offsets successful').toEqual(expectedData);
 });
-
 type CopyTextureToBufferFixture = {
   title: string;
   format: TextureFormat;
@@ -357,95 +214,84 @@ type CopyTextureToBufferFixture = {
   dstPixel: Uint8Array | Float32Array;
   dstOffset?: number;
 };
-
-const COPY_TEXTURE_TO_BUFFER_FIXTURES: CopyTextureToBufferFixture[] = [
-  {
-    title: 'rgba8',
-    format: 'rgba8unorm',
-    srcPixel: new Uint8Array([255, 128, 64, 32]),
-    dstPixel: new Uint8Array([255, 128, 64, 32])
-  },
-  {
-    title: 'rgba8 + offset',
-    format: 'rgba8unorm',
-    srcPixel: new Uint8Array([255, 128, 64, 32]),
-    dstPixel: new Uint8Array([255, 128, 64, 32]),
-    dstOffset: 4
-  },
-  // {
-  //   // TODO: Framebuffer creation fails under Node (browser WebGL1 is fine)
-  //   format: 'rgb8unorm-webgl',
-  //   srcPixel: new Uint8Array([255, 64, 32]),
-  //   dstPixel: new Uint8Array([255, 64, 32]),
-  // },
-  {
-    title: 'rgba32',
-    format: 'rgba32float',
-    srcPixel: new Float32Array([0.214, -32.23, 1242, -123.847]),
-    dstPixel: new Float32Array([0.214, -32.23, 1242, -123.847])
-  },
-  {
-    title: 'rgba32 + offset',
-    format: 'rgba32float',
-    srcPixel: new Float32Array([0.214, -32.23, 1242, -123.847]),
-    dstPixel: new Float32Array([0.214, -32.23, 1242, -123.847]),
-    dstOffset: 8
-  },
-  // {
-  //   // RGB32F is not a renderable format even when EXT_color_buffer_float is supported
-  //   title: 'rgb32',
-  //   format: 'rgb32float-webgl',
-  //   srcPixel: new Float32Array([-0.214, 32.23, 1242]),
-  //   dstPixel: new Float32Array([-0.214, 32.23, 1242]),
-  // },
-  {
-    title: 'rg32',
-    format: 'rg32float',
-    srcPixel: new Float32Array([-0.214, 32.23]),
-    dstPixel: new Float32Array([-0.214, 32.23, 0, 0])
-  },
-  {
-    title: 'r32',
-    format: 'r32float',
-    srcPixel: new Float32Array([0.124]),
-    dstPixel: new Float32Array([0.124, 0, 0, 0])
-  }
-];
-
-test('CommandBuffer#copyTextureToBuffer', async t => {
+const COPY_TEXTURE_TO_BUFFER_FIXTURES: CopyTextureToBufferFixture[] = [{
+  title: 'rgba8',
+  format: 'rgba8unorm',
+  srcPixel: new Uint8Array([255, 128, 64, 32]),
+  dstPixel: new Uint8Array([255, 128, 64, 32])
+}, {
+  title: 'rgba8 + offset',
+  format: 'rgba8unorm',
+  srcPixel: new Uint8Array([255, 128, 64, 32]),
+  dstPixel: new Uint8Array([255, 128, 64, 32]),
+  dstOffset: 4
+},
+// {
+//   // TODO: Framebuffer creation fails under Node (browser WebGL1 is fine)
+//   format: 'rgb8unorm-webgl',
+//   srcPixel: new Uint8Array([255, 64, 32]),
+//   dstPixel: new Uint8Array([255, 64, 32]),
+// },
+{
+  title: 'rgba32',
+  format: 'rgba32float',
+  srcPixel: new Float32Array([0.214, -32.23, 1242, -123.847]),
+  dstPixel: new Float32Array([0.214, -32.23, 1242, -123.847])
+}, {
+  title: 'rgba32 + offset',
+  format: 'rgba32float',
+  srcPixel: new Float32Array([0.214, -32.23, 1242, -123.847]),
+  dstPixel: new Float32Array([0.214, -32.23, 1242, -123.847]),
+  dstOffset: 8
+},
+// {
+//   // RGB32F is not a renderable format even when EXT_color_buffer_float is supported
+//   title: 'rgb32',
+//   format: 'rgb32float-webgl',
+//   srcPixel: new Float32Array([-0.214, 32.23, 1242]),
+//   dstPixel: new Float32Array([-0.214, 32.23, 1242]),
+// },
+{
+  title: 'rg32',
+  format: 'rg32float',
+  srcPixel: new Float32Array([-0.214, 32.23]),
+  dstPixel: new Float32Array([-0.214, 32.23, 0, 0])
+}, {
+  title: 'r32',
+  format: 'r32float',
+  srcPixel: new Float32Array([0.124]),
+  dstPixel: new Float32Array([0.124, 0, 0, 0])
+}];
+test('CommandBuffer#copyTextureToBuffer', async () => {
   const device = await getWebGLTestDevice();
   if (isSoftwareBackedDevice(device)) {
-    t.comment('Skipping WebGL texture-to-buffer copy test on a software-backed adapter');
-    t.end();
     return;
   }
-
   for (const fixture of COPY_TEXTURE_TO_BUFFER_FIXTURES) {
-    await testCopyTextureToBuffer(t, device, {...fixture});
-    await testCopyTextureToBuffer(t, device, {
+    await testCopyTextureToBuffer(expect, device, {
+      ...fixture
+    });
+    await testCopyTextureToBuffer(expect, device, {
       ...fixture,
       useFramebuffer: true,
       title: `${fixture.title} + framebuffer`
     });
   }
-
-  t.end();
 });
-
-async function testCopyTextureToBuffer(
-  t: Test,
-  device_: Device,
-  options: CopyTextureToBufferFixture & {useFramebuffer?: boolean}
-) {
-  const {title, srcPixel, dstPixel, dstOffset = 0} = options;
-
+async function testCopyTextureToBuffer(t: typeof expect, device_: Device, options: CopyTextureToBufferFixture & {
+  useFramebuffer?: boolean;
+}) {
+  const {
+    title,
+    srcPixel,
+    dstPixel,
+    dstOffset = 0
+  } = options;
   const elementCount = 6;
   const bytesPerElement = srcPixel.BYTES_PER_ELEMENT;
   const dstByteOffset = dstOffset * bytesPerElement;
   const byteLength = elementCount * bytesPerElement + dstByteOffset;
-
   let sourceTexture;
-
   const colorTexture = device_.createTexture({
     data: srcPixel,
     width: 1,
@@ -453,15 +299,16 @@ async function testCopyTextureToBuffer(
     format: options.format,
     mipmaps: false
   });
-
-  const destinationBuffer = device_.createBuffer({byteLength});
-
+  const destinationBuffer = device_.createBuffer({
+    byteLength
+  });
   if (options.useFramebuffer) {
-    sourceTexture = device_.createFramebuffer({colorAttachments: [colorTexture]});
+    sourceTexture = device_.createFramebuffer({
+      colorAttachments: [colorTexture]
+    });
   } else {
     sourceTexture = colorTexture;
   }
-
   const commandEncoder = device_.createCommandEncoder();
   commandEncoder.copyTextureToBuffer({
     sourceTexture,
@@ -472,67 +319,61 @@ async function testCopyTextureToBuffer(
   });
   const commandBuffer = commandEncoder.finish();
   device_.submit(commandBuffer);
-
-  const color =
-    srcPixel instanceof Uint8Array
-      ? await readAsyncU8(destinationBuffer)
-      : await readAsyncF32(destinationBuffer);
-
+  const color = srcPixel instanceof Uint8Array ? await readAsyncU8(destinationBuffer) : await readAsyncF32(destinationBuffer);
   t.ok(abs(dstPixel[0] - color[0 + dstOffset]) < EPSILON, `reads "R" channel (${title})`);
   t.ok(abs(dstPixel[1] - color[1 + dstOffset]) < EPSILON, `reads "G" channel (${title})`);
   t.ok(abs(dstPixel[2] - color[2 + dstOffset]) < EPSILON, `reads "B" channel (${title})`);
   t.ok(abs(dstPixel[3] - color[3 + dstOffset]) < EPSILON, `reads "A" channel (${title})`);
 }
-
 async function readAsyncU8(source: Buffer): Promise<Uint8Array> {
   return source.readAsync();
 }
-
 async function readAsyncF32(source: Buffer): Promise<Float32Array> {
-  const {buffer, byteOffset, byteLength} = await source.readAsync();
+  const {
+    buffer,
+    byteOffset,
+    byteLength
+  } = await source.readAsync();
   return new Float32Array(buffer, byteOffset, byteLength / Float32Array.BYTES_PER_ELEMENT);
 }
-
-test('CommandEncoder#copyTextureToTexture', async t => {
+test('CommandEncoder#copyTextureToTexture', async () => {
   const device = await getWebGLTestDevice();
   if (isSoftwareBackedDevice(device)) {
-    t.comment('Skipping WebGL texture-to-texture copy test on a software-backed adapter');
-    t.end();
     return;
   }
 
   // for (const device of await getTestDevices()) {
-  testCopyToTexture(t, device, {isSubCopy: false, sourceIsFramebuffer: false});
+  testCopyToTexture(expect, device, {
+    isSubCopy: false,
+    sourceIsFramebuffer: false
+  });
   // testCopyToTexture(t, device, {isSubCopy: false, sourceIsFramebuffer: true});
   // testCopyToTexture(t, device, {isSubCopy: true, sourceIsFramebuffer: false});
   // testCopyToTexture(t, device, {isSubCopy: true, sourceIsFramebuffer: true});
   // }
 });
-
-function testCopyToTexture(
-  t: Test,
-  device_: Device,
-  options: {isSubCopy: boolean; sourceIsFramebuffer: boolean}
-): void {
+function testCopyToTexture(t: typeof expect, device_: Device, options: {
+  isSubCopy: boolean;
+  sourceIsFramebuffer: boolean;
+}): void {
   // const byteLength = 6 * 4; // 6 floats
   const sourceColor = [255, 128, 64, 32];
-
   const sourceTexture = device_.createTexture({
     data: options.sourceIsFramebuffer ? null : new Uint8Array(sourceColor),
     width: 1,
     height: 1
   });
-
   const destinationTexture = sourceTexture.clone();
-
   const commandEncoder = device_.createCommandEncoder();
-  commandEncoder.copyTextureToTexture({sourceTexture, destinationTexture});
+  commandEncoder.copyTextureToTexture({
+    sourceTexture,
+    destinationTexture
+  });
   const commandBuffer = commandEncoder.finish();
   device_.submit(commandBuffer);
 
   // Read data form destination texture
   const color = device_.readPixelsToArrayWebGL(destinationTexture);
-
   t.deepEqual(color, sourceColor, 'copyTextureToTexture() successful');
 
   // const opts = {width: 1, height: 1};
@@ -573,11 +414,8 @@ function testCopyToTexture(
 
   t.end();
 }
-
 function isSoftwareBackedDevice(device: Device): boolean {
-  return (
-    device.info.gpu === 'software' || device.info.gpuType === 'cpu' || Boolean(device.info.fallback)
-  );
+  return device.info.gpu === 'software' || device.info.gpuType === 'cpu' || Boolean(device.info.fallback);
 }
 
 /*

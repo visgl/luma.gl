@@ -1,16 +1,11 @@
-// luma.gl
-// SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
-
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {getWebGLTestDevice} from '@luma.gl/test-utils';
-import {TextureTransform} from '@luma.gl/engine';
-import {Device, Texture} from '@luma.gl/core';
+import {expect, test} from 'vitest';
+import { getWebGLTestDevice } from '@luma.gl/test-utils';
+import { TextureTransform } from '@luma.gl/engine';
+import { Device, Texture } from '@luma.gl/core';
 
 /** Creates a minimal, no-op transform. */
-test('TextureTransform#constructor', async t => {
+test('TextureTransform#constructor', async () => {
   const webglDevice = await getWebGLTestDevice();
-
   const targetTexture = webglDevice.createTexture({
     data: new Float32Array([201, 202, 203, 1.0]),
     width: 1,
@@ -25,16 +20,15 @@ test('TextureTransform#constructor', async t => {
     targetTextureVarying: 'vSrc',
     vertexCount: 1
   });
-  t.ok(transform, 'creates transform');
-
-  t.end();
+  expect(transform, 'creates transform').toBeTruthy();
 });
 
 /** Computes a sum over vertex attribute values by writing to framebuffer. */
-test('TextureTransform#attribute', async t => {
+test('TextureTransform#attribute', async () => {
   const webglDevice = await getWebGLTestDevice();
-
-  const src = webglDevice.createBuffer({data: new Float32Array([10, 20, 30, 70, 80, 90])});
+  const src = webglDevice.createBuffer({
+    data: new Float32Array([10, 20, 30, 70, 80, 90])
+  });
   const targetTexture = webglDevice.createTexture({
     data: new Float32Array([201, 202, 203, 1.0]),
     width: 1,
@@ -43,8 +37,13 @@ test('TextureTransform#attribute', async t => {
   });
   const transform = new TextureTransform(webglDevice, {
     vs: SUM_VS,
-    attributes: {src},
-    bufferLayout: [{name: 'src', format: 'float32'}],
+    attributes: {
+      src
+    },
+    bufferLayout: [{
+      name: 'src',
+      format: 'float32'
+    }],
     topology: 'point-list',
     targetTexture,
     targetTextureChannels: 1,
@@ -62,20 +61,17 @@ test('TextureTransform#attribute', async t => {
 
   // TODO(donmccurdy): Consider having Transform inherit from Model, or at
   // least mimic its API by accepting a RenderPass in .run().
-  transform.run({clearColor: [0, 0, 0, 0]});
-
+  transform.run({
+    clearColor: [0, 0, 0, 0]
+  });
   const sum = await readF32(webglDevice, source, 16);
-  t.is(sum[0], 300, 'computes sum');
-
+  expect(sum[0], 'computes sum').toBe(300);
   transform.destroy();
-
-  t.end();
 });
 
 /** Computes a sum over texture pixels by writing to framebuffer. */
-test('TextureTransform#texture', async t => {
+test('TextureTransform#texture', async () => {
   const webglDevice = await getWebGLTestDevice();
-
   const srcData = new Uint8Array([2, 10, 255, 255]);
   const dstData = new Uint8Array([8, 40, 255, 255]); // src x 4
   const dstOffsetData = new Uint8Array([108, 140, 255, 255]); // src x 4 + 100
@@ -100,7 +96,9 @@ test('TextureTransform#texture', async t => {
     targetTexture,
     targetTextureChannels: 4,
     targetTextureVarying: 'vUv',
-    bindings: {uSampler: inputTexture},
+    bindings: {
+      uSampler: inputTexture
+    },
     parameters: {
       depthCompare: 'always',
       blend: true,
@@ -112,40 +110,35 @@ test('TextureTransform#texture', async t => {
 
   // TODO(donmccurdy): Consider having Transform inherit from Model, or at
   // least mimic its API by accepting a RenderPass in .run().
-  transform.run({clearColor: [0, 0, 0, 0]});
+  transform.run({
+    clearColor: [0, 0, 0, 0]
+  });
   let blend = await readU8(webglDevice, targetTexture, 4);
-  t.deepEqual(Array.from(blend), Array.from(dstData), 'computes blend');
-
+  expect(Array.from(blend), 'computes blend').toEqual(Array.from(dstData));
   const offset = 100 / 255;
-  transform.run({clearColor: [offset, offset, offset, 1]});
+  transform.run({
+    clearColor: [offset, offset, offset, 1]
+  });
   blend = await readU8(webglDevice, targetTexture, 4);
-  t.deepEqual(Array.from(blend), Array.from(dstOffsetData), 'computes blend');
-
+  expect(Array.from(blend), 'computes blend').toEqual(Array.from(dstOffsetData));
   transform.destroy();
   inputTexture.destroy();
   targetTexture.destroy();
-
-  t.end();
 });
-
-async function readF32(
-  webglDevice_: Device,
-  source: Texture,
-  byteLength: number
-): Promise<Float32Array> {
+async function readF32(webglDevice_: Device, source: Texture, byteLength: number): Promise<Float32Array> {
   const bytes = await readU8(webglDevice_, source, byteLength);
   return new Float32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 4);
 }
-
-async function readU8(
-  webglDevice: Device,
-  sourceTexture: Texture,
-  byteLength: number
-): Promise<Uint8Array> {
-  const destinationBuffer = webglDevice.createBuffer({byteLength});
+async function readU8(webglDevice: Device, sourceTexture: Texture, byteLength: number): Promise<Uint8Array> {
+  const destinationBuffer = webglDevice.createBuffer({
+    byteLength
+  });
   try {
     const commandEncoder = webglDevice.createCommandEncoder();
-    commandEncoder.copyTextureToBuffer({sourceTexture, destinationBuffer});
+    commandEncoder.copyTextureToBuffer({
+      sourceTexture,
+      destinationBuffer
+    });
     const commandBuffer = commandEncoder.finish();
     webglDevice.submit(commandBuffer);
     return destinationBuffer.readAsync();
@@ -153,7 +146,6 @@ async function readU8(
     destinationBuffer.destroy();
   }
 }
-
 const BASIC_VS = `\
 #version 300 es
 #define SHADER_NAME texture-transform-basic
@@ -166,7 +158,6 @@ void main()
   gl_PointSize = 1.0;
 }
 `;
-
 const SUM_VS = `\
 #version 300 es
 #define SHADER_NAME texture-transform-sum
@@ -181,7 +172,6 @@ void main()
   gl_PointSize = 1.0;
 }
 `;
-
 const BLEND_VS = `\
 #version 300 es
 #define SHADER_NAME texture-transform-blend
@@ -195,7 +185,6 @@ void main()
   gl_PointSize = 1.0;
 }
 `;
-
 const BLEND_FS = `\
 #version 300 es
 #define SHADER_NAME texture-transform-blend

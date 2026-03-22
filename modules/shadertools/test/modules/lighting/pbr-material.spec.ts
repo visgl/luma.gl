@@ -1,13 +1,7 @@
-// luma.gl
-// SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
-
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {pbrMaterial, getShaderModuleUniforms} from '@luma.gl/shadertools';
-
-test('shadertools#pbrMaterial', t => {
+import {expect, test} from 'vitest';
+import { pbrMaterial, getShaderModuleUniforms } from '@luma.gl/shadertools';
+test('shadertools#pbrMaterial', () => {
   // @ts-expect-error Fix typing
   const uniforms = getShaderModuleUniforms(pbrMaterial, {}, {});
-  t.ok(uniforms, 'Default pbr lighting uniforms ok');
-  t.end();
+  expect(uniforms, 'Default pbr lighting uniforms ok').toBeTruthy();
 });

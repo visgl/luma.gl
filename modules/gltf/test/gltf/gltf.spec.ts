@@ -1,82 +1,51 @@
-// luma.gl
-// SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
-
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {getWebGLTestDevice} from '@luma.gl/test-utils';
-
+import {expect, test} from 'vitest';
+import { getWebGLTestDevice } from '@luma.gl/test-utils';
 import '@loaders.gl/polyfills';
-import {load} from '@loaders.gl/core';
-import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
-
-import {DynamicTexture} from '@luma.gl/engine';
-import {createScenegraphsFromGLTF, loadPBREnvironment} from '@luma.gl/gltf';
-
-test('gltf#loading', async t => {
+import { load } from '@loaders.gl/core';
+import { GLTFLoader, postProcessGLTF } from '@loaders.gl/gltf';
+import { DynamicTexture } from '@luma.gl/engine';
+import { createScenegraphsFromGLTF, loadPBREnvironment } from '@luma.gl/gltf';
+test('gltf#loading', async () => {
   const webglDevice = await getWebGLTestDevice();
   const gltf = await load('test/data/box.glb', GLTFLoader);
-
   const processedGLTF = postProcessGLTF(gltf);
-
   const result = createScenegraphsFromGLTF(webglDevice, processedGLTF);
-
-  t.ok(result.hasOwnProperty('scenes'), 'Should contain scenes property');
-  t.ok(result.hasOwnProperty('animator'), 'Should contain animator property');
-  t.equals(result.scenes.length, 1, 'Should contain single scene');
-  t.deepEquals(result.animator.animations, [], 'Should not contain animations');
-
-  t.end();
+  expect(result.hasOwnProperty('scenes'), 'Should contain scenes property').toBeTruthy();
+  expect(result.hasOwnProperty('animator'), 'Should contain animator property').toBeTruthy();
+  expect(result.scenes.length, 'Should contain single scene').toBe(1);
+  expect(result.animator.animations, 'Should not contain animations').toEqual([]);
 });
-
-test('gltf#animator', async t => {
+test('gltf#animator', async () => {
   const webglDevice = await getWebGLTestDevice();
-
   const gltf = await load('test/data/BoxAnimated.glb', GLTFLoader);
   const processedGLTF = postProcessGLTF(gltf);
-
-  const {scenes, animator, gltfNodeIdToNodeMap} = createScenegraphsFromGLTF(
-    webglDevice,
-    processedGLTF
-  );
-
-  t.equals(scenes.length, 1, 'Should contain single scene');
-  t.equals(animator.animations.length, 1, 'Should contain single animation');
-
-  const {channels} = animator.animations[0].animation;
-  t.equals(channels.length, 2, 'Should contain two animation channels');
-  const {targetNodeId} = channels[0];
+  const {
+    scenes,
+    animator,
+    gltfNodeIdToNodeMap
+  } = createScenegraphsFromGLTF(webglDevice, processedGLTF);
+  expect(scenes.length, 'Should contain single scene').toBe(1);
+  expect(animator.animations.length, 'Should contain single animation').toBe(1);
+  const {
+    channels
+  } = animator.animations[0].animation;
+  expect(channels.length, 'Should contain two animation channels').toBe(2);
+  const {
+    targetNodeId
+  } = channels[0];
   const targetNode = gltfNodeIdToNodeMap.get(targetNodeId);
-  t.ok(targetNode, 'Should contain target node');
-
-  t.ok(
-    processedGLTF.nodes.every(gltfNode => !(gltfNode as any)._node),
-    'GLTF object is not mutated'
-  );
-
-  t.end();
+  expect(targetNode, 'Should contain target node').toBeTruthy();
+  expect(processedGLTF.nodes.every(gltfNode => !(gltfNode as any)._node), 'GLTF object is not mutated').toBeTruthy();
 });
-
-test('gltf#environment', async t => {
+test('gltf#environment', async () => {
   const webglDevice = await getWebGLTestDevice();
-
   const environment = loadPBREnvironment(webglDevice, {
     brdfLutUrl: 'test/data/webgl-logo-0.png',
     getTexUrl: (type, dir, mipLevel) => `test/data/webgl-logo-${mipLevel}.png`,
     specularMipLevels: 9
   });
-
-  await Promise.all([
-    environment.brdfLutTexture.ready,
-    environment.diffuseEnvSampler.ready,
-    environment.specularEnvSampler.ready
-  ]);
-
-  t.ok(environment.brdfLutTexture instanceof DynamicTexture, 'BRDF lookup texture created');
-  t.ok(environment.diffuseEnvSampler instanceof DynamicTexture, 'Diffuse environment map created');
-  t.ok(
-    environment.specularEnvSampler instanceof DynamicTexture,
-    'Specular environment map created'
-  );
-
-  t.end();
+  await Promise.all([environment.brdfLutTexture.ready, environment.diffuseEnvSampler.ready, environment.specularEnvSampler.ready]);
+  expect(environment.brdfLutTexture instanceof DynamicTexture, 'BRDF lookup texture created').toBeTruthy();
+  expect(environment.diffuseEnvSampler instanceof DynamicTexture, 'Diffuse environment map created').toBeTruthy();
+  expect(environment.specularEnvSampler instanceof DynamicTexture, 'Specular environment map created').toBeTruthy();
 });

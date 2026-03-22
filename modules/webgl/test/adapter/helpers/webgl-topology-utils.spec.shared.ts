@@ -1,72 +1,91 @@
+import {expect, test} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {GL} from '@luma.gl/constants';
-import {
-  getGLDrawMode,
-  getGLPrimitive,
-  getPrimitiveCount,
-  getPrimitiveDrawMode,
-  getVertexCount
-} from '@luma.gl/webgl/adapter/helpers/webgl-topology-utils';
-import type {TapeTestFunction} from '@luma.gl/devtools-extensions/tape-test-utils';
-
-export function registerWebGLTopologyUtilsTests(test: TapeTestFunction): void {
-  test('getPrimitiveDrawMode', t => {
-    t.equals(getPrimitiveDrawMode(GL.POINTS), GL.POINTS, 'point-list');
-    t.equals(getPrimitiveDrawMode(GL.LINES), GL.LINES, 'line-list');
-    t.equals(getPrimitiveDrawMode(GL.LINE_STRIP), GL.LINES, 'line-strip');
-    t.equals(getPrimitiveDrawMode(GL.LINE_LOOP), GL.LINES, 'line-loop');
-    t.equals(getPrimitiveDrawMode(GL.TRIANGLES), GL.TRIANGLES, 'triangle-list');
-    t.equals(getPrimitiveDrawMode(GL.TRIANGLE_STRIP), GL.TRIANGLES, 'triangle-strip');
-    t.equals(getPrimitiveDrawMode(GL.TRIANGLE_FAN), GL.TRIANGLES, 'triangle-fan');
-    t.throws(() => getPrimitiveDrawMode(-1 as any), 'invalid');
-    t.end();
+import { GL } from '@luma.gl/constants';
+import { getGLDrawMode, getGLPrimitive, getPrimitiveCount, getPrimitiveDrawMode, getVertexCount } from '@luma.gl/webgl/adapter/helpers/webgl-topology-utils';
+export function registerWebGLTopologyUtilsTests(): void {
+  test('getPrimitiveDrawMode', () => {
+    expect(getPrimitiveDrawMode(GL.POINTS), 'point-list').toBe(GL.POINTS);
+    expect(getPrimitiveDrawMode(GL.LINES), 'line-list').toBe(GL.LINES);
+    expect(getPrimitiveDrawMode(GL.LINE_STRIP), 'line-strip').toBe(GL.LINES);
+    expect(getPrimitiveDrawMode(GL.LINE_LOOP), 'line-loop').toBe(GL.LINES);
+    expect(getPrimitiveDrawMode(GL.TRIANGLES), 'triangle-list').toBe(GL.TRIANGLES);
+    expect(getPrimitiveDrawMode(GL.TRIANGLE_STRIP), 'triangle-strip').toBe(GL.TRIANGLES);
+    expect(getPrimitiveDrawMode(GL.TRIANGLE_FAN), 'triangle-fan').toBe(GL.TRIANGLES);
+    expect(() => getPrimitiveDrawMode(-1 as any), 'invalid').toThrow();
   });
-
-  test('getPrimitiveCount', t => {
-    t.equals(getPrimitiveCount({drawMode: GL.POINTS, vertexCount: 12}), 12, 'point-list');
-    t.equals(getPrimitiveCount({drawMode: GL.LINE_LOOP, vertexCount: 12}), 12, 'line-loop');
-    t.equals(getPrimitiveCount({drawMode: GL.LINES, vertexCount: 12}), 6, 'line-list');
-    t.equals(getPrimitiveCount({drawMode: GL.LINE_STRIP, vertexCount: 12}), 11, 'line-strip');
-    t.equals(getPrimitiveCount({drawMode: GL.TRIANGLES, vertexCount: 12}), 4, 'triangle-list');
-    t.equals(
-      getPrimitiveCount({drawMode: GL.TRIANGLE_STRIP, vertexCount: 12}),
-      10,
-      'triangle-strip'
-    );
-    t.equals(getPrimitiveCount({drawMode: GL.TRIANGLE_FAN, vertexCount: 12}), 10, 'triangle-fan');
-    t.throws(() => getPrimitiveCount({drawMode: -1 as any, vertexCount: 12}), 'invalid');
-    t.end();
+  test('getPrimitiveCount', () => {
+    expect(getPrimitiveCount({
+      drawMode: GL.POINTS,
+      vertexCount: 12
+    }), 'point-list').toBe(12);
+    expect(getPrimitiveCount({
+      drawMode: GL.LINE_LOOP,
+      vertexCount: 12
+    }), 'line-loop').toBe(12);
+    expect(getPrimitiveCount({
+      drawMode: GL.LINES,
+      vertexCount: 12
+    }), 'line-list').toBe(6);
+    expect(getPrimitiveCount({
+      drawMode: GL.LINE_STRIP,
+      vertexCount: 12
+    }), 'line-strip').toBe(11);
+    expect(getPrimitiveCount({
+      drawMode: GL.TRIANGLES,
+      vertexCount: 12
+    }), 'triangle-list').toBe(4);
+    expect(getPrimitiveCount({
+      drawMode: GL.TRIANGLE_STRIP,
+      vertexCount: 12
+    }), 'triangle-strip').toBe(10);
+    expect(getPrimitiveCount({
+      drawMode: GL.TRIANGLE_FAN,
+      vertexCount: 12
+    }), 'triangle-fan').toBe(10);
+    expect(() => getPrimitiveCount({
+      drawMode: -1 as any,
+      vertexCount: 12
+    }), 'invalid').toThrow();
   });
-
-  test('getVertexCount', t => {
-    t.equals(getVertexCount({drawMode: GL.POINTS, vertexCount: 12}), 12, 'point-list');
-    t.equals(getVertexCount({drawMode: GL.LINE_STRIP, vertexCount: 12}), 22, 'line-strip');
-    t.equals(getVertexCount({drawMode: GL.TRIANGLE_STRIP, vertexCount: 12}), 30, 'triangle-strip');
-    t.equals(getVertexCount({drawMode: GL.TRIANGLE_FAN, vertexCount: 12}), 30, 'triangle-fan');
-    t.throws(() => getVertexCount({drawMode: -1 as any, vertexCount: 12}), 'invalid');
-    t.end();
+  test('getVertexCount', () => {
+    expect(getVertexCount({
+      drawMode: GL.POINTS,
+      vertexCount: 12
+    }), 'point-list').toBe(12);
+    expect(getVertexCount({
+      drawMode: GL.LINE_STRIP,
+      vertexCount: 12
+    }), 'line-strip').toBe(22);
+    expect(getVertexCount({
+      drawMode: GL.TRIANGLE_STRIP,
+      vertexCount: 12
+    }), 'triangle-strip').toBe(30);
+    expect(getVertexCount({
+      drawMode: GL.TRIANGLE_FAN,
+      vertexCount: 12
+    }), 'triangle-fan').toBe(30);
+    expect(() => getVertexCount({
+      drawMode: -1 as any,
+      vertexCount: 12
+    }), 'invalid').toThrow();
   });
-
-  test('getGLDrawMode', t => {
-    t.equals(getGLDrawMode('point-list'), GL.POINTS, 'point-list');
-    t.equals(getGLDrawMode('line-list'), GL.LINES, 'line-list');
-    t.equals(getGLDrawMode('line-strip'), GL.LINE_STRIP, 'line-strip');
-    t.equals(getGLDrawMode('triangle-list'), GL.TRIANGLES, 'triangle-list');
-    t.equals(getGLDrawMode('triangle-strip'), GL.TRIANGLE_STRIP, 'triangle-strip');
-    t.throws(() => getGLDrawMode('quad-list' as any), 'invalid');
-    t.end();
+  test('getGLDrawMode', () => {
+    expect(getGLDrawMode('point-list'), 'point-list').toBe(GL.POINTS);
+    expect(getGLDrawMode('line-list'), 'line-list').toBe(GL.LINES);
+    expect(getGLDrawMode('line-strip'), 'line-strip').toBe(GL.LINE_STRIP);
+    expect(getGLDrawMode('triangle-list'), 'triangle-list').toBe(GL.TRIANGLES);
+    expect(getGLDrawMode('triangle-strip'), 'triangle-strip').toBe(GL.TRIANGLE_STRIP);
+    expect(() => getGLDrawMode('quad-list' as any), 'invalid').toThrow();
   });
-
-  test('getGLPrimitive', t => {
-    t.equals(getGLPrimitive('point-list'), GL.POINTS, 'point-list');
-    t.equals(getGLPrimitive('line-list'), GL.LINES, 'line-list');
-    t.equals(getGLPrimitive('line-strip'), GL.LINES, 'line-strip');
-    t.equals(getGLPrimitive('triangle-list'), GL.TRIANGLES, 'triangle-list');
-    t.equals(getGLPrimitive('triangle-strip'), GL.TRIANGLES, 'triangle-strip');
-    t.throws(() => getGLPrimitive('quad-list' as any), 'invalid');
-    t.end();
+  test('getGLPrimitive', () => {
+    expect(getGLPrimitive('point-list'), 'point-list').toBe(GL.POINTS);
+    expect(getGLPrimitive('line-list'), 'line-list').toBe(GL.LINES);
+    expect(getGLPrimitive('line-strip'), 'line-strip').toBe(GL.LINES);
+    expect(getGLPrimitive('triangle-list'), 'triangle-list').toBe(GL.TRIANGLES);
+    expect(getGLPrimitive('triangle-strip'), 'triangle-strip').toBe(GL.TRIANGLES);
+    expect(() => getGLPrimitive('quad-list' as any), 'invalid').toThrow();
   });
 }

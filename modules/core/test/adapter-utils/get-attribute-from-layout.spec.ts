@@ -1,96 +1,68 @@
-// luma.gl
-// SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
-
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {
-  ShaderLayout,
-  getAttributeInfosFromLayouts,
-  AttributeInfo,
-  BufferLayout
-} from '@luma.gl/core';
-
+import {expect, test} from 'vitest';
+import { ShaderLayout, getAttributeInfosFromLayouts, AttributeInfo, BufferLayout } from '@luma.gl/core';
 const shaderLayout: ShaderLayout = {
   bindings: [],
-  attributes: [
-    {
-      name: 'vertexPositions',
-      location: 0,
-      type: 'vec3<f32>',
-      stepMode: 'vertex'
-    },
-    {
-      name: 'vertexPositions64Low',
-      location: 1,
-      type: 'vec3<f32>',
-      stepMode: 'vertex'
-    },
-    {
-      name: 'instancePositions',
-      location: 0,
-      type: 'vec3<f32>',
-      stepMode: 'instance'
-    },
-    {
-      name: 'instancePositions64Low',
-      location: 2,
-      type: 'vec3<f32>',
-      stepMode: 'instance'
-    },
-    {
-      name: 'instanceNextPositions',
-      location: 1,
-      type: 'vec3<f32>',
-      stepMode: 'instance'
-    },
-    {
-      name: 'instanceNextPositions64Low',
-      location: 3,
-      type: 'vec3<f32>',
-      stepMode: 'instance'
-    }
-  ]
-};
-
-const bufferLayout: BufferLayout[] = [
-  {
+  attributes: [{
     name: 'vertexPositions',
-    byteStride: 24,
-    attributes: [
-      {
-        attribute: 'vertexPositions',
-        format: 'float32x3',
-        byteOffset: 0
-      },
-      {
-        attribute: 'vertexPositions64Low',
-        format: 'float32x3',
-        byteOffset: 12
-      },
-      {
-        attribute: 'instancePositions',
-        format: 'float32x3',
-        byteOffset: 24
-      },
-      {
-        attribute: 'instancePositions64Low',
-        format: 'float32x3',
-        byteOffset: 12
-      },
-      {
-        attribute: 'instanceNextPositions',
-        format: 'float32x3',
-        byteOffset: 24
-      },
-      {
-        attribute: 'instanceNextPositions64Low',
-        format: 'float32x3',
-        byteOffset: 36
-      }
-    ]
-  }
-];
-
+    location: 0,
+    type: 'vec3<f32>',
+    stepMode: 'vertex'
+  }, {
+    name: 'vertexPositions64Low',
+    location: 1,
+    type: 'vec3<f32>',
+    stepMode: 'vertex'
+  }, {
+    name: 'instancePositions',
+    location: 0,
+    type: 'vec3<f32>',
+    stepMode: 'instance'
+  }, {
+    name: 'instancePositions64Low',
+    location: 2,
+    type: 'vec3<f32>',
+    stepMode: 'instance'
+  }, {
+    name: 'instanceNextPositions',
+    location: 1,
+    type: 'vec3<f32>',
+    stepMode: 'instance'
+  }, {
+    name: 'instanceNextPositions64Low',
+    location: 3,
+    type: 'vec3<f32>',
+    stepMode: 'instance'
+  }]
+};
+const bufferLayout: BufferLayout[] = [{
+  name: 'vertexPositions',
+  byteStride: 24,
+  attributes: [{
+    attribute: 'vertexPositions',
+    format: 'float32x3',
+    byteOffset: 0
+  }, {
+    attribute: 'vertexPositions64Low',
+    format: 'float32x3',
+    byteOffset: 12
+  }, {
+    attribute: 'instancePositions',
+    format: 'float32x3',
+    byteOffset: 24
+  }, {
+    attribute: 'instancePositions64Low',
+    format: 'float32x3',
+    byteOffset: 12
+  }, {
+    attribute: 'instanceNextPositions',
+    format: 'float32x3',
+    byteOffset: 24
+  }, {
+    attribute: 'instanceNextPositions64Low',
+    format: 'float32x3',
+    byteOffset: 36
+  }]
+}];
 const resolvedLayout: Record<string, AttributeInfo> = {
   vertexPositions: {
     attributeName: 'vertexPositions',
@@ -189,16 +161,10 @@ const resolvedLayout: Record<string, AttributeInfo> = {
     byteStride: 24
   }
 };
-
-test('getAttributeInfosFromLayouts', t => {
+test('getAttributeInfosFromLayouts', () => {
   const result = getAttributeInfosFromLayouts(shaderLayout, bufferLayout);
   for (const key of Object.keys(resolvedLayout)) {
-    t.deepEqual(
-      result[key],
-      resolvedLayout[key],
-      `Interleaved attribute info for ${key} are correct`
-    );
+    expect(result[key], `Interleaved attribute info for ${key} are correct`).toEqual(resolvedLayout[key]);
     // t.comment(JSON.stringify(result[key], null, 2));
   }
-  t.end();
 });

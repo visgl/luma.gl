@@ -1,95 +1,278 @@
-// luma.gl
-// SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
-
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {type TypedArray} from '@math.gl/types';
-import {vertexFormatDecoder, VertexFormat} from '@luma.gl/core';
+import {expect, test} from 'vitest';
+import { type TypedArray } from '@math.gl/types';
+import { vertexFormatDecoder, VertexFormat } from '@luma.gl/core';
 
 // prettier-ignore
-const TEST_CASES: {format: VertexFormat, result: any}[] = [
-  {format: 'float32', result: {type: 'float32', components: 1, byteLength: 4, integer: false, signed: false, normalized: false}},
-  {format: 'uint32', result: {type: 'uint32', components: 1, byteLength: 4, integer: true, signed: false, normalized: false}},
-  {format: 'sint32', result: {type: 'sint32', components: 1, byteLength: 4, integer: true, signed: true, normalized: false}},
-
-  {format: 'uint8x2', result: {type: 'uint8', components: 2, byteLength: 2, integer: true, signed: false, normalized: false}},
-  {format: 'sint8x2', result: {type: 'sint8', components: 2, byteLength: 2, integer: true, signed: true, normalized: false}},
-  {format: 'unorm8x2', result: {type: 'unorm8', components: 2, byteLength: 2, integer: false, signed: false, normalized: true}},
-  {format: 'snorm8x2', result: {type: 'snorm8', components: 2, byteLength: 2, integer: false, signed: true, normalized: true}},
-  {format: 'uint16x2', result: {type: 'uint16', components: 2, byteLength: 4, integer: true, signed: false, normalized: false}},
-  {format: 'sint16x2', result: {type: 'sint16', components: 2, byteLength: 4, integer: true, signed: true, normalized: false}},
-  {format: 'unorm16x2', result: {type: 'unorm16', components: 2, byteLength: 4, integer: false, signed: false, normalized: true}},
-  {format: 'snorm16x2', result: {type: 'snorm16', components: 2, byteLength: 4, integer: false, signed: true, normalized: true}},
-  {format: 'float16x2', result: {type: 'float16', components: 2, byteLength: 4, integer: false, signed: false, normalized: false}},
-  {format: 'float32x2', result: {type: 'float32', components: 2, byteLength: 8, integer: false, signed: false, normalized: false}},
-  {format: 'uint32x2', result: {type: 'uint32', components: 2, byteLength: 8, integer: true, signed: false, normalized: false}},
-  {format: 'sint32x2', result: {type: 'sint32', components: 2, byteLength: 8, integer: true, signed: true, normalized: false}},
-];
-
-test('shadertypes#vertexFormatDecoder.getVertexFormatInfo', t => {
+const TEST_CASES: {
+  format: VertexFormat;
+  result: any;
+}[] = [{
+  format: 'float32',
+  result: {
+    type: 'float32',
+    components: 1,
+    byteLength: 4,
+    integer: false,
+    signed: false,
+    normalized: false
+  }
+}, {
+  format: 'uint32',
+  result: {
+    type: 'uint32',
+    components: 1,
+    byteLength: 4,
+    integer: true,
+    signed: false,
+    normalized: false
+  }
+}, {
+  format: 'sint32',
+  result: {
+    type: 'sint32',
+    components: 1,
+    byteLength: 4,
+    integer: true,
+    signed: true,
+    normalized: false
+  }
+}, {
+  format: 'uint8x2',
+  result: {
+    type: 'uint8',
+    components: 2,
+    byteLength: 2,
+    integer: true,
+    signed: false,
+    normalized: false
+  }
+}, {
+  format: 'sint8x2',
+  result: {
+    type: 'sint8',
+    components: 2,
+    byteLength: 2,
+    integer: true,
+    signed: true,
+    normalized: false
+  }
+}, {
+  format: 'unorm8x2',
+  result: {
+    type: 'unorm8',
+    components: 2,
+    byteLength: 2,
+    integer: false,
+    signed: false,
+    normalized: true
+  }
+}, {
+  format: 'snorm8x2',
+  result: {
+    type: 'snorm8',
+    components: 2,
+    byteLength: 2,
+    integer: false,
+    signed: true,
+    normalized: true
+  }
+}, {
+  format: 'uint16x2',
+  result: {
+    type: 'uint16',
+    components: 2,
+    byteLength: 4,
+    integer: true,
+    signed: false,
+    normalized: false
+  }
+}, {
+  format: 'sint16x2',
+  result: {
+    type: 'sint16',
+    components: 2,
+    byteLength: 4,
+    integer: true,
+    signed: true,
+    normalized: false
+  }
+}, {
+  format: 'unorm16x2',
+  result: {
+    type: 'unorm16',
+    components: 2,
+    byteLength: 4,
+    integer: false,
+    signed: false,
+    normalized: true
+  }
+}, {
+  format: 'snorm16x2',
+  result: {
+    type: 'snorm16',
+    components: 2,
+    byteLength: 4,
+    integer: false,
+    signed: true,
+    normalized: true
+  }
+}, {
+  format: 'float16x2',
+  result: {
+    type: 'float16',
+    components: 2,
+    byteLength: 4,
+    integer: false,
+    signed: false,
+    normalized: false
+  }
+}, {
+  format: 'float32x2',
+  result: {
+    type: 'float32',
+    components: 2,
+    byteLength: 8,
+    integer: false,
+    signed: false,
+    normalized: false
+  }
+}, {
+  format: 'uint32x2',
+  result: {
+    type: 'uint32',
+    components: 2,
+    byteLength: 8,
+    integer: true,
+    signed: false,
+    normalized: false
+  }
+}, {
+  format: 'sint32x2',
+  result: {
+    type: 'sint32',
+    components: 2,
+    byteLength: 8,
+    integer: true,
+    signed: true,
+    normalized: false
+  }
+}];
+test('shadertypes#vertexFormatDecoder.getVertexFormatInfo', () => {
   for (const tc of TEST_CASES) {
     const decoded = vertexFormatDecoder.getVertexFormatInfo(tc.format);
-    t.deepEqual(
-      decoded,
-      tc.result,
-      `vertexFormatDecoder.getVertexFormatInfo('${tc.format}') => ${JSON.stringify(decoded.type)}`
-    );
+    expect(decoded, `vertexFormatDecoder.getVertexFormatInfo('${tc.format}') => ${JSON.stringify(decoded.type)}`).toEqual(tc.result);
   }
-  t.end();
 });
-
 const TEST_CASES_2: {
   typedArray: TypedArray;
   size: number;
   normalized?: boolean;
   result?: VertexFormat;
   error?: string;
-}[] = [
-  {typedArray: new Uint8Array(), size: 4, result: 'uint8x4'},
-  {typedArray: new Uint8ClampedArray(), size: 2, result: 'uint8x2'},
-  {typedArray: new Int8Array(), size: 4, result: 'sint8x4'},
-  {typedArray: new Uint16Array(), size: 4, result: 'uint16x4'},
-  {typedArray: new Int16Array(), size: 2, result: 'sint16x2'},
-  {typedArray: new Uint32Array(), size: 3, result: 'uint32x3'},
-  {typedArray: new Int32Array(), size: 1, result: 'sint32'},
-  {typedArray: new Float32Array(), size: 2, result: 'float32x2'},
-  {typedArray: new Float32Array(), size: 3, result: 'float32x3'},
-  {typedArray: new Float32Array(), size: 4, result: 'float32x4'},
-
-  {typedArray: new Uint8Array(), size: 2, normalized: true, result: 'unorm8x2'},
-  {typedArray: new Uint8ClampedArray(), size: 4, normalized: true, result: 'unorm8x4'},
-  {typedArray: new Int8Array(), size: 2, normalized: true, result: 'snorm8x2'},
-  {typedArray: new Uint16Array(), size: 2, normalized: true, result: 'unorm16x2'},
-  {typedArray: new Int16Array(), size: 4, normalized: true, result: 'snorm16x4'},
-
-  {typedArray: new Float32Array(), size: 5, error: 'Invalid attribute size 5'},
-  // @ts-expect-error Intentionally no size
-  {typedArray: new Int32Array(), error: 'Missing attribute size'},
-  {typedArray: new Uint8Array(), size: 1, error: 'Bad 16 bit alignment'},
-  {typedArray: new Int16Array(), size: 3, error: 'Bad 32 bit alignment'},
-  {typedArray: new Float64Array(), size: 2, error: 'Unknown array format'}
-];
-
-test('shadertypes#vertexFormatDecoder.getVertexFormatFromAttribute', t => {
-  for (const {typedArray, size, normalized, result, error} of TEST_CASES_2) {
+}[] = [{
+  typedArray: new Uint8Array(),
+  size: 4,
+  result: 'uint8x4'
+}, {
+  typedArray: new Uint8ClampedArray(),
+  size: 2,
+  result: 'uint8x2'
+}, {
+  typedArray: new Int8Array(),
+  size: 4,
+  result: 'sint8x4'
+}, {
+  typedArray: new Uint16Array(),
+  size: 4,
+  result: 'uint16x4'
+}, {
+  typedArray: new Int16Array(),
+  size: 2,
+  result: 'sint16x2'
+}, {
+  typedArray: new Uint32Array(),
+  size: 3,
+  result: 'uint32x3'
+}, {
+  typedArray: new Int32Array(),
+  size: 1,
+  result: 'sint32'
+}, {
+  typedArray: new Float32Array(),
+  size: 2,
+  result: 'float32x2'
+}, {
+  typedArray: new Float32Array(),
+  size: 3,
+  result: 'float32x3'
+}, {
+  typedArray: new Float32Array(),
+  size: 4,
+  result: 'float32x4'
+}, {
+  typedArray: new Uint8Array(),
+  size: 2,
+  normalized: true,
+  result: 'unorm8x2'
+}, {
+  typedArray: new Uint8ClampedArray(),
+  size: 4,
+  normalized: true,
+  result: 'unorm8x4'
+}, {
+  typedArray: new Int8Array(),
+  size: 2,
+  normalized: true,
+  result: 'snorm8x2'
+}, {
+  typedArray: new Uint16Array(),
+  size: 2,
+  normalized: true,
+  result: 'unorm16x2'
+}, {
+  typedArray: new Int16Array(),
+  size: 4,
+  normalized: true,
+  result: 'snorm16x4'
+}, {
+  typedArray: new Float32Array(),
+  size: 5,
+  error: 'Invalid attribute size 5'
+},
+// @ts-expect-error Intentionally no size
+{
+  typedArray: new Int32Array(),
+  error: 'Missing attribute size'
+}, {
+  typedArray: new Uint8Array(),
+  size: 1,
+  error: 'Bad 16 bit alignment'
+}, {
+  typedArray: new Int16Array(),
+  size: 3,
+  error: 'Bad 32 bit alignment'
+}, {
+  typedArray: new Float64Array(),
+  size: 2,
+  error: 'Unknown array format'
+}];
+test('shadertypes#vertexFormatDecoder.getVertexFormatFromAttribute', () => {
+  for (const {
+    typedArray,
+    size,
+    normalized,
+    result,
+    error
+  } of TEST_CASES_2) {
     if (result) {
-      const vertexFormat = vertexFormatDecoder.getVertexFormatFromAttribute(
-        typedArray,
-        size,
-        normalized
-      );
-      t.deepEqual(
-        vertexFormat,
-        result,
-        `Typed array: '${typedArray.constructor.name}, size: ${size}' => ${result}`
-      );
+      const vertexFormat = vertexFormatDecoder.getVertexFormatFromAttribute(typedArray, size, normalized);
+      expect(vertexFormat, `Typed array: '${typedArray.constructor.name}, size: ${size}' => ${result}`).toEqual(result);
     } else {
-      t.throws(() => {
+      expect(() => {
         vertexFormatDecoder.getVertexFormatFromAttribute(typedArray, size);
-      }, error);
+      }).toThrow(error);
     }
   }
-  t.end();
 });
 
 // test default vertex format deduction

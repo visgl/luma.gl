@@ -1,14 +1,8 @@
-// luma.gl
-// SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
-
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {getTestDevices} from '@luma.gl/test-utils';
-
-test('Device#info (unknown)', async t => {
+import {expect, test} from 'vitest';
+import { getTestDevices } from '@luma.gl/test-utils';
+test('Device#info (unknown)', async () => {
   for (const testDevice of await getTestDevices()) {
-    t.ok(testDevice.info.type);
+    expect(testDevice.info.type).toBeTruthy();
     // TODO check all info fields
   }
-  t.end();
 });

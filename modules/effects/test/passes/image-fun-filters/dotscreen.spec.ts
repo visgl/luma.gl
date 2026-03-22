@@ -1,17 +1,14 @@
+import {expect, test} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {dotScreen} from '@luma.gl/effects';
-import {getShaderModuleUniforms} from '@luma.gl/shadertools';
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
-
-test('dotScreen#build/uniform', t => {
+import { dotScreen } from '@luma.gl/effects';
+import { getShaderModuleUniforms } from '@luma.gl/shadertools';
+test('dotScreen#build/uniform', () => {
   const uniforms = getShaderModuleUniforms(dotScreen, {}, {});
-
-  t.ok(uniforms, 'dotScreen module build is ok');
-  t.deepEqual(uniforms.center, [0.5, 0.5], 'dotScreen center uniform is ok');
-  t.equal(uniforms.angle, 1.1, 'dotScreen angle uniform is ok');
-  t.equal(uniforms.size, 3, 'dotScreen size uniform is ok');
-  t.end();
+  expect(uniforms, 'dotScreen module build is ok').toBeTruthy();
+  expect(uniforms.center, 'dotScreen center uniform is ok').toEqual([0.5, 0.5]);
+  expect(uniforms.angle, 'dotScreen angle uniform is ok').toBe(1.1);
+  expect(uniforms.size, 'dotScreen size uniform is ok').toBe(3);
 });

@@ -1,17 +1,12 @@
-// luma.gl
-// SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
-
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {getTestDevices} from '@luma.gl/test-utils';
+import {expect, test} from 'vitest';
+import { getTestDevices } from '@luma.gl/test-utils';
 
 // import {luma} from '@luma.gl/core';
 
 // TODO - add full reference table, more exhaustive test
-test('Device#isTextureFormatCompressed', async t => {
+test('Device#isTextureFormatCompressed', async () => {
   for (const device of await getTestDevices()) {
-    t.equal(device.isTextureFormatCompressed('rgba8unorm'), false);
-    t.equal(device.isTextureFormatCompressed('bc3-rgba-unorm'), true);
+    expect(device.isTextureFormatCompressed('rgba8unorm')).toBe(false);
+    expect(device.isTextureFormatCompressed('bc3-rgba-unorm')).toBe(true);
   }
-  t.end();
 });

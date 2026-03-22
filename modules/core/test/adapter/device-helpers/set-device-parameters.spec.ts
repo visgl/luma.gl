@@ -1,13 +1,8 @@
-// luma.gl
-// SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
-
-import test, {Test} from '@luma.gl/devtools-extensions/tape-test-utils';
-import {getWebGLTestDevice} from '@luma.gl/test-utils';
-
-import {Parameters} from '@luma.gl/core';
-import {GL, GLParameters} from '@luma.gl/constants';
-import {setDeviceParameters, getGLParameters, resetGLParameters, WebGLDevice} from '@luma.gl/webgl';
+import {expect, test} from 'vitest';
+import { getWebGLTestDevice } from '@luma.gl/test-utils';
+import { Parameters } from '@luma.gl/core';
+import { GL, GLParameters } from '@luma.gl/constants';
+import { setDeviceParameters, getGLParameters, resetGLParameters, WebGLDevice } from '@luma.gl/webgl';
 
 // const stringify = (v) => JSON.stringify(ArrayBuffer.isView(v) ? Array.apply([], v) : v);
 
@@ -15,71 +10,63 @@ const getGLParameter = (gl: WebGL2RenderingContext, parameter: keyof GLParameter
   const parameters = getGLParameters(gl, [parameter]);
   return parameters[parameter];
 };
-
-test('setDeviceParameters#cullMode', async t => {
+test('setDeviceParameters#cullMode', async () => {
   const webglDevice = await getWebGLTestDevice();
   const gl = webglDevice.gl;
-
   resetGLParameters(gl);
-
-  t.deepEqual(getGLParameter(gl, GL.CULL_FACE), false, 'got expected value');
-
-  setDeviceParameters(webglDevice, {cullMode: 'front'});
-  t.deepEqual(getGLParameter(gl, GL.CULL_FACE), true, 'got expected value');
-  t.deepEqual(getGLParameter(gl, GL.CULL_FACE_MODE), GL.FRONT, 'got expected value');
-
-  setDeviceParameters(webglDevice, {cullMode: 'back'});
-  t.deepEqual(getGLParameter(gl, GL.CULL_FACE), true, 'got expected value');
-  t.deepEqual(getGLParameter(gl, GL.CULL_FACE_MODE), GL.BACK, 'got expected value');
-
-  setDeviceParameters(webglDevice, {cullMode: 'none'});
-  t.deepEqual(getGLParameter(gl, GL.CULL_FACE), false, 'got expected value');
-
-  t.end();
+  expect(getGLParameter(gl, GL.CULL_FACE), 'got expected value').toEqual(false);
+  setDeviceParameters(webglDevice, {
+    cullMode: 'front'
+  });
+  expect(getGLParameter(gl, GL.CULL_FACE), 'got expected value').toEqual(true);
+  expect(getGLParameter(gl, GL.CULL_FACE_MODE), 'got expected value').toEqual(GL.FRONT);
+  setDeviceParameters(webglDevice, {
+    cullMode: 'back'
+  });
+  expect(getGLParameter(gl, GL.CULL_FACE), 'got expected value').toEqual(true);
+  expect(getGLParameter(gl, GL.CULL_FACE_MODE), 'got expected value').toEqual(GL.BACK);
+  setDeviceParameters(webglDevice, {
+    cullMode: 'none'
+  });
+  expect(getGLParameter(gl, GL.CULL_FACE), 'got expected value').toEqual(false);
 });
-
-test('setDeviceParameters#frontFace', async t => {
+test('setDeviceParameters#frontFace', async () => {
   const webglDevice = await getWebGLTestDevice();
   const gl = webglDevice.gl;
-
   resetGLParameters(gl);
-
-  t.deepEqual(getGLParameter(gl, GL.FRONT_FACE), GL.CCW, 'got expected value');
-
-  setDeviceParameters(webglDevice, {frontFace: 'cw'});
-  t.deepEqual(getGLParameter(gl, GL.FRONT_FACE), GL.CW, 'got expected value');
-
-  setDeviceParameters(webglDevice, {frontFace: 'ccw'});
-  t.deepEqual(getGLParameter(gl, GL.FRONT_FACE), GL.CCW, 'got expected value');
-
-  t.end();
+  expect(getGLParameter(gl, GL.FRONT_FACE), 'got expected value').toEqual(GL.CCW);
+  setDeviceParameters(webglDevice, {
+    frontFace: 'cw'
+  });
+  expect(getGLParameter(gl, GL.FRONT_FACE), 'got expected value').toEqual(GL.CW);
+  setDeviceParameters(webglDevice, {
+    frontFace: 'ccw'
+  });
+  expect(getGLParameter(gl, GL.FRONT_FACE), 'got expected value').toEqual(GL.CCW);
 });
-
-test('setDeviceParameters#depthWriteEnabled', async t => {
+test('setDeviceParameters#depthWriteEnabled', async () => {
   const webglDevice = await getWebGLTestDevice();
   const gl = webglDevice.gl;
-
   resetGLParameters(gl);
-
-  t.deepEqual(getGLParameter(gl, GL.DEPTH_WRITEMASK), true, 'got expected value');
-
-  setDeviceParameters(webglDevice, {depthWriteEnabled: false});
-  t.deepEqual(getGLParameter(gl, GL.DEPTH_WRITEMASK), false, 'got expected value');
-
-  setDeviceParameters(webglDevice, {depthWriteEnabled: true});
-  t.deepEqual(getGLParameter(gl, GL.DEPTH_WRITEMASK), true, 'got expected value');
-
-  t.end();
+  expect(getGLParameter(gl, GL.DEPTH_WRITEMASK), 'got expected value').toEqual(true);
+  setDeviceParameters(webglDevice, {
+    depthWriteEnabled: false
+  });
+  expect(getGLParameter(gl, GL.DEPTH_WRITEMASK), 'got expected value').toEqual(false);
+  setDeviceParameters(webglDevice, {
+    depthWriteEnabled: true
+  });
+  expect(getGLParameter(gl, GL.DEPTH_WRITEMASK), 'got expected value').toEqual(true);
 });
 
 // type TestClause = {check: GLParameters} | {set: Parameters};
-type TestClause = {check?: GLParameters; set?: Parameters};
-
-function testClauses(t: Test, device: WebGLDevice, name: string, clauses: TestClause[]): void {
+type TestClause = {
+  check?: GLParameters;
+  set?: Parameters;
+};
+function testClauses(t: typeof expect, device: WebGLDevice, name: string, clauses: TestClause[]): void {
   const gl = device.gl;
-
   resetGLParameters(device.gl);
-
   for (const clause of clauses) {
     if (clause.check) {
       const values = getGLParameters(gl, clause.check);
@@ -87,36 +74,42 @@ function testClauses(t: Test, device: WebGLDevice, name: string, clauses: TestCl
         t.deepEqual(values[key], value, `got expected value for ${name}`);
       }
     }
-
     if (clause.set) {
       setDeviceParameters(device, clause.set);
     }
   }
 }
-
-test('setDeviceParameters#depthWriteEnabled', async t => {
+test('setDeviceParameters#depthWriteEnabled', async () => {
   const webglDevice = await getWebGLTestDevice();
-
-  testClauses(t, webglDevice, 'depthWriteEnabled', [
-    {check: {[GL.DEPTH_WRITEMASK]: true}},
-    {set: {depthWriteEnabled: false}},
-    {check: {[GL.DEPTH_WRITEMASK]: false}},
-    {set: {depthWriteEnabled: true}},
-    {check: {[GL.DEPTH_WRITEMASK]: true}}
-  ]);
-
-  t.end();
+  testClauses(expect, webglDevice, 'depthWriteEnabled', [{
+    check: {
+      [GL.DEPTH_WRITEMASK]: true
+    }
+  }, {
+    set: {
+      depthWriteEnabled: false
+    }
+  }, {
+    check: {
+      [GL.DEPTH_WRITEMASK]: false
+    }
+  }, {
+    set: {
+      depthWriteEnabled: true
+    }
+  }, {
+    check: {
+      [GL.DEPTH_WRITEMASK]: true
+    }
+  }]);
 });
-
-test('setDeviceParameters#depthClearValue', async t => {
+test('setDeviceParameters#depthClearValue', async () => {
   const webglDevice = await getWebGLTestDevice();
   const gl = webglDevice.gl;
-
   resetGLParameters(gl);
-  t.deepEqual(getGLParameter(gl, GL.DEPTH_CLEAR_VALUE), 1, 'got expected clear depth');
-
-  setDeviceParameters(webglDevice, {clearDepth: 0});
-  t.deepEqual(getGLParameter(gl, GL.DEPTH_CLEAR_VALUE), 0, 'set clear depth works');
-
-  t.end();
+  expect(getGLParameter(gl, GL.DEPTH_CLEAR_VALUE), 'got expected clear depth').toEqual(1);
+  setDeviceParameters(webglDevice, {
+    clearDepth: 0
+  });
+  expect(getGLParameter(gl, GL.DEPTH_CLEAR_VALUE), 'set clear depth works').toEqual(0);
 });

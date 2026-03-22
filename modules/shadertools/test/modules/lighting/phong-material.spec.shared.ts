@@ -1,15 +1,13 @@
+import {expect, test} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {phongMaterial} from '@luma.gl/shadertools';
-import type {TapeTestFunction} from '@luma.gl/devtools-extensions/tape-test-utils';
-
-export function registerPhongMaterialTests(test: TapeTestFunction): void {
-  test('shadertools#phongMaterial', t => {
+import { phongMaterial } from '@luma.gl/shadertools';
+export function registerPhongMaterialTests(): void {
+  test('shadertools#phongMaterial', () => {
     let uniforms = phongMaterial.getUniforms({});
-    t.deepEqual(uniforms, phongMaterial.defaultUniforms, 'Default phong lighting uniforms ok');
-
+    expect(uniforms, 'Default phong lighting uniforms ok').toEqual(phongMaterial.defaultUniforms);
     uniforms = phongMaterial.getUniforms({
       unlit: true,
       ambient: 0.0,
@@ -17,20 +15,17 @@ export function registerPhongMaterialTests(test: TapeTestFunction): void {
       shininess: 0.0,
       specularColor: [255, 0, 0]
     });
-    t.is(uniforms.unlit, true, 'unlit');
-    t.is(uniforms.ambient, 0, 'ambient');
-    t.is(uniforms.diffuse, 0, 'diffuse');
-    t.is(uniforms.shininess, 0, 'shininess');
-    t.deepEqual(uniforms.specularColor, [1, 0, 0], 'specularColor');
-
+    expect(uniforms.unlit, 'unlit').toBe(true);
+    expect(uniforms.ambient, 'ambient').toBe(0);
+    expect(uniforms.diffuse, 'diffuse').toBe(0);
+    expect(uniforms.shininess, 'shininess').toBe(0);
+    expect(uniforms.specularColor, 'specularColor').toEqual([1, 0, 0]);
     uniforms = phongMaterial.getUniforms({});
-    t.equal(uniforms.unlit, false, 'unlit');
-    t.equal(uniforms.ambient, 0.35, 'ambient');
-    t.equal(uniforms.diffuse, 0.6, 'diffuse');
-    t.equal(uniforms.shininess, 32, 'shininess');
-    t.deepEqual(uniforms.specularColor, [0.15, 0.15, 0.15], 'specularColor');
-    t.ok(phongMaterial.defines?.LIGHTING_FRAGMENT, 'phongMaterial enables fragment lighting');
-
-    t.end();
+    expect(uniforms.unlit, 'unlit').toBe(false);
+    expect(uniforms.ambient, 'ambient').toBe(0.35);
+    expect(uniforms.diffuse, 'diffuse').toBe(0.6);
+    expect(uniforms.shininess, 'shininess').toBe(32);
+    expect(uniforms.specularColor, 'specularColor').toEqual([0.15, 0.15, 0.15]);
+    expect(phongMaterial.defines?.LIGHTING_FRAGMENT, 'phongMaterial enables fragment lighting').toBeTruthy();
   });
 }

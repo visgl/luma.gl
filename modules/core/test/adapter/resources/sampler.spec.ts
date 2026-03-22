@@ -1,11 +1,6 @@
-// luma.gl
-// SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
-
-import test, {Test} from '@luma.gl/devtools-extensions/tape-test-utils';
-import {getWebGLTestDevice} from '@luma.gl/test-utils';
-
-import {Device, Sampler} from '@luma.gl/core';
+import { expect, test } from 'vitest';
+import { getWebGLTestDevice } from '@luma.gl/test-utils';
+import { Device, Sampler } from '@luma.gl/core';
 
 // Sampler Parameters
 
@@ -14,36 +9,28 @@ export const SAMPLER_PARAMETERS = {
     linear: 'interpolated texel',
     nearest: 'nearest texel'
   },
-
   magFilter: {
     linear: 'interpolated texel',
     nearest: 'nearest texel'
   },
-
   mipmapFilter: {
     linear: 'interpolated between mipmaps',
     nearest: 'nearest mipmap'
   },
-
   addressModeU: {
     repeat: 'use fractional part of texture coordinates',
     'clamp-to-edge': 'clamp texture coordinates',
-    'mirrored-repeat':
-      'use fractional part of texture coordinate if integer part is odd, otherwise `1 - frac'
+    'mirrored-repeat': 'use fractional part of texture coordinate if integer part is odd, otherwise `1 - frac'
   },
-
   addressModeV: {
     repeat: 'use fractional part of texture coordinates',
     'clamp-to-edge': 'clamp texture coordinates',
-    'mirrored-repeat':
-      'use fractional part of texture coordinate if integer part is odd, otherwise `1 - frac'
+    'mirrored-repeat': 'use fractional part of texture coordinate if integer part is odd, otherwise `1 - frac'
   },
-
   addressModeW: {
     repeat: 'use fractional part of texture coordinates',
     'clamp-to-edge': 'clamp texture coordinates',
-    'mirrored-repeat':
-      'use fractional part of texture coordinate if integer part is odd, otherwise `1 - frac'
+    'mirrored-repeat': 'use fractional part of texture coordinate if integer part is odd, otherwise `1 - frac'
   }
 
   /*
@@ -52,8 +39,7 @@ export const SAMPLER_PARAMETERS = {
     COMPARE_REF_TO_TEXTURE]:
       'interpolated and clamped `r` texture coordinate is compared to currently bound depth texture, result is assigned to the red channel'
   },
-
-  COMPARE_FUNC]: {
+   COMPARE_FUNC]: {
     LEQUAL]: 'result = 1.0 0.0, r <= D t r > D t',
     GEQUAL]: 'result = 1.0 0.0, r >= D t r < D t',
     LESS]: 'result = 1.0 0.0, r < D t r >= D t',
@@ -65,27 +51,22 @@ export const SAMPLER_PARAMETERS = {
   }
   */
 };
-
-test('WebGL#Sampler setParameters', async t => {
+test('WebGL#Sampler setParameters', async () => {
   const webglDevice = await getWebGLTestDevice();
-
-  testSampler(t, webglDevice);
-  testSampler(t, webglDevice);
+  testSampler(expect, webglDevice);
+  testSampler(expect, webglDevice);
   // testSampler(t, webgpuDevice);
-  t.end();
 });
-
-function testSampler(t: Test, device: Device): void {
+function testSampler(t: typeof expect, device: Device): void {
   for (const pname in SAMPLER_PARAMETERS) {
     const parameter = Number(pname);
     const values = SAMPLER_PARAMETERS[parameter];
     for (const valueString in values) {
       const value = Number(valueString);
-      const sampler = device.createSampler({[parameter]: value});
-      t.ok(
-        sampler instanceof Sampler,
-        `${device.type} new Sampler({${pname}: ${valueString}}) constructed.`
-      );
+      const sampler = device.createSampler({
+        [parameter]: value
+      });
+      t.ok(sampler instanceof Sampler, `${device.type} new Sampler({${pname}: ${valueString}}) constructed.`);
       sampler.destroy();
     }
   }

@@ -1,33 +1,35 @@
-// luma.gl
-// SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
-
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {getWebGLTestDevice} from '@luma.gl/test-utils';
-import {GroupNode, ScenegraphNode, ModelNode, Model} from '@luma.gl/engine';
-import {Matrix4} from '@math.gl/core';
-import {DUMMY_VS, DUMMY_FS} from './model-node.spec';
-
-test('GroupNode#construction', async t => {
+import {expect, test} from 'vitest';
+import { getWebGLTestDevice } from '@luma.gl/test-utils';
+import { GroupNode, ScenegraphNode, ModelNode, Model } from '@luma.gl/engine';
+import { Matrix4 } from '@math.gl/core';
+import { DUMMY_VS, DUMMY_FS } from './model-node.spec';
+test('GroupNode#construction', async () => {
   const grandChild = new ScenegraphNode();
   const child1 = new GroupNode([grandChild]);
   const child2 = new GroupNode();
-  const groupNode = new GroupNode({children: [child1, child2]});
-  const invalidNode = {id: 'invalidNode'};
+  const groupNode = new GroupNode({
+    children: [child1, child2]
+  });
+  const invalidNode = {
+    id: 'invalidNode'
+  };
+  expect(child1 instanceof GroupNode, 'construction with array is successful').toBeTruthy();
+  expect(groupNode instanceof GroupNode, 'construction with object is successful').toBeTruthy();
 
-  t.ok(child1 instanceof GroupNode, 'construction with array is successful');
-  t.ok(groupNode instanceof GroupNode, 'construction with object is successful');
-
   // @ts-expect-error
-  t.throws(() => new GroupNode({children: [invalidNode]}));
+  expect(() => new GroupNode({
+    children: [invalidNode]
+  })).toThrow();
   // @ts-expect-error
-  t.throws(() => new GroupNode({children: [invalidNode, child1]}));
+  expect(() => new GroupNode({
+    children: [invalidNode, child1]
+  })).toThrow();
   // @ts-expect-error
-  t.throws(() => new GroupNode({children: [child1, invalidNode]}));
-  t.end();
+  expect(() => new GroupNode({
+    children: [child1, invalidNode]
+  })).toThrow();
 });
-
-test('GroupNode#add', async t => {
+test('GroupNode#add', async () => {
   const child1 = new GroupNode();
   const child2 = new GroupNode();
   const child3 = new GroupNode();
@@ -35,108 +37,96 @@ test('GroupNode#add', async t => {
 
   // @ts-expect-error Need to fix nested types
   groupNode.add([child1, [child2, child3]]);
-
-  t.ok(groupNode.children.length === 3, 'add: should unpack nested arrays');
-  t.end();
+  expect(groupNode.children.length === 3, 'add: should unpack nested arrays').toBeTruthy();
 });
-
-test('GroupNode#remove', async t => {
+test('GroupNode#remove', async () => {
   const child1 = new GroupNode();
   const child2 = new GroupNode();
   const child3 = new GroupNode();
   const groupNode = new GroupNode();
-
   groupNode.add([child1, child2]);
-
   groupNode.remove(child3);
-  t.ok(groupNode.children.length === 2, 'remove: should ignore non child node');
-
+  expect(groupNode.children.length === 2, 'remove: should ignore non child node').toBeTruthy();
   groupNode.remove(child2);
-  t.ok(groupNode.children.length === 1, 'remove: should remove child');
-  t.end();
+  expect(groupNode.children.length === 1, 'remove: should remove child').toBeTruthy();
 });
-
-test('GroupNode#removeAll', async t => {
+test('GroupNode#removeAll', async () => {
   const child1 = new GroupNode();
   const child2 = new GroupNode();
   const child3 = new GroupNode();
   const groupNode = new GroupNode();
   groupNode.add([child1, child2, child3]);
-
   groupNode.removeAll();
-
-  t.ok(groupNode.children.length === 0, 'removeAll: should remove all');
-  t.end();
+  expect(groupNode.children.length === 0, 'removeAll: should remove all').toBeTruthy();
 });
-
-test('GroupNode#destroy', async t => {
+test('GroupNode#destroy', async () => {
   const grandChild = new GroupNode();
   const child1 = new GroupNode([grandChild]);
   const child2 = new GroupNode();
-  const groupNode = new GroupNode({children: [child1, child2]});
-
+  const groupNode = new GroupNode({
+    children: [child1, child2]
+  });
   groupNode.destroy();
-
-  t.ok(groupNode.children.length === 0, 'destroy: should remove all');
-  t.ok(child1.children.length === 0, 'destroy: should destroy children');
-  t.end();
+  expect(groupNode.children.length === 0, 'destroy: should remove all').toBeTruthy();
+  expect(child1.children.length === 0, 'destroy: should destroy children').toBeTruthy();
 });
-
-test('GroupNode#traverse', async t => {
+test('GroupNode#traverse', async () => {
   const modelMatrices = {};
   const matrix = new Matrix4().identity().scale(2);
-
   function visitor(child, opts) {
     modelMatrices[child.id] = opts.worldMatrix;
   }
-
-  const childSNode = new ScenegraphNode({id: 'childSNode'});
-  const grandChildSNode = new ScenegraphNode({id: 'grandChildSNode'});
-  const child1 = new GroupNode({id: 'child-1', matrix, children: [grandChildSNode]});
-  const groupNode = new GroupNode({id: 'parent', matrix, children: [child1, childSNode]});
-
+  const childSNode = new ScenegraphNode({
+    id: 'childSNode'
+  });
+  const grandChildSNode = new ScenegraphNode({
+    id: 'grandChildSNode'
+  });
+  const child1 = new GroupNode({
+    id: 'child-1',
+    matrix,
+    children: [grandChildSNode]
+  });
+  const groupNode = new GroupNode({
+    id: 'parent',
+    matrix,
+    children: [child1, childSNode]
+  });
   groupNode.traverse(visitor);
-
-  t.deepEqual(modelMatrices[childSNode.id], matrix, 'should update child matrix');
-  t.deepEqual(
-    modelMatrices[grandChildSNode.id],
-    new Matrix4().identity().scale(4),
-    'should update grand child matrix'
-  );
-
-  t.end();
+  expect(modelMatrices[childSNode.id], 'should update child matrix').toEqual(matrix);
+  expect(modelMatrices[grandChildSNode.id], 'should update grand child matrix').toEqual(new Matrix4().identity().scale(4));
 });
-
-test('GroupNode#getBounds', async t => {
+test('GroupNode#getBounds', async () => {
   const device = await getWebGLTestDevice();
-
   const matrix = new Matrix4().translate([0, 0, 1]).scale(2);
-
-  const model1 = new Model(device, {id: 'childSNode', vs: DUMMY_VS, fs: DUMMY_FS});
-  const model2 = new Model(device, {id: 'grandChildSNode', vs: DUMMY_VS, fs: DUMMY_FS});
-  const childSNode = new ModelNode({model: model1});
-  const grandChildSNode = new ModelNode({model: model2});
-  const child1 = new GroupNode({id: 'child-1', matrix, children: [grandChildSNode]});
-  const groupNode = new GroupNode({id: 'parent', matrix, children: [child1, childSNode]});
-
-  t.deepEqual(groupNode.getBounds(), null, 'child bounds are not defined');
-
-  childSNode.bounds = [
-    [0, 0, 0],
-    [1, 1, 1]
-  ];
-  grandChildSNode.bounds = [
-    [-1, -1, -1],
-    [0, 0, 0]
-  ];
-
-  t.deepEqual(
-    groupNode.getBounds(),
-    [
-      [-4, -4, -1],
-      [2, 2, 3]
-    ],
-    'bounds calculated'
-  );
-  t.end();
+  const model1 = new Model(device, {
+    id: 'childSNode',
+    vs: DUMMY_VS,
+    fs: DUMMY_FS
+  });
+  const model2 = new Model(device, {
+    id: 'grandChildSNode',
+    vs: DUMMY_VS,
+    fs: DUMMY_FS
+  });
+  const childSNode = new ModelNode({
+    model: model1
+  });
+  const grandChildSNode = new ModelNode({
+    model: model2
+  });
+  const child1 = new GroupNode({
+    id: 'child-1',
+    matrix,
+    children: [grandChildSNode]
+  });
+  const groupNode = new GroupNode({
+    id: 'parent',
+    matrix,
+    children: [child1, childSNode]
+  });
+  expect(groupNode.getBounds(), 'child bounds are not defined').toEqual(null);
+  childSNode.bounds = [[0, 0, 0], [1, 1, 1]];
+  grandChildSNode.bounds = [[-1, -1, -1], [0, 0, 0]];
+  expect(groupNode.getBounds(), 'bounds calculated').toEqual([[-4, -4, -1], [2, 2, 3]]);
 });

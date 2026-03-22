@@ -1,36 +1,29 @@
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {UniformBufferLayout, UniformStore} from '../../src';
-
+import {expect, test} from 'vitest';
+import { UniformBufferLayout, UniformStore } from '../../src';
 function almostEqual(a: number, b: number, eps = 1e-3): boolean {
   return Math.abs(a - b) <= eps;
 }
-
-test('unaligned scalar forces padding before vec4', t => {
+test('unaligned scalar forces padding before vec4', () => {
   const uniformTypes = {
     scalar: 'f32',
     vector: 'vec4<f32>'
   } as const;
-
   const layout = new UniformBufferLayout(uniformTypes);
-
   const data = layout.getData({
     scalar: 42,
     vector: [1, 2, 3, 4]
   });
-
   const view = new Float32Array(data.buffer);
-  t.equal(view[0], 42, 'scalar');
-  t.equal(view[1], 0, 'padding');
-  t.equal(view[2], 0, 'padding');
-  t.equal(view[3], 0, 'padding');
-  t.equal(view[4], 1, 'vector[0]');
-  t.equal(view[5], 2, 'vector[1]');
-  t.equal(view[6], 3, 'vector[2]');
-  t.equal(view[7], 4, 'vector[3]');
-  t.end();
+  expect(view[0], 'scalar').toBe(42);
+  expect(view[1], 'padding').toBe(0);
+  expect(view[2], 'padding').toBe(0);
+  expect(view[3], 'padding').toBe(0);
+  expect(view[4], 'vector[0]').toBe(1);
+  expect(view[5], 'vector[1]').toBe(2);
+  expect(view[6], 'vector[2]').toBe(3);
+  expect(view[7], 'vector[3]').toBe(4);
 });
-
-test('nested struct layout (struct inside struct)', t => {
+test('nested struct layout (struct inside struct)', () => {
   const uniformTypes = {
     light: {
       transform: {
@@ -40,9 +33,7 @@ test('nested struct layout (struct inside struct)', t => {
       intensity: 'f32'
     }
   } as const;
-
   const layout = new UniformBufferLayout(uniformTypes);
-
   const data = layout.getData({
     light: {
       transform: {
@@ -52,95 +43,74 @@ test('nested struct layout (struct inside struct)', t => {
       intensity: 0.8
     }
   });
-
   const view = new Float32Array(data.buffer);
-
-  t.equal(view[0], 1, 'transform.position[0]');
-  t.equal(view[1], 2);
-  t.equal(view[2], 3);
-  t.equal(view[3], 0, 'vec3 padding');
-  t.equal(view[4], 10, 'transform.range');
-  t.ok(almostEqual(view[8], 0.8), 'light.intensity');
-  t.end();
+  expect(view[0], 'transform.position[0]').toBe(1);
+  expect(view[1]).toBe(2);
+  expect(view[2]).toBe(3);
+  expect(view[3], 'vec3 padding').toBe(0);
+  expect(view[4], 'transform.range').toBe(10);
+  expect(almostEqual(view[8], 0.8), 'light.intensity').toBeTruthy();
 });
-
-test('array of primitives uses std140 stride', t => {
+test('array of primitives uses std140 stride', () => {
   const uniformTypes = {
     thresholds: ['f32', 3]
   } as const;
-
   const layout = new UniformBufferLayout(uniformTypes);
-
   const data = layout.getData({
     thresholds: [1, 2, 3]
   });
-
   const view = new Float32Array(data.buffer);
-  t.equal(view[0], 1, 'thresholds[0]');
-  t.equal(view[4], 2, 'thresholds[1]');
-  t.equal(view[8], 3, 'thresholds[2]');
-  t.end();
+  expect(view[0], 'thresholds[0]').toBe(1);
+  expect(view[4], 'thresholds[1]').toBe(2);
+  expect(view[8], 'thresholds[2]').toBe(3);
 });
-
-test('array of matrices accepts packed values', t => {
+test('array of matrices accepts packed values', () => {
   const layout = new UniformBufferLayout({
     jointMatrix: ['mat4x4<f32>', 2]
   });
-
   const data = layout.getData({
-    jointMatrix: new Float32Array([
-      1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 2, 0, 0, 0, 0, 2, 0, 0, 0, 0, 2, 0, 0, 0, 0, 2
-    ])
+    jointMatrix: new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 2, 0, 0, 0, 0, 2, 0, 0, 0, 0, 2, 0, 0, 0, 0, 2])
   });
-
   const view = new Float32Array(data.buffer);
-  t.equal(view[0], 1, 'jointMatrix[0][0]');
-  t.equal(view[15], 1, 'jointMatrix[0][15]');
-  t.equal(view[16], 2, 'jointMatrix[1][0]');
-  t.equal(view[31], 2, 'jointMatrix[1][15]');
-  t.end();
+  expect(view[0], 'jointMatrix[0][0]').toBe(1);
+  expect(view[15], 'jointMatrix[0][15]').toBe(1);
+  expect(view[16], 'jointMatrix[1][0]').toBe(2);
+  expect(view[31], 'jointMatrix[1][15]').toBe(2);
 });
-
-test('array of structs layout', t => {
+test('array of structs layout', () => {
   const uniformTypes = {
-    lights: [
-      {
-        position: 'vec3<f32>',
-        intensity: 'f32'
-      },
-      2
-    ]
+    lights: [{
+      position: 'vec3<f32>',
+      intensity: 'f32'
+    }, 2]
   } as const;
-
   const layout = new UniformBufferLayout(uniformTypes);
-
   const data = layout.getData({
-    lights: [
-      {position: [1, 2, 3], intensity: 0.5},
-      {position: [4, 5, 6], intensity: 1.0}
-    ]
+    lights: [{
+      position: [1, 2, 3],
+      intensity: 0.5
+    }, {
+      position: [4, 5, 6],
+      intensity: 1.0
+    }]
   });
-
   const view = new Float32Array(data.buffer);
 
   // First struct
-  t.equal(view[0], 1, 'lights[0].position[0]');
-  t.equal(view[1], 2, 'lights[0].position[1]');
-  t.equal(view[2], 3, 'lights[0].position[2]');
-  t.equal(view[3], 0, 'lights[0] vec3 padding');
-  t.equal(view[4], 0.5, 'lights[0].intensity');
+  expect(view[0], 'lights[0].position[0]').toBe(1);
+  expect(view[1], 'lights[0].position[1]').toBe(2);
+  expect(view[2], 'lights[0].position[2]').toBe(3);
+  expect(view[3], 'lights[0] vec3 padding').toBe(0);
+  expect(view[4], 'lights[0].intensity').toBe(0.5);
 
   // Second struct
-  t.equal(view[8], 4, 'lights[1].position[0]');
-  t.equal(view[9], 5, 'lights[1].position[1]');
-  t.equal(view[10], 6, 'lights[1].position[2]');
-  t.equal(view[11], 0, 'lights[1] vec3 padding');
-  t.equal(view[12], 1.0, 'lights[1].intensity');
-
-  t.end();
+  expect(view[8], 'lights[1].position[0]').toBe(4);
+  expect(view[9], 'lights[1].position[1]').toBe(5);
+  expect(view[10], 'lights[1].position[2]').toBe(6);
+  expect(view[11], 'lights[1] vec3 padding').toBe(0);
+  expect(view[12], 'lights[1].intensity').toBe(1.0);
 });
-
-test('partial nested updates preserve unspecified leaves', t => {
+test('partial nested updates preserve unspecified leaves', () => {
   const uniformStore = new UniformStore({
     lighting: {
       uniformTypes: {
@@ -163,7 +133,6 @@ test('partial nested updates preserve unspecified leaves', t => {
       }
     }
   });
-
   uniformStore.setUniforms({
     lighting: {
       light: {
@@ -171,38 +140,31 @@ test('partial nested updates preserve unspecified leaves', t => {
       }
     }
   });
-
   const data = uniformStore.getUniformBufferData('lighting');
   const view = new Float32Array(data.buffer);
-
-  t.equal(view[0], 1, 'default position[0] preserved');
-  t.equal(view[1], 2, 'default position[1] preserved');
-  t.equal(view[2], 3, 'default position[2] preserved');
-  t.equal(view[4], 10, 'default range preserved');
-  t.ok(almostEqual(view[8], 0.8), 'updated intensity written');
-
-  t.end();
+  expect(view[0], 'default position[0] preserved').toBe(1);
+  expect(view[1], 'default position[1] preserved').toBe(2);
+  expect(view[2], 'default position[2] preserved').toBe(3);
+  expect(view[4], 'default range preserved').toBe(10);
+  expect(almostEqual(view[8], 0.8), 'updated intensity written').toBeTruthy();
 });
-test('uniform layout accepts WGSL alias types', t => {
+test('uniform layout accepts WGSL alias types', () => {
   const layout = new UniformBufferLayout({
     camera: 'vec3f',
     modelMatrix: 'mat4x4f'
   } as any);
-
   const data = layout.getData({
     camera: [1, 2, 3],
     modelMatrix: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]
   });
-
   const view = new Float32Array(data.buffer);
-  t.equal(view[0], 1, 'camera[0]');
-  t.equal(view[1], 2, 'camera[1]');
-  t.equal(view[2], 3, 'camera[2]');
-  t.equal(view[4], 1, 'modelMatrix[0]');
-  t.equal(view[9], 1, 'modelMatrix[5]');
-  t.equal(view[14], 1, 'modelMatrix[10]');
-  t.equal(view[19], 1, 'modelMatrix[15]');
-  t.end();
+  expect(view[0], 'camera[0]').toBe(1);
+  expect(view[1], 'camera[1]').toBe(2);
+  expect(view[2], 'camera[2]').toBe(3);
+  expect(view[4], 'modelMatrix[0]').toBe(1);
+  expect(view[9], 'modelMatrix[5]').toBe(1);
+  expect(view[14], 'modelMatrix[10]').toBe(1);
+  expect(view[19], 'modelMatrix[15]').toBe(1);
 });
 
 /*

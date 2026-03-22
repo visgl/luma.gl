@@ -1,30 +1,25 @@
+import {expect, test} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {lambertMaterial} from '@luma.gl/shadertools';
-import type {TapeTestFunction} from '@luma.gl/devtools-extensions/tape-test-utils';
-
-export function registerLambertMaterialTests(test: TapeTestFunction): void {
-  test('shadertools#lambertMaterial', t => {
+import { lambertMaterial } from '@luma.gl/shadertools';
+export function registerLambertMaterialTests(): void {
+  test('shadertools#lambertMaterial', () => {
     let uniforms = lambertMaterial.getUniforms({});
-    t.deepEqual(uniforms, lambertMaterial.defaultUniforms, 'Default lambert lighting uniforms ok');
-
+    expect(uniforms, 'Default lambert lighting uniforms ok').toEqual(lambertMaterial.defaultUniforms);
     uniforms = lambertMaterial.getUniforms({
       unlit: true,
       ambient: 0.0,
       diffuse: 0.0
     });
-    t.is(uniforms.unlit, true, 'unlit');
-    t.is(uniforms.ambient, 0, 'ambient');
-    t.is(uniforms.diffuse, 0, 'diffuse');
-
+    expect(uniforms.unlit, 'unlit').toBe(true);
+    expect(uniforms.ambient, 'ambient').toBe(0);
+    expect(uniforms.diffuse, 'diffuse').toBe(0);
     uniforms = lambertMaterial.getUniforms({});
-    t.equal(uniforms.unlit, false, 'unlit');
-    t.equal(uniforms.ambient, 0.35, 'ambient');
-    t.equal(uniforms.diffuse, 0.6, 'diffuse');
-    t.ok(lambertMaterial.defines?.LIGHTING_FRAGMENT, 'lambertMaterial enables fragment lighting');
-
-    t.end();
+    expect(uniforms.unlit, 'unlit').toBe(false);
+    expect(uniforms.ambient, 'ambient').toBe(0.35);
+    expect(uniforms.diffuse, 'diffuse').toBe(0.6);
+    expect(lambertMaterial.defines?.LIGHTING_FRAGMENT, 'lambertMaterial enables fragment lighting').toBeTruthy();
   });
 }

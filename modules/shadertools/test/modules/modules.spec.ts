@@ -1,12 +1,6 @@
-// luma.gl
-// SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
-
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
-
-import {initializeShaderModule, getShaderModuleUniforms} from '@luma.gl/shadertools';
+import { expect, test } from 'vitest';
+import { initializeShaderModule, getShaderModuleUniforms } from '@luma.gl/shadertools';
 import * as imports from '@luma.gl/shadertools';
-
 const shaderModules = {};
 
 // HACK - sniff out modules from * imports
@@ -16,18 +10,14 @@ for (const [name, value] of Object.entries(imports)) {
     shaderModules[name] = value;
   }
 }
-
-test('shadertools#module imports are defined', t => {
+test('shadertools#module imports are defined', () => {
   for (const name in shaderModules) {
-    verifyShaderModule(t, shaderModules[name]);
+    verifyShaderModule(expect, shaderModules[name]);
   }
-  t.end();
 });
-
 function verifyShaderModule(t, module) {
   initializeShaderModule(module);
   t.ok(module, `${module.name} imported`);
-
   const uniforms = getShaderModuleUniforms(module, {}, {});
   let isUniformsVaid = true;
   for (const key in uniforms) {
@@ -39,7 +29,6 @@ function verifyShaderModule(t, module) {
   }
   t.ok(isUniformsVaid, `${module.name} getUniforms returns valid default values`);
 }
-
 function getUniformType(value) {
   if (value === null) {
     return 'null';

@@ -1,20 +1,11 @@
-// luma.gl
-// SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
-
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {getWebGLTestDevice} from '@luma.gl/test-utils';
-
-import {GL} from '@luma.gl/constants';
-
-test('@luma.gl/constants', t => {
-  t.equal(typeof GL, 'object', '@luma.gl/constants is an object');
-  t.end();
+import {expect, test} from 'vitest';
+import { getWebGLTestDevice } from '@luma.gl/test-utils';
+import { GL } from '@luma.gl/constants';
+test('@luma.gl/constants', () => {
+  expect(typeof GL, '@luma.gl/constants is an object').toBe('object');
 });
-
-test('@luma.gl/constants#WebGL2RenderingContext comparison', async t => {
+test('@luma.gl/constants#WebGL2RenderingContext comparison', async () => {
   const webglDevice = await getWebGLTestDevice();
-
   for (const device of [webglDevice]) {
     // @ts-ignore
     const gl = device.gl;
@@ -24,12 +15,10 @@ test('@luma.gl/constants#WebGL2RenderingContext comparison', async t => {
       if (Number.isFinite(value) && key.toUpperCase() === key && GL[key] !== undefined) {
         // Avoid generating too much test log
         if (GL[key] !== value) {
-          t.equals(GL[key], value, `GL.${key} is equal to gl.${key}`);
+          expect(GL[key], `GL.${key} is equal to gl.${key}`).toBe(value);
         }
         count++;
       }
     }
-    t.comment(`Checked ${count} GL constants against platform WebGL2 context`);
   }
-  t.end();
 });

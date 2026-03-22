@@ -1,16 +1,13 @@
+import {expect, test} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {hexagonalPixelate} from '@luma.gl/effects';
-import {getShaderModuleUniforms} from '@luma.gl/shadertools';
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
-
-test('hexagonalPixelate#build/uniform', t => {
+import { hexagonalPixelate } from '@luma.gl/effects';
+import { getShaderModuleUniforms } from '@luma.gl/shadertools';
+test('hexagonalPixelate#build/uniform', () => {
   const uniforms = getShaderModuleUniforms(hexagonalPixelate, {}, {});
-
-  t.ok(uniforms, 'hexagonalPixelate module build is ok');
-  t.deepEqual(uniforms.center, [0.5, 0.5], 'hexagonalPixelate center uniform is ok');
-  t.equal(uniforms.scale, 10, 'hexagonalPixelate strength uniform is ok');
-  t.end();
+  expect(uniforms, 'hexagonalPixelate module build is ok').toBeTruthy();
+  expect(uniforms.center, 'hexagonalPixelate center uniform is ok').toEqual([0.5, 0.5]);
+  expect(uniforms.scale, 'hexagonalPixelate strength uniform is ok').toBe(10);
 });

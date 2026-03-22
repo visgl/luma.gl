@@ -1,16 +1,14 @@
+import {expect, test} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {UniformValue} from '@luma.gl/core';
-import {gouraudMaterial} from '@luma.gl/shadertools';
-import type {TapeTestFunction} from '@luma.gl/devtools-extensions/tape-test-utils';
-
-export function registerGouraudMaterialTests(test: TapeTestFunction): void {
-  test('shadertools#gouraudMaterial', t => {
+import type { UniformValue } from '@luma.gl/core';
+import { gouraudMaterial } from '@luma.gl/shadertools';
+export function registerGouraudMaterialTests(): void {
+  test('shadertools#gouraudMaterial', () => {
     let uniforms: Record<string, UniformValue | any> = gouraudMaterial.getUniforms?.({})!;
-    t.deepEqual(uniforms, gouraudMaterial.defaultUniforms, 'Default phong lighting uniforms ok');
-
+    expect(uniforms, 'Default phong lighting uniforms ok').toEqual(gouraudMaterial.defaultUniforms);
     uniforms = gouraudMaterial.getUniforms?.({
       unlit: true,
       ambient: 0.0,
@@ -18,20 +16,17 @@ export function registerGouraudMaterialTests(test: TapeTestFunction): void {
       shininess: 0.0,
       specularColor: [255, 0, 0]
     })!;
-    t.is(uniforms.unlit, true, 'unlit');
-    t.is(uniforms.ambient, 0, 'ambient');
-    t.is(uniforms.diffuse, 0, 'diffuse');
-    t.is(uniforms.shininess, 0, 'shininess');
-    t.deepEqual(uniforms.specularColor, [1, 0, 0], 'specularColor');
-
+    expect(uniforms.unlit, 'unlit').toBe(true);
+    expect(uniforms.ambient, 'ambient').toBe(0);
+    expect(uniforms.diffuse, 'diffuse').toBe(0);
+    expect(uniforms.shininess, 'shininess').toBe(0);
+    expect(uniforms.specularColor, 'specularColor').toEqual([1, 0, 0]);
     uniforms = gouraudMaterial.getUniforms?.({})!;
-    t.equal(uniforms.unlit, false, 'unlit');
-    t.equal(uniforms.ambient, 0.35, 'ambient');
-    t.equal(uniforms.diffuse, 0.6, 'diffuse');
-    t.equal(uniforms.shininess, 32, 'shininess');
-    t.deepEqual(uniforms.specularColor, [0.15, 0.15, 0.15], 'specularColor');
-    t.ok(gouraudMaterial.defines?.LIGHTING_VERTEX, 'gouraudMaterial enables vertex lighting');
-
-    t.end();
+    expect(uniforms.unlit, 'unlit').toBe(false);
+    expect(uniforms.ambient, 'ambient').toBe(0.35);
+    expect(uniforms.diffuse, 'diffuse').toBe(0.6);
+    expect(uniforms.shininess, 'shininess').toBe(32);
+    expect(uniforms.specularColor, 'specularColor').toEqual([0.15, 0.15, 0.15]);
+    expect(gouraudMaterial.defines?.LIGHTING_VERTEX, 'gouraudMaterial enables vertex lighting').toBeTruthy();
   });
 }

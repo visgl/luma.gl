@@ -1,13 +1,8 @@
-// luma.gl
-// SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
-
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import {Buffer, Device} from '@luma.gl/core';
-import {Computation} from '@luma.gl/engine';
-
-const source = /* WGSL*/ `\
+import {expect, test} from 'vitest';
+import { getWebGPUTestDevice } from '@luma.gl/test-utils';
+import { Buffer, Device } from '@luma.gl/core';
+import { Computation } from '@luma.gl/engine';
+const source = /* WGSL*/`\
 @group(0) @binding(0) var<storage, read_write> data: array<i32>;
 
 @compute @workgroup_size(1) fn main(
@@ -17,64 +12,56 @@ const source = /* WGSL*/ `\
   data[i] = 2 * data[i];
 }
 `;
-
-test('Computation#construct/delete', async t => {
+test('Computation#construct/delete', async () => {
   const webgpuDevice = await getWebGPUTestDevice();
   if (webgpuDevice) {
-    const computation = new Computation(webgpuDevice, {source});
-    t.ok(computation instanceof Computation, 'ComputePipeline construction successful');
+    const computation = new Computation(webgpuDevice, {
+      source
+    });
+    expect(computation instanceof Computation, 'ComputePipeline construction successful').toBeTruthy();
     computation.destroy();
-    t.ok(computation instanceof Computation, 'ComputePipeline delete successful');
+    expect(computation instanceof Computation, 'ComputePipeline delete successful').toBeTruthy();
     computation.destroy();
-    t.ok(computation instanceof Computation, 'ComputePipeline repeated delete successful');
+    expect(computation instanceof Computation, 'ComputePipeline repeated delete successful').toBeTruthy();
   }
-  t.end();
 });
-
-test('Computation#compute', async t => {
+test('Computation#compute', async () => {
   const webgpuDevice = await getWebGPUTestDevice();
   if (webgpuDevice) {
     if (isSoftwareBackedDevice(webgpuDevice)) {
-      t.comment('Skipping WebGPU compute test on a software-backed adapter');
-      t.end();
       return;
     }
-
     const computation = new Computation(webgpuDevice, {
       source,
       shaderLayout: {
-        bindings: [{name: 'data', type: 'storage', group: 0, location: 0}]
+        bindings: [{
+          name: 'data',
+          type: 'storage',
+          group: 0,
+          location: 0
+        }]
       }
     });
-
     const workBuffer = webgpuDevice.createBuffer({
       id: 'work buffer',
       byteLength: 4,
       usage: Buffer.STORAGE | Buffer.COPY_SRC | Buffer.COPY_DST
     });
-
     workBuffer.write(new Int32Array([2]));
     const inputData = new Int32Array(await workBuffer.readAsync());
-    t.equal(inputData[0], 2, 'Input data is correct');
-
-    computation.setBindings({data: workBuffer});
-
+    expect(inputData[0], 'Input data is correct').toBe(2);
+    computation.setBindings({
+      data: workBuffer
+    });
     const computePass = webgpuDevice.beginComputePass({});
     computation.dispatch(computePass, 1);
     computePass.end();
-
     webgpuDevice.submit();
-
     const computedData = new Int32Array(await workBuffer.readAsync());
-    t.equal(computedData[0], 4, 'Computed data is correct');
-
+    expect(computedData[0], 'Computed data is correct').toBe(4);
     computation.destroy();
   }
-  t.end();
 });
-
 function isSoftwareBackedDevice(device: Device): boolean {
-  return (
-    device.info.gpu === 'software' || device.info.gpuType === 'cpu' || Boolean(device.info.fallback)
-  );
+  return device.info.gpu === 'software' || device.info.gpuType === 'cpu' || Boolean(device.info.fallback);
 }

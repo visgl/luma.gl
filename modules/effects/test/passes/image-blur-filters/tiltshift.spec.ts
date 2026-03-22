@@ -1,19 +1,16 @@
+import {expect, test} from 'vitest';
 // luma.gl
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {tiltShift} from '@luma.gl/effects';
-import {getShaderModuleUniforms} from '@luma.gl/shadertools';
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
-
-test('tiltShift#build/uniform', t => {
+import { tiltShift } from '@luma.gl/effects';
+import { getShaderModuleUniforms } from '@luma.gl/shadertools';
+test('tiltShift#build/uniform', () => {
   const uniforms = getShaderModuleUniforms(tiltShift, {}, {});
-
-  t.ok(uniforms, 'tiltShift module build is ok');
-  t.equal(uniforms.blurRadius, 15, 'tiltShift blurRadius uniform is ok');
-  t.equal(uniforms.gradientRadius, 200, 'tiltShift gradientRadius uniform is ok');
-  t.deepEqual(uniforms.start, [0, 0], 'tiltShift start uniform is ok');
-  t.deepEqual(uniforms.end, [1, 1], 'tiltShift end uniform is ok');
-  t.equal(uniforms.invert, 0, 'tiltShift invert uniform is ok');
-  t.end();
+  expect(uniforms, 'tiltShift module build is ok').toBeTruthy();
+  expect(uniforms.blurRadius, 'tiltShift blurRadius uniform is ok').toBe(15);
+  expect(uniforms.gradientRadius, 'tiltShift gradientRadius uniform is ok').toBe(200);
+  expect(uniforms.start, 'tiltShift start uniform is ok').toEqual([0, 0]);
+  expect(uniforms.end, 'tiltShift end uniform is ok').toEqual([1, 1]);
+  expect(uniforms.invert, 'tiltShift invert uniform is ok').toBe(0);
 });

@@ -1,22 +1,13 @@
-// luma.gl
-// SPDX-License-Identifier: MIT
-// Copyright (c) vis.gl contributors
-
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import type {ShaderModule} from '@luma.gl/shadertools';
-import {
-  initializeShaderModule,
-  checkShaderModuleDeprecations,
-  getShaderModuleUniforms,
-  getShaderModuleSource
-} from '@luma.gl/shadertools';
-
-test('ShaderModule', t => {
-  let shaderModule: ShaderModule = {name: 'empty-shader-module', uniformTypes: {}};
-
-  t.ok(getShaderModuleSource(shaderModule, 'vertex'), 'returns vertex shader');
-  t.ok(getShaderModuleSource(shaderModule, 'fragment'), 'returns fragment shader');
-
+import {expect, test} from 'vitest';
+import type { ShaderModule } from '@luma.gl/shadertools';
+import { initializeShaderModule, checkShaderModuleDeprecations, getShaderModuleUniforms, getShaderModuleSource } from '@luma.gl/shadertools';
+test('ShaderModule', () => {
+  let shaderModule: ShaderModule = {
+    name: 'empty-shader-module',
+    uniformTypes: {}
+  };
+  expect(getShaderModuleSource(shaderModule, 'vertex'), 'returns vertex shader').toBeTruthy();
+  expect(getShaderModuleSource(shaderModule, 'fragment'), 'returns fragment shader').toBeTruthy();
   shaderModule = {
     name: 'test-shader-module',
     uniformTypes: {},
@@ -30,23 +21,25 @@ varying float vClipped;
 `
   };
   initializeShaderModule(shaderModule);
-
-  t.ok(getShaderModuleSource(shaderModule, 'vertex'), 'returns vertex shader');
-  t.ok(getShaderModuleSource(shaderModule, 'fragment'), 'returns fragment shader');
+  expect(getShaderModuleSource(shaderModule, 'vertex'), 'returns vertex shader').toBeTruthy();
+  expect(getShaderModuleSource(shaderModule, 'fragment'), 'returns fragment shader').toBeTruthy();
   // @ts-expect-error
-  t.throws(() => getShaderModuleSource(shaderModule, ''), 'unknown shader type');
-
-  t.end();
+  expect(() => getShaderModuleSource(shaderModule, ''), 'unknown shader type').toThrow();
 });
-
-test('checkShader', t => {
+test('checkShader', () => {
   const shaderModule = {
     name: 'test-shader-module',
     uniformTypes: {},
-    deprecations: [
-      {type: 'function', old: 'project', new: 'project_to_clipspace', deprecated: true},
-      {type: 'vec4', old: 'viewMatrix', new: 'uViewMatrix'}
-    ]
+    deprecations: [{
+      type: 'function',
+      old: 'project',
+      new: 'project_to_clipspace',
+      deprecated: true
+    }, {
+      type: 'vec4',
+      old: 'viewMatrix',
+      new: 'uViewMatrix'
+    }]
   };
   initializeShaderModule(shaderModule);
   const testShader = `
@@ -58,7 +51,6 @@ void main() {
   gl_Position = project(instancePositions);
 }
 `;
-
   const log = {
     deprecatedCalled: [],
     deprecated: function deprecated(...args) {
@@ -71,61 +63,60 @@ void main() {
       return () => {};
     }
   };
-
   checkShaderModuleDeprecations(shaderModule, testShader, log);
-
-  t.deepEqual(
-    log.deprecatedCalled[0],
-    ['project', 'project_to_clipspace'],
-    'log.deprecated called'
-  );
-  t.deepEqual(log.removedCalled[0], ['viewMatrix', 'uViewMatrix'], 'log.removed called');
-
-  t.end();
+  expect(log.deprecatedCalled[0], 'log.deprecated called').toEqual(['project', 'project_to_clipspace']);
+  expect(log.removedCalled[0], 'log.removed called').toEqual(['viewMatrix', 'uViewMatrix']);
 });
-
-test('initializeShaderModule', t => {
+test('initializeShaderModule', () => {
   const module: ShaderModule = {
     name: 'test-shader-module',
     propTypes: {
       // @ts-expect-error
       center: [0.5, 0.5],
-      strength: {type: 'number', value: 0.3, min: 0, max: 1},
+      strength: {
+        type: 'number',
+        value: 0.3,
+        min: 0,
+        max: 1
+      },
       // @ts-expect-error
       enabled: false,
       // @ts-ignore
       sampler: null,
-      range: {value: new Float32Array([0, 1]), private: true}
+      range: {
+        value: new Float32Array([0, 1]),
+        private: true
+      }
     }
   };
-
   initializeShaderModule(module);
-
   let uniforms = getShaderModuleUniforms(module, {});
-  t.deepEqual(uniforms, {
+  expect(uniforms).toEqual({
     center: [0.5, 0.5],
     strength: 0.3,
     enabled: false,
     sampler: null,
     range: [0, 1]
   });
-
   uniforms = getShaderModuleUniforms(module, {
     center: new Float32Array([0, 0]),
     sampler: {},
     range: [0, 2]
   });
-  t.deepEqual(uniforms, {
+  expect(uniforms).toEqual({
     center: [0, 0],
     strength: 0.3,
     enabled: false,
     sampler: {},
     range: [0, 1]
   });
-
-  t.throws(() => getShaderModuleUniforms(module, {strength: -1}), 'invalid uniform');
-  t.throws(() => getShaderModuleUniforms(module, {strength: 2}), 'invalid uniform');
-  t.throws(() => getShaderModuleUniforms(module, {center: 0.5}), 'invalid uniform');
-
-  t.end();
+  expect(() => getShaderModuleUniforms(module, {
+    strength: -1
+  }), 'invalid uniform').toThrow();
+  expect(() => getShaderModuleUniforms(module, {
+    strength: 2
+  }), 'invalid uniform').toThrow();
+  expect(() => getShaderModuleUniforms(module, {
+    center: 0.5
+  }), 'invalid uniform').toThrow();
 });
