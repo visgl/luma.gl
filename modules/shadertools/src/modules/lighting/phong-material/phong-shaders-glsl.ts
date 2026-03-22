@@ -4,6 +4,7 @@
 
 export const PHONG_VS = /* glsl */ `\
 uniform phongMaterialUniforms {
+  uniform bool unlit;
   uniform float ambient;
   uniform float diffuse;
   uniform float shininess;
@@ -13,6 +14,7 @@ uniform phongMaterialUniforms {
 
 export const PHONG_FS = /* glsl */ `\
 uniform phongMaterialUniforms {
+  uniform bool unlit;
   uniform float ambient;
   uniform float diffuse;
   uniform float shininess;
@@ -33,6 +35,10 @@ vec3 lighting_getLightColor(vec3 surfaceColor, vec3 light_direction, vec3 view_d
 
 vec3 lighting_getLightColor(vec3 surfaceColor, vec3 cameraPosition, vec3 position_worldspace, vec3 normal_worldspace) {
   vec3 lightColor = surfaceColor;
+
+  if (material.unlit) {
+    return surfaceColor;
+  }
 
   if (lighting.enabled == 0) {
     return lightColor;

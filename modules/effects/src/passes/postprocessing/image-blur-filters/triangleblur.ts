@@ -11,7 +11,7 @@ struct triangleBlurUniforms {
   delta: vec2f,
 };
 
-@group(0) @binding(1) var<uniform> triangleBlur: triangleBlurUniforms;
+@group(0) @binding(auto) var<uniform> triangleBlur: triangleBlurUniforms;
 
 fn triangleBlur_sampleColor(
   sourceTexture: texture_2d<f32>,

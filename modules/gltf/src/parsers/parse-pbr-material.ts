@@ -8,7 +8,7 @@ import type {GLTFSampler} from '@loaders.gl/gltf';
 
 import {type ParsedPBRMaterial} from '../pbr/pbr-material';
 import {type PBREnvironment} from '../pbr/pbr-environment';
-import {type PBRMaterialBindings} from '@luma.gl/shadertools';
+import {type IBLBindings, type PBRMaterialBindings} from '@luma.gl/shadertools';
 import {GLEnum} from '../webgl-to-webgpu/gltf-webgl-constants';
 import {convertSampler} from '../webgl-to-webgpu/convert-webgl-sampler';
 
@@ -93,7 +93,7 @@ export function parsePBRMaterial(
       imageBasedLightingEnvironment.diffuseEnvSampler.texture;
     parsedMaterial.bindings.pbr_specularEnvSampler =
       imageBasedLightingEnvironment.specularEnvSampler.texture;
-    parsedMaterial.bindings.pbr_BrdfLUT = imageBasedLightingEnvironment.brdfLutTexture.texture;
+    parsedMaterial.bindings.pbr_brdfLUT = imageBasedLightingEnvironment.brdfLutTexture.texture;
     parsedMaterial.uniforms.scaleIBLAmbient = [1, 1];
   }
 
@@ -235,7 +235,7 @@ function parsePbrMetallicRoughness(
 function addTexture(
   device: Device,
   gltfTexture: GLTFTexture,
-  uniformName: keyof PBRMaterialBindings,
+  uniformName: keyof (PBRMaterialBindings & IBLBindings),
   define: string,
   parsedMaterial: ParsedPBRMaterial
 ): void {

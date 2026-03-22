@@ -9,6 +9,10 @@ via the `ShaderAssembler` class.
 - and injections 
 to generate the final vertex and fragment shader source that can be used to create a program.
 
+For current WGSL-specific behavior, including module WGSL assembly and
+`@binding(auto)` relocation, see
+[WGSL Support](/docs/api-reference/shadertools/wgsl-support).
+
 ## Types
 
 ## `AssembleShaderOptions`

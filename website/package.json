@@ -20,12 +20,6 @@
   "resolution_notes": {
     "cheerio": "@cmfcmf/docusaurus-search-local breaks with v1.0.0 production release"
   },
-  "resolutions": {
-    "cheerio": "1.0.0-rc.9",
-    "@docusaurus/plugin-client-redirects": "^3.9.2",
-    "@docusaurus/plugin-content-docs": "^3.9.2",
-    "@docusaurus/preset-classic": "^3.9.2"
-  },
   "dependencies": {
     "@algolia/autocomplete-js": "^1.19.2",
     "@docusaurus/core": "^3.9.2",
@@ -43,6 +37,5 @@
     "@docusaurus/tsconfig": "^3.9.2",
     "docusaurus-mdx-checker": "^3.0.0"
   },
-  "browserslist": {},
-  "packageManager": "yarn@4.13.0"
+  "browserslist": {}
 }

@@ -155,12 +155,6 @@ uniform sampler2D pbr_iridescenceSampler;
 #ifdef HAS_ANISOTROPYMAP
 uniform sampler2D pbr_anisotropySampler;
 #endif
-#ifdef USE_IBL
-uniform samplerCube pbr_diffuseEnvSampler;
-uniform samplerCube pbr_specularEnvSampler;
-uniform sampler2D pbr_brdfLUT;
-#endif
-
 // Inputs from vertex shader
 
 in vec3 pbr_vPosition;

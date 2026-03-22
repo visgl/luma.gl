@@ -31,6 +31,7 @@ import type {VertexArray, VertexArrayProps} from './resources/vertex-array';
 import type {TransformFeedback, TransformFeedbackProps} from './resources/transform-feedback';
 import type {QuerySet, QuerySetProps} from './resources/query-set';
 import type {Fence} from './resources/fence';
+import type {Bindings, ComputeShaderLayout, ShaderLayout} from './types/shader-layout';
 
 import {vertexFormatDecoder} from '../shadertypes/vertex-types/vertex-format-decoder';
 import {textureFormatDecoder} from '../shadertypes/texture-types/texture-format-decoder';
@@ -396,6 +397,10 @@ export type DeviceProps = {
   _handle?: unknown; // WebGL2RenderingContext | GPUDevice | null;
 };
 
+type DeviceFactories = {
+  bindGroupFactory?: unknown;
+};
+
 /** WebGL independent copy of WebGLContextAttributes */
 type WebGLContextProps = {
   /** indicates if the canvas contains an alpha buffer. */
@@ -506,6 +511,8 @@ export abstract class Device {
   userData: {[key: string]: unknown} = {};
   /** stats */
   readonly statsManager: StatsManager = lumaStats;
+  /** Internal per-device factory storage */
+  _factories: DeviceFactories = {};
   /** An abstract timestamp used for change tracking */
   timestamp: number = 0;
 
@@ -784,6 +791,24 @@ or create a device with the 'debug: true' prop.`;
   /** Internal helper for creating a shareable WebGL render-pipeline implementation. */
   _createSharedRenderPipelineWebGL(_props: RenderPipelineProps): SharedRenderPipeline {
     throw new Error('_createSharedRenderPipelineWebGL() not implemented');
+  }
+
+  /** Internal WebGPU-only helper for retrieving the native bind-group layout for a pipeline group. */
+  _createBindGroupLayoutWebGPU(
+    _pipeline: RenderPipeline | ComputePipeline,
+    _group: number
+  ): unknown {
+    throw new Error('_createBindGroupLayoutWebGPU() not implemented');
+  }
+
+  /** Internal WebGPU-only helper for creating a native bind group. */
+  _createBindGroupWebGPU(
+    _bindGroupLayout: unknown,
+    _shaderLayout: ShaderLayout | ComputeShaderLayout,
+    _bindings: Bindings,
+    _group: number
+  ): unknown {
+    throw new Error('_createBindGroupWebGPU() not implemented');
   }
 
   /**

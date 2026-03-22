@@ -166,6 +166,12 @@ export type Binding =
   | Buffer
   | {buffer: Buffer; offset?: number; size?: number};
 
+/** Named binding map */
+export type Bindings = Record<string, Binding>;
+
+/** Bindings partitioned by bind-group index */
+export type BindingsByGroup = Partial<Record<number, Bindings>>;
+
 // SHADER LAYOUTS
 
 /**

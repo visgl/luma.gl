@@ -9,7 +9,7 @@ struct inkUniforms {
   strength: f32,
 };
 
-@group(0) @binding(1) var<uniform> ink: inkUniforms;
+@group(0) @binding(auto) var<uniform> ink: inkUniforms;
 
 fn ink_sampleColor(
   sourceTexture: texture_2d<f32>,

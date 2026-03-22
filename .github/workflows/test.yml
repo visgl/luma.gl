@@ -26,9 +26,7 @@ jobs:
         with:
           node-version-file: '.nvmrc'
           cache: 'yarn' # or 'pnpm', 'npm' depending on your package manager
-          cache-dependency-path: |
-            yarn.lock
-            website/yarn.lock
+          cache-dependency-path: yarn.lock
 
       - name: Install dependencies
         run: yarn install --immutable
@@ -107,17 +105,10 @@ jobs:
         with:
           node-version-file: '.nvmrc'
           cache: 'yarn'
-          cache-dependency-path: |
-            yarn.lock
-            website/yarn.lock
+          cache-dependency-path: yarn.lock
 
-      - name: Install root dependencies
+      - name: Install dependencies
         run: yarn install --immutable
-
-      - name: Install website dependencies
-        run: yarn install --immutable
-        working-directory: website
 
       - name: Build website
-        run: yarn build
-        working-directory: website
+        run: yarn website:build

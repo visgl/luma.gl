@@ -201,38 +201,65 @@ struct pbrMaterialUniforms {
   // #endif
 }
 
-@binding(2) @group(0) var<uniform> pbrMaterial : pbrMaterialUniforms;
+@group(3) @binding(0) var<uniform> pbrMaterial : pbrMaterialUniforms;
 
 // Samplers
 #ifdef HAS_BASECOLORMAP
-@binding(3) @group(0) var pbr_baseColorSampler: texture_2d<f32>;
-@binding(4) @group(0) var pbr_baseColorSamplerSampler: sampler;
+@group(3) @binding(1) var pbr_baseColorSampler: texture_2d<f32>;
+@group(3) @binding(2) var pbr_baseColorSamplerSampler: sampler;
 #endif
 #ifdef HAS_NORMALMAP
-@binding(5) @group(0) var pbr_normalSampler: texture_2d<f32>;
-@binding(6) @group(0) var pbr_normalSamplerSampler: sampler;
+@group(3) @binding(3) var pbr_normalSampler: texture_2d<f32>;
+@group(3) @binding(4) var pbr_normalSamplerSampler: sampler;
 #endif
 #ifdef HAS_EMISSIVEMAP
-@binding(7) @group(0) var pbr_emissiveSampler: texture_2d<f32>;
-@binding(8) @group(0) var pbr_emissiveSamplerSampler: sampler;
+@group(3) @binding(5) var pbr_emissiveSampler: texture_2d<f32>;
+@group(3) @binding(6) var pbr_emissiveSamplerSampler: sampler;
 #endif
 #ifdef HAS_METALROUGHNESSMAP
-@binding(9) @group(0) var pbr_metallicRoughnessSampler: texture_2d<f32>;
-@binding(10) @group(0) var pbr_metallicRoughnessSamplerSampler: sampler;
+@group(3) @binding(7) var pbr_metallicRoughnessSampler: texture_2d<f32>;
+@group(3) @binding(8) var pbr_metallicRoughnessSamplerSampler: sampler;
 #endif
 #ifdef HAS_OCCLUSIONMAP
-@binding(11) @group(0) var pbr_occlusionSampler: texture_2d<f32>;
-@binding(12) @group(0) var pbr_occlusionSamplerSampler: sampler;
+@group(3) @binding(9) var pbr_occlusionSampler: texture_2d<f32>;
+@group(3) @binding(10) var pbr_occlusionSamplerSampler: sampler;
 #endif
-#ifdef USE_IBL
-@binding(13) @group(0) var pbr_diffuseEnvSampler: texture_cube<f32>;
-@binding(14) @group(0) var pbr_diffuseEnvSamplerSampler: sampler;
-@binding(15) @group(0) var pbr_specularEnvSampler: texture_cube<f32>;
-@binding(16) @group(0) var pbr_specularEnvSamplerSampler: sampler;
-@binding(17) @group(0) var pbr_BrdfLUT: texture_2d<f32>;
-@binding(18) @group(0) var pbr_BrdfLUTSampler: sampler;
+#ifdef HAS_SPECULARCOLORMAP
+@group(3) @binding(11) var pbr_specularColorSampler: texture_2d<f32>;
+@group(3) @binding(12) var pbr_specularColorSamplerSampler: sampler;
 #endif
-
+#ifdef HAS_SPECULARINTENSITYMAP
+@group(3) @binding(13) var pbr_specularIntensitySampler: texture_2d<f32>;
+@group(3) @binding(14) var pbr_specularIntensitySamplerSampler: sampler;
+#endif
+#ifdef HAS_TRANSMISSIONMAP
+@group(3) @binding(15) var pbr_transmissionSampler: texture_2d<f32>;
+@group(3) @binding(16) var pbr_transmissionSamplerSampler: sampler;
+#endif
+#ifdef HAS_CLEARCOATMAP
+@group(3) @binding(17) var pbr_clearcoatSampler: texture_2d<f32>;
+@group(3) @binding(18) var pbr_clearcoatSamplerSampler: sampler;
+#endif
+#ifdef HAS_CLEARCOATROUGHNESSMAP
+@group(3) @binding(19) var pbr_clearcoatRoughnessSampler: texture_2d<f32>;
+@group(3) @binding(20) var pbr_clearcoatRoughnessSamplerSampler: sampler;
+#endif
+#ifdef HAS_SHEENCOLORMAP
+@group(3) @binding(21) var pbr_sheenColorSampler: texture_2d<f32>;
+@group(3) @binding(22) var pbr_sheenColorSamplerSampler: sampler;
+#endif
+#ifdef HAS_SHEENROUGHNESSMAP
+@group(3) @binding(23) var pbr_sheenRoughnessSampler: texture_2d<f32>;
+@group(3) @binding(24) var pbr_sheenRoughnessSamplerSampler: sampler;
+#endif
+#ifdef HAS_IRIDESCENCEMAP
+@group(3) @binding(25) var pbr_iridescenceSampler: texture_2d<f32>;
+@group(3) @binding(26) var pbr_iridescenceSamplerSampler: sampler;
+#endif
+#ifdef HAS_ANISOTROPYMAP
+@group(3) @binding(27) var pbr_anisotropySampler: texture_2d<f32>;
+@group(3) @binding(28) var pbr_anisotropySamplerSampler: sampler;
+#endif
 // Encapsulate the various inputs used by the various functions in the shading equation
 // We store values in this struct to simplify the integration of alternative implementations
 // of the shading terms, outlined in the Readme.MD Appendix.

@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {createRequire} from 'node:module';
+import {fileURLToPath} from 'node:url';
 
 import {defineConfig} from 'vitest/config';
 import {playwright} from '@vitest/browser-playwright';
@@ -12,6 +13,9 @@ import {loadOcularConfig} from './load-ocular-config.mjs';
 const require = createRequire(import.meta.url);
 const VITEST_PACKAGE_ROOT = path.dirname(require.resolve('vitest/package.json'));
 const VITEST_INTERNAL_BROWSER_PATH = require.resolve('vitest/internal/browser');
+const BROWSER_PROCESS_SHIM_PATH = fileURLToPath(
+  new URL('./vitest/browser-process-shim.mjs', import.meta.url)
+);
 
 export async function getVitestConfig(options = {}) {
   const ocularConfig = options.ocularConfig || (await loadOcularConfig(options));
@@ -63,6 +67,7 @@ export async function getVitestConfig(options = {}) {
             color: 'green',
             environment: 'node',
             testTimeout,
+            setupFiles: [BROWSER_PROCESS_SHIM_PATH],
             include: ['modules/**/*.spec.{ts,js}', 'test/**/*.spec.{ts,js}'],
             exclude: ['modules/**/*.node.spec.{ts,js}', 'test/**/*.node.spec.{ts,js}', ...excludePatterns],
             browser: {
@@ -79,6 +84,7 @@ export async function getVitestConfig(options = {}) {
             color: 'cyan',
             environment: 'node',
             testTimeout,
+            setupFiles: [BROWSER_PROCESS_SHIM_PATH],
             include: ['modules/**/*.spec.{ts,js}', 'test/**/*.spec.{ts,js}'],
             exclude: ['modules/**/*.node.spec.{ts,js}', 'test/**/*.node.spec.{ts,js}', ...excludePatterns],
             browser: {

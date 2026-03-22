@@ -2,21 +2,32 @@
 
 :::caution
 This describes informal conventions that luma.gl applies to its shaders. 
-It is still a work in progress/
+It is still a work in progress.
 :::
 
 ## Uniform Blocks
 
-Shader modules are built around a set of well-defined uniform interface blocks.
+Shader modules are increasingly organized around a logical bind-group
+convention:
 
-| Interface Block    | Binding (Group) | Description                                                                           | Usage                                                                 |
-| ------------------ | --------------- | ------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| **project**        | 0 (0)           | camera world position, view and projection matrices                                   | Usually static for a view render cycle                                |
-| **lighting**       | 1 (0)           | ambient light color, point and directional light counts, trailing fixed-size light struct array | Usually static for a scene                                            |
-| **material**       | 2 (1)           | PBR parameters, base color, ...                                                       | Uniform buffer can be pre-calculated for each material and swapped in |
-| **postprocessing** | 3               | parameters for current post processing effect (often independent of other interfaces) |
+| Group | Intended Use | Typical Examples |
+| ----- | ------------ | ---------------- |
+| `0` | Core engine-owned per-draw state | `project`, `pbrProjection`, `picking`, `skin`, transform or object data |
+| `1` | Application-defined shared state | renderer feature blocks, app-specific environment or simulation state, terrain or dataset-level state |
+| `2` | Lighting and other scene invariants reused across many materials and draws | `lighting`, `dirlight`, shared `ibl`, shadow maps and shadow parameters |
+| `3` | Per-material surface state | `pbrMaterial`, `lambertMaterial`, `phongMaterial`, `gouraudMaterial`, material textures and samplers |
 
-This helps respect the limited budget for uniform blocks.
+Postprocessing and effect parameters should generally stay in group `0` for
+now. They are pass-local state rather than material state, and reusing group
+`3` for both would make the convention ambiguous.
+
+Projection-style blocks stay in group `0` when they mix camera data with
+object-dependent matrices such as `modelMatrix` or `normalMatrix`. A pure
+camera or view-projection block could reasonably live in group `1` or group
+`2`.
+
+For the current public guidance, see the
+[Bind Groups and Bindings Guide](/docs/api-guide/gpu/gpu-bindings).
 
 ## Shader Passes
 
