@@ -3,8 +3,8 @@
 // Copyright (c) vis.gl contributors
 
 import type {TypedArray, NumberArray4} from '@math.gl/types';
-import type {RenderPassProps, RenderPassParameters, Binding} from '@luma.gl/core';
-import {Buffer, RenderPass, RenderPipeline, log} from '@luma.gl/core';
+import type {RenderPassProps, RenderPassParameters, Bindings, BindingsByGroup} from '@luma.gl/core';
+import {Buffer, RenderPass, RenderPipeline, _getDefaultBindGroupFactory, log} from '@luma.gl/core';
 import {WebGPUDevice} from '../webgpu-device';
 import {WebGPUBuffer} from './webgpu-buffer';
 // import {WebGPUCommandEncoder} from './webgpu-command-encoder';
@@ -22,7 +22,7 @@ export class WebGPURenderPass extends RenderPass {
   pipeline: WebGPURenderPipeline | null = null;
 
   /** Latest bindings applied to this pass */
-  bindings: Record<string, Binding> = {};
+  bindings: Bindings | BindingsByGroup = {};
 
   constructor(device: WebGPUDevice, props: RenderPassProps = {}) {
     super(device, props);
@@ -125,11 +125,16 @@ export class WebGPURenderPass extends RenderPass {
   }
 
   /** Sets an array of bindings (uniform buffers, samplers, textures, ...) */
-  setBindings(bindings: Record<string, Binding>): void {
+  setBindings(bindings: Bindings | BindingsByGroup): void {
     this.bindings = bindings;
-    const bindGroup = this.pipeline?._getBindGroup(bindings);
-    if (bindGroup) {
-      this.handle.setBindGroup(0, bindGroup);
+    const bindGroups =
+      (this.pipeline &&
+        _getDefaultBindGroupFactory(this.device).getBindGroups(this.pipeline, bindings)) ||
+      {};
+    for (const [group, bindGroup] of Object.entries(bindGroups)) {
+      if (bindGroup) {
+        this.handle.setBindGroup(Number(group), bindGroup as GPUBindGroup);
+      }
     }
   }
 

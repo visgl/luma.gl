@@ -10,7 +10,7 @@ struct hueSaturationUniforms {
   saturation: f32,
 };
 
-@group(0) @binding(1) var<uniform> hueSaturation: hueSaturationUniforms;
+@group(0) @binding(auto) var<uniform> hueSaturation: hueSaturationUniforms;
 
 fn hueSaturation_filterColor(color: vec4f) -> vec4f {
   let angle = hueSaturation.hue * 3.14159265;

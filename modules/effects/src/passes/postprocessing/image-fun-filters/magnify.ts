@@ -13,7 +13,7 @@ struct magnifyUniforms {
   borderColor: vec4f,
 };
 
-@group(0) @binding(1) var<uniform> magnify: magnifyUniforms;
+@group(0) @binding(auto) var<uniform> magnify: magnifyUniforms;
 
 fn magnify_sampleColor(
   sourceTexture: texture_2d<f32>,

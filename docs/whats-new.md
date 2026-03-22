@@ -21,6 +21,7 @@ Target Date: April 2026
 
 - **Multi-canvas rendering** is now supported on both WebGL and WebGPU via [`device.createPresentationContext()`](/docs/api-reference/core/presentation-context). See the [Multiple Canvases](/docs/developer-guide/multiple-canvases) developer guide details.
 - **Composite uniform buffer layouts** now support nested structs and fixed-size arrays in [`UniformBufferLayout`](/docs/api-reference/core/uniform-buffer-layout) and [`UniformStore`](/docs/api-reference/core/uniform-store), while preserving nested JavaScript values at the API boundary.
+- **Grouped bindings** now support `ShaderLayout.bindings[].group`, flat `bindings`, and grouped `bindGroups`, including sparse logical bind-group usage on both WebGPU and WebGL.
 
 **@luma.gl/engine**
 
@@ -28,6 +29,7 @@ Target Date: April 2026
 - **Explicit mip chains** can now be passed to `DynamicTexture` for 2D, array, cube, and 3D uploads.
 - **Compressed mip uploads** are now validated and uploaded through `DynamicTexture`, including block-size-aware mip truncation.
 - **Mip-level format metadata** now accepts both `textureFormat` and `format` on texture data objects during the transition to loaders.gl `TextureLevel` naming.
+- New **`Material`** and **`MaterialFactory`** classes provide reusable material-owned group-3 bindings for models.
 
 **@luma.gl/webgpu**
 
@@ -44,12 +46,17 @@ Target Date: April 2026
 - **Joint/Skin Animations** - Support for glTF animations now include joint and skin animations.
 - **Lighting** - luma.gl Light definitions are now extracted if the `KHR_lights_punctual` glTF extension is present in the glTF file.
 - **`linear` texture filtering** - default texture filtering is now `linear` instead of `nearest` for improved texture rendering.
+- **Returned materials** - glTF scenegraph creation now returns `materials` aligned with the source glTF `materials` array.
 
 **@luma.gl/shadertools**
 
 - `WGSL shader modules` - most notably, the [`pbrMaterial`] module is now supported in WebGPU.
+- `WGSL shader modules` now support shadertools-managed `@binding(auto)` allocation for module-owned bindings. See [WGSL Support](/docs/api-reference/shadertools/wgsl-support).
 - `ShaderModule uniformTypes` now support nested structs and fixed-size arrays. See [`ShaderModule`](/docs/api-reference/shadertools/shader-module).
 - `SpotLight` support has been added to the [`lighting`](/docs/api-reference/shadertools/shader-modules/lighting) shader module.
+- New [`lambertMaterial`](/docs/api-reference/shadertools/shader-modules/lambert-material) shader module adds a diffuse-only matte material model.
+- Built-in material shader modules now support `unlit`, allowing applications to disable lighting without changing material families.
+- `lighting` and `pbrMaterial` documentation now describes the current bind-group conventions used by those modules.
 
 **@luma.gl/effects**
 

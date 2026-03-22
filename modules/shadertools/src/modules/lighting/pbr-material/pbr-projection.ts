@@ -23,7 +23,7 @@ struct pbrProjectionUniforms {
   camera: vec3<f32>
 };
 
-@binding(0) @group(0) var<uniform> pbrProjection: pbrProjectionUniforms;
+@group(0) @binding(auto) var<uniform> pbrProjection: pbrProjectionUniforms;
 `;
 
 export type PBRProjectionProps = {
@@ -35,6 +35,7 @@ export type PBRProjectionProps = {
 
 export const pbrProjection: ShaderModule<PBRProjectionProps> = {
   name: 'pbrProjection',
+  bindingLayout: [{name: 'pbrProjection', group: 0}],
   source: wgslUniformBlock,
   vs: uniformBlock,
   fs: uniformBlock,

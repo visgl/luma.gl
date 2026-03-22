@@ -6,6 +6,9 @@
 // / <reference types="@webgpu/types" />
 
 import type {
+  Bindings,
+  ComputePipeline,
+  ComputeShaderLayout,
   DeviceInfo,
   DeviceLimits,
   DeviceFeature,
@@ -31,6 +34,8 @@ import type {
   DeviceProps,
   CommandEncoderProps,
   PipelineLayoutProps,
+  RenderPipeline,
+  ShaderLayout
 } from '@luma.gl/core';
 import {Device, DeviceFeatures} from '@luma.gl/core';
 import {WebGPUBuffer} from './resources/webgpu-buffer';
@@ -53,6 +58,7 @@ import {WebGPUFence} from './resources/webgpu-fence';
 
 import {getShaderLayoutFromWGSL} from '../wgsl/get-shader-layout-wgsl';
 import {generateMipmapsWebGPU} from './helpers/generate-mipmaps-webgpu';
+import {getBindGroup} from './helpers/get-bind-group';
 import {
   getCpuHotspotProfiler as getWebGPUCpuHotspotProfiler,
   getCpuHotspotSubmitReason as getWebGPUCpuHotspotSubmitReason,
@@ -238,6 +244,31 @@ export class WebGPUDevice extends Device {
 
   override generateMipmapsWebGPU(texture: Texture): void {
     generateMipmapsWebGPU(this, texture);
+  }
+
+  override _createBindGroupLayoutWebGPU(
+    pipeline: RenderPipeline | ComputePipeline,
+    group: number
+  ): GPUBindGroupLayout {
+    return (pipeline as WebGPURenderPipeline | WebGPUComputePipeline).handle.getBindGroupLayout(
+      group
+    );
+  }
+
+  override _createBindGroupWebGPU(
+    bindGroupLayout: unknown,
+    shaderLayout: ShaderLayout | ComputeShaderLayout,
+    bindings: Bindings,
+    group: number
+  ): GPUBindGroup | null {
+    if (Object.keys(bindings).length === 0) {
+      return this.handle.createBindGroup({
+        layout: bindGroupLayout as GPUBindGroupLayout,
+        entries: []
+      });
+    }
+
+    return getBindGroup(this, bindGroupLayout as GPUBindGroupLayout, shaderLayout, bindings, group);
   }
 
   submit(commandBuffer?: WebGPUCommandBuffer): void {
