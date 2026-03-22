@@ -645,7 +645,7 @@ export abstract class Texture extends Resource<TextureProps> {
     data: null,
     dimension: '2d',
     format: 'rgba8unorm',
-    usage: Texture.SAMPLE | Texture.RENDER | Texture.COPY_DST | Texture.COPY_SRC,
+    usage: Texture.SAMPLE | Texture.RENDER | Texture.COPY_DST,
     width: undefined!,
     height: undefined!,
     depth: 1,

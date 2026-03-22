@@ -1826,13 +1826,15 @@ test('Texture#readBuffer reuses the cached WebGL read framebuffer', async t => {
   );
 
   const firstReadBuffer = webglDevice.createBuffer({
-    byteLength: texture.computeMemoryLayout({width: 1, height: 1, z: 0, depthOrArrayLayers: 1}).byteLength,
+    byteLength: texture.computeMemoryLayout({width: 1, height: 1, z: 0, depthOrArrayLayers: 1})
+      .byteLength,
     usage: Buffer.COPY_DST | Buffer.MAP_READ
   });
   texture.readBuffer({width: 1, height: 1, z: 0, depthOrArrayLayers: 1}, firstReadBuffer);
   const firstFramebuffer = (texture as any)._framebuffer;
   const secondReadBuffer = webglDevice.createBuffer({
-    byteLength: texture.computeMemoryLayout({width: 1, height: 1, z: 1, depthOrArrayLayers: 1}).byteLength,
+    byteLength: texture.computeMemoryLayout({width: 1, height: 1, z: 1, depthOrArrayLayers: 1})
+      .byteLength,
     usage: Buffer.COPY_DST | Buffer.MAP_READ
   });
   texture.readBuffer({width: 1, height: 1, z: 1, depthOrArrayLayers: 1}, secondReadBuffer);

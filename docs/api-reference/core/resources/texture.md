@@ -357,6 +357,8 @@ Use `readBuffer()` when you want a GPU buffer containing texture data, typically
 
 `readBuffer()` requires a caller-supplied destination buffer. This keeps the core `Texture` API explicit about allocation and ownership.
 
+Textures that will be read back through `readBuffer()` or `copyTextureToBuffer()` must also be created with `Texture.COPY_SRC`. luma.gl does not add readback usage automatically to every texture.
+
 Compared to the deprecated `readDataAsync()` helper, `readBuffer()` exposes the linear buffer layout directly. On WebGPU, that means the returned layout follows buffer-copy alignment rules rather than tightly packed CPU upload rules.
 
 If you need a matching layout, call `texture.computeMemoryLayout()` for the same region. On WebGPU, the returned `bytesPerRow` is padded for buffer copies, typically to a multiple of `256`.

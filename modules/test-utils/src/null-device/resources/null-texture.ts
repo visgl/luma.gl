@@ -74,14 +74,14 @@ export class NullTexture extends Texture {
     super.copyImageData(options);
   }
 
-  override readBuffer(options: TextureReadOptions = {}, buffer?: Buffer): Buffer {
+  override readBuffer(_options: TextureReadOptions = {}, buffer?: Buffer): Buffer {
     if (!buffer) {
       throw new Error('buffer required');
     }
     return buffer;
   }
 
-  override async readDataAsync(options: TextureReadOptions = {}): Promise<ArrayBuffer> {
+  override async readDataAsync(_options: TextureReadOptions = {}): Promise<ArrayBuffer> {
     throw new Error(
       `${this} readDataAsync is deprecated; use readBuffer() with an explicit destination buffer or DynamicTexture.readAsync()`
     );

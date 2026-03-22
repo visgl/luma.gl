@@ -149,6 +149,7 @@ Use `Texture.readBuffer()` when:
 
 - you want a simple standalone readback helper with an explicit destination buffer
 - you do not need that readback to be manually integrated into a larger command stream
+- the source texture was created with `Texture.COPY_SRC`
 
 Use engine `DynamicTexture.readAsync()` when:
 

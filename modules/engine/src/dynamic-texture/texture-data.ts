@@ -239,7 +239,9 @@ export function getTexture1DSubresources(data: Texture1DData): TextureSubresourc
 }
 
 /** Normalize 2D layer payload into an array of mip-level items */
-function _normalizeTexture2DData(data: Texture2DData): (TextureImageData | ExternalImage | TypedArray)[] {
+function _normalizeTexture2DData(
+  data: Texture2DData
+): (TextureImageData | ExternalImage | TypedArray)[] {
   return Array.isArray(data) ? data : [data];
 }
 

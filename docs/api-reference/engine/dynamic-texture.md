@@ -87,6 +87,8 @@ Sets a sampler on the underlying texture.
 
 Allocates a temporary GPU readback buffer, copies the requested region into it, waits for GPU completion, and returns the ready-to-read buffer. The caller owns the returned buffer and must destroy it.
 
+The underlying texture must support `Texture.COPY_SRC`. `DynamicTexture` owns the temporary buffer allocation, but it does not broaden texture usage automatically.
+
 ### `readAsync(options?: TextureReadOptions): Promise<ArrayBuffer>`
 
 Convenience readback built on `readBuffer()`. Allocates a temporary buffer, copies the requested region, maps it, returns the bytes as an `ArrayBuffer`, and destroys the temporary buffer.

@@ -52,7 +52,7 @@ export class WebGPUTexture extends Texture {
           height: this.height,
           depthOrArrayLayers: this.depth
         },
-        usage: this.props.usage || Texture.TEXTURE | Texture.COPY_DST | Texture.COPY_SRC,
+        usage: this.props.usage || Texture.TEXTURE | Texture.COPY_DST,
         dimension: this.baseDimension,
         format: getWebGPUTextureFormat(this.format),
         mipLevelCount: this.mipLevels,

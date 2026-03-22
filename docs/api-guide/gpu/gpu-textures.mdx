@@ -181,7 +181,7 @@ Textures offer a set of methods to read and write texture data
 | `Texture.writeData()` | Writes typed-array data into a texture subresource, including mip levels, array layers, depth slices, and optional row layout. |
 | `Texture.readDataAsync()` | Deprecated convenience wrapper. Prefer `Texture.readBuffer()` or `DynamicTexture.readAsync()`. |
 | `Texture.writeBuffer()` | Copies data from a GPU buffer into a texture subresource using the provided destination region and layout. |
-| `Texture.readBuffer()` | |
+| `Texture.readBuffer()` | Copies texture data into a caller-supplied GPU buffer. The source texture must support `Texture.COPY_SRC`. |
 
 `Texture.copyImageData()` remains available for compatibility, but it is a deprecated wrapper over `Texture.writeData()`.
 
@@ -204,6 +204,8 @@ Use the texture write method that matches your source data:
 - `byteOffset`, `bytesPerRow`, `rowsPerImage` describe the source memory layout
 
 This means the difference between `writeData()` and `writeBuffer()` is the source, not the shape of the update.
+
+For readback, `readBuffer()` is similarly explicit: the destination buffer is caller-owned, and the texture being read must have been created with `Texture.COPY_SRC`.
 
 ### Texture upload semantics
 

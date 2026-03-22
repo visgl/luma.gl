@@ -122,7 +122,7 @@ export abstract class Framebuffer extends Resource<FramebufferProps> {
   protected createColorTexture(format: TextureFormat, index: number): Texture {
     return this.device.createTexture({
       id: `${this.id}-color-attachment-${index}`,
-      usage: Texture.RENDER_ATTACHMENT | Texture.COPY_SRC,
+      usage: Texture.RENDER_ATTACHMENT,
       format,
       width: this.width,
       height: this.height,

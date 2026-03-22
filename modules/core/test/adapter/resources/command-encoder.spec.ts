@@ -483,6 +483,7 @@ test('CommandEncoder#copyTextureToBuffer honors origin and byteOffset across bac
       width: 2,
       height: 1,
       format: 'rgba8unorm',
+      usage: Texture.COPY_DST | Texture.COPY_SRC,
       mipmaps: false
     });
     const destinationBuffer = device.createBuffer({
@@ -521,12 +522,17 @@ test('WebGPU custom CommandEncoder render pass records on the owning encoder', a
     return;
   }
 
+  const colorTexture = device.createTexture({
+    width: 1,
+    height: 1,
+    format: 'rgba8unorm',
+    usage: Texture.RENDER_ATTACHMENT | Texture.COPY_SRC
+  });
   const framebuffer = device.createFramebuffer({
     width: 1,
     height: 1,
-    colorAttachments: ['rgba8unorm']
+    colorAttachments: [colorTexture]
   });
-  const colorTexture = framebuffer.colorAttachments[0].texture;
   const layout = colorTexture.computeMemoryLayout({width: 1, height: 1});
   const readBuffer = device.createBuffer({
     byteLength: layout.byteLength,
@@ -568,6 +574,7 @@ test('WebGPU CommandEncoder#copyTextureToBuffer does not submit before finish/su
     width: 1,
     height: 1,
     format: 'rgba8unorm',
+    usage: Texture.COPY_DST | Texture.COPY_SRC,
     mipmaps: false
   });
   const destinationBuffer = device.createBuffer({
@@ -622,6 +629,7 @@ async function testCopyTextureToBuffer(
     width: 1,
     height: 1,
     format: options.format,
+    usage: Texture.RENDER | Texture.COPY_DST | Texture.COPY_SRC,
     mipmaps: false
   });
 
