@@ -107,7 +107,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   options: Record<string, boolean> = {
     useModelLights: true,
     cameraAnimation: true,
-    gltfAnimation: false
+    gltfAnimation: true
   };
   isFinalized: boolean = false;
   gltfLoadGeneration: number = 0;

@@ -173,13 +173,15 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     }
   }
 
-  onRender({aspect, device}: AnimationProps): void {
+  onRender({aspect, device, time}: AnimationProps): void {
     const renderPass = device.beginRenderPass({clearColor: this.getClearColor(), clearDepth: 1});
 
     if (!this.scenegraphsFromGLTF?.scenes?.length) {
       renderPass.end();
       return;
     }
+
+    this.scenegraphsFromGLTF.animator?.setTime(time);
 
     const orbitDistance = this.cameraOrbitDistance;
     const far = Math.max(orbitDistance + this.sceneRadius * 8, 10);
