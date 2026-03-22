@@ -105,7 +105,15 @@ fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4f {
   let bitangent = normalize(cross(inputs.pbrNormal, tangent)) * inputs.pbrTangent.w;
   fragmentInputs.pbr_vTBN = mat3x3f(tangent, bitangent, inputs.pbrNormal);
 #endif
-  return pbr_filterColor(vec4f(1.0));
+  var fragmentColor = pbr_filterColor(vec4f(1.0));
+#ifdef USE_VORONOI_MAN
+  fragmentColor = voronoiMan_filterColor(
+    fragmentColor,
+    fragmentInputs.pbr_vPosition,
+    fragmentInputs.pbr_vUV
+  );
+#endif
+  return fragmentColor;
 }
 `;
 
@@ -174,6 +182,9 @@ const fs = /* glsl */ `\
   void main(void) {
     vec3 pos = pbr_vPosition;
     fragmentColor = pbr_filterColor(vec4(1.0));
+#ifdef USE_VORONOI_MAN
+    fragmentColor = voronoiMan_filterColor(fragmentColor, pbr_vPosition, pbr_vUV);
+#endif
   }
 `;
 

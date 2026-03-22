@@ -18,6 +18,8 @@
 - Those commands delegate into the local `@luma.gl/devtools-extensions` workspace.
 - Reusable Vitest and Playwright wiring lives under [`dev-modules/devtools-extensions`](/Users/ibgreen/code/luma.gl/dev-modules/devtools-extensions).
 - Repo-specific overrides for that tooling live in [`\.ocularrc.js`](/Users/ibgreen/code/luma.gl/.ocularrc.js).
+- When running `@loaders.gl/*` code in Node-based tests or scripts, import `@loaders.gl/polyfills` first so the required web platform globals are installed before calling `load()`.
+- See [`modules/gltf/test/gltf/gltf.spec.ts`](/Users/ibgreen/code/luma.gl/modules/gltf/test/gltf/gltf.spec.ts) for the expected setup.
 - For details, see [dev-modules/devtools-extensions/docs/llm-friendly-test-setup.md](/Users/ibgreen/code/luma.gl/dev-modules/devtools-extensions/docs/llm-friendly-test-setup.md).
 
 ## Before committing

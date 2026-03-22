@@ -65,6 +65,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   device: Device;
   scenegraphsFromGLTF?: ReturnType<typeof createScenegraphsFromGLTF>;
   modelLights: Light[] = [];
+  currentModelName: string = '';
   center = [0, 0, 0];
   cameraPos = [0, 0, 0];
   mouseCameraTime = 0;
@@ -94,7 +95,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       }
       const currentModel = window.localStorage[modelStorageKey];
       const cleanupModelMenu = setModelMenu(
-        models.map(model => model.name),
+        models,
         currentModel,
         (modelName: string) => {
           this.loadGLTF(modelName);
@@ -125,6 +126,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     destroyScenegraphs(this.scenegraphsFromGLTF);
     this.scenegraphsFromGLTF = undefined;
     this.modelLights = [];
+    this.currentModelName = '';
   }
 
   getDefaultModelName(): string {
@@ -134,6 +136,23 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   getModelStorageKey(): string {
     return LAST_GLTF_MODEL_STORAGE_KEY;
   }
+
+  getModelUrl(modelName: string): string {
+    return `${MODEL_DIRECTORY_URL}/${modelName}/glTF/${modelName}.gltf`;
+  }
+
+  getCreateScenegraphsFromGLTFOptions(
+    _modelName: string
+  ): Parameters<typeof createScenegraphsFromGLTF>[2] {
+    return {
+      lights: true,
+      imageBasedLightingEnvironment: undefined,
+      pbrDebug: false,
+      useTangents: true
+    };
+  }
+
+  applyModelShaderInputs(_modelNode: ModelNode, _modelName: string): void {}
 
   onRender({aspect, device, time}: AnimationProps): void {
     if (!this.scenegraphsFromGLTF?.scenes?.length) {
@@ -178,12 +197,13 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
           scenegraphsFromGLTF: this.scenegraphsFromGLTF
         }
       });
+      this.applyModelShaderInputs(node as ModelNode, this.currentModelName);
       model.draw(renderPass);
     });
     renderPass.end();
   }
 
-  async fetchModelList(): Promise<{name: string}[]> {
+  async fetchModelList(): Promise<Array<{name: string; label?: string}>> {
     const response = await fetch(MODEL_LIST_URL);
     const models = await response.json();
     return models;
@@ -196,18 +216,14 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     try {
       canvas.style.opacity = '0.1';
 
-      const gltf = await load(
-        `${MODEL_DIRECTORY_URL}/${modelName}/glTF/${modelName}.gltf`,
-        GLTFLoader
-      );
+      const gltf = await load(this.getModelUrl(modelName), GLTFLoader);
       const processedGLTF = postProcessGLTF(gltf);
 
-      const scenegraphsFromGLTF = createScenegraphsFromGLTF(this.device, processedGLTF, {
-        lights: true,
-        imageBasedLightingEnvironment: undefined,
-        pbrDebug: false,
-        useTangents: true
-      });
+      const scenegraphsFromGLTF = createScenegraphsFromGLTF(
+        this.device,
+        processedGLTF,
+        this.getCreateScenegraphsFromGLTFOptions(modelName)
+      );
 
       if (this.isFinalized || loadGeneration !== this.gltfLoadGeneration) {
         destroyScenegraphs(scenegraphsFromGLTF);
@@ -217,6 +233,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       destroyScenegraphs(this.scenegraphsFromGLTF);
       this.scenegraphsFromGLTF = scenegraphsFromGLTF;
       this.modelLights = scenegraphsFromGLTF.lights;
+      this.currentModelName = modelName;
 
       const sceneBounds = scenegraphsFromGLTF.scenes[0]?.getBounds();
       const min = sceneBounds?.[0] ?? [-1, -1, -1];
@@ -246,7 +263,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 }
 
 function setModelMenu(
-  items: string[],
+  items: Array<{name: string; label?: string}>,
   currentItem: string,
   onMenuItemSelected: (item: string) => void
 ): () => void {
@@ -264,8 +281,8 @@ function setModelMenu(
 
   const options = items.map(item => {
     const option = document.createElement('option');
-    option.value = item;
-    option.textContent = item;
+    option.value = item.name;
+    option.textContent = item.label || item.name;
     return option;
   });
 

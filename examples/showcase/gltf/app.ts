@@ -2,7 +2,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+import {DynamicTexture, loadImageBitmap, type AnimationProps, type ModelNode} from '@luma.gl/engine';
 import HelloGLTFApp from '../../tutorials/hello-gltf/app';
+import {pbrMaterial, skin} from '@luma.gl/shadertools';
+import {voronoiMan} from './voronoi-man-module';
 
 const INFO_HTML = `\
 <p>
@@ -24,12 +27,82 @@ const INFO_HTML = `\
 
 export default class AppAnimationLoopTemplate extends HelloGLTFApp {
   static info = INFO_HTML;
+  voronoiManFaceMaskTexture: DynamicTexture;
 
-  getDefaultModelName(): string {
-    return 'CesiumMan';
+  constructor(props: AnimationProps) {
+    const modelStorageKey = 'showcase-last-gltf-model';
+    const voronoiManMigrationKey = 'showcase-last-gltf-model-voronoi-man-migrated';
+    if (
+      !window.localStorage[modelStorageKey] ||
+      (!window.localStorage[voronoiManMigrationKey] &&
+        window.localStorage[modelStorageKey] === 'CesiumMan')
+    ) {
+      window.localStorage[modelStorageKey] = 'voronoi-man';
+      window.localStorage[voronoiManMigrationKey] = 'true';
+    }
+
+    super(props);
+
+    this.voronoiManFaceMaskTexture = new DynamicTexture(this.device, {
+      data: loadImageBitmap('/models/voronoi-man/voronoi-man_face-mask.png')
+    });
   }
 
-  getModelStorageKey(): string {
+  override getDefaultModelName(): string {
+    return 'voronoi-man';
+  }
+
+  override getModelStorageKey(): string {
     return 'showcase-last-gltf-model';
+  }
+
+  override onFinalize(): void {
+    super.onFinalize();
+    this.voronoiManFaceMaskTexture.destroy();
+  }
+
+  override async fetchModelList(): Promise<Array<{name: string; label?: string}>> {
+    const models = await super.fetchModelList();
+    return [{name: 'voronoi-man', label: 'Voronoi Man'}, ...models];
+  }
+
+  override getModelUrl(modelName: string): string {
+    if (modelName === 'voronoi-man') {
+      return '/models/voronoi-man/voronoi-man.gltf';
+    }
+
+    return super.getModelUrl(modelName);
+  }
+
+  override getCreateScenegraphsFromGLTFOptions(modelName: string) {
+    const options = super.getCreateScenegraphsFromGLTFOptions(modelName);
+    if (modelName !== 'voronoi-man') {
+      return options;
+    }
+
+    return {
+      ...options,
+      modelOptions: {
+        modules: [pbrMaterial, skin, voronoiMan]
+      }
+    };
+  }
+
+  override applyModelShaderInputs(modelNode: ModelNode, modelName: string): void {
+    if (modelName !== 'voronoi-man') {
+      return;
+    }
+
+    modelNode.model.shaderInputs.setProps({
+      voronoiMan: {
+        cellScale: 10.5,
+        edgeWidth: 0.075,
+        decalSize: 1,
+        decalFeather: 0.035,
+        fillColor: [0.82, 0.82, 0.84, 1],
+        edgeColor: [0.06, 0.06, 0.07, 1],
+        voronoiMan_faceMaskSampler: this.voronoiManFaceMaskTexture
+      }
+    });
   }
 }
