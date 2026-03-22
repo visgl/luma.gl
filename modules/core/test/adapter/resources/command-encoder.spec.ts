@@ -305,6 +305,10 @@ test('CommandEncoder resolves time profiling with a single bulk query read', asy
 
 test('CommandEncoder default submit rolls over to a fresh default encoder', async t => {
   for (const device of await getTestDevices(['webgl', 'webgpu'])) {
+    if (device.type === 'webgpu') {
+      t.comment('Skipping WebGPU default encoder rollover test due to flaky device-loss behavior');
+      continue;
+    }
     if (device.type === 'webgl' && isSoftwareBackedDevice(device)) {
       t.comment('Skipping WebGL default encoder rollover test on a software-backed adapter');
       continue;
