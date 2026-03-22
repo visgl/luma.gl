@@ -12,7 +12,7 @@ import type {
 } from '@luma.gl/core';
 import {getVariableShaderTypeInfo, assertDefined, log} from '@luma.gl/core';
 
-import {GL, GLUniformType} from '@luma.gl/constants';
+import {GL, GLUniformType} from '@luma.gl/webgl/constants';
 import {
   isGLSamplerType,
   getTextureBindingFromGLSamplerType,

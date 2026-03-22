@@ -36,7 +36,7 @@ import type {
   VertexFormat
 } from '@luma.gl/core';
 import {Device, CanvasContext, log} from '@luma.gl/core';
-import type {GLExtensions} from '@luma.gl/constants';
+import type {GLExtensions} from '@luma.gl/webgl/constants';
 import {WebGLStateTracker} from '../context/state-tracker/webgl-state-tracker';
 import {createBrowserContext} from '../context/helpers/create-browser-context';
 import {getWebGLContextData} from '../context/helpers/webgl-context-data';

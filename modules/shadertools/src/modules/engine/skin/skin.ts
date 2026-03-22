@@ -13,7 +13,7 @@ struct skinUniforms {
   jointMatrix: array<mat4x4<f32>, ${SKIN_MAX_JOINTS}>,
 };
 
-@binding(19) @group(0) var<uniform> skin: skinUniforms;
+@group(0) @binding(auto) var<uniform> skin: skinUniforms;
 
 fn getSkinMatrix(weights: vec4f, joints: vec4u) -> mat4x4<f32> {
   return (weights.x * skin.jointMatrix[joints.x])
@@ -54,6 +54,7 @@ export const skin = {
   uniforms: {} as SkinUniforms,
 
   name: 'skin',
+  bindingLayout: [{name: 'skin', group: 0}],
   dependencies: [],
   source,
   vs,

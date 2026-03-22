@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {DeviceLimits} from '@luma.gl/core';
-import {GL} from '@luma.gl/constants';
+import {GL} from '@luma.gl/webgl/constants';
 
 // prettier-ignore
 export class WebGLDeviceLimits extends DeviceLimits {

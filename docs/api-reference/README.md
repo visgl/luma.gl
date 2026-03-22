@@ -25,12 +25,7 @@ If you are looking for `Model`, start with [`@luma.gl/engine`][engine]. The `Mod
 - [`@luma.gl/shadertools`][shadertools] for shader modules and shader assembly.
 - [`@luma.gl/gltf`][gltf] for glTF scenegraph loading and extensions.
 - [`@luma.gl/webgl`][webgl] and [`@luma.gl/webgpu`][webgpu] for backend adapters used by `@luma.gl/core`.
-
-luma.gl also publishes legacy modules that should be avoided in new applications.
-
-| Legacy Module        | Status     | Description      | Replacement                   |
-| -------------------- | ---------- | ---------------- | ----------------------------- |
-| `@luma.gl/constants` | Deprecated | WebGL constants. | No longer used in luma.gl v9. |
+- [`@luma.gl/webgl/constants`](/docs/api-reference/webgl/constants) when you need raw numeric WebGL enums.
 
 [webgl]: /docs/api-reference/webgl
 [webgpu]: /docs/api-reference/webgpu

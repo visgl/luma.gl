@@ -10,6 +10,32 @@
 
 // Types
 export type {WebGLDeviceLimits} from './adapter/device-helpers/webgl-device-limits';
+export {GL} from './constants/webgl-constants';
+export type {
+  GLTextureTarget,
+  GLTextureCubeMapTarget,
+  GLTexelDataFormat,
+  GLPrimitiveTopology,
+  GLPrimitive,
+  GLDataType,
+  GLPixelType,
+  GLUniformType,
+  GLSamplerType,
+  GLFunction,
+  GLBlendEquation,
+  GLBlendFunction,
+  GLStencilOp,
+  GLSamplerParameters,
+  GLValueParameters,
+  GLPackParameters,
+  GLUnpackParameters,
+  GLFunctionParameters,
+  GLParameters,
+  GLLimits,
+  GLExtensions,
+  GLPolygonMode,
+  GLProvokingVertex
+} from './constants/webgl-types';
 
 // WebGL adapter classes
 export {webgl2Adapter} from './adapter/webgl-adapter';

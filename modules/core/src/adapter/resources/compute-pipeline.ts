@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {Resource, ResourceProps} from './resource';
-import type {ComputeShaderLayout, Binding} from '../types/shader-layout';
+import type {ComputeShaderLayout, Bindings, BindingsByGroup} from '../types/shader-layout';
 import type {Device} from '../device';
 import type {Shader} from './shader';
 
@@ -43,7 +43,7 @@ export abstract class ComputePipeline extends Resource<ComputePipelineProps> {
    * @todo Use renderpass.setBindings() ?
    * @todo Do we want to expose BindGroups in the API and remove this?
    */
-  abstract setBindings(bindings: Record<string, Binding>): void;
+  abstract setBindings(bindings: Bindings | BindingsByGroup): void;
 
   static override defaultProps: Required<ComputePipelineProps> = {
     ...Resource.defaultProps,

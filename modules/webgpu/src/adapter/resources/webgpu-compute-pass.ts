@@ -2,7 +2,15 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {ComputePass, ComputePassProps, ComputePipeline, Buffer, Binding} from '@luma.gl/core';
+import {
+  ComputePass,
+  ComputePassProps,
+  ComputePipeline,
+  Buffer,
+  Bindings,
+  BindingsByGroup,
+  _getDefaultBindGroupFactory
+} from '@luma.gl/core';
 import {WebGPUDevice} from '../webgpu-device';
 import {WebGPUBuffer} from './webgpu-buffer';
 import {WebGPUComputePipeline} from './webgpu-compute-pipeline';
@@ -62,17 +70,32 @@ export class WebGPUComputePass extends ComputePass {
     const wgpuPipeline = pipeline as WebGPUComputePipeline;
     this.handle.setPipeline(wgpuPipeline.handle);
     this._webgpuPipeline = wgpuPipeline;
-    this.setBindings([]);
+    const bindGroups = _getDefaultBindGroupFactory(this.device).getBindGroups(
+      this._webgpuPipeline,
+      this._webgpuPipeline._getBindingsByGroupWebGPU(),
+      this._webgpuPipeline._getBindGroupCacheKeysWebGPU()
+    );
+    for (const [group, bindGroup] of Object.entries(bindGroups)) {
+      if (bindGroup) {
+        this.handle.setBindGroup(Number(group), bindGroup as GPUBindGroup);
+      }
+    }
   }
 
   /**
    * Sets an array of bindings (uniform buffers, samplers, textures, ...)
    * TODO - still some API confusion - does this method go here or on the pipeline?
    */
-  setBindings(bindings: Binding[]): void {
-    // @ts-expect-error
-    const bindGroup = this._webgpuPipeline._getBindGroup();
-    this.handle.setBindGroup(0, bindGroup);
+  setBindings(bindings: Bindings | BindingsByGroup): void {
+    const bindGroups =
+      (this._webgpuPipeline &&
+        _getDefaultBindGroupFactory(this.device).getBindGroups(this._webgpuPipeline, bindings)) ||
+      {};
+    for (const [group, bindGroup] of Object.entries(bindGroups)) {
+      if (bindGroup) {
+        this.handle.setBindGroup(Number(group), bindGroup as GPUBindGroup);
+      }
+    }
   }
 
   /**

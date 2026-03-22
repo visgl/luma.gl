@@ -40,9 +40,7 @@ jobs:
         with:
           node-version-file: '.nvmrc'
           cache: 'yarn'
-          cache-dependency-path: |
-            yarn.lock
-            website/yarn.lock
+          cache-dependency-path: yarn.lock
 
       - name: Enable Corepack / Yarn 4
         run: |
@@ -51,12 +49,10 @@ jobs:
           yarn -v
 
       - name: Install dependencies
-        run: |
-          yarn
-          (cd website && yarn)
+        run: yarn install --immutable
 
       - name: Build website
-        run: (cd website && yarn build)
+        run: yarn website:build
 
       - name: Deploy
         uses: JamesIves/github-pages-deploy-action@132898c54c57c7cc6b80eb3a89968de8fc283505 # 3.7.1

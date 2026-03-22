@@ -3,9 +3,19 @@
 The `lighting` shader module collects scene lighting into a single uniform block
 that can be shared across draw calls. It is the common light source module used
 by 
+- [`lambertMaterial`](/docs/api-reference/shadertools/shader-modules/lambert-material),
 - [`phongMaterial`](/docs/api-reference/shadertools/shader-modules/phong-material),
 - [`gouraudMaterial`](/docs/api-reference/shadertools/shader-modules/gouraud-material),
 - [`pbrMaterial`](/docs/api-reference/shadertools/shader-modules/pbr-material).
+
+## Bind Group Convention
+
+The module's bindings are currently assigned to bind group `2`. This reflects
+the recommended luma.gl convention of treating lighting as scene-level data that
+is stable across many draw calls.
+
+See the [Bind Groups and Bindings Guide](/docs/api-guide/gpu/gpu-bindings) for
+details on how grouped bindings are declared and supplied.
 
 ## Props
 

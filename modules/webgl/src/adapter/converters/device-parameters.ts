@@ -4,7 +4,7 @@
 
 import type {CompareFunction, StencilOperation, BlendOperation, BlendFactor} from '@luma.gl/core';
 import {Device, log, Parameters, PolygonMode, ProvokingVertex} from '@luma.gl/core';
-import {GL} from '@luma.gl/constants';
+import {GL} from '@luma.gl/webgl/constants';
 import type {
   GLBlendEquation,
   GLBlendFunction,
@@ -13,7 +13,7 @@ import type {
   GLPolygonMode,
   GLProvokingVertex,
   GLStencilOp
-} from '@luma.gl/constants';
+} from '@luma.gl/webgl/constants';
 import {setGLParameters} from '../../context/parameters/unified-parameter-api';
 import {WebGLDevice} from '../webgl-device';
 

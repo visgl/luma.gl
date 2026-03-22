@@ -88,10 +88,12 @@ uniform pbrMaterialUniforms {
   float clearcoatFactor;
   float clearcoatRoughnessFactor;
   bool clearcoatMapEnabled;
+  bool clearcoatRoughnessMapEnabled;
 
   vec3 sheenColorFactor;
   float sheenRoughnessFactor;
   bool sheenColorMapEnabled;
+  bool sheenRoughnessMapEnabled;
 
   float iridescenceFactor;
   float iridescenceIor;
@@ -141,26 +143,33 @@ uniform sampler2D pbr_specularIntensitySampler;
 #ifdef HAS_TRANSMISSIONMAP
 uniform sampler2D pbr_transmissionSampler;
 #endif
+#ifdef HAS_THICKNESSMAP
+uniform sampler2D pbr_thicknessSampler;
+#endif
 #ifdef HAS_CLEARCOATMAP
 uniform sampler2D pbr_clearcoatSampler;
+#endif
+#ifdef HAS_CLEARCOATROUGHNESSMAP
 uniform sampler2D pbr_clearcoatRoughnessSampler;
+#endif
+#ifdef HAS_CLEARCOATNORMALMAP
+uniform sampler2D pbr_clearcoatNormalSampler;
 #endif
 #ifdef HAS_SHEENCOLORMAP
 uniform sampler2D pbr_sheenColorSampler;
+#endif
+#ifdef HAS_SHEENROUGHNESSMAP
 uniform sampler2D pbr_sheenRoughnessSampler;
 #endif
 #ifdef HAS_IRIDESCENCEMAP
 uniform sampler2D pbr_iridescenceSampler;
 #endif
+#ifdef HAS_IRIDESCENCETHICKNESSMAP
+uniform sampler2D pbr_iridescenceThicknessSampler;
+#endif
 #ifdef HAS_ANISOTROPYMAP
 uniform sampler2D pbr_anisotropySampler;
 #endif
-#ifdef USE_IBL
-uniform samplerCube pbr_diffuseEnvSampler;
-uniform samplerCube pbr_specularEnvSampler;
-uniform sampler2D pbr_brdfLUT;
-#endif
-
 // Inputs from vertex shader
 
 in vec3 pbr_vPosition;
@@ -197,6 +206,8 @@ struct PBRInfo {
 const float M_PI = 3.141592653589793;
 const float c_MinRoughness = 0.04;
 
+vec3 calculateFinalColor(PBRInfo pbrInfo, vec3 lightColor);
+
 vec4 SRGBtoLINEAR(vec4 srgbIn)
 {
 #ifdef MANUAL_SRGB
@@ -212,11 +223,9 @@ vec4 SRGBtoLINEAR(vec4 srgbIn)
 #endif //MANUAL_SRGB
 }
 
-// Find the normal for this fragment, pulling either from a predefined normal map
-// or from the interpolated mesh normal and tangent attributes.
-vec3 getNormal()
+// Build the tangent basis from interpolated attributes or screen-space derivatives.
+mat3 getTBN()
 {
-  // Retrieve the tangent space matrix
 #ifndef HAS_TANGENTS
   vec3 pos_dx = dFdx(pbr_vPosition);
   vec3 pos_dy = dFdy(pbr_vPosition);
@@ -237,15 +246,36 @@ vec3 getNormal()
   mat3 tbn = pbr_vTBN;
 #endif
 
+  return tbn;
+}
+
+// Find the normal for this fragment, pulling either from a predefined normal map
+// or from the interpolated mesh normal and tangent attributes.
+vec3 getMappedNormal(sampler2D normalSampler, mat3 tbn, float normalScale)
+{
+  vec3 n = texture(normalSampler, pbr_vUV).rgb;
+  return normalize(tbn * ((2.0 * n - 1.0) * vec3(normalScale, normalScale, 1.0)));
+}
+
+vec3 getNormal(mat3 tbn)
+{
 #ifdef HAS_NORMALMAP
-  vec3 n = texture(pbr_normalSampler, pbr_vUV).rgb;
-  n = normalize(tbn * ((2.0 * n - 1.0) * vec3(pbrMaterial.normalScale, pbrMaterial.normalScale, 1.0)));
+  vec3 n = getMappedNormal(pbr_normalSampler, tbn, pbrMaterial.normalScale);
 #else
   // The tbn matrix is linearly interpolated, so we need to re-normalize
   vec3 n = normalize(tbn[2].xyz);
 #endif
 
   return n;
+}
+
+vec3 getClearcoatNormal(mat3 tbn, vec3 baseNormal)
+{
+#ifdef HAS_CLEARCOATNORMALMAP
+  return getMappedNormal(pbr_clearcoatNormalSampler, tbn, 1.0);
+#else
+  return baseNormal;
+#endif
 }
 
 // Calculation of the lighting contribution from an optional Image Based Light source.
@@ -323,6 +353,169 @@ float microfacetDistribution(PBRInfo pbrInfo)
   return roughnessSq / (M_PI * f * f);
 }
 
+float maxComponent(vec3 value)
+{
+  return max(max(value.r, value.g), value.b);
+}
+
+float getDielectricF0(float ior)
+{
+  float clampedIor = max(ior, 1.0);
+  float ratio = (clampedIor - 1.0) / (clampedIor + 1.0);
+  return ratio * ratio;
+}
+
+vec2 normalizeDirection(vec2 direction)
+{
+  float directionLength = length(direction);
+  return directionLength > 0.0001 ? direction / directionLength : vec2(1.0, 0.0);
+}
+
+vec2 rotateDirection(vec2 direction, float rotation)
+{
+  float s = sin(rotation);
+  float c = cos(rotation);
+  return vec2(direction.x * c - direction.y * s, direction.x * s + direction.y * c);
+}
+
+vec3 getIridescenceTint(float iridescence, float thickness, float NdotV)
+{
+  if (iridescence <= 0.0) {
+    return vec3(1.0);
+  }
+
+  float phase = 0.015 * thickness * pbrMaterial.iridescenceIor + (1.0 - NdotV) * 6.0;
+  vec3 thinFilmTint =
+    0.5 + 0.5 * cos(vec3(phase, phase + 2.0943951, phase + 4.1887902));
+  return mix(vec3(1.0), thinFilmTint, iridescence);
+}
+
+vec3 getVolumeAttenuation(float thickness)
+{
+  if (thickness <= 0.0) {
+    return vec3(1.0);
+  }
+
+  vec3 attenuationCoefficient =
+    -log(max(pbrMaterial.attenuationColor, vec3(0.0001))) /
+    max(pbrMaterial.attenuationDistance, 0.0001);
+  return exp(-attenuationCoefficient * thickness);
+}
+
+PBRInfo createClearcoatPBRInfo(PBRInfo basePBRInfo, vec3 clearcoatNormal, float clearcoatRoughness)
+{
+  float perceptualRoughness = clamp(clearcoatRoughness, c_MinRoughness, 1.0);
+  float alphaRoughness = perceptualRoughness * perceptualRoughness;
+  float NdotV = clamp(abs(dot(clearcoatNormal, basePBRInfo.v)), 0.001, 1.0);
+
+  return PBRInfo(
+    basePBRInfo.NdotL,
+    NdotV,
+    basePBRInfo.NdotH,
+    basePBRInfo.LdotH,
+    basePBRInfo.VdotH,
+    perceptualRoughness,
+    0.0,
+    vec3(0.04),
+    vec3(1.0),
+    alphaRoughness,
+    vec3(0.0),
+    vec3(0.04),
+    clearcoatNormal,
+    basePBRInfo.v
+  );
+}
+
+vec3 calculateClearcoatContribution(
+  PBRInfo pbrInfo,
+  vec3 lightColor,
+  vec3 clearcoatNormal,
+  float clearcoatFactor,
+  float clearcoatRoughness
+) {
+  if (clearcoatFactor <= 0.0) {
+    return vec3(0.0);
+  }
+
+  PBRInfo clearcoatPBRInfo = createClearcoatPBRInfo(pbrInfo, clearcoatNormal, clearcoatRoughness);
+  return calculateFinalColor(clearcoatPBRInfo, lightColor) * clearcoatFactor;
+}
+
+#ifdef USE_IBL
+vec3 calculateClearcoatIBLContribution(
+  PBRInfo pbrInfo,
+  vec3 clearcoatNormal,
+  vec3 reflection,
+  float clearcoatFactor,
+  float clearcoatRoughness
+) {
+  if (clearcoatFactor <= 0.0) {
+    return vec3(0.0);
+  }
+
+  PBRInfo clearcoatPBRInfo = createClearcoatPBRInfo(pbrInfo, clearcoatNormal, clearcoatRoughness);
+  return getIBLContribution(clearcoatPBRInfo, clearcoatNormal, reflection) * clearcoatFactor;
+}
+#endif
+
+vec3 calculateSheenContribution(
+  PBRInfo pbrInfo,
+  vec3 lightColor,
+  vec3 sheenColor,
+  float sheenRoughness
+) {
+  if (maxComponent(sheenColor) <= 0.0) {
+    return vec3(0.0);
+  }
+
+  float sheenFresnel = pow(clamp(1.0 - pbrInfo.VdotH, 0.0, 1.0), 5.0);
+  float sheenVisibility = mix(1.0, pbrInfo.NdotL * pbrInfo.NdotV, sheenRoughness);
+  return pbrInfo.NdotL *
+    lightColor *
+    sheenColor *
+    (0.25 + 0.75 * sheenFresnel) *
+    sheenVisibility *
+    (1.0 - pbrInfo.metalness);
+}
+
+float calculateAnisotropyBoost(
+  PBRInfo pbrInfo,
+  vec3 anisotropyTangent,
+  float anisotropyStrength
+) {
+  if (anisotropyStrength <= 0.0) {
+    return 1.0;
+  }
+
+  vec3 anisotropyBitangent = normalize(cross(pbrInfo.n, anisotropyTangent));
+  float bitangentViewAlignment = abs(dot(pbrInfo.v, anisotropyBitangent));
+  return mix(1.0, 0.65 + 0.7 * bitangentViewAlignment, anisotropyStrength);
+}
+
+vec3 calculateMaterialLightColor(
+  PBRInfo pbrInfo,
+  vec3 lightColor,
+  vec3 clearcoatNormal,
+  float clearcoatFactor,
+  float clearcoatRoughness,
+  vec3 sheenColor,
+  float sheenRoughness,
+  vec3 anisotropyTangent,
+  float anisotropyStrength
+) {
+  float anisotropyBoost = calculateAnisotropyBoost(pbrInfo, anisotropyTangent, anisotropyStrength);
+  vec3 color = calculateFinalColor(pbrInfo, lightColor) * anisotropyBoost;
+  color += calculateClearcoatContribution(
+    pbrInfo,
+    lightColor,
+    clearcoatNormal,
+    clearcoatFactor,
+    clearcoatRoughness
+  );
+  color += calculateSheenContribution(pbrInfo, lightColor, sheenColor, sheenRoughness);
+  return color;
+}
+
 void PBRInfo_setAmbientLight(inout PBRInfo pbrInfo) {
   pbrInfo.NdotL = 1.0;
   pbrInfo.NdotH = 0.0;
@@ -382,6 +575,8 @@ vec4 pbr_filterColor(vec4 colorUnused)
 
   vec3 color = vec3(0, 0, 0);
 
+  float transmission = 0.0;
+
   if(pbrMaterial.unlit){
     color.rgb = baseColor.rgb;
   }
@@ -400,14 +595,252 @@ vec4 pbr_filterColor(vec4 colorUnused)
 #endif
     perceptualRoughness = clamp(perceptualRoughness, c_MinRoughness, 1.0);
     metallic = clamp(metallic, 0.0, 1.0);
+    mat3 tbn = getTBN();
+    vec3 n = getNormal(tbn);                          // normal at surface point
+    vec3 v = normalize(pbrProjection.camera - pbr_vPosition);  // Vector from surface point to camera
+    float NdotV = clamp(abs(dot(n, v)), 0.001, 1.0);
+#ifdef USE_MATERIAL_EXTENSIONS
+    bool useExtendedPBR =
+      pbrMaterial.specularColorMapEnabled ||
+      pbrMaterial.specularIntensityMapEnabled ||
+      abs(pbrMaterial.specularIntensityFactor - 1.0) > 0.0001 ||
+      maxComponent(abs(pbrMaterial.specularColorFactor - vec3(1.0))) > 0.0001 ||
+      abs(pbrMaterial.ior - 1.5) > 0.0001 ||
+      pbrMaterial.transmissionMapEnabled ||
+      pbrMaterial.transmissionFactor > 0.0001 ||
+      pbrMaterial.clearcoatMapEnabled ||
+      pbrMaterial.clearcoatRoughnessMapEnabled ||
+      pbrMaterial.clearcoatFactor > 0.0001 ||
+      pbrMaterial.clearcoatRoughnessFactor > 0.0001 ||
+      pbrMaterial.sheenColorMapEnabled ||
+      pbrMaterial.sheenRoughnessMapEnabled ||
+      maxComponent(pbrMaterial.sheenColorFactor) > 0.0001 ||
+      pbrMaterial.sheenRoughnessFactor > 0.0001 ||
+      pbrMaterial.iridescenceMapEnabled ||
+      pbrMaterial.iridescenceFactor > 0.0001 ||
+      abs(pbrMaterial.iridescenceIor - 1.3) > 0.0001 ||
+      abs(pbrMaterial.iridescenceThicknessRange.x - 100.0) > 0.0001 ||
+      abs(pbrMaterial.iridescenceThicknessRange.y - 400.0) > 0.0001 ||
+      pbrMaterial.anisotropyMapEnabled ||
+      pbrMaterial.anisotropyStrength > 0.0001 ||
+      abs(pbrMaterial.anisotropyRotation) > 0.0001 ||
+      length(pbrMaterial.anisotropyDirection - vec2(1.0, 0.0)) > 0.0001;
+#else
+    bool useExtendedPBR = false;
+#endif
+
+    if (!useExtendedPBR) {
+      // Keep the baseline metallic-roughness implementation byte-for-byte equivalent in behavior.
+      float alphaRoughness = perceptualRoughness * perceptualRoughness;
+
+      vec3 f0 = vec3(0.04);
+      vec3 diffuseColor = baseColor.rgb * (vec3(1.0) - f0);
+      diffuseColor *= 1.0 - metallic;
+      vec3 specularColor = mix(f0, baseColor.rgb, metallic);
+
+      float reflectance = max(max(specularColor.r, specularColor.g), specularColor.b);
+      float reflectance90 = clamp(reflectance * 25.0, 0.0, 1.0);
+      vec3 specularEnvironmentR0 = specularColor.rgb;
+      vec3 specularEnvironmentR90 = vec3(1.0, 1.0, 1.0) * reflectance90;
+      vec3 reflection = -normalize(reflect(v, n));
+
+      PBRInfo pbrInfo = PBRInfo(
+        0.0, // NdotL
+        NdotV,
+        0.0, // NdotH
+        0.0, // LdotH
+        0.0, // VdotH
+        perceptualRoughness,
+        metallic,
+        specularEnvironmentR0,
+        specularEnvironmentR90,
+        alphaRoughness,
+        diffuseColor,
+        specularColor,
+        n,
+        v
+      );
+
+#ifdef USE_LIGHTS
+      PBRInfo_setAmbientLight(pbrInfo);
+      color += calculateFinalColor(pbrInfo, lighting.ambientColor);
+
+      for(int i = 0; i < lighting.directionalLightCount; i++) {
+        if (i < lighting.directionalLightCount) {
+          PBRInfo_setDirectionalLight(pbrInfo, lighting_getDirectionalLight(i).direction);
+          color += calculateFinalColor(pbrInfo, lighting_getDirectionalLight(i).color);
+        }
+      }
+
+      for(int i = 0; i < lighting.pointLightCount; i++) {
+        if (i < lighting.pointLightCount) {
+          PBRInfo_setPointLight(pbrInfo, lighting_getPointLight(i));
+          float attenuation = getPointLightAttenuation(lighting_getPointLight(i), distance(lighting_getPointLight(i).position, pbr_vPosition));
+          color += calculateFinalColor(pbrInfo, lighting_getPointLight(i).color / attenuation);
+        }
+      }
+
+      for(int i = 0; i < lighting.spotLightCount; i++) {
+        if (i < lighting.spotLightCount) {
+          PBRInfo_setSpotLight(pbrInfo, lighting_getSpotLight(i));
+          float attenuation = getSpotLightAttenuation(lighting_getSpotLight(i), pbr_vPosition);
+          color += calculateFinalColor(pbrInfo, lighting_getSpotLight(i).color / attenuation);
+        }
+      }
+#endif
+
+#ifdef USE_IBL
+      if (pbrMaterial.IBLenabled) {
+        color += getIBLContribution(pbrInfo, n, reflection);
+      }
+#endif
+
+#ifdef HAS_OCCLUSIONMAP
+      if (pbrMaterial.occlusionMapEnabled) {
+        float ao = texture(pbr_occlusionSampler, pbr_vUV).r;
+        color = mix(color, color * ao, pbrMaterial.occlusionStrength);
+      }
+#endif
+
+      vec3 emissive = pbrMaterial.emissiveFactor;
+#ifdef HAS_EMISSIVEMAP
+      if (pbrMaterial.emissiveMapEnabled) {
+        emissive *= SRGBtoLINEAR(texture(pbr_emissiveSampler, pbr_vUV)).rgb;
+      }
+#endif
+      color += emissive * pbrMaterial.emissiveStrength;
+
+#ifdef PBR_DEBUG
+      color = mix(color, baseColor.rgb, pbrMaterial.scaleDiffBaseMR.y);
+      color = mix(color, vec3(metallic), pbrMaterial.scaleDiffBaseMR.z);
+      color = mix(color, vec3(perceptualRoughness), pbrMaterial.scaleDiffBaseMR.w);
+#endif
+
+      return vec4(pow(color, vec3(1.0 / 2.2)), baseColor.a);
+    }
+
+    float specularIntensity = pbrMaterial.specularIntensityFactor;
+#ifdef HAS_SPECULARINTENSITYMAP
+    if (pbrMaterial.specularIntensityMapEnabled) {
+      specularIntensity *= texture(pbr_specularIntensitySampler, pbr_vUV).a;
+    }
+#endif
+
+    vec3 specularFactor = pbrMaterial.specularColorFactor;
+#ifdef HAS_SPECULARCOLORMAP
+    if (pbrMaterial.specularColorMapEnabled) {
+      specularFactor *= SRGBtoLINEAR(texture(pbr_specularColorSampler, pbr_vUV)).rgb;
+    }
+#endif
+
+    transmission = pbrMaterial.transmissionFactor;
+#ifdef HAS_TRANSMISSIONMAP
+    if (pbrMaterial.transmissionMapEnabled) {
+      transmission *= texture(pbr_transmissionSampler, pbr_vUV).r;
+    }
+#endif
+    transmission = clamp(transmission * (1.0 - metallic), 0.0, 1.0);
+    float thickness = max(pbrMaterial.thicknessFactor, 0.0);
+#ifdef HAS_THICKNESSMAP
+    thickness *= texture(pbr_thicknessSampler, pbr_vUV).g;
+#endif
+
+    float clearcoatFactor = pbrMaterial.clearcoatFactor;
+    float clearcoatRoughness = pbrMaterial.clearcoatRoughnessFactor;
+#ifdef HAS_CLEARCOATMAP
+    if (pbrMaterial.clearcoatMapEnabled) {
+      clearcoatFactor *= texture(pbr_clearcoatSampler, pbr_vUV).r;
+    }
+#endif
+#ifdef HAS_CLEARCOATROUGHNESSMAP
+    if (pbrMaterial.clearcoatRoughnessMapEnabled) {
+      clearcoatRoughness *= texture(pbr_clearcoatRoughnessSampler, pbr_vUV).g;
+    }
+#endif
+    clearcoatFactor = clamp(clearcoatFactor, 0.0, 1.0);
+    clearcoatRoughness = clamp(clearcoatRoughness, c_MinRoughness, 1.0);
+    vec3 clearcoatNormal = getClearcoatNormal(tbn, n);
+
+    vec3 sheenColor = pbrMaterial.sheenColorFactor;
+    float sheenRoughness = pbrMaterial.sheenRoughnessFactor;
+#ifdef HAS_SHEENCOLORMAP
+    if (pbrMaterial.sheenColorMapEnabled) {
+      sheenColor *= SRGBtoLINEAR(texture(pbr_sheenColorSampler, pbr_vUV)).rgb;
+    }
+#endif
+#ifdef HAS_SHEENROUGHNESSMAP
+    if (pbrMaterial.sheenRoughnessMapEnabled) {
+      sheenRoughness *= texture(pbr_sheenRoughnessSampler, pbr_vUV).a;
+    }
+#endif
+    sheenRoughness = clamp(sheenRoughness, c_MinRoughness, 1.0);
+
+    float iridescence = pbrMaterial.iridescenceFactor;
+#ifdef HAS_IRIDESCENCEMAP
+    if (pbrMaterial.iridescenceMapEnabled) {
+      iridescence *= texture(pbr_iridescenceSampler, pbr_vUV).r;
+    }
+#endif
+    iridescence = clamp(iridescence, 0.0, 1.0);
+    float iridescenceThickness = mix(
+      pbrMaterial.iridescenceThicknessRange.x,
+      pbrMaterial.iridescenceThicknessRange.y,
+      0.5
+    );
+#ifdef HAS_IRIDESCENCETHICKNESSMAP
+    iridescenceThickness = mix(
+      pbrMaterial.iridescenceThicknessRange.x,
+      pbrMaterial.iridescenceThicknessRange.y,
+      texture(pbr_iridescenceThicknessSampler, pbr_vUV).g
+    );
+#endif
+
+    float anisotropyStrength = clamp(pbrMaterial.anisotropyStrength, 0.0, 1.0);
+    vec2 anisotropyDirection = normalizeDirection(pbrMaterial.anisotropyDirection);
+#ifdef HAS_ANISOTROPYMAP
+    if (pbrMaterial.anisotropyMapEnabled) {
+      vec3 anisotropySample = texture(pbr_anisotropySampler, pbr_vUV).rgb;
+      anisotropyStrength *= anisotropySample.b;
+      vec2 mappedDirection = anisotropySample.rg * 2.0 - 1.0;
+      if (length(mappedDirection) > 0.0001) {
+        anisotropyDirection = normalize(mappedDirection);
+      }
+    }
+#endif
+    anisotropyDirection = rotateDirection(anisotropyDirection, pbrMaterial.anisotropyRotation);
+    vec3 anisotropyTangent = normalize(tbn[0] * anisotropyDirection.x + tbn[1] * anisotropyDirection.y);
+    if (length(anisotropyTangent) < 0.0001) {
+      anisotropyTangent = normalize(tbn[0]);
+    }
+    float anisotropyViewAlignment = abs(dot(v, anisotropyTangent));
+    perceptualRoughness = mix(
+      perceptualRoughness,
+      clamp(perceptualRoughness * (1.0 - 0.6 * anisotropyViewAlignment), c_MinRoughness, 1.0),
+      anisotropyStrength
+    );
+
     // Roughness is authored as perceptual roughness; as is convention,
     // convert to material roughness by squaring the perceptual roughness [2].
     float alphaRoughness = perceptualRoughness * perceptualRoughness;
 
-    vec3 f0 = vec3(0.04);
-    vec3 diffuseColor = baseColor.rgb * (vec3(1.0) - f0);
-    diffuseColor *= 1.0 - metallic;
-    vec3 specularColor = mix(f0, baseColor.rgb, metallic);
+    float dielectricF0 = getDielectricF0(pbrMaterial.ior);
+    vec3 dielectricSpecularF0 = min(
+      vec3(dielectricF0) * specularFactor * specularIntensity,
+      vec3(1.0)
+    );
+    vec3 iridescenceTint = getIridescenceTint(iridescence, iridescenceThickness, NdotV);
+    dielectricSpecularF0 = mix(
+      dielectricSpecularF0,
+      dielectricSpecularF0 * iridescenceTint,
+      iridescence
+    );
+    vec3 diffuseColor = baseColor.rgb * (vec3(1.0) - dielectricSpecularF0);
+    diffuseColor *= (1.0 - metallic) * (1.0 - transmission);
+    vec3 specularColor = mix(dielectricSpecularF0, baseColor.rgb, metallic);
+
+    float baseLayerEnergy = 1.0 - clearcoatFactor * 0.25;
+    diffuseColor *= baseLayerEnergy;
+    specularColor *= baseLayerEnergy;
 
     // Compute reflectance.
     float reflectance = max(max(specularColor.r, specularColor.g), specularColor.b);
@@ -419,11 +852,6 @@ vec4 pbr_filterColor(vec4 colorUnused)
     float reflectance90 = clamp(reflectance * 25.0, 0.0, 1.0);
     vec3 specularEnvironmentR0 = specularColor.rgb;
     vec3 specularEnvironmentR90 = vec3(1.0, 1.0, 1.0) * reflectance90;
-
-    vec3 n = getNormal();                          // normal at surface point
-    vec3 v = normalize(pbrProjection.camera - pbr_vPosition);  // Vector from surface point to camera
-
-    float NdotV = clamp(abs(dot(n, v)), 0.001, 1.0);
     vec3 reflection = -normalize(reflect(v, n));
 
     PBRInfo pbrInfo = PBRInfo(
@@ -447,13 +875,33 @@ vec4 pbr_filterColor(vec4 colorUnused)
 #ifdef USE_LIGHTS
     // Apply ambient light
     PBRInfo_setAmbientLight(pbrInfo);
-    color += calculateFinalColor(pbrInfo, lighting.ambientColor);
+    color += calculateMaterialLightColor(
+      pbrInfo,
+      lighting.ambientColor,
+      clearcoatNormal,
+      clearcoatFactor,
+      clearcoatRoughness,
+      sheenColor,
+      sheenRoughness,
+      anisotropyTangent,
+      anisotropyStrength
+    );
 
     // Apply directional light
     for(int i = 0; i < lighting.directionalLightCount; i++) {
       if (i < lighting.directionalLightCount) {
         PBRInfo_setDirectionalLight(pbrInfo, lighting_getDirectionalLight(i).direction);
-        color += calculateFinalColor(pbrInfo, lighting_getDirectionalLight(i).color);
+        color += calculateMaterialLightColor(
+          pbrInfo,
+          lighting_getDirectionalLight(i).color,
+          clearcoatNormal,
+          clearcoatFactor,
+          clearcoatRoughness,
+          sheenColor,
+          sheenRoughness,
+          anisotropyTangent,
+          anisotropyStrength
+        );
       }
     }
 
@@ -462,7 +910,17 @@ vec4 pbr_filterColor(vec4 colorUnused)
       if (i < lighting.pointLightCount) {
         PBRInfo_setPointLight(pbrInfo, lighting_getPointLight(i));
         float attenuation = getPointLightAttenuation(lighting_getPointLight(i), distance(lighting_getPointLight(i).position, pbr_vPosition));
-        color += calculateFinalColor(pbrInfo, lighting_getPointLight(i).color / attenuation);
+        color += calculateMaterialLightColor(
+          pbrInfo,
+          lighting_getPointLight(i).color / attenuation,
+          clearcoatNormal,
+          clearcoatFactor,
+          clearcoatRoughness,
+          sheenColor,
+          sheenRoughness,
+          anisotropyTangent,
+          anisotropyStrength
+        );
       }
     }
 
@@ -470,7 +928,17 @@ vec4 pbr_filterColor(vec4 colorUnused)
       if (i < lighting.spotLightCount) {
         PBRInfo_setSpotLight(pbrInfo, lighting_getSpotLight(i));
         float attenuation = getSpotLightAttenuation(lighting_getSpotLight(i), pbr_vPosition);
-        color += calculateFinalColor(pbrInfo, lighting_getSpotLight(i).color / attenuation);
+        color += calculateMaterialLightColor(
+          pbrInfo,
+          lighting_getSpotLight(i).color / attenuation,
+          clearcoatNormal,
+          clearcoatFactor,
+          clearcoatRoughness,
+          sheenColor,
+          sheenRoughness,
+          anisotropyTangent,
+          anisotropyStrength
+        );
       }
     }
 #endif
@@ -478,7 +946,16 @@ vec4 pbr_filterColor(vec4 colorUnused)
     // Calculate lighting contribution from image based lighting source (IBL)
 #ifdef USE_IBL
     if (pbrMaterial.IBLenabled) {
-      color += getIBLContribution(pbrInfo, n, reflection);
+      color += getIBLContribution(pbrInfo, n, reflection) *
+        calculateAnisotropyBoost(pbrInfo, anisotropyTangent, anisotropyStrength);
+      color += calculateClearcoatIBLContribution(
+        pbrInfo,
+        clearcoatNormal,
+        -normalize(reflect(v, clearcoatNormal)),
+        clearcoatFactor,
+        clearcoatRoughness
+      );
+      color += sheenColor * pbrMaterial.scaleIBLAmbient.x * (1.0 - sheenRoughness) * 0.25;
     }
 #endif
 
@@ -490,12 +967,17 @@ vec4 pbr_filterColor(vec4 colorUnused)
     }
 #endif
 
+    vec3 emissive = pbrMaterial.emissiveFactor;
 #ifdef HAS_EMISSIVEMAP
     if (pbrMaterial.emissiveMapEnabled) {
-      vec3 emissive = SRGBtoLINEAR(texture(pbr_emissiveSampler, pbr_vUV)).rgb * pbrMaterial.emissiveFactor;
-      color += emissive;
+      emissive *= SRGBtoLINEAR(texture(pbr_emissiveSampler, pbr_vUV)).rgb;
     }
 #endif
+    color += emissive * pbrMaterial.emissiveStrength;
+
+    if (transmission > 0.0) {
+      color = mix(color, color * getVolumeAttenuation(thickness), transmission);
+    }
 
     // This section uses mix to override final color for reference app visualization
     // of various parameters in the lighting equation.
@@ -515,6 +997,7 @@ vec4 pbr_filterColor(vec4 colorUnused)
 
   }
 
-  return vec4(pow(color,vec3(1.0/2.2)), baseColor.a);
+  float alpha = clamp(baseColor.a * (1.0 - transmission), 0.0, 1.0);
+  return vec4(pow(color,vec3(1.0/2.2)), alpha);
 }
 `;

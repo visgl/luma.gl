@@ -8,13 +8,14 @@ import type {
   PrimitiveTopology,
   ShaderLayout,
   UniformValue,
-  Binding,
+  Bindings,
+  BindingsByGroup,
   RenderPass,
   VertexArray
 } from '@luma.gl/core';
-import {RenderPipeline, log} from '@luma.gl/core';
+import {RenderPipeline, flattenBindingsByGroup, log, normalizeBindingsByGroup} from '@luma.gl/core';
 // import {getAttributeInfosFromLayouts} from '@luma.gl/core';
-import {GL} from '@luma.gl/constants';
+import {GL} from '@luma.gl/webgl/constants';
 
 import {withDeviceAndGLParameters} from '../converters/device-parameters';
 import {setUniform} from '../helpers/set-uniform';
@@ -45,7 +46,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
   introspectedLayout: ShaderLayout;
 
   /** Compatibility path for direct pipeline.setBindings() usage */
-  bindings: Record<string, Binding> = {};
+  bindings: Bindings = {};
   /** Compatibility path for direct pipeline.uniforms usage */
   uniforms: Record<string, UniformValue> = {};
   /** WebGL varyings */
@@ -96,11 +97,12 @@ export class WEBGLRenderPipeline extends RenderPipeline {
    * Compatibility shim for code paths that still set bindings on the pipeline.
    * Shared-model draws pass bindings per draw and do not rely on this state.
    */
-  setBindings(bindings: Record<string, Binding>, options?: {disableWarnings?: boolean}): void {
-    for (const [name, value] of Object.entries(bindings)) {
-      const binding =
-        this.shaderLayout.bindings.find(binding_ => binding_.name === name) ||
-        this.shaderLayout.bindings.find(binding_ => binding_.name === `${name}Uniforms`);
+  setBindings(bindings: Bindings | BindingsByGroup, options?: {disableWarnings?: boolean}): void {
+    const flatBindings = flattenBindingsByGroup(
+      normalizeBindingsByGroup(this.shaderLayout, bindings)
+    );
+    for (const [name, value] of Object.entries(flatBindings)) {
+      const binding = getShaderLayoutBindingByName(this.shaderLayout, name);
 
       if (!binding) {
         const validBindings = this.shaderLayout.bindings
@@ -164,10 +166,15 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     firstInstance?: number;
     baseVertex?: number;
     transformFeedback?: WEBGLTransformFeedback;
-    bindings?: Record<string, Binding>;
+    bindings?: Bindings;
+    bindGroups?: BindingsByGroup;
+    _bindGroupCacheKeys?: Partial<Record<number, object>>;
     uniforms?: Record<string, UniformValue>;
   }): boolean {
     this._syncLinkStatus();
+    const drawBindings = options.bindGroups
+      ? flattenBindingsByGroup(options.bindGroups)
+      : options.bindings || this.bindings;
 
     const {
       renderPass,
@@ -183,7 +190,6 @@ export class WEBGLRenderPipeline extends RenderPipeline {
       // firstInstance,
       // baseVertex,
       transformFeedback,
-      bindings = this.bindings,
       uniforms = this.uniforms
     } = options;
 
@@ -202,7 +208,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     // Note: async textures set as uniforms might still be loading.
     // Now that all uniforms have been updated, check if any texture
     // in the uniforms is not yet initialized, then we don't draw
-    if (!this._areTexturesRenderable(bindings)) {
+    if (!this._areTexturesRenderable(drawBindings)) {
       log.info(2, `RenderPipeline:${this.id}.draw() aborted - textures not yet loaded`)();
       //  Note: false means that the app needs to redraw the pipeline again.
       return false;
@@ -225,7 +231,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     }
 
     // We have to apply bindings before every draw call since other draw calls will overwrite
-    this._applyBindings(bindings, {disableWarnings: this.props.disableWarnings});
+    this._applyBindings(drawBindings, {disableWarnings: this.props.disableWarnings});
     this._applyUniforms(uniforms);
 
     const webglRenderPass = renderPass as WEBGLRenderPass;
@@ -269,11 +275,11 @@ export class WEBGLRenderPipeline extends RenderPipeline {
    * Update a texture if needed (e.g. from video)
    * Note: This is currently done before every draw call
    */
-  _areTexturesRenderable(bindings: Record<string, Binding>) {
+  _areTexturesRenderable(bindings: Bindings) {
     let texturesRenderable = true;
 
     for (const bindingInfo of this.shaderLayout.bindings) {
-      if (!bindings[bindingInfo.name] && !bindings[bindingInfo.name.replace(/Uniforms$/, '')]) {
+      if (!getBindingValueForLayoutBinding(bindings, bindingInfo.name)) {
         log.warn(`Binding ${bindingInfo.name} not found in ${this.id}`)();
         texturesRenderable = false;
       }
@@ -290,7 +296,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
   }
 
   /** Apply any bindings (before each draw call) */
-  _applyBindings(bindings: Record<string, Binding>, _options?: {disableWarnings?: boolean}) {
+  _applyBindings(bindings: Bindings, _options?: {disableWarnings?: boolean}) {
     this._syncLinkStatus();
 
     // If we are using async linking, we need to wait until linking completes
@@ -304,8 +310,7 @@ export class WEBGLRenderPipeline extends RenderPipeline {
     let textureUnit = 0;
     let uniformBufferIndex = 0;
     for (const binding of this.shaderLayout.bindings) {
-      // Accept both `xyz` and `xyzUniforms` as valid names for `xyzUniforms` uniform block
-      const value = bindings[binding.name] || bindings[binding.name.replace(/Uniforms$/, '')];
+      const value = getBindingValueForLayoutBinding(bindings, binding.name);
       if (!value) {
         throw new Error(`No value for binding ${binding.name} in ${this.id}`);
       }
@@ -321,15 +326,13 @@ export class WEBGLRenderPipeline extends RenderPipeline {
           if (value instanceof WEBGLBuffer) {
             gl.bindBufferBase(GL.UNIFORM_BUFFER, uniformBufferIndex, value.handle);
           } else {
+            const bufferBinding = value as {buffer: WEBGLBuffer; offset?: number; size?: number};
             gl.bindBufferRange(
               GL.UNIFORM_BUFFER,
               uniformBufferIndex,
-              // @ts-expect-error
-              value.buffer.handle,
-              // @ts-expect-error
-              value.offset || 0,
-              // @ts-expect-error
-              value.size || value.buffer.byteLength - value.offset
+              bufferBinding.buffer.handle,
+              bufferBinding.offset || 0,
+              bufferBinding.size || bufferBinding.buffer.byteLength - (bufferBinding.offset || 0)
             );
           }
           uniformBufferIndex += 1;
@@ -408,7 +411,8 @@ function mergeShaderLayout(baseLayout: ShaderLayout, overrideLayout: ShaderLayou
   // Deep clone the base layout
   const mergedLayout: ShaderLayout = {
     ...baseLayout,
-    attributes: baseLayout.attributes.map(attribute => ({...attribute}))
+    attributes: baseLayout.attributes.map(attribute => ({...attribute})),
+    bindings: baseLayout.bindings.map(binding => ({...binding}))
   };
   // Merge the attributes
   for (const attribute of overrideLayout?.attributes || []) {
@@ -420,5 +424,37 @@ function mergeShaderLayout(baseLayout: ShaderLayout, overrideLayout: ShaderLayou
       baseAttribute.stepMode = attribute.stepMode || baseAttribute.stepMode;
     }
   }
+
+  for (const binding of overrideLayout?.bindings || []) {
+    const baseBinding = getShaderLayoutBindingByName(mergedLayout, binding.name);
+    if (!baseBinding) {
+      log.warn(`shader layout binding ${binding.name} not present in shader`);
+      continue;
+    }
+    Object.assign(baseBinding, binding);
+  }
   return mergedLayout;
+}
+
+function getShaderLayoutBindingByName(
+  shaderLayout: ShaderLayout,
+  bindingName: string
+): ShaderLayout['bindings'][number] | undefined {
+  return shaderLayout.bindings.find(
+    binding =>
+      binding.name === bindingName ||
+      binding.name === `${bindingName}Uniforms` ||
+      `${binding.name}Uniforms` === bindingName
+  );
+}
+
+function getBindingValueForLayoutBinding(
+  bindings: Bindings,
+  bindingName: string
+): Bindings[string] | undefined {
+  return (
+    bindings[bindingName] ||
+    bindings[`${bindingName}Uniforms`] ||
+    bindings[bindingName.replace(/Uniforms$/, '')]
+  );
 }

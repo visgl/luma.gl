@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {VariableShaderType, SignedDataType, VertexFormat, NormalizedDataType} from '@luma.gl/core';
-import {GL, GLUniformType, GLSamplerType, GLDataType} from '@luma.gl/constants';
+import {GL, GLUniformType, GLSamplerType, GLDataType} from '@luma.gl/webgl/constants';
 
 export type TextureBindingInfo = {
   viewDimension: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d';

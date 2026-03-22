@@ -4,7 +4,7 @@
 
 import {log} from '@luma.gl/core';
 // Rename constant to prevent inlining. We need the full set of constants for generating debug strings.
-import {GL as GLEnum} from '@luma.gl/constants';
+import {GL as GLEnum} from '@luma.gl/webgl/constants';
 import {isBrowser} from '@probe.gl/env';
 import {loadScript} from '../../utils/load-script';
 

@@ -5,7 +5,7 @@
 import type {TypedArray, NumericArray} from '@math.gl/types';
 import type {Device, Buffer, VertexArrayProps} from '@luma.gl/core';
 import {VertexArray, getScratchArray} from '@luma.gl/core';
-import {GL} from '@luma.gl/constants';
+import {GL} from '@luma.gl/webgl/constants';
 import {getBrowser} from '@probe.gl/env';
 
 import {WebGLDevice} from '../webgl-device';

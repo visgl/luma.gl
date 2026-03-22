@@ -10,7 +10,7 @@ struct denoiseUniforms {
   strength: f32,
 };
 
-@group(0) @binding(1) var<uniform> denoise: denoiseUniforms;
+@group(0) @binding(auto) var<uniform> denoise: denoiseUniforms;
 
 fn denoise_sampleColor(
   sourceTexture: texture_2d<f32>,

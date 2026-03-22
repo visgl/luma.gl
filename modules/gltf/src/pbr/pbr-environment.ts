@@ -33,6 +33,8 @@ export type PBREnvironmentProps = {
 
 /** Loads textures for PBR environment */
 export function loadPBREnvironment(device: Device, props: PBREnvironmentProps): PBREnvironment {
+  const specularMipLevels = props.specularMipLevels ?? 1;
+
   const brdfLutTexture = new DynamicTexture(device, {
     id: 'brdfLUT',
     sampler: {
@@ -62,7 +64,6 @@ export function loadPBREnvironment(device: Device, props: PBREnvironmentProps): 
   const specularEnvSampler = makeCube(device, {
     id: 'SpecularEnvSampler',
     getTextureForFace: (face: TextureCubeFace) => {
-      const specularMipLevels = props.specularMipLevels ?? 1;
       const imageArray: Array<Promise<unknown>> = [];
       const direction = FACES.indexOf(face);
       for (let lod = 0; lod < specularMipLevels; lod++) {

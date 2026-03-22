@@ -79,3 +79,7 @@ fixed-size arrays, and TypeScript inference, see
 [Core Shader Types](/docs/api-reference/core/shader-types).
 
 Several functions are also available to initialize and use shader modules.
+
+For the current WGSL-specific assembly and binding-relocation rules used by
+shadertools, see
+[`WGSL Support`](/docs/api-reference/shadertools/wgsl-support).

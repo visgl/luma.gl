@@ -189,7 +189,7 @@
       {
         "type": "category",
         "label": "@luma.gl/webgl",
-        "items": ["api-reference/webgl/README"]
+        "items": ["api-reference/webgl/README", "api-reference/webgl/constants"]
       },
       {
         "type": "category",
