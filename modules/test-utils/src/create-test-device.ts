@@ -47,7 +47,7 @@ export async function getTestDevice(
     case 'webgl':
       return getOrCreateWebGLTestDevicePromise();
     case 'webgpu':
-      return getOrCreateWebGPUTestDevicePromise();
+      return getWebGPUTestDevice();
     case 'null':
       return getOrCreateNullTestDevicePromise();
     case 'unknown':
@@ -56,8 +56,15 @@ export async function getTestDevice(
 }
 
 /** returns WebGPU device promise, if available */
-export function getWebGPUTestDevice(): Promise<WebGPUDevice | null> {
-  return getOrCreateWebGPUTestDevicePromise();
+export async function getWebGPUTestDevice(): Promise<WebGPUDevice | null> {
+  const webgpuDevice = await getOrCreateWebGPUTestDevicePromise();
+  if (webgpuDevice?.isLost) {
+    if (testDeviceCache.webgpuDevicePromise) {
+      testDeviceCache.webgpuDevicePromise = null;
+    }
+    return getOrCreateWebGPUTestDevicePromise();
+  }
+  return webgpuDevice;
 }
 
 /** returns WebGL device promise, if available */
