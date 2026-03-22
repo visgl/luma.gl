@@ -6,7 +6,12 @@ import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
 
 import {BufferTransform} from '@luma.gl/engine';
-import {assembleGLSLShaderPair, type PlatformInfo, picking, getShaderModuleUniforms} from '@luma.gl/shadertools';
+import {
+  assembleGLSLShaderPair,
+  type PlatformInfo,
+  picking,
+  getShaderModuleUniforms
+} from '@luma.gl/shadertools';
 
 const TEST_DATA = {
   vertexColorData: new Float32Array([
@@ -243,11 +248,7 @@ test('picking#useFloatColors', async t => {
   });
   normalizedTransform.run();
 
-  const normalizedData = await readTransformOutput(
-    normalizedTransform,
-    'payload',
-    vertexCount * 3
-  );
+  const normalizedData = await readTransformOutput(normalizedTransform, 'payload', vertexCount * 3);
   t.deepEqual(
     Array.from(normalizedData).map(value => Number(value.toFixed(6))),
     [1, 0.501961, 0.25098, 0.00098, 0.001961, 0.002941],
@@ -307,7 +308,11 @@ test('picking#picking_setPickingAttribute', async t => {
   transform.run();
 
   const outData = await readTransformOutput(transform, 'payload', vertexCount * 3);
-  t.deepEqual(Array.from(outData), [1, 2, 3, 4, 5, 6], 'Legacy attribute picking payload remains unchanged');
+  t.deepEqual(
+    Array.from(outData),
+    [1, 2, 3, 4, 5, 6],
+    'Legacy attribute picking payload remains unchanged'
+  );
 
   transform.destroy();
   t.end();
@@ -409,7 +414,9 @@ function createPickingPayloadTransform(
   pickingSetup: string
 ): BufferTransform {
   const vertexColor = device.createBuffer({data: vertexColorData});
-  const payload = device.createBuffer({byteLength: vertexCount * 3 * Float32Array.BYTES_PER_ELEMENT});
+  const payload = device.createBuffer({
+    byteLength: vertexCount * 3 * Float32Array.BYTES_PER_ELEMENT
+  });
 
   return new BufferTransform(device, {
     vs: `\
