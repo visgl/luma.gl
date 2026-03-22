@@ -2,6 +2,10 @@
 
 ## v9.3
 
+### v9.3.0-alpha.8
+
+- chore: Update release workflow (#2562)
+
 ### v9.3.0-alpha.7
 
 - feat(engine): add async texture buffer read (#2439)
