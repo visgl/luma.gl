@@ -491,7 +491,9 @@ test('CommandBuffer#copyTextureToBuffer', async t => {
 test('CommandEncoder#copyTextureToBuffer honors origin and byteOffset across backends', async t => {
   for (const device of await getTestDevices(['webgl', 'webgpu'])) {
     if (device.type === 'webgpu') {
-      t.comment('Skipping WebGPU texture-to-buffer origin/offset test due to flaky device-loss behavior');
+      t.comment(
+        'Skipping WebGPU texture-to-buffer origin/offset test due to flaky device-loss behavior'
+      );
       continue;
     }
     if (device.type === 'webgl' && isSoftwareBackedDevice(device)) {
