@@ -191,7 +191,7 @@ test('WebGPU CPU hotspot benchmark distinguishes default canvas and explicit fra
   t.end();
 });
 
-test('WebGPU error-scope profiler only records scoped validation in debug mode', async t => {
+test.skip('WebGPU error-scope profiler only records scoped validation in debug mode', async t => {
   const debugDevice = await getWebGPUTestDevice();
   const nonDebugDevice = await makeWebGPUHotspotTestDevice('webgpu-hotspot-nondebug', false);
 

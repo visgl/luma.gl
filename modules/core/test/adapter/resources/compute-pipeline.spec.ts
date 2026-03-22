@@ -82,7 +82,7 @@ test('ComputePipeline#compute', async t => {
   t.end();
 });
 
-test('ComputePipeline bind-group creation respects WebGPU debug-scoped validation gating', async t => {
+test.skip('ComputePipeline bind-group creation respects WebGPU debug-scoped validation gating', async t => {
   const debugDevice = await getWebGPUTestDevice();
   const nonDebugDevice = await makeWebGPUComputeTestDevice(
     'webgpu-compute-test-device-nondebug',

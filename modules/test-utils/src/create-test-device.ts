@@ -10,15 +10,26 @@ import {nullAdapter} from './null-device/null-adapter';
 import {NullDevice} from './null-device/null-device';
 
 const DEFAULT_CANVAS_CONTEXT_PROPS: CanvasContextProps = {width: 1, height: 1};
+const TEST_DEVICE_CACHE_KEY = '__lumaTestDeviceCache';
 
-/** A null device intended for testing - @note Only available after getTestDevices() has completed */
-let nullDevicePromise: Promise<NullDevice> | null = null;
-/** This WebGL Device can be used directly but will not have WebGL debugging initialized */
-let webglDevicePromise: Promise<WebGLDevice> | null = null;
-/** A shared offscreen WebGL device for presentation-context tests */
-let presentationWebglDevicePromise: Promise<WebGLDevice | null> | null = null;
-/** A WebGL 2 Device intended for testing - @note Only available after getTestDevices() has completed */
-let webgpuDevicePromise: Promise<WebGPUDevice | null> | null = null;
+type TestDeviceCache = {
+  /** A null device intended for testing - @note Only available after getTestDevices() has completed */
+  nullDevicePromise: Promise<NullDevice> | null;
+  /** This WebGL Device can be used directly but will not have WebGL debugging initialized */
+  webglDevicePromise: Promise<WebGLDevice> | null;
+  /** A shared offscreen WebGL device for presentation-context tests */
+  presentationWebglDevicePromise: Promise<WebGLDevice | null> | null;
+  /** A WebGL 2 Device intended for testing - @note Only available after getTestDevices() has completed */
+  webgpuDevicePromise: Promise<WebGPUDevice | null> | null;
+};
+
+declare global {
+  interface Window {
+    [TEST_DEVICE_CACHE_KEY]?: TestDeviceCache;
+  }
+}
+
+const testDeviceCache = getOrCreateTestDeviceCache();
 
 /** Includes WebGPU device if available */
 export async function getTestDevices(
@@ -65,23 +76,23 @@ export async function getNullTestDevice(): Promise<NullDevice> {
 }
 
 function getOrCreateWebGPUTestDevicePromise(): Promise<WebGPUDevice | null> {
-  webgpuDevicePromise ||= makeWebGPUTestDevice();
-  return webgpuDevicePromise;
+  testDeviceCache.webgpuDevicePromise ||= makeWebGPUTestDevice();
+  return testDeviceCache.webgpuDevicePromise;
 }
 
 function getOrCreateWebGLTestDevicePromise(): Promise<WebGLDevice> {
-  webglDevicePromise ||= makeWebGLTestDevice();
-  return webglDevicePromise;
+  testDeviceCache.webglDevicePromise ||= makeWebGLTestDevice();
+  return testDeviceCache.webglDevicePromise;
 }
 
 function getOrCreatePresentationWebGLTestDevicePromise(): Promise<WebGLDevice | null> {
-  presentationWebglDevicePromise ||= makePresentationWebGLTestDevice();
-  return presentationWebglDevicePromise;
+  testDeviceCache.presentationWebglDevicePromise ||= makePresentationWebGLTestDevice();
+  return testDeviceCache.presentationWebglDevicePromise;
 }
 
 function getOrCreateNullTestDevicePromise(): Promise<NullDevice> {
-  nullDevicePromise ||= makeNullTestDevice();
-  return nullDevicePromise;
+  testDeviceCache.nullDevicePromise ||= makeNullTestDevice();
+  return testDeviceCache.nullDevicePromise;
 }
 
 async function makeWebGPUTestDevice(): Promise<WebGPUDevice | null> {
@@ -95,8 +106,8 @@ async function makeWebGPUTestDevice(): Promise<WebGPUDevice | null> {
       debug: true
     })) as unknown as WebGPUDevice;
     webgpuDevice.lost.finally(() => {
-      if (webgpuDevicePromise === webgpuDeviceResolvers.promise) {
-        webgpuDevicePromise = null;
+      if (testDeviceCache.webgpuDevicePromise === webgpuDeviceResolvers.promise) {
+        testDeviceCache.webgpuDevicePromise = null;
       }
     });
     webgpuDeviceResolvers.resolve(webgpuDevice);
@@ -120,8 +131,8 @@ async function makeWebGLTestDevice(): Promise<WebGLDevice> {
       debug: true
     })) as unknown as WebGLDevice;
     webglDevice.lost.finally(() => {
-      if (webglDevicePromise === webglDeviceResolvers.promise) {
-        webglDevicePromise = null;
+      if (testDeviceCache.webglDevicePromise === webglDeviceResolvers.promise) {
+        testDeviceCache.webglDevicePromise = null;
       }
     });
     webglDeviceResolvers.resolve(webglDevice);
@@ -148,8 +159,10 @@ async function makePresentationWebGLTestDevice(): Promise<WebGLDevice | null> {
       debug: true
     })) as unknown as WebGLDevice;
     webglDevice.lost.finally(() => {
-      if (presentationWebglDevicePromise === presentationWebGLDeviceResolvers.promise) {
-        presentationWebglDevicePromise = null;
+      if (
+        testDeviceCache.presentationWebglDevicePromise === presentationWebGLDeviceResolvers.promise
+      ) {
+        testDeviceCache.presentationWebglDevicePromise = null;
       }
     });
     presentationWebGLDeviceResolvers.resolve(webglDevice);
@@ -175,12 +188,27 @@ async function makeNullTestDevice(): Promise<NullDevice> {
   } catch (error) {
     log.error(String(error))();
     // @ts-ignore TODO
-    nullDevicePromise = Promise.resolve(null);
+    testDeviceCache.nullDevicePromise = Promise.resolve(null);
   }
   return nullDeviceResolvers.promise;
 }
 
 // HELPERS
+
+function getOrCreateTestDeviceCache(): TestDeviceCache {
+  const rootObject = globalThis as typeof globalThis & {
+    [TEST_DEVICE_CACHE_KEY]?: TestDeviceCache;
+  };
+
+  rootObject[TEST_DEVICE_CACHE_KEY] ||= {
+    nullDevicePromise: null,
+    webglDevicePromise: null,
+    presentationWebglDevicePromise: null,
+    webgpuDevicePromise: null
+  };
+
+  return rootObject[TEST_DEVICE_CACHE_KEY];
+}
 
 // TODO - replace with Promise.withResolvers once we upgrade TS baseline
 function withResolvers<T>(): {
