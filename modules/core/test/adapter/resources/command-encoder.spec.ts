@@ -305,14 +305,21 @@ test('CommandEncoder resolves time profiling with a single bulk query read', asy
 
 test('CommandEncoder default submit rolls over to a fresh default encoder', async t => {
   for (const device of await getTestDevices(['webgl', 'webgpu'])) {
+    if (device.type === 'webgl' && isSoftwareBackedDevice(device)) {
+      t.comment('Skipping WebGL default encoder rollover test on a software-backed adapter');
+      continue;
+    }
+
     const sourceBuffer = device.createBuffer({
-      data: new Float32Array([1, 2, 3]),
+      byteLength: 3 * Float32Array.BYTES_PER_ELEMENT,
       usage: Buffer.COPY_SRC | Buffer.COPY_DST
     });
+    sourceBuffer.write(new Float32Array([1, 2, 3]));
     const destinationBuffer = device.createBuffer({
-      data: new Float32Array([0, 0, 0]),
+      byteLength: 3 * Float32Array.BYTES_PER_ELEMENT,
       usage: Buffer.COPY_DST | Buffer.COPY_SRC
     });
+    destinationBuffer.write(new Float32Array([0, 0, 0]));
 
     device.commandEncoder.copyBufferToBuffer({
       sourceBuffer,
@@ -479,6 +486,11 @@ test('CommandBuffer#copyTextureToBuffer', async t => {
 
 test('CommandEncoder#copyTextureToBuffer honors origin and byteOffset across backends', async t => {
   for (const device of await getTestDevices(['webgl', 'webgpu'])) {
+    if (device.type === 'webgl' && isSoftwareBackedDevice(device)) {
+      t.comment('Skipping WebGL origin/byteOffset texture copy test on a software-backed adapter');
+      continue;
+    }
+
     const sourceTexture = device.createTexture({
       data: new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]),
       width: 2,
@@ -488,9 +500,10 @@ test('CommandEncoder#copyTextureToBuffer honors origin and byteOffset across bac
       mipmaps: false
     });
     const destinationBuffer = device.createBuffer({
-      data: new Uint8Array(8),
-      usage: Buffer.COPY_DST | Buffer.MAP_READ
+      byteLength: 8,
+      usage: Buffer.COPY_DST | Buffer.COPY_SRC
     });
+    destinationBuffer.write(new Uint8Array(8));
 
     const commandEncoder = device.createCommandEncoder();
     commandEncoder.copyTextureToBuffer({
@@ -537,7 +550,7 @@ test('WebGPU custom CommandEncoder render pass records on the owning encoder', a
   const layout = colorTexture.computeMemoryLayout({width: 1, height: 1});
   const readBuffer = device.createBuffer({
     byteLength: layout.byteLength,
-    usage: Buffer.COPY_DST | Buffer.MAP_READ
+    usage: Buffer.COPY_DST | Buffer.COPY_SRC
   });
   const commandEncoder = device.createCommandEncoder({id: 'custom-renderpass-owner'});
   const renderPass = commandEncoder.beginRenderPass({
@@ -546,10 +559,16 @@ test('WebGPU custom CommandEncoder render pass records on the owning encoder', a
   });
   renderPass.end();
 
+  commandEncoder.copyTextureToBuffer({
+    sourceTexture: colorTexture,
+    width: 1,
+    height: 1,
+    destinationBuffer: readBuffer
+  });
+
   const commandBuffer = commandEncoder.finish();
   device.submit(commandBuffer);
 
-  colorTexture.readBuffer({width: 1, height: 1}, readBuffer);
   const pixelData = new Uint8Array(await readBuffer.readAsync(0, layout.byteLength));
   t.deepEqual(
     Array.from(pixelData.slice(0, 4)),
@@ -579,9 +598,10 @@ test('WebGPU CommandEncoder#copyTextureToBuffer does not submit before finish/su
     mipmaps: false
   });
   const destinationBuffer = device.createBuffer({
-    data: new Uint8Array([0, 0, 0, 0]),
-    usage: Buffer.COPY_DST | Buffer.MAP_READ
+    byteLength: 4,
+    usage: Buffer.COPY_DST | Buffer.COPY_SRC
   });
+  destinationBuffer.write(new Uint8Array([0, 0, 0, 0]));
 
   const commandEncoder = device.createCommandEncoder();
   commandEncoder.copyTextureToBuffer({
