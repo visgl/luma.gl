@@ -65,7 +65,7 @@ fn tiltShift_sampleColor(
 `;
 
 const fs = /* glsl */ `\
-uniform tiltShiftUniforms {
+layout(std140) uniform tiltShiftUniforms {
   float blurRadius;
   float gradientRadius;
   vec2 start;

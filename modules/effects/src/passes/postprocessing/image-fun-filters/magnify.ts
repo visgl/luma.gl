@@ -40,7 +40,7 @@ fn magnify_sampleColor(
 `;
 
 const fs = /* glsl */ `\
-uniform magnifyUniforms {
+layout(std140) uniform magnifyUniforms {
   vec2 screenXY;
   float radiusPixels;
   float zoom;

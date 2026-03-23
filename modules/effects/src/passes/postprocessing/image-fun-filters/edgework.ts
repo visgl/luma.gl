@@ -111,7 +111,7 @@ fn edgeWork_sampleColor(
 `;
 
 const fs = /* glsl */ `\
-uniform edgeWorkUniforms {
+layout(std140) uniform edgeWorkUniforms {
   float radius;
   int mode;
 } edgeWork;

@@ -28,7 +28,7 @@ uniform float test_uClipped;
     module,
     options: {shaderLanguage: 'glsl', uniforms: 'unscoped-interface-blocks'},
     result: `\
-uniform Test {
+layout(std140) uniform Test {
   mat4 test_uProjectMatrix;
   mat4 test_uViewMatrix;
   float test_uClipped;
@@ -39,7 +39,7 @@ uniform Test {
     module,
     options: {shaderLanguage: 'glsl', uniforms: 'scoped-interface-blocks'},
     result: `\
-uniform Test {
+layout(std140) uniform Test {
   mat4 uProjectMatrix;
   mat4 uViewMatrix;
   float uClipped;

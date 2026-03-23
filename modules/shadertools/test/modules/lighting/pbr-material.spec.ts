@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {UniformBufferLayout, UniformStore} from '@luma.gl/core';
+import {makeShaderBlockLayout, ShaderBlockWriter, UniformStore} from '@luma.gl/core';
 import {
   getShaderModuleUniformBlockFields,
   getShaderModuleUniformLayoutValidationResult,
@@ -21,42 +21,42 @@ const EXPECTED_UNIFORM_BUFFER_LAYOUT = {
   normalMapEnabled: {offset: 8, size: 1},
   normalScale: {offset: 9, size: 1},
   emissiveMapEnabled: {offset: 10, size: 1},
-  emissiveFactor: {offset: 12, size: 4},
+  emissiveFactor: {offset: 12, size: 3},
   metallicRoughnessValues: {offset: 16, size: 2},
   metallicRoughnessMapEnabled: {offset: 18, size: 1},
   occlusionMapEnabled: {offset: 19, size: 1},
   occlusionStrength: {offset: 20, size: 1},
   alphaCutoffEnabled: {offset: 21, size: 1},
   alphaCutoff: {offset: 22, size: 1},
-  specularColorFactor: {offset: 24, size: 4},
-  specularIntensityFactor: {offset: 28, size: 1},
-  specularColorMapEnabled: {offset: 29, size: 1},
-  specularIntensityMapEnabled: {offset: 30, size: 1},
-  ior: {offset: 31, size: 1},
-  transmissionFactor: {offset: 32, size: 1},
-  transmissionMapEnabled: {offset: 33, size: 1},
-  thicknessFactor: {offset: 34, size: 1},
-  attenuationDistance: {offset: 35, size: 1},
-  attenuationColor: {offset: 36, size: 4},
-  clearcoatFactor: {offset: 40, size: 1},
-  clearcoatRoughnessFactor: {offset: 41, size: 1},
-  clearcoatMapEnabled: {offset: 42, size: 1},
-  clearcoatRoughnessMapEnabled: {offset: 43, size: 1},
-  sheenColorFactor: {offset: 44, size: 4},
-  sheenRoughnessFactor: {offset: 48, size: 1},
-  sheenColorMapEnabled: {offset: 49, size: 1},
-  sheenRoughnessMapEnabled: {offset: 50, size: 1},
-  iridescenceFactor: {offset: 51, size: 1},
-  iridescenceIor: {offset: 52, size: 1},
-  iridescenceThicknessRange: {offset: 54, size: 2},
-  iridescenceMapEnabled: {offset: 56, size: 1},
-  anisotropyStrength: {offset: 57, size: 1},
-  anisotropyRotation: {offset: 58, size: 1},
-  anisotropyDirection: {offset: 60, size: 2},
-  anisotropyMapEnabled: {offset: 62, size: 1},
-  emissiveStrength: {offset: 63, size: 1},
-  IBLenabled: {offset: 64, size: 1},
-  scaleIBLAmbient: {offset: 66, size: 2},
+  specularColorFactor: {offset: 24, size: 3},
+  specularIntensityFactor: {offset: 27, size: 1},
+  specularColorMapEnabled: {offset: 28, size: 1},
+  specularIntensityMapEnabled: {offset: 29, size: 1},
+  ior: {offset: 30, size: 1},
+  transmissionFactor: {offset: 31, size: 1},
+  transmissionMapEnabled: {offset: 32, size: 1},
+  thicknessFactor: {offset: 33, size: 1},
+  attenuationDistance: {offset: 34, size: 1},
+  attenuationColor: {offset: 36, size: 3},
+  clearcoatFactor: {offset: 39, size: 1},
+  clearcoatRoughnessFactor: {offset: 40, size: 1},
+  clearcoatMapEnabled: {offset: 41, size: 1},
+  clearcoatRoughnessMapEnabled: {offset: 42, size: 1},
+  sheenColorFactor: {offset: 44, size: 3},
+  sheenRoughnessFactor: {offset: 47, size: 1},
+  sheenColorMapEnabled: {offset: 48, size: 1},
+  sheenRoughnessMapEnabled: {offset: 49, size: 1},
+  iridescenceFactor: {offset: 50, size: 1},
+  iridescenceIor: {offset: 51, size: 1},
+  iridescenceThicknessRange: {offset: 52, size: 2},
+  iridescenceMapEnabled: {offset: 54, size: 1},
+  anisotropyStrength: {offset: 55, size: 1},
+  anisotropyRotation: {offset: 56, size: 1},
+  anisotropyDirection: {offset: 58, size: 2},
+  anisotropyMapEnabled: {offset: 60, size: 1},
+  emissiveStrength: {offset: 61, size: 1},
+  IBLenabled: {offset: 62, size: 1},
+  scaleIBLAmbient: {offset: 64, size: 2},
   scaleDiffBaseMR: {offset: 68, size: 4},
   scaleFGDSpec: {offset: 72, size: 4}
 } as const;
@@ -155,21 +155,21 @@ test('shadertools#pbrMaterial shader uniform blocks match uniformTypes order', t
 });
 
 test('shadertools#pbrMaterial uniform buffer layout matches expected std140 packing', testCase => {
-  const uniformBufferLayout = new UniformBufferLayout(pbrMaterial.uniformTypes);
+  const shaderBlockLayout = makeShaderBlockLayout(pbrMaterial.uniformTypes);
 
   testCase.equal(
-    uniformBufferLayout.byteLength,
-    1024,
-    'uniform buffer uses the padded minimum size'
+    shaderBlockLayout.byteLength,
+    304,
+    'uniform buffer layout reports the exact packed size'
   );
   testCase.deepEqual(
-    Object.keys(uniformBufferLayout.layout),
+    Object.keys(shaderBlockLayout.fields),
     EXPECTED_UNIFORM_NAMES,
     'uniform buffer layout key order matches uniform definitions'
   );
 
   for (const [uniformName, expectedLayout] of Object.entries(EXPECTED_UNIFORM_BUFFER_LAYOUT)) {
-    const actualLayout = uniformBufferLayout.get(uniformName);
+    const actualLayout = shaderBlockLayout.fields[uniformName];
     testCase.ok(actualLayout, `${uniformName} is present in the layout`);
     testCase.equal(actualLayout?.offset, expectedLayout.offset, `${uniformName} offset`);
     testCase.equal(actualLayout?.size, expectedLayout.size, `${uniformName} size`);
@@ -178,9 +178,32 @@ test('shadertools#pbrMaterial uniform buffer layout matches expected std140 pack
   testCase.end();
 });
 
+test('shadertools#pbrMaterial uniform store reports minimum allocation size separately', testCase => {
+  const uniformStore = new UniformStore<{material: PBRMaterialUniforms}>({type: 'webgl'} as any, {
+    material: {
+      uniformTypes: pbrMaterial.uniformTypes,
+      defaultUniforms: pbrMaterial.defaultUniforms
+    }
+  });
+
+  testCase.equal(
+    uniformStore.getUniformBufferByteLength('material'),
+    1024,
+    'uniform store keeps the minimum allocation size'
+  );
+  testCase.equal(
+    uniformStore.getUniformBufferData('material').byteLength,
+    304,
+    'uniform store serializes only the packed block data'
+  );
+
+  testCase.end();
+});
+
 test('shadertools#pbrMaterial serializes a full PBR sample into the expected buffer slots', testCase => {
-  const uniformBufferLayout = new UniformBufferLayout(pbrMaterial.uniformTypes);
-  const uniformBufferData = uniformBufferLayout.getData(fullPBRUniforms);
+  const shaderBlockLayout = makeShaderBlockLayout(pbrMaterial.uniformTypes);
+  const shaderBlockWriter = new ShaderBlockWriter(shaderBlockLayout);
+  const uniformBufferData = shaderBlockWriter.getData(fullPBRUniforms);
   const float32View = new Float32Array(uniformBufferData.buffer);
   const int32View = new Int32Array(uniformBufferData.buffer);
 
@@ -205,7 +228,7 @@ test('shadertools#pbrMaterial serializes a full PBR sample into the expected buf
   } as const;
 
   for (const [uniformName, expectedValue] of Object.entries(expectedIntegerValues)) {
-    const uniformOffset = uniformBufferLayout.get(uniformName)!.offset;
+    const uniformOffset = shaderBlockLayout.fields[uniformName].offset;
     testCase.equal(int32View[uniformOffset], expectedValue, `${uniformName} encoded as i32`);
   }
 
@@ -229,7 +252,7 @@ test('shadertools#pbrMaterial serializes a full PBR sample into the expected buf
   } as const;
 
   for (const [uniformName, expectedValue] of Object.entries(expectedScalarValues)) {
-    const uniformOffset = uniformBufferLayout.get(uniformName)!.offset;
+    const uniformOffset = shaderBlockLayout.fields[uniformName].offset;
     testCase.ok(
       almostEqual(float32View[uniformOffset], expectedValue),
       `${uniformName} encoded as f32`
@@ -251,7 +274,7 @@ test('shadertools#pbrMaterial serializes a full PBR sample into the expected buf
   } as const;
 
   for (const [uniformName, expectedValues] of Object.entries(expectedVectorValues)) {
-    const uniformOffset = uniformBufferLayout.get(uniformName)!.offset;
+    const uniformOffset = shaderBlockLayout.fields[uniformName].offset;
 
     for (let valueIndex = 0; valueIndex < expectedValues.length; valueIndex++) {
       testCase.ok(
@@ -264,10 +287,11 @@ test('shadertools#pbrMaterial serializes a full PBR sample into the expected buf
   const expectedPaddingSlots = {
     baseColorFactor: [],
     emissiveFactor: [15],
-    specularColorFactor: [27],
-    attenuationColor: [39],
-    sheenColorFactor: [47],
-    IBLenabled: [65]
+    specularColorFactor: [],
+    attenuationColor: [],
+    sheenColorFactor: [],
+    anisotropyRotation: [57],
+    IBLenabled: [63]
   } as const;
 
   for (const [uniformName, paddingSlots] of Object.entries(expectedPaddingSlots)) {
@@ -280,8 +304,8 @@ test('shadertools#pbrMaterial serializes a full PBR sample into the expected buf
 });
 
 test('shadertools#pbrMaterial uniform store preserves prior and default values across partial updates', testCase => {
-  const uniformBufferLayout = new UniformBufferLayout(pbrMaterial.uniformTypes);
-  const uniformStore = new UniformStore<{material: PBRMaterialUniforms}>({
+  const shaderBlockLayout = makeShaderBlockLayout(pbrMaterial.uniformTypes);
+  const uniformStore = new UniformStore<{material: PBRMaterialUniforms}>({type: 'webgl'} as any, {
     material: {
       uniformTypes: pbrMaterial.uniformTypes,
       defaultUniforms: pbrMaterial.defaultUniforms
@@ -308,14 +332,14 @@ test('shadertools#pbrMaterial uniform store preserves prior and default values a
   const float32View = new Float32Array(uniformBufferData.buffer);
   const int32View = new Int32Array(uniformBufferData.buffer);
 
-  const baseColorFactorOffset = uniformBufferLayout.get('baseColorFactor')!.offset;
-  const metallicRoughnessValuesOffset = uniformBufferLayout.get('metallicRoughnessValues')!.offset;
-  const clearcoatFactorOffset = uniformBufferLayout.get('clearcoatFactor')!.offset;
-  const emissiveStrengthOffset = uniformBufferLayout.get('emissiveStrength')!.offset;
-  const iorOffset = uniformBufferLayout.get('ior')!.offset;
-  const IBLenabledOffset = uniformBufferLayout.get('IBLenabled')!.offset;
-  const scaleIBLAmbientOffset = uniformBufferLayout.get('scaleIBLAmbient')!.offset;
-  const scaleDiffBaseMROffset = uniformBufferLayout.get('scaleDiffBaseMR')!.offset;
+  const baseColorFactorOffset = shaderBlockLayout.fields.baseColorFactor.offset;
+  const metallicRoughnessValuesOffset = shaderBlockLayout.fields.metallicRoughnessValues.offset;
+  const clearcoatFactorOffset = shaderBlockLayout.fields.clearcoatFactor.offset;
+  const emissiveStrengthOffset = shaderBlockLayout.fields.emissiveStrength.offset;
+  const iorOffset = shaderBlockLayout.fields.ior.offset;
+  const IBLenabledOffset = shaderBlockLayout.fields.IBLenabled.offset;
+  const scaleIBLAmbientOffset = shaderBlockLayout.fields.scaleIBLAmbient.offset;
+  const scaleDiffBaseMROffset = shaderBlockLayout.fields.scaleDiffBaseMR.offset;
 
   testCase.ok(almostEqual(float32View[baseColorFactorOffset], 0.25), 'baseColorFactor update kept');
   testCase.ok(

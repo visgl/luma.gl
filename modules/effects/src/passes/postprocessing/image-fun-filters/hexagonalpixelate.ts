@@ -64,7 +64,7 @@ fn hexagonalPixelate_sampleColor(
 `;
 
 const fs = /* glsl */ `\
-uniform hexagonalPixelateUniforms {
+layout(std140) uniform hexagonalPixelateUniforms {
   vec2 center;
   float scale;
 } hexagonalPixelate;

@@ -48,7 +48,7 @@ void pbr_setPositionNormalTangentUV(vec4 position, vec4 normal, vec4 tangent, ve
 export const fs = /* glsl */ `\
 precision highp float;
 
-uniform pbrMaterialUniforms {
+layout(std140) uniform pbrMaterialUniforms {
   // Material is unlit
   bool unlit;
 

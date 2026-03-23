@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 export const LAMBERT_VS = /* glsl */ `\
-uniform lambertMaterialUniforms {
+layout(std140) uniform lambertMaterialUniforms {
   uniform bool unlit;
   uniform float ambient;
   uniform float diffuse;
@@ -11,7 +11,7 @@ uniform lambertMaterialUniforms {
 `;
 
 export const LAMBERT_FS = /* glsl */ `\
-uniform lambertMaterialUniforms {
+layout(std140) uniform lambertMaterialUniforms {
   uniform bool unlit;
   uniform float ambient;
   uniform float diffuse;

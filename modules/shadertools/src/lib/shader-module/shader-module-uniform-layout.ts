@@ -5,28 +5,81 @@
 import type {ShaderModule} from './shader-module';
 import {assert} from '../utils/assert';
 
+/**
+ * Shader stages supported by shader-module uniform-layout validation helpers.
+ */
 export type ShaderModuleUniformLayoutStage = 'vertex' | 'fragment' | 'wgsl';
 
+/**
+ * Describes the result of comparing declared `uniformTypes` with the fields
+ * found in a shader uniform block.
+ */
 export type ShaderModuleUniformLayoutValidationResult = {
+  /** Name of the shader module being validated. */
   moduleName: string;
+  /** Expected block name derived from the shader module name. */
   uniformBlockName: string;
+  /** Shader stage that was inspected. */
   stage: ShaderModuleUniformLayoutStage;
+  /** Field names declared by the module metadata. */
   expectedUniformNames: string[];
+  /** Field names parsed from the shader source. */
   actualUniformNames: string[];
+  /** Whether the declared and parsed field lists match exactly. */
   matches: boolean;
 };
 
-type Logger = {
-  error?: (...args: unknown[]) => () => unknown;
+/**
+ * Parsed information about one GLSL uniform block declaration.
+ */
+export type GLSLUniformBlockInfo = {
+  /** Declared block type name. */
+  blockName: string;
+  /** Optional instance name that follows the block declaration. */
+  instanceName: string | null;
+  /** Raw layout qualifier text, if present. */
+  layoutQualifier: string | null;
+  /** Whether any explicit layout qualifier was present. */
+  hasLayoutQualifier: boolean;
+  /** Whether the block explicitly declares `layout(std140)`. */
+  isStd140: boolean;
+  /** Raw source text inside the block braces. */
+  body: string;
 };
 
+/**
+ * Logging surface used by validation and warning helpers.
+ */
+type Logger = {
+  /** Error logger compatible with luma's deferred log API. */
+  error?: (...args: unknown[]) => () => unknown;
+  /** Warning logger compatible with luma's deferred log API. */
+  warn?: (...args: unknown[]) => () => unknown;
+};
+
+/**
+ * Matches one field declaration inside a GLSL uniform block body.
+ */
 const GLSL_UNIFORM_BLOCK_FIELD_REGEXP =
   /^(?:uniform\s+)?(?:(?:lowp|mediump|highp)\s+)?[A-Za-z0-9_]+(?:<[^>]+>)?\s+([A-Za-z0-9_]+)(?:\s*\[[^\]]+\])?\s*;/;
+/**
+ * Matches full GLSL uniform block declarations, including optional layout qualifiers.
+ */
+const GLSL_UNIFORM_BLOCK_REGEXP =
+  /((?:layout\s*\([^)]*\)\s*)*)uniform\s+([A-Za-z_][A-Za-z0-9_]*)\s*\{([\s\S]*?)\}\s*([A-Za-z_][A-Za-z0-9_]*)?\s*;/g;
 
+/**
+ * Returns the uniform block type name expected for the supplied shader module.
+ */
 export function getShaderModuleUniformBlockName(module: ShaderModule): string {
   return `${module.name}Uniforms`;
 }
 
+/**
+ * Returns the ordered field names parsed from a shader module's uniform block.
+ *
+ * @returns `null` when the stage has no source or the expected block is absent.
+ */
 export function getShaderModuleUniformBlockFields(
   module: ShaderModule,
   stage: ShaderModuleUniformLayoutStage
@@ -46,6 +99,12 @@ export function getShaderModuleUniformBlockFields(
   );
 }
 
+/**
+ * Computes the validation result for a shader module's declared and parsed
+ * uniform-block field lists.
+ *
+ * @returns `null` when the module has no declared uniform types or no matching block.
+ */
 export function getShaderModuleUniformLayoutValidationResult(
   module: ShaderModule,
   stage: ShaderModuleUniformLayoutStage
@@ -70,6 +129,12 @@ export function getShaderModuleUniformLayoutValidationResult(
   };
 }
 
+/**
+ * Validates that a shader module's parsed uniform block matches `uniformTypes`.
+ *
+ * When a mismatch is detected, the helper logs a formatted error and optionally
+ * throws via {@link assert}.
+ */
 export function validateShaderModuleUniformLayout(
   module: ShaderModule,
   stage: ShaderModuleUniformLayoutStage,
@@ -93,6 +158,67 @@ export function validateShaderModuleUniformLayout(
   return validationResult;
 }
 
+/**
+ * Parses all GLSL uniform blocks in a shader source string.
+ */
+export function getGLSLUniformBlocks(shaderSource: string): GLSLUniformBlockInfo[] {
+  const blocks: GLSLUniformBlockInfo[] = [];
+  const uncommentedSource = stripShaderComments(shaderSource);
+
+  for (const sourceMatch of uncommentedSource.matchAll(GLSL_UNIFORM_BLOCK_REGEXP)) {
+    const layoutQualifier = sourceMatch[1]?.trim() || null;
+    blocks.push({
+      blockName: sourceMatch[2],
+      body: sourceMatch[3],
+      instanceName: sourceMatch[4] || null,
+      layoutQualifier,
+      hasLayoutQualifier: Boolean(layoutQualifier),
+      isStd140: Boolean(
+        layoutQualifier && /\blayout\s*\([^)]*\bstd140\b[^)]*\)/.exec(layoutQualifier)
+      )
+    });
+  }
+
+  return blocks;
+}
+
+/**
+ * Emits warnings for GLSL uniform blocks that do not explicitly declare
+ * `layout(std140)`.
+ *
+ * @returns The list of parsed blocks that were considered non-compliant.
+ */
+export function warnIfGLSLUniformBlocksAreNotStd140(
+  shaderSource: string,
+  stage: Exclude<ShaderModuleUniformLayoutStage, 'wgsl'>,
+  log?: Logger,
+  context?: {label?: string}
+): GLSLUniformBlockInfo[] {
+  const nonStd140Blocks = getGLSLUniformBlocks(shaderSource).filter(block => !block.isStd140);
+  const seenBlockNames = new Set<string>();
+
+  for (const block of nonStd140Blocks) {
+    if (seenBlockNames.has(block.blockName)) {
+      continue;
+    }
+    seenBlockNames.add(block.blockName);
+
+    const shaderLabel = context?.label ? `${context.label} ` : '';
+    const actualLayout = block.hasLayoutQualifier
+      ? `declares ${normalizeWhitespace(block.layoutQualifier!)} instead of layout(std140)`
+      : 'does not declare layout(std140)';
+    const message = `${shaderLabel}${stage} shader uniform block ${
+      block.blockName
+    } ${actualLayout}. luma.gl host-side shader block packing assumes explicit layout(std140) for GLSL uniform blocks. Add \`layout(std140)\` to the block declaration.`;
+    log?.warn?.(message, block)();
+  }
+
+  return nonStd140Blocks;
+}
+
+/**
+ * Extracts field names from the named GLSL or WGSL uniform block/struct.
+ */
 function extractShaderUniformBlockFieldNames(
   shaderSource: string,
   language: 'glsl' | 'wgsl',
@@ -128,6 +254,9 @@ function extractShaderUniformBlockFieldNames(
   return fieldNames;
 }
 
+/**
+ * Extracts the body of a WGSL struct with the supplied name.
+ */
 function extractWGSLStructBody(shaderSource: string, uniformBlockName: string): string | null {
   const structMatch = new RegExp(`\\bstruct\\s+${uniformBlockName}\\b`, 'm').exec(shaderSource);
   if (!structMatch) {
@@ -159,17 +288,22 @@ function extractWGSLStructBody(shaderSource: string, uniformBlockName: string): 
   return null;
 }
 
+/**
+ * Extracts the body of a named GLSL uniform block from shader source.
+ */
 function extractGLSLUniformBlockBody(
   shaderSource: string,
   uniformBlockName: string
 ): string | null {
-  const sourceMatch = shaderSource.match(
-    new RegExp(`uniform\\s+${uniformBlockName}\\s*\\{([\\s\\S]*?)\\}\\s*[A-Za-z0-9_]+\\s*;`, 'm')
+  const block = getGLSLUniformBlocks(shaderSource).find(
+    candidate => candidate.blockName === uniformBlockName
   );
-
-  return sourceMatch?.[1] || null;
+  return block?.body || null;
 }
 
+/**
+ * Returns `true` when the two arrays contain the same strings in the same order.
+ */
 function areStringArraysEqual(leftValues: string[], rightValues: string[]): boolean {
   if (leftValues.length !== rightValues.length) {
     return false;
@@ -184,6 +318,9 @@ function areStringArraysEqual(leftValues: string[], rightValues: string[]): bool
   return true;
 }
 
+/**
+ * Formats the standard validation error message for a shader-module layout mismatch.
+ */
 function formatShaderModuleUniformLayoutError(
   validationResult: ShaderModuleUniformLayoutValidationResult
 ): string {
@@ -192,4 +329,18 @@ function formatShaderModuleUniformLayoutError(
   } does not match module.uniformTypes.\nExpected: ${validationResult.expectedUniformNames.join(
     ', '
   )}\nActual: ${validationResult.actualUniformNames.join(', ')}`;
+}
+
+/**
+ * Removes line and block comments from shader source before lightweight parsing.
+ */
+function stripShaderComments(shaderSource: string): string {
+  return shaderSource.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+}
+
+/**
+ * Collapses repeated whitespace in a layout qualifier for log-friendly output.
+ */
+function normalizeWhitespace(value: string): string {
+  return value.replace(/\s+/g, ' ').trim();
 }

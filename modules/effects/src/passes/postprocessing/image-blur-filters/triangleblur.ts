@@ -53,7 +53,7 @@ fn triangleBlur_sampleColor(
 `;
 
 const fs = /* glsl */ `\
-uniform triangleBlurUniforms {
+layout(std140) uniform triangleBlurUniforms {
   float radius;
   vec2 delta;
 } triangleBlur;

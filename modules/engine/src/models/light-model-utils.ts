@@ -547,7 +547,7 @@ in vec3 instanceDirection;
 in vec3 instanceScale;
 in vec4 instanceColor;
 
-uniform lightMarkerUniforms {
+layout(std140) uniform lightMarkerUniforms {
   mat4 viewProjectionMatrix;
 } lightMarker;
 

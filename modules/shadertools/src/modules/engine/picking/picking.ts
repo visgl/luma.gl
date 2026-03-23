@@ -50,7 +50,7 @@ export type PickingUniforms = {
 };
 
 const vs = /* glsl */ `\
-uniform pickingUniforms {
+layout(std140) uniform pickingUniforms {
   float isActive;
   float isAttribute;
   float isHighlightActive;
@@ -124,7 +124,7 @@ void picking_setPickingAttribute(vec3 value) {
 `;
 
 const fs = /* glsl */ `\
-uniform pickingUniforms {
+layout(std140) uniform pickingUniforms {
   float isActive;
   float isAttribute;
   float isHighlightActive;

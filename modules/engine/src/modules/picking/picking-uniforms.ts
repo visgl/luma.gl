@@ -78,7 +78,7 @@ export const GLSL_UNIFORMS = /* glsl */ `\
 precision highp float;
 precision highp int;
 
-uniform pickingUniforms {
+layout(std140) uniform pickingUniforms {
   int isActive;
   int indexMode;
   int batchIndex;

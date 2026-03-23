@@ -240,11 +240,11 @@ export class Computation {
 
   setShaderInputs(shaderInputs: ShaderInputs): void {
     this.shaderInputs = shaderInputs;
-    this._uniformStore = new UniformStore(this.shaderInputs.modules);
+    this._uniformStore = new UniformStore(this.device, this.shaderInputs.modules);
     // Create uniform buffer bindings for all modules
     for (const [moduleName, module] of Object.entries(this.shaderInputs.modules)) {
       if (shaderModuleHasUniforms(module)) {
-        const uniformBuffer = this._uniformStore.getManagedUniformBuffer(this.device, moduleName);
+        const uniformBuffer = this._uniformStore.getManagedUniformBuffer(moduleName);
         this.bindings[`${moduleName}Uniforms`] = uniformBuffer;
       }
     }

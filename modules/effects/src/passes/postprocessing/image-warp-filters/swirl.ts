@@ -44,7 +44,7 @@ fn swirl_sampleColor(
 `;
 
 const fs = /* glsl */ `\
-uniform swirlUniforms {
+layout(std140) uniform swirlUniforms {
   vec2 center;
   float radius;
   float angle;

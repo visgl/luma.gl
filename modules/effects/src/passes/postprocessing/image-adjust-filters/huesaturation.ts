@@ -40,7 +40,7 @@ fn hueSaturation_filterColor_ext(color: vec4f, texSize: vec2f, texCoord: vec2f) 
 `;
 
 const fs = /* glsl */ `\
-uniform hueSaturationUniforms {
+layout(std140) uniform hueSaturationUniforms {
   float hue;
   float saturation;
 } hueSaturation;

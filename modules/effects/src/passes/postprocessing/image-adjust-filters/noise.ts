@@ -26,7 +26,7 @@ fn noise_filterColor_ext(color: vec4f, texSize: vec2f, texCoord: vec2f) -> vec4f
 `;
 
 const fs = /* glsl */ `\
-uniform noiseUniforms {
+layout(std140) uniform noiseUniforms {
   float amount;
 } noise;
 

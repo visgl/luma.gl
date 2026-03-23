@@ -25,7 +25,7 @@ fn getSkinMatrix(weights: vec4f, joints: vec4u) -> mat4x4<f32> {
 
 export const vs = /* glsl */ `\
 
-uniform skinUniforms {
+layout(std140) uniform skinUniforms {
   mat4 jointMatrix[SKIN_MAX_JOINTS];
 } skin;
 

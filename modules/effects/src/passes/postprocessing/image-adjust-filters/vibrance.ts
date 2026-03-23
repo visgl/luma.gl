@@ -25,7 +25,7 @@ fn vibrance_filterColor_ext(color: vec4f, texSize: vec2f, texCoord: vec2f) -> ve
 `;
 
 const fs = /* glsl */ `\
-uniform vibranceUniforms {
+layout(std140) uniform vibranceUniforms {
   float amount;
 } vibrance;
 

@@ -172,7 +172,7 @@ shaderInputs.setProps({
 ```
 
 `ShaderInputs` preserves the nested `lights` array shape at the module API
-boundary. `UniformStore` and `UniformBufferLayout` flatten it internally for
+boundary. `UniformStore` and `ShaderBlockWriter` flatten it internally for
 portable std140 packing. See
 [Core Shader Types](/docs/api-reference/core/shader-types) for the general
 rules behind that flow.

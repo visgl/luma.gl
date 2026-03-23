@@ -47,7 +47,7 @@ fn colorHalftone_filterColor_ext(color: vec4f, texSize: vec2f, texCoord: vec2f) 
 
 // TODO pass texCoord to angle
 const fs = /* glsl */ `\
-uniform colorHalftoneUniforms {
+layout(std140) uniform colorHalftoneUniforms {
   vec2 center;
   float angle;
   float size;

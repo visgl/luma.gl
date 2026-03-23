@@ -46,7 +46,7 @@ fn ink_sampleColor(
 `;
 
 const fs = /* glsl */ `\
-uniform inkUniforms {
+layout(std140) uniform inkUniforms {
   float strength;
 } ink;
 

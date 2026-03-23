@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 export const PHONG_VS = /* glsl */ `\
-uniform phongMaterialUniforms {
+layout(std140) uniform phongMaterialUniforms {
   uniform bool unlit;
   uniform float ambient;
   uniform float diffuse;
@@ -13,7 +13,7 @@ uniform phongMaterialUniforms {
 `;
 
 export const PHONG_FS = /* glsl */ `\
-uniform phongMaterialUniforms {
+layout(std140) uniform phongMaterialUniforms {
   uniform bool unlit;
   uniform float ambient;
   uniform float diffuse;

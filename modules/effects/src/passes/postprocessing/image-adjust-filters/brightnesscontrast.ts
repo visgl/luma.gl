@@ -24,7 +24,7 @@ fn brightnessContrast_filterColor_ext(color: vec4f, texSize: vec2<f32>, texCoord
 `;
 
 const fs = /* glsl */ `\
-uniform brightnessContrastUniforms {
+layout(std140) uniform brightnessContrastUniforms {
   float brightness;
   float contrast;
 } brightnessContrast;

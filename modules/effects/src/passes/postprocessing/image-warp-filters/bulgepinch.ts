@@ -51,7 +51,7 @@ fn bulgePinch_sampleColor(
 `;
 
 const fs = /* glsl */ `\
-uniform bulgePinchUniforms {
+layout(std140) uniform bulgePinchUniforms {
   vec2 center;
   float radius;
   float strength;

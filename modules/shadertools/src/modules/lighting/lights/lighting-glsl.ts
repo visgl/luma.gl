@@ -37,7 +37,7 @@ struct UniformLight {
   vec2 coneCos;
 };
 
-uniform lightingUniforms {
+layout(std140) uniform lightingUniforms {
   int enabled;
   int directionalLightCount;
   int pointLightCount;
