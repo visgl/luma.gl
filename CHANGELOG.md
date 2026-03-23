@@ -2,6 +2,10 @@
 
 ## v9.3
 
+### v9.3.0-alpha.10
+
+- Improve shader block layouts (#2564)
+
 ### v9.3.0-alpha.9
 
 - fix: GLSL parser supports precision specifiers (#2563)
