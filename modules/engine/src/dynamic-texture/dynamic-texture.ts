@@ -18,14 +18,11 @@ import {
   // cube constants
   type TextureCubeFace,
   TEXTURE_CUBE_FACE_MAP,
-
   // texture slice/mip data types
   type TextureSubresource,
-
   // props (dimension + data)
   type TextureDataProps,
   type TextureDataAsyncProps,
-
   // combined data for different texture types
   type Texture1DData,
   type Texture2DData,
@@ -33,7 +30,6 @@ import {
   type TextureArrayData,
   type TextureCubeArrayData,
   type TextureCubeData,
-
   // Helpers
   getTextureSizeFromData,
   resolveTextureImageFormat,

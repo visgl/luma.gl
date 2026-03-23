@@ -3,6 +3,7 @@
 `devtools-extensions` holds repo-owned reusable development helpers that can be upstreamed into `@vis.gl/dev-tools`.
 
 Current support:
+- Biome base config and root lint wrapper used by `yarn lint` / `yarn lint fix`
 - Vitest config boilerplate via `getVitestConfig()`
 - Tape-style Vitest assertions via `vitest-tape`
 - Playwright launch option helpers
@@ -14,6 +15,7 @@ Boundary:
 - Repo-specific policy stays in `.ocularrc.js`
 
 Examples of repo-specific policy:
+- Biome file-scope and rule overrides in `biome.jsonc`
 - example aliases such as `persistence`
 - default example routes
 - Vitest exclude patterns

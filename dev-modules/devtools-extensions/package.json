@@ -13,6 +13,7 @@
     "./package.json": "./package.json"
   },
   "scripts": {
+    "lint": "node ./biome/lint.mjs",
     "website-debug": "node ./playwright/website-playwright.mjs",
     "playwright:install": "playwright install chromium",
     "test-node": "cd ../.. && vitest run --config vitest.config.ts --project node",
@@ -21,6 +22,7 @@
     "test-coverage": "cd ../.. && vitest run --config vitest.config.ts --coverage --project headless"
   },
   "dependencies": {
+    "@biomejs/biome": "^2.4.8",
     "@vitest/browser": "^4.0.18",
     "@vitest/browser-playwright": "^4.0.18",
     "@vitest/coverage-v8": "^4.0.18",

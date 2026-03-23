@@ -59,12 +59,12 @@ export function parseShaderCompilerLog(errLog: string): readonly CompilerMessage
     }
 
     let lineNum = parseInt(lineNumber, 10);
-    if (isNaN(lineNum)) {
+    if (Number.isNaN(lineNum)) {
       lineNum = 0;
     }
 
     let linePos = parseInt(linePosition, 10);
-    if (isNaN(linePos)) {
+    if (Number.isNaN(linePos)) {
       linePos = 0;
     }
 

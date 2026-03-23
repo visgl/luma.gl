@@ -538,11 +538,8 @@ test('CommandEncoder#copyTextureToBuffer honors origin and byteOffset across bac
   t.end();
 });
 
-test('WebGPU custom CommandEncoder render pass records on the owning encoder', async t => {
+test.skip('WebGPU custom CommandEncoder render pass records on the owning encoder', async t => {
   const device = await getWebGPUTestDevice();
-  t.comment('Skipping flaky WebGPU custom render-pass ownership test in headless CI');
-  t.end();
-  return;
 
   const colorTexture = device.createTexture({
     width: 1,
@@ -589,11 +586,8 @@ test('WebGPU custom CommandEncoder render pass records on the owning encoder', a
   t.end();
 });
 
-test('WebGPU CommandEncoder#copyTextureToBuffer does not submit before finish/submit', async t => {
+test.skip('WebGPU CommandEncoder#copyTextureToBuffer does not submit before finish/submit', async t => {
   const device = await getWebGPUTestDevice();
-  t.comment('Skipping flaky WebGPU copyTextureToBuffer submit-order test in headless CI');
-  t.end();
-  return;
 
   const sourceTexture = device.createTexture({
     data: new Uint8Array([9, 8, 7, 6]),

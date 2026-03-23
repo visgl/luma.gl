@@ -10,12 +10,13 @@ test('WebGLDevice#lost (Promise)', async t => {
   const device = await webgl2Adapter.create({createCanvasContext: true, debug: false});
 
   // Wrap in a promise to make sure tape waits for us
-  await new Promise<void>(async resolve => {
-    setTimeout(async () => {
-      const cause = await device.lost;
-      t.equal(cause.reason, 'destroyed', `Context lost: ${cause.message}`);
-      t.end();
-      resolve();
+  await new Promise<void>(resolve => {
+    setTimeout(() => {
+      void device.lost.then(cause => {
+        t.equal(cause.reason, 'destroyed', `Context lost: ${cause.message}`);
+        t.end();
+        resolve();
+      });
     }, 0);
     device.loseDevice();
   });

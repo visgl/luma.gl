@@ -131,7 +131,7 @@ export function normalizeTextureData(
 
 /** Convert luma.gl cubemap face constants to depth index */
 export function getCubeFaceDepth(face: TextureCubeFace): number {
-  // prettier-ignore
+  // biome-ignore format: preserve layout
   switch (face) {
         case '+X': return  0;
         case '-X': return  1;

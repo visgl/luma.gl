@@ -75,7 +75,9 @@ function tesselateIcosaHedron(props: IcoSphereGeometryProps) {
 
       positions.push(xm, ym, zm);
 
-      return (pointMemo[key] = positions.length / 3 - 1);
+      const pointIndex = positions.length / 3 - 1;
+      pointMemo[key] = pointIndex;
+      return pointIndex;
     };
   })();
 

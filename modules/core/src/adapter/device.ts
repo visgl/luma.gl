@@ -696,7 +696,8 @@ export abstract class Device {
   debug(): void {
     if (this.props.debug) {
       // @ts-ignore
-      debugger; // eslint-disable-line
+      // biome-ignore lint/suspicious/noDebugger: explicit debug break when device debugging is enabled.
+      debugger;
     } else {
       // TODO(ibgreen): Does not appear to be printed in the console
       const message = `\

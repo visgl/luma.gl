@@ -9,7 +9,7 @@ import {
   type TextureFormatCapabilities
 } from '@luma.gl/core';
 
-// prettier-ignore
+// biome-ignore format: preserve layout
 const TEST_CASES: {format: TextureFormat, result: any}[] = [
   // 8-bit formats
   {format: 'r8unorm', result: {attachment: 'color', dataType: 'uint8', components: 1, channels: 'r', integer: false, signed: false, normalized: true, bitsPerChannel: [8, 0, 0, 0], bytesPerPixel: 1, packed: false, srgb: false}},
@@ -58,7 +58,7 @@ test('shadertype#textureFormatDecoder.getInfo packed WebGL formats', t => {
   t.end();
 });
 
-// prettier-ignore
+// biome-ignore format: preserve layout
 const TEST_CASES_CAPABILITIES: {format: TextureFormat, result: Omit<TextureFormatCapabilities, 'format'>}[] = [
   // 8-bit formats
   {format: 'r8unorm', result: {create: true, render: true, filter: true, blend: true, store: true}},

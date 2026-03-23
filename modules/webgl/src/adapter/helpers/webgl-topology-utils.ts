@@ -81,7 +81,7 @@ export function getGLDrawMode(
   | GL.TRIANGLES
   | GL.TRIANGLE_STRIP
   | GL.TRIANGLE_FAN {
-  // prettier-ignore
+  // biome-ignore format: preserve layout
   switch (topology) {
     case 'point-list': return GL.POINTS;
     case 'line-list': return GL.LINES;
@@ -94,7 +94,7 @@ export function getGLDrawMode(
 
 /** Get the primitive type for transform feedback */
 export function getGLPrimitive(topology: PrimitiveTopology): GL.POINTS | GL.LINES | GL.TRIANGLES {
-  // prettier-ignore
+  // biome-ignore format: preserve layout
   switch (topology) {
     case 'point-list': return GL.POINTS;
     case 'line-list': return GL.LINES;

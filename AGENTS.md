@@ -5,7 +5,7 @@
 - Install deps: `yarn install`
 - Check types: `yarn build`
 - Check lint and formatting: `yarn lint`
-- Run tests: `yarm test`
+- Run tests: `yarn test`
 - Check website build `yarn website:build`
 
 ## LLM-friendly test setup
@@ -22,7 +22,7 @@
 
 ## Before committing
 - Format code: `yarn lint fix`
-- Always `yarn lint fix` after making changes to ensure that prettier formatting is maintained.
+- Always `yarn lint fix` after making changes to ensure that Biome formatting is maintained.
  
 ## Code style
 - TypeScript strict mode

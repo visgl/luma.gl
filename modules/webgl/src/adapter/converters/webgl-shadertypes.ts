@@ -38,7 +38,7 @@ export function getTextureBindingFromGLSamplerType(
 /** Get vertex format from GL constants */
 export function getVertexFormatFromGL(type: GLDataType, components: 1 | 2 | 3 | 4): VertexFormat {
   const base = getVertexTypeFromGL(type);
-  // prettier-ignore
+  // biome-ignore format: preserve layout
   switch (components) {
     case 1: return base;
     case 2: return `${base}x2`;

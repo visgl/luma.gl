@@ -6,7 +6,7 @@ import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {type TypedArray} from '@math.gl/types';
 import {vertexFormatDecoder, VertexFormat} from '@luma.gl/core';
 
-// prettier-ignore
+// biome-ignore format: preserve layout
 const TEST_CASES: {format: VertexFormat, result: any}[] = [
   {format: 'float32', result: {type: 'float32', components: 1, byteLength: 4, integer: false, signed: false, normalized: false}},
   {format: 'uint32', result: {type: 'uint32', components: 1, byteLength: 4, integer: true, signed: false, normalized: false}},

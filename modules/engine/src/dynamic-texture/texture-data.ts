@@ -40,11 +40,11 @@ export type TextureSliceData = TextureMipLevelData | TextureMipLevelData[];
 export type TextureCubeFace = '+X' | '-X' | '+Y' | '-Y' | '+Z' | '-Z';
 
 /** Array of cube texture faces. @note: index in array is the face index */
-// prettier-ignore
+// biome-ignore format: preserve layout
 export const TEXTURE_CUBE_FACES = ['+X', '-X', '+Y', '-Y', '+Z', '-Z'] as const satisfies readonly TextureCubeFace[];
 
 /** Map of cube texture face names to face indexes */
-// prettier-ignore
+// biome-ignore format: preserve layout
 export const TEXTURE_CUBE_FACE_MAP = {'+X': 0, '-X': 1, '+Y': 2, '-Y': 3, '+Z': 4, '-Z': 5} as const satisfies Record<TextureCubeFace, number>;
 
 /** @todo - Define what data type is supported for 1D textures. TextureImageData with height = 1 */

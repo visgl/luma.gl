@@ -28,7 +28,7 @@ export function setUniform(
   }
   const arrayValue = typeof uniformValue === 'number' ? [uniformValue] : uniformValue;
 
-  // prettier-ignore
+  // biome-ignore format: preserve layout
   switch (type) {
     case GL.SAMPLER_2D:
     case GL.SAMPLER_CUBE:
