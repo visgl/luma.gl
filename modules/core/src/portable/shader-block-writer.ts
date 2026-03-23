@@ -170,7 +170,7 @@ export class ShaderBlockWriter {
     value: UniformValue
   ): void {
     const numericValue = value as Readonly<ArrayLike<number>>;
-    const elementLayout = getLeafLayoutInfo(elementType, this.layout.format);
+    const elementLayout = getLeafLayoutInfo(elementType, this.layout.layout);
     const packedElementLength = elementLayout.components;
 
     for (let index = 0; index < length; index++) {

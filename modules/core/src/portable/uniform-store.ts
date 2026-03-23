@@ -22,8 +22,8 @@ export type UniformStoreBlockDefinition = {
   defaultProps?: Record<string, unknown>;
   /** Initial uniform values written into the backing block. */
   defaultUniforms?: Record<string, CompositeUniformValue>;
-  /** Explicit buffer layout format override. */
-  format?: 'std140' | 'wgsl-uniform' | 'wgsl-storage';
+  /** Explicit shader-block layout override. */
+  layout?: 'std140' | 'wgsl-uniform' | 'wgsl-storage';
 };
 
 /** Uniform block definitions keyed by block name. */
@@ -54,7 +54,7 @@ export class UniformStore<
     Record<string, unknown>
   >
 > {
-  /** Device used to infer layout format and allocate buffers. */
+  /** Device used to infer layout and allocate buffers. */
   readonly device: Device;
   /** Stores the uniform values for each uniform block */
   uniformBlocks = new Map<keyof TPropGroups, UniformBlock>();
@@ -76,7 +76,7 @@ export class UniformStore<
 
       // Create a layout object to help us generate correctly formatted binary uniform buffers
       const shaderBlockLayout = makeShaderBlockLayout(block.uniformTypes ?? {}, {
-        format: block.format ?? getDefaultUniformBufferFormat(device)
+        layout: block.layout ?? getDefaultUniformBufferLayout(device)
       });
       const shaderBlockWriter = new ShaderBlockWriter(shaderBlockLayout);
       this.shaderBlockLayouts.set(uniformBufferName, shaderBlockLayout);
@@ -227,8 +227,8 @@ export class UniformStore<
 }
 
 /**
- * Returns the default uniform-buffer layout format for the supplied device.
+ * Returns the default uniform-buffer layout for the supplied device.
  */
-function getDefaultUniformBufferFormat(device: Device): 'std140' | 'wgsl-uniform' | 'wgsl-storage' {
+function getDefaultUniformBufferLayout(device: Device): 'std140' | 'wgsl-uniform' | 'wgsl-storage' {
   return device.type === 'webgpu' ? 'wgsl-uniform' : 'std140';
 }

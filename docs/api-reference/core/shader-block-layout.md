@@ -48,14 +48,14 @@ Builds a pure `ShaderBlockLayout` object.
 
 - `uniformTypes` uses the composite shader-type descriptors documented in
   [Shader Types](/docs/api-reference/core/shader-types)
-- `options.format` selects the packing rules:
+- `options.layout` selects the packing rules:
   - `'std140'`
   - `'wgsl-uniform'`
   - `'wgsl-storage'`
 
 The returned layout includes:
 
-- `format`
+- `layout`
 - `byteLength`
 - `uniformTypes`
 - `fields`

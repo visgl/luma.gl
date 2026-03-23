@@ -251,7 +251,7 @@ test('wgsl-uniform keeps native WGSL matrix packing', t => {
       transform: 'mat2x2<f32>',
       exposure: 'f32'
     },
-    {format: 'wgsl-uniform'}
+    {layout: 'wgsl-uniform'}
   );
 
   t.equal(layout.fields.transform?.offset, 0, 'mat2x2 starts at 0');
@@ -273,7 +273,7 @@ test('wgsl-storage packs primitive arrays densely', t => {
     {
       thresholds: ['f32', 3]
     },
-    {format: 'wgsl-storage'}
+    {layout: 'wgsl-storage'}
   );
 
   t.equal(layout.fields['thresholds[0]']?.offset, 0, 'threshold[0] offset');
@@ -300,7 +300,7 @@ test('wgsl-storage packs vec3 tails and nested structs without std140 struct pad
         intensity: 'f32'
       }
     },
-    {format: 'wgsl-storage'}
+    {layout: 'wgsl-storage'}
   );
 
   t.equal(layout.fields['light.transform.position']?.offset, 0, 'vec3 offset');

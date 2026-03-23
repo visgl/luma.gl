@@ -41,7 +41,7 @@ export type ShaderBlockLayoutOptions = {
    *
    * Defaults to `'std140'`.
    */
-  format?: 'std140' | 'wgsl-uniform' | 'wgsl-storage';
+  layout?: 'std140' | 'wgsl-uniform' | 'wgsl-storage';
 };
 
 /**
@@ -49,7 +49,7 @@ export type ShaderBlockLayoutOptions = {
  */
 export type ShaderBlockLayout = {
   /** Packing rules used when this layout was created. */
-  format: 'std140' | 'wgsl-uniform' | 'wgsl-storage';
+  layout: 'std140' | 'wgsl-uniform' | 'wgsl-storage';
   /** Exact number of packed bytes required by the block. */
   byteLength: number;
   /** Original composite shader type declarations keyed by top-level field. */
@@ -70,18 +70,18 @@ export function makeShaderBlockLayout(
   options: ShaderBlockLayoutOptions = {}
 ): ShaderBlockLayout {
   const copiedUniformTypes = {...uniformTypes};
-  const format = options.format ?? 'std140';
+  const layout = options.layout ?? 'std140';
   const fields: Record<string, ShaderBlockLayoutEntry> = {};
 
   let size = 0;
   for (const [key, uniformType] of Object.entries(copiedUniformTypes)) {
-    size = addToLayout(fields, key, uniformType, size, format);
+    size = addToLayout(fields, key, uniformType, size, layout);
   }
 
-  size = alignTo(size, getTypeAlignment(copiedUniformTypes, format));
+  size = alignTo(size, getTypeAlignment(copiedUniformTypes, layout));
 
   return {
-    format,
+    layout,
     byteLength: size * 4,
     uniformTypes: copiedUniformTypes,
     fields
@@ -96,7 +96,7 @@ export function makeShaderBlockLayout(
  */
 export function getLeafLayoutInfo(
   type: VariableShaderType,
-  format: 'std140' | 'wgsl-uniform' | 'wgsl-storage'
+  layout: 'std140' | 'wgsl-uniform' | 'wgsl-storage'
 ): Omit<ShaderBlockLayoutEntry, 'offset'> & {alignment: 1 | 2 | 4} {
   const resolvedType = resolveVariableShaderTypeAlias(type);
   const decodedType = getVariableShaderTypeInfo(resolvedType);
@@ -109,9 +109,9 @@ export function getLeafLayoutInfo(
       rows as 2 | 3 | 4,
       resolvedType,
       decodedType.type,
-      format
+      layout
     );
-    const columnStride = getMatrixColumnStride(columnInfo.size, columnInfo.alignment, format);
+    const columnStride = getMatrixColumnStride(columnInfo.size, columnInfo.alignment, layout);
 
     return {
       alignment: columnInfo.alignment,
@@ -131,7 +131,7 @@ export function getLeafLayoutInfo(
       Number(vectorMatch[1]) as 2 | 3 | 4,
       resolvedType,
       decodedType.type,
-      format
+      layout
     );
   }
 
@@ -166,10 +166,10 @@ function addToLayout(
   name: string,
   type: CompositeShaderType,
   offset: number,
-  format: 'std140' | 'wgsl-uniform' | 'wgsl-storage'
+  layout: 'std140' | 'wgsl-uniform' | 'wgsl-storage'
 ): number {
   if (typeof type === 'string') {
-    const info = getLeafLayoutInfo(type, format);
+    const info = getLeafLayoutInfo(type, layout);
     const alignedOffset = alignTo(offset, info.alignment);
     fields[name] = {
       offset: alignedOffset,
@@ -185,20 +185,20 @@ function addToLayout(
 
     const elementType = type[0] as CompositeShaderType;
     const length = type[1] as number;
-    const stride = getArrayStride(elementType, format);
-    const arrayOffset = alignTo(offset, getTypeAlignment(type, format));
+    const stride = getArrayStride(elementType, layout);
+    const arrayOffset = alignTo(offset, getTypeAlignment(type, layout));
 
     for (let i = 0; i < length; i++) {
-      addToLayout(fields, `${name}[${i}]`, elementType, arrayOffset + i * stride, format);
+      addToLayout(fields, `${name}[${i}]`, elementType, arrayOffset + i * stride, layout);
     }
     return arrayOffset + stride * length;
   }
 
   if (isCompositeShaderTypeStruct(type)) {
-    const structAlignment = getTypeAlignment(type, format);
+    const structAlignment = getTypeAlignment(type, layout);
     let structOffset = alignTo(offset, structAlignment);
     for (const [memberName, memberType] of Object.entries(type)) {
-      structOffset = addToLayout(fields, `${name}.${memberName}`, memberType, structOffset, format);
+      structOffset = addToLayout(fields, `${name}.${memberName}`, memberType, structOffset, layout);
     }
     return alignTo(structOffset, structAlignment);
   }
@@ -211,10 +211,10 @@ function addToLayout(
  */
 function getTypeSize(
   type: CompositeShaderType,
-  format: 'std140' | 'wgsl-uniform' | 'wgsl-storage'
+  layout: 'std140' | 'wgsl-uniform' | 'wgsl-storage'
 ): number {
   if (typeof type === 'string') {
-    return getLeafLayoutInfo(type, format).size;
+    return getLeafLayoutInfo(type, layout).size;
   }
 
   if (Array.isArray(type)) {
@@ -225,17 +225,17 @@ function getTypeSize(
       throw new Error('Nested arrays are not supported');
     }
 
-    return getArrayStride(elementType, format) * length;
+    return getArrayStride(elementType, layout) * length;
   }
 
   let size = 0;
   for (const memberType of Object.values(type)) {
     const compositeMemberType = memberType as CompositeShaderType;
-    size = alignTo(size, getTypeAlignment(compositeMemberType, format));
-    size += getTypeSize(compositeMemberType, format);
+    size = alignTo(size, getTypeAlignment(compositeMemberType, layout));
+    size += getTypeSize(compositeMemberType, layout);
   }
 
-  return alignTo(size, getTypeAlignment(type, format));
+  return alignTo(size, getTypeAlignment(type, layout));
 }
 
 /**
@@ -243,27 +243,27 @@ function getTypeSize(
  */
 function getTypeAlignment(
   type: CompositeShaderType,
-  format: 'std140' | 'wgsl-uniform' | 'wgsl-storage'
+  layout: 'std140' | 'wgsl-uniform' | 'wgsl-storage'
 ): 1 | 2 | 4 {
   if (typeof type === 'string') {
-    return getLeafLayoutInfo(type, format).alignment;
+    return getLeafLayoutInfo(type, layout).alignment;
   }
 
   if (Array.isArray(type)) {
     const elementType = type[0] as CompositeShaderType;
-    const elementAlignment = getTypeAlignment(elementType, format);
-    return uses16ByteArrayAlignment(format)
+    const elementAlignment = getTypeAlignment(elementType, layout);
+    return uses16ByteArrayAlignment(layout)
       ? (Math.max(elementAlignment, 4) as 1 | 2 | 4)
       : elementAlignment;
   }
 
   let maxAlignment: 1 | 2 | 4 = 1;
   for (const memberType of Object.values(type)) {
-    const memberAlignment = getTypeAlignment(memberType as CompositeShaderType, format);
+    const memberAlignment = getTypeAlignment(memberType as CompositeShaderType, layout);
     maxAlignment = Math.max(maxAlignment, memberAlignment) as 1 | 2 | 4;
   }
 
-  return uses16ByteStructAlignment(format)
+  return uses16ByteStructAlignment(layout)
     ? (Math.max(maxAlignment, 4) as 1 | 2 | 4)
     : maxAlignment;
 }
@@ -275,7 +275,7 @@ function getVectorLayoutInfo(
   components: 2 | 3 | 4,
   shaderType: VariableShaderType,
   type: PrimitiveDataType,
-  format: 'std140' | 'wgsl-uniform' | 'wgsl-storage'
+  layout: 'std140' | 'wgsl-uniform' | 'wgsl-storage'
 ): Omit<ShaderBlockLayoutEntry, 'offset'> & {alignment: 1 | 2 | 4} {
   return {
     alignment: components === 2 ? 2 : 4,
@@ -292,26 +292,26 @@ function getVectorLayoutInfo(
 /**
  * Returns the stride of an array element in 32-bit words.
  *
- * This includes any format-specific padding between adjacent array elements.
+ * This includes any layout-specific padding between adjacent array elements.
  */
 function getArrayStride(
   elementType: CompositeShaderType,
-  format: 'std140' | 'wgsl-uniform' | 'wgsl-storage'
+  layout: 'std140' | 'wgsl-uniform' | 'wgsl-storage'
 ): number {
-  const elementSize = getTypeSize(elementType, format);
-  const elementAlignment = getTypeAlignment(elementType, format);
-  return getArrayLikeStride(elementSize, elementAlignment, format);
+  const elementSize = getTypeSize(elementType, layout);
+  const elementAlignment = getTypeAlignment(elementType, layout);
+  return getArrayLikeStride(elementSize, elementAlignment, layout);
 }
 
 /**
- * Returns the common stride rule shared by array-like elements in the target format.
+ * Returns the common stride rule shared by array-like elements in the target layout.
  */
 function getArrayLikeStride(
   size: number,
   alignment: 1 | 2 | 4,
-  format: 'std140' | 'wgsl-uniform' | 'wgsl-storage'
+  layout: 'std140' | 'wgsl-uniform' | 'wgsl-storage'
 ): number {
-  return alignTo(size, uses16ByteArrayAlignment(format) ? 4 : alignment);
+  return alignTo(size, uses16ByteArrayAlignment(layout) ? 4 : alignment);
 }
 
 /**
@@ -320,21 +320,21 @@ function getArrayLikeStride(
 function getMatrixColumnStride(
   size: number,
   alignment: 1 | 2 | 4,
-  format: 'std140' | 'wgsl-uniform' | 'wgsl-storage'
+  layout: 'std140' | 'wgsl-uniform' | 'wgsl-storage'
 ): number {
-  return format === 'std140' ? 4 : alignTo(size, alignment);
+  return layout === 'std140' ? 4 : alignTo(size, alignment);
 }
 
 /**
  * Returns `true` when arrays must be rounded up to 16-byte boundaries.
  */
-function uses16ByteArrayAlignment(format: 'std140' | 'wgsl-uniform' | 'wgsl-storage'): boolean {
-  return format === 'std140' || format === 'wgsl-uniform';
+function uses16ByteArrayAlignment(layout: 'std140' | 'wgsl-uniform' | 'wgsl-storage'): boolean {
+  return layout === 'std140' || layout === 'wgsl-uniform';
 }
 
 /**
  * Returns `true` when structs must be rounded up to 16-byte boundaries.
  */
-function uses16ByteStructAlignment(format: 'std140' | 'wgsl-uniform' | 'wgsl-storage'): boolean {
-  return format === 'std140' || format === 'wgsl-uniform';
+function uses16ByteStructAlignment(layout: 'std140' | 'wgsl-uniform' | 'wgsl-storage'): boolean {
+  return layout === 'std140' || layout === 'wgsl-uniform';
 }
