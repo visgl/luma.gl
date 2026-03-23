@@ -21,11 +21,11 @@ function generateGLSLUniformDeclarations(
 ): string {
   const glsl: string[] = [];
 
-  // => uniform UniformBlockName {
+  // => layout(std140) uniform UniformBlockName {
   switch (options.uniforms) {
     case 'scoped-interface-blocks':
     case 'unscoped-interface-blocks':
-      glsl.push(`uniform ${capitalize(module.name)} {`);
+      glsl.push(`layout(std140) uniform ${capitalize(module.name)} {`);
       break;
     case 'uniforms':
     // ignore
@@ -41,11 +41,11 @@ function generateGLSLUniformDeclarations(
     const glslUniformType = getGLSLUniformType(uniformFormat as UniformFormat);
     switch (options.uniforms) {
       case 'scoped-interface-blocks':
-        // => uniform UniformBlockName {
+        // => layout(std140) uniform UniformBlockName {
         glsl.push(`  ${glslUniformType} ${uniformName};`);
         break;
       case 'unscoped-interface-blocks':
-        // => uniform UniformBlockName {
+        // => layout(std140) uniform UniformBlockName {
         glsl.push(`  ${glslUniformType} ${module.name}_${uniformName};`);
         break;
       case 'uniforms':

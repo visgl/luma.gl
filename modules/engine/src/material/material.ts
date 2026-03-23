@@ -94,11 +94,11 @@ export class Material<
       ])
     ) as {[P in keyof TModuleProps]?: ShaderModule[] extends never ? never : any};
     this.shaderInputs = props.shaderInputs || new ShaderInputs<TModuleProps>(moduleMap);
-    this._uniformStore = new UniformStore(this.shaderInputs.modules);
+    this._uniformStore = new UniformStore(this.device, this.shaderInputs.modules);
 
     for (const [moduleName, module] of Object.entries(this.shaderInputs.modules)) {
       if (this.ownsModule(moduleName) && shaderModuleHasUniforms(module)) {
-        const uniformBuffer = this._uniformStore.getManagedUniformBuffer(this.device, moduleName);
+        const uniformBuffer = this._uniformStore.getManagedUniformBuffer(moduleName);
         this.bindings[`${moduleName}Uniforms`] = uniformBuffer;
       }
     }

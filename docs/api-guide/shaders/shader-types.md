@@ -25,7 +25,7 @@ Use that page for:
 - [`ShaderInputs`](/docs/api-reference/engine/shader-inputs) preserves nested
   app-facing values
 - [`UniformStore`](/docs/api-reference/core/uniform-store) and
-  [`UniformBufferLayout`](/docs/api-reference/core/uniform-buffer-layout)
+  [`ShaderBlockLayout`](/docs/api-reference/core/shader-block-layout)
   flatten and pack those values for upload
 
 ## Related Pages

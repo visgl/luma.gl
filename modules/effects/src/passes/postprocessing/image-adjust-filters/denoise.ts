@@ -44,7 +44,7 @@ fn denoise_sampleColor(
 `;
 
 const fs = /* glsl */ `\
-uniform denoiseUniforms {
+layout(std140) uniform denoiseUniforms {
   float strength;
 } denoise;
 

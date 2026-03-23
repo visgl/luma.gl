@@ -7,7 +7,7 @@ import type {NumberArray3, NumberArray16} from '@math.gl/core';
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
 
 const uniformBlock = /* glsl */ `\
-uniform pbrProjectionUniforms {
+layout(std140) uniform pbrProjectionUniforms {
   mat4 modelViewProjectionMatrix;
   mat4 modelMatrix;
   mat4 normalMatrix;

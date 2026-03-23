@@ -88,4 +88,4 @@ Returns a table-like object that is useful with `console.table()` or luma loggin
 - `ShaderInputs` does not upload GPU buffers by itself. Engine classes use it together with an internal `UniformStore`.
 - Unknown module names are ignored and warn by default unless `disableWarnings` is enabled.
 - Composite uniform values stay nested in `ShaderInputs`, while `UniformStore`
-  and `UniformBufferLayout` flatten them internally for packing.
+  and `ShaderBlockWriter` flatten them internally for packing.

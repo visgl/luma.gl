@@ -24,7 +24,7 @@ fn vignette_filterColor_ext(color: vec4f, texSize: vec2f, texCoord: vec2f) -> ve
 `;
 
 const fs = /* glsl */ `\
-uniform vignetteUniforms {
+layout(std140) uniform vignetteUniforms {
   float radius;
   float amount;
 } vignette;

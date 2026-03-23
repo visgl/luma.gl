@@ -31,7 +31,7 @@ fn sepia_filterColor_ext(color: vec4f, texSize: vec2f, texCoord: vec2f) -> vec4f
 `;
 
 const fs = /* glsl */ `\
-uniform sepiaUniforms {
+layout(std140) uniform sepiaUniforms {
   float amount;
 } sepia;
 

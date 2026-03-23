@@ -6,6 +6,7 @@
 
 import './lib/shader-module/shader-module.spec';
 import './lib/shader-module/shader-module-dependencies.spec';
+import './lib/shader-module/project-layout-regression.spec';
 
 // utils
 import './lib/glsl-utils/get-shader-info.spec';

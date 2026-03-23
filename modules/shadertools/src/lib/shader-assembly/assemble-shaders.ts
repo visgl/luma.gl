@@ -8,7 +8,10 @@ import {getPlatformShaderDefines} from './platform-defines';
 import {injectShader, DECLARATION_INJECT_MARKER} from './shader-injections';
 import {transpileGLSLShader} from '../shader-transpiler/transpile-glsl-shader';
 import {checkShaderModuleDeprecations} from '../shader-module/shader-module';
-import {validateShaderModuleUniformLayout} from '../shader-module/shader-module-uniform-layout';
+import {
+  validateShaderModuleUniformLayout,
+  warnIfGLSLUniformBlocksAreNotStd140
+} from '../shader-module/shader-module-uniform-layout';
 import type {ShaderInjection} from './shader-injections';
 import type {ShaderModule} from '../shader-module/shader-module';
 import {ShaderHook, normalizeShaderHooks, getShaderHooks} from './shader-hooks';
@@ -458,6 +461,10 @@ ${getApplicationDefines(allDefines)}
 
   if (language === 'glsl' && sourceVersion !== targetVersion) {
     assembledSource = transpileGLSLShader(assembledSource, stage);
+  }
+
+  if (language === 'glsl') {
+    warnIfGLSLUniformBlocksAreNotStd140(assembledSource, stage, log);
   }
 
   return assembledSource.trim();

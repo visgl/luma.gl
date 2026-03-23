@@ -49,7 +49,7 @@ void dirlight_setNormal(vec3 normal) {
 `;
 
 const FS_GLSL = /* glsl */ `\
-uniform dirlightUniforms {
+layout(std140) uniform dirlightUniforms {
   vec3 lightDirection;
 } dirlight;
 

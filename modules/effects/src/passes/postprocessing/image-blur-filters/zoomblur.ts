@@ -45,7 +45,7 @@ fn zoomBlur_sampleColor(
 `;
 
 const fs = /* glsl */ `
-uniform zoomBlurUniforms {
+layout(std140) uniform zoomBlurUniforms {
   vec2 center;
   float strength;
 } zoomBlur;

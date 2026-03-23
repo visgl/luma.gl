@@ -32,7 +32,7 @@ fn dotScreen_filterColor_ext(color: vec4f, texSize: vec2f, texCoord: vec2f) -> v
 `;
 
 const fs = /* glsl */ `\
-uniform dotScreenUniforms {
+layout(std140) uniform dotScreenUniforms {
   vec2 center;
   float angle;
   float size;

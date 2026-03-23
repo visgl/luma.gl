@@ -4,7 +4,7 @@
 
 export const fp64arithmeticShader = /* glsl */ `\
 
-uniform fp64arithmeticUniforms {
+layout(std140) uniform fp64arithmeticUniforms {
   uniform float ONE;
   uniform float SPLIT;
 } fp64;

@@ -22,14 +22,17 @@ export {getShaderModuleUniforms} from './lib/shader-module/shader-module';
 export {getShaderModuleDependencies} from './lib/shader-module/shader-module-dependencies';
 export {checkShaderModuleDeprecations} from './lib/shader-module/shader-module';
 export type {
+  GLSLUniformBlockInfo,
   ShaderModuleUniformLayoutStage,
   ShaderModuleUniformLayoutValidationResult
 } from './lib/shader-module/shader-module-uniform-layout';
 export {
+  getGLSLUniformBlocks,
   getShaderModuleUniformBlockFields,
   getShaderModuleUniformBlockName,
   getShaderModuleUniformLayoutValidationResult,
-  validateShaderModuleUniformLayout
+  validateShaderModuleUniformLayout,
+  warnIfGLSLUniformBlocksAreNotStd140
 } from './lib/shader-module/shader-module-uniform-layout';
 
 export {getShaderModuleSource} from './lib/shader-assembly/assemble-shaders';
@@ -109,6 +112,12 @@ export type {
   PBRMaterialProps,
   PBRMaterialUniforms
 } from './modules/lighting/pbr-material/pbr-material';
+export type {
+  PBRSceneBindings,
+  PBRSceneProps,
+  PBRSceneUniforms
+} from './modules/lighting/pbr-material/pbr-scene';
 export type {PBRProjectionProps} from './modules/lighting/pbr-material/pbr-projection';
 
 export {pbrMaterial} from './modules/lighting/pbr-material/pbr-material';
+export {pbrScene} from './modules/lighting/pbr-material/pbr-scene';

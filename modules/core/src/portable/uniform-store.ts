@@ -7,8 +7,39 @@ import type {CompositeUniformValue} from '../adapter/types/uniforms';
 import type {Device} from '../adapter/device';
 import {Buffer} from '../adapter/resources/buffer';
 import {log} from '../utils/log';
+import {
+  makeShaderBlockLayout,
+  type ShaderBlockLayout
+} from '../shadertypes/shader-types/shader-block-layout';
 import {UniformBlock} from './uniform-block';
-import {UniformBufferLayout} from './uniform-buffer-layout';
+import {ShaderBlockWriter} from './shader-block-writer';
+
+/** Definition of a single managed uniform block. */
+export type UniformStoreBlockDefinition = {
+  /** Declared shader types for the block's uniforms. */
+  uniformTypes?: Record<string, CompositeShaderType>;
+  /** Reserved for future prop-level defaults. */
+  defaultProps?: Record<string, unknown>;
+  /** Initial uniform values written into the backing block. */
+  defaultUniforms?: Record<string, CompositeUniformValue>;
+  /** Explicit shader-block layout override. */
+  layout?: 'std140' | 'wgsl-uniform' | 'wgsl-storage';
+};
+
+/** Uniform block definitions keyed by block name. */
+export type UniformStoreBlocks<TPropGroups extends Record<string, Record<string, unknown>>> =
+  Record<keyof TPropGroups, UniformStoreBlockDefinition>;
+
+/**
+ * Smallest buffer size that can be used for uniform buffers.
+ *
+ * This is an allocation policy rather than part of {@link ShaderBlockLayout}.
+ * Layouts report the exact packed size, while the store applies any minimum
+ * buffer-size rule when allocating GPU buffers.
+ *
+ * TODO - does this depend on device?
+ */
+const minUniformBufferSize = 1024;
 
 /**
  * A uniform store holds a uniform values for one or more uniform blocks,
@@ -23,39 +54,37 @@ export class UniformStore<
     Record<string, unknown>
   >
 > {
+  /** Device used to infer layout and allocate buffers. */
+  readonly device: Device;
   /** Stores the uniform values for each uniform block */
   uniformBlocks = new Map<keyof TPropGroups, UniformBlock>();
-  /** Can generate data for a uniform buffer for each block from data */
-  uniformBufferLayouts = new Map<keyof TPropGroups, UniformBufferLayout>();
+  /** Flattened layout metadata for each block. */
+  shaderBlockLayouts = new Map<keyof TPropGroups, ShaderBlockLayout>();
+  /** Serializers for block-backed uniform data. */
+  shaderBlockWriters = new Map<keyof TPropGroups, ShaderBlockWriter>();
   /** Actual buffer for the blocks */
   uniformBuffers = new Map<keyof TPropGroups, Buffer>();
 
   /**
-   * Create a new UniformStore instance
-   * @param blocks
+   * Creates a new {@link UniformStore} for the supplied device and block definitions.
    */
-  constructor(
-    blocks: Record<
-      keyof TPropGroups,
-      {
-        uniformTypes?: Record<string, CompositeShaderType>;
-        defaultProps?: Record<string, unknown>;
-        defaultUniforms?: Record<string, CompositeUniformValue>;
-      }
-    >
-  ) {
+  constructor(device: Device, blocks: UniformStoreBlocks<TPropGroups>) {
+    this.device = device;
+
     for (const [bufferName, block] of Object.entries(blocks)) {
       const uniformBufferName = bufferName as keyof TPropGroups;
 
       // Create a layout object to help us generate correctly formatted binary uniform buffers
-      const uniformBufferLayout = new UniformBufferLayout(block.uniformTypes ?? {});
-      this.uniformBufferLayouts.set(uniformBufferName, uniformBufferLayout);
+      const shaderBlockLayout = makeShaderBlockLayout(block.uniformTypes ?? {}, {
+        layout: block.layout ?? getDefaultUniformBufferLayout(device)
+      });
+      const shaderBlockWriter = new ShaderBlockWriter(shaderBlockLayout);
+      this.shaderBlockLayouts.set(uniformBufferName, shaderBlockLayout);
+      this.shaderBlockWriters.set(uniformBufferName, shaderBlockWriter);
 
       // Create a Uniform block to store the uniforms for each buffer.
       const uniformBlock = new UniformBlock({name: bufferName});
-      uniformBlock.setUniforms(
-        uniformBufferLayout.getFlatUniformValues(block.defaultUniforms || {})
-      );
+      uniformBlock.setUniforms(shaderBlockWriter.getFlatUniformValues(block.defaultUniforms || {}));
       this.uniformBlocks.set(uniformBufferName, uniformBlock);
     }
   }
@@ -69,15 +98,17 @@ export class UniformStore<
 
   /**
    * Set uniforms
-   * Makes all properties partial
+   *
+   * Makes all group properties partial and eagerly propagates changes to any
+   * managed GPU buffers.
    */
   setUniforms(
     uniforms: Partial<{[group in keyof TPropGroups]: Partial<TPropGroups[group]>}>
   ): void {
     for (const [blockName, uniformValues] of Object.entries(uniforms)) {
       const uniformBufferName = blockName as keyof TPropGroups;
-      const uniformBufferLayout = this.uniformBufferLayouts.get(uniformBufferName);
-      const flattenedUniforms = uniformBufferLayout?.getFlatUniformValues(
+      const shaderBlockWriter = this.shaderBlockWriters.get(uniformBufferName);
+      const flattenedUniforms = shaderBlockWriter?.getFlatUniformValues(
         (uniformValues || {}) as Record<string, CompositeUniformValue>
       );
       this.uniformBlocks.get(uniformBufferName)?.setUniforms(flattenedUniforms || {});
@@ -88,24 +119,33 @@ export class UniformStore<
     this.updateUniformBuffers();
   }
 
-  /** Get the required minimum length of the uniform buffer */
+  /**
+   * Returns the allocation size for the named uniform buffer.
+   *
+   * This may exceed the packed layout size because minimum buffer-size policy is
+   * applied at the store layer.
+   */
   getUniformBufferByteLength(uniformBufferName: keyof TPropGroups): number {
-    return this.uniformBufferLayouts.get(uniformBufferName)?.byteLength || 0;
-  }
-
-  /** Get formatted binary memory that can be uploaded to a buffer */
-  getUniformBufferData(uniformBufferName: keyof TPropGroups): Uint8Array {
-    const uniformValues = this.uniformBlocks.get(uniformBufferName)?.getAllUniforms() || {};
-    // @ts-ignore
-    return this.uniformBufferLayouts.get(uniformBufferName)?.getData(uniformValues);
+    const packedByteLength = this.shaderBlockLayouts.get(uniformBufferName)?.byteLength || 0;
+    return Math.max(packedByteLength, minUniformBufferSize);
   }
 
   /**
-   * Creates an unmanaged uniform buffer (umnanaged means that application is responsible for destroying it)
-   * The new buffer is initialized with current / supplied values
+   * Returns packed binary data that can be uploaded to the named uniform buffer.
+   *
+   * The returned view length matches the packed block size and is not padded to
+   * the store's minimum allocation size.
+   */
+  getUniformBufferData(uniformBufferName: keyof TPropGroups): Uint8Array {
+    const uniformValues = this.uniformBlocks.get(uniformBufferName)?.getAllUniforms() || {};
+    const shaderBlockWriter = this.shaderBlockWriters.get(uniformBufferName);
+    return shaderBlockWriter?.getData(uniformValues) || new Uint8Array(0);
+  }
+
+  /**
+   * Creates an unmanaged uniform buffer initialized with the current or supplied values.
    */
   createUniformBuffer(
-    device: Device,
     uniformBufferName: keyof TPropGroups,
     uniforms?: Partial<{[group in keyof TPropGroups]: Partial<TPropGroups[group]>}>
   ): Buffer {
@@ -113,7 +153,7 @@ export class UniformStore<
       this.setUniforms(uniforms);
     }
     const byteLength = this.getUniformBufferByteLength(uniformBufferName);
-    const uniformBuffer = device.createBuffer({
+    const uniformBuffer = this.device.createBuffer({
       usage: Buffer.UNIFORM | Buffer.COPY_DST,
       byteLength
     });
@@ -123,11 +163,11 @@ export class UniformStore<
     return uniformBuffer;
   }
 
-  /** Get the managed uniform buffer. "managed" resources are destroyed when the uniformStore is destroyed. */
-  getManagedUniformBuffer(device: Device, uniformBufferName: keyof TPropGroups): Buffer {
+  /** Returns the managed uniform buffer for the named block. */
+  getManagedUniformBuffer(uniformBufferName: keyof TPropGroups): Buffer {
     if (!this.uniformBuffers.get(uniformBufferName)) {
       const byteLength = this.getUniformBufferByteLength(uniformBufferName);
-      const uniformBuffer = device.createBuffer({
+      const uniformBuffer = this.device.createBuffer({
         usage: Buffer.UNIFORM | Buffer.COPY_DST,
         byteLength
       });
@@ -138,7 +178,11 @@ export class UniformStore<
     return this.uniformBuffers.get(uniformBufferName);
   }
 
-  /** Updates all uniform buffers where values have changed */
+  /**
+   * Updates every managed uniform buffer whose source uniforms have changed.
+   *
+   * @returns The first redraw reason encountered, or `false` if nothing changed.
+   */
   updateUniformBuffers(): false | string {
     let reason: false | string = false;
     for (const uniformBufferName of this.uniformBlocks.keys()) {
@@ -151,7 +195,11 @@ export class UniformStore<
     return reason;
   }
 
-  /** Update one uniform buffer. Only updates if values have changed */
+  /**
+   * Updates one managed uniform buffer if its corresponding block is dirty.
+   *
+   * @returns The redraw reason for the update, or `false` if no write occurred.
+   */
   updateUniformBuffer(uniformBufferName: keyof TPropGroups): false | string {
     const uniformBlock = this.uniformBlocks.get(uniformBufferName);
     let uniformBuffer = this.uniformBuffers.get(uniformBufferName);
@@ -176,4 +224,11 @@ export class UniformStore<
     }
     return reason;
   }
+}
+
+/**
+ * Returns the default uniform-buffer layout for the supplied device.
+ */
+function getDefaultUniformBufferLayout(device: Device): 'std140' | 'wgsl-uniform' | 'wgsl-storage' {
+  return device.type === 'webgpu' ? 'wgsl-uniform' : 'std140';
 }
