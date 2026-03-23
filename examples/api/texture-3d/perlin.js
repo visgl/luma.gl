@@ -48,16 +48,16 @@ var fade = function (x) {
 var grad = function (hash, x, y, z) {
   var h = hash & 15;
   var u = h < 8 ? x : y;
-  var v = h < 4 ? y : h == 12 || h == 14 ? x : z;
+  var v = h < 4 ? y : h === 12 || h === 14 ? x : z;
   return (h & 1 ? -u : u) + (h & 2 ? -v : v);
 };
 
 export function perlin(params) {
-  if (typeof params != 'object') throw new TypeError('params is not an object');
-  if (typeof params.interpolation != 'function')
+  if (typeof params !== 'object') throw new TypeError('params is not an object');
+  if (typeof params.interpolation !== 'function')
     throw new TypeError('params.interpolation is not a function');
   if (!Array.isArray(params.permutation)) throw new TypeError('params.permutation is not an array');
-  if (params.permutation.length != 256) throw new Error('params.permutation must have 256 items');
+  if (params.permutation.length !== 256) throw new Error('params.permutation must have 256 items');
 
   var irp = params.interpolation;
   var p = params.permutation.slice(0);

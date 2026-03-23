@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-// prettier-ignore
+// biome-ignore format: preserve layout
 // / <reference types="@webgpu/types" />
 
 import type {
@@ -128,10 +128,9 @@ export class WebGPUDevice extends Device {
     });
 
     // "Context" loss handling
-    this.lost = new Promise<{reason: 'destroyed'; message: string}>(async resolve => {
-      const lostInfo = await this.handle.lost;
+    this.lost = this.handle.lost.then(lostInfo => {
       this._isLost = true;
-      resolve({reason: 'destroyed', message: lostInfo.message});
+      return {reason: 'destroyed', message: lostInfo.message};
     });
 
     // Note: WebGPU devices can be created without a canvas, for compute shader purposes

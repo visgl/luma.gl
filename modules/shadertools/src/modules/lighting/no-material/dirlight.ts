@@ -12,7 +12,7 @@ export type DirlightProps = {
 export type DirlightUniforms = DirlightProps;
 
 // TODO
-export const SOURCE_WGSL = /* WGSL */ `\  
+export const SOURCE_WGSL = /* WGSL */ `\
 struct dirlightUniforms {
   lightDirection: vec3<f32>,
 };

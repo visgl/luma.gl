@@ -210,7 +210,7 @@ test('WebGLFramebuffer contents', async t => {
       t.comment('finished reading from framebuffer');
       t.deepEqual(
         pixels,
-        // prettier-ignore
+        // biome-ignore format: preserve layout
         [255, 0, 0, 255,  255, 0, 0, 255,  255, 0, 0, 255,  255, 0, 0, 255],
         'Framebuffer pixel colors are set correctly'
       );

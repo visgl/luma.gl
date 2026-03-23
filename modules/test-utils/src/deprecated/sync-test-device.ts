@@ -35,7 +35,8 @@ export function createTestDevice(): WebGLDevice | null {
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error(`Failed to created device: ${(error as Error).message}`);
-    debugger; // eslint-disable-line no-debugger
+    // biome-ignore lint/suspicious/noDebugger: explicit debug break for synchronous test-device failures.
+    debugger;
     return null;
   }
 }

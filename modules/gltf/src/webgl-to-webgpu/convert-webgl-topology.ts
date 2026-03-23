@@ -16,7 +16,7 @@ export function convertGLDrawModeToTopology(
     | GLEnum.TRIANGLE_STRIP
     | GLEnum.TRIANGLE_FAN
 ): PrimitiveTopology {
-  // prettier-ignore
+  // biome-ignore format: preserve layout
   switch (drawMode) {
     case GLEnum.POINTS: return 'point-list';
     case GLEnum.LINES: return 'line-list';

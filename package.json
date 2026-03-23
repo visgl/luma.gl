@@ -27,7 +27,7 @@
     "bootstrap": "bash ./dev-modules/devtools-extensions/bootstrap.sh",
     "start": "open https://luma.gl/docs/getting-started",
     "build": "ocular-clean && (cd modules/constants && yarn pre-build) && ocular-build",
-    "lint": "ocular-lint",
+    "lint": "yarn workspace @luma.gl/devtools-extensions lint",
     "publish-beta": "ocular-publish version-only-beta",
     "publish-prod": "ocular-publish version-only-prod",
     "test": "yarn test-node && yarn test-headless",
@@ -60,8 +60,6 @@
     "@vitest/browser": "^4.0.18",
     "@vitest/browser-playwright": "^4.0.18",
     "@vitest/coverage-v8": "^4.0.18",
-    "eslint-import-resolver-typescript": "^3.10.1",
-    "eslint-plugin-tree-shaking": "^1.12.2",
     "pre-commit": "^1.2.2",
     "vite": "^8.0.0",
     "vitest": "^4.0.18"

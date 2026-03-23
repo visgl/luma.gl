@@ -139,7 +139,8 @@ function onGLError(
     'color: white; background: red; padding: 2px 6px; border-radius: 3px;',
     message
   )();
-  debugger; // eslint-disable-line
+  // biome-ignore lint/suspicious/noDebugger: pause immediately on WebGL debug utility errors.
+  debugger;
   throw new Error(message);
 }
 
@@ -163,7 +164,8 @@ function onValidateGLFunc(
   for (const arg of functionArgs) {
     if (arg === undefined) {
       functionString = functionString || getFunctionString(functionName, functionArgs);
-      debugger; // eslint-disable-line
+      // biome-ignore lint/suspicious/noDebugger: pause when validating undefined WebGL call arguments.
+      debugger;
       // throw new Error(`Undefined argument: ${functionString}`);
     }
   }

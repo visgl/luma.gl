@@ -191,12 +191,12 @@ export class WEBGLTexture extends Texture {
       switch (this.dimension) {
         case '2d':
         case 'cube':
-          // prettier-ignore
+          // biome-ignore format: preserve layout
           this.gl.texSubImage2D(glTarget, mipLevel, x, y, width, height, glFormat, glType, image);
           break;
         case '2d-array':
         case '3d':
-          // prettier-ignore
+          // biome-ignore format: preserve layout
           this.gl.texSubImage3D(glTarget, mipLevel, x, y, z, width, height, depth, glFormat, glType, image);
           break;
         default:
@@ -367,14 +367,14 @@ export class WEBGLTexture extends Texture {
         case 'cube':
           if (compressed) {
             if (isFullMipUpload) {
-              // prettier-ignore
+              // biome-ignore format: preserve layout
               this.gl.compressedTexImage2D(glTarget, mipLevel, glFormat, width, height, 0, compressedData);
             } else {
-              // prettier-ignore
+              // biome-ignore format: preserve layout
               this.gl.compressedTexSubImage2D(glTarget, mipLevel, x, y, width, height, glFormat, compressedData);
             }
           } else {
-            // prettier-ignore
+            // biome-ignore format: preserve layout
             this.gl.texSubImage2D(glTarget, mipLevel, x, y, width, height, glFormat, glType, typedArray, sourceElementOffset);
           }
           break;
@@ -382,7 +382,7 @@ export class WEBGLTexture extends Texture {
         case '3d':
           if (compressed) {
             if (isFullMipUpload) {
-              // prettier-ignore
+              // biome-ignore format: preserve layout
               this.gl.compressedTexImage3D(
                 glTarget,
                 mipLevel,
@@ -394,7 +394,7 @@ export class WEBGLTexture extends Texture {
                 compressedData
               );
             } else {
-              // prettier-ignore
+              // biome-ignore format: preserve layout
               this.gl.compressedTexSubImage3D(
                 glTarget,
                 mipLevel,
@@ -409,7 +409,7 @@ export class WEBGLTexture extends Texture {
               );
             }
           } else {
-            // prettier-ignore
+            // biome-ignore format: preserve layout
             this.gl.texSubImage3D(glTarget, mipLevel, x, y, z, width, height, depthOrArrayLayers, glFormat, glType, typedArray, sourceElementOffset);
           }
           break;
@@ -722,7 +722,7 @@ function getWebGLTextureSourceElementOffset(
 export function getWebGLTextureTarget(
   dimension: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d'
 ): GLTextureTarget {
-  // prettier-ignore
+  // biome-ignore format: preserve layout
   switch (dimension) {
     case '1d': break; // not supported in any WebGL version
     case '2d': return GL.TEXTURE_2D; // supported in WebGL1

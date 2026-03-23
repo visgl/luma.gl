@@ -59,7 +59,7 @@ export type ArrayShaderType = readonly [type: CompositeShaderType, length: numbe
 export type AttributeShaderTypeAlias = keyof AttributeShaderTypeAliasMap;
 
 /** @note work around for lack of type narrowing in conditional generics */
-// prettier-ignore
+// biome-ignore format: preserve layout
 type AttributeShaderTypeAliasMap = {
   vec2f: 'vec2<f32>';
   vec3f: 'vec3<f32>';
@@ -79,7 +79,7 @@ type AttributeShaderTypeAliasMap = {
 export type VariableShaderTypeAlias = keyof VariableShaderTypeAliasMap;
 
 /** @note work around for lack of type narrowing in conditional generics */
-// prettier-ignore
+// biome-ignore format: preserve layout
 type VariableShaderTypeAliasMap = {
   // Vector aliases
   vec2f: 'vec2<f32>';
@@ -149,7 +149,7 @@ export type VariableShaderTypeT<T extends VariableShaderType | keyof VariableSha
 
 // HELPER TYPES
 
-// prettier-ignore
+// biome-ignore format: preserve layout
 type TypeOfAliasSuffix<T extends string> =
   T extends 'f' ? 'f32' :
   T extends 'i' ? 'i32' :
@@ -157,14 +157,14 @@ type TypeOfAliasSuffix<T extends string> =
   T extends 'h' ? 'f16' :
   never;
 
-// prettier-ignore
+// biome-ignore format: preserve layout
 export type AttributeShaderTypeAliasT<T extends AttributeShaderTypeAlias> =
   T extends `vec2${infer S}` ? `vec2<${TypeOfAliasSuffix<S>}>` :
   T extends `vec3${infer S}` ? `vec3<${TypeOfAliasSuffix<S>}>` :
   T extends `vec4${infer S}` ? `vec4<${TypeOfAliasSuffix<S>}>` :
   never;
 
-// prettier-ignore
+// biome-ignore format: preserve layout
 export type VariableShaderTypeAliasT<T extends VariableShaderTypeAlias> =
   T extends `vec2${infer S}` ? `vec2<${TypeOfAliasSuffix<S>}>` :
   T extends `vec3${infer S}` ? `vec3<${TypeOfAliasSuffix<S>}>` :

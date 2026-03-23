@@ -70,7 +70,8 @@ export function getShaderBindingDebugRowsFromWGSL(
   for (const regex of WGSL_BINDING_DEBUG_REGEXES) {
     regex.lastIndex = 0;
     let match: RegExpExecArray | null;
-    while ((match = regex.exec(source))) {
+    match = regex.exec(source);
+    while (match) {
       const isBindingFirst = regex === WGSL_BINDING_DEBUG_REGEXES[0];
       const binding = Number(match[isBindingFirst ? 1 : 2]);
       const group = Number(match[isBindingFirst ? 2 : 1]);
@@ -90,6 +91,7 @@ export function getShaderBindingDebugRowsFromWGSL(
           resourceType
         })
       );
+      match = regex.exec(source);
     }
   }
 

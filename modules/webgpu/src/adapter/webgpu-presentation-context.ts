@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-// prettier-ignore
+// biome-ignore format: preserve layout
 // / <reference types="@webgpu/types" />
 
 import type {PresentationContextProps, TextureFormatDepthStencil} from '@luma.gl/core';

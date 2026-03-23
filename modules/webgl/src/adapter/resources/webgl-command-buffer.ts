@@ -345,10 +345,10 @@ function _clearTexture(device: WebGLDevice, options: ClearTextureOptions) {
     case '2d-array':
     case '3d':
       if (compressed) {
-        // prettier-ignore
+        // biome-ignore format: preserve layout
         device.gl.compressedTexImage3D(glTarget, mipLevel, glInternalFormat, width, height, depth, BORDER, null);
       } else {
-        // prettier-ignore
+        // biome-ignore format: preserve layout
         device.gl.texImage3D( glTarget, mipLevel, glInternalFormat, width, height, depth, BORDER, glFormat, glType, null);
       }
       break;
@@ -356,10 +356,10 @@ function _clearTexture(device: WebGLDevice, options: ClearTextureOptions) {
     case '2d':
     case 'cube':
       if (compressed) {
-        // prettier-ignore
+        // biome-ignore format: preserve layout
         device.gl.compressedTexImage2D(glTarget, mipLevel, glInternalFormat, width, height, BORDER, null);
       } else {
-        // prettier-ignore
+        // biome-ignore format: preserve layout
         device.gl.texImage2D(glTarget, mipLevel, glInternalFormat, width, height, BORDER, glFormat, glType, null);
       }
       break;

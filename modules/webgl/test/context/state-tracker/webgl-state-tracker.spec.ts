@@ -146,7 +146,7 @@ test('WebGLStateTracker#gl API', async t => {
   parameters = getGLParameters(gl);
   for (const key in ENUM_STYLE_SETTINGS_SET1) {
     // Skipping composite setters
-    if (!isNaN(Number(GL_PARAMETER_SETTERS[key]))) {
+    if (!Number.isNaN(Number(GL_PARAMETER_SETTERS[key]))) {
       // @ts-expect-error
       const value = getGLParameters(gl, [key])[key];
       t.deepEqual(

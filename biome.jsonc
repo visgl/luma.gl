@@ -1,0 +1,131 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.4.8/schema.json",
+  "extends": ["./dev-modules/devtools-extensions/biome/base.jsonc"],
+  "files": {
+    "includes": [
+      "!**/*.min.js",
+      "!**/dist/**",
+      "!**/.cache/**",
+      "!**/.docusaurus/**",
+      "modules/**/*.js",
+      "modules/**/*.jsx",
+      "modules/**/*.ts",
+      "modules/**/*.tsx",
+      "docs/**/*.js",
+      "docs/**/*.jsx",
+      "docs/**/*.ts",
+      "docs/**/*.tsx",
+      "test/**/*.js",
+      "test/**/*.jsx",
+      "test/**/*.ts",
+      "test/**/*.tsx",
+      "!test/apps/**",
+      "examples/**/*.js",
+      "examples/**/*.jsx",
+      "examples/**/*.ts",
+      "examples/**/*.tsx"
+    ]
+  },
+  "formatter": {
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 100,
+    "bracketSpacing": false
+  },
+  "javascript": {
+    "formatter": {
+      "arrowParentheses": "asNeeded",
+      "quoteStyle": "single",
+      "jsxQuoteStyle": "double",
+      "semicolons": "always",
+      "trailingCommas": "none",
+      "bracketSpacing": false
+    }
+  },
+  "linter": {
+    "rules": {
+      "recommended": false,
+      "correctness": {
+        "noUnusedImports": "warn",
+        "noUnusedVariables": "warn",
+        "noUnreachable": "error"
+      },
+      "suspicious": {
+        "noAssignInExpressions": "error",
+        "noAsyncPromiseExecutor": "error",
+        "noConsole": "warn",
+        "noDebugger": "error",
+        "noDoubleEquals": "error",
+        "noGlobalIsNan": "error",
+        "noRedeclare": "error"
+      }
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["modules/webgpu/**/*.ts", "modules/webgpu/**/*.js"],
+      "javascript": {
+        "globals": [
+          "GPU",
+          "GPUAdapter",
+          "GPUAdapterInfo",
+          "GPUBindGroup",
+          "GPUBindGroupLayout",
+          "GPUBuffer",
+          "GPUBufferUsage",
+          "GPUCanvasContext",
+          "GPUColorTargetState",
+          "GPUColorWrite",
+          "GPUCommandBuffer",
+          "GPUCommandEncoder",
+          "GPUCompilationInfo",
+          "GPUCompilationMessage",
+          "GPUComputePassEncoder",
+          "GPUComputePassTimestampWrites",
+          "GPUComputePipeline",
+          "GPUDepthStencilState",
+          "GPUDevice",
+          "GPUDeviceLostInfo",
+          "GPUError",
+          "GPUExtent3D",
+          "GPUExternalTexture",
+          "GPUFeatureName",
+          "GPUFragmentState",
+          "GPUImageCopyBuffer",
+          "GPUImageCopyTexture",
+          "GPUIndexFormat",
+          "GPUInternalError",
+          "GPUMapMode",
+          "GPUOutOfMemoryError",
+          "GPUPipelineError",
+          "GPUPipelineLayout",
+          "GPUQuerySet",
+          "GPUQueue",
+          "GPURenderBundle",
+          "GPURenderBundleEncoder",
+          "GPURenderPassColorAttachment",
+          "GPURenderPassDepthStencilAttachment",
+          "GPURenderPassDescriptor",
+          "GPURenderPassEncoder",
+          "GPURenderPipeline",
+          "GPURenderPipelineDescriptor",
+          "GPUSampler",
+          "GPUShaderModule",
+          "GPUShaderStage",
+          "GPUStencilFaceState",
+          "GPUSupportedLimits",
+          "GPUTexture",
+          "GPUTextureFormat",
+          "GPUTextureUsage",
+          "GPUTextureView",
+          "GPUUncapturedErrorEvent",
+          "GPUValidationError",
+          "GPUVertexAttribute",
+          "GPUVertexBufferLayout",
+          "GPUVertexFormat",
+          "GPUVertexState"
+        ]
+      }
+    }
+  ]
+}

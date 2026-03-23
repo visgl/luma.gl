@@ -594,7 +594,8 @@ function getUsedBindingsByGroupFromApplicationWGSL(source: string): Map<number, 
   for (const regex of WGSL_BINDING_DECLARATION_REGEXES) {
     regex.lastIndex = 0;
     let match: RegExpExecArray | null;
-    while ((match = regex.exec(source))) {
+    match = regex.exec(source);
+    while (match) {
       const isBindingFirst = regex === WGSL_BINDING_DECLARATION_REGEXES[0];
       const location = Number(match[isBindingFirst ? 1 : 2]);
       const group = Number(match[isBindingFirst ? 2 : 1]);
@@ -607,6 +608,7 @@ function getUsedBindingsByGroupFromApplicationWGSL(source: string): Map<number, 
         location,
         `application binding "${name}"`
       );
+      match = regex.exec(source);
     }
   }
 
@@ -785,12 +787,14 @@ function getModuleWGSLBindingDeclarations(module: ShaderModule): {name: string; 
   for (const regex of MODULE_WGSL_BINDING_DECLARATION_REGEXES) {
     regex.lastIndex = 0;
     let match: RegExpExecArray | null;
-    while ((match = regex.exec(moduleSource))) {
+    match = regex.exec(moduleSource);
+    while (match) {
       const isBindingFirst = regex === MODULE_WGSL_BINDING_DECLARATION_REGEXES[0];
       declarations.push({
         name: match[4],
         group: Number(match[isBindingFirst ? 2 : 1])
       });
+      match = regex.exec(moduleSource);
     }
   }
 
