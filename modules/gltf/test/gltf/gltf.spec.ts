@@ -8,6 +8,7 @@ import {getWebGLTestDevice} from '@luma.gl/test-utils';
 import '@loaders.gl/polyfills';
 import {load} from '@loaders.gl/core';
 import {GLTFLoader, postProcessGLTF} from '@loaders.gl/gltf';
+import type {GLTFPostprocessed} from '@loaders.gl/gltf';
 
 import {DynamicTexture} from '@luma.gl/engine';
 import {createScenegraphsFromGLTF, loadPBREnvironment} from '@luma.gl/gltf';
@@ -83,6 +84,163 @@ test('gltf#environment', async t => {
   t.ok(
     environment.specularEnvSampler instanceof DynamicTexture,
     'Specular environment map created'
+  );
+
+  t.end();
+});
+
+test('gltf#createScenegraphsFromGLTF wires supported KHR_animation_pointer material channels', async t => {
+  const webglDevice = await getWebGLTestDevice();
+  const gltf: GLTFPostprocessed = {
+    id: 'pointer-gltf',
+    accessors: [
+      {
+        componentType: 5126,
+        count: 2,
+        type: 'SCALAR',
+        bufferView: {
+          data: {
+            buffer: new Float32Array([0, 1]).buffer
+          }
+        }
+      },
+      {
+        componentType: 5126,
+        count: 2,
+        type: 'VEC4',
+        bufferView: {
+          data: {
+            buffer: new Float32Array([1, 0, 0, 1, 0, 1, 0, 1]).buffer
+          }
+        }
+      }
+    ] as any,
+    animations: [
+      {
+        channels: [
+          {
+            sampler: 0,
+            target: {
+              path: 'pointer',
+              extensions: {
+                KHR_animation_pointer: {
+                  pointer: '/materials/0/pbrMetallicRoughness/baseColorFactor'
+                }
+              }
+            }
+          }
+        ],
+        samplers: [{input: 0, interpolation: 'LINEAR', output: 1}]
+      }
+    ] as any,
+    asset: {version: '2.0'},
+    buffers: [],
+    bufferViews: [],
+    cameras: [],
+    images: [],
+    materials: [{id: 'material-0', pbrMetallicRoughness: {baseColorFactor: [1, 0, 0, 1]}}] as any,
+    meshes: [],
+    nodes: [{id: 'node-0'}] as any,
+    samplers: [],
+    scenes: [{id: 'scene-0', nodes: [{id: 'node-0'}]}] as any,
+    skins: [],
+    textures: []
+  };
+
+  const {animator, materials} = createScenegraphsFromGLTF(webglDevice, gltf);
+
+  animator.setTime(500);
+
+  const uniforms = materials[0].shaderInputs.getUniformValues() as Record<string, any>;
+  t.deepEqual(
+    uniforms.pbrMaterial.baseColorFactor,
+    [0.5, 0.5, 0, 1],
+    'material pointer animation updates the real luma.gl material state'
+  );
+
+  t.end();
+});
+
+test('gltf#createScenegraphsFromGLTF wires texture-transform KHR_animation_pointer channels', async t => {
+  const webglDevice = await getWebGLTestDevice();
+  const gltf: GLTFPostprocessed = {
+    id: 'texture-pointer-gltf',
+    accessors: [
+      {
+        componentType: 5126,
+        count: 2,
+        type: 'SCALAR',
+        bufferView: {
+          data: {
+            buffer: new Float32Array([0, 1]).buffer
+          }
+        }
+      },
+      {
+        componentType: 5126,
+        count: 2,
+        type: 'SCALAR',
+        bufferView: {
+          data: {
+            buffer: new Float32Array([0.2, 1.2]).buffer
+          }
+        }
+      }
+    ] as any,
+    animations: [
+      {
+        channels: [
+          {
+            sampler: 0,
+            target: {
+              path: 'pointer',
+              extensions: {
+                KHR_animation_pointer: {
+                  pointer: '/materials/0/normalTexture/extensions/KHR_texture_transform/rotation'
+                }
+              }
+            }
+          }
+        ],
+        samplers: [{input: 0, interpolation: 'LINEAR', output: 1}]
+      }
+    ] as any,
+    asset: {version: '2.0'},
+    buffers: [],
+    bufferViews: [],
+    cameras: [],
+    images: [],
+    materials: [
+      {
+        id: 'material-0',
+        normalTexture: {
+          id: 'normal-0',
+          texture: {},
+          extensions: {
+            KHR_texture_transform: {
+              rotation: 0.2
+            }
+          }
+        }
+      }
+    ] as any,
+    meshes: [],
+    nodes: [{id: 'node-0'}] as any,
+    samplers: [],
+    scenes: [{id: 'scene-0', nodes: [{id: 'node-0'}]}] as any,
+    skins: [],
+    textures: []
+  };
+
+  const {animator, materials} = createScenegraphsFromGLTF(webglDevice, gltf);
+
+  animator.setTime(500);
+
+  const uniforms = materials[0].shaderInputs.getUniformValues() as Record<string, any>;
+  t.deepEqual(
+    uniforms.pbrMaterial.normalUVTransform.map((value: number) => Number(value.toFixed(6))),
+    [0.877583, 0.479426, 0, -0.479426, 0.877583, 0, 0, 0, 1],
+    'texture-transform pointer animation updates the runtime UV delta matrix'
   );
 
   t.end();

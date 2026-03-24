@@ -117,6 +117,9 @@ export function getAttributeBuffersFromGeometry(
       case 'TEXCOORD_0':
         name = 'texCoords';
         break;
+      case 'TEXCOORD_1':
+        name = 'texCoords1';
+        break;
       case 'COLOR_0':
         name = 'colors';
         break;
