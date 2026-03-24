@@ -32,10 +32,29 @@ export function interpolate(
   target: GroupNode,
   path: GLTFAnimationPath
 ) {
+  const value = evaluateSampler(time, {input, interpolation, output}, path);
+  if (value) {
+    updateTargetPath(target, path, value);
+  }
+}
+
+/** Evaluates a glTF animation sampler at the supplied time. */
+export function evaluateSampler(
+  time: number,
+  {input, interpolation, output}: GLTFAnimationSampler,
+  path?: GLTFAnimationPath
+): number[] | null {
   const maxTime = input[input.length - 1];
+  if (!Number.isFinite(maxTime) || maxTime <= 0) {
+    return output[0] || null;
+  }
+
   const animationTime = time % maxTime;
 
   const nextIndex = input.findIndex(t => t >= animationTime);
+  if (nextIndex < 0) {
+    return output[output.length - 1] || null;
+  }
   const previousIndex = Math.max(0, nextIndex - 1);
 
   const previousTime = input[previousIndex];
@@ -43,15 +62,14 @@ export function interpolate(
 
   switch (interpolation) {
     case 'STEP':
-      stepInterpolate(target, path, output[previousIndex]);
-      break;
+      return output[previousIndex];
 
     case 'LINEAR':
       if (nextTime > previousTime) {
         const ratio = (animationTime - previousTime) / (nextTime - previousTime);
-        linearInterpolate(target, path, output[previousIndex], output[nextIndex], ratio);
+        return linearInterpolate(path, output[previousIndex], output[nextIndex], ratio);
       }
-      break;
+      return output[previousIndex] || null;
 
     case 'CUBICSPLINE':
       if (nextTime > previousTime) {
@@ -63,41 +81,37 @@ export function interpolate(
         const inTangent1 = output[3 * nextIndex + 0];
         const p1 = output[3 * nextIndex + 1];
 
-        cubicsplineInterpolate(target, path, {p0, outTangent0, inTangent1, p1, tDiff, ratio});
+        return cubicsplineInterpolate({p0, outTangent0, inTangent1, p1, tDiff, ratio});
       }
-      break;
+      return output[3 * previousIndex + 1] || null;
 
     default:
       log.warn(`Interpolation ${interpolation} not supported`)();
-      break;
+      return null;
   }
 }
 
 /** Applies linear interpolation between two keyframes. */
 function linearInterpolate(
-  target: GroupNode,
-  path: GLTFAnimationPath,
+  path: GLTFAnimationPath | undefined,
   start: number[],
   stop: number[],
   ratio: number
-) {
+): number[] {
   if (path === 'rotation') {
     // SLERP when path is rotation
-    updateTargetPath(target, path, new Quaternion().slerp({start, target: stop, ratio}));
-  } else {
-    // regular interpolation
-    const newVal = [];
-    for (let i = 0; i < start.length; i++) {
-      newVal[i] = ratio * stop[i] + (1 - ratio) * start[i];
-    }
-    updateTargetPath(target, path, newVal);
+    return new Quaternion().slerp({start, target: stop, ratio}) as unknown as number[];
   }
+
+  const newVal = [];
+  for (let i = 0; i < start.length; i++) {
+    newVal[i] = ratio * stop[i] + (1 - ratio) * start[i];
+  }
+  return newVal;
 }
 
 /** Applies glTF cubic spline interpolation between two keyframes. */
 function cubicsplineInterpolate(
-  target: GroupNode,
-  path: GLTFAnimationPath,
   {
     p0,
     outTangent0,
@@ -113,7 +127,7 @@ function cubicsplineInterpolate(
     tDiff: number;
     ratio: number;
   }
-) {
+): number[] {
   // TODO: Quaternion might need normalization
   const newVal = [];
   for (let i = 0; i < p0.length; i++) {
@@ -125,10 +139,5 @@ function cubicsplineInterpolate(
       (-2 * Math.pow(t, 3) + 3 * Math.pow(t, 2)) * p1[i] +
       (Math.pow(t, 3) - Math.pow(t, 2)) * m1;
   }
-  updateTargetPath(target, path, newVal);
-}
-
-/** Applies step interpolation by copying the current keyframe value. */
-function stepInterpolate(target: GroupNode, path: GLTFAnimationPath, value: number[]) {
-  updateTargetPath(target, path, value);
+  return newVal;
 }
