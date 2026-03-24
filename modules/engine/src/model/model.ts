@@ -463,38 +463,37 @@ export class Model {
           `>>> DRAWING ABORTED ${this.id}: ${PIPELINE_INITIALIZATION_FAILED}`
         )();
         drawSuccess = false;
-        return drawSuccess;
+      } else {
+        const syncBindings = this._getBindings();
+        const syncBindGroups = this._getBindGroups();
+
+        const {indexBuffer} = this.vertexArray;
+        const indexCount = indexBuffer
+          ? indexBuffer.byteLength / (indexBuffer.indexType === 'uint32' ? 4 : 2)
+          : undefined;
+
+        drawSuccess = this.pipeline.draw({
+          renderPass,
+          vertexArray: this.vertexArray,
+          isInstanced: this.isInstanced,
+          vertexCount: this.vertexCount,
+          instanceCount: this.instanceCount,
+          indexCount,
+          transformFeedback: this.transformFeedback || undefined,
+          // Pipelines may be shared across models when caching is enabled, so bindings
+          // and WebGL uniforms must be supplied on every draw instead of being stored
+          // on the pipeline instance.
+          bindings: syncBindings,
+          bindGroups: syncBindGroups,
+          _bindGroupCacheKeys: this._getBindGroupCacheKeys(),
+          uniforms: this.props.uniforms,
+          // WebGL shares underlying cached pipelines even for models that have different parameters and topology,
+          // so we must provide our unique parameters to each draw
+          // (In WebGPU most parameters are encoded in the pipeline and cannot be changed per draw call)
+          parameters: this.parameters,
+          topology: this.topology
+        });
       }
-
-      const syncBindings = this._getBindings();
-      const syncBindGroups = this._getBindGroups();
-
-      const {indexBuffer} = this.vertexArray;
-      const indexCount = indexBuffer
-        ? indexBuffer.byteLength / (indexBuffer.indexType === 'uint32' ? 4 : 2)
-        : undefined;
-
-      drawSuccess = this.pipeline.draw({
-        renderPass,
-        vertexArray: this.vertexArray,
-        isInstanced: this.isInstanced,
-        vertexCount: this.vertexCount,
-        instanceCount: this.instanceCount,
-        indexCount,
-        transformFeedback: this.transformFeedback || undefined,
-        // Pipelines may be shared across models when caching is enabled, so bindings
-        // and WebGL uniforms must be supplied on every draw instead of being stored
-        // on the pipeline instance.
-        bindings: syncBindings,
-        bindGroups: syncBindGroups,
-        _bindGroupCacheKeys: this._getBindGroupCacheKeys(),
-        uniforms: this.props.uniforms,
-        // WebGL shares underlying cached pipelines even for models that have different parameters and topology,
-        // so we must provide our unique parameters to each draw
-        // (In WebGPU most parameters are encoded in the pipeline and cannot be changed per draw call)
-        parameters: this.parameters,
-        topology: this.topology
-      });
     } finally {
       renderPass.popDebugGroup();
       this._logDrawCallEnd();
