@@ -14,18 +14,79 @@ import {Device} from '@luma.gl/core';
 import * as shaderModules from '@luma.gl/effects';
 import {ShaderPass} from '@luma.gl/shadertools';
 
+const PANEL_STYLE = [
+  'margin-top: 16px',
+  'padding: 16px',
+  'border: 1px solid rgba(148, 163, 184, 0.28)',
+  'border-radius: 18px',
+  'background: linear-gradient(180deg, rgba(15, 23, 42, 0.94) 0%, rgba(2, 6, 23, 0.96) 100%)',
+  'box-shadow: 0 18px 44px rgba(0, 0, 0, 0.38)'
+].join('; ');
+
+const LABEL_STYLE = [
+  'display: block',
+  'margin-bottom: 8px',
+  'font-size: 11px',
+  'font-weight: 700',
+  'letter-spacing: 0.08em',
+  'text-transform: uppercase',
+  'color: rgba(148, 163, 184, 0.92)'
+].join('; ');
+
+const SELECT_STYLE = [
+  'display: block',
+  'width: 100%',
+  'margin: 0',
+  'padding: 10px 42px 10px 14px',
+  'border: 1px solid rgba(148, 163, 184, 0.35)',
+  'border-radius: 12px',
+  'background: rgba(15, 23, 42, 0.92)',
+  'color: #f8fafc',
+  'font-size: 15px',
+  'font-weight: 500',
+  'line-height: 1.2',
+  'appearance: none',
+  '-webkit-appearance: none',
+  'box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04)'
+].join('; ');
+
+const CARET_STYLE = [
+  'position: absolute',
+  'right: 14px',
+  'top: 50%',
+  'width: 9px',
+  'height: 9px',
+  'border-right: 2px solid rgba(226, 232, 240, 0.85)',
+  'border-bottom: 2px solid rgba(226, 232, 240, 0.85)',
+  'transform: translateY(-65%) rotate(45deg)',
+  'pointer-events: none'
+].join('; ');
+
+const IMAGE_OPTIONS = {
+  'Bloom Study': './bloom-scene.svg',
+  'Vis Logo': './image2.png',
+  Helmet: './image.jpg'
+} as const;
+
+type ImageOptionName = keyof typeof IMAGE_OPTIONS;
+
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = `\
-<div>
+<div style="color: rgba(226, 232, 240, 0.96);">
   This example demonstrates how to use luma.gl's postprocessing utilities to apply shader effects to an image.
   <br>
-  Many luma.gl effects were inspired by Evan Wallace's landmark <a href="http://github.com/evanw/webgl-filter/">glfx.js / WebGL Filter</a> application.
+  Many luma.gl effects were inspired by Evan Wallace's landmark <a href="http://github.com/evanw/webgl-filter/" style="color: #7dd3fc;">glfx.js / WebGL Filter</a> application.
 </div>
-<div style="margin-top: 16px; padding: 14px 16px; border: 1px solid rgba(208, 215, 222, 0.9); border-radius: 16px; background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(246, 248, 250, 0.96) 100%); box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);">
-  <label for="postprocessing-selector" style="display: block; margin-bottom: 8px; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #57606a;">Effect</label>
+<div style="${PANEL_STYLE}">
+  <label for="postprocessing-image-selector" style="${LABEL_STYLE}">Image</label>
   <div style="position: relative;">
-    <select id="postprocessing-selector" style="display: block; width: 100%; margin: 0; padding: 10px 42px 10px 14px; border: 1px solid #c9d1d9; border-radius: 12px; background: rgba(255, 255, 255, 0.95); color: #0f172a; font-size: 15px; font-weight: 500; line-height: 1.2; appearance: none; -webkit-appearance: none; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);"></select>
-    <span aria-hidden="true" style="position: absolute; right: 14px; top: 50%; width: 9px; height: 9px; border-right: 2px solid #57606a; border-bottom: 2px solid #57606a; transform: translateY(-65%) rotate(45deg); pointer-events: none;"></span>
+    <select id="postprocessing-image-selector" style="${SELECT_STYLE}"></select>
+    <span aria-hidden="true" style="${CARET_STYLE}"></span>
+  </div>
+  <label for="postprocessing-selector" style="${LABEL_STYLE}; margin-top: 14px;">Effect</label>
+  <div style="position: relative;">
+    <select id="postprocessing-selector" style="${SELECT_STYLE}"></select>
+    <span aria-hidden="true" style="${CARET_STYLE}"></span>
   </div>
 </div>
 `;
@@ -38,7 +99,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
   shaderPassMap: Record<string, ShaderPass>;
   imageTexture: DynamicTexture;
-  selector: HTMLSelectElement | null = null;
+  effectSelector: HTMLSelectElement | null = null;
+  imageSelector: HTMLSelectElement | null = null;
 
   shaderPassRenderer!: ShaderPassRenderer;
   shaderPasses!: ShaderPass[];
@@ -47,24 +109,36 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     super();
 
     this.device = device;
-    this.imageTexture = new DynamicTexture(device, {
-      data: loadImageBitmap('./image2.png', {imageOrientation: 'flipY'})
-    });
+    this.imageTexture = this.createImageTexture(IMAGE_OPTIONS['Bloom Study']);
 
     this.shaderPassMap = getShaderPasses();
     this.setShaderPasses([]);
 
+    const imageOptionNames = Object.keys(IMAGE_OPTIONS);
+    this.imageSelector = initializeSelector(
+      'postprocessing-image-selector',
+      imageOptionNames,
+      imageName => this.setImageSource(imageName as ImageOptionName),
+      'Bloom Study'
+    );
+
     const NO_EFFECT = 'No effect';
     const shaderPassNames = [NO_EFFECT, ...Object.keys(this.shaderPassMap)];
-    this.selector = initializeSelector('postprocessing-selector', shaderPassNames, passName => {
-      const shaderPasses: ShaderPass[] = this.shaderPassMap[passName]
-        ? [this.shaderPassMap[passName]]
-        : [];
-      this.setShaderPasses(shaderPasses);
-    });
+    this.effectSelector = initializeSelector(
+      'postprocessing-selector',
+      shaderPassNames,
+      passName => {
+        const shaderPasses: ShaderPass[] = this.shaderPassMap[passName]
+          ? [this.shaderPassMap[passName]]
+          : [];
+        this.setShaderPasses(shaderPasses);
+      },
+      NO_EFFECT
+    );
   }
 
   onFinalize() {
+    this.imageTexture?.destroy();
     this.shaderPassRenderer?.destroy();
   }
 
@@ -83,6 +157,18 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       shaderPasses
     });
   }
+
+  createImageTexture(imageSource: string): DynamicTexture {
+    return new DynamicTexture(this.device, {
+      data: loadImageBitmap(imageSource, {imageOrientation: 'flipY'})
+    });
+  }
+
+  setImageSource(imageName: ImageOptionName) {
+    const previousTexture = this.imageTexture;
+    this.imageTexture = this.createImageTexture(IMAGE_OPTIONS[imageName]);
+    previousTexture?.destroy();
+  }
 }
 
 // Extract list of postprocessing-capable shader modules from the wildcard import
@@ -100,7 +186,8 @@ function getShaderPasses(): Record<string, ShaderPass> {
 function initializeSelector(
   id: string,
   array: string[],
-  onChange: (key: string) => void
+  onChange: (key: string) => void,
+  initialValue?: string
 ): HTMLSelectElement | null {
   const selectList = document.getElementById(id) as HTMLSelectElement | null;
   if (!selectList) {
@@ -115,6 +202,7 @@ function initializeSelector(
     option.value = key;
     option.text = key;
     option.id = key;
+    option.selected = key === initialValue;
     selectList.appendChild(option);
   }
 

@@ -6,6 +6,7 @@ import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {WgslReflect} from 'wgsl_reflect';
 import {
+  bloom,
   brightnessContrast,
   bulgePinch,
   colorHalftone,
@@ -13,6 +14,7 @@ import {
   dotScreen,
   edgeWork,
   fxaa,
+  gaussianBlur,
   hexagonalPixelate,
   hueSaturation,
   ink,
@@ -71,6 +73,8 @@ const SHADER_PASSES = [
   sepia,
   vibrance,
   vignette,
+  bloom,
+  gaussianBlur,
   tiltShift,
   triangleBlur,
   zoomBlur,
