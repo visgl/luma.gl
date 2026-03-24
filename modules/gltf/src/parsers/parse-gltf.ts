@@ -3,16 +3,26 @@
 // Copyright (c) vis.gl contributors
 
 import {Device, type PrimitiveTopology} from '@luma.gl/core';
-import {Geometry, GeometryAttribute, GroupNode, ModelNode, type ModelProps} from '@luma.gl/engine';
 import {
+  Geometry,
+  GeometryAttribute,
+  GroupNode,
+  Material,
+  MaterialFactory,
+  ModelNode,
+  type ModelProps
+} from '@luma.gl/engine';
+import {
+  type GLTFMaterialPostprocessed,
   type GLTFMeshPostprocessed,
   type GLTFNodePostprocessed,
   type GLTFPostprocessed
 } from '@loaders.gl/gltf';
+import {pbrMaterial} from '@luma.gl/shadertools';
 
 import {type PBREnvironment} from '../pbr/pbr-environment';
 import {convertGLDrawModeToTopology} from '../webgl-to-webgpu/convert-webgl-topology';
-import {createGLTFModel} from '../gltf/create-gltf-model';
+import {createGLTFMaterial, createGLTFModel} from '../gltf/create-gltf-model';
 
 import {parsePBRMaterial} from './parse-pbr-material';
 
@@ -49,6 +59,8 @@ export function parseGLTF(
 ): {
   /** Scene roots generated from `gltf.scenes`. */
   scenes: GroupNode[];
+  /** Materials aligned with the source `gltf.materials` array. */
+  materials: Material[];
   /** Map from glTF mesh ids to generated mesh group nodes. */
   gltfMeshIdToNodeMap: Map<string, GroupNode>;
   /** Map from glTF node indices to generated scenegraph nodes. */
@@ -57,10 +69,37 @@ export function parseGLTF(
   gltfNodeIdToNodeMap: Map<string, GroupNode>;
 } {
   const combinedOptions = {...defaultOptions, ...options};
+  const materialFactory = new MaterialFactory(device, {modules: [pbrMaterial]});
+  const materials = (gltf.materials || []).map((gltfMaterial, materialIndex) =>
+    createGLTFMaterial(device, {
+      id: getGLTFMaterialId(gltfMaterial, materialIndex),
+      parsedPPBRMaterial: parsePBRMaterial(
+        device,
+        gltfMaterial as any,
+        {},
+        {
+          ...combinedOptions,
+          gltf,
+          validateAttributes: false
+        }
+      ),
+      materialFactory
+    })
+  );
+  const gltfMaterialIdToMaterialMap = new Map<string, Material>();
+  (gltf.materials || []).forEach((gltfMaterial, materialIndex) => {
+    gltfMaterialIdToMaterialMap.set(gltfMaterial.id, materials[materialIndex]);
+  });
 
   const gltfMeshIdToNodeMap = new Map<string, GroupNode>();
   gltf.meshes.forEach((gltfMesh, idx) => {
-    const newMesh = createNodeForGLTFMesh(device, gltfMesh, combinedOptions);
+    const newMesh = createNodeForGLTFMesh(
+      device,
+      gltfMesh,
+      gltf,
+      gltfMaterialIdToMaterialMap,
+      combinedOptions
+    );
     gltfMeshIdToNodeMap.set(gltfMesh.id, newMesh);
   });
 
@@ -107,7 +146,7 @@ export function parseGLTF(
     });
   });
 
-  return {scenes, gltfMeshIdToNodeMap, gltfNodeIdToNodeMap, gltfNodeIndexToNodeMap};
+  return {scenes, materials, gltfMeshIdToNodeMap, gltfNodeIdToNodeMap, gltfNodeIndexToNodeMap};
 }
 
 /** Creates a `GroupNode` for one glTF node transform. */
@@ -130,11 +169,21 @@ function createNodeForGLTFNode(
 function createNodeForGLTFMesh(
   device: Device,
   gltfMesh: GLTFMeshPostprocessed,
+  gltf: GLTFPostprocessed,
+  gltfMaterialIdToMaterialMap: Map<string, Material>,
   options: Required<ParseGLTFOptions>
 ): GroupNode {
   const gltfPrimitives = gltfMesh.primitives || [];
   const primitives = gltfPrimitives.map((gltfPrimitive, i) =>
-    createNodeForGLTFPrimitive(device, gltfPrimitive, i, gltfMesh, options)
+    createNodeForGLTFPrimitive({
+      device,
+      gltfPrimitive,
+      primitiveIndex: i,
+      gltfMesh,
+      gltf,
+      gltfMaterialIdToMaterialMap,
+      options
+    })
   );
   const mesh = new GroupNode({
     id: gltfMesh.name || gltfMesh.id,
@@ -144,32 +193,46 @@ function createNodeForGLTFMesh(
   return mesh;
 }
 
+/** Input options for creating one renderable glTF primitive model node. */
+type CreateNodeForGLTFPrimitiveOptions = {
+  device: Device;
+  gltfPrimitive: any;
+  primitiveIndex: number;
+  gltfMesh: GLTFMeshPostprocessed;
+  gltf: GLTFPostprocessed;
+  gltfMaterialIdToMaterialMap: Map<string, Material>;
+  options: Required<ParseGLTFOptions>;
+};
+
 /** Creates a renderable model node for one glTF primitive. */
-function createNodeForGLTFPrimitive(
-  device: Device,
-  gltfPrimitive: any,
-  i: number,
-  gltfMesh: GLTFMeshPostprocessed,
-  options: Required<ParseGLTFOptions>
-): ModelNode {
-  const id = gltfPrimitive.name || `${gltfMesh.name || gltfMesh.id}-primitive-${i}`;
-  const topology = convertGLDrawModeToTopology(gltfPrimitive.mode || 4);
+function createNodeForGLTFPrimitive({
+  device,
+  gltfPrimitive,
+  primitiveIndex,
+  gltfMesh,
+  gltf,
+  gltfMaterialIdToMaterialMap,
+  options
+}: CreateNodeForGLTFPrimitiveOptions): ModelNode {
+  const id = gltfPrimitive.name || `${gltfMesh.name || gltfMesh.id}-primitive-${primitiveIndex}`;
+  const topology = convertGLDrawModeToTopology(gltfPrimitive.mode ?? 4);
   const vertexCount = gltfPrimitive.indices
     ? gltfPrimitive.indices.count
     : getVertexCount(gltfPrimitive.attributes);
 
   const geometry = createGeometry(id, gltfPrimitive, topology);
 
-  const parsedPPBRMaterial = parsePBRMaterial(
-    device,
-    gltfPrimitive.material,
-    geometry.attributes,
-    options
-  );
+  const parsedPPBRMaterial = parsePBRMaterial(device, gltfPrimitive.material, geometry.attributes, {
+    ...options,
+    gltf
+  });
 
   const modelNode = createGLTFModel(device, {
     id,
-    geometry: createGeometry(id, gltfPrimitive, topology),
+    geometry,
+    material: gltfPrimitive.material
+      ? gltfMaterialIdToMaterialMap.get(gltfPrimitive.material.id) || null
+      : null,
     parsedPPBRMaterial,
     modelOptions: options.modelOptions,
     vertexCount
@@ -184,22 +247,39 @@ function createNodeForGLTFPrimitive(
 
 /** Computes the vertex count for a primitive without indices. */
 function getVertexCount(attributes: any) {
-  throw new Error('getVertexCount not implemented');
+  let vertexCount = Infinity;
+  for (const attribute of Object.values(attributes)) {
+    if (attribute) {
+      const {value, size, components} = attribute as any;
+      const attributeSize = size ?? components;
+      if (value?.length !== undefined && attributeSize >= 1) {
+        vertexCount = Math.min(vertexCount, value.length / attributeSize);
+      }
+    }
+  }
+  if (!Number.isFinite(vertexCount)) {
+    throw new Error('Could not determine vertex count from attributes');
+  }
+  return vertexCount;
 }
 
 /** Converts glTF primitive attributes and indices into a luma.gl `Geometry`. */
 function createGeometry(id: string, gltfPrimitive: any, topology: PrimitiveTopology): Geometry {
   const attributes: Record<string, GeometryAttribute> = {};
   for (const [attributeName, attribute] of Object.entries(gltfPrimitive.attributes)) {
-    const {components, size, value} = attribute as GeometryAttribute;
+    const {components, size, value, normalized} = attribute as GeometryAttribute;
 
-    attributes[attributeName] = {size: size ?? components, value};
+    attributes[attributeName] = {size: size ?? components, value, normalized};
   }
 
   return new Geometry({
     id,
     topology,
-    indices: gltfPrimitive.indices.value,
+    indices: gltfPrimitive.indices?.value,
     attributes
   });
+}
+
+function getGLTFMaterialId(gltfMaterial: GLTFMaterialPostprocessed, materialIndex: number): string {
+  return gltfMaterial.name || gltfMaterial.id || `material-${materialIndex}`;
 }

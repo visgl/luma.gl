@@ -10,7 +10,7 @@ struct vignetteUniforms {
   amount: f32,
 };
 
-@group(0) @binding(1) var<uniform> vignette: vignetteUniforms;
+@group(0) @binding(auto) var<uniform> vignette: vignetteUniforms;
 
 fn vignette_filterColor_ext(color: vec4f, texSize: vec2f, texCoord: vec2f) -> vec4f {
   let dist = distance(texCoord, vec2f(0.5, 0.5));
@@ -24,7 +24,7 @@ fn vignette_filterColor_ext(color: vec4f, texSize: vec2f, texCoord: vec2f) -> ve
 `;
 
 const fs = /* glsl */ `\
-uniform vignetteUniforms {
+layout(std140) uniform vignetteUniforms {
   float radius;
   float amount;
 } vignette;

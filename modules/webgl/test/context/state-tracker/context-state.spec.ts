@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
 
 import type {TypedArray} from '@math.gl/types';
-import type {GLParameters} from '@luma.gl/constants';
-import {GL} from '@luma.gl/constants';
+import type {GLParameters} from '@luma.gl/webgl/constants';
+import {GL} from '@luma.gl/webgl/constants';
 
 import {
   getGLParameters,

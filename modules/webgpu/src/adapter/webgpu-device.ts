@@ -2,10 +2,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-// prettier-ignore
+// biome-ignore format: preserve layout
 // / <reference types="@webgpu/types" />
 
 import type {
+  Bindings,
+  ComputePipeline,
+  ComputeShaderLayout,
   DeviceInfo,
   DeviceLimits,
   DeviceFeature,
@@ -31,6 +34,8 @@ import type {
   DeviceProps,
   CommandEncoderProps,
   PipelineLayoutProps,
+  RenderPipeline,
+  ShaderLayout
 } from '@luma.gl/core';
 import {Device, DeviceFeatures} from '@luma.gl/core';
 import {WebGPUBuffer} from './resources/webgpu-buffer';
@@ -53,6 +58,7 @@ import {WebGPUFence} from './resources/webgpu-fence';
 
 import {getShaderLayoutFromWGSL} from '../wgsl/get-shader-layout-wgsl';
 import {generateMipmapsWebGPU} from './helpers/generate-mipmaps-webgpu';
+import {getBindGroup} from './helpers/get-bind-group';
 import {
   getCpuHotspotProfiler as getWebGPUCpuHotspotProfiler,
   getCpuHotspotSubmitReason as getWebGPUCpuHotspotSubmitReason,
@@ -122,10 +128,9 @@ export class WebGPUDevice extends Device {
     });
 
     // "Context" loss handling
-    this.lost = new Promise<{reason: 'destroyed'; message: string}>(async resolve => {
-      const lostInfo = await this.handle.lost;
+    this.lost = this.handle.lost.then(lostInfo => {
       this._isLost = true;
-      resolve({reason: 'destroyed', message: lostInfo.message});
+      return {reason: 'destroyed', message: lostInfo.message};
     });
 
     // Note: WebGPU devices can be created without a canvas, for compute shader purposes
@@ -240,26 +245,35 @@ export class WebGPUDevice extends Device {
     generateMipmapsWebGPU(this, texture);
   }
 
+  override _createBindGroupLayoutWebGPU(
+    pipeline: RenderPipeline | ComputePipeline,
+    group: number
+  ): GPUBindGroupLayout {
+    return (pipeline as WebGPURenderPipeline | WebGPUComputePipeline).handle.getBindGroupLayout(
+      group
+    );
+  }
+
+  override _createBindGroupWebGPU(
+    bindGroupLayout: unknown,
+    shaderLayout: ShaderLayout | ComputeShaderLayout,
+    bindings: Bindings,
+    group: number
+  ): GPUBindGroup | null {
+    if (Object.keys(bindings).length === 0) {
+      return this.handle.createBindGroup({
+        layout: bindGroupLayout as GPUBindGroupLayout,
+        entries: []
+      });
+    }
+
+    return getBindGroup(this, bindGroupLayout as GPUBindGroupLayout, shaderLayout, bindings, group);
+  }
+
   submit(commandBuffer?: WebGPUCommandBuffer): void {
     let submittedCommandEncoder: WebGPUCommandEncoder | null = null;
     if (!commandBuffer) {
-      submittedCommandEncoder = this.commandEncoder;
-      if (
-        submittedCommandEncoder.getTimeProfilingSlotCount() > 0 &&
-        submittedCommandEncoder.getTimeProfilingQuerySet() instanceof WebGPUQuerySet
-      ) {
-        const querySet = submittedCommandEncoder.getTimeProfilingQuerySet() as WebGPUQuerySet;
-        querySet._encodeResolveToReadBuffer(submittedCommandEncoder, {
-          firstQuery: 0,
-          queryCount: submittedCommandEncoder.getTimeProfilingSlotCount()
-        });
-      }
-      commandBuffer = submittedCommandEncoder.finish();
-      this.commandEncoder.destroy();
-      this.commandEncoder = this.createCommandEncoder({
-        id: submittedCommandEncoder.props.id,
-        timeProfilingQuerySet: submittedCommandEncoder.getTimeProfilingQuerySet()
-      });
+      ({submittedCommandEncoder, commandBuffer} = this._finalizeDefaultCommandEncoderForSubmit());
     }
 
     const profiler = getWebGPUCpuHotspotProfiler(this);
@@ -318,6 +332,32 @@ export class WebGPUDevice extends Device {
     }
   }
 
+  private _finalizeDefaultCommandEncoderForSubmit(): {
+    submittedCommandEncoder: WebGPUCommandEncoder;
+    commandBuffer: WebGPUCommandBuffer;
+  } {
+    const submittedCommandEncoder = this.commandEncoder;
+    if (
+      submittedCommandEncoder.getTimeProfilingSlotCount() > 0 &&
+      submittedCommandEncoder.getTimeProfilingQuerySet() instanceof WebGPUQuerySet
+    ) {
+      const querySet = submittedCommandEncoder.getTimeProfilingQuerySet() as WebGPUQuerySet;
+      querySet._encodeResolveToReadBuffer(submittedCommandEncoder, {
+        firstQuery: 0,
+        queryCount: submittedCommandEncoder.getTimeProfilingSlotCount()
+      });
+    }
+
+    const commandBuffer = submittedCommandEncoder.finish();
+    this.commandEncoder.destroy();
+    this.commandEncoder = this.createCommandEncoder({
+      id: submittedCommandEncoder.props.id,
+      timeProfilingQuerySet: submittedCommandEncoder.getTimeProfilingQuerySet()
+    });
+
+    return {submittedCommandEncoder, commandBuffer};
+  }
+
   // WebGPU specific
 
   pushErrorScope(scope: 'validation' | 'out-of-memory'): void {
@@ -339,11 +379,22 @@ export class WebGPUDevice extends Device {
     }
     const profiler = getWebGPUCpuHotspotProfiler(this);
     const startTime = profiler ? getTimestamp() : 0;
-    this.handle.popErrorScope().then((error: GPUError | null) => {
-      if (error) {
-        handler(error);
-      }
-    });
+    this.handle
+      .popErrorScope()
+      .then((error: GPUError | null) => {
+        if (error) {
+          handler(error);
+        }
+      })
+      .catch((error: unknown) => {
+        if (this.shouldIgnoreDroppedInstanceError(error, 'popErrorScope')) {
+          return;
+        }
+
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        this.reportError(new Error(`${this} popErrorScope failed: ${errorMessage}`), this)();
+        this.debug();
+      });
     if (profiler) {
       profiler.errorScopePopCount = (profiler.errorScopePopCount || 0) + 1;
       profiler.errorScopeTimeMs = (profiler.errorScopeTimeMs || 0) + (getTimestamp() - startTime);
@@ -359,11 +410,22 @@ export class WebGPUDevice extends Device {
     const vendor = this.adapterInfo.vendor || this.adapter.__brand || 'unknown';
     const renderer = driver || '';
     const version = driverVersion || '';
+    const fallback = Boolean(
+      (this.adapterInfo as any).isFallbackAdapter ??
+        (this.adapter as any).isFallbackAdapter ??
+        false
+    );
+    const softwareRenderer = /SwiftShader/i.test(
+      `${vendor} ${renderer} ${this.adapterInfo.architecture || ''}`
+    );
 
-    const gpu = vendor === 'apple' ? 'apple' : 'unknown'; // 'nvidia' | 'amd' | 'intel' | 'apple' | 'unknown',
+    const gpu =
+      vendor === 'apple' ? 'apple' : softwareRenderer || fallback ? 'software' : 'unknown'; // 'nvidia' | 'amd' | 'intel' | 'apple' | 'unknown',
     const gpuArchitecture = this.adapterInfo.architecture || 'unknown';
     const gpuBackend = (this.adapterInfo as any).backend || 'unknown';
-    const gpuType = ((this.adapterInfo as any).type || '').split(' ')[0].toLowerCase() || 'unknown';
+    const gpuType =
+      ((this.adapterInfo as any).type || '').split(' ')[0].toLowerCase() ||
+      (softwareRenderer || fallback ? 'cpu' : 'unknown');
 
     return {
       type: 'webgpu',
@@ -374,9 +436,22 @@ export class WebGPUDevice extends Device {
       gpuType,
       gpuBackend,
       gpuArchitecture,
+      fallback,
       shadingLanguage: 'wgsl',
       shadingLanguageVersion: 100
     };
+  }
+
+  shouldIgnoreDroppedInstanceError(error: unknown, operation?: string): boolean {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return (
+      errorMessage.includes('Instance dropped') &&
+      (!operation || errorMessage.includes(operation)) &&
+      (this._isLost ||
+        this.info.gpu === 'software' ||
+        this.info.gpuType === 'cpu' ||
+        Boolean(this.info.fallback))
+    );
   }
 
   protected _getFeatures(): DeviceFeatures {

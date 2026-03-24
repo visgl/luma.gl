@@ -11,7 +11,7 @@ struct dotScreenUniforms {
   size: f32,
 };
 
-@group(0) @binding(1) var<uniform> dotScreen: dotScreenUniforms;
+@group(0) @binding(auto) var<uniform> dotScreen: dotScreenUniforms;
 
 fn pattern(texSize: vec2f, texCoord: vec2f) -> f32 {
   let scale = 3.1415 / dotScreen.size;
@@ -32,7 +32,7 @@ fn dotScreen_filterColor_ext(color: vec4f, texSize: vec2f, texCoord: vec2f) -> v
 `;
 
 const fs = /* glsl */ `\
-uniform dotScreenUniforms {
+layout(std140) uniform dotScreenUniforms {
   vec2 center;
   float angle;
   float size;

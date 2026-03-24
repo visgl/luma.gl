@@ -7,14 +7,18 @@ import {
   installCpuHotspotProfilerApi,
   updateCpuHotspotProfilerTargets
 } from '../debug/luma-cpu-hotspot-profiler';
+import {getErrorMessage, logError} from '../utils/error-utils';
 
 const DEVICE_TYPE_STORAGE_KEY = 'luma-device-type';
 const DEFAULT_DEVICE_TYPE: 'webgl' | 'webgpu' = 'webgpu';
+const FALLBACK_DEVICE_TYPE_ORDER: ('webgpu' | 'webgl')[] = ['webgpu', 'webgl'];
+
+export type DeviceType = 'webgl' | 'webgpu';
 
 export type Store = {
   device?: Device;
   presentationDevice?: Device;
-  deviceType?: 'webgl' | 'webgpu';
+  deviceType?: DeviceType;
   deviceError?: any;
   presentationDeviceError?: any;
   setDeviceType: (type: any) => Promise<void>;
@@ -22,6 +26,7 @@ export type Store = {
 
 let cachedDevice: Record<string, Promise<Device>> = {};
 let cachedPresentationDevice: Record<string, Promise<Device>> = {};
+let cachedDeviceAvailability: Partial<Record<DeviceType, Promise<boolean>>> = {};
 let deviceRequestGeneration = 0;
 
 let cachedContainer: HTMLDivElement | undefined;
@@ -34,7 +39,7 @@ export function getCanvasContainer() {
   return cachedContainer;
 }
 
-export async function createDevice(type: 'webgl' | 'webgpu'): Promise<Device> {
+export async function createDevice(type: DeviceType): Promise<Device> {
   cachedDevice[type] =
     cachedDevice[type] ||
     luma.createDevice({
@@ -49,7 +54,7 @@ export async function createDevice(type: 'webgl' | 'webgpu'): Promise<Device> {
   return await cachedDevice[type];
 }
 
-export async function createPresentationDevice(type: 'webgl' | 'webgpu'): Promise<Device> {
+export async function createPresentationDevice(type: DeviceType): Promise<Device> {
   if (type === 'webgpu') {
     return await createDevice(type);
   }
@@ -76,7 +81,7 @@ export async function createPresentationDevice(type: 'webgl' | 'webgpu'): Promis
   return await cachedPresentationDevice[type];
 }
 
-function getStoredDeviceType(): 'webgl' | 'webgpu' | undefined {
+function getStoredDeviceType(): DeviceType | undefined {
   if (typeof window === 'undefined') {
     return undefined;
   }
@@ -85,6 +90,32 @@ function getStoredDeviceType(): 'webgl' | 'webgpu' | undefined {
   return storedDeviceType === 'webgl' || storedDeviceType === 'webgpu'
     ? storedDeviceType
     : undefined;
+}
+
+export async function canCreateDeviceType(type: DeviceType): Promise<boolean> {
+  cachedDeviceAvailability[type] ||= (async () => {
+    try {
+      await createDevice(type);
+      await createPresentationDevice(type);
+      return true;
+    } catch {
+      return false;
+    }
+  })();
+
+  return await cachedDeviceAvailability[type]!;
+}
+
+export async function getPreferredAvailableDeviceType(
+  preferredTypes: DeviceType[]
+): Promise<DeviceType | undefined> {
+  for (const deviceType of preferredTypes) {
+    if (await canCreateDeviceType(deviceType)) {
+      return deviceType;
+    }
+  }
+
+  return undefined;
 }
 
 export const useStore = create<Store>(set => ({
@@ -110,12 +141,14 @@ export const useStore = create<Store>(set => ({
     try {
       device = await createDevice(deviceType);
     } catch (error) {
-      deviceError = error.message;
+      deviceError = getErrorMessage(error);
+      logError(`Failed to create ${deviceType} device`, error);
     }
     try {
       presentationDevice = await createPresentationDevice(deviceType);
     } catch (error) {
-      presentationDeviceError = error.message;
+      presentationDeviceError = getErrorMessage(error);
+      logError(`Failed to create ${deviceType} presentation device`, error);
     }
     if (typeof window !== 'undefined') {
       window.localStorage.setItem(DEVICE_TYPE_STORAGE_KEY, deviceType);
@@ -138,5 +171,15 @@ export const useStore = create<Store>(set => ({
   }
 }));
 
-// Initialize store
-useStore.getState().setDeviceType(getStoredDeviceType() || DEFAULT_DEVICE_TYPE);
+async function initializeDeviceType(): Promise<void> {
+  const storedDeviceType = getStoredDeviceType();
+  const preferredDeviceTypes = [
+    ...(storedDeviceType ? [storedDeviceType] : []),
+    ...FALLBACK_DEVICE_TYPE_ORDER.filter(deviceType => deviceType !== storedDeviceType)
+  ];
+  const initialDeviceType =
+    (await getPreferredAvailableDeviceType(preferredDeviceTypes)) || DEFAULT_DEVICE_TYPE;
+  await useStore.getState().setDeviceType(initialDeviceType);
+}
+
+initializeDeviceType();

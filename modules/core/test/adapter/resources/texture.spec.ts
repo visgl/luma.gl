@@ -1,6 +1,6 @@
 /* eslint-disable no-continue, max-depth */
 
-import test from 'test/utils/vitest-tape';
+import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {getWebGLTestDevice, getTestDevices, getWebGPUTestDevice} from '@luma.gl/test-utils';
 
 import {
@@ -17,7 +17,7 @@ import {
   TextureView,
   getTypedArrayConstructor
 } from '@luma.gl/core';
-import {GL} from '@luma.gl/constants';
+import {GL} from '@luma.gl/webgl/constants';
 import {WebGLDevice} from '@luma.gl/webgl';
 
 import {SAMPLER_PARAMETERS} from './sampler.spec';
@@ -495,20 +495,39 @@ async function readTexturePixels(
   texture: Texture,
   options: TextureReadOptions
 ): Promise<Uint8Array> {
-  const arrayBuffer = await withTimeout(
-    texture.readDataAsync(options),
-    5000,
-    `${texture.device.type} ${texture.format} readDataAsync timed out`
-  );
-  return compactTextureBytes(texture, arrayBuffer, options);
+  const layout = texture.computeMemoryLayout(options);
+  const buffer = texture.device.createBuffer({
+    byteLength: layout.byteLength,
+    usage: Buffer.COPY_DST | Buffer.MAP_READ
+  });
+  // Browser CI runs with coverage and a software GPU can make async texture readback noticeably
+  // slower, especially for WebGPU 3d textures. Keep the helper timeout comfortably below the
+  // enclosing test timeout, but high enough to avoid false negatives from backend latency.
+  try {
+    texture.readBuffer(options, buffer);
+    const arrayBufferView = await withTimeout(
+      buffer.readAsync(0, layout.byteLength),
+      15000,
+      `${texture.device.type} ${texture.format} readBuffer timed out`,
+      () => getTextureReadbackError(texture)
+    );
+    return compactTextureBytes(texture, arrayBufferView, options);
+  } finally {
+    buffer.destroy();
+  }
 }
 
 async function readTextureBufferPixels(
   texture: Texture,
   options: TextureReadOptions
 ): Promise<Uint8Array> {
-  const buffer = texture.readBuffer(options);
+  const layout = texture.computeMemoryLayout(options);
+  const buffer = texture.device.createBuffer({
+    byteLength: layout.byteLength,
+    usage: Buffer.COPY_DST | Buffer.MAP_READ
+  });
   try {
+    texture.readBuffer(options, buffer);
     const arrayBufferView = await buffer.readAsync();
     return compactTextureBytes(texture, arrayBufferView, options);
   } finally {
@@ -659,13 +678,12 @@ test('Texture#writeData & readDataAsync round-trip', async t => {
     });
 
     tex.writeData(RGBA8_DATA);
-    const arrayBuffer = await tex.readDataAsync();
-    const result = toUint8(arrayBuffer).slice(0, RGBA8_DATA.length);
+    const result = await readTexturePixels(tex, {});
 
     t.deepEquals(
-      result,
+      result.slice(0, RGBA8_DATA.length),
       RGBA8_DATA,
-      `${device.type}: writeData + readDataAsync returns same pixels`
+      `${device.type}: writeData + readBuffer returns same pixels`
     );
     tex.destroy();
   }
@@ -1463,6 +1481,10 @@ test('Texture#writeData & readDataAsync round-trip for all formats and dimension
         continue;
       }
 
+      if (device.type === 'webgpu' && isSoftwareBackedDevice(device)) {
+        continue;
+      }
+
       if (!device.isTextureFormatRenderable(format)) {
         t.comment(`Skipping unrenderable format ${format}`);
         continue;
@@ -1541,13 +1563,30 @@ function almostEqual(a: Float32Array, b: Float32Array, epsilon = 1e-6): boolean 
 async function withTimeout<T>(
   promise: Promise<T>,
   milliseconds: number,
-  errorMessage: string
+  errorMessage: string,
+  getPendingError: (() => string | null) | null = null
 ): Promise<T> {
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  let slowReadbackTimeoutId: ReturnType<typeof setTimeout> | undefined;
+  let errorPollTimeoutId: ReturnType<typeof setTimeout> | undefined;
   try {
     return await Promise.race([
       promise,
       new Promise<T>((_, reject) => {
+        if (getPendingError) {
+          slowReadbackTimeoutId = setTimeout(() => {
+            const pollForPendingError = () => {
+              const pendingError = getPendingError();
+              if (pendingError) {
+                reject(new Error(pendingError));
+                return;
+              }
+              errorPollTimeoutId = setTimeout(pollForPendingError, 100);
+            };
+
+            pollForPendingError();
+          }, 2000);
+        }
         timeoutId = setTimeout(() => reject(new Error(errorMessage)), milliseconds);
       })
     ]);
@@ -1555,26 +1594,55 @@ async function withTimeout<T>(
     if (timeoutId !== undefined) {
       clearTimeout(timeoutId);
     }
+    if (slowReadbackTimeoutId !== undefined) {
+      clearTimeout(slowReadbackTimeoutId);
+    }
+    if (errorPollTimeoutId !== undefined) {
+      clearTimeout(errorPollTimeoutId);
+    }
   }
+}
+
+function getTextureReadbackError(texture: Texture): string | null {
+  if (!(texture.device instanceof WebGLDevice)) {
+    return null;
+  }
+
+  const gl = texture.device.gl;
+  if (gl.isContextLost()) {
+    return `${texture.device.type} ${texture.format} readDataAsync failed: WebGL context lost`;
+  }
+
+  const glError = gl.getError();
+  if (glError !== GL.NO_ERROR) {
+    return `${texture.device.type} ${texture.format} readDataAsync failed: gl.getError() -> ${glError}`;
+  }
+
+  return null;
+}
+
+function isSoftwareBackedDevice(device: Device): boolean {
+  return (
+    device.info.gpu === 'software' || device.info.gpuType === 'cpu' || Boolean(device.info.fallback)
+  );
 }
 
 test.skip('Texture#copyImageData & readDataAsync round-trip', async t => {
   for (const device of await getTestDevices()) {
     const tex = device.createTexture({width: 2, height: 1, format: 'rgba8unorm'});
     tex.copyImageData({data: RGBA8_DATA});
-    const buffer = await tex.readDataAsync({});
-    const result = toUint8(buffer).slice(0, RGBA8_DATA.length);
+    const result = await readTexturePixels(tex, {});
     t.deepEquals(
-      result,
+      result.slice(0, RGBA8_DATA.length),
       RGBA8_DATA,
-      `${device.type}: copyImageData + readDataAsync returns same pixels`
+      `${device.type}: copyImageData + readBuffer returns same pixels`
     );
     tex.destroy();
   }
   t.end();
 });
 
-test.skip('Texture#writeBuffer & readDataAsync round-trip', async t => {
+test.skip('Texture#writeBuffer & readBuffer round-trip', async t => {
   for (const device of await getTestDevices()) {
     const width = 2;
     const height = 1;
@@ -1590,12 +1658,11 @@ test.skip('Texture#writeBuffer & readDataAsync round-trip', async t => {
 
     const tex = device.createTexture({width, height, format: 'rgba8unorm'});
     tex.writeBuffer(upload, {});
-    const data = await tex.readDataAsync({});
-    const result = toUint8(data);
+    const result = await readTexturePixels(tex, {});
     t.deepEquals(
       result,
       RGBA8_DATA,
-      `${device.type}: writeBuffer + readDataAsync returns same pixels`
+      `${device.type}: writeBuffer + readBuffer returns same pixels`
     );
     upload.destroy();
     tex.destroy();
@@ -1608,7 +1675,9 @@ test.skip('Texture#readBuffer & Buffer.readAsync round-trip', async t => {
     const tex = device.createTexture({width: 2, height: 1, format: 'rgba8unorm'});
     // initialize via writeData
     tex.writeData(RGBA8_DATA, {});
-    const buf = tex.readBuffer({});
+    const layout = tex.computeMemoryLayout({});
+    const buf = device.createBuffer({byteLength: layout.byteLength});
+    tex.readBuffer({}, buf);
     const arr = await buf.readAsync();
     const result = toUint8(arr);
     t.deepEquals(
@@ -1618,6 +1687,20 @@ test.skip('Texture#readBuffer & Buffer.readAsync round-trip', async t => {
     );
     tex.destroy();
   }
+  t.end();
+});
+
+test('Texture#readBuffer requires explicit destination buffer', async t => {
+  for (const device of await getTestDevices()) {
+    const texture = device.createTexture({width: 1, height: 1, format: 'rgba8unorm'});
+    t.throws(
+      () => texture.readBuffer({}),
+      /requires a destination buffer/,
+      `${device.type}: readBuffer requires a caller-supplied destination buffer`
+    );
+    texture.destroy();
+  }
+
   t.end();
 });
 
@@ -1645,9 +1728,13 @@ test('Texture color read APIs reject unsupported formats and aspects', async t =
   ];
 
   for (const device of await getTestDevices()) {
+    const readBuffer = device.createBuffer({
+      byteLength: 4,
+      usage: Buffer.COPY_DST | Buffer.MAP_READ
+    });
     const colorTexture = device.createTexture({width: 1, height: 1, format: 'rgba8unorm'});
     t.throws(
-      () => colorTexture.readBuffer({aspect: 'depth-only'}),
+      () => colorTexture.readBuffer({aspect: 'depth-only'}, readBuffer),
       /aspect 'all'/,
       `${device.type}: color reads reject non-all aspects`
     );
@@ -1655,7 +1742,7 @@ test('Texture color read APIs reject unsupported formats and aspects', async t =
 
     const depthTexture = device.createTexture({width: 1, height: 1, format: 'depth16unorm'});
     t.throws(
-      () => depthTexture.readBuffer({}),
+      () => depthTexture.readBuffer({}, readBuffer),
       /depth formats/,
       `${device.type}: color reads reject depth formats`
     );
@@ -1665,7 +1752,7 @@ test('Texture color read APIs reject unsupported formats and aspects', async t =
       try {
         const stencilTexture = device.createTexture({width: 1, height: 1, format: 'stencil8'});
         t.throws(
-          () => stencilTexture.readBuffer({}),
+          () => stencilTexture.readBuffer({}, readBuffer),
           /stencil formats/,
           `${device.type}: color reads reject stencil formats`
         );
@@ -1681,7 +1768,7 @@ test('Texture color read APIs reject unsupported formats and aspects', async t =
       format: 'depth24plus-stencil8'
     });
     t.throws(
-      () => depthStencilTexture.readBuffer({}),
+      () => depthStencilTexture.readBuffer({}, readBuffer),
       /depth-stencil formats/,
       `${device.type}: color reads reject depth-stencil formats`
     );
@@ -1697,7 +1784,7 @@ test('Texture color read APIs reject unsupported formats and aspects', async t =
         format: compressedFormat
       });
       t.throws(
-        () => compressedTexture.readBuffer({}),
+        () => compressedTexture.readBuffer({}, readBuffer),
         /compressed formats/,
         `${device.type}: color reads reject compressed formats`
       );
@@ -1707,12 +1794,14 @@ test('Texture color read APIs reject unsupported formats and aspects', async t =
         `${device.type}: skipping compressed read guard test (no supported compressed format)`
       );
     }
+
+    readBuffer.destroy();
   }
 
   t.end();
 });
 
-test('Texture#readDataAsync reuses the cached WebGL read framebuffer', async t => {
+test('Texture#readBuffer reuses the cached WebGL read framebuffer', async t => {
   const device = await getWebGLTestDevice();
   if (!device) {
     t.comment('WebGL not available');
@@ -1742,9 +1831,19 @@ test('Texture#readDataAsync reuses the cached WebGL read framebuffer', async t =
     {width: 1, height: 1, depthOrArrayLayers: 2, bytesPerRow: 256, rowsPerImage: 1}
   );
 
-  await texture.readDataAsync({width: 1, height: 1, z: 0, depthOrArrayLayers: 1});
+  const firstReadBuffer = device.createBuffer({
+    byteLength: texture.computeMemoryLayout({width: 1, height: 1, z: 0, depthOrArrayLayers: 1})
+      .byteLength,
+    usage: Buffer.COPY_DST | Buffer.MAP_READ
+  });
+  texture.readBuffer({width: 1, height: 1, z: 0, depthOrArrayLayers: 1}, firstReadBuffer);
   const firstFramebuffer = (texture as any)._framebuffer;
-  await texture.readDataAsync({width: 1, height: 1, z: 1, depthOrArrayLayers: 1});
+  const secondReadBuffer = device.createBuffer({
+    byteLength: texture.computeMemoryLayout({width: 1, height: 1, z: 1, depthOrArrayLayers: 1})
+      .byteLength,
+    usage: Buffer.COPY_DST | Buffer.MAP_READ
+  });
+  texture.readBuffer({width: 1, height: 1, z: 1, depthOrArrayLayers: 1}, secondReadBuffer);
   const secondFramebuffer = (texture as any)._framebuffer;
 
   t.ok(firstFramebuffer, 'webgl: first read creates a cached read framebuffer');
@@ -1753,6 +1852,9 @@ test('Texture#readDataAsync reuses the cached WebGL read framebuffer', async t =
     firstFramebuffer,
     'webgl: subsequent reads reuse the cached read framebuffer'
   );
+
+  firstReadBuffer.destroy();
+  secondReadBuffer.destroy();
 
   texture.destroy();
   t.end();

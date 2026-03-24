@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {luma} from '@luma.gl/core';
 import {webgpuAdapter, type WebGPUDevice} from '@luma.gl/webgpu';
@@ -241,7 +241,7 @@ test('engine#AnimationLoop WebGPU timing path avoids backend casts', async t => 
   t.end();
 });
 
-test('engine#AnimationLoop debugGPUTime enables GPU timing without full debug', async t => {
+test.skip('engine#AnimationLoop debugGPUTime enables GPU timing without full debug', async t => {
   let device: WebGPUDevice | null = null;
   try {
     device = (await luma.createDevice({

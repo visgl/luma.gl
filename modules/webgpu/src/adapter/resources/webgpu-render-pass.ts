@@ -3,8 +3,8 @@
 // Copyright (c) vis.gl contributors
 
 import type {TypedArray, NumberArray4} from '@math.gl/types';
-import type {RenderPassProps, RenderPassParameters, Binding} from '@luma.gl/core';
-import {Buffer, RenderPass, RenderPipeline, log} from '@luma.gl/core';
+import type {RenderPassProps, RenderPassParameters, Bindings, BindingsByGroup} from '@luma.gl/core';
+import {Buffer, RenderPass, RenderPipeline, _getDefaultBindGroupFactory, log} from '@luma.gl/core';
 import {WebGPUDevice} from '../webgpu-device';
 import {WebGPUBuffer} from './webgpu-buffer';
 // import {WebGPUCommandEncoder} from './webgpu-command-encoder';
@@ -22,9 +22,13 @@ export class WebGPURenderPass extends RenderPass {
   pipeline: WebGPURenderPipeline | null = null;
 
   /** Latest bindings applied to this pass */
-  bindings: Record<string, Binding> = {};
+  bindings: Bindings | BindingsByGroup = {};
 
-  constructor(device: WebGPUDevice, props: RenderPassProps = {}) {
+  constructor(
+    device: WebGPUDevice,
+    props: RenderPassProps = {},
+    commandEncoder: GPUCommandEncoder = device.commandEncoder.handle
+  ) {
     super(device, props);
     this.device = device;
     const {props: renderPassProps} = this;
@@ -72,14 +76,9 @@ export class WebGPURenderPass extends RenderPass {
           (getTimestamp() - descriptorAssemblyStartTime);
       }
 
-      if (!device.commandEncoder) {
-        throw new Error('commandEncoder not available');
-      }
-
       this.device.pushErrorScope('validation');
       const beginRenderPassStartTime = profiler ? getTimestamp() : 0;
-      this.handle =
-        this.props.handle || device.commandEncoder.handle.beginRenderPass(renderPassDescriptor);
+      this.handle = this.props.handle || commandEncoder.beginRenderPass(renderPassDescriptor);
       if (profiler) {
         profiler.renderPassBeginCount = (profiler.renderPassBeginCount || 0) + 1;
         profiler.renderPassBeginTimeMs =
@@ -125,11 +124,16 @@ export class WebGPURenderPass extends RenderPass {
   }
 
   /** Sets an array of bindings (uniform buffers, samplers, textures, ...) */
-  setBindings(bindings: Record<string, Binding>): void {
+  setBindings(bindings: Bindings | BindingsByGroup): void {
     this.bindings = bindings;
-    const bindGroup = this.pipeline?._getBindGroup(bindings);
-    if (bindGroup) {
-      this.handle.setBindGroup(0, bindGroup);
+    const bindGroups =
+      (this.pipeline &&
+        _getDefaultBindGroupFactory(this.device).getBindGroups(this.pipeline, bindings)) ||
+      {};
+    for (const [group, bindGroup] of Object.entries(bindGroups)) {
+      if (bindGroup) {
+        this.handle.setBindGroup(Number(group), bindGroup as GPUBindGroup);
+      }
     }
   }
 

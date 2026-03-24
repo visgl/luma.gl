@@ -8,6 +8,7 @@ import {
   clearActiveCpuHotspotProfilerDevice,
   setActiveCpuHotspotProfilerDevice
 } from '../debug/luma-cpu-hotspot-profiler';
+import {logError} from '../utils/error-utils';
 
 // import {VRDisplay} from '@luma.gl/experimental';
 import {getCanvasContainer, useStore} from '../store/device-store';
@@ -635,7 +636,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
 
     currentTask.current = Promise.resolve(currentTask.current).then(() => {
       asyncCreateLoop().catch(error => {
-        console.error(`start ${deviceType} failed`, error);
+        logError(`Example startup failed for ${deviceType}`, error);
       });
     });
 
@@ -672,7 +673,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
           getCanvasContainer().appendChild(deviceCanvas);
         })
         .catch(error => {
-          console.error(`unmounting ${deviceType} failed`, error);
+          logError(`Example cleanup failed for ${deviceType}`, error);
         });
     };
   }, [deviceType, device, showStats, props.template, props.directory, props.id]);

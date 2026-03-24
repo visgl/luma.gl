@@ -50,7 +50,7 @@ export type PickingUniforms = {
 };
 
 const vs = /* glsl */ `\
-uniform pickingUniforms {
+layout(std140) uniform pickingUniforms {
   float isActive;
   float isAttribute;
   float isHighlightActive;
@@ -124,7 +124,7 @@ void picking_setPickingAttribute(vec3 value) {
 `;
 
 const fs = /* glsl */ `\
-uniform pickingUniforms {
+layout(std140) uniform pickingUniforms {
   float isActive;
   float isAttribute;
   float isHighlightActive;
@@ -183,6 +183,9 @@ vec4 picking_filterColor(vec4 color) {
 `;
 
 /**
+ * Deprecated legacy picking module retained for compatibility with existing
+ * shadertools users such as deck.gl. Keep the shader contract stable.
+ *
  * Provides support for color-coding-based picking and highlighting.
  * In particular, supports picking a specific instance in an instanced
  * draw call and highlighting an instance based on its picking color,

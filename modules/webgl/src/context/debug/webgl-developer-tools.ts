@@ -4,7 +4,7 @@
 
 import {log} from '@luma.gl/core';
 // Rename constant to prevent inlining. We need the full set of constants for generating debug strings.
-import {GL as GLEnum} from '@luma.gl/constants';
+import {GL as GLEnum} from '@luma.gl/webgl/constants';
 import {isBrowser} from '@probe.gl/env';
 import {loadScript} from '../../utils/load-script';
 
@@ -139,7 +139,8 @@ function onGLError(
     'color: white; background: red; padding: 2px 6px; border-radius: 3px;',
     message
   )();
-  debugger; // eslint-disable-line
+  // biome-ignore lint/suspicious/noDebugger: pause immediately on WebGL debug utility errors.
+  debugger;
   throw new Error(message);
 }
 
@@ -163,7 +164,8 @@ function onValidateGLFunc(
   for (const arg of functionArgs) {
     if (arg === undefined) {
       functionString = functionString || getFunctionString(functionName, functionArgs);
-      debugger; // eslint-disable-line
+      // biome-ignore lint/suspicious/noDebugger: pause when validating undefined WebGL call arguments.
+      debugger;
       // throw new Error(`Undefined argument: ${functionString}`);
     }
   }

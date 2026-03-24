@@ -10,7 +10,7 @@ struct hexagonalPixelateUniforms {
   scale: f32,
 };
 
-@group(0) @binding(1) var<uniform> hexagonalPixelate: hexagonalPixelateUniforms;
+@group(0) @binding(auto) var<uniform> hexagonalPixelate: hexagonalPixelateUniforms;
 
 fn hexagonalPixelate_sampleColor(
   sourceTexture: texture_2d<f32>,
@@ -64,7 +64,7 @@ fn hexagonalPixelate_sampleColor(
 `;
 
 const fs = /* glsl */ `\
-uniform hexagonalPixelateUniforms {
+layout(std140) uniform hexagonalPixelateUniforms {
   vec2 center;
   float scale;
 } hexagonalPixelate;

@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import {Buffer} from '@luma.gl/core';
+import {Buffer, Device} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 
 const source = /* WGSL*/ `\
@@ -34,6 +34,12 @@ test('Computation#construct/delete', async t => {
 test('Computation#compute', async t => {
   const webgpuDevice = await getWebGPUTestDevice();
   if (webgpuDevice) {
+    if (isSoftwareBackedDevice(webgpuDevice)) {
+      t.comment('Skipping WebGPU compute test on a software-backed adapter');
+      t.end();
+      return;
+    }
+
     const computation = new Computation(webgpuDevice, {
       source,
       shaderLayout: {
@@ -66,3 +72,9 @@ test('Computation#compute', async t => {
   }
   t.end();
 });
+
+function isSoftwareBackedDevice(device: Device): boolean {
+  return (
+    device.info.gpu === 'software' || device.info.gpuType === 'cpu' || Boolean(device.info.fallback)
+  );
+}

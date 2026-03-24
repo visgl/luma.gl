@@ -8,20 +8,20 @@ import {
   type CopyBufferToTextureOptions,
   type CopyTextureToBufferOptions,
   type CopyTextureToTextureOptions,
+  type TextureReadOptions,
   // type ClearTextureOptions,
-  // type TextureReadOptions
   CommandBuffer,
   Texture,
   Framebuffer,
   assertDefined
 } from '@luma.gl/core';
-import {GL, type GLTextureTarget, type GLTextureCubeMapTarget} from '@luma.gl/constants';
+import {GL, type GLTextureTarget, type GLTextureCubeMapTarget} from '@luma.gl/webgl/constants';
 
+import {getTextureFormatWebGL} from '../converters/webgl-texture-table';
 import {WebGLDevice} from '../webgl-device';
 import {WEBGLBuffer} from './webgl-buffer';
 import {WEBGLTexture} from './webgl-texture';
 import {WEBGLFramebuffer} from './webgl-framebuffer';
-import {getTextureFormatWebGL} from '../converters/webgl-texture-table';
 
 type CopyBufferToBufferCommand = {
   name: 'copy-buffer-to-buffer';
@@ -119,8 +119,8 @@ function _copyBufferToBuffer(device: WebGLDevice, options: CopyBufferToBufferOpt
  * Copies data from a Buffer object into a Texture object
  * NOTE: doesn't wait for copy to be complete
  */
-function _copyBufferToTexture(device: WebGLDevice, options: CopyBufferToTextureOptions): void {
-  throw new Error('Not implemented');
+function _copyBufferToTexture(_device: WebGLDevice, _options: CopyBufferToTextureOptions): void {
+  throw new Error('copyBufferToTexture is not supported in WebGL');
 }
 
 /**
@@ -129,37 +129,36 @@ function _copyBufferToTexture(device: WebGLDevice, options: CopyBufferToTextureO
  */
 function _copyTextureToBuffer(device: WebGLDevice, options: CopyTextureToBufferOptions): void {
   const {
-    /** Texture to copy to/from. */
     sourceTexture,
-    /**  Mip-map level of the texture to copy to/from. (Default 0) */
     mipLevel = 0,
-    /** Defines which aspects of the texture to copy to/from. */
     aspect = 'all',
-
-    /** Width to copy */
     width = options.sourceTexture.width,
-    /** Height to copy */
     height = options.sourceTexture.height,
-    depthOrArrayLayers = 0,
-    /** Defines the origin of the copy - the minimum corner of the texture sub-region to copy to/from. */
+    depthOrArrayLayers,
     origin = [0, 0, 0],
-
-    /** Destination buffer */
     destinationBuffer,
-    /** Offset, in bytes, from the beginning of the buffer to the start of the image data (default 0) */
     byteOffset = 0,
-    /**
-     * The stride, in bytes, between the beginning of each block row and the subsequent block row.
-     * Required if there are multiple block rows (i.e. the copy height or depth is more than one block).
-     */
     bytesPerRow,
-    /**
-     * Number of block rows per single image of the texture.
-     * rowsPerImage &times; bytesPerRow is the stride, in bytes, between the beginning of each image of data and the subsequent image.
-     * Required if there are multiple images (i.e. the copy depth is more than one).
-     */
     rowsPerImage
   } = options;
+
+  if (sourceTexture instanceof Texture) {
+    sourceTexture.readBuffer(
+      {
+        x: origin[0] ?? 0,
+        y: origin[1] ?? 0,
+        z: origin[2] ?? 0,
+        width,
+        height,
+        depthOrArrayLayers,
+        mipLevel,
+        aspect,
+        byteOffset
+      } as TextureReadOptions & {byteOffset?: number},
+      destinationBuffer
+    );
+    return;
+  }
 
   // TODO - Not possible to read just stencil or depth part in WebGL?
   if (aspect !== 'all') {
@@ -167,7 +166,7 @@ function _copyTextureToBuffer(device: WebGLDevice, options: CopyTextureToBufferO
   }
 
   // TODO - mipLevels are set when attaching texture to framebuffer
-  if (mipLevel !== 0 || depthOrArrayLayers !== 0 || bytesPerRow || rowsPerImage) {
+  if (mipLevel !== 0 || depthOrArrayLayers !== undefined || bytesPerRow || rowsPerImage) {
     throw new Error('not implemented');
   }
 
@@ -346,10 +345,10 @@ function _clearTexture(device: WebGLDevice, options: ClearTextureOptions) {
     case '2d-array':
     case '3d':
       if (compressed) {
-        // prettier-ignore
+        // biome-ignore format: preserve layout
         device.gl.compressedTexImage3D(glTarget, mipLevel, glInternalFormat, width, height, depth, BORDER, null);
       } else {
-        // prettier-ignore
+        // biome-ignore format: preserve layout
         device.gl.texImage3D( glTarget, mipLevel, glInternalFormat, width, height, depth, BORDER, glFormat, glType, null);
       }
       break;
@@ -357,10 +356,10 @@ function _clearTexture(device: WebGLDevice, options: ClearTextureOptions) {
     case '2d':
     case 'cube':
       if (compressed) {
-        // prettier-ignore
+        // biome-ignore format: preserve layout
         device.gl.compressedTexImage2D(glTarget, mipLevel, glInternalFormat, width, height, BORDER, null);
       } else {
-        // prettier-ignore
+        // biome-ignore format: preserve layout
         device.gl.texImage2D(glTarget, mipLevel, glInternalFormat, width, height, BORDER, glFormat, glType, null);
       }
       break;

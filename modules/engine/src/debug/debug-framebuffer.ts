@@ -83,7 +83,7 @@ function flushDebugFramebuffers(
         minimap: options.minimap
       });
 
-      gl.bindFramebuffer(gl.READ_FRAMEBUFFER, framebuffer.handle);
+      gl.bindFramebuffer(gl.READ_FRAMEBUFFER, framebuffer.handle as WebGLFramebuffer | null);
       gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null);
       gl.blitFramebuffer(
         0,

@@ -2,6 +2,35 @@
 
 ## v9.3
 
+### v9.3.0-alpha.10
+
+- Improve shader block layouts (#2564)
+
+### v9.3.0-alpha.9
+
+- fix: GLSL parser supports precision specifiers (#2563)
+
+### v9.3.0-alpha.8
+
+- chore: Update release workflow (#2562)
+
+### v9.3.0-alpha.7
+
+- feat(engine): add async texture buffer read (#2439)
+- feat(gltf) Implement glTF material extensions (#2559)
+- chore(constants): Deprecate constants module in favor of @webgl/constants (#2558)
+- feat(core, webgpu): Support WebGPU bind groups and WGSL `auto` binding syntax (#2560)
+- chore: Single yarn workspace including website (#2561)
+- feat(devtool); Enable LLMs to automatically test website, package for devtools upstream (#2557)
+- chore: Revive skipped tests (#2556)
+- ib/remove-unused-files-and-functions
+- fix(engine): Include attachments in pipeline hash keys (#2553)
+- chore: Run tests on src instead of dist (#2555)
+- docs: website nits (#2551)
+- chore: Migrate to vitest (#2554)
+- chore(core) composite shadertypes (structs, arrays), lighting module improvements (#2395)
+- feat(shadertools) Port fp64 module to WGSL, fp64 example (#2549)
+
 ### v9.3.0-alpha.6
 
 - chore: Enable corepack in release workflow

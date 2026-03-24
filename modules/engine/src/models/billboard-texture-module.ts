@@ -7,7 +7,7 @@ import {ShaderModule} from '@luma.gl/shadertools';
 const BACKGROUND_FS = /* glsl */ `\
 #version 300 es
 
-uniform billboardTextureUniforms {
+layout(std140) uniform billboardTextureUniforms {
   vec2 topLeft;
   vec2 bottomRight;
 } billboardTexture;

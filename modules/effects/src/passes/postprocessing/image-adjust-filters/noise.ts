@@ -9,7 +9,7 @@ struct noiseUniforms {
   amount: f32,
 };
 
-@group(0) @binding(1) var<uniform> noise: noiseUniforms;
+@group(0) @binding(auto) var<uniform> noise: noiseUniforms;
 
 fn rand(co: vec2f) -> f32 {
 	return fract(sin(dot(co.xy, vec2f(12.9898, 78.233))) * 43758.547);
@@ -26,7 +26,7 @@ fn noise_filterColor_ext(color: vec4f, texSize: vec2f, texCoord: vec2f) -> vec4f
 `;
 
 const fs = /* glsl */ `\
-uniform noiseUniforms {
+layout(std140) uniform noiseUniforms {
   float amount;
 } noise;
 

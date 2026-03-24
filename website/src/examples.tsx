@@ -13,6 +13,7 @@ import initializeExternalWebGLContext, {
   ExternalWebGLContextHandle
 } from '../../examples/integrations/external-context/app';
 import HelloReactApp from '../../examples/integrations/hello-react/app';
+import {getErrorMessage, logError} from './react-luma/utils/error-utils';
 
 // import PerformanceApp from '../../examples/performance/stress-test/app';
 
@@ -44,6 +45,7 @@ const exampleConfig = {};
 export const GLTFExample: React.FC = props => (
   <LumaExample
     id="gltf"
+    title="glTF"
     directory="showcase"
     template={GLTFApp}
     config={exampleConfig}
@@ -194,7 +196,8 @@ export const ExternalContextExample: React.FC = () => {
         exampleHandle = instance;
       })
       .catch(caughtError => {
-        setError(caughtError.message);
+        logError('External WebGL context example failed', caughtError);
+        setError(getErrorMessage(caughtError));
       });
 
     return () => {

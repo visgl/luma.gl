@@ -68,7 +68,7 @@ export function getTextureFormatTable(): Readonly<Record<TextureFormat, TextureF
   return TEXTURE_FORMAT_TABLE;
 }
 
-// prettier-ignore
+// biome-ignore format: preserve layout
 const TEXTURE_FORMAT_COLOR_DEPTH_TABLE: Readonly<Record<TextureFormatColorUncompressed | TextureFormatDepthStencil, TextureFormatDefinition>> = {
   // 8-bit formats
   'r8unorm': {},
@@ -153,7 +153,7 @@ const TEXTURE_FORMAT_COLOR_DEPTH_TABLE: Readonly<Record<TextureFormatColorUncomp
   'depth32float-stencil8': {attachment: 'depth-stencil', bitsPerChannel: [32, 8, 0, 0], packed: true},
 };
 
-// prettier-ignore
+// biome-ignore format: preserve layout
 const TEXTURE_FORMAT_COMPRESSED_TABLE: Readonly<Record<TextureFormatCompressed, TextureFormatDefinition>> = {
 
   // BC compressed formats: check device.features.has("texture-compression-bc");

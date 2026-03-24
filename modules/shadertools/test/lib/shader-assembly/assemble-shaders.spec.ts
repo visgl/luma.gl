@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {Device} from '@luma.gl/core';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
 import {
@@ -231,6 +231,7 @@ const VS_GLSL_300_GLTF = /* glsl */ `\
     vec4 _NORMAL = vec4(0.);
     vec4 _TANGENT = vec4(0.);
     vec2 _TEXCOORD_0 = vec2(0.);
+    vec2 _TEXCOORD_1 = vec2(0.);
 
     #ifdef HAS_NORMALS
       _NORMAL = NORMAL;
@@ -244,7 +245,7 @@ const VS_GLSL_300_GLTF = /* glsl */ `\
       _TEXCOORD_0 = TEXCOORD_0;
     #endif
 
-    pbr_setPositionNormalTangentUV(POSITION, _NORMAL, _TANGENT, _TEXCOORD_0);
+    pbr_setPositionNormalTangentUV(POSITION, _NORMAL, _TANGENT, _TEXCOORD_0, _TEXCOORD_1);
     gl_Position = u_MVPMatrix * POSITION;
   }
 `;
@@ -297,6 +298,24 @@ void main(void) {
 }
 `;
 
+const STATIC_PLATFORM_INFO: PlatformInfo = {
+  type: 'webgl',
+  gpu: 'test-gpu',
+  shaderLanguage: 'glsl',
+  shaderLanguageVersion: 300,
+  features: new Set()
+};
+
+function createTestLog() {
+  return {
+    warnCalled: [] as unknown[][],
+    warn(...args: unknown[]) {
+      this.warnCalled.push(args);
+      return () => {};
+    }
+  };
+}
+
 test('assembleGLSLShaderPair#import', async t => {
   t.ok(assembleGLSLShaderPair !== undefined, 'assembleGLSLShaderPair import successful');
   t.end();
@@ -322,6 +341,128 @@ test('assembleGLSLShaderPair#version_directive', async t => {
     0,
     'version directive should be first statement'
   );
+  t.end();
+});
+
+test('assembleGLSLShaderPair#warns on non-std140 app-authored uniform blocks', t => {
+  const log = createTestLog();
+  const vs = `\
+#version 300 es
+uniform AppBlock {
+  float opacity;
+  vec2 offsets;
+} appBlock;
+in vec4 positions;
+void main(void) {
+  gl_Position = positions;
+}
+`;
+
+  assembleGLSLShaderPair({
+    platformInfo: STATIC_PLATFORM_INFO,
+    vs,
+    fs: FS_GLSL_300,
+    log
+  });
+
+  t.equal(log.warnCalled.length, 1, 'warns once for the non-std140 block');
+  t.ok(
+    String(log.warnCalled[0][0]).includes('vertex shader uniform block AppBlock'),
+    'warning includes stage and block name'
+  );
+  t.ok(
+    String(log.warnCalled[0][0]).includes('layout(std140)'),
+    'warning recommends explicit std140'
+  );
+
+  t.end();
+});
+
+test('assembleGLSLShaderPair#does not warn for explicit std140 uniform blocks', t => {
+  const log = createTestLog();
+  const vs = `\
+#version 300 es
+layout(std140) uniform AppBlock {
+  float opacity;
+} appBlock;
+in vec4 positions;
+void main(void) {
+  gl_Position = positions;
+}
+`;
+
+  assembleGLSLShaderPair({
+    platformInfo: STATIC_PLATFORM_INFO,
+    vs,
+    fs: FS_GLSL_300,
+    log
+  });
+
+  t.equal(log.warnCalled.length, 0, 'does not warn for explicit std140');
+  t.end();
+});
+
+test('assembleGLSLShaderPair#warns on handwritten module GLSL uniform blocks without std140', t => {
+  const log = createTestLog();
+  const moduleWithDefaultBlock = {
+    name: 'module-default-block',
+    uniformTypes: {
+      opacity: 'f32'
+    },
+    vs: `\
+uniform module_default_blockUniforms {
+  float opacity;
+} moduleDefaultBlock;
+`
+  };
+
+  assembleGLSLShaderPair({
+    platformInfo: STATIC_PLATFORM_INFO,
+    vs: VS_GLSL_300,
+    fs: FS_GLSL_300,
+    modules: [moduleWithDefaultBlock],
+    log
+  });
+
+  t.equal(log.warnCalled.length, 1, 'warns for handwritten module block');
+  t.ok(
+    String(log.warnCalled[0][0]).includes('module_default_blockUniforms'),
+    'warning includes module block name'
+  );
+
+  t.end();
+});
+
+test('assembleGLSLShaderPair#warns only for non-std140 blocks and deduplicates by block name', t => {
+  const log = createTestLog();
+  const vs = `\
+#version 300 es
+layout(std140) uniform GoodBlock {
+  float opacity;
+} goodBlock;
+uniform BadBlock {
+  float opacity;
+} badBlock;
+uniform BadBlock {
+  float opacity;
+} badBlock2;
+in vec4 positions;
+void main(void) {
+  gl_Position = positions;
+}
+`;
+
+  assembleGLSLShaderPair({
+    platformInfo: STATIC_PLATFORM_INFO,
+    vs,
+    fs: FS_GLSL_300,
+    log
+  });
+
+  t.equal(log.warnCalled.length, 1, 'warns once for the non-std140 block name');
+  t.ok(String(log.warnCalled[0][0]).includes('BadBlock'), 'warning targets the non-std140 block');
+  t.ok(!String(log.warnCalled[0][0]).includes('GoodBlock'), 'warning ignores std140 blocks');
+
   t.end();
 });
 

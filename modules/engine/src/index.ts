@@ -19,6 +19,10 @@ export {makeAnimationLoop} from './animation-loop/make-animation-loop';
 
 export type {ModelProps} from './model/model';
 export {Model} from './model/model';
+export type {MaterialProps} from './material/material';
+export {Material} from './material/material';
+export type {MaterialFactoryProps} from './material/material-factory';
+export {MaterialFactory} from './material/material-factory';
 
 // Transforms
 export type {BufferTransformProps} from './compute/buffer-transform';
@@ -100,7 +104,21 @@ export type {
 export type {DynamicTextureProps} from './dynamic-texture/dynamic-texture';
 export {DynamicTexture} from './dynamic-texture/dynamic-texture';
 
-export {PickingManager} from './modules/picking/picking-manager';
+export type {
+  PickInfo,
+  PickingMode,
+  ResolvedPickingMode,
+  PickingBackend,
+  PickingManagerProps,
+  ResolvedPickingBackend
+} from './modules/picking/picking-manager';
+export {
+  PickingManager,
+  supportsIndexPicking,
+  resolvePickingMode,
+  resolvePickingBackend
+} from './modules/picking/picking-manager';
+export {picking} from './modules/picking/picking';
 export {picking as indexPicking} from './modules/picking/index-picking';
 export {picking as colorPicking} from './modules/picking/color-picking';
 
@@ -112,6 +130,7 @@ export {
 // DEPRECATED
 
 export {LegacyPickingManager} from './modules/picking/legacy-picking-manager';
+export {legacyColorPicking} from './modules/picking/legacy-color-picking';
 
 import {DynamicTexture, type DynamicTextureProps} from './dynamic-texture/dynamic-texture';
 /** @deprecated use DynamicTexture */

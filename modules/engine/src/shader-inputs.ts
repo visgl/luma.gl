@@ -18,7 +18,7 @@ export type ShaderInputsOptions = {
 
 type ShaderInputsModule = Pick<
   ShaderModule<any, any, any>,
-  'defaultUniforms' | 'dependencies' | 'getUniforms' | 'name' | 'uniformTypes'
+  'bindingLayout' | 'defaultUniforms' | 'dependencies' | 'getUniforms' | 'name' | 'uniformTypes'
 >;
 
 /**

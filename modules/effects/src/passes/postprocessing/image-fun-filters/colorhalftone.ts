@@ -11,7 +11,7 @@ struct colorHalftoneUniforms {
   size: f32,
 };
 
-@group(0) @binding(1) var<uniform> colorHalftone: colorHalftoneUniforms;
+@group(0) @binding(auto) var<uniform> colorHalftone: colorHalftoneUniforms;
 
 fn pattern(angle: f32, scale: f32, texSize: vec2f, texCoord: vec2f) -> f32 {
   let s = sin(angle);
@@ -47,7 +47,7 @@ fn colorHalftone_filterColor_ext(color: vec4f, texSize: vec2f, texCoord: vec2f) 
 
 // TODO pass texCoord to angle
 const fs = /* glsl */ `\
-uniform colorHalftoneUniforms {
+layout(std140) uniform colorHalftoneUniforms {
   vec2 center;
   float angle;
   float size;

@@ -18,7 +18,7 @@ import {getTextureFormatDefinition} from './texture-format-table';
 const RGB_FORMAT_REGEX = /^(r|rg|rgb|rgba|bgra)([0-9]*)([a-z]*)(-srgb)?(-webgl)?$/;
 const COLOR_FORMAT_PREFIXES = ['rgb', 'rgba', 'bgra'];
 const DEPTH_FORMAT_PREFIXES = ['depth', 'stencil'];
-// prettier-ignore
+// biome-ignore format: preserve layout
 const COMPRESSED_TEXTURE_FORMAT_PREFIXES = [
   'bc1', 'bc2', 'bc3', 'bc4', 'bc5', 'bc6', 'bc7', 'etc1', 'etc2', 'eac', 'atc', 'astc', 'pvrtc'
 ];

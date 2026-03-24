@@ -78,7 +78,7 @@ varying vec4 project_vPositionWorld;
 varying vec3 project_vNormalWorld;
 
 // Project uniform block
-uniform Project {
+layout(std140) uniform Project {
   mat4 viewMatrix;
   mat4 projectionMatrix;
   mat4 viewProjectionMatrix;

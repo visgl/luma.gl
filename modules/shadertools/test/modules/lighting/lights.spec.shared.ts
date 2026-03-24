@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {UniformBufferLayout} from '@luma.gl/core';
+import {makeShaderBlockLayout, ShaderBlockWriter} from '@luma.gl/core';
 import {lighting, type LightingUniforms} from '../../../src/index';
-import type {TapeTestFunction} from 'test/utils/vitest-tape';
+import type {TapeTestFunction} from '@luma.gl/devtools-extensions/tape-test-utils';
 
 const lightingUniformTypecheck: LightingUniforms = lighting.defaultUniforms;
 const FLOAT32_EPSILON = 1e-6;
@@ -51,44 +51,45 @@ export function registerLightingTests(test: TapeTestFunction): void {
     t.deepEqual(uniforms.lights[1].direction, [0, -1, 0], 'spot light stored in second slot');
     t.deepEqual(uniforms.lights[2].direction, [0, 1, 0], 'directional light stored after spots');
 
-    const layout = new UniformBufferLayout(lighting.uniformTypes);
-    const layoutKeys = Object.keys(layout.layout);
+    const layout = makeShaderBlockLayout(lighting.uniformTypes);
+    const writer = new ShaderBlockWriter(layout);
+    const layoutKeys = Object.keys(layout.fields);
     t.deepEqual(
       layoutKeys.slice(-4),
       ['lights[4].position', 'lights[4].direction', 'lights[4].attenuation', 'lights[4].coneCos'],
       'lights array occupies the tail of the uniform block'
     );
 
-    const data = layout.getData(uniforms);
+    const data = writer.getData(uniforms);
     const floatView = new Float32Array(data.buffer);
     const intView = new Int32Array(data.buffer);
 
-    t.equal(intView[layout.get('pointLightCount')!.offset], 1, 'point light count packed');
-    t.equal(intView[layout.get('spotLightCount')!.offset], 1, 'spot light count packed');
+    t.equal(intView[layout.fields.pointLightCount.offset], 1, 'point light count packed');
+    t.equal(intView[layout.fields.spotLightCount.offset], 1, 'spot light count packed');
     t.equal(
-      intView[layout.get('directionalLightCount')!.offset],
+      intView[layout.fields.directionalLightCount.offset],
       1,
       'directional light count packed'
     );
-    t.equal(floatView[layout.get('ambientColor')!.offset + 2], 1, 'ambient color packed');
-    t.equal(floatView[layout.get('lights[0].color')!.offset], 1, 'first light color packed');
+    t.equal(floatView[layout.fields.ambientColor.offset + 2], 1, 'ambient color packed');
+    t.equal(floatView[layout.fields['lights[0].color'].offset], 1, 'first light color packed');
     t.equal(
-      floatView[layout.get('lights[0].position')!.offset + 1],
+      floatView[layout.fields['lights[0].position'].offset + 1],
       2,
       'first light position packed'
     );
     t.equal(
-      floatView[layout.get('lights[1].direction')!.offset + 1],
+      floatView[layout.fields['lights[1].direction'].offset + 1],
       -1,
       'spot light direction packed'
     );
     t.ok(
-      Math.abs(floatView[layout.get('lights[1].coneCos')!.offset] - Math.cos(0.25)) <
+      Math.abs(floatView[layout.fields['lights[1].coneCos'].offset] - Math.cos(0.25)) <
         FLOAT32_EPSILON,
       'spot light cone packed'
     );
     t.equal(
-      floatView[layout.get('lights[2].direction')!.offset + 1],
+      floatView[layout.fields['lights[2].direction'].offset + 1],
       1,
       'directional light direction packed'
     );

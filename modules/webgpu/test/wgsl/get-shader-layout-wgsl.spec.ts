@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {ShaderLayout} from '@luma.gl/core';
 import {getShaderLayoutFromWGSL} from '@luma.gl/webgpu';
 
@@ -134,6 +134,100 @@ TEST_CASES.push({
         type: 'sampler',
         name: 'mySampler',
         group: 0,
+        location: 2
+      }
+    ]
+  }
+});
+
+const STORAGE_SHADER = /* WGSL */ `\
+@group(0) @binding(0) var<storage, read_write> writableData: array<i32>;
+@group(0) @binding(1) var<storage, read> readableData: array<i32>;
+
+@compute @workgroup_size(1)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+  let index = id.x;
+  writableData[index] = writableData[index] + readableData[index];
+}
+`;
+
+TEST_CASES.push({
+  title: 'storage bindings',
+  wgsl: STORAGE_SHADER,
+  shaderLayout: {
+    attributes: [],
+    bindings: [
+      {
+        type: 'storage',
+        name: 'writableData',
+        group: 0,
+        location: 0
+      },
+      {
+        type: 'read-only-storage',
+        name: 'readableData',
+        group: 0,
+        location: 1
+      }
+    ]
+  }
+});
+
+const MULTI_GROUP_SHADER = /* WGSL */ `\
+struct SceneUniforms {
+  exposure: f32,
+};
+
+struct MaterialUniforms {
+  baseColor: vec4<f32>,
+};
+
+@group(2) @binding(0) var<uniform> scene: SceneUniforms;
+@group(3) @binding(0) var<uniform> material: MaterialUniforms;
+@group(3) @binding(1) var materialTexture: texture_2d<f32>;
+@group(3) @binding(2) var materialSampler: sampler;
+
+@fragment
+fn main() -> @location(0) vec4<f32> {
+  return material.baseColor * scene.exposure;
+}
+`;
+
+TEST_CASES.push({
+  title: 'multi-group bindings',
+  wgsl: MULTI_GROUP_SHADER,
+  shaderLayout: {
+    attributes: [],
+    bindings: [
+      {
+        type: 'uniform',
+        name: 'scene',
+        group: 2,
+        location: 0,
+        // @ts-expect-error
+        members: [{name: 'exposure', type: 'f32'}]
+      },
+      {
+        type: 'uniform',
+        name: 'material',
+        group: 3,
+        location: 0,
+        // @ts-expect-error
+        members: [{name: 'baseColor', type: 'vec4<f32>'}]
+      },
+      {
+        type: 'texture',
+        name: 'materialTexture',
+        group: 3,
+        location: 1,
+        viewDimension: '2d',
+        sampleType: 'float',
+        multisampled: false
+      },
+      {
+        type: 'sampler',
+        name: 'materialSampler',
+        group: 3,
         location: 2
       }
     ]

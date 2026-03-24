@@ -2,9 +2,26 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Device, type RenderPipelineParameters, log} from '@luma.gl/core';
+import {
+  Buffer,
+  Device,
+  Sampler,
+  Texture,
+  TextureView,
+  type Binding,
+  type RenderPipelineParameters,
+  log
+} from '@luma.gl/core';
+import {DynamicTexture} from '@luma.gl/engine';
 import {pbrMaterial, skin} from '@luma.gl/shadertools';
-import {Geometry, Model, ModelNode, type ModelProps} from '@luma.gl/engine';
+import {
+  Geometry,
+  Material,
+  MaterialFactory,
+  Model,
+  ModelNode,
+  type ModelProps
+} from '@luma.gl/engine';
 import {type ParsedPBRMaterial} from '../pbr/pbr-material';
 
 const SHADER = /* WGSL */ `
@@ -19,19 +36,23 @@ struct VertexInputs {
 #ifdef HAS_UV
   @location(3) texCoords: vec2f,
 #endif
+#ifdef HAS_UV_1
+  @location(4) texCoords1: vec2f,
+#endif
 #ifdef HAS_SKIN
-  @location(4) JOINTS_0: vec4u,
-  @location(5) WEIGHTS_0: vec4f,
+  @location(5) JOINTS_0: vec4u,
+  @location(6) WEIGHTS_0: vec4f,
 #endif
 };
 
 struct FragmentInputs {
   @builtin(position) position: vec4f,
   @location(0) pbrPosition: vec3f,
-  @location(1) pbrUV: vec2f,
-  @location(2) pbrNormal: vec3f,
+  @location(1) pbrUV0: vec2f,
+  @location(2) pbrUV1: vec2f,
+  @location(3) pbrNormal: vec3f,
 #ifdef HAS_TANGENTS
-  @location(3) pbrTangent: vec4f,
+  @location(4) pbrTangent: vec4f,
 #endif
 };
 
@@ -41,13 +62,17 @@ fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
   var position = vec4f(inputs.positions, 1.0);
   var normal = vec3f(0.0, 0.0, 1.0);
   var tangent = vec4f(1.0, 0.0, 0.0, 1.0);
-  var uv = vec2f(0.0, 0.0);
+  var uv0 = vec2f(0.0, 0.0);
+  var uv1 = vec2f(0.0, 0.0);
 
 #ifdef HAS_NORMALS
   normal = inputs.normals;
 #endif
 #ifdef HAS_UV
-  uv = inputs.texCoords;
+  uv0 = inputs.texCoords;
+#endif
+#ifdef HAS_UV_1
+  uv1 = inputs.texCoords1;
 #endif
 #ifdef HAS_TANGENTS
   tangent = inputs.TANGENT;
@@ -73,7 +98,8 @@ fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
 
   outputs.position = pbrProjection.modelViewProjectionMatrix * position;
   outputs.pbrPosition = worldPosition.xyz / worldPosition.w;
-  outputs.pbrUV = uv;
+  outputs.pbrUV0 = uv0;
+  outputs.pbrUV1 = uv1;
   outputs.pbrNormal = normal;
   return outputs;
 }
@@ -81,7 +107,8 @@ fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
 @fragment
 fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4f {
   fragmentInputs.pbr_vPosition = inputs.pbrPosition;
-  fragmentInputs.pbr_vUV = inputs.pbrUV;
+  fragmentInputs.pbr_vUV0 = inputs.pbrUV0;
+  fragmentInputs.pbr_vUV1 = inputs.pbrUV1;
   fragmentInputs.pbr_vNormal = inputs.pbrNormal;
 #ifdef HAS_TANGENTS
   let tangent = normalize(inputs.pbrTangent.xyz);
@@ -114,6 +141,10 @@ const vs = /* glsl */ `\
     in vec2 texCoords;
   #endif
 
+  #ifdef HAS_UV_1
+    in vec2 texCoords1;
+  #endif
+
   #ifdef HAS_SKIN
     in uvec4 JOINTS_0;
     in vec4 WEIGHTS_0;
@@ -123,6 +154,7 @@ const vs = /* glsl */ `\
     vec4 _NORMAL = vec4(0.);
     vec4 _TANGENT = vec4(0.);
     vec2 _TEXCOORD_0 = vec2(0.);
+    vec2 _TEXCOORD_1 = vec2(0.);
 
     #ifdef HAS_NORMALS
       _NORMAL = normals;
@@ -136,6 +168,10 @@ const vs = /* glsl */ `\
       _TEXCOORD_0 = texCoords;
     #endif
 
+    #ifdef HAS_UV_1
+      _TEXCOORD_1 = texCoords1;
+    #endif
+
     vec4 pos = positions;
 
     #ifdef HAS_SKIN
@@ -145,7 +181,7 @@ const vs = /* glsl */ `\
       _TANGENT = vec4((skinMat * vec4(_TANGENT.xyz, 0.)).xyz, _TANGENT.w);
     #endif
 
-    pbr_setPositionNormalTangentUV(pos, _NORMAL, _TANGENT, _TEXCOORD_0);
+    pbr_setPositionNormalTangentUV(pos, _NORMAL, _TANGENT, _TEXCOORD_0, _TEXCOORD_1);
     gl_Position = pbrProjection.modelViewProjectionMatrix * pos;
   }
 `;
@@ -170,9 +206,41 @@ export type CreateGLTFModelOptions = {
   geometry: Geometry;
   /** Parsed PBR material state for the primitive. */
   parsedPPBRMaterial: ParsedPBRMaterial;
+  /** Pre-created material aligned with the source glTF material entry, when available. */
+  material?: Material | null;
   /** Additional model props merged into the generated model. */
   modelOptions?: Partial<ModelProps>;
 };
+
+export type CreateGLTFMaterialOptions = {
+  id?: string;
+  parsedPPBRMaterial: ParsedPBRMaterial;
+  materialFactory?: MaterialFactory;
+};
+
+export function createGLTFMaterial(device: Device, options: CreateGLTFMaterialOptions): Material {
+  const materialFactory =
+    options.materialFactory || new MaterialFactory(device, {modules: [pbrMaterial]});
+
+  const pbrMaterialProps = {...options.parsedPPBRMaterial.uniforms};
+  delete pbrMaterialProps.camera;
+  const materialBindings = Object.fromEntries(
+    Object.entries({
+      ...pbrMaterialProps,
+      ...options.parsedPPBRMaterial.bindings
+    }).filter(
+      ([name, value]) => materialFactory.ownsBinding(name) && isMaterialBindingResource(value)
+    )
+  ) as Record<string, Binding | DynamicTexture>;
+
+  const material = materialFactory.createMaterial({
+    id: options.id,
+    bindings: materialBindings
+  });
+  material.setProps({pbrMaterial: pbrMaterialProps});
+
+  return material;
+}
 
 /** Creates a luma.gl Model from GLTF data*/
 export function createGLTFModel(device: Device, options: CreateGLTFModelOptions): ModelNode {
@@ -209,15 +277,74 @@ export function createGLTFModel(device: Device, options: CreateGLTFModelOptions)
     parameters: {...parameters, ...parsedPPBRMaterial.parameters, ...modelOptions.parameters}
   };
 
+  const material =
+    options.material ||
+    createGLTFMaterial(device, {
+      id: id ? `${id}-material` : undefined,
+      parsedPPBRMaterial
+    });
+  modelProps.material = material;
+
   const model = new Model(device, modelProps);
 
-  const {camera, ...pbrMaterialProps} = {
+  const sceneShaderInputValues = {
     ...parsedPPBRMaterial.uniforms,
     ...modelOptions.uniforms,
     ...parsedPPBRMaterial.bindings,
     ...modelOptions.bindings
   };
-
-  model.shaderInputs.setProps({pbrMaterial: pbrMaterialProps, pbrProjection: {camera}});
+  const sceneShaderInputProps = getSceneShaderInputProps(
+    model.shaderInputs.getModules(),
+    material,
+    sceneShaderInputValues
+  );
+  model.shaderInputs.setProps(sceneShaderInputProps);
   return new ModelNode({managedResources, model});
+}
+
+function isMaterialBindingResource(value: unknown): boolean {
+  return (
+    value instanceof Buffer ||
+    value instanceof DynamicTexture ||
+    value instanceof Sampler ||
+    value instanceof Texture ||
+    value instanceof TextureView
+  );
+}
+
+function getSceneShaderInputProps(
+  modules: Array<{
+    name: string;
+    uniformTypes?: Readonly<Record<string, unknown>>;
+    bindingLayout?: ReadonlyArray<{name: string}>;
+  }>,
+  material: Material,
+  shaderInputValues: Record<string, unknown>
+): Record<string, Record<string, unknown>> {
+  const propertyToModuleNameMap = new Map<string, string>();
+  for (const module of modules) {
+    for (const uniformName of Object.keys(module.uniformTypes || {})) {
+      propertyToModuleNameMap.set(uniformName, module.name);
+    }
+    for (const binding of module.bindingLayout || []) {
+      propertyToModuleNameMap.set(binding.name, module.name);
+    }
+  }
+
+  const sceneShaderInputProps: Record<string, Record<string, unknown>> = {};
+  for (const [propertyName, value] of Object.entries(shaderInputValues)) {
+    if (value === undefined) {
+      continue;
+    }
+
+    const moduleName = propertyToModuleNameMap.get(propertyName);
+    if (!moduleName || material.ownsModule(moduleName)) {
+      continue;
+    }
+
+    sceneShaderInputProps[moduleName] ||= {};
+    sceneShaderInputProps[moduleName][propertyName] = value;
+  }
+
+  return sceneShaderInputProps;
 }

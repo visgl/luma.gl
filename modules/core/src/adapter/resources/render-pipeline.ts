@@ -4,7 +4,7 @@
 
 import type {Device} from '../device';
 import type {PrimitiveTopology, RenderPipelineParameters} from '../types/parameters';
-import type {ShaderLayout, Binding} from '../types/shader-layout';
+import type {ShaderLayout, Bindings, BindingsByGroup} from '../types/shader-layout';
 import type {BufferLayout} from '../types/buffer-layout';
 import type {
   TextureFormatColor,
@@ -64,7 +64,9 @@ export type RenderPipelineProps = ResourceProps & {
 
   // Dynamic bindings (TODO - pipelines should be immutable, move to RenderPass)
   /** Buffers, Textures, Samplers for the shader bindings */
-  bindings?: Record<string, Binding>;
+  bindings?: Bindings;
+  /** Bindings grouped by bind-group index */
+  bindGroups?: BindingsByGroup;
 };
 
 /**
@@ -142,7 +144,11 @@ export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
     /** Transform feedback. WebGL only. */
     transformFeedback?: TransformFeedback;
     /** Bindings applied for this draw (textures, samplers, uniform buffers) */
-    bindings?: Record<string, Binding>;
+    bindings?: Bindings;
+    /** Bindings grouped by bind-group index */
+    bindGroups?: BindingsByGroup;
+    /** Optional stable cache keys for backend bind-group reuse */
+    _bindGroupCacheKeys?: Partial<Record<number, object>>;
     /** WebGL-only uniforms */
     uniforms?: Record<string, unknown>;
   }): boolean;
@@ -170,6 +176,7 @@ export abstract class RenderPipeline extends Resource<RenderPipelineProps> {
     bufferMode: undefined!,
     disableWarnings: false,
     _sharedRenderPipeline: undefined!,
-    bindings: undefined!
+    bindings: undefined!,
+    bindGroups: undefined!
   };
 }

@@ -13,7 +13,7 @@ import {
   GLTexelDataFormat,
   GLPixelType,
   GLDataType
-} from '@luma.gl/constants';
+} from '@luma.gl/webgl/constants';
 
 import {convertDataTypeToGLDataType} from '../converters/webgl-shadertypes';
 import {WEBGLFramebuffer} from '../resources/webgl-framebuffer';
@@ -102,10 +102,10 @@ export function copyGPUBufferToMipLevel(
       // 3 dimensional textures requires 3D texture functions
       if (compressed) {
         // TODO enable extension?
-        // prettier-ignore
+        // biome-ignore format: preserve layout
         gl.compressedTexSubImage3D(glTarget, mipLevel, x, y, z, width, height, depth, glFormat, byteLength, byteOffset);
       } else {
-        // prettier-ignore
+        // biome-ignore format: preserve layout
         gl.texSubImage3D(glTarget, mipLevel, x, y, z, width, height, depth, glFormat, glType, byteOffset);
       }
       break;
@@ -113,10 +113,10 @@ export function copyGPUBufferToMipLevel(
     case '2d':
     case 'cube':
       if (compressed) {
-        // prettier-ignore
+        // biome-ignore format: preserve layout
         gl.compressedTexSubImage2D(glTarget, mipLevel, x, y, width, height, glFormat, byteLength, byteOffset);
       } else {
-        // prettier-ignore
+        // biome-ignore format: preserve layout
         gl.texSubImage2D(glTarget, mipLevel, x, y, width, height, BORDER, glFormat, byteOffset);
       }
       break;
@@ -132,7 +132,7 @@ export function copyGPUBufferToMipLevel(
 export function getWebGLTextureTarget(
   dimension: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d'
 ): GLTextureTarget {
-  // prettier-ignore
+  // biome-ignore format: preserve layout
   switch (dimension) {
     case '1d': break; // not supported in any WebGL version
     case '2d': return GL.TEXTURE_2D; // supported in WebGL1

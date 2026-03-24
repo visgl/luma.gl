@@ -46,7 +46,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '24.5.0'
+          node-version-file: '.nvmrc'
 
       - name: Enable Corepack / Yarn 4
         run: |
@@ -60,8 +60,11 @@ jobs:
       - name: Build packages
         run: npm run build
       
-      - name: Run tests from transpiled code
-        run: npx ocular-test dist
+      - name: Install Playwright Chromium
+        run: yarn playwright:install
+
+      - name: Run release test suite
+        run: yarn test
 
       - name: Login to NPM
         run: npm config set "//registry.npmjs.org/:_authToken=${NPM_ACCESS_TOKEN}"

@@ -60,7 +60,7 @@ Have to start somewhere...
   constructor({device}: AnimationProps) {
     super();
 
-    // prettier-ignore
+    // biome-ignore format: preserve layout
     const interleavedData = new Float32Array([
       // Offset
       0, 0,

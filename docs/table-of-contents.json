@@ -39,6 +39,7 @@
           "api-guide/gpu/gpu-initialization",
           "api-guide/gpu/gpu-resources",
           "api-guide/gpu/gpu-memory",
+          "api-guide/gpu/gpu-commands",
           "api-guide/gpu/gpu-buffers",
           "api-guide/gpu/gpu-textures",
           "api-guide/gpu/gpu-rendering",
@@ -98,6 +99,7 @@
           "api-reference/core/vertex-formats",
           "api-reference/core/texture-formats",
           "api-reference/core/resources/buffer",
+          "api-reference/core/resources/command-encoder",
           "api-reference/core/resources/compute-pass",
           "api-reference/core/resources/compute-pipeline",
           "api-reference/core/resources/fence",
@@ -187,7 +189,7 @@
       {
         "type": "category",
         "label": "@luma.gl/webgl",
-        "items": ["api-reference/webgl/README"]
+        "items": ["api-reference/webgl/README", "api-reference/webgl/constants"]
       },
       {
         "type": "category",

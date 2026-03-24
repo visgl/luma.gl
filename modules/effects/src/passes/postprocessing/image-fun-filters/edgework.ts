@@ -11,7 +11,7 @@ struct edgeWorkUniforms {
   mode: u32,
 };
 
-@group(0) @binding(1) var<uniform> edgeWork: edgeWorkUniforms;
+@group(0) @binding(auto) var<uniform> edgeWork: edgeWorkUniforms;
 
 fn edgeWork_sampleColorRGB(
   sourceTexture: texture_2d<f32>,
@@ -111,7 +111,7 @@ fn edgeWork_sampleColor(
 `;
 
 const fs = /* glsl */ `\
-uniform edgeWorkUniforms {
+layout(std140) uniform edgeWorkUniforms {
   float radius;
   int mode;
 } edgeWork;

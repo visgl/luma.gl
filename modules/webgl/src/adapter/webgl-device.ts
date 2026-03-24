@@ -36,7 +36,7 @@ import type {
   VertexFormat
 } from '@luma.gl/core';
 import {Device, CanvasContext, log} from '@luma.gl/core';
-import type {GLExtensions} from '@luma.gl/constants';
+import type {GLExtensions} from '@luma.gl/webgl/constants';
 import {WebGLStateTracker} from '../context/state-tracker/webgl-state-tracker';
 import {createBrowserContext} from '../context/helpers/create-browser-context';
 import {getWebGLContextData} from '../context/helpers/webgl-context-data';
@@ -233,7 +233,10 @@ export class WebGLDevice extends Device {
     const contextData = getWebGLContextData(this.handle);
     contextData.device = this; // Update GL context: Link webgl context back to device
 
-    this.extensions = contextData.extensions || (contextData.extensions = {});
+    if (!contextData.extensions) {
+      contextData.extensions = {};
+    }
+    this.extensions = contextData.extensions;
 
     // initialize luma Device fields
     this.info = getDeviceInfo(this.gl, this.extensions);
@@ -369,13 +372,7 @@ export class WebGLDevice extends Device {
   submit(commandBuffer?: WEBGLCommandBuffer): void {
     let submittedCommandEncoder: WEBGLCommandEncoder | null = null;
     if (!commandBuffer) {
-      submittedCommandEncoder = this.commandEncoder;
-      commandBuffer = submittedCommandEncoder.finish();
-      this.commandEncoder.destroy();
-      this.commandEncoder = this.createCommandEncoder({
-        id: submittedCommandEncoder.props.id,
-        timeProfilingQuerySet: submittedCommandEncoder.getTimeProfilingQuerySet()
-      });
+      ({submittedCommandEncoder, commandBuffer} = this._finalizeDefaultCommandEncoderForSubmit());
     }
 
     try {
@@ -392,6 +389,20 @@ export class WebGLDevice extends Device {
     } finally {
       commandBuffer.destroy();
     }
+  }
+
+  private _finalizeDefaultCommandEncoderForSubmit(): {
+    submittedCommandEncoder: WEBGLCommandEncoder;
+    commandBuffer: WEBGLCommandBuffer;
+  } {
+    const submittedCommandEncoder = this.commandEncoder;
+    const commandBuffer = submittedCommandEncoder.finish();
+    this.commandEncoder.destroy();
+    this.commandEncoder = this.createCommandEncoder({
+      id: submittedCommandEncoder.props.id,
+      timeProfilingQuerySet: submittedCommandEncoder.getTimeProfilingQuerySet()
+    });
+    return {submittedCommandEncoder, commandBuffer};
   }
 
   //

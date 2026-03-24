@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {Shader, ShaderProps, CompilerMessage, log} from '@luma.gl/core';
-import {GL} from '@luma.gl/constants';
+import {GL} from '@luma.gl/webgl/constants';
 import {parseShaderCompilerLog} from '../helpers/parse-shader-compiler-log';
 import {WebGLDevice} from '../webgl-device';
 

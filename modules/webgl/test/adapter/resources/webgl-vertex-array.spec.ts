@@ -2,10 +2,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
 
-import {GL} from '@luma.gl/constants';
+import {VertexArray} from '@luma.gl/core';
+import {GL} from '@luma.gl/webgl/constants';
 import {WEBGLBuffer, WEBGLVertexArray} from '@luma.gl/webgl';
 
 function createVertexArray(device): WEBGLVertexArray {
@@ -14,6 +15,23 @@ function createVertexArray(device): WEBGLVertexArray {
     bufferLayout: []
   }) as WEBGLVertexArray;
 }
+
+test('VertexArray#construct/delete', async t => {
+  const device = await getWebGLTestDevice();
+
+  const vertexArray = device.createVertexArray({
+    shaderLayout: {attributes: [], bindings: []},
+    bufferLayout: []
+  });
+  t.ok(vertexArray instanceof VertexArray, 'VertexArray construction successful');
+
+  vertexArray.destroy();
+  t.ok(vertexArray instanceof VertexArray, 'VertexArray delete successful');
+
+  vertexArray.destroy();
+  t.ok(vertexArray instanceof VertexArray, 'VertexArray repeated destroy successful');
+  t.end();
+});
 
 test('WEBGLVertexArray#divisors', async t => {
   const device = await getWebGLTestDevice();

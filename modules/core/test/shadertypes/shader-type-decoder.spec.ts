@@ -2,14 +2,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {
   type AttributeShaderType,
   type AttributeShaderTypeInfo,
   shaderTypeDecoder
 } from '@luma.gl/core';
 
-// prettier-ignore
+// biome-ignore format: preserve layout
 const TEST_CASES: {format: AttributeShaderType | string, result: AttributeShaderTypeInfo}[] = [
   {format: 'f32', result: {primitiveType: 'f32', components: 1, byteLength: 1 * 4, integer: false, signed: true}},
   {format: 'vec2<f32>', result: {primitiveType: 'f32', components: 2, byteLength: 2 * 4, integer: false, signed: true}},

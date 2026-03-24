@@ -2,6 +2,8 @@ import {DeviceTabs, Format as Ft, Filter as L, Render as R} from '@site/src/reac
 
 # Using GPU Textures
 
+See also [GPU Commands](/docs/api-guide/gpu/gpu-commands) for the difference between immediate texture helpers such as `writeData()` and explicit `CommandEncoder` copy operations.
+
 While the idea behind textures is simple in principle (a grid of pixels stored on GPU memory), GPU Textures are surprisingly complex objects.
 
 Capabilities
@@ -144,7 +146,7 @@ In WebGPU/WGSL, textures can be used with compute shaders through storage bindin
 
 ## Copying Textures
 
-Texture data can be copied between GPU and CPU and vice versa, via GPU Buffers. See `CommandEncoder` for more information.
+Texture data can be copied between GPU and CPU and vice versa, via GPU Buffers. See [GPU Commands](/docs/api-guide/gpu/gpu-commands) for when those copies should be recorded explicitly versus issued through resource-level convenience methods.
 
 ## Texture Format Capabilities
 
@@ -177,9 +179,9 @@ Textures offer a set of methods to read and write texture data
 | Method | Description |
 | --- | --- |
 | `Texture.writeData()` | Writes typed-array data into a texture subresource, including mip levels, array layers, depth slices, and optional row layout. |
-| `Texture.readDataAsync()` | |
+| `Texture.readDataAsync()` | Deprecated convenience wrapper. Prefer `Texture.readBuffer()` or `DynamicTexture.readAsync()`. |
 | `Texture.writeBuffer()` | Copies data from a GPU buffer into a texture subresource using the provided destination region and layout. |
-| `Texture.readBuffer()` | |
+| `Texture.readBuffer()` | Copies texture data into a caller-supplied GPU buffer. The source texture must support `Texture.COPY_SRC`. |
 
 `Texture.copyImageData()` remains available for compatibility, but it is a deprecated wrapper over `Texture.writeData()`.
 
@@ -202,6 +204,8 @@ Use the texture write method that matches your source data:
 - `byteOffset`, `bytesPerRow`, `rowsPerImage` describe the source memory layout
 
 This means the difference between `writeData()` and `writeBuffer()` is the source, not the shape of the update.
+
+For readback, `readBuffer()` is similarly explicit: the destination buffer is caller-owned, and the texture being read must have been created with `Texture.COPY_SRC`.
 
 ### Texture upload semantics
 

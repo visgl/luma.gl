@@ -9,6 +9,7 @@
  * Install https://marketplace.visualstudio.com/items?itemName=boyswan.glsl-literal
  */
 export type {PlatformInfo} from './lib/shader-assembly/platform-info';
+export type {ShaderBindingDebugRow} from './lib/shader-assembly/wgsl-binding-debug';
 
 // ShaderModules
 
@@ -20,6 +21,19 @@ export {initializeShaderModule, initializeShaderModules} from './lib/shader-modu
 export {getShaderModuleUniforms} from './lib/shader-module/shader-module';
 export {getShaderModuleDependencies} from './lib/shader-module/shader-module-dependencies';
 export {checkShaderModuleDeprecations} from './lib/shader-module/shader-module';
+export type {
+  GLSLUniformBlockInfo,
+  ShaderModuleUniformLayoutStage,
+  ShaderModuleUniformLayoutValidationResult
+} from './lib/shader-module/shader-module-uniform-layout';
+export {
+  getGLSLUniformBlocks,
+  getShaderModuleUniformBlockFields,
+  getShaderModuleUniformBlockName,
+  getShaderModuleUniformLayoutValidationResult,
+  validateShaderModuleUniformLayout,
+  warnIfGLSLUniformBlocksAreNotStd140
+} from './lib/shader-module/shader-module-uniform-layout';
 
 export {getShaderModuleSource} from './lib/shader-assembly/assemble-shaders';
 
@@ -84,7 +98,11 @@ export {
 
 export type {LightingProps, LightingUniforms} from './modules/lighting/lights/lighting';
 export {lighting} from './modules/lighting/lights/lighting';
+export type {IBLBindings} from './modules/lighting/ibl/ibl';
+export {ibl} from './modules/lighting/ibl/ibl';
 export {dirlight} from './modules/lighting/no-material/dirlight';
+export type {LambertMaterialProps} from './modules/lighting/lambert-material/lambert-material';
+export {lambertMaterial} from './modules/lighting/lambert-material/lambert-material';
 export type {GouraudMaterialProps} from './modules/lighting/gouraud-material/gouraud-material';
 export {gouraudMaterial} from './modules/lighting/gouraud-material/gouraud-material';
 export type {PhongMaterialProps} from './modules/lighting/phong-material/phong-material';
@@ -94,6 +112,12 @@ export type {
   PBRMaterialProps,
   PBRMaterialUniforms
 } from './modules/lighting/pbr-material/pbr-material';
+export type {
+  PBRSceneBindings,
+  PBRSceneProps,
+  PBRSceneUniforms
+} from './modules/lighting/pbr-material/pbr-scene';
 export type {PBRProjectionProps} from './modules/lighting/pbr-material/pbr-projection';
 
 export {pbrMaterial} from './modules/lighting/pbr-material/pbr-material';
+export {pbrScene} from './modules/lighting/pbr-material/pbr-scene';

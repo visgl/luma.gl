@@ -62,7 +62,8 @@ Typical flow:
 createScenegraphsFromGLTF(device, gltf[, options])
 ```
 
-Creates scenegraph nodes and returns `{scenes, animator}`.
+Creates scenegraph nodes and returns a `GLTFScenegraphs` bundle including
+`scenes`, `animator`, `lights`, and `extensionSupport`.
 
 - `device`- a Device instance created from @luma.gl/core.
 - `gltf`- a GLTFPostprocessed object (data returned by `@loaders.gl/gltf` when postProcess: true is enabled).
@@ -71,6 +72,11 @@ Creates scenegraph nodes and returns `{scenes, animator}`.
 The returned scenes array contains a GroupNode for each glTF scene
 in the file. The optional animator is an instance of GLTFAnimator
 that can be used to update active animations (animator.setTime(ms)).
+`extensionSupport` is a `Map` keyed by extension name with
+`{supported, supportLevel, comment}` entries for the extensions reported by the
+asset. `supported` indicates built-in end-to-end support in luma.gl's default
+loader-to-scenegraph pipeline, while `supportLevel` distinguishes partial cases
+such as `parsed-and-wired` and `loader-only`.
 
 ```ts
 type ParseGLTFOptions = {
@@ -166,6 +172,11 @@ Notes:
 - All scenegraph objects created by @luma.gl/gltf are ordinary
 `@luma.gl/engine` scengraph nodes and can be freely manpipulated or intermixed with manually
 constructed nodes.
+- Extension coverage is summarized in the
+[`glTF Extension Support`](./gltf-extensions.mdx) table, including the current
+partial limits for `KHR_animation_pointer` and animated `KHR_texture_transform`.
+That table also calls out that transmissive refraction effects still use luma.gl's
+stock approximation and may not visually match the Khronos Sample Viewer.
 
 glTF files containing extension data (e.g. Draco compressed meshes,
 custom PBR materials, or meshopt compression) need to be processed by

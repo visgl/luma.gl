@@ -22,6 +22,11 @@ export type UniformInfo = {
   format?: UniformFormat;
 } & PropType;
 
+export type ShaderModuleBindingLayout = {
+  name: string;
+  group: number;
+};
+
 // Helper types
 type BindingKeys<T> = {[K in keyof T]: T[K] extends UniformValue ? never : K}[keyof T];
 type UniformKeys<T> = {[K in keyof T]: T[K] extends UniformValue ? K : never}[keyof T];
@@ -46,6 +51,10 @@ export type ShaderModule<
   uniforms?: UniformsT;
   /** Used for type inference, not currently used for values */
   bindings?: BindingsT;
+  /** Logical bind-group assignment for bindings declared by this module */
+  bindingLayout?: readonly ShaderModuleBindingLayout[];
+  /** Preferred starting binding slot for this module's WGSL `@binding(auto)` declarations. */
+  firstBindingSlot?: number;
 
   name: string;
 

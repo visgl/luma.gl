@@ -7,12 +7,12 @@ import {warp} from './warp';
 
 const source = /* wgsl */ `\
 struct bulgePinchUniforms {
+  center: vec2f,
   radius: f32,
   strength: f32,
-  center: vec2f,
 };
 
-@group(0) @binding(1) var<uniform> bulgePinch: bulgePinchUniforms;
+@group(0) @binding(auto) var<uniform> bulgePinch: bulgePinchUniforms;
 
 fn bulgePinch_warp(coordIn: vec2f, texCenter: vec2f) -> vec2f {
   var coord = coordIn - texCenter;
@@ -51,10 +51,10 @@ fn bulgePinch_sampleColor(
 `;
 
 const fs = /* glsl */ `\
-uniform bulgePinchUniforms {
+layout(std140) uniform bulgePinchUniforms {
+  vec2 center;
   float radius;
   float strength;
-  vec2 center;
 } bulgePinch;
 
 vec2 bulgePinch_warp(vec2 coord, vec2 texCenter) {

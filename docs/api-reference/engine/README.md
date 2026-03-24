@@ -8,12 +8,13 @@ creating pipelines from shaders, binding buffers and textures, handling redraw s
 ## Start Here
 
 - [`Model`](/docs/api-reference/engine/model) is the central rendering class and the page most users are looking for when they want the main luma.gl drawing API.
+- [`Materials`](/docs/api-guide/engine/materials) explains what `Material` and `MaterialFactory` represent in the engine layer.
 - [`ClipSpace`](/docs/api-reference/engine/clip-space) and [`BackgroundTextureModel`](/docs/api-reference/engine/background-texture-model) provide ready-made fullscreen rendering helpers.
 - [`AnimationLoop`](/docs/api-reference/engine/animation-loop) manages per-frame rendering and animation state.
 - [`Geometry`](/docs/api-reference/engine/geometry) and [`Geometries`](/docs/api-reference/engine/geometry/geometries) provide reusable mesh and attribute helpers.
 - [`GPUGeometry`](/docs/api-reference/engine/geometry/gpu-geometry) describes already-uploaded geometry buffers.
 - [`Scenegraph`](/docs/api-guide/engine/scenegraph), [`GroupNode`](/docs/api-reference/engine/scenegraph/group-node), and [`ModelNode`](/docs/api-reference/engine/scenegraph/model-node) cover scenegraph organization.
-- [`PickingManager`](/docs/api-reference/engine/picking-manager) handles color-picking style selection for models that use the picking shader module.
+- [`PickingManager`](/docs/api-reference/engine/picking-manager) handles object picking and highlight state for models that use the engine picking shader modules.
 - [`Computation`](/docs/api-reference/engine/compute/computation), [`BufferTransform`](/docs/api-reference/engine/compute/buffer-transform), and [`TextureTransform`](/docs/api-reference/engine/compute/texture-transform) cover engine-level compute workflows.
 - [`ShaderPassRenderer`](/docs/api-reference/engine/passes/shader-pass-renderer) applies shader passes to textures for postprocessing pipelines.
 

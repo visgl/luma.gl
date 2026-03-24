@@ -7,12 +7,12 @@ import {warp} from './warp';
 
 const source = /* wgsl */ `\
 struct swirlUniforms {
+  center: vec2f,
   radius: f32,
   angle: f32,
-  center: vec2f,
 };
 
-@group(0) @binding(1) var<uniform> swirl: swirlUniforms;
+@group(0) @binding(auto) var<uniform> swirl: swirlUniforms;
 
 fn swirl_warp(coordIn: vec2f, texCenter: vec2f) -> vec2f {
   var coord = coordIn - texCenter;
@@ -44,10 +44,10 @@ fn swirl_sampleColor(
 `;
 
 const fs = /* glsl */ `\
-uniform swirlUniforms {
+layout(std140) uniform swirlUniforms {
+  vec2 center;
   float radius;
   float angle;
-  vec2 center;
 } swirl;
 
 vec2 swirl_warp(vec2 coord, vec2 texCenter) {

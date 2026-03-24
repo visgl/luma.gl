@@ -4,7 +4,7 @@
 
 /* eslint-disable quotes */
 
-import test from 'test/utils/vitest-tape';
+import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {registerParseShaderCompilerLogTests} from 'test/utils/parse-shader-compiler-log.spec.shared';
 
 registerParseShaderCompilerLogTests(test);

@@ -14,7 +14,7 @@ struct tiltShiftUniforms {
   invert: u32,
 };
 
-@group(0) @binding(1) var<uniform> tiltShift: tiltShiftUniforms;
+@group(0) @binding(auto) var<uniform> tiltShift: tiltShiftUniforms;
 
 fn tiltShift_getDelta(texSize: vec2f) -> vec2f {
   let vector = normalize((tiltShift.end - tiltShift.start) * texSize);
@@ -65,7 +65,7 @@ fn tiltShift_sampleColor(
 `;
 
 const fs = /* glsl */ `\
-uniform tiltShiftUniforms {
+layout(std140) uniform tiltShiftUniforms {
   float blurRadius;
   float gradientRadius;
   vec2 start;

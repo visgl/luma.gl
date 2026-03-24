@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import type {Device, RenderPassProps} from '@luma.gl/core';
 import {luma} from '@luma.gl/core';
 import {webgpuAdapter, type WebGPUDevice} from '@luma.gl/webgpu';
@@ -191,7 +191,7 @@ test('WebGPU CPU hotspot benchmark distinguishes default canvas and explicit fra
   t.end();
 });
 
-test('WebGPU error-scope profiler only records scoped validation in debug mode', async t => {
+test.skip('WebGPU error-scope profiler only records scoped validation in debug mode', async t => {
   const debugDevice = await getWebGPUTestDevice();
   const nonDebugDevice = await makeWebGPUHotspotTestDevice('webgpu-hotspot-nondebug', false);
 

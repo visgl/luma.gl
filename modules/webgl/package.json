@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/webgl",
-  "version": "9.3.0-alpha.6",
+  "version": "9.3.0-alpha.10",
   "description": "WebGL2 adapter for the luma.gl core API",
   "type": "module",
   "license": "MIT",
@@ -25,6 +25,21 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./constants": {
+      "types": "./dist/constants/index.d.ts",
+      "import": "./dist/constants/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./webgl-constants": {
+      "types": "./dist/webgl-constants.d.ts",
+      "import": "./dist/webgl-constants.js",
+      "require": "./dist/index.cjs"
+    },
+    "./webgl-types": {
+      "types": "./dist/webgl-types.d.ts",
+      "import": "./dist/webgl-types.js",
+      "require": "./dist/index.cjs"
     }
   },
   "files": [
@@ -43,7 +58,6 @@
     "@luma.gl/core": "9.3.0-alpha.6"
   },
   "dependencies": {
-    "@luma.gl/constants": "9.3.0-alpha.6",
     "@math.gl/types": "^4.1.0",
     "@probe.gl/env": "^4.1.1"
   },

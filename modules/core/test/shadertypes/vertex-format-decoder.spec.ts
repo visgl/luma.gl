@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {type TypedArray} from '@math.gl/types';
 import {vertexFormatDecoder, VertexFormat} from '@luma.gl/core';
 
-// prettier-ignore
+// biome-ignore format: preserve layout
 const TEST_CASES: {format: VertexFormat, result: any}[] = [
   {format: 'float32', result: {type: 'float32', components: 1, byteLength: 4, integer: false, signed: false, normalized: false}},
   {format: 'uint32', result: {type: 'uint32', components: 1, byteLength: 4, integer: true, signed: false, normalized: false}},
@@ -62,11 +62,17 @@ const TEST_CASES_2: {
   {typedArray: new Uint16Array(), size: 2, normalized: true, result: 'unorm16x2'},
   {typedArray: new Int16Array(), size: 4, normalized: true, result: 'snorm16x4'},
 
+  {typedArray: new Int16Array(), size: 3, result: 'sint16x3-webgl'},
+  {typedArray: new Uint16Array(), size: 3, result: 'uint16x3-webgl'},
+  {typedArray: new Uint16Array(), size: 3, normalized: true, result: 'unorm16x3-webgl'},
+  {typedArray: new Int16Array(), size: 3, normalized: true, result: 'snorm16x3-webgl'},
+  {typedArray: new Uint8Array(), size: 3, normalized: true, result: 'unorm8x3-webgl'},
+  {typedArray: new Int8Array(), size: 3, normalized: true, result: 'snorm8x3-webgl'},
+
   {typedArray: new Float32Array(), size: 5, error: 'Invalid attribute size 5'},
   // @ts-expect-error Intentionally no size
   {typedArray: new Int32Array(), error: 'Missing attribute size'},
   {typedArray: new Uint8Array(), size: 1, error: 'Bad 16 bit alignment'},
-  {typedArray: new Int16Array(), size: 3, error: 'Bad 32 bit alignment'},
   {typedArray: new Float64Array(), size: 2, error: 'Unknown array format'}
 ];
 

@@ -2,7 +2,9 @@
 
 A `Texture` are GPU objects that contain one or more images that all have the same image format, that can be accessed from shaders.
 
-While the idea behind textures is simple in principle (a grid of pixels stored on GPU memory), GPU Textures are surprisingly complex objects. It can be helpful to read the [API Guide section on textures](http://localhost:3000/docs/api-guide/gpu/gpu-textures) to make sure you have a full picture.
+While the idea behind textures is simple in principle (a grid of pixels stored on GPU memory), GPU Textures are surprisingly complex objects. It can be helpful to read the [API Guide section on textures](/docs/api-guide/gpu/gpu-textures) to make sure you have a full picture.
+
+For upload and readback strategy, also see [GPU Commands](/docs/api-guide/gpu/gpu-commands).
 
 
 ## Usage
@@ -353,9 +355,19 @@ On WebGPU this corresponds closely to `copyTextureToBuffer()`. On WebGL, luma.gl
 
 Use `readBuffer()` when you want a GPU buffer containing texture data, typically for staging, readback pipelines, or explicit post-processing workflows.
 
-Unlike `readDataAsync()`, `readBuffer()` exposes the linear buffer layout directly. On WebGPU, that means the returned layout follows buffer-copy alignment rules rather than tightly packed CPU upload rules.
+`readBuffer()` requires a caller-supplied destination buffer. This keeps the core `Texture` API explicit about allocation and ownership.
+
+Textures that will be read back through `readBuffer()` or `copyTextureToBuffer()` must also be created with `Texture.COPY_SRC`. luma.gl does not add readback usage automatically to every texture.
+
+Compared to the deprecated `readDataAsync()` helper, `readBuffer()` exposes the linear buffer layout directly. On WebGPU, that means the returned layout follows buffer-copy alignment rules rather than tightly packed CPU upload rules.
 
 If you need a matching layout, call `texture.computeMemoryLayout()` for the same region. On WebGPU, the returned `bytesPerRow` is padded for buffer copies, typically to a multiple of `256`.
+
+### `readDataAsync()`
+
+Deprecated convenience API.
+
+Use `readBuffer()` with an explicit destination buffer, or engine [`DynamicTexture`](/docs/api-reference/engine/dynamic-texture) when you want convenience readback that allocates temporary buffers for you.
 
 ### `writeBuffer()`
 

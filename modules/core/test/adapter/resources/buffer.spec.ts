@@ -4,12 +4,12 @@
 
 /* eslint-disable no-continue */
 
-import test from 'test/utils/vitest-tape';
+import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {getTestDevices, getWebGPUTestDevice, getWebGLTestDevice} from '@luma.gl/test-utils';
 
 import {TypedArray} from '@math.gl/types';
 import {Buffer, Device} from '@luma.gl/core';
-import {GL} from '@luma.gl/constants';
+import {GL} from '@luma.gl/webgl/constants';
 
 const DEVICE_TYPES = ['webgpu', 'webgl', 'null'] as const;
 

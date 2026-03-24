@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {capitalize} from '@luma.gl/shadertools';
-import type {TapeTestFunction} from 'test/utils/vitest-tape';
+import type {TapeTestFunction} from '@luma.gl/devtools-extensions/tape-test-utils';
 
 export function registerCapitalizeTests(test: TapeTestFunction): void {
   test('shadertools#capitalize', t => {

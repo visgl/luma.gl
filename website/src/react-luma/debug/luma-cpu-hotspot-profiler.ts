@@ -159,7 +159,7 @@ function getCpuHotspotProfiler(device: Device | undefined | null): CpuHotspotPro
 
 function resetCpuHotspotProfiler(device: Device | undefined | null): void {
   const profiler = getCpuHotspotProfiler(device);
-  if (!profiler) {
+  if (!profiler || typeof profiler !== 'object') {
     return;
   }
 

@@ -1,9 +1,16 @@
 // luma.gl, MIT license
 // Copyright (c) vis.gl contributors
 
-import type {TextureProps, SamplerProps, TextureView, Device, TextureFormat} from '@luma.gl/core';
+import type {
+  TextureProps,
+  SamplerProps,
+  TextureView,
+  Device,
+  TextureFormat,
+  TextureReadOptions
+} from '@luma.gl/core';
 
-import {Texture, Sampler, log} from '@luma.gl/core';
+import {Buffer, Texture, Sampler, log} from '@luma.gl/core';
 
 // import {loadImageBitmap} from '../application-utils/load-file';
 import {uid} from '../utils/uid';
@@ -11,14 +18,11 @@ import {
   // cube constants
   type TextureCubeFace,
   TEXTURE_CUBE_FACE_MAP,
-
   // texture slice/mip data types
   type TextureSubresource,
-
   // props (dimension + data)
   type TextureDataProps,
   type TextureDataAsyncProps,
-
   // combined data for different texture types
   type Texture1DData,
   type Texture2DData,
@@ -26,7 +30,6 @@ import {
   type TextureArrayData,
   type TextureCubeArrayData,
   type TextureCubeData,
-
   // Helpers
   getTextureSizeFromData,
   resolveTextureImageFormat,
@@ -109,7 +112,9 @@ export class DynamicTexture {
     return 'DynamicTexture';
   }
   toString(): string {
-    return `DynamicTexture:"${this.id}":${this.texture.width}x${this.texture.height}px:(${this.isReady ? 'ready' : 'loading...'})`;
+    const width = this._texture?.width ?? this.props.width ?? '?';
+    const height = this._texture?.height ?? this.props.height ?? '?';
+    return `DynamicTexture:"${this.id}":${width}x${height}px:(${this.isReady ? 'ready' : 'loading...'})`;
   }
 
   constructor(device: Device, props: DynamicTextureProps) {
@@ -140,7 +145,14 @@ export class DynamicTexture {
 
       const propsWithSyncData = await this._loadAllData(originalPropsWithAsyncData);
       this._checkNotDestroyed();
-      const subresources = propsWithSyncData.data ? getTextureSubresources(propsWithSyncData) : [];
+      const subresources = propsWithSyncData.data
+        ? getTextureSubresources({
+            ...propsWithSyncData,
+            width: originalPropsWithAsyncData.width,
+            height: originalPropsWithAsyncData.height,
+            format: originalPropsWithAsyncData.format
+          })
+        : [];
       const userProvidedFormat =
         'format' in originalPropsWithAsyncData && originalPropsWithAsyncData.format !== undefined;
       const userProvidedUsage =
@@ -262,6 +274,59 @@ export class DynamicTexture {
     const s = sampler instanceof Sampler ? sampler : this.device.createSampler(sampler);
     this.texture.setSampler(s);
     this._sampler = s;
+  }
+
+  /**
+   * Copies texture contents into a GPU buffer and waits until the copy is complete.
+   * The caller owns the returned buffer and must destroy it when finished.
+   */
+  async readBuffer(options: TextureReadOptions = {}): Promise<Buffer> {
+    if (!this.isReady) {
+      await this.ready;
+    }
+
+    const width = options.width ?? this.texture.width;
+    const height = options.height ?? this.texture.height;
+    const depthOrArrayLayers = options.depthOrArrayLayers ?? this.texture.depth;
+    const layout = this.texture.computeMemoryLayout({width, height, depthOrArrayLayers});
+
+    const buffer = this.device.createBuffer({
+      byteLength: layout.byteLength,
+      usage: Buffer.COPY_DST | Buffer.MAP_READ
+    });
+
+    this.texture.readBuffer(
+      {
+        ...options,
+        width,
+        height,
+        depthOrArrayLayers
+      },
+      buffer
+    );
+
+    const fence = this.device.createFence();
+    await fence.signaled;
+    fence.destroy();
+
+    return buffer;
+  }
+
+  /** Reads texture contents back to CPU memory. */
+  async readAsync(options: TextureReadOptions = {}): Promise<ArrayBuffer> {
+    if (!this.isReady) {
+      await this.ready;
+    }
+
+    const width = options.width ?? this.texture.width;
+    const height = options.height ?? this.texture.height;
+    const depthOrArrayLayers = options.depthOrArrayLayers ?? this.texture.depth;
+    const layout = this.texture.computeMemoryLayout({width, height, depthOrArrayLayers});
+
+    const buffer = await this.readBuffer(options);
+    const data = await buffer.readAsync(0, layout.byteLength);
+    buffer.destroy();
+    return data.buffer;
   }
 
   /**
@@ -429,16 +494,22 @@ type TextureSubresourceAnalysis = {
 };
 
 // Flatten dimension-specific texture data into one list of uploadable subresources.
-function getTextureSubresources(props: TextureDataProps): TextureSubresource[] {
+function getTextureSubresources(
+  props: TextureDataProps & Partial<Pick<TextureProps, 'width' | 'height' | 'format'>>
+): TextureSubresource[] {
   if (!props.data) {
     return [];
   }
+
+  const baseLevelSize =
+    props.width && props.height ? {width: props.width, height: props.height} : undefined;
+  const textureFormat = 'format' in props ? props.format : undefined;
 
   switch (props.dimension) {
     case '1d':
       return getTexture1DSubresources(props.data);
     case '2d':
-      return getTexture2DSubresources(0, props.data);
+      return getTexture2DSubresources(0, props.data, baseLevelSize, textureFormat);
     case '3d':
       return getTexture3DSubresources(props.data);
     case '2d-array':
@@ -617,7 +688,7 @@ async function awaitAllPromises(x: any): Promise<any> {
   }
   if (x && typeof x === 'object' && x.constructor === Object) {
     const object: Record<string, any> = x;
-    const values = await Promise.all(Object.values(object));
+    const values = await Promise.all(Object.values(object).map(awaitAllPromises));
     const keys = Object.keys(object);
     const resolvedObject: Record<string, any> = {};
     for (let i = 0; i < keys.length; i++) {

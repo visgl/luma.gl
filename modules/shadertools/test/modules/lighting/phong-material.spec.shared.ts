@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {phongMaterial} from '@luma.gl/shadertools';
-import type {TapeTestFunction} from 'test/utils/vitest-tape';
+import type {TapeTestFunction} from '@luma.gl/devtools-extensions/tape-test-utils';
 
 export function registerPhongMaterialTests(test: TapeTestFunction): void {
   test('shadertools#phongMaterial', t => {
@@ -11,17 +11,20 @@ export function registerPhongMaterialTests(test: TapeTestFunction): void {
     t.deepEqual(uniforms, phongMaterial.defaultUniforms, 'Default phong lighting uniforms ok');
 
     uniforms = phongMaterial.getUniforms({
+      unlit: true,
       ambient: 0.0,
       diffuse: 0.0,
       shininess: 0.0,
       specularColor: [255, 0, 0]
     });
+    t.is(uniforms.unlit, true, 'unlit');
     t.is(uniforms.ambient, 0, 'ambient');
     t.is(uniforms.diffuse, 0, 'diffuse');
     t.is(uniforms.shininess, 0, 'shininess');
     t.deepEqual(uniforms.specularColor, [1, 0, 0], 'specularColor');
 
     uniforms = phongMaterial.getUniforms({});
+    t.equal(uniforms.unlit, false, 'unlit');
     t.equal(uniforms.ambient, 0.35, 'ambient');
     t.equal(uniforms.diffuse, 0.6, 'diffuse');
     t.equal(uniforms.shininess, 32, 'shininess');

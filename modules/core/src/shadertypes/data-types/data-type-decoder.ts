@@ -35,7 +35,7 @@ export class DataTypeDecoder {
   /** Build a vertex format from a signed data type and a component */
   getNormalizedDataType(signedDataType: SignedDataType): NormalizedDataType {
     const dataType: NormalizedDataType = signedDataType;
-    // prettier-ignore
+    // biome-ignore format: preserve layout
     switch (dataType) {
       case 'uint8': return 'unorm8';
       case 'sint8': return 'snorm8';
@@ -47,7 +47,7 @@ export class DataTypeDecoder {
 
   /** Align offset to 1, 2 or 4 elements (4, 8 or 16 bytes) */
   alignTo(size: number, count: number): number {
-    // prettier-ignore
+    // biome-ignore format: preserve layout
     switch (count) {
       case 1: return size; // Pad upwards to even multiple of 2
       case 2: return size + (size % 2); // Pad upwards to even multiple of 2

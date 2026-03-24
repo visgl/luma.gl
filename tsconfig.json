@@ -68,6 +68,9 @@
       "@luma.gl/test-utils/*": ["modules/test-utils/src/*"],
       "@luma.gl/test-utils/test/*": ["modules/test-utils/test/*"],
       "@luma.gl/webgl": ["modules/webgl/src/index.ts"],
+      "@luma.gl/webgl/constants": ["modules/webgl/src/constants/index.ts"],
+      "@luma.gl/webgl/webgl-constants": ["modules/webgl/src/webgl-constants.ts"],
+      "@luma.gl/webgl/webgl-types": ["modules/webgl/src/webgl-types.ts"],
       "@luma.gl/webgl/*": ["modules/webgl/src/*"],
       "@luma.gl/webgl/test/*": ["modules/webgl/test/*"],
       "@luma.gl/webgpu": ["modules/webgpu/src/index.ts"],
@@ -101,6 +104,7 @@
   // Note: an "include": [] section dramatically limits coverage.
   // Better to explicitly exclude things.
   "include": [
+    "devtools/**/*",
     "modules/*/src",
     "modules/*/test",
     "examples/**/*",

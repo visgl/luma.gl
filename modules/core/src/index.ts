@@ -52,6 +52,7 @@ export {
 export type {PipelineFactoryProps} from './factories/pipeline-factory';
 export {PipelineFactory} from './factories/pipeline-factory';
 export {ShaderFactory} from './factories/shader-factory';
+export {_getDefaultBindGroupFactory} from './factories/bind-group-factory';
 
 export type {RenderPassProps} from './adapter/resources/render-pass';
 export {RenderPass} from './adapter/resources/render-pass';
@@ -83,7 +84,13 @@ export type {PipelineLayoutProps} from './adapter/resources/pipeline-layout';
 export {PipelineLayout} from './adapter/resources/pipeline-layout';
 
 // PORTABLE API - UNIFORM BUFFERS
-export {UniformBufferLayout} from './portable/uniform-buffer-layout';
+export {
+  makeShaderBlockLayout,
+  type ShaderBlockLayout,
+  type ShaderBlockLayoutEntry,
+  type ShaderBlockLayoutOptions
+} from './shadertypes/shader-types/shader-block-layout';
+export {ShaderBlockWriter} from './portable/shader-block-writer';
 export {UniformBlock} from './portable/uniform-block';
 export {UniformStore} from './portable/uniform-store';
 // TEXTURE TYPES
@@ -127,6 +134,8 @@ export type {
   AttributeDeclaration,
   BindingDeclaration,
   Binding,
+  Bindings,
+  BindingsByGroup,
   UniformBufferBindingLayout,
   StorageBufferBindingLayout,
   TextureBindingLayout,
@@ -238,6 +247,11 @@ export type {
 
 // INTERNAL UTILS - for use in other luma.gl modules only
 export {log} from './utils/log';
+export {
+  getShaderLayoutBinding,
+  normalizeBindingsByGroup,
+  flattenBindingsByGroup
+} from './adapter-utils/bind-groups';
 export {assert, assertDefined} from './utils/assert';
 export {getScratchArray} from './utils/array-utils-flat';
 export type {AttributeInfo} from './adapter-utils/get-attribute-from-layouts';

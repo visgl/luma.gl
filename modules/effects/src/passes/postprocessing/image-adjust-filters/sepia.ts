@@ -9,7 +9,7 @@ struct sepiaUniforms {
   amount: f32,
 };
 
-@group(0) @binding(1) var<uniform> sepia: sepiaUniforms;
+@group(0) @binding(auto) var<uniform> sepia: sepiaUniforms;
 
 fn sepia_filterColor(color: vec4f) -> vec4f {
   let r = color.r;
@@ -31,7 +31,7 @@ fn sepia_filterColor_ext(color: vec4f, texSize: vec2f, texCoord: vec2f) -> vec4f
 `;
 
 const fs = /* glsl */ `\
-uniform sepiaUniforms {
+layout(std140) uniform sepiaUniforms {
   float amount;
 } sepia;
 

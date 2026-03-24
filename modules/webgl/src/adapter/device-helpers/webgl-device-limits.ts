@@ -3,9 +3,9 @@
 // Copyright (c) vis.gl contributors
 
 import {DeviceLimits} from '@luma.gl/core';
-import {GL} from '@luma.gl/constants';
+import {GL} from '@luma.gl/webgl/constants';
 
-// prettier-ignore
+// biome-ignore format: preserve layout
 export class WebGLDeviceLimits extends DeviceLimits {
   get maxTextureDimension1D() { return 0; } // WebGL does not support 1D textures
   get maxTextureDimension2D() { return this.getParameter(GL.MAX_TEXTURE_SIZE); }

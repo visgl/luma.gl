@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
+import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {
   GL_PARAMETER_DEFAULTS,
   GL_PARAMETER_SETTERS
@@ -146,7 +146,7 @@ test('WebGLStateTracker#gl API', async t => {
   parameters = getGLParameters(gl);
   for (const key in ENUM_STYLE_SETTINGS_SET1) {
     // Skipping composite setters
-    if (!isNaN(Number(GL_PARAMETER_SETTERS[key]))) {
+    if (!Number.isNaN(Number(GL_PARAMETER_SETTERS[key]))) {
       // @ts-expect-error
       const value = getGLParameters(gl, [key])[key];
       t.deepEqual(

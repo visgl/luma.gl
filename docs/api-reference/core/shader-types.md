@@ -15,7 +15,7 @@ that system:
 - `UniformTypes<T>` validation in `@luma.gl/shadertools`
 - nested values flowing through [`ShaderInputs`](/docs/api-reference/engine/shader-inputs),
   [`UniformStore`](/docs/api-reference/core/uniform-store), and
-  [`UniformBufferLayout`](/docs/api-reference/core/uniform-buffer-layout)
+  [`ShaderBlockLayout`](/docs/api-reference/core/shader-block-layout)
 
 For adjacent type families, see:
 
@@ -180,7 +180,7 @@ The data flow is:
 1. `ShaderModule.uniformTypes` declares the shader-facing layout
 2. application code updates nested values through `ShaderInputs.setProps()`
 3. `ShaderInputs` preserves the nested JavaScript shape per module
-4. `UniformStore` and `UniformBufferLayout` flatten leaf values internally
+4. `UniformStore` and `ShaderBlockWriter` flatten leaf values internally
 5. the final buffer is packed using std140-compatible rules
 
 That means application code works with values like:
@@ -240,4 +240,4 @@ Also note:
 
 - primitive leaf values still use the string descriptors listed above
 - composite shader type support here is about uniforms, not texture formats or vertex formats
-- `UniformBufferLayout` and `UniformStore` are runtime packing utilities, not sources of TypeScript inference
+- `ShaderBlockLayout`, `ShaderBlockWriter`, and `UniformStore` are runtime packing utilities, not sources of TypeScript inference

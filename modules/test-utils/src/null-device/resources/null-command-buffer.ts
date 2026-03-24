@@ -22,17 +22,27 @@ export class NullCommandBuffer extends CommandBuffer {
     this.device = device;
   }
 
-  copyBufferToBuffer(options: CopyBufferToBufferOptions): void {}
+  copyBufferToBuffer(_options: CopyBufferToBufferOptions): void {
+    throw new Error('copyBufferToBuffer is not supported on NullDevice');
+  }
 
-  copyBufferToTexture(options: CopyBufferToTextureOptions) {}
+  copyBufferToTexture(_options: CopyBufferToTextureOptions) {
+    throw new Error('copyBufferToTexture is not supported on NullDevice');
+  }
 
-  copyTextureToBuffer(options: CopyTextureToBufferOptions): void {}
+  copyTextureToBuffer(_options: CopyTextureToBufferOptions): void {
+    throw new Error('copyTextureToBuffer is not supported on NullDevice');
+  }
 
-  copyTextureToTexture(options: CopyTextureToTextureOptions): void {}
+  copyTextureToTexture(_options: CopyTextureToTextureOptions): void {
+    throw new Error('copyTextureToTexture is not supported on NullDevice');
+  }
 
   pushDebugGroup(groupLabel: string): void {}
   popDebugGroup() {}
 
-  insertDebugMarker(markerLabel: string): void {}
-  resolveQuerySet(querySet: QuerySet): void {}
+  insertDebugMarker(_markerLabel: string): void {}
+  resolveQuerySet(_querySet: QuerySet): void {
+    throw new Error('resolveQuerySet is not supported on NullDevice');
+  }
 }

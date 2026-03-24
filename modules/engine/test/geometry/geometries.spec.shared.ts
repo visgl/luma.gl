@@ -12,7 +12,7 @@ import {
   SphereGeometry,
   TruncatedConeGeometry
 } from '@luma.gl/engine';
-import type {TapeTestFunction} from 'test/utils/vitest-tape';
+import type {TapeTestFunction} from '@luma.gl/devtools-extensions/tape-test-utils';
 
 const GEOMETRY_TESTS = [
   {name: 'ConeGeometry', Geometry: ConeGeometry, props: [{height: 2}, {verticalAxis: 'z'}]},

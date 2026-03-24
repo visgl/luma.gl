@@ -10,8 +10,7 @@ struct brightnessContrastUniforms {
   contrast: f32
 };
 
-// Binding 0:1 is reserved for shader passes
-@group(0) @binding(1) var<uniform> brightnessContrast : brightnessContrastUniforms;
+@group(0) @binding(auto) var<uniform> brightnessContrast : brightnessContrastUniforms;
 
 fn brightnessContrast_filterColor_ext(color: vec4f, texSize: vec2<f32>, texCoords: vec2<f32>) -> vec4f {
   var resultRgb = color.rgb + vec3f(brightnessContrast.brightness);
@@ -25,7 +24,7 @@ fn brightnessContrast_filterColor_ext(color: vec4f, texSize: vec2<f32>, texCoord
 `;
 
 const fs = /* glsl */ `\
-uniform brightnessContrastUniforms {
+layout(std140) uniform brightnessContrastUniforms {
   float brightness;
   float contrast;
 } brightnessContrast;

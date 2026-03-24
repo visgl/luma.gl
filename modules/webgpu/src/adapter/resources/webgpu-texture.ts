@@ -16,6 +16,7 @@ import {getWebGPUTextureFormat} from '../helpers/convert-texture-format';
 import type {WebGPUDevice} from '../webgpu-device';
 import {WebGPUSampler} from './webgpu-sampler';
 import {WebGPUTextureView} from './webgpu-texture-view';
+import {WebGPUBuffer} from './webgpu-buffer';
 
 /** WebGPU implementation of the luma.gl core Texture resource */
 export class WebGPUTexture extends Texture {
@@ -165,62 +166,36 @@ export class WebGPUTexture extends Texture {
     };
   }
 
-  override readBuffer(options: TextureReadOptions = {}, buffer?: Buffer): Buffer {
+  override readBuffer(
+    options: TextureReadOptions & {byteOffset?: number} = {},
+    buffer?: Buffer
+  ): Buffer {
+    if (!buffer) {
+      throw new Error(`${this} readBuffer requires a destination buffer`);
+    }
     const {x, y, z, width, height, depthOrArrayLayers, mipLevel, aspect} =
       this._getSupportedColorReadOptions(options);
+    const byteOffset = options.byteOffset ?? 0;
 
-    const layout = this.computeMemoryLayout({x, y, z, width, height, depthOrArrayLayers, mipLevel});
+    const layout = this.computeMemoryLayout({width, height, depthOrArrayLayers, mipLevel});
 
-    const {bytesPerRow, rowsPerImage, byteLength} = layout;
+    const {byteLength} = layout;
 
-    // Create a GPUBuffer to hold the copied pixel data.
-    const readBuffer =
-      buffer ||
-      this.device.createBuffer({
-        byteLength,
-        usage: Buffer.COPY_DST | Buffer.MAP_READ
-      });
-
-    if (readBuffer.byteLength < byteLength) {
+    if (buffer.byteLength < byteOffset + byteLength) {
       throw new Error(
-        `${this} readBuffer target is too small (${readBuffer.byteLength} < ${byteLength})`
+        `${this} readBuffer target is too small (${buffer.byteLength} < ${byteOffset + byteLength})`
       );
     }
 
-    const gpuReadBuffer = readBuffer.handle as GPUBuffer;
-
-    // Record commands to copy from the texture to the buffer.
     const gpuDevice = this.device.handle;
-
     this.device.pushErrorScope('validation');
     const commandEncoder = gpuDevice.createCommandEncoder();
-    commandEncoder.copyTextureToBuffer(
-      // source
-      {
-        texture: this.handle,
-        origin: {x, y, z},
-        // origin: [options.x, options.y, 0], // options.depth],
-        mipLevel,
-        aspect
-        // colorSpace: options.colorSpace,
-        // premultipliedAlpha: options.premultipliedAlpha
-      },
-      // destination
-      {
-        buffer: gpuReadBuffer,
-        offset: 0,
-        bytesPerRow,
-        rowsPerImage
-      },
-      // copy size
-      {
-        width,
-        height,
-        depthOrArrayLayers
-      }
+    this.copyToBuffer(
+      commandEncoder,
+      {x, y, z, width, height, depthOrArrayLayers, mipLevel, aspect, byteOffset},
+      buffer
     );
 
-    // Submit the command.
     const commandBuffer = commandEncoder.finish();
     this.device.handle.queue.submit([commandBuffer]);
     this.device.popErrorScope((error: GPUError) => {
@@ -228,14 +203,56 @@ export class WebGPUTexture extends Texture {
       this.device.debug();
     });
 
-    return readBuffer;
+    return buffer;
   }
 
   override async readDataAsync(options: TextureReadOptions = {}): Promise<ArrayBuffer> {
-    const buffer = this.readBuffer(options);
-    const data = await buffer.readAsync();
-    buffer.destroy();
-    return data.buffer as ArrayBuffer;
+    throw new Error(
+      `${this} readDataAsync is deprecated; use readBuffer() with an explicit destination buffer or DynamicTexture.readAsync()`
+    );
+  }
+
+  copyToBuffer(
+    commandEncoder: GPUCommandEncoder,
+    options: TextureReadOptions & {
+      byteOffset?: number;
+      bytesPerRow?: number;
+      rowsPerImage?: number;
+    } = {},
+    buffer: Buffer
+  ): void {
+    const {
+      byteOffset = 0,
+      bytesPerRow: requestedBytesPerRow,
+      rowsPerImage: requestedRowsPerImage,
+      ...textureReadOptions
+    } = options;
+    const {x, y, z, width, height, depthOrArrayLayers, mipLevel, aspect} =
+      this._getSupportedColorReadOptions(textureReadOptions);
+    const layout = this.computeMemoryLayout({width, height, depthOrArrayLayers, mipLevel});
+    const effectiveBytesPerRow = requestedBytesPerRow ?? layout.bytesPerRow;
+    const effectiveRowsPerImage = requestedRowsPerImage ?? layout.rowsPerImage;
+    const webgpuBuffer = buffer as WebGPUBuffer;
+
+    commandEncoder.copyTextureToBuffer(
+      {
+        texture: this.handle,
+        origin: {x, y, z},
+        mipLevel,
+        aspect
+      },
+      {
+        buffer: webgpuBuffer.handle,
+        offset: byteOffset,
+        bytesPerRow: effectiveBytesPerRow,
+        rowsPerImage: effectiveRowsPerImage
+      },
+      {
+        width,
+        height,
+        depthOrArrayLayers
+      }
+    );
   }
 
   override writeBuffer(buffer: Buffer, options_: TextureWriteOptions = {}) {

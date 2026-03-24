@@ -6,7 +6,7 @@
 // Provides a function that enables simple checking of which WebGL features are
 
 import {DeviceFeature, DeviceFeatures} from '@luma.gl/core';
-import {GLExtensions} from '@luma.gl/constants';
+import {GLExtensions} from '@luma.gl/webgl/constants';
 import {getWebGLExtension} from '../../context/helpers/webgl-extensions';
 import {
   isTextureFeature,

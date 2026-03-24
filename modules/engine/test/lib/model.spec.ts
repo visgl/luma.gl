@@ -2,16 +2,34 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from 'test/utils/vitest-tape';
-import {luma, PipelineFactory, ShaderFactory} from '@luma.gl/core';
+import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import {Device, luma, PipelineFactory, ShaderFactory} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
 import {getWebGLTestDevice, getWebGPUTestDevice, getTestDevices} from '@luma.gl/test-utils';
+import {skin} from '@luma.gl/shadertools';
+import {pbrProjection} from '../../../shadertools/src/modules/lighting/pbr-material/pbr-projection';
 
 const stats = luma.stats.get('GPU Resource Counts');
 
 const DUMMY_WGSL = /* WGSL */ `
 @vertex fn vertexMain() -> @builtin(position) vec4<f32> {
   return vec4<f32>(0.0, 0.0, 0.0, 1.0);
+}
+
+@fragment fn fragmentMain(@builtin(position) coord_in: vec4<f32>) -> @location(0) vec4<f32> {
+  return vec4<f32>(coord_in.x, coord_in.y, 0.0, 1.0);
+}
+`;
+
+const DUMMY_WGSL_WITH_BINDING = /* wgsl */ `
+struct AppFrameUniforms {
+  scale: f32
+};
+
+@group(0) @binding(0) var<uniform> appFrame: AppFrameUniforms;
+
+@vertex fn vertexMain() -> @builtin(position) vec4<f32> {
+  return vec4<f32>(appFrame.scale, 0.0, 0.0, 1.0);
 }
 
 @fragment fn fragmentMain(@builtin(position) coord_in: vec4<f32>) -> @location(0) vec4<f32> {
@@ -231,11 +249,80 @@ test('Model#draw skips WebGPU render pipelines that failed init', async t => {
 
   t.equal(model.draw(renderPass), false, 'first draw is skipped when the pipeline is errored');
   t.equal(model.draw(renderPass), false, 'repeated draws remain skipped');
-  t.equal(model.needsRedraw(), 'render pipeline initialization failed', 'model keeps failure reason');
+  t.equal(
+    model.needsRedraw(),
+    'render pipeline initialization failed',
+    'model keeps failure reason'
+  );
 
   renderPass.end();
   renderPass.destroy();
   model.destroy();
+  t.end();
+});
+
+test('Model#getBindingDebugTable', async t => {
+  const webgpuDevice = await getWebGPUTestDevice();
+  if (!webgpuDevice) {
+    t.comment('WebGPU unavailable, skipping binding debug table test');
+    t.end();
+    return;
+  }
+
+  const wgslModel = new Model(webgpuDevice, {
+    id: 'binding-debug-table-test',
+    source: DUMMY_WGSL_WITH_BINDING,
+    modules: [pbrProjection, skin],
+    vertexCount: 3
+  });
+
+  t.deepEqual(
+    wgslModel.getBindingDebugTable().map(row => ({
+      name: row.name,
+      group: row.group,
+      binding: row.binding,
+      owner: row.owner,
+      moduleName: row.moduleName
+    })),
+    [
+      {
+        name: 'appFrame',
+        group: 0,
+        binding: 0,
+        owner: 'application',
+        moduleName: undefined
+      },
+      {
+        name: 'pbrProjection',
+        group: 0,
+        binding: 100,
+        owner: 'module',
+        moduleName: 'pbrProjection'
+      },
+      {
+        name: 'skin',
+        group: 0,
+        binding: 101,
+        owner: 'module',
+        moduleName: 'skin'
+      }
+    ],
+    'WGSL model exposes assembled binding debug rows before draw'
+  );
+
+  wgslModel.destroy();
+
+  const webglDevice = await getWebGLTestDevice();
+  const glslModel = new Model(webglDevice, {
+    id: 'binding-debug-table-glsl-test',
+    vs: DUMMY_VS,
+    fs: DUMMY_FS,
+    vertexCount: 3
+  });
+
+  t.deepEqual(glslModel.getBindingDebugTable(), [], 'GLSL model reports no WGSL binding rows');
+
+  glslModel.destroy();
   t.end();
 });
 
@@ -295,6 +382,11 @@ async function waitForPipelineError(pipeline: {
 
 test('Model#pipeline caching', async t => {
   const webglDevice = await getWebGLTestDevice();
+  if (isSoftwareBackedDevice(webglDevice)) {
+    t.comment('Skipping WebGL pipeline caching test on a software-backed adapter');
+    t.end();
+    return;
+  }
   if (!webglDevice.props._cachePipelines) {
     t.comment('Pipeline caching is disabled');
     t.end();
@@ -348,6 +440,11 @@ test('Model#pipeline caching', async t => {
 
 test('Model#pipeline caching with defines and modules', async t => {
   const webglDevice = await getWebGLTestDevice();
+  if (isSoftwareBackedDevice(webglDevice)) {
+    t.comment('Skipping WebGL pipeline caching-with-modules test on a software-backed adapter');
+    t.end();
+    return;
+  }
   if (!webglDevice.props._cachePipelines) {
     t.comment('Pipeline caching is disabled');
     t.end();
@@ -449,6 +546,12 @@ test('Model#pipeline caching with defines and modules', async t => {
 
   t.end();
 });
+
+function isSoftwareBackedDevice(device: Device): boolean {
+  return (
+    device.info.gpu === 'software' || device.info.gpuType === 'cpu' || Boolean(device.info.fallback)
+  );
+}
 
 /*
 import {dirlight, picking} from '@luma.gl/shadertools';

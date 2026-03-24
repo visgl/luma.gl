@@ -9,7 +9,7 @@ import type {
   DeviceTextureFormatCapabilities
 } from '@luma.gl/core';
 import {textureFormatDecoder} from '@luma.gl/core';
-import {GL, GLPixelType, GLExtensions, GLTexelDataFormat} from '@luma.gl/constants';
+import {GL, GLPixelType, GLExtensions, GLTexelDataFormat} from '@luma.gl/webgl/constants';
 import {getWebGLExtension} from '../../context/helpers/webgl-extensions';
 import {getGLFromVertexType} from './webgl-vertex-formats';
 
@@ -44,7 +44,7 @@ type TextureFeatureDefinition = {
   features?: DeviceFeature[];
 };
 
-// prettier-ignore
+// biome-ignore format: preserve layout
 export const TEXTURE_FEATURES: Partial<Record<DeviceFeature, TextureFeatureDefinition>> = {
   'float32-renderable-webgl': {extensions: [EXT_color_buffer_float]},
   'float16-renderable-webgl': {extensions: ['EXT_color_buffer_half_float']},
@@ -137,7 +137,7 @@ type WebGLFormatInfo = {
  * Texture format data -
  * Exported but can change without notice
  */
-// prettier-ignore
+// biome-ignore format: preserve layout
 export const WEBGL_TEXTURE_FORMATS: Record<TextureFormat, WebGLFormatInfo> = {
   // 8-bit formats
   'r8unorm': {gl: GL.R8, rb: true},
@@ -478,7 +478,7 @@ export function getWebGLPixelDataFormat(
   if (format === GL.RGBA || format === GL.RGB) {
     return format;
   }
-  // prettier-ignore
+  // biome-ignore format: preserve layout
   switch (channels) {
     case 'r': return integer && !normalized ? GL.RED_INTEGER : GL.RED;
     case 'rg': return integer && !normalized ? GL.RG_INTEGER : GL.RG;

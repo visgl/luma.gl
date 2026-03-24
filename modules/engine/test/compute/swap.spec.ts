@@ -1,4 +1,4 @@
-import test from 'test/utils/vitest-tape';
+import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {Swap, SwapFramebuffers} from '../../src/compute/swap';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
 

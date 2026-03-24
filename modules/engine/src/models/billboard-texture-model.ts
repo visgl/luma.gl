@@ -41,7 +41,7 @@ precision highp float;
 
 uniform sampler2D backgroundTexture;
 
-uniform backgroundUniforms {
+layout(std140) uniform backgroundUniforms {
   vec2 scale;
 } background;
 

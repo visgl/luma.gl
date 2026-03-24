@@ -235,4 +235,5 @@ export class Luma {
  * Register WebGPU and/or WebGL adapters (controls application bundle size)
  * Run-time selection of the first available Device
  */
+// biome-ignore lint/suspicious/noRedeclare: the exported singleton intentionally mirrors the global debug handle.
 export const luma = new Luma();

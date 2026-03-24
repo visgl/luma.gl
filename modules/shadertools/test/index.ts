@@ -6,6 +6,7 @@
 
 import './lib/shader-module/shader-module.spec';
 import './lib/shader-module/shader-module-dependencies.spec';
+import './lib/shader-module/project-layout-regression.spec';
 
 // utils
 import './lib/glsl-utils/get-shader-info.spec';
@@ -44,7 +45,7 @@ import './modules/lighting/lights.spec';
 import './modules/lighting/dirlight.spec';
 import './modules/lighting/phong-material.spec';
 import './modules/lighting/gouraud-material.spec';
-// import './modules/lighting/pbr-material.spec';
+import './modules/lighting/pbr-material.spec';
 
 // Engine
 import './modules/engine/picking.spec';

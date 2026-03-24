@@ -35,13 +35,13 @@ export class CubeGeometry extends Geometry {
   }
 }
 
-// prettier-ignore
+// biome-ignore format: preserve layout
 const CUBE_INDICES = new Uint16Array([
   0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7, 8, 9, 10, 8, 10, 11, 12, 13,
   14, 12, 14, 15, 16, 17, 18, 16, 18, 19, 20, 21, 22, 20, 22, 23
 ]);
 
-// prettier-ignore
+// biome-ignore format: preserve layout
 const CUBE_POSITIONS = new Float32Array([
   -1,  -1,  1, 1,  -1,  1,  1,  1,  1,  -1,  1,  1,
   -1,  -1,  -1,  -1,  1,  -1,  1,  1,  -1,  1,  -1,  -1,
@@ -52,7 +52,7 @@ const CUBE_POSITIONS = new Float32Array([
 ]);
 
 // TODO - could be Uint8
-// prettier-ignore
+// biome-ignore format: preserve layout
 const CUBE_NORMALS = new Float32Array([
   // Front face
   0,  0,  1,  0,  0,  1,  0,  0,  1,  0,  0,  1,
@@ -68,7 +68,7 @@ const CUBE_NORMALS = new Float32Array([
   -1,  0,  0,  -1,  0,  0,  -1,  0,  0,  -1,  0,  0
 ]);
 
-// prettier-ignore
+// biome-ignore format: preserve layout
 const CUBE_TEX_COORDS = new Float32Array([
   // Front face
   0,  0,  1,  0,  1,  1,  0,  1,
@@ -85,7 +85,7 @@ const CUBE_TEX_COORDS = new Float32Array([
 ]);
 
 // float4 position
-// prettier-ignore
+// biome-ignore format: preserve layout
 export const CUBE_NON_INDEXED_POSITIONS = new Float32Array([
   1, -1, 1,
   -1, -1, 1,
@@ -131,7 +131,7 @@ export const CUBE_NON_INDEXED_POSITIONS = new Float32Array([
 ]);
 
 // float2 uv,
-// prettier-ignore
+// biome-ignore format: preserve layout
 export const CUBE_NON_INDEXED_TEX_COORDS = new Float32Array([
   1, 1,
   0, 1,
@@ -177,7 +177,7 @@ export const CUBE_NON_INDEXED_TEX_COORDS = new Float32Array([
 ]);
 
 // float4 color
-// prettier-ignore
+// biome-ignore format: preserve layout
 export const CUBE_NON_INDEXED_COLORS = new Float32Array([
   1, 0, 1, 1,
   0, 0, 1, 1,

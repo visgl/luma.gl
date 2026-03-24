@@ -31,6 +31,7 @@ import type {VertexArray, VertexArrayProps} from './resources/vertex-array';
 import type {TransformFeedback, TransformFeedbackProps} from './resources/transform-feedback';
 import type {QuerySet, QuerySetProps} from './resources/query-set';
 import type {Fence} from './resources/fence';
+import type {Bindings, ComputeShaderLayout, ShaderLayout} from './types/shader-layout';
 
 import {vertexFormatDecoder} from '../shadertypes/vertex-types/vertex-format-decoder';
 import {textureFormatDecoder} from '../shadertypes/texture-types/texture-format-decoder';
@@ -123,6 +124,84 @@ export abstract class DeviceLimits {
   abstract maxComputeWorkgroupSizeZ: number;
   /** max ComputeWorkgroupsPerDimension */
   abstract maxComputeWorkgroupsPerDimension: number;
+}
+
+function formatErrorLogArguments(context: unknown, args: unknown[]): unknown[] {
+  const formattedContext = formatErrorLogValue(context);
+  const formattedArgs = args.map(formatErrorLogValue).filter(arg => arg !== undefined);
+  return [formattedContext, ...formattedArgs].filter(arg => arg !== undefined);
+}
+
+function formatErrorLogValue(value: unknown): unknown {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (
+    value === null ||
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'boolean'
+  ) {
+    return value;
+  }
+  if (value instanceof Error) {
+    return value.message;
+  }
+  if (Array.isArray(value)) {
+    return value.map(formatErrorLogValue);
+  }
+  if (typeof value === 'object') {
+    if (hasCustomToString(value)) {
+      const stringValue = String(value);
+      if (stringValue !== '[object Object]') {
+        return stringValue;
+      }
+    }
+
+    if (looksLikeGPUCompilationMessage(value)) {
+      return formatGPUCompilationMessage(value);
+    }
+
+    return value.constructor?.name || 'Object';
+  }
+
+  return String(value);
+}
+
+function hasCustomToString(value: object): boolean {
+  return (
+    'toString' in value &&
+    typeof value.toString === 'function' &&
+    value.toString !== Object.prototype.toString
+  );
+}
+
+function looksLikeGPUCompilationMessage(value: object): value is {
+  message?: unknown;
+  type?: unknown;
+  lineNum?: unknown;
+  linePos?: unknown;
+} {
+  return 'message' in value && 'type' in value;
+}
+
+function formatGPUCompilationMessage(value: {
+  message?: unknown;
+  type?: unknown;
+  lineNum?: unknown;
+  linePos?: unknown;
+}): string {
+  const type = typeof value.type === 'string' ? value.type : 'message';
+  const message = typeof value.message === 'string' ? value.message : '';
+  const lineNum = typeof value.lineNum === 'number' ? value.lineNum : null;
+  const linePos = typeof value.linePos === 'number' ? value.linePos : null;
+  const location =
+    lineNum !== null && linePos !== null
+      ? ` @ ${lineNum}:${linePos}`
+      : lineNum !== null
+        ? ` @ ${lineNum}`
+        : '';
+  return `${type}${location}: ${message}`.trim();
 }
 
 /** Set-like class for features (lets apps check for WebGL / WebGPU extensions) */
@@ -318,6 +397,10 @@ export type DeviceProps = {
   _handle?: unknown; // WebGL2RenderingContext | GPUDevice | null;
 };
 
+type DeviceFactories = {
+  bindGroupFactory?: unknown;
+};
+
 /** WebGL independent copy of WebGLContextAttributes */
 type WebGLContextProps = {
   /** indicates if the canvas contains an alpha buffer. */
@@ -428,6 +511,8 @@ export abstract class Device {
   userData: {[key: string]: unknown} = {};
   /** stats */
   readonly statsManager: StatsManager = lumaStats;
+  /** Internal per-device factory storage */
+  _factories: DeviceFactories = {};
   /** An abstract timestamp used for change tracking */
   timestamp: number = 0;
 
@@ -595,13 +680,13 @@ export abstract class Device {
     // Call the error handler
     const isHandled = this.props.onError(error, context);
     if (!isHandled) {
+      const logArguments = formatErrorLogArguments(context, args);
       // Note: Returns a function that must be called: `device.reportError(...)()`
       return log.error(
         this.type === 'webgl' ? '%cWebGL' : '%cWebGPU',
         'color: white; background: red; padding: 2px 6px; border-radius: 3px;',
         error.message,
-        context,
-        ...args
+        ...logArguments
       );
     }
     return () => {};
@@ -611,7 +696,8 @@ export abstract class Device {
   debug(): void {
     if (this.props.debug) {
       // @ts-ignore
-      debugger; // eslint-disable-line
+      // biome-ignore lint/suspicious/noDebugger: explicit debug break when device debugging is enabled.
+      debugger;
     } else {
       // TODO(ibgreen): Does not appear to be printed in the console
       const message = `\
@@ -706,6 +792,24 @@ or create a device with the 'debug: true' prop.`;
   /** Internal helper for creating a shareable WebGL render-pipeline implementation. */
   _createSharedRenderPipelineWebGL(_props: RenderPipelineProps): SharedRenderPipeline {
     throw new Error('_createSharedRenderPipelineWebGL() not implemented');
+  }
+
+  /** Internal WebGPU-only helper for retrieving the native bind-group layout for a pipeline group. */
+  _createBindGroupLayoutWebGPU(
+    _pipeline: RenderPipeline | ComputePipeline,
+    _group: number
+  ): unknown {
+    throw new Error('_createBindGroupLayoutWebGPU() not implemented');
+  }
+
+  /** Internal WebGPU-only helper for creating a native bind group. */
+  _createBindGroupWebGPU(
+    _bindGroupLayout: unknown,
+    _shaderLayout: ShaderLayout | ComputeShaderLayout,
+    _bindings: Bindings,
+    _group: number
+  ): unknown {
+    throw new Error('_createBindGroupWebGPU() not implemented');
   }
 
   /**

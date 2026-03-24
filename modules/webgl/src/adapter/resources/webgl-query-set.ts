@@ -1,6 +1,6 @@
 // WebGL2 QuerySet (also handles disjoint timer extensions)
 import {QuerySet, QuerySetProps} from '@luma.gl/core';
-import {GL} from '@luma.gl/constants';
+import {GL} from '@luma.gl/webgl/constants';
 import {WebGLDevice} from '../webgl-device';
 
 type WebGLPendingQuery = {
