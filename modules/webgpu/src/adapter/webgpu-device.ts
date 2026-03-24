@@ -467,24 +467,24 @@ export class WebGPUDevice extends Device {
 
     // Some subsets of WebGPU extensions correspond to WebGL extensions
     if (features.has('texture-compression-bc')) {
-      features.add('texture-compression-bc5-webgl');
+      features.add('texture-compression-bc5-ext');
     }
 
     if (this.handle.features.has('chromium-experimental-norm16-texture-formats')) {
-      features.add('norm16-renderable-webgl');
+      features.add('norm16-renderable-ext');
     }
 
     if (this.handle.features.has('chromium-experimental-snorm16-texture-formats')) {
-      features.add('snorm16-renderable-webgl');
+      features.add('snorm16-renderable-ext');
     }
 
     const WEBGPU_ALWAYS_FEATURES: DeviceFeature[] = [
-      'compilation-status-async-webgl',
-      'float32-renderable-webgl',
-      'float16-renderable-webgl',
-      'norm16-renderable-webgl',
-      'texture-filterable-anisotropic-webgl',
-      'shader-noperspective-interpolation-webgl'
+      'compilation-status-async-ext',
+      'float32-renderable-ext',
+      'float16-renderable-ext',
+      'norm16-renderable-ext',
+      'texture-filterable-anisotropic-ext',
+      'shader-noperspective-interpolation-ext'
     ];
 
     for (const feature of WEBGPU_ALWAYS_FEATURES) {
@@ -498,7 +498,7 @@ export class WebGPUDevice extends Device {
     capabilities: DeviceTextureFormatCapabilities
   ): DeviceTextureFormatCapabilities {
     const {format} = capabilities;
-    if (format.includes('webgl')) {
+    if (format.endsWith('-ext')) {
       return {format, create: false, render: false, filter: false, blend: false, store: false};
     }
     return capabilities;

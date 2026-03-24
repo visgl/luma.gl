@@ -115,18 +115,18 @@ export type TextureFeature =
   | 'texture-compression-bc'
   | 'texture-compression-astc'
   | 'texture-compression-etc2'
-  | 'texture-compression-etc1-webgl'
-  | 'texture-compression-pvrtc-webgl'
-  | 'texture-compression-atc-webgl'
-  | 'float32-renderable-webgl'
-  | 'float16-renderable-webgl'
-  | 'rgb9e5ufloat-renderable-webgl'
-  | 'snorm8-renderable-webgl'
-  | 'norm16-webgl'
-  | 'norm16-renderable-webgl'
-  | 'snorm16-renderable-webgl'
+  | 'texture-compression-etc1-ext'
+  | 'texture-compression-pvrtc-ext'
+  | 'texture-compression-atc-ext'
+  | 'float32-renderable-ext'
+  | 'float16-renderable-ext'
+  | 'rgb9e5ufloat-renderable-ext'
+  | 'snorm8-renderable-ext'
+  | 'norm16-ext'
+  | 'norm16-renderable-ext'
+  | 'snorm16-renderable-ext'
   | 'float32-filterable'
-  | 'float16-filterable-webgl';
+  | 'float16-filterable-ext';
 
 /** Chrome-specific extensions. Expected to eventually become standard features. */
 export type ChromeExperimentalTextureFeature =
@@ -170,21 +170,21 @@ export type TextureFormatColorUncompressed =
 export type TextureFormatUnorm8 =
   | 'r8unorm'
   | 'rg8unorm'
-  | 'rgb8unorm-webgl'
+  | 'rgb8unorm-ext'
   | 'rgba8unorm'
   | 'rgba8unorm-srgb'
   | 'bgra8unorm'
   | 'bgra8unorm-srgb';
 
-export type TextureFormatSnorm8 = 'r8snorm' | 'rg8snorm' | 'rgb8snorm-webgl' | 'rgba8snorm';
+export type TextureFormatSnorm8 = 'r8snorm' | 'rg8snorm' | 'rgb8snorm-ext' | 'rgba8snorm';
 
 export type TextureFormatUint8 = 'r8uint' | 'rg8uint' | 'rgba8uint';
 
 export type TextureFormatSint8 = 'r8sint' | 'rg8sint' | 'rgba8sint';
 
-export type TextureFormatUnorm16 = 'r16unorm' | 'rg16unorm' | 'rgb16unorm-webgl' | 'rgba16unorm';
+export type TextureFormatUnorm16 = 'r16unorm' | 'rg16unorm' | 'rgb16unorm-ext' | 'rgba16unorm';
 
-export type TextureFormatSnorm16 = 'r16snorm' | 'rg16snorm' | 'rgb16snorm-webgl' | 'rgba16snorm';
+export type TextureFormatSnorm16 = 'r16snorm' | 'rg16snorm' | 'rgb16snorm-ext' | 'rgba16snorm';
 
 export type TextureFormatUint16 = 'r16uint' | 'rg16uint' | 'rgba16uint';
 
@@ -197,9 +197,9 @@ export type TextureFormatUint32 = 'r32uint' | 'rg32uint' | 'rgba32uint';
 
 export type TextureFormatSint32 = 'r32sint' | 'rg32sint' | 'rgba32sint';
 
-export type TextureFormatFloat32 = 'r32float' | 'rg32float' | 'rgb32float-webgl' | 'rgba32float';
+export type TextureFormatFloat32 = 'r32float' | 'rg32float' | 'rgb32float-ext' | 'rgba32float';
 
-export type TextureFormatPacked16 = 'rgba4unorm-webgl' | 'rgb565unorm-webgl' | 'rgb5a1unorm-webgl';
+export type TextureFormatPacked16 = 'rgba4unorm-ext' | 'rgb565unorm-ext' | 'rgb5a1unorm-ext';
 
 export type TextureFormatPacked32 =
   | 'rgb9e5ufloat'
@@ -207,16 +207,16 @@ export type TextureFormatPacked32 =
   | 'rgb10a2unorm'
   | 'rgb10a2uint';
 export type TextureFormatCompressed =
-  | 'bc1-rgb-unorm-webgl'
-  | 'bc1-rgb-unorm-srgb-webgl'
-  | 'pvrtc-rgb4unorm-webgl'
-  | 'pvrtc-rgba4unorm-webgl'
-  | 'pvrtc-rgb2unorm-webgl'
-  | 'pvrtc-rgba2unorm-webgl'
-  | 'etc1-rbg-unorm-webgl'
-  | 'atc-rgb-unorm-webgl'
-  | 'atc-rgba-unorm-webgl'
-  | 'atc-rgbai-unorm-webgl'
+  | 'bc1-rgb-unorm-ext'
+  | 'bc1-rgb-unorm-srgb-ext'
+  | 'pvrtc-rgb4unorm-ext'
+  | 'pvrtc-rgba4unorm-ext'
+  | 'pvrtc-rgb2unorm-ext'
+  | 'pvrtc-rgba2unorm-ext'
+  | 'etc1-rbg-unorm-ext'
+  | 'atc-rgb-unorm-ext'
+  | 'atc-rgba-unorm-ext'
+  | 'atc-rgbai-unorm-ext'
 
   // BC compressed formats usable if 'texture-compression-bc' is both
   // supported by the device/user agent and enabled in requestDevice.

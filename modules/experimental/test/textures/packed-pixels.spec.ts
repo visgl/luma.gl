@@ -15,8 +15,8 @@ function almostEqual(a: number, b: number, eps = 1e-3): boolean {
 // Integer/unorm round-trip tests
 test('Integer/unorm formats round-trip', t => {
   const formats: Array<
-    'rgba4unorm-webgl' | 'rgb565unorm-webgl' | 'rgb5a1unorm-webgl' | 'rgb10a2unorm' | 'rgb10a2uint'
-  > = ['rgba4unorm-webgl', 'rgb565unorm-webgl', 'rgb5a1unorm-webgl', 'rgb10a2unorm', 'rgb10a2uint'];
+    'rgba4unorm-ext' | 'rgb565unorm-ext' | 'rgb5a1unorm-ext' | 'rgb10a2unorm' | 'rgb10a2uint'
+  > = ['rgba4unorm-ext', 'rgb565unorm-ext', 'rgb5a1unorm-ext', 'rgb10a2unorm', 'rgb10a2uint'];
   const vals: [number, number, number, number] = [0.2, 0.5, 0.8, 1.0];
   for (const fmt of formats) {
     const bits = rgbaDecoder.encodeRGBA(vals, fmt);
@@ -29,9 +29,9 @@ test('Integer/unorm formats round-trip', t => {
 // Precomputed integer/unorm decodes
 test('Precomputed integer/unorm decodes', t => {
   const cases = [
-    {format: 'rgb565unorm-webgl', bits: 0xf81f, expected: [1, 0, 1, 1]},
-    {format: 'rgba4unorm-webgl', bits: 0xf00f, expected: [1, 0, 0, 1]},
-    {format: 'rgb5a1unorm-webgl', bits: 0xf801, expected: [1, 0, 0, 1]},
+    {format: 'rgb565unorm-ext', bits: 0xf81f, expected: [1, 0, 1, 1]},
+    {format: 'rgba4unorm-ext', bits: 0xf00f, expected: [1, 0, 0, 1]},
+    {format: 'rgb5a1unorm-ext', bits: 0xf801, expected: [1, 0, 0, 1]},
     {format: 'rgb10a2unorm', bits: 0xffc00003, expected: [1, 0, 0, 1]},
     {format: 'rgb10a2uint', bits: 0xffc00003, expected: [1023, 0, 0, 3]}
   ];

@@ -1,9 +1,9 @@
 /** @todo - import from texture-types */
 // import { type TextureFormatPacked } from "../textures/texture-format-types";
 export type TextureFormatPacked =
-  | 'rgba4unorm-webgl'
-  | 'rgb565unorm-webgl'
-  | 'rgb5a1unorm-webgl'
+  | 'rgba4unorm-ext'
+  | 'rgb565unorm-ext'
+  | 'rgb5a1unorm-ext'
   | 'rgb10a2unorm'
   | 'rgb10a2uint'
   | 'rgb9e5ufloat'

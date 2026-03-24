@@ -277,25 +277,25 @@ and luma.gl is exposing support for many of the new WebGL extensions through the
 
 New `Device.features` that improve application performance in WebGL:
 
-- `compilation-status-async-webgl`: Asynchronous shader compilation and linking is used automatically by luma.gl and significantly speeds up applications that create many `RenderPipelines`.
+- `compilation-status-async-ext`: Asynchronous shader compilation and linking is used automatically by luma.gl and significantly speeds up applications that create many `RenderPipelines`.
 
 New `Device.features` that enable additional color format support in WebGL:
 
-- `rgb9e5ufloat-renderable-webgl`: `rgb9e5ufloat` is renderable.
-- `snorm8-renderable-webgl`: `r,rg,rgba8snorm` are renderable.
-- `norm16-renderable-webgl`: `r,rg,rgba16norm` are renderable.
-- `snorm16-renderable-webgl`: `r,rg,rgba16snorm` are renderable.
+- `rgb9e5ufloat-renderable-ext`: `rgb9e5ufloat` is renderable.
+- `snorm8-renderable-ext`: `r,rg,rgba8snorm` are renderable.
+- `norm16-renderable-ext`: `r,rg,rgba16norm` are renderable.
+- `snorm16-renderable-ext`: `r,rg,rgba16snorm` are renderable.
 
 New `Device.features` that expose new GPU parameters in WebGL:
 
 - `depth-clip-control`: `parameters.unclippedDepth` - depth clipping can now be disabled.
-- `provoking-vertex-webgl`: `parameters.provokingVertex` - controls which primitive vertex is used for flat shading.
-- `polygon-mode-webgl`: `parameters.polygonMode` - enables wire frame rendering of polygons.
-- `polygon-mode-webgl`: `parameters.polygonOffsetLine` - enables depth bias (polygon offset) for lines.
-- `shader-clip-cull-distance-webgl`: `parameters.clipCullDistance0-7`, also see GLSL effects below.
+- `provoking-vertex-ext`: `parameters.provokingVertex` - controls which primitive vertex is used for flat shading.
+- `polygon-mode-ext`: `parameters.polygonMode` - enables wire frame rendering of polygons.
+- `polygon-mode-ext`: `parameters.polygonOffsetLine` - enables depth bias (polygon offset) for lines.
+- `shader-clip-cull-distance-ext`: `parameters.clipCullDistance0-7`, also see GLSL effects below.
 
 New `Device.features` that enable new GLSL syntax
 
-- `shader-noperspective-interpolation-webgl`: GLSL vertex outputs and fragment inputs may be declared with a `noperspective` interpolation qualifier.
-- `shader-conservative-depth-webgl`: GLSL `gl_FragDepth` qualifiers `depth_any` `depth_greater` `depth_less` `depth_unchanged` can enable early depth test optimizations.
-- `shader-clip-cull-distance-webgl`: Enables `gl_ClipDistance[] / gl_CullDistance[]`.
+- `shader-noperspective-interpolation-ext`: GLSL vertex outputs and fragment inputs may be declared with a `noperspective` interpolation qualifier.
+- `shader-conservative-depth-ext`: GLSL `gl_FragDepth` qualifiers `depth_any` `depth_greater` `depth_less` `depth_unchanged` can enable early depth test optimizations.
+- `shader-clip-cull-distance-ext`: Enables `gl_ClipDistance[] / gl_CullDistance[]`.

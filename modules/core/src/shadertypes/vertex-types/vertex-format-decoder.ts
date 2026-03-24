@@ -12,14 +12,15 @@ export class VertexFormatDecoder {
    * Decodes a vertex format, returning type, components, byte  length and flags (integer, signed, normalized)
    */
   getVertexFormatInfo<T extends VertexFormat = VertexFormat>(format: T): VertexFormatInfo<T> {
-    // Strip the -webgl ending if present
+    // Strip the -ext ending if present
     let webglOnly: boolean | undefined;
-    if (format.endsWith('-webgl')) {
-      format.replace('-webgl', '');
+    let normalizedFormat = format as string;
+    if (normalizedFormat.endsWith('-ext')) {
+      normalizedFormat = normalizedFormat.slice(0, -4);
       webglOnly = true;
     }
     // split components from type
-    const [type_, count] = format.split('x');
+    const [type_, count] = normalizedFormat.split('x');
     const type = type_ as NormalizedDataType;
     const components = (count ? parseInt(count) : 1) as 1 | 2 | 3 | 4;
     // decode the type
@@ -55,7 +56,7 @@ export class VertexFormatDecoder {
           return 'unorm8';
         }
         if (components === 3) {
-          return 'unorm8x3-webgl';
+          return 'unorm8x3-ext';
         }
         return `${dataType}x${components}`;
 
@@ -64,7 +65,7 @@ export class VertexFormatDecoder {
           return 'snorm8';
         }
         if (components === 3) {
-          return 'snorm8x3-webgl';
+          return 'snorm8x3-ext';
         }
         return `${dataType}x${components}`;
 
@@ -81,7 +82,7 @@ export class VertexFormatDecoder {
           return 'uint16';
         }
         if (components === 3) {
-          return 'uint16x3-webgl';
+          return 'uint16x3-ext';
         }
         return `${dataType}x${components}`;
 
@@ -90,7 +91,7 @@ export class VertexFormatDecoder {
           return 'sint16';
         }
         if (components === 3) {
-          return 'sint16x3-webgl';
+          return 'sint16x3-ext';
         }
         return `${dataType}x${components}`;
 
@@ -99,7 +100,7 @@ export class VertexFormatDecoder {
           return 'unorm16';
         }
         if (components === 3) {
-          return 'unorm16x3-webgl';
+          return 'unorm16x3-ext';
         }
         return `${dataType}x${components}`;
 
@@ -108,7 +109,7 @@ export class VertexFormatDecoder {
           return 'snorm16';
         }
         if (components === 3) {
-          return 'snorm16x3-webgl';
+          return 'snorm16x3-ext';
         }
         return `${dataType}x${components}`;
 

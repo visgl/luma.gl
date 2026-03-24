@@ -69,4 +69,4 @@ Compiling shaders is usually cheaper than creating complete pipelines, but appli
 - Shader compilation is fairly fast, in particular compared to Pipeline linking.
 - In WebGL, checking for shader compile status and pipeline link status is expensive as it forces a GPU sync.
 - Therefore checking is not done unless `luma.log.level > 0`. If your program fails to render, please increase the level.
-- If the `shader-async-status-webgl` feature is available, WebGL will use async shader compilation and pipeline linking.
+- If the `compilation-status-async-ext` feature is available, WebGL will use async shader compilation and pipeline linking.

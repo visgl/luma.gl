@@ -6,9 +6,9 @@ import type {ShaderLayout, BufferLayout, AttributeDeclaration, VertexFormat} fro
 import {log, vertexFormatDecoder} from '@luma.gl/core';
 // import {getAttributeInfosFromLayouts} from '@luma.gl/core';
 
-/** Throw error on any WebGL-only vertex formats */
+/** Throw error on any extension-only vertex formats */
 function getWebGPUVertexFormat(format: VertexFormat): GPUVertexFormat {
-  if (format.endsWith('-webgl')) {
+  if (format.endsWith('-ext')) {
     throw new Error(`WebGPU does not support vertex format ${format}`);
   }
   return format as GPUVertexFormat;

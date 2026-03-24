@@ -8,9 +8,9 @@ export const TEXTURE_FORMAT_PIXEL_DECODERS: Record<
   TextureFormatPacked,
   {decodeRGBA?: DecodeRGBA; encodeRGBA?: EncodeRGBA}
 > = {
-  'rgba4unorm-webgl': {decodeRGBA: decodePackedRGBA, encodeRGBA: encodePackedRGBA},
-  'rgb565unorm-webgl': {decodeRGBA: decodePackedRGBA, encodeRGBA: encodePackedRGBA},
-  'rgb5a1unorm-webgl': {decodeRGBA: decodePackedRGBA, encodeRGBA: encodePackedRGBA},
+  'rgba4unorm-ext': {decodeRGBA: decodePackedRGBA, encodeRGBA: encodePackedRGBA},
+  'rgb565unorm-ext': {decodeRGBA: decodePackedRGBA, encodeRGBA: encodePackedRGBA},
+  'rgb5a1unorm-ext': {decodeRGBA: decodePackedRGBA, encodeRGBA: encodePackedRGBA},
   rgb10a2unorm: {decodeRGBA: decodePackedRGBA, encodeRGBA: encodePackedRGBA},
   rgb10a2uint: {decodeRGBA: decodePackedRGBA, encodeRGBA: encodePackedRGBA},
   rgb9e5ufloat: {decodeRGBA: decodePackedRGBAFloat, encodeRGBA: encodePackedRGBAFloat},
@@ -50,16 +50,16 @@ type FormatConfig =
 
 // Table of all supported packed formats
 const FORMAT_CONFIG_TABLE: Record<
-  | 'rgba4unorm-webgl'
-  | 'rgb565unorm-webgl'
-  | 'rgb5a1unorm-webgl'
+  | 'rgba4unorm-ext'
+  | 'rgb565unorm-ext'
+  | 'rgb5a1unorm-ext'
   | 'rgb10a2unorm'
   | 'rgb10a2uint'
   | 'rgb9e5ufloat'
   | 'rg11b10ufloat',
   FormatConfig
 > = {
-  'rgba4unorm-webgl': {
+  'rgba4unorm-ext': {
     kind: 'unorm',
     channels: [
       {shift: 12, mask: 0x0f},
@@ -68,7 +68,7 @@ const FORMAT_CONFIG_TABLE: Record<
       {shift: 0, mask: 0x0f}
     ]
   },
-  'rgb565unorm-webgl': {
+  'rgb565unorm-ext': {
     kind: 'unorm',
     channels: [
       {shift: 11, mask: 0x1f},
@@ -77,7 +77,7 @@ const FORMAT_CONFIG_TABLE: Record<
       {mask: 0x00, defaultValue: 1}
     ]
   },
-  'rgb5a1unorm-webgl': {
+  'rgb5a1unorm-ext': {
     kind: 'unorm',
     channels: [
       {shift: 11, mask: 0x1f},
@@ -128,12 +128,7 @@ const FORMAT_CONFIG_TABLE: Record<
 /** Decode RGBA for integer/unorm formats */
 export function decodePackedRGBA(
   bits: number,
-  format:
-    | 'rgba4unorm-webgl'
-    | 'rgb565unorm-webgl'
-    | 'rgb5a1unorm-webgl'
-    | 'rgb10a2unorm'
-    | 'rgb10a2uint'
+  format: 'rgba4unorm-ext' | 'rgb565unorm-ext' | 'rgb5a1unorm-ext' | 'rgb10a2unorm' | 'rgb10a2uint'
 ): [number, number, number, number] {
   const cfg = FORMAT_CONFIG_TABLE[format] as {kind: 'unorm' | 'uint'; channels: ChannelConfig[]};
   const out: [number, number, number, number] = [0, 0, 0, 0];
@@ -147,12 +142,7 @@ export function decodePackedRGBA(
 /** Encode RGBA for integer/unorm formats */
 export function encodePackedRGBA(
   rgba: [number, number, number, number],
-  format:
-    | 'rgba4unorm-webgl'
-    | 'rgb565unorm-webgl'
-    | 'rgb5a1unorm-webgl'
-    | 'rgb10a2unorm'
-    | 'rgb10a2uint'
+  format: 'rgba4unorm-ext' | 'rgb565unorm-ext' | 'rgb5a1unorm-ext' | 'rgb10a2unorm' | 'rgb10a2uint'
 ): number {
   const cfg = FORMAT_CONFIG_TABLE[format] as {kind: 'unorm' | 'uint'; channels: ChannelConfig[]};
   let bits = 0;

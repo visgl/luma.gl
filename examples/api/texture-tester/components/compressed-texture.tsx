@@ -194,12 +194,12 @@ type CompressedTexturePreviewSource = {
 
 // TODO(ibgreen): remove when fixed in loaders.gl
 const LEGACY_TEXTURE_FORMAT_ALIASES: Partial<Record<string, TextureFormat>> = {
-  'pvrtc-rbg2unorm-webgl': 'pvrtc-rgb2unorm-webgl'
+  'pvrtc-rbg2unorm-webgl': 'pvrtc-rgb2unorm-ext'
 };
 
 const WEBGPU_TEXTURE_FORMAT_ALIASES: Partial<Record<string, TextureFormat>> = {
-  'bc1-rgb-unorm-webgl': 'bc1-rgba-unorm',
-  'bc1-rgb-unorm-srgb-webgl': 'bc1-rgba-unorm-srgb'
+  'bc1-rgb-unorm-ext': 'bc1-rgba-unorm',
+  'bc1-rgb-unorm-srgb-ext': 'bc1-rgba-unorm-srgb'
 };
 
 let basisLoadChain: Promise<void> = Promise.resolve();

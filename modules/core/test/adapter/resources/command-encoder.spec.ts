@@ -430,7 +430,7 @@ const COPY_TEXTURE_TO_BUFFER_FIXTURES: CopyTextureToBufferFixture[] = [
   },
   // {
   //   // TODO: Framebuffer creation fails under Node (browser WebGL1 is fine)
-  //   format: 'rgb8unorm-webgl',
+  //   format: 'rgb8unorm-ext',
   //   srcPixel: new Uint8Array([255, 64, 32]),
   //   dstPixel: new Uint8Array([255, 64, 32]),
   // },
@@ -450,7 +450,7 @@ const COPY_TEXTURE_TO_BUFFER_FIXTURES: CopyTextureToBufferFixture[] = [
   // {
   //   // RGB32F is not a renderable format even when EXT_color_buffer_float is supported
   //   title: 'rgb32',
-  //   format: 'rgb32float-webgl',
+  //   format: 'rgb32float-ext',
   //   srcPixel: new Float32Array([-0.214, 32.23, 1242]),
   //   dstPixel: new Float32Array([-0.214, 32.23, 1242]),
   // },

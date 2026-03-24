@@ -20,7 +20,7 @@ test('Shader', async t => {
     if (device.type === 'webgl') {
       const createBadShader = () =>
         device.createShader({stage: 'vertex', source: BAD_SHADER_SOURCE});
-      if (device.features.has('compilation-status-async-webgl')) {
+      if (device.features.has('compilation-status-async-ext')) {
         const badShader = createBadShader();
         const compilationStatus = await badShader.asyncCompilationStatus;
         t.equal(

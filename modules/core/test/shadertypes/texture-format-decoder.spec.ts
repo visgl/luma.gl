@@ -38,9 +38,9 @@ test('shadertype#textureFormatDecoder.getInfo', t => {
 
 test('shadertype#textureFormatDecoder.getInfo packed WebGL formats', t => {
   const testCases = [
-    {format: 'rgba4unorm-webgl' as const, channels: 'rgba', bitsPerChannel: [4, 4, 4, 4] as const},
-    {format: 'rgb565unorm-webgl' as const, channels: 'rgb', bitsPerChannel: [5, 6, 5, 0] as const},
-    {format: 'rgb5a1unorm-webgl' as const, channels: 'rgba', bitsPerChannel: [5, 5, 5, 1] as const}
+    {format: 'rgba4unorm-ext' as const, channels: 'rgba', bitsPerChannel: [4, 4, 4, 4] as const},
+    {format: 'rgb565unorm-ext' as const, channels: 'rgb', bitsPerChannel: [5, 6, 5, 0] as const},
+    {format: 'rgb5a1unorm-ext' as const, channels: 'rgba', bitsPerChannel: [5, 5, 5, 1] as const}
   ];
 
   for (const tc of testCases) {

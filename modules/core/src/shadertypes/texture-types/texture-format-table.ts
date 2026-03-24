@@ -16,20 +16,20 @@ import {
 const texture_compression_bc: TextureFeature = 'texture-compression-bc';
 const texture_compression_astc: TextureFeature = 'texture-compression-astc';
 const texture_compression_etc2: TextureFeature = 'texture-compression-etc2';
-const texture_compression_etc1_webgl: TextureFeature = 'texture-compression-etc1-webgl';
-const texture_compression_pvrtc_webgl: TextureFeature = 'texture-compression-pvrtc-webgl';
-const texture_compression_atc_webgl: TextureFeature = 'texture-compression-atc-webgl';
+const texture_compression_etc1_webgl: TextureFeature = 'texture-compression-etc1-ext';
+const texture_compression_pvrtc_webgl: TextureFeature = 'texture-compression-pvrtc-ext';
+const texture_compression_atc_webgl: TextureFeature = 'texture-compression-atc-ext';
 
-const float32_renderable: TextureFeature = 'float32-renderable-webgl';
-const float16_renderable: TextureFeature = 'float16-renderable-webgl';
-const rgb9e5ufloat_renderable: TextureFeature = 'rgb9e5ufloat-renderable-webgl';
-const snorm8_renderable: TextureFeature = 'snorm8-renderable-webgl';
-const norm16_webgl: TextureFeature = 'norm16-webgl';
-const norm16_renderable: TextureFeature = 'norm16-renderable-webgl';
-const snorm16_renderable: TextureFeature = 'snorm16-renderable-webgl';
+const float32_renderable: TextureFeature = 'float32-renderable-ext';
+const float16_renderable: TextureFeature = 'float16-renderable-ext';
+const rgb9e5ufloat_renderable: TextureFeature = 'rgb9e5ufloat-renderable-ext';
+const snorm8_renderable: TextureFeature = 'snorm8-renderable-ext';
+const norm16_webgl: TextureFeature = 'norm16-ext';
+const norm16_renderable: TextureFeature = 'norm16-renderable-ext';
+const snorm16_renderable: TextureFeature = 'snorm16-renderable-ext';
 
 const float32_filterable: TextureFeature = 'float32-filterable';
-const float16_filterable: TextureFeature = 'float16-filterable-webgl';
+const float16_filterable: TextureFeature = 'float16-filterable-ext';
 
 /** https://www.w3.org/TR/webgpu/#texture-format-caps */
 
@@ -73,13 +73,13 @@ const TEXTURE_FORMAT_COLOR_DEPTH_TABLE: Readonly<Record<TextureFormatColorUncomp
   // 8-bit formats
   'r8unorm': {},
   'rg8unorm': {},
-  'rgb8unorm-webgl': {},
+  'rgb8unorm-ext': {},
   'rgba8unorm': {},
   'rgba8unorm-srgb': {},
 
   'r8snorm': {render: snorm8_renderable},
   'rg8snorm': {render: snorm8_renderable},
-  'rgb8snorm-webgl': {},
+  'rgb8snorm-ext': {},
   'rgba8snorm': {render: snorm8_renderable},
 
   'r8uint': {},
@@ -96,12 +96,12 @@ const TEXTURE_FORMAT_COLOR_DEPTH_TABLE: Readonly<Record<TextureFormatColorUncomp
 
   'r16unorm': {f: norm16_webgl, render: norm16_renderable},
   'rg16unorm': {f: norm16_webgl, render: norm16_renderable},
-  'rgb16unorm-webgl': {f: norm16_webgl, render: false}, // rgb not renderable
+  'rgb16unorm-ext': {f: norm16_webgl, render: false}, // rgb not renderable
   'rgba16unorm': {f: norm16_webgl, render: norm16_renderable},
 
   'r16snorm': {f: norm16_webgl, render: snorm16_renderable},
   'rg16snorm': {f: norm16_webgl, render: snorm16_renderable},
-  'rgb16snorm-webgl': {f: norm16_webgl, render: false}, // rgb not renderable
+  'rgb16snorm-ext': {f: norm16_webgl, render: false}, // rgb not renderable
   'rgba16snorm': {f: norm16_webgl, render: snorm16_renderable},
 
   'r16uint': {},
@@ -112,7 +112,7 @@ const TEXTURE_FORMAT_COLOR_DEPTH_TABLE: Readonly<Record<TextureFormatColorUncomp
   'rg16sint': {},
   'rgba16sint': {},
 
-  'r16float': {render: float16_renderable, filter: 'float16-filterable-webgl'},
+  'r16float': {render: float16_renderable, filter: 'float16-filterable-ext'},
   'rg16float': {render: float16_renderable, filter: float16_filterable},
   'rgba16float': {render: float16_renderable, filter: float16_filterable},
 
@@ -126,13 +126,13 @@ const TEXTURE_FORMAT_COLOR_DEPTH_TABLE: Readonly<Record<TextureFormatColorUncomp
 
   'r32float': {render: float32_renderable, filter: float32_filterable},
   'rg32float': {render: false, filter: float32_filterable},
-  'rgb32float-webgl': {render: float32_renderable, filter: float32_filterable},
+  'rgb32float-ext': {render: float32_renderable, filter: float32_filterable},
   'rgba32float': {render: float32_renderable, filter: float32_filterable},
 
   // Packed 16-bit formats
-  'rgba4unorm-webgl': {channels: 'rgba', bitsPerChannel: [4, 4, 4, 4], packed: true},
-  'rgb565unorm-webgl': {channels: 'rgb', bitsPerChannel: [5, 6, 5, 0], packed: true},
-  'rgb5a1unorm-webgl': {channels: 'rgba', bitsPerChannel: [5, 5, 5, 1], packed: true},
+  'rgba4unorm-ext': {channels: 'rgba', bitsPerChannel: [4, 4, 4, 4], packed: true},
+  'rgb565unorm-ext': {channels: 'rgb', bitsPerChannel: [5, 6, 5, 0], packed: true},
+  'rgb5a1unorm-ext': {channels: 'rgba', bitsPerChannel: [5, 5, 5, 1], packed: true},
 
   // Packed 32 bit formats
   'rgb9e5ufloat': {channels: 'rgb', packed: true, render: rgb9e5ufloat_renderable}, // , filter: true},
@@ -158,8 +158,8 @@ const TEXTURE_FORMAT_COMPRESSED_TABLE: Readonly<Record<TextureFormatCompressed, 
 
   // BC compressed formats: check device.features.has("texture-compression-bc");
 
-  'bc1-rgb-unorm-webgl': {f: texture_compression_bc},
-  'bc1-rgb-unorm-srgb-webgl': {f: texture_compression_bc},
+  'bc1-rgb-unorm-ext': {f: texture_compression_bc},
+  'bc1-rgb-unorm-srgb-ext': {f: texture_compression_bc},
 
   'bc1-rgba-unorm': {f: texture_compression_bc},
   'bc1-rgba-unorm-srgb': {f: texture_compression_bc},
@@ -224,20 +224,20 @@ const TEXTURE_FORMAT_COMPRESSED_TABLE: Readonly<Record<TextureFormatCompressed, 
 
   // WEBGL_compressed_texture_pvrtc
 
-  'pvrtc-rgb4unorm-webgl': {f: texture_compression_pvrtc_webgl},
-  'pvrtc-rgba4unorm-webgl': {f: texture_compression_pvrtc_webgl},
-  'pvrtc-rgb2unorm-webgl': {f: texture_compression_pvrtc_webgl},
-  'pvrtc-rgba2unorm-webgl': {f: texture_compression_pvrtc_webgl},
+  'pvrtc-rgb4unorm-ext': {f: texture_compression_pvrtc_webgl},
+  'pvrtc-rgba4unorm-ext': {f: texture_compression_pvrtc_webgl},
+  'pvrtc-rgb2unorm-ext': {f: texture_compression_pvrtc_webgl},
+  'pvrtc-rgba2unorm-ext': {f: texture_compression_pvrtc_webgl},
 
   // WEBGL_compressed_texture_etc1
 
-  'etc1-rbg-unorm-webgl': {f: texture_compression_etc1_webgl},
+  'etc1-rbg-unorm-ext': {f: texture_compression_etc1_webgl},
 
   // WEBGL_compressed_texture_atc
 
-  'atc-rgb-unorm-webgl': {f: texture_compression_atc_webgl},
-  'atc-rgba-unorm-webgl': {f: texture_compression_atc_webgl},
-  'atc-rgbai-unorm-webgl': {f: texture_compression_atc_webgl}
+  'atc-rgb-unorm-ext': {f: texture_compression_atc_webgl},
+  'atc-rgba-unorm-ext': {f: texture_compression_atc_webgl},
+  'atc-rgbai-unorm-ext': {f: texture_compression_atc_webgl}
 };
 
 export const TEXTURE_FORMAT_TABLE: Readonly<Record<TextureFormat, TextureFormatDefinition>> = {

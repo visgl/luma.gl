@@ -646,7 +646,7 @@ export class WEBGLTexture extends Texture {
 
         case GL.TEXTURE_MAX_ANISOTROPY_EXT:
           // We have to query feature before using it
-          if (this.device.features.has('texture-filterable-anisotropic-webgl')) {
+          if (this.device.features.has('texture-filterable-anisotropic-ext')) {
             this.gl.texParameteri(this.glTarget, param, value);
           }
           break;

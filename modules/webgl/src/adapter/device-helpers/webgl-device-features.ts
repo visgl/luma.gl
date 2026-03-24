@@ -27,12 +27,12 @@ const WEBGL_FEATURES: Partial<Record<DeviceFeature, boolean | string>> = {
   // 'depth32float-stencil8' // GPUTextureFormat 'depth32float-stencil8'
 
   // optional WebGL features
-  'compilation-status-async-webgl': 'KHR_parallel_shader_compile',
-  'polygon-mode-webgl': 'WEBGL_polygon_mode',
-  'provoking-vertex-webgl': 'WEBGL_provoking_vertex',
-  'shader-clip-cull-distance-webgl': 'WEBGL_clip_cull_distance',
-  'shader-noperspective-interpolation-webgl': 'NV_shader_noperspective_interpolation',
-  'shader-conservative-depth-webgl': 'EXT_conservative_depth'
+  'compilation-status-async-ext': 'KHR_parallel_shader_compile',
+  'polygon-mode-ext': 'WEBGL_polygon_mode',
+  'provoking-vertex-ext': 'WEBGL_provoking_vertex',
+  'shader-clip-cull-distance-ext': 'WEBGL_clip_cull_distance',
+  'shader-noperspective-interpolation-ext': 'NV_shader_noperspective_interpolation',
+  'shader-conservative-depth-ext': 'EXT_conservative_depth'
 
   // Textures are handled by getTextureFeatures()
 };
@@ -97,7 +97,7 @@ export class WebGLDeviceFeatures extends DeviceFeatures {
   initializeFeatures() {
     // Initialize all features by checking them.
     // Except WEBGL_polygon_mode since Chrome logs ugly console warnings
-    const features = this.getFeatures().filter(feature => feature !== 'polygon-mode-webgl');
+    const features = this.getFeatures().filter(feature => feature !== 'polygon-mode-ext');
     for (const feature of features) {
       this.has(feature);
     }

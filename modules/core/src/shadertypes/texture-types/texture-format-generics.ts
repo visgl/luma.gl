@@ -114,11 +114,11 @@ type TextureFormatRG =
   | 'rg32float';
 
 type TextureFormatRGB =
-  | 'rgb8unorm-webgl'
-  | 'rgb8snorm-webgl'
-  | 'rgb16unorm-webgl'
-  | 'rgb16snorm-webgl'
-  | 'rgb32float-webgl';
+  | 'rgb8unorm-ext'
+  | 'rgb8snorm-ext'
+  | 'rgb16unorm-ext'
+  | 'rgb16snorm-ext'
+  | 'rgb32float-ext';
 
 type TextureFormatRGBA =
   | 'rgba8uint'
@@ -137,11 +137,11 @@ type TextureFormatRGBA =
   | 'rgba32sint'
   | 'rgba32float';
 
-type TextureFormatPackedRGB = 'rgb565unorm-webgl' | 'rgb9e5ufloat' | 'rg11b10ufloat';
+type TextureFormatPackedRGB = 'rgb565unorm-ext' | 'rgb9e5ufloat' | 'rg11b10ufloat';
 
 type TextureFormatPackedRGBA =
-  | 'rgba4unorm-webgl'
-  | 'rgb5a1unorm-webgl'
+  | 'rgba4unorm-ext'
+  | 'rgb5a1unorm-ext'
   | 'rgb10a2unorm'
   | 'rgb10a2uint';
 
@@ -150,21 +150,21 @@ type TextureFormatPackedRGBA =
 type TextureFormatUnorm8 =
   | 'r8unorm'
   | 'rg8unorm'
-  | 'rgb8unorm-webgl'
+  | 'rgb8unorm-ext'
   | 'rgba8unorm'
   | 'rgba8unorm-srgb'
   | 'bgra8unorm'
   | 'bgra8unorm-srgb';
 
-type TextureFormatSnorm8 = 'r8snorm' | 'rg8snorm' | 'rgb8snorm-webgl' | 'rgba8snorm';
+type TextureFormatSnorm8 = 'r8snorm' | 'rg8snorm' | 'rgb8snorm-ext' | 'rgba8snorm';
 
 type TextureFormatUint8 = 'r8uint' | 'rg8uint' | 'rgba8uint';
 
 type TextureFormatSint8 = 'r8sint' | 'rg8sint' | 'rgba8sint';
 
-type TextureFormatUnorm16 = 'r16unorm' | 'rg16unorm' | 'rgb16unorm-webgl' | 'rgba16unorm';
+type TextureFormatUnorm16 = 'r16unorm' | 'rg16unorm' | 'rgb16unorm-ext' | 'rgba16unorm';
 
-type TextureFormatSnorm16 = 'r16snorm' | 'rg16snorm' | 'rgb16snorm-webgl' | 'rgba16snorm';
+type TextureFormatSnorm16 = 'r16snorm' | 'rg16snorm' | 'rgb16snorm-ext' | 'rgba16snorm';
 
 type TextureFormatUint16 = 'r16uint' | 'rg16uint' | 'rgba16uint';
 
@@ -177,8 +177,8 @@ type TextureFormatUint32 = 'r32uint' | 'rg32uint' | 'rgba32uint';
 
 type TextureFormatSint32 = 'r32sint' | 'rg32sint' | 'rgba32sint';
 
-type TextureFormatFloat32 = 'r32float' | 'rg32float' | 'rgb32float-webgl' | 'rgba32float';
+type TextureFormatFloat32 = 'r32float' | 'rg32float' | 'rgb32float-ext' | 'rgba32float';
 
-type TextureFormatPacked16 = 'rgba4unorm-webgl' | 'rgb565unorm-webgl' | 'rgb5a1unorm-webgl';
+type TextureFormatPacked16 = 'rgba4unorm-ext' | 'rgb565unorm-ext' | 'rgb5a1unorm-ext';
 
 type TextureFormatPacked32 = 'rgb9e5ufloat' | 'rg11b10ufloat' | 'rgb10a2unorm' | 'rgb10a2uint';

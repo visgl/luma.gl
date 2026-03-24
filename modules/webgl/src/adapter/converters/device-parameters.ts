@@ -159,7 +159,7 @@ export function setDeviceParameters(device: Device, parameters: Parameters) {
   // WEBGL EXTENSIONS
 
   if (parameters.provokingVertex) {
-    if (device.features.has('provoking-vertex-webgl')) {
+    if (device.features.has('provoking-vertex-ext')) {
       const extensions = webglDevice.getExtension('WEBGL_provoking_vertex');
       const ext = extensions.WEBGL_provoking_vertex;
 
@@ -176,7 +176,7 @@ export function setDeviceParameters(device: Device, parameters: Parameters) {
   }
 
   if (parameters.polygonMode || parameters.polygonOffsetLine) {
-    if (device.features.has('polygon-mode-webgl')) {
+    if (device.features.has('polygon-mode-ext')) {
       if (parameters.polygonMode) {
         const extensions = webglDevice.getExtension('WEBGL_polygon_mode');
         const ext = extensions.WEBGL_polygon_mode;
@@ -194,7 +194,7 @@ export function setDeviceParameters(device: Device, parameters: Parameters) {
     }
   }
 
-  if (device.features.has('shader-clip-cull-distance-webgl')) {
+  if (device.features.has('shader-clip-cull-distance-ext')) {
     if (parameters.clipDistance0) {
       gl.enable(GL.CLIP_DISTANCE0_WEBGL);
     }

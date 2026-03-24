@@ -36,10 +36,10 @@ All parameters listed in a single table
 | `stencilFailOperation`      | `RenderPipeline`               | Operation on stencil buffer when test fails                          | **`'keep'`**                      | `gl.stencilOp`             |
 | **Extensions**              |
 | `unclippedDepth`            | `RenderPipeline`               | `depth-clip-control`:  Disable depth value clipping.                 | `boolean`                         | `WEBGL_depth_clamp`        |
-| `provokingVertex`           | `RenderPipeline`               | `provoking-vertex-webgl`: Vertex used for flat shading               | **`'last'`**, `'first'`           | `WEBGL_provoking_vertex`   |
-| `polygonMode`               | `RenderPipeline`               | `polygon-mode-webgl`: Enable wire frame rendering.                   | **`'fill'`**, `'line'`            | `WEBGL_polygon_mode`       |
-| `polygonOffsetLine`         | `RenderPipeline`               | `polygon-mode-webgl`: Vertex used for flat shading. Requires         | `boolean`                         | `WEBGL_polygon_mode`       |
-| `clipDistance0` (`0-7`)     | `RenderPipeline`               | `shader-clip-cull-distance-webgl`: `gl_ClipDistance/gl_CullDistance` | `boolean`                         | `WEBGL_clip_cull_distance` |
+| `provokingVertex`           | `RenderPipeline`               | `provoking-vertex-ext`: Vertex used for flat shading               | **`'last'`**, `'first'`           | `WEBGL_provoking_vertex`   |
+| `polygonMode`               | `RenderPipeline`               | `polygon-mode-ext`: Enable wire frame rendering.                   | **`'fill'`**, `'line'`            | `WEBGL_polygon_mode`       |
+| `polygonOffsetLine`         | `RenderPipeline`               | `polygon-mode-ext`: Vertex used for flat shading. Requires         | `boolean`                         | `WEBGL_polygon_mode`       |
+| `clipDistance0` (`0-7`)     | `RenderPipeline`               | `shader-clip-cull-distance-ext`: `gl_ClipDistance/gl_CullDistance` | `boolean`                         | `WEBGL_clip_cull_distance` |
 
 F## Other types of parameters
 

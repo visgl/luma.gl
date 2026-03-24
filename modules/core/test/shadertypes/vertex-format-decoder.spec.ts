@@ -62,12 +62,12 @@ const TEST_CASES_2: {
   {typedArray: new Uint16Array(), size: 2, normalized: true, result: 'unorm16x2'},
   {typedArray: new Int16Array(), size: 4, normalized: true, result: 'snorm16x4'},
 
-  {typedArray: new Int16Array(), size: 3, result: 'sint16x3-webgl'},
-  {typedArray: new Uint16Array(), size: 3, result: 'uint16x3-webgl'},
-  {typedArray: new Uint16Array(), size: 3, normalized: true, result: 'unorm16x3-webgl'},
-  {typedArray: new Int16Array(), size: 3, normalized: true, result: 'snorm16x3-webgl'},
-  {typedArray: new Uint8Array(), size: 3, normalized: true, result: 'unorm8x3-webgl'},
-  {typedArray: new Int8Array(), size: 3, normalized: true, result: 'snorm8x3-webgl'},
+  {typedArray: new Int16Array(), size: 3, result: 'sint16x3-ext'},
+  {typedArray: new Uint16Array(), size: 3, result: 'uint16x3-ext'},
+  {typedArray: new Uint16Array(), size: 3, normalized: true, result: 'unorm16x3-ext'},
+  {typedArray: new Int16Array(), size: 3, normalized: true, result: 'snorm16x3-ext'},
+  {typedArray: new Uint8Array(), size: 3, normalized: true, result: 'unorm8x3-ext'},
+  {typedArray: new Int8Array(), size: 3, normalized: true, result: 'snorm8x3-ext'},
 
   {typedArray: new Float32Array(), size: 5, error: 'Invalid attribute size 5'},
   // @ts-expect-error Intentionally no size

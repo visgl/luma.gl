@@ -24,14 +24,14 @@ export type VertexFormat =
   | 'sint8x4'
   | 'unorm8' // Chrome 133+
   | 'unorm8x2'
-  | 'unorm8x3-webgl' // Not in WebGPU
+  | 'unorm8x3-ext' // Not in WebGPU
   | 'unorm8x4'
   | 'unorm8x4-bgra' // Chrome 133+
   | 'unorm10-10-10-2' // Chrome 119+
   // | 'snorm-10-10-10-2' // Not in WebGPU, DXD12 doesn't support
   | 'snorm8' // Chrome 133+
   | 'snorm8x2'
-  | 'snorm8x3-webgl'
+  | 'snorm8x3-ext'
   | 'snorm8x4'
   // 16 bit integers, that only 32 bit aligned formats are supported in WebGPU (x2 and x4)
   | 'uint16' // Chrome 133+
@@ -39,16 +39,16 @@ export type VertexFormat =
   | 'unorm16' // Chrome 133+
   | 'snorm16' // Chrome 133+
   | 'uint16x2'
-  | 'uint16x3-webgl' // Not in WebGPU
+  | 'uint16x3-ext' // Not in WebGPU
   | 'uint16x4'
   | 'sint16x2'
-  | 'sint16x3-webgl' // Not in WebGPU
+  | 'sint16x3-ext' // Not in WebGPU
   | 'sint16x4'
   | 'unorm16x2'
-  | 'unorm16x3-webgl' // Not in WebGPU
+  | 'unorm16x3-ext' // Not in WebGPU
   | 'unorm16x4'
   | 'snorm16x2'
-  | 'snorm16x3-webgl' // Not in WebGPU
+  | 'snorm16x3-ext' // Not in WebGPU
   | 'snorm16x4'
   // 32 bit integers
   | 'uint32'
@@ -142,15 +142,15 @@ type VertexFormatSint8 = 'sint8' | 'sint8x2' | 'sint8x4';
 type VertexFormatUnorm8 =
   | 'unorm8'
   | 'unorm8x2'
-  | 'unorm8x3-webgl'
+  | 'unorm8x3-ext'
   | 'unorm8x4'
   | 'unorm8x4-bgra'
   | 'unorm10-10-10-2';
-type VertexFormatSnorm8 = 'snorm8' | 'snorm8x2' | 'snorm8x3-webgl' | 'snorm8x4';
-type VertexFormatUint16 = 'uint16' | 'uint16x2' | 'uint16x3-webgl' | 'uint16x4';
-type VertexFormatSint16 = 'sint16' | 'sint16x2' | 'sint16x3-webgl' | 'sint16x4';
-type VertexFormatUnorm16 = 'unorm16' | 'unorm16x2' | 'unorm16x3-webgl' | 'unorm16x4';
-type VertexFormatSnorm16 = 'snorm16' | 'snorm16x2' | 'snorm16x3-webgl' | 'snorm16x4';
+type VertexFormatSnorm8 = 'snorm8' | 'snorm8x2' | 'snorm8x3-ext' | 'snorm8x4';
+type VertexFormatUint16 = 'uint16' | 'uint16x2' | 'uint16x3-ext' | 'uint16x4';
+type VertexFormatSint16 = 'sint16' | 'sint16x2' | 'sint16x3-ext' | 'sint16x4';
+type VertexFormatUnorm16 = 'unorm16' | 'unorm16x2' | 'unorm16x3-ext' | 'unorm16x4';
+type VertexFormatSnorm16 = 'snorm16' | 'snorm16x2' | 'snorm16x3-ext' | 'snorm16x4';
 type VertexFormatUint32 = 'uint32' | 'uint32x2' | 'uint32x3' | 'uint32x4';
 type VertexFormatSint32 = 'sint32' | 'sint32x2' | 'sint32x3' | 'sint32x4';
 type VertexFormatFloat16 = 'float16' | 'float16x2' | 'float16x4';
@@ -170,12 +170,12 @@ type VertexFormat2Components =
   | 'float16x2'
   | 'float32x2';
 type VertexFormat3Components =
-  | 'unorm8x3-webgl'
-  | 'snorm8x3-webgl'
-  | 'uint16x3-webgl'
-  | 'sint16x3-webgl'
-  | 'unorm16x3-webgl'
-  | 'snorm16x3-webgl'
+  | 'unorm8x3-ext'
+  | 'snorm8x3-ext'
+  | 'uint16x3-ext'
+  | 'sint16x3-ext'
+  | 'unorm16x3-ext'
+  | 'snorm16x3-ext'
   | 'uint32x3'
   | 'sint32x3'
   | 'float32x3';

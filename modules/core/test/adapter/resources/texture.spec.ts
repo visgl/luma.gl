@@ -1724,7 +1724,7 @@ test('Texture color read APIs reject unsupported formats and aspects', async t =
     'bc1-rgba-unorm',
     'etc2-rgba8unorm',
     'astc-4x4-unorm',
-    'bc1-rgb-unorm-webgl'
+    'bc1-rgb-unorm-ext'
   ];
 
   for (const device of await getTestDevices()) {
@@ -1865,7 +1865,7 @@ test('Texture#readBuffer reuses the cached WebGL read framebuffer', async t => {
 test('Device#isTextureFormatSupported()', async t => {
   const UNSUPPORTED_FORMATS: Record<string, TextureFormat[]> = {
     webgl: ['stencil8'],
-    webgpu: ['rgb32float-webgl']
+    webgpu: ['rgb32float-ext']
   };
 
   for (const device of await getTestDevices()) {
@@ -1891,11 +1891,11 @@ test('Device#isTextureFormatFilterable()', async t => {
   const UNSUPPORTED_FORMATS: Record<Device['type'], TextureFormat[]> = {
     webgl: [
       'rgba8unorm',
-      'rgb16unorm-webgl',
-      'rgb16snorm-webgl',
+      'rgb16unorm-ext',
+      'rgb16snorm-ext',
       'r32float',
       'rg32float',
-      'rgb32float-webgl',
+      'rgb32float-ext',
       'rgba32float'
     ],
     webgpu: []
@@ -1922,7 +1922,7 @@ test('Device#isTextureFormatFilterable()', async t => {
 
 test('Device#isTextureFormatRenderable()', async t => {
   const UNSUPPORTED_FORMATS: Record<Device['type'], TextureFormat[]> = {
-    webgl: ['rgba8unorm', 'r32float', 'rg32float', 'rgb32float-webgl', 'rgba32float'],
+    webgl: ['rgba8unorm', 'r32float', 'rg32float', 'rgb32float-ext', 'rgba32float'],
     webgpu: []
   };
 

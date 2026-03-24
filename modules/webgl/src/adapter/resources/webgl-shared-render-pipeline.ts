@@ -76,7 +76,7 @@ export class WEBGLSharedRenderPipeline extends SharedRenderPipeline {
     gl.linkProgram(this.handle);
     log.timeEnd(LOG_PROGRAM_PERF_PRIORITY, `linkProgram for ${this.id}`)();
 
-    if (!this.device.features.has('compilation-status-async-webgl')) {
+    if (!this.device.features.has('compilation-status-async-ext')) {
       const status = this._getLinkStatus();
       this._reportLinkStatus(status);
       return;
@@ -194,7 +194,7 @@ export class WEBGLSharedRenderPipeline extends SharedRenderPipeline {
     const waitMs = async (ms: number) => await new Promise(resolve => setTimeout(resolve, ms));
     const DELAY_MS = 10;
 
-    if (!this.device.features.has('compilation-status-async-webgl')) {
+    if (!this.device.features.has('compilation-status-async-ext')) {
       await waitMs(DELAY_MS);
       return;
     }

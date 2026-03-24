@@ -259,40 +259,40 @@ export type WebGPUDeviceFeature =
 
 export type WebGLDeviceFeature =
   // webgl extension features
-  | 'compilation-status-async-webgl' // Non-blocking shader compile/link status query available
-  | 'provoking-vertex-webgl' // parameters.provokingVertex
-  | 'polygon-mode-webgl' // parameters.polygonMode and parameters.polygonOffsetLine
+  | 'compilation-status-async-ext' // Non-blocking shader compile/link status query available
+  | 'provoking-vertex-ext' // parameters.provokingVertex
+  | 'polygon-mode-ext' // parameters.polygonMode and parameters.polygonOffsetLine
 
   // GLSL extension features
-  | 'shader-noperspective-interpolation-webgl' // Vertex outputs & fragment inputs can have a `noperspective` interpolation qualifier.
-  | 'shader-conservative-depth-webgl' // GLSL `gl_FragDepth` qualifiers `depth_unchanged` etc can enable early depth test
-  | 'shader-clip-cull-distance-webgl' // Makes gl_ClipDistance and gl_CullDistance available in shaders
+  | 'shader-noperspective-interpolation-ext' // Vertex outputs & fragment inputs can have a `noperspective` interpolation qualifier.
+  | 'shader-conservative-depth-ext' // GLSL `gl_FragDepth` qualifiers `depth_unchanged` etc can enable early depth test
+  | 'shader-clip-cull-distance-ext' // Makes gl_ClipDistance and gl_CullDistance available in shaders
 
   // texture rendering
-  | 'float32-renderable-webgl'
-  | 'float16-renderable-webgl'
-  | 'rgb9e5ufloat-renderable-webgl'
-  | 'snorm8-renderable-webgl'
-  | 'norm16-webgl'
-  | 'norm16-renderable-webgl'
-  | 'snorm16-renderable-webgl'
+  | 'float32-renderable-ext'
+  | 'float16-renderable-ext'
+  | 'rgb9e5ufloat-renderable-ext'
+  | 'snorm8-renderable-ext'
+  | 'norm16-ext'
+  | 'norm16-renderable-ext'
+  | 'snorm16-renderable-ext'
 
   // texture filtering
-  | 'float16-filterable-webgl'
-  | 'texture-filterable-anisotropic-webgl'
+  | 'float16-filterable-ext'
+  | 'texture-filterable-anisotropic-ext'
 
   // texture storage bindings
   | 'bgra8unorm-storage'
 
   // texture blending
-  | 'texture-blend-float-webgl';
+  | 'texture-blend-float-ext';
 
 type WebGLCompressedTextureFeatures =
-  | 'texture-compression-bc5-webgl'
-  | 'texture-compression-bc7-webgl'
-  | 'texture-compression-etc1-webgl'
-  | 'texture-compression-pvrtc-webgl'
-  | 'texture-compression-atc-webgl';
+  | 'texture-compression-bc5-ext'
+  | 'texture-compression-bc7-ext'
+  | 'texture-compression-etc1-ext'
+  | 'texture-compression-pvrtc-ext'
+  | 'texture-compression-atc-ext';
 
 /** Texture format capabilities that have been checked against a specific device */
 export type DeviceTextureFormatCapabilities = {
@@ -483,7 +483,7 @@ export abstract class Device {
     // TODO - Change these after confirming things work as expected
     _initializeFeatures: true,
     _disabledFeatures: {
-      'compilation-status-async-webgl': true
+      'compilation-status-async-ext': true
     },
 
     // INTERNAL

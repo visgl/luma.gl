@@ -91,7 +91,7 @@ export class WEBGLShader extends Shader {
     }
 
     // Sync case - slower, but advantage is that it throws in the constructor, making break on error more useful
-    if (!this.device.features.has('compilation-status-async-webgl')) {
+    if (!this.device.features.has('compilation-status-async-ext')) {
       this._getCompilationStatus();
       // The `Shader` base class will determine if debug window should be opened based on this.compilationStatus
       this.debugShader();
@@ -118,7 +118,7 @@ export class WEBGLShader extends Shader {
     const DELAY_MS = 10; // Shader compilation is typically quite fast (with some exceptions)
 
     // If status polling is not available, we can't wait for completion. Just wait a little to minimize blocking
-    if (!this.device.features.has('compilation-status-async-webgl')) {
+    if (!this.device.features.has('compilation-status-async-ext')) {
       await waitMs(DELAY_MS);
       return;
     }

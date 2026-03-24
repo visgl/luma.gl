@@ -15,7 +15,7 @@ import type {
 } from './texture-formats';
 import {getTextureFormatDefinition} from './texture-format-table';
 
-const RGB_FORMAT_REGEX = /^(r|rg|rgb|rgba|bgra)([0-9]*)([a-z]*)(-srgb)?(-webgl)?$/;
+const RGB_FORMAT_REGEX = /^(r|rg|rgb|rgba|bgra)([0-9]*)([a-z]*)(-srgb)?(-ext)?$/;
 const COLOR_FORMAT_PREFIXES = ['rgb', 'rgba', 'bgra'];
 const DEPTH_FORMAT_PREFIXES = ['depth', 'stencil'];
 // biome-ignore format: preserve layout
@@ -193,7 +193,7 @@ export function getTextureFormatInfo(format: TextureFormat): TextureFormatInfo {
       srgb: formatInfo.srgb
     };
 
-    if (suffix === '-webgl') {
+    if (suffix === '-ext') {
       formatInfo.webgl = true;
     }
     // dataType - overwritten by decodedType
@@ -202,7 +202,7 @@ export function getTextureFormatInfo(format: TextureFormat): TextureFormatInfo {
     }
   }
 
-  if (format.endsWith('-webgl')) {
+  if (format.endsWith('-ext')) {
     formatInfo.webgl = true;
   }
   if (format.endsWith('-srgb')) {
@@ -287,7 +287,7 @@ function getCompressedTextureBlockByteLength(format: TextureFormatCompressed): n
     format.startsWith('etc2-rgb8') ||
     format.startsWith('etc2-rgb8a1') ||
     format.startsWith('eac-r11') ||
-    format === 'atc-rgb-unorm-webgl'
+    format === 'atc-rgb-unorm-ext'
   ) {
     return 8;
   }
@@ -301,8 +301,8 @@ function getCompressedTextureBlockByteLength(format: TextureFormatCompressed): n
     format.startsWith('etc2-rgba8') ||
     format.startsWith('eac-rg11') ||
     format.startsWith('astc') ||
-    format === 'atc-rgba-unorm-webgl' ||
-    format === 'atc-rgbai-unorm-webgl'
+    format === 'atc-rgba-unorm-ext' ||
+    format === 'atc-rgbai-unorm-ext'
   ) {
     return 16;
   }

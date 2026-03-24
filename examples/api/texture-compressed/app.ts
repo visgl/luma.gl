@@ -264,7 +264,7 @@ function getFormat(vkFormat: VKFormat): TextureFormat {
       return 'etc2-rgba8unorm-srgb';
 
     case VK_FORMAT_BC1_RGB_SRGB_BLOCK:
-      return 'bc1-rgb-unorm-srgb-webgl';
+      return 'bc1-rgb-unorm-srgb-ext';
 
     case VK_FORMAT_BC3_SRGB_BLOCK:
       return 'bc3-rgba-unorm-srgb';
