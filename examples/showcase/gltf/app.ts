@@ -9,6 +9,7 @@ import {type LightingProps} from '@luma.gl/shadertools';
 import GLTFCatalogApp, {
   GLTF_CONTROL_PANEL_STYLE,
   GLTF_CONTROL_ROW_STYLE,
+  GLTF_MODEL_INFO_ID,
   GLTF_SELECT_STYLE,
   type GLTFCatalogModel,
   type GLTFModelReference
@@ -98,6 +99,7 @@ const INFO_HTML = `\
   <div><label><input type="checkbox" id="gltfAnimation" />glTF Animation</label></div>
 </div>
 <p style="margin-top: 8px;">Drag to orbit. Use the mouse wheel or trackpad to zoom.</p>
+<div id="${GLTF_MODEL_INFO_ID}" style="margin-top: 12px; display: none;"></div>
 <div id="model-light-indicator" style="margin-top: 8px;"></div>
 <div id="extension-support" style="margin-top: 12px;"></div>
 <div id="error" style="color: #b00020; margin-top: 8px;"></div>

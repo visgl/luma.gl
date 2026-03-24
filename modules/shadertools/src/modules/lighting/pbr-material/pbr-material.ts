@@ -6,12 +6,14 @@
 
 import type {Texture} from '@luma.gl/core';
 import type {
+  Matrix3,
   Vector2,
   Vector3,
   Vector4,
   NumberArray2,
   NumberArray3,
-  NumberArray4
+  NumberArray4,
+  NumberArray9
 } from '@math.gl/core';
 
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
@@ -113,6 +115,41 @@ export type PBRMaterialUniforms = {
   anisotropyMapEnabled?: boolean;
 
   emissiveStrength?: number;
+
+  baseColorUVSet?: number;
+  baseColorUVTransform?: Readonly<NumberArray9 | Matrix3>;
+  metallicRoughnessUVSet?: number;
+  metallicRoughnessUVTransform?: Readonly<NumberArray9 | Matrix3>;
+  normalUVSet?: number;
+  normalUVTransform?: Readonly<NumberArray9 | Matrix3>;
+  occlusionUVSet?: number;
+  occlusionUVTransform?: Readonly<NumberArray9 | Matrix3>;
+  emissiveUVSet?: number;
+  emissiveUVTransform?: Readonly<NumberArray9 | Matrix3>;
+  specularColorUVSet?: number;
+  specularColorUVTransform?: Readonly<NumberArray9 | Matrix3>;
+  specularIntensityUVSet?: number;
+  specularIntensityUVTransform?: Readonly<NumberArray9 | Matrix3>;
+  transmissionUVSet?: number;
+  transmissionUVTransform?: Readonly<NumberArray9 | Matrix3>;
+  thicknessUVSet?: number;
+  thicknessUVTransform?: Readonly<NumberArray9 | Matrix3>;
+  clearcoatUVSet?: number;
+  clearcoatUVTransform?: Readonly<NumberArray9 | Matrix3>;
+  clearcoatRoughnessUVSet?: number;
+  clearcoatRoughnessUVTransform?: Readonly<NumberArray9 | Matrix3>;
+  clearcoatNormalUVSet?: number;
+  clearcoatNormalUVTransform?: Readonly<NumberArray9 | Matrix3>;
+  sheenColorUVSet?: number;
+  sheenColorUVTransform?: Readonly<NumberArray9 | Matrix3>;
+  sheenRoughnessUVSet?: number;
+  sheenRoughnessUVTransform?: Readonly<NumberArray9 | Matrix3>;
+  iridescenceUVSet?: number;
+  iridescenceUVTransform?: Readonly<NumberArray9 | Matrix3>;
+  iridescenceThicknessUVSet?: number;
+  iridescenceThicknessUVTransform?: Readonly<NumberArray9 | Matrix3>;
+  anisotropyUVSet?: number;
+  anisotropyUVTransform?: Readonly<NumberArray9 | Matrix3>;
 };
 
 export type PBRMaterialProps = PBRMaterialBindings & PBRMaterialUniforms;
@@ -185,7 +222,42 @@ export const pbrMaterial = {
     anisotropyDirection: [1, 0],
     anisotropyMapEnabled: false,
 
-    emissiveStrength: 1
+    emissiveStrength: 1,
+
+    baseColorUVSet: 0,
+    baseColorUVTransform: [1, 0, 0, 0, 1, 0, 0, 0, 1],
+    metallicRoughnessUVSet: 0,
+    metallicRoughnessUVTransform: [1, 0, 0, 0, 1, 0, 0, 0, 1],
+    normalUVSet: 0,
+    normalUVTransform: [1, 0, 0, 0, 1, 0, 0, 0, 1],
+    occlusionUVSet: 0,
+    occlusionUVTransform: [1, 0, 0, 0, 1, 0, 0, 0, 1],
+    emissiveUVSet: 0,
+    emissiveUVTransform: [1, 0, 0, 0, 1, 0, 0, 0, 1],
+    specularColorUVSet: 0,
+    specularColorUVTransform: [1, 0, 0, 0, 1, 0, 0, 0, 1],
+    specularIntensityUVSet: 0,
+    specularIntensityUVTransform: [1, 0, 0, 0, 1, 0, 0, 0, 1],
+    transmissionUVSet: 0,
+    transmissionUVTransform: [1, 0, 0, 0, 1, 0, 0, 0, 1],
+    thicknessUVSet: 0,
+    thicknessUVTransform: [1, 0, 0, 0, 1, 0, 0, 0, 1],
+    clearcoatUVSet: 0,
+    clearcoatUVTransform: [1, 0, 0, 0, 1, 0, 0, 0, 1],
+    clearcoatRoughnessUVSet: 0,
+    clearcoatRoughnessUVTransform: [1, 0, 0, 0, 1, 0, 0, 0, 1],
+    clearcoatNormalUVSet: 0,
+    clearcoatNormalUVTransform: [1, 0, 0, 0, 1, 0, 0, 0, 1],
+    sheenColorUVSet: 0,
+    sheenColorUVTransform: [1, 0, 0, 0, 1, 0, 0, 0, 1],
+    sheenRoughnessUVSet: 0,
+    sheenRoughnessUVTransform: [1, 0, 0, 0, 1, 0, 0, 0, 1],
+    iridescenceUVSet: 0,
+    iridescenceUVTransform: [1, 0, 0, 0, 1, 0, 0, 0, 1],
+    iridescenceThicknessUVSet: 0,
+    iridescenceThicknessUVTransform: [1, 0, 0, 0, 1, 0, 0, 0, 1],
+    anisotropyUVSet: 0,
+    anisotropyUVTransform: [1, 0, 0, 0, 1, 0, 0, 0, 1]
   } as Required<PBRMaterialUniforms>,
 
   name: 'pbrMaterial',
@@ -306,6 +378,41 @@ export const pbrMaterial = {
     // debugging flags used for shader output of intermediate PBR variables
     // #ifdef PBR_DEBUG
     scaleDiffBaseMR: 'vec4<f32>',
-    scaleFGDSpec: 'vec4<f32>'
+    scaleFGDSpec: 'vec4<f32>',
+
+    baseColorUVSet: 'i32',
+    baseColorUVTransform: 'mat3x3<f32>',
+    metallicRoughnessUVSet: 'i32',
+    metallicRoughnessUVTransform: 'mat3x3<f32>',
+    normalUVSet: 'i32',
+    normalUVTransform: 'mat3x3<f32>',
+    occlusionUVSet: 'i32',
+    occlusionUVTransform: 'mat3x3<f32>',
+    emissiveUVSet: 'i32',
+    emissiveUVTransform: 'mat3x3<f32>',
+    specularColorUVSet: 'i32',
+    specularColorUVTransform: 'mat3x3<f32>',
+    specularIntensityUVSet: 'i32',
+    specularIntensityUVTransform: 'mat3x3<f32>',
+    transmissionUVSet: 'i32',
+    transmissionUVTransform: 'mat3x3<f32>',
+    thicknessUVSet: 'i32',
+    thicknessUVTransform: 'mat3x3<f32>',
+    clearcoatUVSet: 'i32',
+    clearcoatUVTransform: 'mat3x3<f32>',
+    clearcoatRoughnessUVSet: 'i32',
+    clearcoatRoughnessUVTransform: 'mat3x3<f32>',
+    clearcoatNormalUVSet: 'i32',
+    clearcoatNormalUVTransform: 'mat3x3<f32>',
+    sheenColorUVSet: 'i32',
+    sheenColorUVTransform: 'mat3x3<f32>',
+    sheenRoughnessUVSet: 'i32',
+    sheenRoughnessUVTransform: 'mat3x3<f32>',
+    iridescenceUVSet: 'i32',
+    iridescenceUVTransform: 'mat3x3<f32>',
+    iridescenceThicknessUVSet: 'i32',
+    iridescenceThicknessUVTransform: 'mat3x3<f32>',
+    anisotropyUVSet: 'i32',
+    anisotropyUVTransform: 'mat3x3<f32>'
   }
 } as const satisfies ShaderModule<PBRMaterialProps, PBRMaterialUniforms, PBRMaterialBindings>;

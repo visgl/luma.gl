@@ -11,6 +11,14 @@ import {type PBREnvironment} from '../pbr/pbr-environment';
 import {type PBRMaterialBindings} from '@luma.gl/shadertools';
 import {GLEnum} from '../webgl-to-webgpu/gltf-webgl-constants';
 import {convertSampler} from '../webgl-to-webgpu/convert-webgl-sampler';
+import {
+  getTextureTransformSlotDefinition,
+  getTextureTransformSlotDefinitions,
+  getTextureTransformMatrix,
+  resolveTextureCoordinateSet,
+  resolveTextureTransform,
+  type PBRTextureTransformSlot
+} from '../pbr/texture-transform';
 
 // TODO - synchronize the GLTF... types with loaders.gl
 // TODO - remove the glParameters, use only parameters
@@ -143,6 +151,8 @@ type TextureFeatureOptions = {
 type TextureParseOptions = {
   featureOptions?: TextureFeatureOptions;
   gltf?: GLTFPostprocessed;
+  attributes?: Record<string, any>;
+  textureTransformSlot?: PBRTextureTransformSlot;
 };
 
 export type ParsePBRMaterialOptions = {
@@ -211,6 +221,7 @@ export function parsePBRMaterial(
   if (attributes['NORMAL']) parsedMaterial.defines['HAS_NORMALS'] = true;
   if (attributes['TANGENT'] && options?.useTangents) parsedMaterial.defines['HAS_TANGENTS'] = true;
   if (attributes['TEXCOORD_0']) parsedMaterial.defines['HAS_UV'] = true;
+  if (attributes['TEXCOORD_1']) parsedMaterial.defines['HAS_UV_1'] = true;
   if (attributes['JOINTS_0'] && attributes['WEIGHTS_0']) parsedMaterial.defines['HAS_SKIN'] = true;
   if (attributes['COLOR_0']) parsedMaterial.defines['HAS_COLORS'] = true;
 
@@ -221,7 +232,7 @@ export function parsePBRMaterial(
     if (options.validateAttributes !== false) {
       warnOnMissingExpectedAttributes(material, attributes);
     }
-    parseMaterial(device, material, parsedMaterial, options.gltf);
+    parseMaterial(device, material, parsedMaterial, attributes, options.gltf);
   }
 
   return parsedMaterial;
@@ -231,10 +242,16 @@ function warnOnMissingExpectedAttributes(
   material: GLTFPBRMaterial,
   attributes: Record<string, any>
 ): void {
-  const uvDependentTextureSlots = getUvDependentTextureSlots(material);
+  const uvDependentTextureSlots = getUvDependentTextureSlots(material, 0);
   if (uvDependentTextureSlots.length > 0 && !attributes['TEXCOORD_0']) {
     log.warn(
       `glTF material uses ${uvDependentTextureSlots.join(', ')} but primitive is missing TEXCOORD_0; textured shading will sample the default UV coordinates`
+    )();
+  }
+  const uv1DependentTextureSlots = getUvDependentTextureSlots(material, 1);
+  if (uv1DependentTextureSlots.length > 0 && !attributes['TEXCOORD_1']) {
+    log.warn(
+      `glTF material uses ${uv1DependentTextureSlots.join(', ')} with TEXCOORD_1 but primitive is missing TEXCOORD_1; those textures will be skipped`
     )();
   }
 
@@ -251,53 +268,39 @@ function warnOnMissingExpectedAttributes(
   )();
 }
 
-function getUvDependentTextureSlots(material: GLTFPBRMaterial): string[] {
+function getUvDependentTextureSlots(
+  material: GLTFPBRMaterial,
+  textureCoordinateSet: number
+): string[] {
   const uvDependentTextureSlots: string[] = [];
 
-  if (material.pbrMetallicRoughness?.baseColorTexture) {
-    uvDependentTextureSlots.push('baseColorTexture');
-  }
-  if (material.pbrMetallicRoughness?.metallicRoughnessTexture) {
-    uvDependentTextureSlots.push('metallicRoughnessTexture');
-  }
-  if (material.normalTexture) {
-    uvDependentTextureSlots.push('normalTexture');
-  }
-  if (material.occlusionTexture) {
-    uvDependentTextureSlots.push('occlusionTexture');
-  }
-  if (material.emissiveTexture) {
-    uvDependentTextureSlots.push('emissiveTexture');
-  }
-  if (material.extensions?.KHR_materials_specular?.specularTexture) {
-    uvDependentTextureSlots.push('KHR_materials_specular.specularTexture');
-  }
-  if (material.extensions?.KHR_materials_specular?.specularColorTexture) {
-    uvDependentTextureSlots.push('KHR_materials_specular.specularColorTexture');
-  }
-  if (material.extensions?.KHR_materials_transmission?.transmissionTexture) {
-    uvDependentTextureSlots.push('KHR_materials_transmission.transmissionTexture');
-  }
-  if (material.extensions?.KHR_materials_clearcoat?.clearcoatTexture) {
-    uvDependentTextureSlots.push('KHR_materials_clearcoat.clearcoatTexture');
-  }
-  if (material.extensions?.KHR_materials_clearcoat?.clearcoatRoughnessTexture) {
-    uvDependentTextureSlots.push('KHR_materials_clearcoat.clearcoatRoughnessTexture');
-  }
-  if (material.extensions?.KHR_materials_sheen?.sheenColorTexture) {
-    uvDependentTextureSlots.push('KHR_materials_sheen.sheenColorTexture');
-  }
-  if (material.extensions?.KHR_materials_sheen?.sheenRoughnessTexture) {
-    uvDependentTextureSlots.push('KHR_materials_sheen.sheenRoughnessTexture');
-  }
-  if (material.extensions?.KHR_materials_iridescence?.iridescenceTexture) {
-    uvDependentTextureSlots.push('KHR_materials_iridescence.iridescenceTexture');
-  }
-  if (material.extensions?.KHR_materials_anisotropy?.anisotropyTexture) {
-    uvDependentTextureSlots.push('KHR_materials_anisotropy.anisotropyTexture');
+  for (const slotDefinition of getTextureTransformSlotDefinitions()) {
+    const textureInfo = getNestedTextureInfo(material, slotDefinition.pathSegments);
+    if (!textureInfo) {
+      continue;
+    }
+
+    if (resolveTextureCoordinateSet(textureInfo) === textureCoordinateSet) {
+      uvDependentTextureSlots.push(slotDefinition.displayName);
+    }
   }
 
   return uvDependentTextureSlots;
+}
+
+function getNestedTextureInfo(
+  material: GLTFPBRMaterial,
+  pathSegments: string[]
+): Record<string, any> | null {
+  let value: any = material;
+  for (const pathSegment of pathSegments) {
+    value = value?.[pathSegment];
+    if (!value) {
+      return null;
+    }
+  }
+
+  return value;
 }
 
 /** Parse GLTF material record */
@@ -305,6 +308,7 @@ function parseMaterial(
   device: Device,
   material: GLTFPBRMaterial,
   parsedMaterial: ParsedPBRMaterial,
+  attributes: Record<string, any>,
   gltf?: GLTFPostprocessed
 ): void {
   parsedMaterial.uniforms.unlit = Boolean(
@@ -312,7 +316,13 @@ function parseMaterial(
   );
 
   if (material.pbrMetallicRoughness) {
-    parsePbrMetallicRoughness(device, material.pbrMetallicRoughness, parsedMaterial, gltf);
+    parsePbrMetallicRoughness(
+      device,
+      material.pbrMetallicRoughness,
+      parsedMaterial,
+      attributes,
+      gltf
+    );
   }
   if (material.normalTexture) {
     addTexture(device, material.normalTexture, 'pbr_normalSampler', parsedMaterial, {
@@ -320,7 +330,9 @@ function parseMaterial(
         define: 'HAS_NORMALMAP',
         enabledUniformName: 'normalMapEnabled'
       },
-      gltf
+      gltf,
+      attributes,
+      textureTransformSlot: 'normal'
     });
 
     const {scale = 1} = material.normalTexture;
@@ -332,7 +344,9 @@ function parseMaterial(
         define: 'HAS_OCCLUSIONMAP',
         enabledUniformName: 'occlusionMapEnabled'
       },
-      gltf
+      gltf,
+      attributes,
+      textureTransformSlot: 'occlusion'
     });
 
     const {strength = 1} = material.occlusionTexture;
@@ -345,11 +359,13 @@ function parseMaterial(
         define: 'HAS_EMISSIVEMAP',
         enabledUniformName: 'emissiveMapEnabled'
       },
-      gltf
+      gltf,
+      attributes,
+      textureTransformSlot: 'emissive'
     });
   }
 
-  parseMaterialExtensions(device, material.extensions, parsedMaterial, gltf);
+  parseMaterialExtensions(device, material.extensions, parsedMaterial, gltf, attributes);
 
   switch (material.alphaMode || 'OPAQUE') {
     case 'OPAQUE':
@@ -414,6 +430,7 @@ function parsePbrMetallicRoughness(
   device: Device,
   pbrMetallicRoughness: GLTFPBRMetallicRoughness,
   parsedMaterial: ParsedPBRMaterial,
+  attributes: Record<string, any>,
   gltf?: GLTFPostprocessed
 ): void {
   if (pbrMetallicRoughness.baseColorTexture) {
@@ -427,7 +444,9 @@ function parsePbrMetallicRoughness(
           define: 'HAS_BASECOLORMAP',
           enabledUniformName: 'baseColorMapEnabled'
         },
-        gltf
+        gltf,
+        attributes,
+        textureTransformSlot: 'baseColor'
       }
     );
   }
@@ -444,7 +463,9 @@ function parsePbrMetallicRoughness(
           define: 'HAS_METALROUGHNESSMAP',
           enabledUniformName: 'metallicRoughnessMapEnabled'
         },
-        gltf
+        gltf,
+        attributes,
+        textureTransformSlot: 'metallicRoughness'
       }
     );
   }
@@ -456,7 +477,8 @@ function parseMaterialExtensions(
   device: Device,
   extensions: GLTFMaterialExtensions | undefined,
   parsedMaterial: ParsedPBRMaterial,
-  gltf?: GLTFPostprocessed
+  gltf?: GLTFPostprocessed,
+  attributes: Record<string, any> = {}
 ): void {
   if (!extensions) {
     return;
@@ -466,14 +488,44 @@ function parseMaterialExtensions(
     parsedMaterial.defines['USE_MATERIAL_EXTENSIONS'] = true;
   }
 
-  parseSpecularExtension(device, extensions.KHR_materials_specular, parsedMaterial, gltf);
+  parseSpecularExtension(
+    device,
+    extensions.KHR_materials_specular,
+    parsedMaterial,
+    gltf,
+    attributes
+  );
   parseIorExtension(extensions.KHR_materials_ior, parsedMaterial);
-  parseTransmissionExtension(device, extensions.KHR_materials_transmission, parsedMaterial, gltf);
-  parseVolumeExtension(device, extensions.KHR_materials_volume, parsedMaterial, gltf);
-  parseClearcoatExtension(device, extensions.KHR_materials_clearcoat, parsedMaterial, gltf);
-  parseSheenExtension(device, extensions.KHR_materials_sheen, parsedMaterial, gltf);
-  parseIridescenceExtension(device, extensions.KHR_materials_iridescence, parsedMaterial, gltf);
-  parseAnisotropyExtension(device, extensions.KHR_materials_anisotropy, parsedMaterial, gltf);
+  parseTransmissionExtension(
+    device,
+    extensions.KHR_materials_transmission,
+    parsedMaterial,
+    gltf,
+    attributes
+  );
+  parseVolumeExtension(device, extensions.KHR_materials_volume, parsedMaterial, gltf, attributes);
+  parseClearcoatExtension(
+    device,
+    extensions.KHR_materials_clearcoat,
+    parsedMaterial,
+    gltf,
+    attributes
+  );
+  parseSheenExtension(device, extensions.KHR_materials_sheen, parsedMaterial, gltf, attributes);
+  parseIridescenceExtension(
+    device,
+    extensions.KHR_materials_iridescence,
+    parsedMaterial,
+    gltf,
+    attributes
+  );
+  parseAnisotropyExtension(
+    device,
+    extensions.KHR_materials_anisotropy,
+    parsedMaterial,
+    gltf,
+    attributes
+  );
   parseEmissiveStrengthExtension(extensions.KHR_materials_emissive_strength, parsedMaterial);
 }
 
@@ -494,7 +546,8 @@ function parseSpecularExtension(
   device: Device,
   extension: GLTFMaterialSpecularExtension | undefined,
   parsedMaterial: ParsedPBRMaterial,
-  gltf?: GLTFPostprocessed
+  gltf?: GLTFPostprocessed,
+  attributes: Record<string, any> = {}
 ): void {
   if (!extension) {
     return;
@@ -512,7 +565,9 @@ function parseSpecularExtension(
         define: 'HAS_SPECULARCOLORMAP',
         enabledUniformName: 'specularColorMapEnabled'
       },
-      gltf
+      gltf,
+      attributes,
+      textureTransformSlot: 'specularColor'
     });
   }
   if (extension.specularTexture) {
@@ -521,7 +576,9 @@ function parseSpecularExtension(
         define: 'HAS_SPECULARINTENSITYMAP',
         enabledUniformName: 'specularIntensityMapEnabled'
       },
-      gltf
+      gltf,
+      attributes,
+      textureTransformSlot: 'specularIntensity'
     });
   }
 }
@@ -539,7 +596,8 @@ function parseTransmissionExtension(
   device: Device,
   extension: GLTFMaterialTransmissionExtension | undefined,
   parsedMaterial: ParsedPBRMaterial,
-  gltf?: GLTFPostprocessed
+  gltf?: GLTFPostprocessed,
+  attributes: Record<string, any> = {}
 ): void {
   if (!extension) {
     return;
@@ -554,7 +612,9 @@ function parseTransmissionExtension(
         define: 'HAS_TRANSMISSIONMAP',
         enabledUniformName: 'transmissionMapEnabled'
       },
-      gltf
+      gltf,
+      attributes,
+      textureTransformSlot: 'transmission'
     });
   }
 
@@ -570,7 +630,8 @@ function parseVolumeExtension(
   device: Device,
   extension: GLTFMaterialVolumeExtension | undefined,
   parsedMaterial: ParsedPBRMaterial,
-  gltf?: GLTFPostprocessed
+  gltf?: GLTFPostprocessed,
+  attributes: Record<string, any> = {}
 ): void {
   if (!extension) {
     return;
@@ -584,7 +645,9 @@ function parseVolumeExtension(
       featureOptions: {
         define: 'HAS_THICKNESSMAP'
       },
-      gltf
+      gltf,
+      attributes,
+      textureTransformSlot: 'thickness'
     });
   }
   if (extension.attenuationDistance !== undefined) {
@@ -599,7 +662,8 @@ function parseClearcoatExtension(
   device: Device,
   extension: GLTFMaterialClearcoatExtension | undefined,
   parsedMaterial: ParsedPBRMaterial,
-  gltf?: GLTFPostprocessed
+  gltf?: GLTFPostprocessed,
+  attributes: Record<string, any> = {}
 ): void {
   if (!extension) {
     return;
@@ -617,7 +681,9 @@ function parseClearcoatExtension(
         define: 'HAS_CLEARCOATMAP',
         enabledUniformName: 'clearcoatMapEnabled'
       },
-      gltf
+      gltf,
+      attributes,
+      textureTransformSlot: 'clearcoat'
     });
   }
   if (extension.clearcoatRoughnessTexture) {
@@ -631,7 +697,9 @@ function parseClearcoatExtension(
           define: 'HAS_CLEARCOATROUGHNESSMAP',
           enabledUniformName: 'clearcoatRoughnessMapEnabled'
         },
-        gltf
+        gltf,
+        attributes,
+        textureTransformSlot: 'clearcoatRoughness'
       }
     );
   }
@@ -645,7 +713,9 @@ function parseClearcoatExtension(
         featureOptions: {
           define: 'HAS_CLEARCOATNORMALMAP'
         },
-        gltf
+        gltf,
+        attributes,
+        textureTransformSlot: 'clearcoatNormal'
       }
     );
   }
@@ -655,7 +725,8 @@ function parseSheenExtension(
   device: Device,
   extension: GLTFMaterialSheenExtension | undefined,
   parsedMaterial: ParsedPBRMaterial,
-  gltf?: GLTFPostprocessed
+  gltf?: GLTFPostprocessed,
+  attributes: Record<string, any> = {}
 ): void {
   if (!extension) {
     return;
@@ -673,7 +744,9 @@ function parseSheenExtension(
         define: 'HAS_SHEENCOLORMAP',
         enabledUniformName: 'sheenColorMapEnabled'
       },
-      gltf
+      gltf,
+      attributes,
+      textureTransformSlot: 'sheenColor'
     });
   }
   if (extension.sheenRoughnessTexture) {
@@ -687,7 +760,9 @@ function parseSheenExtension(
           define: 'HAS_SHEENROUGHNESSMAP',
           enabledUniformName: 'sheenRoughnessMapEnabled'
         },
-        gltf
+        gltf,
+        attributes,
+        textureTransformSlot: 'sheenRoughness'
       }
     );
   }
@@ -697,7 +772,8 @@ function parseIridescenceExtension(
   device: Device,
   extension: GLTFMaterialIridescenceExtension | undefined,
   parsedMaterial: ParsedPBRMaterial,
-  gltf?: GLTFPostprocessed
+  gltf?: GLTFPostprocessed,
+  attributes: Record<string, any> = {}
 ): void {
   if (!extension) {
     return;
@@ -724,7 +800,9 @@ function parseIridescenceExtension(
         define: 'HAS_IRIDESCENCEMAP',
         enabledUniformName: 'iridescenceMapEnabled'
       },
-      gltf
+      gltf,
+      attributes,
+      textureTransformSlot: 'iridescence'
     });
   }
   if (extension.iridescenceThicknessTexture) {
@@ -737,7 +815,9 @@ function parseIridescenceExtension(
         featureOptions: {
           define: 'HAS_IRIDESCENCETHICKNESSMAP'
         },
-        gltf
+        gltf,
+        attributes,
+        textureTransformSlot: 'iridescenceThickness'
       }
     );
   }
@@ -747,7 +827,8 @@ function parseAnisotropyExtension(
   device: Device,
   extension: GLTFMaterialAnisotropyExtension | undefined,
   parsedMaterial: ParsedPBRMaterial,
-  gltf?: GLTFPostprocessed
+  gltf?: GLTFPostprocessed,
+  attributes: Record<string, any> = {}
 ): void {
   if (!extension) {
     return;
@@ -765,7 +846,9 @@ function parseAnisotropyExtension(
         define: 'HAS_ANISOTROPYMAP',
         enabledUniformName: 'anisotropyMapEnabled'
       },
-      gltf
+      gltf,
+      attributes,
+      textureTransformSlot: 'anisotropy'
     });
   }
 }
@@ -787,8 +870,22 @@ function addTexture(
   parsedMaterial: ParsedPBRMaterial,
   textureParseOptions: TextureParseOptions = {}
 ): void {
-  const {featureOptions = {}, gltf} = textureParseOptions;
+  const {featureOptions = {}, gltf, attributes = {}, textureTransformSlot} = textureParseOptions;
   const {define, enabledUniformName} = featureOptions;
+  const textureCoordinateSet = resolveTextureCoordinateSet(gltfTexture as Record<string, any>);
+  if (textureCoordinateSet > 1) {
+    log.warn(
+      `Skipping ${String(uniformName)} because ${textureCoordinateSet} is not supported; only TEXCOORD_0 and TEXCOORD_1 are currently available`
+    )();
+    return;
+  }
+  if (textureCoordinateSet === 1 && !attributes['TEXCOORD_1']) {
+    log.warn(
+      `Skipping ${String(uniformName)} because it requires TEXCOORD_1 but the primitive does not provide TEXCOORD_1`
+    )();
+    return;
+  }
+
   const resolvedTextureInfo = resolveTextureInfo(gltfTexture, gltf);
   const image = resolvedTextureInfo.texture?.source?.image;
   if (!image) {
@@ -827,6 +924,14 @@ function addTexture(
   if (define) parsedMaterial.defines[define] = true;
   if (enabledUniformName) {
     parsedMaterial.uniforms[enabledUniformName] = true;
+  }
+  if (textureTransformSlot) {
+    const textureTransformSlotDefinition = getTextureTransformSlotDefinition(textureTransformSlot);
+    (parsedMaterial.uniforms as Record<string, any>)[textureTransformSlotDefinition.uvSetUniform] =
+      textureCoordinateSet;
+    (parsedMaterial.uniforms as Record<string, any>)[
+      textureTransformSlotDefinition.uvTransformUniform
+    ] = getTextureTransformMatrix(resolveTextureTransform(gltfTexture as Record<string, any>));
   }
   parsedMaterial.generatedTextures.push(texture);
 }

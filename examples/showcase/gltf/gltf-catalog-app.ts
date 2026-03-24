@@ -18,6 +18,7 @@ const MODEL_LIST_URL = `${MODEL_DIRECTORY_URL}/model-index.json`;
 const LAST_GLTF_MODEL_STORAGE_KEY = 'last-gltf-model';
 const GLTF_OPTIONS_STORAGE_KEY = 'showcase-gltf-options';
 const GLTF_LOADING_STYLE_ID = 'gltf-loading-indicator-style';
+export const GLTF_MODEL_INFO_ID = 'model-info';
 export const GLTF_CONTROL_PANEL_STYLE = 'display: grid; gap: 8px;';
 export const GLTF_CONTROL_ROW_STYLE =
   'display: grid; grid-template-columns: 7rem minmax(0, 1fr); align-items: center; column-gap: 0.75rem;';
@@ -64,9 +65,10 @@ const INFO_HTML = `\
     </div>
   </div>
   <div><label><input type="checkbox" id="useModelLights" />Use Model Lights</label></div>
-  <div><label><input type="checkbox" id="cameraAnimation" />Camera Animation</label></div>
-  <div><label><input type="checkbox" id="gltfAnimation" />glTF Animation</label></div>
+<div><label><input type="checkbox" id="cameraAnimation" />Camera Animation</label></div>
+<div><label><input type="checkbox" id="gltfAnimation" />glTF Animation</label></div>
 </div>
+<div id="${GLTF_MODEL_INFO_ID}" style="margin-top: 12px; display: none;"></div>
 <div id="model-light-indicator" style="margin-top: 8px;"></div>
 <div id="error" style="color: #b00020; margin-top: 8px;"></div>
 `;
@@ -79,9 +81,19 @@ export type GLTFCatalogModel = {
   hasGLBVariant?: boolean;
   label: string;
   name: string;
+  summary?: string;
+  description?: string;
   screenshot?: string;
   tags?: string[];
   variants?: Record<string, string>;
+};
+type GLTFModelMetadata = Pick<GLTFCatalogModel, 'summary' | 'description'>;
+
+const GLTF_MODEL_METADATA_OVERRIDES: Record<string, GLTFModelMetadata> = {
+  PotOfCoalsAnimationPointer: {
+    description:
+      'A non-reflective bumpy glass-like surface distorts the hot coals underneath, using KHR_animation_pointer to animate the heat refraction effect.'
+  }
 };
 export type GLTFModelReference = {
   name: string;
@@ -112,6 +124,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   isFinalized: boolean = false;
   gltfLoadGeneration: number = 0;
   cleanupCallbacks: Array<() => void> = [];
+  modelMetadataCache = new Map<string, Promise<GLTFModelMetadata>>();
 
   constructor({device}: AnimationProps) {
     super();
@@ -188,6 +201,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.scenegraphsFromGLTF = undefined;
     this.modelLights = [];
     this.setViewerLoadingState(false);
+    updateModelInfoBox();
     updateExtensionSupportTable();
   }
 
@@ -316,6 +330,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const loadGeneration = ++this.gltfLoadGeneration;
     const candidateModelReferences = getModelLoadCandidates(modelReference, this.availableModels);
     const primaryModelReference = candidateModelReferences[0];
+    this.updateModelInfo(primaryModelReference, loadGeneration);
     const primaryModelUrl = getModelUrl(primaryModelReference);
     const {name, variant} = primaryModelReference;
     const modelDescription = getModelDescription(name, variant);
@@ -355,6 +370,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       destroyScenegraphs(this.scenegraphsFromGLTF);
       this.scenegraphsFromGLTF = scenegraphsFromGLTF;
       this.modelLights = scenegraphsFromGLTF.lights;
+      this.updateModelInfo(resolvedModelReference, loadGeneration);
       updateExtensionSupportTable(scenegraphsFromGLTF.extensionSupport);
 
       const activeSceneBounds =
@@ -396,6 +412,46 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     }
 
     return lightSources;
+  }
+
+  private updateModelInfo(
+    modelReference: Required<GLTFModelReference>,
+    loadGeneration: number
+  ): void {
+    const catalogModel = this.availableModels.find(model => model.name === modelReference.name);
+    updateModelInfoBox(catalogModel, modelReference);
+
+    void this.fetchModelMetadata(modelReference.name).then(modelMetadata => {
+      if (this.isLoadStale(loadGeneration)) {
+        return;
+      }
+
+      const mutableCatalogModel = this.availableModels.find(
+        model => model.name === modelReference.name
+      );
+      if (mutableCatalogModel) {
+        Object.assign(mutableCatalogModel, modelMetadata);
+        updateModelInfoBox(mutableCatalogModel, modelReference);
+        return;
+      }
+
+      updateModelInfoBox(
+        {
+          label: modelReference.name,
+          name: modelReference.name,
+          ...modelMetadata
+        },
+        modelReference
+      );
+    });
+  }
+
+  private fetchModelMetadata(modelName: string): Promise<GLTFModelMetadata> {
+    if (!this.modelMetadataCache.has(modelName)) {
+      this.modelMetadataCache.set(modelName, loadModelMetadata(modelName));
+    }
+
+    return this.modelMetadataCache.get(modelName)!;
   }
 }
 
@@ -614,6 +670,66 @@ function getModelLoadingLabel(modelDescription: string): string {
   return `Loading ${modelDescription}...`;
 }
 
+async function loadModelMetadata(modelName: string): Promise<GLTFModelMetadata> {
+  const readmeUrl = `${MODEL_DIRECTORY_URL}/${modelName}/README.md`;
+
+  try {
+    const response = await fetch(readmeUrl);
+    if (!response.ok) {
+      return GLTF_MODEL_METADATA_OVERRIDES[modelName] || {};
+    }
+
+    const markdown = await response.text();
+    const summary = extractReadmeSection(markdown, 'Summary');
+    const description = getFirstParagraph(extractReadmeSection(markdown, 'Description'));
+
+    return {
+      summary: summary || GLTF_MODEL_METADATA_OVERRIDES[modelName]?.summary,
+      description: GLTF_MODEL_METADATA_OVERRIDES[modelName]?.description || description
+    };
+  } catch {
+    return GLTF_MODEL_METADATA_OVERRIDES[modelName] || {};
+  }
+}
+
+function extractReadmeSection(markdown: string, sectionName: string): string | undefined {
+  const sectionMatch = new RegExp(
+    `## ${escapeRegExp(sectionName)}\\s*\\n\\n([\\s\\S]*?)(?=\\n##\\s|$)`
+  ).exec(markdown);
+  if (!sectionMatch) {
+    return undefined;
+  }
+
+  const normalizedSection = normalizeMarkdown(sectionMatch[1]);
+  return normalizedSection || undefined;
+}
+
+function normalizeMarkdown(markdown: string): string {
+  return markdown
+    .replace(/!\[[^\]]*]\([^)]+\)\s*/g, '')
+    .replace(/<br[^>]*\/?>.*$/gm, '')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/^\s*[-*]\s+/gm, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+function getFirstParagraph(markdownSection: string | undefined): string | undefined {
+  if (!markdownSection) {
+    return undefined;
+  }
+
+  return markdownSection
+    .split(/\n\s*\n/)
+    .map(paragraph => paragraph.trim())
+    .find(Boolean);
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 function setLoadingState(isLoading: boolean, message?: string): void {
   const loadingIndicator = document.getElementById('loading-state') as HTMLDivElement | null;
 
@@ -628,6 +744,56 @@ function setLoadingState(isLoading: boolean, message?: string): void {
     if (control) {
       control.disabled = isLoading;
     }
+  }
+}
+
+function updateModelInfoBox(
+  model?: Pick<GLTFCatalogModel, 'label' | 'name' | 'summary' | 'description'>,
+  modelReference?: Required<GLTFModelReference>
+): void {
+  const container = document.getElementById(GLTF_MODEL_INFO_ID) as HTMLDivElement | null;
+  if (!container) {
+    return;
+  }
+
+  const summary = model?.summary?.trim();
+  const description = model?.description?.trim();
+  if (!model && !modelReference) {
+    container.replaceChildren();
+    container.style.display = 'none';
+    return;
+  }
+
+  container.replaceChildren();
+  container.style.display = summary || description || modelReference ? 'block' : 'none';
+
+  const title = document.createElement('div');
+  title.style.fontWeight = '600';
+  title.style.marginBottom = '4px';
+  title.textContent = model?.label || model?.name || modelReference?.name || '';
+  container.append(title);
+
+  if (modelReference?.variant) {
+    const variant = document.createElement('div');
+    variant.style.fontSize = '12px';
+    variant.style.opacity = '0.7';
+    variant.style.marginBottom = '6px';
+    variant.textContent = modelReference.variant;
+    container.append(variant);
+  }
+
+  if (summary) {
+    const summaryParagraph = document.createElement('p');
+    summaryParagraph.style.margin = '0 0 6px 0';
+    summaryParagraph.textContent = summary;
+    container.append(summaryParagraph);
+  }
+
+  if (description) {
+    const descriptionParagraph = document.createElement('p');
+    descriptionParagraph.style.margin = '0';
+    descriptionParagraph.textContent = description;
+    container.append(descriptionParagraph);
   }
 }
 

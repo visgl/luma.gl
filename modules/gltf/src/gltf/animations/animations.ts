@@ -67,8 +67,31 @@ export type GLTFMaterialAnimationChannel = {
   component?: number;
 };
 
+/** Parsed glTF animation channel that targets a runtime texture-transform delta. */
+export type GLTFTextureTransformAnimationChannel = {
+  /** Channel target kind. */
+  type: 'textureTransform';
+  /** Time/value sampler used to evaluate the channel. */
+  sampler: GLTFAnimationSampler;
+  /** Original JSON pointer from `KHR_animation_pointer`. */
+  pointer: string;
+  /** Target material index in the source glTF. */
+  targetMaterialIndex: number;
+  /** Texture slot updated by this channel. */
+  textureSlot: import('../../pbr/texture-transform').PBRTextureTransformSlot;
+  /** Texture transform component updated by this channel. */
+  path: import('../../pbr/texture-transform').PBRTextureTransformPath;
+  /** Component index when animating a single offset or scale element. */
+  component?: number;
+  /** Static source transform baked by loaders.gl before runtime animation. */
+  baseTransform: import('../../pbr/texture-transform').PBRTextureTransform;
+};
+
 /** Parsed glTF animation channel. */
-export type GLTFAnimationChannel = GLTFNodeAnimationChannel | GLTFMaterialAnimationChannel;
+export type GLTFAnimationChannel =
+  | GLTFNodeAnimationChannel
+  | GLTFMaterialAnimationChannel
+  | GLTFTextureTransformAnimationChannel;
 
 /** Parsed glTF animation sampler. */
 export type GLTFAnimationSampler = {

@@ -11,7 +11,8 @@ import {
   getShaderModuleUniforms,
   getShaderModuleSource,
   getShaderModuleUniformBlockFields,
-  getShaderModuleUniformLayoutValidationResult
+  getShaderModuleUniformLayoutValidationResult,
+  validateShaderModuleUniformLayout
 } from '@luma.gl/shadertools';
 
 test('ShaderModule', t => {
@@ -218,6 +219,31 @@ uniform precisionQualifiedUniforms {
   t.ok(
     getShaderModuleUniformLayoutValidationResult(shaderModule, 'fragment')?.matches,
     'validation accepts precision-qualified GLSL uniform block fields'
+  );
+
+  t.end();
+});
+
+test('ShaderModule uniform block validation reports concise mismatch details', t => {
+  const shaderModule: ShaderModule = {
+    name: 'mismatchReporter',
+    uniformTypes: {
+      opacity: 'f32',
+      color: 'vec4<f32>',
+      uvTransform: 'mat3x3<f32>'
+    },
+    fs: `\
+uniform mismatchReporterUniforms {
+  float opacity;
+  vec4 color;
+} mismatchReporter;
+`
+  };
+
+  t.throws(
+    () => validateShaderModuleUniformLayout(shaderModule, 'fragment'),
+    /Expected 3 fields, found 2\..*Shader block ends after field 2; expected next field uvTransform\..*Missing from shader block \(1\): uvTransform\./,
+    'mismatch errors report counts, first mismatch location, and missing uniforms'
   );
 
   t.end();

@@ -173,7 +173,10 @@ Notes:
 `@luma.gl/engine` scengraph nodes and can be freely manpipulated or intermixed with manually
 constructed nodes.
 - Extension coverage is summarized in the
-[`glTF Extension Support`](./gltf-extensions.mdx) table.
+[`glTF Extension Support`](./gltf-extensions.mdx) table, including the current
+partial limits for `KHR_animation_pointer` and animated `KHR_texture_transform`.
+That table also calls out that transmissive refraction effects still use luma.gl's
+stock approximation and may not visually match the Khronos Sample Viewer.
 
 glTF files containing extension data (e.g. Draco compressed meshes,
 custom PBR materials, or meshopt compression) need to be processed by

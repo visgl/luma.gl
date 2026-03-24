@@ -148,14 +148,21 @@ uniform sampler2D u_brdfLUT;
 export const source = /* wgsl */ `\
 struct PBRFragmentInputs {
   pbr_vPosition: vec3f,
-  pbr_vUV: vec2f,
+  pbr_vUV0: vec2f,
+  pbr_vUV1: vec2f,
   pbr_vTBN: mat3x3f,
   pbr_vNormal: vec3f
 };
 
 var<private> fragmentInputs: PBRFragmentInputs;
 
-fn pbr_setPositionNormalTangentUV(position: vec4f, normal: vec4f, tangent: vec4f, uv: vec2f)
+fn pbr_setPositionNormalTangentUV(
+  position: vec4f,
+  normal: vec4f,
+  tangent: vec4f,
+  uv0: vec2f,
+  uv1: vec2f
+)
 {
   var pos: vec4f = pbrProjection.modelMatrix * position;
   fragmentInputs.pbr_vPosition = pos.xyz / pos.w;
@@ -165,7 +172,8 @@ fn pbr_setPositionNormalTangentUV(position: vec4f, normal: vec4f, tangent: vec4f
     vec3f(0.0, 1.0, 0.0),
     vec3f(0.0, 0.0, 1.0)
   );
-  fragmentInputs.pbr_vUV = vec2f(0.0, 0.0);
+  fragmentInputs.pbr_vUV0 = vec2f(0.0, 0.0);
+  fragmentInputs.pbr_vUV1 = uv1;
 
 #ifdef HAS_NORMALS
   let normalW: vec3f = normalize((pbrProjection.normalMatrix * vec4f(normal.xyz, 0.0)).xyz);
@@ -178,7 +186,7 @@ fn pbr_setPositionNormalTangentUV(position: vec4f, normal: vec4f, tangent: vec4f
 #endif
 
 #ifdef HAS_UV
-  fragmentInputs.pbr_vUV = uv;
+  fragmentInputs.pbr_vUV0 = uv0;
 #endif
 }
 
@@ -250,6 +258,41 @@ struct pbrMaterialUniforms {
   scaleDiffBaseMR: vec4f,
   scaleFGDSpec: vec4f,
   // #endif
+
+  baseColorUVSet: i32,
+  baseColorUVTransform: mat3x3f,
+  metallicRoughnessUVSet: i32,
+  metallicRoughnessUVTransform: mat3x3f,
+  normalUVSet: i32,
+  normalUVTransform: mat3x3f,
+  occlusionUVSet: i32,
+  occlusionUVTransform: mat3x3f,
+  emissiveUVSet: i32,
+  emissiveUVTransform: mat3x3f,
+  specularColorUVSet: i32,
+  specularColorUVTransform: mat3x3f,
+  specularIntensityUVSet: i32,
+  specularIntensityUVTransform: mat3x3f,
+  transmissionUVSet: i32,
+  transmissionUVTransform: mat3x3f,
+  thicknessUVSet: i32,
+  thicknessUVTransform: mat3x3f,
+  clearcoatUVSet: i32,
+  clearcoatUVTransform: mat3x3f,
+  clearcoatRoughnessUVSet: i32,
+  clearcoatRoughnessUVTransform: mat3x3f,
+  clearcoatNormalUVSet: i32,
+  clearcoatNormalUVTransform: mat3x3f,
+  sheenColorUVSet: i32,
+  sheenColorUVTransform: mat3x3f,
+  sheenRoughnessUVSet: i32,
+  sheenRoughnessUVTransform: mat3x3f,
+  iridescenceUVSet: i32,
+  iridescenceUVTransform: mat3x3f,
+  iridescenceThicknessUVSet: i32,
+  iridescenceThicknessUVTransform: mat3x3f,
+  anisotropyUVSet: i32,
+  anisotropyUVTransform: mat3x3f,
 }
 
 @group(3) @binding(auto) var<uniform> pbrMaterial : pbrMaterialUniforms;
@@ -363,13 +406,22 @@ fn SRGBtoLINEAR(srgbIn: vec4f ) -> vec4f
   return vec4f(linOut, srgbIn.w);
 }
 
+fn getMaterialUV(uvSet: i32, uvTransform: mat3x3f) -> vec2f
+{
+  var baseUV = fragmentInputs.pbr_vUV0;
+  if (uvSet == 1) {
+    baseUV = fragmentInputs.pbr_vUV1;
+  }
+  return (uvTransform * vec3f(baseUV, 1.0)).xy;
+}
+
 // Build the tangent basis from interpolated attributes or screen-space derivatives.
-fn getTBN() -> mat3x3f
+fn getTBN(uv: vec2f) -> mat3x3f
 {
   let pos_dx: vec3f = dpdx(fragmentInputs.pbr_vPosition);
   let pos_dy: vec3f = dpdy(fragmentInputs.pbr_vPosition);
-  let tex_dx: vec3f = dpdx(vec3f(fragmentInputs.pbr_vUV, 0.0));
-  let tex_dy: vec3f = dpdy(vec3f(fragmentInputs.pbr_vUV, 0.0));
+  let tex_dx: vec3f = dpdx(vec3f(uv, 0.0));
+  let tex_dy: vec3f = dpdy(vec3f(uv, 0.0));
   var t: vec3f = (tex_dy.y * pos_dx - tex_dx.y * pos_dy) / (tex_dx.x * tex_dy.y - tex_dy.x * tex_dx.y);
 
   var ng: vec3f = cross(pos_dx, pos_dy);
@@ -392,14 +444,15 @@ fn getMappedNormal(
   normalSampler: texture_2d<f32>,
   normalSamplerBinding: sampler,
   tbn: mat3x3f,
-  normalScale: f32
+  normalScale: f32,
+  uv: vec2f
 ) -> vec3f
 {
-  let n = textureSample(normalSampler, normalSamplerBinding, fragmentInputs.pbr_vUV).rgb;
+  let n = textureSample(normalSampler, normalSamplerBinding, uv).rgb;
   return normalize(tbn * ((2.0 * n - 1.0) * vec3f(normalScale, normalScale, 1.0)));
 }
 
-fn getNormal(tbn: mat3x3f) -> vec3f
+fn getNormal(tbn: mat3x3f, uv: vec2f) -> vec3f
 {
   // The tbn matrix is linearly interpolated, so we need to re-normalize
   var n: vec3f = normalize(tbn[2].xyz);
@@ -408,21 +461,23 @@ fn getNormal(tbn: mat3x3f) -> vec3f
     pbr_normalSampler,
     pbr_normalSamplerSampler,
     tbn,
-    pbrMaterial.normalScale
+    pbrMaterial.normalScale,
+    uv
   );
 #endif
 
   return n;
 }
 
-fn getClearcoatNormal(tbn: mat3x3f, baseNormal: vec3f) -> vec3f
+fn getClearcoatNormal(tbn: mat3x3f, baseNormal: vec3f, uv: vec2f) -> vec3f
 {
 #ifdef HAS_CLEARCOATNORMALMAP
   return getMappedNormal(
     pbr_clearcoatNormalSampler,
     pbr_clearcoatNormalSamplerSampler,
     tbn,
-    1.0
+    1.0,
+    uv
   );
 #else
   return baseNormal;
@@ -727,11 +782,62 @@ fn calculateFinalColor(pbrInfo: PBRInfo, lightColor: vec3<f32>) -> vec3<f32> {
 }
 
 fn pbr_filterColor(colorUnused: vec4<f32>) -> vec4<f32> {
+  let baseColorUV = getMaterialUV(pbrMaterial.baseColorUVSet, pbrMaterial.baseColorUVTransform);
+  let metallicRoughnessUV = getMaterialUV(
+    pbrMaterial.metallicRoughnessUVSet,
+    pbrMaterial.metallicRoughnessUVTransform
+  );
+  let normalUV = getMaterialUV(pbrMaterial.normalUVSet, pbrMaterial.normalUVTransform);
+  let occlusionUV = getMaterialUV(pbrMaterial.occlusionUVSet, pbrMaterial.occlusionUVTransform);
+  let emissiveUV = getMaterialUV(pbrMaterial.emissiveUVSet, pbrMaterial.emissiveUVTransform);
+  let specularColorUV = getMaterialUV(
+    pbrMaterial.specularColorUVSet,
+    pbrMaterial.specularColorUVTransform
+  );
+  let specularIntensityUV = getMaterialUV(
+    pbrMaterial.specularIntensityUVSet,
+    pbrMaterial.specularIntensityUVTransform
+  );
+  let transmissionUV = getMaterialUV(
+    pbrMaterial.transmissionUVSet,
+    pbrMaterial.transmissionUVTransform
+  );
+  let thicknessUV = getMaterialUV(pbrMaterial.thicknessUVSet, pbrMaterial.thicknessUVTransform);
+  let clearcoatUV = getMaterialUV(pbrMaterial.clearcoatUVSet, pbrMaterial.clearcoatUVTransform);
+  let clearcoatRoughnessUV = getMaterialUV(
+    pbrMaterial.clearcoatRoughnessUVSet,
+    pbrMaterial.clearcoatRoughnessUVTransform
+  );
+  let clearcoatNormalUV = getMaterialUV(
+    pbrMaterial.clearcoatNormalUVSet,
+    pbrMaterial.clearcoatNormalUVTransform
+  );
+  let sheenColorUV = getMaterialUV(
+    pbrMaterial.sheenColorUVSet,
+    pbrMaterial.sheenColorUVTransform
+  );
+  let sheenRoughnessUV = getMaterialUV(
+    pbrMaterial.sheenRoughnessUVSet,
+    pbrMaterial.sheenRoughnessUVTransform
+  );
+  let iridescenceUV = getMaterialUV(
+    pbrMaterial.iridescenceUVSet,
+    pbrMaterial.iridescenceUVTransform
+  );
+  let iridescenceThicknessUV = getMaterialUV(
+    pbrMaterial.iridescenceThicknessUVSet,
+    pbrMaterial.iridescenceThicknessUVTransform
+  );
+  let anisotropyUV = getMaterialUV(
+    pbrMaterial.anisotropyUVSet,
+    pbrMaterial.anisotropyUVTransform
+  );
+
   // The albedo may be defined from a base texture or a flat color
   var baseColor: vec4<f32> = pbrMaterial.baseColorFactor;
   #ifdef HAS_BASECOLORMAP
   baseColor = SRGBtoLINEAR(
-    textureSample(pbr_baseColorSampler, pbr_baseColorSamplerSampler, fragmentInputs.pbr_vUV)
+    textureSample(pbr_baseColorSampler, pbr_baseColorSamplerSampler, baseColorUV)
   ) * pbrMaterial.baseColorFactor;
   #endif
 
@@ -758,15 +864,15 @@ fn pbr_filterColor(colorUnused: vec4<f32>) -> vec4<f32> {
     let mrSample = textureSample(
       pbr_metallicRoughnessSampler,
       pbr_metallicRoughnessSamplerSampler,
-      fragmentInputs.pbr_vUV
+      metallicRoughnessUV
     );
     perceptualRoughness = mrSample.g * perceptualRoughness;
     metallic = mrSample.b * metallic;
     #endif
     perceptualRoughness = clamp(perceptualRoughness, c_MinRoughness, 1.0);
     metallic = clamp(metallic, 0.0, 1.0);
-    let tbn = getTBN();
-    let n = getNormal(tbn);                          // normal at surface point
+    let tbn = getTBN(normalUV);
+    let n = getNormal(tbn, normalUV);                          // normal at surface point
     let v = normalize(pbrProjection.camera - fragmentInputs.pbr_vPosition);  // Vector from surface point to camera
     let NdotV = clamp(abs(dot(n, v)), 0.001, 1.0);
     var useExtendedPBR = false;
@@ -871,8 +977,7 @@ fn pbr_filterColor(colorUnused: vec4<f32>) -> vec4<f32> {
 
       #ifdef HAS_OCCLUSIONMAP
       if (pbrMaterial.occlusionMapEnabled != 0) {
-        let ao =
-          textureSample(pbr_occlusionSampler, pbr_occlusionSamplerSampler, fragmentInputs.pbr_vUV).r;
+        let ao = textureSample(pbr_occlusionSampler, pbr_occlusionSamplerSampler, occlusionUV).r;
         color = mix(color, color * ao, pbrMaterial.occlusionStrength);
       }
       #endif
@@ -881,7 +986,7 @@ fn pbr_filterColor(colorUnused: vec4<f32>) -> vec4<f32> {
       #ifdef HAS_EMISSIVEMAP
       if (pbrMaterial.emissiveMapEnabled != 0u) {
         emissive *= SRGBtoLINEAR(
-          textureSample(pbr_emissiveSampler, pbr_emissiveSamplerSampler, fragmentInputs.pbr_vUV)
+          textureSample(pbr_emissiveSampler, pbr_emissiveSamplerSampler, emissiveUV)
         ).rgb;
       }
       #endif
@@ -902,7 +1007,7 @@ fn pbr_filterColor(colorUnused: vec4<f32>) -> vec4<f32> {
       specularIntensity *= textureSample(
         pbr_specularIntensitySampler,
         pbr_specularIntensitySamplerSampler,
-        fragmentInputs.pbr_vUV
+        specularIntensityUV
       ).a;
     }
     #endif
@@ -914,7 +1019,7 @@ fn pbr_filterColor(colorUnused: vec4<f32>) -> vec4<f32> {
         textureSample(
           pbr_specularColorSampler,
           pbr_specularColorSamplerSampler,
-          fragmentInputs.pbr_vUV
+          specularColorUV
         )
       ).rgb;
     }
@@ -926,7 +1031,7 @@ fn pbr_filterColor(colorUnused: vec4<f32>) -> vec4<f32> {
       transmission *= textureSample(
         pbr_transmissionSampler,
         pbr_transmissionSamplerSampler,
-        fragmentInputs.pbr_vUV
+        transmissionUV
       ).r;
     }
     #endif
@@ -936,7 +1041,7 @@ fn pbr_filterColor(colorUnused: vec4<f32>) -> vec4<f32> {
     thickness *= textureSample(
       pbr_thicknessSampler,
       pbr_thicknessSamplerSampler,
-      fragmentInputs.pbr_vUV
+      thicknessUV
     ).g;
     #endif
 
@@ -947,7 +1052,7 @@ fn pbr_filterColor(colorUnused: vec4<f32>) -> vec4<f32> {
       clearcoatFactor *= textureSample(
         pbr_clearcoatSampler,
         pbr_clearcoatSamplerSampler,
-        fragmentInputs.pbr_vUV
+        clearcoatUV
       ).r;
     }
     #endif
@@ -956,13 +1061,13 @@ fn pbr_filterColor(colorUnused: vec4<f32>) -> vec4<f32> {
       clearcoatRoughness *= textureSample(
         pbr_clearcoatRoughnessSampler,
         pbr_clearcoatRoughnessSamplerSampler,
-        fragmentInputs.pbr_vUV
+        clearcoatRoughnessUV
       ).g;
     }
     #endif
     clearcoatFactor = clamp(clearcoatFactor, 0.0, 1.0);
     clearcoatRoughness = clamp(clearcoatRoughness, c_MinRoughness, 1.0);
-    let clearcoatNormal = getClearcoatNormal(tbn, n);
+    let clearcoatNormal = getClearcoatNormal(getTBN(clearcoatNormalUV), n, clearcoatNormalUV);
 
     var sheenColor = pbrMaterial.sheenColorFactor;
     var sheenRoughness = pbrMaterial.sheenRoughnessFactor;
@@ -972,7 +1077,7 @@ fn pbr_filterColor(colorUnused: vec4<f32>) -> vec4<f32> {
         textureSample(
           pbr_sheenColorSampler,
           pbr_sheenColorSamplerSampler,
-          fragmentInputs.pbr_vUV
+          sheenColorUV
         )
       ).rgb;
     }
@@ -982,7 +1087,7 @@ fn pbr_filterColor(colorUnused: vec4<f32>) -> vec4<f32> {
       sheenRoughness *= textureSample(
         pbr_sheenRoughnessSampler,
         pbr_sheenRoughnessSamplerSampler,
-        fragmentInputs.pbr_vUV
+        sheenRoughnessUV
       ).a;
     }
     #endif
@@ -994,7 +1099,7 @@ fn pbr_filterColor(colorUnused: vec4<f32>) -> vec4<f32> {
       iridescence *= textureSample(
         pbr_iridescenceSampler,
         pbr_iridescenceSamplerSampler,
-        fragmentInputs.pbr_vUV
+        iridescenceUV
       ).r;
     }
     #endif
@@ -1011,7 +1116,7 @@ fn pbr_filterColor(colorUnused: vec4<f32>) -> vec4<f32> {
       textureSample(
         pbr_iridescenceThicknessSampler,
         pbr_iridescenceThicknessSamplerSampler,
-        fragmentInputs.pbr_vUV
+        iridescenceThicknessUV
       ).g
     );
     #endif
@@ -1023,7 +1128,7 @@ fn pbr_filterColor(colorUnused: vec4<f32>) -> vec4<f32> {
       let anisotropySample = textureSample(
         pbr_anisotropySampler,
         pbr_anisotropySamplerSampler,
-        fragmentInputs.pbr_vUV
+        anisotropyUV
       ).rgb;
       anisotropyStrength *= anisotropySample.b;
       let mappedDirection = anisotropySample.rg * 2.0 - 1.0;
@@ -1190,8 +1295,7 @@ fn pbr_filterColor(colorUnused: vec4<f32>) -> vec4<f32> {
     // Apply optional PBR terms for additional (optional) shading
     #ifdef HAS_OCCLUSIONMAP
     if (pbrMaterial.occlusionMapEnabled != 0) {
-      let ao =
-        textureSample(pbr_occlusionSampler, pbr_occlusionSamplerSampler, fragmentInputs.pbr_vUV).r;
+      let ao = textureSample(pbr_occlusionSampler, pbr_occlusionSamplerSampler, occlusionUV).r;
       color = mix(color, color * ao, pbrMaterial.occlusionStrength);
     }
     #endif
@@ -1200,7 +1304,7 @@ fn pbr_filterColor(colorUnused: vec4<f32>) -> vec4<f32> {
     #ifdef HAS_EMISSIVEMAP
     if (pbrMaterial.emissiveMapEnabled != 0u) {
       emissive *= SRGBtoLINEAR(
-        textureSample(pbr_emissiveSampler, pbr_emissiveSamplerSampler, fragmentInputs.pbr_vUV)
+        textureSample(pbr_emissiveSampler, pbr_emissiveSamplerSampler, emissiveUV)
       ).rgb;
     }
     #endif

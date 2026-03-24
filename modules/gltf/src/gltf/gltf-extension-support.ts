@@ -121,8 +121,9 @@ const GLTF_EXTENSION_SUPPORT_REGISTRY: Record<string, GLTFExtensionSupportDefini
     comment: 'Node-visibility animations and toggles are not mapped onto runtime scenegraph state.'
   },
   KHR_animation_pointer: {
-    supportLevel: 'none',
-    comment: 'Animation pointers are not mapped onto runtime scenegraph updates.'
+    supportLevel: 'parsed-and-wired',
+    comment:
+      'Selected node TRS, material factor, and KHR_texture_transform offset/rotation/scale pointers are wired to runtime updates; unsupported targets are skipped.'
   },
   KHR_materials_diffuse_transmission: {
     supportLevel: 'none',
@@ -171,7 +172,9 @@ export function getGLTFExtensionSupport(
         extensionName,
         {
           extensionName,
-          supported: extensionSupportDefinition.supportLevel === 'built-in',
+          supported:
+            extensionSupportDefinition.supportLevel === 'built-in' ||
+            extensionSupportDefinition.supportLevel === 'parsed-and-wired',
           supportLevel: extensionSupportDefinition.supportLevel,
           comment: extensionSupportDefinition.comment
         }
@@ -180,6 +183,12 @@ export function getGLTFExtensionSupport(
   );
 
   return new Map(extensionSupportEntries);
+}
+
+export function getRegisteredGLTFExtensionSupport(
+  extensionName: string
+): GLTFExtensionSupportDefinition | null {
+  return GLTF_EXTENSION_SUPPORT_REGISTRY[extensionName] || null;
 }
 
 function collectGLTFExtensionNames(gltf: GLTFPostprocessed): Set<string> {

@@ -111,23 +111,21 @@ function linearInterpolate(
 }
 
 /** Applies glTF cubic spline interpolation between two keyframes. */
-function cubicsplineInterpolate(
-  {
-    p0,
-    outTangent0,
-    inTangent1,
-    p1,
-    tDiff,
-    ratio: t
-  }: {
-    p0: number[];
-    outTangent0: number[];
-    inTangent1: number[];
-    p1: number[];
-    tDiff: number;
-    ratio: number;
-  }
-): number[] {
+function cubicsplineInterpolate({
+  p0,
+  outTangent0,
+  inTangent1,
+  p1,
+  tDiff,
+  ratio: t
+}: {
+  p0: number[];
+  outTangent0: number[];
+  inTangent1: number[];
+  p1: number[];
+  tDiff: number;
+  ratio: number;
+}): number[] {
   // TODO: Quaternion might need normalization
   const newVal = [];
   for (let i = 0; i < p0.length; i++) {

@@ -231,6 +231,7 @@ const VS_GLSL_300_GLTF = /* glsl */ `\
     vec4 _NORMAL = vec4(0.);
     vec4 _TANGENT = vec4(0.);
     vec2 _TEXCOORD_0 = vec2(0.);
+    vec2 _TEXCOORD_1 = vec2(0.);
 
     #ifdef HAS_NORMALS
       _NORMAL = NORMAL;
@@ -244,7 +245,7 @@ const VS_GLSL_300_GLTF = /* glsl */ `\
       _TEXCOORD_0 = TEXCOORD_0;
     #endif
 
-    pbr_setPositionNormalTangentUV(POSITION, _NORMAL, _TANGENT, _TEXCOORD_0);
+    pbr_setPositionNormalTangentUV(POSITION, _NORMAL, _TANGENT, _TEXCOORD_0, _TEXCOORD_1);
     gl_Position = u_MVPMatrix * POSITION;
   }
 `;
