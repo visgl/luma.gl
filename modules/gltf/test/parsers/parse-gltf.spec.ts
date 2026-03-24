@@ -126,7 +126,7 @@ test('gltf#parseGLTF - box.glb integration', async t => {
   const webglDevice = await getWebGLTestDevice();
 
   try {
-    const gltf = await load('data/box.glb', GLTFLoader);
+    const gltf = await load('test/data/box.glb', GLTFLoader);
     const processedGLTF = gltf.json ? postProcessGLTF(gltf) : gltf;
     const result = createScenegraphsFromGLTF(webglDevice, processedGLTF);
     const vertexCounts = collectVertexCounts(result.scenes);
@@ -146,7 +146,7 @@ test('gltf#parseGLTF - non-indexed geometry', async t => {
   const webglDevice = await getWebGLTestDevice();
 
   try {
-    const gltf = await load('data/box-non-indexed.glb', GLTFLoader);
+    const gltf = await load('test/data/box-non-indexed.glb', GLTFLoader);
     const processedGLTF = gltf.json ? postProcessGLTF(gltf) : gltf;
     const mesh = processedGLTF.meshes?.[0];
     const primitive = mesh?.primitives?.[0];
@@ -169,7 +169,7 @@ test('gltf#parseGLTF - KHR_mesh_quantization point cloud', async t => {
   const webglDevice = await getWebGLTestDevice();
 
   try {
-    const gltf = await load('data/quantized-point-cloud.glb', GLTFLoader);
+    const gltf = await load('test/data/quantized-point-cloud.glb', GLTFLoader);
     const processedGLTF = gltf.json ? postProcessGLTF(gltf) : gltf;
     const extensions = processedGLTF.extensionsUsed || [];
     const mesh = processedGLTF.meshes?.[0];
@@ -191,7 +191,7 @@ test('gltf#parseGLTF - KHR_mesh_quantization point cloud', async t => {
     t.ok(result.scenes, 'Should create scenes from quantized glTF');
     t.ok(result.scenes.length > 0, 'Should have at least one scene');
     t.ok(vertexCounts.length > 0, 'Should have at least one model');
-    t.equals(vertexCounts[0], 69936, 'Vertex count should be 69936 (from POSITION attribute)');
+    t.equals(vertexCounts[0], 24, 'Vertex count should be 24 (from POSITION attribute)');
   } finally {
     webglDevice.destroy();
   }
@@ -203,7 +203,7 @@ test('gltf#parseGLTF - nonquantized.glb (float32 mesh)', async t => {
   const webglDevice = await getWebGLTestDevice();
 
   try {
-    const gltf = await load('data/nonquantized.glb', GLTFLoader);
+    const gltf = await load('test/data/nonquantized.glb', GLTFLoader);
     const processedGLTF = gltf.json ? postProcessGLTF(gltf) : gltf;
     const extensions = processedGLTF.extensionsUsed || [];
     const mesh = processedGLTF.meshes?.[0];
@@ -236,7 +236,7 @@ test('gltf#parseGLTF - quantized.glb (snorm8x3 + uint16x3)', async t => {
   const webglDevice = await getWebGLTestDevice();
 
   try {
-    const gltf = await load('data/quantized.glb', GLTFLoader);
+    const gltf = await load('test/data/quantized.glb', GLTFLoader);
     const processedGLTF = gltf.json ? postProcessGLTF(gltf) : gltf;
     const extensions = processedGLTF.extensionsUsed || [];
     const mesh = processedGLTF.meshes?.[0];

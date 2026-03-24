@@ -70,8 +70,12 @@ export class VertexFormatDecoder {
 
       case 'uint8':
       case 'sint8':
-      // WebGPU 8 bit formats must be aligned to 16 bit boundaries');
-      // fall through
+        // WebGPU 8 bit formats must be aligned to 16 bit boundaries.
+        if (components === 1 || components === 3) {
+          throw new Error(`size: ${components}`);
+        }
+        return `${dataType}x${components}`;
+
       case 'uint16':
         if (components === 1) {
           return 'uint16';

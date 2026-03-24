@@ -191,12 +191,15 @@ function collectGLTFExtensionNames(gltf: GLTFPostprocessed): Set<string> {
   addExtensionNames(extensionNames, gltfWithRemovedExtensions.extensionsRemoved);
   addExtensionNames(extensionNames, Object.keys(gltf.extensions || {}));
 
-  if (gltfWithRemovedExtensions.lights?.length || gltf.nodes.some(node => 'light' in node)) {
+  if (
+    gltfWithRemovedExtensions.lights?.length ||
+    (gltf.nodes || []).some(node => 'light' in node)
+  ) {
     extensionNames.add('KHR_lights_punctual');
   }
 
   if (
-    gltf.materials.some(material => {
+    (gltf.materials || []).some(material => {
       const gltfMaterial = material as typeof material & {unlit?: boolean};
       return gltfMaterial.unlit || gltfMaterial.extensions?.KHR_materials_unlit;
     })
