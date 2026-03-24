@@ -62,11 +62,17 @@ const TEST_CASES_2: {
   {typedArray: new Uint16Array(), size: 2, normalized: true, result: 'unorm16x2'},
   {typedArray: new Int16Array(), size: 4, normalized: true, result: 'snorm16x4'},
 
+  {typedArray: new Int16Array(), size: 3, result: 'sint16x3-webgl'},
+  {typedArray: new Uint16Array(), size: 3, result: 'uint16x3-webgl'},
+  {typedArray: new Uint16Array(), size: 3, normalized: true, result: 'unorm16x3-webgl'},
+  {typedArray: new Int16Array(), size: 3, normalized: true, result: 'snorm16x3-webgl'},
+  {typedArray: new Uint8Array(), size: 3, normalized: true, result: 'unorm8x3-webgl'},
+  {typedArray: new Int8Array(), size: 3, normalized: true, result: 'snorm8x3-webgl'},
+
   {typedArray: new Float32Array(), size: 5, error: 'Invalid attribute size 5'},
   // @ts-expect-error Intentionally no size
   {typedArray: new Int32Array(), error: 'Missing attribute size'},
   {typedArray: new Uint8Array(), size: 1, error: 'Bad 16 bit alignment'},
-  {typedArray: new Int16Array(), size: 3, error: 'Bad 32 bit alignment'},
   {typedArray: new Float64Array(), size: 2, error: 'Unknown array format'}
 ];
 
