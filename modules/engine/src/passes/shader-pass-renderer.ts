@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {Device, RenderPass, Texture} from '@luma.gl/core';
-import type {ShaderPass} from '@luma.gl/shadertools';
+import type {ShaderModule, ShaderPass} from '@luma.gl/shadertools';
 import {initializeShaderModule} from '@luma.gl/shadertools';
 import {ShaderInputs} from '../shader-inputs';
 import {DynamicTexture} from '../dynamic-texture/dynamic-texture';
@@ -14,6 +14,13 @@ import {BackgroundTextureModel} from '../models/billboard-texture-model';
 import {getFragmentShaderForRenderPass} from './get-fragment-shader';
 
 type ShaderSubPass = NonNullable<ShaderPass['passes']>[0];
+
+const textureTransform = {
+  name: 'textureTransform',
+  uniformTypes: {
+    scale: 'vec2<f32>'
+  }
+} as const satisfies ShaderModule<{}, {scale: [number, number]}>;
 
 /** Props for ShaderPassRenderer */
 export type ShaderPassRendererProps = {
@@ -115,39 +122,16 @@ export class ShaderPassRenderer {
       return sourceTexture.texture;
     }
 
-    this.textureModel.setProps({backgroundTexture: sourceTexture});
-
-    // Clear the current texture before we begin
-    const clearTexturePass = this.device.beginRenderPass({
-      id: 'shader-pass-renderer-clear-texture',
-      framebuffer: this.swapFramebuffers.current,
-      clearColor: [1, 0, 0, 1]
-    });
-    this.textureModel.draw(clearTexturePass);
-    clearTexturePass.end();
-
-    // Copy the texture contents
-    // const commandEncoder = this.device.createCommandEncoder();
-    // commandEncoder.copyTextureToTexture({
-    //   sourceTexture: sourceTexture.texture,
-    //   destinationTexture: this.swapFramebuffers.current.colorAttachments[0].texture
-    // });
-    // commandEncoder.finish();
-
     let first = true;
     for (const passRenderer of this.passRenderers) {
       for (const subPassRenderer of passRenderer.subPassRenderers) {
         if (!first) {
           this.swapFramebuffers.swap();
         }
-        first = false;
-
-        const swapBufferTexture = this.swapFramebuffers.current.colorAttachments[0].texture;
-
-        const bindings = {
-          sourceTexture: swapBufferTexture
-          // texSize: [sourceTextures.width, sourceTextures.height]
-        };
+        const subPassSourceTexture = first
+          ? sourceTexture.texture
+          : this.swapFramebuffers.current.colorAttachments[0].texture;
+        const outputTexture = this.swapFramebuffers.next.colorAttachments[0].texture;
 
         const renderPass = this.device.beginRenderPass({
           id: 'shader-pass-renderer-run-pass',
@@ -155,8 +139,13 @@ export class ShaderPassRenderer {
           clearColor: [0, 0, 0, 1],
           clearDepth: 1
         });
-        subPassRenderer.render({renderPass, bindings});
+        subPassRenderer.render({
+          renderPass,
+          bindings: {sourceTexture: subPassSourceTexture},
+          textureScale: calculateTextureScale(subPassSourceTexture, outputTexture)
+        });
         renderPass.end();
+        first = false;
       }
     }
 
@@ -212,7 +201,7 @@ class SubPassRenderer {
       id: `${shaderPass.name}-subpass`,
       source: fs,
       fs,
-      modules: [shaderPass],
+      modules: [textureTransform, shaderPass],
       parameters: {
         depthWriteEnabled: false
       }
@@ -223,9 +212,12 @@ class SubPassRenderer {
     this.model.destroy();
   }
 
-  render(options: {renderPass: RenderPass; bindings: any}): void {
-    const {renderPass, bindings} = options;
+  render(options: {renderPass: RenderPass; bindings: any; textureScale: [number, number]}): void {
+    const {renderPass, bindings, textureScale} = options;
 
+    this.model.shaderInputs.setProps({
+      textureTransform: {scale: textureScale}
+    });
     this.model.shaderInputs.setProps({
       [this.shaderPass.name]: this.shaderPass.uniforms || {}
     });
@@ -236,4 +228,18 @@ class SubPassRenderer {
     this.model.setBindings(bindings || {});
     this.model.draw(renderPass);
   }
+}
+
+function calculateTextureScale(
+  sourceTexture: Texture,
+  outputTexture: Texture
+): [scaleX: number, scaleY: number] {
+  const sourceAspect = sourceTexture.width / sourceTexture.height;
+  const outputAspect = outputTexture.width / outputTexture.height;
+
+  if (outputAspect > sourceAspect) {
+    return [1, outputAspect / sourceAspect];
+  }
+
+  return [sourceAspect / outputAspect, 1];
 }

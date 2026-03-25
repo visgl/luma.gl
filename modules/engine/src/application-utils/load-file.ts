@@ -21,10 +21,21 @@ export async function loadImageBitmap(
   opts?: {crossOrigin?: string} & ImageBitmapOptions
 ): Promise<ImageBitmap> {
   const image = new Image();
+  const resolvedUrl = url.startsWith('http') ? url : pathPrefix + url;
   image.crossOrigin = opts?.crossOrigin || 'anonymous';
-  image.src = url.startsWith('http') ? url : pathPrefix + url;
-  await image.decode();
-  return opts ? await createImageBitmap(image, opts) : await createImageBitmap(image);
+  image.src = resolvedUrl;
+
+  try {
+    await image.decode();
+  } catch (error) {
+    throw createImageBitmapLoadError('decode', resolvedUrl, error);
+  }
+
+  try {
+    return opts ? await createImageBitmap(image, opts) : await createImageBitmap(image);
+  } catch (error) {
+    throw createImageBitmapLoadError('create', resolvedUrl, error);
+  }
 }
 
 /**
@@ -48,4 +59,15 @@ export async function loadImage(
       reject(error);
     }
   });
+}
+
+function createImageBitmapLoadError(
+  phase: 'decode' | 'create',
+  resolvedUrl: string,
+  error: unknown
+): Error {
+  const reason = error instanceof Error ? error.message : String(error);
+  const phaseLabel =
+    phase === 'decode' ? 'decode source image' : 'create ImageBitmap from decoded image';
+  return new Error(`Could not ${phaseLabel} "${resolvedUrl}": ${reason}`);
 }
