@@ -53,6 +53,7 @@ import {Material} from '../material/material';
 
 const LOG_DRAW_PRIORITY = 2;
 const LOG_DRAW_TIMEOUT = 10000;
+const PIPELINE_INITIALIZATION_FAILED = 'render pipeline initialization failed';
 
 export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs' | 'bindings'> & {
   source?: string;
@@ -445,6 +446,7 @@ export class Model {
     }
 
     let drawSuccess: boolean;
+    let pipelineErrored = this.pipeline.isErrored;
     try {
       renderPass.pushDebugGroup(`${this}.draw(${renderPass})`);
       this._logDrawCallStart();
@@ -453,36 +455,45 @@ export class Model {
       // TODO - inside RenderPass is likely the worst place to do this from performance perspective.
       // Application can call Model.predraw() to avoid this.
       this.pipeline = this._updatePipeline();
+      pipelineErrored = this.pipeline.isErrored;
 
-      const syncBindings = this._getBindings();
-      const syncBindGroups = this._getBindGroups();
+      if (pipelineErrored) {
+        log.info(
+          LOG_DRAW_PRIORITY,
+          `>>> DRAWING ABORTED ${this.id}: ${PIPELINE_INITIALIZATION_FAILED}`
+        )();
+        drawSuccess = false;
+      } else {
+        const syncBindings = this._getBindings();
+        const syncBindGroups = this._getBindGroups();
 
-      const {indexBuffer} = this.vertexArray;
-      const indexCount = indexBuffer
-        ? indexBuffer.byteLength / (indexBuffer.indexType === 'uint32' ? 4 : 2)
-        : undefined;
+        const {indexBuffer} = this.vertexArray;
+        const indexCount = indexBuffer
+          ? indexBuffer.byteLength / (indexBuffer.indexType === 'uint32' ? 4 : 2)
+          : undefined;
 
-      drawSuccess = this.pipeline.draw({
-        renderPass,
-        vertexArray: this.vertexArray,
-        isInstanced: this.isInstanced,
-        vertexCount: this.vertexCount,
-        instanceCount: this.instanceCount,
-        indexCount,
-        transformFeedback: this.transformFeedback || undefined,
-        // Pipelines may be shared across models when caching is enabled, so bindings
-        // and WebGL uniforms must be supplied on every draw instead of being stored
-        // on the pipeline instance.
-        bindings: syncBindings,
-        bindGroups: syncBindGroups,
-        _bindGroupCacheKeys: this._getBindGroupCacheKeys(),
-        uniforms: this.props.uniforms,
-        // WebGL shares underlying cached pipelines even for models that have different parameters and topology,
-        // so we must provide our unique parameters to each draw
-        // (In WebGPU most parameters are encoded in the pipeline and cannot be changed per draw call)
-        parameters: this.parameters,
-        topology: this.topology
-      });
+        drawSuccess = this.pipeline.draw({
+          renderPass,
+          vertexArray: this.vertexArray,
+          isInstanced: this.isInstanced,
+          vertexCount: this.vertexCount,
+          instanceCount: this.instanceCount,
+          indexCount,
+          transformFeedback: this.transformFeedback || undefined,
+          // Pipelines may be shared across models when caching is enabled, so bindings
+          // and WebGL uniforms must be supplied on every draw instead of being stored
+          // on the pipeline instance.
+          bindings: syncBindings,
+          bindGroups: syncBindGroups,
+          _bindGroupCacheKeys: this._getBindGroupCacheKeys(),
+          uniforms: this.props.uniforms,
+          // WebGL shares underlying cached pipelines even for models that have different parameters and topology,
+          // so we must provide our unique parameters to each draw
+          // (In WebGPU most parameters are encoded in the pipeline and cannot be changed per draw call)
+          parameters: this.parameters,
+          topology: this.topology
+        });
+      }
     } finally {
       renderPass.popDebugGroup();
       this._logDrawCallEnd();
@@ -493,6 +504,8 @@ export class Model {
     if (drawSuccess) {
       this._lastDrawTimestamp = this.device.timestamp;
       this._needsRedraw = false;
+    } else if (pipelineErrored) {
+      this._needsRedraw = PIPELINE_INITIALIZATION_FAILED;
     } else {
       this._needsRedraw = 'waiting for resource initialization';
     }
@@ -948,12 +961,11 @@ export class Model {
       // } || (this._drawCount++ > 3 && this._drawCount % 60)) {
       return;
     }
-    // TODO - display framebuffer output in debug window
     const framebuffer = renderPass.props.framebuffer;
-    if (framebuffer) {
-      debugFramebuffer(framebuffer, {id: framebuffer.id, minimap: true});
-      // log.image({logLevel: LOG_DRAW_PRIORITY, message: `${framebuffer.id} %c sup?`, image})();
-    }
+    debugFramebuffer(renderPass, framebuffer, {
+      id: framebuffer?.id || `${this.id}-framebuffer`,
+      minimap: true
+    });
   }
 
   _getAttributeDebugTable(): Record<string, Record<string, unknown>> {

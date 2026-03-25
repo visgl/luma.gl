@@ -27,8 +27,6 @@ export type AssertNotEqual<T, Expected> = [T] extends [Expected]
     : true
   : true;
 
-let type: AttributeShaderTypeT<'vec5'>;
-
 // Test cases for alias types
 type AttributeShaderTypeTests = {
   // Test that the type is preserved

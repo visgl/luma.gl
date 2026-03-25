@@ -43,6 +43,7 @@ export function makeAnimationLoop(
         // Any async loading can be handled here
         return await renderLoop?.onInitialize(animationProps);
       } catch (error) {
+        console.error(error);
         setError(animationProps.animationLoop.device, error as Error);
         return null;
       }

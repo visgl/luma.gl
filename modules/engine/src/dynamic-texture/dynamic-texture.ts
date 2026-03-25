@@ -112,7 +112,9 @@ export class DynamicTexture {
     return 'DynamicTexture';
   }
   toString(): string {
-    return `DynamicTexture:"${this.id}":${this.texture.width}x${this.texture.height}px:(${this.isReady ? 'ready' : 'loading...'})`;
+    const width = this._texture?.width ?? this.props.width ?? '?';
+    const height = this._texture?.height ?? this.props.height ?? '?';
+    return `DynamicTexture:"${this.id}":${width}x${height}px:(${this.isReady ? 'ready' : 'loading...'})`;
   }
 
   constructor(device: Device, props: DynamicTextureProps) {

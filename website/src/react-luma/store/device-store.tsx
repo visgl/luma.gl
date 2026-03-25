@@ -7,6 +7,7 @@ import {
   installCpuHotspotProfilerApi,
   updateCpuHotspotProfilerTargets
 } from '../debug/luma-cpu-hotspot-profiler';
+import {getErrorMessage, logError} from '../utils/error-utils';
 
 const DEVICE_TYPE_STORAGE_KEY = 'luma-device-type';
 const DEFAULT_DEVICE_TYPE: 'webgl' | 'webgpu' = 'webgpu';
@@ -140,12 +141,14 @@ export const useStore = create<Store>(set => ({
     try {
       device = await createDevice(deviceType);
     } catch (error) {
-      deviceError = error.message;
+      deviceError = getErrorMessage(error);
+      logError(`Failed to create ${deviceType} device`, error);
     }
     try {
       presentationDevice = await createPresentationDevice(deviceType);
     } catch (error) {
-      presentationDeviceError = error.message;
+      presentationDeviceError = getErrorMessage(error);
+      logError(`Failed to create ${deviceType} presentation device`, error);
     }
     if (typeof window !== 'undefined') {
       window.localStorage.setItem(DEVICE_TYPE_STORAGE_KEY, deviceType);

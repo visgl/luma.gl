@@ -84,13 +84,11 @@ export class ShaderInputs<
 
     // Initialize the modules
     for (const [name, module] of Object.entries(modules)) {
-      if (!module) {
-        continue;
-      }
-
-      this._addModule(module);
-      if (module.name && name !== module.name && !this.options.disableWarnings) {
-        log.warn(`Module name: ${name} vs ${module.name}`)();
+      if (module) {
+        this._addModule(module);
+        if (module.name && name !== module.name && !this.options.disableWarnings) {
+          log.warn(`Module name: ${name} vs ${module.name}`)();
+        }
       }
     }
   }
@@ -111,25 +109,24 @@ export class ShaderInputs<
         if (!this.options.disableWarnings) {
           log.warn(`Module ${name} not found`)();
         }
-        continue; // eslint-disable-line no-continue
+      } else {
+        const oldUniforms = this.moduleUniforms[moduleName];
+        const oldBindings = this.moduleBindings[moduleName];
+        const uniformsAndBindings =
+          module.getUniforms?.(moduleProps, oldUniforms) || (moduleProps as any);
+
+        const {uniforms, bindings} = splitUniformsAndBindings(
+          uniformsAndBindings,
+          module.uniformTypes as Readonly<Record<string, CompositeShaderType>>
+        );
+        this.moduleUniforms[moduleName] = mergeModuleUniforms(
+          oldUniforms as Record<string, ShaderModuleUniformValue>,
+          uniforms,
+          module.uniformTypes as Readonly<Record<string, CompositeShaderType>>
+        );
+        this.moduleBindings[moduleName] = {...oldBindings, ...bindings};
+        // this.moduleUniformsChanged ||= moduleName;
       }
-
-      const oldUniforms = this.moduleUniforms[moduleName];
-      const oldBindings = this.moduleBindings[moduleName];
-      const uniformsAndBindings =
-        module.getUniforms?.(moduleProps, oldUniforms) || (moduleProps as any);
-
-      const {uniforms, bindings} = splitUniformsAndBindings(
-        uniformsAndBindings,
-        module.uniformTypes as Readonly<Record<string, CompositeShaderType>>
-      );
-      this.moduleUniforms[moduleName] = mergeModuleUniforms(
-        oldUniforms as Record<string, ShaderModuleUniformValue>,
-        uniforms,
-        module.uniformTypes as Readonly<Record<string, CompositeShaderType>>
-      );
-      this.moduleBindings[moduleName] = {...oldBindings, ...bindings};
-      // this.moduleUniformsChanged ||= moduleName;
 
       // console.log(`setProps(${String(moduleName)}`, moduleName, this.moduleUniforms[moduleName])
     }
@@ -194,11 +191,9 @@ function mergeModuleUniforms(
 ): Record<string, ShaderModuleUniformValue> {
   const mergedUniforms = {...currentUniforms};
   for (const [key, value] of Object.entries(nextUniforms)) {
-    if (value === undefined) {
-      continue;
+    if (value !== undefined) {
+      mergedUniforms[key] = mergeModuleUniformValue(currentUniforms[key], value, uniformTypes[key]);
     }
-
-    mergedUniforms[key] = mergeModuleUniformValue(currentUniforms[key], value, uniformTypes[key]);
   }
   return mergedUniforms;
 }
@@ -224,15 +219,13 @@ function mergeModuleUniformValue(
     const mergedArray = currentArray.slice();
     for (let index = 0; index < nextValue.length; index++) {
       const elementValue = nextValue[index];
-      if (elementValue === undefined) {
-        continue;
+      if (elementValue !== undefined) {
+        mergedArray[index] = mergeModuleUniformValue(
+          currentArray[index],
+          elementValue,
+          uniformType[0] as CompositeShaderType
+        );
       }
-
-      mergedArray[index] = mergeModuleUniformValue(
-        currentArray[index],
-        elementValue,
-        uniformType[0] as CompositeShaderType
-      );
     }
     return mergedArray;
   }
@@ -245,11 +238,9 @@ function mergeModuleUniformValue(
   const currentObject = isPlainUniformObject(currentValue) ? currentValue : {};
   const mergedObject: Record<string, ShaderModuleUniformValue | undefined> = {...currentObject};
   for (const [key, value] of Object.entries(nextValue)) {
-    if (value === undefined) {
-      continue;
+    if (value !== undefined) {
+      mergedObject[key] = mergeModuleUniformValue(currentObject[key], value, uniformStruct[key]);
     }
-
-    mergedObject[key] = mergeModuleUniformValue(currentObject[key], value, uniformStruct[key]);
   }
   return mergedObject as ShaderModuleUniformValue;
 }
