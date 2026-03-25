@@ -2,8 +2,15 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+import type {Binding} from '@luma.gl/core';
 import {Device, Framebuffer, RenderPass, Texture} from '@luma.gl/core';
-import type {ShaderModule, ShaderPass, ShaderPassRenderTarget} from '@luma.gl/shadertools';
+import type {
+  ShaderModule,
+  ShaderPass,
+  ShaderPassInputSource,
+  ShaderPassPipeline,
+  ShaderPassRenderTarget
+} from '@luma.gl/shadertools';
 import {initializeShaderModule} from '@luma.gl/shadertools';
 import {ShaderInputs} from '../shader-inputs';
 import {DynamicTexture} from '../dynamic-texture/dynamic-texture';
@@ -12,22 +19,33 @@ import {SwapFramebuffers} from '../compute/swap';
 import {BackgroundTextureModel} from '../models/billboard-texture-model';
 
 import {getFragmentShaderForRenderPass} from './get-fragment-shader';
+import {textureTransform} from './texture-transform-module';
 
+type ShaderPassLike = ShaderPass | ShaderPassPipeline;
 type ShaderSubPass = NonNullable<ShaderPass['passes']>[0];
+
+type EffectiveSubPass = {
+  ownerName: string;
+  shaderPass: ShaderPass;
+  subPassRenderer: SubPassRenderer;
+  inputs?: Partial<Record<string, ShaderPassInputSource<string>>>;
+  output?: 'previous' | string;
+  uniforms?: Record<string, unknown>;
+};
+
+type ManagedRenderTarget = {
+  name: string;
+  spec: ShaderPassRenderTarget;
+  texture: Texture;
+  framebuffer: Framebuffer;
+};
 
 const RESERVED_RENDER_TARGET_NAMES = new Set(['original', 'previous']);
 
-const textureTransform = {
-  name: 'textureTransform',
-  uniformTypes: {
-    scale: 'vec2<f32>'
-  }
-} as const satisfies ShaderModule<{}, {scale: [number, number]}>;
-
 /** Props for ShaderPassRenderer */
 export type ShaderPassRendererProps = {
-  /** List of ShaderPasses to apply to the sourceTexture */
-  shaderPasses: ShaderPass[];
+  /** List of ShaderPasses or ShaderPassPipelines to apply to the sourceTexture */
+  shaderPasses: ShaderPassLike[];
   /** Optional typed ShaderInputs object for setting uniforms */
   shaderInputs?: ShaderInputs;
 };
@@ -43,9 +61,10 @@ export class ShaderPassRenderer {
   constructor(device: Device, props: ShaderPassRendererProps) {
     this.device = device;
 
-    props.shaderPasses.map(shaderPass => initializeShaderModule(shaderPass));
+    const executableShaderPasses = getExecutableShaderPasses(props.shaderPasses);
+    executableShaderPasses.map(shaderPass => initializeShaderModule(shaderPass));
 
-    const modules = props.shaderPasses.reduce(
+    const modules = executableShaderPasses.reduce(
       (object, shaderPass) => ({...object, [shaderPass.name]: shaderPass}),
       {}
     );
@@ -67,8 +86,8 @@ export class ShaderPassRenderer {
 
   /** Destroys resources created by this ShaderPassRenderer */
   destroy() {
-    for (const subPassRenderer of this.passRenderers) {
-      subPassRenderer.destroy();
+    for (const passRenderer of this.passRenderers) {
+      passRenderer.destroy();
     }
     this.swapFramebuffers.destroy();
     this.textureModel.destroy();
@@ -87,10 +106,8 @@ export class ShaderPassRenderer {
     uniforms?: any;
     bindings?: any;
   }): boolean {
-    // Run the shader passes and generate an output texture
     const outputTexture = this.renderToTexture(options);
     if (!outputTexture) {
-      // source texture not yet loaded
       return false;
     }
 
@@ -100,7 +117,6 @@ export class ShaderPassRenderer {
     const renderPass = this.device.beginRenderPass({
       id: 'shader-pass-renderer-to-screen',
       framebuffer,
-      // clearColor: [1, 1, 0, 1],
       clearDepth: false
     });
     this.textureModel.setProps({backgroundTexture: outputTexture});
@@ -122,7 +138,6 @@ export class ShaderPassRenderer {
       return null;
     }
 
-    // If no shader passes are provided, just return the original texture
     if (this.passRenderers.length === 0) {
       return sourceTexture.texture;
     }
@@ -130,15 +145,15 @@ export class ShaderPassRenderer {
     let previousTexture: Texture = sourceTexture.texture;
     let previousFramebuffer: Framebuffer | null = null;
     for (const passRenderer of this.passRenderers) {
-      for (const subPassRenderer of passRenderer.subPassRenderers) {
-        const outputFramebuffer =
-          subPassRenderer.subPass.output === 'previous' ||
-          subPassRenderer.subPass.output === undefined
+      for (const execution of passRenderer.subPassExecutions) {
+        const outputName = execution.output || 'previous';
+        const outputFramebuffer: Framebuffer =
+          outputName === 'previous'
             ? getNextPreviousFramebuffer(this.swapFramebuffers, previousFramebuffer)
-            : passRenderer.getRenderTarget(subPassRenderer.subPass.output).framebuffer;
+            : passRenderer.getRenderTarget(outputName).framebuffer;
         const outputTexture = getFramebufferTexture(outputFramebuffer);
         const resolvedBindings = passRenderer.resolveBindings({
-          subPass: subPassRenderer.subPass,
+          execution,
           originalTexture: sourceTexture.texture,
           previousTexture,
           outputTexture,
@@ -151,128 +166,156 @@ export class ShaderPassRenderer {
           clearColor: [0, 0, 0, 1],
           clearDepth: 1
         });
-        subPassRenderer.render({
+        execution.subPassRenderer.render({
           renderPass,
           bindings: resolvedBindings,
           textureScale: calculateTextureScale(
-            (resolvedBindings.sourceTexture as Texture) || previousTexture,
+            (resolvedBindings['sourceTexture'] as Texture) || previousTexture,
             outputTexture
-          )
+          ),
+          uniforms: execution.uniforms
         });
         renderPass.end();
 
-        if (
-          subPassRenderer.subPass.output === 'previous' ||
-          subPassRenderer.subPass.output === undefined
-        ) {
+        if (outputName === 'previous') {
           previousTexture = outputTexture;
           previousFramebuffer = outputFramebuffer;
         }
       }
     }
+
     return previousTexture;
   }
 }
 
-/** renders one ShaderPass */
+/** renders one ShaderPass or ShaderPassPipeline */
 class PassRenderer {
-  shaderPass: ShaderPass;
-  subPassRenderers: SubPassRenderer[];
-  renderTargets: Record<string, PrivateRenderTarget>;
   device: Device;
+  passDefinition: ShaderPassLike;
+  renderTargets: Record<string, ManagedRenderTarget>;
+  subPassExecutions: EffectiveSubPass[];
 
-  constructor(device: Device, shaderPass: ShaderPass, props = {}) {
+  constructor(device: Device, passDefinition: ShaderPassLike) {
     this.device = device;
-    this.shaderPass = shaderPass;
-    // const id = `${shaderPass.name}-pass`;
+    this.passDefinition = passDefinition;
 
-    const subPasses = shaderPass.passes || [];
-    // normalizePasses(gl, module, id, props);
-    this.validateRenderTargets();
-    this.renderTargets = this.createRenderTargets();
-    this.validateSubPasses(subPasses);
+    if (isShaderPassPipeline(passDefinition)) {
+      validateRenderTargetNames(passDefinition.name, passDefinition.renderTargets || {});
+      this.renderTargets = createManagedRenderTargets(device, passDefinition.renderTargets || {});
+      this.subPassExecutions = passDefinition.steps.flatMap(step =>
+        this.createStepExecutions(passDefinition, step)
+      );
+      return;
+    }
 
-    this.subPassRenderers = subPasses.map(subPass => {
-      // const idn = `${id}-${subPasses.length + 1}`;
-      return new SubPassRenderer(device, shaderPass, subPass);
+    validateShaderPassDoesNotOwnRenderTargets(passDefinition, passDefinition.name);
+    this.renderTargets = {};
+    this.subPassExecutions = this.createPassExecutions(passDefinition, {
+      ownerName: passDefinition.name
     });
   }
 
   destroy() {
-    for (const subPassRenderer of this.subPassRenderers) {
-      subPassRenderer.destroy();
+    for (const execution of this.subPassExecutions) {
+      execution.subPassRenderer.destroy();
     }
-    for (const renderTarget of Object.values(this.renderTargets)) {
-      renderTarget.framebuffer.destroy();
-      renderTarget.texture.destroy();
-    }
+    destroyManagedRenderTargets(this.renderTargets);
   }
 
   resize(size: [width: number, height: number]) {
-    for (const renderTarget of Object.values(this.renderTargets)) {
-      const targetSize = getRenderTargetSize(size, renderTarget.spec.scale);
-      if (
-        renderTarget.texture.width === targetSize[0] &&
-        renderTarget.texture.height === targetSize[1]
-      ) {
-        continue;
-      }
-
-      renderTarget.framebuffer.destroy();
-      renderTarget.texture.destroy();
-      const replacement = createPrivateRenderTarget(
-        this.device,
-        renderTarget.name,
-        renderTarget.spec,
-        size
-      );
-      renderTarget.texture = replacement.texture;
-      renderTarget.framebuffer = replacement.framebuffer;
-    }
+    resizeManagedRenderTargets(this.device, this.renderTargets, size);
   }
 
-  getRenderTarget(name: string): PrivateRenderTarget {
+  getRenderTarget(name: string): ManagedRenderTarget {
     const renderTarget = this.renderTargets[name];
     if (!renderTarget) {
-      throw new Error(`${this.shaderPass.name}: unknown render target "${name}"`);
+      throw new Error(`${this.getOwnerName()}: unknown render target "${name}"`);
     }
     return renderTarget;
   }
 
   resolveBindings(options: {
-    subPass: ShaderSubPass;
+    execution: EffectiveSubPass;
     originalTexture: Texture;
     previousTexture: Texture;
     outputTexture: Texture;
-    externalBindings: Record<string, unknown>;
-  }): Record<string, unknown> {
-    const {subPass, originalTexture, previousTexture, outputTexture, externalBindings} = options;
-    const inputMap = subPass.inputs || {sourceTexture: 'previous'};
-    const resolvedBindings: Record<string, unknown> = {...externalBindings};
+    externalBindings: Record<string, Binding | DynamicTexture>;
+  }): Record<string, Binding | DynamicTexture> {
+    const {execution, originalTexture, previousTexture, outputTexture, externalBindings} = options;
+    const inputMap = execution.inputs || {sourceTexture: 'previous'};
+    const resolvedBindings: Record<string, Binding | DynamicTexture> = {...externalBindings};
+    const outputName = execution.output || 'previous';
 
     for (const [bindingName, inputSource] of Object.entries(inputMap)) {
       if (!inputSource) {
         continue;
       }
       const texture = this.resolveInputTexture(inputSource, originalTexture, previousTexture);
-      if (subPass.output && subPass.output !== 'previous' && inputSource === subPass.output) {
+      if (outputName !== 'previous' && inputSource === outputName) {
         throw new Error(
-          `${this.shaderPass.name}: subpass cannot read and write render target "${subPass.output}" in the same draw`
+          `${execution.ownerName}: subpass cannot read and write render target "${outputName}" in the same draw`
         );
       }
       if (bindingName === 'sourceTexture' && texture === outputTexture) {
         throw new Error(
-          `${this.shaderPass.name}: subpass cannot sample from the render target it is writing to`
+          `${execution.ownerName}: subpass cannot sample from the render target it is writing to`
         );
       }
       resolvedBindings[bindingName] = texture;
     }
 
     if (!('sourceTexture' in resolvedBindings)) {
-      resolvedBindings.sourceTexture = previousTexture;
+      resolvedBindings['sourceTexture'] = previousTexture;
     }
 
     return resolvedBindings;
+  }
+
+  private createStepExecutions(
+    pipeline: ShaderPassPipeline,
+    step: ShaderPassPipeline['steps'][number]
+  ): EffectiveSubPass[] {
+    validateShaderPassDoesNotOwnRenderTargets(
+      step.shaderPass,
+      `${pipeline.name}/${step.shaderPass.name}`
+    );
+
+    return this.createPassExecutions(step.shaderPass, {
+      ownerName: `${pipeline.name}/${step.shaderPass.name}`,
+      firstInputs: step.inputs,
+      lastOutput: step.output,
+      uniformOverrides: step.uniforms
+    });
+  }
+
+  private createPassExecutions(
+    shaderPass: ShaderPass,
+    options: {
+      ownerName: string;
+      firstInputs?: Partial<Record<string, ShaderPassInputSource<string>>>;
+      lastOutput?: 'previous' | string;
+      uniformOverrides?: Record<string, unknown>;
+    }
+  ): EffectiveSubPass[] {
+    const subPasses = shaderPass.passes || [];
+    return subPasses.map((subPass, index) => {
+      const isFirstSubPass = index === 0;
+      const isLastSubPass = index === subPasses.length - 1;
+      const inputs =
+        isFirstSubPass && options.firstInputs !== undefined ? options.firstInputs : subPass.inputs;
+      const output =
+        isLastSubPass && options.lastOutput !== undefined ? options.lastOutput : subPass.output;
+      validateSubPassRouting(options.ownerName, inputs, output, this.renderTargets);
+
+      return {
+        ownerName: options.ownerName,
+        shaderPass,
+        subPassRenderer: new SubPassRenderer(this.device, shaderPass, subPass),
+        inputs,
+        output,
+        uniforms: mergeUniforms(options.uniformOverrides, subPass.uniforms)
+      };
+    });
   }
 
   private resolveInputTexture(
@@ -290,47 +333,8 @@ class PassRenderer {
     }
   }
 
-  private validateRenderTargets(): void {
-    for (const name of Object.keys(this.shaderPass.renderTargets || {})) {
-      if (RESERVED_RENDER_TARGET_NAMES.has(name)) {
-        throw new Error(`${this.shaderPass.name}: render target name "${name}" is reserved`);
-      }
-    }
-  }
-
-  private createRenderTargets(): Record<string, PrivateRenderTarget> {
-    const size = this.device.getCanvasContext().getDrawingBufferSize();
-    return Object.entries(this.shaderPass.renderTargets || {}).reduce(
-      (renderTargets, [name, spec]) => ({
-        ...renderTargets,
-        [name]: createPrivateRenderTarget(this.device, name, spec, size)
-      }),
-      {} as Record<string, PrivateRenderTarget>
-    );
-  }
-
-  private validateSubPasses(subPasses: ShaderSubPass[]): void {
-    for (const subPass of subPasses) {
-      const inputMap = subPass.inputs || {sourceTexture: 'previous'};
-      for (const inputSource of Object.values(inputMap)) {
-        if (
-          inputSource &&
-          inputSource !== 'original' &&
-          inputSource !== 'previous' &&
-          !(inputSource in this.renderTargets)
-        ) {
-          throw new Error(`${this.shaderPass.name}: unknown input source "${inputSource}"`);
-        }
-      }
-
-      if (
-        subPass.output &&
-        subPass.output !== 'previous' &&
-        !(subPass.output in this.renderTargets)
-      ) {
-        throw new Error(`${this.shaderPass.name}: unknown output target "${subPass.output}"`);
-      }
-    }
+  private getOwnerName(): string {
+    return this.passDefinition.name;
   }
 }
 
@@ -366,8 +370,13 @@ class SubPassRenderer {
     this.model.destroy();
   }
 
-  render(options: {renderPass: RenderPass; bindings: any; textureScale: [number, number]}): void {
-    const {renderPass, bindings, textureScale} = options;
+  render(options: {
+    renderPass: RenderPass;
+    bindings: Record<string, Binding | DynamicTexture>;
+    textureScale: [number, number];
+    uniforms?: Record<string, unknown>;
+  }): void {
+    const {renderPass, bindings, textureScale, uniforms} = options;
 
     this.model.shaderInputs.setProps({
       textureTransform: {scale: textureScale}
@@ -376,27 +385,138 @@ class SubPassRenderer {
       [this.shaderPass.name]: this.shaderPass.uniforms || {}
     });
     this.model.shaderInputs.setProps({
-      [this.shaderPass.name]: this.subPass.uniforms || {}
+      [this.shaderPass.name]: uniforms || {}
     });
-    // this.model.setBindings(this.subPass.bindings || {});
     this.model.setBindings(bindings || {});
     this.model.draw(renderPass);
   }
 }
 
-type PrivateRenderTarget = {
-  name: string;
-  spec: ShaderPassRenderTarget;
-  texture: Texture;
-  framebuffer: Framebuffer;
-};
+function getExecutableShaderPasses(shaderPasses: ShaderPassLike[]): ShaderPass[] {
+  return shaderPasses.flatMap(shaderPass =>
+    isShaderPassPipeline(shaderPass) ? shaderPass.steps.map(step => step.shaderPass) : [shaderPass]
+  );
+}
 
-function createPrivateRenderTarget(
+function isShaderPassPipeline(shaderPass: ShaderPassLike): shaderPass is ShaderPassPipeline {
+  return 'steps' in shaderPass;
+}
+
+function validateShaderPassDoesNotOwnRenderTargets(
+  shaderPass: ShaderPass,
+  ownerName: string
+): void {
+  const renderTargets = (shaderPass as ShaderPass & {renderTargets?: Record<string, unknown>})
+    .renderTargets;
+  if (renderTargets && Object.keys(renderTargets).length > 0) {
+    throw new Error(
+      `${ownerName}: ShaderPass.renderTargets is not supported; use ShaderPassPipeline.renderTargets instead`
+    );
+  }
+}
+
+function validateRenderTargetNames(
+  ownerName: string,
+  renderTargets: Record<string, ShaderPassRenderTarget>
+): void {
+  for (const name of Object.keys(renderTargets)) {
+    if (RESERVED_RENDER_TARGET_NAMES.has(name)) {
+      throw new Error(`${ownerName}: render target name "${name}" is reserved`);
+    }
+  }
+}
+
+function validateSubPassRouting(
+  ownerName: string,
+  inputs: Partial<Record<string, ShaderPassInputSource<string>>> | undefined,
+  output: 'previous' | string | undefined,
+  renderTargets: Record<string, ManagedRenderTarget>
+): void {
+  const inputMap = inputs || {sourceTexture: 'previous'};
+  for (const inputSource of Object.values(inputMap)) {
+    if (
+      inputSource &&
+      inputSource !== 'original' &&
+      inputSource !== 'previous' &&
+      !(inputSource in renderTargets)
+    ) {
+      throw new Error(`${ownerName}: unknown input source "${inputSource}"`);
+    }
+  }
+
+  if (output && output !== 'previous' && !(output in renderTargets)) {
+    throw new Error(`${ownerName}: unknown output target "${output}"`);
+  }
+}
+
+function mergeUniforms(
+  baseUniforms?: Record<string, unknown>,
+  subPassUniforms?: Record<string, unknown>
+): Record<string, unknown> | undefined {
+  if (!baseUniforms && !subPassUniforms) {
+    return undefined;
+  }
+
+  return {
+    ...(baseUniforms || {}),
+    ...(subPassUniforms || {})
+  };
+}
+
+function createManagedRenderTargets(
+  device: Device,
+  renderTargets: Record<string, ShaderPassRenderTarget>
+): Record<string, ManagedRenderTarget> {
+  const size = device.getCanvasContext().getDrawingBufferSize();
+  return Object.entries(renderTargets).reduce(
+    (managedRenderTargets, [name, spec]) => ({
+      ...managedRenderTargets,
+      [name]: createManagedRenderTarget(device, name, spec, size)
+    }),
+    {} as Record<string, ManagedRenderTarget>
+  );
+}
+
+function destroyManagedRenderTargets(renderTargets: Record<string, ManagedRenderTarget>): void {
+  for (const renderTarget of Object.values(renderTargets)) {
+    renderTarget.framebuffer.destroy();
+    renderTarget.texture.destroy();
+  }
+}
+
+function resizeManagedRenderTargets(
+  device: Device,
+  renderTargets: Record<string, ManagedRenderTarget>,
+  size: [width: number, height: number]
+): void {
+  for (const renderTarget of Object.values(renderTargets)) {
+    const targetSize = getRenderTargetSize(size, renderTarget.spec.scale);
+    if (
+      renderTarget.texture.width === targetSize[0] &&
+      renderTarget.texture.height === targetSize[1]
+    ) {
+      continue;
+    }
+
+    renderTarget.framebuffer.destroy();
+    renderTarget.texture.destroy();
+    const replacement = createManagedRenderTarget(
+      device,
+      renderTarget.name,
+      renderTarget.spec,
+      size
+    );
+    renderTarget.texture = replacement.texture;
+    renderTarget.framebuffer = replacement.framebuffer;
+  }
+}
+
+function createManagedRenderTarget(
   device: Device,
   name: string,
   spec: ShaderPassRenderTarget,
   size: [number, number]
-): PrivateRenderTarget {
+): ManagedRenderTarget {
   const targetSize = getRenderTargetSize(size, spec.scale);
   const texture = device.createTexture({
     id: `${name}-texture`,

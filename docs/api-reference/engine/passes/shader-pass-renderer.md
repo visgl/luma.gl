@@ -1,15 +1,8 @@
 # ShaderPassRenderer
 
-`ShaderPassRenderer` applies one or more `ShaderPass` definitions to a source texture and either renders the result back to a texture or draws it to the screen.
+`ShaderPassRenderer` applies one or more `ShaderPass` or `ShaderPassPipeline` definitions to a source texture and either renders the result back to a texture or draws it to the screen.
 
 Internally it uses [`ClipSpace`](/docs/api-reference/engine/clip-space), [`BackgroundTextureModel`](/docs/api-reference/engine/background-texture-model), and [`SwapFramebuffers`](/docs/api-reference/engine/compute/swap) to manage the pass chain.
-
-The renderer supports two kinds of render targets:
-
-- The shared `previous` chain, implemented as an internal ping-pong framebuffer pair.
-- Pass-private named render targets declared on an individual `ShaderPass`.
-
-This lets a pass stage intermediate results without mutating the shared `previous` texture until it explicitly chooses to write back.
 
 ## Usage
 
@@ -17,7 +10,7 @@ This lets a pass stage intermediate results without mutating the shared `previou
 import {ShaderPassRenderer} from '@luma.gl/engine';
 
 const renderer = new ShaderPassRenderer(device, {
-  shaderPasses: [myShaderPass]
+  shaderPasses: [myShaderPass, myShaderPassPipeline]
 });
 
 const outputTexture = renderer.renderToTexture({sourceTexture});
@@ -25,99 +18,74 @@ const outputTexture = renderer.renderToTexture({sourceTexture});
 
 ## Routing Model
 
-During a single `renderToTexture()` call, every subpass can read from:
+The renderer always provides two logical texture sources:
 
-- `original`: the original input texture passed to the renderer.
-- `previous`: the current shared output of the pass chain. On the first subpass this is the same texture as `original`.
-- A named private render target declared by the current `ShaderPass`.
+- `original`: the original input texture passed to `renderToTexture()`
+- `previous`: the current shared output of the pass chain
 
-Every subpass can write to:
+Plain `ShaderPass` objects may route subpasses only against those logical sources.
 
-- `previous`: the shared ping-pong chain. This is the default.
-- A named private render target declared by the current `ShaderPass`.
-
-Named render targets are private to one shader pass. They cannot be read by later shader passes in the chain.
-
-## ShaderPass Extensions
-
-`ShaderPassRenderer` understands the following optional `ShaderPass` fields:
+`ShaderPassPipeline` adds pipeline-global named render targets that any later step in that pipeline may read:
 
 ```ts
-type ShaderPassRenderTarget = {
-  scale?: [number, number];
-  format?: TextureFormat;
+type ShaderPassPipeline<TargetNameT extends string = string> = {
+  name: string;
+  renderTargets?: Record<TargetNameT, ShaderPassRenderTarget>;
+  steps: ShaderPassPipelineStep<TargetNameT>[];
 };
 
-type ShaderPassInputSource<RenderTargetNameT extends string = string> =
-  | 'original'
-  | 'previous'
-  | RenderTargetNameT;
-
-type ShaderSubPass<
-  UniformsT extends Record<string, UniformValue>,
-  BindingNameT extends string = string,
-  RenderTargetNameT extends string = string
-> = {
-  uniforms?: UniformsT;
-  inputs?: Partial<
-    Record<BindingNameT | 'sourceTexture', ShaderPassInputSource<RenderTargetNameT>>
-  >;
-  output?: 'previous' | RenderTargetNameT;
+type ShaderPassPipelineStep<TargetNameT extends string = string> = {
+  shaderPass: ShaderPass;
+  inputs?: Record<string, ShaderPassInputSource<TargetNameT>>;
+  output?: 'previous' | TargetNameT;
+  uniforms?: Record<string, UniformValue>;
 };
 ```
 
-Notes:
+Each step runs an existing `ShaderPass`:
 
-- `renderTargets` is declared on the parent `ShaderPass`, not on the renderer.
-- `inputs` maps shader binding names to logical texture sources.
-- `output` selects the destination render target for that subpass.
-- If `inputs` is omitted, the renderer behaves as if `{sourceTexture: 'previous'}` was supplied.
-- If `output` is omitted, the renderer behaves as if `'previous'` was supplied.
+- `step.inputs` is applied to the first subpass of the referenced pass.
+- `step.output` is applied to the last subpass of the referenced pass.
+- `step.uniforms` is merged into every subpass as a base layer.
+
+This lets the renderer orchestrate existing passes without turning `ShaderPass.passes` into nested effects.
 
 ## Example
 
-This example stages bright pixels into one private target, blurs them into another, and then composites back onto the shared chain:
+This example extracts highlights into one named target, runs an existing blur pass into another, then composites back to `previous`:
 
 ```ts
-const bloomLikePass: ShaderPass<
-  {threshold?: number; bloomTexture?: Texture},
-  {threshold?: number},
-  {bloomTexture?: Texture},
-  'extract' | 'blur'
-> = {
-  name: 'bloomLike',
+const bloomPipeline: ShaderPassPipeline<'extract' | 'blurred'> = {
+  name: 'bloom',
   renderTargets: {
     extract: {},
-    blur: {scale: [0.5, 0.5]}
+    blurred: {scale: [0.5, 0.5]}
   },
-  passes: [
+  steps: [
     {
-      sampler: true,
-      uniforms: {threshold: 0.7},
-      output: 'extract'
+      shaderPass: brightExtractPass,
+      inputs: {sourceTexture: 'original'},
+      output: 'extract',
+      uniforms: {threshold: 0.8}
     },
     {
-      sampler: true,
+      shaderPass: gaussianBlur,
       inputs: {sourceTexture: 'extract'},
-      output: 'blur'
+      output: 'blurred',
+      uniforms: {radius: 12}
     },
     {
-      sampler: true,
+      shaderPass: bloomCompositePass,
       inputs: {
         sourceTexture: 'previous',
-        bloomTexture: 'blur'
+        bloomTexture: 'blurred'
       },
-      output: 'previous'
+      output: 'previous',
+      uniforms: {intensity: 1.5}
     }
   ]
 };
 ```
-
-In that final composite subpass:
-
-- `sourceTexture: 'previous'` still refers to the shared chain.
-- `bloomTexture: 'blur'` reads the pass-private blurred texture.
-- Writing to `previous` advances the global pass chain only after the composite is complete.
 
 ## Types
 
@@ -125,7 +93,7 @@ In that final composite subpass:
 
 ```ts
 export type ShaderPassRendererProps = {
-  shaderPasses: ShaderPass[];
+  shaderPasses: (ShaderPass | ShaderPassPipeline)[];
   shaderInputs?: ShaderInputs;
 };
 ```
@@ -138,11 +106,11 @@ Shader-input manager used to store pass uniforms.
 
 ### `swapFramebuffers`
 
-Double-buffered framebuffer pair used while running the pass chain.
+Double-buffered framebuffer pair used while running the shared `previous` chain.
 
 ### `passRenderers`
 
-Internal per-pass renderers. Each one owns any private render targets declared by its `ShaderPass`.
+Internal per-entry renderers. A renderer for a `ShaderPassPipeline` owns that pipeline's named render targets.
 
 ### `textureModel`
 
@@ -160,9 +128,9 @@ Destroys owned pass renderers, swap framebuffers, and texture model.
 
 ### `resize(size?: [number, number]): void`
 
-Resizes the internal swap framebuffers and all pass-private render targets to match the provided size or the current canvas size.
+Resizes the internal swap framebuffers and all pipeline render targets to match the provided size or the current canvas size.
 
-Private targets respect their declared `scale`. For example, a target with `scale: [0.5, 0.5]` is resized to half width and half height.
+Named targets respect their declared `scale`. For example, a target with `scale: [0.5, 0.5]` is resized to half width and half height.
 
 ### `renderToScreen(options): boolean`
 
@@ -194,9 +162,8 @@ renderToTexture(options: {
 
 - The current implementation expects `sourceTexture` to be a `DynamicTexture`.
 - Two internal framebuffers are used for ping-pong rendering through the shared `previous` sequence.
-- Pass-private render targets are allocated once per `ShaderPassRenderer`, resized with `resize()`, and destroyed with `destroy()`.
-- Render-target names `original` and `previous` are reserved and may not be used as private target names.
-- Subpasses may read `original`, `previous`, or a private target from the same pass.
-- Subpasses may not read a private target owned by a different shader pass.
-- The renderer throws if a subpass references an unknown input source or output target.
-- The renderer throws if a subpass tries to read from and write to the same private render target in one draw.
+- Named render targets are declared only on `ShaderPassPipeline`, not on `ShaderPass`.
+- Target names `original` and `previous` are reserved and may not be used as pipeline target names.
+- A plain `ShaderPass` used outside a pipeline may only reference `original` and `previous`.
+- The renderer throws if a pass or pipeline step references an unknown input source or output target.
+- The renderer throws if a subpass tries to read from and write to the same named render target in one draw.

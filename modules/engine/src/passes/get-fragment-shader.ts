@@ -38,14 +38,6 @@ function getFilterShaderWGSL(func: string) {
   return /* wgsl */ `\
 @group(0) @binding(0) var sourceTexture: texture_2d<f32>;
 @group(0) @binding(2) var sourceTextureSampler: sampler;
-struct textureTransformUniforms {
-  scale: vec2<f32>,
-};
-@group(0) @binding(1) var<uniform> textureTransform: textureTransformUniforms;
-
-fn shaderPassRenderer_getTextureUV(uv: vec2<f32>) -> vec2<f32> {
-  return (uv - vec2<f32>(0.5, 0.5)) / textureTransform.scale + vec2<f32>(0.5, 0.5);
-}
 
 @fragment
 fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4f {
@@ -64,14 +56,6 @@ function getSamplerShaderWGSL(func: string) {
   return /* wgsl */ `\
 @group(0) @binding(0) var sourceTexture: texture_2d<f32>;
 @group(0) @binding(2) var sourceTextureSampler: sampler;
-struct textureTransformUniforms {
-  scale: vec2<f32>,
-};
-@group(0) @binding(1) var<uniform> textureTransform: textureTransformUniforms;
-
-fn shaderPassRenderer_getTextureUV(uv: vec2<f32>) -> vec2<f32> {
-  return (uv - vec2<f32>(0.5, 0.5)) / textureTransform.scale + vec2<f32>(0.5, 0.5);
-}
 
 @fragment
 fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4f {
@@ -89,19 +73,11 @@ function getFilterShaderGLSL(func: string) {
 
 uniform sampler2D sourceTexture;
 
-layout(std140) uniform textureTransformUniforms {
-  vec2 scale;
-} textureTransform;
-
 in vec2 position;
 in vec2 coordinate;
 in vec2 uv;
 
 out vec4 fragColor;
-
-vec2 shaderPassRenderer_getTextureUV(vec2 coord) {
-  return (coord - 0.5) / textureTransform.scale + 0.5;
-}
 
 void main() {
   vec2 texCoord = shaderPassRenderer_getTextureUV(coordinate);
@@ -121,19 +97,11 @@ function getSamplerShaderGLSL(func: string) {
 
 uniform sampler2D sourceTexture;
 
-layout(std140) uniform textureTransformUniforms {
-  vec2 scale;
-} textureTransform;
-
 in vec2 position;
 in vec2 coordinate;
 in vec2 uv;
 
 out vec4 fragColor;
-
-vec2 shaderPassRenderer_getTextureUV(vec2 coord) {
-  return (coord - 0.5) / textureTransform.scale + 0.5;
-}
 
 void main() {
   vec2 texCoord = shaderPassRenderer_getTextureUV(coordinate);

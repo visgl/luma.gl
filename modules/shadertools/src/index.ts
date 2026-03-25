@@ -14,7 +14,16 @@ export type {ShaderBindingDebugRow} from './lib/shader-assembly/wgsl-binding-deb
 // ShaderModules
 
 export type {ShaderModule} from './lib/shader-module/shader-module';
-export type {ShaderPass} from './lib/shader-module/shader-pass';
+export type {
+  ShaderPass,
+  ShaderPassInputSource,
+  ShaderPassRenderTarget,
+  ShaderSubPass
+} from './lib/shader-module/shader-pass';
+export type {
+  ShaderPassPipeline,
+  ShaderPassPipelineStep
+} from './lib/shader-module/shader-pass-pipeline';
 export type {ShaderModuleUniformValue, UniformTypes} from './lib/utils/uniform-types';
 
 export {initializeShaderModule, initializeShaderModules} from './lib/shader-module/shader-module';

@@ -27,10 +27,8 @@ export type ShaderPass<
   PropsT extends Record<string, any> = Record<string, any>,
   UniformsT extends Record<string, UniformValue> = PickUniforms<PropsT>,
   BindingsT extends Record<string, Binding> = PickBindings<PropsT>,
-  RenderTargetNameT extends string = string
+  RenderTargetNameT extends string = never
 > = ShaderModule<PropsT, UniformsT, BindingsT> & {
-  /** Private named render targets that can be used by this pass's subpasses. */
-  renderTargets?: Record<RenderTargetNameT, ShaderPassRenderTarget>;
   /** A shader pass can run multiple sub passes */
   passes?: ShaderSubPass<UniformsT, Extract<keyof BindingsT, string>, RenderTargetNameT>[];
   // TODO better name

@@ -12,7 +12,7 @@ import {
 } from '@luma.gl/engine';
 import {Device} from '@luma.gl/core';
 import * as shaderModules from '@luma.gl/effects';
-import {ShaderPass} from '@luma.gl/shadertools';
+import {ShaderPass, ShaderPassPipeline} from '@luma.gl/shadertools';
 
 const nullEffect = {
   name: 'nullEffect',
@@ -135,6 +135,7 @@ type ImageOptionName = keyof typeof IMAGE_OPTIONS;
 type EffectPropValue = number | number[];
 type EffectState = Record<string, EffectPropValue>;
 type ShaderPropType = NonNullable<ShaderPass['propTypes']>[string];
+type EffectDefinition = ShaderPass | ShaderPassPipeline;
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = `\
@@ -167,7 +168,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   vantage = [0, 0, 0];
   time: number = 0;
 
-  shaderPassMap: Record<string, ShaderPass>;
+  shaderPassMap: Record<string, EffectDefinition>;
   imageTexture: DynamicTexture;
   effectSelector: HTMLSelectElement | null = null;
   imageSelector: HTMLSelectElement | null = null;
@@ -175,7 +176,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   effectValuesByName: Record<string, EffectState> = {};
 
   shaderPassRenderer!: ShaderPassRenderer;
-  shaderPasses!: ShaderPass[];
+  shaderPasses!: EffectDefinition[];
 
   constructor({device}: AnimationProps) {
     super();
@@ -219,7 +220,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
   }
 
-  setShaderPasses(shaderPasses: ShaderPass[]) {
+  setShaderPasses(shaderPasses: EffectDefinition[]) {
     // this.shaderPasses = shaderPasses;
     this.shaderPassRenderer?.destroy();
     this.shaderPassRenderer = new ShaderPassRenderer(this.device, {
@@ -245,17 +246,26 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.renderEffectControls();
   }
 
-  getShaderPassesForSelection(passName: string): ShaderPass[] {
+  getShaderPassesForSelection(passName: string): EffectDefinition[] {
     if (passName === 'No effect') {
       return [nullEffect];
     }
 
-    const shaderPass = this.shaderPassMap[passName];
-    if (!shaderPass) {
+    const effectDefinition = this.shaderPassMap[passName];
+    if (!effectDefinition) {
       return [];
     }
 
-    return [{...shaderPass, uniforms: this.effectValuesByName[passName] || {}}];
+    const effectValues = this.effectValuesByName[passName] || {};
+    if (passName === 'bloom' && isShaderPassPipeline(effectDefinition)) {
+      return [cloneBloomShaderPassPipeline(effectValues)];
+    }
+
+    if (isShaderPassPipeline(effectDefinition)) {
+      return [effectDefinition];
+    }
+
+    return [{...effectDefinition, uniforms: effectValues}];
   }
 
   renderEffectControls() {
@@ -266,11 +276,13 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     controls.replaceChildren();
 
-    const shaderPass =
+    const effectDefinition =
       this.selectedEffectName === 'No effect'
         ? nullEffect
         : this.shaderPassMap[this.selectedEffectName] || nullEffect;
-    const propEntries = getControllableProps(shaderPass);
+    const propEntries = getControllableProps(
+      getEffectControlSource(this.selectedEffectName, effectDefinition)
+    );
 
     if (propEntries.length === 0) {
       const message = document.createElement('div');
@@ -415,22 +427,33 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 }
 
 // Extract list of postprocessing-capable shader modules from the wildcard import
-function getShaderPasses(): Record<string, ShaderPass> {
-  const passes: Record<string, ShaderPass> = {};
+function getShaderPasses(): Record<string, EffectDefinition> {
+  const passes: Record<string, EffectDefinition> = {};
   Object.entries(shaderModules).forEach(([key, module]) => {
-    if (module.passes && !key.startsWith('_')) {
-      passes[key] = module as ShaderPass;
+    if (key === 'bloom') {
+      passes[key] = shaderModules.bloomShaderPassPipeline as ShaderPassPipeline;
+      return;
+    }
+
+    if (key === 'bloomShaderPassPipeline') {
+      return;
+    }
+
+    if ((isShaderPass(module) || isShaderPassPipeline(module)) && !key.startsWith('_')) {
+      passes[key] = module as EffectDefinition;
     }
   });
   return passes;
 }
 
 function getInitialEffectValues(
-  shaderPassMap: Record<string, ShaderPass>
+  shaderPassMap: Record<string, EffectDefinition>
 ): Record<string, EffectState> {
   const initialValues: Record<string, EffectState> = {};
-  for (const [passName, shaderPass] of Object.entries(shaderPassMap)) {
-    initialValues[passName] = getDefaultEffectValues(shaderPass);
+  for (const [passName, effectDefinition] of Object.entries(shaderPassMap)) {
+    initialValues[passName] = getDefaultEffectValues(
+      getEffectControlSource(passName, effectDefinition)
+    );
   }
   initialValues.bloom = {
     ...initialValues.bloom,
@@ -450,10 +473,54 @@ function getDefaultEffectValues(shaderPass: ShaderPass): EffectState {
   return values;
 }
 
+function getEffectControlSource(
+  effectName: string,
+  effectDefinition: EffectDefinition
+): ShaderPass {
+  if (effectName === 'bloom' && isShaderPassPipeline(effectDefinition)) {
+    return shaderModules.bloom as ShaderPass;
+  }
+
+  return isShaderPass(effectDefinition) ? effectDefinition : nullEffect;
+}
+
+function cloneBloomShaderPassPipeline(effectValues: EffectState): ShaderPassPipeline {
+  const threshold =
+    typeof effectValues.threshold === 'number' ? effectValues.threshold : BLOOM_UNIFORMS.threshold;
+  const intensity =
+    typeof effectValues.intensity === 'number' ? effectValues.intensity : BLOOM_UNIFORMS.intensity;
+  const radius =
+    typeof effectValues.radius === 'number' ? effectValues.radius : BLOOM_UNIFORMS.radius;
+
+  return {
+    ...shaderModules.bloomShaderPassPipeline,
+    steps: shaderModules.bloomShaderPassPipeline.steps.map(step => {
+      switch (step.shaderPass.name) {
+        case 'bloomExtract':
+          return {...step, uniforms: {...step.uniforms, threshold}};
+        case 'bloomBlur':
+          return {...step, uniforms: {...step.uniforms, radius}};
+        case 'bloomComposite':
+          return {...step, uniforms: {...step.uniforms, intensity}};
+        default:
+          return step;
+      }
+    })
+  };
+}
+
 function getControllableProps(shaderPass: ShaderPass): [string, ShaderPropType][] {
   return Object.entries(shaderPass.propTypes || {}).filter(
     ([, propType]) => !propType.private && propType.value !== undefined
   );
+}
+
+function isShaderPass(module: unknown): module is ShaderPass {
+  return Boolean(module && typeof module === 'object' && 'passes' in module);
+}
+
+function isShaderPassPipeline(module: unknown): module is ShaderPassPipeline {
+  return Boolean(module && typeof module === 'object' && 'steps' in module);
 }
 
 function cloneEffectValue(value: unknown): EffectPropValue | undefined {

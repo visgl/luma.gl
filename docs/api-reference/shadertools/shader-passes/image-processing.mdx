@@ -163,9 +163,9 @@ Simulates the shallow depth of field normally encountered in close-up photograph
 
 ### gaussianBlur
 
-Applies a stronger separable blur using Gaussian weights. This is a better starting point than `triangleBlur` when you want a softer, more photographic blur kernel.
+Applies a true separable Gaussian blur with a radius-driven kernel and soft falloff. This is a better starting point than `triangleBlur` when you want a softer, more photographic blur kernel.
 
-- `radius` The blur radius in pixels. Default value is `12`.
+- `radius` The blur radius in pixels. Default value is `12`, maximum value is `32`.
 
 ### bloom
 
