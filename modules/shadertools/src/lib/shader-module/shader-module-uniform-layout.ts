@@ -324,11 +324,49 @@ function areStringArraysEqual(leftValues: string[], rightValues: string[]): bool
 function formatShaderModuleUniformLayoutError(
   validationResult: ShaderModuleUniformLayoutValidationResult
 ): string {
+  const {expectedUniformNames, actualUniformNames} = validationResult;
+  const missingUniformNames = expectedUniformNames.filter(
+    uniformName => !actualUniformNames.includes(uniformName)
+  );
+  const unexpectedUniformNames = actualUniformNames.filter(
+    uniformName => !expectedUniformNames.includes(uniformName)
+  );
+  const mismatchDetails = [
+    `Expected ${expectedUniformNames.length} fields, found ${actualUniformNames.length}.`
+  ];
+  const firstMismatchDescription = getFirstUniformMismatchDescription(
+    expectedUniformNames,
+    actualUniformNames
+  );
+  if (firstMismatchDescription) {
+    mismatchDetails.push(firstMismatchDescription);
+  }
+  if (missingUniformNames.length) {
+    mismatchDetails.push(
+      `Missing from shader block (${missingUniformNames.length}): ${formatUniformNameList(
+        missingUniformNames
+      )}.`
+    );
+  }
+  if (unexpectedUniformNames.length) {
+    mismatchDetails.push(
+      `Unexpected in shader block (${unexpectedUniformNames.length}): ${formatUniformNameList(
+        unexpectedUniformNames
+      )}.`
+    );
+  }
+  if (
+    expectedUniformNames.length <= 12 &&
+    actualUniformNames.length <= 12 &&
+    (missingUniformNames.length || unexpectedUniformNames.length)
+  ) {
+    mismatchDetails.push(`Expected: ${expectedUniformNames.join(', ')}.`);
+    mismatchDetails.push(`Actual: ${actualUniformNames.join(', ')}.`);
+  }
+
   return `${validationResult.moduleName}: ${validationResult.stage} shader uniform block ${
     validationResult.uniformBlockName
-  } does not match module.uniformTypes.\nExpected: ${validationResult.expectedUniformNames.join(
-    ', '
-  )}\nActual: ${validationResult.actualUniformNames.join(', ')}`;
+  } does not match module.uniformTypes. ${mismatchDetails.join(' ')}`;
 }
 
 /**
@@ -343,4 +381,40 @@ function stripShaderComments(shaderSource: string): string {
  */
 function normalizeWhitespace(value: string): string {
   return value.replace(/\s+/g, ' ').trim();
+}
+
+function getFirstUniformMismatchDescription(
+  expectedUniformNames: string[],
+  actualUniformNames: string[]
+): string | null {
+  const minimumLength = Math.min(expectedUniformNames.length, actualUniformNames.length);
+  for (let index = 0; index < minimumLength; index++) {
+    if (expectedUniformNames[index] !== actualUniformNames[index]) {
+      return `First mismatch at field ${index + 1}: expected ${
+        expectedUniformNames[index]
+      }, found ${actualUniformNames[index]}.`;
+    }
+  }
+
+  if (expectedUniformNames.length > actualUniformNames.length) {
+    return `Shader block ends after field ${actualUniformNames.length}; expected next field ${
+      expectedUniformNames[actualUniformNames.length]
+    }.`;
+  }
+  if (actualUniformNames.length > expectedUniformNames.length) {
+    return `Shader block has extra field ${actualUniformNames.length}: ${
+      actualUniformNames[expectedUniformNames.length]
+    }.`;
+  }
+
+  return null;
+}
+
+function formatUniformNameList(uniformNames: string[], maxNames = 8): string {
+  if (uniformNames.length <= maxNames) {
+    return uniformNames.join(', ');
+  }
+
+  const remainingCount = uniformNames.length - maxNames;
+  return `${uniformNames.slice(0, maxNames).join(', ')}, ... (${remainingCount} more)`;
 }

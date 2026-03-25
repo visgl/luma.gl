@@ -57,8 +57,8 @@ test('gltf#getGLTFExtensionSupport collects and annotates used extensions', t =>
   );
   t.equal(
     extensionSupport.get('KHR_animation_pointer')?.supported,
-    false,
-    'unsupported extension is marked as unsupported'
+    true,
+    'parsed-and-wired extension is marked as supported'
   );
   t.equal(
     extensionSupport.get('KHR_materials_specular')?.supported,

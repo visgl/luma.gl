@@ -279,6 +279,85 @@ test('gltf#parsePBRMaterial parses KHR_materials extensions', t => {
   t.end();
 });
 
+test('gltf#parsePBRMaterial configures runtime UV selectors and baked transforms', t => {
+  const parsedMaterial = parsePBRMaterial(
+    device,
+    {
+      pbrMetallicRoughness: {
+        baseColorTexture: {
+          ...makeCompressedTextureInfo('base-color'),
+          texCoord: 1,
+          extensions: {
+            KHR_texture_transform: {
+              offset: [0.25, 0.5],
+              rotation: 0.2,
+              scale: [1.5, 0.75]
+            }
+          }
+        }
+      },
+      normalTexture: makeCompressedTextureInfo('normal')
+    } as any,
+    {TEXCOORD_0: {}, TEXCOORD_1: {}},
+    {}
+  );
+
+  t.equal(
+    parsedMaterial.uniforms.baseColorUVSet,
+    1,
+    'texture texCoord is preserved for runtime sampling'
+  );
+  t.deepEqual(
+    parsedMaterial.uniforms.baseColorUVTransform?.map(value => Number(value.toFixed(6))),
+    [1.4701, 0.298004, 0, -0.149002, 0.73505, 0, 0.25, 0.5, 1],
+    'baked texture transform matrix is captured for runtime delta computation'
+  );
+  t.deepEqual(
+    parsedMaterial.uniforms.normalUVTransform,
+    [1, 0, 0, 0, 1, 0, 0, 0, 1],
+    'textures without KHR_texture_transform keep the identity matrix'
+  );
+
+  destroyParsedTextures(parsedMaterial);
+  t.end();
+});
+
+test('gltf#parsePBRMaterial skips texture slots that require unsupported TEXCOORD sets', t => {
+  const warnings = captureWarnings(() => {
+    const parsedMaterial = parsePBRMaterial(
+      device,
+      {
+        pbrMetallicRoughness: {
+          baseColorTexture: {
+            ...makeCompressedTextureInfo('base-color'),
+            texCoord: 2
+          }
+        }
+      } as any,
+      {TEXCOORD_0: {}, TEXCOORD_1: {}},
+      {}
+    );
+
+    t.notOk(
+      parsedMaterial.bindings.pbr_baseColorSampler,
+      'unsupported TEXCOORD texture binding is skipped'
+    );
+    t.notOk(
+      parsedMaterial.uniforms.baseColorMapEnabled,
+      'unsupported TEXCOORD texture is not enabled'
+    );
+  });
+
+  t.ok(
+    warnings.some(warning =>
+      warning.includes('only TEXCOORD_0 and TEXCOORD_1 are currently available')
+    ),
+    'unsupported TEXCOORD usage is warned'
+  );
+
+  t.end();
+});
+
 test('gltf#parsePBRMaterial reads KHR_materials_unlit from material.extensions', t => {
   const parsedMaterial = parsePBRMaterial(
     device,

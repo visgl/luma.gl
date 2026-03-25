@@ -36,19 +36,23 @@ struct VertexInputs {
 #ifdef HAS_UV
   @location(3) texCoords: vec2f,
 #endif
+#ifdef HAS_UV_1
+  @location(4) texCoords1: vec2f,
+#endif
 #ifdef HAS_SKIN
-  @location(4) JOINTS_0: vec4u,
-  @location(5) WEIGHTS_0: vec4f,
+  @location(5) JOINTS_0: vec4u,
+  @location(6) WEIGHTS_0: vec4f,
 #endif
 };
 
 struct FragmentInputs {
   @builtin(position) position: vec4f,
   @location(0) pbrPosition: vec3f,
-  @location(1) pbrUV: vec2f,
-  @location(2) pbrNormal: vec3f,
+  @location(1) pbrUV0: vec2f,
+  @location(2) pbrUV1: vec2f,
+  @location(3) pbrNormal: vec3f,
 #ifdef HAS_TANGENTS
-  @location(3) pbrTangent: vec4f,
+  @location(4) pbrTangent: vec4f,
 #endif
 };
 
@@ -58,13 +62,17 @@ fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
   var position = vec4f(inputs.positions, 1.0);
   var normal = vec3f(0.0, 0.0, 1.0);
   var tangent = vec4f(1.0, 0.0, 0.0, 1.0);
-  var uv = vec2f(0.0, 0.0);
+  var uv0 = vec2f(0.0, 0.0);
+  var uv1 = vec2f(0.0, 0.0);
 
 #ifdef HAS_NORMALS
   normal = inputs.normals;
 #endif
 #ifdef HAS_UV
-  uv = inputs.texCoords;
+  uv0 = inputs.texCoords;
+#endif
+#ifdef HAS_UV_1
+  uv1 = inputs.texCoords1;
 #endif
 #ifdef HAS_TANGENTS
   tangent = inputs.TANGENT;
@@ -90,7 +98,8 @@ fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
 
   outputs.position = pbrProjection.modelViewProjectionMatrix * position;
   outputs.pbrPosition = worldPosition.xyz / worldPosition.w;
-  outputs.pbrUV = uv;
+  outputs.pbrUV0 = uv0;
+  outputs.pbrUV1 = uv1;
   outputs.pbrNormal = normal;
   return outputs;
 }
@@ -98,7 +107,8 @@ fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
 @fragment
 fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4f {
   fragmentInputs.pbr_vPosition = inputs.pbrPosition;
-  fragmentInputs.pbr_vUV = inputs.pbrUV;
+  fragmentInputs.pbr_vUV0 = inputs.pbrUV0;
+  fragmentInputs.pbr_vUV1 = inputs.pbrUV1;
   fragmentInputs.pbr_vNormal = inputs.pbrNormal;
 #ifdef HAS_TANGENTS
   let tangent = normalize(inputs.pbrTangent.xyz);
@@ -131,6 +141,10 @@ const vs = /* glsl */ `\
     in vec2 texCoords;
   #endif
 
+  #ifdef HAS_UV_1
+    in vec2 texCoords1;
+  #endif
+
   #ifdef HAS_SKIN
     in uvec4 JOINTS_0;
     in vec4 WEIGHTS_0;
@@ -140,6 +154,7 @@ const vs = /* glsl */ `\
     vec4 _NORMAL = vec4(0.);
     vec4 _TANGENT = vec4(0.);
     vec2 _TEXCOORD_0 = vec2(0.);
+    vec2 _TEXCOORD_1 = vec2(0.);
 
     #ifdef HAS_NORMALS
       _NORMAL = normals;
@@ -153,6 +168,10 @@ const vs = /* glsl */ `\
       _TEXCOORD_0 = texCoords;
     #endif
 
+    #ifdef HAS_UV_1
+      _TEXCOORD_1 = texCoords1;
+    #endif
+
     vec4 pos = positions;
 
     #ifdef HAS_SKIN
@@ -162,7 +181,7 @@ const vs = /* glsl */ `\
       _TANGENT = vec4((skinMat * vec4(_TANGENT.xyz, 0.)).xyz, _TANGENT.w);
     #endif
 
-    pbr_setPositionNormalTangentUV(pos, _NORMAL, _TANGENT, _TEXCOORD_0);
+    pbr_setPositionNormalTangentUV(pos, _NORMAL, _TANGENT, _TEXCOORD_0, _TEXCOORD_1);
     gl_Position = pbrProjection.modelViewProjectionMatrix * pos;
   }
 `;

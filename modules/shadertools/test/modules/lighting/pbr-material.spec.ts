@@ -14,7 +14,7 @@ import {
 
 const FLOAT32_EPSILON = 1e-6;
 
-const EXPECTED_UNIFORM_BUFFER_LAYOUT = {
+const CORE_UNIFORM_BUFFER_LAYOUT = {
   unlit: {offset: 0, size: 1},
   baseColorMapEnabled: {offset: 1, size: 1},
   baseColorFactor: {offset: 4, size: 4},
@@ -60,6 +60,41 @@ const EXPECTED_UNIFORM_BUFFER_LAYOUT = {
   scaleDiffBaseMR: {offset: 68, size: 4},
   scaleFGDSpec: {offset: 72, size: 4}
 } as const;
+
+const TEXTURE_TRANSFORM_SLOT_NAMES = [
+  'baseColor',
+  'metallicRoughness',
+  'normal',
+  'occlusion',
+  'emissive',
+  'specularColor',
+  'specularIntensity',
+  'transmission',
+  'thickness',
+  'clearcoat',
+  'clearcoatRoughness',
+  'clearcoatNormal',
+  'sheenColor',
+  'sheenRoughness',
+  'iridescence',
+  'iridescenceThickness',
+  'anisotropy'
+] as const;
+
+const TEXTURE_TRANSFORM_UNIFORM_BUFFER_LAYOUT = Object.fromEntries(
+  TEXTURE_TRANSFORM_SLOT_NAMES.flatMap((slotName, slotIndex) => {
+    const offset = 76 + slotIndex * 16;
+    return [
+      [`${slotName}UVSet`, {offset, size: 1}],
+      [`${slotName}UVTransform`, {offset: offset + 4, size: 12}]
+    ];
+  })
+);
+
+const EXPECTED_UNIFORM_BUFFER_LAYOUT = {
+  ...CORE_UNIFORM_BUFFER_LAYOUT,
+  ...TEXTURE_TRANSFORM_UNIFORM_BUFFER_LAYOUT
+};
 
 const EXPECTED_UNIFORM_NAMES = Object.keys(EXPECTED_UNIFORM_BUFFER_LAYOUT);
 
@@ -159,7 +194,7 @@ test('shadertools#pbrMaterial uniform buffer layout matches expected std140 pack
 
   testCase.equal(
     shaderBlockLayout.byteLength,
-    304,
+    1392,
     'uniform buffer layout reports the exact packed size'
   );
   testCase.deepEqual(
@@ -188,12 +223,12 @@ test('shadertools#pbrMaterial uniform store reports minimum allocation size sepa
 
   testCase.equal(
     uniformStore.getUniformBufferByteLength('material'),
-    1024,
+    1392,
     'uniform store keeps the minimum allocation size'
   );
   testCase.equal(
     uniformStore.getUniformBufferData('material').byteLength,
-    304,
+    1392,
     'uniform store serializes only the packed block data'
   );
 

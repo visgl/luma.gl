@@ -189,7 +189,6 @@ export default class App extends React.PureComponent<AppProps, AppState> {
         isReady: this.renderer.hasActiveVisualizations()
       });
     } catch (error) {
-      console.error('FP64 example initialization failed', error);
       this.setState({
         initializationError: error instanceof Error ? error.message : String(error),
         isReady: false
@@ -355,7 +354,6 @@ class MultiCanvasRenderer {
       try {
         return createVisualizationRenderer(device, canvases[index], this.fullscreenBuffer, spec);
       } catch (error) {
-        console.error(`Failed to initialize ${spec.kind} visualization`, error);
         return {
           error: error instanceof Error ? error.message : String(error),
           model: null,

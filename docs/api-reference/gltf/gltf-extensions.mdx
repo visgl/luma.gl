@@ -206,8 +206,17 @@ Status meanings:
       loaders.gl rewrites the core material UV sets during load before luma.gl creates
       geometry.
     </SupportRow>
-    <SupportRow name="KHR_animation_pointer" support="❌">
-      luma.gl does not currently map animation pointers onto runtime scenegraph updates.
+    <SupportRow name="KHR_animation_pointer" support="✅ 🚧" fromVersion="9.3">
+      Node TRS pointers, selected material factor pointers, and animated
+      <code>KHR_texture_transform</code> offset/rotation/scale pointers are wired to
+      runtime updates. Still unsupported: morph weights, cameras, extras,
+      structural material switches such as <code>alphaMode</code> /
+      <code>doubleSided</code> / <code>unlit</code>, animated
+      <code>KHR_texture_transform.texCoord</code>, and texture slots that resolve to
+      <code>TEXCOORD_2+</code>. When used with
+      <code>KHR_materials_transmission</code> / <code>KHR_materials_volume</code>,
+      luma.gl still uses its stock transmission approximation, so effects such as
+      heat-haze-style scene refraction will not yet match the Khronos Sample Viewer.
     </SupportRow>
     <SupportRow name="KHR_node_visibility" support="❌">
       Node-visibility animations and toggles are not mapped onto runtime scenegraph

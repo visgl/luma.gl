@@ -13,6 +13,7 @@ import initializeExternalWebGLContext, {
   ExternalWebGLContextHandle
 } from '../../examples/integrations/external-context/app';
 import HelloReactApp from '../../examples/integrations/hello-react/app';
+import {getErrorMessage, logError} from './react-luma/utils/error-utils';
 
 // import PerformanceApp from '../../examples/performance/stress-test/app';
 
@@ -195,7 +196,8 @@ export const ExternalContextExample: React.FC = () => {
         exampleHandle = instance;
       })
       .catch(caughtError => {
-        setError(caughtError.message);
+        logError('External WebGL context example failed', caughtError);
+        setError(getErrorMessage(caughtError));
       });
 
     return () => {
