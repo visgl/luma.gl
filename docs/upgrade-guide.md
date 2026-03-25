@@ -13,6 +13,7 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 ## Upgrading to v9.3
 
 **Potentially breaking behavior**
+- `AsyncTexture` has been renamed to `DynamicTexture`.
 - Scenegraph creation API has been improved, see [`createScenegraphsFromGLTF()`](/docs/api-reference/gltf).
 - gltf module now creates `DynamicTexture` instances rather than raw `Texture`s.
 - glTF texture sampling now defaults to linear filtering when a glTF sampler omits explicit filter settings. Applications relying on the previous nearest-neighbor default should verify visual output and set sampler filters explicitly when nearest sampling is required.
@@ -22,18 +23,17 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 
 ## Upgrading to v9.2
 
-v9.2 brings full WebGPU support. Some additional deprecations and breaking changes have been necessary, but apart from the `Texture` -> `DynamicTexture` split, impact on most applications should be minimal. 
+v9.2 brings full WebGPU support. Some additional deprecations and breaking changes have been necessary, but apart from the `Texture` -> `AsyncTexture` split, impact on most applications should be minimal. 
 
 **New VertexFormats**
 - `VertexFormat` Replace `'unorm8-webgl'` with `'unorm8'`.
 
-**Texture and DynamicTexture**
-- The `Texture` class has been simplified to the minimum API required for GPU portability. The `DynamicTexture` texture class provides a higher-level API and is recommended for most applications.
-- (`DynamicTexture` was called `AsyncTexture` in 9.1).
-- `device.createTexture()` no longer accepts `props.data`: Use `DynamicTexture` or call `texture.setImageData()`
-- `device.createTexture()` no longer accepts `props.mipmaps`: Use `DynamicTexture` (or call `texture.generateMipmapsWebGL()`)
-- On WebGPU, mipmap generation now lives in `DynamicTexture.generateMipmaps()`, not in core `Texture`.
-- WebGPU `DynamicTexture` uses render passes for `2d`, `2d-array`, `cube`, and `cube-array`, and a compute path for `3d`.
+**Texture and AsyncTexture**
+- The `Texture` class has been simplified to the minimum API required for GPU portability. The `AsyncTexture` texture class provides a higher-level API and is recommended for most applications.
+- `device.createTexture()` no longer accepts `props.data`: Use `AsyncTexture` or call `texture.setImageData()`
+- `device.createTexture()` no longer accepts `props.mipmaps`: Use `AsyncTexture` (or call `texture.generateMipmapsWebGL()`)
+- On WebGPU, mipmap generation now lives in `AsyncTexture.generateMipmaps()`, not in core `Texture`.
+- WebGPU `AsyncTexture` uses render passes for `2d`, `2d-array`, `cube`, and `cube-array`, and a compute path for `3d`.
 - Unsupported WebGPU formats now fail explicitly when mipmap generation is requested, instead of silently acting as a no-op.
 - `TextureFormat` Correct the PVRTC 2bpp RGB format spelling from `pvrtc-rbg2unorm-webgl` to `pvrtc-rgb2unorm-webgl`.
 
