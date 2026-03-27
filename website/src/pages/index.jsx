@@ -2,6 +2,7 @@ import React from 'react';
 import Layout from '@theme/Layout';
 import {Home} from '@vis.gl/docusaurus-website/components';
 import {InstancingExample} from '../examples';
+import {GPUConceptGrid} from '../components/gpu-concepts';
 import styled from 'styled-components';
 
 if (typeof window !== 'undefined') {
@@ -46,6 +47,7 @@ export default class IndexPage extends React.Component {
             A clean TypeScript and WebGPU friendly GPU API that works across WebGPU and WebGL 2.
             </Bullet>
           </ul>
+          <GPUConceptGrid />
         </ContentContainer>
       </main>
     </Layout>;

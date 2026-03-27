@@ -78,3 +78,205 @@ body:has(.textures-example-page) .theme-layout-footer,
 body:has(.integration-example-page) .theme-layout-footer {
   display: none;
 }
+
+.gpuConceptDemoPage {
+  min-height: calc(100vh - var(--ifm-navbar-height));
+  padding: clamp(32px, 5vw, 64px) 1rem 80px;
+  background:
+    radial-gradient(circle at top left, rgba(83, 169, 255, 0.16), transparent 30%),
+    radial-gradient(circle at top right, rgba(182, 92, 255, 0.12), transparent 28%),
+    #0b0f14;
+}
+
+.gpuConceptDemoPage .gpuConceptSection {
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.gpuConceptSection {
+  margin-top: 72px;
+  padding: clamp(24px, 4vw, 36px);
+  border: 1px solid rgba(103, 129, 255, 0.18);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at top left, rgba(83, 169, 255, 0.16), transparent 36%),
+    radial-gradient(circle at bottom right, rgba(182, 92, 255, 0.12), transparent 40%),
+    linear-gradient(180deg, #111827 0%, #0b0f14 100%);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.32);
+  color: #eff4ff;
+}
+
+.gpuConceptSectionHeader {
+  max-width: 680px;
+  margin-bottom: 28px;
+}
+
+.gpuConceptSectionHeader h2 {
+  margin: 10px 0 12px;
+  color: #f7fbff;
+  font-size: clamp(1.9rem, 2vw, 2.5rem);
+  line-height: 1.08;
+}
+
+.gpuConceptSectionHeader p {
+  margin: 0;
+  color: rgba(225, 233, 248, 0.76);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.gpuConceptEyebrow,
+.gpuConceptEyebrowSmall {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.gpuConceptEyebrow {
+  color: #8bc2ff;
+  font-size: 0.76rem;
+}
+
+.gpuConceptEyebrowSmall {
+  color: rgba(210, 220, 255, 0.68);
+  font-size: 0.68rem;
+}
+
+.gpuConceptGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.gpuConceptCard {
+  position: relative;
+  min-height: 192px;
+  padding: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(17, 24, 39, 0.96), rgba(11, 15, 20, 0.98));
+  color: inherit;
+  cursor: pointer;
+  outline: none;
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    background-color 180ms ease;
+}
+
+.gpuConceptCard:hover,
+.gpuConceptCard:focus-visible,
+.gpuConceptCardExpanded {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--gpu-accent) 55%, rgba(255, 255, 255, 0.2));
+  box-shadow:
+    0 18px 40px rgba(0, 0, 0, 0.32),
+    0 0 0 1px color-mix(in srgb, var(--gpu-accent) 28%, transparent),
+    0 0 24px color-mix(in srgb, var(--gpu-accent-secondary) 18%, transparent);
+}
+
+.gpuConceptCardHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.gpuConceptCardHeader h3 {
+  margin: 0;
+  color: #f4f8ff;
+  font-size: 1.3rem;
+  line-height: 1.1;
+}
+
+.gpuConceptDescription {
+  margin: 14px 0 0;
+  color: rgba(225, 233, 248, 0.82);
+  line-height: 1.55;
+}
+
+.gpuConceptCanvasRegion {
+  max-height: 0;
+  margin-top: 0;
+  opacity: 0;
+  overflow: hidden;
+  transform: translateY(-8px);
+  transition:
+    max-height 180ms ease,
+    margin-top 180ms ease,
+    opacity 180ms ease,
+    transform 180ms ease;
+}
+
+.gpuConceptCardExpanded .gpuConceptCanvasRegion {
+  max-height: 180px;
+  margin-top: 18px;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.gpuConceptCanvasShell {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.gpuConceptDetail {
+  margin: 0;
+  color: rgba(196, 208, 232, 0.72);
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+.gpuConceptCanvas {
+  display: block;
+  width: min(100%, 240px);
+  height: 80px;
+  margin: 0 auto;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  background:
+    linear-gradient(180deg, rgba(17, 24, 39, 0.9), rgba(7, 10, 16, 0.96)),
+    #091019;
+}
+
+.gpuConceptStatusMessage {
+  margin: 0;
+  color: rgba(170, 183, 212, 0.7);
+  font-size: 0.78rem;
+  text-align: center;
+}
+
+@media screen and (max-width: 996px) {
+  .gpuConceptSection {
+    margin-top: 56px;
+  }
+
+  .gpuConceptGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media screen and (max-width: 640px) {
+  .gpuConceptSection {
+    padding: 20px;
+    border-radius: 22px;
+  }
+
+  .gpuConceptGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .gpuConceptCard {
+    min-height: 0;
+    padding: 18px;
+  }
+
+  .gpuConceptSectionHeader h2 {
+    font-size: 1.8rem;
+  }
+}

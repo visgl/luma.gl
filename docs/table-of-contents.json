@@ -42,6 +42,7 @@
           "api-guide/gpu/gpu-commands",
           "api-guide/gpu/gpu-buffers",
           "api-guide/gpu/gpu-textures",
+          "api-guide/gpu/gpu-compute",
           "api-guide/gpu/gpu-rendering",
           "api-guide/gpu/gpu-parameters",
           "api-guide/gpu/gpu-bindings",
