@@ -46,6 +46,20 @@ fn vertexMain() -> @builtin(position) vec4<f32> {
 }
 `;
 
+const APP_MULTILINE_GROUP_0_AUTO_WGSL = /* wgsl */ `\
+struct AppAutoUniforms {
+  value: f32
+};
+
+@group(0) @binding(auto)
+var<uniform> appAuto: AppAutoUniforms;
+
+@vertex
+fn vertexMain() -> @builtin(position) vec4<f32> {
+  return vec4<f32>(appAuto.value, 0.0, 0.0, 1.0);
+}
+`;
+
 const APP_MULTIPLE_AUTO_WGSL = /* wgsl */ `\
 struct AppFirstUniforms {
   value: f32
@@ -75,6 +89,27 @@ struct AppAutoUniforms {
 
 @group(2) @binding(3) var<uniform> appExplicit: AppExplicitUniforms;
 @group(2) @binding(auto) var<uniform> appAuto: AppAutoUniforms;
+
+@vertex
+fn vertexMain() -> @builtin(position) vec4<f32> {
+  return vec4<f32>(appExplicit.value + appAuto.value, 0.0, 0.0, 1.0);
+}
+`;
+
+const APP_MULTILINE_EXPLICIT_AND_AUTO_WGSL = /* wgsl */ `\
+struct AppExplicitUniforms {
+  value: f32
+};
+
+struct AppAutoUniforms {
+  value: f32
+};
+
+@group(2) @binding(0)
+var<uniform> appExplicit: AppExplicitUniforms;
+
+@group(2) @binding(auto)
+var<uniform> appAuto: AppAutoUniforms;
 
 @vertex
 fn vertexMain() -> @builtin(position) vec4<f32> {
@@ -114,6 +149,7 @@ struct AppUnsupportedUniforms {
 };
 
 @group(0) @binding(auto)
+@size(16)
 var<uniform> appUnsupported: AppUnsupportedUniforms;
 
 @vertex
@@ -236,6 +272,32 @@ struct Group2RegistryBUniforms {
 };
 
 @group(2) @binding(auto) var<uniform> group2RegistryB: Group2RegistryBUniforms;
+`
+};
+
+const MULTILINE_EXPLICIT_MODULE: ShaderModule = {
+  name: 'multilineExplicitModule',
+  bindingLayout: [{name: 'multilineExplicit', group: 2}],
+  source: /* wgsl */ `\
+struct MultilineExplicitUniforms {
+  value: f32
+};
+
+@group(2) @binding(0)
+var<uniform> multilineExplicit: MultilineExplicitUniforms;
+`
+};
+
+const MULTILINE_AUTO_MODULE: ShaderModule = {
+  name: 'multilineAutoModule',
+  bindingLayout: [{name: 'multilineAuto', group: 2}],
+  source: /* wgsl */ `\
+struct MultilineAutoUniforms {
+  value: f32
+};
+
+@group(2) @binding(auto)
+var<uniform> multilineAuto: MultilineAutoUniforms;
 `
 };
 
@@ -447,6 +509,27 @@ test('assembleWGSLShader#relocates application group 0 auto bindings from 0', t 
   t.end();
 });
 
+test('assembleWGSLShader#relocates multiline application group 0 auto bindings', t => {
+  const shaderAssembler = new ShaderAssembler();
+  const assembledShader = shaderAssembler.assembleWGSLShader({
+    platformInfo: PLATFORM_INFO,
+    source: APP_MULTILINE_GROUP_0_AUTO_WGSL,
+    modules: []
+  });
+
+  t.ok(
+    assembledShader.source.includes('@group(0) @binding(0)\nvar<uniform> appAuto'),
+    'multiline application auto binding preserves formatting and assigns location 0'
+  );
+  t.equal(
+    assembledShader.bindingTable.find(row => row.name === 'appAuto')?.binding,
+    0,
+    'binding table reflects relocated multiline application binding'
+  );
+
+  t.end();
+});
+
 test('assembleWGSLShader#allocates multiple application auto bindings in declaration order', t => {
   const shaderAssembler = new ShaderAssembler();
   const assembledShader = shaderAssembler.assembleWGSLShader({
@@ -487,6 +570,26 @@ test('assembleWGSLShader#application auto bindings skip occupied slots', t => {
   t.end();
 });
 
+test('assembleWGSLShader#multiline explicit application bindings reserve occupied slots', t => {
+  const shaderAssembler = new ShaderAssembler();
+  const assembledShader = shaderAssembler.assembleWGSLShader({
+    platformInfo: PLATFORM_INFO,
+    source: APP_MULTILINE_EXPLICIT_AND_AUTO_WGSL,
+    modules: []
+  });
+
+  t.ok(
+    assembledShader.source.includes('@group(2) @binding(0)\nvar<uniform> appExplicit'),
+    'multiline explicit application binding is preserved'
+  );
+  t.ok(
+    assembledShader.source.includes('@group(2) @binding(1)\nvar<uniform> appAuto'),
+    'application auto binding allocates around multiline explicit reservation'
+  );
+
+  t.end();
+});
+
 test('assembleWGSLShader#supports binding-first module auto declarations', t => {
   const shaderAssembler = new ShaderAssembler();
   const assembledShader = shaderAssembler.assembleWGSLShader({
@@ -503,6 +606,31 @@ test('assembleWGSLShader#supports binding-first module auto declarations', t => 
     assembledShader.bindingTable.find(row => row.name === 'bindingFirstAuto')?.binding,
     0,
     'binding table reflects binding-first relocation result'
+  );
+
+  t.end();
+});
+
+test('assembleWGSLShader#multiline module bindings are discovered for reservation and relocation', t => {
+  const shaderAssembler = new ShaderAssembler();
+  const assembledShader = shaderAssembler.assembleWGSLShader({
+    platformInfo: PLATFORM_INFO,
+    source: APP_WGSL,
+    modules: [MULTILINE_EXPLICIT_MODULE, MULTILINE_AUTO_MODULE]
+  });
+
+  t.ok(
+    assembledShader.source.includes('@group(2) @binding(0)\nvar<uniform> multilineExplicit'),
+    'multiline explicit module binding is preserved'
+  );
+  t.ok(
+    assembledShader.source.includes('@group(2) @binding(1)\nvar<uniform> multilineAuto'),
+    'multiline module auto binding allocates around explicit reservation'
+  );
+  t.equal(
+    assembledShader.bindingTable.find(row => row.name === 'multilineAuto')?.binding,
+    1,
+    'binding table reflects relocated multiline module auto binding'
   );
 
   t.end();

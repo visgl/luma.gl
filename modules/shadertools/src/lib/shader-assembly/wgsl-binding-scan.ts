@@ -4,36 +4,37 @@
 
 export const WGSL_BINDABLE_VARIABLE_PATTERN =
   '(?:var<\\s*(uniform|storage(?:\\s*,\\s*[A-Za-z_][A-Za-z0-9_]*)?)\\s*>|var)\\s+([A-Za-z_][A-Za-z0-9_]*)';
+const WGSL_BINDING_DECLARATION_SEPARATOR_PATTERN = '\\s*';
 
 export const MODULE_WGSL_BINDING_DECLARATION_REGEXES = [
   new RegExp(
-    `@binding\\(\\s*(auto|\\d+)\\s*\\)[ \t]*@group\\(\\s*(\\d+)\\s*\\)[ \t]*${WGSL_BINDABLE_VARIABLE_PATTERN}`,
+    `@binding\\(\\s*(auto|\\d+)\\s*\\)${WGSL_BINDING_DECLARATION_SEPARATOR_PATTERN}@group\\(\\s*(\\d+)\\s*\\)${WGSL_BINDING_DECLARATION_SEPARATOR_PATTERN}${WGSL_BINDABLE_VARIABLE_PATTERN}`,
     'g'
   ),
   new RegExp(
-    `@group\\(\\s*(\\d+)\\s*\\)[ \t]*@binding\\(\\s*(auto|\\d+)\\s*\\)[ \t]*${WGSL_BINDABLE_VARIABLE_PATTERN}`,
+    `@group\\(\\s*(\\d+)\\s*\\)${WGSL_BINDING_DECLARATION_SEPARATOR_PATTERN}@binding\\(\\s*(auto|\\d+)\\s*\\)${WGSL_BINDING_DECLARATION_SEPARATOR_PATTERN}${WGSL_BINDABLE_VARIABLE_PATTERN}`,
     'g'
   )
 ] as const;
 
 export const WGSL_BINDING_DECLARATION_REGEXES = [
   new RegExp(
-    `@binding\\(\\s*(auto|\\d+)\\s*\\)[ \t]*@group\\(\\s*(\\d+)\\s*\\)[ \t]*${WGSL_BINDABLE_VARIABLE_PATTERN}`,
+    `@binding\\(\\s*(auto|\\d+)\\s*\\)${WGSL_BINDING_DECLARATION_SEPARATOR_PATTERN}@group\\(\\s*(\\d+)\\s*\\)${WGSL_BINDING_DECLARATION_SEPARATOR_PATTERN}${WGSL_BINDABLE_VARIABLE_PATTERN}`,
     'g'
   ),
   new RegExp(
-    `@group\\(\\s*(\\d+)\\s*\\)[ \t]*@binding\\(\\s*(auto|\\d+)\\s*\\)[ \t]*${WGSL_BINDABLE_VARIABLE_PATTERN}`,
+    `@group\\(\\s*(\\d+)\\s*\\)${WGSL_BINDING_DECLARATION_SEPARATOR_PATTERN}@binding\\(\\s*(auto|\\d+)\\s*\\)${WGSL_BINDING_DECLARATION_SEPARATOR_PATTERN}${WGSL_BINDABLE_VARIABLE_PATTERN}`,
     'g'
   )
 ] as const;
 
 export const WGSL_EXPLICIT_BINDING_DECLARATION_REGEXES = [
   new RegExp(
-    `@binding\\(\\s*(\\d+)\\s*\\)[ \t]*@group\\(\\s*(\\d+)\\s*\\)[ \t]*${WGSL_BINDABLE_VARIABLE_PATTERN}`,
+    `@binding\\(\\s*(\\d+)\\s*\\)${WGSL_BINDING_DECLARATION_SEPARATOR_PATTERN}@group\\(\\s*(\\d+)\\s*\\)${WGSL_BINDING_DECLARATION_SEPARATOR_PATTERN}${WGSL_BINDABLE_VARIABLE_PATTERN}`,
     'g'
   ),
   new RegExp(
-    `@group\\(\\s*(\\d+)\\s*\\)[ \t]*@binding\\(\\s*(\\d+)\\s*\\)[ \t]*${WGSL_BINDABLE_VARIABLE_PATTERN}`,
+    `@group\\(\\s*(\\d+)\\s*\\)${WGSL_BINDING_DECLARATION_SEPARATOR_PATTERN}@binding\\(\\s*(\\d+)\\s*\\)${WGSL_BINDING_DECLARATION_SEPARATOR_PATTERN}${WGSL_BINDABLE_VARIABLE_PATTERN}`,
     'g'
   )
 ] as const;

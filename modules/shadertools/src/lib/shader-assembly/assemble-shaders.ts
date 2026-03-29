@@ -656,7 +656,7 @@ function relocateWGSLApplicationBindings(source: string): {source: string} {
   if (hasWGSLAutoBinding(source) && !relocationState.sawSupportedBindingDeclaration) {
     throw new Error(
       'Unsupported @binding(auto) declaration form in application WGSL. ' +
-        'Use "@group(N) @binding(auto) var ..." or "@binding(auto) @group(N) var ..." on a single line.'
+        'Use adjacent "@group(N)" and "@binding(auto)" decorators followed by a bindable "var" declaration.'
     );
   }
 
@@ -694,7 +694,7 @@ function relocateWGSLModuleBindings(
   if (hasWGSLAutoBinding(moduleSource) && !relocationState.sawSupportedBindingDeclaration) {
     throw new Error(
       `Unsupported @binding(auto) declaration form in module "${module.name}". ` +
-        'Use "@group(N) @binding(auto) var ..." or "@binding(auto) @group(N) var ..." on a single line.'
+        'Use adjacent "@group(N)" and "@binding(auto)" decorators followed by a bindable "var" declaration.'
     );
   }
 
