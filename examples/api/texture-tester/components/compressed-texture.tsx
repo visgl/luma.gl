@@ -53,8 +53,8 @@ registerLoaders([BasisLoader, CompressedTextureLoader, ImageLoader]);
 // TEXTURE SHADERS
 
 const source = /* wgsl */ `\
-@group(0) @binding(0) var uTexture: texture_2d<f32>;
-@group(0) @binding(1) var uTextureSampler: sampler;
+@group(0) @binding(auto) var uTexture: texture_2d<f32>;
+@group(0) @binding(auto) var uTextureSampler: sampler;
 
 struct VertexInputs {
   @location(0) position: vec2<f32>,

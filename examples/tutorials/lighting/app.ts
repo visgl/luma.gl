@@ -23,9 +23,9 @@ struct Uniforms {
   eyePosition : vec3<f32>,
 };
 
-@binding(0) @group(0) var<uniform> app : Uniforms;
-@group(0) @binding(3) var uTexture : texture_2d<f32>;
-@group(0) @binding(4) var uTextureSampler : sampler;
+@group(0) @binding(auto) var<uniform> app : Uniforms;
+@group(0) @binding(auto) var uTexture : texture_2d<f32>;
+@group(0) @binding(auto) var uTextureSampler : sampler;
 
 struct VertexInputs {
   // CUBE GEOMETRY

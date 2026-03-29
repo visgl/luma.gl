@@ -496,7 +496,7 @@ struct lightMarkerUniforms {
   viewProjectionMatrix: mat4x4<f32>,
 };
 
-@binding(0) @group(0) var<uniform> lightMarker : lightMarkerUniforms;
+@group(0) @binding(auto) var<uniform> lightMarker : lightMarkerUniforms;
 
 struct VertexInputs {
   @location(0) positions : vec3<f32>,

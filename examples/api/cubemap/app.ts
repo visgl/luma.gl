@@ -55,9 +55,9 @@ struct appUniforms {
   projectionMatrix: mat4x4<f32>,
 };
 
-@group(0) @binding(0) var<uniform> app : appUniforms;
-@group(0) @binding(1) var cubeTexture : texture_cube<f32>;
-@group(0) @binding(2) var cubeTextureSampler : sampler;
+@group(0) @binding(auto) var<uniform> app : appUniforms;
+@group(0) @binding(auto) var cubeTexture : texture_cube<f32>;
+@group(0) @binding(auto) var cubeTextureSampler : sampler;
 
 struct VertexInputs {
   @location(0) positions : vec3<f32>,
@@ -143,11 +143,11 @@ struct appUniforms {
   eyePosition: vec3<f32>,
 };
 
-@group(0) @binding(0) var<uniform> app : appUniforms;
-@group(0) @binding(1) var cubeTexture : texture_cube<f32>;
-@group(0) @binding(2) var cubeTextureSampler : sampler;
-@group(0) @binding(3) var prismTexture : texture_2d<f32>;
-@group(0) @binding(4) var prismTextureSampler : sampler;
+@group(0) @binding(auto) var<uniform> app : appUniforms;
+@group(0) @binding(auto) var cubeTexture : texture_cube<f32>;
+@group(0) @binding(auto) var cubeTextureSampler : sampler;
+@group(0) @binding(auto) var prismTexture : texture_2d<f32>;
+@group(0) @binding(auto) var prismTextureSampler : sampler;
 
 struct VertexInputs {
   @location(0) positions : vec3<f32>,

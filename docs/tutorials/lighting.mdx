@@ -27,6 +27,9 @@ The example below introduces the `lighting` and `phongMaterial` shader modules. 
 `ShaderInputs` instance manages uniform blocks and module settings, while the
 `Model` is supplied with both WGSL and GLSL shaders for cross-platform rendering.
 
+The WGSL side uses `@binding(auto)` throughout, so the binding numbers are
+generated during assembly and the application code only binds resources by name.
+
 ```typescript
 import {NumberArray} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
@@ -51,9 +54,9 @@ struct Uniforms {
   eyePosition : vec3<f32>,
 };
 
-@binding(0) @group(0) var<uniform> app : Uniforms;
-@group(0) @binding(3) var uTexture : texture_2d<f32>;
-@group(0) @binding(4) var uTextureSampler : sampler;
+@group(0) @binding(auto) var<uniform> app : Uniforms;
+@group(0) @binding(auto) var uTexture : texture_2d<f32>;
+@group(0) @binding(auto) var uTextureSampler : sampler;
 
 struct VertexInputs {
   @location(0) positions : vec3<f32>,

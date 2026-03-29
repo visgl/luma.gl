@@ -766,7 +766,7 @@ struct Mandelbrot32Uniforms {
   iterationLimit: f32,
 };
 
-@group(0) @binding(0) var<uniform> mandelbrot32 : Mandelbrot32Uniforms;
+@group(0) @binding(auto) var<uniform> mandelbrot32 : Mandelbrot32Uniforms;
 
 const MAX_ITERATIONS: i32 = 2048;
 const ESCAPE_RADIUS_SQUARED: f32 = 256.0;
@@ -908,7 +908,7 @@ struct Mandelbrot64Uniforms {
   iterationLimit: f32,
 };
 
-@group(0) @binding(1) var<uniform> mandelbrot64 : Mandelbrot64Uniforms;
+@group(0) @binding(auto) var<uniform> mandelbrot64 : Mandelbrot64Uniforms;
 
 const MAX_ITERATIONS: i32 = 2048;
 const ESCAPE_RADIUS_SQUARED: f32 = 256.0;
