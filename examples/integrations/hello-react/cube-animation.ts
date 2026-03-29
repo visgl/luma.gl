@@ -13,7 +13,7 @@ struct Uniforms {
   modelViewProjectionMatrix : mat4x4<f32>,
 };
 
-@group(0) @binding(0) var<uniform> app : Uniforms;
+@group(0) @binding(auto) var<uniform> app : Uniforms;
 
 struct VertexInputs {
   @location(0) positions : vec4<f32>

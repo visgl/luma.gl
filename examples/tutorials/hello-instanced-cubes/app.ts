@@ -16,7 +16,7 @@ struct Uniforms {
   modelViewProjectionMatrix : array<mat4x4<f32>, 16>,
 };
 
-@binding(0) @group(0) var<uniform> app : Uniforms;
+@group(0) @binding(auto) var<uniform> app : Uniforms;
 
 struct VertexInputs {
   @builtin(instance_index) instanceIdx : u32,

@@ -42,7 +42,7 @@ struct SphereUniforms {
   projectionMatrix: mat4x4<f32>,
 };
 
-@group(0) @binding(0) var<uniform> sphere : SphereUniforms;
+@group(0) @binding(auto) var<uniform> sphere : SphereUniforms;
 
 struct VertexInputs {
   @location(0) positions: vec3<f32>,
@@ -122,10 +122,10 @@ void main(void) {
 `;
 
 const PERSISTENCE_WGSL = /* WGSL */ `\
-@group(0) @binding(1) var sourceTexture : texture_2d<f32>;
-@group(0) @binding(2) var sourceTextureSampler : sampler;
-@group(0) @binding(3) var persistenceTexture : texture_2d<f32>;
-@group(0) @binding(4) var persistenceTextureSampler : sampler;
+@group(0) @binding(auto) var sourceTexture : texture_2d<f32>;
+@group(0) @binding(auto) var sourceTextureSampler : sampler;
+@group(0) @binding(auto) var persistenceTexture : texture_2d<f32>;
+@group(0) @binding(auto) var persistenceTextureSampler : sampler;
 
 fn getCoverage(color: vec4f) -> f32 {
   return max(color.a, max(color.r, max(color.g, color.b)));
@@ -172,8 +172,8 @@ void main(void) {
 `;
 
 const SCREEN_WGSL = /* WGSL */ `\
-@group(0) @binding(1) var sourceTexture: texture_2d<f32>;
-@group(0) @binding(2) var sourceTextureSampler: sampler;
+@group(0) @binding(auto) var sourceTexture: texture_2d<f32>;
+@group(0) @binding(auto) var sourceTextureSampler: sampler;
 
 @fragment
 fn fragmentMain(

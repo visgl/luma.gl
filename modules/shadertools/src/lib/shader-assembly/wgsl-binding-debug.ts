@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+import {WGSL_BINDABLE_VARIABLE_PATTERN, maskWGSLComments} from './wgsl-binding-scan';
+
 type ShaderBindingAssignment = {
   moduleName: string;
   name: string;
@@ -10,8 +12,14 @@ type ShaderBindingAssignment = {
 };
 
 const WGSL_BINDING_DEBUG_REGEXES = [
-  /@binding\(\s*(\d+)\s*\)\s*@group\(\s*(\d+)\s*\)\s*var(?:<([^>]+)>)?\s+([A-Za-z_][A-Za-z0-9_]*)\s*:\s*([^;]+);/g,
-  /@group\(\s*(\d+)\s*\)\s*@binding\(\s*(\d+)\s*\)\s*var(?:<([^>]+)>)?\s+([A-Za-z_][A-Za-z0-9_]*)\s*:\s*([^;]+);/g
+  new RegExp(
+    `@binding\\(\\s*(\\d+)\\s*\\)\\s*@group\\(\\s*(\\d+)\\s*\\)\\s*${WGSL_BINDABLE_VARIABLE_PATTERN}\\s*:\\s*([^;]+);`,
+    'g'
+  ),
+  new RegExp(
+    `@group\\(\\s*(\\d+)\\s*\\)\\s*@binding\\(\\s*(\\d+)\\s*\\)\\s*${WGSL_BINDABLE_VARIABLE_PATTERN}\\s*:\\s*([^;]+);`,
+    'g'
+  )
 ] as const;
 
 /** One debug row describing a WGSL binding in the assembled shader source. */
@@ -54,6 +62,7 @@ export function getShaderBindingDebugRowsFromWGSL(
   source: string,
   bindingAssignments: ShaderBindingAssignment[] = []
 ): ShaderBindingDebugRow[] {
+  const maskedSource = maskWGSLComments(source);
   const assignmentMap = new Map<string, string>();
   for (const bindingAssignment of bindingAssignments) {
     assignmentMap.set(
@@ -70,7 +79,7 @@ export function getShaderBindingDebugRowsFromWGSL(
   for (const regex of WGSL_BINDING_DEBUG_REGEXES) {
     regex.lastIndex = 0;
     let match: RegExpExecArray | null;
-    match = regex.exec(source);
+    match = regex.exec(maskedSource);
     while (match) {
       const isBindingFirst = regex === WGSL_BINDING_DEBUG_REGEXES[0];
       const binding = Number(match[isBindingFirst ? 1 : 2]);
@@ -91,7 +100,7 @@ export function getShaderBindingDebugRowsFromWGSL(
           resourceType
         })
       );
-      match = regex.exec(source);
+      match = regex.exec(maskedSource);
     }
   }
 

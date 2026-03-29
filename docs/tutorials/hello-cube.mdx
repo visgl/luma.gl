@@ -19,6 +19,9 @@ The complete source for this example is shown below. It builds a `Model` with WG
 and GLSL shaders, manages uniforms with a `UniformStore`, and draws a `CubeGeometry`
 inside an `AnimationLoopTemplate`.
 
+In WGSL, the example uses `@binding(auto)`, so the JavaScript side only needs
+to provide bindings by name.
+
 ```typescript
 import type {NumberArray, VariableShaderType} from '@luma.gl/core';
 import {Texture, UniformStore} from '@luma.gl/core';
@@ -41,9 +44,9 @@ struct Uniforms {
   modelViewProjectionMatrix : mat4x4<f32>,
 };
 
-@group(0) @binding(0) var<uniform> app : Uniforms;
-@group(0) @binding(1) var uTexture : texture_2d<f32>;
-@group(0) @binding(2) var uTextureSampler : sampler;
+@group(0) @binding(auto) var<uniform> app : Uniforms;
+@group(0) @binding(auto) var uTexture : texture_2d<f32>;
+@group(0) @binding(auto) var uTextureSampler : sampler;
 
 struct VertexInputs {
   @location(0) positions : vec4<f32>,

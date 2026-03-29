@@ -17,9 +17,9 @@ struct Uniforms {
   time : f32,
 };
 
-@binding(0) @group(0) var<uniform> app : Uniforms;
-@group(0) @binding(1) var uTexture : texture_3d<f32>;
-@group(0) @binding(2) var uTextureSampler : sampler;
+@group(0) @binding(auto) var<uniform> app : Uniforms;
+@group(0) @binding(auto) var uTexture : texture_3d<f32>;
+@group(0) @binding(auto) var uTextureSampler : sampler;
 
 struct VertexInputs {
   // CUBE GEOMETRY

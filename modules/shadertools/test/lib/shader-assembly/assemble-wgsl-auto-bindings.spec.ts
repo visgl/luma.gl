@@ -33,6 +33,95 @@ fn vertexMain(@builtin(vertex_index) vertexIndex: u32) -> @builtin(position) vec
 }
 `;
 
+const APP_GROUP_0_AUTO_WGSL = /* wgsl */ `\
+struct AppAutoUniforms {
+  value: f32
+};
+
+@group(0) @binding(auto) var<uniform> appAuto: AppAutoUniforms;
+
+@vertex
+fn vertexMain() -> @builtin(position) vec4<f32> {
+  return vec4<f32>(appAuto.value, 0.0, 0.0, 1.0);
+}
+`;
+
+const APP_MULTIPLE_AUTO_WGSL = /* wgsl */ `\
+struct AppFirstUniforms {
+  value: f32
+};
+
+struct AppSecondUniforms {
+  value: f32
+};
+
+@group(2) @binding(auto) var<uniform> appFirst: AppFirstUniforms;
+@group(2) @binding(auto) var<uniform> appSecond: AppSecondUniforms;
+
+@vertex
+fn vertexMain() -> @builtin(position) vec4<f32> {
+  return vec4<f32>(appFirst.value + appSecond.value, 0.0, 0.0, 1.0);
+}
+`;
+
+const APP_EXPLICIT_AND_AUTO_WGSL = /* wgsl */ `\
+struct AppExplicitUniforms {
+  value: f32
+};
+
+struct AppAutoUniforms {
+  value: f32
+};
+
+@group(2) @binding(3) var<uniform> appExplicit: AppExplicitUniforms;
+@group(2) @binding(auto) var<uniform> appAuto: AppAutoUniforms;
+
+@vertex
+fn vertexMain() -> @builtin(position) vec4<f32> {
+  return vec4<f32>(appExplicit.value + appAuto.value, 0.0, 0.0, 1.0);
+}
+`;
+
+const APP_GROUP_0_AUTO_WITH_MODULE_WGSL = /* wgsl */ `\
+struct AppAutoUniforms {
+  value: f32
+};
+
+@group(0) @binding(auto) var<uniform> appAuto: AppAutoUniforms;
+
+@vertex
+fn vertexMain() -> @builtin(position) vec4<f32> {
+  return vec4<f32>(appAuto.value, 0.0, 0.0, 1.0);
+}
+`;
+
+const APP_GROUP_2_AUTO_WITH_MODULE_WGSL = /* wgsl */ `\
+struct AppGroup2Uniforms {
+  value: f32
+};
+
+@group(2) @binding(auto) var<uniform> appGroup2: AppGroup2Uniforms;
+
+@vertex
+fn vertexMain() -> @builtin(position) vec4<f32> {
+  return vec4<f32>(appGroup2.value, 0.0, 0.0, 1.0);
+}
+`;
+
+const UNSUPPORTED_APP_AUTO_WGSL = /* wgsl */ `\
+struct AppUnsupportedUniforms {
+  value: f32
+};
+
+@group(0) @binding(auto)
+var<uniform> appUnsupported: AppUnsupportedUniforms;
+
+@vertex
+fn vertexMain() -> @builtin(position) vec4<f32> {
+  return vec4<f32>(0.0, 0.0, 0.0, 1.0);
+}
+`;
+
 const GROUP_2_AUTO_MODULE: ShaderModule = {
   name: 'group2AutoModule',
   bindingLayout: [
@@ -147,6 +236,71 @@ struct Group2RegistryBUniforms {
 };
 
 @group(2) @binding(auto) var<uniform> group2RegistryB: Group2RegistryBUniforms;
+`
+};
+
+const COMMENTED_PRIVATE_STATE_MODULE: ShaderModule = {
+  name: 'commentedPrivateStateModule',
+  source: /* wgsl */ `\
+struct Geometry {
+  position: vec4<f32>
+};
+
+// @group(0) @binding(1)
+var<private> geometry: Geometry;
+`
+};
+
+const COMMENTED_REAL_BINDING_MODULE: ShaderModule = {
+  name: 'commentedRealBindingModule',
+  bindingLayout: [{name: 'commentedRealBinding', group: 2}],
+  source: /* wgsl */ `\
+struct CommentedRealBindingUniforms {
+  value: f32
+};
+
+// @group(0) @binding(1)
+@group(2) @binding(auto) var<uniform> commentedRealBinding: CommentedRealBindingUniforms;
+`
+};
+
+const BLOCK_COMMENTED_PRIVATE_STATE_MODULE: ShaderModule = {
+  name: 'blockCommentedPrivateStateModule',
+  source: /* wgsl */ `\
+struct Geometry {
+  position: vec4<f32>
+};
+
+/* @group(0) @binding(1) */
+var<private> geometry: Geometry;
+`
+};
+
+const COMMENTED_BINDING_TABLE_MODULE: ShaderModule = {
+  name: 'commentedBindingTableModule',
+  bindingLayout: [{name: 'visibleBinding', group: 2}],
+  source: /* wgsl */ `\
+struct VisibleBindingUniforms {
+  value: f32
+};
+
+// @group(2) @binding(7) var<uniform> hiddenBinding: VisibleBindingUniforms;
+@group(2) @binding(auto) var<uniform> visibleBinding: VisibleBindingUniforms;
+`
+};
+
+const UNSUPPORTED_MODULE_AUTO_BINDING: ShaderModule = {
+  name: 'unsupportedModuleAutoBinding',
+  bindingLayout: [{name: 'supportedModuleBinding', group: 2}],
+  source: /* wgsl */ `\
+struct UnsupportedAutoBindingUniforms {
+  value: f32
+};
+
+@group(2) @binding(auto) var<uniform> supportedModuleBinding: UnsupportedAutoBindingUniforms;
+@group(2) @binding(auto)
+@size(16)
+var<uniform> unsupportedModuleBinding: UnsupportedAutoBindingUniforms;
 `
 };
 
@@ -272,6 +426,67 @@ test('assembleWGSLShader#allocates multiple auto bindings in one module', t => {
   t.end();
 });
 
+test('assembleWGSLShader#relocates application group 0 auto bindings from 0', t => {
+  const shaderAssembler = new ShaderAssembler();
+  const assembledShader = shaderAssembler.assembleWGSLShader({
+    platformInfo: PLATFORM_INFO,
+    source: APP_GROUP_0_AUTO_WGSL,
+    modules: []
+  });
+
+  t.ok(
+    assembledShader.source.includes('@group(0) @binding(0) var<uniform> appAuto'),
+    'application group 0 auto binding assigned location 0'
+  );
+  t.equal(
+    assembledShader.bindingTable.find(row => row.name === 'appAuto')?.binding,
+    0,
+    'binding table reflects relocated application group 0 binding'
+  );
+
+  t.end();
+});
+
+test('assembleWGSLShader#allocates multiple application auto bindings in declaration order', t => {
+  const shaderAssembler = new ShaderAssembler();
+  const assembledShader = shaderAssembler.assembleWGSLShader({
+    platformInfo: PLATFORM_INFO,
+    source: APP_MULTIPLE_AUTO_WGSL,
+    modules: []
+  });
+
+  t.ok(
+    assembledShader.source.includes('@group(2) @binding(0) var<uniform> appFirst'),
+    'first application auto binding assigned location 0'
+  );
+  t.ok(
+    assembledShader.source.includes('@group(2) @binding(1) var<uniform> appSecond'),
+    'second application auto binding assigned location 1'
+  );
+
+  t.end();
+});
+
+test('assembleWGSLShader#application auto bindings skip occupied slots', t => {
+  const shaderAssembler = new ShaderAssembler();
+  const assembledShader = shaderAssembler.assembleWGSLShader({
+    platformInfo: PLATFORM_INFO,
+    source: APP_EXPLICIT_AND_AUTO_WGSL,
+    modules: []
+  });
+
+  t.ok(
+    assembledShader.source.includes('@group(2) @binding(3) var<uniform> appExplicit'),
+    'explicit application binding kept at location 3'
+  );
+  t.ok(
+    assembledShader.source.includes('@group(2) @binding(0) var<uniform> appAuto'),
+    'application auto binding uses the first free slot'
+  );
+
+  t.end();
+});
+
 test('assembleWGSLShader#supports binding-first module auto declarations', t => {
   const shaderAssembler = new ShaderAssembler();
   const assembledShader = shaderAssembler.assembleWGSLShader({
@@ -288,6 +503,90 @@ test('assembleWGSLShader#supports binding-first module auto declarations', t => 
     assembledShader.bindingTable.find(row => row.name === 'bindingFirstAuto')?.binding,
     0,
     'binding table reflects binding-first relocation result'
+  );
+
+  t.end();
+});
+
+test('assembleWGSLShader#ignores line-comment binding annotations before private state', t => {
+  const shaderAssembler = new ShaderAssembler();
+  const assembledShader = shaderAssembler.assembleWGSLShader({
+    platformInfo: PLATFORM_INFO,
+    source: APP_WGSL,
+    modules: [COMMENTED_PRIVATE_STATE_MODULE]
+  });
+
+  t.deepEqual(
+    assembledShader.bindingAssignments,
+    [],
+    'no module binding assignments are produced for commented private state'
+  );
+  t.notOk(
+    assembledShader.bindingTable.find(row => row.name === 'geometry'),
+    'binding table omits private state that only follows a commented annotation'
+  );
+
+  t.end();
+});
+
+test('assembleWGSLShader#ignores commented binding annotations above real bindings', t => {
+  const shaderAssembler = new ShaderAssembler();
+  const assembledShader = shaderAssembler.assembleWGSLShader({
+    platformInfo: PLATFORM_INFO,
+    source: APP_WGSL,
+    modules: [COMMENTED_REAL_BINDING_MODULE]
+  });
+
+  t.ok(
+    assembledShader.source.includes('@group(2) @binding(0) var<uniform> commentedRealBinding'),
+    'real binding keeps its actual declaration and auto-allocation'
+  );
+  t.equal(
+    assembledShader.bindingTable.find(row => row.name === 'commentedRealBinding')?.binding,
+    0,
+    'binding table reflects the real binding instead of the commented annotation'
+  );
+
+  t.end();
+});
+
+test('assembleWGSLShader#ignores block-comment binding annotations before private state', t => {
+  const shaderAssembler = new ShaderAssembler();
+  const assembledShader = shaderAssembler.assembleWGSLShader({
+    platformInfo: PLATFORM_INFO,
+    source: APP_WGSL,
+    modules: [BLOCK_COMMENTED_PRIVATE_STATE_MODULE]
+  });
+
+  t.deepEqual(
+    assembledShader.bindingAssignments,
+    [],
+    'block-commented binding annotations do not create module bindings'
+  );
+  t.notOk(
+    assembledShader.bindingTable.find(row => row.name === 'geometry'),
+    'binding table omits private state following a block-commented annotation'
+  );
+
+  t.end();
+});
+
+test('assembleWGSLShader#binding table excludes commented declarations', t => {
+  const shaderAssembler = new ShaderAssembler();
+  const assembledShader = shaderAssembler.assembleWGSLShader({
+    platformInfo: PLATFORM_INFO,
+    source: APP_WGSL,
+    modules: [COMMENTED_BINDING_TABLE_MODULE]
+  });
+
+  t.equal(
+    assembledShader.bindingTable.find(row => row.name === 'visibleBinding')?.binding,
+    0,
+    'visible binding is still discovered'
+  );
+  t.notOk(
+    assembledShader.bindingTable.find(row => row.name === 'hiddenBinding'),
+    'binding table excludes commented-out declarations'
   );
 
   t.end();
@@ -398,6 +697,60 @@ test('assembleWGSLShader#allocates group 0 auto bindings in dependency order', t
   t.end();
 });
 
+test('assembleWGSLShader#application group 0 auto bindings reserve low slots before modules', t => {
+  const shaderAssembler = new ShaderAssembler();
+  const assembledShader = shaderAssembler.assembleWGSLShader({
+    platformInfo: PLATFORM_INFO,
+    source: APP_GROUP_0_AUTO_WITH_MODULE_WGSL,
+    modules: [pbrProjection, skin]
+  });
+
+  t.equal(
+    assembledShader.bindingTable.find(row => row.name === 'appAuto')?.binding,
+    0,
+    'application binding uses location 0'
+  );
+  t.equal(
+    assembledShader.bindingTable.find(row => row.name === 'pbrProjection')?.binding,
+    100,
+    'module binding still starts at reserved group 0 module range'
+  );
+  t.equal(
+    assembledShader.bindingTable.find(row => row.name === 'skin')?.binding,
+    101,
+    'subsequent module binding remains in reserved group 0 module range'
+  );
+
+  t.end();
+});
+
+test('assembleWGSLShader#application auto bindings allocate before modules in non-zero groups', t => {
+  const shaderAssembler = new ShaderAssembler();
+  const assembledShader = shaderAssembler.assembleWGSLShader({
+    platformInfo: PLATFORM_INFO,
+    source: APP_GROUP_2_AUTO_WITH_MODULE_WGSL,
+    modules: [GROUP_2_AUTO_MODULE]
+  });
+
+  t.equal(
+    assembledShader.bindingTable.find(row => row.name === 'appGroup2')?.binding,
+    0,
+    'application binding takes the first slot in group 2'
+  );
+  t.equal(
+    assembledShader.bindingTable.find(row => row.name === 'group2First')?.binding,
+    1,
+    'module binding allocates around application-owned slot'
+  );
+  t.equal(
+    assembledShader.bindingTable.find(row => row.name === 'group2Second')?.binding,
+    2,
+    'later module binding stays contiguous after application-owned slot'
+  );
+
+  t.end();
+});
+
 test('assembleWGSLShader#keeps module auto allocations stable within one assembler', t => {
   const shaderAssembler = new ShaderAssembler();
 
@@ -493,29 +846,35 @@ test('assembleWGSLShader#rejects duplicate explicit module bindings', t => {
   t.end();
 });
 
-test('assembleWGSLShader#rejects unresolved auto bindings in app WGSL', t => {
+test('assembleWGSLShader#rejects unsupported application auto binding declaration forms', t => {
   const shaderAssembler = new ShaderAssembler();
 
   t.throws(
     () =>
       shaderAssembler.assembleWGSLShader({
         platformInfo: PLATFORM_INFO,
-        source: /* wgsl */ `\
-struct AppAutoUniforms {
-  value: f32
-};
-
-@group(0) @binding(auto) var<uniform> appAuto: AppAutoUniforms;
-
-@vertex
-fn vertexMain() -> @builtin(position) vec4<f32> {
-  return vec4<f32>(0.0, 0.0, 0.0, 1.0);
-}
-`,
+        source: UNSUPPORTED_APP_AUTO_WGSL,
         modules: []
       }),
-    /Unresolved @binding\(auto\) remained in assembled WGSL source/,
-    'application WGSL cannot use @binding(auto) in v1'
+    /Unsupported @binding\(auto\) declaration form in application WGSL/,
+    'application WGSL unsupported form error is specific'
+  );
+
+  t.end();
+});
+
+test('assembleWGSLShader#rejects unresolved auto bindings with module and binding names', t => {
+  const shaderAssembler = new ShaderAssembler();
+
+  t.throws(
+    () =>
+      shaderAssembler.assembleWGSLShader({
+        platformInfo: PLATFORM_INFO,
+        source: APP_WGSL,
+        modules: [UNSUPPORTED_MODULE_AUTO_BINDING]
+      }),
+    /Unresolved @binding\(auto\) for module "unsupportedModuleAutoBinding" binding "unsupportedModuleBinding" remained in assembled WGSL source/,
+    'module-side unresolved auto binding error identifies the owning module and binding'
   );
 
   t.end();

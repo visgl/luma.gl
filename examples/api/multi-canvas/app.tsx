@@ -514,7 +514,7 @@ struct AppUniforms {
   speed: f32,
 };
 
-@group(0) @binding(0) var<uniform> app : AppUniforms;
+@group(0) @binding(auto) var<uniform> app : AppUniforms;
 
 struct VertexInput {
   @location(0) position: vec2<f32>,

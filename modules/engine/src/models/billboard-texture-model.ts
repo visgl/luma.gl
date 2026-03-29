@@ -15,12 +15,12 @@ const backgroundModule = {
 } as const satisfies ShaderModule<{}, {scale: [number, number]}>;
 
 const BACKGROUND_FS_WGSL = /* wgsl */ `\
-@group(0) @binding(0) var backgroundTexture: texture_2d<f32>;
-@group(0) @binding(1) var backgroundTextureSampler: sampler;
+@group(0) @binding(auto) var backgroundTexture: texture_2d<f32>;
+@group(0) @binding(auto) var backgroundTextureSampler: sampler;
 struct backgroundUniforms {
   scale: vec2<f32>,
 };
-@group(0) @binding(2) var<uniform> background: backgroundUniforms;
+@group(0) @binding(auto) var<uniform> background: backgroundUniforms;
 
 fn billboardTexture_getTextureUV(uv: vec2<f32>) -> vec2<f32> {
         let scale: vec2<f32> = background.scale;
