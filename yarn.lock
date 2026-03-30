@@ -14858,9 +14858,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"luma.gl-examples-fp64@workspace:examples/api/fp64":
+"luma.gl-examples-fp64@workspace:examples/website/experimental/fp64":
   version: 0.0.0-use.local
-  resolution: "luma.gl-examples-fp64@workspace:examples/api/fp64"
+  resolution: "luma.gl-examples-fp64@workspace:examples/website/experimental/fp64"
   dependencies:
     "@luma.gl/core": "npm:9.3.0-alpha.11"
     "@luma.gl/engine": "npm:9.3.0-alpha.11"
@@ -15166,9 +15166,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"luma.gl-examples-water-globe@workspace:examples/showcase/water-globe":
+"luma.gl-examples-water-globe@workspace:examples/website/experimental/water":
   version: 0.0.0-use.local
-  resolution: "luma.gl-examples-water-globe@workspace:examples/showcase/water-globe"
+  resolution: "luma.gl-examples-water-globe@workspace:examples/website/experimental/water"
   dependencies:
     "@luma.gl/constants": "npm:9.3.0-alpha.11"
     "@luma.gl/core": "npm:9.3.0-alpha.11"
