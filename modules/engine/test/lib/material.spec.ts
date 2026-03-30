@@ -5,9 +5,9 @@
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import type {ShaderModule} from '@luma.gl/shadertools';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
-import {waterMaterial} from '../../../shadertools/src';
-import type {Buffer} from '../../../core/src';
-import {MaterialFactory} from '../../src';
+import {waterMaterial} from '../../../shadertools/src/modules/lighting/water-material/water-material';
+import {Buffer} from '../../../core/src';
+import {DynamicBuffer, MaterialFactory} from '../../src';
 
 const defaultUniformMaterial: ShaderModule<{value: number}> = {
   name: 'defaultUniformMaterial',
@@ -19,6 +19,13 @@ const defaultUniformMaterial: ShaderModule<{value: number}> = {
     value: 2.5
   },
   getUniforms: props => props || {},
+  dependencies: []
+};
+
+const dynamicBufferMaterial: ShaderModule<Record<string, never>> = {
+  name: 'dynamicBufferMaterial',
+  bindingLayout: [{name: 'materialBuffer', group: 3}],
+  getUniforms: () => ({}),
   dependencies: []
 };
 
@@ -96,5 +103,39 @@ test('Material preserves prior waterMaterial uniforms across partial updates', a
   t.equal(uniforms.mappingMode, 1, 'mapping prop resolves to world-space mode');
 
   material.destroy();
+  t.end();
+});
+
+test('Material invalidates bind-group cache keys when DynamicBuffer generation changes', async t => {
+  const webglDevice = await getWebGLTestDevice();
+  const materialFactory = new MaterialFactory<{}, {materialBuffer: DynamicBuffer}>(webglDevice, {
+    modules: [dynamicBufferMaterial]
+  });
+  const dynamicBuffer = new DynamicBuffer(webglDevice, {
+    byteLength: 16,
+    usage: Buffer.UNIFORM | Buffer.COPY_DST | Buffer.COPY_SRC
+  });
+  const material = materialFactory.createMaterial({
+    bindings: {
+      materialBuffer: dynamicBuffer
+    }
+  });
+
+  material.getBindings();
+  const initialCacheKey = material.getBindGroupCacheKey(3);
+
+  dynamicBuffer.resize({byteLength: 32});
+  material.getBindings();
+  const resizedCacheKey = material.getBindGroupCacheKey(3);
+
+  t.ok(initialCacheKey !== resizedCacheKey, 'resizing DynamicBuffer invalidates cache token');
+  t.equal(
+    material.getBindings().materialBuffer,
+    dynamicBuffer.buffer,
+    'resolved bindings use the current DynamicBuffer backing buffer'
+  );
+
+  material.destroy();
+  dynamicBuffer.destroy();
   t.end();
 });

@@ -79,7 +79,7 @@ export {ShaderInputs} from './shader-inputs';
 
 // Application Utilities
 export {makeRandomGenerator} from './application-utils/random';
-export {setPathPrefix, loadImage, loadImageBitmap} from './application-utils/load-file';
+export {setPathPrefix, loadImage, loadImageBitmap, _resolveLoadFileUrl} from './application-utils/load-file';
 
 // EXPERIMENTAL
 export type {ShaderPassRendererProps} from './passes/shader-pass-renderer';
@@ -105,6 +105,8 @@ export type {
 
 export type {DynamicTextureProps} from './dynamic-texture/dynamic-texture';
 export {DynamicTexture} from './dynamic-texture/dynamic-texture';
+export type {DynamicBufferProps, DynamicBufferRange} from './dynamic-buffer/dynamic-buffer';
+export {DynamicBuffer} from './dynamic-buffer/dynamic-buffer';
 
 export type {
   PickInfo,

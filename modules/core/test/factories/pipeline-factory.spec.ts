@@ -367,6 +367,49 @@ test('PipelineFactory#caching with WebGPU attachment formats', async t => {
   t.end();
 });
 
+test('PipelineFactory#caching with explicit WebGPU depth attachments when depth writes are disabled', async t => {
+  const webgpuDevice = await getWebGPUTestDevice();
+  if (!webgpuDevice) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+  if (!webgpuDevice.props._cachePipelines) {
+    t.comment('Pipeline caching not enabled');
+    t.end();
+    return;
+  }
+
+  const pipelineFactory = new PipelineFactory(webgpuDevice);
+  const shader = webgpuDevice.createShader({source: webgpuRenderSource});
+
+  const colorOnlyPipeline = pipelineFactory.createRenderPipeline({
+    vs: shader,
+    fs: shader,
+    topology: 'triangle-list',
+    colorAttachmentFormats: ['bgra8unorm']
+  });
+  const depthAttachedPipeline = pipelineFactory.createRenderPipeline({
+    vs: shader,
+    fs: shader,
+    topology: 'triangle-list',
+    colorAttachmentFormats: ['bgra8unorm'],
+    depthStencilAttachmentFormat: 'depth24plus'
+  });
+
+  t.notEqual(
+    colorOnlyPipeline,
+    depthAttachedPipeline,
+    'Does not cache WebGPU pipelines across explicit depth attachment changes when depth writes are disabled'
+  );
+
+  pipelineFactory.release(colorOnlyPipeline);
+  pipelineFactory.release(depthAttachedPipeline);
+  shader.destroy();
+
+  t.end();
+});
+
 test('PipelineFactory#caching with shaderLayout on webgl', async t => {
   const webglDevice = await getWebGLTestDevice();
   if (!webglDevice.props._cachePipelines) {

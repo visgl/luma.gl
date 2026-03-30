@@ -233,9 +233,11 @@ export class WebGPURenderPipeline extends RenderPipeline {
     // Set depth format if required, defaulting to the preferred depth format
     const depthFormat = this.props.depthStencilAttachmentFormat || this.device.preferredDepthFormat;
 
-    if (this.props.parameters.depthWriteEnabled) {
+    if (this.props.depthStencilAttachmentFormat || this.props.parameters.depthWriteEnabled) {
       descriptor.depthStencil = {
-        format: getWebGPUTextureFormat(depthFormat)
+        format: getWebGPUTextureFormat(depthFormat),
+        depthWriteEnabled: false,
+        depthCompare: 'less-equal'
       };
     }
 

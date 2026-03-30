@@ -56,7 +56,11 @@ test('gltf#GLTFAnimator updates node animation channels', t => {
     [1, 2, 3],
     'node translation is updated at the sampled time'
   );
-  t.equal(animator.animations, animator.getAnimations(), 'compatibility animations alias is preserved');
+  t.equal(
+    animator.animations,
+    animator.getAnimations(),
+    'compatibility animations alias is preserved'
+  );
 
   t.end();
 });
