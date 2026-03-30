@@ -182,4 +182,6 @@ async function initializeDeviceType(): Promise<void> {
   await useStore.getState().setDeviceType(initialDeviceType);
 }
 
-initializeDeviceType();
+if (typeof window !== 'undefined') {
+  void initializeDeviceType();
+}

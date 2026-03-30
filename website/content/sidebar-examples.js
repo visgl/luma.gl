@@ -8,12 +8,7 @@ const sidebars = {
     {
       type: 'category',
       label: 'Showcase',
-      items: [
-        'showcase/gltf',
-        'showcase/instancing',
-        'showcase/water-globe',
-        'showcase/postprocessing'
-      ]
+      items: ['showcase/gltf', 'showcase/instancing', 'showcase/postprocessing']
     },
     {
       type: 'category',

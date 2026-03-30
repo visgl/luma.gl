@@ -6,7 +6,9 @@ import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {_resolveLoadFileUrl, setPathPrefix} from '@luma.gl/engine';
 
 test('load-file resolves only bare relative asset URLs against the configured prefix', t => {
-  setPathPrefix('https://raw.githubusercontent.com/visgl/luma.gl/master/examples/showcase/water-globe/');
+  setPathPrefix(
+    'https://raw.githubusercontent.com/visgl/luma.gl/master/examples/showcase/water-globe/'
+  );
 
   t.equal(
     _resolveLoadFileUrl('earth.jpg'),

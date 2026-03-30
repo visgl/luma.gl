@@ -6,7 +6,7 @@ import type {Device} from '@luma.gl/core';
 import {
   AnimationLoopTemplate,
   type AnimationProps,
-  ClipSpace,
+  CubeGeometry,
   DynamicTexture,
   loadImageBitmap,
   type Material,
@@ -25,6 +25,13 @@ import {
 import {Matrix4, radians} from '@math.gl/core';
 import earthTextureUrl from './earth.jpg';
 import earthWaterMaskUrl from './earth-specular.gif';
+// NASA Tycho Star Map converted to local cube-map faces for offline example loading.
+import tychoNegxUrl from './tycho-negx.jpg';
+import tychoNegyUrl from './tycho-negy.jpg';
+import tychoNegzUrl from './tycho-negz.jpg';
+import tychoPosxUrl from './tycho-posx.jpg';
+import tychoPosyUrl from './tycho-posy.jpg';
+import tychoPoszUrl from './tycho-posz.jpg';
 
 const INFO_HTML = `\
 <style>
@@ -50,7 +57,7 @@ const INFO_HTML = `\
 
   #water-globe-controls .toggle-row {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
     gap: 12px 16px;
   }
 
@@ -105,9 +112,10 @@ const INFO_HTML = `\
   }
 </style>
 <div id="water-globe-controls">
-  <p>Revives the classic Earth specular demo as a modern luma.gl v9 showcase with animated oceans.</p>
+  <p>Revives the classic Earth specular demo as a modern luma.gl v9 showcase with animated oceans and a NASA Tycho star background.</p>
   <div class="grid">
     <div class="toggle-row">
+      <label class="toggle"><span>Star Background</span><input id="star-background-enabled" type="checkbox" checked /></label>
       <label class="toggle"><span>Water Overlay</span><input id="water-enabled" type="checkbox" checked /></label>
       <label class="toggle"><span>Land Texture</span><input id="land-texture-enabled" type="checkbox" checked /></label>
     </div>
@@ -124,34 +132,82 @@ const INFO_HTML = `\
 </div>
 `;
 
-const BACKGROUND_SHADER_WGSL = /* wgsl */ `\
+const SKYBOX_SHADER_WGSL = /* wgsl */ `\
+struct SkyboxSceneUniforms {
+  modelMatrix: mat4x4<f32>,
+  viewMatrix: mat4x4<f32>,
+  projectionMatrix: mat4x4<f32>,
+};
+
+@group(0) @binding(auto) var<uniform> skyboxScene : SkyboxSceneUniforms;
+@group(0) @binding(auto) var cubeTexture : texture_cube<f32>;
+@group(0) @binding(auto) var cubeTextureSampler : sampler;
+
+struct VertexInputs {
+  @location(0) positions : vec3<f32>,
+};
+
+struct FragmentInputs {
+  @builtin(position) position : vec4<f32>,
+  @location(0) direction : vec3<f32>,
+};
+
+@vertex
+fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
+  var outputs : FragmentInputs;
+  outputs.position =
+    skyboxScene.projectionMatrix *
+    skyboxScene.viewMatrix *
+    skyboxScene.modelMatrix *
+    vec4<f32>(inputs.positions, 1.0);
+  outputs.direction = inputs.positions;
+  return outputs;
+}
+
 @fragment
 fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
-  let topColor = vec3<f32>(0.10, 0.18, 0.30);
-  let bottomColor = vec3<f32>(0.02, 0.05, 0.09);
-  let verticalMix = smoothstep(1.0, 0.0, inputs.uv.y);
-  let gradientColor = mix(topColor, bottomColor, verticalMix);
-  let centeredPosition = inputs.uv - vec2<f32>(0.48, 0.28);
-  let bloom = 0.12 * exp(-7.5 * dot(centeredPosition, centeredPosition));
-  return vec4<f32>(gradientColor + vec3<f32>(bloom, bloom * 0.8, bloom * 0.35), 1.0);
+  let skyColor = textureSample(cubeTexture, cubeTextureSampler, normalize(inputs.direction)).rgb;
+  return vec4<f32>(skyColor * 1.35, 1.0);
 }
 `;
 
-const BACKGROUND_SHADER_GLSL = /* glsl */ `\
+const SKYBOX_SHADER_GLSL = /* glsl */ `\
 #version 300 es
 precision highp float;
 
-in vec2 uv;
+in vec3 positions;
+
+out vec3 vDirection;
+
+uniform skyboxSceneUniforms {
+  mat4 modelMatrix;
+  mat4 viewMatrix;
+  mat4 projectionMatrix;
+} skyboxScene;
+
+void main(void) {
+  gl_Position =
+    skyboxScene.projectionMatrix *
+    skyboxScene.viewMatrix *
+    skyboxScene.modelMatrix *
+    vec4(positions, 1.0);
+  vDirection = positions;
+}
+`;
+
+const SKYBOX_FRAGMENT_GLSL = /* glsl */ `\
+#version 300 es
+precision highp float;
+
+in vec3 vDirection;
+
+uniform samplerCube cubeTexture;
+
 out vec4 fragColor;
 
 void main(void) {
-  vec3 topColor = vec3(0.10, 0.18, 0.30);
-  vec3 bottomColor = vec3(0.02, 0.05, 0.09);
-  float verticalMix = smoothstep(1.0, 0.0, uv.y);
-  vec3 gradientColor = mix(topColor, bottomColor, verticalMix);
-  vec2 centeredPosition = uv - vec2(0.48, 0.28);
-  float bloom = 0.12 * exp(-7.5 * dot(centeredPosition, centeredPosition));
-  fragColor = vec4(gradientColor + vec3(bloom, bloom * 0.8, bloom * 0.35), 1.0);
+  vec3 skyColor = texture(cubeTexture, normalize(vDirection)).rgb;
+  fragColor = vec4(skyColor * 1.35, 1.0);
 }
 `;
 
@@ -217,6 +273,7 @@ fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
     inputs.fragPosition,
     normalizedNormal
   );
+  var sunVisibility = 1.0;
   let viewDirection = normalize(globeScene.cameraPosition - inputs.fragPosition);
   let iceRim = pow(1.0 - max(dot(viewDirection, normalizedNormal), 0.0), 6.0);
   var iceHighlight = vec3<f32>(0.0, 0.0, 0.0);
@@ -224,6 +281,7 @@ fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
   if (lighting.directionalLightCount > 0) {
     let directionalLight = lighting_getDirectionalLight(0);
     let lightDirection = normalize(-directionalLight.direction);
+    sunVisibility = smoothstep(-0.22, 0.28, dot(normalizedNormal, lightDirection));
     let halfVector = normalize(lightDirection + viewDirection);
     let directionalSpecular = pow(max(dot(normalizedNormal, halfVector), 0.0), 96.0);
     iceHighlight += directionalLight.color * directionalSpecular * 1.6;
@@ -238,6 +296,7 @@ fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
   }
 
   litColor += vec3<f32>(0.9, 0.96, 1.0) * iceMask * (iceRim * 0.55) + iceHighlight * iceMask;
+  litColor *= mix(0.22, 1.0, sunVisibility);
   return vec4<f32>(min(litColor, vec3<f32>(1.0, 1.0, 1.0)), 1.0);
 }
 `;
@@ -287,7 +346,7 @@ fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
   let landMask = textureSample(waterMaskTexture, waterMaskTextureSampler, surfaceUV).r;
   let oceanMask = smoothstep(0.4, 0.6, 1.0 - landMask);
   let normalizedNormal = normalize(inputs.fragNormal);
-  let polarIceMask = oceanMask * smoothstep(0.8, 0.92, normalizedNormal.y);
+  let polarIceMask = oceanMask * smoothstep(0.8, 0.92, abs(normalizedNormal.y));
   let openWaterMask = max(oceanMask - polarIceMask, 0.0);
   let waterColor = water_getColor(
     globeScene.cameraPosition,
@@ -295,6 +354,7 @@ fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
     normalizedNormal,
     surfaceUV
   );
+  var sunVisibility = 1.0;
   let viewDirection = normalize(globeScene.cameraPosition - inputs.fragPosition);
   let iceRim = pow(1.0 - max(dot(viewDirection, normalizedNormal), 0.0), 5.0);
   var iceHighlight = vec3<f32>(0.0, 0.0, 0.0);
@@ -302,6 +362,7 @@ fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
   if (lighting.directionalLightCount > 0) {
     let directionalLight = lighting_getDirectionalLight(0);
     let lightDirection = normalize(-directionalLight.direction);
+    sunVisibility = smoothstep(-0.22, 0.28, dot(normalizedNormal, lightDirection));
     let halfVector = normalize(lightDirection + viewDirection);
     let iceSpecular = pow(max(dot(normalizedNormal, halfVector), 0.0), 88.0);
     iceHighlight += directionalLight.color * iceSpecular * 1.55;
@@ -316,7 +377,9 @@ fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
   }
 
   let iceColor = vec3<f32>(0.95, 0.98, 1.0) + vec3<f32>(0.85, 0.92, 1.0) * iceRim * 0.28 + iceHighlight;
-  let finalColor = waterColor.rgb * openWaterMask + min(iceColor, vec3<f32>(1.0, 1.0, 1.0)) * polarIceMask;
+  let finalColor =
+    (waterColor.rgb * openWaterMask + min(iceColor, vec3<f32>(1.0, 1.0, 1.0)) * polarIceMask) *
+    mix(0.18, 1.0, sunVisibility);
   let finalAlpha = waterColor.a * openWaterMask + 0.96 * polarIceMask;
   return vec4<f32>(finalColor, finalAlpha);
 }
@@ -387,6 +450,7 @@ void main(void) {
   float iceMask = textureMix * landMask * max(brightIceMask, southPolarMask);
   baseColor = mix(baseColor, vec3(0.95, 0.97, 1.0), iceMask);
   vec3 litColor = lighting_getLightColor(baseColor, globeScene.cameraPosition, vPosition, normalizedNormal);
+  float sunVisibility = 1.0;
   vec3 viewDirection = normalize(globeScene.cameraPosition - vPosition);
   float iceRim = pow(1.0 - max(dot(viewDirection, normalizedNormal), 0.0), 6.0);
   vec3 iceHighlight = vec3(0.0);
@@ -394,6 +458,7 @@ void main(void) {
   if (lighting.directionalLightCount > 0) {
     DirectionalLight directionalLight = lighting_getDirectionalLight(0);
     vec3 lightDirection = normalize(-directionalLight.direction);
+    sunVisibility = smoothstep(-0.22, 0.28, dot(normalizedNormal, lightDirection));
     vec3 halfVector = normalize(lightDirection + viewDirection);
     float directionalSpecular = pow(max(dot(normalizedNormal, halfVector), 0.0), 96.0);
     iceHighlight += directionalLight.color * directionalSpecular * 1.6;
@@ -408,6 +473,7 @@ void main(void) {
   }
 
   litColor += vec3(0.9, 0.96, 1.0) * iceMask * (iceRim * 0.55) + iceHighlight * iceMask;
+  litColor *= mix(0.22, 1.0, sunVisibility);
   fragColor = vec4(min(litColor, vec3(1.0)), 1.0);
 }
 `;
@@ -437,9 +503,10 @@ void main(void) {
   float landMask = texture(waterMaskTexture, surfaceUV).r;
   float oceanMask = smoothstep(0.4, 0.6, 1.0 - landMask);
   vec3 normalizedNormal = normalize(vNormal);
-  float polarIceMask = oceanMask * smoothstep(0.8, 0.92, normalizedNormal.y);
+  float polarIceMask = oceanMask * smoothstep(0.8, 0.92, abs(normalizedNormal.y));
   float openWaterMask = max(oceanMask - polarIceMask, 0.0);
   vec4 waterColor = water_getColor(globeScene.cameraPosition, vPosition, normalizedNormal, surfaceUV);
+  float sunVisibility = 1.0;
   vec3 viewDirection = normalize(globeScene.cameraPosition - vPosition);
   float iceRim = pow(1.0 - max(dot(viewDirection, normalizedNormal), 0.0), 5.0);
   vec3 iceHighlight = vec3(0.0);
@@ -447,6 +514,7 @@ void main(void) {
   if (lighting.directionalLightCount > 0) {
     DirectionalLight directionalLight = lighting_getDirectionalLight(0);
     vec3 lightDirection = normalize(-directionalLight.direction);
+    sunVisibility = smoothstep(-0.22, 0.28, dot(normalizedNormal, lightDirection));
     vec3 halfVector = normalize(lightDirection + viewDirection);
     float iceSpecular = pow(max(dot(normalizedNormal, halfVector), 0.0), 88.0);
     iceHighlight += directionalLight.color * iceSpecular * 1.55;
@@ -467,6 +535,7 @@ void main(void) {
   vec3 finalColor =
     waterColor.rgb * openWaterMask +
     min(iceColor, vec3(1.0)) * polarIceMask;
+  finalColor *= mix(0.18, 1.0, sunVisibility);
   float finalAlpha = waterColor.a * openWaterMask + 0.96 * polarIceMask;
   fragColor = vec4(finalColor, finalAlpha);
 }
@@ -483,6 +552,15 @@ const globeScene: ShaderModule<GlobeSceneUniforms, GlobeSceneUniforms> = {
   }
 };
 
+const skyboxScene: ShaderModule<SkyboxSceneUniforms, SkyboxSceneUniforms> = {
+  name: 'skyboxScene',
+  uniformTypes: {
+    modelMatrix: 'mat4x4<f32>',
+    viewMatrix: 'mat4x4<f32>',
+    projectionMatrix: 'mat4x4<f32>'
+  }
+};
+
 type GlobeSceneUniforms = {
   viewProjectionMatrix: Matrix4;
   modelMatrix: Matrix4;
@@ -491,7 +569,14 @@ type GlobeSceneUniforms = {
   showLandTexture: number;
 };
 
+type SkyboxSceneUniforms = {
+  modelMatrix: Matrix4;
+  viewMatrix: Matrix4;
+  projectionMatrix: Matrix4;
+};
+
 type GlobeControls = {
+  starBackgroundEnabled: boolean;
   waterEnabled: boolean;
   landTextureEnabled: boolean;
   waveSpeed: number;
@@ -507,8 +592,12 @@ type GlobeShaderInputs = {
   globeScene: typeof globeScene.props;
   lighting: typeof lighting.props;
 };
+type SkyboxShaderInputs = {
+  skyboxScene: typeof skyboxScene.props;
+};
 
 const DEFAULT_CONTROLS: GlobeControls = {
+  starBackgroundEnabled: true,
   waterEnabled: true,
   landTextureEnabled: true,
   waveSpeed: 1.25,
@@ -524,18 +613,22 @@ const BASE_WAVE_B_SPEED = -1.4;
 const MAX_CAMERA_TILT = 1.15;
 const MIN_CAMERA_DISTANCE = 1.05;
 const MAX_CAMERA_DISTANCE = 9;
+const EARTH_AXIAL_TILT = radians(23.44);
+const EARTH_CELESTIAL_OFFSET = radians(-90);
 const EARTH_ROTATION_RATE = 0.00008;
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = INFO_HTML;
 
-  backgroundModel: ClipSpace;
+  backgroundModel: Model;
   landModel: Model;
   oceanModel: Model;
   landMaterial: Material<{phongMaterial: typeof phongMaterial.props}, {}>;
   oceanMaterial: Material<{waterMaterial: typeof waterMaterial.props}, {}>;
+  backgroundShaderInputs: ShaderInputs<SkyboxShaderInputs>;
   landShaderInputs: ShaderInputs<GlobeShaderInputs>;
   oceanShaderInputs: ShaderInputs<GlobeShaderInputs>;
+  skyTexture: DynamicTexture;
   landTexture: DynamicTexture;
   waterMaskTexture: DynamicTexture;
   device: Device;
@@ -595,13 +688,21 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       canvas.removeEventListener('wheel', wheelHandler as EventListener)
     );
 
-    this.backgroundModel = new ClipSpace(device, {
-      id: 'water-globe-background',
-      source: BACKGROUND_SHADER_WGSL,
-      fs: BACKGROUND_SHADER_GLSL,
-      parameters: {
-        depthWriteEnabled: false,
-        depthCompare: 'always'
+    this.skyTexture = new DynamicTexture(device, {
+      dimension: 'cube',
+      mipmaps: true,
+      data: (async () => ({
+        '+X': await loadImageBitmap(tychoPosxUrl),
+        '-X': await loadImageBitmap(tychoNegxUrl),
+        '+Y': await loadImageBitmap(tychoPosyUrl),
+        '-Y': await loadImageBitmap(tychoNegyUrl),
+        '+Z': await loadImageBitmap(tychoPoszUrl),
+        '-Z': await loadImageBitmap(tychoNegzUrl)
+      }))(),
+      sampler: {
+        magFilter: 'linear',
+        minFilter: 'linear',
+        mipmapFilter: 'nearest'
       }
     });
 
@@ -636,18 +737,19 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.oceanMaterial = oceanMaterialFactory.createMaterial();
     this.oceanMaterial.setProps({
       waterMaterial: {
-        mapping: 'world',
+        mapping: 'uv',
         baseColor: [10, 70, 128],
         fresnelColor: [214, 238, 248],
         opacity: 0.84,
-        coordinateScale: [7.5, 7.5],
+        coordinateScale: [2.4, 6.8],
+        coordinateOffset: [0, 0.12],
         normalStrength: this.controls.normalStrength,
         fresnelPower: this.controls.fresnelPower,
         specularIntensity: this.controls.specularIntensity,
-        waveADirection: [1, 0.18],
+        waveADirection: [0.04, 1],
         waveAFrequency: 4.4,
         waveAAmplitude: 0.028,
-        waveBDirection: [-0.45, 1],
+        waveBDirection: [-0.12, 1],
         waveBFrequency: 14.5,
         waveBAmplitude: 0.014
       }
@@ -660,6 +762,27 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.oceanShaderInputs = new ShaderInputs<GlobeShaderInputs>({
       globeScene,
       lighting
+    });
+    this.backgroundShaderInputs = new ShaderInputs<SkyboxShaderInputs>({
+      skyboxScene
+    });
+
+    this.backgroundModel = new Model(device, {
+      id: 'water-globe-background',
+      source: SKYBOX_SHADER_WGSL,
+      vs: SKYBOX_SHADER_GLSL,
+      fs: SKYBOX_FRAGMENT_GLSL,
+      modules: [skyboxScene],
+      shaderInputs: this.backgroundShaderInputs,
+      geometry: new CubeGeometry({indices: true}),
+      bindings: {
+        cubeTexture: this.skyTexture
+      },
+      parameters: {
+        depthWriteEnabled: false,
+        depthCompare: 'less-equal',
+        cullMode: 'front'
+      }
     });
 
     this.landModel = new Model(device, {
@@ -717,6 +840,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.backgroundModel.destroy();
     this.landModel.destroy();
     this.oceanModel.destroy();
+    this.skyTexture.destroy();
     this.landMaterial.destroy();
     this.oceanMaterial.destroy();
     this.landTexture.destroy();
@@ -729,13 +853,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   override onRender({aspect, device, time}: AnimationProps): void {
-    const renderPass = device.beginRenderPass({
-      clearColor: this.getClearColor(),
-      clearDepth: 1
-    });
-
-    this.backgroundModel.draw(renderPass);
-
     const projectionMatrix = new Matrix4().perspective({
       fovy: Math.PI / 3.6,
       aspect,
@@ -744,8 +861,31 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
     const cameraPosition = this.getCameraPosition();
     const viewMatrix = new Matrix4().lookAt({eye: cameraPosition, center: [0, 0, 0]});
+    const skyboxViewMatrix = new Matrix4(viewMatrix);
+    skyboxViewMatrix[12] = 0;
+    skyboxViewMatrix[13] = 0;
+    skyboxViewMatrix[14] = 0;
+
+    const renderPass = device.beginRenderPass({
+      clearColor: this.getClearColor(),
+      clearDepth: 1
+    });
+
+    if (this.controls.starBackgroundEnabled) {
+      this.backgroundShaderInputs.setProps({
+        skyboxScene: {
+          modelMatrix: new Matrix4().scale([40, 40, 40]),
+          viewMatrix: skyboxViewMatrix,
+          projectionMatrix
+        }
+      });
+      this.backgroundModel.draw(renderPass);
+    }
+
     const viewProjectionMatrix = new Matrix4(projectionMatrix).multiplyRight(viewMatrix);
-    const globeRotation = new Matrix4().rotateY(time * EARTH_ROTATION_RATE);
+    const globeRotation = new Matrix4()
+      .rotateZ(EARTH_AXIAL_TILT)
+      .rotateY(EARTH_CELESTIAL_OFFSET + time * EARTH_ROTATION_RATE);
     const normalMatrix = new Matrix4(globeRotation).invert().transpose();
     const lightingProps = this.getLightingProps();
 
@@ -795,6 +935,14 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   private initializeControls(): void {
+    bindCheckboxControl(
+      'star-background-enabled',
+      this.controls.starBackgroundEnabled,
+      value => {
+        this.controls.starBackgroundEnabled = value;
+      },
+      this.cleanupCallbacks
+    );
     bindCheckboxControl(
       'water-enabled',
       this.controls.waterEnabled,

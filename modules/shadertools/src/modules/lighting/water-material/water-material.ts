@@ -33,6 +33,27 @@ export type WaterMaterialProps = Omit<WaterMaterialUniforms, 'mappingMode'> & {
   mapping?: 'uv' | 'world';
 };
 
+const DEFAULT_WATER_MATERIAL_UNIFORMS: Required<WaterMaterialUniforms> = {
+  time: 0,
+  baseColor: [0.04, 0.18, 0.31],
+  opacity: 0.82,
+  fresnelColor: [0.86, 0.95, 1],
+  fresnelPower: 5,
+  specularIntensity: 1.4,
+  normalStrength: 0.35,
+  mappingMode: 0,
+  coordinateScale: [1, 1],
+  coordinateOffset: [0, 0],
+  waveADirection: [0.9805806756909201, 0.19611613513818402],
+  waveASpeed: 0.6,
+  waveAFrequency: 4,
+  waveAAmplitude: 0.08,
+  waveBDirection: [0.09950371902099893, 0.9950371902099893],
+  waveBSpeed: -0.45,
+  waveBFrequency: 7,
+  waveBAmplitude: 0.04
+};
+
 /** Animated water material with procedural waves and Fresnel/specular shading. */
 export const waterMaterial: ShaderModule<WaterMaterialProps, WaterMaterialUniforms> = {
   name: 'waterMaterial',
@@ -65,29 +86,10 @@ export const waterMaterial: ShaderModule<WaterMaterialProps, WaterMaterialUnifor
     waveBFrequency: 'f32',
     waveBAmplitude: 'f32'
   },
-  defaultUniforms: {
-    time: 0,
-    baseColor: [0.04, 0.18, 0.31],
-    opacity: 0.82,
-    fresnelColor: [0.86, 0.95, 1],
-    fresnelPower: 5,
-    specularIntensity: 1.4,
-    normalStrength: 0.35,
-    mappingMode: 0,
-    coordinateScale: [1, 1],
-    coordinateOffset: [0, 0],
-    waveADirection: [0.9805806756909201, 0.19611613513818402],
-    waveASpeed: 0.6,
-    waveAFrequency: 4,
-    waveAAmplitude: 0.08,
-    waveBDirection: [0.09950371902099893, 0.9950371902099893],
-    waveBSpeed: -0.45,
-    waveBFrequency: 7,
-    waveBAmplitude: 0.04
-  } as Required<WaterMaterialUniforms>,
+  defaultUniforms: DEFAULT_WATER_MATERIAL_UNIFORMS,
   getUniforms(
     props?: WaterMaterialProps,
-    previousUniforms: Partial<WaterMaterialUniforms> = waterMaterial.defaultUniforms
+    previousUniforms: Partial<WaterMaterialUniforms> = DEFAULT_WATER_MATERIAL_UNIFORMS
   ) {
     const {mapping, ...uniformProps} = props || {};
     const uniforms = mergeWaterMaterialUniforms(previousUniforms);
@@ -163,37 +165,42 @@ function mergeWaterMaterialUniforms(
   previousUniforms: Partial<WaterMaterialUniforms>
 ): Required<WaterMaterialUniforms> {
   return {
-    time: previousUniforms.time ?? waterMaterial.defaultUniforms.time,
+    time: previousUniforms.time ?? DEFAULT_WATER_MATERIAL_UNIFORMS.time,
     baseColor: previousUniforms.baseColor
       ? normalizeColor3(previousUniforms.baseColor)
-      : waterMaterial.defaultUniforms.baseColor,
-    opacity: previousUniforms.opacity ?? waterMaterial.defaultUniforms.opacity,
+      : DEFAULT_WATER_MATERIAL_UNIFORMS.baseColor,
+    opacity: previousUniforms.opacity ?? DEFAULT_WATER_MATERIAL_UNIFORMS.opacity,
     fresnelColor: previousUniforms.fresnelColor
       ? normalizeColor3(previousUniforms.fresnelColor)
-      : waterMaterial.defaultUniforms.fresnelColor,
-    fresnelPower: previousUniforms.fresnelPower ?? waterMaterial.defaultUniforms.fresnelPower,
+      : DEFAULT_WATER_MATERIAL_UNIFORMS.fresnelColor,
+    fresnelPower: previousUniforms.fresnelPower ?? DEFAULT_WATER_MATERIAL_UNIFORMS.fresnelPower,
     specularIntensity:
-      previousUniforms.specularIntensity ?? waterMaterial.defaultUniforms.specularIntensity,
-    normalStrength: previousUniforms.normalStrength ?? waterMaterial.defaultUniforms.normalStrength,
-    mappingMode: previousUniforms.mappingMode ?? waterMaterial.defaultUniforms.mappingMode,
+      previousUniforms.specularIntensity ?? DEFAULT_WATER_MATERIAL_UNIFORMS.specularIntensity,
+    normalStrength:
+      previousUniforms.normalStrength ?? DEFAULT_WATER_MATERIAL_UNIFORMS.normalStrength,
+    mappingMode: previousUniforms.mappingMode ?? DEFAULT_WATER_MATERIAL_UNIFORMS.mappingMode,
     coordinateScale: previousUniforms.coordinateScale
       ? [Number(previousUniforms.coordinateScale[0]), Number(previousUniforms.coordinateScale[1])]
-      : waterMaterial.defaultUniforms.coordinateScale,
+      : DEFAULT_WATER_MATERIAL_UNIFORMS.coordinateScale,
     coordinateOffset: previousUniforms.coordinateOffset
       ? [Number(previousUniforms.coordinateOffset[0]), Number(previousUniforms.coordinateOffset[1])]
-      : waterMaterial.defaultUniforms.coordinateOffset,
+      : DEFAULT_WATER_MATERIAL_UNIFORMS.coordinateOffset,
     waveADirection: previousUniforms.waveADirection
       ? normalizeDirection2(previousUniforms.waveADirection)
-      : waterMaterial.defaultUniforms.waveADirection,
-    waveASpeed: previousUniforms.waveASpeed ?? waterMaterial.defaultUniforms.waveASpeed,
-    waveAFrequency: previousUniforms.waveAFrequency ?? waterMaterial.defaultUniforms.waveAFrequency,
-    waveAAmplitude: previousUniforms.waveAAmplitude ?? waterMaterial.defaultUniforms.waveAAmplitude,
+      : DEFAULT_WATER_MATERIAL_UNIFORMS.waveADirection,
+    waveASpeed: previousUniforms.waveASpeed ?? DEFAULT_WATER_MATERIAL_UNIFORMS.waveASpeed,
+    waveAFrequency:
+      previousUniforms.waveAFrequency ?? DEFAULT_WATER_MATERIAL_UNIFORMS.waveAFrequency,
+    waveAAmplitude:
+      previousUniforms.waveAAmplitude ?? DEFAULT_WATER_MATERIAL_UNIFORMS.waveAAmplitude,
     waveBDirection: previousUniforms.waveBDirection
       ? normalizeDirection2(previousUniforms.waveBDirection)
-      : waterMaterial.defaultUniforms.waveBDirection,
-    waveBSpeed: previousUniforms.waveBSpeed ?? waterMaterial.defaultUniforms.waveBSpeed,
-    waveBFrequency: previousUniforms.waveBFrequency ?? waterMaterial.defaultUniforms.waveBFrequency,
-    waveBAmplitude: previousUniforms.waveBAmplitude ?? waterMaterial.defaultUniforms.waveBAmplitude
+      : DEFAULT_WATER_MATERIAL_UNIFORMS.waveBDirection,
+    waveBSpeed: previousUniforms.waveBSpeed ?? DEFAULT_WATER_MATERIAL_UNIFORMS.waveBSpeed,
+    waveBFrequency:
+      previousUniforms.waveBFrequency ?? DEFAULT_WATER_MATERIAL_UNIFORMS.waveBFrequency,
+    waveBAmplitude:
+      previousUniforms.waveBAmplitude ?? DEFAULT_WATER_MATERIAL_UNIFORMS.waveBAmplitude
   };
 }
 

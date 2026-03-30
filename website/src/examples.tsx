@@ -84,10 +84,10 @@ export const PostprocessingExample: React.FC = props => (
   />
 );
 
-export const WaterGlobeExample: React.FC = props => (
+export const WaterExample: React.FC = props => (
   <LumaExample
-    id="water-globe"
-    title="Water Globe"
+    id="water"
+    title="Water"
     directory="showcase"
     template={WaterGlobeApp}
     config={exampleConfig}

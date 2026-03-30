@@ -61,6 +61,14 @@ import {Material} from '../material/material';
 const LOG_DRAW_PRIORITY = 2;
 const LOG_DRAW_TIMEOUT = 10000;
 const PIPELINE_INITIALIZATION_FAILED = 'render pipeline initialization failed';
+const DEPTH_STENCIL_ATTACHMENT_FORMATS: TextureFormatDepthStencil[] = [
+  'stencil8',
+  'depth16unorm',
+  'depth24plus',
+  'depth24plus-stencil8',
+  'depth32float',
+  'depth32float-stencil8'
+];
 type ModelBinding = Binding | DynamicTexture | DynamicBuffer | DynamicBufferRange;
 type ModelBuffer = Buffer | DynamicBuffer;
 
@@ -1095,13 +1103,15 @@ export class Model {
         }
       ).framebuffer || renderPass.props.framebuffer;
 
-    const nextColorAttachmentFormats = framebuffer?.colorAttachments?.map(
-      colorAttachment => colorAttachment?.texture?.format || null
+    const nextColorAttachmentFormats = framebuffer?.colorAttachments?.map(colorAttachment =>
+      asColorAttachmentFormat(colorAttachment?.texture?.format)
     );
-    const nextDepthStencilAttachmentFormat = framebuffer?.depthStencilAttachment?.texture?.format;
+    const nextDepthStencilAttachmentFormat = asDepthStencilAttachmentFormat(
+      framebuffer?.depthStencilAttachment?.texture?.format
+    );
 
     if (
-      !deepEqual(this._colorAttachmentFormats, nextColorAttachmentFormats) ||
+      !deepEqual(this._colorAttachmentFormats, nextColorAttachmentFormats, 1) ||
       this._depthStencilAttachmentFormat !== nextDepthStencilAttachmentFormat
     ) {
       this._colorAttachmentFormats = nextColorAttachmentFormats;
@@ -1127,6 +1137,20 @@ function resolveModelBinding(binding: ModelBinding): Binding | null {
   }
 
   return binding;
+}
+
+function asColorAttachmentFormat(format?: string | null): TextureFormatColor | null {
+  return format && !isDepthStencilAttachmentFormat(format) ? (format as TextureFormatColor) : null;
+}
+
+function asDepthStencilAttachmentFormat(
+  format?: string | null
+): TextureFormatDepthStencil | undefined {
+  return format && isDepthStencilAttachmentFormat(format) ? format : undefined;
+}
+
+function isDepthStencilAttachmentFormat(format: string): format is TextureFormatDepthStencil {
+  return DEPTH_STENCIL_ATTACHMENT_FORMATS.includes(format as TextureFormatDepthStencil);
 }
 
 /** Create a shadertools platform info from the Device */
