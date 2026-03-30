@@ -10,6 +10,7 @@
     "items": [
       "showcase/instancing",
       "showcase/gltf",
+      "showcase/water-globe",
       "showcase/postprocessing",
       "showcase/persistence"
     ]

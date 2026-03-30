@@ -11,6 +11,7 @@ const sidebars = {
       items: [
         'showcase/gltf',
         'showcase/instancing',
+        'showcase/water-globe',
         'showcase/postprocessing'
       ]
     },

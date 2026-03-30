@@ -5,6 +5,8 @@
 // luma.gl Engine API
 
 // Animation
+export type {AnimationClipControllerProps} from './animation/animator';
+export {AnimationClipController, Animator} from './animation/animator';
 export {Timeline} from './animation/timeline';
 export {KeyFrames} from './animation/key-frames';
 export type {AnimationProps} from './animation-loop/animation-props';

@@ -56,6 +56,7 @@ const config = {
         peristence: '/examples/showcase/persistence',
         persistence: '/examples/showcase/persistence',
         postprocessing: '/examples/showcase/postprocessing',
+        'water-globe': '/examples/showcase/water-globe',
         'react-strict-mode': '/examples/integrations/react-strict-mode',
         'shader-hooks': '/examples/tutorials/shader-hooks',
         'shader-modules': '/examples/tutorials/shader-modules',

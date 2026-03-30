@@ -15166,6 +15166,22 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"luma.gl-examples-water-globe@workspace:examples/showcase/water-globe":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-water-globe@workspace:examples/showcase/water-globe"
+  dependencies:
+    "@luma.gl/constants": "npm:9.3.0-alpha.11"
+    "@luma.gl/core": "npm:9.3.0-alpha.11"
+    "@luma.gl/engine": "npm:9.3.0-alpha.11"
+    "@luma.gl/shadertools": "npm:9.3.0-alpha.11"
+    "@luma.gl/webgl": "npm:9.3.0-alpha.11"
+    "@luma.gl/webgpu": "npm:9.3.0-alpha.11"
+    "@math.gl/core": "npm:^4.1.0"
+    typescript: "npm:^5.9.3"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
 "luma.gl-examples-webgpu-hello-triangle@workspace:examples/tutorials/hello-triangle":
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-webgpu-hello-triangle@workspace:examples/tutorials/hello-triangle"
