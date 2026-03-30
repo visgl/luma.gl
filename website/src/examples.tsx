@@ -5,7 +5,7 @@ import {ExamplePage, LumaExample, ReactExample, useStore} from './react-luma';
 
 import AnimationApp from '../../examples/api/animation/app';
 import CubemapApp from '../../examples/api/cubemap/app';
-import FP64App from '../../examples/api/fp64/app';
+import FP64App from '../../examples/website/experimental/fp64/app';
 import MultiCanvasApp from '../../examples/api/multi-canvas/app';
 import Texture3DApp from '../../examples/api/texture-3d/app';
 import TextureTesterApp from '../../examples/api/texture-tester/app';
@@ -23,7 +23,7 @@ import GLTFApp from '../../examples/showcase/gltf/app';
 import InstancingApp from '../../examples/showcase/instancing/app';
 import PersistenceApp from '../../examples/showcase/persistence/app';
 import PostprocessingApp from '../../examples/showcase/postprocessing/app';
-import WaterGlobeApp from '../../examples/showcase/water-globe/app';
+import WaterGlobeApp from '../../examples/website/experimental/water/app';
 // import WanderingApp from '../../examples/showcase/wandering/app';
 
 import HelloTriangleGeometryApp from '../../examples/tutorials/hello-triangle-geometry/app';
@@ -88,7 +88,7 @@ export const WaterExample: React.FC = props => (
   <LumaExample
     id="water"
     title="Water"
-    directory="showcase"
+    directory="website/experimental"
     template={WaterGlobeApp}
     config={exampleConfig}
     {...props}

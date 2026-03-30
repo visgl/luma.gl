@@ -1,0 +1,20 @@
+---
+title: Water
+---
+
+import {ExampleHeader} from '@site/src/react-luma';
+import {WaterExample} from '@site/src/examples';
+
+<ExampleHeader id="water" directory="website/experimental">
+  <div>
+    This showcase revives the classic Earth specular demo with animated oceans and a local star
+    cube rendered behind the globe.
+  </div>
+  <div style={{marginTop: 12}}>
+    The background skybox is derived from NASA&apos;s{' '}
+    <a href="https://science.nasa.gov/3d-resources/tycho-star-map/">Tycho Star Map</a> and is
+    included here with attribution for offline example loading.
+  </div>
+</ExampleHeader>
+
+<WaterExample showHeader={false} />
