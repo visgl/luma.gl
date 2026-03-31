@@ -45,12 +45,13 @@ export function normalizeByteColor4(
   useByteColors: boolean = true
 ): NumberArray4 {
   const normalizedColor = normalizeByteColor3(color.slice(0, 3) as NumberArray3, useByteColors);
-  const alpha = Number.isFinite(color[3]) ? (color[3] as number) : 1;
+  const hasAlpha = Number.isFinite(color[3]);
+  const alpha = hasAlpha ? (color[3] as number) : 1;
 
   return [
     normalizedColor[0],
     normalizedColor[1],
     normalizedColor[2],
-    useByteColors ? alpha / 255 : alpha
+    useByteColors && hasAlpha ? alpha / 255 : alpha
   ] as NumberArray4;
 }
