@@ -807,7 +807,8 @@ or create a device with the 'debug: true' prop.`;
     _bindGroupLayout: unknown,
     _shaderLayout: ShaderLayout | ComputeShaderLayout,
     _bindings: Bindings,
-    _group: number
+    _group: number,
+    _label?: string
   ): unknown {
     throw new Error('_createBindGroupWebGPU() not implemented');
   }

@@ -18,6 +18,9 @@ programs.
 
 The complete source for this example is shown below:
 
+The WGSL uses `@binding(auto)`, so shader module bindings are matched by name
+instead of hard-coded binding numbers.
+
 ```typescript
 import {NumberArray3} from '@math.gl/types';
 import {Buffer} from '@luma.gl/core';
@@ -50,7 +53,7 @@ struct ColorUniforms {
   hsv: vec3<f32>,
 };
 
-@group(0) @binding(0) var<uniform> color: ColorUniforms;
+@group(0) @binding(auto) var<uniform> color: ColorUniforms;
 
 @fragment
 fn fragmentMain() -> @location(0) vec4<f32> {
@@ -74,7 +77,7 @@ struct ColorUniforms {
   hsv: vec3<f32>,
 };
 
-@group(0) @binding(0) var<uniform> color: ColorUniforms;
+@group(0) @binding(auto) var<uniform> color: ColorUniforms;
 
 @fragment
 fn fragmentMain() -> @location(0) vec4<f32> {

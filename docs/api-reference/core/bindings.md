@@ -11,6 +11,10 @@ binding points:
 In luma.gl, bindings are passed by **name** and matched against a
 [`ShaderLayout`](/docs/api-reference/core/shader-layout).
 
+For WGSL assembled through `Model` or shadertools, the recommended style is to
+use `@binding(auto)` in the shader and keep JavaScript code focused on binding
+names rather than numeric binding locations.
+
 ## Types
 
 ### `Binding`

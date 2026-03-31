@@ -36,8 +36,8 @@ export function getFragmentShaderForRenderPass(options: {
 /** Get a filtering WGSL fragment shader */
 function getFilterShaderWGSL(func: string) {
   return /* wgsl */ `\
-@group(0) @binding(0) var sourceTexture: texture_2d<f32>;
-@group(0) @binding(2) var sourceTextureSampler: sampler;
+@group(0) @binding(auto) var sourceTexture: texture_2d<f32>;
+@group(0) @binding(auto) var sourceTextureSampler: sampler;
 
 @fragment
 fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4f {
@@ -54,8 +54,8 @@ fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4f {
 /** Get a sampling WGSL fragment shader */
 function getSamplerShaderWGSL(func: string) {
   return /* wgsl */ `\
-@group(0) @binding(0) var sourceTexture: texture_2d<f32>;
-@group(0) @binding(2) var sourceTextureSampler: sampler;
+@group(0) @binding(auto) var sourceTexture: texture_2d<f32>;
+@group(0) @binding(auto) var sourceTextureSampler: sampler;
 
 @fragment
 fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4f {

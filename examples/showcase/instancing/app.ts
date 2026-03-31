@@ -37,7 +37,7 @@ struct AppUniforms {
   time: f32,
 };
 
-@group(0) @binding(0) var<uniform> app : AppUniforms;
+@group(0) @binding(auto) var<uniform> app : AppUniforms;
 
 struct VertexInputs {
   @builtin(instance_index) instanceIndex : u32,

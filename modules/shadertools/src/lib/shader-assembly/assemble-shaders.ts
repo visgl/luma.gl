@@ -18,16 +18,18 @@ import {ShaderHook, normalizeShaderHooks, getShaderHooks} from './shader-hooks';
 import {assert} from '../utils/assert';
 import {getShaderInfo} from '../glsl-utils/get-shader-info';
 import {getShaderBindingDebugRowsFromWGSL, type ShaderBindingDebugRow} from './wgsl-binding-debug';
+import {
+  MODULE_WGSL_BINDING_DECLARATION_REGEXES,
+  WGSL_BINDING_DECLARATION_REGEXES,
+  WGSL_EXPLICIT_BINDING_DECLARATION_REGEXES,
+  getFirstWGSLAutoBindingDeclarationMatch,
+  getWGSLBindingDeclarationMatches,
+  hasWGSLAutoBinding,
+  replaceWGSLBindingDeclarationMatches,
+  type WGSLBindingDeclarationMatch
+} from './wgsl-binding-scan';
 
 const INJECT_SHADER_DECLARATIONS = `\n\n${DECLARATION_INJECT_MARKER}\n`;
-const MODULE_WGSL_BINDING_DECLARATION_REGEXES = [
-  /@binding\(\s*(auto|\d+)\s*\)\s*@group\(\s*(\d+)\s*\)\s*(var(?:<[^>]+>)?\s+([A-Za-z_][A-Za-z0-9_]*))/g,
-  /@group\(\s*(\d+)\s*\)\s*@binding\(\s*(auto|\d+)\s*\)\s*(var(?:<[^>]+>)?\s+([A-Za-z_][A-Za-z0-9_]*))/g
-] as const;
-const WGSL_BINDING_DECLARATION_REGEXES = [
-  /@binding\(\s*(\d+)\s*\)\s*@group\(\s*(\d+)\s*\)\s*(var(?:<[^>]+>)?\s+([A-Za-z_][A-Za-z0-9_]*))/g,
-  /@group\(\s*(\d+)\s*\)\s*@binding\(\s*(\d+)\s*\)\s*(var(?:<[^>]+>)?\s+([A-Za-z_][A-Za-z0-9_]*))/g
-] as const;
 const RESERVED_APPLICATION_GROUP_0_BINDING_LIMIT = 100;
 
 /**
@@ -252,7 +254,10 @@ export function assembleShaderWGSL(
 
   // TODO - hack until shadertool modules support WebGPU
   const modulesToInject = modules;
-  const usedBindingsByGroup = getUsedBindingsByGroupFromApplicationWGSL(coreSource);
+  const applicationRelocation = relocateWGSLApplicationBindings(coreSource);
+  const usedBindingsByGroup = getUsedBindingsByGroupFromApplicationWGSL(
+    applicationRelocation.source
+  );
   const reservedBindingKeysByGroup = reserveRegisteredModuleBindings(
     modulesToInject,
     options._bindingRegistry,
@@ -302,7 +307,7 @@ export function assembleShaderWGSL(
   assembledSource += formatWGSLBindingAssignmentComments(bindingAssignments);
 
   // Add the version directive and actual source of this shader
-  assembledSource += coreSource;
+  assembledSource += applicationRelocation.source;
 
   // Apply any requested shader injections
   assembledSource = injectShader(assembledSource, stage, mainInjections);
@@ -575,13 +580,16 @@ type WGSLBindingAssignment = {
   location: number;
 };
 
+type WGSLApplicationRelocationState = {
+  sawSupportedBindingDeclaration: boolean;
+};
+
 type WGSLRelocationState = {
   sawSupportedBindingDeclaration: boolean;
   nextHintedBindingLocation: number | null;
 };
 
 type WGSLRelocationParams = {
-  isBindingFirst: boolean;
   module: ShaderModule;
   context: BindingRelocationContext;
   bindingAssignments: WGSLBindingAssignment[];
@@ -591,28 +599,68 @@ type WGSLRelocationParams = {
 function getUsedBindingsByGroupFromApplicationWGSL(source: string): Map<number, Set<number>> {
   const usedBindingsByGroup = new Map<number, Set<number>>();
 
-  for (const regex of WGSL_BINDING_DECLARATION_REGEXES) {
-    regex.lastIndex = 0;
-    let match: RegExpExecArray | null;
-    match = regex.exec(source);
-    while (match) {
-      const isBindingFirst = regex === WGSL_BINDING_DECLARATION_REGEXES[0];
-      const location = Number(match[isBindingFirst ? 1 : 2]);
-      const group = Number(match[isBindingFirst ? 2 : 1]);
-      const name = match[4];
+  for (const match of getWGSLBindingDeclarationMatches(
+    source,
+    WGSL_EXPLICIT_BINDING_DECLARATION_REGEXES
+  )) {
+    const location = Number(match.bindingToken);
+    const group = Number(match.groupToken);
 
-      validateApplicationWGSLBinding(group, location, name);
-      registerUsedBindingLocation(
-        usedBindingsByGroup,
-        group,
-        location,
-        `application binding "${name}"`
-      );
-      match = regex.exec(source);
-    }
+    validateApplicationWGSLBinding(group, location, match.name);
+    registerUsedBindingLocation(
+      usedBindingsByGroup,
+      group,
+      location,
+      `application binding "${match.name}"`
+    );
   }
 
   return usedBindingsByGroup;
+}
+
+function relocateWGSLApplicationBindings(source: string): {source: string} {
+  const declarationMatches = getWGSLBindingDeclarationMatches(
+    source,
+    WGSL_BINDING_DECLARATION_REGEXES
+  );
+  const usedBindingsByGroup = new Map<number, Set<number>>();
+
+  for (const declarationMatch of declarationMatches) {
+    if (declarationMatch.bindingToken === 'auto') {
+      continue;
+    }
+
+    const location = Number(declarationMatch.bindingToken);
+    const group = Number(declarationMatch.groupToken);
+
+    validateApplicationWGSLBinding(group, location, declarationMatch.name);
+    registerUsedBindingLocation(
+      usedBindingsByGroup,
+      group,
+      location,
+      `application binding "${declarationMatch.name}"`
+    );
+  }
+
+  const relocationState: WGSLApplicationRelocationState = {
+    sawSupportedBindingDeclaration: declarationMatches.length > 0
+  };
+
+  const relocatedSource = replaceWGSLBindingDeclarationMatches(
+    source,
+    WGSL_BINDING_DECLARATION_REGEXES,
+    declarationMatch =>
+      relocateWGSLApplicationBindingMatch(declarationMatch, usedBindingsByGroup, relocationState)
+  );
+
+  if (hasWGSLAutoBinding(source) && !relocationState.sawSupportedBindingDeclaration) {
+    throw new Error(
+      'Unsupported @binding(auto) declaration form in application WGSL. ' +
+        'Use adjacent "@group(N)" and "@binding(auto)" decorators followed by a bindable "var" declaration.'
+    );
+  }
+
+  return {source: relocatedSource};
 }
 
 function relocateWGSLModuleBindings(
@@ -621,54 +669,45 @@ function relocateWGSLModuleBindings(
   context: BindingRelocationContext
 ): {source: string; bindingAssignments: WGSLBindingAssignment[]} {
   const bindingAssignments: WGSLBindingAssignment[] = [];
+  const declarationMatches = getWGSLBindingDeclarationMatches(
+    moduleSource,
+    MODULE_WGSL_BINDING_DECLARATION_REGEXES
+  );
   const relocationState: WGSLRelocationState = {
-    sawSupportedBindingDeclaration: false,
+    sawSupportedBindingDeclaration: declarationMatches.length > 0,
     nextHintedBindingLocation:
       typeof module.firstBindingSlot === 'number' ? module.firstBindingSlot : null
   };
 
-  let relocatedSource = relocateWGSLModuleBindingsWithRegex(
+  const relocatedSource = replaceWGSLBindingDeclarationMatches(
     moduleSource,
-    MODULE_WGSL_BINDING_DECLARATION_REGEXES[0],
-    {isBindingFirst: true, module, context, bindingAssignments, relocationState}
-  );
-  relocatedSource = relocateWGSLModuleBindingsWithRegex(
-    relocatedSource,
-    MODULE_WGSL_BINDING_DECLARATION_REGEXES[1],
-    {isBindingFirst: false, module, context, bindingAssignments, relocationState}
+    MODULE_WGSL_BINDING_DECLARATION_REGEXES,
+    declarationMatch =>
+      relocateWGSLModuleBindingMatch(declarationMatch, {
+        module,
+        context,
+        bindingAssignments,
+        relocationState
+      })
   );
 
-  if (moduleSource.includes('@binding(auto)') && !relocationState.sawSupportedBindingDeclaration) {
+  if (hasWGSLAutoBinding(moduleSource) && !relocationState.sawSupportedBindingDeclaration) {
     throw new Error(
       `Unsupported @binding(auto) declaration form in module "${module.name}". ` +
-        'Use "@group(N) @binding(auto) var ..." or "@binding(auto) @group(N) var ..." on a single line.'
+        'Use adjacent "@group(N)" and "@binding(auto)" decorators followed by a bindable "var" declaration.'
     );
   }
 
   return {source: relocatedSource, bindingAssignments};
 }
 
-function relocateWGSLModuleBindingsWithRegex(
-  source: string,
-  regex: RegExp,
-  params: WGSLRelocationParams
-): string {
-  return source.replace(regex, (...replaceArguments) =>
-    relocateWGSLModuleBindingMatch(replaceArguments, params)
-  );
-}
-
 function relocateWGSLModuleBindingMatch(
-  replaceArguments: unknown[],
+  declarationMatch: WGSLBindingDeclarationMatch,
   params: WGSLRelocationParams
 ): string {
-  const {isBindingFirst, module, context, bindingAssignments, relocationState} = params;
-  relocationState.sawSupportedBindingDeclaration = true;
+  const {module, context, bindingAssignments, relocationState} = params;
 
-  const match = replaceArguments[0] as string;
-  const bindingToken = replaceArguments[isBindingFirst ? 1 : 2] as string;
-  const groupToken = replaceArguments[isBindingFirst ? 2 : 1] as string;
-  const name = replaceArguments[4] as string;
+  const {match, bindingToken, groupToken, name} = declarationMatch;
   const group = Number(groupToken);
 
   if (bindingToken === 'auto') {
@@ -715,6 +754,30 @@ function relocateWGSLModuleBindingMatch(
     `module "${module.name}" binding "${name}"`
   );
   bindingAssignments.push({moduleName: module.name, name, group, location});
+  return match;
+}
+
+function relocateWGSLApplicationBindingMatch(
+  declarationMatch: WGSLBindingDeclarationMatch,
+  usedBindingsByGroup: Map<number, Set<number>>,
+  relocationState: WGSLApplicationRelocationState
+): string {
+  const {match, bindingToken, groupToken, name} = declarationMatch;
+  const group = Number(groupToken);
+
+  if (bindingToken === 'auto') {
+    const location = allocateApplicationAutoBindingLocation(group, usedBindingsByGroup);
+    validateApplicationWGSLBinding(group, location, name);
+    registerUsedBindingLocation(
+      usedBindingsByGroup,
+      group,
+      location,
+      `application binding "${name}"`
+    );
+    return match.replace(/@binding\(\s*auto\s*\)/, `@binding(${location})`);
+  }
+
+  relocationState.sawSupportedBindingDeclaration = true;
   return match;
 }
 
@@ -784,18 +847,14 @@ function getModuleWGSLBindingDeclarations(module: ShaderModule): {name: string; 
   const declarations: {name: string; group: number}[] = [];
   const moduleSource = module.source || '';
 
-  for (const regex of MODULE_WGSL_BINDING_DECLARATION_REGEXES) {
-    regex.lastIndex = 0;
-    let match: RegExpExecArray | null;
-    match = regex.exec(moduleSource);
-    while (match) {
-      const isBindingFirst = regex === MODULE_WGSL_BINDING_DECLARATION_REGEXES[0];
-      declarations.push({
-        name: match[4],
-        group: Number(match[isBindingFirst ? 2 : 1])
-      });
-      match = regex.exec(moduleSource);
-    }
+  for (const match of getWGSLBindingDeclarationMatches(
+    moduleSource,
+    MODULE_WGSL_BINDING_DECLARATION_REGEXES
+  )) {
+    declarations.push({
+      name: match.name,
+      group: Number(match.groupToken)
+    });
   }
 
   return declarations;
@@ -861,10 +920,45 @@ function allocateAutoBindingLocation(
   return nextBinding;
 }
 
-function assertNoUnresolvedAutoBindings(source: string): void {
-  if (/@binding\(\s*auto\s*\)/.test(source)) {
-    throw new Error('Unresolved @binding(auto) remained in assembled WGSL source.');
+function allocateApplicationAutoBindingLocation(
+  group: number,
+  usedBindingsByGroup: Map<number, Set<number>>
+): number {
+  const usedBindings = usedBindingsByGroup.get(group) || new Set<number>();
+  let nextBinding = 0;
+
+  while (usedBindings.has(nextBinding)) {
+    nextBinding++;
   }
+
+  return nextBinding;
+}
+
+function assertNoUnresolvedAutoBindings(source: string): void {
+  const unresolvedBinding = getFirstWGSLAutoBindingDeclarationMatch(
+    source,
+    MODULE_WGSL_BINDING_DECLARATION_REGEXES
+  );
+  if (!unresolvedBinding) {
+    return;
+  }
+
+  const moduleName = getWGSLModuleNameAtIndex(source, unresolvedBinding.index);
+  if (moduleName) {
+    throw new Error(
+      `Unresolved @binding(auto) for module "${moduleName}" binding "${unresolvedBinding.name}" remained in assembled WGSL source.`
+    );
+  }
+
+  if (isInApplicationWGSLSection(source, unresolvedBinding.index)) {
+    throw new Error(
+      `Unresolved @binding(auto) for application binding "${unresolvedBinding.name}" remained in assembled WGSL source.`
+    );
+  }
+
+  throw new Error(
+    `Unresolved @binding(auto) remained in assembled WGSL source near "${formatWGSLSourceSnippet(unresolvedBinding.match)}".`
+  );
 }
 
 function formatWGSLBindingAssignmentComments(bindingAssignments: WGSLBindingAssignment[]): string {
@@ -882,6 +976,29 @@ function formatWGSLBindingAssignmentComments(bindingAssignments: WGSLBindingAssi
 
 function getBindingRegistryKey(group: number, moduleName: string, bindingName: string): string {
   return `${group}:${moduleName}:${bindingName}`;
+}
+
+function getWGSLModuleNameAtIndex(source: string, index: number): string | undefined {
+  const moduleHeaderRegex = /^\/\/ ----- MODULE ([^\n]+) ---------------$/gm;
+  let moduleName: string | undefined;
+  let match: RegExpExecArray | null;
+
+  match = moduleHeaderRegex.exec(source);
+  while (match && match.index <= index) {
+    moduleName = match[1];
+    match = moduleHeaderRegex.exec(source);
+  }
+
+  return moduleName;
+}
+
+function isInApplicationWGSLSection(source: string, index: number): boolean {
+  const injectionMarkerIndex = source.indexOf(INJECT_SHADER_DECLARATIONS);
+  return injectionMarkerIndex >= 0 ? index > injectionMarkerIndex : true;
+}
+
+function formatWGSLSourceSnippet(source: string): string {
+  return source.replace(/\s+/g, ' ').trim();
 }
 
 /*

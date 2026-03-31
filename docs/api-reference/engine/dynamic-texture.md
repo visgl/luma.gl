@@ -1,5 +1,9 @@
 # DynamicTexture
 
+<p class="badges">
+  <img src="https://img.shields.io/badge/From-v9.3-blue.svg?style=flat-square" alt="From-v9.3" />
+</p>
+
 `DynamicTexture` is the engine-level convenience wrapper around core [`Texture`](/docs/api-reference/core/resources/texture) resources.
 It adds async initialization, resizing, mipmap generation, and helpers for more complex texture layouts while still producing a normal `Texture`, `Sampler`, and `TextureView` once ready.
 

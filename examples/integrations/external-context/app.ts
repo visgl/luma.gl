@@ -37,7 +37,7 @@ struct AppUniforms {
   uModelViewProjection : mat4x4<f32>,
 }
 
-@group(0) @binding(0) var<uniform> app : AppUniforms;
+@group(0) @binding(auto) var<uniform> app : AppUniforms;
 
 struct VertexInput {
   @location(0) positions : vec3<f32>,

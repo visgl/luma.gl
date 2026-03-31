@@ -48,13 +48,15 @@ export class BindGroupFactory {
     for (const group of getBindGroupIndicesUpToMax(pipeline.shaderLayout.bindings)) {
       const groupBindings = bindingsByGroup[group];
       const bindGroupLayout = this._getBindGroupLayout(pipeline, group);
+      const bindGroupLabel = getBindGroupLabel(pipeline, pipeline.shaderLayout, group);
 
       if (!groupBindings || Object.keys(groupBindings).length === 0) {
         if (!hasBindingsInGroup(pipeline.shaderLayout.bindings, group)) {
           resolvedBindGroups[group] = this._getEmptyBindGroup(
             bindGroupLayout,
             pipeline.shaderLayout,
-            group
+            group,
+            bindGroupLabel
           );
         }
         continue;
@@ -72,7 +74,8 @@ export class BindGroupFactory {
           bindGroupLayout,
           pipeline.shaderLayout,
           groupBindings,
-          group
+          group,
+          bindGroupLabel
         );
         layoutCache.bindGroupsBySource.set(bindGroupCacheKey, bindGroup);
         resolvedBindGroups[group] = bindGroup;
@@ -81,7 +84,8 @@ export class BindGroupFactory {
           bindGroupLayout,
           pipeline.shaderLayout,
           groupBindings,
-          group
+          group,
+          bindGroupLabel
         );
       }
     }
@@ -103,11 +107,12 @@ export class BindGroupFactory {
   private _getEmptyBindGroup(
     bindGroupLayout: object,
     shaderLayout: AnyShaderLayout,
-    group: number
+    group: number,
+    label: string
   ): unknown {
     const layoutCache = this._getLayoutBindGroupCache(bindGroupLayout);
     layoutCache.emptyBindGroup ||=
-      this.device._createBindGroupWebGPU(bindGroupLayout, shaderLayout, {}, group) || null;
+      this.device._createBindGroupWebGPU(bindGroupLayout, shaderLayout, {}, group, label) || null;
     return layoutCache.emptyBindGroup;
   }
 
@@ -136,4 +141,17 @@ function getBindGroupIndicesUpToMax(bindings: AnyShaderLayout['bindings']): numb
 
 function hasBindingsInGroup(bindings: AnyShaderLayout['bindings'], group: number): boolean {
   return bindings.some(binding => binding.group === group);
+}
+
+function getBindGroupLabel(
+  pipeline: AnyPipeline,
+  shaderLayout: AnyShaderLayout,
+  group: number
+): string {
+  const bindingNames = shaderLayout.bindings
+    .filter(binding => binding.group === group)
+    .sort((left, right) => left.location - right.location)
+    .map(binding => binding.name);
+  const bindingSuffix = bindingNames.length > 0 ? bindingNames.join(',') : 'empty';
+  return `${pipeline.id}/group${group}[${bindingSuffix}]`;
 }

@@ -40,7 +40,7 @@ struct Uniforms {
   uProjection : mat4x4<f32>,
 };
 
-@binding(0) @group(0) var<uniform> app : Uniforms;
+@group(0) @binding(auto) var<uniform> app : Uniforms;
 
 struct VertexInputs {
   // CUBE GEOMETRY

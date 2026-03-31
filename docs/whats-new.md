@@ -25,11 +25,11 @@ Target Date: April 2026
 
 **@luma.gl/engine**
 
+- New **`Material`** and **`MaterialFactory`** classes provide reusable material-owned group-3 bindings for `Scenegraph` models.
 - **WebGPU mipmap generation** now supported by [`DynamicTexture`](/docs/api-reference/engine/dynamic-texture).
 - **Explicit mip chains** can now be passed to `DynamicTexture` for 2D, array, cube, and 3D uploads.
 - **Compressed mip uploads** are now validated and uploaded through `DynamicTexture`, including block-size-aware mip truncation.
 - **Mip-level format metadata** now accepts both `textureFormat` and `format` on texture data objects during the transition to loaders.gl `TextureLevel` naming.
-- New **`Material`** and **`MaterialFactory`** classes provide reusable material-owned group-3 bindings for models.
 
 **@luma.gl/webgpu**
 
@@ -45,24 +45,22 @@ Target Date: April 2026
 - **WebGPU support** - glTF models can now be rendered in WebGPU.
 - **Joint/Skin Animations** - Support for glTF animations now include joint and skin animations.
 - **Lighting** - luma.gl Light definitions are now extracted if the `KHR_lights_punctual` glTF extension is present in the glTF file.
+- **Scenegraph materials** - glTF scenegraph creation now returns `materials` aligned with the source glTF `materials` array.
 - **`linear` texture filtering** - default texture filtering is now `linear` instead of `nearest` for improved texture rendering.
 - **PBR material extensions** - the stock `pbrMaterial` shader now implements `KHR_materials_specular`, `KHR_materials_ior`, `KHR_materials_transmission`, `KHR_materials_volume`, `KHR_materials_clearcoat`, `KHR_materials_sheen`, `KHR_materials_iridescence`, and `KHR_materials_anisotropy`, using the parsed glTF extension uniforms and textures.
 - **Emissive materials** - the stock PBR shader now applies `KHR_materials_emissive_strength`, and core `emissiveFactor` values are preserved even when no emissive texture is present.
 - **`KHR_animation_pointer`** - `createScenegraphsFromGLTF()` and `GLTFAnimator` now animate supported node TRS targets, selected material factors, and animated `KHR_texture_transform` offset/rotation/scale targets on stock PBR material texture slots. Structural targets such as animated `texCoord`, morph weights, cameras, and material mode switches remain unsupported.
 - **Extension support docs** - the [`glTF Extension Support`](/docs/api-reference/gltf/gltf-extensions) table now documents the current built-in vs parsed-only extension coverage for `@luma.gl/gltf`.
 - **Extension support metadata** - `createScenegraphsFromGLTF()` now exposes an `extensionSupport` map so applications can inspect which extensions a model uses and whether `@luma.gl/gltf` supports them.
-- **Returned materials** - glTF scenegraph creation now returns `materials` aligned with the source glTF `materials` array.
 
 **@luma.gl/shadertools**
 
-- `WGSL shader modules` - most notably, the [`pbrMaterial`] module is now supported in WebGPU.
-- `WGSL shader modules` now support shadertools-managed `@binding(auto)` allocation for module-owned bindings. See [WGSL Support](/docs/api-reference/shadertools/wgsl-support).
-- `ShaderModule uniformTypes` now support nested structs and fixed-size arrays. See [`ShaderModule`](/docs/api-reference/shadertools/shader-module).
-- `SpotLight` support has been added to the [`lighting`](/docs/api-reference/shadertools/shader-modules/lighting) shader module.
-- New [`lambertMaterial`](/docs/api-reference/shadertools/shader-modules/lambert-material) shader module adds a diffuse-only matte material model.
-- Built-in material shader modules now support `unlit`, allowing applications to disable lighting without changing material families.
-- `lighting` and `pbrMaterial` documentation now describes the current bind-group conventions used by those modules.
-- The deprecated [`picking`](/docs/api-reference/shadertools/shader-modules/picking) shader module remains available and behaviorally stable as a legacy compatibility path, but new picking features continue to land only in `@luma.gl/engine`.
+- **[`lighting`](/docs/api-reference/shadertools/shader-modules/lighting)** shader module supports a new light type `SpotLight`.
+- **[`lambertMaterial`](/docs/api-reference/shadertools/shader-modules/lambert-material)** A new shader module adds a diffuse-only matte material model, completing the material catalog
+- **Unlit Materials** All material shader modules now support `unlit` prop, allowing applications to disable lighting for materials that are already lit (e.g. photogrammetry).
+- `Composite uniformTypes` `uniformTypes` now support nested structs and fixed-size arrays. See [`ShaderModule`](/docs/api-reference/shadertools/shader-module).
+- `WebGPU Shader modules` - ShaderModules now have WGSL variants.
+- `Shader module auto bindings` WGSL shader module now support `@binding(auto)` which eliminates binding conflicts. See [WGSL Support](/docs/api-reference/shadertools/wgsl-support).
 
 **@luma.gl/effects**
 

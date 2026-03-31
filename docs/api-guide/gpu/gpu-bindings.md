@@ -14,6 +14,28 @@ same grouped model across both WebGPU and WebGL:
 This page explains how to describe grouped bindings in luma.gl and how to pass
 them to pipelines and models.
 
+## Quick Rule
+
+For WGSL that goes through `Model` or shadertools assembly, prefer
+`@binding(auto)` and pass bindings by name.
+
+```wgsl
+@group(0) @binding(auto) var<uniform> app: AppUniforms;
+@group(0) @binding(auto) var colorTexture: texture_2d<f32>;
+@group(0) @binding(auto) var colorTextureSampler: sampler;
+```
+
+```ts
+model.setBindings({
+  app: uniformBuffer,
+  colorTexture: texture
+});
+```
+
+In that flow, luma.gl assigns the numeric binding locations for you. The rest
+of this page is mainly for custom grouping, low-level pipeline work, and
+understanding how those names map to bind groups.
+
 ## Core Concepts
 
 The main public concepts are:

@@ -2,13 +2,26 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {Binding, Bindings, ComputeShaderLayout, ShaderLayout} from '@luma.gl/core';
+import type {
+  Binding,
+  BindingDeclaration,
+  Bindings,
+  ComputeShaderLayout,
+  ShaderLayout
+} from '@luma.gl/core';
 import {Buffer, Sampler, Texture, TextureView, getShaderLayoutBinding, log} from '@luma.gl/core';
 import type {WebGPUDevice} from '../webgpu-device';
 import type {WebGPUBuffer} from '../resources/webgpu-buffer';
 import type {WebGPUSampler} from '../resources/webgpu-sampler';
 import type {WebGPUTexture} from '../resources/webgpu-texture';
 import type {WebGPUTextureView} from '../resources/webgpu-texture-view';
+
+type AnyShaderLayout = ShaderLayout | ComputeShaderLayout;
+type BindGroupBindingSummary = {
+  name: string;
+  location: number;
+  type: string;
+};
 
 /**
  * Create a WebGPU "bind group layout" from an array of luma.gl bindings
@@ -34,7 +47,8 @@ export function getBindGroup(
   bindGroupLayout: GPUBindGroupLayout,
   shaderLayout: ShaderLayout | ComputeShaderLayout,
   bindings: Bindings,
-  group: number
+  group: number,
+  label?: string
 ): GPUBindGroup | null {
   const entries = getBindGroupEntries(bindings, shaderLayout, group);
   if (entries.length === 0) {
@@ -42,13 +56,69 @@ export function getBindGroup(
   }
   device.pushErrorScope('validation');
   const bindGroup = device.handle.createBindGroup({
+    label,
     layout: bindGroupLayout,
     entries
   });
   device.popErrorScope((error: GPUError) => {
-    log.error(`bindGroup creation: ${error.message}`, bindGroup)();
+    const summary = formatBindGroupCreationErrorSummary(shaderLayout, bindings, entries, group);
+    log.error(`bindGroup creation: ${summary}\nRaw WebGPU error: ${error.message}`, bindGroup)();
   });
   return bindGroup;
+}
+
+export function formatBindGroupCreationErrorSummary(
+  shaderLayout: AnyShaderLayout,
+  bindings: Bindings,
+  entries: GPUBindGroupEntry[],
+  group: number
+): string {
+  const expectedBindings = getExpectedBindingsForGroup(shaderLayout, group);
+  const expectedByLocation = new Map(
+    expectedBindings.map(bindingSummary => [bindingSummary.location, bindingSummary])
+  );
+  const providedBindings = entries
+    .map(entry => expectedByLocation.get(entry.binding) || getUnexpectedEntrySummary(entry))
+    .sort(compareBindingSummaries);
+  const missingBindings = expectedBindings.filter(
+    bindingSummary =>
+      !providedBindings.some(provided => provided.location === bindingSummary.location)
+  );
+  const unexpectedBindings = providedBindings.filter(
+    bindingSummary => !expectedByLocation.has(bindingSummary.location)
+  );
+  const unmatchedLogicalBindings = Object.keys(bindings)
+    .filter(bindingName => !resolveGroupBinding(bindingName, bindings, shaderLayout, group))
+    .sort();
+
+  const lines = [
+    `bindGroup creation failed for group ${group}: expected ${expectedBindings.length}, provided ${providedBindings.length}`,
+    `expected: ${formatBindingSummaryList(expectedBindings)}`,
+    `provided: ${formatBindingSummaryList(providedBindings)}`
+  ];
+
+  if (missingBindings.length > 0) {
+    lines.push(`missing: ${formatBindingSummaryList(missingBindings)}`);
+  }
+  if (unexpectedBindings.length > 0) {
+    lines.push(`unexpected entries: ${formatBindingSummaryList(unexpectedBindings)}`);
+  }
+  if (unmatchedLogicalBindings.length > 0) {
+    lines.push(`unmatched logical bindings: ${unmatchedLogicalBindings.join(', ')}`);
+  }
+
+  return lines.join('\n');
+}
+
+export function getBindGroupLabel(
+  pipelineId: string,
+  shaderLayout: AnyShaderLayout,
+  group: number
+): string {
+  const expectedBindings = getExpectedBindingsForGroup(shaderLayout, group);
+  const bindingSuffix =
+    expectedBindings.length > 0 ? expectedBindings.map(binding => binding.name).join(',') : 'empty';
+  return `${pipelineId}/group${group}[${bindingSuffix}]`;
 }
 
 /**
@@ -57,20 +127,22 @@ export function getBindGroup(
  */
 function getBindGroupEntries(
   bindings: Bindings,
-  shaderLayout: ShaderLayout | ComputeShaderLayout,
+  shaderLayout: AnyShaderLayout,
   group: number
 ): GPUBindGroupEntry[] {
   const entries: GPUBindGroupEntry[] = [];
 
   for (const [bindingName, value] of Object.entries(bindings)) {
-    const exactBindingLayout = shaderLayout.bindings.find(binding => binding.name === bindingName);
-    const bindingLayout = exactBindingLayout || getShaderLayoutBinding(shaderLayout, bindingName);
-    const isShadowedAlias =
-      !exactBindingLayout && bindingLayout ? bindingLayout.name in bindings : false;
+    const {bindingLayout, isShadowedAlias} = resolveGroupBinding(
+      bindingName,
+      bindings,
+      shaderLayout,
+      group
+    ) || {bindingLayout: null, isShadowedAlias: false};
 
     // Mirror the WebGL path: when both `foo` and `fooUniforms` exist in the bindings map,
     // prefer the exact shader binding name and ignore the alias entry.
-    if (!isShadowedAlias && bindingLayout?.group === group) {
+    if (!isShadowedAlias && bindingLayout) {
       const entry = bindingLayout
         ? getBindGroupEntry(value, bindingLayout.location, undefined, bindingName)
         : null;
@@ -138,4 +210,66 @@ function getBindGroupEntry(
   }
   log.warn(`invalid binding ${bindingName}`, binding);
   return null;
+}
+
+function getExpectedBindingsForGroup(
+  shaderLayout: AnyShaderLayout,
+  group: number
+): BindGroupBindingSummary[] {
+  return shaderLayout.bindings
+    .filter(bindingLayout => bindingLayout.group === group)
+    .map(bindingLayout => toBindingSummary(bindingLayout))
+    .sort(compareBindingSummaries);
+}
+
+function resolveGroupBinding(
+  bindingName: string,
+  bindings: Bindings,
+  shaderLayout: AnyShaderLayout,
+  group: number
+): {bindingLayout: BindingDeclaration; isShadowedAlias: boolean} | null {
+  const exactBindingLayout = shaderLayout.bindings.find(binding => binding.name === bindingName);
+  const bindingLayout =
+    exactBindingLayout || getShaderLayoutBinding(shaderLayout, bindingName, {ignoreWarnings: true});
+  const isShadowedAlias =
+    !exactBindingLayout && bindingLayout ? bindingLayout.name in bindings : false;
+
+  if (isShadowedAlias || !bindingLayout || bindingLayout.group !== group) {
+    return null;
+  }
+
+  return {bindingLayout, isShadowedAlias};
+}
+
+function toBindingSummary(bindingLayout: BindingDeclaration): BindGroupBindingSummary {
+  return {
+    name: bindingLayout.name,
+    location: bindingLayout.location,
+    type: bindingLayout.type
+  };
+}
+
+function getUnexpectedEntrySummary(entry: GPUBindGroupEntry): BindGroupBindingSummary {
+  return {
+    name: '?',
+    location: entry.binding,
+    type: 'unknown'
+  };
+}
+
+function compareBindingSummaries(
+  left: BindGroupBindingSummary,
+  right: BindGroupBindingSummary
+): number {
+  if (left.location !== right.location) {
+    return left.location - right.location;
+  }
+  return left.name.localeCompare(right.name);
+}
+
+function formatBindingSummaryList(bindings: BindGroupBindingSummary[]): string {
+  if (bindings.length === 0) {
+    return 'none';
+  }
+  return bindings.map(binding => `${binding.name}@${binding.location}`).join(', ');
 }

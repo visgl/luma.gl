@@ -2,6 +2,15 @@
 
 ## v9.3
 
+### v9.3.0-alpha.11
+
+- feat(shadertools) WGSL auto bindings: improve assembly diagnostics (#2573)
+- docs: Fix AsyncTexture version (#2570)
+- chore(example): use effects module for persistence (#2434)
+- feat(gltf): KHR_animation_pointer (#2566)
+- support non-indexed geometry and KHR_mesh_quantization (#2567)
+- chore: Use biome for lint and prettier (#2565)
+
 ### v9.3.0-alpha.10
 
 - Improve shader block layouts (#2564)

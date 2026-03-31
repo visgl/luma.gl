@@ -258,16 +258,25 @@ export class WebGPUDevice extends Device {
     bindGroupLayout: unknown,
     shaderLayout: ShaderLayout | ComputeShaderLayout,
     bindings: Bindings,
-    group: number
+    group: number,
+    label?: string
   ): GPUBindGroup | null {
     if (Object.keys(bindings).length === 0) {
       return this.handle.createBindGroup({
+        label,
         layout: bindGroupLayout as GPUBindGroupLayout,
         entries: []
       });
     }
 
-    return getBindGroup(this, bindGroupLayout as GPUBindGroupLayout, shaderLayout, bindings, group);
+    return getBindGroup(
+      this,
+      bindGroupLayout as GPUBindGroupLayout,
+      shaderLayout,
+      bindings,
+      group,
+      label
+    );
   }
 
   submit(commandBuffer?: WebGPUCommandBuffer): void {
