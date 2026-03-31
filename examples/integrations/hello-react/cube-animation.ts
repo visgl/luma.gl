@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {NumberArray, VariableShaderType} from '@luma.gl/core';
-import {UniformStore} from '@luma.gl/core';
-import {AnimationLoopTemplate, Model, CubeGeometry} from '@luma.gl/engine';
+import type {NumberArray} from '@luma.gl/core';
+import {AnimationLoopTemplate, Model, CubeGeometry, ShaderInputs} from '@luma.gl/engine';
 import type {AnimationProps} from '@luma.gl/engine';
+import type {ShaderModule} from '@luma.gl/shadertools';
 import {Matrix4} from '@math.gl/core';
 
 const WGSL_SHADER = /* WGSL */ `\
@@ -75,23 +75,23 @@ void main() {
 `;
 
 type AppUniforms = {
-  mvpMatrix: NumberArray;
+  modelViewProjectionMatrix: NumberArray;
 };
 
-const app: {uniformTypes: Record<keyof AppUniforms, VariableShaderType>} = {
+const appShaderModule: ShaderModule<AppUniforms> = {
+  name: 'app',
   uniformTypes: {
-    mvpMatrix: 'mat4x4<f32>'
+    modelViewProjectionMatrix: 'mat4x4<f32>'
   }
 };
 
 const eyePosition = [0, 0, -4];
 
 export class CubeAnimationLoopTemplate extends AnimationLoopTemplate {
-  mvpMatrix = new Matrix4();
+  modelViewProjectionMatrix = new Matrix4();
   viewMatrix = new Matrix4().lookAt({eye: eyePosition});
   model: Model;
-
-  uniformStore = new UniformStore<{app: AppUniforms}>({app});
+  shaderInputs = new ShaderInputs<{app: AppUniforms}>({app: appShaderModule});
 
   constructor({device}: AnimationProps) {
     super();
@@ -101,10 +101,8 @@ export class CubeAnimationLoopTemplate extends AnimationLoopTemplate {
       source: WGSL_SHADER,
       vs: VS_GLSL,
       fs: FS_GLSL,
+      shaderInputs: this.shaderInputs,
       geometry: new CubeGeometry({indices: false}),
-      bindings: {
-        app: this.uniformStore.getManagedUniformBuffer(device, 'app')
-      },
       parameters: {
         depthWriteEnabled: true,
         depthCompare: 'less-equal'
@@ -114,18 +112,17 @@ export class CubeAnimationLoopTemplate extends AnimationLoopTemplate {
 
   onFinalize() {
     this.model.destroy();
-    this.uniformStore.destroy();
   }
 
   onRender({device, aspect, tick}: AnimationProps) {
-    this.mvpMatrix
+    this.modelViewProjectionMatrix
       .perspective({fovy: Math.PI / 3, aspect})
       .multiplyRight(this.viewMatrix)
       .rotateX(tick * 0.01)
       .rotateY(tick * 0.013);
 
-    this.uniformStore.setUniforms({
-      app: {mvpMatrix: this.mvpMatrix}
+    this.shaderInputs.setProps({
+      app: {modelViewProjectionMatrix: this.modelViewProjectionMatrix}
     });
 
     const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1], clearDepth: 1});
