@@ -69,7 +69,14 @@ export async function getWebGPUTestDevice(): Promise<WebGPUDevice | null> {
 
 /** returns WebGL device promise, if available */
 export async function getWebGLTestDevice(): Promise<WebGLDevice> {
-  return getOrCreateWebGLTestDevicePromise();
+  const webglDevice = await getOrCreateWebGLTestDevicePromise();
+  if (webglDevice?.isLost) {
+    if (testDeviceCache.webglDevicePromise) {
+      testDeviceCache.webglDevicePromise = null;
+    }
+    return getOrCreateWebGLTestDevicePromise();
+  }
+  return webglDevice;
 }
 
 /** returns an offscreen WebGL device promise for presentation-context tests, if available */
