@@ -2,6 +2,13 @@
 
 ## v9.3
 
+### v9.3.0
+
+- chore: Upgrade to loaders.gl@~4.4.0 (#2579)
+- chore: Bump to loaders.gl@alpha.19 (#2578)
+- feat: Add opt-in support for float colors (#2577)
+- feat(website): Restore DOF showcase example (#2576)
+
 ### v9.3.0-alpha.11
 
 - feat(shadertools) WGSL auto bindings: improve assembly diagnostics (#2573)
