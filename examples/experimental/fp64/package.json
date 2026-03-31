@@ -1,23 +1,26 @@
 {
-  "name": "luma.gl-examples-water-globe",
+  "name": "luma.gl-examples-experimental-fp64",
   "version": "9.3.0-alpha.11",
   "private": true,
   "scripts": {
     "start": "vite",
-    "build": "tsc && vite build",
+    "build": "tsc --noEmit && vite build",
     "serve": "vite preview"
   },
   "dependencies": {
-    "@luma.gl/constants": "9.3.0-alpha.11",
     "@luma.gl/core": "9.3.0-alpha.11",
     "@luma.gl/engine": "9.3.0-alpha.11",
     "@luma.gl/shadertools": "9.3.0-alpha.11",
     "@luma.gl/webgl": "9.3.0-alpha.11",
     "@luma.gl/webgpu": "9.3.0-alpha.11",
-    "@math.gl/core": "^4.1.0"
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
   },
   "devDependencies": {
-    "typescript": "^5.9.3",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "@vitejs/plugin-react": "^6.0.1",
+    "typescript": "^5.5.0",
     "vite": "^8.0.0"
   }
 }

@@ -8,7 +8,12 @@ const sidebars = {
     {
       type: 'category',
       label: 'Showcase',
-      items: ['showcase/gltf', 'showcase/instancing', 'showcase/postprocessing']
+      items: [
+        'showcase/gltf',
+        'showcase/instancing',
+        'showcase/postprocessing',
+        'showcase/dof'
+      ]
     },
     {
       type: 'category',
@@ -16,14 +21,15 @@ const sidebars = {
       items: [
         'api/animation',
         'api/multi-canvas',
-        'integrations/external-context',
-        'integrations/react-strict-mode'
+        'api/cubemap',
+        'api/texture-3d',
+        'api/texture-tester'
       ]
     },
     {
       type: 'category',
-      label: 'Textures',
-      items: ['api/cubemap', 'api/texture-3d', 'api/texture-tester']
+      label: 'Integrations',
+      items: ['integrations/external-context', 'integrations/react-strict-mode']
     },
     {
       type: 'category',

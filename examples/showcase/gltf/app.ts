@@ -129,11 +129,11 @@ export default class AppAnimationLoopTemplate extends GLTFCatalogApp {
   }
 
   getDefaultModelName(): string {
-    return 'CesiumMan';
+    return 'DamagedHelmet';
   }
 
   getModelStorageKey(): string {
-    return 'showcase-last-gltf-model';
+    return 'showcase-last-gltf-model-v2';
   }
 
   getClearColor(): [number, number, number, number] {

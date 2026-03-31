@@ -1,11 +1,11 @@
 //
 
 import React, {useEffect, useRef, useState} from 'react';
-import {ExamplePage, LumaExample, ReactExample, useStore} from './react-luma';
+import {ExampleHeader, ExamplePage, LumaExample, ReactExample, useStore} from './react-luma';
 
 import AnimationApp from '../../examples/api/animation/app';
 import CubemapApp from '../../examples/api/cubemap/app';
-import FP64App from '../../examples/website/experimental/fp64/app';
+import FP64App from '../../examples/experimental/fp64/app';
 import MultiCanvasApp from '../../examples/api/multi-canvas/app';
 import Texture3DApp from '../../examples/api/texture-3d/app';
 import TextureTesterApp from '../../examples/api/texture-tester/app';
@@ -14,6 +14,7 @@ import initializeExternalWebGLContext, {
 } from '../../examples/integrations/external-context/app';
 import HelloReactApp from '../../examples/integrations/hello-react/app';
 import {getErrorMessage, logError} from './react-luma/utils/error-utils';
+import DOFApp from '../../examples/showcase/dof/app';
 
 // import PerformanceApp from '../../examples/performance/stress-test/app';
 
@@ -23,7 +24,7 @@ import GLTFApp from '../../examples/showcase/gltf/app';
 import InstancingApp from '../../examples/showcase/instancing/app';
 import PersistenceApp from '../../examples/showcase/persistence/app';
 import PostprocessingApp from '../../examples/showcase/postprocessing/app';
-import WaterGlobeApp from '../../examples/website/experimental/water/app';
+import GlobeApp from '../../examples/experimental/globe/app';
 // import WanderingApp from '../../examples/showcase/wandering/app';
 
 import HelloTriangleGeometryApp from '../../examples/tutorials/hello-triangle-geometry/app';
@@ -84,13 +85,25 @@ export const PostprocessingExample: React.FC = props => (
   />
 );
 
-export const WaterExample: React.FC = props => (
+export const GlobeExample: React.FC = props => (
   <LumaExample
-    id="water"
-    title="Water"
-    directory="website/experimental"
-    template={WaterGlobeApp}
+    id="globe"
+    title="Globe"
+    directory="experimental"
+    template={GlobeApp}
     config={exampleConfig}
+    {...props}
+  />
+);
+
+export const DOFExample: React.FC = props => (
+  <LumaExample
+    id="dof"
+    title="Depth of Field"
+    directory="showcase"
+    template={DOFApp}
+    config={exampleConfig}
+    showHeader={false}
     {...props}
   />
 );
@@ -230,13 +243,67 @@ export const ExternalContextExample: React.FC = () => {
   );
 };
 
-export const ReactStrictModeExample: React.FC = () => (
-  <div className="integration-example-page" style={{width: '100%', minHeight: '640px'}}>
-    <React.StrictMode>
-      <HelloReactApp />
-    </React.StrictMode>
-  </div>
-);
+export const ReactStrictModeExample: React.FC = () => {
+  const [showCube, setShowCube] = useState(true);
+  const [mountCount, setMountCount] = useState(0);
+
+  const toggleCube = () => {
+    setShowCube(previousValue => {
+      if (!previousValue) {
+        setMountCount(previousCount => previousCount + 1);
+      }
+      return !previousValue;
+    });
+  };
+
+  return (
+    <ExamplePage style={{minHeight: '640px'}}>
+      <ExampleHeader
+        title="React Strict Mode"
+        sourcePath="examples/integrations/hello-react"
+        devices={['webgl2']}
+      >
+        <div style={{display: 'grid', gap: 12}}>
+          <div>
+            Verify luma.gl device and animation-loop cleanup under React <code>StrictMode</code>{' '}
+            remounting.
+          </div>
+          <div style={{display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap'}}>
+            <button
+              type="button"
+              onClick={toggleCube}
+              style={{
+                padding: '8px 14px',
+                fontSize: 14,
+                backgroundColor: showCube ? '#dc3545' : '#28a745',
+                color: 'white',
+                border: 'none',
+                borderRadius: 6,
+                cursor: 'pointer',
+                fontWeight: 600
+              }}
+            >
+              {showCube ? 'Unmount Cube' : 'Mount Cube'}
+            </button>
+            <span>
+              Mount count: <strong>{mountCount}</strong>
+            </span>
+          </div>
+        </div>
+      </ExampleHeader>
+      <div className="integration-example-page" style={{width: '100%', minHeight: '640px'}}>
+        <React.StrictMode>
+          <HelloReactApp
+            showControls={false}
+            showCube={showCube}
+            mountCount={mountCount}
+            onToggleCube={toggleCube}
+          />
+        </React.StrictMode>
+      </div>
+    </ExamplePage>
+  );
+};
 
 // Tutorial Examples
 

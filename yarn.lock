@@ -14843,24 +14843,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"luma.gl-examples-external-webgl-context@workspace:examples/integrations/external-context":
+"luma.gl-examples-experimental-fp64@workspace:examples/experimental/fp64":
   version: 0.0.0-use.local
-  resolution: "luma.gl-examples-external-webgl-context@workspace:examples/integrations/external-context"
-  dependencies:
-    "@luma.gl/core": "npm:9.3.0-alpha.11"
-    "@luma.gl/engine": "npm:9.3.0-alpha.11"
-    "@luma.gl/shadertools": "npm:9.3.0-alpha.11"
-    "@luma.gl/webgl": "npm:9.3.0-alpha.11"
-    "@math.gl/core": "npm:^4.1.0"
-    maplibre-gl: "npm:^5.20.0"
-    typescript: "npm:^5.9.3"
-    vite: "npm:^8.0.0"
-  languageName: unknown
-  linkType: soft
-
-"luma.gl-examples-fp64@workspace:examples/website/experimental/fp64":
-  version: 0.0.0-use.local
-  resolution: "luma.gl-examples-fp64@workspace:examples/website/experimental/fp64"
+  resolution: "luma.gl-examples-experimental-fp64@workspace:examples/experimental/fp64"
   dependencies:
     "@luma.gl/core": "npm:9.3.0-alpha.11"
     "@luma.gl/engine": "npm:9.3.0-alpha.11"
@@ -14873,6 +14858,37 @@ __metadata:
     react: "npm:^18.2.0"
     react-dom: "npm:^18.2.0"
     typescript: "npm:^5.5.0"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
+"luma.gl-examples-experimental-globe@workspace:examples/experimental/globe":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-experimental-globe@workspace:examples/experimental/globe"
+  dependencies:
+    "@luma.gl/constants": "npm:9.3.0-alpha.11"
+    "@luma.gl/core": "npm:9.3.0-alpha.11"
+    "@luma.gl/engine": "npm:9.3.0-alpha.11"
+    "@luma.gl/shadertools": "npm:9.3.0-alpha.11"
+    "@luma.gl/webgl": "npm:9.3.0-alpha.11"
+    "@luma.gl/webgpu": "npm:9.3.0-alpha.11"
+    "@math.gl/core": "npm:^4.1.0"
+    typescript: "npm:^5.9.3"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
+"luma.gl-examples-external-webgl-context@workspace:examples/integrations/external-context":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-external-webgl-context@workspace:examples/integrations/external-context"
+  dependencies:
+    "@luma.gl/core": "npm:9.3.0-alpha.11"
+    "@luma.gl/engine": "npm:9.3.0-alpha.11"
+    "@luma.gl/shadertools": "npm:9.3.0-alpha.11"
+    "@luma.gl/webgl": "npm:9.3.0-alpha.11"
+    "@math.gl/core": "npm:^4.1.0"
+    maplibre-gl: "npm:^5.20.0"
+    typescript: "npm:^5.9.3"
     vite: "npm:^8.0.0"
   languageName: unknown
   linkType: soft
@@ -15085,6 +15101,21 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"luma.gl-examples-showcase-dof@workspace:examples/showcase/dof":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-showcase-dof@workspace:examples/showcase/dof"
+  dependencies:
+    "@luma.gl/core": "npm:9.3.0-alpha.11"
+    "@luma.gl/engine": "npm:9.3.0-alpha.11"
+    "@luma.gl/shadertools": "npm:9.3.0-alpha.11"
+    "@luma.gl/webgl": "npm:9.3.0-alpha.11"
+    "@luma.gl/webgpu": "npm:9.3.0-alpha.11"
+    "@math.gl/core": "npm:^4.1.0"
+    typescript: "npm:^5.9.3"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
 "luma.gl-examples-texture-3d@workspace:examples/api/texture-3d":
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-texture-3d@workspace:examples/api/texture-3d"
@@ -15161,22 +15192,6 @@ __metadata:
     "@luma.gl/shadertools": "npm:9.3.0-alpha.11"
     "@luma.gl/webgl": "npm:9.3.0-alpha.11"
     "@probe.gl/log": "npm:^4.1.1"
-    typescript: "npm:^5.9.3"
-    vite: "npm:^8.0.0"
-  languageName: unknown
-  linkType: soft
-
-"luma.gl-examples-water-globe@workspace:examples/website/experimental/water":
-  version: 0.0.0-use.local
-  resolution: "luma.gl-examples-water-globe@workspace:examples/website/experimental/water"
-  dependencies:
-    "@luma.gl/constants": "npm:9.3.0-alpha.11"
-    "@luma.gl/core": "npm:9.3.0-alpha.11"
-    "@luma.gl/engine": "npm:9.3.0-alpha.11"
-    "@luma.gl/shadertools": "npm:9.3.0-alpha.11"
-    "@luma.gl/webgl": "npm:9.3.0-alpha.11"
-    "@luma.gl/webgpu": "npm:9.3.0-alpha.11"
-    "@math.gl/core": "npm:^4.1.0"
     typescript: "npm:^5.9.3"
     vite: "npm:^8.0.0"
   languageName: unknown
