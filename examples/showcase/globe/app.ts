@@ -57,15 +57,14 @@ const INFO_HTML = `\
 
   #water-globe-controls .toggle-row {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 12px 16px;
+    gap: 10px;
   }
 
   #water-globe-controls .toggle {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: 160px minmax(140px, 1fr) 56px;
     align-items: center;
-    column-gap: 10px;
+    column-gap: 12px;
   }
 
   #water-globe-controls .control-row {
@@ -89,6 +88,11 @@ const INFO_HTML = `\
     font-weight: 500;
   }
 
+  #water-globe-controls .toggle span {
+    grid-column: 1;
+    min-width: 0;
+  }
+
   #water-globe-controls input[type='range'] {
     width: 100%;
     accent-color: #73d0ff;
@@ -106,6 +110,8 @@ const INFO_HTML = `\
 
   #water-globe-controls input[type='checkbox'] {
     accent-color: #73d0ff;
+    grid-column: 3;
+    justify-self: end;
   }
 
   #water-globe-controls output {
@@ -787,19 +793,19 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.oceanMaterial = oceanMaterialFactory.createMaterial();
     this.oceanMaterial.setProps({
       waterMaterial: {
-        mapping: 'object',
+        mapping: 'uv',
         baseColor: [10, 70, 128],
         fresnelColor: [232, 245, 252],
         opacity: 0.84,
-        coordinateScale: [5.2, 5.2],
+        coordinateScale: [1, 6.8],
         coordinateOffset: [0, 0],
         normalStrength: this.controls.normalStrength,
         fresnelPower: this.controls.fresnelPower,
         specularIntensity: this.controls.specularIntensity,
-        waveADirection: [0.08, -1],
+        waveADirection: [0, -1],
         waveAFrequency: 3.8,
         waveAAmplitude: 0.024,
-        waveBDirection: [-0.18, -1],
+        waveBDirection: [0, -1],
         waveBFrequency: 11.8,
         waveBAmplitude: 0.012
       }
