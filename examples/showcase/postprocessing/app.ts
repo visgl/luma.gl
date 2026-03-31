@@ -5,14 +5,16 @@
 import {
   AnimationLoopTemplate,
   AnimationProps,
-  GroupNode,
   DynamicTexture,
   loadImageBitmap,
   ShaderPassRenderer
 } from '@luma.gl/engine';
 import {Device} from '@luma.gl/core';
 import * as shaderModules from '@luma.gl/effects';
-import {ShaderPass, ShaderPassPipeline} from '@luma.gl/shadertools';
+import type {ShaderPass} from '@luma.gl/shadertools';
+
+const SOURCE_IMAGE = 'image2.png';
+const NO_EFFECT = 'No effect';
 
 const nullEffect = {
   name: 'nullEffect',
@@ -33,12 +35,6 @@ vec4 nullEffect_sampleColor(sampler2D source, vec2 texSize, vec2 texCoord) {
 `,
   passes: [{sampler: true}]
 } as const satisfies ShaderPass;
-
-const BLOOM_UNIFORMS = {
-  threshold: 0.55,
-  intensity: 1.8,
-  radius: 8
-} as const;
 
 const PANEL_STYLE = [
   'margin-top: 16px',
@@ -125,32 +121,19 @@ const RANGE_STYLE = ['width: 100%', 'margin: 0', 'accent-color: #38bdf8'].join('
 
 const VECTOR_COMPONENT_LABELS = ['X', 'Y', 'Z', 'W'] as const;
 
-const IMAGE_OPTIONS = {
-  'Bloom Study': 'bloom-scene.png',
-  'Vis Logo': 'image2.png',
-  Helmet: 'image.jpg'
-} as const;
-
-type ImageOptionName = keyof typeof IMAGE_OPTIONS;
 type EffectPropValue = number | number[];
 type EffectState = Record<string, EffectPropValue>;
 type ShaderPropType = NonNullable<ShaderPass['propTypes']>[string];
-type EffectDefinition = ShaderPass | ShaderPassPipeline;
 
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = `\
 <div style="color: rgba(226, 232, 240, 0.96);">
-  This example demonstrates how to use luma.gl's postprocessing utilities to apply shader effects to an image.
+  This example demonstrates luma.gl's reusable postprocessing shader passes on a fixed source image.
   <br>
   Many luma.gl effects were inspired by Evan Wallace's landmark <a href="http://github.com/evanw/webgl-filter/" style="color: #7dd3fc;">glfx.js / WebGL Filter</a> application.
 </div>
 <div style="${PANEL_STYLE}">
-  <label for="postprocessing-image-selector" style="${LABEL_STYLE}">Image</label>
-  <div style="position: relative;">
-    <select id="postprocessing-image-selector" style="${SELECT_STYLE}"></select>
-    <span aria-hidden="true" style="${CARET_STYLE}"></span>
-  </div>
-  <label for="postprocessing-selector" style="${LABEL_STYLE}; margin-top: 14px;">Effect</label>
+  <label for="postprocessing-selector" style="${LABEL_STYLE}">Effect</label>
   <div style="position: relative;">
     <select id="postprocessing-selector" style="${SELECT_STYLE}"></select>
     <span aria-hidden="true" style="${CARET_STYLE}"></span>
@@ -163,69 +146,40 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 `;
 
   device: Device;
-  scenes: GroupNode[] = [];
-  center = [0, 0, 0];
-  vantage = [0, 0, 0];
-  time: number = 0;
-
-  shaderPassMap: Record<string, EffectDefinition>;
   imageTexture: DynamicTexture;
   effectSelector: HTMLSelectElement | null = null;
-  imageSelector: HTMLSelectElement | null = null;
-  selectedEffectName = 'bloom';
+  selectedEffectName = NO_EFFECT;
   effectValuesByName: Record<string, EffectState> = {};
-
+  shaderPassMap: Record<string, ShaderPass>;
   shaderPassRenderer!: ShaderPassRenderer;
-  shaderPasses!: EffectDefinition[];
 
   constructor({device}: AnimationProps) {
     super();
 
     this.device = device;
-    this.imageTexture = this.createImageTexture(IMAGE_OPTIONS['Bloom Study']);
-
+    this.imageTexture = this.createImageTexture(SOURCE_IMAGE);
     this.shaderPassMap = getShaderPasses();
     this.effectValuesByName = getInitialEffectValues(this.shaderPassMap);
-    this.applySelectedEffect('bloom');
 
-    const imageOptionNames = Object.keys(IMAGE_OPTIONS);
-    this.imageSelector = initializeSelector(
-      'postprocessing-image-selector',
-      imageOptionNames,
-      imageName => this.setImageSource(imageName as ImageOptionName),
-      'Bloom Study'
-    );
-
-    const NO_EFFECT = 'No effect';
     const shaderPassNames = [NO_EFFECT, ...Object.keys(this.shaderPassMap)];
     this.effectSelector = initializeSelector(
       'postprocessing-selector',
       shaderPassNames,
       passName => this.applySelectedEffect(passName),
-      'bloom'
+      NO_EFFECT
     );
-    this.renderEffectControls();
+
+    this.applySelectedEffect(NO_EFFECT);
   }
 
-  onFinalize() {
+  onFinalize(): void {
     this.imageTexture?.destroy();
     this.shaderPassRenderer?.destroy();
   }
 
-  onRender({device}: AnimationProps): void {
+  onRender(): void {
     this.shaderPassRenderer?.resize();
-    // Run the shader passes and generate an output texture
-    /* const outputTexture = */ this.shaderPassRenderer.renderToScreen({
-      sourceTexture: this.imageTexture
-    });
-  }
-
-  setShaderPasses(shaderPasses: EffectDefinition[]) {
-    // this.shaderPasses = shaderPasses;
-    this.shaderPassRenderer?.destroy();
-    this.shaderPassRenderer = new ShaderPassRenderer(this.device, {
-      shaderPasses
-    });
+    this.shaderPassRenderer.renderToScreen({sourceTexture: this.imageTexture});
   }
 
   createImageTexture(imageSource: string): DynamicTexture {
@@ -234,41 +188,31 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
   }
 
-  setImageSource(imageName: ImageOptionName) {
-    const previousTexture = this.imageTexture;
-    this.imageTexture = this.createImageTexture(IMAGE_OPTIONS[imageName]);
-    previousTexture?.destroy();
-  }
-
-  applySelectedEffect(passName: string) {
+  applySelectedEffect(passName: string): void {
     this.selectedEffectName = passName;
     this.setShaderPasses(this.getShaderPassesForSelection(passName));
     this.renderEffectControls();
   }
 
-  getShaderPassesForSelection(passName: string): EffectDefinition[] {
-    if (passName === 'No effect') {
+  setShaderPasses(shaderPasses: ShaderPass[]): void {
+    this.shaderPassRenderer?.destroy();
+    this.shaderPassRenderer = new ShaderPassRenderer(this.device, {shaderPasses});
+  }
+
+  getShaderPassesForSelection(passName: string): ShaderPass[] {
+    if (passName === NO_EFFECT) {
       return [nullEffect];
     }
 
-    const effectDefinition = this.shaderPassMap[passName];
-    if (!effectDefinition) {
-      return [];
+    const shaderPass = this.shaderPassMap[passName];
+    if (!shaderPass) {
+      return [nullEffect];
     }
 
-    const effectValues = this.effectValuesByName[passName] || {};
-    if (passName === 'bloom' && isShaderPassPipeline(effectDefinition)) {
-      return [cloneBloomShaderPassPipeline(effectValues)];
-    }
-
-    if (isShaderPassPipeline(effectDefinition)) {
-      return [effectDefinition];
-    }
-
-    return [{...effectDefinition, uniforms: effectValues}];
+    return [{...shaderPass, uniforms: this.effectValuesByName[passName]}];
   }
 
-  renderEffectControls() {
+  renderEffectControls(): void {
     const controls = document.getElementById('postprocessing-controls');
     if (!controls) {
       return;
@@ -276,19 +220,17 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     controls.replaceChildren();
 
-    const effectDefinition =
-      this.selectedEffectName === 'No effect'
+    const shaderPass =
+      this.selectedEffectName === NO_EFFECT
         ? nullEffect
         : this.shaderPassMap[this.selectedEffectName] || nullEffect;
-    const propEntries = getControllableProps(
-      getEffectControlSource(this.selectedEffectName, effectDefinition)
-    );
+    const propEntries = getControllableProps(shaderPass);
 
     if (propEntries.length === 0) {
       const message = document.createElement('div');
       message.style.cssText = CONTROL_ROW_STYLE;
       message.textContent =
-        this.selectedEffectName === 'No effect'
+        this.selectedEffectName === NO_EFFECT
           ? 'Null effect passes the image through unchanged.'
           : 'This effect does not expose configurable parameters.';
       controls.appendChild(message);
@@ -413,7 +355,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     return row;
   }
 
-  updateEffectValue(effectName: string, propName: string, nextValue: EffectPropValue) {
+  updateEffectValue(effectName: string, propName: string, nextValue: EffectPropValue): void {
     const currentState = this.effectValuesByName[effectName] || {};
     this.effectValuesByName[effectName] = {
       ...currentState,
@@ -426,39 +368,28 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 }
 
-// Extract list of postprocessing-capable shader modules from the wildcard import
-function getShaderPasses(): Record<string, EffectDefinition> {
-  const passes: Record<string, EffectDefinition> = {};
+function getShaderPasses(): Record<string, ShaderPass> {
+  const passes: Record<string, ShaderPass> = {};
   Object.entries(shaderModules).forEach(([key, module]) => {
-    if (key === 'bloom') {
-      passes[key] = shaderModules.bloomShaderPassPipeline as ShaderPassPipeline;
+    if (key === 'bloom' || key === 'bloomShaderPassPipeline') {
       return;
     }
 
-    if (key === 'bloomShaderPassPipeline') {
-      return;
-    }
-
-    if ((isShaderPass(module) || isShaderPassPipeline(module)) && !key.startsWith('_')) {
-      passes[key] = module as EffectDefinition;
+    if (isShaderPass(module) && !key.startsWith('_')) {
+      passes[key] = module;
     }
   });
+
   return passes;
 }
 
 function getInitialEffectValues(
-  shaderPassMap: Record<string, EffectDefinition>
+  shaderPassMap: Record<string, ShaderPass>
 ): Record<string, EffectState> {
   const initialValues: Record<string, EffectState> = {};
-  for (const [passName, effectDefinition] of Object.entries(shaderPassMap)) {
-    initialValues[passName] = getDefaultEffectValues(
-      getEffectControlSource(passName, effectDefinition)
-    );
+  for (const [passName, shaderPass] of Object.entries(shaderPassMap)) {
+    initialValues[passName] = getDefaultEffectValues(shaderPass);
   }
-  initialValues.bloom = {
-    ...initialValues.bloom,
-    ...BLOOM_UNIFORMS
-  };
   return initialValues;
 }
 
@@ -473,42 +404,6 @@ function getDefaultEffectValues(shaderPass: ShaderPass): EffectState {
   return values;
 }
 
-function getEffectControlSource(
-  effectName: string,
-  effectDefinition: EffectDefinition
-): ShaderPass {
-  if (effectName === 'bloom' && isShaderPassPipeline(effectDefinition)) {
-    return shaderModules.bloom as ShaderPass;
-  }
-
-  return isShaderPass(effectDefinition) ? effectDefinition : nullEffect;
-}
-
-function cloneBloomShaderPassPipeline(effectValues: EffectState): ShaderPassPipeline {
-  const threshold =
-    typeof effectValues.threshold === 'number' ? effectValues.threshold : BLOOM_UNIFORMS.threshold;
-  const intensity =
-    typeof effectValues.intensity === 'number' ? effectValues.intensity : BLOOM_UNIFORMS.intensity;
-  const radius =
-    typeof effectValues.radius === 'number' ? effectValues.radius : BLOOM_UNIFORMS.radius;
-
-  return {
-    ...shaderModules.bloomShaderPassPipeline,
-    steps: shaderModules.bloomShaderPassPipeline.steps.map(step => {
-      switch (step.shaderPass.name) {
-        case 'bloomExtract':
-          return {...step, uniforms: {...step.uniforms, threshold}};
-        case 'bloomBlur':
-          return {...step, uniforms: {...step.uniforms, radius}};
-        case 'bloomComposite':
-          return {...step, uniforms: {...step.uniforms, intensity}};
-        default:
-          return step;
-      }
-    })
-  };
-}
-
 function getControllableProps(shaderPass: ShaderPass): [string, ShaderPropType][] {
   return Object.entries(shaderPass.propTypes || {}).filter(
     ([, propType]) => !propType.private && propType.value !== undefined
@@ -517,10 +412,6 @@ function getControllableProps(shaderPass: ShaderPass): [string, ShaderPropType][
 
 function isShaderPass(module: unknown): module is ShaderPass {
   return Boolean(module && typeof module === 'object' && 'passes' in module);
-}
-
-function isShaderPassPipeline(module: unknown): module is ShaderPassPipeline {
-  return Boolean(module && typeof module === 'object' && 'steps' in module);
 }
 
 function cloneEffectValue(value: unknown): EffectPropValue | undefined {
@@ -565,10 +456,9 @@ function formatControlValue(value: number): string {
   return Math.abs(value) >= 100 ? value.toFixed(0) : value.toFixed(3).replace(/\.?0+$/, '');
 }
 
-/** Initialize an existing HTML selector for the shader passes */
 function initializeSelector(
   id: string,
-  array: string[],
+  options: string[],
   onChange: (key: string) => void,
   initialValue?: string
 ): HTMLSelectElement | null {
@@ -578,18 +468,17 @@ function initializeSelector(
   }
 
   selectList.replaceChildren();
-
-  // Create and append the options
-  for (const key of array) {
+  for (const optionName of options) {
     const option = document.createElement('option');
-    option.value = key;
-    option.text = key;
-    option.id = key;
-    option.selected = key === initialValue;
+    option.value = optionName;
+    option.text = optionName;
+    option.selected = optionName === initialValue;
     selectList.appendChild(option);
   }
 
-  selectList?.addEventListener('change', e => onChange((e.target as HTMLSelectElement).value));
+  selectList.addEventListener('change', event =>
+    onChange((event.target as HTMLSelectElement).value)
+  );
 
   return selectList;
 }

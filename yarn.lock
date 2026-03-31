@@ -14843,6 +14843,21 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"luma.gl-examples-experimental-bloom@workspace:examples/experimental/bloom":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-experimental-bloom@workspace:examples/experimental/bloom"
+  dependencies:
+    "@luma.gl/core": "npm:9.3.0-alpha.11"
+    "@luma.gl/effects": "npm:9.3.0-alpha.11"
+    "@luma.gl/engine": "npm:9.3.0-alpha.11"
+    "@luma.gl/shadertools": "npm:9.3.0-alpha.11"
+    "@luma.gl/webgl": "npm:9.3.0-alpha.11"
+    "@luma.gl/webgpu": "npm:9.3.0-alpha.11"
+    typescript: "npm:^5.9.3"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
 "luma.gl-examples-experimental-fp64@workspace:examples/experimental/fp64":
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-experimental-fp64@workspace:examples/experimental/fp64"

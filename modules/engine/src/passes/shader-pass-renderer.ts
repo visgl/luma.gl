@@ -5,7 +5,6 @@
 import type {Binding} from '@luma.gl/core';
 import {Device, Framebuffer, RenderPass, Texture} from '@luma.gl/core';
 import type {
-  ShaderModule,
   ShaderPass,
   ShaderPassInputSource,
   ShaderPassPipeline,

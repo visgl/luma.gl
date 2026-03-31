@@ -5,6 +5,7 @@ import {ExampleHeader, ExamplePage, LumaExample, ReactExample, useStore} from '.
 
 import AnimationApp from '../../examples/api/animation/app';
 import CubemapApp from '../../examples/api/cubemap/app';
+import BloomApp from '../../examples/experimental/bloom/app';
 import FP64App from '../../examples/experimental/fp64/app';
 import MultiCanvasApp from '../../examples/api/multi-canvas/app';
 import Texture3DApp from '../../examples/api/texture-3d/app';
@@ -92,6 +93,17 @@ export const DOFExample: React.FC = props => (
     template={DOFApp}
     config={exampleConfig}
     showHeader={false}
+    {...props}
+  />
+);
+
+export const BloomExample: React.FC = props => (
+  <LumaExample
+    id="bloom"
+    title="Bloom"
+    directory="experimental"
+    template={BloomApp}
+    config={exampleConfig}
     {...props}
   />
 );
