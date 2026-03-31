@@ -92,7 +92,7 @@ export function loadPBREnvironment(device: Device, props: PBREnvironmentProps): 
 const FACES: TextureCubeFace[] = ['+X', '-X', '+Y', '-Y', '+Z', '-Z'];
 
 function resolveTextureUrl(url: string): string {
-  const baseUrl = globalThis.location?.href ?? globalThis.document?.baseURI;
+  const baseUrl = globalThis.document?.baseURI ?? globalThis.location?.href;
   return baseUrl ? new URL(url, baseUrl).toString() : url;
 }
 
