@@ -1,0 +1,20 @@
+---
+title: Depth of Field
+---
+
+import {ExampleHeader} from '@site/src/react-luma';
+import {DOFExample} from '@site/src/examples';
+
+<ExampleHeader
+  id="dof"
+  title="Depth of Field"
+  directory="showcase"
+  devices={['webgl2', 'webgpu']}
+>
+  <div>
+    Several instanced cubes rendered to an offscreen framebuffer and composited with a
+    depth-of-field blur pass ported from the luma.gl v8 example.
+  </div>
+</ExampleHeader>
+
+<DOFExample />

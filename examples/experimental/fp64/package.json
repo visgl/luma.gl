@@ -1,5 +1,5 @@
 {
-  "name": "luma.gl-examples-fp64",
+  "name": "luma.gl-examples-experimental-fp64",
   "version": "9.3.0-alpha.11",
   "private": true,
   "scripts": {
