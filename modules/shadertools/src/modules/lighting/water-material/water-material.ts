@@ -30,7 +30,7 @@ export type WaterMaterialUniforms = {
 };
 
 export type WaterMaterialProps = Omit<WaterMaterialUniforms, 'mappingMode'> & {
-  mapping?: 'uv' | 'world';
+  mapping?: 'uv' | 'world' | 'object';
 };
 
 const DEFAULT_WATER_MATERIAL_UNIFORMS: Required<WaterMaterialUniforms> = {
@@ -154,7 +154,7 @@ export const waterMaterial: ShaderModule<WaterMaterialProps, WaterMaterialUnifor
     }
 
     if (mapping !== undefined) {
-      uniforms.mappingMode = mapping === 'world' ? 1 : 0;
+      uniforms.mappingMode = mapping === 'world' ? 1 : mapping === 'object' ? 2 : 0;
     }
 
     return uniforms;

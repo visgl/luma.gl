@@ -241,7 +241,7 @@ export class DynamicTexture {
       this.isReady = true;
       this.resolveReady(this.texture);
 
-      log.info(0, `${this} created`)();
+      log.info(1, `${this} created`)();
     } catch (e) {
       const err = e instanceof Error ? e : new Error(String(e));
       this.rejectReady(err);

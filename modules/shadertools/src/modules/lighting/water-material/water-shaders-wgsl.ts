@@ -35,10 +35,19 @@ fn water_getDirection(direction: vec2<f32>) -> vec2<f32> {
   return vec2<f32>(1.0, 0.0);
 }
 
-fn water_getCoordinates(position_worldspace: vec3<f32>, uv: vec2<f32>) -> vec2<f32> {
+fn water_getCoordinates(
+  position_worldspace: vec3<f32>,
+  position_objectspace: vec3<f32>,
+  uv: vec2<f32>
+) -> vec2<f32> {
   var baseCoordinates = uv;
   if (waterMaterial.mappingMode == 1) {
     baseCoordinates = position_worldspace.xz;
+  } else if (waterMaterial.mappingMode == 2) {
+    let globeDirection = normalize(position_objectspace);
+    let longitude = atan2(globeDirection.x, globeDirection.z);
+    let latitude = asin(clamp(globeDirection.y, -1.0, 1.0));
+    baseCoordinates = vec2<f32>(longitude, latitude);
   }
 
   return baseCoordinates * waterMaterial.coordinateScale + waterMaterial.coordinateOffset;
@@ -67,10 +76,11 @@ fn water_getTangent(normal_worldspace: vec3<f32>) -> vec3<f32> {
 
 fn water_getNormal(
   position_worldspace: vec3<f32>,
+  position_objectspace: vec3<f32>,
   normal_worldspace: vec3<f32>,
   uv: vec2<f32>
 ) -> vec3<f32> {
-  let coordinates = water_getCoordinates(position_worldspace, uv);
+  let coordinates = water_getCoordinates(position_worldspace, position_objectspace, uv);
   let gradient =
     water_getWaveGradient(
       coordinates,
@@ -110,13 +120,19 @@ fn water_getSpecularContribution(
   return waterMaterial.fresnelColor * light_color * specular;
 }
 
-fn water_getColor(
+fn water_getColorMapped(
   cameraPosition: vec3<f32>,
   position_worldspace: vec3<f32>,
+  position_objectspace: vec3<f32>,
   normal_worldspace: vec3<f32>,
   uv: vec2<f32>
 ) -> vec4<f32> {
-  let waterNormal = water_getNormal(position_worldspace, normalize(normal_worldspace), uv);
+  let waterNormal = water_getNormal(
+    position_worldspace,
+    position_objectspace,
+    normalize(normal_worldspace),
+    uv
+  );
   let viewDirection = normalize(cameraPosition - position_worldspace);
   let fresnel =
     pow(
@@ -195,5 +211,20 @@ fn water_getColor(
     clamp(fresnel, 0.0, 1.0) * 0.35
   );
   return vec4<f32>(lightColor, waterMaterial.opacity);
+}
+
+fn water_getColor(
+  cameraPosition: vec3<f32>,
+  position_worldspace: vec3<f32>,
+  normal_worldspace: vec3<f32>,
+  uv: vec2<f32>
+) -> vec4<f32> {
+  return water_getColorMapped(
+    cameraPosition,
+    position_worldspace,
+    position_worldspace,
+    normal_worldspace,
+    uv
+  );
 }
 `;

@@ -25,6 +25,8 @@ export function registerWaterMaterialTests(test: TapeTestFunction): void {
     t.deepEqual(uniforms.waveADirection, [0, 1], 'wave A direction is normalized');
     t.deepEqual(uniforms.waveBDirection, [-1, 0], 'wave B direction is normalized');
     t.equal(uniforms.normalStrength, 0.5, 'scalar uniforms are forwarded');
+    uniforms = waterMaterial.getUniforms({mapping: 'object'});
+    t.equal(uniforms.mappingMode, 2, 'object mapping converts to object-space mode');
     t.ok(
       waterMaterial.defines?.LIGHTING_FRAGMENT,
       'waterMaterial opts into fragment lighting helpers'

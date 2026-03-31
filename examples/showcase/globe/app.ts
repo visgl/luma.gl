@@ -32,6 +32,14 @@ import tychoNegzUrl from './tycho-negz.jpg';
 import tychoPosxUrl from './tycho-posx.jpg';
 import tychoPosyUrl from './tycho-posy.jpg';
 import tychoPoszUrl from './tycho-posz.jpg';
+// Wikimedia Commons "Constellations, equirectangular plot.svg" by CMG Lee,
+// converted to local cube-map faces for offline example loading.
+import constellationNegxUrl from './constellation-negx.png';
+import constellationNegyUrl from './constellation-negy.png';
+import constellationNegzUrl from './constellation-negz.png';
+import constellationPosxUrl from './constellation-posx.png';
+import constellationPosyUrl from './constellation-posy.png';
+import constellationPoszUrl from './constellation-posz.png';
 
 const INFO_HTML = `\
 <style>
@@ -94,6 +102,16 @@ const INFO_HTML = `\
     accent-color: #73d0ff;
   }
 
+  #water-globe-controls select {
+    width: 100%;
+    border: 1px solid rgba(23, 37, 54, 0.18);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.92);
+    color: #172536;
+    padding: 6px 10px;
+    font: inherit;
+  }
+
   #water-globe-controls input[type='checkbox'] {
     accent-color: #73d0ff;
   }
@@ -110,25 +128,43 @@ const INFO_HTML = `\
     color: rgba(23, 37, 54, 0.6);
     font-size: 12px;
   }
+
+  #water-globe-controls .attribution {
+    margin-top: 8px;
+    color: rgba(23, 37, 54, 0.56);
+    font-size: 11px;
+    line-height: 1.35;
+  }
+
+  #water-globe-controls .attribution a {
+    color: inherit;
+  }
 </style>
 <div id="water-globe-controls">
-  <p>Revives the classic Earth specular demo as a modern luma.gl v9 showcase with animated oceans and a NASA Tycho star background.</p>
+  <p>Revives the classic Earth specular demo as a modern luma.gl v9 showcase with animated oceans and switchable celestial sky maps.</p>
   <div class="grid">
     <div class="toggle-row">
-      <label class="toggle"><span>Star Background</span><input id="star-background-enabled" type="checkbox" checked /></label>
+      <label class="toggle"><span>Sky Background</span><input id="star-background-enabled" type="checkbox" checked /></label>
       <label class="toggle"><span>Water Overlay</span><input id="water-enabled" type="checkbox" checked /></label>
       <label class="toggle"><span>Land Texture</span><input id="land-texture-enabled" type="checkbox" checked /></label>
     </div>
     <div class="rows">
+      <label class="control-row"><span class="control-label">Sky Map</span><span class="control-input"><select id="sky-map"><option value="stars" selected>Stars</option><option value="constellations">Constellations</option></select></span><output id="sky-map-value">Stars</output></label>
       <label class="control-row"><span class="control-label">Wave Speed</span><span class="control-input"><input id="wave-speed" type="range" min="0" max="4" step="0.01" value="1.25" /></span><output id="wave-speed-value">1.25x</output></label>
       <label class="control-row"><span class="control-label">Normal Strength</span><span class="control-input"><input id="normal-strength" type="range" min="0" max="1.4" step="0.01" value="0.52" /></span><output id="normal-strength-value">0.52</output></label>
       <label class="control-row"><span class="control-label">Fresnel Power</span><span class="control-input"><input id="fresnel-power" type="range" min="1" max="12" step="0.1" value="6.2" /></span><output id="fresnel-power-value">6.2</output></label>
-      <label class="control-row"><span class="control-label">Specular Intensity</span><span class="control-input"><input id="specular-intensity" type="range" min="0" max="4" step="0.05" value="1.8" /></span><output id="specular-intensity-value">1.80</output></label>
+      <label class="control-row"><span class="control-label">Specular Intensity</span><span class="control-input"><input id="specular-intensity" type="range" min="0" max="5" step="0.05" value="2.45" /></span><output id="specular-intensity-value">2.45</output></label>
       <label class="control-row"><span class="control-label">Light Azimuth</span><span class="control-input"><input id="light-azimuth" type="range" min="-180" max="180" step="1" value="-38" /></span><output id="light-azimuth-value">-38°</output></label>
       <label class="control-row"><span class="control-label">Light Elevation</span><span class="control-input"><input id="light-elevation" type="range" min="5" max="85" step="1" value="34" /></span><output id="light-elevation-value">34°</output></label>
     </div>
   </div>
   <div class="caption">Drag to orbit. Use the mouse wheel or trackpad to zoom.</div>
+  <div class="attribution">
+    Sky maps: NASA <a href="https://science.nasa.gov/3d-resources/tycho-star-map/">Tycho Star Map</a>;
+    constellation map derived from Wikimedia Commons
+    <a href="https://commons.wikimedia.org/wiki/File:Constellations,_equirectangular_plot.svg"> Constellations, equirectangular plot.svg</a>
+    by CMG Lee, <a href="https://creativecommons.org/licenses/by-sa/3.0/">CC BY-SA 3.0</a>.
+  </div>
 </div>
 `;
 
@@ -237,6 +273,8 @@ struct FragmentInputs {
   @location(0) fragUV : vec2<f32>,
   @location(1) fragPosition : vec3<f32>,
   @location(2) fragNormal : vec3<f32>,
+  @location(3) fragLocalNormal : vec3<f32>,
+  @location(4) fragLocalPosition : vec3<f32>,
 };
 
 @vertex
@@ -248,6 +286,8 @@ fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
   outputs.fragUV = inputs.texCoords;
   outputs.fragPosition = worldPosition.xyz;
   outputs.fragNormal = normalize((globeScene.normalMatrix * vec4<f32>(inputs.normals, 0.0)).xyz);
+  outputs.fragLocalNormal = normalize(inputs.normals);
+  outputs.fragLocalPosition = inputs.positions;
 
   return outputs;
 }
@@ -261,8 +301,9 @@ fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
   let textureMix = select(0.0, 1.0, globeScene.showLandTexture != 0);
   let baseColor = mix(vec3<f32>(0.74, 0.72, 0.66), landSample, textureMix);
   let normalizedNormal = normalize(inputs.fragNormal);
-  let latitudeMask = smoothstep(0.45, 0.72, abs(normalizedNormal.y));
-  let southPolarMask = smoothstep(0.58, 0.82, -normalizedNormal.y);
+  let polarNormal = normalize(inputs.fragLocalNormal);
+  let latitudeMask = smoothstep(0.45, 0.72, abs(polarNormal.y));
+  let southPolarMask = smoothstep(0.58, 0.82, -polarNormal.y);
   let landLuminance = dot(landSample, vec3<f32>(0.2126, 0.7152, 0.0722));
   let brightIceMask = latitudeMask * smoothstep(0.68, 0.9, landLuminance);
   let iceMask = textureMix * landMask * max(brightIceMask, southPolarMask);
@@ -325,6 +366,8 @@ struct FragmentInputs {
   @location(0) fragUV : vec2<f32>,
   @location(1) fragPosition : vec3<f32>,
   @location(2) fragNormal : vec3<f32>,
+  @location(3) fragLocalNormal : vec3<f32>,
+  @location(4) fragLocalPosition : vec3<f32>,
 };
 
 @vertex
@@ -336,6 +379,8 @@ fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
   outputs.fragUV = inputs.texCoords;
   outputs.fragPosition = worldPosition.xyz;
   outputs.fragNormal = normalize((globeScene.normalMatrix * vec4<f32>(inputs.normals, 0.0)).xyz);
+  outputs.fragLocalNormal = normalize(inputs.normals);
+  outputs.fragLocalPosition = inputs.positions;
 
   return outputs;
 }
@@ -346,11 +391,13 @@ fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
   let landMask = textureSample(waterMaskTexture, waterMaskTextureSampler, surfaceUV).r;
   let oceanMask = smoothstep(0.4, 0.6, 1.0 - landMask);
   let normalizedNormal = normalize(inputs.fragNormal);
-  let polarIceMask = oceanMask * smoothstep(0.8, 0.92, abs(normalizedNormal.y));
+  let polarNormal = normalize(inputs.fragLocalNormal);
+  let polarIceMask = oceanMask * smoothstep(0.8, 0.92, abs(polarNormal.y));
   let openWaterMask = max(oceanMask - polarIceMask, 0.0);
-  let waterColor = water_getColor(
+  let waterColor = water_getColorMapped(
     globeScene.cameraPosition,
     inputs.fragPosition,
+    inputs.fragLocalPosition,
     normalizedNormal,
     surfaceUV
   );
@@ -396,6 +443,8 @@ in vec2 texCoords;
 out vec2 vUV;
 out vec3 vPosition;
 out vec3 vNormal;
+out vec3 vLocalNormal;
+out vec3 vLocalPosition;
 
 uniform globeSceneUniforms {
   mat4 viewProjectionMatrix;
@@ -411,6 +460,8 @@ void main(void) {
   vUV = texCoords;
   vPosition = worldPosition.xyz;
   vNormal = normalize((globeScene.normalMatrix * vec4(normals, 0.0)).xyz);
+  vLocalNormal = normalize(normals);
+  vLocalPosition = positions;
 }
 `;
 
@@ -421,6 +472,7 @@ precision highp float;
 in vec2 vUV;
 in vec3 vPosition;
 in vec3 vNormal;
+in vec3 vLocalNormal;
 
 uniform sampler2D landTexture;
 uniform sampler2D landMaskTexture;
@@ -443,8 +495,9 @@ void main(void) {
   float textureMix = globeScene.showLandTexture != 0 ? 1.0 : 0.0;
   vec3 baseColor = mix(vec3(0.74, 0.72, 0.66), landSample, textureMix);
   vec3 normalizedNormal = normalize(vNormal);
-  float latitudeMask = smoothstep(0.45, 0.72, abs(normalizedNormal.y));
-  float southPolarMask = smoothstep(0.58, 0.82, -normalizedNormal.y);
+  vec3 polarNormal = normalize(vLocalNormal);
+  float latitudeMask = smoothstep(0.45, 0.72, abs(polarNormal.y));
+  float southPolarMask = smoothstep(0.58, 0.82, -polarNormal.y);
   float landLuminance = dot(landSample, vec3(0.2126, 0.7152, 0.0722));
   float brightIceMask = latitudeMask * smoothstep(0.68, 0.9, landLuminance);
   float iceMask = textureMix * landMask * max(brightIceMask, southPolarMask);
@@ -485,6 +538,8 @@ precision highp float;
 in vec2 vUV;
 in vec3 vPosition;
 in vec3 vNormal;
+in vec3 vLocalNormal;
+in vec3 vLocalPosition;
 
 uniform sampler2D waterMaskTexture;
 
@@ -503,9 +558,16 @@ void main(void) {
   float landMask = texture(waterMaskTexture, surfaceUV).r;
   float oceanMask = smoothstep(0.4, 0.6, 1.0 - landMask);
   vec3 normalizedNormal = normalize(vNormal);
-  float polarIceMask = oceanMask * smoothstep(0.8, 0.92, abs(normalizedNormal.y));
+  vec3 polarNormal = normalize(vLocalNormal);
+  float polarIceMask = oceanMask * smoothstep(0.8, 0.92, abs(polarNormal.y));
   float openWaterMask = max(oceanMask - polarIceMask, 0.0);
-  vec4 waterColor = water_getColor(globeScene.cameraPosition, vPosition, normalizedNormal, surfaceUV);
+  vec4 waterColor = water_getColorMapped(
+    globeScene.cameraPosition,
+    vPosition,
+    vLocalPosition,
+    normalizedNormal,
+    surfaceUV
+  );
   float sunVisibility = 1.0;
   vec3 viewDirection = normalize(globeScene.cameraPosition - vPosition);
   float iceRim = pow(1.0 - max(dot(viewDirection, normalizedNormal), 0.0), 5.0);
@@ -577,6 +639,7 @@ type SkyboxSceneUniforms = {
 
 type GlobeControls = {
   starBackgroundEnabled: boolean;
+  skyMap: SkyMapId;
   waterEnabled: boolean;
   landTextureEnabled: boolean;
   waveSpeed: number;
@@ -588,6 +651,7 @@ type GlobeControls = {
 };
 
 type CleanupCallback = () => void;
+type SkyMapId = 'stars' | 'constellations';
 type GlobeShaderInputs = {
   globeScene: typeof globeScene.props;
   lighting: typeof lighting.props;
@@ -598,12 +662,13 @@ type SkyboxShaderInputs = {
 
 const DEFAULT_CONTROLS: GlobeControls = {
   starBackgroundEnabled: true,
+  skyMap: 'stars',
   waterEnabled: true,
   landTextureEnabled: true,
   waveSpeed: 1.25,
   normalStrength: 0.52,
   fresnelPower: 6.2,
-  specularIntensity: 1.8,
+  specularIntensity: 2.45,
   lightAzimuth: -38,
   lightElevation: 34
 };
@@ -628,7 +693,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   backgroundShaderInputs: ShaderInputs<SkyboxShaderInputs>;
   landShaderInputs: ShaderInputs<GlobeShaderInputs>;
   oceanShaderInputs: ShaderInputs<GlobeShaderInputs>;
-  skyTexture: DynamicTexture;
+  tychoSkyTexture: DynamicTexture;
+  constellationSkyTexture: DynamicTexture;
   landTexture: DynamicTexture;
   waterMaskTexture: DynamicTexture;
   device: Device;
@@ -688,7 +754,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       canvas.removeEventListener('wheel', wheelHandler as EventListener)
     );
 
-    this.skyTexture = new DynamicTexture(device, {
+    this.tychoSkyTexture = new DynamicTexture(device, {
       dimension: 'cube',
       mipmaps: true,
       data: (async () => ({
@@ -698,6 +764,23 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         '-Y': await loadImageBitmap(tychoNegyUrl),
         '+Z': await loadImageBitmap(tychoPoszUrl),
         '-Z': await loadImageBitmap(tychoNegzUrl)
+      }))(),
+      sampler: {
+        magFilter: 'linear',
+        minFilter: 'linear',
+        mipmapFilter: 'nearest'
+      }
+    });
+    this.constellationSkyTexture = new DynamicTexture(device, {
+      dimension: 'cube',
+      mipmaps: true,
+      data: (async () => ({
+        '+X': await loadImageBitmap(constellationPosxUrl),
+        '-X': await loadImageBitmap(constellationNegxUrl),
+        '+Y': await loadImageBitmap(constellationPosyUrl),
+        '-Y': await loadImageBitmap(constellationNegyUrl),
+        '+Z': await loadImageBitmap(constellationPoszUrl),
+        '-Z': await loadImageBitmap(constellationNegzUrl)
       }))(),
       sampler: {
         magFilter: 'linear',
@@ -737,21 +820,21 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.oceanMaterial = oceanMaterialFactory.createMaterial();
     this.oceanMaterial.setProps({
       waterMaterial: {
-        mapping: 'uv',
+        mapping: 'object',
         baseColor: [10, 70, 128],
-        fresnelColor: [214, 238, 248],
+        fresnelColor: [232, 245, 252],
         opacity: 0.84,
-        coordinateScale: [2.4, 6.8],
-        coordinateOffset: [0, 0.12],
+        coordinateScale: [5.2, 5.2],
+        coordinateOffset: [0, 0],
         normalStrength: this.controls.normalStrength,
         fresnelPower: this.controls.fresnelPower,
         specularIntensity: this.controls.specularIntensity,
-        waveADirection: [0.04, 1],
-        waveAFrequency: 4.4,
-        waveAAmplitude: 0.028,
-        waveBDirection: [-0.12, 1],
-        waveBFrequency: 14.5,
-        waveBAmplitude: 0.014
+        waveADirection: [0.08, -1],
+        waveAFrequency: 3.8,
+        waveAAmplitude: 0.024,
+        waveBDirection: [-0.18, -1],
+        waveBFrequency: 11.8,
+        waveBAmplitude: 0.012
       }
     });
 
@@ -776,7 +859,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       shaderInputs: this.backgroundShaderInputs,
       geometry: new CubeGeometry({indices: true}),
       bindings: {
-        cubeTexture: this.skyTexture
+        cubeTexture: this.tychoSkyTexture
       },
       parameters: {
         depthWriteEnabled: false,
@@ -840,7 +923,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.backgroundModel.destroy();
     this.landModel.destroy();
     this.oceanModel.destroy();
-    this.skyTexture.destroy();
+    this.tychoSkyTexture.destroy();
+    this.constellationSkyTexture.destroy();
     this.landMaterial.destroy();
     this.oceanMaterial.destroy();
     this.landTexture.destroy();
@@ -872,6 +956,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
 
     if (this.controls.starBackgroundEnabled) {
+      this.backgroundModel.setBindings({cubeTexture: this.getSkyTexture()});
       this.backgroundShaderInputs.setProps({
         skyboxScene: {
           modelMatrix: new Matrix4().scale([40, 40, 40]),
@@ -941,6 +1026,16 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       value => {
         this.controls.starBackgroundEnabled = value;
       },
+      this.cleanupCallbacks
+    );
+    bindSelectControl(
+      'sky-map',
+      'sky-map-value',
+      this.controls.skyMap,
+      value => {
+        this.controls.skyMap = value as SkyMapId;
+      },
+      value => (value === 'constellations' ? 'Constellations' : 'Stars'),
       this.cleanupCallbacks
     );
     bindCheckboxControl(
@@ -1058,6 +1153,12 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       ]
     };
   }
+
+  private getSkyTexture(): DynamicTexture {
+    return this.controls.skyMap === 'constellations'
+      ? this.constellationSkyTexture
+      : this.tychoSkyTexture;
+  }
 }
 
 function bindCheckboxControl(
@@ -1105,6 +1206,36 @@ function bindRangeControl(
   };
   input.addEventListener('input', inputHandler);
   cleanupCallbacks.push(() => input.removeEventListener('input', inputHandler));
+}
+
+function bindSelectControl(
+  id: string,
+  outputId: string,
+  initialValue: string,
+  onChange: (value: string) => void,
+  formatValue: (value: string) => string,
+  cleanupCallbacks: CleanupCallback[]
+): void {
+  const input = document.getElementById(id) as HTMLSelectElement | null;
+  const output = document.getElementById(outputId) as HTMLOutputElement | null;
+  if (!input || !output) {
+    return;
+  }
+
+  const applyValue = (value: string) => {
+    input.value = value;
+    output.value = formatValue(value);
+    output.textContent = formatValue(value);
+    onChange(value);
+  };
+
+  applyValue(initialValue);
+
+  const changeHandler = () => {
+    applyValue(input.value);
+  };
+  input.addEventListener('change', changeHandler);
+  cleanupCallbacks.push(() => input.removeEventListener('change', changeHandler));
 }
 
 function getDirectionalLightDirection(

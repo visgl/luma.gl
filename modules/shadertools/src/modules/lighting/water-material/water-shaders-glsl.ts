@@ -52,8 +52,16 @@ vec2 water_getDirection(vec2 direction) {
   return directionLength > 0.0 ? direction / directionLength : vec2(1.0, 0.0);
 }
 
-vec2 water_getCoordinates(vec3 position_worldspace, vec2 uv) {
-  vec2 baseCoordinates = waterMaterial.mappingMode == 1 ? position_worldspace.xz : uv;
+vec2 water_getCoordinates(vec3 position_worldspace, vec3 position_objectspace, vec2 uv) {
+  vec2 baseCoordinates = uv;
+  if (waterMaterial.mappingMode == 1) {
+    baseCoordinates = position_worldspace.xz;
+  } else if (waterMaterial.mappingMode == 2) {
+    vec3 globeDirection = normalize(position_objectspace);
+    float longitude = atan(globeDirection.x, globeDirection.z);
+    float latitude = asin(clamp(globeDirection.y, -1.0, 1.0));
+    baseCoordinates = vec2(longitude, latitude);
+  }
   return baseCoordinates * waterMaterial.coordinateScale + waterMaterial.coordinateOffset;
 }
 
@@ -74,8 +82,13 @@ vec3 water_getTangent(vec3 normal_worldspace) {
   return normalize(cross(referenceAxis, normal_worldspace));
 }
 
-vec3 water_getNormal(vec3 position_worldspace, vec3 normal_worldspace, vec2 uv) {
-  vec2 coordinates = water_getCoordinates(position_worldspace, uv);
+vec3 water_getNormal(
+  vec3 position_worldspace,
+  vec3 position_objectspace,
+  vec3 normal_worldspace,
+  vec2 uv
+) {
+  vec2 coordinates = water_getCoordinates(position_worldspace, position_objectspace, uv);
   vec2 gradient =
     water_getWaveGradient(
       coordinates,
@@ -116,13 +129,19 @@ vec3 water_getSpecularContribution(
   return waterMaterial.fresnelColor * light_color * specular;
 }
 
-vec4 water_getColor(
+vec4 water_getColorMapped(
   vec3 cameraPosition,
   vec3 position_worldspace,
+  vec3 position_objectspace,
   vec3 normal_worldspace,
   vec2 uv
 ) {
-  vec3 waterNormal = water_getNormal(position_worldspace, normalize(normal_worldspace), uv);
+  vec3 waterNormal = water_getNormal(
+    position_worldspace,
+    position_objectspace,
+    normalize(normal_worldspace),
+    uv
+  );
   vec3 viewDirection = normalize(cameraPosition - position_worldspace);
   float fresnel =
     pow(
@@ -195,5 +214,20 @@ vec4 water_getColor(
 
   lightColor = mix(lightColor, waterMaterial.fresnelColor, clamp(fresnel, 0.0, 1.0) * 0.35);
   return vec4(lightColor, waterMaterial.opacity);
+}
+
+vec4 water_getColor(
+  vec3 cameraPosition,
+  vec3 position_worldspace,
+  vec3 normal_worldspace,
+  vec2 uv
+) {
+  return water_getColorMapped(
+    cameraPosition,
+    position_worldspace,
+    position_worldspace,
+    normal_worldspace,
+    uv
+  );
 }
 `;
