@@ -31,6 +31,9 @@ test('gltf#parseGLTFLights - directional', t => {
   t.equals(light.type, 'directional');
   t.deepEquals(light.color, [51, 76.5, 102], 'glTF colors are normalized to luma light range');
   t.equals(light.intensity, 2);
+
+  const floatLights = parseGLTFLights(gltf, {useByteColors: false});
+  t.deepEquals((floatLights[0] as any).color, [0.2, 0.3, 0.4], 'float mode preserves glTF colors');
   t.end();
 });
 

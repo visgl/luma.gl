@@ -7,6 +7,7 @@ import {ShaderModule} from '../../../lib/shader-module/shader-module';
 import {lighting} from '../lights/lighting';
 import {PHONG_WGSL} from './phong-shaders-wgsl';
 import {PHONG_VS, PHONG_FS} from './phong-shaders-glsl';
+import {normalizeByteColor3, resolveUseByteColors} from '../../../lib/color/normalize-byte-colors';
 
 export type PhongMaterialProps = {
   unlit?: boolean;
@@ -15,6 +16,7 @@ export type PhongMaterialProps = {
   /** Specularity exponent */
   shininess?: number;
   specularColor?: NumberArray3;
+  useByteColors?: boolean;
 };
 
 /** In Phong shading, the normal vector is linearly interpolated across the surface of the polygon from the polygon's vertex normals. */
@@ -35,19 +37,24 @@ export const phongMaterial: ShaderModule<PhongMaterialProps> = {
     ambient: 'f32',
     diffuse: 'f32',
     shininess: 'f32',
-    specularColor: 'vec3<f32>'
+    specularColor: 'vec3<f32>',
+    useByteColors: 'i32'
   },
   defaultUniforms: {
     unlit: false,
     ambient: 0.35,
     diffuse: 0.6,
     shininess: 32,
-    specularColor: [0.15, 0.15, 0.15]
+    specularColor: [0.15, 0.15, 0.15],
+    useByteColors: true
   },
   getUniforms(props?: PhongMaterialProps) {
     const uniforms = {...props};
     if (uniforms.specularColor) {
-      uniforms.specularColor = uniforms.specularColor.map(x => x / 255) as NumberArray3;
+      uniforms.specularColor = normalizeByteColor3(
+        uniforms.specularColor,
+        resolveUseByteColors(uniforms.useByteColors, true)
+      ) as NumberArray3;
     }
     return {...phongMaterial.defaultUniforms, ...uniforms};
   }

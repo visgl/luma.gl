@@ -31,6 +31,12 @@ export function registerPhongMaterialTests(test: TapeTestFunction): void {
     t.deepEqual(uniforms.specularColor, [0.15, 0.15, 0.15], 'specularColor');
     t.ok(phongMaterial.defines?.LIGHTING_FRAGMENT, 'phongMaterial enables fragment lighting');
 
+    uniforms = phongMaterial.getUniforms({
+      specularColor: [2, 1, 0.5],
+      useByteColors: false
+    });
+    t.deepEqual(uniforms.specularColor, [2, 1, 0.5], 'float specular colors pass through');
+
     t.end();
   });
 }

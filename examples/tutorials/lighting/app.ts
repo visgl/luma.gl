@@ -180,11 +180,12 @@ Drawing a phong-shaded cube with multiple colored spot lights aimed at the cube
         eyePosition
       },
       lighting: {
+        useByteColors: false,
         lights: [
-          {type: 'ambient', color: [255, 255, 255], intensity: 0.15},
+          {type: 'ambient', color: [1, 1, 1], intensity: 0.15},
           {
             type: 'spot',
-            color: [255, 120, 10],
+            color: [1, 0.47, 0.04],
             position: [2, 4, 3],
             direction: [-2, -4, -3],
             innerConeAngle: 0.2,
@@ -192,7 +193,7 @@ Drawing a phong-shaded cube with multiple colored spot lights aimed at the cube
           },
           {
             type: 'spot',
-            color: [0, 255, 10],
+            color: [0, 1, 0.04],
             position: [-2, 1, 3],
             direction: [2, -1, -3],
             innerConeAngle: 0.2,
@@ -200,7 +201,7 @@ Drawing a phong-shaded cube with multiple colored spot lights aimed at the cube
           },
           {
             type: 'spot',
-            color: [80, 160, 255],
+            color: [0.31, 0.63, 1],
             position: [-3, -2, 2],
             direction: [3, 2, -2],
             innerConeAngle: 0.2,
@@ -208,17 +209,18 @@ Drawing a phong-shaded cube with multiple colored spot lights aimed at the cube
           },
           {
             type: 'spot',
-            color: [255, 80, 180],
+            color: [1, 0.31, 0.71],
             position: [3, -3, 2],
             direction: [-3, 3, -2],
             innerConeAngle: 0.25,
             outerConeAngle: 0.7
           },
-          {type: 'directional', color: [255, 255, 220], direction: [-1, -0.5, -1]}
+          {type: 'directional', color: [1, 1, 0.86], direction: [-1, -0.5, -1]}
         ]
       },
       phongMaterial: {
-        specularColor: [255, 255, 255],
+        specularColor: [1, 1, 1],
+        useByteColors: false,
         shininess: 100
       }
     });

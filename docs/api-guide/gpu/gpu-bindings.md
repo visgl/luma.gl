@@ -319,7 +319,8 @@ const model = new Model(device, {
 
 shaderInputs.setProps({
   lighting: {
-    lights: [{type: 'ambient', color: [255, 255, 255], intensity: 0.2}]
+    useByteColors: false,
+    lights: [{type: 'ambient', color: [1, 1, 1], intensity: 0.2}]
   },
   pbrMaterial: {
     baseColorFactor: [1, 0.8, 0.7, 1]
