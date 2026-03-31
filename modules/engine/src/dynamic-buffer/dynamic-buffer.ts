@@ -69,10 +69,24 @@ export class DynamicBuffer {
   constructor(device: Device, props: DynamicBufferProps) {
     const {debugData: debugDataProps = false, ...bufferProps} = props;
     const id = props.id || uid('dynamic-buffer');
+    const normalizedBufferProps: DynamicBufferProps = {...bufferProps, id};
+
+    if ((normalizedBufferProps.usage || 0) & Buffer.INDEX && !normalizedBufferProps.indexType) {
+      if (bufferProps.data instanceof Uint32Array) {
+        normalizedBufferProps.indexType = 'uint32';
+      } else if (bufferProps.data instanceof Uint16Array) {
+        normalizedBufferProps.indexType = 'uint16';
+      } else if (bufferProps.data instanceof Uint8Array) {
+        normalizedBufferProps.indexType = 'uint8';
+      }
+    }
+
+    delete normalizedBufferProps.data;
+    delete normalizedBufferProps.byteOffset;
 
     this.device = device;
     this.id = id;
-    this.props = {...bufferProps, id};
+    this.props = normalizedBufferProps;
     this.usage = bufferProps.usage || 0;
     this._debugDataEnabled = Boolean(debugDataProps);
     this._maxDebugDataByteLength =
@@ -80,7 +94,7 @@ export class DynamicBuffer {
         ? debugDataProps.maxByteLength
         : DEFAULT_MAX_DEBUG_DATA_BYTE_LENGTH;
 
-    this._buffer = this.device.createBuffer(this.props);
+    this._buffer = this.device.createBuffer({...bufferProps, id});
     this.ready = Promise.resolve(this._buffer);
     this.updateTimestamp = this._buffer.updateTimestamp;
 
@@ -161,8 +175,13 @@ export class DynamicBuffer {
 
     const previousBuffer = this._buffer;
     const previousDebugData = this.debugData.slice(0);
+    const {
+      data: _initialData,
+      byteOffset: _initialByteOffset,
+      ...resizableBufferProps
+    } = this.props;
     const nextBuffer = this.device.createBuffer({
-      ...this.props,
+      ...resizableBufferProps,
       byteLength
     });
 

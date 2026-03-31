@@ -35,70 +35,70 @@ import tychoPoszUrl from './tycho-posz.jpg';
 
 const INFO_HTML = `\
 <style>
-  #water-globe-controls {
+  #globe-controls {
     color: #172536;
     font: 13px/1.45 "SF Pro Text", "Segoe UI", sans-serif;
   }
 
-  #water-globe-controls p {
+  #globe-controls p {
     margin: 0 0 12px;
     color: rgba(23, 37, 54, 0.78);
   }
 
-  #water-globe-controls .grid {
+  #globe-controls .grid {
     display: grid;
     gap: 12px;
   }
 
-  #water-globe-controls .rows {
+  #globe-controls .rows {
     display: grid;
     gap: 10px;
   }
 
-  #water-globe-controls .toggle-row {
+  #globe-controls .toggle-row {
     display: grid;
     gap: 10px;
   }
 
-  #water-globe-controls .toggle {
+  #globe-controls .toggle {
     display: grid;
     grid-template-columns: 160px minmax(140px, 1fr) 56px;
     align-items: center;
     column-gap: 12px;
   }
 
-  #water-globe-controls .control-row {
+  #globe-controls .control-row {
     display: grid;
     grid-template-columns: 160px minmax(140px, 1fr) 56px;
     align-items: center;
     column-gap: 12px;
   }
 
-  #water-globe-controls .control-label {
+  #globe-controls .control-label {
     min-width: 0;
   }
 
-  #water-globe-controls .control-input {
+  #globe-controls .control-input {
     display: flex;
     align-items: center;
   }
 
-  #water-globe-controls .toggle span,
-  #water-globe-controls .control-label {
+  #globe-controls .toggle span,
+  #globe-controls .control-label {
     font-weight: 500;
   }
 
-  #water-globe-controls .toggle span {
+  #globe-controls .toggle span {
     grid-column: 1;
     min-width: 0;
   }
 
-  #water-globe-controls input[type='range'] {
+  #globe-controls input[type='range'] {
     width: 100%;
     accent-color: #73d0ff;
   }
 
-  #water-globe-controls select {
+  #globe-controls select {
     width: 100%;
     border: 1px solid rgba(23, 37, 54, 0.18);
     border-radius: 8px;
@@ -108,37 +108,37 @@ const INFO_HTML = `\
     font: inherit;
   }
 
-  #water-globe-controls input[type='checkbox'] {
+  #globe-controls input[type='checkbox'] {
     accent-color: #73d0ff;
     grid-column: 3;
     justify-self: end;
   }
 
-  #water-globe-controls output {
+  #globe-controls output {
     min-width: 44px;
     color: rgba(23, 37, 54, 0.64);
     text-align: right;
     font-variant-numeric: tabular-nums;
   }
 
-  #water-globe-controls .caption {
+  #globe-controls .caption {
     margin-top: 12px;
     color: rgba(23, 37, 54, 0.6);
     font-size: 12px;
   }
 
-  #water-globe-controls .attribution {
+  #globe-controls .attribution {
     margin-top: 8px;
     color: rgba(23, 37, 54, 0.56);
     font-size: 11px;
     line-height: 1.35;
   }
 
-  #water-globe-controls .attribution a {
+  #globe-controls .attribution a {
     color: inherit;
   }
 </style>
-<div id="water-globe-controls">
+<div id="globe-controls">
   <p>Revives the classic Earth specular demo as a modern luma.gl v9 showcase with animated oceans and a starfield backdrop.</p>
   <div class="grid">
     <div class="toggle-row">
@@ -824,7 +824,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
 
     this.backgroundModel = new Model(device, {
-      id: 'water-globe-background',
+      id: 'globe-background',
       source: SKYBOX_SHADER_WGSL,
       vs: SKYBOX_SHADER_GLSL,
       fs: SKYBOX_FRAGMENT_GLSL,
@@ -842,7 +842,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
 
     this.landModel = new Model(device, {
-      id: 'water-globe-land',
+      id: 'globe-land',
       source: LAND_SHADER_WGSL,
       vs: GLOBE_SHADER_GLSL,
       fs: LAND_FRAGMENT_GLSL,
@@ -862,7 +862,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
 
     this.oceanModel = new Model(device, {
-      id: 'water-globe-ocean',
+      id: 'globe-ocean',
       source: WATER_SHADER_WGSL,
       vs: GLOBE_SHADER_GLSL,
       fs: WATER_FRAGMENT_GLSL,

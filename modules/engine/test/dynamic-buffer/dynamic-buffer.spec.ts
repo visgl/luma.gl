@@ -41,7 +41,8 @@ test('DynamicBuffer#write/read/debugData', async t => {
 test('DynamicBuffer#resize without preserveData replaces the backing buffer', async t => {
   for (const device of await getTestDevices(DEVICE_TYPES)) {
     const dynamicBuffer = new DynamicBuffer(device, {
-      data: new Uint8Array([1, 2, 3, 4]),
+      data: new Uint8Array([1, 2, 3, 4, 5, 6]),
+      byteOffset: 1,
       usage: Buffer.COPY_DST | Buffer.COPY_SRC | Buffer.VERTEX,
       debugData: true
     });
@@ -49,8 +50,8 @@ test('DynamicBuffer#resize without preserveData replaces the backing buffer', as
     const initialBuffer = dynamicBuffer.buffer;
     const initialTimestamp = dynamicBuffer.updateTimestamp;
 
-    t.ok(dynamicBuffer.resize({byteLength: 8}), `${device.type} resize reports change`);
-    t.equal(dynamicBuffer.byteLength, 8, `${device.type} resize updates byteLength`);
+    t.ok(dynamicBuffer.resize({byteLength: 4}), `${device.type} resize reports change`);
+    t.equal(dynamicBuffer.byteLength, 4, `${device.type} resize updates byteLength`);
     t.ok(dynamicBuffer.buffer !== initialBuffer, `${device.type} resize replaces buffer handle`);
     t.equal(dynamicBuffer.generation, 1, `${device.type} resize increments generation`);
     t.ok(
@@ -61,6 +62,11 @@ test('DynamicBuffer#resize without preserveData replaces the backing buffer', as
       dynamicBuffer.ensureSize(4),
       false,
       `${device.type} ensureSize is a no-op when current buffer is large enough`
+    );
+    t.deepEqual(
+      Array.from(new Uint8Array(dynamicBuffer.debugData)),
+      [0, 0, 0, 0],
+      `${device.type} resize without preserveData does not retain constructor upload data`
     );
 
     dynamicBuffer.destroy();
