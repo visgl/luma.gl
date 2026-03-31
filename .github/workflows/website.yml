@@ -35,18 +35,22 @@ jobs:
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
         with:
           token: ${{ secrets.WEBSITE_DEPLOY_TOKEN }}
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: '.nvmrc'
-          cache: 'yarn'
-          cache-dependency-path: yarn.lock
+      
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Enable Corepack / Yarn 4
         run: |
           corepack enable
           corepack prepare yarn@4.13.0 --activate
           yarn -v
+
+      - name: Setup Node (with Corepack)
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'yarn' # or 'pnpm', 'npm' depending on your package manager
+          cache-dependency-path: yarn.lock
 
       - name: Install dependencies and build website
         run: |
