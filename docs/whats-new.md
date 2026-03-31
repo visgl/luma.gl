@@ -2,15 +2,15 @@
 
 _This page contains news for recent luma.gl releases. For older releases (through v8.5) refer to the [Legacy What's New](/docs/legacy/legacy-upgrade-guide) page._
 
-## Version 9.3 (In Development)
+## Version 9.3
 
-Target Date: April 2026
+Release Date: March 31, 2026
 
 **General**
 
 - **Typescript 5.9** - luma.gl code base is now TypeScript 5.9 clean.
 
-**Examples**
+**New Examples**
 
 - **[Texture Tester Example](/examples/api/texture-tester)** - New example showing support for compressed textures on WebGL and WebGPU. Also implements multi-canvas rendering.
 - **[Multi-Canvas Example](/examples/api/multi-canvas)** - New example showing rendering into multiple HTML canvas elements.
