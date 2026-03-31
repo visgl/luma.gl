@@ -26,6 +26,13 @@ For the uniform descriptor syntax behind the module's packed light array, see
 
 Enables or disables lighting calculations for the module.
 
+### `useByteColors?: boolean`
+
+When `true`, light colors are interpreted in the legacy `0..255` convention.
+When `false`, light colors are interpreted directly as floats, which also enables HDR-style values above `1`.
+
+Phase 1 keeps `useByteColors` enabled by default for backward compatibility.
+
 ### `lights?: Light[]`
 
 <p class="badges">
@@ -106,8 +113,8 @@ type DirectionalLight = {
 };
 ```
 
-Colors are specified in the existing 0-255 convention used by the material
-modules. The module converts them to 0-1 shader values internally.
+By default colors are specified in the existing `0..255` convention used by the material
+modules. Set `useByteColors: false` to work directly with float colors.
 
 ## Uniform Layout
 
@@ -154,18 +161,19 @@ const shaderInputs = new ShaderInputs({lighting, phongMaterial});
 
 shaderInputs.setProps({
   lighting: {
+    useByteColors: false,
     lights: [
-      {type: 'ambient', color: [255, 255, 255], intensity: 0.1},
-      {type: 'point', color: [255, 120, 10], position: [2, 4, 3]},
+      {type: 'ambient', color: [1, 1, 1], intensity: 0.1},
+      {type: 'point', color: [1, 0.47, 0.04], position: [2, 4, 3]},
       {
         type: 'spot',
-        color: [80, 160, 255],
+        color: [0.31, 0.63, 1],
         position: [-3, -2, 2],
         direction: [3, 2, -2],
         innerConeAngle: 0.2,
         outerConeAngle: 0.6
       },
-      {type: 'directional', color: [255, 255, 255], direction: [0, -1, 0]}
+      {type: 'directional', color: [1, 1, 1], direction: [0, -1, 0]}
     ]
   }
 });

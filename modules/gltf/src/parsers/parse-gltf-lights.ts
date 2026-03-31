@@ -1,11 +1,23 @@
 import {Matrix4} from '@math.gl/core';
 import type {GLTFNodePostprocessed, GLTFPostprocessed} from '@loaders.gl/gltf';
-import type {DirectionalLight, Light, PointLight, SpotLight} from '@luma.gl/shadertools';
+import {
+  normalizeByteColor3,
+  type DirectionalLight,
+  type Light,
+  type PointLight,
+  type SpotLight
+} from '@luma.gl/shadertools';
 
-const GLTF_COLOR_FACTOR = 255;
+export type ParseGLTFLightsOptions = {
+  /** When true, parsed light colors are converted into luma.gl's legacy byte-style range. */
+  useByteColors?: boolean;
+};
 
 /** Parse KHR_lights_punctual extension into luma.gl light definitions */
-export function parseGLTFLights(gltf: GLTFPostprocessed): Light[] {
+export function parseGLTFLights(
+  gltf: GLTFPostprocessed,
+  options: ParseGLTFLightsOptions = {}
+): Light[] {
   const lightDefs =
     // `postProcessGLTF()` moves KHR_lights_punctual into `gltf.lights`.
     (gltf as GLTFPostprocessed & {lights?: any[]}).lights ||
@@ -33,7 +45,8 @@ export function parseGLTFLights(gltf: GLTFPostprocessed): Light[] {
     }
 
     const color = normalizeGLTFLightColor(
-      (gltfLight.color || [1, 1, 1]) as [number, number, number]
+      (gltfLight.color || [1, 1, 1]) as [number, number, number],
+      options.useByteColors ?? true
     );
     const intensity = gltfLight.intensity ?? 1;
     const range = gltfLight.range;
@@ -59,10 +72,16 @@ export function parseGLTFLights(gltf: GLTFPostprocessed): Light[] {
 }
 
 /**
- * Converts glTF colors from the 0-1 spec range to luma.gl's 0-255 light convention.
+ * Converts glTF colors from the 0-1 spec range to the configured luma light convention.
  */
-function normalizeGLTFLightColor(color: [number, number, number]): [number, number, number] {
-  return color.map(component => component * GLTF_COLOR_FACTOR) as [number, number, number];
+function normalizeGLTFLightColor(
+  color: [number, number, number],
+  useByteColors: boolean
+): [number, number, number] {
+  if (useByteColors) {
+    return color.map(component => component * 255) as [number, number, number];
+  }
+  return normalizeByteColor3(color, false) as [number, number, number];
 }
 
 /**

@@ -117,6 +117,12 @@ export function registerLightingTests(test: TapeTestFunction): void {
     );
     t.deepEqual(legacyUniforms.lights[0].position, [4, 5, 6], 'legacy light data is preserved');
 
+    const floatUniforms = lighting.getUniforms({
+      useByteColors: false,
+      lights: [{type: 'ambient', color: [1, 0.5, 0.25], intensity: 2}]
+    });
+    t.deepEqual(floatUniforms.ambientColor, [2, 1, 0.5], 'float light colors pass through');
+
     t.end();
   });
 }

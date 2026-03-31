@@ -44,14 +44,14 @@ export function loadPBREnvironment(device: Device, props: PBREnvironmentProps): 
       magFilter: 'linear'
     } as const satisfies SamplerProps,
     // Texture accepts a promise that returns an image as data (Async Textures)
-    data: loadImageTexture(props.brdfLutUrl)
+    data: loadImageTexture(resolveTextureUrl(props.brdfLutUrl))
   });
 
   const diffuseEnvSampler = makeCube(device, {
     id: 'DiffuseEnvSampler',
     getTextureForFace: face =>
       loadImageTexture(
-        props.getTexUrl('diffuse', FACES.indexOf(face), 0)
+        resolveTextureUrl(props.getTexUrl('diffuse', FACES.indexOf(face), 0))
       ) as Promise<Texture2DData>,
     sampler: {
       addressModeU: 'clamp-to-edge',
@@ -67,7 +67,9 @@ export function loadPBREnvironment(device: Device, props: PBREnvironmentProps): 
       const imageArray: Array<Promise<unknown>> = [];
       const direction = FACES.indexOf(face);
       for (let lod = 0; lod < specularMipLevels; lod++) {
-        imageArray.push(loadImageTexture(props.getTexUrl('specular', direction, lod)));
+        imageArray.push(
+          loadImageTexture(resolveTextureUrl(props.getTexUrl('specular', direction, lod)))
+        );
       }
       return Promise.all(imageArray) as Promise<Texture2DData>;
     },
@@ -88,6 +90,11 @@ export function loadPBREnvironment(device: Device, props: PBREnvironmentProps): 
 
 // TODO put somewhere common
 const FACES: TextureCubeFace[] = ['+X', '-X', '+Y', '-Y', '+Z', '-Z'];
+
+function resolveTextureUrl(url: string): string {
+  const baseUrl = globalThis.document?.baseURI ?? globalThis.location?.href;
+  return baseUrl ? new URL(url, baseUrl).toString() : url;
+}
 
 /** Construction props for an asynchronously loaded cubemap. */
 function makeCube(

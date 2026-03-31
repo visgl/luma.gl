@@ -64,7 +64,7 @@ export function createScenegraphsFromGLTF(
 
   const animations = parseGLTFAnimations(gltf);
   const animator = new GLTFAnimator({animations, gltfNodeIdToNodeMap, materials});
-  const lights = parseGLTFLights(gltf);
+  const lights = parseGLTFLights(gltf, {useByteColors: options?.useByteColors ?? true});
   const extensionSupport = getGLTFExtensionSupport(gltf);
   const sceneBounds = scenes.map(scene => getScenegraphBounds(scene.getBounds()));
   const modelBounds = getCombinedScenegraphBounds(sceneBounds);

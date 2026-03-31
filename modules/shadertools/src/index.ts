@@ -79,12 +79,19 @@ export {combineInjects} from './lib/shader-assembly/shader-injections';
 // data utils
 export {toHalfFloat, fromHalfFloat} from './modules/math/fp16/fp16-utils';
 export {fp64ify, fp64LowPart, fp64ifyMatrix4} from './modules/math/fp64/fp64-utils';
+export {
+  normalizeByteColor3,
+  normalizeByteColor4,
+  resolveUseByteColors
+} from './lib/color/normalize-byte-colors';
 
 // math libraries
 export {random} from './modules/math/random/random';
 
 export {fp32} from './modules/math/fp32/fp32';
 export {fp64, fp64arithmetic} from './modules/math/fp64/fp64';
+export type {FloatColorsProps, FloatColorsUniforms} from './modules/color/float-colors';
+export {floatColors} from './modules/color/float-colors';
 
 // engine shader modules
 
