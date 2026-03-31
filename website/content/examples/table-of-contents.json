@@ -11,9 +11,9 @@
       "showcase/instancing",
       "showcase/gltf",
       "showcase/postprocessing",
-      "showcase/globe",
       "showcase/persistence",
-      "showcase/dof"
+      "showcase/dof",
+      "showcase/globe"
     ]
   },
   {

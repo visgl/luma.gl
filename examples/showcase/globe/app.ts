@@ -32,14 +32,6 @@ import tychoNegzUrl from './tycho-negz.jpg';
 import tychoPosxUrl from './tycho-posx.jpg';
 import tychoPosyUrl from './tycho-posy.jpg';
 import tychoPoszUrl from './tycho-posz.jpg';
-// Wikimedia Commons "Constellations, equirectangular plot.svg" by CMG Lee,
-// converted to local cube-map faces for offline example loading.
-import constellationNegxUrl from './constellation-negx.png';
-import constellationNegyUrl from './constellation-negy.png';
-import constellationNegzUrl from './constellation-negz.png';
-import constellationPosxUrl from './constellation-posx.png';
-import constellationPosyUrl from './constellation-posy.png';
-import constellationPoszUrl from './constellation-posz.png';
 
 const INFO_HTML = `\
 <style>
@@ -141,7 +133,7 @@ const INFO_HTML = `\
   }
 </style>
 <div id="water-globe-controls">
-  <p>Revives the classic Earth specular demo as a modern luma.gl v9 showcase with animated oceans and switchable celestial sky maps.</p>
+  <p>Revives the classic Earth specular demo as a modern luma.gl v9 showcase with animated oceans and a starfield backdrop.</p>
   <div class="grid">
     <div class="toggle-row">
       <label class="toggle"><span>Sky Background</span><input id="star-background-enabled" type="checkbox" checked /></label>
@@ -149,7 +141,6 @@ const INFO_HTML = `\
       <label class="toggle"><span>Land Texture</span><input id="land-texture-enabled" type="checkbox" checked /></label>
     </div>
     <div class="rows">
-      <label class="control-row"><span class="control-label">Sky Map</span><span class="control-input"><select id="sky-map"><option value="stars" selected>Stars</option><option value="constellations">Constellations</option></select></span><output id="sky-map-value">Stars</output></label>
       <label class="control-row"><span class="control-label">Wave Speed</span><span class="control-input"><input id="wave-speed" type="range" min="0" max="4" step="0.01" value="1.25" /></span><output id="wave-speed-value">1.25x</output></label>
       <label class="control-row"><span class="control-label">Normal Strength</span><span class="control-input"><input id="normal-strength" type="range" min="0" max="1.4" step="0.01" value="0.52" /></span><output id="normal-strength-value">0.52</output></label>
       <label class="control-row"><span class="control-label">Fresnel Power</span><span class="control-input"><input id="fresnel-power" type="range" min="1" max="12" step="0.1" value="6.2" /></span><output id="fresnel-power-value">6.2</output></label>
@@ -160,10 +151,7 @@ const INFO_HTML = `\
   </div>
   <div class="caption">Drag to orbit. Use the mouse wheel or trackpad to zoom.</div>
   <div class="attribution">
-    Sky maps: NASA <a href="https://science.nasa.gov/3d-resources/tycho-star-map/">Tycho Star Map</a>;
-    constellation map derived from Wikimedia Commons
-    <a href="https://commons.wikimedia.org/wiki/File:Constellations,_equirectangular_plot.svg"> Constellations, equirectangular plot.svg</a>
-    by CMG Lee, <a href="https://creativecommons.org/licenses/by-sa/3.0/">CC BY-SA 3.0</a>.
+    Sky: NASA <a href="https://science.nasa.gov/3d-resources/tycho-star-map/">Tycho Star Map</a>.
   </div>
 </div>
 `;
@@ -639,7 +627,6 @@ type SkyboxSceneUniforms = {
 
 type GlobeControls = {
   starBackgroundEnabled: boolean;
-  skyMap: SkyMapId;
   waterEnabled: boolean;
   landTextureEnabled: boolean;
   waveSpeed: number;
@@ -651,7 +638,6 @@ type GlobeControls = {
 };
 
 type CleanupCallback = () => void;
-type SkyMapId = 'stars' | 'constellations';
 type GlobeShaderInputs = {
   globeScene: typeof globeScene.props;
   lighting: typeof lighting.props;
@@ -662,7 +648,6 @@ type SkyboxShaderInputs = {
 
 const DEFAULT_CONTROLS: GlobeControls = {
   starBackgroundEnabled: true,
-  skyMap: 'stars',
   waterEnabled: true,
   landTextureEnabled: true,
   waveSpeed: 1.25,
@@ -694,7 +679,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   landShaderInputs: ShaderInputs<GlobeShaderInputs>;
   oceanShaderInputs: ShaderInputs<GlobeShaderInputs>;
   tychoSkyTexture: DynamicTexture;
-  constellationSkyTexture: DynamicTexture;
   landTexture: DynamicTexture;
   waterMaskTexture: DynamicTexture;
   device: Device;
@@ -764,23 +748,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         '-Y': await loadImageBitmap(tychoNegyUrl),
         '+Z': await loadImageBitmap(tychoPoszUrl),
         '-Z': await loadImageBitmap(tychoNegzUrl)
-      }))(),
-      sampler: {
-        magFilter: 'linear',
-        minFilter: 'linear',
-        mipmapFilter: 'nearest'
-      }
-    });
-    this.constellationSkyTexture = new DynamicTexture(device, {
-      dimension: 'cube',
-      mipmaps: true,
-      data: (async () => ({
-        '+X': await loadImageBitmap(constellationPosxUrl),
-        '-X': await loadImageBitmap(constellationNegxUrl),
-        '+Y': await loadImageBitmap(constellationPosyUrl),
-        '-Y': await loadImageBitmap(constellationNegyUrl),
-        '+Z': await loadImageBitmap(constellationPoszUrl),
-        '-Z': await loadImageBitmap(constellationNegzUrl)
       }))(),
       sampler: {
         magFilter: 'linear',
@@ -924,7 +891,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.landModel.destroy();
     this.oceanModel.destroy();
     this.tychoSkyTexture.destroy();
-    this.constellationSkyTexture.destroy();
     this.landMaterial.destroy();
     this.oceanMaterial.destroy();
     this.landTexture.destroy();
@@ -956,7 +922,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
 
     if (this.controls.starBackgroundEnabled) {
-      this.backgroundModel.setBindings({cubeTexture: this.getSkyTexture()});
       this.backgroundShaderInputs.setProps({
         skyboxScene: {
           modelMatrix: new Matrix4().scale([40, 40, 40]),
@@ -1026,16 +991,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       value => {
         this.controls.starBackgroundEnabled = value;
       },
-      this.cleanupCallbacks
-    );
-    bindSelectControl(
-      'sky-map',
-      'sky-map-value',
-      this.controls.skyMap,
-      value => {
-        this.controls.skyMap = value as SkyMapId;
-      },
-      value => (value === 'constellations' ? 'Constellations' : 'Stars'),
       this.cleanupCallbacks
     );
     bindCheckboxControl(
@@ -1153,12 +1108,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       ]
     };
   }
-
-  private getSkyTexture(): DynamicTexture {
-    return this.controls.skyMap === 'constellations'
-      ? this.constellationSkyTexture
-      : this.tychoSkyTexture;
-  }
 }
 
 function bindCheckboxControl(
@@ -1206,36 +1155,6 @@ function bindRangeControl(
   };
   input.addEventListener('input', inputHandler);
   cleanupCallbacks.push(() => input.removeEventListener('input', inputHandler));
-}
-
-function bindSelectControl(
-  id: string,
-  outputId: string,
-  initialValue: string,
-  onChange: (value: string) => void,
-  formatValue: (value: string) => string,
-  cleanupCallbacks: CleanupCallback[]
-): void {
-  const input = document.getElementById(id) as HTMLSelectElement | null;
-  const output = document.getElementById(outputId) as HTMLOutputElement | null;
-  if (!input || !output) {
-    return;
-  }
-
-  const applyValue = (value: string) => {
-    input.value = value;
-    output.value = formatValue(value);
-    output.textContent = formatValue(value);
-    onChange(value);
-  };
-
-  applyValue(initialValue);
-
-  const changeHandler = () => {
-    applyValue(input.value);
-  };
-  input.addEventListener('change', changeHandler);
-  cleanupCallbacks.push(() => input.removeEventListener('change', changeHandler));
 }
 
 function getDirectionalLightDirection(
