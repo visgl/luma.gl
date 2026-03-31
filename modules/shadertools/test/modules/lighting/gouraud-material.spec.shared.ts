@@ -32,6 +32,12 @@ export function registerGouraudMaterialTests(test: TapeTestFunction): void {
     t.deepEqual(uniforms.specularColor, [0.15, 0.15, 0.15], 'specularColor');
     t.ok(gouraudMaterial.defines?.LIGHTING_VERTEX, 'gouraudMaterial enables vertex lighting');
 
+    uniforms = gouraudMaterial.getUniforms?.({
+      specularColor: [2, 1, 0.5],
+      useByteColors: false
+    })!;
+    t.deepEqual(uniforms.specularColor, [2, 1, 0.5], 'float specular colors pass through');
+
     t.end();
   });
 }

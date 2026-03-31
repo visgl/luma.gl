@@ -75,7 +75,7 @@ test('picking#defaultUniforms', t => {
       isActive: false,
       isAttribute: false,
       isHighlightActive: false,
-      useFloatColors: true,
+      useByteColors: true,
       highlightedObjectColor: [0, 0, 0],
       highlightColor: [0, 1, 1, 1]
     },
@@ -134,29 +134,44 @@ test('picking#getUniforms', async t => {
     picking.getUniforms({
       highlightedObjectColor: [0, 0, 1],
       highlightColor: [102, 0, 0, 51],
-      useFloatColors: false
+      useByteColors: true
     }),
     {
-      useFloatColors: false,
+      useByteColors: true,
       isHighlightActive: true,
       highlightedObjectColor: [0, 0, 1],
       highlightColor: [0.4, 0, 0, 0.2]
     },
-    'Override useFloatColors'
+    'Byte highlight colors normalize when useByteColors is true'
+  );
+
+  t.deepEqual(
+    picking.getUniforms({
+      highlightedObjectColor: [0, 0, 1],
+      highlightColor: [1, 0, 0, 0.5],
+      useByteColors: false
+    }),
+    {
+      useByteColors: false,
+      isHighlightActive: true,
+      highlightedObjectColor: [0, 0, 1],
+      highlightColor: [1, 0, 0, 0.5]
+    },
+    'useByteColors=false preserves float highlight colors'
   );
 
   t.deepEqual(
     picking.getUniforms({
       isActive: false,
       isAttribute: true,
-      useFloatColors: true
+      useByteColors: false
     }),
     {
       isActive: false,
       isAttribute: true,
-      useFloatColors: true
+      useByteColors: false
     },
-    'Legacy activity, attribute, and float-color props remain unchanged'
+    'Legacy activity, attribute, and byte-color props remain unchanged'
   );
 
   t.end();
@@ -222,7 +237,7 @@ test('picking#picking_setPickingColor', async t => {
   t.end();
 });
 
-test('picking#useFloatColors', async t => {
+test('picking#useByteColors', async t => {
   const device = await getWebGLTestDevice();
 
   if (!BufferTransform.isSupported(device)) {
@@ -243,7 +258,7 @@ test('picking#useFloatColors', async t => {
   normalizedTransform.model.shaderInputs.setProps({
     picking: {
       isActive: true,
-      useFloatColors: false
+      useByteColors: true
     }
   });
   normalizedTransform.run();
@@ -252,7 +267,7 @@ test('picking#useFloatColors', async t => {
   t.deepEqual(
     Array.from(normalizedData).map(value => Number(value.toFixed(6))),
     [1, 0.501961, 0.25098, 0.00098, 0.001961, 0.002941],
-    'Legacy module normalizes byte colors when useFloatColors is false'
+    'Legacy module normalizes byte colors when useByteColors is true'
   );
   normalizedTransform.destroy();
 
@@ -265,7 +280,7 @@ test('picking#useFloatColors', async t => {
   floatColorTransform.model.shaderInputs.setProps({
     picking: {
       isActive: true,
-      useFloatColors: true
+      useByteColors: false
     }
   });
   floatColorTransform.run();
@@ -274,7 +289,7 @@ test('picking#useFloatColors', async t => {
   t.deepEqual(
     Array.from(floatColorData).map(value => Number(value.toFixed(6))),
     [255, 128, 64, 0.25, 0.5, 0.75],
-    'Legacy module preserves float colors when useFloatColors is true'
+    'Legacy module preserves float colors when useByteColors is false'
   );
   floatColorTransform.destroy();
 

@@ -33,6 +33,7 @@ The API reference contains pages for the built-in shader modules exported by `@l
 - [`fp32`](/docs/api-reference/shadertools/shader-modules/fp32)
 - [`fp64`](/docs/api-reference/shadertools/shader-modules/fp64)
 - [`fp64arithmetic`](/docs/api-reference/shadertools/shader-modules/fp64-arithmetic)
+- [`floatColors`](/docs/api-reference/shadertools/shader-modules/float-colors)
 - [`picking`](/docs/api-reference/shadertools/shader-modules/picking)
 - [`skin`](/docs/api-reference/shadertools/shader-modules/skin)
 - [`lighting`](/docs/api-reference/shadertools/shader-modules/lighting)

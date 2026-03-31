@@ -109,12 +109,13 @@ When inactive, renders normal colors, with the exception of selected object whic
 | -------------------------------------- | ------------------------------------------------------------------- |
 | `isActive`?: boolean                   | Whether in picking or normal rendering (+highlighting) mode         |
 | `isAttribute`: boolean                 | Set to true when picking an attribute value instead of object index |
-| `useFloatColors`?: boolean             | Color range 0-1 or 0-255                                            |
+| `useByteColors`?: boolean              | Interprets highlight colors as byte-style `0..255` values           |
 | `isHighlightActive`?: boolean          | Do we have a highlighted item?                                      |
 | `highlightedObjectColor`?: NumberArray | Set to a picking color to visually highlight that item              |
 | `highlightColor`?: NumberArray         | Color of visual highlight of "selected" item                        |
 
 - `isActive` - When true, renders picking colors. Set when rendering to off-screen "picking" buffer. When false, renders normal colors, with the exception of selected object which is rendered with highlight 
+- `useByteColors` defaults to byte-compatible highlight color behavior in Phase 1.
 
 <!---
 - `pickingActive`=`false` (_boolean_) - Renders the picking colors instead of the normal colors. Normally only used with an off-screen framebuffer during picking.
@@ -185,4 +186,3 @@ If picking active, returns the current vertex's picking color set by `picking_se
 ## Remarks
 
 - It is recommended that `picking_filterPickingColor()` is called last in a fragment shader, as the picking color (returned when picking is enabled) must not be modified in any way (and alpha must remain 1) or picking results will not be correct.
-
