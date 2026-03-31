@@ -2,6 +2,10 @@
 
 ## v9.3
 
+### v9.3.1
+
+- chore: Bump version specifiers (#2580)
+
 ### v9.3.0
 
 - chore: Upgrade to loaders.gl@~4.4.0 (#2579)
