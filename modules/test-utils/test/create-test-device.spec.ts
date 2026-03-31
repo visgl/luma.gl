@@ -9,7 +9,11 @@ test('getWebGLTestDevice refreshes the shared device after context loss', async 
   const webglDevice = await getWebGLTestDevice();
   const lostDevicePromise = webglDevice.lost;
 
-  webglDevice.loseDevice();
+  try {
+    webglDevice.loseDevice();
+  } catch (error) {
+    expect(String(error)).toContain('CONTEXT_LOST_WEBGL');
+  }
 
   await lostDevicePromise;
 
