@@ -56,7 +56,7 @@ Release Date: March 31, 2026
 **@luma.gl/shadertools**
 
 - **[`floatColors`](/docs/api-reference/shadertools/shader-modules/float-colors)** - New shader module with shared semantic color normalization and premultiplied alpha helpers.
-- **Opt-in float semantic colors** - Byte-based semantic color APIs in `lighting`, `phongMaterial`, `gouraudMaterial`, legacy `picking`, and glTF light parsing now accept `useByteColors: false` for float and HDR-style color values while preserving current defaults.
+- **Opt-in float semantic colors** - Byte-based semantic color APIs in `lighting`, shared `floatColors`, legacy `picking`, and glTF light parsing accept `useByteColors: false` for float and HDR-style color values while preserving current defaults.
 - **[`lighting`](/docs/api-reference/shadertools/shader-modules/lighting)** shader module supports a new light type `SpotLight`.
 - **[`lambertMaterial`](/docs/api-reference/shadertools/shader-modules/lambert-material)** A new shader module adds a diffuse-only matte material model, completing the material catalog
 - **Unlit Materials** All material shader modules now support `unlit` prop, allowing applications to disable lighting for materials that are already lit (e.g. photogrammetry).

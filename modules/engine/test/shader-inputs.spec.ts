@@ -4,8 +4,18 @@
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {Texture} from '../../core/src/index';
-import {lighting, picking, ShaderModule} from '../../shadertools/src/index';
-import type {LightingProps} from '../../shadertools/src/index';
+import {
+  floatColors,
+  lighting,
+  phongMaterial,
+  picking,
+  ShaderModule
+} from '../../shadertools/src/index';
+import type {
+  FloatColorsProps,
+  LightingProps,
+  PhongMaterialProps
+} from '../../shadertools/src/index';
 import {ShaderInputs} from '../src/shader-inputs';
 
 test('ShaderInputs#picking', t => {
@@ -88,6 +98,33 @@ test('ShaderInputs#dependencies', t => {
     shaderInputs.moduleUniforms.picking['highlightedObjectColor'],
     [1, 2, 3],
     'highlight object color updated'
+  );
+
+  t.end();
+});
+
+test('ShaderInputs#floatColors dependency props', t => {
+  const shaderInputs = new ShaderInputs<{
+    phongMaterial: PhongMaterialProps;
+    floatColors: FloatColorsProps;
+  }>({phongMaterial, floatColors});
+
+  shaderInputs.setProps({
+    phongMaterial: {
+      specularColor: [2, 1, 0.5]
+    },
+    floatColors: {useByteColors: false}
+  });
+
+  t.deepEqual(
+    shaderInputs.moduleUniforms.phongMaterial.specularColor,
+    [2, 1, 0.5],
+    'phong material uniform updated without CPU normalization'
+  );
+  t.equal(
+    shaderInputs.moduleUniforms.floatColors.useByteColors,
+    false,
+    'useByteColors configured directly on floatColors dependency'
   );
 
   t.end();
