@@ -22,7 +22,10 @@ fn lighting_getLightColor(surfaceColor: vec3<f32>, light_direction: vec3<f32>, v
     specular = pow(specular_angle, phongMaterial.shininess);
   }
   lambertian = max(lambertian, 0.0);
-  return (lambertian * phongMaterial.diffuse * surfaceColor + specular * phongMaterial.specularColor) * color;
+  return (
+    lambertian * phongMaterial.diffuse * surfaceColor +
+    specular * floatColors_normalize(phongMaterial.specularColor)
+  ) * color;
 }
 
 fn lighting_getLightColor2(surfaceColor: vec3<f32>, cameraPosition: vec3<f32>, position_worldspace: vec3<f32>, normal_worldspace: vec3<f32>) -> vec3<f32> {
