@@ -4311,7 +4311,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@luma.gl/constants@npm:~9.3.0, @luma.gl/constants@workspace:modules/constants":
+"@luma.gl/constants@npm:~9.3.0":
+  version: 9.3.1
+  resolution: "@luma.gl/constants@npm:9.3.1"
+  checksum: 10c0/648cd72fc7115505350a0d9e116a8145275a4ef1963deb84ddf4dffe821f9d14230f94374afbcf900dc558a23409cef71e281204869cfb96ba3e2ca943bbbcc1
+  languageName: node
+  linkType: hard
+
+"@luma.gl/constants@workspace:modules/constants":
   version: 0.0.0-use.local
   resolution: "@luma.gl/constants@workspace:modules/constants"
   languageName: unknown
