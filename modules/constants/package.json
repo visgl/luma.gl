@@ -25,16 +25,6 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
-    },
-    "./webgl-constants": {
-      "types": "./dist/webgl-constants.d.ts",
-      "import": "./dist/webgl-constants.js",
-      "require": "./dist/index.cjs"
-    },
-    "./webgl-types": {
-      "types": "./dist/webgl-types.d.ts",
-      "import": "./dist/webgl-types.js",
-      "require": "./dist/index.cjs"
     }
   },
   "files": [
