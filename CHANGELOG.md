@@ -2,6 +2,13 @@
 
 ## v9.3
 
+### v9.3.2
+
+- chore(webgl): fix CJS paths (#2582)
+- (origin/9.3-release) fix(shadermodules) useByteColors from floatColors module (#2584)
+- chore: Restore deprecated constants modules (#2583)
+919a0670a Fix website build
+
 ### v9.3.1
 
 - chore: Bump version specifiers (#2580)
