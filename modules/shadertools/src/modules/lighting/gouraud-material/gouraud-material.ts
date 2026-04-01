@@ -4,10 +4,10 @@
 
 import {NumberArray3} from '@math.gl/types';
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
+import {floatColors} from '../../color/float-colors';
 import {lighting} from '../lights/lighting';
 import {PHONG_VS, PHONG_FS} from '../phong-material/phong-shaders-glsl';
 import {PHONG_WGSL} from '../phong-material/phong-shaders-wgsl';
-import {normalizeByteColor3, resolveUseByteColors} from '../../../lib/color/normalize-byte-colors';
 
 export type GouraudMaterialProps = {
   unlit?: boolean;
@@ -16,8 +16,9 @@ export type GouraudMaterialProps = {
   /** Specularity exponent */
   shininess?: number;
   specularColor?: [number, number, number];
-  useByteColors?: boolean;
 };
+
+const DEFAULT_SPECULAR_COLOR: NumberArray3 = [38.25, 38.25, 38.25];
 
 /** In Gouraud shading, color is calculated for each triangle vertex normal, and then color is interpolated colors across the triangle */
 export const gouraudMaterial: ShaderModule<GouraudMaterialProps> = {
@@ -32,32 +33,23 @@ export const gouraudMaterial: ShaderModule<GouraudMaterialProps> = {
   defines: {
     LIGHTING_VERTEX: true
   },
-  dependencies: [lighting],
+  dependencies: [lighting, floatColors],
   uniformTypes: {
     unlit: 'i32',
     ambient: 'f32',
     diffuse: 'f32',
     shininess: 'f32',
-    specularColor: 'vec3<f32>',
-    useByteColors: 'i32'
+    specularColor: 'vec3<f32>'
   },
   defaultUniforms: {
     unlit: false,
     ambient: 0.35,
     diffuse: 0.6,
     shininess: 32,
-    specularColor: [0.15, 0.15, 0.15],
-    useByteColors: true
+    specularColor: DEFAULT_SPECULAR_COLOR
   },
 
   getUniforms(props: GouraudMaterialProps) {
-    const uniforms = {...props};
-    if (uniforms.specularColor) {
-      uniforms.specularColor = normalizeByteColor3(
-        uniforms.specularColor,
-        resolveUseByteColors(uniforms.useByteColors, true)
-      ) as NumberArray3;
-    }
-    return {...gouraudMaterial.defaultUniforms, ...uniforms};
+    return {...gouraudMaterial.defaultUniforms, ...props};
   }
 };

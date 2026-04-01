@@ -30,7 +30,7 @@ vec3 lighting_getLightColor(vec3 surfaceColor, vec3 light_direction, vec3 view_d
     specular = pow(specular_angle, material.shininess);
   }
   lambertian = max(lambertian, 0.0);
-  return (lambertian * material.diffuse * surfaceColor + specular * material.specularColor) * color;
+  return (lambertian * material.diffuse * surfaceColor + specular * floatColors_normalize(material.specularColor)) * color;
 }
 
 vec3 lighting_getLightColor(vec3 surfaceColor, vec3 cameraPosition, vec3 position_worldspace, vec3 normal_worldspace) {
