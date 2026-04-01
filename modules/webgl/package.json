@@ -29,17 +29,17 @@
     "./constants": {
       "types": "./dist/constants/index.d.ts",
       "import": "./dist/constants/index.js",
-      "require": "./dist/index.cjs"
+      "require": "./dist/constants/index.cjs"
     },
     "./webgl-constants": {
       "types": "./dist/webgl-constants.d.ts",
       "import": "./dist/webgl-constants.js",
-      "require": "./dist/index.cjs"
+      "require": "./dist/webgl-constants.cjs"
     },
     "./webgl-types": {
       "types": "./dist/webgl-types.d.ts",
       "import": "./dist/webgl-types.js",
-      "require": "./dist/index.cjs"
+      "require": "./dist/webgl-types.cjs"
     }
   },
   "files": [
