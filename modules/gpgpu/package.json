@@ -1,12 +1,10 @@
 {
   "name": "@luma.gl/gpgpu",
-  "version": "9.2.0-alpha.1",
+  "version": "9.3.2",
   "description": "3D Engine Components for luma.gl",
   "type": "module",
   "license": "MIT",
-  "publishConfig": {
-    "access": "public"
-  },
+  "private": true,
   "repository": {
     "type": "git",
     "url": "https://github.com/visgl/luma.gl"
@@ -40,9 +38,10 @@
     "prepublishOnly": "npm run build-minified-bundle && npm run build-dev-bundle"
   },
   "peerDependencies": {
-    "@luma.gl/core": "9.2.0-alpha.1",
-    "@luma.gl/engine": "9.2.0-alpha.1",
-    "@luma.gl/shadertools": "9.2.0-alpha.1"
+    "@luma.gl/core": "~9.3.0",
+    "@luma.gl/engine": "~9.3.0",
+    "@luma.gl/shadertools": "~9.3.0",
+    "@luma.gl/webgpu": "~9.3.0"
   },
   "dependencies": {
     "@math.gl/core": "^4.1.0",

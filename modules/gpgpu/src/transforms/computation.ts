@@ -10,14 +10,17 @@ import {
   ComputePass,
   UniformStore,
   log,
-  getTypedArrayFromDataType
 } from '@luma.gl/core';
 import type {ShaderModule, PlatformInfo} from '@luma.gl/shadertools';
-import {ShaderAssembler, getShaderLayoutFromWGSL} from '@luma.gl/shadertools';
+import {ShaderAssembler} from '@luma.gl/shadertools';
+import {getShaderLayoutFromWGSL} from '@luma.gl/webgpu';
+
 import {TypedArray, isNumericArray} from '@math.gl/types';
-import {ShaderInputs, PipelineFactory, ShaderFactory} from '@luma.gl/engine';
+import { PipelineFactory, ShaderFactory} from '@luma.gl/core';
+import {ShaderInputs} from '@luma.gl/engine';
 import {uid} from '../utils/uid';
 // import {getDebugTableForShaderLayout} from '../debug/debug-shader-layout';
+import {getTypedArrayFromDataType} from '../utils/vertex-data-types';
 
 const LOG_DRAW_PRIORITY = 2;
 const LOG_DRAW_TIMEOUT = 10000;
@@ -225,10 +228,10 @@ export class Computation {
 
   setShaderInputs(shaderInputs: ShaderInputs): void {
     this.shaderInputs = shaderInputs;
-    this._uniformStore = new UniformStore(this.shaderInputs.modules);
+    this._uniformStore = new UniformStore(this.device, this.shaderInputs.modules);
     // Create uniform buffer bindings for all modules
     for (const moduleName of Object.keys(this.shaderInputs.modules)) {
-      const uniformBuffer = this._uniformStore.getManagedUniformBuffer(this.device, moduleName);
+      const uniformBuffer = this._uniformStore.getManagedUniformBuffer(moduleName);
       this.bindings[`${moduleName}Uniforms`] = uniformBuffer;
     }
   }

@@ -11,6 +11,7 @@
     {"path": "../core"},
     {"path": "../engine"},
     {"path": "../constants"},
-    {"path": "../shadertools"}
+    {"path": "../shadertools"},
+    {"path": "../webgpu"}
   ]
 }
