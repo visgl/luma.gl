@@ -18,7 +18,7 @@ export type BufferTransformProps = Omit<ModelProps, 'fs'> & {
   /** bufferMode when binding varyings
    * https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/transformFeedbackVaryings
    */
-  bufferMode?: 'interleaved' | 'separate';
+  feedbackBufferMode?: 'interleaved' | 'separate';
   /** A list of named outputs corresponding to shader declarations (varyings in WebGL) */
   outputs?: string[];
   /** @deprecated Use run({outputBuffers}) instead - Map of output buffers that the shaders will write results of computations to */
@@ -36,7 +36,7 @@ export class BufferTransform {
 
   static defaultProps: Required<BufferTransformProps> = {
     ...Model.defaultProps,
-    bufferMode: 'separate',
+    feedbackBufferMode: 'separate',
     outputs: undefined!,
     feedbackBuffers: undefined!
   };
@@ -58,8 +58,7 @@ export class BufferTransform {
       topology: props.topology || 'point-list',
       varyings: props.outputs || props.varyings,
       ...props,
-      // @ts-expect-error not exposed by RenderPipeline
-      bufferMode: props.bufferMode === 'interleaved' ? GL.INTERLEAVED_ATTRIBS : GL.SEPARATE_ATTRIBS,
+      bufferMode: props.feedbackBufferMode === 'interleaved' ? GL.INTERLEAVED_ATTRIBS : GL.SEPARATE_ATTRIBS,
     });
 
     this.transformFeedback = this.device.createTransformFeedback({

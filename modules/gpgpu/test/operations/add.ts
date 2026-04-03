@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from 'tape-promise/tape';
+import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {add} from '@luma.gl/gpgpu';
 import {getTestDevices} from '@luma.gl/test-utils';
 import { TestData, makeTable, verifyTableShape, verifyTableValue } from './fixtures';

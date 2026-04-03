@@ -1,8 +1,8 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
-
-import {getDataTypeFromTypedArray, getTypedArrayFromDataType, Device, Buffer, SignedDataType} from '@luma.gl/core';
+import {getDataTypeFromTypedArray, getTypedArrayFromDataType} from '../utils/vertex-data-types';
+import {Device, Buffer, SignedDataType} from '@luma.gl/core';
 import type {TypedArray, TypedArrayConstructor} from '@math.gl/types';
 import { bufferPool } from '../utils/buffer-pool';
 import type { Operation } from './operation';
@@ -166,7 +166,7 @@ export class GPUTable {
     const {ValueType} = this;
     if (!this._value) {
       const bytes = await this.buffer.readAsync(this.offset, this.byteLength);
-      this._value = new ValueType(bytes.buffer);
+      this._value = new ValueType(bytes.buffer as ArrayBuffer);
     }
 
     const {size, offset, stride, length} = this;
