@@ -12,7 +12,7 @@ export type DirlightProps = {
 export type DirlightUniforms = DirlightProps;
 
 // TODO
-export const SOURCE_WGSL = /* WGSL */ `\  
+export const SOURCE_WGSL = /* WGSL */ `\
 struct dirlightUniforms {
   lightDirection: vec3<f32>,
 };
@@ -23,7 +23,7 @@ struct DirlightInputs {
   normal: DirlightNormal,
 };
 
-@binding(1) @group(0) var<uniform> dirlight : dirlightUniforms;
+@group(2) @binding(auto) var<uniform> dirlight : dirlightUniforms;
 
 // For vertex
 fn dirlight_setNormal(normal: vec3<f32>) -> DirlightNormal {
@@ -49,7 +49,7 @@ void dirlight_setNormal(vec3 normal) {
 `;
 
 const FS_GLSL = /* glsl */ `\
-uniform dirlightUniforms {
+layout(std140) uniform dirlightUniforms {
   vec3 lightDirection;
 } dirlight;
 
@@ -70,6 +70,8 @@ export const dirlight = {
   uniforms: {} as DirlightUniforms,
 
   name: 'dirlight',
+  bindingLayout: [{name: 'dirlight', group: 2}],
+  firstBindingSlot: 16,
   dependencies: [],
   source: SOURCE_WGSL,
   vs: VS_GLSL,

@@ -23,7 +23,9 @@ import {Resource, ResourceProps} from './resource';
 export type CommandBufferProps = ResourceProps & {};
 
 /**
- * Encodes commands to queue that can be executed later
+ * Represents the finished contents of exactly one CommandEncoder. Backends may store native
+ * command buffers or replayable command lists internally, but submission must preserve the same
+ * recorded command ordering.
  */
 export abstract class CommandBuffer extends Resource<CommandBufferProps> {
   override get [Symbol.toStringTag](): string {

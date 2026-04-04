@@ -6,7 +6,7 @@ import type {
   TextureFormatColor,
   TextureFormatDepthStencil,
   TextureFormat
-} from '../../shadertypes/textures/texture-formats';
+} from '../../shadertypes/texture-types/texture-formats';
 import type {Device} from '../device';
 import {Resource, ResourceProps} from './resource';
 import {Texture} from './texture';
@@ -151,17 +151,15 @@ export abstract class Framebuffer extends Resource<FramebufferProps> {
    * and destroys existing textures if owned
    */
   protected resizeAttachments(width: number, height: number): void {
-    for (let i = 0; i < this.colorAttachments.length; ++i) {
-      if (this.colorAttachments[i]) {
-        const resizedTexture = this.colorAttachments[i].texture.clone({
-          width,
-          height
-        });
-        this.destroyAttachedResource(this.colorAttachments[i]);
-        this.colorAttachments[i] = resizedTexture.view;
-        this.attachResource(resizedTexture.view);
-      }
-    }
+    this.colorAttachments.forEach((colorAttachment, i) => {
+      const resizedTexture = colorAttachment.texture.clone({
+        width,
+        height
+      });
+      this.destroyAttachedResource(colorAttachment);
+      this.colorAttachments[i] = resizedTexture.view;
+      this.attachResource(resizedTexture.view);
+    });
 
     if (this.depthStencilAttachment) {
       const resizedTexture = this.depthStencilAttachment.texture.clone({

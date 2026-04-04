@@ -36,26 +36,16 @@ export function getFragmentShaderForRenderPass(options: {
 /** Get a filtering WGSL fragment shader */
 function getFilterShaderWGSL(func: string) {
   return /* wgsl */ `\
-// Binding 0:1 is reserved for shader passes
-// @group(0) @binding(0) var<uniform> brightnessContrast : brightnessContrastUniforms;
-@group(0) @binding(1) var texture: texture_2d<f32>;
-@group(0) @binding(2) var textureSampler: sampler;
-
-// This needs to be aligned with
-// struct FragmentInputs {
-//   @location(0) fragUV: vec2f,
-//   @location(1) fragPosition: vec4f,
-//   @location(2) fragCoordinate: vec4f
-// };
+@group(0) @binding(auto) var sourceTexture: texture_2d<f32>;
+@group(0) @binding(auto) var sourceTextureSampler: sampler;
 
 @fragment
 fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4f {
-  let fragUV = inputs.uv;
-  let fragCoordinate = inputs.coordinate;
-  let texSize = vec2f(textureDimensions(texture, 0));
+  let texCoord = inputs.coordinate;
+  let texSize = vec2f(textureDimensions(sourceTexture));
 
-  var fragColor = textureSample(texture, textureSampler, fragUV);
-  fragColor = ${func}(fragColor, texSize, fragCoordinate);
+  var fragColor = textureSample(sourceTexture, sourceTextureSampler, texCoord);
+  fragColor = ${func}(fragColor, texSize, texCoord);
   return fragColor;
 }
 `;
@@ -64,23 +54,14 @@ fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4f {
 /** Get a sampling WGSL fragment shader */
 function getSamplerShaderWGSL(func: string) {
   return /* wgsl */ `\
-// Binding 0:1 is reserved for shader passes
-@group(0) @binding(0) var<uniform> brightnessContrast : brightnessContrastUniforms;
-@group(0) @binding(1) var texture: texture_2d<f32>;
-@group(0) @binding(2) var sampler: sampler;
-
-struct FragmentInputs = {
-  @location(0) fragUV: vec2f,
-  @location(1) fragPosition: vec4f,
-  @location(2) fragCoordinate: vec4f
-};
+@group(0) @binding(auto) var sourceTexture: texture_2d<f32>;
+@group(0) @binding(auto) var sourceTextureSampler: sampler;
 
 @fragment
 fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4f {
-  let texSize = vec2f(textureDimensions(texture, 0));
-  var fragColor = textureSample(texture, sampler, fragUV);
-  fragColor = ${func}(fragColor, texSize, texCoord);
-  return fragColor;
+  let texCoord = inputs.coordinate;
+  let texSize = vec2f(textureDimensions(sourceTexture));
+  return ${func}(sourceTexture, sourceTextureSampler, texSize, texCoord);
 }
 `;
 }

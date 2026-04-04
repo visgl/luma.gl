@@ -1,129 +1,139 @@
 # DynamicTexture
 
 <p class="badges">
-  <img src="https://img.shields.io/badge/From-v9.2-blue.svg?style=flat-square" alt="From-v9.2" />
-  <img src="https://img.shields.io/badge/@luma.gl-engine.svg?style=flat-square" alt="@luma.gl/engine" />
+  <img src="https://img.shields.io/badge/From-v9.3-blue.svg?style=flat-square" alt="From-v9.3" />
 </p>
 
-> `DynamicTexture` was called `AsyncTexture` in v9.1
-
-The `DynamicTexture` class module is designed to make it easier to work with textures in luma.gl. The underlying `Texture` class in `@luma.gl/core` module can be used, however it is not designed for convenience, as it intentionally offers only the minimal API necessary to expose GPU texture capabilities in a portable way.
-
-| `DynamicTexture` | `Texture` | Capability | Description                                                  |
-| ---------------- | --------- | ---------- | ------------------------------------------------------------ |
-| ✅               | ❌        | Resize     | e.g updating textures to match changes in screen size        |
-| ✅               | ❌        | Async Init | avoids callbacks and conditional logic to defer texture init |
-| 🚧               | ❌        | Mipmaps    | Handles mipmap generation on WebGPU                          |
-| ✅               | -         | `Model`    | `Model` class is `DynamicTexture` aware                      |
-
-- `DynamicTexture` can be resized.
-  - This is very useful when developing shader based techniques that need to respond to changes in screen size.
-- `DynamicTexture` can be created and "used" while data is still being loaded.
-  - The `DynamicTexture` class accepts promises that resolve to texture data (images or byte arrays).
-  - It postpones the creation of underlying `Textures` until the supplied promise(s) resolve and data is available.
-- The `Model` class accepts `DynamicTextures` as bindings wherever a `Texture` or `TextureView` would be accepted
-  - `Model` avoids rendering (`Model.draw()` call execution) until the underlying texture has been created.
+`DynamicTexture` is the engine-level convenience wrapper around core [`Texture`](/docs/api-reference/core/resources/texture) resources.
+It adds async initialization, resizing, mipmap generation, and helpers for more complex texture layouts while still producing a normal `Texture`, `Sampler`, and `TextureView` once ready.
 
 ## Usage
 
-```ts
-import {DynamicTexture, loadImage} from '@luma.gl/engine';
-const dynamicTexture = new DynamicTexture({data: loadImage(url)});
-const model = new Model(device, {source, bindings: {texture: DynamicTexture}});
-const renderPass = device.createRenderPass();
-model.draw(renderPass); // Doesn't draw
-...
-await dynamicTexture.ready; // Not necessary, just for illustration
-model.draw(renderPass); // Draws
+```typescript
+import {DynamicTexture, loadImageBitmap, Model} from '@luma.gl/engine';
+
+const dynamicTexture = new DynamicTexture(device, {
+  data: loadImageBitmap('/path/to/image.png'),
+  mipmaps: true
+});
+
+const model = new Model(device, {
+  source,
+  bindings: {texture: dynamicTexture}
+});
+
+await dynamicTexture.ready;
 ```
 
 ## Types
 
-```ts
-export type DynamicTextureProps = Omit<TextureProps, 'data'> & DynamicTextureDataProps;
-
-type DynamicTextureDataProps =
-  | DynamicTexture1DProps
-  | DynamicTexture2DProps
-  | DynamicTexture3DProps
-  | DynamicTextureArrayProps
-  | DynamicTextureCubeProps
-  | DynamicTextureCubeArrayProps;
-
-type DynamicTexture1DProps = {dimension: '1d'; data: Promise<Texture1DData> | Texture1DData | null};
-type DynamicTexture2DProps = {
-  dimension?: '2d';
-  data: Promise<Texture2DData> | Texture2DData | null;
-};
-type DynamicTexture3DProps = {dimension: '3d'; data: Promise<Texture3DData> | Texture3DData | null};
-type DynamicTextureArrayProps = {
-  dimension: '2d-array';
-  data: Promise<TextureArrayData> | TextureArrayData | null;
-};
-type DynamicTextureCubeProps = {
-  dimension: 'cube';
-  data: Promise<TextureCubeData> | TextureCubeData | null;
-};
-type DynamicTextureCubeArrayProps = {
-  dimension: 'cube-array';
-  data: Promise<TextureCubeArrayData> | TextureCubeArrayData | null;
-};
-```
-
-## Members
-
-### `ready`
-
-A promise that resolves when the data has completed loading / preparation and the underlying GPU texture has been created and initialized, or rejects with an `Error` instance describing the failure.
+### `DynamicTextureProps`
 
 ```ts
-ready: Promise<void>;
+export type DynamicTextureProps =
+  Omit<TextureProps, 'data' | 'mipLevels' | 'width' | 'height'> &
+  TextureDataAsyncProps & {
+    mipmaps?: boolean;
+    mipLevels?: number | 'auto';
+    width?: number;
+    height?: number;
+  };
 ```
 
-### `isReady`
+`DynamicTextureProps` combines normal texture props with async-friendly texture data props from `texture-data.ts`.
+For simple `2d` textures, `data` may still be provided as a bare typed array when `width` and `height` are supplied.
 
-A flag that indicates whether data loading / preparation has completed loading and the underlying GPU texture has been created and initialized.
+## Properties
 
-```ts
-isReady: boolean;
-```
+### `device`, `id`
 
-Initial value is `false`. Once the `DynamicTexture.ready` promise resolve successfully, the `DynamicTexture.isReady` flag is guaranteed to be true.
+Owning device and application-provided identifier.
 
-### `texture`
+### `props`
 
-It is an error to access this member if `DynamicTexture.isReady` is not true).
+Resolved texture props, with defaults applied and async `data` removed after initialization begins.
 
-```ts
-texture: Texture;
-```
+### `ready: Promise<Texture>`
 
-### `sampler`
+Resolves when the underlying texture has been created and any initial data has been uploaded.
 
-Shortcut to `DynamicTexture.texture.sampler`.
+### `isReady: boolean`
 
-It is an error to access this member if `DynamicTexture.isReady` is not true).
+Indicates whether `ready` has resolved successfully.
 
-```ts
-sampler: Sampler;
-```
+### `destroyed: boolean`
 
-### `view`
+Indicates whether the dynamic texture has been destroyed.
 
-Shortcut to `DynamicTexture.texture.view`.
+### `texture`, `sampler`, `view`
 
-It is an error to access this member if `DynamicTexture.isReady` is not true).
-
-```ts
-view: TextureView;
-```
+Shortcuts to the underlying core texture resources. Accessing them before `isReady` is an error.
 
 ## Methods
 
-### constructor
+### `constructor(device: Device, props: DynamicTextureProps)`
 
-Creates a new `DynamicTexture`.
+Starts async initialization immediately.
 
-```ts
-new DynamicTexture(device: Device, props: DynamicTextureProps);
-```
+### `destroy(): void`
+
+Destroys the underlying texture and marks the wrapper as destroyed.
+
+### `generateMipmaps(): void`
+
+Generates mipmaps for the current texture. Uses the appropriate WebGL or WebGPU backend path.
+
+### `setSampler(sampler: Sampler | SamplerProps = {}): void`
+
+Sets a sampler on the underlying texture.
+
+### `readBuffer(options?: TextureReadOptions): Promise<Buffer>`
+
+Allocates a temporary GPU readback buffer, copies the requested region into it, waits for GPU completion, and returns the ready-to-read buffer. The caller owns the returned buffer and must destroy it.
+
+The underlying texture must support `Texture.COPY_SRC`. `DynamicTexture` owns the temporary buffer allocation, but it does not broaden texture usage automatically.
+
+### `readAsync(options?: TextureReadOptions): Promise<ArrayBuffer>`
+
+Convenience readback built on `readBuffer()`. Allocates a temporary buffer, copies the requested region, maps it, returns the bytes as an `ArrayBuffer`, and destroys the temporary buffer.
+
+### `resize(size: {width: number; height: number}): boolean`
+
+Clones the immutable underlying texture to a new size. Returns `false` when the size did not change.
+
+### `getCubeFaceIndex(face: TextureCubeFace): number`
+
+Returns the layer index for one cube face.
+
+### `getCubeArrayFaceIndex(cubeIndex: number, face: TextureCubeFace): number`
+
+Returns the layer index for a face within a cube-array texture.
+
+### `setTexture1DData(data: Texture1DData): void`
+
+Uploads 1D texture data.
+
+### `setTexture2DData(data: Texture2DData, z = 0): void`
+
+Uploads 2D texture data, optionally targeting a slice index.
+
+### `setTexture3DData(data: Texture3DData): void`
+
+Uploads 3D texture data.
+
+### `setTextureArrayData(data: TextureArrayData): void`
+
+Uploads 2D-array texture data.
+
+### `setTextureCubeData(data: TextureCubeData): void`
+
+Uploads cube texture data.
+
+### `setTextureCubeArrayData(data: TextureCubeArrayData): void`
+
+Uploads cube-array texture data.
+
+## Remarks
+
+- `DynamicTexture` is directly supported anywhere [`Model`](/docs/api-reference/engine/model) accepts bindings.
+- It is the recommended way to work with promise-backed texture data and backend-independent mipmap generation.

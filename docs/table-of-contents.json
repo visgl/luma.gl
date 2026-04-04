@@ -14,6 +14,7 @@
       "tutorials/shader-modules",
       "tutorials/shader-hooks",
       "tutorials/transform-feedback",
+      "tutorials/external-webgl-context",
       "tutorials/whats-next"
     ]
   },
@@ -38,6 +39,7 @@
           "api-guide/gpu/gpu-initialization",
           "api-guide/gpu/gpu-resources",
           "api-guide/gpu/gpu-memory",
+          "api-guide/gpu/gpu-commands",
           "api-guide/gpu/gpu-buffers",
           "api-guide/gpu/gpu-textures",
           "api-guide/gpu/gpu-rendering",
@@ -52,6 +54,7 @@
         "type": "category",
         "label": "Shader Programming",
         "items": [
+          "api-guide/shaders/shader-types",
           "api-guide/shaders/shader-modules"
         ]
       },
@@ -86,12 +89,17 @@
           "api-reference/core/device-features",
           "api-reference/core/device-limits",
           "api-reference/core/canvas-context",
+          "api-reference/core/presentation-context",
           "api-reference/core/parameters",
+          "api-reference/core/pipeline-factory",
+          "api-reference/core/shader-factory",
           "api-reference/core/bindings",
           "api-reference/core/shader-layout",
+          "api-reference/core/shader-types",
           "api-reference/core/vertex-formats",
           "api-reference/core/texture-formats",
           "api-reference/core/resources/buffer",
+          "api-reference/core/resources/command-encoder",
           "api-reference/core/resources/compute-pass",
           "api-reference/core/resources/compute-pipeline",
           "api-reference/core/resources/fence",
@@ -112,7 +120,10 @@
         "type": "category",
         "label": "@luma.gl/engine",
         "items": [
+          "api-reference/engine/README",
           "api-reference/engine/model",
+          "api-reference/engine/clip-space",
+          "api-reference/engine/background-texture-model",
           "api-reference/engine/shader-inputs",
           "api-reference/engine/animation-loop",
           "api-reference/engine/animation-loop-template",
@@ -120,20 +131,18 @@
           "api-reference/engine/load-image-bitmap",          
           "api-reference/engine/geometry/geometries",
           "api-reference/engine/geometry/geometry",
+          "api-reference/engine/geometry/gpu-geometry",
           "api-reference/engine/animation/key-frames",
           "api-reference/engine/animation/timeline",
           "api-reference/engine/scenegraph/group-node",
           "api-reference/engine/scenegraph/model-node",
           "api-reference/engine/scenegraph/scenegraph-node",
-          "api-reference/engine/pipeline-factory",
-          "api-reference/engine/shader-factory",
+          "api-reference/engine/picking-manager",
           "api-reference/engine/passes/shader-pass-renderer",
           "api-reference/engine/compute/swap",
           "api-reference/engine/compute/computation",
           "api-reference/engine/compute/buffer-transform",
-          "api-reference/engine/compute/texture-transform",
-          "api-reference/engine/gpgpu/gpu-point-in-polygon",
-          "api-reference/engine/gpgpu/histopyramid"
+          "api-reference/engine/compute/texture-transform"
         ]
       },
       {
@@ -149,6 +158,7 @@
             "type": "category",
             "label": "Shader Modules",
             "items": [
+              "api-reference/shadertools/shader-modules/float-colors",
               "api-reference/shadertools/shader-modules/fp32",
               "api-reference/shadertools/shader-modules/fp64",
               "api-reference/shadertools/shader-modules/pbr-material",
@@ -180,7 +190,7 @@
       {
         "type": "category",
         "label": "@luma.gl/webgl",
-        "items": ["api-reference/webgl/README"]
+        "items": ["api-reference/webgl/README", "api-reference/webgl/constants"]
       },
       {
         "type": "category",
@@ -199,6 +209,7 @@
       "developer-guide/testing",
       "developer-guide/profiling",
       "developer-guide/bundling",
+      "developer-guide/multiple-canvases",
       "developer-guide/contributing"
     ]
   },

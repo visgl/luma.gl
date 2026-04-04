@@ -65,6 +65,8 @@ export const PARAMETER_TABLE: Record<keyof Parameters, Function> = {
     depthStencil.format = value;
   },
 
+  clearDepth: notSupported,
+
   depthBias: (_: keyof Parameters, value: any, descriptor: GPURenderPipelineDescriptor) => {
     const depthStencil = addDepthStencil(descriptor);
     depthStencil.depthBias = value;

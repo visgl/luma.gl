@@ -11,6 +11,11 @@ export function setPathPrefix(prefix: string) {
   pathPrefix = prefix;
 }
 
+/** @internal */
+export function _resolveLoadFileUrl(url: string): string {
+  return isAbsoluteLoadFileUrl(url) ? url : pathPrefix + url;
+}
+
 /**
  * Loads ImageBitmap asynchronously. Respects setPathPrefix.
  * image.crossOrigin can be set via opts.crossOrigin, default to 'anonymous'
@@ -21,10 +26,29 @@ export async function loadImageBitmap(
   opts?: {crossOrigin?: string} & ImageBitmapOptions
 ): Promise<ImageBitmap> {
   const image = new Image();
+  const resolvedUrl = _resolveLoadFileUrl(url);
   image.crossOrigin = opts?.crossOrigin || 'anonymous';
-  image.src = url.startsWith('http') ? url : pathPrefix + url;
-  await image.decode();
-  return opts ? await createImageBitmap(image, opts) : await createImageBitmap(image);
+  image.src = resolvedUrl;
+
+  try {
+    await image.decode();
+  } catch (error) {
+    const causeMessage = error instanceof Error ? error.message : String(error);
+    throw new Error(
+      `Could not decode image "${resolvedUrl}" during loadImageBitmap(): ${causeMessage}`,
+      {cause: error}
+    );
+  }
+
+  try {
+    return opts ? await createImageBitmap(image, opts) : await createImageBitmap(image);
+  } catch (error) {
+    const causeMessage = error instanceof Error ? error.message : String(error);
+    throw new Error(
+      `Could not create ImageBitmap from "${resolvedUrl}" during loadImageBitmap(): ${causeMessage}`,
+      {cause: error}
+    );
+  }
 }
 
 /**
@@ -40,12 +64,17 @@ export async function loadImage(
   return await new Promise((resolve, reject) => {
     try {
       const image = new Image();
+      const resolvedUrl = _resolveLoadFileUrl(url);
       image.onload = () => resolve(image);
-      image.onerror = () => reject(new Error(`Could not load image ${url}.`));
+      image.onerror = () => reject(new Error(`Could not load image ${resolvedUrl}.`));
       image.crossOrigin = opts?.crossOrigin || 'anonymous';
-      image.src = url.startsWith('http') ? url : pathPrefix + url;
+      image.src = resolvedUrl;
     } catch (error) {
       reject(error);
     }
   });
+}
+
+function isAbsoluteLoadFileUrl(url: string): boolean {
+  return url.startsWith('/') || /^[a-z][a-z\d+\-.]*:/i.test(url);
 }

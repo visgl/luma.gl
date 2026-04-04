@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from 'tape-promise/tape';
+import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
 
 import type {TypedArray} from '@math.gl/types';
-import type {GLParameters} from '@luma.gl/constants';
-import {GL} from '@luma.gl/constants';
+import type {GLParameters} from '@luma.gl/webgl/constants';
+import {GL} from '@luma.gl/webgl/constants';
 
 import {
   getGLParameters,
@@ -56,7 +56,7 @@ test('WebGLState#getGLParameters (WebGL)', async t => {
 });
 
 // TODO - restore asap
-test.skip('WebGLState#setGLParameters (Mixing enum and function style keys)', async t => {
+test('WebGLState#setGLParameters (Mixing enum and function style keys)', async t => {
   const webglDevice = await getWebGLTestDevice();
 
   resetGLParameters(webglDevice.gl);

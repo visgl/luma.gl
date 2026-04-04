@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {Shader, ShaderProps, CompilerMessage, log} from '@luma.gl/core';
-import {GL} from '@luma.gl/constants';
+import {GL} from '@luma.gl/webgl/constants';
 import {parseShaderCompilerLog} from '../helpers/parse-shader-compiler-log';
 import {WebGLDevice} from '../webgl-device';
 
@@ -31,7 +31,13 @@ export class WEBGLShader extends Shader {
     // default framebuffer handle is null, so we can't set spector metadata...
     device._setWebGLDebugMetadata(this.handle, this, {spector: this.props});
 
-    this._compile(this.source);
+    const compilationStatus = this._compile(this.source);
+    if (compilationStatus && typeof compilationStatus.catch === 'function') {
+      compilationStatus.catch(() => {
+        // Ensure any async compile status errors are consumed.
+        this.compilationStatus = 'error';
+      });
+    }
   }
 
   override destroy(): void {
@@ -71,7 +77,7 @@ export class WEBGLShader extends Shader {
   // PRIVATE METHODS
 
   /** Compile a shader and get compilation status */
-  protected async _compile(source: string): Promise<void> {
+  protected _compile(source: string): void | Promise<void> {
     source = source.startsWith('#version ') ? source : `#version 300 es\n${source}`;
 
     const {gl} = this.device;
@@ -97,12 +103,13 @@ export class WEBGLShader extends Shader {
 
     // async case
     log.once(1, 'Shader compilation is asynchronous')();
-    await this._waitForCompilationComplete();
-    log.info(2, `Shader ${this.id} - async compilation complete: ${this.compilationStatus}`)();
-    this._getCompilationStatus();
+    return this._waitForCompilationComplete().then(() => {
+      log.info(2, `Shader ${this.id} - async compilation complete: ${this.compilationStatus}`)();
+      this._getCompilationStatus();
 
-    // The `Shader` base class will determine if debug window should be opened based on this.compilationStatus
-    this.debugShader();
+      // The `Shader` base class will determine if debug window should be opened based on this.compilationStatus
+      this.debugShader();
+    });
   }
 
   /** Use KHR_parallel_shader_compile extension if available */

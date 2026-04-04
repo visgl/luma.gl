@@ -21,25 +21,31 @@ function generateGLSLUniformDeclarations(
 ): string {
   const glsl: string[] = [];
 
-  // => uniform UniformBlockName {
+  // => layout(std140) uniform UniformBlockName {
   switch (options.uniforms) {
     case 'scoped-interface-blocks':
     case 'unscoped-interface-blocks':
-      glsl.push(`uniform ${capitalize(module.name)} {`);
+      glsl.push(`layout(std140) uniform ${capitalize(module.name)} {`);
       break;
     case 'uniforms':
     // ignore
   }
 
   for (const [uniformName, uniformFormat] of Object.entries(module.uniformTypes || {})) {
-    const glslUniformType = getGLSLUniformType(uniformFormat);
+    if (typeof uniformFormat !== 'string') {
+      throw new Error(
+        `Composite uniform types are not supported by GLSL shader generation: ${module.name}.${uniformName}`
+      );
+    }
+
+    const glslUniformType = getGLSLUniformType(uniformFormat as UniformFormat);
     switch (options.uniforms) {
       case 'scoped-interface-blocks':
-        // => uniform UniformBlockName {
+        // => layout(std140) uniform UniformBlockName {
         glsl.push(`  ${glslUniformType} ${uniformName};`);
         break;
       case 'unscoped-interface-blocks':
-        // => uniform UniformBlockName {
+        // => layout(std140) uniform UniformBlockName {
         glsl.push(`  ${glslUniformType} ${module.name}_${uniformName};`);
         break;
       case 'uniforms':

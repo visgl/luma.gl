@@ -10,11 +10,13 @@ dist.min.js
 _docs/
 .nyc_output/
 coverage/
+coverage-*/
 node_modules/
 npm-debug.log
 stats.json
 .reify-cache
 .cache
+.playwright-artifacts/
 jscpd-report.md
 
 tsconfig.tsbuildinfo
@@ -48,4 +50,3 @@ TODO
 
 # editor files
 .idea
-

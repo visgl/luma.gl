@@ -3,9 +3,9 @@
 // Copyright (c) vis.gl contributors
 
 /*
-import test from 'tape-promise/tape';
+import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {getWebGLTestDevices} from '@luma.gl/test-utils';
-import {GL} from '@luma.gl/constants';
+import {GL} from '@luma.gl/webgl/constants';
 import {Program} from '@luma.gl/webgl-legacy';
 import ShaderLayout from '@luma.gl/webgl-legacy/classic/program-configuration';
 import {fixture} from 'test/setup';

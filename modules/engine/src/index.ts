@@ -5,6 +5,8 @@
 // luma.gl Engine API
 
 // Animation
+export type {AnimationClipControllerProps} from './animation/animator';
+export {AnimationClipController, Animator} from './animation/animator';
 export {Timeline} from './animation/timeline';
 export {KeyFrames} from './animation/key-frames';
 export type {AnimationProps} from './animation-loop/animation-props';
@@ -19,6 +21,10 @@ export {makeAnimationLoop} from './animation-loop/make-animation-loop';
 
 export type {ModelProps} from './model/model';
 export {Model} from './model/model';
+export type {MaterialProps} from './material/material';
+export {Material} from './material/material';
+export type {MaterialFactoryProps} from './material/material-factory';
+export {MaterialFactory} from './material/material-factory';
 
 // Transforms
 export type {BufferTransformProps} from './compute/buffer-transform';
@@ -26,14 +32,20 @@ export {BufferTransform} from './compute/buffer-transform';
 export type {TextureTransformProps} from './compute/texture-transform';
 export {TextureTransform} from './compute/texture-transform';
 
-export {PipelineFactory} from './factories/pipeline-factory';
-export {ShaderFactory} from './factories/shader-factory';
-
 // Models
 export type {ClipSpaceProps} from './models/clip-space';
 export {ClipSpace} from './models/clip-space';
 export type {BackgroundTextureModelProps} from './models/billboard-texture-model';
 export {BackgroundTextureModel} from './models/billboard-texture-model';
+export type {
+  BaseLightModelProps,
+  PointLightModelProps,
+  SpotLightModelProps,
+  DirectionalLightModelProps
+} from './models/light-model-utils';
+export {PointLightModel} from './models/point-light-model';
+export {SpotLightModel} from './models/spot-light-model';
+export {DirectionalLightModel} from './models/directional-light-model';
 
 // Scenegraph Core nodes
 export {ScenegraphNode} from './scenegraph/scenegraph-node';
@@ -67,7 +79,12 @@ export {ShaderInputs} from './shader-inputs';
 
 // Application Utilities
 export {makeRandomGenerator} from './application-utils/random';
-export {setPathPrefix, loadImage, loadImageBitmap} from './application-utils/load-file';
+export {
+  setPathPrefix,
+  loadImage,
+  loadImageBitmap,
+  _resolveLoadFileUrl
+} from './application-utils/load-file';
 
 // EXPERIMENTAL
 export type {ShaderPassRendererProps} from './passes/shader-pass-renderer';
@@ -94,7 +111,21 @@ export type {
 export type {DynamicTextureProps} from './dynamic-texture/dynamic-texture';
 export {DynamicTexture} from './dynamic-texture/dynamic-texture';
 
-export {PickingManager} from './modules/picking/picking-manager';
+export type {
+  PickInfo,
+  PickingMode,
+  ResolvedPickingMode,
+  PickingBackend,
+  PickingManagerProps,
+  ResolvedPickingBackend
+} from './modules/picking/picking-manager';
+export {
+  PickingManager,
+  supportsIndexPicking,
+  resolvePickingMode,
+  resolvePickingBackend
+} from './modules/picking/picking-manager';
+export {picking} from './modules/picking/picking';
 export {picking as indexPicking} from './modules/picking/index-picking';
 export {picking as colorPicking} from './modules/picking/color-picking';
 
@@ -106,6 +137,7 @@ export {
 // DEPRECATED
 
 export {LegacyPickingManager} from './modules/picking/legacy-picking-manager';
+export {legacyColorPicking} from './modules/picking/legacy-color-picking';
 
 import {DynamicTexture, type DynamicTextureProps} from './dynamic-texture/dynamic-texture';
 /** @deprecated use DynamicTexture */

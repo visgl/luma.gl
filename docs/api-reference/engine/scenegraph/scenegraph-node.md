@@ -1,63 +1,105 @@
 # ScenegraphNode
 
-The `ScenegraphNode` is a base class for objects in the luma.gl scene graph, such as `Model`, `Group` and `Camera`. It holds the transformation matrix (i.e. the position, orientation and scale) of the object.
+`ScenegraphNode` is the base class for engine scenegraph objects.
+It stores an id, transform state, a model matrix, and utility methods for updating that transform.
 
 ## Usage
 
-`ScenegraphNode` is a base class, normally only instantiated via base classes.
+```typescript
+import {ScenegraphNode} from '@luma.gl/engine';
 
+const node = new ScenegraphNode({position: [0, 1, 2]});
+node.updateMatrix();
 ```
-const model = new Model();
-model
-  .setPosition([0, 1, 2])
-  .update();
+
+## Types
+
+### `ScenegraphNodeProps`
+
+```ts
+export type ScenegraphNodeProps = {
+  id?: string;
+  display?: boolean;
+  matrix?: NumericArray;
+  position?: NumericArray;
+  rotation?: NumericArray;
+  scale?: NumericArray;
+  update?: boolean;
+};
 ```
 
 ## Properties
 
-A Model instance has a number of public properties that can be accessed/modified:
+### `id`
 
-- `position` (_object_) - A `Vector3` indicating the position of the Model.
-- `rotation` (_object_) - A `Vector3` indicating the rotation of the Model.
-- `scale` (_object_) - A `Vecto3` indicating the scaling of the Model.
-- `matrix` (_object_) - A `Matrix4` containing information about position, rotation and scale.
+Application-provided or auto-generated identifier.
 
-This matrix gets updated each time the method `update` is called on a Model instance.
+### `matrix`
 
-## Properties
+Current model matrix.
 
-### matrix (`Number[16]`)
+### `display`
 
-The model matrix of this scenegraph node.
+Display flag stored on the node.
+
+### `position`, `rotation`, `scale`
+
+Transform components.
+
+### `userData`
+
+Application-owned metadata.
 
 ## Methods
 
-### constructor(props : Object)
+### `constructor(props?: ScenegraphNodeProps)`
 
-```
-var node = new Model(gl, props);
-```
+Creates a scenegraph node and initializes its transform state.
 
-### setProps(props: Object)
+### `getBounds(): [number[], number[]] | null`
 
-- `position` (`Number[3]`) - Sets the position part of the matrix
-- `rotation` (`Number[3]`) - Sets the rotation part of the matrix
-- `scale` (`Number[3]`) - Sets the scale part of the matrix
+Base implementation returns `null`.
 
-Note that setting orientation props does not actually update the object's matrix. `update()` must be called.
+### `destroy(): void`
 
-### getBounds() : [min: number[], max: number[]] | null
+Base implementation is a no-op.
 
-Calculate the bounding box of the node.
+### `delete(): void`
 
-### update() - DEPRECATED
+Deprecated alias for `destroy()`.
 
-Update the model matrix. Useful to update changes to the `position`, `rotation` or `scale` properties.
+### `setProps(props: ScenegraphNodeProps): this`
 
-```
-node.update();
-```
+Applies node properties and updates the matrix.
 
-## Remarks
+### `setPosition(position): this`
 
-- Before luma.gl v7, `ScenegraphNode` was called `Object3D`.
+Updates position.
+
+### `setRotation(rotation): this`
+
+Updates Euler or quaternion rotation.
+
+### `setScale(scale): this`
+
+Updates scale.
+
+### `setMatrix(matrix, copyMatrix = true): void`
+
+Replaces the model matrix directly.
+
+### `setMatrixComponents({position, rotation, scale, update?}): this`
+
+Updates transform components in one call.
+
+### `updateMatrix(): this`
+
+Recomputes the matrix from position, rotation, and scale.
+
+### `update({position, rotation, scale} = {}): this`
+
+Updates individual components and recomputes the matrix.
+
+### `getCoordinateUniforms(viewMatrix, modelMatrix?): {...}`
+
+Returns derived matrices useful for shaders.

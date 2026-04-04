@@ -2,6 +2,10 @@
 
 luma.gl is packaged and published as a suite of composable npm modules, so that applications can choose what functionality they need.
 
+Use the API reference when you want the class-by-class reference pages for a specific module. If you are looking for conceptual guides or an introduction to how the pieces fit together, start in the [API Guide](/docs/api-guide) and then come back here for the detailed type and method docs.
+
+If you are looking for `Model`, start with [`@luma.gl/engine`][engine]. The `Model` class lives in the engine module and is one of the main entry points for rendering in luma.gl.
+
 | Module                                | Usage       | Description                                                                                     |
 | ------------------------------------- | ----------- | ----------------------------------------------------------------------------------------------- |
 | [`@luma.gl/core`][core]               | Required    | The "Abstract" `Device` API (implemented by both the `webgpu` and `webgl` modules).             |
@@ -14,11 +18,14 @@ luma.gl is packaged and published as a suite of composable npm modules, so that 
 
 \* At least one backend, either WebGL or WebGPU, must be installed to enable GPU resource creation.
 
-luma.gl also publishes a legacy moduls that should be avoided in new applications.
+## Start Here
 
-| Legacy Module        | Status     | Description      | Replacement                   |
-| -------------------- | ---------- | ---------------- | ----------------------------- |
-| `@luma.gl/constants` | Deprecated | WebGL constants. | No longer used in luma.gl v9. |
+- [`@luma.gl/engine`][engine] for `Model`, `AnimationLoop`, scenegraph helpers, and compute-oriented utilities.
+- [`@luma.gl/core`][core] for `Device`, buffers, textures, shaders, render passes, and `RenderPipeline`.
+- [`@luma.gl/shadertools`][shadertools] for shader modules and shader assembly.
+- [`@luma.gl/gltf`][gltf] for glTF scenegraph loading and extensions.
+- [`@luma.gl/webgl`][webgl] and [`@luma.gl/webgpu`][webgpu] for backend adapters used by `@luma.gl/core`.
+- [`@luma.gl/webgl/constants`](/docs/api-reference/webgl/constants) when you need raw numeric WebGL enums.
 
 [webgl]: /docs/api-reference/webgl
 [webgpu]: /docs/api-reference/webgpu

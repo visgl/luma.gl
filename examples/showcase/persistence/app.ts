@@ -3,25 +3,25 @@
 // Copyright (c) vis.gl contributors
 
 import type {NumberArray, VariableShaderType} from '@luma.gl/core';
-import {UniformStore, Framebuffer} from '@luma.gl/core';
+import type {NumericArray} from '@math.gl/types';
+import {Buffer, UniformStore, Framebuffer, Texture} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {
   AnimationLoopTemplate,
-  Geometry,
   SphereGeometry,
   Model,
   makeRandomGenerator,
   loadImageBitmap,
   DynamicTexture,
-  BackgroundTextureModel
+  BackgroundTextureModel,
+  ClipSpace
 } from '@luma.gl/engine';
 import {Matrix4, Vector3, radians} from '@math.gl/core';
 
 // SPHERE SHADER
 
 type SphereUniforms = {
-  color: NumberArray;
-  lighting: boolean;
+  colorAndLighting: NumberArray;
   modelViewMatrix: NumberArray;
   projectionMatrix: NumberArray;
 };
@@ -29,51 +29,47 @@ type SphereUniforms = {
 const sphere: {uniformTypes: Record<keyof SphereUniforms, VariableShaderType>} = {
   uniformTypes: {
     // TODO make sure order doesn't matter
-    color: 'vec3<f32>',
-    lighting: 'f32',
+    colorAndLighting: 'vec4<f32>',
     modelViewMatrix: 'mat4x4<f32>',
-    projectionMatrix: 'mat4x3<f32>'
+    projectionMatrix: 'mat4x4<f32>'
   }
 };
 
 const SPHERE_WGSL = /* WGSL */ `\
-#version 300 es
+struct SphereUniforms {
+  colorAndLighting: vec4<f32>,
+  modelViewMatrix: mat4x4<f32>,
+  projectionMatrix: mat4x4<f32>,
+};
+
+@group(0) @binding(auto) var<uniform> sphere : SphereUniforms;
 
 struct VertexInputs {
-  positions: vec3<f32>;
-  normals: vec3<f32>;
-}
+  @location(0) positions: vec3<f32>,
+  @location(1) normals: vec3<f32>,
+};
 
-struct FragmentInputs {
-  @builtin(position) position: vec4<f32>;
-  normal: vec3<f32>;
-}
-
-uniform sphereUniforms {
-  // fragment shader
-  color: vec3<f32>;
-  lighting: bool;
-  // vertex shader
-  modelViewMatrix: mat4<f32>;
-  projectionMatrix: mat4<f32>;
-} sphere;
+struct VertexOutputs {
+  @builtin(position) position: vec4<f32>,
+  @location(0) normal: vec3<f32>,
+};
 
 @vertex
-fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
-  const outputs: VertexOutputs;
-  gl_Position = sphere.projectionMatrix * sphere.modelViewMatrix * vec4(inputs.positions, 1.0);
-  outputs.normal = vec3((sphere.modelViewMatrix * vec4(inputs.normals, 0.0)));
+fn vertexMain(inputs: VertexInputs) -> VertexOutputs {
+  var outputs: VertexOutputs;
+  outputs.position = sphere.projectionMatrix * sphere.modelViewMatrix * vec4(inputs.positions, 1.0);
+  outputs.normal = vec3((sphere.modelViewMatrix * vec4(inputs.normals, 0.0)).xyz);
   return outputs;
 }
 
 @fragment
-fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
-  let attenuation = 1.0;
-  if (sphere.lighting) {
-    light = normalize(vec3(1,1,2));
-    attenuation = dot(normal, light);
+fn fragmentMain(inputs: VertexOutputs) -> @location(0) vec4<f32> {
+  var attenuation = 1.0;
+  if (sphere.colorAndLighting.a > 0.5) {
+    let light = normalize(vec3(1.0, 1.0, 2.0));
+    attenuation = max(dot(inputs.normal, light), 0.0);
   }
-  return vec4(sphere.color * attenuation, 1);
+  return vec4(sphere.colorAndLighting.rgb * attenuation, 1.0);
 }
 `;
 
@@ -85,8 +81,7 @@ in vec3 normals;
 
 uniform sphereUniforms {
   // fragment shader
-  vec3 color;
-  bool lighting;
+  vec4 colorAndLighting;
   // vertex shader
   mat4 modelViewMatrix;
   mat4 projectionMatrix;
@@ -107,8 +102,7 @@ precision highp float;
 
 uniform sphereUniforms {
   // fragment
-  vec3 color;
-  bool lighting;
+  vec4 colorAndLighting;
   // vertex
   mat4 modelViewMatrix;
   mat4 projectionMatrix;
@@ -119,135 +113,36 @@ out vec4 fragColor;
 
 void main(void) {
   float attenuation = 1.0;
-  if (sphere.lighting) {
+  if (sphere.colorAndLighting.a > 0.5) {
     vec3 light = normalize(vec3(1,1,2));
-    attenuation = dot(normal, light);
+    attenuation = max(dot(normal, light), 0.0);
   }
-  fragColor = vec4(sphere.color * attenuation, 1);
+  fragColor = vec4(sphere.colorAndLighting.rgb * attenuation, 1);
 }
 `;
-
-// SCREEN QUAD SHADERS
-
-type ScreenQuadUniforms = {
-  resolution: NumberArray;
-};
-
-const screenQuad: {uniformTypes: Record<keyof ScreenQuadUniforms, VariableShaderType>} = {
-  uniformTypes: {
-    resolution: 'vec2<f32>'
-  }
-};
-
-const SCREEN_QUAD_MODULE_WGSL = /* WGSL */ `\
-fn getQuadVertex(vertexIndex : u32) -> vec2f {
-  // SCREEN QUAD
-  let positions = array(
-    // 1st triangle
-    vec2f( 0.0,  0.0),  // center
-    vec2f( 1.0,  0.0),  // right, center
-    vec2f( 0.0,  1.0),  // center, top
-    // 2st triangle
-    vec2f( 0.0,  1.0),  // center, top
-    vec2f( 1.0,  0.0),  // right, center
-    vec2f( 1.0,  1.0),  // right, top
-  );
-  return positions[vertexIndex];
-}
-`;
-
-const SCREEN_QUAD_WGSL = /* WGSL */ `\
-
-${SCREEN_QUAD_MODULE_WGSL}
-
-struct FragmentInputs {
-  @builtin(position) position: vec4f,
-  @location(0) texcoord: vec2f,
-};
-
-@vertex fn vertexMain(@builtin(vertex_index) vertexIndex : u32) -> FragmentInputs {
-  var outputs: FragmentInputs;
-  let xy = getQuadVertex(vertexIndex);
-  outputs.position = vec4f(xy, 0.0, 1.0);
-  outputs.texcoord = xy;
-  return outputs;
-}
-
-@group(0) @binding(0) var texture : texture_2d<f32>;
-@group(0) @binding(1) var sampler : sampler;
-
-@fragment fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4f {
-  return textureSample(texture, sampler, inputs.texcoord);
-}
-`;
-
-const SCREEN_QUAD_VS = /* glsl */ `\
-#version 300 es
-
-in vec2 aPosition;
-
-void main(void) {
-  gl_Position = vec4(aPosition, 0, 1);
-}
-`;
-
-const SCREEN_QUAD_FS = /* glsl */ `\
-#version 300 es
-
-precision highp float;
-
-uniform sampler2D uTexture;
-
-uniform screenQuadUniforms {
-  vec2 resolution;
-} screenQuad;
-
-out vec4 fragColor;
-
-void main(void) {
-  vec2 p = gl_FragCoord.xy/screenQuad.resolution.xy;
-  fragColor = texture(uTexture, p);
-}
-`;
-
-// PERSISTENCE SHADERS
-
-type PersistenceQuadUniforms = {
-  resolution: NumberArray;
-};
-
-const persistenceQuad: {uniformTypes: Record<keyof ScreenQuadUniforms, VariableShaderType>} = {
-  uniformTypes: {
-    resolution: 'vec2<f32>'
-  }
-};
 
 const PERSISTENCE_WGSL = /* WGSL */ `\
+@group(0) @binding(auto) var sourceTexture : texture_2d<f32>;
+@group(0) @binding(auto) var sourceTextureSampler : sampler;
+@group(0) @binding(auto) var persistenceTexture : texture_2d<f32>;
+@group(0) @binding(auto) var persistenceTextureSampler : sampler;
 
-${SCREEN_QUAD_MODULE_WGSL}
-
-struct FragmentInputs {
-  @builtin(position) position: vec4f,
-  @location(0) texcoord: vec2f,
-};
-
-@vertex fn vertexMain(@builtin(vertex_index) vertexIndex : u32) -> FragmentInputs {
-  var outputs: FragmentInputs;
-  let xy = getQuadVertex(vertexIndex);
-  outputs.position = vec4f(xy, 0.0, 1.0);
-  outputs.texcoord = xy;
-  return outputs;
+fn getCoverage(color: vec4f) -> f32 {
+  return max(color.a, max(color.r, max(color.g, color.b)));
 }
 
-@group(0) @binding(0) var sceneTexture : texture_2d<f32>;
-@group(0) @binding(1) var persistenceTexture : texture_2d<f32>;
-@group(0) @binding(2) var sampler : sampler;
-
-@fragment 
-fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4f {
-  let sceneColor = textureSample(sceneTexture, sampler, inputs.texcoord);
-  let persistenceColor = textureSample(persistenceTexture, sampler, inputs.texcoord);
-  return mix(sceneColor * 4.0, persistenceColor, 0.9);
+@fragment
+fn fragmentMain(
+  @location(2) uv: vec2<f32>
+) -> @location(0) vec4f {
+  let sceneColor = textureSample(sourceTexture, sourceTextureSampler, uv);
+  let persistenceColor = textureSample(persistenceTexture, persistenceTextureSampler, uv);
+  let accumulatedColor = min(
+    mix(sceneColor.rgb * 4.0, persistenceColor.rgb, vec3f(0.9, 0.9, 0.9)),
+    vec3f(1.0, 1.0, 1.0)
+  );
+  let accumulatedAlpha = max(getCoverage(sceneColor), persistenceColor.a * 0.9);
+  return vec4f(accumulatedColor, accumulatedAlpha);
 }
 `;
 
@@ -256,71 +151,107 @@ const PERSISTENCE_FS = /* glsl */ `\
 
 precision highp float;
 
-uniform sampler2D uScene;
-uniform sampler2D uPersistence;
+uniform sampler2D sourceTexture;
+uniform sampler2D persistenceTexture;
 
-uniform persistenceQuadUniforms {
-  vec2 resolution;
-} persistence;
+in vec2 uv;
+out vec4 fragColor;
 
+float getCoverage(vec4 color) {
+  return max(color.a, max(color.r, max(color.g, color.b)));
+}
+
+void main(void) {
+  vec2 p = uv;
+  vec4 sceneColor = texture(sourceTexture, p);
+  vec4 persistenceColor = texture(persistenceTexture, p);
+  vec3 accumulatedColor = min(mix(sceneColor.rgb * 4.0, persistenceColor.rgb, vec3(0.9)), vec3(1.0));
+  float accumulatedAlpha = max(getCoverage(sceneColor), persistenceColor.a * 0.9);
+  fragColor = vec4(accumulatedColor, accumulatedAlpha);
+}
+`;
+
+const SCREEN_WGSL = /* WGSL */ `\
+@group(0) @binding(auto) var sourceTexture: texture_2d<f32>;
+@group(0) @binding(auto) var sourceTextureSampler: sampler;
+
+@fragment
+fn fragmentMain(
+  @location(2) uv: vec2<f32>
+) -> @location(0) vec4f {
+  return textureSample(sourceTexture, sourceTextureSampler, uv);
+}
+`;
+
+const SCREEN_FS = /* glsl */ `\
+#version 300 es
+
+precision highp float;
+
+uniform sampler2D sourceTexture;
+
+in vec2 uv;
 out vec4 fragColor;
 
 void main(void) {
-  vec2 p = gl_FragCoord.xy / persistence.resolution.xy;
-  vec4 cS = texture(uScene, p);
-  vec4 cP = texture(uPersistence, p);
-  fragColor = mix(cS*4.0, cP, 0.9);
+  fragColor = texture(sourceTexture, uv);
 }
 `;
 
 const random = makeRandomGenerator();
+const OFFSCREEN_COLOR_FORMAT = 'rgba8unorm';
 
 const CORE_COUNT = 64;
 const ELECTRON_COUNT = 64;
-const electronPosition = [];
-const electronRotation = [];
-const nucleonPosition = [];
+const electronPosition: NumericArray[] = [];
+const electronRotation: Matrix4[] = [];
+const nucleonPosition: NumericArray[] = [];
 
 /* eslint-disable max-statements */
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = `
 <p>
   Electron trails renderings persist across multiple frames.
+</p>
 <p>
   Uses multiple luma.gl <code>Framebuffer</code>s to hold previously rendered data between frames.
 </p>
 `;
 
-  // A single uniform store that manages uniforms for all our shaders
-  uniformStore = new UniformStore<{
+  // A single uniform store that manages uniforms for our sphere shader
+  uniformStore: UniformStore<{
     sphere: SphereUniforms;
-    screenQuad: ScreenQuadUniforms;
-    persistenceQuad: PersistenceQuadUniforms;
-  }>({
-    sphere,
-    screenQuad,
-    persistenceQuad
-  });
+  }>;
 
-  /** Model that renders a background texture into transparent areas of the screen */
+  /** Background texture used for final screen compositing */
+  backgroundTexture: DynamicTexture;
   backgroundTextureModel: BackgroundTextureModel;
   /** Electron model, will be drawn multiple times */
   electron: Model;
   /** Nucleon model, will be drawn multiple times */
   nucleon: Model;
+  electronUniformBuffers: Buffer[];
+  nucleonUniformBuffers: Buffer[];
 
   /** Model that  */
   mainFramebuffer: Framebuffer;
   pingpongFramebuffers: Framebuffer[];
-  screenQuad: Model;
-  persistenceQuad: Model;
+  screenPass: ClipSpace;
+  persistencePass: ClipSpace;
+  persistenceFramebufferSize: [number, number] | null = null;
 
   constructor({device, width, height}: AnimationProps) {
     super();
 
+    this.uniformStore = new UniformStore(device, {
+      sphere
+    });
+    this.electronUniformBuffers = this.createSphereUniformBuffers(device, ELECTRON_COUNT);
+    this.nucleonUniformBuffers = this.createSphereUniformBuffers(device, CORE_COUNT);
+
+    this.backgroundTexture = new DynamicTexture(device, {data: loadImageBitmap('background.png')});
     this.backgroundTextureModel = new BackgroundTextureModel(device, {
-      backgroundTexture: new DynamicTexture(device, {data: loadImageBitmap('background.png')}),
-      blend: true
+      backgroundTexture: this.backgroundTexture
     });
 
     this.electron = new Model(device, {
@@ -328,9 +259,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       source: SPHERE_WGSL,
       vs: SPHERE_VS,
       fs: SPHERE_FS,
+      colorAttachmentFormats: [OFFSCREEN_COLOR_FORMAT],
       geometry: new SphereGeometry({nlat: 20, nlong: 30}), // To test that sphere generation is working properly.
       bindings: {
-        sphere: this.uniformStore.getManagedUniformBuffer(device, 'sphere')
+        sphere: this.electronUniformBuffers[0]
       },
       parameters: {
         depthWriteEnabled: true,
@@ -344,6 +276,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       source: SPHERE_WGSL,
       vs: SPHERE_VS,
       fs: SPHERE_FS,
+      colorAttachmentFormats: [OFFSCREEN_COLOR_FORMAT],
       geometry: new SphereGeometry({nlat: 20, nlong: 30}),
       parameters: {
         depthWriteEnabled: true,
@@ -351,14 +284,16 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         cullMode: 'back'
       },
       bindings: {
-        sphere: this.uniformStore.getManagedUniformBuffer(device, 'sphere')
+        sphere: this.nucleonUniformBuffers[0]
       }
     });
 
     this.mainFramebuffer = device.createFramebuffer({
       width,
       height,
-      colorAttachments: ['rgba8unorm'],
+      colorAttachments: [
+        createOffscreenColorAttachment(device, 'main-framebuffer-color', width, height)
+      ],
       depthStencilAttachment: 'depth24plus'
     });
 
@@ -366,61 +301,54 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       device.createFramebuffer({
         width,
         height,
-        colorAttachments: ['rgba8unorm'],
-        depthStencilAttachment: 'depth24plus'
+        colorAttachments: [
+          createOffscreenColorAttachment(device, 'persistence-framebuffer-0-color', width, height)
+        ]
       }),
       device.createFramebuffer({
         width,
         height,
-        colorAttachments: ['rgba8unorm'],
-        depthStencilAttachment: 'depth24plus'
+        colorAttachments: [
+          createOffscreenColorAttachment(device, 'persistence-framebuffer-1-color', width, height)
+        ]
       })
     ];
 
-    const QUAD_POSITIONS = [-1, -1, 1, -1, 1, 1, -1, -1, 1, 1, -1, 1];
-
-    const quadGeometry = new Geometry({
-      topology: 'triangle-list',
-      attributes: {
-        aPosition: {
-          value: new Float32Array(QUAD_POSITIONS),
-          size: 2
-        }
-      },
-      vertexCount: 6
-    });
-
-    this.screenQuad = new Model(device, {
-      id: 'quad',
-      source: SCREEN_QUAD_WGSL,
-      vs: SCREEN_QUAD_VS,
-      fs: SCREEN_QUAD_FS,
-      geometry: quadGeometry,
-      bindings: {
-        screenQuad: this.uniformStore.getManagedUniformBuffer(device, 'screenQuad')
-      },
-      parameters: {
-        depthWriteEnabled: true,
-        depthCompare: 'less-equal',
-        cullMode: 'back'
-      }
-    });
-
-    this.persistenceQuad = new Model(device, {
-      id: 'persistence-quad',
-      source: PERSISTENCE_WGSL,
-      vs: SCREEN_QUAD_VS,
-      fs: PERSISTENCE_FS,
-      geometry: quadGeometry,
-      bindings: {
-        persistenceQuad: this.uniformStore.getManagedUniformBuffer(device, 'persistenceQuad')
-      },
-      parameters: {
-        depthWriteEnabled: true,
-        depthCompare: 'less-equal',
-        cullMode: 'back'
-      }
-    });
+    this.screenPass = new ClipSpace(
+      device,
+      device.info.shadingLanguage === 'wgsl'
+        ? {
+            source: SCREEN_WGSL,
+            colorAttachmentFormats: [device.preferredColorFormat],
+            parameters: {
+              blend: true,
+              blendColorOperation: 'add',
+              blendAlphaOperation: 'add',
+              blendColorSrcFactor: 'src-alpha',
+              blendColorDstFactor: 'one-minus-src-alpha',
+              blendAlphaSrcFactor: 'one',
+              blendAlphaDstFactor: 'one-minus-src-alpha'
+            }
+          }
+        : {
+            fs: SCREEN_FS,
+            parameters: {
+              blend: true,
+              blendColorOperation: 'add',
+              blendAlphaOperation: 'add',
+              blendColorSrcFactor: 'src-alpha',
+              blendColorDstFactor: 'one-minus-src-alpha',
+              blendAlphaSrcFactor: 'one',
+              blendAlphaDstFactor: 'one-minus-src-alpha'
+            }
+          }
+    );
+    this.persistencePass = new ClipSpace(
+      device,
+      device.info.shadingLanguage === 'wgsl'
+        ? {source: PERSISTENCE_WGSL, colorAttachmentFormats: [OFFSCREEN_COLOR_FORMAT]}
+        : {fs: PERSISTENCE_FS}
+    );
 
     const dt = 0.0125;
 
@@ -452,33 +380,57 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   onFinalize(animationProps: AnimationProps): void {
+    this.uniformStore.destroy();
+    this.backgroundTexture.destroy();
+    this.backgroundTextureModel.destroy();
     this.electron.destroy();
     this.nucleon.destroy();
+    for (const uniformBuffer of this.electronUniformBuffers) {
+      uniformBuffer.destroy();
+    }
+    for (const uniformBuffer of this.nucleonUniformBuffers) {
+      uniformBuffer.destroy();
+    }
 
     this.mainFramebuffer.destroy();
     this.pingpongFramebuffers[0].destroy();
     this.pingpongFramebuffers[1].destroy();
-    this.screenQuad.destroy();
-    this.persistenceQuad.destroy();
+    this.screenPass.destroy();
+    this.persistencePass.destroy();
   }
 
   onRender({device, tick, width, height, aspect}: AnimationProps) {
+    if (!this.backgroundTexture.isReady) {
+      return;
+    }
+
+    const needsPersistenceReset =
+      !this.persistenceFramebufferSize ||
+      this.persistenceFramebufferSize[0] !== width ||
+      this.persistenceFramebufferSize[1] !== height;
+
     this.mainFramebuffer.resize({width, height});
     this.pingpongFramebuffers[0].resize({width, height});
     this.pingpongFramebuffers[1].resize({width, height});
+
+    if (needsPersistenceReset) {
+      this.clearPersistenceFramebuffers(device);
+      this.persistenceFramebufferSize = [width, height];
+    }
 
     const projectionMatrix = new Matrix4().perspective({fovy: radians(75), aspect});
     const viewMatrix = new Matrix4().lookAt({eye: [0, 0, 4]});
 
     const mainRenderPass = device.beginRenderPass({
       framebuffer: this.mainFramebuffer,
-      clearColor: [0, 0, 0, 1],
-      clearDepth: 1
+      clearColor: [0, 0, 0, 0],
+      clearDepth: 1,
+      clearStencil: false
     });
 
     // Render electrons to framebuffer
 
-    this.uniformStore.setUniforms({sphere: {color: [0.0, 0.5, 1], lighting: false}});
+    this.uniformStore.setUniforms({sphere: {colorAndLighting: [0.0, 0.5, 1.0, 0.0]}});
 
     for (let i = 0; i < ELECTRON_COUNT; i++) {
       electronPosition[i] = electronRotation[i].transformVector(electronPosition[i]);
@@ -492,15 +444,15 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
           projectionMatrix
         }
       });
-      this.uniformStore.updateUniformBuffers();
+      this.electronUniformBuffers[i].write(this.uniformStore.getUniformBufferData('sphere'));
+      this.electron.setBindings({sphere: this.electronUniformBuffers[i]});
       this.electron.draw(mainRenderPass);
     }
 
     // Render core to framebuffer
     this.uniformStore.setUniforms({
       sphere: {
-        color: [1, 0.25, 0.25],
-        lighting: true
+        colorAndLighting: [1.0, 0.25, 0.25, 1.0]
       }
     });
 
@@ -519,7 +471,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
           projectionMatrix
         }
       });
-      this.uniformStore.updateUniformBuffers();
+      this.nucleonUniformBuffers[i].write(this.uniformStore.getUniformBufferData('sphere'));
+      this.nucleon.setBindings({sphere: this.nucleonUniformBuffers[i]});
       this.nucleon.draw(mainRenderPass);
     }
 
@@ -532,28 +485,81 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     // Accumulate in persistence buffer
     const persistenceRenderPass = device.beginRenderPass({
       framebuffer: currentFramebuffer,
-      clearColor: [0, 0, 0, 0]
+      clearColor: [0, 0, 0, 0],
+      clearDepth: false,
+      clearStencil: false
     });
-    this.persistenceQuad.setBindings({
-      uScene: this.mainFramebuffer.colorAttachments[0],
-      uPersistence: nextFramebuffer.colorAttachments[0]
+    this.persistencePass.setBindings({
+      sourceTexture: this.mainFramebuffer.colorAttachments[0].texture,
+      persistenceTexture: nextFramebuffer.colorAttachments[0].texture
     });
-    this.uniformStore.setUniforms({persistenceQuad: {resolution: [width, height]}});
-    this.uniformStore.updateUniformBuffers();
-
-    this.persistenceQuad.draw(persistenceRenderPass);
+    this.persistencePass.draw(persistenceRenderPass);
     persistenceRenderPass.end();
 
     // Copy the current framebuffer to screen
-    const screenRenderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1]});
-    this.screenQuad.setBindings({
-      uTexture: currentFramebuffer.colorAttachments[0]
+    const screenRenderPass = device.beginRenderPass({
+      framebuffer: device
+        .getDefaultCanvasContext()
+        .getCurrentFramebuffer({depthStencilFormat: false}),
+      clearColor: [0, 0, 0, 0]
     });
-    this.uniformStore.setUniforms({screenQuad: {resolution: [width, height]}});
-    this.uniformStore.updateUniformBuffers();
-
-    this.screenQuad.draw(screenRenderPass);
-    this.backgroundTextureModel.draw(screenRenderPass);
+    if (this.backgroundTexture.isReady) {
+      this.backgroundTextureModel.draw(screenRenderPass);
+    }
+    this.screenPass.setBindings({
+      sourceTexture: currentFramebuffer.colorAttachments[0].texture
+    });
+    this.screenPass.draw(screenRenderPass);
+    this.screenPass.setBindings({
+      sourceTexture: this.mainFramebuffer.colorAttachments[0].texture
+    });
+    this.screenPass.draw(screenRenderPass);
     screenRenderPass.end();
   }
+
+  clearPersistenceFramebuffers(device: AnimationProps['device']) {
+    for (const framebuffer of this.pingpongFramebuffers) {
+      const renderPass = device.beginRenderPass({
+        framebuffer,
+        clearColor: [0, 0, 0, 0],
+        clearDepth: false,
+        clearStencil: false
+      });
+      renderPass.end();
+    }
+  }
+
+  createSphereUniformBuffers(device: AnimationProps['device'], count: number): Buffer[] {
+    const byteLength = this.uniformStore.getUniformBufferByteLength('sphere');
+    return Array.from({length: count}, () =>
+      device.createBuffer({
+        usage: Buffer.UNIFORM | Buffer.COPY_DST,
+        byteLength
+      })
+    );
+  }
+}
+
+function createOffscreenColorAttachment(
+  device: AnimationProps['device'],
+  id: string,
+  width: number,
+  height: number
+) {
+  if (device.type !== 'webgpu') {
+    return OFFSCREEN_COLOR_FORMAT;
+  }
+
+  return device.createTexture({
+    id,
+    format: OFFSCREEN_COLOR_FORMAT,
+    width,
+    height,
+    usage: Texture.SAMPLE | Texture.RENDER,
+    sampler: {
+      magFilter: 'linear',
+      minFilter: 'linear',
+      mipmapFilter: 'none'
+    }
+  });
 }

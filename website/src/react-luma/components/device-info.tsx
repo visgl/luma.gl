@@ -1,7 +1,7 @@
 // luma.gl
 import React from 'react';
 import type {Device, DeviceFeature, DeviceLimits, TextureFormat, VertexFormat} from '@luma.gl/core';
-import {GL} from '@luma.gl/constants';
+import {GL} from '@luma.gl/webgl/constants';
 import {WebGLDevice} from '@luma.gl/webgl';
 
 import {useStore} from '../store/device-store';

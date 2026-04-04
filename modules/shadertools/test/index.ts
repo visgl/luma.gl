@@ -6,10 +6,12 @@
 
 import './lib/shader-module/shader-module.spec';
 import './lib/shader-module/shader-module-dependencies.spec';
+import './lib/shader-module/project-layout-regression.spec';
 
 // utils
 import './lib/glsl-utils/get-shader-info.spec';
 import './lib/glsl-utils/shader-utils.spec';
+import './lib/uniform-types.spec';
 
 // shader transpilation
 import './lib/preprocessor/preprocessor.spec';
@@ -28,8 +30,9 @@ import './lib/shader-assembler.spec';
 
 // Data utilities
 import './modules/math/fp16-utils.spec';
-// import './modules/math/fp64-arithmetic-transform.spec';
-// import './modules/math/fp64-utils.spec';
+import './modules/math/fp64-arithmetic-compute.spec';
+import './modules/math/fp64-arithmetic-transform.spec';
+import './modules/math/fp64-utils.spec';
 
 // General modules tests
 import './modules/modules.spec';
@@ -38,11 +41,14 @@ import './modules/modules.spec';
 import './modules/utils/random.spec';
 
 // Lighting
-// import './modules/lights/lights.spec';
+import './modules/color/float-colors.spec';
+import './modules/lighting/lights.spec';
 import './modules/lighting/dirlight.spec';
 import './modules/lighting/phong-material.spec';
 import './modules/lighting/gouraud-material.spec';
-// import './modules/lighting/pbr-material.spec';
+import './modules/lighting/water-material.spec';
+import './modules/lighting/pbr-material.spec';
 
 // Engine
 import './modules/engine/picking.spec';
+import './modules/engine/skin.spec';

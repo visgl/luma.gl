@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/text",
-  "version": "9.2.0-alpha.6",
+  "version": "9.3.0",
   "description": "3D text generation utilities for luma.gl",
   "license": "MIT",
   "type": "module",
@@ -35,8 +35,10 @@
     "README.md"
   ],
   "sideEffects": false,
+  "peerDependencies": {
+    "@luma.gl/engine": "~9.3.0"
+  },
   "dependencies": {
-    "@luma.gl/engine": "9.2.0-alpha.6",
     "@math.gl/core": "^4.1.0",
     "@math.gl/polygon": "^4.1.0"
   }

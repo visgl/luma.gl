@@ -6,7 +6,7 @@ import {ShaderModulesExample} from '@site/src/examples';
 This tutorial shows how to build reusable shader functionality with luma.gl's shader modules. The example below defines a custom `color` module that injects an HSV-to-RGB function into two different models.
 
 <DeviceTabs />
-<ShaderModulesExample />
+<ShaderModulesExample showHeader={false} showStats={false} />
 
 It is assumed you've set up your development environment as described in [Setup](/docs/tutorials).
 
@@ -18,10 +18,19 @@ programs.
 
 The complete source for this example is shown below:
 
+The WGSL uses `@binding(auto)`, so shader module bindings are matched by name
+instead of hard-coded binding numbers.
+
 ```typescript
 import {NumberArray3} from '@math.gl/types';
 import {Buffer} from '@luma.gl/core';
-import {AnimationLoopTemplate, AnimationProps, Model, ShaderInputs} from '@luma.gl/engine';
+import {
+  AnimationLoopTemplate,
+  AnimationProps,
+  Model,
+  ShaderInputs,
+  makeAnimationLoop
+} from '@luma.gl/engine';
 import {ShaderModule} from '@luma.gl/shadertools';
 import {webgl2Adapter} from '@luma.gl/webgl';
 import {webgpuAdapter} from '@luma.gl/webgpu';
@@ -44,7 +53,7 @@ struct ColorUniforms {
   hsv: vec3<f32>,
 };
 
-@group(0) @binding(0) var<uniform> color: ColorUniforms;
+@group(0) @binding(auto) var<uniform> color: ColorUniforms;
 
 @fragment
 fn fragmentMain() -> @location(0) vec4<f32> {
@@ -68,7 +77,7 @@ struct ColorUniforms {
   hsv: vec3<f32>,
 };
 
-@group(0) @binding(0) var<uniform> color: ColorUniforms;
+@group(0) @binding(auto) var<uniform> color: ColorUniforms;
 
 @fragment
 fn fragmentMain() -> @location(0) vec4<f32> {
@@ -221,7 +230,9 @@ class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 }
 
-const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {adapters: [webgpuAdapter, webgl2Adapter]})
+const animationLoop = makeAnimationLoop(AppAnimationLoopTemplate, {
+  adapters: [webgpuAdapter, webgl2Adapter]
+});
 animationLoop.start();
 ```
 

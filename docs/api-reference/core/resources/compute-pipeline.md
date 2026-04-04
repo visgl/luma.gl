@@ -1,77 +1,107 @@
 # ComputePipeline
 
 :::info
-`ComputePipeline` is only available on WebGPU. Note on WebGL you can still perform
-many GPU computations on `RenderPipeline` using `TransformFeedback`.
+`ComputePipeline` is only available on WebGPU.
 :::
 
-A `ComputePipeline` holds a compiled and linked compute shader.
+A `ComputePipeline` holds a compiled compute shader plus the
+[`ComputeShaderLayout`](/docs/api-reference/core/shader-layout) that describes
+its bindings.
+
+## Bindings and bind groups
+
+`ComputePipeline.setBindings()` accepts either:
+
+- flat `bindings`
+- grouped `bindGroups`
+
+Grouped bindings are keyed by bind-group index, and sparse groups are valid.
 
 ## Usage
 
-Create and run a compute shader that multiplies an array of numbers by 2.
-
 ```ts
-const source = /*WGSL*/`\
+const source = /* wgsl */ `
 @group(0) @binding(0) var<storage, read_write> data: array<i32>;
-@compute @workgroup_size(1) fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+
+struct SceneUniforms {
+  addend: i32
+};
+
+@group(2) @binding(0) var<uniform> sceneUniforms: SceneUniforms;
+
+@compute @workgroup_size(1)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
   let i = id.x;
-  data[i] = 2 * data[i];
-}`;
+  data[i] = data[i] + sceneUniforms.addend;
+}
+`;
 
 const shader = webgpuDevice.createShader({source});
 const computePipeline = webgpuDevice.createComputePipeline({
   shader,
   shaderLayout: {
-    bindings: [{name: 'data', type: 'storage', location: 0}]
+    bindings: [
+      {name: 'data', type: 'storage', group: 0, location: 0},
+      {name: 'sceneUniforms', type: 'uniform', group: 2, location: 0}
+    ]
   }
 });
 
-const workBuffer = webgpuDevice.createBuffer({
-  byteLength: 4,
-  usage: Buffer.STORAGE | Buffer.COPY_SRC | Buffer.COPY_DST,
+computePipeline.setBindings({
+  0: {data: workBuffer},
+  2: {sceneUniforms}
 });
-
-workBuffer.write(new Int32Array([2]));
-
-computePipeline.setBindings({data: workBuffer});
-
-const computePass = webgpuDevice.beginComputePass({});
-computePass.setPipeline(computePipeline);
-computePass.dispatch(1);
-computePass.end();
-
-webgpuDevice.submit();
-
-const computedData = new Int32Array(await workBuffer.readAsync());
-// computedData[0] === 4
 ```
 
-## Types
+Flat bindings work as well:
 
-### `ComputePipelineProps`
+```ts
+computePipeline.setBindings({
+  data: workBuffer,
+  sceneUniforms
+});
+```
 
-- `handle`: `unknown` - holds the underlying WebGPU object
+When flat bindings are used, luma.gl partitions them into groups using the
+shader layout.
 
-## Members
+## `ComputePipelineProps`
 
-- `device`: `Device` - holds a reference to the device that created this resource
-- `handle`: `unknown` - holds the underlying WebGPU object
-- `props`: `ComputePipelineProps` - holds a copy of the `ComputePipelineProps` used to create this `ComputePipeline`.
+Important properties:
+
+- `shader: Shader`
+- `entryPoint?: string`
+- `constants?: Record<string, number>`
+- `shaderLayout?: ComputeShaderLayout | null`
+
+Unlike `RenderPipeline`, grouped bindings are not configured through
+`ComputePipelineProps`. They are supplied through `setBindings()`.
 
 ## Methods
 
-### `constructor()`
+### `setBindings(bindingsOrBindGroups)`
 
-`ComputePipeline` is an abstract class and cannot be instantiated directly. Create with 
-
-```typescript
-const computePipeline = device.createComputePipeline({...})
+```ts
+computePipeline.setBindings(bindingsOrBindGroups);
 ```
 
-### `destroy(): void`
+Accepts either:
 
-```typescript
-destroy(): void
-```
-Free up any GPU resources associated with this compute pipeline immediately (instead of waiting for garbage collection).
+- `Bindings`
+- `BindingsByGroup`
+
+### `destroy()`
+
+Releases the pipeline resources immediately.
+
+## Performance
+
+Creating compute pipelines can be expensive. Applications that create compatible
+pipelines repeatedly should prefer `PipelineFactory` over
+`device.createComputePipeline()` directly.
+
+## Related Pages
+
+- [Bind Groups and Bindings Guide](/docs/api-guide/gpu/gpu-bindings)
+- [Bindings](/docs/api-reference/core/bindings)
+- [ShaderLayout](/docs/api-reference/core/shader-layout)

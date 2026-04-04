@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {GL} from '@luma.gl/constants';
+import {GL} from '@luma.gl/webgl/constants';
 
 // Returns number of components in a specific readPixels WebGL format
 export function glFormatToComponents(format: GL): 0 | 1 | 2 | 3 | 4 {

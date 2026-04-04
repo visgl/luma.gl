@@ -9,17 +9,31 @@
  * Install https://marketplace.visualstudio.com/items?itemName=boyswan.glsl-literal
  */
 export type {PlatformInfo} from './lib/shader-assembly/platform-info';
+export type {ShaderBindingDebugRow} from './lib/shader-assembly/wgsl-binding-debug';
 
 // ShaderModules
 
 export type {ShaderModule} from './lib/shader-module/shader-module';
 export type {ShaderPass} from './lib/shader-module/shader-pass';
-export type {UniformTypes} from './lib/utils/uniform-types';
+export type {ShaderModuleUniformValue, UniformTypes} from './lib/utils/uniform-types';
 
 export {initializeShaderModule, initializeShaderModules} from './lib/shader-module/shader-module';
 export {getShaderModuleUniforms} from './lib/shader-module/shader-module';
 export {getShaderModuleDependencies} from './lib/shader-module/shader-module-dependencies';
 export {checkShaderModuleDeprecations} from './lib/shader-module/shader-module';
+export type {
+  GLSLUniformBlockInfo,
+  ShaderModuleUniformLayoutStage,
+  ShaderModuleUniformLayoutValidationResult
+} from './lib/shader-module/shader-module-uniform-layout';
+export {
+  getGLSLUniformBlocks,
+  getShaderModuleUniformBlockFields,
+  getShaderModuleUniformBlockName,
+  getShaderModuleUniformLayoutValidationResult,
+  validateShaderModuleUniformLayout,
+  warnIfGLSLUniformBlocksAreNotStd140
+} from './lib/shader-module/shader-module-uniform-layout';
 
 export {getShaderModuleSource} from './lib/shader-assembly/assemble-shaders';
 
@@ -56,12 +70,19 @@ export {combineInjects} from './lib/shader-assembly/shader-injections';
 // data utils
 export {toHalfFloat, fromHalfFloat} from './modules/math/fp16/fp16-utils';
 export {fp64ify, fp64LowPart, fp64ifyMatrix4} from './modules/math/fp64/fp64-utils';
+export {
+  normalizeByteColor3,
+  normalizeByteColor4,
+  resolveUseByteColors
+} from './lib/color/normalize-byte-colors';
 
 // math libraries
 export {random} from './modules/math/random/random';
 
 export {fp32} from './modules/math/fp32/fp32';
 export {fp64, fp64arithmetic} from './modules/math/fp64/fp64';
+export type {FloatColorsProps, FloatColorsUniforms} from './modules/color/float-colors';
+export {floatColors} from './modules/color/float-colors';
 
 // engine shader modules
 
@@ -70,27 +91,45 @@ export {fp64, fp64arithmetic} from './modules/math/fp64/fp64';
 // export {projection} from './modules/engine/project/project';
 export type {PickingProps, PickingUniforms} from './modules/engine/picking/picking';
 export {picking} from './modules/engine/picking/picking';
+export {skin} from './modules/engine/skin/skin';
 
 // lighting
 export {
   type Light,
   type AmbientLight,
   type PointLight,
-  type DirectionalLight
+  type SpotLight,
+  type DirectionalLight,
+  type LightingLightUniform
 } from './modules/lighting/lights/lighting';
 
 export type {LightingProps, LightingUniforms} from './modules/lighting/lights/lighting';
 export {lighting} from './modules/lighting/lights/lighting';
+export type {IBLBindings} from './modules/lighting/ibl/ibl';
+export {ibl} from './modules/lighting/ibl/ibl';
 export {dirlight} from './modules/lighting/no-material/dirlight';
+export type {LambertMaterialProps} from './modules/lighting/lambert-material/lambert-material';
+export {lambertMaterial} from './modules/lighting/lambert-material/lambert-material';
 export type {GouraudMaterialProps} from './modules/lighting/gouraud-material/gouraud-material';
 export {gouraudMaterial} from './modules/lighting/gouraud-material/gouraud-material';
 export type {PhongMaterialProps} from './modules/lighting/phong-material/phong-material';
 export {phongMaterial} from './modules/lighting/phong-material/phong-material';
 export type {
+  WaterMaterialProps,
+  WaterMaterialUniforms
+} from './modules/lighting/water-material/water-material';
+export {waterMaterial} from './modules/lighting/water-material/water-material';
+export type {
   PBRMaterialBindings,
   PBRMaterialProps,
   PBRMaterialUniforms
 } from './modules/lighting/pbr-material/pbr-material';
+export type {
+  PBRSceneBindings,
+  PBRSceneProps,
+  PBRSceneUniforms
+} from './modules/lighting/pbr-material/pbr-scene';
 export type {PBRProjectionProps} from './modules/lighting/pbr-material/pbr-projection';
 
 export {pbrMaterial} from './modules/lighting/pbr-material/pbr-material';
+export {pbrScene} from './modules/lighting/pbr-material/pbr-scene';

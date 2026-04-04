@@ -2,12 +2,17 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+import type {GLExtensions} from '@luma.gl/webgl/constants';
+
 /**
  * Stores luma.gl specific state associated with a context
  */
 export interface WebGLContextData {
+  /** This type is used by lower level code that is not aware of the Device type */
+  device?: unknown;
   _polyfilled: boolean;
-  _extensions: Record<string, any>;
+  extensions: GLExtensions;
+  softwareRenderer?: boolean;
 }
 
 /**
@@ -16,16 +21,17 @@ export interface WebGLContextData {
  */
 export function getWebGLContextData(gl: WebGL2RenderingContext): WebGLContextData {
   // @ts-expect-error
-  const luma = gl.luma as WebGLContextData | null;
-  if (!luma) {
-    const contextState: WebGLContextData = {
-      _polyfilled: false,
-      _extensions: {}
-    };
-    // @ts-expect-error
-    gl.luma = contextState;
-  }
+  const contextData = (gl.luma as WebGLContextData | null) || {
+    _polyfilled: false,
+    extensions: {},
+    softwareRenderer: false
+  };
+
+  contextData._polyfilled ??= false;
+  contextData.extensions ||= {};
 
   // @ts-expect-error
-  return gl.luma;
+  gl.luma = contextData;
+
+  return contextData;
 }

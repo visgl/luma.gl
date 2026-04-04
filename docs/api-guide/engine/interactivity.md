@@ -10,6 +10,8 @@ The browser offers APIs for this, and another option is to a library or framewor
 Allowing he user to picking object from the screen is a key capability for most interactive applications.
 It is also often desirable to be able to highlight specific objects.
 
+For the engine-level workflow, see [`PickingManager`](/docs/api-reference/engine/picking-manager).
+
 ### About GPU picking
 
 GPU based picking has a couple of significant advantage over CPU-based picking:
@@ -21,6 +23,12 @@ GPU based picking has a couple of significant advantage over CPU-based picking:
 Note that GPU-based picking does comes with some limitations:
 - Picking occluding objects require re-rendering and discarding the already picked objects.
 - On WebGL-specific: the read back of the picking data from the picking texture can only be done synchronously, causing a GPU pipeline stall, which can defeat some of the performance advantages.
+
+In luma.gl engine, GPU picking is typically managed by `PickingManager`:
+
+- `mode: 'color'` is the default.
+- `mode: 'auto'` prefers index picking when supported and otherwise falls back to color picking.
+- WebGL can only use index picking on devices that support renderable `rg32sint` textures.
 
 ### About CPU picking
 

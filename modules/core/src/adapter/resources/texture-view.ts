@@ -4,7 +4,7 @@
 
 import type {Device} from '../device';
 import type {Texture} from './texture';
-import type {TextureFormat} from '../../shadertypes/textures/texture-formats';
+import type {TextureFormat} from '../../shadertypes/texture-types/texture-formats';
 import {Resource, ResourceProps} from './resource';
 
 /** Properties for initializing a texture view */

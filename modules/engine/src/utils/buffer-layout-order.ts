@@ -2,22 +2,28 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {type BufferLayout, type ShaderLayout} from '@luma.gl/core';
+import {
+  getBufferLayoutAttributeNames,
+  getMinimumAttributeLocation,
+  getShaderAttributeLocationMap,
+  type BufferLayout,
+  type ShaderLayout
+} from '@luma.gl/core';
 
 export function sortedBufferLayoutByShaderSourceLocations(
   shaderLayout: ShaderLayout,
   bufferLayout: BufferLayout[]
 ): BufferLayout[] {
-  const shaderLayoutMap = Object.fromEntries(
-    shaderLayout.attributes.map(attr => [attr.name, attr.location])
-  );
+  const shaderLayoutMap = getShaderAttributeLocationMap(shaderLayout);
 
   const sortedLayout = bufferLayout.slice();
   sortedLayout.sort((a, b) => {
-    const attributeNamesA = a.attributes ? a.attributes.map(attr => attr.attribute) : [a.name];
-    const attributeNamesB = b.attributes ? b.attributes.map(attr => attr.attribute) : [b.name];
-    const minLocationA = Math.min(...attributeNamesA.map(name => shaderLayoutMap[name]));
-    const minLocationB = Math.min(...attributeNamesB.map(name => shaderLayoutMap[name]));
+    const minLocationA = getMinimumAttributeLocation(
+      getBufferLayoutAttributeNames(a).map(attributeName => shaderLayoutMap[attributeName])
+    );
+    const minLocationB = getMinimumAttributeLocation(
+      getBufferLayoutAttributeNames(b).map(attributeName => shaderLayoutMap[attributeName])
+    );
 
     return minLocationA - minLocationB;
   });

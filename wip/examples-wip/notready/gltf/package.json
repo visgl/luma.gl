@@ -12,17 +12,17 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@loaders.gl/core": "^3.2.12",
-    "@loaders.gl/gltf": "^3.2.12",
-    "@loaders.gl/polyfills": "^3.2.12",
-    "@luma.gl/constants": "9.0.0-alpha.29",
-    "@luma.gl/engine": "9.0.0-alpha.29",
-    "@luma.gl/experimental": "9.0.0-alpha.29",
-    "@luma.gl/webgl": "9.0.0-alpha.29",
+    "@loaders.gl/core": "~4.4.0",
+    "@loaders.gl/gltf": "~4.4.0",
+    "@loaders.gl/polyfills": "~4.4.0",
+    "@luma.gl/constants": "~9.3.0",
+    "@luma.gl/engine": "~9.3.0",
+    "@luma.gl/experimental": "~9.3.0",
+    "@luma.gl/webgl": "~9.3.0",
     "@math.gl/core": "4.0.0-alpha.4"
   },
   "devDependencies": {
     "typescript": "^5.1.6",
-    "vite": "^3.2.4"
+    "vite": "^8.0.0"
   }
 }

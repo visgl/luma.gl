@@ -8,6 +8,8 @@ import type {
   DeviceInfo,
   DeviceTextureFormatCapabilities,
   CanvasContextProps,
+  PresentationContextProps,
+  PresentationContext,
   Buffer,
   Texture,
   Framebuffer,
@@ -23,6 +25,7 @@ import type {
   FramebufferProps,
   // RenderPipeline,
   RenderPipelineProps,
+  SharedRenderPipeline,
   ComputePipeline,
   ComputePipelineProps,
   // CommandEncoder,
@@ -33,13 +36,15 @@ import type {
   VertexFormat
 } from '@luma.gl/core';
 import {Device, CanvasContext, log} from '@luma.gl/core';
-import type {GLExtensions} from '@luma.gl/constants';
+import type {GLExtensions} from '@luma.gl/webgl/constants';
 import {WebGLStateTracker} from '../context/state-tracker/webgl-state-tracker';
 import {createBrowserContext} from '../context/helpers/create-browser-context';
+import {getWebGLContextData} from '../context/helpers/webgl-context-data';
 import {getDeviceInfo} from './device-helpers/webgl-device-info';
 import {WebGLDeviceFeatures} from './device-helpers/webgl-device-features';
 import {WebGLDeviceLimits} from './device-helpers/webgl-device-limits';
 import {WebGLCanvasContext} from './webgl-canvas-context';
+import {WebGLPresentationContext} from './webgl-presentation-context';
 import type {Spector} from '../context/debug/spector-types';
 import {initializeSpectorJS} from '../context/debug/spector';
 import {makeDebugContext} from '../context/debug/webgl-developer-tools';
@@ -52,6 +57,7 @@ import {WEBGLSampler} from './resources/webgl-sampler';
 import {WEBGLTexture} from './resources/webgl-texture';
 import {WEBGLFramebuffer} from './resources/webgl-framebuffer';
 import {WEBGLRenderPipeline} from './resources/webgl-render-pipeline';
+import {WEBGLSharedRenderPipeline} from './resources/webgl-shared-render-pipeline';
 import {WEBGLCommandEncoder} from './resources/webgl-command-encoder';
 import {WEBGLCommandBuffer} from './resources/webgl-command-buffer';
 import {WEBGLVertexArray} from './resources/webgl-vertex-array';
@@ -70,6 +76,13 @@ import {getWebGLExtension} from '../context/helpers/webgl-extensions';
 
 /** WebGPU style Device API for a WebGL context */
 export class WebGLDevice extends Device {
+  static getDeviceFromContext(gl: WebGL2RenderingContext | null): WebGLDevice | null {
+    if (!gl) {
+      return null;
+    }
+    // @ts-expect-error Ingore WebGL2RenderingContext type
+    return gl.luma?.device ?? null;
+  }
   // Public `Device` API
 
   /** type of this device */
@@ -100,7 +113,7 @@ export class WebGLDevice extends Device {
   _constants: (TypedArray | null)[];
 
   /** State used by luma.gl classes - TODO - not used? */
-  readonly _extensions: GLExtensions = {};
+  readonly extensions!: GLExtensions;
   _polyfilled: boolean = false;
 
   /** Instance of Spector.js (if initialized) */
@@ -141,7 +154,8 @@ export class WebGLDevice extends Device {
     // Note that this can be avoided in webgl2adapter.create() if
     // DeviceProps._reuseDevices is set.
     // @ts-expect-error device is attached to context
-    let device: WebGLDevice | undefined = canvasContextProps.canvas?.gl?.device;
+    const existingContext = canvasContextProps.canvas?.gl ?? null;
+    let device: WebGLDevice | null = WebGLDevice.getDeviceFromContext(existingContext);
     if (device) {
       throw new Error(`WebGL context already attached to device ${device.id}`);
     }
@@ -160,6 +174,9 @@ export class WebGLDevice extends Device {
     }
     if (props.powerPreference !== undefined) {
       webglContextAttributes.powerPreference = props.powerPreference;
+    }
+    if (props.failIfMajorPerformanceCaveat !== undefined) {
+      webglContextAttributes.failIfMajorPerformanceCaveat = props.failIfMajorPerformanceCaveat;
     }
 
     // Check if we should attach to an externally created context or create a new context
@@ -187,8 +204,7 @@ export class WebGLDevice extends Device {
 
     // Note that the browser will only create one WebGL context per canvas.
     // This means that a newly created gl context may already have a device attached to it.
-    // @ts-expect-error luma.gl stores a device reference on the context.
-    device = gl.device;
+    device = WebGLDevice.getDeviceFromContext(gl);
     if (device) {
       if (props._reuseDevices) {
         log.log(
@@ -196,6 +212,9 @@ export class WebGLDevice extends Device {
           `Not creating a new Device, instead returning a reference to Device ${device.id} already attached to WebGL context`,
           device
         )();
+        // Destroy the orphaned canvas context that was created above (line 149)
+        // to prevent its ResizeObserver from firing callbacks with undefined device
+        this.canvasContext.destroy();
         device._reused = true;
         return device;
       }
@@ -211,18 +230,18 @@ export class WebGLDevice extends Device {
     this.spectorJS = initializeSpectorJS({...this.props, gl: this.handle});
 
     // Instrument context
-    (this.gl as any).device = this; // Update GL context: Link webgl context back to device
-    // TODO - remove, this is only used to detect debug contexts.
-    (this.gl as any)._version = 2; // Update GL context: Store WebGL version field on gl context (HACK to identify debug contexts)
+    const contextData = getWebGLContextData(this.handle);
+    contextData.device = this; // Update GL context: Link webgl context back to device
+
+    if (!contextData.extensions) {
+      contextData.extensions = {};
+    }
+    this.extensions = contextData.extensions;
 
     // initialize luma Device fields
-    this.info = getDeviceInfo(this.gl, this._extensions);
+    this.info = getDeviceInfo(this.gl, this.extensions);
     this.limits = new WebGLDeviceLimits(this.gl);
-    this.features = new WebGLDeviceFeatures(
-      this.gl,
-      this._extensions,
-      this.props._disabledFeatures
-    );
+    this.features = new WebGLDeviceFeatures(this.gl, this.extensions, this.props._disabledFeatures);
     if (this.props._initializeFeatures) {
       this.features.initializeFeatures();
     }
@@ -244,6 +263,7 @@ export class WebGLDevice extends Device {
     }
 
     this.commandEncoder = new WEBGLCommandEncoder(this, {id: `${this}-command-encoder`});
+    this.canvasContext._startObservers();
   }
 
   /**
@@ -257,6 +277,7 @@ export class WebGLDevice extends Device {
    * browser API for destroying WebGL contexts.
    */
   destroy(): void {
+    this.commandEncoder?.destroy();
     // Note that deck.gl (especially in React strict mode) depends on being able
     // to asynchronously create a Device against the same canvas (i.e. WebGL context)
     // multiple times and getting the same device back. Since deck.gl is not aware
@@ -264,7 +285,8 @@ export class WebGLDevice extends Device {
     // Therefore we must do nothing in destroy() if props._reuseDevices is true
     if (!this.props._reuseDevices && !this._reused) {
       // Delete the reference to the device that we store on the WebGL context
-      delete (this.gl as any).device;
+      const contextData = getWebGLContextData(this.handle);
+      contextData.device = null;
     }
   }
 
@@ -276,6 +298,10 @@ export class WebGLDevice extends Device {
 
   createCanvasContext(props?: CanvasContextProps): CanvasContext {
     throw new Error('WebGL only supports a single canvas');
+  }
+
+  createPresentationContext(props?: PresentationContextProps): PresentationContext {
+    return new WebGLPresentationContext(this, props || {});
   }
 
   createBuffer(props: BufferProps | ArrayBuffer | ArrayBufferView): WEBGLBuffer {
@@ -323,6 +349,13 @@ export class WebGLDevice extends Device {
     return new WEBGLRenderPipeline(this, props);
   }
 
+  override _createSharedRenderPipelineWebGL(props: RenderPipelineProps): SharedRenderPipeline {
+    return new WEBGLSharedRenderPipeline(
+      this,
+      props as RenderPipelineProps & {vs: WEBGLShader; fs: WEBGLShader}
+    );
+  }
+
   createComputePipeline(props?: ComputePipelineProps): ComputePipeline {
     throw new Error('ComputePipeline not supported in WebGL');
   }
@@ -336,14 +369,40 @@ export class WebGLDevice extends Device {
    * https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/commit
    * Chrome's offscreen canvas does not require gl.commit
    */
-  submit(commandBuffer: WEBGLCommandBuffer): void {
+  submit(commandBuffer?: WEBGLCommandBuffer): void {
+    let submittedCommandEncoder: WEBGLCommandEncoder | null = null;
     if (!commandBuffer) {
-      commandBuffer = this.commandEncoder.finish();
-      this.commandEncoder.destroy();
-      this.commandEncoder = this.createCommandEncoder({id: `${this.id}-default-encoder`});
+      ({submittedCommandEncoder, commandBuffer} = this._finalizeDefaultCommandEncoderForSubmit());
     }
 
-    commandBuffer._executeCommands();
+    try {
+      commandBuffer._executeCommands();
+
+      if (submittedCommandEncoder) {
+        submittedCommandEncoder
+          .resolveTimeProfilingQuerySet()
+          .then(() => {
+            this.commandEncoder._gpuTimeMs = submittedCommandEncoder._gpuTimeMs;
+          })
+          .catch(() => {});
+      }
+    } finally {
+      commandBuffer.destroy();
+    }
+  }
+
+  private _finalizeDefaultCommandEncoderForSubmit(): {
+    submittedCommandEncoder: WEBGLCommandEncoder;
+    commandBuffer: WEBGLCommandBuffer;
+  } {
+    const submittedCommandEncoder = this.commandEncoder;
+    const commandBuffer = submittedCommandEncoder.finish();
+    this.commandEncoder.destroy();
+    this.commandEncoder = this.createCommandEncoder({
+      id: submittedCommandEncoder.props.id,
+      timeProfilingQuerySet: submittedCommandEncoder.getTimeProfilingQuerySet()
+    });
+    return {submittedCommandEncoder, commandBuffer};
   }
 
   //
@@ -406,7 +465,7 @@ export class WebGLDevice extends Device {
   override _getDeviceSpecificTextureFormatCapabilities(
     capabilities: DeviceTextureFormatCapabilities
   ): DeviceTextureFormatCapabilities {
-    return getTextureFormatCapabilitiesWebGL(this.gl, capabilities, this._extensions);
+    return getTextureFormatCapabilitiesWebGL(this.gl, capabilities, this.extensions);
   }
 
   //
@@ -509,8 +568,8 @@ export class WebGLDevice extends Device {
 
   /** Ensure extensions are only requested once */
   getExtension(name: keyof GLExtensions): GLExtensions {
-    getWebGLExtension(this.gl, name, this._extensions);
-    return this._extensions;
+    getWebGLExtension(this.gl, name, this.extensions);
+    return this.extensions;
   }
 
   // INTERNAL SUPPORT METHODS FOR WEBGL RESOURCES

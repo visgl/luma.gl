@@ -14,6 +14,8 @@ import type {
   NumberArray16
 } from '@math.gl/core';
 
+import type {CompositeShaderType} from '@luma.gl/core';
+
 /*
  * Allowed types to be used for uniform values
  *
@@ -37,7 +39,18 @@ export type UniformValue = Readonly<
   | Matrix4
 >;
 
-type UniformType<ValueT extends UniformValue> = ValueT extends number | boolean
+export type ShaderModuleUniformValue =
+  | UniformValue
+  | ShaderModuleUniformStruct
+  | ShaderModuleUniformArray;
+
+export type ShaderModuleUniformStruct = {
+  [name: string]: ShaderModuleUniformValue | undefined;
+};
+
+export type ShaderModuleUniformArray = ReadonlyArray<ShaderModuleUniformValue | undefined>;
+
+type UniformLeafType<ValueT extends UniformValue> = ValueT extends number | boolean
   ? 'f32' | 'i32' | 'u32'
   : ValueT extends Readonly<NumberArray2 | Vector2>
     ? 'vec2<f32>' | 'vec2<i32>' | 'vec2<u32>'
@@ -57,14 +70,16 @@ type UniformType<ValueT extends UniformValue> = ValueT extends number | boolean
                   ? 'mat4x4<f32>'
                   : never;
 
-type UniformProps = {
-  [name: string]: UniformValue;
-};
+type UniformType<ValueT> = ValueT extends UniformValue
+  ? UniformLeafType<ValueT>
+  : ValueT extends ReadonlyArray<infer ElementT>
+    ? readonly [UniformType<NonNullable<ElementT>>, number]
+    : ValueT extends Record<string, unknown>
+      ? {[name in keyof ValueT]-?: UniformType<NonNullable<ValueT[name]>>}
+      : never;
+
+type UniformProps = Record<string, unknown>;
 
 export type UniformTypes<PropsT extends UniformProps> = {
-  [name in keyof PropsT]: UniformType<PropsT[name]>;
-};
-
-export type UniformSizes<PropsT extends UniformProps> = {
-  [name in keyof PropsT]: number;
+  [name in keyof PropsT]-?: UniformType<NonNullable<PropsT[name]>> & CompositeShaderType;
 };

@@ -10,8 +10,11 @@
     "items": [
       "showcase/instancing",
       "showcase/text-3d",
+      "showcase/gltf",
+      "showcase/postprocessing",
       "showcase/persistence",
-      "showcase/postprocessing"
+      "showcase/dof",
+      "showcase/globe"
     ]
   },
   {
@@ -19,9 +22,16 @@
     "label": "API",
     "items": [
       "api/animation",
+      "api/multi-canvas",
       "api/cubemap",
-      "api/texture-3d"
+      "api/texture-3d",
+      "api/texture-tester"
     ]
+  },
+  {
+    "type": "category",
+    "label": "Integrations",
+    "items": ["integrations/external-context", "integrations/react-strict-mode"]
   },
   {
     "type": "category",

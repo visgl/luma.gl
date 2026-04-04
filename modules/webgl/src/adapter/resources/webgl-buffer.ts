@@ -4,7 +4,7 @@
 
 import type {BufferMapCallback, BufferProps} from '@luma.gl/core';
 import {Buffer} from '@luma.gl/core';
-import {GL} from '@luma.gl/constants';
+import {GL} from '@luma.gl/webgl/constants';
 import {WebGLDevice} from '../webgl-device';
 
 /** WebGL Buffer interface */
@@ -42,6 +42,7 @@ export class WEBGLBuffer extends Buffer {
     // - In WebGL2, we can use GL.COPY_READ_BUFFER which avoids locking the type here
     this.glTarget = getWebGLTarget(this.props.usage);
     this.glUsage = getWebGLUsage(this.props.usage);
+    // Note: uint8 indices are converted to uint16 during device normalization for WebGPU compatibility
     this.glIndexType = this.props.indexType === 'uint32' ? GL.UNSIGNED_INT : GL.UNSIGNED_SHORT;
 
     // Set data: (re)initializes the buffer
@@ -55,8 +56,12 @@ export class WEBGLBuffer extends Buffer {
   override destroy(): void {
     if (!this.destroyed && this.handle) {
       this.removeStats();
-      this.trackDeallocatedMemory();
-      this.gl.deleteBuffer(this.handle);
+      if (!this.props.handle) {
+        this.trackDeallocatedMemory();
+        this.gl.deleteBuffer(this.handle);
+      } else {
+        this.trackDeallocatedReferencedMemory('Buffer');
+      }
       this.destroyed = true;
       // @ts-expect-error
       this.handle = null;
@@ -80,7 +85,11 @@ export class WEBGLBuffer extends Buffer {
     this.byteLength = byteLength;
 
     this._setDebugData(data, byteOffset, byteLength);
-    this.trackAllocatedMemory(byteLength);
+    if (!this.props.handle) {
+      this.trackAllocatedMemory(byteLength);
+    } else {
+      this.trackReferencedMemory(byteLength, 'Buffer');
+    }
   }
 
   // Allocate a GPU buffer of specified size.
@@ -106,7 +115,11 @@ export class WEBGLBuffer extends Buffer {
     this.byteLength = byteLength;
 
     this._setDebugData(null, 0, byteLength);
-    this.trackAllocatedMemory(byteLength);
+    if (!this.props.handle) {
+      this.trackAllocatedMemory(byteLength);
+    } else {
+      this.trackReferencedMemory(byteLength, 'Buffer');
+    }
 
     return this;
   }

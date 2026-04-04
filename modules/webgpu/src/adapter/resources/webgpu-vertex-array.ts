@@ -8,23 +8,35 @@ import {getBrowser} from '@probe.gl/env';
 
 import {WebGPUDevice} from '../webgpu-device';
 import {WebGPUBuffer} from '../resources/webgpu-buffer';
+import {
+  getBufferSlots,
+  resolveVertexBufferLayouts,
+  type ResolvedVertexBufferSlot
+} from '../helpers/get-vertex-buffer-layout';
 
 import {WebGPURenderPass} from './webgpu-render-pass';
 
 /** VertexArrayObject wrapper */
 export class WebGPUVertexArray extends VertexArray {
   override get [Symbol.toStringTag](): string {
-    return 'WebGPUVertexArray';
+    return 'VertexArray';
   }
 
   readonly device: WebGPUDevice;
   /** Vertex Array is just a helper class under WebGPU */
   readonly handle = null;
+  /** Physical WebGPU vertex-buffer slots derived from the logical buffer layout. */
+  private readonly resolvedBufferSlots: ResolvedVertexBufferSlot[];
+  /** Logical vertex-array slot lookup keyed by buffer name. */
+  private readonly logicalBufferSlots: Record<string, number>;
 
-  // Create a VertexArray
+  /** Creates a WebGPU vertex array helper for draw-time buffer rebinding. */
   constructor(device: WebGPUDevice, props: VertexArrayProps) {
     super(device, props);
     this.device = device;
+    const {resolvedSlots} = resolveVertexBufferLayouts(props.shaderLayout, props.bufferLayout);
+    this.resolvedBufferSlots = resolvedSlots;
+    this.logicalBufferSlots = getBufferSlots(props.shaderLayout, props.bufferLayout);
   }
 
   override destroy(): void {}
@@ -38,7 +50,7 @@ export class WebGPUVertexArray extends VertexArray {
     this.indexBuffer = buffer;
   }
 
-  /** Set a bufferSlot in vertex attributes array to a buffer, enables the bufferSlot, sets divisor */
+  /** Sets the buffer stored in one logical vertex-array slot. */
   setBuffer(bufferSlot: number, buffer: Buffer): void {
     // Sanity check target
     // if (buffer.glUsage === GL.ELEMENT_ARRAY_BUFFER) {
@@ -48,6 +60,10 @@ export class WebGPUVertexArray extends VertexArray {
     this.attributes[bufferSlot] = buffer;
   }
 
+  /**
+   * Binds index and vertex buffers for the current draw call.
+   * Repeats logical buffers across multiple WebGPU slots when the resolved layout was expanded.
+   */
   override bindBeforeRender(
     renderPass: RenderPass,
     firstIndex?: number,
@@ -69,11 +85,22 @@ export class WebGPUVertexArray extends VertexArray {
         webgpuIndexBuffer?.indexType
       );
     }
-    for (let location = 0; location < this.maxVertexAttributes; location++) {
-      const webgpuBuffer = this.attributes[location] as WebGPUBuffer;
+    for (const resolvedSlot of this.resolvedBufferSlots) {
+      const logicalBufferSlot =
+        this.logicalBufferSlots[resolvedSlot.bufferName] ?? resolvedSlot.shaderSlot;
+      const webgpuBuffer = this.attributes[logicalBufferSlot] as WebGPUBuffer;
       if (webgpuBuffer?.handle) {
-        log.info(3, `setting vertex buffer ${location}`, webgpuBuffer?.handle)();
-        webgpuRenderPass.handle.setVertexBuffer(location, webgpuBuffer?.handle);
+        log.info(
+          3,
+          `setting vertex buffer ${resolvedSlot.shaderSlot}`,
+          webgpuBuffer?.handle,
+          resolvedSlot.bindingOffset
+        )();
+        webgpuRenderPass.handle.setVertexBuffer(
+          resolvedSlot.shaderSlot,
+          webgpuBuffer?.handle,
+          resolvedSlot.bindingOffset
+        );
       }
     }
     // TODO - emit warnings/errors/throw if constants have been set on this vertex array

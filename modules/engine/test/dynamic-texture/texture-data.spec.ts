@@ -1,9 +1,10 @@
-import test from 'tape';
+import test from '@luma.gl/devtools-extensions/tape-test-utils';
 
 import {
   isTextureSliceData,
   getFirstMipLevel,
   getTextureSizeFromData,
+  getTexture2DSubresources,
   type TextureImageData,
   type TextureDataProps,
   type TextureCubeFace,
@@ -186,6 +187,24 @@ test('getTextureSizeFromData: invalid 2d payload throws', t => {
     /Unsupported mip-level data/,
     'throws for unsupported mip-level data'
   );
+  t.end();
+});
+
+test('getTexture2DSubresources: bare typed arrays use explicit base size', t => {
+  const subresources = getTexture2DSubresources(
+    0,
+    new Uint8Array([1, 2, 3, 4]) as any,
+    {width: 1, height: 1},
+    'rgba8unorm'
+  );
+
+  t.equal(subresources.length, 1, 'creates one subresource');
+  t.equal(subresources[0].type, 'texture-data', 'typed array normalizes to texture-data');
+  if (subresources[0].type === 'texture-data') {
+    t.equal(subresources[0].data.width, 1, 'preserves width');
+    t.equal(subresources[0].data.height, 1, 'preserves height');
+  }
+
   t.end();
 });
 

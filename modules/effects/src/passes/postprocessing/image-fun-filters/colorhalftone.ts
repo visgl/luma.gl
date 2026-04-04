@@ -8,44 +8,46 @@ const source = /* wgsl */ `\
 struct colorHalftoneUniforms {
   center: vec2f,
   angle: f32,
-  size: f32.
+  size: f32,
 };
 
-@group(0) @binding(1) var<uniform> colorHalftone: colorHalftoneUniforms;
+@group(0) @binding(auto) var<uniform> colorHalftone: colorHalftoneUniforms;
 
 fn pattern(angle: f32, scale: f32, texSize: vec2f, texCoord: vec2f) -> f32 {
-  let s: f32 = sin(angle), c = cos(angle);
-  let tex: vec2f = texCoord * texSize - colorHalftone.center * texSize;
-  let point: vec2f = vec2(
-	  c * tex.x - s * tex.y,
-	  s * tex.x + c * tex.y
+  let s = sin(angle);
+  let c = cos(angle);
+  let tex = texCoord * texSize - colorHalftone.center * texSize;
+  let point = vec2f(
+    c * tex.x - s * tex.y,
+    s * tex.x + c * tex.y
   ) * scale;
   return (sin(point.x) * sin(point.y)) * 4.0;
 }
 
-fn colorHalftone_filterColor_ext(vec4f color, vec2f texSize, vec2f texCoord) -> vec4f {
-  let scale: f32 = 3.1514 / colorHalftone.size;
-  let cmy: vec3f = 1.0 - color.rgb;
-  let k: f32 = min(cmy.x, min(cmy.y, cmy.z));
+fn colorHalftone_filterColor_ext(color: vec4f, texSize: vec2f, texCoord: vec2f) -> vec4f {
+  let scale = 3.1514 / colorHalftone.size;
+  var cmy = vec3f(1.0) - color.rgb;
+  var k = min(cmy.x, min(cmy.y, cmy.z));
+  let safeDenominator = max(1.0 - k, 0.00001);
 
-  cmy = (cmy - k) / (1.0 - k);
+  cmy = (cmy - vec3f(k)) / safeDenominator;
   cmy = clamp(
-	  cmy * 10.0 - 3.0 + vec3(
+    cmy * 10.0 - vec3f(3.0) + vec3f(
       pattern(colorHalftone.angle + 0.26179, scale, texSize, texCoord),
-	    pattern(colorHalftone.angle + 1.30899, scale, texSize, texCoord),
+      pattern(colorHalftone.angle + 1.30899, scale, texSize, texCoord),
       pattern(colorHalftone.angle, scale, texSize, texCoord)
     ),
-	  0.0,
-	  1.0
+    vec3f(0.0),
+    vec3f(1.0)
   );
   k = clamp(k * 10.0 - 5.0 + pattern(colorHalftone.angle + 0.78539, scale, texSize, texCoord), 0.0, 1.0);
-  return vec4(1.0 - cmy - k, color.a);
+  return vec4f(vec3f(1.0) - cmy - vec3f(k), color.a);
 }
 `;
 
 // TODO pass texCoord to angle
 const fs = /* glsl */ `\
-uniform colorHalftoneUniforms {
+layout(std140) uniform colorHalftoneUniforms {
   vec2 center;
   float angle;
   float size;

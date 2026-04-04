@@ -21,7 +21,7 @@ const WGSL_SHADER = /* WGSL */ `\
 struct Uniforms {
   modelViewProjectionMatrix : mat4x4<f32>,
 };
-@binding(0) @group(0) var<uniform> app : Uniforms;
+@group(0) @binding(auto) var<uniform> app : Uniforms;
 
 struct VertexInputs {
   @location(0) positions : vec4<f32>,

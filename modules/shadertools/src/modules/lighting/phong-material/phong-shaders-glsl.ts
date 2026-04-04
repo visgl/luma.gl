@@ -3,7 +3,8 @@
 // Copyright (c) vis.gl contributors
 
 export const PHONG_VS = /* glsl */ `\
-uniform phongMaterialUniforms {
+layout(std140) uniform phongMaterialUniforms {
+  uniform bool unlit;
   uniform float ambient;
   uniform float diffuse;
   uniform float shininess;
@@ -12,9 +13,8 @@ uniform phongMaterialUniforms {
 `;
 
 export const PHONG_FS = /* glsl */ `\
-#define MAX_LIGHTS 3
-
-uniform phongMaterialUniforms {
+layout(std140) uniform phongMaterialUniforms {
+  uniform bool unlit;
   uniform float ambient;
   uniform float diffuse;
   uniform float shininess;
@@ -30,11 +30,15 @@ vec3 lighting_getLightColor(vec3 surfaceColor, vec3 light_direction, vec3 view_d
     specular = pow(specular_angle, material.shininess);
   }
   lambertian = max(lambertian, 0.0);
-  return (lambertian * material.diffuse * surfaceColor + specular * material.specularColor) * color;
+  return (lambertian * material.diffuse * surfaceColor + specular * floatColors_normalize(material.specularColor)) * color;
 }
 
 vec3 lighting_getLightColor(vec3 surfaceColor, vec3 cameraPosition, vec3 position_worldspace, vec3 normal_worldspace) {
   vec3 lightColor = surfaceColor;
+
+  if (material.unlit) {
+    return surfaceColor;
+  }
 
   if (lighting.enabled == 0) {
     return lightColor;
@@ -51,8 +55,15 @@ vec3 lighting_getLightColor(vec3 surfaceColor, vec3 cameraPosition, vec3 positio
     lightColor += lighting_getLightColor(surfaceColor, light_direction, view_direction, normal_worldspace, pointLight.color / light_attenuation);
   }
 
-  int totalLights = min(MAX_LIGHTS, lighting.pointLightCount + lighting.directionalLightCount);
-  for (int i = lighting.pointLightCount; i < totalLights; i++) {
+  for (int i = 0; i < lighting.spotLightCount; i++) {
+    SpotLight spotLight = lighting_getSpotLight(i);
+    vec3 light_position_worldspace = spotLight.position;
+    vec3 light_direction = normalize(light_position_worldspace - position_worldspace);
+    float light_attenuation = getSpotLightAttenuation(spotLight, position_worldspace);
+    lightColor += lighting_getLightColor(surfaceColor, light_direction, view_direction, normal_worldspace, spotLight.color / light_attenuation);
+  }
+
+  for (int i = 0; i < lighting.directionalLightCount; i++) {
     DirectionalLight directionalLight = lighting_getDirectionalLight(i);
     lightColor += lighting_getLightColor(surfaceColor, -directionalLight.direction, view_direction, normal_worldspace, directionalLight.color);
   }

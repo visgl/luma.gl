@@ -2,11 +2,26 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {ComputeShaderLayout, BindingDeclaration, Binding} from '@luma.gl/core';
-import {Buffer, Sampler, Texture, log} from '@luma.gl/core';
+import type {
+  Binding,
+  BindingDeclaration,
+  Bindings,
+  ComputeShaderLayout,
+  ShaderLayout
+} from '@luma.gl/core';
+import {Buffer, Sampler, Texture, TextureView, getShaderLayoutBinding, log} from '@luma.gl/core';
+import type {WebGPUDevice} from '../webgpu-device';
 import type {WebGPUBuffer} from '../resources/webgpu-buffer';
 import type {WebGPUSampler} from '../resources/webgpu-sampler';
 import type {WebGPUTexture} from '../resources/webgpu-texture';
+import type {WebGPUTextureView} from '../resources/webgpu-texture-view';
+
+type AnyShaderLayout = ShaderLayout | ComputeShaderLayout;
+type BindGroupBindingSummary = {
+  name: string;
+  location: number;
+  type: string;
+};
 
 /**
  * Create a WebGPU "bind group layout" from an array of luma.gl bindings
@@ -15,7 +30,7 @@ import type {WebGPUTexture} from '../resources/webgpu-texture';
 export function makeBindGroupLayout(
   device: GPUDevice,
   layout: GPUBindGroupLayout,
-  bindings: Binding[]
+  bindings: Bindings
 ): GPUBindGroupLayout {
   throw new Error('not implemented');
   // return device.createBindGroupLayout({
@@ -28,39 +43,82 @@ export function makeBindGroupLayout(
  * Create a WebGPU "bind group" from an array of luma.gl bindings
  */
 export function getBindGroup(
-  device: GPUDevice,
+  device: WebGPUDevice,
   bindGroupLayout: GPUBindGroupLayout,
-  shaderLayout: ComputeShaderLayout,
-  bindings: Record<string, Binding>
-): GPUBindGroup {
-  const entries = getBindGroupEntries(bindings, shaderLayout);
+  shaderLayout: ShaderLayout | ComputeShaderLayout,
+  bindings: Bindings,
+  group: number,
+  label?: string
+): GPUBindGroup | null {
+  const entries = getBindGroupEntries(bindings, shaderLayout, group);
+  if (entries.length === 0) {
+    return null;
+  }
   device.pushErrorScope('validation');
-  const bindGroup = device.createBindGroup({
+  const bindGroup = device.handle.createBindGroup({
+    label,
     layout: bindGroupLayout,
     entries
   });
-  device.popErrorScope().then((error: GPUError | null) => {
-    if (error) {
-      log.error(`bindGroup creation: ${error.message}`, bindGroup)();
-    }
+  device.popErrorScope((error: GPUError) => {
+    const summary = formatBindGroupCreationErrorSummary(shaderLayout, bindings, entries, group);
+    log.error(`bindGroup creation: ${summary}\nRaw WebGPU error: ${error.message}`, bindGroup)();
   });
   return bindGroup;
 }
 
-export function getShaderLayoutBinding(
-  shaderLayout: ComputeShaderLayout,
-  bindingName: string,
-  options?: {ignoreWarnings?: boolean}
-): BindingDeclaration | null {
-  const bindingLayout = shaderLayout.bindings.find(
-    binding =>
-      binding.name === bindingName ||
-      `${binding.name.toLocaleLowerCase()}uniforms` === bindingName.toLocaleLowerCase()
+export function formatBindGroupCreationErrorSummary(
+  shaderLayout: AnyShaderLayout,
+  bindings: Bindings,
+  entries: GPUBindGroupEntry[],
+  group: number
+): string {
+  const expectedBindings = getExpectedBindingsForGroup(shaderLayout, group);
+  const expectedByLocation = new Map(
+    expectedBindings.map(bindingSummary => [bindingSummary.location, bindingSummary])
   );
-  if (!bindingLayout && !options?.ignoreWarnings) {
-    log.warn(`Binding ${bindingName} not set: Not found in shader layout.`)();
+  const providedBindings = entries
+    .map(entry => expectedByLocation.get(entry.binding) || getUnexpectedEntrySummary(entry))
+    .sort(compareBindingSummaries);
+  const missingBindings = expectedBindings.filter(
+    bindingSummary =>
+      !providedBindings.some(provided => provided.location === bindingSummary.location)
+  );
+  const unexpectedBindings = providedBindings.filter(
+    bindingSummary => !expectedByLocation.has(bindingSummary.location)
+  );
+  const unmatchedLogicalBindings = Object.keys(bindings)
+    .filter(bindingName => !resolveGroupBinding(bindingName, bindings, shaderLayout, group))
+    .sort();
+
+  const lines = [
+    `bindGroup creation failed for group ${group}: expected ${expectedBindings.length}, provided ${providedBindings.length}`,
+    `expected: ${formatBindingSummaryList(expectedBindings)}`,
+    `provided: ${formatBindingSummaryList(providedBindings)}`
+  ];
+
+  if (missingBindings.length > 0) {
+    lines.push(`missing: ${formatBindingSummaryList(missingBindings)}`);
   }
-  return bindingLayout || null;
+  if (unexpectedBindings.length > 0) {
+    lines.push(`unexpected entries: ${formatBindingSummaryList(unexpectedBindings)}`);
+  }
+  if (unmatchedLogicalBindings.length > 0) {
+    lines.push(`unmatched logical bindings: ${unmatchedLogicalBindings.join(', ')}`);
+  }
+
+  return lines.join('\n');
+}
+
+export function getBindGroupLabel(
+  pipelineId: string,
+  shaderLayout: AnyShaderLayout,
+  group: number
+): string {
+  const expectedBindings = getExpectedBindingsForGroup(shaderLayout, group);
+  const bindingSuffix =
+    expectedBindings.length > 0 ? expectedBindings.map(binding => binding.name).join(',') : 'empty';
+  return `${pipelineId}/group${group}[${bindingSuffix}]`;
 }
 
 /**
@@ -68,29 +126,42 @@ export function getShaderLayoutBinding(
  * @returns
  */
 function getBindGroupEntries(
-  bindings: Record<string, Binding>,
-  shaderLayout: ComputeShaderLayout
+  bindings: Bindings,
+  shaderLayout: AnyShaderLayout,
+  group: number
 ): GPUBindGroupEntry[] {
   const entries: GPUBindGroupEntry[] = [];
 
   for (const [bindingName, value] of Object.entries(bindings)) {
-    let bindingLayout = getShaderLayoutBinding(shaderLayout, bindingName);
-    if (bindingLayout) {
-      const entry = getBindGroupEntry(value, bindingLayout.location);
+    const {bindingLayout, isShadowedAlias} = resolveGroupBinding(
+      bindingName,
+      bindings,
+      shaderLayout,
+      group
+    ) || {bindingLayout: null, isShadowedAlias: false};
+
+    // Mirror the WebGL path: when both `foo` and `fooUniforms` exist in the bindings map,
+    // prefer the exact shader binding name and ignore the alias entry.
+    if (!isShadowedAlias && bindingLayout) {
+      const entry = bindingLayout
+        ? getBindGroupEntry(value, bindingLayout.location, undefined, bindingName)
+        : null;
       if (entry) {
         entries.push(entry);
       }
-    }
 
-    // TODO - hack to automatically bind samplers to supplied texture default samplers
-    if (value instanceof Texture) {
-      bindingLayout = getShaderLayoutBinding(shaderLayout, `${bindingName}Sampler`, {
-        ignoreWarnings: true
-      });
-      if (bindingLayout) {
-        const entry = getBindGroupEntry(value, bindingLayout.location, {sampler: true});
-        if (entry) {
-          entries.push(entry);
+      // TODO - hack to automatically bind samplers to supplied texture default samplers
+      if (value instanceof Texture) {
+        const samplerBindingLayout = getShaderLayoutBinding(shaderLayout, `${bindingName}Sampler`, {
+          ignoreWarnings: true
+        });
+        const samplerEntry = samplerBindingLayout
+          ? samplerBindingLayout.group === group
+            ? getBindGroupEntry(value, samplerBindingLayout.location, {sampler: true}, bindingName)
+            : null
+          : null;
+        if (samplerEntry) {
+          entries.push(samplerEntry);
         }
       }
     }
@@ -102,7 +173,8 @@ function getBindGroupEntries(
 function getBindGroupEntry(
   binding: Binding,
   index: number,
-  options?: {sampler?: boolean}
+  options?: {sampler?: boolean},
+  bindingName: string = 'unknown'
 ): GPUBindGroupEntry | null {
   if (binding instanceof Buffer) {
     return {
@@ -118,6 +190,12 @@ function getBindGroupEntry(
       resource: (binding as WebGPUSampler).handle
     };
   }
+  if (binding instanceof TextureView) {
+    return {
+      binding: index,
+      resource: (binding as WebGPUTextureView).handle
+    };
+  }
   if (binding instanceof Texture) {
     if (options?.sampler) {
       return {
@@ -130,6 +208,68 @@ function getBindGroupEntry(
       resource: (binding as WebGPUTexture).view.handle
     };
   }
-  log.warn(`invalid binding ${name}`, binding);
+  log.warn(`invalid binding ${bindingName}`, binding);
   return null;
+}
+
+function getExpectedBindingsForGroup(
+  shaderLayout: AnyShaderLayout,
+  group: number
+): BindGroupBindingSummary[] {
+  return shaderLayout.bindings
+    .filter(bindingLayout => bindingLayout.group === group)
+    .map(bindingLayout => toBindingSummary(bindingLayout))
+    .sort(compareBindingSummaries);
+}
+
+function resolveGroupBinding(
+  bindingName: string,
+  bindings: Bindings,
+  shaderLayout: AnyShaderLayout,
+  group: number
+): {bindingLayout: BindingDeclaration; isShadowedAlias: boolean} | null {
+  const exactBindingLayout = shaderLayout.bindings.find(binding => binding.name === bindingName);
+  const bindingLayout =
+    exactBindingLayout || getShaderLayoutBinding(shaderLayout, bindingName, {ignoreWarnings: true});
+  const isShadowedAlias =
+    !exactBindingLayout && bindingLayout ? bindingLayout.name in bindings : false;
+
+  if (isShadowedAlias || !bindingLayout || bindingLayout.group !== group) {
+    return null;
+  }
+
+  return {bindingLayout, isShadowedAlias};
+}
+
+function toBindingSummary(bindingLayout: BindingDeclaration): BindGroupBindingSummary {
+  return {
+    name: bindingLayout.name,
+    location: bindingLayout.location,
+    type: bindingLayout.type
+  };
+}
+
+function getUnexpectedEntrySummary(entry: GPUBindGroupEntry): BindGroupBindingSummary {
+  return {
+    name: '?',
+    location: entry.binding,
+    type: 'unknown'
+  };
+}
+
+function compareBindingSummaries(
+  left: BindGroupBindingSummary,
+  right: BindGroupBindingSummary
+): number {
+  if (left.location !== right.location) {
+    return left.location - right.location;
+  }
+  return left.name.localeCompare(right.name);
+}
+
+function formatBindingSummaryList(bindings: BindGroupBindingSummary[]): string {
+  if (bindings.length === 0) {
+    return 'none';
+  }
+  return bindings.map(binding => `${binding.name}@${binding.location}`).join(', ');
 }

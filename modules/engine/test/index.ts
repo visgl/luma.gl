@@ -10,8 +10,7 @@ import './utils/buffer-layout-order.spec';
 // model etc
 import './lib/model.spec';
 import './lib/animation-loop.spec';
-import './lib/pipeline-factory.spec';
-import './lib/shader-factory.spec';
+import './lib/picking-manager.spec';
 
 import './dynamic-texture/dynamic-texture.spec';
 import './dynamic-texture/mip-levels.spec';
@@ -25,6 +24,7 @@ import './geometry/gpu-geometry.spec';
 
 import './animation/timeline.spec';
 import './animation/key-frames.spec';
+import './animation/animator.spec';
 
 // Scenegraph
 import './scenegraph/group-node.spec';
@@ -36,9 +36,11 @@ import './debug/get-debug-table-from-shader-layout.spec';
 
 // Experimental
 import './shader-inputs.spec';
+import './shader-inputs-types.spec';
 import './compute/swap.spec';
 import './compute/buffer-transform.spec';
 import './compute/texture-transform.spec';
 import './compute/computation.spec';
 import './passes/shader-pass-renderer.spec';
 import './models/background-texture-model.spec';
+import './models/light-models.spec';

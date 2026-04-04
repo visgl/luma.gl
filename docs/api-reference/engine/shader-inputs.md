@@ -1,100 +1,91 @@
 # ShaderInputs
 
-ShaderInputs holds uniform and binding values for one or more shader modules,
-- It can generate binary data for any uniform buffer
-- It can manage a uniform buffer for each block
-- It can update managed uniform buffers with a single call
-- It performs some book keeping on what has changed to minimize unnecessary writes to uniform buffers.
+`ShaderInputs` stores per-module uniform values and binding values for shader modules.
+It is the glue between engine classes like [`Model`](/docs/api-reference/engine/model) and [`Computation`](/docs/api-reference/engine/compute/computation) and the uniform layouts defined by `@luma.gl/shadertools` modules.
 
 ## Usage
 
-TBA
+```typescript
+import {ShaderInputs} from '@luma.gl/engine';
+import {picking} from '@luma.gl/shadertools';
+
+const shaderInputs = new ShaderInputs({picking});
+shaderInputs.setProps({
+  picking: {
+    isActive: true,
+    highlightedObjectIndex: 5
+  }
+});
+```
+
+For the `uniformTypes` descriptor syntax that drives nested uniform handling,
+see [Core Shader Types](/docs/api-reference/core/shader-types).
 
 ## Types
 
-### `ShaderModuleInputs`
-
-Minimal ShaderModule subset, we don't need shader code etc
+### `ShaderInputsOptions`
 
 ```ts
-export type ShaderModuleInputs<
-  PropsT extends Record<string, unknown> = Record<string, unknown>,
-  UniformsT extends Record<string, UniformValue> = Record<string, UniformValue>,
-  BindingsT extends Record<string, BindingValue> = Record<string, BindingValue>
-> = {
-  defaultUniforms?: UniformsT;
-  getUniforms?: (props?: any, oldProps?: any) => Record<string, BindingValue | UniformValue>;
-
-  /** Not used. Used to access props type */
-  props?: PropsT;
-
-  bindings?: Record<
-    keyof BindingsT,
-    {
-      location: number;
-      type: 'texture' | 'sampler' | 'uniforms';
-    }
-  >;
-
-  uniformTypes?: any;
+export type ShaderInputsOptions = {
+  disableWarnings?: boolean;
 };
 ```
 
-```ts
-export class ShaderInputs<
-  ShaderPropsT extends Partial<Record<string, Record<string, unknown>>> = Partial<
-    Record<string, Record<string, unknown>>
-  >
-```
+## Properties
+
+### `modules`
+
+Resolved shader modules, including module dependencies.
+
+### `moduleUniforms`
+
+Per-module uniform values.
+
+### `moduleBindings`
+
+Per-module binding values.
 
 ## Methods
 
-### constructor
+### `constructor(modules, options?)`
 
-Create a new UniformStore instance
+Creates a `ShaderInputs` instance for one or more shader modules.
 
-```ts
-  constructor(modules: {[P in keyof ShaderPropsT]?: ShaderModuleInputs<ShaderPropsT[P]>})
-```
+### `destroy(): void`
 
-- modules: A mao of shader modules.
+Currently a no-op placeholder for symmetry with other engine resource managers.
 
-### `destroy()`
+### `setProps(props): void`
 
-Destroys all resources created by this `ShaderInputs` instance.
+Updates one or more modules by calling each module's `getUniforms()` function and splitting the result into uniforms and bindings.
 
-  ```ts
-  destroy(): void {}
-  ```
+<p class="badges">
+  <img src="https://img.shields.io/badge/From-v9.3-blue.svg?style=flat-square" alt="From-v9.3" />
+</p>
 
-### `setProps()`
+If a module declares composite `uniformTypes`, `setProps()` preserves nested
+struct and array shapes at the module boundary and merges partial updates by the
+declared schema.
 
-Sets shader module props (which sets uniforms and bindings).
+### `getModules(): ShaderModule[]`
 
-```ts
-setProps(props: Partial<{[P in keyof ShaderPropsT]?: Partial<ShaderPropsT[P]>}>): void {
-```
+Returns the registered modules, including resolved dependencies.
 
-### getModules()
+### `getUniformValues(): Partial<Record<string, Record<string, UniformValue>>>`
 
-Return the map of modules
+Returns the current uniform values grouped by module.
 
-```ts
-getModules(): ShaderModule[]
-```
+### `getBindingValues(): Record<string, Binding>`
 
-### getUniformValues()
+Merges all module bindings into a single binding map suitable for a `Model` or `Computation`.
 
-Get all uniform values for all modules
+### `getDebugTable(): Record<string, Record<string, unknown>>`
 
-```ts
-getUniformValues(): Partial<Record<keyof ShaderPropsT, Record<string, UniformValue>>>
-```
+Returns a table-like object that is useful with `console.table()` or luma logging.
 
-### getBindingValues()
+## Remarks
 
-Merges all bindings for the shader (from the various modules)
-
-```ts
-getBindingValues(): Record<string, Texture | Sampler>
-```
+- `ShaderInputs` does not upload GPU buffers by itself. Engine classes use it together with an internal `UniformStore`.
+- Unknown module names are ignored and warn by default unless `disableWarnings` is enabled.
+- Composite uniform values stay nested in `ShaderInputs`, while `UniformStore`
+  and `ShaderBlockWriter` flatten them internally for packing.

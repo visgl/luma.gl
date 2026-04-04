@@ -1,0 +1,39 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "@luma.gl/core": [
+        "modules/core/src/index.ts"
+      ],
+      "@luma.gl/core/*": [
+        "modules/core/src/*"
+      ],
+      "@luma.gl/constants": [
+        "modules/constants/src/index.ts"
+      ],
+      "@luma.gl/constants/*": [
+        "modules/constants/src/*"
+      ],
+      "@luma.gl/shadertools": [
+        "modules/shadertools/src/index.ts"
+      ],
+      "@luma.gl/shadertools/*": [
+        "modules/shadertools/src/*"
+      ],
+      "@luma.gl/engine": [
+        "modules/engine/src/index.ts"
+      ],
+      "@luma.gl/engine/*": [
+        "modules/engine/src/*"
+      ]
+    }
+  },
+  "include": [
+    "modules/shadertools/test/lib/uniform-types.spec.ts",
+    "modules/engine/test/shader-inputs-types.spec.ts"
+  ],
+  "exclude": [
+    "modules/**/dist",
+    "node_modules"
+  ]
+}

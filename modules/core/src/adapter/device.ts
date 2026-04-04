@@ -5,12 +5,18 @@
 import {StatsManager, lumaStats} from '../utils/stats-manager';
 import {log} from '../utils/log';
 import {uid} from '../utils/uid';
-import type {VertexFormat, VertexFormatInfo} from '../shadertypes/vertex-arrays/vertex-formats';
-import type {TextureFormat, TextureFormatInfo} from '../shadertypes/textures/texture-formats';
+import type {VertexFormat, VertexFormatInfo} from '../shadertypes/vertex-types/vertex-formats';
+import type {
+  TextureFormat,
+  TextureFormatInfo,
+  CompressedTextureFormat
+} from '../shadertypes/texture-types/texture-formats';
 import type {CanvasContext, CanvasContextProps} from './canvas-context';
+import type {PresentationContext, PresentationContextProps} from './presentation-context';
 import type {BufferProps} from './resources/buffer';
 import {Buffer} from './resources/buffer';
 import type {RenderPipeline, RenderPipelineProps} from './resources/render-pipeline';
+import type {SharedRenderPipeline} from './resources/shared-render-pipeline';
 import type {ComputePipeline, ComputePipelineProps} from './resources/compute-pipeline';
 import type {Sampler, SamplerProps} from './resources/sampler';
 import type {Shader, ShaderProps} from './resources/shader';
@@ -25,11 +31,13 @@ import type {VertexArray, VertexArrayProps} from './resources/vertex-array';
 import type {TransformFeedback, TransformFeedbackProps} from './resources/transform-feedback';
 import type {QuerySet, QuerySetProps} from './resources/query-set';
 import type {Fence} from './resources/fence';
+import type {Bindings, ComputeShaderLayout, ShaderLayout} from './types/shader-layout';
 
-import {getVertexFormatInfo} from '../shadertypes/vertex-arrays/decode-vertex-format';
-import {textureFormatDecoder} from '../shadertypes/textures/texture-format-decoder';
-import type {ExternalImage} from '../image-utils/image-types';
-import {isExternalImage, getExternalImageSize} from '../image-utils/image-types';
+import {vertexFormatDecoder} from '../shadertypes/vertex-types/vertex-format-decoder';
+import {textureFormatDecoder} from '../shadertypes/texture-types/texture-format-decoder';
+import type {ExternalImage} from '../shadertypes/image-types/image-types';
+import {isExternalImage, getExternalImageSize} from '../shadertypes/image-types/image-types';
+import {getTextureFormatTable} from '../shadertypes/texture-types/texture-format-table';
 
 /**
  * Identifies the GPU vendor and driver.
@@ -118,6 +126,84 @@ export abstract class DeviceLimits {
   abstract maxComputeWorkgroupsPerDimension: number;
 }
 
+function formatErrorLogArguments(context: unknown, args: unknown[]): unknown[] {
+  const formattedContext = formatErrorLogValue(context);
+  const formattedArgs = args.map(formatErrorLogValue).filter(arg => arg !== undefined);
+  return [formattedContext, ...formattedArgs].filter(arg => arg !== undefined);
+}
+
+function formatErrorLogValue(value: unknown): unknown {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (
+    value === null ||
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'boolean'
+  ) {
+    return value;
+  }
+  if (value instanceof Error) {
+    return value.message;
+  }
+  if (Array.isArray(value)) {
+    return value.map(formatErrorLogValue);
+  }
+  if (typeof value === 'object') {
+    if (hasCustomToString(value)) {
+      const stringValue = String(value);
+      if (stringValue !== '[object Object]') {
+        return stringValue;
+      }
+    }
+
+    if (looksLikeGPUCompilationMessage(value)) {
+      return formatGPUCompilationMessage(value);
+    }
+
+    return value.constructor?.name || 'Object';
+  }
+
+  return String(value);
+}
+
+function hasCustomToString(value: object): boolean {
+  return (
+    'toString' in value &&
+    typeof value.toString === 'function' &&
+    value.toString !== Object.prototype.toString
+  );
+}
+
+function looksLikeGPUCompilationMessage(value: object): value is {
+  message?: unknown;
+  type?: unknown;
+  lineNum?: unknown;
+  linePos?: unknown;
+} {
+  return 'message' in value && 'type' in value;
+}
+
+function formatGPUCompilationMessage(value: {
+  message?: unknown;
+  type?: unknown;
+  lineNum?: unknown;
+  linePos?: unknown;
+}): string {
+  const type = typeof value.type === 'string' ? value.type : 'message';
+  const message = typeof value.message === 'string' ? value.message : '';
+  const lineNum = typeof value.lineNum === 'number' ? value.lineNum : null;
+  const linePos = typeof value.linePos === 'number' ? value.linePos : null;
+  const location =
+    lineNum !== null && linePos !== null
+      ? ` @ ${lineNum}:${linePos}`
+      : lineNum !== null
+        ? ` @ ${lineNum}`
+        : '';
+  return `${type}${location}: ${message}`.trim();
+}
+
 /** Set-like class for features (lets apps check for WebGL / WebGPU extensions) */
 export class DeviceFeatures {
   protected features: Set<DeviceFeature>;
@@ -173,7 +259,6 @@ export type WebGPUDeviceFeature =
 
 export type WebGLDeviceFeature =
   // webgl extension features
-  | 'timer-query-webgl' // unify with WebGPU timestamp-query?
   | 'compilation-status-async-webgl' // Non-blocking shader compile/link status query available
   | 'provoking-vertex-webgl' // parameters.provokingVertex
   | 'polygon-mode-webgl' // parameters.polygonMode and parameters.polygonOffsetLine
@@ -188,6 +273,7 @@ export type WebGLDeviceFeature =
   | 'float16-renderable-webgl'
   | 'rgb9e5ufloat-renderable-webgl'
   | 'snorm8-renderable-webgl'
+  | 'norm16-webgl'
   | 'norm16-renderable-webgl'
   | 'snorm16-renderable-webgl'
 
@@ -242,18 +328,29 @@ export type DeviceProps = {
   /** Error handler. If it returns a probe logger style function, it will be called at the site of the error to optimize console error links. */
   onError?: (error: Error, context?: unknown) => unknown;
   /** Called when the size of a CanvasContext's canvas changes */
-  onResize?: (ctx: CanvasContext, info: {oldPixelSize: [number, number]}) => unknown;
+  onResize?: (
+    ctx: CanvasContext | PresentationContext,
+    info: {oldPixelSize: [number, number]}
+  ) => unknown;
   /** Called when the absolute position of a CanvasContext's canvas changes. Must set `CanvasContextProps.trackPosition: true` */
-  onPositionChange?: (ctx: CanvasContext, info: {oldPosition: [number, number]}) => unknown;
+  onPositionChange?: (
+    ctx: CanvasContext | PresentationContext,
+    info: {oldPosition: [number, number]}
+  ) => unknown;
   /** Called when the visibility of a CanvasContext's canvas changes */
-  onVisibilityChange?: (ctx: CanvasContext) => unknown;
+  onVisibilityChange?: (ctx: CanvasContext | PresentationContext) => unknown;
   /** Called when the device pixel ratio of a CanvasContext's canvas changes */
-  onDevicePixelRatioChange?: (ctx: CanvasContext, info: {oldRatio: number}) => unknown;
+  onDevicePixelRatioChange?: (
+    ctx: CanvasContext | PresentationContext,
+    info: {oldRatio: number}
+  ) => unknown;
 
   // DEBUG SETTINGS
 
   /** Turn on implementation defined checks that slow down execution but help break where errors occur */
   debug?: boolean;
+  /** Enable GPU timestamp collection without enabling all debug validation paths. */
+  debugGPUTime?: boolean;
   /** Show shader source in browser? The default is `'error'`, meaning that logs are shown when shader compilation has errors */
   debugShaders?: 'never' | 'errors' | 'warnings' | 'always';
   /** Renders a small version of updated Framebuffers into the primary canvas context. Can be set in console luma.log.set('debug-framebuffers', true) */
@@ -279,13 +376,29 @@ export type DeviceProps = {
   _initializeFeatures?: boolean;
   /** Enable shader caching (via ShaderFactory) */
   _cacheShaders?: boolean;
-  /** Enable shader caching (via PipelineFactory) */
+  /**
+   * Destroy cached shaders when they become unused.
+   * Defaults to `false` so repeated create/destroy cycles can still reuse cached shaders.
+   * Enable this if the application creates very large numbers of distinct shaders and needs cache eviction.
+   */
+  _destroyShaders?: boolean;
+  /** Enable pipeline caching (via PipelineFactory) */
   _cachePipelines?: boolean;
-  /** Never destroy cached shaders and pipelines */
-  _cacheDestroyPolicy?: 'unused' | 'never';
+  /** Enable sharing of backend render-pipeline implementations when caching is enabled. Currently used by WebGL. */
+  _sharePipelines?: boolean;
+  /**
+   * Destroy cached pipelines when they become unused.
+   * Defaults to `false` so repeated create/destroy cycles can still reuse cached pipelines.
+   * Enable this if the application creates very large numbers of distinct pipelines and needs cache eviction.
+   */
+  _destroyPipelines?: boolean;
 
   /** @deprecated Internal, Do not use directly! Use `luma.attachDevice()` to attach to pre-created contexts/devices. */
   _handle?: unknown; // WebGL2RenderingContext | GPUDevice | null;
+};
+
+type DeviceFactories = {
+  bindGroupFactory?: unknown;
 };
 
 /** WebGL independent copy of WebGLContextAttributes */
@@ -350,7 +463,8 @@ export abstract class Device {
       log.log(1, `${context} DPR changed ${info.oldRatio} => ${context.devicePixelRatio}`)(),
 
     // Debug flags
-    debug: log.get('debug') || undefined!,
+    debug: getDefaultDebugValue(),
+    debugGPUTime: false,
     debugShaders: log.get('debug-shaders') || undefined!,
     debugFramebuffers: Boolean(log.get('debug-framebuffers')),
     debugFactories: Boolean(log.get('debug-factories')),
@@ -361,9 +475,11 @@ export abstract class Device {
     // Experimental
     _reuseDevices: false,
     _requestMaxLimits: true,
-    _cacheShaders: false,
-    _cachePipelines: false,
-    _cacheDestroyPolicy: 'unused',
+    _cacheShaders: true,
+    _destroyShaders: false,
+    _cachePipelines: true,
+    _sharePipelines: true,
+    _destroyPipelines: false,
     // TODO - Change these after confirming things work as expected
     _initializeFeatures: true,
     _disabledFeatures: {
@@ -395,13 +511,15 @@ export abstract class Device {
   userData: {[key: string]: unknown} = {};
   /** stats */
   readonly statsManager: StatsManager = lumaStats;
+  /** Internal per-device factory storage */
+  _factories: DeviceFactories = {};
   /** An abstract timestamp used for change tracking */
   timestamp: number = 0;
 
   /** True if this device has been reused during device creation (app has multiple references) */
   _reused: boolean = false;
   /** Used by other luma.gl modules to store data on the device */
-  _lumaData: {[key: string]: unknown} = {};
+  private _moduleData: Record<string, Record<string, unknown>> = {};
 
   // Capabilities
 
@@ -420,6 +538,8 @@ export abstract class Device {
   abstract preferredDepthFormat: 'depth16' | 'depth24plus' | 'depth32float';
 
   protected _textureCaps: Partial<Record<TextureFormat, DeviceTextureFormatCapabilities>> = {};
+  /** Internal timestamp query set used when GPU timing collection is enabled for this device. */
+  protected _debugGPUTimeQuery: QuerySet | null = null;
 
   constructor(props: DeviceProps) {
     this.props = {...Device.defaultProps, ...props};
@@ -428,8 +548,10 @@ export abstract class Device {
 
   abstract destroy(): void;
 
+  // TODO - just expose the shadertypes decoders?
+
   getVertexFormatInfo(format: VertexFormat): VertexFormatInfo {
-    return getVertexFormatInfo(format);
+    return vertexFormatDecoder.getVertexFormatInfo(format);
   }
 
   isVertexFormatSupported(format: VertexFormat): boolean {
@@ -486,6 +608,19 @@ export abstract class Device {
   /** Check if a specific texture format is GPU compressed */
   isTextureFormatCompressed(format: TextureFormat): boolean {
     return textureFormatDecoder.isCompressed(format);
+  }
+
+  /** Returns the compressed texture formats that can be created and sampled on this device */
+  getSupportedCompressedTextureFormats(): CompressedTextureFormat[] {
+    const supportedFormats: CompressedTextureFormat[] = [];
+
+    for (const format of Object.keys(getTextureFormatTable()) as TextureFormat[]) {
+      if (this.isTextureFormatCompressed(format) && this.isTextureFormatSupported(format)) {
+        supportedFormats.push(format as CompressedTextureFormat);
+      }
+    }
+
+    return supportedFormats;
   }
 
   // DEBUG METHODS
@@ -545,13 +680,13 @@ export abstract class Device {
     // Call the error handler
     const isHandled = this.props.onError(error, context);
     if (!isHandled) {
+      const logArguments = formatErrorLogArguments(context, args);
       // Note: Returns a function that must be called: `device.reportError(...)()`
       return log.error(
         this.type === 'webgl' ? '%cWebGL' : '%cWebGPU',
         'color: white; background: red; padding: 2px 6px; border-radius: 3px;',
         error.message,
-        context,
-        ...args
+        ...logArguments
       );
     }
     return () => {};
@@ -561,7 +696,8 @@ export abstract class Device {
   debug(): void {
     if (this.props.debug) {
       // @ts-ignore
-      debugger; // eslint-disable-line
+      // biome-ignore lint/suspicious/noDebugger: explicit debug break when device debugging is enabled.
+      debugger;
     } else {
       // TODO(ibgreen): Does not appear to be printed in the console
       const message = `\
@@ -586,6 +722,9 @@ or create a device with the 'debug: true' prop.`;
 
   /** Creates a new CanvasContext (WebGPU only) */
   abstract createCanvasContext(props?: CanvasContextProps): CanvasContext;
+
+  /** Creates a presentation context for a destination canvas. WebGL requires the default canvas context to use an OffscreenCanvas. */
+  abstract createPresentationContext(props?: PresentationContextProps): PresentationContext;
 
   /** Call after rendering a frame (necessary e.g. on WebGL OffscreenCanvas) */
   abstract submit(commandBuffer?: CommandBuffer): void;
@@ -639,6 +778,102 @@ or create a device with the 'debug: true' prop.`;
   /** Create a ComputePass using the default CommandEncoder*/
   beginComputePass(props?: ComputePassProps): ComputePass {
     return this.commandEncoder.beginComputePass(props);
+  }
+
+  /**
+   * Generate mipmaps for a WebGPU texture.
+   * WebGPU textures must be created up front with the required mip count, usage flags, and a format that supports the chosen generation path.
+   * WebGL uses `Texture.generateMipmapsWebGL()` directly because the backend manages mip generation on the texture object itself.
+   */
+  generateMipmapsWebGPU(_texture: Texture): void {
+    throw new Error('not implemented');
+  }
+
+  /** Internal helper for creating a shareable WebGL render-pipeline implementation. */
+  _createSharedRenderPipelineWebGL(_props: RenderPipelineProps): SharedRenderPipeline {
+    throw new Error('_createSharedRenderPipelineWebGL() not implemented');
+  }
+
+  /** Internal WebGPU-only helper for retrieving the native bind-group layout for a pipeline group. */
+  _createBindGroupLayoutWebGPU(
+    _pipeline: RenderPipeline | ComputePipeline,
+    _group: number
+  ): unknown {
+    throw new Error('_createBindGroupLayoutWebGPU() not implemented');
+  }
+
+  /** Internal WebGPU-only helper for creating a native bind group. */
+  _createBindGroupWebGPU(
+    _bindGroupLayout: unknown,
+    _shaderLayout: ShaderLayout | ComputeShaderLayout,
+    _bindings: Bindings,
+    _group: number,
+    _label?: string
+  ): unknown {
+    throw new Error('_createBindGroupWebGPU() not implemented');
+  }
+
+  /**
+   * Internal helper that returns `true` when timestamp-query GPU timing should be
+   * collected for this device.
+   */
+  _supportsDebugGPUTime(): boolean {
+    return (
+      this.features.has('timestamp-query') && Boolean(this.props.debug || this.props.debugGPUTime)
+    );
+  }
+
+  /**
+   * Internal helper that enables device-managed GPU timing collection on the
+   * default command encoder. Reuses the existing query set if timing is already enabled.
+   *
+   * @param queryCount - Number of timestamp slots reserved for profiled passes.
+   * @returns The device-managed timestamp QuerySet, or `null` when timing is not supported or could not be enabled.
+   */
+  _enableDebugGPUTime(queryCount: number = 256): QuerySet | null {
+    if (!this._supportsDebugGPUTime()) {
+      return null;
+    }
+
+    if (this._debugGPUTimeQuery) {
+      return this._debugGPUTimeQuery;
+    }
+
+    try {
+      this._debugGPUTimeQuery = this.createQuerySet({type: 'timestamp', count: queryCount});
+      this.commandEncoder = this.createCommandEncoder({
+        id: this.commandEncoder.props.id,
+        timeProfilingQuerySet: this._debugGPUTimeQuery
+      });
+    } catch {
+      this._debugGPUTimeQuery = null;
+    }
+
+    return this._debugGPUTimeQuery;
+  }
+
+  /**
+   * Internal helper that disables device-managed GPU timing collection and restores
+   * the default command encoder to an unprofiled state.
+   */
+  _disableDebugGPUTime(): void {
+    if (!this._debugGPUTimeQuery) {
+      return;
+    }
+
+    if (this.commandEncoder.getTimeProfilingQuerySet() === this._debugGPUTimeQuery) {
+      this.commandEncoder = this.createCommandEncoder({
+        id: this.commandEncoder.props.id
+      });
+    }
+
+    this._debugGPUTimeQuery.destroy();
+    this._debugGPUTimeQuery = null;
+  }
+
+  /** Internal helper that returns `true` when device-managed GPU timing is currently active. */
+  _isDebugGPUTimeEnabled(): boolean {
+    return this._debugGPUTimeQuery !== null;
   }
 
   /**
@@ -720,6 +955,15 @@ or create a device with the 'debug: true' prop.`;
     throw new Error('not implemented');
   }
 
+  // INTERNAL LUMA.GL METHODS
+
+  getModuleData<ModuleDataT extends Record<string, unknown>>(moduleName: string): ModuleDataT {
+    this._moduleData[moduleName] ||= {};
+    return this._moduleData[moduleName] as ModuleDataT;
+  }
+
+  // INTERNAL HELPERS
+
   // IMPLEMENTATION
 
   /** Helper to get the canvas context props */
@@ -765,6 +1009,10 @@ or create a device with the 'debug: true' prop.`;
           newProps.indexType = 'uint32';
         } else if (props.data instanceof Uint16Array) {
           newProps.indexType = 'uint16';
+        } else if (props.data instanceof Uint8Array) {
+          // Convert uint8 to uint16 for WebGPU compatibility (WebGPU doesn't support uint8 indices)
+          newProps.data = new Uint16Array(props.data);
+          newProps.indexType = 'uint16';
         }
       }
       if (!newProps.indexType) {
@@ -774,4 +1022,37 @@ or create a device with the 'debug: true' prop.`;
 
     return newProps;
   }
+}
+
+/**
+ * Internal helper for resolving the default `debug` prop.
+ * Precedence is: explicit log debug value first, then `NODE_ENV`, then `false`.
+ */
+export function _getDefaultDebugValue(logDebugValue: unknown, nodeEnv?: string): boolean {
+  if (logDebugValue !== undefined && logDebugValue !== null) {
+    return Boolean(logDebugValue);
+  }
+
+  if (nodeEnv !== undefined) {
+    return nodeEnv !== 'production';
+  }
+
+  return false;
+}
+
+function getDefaultDebugValue(): boolean {
+  return _getDefaultDebugValue(log.get('debug'), getNodeEnv());
+}
+
+function getNodeEnv(): string | undefined {
+  const processObject = (
+    globalThis as typeof globalThis & {
+      process?: {env?: Record<string, string | undefined>};
+    }
+  ).process;
+  if (!processObject?.env) {
+    return undefined;
+  }
+
+  return processObject.env['NODE_ENV'];
 }

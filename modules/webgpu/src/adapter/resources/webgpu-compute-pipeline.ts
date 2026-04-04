@@ -2,10 +2,18 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {ComputePipeline, ComputePipelineProps, Binding} from '@luma.gl/core';
-import {getBindGroup} from '../helpers/get-bind-group';
+import {
+  ComputePipeline,
+  ComputePipelineProps,
+  Bindings,
+  BindingsByGroup,
+  _getDefaultBindGroupFactory,
+  normalizeBindingsByGroup
+} from '@luma.gl/core';
 import {WebGPUDevice} from '../webgpu-device';
 import {WebGPUShader} from './webgpu-shader';
+
+const EMPTY_BIND_GROUPS: BindingsByGroup = {};
 
 // COMPUTE PIPELINE
 
@@ -14,11 +22,8 @@ export class WebGPUComputePipeline extends ComputePipeline {
   readonly device: WebGPUDevice;
   readonly handle: GPUComputePipeline;
 
-  /** For internal use to create BindGroups */
-  private _bindGroupLayout: GPUBindGroupLayout | null = null;
-  private _bindGroup: GPUBindGroup | null = null;
-  /** For internal use to create BindGroups */
-  private _bindings: Record<string, Binding> = {};
+  private _bindingsByGroup: BindingsByGroup;
+  private _bindGroupCacheKeysByGroup: Partial<Record<number, object>>;
 
   constructor(device: WebGPUDevice, props: ComputePipelineProps) {
     super(device, props);
@@ -37,26 +42,52 @@ export class WebGPUComputePipeline extends ComputePipeline {
         },
         layout: 'auto'
       });
+
+    this._bindingsByGroup = EMPTY_BIND_GROUPS;
+    this._bindGroupCacheKeysByGroup = {};
   }
 
   /**
    * @todo Use renderpass.setBindings() ?
    * @todo Do we want to expose BindGroups in the API and remove this?
    */
-  setBindings(bindings: Record<string, Binding>): void {
-    Object.assign(this._bindings, bindings);
+  setBindings(bindings: Bindings | BindingsByGroup): void {
+    const nextBindingsByGroup = normalizeBindingsByGroup(this.shaderLayout, bindings);
+    for (const [groupKey, groupBindings] of Object.entries(nextBindingsByGroup)) {
+      const group = Number(groupKey);
+      for (const [name, binding] of Object.entries(groupBindings || {})) {
+        const currentGroupBindings = this._bindingsByGroup[group] || {};
+        if (currentGroupBindings[name] !== binding) {
+          if (
+            !this._bindingsByGroup[group] ||
+            this._bindingsByGroup[group] === currentGroupBindings
+          ) {
+            this._bindingsByGroup[group] = {...currentGroupBindings};
+          }
+          this._bindingsByGroup[group][name] = binding;
+          this._bindGroupCacheKeysByGroup[group] = {};
+        }
+      }
+    }
   }
 
-  /** Return a bind group created by setBindings */
-  _getBindGroup() {
-    // Get hold of the bind group layout. We don't want to do this unless we know there is at least one bind group
-    this._bindGroupLayout = this._bindGroupLayout || this.handle.getBindGroupLayout(0);
+  _getBindGroups(
+    bindings?: Bindings | BindingsByGroup,
+    bindGroupCacheKeys?: Partial<Record<number, object>>
+  ): Partial<Record<number, unknown>> {
+    const hasExplicitBindings = Boolean(bindings);
+    return _getDefaultBindGroupFactory(this.device).getBindGroups(
+      this,
+      hasExplicitBindings ? bindings : this._bindingsByGroup,
+      hasExplicitBindings ? bindGroupCacheKeys : this._bindGroupCacheKeysByGroup
+    );
+  }
 
-    // Set up the bindings
-    this._bindGroup =
-      this._bindGroup ||
-      getBindGroup(this.device.handle, this._bindGroupLayout, this.shaderLayout, this._bindings);
+  _getBindingsByGroupWebGPU(): BindingsByGroup {
+    return this._bindingsByGroup;
+  }
 
-    return this._bindGroup;
+  _getBindGroupCacheKeysWebGPU(): Partial<Record<number, object>> {
+    return this._bindGroupCacheKeysByGroup;
   }
 }

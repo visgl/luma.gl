@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {GL} from '@luma.gl/constants';
+import {GL} from '@luma.gl/webgl/constants';
 import {VertexFormat, NormalizedDataType} from '@luma.gl/core';
 
 type GLDataType =
@@ -18,7 +18,7 @@ type GLDataType =
 /** Get vertex format from GL constants */
 export function getVertexFormatFromGL(type: GLDataType, components: 1 | 2 | 3 | 4): VertexFormat {
   const base = getVertexTypeFromGL(type);
-  // prettier-ignore
+  // biome-ignore format: preserve layout
   switch (components) {
     case 1: return base;
     case 2: return `${base}x2`;
@@ -32,7 +32,7 @@ export function getVertexFormatFromGL(type: GLDataType, components: 1 | 2 | 3 | 
 
 /** Get data type from GL constants */
 export function getVertexTypeFromGL(type: GLDataType, normalized = false): NormalizedDataType {
-  // prettier-ignore
+  // biome-ignore format: preserve layout
   switch (type) {
     // WebGPU does not support normalized 32 bit integer attributes
     case GL.INT: return normalized ? 'sint32' : 'sint32';
@@ -59,7 +59,7 @@ export function getGLFromVertexType(
   | GL.INT
   | GL.HALF_FLOAT
   | GL.FLOAT {
-  // prettier-ignore
+  // biome-ignore format: preserve layout
   switch (dataType) {
     case 'uint8': return GL.UNSIGNED_BYTE;
     case 'sint8': return GL.BYTE;

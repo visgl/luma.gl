@@ -7,6 +7,7 @@
 
 import {AnimationProps} from '@luma.gl/engine';
 import {getWebGLTestDevice} from './create-test-device';
+import {createTestDevice} from './deprecated/sync-test-device';
 
 // TODO - Replace with new AnimationLoop from `@luma.gl/engine`
 import {ClassicAnimationLoop as AnimationLoop} from './deprecated/classic-animation-loop';
@@ -65,7 +66,7 @@ const DEFAULT_TEST_PROPS: Required<TestRunnerProps> = {
 
 /** Runs an array of test cases */
 export class TestRunner {
-  device = webglDevice;
+  device = createTestDevice();
   props: Record<string, any>;
   isRunning: boolean = false;
   testOptions: Required<TestRunnerProps> = {...DEFAULT_TEST_PROPS};

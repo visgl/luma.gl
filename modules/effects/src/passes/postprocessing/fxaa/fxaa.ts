@@ -97,6 +97,293 @@ import type {ShaderPass} from '@luma.gl/shadertools';
 // _  = the highest digit is directly related to style
 //
 
+const source = /* wgsl */ `\
+fn fxaaSat(value: f32) -> f32 {
+  return clamp(value, 0.0, 1.0);
+}
+
+fn fxaaTexTop(
+  sourceTexture: texture_2d<f32>,
+  sourceTextureSampler: sampler,
+  texCoord: vec2f
+) -> vec4f {
+  return textureSampleLevel(sourceTexture, sourceTextureSampler, texCoord, 0.0);
+}
+
+fn fxaaTexOff(
+  sourceTexture: texture_2d<f32>,
+  sourceTextureSampler: sampler,
+  texCoord: vec2f,
+  offset: vec2f,
+  reciprocalFrame: vec2f
+) -> vec4f {
+  return textureSampleLevel(
+    sourceTexture,
+    sourceTextureSampler,
+    texCoord + offset * reciprocalFrame,
+    0.0
+  );
+}
+
+fn fxaaLuma(color: vec4f) -> f32 {
+  return dot(color.rgb, vec3f(0.2126, 0.7152, 0.0722));
+}
+
+fn fxaaGetQualityStep(stepIndex: u32) -> f32 {
+  switch (stepIndex) {
+    case 0u: {
+      return 1.0;
+    }
+    case 1u: {
+      return 1.5;
+    }
+    case 2u: {
+      return 2.0;
+    }
+    case 3u: {
+      return 2.0;
+    }
+    case 4u: {
+      return 2.0;
+    }
+    case 5u: {
+      return 2.0;
+    }
+    case 6u: {
+      return 2.0;
+    }
+    case 7u: {
+      return 2.0;
+    }
+    case 8u: {
+      return 2.0;
+    }
+    case 9u: {
+      return 2.0;
+    }
+    case 10u: {
+      return 4.0;
+    }
+    default: {
+      return 8.0;
+    }
+  }
+}
+
+fn fxaaPixelShader(
+  texCoord: vec2f,
+  sourceTexture: texture_2d<f32>,
+  sourceTextureSampler: sampler,
+  reciprocalFrame: vec2f,
+  qualitySubpix: f32,
+  qualityEdgeThreshold: f32,
+  qualityEdgeThresholdMin: f32
+) -> vec4f {
+  var posM = texCoord;
+  let rgbyM = fxaaTexTop(sourceTexture, sourceTextureSampler, posM);
+  let lumaM = rgbyM.g;
+  var lumaS = fxaaLuma(
+    fxaaTexOff(sourceTexture, sourceTextureSampler, posM, vec2f(0.0, 1.0), reciprocalFrame)
+  );
+  let lumaE = fxaaLuma(
+    fxaaTexOff(sourceTexture, sourceTextureSampler, posM, vec2f(1.0, 0.0), reciprocalFrame)
+  );
+  var lumaN = fxaaLuma(
+    fxaaTexOff(sourceTexture, sourceTextureSampler, posM, vec2f(0.0, -1.0), reciprocalFrame)
+  );
+  let lumaW = fxaaLuma(
+    fxaaTexOff(sourceTexture, sourceTextureSampler, posM, vec2f(-1.0, 0.0), reciprocalFrame)
+  );
+
+  let maxSM = max(lumaS, lumaM);
+  let minSM = min(lumaS, lumaM);
+  let maxESM = max(lumaE, maxSM);
+  let minESM = min(lumaE, minSM);
+  let maxWN = max(lumaN, lumaW);
+  let minWN = min(lumaN, lumaW);
+  let rangeMax = max(maxWN, maxESM);
+  let rangeMin = min(minWN, minESM);
+  let rangeMaxScaled = rangeMax * qualityEdgeThreshold;
+  let range = rangeMax - rangeMin;
+  let rangeMaxClamped = max(qualityEdgeThresholdMin, rangeMaxScaled);
+  if (range < rangeMaxClamped) {
+    return rgbyM;
+  }
+
+  let lumaNW = fxaaLuma(
+    fxaaTexOff(sourceTexture, sourceTextureSampler, posM, vec2f(-1.0, -1.0), reciprocalFrame)
+  );
+  let lumaSE = fxaaLuma(
+    fxaaTexOff(sourceTexture, sourceTextureSampler, posM, vec2f(1.0, 1.0), reciprocalFrame)
+  );
+  let lumaNE = fxaaLuma(
+    fxaaTexOff(sourceTexture, sourceTextureSampler, posM, vec2f(1.0, -1.0), reciprocalFrame)
+  );
+  let lumaSW = fxaaLuma(
+    fxaaTexOff(sourceTexture, sourceTextureSampler, posM, vec2f(-1.0, 1.0), reciprocalFrame)
+  );
+
+  let lumaNS = lumaN + lumaS;
+  let lumaWE = lumaW + lumaE;
+  let subpixReciprocalRange = 1.0 / range;
+  let subpixNSWE = lumaNS + lumaWE;
+  let edgeHorizontal1 = -2.0 * lumaM + lumaNS;
+  let edgeVertical1 = -2.0 * lumaM + lumaWE;
+
+  let lumaNESE = lumaNE + lumaSE;
+  let lumaNWNE = lumaNW + lumaNE;
+  let edgeHorizontal2 = -2.0 * lumaE + lumaNESE;
+  let edgeVertical2 = -2.0 * lumaN + lumaNWNE;
+
+  let lumaNWSW = lumaNW + lumaSW;
+  let lumaSWSE = lumaSW + lumaSE;
+  let edgeHorizontal4 = abs(edgeHorizontal1) * 2.0 + abs(edgeHorizontal2);
+  let edgeVertical4 = abs(edgeVertical1) * 2.0 + abs(edgeVertical2);
+  let edgeHorizontal3 = -2.0 * lumaW + lumaNWSW;
+  let edgeVertical3 = -2.0 * lumaS + lumaSWSE;
+  let edgeHorizontal = abs(edgeHorizontal3) + edgeHorizontal4;
+  let edgeVertical = abs(edgeVertical3) + edgeVertical4;
+
+  let subpixNWSWNESE = lumaNWSW + lumaNESE;
+  let horizontalSpan = edgeHorizontal >= edgeVertical;
+  var lengthSign = reciprocalFrame.x;
+  let subpixA = subpixNSWE * 2.0 + subpixNWSWNESE;
+  if (!horizontalSpan) {
+    lumaN = lumaW;
+    lumaS = lumaE;
+  }
+  if (horizontalSpan) {
+    lengthSign = reciprocalFrame.y;
+  }
+  let subpixB = subpixA * (1.0 / 12.0) - lumaM;
+
+  let gradientN = lumaN - lumaM;
+  let gradientS = lumaS - lumaM;
+  var lumaNN = lumaN + lumaM;
+  let lumaSS = lumaS + lumaM;
+  let pairN = abs(gradientN) >= abs(gradientS);
+  let gradient = max(abs(gradientN), abs(gradientS));
+  if (pairN) {
+    lengthSign = -lengthSign;
+  }
+  let subpixC = fxaaSat(abs(subpixB) * subpixReciprocalRange);
+
+  var posB = posM;
+  var offNP = vec2f(0.0);
+  if (horizontalSpan) {
+    offNP = vec2f(reciprocalFrame.x, 0.0);
+    posB.y += lengthSign * 0.5;
+  } else {
+    offNP = vec2f(0.0, reciprocalFrame.y);
+    posB.x += lengthSign * 0.5;
+  }
+
+  var posN = posB - offNP * fxaaGetQualityStep(0u);
+  var posP = posB + offNP * fxaaGetQualityStep(0u);
+  let subpixD = -2.0 * subpixC + 3.0;
+  var lumaEndN = fxaaLuma(fxaaTexTop(sourceTexture, sourceTextureSampler, posN));
+  let subpixE = subpixC * subpixC;
+  var lumaEndP = fxaaLuma(fxaaTexTop(sourceTexture, sourceTextureSampler, posP));
+
+  if (!pairN) {
+    lumaNN = lumaSS;
+  }
+  let gradientScaled = gradient * 0.25;
+  let lumaMM = lumaM - lumaNN * 0.5;
+  let subpixF = subpixD * subpixE;
+  let lumaMoreThanZero = lumaMM < 0.0;
+
+  lumaEndN -= lumaNN * 0.5;
+  lumaEndP -= lumaNN * 0.5;
+  var doneN = abs(lumaEndN) >= gradientScaled;
+  var doneP = abs(lumaEndP) >= gradientScaled;
+  var doneNP = !doneN || !doneP;
+  var qualityStepIndex = 1u;
+  loop {
+    if (!(doneNP && qualityStepIndex < 12u)) {
+      break;
+    }
+
+    let qualityStep = fxaaGetQualityStep(qualityStepIndex);
+    if (!doneN) {
+      posN -= offNP * qualityStep;
+    }
+    if (!doneP) {
+      posP += offNP * qualityStep;
+    }
+
+    qualityStepIndex += 1u;
+    if (qualityStepIndex >= 12u) {
+      break;
+    }
+
+    if (!doneN) {
+      lumaEndN = fxaaLuma(fxaaTexTop(sourceTexture, sourceTextureSampler, posN));
+      lumaEndN -= lumaNN * 0.5;
+      doneN = abs(lumaEndN) >= gradientScaled;
+    }
+    if (!doneP) {
+      lumaEndP = fxaaLuma(fxaaTexTop(sourceTexture, sourceTextureSampler, posP));
+      lumaEndP -= lumaNN * 0.5;
+      doneP = abs(lumaEndP) >= gradientScaled;
+    }
+
+    doneNP = !doneN || !doneP;
+  }
+
+  var dstN = posM.x - posN.x;
+  var dstP = posP.x - posM.x;
+  if (!horizontalSpan) {
+    dstN = posM.y - posN.y;
+    dstP = posP.y - posM.y;
+  }
+
+  let goodSpanN = (lumaEndN < 0.0) != lumaMoreThanZero;
+  let spanLength = dstP + dstN;
+  let goodSpanP = (lumaEndP < 0.0) != lumaMoreThanZero;
+  let spanLengthReciprocal = 1.0 / spanLength;
+
+  let directionN = dstN < dstP;
+  let dst = min(dstN, dstP);
+  let goodSpan = select(goodSpanP, goodSpanN, directionN);
+  let subpixG = subpixF * subpixF;
+  let pixelOffset = dst * -spanLengthReciprocal + 0.5;
+  let subpixH = subpixG * qualitySubpix;
+
+  let pixelOffsetGood = select(0.0, pixelOffset, goodSpan);
+  let pixelOffsetSubpix = max(pixelOffsetGood, subpixH);
+  if (!horizontalSpan) {
+    posM.x += pixelOffsetSubpix * lengthSign;
+  }
+  if (horizontalSpan) {
+    posM.y += pixelOffsetSubpix * lengthSign;
+  }
+
+  return fxaaTexTop(sourceTexture, sourceTextureSampler, posM);
+}
+
+fn fxaa_sampleColor(
+  sourceTexture: texture_2d<f32>,
+  sourceTextureSampler: sampler,
+  texSize: vec2f,
+  texCoord: vec2f
+) -> vec4f {
+  let qualitySubpix = 0.5;
+  let qualityEdgeThreshold = 0.125;
+  let qualityEdgeThresholdMin = 0.0833;
+
+  return fxaaPixelShader(
+    texCoord,
+    sourceTexture,
+    sourceTextureSampler,
+    vec2f(1.0) / texSize,
+    qualitySubpix,
+    qualityEdgeThreshold,
+    qualityEdgeThresholdMin
+  );
+}
+`;
+
 const fs = /* glsl */ `
 #define FXAA_QUALITY_PRESET 29
 
@@ -688,6 +975,7 @@ export type FXAAUniforms = {};
 export const fxaa = {
   name: 'fxaa',
   propTypes: {},
+  source,
   fs,
   passes: [{sampler: true}],
   getUniforms: props => props

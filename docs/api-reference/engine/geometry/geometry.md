@@ -1,79 +1,86 @@
 # Geometry
 
-The Geometry class holds a collection of vertex array attributes representing a geometric primitive.
-
-A geometry is considered a "primitive" when it can be rendered with a single GPU draw call. Multiple geometry primitives can be composed into a composite geometry using the `Mesh` and `Model` classes.
-
-To learn more about attributes refer to the `Accessor` class that holds metadata for each attributes.
+`Geometry` is the CPU-side geometry container used by engine classes.
+It stores typed-array attributes and optional indices and computes `vertexCount` automatically when not supplied.
 
 ## Usage
 
-Create a pyramid geometry (used in lesson 4 of learning WebGL examples).
-
 ```typescript
-const pyramidGeometry= new Geometry({
+import {Geometry} from '@luma.gl/engine';
+
+const geometry = new Geometry({
+  topology: 'triangle-list',
   attributes: {
-    positions: new Float32Array([ ... ]),
-    colors: {
-      size: 4,
-      value: new Float32Array([ ... ])
-    }
+    POSITION: {size: 3, value: new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0])}
   }
 });
 ```
 
+## Types
+
+### `GeometryProps`
+
+```ts
+export type GeometryProps = {
+  id?: string;
+  topology: 'point-list' | 'line-list' | 'line-strip' | 'triangle-list' | 'triangle-strip';
+  vertexCount?: number;
+  attributes: Record<string, GeometryAttribute | TypedArray>;
+  indices?: GeometryAttribute | TypedArray;
+};
+```
+
+### `GeometryAttribute`
+
+```ts
+export type GeometryAttribute = {
+  size?: number;
+  value: TypedArray;
+  [key: string]: any;
+};
+```
+
 ## Properties
 
-### `id: string` 
+### `id`
 
-An id for the model. If not provided, a random unique identifier will be created.
+Application-provided identifier.
 
-### topology
+### `topology`
 
-The draw mode, or primitive type.
+Primitive topology used by consumers of the geometry.
 
-Some options are `triangle-list` (default), `triangle-strip`, `point-list`, `line-list`.
+### `vertexCount`
 
-### `attributes`
-
-An object with buffer/attribute names and buffer/attribute descriptors to be set before rendering the model.
+Explicit or auto-calculated vertex count.
 
 ### `indices`
 
-An optional `Accessor` instance that contains the indices (aka elements) for this geometry. Can be `null` or `undefined` if this primitive doesn't use indices. Note that indices can also be stored inside `attributes`.
+Optional index attribute.
+
+### `attributes`
+
+Named geometry attributes such as `POSITION`, `NORMAL`, `TEXCOORD_0`, or application-defined attributes.
+
+### `userData`
+
+Application-owned metadata.
 
 ## Methods
 
-### constructor(props : Object)
+### `constructor(props: GeometryProps)`
 
-The constructor for the `Geometry` class. Use this to create a new `Geometry`.
+Creates a geometry object and normalizes raw typed arrays into `GeometryAttribute` records.
 
-```typescript
-const geometry = new Geometry(props);
-```
+### `getVertexCount(): number`
 
-### setProps(props : Object)
+Returns the resolved vertex count.
 
-Update properties
+### `getAttributes(): GeometryAttributes`
 
-## Types and Enumerations
-
-### topology
-
-Follows glTF/OpenGL/WebGL conventions:
-
-### Typical Attributes
-
-| Attribute       | Description                                                                                                                                      |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `indices`       | (_array_, optional) An array of numbers describing the vertex indices for each face.                                                             |
-| `positions`     | (_array_, optional) An array of floats that describe the vertices of the model.                                                                  |
-| `normals`       | (_array_, optional) An array of floats that describe the normals of the model.                                                                   |
-| `texCoords`     | (_mixed_, optional) Can be an array of floats indicating the texture coordinates for the texture to be used or an object that has texture ids as | keys and an array of floats as values. |
-| `colors`        | (_array_, optional) An array of colors in RGBA. If just one color is specified that color will be used for all faces.                            |
-| `pickingColors` | (_array_, optional) A custom set of colors to render the object to texture when performing the color picking algorithm.                          |
+Returns the geometry attributes, including `indices` when present.
 
 ## Remarks
 
-- The Geometry class does not take a `WebGLRenderingContext` and is intentionally
-- The `Geometry` class holds the [glTF2 "primitive" specification](https://github.com/KhronosGroup/glTF/tree/master/specification/2.0), although morph `targets` are not yet supported.
+- `POSITION` or `positions` defaults to `size: 3` when the size is omitted.
+- Use [`GPUGeometry`](/docs/api-reference/engine/geometry/gpu-geometry) when geometry data is already uploaded into GPU buffers.
