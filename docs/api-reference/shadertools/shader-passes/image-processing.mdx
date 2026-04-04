@@ -161,6 +161,20 @@ Simulates the shallow depth of field normally encountered in close-up photograph
   </tbody>
 </table>
 
+### gaussianBlur
+
+Applies a true separable Gaussian blur with a radius-driven kernel and soft falloff. This is a better starting point than `triangleBlur` when you want a softer, more photographic blur kernel.
+
+- `radius` The blur radius in pixels. Default value is `12`, maximum value is `32`.
+
+### bloom
+
+Adds a glow to bright areas of the image by extracting pixels above a luminance threshold, softly blurring them, and mixing them back with the source color.
+
+- `radius` Radius of the sampling kernel in pixels. Default value is `4`.
+- `threshold` Luminance threshold above which a pixel contributes to bloom. Default value is `0.8`.
+- `intensity` Strength of the bloom contribution. Default value is `1`.
+
 ### triangleBlur
 
 This is the most basic blur filter, which convolves the image with a pyramid filter. The pyramid filter is separable and is applied as two perpendicular triangle filters.

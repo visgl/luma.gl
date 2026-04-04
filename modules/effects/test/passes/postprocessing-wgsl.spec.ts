@@ -6,6 +6,7 @@ import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {WgslReflect} from 'wgsl_reflect';
 import {
+  bloom,
   brightnessContrast,
   bulgePinch,
   colorHalftone,
@@ -13,6 +14,7 @@ import {
   dotScreen,
   edgeWork,
   fxaa,
+  gaussianBlur,
   hexagonalPixelate,
   hueSaturation,
   ink,
@@ -28,6 +30,7 @@ import {
 } from '../../src/index';
 import {ShaderAssembler} from '../../../shadertools/src/lib/shader-assembler';
 import {getFragmentShaderForRenderPass} from '../../../engine/src/passes/get-fragment-shader';
+import {textureTransform} from '../../../engine/src/passes/texture-transform-module';
 
 const CLIP_SPACE_VERTEX_SHADER_WGSL = /* wgsl */ `\
 struct VertexInputs {
@@ -71,6 +74,8 @@ const SHADER_PASSES = [
   sepia,
   vibrance,
   vignette,
+  bloom,
+  gaussianBlur,
   tiltShift,
   triangleBlur,
   zoomBlur,
@@ -156,7 +161,7 @@ test('postprocessing WGSL#assemble/compile', async testCase => {
       const assembledSource = shaderAssembler.assembleWGSLShader({
         platformInfo: PLATFORM_INFO,
         source: `${CLIP_SPACE_VERTEX_SHADER_WGSL}\n${fragmentSource}`,
-        modules: [shaderPass]
+        modules: [textureTransform, shaderPass]
       }).source;
       const targetFunctionName = getTargetFunctionName(shaderPass.name, action);
 

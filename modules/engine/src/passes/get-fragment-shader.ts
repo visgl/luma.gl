@@ -41,7 +41,7 @@ function getFilterShaderWGSL(func: string) {
 
 @fragment
 fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4f {
-  let texCoord = inputs.coordinate;
+  let texCoord = shaderPassRenderer_getTextureUV(inputs.coordinate);
   let texSize = vec2f(textureDimensions(sourceTexture));
 
   var fragColor = textureSample(sourceTexture, sourceTextureSampler, texCoord);
@@ -59,7 +59,7 @@ function getSamplerShaderWGSL(func: string) {
 
 @fragment
 fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4f {
-  let texCoord = inputs.coordinate;
+  let texCoord = shaderPassRenderer_getTextureUV(inputs.coordinate);
   let texSize = vec2f(textureDimensions(sourceTexture));
   return ${func}(sourceTexture, sourceTextureSampler, texSize, texCoord);
 }
@@ -80,7 +80,7 @@ in vec2 uv;
 out vec4 fragColor;
 
 void main() {
-  vec2 texCoord = coordinate;
+  vec2 texCoord = shaderPassRenderer_getTextureUV(coordinate);
   ivec2 iTexSize = textureSize(sourceTexture, 0);
   vec2 texSize = vec2(float(iTexSize.x), float(iTexSize.y));
 
@@ -104,7 +104,7 @@ in vec2 uv;
 out vec4 fragColor;
 
 void main() {
-  vec2 texCoord = coordinate;
+  vec2 texCoord = shaderPassRenderer_getTextureUV(coordinate);
   ivec2 iTexSize = textureSize(sourceTexture, 0);
   vec2 texSize = vec2(float(iTexSize.x), float(iTexSize.y));
 
