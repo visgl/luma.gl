@@ -156,6 +156,17 @@ export class ShaderInputs<
     return bindings;
   }
 
+  /**
+   * Gets binding values for a single shader module without flattening them into the full shader map.
+   *
+   * This is used by systems such as {@link ShaderPassRenderer} that execute one shader module at a
+   * time and need the defaults for just that module.
+   */
+  getModuleBindingValues(moduleName: keyof ShaderPropsT | string): Record<string, Binding> {
+    const moduleBindings = this.moduleBindings[moduleName as keyof ShaderPropsT];
+    return moduleBindings ? {...moduleBindings} : {};
+  }
+
   // INTERNAL
 
   /** Return a debug table that can be used for console.table() or log.table() */

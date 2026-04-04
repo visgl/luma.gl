@@ -169,6 +169,53 @@ test('ShaderInputs#bindings', t => {
   });
 });
 
+test('ShaderInputs#getModuleBindingValues', t => {
+  type FirstModuleProps = {firstTexture: Texture};
+  type SecondModuleProps = {secondTexture: Texture};
+
+  const firstModule: ShaderModule<FirstModuleProps> = {
+    name: 'firstModule'
+  };
+  const secondModule: ShaderModule<SecondModuleProps> = {
+    name: 'secondModule'
+  };
+
+  const shaderInputs = new ShaderInputs<{
+    firstModule: FirstModuleProps;
+    secondModule: SecondModuleProps;
+  }>({firstModule, secondModule});
+
+  const firstTexture = 'FIRST_TEXTURE' as unknown as Texture;
+  const secondTexture = 'SECOND_TEXTURE' as unknown as Texture;
+  shaderInputs.setProps({
+    firstModule: {firstTexture},
+    secondModule: {secondTexture}
+  });
+
+  t.deepEqual(
+    shaderInputs.getModuleBindingValues('firstModule'),
+    {firstTexture},
+    'returns only bindings for the requested module'
+  );
+  t.deepEqual(
+    shaderInputs.getModuleBindingValues('secondModule'),
+    {secondTexture},
+    'returns bindings for a different module independently'
+  );
+  t.deepEqual(
+    shaderInputs.getModuleBindingValues('missingModule'),
+    {},
+    'returns an empty object for unknown modules'
+  );
+  t.deepEqual(
+    shaderInputs.getBindingValues(),
+    {firstTexture, secondTexture},
+    'flattened binding lookup remains unchanged'
+  );
+
+  t.end();
+});
+
 test('ShaderInputs#composite uniforms', t => {
   type CompositeUniforms = {
     light: {

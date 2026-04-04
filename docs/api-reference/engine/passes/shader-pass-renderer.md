@@ -77,11 +77,15 @@ At draw time, the renderer merges three uniform layers for each shader pass:
 
 Bindings follow a similar pattern:
 
-- bindings already stored in `shaderInputs`
+- bindings already stored in `shaderInputs` for the current shader pass
 - `options.bindings` passed to the draw call
 
 This makes it practical to keep one renderer alive while swapping in frame-specific resources such
 as a freshly rendered depth texture.
+
+When you call `shaderInputs.setProps({[passName]: {...}})`, any texture bindings in that object are
+stored as defaults for that specific shader pass. `ShaderPassRenderer` resolves those defaults per
+pass, then layers `options.bindings` on top for per-frame overrides.
 
 ## Example
 

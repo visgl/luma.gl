@@ -286,11 +286,10 @@ class PassRenderer {
   }): Record<string, Binding | DynamicTexture> {
     const {execution, originalTexture, previousTexture, outputTexture, externalBindings} = options;
     const inputMap = execution.inputs || {sourceTexture: 'previous'};
-    const shaderInputBindings = this.shaderInputs.getBindingValues()[
-      execution.shaderPass.name
-    ] as unknown as Record<string, Binding | DynamicTexture> | undefined;
-    // Module bindings from `shaderInputs` act as defaults, while per-draw external bindings
-    // provide the escape hatch needed for resources such as a freshly rendered depth texture.
+    const shaderInputBindings = this.shaderInputs.getModuleBindingValues(execution.shaderPass.name);
+    // Shader-pass bindings stored in `shaderInputs` act as renderer-owned defaults. Per-draw
+    // external bindings can override those defaults for frame-specific resources, while routed
+    // logical inputs such as `sourceTexture` remain authoritative below.
     const resolvedBindings: Record<string, Binding | DynamicTexture> = {
       ...shaderInputBindings,
       ...externalBindings
