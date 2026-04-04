@@ -27,6 +27,7 @@ Notes:
 For `HTMLCanvasElements` the `CanvasContext` will monitor changes to the underlying canvas and call callbacks on the associated `Device`, see:
 
 - `DeviceProps.onResize` - called if the size of the "device pixel content box" changes.
+- `DeviceProps.onPositionChange` - called if the absolute position of the canvas changes. Requires `CanvasContextProps.trackPosition`.
 - `DeviceProps.onVisibilityChange` - called if the visibility of the canvas changes (window is closed or occluded).
 - `DeviceProps.onDevicePixelRatioChange` - called if the DPR changes (perhaps by moving the window to another screen or zooming the browser)
 
