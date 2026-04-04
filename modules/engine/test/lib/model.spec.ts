@@ -21,6 +21,22 @@ const DUMMY_WGSL = /* WGSL */ `
 }
 `;
 
+const DUMMY_WGSL_WITH_BINDING = /* wgsl */ `
+struct AppFrameUniforms {
+  scale: f32
+};
+
+@group(0) @binding(auto) var<uniform> appFrame: AppFrameUniforms;
+
+@vertex fn vertexMain() -> @builtin(position) vec4<f32> {
+  return vec4<f32>(appFrame.scale, 0.0, 0.0, 1.0);
+}
+
+@fragment fn fragmentMain(@builtin(position) coord_in: vec4<f32>) -> @location(0) vec4<f32> {
+  return vec4<f32>(coord_in.x, coord_in.y, 0.0, 1.0);
+}
+`;
+
 const DUMMY_VS = `#version 300 es
   void main() { gl_Position = vec4(1.0); }
 `;
