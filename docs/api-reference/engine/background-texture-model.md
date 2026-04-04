@@ -44,9 +44,9 @@ Creates the fullscreen texture renderer. Throws if `backgroundTexture` is missin
 
 Updates the background texture and recomputes aspect-ratio scale when the texture is ready.
 
-### `predraw(): void`
+### `predraw(commandEncoder: CommandEncoder): void`
 
-Runs the normal `ClipSpace` predraw path.
+Runs the normal `ClipSpace` predraw path, encoding any managed uniform uploads onto the supplied command encoder.
 
 ### `updateScale(texture: Texture): void`
 

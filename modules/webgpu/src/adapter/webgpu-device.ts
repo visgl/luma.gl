@@ -33,11 +33,12 @@ import type {
   QuerySetProps,
   DeviceProps,
   CommandEncoderProps,
+  CommandEncoder,
   PipelineLayoutProps,
   RenderPipeline,
   ShaderLayout
 } from '@luma.gl/core';
-import {Device, DeviceFeatures} from '@luma.gl/core';
+import {Buffer, Device, DeviceFeatures} from '@luma.gl/core';
 import {WebGPUBuffer} from './resources/webgpu-buffer';
 import {WebGPUTexture} from './resources/webgpu-texture';
 import {WebGPUExternalTexture} from './resources/webgpu-external-texture';
@@ -215,6 +216,33 @@ export class WebGPUDevice extends Device {
     return new WebGPUCommandEncoder(this, props);
   }
 
+  override writeBufferViaCommandEncoder(
+    commandEncoder: CommandEncoder,
+    destinationBuffer: Buffer,
+    data: ArrayBufferLike | ArrayBufferView | SharedArrayBuffer,
+    byteOffset: number = 0
+  ): void {
+    const webgpuCommandEncoder = commandEncoder as WebGPUCommandEncoder;
+    const uploadData = ArrayBuffer.isView(data)
+      ? new Uint8Array(data.buffer, data.byteOffset, data.byteLength)
+      : new Uint8Array(data);
+    // WebGPU cannot encode CPU writes directly on a command encoder. Record the
+    // upload as a staging-buffer copy so it stays ordered with the draw/dispatch
+    // commands that will consume the destination buffer.
+    const uploadBuffer = this.createBuffer({
+      usage: Buffer.COPY_SRC,
+      data: uploadData
+    });
+
+    webgpuCommandEncoder.trackTransientUploadBuffer(uploadBuffer);
+    webgpuCommandEncoder.copyBufferToBuffer({
+      sourceBuffer: uploadBuffer,
+      destinationBuffer,
+      destinationOffset: byteOffset,
+      size: uploadData.byteLength
+    });
+  }
+
   // WebGPU specifics
 
   createTransformFeedback(props: TransformFeedbackProps): TransformFeedback {
@@ -288,10 +316,13 @@ export class WebGPUDevice extends Device {
     const profiler = getWebGPUCpuHotspotProfiler(this);
     const startTime = profiler ? getTimestamp() : 0;
     const submitReason = getWebGPUCpuHotspotSubmitReason(this);
+    const transientUploadBuffers = commandBuffer.transientUploadBuffers;
+    let didSubmit = false;
     try {
       this.pushErrorScope('validation');
       const queueSubmitStartTime = profiler ? getTimestamp() : 0;
       this.handle.queue.submit([commandBuffer.handle]);
+      didSubmit = true;
       if (profiler) {
         profiler.queueSubmitCount = (profiler.queueSubmitCount || 0) + 1;
         profiler.queueSubmitTimeMs =
@@ -320,6 +351,29 @@ export class WebGPUDevice extends Device {
         }
       }
     } finally {
+      if (transientUploadBuffers.length) {
+        if (didSubmit) {
+          // The GPU may still be reading from the staging buffers after
+          // queue.submit() returns, so defer destruction until the submitted
+          // work has fully completed.
+          this.handle.queue
+            .onSubmittedWorkDone()
+            .then(() => {
+              for (const uploadBuffer of transientUploadBuffers) {
+                uploadBuffer.destroy();
+              }
+            })
+            .catch(() => {
+              for (const uploadBuffer of transientUploadBuffers) {
+                uploadBuffer.destroy();
+              }
+            });
+        } else {
+          for (const uploadBuffer of transientUploadBuffers) {
+            uploadBuffer.destroy();
+          }
+        }
+      }
       if (profiler) {
         profiler.submitCount = (profiler.submitCount || 0) + 1;
         profiler.submitTimeMs = (profiler.submitTimeMs || 0) + (getTimestamp() - startTime);

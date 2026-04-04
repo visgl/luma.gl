@@ -6,7 +6,7 @@ import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {getTestDevices} from '@luma.gl/test-utils';
 import {ShaderPassRenderer, DynamicTexture, ShaderInputs} from '@luma.gl/engine';
 import type {ShaderPass, ShaderPassPipeline} from '@luma.gl/shadertools';
-import {Buffer, Texture} from '@luma.gl/core';
+import {Buffer, CommandEncoder, Texture} from '@luma.gl/core';
 
 const invertPass: ShaderPass = {
   name: 'invert',
@@ -577,5 +577,87 @@ test('ShaderPassRenderer validates ShaderPassPipeline routing', async t => {
 
   aliasingRenderer.destroy();
   sourceTexture.destroy();
+  t.end();
+});
+
+test('ShaderPassRenderer calls BackgroundTextureModel.predraw before drawing', async t => {
+  const devices = await getTestDevices();
+  for (const device of devices) {
+    if (device.type === 'webgpu') {
+      continue; // eslint-disable-line no-continue
+    }
+
+    const sourceTexture = new DynamicTexture(device, {
+      id: 'predraw-source-texture',
+      usage: Texture.RENDER | Texture.COPY_SRC | Texture.COPY_DST,
+      dimension: '2d',
+      data: {data: new Uint8Array([255, 0, 0, 255]), width: 1, height: 1, format: 'rgba8unorm'}
+    });
+    await sourceTexture.ready;
+
+    const renderer = new ShaderPassRenderer(device, {
+      shaderPasses: [],
+      shaderInputs: new ShaderInputs({})
+    });
+    let predrawCallCount = 0;
+    const originalPredraw = renderer.textureModel.predraw.bind(renderer.textureModel);
+    renderer.textureModel.predraw = (commandEncoder: CommandEncoder) => {
+      predrawCallCount++;
+      originalPredraw(commandEncoder);
+    };
+
+    renderer.renderToTexture({sourceTexture});
+    renderer.renderToScreen({sourceTexture});
+
+    t.equal(predrawCallCount, 2, `${device.type} prepares background model before each pass`);
+
+    renderer.destroy();
+    sourceTexture.destroy();
+  }
+  t.end();
+});
+
+test('ShaderPassRenderer prepares each subpass before drawing', async t => {
+  const devices = await getTestDevices();
+  for (const device of devices) {
+    if (device.type === 'webgpu') {
+      continue; // eslint-disable-line no-continue
+    }
+
+    const sourceTexture = new DynamicTexture(device, {
+      id: 'subpass-prepare-source-texture',
+      usage: Texture.RENDER | Texture.COPY_SRC | Texture.COPY_DST,
+      dimension: '2d',
+      data: {data: new Uint8Array([255, 0, 0, 255]), width: 1, height: 1, format: 'rgba8unorm'}
+    });
+    await sourceTexture.ready;
+
+    const renderer = new ShaderPassRenderer(device, {
+      shaderPasses: [stagedPipeline],
+      shaderInputs: new ShaderInputs({stagedColor: stagedColorPass, combine: combinePass})
+    });
+    const subPassRenderers = renderer.passRenderers[0].subPassExecutions.map(
+      execution => execution.subPassRenderer
+    ) as Array<{prepare: (options: unknown) => void}>;
+    let prepareCallCount = 0;
+    for (const subPassRenderer of subPassRenderers) {
+      const originalPrepare = subPassRenderer.prepare.bind(subPassRenderer);
+      subPassRenderer.prepare = (options: unknown) => {
+        prepareCallCount++;
+        originalPrepare(options);
+      };
+    }
+
+    renderer.renderToTexture({sourceTexture});
+
+    t.equal(
+      prepareCallCount,
+      subPassRenderers.length,
+      `${device.type} prepares each subpass before beginRenderPass`
+    );
+
+    renderer.destroy();
+    sourceTexture.destroy();
+  }
   t.end();
 });

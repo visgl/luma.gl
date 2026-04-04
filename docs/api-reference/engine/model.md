@@ -123,9 +123,9 @@ Returns the current redraw reason and clears the internal redraw flag.
 
 Marks the model as needing redraw.
 
-### `predraw(): void`
+### `predraw(commandEncoder: CommandEncoder): void`
 
-Updates shader inputs and rebuilds the pipeline if necessary.
+Updates shader inputs and rebuilds the pipeline if necessary, encoding any managed uniform uploads onto the supplied command encoder before the render pass begins.
 
 ### `draw(renderPass: RenderPass): boolean`
 
@@ -159,9 +159,9 @@ Updates the vertex count.
 
 Replaces the current `ShaderInputs` instance.
 
-### `updateShaderInputs(): void`
+### `updateShaderInputs(commandEncoder?: CommandEncoder): void`
 
-Flushes current `ShaderInputs` values into the model's internal uniform store and bindings.
+Flushes current `ShaderInputs` values into the model's internal uniform store and bindings. On WebGPU, pass the same `CommandEncoder` that will later open the render pass when uploads must be ordered with subsequent draws.
 
 ### `setBindings(bindings: Record<string, Binding | DynamicTexture>): void`
 
