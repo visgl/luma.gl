@@ -22,6 +22,7 @@ import {
   Buffer,
   Texture,
   TextureView,
+  Sampler,
   RenderPipeline,
   RenderPass,
   PipelineFactory,
@@ -49,12 +50,6 @@ import {
 } from '../utils/shader-module-utils';
 import {uid} from '../utils/uid';
 import {ShaderInputs} from '../shader-inputs';
-import {
-  DynamicBuffer,
-  type DynamicBufferRange,
-  isBufferRangeBinding,
-  resolveBufferRangeBinding
-} from '../dynamic-buffer/dynamic-buffer';
 import {DynamicTexture} from '../dynamic-texture/dynamic-texture';
 import {Material} from '../material/material';
 
@@ -69,8 +64,7 @@ const DEPTH_STENCIL_ATTACHMENT_FORMATS: TextureFormatDepthStencil[] = [
   'depth32float',
   'depth32float-stencil8'
 ];
-type ModelBinding = Binding | DynamicTexture | DynamicBuffer | DynamicBufferRange;
-type ModelBuffer = Buffer | DynamicBuffer;
+type ModelBinding = Binding | DynamicTexture;
 
 export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs' | 'bindings'> & {
   source?: string;
@@ -88,7 +82,7 @@ export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs' | 'bindings'> & {
   /** Material-owned group-3 bindings */
   material?: Material;
   /** Bindings */
-  bindings?: Record<string, ModelBinding>;
+  bindings?: Record<string, Binding | DynamicTexture>;
   /** WebGL-only uniforms */
   uniforms?: Record<string, unknown>;
   /** Parameters that are built into the pipeline */
@@ -104,9 +98,9 @@ export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs' | 'bindings'> & {
   /** Vertex count */
   vertexCount?: number;
 
-  indexBuffer?: ModelBuffer | null;
+  indexBuffer?: Buffer | null;
   /** @note this is really a map of buffers, not a map of attributes */
-  attributes?: Record<string, ModelBuffer>;
+  attributes?: Record<string, Buffer>;
   /**   */
   constantAttributes?: Record<string, TypedArray>;
 
@@ -224,7 +218,7 @@ export class Model {
   /** Constant-valued attributes */
   constantAttributes: Record<string, TypedArray> = {};
   /** Bindings (textures, samplers, uniform buffers) */
-  bindings: Record<string, ModelBinding> = {};
+  bindings: Record<string, Binding | DynamicTexture> = {};
 
   /**
    * VertexArray
@@ -249,11 +243,6 @@ export class Model {
   _attributeInfos: Record<string, AttributeInfo> = {};
   _gpuGeometry: GPUGeometry | null = null;
   private props: Required<ModelProps>;
-  private _dynamicIndexBufferSource: {source: DynamicBuffer; generation: number} | null = null;
-  private _dynamicAttributeBufferSources: Record<
-    number,
-    {source: DynamicBuffer; generation: number}
-  > = {};
   private _colorAttachmentFormats: (TextureFormatColor | null)[] | undefined;
   private _depthStencilAttachmentFormat: TextureFormatDepthStencil | undefined;
 
@@ -446,7 +435,6 @@ export class Model {
   predraw(): void {
     // Update uniform buffers if needed
     this.updateShaderInputs();
-    this._syncDynamicBuffers();
     // Check if the pipeline is invalidated
     this.pipeline = this._updatePipeline();
   }
@@ -668,7 +656,7 @@ export class Model {
   /**
    * Sets bindings (textures, samplers, uniform buffers)
    */
-  setBindings(bindings: Record<string, ModelBinding>): void {
+  setBindings(bindings: Record<string, Binding | DynamicTexture>): void {
     Object.assign(this.bindings, bindings);
     this.setNeedsRedraw('bindings');
   }
@@ -685,15 +673,8 @@ export class Model {
    * Sets the index buffer
    * @todo - how to unset it if we change geometry?
    */
-  setIndexBuffer(indexBuffer: ModelBuffer | null): void {
-    const resolvedIndexBuffer =
-      indexBuffer instanceof DynamicBuffer ? indexBuffer.buffer : indexBuffer;
-    this.indexBuffer = resolvedIndexBuffer;
-    this._dynamicIndexBufferSource =
-      indexBuffer instanceof DynamicBuffer
-        ? {source: indexBuffer, generation: indexBuffer.generation}
-        : null;
-    this.vertexArray.setIndexBuffer(resolvedIndexBuffer);
+  setIndexBuffer(indexBuffer: Buffer | null): void {
+    this.vertexArray.setIndexBuffer(indexBuffer);
     this.setNeedsRedraw('indexBuffer');
   }
 
@@ -701,7 +682,7 @@ export class Model {
    * Sets attributes (buffers)
    * @note Overrides any attributes previously set with the same name
    */
-  setAttributes(buffers: Record<string, ModelBuffer>, options?: {disableWarnings?: boolean}): void {
+  setAttributes(buffers: Record<string, Buffer>, options?: {disableWarnings?: boolean}): void {
     const disableWarnings = options?.disableWarnings ?? this.props.disableWarnings;
     if (buffers['indices']) {
       log.warn(
@@ -719,7 +700,6 @@ export class Model {
 
     // Check if all buffers have a layout
     for (const [bufferName, buffer] of Object.entries(buffers)) {
-      const resolvedBuffer = buffer instanceof DynamicBuffer ? buffer.buffer : buffer;
       const bufferLayout = bufferLayoutHelper.getBufferLayout(bufferName);
       if (!bufferLayout) {
         if (!disableWarnings) {
@@ -740,21 +720,13 @@ export class Model {
               ? bufferLayoutHelper.getBufferIndex(attributeInfo.bufferName)
               : attributeInfo.location;
 
-          this.vertexArray.setBuffer(location, resolvedBuffer);
-          if (buffer instanceof DynamicBuffer) {
-            this._dynamicAttributeBufferSources[location] = {
-              source: buffer,
-              generation: buffer.generation
-            };
-          } else {
-            delete this._dynamicAttributeBufferSources[location];
-          }
+          this.vertexArray.setBuffer(location, buffer);
           set = true;
         }
       }
       if (!set && !disableWarnings) {
         log.warn(
-          `Model(${this.id}): Ignoring buffer "${resolvedBuffer.id}" for unknown attribute "${bufferName}"`
+          `Model(${this.id}): Ignoring buffer "${buffer.id}" for unknown attribute "${bufferName}"`
         )();
       }
     }
@@ -808,9 +780,13 @@ export class Model {
     const validBindings: Record<string, Binding> = {};
 
     for (const [name, binding] of Object.entries(this.bindings)) {
-      const resolvedBinding = resolveModelBinding(binding);
-      if (resolvedBinding) {
-        validBindings[name] = resolvedBinding;
+      if (binding instanceof DynamicTexture) {
+        // Check that async textures are loaded
+        if (binding.isReady) {
+          validBindings[name] = binding.texture;
+        }
+      } else {
+        validBindings[name] = binding;
       }
     }
 
@@ -851,20 +827,13 @@ export class Model {
         timestamp = Math.max(timestamp, binding.texture.updateTimestamp);
       } else if (binding instanceof Buffer || binding instanceof Texture) {
         timestamp = Math.max(timestamp, binding.updateTimestamp);
-      } else if (binding instanceof DynamicBuffer) {
-        timestamp = Math.max(timestamp, binding.updateTimestamp);
       } else if (binding instanceof DynamicTexture) {
         timestamp = binding.texture
           ? Math.max(timestamp, binding.texture.updateTimestamp)
           : // The texture will become available in the future
             Infinity;
-      } else if (isBufferRangeBinding(binding)) {
-        timestamp = Math.max(
-          timestamp,
-          binding.buffer instanceof DynamicBuffer
-            ? binding.buffer.updateTimestamp
-            : binding.buffer.updateTimestamp
-        );
+      } else if (!(binding instanceof Sampler)) {
+        timestamp = Math.max(timestamp, binding.buffer.updateTimestamp);
       }
     }
     return Math.max(timestamp, this.material?.getBindingsUpdateTimestamp() || 0);
@@ -1067,27 +1036,6 @@ export class Model {
     return filteredBindings;
   }
 
-  private _syncDynamicBuffers(): void {
-    if (
-      this._dynamicIndexBufferSource &&
-      this._dynamicIndexBufferSource.generation !== this._dynamicIndexBufferSource.source.generation
-    ) {
-      const resolvedIndexBuffer = this._dynamicIndexBufferSource.source.buffer;
-      this.indexBuffer = resolvedIndexBuffer;
-      this.vertexArray.setIndexBuffer(resolvedIndexBuffer);
-      this._dynamicIndexBufferSource.generation = this._dynamicIndexBufferSource.source.generation;
-      this.setNeedsRedraw('dynamic index buffer');
-    }
-
-    for (const [locationKey, entry] of Object.entries(this._dynamicAttributeBufferSources)) {
-      if (entry.generation !== entry.source.generation) {
-        this.vertexArray.setBuffer(Number(locationKey), entry.source.buffer);
-        entry.generation = entry.source.generation;
-        this.setNeedsRedraw('dynamic attribute buffer');
-      }
-    }
-  }
-
   private _syncAttachmentFormats(renderPass: RenderPass): void {
     if (this.device.type !== 'webgpu') {
       return;
@@ -1122,22 +1070,6 @@ export class Model {
 }
 
 // HELPERS
-
-function resolveModelBinding(binding: ModelBinding): Binding | null {
-  if (binding instanceof DynamicTexture) {
-    return binding.isReady ? binding.texture : null;
-  }
-
-  if (binding instanceof DynamicBuffer) {
-    return binding.buffer;
-  }
-
-  if (isBufferRangeBinding(binding)) {
-    return resolveBufferRangeBinding(binding);
-  }
-
-  return binding;
-}
 
 function asColorAttachmentFormat(format?: string | null): TextureFormatColor | null {
   return format && !isDepthStencilAttachmentFormat(format) ? (format as TextureFormatColor) : null;

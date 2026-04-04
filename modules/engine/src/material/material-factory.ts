@@ -11,10 +11,7 @@ import {Material as MaterialClass} from './material';
 type MaterialModuleProps = Partial<Record<string, Record<string, unknown>>>;
 type MaterialBindings = Record<
   string,
-  | Binding
-  | import('../dynamic-texture/dynamic-texture').DynamicTexture
-  | import('../dynamic-buffer/dynamic-buffer').DynamicBuffer
-  | import('../dynamic-buffer/dynamic-buffer').DynamicBufferRange
+  Binding | import('../dynamic-texture/dynamic-texture').DynamicTexture
 >;
 
 /** Logical bind-group slot reserved for material-owned bindings. */

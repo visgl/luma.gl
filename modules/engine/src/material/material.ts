@@ -3,15 +3,8 @@
 // Copyright (c) vis.gl contributors
 
 import type {Binding, BindingsByGroup, Device} from '@luma.gl/core';
-import {Buffer, Texture, TextureView, UniformStore} from '@luma.gl/core';
+import {Buffer, Sampler, Texture, TextureView, UniformStore} from '@luma.gl/core';
 import type {ShaderModule} from '@luma.gl/shadertools';
-import {
-  DynamicBuffer,
-  type DynamicBufferRange,
-  getDynamicBufferFromBinding,
-  isBufferRangeBinding,
-  resolveBufferRangeBinding
-} from '../dynamic-buffer/dynamic-buffer';
 import {DynamicTexture} from '../dynamic-texture/dynamic-texture';
 import {ShaderInputs} from '../shader-inputs';
 import {shaderModuleHasUniforms} from '../utils/shader-module-utils';
@@ -23,8 +16,7 @@ import {
 } from './material-factory';
 
 type MaterialModuleProps = Partial<Record<string, Record<string, unknown>>>;
-type MaterialBinding = Binding | DynamicTexture | DynamicBuffer | DynamicBufferRange;
-type MaterialBindings = Record<string, MaterialBinding>;
+type MaterialBindings = Record<string, Binding | DynamicTexture>;
 type MaterialPropsUpdate<TModuleProps extends MaterialModuleProps> = Partial<{
   [P in keyof TModuleProps]?: Partial<TModuleProps[P]>;
 }>;
@@ -80,11 +72,10 @@ export class Material<
   /** Shader inputs for the material-owned modules. */
   readonly shaderInputs: ShaderInputs<TModuleProps>;
   /** Internal binding store including uniform buffers and resource bindings. */
-  readonly bindings: Record<string, MaterialBinding> = {};
+  readonly bindings: Record<string, Binding | DynamicTexture> = {};
 
   private _uniformStore: UniformStore;
   private _bindGroupCacheToken: object = {};
-  private _dynamicBufferGenerations: Record<string, number> = {};
 
   constructor(device: Device, props: MaterialProps<TModuleProps, TBindings> = {}) {
     this.id = props.id || uid('material');
@@ -176,7 +167,7 @@ export class Material<
 
     for (const [name, binding] of Object.entries(this.bindings)) {
       if (!getModuleNameFromUniformBinding(name)) {
-        (resourceBindings as Record<string, MaterialBinding>)[name] = binding;
+        (resourceBindings as Record<string, Binding | DynamicTexture>)[name] = binding;
       }
     }
 
@@ -185,8 +176,6 @@ export class Material<
 
   /** Returns the resolved bindings, including internal uniform buffers and ready textures. */
   getBindings(): Partial<{[K in keyof TBindings]: Binding}> & Record<string, Binding> {
-    this._syncDynamicBufferCacheToken();
-
     const validBindings = {} as Partial<{[K in keyof TBindings]: Binding}> &
       Record<string, Binding>;
     const validBindingsMap = validBindings as Record<string, Binding>;
@@ -196,10 +185,6 @@ export class Material<
         if (binding.isReady) {
           validBindingsMap[name] = binding.texture;
         }
-      } else if (binding instanceof DynamicBuffer) {
-        validBindingsMap[name] = binding.buffer;
-      } else if (isBufferRangeBinding(binding)) {
-        validBindingsMap[name] = resolveBufferRangeBinding(binding);
       } else {
         validBindingsMap[name] = binding;
       }
@@ -215,7 +200,6 @@ export class Material<
 
   /** Returns the stable bind-group cache token for the requested bind group. */
   getBindGroupCacheKey(group: number): object | null {
-    this._syncDynamicBufferCacheToken();
     return group === MATERIAL_BIND_GROUP ? this._bindGroupCacheToken : null;
   }
 
@@ -227,19 +211,12 @@ export class Material<
         timestamp = Math.max(timestamp, binding.texture.updateTimestamp);
       } else if (binding instanceof Buffer || binding instanceof Texture) {
         timestamp = Math.max(timestamp, binding.updateTimestamp);
-      } else if (binding instanceof DynamicBuffer) {
-        timestamp = Math.max(timestamp, binding.updateTimestamp);
       } else if (binding instanceof DynamicTexture) {
         timestamp = binding.texture
           ? Math.max(timestamp, binding.texture.updateTimestamp)
           : Infinity;
-      } else if (isBufferRangeBinding(binding)) {
-        timestamp = Math.max(
-          timestamp,
-          binding.buffer instanceof DynamicBuffer
-            ? binding.buffer.updateTimestamp
-            : binding.buffer.updateTimestamp
-        );
+      } else if (!(binding instanceof Sampler)) {
+        timestamp = Math.max(timestamp, binding.buffer.updateTimestamp);
       }
     }
     return timestamp;
@@ -254,7 +231,7 @@ export class Material<
   }
 
   private _setOwnedBindings(
-    bindings: Partial<TBindings> | Record<string, MaterialBinding>
+    bindings: Partial<TBindings> | Record<string, Binding | DynamicTexture>
   ): boolean {
     let didChange = false;
 
@@ -273,31 +250,5 @@ export class Material<
     }
 
     return didChange;
-  }
-
-  private _syncDynamicBufferCacheToken(): void {
-    const nextGenerations: Record<string, number> = {};
-    let didChange = false;
-
-    for (const [name, binding] of Object.entries(this.bindings)) {
-      const dynamicBuffer = getDynamicBufferFromBinding(binding);
-      if (dynamicBuffer) {
-        nextGenerations[name] = dynamicBuffer.generation;
-        if (this._dynamicBufferGenerations[name] !== dynamicBuffer.generation) {
-          didChange = true;
-        }
-      }
-    }
-
-    if (
-      Object.keys(nextGenerations).length !== Object.keys(this._dynamicBufferGenerations).length
-    ) {
-      didChange = true;
-    }
-
-    this._dynamicBufferGenerations = nextGenerations;
-    if (didChange) {
-      this._bindGroupCacheToken = {};
-    }
   }
 }

@@ -110,8 +110,6 @@ export type {
 
 export type {DynamicTextureProps} from './dynamic-texture/dynamic-texture';
 export {DynamicTexture} from './dynamic-texture/dynamic-texture';
-export type {DynamicBufferProps, DynamicBufferRange} from './dynamic-buffer/dynamic-buffer';
-export {DynamicBuffer} from './dynamic-buffer/dynamic-buffer';
 
 export type {
   PickInfo,

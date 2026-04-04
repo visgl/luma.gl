@@ -31,10 +31,6 @@ declare global {
 
 const testDeviceCache = getOrCreateTestDeviceCache();
 
-type LostAwareDevice = {
-  isLost: boolean;
-};
-
 /** Includes WebGPU device if available */
 export async function getTestDevices(
   types: Readonly<('webgl' | 'webgpu' | 'null' | 'unknown')[]> = ['webgl', 'webgpu']
@@ -61,16 +57,19 @@ export async function getTestDevice(
 
 /** returns WebGPU device promise, if available */
 export async function getWebGPUTestDevice(): Promise<WebGPUDevice | null> {
-  return _refreshLostCachedTestDevice(getOrCreateWebGPUTestDevicePromise, () => {
-    testDeviceCache.webgpuDevicePromise = null;
-  });
+  const webgpuDevice = await getOrCreateWebGPUTestDevicePromise();
+  if (webgpuDevice?.isLost) {
+    if (testDeviceCache.webgpuDevicePromise) {
+      testDeviceCache.webgpuDevicePromise = null;
+    }
+    return getOrCreateWebGPUTestDevicePromise();
+  }
+  return webgpuDevice;
 }
 
 /** returns WebGL device promise, if available */
 export async function getWebGLTestDevice(): Promise<WebGLDevice> {
-  return _refreshLostCachedTestDevice(getOrCreateWebGLTestDevicePromise, () => {
-    testDeviceCache.webglDevicePromise = null;
-  });
+  return getOrCreateWebGLTestDevicePromise();
 }
 
 /** returns an offscreen WebGL device promise for presentation-context tests, if available */
@@ -202,18 +201,6 @@ async function makeNullTestDevice(): Promise<NullDevice> {
 }
 
 // HELPERS
-
-export async function _refreshLostCachedTestDevice<DeviceT extends LostAwareDevice | null>(
-  getOrCreateDevice: () => Promise<DeviceT>,
-  clearCachedDevice: () => void
-): Promise<DeviceT> {
-  const device = await getOrCreateDevice();
-  if (device?.isLost) {
-    clearCachedDevice();
-    return getOrCreateDevice();
-  }
-  return device;
-}
 
 function getOrCreateTestDeviceCache(): TestDeviceCache {
   const rootObject = globalThis as typeof globalThis & {
