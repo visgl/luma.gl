@@ -33,21 +33,13 @@ export async function loadImageBitmap(
   try {
     await image.decode();
   } catch (error) {
-    const causeMessage = error instanceof Error ? error.message : String(error);
-    throw new Error(
-      `Could not decode image "${resolvedUrl}" during loadImageBitmap(): ${causeMessage}`,
-      {cause: error}
-    );
+    throw createImageBitmapLoadError('decode', resolvedUrl, error);
   }
 
   try {
     return opts ? await createImageBitmap(image, opts) : await createImageBitmap(image);
   } catch (error) {
-    const causeMessage = error instanceof Error ? error.message : String(error);
-    throw new Error(
-      `Could not create ImageBitmap from "${resolvedUrl}" during loadImageBitmap(): ${causeMessage}`,
-      {cause: error}
-    );
+    throw createImageBitmapLoadError('create', resolvedUrl, error);
   }
 }
 
@@ -75,6 +67,18 @@ export async function loadImage(
   });
 }
 
+function createImageBitmapLoadError(
+  phase: 'decode' | 'create',
+  resolvedUrl: string,
+  error: unknown
+): Error {
+  const reason = error instanceof Error ? error.message : String(error);
+  const message =
+    phase === 'decode'
+      ? `Could not decode source image "${resolvedUrl}": ${reason}`
+      : `Could not create ImageBitmap from decoded image "${resolvedUrl}": ${reason}`;
+  return new Error(message, {cause: error});
+}
 function isAbsoluteLoadFileUrl(url: string): boolean {
   return url.startsWith('/') || /^[a-z][a-z\d+\-.]*:/i.test(url);
 }

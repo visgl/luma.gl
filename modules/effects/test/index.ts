@@ -4,6 +4,8 @@
 
 // Post-processing Modules (Shader passes)
 // Blur Filters
+import './passes/image-blur-filters/bloom.spec';
+import './passes/image-blur-filters/gaussianblur.spec';
 import './passes/image-blur-filters/tiltshift.spec';
 import './passes/image-blur-filters/triangleblur.spec';
 import './passes/image-blur-filters/zoomblur.spec';

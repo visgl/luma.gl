@@ -37,10 +37,21 @@ export {vignette} from './passes/postprocessing/image-adjust-filters/vignette';
 
 // glfx  BLUR shader modules
 export type {
+  GaussianBlurProps,
+  GaussianBlurUniforms
+} from './passes/postprocessing/image-blur-filters/gaussianblur';
+export {gaussianBlur} from './passes/postprocessing/image-blur-filters/gaussianblur';
+export type {
   TiltShiftProps,
   TiltShiftUniforms
 } from './passes/postprocessing/image-blur-filters/tiltshift';
 export {tiltShift} from './passes/postprocessing/image-blur-filters/tiltshift';
+export type {
+  BloomProps,
+  BloomUniforms
+} from './passes/postprocessing/image-blur-filters/bloom';
+export {bloom} from './passes/postprocessing/image-blur-filters/bloom';
+export {bloomShaderPassPipeline} from './passes/postprocessing/image-blur-filters/bloom-shader-pass-pipeline';
 export type {
   TriangleBlurProps,
   TriangleBlurUniforms

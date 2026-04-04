@@ -12,5 +12,5 @@ at vertices instead of fragments.
 Specular highlight color. By default the module preserves the legacy `0..255`
 authoring convention for backward compatibility.
 Color interpretation is inherited from the shared
-[`floatColors`](/Users/ibgreen/code/luma.gl/docs/api-reference/shadertools/shader-modules/float-colors.md)
+[`floatColors`](./float-colors.md)
 shader module. By default, `floatColors.useByteColors` is `true`.

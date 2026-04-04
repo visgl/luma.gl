@@ -55,11 +55,13 @@ const config = getDocusaurusConfig({
 const {
   onBrokenMarkdownLinks,
   plugins: basePlugins = [],
+  staticDirectories = [],
   ...baseConfig
 } = config;
 
 module.exports = {
   ...baseConfig,
+  staticDirectories: [...staticDirectories, '.generated/example-assets'],
   plugins: basePlugins.map((plugin) => {
     if (Array.isArray(plugin) && plugin[0] === '@cmfcmf/docusaurus-search-local') {
       return [

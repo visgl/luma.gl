@@ -16,6 +16,7 @@ import {
   SphereGeometry
 } from '@luma.gl/engine';
 import {
+  floatColors,
   lighting,
   phongMaterial,
   type ShaderModule,
@@ -293,7 +294,7 @@ fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
   let landMaskSample = textureSample(landMaskTexture, landMaskTextureSampler, surfaceUV).r;
   let landMask = smoothstep(0.4, 0.6, landMaskSample);
   let textureMix = select(0.0, 1.0, globeScene.showLandTexture != 0);
-  let baseColor = mix(vec3<f32>(0.74, 0.72, 0.66), landSample, textureMix);
+  var baseColor = mix(vec3<f32>(0.74, 0.72, 0.66), landSample, textureMix);
   let normalizedNormal = normalize(inputs.fragNormal);
   let polarNormal = normalize(inputs.fragLocalNormal);
   let latitudeMask = smoothstep(0.45, 0.72, abs(polarNormal.y));
@@ -302,7 +303,7 @@ fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
   let brightIceMask = latitudeMask * smoothstep(0.68, 0.9, landLuminance);
   let iceMask = textureMix * landMask * max(brightIceMask, southPolarMask);
   baseColor = mix(baseColor, vec3<f32>(0.95, 0.97, 1.0), iceMask);
-  let litColor = lighting_getLightColor2(
+  var litColor = lighting_getLightColor2(
     baseColor,
     globeScene.cameraPosition,
     inputs.fragPosition,
@@ -644,7 +645,12 @@ type GlobeControls = {
 };
 
 type CleanupCallback = () => void;
-type GlobeShaderInputs = {
+type LandShaderInputs = {
+  globeScene: typeof globeScene.props;
+  lighting: typeof lighting.props;
+  floatColors: typeof floatColors.props;
+};
+type OceanShaderInputs = {
   globeScene: typeof globeScene.props;
   lighting: typeof lighting.props;
 };
@@ -682,8 +688,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   landMaterial: Material<{phongMaterial: typeof phongMaterial.props}, {}>;
   oceanMaterial: Material<{waterMaterial: typeof waterMaterial.props}, {}>;
   backgroundShaderInputs: ShaderInputs<SkyboxShaderInputs>;
-  landShaderInputs: ShaderInputs<GlobeShaderInputs>;
-  oceanShaderInputs: ShaderInputs<GlobeShaderInputs>;
+  landShaderInputs: ShaderInputs<LandShaderInputs>;
+  oceanShaderInputs: ShaderInputs<OceanShaderInputs>;
   tychoSkyTexture: DynamicTexture;
   landTexture: DynamicTexture;
   waterMaskTexture: DynamicTexture;
@@ -811,11 +817,17 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       }
     });
 
-    this.landShaderInputs = new ShaderInputs<GlobeShaderInputs>({
+    this.landShaderInputs = new ShaderInputs<LandShaderInputs>({
       globeScene,
-      lighting
+      lighting,
+      floatColors
     });
-    this.oceanShaderInputs = new ShaderInputs<GlobeShaderInputs>({
+    this.landShaderInputs.setProps({
+      floatColors: {
+        useByteColors: true
+      }
+    });
+    this.oceanShaderInputs = new ShaderInputs<OceanShaderInputs>({
       globeScene,
       lighting
     });

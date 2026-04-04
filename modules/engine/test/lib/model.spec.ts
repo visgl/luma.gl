@@ -26,7 +26,7 @@ struct AppFrameUniforms {
   scale: f32
 };
 
-@group(0) @binding(0) var<uniform> appFrame: AppFrameUniforms;
+@group(0) @binding(auto) var<uniform> appFrame: AppFrameUniforms;
 
 @vertex fn vertexMain() -> @builtin(position) vec4<f32> {
   return vec4<f32>(appFrame.scale, 0.0, 0.0, 1.0);
