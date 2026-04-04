@@ -4479,6 +4479,17 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@luma.gl/text@npm:~9.3.0, @luma.gl/text@workspace:modules/text":
+  version: 0.0.0-use.local
+  resolution: "@luma.gl/text@workspace:modules/text"
+  dependencies:
+    "@math.gl/core": "npm:^4.1.0"
+    "@math.gl/polygon": "npm:^4.1.0"
+  peerDependencies:
+    "@luma.gl/engine": ~9.3.0
+  languageName: unknown
+  linkType: soft
+
 "@luma.gl/webgl@npm:9.3.0-alpha.11":
   version: 9.3.0-alpha.11
   resolution: "@luma.gl/webgl@npm:9.3.0-alpha.11"
@@ -8620,9 +8631,9 @@ __metadata:
   linkType: hard
 
 "caniuse-lite@npm:^1.0.30001688":
-  version: 1.0.30001778
-  resolution: "caniuse-lite@npm:1.0.30001778"
-  checksum: 10c0/830042e0a6af0796d3da4d9575f60966b92308c5504577993b618dd196c835d023dbd725fa8b47c33b74c487d75ce01ee3ebd6e7a078714989513110e8ff80e5
+  version: 1.0.30001715
+  resolution: "caniuse-lite@npm:1.0.30001715"
+  checksum: 10c0/0109a7da797ffbe1aa197baa5242b205011098eecec1087ef3d0c58ceea19be325ab6679b2751a78660adc3051a9f77e99d5789938fd1eb1235e6fdf6a1dbf8e
   languageName: node
   linkType: hard
 
@@ -15198,6 +15209,22 @@ __metadata:
     "@luma.gl/shadertools": "npm:9.3.0-alpha.11"
     "@luma.gl/webgl": "npm:9.3.0-alpha.11"
     "@luma.gl/webgpu": "npm:9.3.0-alpha.11"
+    "@math.gl/core": "npm:^4.1.0"
+    typescript: "npm:^5.9.3"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
+"luma.gl-examples-text-3d@workspace:examples/showcase/text-3d":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-text-3d@workspace:examples/showcase/text-3d"
+  dependencies:
+    "@luma.gl/core": "npm:~9.3.0"
+    "@luma.gl/engine": "npm:~9.3.0"
+    "@luma.gl/shadertools": "npm:~9.3.0"
+    "@luma.gl/text": "npm:~9.3.0"
+    "@luma.gl/webgl": "npm:~9.3.0"
+    "@luma.gl/webgpu": "npm:~9.3.0"
     "@math.gl/core": "npm:^4.1.0"
     typescript: "npm:^5.9.3"
     vite: "npm:^8.0.0"
@@ -23819,8 +23846,8 @@ __metadata:
   linkType: hard
 
 "ws@npm:^8.18.0":
-  version: 8.20.0
-  resolution: "ws@npm:8.20.0"
+  version: 8.18.1
+  resolution: "ws@npm:8.18.1"
   peerDependencies:
     bufferutil: ^4.0.1
     utf-8-validate: ">=5.0.2"
@@ -23829,7 +23856,7 @@ __metadata:
       optional: true
     utf-8-validate:
       optional: true
-  checksum: 10c0/956ac5f11738c914089b65878b9223692ace77337ba55379ae68e1ecbeae9b47a0c6eb9403688f609999a58c80d83d99865fe0029b229d308b08c1ef93d4ea14
+  checksum: 10c0/e498965d6938c63058c4310ffb6967f07d4fa06789d3364829028af380d299fe05762961742971c764973dce3d1f6a2633fe8b2d9410c9b52e534b4b882a99fa
   languageName: node
   linkType: hard
 
