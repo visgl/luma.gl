@@ -4,7 +4,7 @@
 
 import type {Device} from '../device';
 import {Resource, ResourceProps} from './resource';
-// import { log } from '../../utils/log';
+import {log} from '../../utils/log';
 import {uid} from '../../utils/uid';
 import {CompilerMessage} from '../types/compiler-message';
 import {formatCompilerLog} from '../../adapter-utils/format-compiler-log';
@@ -85,11 +85,15 @@ export abstract class Shader extends Resource<ShaderProps> {
         break;
     }
 
-    const messages = await this.getCompilationInfo();
-    if (trigger === 'warnings' && messages?.length === 0) {
-      return;
+    try {
+      const messages = await this.getCompilationInfo();
+      if (trigger === 'warnings' && messages?.length === 0) {
+        return;
+      }
+      this._displayShaderLog(messages, this.id);
+    } catch (error) {
+      log.warn(`Shader ${this.id}: failed to fetch compilation info during debug logging`, error)();
     }
-    this._displayShaderLog(messages, this.id);
   }
 
   // PRIVATE

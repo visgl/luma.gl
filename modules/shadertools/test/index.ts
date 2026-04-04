@@ -46,6 +46,7 @@ import './modules/lighting/lights.spec';
 import './modules/lighting/dirlight.spec';
 import './modules/lighting/phong-material.spec';
 import './modules/lighting/gouraud-material.spec';
+import './modules/lighting/water-material.spec';
 import './modules/lighting/pbr-material.spec';
 
 // Engine

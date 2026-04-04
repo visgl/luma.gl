@@ -49,11 +49,17 @@ test('gltf#GLTFAnimator updates node animation channels', t => {
   });
 
   animator.setTime(500);
+  animator.animate(500);
 
   t.deepEqual(
     Array.from(node.position),
     [1, 2, 3],
     'node translation is updated at the sampled time'
+  );
+  t.equal(
+    animator.animations,
+    animator.getAnimations(),
+    'compatibility animations alias is preserved'
   );
 
   t.end();

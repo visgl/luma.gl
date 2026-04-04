@@ -115,6 +115,11 @@ export {gouraudMaterial} from './modules/lighting/gouraud-material/gouraud-mater
 export type {PhongMaterialProps} from './modules/lighting/phong-material/phong-material';
 export {phongMaterial} from './modules/lighting/phong-material/phong-material';
 export type {
+  WaterMaterialProps,
+  WaterMaterialUniforms
+} from './modules/lighting/water-material/water-material';
+export {waterMaterial} from './modules/lighting/water-material/water-material';
+export type {
   PBRMaterialBindings,
   PBRMaterialProps,
   PBRMaterialUniforms

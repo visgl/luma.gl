@@ -5,6 +5,8 @@
 // luma.gl Engine API
 
 // Animation
+export type {AnimationClipControllerProps} from './animation/animator';
+export {AnimationClipController, Animator} from './animation/animator';
 export {Timeline} from './animation/timeline';
 export {KeyFrames} from './animation/key-frames';
 export type {AnimationProps} from './animation-loop/animation-props';
@@ -77,7 +79,12 @@ export {ShaderInputs} from './shader-inputs';
 
 // Application Utilities
 export {makeRandomGenerator} from './application-utils/random';
-export {setPathPrefix, loadImage, loadImageBitmap} from './application-utils/load-file';
+export {
+  setPathPrefix,
+  loadImage,
+  loadImageBitmap,
+  _resolveLoadFileUrl
+} from './application-utils/load-file';
 
 // EXPERIMENTAL
 export type {ShaderPassRendererProps} from './passes/shader-pass-renderer';
