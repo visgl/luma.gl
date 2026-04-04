@@ -82,8 +82,8 @@ function addShape(shape: Shape, options: ExtrudeOptions, verticesArray: number[]
   }
 
   const shapePoints = shape.extractPoints(curveSegments)
-  let vertices = shapePoints.shape
-  const holes = shapePoints.holes
+  let vertices = cleanContour(shapePoints.shape)
+  const holes = shapePoints.holes.map((hole) => cleanContour(hole))
 
   const reverse = !ShapeUtils.isClockWise(vertices)
   if (reverse) {
@@ -372,6 +372,27 @@ function addShape(shape: Shape, options: ExtrudeOptions, verticesArray: number[]
   function addUV(vector: Vector2) {
     uvArray.push(vector.x, vector.y)
   }
+}
+
+/** Removes adjacent duplicates and a repeated closing vertex from a contour. */
+function cleanContour(points: Vector2[]): Vector2[] {
+  const cleanedPoints: Vector2[] = []
+
+  for (const point of points) {
+    const previousPoint = cleanedPoints[cleanedPoints.length - 1]
+    if (!previousPoint || !point.equals(previousPoint)) {
+      cleanedPoints.push(point)
+    }
+  }
+
+  if (
+    cleanedPoints.length > 2 &&
+    cleanedPoints[0].equals(cleanedPoints[cleanedPoints.length - 1])
+  ) {
+    cleanedPoints.pop()
+  }
+
+  return cleanedPoints
 }
 
 /** Provides UV generation helpers for extruded meshes. */

@@ -69,6 +69,7 @@ export const InstancingExample: React.FC = props => (
 export const Text3DExample: React.FC = props => (
   <LumaExample
     id="text-3d"
+    title="3D Text"
     directory="showcase"
     template={Text3DApp}
     config={exampleConfig}

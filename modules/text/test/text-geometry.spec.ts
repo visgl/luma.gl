@@ -37,7 +37,36 @@ test('TextGeometry exposes luma.gl attribute layout', t => {
   t.end()
 })
 
-test.skip('extrusion preserves holes in polygonal glyphs', t => {
+test('Font can center each line independently', t => {
+  const font = parseFont(simpleFont)
+  const shapes = font.generateShapes('A\nAA', 10, 2, {align: 'center'})
+
+  t.equal(shapes.length, 3, 'each glyph produced a shape')
+
+  const lineBounds = new Map<number, {minX: number; maxX: number}>()
+  for (const shape of shapes) {
+    const points = shape.extractPoints(2).shape
+    const centerY = Math.round(((Math.min(...points.map(point => point.y)) + Math.max(...points.map(point => point.y))) / 2) * 1000)
+    const minX = Math.min(...points.map(point => point.x))
+    const maxX = Math.max(...points.map(point => point.x))
+    const existingBounds = lineBounds.get(centerY)
+
+    if (existingBounds) {
+      existingBounds.minX = Math.min(existingBounds.minX, minX)
+      existingBounds.maxX = Math.max(existingBounds.maxX, maxX)
+    } else {
+      lineBounds.set(centerY, {minX, maxX})
+    }
+  }
+
+  const [firstLineBounds, secondLineBounds] = [...lineBounds.values()]
+  const firstLineCenter = (firstLineBounds.minX + firstLineBounds.maxX) / 2
+  const secondLineCenter = (secondLineBounds.minX + secondLineBounds.maxX) / 2
+  t.ok(Math.abs(firstLineCenter - secondLineCenter) < 0.0001, 'line centers align horizontally')
+  t.end()
+})
+
+test('extrusion preserves holes in polygonal glyphs', t => {
   const font = parseFont(simpleFont)
   const shapes = font.generateShapes('A', 20, 4)
   const attributes = extrudeShapes(shapes, {depth: 2, bevelEnabled: false, curveSegments: 4})

@@ -11,7 +11,7 @@ import {parseFont, TextGeometry} from '@luma.gl/text'
 import {helvetiker} from './helvetiker-font'
 
 export const title = '3D Text'
-export const description = 'Star Wars-style opening crawl built with extruded text geometry.'
+export const description = 'Deck.gl-inspired opening crawl built with extruded text geometry.'
 
 const WGSL_SHADER = /* wgsl */ `
 struct AppUniforms {
@@ -147,31 +147,81 @@ const app: ShaderModule<AppUniforms, AppUniforms> = {
 const font = parseFont(helvetiker)
 
 const crawlText = [
+  '',
+  '',
+  '',
+  '',
+  '',
+  '',
+  '',
+  '',
+  '',
+  '',
+  '',
+  '',
   'EPISODE IV',
   'A NEW HOPE',
   '',
-  'It is a period of civil war.',
-  'Rebel spaceships, striking',
-  'from a hidden base, have won',
-  'their first victory against',
-  'the evil Galactic Empire.'
+  'It is a period of rapid',
+  'development in visualization',
+  'technology.',
+  '',
+  'A new generation of GPU',
+  'powered frameworks has emerged.',
+  'deck.gl leads the fleet,',
+  'projecting vast geospatial',
+  'datasets into motion with',
+  'layers, lighting, and',
+  'precision interaction.',
+  '',
+  'From hidden shaders inside',
+  'luma.gl, the rendering',
+  'engine supplies the power',
+  'needed to navigate dense',
+  'point clouds, global trips,',
+  'terrain, and worlds of',
+  'streaming data.',
+  '',
+  'Behind the scenes,',
+  'loaders.gl retrieves',
+  'tiles, textures, scenes,',
+  'and tabular formats from',
+  'distant systems, decoding',
+  'massive payloads into',
+  'forms the GPU can wield.',
+  '',
+  'Alongside it, math.gl',
+  'keeps vectors, matrices,',
+  'projections, and precision',
+  'calculations in formation,',
+  'guiding every camera move,',
+  'geospatial transform, and',
+  'animated flight path.',
+  '',
+  'Together they form a',
+  'constellation of vis.gl',
+  'tools, helping developers',
+  'build interactive worlds',
+  'from data, light, motion,',
+  'and maps at galactic scale.'
 ].join('\n')
 
 export default class TextAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = `
 <p>Extrudes text geometry using a typeface JSON font with beveling.</p>
-<p>The text scrolls into deep space in homage to the Star Wars opening crawl.</p>
+<p>The text scrolls into deep space with deck.gl-flavored opening crawl copy.</p>
 <p>Enable canvas antialiasing or increase bevel and curve segments if the edges shimmer.</p>
 `
 
   modelMatrix = new Matrix4()
   normalMatrix = new Matrix4()
-  viewMatrix = new Matrix4().lookAt({eye: [0, 90, 520], center: [0, 80, -420]})
+  viewMatrix = new Matrix4().lookAt({eye: [0, 130, 980], center: [0, 110, -700]})
   projectionMatrix = new Matrix4()
   shaderInputs = new ShaderInputs<{app: typeof app.props}>({app})
   model: Model
   /** Horizontal translation that centers the generated text geometry. */
   geometryOffset: [number, number, number]
+  initialCrawlProgress = 0.42
 
   constructor({device}: AnimationProps) {
     super()
@@ -190,13 +240,14 @@ export default class TextAnimationLoopTemplate extends AnimationLoopTemplate {
     // Reduced tessellation to stay well under default WebGPU buffer limits
     const geometry = new TextGeometry(crawlText, {
       font,
-      size: 78,
-      depth: 20,
+      align: 'center',
+      size: 56,
+      depth: 16,
       bevelEnabled: true,
-      bevelThickness: 3.5,
-      bevelSize: 5,
-      bevelSegments: 3,
-      curveSegments: 6
+      bevelThickness: 2.5,
+      bevelSize: 3.5,
+      bevelSegments: 2,
+      curveSegments: 4
     })
 
     const geometryAttributes = geometry.getAttributes()
@@ -250,17 +301,17 @@ export default class TextAnimationLoopTemplate extends AnimationLoopTemplate {
 
   onRender({device, tick, aspect}: AnimationProps) {
     const elapsedSeconds = tick * 0.016
-    const crawlDurationSeconds = (46 / 5) * 3
-    const crawlProgress = (elapsedSeconds % crawlDurationSeconds) / crawlDurationSeconds
-    const depthOffset = -120 - crawlProgress * 520
-    const verticalOffset = -220 + crawlProgress * 320
+    const crawlDurationSeconds = 21
+    const crawlProgress =
+      (this.initialCrawlProgress + elapsedSeconds / crawlDurationSeconds + 1) % 1
+    const depthOffset = -560 - crawlProgress * 600
+    const verticalOffset = -980 + crawlProgress * 960
 
     this.modelMatrix
       .identity()
       .translate([0, verticalOffset, depthOffset])
       .rotateX(-0.9)
-      .rotateZ(0.08)
-      .scale([1.12, 1.12, 1])
+      .scale([0.72, 0.72, 1])
       .translate(this.geometryOffset)
 
     this.normalMatrix.copy(this.modelMatrix).invert().transpose()
@@ -273,7 +324,7 @@ export default class TextAnimationLoopTemplate extends AnimationLoopTemplate {
         projectionMatrix: this.projectionMatrix,
         normalMatrix: this.normalMatrix,
         time: tick * 0.016,
-        fade: [-220, -80, 380, 620]
+        fade: [-820, -360, 620, 1040]
       }
     })
 

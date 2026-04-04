@@ -39,6 +39,12 @@ export type TypefaceFontData = {
   underlineThickness: number
 }
 
+/** Layout options applied while generating glyph shapes. */
+export type TextLayoutOptions = {
+  /** Horizontal alignment applied independently to each line. */
+  align?: 'left' | 'center'
+}
+
 /** Font wrapper that can generate shapes for strings. */
 export class Font {
   /** Discriminator flag matching THREE.js fonts. */
@@ -54,9 +60,9 @@ export class Font {
   }
 
   /** Converts the provided text into a collection of shapes. */
-  generateShapes(text: string, size = 100, divisions = 12): Shape[] {
+  generateShapes(text: string, size = 100, divisions = 12, options: TextLayoutOptions = {}): Shape[] {
     const shapes: Shape[] = []
-    const paths = createPaths(text, size, this.data, divisions)
+    const paths = createPaths(text, size, this.data, divisions, options)
     for (const path of paths) {
       shapes.push(...path.toShapes())
     }
@@ -70,27 +76,52 @@ export function parseFont(data: TypefaceFontData): Font {
 }
 
 /** Builds ShapePath instances for the supplied text string. */
-function createPaths(text: string, size: number, data: TypefaceFontData, divisions: number): ShapePath[] {
-  const characters = Array.from(text)
+function createPaths(
+  text: string,
+  size: number,
+  data: TypefaceFontData,
+  divisions: number,
+  options: TextLayoutOptions
+): ShapePath[] {
+  const lines = text.split('\n')
   const scale = size / data.resolution
   const lineHeight = (data.boundingBox.yMax - data.boundingBox.yMin + data.underlineThickness) * scale
+  const align = options.align ?? 'left'
 
   const paths: ShapePath[] = []
-  let offsetX = 0
   let offsetY = 0
 
-  for (const character of characters) {
-    if (character === '\n') {
-      offsetX = 0
-      offsetY -= lineHeight
-    } else {
+  for (const line of lines) {
+    let offsetX = 0
+    if (align === 'center') {
+      offsetX = -measureLineWidth(line, data, scale) / 2
+    }
+
+    for (const character of Array.from(line)) {
       const result = createPath(character, scale, offsetX, offsetY, data, divisions)
       offsetX += result.offsetX
       paths.push(result.path)
     }
+
+    offsetY -= lineHeight
   }
 
   return paths
+}
+
+/** Computes the total advance width for a line of text. */
+function measureLineWidth(line: string, data: TypefaceFontData, scale: number): number {
+  let width = 0
+
+  for (const character of Array.from(line)) {
+    const glyph = data.glyphs[character] ?? data.glyphs['?']
+    if (!glyph) {
+      throw new Error(`Font: character "${character}" is not available in ${data.familyName}`)
+    }
+    width += glyph.ha * scale
+  }
+
+  return width
 }
 
 /** Converts a single character into a ShapePath. */

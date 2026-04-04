@@ -11,6 +11,7 @@ import helvetiker from './fonts/helvetiker_regular.typeface.json'
 const font = parseFont(helvetiker)
 const geometry = new TextGeometry('Hello luma.gl', {
   font,
+  align: 'center',
   size: 24,
   depth: 4,
   curveSegments: 8,

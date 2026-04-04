@@ -6,9 +6,9 @@
 // eslint-disable-next-line import/no-unresolved
 import {Geometry, type GeometryProps} from '@luma.gl/engine'
 import {extrudeShapes, type ExtrudeOptions} from './extrude'
-import {Font} from './font'
+import {Font, type TextLayoutOptions} from './font'
 
-export type TextGeometryOptions = ExtrudeOptions & {
+export type TextGeometryOptions = ExtrudeOptions & TextLayoutOptions & {
   /** Typeface used to generate glyph shapes. */
   font: Font
   /** Desired font size for generated shapes. */
@@ -21,9 +21,9 @@ export type TextGeometryOptions = ExtrudeOptions & {
 export class TextGeometry extends Geometry {
   /** Creates geometry buffers representing the provided text. */
   constructor(text: string, options: TextGeometryOptions) {
-    const {font, size = 100, id, ...extrudeOptions} = options
+    const {font, size = 100, align, id, ...extrudeOptions} = options
     const curveSegments = extrudeOptions.curveSegments ?? 12
-    const shapes = font.generateShapes(text, size, curveSegments)
+    const shapes = font.generateShapes(text, size, curveSegments, {align})
     const {positions, normals, uvs} = extrudeShapes(shapes, {
       depth: 50,
       bevelEnabled: false,
