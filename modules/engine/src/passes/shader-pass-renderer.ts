@@ -142,8 +142,23 @@ export class ShaderPassRenderer {
       return sourceTexture.texture;
     }
 
-    let previousTexture: Texture = sourceTexture.texture;
-    let previousFramebuffer: Framebuffer | null = null;
+    // Seed the first swap framebuffer with the source image before running any subpasses.
+    // Postprocessing shaders derive texSize from sourceTexture, so the first pass must sample
+    // a drawing-buffer-sized intermediate texture rather than the original image dimensions.
+    this.textureModel.setProps({backgroundTexture: sourceTexture});
+
+    const sourceFramebuffer = this.swapFramebuffers.current;
+    const seedRenderPass = this.device.beginRenderPass({
+      id: 'shader-pass-renderer-seed-source',
+      framebuffer: sourceFramebuffer,
+      clearColor: [0, 0, 0, 1],
+      clearDepth: false
+    });
+    this.textureModel.draw(seedRenderPass);
+    seedRenderPass.end();
+
+    let previousFramebuffer: Framebuffer | null = sourceFramebuffer;
+    let previousTexture: Texture = getFramebufferTexture(sourceFramebuffer);
     for (const passRenderer of this.passRenderers) {
       for (const execution of passRenderer.subPassExecutions) {
         const outputName = execution.output || 'previous';
