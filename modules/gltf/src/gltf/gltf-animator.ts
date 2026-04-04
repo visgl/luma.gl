@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {log} from '@luma.gl/core';
-import {GroupNode, Material} from '@luma.gl/engine';
+import {AnimationClipController, Animator, GroupNode, Material} from '@luma.gl/engine';
 import {
   GLTFAnimation,
   GLTFMaterialAnimationChannel,
@@ -19,35 +18,23 @@ import {
 } from '../pbr/texture-transform';
 
 /** Construction props for a single glTF animation controller. */
-type GLTFSingleAnimatorProps = {
+type GLTFAnimationClipProps = {
   /** Animation data to evaluate. */
   animation: GLTFAnimation;
   /** Mapping from glTF node ids to scenegraph nodes. */
   gltfNodeIdToNodeMap: Map<string, GroupNode>;
   /** Materials aligned with the source glTF materials array. */
   materials?: Material[];
-  /** Start time in seconds. */
-  startTime?: number;
-  /** Whether playback is active. */
-  playing?: boolean;
-  /** Playback speed multiplier. */
-  speed?: number;
 };
 
 /** Evaluates one glTF animation against the generated scenegraph. */
-class GLTFSingleAnimator {
+export class GLTFAnimationClip extends AnimationClipController {
   /** Animation definition being played. */
   animation: GLTFAnimation;
   /** Target scenegraph lookup table. */
   gltfNodeIdToNodeMap: Map<string, GroupNode>;
   /** Materials aligned with the source glTF materials array. */
   materials: Material[];
-  /** Playback start time in seconds. */
-  startTime: number = 0;
-  /** Whether playback is currently enabled. */
-  playing: boolean = true;
-  /** Playback speed multiplier. */
-  speed: number = 1;
   /** Mutable runtime texture-transform state for animated material slots. */
   materialTextureTransformState = new Map<
     Material,
@@ -55,11 +42,13 @@ class GLTFSingleAnimator {
   >();
 
   /** Creates a single-animation controller. */
-  constructor(props: GLTFSingleAnimatorProps) {
+  constructor(props: GLTFAnimationClipProps) {
+    super({name: props.animation.name || 'unnamed'});
     this.animation = props.animation;
     this.gltfNodeIdToNodeMap = props.gltfNodeIdToNodeMap;
     this.materials = props.materials || [];
     this.animation.name ||= 'unnamed';
+    this.name = this.animation.name;
     Object.assign(this, props);
 
     if (
@@ -72,15 +61,8 @@ class GLTFSingleAnimator {
     }
   }
 
-  /** Advances the animation to the supplied wall-clock time in milliseconds. */
-  setTime(timeMs: number) {
-    if (!this.playing) {
-      return;
-    }
-
-    const absTime = timeMs / 1000;
-    const time = (absTime - this.startTime) * this.speed;
-
+  /** Applies the resolved local clip time in seconds. */
+  protected override applyTime(time: number): void {
     this.animation.channels.forEach(channel => {
       if (channel.type === 'node') {
         const {sampler, targetNodeId, path} = channel;
@@ -128,36 +110,19 @@ export type GLTFAnimatorProps = {
 };
 
 /** Coordinates playback of every animation found in a glTF scene. */
-export class GLTFAnimator {
-  /** Individual animation controllers. */
-  animations: GLTFSingleAnimator[];
-
+export class GLTFAnimator extends Animator<GLTFAnimationClip> {
   /** Creates an animator for the supplied glTF scenegraph. */
   constructor(props: GLTFAnimatorProps) {
-    this.animations = props.animations.map((animation, index) => {
-      const name = animation.name || `Animation-${index}`;
-      return new GLTFSingleAnimator({
-        gltfNodeIdToNodeMap: props.gltfNodeIdToNodeMap,
-        materials: props.materials,
-        animation: {name, channels: animation.channels}
-      });
-    });
-  }
-
-  /** @deprecated Use .setTime(). Will be removed (deck.gl is using this) */
-  animate(time: number): void {
-    log.warn('GLTFAnimator#animate is deprecated. Use GLTFAnimator#setTime instead')();
-    this.setTime(time);
-  }
-
-  /** Advances every animation to the supplied wall-clock time in milliseconds. */
-  setTime(time: number): void {
-    this.animations.forEach(animation => animation.setTime(time));
-  }
-
-  /** Returns the per-animation controllers managed by this animator. */
-  getAnimations() {
-    return this.animations;
+    super(
+      props.animations.map((animation, index) => {
+        const name = animation.name || `Animation-${index}`;
+        return new GLTFAnimationClip({
+          gltfNodeIdToNodeMap: props.gltfNodeIdToNodeMap,
+          materials: props.materials,
+          animation: {name, channels: animation.channels}
+        });
+      })
+    );
   }
 }
 

@@ -314,9 +314,9 @@ export class PipelineFactory {
     const colorAttachmentFormats = props.colorAttachmentFormats ?? [
       this.device.preferredColorFormat
     ];
-    const depthStencilAttachmentFormat = props.parameters?.depthWriteEnabled
-      ? props.depthStencilAttachmentFormat || this.device.preferredDepthFormat
-      : null;
+    const depthStencilAttachmentFormat =
+      props.depthStencilAttachmentFormat ??
+      (props.parameters?.depthWriteEnabled ? this.device.preferredDepthFormat : null);
 
     return this._getHash(
       JSON.stringify({

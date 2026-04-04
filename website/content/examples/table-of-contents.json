@@ -12,7 +12,8 @@
       "showcase/gltf",
       "showcase/postprocessing",
       "showcase/persistence",
-      "showcase/dof"
+      "showcase/dof",
+      "showcase/globe"
     ]
   },
   {

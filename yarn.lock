@@ -15189,6 +15189,21 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"luma.gl-examples-showcase-globe@workspace:examples/showcase/globe":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-showcase-globe@workspace:examples/showcase/globe"
+  dependencies:
+    "@luma.gl/core": "npm:9.3.0-alpha.11"
+    "@luma.gl/engine": "npm:9.3.0-alpha.11"
+    "@luma.gl/shadertools": "npm:9.3.0-alpha.11"
+    "@luma.gl/webgl": "npm:9.3.0-alpha.11"
+    "@luma.gl/webgpu": "npm:9.3.0-alpha.11"
+    "@math.gl/core": "npm:^4.1.0"
+    typescript: "npm:^5.9.3"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
 "luma.gl-examples-texture-3d@workspace:examples/api/texture-3d":
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-texture-3d@workspace:examples/api/texture-3d"

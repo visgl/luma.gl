@@ -25,6 +25,7 @@ import GLTFApp from '../../examples/showcase/gltf/app';
 import InstancingApp from '../../examples/showcase/instancing/app';
 import PersistenceApp from '../../examples/showcase/persistence/app';
 import PostprocessingApp from '../../examples/showcase/postprocessing/app';
+import GlobeApp from '../../examples/showcase/globe/app';
 // import WanderingApp from '../../examples/showcase/wandering/app';
 
 import HelloTriangleGeometryApp from '../../examples/tutorials/hello-triangle-geometry/app';
@@ -80,6 +81,17 @@ export const PostprocessingExample: React.FC = props => (
     id="postprocessing"
     directory="showcase"
     template={PostprocessingApp}
+    config={exampleConfig}
+    {...props}
+  />
+);
+
+export const GlobeExample: React.FC = props => (
+  <LumaExample
+    id="globe"
+    title="Globe"
+    directory="showcase"
+    template={GlobeApp}
     config={exampleConfig}
     {...props}
   />

@@ -11,6 +11,11 @@ export function setPathPrefix(prefix: string) {
   pathPrefix = prefix;
 }
 
+/** @internal */
+export function _resolveLoadFileUrl(url: string): string {
+  return isAbsoluteLoadFileUrl(url) ? url : pathPrefix + url;
+}
+
 /**
  * Loads ImageBitmap asynchronously. Respects setPathPrefix.
  * image.crossOrigin can be set via opts.crossOrigin, default to 'anonymous'
@@ -21,7 +26,7 @@ export async function loadImageBitmap(
   opts?: {crossOrigin?: string} & ImageBitmapOptions
 ): Promise<ImageBitmap> {
   const image = new Image();
-  const resolvedUrl = url.startsWith('http') ? url : pathPrefix + url;
+  const resolvedUrl = _resolveLoadFileUrl(url);
   image.crossOrigin = opts?.crossOrigin || 'anonymous';
   image.src = resolvedUrl;
 
@@ -51,10 +56,11 @@ export async function loadImage(
   return await new Promise((resolve, reject) => {
     try {
       const image = new Image();
+      const resolvedUrl = _resolveLoadFileUrl(url);
       image.onload = () => resolve(image);
-      image.onerror = () => reject(new Error(`Could not load image ${url}.`));
+      image.onerror = () => reject(new Error(`Could not load image ${resolvedUrl}.`));
       image.crossOrigin = opts?.crossOrigin || 'anonymous';
-      image.src = url.startsWith('http') ? url : pathPrefix + url;
+      image.src = resolvedUrl;
     } catch (error) {
       reject(error);
     }
@@ -67,7 +73,13 @@ function createImageBitmapLoadError(
   error: unknown
 ): Error {
   const reason = error instanceof Error ? error.message : String(error);
-  const phaseLabel =
-    phase === 'decode' ? 'decode source image' : 'create ImageBitmap from decoded image';
-  return new Error(`Could not ${phaseLabel} "${resolvedUrl}": ${reason}`);
+  const message =
+    phase === 'decode'
+      ? `Could not decode source image "${resolvedUrl}": ${reason}`
+      : `Could not create ImageBitmap from decoded image "${resolvedUrl}": ${reason}`;
+  return new Error(message, {cause: error});
+}
+
+function isAbsoluteLoadFileUrl(url: string): boolean {
+  return url.startsWith('/') || /^[a-z][a-z\d+\-.]*:/i.test(url);
 }

@@ -165,6 +165,45 @@ test('RenderPipeline bind-group cache only invalidates when binding identities c
   t.end();
 });
 
+test('RenderPipeline creates a depth attachment descriptor when an explicit WebGPU depth format is supplied', async t => {
+  const webgpuDevice = await getWebGPUTestDevice();
+
+  if (!webgpuDevice) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const shader = webgpuDevice.createShader({source: BUILTIN_ONLY_RENDER_SOURCE});
+  const renderPipeline = webgpuDevice.createRenderPipeline({
+    vs: shader,
+    fs: shader,
+    topology: 'triangle-list',
+    colorAttachmentFormats: ['bgra8unorm'],
+    depthStencilAttachmentFormat: 'depth24plus'
+  }) as unknown as {descriptor?: GPURenderPipelineDescriptor | null; destroy(): void};
+
+  t.equal(
+    renderPipeline.descriptor?.depthStencil?.format,
+    'depth24plus',
+    'explicit depth attachment formats are preserved even when depth writes are disabled'
+  );
+  t.equal(
+    renderPipeline.descriptor?.depthStencil?.depthWriteEnabled,
+    false,
+    'explicit depth attachment formats default depthWriteEnabled to false'
+  );
+  t.equal(
+    renderPipeline.descriptor?.depthStencil?.depthCompare,
+    'less-equal',
+    'explicit depth attachment formats default depthCompare'
+  );
+
+  renderPipeline.destroy();
+  shader.destroy();
+  t.end();
+});
+
 test('WebGPU RenderPipeline marks init failures as errored and skips draw', async t => {
   const webgpuDevice = await getWebGPUTestDevice();
 

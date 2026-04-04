@@ -12,7 +12,11 @@ export class NullVertexArray extends VertexArray {
   device: NullDevice;
   readonly handle = null;
 
-  // Create a VertexArray
+  /**
+   * Creates a null-device vertex array used by tests and non-rendering code paths.
+   * @param device The device that owns the vertex array.
+   * @param props Vertex-array initialization properties.
+   */
   constructor(device: NullDevice, props: VertexArrayProps) {
     super(device, props);
     this.device = device;
@@ -22,18 +26,24 @@ export class NullVertexArray extends VertexArray {
     this.indexBuffer = indexBuffer;
   }
 
-  /** Set a location in vertex attributes array to a buffer, enables the location, sets divisor */
+  /**
+   * Stores a buffer in one logical slot for testing purposes.
+   * @param location Buffer slot or attribute location.
+   * @param attributeBuffer Buffer supplying the test data.
+   */
   setBuffer(location: number, attributeBuffer: Buffer): void {
-    const attributeInfo = this.attributeInfos[location];
-    if (!attributeInfo) {
+    if (location < 0 || location >= this.maxVertexAttributes) {
       throw new Error(`Unknown attribute location ${location}`);
     }
     this.attributes[location] = attributeBuffer;
   }
 
+  /** No-op for the null device. */
   bindBeforeRender(): void {}
 
+  /** No-op for the null device. */
   unbindAfterRender(): void {}
 
+  /** No-op for the null device. */
   override setConstantWebGL(location: number, value: TypedArray | null): void {}
 }
