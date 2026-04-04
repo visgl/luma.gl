@@ -415,7 +415,9 @@ test('Device.writeBufferViaCommandEncoder preserves WebGPU upload order and reti
     'webgpu encoder uploads stay ordered with subsequent buffer copies'
   );
 
-  await device.handle.queue.onSubmittedWorkDone();
+  const fence = device.createFence();
+  await fence.signaled;
+  fence.destroy();
   t.equal(
     stats.get('Buffers Active').count - beforeBufferCount,
     2,
