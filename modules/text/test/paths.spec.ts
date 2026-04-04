@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from 'tape-promise/tape.js';
+import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {Vector2} from '@math.gl/core';
 import {CurvePath} from '../src/paths/curve-path';
 import {CubicBezierCurve, LineCurve, QuadraticBezierCurve, SplineCurve} from '../src/paths/curves';
