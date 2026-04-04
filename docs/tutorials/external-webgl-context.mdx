@@ -32,7 +32,9 @@ const map = new maplibregl.Map({
 
 map.on('load', async () => {
   const webglContext = map.getCanvas().getContext('webgl2') as WebGL2RenderingContext
-  const device = await webgl2Adapter.attach(webglContext, {createCanvasContext: {autoResize: false}})
+  const device = await webgl2Adapter.attach(webglContext, {
+    createCanvasContext: {autoResize: false}
+  })
 
   // Keep the WebGLCanvasContext aligned with MapLibre's drawing buffer
   device.canvasContext.resize({width: webglContext.drawingBufferWidth, height: webglContext.drawingBufferHeight})
@@ -88,6 +90,19 @@ map.on('resize', () => {
   })
 })
 ```
+
+If you are matching an overlaid map canvas such as deck.gl `MapboxOverlay` or a MapLibre custom overlay that still sizes its drawing buffer with legacy `Math.round(css * devicePixelRatio)` logic, opt into compatibility sizing when creating the canvas context:
+
+```typescript
+const device = await webgl2Adapter.attach(webglContext, {
+  createCanvasContext: {
+    autoResize: false,
+    pixelSizeSource: 'css-dpr'
+  }
+})
+```
+
+Keep the default `'exact'` mode when you want luma.gl to track the browser's precise device-pixel content box.
 
 ## See it in action
 

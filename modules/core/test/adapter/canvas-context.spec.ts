@@ -242,6 +242,106 @@ test('CanvasContext', t => {
   t.end();
 });
 
+test('CanvasContext#_handleResize prefers exact device pixel size by default', t => {
+  if (!isBrowser()) {
+    t.end();
+    return;
+  }
+
+  const canvasContext = new TestCanvasContext({}, false);
+
+  (canvasContext as any)._handleResize([
+    {
+      target: canvasContext.canvas,
+      contentBoxSize: [{inlineSize: 100.2, blockSize: 50.2}],
+      devicePixelContentBoxSize: [{inlineSize: 150, blockSize: 75}]
+    }
+  ]);
+
+  t.deepEqual(canvasContext.getDevicePixelSize(), [150, 75], 'exact pixel size is tracked');
+  t.deepEqual(
+    canvasContext.getDrawingBufferSize(),
+    [150, 75],
+    'drawing buffer follows exact pixel size when useDevicePixels=true'
+  );
+  t.end();
+});
+
+test('CanvasContext#_handleResize supports css-dpr compatibility sizing', t => {
+  if (!isBrowser()) {
+    t.end();
+    return;
+  }
+
+  const canvasContext = new TestCanvasContext({pixelSizeSource: 'css-dpr'}, false);
+  const originalGetDevicePixelRatio = canvasContext.getDevicePixelRatio;
+  canvasContext.getDevicePixelRatio = () => 1.5;
+
+  try {
+    (canvasContext as any)._handleResize([
+      {
+        target: canvasContext.canvas,
+        contentBoxSize: [{inlineSize: 100.2, blockSize: 50.2}],
+        devicePixelContentBoxSize: [{inlineSize: 151, blockSize: 76}]
+      }
+    ]);
+
+    t.deepEqual(
+      canvasContext.getDevicePixelSize(),
+      [150, 75],
+      'css-dpr mode rounds css size times DPR and ignores exact observer size'
+    );
+    t.deepEqual(
+      canvasContext.getDrawingBufferSize(),
+      [150, 75],
+      'drawing buffer follows compatibility device pixel size when useDevicePixels=true'
+    );
+  } finally {
+    canvasContext.getDevicePixelRatio = originalGetDevicePixelRatio;
+  }
+
+  t.end();
+});
+
+test('CanvasContext#_handleResize keeps numeric useDevicePixels override across pixel size modes', t => {
+  if (!isBrowser()) {
+    t.end();
+    return;
+  }
+
+  const canvasContext = new TestCanvasContext(
+    {pixelSizeSource: 'css-dpr', useDevicePixels: 2},
+    false
+  );
+  const originalGetDevicePixelRatio = canvasContext.getDevicePixelRatio;
+  canvasContext.getDevicePixelRatio = () => 1.5;
+
+  try {
+    (canvasContext as any)._handleResize([
+      {
+        target: canvasContext.canvas,
+        contentBoxSize: [{inlineSize: 100.2, blockSize: 50.2}],
+        devicePixelContentBoxSize: [{inlineSize: 151, blockSize: 76}]
+      }
+    ]);
+
+    t.deepEqual(
+      canvasContext.getDevicePixelSize(),
+      [150, 75],
+      'compatibility pixel size is tracked'
+    );
+    t.deepEqual(
+      canvasContext.getDrawingBufferSize(),
+      [200, 100],
+      'numeric useDevicePixels still controls drawing buffer size'
+    );
+  } finally {
+    canvasContext.getDevicePixelRatio = originalGetDevicePixelRatio;
+  }
+
+  t.end();
+});
+
 test('CanvasContext#_startObservers defers DOM observation until explicitly started', t => {
   if (!isBrowser()) {
     t.end();
