@@ -2,7 +2,15 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {ComputePass, ComputePassProps, ComputePipeline, Buffer, Binding} from '@luma.gl/core';
+import {
+  ComputePass,
+  ComputePassProps,
+  ComputePipeline,
+  Buffer,
+  Bindings,
+  BindingsByGroup,
+  _getDefaultBindGroupFactory
+} from '@luma.gl/core';
 import {WebGPUDevice} from '../webgpu-device';
 import {WebGPUBuffer} from './webgpu-buffer';
 import {WebGPUComputePipeline} from './webgpu-compute-pipeline';
@@ -14,53 +22,80 @@ export class WebGPUComputePass extends ComputePass {
 
   _webgpuPipeline: WebGPUComputePipeline | null = null;
 
-  constructor(device: WebGPUDevice, props: ComputePassProps) {
+  constructor(
+    device: WebGPUDevice,
+    props: ComputePassProps = {},
+    commandEncoder: GPUCommandEncoder = device.commandEncoder.handle
+  ) {
     super(device, props);
     this.device = device;
+    const {props: computePassProps} = this;
 
     // Set up queries
     let timestampWrites: GPUComputePassTimestampWrites | undefined;
-    if (device.features.has('timestamp-query')) {
-      const webgpuQuerySet = props.timestampQuerySet as WebGPUQuerySet;
+    if (computePassProps.timestampQuerySet) {
+      const webgpuQuerySet = computePassProps.timestampQuerySet as WebGPUQuerySet;
       if (webgpuQuerySet) {
+        webgpuQuerySet._invalidateResults();
         timestampWrites = {
           querySet: webgpuQuerySet.handle,
-          beginningOfPassWriteIndex: props.beginTimestampIndex,
-          endOfPassWriteIndex: props.endTimestampIndex
+          beginningOfPassWriteIndex: computePassProps.beginTimestampIndex,
+          endOfPassWriteIndex: computePassProps.endTimestampIndex
         };
       }
     }
 
     this.handle =
       this.props.handle ||
-      device.commandEncoder.handle.beginComputePass({
+      commandEncoder.beginComputePass({
         label: this.props.id,
         timestampWrites
       });
   }
 
   /** @note no WebGPU destroy method, just gc */
-  override destroy(): void {}
+  override destroy(): void {
+    this.destroyResource();
+  }
 
   end(): void {
+    if (this.destroyed) {
+      return;
+    }
     this.handle.end();
+    this.destroy();
   }
 
   setPipeline(pipeline: ComputePipeline): void {
     const wgpuPipeline = pipeline as WebGPUComputePipeline;
     this.handle.setPipeline(wgpuPipeline.handle);
     this._webgpuPipeline = wgpuPipeline;
-    this.setBindings([]);
+    const bindGroups = _getDefaultBindGroupFactory(this.device).getBindGroups(
+      this._webgpuPipeline,
+      this._webgpuPipeline._getBindingsByGroupWebGPU(),
+      this._webgpuPipeline._getBindGroupCacheKeysWebGPU()
+    );
+    for (const [group, bindGroup] of Object.entries(bindGroups)) {
+      if (bindGroup) {
+        this.handle.setBindGroup(Number(group), bindGroup as GPUBindGroup);
+      }
+    }
   }
 
   /**
    * Sets an array of bindings (uniform buffers, samplers, textures, ...)
    * TODO - still some API confusion - does this method go here or on the pipeline?
    */
-  setBindings(bindings: Binding[]): void {
-    // @ts-expect-error
-    const bindGroup = this._webgpuPipeline._getBindGroup();
-    this.handle.setBindGroup(0, bindGroup);
+  setBindings(bindings: Bindings | BindingsByGroup): void {
+    const bindGroups =
+      (this._webgpuPipeline &&
+        _getDefaultBindGroupFactory(this.device).getBindGroups(this._webgpuPipeline, bindings)) ||
+      {};
+    for (const [group, bindGroup] of Object.entries(bindGroups)) {
+      if (bindGroup) {
+        this.handle.setBindGroup(Number(group), bindGroup as GPUBindGroup);
+      }
+    }
   }
 
   /**

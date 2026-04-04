@@ -4,7 +4,7 @@
 
 import type {FramebufferProps} from '@luma.gl/core';
 import {Framebuffer} from '@luma.gl/core';
-import {GL} from '@luma.gl/constants';
+import {GL} from '@luma.gl/webgl/constants';
 import {WebGLDevice} from '../webgl-device';
 import {WEBGLTexture} from './webgl-texture';
 import {WEBGLTextureView} from './webgl-texture-view';
@@ -136,6 +136,17 @@ export class WEBGLFramebuffer extends Framebuffer {
     }
 
     gl.bindTexture(texture.glTarget, null);
+  }
+
+  /** Default framebuffer resize is managed by canvas size and should be a no-op. */
+  protected override resizeAttachments(width: number, height: number): void {
+    if (this.handle === null) {
+      this.width = width;
+      this.height = height;
+      return;
+    }
+
+    super.resizeAttachments(width, height);
   }
 }
 

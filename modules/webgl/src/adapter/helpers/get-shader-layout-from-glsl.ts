@@ -10,9 +10,9 @@ import type {
   VaryingBinding,
   AttributeShaderType
 } from '@luma.gl/core';
-import {getVariableShaderTypeInfo} from '@luma.gl/core';
+import {getVariableShaderTypeInfo, assertDefined, log} from '@luma.gl/core';
 
-import {GL, GLUniformType} from '@luma.gl/constants';
+import {GL, GLUniformType} from '@luma.gl/webgl/constants';
 import {
   isGLSamplerType,
   getTextureBindingFromGLSamplerType,
@@ -252,23 +252,45 @@ function readUniformBlocks(
     // ); // Array of GLint indicating the strides between columns of a column-major matrix or a row-major matrix.
     // const uniformRowMajor = gl.getActiveUniforms(program, uniformIndices, GL.UNIFORM_IS_ROW_MAJOR);
     for (let i = 0; i < blockInfo.uniformCount; ++i) {
-      const activeInfo = gl.getActiveUniform(program, uniformIndices[i]);
-      if (!activeInfo) {
-        throw new Error('activeInfo');
+      const uniformIndex = uniformIndices[i];
+      if (uniformIndex !== undefined) {
+        const activeInfo = gl.getActiveUniform(program, uniformIndex);
+        if (!activeInfo) {
+          throw new Error('activeInfo');
+        }
+
+        const format = convertGLUniformTypeToShaderVariableType(uniformType[i]);
+
+        blockInfo.uniforms.push({
+          name: activeInfo.name,
+          format,
+          type: uniformType[i],
+          arrayLength: uniformArrayLength[i],
+          byteOffset: uniformOffset[i],
+          byteStride: uniformStride[i]
+          // matrixStride: uniformStride[i],
+          // rowMajor: uniformRowMajor[i]
+        });
       }
+    }
 
-      const format = convertGLUniformTypeToShaderVariableType(uniformType[i]);
-
-      blockInfo.uniforms.push({
-        name: activeInfo.name,
-        format,
-        type: uniformType[i],
-        arrayLength: uniformArrayLength[i],
-        byteOffset: uniformOffset[i],
-        byteStride: uniformStride[i]
-        // matrixStride: uniformStride[i],
-        // rowMajor: uniformRowMajor[i]
-      });
+    const uniformInstancePrefixes = new Set(
+      blockInfo.uniforms
+        .map(uniform => uniform.name.split('.')[0])
+        .filter((instanceName): instanceName is string => Boolean(instanceName))
+    );
+    const blockAlias = blockInfo.name.replace(/Uniforms$/, '');
+    if (
+      uniformInstancePrefixes.size === 1 &&
+      !uniformInstancePrefixes.has(blockInfo.name) &&
+      !uniformInstancePrefixes.has(blockAlias)
+    ) {
+      const [instanceName] = uniformInstancePrefixes;
+      log.warn(
+        `Uniform block "${blockInfo.name}" uses GLSL instance "${instanceName}". ` +
+          `luma.gl binds uniform buffers by block name ("${blockInfo.name}") and alias ("${blockAlias}"). ` +
+          'Prefer matching the instance name to one of those to avoid confusing silent mismatches.'
+      )();
     }
 
     uniformBlocks.push(blockInfo);
@@ -314,13 +336,11 @@ function parseUniformName(name: string): {name: string; length: number; isArray:
   // if array name then clean the array brackets
   const UNIFORM_NAME_REGEXP = /([^[]*)(\[[0-9]+\])?/;
   const matches = UNIFORM_NAME_REGEXP.exec(name);
-  if (!matches || matches.length < 2) {
-    throw new Error(`Failed to parse GLSL uniform name ${name}`);
-  }
-
+  const uniformName = assertDefined(matches?.[1], `Failed to parse GLSL uniform name ${name}`);
   return {
-    name: matches[1],
-    length: matches[2] ? 1 : 0,
-    isArray: Boolean(matches[2])
+    name: uniformName,
+    // TODO - is this a bug, shouldn't we return the value?
+    length: matches?.[2] ? 1 : 0,
+    isArray: Boolean(matches?.[2])
   };
 }

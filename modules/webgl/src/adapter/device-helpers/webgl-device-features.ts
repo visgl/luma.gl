@@ -6,7 +6,7 @@
 // Provides a function that enables simple checking of which WebGL features are
 
 import {DeviceFeature, DeviceFeatures} from '@luma.gl/core';
-import {GLExtensions} from '@luma.gl/constants';
+import {GLExtensions} from '@luma.gl/webgl/constants';
 import {getWebGLExtension} from '../../context/helpers/webgl-extensions';
 import {
   isTextureFeature,
@@ -21,13 +21,12 @@ import {
 const WEBGL_FEATURES: Partial<Record<DeviceFeature, boolean | string>> = {
   // optional WebGPU features
   'depth-clip-control': 'EXT_depth_clamp', // TODO these seem subtly different
-  // 'timestamp-query' // GPUQueryType "timestamp-query"
+  'timestamp-query': 'EXT_disjoint_timer_query_webgl2',
   // "indirect-first-instance"
   // Textures are handled by getTextureFeatures()
   // 'depth32float-stencil8' // GPUTextureFormat 'depth32float-stencil8'
 
   // optional WebGL features
-  'timer-query-webgl': 'EXT_disjoint_timer_query_webgl2',
   'compilation-status-async-webgl': 'KHR_parallel_shader_compile',
   'polygon-mode-webgl': 'WEBGL_polygon_mode',
   'provoking-vertex-webgl': 'WEBGL_provoking_vertex',

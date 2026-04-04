@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {CompilerMessage} from '@luma.gl/core';
+import {type CompilerMessage} from '@luma.gl/core';
 
 /**
  * Parse a WebGL-format GLSL compilation log into an array of WebGPU style message records.
@@ -20,29 +20,51 @@ export function parseShaderCompilerLog(errLog: string): readonly CompilerMessage
       continue; // eslint-disable-line no-continue
     }
 
+    const lineWithTrimmedWhitespace = line.trim();
+
     const segments: string[] = line.split(':');
+    const trimmedMessageType = segments[0]?.trim();
 
     // Check for messages with no line information `ERROR: unsupported shader version`
     if (segments.length === 2) {
       const [messageType, message] = segments;
+      if (!messageType || !message) {
+        messages.push({
+          message: lineWithTrimmedWhitespace,
+          type: getMessageType(trimmedMessageType || 'info'),
+          lineNum: 0,
+          linePos: 0
+        });
+        continue; // eslint-disable-line no-continue
+      }
       messages.push({
         message: message.trim(),
         type: getMessageType(messageType),
         lineNum: 0,
         linePos: 0
       });
+
       continue; // eslint-disable-line no-continue
     }
 
     const [messageType, linePosition, lineNumber, ...rest] = segments;
+    if (!messageType || !linePosition || !lineNumber) {
+      messages.push({
+        message: segments.slice(1).join(':').trim() || lineWithTrimmedWhitespace,
+        type: getMessageType(trimmedMessageType || 'info'),
+        lineNum: 0,
+        linePos: 0
+      });
+      continue; // eslint-disable-line no-continue
+    }
 
     let lineNum = parseInt(lineNumber, 10);
-    if (isNaN(lineNum)) {
+    if (Number.isNaN(lineNum)) {
       lineNum = 0;
     }
 
     let linePos = parseInt(linePosition, 10);
-    if (isNaN(linePos)) {
+    if (Number.isNaN(linePos)) {
       linePos = 0;
     }
 

@@ -1,5 +1,7 @@
 # How GPU Rendering Works
 
+See also [GPU Commands](/docs/api-guide/gpu/gpu-commands) for how render passes relate to `CommandEncoder`, `CommandBuffer`, and `device.submit()` on WebGL and WebGPU.
+
 :::info
 Note that the luma.gl documentation includes a series of tutorials that explain how to render with the luma.gl API.
 :::
@@ -72,7 +74,9 @@ A `CanvasContext` holds a connection between the GPU `Device` and an HTML or off
 
 The most important method is `CanvasContext.getCurrentFramebuffer()` that is used to obtain fresh `Framebuffer` every render frame. This framebuffer contains a special texture `colorAttachment` that draws into to the canvas "drawing buffer" which will then be copied to the screen when then render pass ends.
 
-While there are ways to obtain multiple `CanvasContext` instances on WebGPU, the recommended portable way (that also works on WebGL) is to create a "default canvas context" by supplying the `createCanvasContext` prop to your `luma.createDevice({..., createCanvasContext: true})` call. The created canvas contest is available via `device.getDefaultCanvasContext()`.
+While there are ways to obtain multiple `CanvasContext` instances on WebGPU, the recommended portable way (that also works on WebGL) is to create a "default canvas context" by supplying the `createCanvasContext` prop to your `luma.createDevice({..., createCanvasContext: true})` call. The created canvas context is available via `device.getDefaultCanvasContext()`.
+
+For portable multi-canvas rendering, see the [Multiple Canvases](/docs/developer-guide/multiple-canvases) developer guide.
 
 ### Creating a RenderPipeline
 
@@ -266,4 +270,3 @@ void main(void) {
   gl_FragData[3] = vec4(1.0);
 }
 ```
-

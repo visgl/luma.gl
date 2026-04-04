@@ -5,12 +5,8 @@ import {HelloCubeExample} from '@site/src/examples';
 
 This tutorial demonstrates how to render a spinning textured cube using luma.gl's cross-platform rendering APIs.
 
-:::caution
-Tutorials are maintained on a best-effort basis and may not be fully up to date (contributions welcome). Working versions of these examples are found in the [`/examples/tutorials`](https://github.com/visgl/luma.gl/tree/master/examples/tutorials) directory of the luma.gl repository.
-:::
-
 <DeviceTabs />
-<HelloCubeExample />
+<HelloCubeExample showHeader={false} showStats={false} />
 
 It is assumed you've set up your development environment as described in [Setup](/docs/tutorials).
 
@@ -23,6 +19,9 @@ The complete source for this example is shown below. It builds a `Model` with WG
 and GLSL shaders, manages uniforms with a `UniformStore`, and draws a `CubeGeometry`
 inside an `AnimationLoopTemplate`.
 
+In WGSL, the example uses `@binding(auto)`, so the JavaScript side only needs
+to provide bindings by name.
+
 ```typescript
 import type {NumberArray, VariableShaderType} from '@luma.gl/core';
 import {Texture, UniformStore} from '@luma.gl/core';
@@ -33,7 +32,7 @@ import {
   Model,
   CubeGeometry,
   loadImageBitmap,
-  AsyncTexture
+  DynamicTexture
 } from '@luma.gl/engine';
 import {webgl2Adapter} from '@luma.gl/webgl';
 import {webgpuAdapter} from '@luma.gl/webgpu';
@@ -45,9 +44,9 @@ struct Uniforms {
   modelViewProjectionMatrix : mat4x4<f32>,
 };
 
-@group(0) @binding(0) var<uniform> app : Uniforms;
-@group(0) @binding(1) var uTexture : texture_2d<f32>;
-@group(0) @binding(2) var uTextureSampler : sampler;
+@group(0) @binding(auto) var<uniform> app : Uniforms;
+@group(0) @binding(auto) var uTexture : texture_2d<f32>;
+@group(0) @binding(auto) var uTextureSampler : sampler;
 
 struct VertexInputs {
   @location(0) positions : vec4<f32>,
@@ -135,7 +134,7 @@ class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   constructor({device}: AnimationProps) {
     super();
 
-    const texture = new AsyncTexture(device, {
+    const texture = new DynamicTexture(device, {
       usage: Texture.TEXTURE | Texture.RENDER_ATTACHMENT | Texture.COPY_DST,
       data: loadImageBitmap('vis-logo.png'),
       flipY: true,
@@ -186,7 +185,9 @@ class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 }
 
-const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {adapters: [webgpuAdapter, webgl2Adapter]})
+const animationLoop = makeAnimationLoop(AppAnimationLoopTemplate, {
+  adapters: [webgpuAdapter, webgl2Adapter]
+});
 animationLoop.start();
 ```
 

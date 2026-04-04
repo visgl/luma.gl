@@ -6,7 +6,7 @@
 
 // Uniforms
 import type {UniformValue} from '@luma.gl/core';
-import {GL, GLUniformType, GLSamplerType} from '@luma.gl/constants';
+import {GL, GLUniformType, GLSamplerType} from '@luma.gl/webgl/constants';
 
 /** Set a raw uniform (without type conversion and caching) */
 /* eslint-disable max-len */
@@ -28,7 +28,7 @@ export function setUniform(
   }
   const arrayValue = typeof uniformValue === 'number' ? [uniformValue] : uniformValue;
 
-  // prettier-ignore
+  // biome-ignore format: preserve layout
   switch (type) {
     case GL.SAMPLER_2D:
     case GL.SAMPLER_CUBE:

@@ -7,12 +7,23 @@ import type {NumberArray3, NumberArray16} from '@math.gl/core';
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
 
 const uniformBlock = /* glsl */ `\
-uniform pbrProjectionUniforms {
+layout(std140) uniform pbrProjectionUniforms {
   mat4 modelViewProjectionMatrix;
   mat4 modelMatrix;
   mat4 normalMatrix;
   vec3 camera;
 } pbrProjection;
+`;
+
+const wgslUniformBlock = /* wgsl */ `\
+struct pbrProjectionUniforms {
+  modelViewProjectionMatrix: mat4x4<f32>,
+  modelMatrix: mat4x4<f32>,
+  normalMatrix: mat4x4<f32>,
+  camera: vec3<f32>
+};
+
+@group(0) @binding(auto) var<uniform> pbrProjection: pbrProjectionUniforms;
 `;
 
 export type PBRProjectionProps = {
@@ -24,6 +35,8 @@ export type PBRProjectionProps = {
 
 export const pbrProjection: ShaderModule<PBRProjectionProps> = {
   name: 'pbrProjection',
+  bindingLayout: [{name: 'pbrProjection', group: 0}],
+  source: wgslUniformBlock,
   vs: uniformBlock,
   fs: uniformBlock,
   // TODO why is this needed?
@@ -32,6 +45,6 @@ export const pbrProjection: ShaderModule<PBRProjectionProps> = {
     modelViewProjectionMatrix: 'mat4x4<f32>',
     modelMatrix: 'mat4x4<f32>',
     normalMatrix: 'mat4x4<f32>',
-    camera: 'vec3<i32>'
+    camera: 'vec3<f32>'
   }
 };

@@ -15,55 +15,83 @@
     "3d"
   ],
   "workspaces": [
+    "dev-modules/*",
     "modules/*",
-    "examples/**/*"
+    "examples/**/*",
+    "website"
   ],
   "browser": {
     "fs": false
   },
   "scripts": {
-    "bootstrap": "yarn && ocular-bootstrap && yarn build",
+    "bootstrap": "bash ./dev-modules/devtools-extensions/bootstrap.sh",
     "start": "open https://luma.gl/docs/getting-started",
     "build": "ocular-clean && (cd modules/constants && yarn pre-build) && ocular-build",
-    "lint": "ocular-lint",
+    "lint": "yarn workspace @luma.gl/devtools-extensions lint",
     "publish-beta": "ocular-publish version-only-beta",
     "publish-prod": "ocular-publish version-only-prod",
-    "test": "ocular-test",
-    "test-fast": "ocular-lint && ocular-test node",
-    "test-website": "cd website && yarn && yarn build && cd ..",
+    "test": "yarn test-node && yarn test-headless",
+    "test-node": "yarn workspace @luma.gl/devtools-extensions test-node",
+    "test-browser": "yarn workspace @luma.gl/devtools-extensions test-browser",
+    "test-headless": "yarn workspace @luma.gl/devtools-extensions test-headless",
+    "test-coverage": "yarn workspace @luma.gl/devtools-extensions test-coverage",
+    "test-fast": "yarn lint && yarn test-node",
+    "test-website": "yarn website:build",
+    "website:build": "yarn workspace website-docusaurus build",
+    "website:start": "yarn workspace website-docusaurus start",
+    "website-debug": "yarn workspace @luma.gl/devtools-extensions website-debug",
+    "playwright:install": "yarn workspace @luma.gl/devtools-extensions playwright:install",
     "metrics": "./scripts/metrics.sh && ocular-metrics"
   },
   "devDependencies": {
-    "@loaders.gl/core": "^4.2.0",
-    "@loaders.gl/gltf": "^4.2.0",
-    "@loaders.gl/polyfills": "^4.2.0",
-    "@probe.gl/bench": "^4.0.8",
-    "@probe.gl/stats": "^4.0.8",
-    "@probe.gl/stats-widget": "^4.0.8",
-    "@probe.gl/test-utils": "^4.0.8",
-    "@types/tape-promise": "^4.0.1 ",
-    "@vis.gl/dev-tools": "1.0.0-alpha.19",
-    "@vis.gl/ts-plugins": "1.0.0-alpha.19",
-    "eslint-plugin-tree-shaking": "^1.9.2",
-    "nyc": "^15.1.0",
+    "@babel/core": "^7.28.3",
+    "@babel/preset-env": "^7.28.3",
+    "@loaders.gl/core": "~4.4.0",
+    "@loaders.gl/gltf": "~4.4.0",
+    "@loaders.gl/polyfills": "~4.4.0",
+    "@luma.gl/devtools-extensions": "workspace:*",
+    "@probe.gl/bench": "^4.1.1",
+    "@probe.gl/stats": "^4.1.1",
+    "@probe.gl/stats-widget": "^4.1.1",
+    "@probe.gl/test-utils": "^4.1.1",
+    "@types/tape-promise": "^4.0.6",
+    "@vis.gl/dev-tools": "^1.0.2",
+    "@vis.gl/ts-plugins": "^1.0.2",
+    "@vitest/browser": "^4.0.18",
+    "@vitest/browser-playwright": "^4.0.18",
+    "@vitest/coverage-v8": "^4.0.18",
     "pre-commit": "^1.2.2",
-    "puppeteer": "^22.0.0"
+    "vite": "^8.0.0",
+    "vitest": "^4.0.18"
   },
   "resolutions": {
-    "typescript": "^5.8.3",
+    "@luma.gl/constants@npm:^9.0.0": "~9.0.0",
+    "@docusaurus/plugin-client-redirects": "^3.9.2",
+    "@docusaurus/plugin-content-docs": "^3.9.2",
+    "@docusaurus/preset-classic": "^3.9.2",
+    "cheerio": "1.0.0-rc.9",
+    "typescript": "5.8.3",
     "tsconfig-paths": "^3.9.0",
     "ts-patch": "^3.3.0"
+  },
+  "packageExtensions": {
+    "@loaders.gl/gltf@*": {
+      "peerDependencies": {
+        "@loaders.gl/core": "~4.4.0"
+      }
+    },
+    "@loaders.gl/images@*": {
+      "peerDependencies": {
+        "@loaders.gl/core": "~4.4.0"
+      }
+    }
   },
   "pre-commit": [
     "test-fast"
   ],
   "dependencies": {
     "@math.gl/types": "^4.1.0",
-    "@types/offscreencanvas": "^2019.6.4"
+    "@types/offscreencanvas": "^2019.7.3"
   },
-  "volta": {
-    "node": "24.5.0",
-    "yarn": "4.9.2"
-  },
-  "packageManager": "yarn@4.9.1"
+  "packageManager": "yarn@4.13.0"
 }

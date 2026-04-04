@@ -43,18 +43,28 @@ jobs:
 
     steps:
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
-      - uses: volta-cli/action@2d68418f32546fd191eb666e232b321d5726484d # v4.1.1
+
+      - uses: actions/setup-node@v4
         with:
-          cache: 'yarn'
+          node-version-file: '.nvmrc'
+
+      - name: Enable Corepack / Yarn 4
+        run: |
+          corepack enable
+          corepack prepare yarn@4.13.0 --activate
+          yarn -v
 
       - name: Install dependencies
-        run: yarn
+        run: yarn install --immutable
 
       - name: Build packages
         run: npm run build
       
-      - name: Run tests from transpiled code
-        run: npx ocular-test dist
+      - name: Install Playwright Chromium
+        run: yarn playwright:install
+
+      - name: Run release test suite
+        run: yarn test
 
       - name: Login to NPM
         run: npm config set "//registry.npmjs.org/:_authToken=${NPM_ACCESS_TOKEN}"

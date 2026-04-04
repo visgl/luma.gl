@@ -1,6 +1,11 @@
 # Shader Modules
 
-luma.device provides a shader module system (through the `@luma.device/shadertools` module) that allows you build modular shaders. The system is built around a shader "assembler", and addresses the lack of a module/import system in the GLSL and WGSL languages. The shader assembler allows you to import chunks of reusable shader code from separately defined shader fragments into your shader program source code, which allows you to organize your shader code in reusable modules.
+luma.gl provides a shader module system through `@luma.gl/shadertools` that
+lets you build modular shaders. The system is built around a shader
+"assembler", and addresses the lack of a module/import system in GLSL and WGSL.
+The shader assembler allows you to import chunks of reusable shader code from
+separately defined shader fragments into your shader program source code, which
+lets you organize shader code into reusable modules.
 
 - Enables you to import and "inject" prepackaged modules of shader code into your shaders.
 - Allows you to package up reusable GLSL and/or WGSL code as shader modules.
@@ -42,7 +47,10 @@ assembleShaders(device, {..., modules: [MY_SHADER_MODULE]});
 
 ## Structure of a Shader Module
 
-The simplest shader modules just contain one or more reusable generic global GLSL / WGLS functions that can be included either in fragment or vertex shaders (or both). The shader assembles just adds the functions to the top of the assembled shader. The `fp64` module is an example of this type of module.
+The simplest shader modules just contain one or more reusable generic global
+GLSL or WGSL functions that can be included either in fragment or vertex
+shaders, or both. The shader assembler simply adds the functions to the top of
+the assembled shader. The `fp64` module is an example of this type of module.
 
 More complex shader modules contain specific vertex and/or fragment shader "chunks". In this case the shader module defines vertex shader inputs and outputs requiring more sophisticated shader generation to wire up the inputs and outputs between shader stages.
 
@@ -66,4 +74,12 @@ export const myShaderModule = {
 
 For details see the [`ShaderModule`](/docs/api-reference/shadertools/shader-module) type reference page.
 
+For the uniform descriptor syntax used by `uniformTypes`, including structs,
+fixed-size arrays, and TypeScript inference, see
+[Core Shader Types](/docs/api-reference/core/shader-types).
+
 Several functions are also available to initialize and use shader modules.
+
+For the current WGSL-specific assembly and binding-relocation rules used by
+shadertools, see
+[`WGSL Support`](/docs/api-reference/shadertools/wgsl-support).

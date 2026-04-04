@@ -2,6 +2,8 @@ import {DeviceTabs, Format as Ft, Filter as L, Render as R} from '@site/src/reac
 
 # Using GPU Textures
 
+See also [GPU Commands](/docs/api-guide/gpu/gpu-commands) for the difference between immediate texture helpers such as `writeData()` and explicit `CommandEncoder` copy operations.
+
 While the idea behind textures is simple in principle (a grid of pixels stored on GPU memory), GPU Textures are surprisingly complex objects.
 
 Capabilities
@@ -55,22 +57,7 @@ Note that even though a GPU supports creating and sampling textures of a certain
 
 GPUs support a wide range of texture formats. In luma.gl, each format is identified with a string (the `TextureFormat` type).
 
-### Compressed Textures
-
-Compressed textures refers to textures that are compressed in a way that can be decompressed performantly on the GPU during sampling.
-Such textures do not need to be decompressed fully (neither on CPU or GPU) but can be uploaded directly to the GPU in their compressed format, and will remain compressed there.
-There are some considerations when using compressed textures as support varies between devices, so assets must typically be prepared in multiple formats.
-
-For more information, see e.g. [Compressed Textures in 2020](https://aras-p.info/blog/2020/12/08/Texture-Compression-in-2020/).
-
-For supported compressed texture formats, see [Texture Formats](/docs/api-reference/core/texture-formats).
-
-## Supercompressed Textures
-
-Supercompressed textures solve the portability problem of compressed textures by
-defining a common super-compressed format which can be decoded after load into a supported compressed texture format.
-
-To use Basis supercompressed textures in luma.gl, see the [loaders.gl](https://loaders.gl) `BasisLoader` which can extract compressed textures from a basis encoded texture.
+Compressed and supercompressed texture guidance is collected near the end of this page in [Compressed Textures](#compressed-textures) and [Supercompressed Textures](#supercompressed-textures).
 
 ## Texture Data
 
@@ -114,24 +101,28 @@ Notes:
 ### Mipmaps
 
 To improve sampling quality further when sampling from a distance (`minFilter`), mipmap filtering can be used.
-Mipmaps are a pyramid of lower resolution images that are stored for each text`ure image and used by the GPU when the texture is sampled at a distance.
+Mipmaps are a pyramid of lower resolution images that are stored for each texture image and used by the GPU when the texture is sampled at a distance.
 
-Using mipmap filtering requireds some extra setup. The texture being sampled must be created with the `mipLevels` property set the the appropriate number of mip levels,
+Using mipmap filtering requires some extra setup. The texture being sampled must be created with the `mipLevels` property set to the appropriate number of mip levels,
 and each mip level must be initialized with a scaled down version of the mip level 0 image.
 Note that mip levels can be generated automatically by luma.gl, or each mip level can be set explicitly by the application.
 
-Mipmap usage is controller via `SamplerProps.mipmapFilter`:
+On WebGPU, automatic mipmap generation is provided by `DynamicTexture`.
+For non-3D textures luma.gl uses a render path, and for 3D textures it uses a compute path.
+If the texture format does not support the required capabilities, mipmap generation throws when it is requested.
+
+Mipmap usage is controlled via `SamplerProps.mipmapFilter`:
 
 | `mipmapFilter` | `minFilter` | Description                                     | Linearity             | Speed   |
 | -------------- | ----------- | ----------------------------------------------- | --------------------- | ------- |
-| `none`         | `nearest`   | Mo filtering, no mipmaps                        | none                  |         |
+| `none`         | `nearest`   | No filtering, no mipmaps                        | none                  |         |
 | `none`         | `linear`    | Filtering, no mipmaps                           | bilinear              | slowest |
 | `nearest`      | `nearest`   | No filtering, sharp switching between mipmaps   | none                  |         |
 | `nearest`      | `linear`    | No filtering, smooth transition between mipmaps | linear                |         |
 | `linear`       | `nearest`   | Filtering, sharp switching between mipmaps      | bilinear with mipmaps | fastest |
 | `linear`       | `linear`    | Filtering, smooth transition between mipmaps    | trilinear             |         |
 
-In addition, the `anistropy` sampler property controls how many miplevels are used during sampling.
+In addition, the `anisotropy` sampler property controls how many miplevels are used during sampling.
 
 Notes:
 
@@ -155,7 +146,7 @@ In WebGPU/WGSL, textures can be used with compute shaders through storage bindin
 
 ## Copying Textures
 
-Texture data can be copied between GPU and CPU and vice versa, via GPU Buffers. See `CommandEncoder` for more information.
+Texture data can be copied between GPU and CPU and vice versa, via GPU Buffers. See [GPU Commands](/docs/api-guide/gpu/gpu-commands) for when those copies should be recorded explicitly versus issued through resource-level convenience methods.
 
 ## Texture Format Capabilities
 
@@ -173,7 +164,9 @@ luma provides `Device` methods to help applications determine the capabilities o
 
 Remarks
 
-- Mipmaps can only be auto created for formats that are both filterable and renderable.
+- On WebGPU, `DynamicTexture.generateMipmaps()` owns mipmap generation. `2d`, `2d-array`, `cube`, and `cube-array` require renderable and filterable formats; `3d` requires filterable formats with storage support.
+- `Texture.generateMipmapsWebGL()` is only the WebGL path. WebGPU applications should use `DynamicTexture` when mipmap generation is needed.
+- Mipmaps can only be auto created for formats that satisfy the capability requirements of the selected mipmap-generation path.
 - A renderable format is either a color renderable format, or a depth-or-stencil format
 - All depth/stencil formats are renderable.
 - Samplers always read a "vec4" regardless of which texture format is used. For formats with less than 4 components, missing red, green and blue components in the texture format are read as `0.0`, alpha as `1.0`/
@@ -185,15 +178,73 @@ Textures offer a set of methods to read and write texture data
 
 | Method | Description |
 | --- | --- |
-| `Texture.writeData()` | |
-| `Texture.readDataAsync()` | |
-| `Texture.writeBuffer()` | |
-| `Texture.readBuffer()` | |
+| `Texture.writeData()` | Writes typed-array data into a texture subresource, including mip levels, array layers, depth slices, and optional row layout. |
+| `Texture.readDataAsync()` | Deprecated convenience wrapper. Prefer `Texture.readBuffer()` or `DynamicTexture.readAsync()`. |
+| `Texture.writeBuffer()` | Copies data from a GPU buffer into a texture subresource using the provided destination region and layout. |
+| `Texture.readBuffer()` | Copies texture data into a caller-supplied GPU buffer. The source texture must support `Texture.COPY_SRC`. |
+
+`Texture.copyImageData()` remains available for compatibility, but it is a deprecated wrapper over `Texture.writeData()`.
+
+### Choosing a texture upload method
+
+Use the texture write method that matches your source data:
+
+- `copyExternalImage()`:
+  - for browser image-like sources such as `ImageBitmap`, `ImageData`, canvases, videos, and images
+- `writeData()`:
+  - for CPU-side typed-array or `ArrayBuffer` uploads
+- `writeBuffer()`:
+  - for uploads sourced from a GPU buffer
+
+`writeData()` and `writeBuffer()` use the same destination model:
+
+- `mipLevel` selects which mip to update
+- `x`, `y`, `z` select the origin inside that mip
+- `width`, `height`, `depthOrArrayLayers` define the written extent
+- `byteOffset`, `bytesPerRow`, `rowsPerImage` describe the source memory layout
+
+This means the difference between `writeData()` and `writeBuffer()` is the source, not the shape of the update.
+
+For readback, `readBuffer()` is similarly explicit: the destination buffer is caller-owned, and the texture being read must have been created with `Texture.COPY_SRC`.
+
+### Texture upload semantics
+
+For non-2D textures, `z` is interpreted by texture dimension:
+
+- `cube`: cube face index
+- `2d-array`: array layer index
+- `3d`: depth slice index
+
+If you omit layout fields for `writeData()`, luma.gl computes a tightly packed layout for the write region you requested. For example, when writing a lower mip, row stride defaults are computed from that mip's width, not from the base level width.
+
+Provide explicit layout fields when:
+
+- your rows are padded
+- multiple layers or slices are packed into the same source allocation
+- the source data begins after a nonzero byte offset
 
 ### WebGPU Texture Data Alignment
 
-It is worth noting, especially when working directly with buffers that WebGPU requires that `bytesPerRow` must be a multiple of `256` for all texture data
-(except for 1D textures which do not have alignment requirements).
+There are two different WebGPU texture upload paths, and they do **not** use the same default row layout:
+
+- `writeData()` maps to `GPUQueue.writeTexture()` and defaults to a tightly packed CPU-memory layout.
+- `writeBuffer()` and `readBuffer()` map to buffer copy operations and use linear GPU-buffer layouts.
+
+The `256`-byte rule applies to the second case: buffer copy layouts. It does **not** mean that every `writeData()` upload must be padded to `256` bytes per row.
+
+In practice:
+
+- `writeData()`:
+  - omit `bytesPerRow` / `rowsPerImage` for tightly packed typed-array uploads
+  - provide them only when your CPU-side source is already padded or packs multiple layers/slices into one allocation
+- `writeBuffer()` and `readBuffer()`:
+  - use WebGPU buffer-copy layout rules
+  - `bytesPerRow` must satisfy WebGPU's alignment requirements, typically a multiple of `256`
+
+This row-stride rule is different from compressed block alignment:
+
+- `bytesPerRow` alignment applies to linear buffer layouts
+- compressed block alignment applies to compressed texture dimensions and copy extents
 
 This is because most modern GPU architectures access texture data in large aligned memory blocks, and unaligned row strides:
 
@@ -201,8 +252,7 @@ This is because most modern GPU architectures access texture data in large align
 - Require slower fallback modes or copies
 - May even crash or cause undefined behavior on some hardware
 
-So WebGPU enforces the strictest alignment across the board to avoid inconsistent behavior or costly driver fallbacks.
-It's not a limitation of a specific platform, but rather a lowest common denominator across vendors, including:
+The buffer-copy rule is not a limitation of a specific platform, but rather a lowest common denominator across vendors, including:
 
 | Platform / Vendor              | 256-byte alignment reason                                                                                 |
 | ------------------------------ | --------------------------------------------------------------------------------------------------------- |
@@ -211,17 +261,72 @@ It's not a limitation of a specific platform, but rather a lowest common denomin
 | Vulkan (Linux/Windows/Android) | vkCmdCopyBufferToImage requires bufferRowLength alignment for tight row packing.                          |
 | Mobile GPUs                    | Unified memory and tile-based rendering architectures strongly prefer 256-byte rows for coalesced access. |
 
-Why 256? It has been chose as a sweet spot between overhead and performance. 256 bytes is a power of two, making it a natural alignment boundary that fits well with:
+Why `256`? It is a practical alignment boundary for buffer-backed texture copies across current GPU APIs and drivers:
 
 - Cache line sizes
 - Tile sizes (especially on mobile GPUs)
 - SIMD vectorized memory access units (e.g., 32 or 64 bytes \* 4 or 8 lanes)
 
-Essentially, large enough for efficient DMA transfers, small enough not to waste too much memory.
+Essentially, large enough for efficient DMA transfers, small enough not to waste too much memory. But again, this applies to linear buffer copy layouts, not to the default `writeData()` packing.
 
 ### WebGL2 Texture Data Alignment
 
 WebGL2 accepts unaligned texture data, however there may be a small performance benefit in pre-aligning the data on 2, 4 or 8 byte boundaries.
 This is however unlikely to matter unless many large texture copies are being performed.
+
+For padded CPU uploads on WebGL, pass the real `bytesPerRow` and `rowsPerImage` values. luma.gl maps those fields onto WebGL's pixel unpack state so the same source data layout works on both backends:
+
+- tightly packed CPU data: omit layout fields
+- padded CPU data: pass explicit `bytesPerRow` and `rowsPerImage`
+- WebGPU buffer copy paths: use `writeBuffer()` / `readBuffer()` with `256`-aligned row strides
+
+## Compressed Textures
+
+Compressed textures refers to textures that are compressed in a way that can be decompressed performantly on the GPU during sampling.
+Such textures do not need to be decompressed fully (neither on CPU or GPU) but can be uploaded directly to the GPU in their compressed format, and will remain compressed there.
+There are some considerations when using compressed textures as support varies between devices, so assets must typically be prepared in multiple formats.
+
+Compressed texture formats store pixels in fixed-size blocks, not individual texels. This matters when creating textures and uploading mip levels:
+
+- each compressed format has a block width and block height
+- on WebGPU, compressed texture sizes and compressed copy extents must be aligned to those block dimensions
+- on WebGL, drivers often accept non-aligned logical sizes and pad the storage internally
+
+This means that the same compressed asset can appear to "just work" on WebGL while still requiring an explicitly padded backing texture on WebGPU.
+
+| Backend | Non-aligned compressed logical size | Padding behavior |
+| ------- | ----------------------------------- | ---------------- |
+| WebGL   | Often accepted                      | Usually implicit driver padding |
+| WebGPU  | Rejected                            | Application must pad explicitly |
+
+Compressed texture uploads follow an additional alignment rule that is separate from row-stride alignment:
+
+- texture creation size must be a multiple of the format block width and block height on WebGPU
+- compressed mip uploads must use block-aligned extents on WebGPU
+- very small logical mip levels may still upload as one full block
+
+The preferred approach is to prepare compressed texture assets whose width and height are already multiples of the format block size. That avoids backend-specific padding behavior, keeps texture sizes predictable across WebGL and WebGPU, and usually makes mip chains easier to reason about.
+
+For example, an `astc-6x5-unorm` texture with a logical size of `512 x 512` is valid on WebGL on many drivers, but WebGPU requires an explicitly aligned backing size of `516 x 515`.
+
+Likewise, a tiny compressed mip may still need to upload as a full block:
+
+- logical `1 x 1` ASTC `4x4` mip
+- upload extent `4 x 4`
+
+When exact logical image dimensions matter for shader sampling, keep the logical size separately from the aligned backing texture size.
+
+If you cannot control the source asset size, an aligned backing texture is the fallback strategy, not the preferred one.
+
+For more information, see e.g. [Compressed Textures in 2020](https://aras-p.info/blog/2020/12/08/Texture-Compression-in-2020/).
+
+For supported compressed texture formats, see [Texture Formats](/docs/api-reference/core/texture-formats).
+
+## Supercompressed Textures
+
+Supercompressed textures solve the portability problem of compressed textures by
+defining a common super-compressed format which can be decoded after load into a supported compressed texture format.
+
+To use Basis supercompressed textures in luma.gl, see the [loaders.gl](https://loaders.gl) `BasisLoader` which can extract compressed textures from a basis encoded texture.
 
 ### Texture Data Alignment Utilities

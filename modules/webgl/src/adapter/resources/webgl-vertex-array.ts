@@ -3,9 +3,9 @@
 // Copyright (c) vis.gl contributors
 
 import type {TypedArray, NumericArray} from '@math.gl/types';
-import type {Device, Buffer, VertexArrayProps} from '@luma.gl/core';
-import {VertexArray, getScratchArray} from '@luma.gl/core';
-import {GL} from '@luma.gl/constants';
+import type {AttributeInfo, Device, Buffer, VertexArrayProps} from '@luma.gl/core';
+import {VertexArray, getAttributeInfosFromLayouts, getScratchArray} from '@luma.gl/core';
+import {GL} from '@luma.gl/webgl/constants';
 import {getBrowser} from '@probe.gl/env';
 
 import {WebGLDevice} from '../webgl-device';
@@ -14,7 +14,7 @@ import {WEBGLBuffer} from '../resources/webgl-buffer';
 import {getGLFromVertexType} from '../converters/webgl-vertex-formats';
 import {fillArray} from '../../utils/fill-array';
 
-/** VertexArrayObject wrapper */
+/** WebGL vertex-array implementation backed by a native VAO. */
 export class WEBGLVertexArray extends VertexArray {
   override get [Symbol.toStringTag](): string {
     return 'VertexArray';
@@ -22,21 +22,37 @@ export class WEBGLVertexArray extends VertexArray {
 
   readonly device: WebGLDevice;
   readonly handle: WebGLVertexArrayObject;
+  /** Attribute accessors indexed by shader location for WebGL pointer setup. */
+  private readonly attributeInfosByLocation: AttributeInfo[];
 
   /** Attribute 0 buffer constant */
   private buffer: WEBGLBuffer | null = null;
   private bufferValue: TypedArray | null = null;
 
-  /** * Attribute 0 can not be disable on most desktop OpenGL based browsers */
+  /**
+   * Reports whether attribute location 0 may be disabled without fallback handling.
+   * @param device The device that owns the vertex array.
+   * @returns `true` when constant attribute 0 is supported on the current browser.
+   */
   static isConstantAttributeZeroSupported(device: Device): boolean {
     return getBrowser() === 'Chrome';
   }
 
-  // Create a VertexArray
+  /**
+   * Creates a WebGL vertex array and caches per-location accessor metadata.
+   * @param device The device that owns the vertex array.
+   * @param props Vertex-array initialization properties.
+   */
   constructor(device: WebGLDevice, props: VertexArrayProps) {
     super(device, props);
     this.device = device;
     this.handle = this.device.gl.createVertexArray()!;
+    this.attributeInfosByLocation = new Array(this.maxVertexAttributes).fill(null);
+    for (const attributeInfo of Object.values(
+      getAttributeInfosFromLayouts(props.shaderLayout, props.bufferLayout)
+    )) {
+      this.attributeInfosByLocation[attributeInfo.location] = attributeInfo;
+    }
   }
 
   override destroy(): void {
@@ -76,7 +92,11 @@ export class WEBGLVertexArray extends VertexArray {
     this.device.gl.bindVertexArray(null);
   }
 
-  /** Set a location in vertex attributes array to a buffer, enables the location, sets divisor */
+  /**
+   * Binds a buffer to one shader attribute location and configures the WebGL pointer state.
+   * @param location Shader attribute location.
+   * @param attributeBuffer Buffer supplying the attribute data.
+   */
   setBuffer(location: number, attributeBuffer: Buffer): void {
     const buffer = attributeBuffer as WEBGLBuffer;
     // Sanity check target
@@ -112,7 +132,11 @@ export class WEBGLVertexArray extends VertexArray {
     this.device.gl.bindVertexArray(null);
   }
 
-  /** Set a location in vertex attributes array to a constant value, disables the location */
+  /**
+   * Stores a constant value for one shader attribute location.
+   * @param location Shader attribute location.
+   * @param value Constant attribute value.
+   */
   override setConstantWebGL(location: number, value: TypedArray): void {
     this._enable(location, false);
     this.attributes[location] = value;
@@ -163,9 +187,13 @@ export class WEBGLVertexArray extends VertexArray {
   //   this.device.gl.vertexAttribDivisor(location, divisor || 0);
   // }
 
-  /** Get an accessor from the  */
+  /**
+   * Returns the cached accessor description for one shader attribute location.
+   * @param location Shader attribute location.
+   * @returns WebGL pointer state derived from the shared attribute metadata.
+   */
   protected _getAccessor(location: number) {
-    const attributeInfo = this.attributeInfos[location];
+    const attributeInfo = this.attributeInfosByLocation[location];
     if (!attributeInfo) {
       throw new Error(`Unknown attribute location ${location}`);
     }

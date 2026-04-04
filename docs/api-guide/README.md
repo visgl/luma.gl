@@ -25,6 +25,7 @@ Core responsibilities for any GPU library are to enable applications to perform:
 
 - [GPU initialization](/docs/api-guide/gpu/gpu-initialization) - Open a GPU device and query its capabilities 
 - [GPU memory management](/docs/api-guide/gpu/gpu-memory) - Create, upload memory to and read from [Buffers](/docs/api-guide/gpu/gpu-buffers), [Textures](/docs/api-guide/gpu/gpu-textures) etc.
+- [GPU command encoding](/docs/api-guide/gpu/gpu-commands) - Decide when to use immediate resource helpers versus explicit `CommandEncoder` recording.
 - [GPU resource management](/docs/api-guide/gpu/gpu-resources) - Create `Shader`, `Renderpipeline`, `RenderPass` etc objects.
 - [GPU binding management](/docs/api-guide/gpu/gpu-bindings) - Make attribute buffers, uniforms, textures, samplers available to GPU shaders.
 - [Shader execution / rendering](/docs/api-guide/gpu/gpu-rendering) - Drawing into textures, running compute shaders.
@@ -37,5 +38,5 @@ It is also possible for developers to create new reusable shader modules.
 
 ## Engine API
 
-The engine API provides higher level classes like `Model`, `AnimationLoop` and `Transform`s.
-glTF support is available through `@luma.gl/gltxf`.
+The engine API provides higher level classes like `Model`, `AnimationLoop`, `BufferTransform`, `TextureTransform`, and `Computation`.
+glTF support is available through `@luma.gl/gltf`.

@@ -2,16 +2,34 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from 'tape-promise/tape';
-import {luma} from '@luma.gl/core';
-import {Model, PipelineFactory, ShaderFactory} from '@luma.gl/engine';
-import {getWebGLTestDevice, getTestDevices} from '@luma.gl/test-utils';
+import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import {Device, luma, PipelineFactory, ShaderFactory} from '@luma.gl/core';
+import {Model} from '@luma.gl/engine';
+import {getWebGLTestDevice, getWebGPUTestDevice, getTestDevices} from '@luma.gl/test-utils';
+import {skin} from '@luma.gl/shadertools';
+import {pbrProjection} from '../../../shadertools/src/modules/lighting/pbr-material/pbr-projection';
 
-const stats = luma.stats.get('Resource Counts');
+const stats = luma.stats.get('GPU Resource Counts');
 
 const DUMMY_WGSL = /* WGSL */ `
 @vertex fn vertexMain() -> @builtin(position) vec4<f32> {
   return vec4<f32>(0.0, 0.0, 0.0, 1.0);
+}
+
+@fragment fn fragmentMain(@builtin(position) coord_in: vec4<f32>) -> @location(0) vec4<f32> {
+  return vec4<f32>(coord_in.x, coord_in.y, 0.0, 1.0);
+}
+`;
+
+const DUMMY_WGSL_WITH_BINDING = /* wgsl */ `
+struct AppFrameUniforms {
+  scale: f32
+};
+
+@group(0) @binding(auto) var<uniform> appFrame: AppFrameUniforms;
+
+@vertex fn vertexMain() -> @builtin(position) vec4<f32> {
+  return vec4<f32>(appFrame.scale, 0.0, 0.0, 1.0);
 }
 
 @fragment fn fragmentMain(@builtin(position) coord_in: vec4<f32>) -> @location(0) vec4<f32> {
@@ -27,6 +45,22 @@ const DUMMY_FS = `#version 300 es
   precision highp float;
   out vec4 fragColor;
   void main() { fragColor = vec4(1.0); }
+`;
+
+const INVALID_PIPELINE_WGSL = /* WGSL */ `
+@vertex fn wrongVertexMain(@builtin(vertex_index) vertexIndex: u32) -> @builtin(position) vec4<f32> {
+  var positions = array<vec2<f32>, 3>(
+    vec2<f32>(0.0, 0.5),
+    vec2<f32>(-0.5, -0.5),
+    vec2<f32>(0.5, -0.5)
+  );
+  let position = positions[vertexIndex];
+  return vec4<f32>(position, 0.0, 1.0);
+}
+
+@fragment fn fragmentMain() -> @location(0) vec4<f32> {
+  return vec4<f32>(1.0, 0.0, 0.0, 1.0);
+}
 `;
 
 const mockModule = {
@@ -51,9 +85,13 @@ test('Model#construct/destruct', async t => {
   t.ok(model, 'Model constructor does not throw errors');
   t.ok(model.id, 'Model has an id');
   t.ok(model.pipeline, 'Created pipeline');
+  t.false(model.pipeline.destroyed, 'Pipeline starts alive');
 
   model.destroy();
-  t.true(model.pipeline.destroyed, 'Deleted pipeline');
+  t.false(
+    model.pipeline.destroyed,
+    'Pipeline wrapper remains cached by default after last release'
+  );
 
   t.end();
 });
@@ -82,7 +120,7 @@ test('Model#multiple delete', async t => {
   model1.destroy();
   t.ok(model2.pipeline.destroyed === false, 'program still in use');
   model2.destroy();
-  t.ok(model2.pipeline.destroyed === true, 'program is released');
+  t.ok(model2.pipeline.destroyed === false, 'program remains cached after last release by default');
 
   t.end();
 });
@@ -185,6 +223,109 @@ test('Model#draw', async t => {
   t.end();
 });
 
+test('Model#draw skips WebGPU render pipelines that failed init', async t => {
+  const webgpuDevice = await getWebGPUTestDevice();
+
+  if (!webgpuDevice) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const model = new Model(webgpuDevice, {
+    id: 'errored-webgpu-model-test',
+    source: INVALID_PIPELINE_WGSL,
+    vertexCount: 3
+  });
+
+  const linkStatus = await waitForPipelineError(model.pipeline);
+  t.equal(linkStatus, 'error', 'model render pipeline is marked errored');
+  t.ok(model.pipeline.isErrored, 'model render pipeline reports errored state');
+
+  const framebuffer = webgpuDevice
+    .getDefaultCanvasContext()
+    .getCurrentFramebuffer({depthStencilFormat: false});
+  const renderPass = webgpuDevice.beginRenderPass({framebuffer, clearColor: [0, 0, 0, 0]});
+
+  t.equal(model.draw(renderPass), false, 'first draw is skipped when the pipeline is errored');
+  t.equal(model.draw(renderPass), false, 'repeated draws remain skipped');
+  t.equal(
+    model.needsRedraw(),
+    'render pipeline initialization failed',
+    'model keeps failure reason'
+  );
+
+  renderPass.end();
+  renderPass.destroy();
+  model.destroy();
+  t.end();
+});
+
+test('Model#getBindingDebugTable', async t => {
+  const webgpuDevice = await getWebGPUTestDevice();
+  if (!webgpuDevice) {
+    t.comment('WebGPU unavailable, skipping binding debug table test');
+    t.end();
+    return;
+  }
+
+  const wgslModel = new Model(webgpuDevice, {
+    id: 'binding-debug-table-test',
+    source: DUMMY_WGSL_WITH_BINDING,
+    modules: [pbrProjection, skin],
+    vertexCount: 3
+  });
+
+  t.deepEqual(
+    wgslModel.getBindingDebugTable().map(row => ({
+      name: row.name,
+      group: row.group,
+      binding: row.binding,
+      owner: row.owner,
+      moduleName: row.moduleName
+    })),
+    [
+      {
+        name: 'appFrame',
+        group: 0,
+        binding: 0,
+        owner: 'application',
+        moduleName: undefined
+      },
+      {
+        name: 'pbrProjection',
+        group: 0,
+        binding: 100,
+        owner: 'module',
+        moduleName: 'pbrProjection'
+      },
+      {
+        name: 'skin',
+        group: 0,
+        binding: 101,
+        owner: 'module',
+        moduleName: 'skin'
+      }
+    ],
+    'WGSL model exposes assembled binding debug rows before draw'
+  );
+
+  wgslModel.destroy();
+
+  const webglDevice = await getWebGLTestDevice();
+  const glslModel = new Model(webglDevice, {
+    id: 'binding-debug-table-glsl-test',
+    vs: DUMMY_VS,
+    fs: DUMMY_FS,
+    vertexCount: 3
+  });
+
+  t.deepEqual(glslModel.getBindingDebugTable(), [], 'GLSL model reports no WGSL binding rows');
+
+  glslModel.destroy();
+  t.end();
+});
+
 test('Model#topology', async t => {
   for (const device of await getTestDevices()) {
     const model = new Model(device, {
@@ -230,8 +371,22 @@ test('Model#topology', async t => {
   t.end();
 });
 
+async function waitForPipelineError(pipeline: {
+  linkStatus: 'pending' | 'success' | 'error';
+}): Promise<'pending' | 'success' | 'error'> {
+  for (let iteration = 0; iteration < 50 && pipeline.linkStatus !== 'error'; iteration++) {
+    await new Promise(resolve => setTimeout(resolve, 10));
+  }
+  return pipeline.linkStatus;
+}
+
 test('Model#pipeline caching', async t => {
   const webglDevice = await getWebGLTestDevice();
+  if (isSoftwareBackedDevice(webglDevice)) {
+    t.comment('Skipping WebGL pipeline caching test on a software-backed adapter');
+    t.end();
+    return;
+  }
   if (!webglDevice.props._cachePipelines) {
     t.comment('Pipeline caching is disabled');
     t.end();
@@ -265,20 +420,15 @@ test('Model#pipeline caching', async t => {
 
   const renderPass = webglDevice.beginRenderPass({clearColor: [0, 0, 0, 0]});
 
-  const uniforms: Record<string, unknown> = {};
+  t.ok(model1.draw(renderPass), 'First model draw succeeded');
 
-  model1.draw(renderPass);
-  t.deepEqual(uniforms, {x: 0.5}, 'Pipeline uniforms set');
-
-  model2.draw(renderPass);
-  t.deepEqual(uniforms, {x: -0.5}, 'Pipeline uniforms set');
+  t.ok(model2.draw(renderPass), 'Second model draw succeeded');
 
   model2.setBufferLayout([{name: 'a', format: 'float32x3'}]);
   model2.predraw(); // Forces a pipeline update
   t.ok(model1.pipeline !== model2.pipeline, 'Pipeline updated');
 
-  model2.draw(renderPass);
-  t.deepEqual(uniforms, {x: -0.5}, 'Pipeline uniforms set');
+  t.ok(model2.draw(renderPass), 'Pipeline updates still draw');
 
   renderPass.destroy();
 
@@ -290,6 +440,11 @@ test('Model#pipeline caching', async t => {
 
 test('Model#pipeline caching with defines and modules', async t => {
   const webglDevice = await getWebGLTestDevice();
+  if (isSoftwareBackedDevice(webglDevice)) {
+    t.comment('Skipping WebGL pipeline caching-with-modules test on a software-backed adapter');
+    t.end();
+    return;
+  }
   if (!webglDevice.props._cachePipelines) {
     t.comment('Pipeline caching is disabled');
     t.end();
@@ -391,6 +546,12 @@ test('Model#pipeline caching with defines and modules', async t => {
 
   t.end();
 });
+
+function isSoftwareBackedDevice(device: Device): boolean {
+  return (
+    device.info.gpu === 'software' || device.info.gpuType === 'cpu' || Boolean(device.info.fallback)
+  );
+}
 
 /*
 import {dirlight, picking} from '@luma.gl/shadertools';

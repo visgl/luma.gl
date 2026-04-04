@@ -20,19 +20,16 @@ export class WebGPUPipelineLayout extends PipelineLayout {
 
     this.device = device;
 
-    const bindGroupEntries = this.mapShaderLayoutToBindGroupEntries();
+    const bindGroupEntriesByGroup = this.mapShaderLayoutToBindGroupEntriesByGroup();
 
     this.handle = this.device.handle.createPipelineLayout({
       label: props?.id ?? 'unnamed-pipeline-layout',
-      bindGroupLayouts: [
-        // TODO (kaapp): We can cache these to re-use them across
-        // layers, particularly if using a separate group for injected
-        // bindings (e.g. project/lighting)
+      bindGroupLayouts: bindGroupEntriesByGroup.map((entries, group) =>
         this.device.handle.createBindGroupLayout({
-          label: 'bind-group-layout',
-          entries: bindGroupEntries
+          label: `bind-group-layout-${group}`,
+          entries
         })
-      ]
+      )
     });
   }
 
@@ -42,13 +39,17 @@ export class WebGPUPipelineLayout extends PipelineLayout {
     this.handle = null;
   }
 
-  protected mapShaderLayoutToBindGroupEntries(): GPUBindGroupLayoutEntry[] {
-    // Set up the pipeline layout
-    // TODO (kaapp): This only supports the first group, but so does the rest of the code
-    const bindGroupEntries: GPUBindGroupLayoutEntry[] = [];
+  protected mapShaderLayoutToBindGroupEntriesByGroup(): GPUBindGroupLayoutEntry[][] {
+    const maxGroup = this.props.shaderLayout.bindings.reduce(
+      (highestGroup, binding) => Math.max(highestGroup, binding.group),
+      -1
+    );
+    const bindGroupEntriesByGroup: GPUBindGroupLayoutEntry[][] = Array.from(
+      {length: maxGroup + 1},
+      () => []
+    );
 
-    for (let i = 0; i < this.props.shaderLayout.bindings.length; i++) {
-      const binding = this.props.shaderLayout.bindings[i];
+    for (const binding of this.props.shaderLayout.bindings) {
       const bindingTypeInfo: Omit<GPUBindGroupLayoutEntry, 'binding' | 'visibility'> = {};
 
       switch (binding.type) {
@@ -113,14 +114,14 @@ export class WebGPUPipelineLayout extends PipelineLayout {
       const VISIBILITY_ALL =
         GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT | GPUShaderStage.COMPUTE;
 
-      bindGroupEntries.push({
+      bindGroupEntriesByGroup[binding.group].push({
         binding: binding.location,
         visibility: binding.visibility || VISIBILITY_ALL,
         ...bindingTypeInfo
       });
     }
 
-    return bindGroupEntries;
+    return bindGroupEntriesByGroup;
   }
 }
 

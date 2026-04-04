@@ -9,6 +9,10 @@ via the `ShaderAssembler` class.
 - and injections 
 to generate the final vertex and fragment shader source that can be used to create a program.
 
+For current WGSL-specific behavior, including module WGSL assembly and
+`@binding(auto)` relocation, see
+[WGSL Support](/docs/api-reference/shadertools/wgsl-support).
+
 ## Types
 
 ## `AssembleShaderOptions`
@@ -24,7 +28,7 @@ Common options
 - `prologue`=`true` (Boolean) - Will inject platform prologue (see below)
 - `defines`=`{}` (Object) - a map of key/value pairs representing custom `#define`s to be injected into the shader source
 - `modules`=`[]` (Array) - list of shader modules
-- `inject`=`{}` (Object) - map of substituions,
+- `inject`=`{}` (Object) - map of substitutions,
 - `hookFunctions`=`[]` Array of hook functions descriptions. Descriptions can simply be the hook function signature (with a prefix `vs` for vertex shader, or `fs` for fragment shader) or an object with the hook signature, and a header and footer that will always appear in the hook function.
 
 Example of hook function

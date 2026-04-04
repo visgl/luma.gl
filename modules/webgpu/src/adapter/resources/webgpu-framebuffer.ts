@@ -29,4 +29,25 @@ export class WebGPUFramebuffer extends Framebuffer {
   protected updateAttachments(): void {
     // WebGPU framebuffers are JS only objects, nothing to update
   }
+
+  /**
+   * Internal-only hook for the cached CanvasContext/PresentationContext swapchain path.
+   * Rebinds the long-lived default framebuffer wrapper to the current per-frame color view
+   * and optional depth attachment without allocating a new luma.gl Framebuffer object.
+   */
+  _reinitialize(
+    colorAttachment: WebGPUTextureView,
+    depthStencilAttachment: WebGPUTextureView | null
+  ): void {
+    this.colorAttachments[0] = colorAttachment;
+    // @ts-expect-error Internal-only canvas wrapper reuse mutates this otherwise-readonly attachment.
+    this.depthStencilAttachment = depthStencilAttachment;
+    this.width = colorAttachment.texture.width;
+    this.height = colorAttachment.texture.height;
+
+    this.props.width = this.width;
+    this.props.height = this.height;
+    this.props.colorAttachments = [colorAttachment.texture];
+    this.props.depthStencilAttachment = depthStencilAttachment?.texture || null;
+  }
 }

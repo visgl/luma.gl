@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from 'tape-promise/tape';
+import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
 // import {makeSpy} from '@probe.gl/test-utils';
 import {Model, ModelNode} from '@luma.gl/engine';
@@ -31,20 +31,17 @@ test('ModelNode#constructor', async t => {
   t.end();
 });
 
-// setProps disabled
-// test.skip('ModelNode#setProps', (t) => {
-//   const props = {
-//     instanceCount: 100
-//   };
+test('ModelNode#setProps', async t => {
+  const webglDevice = await getWebGLTestDevice();
+  const model = new Model(webglDevice, {vs: DUMMY_VS, fs: DUMMY_FS});
+  const modelNode = new ModelNode({model});
 
-//   for (const device of getWebGLTestDevices()) {
-//     const model = new Model(device, {vs: DUMMY_VS, fs: DUMMY_FS});
-//     const modelSetPropsSpy = makeSpy(model, 'setProps');
-//     const mNode = new ModelNode({model});
-//     mNode.setProps(props);
-//     t.equal(modelSetPropsSpy.callCount, 1, 'should call setProps on model');
-//     modelSetPropsSpy.restore();
-//   }
+  modelNode.setProps({position: [1, 2, 3]});
+  t.deepEqual(
+    Array.from(modelNode.position),
+    [1, 2, 3],
+    'setProps updates position on scenegraph node'
+  );
 
-//   t.end();
-// });
+  t.end();
+});

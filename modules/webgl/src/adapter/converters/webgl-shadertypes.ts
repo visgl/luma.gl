@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {VariableShaderType, SignedDataType, VertexFormat, NormalizedDataType} from '@luma.gl/core';
-import {GL, GLUniformType, GLSamplerType, GLDataType} from '@luma.gl/constants';
+import {GL, GLUniformType, GLSamplerType, GLDataType} from '@luma.gl/webgl/constants';
 
 export type TextureBindingInfo = {
   viewDimension: '1d' | '2d' | '2d-array' | 'cube' | 'cube-array' | '3d';
@@ -12,14 +12,6 @@ export type TextureBindingInfo = {
 
 /** Converts to a luma shadertype to a GL data type (GL.BYTE, GL.FLOAT32 etc)  */
 export function convertDataTypeToGLDataType(normalizedType: NormalizedDataType): GLDataType {
-  return NORMALIZED_SHADER_TYPE_TO_WEBGL[normalizedType];
-}
-
-/** Converts to a luma shadertype to a GL data type (GL.BYTE, GL.FLOAT32 etc)  */
-export function convertShaderVariableTypeToGLDataType(
-  normalizedType: VariableShaderType
-): GLDataType {
-  // @ts-ignore TODO
   return NORMALIZED_SHADER_TYPE_TO_WEBGL[normalizedType];
 }
 
@@ -46,7 +38,7 @@ export function getTextureBindingFromGLSamplerType(
 /** Get vertex format from GL constants */
 export function getVertexFormatFromGL(type: GLDataType, components: 1 | 2 | 3 | 4): VertexFormat {
   const base = getVertexTypeFromGL(type);
-  // prettier-ignore
+  // biome-ignore format: preserve layout
   switch (components) {
     case 1: return base;
     case 2: return `${base}x2`;

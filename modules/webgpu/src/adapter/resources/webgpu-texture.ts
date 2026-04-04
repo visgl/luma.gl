@@ -3,7 +3,6 @@ import {
   type TextureProps,
   type TextureViewProps,
   type CopyExternalImageOptions,
-  type CopyImageDataOptions,
   type TextureReadOptions,
   type TextureWriteOptions,
   type SamplerProps,
@@ -17,6 +16,7 @@ import {getWebGPUTextureFormat} from '../helpers/convert-texture-format';
 import type {WebGPUDevice} from '../webgpu-device';
 import {WebGPUSampler} from './webgpu-sampler';
 import {WebGPUTextureView} from './webgpu-texture-view';
+import {WebGPUBuffer} from './webgpu-buffer';
 
 /** WebGPU implementation of the luma.gl core Texture resource */
 export class WebGPUTexture extends Texture {
@@ -24,10 +24,21 @@ export class WebGPUTexture extends Texture {
   readonly handle: GPUTexture;
   sampler: WebGPUSampler;
   view: WebGPUTextureView;
+  private _allocatedByteLength: number = 0;
 
   constructor(device: WebGPUDevice, props: TextureProps) {
-    super(device, props, {byteAlignment: 256}); // WebGPU requires row width to be a multiple of 256 bytes
+    // WebGPU buffer copies use 256-byte row alignment. queue.writeTexture() can use tightly packed rows.
+    super(device, props, {byteAlignment: 256});
     this.device = device;
+
+    if (props.sampler instanceof WebGPUSampler) {
+      this.sampler = props.sampler;
+    } else if (props.sampler === undefined) {
+      this.sampler = this.device.getDefaultSampler();
+    } else {
+      this.sampler = new WebGPUSampler(this.device, (props.sampler as SamplerProps) || {});
+      this.attachResource(this.sampler);
+    }
 
     this.device.pushErrorScope('out-of-memory');
     this.device.pushErrorScope('validation');
@@ -56,8 +67,6 @@ export class WebGPUTexture extends Texture {
       this.device.debug();
     });
 
-    // Update props if external handle was supplied - used mainly by CanvasContext.getDefaultFramebuffer()
-    // TODO - Read all properties directly from the supplied handle?
     if (this.props.handle) {
       this.handle.label ||= this.id;
       // @ts-expect-error readonly
@@ -66,11 +75,6 @@ export class WebGPUTexture extends Texture {
       this.height = this.handle.height;
     }
 
-    this.sampler =
-      props.sampler instanceof WebGPUSampler
-        ? props.sampler
-        : new WebGPUSampler(this.device, (props.sampler as SamplerProps) || {});
-
     this.view = new WebGPUTextureView(this.device, {
       ...this.props,
       texture: this,
@@ -78,14 +82,34 @@ export class WebGPUTexture extends Texture {
       // Note: arrayLayerCount controls the view of array textures, but does not apply to 3d texture depths
       arrayLayerCount: this.dimension !== '3d' ? this.depth : 1
     });
+    this.attachResource(this.view);
 
     // Set initial data
     // Texture base class strips out the data prop from this.props, so we need to handle it here
     this._initializeData(props.data);
+
+    this._allocatedByteLength = this.getAllocatedByteLength();
+
+    if (!this.props.handle) {
+      this.trackAllocatedMemory(this._allocatedByteLength, 'Texture');
+    } else {
+      this.trackReferencedMemory(this._allocatedByteLength, 'Texture');
+    }
   }
 
   override destroy(): void {
-    this.handle?.destroy();
+    if (this.destroyed) {
+      return;
+    }
+
+    if (!this.props.handle && this.handle) {
+      this.trackDeallocatedMemory('Texture');
+      this.handle.destroy();
+    } else if (this.handle) {
+      this.trackDeallocatedReferencedMemory('Texture');
+    }
+
+    this.destroyResource();
     // @ts-expect-error readonly
     this.handle = null;
   }
@@ -126,38 +150,6 @@ export class WebGPUTexture extends Texture {
     return {width: options.width, height: options.height};
   }
 
-  copyImageData(options_: CopyImageDataOptions): void {
-    const {width, height, depth} = this;
-    const options = this._normalizeCopyImageDataOptions(options_);
-    this.device.pushErrorScope('validation');
-
-    this.device.handle.queue.writeTexture(
-      // destination: GPUImageCopyTexture
-      {
-        // texture subresource
-        texture: this.handle,
-        mipLevel: options.mipLevel,
-        aspect: options.aspect,
-        // origin to write to
-        origin: [options.x, options.y, options.z]
-      },
-      // data
-      options.data,
-      // dataLayout: GPUImageDataLayout
-      {
-        offset: options.byteOffset,
-        bytesPerRow: options.bytesPerRow,
-        rowsPerImage: options.rowsPerImage
-      },
-      // size: GPUExtent3D - extents of the content to write
-      [width, height, depth]
-    );
-    this.device.popErrorScope((error: GPUError) => {
-      this.device.reportError(new Error(`copyImageData: ${error.message}`), this)();
-      this.device.debug();
-    });
-  }
-
   override generateMipmapsWebGL(): void {
     log.warn(`${this}: generateMipmaps not supported in WebGPU`)();
   }
@@ -174,63 +166,36 @@ export class WebGPUTexture extends Texture {
     };
   }
 
-  override readBuffer(options: TextureReadOptions = {}, buffer?: Buffer): Buffer {
-    const {
-      x = 0,
-      y = 0,
-      z = 0,
-      width = this.width,
-      height = this.height,
-      depthOrArrayLayers = this.depth,
-      mipLevel = 0,
-      aspect = 'all'
-    } = options;
+  override readBuffer(
+    options: TextureReadOptions & {byteOffset?: number} = {},
+    buffer?: Buffer
+  ): Buffer {
+    if (!buffer) {
+      throw new Error(`${this} readBuffer requires a destination buffer`);
+    }
+    const {x, y, z, width, height, depthOrArrayLayers, mipLevel, aspect} =
+      this._getSupportedColorReadOptions(options);
+    const byteOffset = options.byteOffset ?? 0;
 
-    const layout = this.computeMemoryLayout(options);
+    const layout = this.computeMemoryLayout({width, height, depthOrArrayLayers, mipLevel});
 
-    const {bytesPerRow, rowsPerImage, byteLength} = layout;
+    const {byteLength} = layout;
 
-    // Create a GPUBuffer to hold the copied pixel data.
-    const readBuffer =
-      buffer ||
-      this.device.createBuffer({
-        byteLength,
-        usage: Buffer.COPY_DST | Buffer.MAP_READ
-      });
-    const gpuReadBuffer = readBuffer.handle as GPUBuffer;
+    if (buffer.byteLength < byteOffset + byteLength) {
+      throw new Error(
+        `${this} readBuffer target is too small (${buffer.byteLength} < ${byteOffset + byteLength})`
+      );
+    }
 
-    // Record commands to copy from the texture to the buffer.
     const gpuDevice = this.device.handle;
-
     this.device.pushErrorScope('validation');
     const commandEncoder = gpuDevice.createCommandEncoder();
-    commandEncoder.copyTextureToBuffer(
-      // source
-      {
-        texture: this.handle,
-        origin: {x, y, z},
-        // origin: [options.x, options.y, 0], // options.depth],
-        mipLevel,
-        aspect
-        // colorSpace: options.colorSpace,
-        // premultipliedAlpha: options.premultipliedAlpha
-      },
-      // destination
-      {
-        buffer: gpuReadBuffer,
-        offset: 0,
-        bytesPerRow,
-        rowsPerImage
-      },
-      // copy size
-      {
-        width,
-        height,
-        depthOrArrayLayers
-      }
+    this.copyToBuffer(
+      commandEncoder,
+      {x, y, z, width, height, depthOrArrayLayers, mipLevel, aspect, byteOffset},
+      buffer
     );
 
-    // Submit the command.
     const commandBuffer = commandEncoder.finish();
     this.device.handle.queue.submit([commandBuffer]);
     this.device.popErrorScope((error: GPUError) => {
@@ -238,34 +203,73 @@ export class WebGPUTexture extends Texture {
       this.device.debug();
     });
 
-    return readBuffer;
+    return buffer;
   }
 
   override async readDataAsync(options: TextureReadOptions = {}): Promise<ArrayBuffer> {
-    const buffer = this.readBuffer(options);
-    const data = await buffer.readAsync();
-    buffer.destroy();
-    return data.buffer as ArrayBuffer;
+    throw new Error(
+      `${this} readDataAsync is deprecated; use readBuffer() with an explicit destination buffer or DynamicTexture.readAsync()`
+    );
   }
 
-  override writeBuffer(buffer: Buffer, options: TextureWriteOptions = {}) {
+  copyToBuffer(
+    commandEncoder: GPUCommandEncoder,
+    options: TextureReadOptions & {
+      byteOffset?: number;
+      bytesPerRow?: number;
+      rowsPerImage?: number;
+    } = {},
+    buffer: Buffer
+  ): void {
     const {
-      x = 0,
-      y = 0,
-      z = 0,
-      width = this.width,
-      height = this.height,
-      depthOrArrayLayers = this.depth,
-      mipLevel = 0,
-      aspect = 'all'
+      byteOffset = 0,
+      bytesPerRow: requestedBytesPerRow,
+      rowsPerImage: requestedRowsPerImage,
+      ...textureReadOptions
     } = options;
+    const {x, y, z, width, height, depthOrArrayLayers, mipLevel, aspect} =
+      this._getSupportedColorReadOptions(textureReadOptions);
+    const layout = this.computeMemoryLayout({width, height, depthOrArrayLayers, mipLevel});
+    const effectiveBytesPerRow = requestedBytesPerRow ?? layout.bytesPerRow;
+    const effectiveRowsPerImage = requestedRowsPerImage ?? layout.rowsPerImage;
+    const webgpuBuffer = buffer as WebGPUBuffer;
 
-    const layout = this.computeMemoryLayout(options);
+    commandEncoder.copyTextureToBuffer(
+      {
+        texture: this.handle,
+        origin: {x, y, z},
+        mipLevel,
+        aspect
+      },
+      {
+        buffer: webgpuBuffer.handle,
+        offset: byteOffset,
+        bytesPerRow: effectiveBytesPerRow,
+        rowsPerImage: effectiveRowsPerImage
+      },
+      {
+        width,
+        height,
+        depthOrArrayLayers
+      }
+    );
+  }
 
-    // Get the data on the CPU.
-    // await buffer.mapAndReadAsync();
-
-    const {bytesPerRow, rowsPerImage} = layout;
+  override writeBuffer(buffer: Buffer, options_: TextureWriteOptions = {}) {
+    const options = this._normalizeTextureWriteOptions(options_);
+    const {
+      x,
+      y,
+      z,
+      width,
+      height,
+      depthOrArrayLayers,
+      mipLevel,
+      aspect,
+      byteOffset,
+      bytesPerRow,
+      rowsPerImage
+    } = options;
 
     const gpuDevice = this.device.handle;
 
@@ -274,7 +278,7 @@ export class WebGPUTexture extends Texture {
     commandEncoder.copyBufferToTexture(
       {
         buffer: buffer.handle as GPUBuffer,
-        offset: 0,
+        offset: byteOffset,
         bytesPerRow,
         rowsPerImage
       },
@@ -294,29 +298,34 @@ export class WebGPUTexture extends Texture {
     });
   }
 
-  override writeData(data: ArrayBuffer | ArrayBufferView, options: TextureWriteOptions = {}): void {
+  override writeData(
+    data: ArrayBuffer | SharedArrayBuffer | ArrayBufferView,
+    options_: TextureWriteOptions = {}
+  ): void {
     const device = this.device;
-
-    const {
-      x = 0,
-      y = 0,
-      z = 0,
-      width = this.width,
-      height = this.height,
-      depthOrArrayLayers = this.depth,
-      mipLevel = 0,
-      aspect = 'all'
-    } = options;
-
-    const layout = textureFormatDecoder.computeMemoryLayout({
+    const options = this._normalizeTextureWriteOptions(options_);
+    const {x, y, z, width, height, depthOrArrayLayers, mipLevel, aspect, byteOffset} = options;
+    const source = data as GPUAllowSharedBufferSource;
+    const formatInfo = this.device.getTextureFormatInfo(this.format);
+    // queue.writeTexture() defaults to tightly packed rows, unlike WebGPU buffer copy paths.
+    const packedSourceLayout = textureFormatDecoder.computeMemoryLayout({
       format: this.format,
-      width: this.width,
-      height: this.height,
-      depth: this.depth,
-      byteAlignment: this.byteAlignment
+      width,
+      height,
+      depth: depthOrArrayLayers,
+      byteAlignment: 1
     });
+    const bytesPerRow = options_.bytesPerRow ?? packedSourceLayout.bytesPerRow;
+    const rowsPerImage = options_.rowsPerImage ?? packedSourceLayout.rowsPerImage;
+    let copyWidth = width;
+    let copyHeight = height;
 
-    const {bytesPerRow, rowsPerImage} = layout;
+    if (formatInfo.compressed) {
+      const blockWidth = formatInfo.blockWidth || 1;
+      const blockHeight = formatInfo.blockHeight || 1;
+      copyWidth = Math.ceil(width / blockWidth) * blockWidth;
+      copyHeight = Math.ceil(height / blockHeight) * blockHeight;
+    }
 
     this.device.pushErrorScope('validation');
     device.handle.queue.writeTexture(
@@ -326,17 +335,74 @@ export class WebGPUTexture extends Texture {
         aspect,
         origin: {x, y, z}
       },
-      data,
+      source,
       {
-        offset: 0,
+        offset: byteOffset,
         bytesPerRow,
         rowsPerImage
       },
-      {width, height, depthOrArrayLayers}
+      {width: copyWidth, height: copyHeight, depthOrArrayLayers}
     );
     this.device.popErrorScope((error: GPUError) => {
       this.device.reportError(new Error(`${this} writeData: ${error.message}`), this)();
       this.device.debug();
     });
+  }
+
+  /**
+   * Internal-only hook for the cached CanvasContext/PresentationContext swapchain path.
+   * Rebinds this handle-backed texture wrapper to the current per-frame canvas texture
+   * without allocating a new luma.gl Texture or TextureView wrapper.
+   */
+  _reinitialize(handle: GPUTexture, props?: Partial<TextureProps>): void {
+    const nextWidth = props?.width ?? handle.width ?? this.width;
+    const nextHeight = props?.height ?? handle.height ?? this.height;
+    const nextDepth = props?.depth ?? this.depth;
+    const nextFormat = props?.format ?? this.format;
+    const allocationMayHaveChanged =
+      nextWidth !== this.width ||
+      nextHeight !== this.height ||
+      nextDepth !== this.depth ||
+      nextFormat !== this.format;
+    handle.label ||= this.id;
+
+    // @ts-expect-error readonly
+    this.handle = handle;
+    // @ts-expect-error readonly
+    this.width = nextWidth;
+    // @ts-expect-error readonly
+    this.height = nextHeight;
+
+    if (props?.depth !== undefined) {
+      // @ts-expect-error readonly
+      this.depth = nextDepth;
+    }
+    if (props?.format !== undefined) {
+      // @ts-expect-error readonly
+      this.format = nextFormat;
+    }
+
+    this.props.handle = handle;
+    if (props?.width !== undefined) {
+      this.props.width = props.width;
+    }
+    if (props?.height !== undefined) {
+      this.props.height = props.height;
+    }
+    if (props?.depth !== undefined) {
+      this.props.depth = props.depth;
+    }
+    if (props?.format !== undefined) {
+      this.props.format = props.format;
+    }
+
+    if (allocationMayHaveChanged) {
+      const nextAllocation = this.getAllocatedByteLength();
+      if (nextAllocation !== this._allocatedByteLength) {
+        this._allocatedByteLength = nextAllocation;
+        this.trackReferencedMemory(nextAllocation, 'Texture');
+      }
+    }
+    this.view._reinitialize(this);
   }
 }

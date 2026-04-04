@@ -1,176 +1,355 @@
-# Understanding Bindings
+# Bind Groups and Bindings
 
-luma.gl offers support for setting up ("binding") data required by the GPU during shader execution, including: 
-- attribute buffers
-- bindings (uniform buffers, textures, samplers, ...)
-- uniforms
+luma.gl uses the term **binding** for GPU resources that shaders read through
+named binding declarations: uniform buffers, storage buffers, textures, and
+samplers.
 
-## Background
+On WebGPU these bindings are organized into **bind groups**. luma.gl exposes the
+same grouped model across both WebGPU and WebGL:
 
-A key responsibility of any GPU framework is to make enable the application to
-set up (or "bind") data so that it can be accessed by shader code running on the GPU. 
+- WebGPU uses native bind groups.
+- WebGL has no native bind groups, so luma.gl emulates them logically from
+  shader layout metadata.
 
-Shaders contain declarations of external inputs such as attributes, uniform blocks, samplers etc.
-Collectively, these inputs define data that the CPU (the application) needs to be provide to the GPU
-(typically by "binding" data to the right "locations").
+This page explains how to describe grouped bindings in luma.gl and how to pass
+them to pipelines and models.
 
-## Shader Layout
+## Quick Rule
 
-luma.gl needs a certain amount of metadata describing what bindings a specific shader (or pair of vertex and fragment shaders) expects.
+For WGSL that goes through `Model` or shadertools assembly, prefer
+`@binding(auto)` and pass bindings by name.
 
-luma.gl expects this metadata to be conform to the `ShaderLayout` type, and a `ShaderLayout`-conforming object
-is required when creating a `RenderPipeline` or `ComputePipeline`. 
-Note that while `ShaderLayout`s must be created manually for WebGPU devices, 
-luma.gl can generate them automatically on WebGL devices (using WebGL program introspection APIs).
+```wgsl
+@group(0) @binding(auto) var<uniform> app: AppUniforms;
+@group(0) @binding(auto) var colorTexture: texture_2d<f32>;
+@group(0) @binding(auto) var colorTextureSampler: sampler;
+```
 
-Shaders expose numeric bindings, however in applications, named bindings tend to be more convenient,
-and the ShaderLayout does include information on both names, locations and formats.
-
-
-```typescript
-type ShaderLayout = {
-  attributes: {
-    {name: 'instancePositions', location: 0, format: 'float32x2', stepMode: 'instance'},
-    {name: 'instanceVelocities', location: 1, format: 'float32x2', stepMode: 'instance'},
-    {name: 'vertexPositions', location: 2, format: 'float32x2', stepMode: 'vertex'}
-  },
-
-  bindings: {
-    {name: 'projectionUniforms', location: 0, type: 'uniforms'},
-    {name: 'textureSampler', location: 1, type: 'sampler'},
-    {name: 'texture', location: 2, type: 'texture'}
-  }
-}
-
-device.createRenderPipeline({
-  layout,
-  attributes,
-  bindings
+```ts
+model.setBindings({
+  app: uniformBuffer,
+  colorTexture: texture
 });
 ```
 
-### Attribute Layout
+In that flow, luma.gl assigns the numeric binding locations for you. The rest
+of this page is mainly for custom grouping, low-level pipeline work, and
+understanding how those names map to bind groups.
 
-```typescript
-const shaderLayout: ShaderLayout = {
-  attributes: [
-    {name: 'instancePositions', location: 0, format: 'float32x2', stepMode: 'instance'},
-    {name: 'instanceVelocities', location: 1, format: 'float32x2', stepMode: 'instance'},
-    {name: 'vertexPositions', location: 2, format: 'float32x2', stepMode: 'vertex'}
-  ],
-  ...
+## Core Concepts
+
+The main public concepts are:
+
+- `ShaderLayout.bindings[]` declares the static bindings a shader expects.
+- `BindingDeclaration.group` assigns each binding to a logical bind-group index.
+- `Bindings` is a flat map of binding names to GPU resources.
+- `BindingsByGroup` is a grouped map keyed by bind-group index.
+- `bindGroups` is the grouped binding input accepted by render paths that want
+  to bind by group explicitly.
+
+In practice, a shader layout might assign:
+
+- group `0` to core per-draw engine state
+- group `1` to application-defined shared state
+- group `2` to lighting and other scene invariants
+- group `3` to material bindings
+
+This is the current recommended organization in luma.gl, not a hard rule.
+
+## Recommended Grouping Convention
+
+The current luma.gl convention is:
+
+- group `0` for core engine-owned per-draw state
+- group `1` for application-defined shared state
+- group `2` for lighting and other scene invariants reused across many materials
+- group `3` for per-material surface state
+
+### Modules That Usually Belong In Group `0`
+
+- `picking`
+- mixed projection-style blocks such as `project` or `pbrProjection` when they
+  also include object-dependent matrices such as `modelMatrix`,
+  `normalMatrix`, or model-view-projection derivatives
+- skinning data
+- transform or object data
+- other core per-draw engine data
+
+Current explicit examples in the repo:
+
+- `pbrProjection`
+- `skin`
+
+If a renderer splits out a pure camera or view-projection block with no
+object-dependent data, that block could reasonably live in group `1` or group
+`2`. luma.gl's current stock projection-style modules remain in group `0`
+because they are mixed camera-and-object blocks.
+
+### Group `1` As An Extension Layer
+
+Group `1` is intentionally left open as an application-defined shared layer.
+
+Typical uses include:
+
+- renderer feature blocks shared by a subset of draws
+- app-specific environment or simulation state
+- terrain, atmosphere, or dataset-level state
+- other state reused across many draw calls but not treated as core engine
+  state and not universally scene-wide like lighting
+
+### Modules That Usually Belong In Group `2`
+
+- `lighting`
+- shared IBL or environment data
+- other scene-wide invariants reused across many materials and draws
+- shadow maps and shadow parameters
+
+Current explicit examples in the repo:
+
+- `lighting`
+- `dirlight`
+- `ibl`
+
+### Modules That Usually Belong In Group `3`
+
+- material uniform blocks
+- material textures and samplers
+- per-material overrides of otherwise shared scene shading data
+
+Current explicit examples in the repo:
+
+- `pbrMaterial`
+- `lambertMaterial`
+- `phongMaterial`
+- `gouraudMaterial`
+
+For a conceptual explanation of what should and should not be treated as a
+material, see the [Materials guide](/docs/api-guide/engine/materials).
+
+### Effects And Postprocessing
+
+For effects and postprocessing, prefer group `0` for now, not group `3`.
+
+Reason:
+
+- group `3` is becoming the dedicated home for per-material surface state
+- postprocess effects are pass-local state, not material state
+- overloading group `3` for both materials and effects would blur the convention immediately
+
+If luma.gl later adopts a dedicated postprocess grouping convention, it should
+be documented explicitly rather than inferred from the material convention.
+
+## Declaring Groups in `ShaderLayout`
+
+The `group` field lives on each binding declaration.
+
+```ts
+const shaderLayout = {
+  attributes: [{name: 'positions', location: 0, type: 'vec3<f32>'}],
+  bindings: [
+    {name: 'frameUniforms', type: 'uniform', group: 0, location: 0},
+    {name: 'lightingUniforms', type: 'uniform', group: 2, location: 0},
+    {name: 'materialUniforms', type: 'uniform', group: 3, location: 0},
+    {name: 'baseColorTexture', type: 'texture', group: 3, location: 1},
+    {name: 'baseColorSampler', type: 'sampler', group: 3, location: 2}
+  ]
 };
 ```
 
-### Buffer Mapping
+Two important points:
 
-For many use cases, supplying a single, "canonically" formatted buffer per attribute is sufficient. 
-However, sometimes an application may want to use more sophisticated GPU buffer layouts,
-controlling GPU buffer offsets, strides, interleaving etc.
+- `location` is the binding index **within that group**.
+- Groups can be sparse. If a shader uses groups `0`, `2`, and `3`, luma.gl
+  treats that as valid.
 
-Buffer mapping is an optional feature enabling custom buffer layouts and buffer interleaving.
+## Flat `bindings` vs grouped `bindGroups`
 
-Note that buffer mappings need to be defined when a pipeline is created, 
-and all buffers subsequently supplied to that pipeline need to conform to the buffer mapping.
+You can provide resources in either form.
 
-Example: The `bufferLayout` field in the example below specifies that both the 
-`instancePositions` and `instanceVelocities` attributes should be read from a single,
-interleaved buffer. In this example, since no strides are provided, supplied buffers are assumed to be "packed",
-with alternating "position" and "velocity" values with no padding in between.
+Flat bindings:
 
-```typescript
-device.createRenderPipeline({
-  shaderLayout: {
-    attributes: [
-      {name: 'instancePositions', location: 0, format: 'float32x2', stepMode: 'instance'},
-      {name: 'instanceVelocities', location: 1, format: 'float32x2', stepMode: 'instance'},
-      {name: 'vertexPositions', location: 2, format: 'float32x2', stepMode: 'vertex'}
-    ],
-    ...
-  },
-  // We want to use "non-standard" buffers: two attributes interleaved in same buffer
-  bufferLayout: [
-    {name: 'particles', attributes: [
-      {name: 'instancePositions'},
-      {name: 'instanceVelocities'}
-    ]
-  ],
-  attributes: {
-    particles: device.createBuffer(...)
-  },
-  bindings: {}
-});
+```ts
+const bindings = {
+  frameUniforms,
+  lightingUniforms,
+  materialUniforms,
+  baseColorTexture: textureView,
+  baseColorSampler: sampler
+};
 ```
 
-## Model usage
+Grouped bindings:
 
-```typescript
-new Model(device, {
+```ts
+const bindGroups = {
+  0: {frameUniforms},
+  2: {lightingUniforms},
+  3: {
+    materialUniforms,
+    baseColorTexture: textureView,
+    baseColorSampler: sampler
+  }
+};
+```
+
+Flat `bindings` remain supported for compatibility. When you pass flat bindings,
+luma.gl partitions them into groups using the `group` metadata from the
+`ShaderLayout`.
+
+Use `bindGroups` when you want explicit grouping in application code. Use flat
+`bindings` when that is more convenient or when higher-level engine APIs already
+produce a flat binding map.
+
+## WebGPU vs WebGL
+
+### WebGPU
+
+WebGPU uses native bind groups. luma.gl maps each `group` in the shader layout
+to a WebGPU bind-group slot and binds each populated group before drawing or
+dispatching.
+
+### WebGL
+
+WebGL shaders do not declare bind groups. WebGL only exposes flat binding
+mechanisms such as uniform blocks and texture units.
+
+luma.gl therefore emulates bind groups logically on WebGL:
+
+- the `group` field still exists in `ShaderLayout`
+- flat bindings can still be partitioned into logical groups
+- actual WebGL binding still happens through uniform-block bindings and texture
+  units at draw time
+
+Because GLSL/WebGL reflection does not expose groups, WebGL grouping depends on
+luma-authored layout metadata rather than shader introspection alone.
+
+## End-to-End `RenderPipeline` Example
+
+This example shows a WGSL-style layout using group `0` for frame data, group `2`
+for lighting, and group `3` for material state.
+
+```ts
+const vs = device.createShader({
+  stage: 'vertex',
+  source: /* wgsl */ `
+  struct FrameUniforms {
+    modelViewProjectionMatrix: mat4x4<f32>
+  };
+
+  @group(0) @binding(0) var<uniform> frameUniforms: FrameUniforms;
+
+  @vertex
+  fn vertexMain(@location(0) positions: vec3f) -> @builtin(position) vec4f {
+    return frameUniforms.modelViewProjectionMatrix * vec4f(positions, 1.0);
+  }
+  `
+});
+
+const fs = device.createShader({
+  stage: 'fragment',
+  source: /* wgsl */ `
+  struct LightingUniforms {
+    ambientColor: vec3f
+  };
+
+  struct MaterialUniforms {
+    baseColorFactor: vec4f
+  };
+
+  @group(2) @binding(0) var<uniform> lightingUniforms: LightingUniforms;
+  @group(3) @binding(0) var<uniform> materialUniforms: MaterialUniforms;
+  @group(3) @binding(1) var baseColorTexture: texture_2d<f32>;
+  @group(3) @binding(2) var baseColorSampler: sampler;
+
+  @fragment
+  fn fragmentMain() -> @location(0) vec4f {
+    let textureColor = textureSample(baseColorTexture, baseColorSampler, vec2f(0.5, 0.5));
+    return vec4f(textureColor.rgb * lightingUniforms.ambientColor, textureColor.a) *
+      materialUniforms.baseColorFactor;
+  }
+  `
+});
+
+const pipeline = device.createRenderPipeline({
+  vs,
+  fs,
   shaderLayout: {
-    attributes: {
-      instancePositions: {location: 0, format: 'float32x2', stepMode: 'instance'},
-      instanceVelocities: {location: 1, format: 'float32x2', stepMode: 'instance'},
-      vertexPositions: {location: 2, format: 'float32x2', stepMode: 'vertex'}
+    attributes: [{name: 'positions', location: 0, type: 'vec3<f32>'}],
+    bindings: [
+      {name: 'frameUniforms', type: 'uniform', group: 0, location: 0},
+      {name: 'lightingUniforms', type: 'uniform', group: 2, location: 0},
+      {name: 'materialUniforms', type: 'uniform', group: 3, location: 0},
+      {name: 'baseColorTexture', type: 'texture', group: 3, location: 1},
+      {name: 'baseColorSampler', type: 'sampler', group: 3, location: 2}
+    ]
+  },
+  bindGroups: {
+    0: {frameUniforms},
+    2: {lightingUniforms},
+    3: {
+      materialUniforms,
+      baseColorTexture: textureView,
+      baseColorSampler: sampler
     }
   }
 });
 ```
 
-## Types
+You can also pass the same resources as flat `bindings`; luma.gl will route them
+to the correct groups using the shader layout.
 
-### `ShaderLayout`
+## Engine Example
 
-```typescript
-export type ShaderLayout = {
-  attributes: AttributeLayout[];
-  bindings: BindingLayout[];
-}
+At the engine level, `Model` still primarily works with flat bindings. Grouping
+comes from shader layout and shader-module metadata rather than a separate model
+API.
+
+```ts
+import {Model, ShaderInputs} from '@luma.gl/engine';
+import {lighting, pbrMaterial} from '@luma.gl/shadertools';
+
+const shaderInputs = new ShaderInputs({lighting, pbrMaterial});
+
+const model = new Model(device, {
+  vs,
+  fs,
+  modules: [lighting, pbrMaterial],
+  shaderInputs
+});
+
+shaderInputs.setProps({
+  lighting: {
+    useByteColors: false,
+    lights: [{type: 'ambient', color: [1, 1, 1], intensity: 0.2}]
+  },
+  pbrMaterial: {
+    baseColorFactor: [1, 0.8, 0.7, 1]
+  }
+});
+
+model.setBindings({
+  pbr_baseColorSampler: textureView
+});
 ```
 
-### `AttributeLayout`
+Here `Model` manages the module uniform buffers internally through
+`shaderInputs`, while the explicitly supplied texture binding still uses a flat
+binding map. The `lighting` module declares its bindings in group `2` and
+`pbrMaterial` declares its bindings in group `3`, so luma.gl can preserve the
+logical grouping internally.
 
-- name = `string`
-- location - `number`
-- format - `VertexFormat`
-- stepMode - `'vertex' \| 'instance'`
+## Migration Notes
 
+- Existing code that passes flat `bindings` does not need to change immediately.
+- To start organizing bindings by group, add `group` metadata to shader layouts
+  or shader modules first.
+- Move to `bindGroups` when explicit grouping is useful in your application or
+  when you want your code structure to mirror the shader layout more closely.
 
-## Advanced Example
+## Related Pages
 
-WGSL vertex shader
-
-```rust
-struct Uniforms {
-  modelViewProjectionMatrix : mat4x4<f32>;
-};
-@binding(0), @group(0) var<uniform> uniforms : Uniforms; // BINDING 0
-
-struct VertexOutput {
-  @builtin(position) Position : vec4<f32>;
-  @location(0) fragUV : vec2<f32>;
-  @location(1) fragPosition: vec4<f32>;
-};
-
-@stage(vertex)
-fn main(@location(0) position : vec4<f32>,
-        @location(1) uv : vec2<f32>) -> VertexOutput {
-  var output : VertexOutput;
-  output.Position = uniforms.modelViewProjectionMatrix * position;
-  output.fragUV = uv;
-  output.fragPosition = 0.5 * (position + vec4<f32>(1.0, 1.0, 1.0, 1.0));
-  return output;
-}
-```
-
-WGSL Fragment Shader
-
-```rust
-@group(0), binding(1) var mySampler: sampler; // BINDING 1
-@group(0), binding(2) var myTexture: texture_2d<f32>; // BINDING 2
-
-@stage(fragment)
-fn main(@location(0) fragUV: vec2<f32>,
-        @location(1) fragPosition: vec4<f32>) -> [[location(0)]] vec4<f32> {
-  return textureSample(myTexture, mySampler, fragUV) * fragPosition;
-}
- ```
+- [Bindings Reference](/docs/api-reference/core/bindings)
+- [ShaderLayout](/docs/api-reference/core/shader-layout)
+- [RenderPipeline](/docs/api-reference/core/resources/render-pipeline)
+- [ComputePipeline](/docs/api-reference/core/resources/compute-pipeline)
+- [Shader Module Conventions](/docs/api-reference/shadertools/shader-conventions)

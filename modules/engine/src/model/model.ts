@@ -3,19 +3,20 @@
 // Copyright (c) vis.gl contributors
 
 // A lot of imports, but then Model is where it all comes together...
-import type {TypedArray} from '@math.gl/types';
-import type {
-  RenderPipelineProps,
-  RenderPipelineParameters,
-  BufferLayout,
-  Shader,
-  VertexArray,
-  TransformFeedback,
-  AttributeInfo,
-  Binding,
-  PrimitiveTopology
-} from '@luma.gl/core';
+import {type TypedArray} from '@math.gl/types';
 import {
+  type RenderPipelineProps,
+  type RenderPipelineParameters,
+  type BufferLayout,
+  type TextureFormatColor,
+  type TextureFormatDepthStencil,
+  type Shader,
+  type VertexArray,
+  type TransformFeedback,
+  type AttributeInfo,
+  type Binding,
+  type BindingsByGroup,
+  type PrimitiveTopology,
   Device,
   DeviceFeature,
   Buffer,
@@ -24,30 +25,47 @@ import {
   Sampler,
   RenderPipeline,
   RenderPass,
+  PipelineFactory,
+  ShaderFactory,
   UniformStore,
   log,
-  getTypedArrayConstructor,
-  getAttributeInfosFromLayouts
+  dataTypeDecoder,
+  getAttributeInfosFromLayouts,
+  getLogicalBufferSlots,
+  normalizeBindingsByGroup
 } from '@luma.gl/core';
 
-import type {ShaderModule, PlatformInfo} from '@luma.gl/shadertools';
+import type {ShaderBindingDebugRow, ShaderModule, PlatformInfo} from '@luma.gl/shadertools';
 import {ShaderAssembler} from '@luma.gl/shadertools';
 
 import type {Geometry} from '../geometry/geometry';
 import {GPUGeometry, makeGPUGeometry} from '../geometry/gpu-geometry';
-import {PipelineFactory} from '../factories/pipeline-factory';
-import {ShaderFactory} from '../factories/shader-factory';
 import {getDebugTableForShaderLayout} from '../debug/debug-shader-layout';
 import {debugFramebuffer} from '../debug/debug-framebuffer';
 import {deepEqual} from '../utils/deep-equal';
 import {BufferLayoutHelper} from '../utils/buffer-layout-helper';
 import {sortedBufferLayoutByShaderSourceLocations} from '../utils/buffer-layout-order';
+import {
+  mergeShaderModuleBindingsIntoLayout,
+  shaderModuleHasUniforms
+} from '../utils/shader-module-utils';
 import {uid} from '../utils/uid';
 import {ShaderInputs} from '../shader-inputs';
 import {DynamicTexture} from '../dynamic-texture/dynamic-texture';
+import {Material} from '../material/material';
 
 const LOG_DRAW_PRIORITY = 2;
 const LOG_DRAW_TIMEOUT = 10000;
+const PIPELINE_INITIALIZATION_FAILED = 'render pipeline initialization failed';
+const DEPTH_STENCIL_ATTACHMENT_FORMATS: TextureFormatDepthStencil[] = [
+  'stencil8',
+  'depth16unorm',
+  'depth24plus',
+  'depth24plus-stencil8',
+  'depth32float',
+  'depth32float-stencil8'
+];
+type ModelBinding = Binding | DynamicTexture;
 
 export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs' | 'bindings'> & {
   source?: string;
@@ -62,8 +80,12 @@ export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs' | 'bindings'> & {
 
   /** Shader inputs, used to generated uniform buffers and bindings */
   shaderInputs?: ShaderInputs;
+  /** Material-owned group-3 bindings */
+  material?: Material;
   /** Bindings */
   bindings?: Record<string, Binding | DynamicTexture>;
+  /** WebGL-only uniforms */
+  uniforms?: Record<string, unknown>;
   /** Parameters that are built into the pipeline */
   parameters?: RenderPipelineParameters;
 
@@ -114,7 +136,7 @@ export type ModelProps = Omit<RenderPipelineProps, 'vs' | 'fs' | 'bindings'> & {
  * - Reuses and lazily recompiles {@link RenderPipeline | pipelines} as needed.
  * - Integrates with `@luma.gl/shadertools` to assemble GLSL or WGSL from shader modules.
  * - Manages geometry attributes and buffer bindings.
- * - Accepts textures, samplers and uniform buffers as bindings, including `AsyncTexture`.
+ * - Accepts textures, samplers and uniform buffers as bindings, including `DynamicTexture`.
  * - Provides detailed debug logging and optional shader source inspection.
  */
 export class Model {
@@ -132,6 +154,8 @@ export class Model {
     indexBuffer: null,
     attributes: {},
     constantAttributes: {},
+    bindings: {},
+    uniforms: {},
     varyings: [],
 
     isInstanced: undefined!,
@@ -139,6 +163,7 @@ export class Model {
     vertexCount: 0,
 
     shaderInputs: undefined!,
+    material: undefined!,
     pipelineFactory: undefined!,
     shaderFactory: undefined!,
     transformFeedback: undefined!,
@@ -212,12 +237,15 @@ export class Model {
   /** ShaderInputs instance */
   // @ts-expect-error Assigned in function called by constructor
   shaderInputs: ShaderInputs;
+  material: Material | null = null;
   // @ts-expect-error Assigned in function called by constructor
   _uniformStore: UniformStore;
 
   _attributeInfos: Record<string, AttributeInfo> = {};
   _gpuGeometry: GPUGeometry | null = null;
   private props: Required<ModelProps>;
+  private _colorAttachmentFormats: (TextureFormatColor | null)[] | undefined;
+  private _depthStencilAttachmentFormat: TextureFormatDepthStencil | undefined;
 
   _pipelineNeedsUpdate: string | false = 'newly created';
   private _needsRedraw: string | false = 'initializing';
@@ -225,6 +253,7 @@ export class Model {
 
   /** "Time" of last draw. Monotonically increasing timestamp */
   _lastDrawTimestamp: number = -1;
+  private _bindingTable: ShaderBindingDebugRow[] = [];
 
   get [Symbol.toStringTag](): string {
     return 'Model';
@@ -241,6 +270,8 @@ export class Model {
     this.device = device;
 
     Object.assign(this.userData, props.userData);
+
+    this.material = props.material || null;
 
     // Setup shader module inputs
     const moduleMap = Object.fromEntries(
@@ -261,6 +292,9 @@ export class Model {
       // @ts-ignore shaderInputs is assigned in setShaderInputs above.
       (this.props.modules?.length > 0 ? this.props.modules : this.shaderInputs?.getModules()) || [];
 
+    this.props.shaderLayout =
+      mergeShaderModuleBindingsIntoLayout(this.props.shaderLayout, modules) || null;
+
     const isWebGPU = this.device.type === 'webgpu';
 
     // WebGPU
@@ -268,7 +302,7 @@ export class Model {
     // TODO - this is wrong, compile a single shader
     if (isWebGPU && this.props.source) {
       // WGSL
-      const {source, getUniforms} = this.props.shaderAssembler.assembleWGSLShader({
+      const {source, getUniforms, bindingTable} = this.props.shaderAssembler.assembleWGSLShader({
         platformInfo,
         ...this.props,
         modules
@@ -276,9 +310,16 @@ export class Model {
       this.source = source;
       // @ts-expect-error
       this._getModuleUniforms = getUniforms;
+      this._bindingTable = bindingTable;
       // Extract shader layout after modules have been added to WGSL source, to include any bindings added by modules
-      // @ts-expect-error Method on WebGPUDevice
-      this.props.shaderLayout ||= device.getShaderLayout(this.source);
+      const inferredShaderLayout = (
+        device as Device & {getShaderLayout?: (source: string) => any}
+      ).getShaderLayout?.(this.source);
+      this.props.shaderLayout =
+        mergeShaderModuleBindingsIntoLayout(
+          this.props.shaderLayout || inferredShaderLayout || null,
+          modules
+        ) || null;
     } else {
       // GLSL
       const {vs, fs, getUniforms} = this.props.shaderAssembler.assembleGLSLShaderPair({
@@ -291,6 +332,7 @@ export class Model {
       this.fs = fs;
       // @ts-expect-error
       this._getModuleUniforms = getUniforms;
+      this._bindingTable = [];
     }
 
     this.vertexCount = this.props.vertexCount;
@@ -357,7 +399,7 @@ export class Model {
       this.pipelineFactory.release(this.pipeline);
       // Release the shaders
       this.shaderFactory.release(this.pipeline.vs);
-      if (this.pipeline.fs) {
+      if (this.pipeline.fs && this.pipeline.fs !== this.pipeline.vs) {
         this.shaderFactory.release(this.pipeline.fs);
       }
       this._uniformStore.destroy();
@@ -385,6 +427,11 @@ export class Model {
     this._needsRedraw ||= reason;
   }
 
+  /** Returns WGSL binding debug rows for the assembled shader. Returns an empty array for GLSL models. */
+  getBindingDebugTable(): readonly ShaderBindingDebugRow[] {
+    return this._bindingTable;
+  }
+
   /** Update uniforms and pipeline state prior to drawing. */
   predraw(): void {
     // Update uniform buffers if needed
@@ -405,6 +452,8 @@ export class Model {
       return false;
     }
 
+    this._syncAttachmentFormats(renderPass);
+
     try {
       renderPass.pushDebugGroup(`${this}.predraw(${renderPass})`);
       this.predraw();
@@ -413,6 +462,7 @@ export class Model {
     }
 
     let drawSuccess: boolean;
+    let pipelineErrored = this.pipeline.isErrored;
     try {
       renderPass.pushDebugGroup(`${this}.draw(${renderPass})`);
       this._logDrawCallStart();
@@ -421,35 +471,45 @@ export class Model {
       // TODO - inside RenderPass is likely the worst place to do this from performance perspective.
       // Application can call Model.predraw() to avoid this.
       this.pipeline = this._updatePipeline();
+      pipelineErrored = this.pipeline.isErrored;
 
-      // Set pipeline state, we may be sharing a pipeline so we need to set all state on every draw
-      // Any caching needs to be done inside the pipeline functions
-      // TODO this is a busy initialized check for all bindings every frame
+      if (pipelineErrored) {
+        log.info(
+          LOG_DRAW_PRIORITY,
+          `>>> DRAWING ABORTED ${this.id}: ${PIPELINE_INITIALIZATION_FAILED}`
+        )();
+        drawSuccess = false;
+      } else {
+        const syncBindings = this._getBindings();
+        const syncBindGroups = this._getBindGroups();
 
-      const syncBindings = this._getBindings();
-      this.pipeline.setBindings(syncBindings, {
-        disableWarnings: this.props.disableWarnings
-      });
+        const {indexBuffer} = this.vertexArray;
+        const indexCount = indexBuffer
+          ? indexBuffer.byteLength / (indexBuffer.indexType === 'uint32' ? 4 : 2)
+          : undefined;
 
-      const {indexBuffer} = this.vertexArray;
-      const indexCount = indexBuffer
-        ? indexBuffer.byteLength / (indexBuffer.indexType === 'uint32' ? 4 : 2)
-        : undefined;
-
-      drawSuccess = this.pipeline.draw({
-        renderPass,
-        vertexArray: this.vertexArray,
-        isInstanced: this.isInstanced,
-        vertexCount: this.vertexCount,
-        instanceCount: this.instanceCount,
-        indexCount,
-        transformFeedback: this.transformFeedback || undefined,
-        // WebGL shares underlying cached pipelines even for models that have different parameters and topology,
-        // so we must provide our unique parameters to each draw
-        // (In WebGPU most parameters are encoded in the pipeline and cannot be changed per draw call)
-        parameters: this.parameters,
-        topology: this.topology
-      });
+        drawSuccess = this.pipeline.draw({
+          renderPass,
+          vertexArray: this.vertexArray,
+          isInstanced: this.isInstanced,
+          vertexCount: this.vertexCount,
+          instanceCount: this.instanceCount,
+          indexCount,
+          transformFeedback: this.transformFeedback || undefined,
+          // Pipelines may be shared across models when caching is enabled, so bindings
+          // and WebGL uniforms must be supplied on every draw instead of being stored
+          // on the pipeline instance.
+          bindings: syncBindings,
+          bindGroups: syncBindGroups,
+          _bindGroupCacheKeys: this._getBindGroupCacheKeys(),
+          uniforms: this.props.uniforms,
+          // WebGL shares underlying cached pipelines even for models that have different parameters and topology,
+          // so we must provide our unique parameters to each draw
+          // (In WebGPU most parameters are encoded in the pipeline and cannot be changed per draw call)
+          parameters: this.parameters,
+          topology: this.topology
+        });
+      }
     } finally {
       renderPass.popDebugGroup();
       this._logDrawCallEnd();
@@ -460,6 +520,8 @@ export class Model {
     if (drawSuccess) {
       this._lastDrawTimestamp = this.device.timestamp;
       this._needsRedraw = false;
+    } else if (pipelineErrored) {
+      this._needsRedraw = PIPELINE_INITIALIZATION_FAILED;
     } else {
       this._needsRedraw = 'waiting for resource initialization';
     }
@@ -568,21 +630,26 @@ export class Model {
   /** Set the shader inputs */
   setShaderInputs(shaderInputs: ShaderInputs): void {
     this.shaderInputs = shaderInputs;
-    this._uniformStore = new UniformStore(this.shaderInputs.modules);
+    this._uniformStore = new UniformStore(this.device, this.shaderInputs.modules);
     // Create uniform buffer bindings for all modules that actually have uniforms
     for (const [moduleName, module] of Object.entries(this.shaderInputs.modules)) {
-      if (shaderModuleHasUniforms(module)) {
-        const uniformBuffer = this._uniformStore.getManagedUniformBuffer(this.device, moduleName);
+      if (shaderModuleHasUniforms(module) && !this.material?.ownsModule(moduleName)) {
+        const uniformBuffer = this._uniformStore.getManagedUniformBuffer(moduleName);
         this.bindings[`${moduleName}Uniforms`] = uniformBuffer;
       }
     }
     this.setNeedsRedraw('shaderInputs');
   }
 
+  setMaterial(material: Material | null): void {
+    this.material = material;
+    this.setNeedsRedraw('material');
+  }
+
   /** Update uniform buffers from the model's shader inputs */
   updateShaderInputs(): void {
     this._uniformStore.setUniforms(this.shaderInputs.getUniformValues());
-    this.setBindings(this.shaderInputs.getBindingValues());
+    this.setBindings(this._getNonMaterialBindings(this.shaderInputs.getBindingValues()));
     // TODO - this is already tracked through buffer/texture update times?
     this.setNeedsRedraw('shaderInputs');
   }
@@ -631,6 +698,7 @@ export class Model {
       this.bufferLayout
     );
     const bufferLayoutHelper = new BufferLayoutHelper(this.bufferLayout);
+    const logicalBufferSlots = getLogicalBufferSlots(this.pipeline.shaderLayout, this.bufferLayout);
 
     // Check if all buffers have a layout
     for (const [bufferName, buffer] of Object.entries(buffers)) {
@@ -651,7 +719,7 @@ export class Model {
         if (attributeInfo) {
           const location =
             this.device.type === 'webgpu'
-              ? bufferLayoutHelper.getBufferIndex(attributeInfo.bufferName)
+              ? logicalBufferSlots[attributeInfo.bufferName]
               : attributeInfo.location;
 
           this.vertexArray.setBuffer(location, buffer);
@@ -701,6 +769,11 @@ export class Model {
         return binding.id;
       }
     }
+    for (const binding of Object.values(this.material?.bindings || {})) {
+      if (binding instanceof DynamicTexture && !binding.isReady) {
+        return binding.id;
+      }
+    }
     return false;
   }
 
@@ -722,6 +795,32 @@ export class Model {
     return validBindings;
   }
 
+  _getBindGroups(): BindingsByGroup {
+    const shaderLayout = this.pipeline?.shaderLayout || this.props.shaderLayout || {bindings: []};
+    const bindGroups = shaderLayout.bindings.length
+      ? normalizeBindingsByGroup(shaderLayout, this._getBindings())
+      : {0: this._getBindings()};
+
+    if (!this.material) {
+      return bindGroups;
+    }
+
+    for (const [groupKey, groupBindings] of Object.entries(this.material.getBindingsByGroup())) {
+      const group = Number(groupKey);
+      bindGroups[group] = {
+        ...(bindGroups[group] || {}),
+        ...groupBindings
+      };
+    }
+
+    return bindGroups;
+  }
+
+  _getBindGroupCacheKeys(): Partial<Record<number, object>> {
+    const bindGroupCacheKey = this.material?.getBindGroupCacheKey(3);
+    return bindGroupCacheKey ? {3: bindGroupCacheKey} : {};
+  }
+
   /** Get the timestamp of the latest updated bound GPU memory resource (buffer/texture). */
   _getBindingsUpdateTimestamp(): number {
     let timestamp = 0;
@@ -739,7 +838,7 @@ export class Model {
         timestamp = Math.max(timestamp, binding.buffer.updateTimestamp);
       }
     }
-    return timestamp;
+    return Math.max(timestamp, this.material?.getBindingsUpdateTimestamp() || 0);
   }
 
   /**
@@ -811,12 +910,13 @@ export class Model {
 
       this.pipeline = this.pipelineFactory.createRenderPipeline({
         ...this.props,
+        bindings: undefined,
         bufferLayout: this.bufferLayout,
+        colorAttachmentFormats: this._colorAttachmentFormats,
+        depthStencilAttachmentFormat: this._depthStencilAttachmentFormat,
         topology: this.topology,
         parameters: this.parameters,
-        // TODO - why set bindings here when we reset them every frame?
-        // Should we expose a BindGroup abstraction?
-        bindings: this._getBindings(),
+        bindGroups: this._getBindGroups(),
         vs,
         fs
       });
@@ -827,7 +927,9 @@ export class Model {
       );
 
       if (prevShaderVs) this.shaderFactory.release(prevShaderVs);
-      if (prevShaderFs) this.shaderFactory.release(prevShaderFs);
+      if (prevShaderFs && prevShaderFs !== prevShaderVs) {
+        this.shaderFactory.release(prevShaderFs);
+      }
     }
     return this.pipeline;
   }
@@ -878,12 +980,11 @@ export class Model {
       // } || (this._drawCount++ > 3 && this._drawCount % 60)) {
       return;
     }
-    // TODO - display framebuffer output in debug window
     const framebuffer = renderPass.props.framebuffer;
-    if (framebuffer) {
-      debugFramebuffer(framebuffer, {id: framebuffer.id, minimap: true});
-      // log.image({logLevel: LOG_DRAW_PRIORITY, message: `${framebuffer.id} %c sup?`, image})();
-    }
+    debugFramebuffer(renderPass, framebuffer, {
+      id: framebuffer?.id || `${this.id}-framebuffer`,
+      minimap: true
+    });
   }
 
   _getAttributeDebugTable(): Record<string, Record<string, unknown>> {
@@ -915,18 +1016,76 @@ export class Model {
 
   // TODO - fix typing of luma data types
   _getBufferOrConstantValues(attribute: Buffer | TypedArray, dataType: any): string {
-    const TypedArrayConstructor = getTypedArrayConstructor(dataType);
+    const TypedArrayConstructor = dataTypeDecoder.getTypedArrayConstructor(dataType);
     const typedArray =
       attribute instanceof Buffer ? new TypedArrayConstructor(attribute.debugData) : attribute;
     return typedArray.toString();
   }
-}
 
-function shaderModuleHasUniforms(module: ShaderModule): boolean {
-  return Boolean(module.uniformTypes && !isObjectEmpty(module.uniformTypes));
+  private _getNonMaterialBindings(
+    bindings: Record<string, ModelBinding>
+  ): Record<string, ModelBinding> {
+    if (!this.material) {
+      return bindings;
+    }
+
+    const filteredBindings: Record<string, ModelBinding> = {};
+    for (const [name, binding] of Object.entries(bindings)) {
+      if (!this.material.ownsBinding(name)) {
+        filteredBindings[name] = binding;
+      }
+    }
+    return filteredBindings;
+  }
+
+  private _syncAttachmentFormats(renderPass: RenderPass): void {
+    if (this.device.type !== 'webgpu') {
+      return;
+    }
+
+    const framebuffer =
+      (
+        renderPass as RenderPass & {
+          framebuffer?: {
+            colorAttachments?: Array<{texture?: {format?: TextureFormatColor}} | null>;
+            depthStencilAttachment?: {texture?: {format?: TextureFormatDepthStencil}} | null;
+          };
+        }
+      ).framebuffer || renderPass.props.framebuffer;
+
+    const nextColorAttachmentFormats = framebuffer?.colorAttachments?.map(colorAttachment =>
+      asColorAttachmentFormat(colorAttachment?.texture?.format)
+    );
+    const nextDepthStencilAttachmentFormat = asDepthStencilAttachmentFormat(
+      framebuffer?.depthStencilAttachment?.texture?.format
+    );
+
+    if (
+      !deepEqual(this._colorAttachmentFormats, nextColorAttachmentFormats, 1) ||
+      this._depthStencilAttachmentFormat !== nextDepthStencilAttachmentFormat
+    ) {
+      this._colorAttachmentFormats = nextColorAttachmentFormats;
+      this._depthStencilAttachmentFormat = nextDepthStencilAttachmentFormat;
+      this._setPipelineNeedsUpdate('attachment formats');
+    }
+  }
 }
 
 // HELPERS
+
+function asColorAttachmentFormat(format?: string | null): TextureFormatColor | null {
+  return format && !isDepthStencilAttachmentFormat(format) ? (format as TextureFormatColor) : null;
+}
+
+function asDepthStencilAttachmentFormat(
+  format?: string | null
+): TextureFormatDepthStencil | undefined {
+  return format && isDepthStencilAttachmentFormat(format) ? format : undefined;
+}
+
+function isDepthStencilAttachmentFormat(format: string): format is TextureFormatDepthStencil {
+  return DEPTH_STENCIL_ATTACHMENT_FORMATS.includes(format as TextureFormatDepthStencil);
+}
 
 /** Create a shadertools platform info from the Device */
 export function getPlatformInfo(device: Device): PlatformInfo {
@@ -938,14 +1097,4 @@ export function getPlatformInfo(device: Device): PlatformInfo {
     // HACK - we pretend that the DeviceFeatures is a Set, it has a similar API
     features: device.features as unknown as Set<DeviceFeature>
   };
-}
-
-/** Returns true if given object is empty, false otherwise. */
-function isObjectEmpty(obj: object): boolean {
-  // @ts-ignore key is unused
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  for (const key in obj) {
-    return false;
-  }
-  return true;
 }

@@ -12,7 +12,7 @@ Note that the actual `Device` returned by `luma.createDevice()` will be either
 a `WebGLDevice` wrapping a WebGL context or a `WebGPUDevice` wrapping a WebGPU device
 based on what the run-time environment supports.
 
-The `Device` API is intentionally designed to be similar to the 
+The `Device` API is intentionally designed to be similar to the
 WebGPU [`GPUDevice`](https://www.w3.org/TR/webgpu/#gpu-device) class API
 with changes to enable a WebGL2 implementation.
 
@@ -22,7 +22,7 @@ Create a new `Device`, auto creating a canvas and a new WebGL 2 context. See [`l
 
 ```typescript
 import {Device} from '@luma.gl/core';
-const device = new luma.createDevice({type: 'webgl2', ...}); 
+const device = new luma.createDevice({type: 'webgl2', ...});
 ```
 
 Attaching a `Device` to an externally created `WebGL2RenderingContext`.
@@ -74,6 +74,7 @@ Specifies props to use when luma creates the device.
 | `debug?`: `boolean`                                     | `false`                                      | Extra checks (wait for shader compilation, framebuffer completion, WebGL API errors will throw exceptions). |
 | `debugShaders?`: `'errors' 'warnings' 'always' 'never'` | `'error'`                                    | Display shader source code with inline errors in the canvas.                                                |
 | `debugFramebuffers?: boolean`                           | `false`                                      | Show small copy of the contents of updated Framebuffers in the canvas.                                      |
+| `debugFactories?: boolean`                              | `false`                                      | Log pipeline-factory cache create/reuse/release activity.                                                   |
 | `debugWebGL?: boolean`                                  | `false`                                      | traces WebGL API calls to the console (via Khronos WebGLDeveloperTools).                                    |
 | `debugSpectorJS?: boolean`                              | `false`                                      | Initialize the SpectorJS WebGL debugger.                                                                    |
 | `debugSpectorJSUrl?: string`                            | CDN url                                      | SpectorJS URL. Override if different SpectorJS version is desired (or if CDN is down).                      |
@@ -82,9 +83,21 @@ Specifies props to use when luma creates the device.
 Learn more GPU debugging in our [Debugging](../../developer-guide/debugging.md) guide.
 :::
 
+#### Internal caching props
+
+These props are primarily intended for internal tuning and testing of factory-managed resource reuse.
+
+| Property                      | Default | Description                                                                                                                                                                                                                                                                   |
+| ----------------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `_cacheShaders?: boolean`     | `true`  | Enable shader caching through [`ShaderFactory`](/docs/api-reference/core/shader-factory).                                                                                                                                                                                     |
+| `_destroyShaders?: boolean`   | `false` | Destroy cached shaders when their factory reference count reaches zero. Keep this `false` by default so repeated create/destroy cycles can still hit the shader cache; enable it when an application creates very large numbers of distinct shaders and needs eviction.       |
+| `_cachePipelines?: boolean`   | `true`  | Enable [`PipelineFactory`](/docs/api-reference/core/pipeline-factory) wrapper caching.                                                                                                                                                                                        |
+| `_sharePipelines?: boolean`   | `true`  | When pipeline caching is enabled, allow compatible WebGL render-pipeline wrappers to share a linked `WebGLProgram`. See [`PipelineFactory`](/docs/api-reference/core/pipeline-factory) for the distinction between wrapper reuse and shared-program reuse.                 |
+| `_destroyPipelines?: boolean` | `false` | Destroy cached pipelines when their factory reference count reaches zero. Keep this `false` by default so repeated create/destroy cycles can still hit the pipeline cache; enable it when an application creates very large numbers of distinct pipelines and needs eviction. |
+
 #### WebGLContextAttributes
 
-For detailed control over WebGL context can specify what [`WebGLContextAttributes`][webgl-attributes] to use if luma creates the WebGL context. 
+For detailed control over WebGL context can specify what [`WebGLContextAttributes`][webgl-attributes] to use if luma creates the WebGL context.
 
 | `WebGLContextAttributes`                 | Default | Description                                                                                            |
 | ---------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------ |
@@ -112,7 +125,7 @@ A string identifier, for debug purposes.
 ### statsManager
 
 ```typescript
-statsManager: StatsManager
+statsManager: StatsManager;
 ```
 
 Provides access to bags of stats containing information about resource usage and performance of the device.
@@ -120,7 +133,7 @@ Provides access to bags of stats containing information about resource usage and
 ### props
 
 ```typescript
-props: Required<DeviceProps>
+props: Required<DeviceProps>;
 ```
 
 A readonly copy of the props that were used to create this device.
@@ -128,7 +141,7 @@ A readonly copy of the props that were used to create this device.
 ### userData
 
 ```typescript
-userData: Record<string, any>
+userData: Record<string, any>;
 ```
 
 Reserved for the application.
@@ -136,7 +149,7 @@ Reserved for the application.
 ### info
 
 ```typescript
-info: DeviceInfo
+info: DeviceInfo;
 ```
 
 Information about the device (vendor, versions etc).
@@ -154,10 +167,11 @@ Get debug information about the device:
 | `shadingLanguageVersion` | `number` | shading language version              |
 
 Remarks:
+
 - Shading language version is the highest supported version of the device's shading language.
-- Version numbers are calculated as:  `<major version> * 100 + <minor version> * 10 + <patch version>`. 
-- The WGSL version is always `100` 
-- The GLSL version is always `300` (WebGL2). 
+- Version numbers are calculated as: `<major version> * 100 + <minor version> * 10 + <patch version>`.
+- The WGSL version is always `100`
+- The GLSL version is always `300` (WebGL2).
 - Sometimes a vendor provides multiple backends (e.g. Apple ANGLE vs Apple Metal)
 - WebGPU Devices currently do not provide much information due to limitations in the WebGPU API.
 - WebGL Devices can usually provide rich information (through the `WEBGL_debug_renderer_info` extension).
@@ -165,7 +179,7 @@ Remarks:
 ### features
 
 ```typescript
-features: Set<DeviceFeature>
+features: Set<DeviceFeature>;
 ```
 
 Applications can determine whether the device implements an optional features by checking `device.features.has(...)`.
@@ -173,7 +187,7 @@ Applications can determine whether the device implements an optional features by
 ### limits
 
 ```typescript
-limits: DeviceLimits
+limits: DeviceLimits;
 ```
 
 An object with various device limits. WebGPU style.
@@ -205,7 +219,7 @@ Check if device supports rendering to a specific texture format.
 ### isLost
 
 ```typescript
-isLost: boolean
+isLost: boolean;
 ```
 
 True if the device is already lost (GPU is disconnected).
@@ -213,9 +227,8 @@ True if the device is already lost (GPU is disconnected).
 ### lost
 
 ```typescript
-lost: Promise<{reason: 'destroyed', message: string}>
+lost: Promise<{reason: 'destroyed'; message: string}>;
 ```
-
 
 Promise that resolves with an error message if the device is lost (GPU is disconnected).
 
@@ -254,14 +267,14 @@ Use the static `Device.create()` method to create classes.
 Releases resources associated with this `Device`.
 
 :::info
-WebGPU only. Calling `device.destroy()` on a WebGL `Device` will not immediately release GPU resources. 
+WebGPU only. Calling `device.destroy()` on a WebGL `Device` will not immediately release GPU resources.
 The WebGL API does not provide a context destroy function,
 instead relying on garbage collection to eventually release the resources.
 :::
 
 :::caution
 Interaction between `Device.destroy()`, `Device.lost` and `Device.isLost` is implementation-dependent.
-The application should not assume that destroying a device triggers a device loss, 
+The application should not assume that destroying a device triggers a device loss,
 or that the `lost` promise is resolved before any API errors are triggered by access to the destroyed device.
 :::
 
@@ -275,6 +288,31 @@ Creates a new [`CanvasContext`](./canvas-context).
 
 :::info
 WebGPU only. WebGL devices can only render into the canvas they were created with.
+:::
+
+### createPresentationContext()
+
+<p class="badges">
+  <img src="https://img.shields.io/badge/From-v9.3-blue.svg?style=flat-square" alt="From-v9.3" />
+  <img src="https://img.shields.io/badge/Experimental-orange.svg?style=flat-square" alt="Experimental" />
+</p>
+
+```typescript
+createPresentationContext(props?: PresentationContextProps): PresentationContext
+```
+
+Creates a new [`PresentationContext`](./presentation-context) for multi-canvas presentation.
+
+:::caution Experimental
+`createPresentationContext()` is experimental and may change in a future release.
+:::
+
+:::info
+For portable WebGL and WebGPU multi-canvas rendering, create the device with a default `CanvasContext` backed by an `OffscreenCanvas`.
+:::
+
+:::info
+On WebGL, all `PresentationContext` instances on a device share the device's default `CanvasContext` as the actual GPU render target, so they must be used sequentially.
 :::
 
 ### getDefaultCanvasContext()
@@ -294,8 +332,10 @@ In TypeScript applications this helps applications avoid having to repeatedly ch
 submit(): void
 ```
 
-The application should call `device.submit()` after rendering of a frame is complete 
+The application should call `device.submit()` after rendering of a frame is complete
 to ensure that the generated command queue is submitted to the GPU.
+
+See [GPU Commands](/docs/api-guide/gpu/gpu-commands) for when `submit()` is required, how it relates to `CommandEncoder.finish()`, and why WebGL and WebGPU differ here.
 
 ### createBuffer
 
@@ -304,7 +344,7 @@ createBuffer(props: BufferProps): Buffer
 createBuffer(data: ArrayBuffer | ArrayBufferView): Buffer
 ```
 
-Creates a [`Buffer`](./resources/buffer) used to manage memory on the GPU.
+Creates a [`Buffer`](./resources/buffer) used to manage memory on the GPU. See [`BufferProps`](./resources/buffer.md#bufferprops) for available options.
 
 Deduces `indexType` if usage.
 
@@ -315,7 +355,7 @@ createTexture(props: TextureProps): Texture
 createTexture(data: Promise<TextureData>): Texture
 ```
 
-Creates a [`Texture`](./resources/texture), used to manage image data memory on the GPU.
+Creates a [`Texture`](./resources/texture), used to manage image data memory on the GPU. See [`TextureProps`](./resources/texture.md#textureprops) for available options.
 
 ### createSampler
 
@@ -323,7 +363,7 @@ Creates a [`Texture`](./resources/texture), used to manage image data memory on 
 createSampler(props: SamplerProps): Sampler
 ```
 
-Creates a [`Sampler`](./resources/sampler).
+Creates a [`Sampler`](./resources/sampler). See [`SamplerProps`](./resources/sampler.md#samplerprops) for available options.
 
 ### createFramebuffer
 
@@ -331,7 +371,7 @@ Creates a [`Sampler`](./resources/sampler).
 createFramebuffer(props: FramebufferProps): Framebuffer
 ```
 
-Creates a [`Framebuffer`](./resources/framebuffer).
+Creates a [`Framebuffer`](./resources/framebuffer). See [`FramebufferProps`](./resources/framebuffer.md#framebufferprops) for available options.
 
 ### createShader
 
@@ -339,7 +379,7 @@ Creates a [`Framebuffer`](./resources/framebuffer).
 createShader(props: ShaderProps): Shader
 ```
 
-Creates a [`Shader`](./resources/shader).
+Creates a [`Shader`](./resources/shader). See [`ShaderProps`](./resources/shader.md#shaderprops) for available options.
 
 ### createRenderPipeline
 
@@ -347,7 +387,7 @@ Creates a [`Shader`](./resources/shader).
 createRenderPipeline(props: RenderPipelineProps): RenderPipeline
 ```
 
-Creates a [`RenderPipeline`](./resources/render-pipeline) (aka program)
+Creates a [`RenderPipeline`](./resources/render-pipeline) (aka program). See [`RenderPipelineProps`](./resources/render-pipeline.md#renderpipelineprops) for available options.
 
 ### createComputePipeline
 
@@ -355,7 +395,7 @@ Creates a [`RenderPipeline`](./resources/render-pipeline) (aka program)
 createComputePipeline(props: ComputePipelineProps): ComputePipeline
 ```
 
-Creates a [`ComputePipeline`](./resources/compute-pipeline) (aka program)
+Creates a [`ComputePipeline`](./resources/compute-pipeline) (aka program). See [`ComputePipelineProps`](./resources/compute-pipeline.md#computepipelineprops) for available options.
 
 ### createFence
 
@@ -363,7 +403,7 @@ Creates a [`ComputePipeline`](./resources/compute-pipeline) (aka program)
 createFence(): Fence
 ```
 
-Creates a [`Fence`](./resources/fence) used to wait for completion of submitted GPU work.
+Creates a [`Fence`](./resources/fence) used to wait for completion of submitted GPU work. See [`FenceProps`](./resources/fence.md#fenceprops) for available options.
 
 ### beginRenderPass
 
@@ -371,9 +411,10 @@ Creates a [`Fence`](./resources/fence) used to wait for completion of submitted 
 beginRenderPass(props: RenderPassProps): RenderPass
 ```
 
-Creates a [`RenderPass`](./resources/render-pass).
+Creates a [`RenderPass`](./resources/render-pass). See [`RenderPassProps`](./resources/render-pass.md#renderpassprops) for available options.
 
 - `props.framebuffer` If omitted, renders into the default canvas context's default framebuffer.
+- See [GPU Commands](/docs/api-guide/gpu/gpu-commands) for the difference between pass recording on WebGPU and best-effort immediate behavior on WebGL.
 
 ### beginComputePass
 
@@ -381,7 +422,9 @@ Creates a [`RenderPass`](./resources/render-pass).
 beginComputePass(props?: ComputePassProps): ComputePass
 ```
 
-Creates a [`ComputePass`](./resources/compute-pass) which can be used to bind data and run compute operations using compute pipelines.
+Creates a [`ComputePass`](./resources/compute-pass) which can be used to bind data and run compute operations using compute pipelines. See [`ComputePassProps`](./resources/compute-pass.md#computepassprops) for available options.
+
+See [GPU Commands](/docs/api-guide/gpu/gpu-commands) for how compute work is recorded and submitted.
 
 ### loseDevice
 
@@ -393,8 +436,7 @@ Triggers device loss (see below). After this call, the `Device.lost` promise wil
 
 - Returns `true` if an actual or emulated device loss was triggered, `false` otherwise. Note that even if device loss emulation is not supported by the platform this function will still update the `Device` instance to indicate that the device was lost, however the device can still be used.
 
-
 :::note
-The `loseDevice()` method is primarily intended for debugging of device loss handling and should not be relied upon for production code. 
-`loseDevice()` can currently only emulate context loss on WebGL devices on platform's where WebGL API provides the required `WEBGL_lose_context` WebGL debug extension. 
+The `loseDevice()` method is primarily intended for debugging of device loss handling and should not be relied upon for production code.
+`loseDevice()` can currently only emulate context loss on WebGL devices on platform's where WebGL API provides the required `WEBGL_lose_context` WebGL debug extension.
 :::

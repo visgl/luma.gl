@@ -4,6 +4,15 @@ Implements Physically Based Shading of a microfacet surface defined by a glTF ma
 
 Lighting is expected to be defined by the `lights` module.
 
+## Bind Group Convention
+
+The `pbrMaterial` module's material uniform buffer, textures, and samplers are
+currently assigned to bind group `3`. The module also depends on lighting,
+which is assigned to bind group `2`, while projection-style globals typically
+remain in group `0`.
+
+See the [Bind Groups and Bindings Guide](/docs/api-guide/gpu/gpu-bindings) for
+details on how grouped bindings are declared and supplied.
 
 ## References
 
@@ -15,4 +24,3 @@ Lighting is expected to be defined by the `lights` module.
 ## Attribution
 
 This implementation of PBR (Physically-Based Rendering) is a fork of the [Khronos Reference Implementation](https://github.com/KhronosGroup/glTF-WebGL-PBR) under the Apache 2.0 license.
-

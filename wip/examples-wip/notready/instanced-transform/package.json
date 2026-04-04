@@ -8,13 +8,13 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@luma.gl/engine": "9.0.0-alpha.29",
-    "@luma.gl/shadertools": "9.0.0-alpha.29",
-    "@luma.gl/webgl": "9.0.0-alpha.29",
+    "@luma.gl/engine": "~9.3.0",
+    "@luma.gl/shadertools": "~9.3.0",
+    "@luma.gl/webgl": "~9.3.0",
     "@math.gl/core": "4.0.0-alpha.4"
   },
   "devDependencies": {
     "typescript": "^5.1.6",
-    "vite": "^3.2.4"
+    "vite": "^8.0.0"
   }
 }

@@ -14,7 +14,12 @@ export class NullRenderPass extends RenderPass {
     this.device = device;
   }
 
-  end(): void {}
+  end(): void {
+    if (this.destroyed) {
+      return;
+    }
+    this.destroy();
+  }
 
   pushDebugGroup(groupLabel: string): void {}
   popDebugGroup(): void {}

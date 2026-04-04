@@ -3,25 +3,38 @@
 // Copyright (c) vis.gl contributors
 
 import {Device, SamplerProps} from '@luma.gl/core';
-import {DynamicTexture} from '@luma.gl/engine';
+import {
+  DynamicTexture,
+  type Texture2DData,
+  type TextureCubeData,
+  type TextureCubeFace
+} from '@luma.gl/engine';
 import {loadImageTexture} from '@loaders.gl/textures';
 
 /** Environment textures for PBR module */
 export type PBREnvironment = {
   /** Bi-directional Reflectance Distribution Function (BRDF) lookup table */
   brdfLutTexture: DynamicTexture;
+  /** Diffuse irradiance cubemap. */
   diffuseEnvSampler: DynamicTexture;
+  /** Specular reflection cubemap with mip chain. */
   specularEnvSampler: DynamicTexture;
 };
 
+/** Configuration used to load an image-based lighting environment. */
 export type PBREnvironmentProps = {
+  /** URL of the BRDF lookup texture. */
   brdfLutUrl: string;
+  /** Callback that returns the URL for a diffuse or specular cubemap face and mip level. */
   getTexUrl: (name: string, dir: number, level: number) => string;
+  /** Number of mip levels in the specular environment map. */
   specularMipLevels?: number;
 };
 
 /** Loads textures for PBR environment */
 export function loadPBREnvironment(device: Device, props: PBREnvironmentProps): PBREnvironment {
+  const specularMipLevels = props.specularMipLevels ?? 1;
+
   const brdfLutTexture = new DynamicTexture(device, {
     id: 'brdfLUT',
     sampler: {
@@ -31,12 +44,15 @@ export function loadPBREnvironment(device: Device, props: PBREnvironmentProps): 
       magFilter: 'linear'
     } as const satisfies SamplerProps,
     // Texture accepts a promise that returns an image as data (Async Textures)
-    data: loadImageTexture(props.brdfLutUrl)
+    data: loadImageTexture(resolveTextureUrl(props.brdfLutUrl))
   });
 
   const diffuseEnvSampler = makeCube(device, {
     id: 'DiffuseEnvSampler',
-    getTextureForFace: dir => loadImageTexture(props.getTexUrl('diffuse', dir, 0)),
+    getTextureForFace: face =>
+      loadImageTexture(
+        resolveTextureUrl(props.getTexUrl('diffuse', FACES.indexOf(face), 0))
+      ) as Promise<Texture2DData>,
     sampler: {
       addressModeU: 'clamp-to-edge',
       addressModeV: 'clamp-to-edge',
@@ -47,13 +63,15 @@ export function loadPBREnvironment(device: Device, props: PBREnvironmentProps): 
 
   const specularEnvSampler = makeCube(device, {
     id: 'SpecularEnvSampler',
-    getTextureForFace: (dir: number) => {
-      const imageArray: Promise<any>[] = [];
-      // @ts-ignore
-      for (let lod = 0; lod <= props.specularMipLevels - 1; lod++) {
-        imageArray.push(loadImageTexture(props.getTexUrl('specular', dir, lod)));
+    getTextureForFace: (face: TextureCubeFace) => {
+      const imageArray: Array<Promise<unknown>> = [];
+      const direction = FACES.indexOf(face);
+      for (let lod = 0; lod < specularMipLevels; lod++) {
+        imageArray.push(
+          loadImageTexture(resolveTextureUrl(props.getTexUrl('specular', direction, lod)))
+        );
       }
-      return imageArray;
+      return Promise.all(imageArray) as Promise<Texture2DData>;
     },
     sampler: {
       addressModeU: 'clamp-to-edge',
@@ -71,8 +89,14 @@ export function loadPBREnvironment(device: Device, props: PBREnvironmentProps): 
 }
 
 // TODO put somewhere common
-const FACES = [0, 1, 2, 3, 4, 5];
+const FACES: TextureCubeFace[] = ['+X', '-X', '+Y', '-Y', '+Z', '-Z'];
 
+function resolveTextureUrl(url: string): string {
+  const baseUrl = globalThis.document?.baseURI ?? globalThis.location?.href;
+  return baseUrl ? new URL(url, baseUrl).toString() : url;
+}
+
+/** Construction props for an asynchronously loaded cubemap. */
 function makeCube(
   device: Device,
   {
@@ -80,22 +104,28 @@ function makeCube(
     getTextureForFace,
     sampler
   }: {
+    /** Debug id assigned to the created texture. */
     id: string;
-    getTextureForFace: (dir: number) => Promise<any> | Promise<any>[];
+    /** Returns the image or mip-array promise for one cubemap face. */
+    getTextureForFace: (face: TextureCubeFace) => Promise<Texture2DData>;
+    /** Sampler configuration shared across faces. */
     sampler: SamplerProps;
   }
 ): DynamicTexture {
-  const data = {};
-  FACES.forEach(face => {
-    // @ts-ignore TODO
-    data[String(face)] = getTextureForFace(face);
+  const data: Promise<TextureCubeData> = Promise.all(
+    FACES.map(face => getTextureForFace(face))
+  ).then(faceDataArray => {
+    const cubeData = {} as TextureCubeData;
+    FACES.forEach((face, index) => {
+      cubeData[face] = faceDataArray[index];
+    });
+    return cubeData;
   });
   return new DynamicTexture(device, {
     id,
     dimension: 'cube',
     mipmaps: false,
     sampler,
-    // @ts-expect-error
     data
   });
 }

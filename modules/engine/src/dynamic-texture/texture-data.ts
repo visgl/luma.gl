@@ -9,6 +9,8 @@ export type TextureImageSource = ExternalImage;
  * additional optional fields can describe compressed texture data.
  */
 export type TextureImageData = {
+  /** Preferred WebGPU style format string. */
+  textureFormat?: TextureFormat;
   /** WebGPU style format string. Defaults to 'rgba8unorm' */
   format?: TextureFormat;
   /** Typed Array with the bytes of the image. @note beware row byte alignment requirements */
@@ -38,11 +40,11 @@ export type TextureSliceData = TextureMipLevelData | TextureMipLevelData[];
 export type TextureCubeFace = '+X' | '-X' | '+Y' | '-Y' | '+Z' | '-Z';
 
 /** Array of cube texture faces. @note: index in array is the face index */
-// prettier-ignore
+// biome-ignore format: preserve layout
 export const TEXTURE_CUBE_FACES = ['+X', '-X', '+Y', '-Y', '+Z', '-Z'] as const satisfies readonly TextureCubeFace[];
 
 /** Map of cube texture face names to face indexes */
-// prettier-ignore
+// biome-ignore format: preserve layout
 export const TEXTURE_CUBE_FACE_MAP = {'+X': 0, '-X': 1, '+Y': 2, '-Y': 3, '+Z': 4, '-Z': 5} as const satisfies Record<TextureCubeFace, number>;
 
 /** @todo - Define what data type is supported for 1D textures. TextureImageData with height = 1 */
@@ -104,6 +106,7 @@ export type TextureSubresource = {
   | {
       type: 'texture-data';
       data: TextureImageData;
+      textureFormat?: TextureFormat;
     }
 );
 
@@ -173,8 +176,8 @@ function getTextureMipLevelSize(data: TextureMipLevelData): {width: number; heig
   throw new Error('Unsupported mip-level data');
 }
 
-/** Type guard: is a mip-level `TextureImageData` (vs ExternalImage) */
-function isTextureImageData(data: TextureMipLevelData): data is TextureImageData {
+/** Type guard: is a mip-level `TextureImageData` (vs ExternalImage or bare typed array) */
+function isTextureImageData(data: unknown): data is TextureImageData {
   return (
     typeof data === 'object' &&
     data !== null &&
@@ -182,6 +185,20 @@ function isTextureImageData(data: TextureMipLevelData): data is TextureImageData
     'width' in data &&
     'height' in data
   );
+}
+
+function isTypedArrayMipLevelData(data: unknown): data is TypedArray {
+  return ArrayBuffer.isView(data);
+}
+
+export function resolveTextureImageFormat(data: TextureImageData): TextureFormat | undefined {
+  const {textureFormat, format} = data;
+  if (textureFormat && format && textureFormat !== format) {
+    throw new Error(
+      `Conflicting texture formats "${textureFormat}" and "${format}" provided for the same mip level`
+    );
+  }
+  return textureFormat ?? format;
 }
 
 /** Resolve size for a single mip-level datum */
@@ -222,14 +239,18 @@ export function getTexture1DSubresources(data: Texture1DData): TextureSubresourc
 }
 
 /** Normalize 2D layer payload into an array of mip-level items */
-function _normalizeTexture2DData(data: Texture2DData): (TextureImageData | ExternalImage)[] {
+function _normalizeTexture2DData(
+  data: Texture2DData
+): (TextureImageData | ExternalImage | TypedArray)[] {
   return Array.isArray(data) ? data : [data];
 }
 
 /** Experimental: Set multiple mip levels (2D), optionally at `z` (depth/array index) */
 export function getTexture2DSubresources(
   slice: number,
-  lodData: Texture2DData
+  lodData: Texture2DData,
+  baseLevelSize?: {width: number; height: number},
+  textureFormat?: TextureFormat
 ): TextureSubresource[] {
   const lodArray = _normalizeTexture2DData(lodData);
   const z = slice;
@@ -249,6 +270,20 @@ export function getTexture2DSubresources(
       subresources.push({
         type: 'texture-data',
         data: imageData,
+        textureFormat: resolveTextureImageFormat(imageData),
+        z,
+        mipLevel
+      });
+    } else if (isTypedArrayMipLevelData(imageData) && baseLevelSize) {
+      subresources.push({
+        type: 'texture-data',
+        data: {
+          data: imageData,
+          width: Math.max(1, baseLevelSize.width >> mipLevel),
+          height: Math.max(1, baseLevelSize.height >> mipLevel),
+          ...(textureFormat ? {format: textureFormat} : {})
+        },
+        textureFormat,
         z,
         mipLevel
       });
@@ -294,7 +329,7 @@ export function getTextureCubeArraySubresources(data: TextureCubeArrayData): Tex
   data.forEach((cubeData, cubeIndex) => {
     for (const [face, faceData] of Object.entries(cubeData)) {
       const faceDepth = getCubeArrayFaceIndex(cubeIndex, face as TextureCubeFace);
-      getTexture2DSubresources(faceDepth, faceData);
+      subresources.push(...getTexture2DSubresources(faceDepth, faceData));
     }
   });
   return subresources;

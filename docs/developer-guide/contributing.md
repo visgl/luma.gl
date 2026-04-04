@@ -15,7 +15,7 @@ git clone git@github.com:visgl/luma.gl.git
 
 Make sure to install all dependencies from the repository root:
 
-`yarn bootstrap`
+`yarn install`
 
 luma.gl's source code is in the `modules/` directory. Development is most easily done by running the examples in development mode, e.g.:
 
@@ -27,7 +27,7 @@ yarn start-local
 
 Any modifications made to the source or example code will cause the example to rebuild and the page to refresh, making quick iterations on code changes straightforward.
 
-Testing against the full website can be done by running `yarn start` in the the `website/`. This full website take longer to build but makes it easier to test against all examples. This can be helpful when making core changes to luma.gl. As with running the examples in development mode, a rebuild and page refresh will be triggered whenever source or website code is updated.
+Testing against the full website can be done after the root install by running `yarn website:start`. This full website take longer to build but makes it easier to test against all examples. This can be helpful when making core changes to luma.gl. As with running the examples in development mode, a rebuild and page refresh will be triggered whenever source or website code is updated.
 
 ## Testing
 

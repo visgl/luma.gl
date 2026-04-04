@@ -7,7 +7,7 @@
 
 /* eslint-disable camelcase */
 
-import {GL} from '@luma.gl/constants';
+import {GL} from '@luma.gl/webgl/constants';
 
 // webgl1 extensions natively supported by webgl2
 const WEBGL1_STATIC_EXTENSIONS = {

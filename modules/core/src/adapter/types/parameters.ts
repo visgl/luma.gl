@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {NumberArray4, NumberArray6} from '@math.gl/types';
-import {TextureFormatDepthStencil} from '../../shadertypes/textures/texture-formats';
+import {TextureFormatDepthStencil} from '../../shadertypes/texture-types/texture-formats';
 
 export type CompareFunction =
   | 'never'
@@ -102,6 +102,8 @@ export type DepthStencilParameters = {
   depthCompare?: CompareFunction;
   /** The format of depthStencilAttachment this GPURenderPipeline will be compatible with. */
   depthFormat?: TextureFormatDepthStencil;
+  /** Depth value used when clearing depth buffers. */
+  clearDepth?: number;
 
   /** Bitmask controlling which depthStencilAttachment stencil value bits are read when performing stencil comparison tests. */
   stencilReadMask?: number;
@@ -217,6 +219,7 @@ export const DEFAULT_PARAMETERS: Required<Parameters> = {
   depthWriteEnabled: false,
   depthCompare: 'always',
   depthFormat: 'depth24plus',
+  clearDepth: 1,
 
   depthBias: 0,
   depthBiasSlopeScale: 0,

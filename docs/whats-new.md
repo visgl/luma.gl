@@ -2,9 +2,75 @@
 
 _This page contains news for recent luma.gl releases. For older releases (through v8.5) refer to the [Legacy What's New](/docs/legacy/legacy-upgrade-guide) page._
 
-## Version 9.2 (In Development)
+## Version 9.3
 
-Target Date: Q2, 2025
+Release Date: March 31, 2026
+
+**General**
+
+- **Typescript 5.9** - luma.gl code base is now TypeScript 5.9 clean.
+
+**New Examples**
+
+- **[Texture Tester Example](/examples/api/texture-tester)** - New example showing support for compressed textures on WebGL and WebGPU. Also implements multi-canvas rendering.
+- **[Multi-Canvas Example](/examples/api/multi-canvas)** - New example showing rendering into multiple HTML canvas elements.
+- **[External Context Example](/examples/integrations/external-context)** - New example showing integration with external WebGL contexts.
+- **[React Strict Mode Example](/examples/integrations/react-strict-mode)** - Improved resource cleanup for better compatibility when using luma.gl in React `<StrictMode>` apps
+
+**@luma.gl/core**
+
+- **Multi-canvas rendering** is now supported on both WebGL and WebGPU via [`device.createPresentationContext()`](/docs/api-reference/core/presentation-context). See the [Multiple Canvases](/docs/developer-guide/multiple-canvases) developer guide details.
+- **Composite shader block layouts** now support nested structs and fixed-size arrays in [`ShaderBlockLayout`](/docs/api-reference/core/shader-block-layout) and [`UniformStore`](/docs/api-reference/core/uniform-store), while preserving nested JavaScript values at the API boundary.
+- **Grouped bindings** now support `ShaderLayout.bindings[].group`, flat `bindings`, and grouped `bindGroups`, including sparse logical bind-group usage on both WebGPU and WebGL.
+
+**@luma.gl/engine**
+
+- New **`Material`** and **`MaterialFactory`** classes provide reusable material-owned group-3 bindings for `Scenegraph` models.
+- **WebGPU mipmap generation** now supported by [`DynamicTexture`](/docs/api-reference/engine/dynamic-texture).
+- **Explicit mip chains** can now be passed to `DynamicTexture` for 2D, array, cube, and 3D uploads.
+- **Compressed mip uploads** are now validated and uploaded through `DynamicTexture`, including block-size-aware mip truncation.
+- **Mip-level format metadata** now accepts both `textureFormat` and `format` on texture data objects during the transition to loaders.gl `TextureLevel` naming.
+
+**@luma.gl/webgpu**
+
+- **compressed texture** support (but note that WebGPU is stricter than WebGL and requires block-aligned textures).
+- **texture readback** improvements
+
+**@luma.gl/webgl**
+
+- **RenderPipeline optimization** - Compatible WebGL render pipelines now share linked `WebGLProgram`s, reducing pipeline creation overhead while preserving per-pipeline defaults.
+
+**@luma.gl/gltf**
+
+- **WebGPU support** - glTF models can now be rendered in WebGPU.
+- **Joint/Skin Animations** - Support for glTF animations now include joint and skin animations.
+- **Lighting** - luma.gl Light definitions are now extracted if the `KHR_lights_punctual` glTF extension is present in the glTF file.
+- **Scenegraph materials** - glTF scenegraph creation now returns `materials` aligned with the source glTF `materials` array.
+- **`linear` texture filtering** - default texture filtering is now `linear` instead of `nearest` for improved texture rendering.
+- **PBR material extensions** - the stock `pbrMaterial` shader now implements `KHR_materials_specular`, `KHR_materials_ior`, `KHR_materials_transmission`, `KHR_materials_volume`, `KHR_materials_clearcoat`, `KHR_materials_sheen`, `KHR_materials_iridescence`, and `KHR_materials_anisotropy`, using the parsed glTF extension uniforms and textures.
+- **Emissive materials** - the stock PBR shader now applies `KHR_materials_emissive_strength`, and core `emissiveFactor` values are preserved even when no emissive texture is present.
+- **`KHR_animation_pointer`** - `createScenegraphsFromGLTF()` and `GLTFAnimator` now animate supported node TRS targets, selected material factors, and animated `KHR_texture_transform` offset/rotation/scale targets on stock PBR material texture slots. Structural targets such as animated `texCoord`, morph weights, cameras, and material mode switches remain unsupported.
+- **Extension support docs** - the [`glTF Extension Support`](/docs/api-reference/gltf/gltf-extensions) table now documents the current built-in vs parsed-only extension coverage for `@luma.gl/gltf`.
+- **Extension support metadata** - `createScenegraphsFromGLTF()` now exposes an `extensionSupport` map so applications can inspect which extensions a model uses and whether `@luma.gl/gltf` supports them.
+
+**@luma.gl/shadertools**
+
+- **[`floatColors`](/docs/api-reference/shadertools/shader-modules/float-colors)** - New shader module with shared semantic color normalization and premultiplied alpha helpers.
+- **Opt-in float semantic colors** - Byte-based semantic color APIs in `lighting`, shared `floatColors`, legacy `picking`, and glTF light parsing accept `useByteColors: false` for float and HDR-style color values while preserving current defaults.
+- **[`lighting`](/docs/api-reference/shadertools/shader-modules/lighting)** shader module supports a new light type `SpotLight`.
+- **[`lambertMaterial`](/docs/api-reference/shadertools/shader-modules/lambert-material)** A new shader module adds a diffuse-only matte material model, completing the material catalog
+- **Unlit Materials** All material shader modules now support `unlit` prop, allowing applications to disable lighting for materials that are already lit (e.g. photogrammetry).
+- `Composite uniformTypes` `uniformTypes` now support nested structs and fixed-size arrays. See [`ShaderModule`](/docs/api-reference/shadertools/shader-module).
+- `WebGPU Shader modules` - ShaderModules now have WGSL variants.
+- `Shader module auto bindings` WGSL shader module now support `@binding(auto)` which eliminates binding conflicts. See [WGSL Support](/docs/api-reference/shadertools/wgsl-support).
+
+**@luma.gl/effects**
+
+- **WebGPU/WGSL effects** - Effects now have WGSL shader implementations and work under WebGPU.
+
+## Version 9.2
+
+Release Date: Sep 24, 2025
 
 Production quality WebGPU backend
 
@@ -21,42 +87,37 @@ Production quality WebGPU backend
   - [`Buffer.mapAndReadAsync()`] New method that reads directly from buffer memory without performing a copy.
   - [`Buffer.mapAndWriteAsync()`] New method that writes directly to buffer memory.
 - [`Texture`]
-  - `Texture` class refactors complete, see upgrade guide. 
+  - `Texture` class refactors complete, see upgrade guide.
 - Shader type APIs have been improved.
 - `CommandEncoder`/`CommandBuffer` API improvements
 - `Fence` - New synchronization primitive created with `device.createFence()`
 - `CanvasContext` API simplifications (see upgrade guide).
 
 - [Texture Formats](/docs/api-reference/core/texture-formats). Adds support for the new texture formats added in Chrome 132 (currently require setting chrome://flags/#enable-unsafe-webgpu)
+
   - `'r16unorm'`, `'rg16unorm'`, `'rgba16unorm'` (feature `'chromium-experimental-unorm16-texture-formats'`)
   - `'r16snorm'`, `'rg16snorm'`, `'rgba16snorm'` (feature `'chromium-experimental-snorm16-texture-formats'`)
 
 - [Vertex Formats](/docs/api-reference/core/vertex-formats) (added in Chrome v133 and v119)
   - Single component 8 and 16 bit formats are now supported by WebGPU: `'uint8'`, `'sint8'`, `'unorm8'`, `'snorm8'`, `'uint16'`, `'sint16'`, `'unorm16'`, `'snorm16'`, and `'float16'`.
-  - Note: 3 component formats are still missing in WebGPU. 
+  - Note: 3 component formats are still missing in WebGPU.
   - `'unorm8x4-bgra'` - WebGPU only. Simplifies working with BGRA data.
   - `'unorm10-10-10-2` - Exposed since available in all WebGPU backends. Also supported by WebGL2.
 
 **@luma.gl/engine**
 
-- `DynamicTexture` 
-  - now supports mipmap generation for WebGPU textures (in progress)
-
-**@luma.gl/gltf**
-
-- glTF Skeleton Animation Support  (in progress)
-- glTF Mesh Target Animation Support  (in progress)
-- glTF and PRB now supported on WebGPU (in progress)
-- Improved documentation
+- `DynamicTexture`
+  - now supports mipmap generation for WebGPU textures
+  - owns WebGPU mipmap generation for `2d`, `2d-array`, `cube`, `cube-array`, and `3d` textures
+  - throws explicit runtime errors when a WebGPU texture format does not support the required mipmap-generation capabilities
 
 **@luma.gl/effects**
 
-- All postprocessing effects ported to WGSL (in progress)
+- More postprocessing effects ported to WGSL
 
 **@luma.gl/shadertools**
 
-- All shader modules ported to WGSL (in progress)
-
+- More shader modules ported to WGSL
 
 ## Version 9.1
 
@@ -68,7 +129,7 @@ Enhanced WebGPU support.
 
 - GPU backend management is streamlined via the new `Adapter` API.
 - GPU connection to HTML DOM (via `canvas` elements) improved via `CanvasContext` API changes.
-- `Texture`s are now immutable, however a new `AsyncTexture` class offers a higher-level, mutable texture API.
+- `Texture`s are now immutable, however a new `DynamicTexture` class offers a higher-level, mutable texture API.
 - `ShaderModule` type safety improvements (shader uniforms can now be strictly typed in JavaScript)
 
 **@luma.gl/core**
@@ -91,7 +152,7 @@ Enhanced WebGPU support.
   - Now calculates exact "device pixel content box" size enabling pixel perfect sized drawing buffers (no moire etc).
   - Now tracks size, visibility and DPR changes (see the new `DeviceProps` callbacks).
 - `Texture`
-  - Textures are now immutable and synchronous. See upgrade guide, and the new `AsyncTexture` class in `@luma.gl/engine`.
+  - Textures are now immutable and synchronous. See upgrade guide, and the new `DynamicTexture` class in `@luma.gl/engine`.
   - `Texture.copyExternalImage()` New function that works on both WebGPU and WebGL.
   - `Texture.copyImageData()` New function that works on both WebGPU and WebGL.
 - `Sampler`
@@ -105,7 +166,7 @@ Enhanced WebGPU support.
 
 - `makeAnimationLoopTemplate`
   - Accepts a new `.adapters` prop. (Avoids need for global registration of adapters).
-- `AsyncTexture`](/docs/api-reference/engine/dynamic-texture)
+- [`DynamicTexture`](/docs/api-reference/engine/dynamic-texture)
   - New class allows that applications to work withcreate textures from a Promise.
 - `ShaderPassRenderer`
   - New class that helps applications apply a `ShaderPass` list to a texture.

@@ -1,111 +1,174 @@
 # ShaderLayout
 
-A `ShaderLayout` object describes the static structure a `RenderPipeline, "location" and structure of binding points of shaders,
- including attributes, bindings (textures, samplers, uniform buffers), and uniforms (under WebGL) and also lets the application
- assign a name to each binding point (typically matching the name used in the shader code).
+A `ShaderLayout` describes the static interface of a shader pipeline:
 
-Note that a `ShaderLayout` only describes static data and it is typically complemented by a [`BufferLayout`](./buffer-layout.md), which contains
-"dynamic" data such as the specific layout and structure of the buffers that will be provided to a `RenderPipeline`. The application
-could choose to provide buffers with different vertex formats, strides, and offsets, without changing the shader.
+- vertex attributes
+- bindings such as uniform buffers, storage buffers, textures, and samplers
 
-Shader code (WGSL and GLSL) contains declarations of attributes, uniform blocks, samplers etc, describing all required data inputs and outputs. After compilation and linking of fragment and vertex shaders into a pipeline, the resolved declarations collectively define the layout of the data that needs to be bound before the shader can execute on the GPU.
+luma.gl uses `ShaderLayout` to match named JavaScript resources to the numeric
+binding locations used by GPU shaders.
 
-As a preparation to a `RenderPipeline` `draw()` call, the GPU data
-required by the pipeline's shaders must be bound on the CPU via luma.gl calls such as `setAttributes()`, `setIndexBuffer()`, `setBindings()` etc.
-For these calls to work, the metadata in the `ShaderLayout` object is needed in JavaScript.
+## Types
 
-Note that `ShaderLayout`s are designed to be created manually by a programmer (who needs to make sure all relevant declarations in the shader code are described in the `ShaderLayout`).
+### `ShaderLayout`
 
-Remarks:
-- In WebGL, a default `ShaderLayout` is extracted automatically by the `RenderPipeline` in WebGL.
-However this is not yet possible in WebGPU. Therefore it is necessary to provide an explicit `layout` property to any `RenderPipeline` that is expected to run in WebGPU. This restriction may be lifted in the future.
-- It is not possible to automatically infer from a shader which attributes should have instanced step modes. The heuristic applied by luma.gl under WebGL is that any attribute which contains the string `instanced` will be assumed to have `stepMode='instance'`.
-
-## Usage
-
-```typescript
+```ts
 type ShaderLayout = {
+  attributes: AttributeDeclaration[];
+  bindings: BindingDeclaration[];
+  uniforms?: any[];
+  varyings?: VaryingBinding[];
+};
+```
+
+### `ComputeShaderLayout`
+
+```ts
+type ComputeShaderLayout = {
+  bindings: BindingDeclaration[];
+};
+```
+
+## Attributes
+
+```ts
+type AttributeDeclaration = {
+  name: string;
+  location: number;
+  type: AttributeShaderType;
+  stepMode?: 'vertex' | 'instance';
+};
+```
+
+Example:
+
+```ts
+const shaderLayout = {
   attributes: [
-    instancePositions: {location: 0, format: 'float32x2', stepMode: 'instance'},
-    instanceVelocities: {location: 1, format: 'float32x2', stepMode: 'instance'},
-    vertexPositions: {location: 2, format: 'float32x2', stepMode: 'vertex'}
+    {name: 'positions', location: 0, type: 'vec3<f32>'},
+    {name: 'instanceOffsets', location: 1, type: 'vec2<f32>', stepMode: 'instance'}
   ],
+  bindings: []
+};
+```
 
-  bindings: {
-    projection: {location: 0, type: 'uniforms'},
-    textureSampler: {location: 1, type: 'sampler'},
-    texture: {location: 2, type: 'texture'}
-  }
+## Bindings
+
+Bindings are declared as `BindingDeclaration` variants such as:
+
+- `UniformBufferBindingLayout`
+- `StorageBufferBindingLayout`
+- `TextureBindingLayout`
+- `SamplerBindingLayout`
+- `StorageTextureBindingLayout`
+
+All binding declarations include these core fields:
+
+```ts
+{
+  name: string;
+  group: number;
+  location: number;
+  type: ...;
 }
+```
 
-type AttributeLayout =
-  {name: , location: number, format: VertexFormat, stepMode: 'vertex' | 'instance'}
+### `group`
 
-type BindingLayout =
-  {type: 'uniform', location: number} |
-  {type: 'sampler', location: number} |
-  {type: 'texture', location: number}
+`group` is the logical bind-group index for the binding.
+
+Example:
+
+```ts
+bindings: [
+  {name: 'frameUniforms', type: 'uniform', group: 0, location: 0},
+  {name: 'lightingUniforms', type: 'uniform', group: 2, location: 0},
+  {name: 'materialUniforms', type: 'uniform', group: 3, location: 0},
+  {name: 'baseColorTexture', type: 'texture', group: 3, location: 1},
+  {name: 'baseColorSampler', type: 'sampler', group: 3, location: 2}
+]
+```
+
+Important details:
+
+- `location` is the binding index within its group.
+- Groups can be sparse.
+- On WebGL, `group` is still meaningful to luma.gl even though WebGL itself has
+  no native bind-group concept.
+
+### Example binding declaration variants
+
+Uniform buffer:
+
+```ts
+{
+  name: 'frameUniforms',
+  type: 'uniform',
+  group: 0,
+  location: 0
+}
+```
+
+Texture:
+
+```ts
+{
+  name: 'baseColorTexture',
+  type: 'texture',
+  group: 3,
+  location: 1,
+  viewDimension: '2d',
+  sampleType: 'float'
+}
+```
+
+Sampler:
+
+```ts
+{
+  name: 'baseColorSampler',
+  type: 'sampler',
+  group: 3,
+  location: 2,
+  samplerType: 'filtering'
+}
 ```
 
 ## Usage
 
-```typescript
-const shaderLayout: ShaderLayout = {
-  attributes:
-    'instancePositions': {location: 0, format: 'float32x2', stepMode: 'instance'},
-    'instanceVelocities': {location: 1, format: 'float32x2', stepMode: 'instance'},
-    'vertexPositions': {location: 2, format: 'float32x2', stepMode: 'vertex'}
-  },
+```ts
+const shaderLayout = {
+  attributes: [{name: 'positions', location: 0, type: 'vec3<f32>'}],
+  bindings: [
+    {name: 'frameUniforms', type: 'uniform', group: 0, location: 0},
+    {name: 'lightingUniforms', type: 'uniform', group: 2, location: 0},
+    {name: 'materialUniforms', type: 'uniform', group: 3, location: 0}
+  ]
+};
 
-  bindings: {
-    'uniforms': {location: 0, type: 'uniforms'},
-    'sampler': {location: 1, type: 'sampler'},
-    'texture': {location: 2, type: 'texture'}
-  }
-}
+const pipeline = device.createRenderPipeline({
+  vs,
+  fs,
+  shaderLayout
+});
 ```
 
-## Fields
+## WebGPU vs WebGL
 
-### attributes
+### WebGPU
 
-The attributes field declares structural information about the shader pipeline.
-It contains  fixed information about each attribute such as its location (the index in the attribute bank, typically between 0-15) and whether the attribute is instanced.
+WebGPU can use the `group` and `location` metadata directly as native bind-group
+and binding indices.
 
-```typescript
-  attributes:
-    instancePositions: {location: 0, format: 'float32x2', stepMode: 'instance'},
-    instanceVelocities: {location: 1, format: 'float32x2', stepMode: 'instance'},
-    vertexPositions: {location: 2, format: 'float32x2', stepMode: 'vertex'}
-  }
-```
+### WebGL
 
-- `location: number` Compiled pipelines use small integer indices ("locations") to describe binding points (rather than string names). `ShaderLayout` assigns names to each attribute which allows applications to avoid keeping track of these location indices.
-- `format: VertexFormat`
-- `stepMode: 'vertex' | 'instance'` -
+WebGL reflection does not expose bind-group indices. luma.gl can still preserve
+logical grouping on WebGL, but it relies on explicit shader-layout metadata or
+other luma-authored binding metadata rather than GLSL reflection alone.
 
+## Related Pages
 
-### bindings
-
-Bindings cover textures, samplers and uniform buffers. location (index on the GPU)
-and type are the key pieces of information that need to be provided.
-
-```typescript
-  bindings?: {
-    projection: {location: 0, type: 'uniforms'},
-    textureSampler: {location: 1, type: 'sampler'},
-    texture: {location: 2, type: 'texture'}
-  }
-```
-
-- `location: number` Compiled pipelines use small integer indices ("locations") to describe binding points (rather than string names). `ShaderLayout` assigns names to each attribute which allows applications to avoid keeping track of these location indices.
-- `type: 'texture' | 'sampler' | uniform'` The type of bind point (texture, sampler or uniform buffer). WebGPU requires separate bind points for textures and samplers.
-
-
-### uniforms
-
-:::caution
-Uniforms are a WebGL-only concept. For portability it is recommended to use uniform buffers instead.
-:::
-
-Any top-level shader uniforms (not part of a uniform buffer) should be declared in this field.
+- [Bind Groups and Bindings Guide](/docs/api-guide/gpu/gpu-bindings)
+- [Bindings](/docs/api-reference/core/bindings)
+- [RenderPipeline](/docs/api-reference/core/resources/render-pipeline)
+- [ComputePipeline](/docs/api-reference/core/resources/compute-pipeline)

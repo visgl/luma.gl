@@ -61,7 +61,7 @@ void main() {
 
 /** convert glsl type to suffix */
 export function typeToChannelSuffix(type: string): 'x' | 'xy' | 'xyz' | 'xyzw' {
-  // prettier-ignore
+  // biome-ignore format: preserve layout
   switch (type) {
     case 'float': return 'x';
     case 'vec2': return 'xy';
@@ -74,7 +74,7 @@ export function typeToChannelSuffix(type: string): 'x' | 'xy' | 'xyz' | 'xyzw' {
 
 /** convert glsl type to channel count */
 export function typeToChannelCount(type: string): 1 | 2 | 3 | 4 {
-  // prettier-ignore
+  // biome-ignore format: preserve layout
   switch (type) {
     case 'float': return 1;
     case 'vec2': return 2;
@@ -85,7 +85,7 @@ export function typeToChannelCount(type: string): 1 | 2 | 3 | 4 {
   }
 }
 function channelCountToType(channels: 1 | 2 | 3 | 4): 'float' | 'vec2' | 'vec3' | 'vec4' {
-  // prettier-ignore
+  // biome-ignore format: preserve layout
   switch (channels) {
     case 1: return 'float';
     case 2: return 'vec2';
@@ -98,7 +98,7 @@ function channelCountToType(channels: 1 | 2 | 3 | 4): 'float' | 'vec2' | 'vec3' 
 
 /** Returns glsl instruction for converting to vec4 */
 export function convertToVec4(variable: string, channels: 1 | 2 | 3 | 4): string {
-  // prettier-ignore
+  // biome-ignore format: preserve layout
   switch (channels) {
     case 1: return `vec4(${variable}, 0.0, 0.0, 1.0)`;
     case 2: return `vec4(${variable}, 0.0, 1.0)`;

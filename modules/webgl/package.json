@@ -1,6 +1,6 @@
 {
   "name": "@luma.gl/webgl",
-  "version": "9.2.0-alpha.6",
+  "version": "9.3.0",
   "description": "WebGL2 adapter for the luma.gl core API",
   "type": "module",
   "license": "MIT",
@@ -25,6 +25,21 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./constants": {
+      "types": "./dist/constants/index.d.ts",
+      "import": "./dist/constants/index.js",
+      "require": "./dist/constants/index.cjs"
+    },
+    "./webgl-constants": {
+      "types": "./dist/webgl-constants.d.ts",
+      "import": "./dist/webgl-constants.js",
+      "require": "./dist/webgl-constants.cjs"
+    },
+    "./webgl-types": {
+      "types": "./dist/webgl-types.d.ts",
+      "import": "./dist/webgl-types.js",
+      "require": "./dist/webgl-types.cjs"
     }
   },
   "files": [
@@ -40,12 +55,11 @@
     "prepublishOnly": "npm run build-minified-bundle && npm run build-dev-bundle"
   },
   "peerDependencies": {
-    "@luma.gl/core": "9.2.0-alpha.6"
+    "@luma.gl/core": "~9.3.0"
   },
   "dependencies": {
-    "@luma.gl/constants": "9.2.0-alpha.6",
     "@math.gl/types": "^4.1.0",
-    "@probe.gl/env": "^4.0.8"
+    "@probe.gl/env": "^4.1.1"
   },
   "gitHead": "c636c34b8f1581eed163e94543a8eb1f4382ba8e"
 }

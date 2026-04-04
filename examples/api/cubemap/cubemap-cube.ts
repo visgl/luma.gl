@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright...
 
-import {Model, type ModelProps, AsyncTexture, CubeGeometry, ShaderInputs} from '@luma.gl/engine';
+import {Model, type ModelProps, DynamicTexture, CubeGeometry, ShaderInputs} from '@luma.gl/engine';
 import type {Device, Texture} from '@luma.gl/core';
 import {ShaderModule} from '@luma.gl/shadertools';
 import {NumberArray16} from '@math.gl/types';
@@ -27,8 +27,8 @@ export type CubemapCubeProps = Omit<
   ModelProps,
   'vs' | 'fs' | 'source' | 'geometry' | 'bindings'
 > & {
-  /** A cube-map texture (dimension: 'cube'). Provide either a Texture or Dynamic/AsyncTexture. */
-  cubeTexture: Texture | AsyncTexture;
+  /** A cube-map texture (dimension: 'cube'). Provide either a Texture or DynamicTexture. */
+  cubeTexture: Texture | DynamicTexture;
   /** Optional: pass your own ShaderInputs; otherwise one is created. */
   shaderInputs?: ShaderInputs<{app: typeof app.props}>;
 };
@@ -45,9 +45,9 @@ struct appUniforms {
   projectionMatrix: mat4x4<f32>,
 };
 
-@group(0) @binding(0) var<uniform> app : appUniforms;
-@group(0) @binding(1) var cubeTexture : texture_cube<f32>;
-@group(0) @binding(2) var cubeTextureSampler : sampler;
+@group(0) @binding(auto) var<uniform> app : appUniforms;
+@group(0) @binding(auto) var cubeTexture : texture_cube<f32>;
+@group(0) @binding(auto) var cubeTextureSampler : sampler;
 
 struct VSIn {
   @location(0) positions : vec3<f32>,

@@ -9,9 +9,11 @@ const sidebars = {
       type: 'category',
       label: 'Showcase',
       items: [
+        'showcase/gltf',
         'showcase/instancing',
-        'showcase/persistence'
-        // 'showcase/postprocessing'
+        'showcase/postprocessing',
+        'showcase/dof',
+        'showcase/globe'
       ]
     },
     {
@@ -19,9 +21,16 @@ const sidebars = {
       label: 'API',
       items: [
         'api/animation',
-        'api/cubemap'
-        // 'api/texture-3d'
+        'api/multi-canvas',
+        'api/cubemap',
+        'api/texture-3d',
+        'api/texture-tester'
       ]
+    },
+    {
+      type: 'category',
+      label: 'Integrations',
+      items: ['integrations/external-context', 'integrations/react-strict-mode']
     },
     {
       type: 'category',

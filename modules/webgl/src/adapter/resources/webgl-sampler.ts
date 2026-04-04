@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {Sampler, SamplerProps} from '@luma.gl/core';
-import {GL, GLSamplerParameters} from '@luma.gl/constants';
+import {GL, GLSamplerParameters} from '@luma.gl/webgl/constants';
 import {convertSamplerParametersToWebGL} from '../converters/sampler-parameters';
 import type {WebGLDevice} from '../webgl-device';
 
