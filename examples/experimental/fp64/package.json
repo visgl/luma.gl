@@ -1,6 +1,6 @@
 {
   "name": "luma.gl-examples-experimental-fp64",
-  "version": "9.3.0-alpha.11",
+  "version": "9.3.0",
   "private": true,
   "scripts": {
     "start": "vite",
@@ -8,11 +8,11 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@luma.gl/core": "9.3.0-alpha.11",
-    "@luma.gl/engine": "9.3.0-alpha.11",
-    "@luma.gl/shadertools": "9.3.0-alpha.11",
-    "@luma.gl/webgl": "9.3.0-alpha.11",
-    "@luma.gl/webgpu": "9.3.0-alpha.11",
+    "@luma.gl/core": "~9.3.0",
+    "@luma.gl/engine": "~9.3.0",
+    "@luma.gl/shadertools": "~9.3.0",
+    "@luma.gl/webgl": "~9.3.0",
+    "@luma.gl/webgpu": "~9.3.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },

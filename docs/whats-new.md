@@ -2,15 +2,15 @@
 
 _This page contains news for recent luma.gl releases. For older releases (through v8.5) refer to the [Legacy What's New](/docs/legacy/legacy-upgrade-guide) page._
 
-## Version 9.3 (In Development)
+## Version 9.3
 
-Target Date: April 2026
+Release Date: March 31, 2026
 
 **General**
 
 - **Typescript 5.9** - luma.gl code base is now TypeScript 5.9 clean.
 
-**Examples**
+**New Examples**
 
 - **[Texture Tester Example](/examples/api/texture-tester)** - New example showing support for compressed textures on WebGL and WebGPU. Also implements multi-canvas rendering.
 - **[Multi-Canvas Example](/examples/api/multi-canvas)** - New example showing rendering into multiple HTML canvas elements.
@@ -55,6 +55,8 @@ Target Date: April 2026
 
 **@luma.gl/shadertools**
 
+- **[`floatColors`](/docs/api-reference/shadertools/shader-modules/float-colors)** - New shader module with shared semantic color normalization and premultiplied alpha helpers.
+- **Opt-in float semantic colors** - Byte-based semantic color APIs in `lighting`, shared `floatColors`, legacy `picking`, and glTF light parsing accept `useByteColors: false` for float and HDR-style color values while preserving current defaults.
 - **[`lighting`](/docs/api-reference/shadertools/shader-modules/lighting)** shader module supports a new light type `SpotLight`.
 - **[`lambertMaterial`](/docs/api-reference/shadertools/shader-modules/lambert-material)** A new shader module adds a diffuse-only matte material model, completing the material catalog
 - **Unlit Materials** All material shader modules now support `unlit` prop, allowing applications to disable lighting for materials that are already lit (e.g. photogrammetry).

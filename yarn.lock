@@ -4145,92 +4145,92 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@loaders.gl/core@npm:4.4.0-alpha.18":
-  version: 4.4.0-alpha.18
-  resolution: "@loaders.gl/core@npm:4.4.0-alpha.18"
+"@loaders.gl/core@npm:~4.4.0":
+  version: 4.4.0
+  resolution: "@loaders.gl/core@npm:4.4.0"
   dependencies:
-    "@loaders.gl/loader-utils": "npm:4.4.0-alpha.18"
-    "@loaders.gl/schema": "npm:4.4.0-alpha.18"
-    "@loaders.gl/schema-utils": "npm:4.4.0-alpha.18"
-    "@loaders.gl/worker-utils": "npm:4.4.0-alpha.18"
+    "@loaders.gl/loader-utils": "npm:4.4.0"
+    "@loaders.gl/schema": "npm:4.4.0"
+    "@loaders.gl/schema-utils": "npm:4.4.0"
+    "@loaders.gl/worker-utils": "npm:4.4.0"
     "@probe.gl/log": "npm:^4.1.1"
-  checksum: 10c0/785db23c8c15445880c717c23235c081416343c9a981f856c1f1773a453772254e86ee6f7161481a069baac53f4333417432356438584d401bac1480a50532f1
+  checksum: 10c0/0726e1cd6017af0230e3d6384805bffd18223aac71030c9d897c3a2e1231d24fe9ece179eac64eaf645111adbf6a802e463336fc0bbd9b9bc5136cf5cb29a70b
   languageName: node
   linkType: hard
 
-"@loaders.gl/crypto@npm:4.4.0-alpha.18":
-  version: 4.4.0-alpha.18
-  resolution: "@loaders.gl/crypto@npm:4.4.0-alpha.18"
+"@loaders.gl/crypto@npm:4.4.0":
+  version: 4.4.0
+  resolution: "@loaders.gl/crypto@npm:4.4.0"
   dependencies:
-    "@loaders.gl/loader-utils": "npm:4.4.0-alpha.18"
-    "@loaders.gl/worker-utils": "npm:4.4.0-alpha.18"
+    "@loaders.gl/loader-utils": "npm:4.4.0"
+    "@loaders.gl/worker-utils": "npm:4.4.0"
     "@types/crypto-js": "npm:^4.0.2"
   peerDependencies:
     "@loaders.gl/core": 4.4.0-alpha.1
-  checksum: 10c0/0055d03406c1930d84e8f89c5b99c02b10f73868cd9df9a54813cdaa081e339096a08609448fa3310cf1ad30f85a764804b6ce46794bf4273cd60764e168f74a
+  checksum: 10c0/053b9282deb0b74168417bf9b74e123d3740a4d5634e986403b74eb57002bd8ff44ae67d8aa437f272a264dbde830d827dfea90568269663dc89ed3ab7df5745
   languageName: node
   linkType: hard
 
-"@loaders.gl/draco@npm:4.4.0-alpha.18":
-  version: 4.4.0-alpha.18
-  resolution: "@loaders.gl/draco@npm:4.4.0-alpha.18"
+"@loaders.gl/draco@npm:4.4.0":
+  version: 4.4.0
+  resolution: "@loaders.gl/draco@npm:4.4.0"
   dependencies:
-    "@loaders.gl/loader-utils": "npm:4.4.0-alpha.18"
-    "@loaders.gl/schema": "npm:4.4.0-alpha.18"
-    "@loaders.gl/schema-utils": "npm:4.4.0-alpha.18"
-    "@loaders.gl/worker-utils": "npm:4.4.0-alpha.18"
+    "@loaders.gl/loader-utils": "npm:4.4.0"
+    "@loaders.gl/schema": "npm:4.4.0"
+    "@loaders.gl/schema-utils": "npm:4.4.0"
+    "@loaders.gl/worker-utils": "npm:4.4.0"
     draco3d: "npm:1.5.7"
   peerDependencies:
     "@loaders.gl/core": 4.4.0-alpha.1
-  checksum: 10c0/e3f56a48ecc7c14693d3dbe8c406382074d4d60d86a2a7e68083b3f06aa8a8d5e622ae4ae9785709cbbf6bf01548f09ce30d9f10b1cd567d1d34638627c466c5
+  checksum: 10c0/798793d3cefd2216aa8e5f2af2fca5c8809ded2cb4a43d49aa732342d23ba40d28078dc1e90b995a1015d386d7208946e4dc009ad444603cd480323a54bf1486
   languageName: node
   linkType: hard
 
-"@loaders.gl/gltf@npm:4.4.0-alpha.18":
-  version: 4.4.0-alpha.18
-  resolution: "@loaders.gl/gltf@npm:4.4.0-alpha.18"
+"@loaders.gl/gltf@npm:~4.4.0":
+  version: 4.4.0
+  resolution: "@loaders.gl/gltf@npm:4.4.0"
   dependencies:
-    "@loaders.gl/draco": "npm:4.4.0-alpha.18"
-    "@loaders.gl/images": "npm:4.4.0-alpha.18"
-    "@loaders.gl/loader-utils": "npm:4.4.0-alpha.18"
-    "@loaders.gl/schema": "npm:4.4.0-alpha.18"
-    "@loaders.gl/textures": "npm:4.4.0-alpha.18"
+    "@loaders.gl/draco": "npm:4.4.0"
+    "@loaders.gl/images": "npm:4.4.0"
+    "@loaders.gl/loader-utils": "npm:4.4.0"
+    "@loaders.gl/schema": "npm:4.4.0"
+    "@loaders.gl/textures": "npm:4.4.0"
     "@math.gl/core": "npm:^4.1.0"
   peerDependencies:
     "@loaders.gl/core": 4.4.0-alpha.1
-  checksum: 10c0/df59cdc94451b1e1d0706c10d8fe94c54c6ed7e98492ada3bb5d4bfc483c56de5d407c0501b7c8e749ac035e7f8a777a14096be14488292993a4ee2941220c8e
+  checksum: 10c0/2d63248f648fabb0c9f00e44a60558b530b6fd195730d58706689834995d1d45153a78469360b5b535649e6de561224a1362246fb4d283b02e6ea1f8588d493b
   languageName: node
   linkType: hard
 
-"@loaders.gl/images@npm:4.4.0-alpha.18":
-  version: 4.4.0-alpha.18
-  resolution: "@loaders.gl/images@npm:4.4.0-alpha.18"
+"@loaders.gl/images@npm:4.4.0, @loaders.gl/images@npm:~4.4.0":
+  version: 4.4.0
+  resolution: "@loaders.gl/images@npm:4.4.0"
   dependencies:
-    "@loaders.gl/loader-utils": "npm:4.4.0-alpha.18"
+    "@loaders.gl/loader-utils": "npm:4.4.0"
   peerDependencies:
     "@loaders.gl/core": 4.4.0-alpha.1
-  checksum: 10c0/dfcb7f97f2c4658087a3c31bd93290411bfc4af50529d02f5ace80c84e1423fbb5ef9d10fdcea49e96bf5b361963b4aeb2dbec7cc6f6787c0af462a5070da7f7
+  checksum: 10c0/4f477601066ec1ab45f62b1fbd4d001812ead6dd53cd65f516ba4c9dacdf9268352711fc987e62f2180645fba31ef06b3e0db278e015b6e8f27ca094dbf1e15a
   languageName: node
   linkType: hard
 
-"@loaders.gl/loader-utils@npm:4.4.0-alpha.18":
-  version: 4.4.0-alpha.18
-  resolution: "@loaders.gl/loader-utils@npm:4.4.0-alpha.18"
+"@loaders.gl/loader-utils@npm:4.4.0":
+  version: 4.4.0
+  resolution: "@loaders.gl/loader-utils@npm:4.4.0"
   dependencies:
-    "@loaders.gl/schema": "npm:4.4.0-alpha.18"
-    "@loaders.gl/worker-utils": "npm:4.4.0-alpha.18"
+    "@loaders.gl/schema": "npm:4.4.0"
+    "@loaders.gl/worker-utils": "npm:4.4.0"
     "@probe.gl/log": "npm:^4.1.1"
     "@probe.gl/stats": "npm:^4.1.1"
-  checksum: 10c0/33de480a4dd5c01d9bcd6b47f4882381627a92291879f68ea9ad27a6d1ad1ace323e473fb6cc4c0d7f603dce5516b44177b2208fbfa894988bb38c5962f40021
+  checksum: 10c0/823080917188d5df4d59d6202361c86db16efc51185ea4f36073ac6f9082cf190d3d601aaa78dff386bac72b399c4c8598d8735d78a7074c1b702563e66e608f
   languageName: node
   linkType: hard
 
-"@loaders.gl/polyfills@npm:4.4.0-alpha.18":
-  version: 4.4.0-alpha.18
-  resolution: "@loaders.gl/polyfills@npm:4.4.0-alpha.18"
+"@loaders.gl/polyfills@npm:~4.4.0":
+  version: 4.4.0
+  resolution: "@loaders.gl/polyfills@npm:4.4.0"
   dependencies:
-    "@loaders.gl/crypto": "npm:4.4.0-alpha.18"
-    "@loaders.gl/loader-utils": "npm:4.4.0-alpha.18"
+    "@loaders.gl/crypto": "npm:4.4.0"
+    "@loaders.gl/loader-utils": "npm:4.4.0"
     buffer: "npm:^6.0.3"
     get-pixels: "npm:^3.3.3"
     ndarray: "npm:^1.0.19"
@@ -4240,56 +4240,56 @@ __metadata:
     web-streams-polyfill: "npm:^4.0.0"
   peerDependencies:
     "@loaders.gl/core": 4.4.0-alpha.1
-  checksum: 10c0/9c83721ce7275ddb7f70b214af23797ed668d3b269f620dc855e504f08ff818482aba7502a560f553698e7b5d2944bd46140150f0578d4834d46742811b0f24c
+  checksum: 10c0/cac18fcafbc73d452440a8b2f218ecee91148945cdc8d40fc1edb3f1770f9011ec26a0866209caec2828183741653e76eb14873968ecf02268fd476f22a10c1c
   languageName: node
   linkType: hard
 
-"@loaders.gl/schema-utils@npm:4.4.0-alpha.18":
-  version: 4.4.0-alpha.18
-  resolution: "@loaders.gl/schema-utils@npm:4.4.0-alpha.18"
+"@loaders.gl/schema-utils@npm:4.4.0":
+  version: 4.4.0
+  resolution: "@loaders.gl/schema-utils@npm:4.4.0"
   dependencies:
-    "@loaders.gl/schema": "npm:4.4.0-alpha.18"
+    "@loaders.gl/schema": "npm:4.4.0"
     "@types/geojson": "npm:^7946.0.7"
     apache-arrow: "npm:>= 17.0.0"
   peerDependencies:
     "@loaders.gl/core": 4.4.0-alpha.1
-  checksum: 10c0/635405f536c35855dbea4ab45fa9366a59e45934e73c874ba8eea06b9731fd1a288f27ae5631a8a210f701c1c59d4ba0e12a83a3de18226199a55345e12661e6
+  checksum: 10c0/e5cd78f738f24e0c26627265bec614ee26daaeed240d27f0b0329ba314cec5762967c8c57325ad4099365f55513a20c99e787556a9e15e1934581db89458ce74
   languageName: node
   linkType: hard
 
-"@loaders.gl/schema@npm:4.4.0-alpha.18":
-  version: 4.4.0-alpha.18
-  resolution: "@loaders.gl/schema@npm:4.4.0-alpha.18"
+"@loaders.gl/schema@npm:4.4.0":
+  version: 4.4.0
+  resolution: "@loaders.gl/schema@npm:4.4.0"
   dependencies:
     "@types/geojson": "npm:^7946.0.7"
     apache-arrow: "npm:>= 17.0.0"
-  checksum: 10c0/9fff8e5af4691a91b493655cdfd8137f3c659af8cbd7f07b2357b830b6e4a4e9c6d6f686fa0ccff5b2540aced54c7a465e7a83491440e02f0d0a44de74392634
+  checksum: 10c0/e503a274f45eb01f968d89351e69d2ae40e67917b0d8a7b9e607220d87ac4b9ef9b318c8bffe19f4141987a38c764e56ebb8a606e81664c03c69d73686b41520
   languageName: node
   linkType: hard
 
-"@loaders.gl/textures@npm:4.4.0-alpha.18":
-  version: 4.4.0-alpha.18
-  resolution: "@loaders.gl/textures@npm:4.4.0-alpha.18"
+"@loaders.gl/textures@npm:4.4.0, @loaders.gl/textures@npm:~4.4.0":
+  version: 4.4.0
+  resolution: "@loaders.gl/textures@npm:4.4.0"
   dependencies:
-    "@loaders.gl/images": "npm:4.4.0-alpha.18"
-    "@loaders.gl/loader-utils": "npm:4.4.0-alpha.18"
-    "@loaders.gl/schema": "npm:4.4.0-alpha.18"
-    "@loaders.gl/worker-utils": "npm:4.4.0-alpha.18"
+    "@loaders.gl/images": "npm:4.4.0"
+    "@loaders.gl/loader-utils": "npm:4.4.0"
+    "@loaders.gl/schema": "npm:4.4.0"
+    "@loaders.gl/worker-utils": "npm:4.4.0"
     "@math.gl/types": "npm:^4.1.0"
     ktx-parse: "npm:^0.7.0"
     texture-compressor: "npm:^1.0.2"
   peerDependencies:
     "@loaders.gl/core": 4.4.0-alpha.1
-  checksum: 10c0/0071f816cfda4697cc726d8117486eb5b79ba1227242c58e057aad13d5fd3960b3d738ba693fda9a4a9c09e5a5fbd23535ae67111e06ab1369bed6a23206be5e
+  checksum: 10c0/7ee94b1d72b5c4c7dbb0ecb7c630a1bf732529c4b4fef8e95edd77b158640bacd678641c1be49321ee8e634f9ca0d5754bc4277bfe85e138dd15a1162651ac0d
   languageName: node
   linkType: hard
 
-"@loaders.gl/worker-utils@npm:4.4.0-alpha.18":
-  version: 4.4.0-alpha.18
-  resolution: "@loaders.gl/worker-utils@npm:4.4.0-alpha.18"
+"@loaders.gl/worker-utils@npm:4.4.0":
+  version: 4.4.0
+  resolution: "@loaders.gl/worker-utils@npm:4.4.0"
   peerDependencies:
     "@loaders.gl/core": 4.4.0-alpha.1
-  checksum: 10c0/769a982272ab116ff060e082e9d3280bacfe1cb311fde60f6f6508efd7997c3c5a3f1eb43985ec4df814ee4c598adaf04e828a5d0c0d2a6e85b3e44427910520
+  checksum: 10c0/77e35b3144a8dd0e5bc1f595fdcc9af3bc0cc368fb03f54e31840168da0c061210c71cffe3fd6b70933b864309c4f7ef353337ee10e47384ddbc96da95de7554
   languageName: node
   linkType: hard
 
@@ -4297,37 +4297,34 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@luma.gl/arrow@workspace:modules/arrow"
   dependencies:
-    "@luma.gl/core": "npm:9.3.0-alpha.11"
+    "@luma.gl/core": "npm:9.3.0"
     "@math.gl/polygon": "npm:^4.1.0"
     "@math.gl/types": "npm:^4.1.0"
     apache-arrow: "npm:^17.0.0"
   languageName: unknown
   linkType: soft
 
-"@luma.gl/constants@npm:9.3.0-alpha.11, @luma.gl/constants@workspace:modules/constants":
+"@luma.gl/constants@npm:~9.0.0":
+  version: 9.0.28
+  resolution: "@luma.gl/constants@npm:9.0.28"
+  checksum: 10c0/9b662bb630c5f56e5567deaaba32aafb1abe9f97fed666c628d7d3b4053976b8cd78a5b1a51de8c637c311b8d71d69e67edaaba8f15edeab130643d5294536b3
+  languageName: node
+  linkType: hard
+
+"@luma.gl/constants@npm:~9.3.0":
+  version: 9.3.1
+  resolution: "@luma.gl/constants@npm:9.3.1"
+  checksum: 10c0/648cd72fc7115505350a0d9e116a8145275a4ef1963deb84ddf4dffe821f9d14230f94374afbcf900dc558a23409cef71e281204869cfb96ba3e2ca943bbbcc1
+  languageName: node
+  linkType: hard
+
+"@luma.gl/constants@workspace:modules/constants":
   version: 0.0.0-use.local
   resolution: "@luma.gl/constants@workspace:modules/constants"
-  dependencies:
-    "@luma.gl/core": "npm:9.3.0-alpha.11"
-    "@luma.gl/webgl": "npm:9.3.0-alpha.11"
   languageName: unknown
   linkType: soft
 
-"@luma.gl/constants@npm:9.3.0-alpha.6":
-  version: 9.3.0-alpha.6
-  resolution: "@luma.gl/constants@npm:9.3.0-alpha.6"
-  checksum: 10c0/9652431c4d5ef7b0da395f1405433852a11f2d1e62fb96ed146147156f3a8d317c4a1f4a57c5354d523ed4f91b27aba8cb6b40e719cc5bbcecbd0c3b5542ce71
-  languageName: node
-  linkType: hard
-
-"@luma.gl/constants@npm:^9.0.0":
-  version: 9.1.9
-  resolution: "@luma.gl/constants@npm:9.1.9"
-  checksum: 10c0/77b232a8cf9720cdbb80bdf703cbc9e3acae934536a76df4d90e07a094e514d57d94f8eb81a8ac75e23a9c2c6ab5438f75fab3a001d472e9f440a0a1b148e21e
-  languageName: node
-  linkType: hard
-
-"@luma.gl/core@npm:9.3.0-alpha.11, @luma.gl/core@workspace:modules/core":
+"@luma.gl/core@npm:9.3.0, @luma.gl/core@npm:~9.3.0, @luma.gl/core@workspace:modules/core":
   version: 0.0.0-use.local
   resolution: "@luma.gl/core@workspace:modules/core"
   dependencies:
@@ -4353,18 +4350,18 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@luma.gl/effects@npm:9.3.0-alpha.11, @luma.gl/effects@workspace:modules/effects":
+"@luma.gl/effects@npm:~9.3.0, @luma.gl/effects@workspace:modules/effects":
   version: 0.0.0-use.local
   resolution: "@luma.gl/effects@workspace:modules/effects"
   dependencies:
     "@math.gl/core": "npm:^4.1.0"
     "@math.gl/types": "npm:^4.1.0"
   peerDependencies:
-    "@luma.gl/shadertools": 9.3.0-alpha.6
+    "@luma.gl/shadertools": ~9.3.0
   languageName: unknown
   linkType: soft
 
-"@luma.gl/engine@npm:9.3.0-alpha.11, @luma.gl/engine@workspace:modules/engine":
+"@luma.gl/engine@npm:~9.3.0, @luma.gl/engine@workspace:modules/engine":
   version: 0.0.0-use.local
   resolution: "@luma.gl/engine@workspace:modules/engine"
   dependencies:
@@ -4373,8 +4370,8 @@ __metadata:
     "@probe.gl/log": "npm:^4.1.1"
     "@probe.gl/stats": "npm:^4.1.1"
   peerDependencies:
-    "@luma.gl/core": 9.3.0-alpha.6
-    "@luma.gl/shadertools": 9.3.0-alpha.6
+    "@luma.gl/core": ~9.3.0
+    "@luma.gl/shadertools": ~9.3.0
   languageName: unknown
   linkType: soft
 
@@ -4382,36 +4379,36 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@luma.gl/experimental@workspace:modules/experimental"
   dependencies:
-    "@luma.gl/core": "npm:9.3.0-alpha.11"
+    "@luma.gl/core": "npm:9.3.0"
     "@math.gl/polygon": "npm:^4.1.0"
     "@math.gl/types": "npm:^4.1.0"
     apache-arrow: "npm:^17.0.0"
   languageName: unknown
   linkType: soft
 
-"@luma.gl/gltf@npm:9.3.0-alpha.11, @luma.gl/gltf@workspace:modules/gltf":
+"@luma.gl/gltf@npm:~9.3.0, @luma.gl/gltf@workspace:modules/gltf":
   version: 0.0.0-use.local
   resolution: "@luma.gl/gltf@workspace:modules/gltf"
   dependencies:
-    "@loaders.gl/core": "npm:4.4.0-alpha.18"
-    "@loaders.gl/gltf": "npm:4.4.0-alpha.18"
-    "@loaders.gl/textures": "npm:4.4.0-alpha.18"
+    "@loaders.gl/core": "npm:~4.4.0"
+    "@loaders.gl/gltf": "npm:~4.4.0"
+    "@loaders.gl/textures": "npm:~4.4.0"
     "@math.gl/core": "npm:^4.1.0"
   peerDependencies:
-    "@luma.gl/core": 9.3.0-alpha.6
-    "@luma.gl/engine": 9.3.0-alpha.6
-    "@luma.gl/shadertools": 9.3.0-alpha.6
+    "@luma.gl/core": ~9.3.0
+    "@luma.gl/engine": ~9.3.0
+    "@luma.gl/shadertools": ~9.3.0
   languageName: unknown
   linkType: soft
 
-"@luma.gl/shadertools@npm:9.3.0-alpha.11, @luma.gl/shadertools@workspace:modules/shadertools":
+"@luma.gl/shadertools@npm:~9.3.0, @luma.gl/shadertools@workspace:modules/shadertools":
   version: 0.0.0-use.local
   resolution: "@luma.gl/shadertools@workspace:modules/shadertools"
   dependencies:
     "@math.gl/core": "npm:^4.1.0"
     "@math.gl/types": "npm:^4.1.0"
   peerDependencies:
-    "@luma.gl/core": 9.3.0-alpha.6
+    "@luma.gl/core": ~9.3.0
   languageName: unknown
   linkType: soft
 
@@ -4422,26 +4419,26 @@ __metadata:
     "@probe.gl/env": "npm:^4.1.1"
     "@probe.gl/stats": "npm:^4.1.1"
   peerDependencies:
-    "@luma.gl/core": 9.3.0-alpha.6
-    "@luma.gl/engine": 9.3.0-alpha.6
-    "@luma.gl/shadertools": 9.3.0-alpha.6
-    "@luma.gl/webgl": 9.3.0-alpha.6
-    "@luma.gl/webgpu": 9.3.0-alpha.6
+    "@luma.gl/core": ~9.3.0
+    "@luma.gl/engine": ~9.3.0
+    "@luma.gl/shadertools": ~9.3.0
+    "@luma.gl/webgl": ~9.3.0
+    "@luma.gl/webgpu": ~9.3.0
   languageName: unknown
   linkType: soft
 
-"@luma.gl/webgl@npm:9.3.0-alpha.11, @luma.gl/webgl@workspace:modules/webgl":
+"@luma.gl/webgl@npm:~9.3.0, @luma.gl/webgl@workspace:modules/webgl":
   version: 0.0.0-use.local
   resolution: "@luma.gl/webgl@workspace:modules/webgl"
   dependencies:
     "@math.gl/types": "npm:^4.1.0"
     "@probe.gl/env": "npm:^4.1.1"
   peerDependencies:
-    "@luma.gl/core": 9.3.0-alpha.6
+    "@luma.gl/core": ~9.3.0
   languageName: unknown
   linkType: soft
 
-"@luma.gl/webgpu@npm:9.3.0-alpha.11, @luma.gl/webgpu@workspace:modules/webgpu":
+"@luma.gl/webgpu@npm:~9.3.0, @luma.gl/webgpu@workspace:modules/webgpu":
   version: 0.0.0-use.local
   resolution: "@luma.gl/webgpu@workspace:modules/webgpu"
   dependencies:
@@ -4449,7 +4446,7 @@ __metadata:
     "@webgpu/types": "npm:^0.1.69"
     wgsl_reflect: "npm:^1.2.3"
   peerDependencies:
-    "@luma.gl/core": 9.3.0-alpha.6
+    "@luma.gl/core": ~9.3.0
   languageName: unknown
   linkType: soft
 
@@ -7992,7 +7989,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "babel-plugin-inline-webgl-constants@workspace:dev-modules/babel-plugin-inline-webgl-constants"
   dependencies:
-    "@luma.gl/constants": "npm:9.3.0-alpha.6"
+    "@luma.gl/constants": "npm:~9.3.0"
   languageName: unknown
   linkType: soft
 
@@ -14817,10 +14814,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-animation@workspace:examples/api/animation"
   dependencies:
-    "@luma.gl/core": "npm:9.3.0-alpha.11"
-    "@luma.gl/engine": "npm:9.3.0-alpha.11"
-    "@luma.gl/shadertools": "npm:9.3.0-alpha.11"
-    "@luma.gl/webgl": "npm:9.3.0-alpha.11"
+    "@luma.gl/core": "npm:~9.3.0"
+    "@luma.gl/engine": "npm:~9.3.0"
+    "@luma.gl/shadertools": "npm:~9.3.0"
+    "@luma.gl/webgl": "npm:~9.3.0"
     "@math.gl/core": "npm:^4.1.0"
     typescript: "npm:^5.9.3"
     vite: "npm:^8.0.0"
@@ -14831,11 +14828,11 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-cubemap@workspace:examples/api/cubemap"
   dependencies:
-    "@luma.gl/core": "npm:9.3.0-alpha.11"
-    "@luma.gl/engine": "npm:9.3.0-alpha.11"
-    "@luma.gl/shadertools": "npm:9.3.0-alpha.11"
-    "@luma.gl/webgl": "npm:9.3.0-alpha.11"
-    "@luma.gl/webgpu": "npm:9.3.0-alpha.11"
+    "@luma.gl/core": "npm:~9.3.0"
+    "@luma.gl/engine": "npm:~9.3.0"
+    "@luma.gl/shadertools": "npm:~9.3.0"
+    "@luma.gl/webgl": "npm:~9.3.0"
+    "@luma.gl/webgpu": "npm:~9.3.0"
     "@math.gl/core": "npm:^4.1.0"
     "@math.gl/types": "npm:^4.1.0"
     typescript: "npm:^5.9.3"
@@ -14847,11 +14844,11 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-experimental-fp64@workspace:examples/experimental/fp64"
   dependencies:
-    "@luma.gl/core": "npm:9.3.0-alpha.11"
-    "@luma.gl/engine": "npm:9.3.0-alpha.11"
-    "@luma.gl/shadertools": "npm:9.3.0-alpha.11"
-    "@luma.gl/webgl": "npm:9.3.0-alpha.11"
-    "@luma.gl/webgpu": "npm:9.3.0-alpha.11"
+    "@luma.gl/core": "npm:~9.3.0"
+    "@luma.gl/engine": "npm:~9.3.0"
+    "@luma.gl/shadertools": "npm:~9.3.0"
+    "@luma.gl/webgl": "npm:~9.3.0"
+    "@luma.gl/webgpu": "npm:~9.3.0"
     "@types/react": "npm:^18.2.0"
     "@types/react-dom": "npm:^18.2.0"
     "@vitejs/plugin-react": "npm:^6.0.1"
@@ -14866,10 +14863,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-external-webgl-context@workspace:examples/integrations/external-context"
   dependencies:
-    "@luma.gl/core": "npm:9.3.0-alpha.11"
-    "@luma.gl/engine": "npm:9.3.0-alpha.11"
-    "@luma.gl/shadertools": "npm:9.3.0-alpha.11"
-    "@luma.gl/webgl": "npm:9.3.0-alpha.11"
+    "@luma.gl/core": "npm:~9.3.0"
+    "@luma.gl/engine": "npm:~9.3.0"
+    "@luma.gl/shadertools": "npm:~9.3.0"
+    "@luma.gl/webgl": "npm:~9.3.0"
     "@math.gl/core": "npm:^4.1.0"
     maplibre-gl: "npm:^5.20.0"
     typescript: "npm:^5.9.3"
@@ -14881,15 +14878,15 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-gltf-showcase@workspace:examples/showcase/gltf"
   dependencies:
-    "@loaders.gl/core": "npm:4.4.0-alpha.18"
-    "@loaders.gl/gltf": "npm:4.4.0-alpha.18"
-    "@luma.gl/constants": "npm:9.3.0-alpha.11"
-    "@luma.gl/core": "npm:9.3.0-alpha.11"
-    "@luma.gl/engine": "npm:9.3.0-alpha.11"
-    "@luma.gl/gltf": "npm:9.3.0-alpha.11"
-    "@luma.gl/shadertools": "npm:9.3.0-alpha.11"
-    "@luma.gl/webgl": "npm:9.3.0-alpha.11"
-    "@luma.gl/webgpu": "npm:9.3.0-alpha.11"
+    "@loaders.gl/core": "npm:~4.4.0"
+    "@loaders.gl/gltf": "npm:~4.4.0"
+    "@luma.gl/constants": "npm:~9.3.0"
+    "@luma.gl/core": "npm:~9.3.0"
+    "@luma.gl/engine": "npm:~9.3.0"
+    "@luma.gl/gltf": "npm:~9.3.0"
+    "@luma.gl/shadertools": "npm:~9.3.0"
+    "@luma.gl/webgl": "npm:~9.3.0"
+    "@luma.gl/webgpu": "npm:~9.3.0"
     "@math.gl/core": "npm:^4.1.0"
     typescript: "npm:^5.5.0"
     vite: "npm:^8.0.0"
@@ -14900,10 +14897,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-hello-cube@workspace:examples/tutorials/hello-cube"
   dependencies:
-    "@luma.gl/core": "npm:9.3.0-alpha.11"
-    "@luma.gl/engine": "npm:9.3.0-alpha.11"
-    "@luma.gl/shadertools": "npm:9.3.0-alpha.11"
-    "@luma.gl/webgl": "npm:9.3.0-alpha.11"
+    "@luma.gl/core": "npm:~9.3.0"
+    "@luma.gl/engine": "npm:~9.3.0"
+    "@luma.gl/shadertools": "npm:~9.3.0"
+    "@luma.gl/webgl": "npm:~9.3.0"
     "@math.gl/core": "npm:^4.1.0"
     typescript: "npm:^5.9.3"
     vite: "npm:^8.0.0"
@@ -14914,15 +14911,15 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-hello-gltf@workspace:examples/tutorials/hello-gltf"
   dependencies:
-    "@loaders.gl/core": "npm:4.4.0-alpha.18"
-    "@loaders.gl/gltf": "npm:4.4.0-alpha.18"
-    "@luma.gl/constants": "npm:9.3.0-alpha.11"
-    "@luma.gl/core": "npm:9.3.0-alpha.11"
-    "@luma.gl/engine": "npm:9.3.0-alpha.11"
-    "@luma.gl/gltf": "npm:9.3.0-alpha.11"
-    "@luma.gl/shadertools": "npm:9.3.0-alpha.11"
-    "@luma.gl/webgl": "npm:9.3.0-alpha.11"
-    "@luma.gl/webgpu": "npm:9.3.0-alpha.11"
+    "@loaders.gl/core": "npm:~4.4.0"
+    "@loaders.gl/gltf": "npm:~4.4.0"
+    "@luma.gl/constants": "npm:~9.3.0"
+    "@luma.gl/core": "npm:~9.3.0"
+    "@luma.gl/engine": "npm:~9.3.0"
+    "@luma.gl/gltf": "npm:~9.3.0"
+    "@luma.gl/shadertools": "npm:~9.3.0"
+    "@luma.gl/webgl": "npm:~9.3.0"
+    "@luma.gl/webgpu": "npm:~9.3.0"
     "@math.gl/core": "npm:^4.1.0"
     typescript: "npm:^5.9.3"
     vite: "npm:^8.0.0"
@@ -14933,10 +14930,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-hello-instancing-high@workspace:examples/tutorials/hello-instancing"
   dependencies:
-    "@luma.gl/core": "npm:9.3.0-alpha.11"
-    "@luma.gl/engine": "npm:9.3.0-alpha.11"
-    "@luma.gl/shadertools": "npm:9.3.0-alpha.11"
-    "@luma.gl/webgl": "npm:9.3.0-alpha.11"
+    "@luma.gl/core": "npm:~9.3.0"
+    "@luma.gl/engine": "npm:~9.3.0"
+    "@luma.gl/shadertools": "npm:~9.3.0"
+    "@luma.gl/webgl": "npm:~9.3.0"
     typescript: "npm:^5.9.3"
     vite: "npm:^8.0.0"
   languageName: unknown
@@ -14946,10 +14943,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-hello-react@workspace:examples/integrations/hello-react"
   dependencies:
-    "@luma.gl/core": "npm:9.3.0-alpha.11"
-    "@luma.gl/engine": "npm:9.3.0-alpha.11"
-    "@luma.gl/shadertools": "npm:9.3.0-alpha.11"
-    "@luma.gl/webgl": "npm:9.3.0-alpha.11"
+    "@luma.gl/core": "npm:~9.3.0"
+    "@luma.gl/engine": "npm:~9.3.0"
+    "@luma.gl/shadertools": "npm:~9.3.0"
+    "@luma.gl/webgl": "npm:~9.3.0"
     "@math.gl/core": "npm:^4.1.0"
     "@types/react": "npm:^19.2.14"
     "@types/react-dom": "npm:^19.2.3"
@@ -14965,11 +14962,11 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-hello-triangle@workspace:examples/tutorials/hello-triangle-geometry"
   dependencies:
-    "@luma.gl/core": "npm:9.3.0-alpha.11"
-    "@luma.gl/engine": "npm:9.3.0-alpha.11"
-    "@luma.gl/shadertools": "npm:9.3.0-alpha.11"
-    "@luma.gl/webgl": "npm:9.3.0-alpha.11"
-    "@luma.gl/webgpu": "npm:9.3.0-alpha.11"
+    "@luma.gl/core": "npm:~9.3.0"
+    "@luma.gl/engine": "npm:~9.3.0"
+    "@luma.gl/shadertools": "npm:~9.3.0"
+    "@luma.gl/webgl": "npm:~9.3.0"
+    "@luma.gl/webgpu": "npm:~9.3.0"
     typescript: "npm:^5.9.3"
     vite: "npm:^8.0.0"
   languageName: unknown
@@ -14979,11 +14976,11 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-instancing@workspace:examples/showcase/instancing"
   dependencies:
-    "@luma.gl/core": "npm:9.3.0-alpha.11"
-    "@luma.gl/engine": "npm:9.3.0-alpha.11"
-    "@luma.gl/shadertools": "npm:9.3.0-alpha.11"
-    "@luma.gl/webgl": "npm:9.3.0-alpha.11"
-    "@luma.gl/webgpu": "npm:9.3.0-alpha.11"
+    "@luma.gl/core": "npm:~9.3.0"
+    "@luma.gl/engine": "npm:~9.3.0"
+    "@luma.gl/shadertools": "npm:~9.3.0"
+    "@luma.gl/webgl": "npm:~9.3.0"
+    "@luma.gl/webgpu": "npm:~9.3.0"
     "@math.gl/core": "npm:^4.1.0"
     typescript: "npm:^5.9.3"
     vite: "npm:^8.0.0"
@@ -14994,10 +14991,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-lighting@workspace:examples/tutorials/lighting"
   dependencies:
-    "@luma.gl/core": "npm:9.3.0-alpha.11"
-    "@luma.gl/engine": "npm:9.3.0-alpha.11"
-    "@luma.gl/shadertools": "npm:9.3.0-alpha.11"
-    "@luma.gl/webgl": "npm:9.3.0-alpha.11"
+    "@luma.gl/core": "npm:~9.3.0"
+    "@luma.gl/engine": "npm:~9.3.0"
+    "@luma.gl/shadertools": "npm:~9.3.0"
+    "@luma.gl/webgl": "npm:~9.3.0"
     "@math.gl/core": "npm:^4.1.0"
     typescript: "npm:^5.9.3"
     vite: "npm:^8.0.0"
@@ -15008,11 +15005,11 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-multi-canvas@workspace:examples/api/multi-canvas"
   dependencies:
-    "@luma.gl/core": "npm:9.3.0-alpha.11"
-    "@luma.gl/engine": "npm:9.3.0-alpha.11"
-    "@luma.gl/shadertools": "npm:9.3.0-alpha.11"
-    "@luma.gl/webgl": "npm:9.3.0-alpha.11"
-    "@luma.gl/webgpu": "npm:9.3.0-alpha.11"
+    "@luma.gl/core": "npm:~9.3.0"
+    "@luma.gl/engine": "npm:~9.3.0"
+    "@luma.gl/shadertools": "npm:~9.3.0"
+    "@luma.gl/webgl": "npm:~9.3.0"
+    "@luma.gl/webgpu": "npm:~9.3.0"
     "@types/react": "npm:^18.2.0"
     "@types/react-dom": "npm:^18.2.0"
     "@vitejs/plugin-react": "npm:^6.0.1"
@@ -15027,11 +15024,11 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-persistence@workspace:examples/showcase/persistence"
   dependencies:
-    "@luma.gl/core": "npm:9.3.0-alpha.11"
-    "@luma.gl/engine": "npm:9.3.0-alpha.11"
-    "@luma.gl/shadertools": "npm:9.3.0-alpha.11"
-    "@luma.gl/webgl": "npm:9.3.0-alpha.11"
-    "@luma.gl/webgpu": "npm:9.3.0-alpha.11"
+    "@luma.gl/core": "npm:~9.3.0"
+    "@luma.gl/engine": "npm:~9.3.0"
+    "@luma.gl/shadertools": "npm:~9.3.0"
+    "@luma.gl/webgl": "npm:~9.3.0"
+    "@luma.gl/webgpu": "npm:~9.3.0"
     "@math.gl/core": "npm:^4.1.0"
     typescript: "npm:^5.9.3"
     vite: "npm:^8.0.0"
@@ -15042,16 +15039,16 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-postprocessing@workspace:examples/showcase/postprocessing"
   dependencies:
-    "@loaders.gl/core": "npm:4.4.0-alpha.18"
-    "@loaders.gl/gltf": "npm:4.4.0-alpha.18"
-    "@luma.gl/constants": "npm:9.3.0-alpha.11"
-    "@luma.gl/core": "npm:9.3.0-alpha.11"
-    "@luma.gl/effects": "npm:9.3.0-alpha.11"
-    "@luma.gl/engine": "npm:9.3.0-alpha.11"
-    "@luma.gl/gltf": "npm:9.3.0-alpha.11"
-    "@luma.gl/shadertools": "npm:9.3.0-alpha.11"
-    "@luma.gl/webgl": "npm:9.3.0-alpha.11"
-    "@luma.gl/webgpu": "npm:9.3.0-alpha.11"
+    "@loaders.gl/core": "npm:~4.4.0"
+    "@loaders.gl/gltf": "npm:~4.4.0"
+    "@luma.gl/constants": "npm:~9.3.0"
+    "@luma.gl/core": "npm:~9.3.0"
+    "@luma.gl/effects": "npm:~9.3.0"
+    "@luma.gl/engine": "npm:~9.3.0"
+    "@luma.gl/gltf": "npm:~9.3.0"
+    "@luma.gl/shadertools": "npm:~9.3.0"
+    "@luma.gl/webgl": "npm:~9.3.0"
+    "@luma.gl/webgpu": "npm:~9.3.0"
     "@math.gl/core": "npm:^4.1.0"
     typescript: "npm:^5.9.3"
     vite: "npm:^8.0.0"
@@ -15062,10 +15059,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-shader-hooks@workspace:examples/tutorials/shader-hooks"
   dependencies:
-    "@luma.gl/core": "npm:9.3.0-alpha.11"
-    "@luma.gl/engine": "npm:9.3.0-alpha.11"
-    "@luma.gl/shadertools": "npm:9.3.0-alpha.11"
-    "@luma.gl/webgl": "npm:9.3.0-alpha.11"
+    "@luma.gl/core": "npm:~9.3.0"
+    "@luma.gl/engine": "npm:~9.3.0"
+    "@luma.gl/shadertools": "npm:~9.3.0"
+    "@luma.gl/webgl": "npm:~9.3.0"
     typescript: "npm:^5.9.3"
     vite: "npm:^8.0.0"
   languageName: unknown
@@ -15075,10 +15072,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-shader-modules@workspace:examples/tutorials/shader-modules"
   dependencies:
-    "@luma.gl/core": "npm:9.3.0-alpha.11"
-    "@luma.gl/engine": "npm:9.3.0-alpha.11"
-    "@luma.gl/shadertools": "npm:9.3.0-alpha.11"
-    "@luma.gl/webgl": "npm:9.3.0-alpha.11"
+    "@luma.gl/core": "npm:~9.3.0"
+    "@luma.gl/engine": "npm:~9.3.0"
+    "@luma.gl/shadertools": "npm:~9.3.0"
+    "@luma.gl/webgl": "npm:~9.3.0"
     "@math.gl/types": "npm:^4.1.0"
     typescript: "npm:^5.9.3"
     vite: "npm:^8.0.0"
@@ -15089,11 +15086,11 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-showcase-dof@workspace:examples/showcase/dof"
   dependencies:
-    "@luma.gl/core": "npm:9.3.0-alpha.11"
-    "@luma.gl/engine": "npm:9.3.0-alpha.11"
-    "@luma.gl/shadertools": "npm:9.3.0-alpha.11"
-    "@luma.gl/webgl": "npm:9.3.0-alpha.11"
-    "@luma.gl/webgpu": "npm:9.3.0-alpha.11"
+    "@luma.gl/core": "npm:~9.3.0"
+    "@luma.gl/engine": "npm:~9.3.0"
+    "@luma.gl/shadertools": "npm:~9.3.0"
+    "@luma.gl/webgl": "npm:~9.3.0"
+    "@luma.gl/webgpu": "npm:~9.3.0"
     "@math.gl/core": "npm:^4.1.0"
     typescript: "npm:^5.9.3"
     vite: "npm:^8.0.0"
@@ -15120,11 +15117,11 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-texture-3d@workspace:examples/api/texture-3d"
   dependencies:
-    "@luma.gl/core": "npm:9.3.0-alpha.11"
-    "@luma.gl/engine": "npm:9.3.0-alpha.11"
-    "@luma.gl/shadertools": "npm:9.3.0-alpha.11"
-    "@luma.gl/webgl": "npm:9.3.0-alpha.11"
-    "@luma.gl/webgpu": "npm:9.3.0-alpha.11"
+    "@luma.gl/core": "npm:~9.3.0"
+    "@luma.gl/engine": "npm:~9.3.0"
+    "@luma.gl/shadertools": "npm:~9.3.0"
+    "@luma.gl/webgl": "npm:~9.3.0"
+    "@luma.gl/webgpu": "npm:~9.3.0"
     "@math.gl/core": "npm:^4.1.0"
     typescript: "npm:^5.9.3"
     vite: "npm:^8.0.0"
@@ -15135,11 +15132,11 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-texture-compressed@workspace:examples/api/texture-compressed"
   dependencies:
-    "@luma.gl/core": "npm:9.3.0-alpha.11"
-    "@luma.gl/engine": "npm:9.3.0-alpha.11"
-    "@luma.gl/shadertools": "npm:9.3.0-alpha.11"
-    "@luma.gl/webgl": "npm:9.3.0-alpha.11"
-    "@luma.gl/webgpu": "npm:9.3.0-alpha.11"
+    "@luma.gl/core": "npm:~9.3.0"
+    "@luma.gl/engine": "npm:~9.3.0"
+    "@luma.gl/shadertools": "npm:~9.3.0"
+    "@luma.gl/webgl": "npm:~9.3.0"
+    "@luma.gl/webgpu": "npm:~9.3.0"
     "@math.gl/core": "npm:^4.1.0"
     ktx-parse: "npm:^1.1.0"
     typescript: "npm:^5.9.3"
@@ -15151,14 +15148,14 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-texture-tester@workspace:examples/api/texture-tester"
   dependencies:
-    "@loaders.gl/core": "npm:4.4.0-alpha.18"
-    "@loaders.gl/images": "npm:4.4.0-alpha.18"
-    "@loaders.gl/textures": "npm:4.4.0-alpha.18"
-    "@luma.gl/core": "npm:9.3.0-alpha.11"
-    "@luma.gl/engine": "npm:9.3.0-alpha.11"
-    "@luma.gl/shadertools": "npm:9.3.0-alpha.11"
-    "@luma.gl/webgl": "npm:9.3.0-alpha.11"
-    "@luma.gl/webgpu": "npm:9.3.0-alpha.11"
+    "@loaders.gl/core": "npm:~4.4.0"
+    "@loaders.gl/images": "npm:~4.4.0"
+    "@loaders.gl/textures": "npm:~4.4.0"
+    "@luma.gl/core": "npm:~9.3.0"
+    "@luma.gl/engine": "npm:~9.3.0"
+    "@luma.gl/shadertools": "npm:~9.3.0"
+    "@luma.gl/webgl": "npm:~9.3.0"
+    "@luma.gl/webgpu": "npm:~9.3.0"
     "@types/react": "npm:^18.2.0"
     "@types/react-dom": "npm:^18.2.0"
     "@vitejs/plugin-react": "npm:^6.0.1"
@@ -15173,11 +15170,11 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-transform-feedback@workspace:examples/tutorials/transform-feedback"
   dependencies:
-    "@luma.gl/core": "npm:9.3.0-alpha.11"
-    "@luma.gl/engine": "npm:9.3.0-alpha.11"
-    "@luma.gl/shadertools": "npm:9.3.0-alpha.11"
-    "@luma.gl/webgl": "npm:9.3.0-alpha.11"
-    "@luma.gl/webgpu": "npm:9.3.0-alpha.11"
+    "@luma.gl/core": "npm:~9.3.0"
+    "@luma.gl/engine": "npm:~9.3.0"
+    "@luma.gl/shadertools": "npm:~9.3.0"
+    "@luma.gl/webgl": "npm:~9.3.0"
+    "@luma.gl/webgpu": "npm:~9.3.0"
     typescript: "npm:^5.9.3"
     vite: "npm:^8.0.0"
   languageName: unknown
@@ -15187,10 +15184,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-wandering@workspace:examples/tutorials/transform"
   dependencies:
-    "@luma.gl/core": "npm:9.3.0-alpha.11"
-    "@luma.gl/engine": "npm:9.3.0-alpha.11"
-    "@luma.gl/shadertools": "npm:9.3.0-alpha.11"
-    "@luma.gl/webgl": "npm:9.3.0-alpha.11"
+    "@luma.gl/core": "npm:~9.3.0"
+    "@luma.gl/engine": "npm:~9.3.0"
+    "@luma.gl/shadertools": "npm:~9.3.0"
+    "@luma.gl/webgl": "npm:~9.3.0"
     "@probe.gl/log": "npm:^4.1.1"
     typescript: "npm:^5.9.3"
     vite: "npm:^8.0.0"
@@ -15201,10 +15198,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-webgpu-hello-triangle@workspace:examples/tutorials/hello-triangle"
   dependencies:
-    "@luma.gl/core": "npm:9.3.0-alpha.11"
-    "@luma.gl/engine": "npm:9.3.0-alpha.11"
-    "@luma.gl/shadertools": "npm:9.3.0-alpha.11"
-    "@luma.gl/webgpu": "npm:9.3.0-alpha.11"
+    "@luma.gl/core": "npm:~9.3.0"
+    "@luma.gl/engine": "npm:~9.3.0"
+    "@luma.gl/shadertools": "npm:~9.3.0"
+    "@luma.gl/webgpu": "npm:~9.3.0"
     "@math.gl/core": "npm:^4.1.0"
     typescript: "npm:^5.9.3"
     vite: "npm:^8.0.0"
@@ -15215,11 +15212,11 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-webgpu-instance-uniforms@workspace:examples/tutorials/hello-instanced-cubes"
   dependencies:
-    "@luma.gl/core": "npm:9.3.0-alpha.11"
-    "@luma.gl/engine": "npm:9.3.0-alpha.11"
-    "@luma.gl/shadertools": "npm:9.3.0-alpha.11"
-    "@luma.gl/webgl": "npm:9.3.0-alpha.11"
-    "@luma.gl/webgpu": "npm:9.3.0-alpha.11"
+    "@luma.gl/core": "npm:~9.3.0"
+    "@luma.gl/engine": "npm:~9.3.0"
+    "@luma.gl/shadertools": "npm:~9.3.0"
+    "@luma.gl/webgl": "npm:~9.3.0"
+    "@luma.gl/webgpu": "npm:~9.3.0"
     "@math.gl/core": "npm:^4.1.0"
     typescript: "npm:^5.9.3"
     vite: "npm:^8.0.0"
@@ -15230,10 +15227,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-webgpu-two-cubes@workspace:examples/tutorials/hello-two-cubes"
   dependencies:
-    "@luma.gl/core": "npm:9.3.0-alpha.11"
-    "@luma.gl/engine": "npm:9.3.0-alpha.11"
-    "@luma.gl/shadertools": "npm:9.3.0-alpha.11"
-    "@luma.gl/webgpu": "npm:9.3.0-alpha.11"
+    "@luma.gl/core": "npm:~9.3.0"
+    "@luma.gl/engine": "npm:~9.3.0"
+    "@luma.gl/shadertools": "npm:~9.3.0"
+    "@luma.gl/webgpu": "npm:~9.3.0"
     "@math.gl/core": "npm:^4.1.0"
     typescript: "npm:^5.9.3"
     vite: "npm:^8.0.0"
@@ -15246,9 +15243,9 @@ __metadata:
   dependencies:
     "@babel/core": "npm:^7.28.3"
     "@babel/preset-env": "npm:^7.28.3"
-    "@loaders.gl/core": "npm:4.4.0-alpha.18"
-    "@loaders.gl/gltf": "npm:4.4.0-alpha.18"
-    "@loaders.gl/polyfills": "npm:4.4.0-alpha.18"
+    "@loaders.gl/core": "npm:~4.4.0"
+    "@loaders.gl/gltf": "npm:~4.4.0"
+    "@loaders.gl/polyfills": "npm:~4.4.0"
     "@luma.gl/devtools-extensions": "workspace:*"
     "@math.gl/types": "npm:^4.1.0"
     "@probe.gl/bench": "npm:^4.1.1"
@@ -22429,7 +22426,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"typescript@npm:^5.8.3":
+"typescript@npm:5.8.3":
   version: 5.8.3
   resolution: "typescript@npm:5.8.3"
   bin:
@@ -22439,7 +22436,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"typescript@patch:typescript@npm%3A^5.8.3#optional!builtin<compat/typescript>":
+"typescript@patch:typescript@npm%3A5.8.3#optional!builtin<compat/typescript>":
   version: 5.8.3
   resolution: "typescript@patch:typescript@npm%3A5.8.3#optional!builtin<compat/typescript>::version=5.8.3&hash=5786d5"
   bin:

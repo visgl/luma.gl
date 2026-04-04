@@ -4,6 +4,7 @@
 
 import {ShaderModule} from '../../../lib/shader-module/shader-module';
 import type {NumberArray3, NumberArray4} from '@math.gl/core';
+import {normalizeByteColor4, resolveUseByteColors} from '../../../lib/color/normalize-byte-colors';
 
 // cyan color
 const DEFAULT_HIGHLIGHT_COLOR: NumberArray4 = [0, 1, 1, 1];
@@ -22,8 +23,8 @@ export type PickingProps = {
   highlightedObjectColor?: NumberArray3 | null;
   /** Color of visual highlight of "selected" item */
   highlightColor?: NumberArray3 | NumberArray4;
-  /** Color range 0-1 or 0-255 */
-  useFloatColors?: boolean;
+  /** Interpret highlight colors as byte-style 0-255 values. */
+  useByteColors?: boolean;
 };
 
 /**
@@ -39,8 +40,8 @@ export type PickingUniforms = {
   isActive?: boolean;
   /** Set to true when picking an attribute value instead of object index */
   isAttribute?: boolean;
-  /** Color range 0-1 or 0-255 */
-  useFloatColors?: boolean;
+  /** Interpret highlight colors as byte-style 0-255 values. */
+  useByteColors?: boolean;
   /** Do we have a highlighted item? */
   isHighlightActive?: boolean;
   /** Set to a picking color to visually highlight that item */
@@ -54,7 +55,7 @@ layout(std140) uniform pickingUniforms {
   float isActive;
   float isAttribute;
   float isHighlightActive;
-  float useFloatColors;
+  float useByteColors;
   vec3 highlightedObjectColor;
   vec4 highlightColor;
 } picking;
@@ -63,12 +64,12 @@ out vec4 picking_vRGBcolor_Avalid;
 
 // Normalize unsigned byte color to 0-1 range
 vec3 picking_normalizeColor(vec3 color) {
-  return picking.useFloatColors > 0.5 ? color : color / 255.0;
+  return picking.useByteColors > 0.5 ? color / 255.0 : color;
 }
 
 // Normalize unsigned byte color to 0-1 range
 vec4 picking_normalizeColor(vec4 color) {
-  return picking.useFloatColors > 0.5 ? color : color / 255.0;
+  return picking.useByteColors > 0.5 ? color / 255.0 : color;
 }
 
 bool picking_isColorZero(vec3 color) {
@@ -128,7 +129,7 @@ layout(std140) uniform pickingUniforms {
   float isActive;
   float isAttribute;
   float isHighlightActive;
-  float useFloatColors;
+  float useByteColors;
   vec3 highlightedObjectColor;
   vec4 highlightColor;
 } picking;
@@ -202,7 +203,7 @@ export const picking = {
     isActive: 'f32',
     isAttribute: 'f32',
     isHighlightActive: 'f32',
-    useFloatColors: 'f32',
+    useByteColors: 'f32',
     highlightedObjectColor: 'vec3<f32>',
     highlightColor: 'vec4<f32>'
   },
@@ -210,7 +211,7 @@ export const picking = {
     isActive: false,
     isAttribute: false,
     isHighlightActive: false,
-    useFloatColors: true,
+    useByteColors: true,
     highlightedObjectColor: [0, 0, 0],
     highlightColor: DEFAULT_HIGHLIGHT_COLOR
   },
@@ -222,6 +223,7 @@ export const picking = {
 
 function getUniforms(opts: PickingProps = {}, prevUniforms?: PickingUniforms): PickingUniforms {
   const uniforms = {} as PickingUniforms;
+  const useByteColors = resolveUseByteColors(opts.useByteColors, true);
 
   if (opts.highlightedObjectColor === undefined) {
     // Unless highlightedObjectColor explicitly null or set, do not update state
@@ -234,11 +236,7 @@ function getUniforms(opts: PickingProps = {}, prevUniforms?: PickingUniforms): P
   }
 
   if (opts.highlightColor) {
-    const color = Array.from(opts.highlightColor, x => x / 255);
-    if (!Number.isFinite(color[3])) {
-      color[3] = 1;
-    }
-    uniforms.highlightColor = color as NumberArray4;
+    uniforms.highlightColor = normalizeByteColor4(opts.highlightColor, useByteColors);
   }
 
   if (opts.isActive !== undefined) {
@@ -246,8 +244,8 @@ function getUniforms(opts: PickingProps = {}, prevUniforms?: PickingUniforms): P
     uniforms.isAttribute = Boolean(opts.isAttribute);
   }
 
-  if (opts.useFloatColors !== undefined) {
-    uniforms.useFloatColors = Boolean(opts.useFloatColors);
+  if (opts.useByteColors !== undefined) {
+    uniforms.useByteColors = Boolean(opts.useByteColors);
   }
 
   return uniforms;

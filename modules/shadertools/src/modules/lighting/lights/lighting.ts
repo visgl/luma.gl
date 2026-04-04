@@ -7,12 +7,10 @@ import {ShaderModule} from '../../../lib/shader-module/shader-module';
 import {lightingUniformsGLSL} from './lighting-glsl';
 import {lightingUniformsWGSL} from './lighting-wgsl';
 import type {NumberArray2, NumberArray3} from '@math.gl/core';
+import {normalizeByteColor3, resolveUseByteColors} from '../../../lib/color/normalize-byte-colors';
 
 /** Max number of supported lights (in addition to ambient light */
 const MAX_LIGHTS = 5;
-
-/** Whether to divide */
-const COLOR_FACTOR = 255.0;
 
 /** Supported light source descriptions accepted by the lighting shader module. */
 export type Light = AmbientLight | PointLight | SpotLight | DirectionalLight;
@@ -77,6 +75,8 @@ export type SpotLight = {
 export type LightingProps = {
   /** Enables or disables lighting calculations for the module. */
   enabled?: boolean;
+  /** When true, light colors are interpreted as byte-style 0-255 values. */
+  useByteColors?: boolean;
   /** Preferred API for supplying mixed ambient, point, spot, and directional lights. */
   lights?: Light[];
   /**
@@ -191,7 +191,7 @@ function getUniforms(
   }
 
   // Specify lights separately
-  const {ambientLight, pointLights, spotLights, directionalLights} = props || {};
+  const {useByteColors, ambientLight, pointLights, spotLights, directionalLights} = props || {};
   const hasLights =
     ambientLight ||
     (pointLights && pointLights.length > 0) ||
@@ -208,7 +208,13 @@ function getUniforms(
 
   const uniforms = {
     ...createDefaultLightingUniforms(),
-    ...getLightSourceUniforms({ambientLight, pointLights, spotLights, directionalLights})
+    ...getLightSourceUniforms({
+      useByteColors,
+      ambientLight,
+      pointLights,
+      spotLights,
+      directionalLights
+    })
   };
 
   if (props.enabled !== undefined) {
@@ -219,6 +225,7 @@ function getUniforms(
 }
 
 function getLightSourceUniforms({
+  useByteColors,
   ambientLight,
   pointLights = [],
   spotLights = [],
@@ -238,7 +245,7 @@ function getLightSourceUniforms({
 
     lights[currentLight] = {
       ...lights[currentLight],
-      color: convertColor(pointLight),
+      color: convertColor(pointLight, useByteColors),
       position: pointLight.position,
       attenuation: pointLight.attenuation || [1, 0, 0]
     };
@@ -253,7 +260,7 @@ function getLightSourceUniforms({
 
     lights[currentLight] = {
       ...lights[currentLight],
-      color: convertColor(spotLight),
+      color: convertColor(spotLight, useByteColors),
       position: spotLight.position,
       direction: spotLight.direction,
       attenuation: spotLight.attenuation || [1, 0, 0],
@@ -270,7 +277,7 @@ function getLightSourceUniforms({
 
     lights[currentLight] = {
       ...lights[currentLight],
-      color: convertColor(directionalLight),
+      color: convertColor(directionalLight, useByteColors),
       direction: directionalLight.direction
     };
     currentLight++;
@@ -282,7 +289,7 @@ function getLightSourceUniforms({
   }
 
   return {
-    ambientColor: convertColor(ambientLight),
+    ambientColor: convertColor(ambientLight, useByteColors),
     directionalLightCount,
     pointLightCount,
     spotLightCount,
@@ -318,10 +325,12 @@ function extractLightTypes(lights: Light[]): LightingProps {
 
 /** Take color 0-255 and intensity as input and output 0.0-1.0 range */
 function convertColor(
-  colorDef: {color?: Readonly<NumberArray3>; intensity?: number} = {}
+  colorDef: {color?: Readonly<NumberArray3>; intensity?: number} = {},
+  useByteColors?: boolean
 ): NumberArray3 {
   const {color = [0, 0, 0], intensity = 1.0} = colorDef;
-  return color.map(component => (component * intensity) / COLOR_FACTOR) as NumberArray3;
+  const normalizedColor = normalizeByteColor3(color, resolveUseByteColors(useByteColors, true));
+  return normalizedColor.map(component => component * intensity) as NumberArray3;
 }
 
 function createDefaultLightingUniforms(): LightingUniforms {

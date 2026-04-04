@@ -46,9 +46,9 @@
   "devDependencies": {
     "@babel/core": "^7.28.3",
     "@babel/preset-env": "^7.28.3",
-    "@loaders.gl/core": "4.4.0-alpha.18",
-    "@loaders.gl/gltf": "4.4.0-alpha.18",
-    "@loaders.gl/polyfills": "4.4.0-alpha.18",
+    "@loaders.gl/core": "~4.4.0",
+    "@loaders.gl/gltf": "~4.4.0",
+    "@loaders.gl/polyfills": "~4.4.0",
     "@luma.gl/devtools-extensions": "workspace:*",
     "@probe.gl/bench": "^4.1.1",
     "@probe.gl/stats": "^4.1.1",
@@ -65,23 +65,24 @@
     "vitest": "^4.0.18"
   },
   "resolutions": {
+    "@luma.gl/constants@npm:^9.0.0": "~9.0.0",
     "@docusaurus/plugin-client-redirects": "^3.9.2",
     "@docusaurus/plugin-content-docs": "^3.9.2",
     "@docusaurus/preset-classic": "^3.9.2",
     "cheerio": "1.0.0-rc.9",
-    "typescript": "^5.8.3",
+    "typescript": "5.8.3",
     "tsconfig-paths": "^3.9.0",
     "ts-patch": "^3.3.0"
   },
   "packageExtensions": {
     "@loaders.gl/gltf@*": {
       "peerDependencies": {
-        "@loaders.gl/core": "4.4.0-alpha.18"
+        "@loaders.gl/core": "~4.4.0"
       }
     },
     "@loaders.gl/images@*": {
       "peerDependencies": {
-        "@loaders.gl/core": "4.4.0-alpha.18"
+        "@loaders.gl/core": "~4.4.0"
       }
     }
   },

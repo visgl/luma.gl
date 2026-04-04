@@ -38,6 +38,8 @@ export type ParseGLTFOptions = {
   lights?: boolean;
   /** Enables tangent usage when available. */
   useTangents?: boolean;
+  /** When true, parsed semantic light colors are converted into luma.gl's legacy byte-style range. */
+  useByteColors?: boolean;
 };
 
 const defaultOptions: Required<ParseGLTFOptions> = {
@@ -45,7 +47,8 @@ const defaultOptions: Required<ParseGLTFOptions> = {
   pbrDebug: false,
   imageBasedLightingEnvironment: undefined!,
   lights: true,
-  useTangents: false
+  useTangents: false,
+  useByteColors: true
 };
 
 /**
