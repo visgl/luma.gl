@@ -9,7 +9,6 @@
     "label": "Showcase",
     "items": [
       "showcase/instancing",
-      "showcase/text-3d",
       "showcase/gltf",
       "showcase/postprocessing",
       "showcase/persistence",

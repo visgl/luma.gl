@@ -2,110 +2,122 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from 'tape-promise/tape.js'
-import {extrudeShapes, parseFont, TextGeometry} from '../src/index'
-import {simpleFont} from './data/simple-font'
-import {Vector3} from '@math.gl/core'
+import test from 'tape-promise/tape.js';
+import {extrudeShapes, parseFont, TextGeometry} from '../src/index';
+import {simpleFont} from './data/simple-font';
+import {Vector3} from '@math.gl/core';
 
 test('extrudeShapes outputs complete attribute arrays', t => {
-  const font = parseFont(simpleFont)
-  const shapes = font.generateShapes('A', 20, 2)
-  const attributes = extrudeShapes(shapes, {depth: 2, curveSegments: 2})
+  const font = parseFont(simpleFont);
+  const shapes = font.generateShapes('A', 20, 2);
+  const attributes = extrudeShapes(shapes, {depth: 2, curveSegments: 2});
 
-  t.ok(attributes.positions.length > 0, 'positions are populated')
-  t.equal(attributes.normals.length, attributes.positions.length, 'normals align with positions')
-  t.equal(attributes.uvs.length, (attributes.positions.length / 3) * 2, 'uv count matches vertices')
-  t.end()
-})
+  t.ok(attributes.positions.length > 0, 'positions are populated');
+  t.equal(attributes.normals.length, attributes.positions.length, 'normals align with positions');
+  t.equal(
+    attributes.uvs.length,
+    (attributes.positions.length / 3) * 2,
+    'uv count matches vertices'
+  );
+  t.end();
+});
 
 test('TextGeometry exposes luma.gl attribute layout', t => {
-  const font = parseFont(simpleFont)
-  const geometry = new TextGeometry('A', {font, size: 10, depth: 2, curveSegments: 2})
+  const font = parseFont(simpleFont);
+  const geometry = new TextGeometry('A', {font, size: 10, depth: 2, curveSegments: 2});
 
-  t.equal(geometry.topology, 'triangle-list', 'topology matches expected primitive type')
-  t.ok(geometry.attributes.positions.value.length > 0, 'positions are populated')
+  t.equal(geometry.topology, 'triangle-list', 'topology matches expected primitive type');
+  t.ok(geometry.attributes.positions.value.length > 0, 'positions are populated');
   t.equal(
     geometry.attributes.normals.value.length,
     geometry.attributes.positions.value.length,
     'normals align with position count'
-  )
+  );
   t.equal(
     geometry.attributes.texCoords.value.length,
     (geometry.attributes.positions.value.length / 3) * 2,
     'uvs match vertex count'
-  )
-  t.end()
-})
+  );
+  t.end();
+});
 
 test('Font can center each line independently', t => {
-  const font = parseFont(simpleFont)
-  const shapes = font.generateShapes('A\nAA', 10, 2, {align: 'center'})
+  const font = parseFont(simpleFont);
+  const shapes = font.generateShapes('A\nAA', 10, 2, {align: 'center'});
 
-  t.equal(shapes.length, 3, 'each glyph produced a shape')
+  t.equal(shapes.length, 3, 'each glyph produced a shape');
 
-  const lineBounds = new Map<number, {minX: number; maxX: number}>()
+  const lineBounds = new Map<number, {minX: number; maxX: number}>();
   for (const shape of shapes) {
-    const points = shape.extractPoints(2).shape
-    const centerY = Math.round(((Math.min(...points.map(point => point.y)) + Math.max(...points.map(point => point.y))) / 2) * 1000)
-    const minX = Math.min(...points.map(point => point.x))
-    const maxX = Math.max(...points.map(point => point.x))
-    const existingBounds = lineBounds.get(centerY)
+    const points = shape.extractPoints(2).shape;
+    const centerY = Math.round(
+      ((Math.min(...points.map(point => point.y)) + Math.max(...points.map(point => point.y))) /
+        2) *
+        1000
+    );
+    const minX = Math.min(...points.map(point => point.x));
+    const maxX = Math.max(...points.map(point => point.x));
+    const existingBounds = lineBounds.get(centerY);
 
     if (existingBounds) {
-      existingBounds.minX = Math.min(existingBounds.minX, minX)
-      existingBounds.maxX = Math.max(existingBounds.maxX, maxX)
+      existingBounds.minX = Math.min(existingBounds.minX, minX);
+      existingBounds.maxX = Math.max(existingBounds.maxX, maxX);
     } else {
-      lineBounds.set(centerY, {minX, maxX})
+      lineBounds.set(centerY, {minX, maxX});
     }
   }
 
-  const [firstLineBounds, secondLineBounds] = [...lineBounds.values()]
-  const firstLineCenter = (firstLineBounds.minX + firstLineBounds.maxX) / 2
-  const secondLineCenter = (secondLineBounds.minX + secondLineBounds.maxX) / 2
-  t.ok(Math.abs(firstLineCenter - secondLineCenter) < 0.0001, 'line centers align horizontally')
-  t.end()
-})
+  const [firstLineBounds, secondLineBounds] = [...lineBounds.values()];
+  const firstLineCenter = (firstLineBounds.minX + firstLineBounds.maxX) / 2;
+  const secondLineCenter = (secondLineBounds.minX + secondLineBounds.maxX) / 2;
+  t.ok(Math.abs(firstLineCenter - secondLineCenter) < 0.0001, 'line centers align horizontally');
+  t.end();
+});
 
 test('extrusion preserves holes in polygonal glyphs', t => {
-  const font = parseFont(simpleFont)
-  const shapes = font.generateShapes('A', 20, 4)
-  const attributes = extrudeShapes(shapes, {depth: 2, bevelEnabled: false, curveSegments: 4})
+  const font = parseFont(simpleFont);
+  const shapes = font.generateShapes('A', 20, 4);
+  const attributes = extrudeShapes(shapes, {depth: 2, bevelEnabled: false, curveSegments: 4});
 
-  const frontFaceArea = computeFrontFaceArea(attributes.positions)
-  const expectedOuterWidth = 10 * (20 / simpleFont.resolution)
-  const expectedHoleWidth = 4 * (20 / simpleFont.resolution)
-  const expectedArea = expectedOuterWidth * expectedOuterWidth - expectedHoleWidth * expectedHoleWidth
+  const frontFaceArea = computeFrontFaceArea(attributes.positions);
+  const expectedOuterWidth = 10 * (20 / simpleFont.resolution);
+  const expectedHoleWidth = 4 * (20 / simpleFont.resolution);
+  const expectedArea =
+    expectedOuterWidth * expectedOuterWidth - expectedHoleWidth * expectedHoleWidth;
 
-  t.ok(frontFaceArea > 0, 'front face area was measured')
-  t.ok(Math.abs(frontFaceArea - expectedArea) < expectedArea * 0.05, 'triangulation honors inner hole')
-  t.end()
-})
+  t.ok(frontFaceArea > 0, 'front face area was measured');
+  t.ok(
+    Math.abs(frontFaceArea - expectedArea) < expectedArea * 0.05,
+    'triangulation honors inner hole'
+  );
+  t.end();
+});
 
 /** Computes the area of the first lid in the extruded geometry. */
 function computeFrontFaceArea(positions: Float32Array): number {
-  let area = 0
-  const vectorAB = new Vector3()
-  const vectorAC = new Vector3()
+  let area = 0;
+  const vectorAB = new Vector3();
+  const vectorAC = new Vector3();
 
   for (let index = 0; index < positions.length; index += 9) {
-    const ax = positions[index]
-    const ay = positions[index + 1]
-    const az = positions[index + 2]
-    const bx = positions[index + 3]
-    const by = positions[index + 4]
-    const bz = positions[index + 5]
-    const cx = positions[index + 6]
-    const cy = positions[index + 7]
-    const cz = positions[index + 8]
+    const ax = positions[index];
+    const ay = positions[index + 1];
+    const az = positions[index + 2];
+    const bx = positions[index + 3];
+    const by = positions[index + 4];
+    const bz = positions[index + 5];
+    const cx = positions[index + 6];
+    const cy = positions[index + 7];
+    const cz = positions[index + 8];
 
     if (az !== 0 || bz !== 0 || cz !== 0) {
-      break
+      break;
     }
 
-    vectorAB.set(bx - ax, by - ay, 0)
-    vectorAC.set(cx - ax, cy - ay, 0)
-    area += vectorAB.cross(vectorAC).len() * 0.5
+    vectorAB.set(bx - ax, by - ay, 0);
+    vectorAC.set(cx - ax, cy - ay, 0);
+    area += vectorAB.cross(vectorAC).len() * 0.5;
   }
 
-  return area
+  return area;
 }

@@ -1,4 +1,4 @@
-import {defineConfig} from 'vite'
+import {defineConfig} from 'vite';
 
 const alias = {
   '@luma.gl/core': `${__dirname}/../../../modules/core/src`,
@@ -9,9 +9,9 @@ const alias = {
   '@luma.gl/text': `${__dirname}/../../../modules/text/src`,
   '@luma.gl/webgl': `${__dirname}/../../../modules/webgl/src`,
   '@luma.gl/webgpu': `${__dirname}/../../../modules/webgpu/src`
-}
+};
 
 export default defineConfig({
   resolve: {alias},
   server: {open: true}
-})
+});

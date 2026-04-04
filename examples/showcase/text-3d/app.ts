@@ -2,20 +2,20 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {NumberArray} from '@luma.gl/core'
-import type {AnimationProps} from '@luma.gl/engine'
-import {AnimationLoopTemplate, Model, ShaderInputs} from '@luma.gl/engine'
-import {ShaderModule} from '@luma.gl/shadertools'
-import {Matrix4} from '@math.gl/core'
-import {parseFont, TextGeometry} from '@luma.gl/text'
-import {helvetiker} from './helvetiker-font'
+import {NumberArray} from '@luma.gl/core';
+import type {AnimationProps} from '@luma.gl/engine';
+import {AnimationLoopTemplate, Model, ShaderInputs} from '@luma.gl/engine';
+import {ShaderModule} from '@luma.gl/shadertools';
+import {Matrix4} from '@math.gl/core';
+import {parseFont, TextGeometry} from '@luma.gl/text';
+import {helvetiker} from './helvetiker-font';
 
-export const title = '3D Space Crawl'
-export const description = 'Perspective space crawl built with extruded text geometry.'
+export const title = '3D Space Crawl';
+export const description = 'Perspective space crawl built with extruded text geometry.';
 
-const TEXT_3D_COLOR_STORAGE_KEY = 'text-3d-crawl-color'
-const DEFAULT_CRAWL_COLOR: [number, number, number, number] = [1, 0.62, 0.32, 1]
-const YELLOW_CRAWL_COLOR: [number, number, number, number] = [1, 0.9, 0.32, 1]
+const TEXT_3D_COLOR_STORAGE_KEY = 'text-3d-crawl-color';
+const DEFAULT_CRAWL_COLOR: [number, number, number, number] = [1, 0.62, 0.32, 1];
+const YELLOW_CRAWL_COLOR: [number, number, number, number] = [1, 0.9, 0.32, 1];
 
 const WGSL_SHADER = /* wgsl */ `
 struct AppUniforms {
@@ -66,7 +66,7 @@ fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
   let baseColor = app.crawlColor.rgb;
   return vec4<f32>(baseColor * (diffuse + glow) * crawlFade * texBloom, app.crawlColor.a);
 }
-`
+`;
 
 const VS_GLSL = /* glsl */ `#version 300 es
 #define SHADER_NAME text-3d-vs
@@ -96,7 +96,7 @@ void main() {
   vTexCoord = texCoords;
   vWorldY = worldPosition.y;
 }
-`
+`;
 
 const FS_GLSL = /* glsl */ `#version 300 es
 #define SHADER_NAME text-3d-fs
@@ -128,17 +128,17 @@ void main() {
   vec3 baseColor = app.crawlColor.rgb * texBloom;
   fragColor = vec4(baseColor * (diffuse + glow) * crawlFade, app.crawlColor.a);
 }
-`
+`;
 
 type AppUniforms = {
-  modelMatrix: NumberArray
-  viewMatrix: NumberArray
-  projectionMatrix: NumberArray
-  normalMatrix: NumberArray
-  time: number
-  crawlColor: NumberArray
-  fade: NumberArray
-}
+  modelMatrix: NumberArray;
+  viewMatrix: NumberArray;
+  projectionMatrix: NumberArray;
+  normalMatrix: NumberArray;
+  time: number;
+  crawlColor: NumberArray;
+  fade: NumberArray;
+};
 
 const app: ShaderModule<AppUniforms, AppUniforms> = {
   name: 'app',
@@ -151,9 +151,9 @@ const app: ShaderModule<AppUniforms, AppUniforms> = {
     crawlColor: 'vec4<f32>',
     fade: 'vec4<f32>'
   }
-}
+};
 
-const font = parseFont(helvetiker)
+const font = parseFont(helvetiker);
 
 const crawlText = [
   'EPISODE IV',
@@ -172,7 +172,7 @@ const crawlText = [
   'During the battle,',
   'developers uncovered',
   'the secret weakness of',
-  'Legacy Rendering\'s',
+  "Legacy Rendering's",
   'ultimate weapon:',
   'brittle visualization',
   'pipelines with no reusable',
@@ -188,34 +188,34 @@ const crawlText = [
   'interactive maps, massive',
   'datasets, and cinematic',
   'exploration....'
-].join('\n')
+].join('\n');
 
 export default class TextAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = `
 <p>Extrudes text geometry using a typeface JSON font with beveling.</p>
 <p>The text scrolls into deep space with deck.gl-flavored crawl copy.</p>
 <p>Enable canvas antialiasing or increase bevel and curve segments if the edges shimmer.</p>
-`
+`;
 
-  modelMatrix = new Matrix4()
-  normalMatrix = new Matrix4()
-  viewMatrix = new Matrix4().lookAt({eye: [0, 40, 980], center: [0, -520, -520]})
-  projectionMatrix = new Matrix4()
-  shaderInputs = new ShaderInputs<{app: typeof app.props}>({app})
-  model: Model
+  modelMatrix = new Matrix4();
+  normalMatrix = new Matrix4();
+  viewMatrix = new Matrix4().lookAt({eye: [0, 40, 980], center: [0, -520, -520]});
+  projectionMatrix = new Matrix4();
+  shaderInputs = new ShaderInputs<{app: typeof app.props}>({app});
+  model: Model;
   /** Horizontal translation that centers the generated text geometry. */
-  geometryOffset: [number, number, number]
-  textMinY = 0
-  textHeight = 0
-  textWidth = 0
-  leadInHeight = 420
-  leadOutHeight = 520
-  scrollSpeedWorldUnitsPerSecond = 120
-  baseDepthOffset = -320
-  baseScale: [number, number, number] = [1.08, 1.08, 1]
+  geometryOffset: [number, number, number];
+  textMinY = 0;
+  textHeight = 0;
+  textWidth = 0;
+  leadInHeight = 420;
+  leadOutHeight = 520;
+  scrollSpeedWorldUnitsPerSecond = 120;
+  baseDepthOffset = -320;
+  baseScale: [number, number, number] = [1.08, 1.08, 1];
 
   constructor({device}: AnimationProps) {
-    super()
+    super();
 
     this.shaderInputs.setProps({
       app: {
@@ -227,7 +227,7 @@ export default class TextAnimationLoopTemplate extends AnimationLoopTemplate {
         crawlColor: DEFAULT_CRAWL_COLOR,
         fade: [0, 0, 0, 0]
       }
-    })
+    });
 
     // Reduced tessellation to stay well under default WebGPU buffer limits
     const geometry = new TextGeometry(crawlText, {
@@ -240,38 +240,38 @@ export default class TextAnimationLoopTemplate extends AnimationLoopTemplate {
       bevelSize: 3.5,
       bevelSegments: 2,
       curveSegments: 4
-    })
+    });
 
-    const geometryAttributes = geometry.getAttributes()
-    const positionAttribute = geometryAttributes.positions || geometryAttributes.POSITION
-    let minX = Number.POSITIVE_INFINITY
-    let maxX = Number.NEGATIVE_INFINITY
-    let minY = Number.POSITIVE_INFINITY
-    let minZ = Number.POSITIVE_INFINITY
-    let maxY = Number.NEGATIVE_INFINITY
-    let maxZ = Number.NEGATIVE_INFINITY
+    const geometryAttributes = geometry.getAttributes();
+    const positionAttribute = geometryAttributes.positions || geometryAttributes.POSITION;
+    let minX = Number.POSITIVE_INFINITY;
+    let maxX = Number.NEGATIVE_INFINITY;
+    let minY = Number.POSITIVE_INFINITY;
+    let minZ = Number.POSITIVE_INFINITY;
+    let maxY = Number.NEGATIVE_INFINITY;
+    let maxZ = Number.NEGATIVE_INFINITY;
 
     if (positionAttribute) {
-      const {value} = positionAttribute
+      const {value} = positionAttribute;
       for (let index = 0; index < value.length; index += 3) {
-        const positionX = value[index]
-        const positionY = value[index + 1]
-        const positionZ = value[index + 2]
-        minX = Math.min(minX, positionX)
-        maxX = Math.max(maxX, positionX)
-        minY = Math.min(minY, positionY)
-        maxY = Math.max(maxY, positionY)
-        minZ = Math.min(minZ, positionZ)
-        maxZ = Math.max(maxZ, positionZ)
+        const positionX = value[index];
+        const positionY = value[index + 1];
+        const positionZ = value[index + 2];
+        minX = Math.min(minX, positionX);
+        maxX = Math.max(maxX, positionX);
+        minY = Math.min(minY, positionY);
+        maxY = Math.max(maxY, positionY);
+        minZ = Math.min(minZ, positionZ);
+        maxZ = Math.max(maxZ, positionZ);
       }
     }
 
-    const centerX = Number.isFinite(minX) && Number.isFinite(maxX) ? (minX + maxX) / 2 : 0
-    const centerZ = Number.isFinite(minZ) && Number.isFinite(maxZ) ? (minZ + maxZ) / 2 : 0
-    this.geometryOffset = [-centerX, Number.isFinite(maxY) ? -maxY : 0, -centerZ]
-    this.textMinY = Number.isFinite(minY) ? minY : 0
-    this.textWidth = Number.isFinite(minX) && Number.isFinite(maxX) ? maxX - minX : 0
-    this.textHeight = Number.isFinite(minY) && Number.isFinite(maxY) ? maxY - minY : 0
+    const centerX = Number.isFinite(minX) && Number.isFinite(maxX) ? (minX + maxX) / 2 : 0;
+    const centerZ = Number.isFinite(minZ) && Number.isFinite(maxZ) ? (minZ + maxZ) / 2 : 0;
+    this.geometryOffset = [-centerX, Number.isFinite(maxY) ? -maxY : 0, -centerZ];
+    this.textMinY = Number.isFinite(minY) ? minY : 0;
+    this.textWidth = Number.isFinite(minX) && Number.isFinite(maxX) ? maxX - minX : 0;
+    this.textHeight = Number.isFinite(minY) && Number.isFinite(maxY) ? maxY - minY : 0;
 
     this.model = new Model(device, {
       id: 'text-geometry',
@@ -290,15 +290,15 @@ export default class TextAnimationLoopTemplate extends AnimationLoopTemplate {
         depthCompare: 'less-equal',
         cullMode: 'back'
       }
-    })
+    });
   }
 
   onRender({device, tick, aspect}: AnimationProps) {
-    const elapsedSeconds = tick * 0.016
-    const totalTravel = this.leadInHeight + this.textHeight + this.leadOutHeight
-    const distanceTraveled = (elapsedSeconds * this.scrollSpeedWorldUnitsPerSecond) % totalTravel
-    const verticalOffset = -this.leadInHeight + distanceTraveled
-    const depthOffset = this.baseDepthOffset
+    const elapsedSeconds = tick * 0.016;
+    const totalTravel = this.leadInHeight + this.textHeight + this.leadOutHeight;
+    const distanceTraveled = (elapsedSeconds * this.scrollSpeedWorldUnitsPerSecond) % totalTravel;
+    const verticalOffset = -this.leadInHeight + distanceTraveled;
+    const depthOffset = this.baseDepthOffset;
 
     this.modelMatrix
       .identity()
@@ -306,10 +306,10 @@ export default class TextAnimationLoopTemplate extends AnimationLoopTemplate {
       .rotateX(-1.24)
       .translate([0, verticalOffset, 0])
       .scale(this.baseScale)
-      .translate(this.geometryOffset)
+      .translate(this.geometryOffset);
 
-    this.normalMatrix.copy(this.modelMatrix).invert().transpose()
-    this.projectionMatrix.perspective({fovy: Math.PI / 3.9, aspect, near: 24, far: 3200})
+    this.normalMatrix.copy(this.modelMatrix).invert().transpose();
+    this.projectionMatrix.perspective({fovy: Math.PI / 3.9, aspect, near: 24, far: 3200});
 
     this.shaderInputs.setProps({
       app: {
@@ -321,24 +321,25 @@ export default class TextAnimationLoopTemplate extends AnimationLoopTemplate {
         crawlColor: getCrawlColor(),
         fade: [-260, -80, 960, 1360]
       }
-    })
+    });
 
-    const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1], clearDepth: true})
-    this.model.draw(renderPass)
-    renderPass.end()
+    const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 1], clearDepth: true});
+    this.model.draw(renderPass);
+    renderPass.end();
   }
 
   onFinalize() {
-    this.model.destroy()
+    this.model.destroy();
   }
 }
 
 function getCrawlColor(): [number, number, number, number] {
   if (typeof window === 'undefined') {
-    return DEFAULT_CRAWL_COLOR
+    return DEFAULT_CRAWL_COLOR;
   }
 
-  const searchParams = new URLSearchParams(window.location.search)
-  const crawlColor = searchParams.get('crawlColor') ?? window.localStorage.getItem(TEXT_3D_COLOR_STORAGE_KEY)
-  return crawlColor === 'yellow' ? YELLOW_CRAWL_COLOR : DEFAULT_CRAWL_COLOR
+  const searchParams = new URLSearchParams(window.location.search);
+  const crawlColor =
+    searchParams.get('crawlColor') ?? window.localStorage.getItem(TEXT_3D_COLOR_STORAGE_KEY);
+  return crawlColor === 'yellow' ? YELLOW_CRAWL_COLOR : DEFAULT_CRAWL_COLOR;
 }
