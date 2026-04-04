@@ -10,8 +10,12 @@ import {Matrix4} from '@math.gl/core'
 import {parseFont, TextGeometry} from '@luma.gl/text'
 import {helvetiker} from './helvetiker-font'
 
-export const title = '3D Text'
-export const description = 'Deck.gl-inspired opening crawl built with extruded text geometry.'
+export const title = '3D Space Crawl'
+export const description = 'Perspective space crawl built with extruded text geometry.'
+
+const TEXT_3D_COLOR_STORAGE_KEY = 'text-3d-crawl-color'
+const DEFAULT_CRAWL_COLOR: [number, number, number, number] = [1, 0.62, 0.32, 1]
+const YELLOW_CRAWL_COLOR: [number, number, number, number] = [1, 0.9, 0.32, 1]
 
 const WGSL_SHADER = /* wgsl */ `
 struct AppUniforms {
@@ -20,6 +24,7 @@ struct AppUniforms {
   projectionMatrix : mat4x4<f32>,
   normalMatrix : mat4x4<f32>,
   time : f32,
+  crawlColor : vec4<f32>,
   fade : vec4<f32>,
 };
 
@@ -58,8 +63,8 @@ fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
   let fadeOut = 1.0 - smoothstep(app.fade.z, app.fade.w, inputs.vWorldY);
   let crawlFade = clamp(fadeIn * fadeOut, 0.0, 1.0);
   let texBloom = 1.0 + 0.02 * sin(inputs.vTexCoord.x * 0.35);
-  let baseColor = vec3<f32>(1.0, 0.9, 0.32);
-  return vec4<f32>(baseColor * (diffuse + glow) * crawlFade * texBloom, 1.0);
+  let baseColor = app.crawlColor.rgb;
+  return vec4<f32>(baseColor * (diffuse + glow) * crawlFade * texBloom, app.crawlColor.a);
 }
 `
 
@@ -72,6 +77,7 @@ uniform appUniforms {
   mat4 projectionMatrix;
   mat4 normalMatrix;
   float time;
+  vec4 crawlColor;
   vec4 fade;
 } app;
 
@@ -102,6 +108,7 @@ uniform appUniforms {
   mat4 projectionMatrix;
   mat4 normalMatrix;
   float time;
+  vec4 crawlColor;
   vec4 fade;
 } app;
 
@@ -118,8 +125,8 @@ void main() {
   float fadeOut = 1.0 - smoothstep(app.fade.z, app.fade.w, vWorldY);
   float crawlFade = clamp(fadeIn * fadeOut, 0.0, 1.0);
   float texBloom = 1.0 + 0.02 * sin(vTexCoord.x * 0.35);
-  vec3 baseColor = vec3(1.0, 0.9, 0.32) * texBloom;
-  fragColor = vec4(baseColor * (diffuse + glow) * crawlFade, 1.0);
+  vec3 baseColor = app.crawlColor.rgb * texBloom;
+  fragColor = vec4(baseColor * (diffuse + glow) * crawlFade, app.crawlColor.a);
 }
 `
 
@@ -129,6 +136,7 @@ type AppUniforms = {
   projectionMatrix: NumberArray
   normalMatrix: NumberArray
   time: number
+  crawlColor: NumberArray
   fade: NumberArray
 }
 
@@ -140,6 +148,7 @@ const app: ShaderModule<AppUniforms, AppUniforms> = {
     projectionMatrix: 'mat4x4<f32>',
     normalMatrix: 'mat4x4<f32>',
     time: 'f32',
+    crawlColor: 'vec4<f32>',
     fade: 'vec4<f32>'
   }
 }
@@ -162,15 +171,17 @@ const crawlText = [
   '',
   'During the battle,',
   'developers uncovered',
-  'the secret weakness of the',
-  'Empire\'s ultimate weapon:',
+  'the secret weakness of',
+  'Legacy Rendering\'s',
+  'ultimate weapon:',
   'brittle visualization',
   'pipelines with no reusable',
   'layers, no rapid tiling,',
   'and no graceful path to',
   'large-scale interaction.',
   '',
-  'Driven by aspiration,',
+  'Driven by a band of',
+  'vis.gl contributors,',
   'deck.gl carries the hope',
   'of the GPU rebellion,',
   'bringing new promise to',
@@ -182,7 +193,7 @@ const crawlText = [
 export default class TextAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = `
 <p>Extrudes text geometry using a typeface JSON font with beveling.</p>
-<p>The text scrolls into deep space with deck.gl-flavored opening crawl copy.</p>
+<p>The text scrolls into deep space with deck.gl-flavored crawl copy.</p>
 <p>Enable canvas antialiasing or increase bevel and curve segments if the edges shimmer.</p>
 `
 
@@ -213,6 +224,7 @@ export default class TextAnimationLoopTemplate extends AnimationLoopTemplate {
         projectionMatrix: new Matrix4(),
         normalMatrix: new Matrix4(),
         time: 0,
+        crawlColor: DEFAULT_CRAWL_COLOR,
         fade: [0, 0, 0, 0]
       }
     })
@@ -306,6 +318,7 @@ export default class TextAnimationLoopTemplate extends AnimationLoopTemplate {
         projectionMatrix: this.projectionMatrix,
         normalMatrix: this.normalMatrix,
         time: tick * 0.016,
+        crawlColor: getCrawlColor(),
         fade: [-260, -80, 960, 1360]
       }
     })
@@ -318,4 +331,14 @@ export default class TextAnimationLoopTemplate extends AnimationLoopTemplate {
   onFinalize() {
     this.model.destroy()
   }
+}
+
+function getCrawlColor(): [number, number, number, number] {
+  if (typeof window === 'undefined') {
+    return DEFAULT_CRAWL_COLOR
+  }
+
+  const searchParams = new URLSearchParams(window.location.search)
+  const crawlColor = searchParams.get('crawlColor') ?? window.localStorage.getItem(TEXT_3D_COLOR_STORAGE_KEY)
+  return crawlColor === 'yellow' ? YELLOW_CRAWL_COLOR : DEFAULT_CRAWL_COLOR
 }

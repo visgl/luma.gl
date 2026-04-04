@@ -42,6 +42,50 @@ import TransformFeedbackApp from '../../examples/tutorials/transform-feedback/ap
 import TransformApp from '../../examples/tutorials/transform/app';
 
 const exampleConfig = {};
+const TEXT_3D_COLOR_STORAGE_KEY = 'text-3d-crawl-color';
+
+function getInitialText3DColor(): 'copper' | 'yellow' {
+  if (typeof window === 'undefined') {
+    return 'copper';
+  }
+
+  const searchParams = new URLSearchParams(window.location.search);
+  const crawlColor = searchParams.get('crawlColor') ?? window.localStorage.getItem(TEXT_3D_COLOR_STORAGE_KEY);
+  return crawlColor === 'yellow' ? 'yellow' : 'copper';
+}
+
+const Text3DControls: React.FC = () => {
+  const [crawlColor, setCrawlColor] = useState<'copper' | 'yellow'>(getInitialText3DColor);
+
+  const handleChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const nextColor = event.target.value === 'yellow' ? 'yellow' : 'copper';
+    setCrawlColor(nextColor);
+
+    if (typeof window !== 'undefined') {
+      const searchParams = new URLSearchParams(window.location.search);
+      if (nextColor === 'yellow') {
+        searchParams.set('crawlColor', 'yellow');
+      } else {
+        searchParams.delete('crawlColor');
+      }
+
+      const search = searchParams.toString();
+      const nextUrl = `${window.location.pathname}${search ? `?${search}` : ''}${window.location.hash}`;
+      window.history.replaceState({}, '', nextUrl);
+      window.localStorage.setItem(TEXT_3D_COLOR_STORAGE_KEY, nextColor);
+    }
+  };
+
+  return (
+    <label style={{display: 'flex', alignItems: 'center', gap: 8, marginTop: 12}}>
+      <span style={{fontSize: 14, fontWeight: 600}}>Crawl color</span>
+      <select value={crawlColor} onChange={handleChange}>
+        <option value="copper">Copper</option>
+        <option value="yellow">Yellow</option>
+      </select>
+    </label>
+  );
+};
 
 // Showcase Examples
 
@@ -69,10 +113,11 @@ export const InstancingExample: React.FC = props => (
 export const Text3DExample: React.FC = props => (
   <LumaExample
     id="text-3d"
-    title="3D Text"
+    title="3D Space Crawl"
     directory="showcase"
     template={Text3DApp}
     config={exampleConfig}
+    headerControls={<Text3DControls />}
     {...props}
   />
 );
