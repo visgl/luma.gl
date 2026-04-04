@@ -29,6 +29,7 @@ import {
   log,
   dataTypeDecoder,
   getAttributeInfosFromLayouts,
+  getLogicalBufferSlots,
   normalizeBindingsByGroup
 } from '@luma.gl/core';
 
@@ -682,6 +683,7 @@ export class Model {
       this.bufferLayout
     );
     const bufferLayoutHelper = new BufferLayoutHelper(this.bufferLayout);
+    const logicalBufferSlots = getLogicalBufferSlots(this.pipeline.shaderLayout, this.bufferLayout);
 
     // Check if all buffers have a layout
     for (const [bufferName, buffer] of Object.entries(buffers)) {
@@ -702,7 +704,7 @@ export class Model {
         if (attributeInfo) {
           const location =
             this.device.type === 'webgpu'
-              ? bufferLayoutHelper.getBufferIndex(attributeInfo.bufferName)
+              ? logicalBufferSlots[attributeInfo.bufferName]
               : attributeInfo.location;
 
           this.vertexArray.setBuffer(location, buffer);

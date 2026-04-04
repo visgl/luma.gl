@@ -11,11 +11,8 @@ import {
 import {applyParametersToRenderPipelineDescriptor} from '../helpers/webgpu-parameters';
 import {getWebGPUTextureFormat} from '../helpers/convert-texture-format';
 import {getVertexBufferLayout} from '../helpers/get-vertex-buffer-layout';
-// import {convertAttributesVertexBufferToLayout} from '../helpers/get-vertex-buffer-layout';
-// import type {BufferAccessors} from './webgpu-pipeline';
 
 import type {WebGPUDevice} from '../webgpu-device';
-// import type {WebGPUBuffer} from './webgpu-buffer';
 import type {WebGPUShader} from './webgpu-shader';
 import type {WebGPURenderPass} from './webgpu-render-pass';
 
@@ -193,9 +190,7 @@ export class WebGPURenderPipeline extends RenderPipeline {
     const vertex: GPUVertexState = {
       module: (this.props.vs as WebGPUShader).handle,
       entryPoint: this.props.vertexEntryPoint || 'main',
-      buffers: getVertexBufferLayout(this.shaderLayout, this.props.bufferLayout, {
-        pipelineId: this.id
-      })
+      buffers: getVertexBufferLayout(this.shaderLayout, this.props.bufferLayout)
     };
 
     // Populate color targets
@@ -257,45 +252,3 @@ function createBindGroupCacheKeys(
   }
   return bindGroupCacheKeys;
 }
-/**
-_setAttributeBuffers(webgpuRenderPass: WebGPURenderPass) {
-  if (this._indexBuffer) {
-    webgpuRenderPass.handle.setIndexBuffer(this._indexBuffer.handle, this._indexBuffer.props.indexType);
-  }
-
-  const buffers = this._getBuffers();
-  for (let i = 0; i < buffers.length; ++i) {
-    const buffer = cast<WebGPUBuffer>(buffers[i]);
-    if (!buffer) {
-      const attribute = this.shaderLayout.attributes.find(
-        (attribute) => attribute.location === i
-      );
-      throw new Error(
-        `No buffer provided for attribute '${attribute?.name || ''}' in Model '${this.props.id}'`
-      );
-    }
-    webgpuRenderPass.handle.setVertexBuffer(i, buffer.handle);
-  }
-
-  // TODO - HANDLE buffer maps
-  /*
-  for (const [bufferName, attributeMapping] of Object.entries(this.props.bufferLayout)) {
-    const buffer = cast<WebGPUBuffer>(this.props.attributes[bufferName]);
-    if (!buffer) {
-      log.warn(`Missing buffer for buffer map ${bufferName}`)();
-      continue;
-    }
-
-    if ('location' in attributeMapping) {
-      // @ts-expect-error TODO model must not depend on webgpu
-      renderPass.handle.setVertexBuffer(layout.location, buffer.handle);
-    } else {
-      for (const [bufferName, mapping] of Object.entries(attributeMapping)) {
-        // @ts-expect-error TODO model must not depend on webgpu
-        renderPass.handle.setVertexBuffer(field.location, buffer.handle);
-      }
-    }
-  }
-  *
-}
-*/
