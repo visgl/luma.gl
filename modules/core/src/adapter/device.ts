@@ -781,6 +781,20 @@ or create a device with the 'debug: true' prop.`;
   }
 
   /**
+   * Internal helper for encoding CPU-to-buffer uploads in submission order.
+   * Backends may record onto the supplied command encoder or fall back to an
+   * immediate write when no separate queue ordering is required.
+   */
+  writeBufferViaCommandEncoder(
+    _commandEncoder: CommandEncoder,
+    _destinationBuffer: Buffer,
+    _data: ArrayBufferLike | ArrayBufferView | SharedArrayBuffer,
+    _byteOffset: number = 0
+  ): void {
+    throw new Error('writeBufferViaCommandEncoder() not implemented');
+  }
+
+  /**
    * Generate mipmaps for a WebGPU texture.
    * WebGPU textures must be created up front with the required mip count, usage flags, and a format that supports the chosen generation path.
    * WebGL uses `Texture.generateMipmapsWebGL()` directly because the backend manages mip generation on the texture object itself.

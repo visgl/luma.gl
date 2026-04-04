@@ -13,6 +13,7 @@ import {
   type Shader,
   type VertexArray,
   type TransformFeedback,
+  type CommandEncoder,
   type AttributeInfo,
   type Binding,
   type BindingsByGroup,
@@ -432,10 +433,16 @@ export class Model {
     return this._bindingTable;
   }
 
-  /** Update uniforms and pipeline state prior to drawing. */
-  predraw(): void {
+  /**
+   * Updates uniforms and pipeline state before opening a render pass.
+   *
+   * @param commandEncoder - Encoder that should own any GPU uploads emitted
+   * during draw preparation.
+   */
+  predraw(commandEncoder: CommandEncoder): void {
     // Update uniform buffers if needed
-    this.updateShaderInputs();
+    this.updateShaderInputs(commandEncoder);
+    this.material?.updateShaderInputs(commandEncoder);
     // Check if the pipeline is invalidated
     this.pipeline = this._updatePipeline();
   }
@@ -456,7 +463,18 @@ export class Model {
 
     try {
       renderPass.pushDebugGroup(`${this}.predraw(${renderPass})`);
-      this.predraw();
+      if (this.device.type === 'webgpu') {
+        // WebGPU uploads cannot be encoded once the render pass is already open.
+        // Keep the implicit draw() path working for existing callers by falling
+        // back to immediate writes here; callers that need upload ordering
+        // across multiple draws/viewports must call predraw(commandEncoder)
+        // before beginRenderPass().
+        this.updateShaderInputs();
+        this.material?.updateShaderInputs();
+        this.pipeline = this._updatePipeline();
+      } else {
+        this.predraw(this.device.commandEncoder);
+      }
     } finally {
       renderPass.popDebugGroup();
     }
@@ -647,8 +665,15 @@ export class Model {
   }
 
   /** Update uniform buffers from the model's shader inputs */
-  updateShaderInputs(): void {
-    this._uniformStore.setUniforms(this.shaderInputs.getUniformValues());
+  /**
+   * Flushes current shader-input values into managed uniform buffers and
+   * non-material bindings.
+   *
+   * @param commandEncoder - Optional encoder used to order uniform uploads with
+   * subsequent draw commands.
+   */
+  updateShaderInputs(commandEncoder?: CommandEncoder): void {
+    this._uniformStore.setUniforms(this.shaderInputs.getUniformValues(), commandEncoder);
     this.setBindings(this._getNonMaterialBindings(this.shaderInputs.getBindingValues()));
     // TODO - this is already tracked through buffer/texture update times?
     this.setNeedsRedraw('shaderInputs');
