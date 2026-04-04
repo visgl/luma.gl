@@ -23,7 +23,7 @@ import DOFApp from '../../examples/showcase/dof/app';
 // import GeospatialApp from '../../examples/showcase/geospatial/app';
 import GLTFApp from '../../examples/showcase/gltf/app';
 import InstancingApp from '../../examples/showcase/instancing/app';
-import Text3DApp from '../../examples/showcase/text-3d/app';
+import Text3DApp from '../../examples/experimental/text-3d/app';
 import PersistenceApp from '../../examples/showcase/persistence/app';
 import PostprocessingApp from '../../examples/showcase/postprocessing/app';
 import GlobeApp from '../../examples/showcase/globe/app';
@@ -115,7 +115,7 @@ export const Text3DExample: React.FC = props => (
   <LumaExample
     id="text-3d"
     title="3D Space Crawl"
-    directory="showcase"
+    directory="experimental"
     template={Text3DApp}
     config={exampleConfig}
     headerControls={<Text3DControls />}
