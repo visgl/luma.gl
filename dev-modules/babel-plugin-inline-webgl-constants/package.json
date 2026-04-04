@@ -22,8 +22,5 @@
   "exports": {
     "import": "./index.js",
     "require": "./dist/index.cjs"
-  },
-  "dependencies": {
-    "@luma.gl/constants": "~9.3.0"
   }
 }
