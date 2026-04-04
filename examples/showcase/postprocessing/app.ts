@@ -177,8 +177,13 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.shaderPassRenderer?.destroy();
   }
 
-  onRender(): void {
-    this.shaderPassRenderer?.resize();
+  onRender({needsRedraw}: AnimationProps): void {
+    const modelNeedsRedraw = this.shaderPassRenderer.needsRedraw();
+    if (!needsRedraw && !modelNeedsRedraw) {
+      return;
+    }
+    this.shaderPassRenderer.resize();
+    // Run the shader passes and generate an output texture
     this.shaderPassRenderer.renderToScreen({sourceTexture: this.imageTexture});
   }
 

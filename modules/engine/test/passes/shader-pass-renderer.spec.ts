@@ -240,6 +240,119 @@ async function readPixels(texture: Texture): Promise<Uint8Array> {
   }
 }
 
+test('ShaderPassRenderer#needsRedraw tracks initialization, resize, and async source loading', async t => {
+  const devices = await getTestDevices();
+  for (const device of devices) {
+    if (device.type === 'webgpu') {
+      continue; // eslint-disable-line no-continue
+    }
+
+    const renderer = new ShaderPassRenderer(device, {
+      shaderPasses: [],
+      shaderInputs: new ShaderInputs({})
+    });
+
+    t.ok(renderer.needsRedraw(), 'reports redraw after initialization');
+    const readySourceTexture = new DynamicTexture(device, {
+      id: 'ready-source-texture',
+      usage: Texture.RENDER | Texture.COPY_SRC | Texture.COPY_DST,
+      dimension: '2d',
+      data: {data: new Uint8Array([255, 0, 0, 255]), width: 1, height: 1, format: 'rgba8unorm'}
+    });
+    await readySourceTexture.ready;
+    renderer.renderToScreen({sourceTexture: readySourceTexture});
+    t.equal(renderer.needsRedraw(), false, 'clears redraw state after rendering');
+
+    const [width, height] = device.getCanvasContext().getDrawingBufferSize();
+    renderer.resize([width + 1, height + 1]);
+    t.equal(renderer.needsRedraw(), 'resized', 'reports redraw after resize');
+    renderer.renderToScreen({sourceTexture: readySourceTexture});
+    t.equal(renderer.needsRedraw(), false, 'clears resize redraw state after rendering');
+
+    let resolveTextureData: ((value: {
+      data: Uint8Array;
+      width: number;
+      height: number;
+      format: 'rgba8unorm';
+    }) => void) | null = null;
+    const sourceTexture = new DynamicTexture(device, {
+      id: 'loading-source-texture',
+      usage: Texture.RENDER | Texture.COPY_SRC | Texture.COPY_DST,
+      dimension: '2d',
+      data: new Promise(resolve => {
+        resolveTextureData = resolve;
+      })
+    });
+
+    t.equal(renderer.renderToTexture({sourceTexture}), null, 'skips rendering while source loads');
+    t.equal(
+      renderer.needsRedraw(),
+      'source texture loading',
+      're-raises redraw while source texture is still loading'
+    );
+
+    resolveTextureData?.({
+      data: new Uint8Array([255, 0, 0, 255]),
+      width: 1,
+      height: 1,
+      format: 'rgba8unorm'
+    });
+    await sourceTexture.ready;
+    t.ok(renderer.renderToTexture({sourceTexture}), 'renders once source texture is ready');
+
+    renderer.destroy();
+    readySourceTexture.destroy();
+    sourceTexture.destroy();
+  }
+  t.end();
+});
+
+test('ShaderPassRenderer#needsRedraw propagates subpass invalidation', async t => {
+  const devices = await getTestDevices();
+  for (const device of devices) {
+    if (device.type === 'webgpu') {
+      continue; // eslint-disable-line no-continue
+    }
+
+    const sourceTexture = new DynamicTexture(device, {
+      id: 'propagation-source-texture',
+      usage: Texture.RENDER | Texture.COPY_SRC | Texture.COPY_DST,
+      dimension: '2d',
+      data: {data: new Uint8Array([255, 0, 0, 255]), width: 1, height: 1, format: 'rgba8unorm'}
+    });
+    await sourceTexture.ready;
+
+    const renderer = new ShaderPassRenderer(device, {
+      shaderPasses: [invertPass],
+      shaderInputs: new ShaderInputs({invert: invertPass})
+    });
+
+    renderer.needsRedraw();
+    renderer.needsRedraw();
+
+    const passRenderer = renderer.passRenderers[0] as typeof renderer.passRenderers[0] & {
+      subPassExecutions: Array<{
+        subPassRenderer: {
+          model: {setBindings(bindings: Record<string, Texture>): void};
+        };
+      }>;
+    };
+    passRenderer.subPassExecutions[0].subPassRenderer.model.setBindings({
+      sourceTexture: sourceTexture.texture
+    });
+    t.ok(passRenderer.needsRedraw(), 'pass renderer reports redraw after subpass mutation');
+
+    passRenderer.subPassExecutions[0].subPassRenderer.model.setBindings({
+      sourceTexture: sourceTexture.texture
+    });
+    t.ok(renderer.needsRedraw(), 'renderer reports redraw after subpass mutation');
+
+    renderer.destroy();
+    sourceTexture.destroy();
+  }
+  t.end();
+});
+
 test('ShaderPassRenderer reuses BackgroundTextureModel', async t => {
   const devices = await getTestDevices();
   for (const device of devices) {

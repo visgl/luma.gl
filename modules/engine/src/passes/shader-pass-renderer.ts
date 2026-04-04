@@ -56,6 +56,8 @@ export class ShaderPassRenderer {
   passRenderers: PassRenderer[];
   swapFramebuffers: SwapFramebuffers;
   textureModel: BackgroundTextureModel;
+  private redrawReason: string | false = 'initialized';
+  private size: [width: number, height: number];
 
   constructor(device: Device, props: ShaderPassRendererProps) {
     this.device = device;
@@ -70,6 +72,7 @@ export class ShaderPassRenderer {
     this.shaderInputs = props.shaderInputs || new ShaderInputs(modules);
 
     const size = device.getCanvasContext().getDrawingBufferSize();
+    this.size = size;
     this.swapFramebuffers = new SwapFramebuffers(device, {
       colorAttachments: [device.preferredColorFormat],
       width: size[0],
@@ -95,10 +98,27 @@ export class ShaderPassRenderer {
 
   resize(size?: [width: number, height: number]): void {
     size ||= this.device.getCanvasContext().getDrawingBufferSize();
+    if (this.size[0] !== size[0] || this.size[1] !== size[1]) {
+      this.redrawReason ||= 'resized';
+      this.size = size;
+    }
     this.swapFramebuffers.resize({width: size[0], height: size[1]});
     for (const passRenderer of this.passRenderers) {
       passRenderer.resize(size);
     }
+  }
+
+  /** Check if any internal models need to redraw */
+  needsRedraw(): string | false {
+    let redraw: string | false = this.redrawReason;
+    const textureModelNeedsRedraw = this.textureModel.needsRedraw();
+    redraw = redraw || textureModelNeedsRedraw;
+    for (const passRenderer of this.passRenderers) {
+      const passNeedsRedraw = passRenderer.needsRedraw();
+      redraw = redraw || passNeedsRedraw;
+    }
+    this.redrawReason = false;
+    return redraw;
   }
 
   renderToScreen(options: {
@@ -135,6 +155,7 @@ export class ShaderPassRenderer {
   }): Texture | null {
     const {sourceTexture} = options;
     if (!sourceTexture.isReady) {
+      this.redrawReason ||= 'source texture loading';
       return null;
     }
 
@@ -228,6 +249,15 @@ class PassRenderer {
     this.subPassExecutions = this.createPassExecutions(passDefinition, {
       ownerName: passDefinition.name
     });
+  }
+
+  needsRedraw(): string | false {
+    let redraw: string | false = false;
+    for (const execution of this.subPassExecutions) {
+      const subPassNeedsRedraw = execution.subPassRenderer.needsRedraw();
+      redraw = redraw || subPassNeedsRedraw;
+    }
+    return redraw;
   }
 
   destroy() {
@@ -383,6 +413,10 @@ class SubPassRenderer {
 
   destroy() {
     this.model.destroy();
+  }
+
+  needsRedraw(): string | false {
+    return this.model.needsRedraw();
   }
 
   render(options: {
