@@ -85,7 +85,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     this.device = device;
     this.imageTexture = this.createImageTexture('bloom-scene.png');
-    this.setShaderPasses(this.getBloomPassPipeline());
+    this.setShaderPasses([this.getBloomPassPipeline()]);
     this.renderControls();
   }
 
@@ -183,7 +183,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       const nextValue = Number((event.target as HTMLInputElement).value);
       valueLabel.textContent = formatControlValue(nextValue);
       this.bloomValues[propName] = nextValue;
-      this.setShaderPasses(this.getBloomPassPipeline());
+      this.setShaderPasses([this.getBloomPassPipeline()]);
     });
     row.appendChild(input);
 

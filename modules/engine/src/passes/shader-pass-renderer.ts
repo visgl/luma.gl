@@ -77,7 +77,8 @@ export class ShaderPassRenderer {
     });
 
     this.textureModel = new BackgroundTextureModel(device, {
-      backgroundTexture: this.swapFramebuffers.current.colorAttachments[0].texture
+      backgroundTexture: this.swapFramebuffers.current.colorAttachments[0].texture,
+      flipY: device.type === 'webgpu'
     });
 
     this.passRenderers = props.shaderPasses.map(shaderPass => new PassRenderer(device, shaderPass));

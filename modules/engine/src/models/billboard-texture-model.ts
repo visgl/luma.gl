@@ -10,28 +10,33 @@ import {ClipSpace, ClipSpaceProps} from './clip-space';
 const backgroundModule = {
   name: 'background',
   uniformTypes: {
-    scale: 'vec2<f32>'
+    scale: 'vec2<f32>',
+    flipY: 'i32'
   }
-} as const satisfies ShaderModule<{}, {scale: [number, number]}>;
+} as const satisfies ShaderModule<{}, {scale: [number, number]; flipY: number}>;
 
 const BACKGROUND_FS_WGSL = /* wgsl */ `\
 @group(0) @binding(auto) var backgroundTexture: texture_2d<f32>;
 @group(0) @binding(auto) var backgroundTextureSampler: sampler;
 struct backgroundUniforms {
   scale: vec2<f32>,
+  flipY: i32,
 };
 @group(0) @binding(auto) var<uniform> background: backgroundUniforms;
 
 fn billboardTexture_getTextureUV(uv: vec2<f32>) -> vec2<f32> {
-        let scale: vec2<f32> = background.scale;
-        var position: vec2<f32> = (uv - vec2<f32>(0.5, 0.5)) / scale + vec2<f32>(0.5, 0.5);
-        return position;
+  let scale: vec2<f32> = background.scale;
+  var position: vec2<f32> = (uv - vec2<f32>(0.5, 0.5)) / scale + vec2<f32>(0.5, 0.5);
+  if (background.flipY != 0) {
+    position.y = 1.0 - position.y;
+  }
+  return position;
 }
 
 @fragment
 fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
-        let position: vec2<f32> = billboardTexture_getTextureUV(inputs.uv);
-        return textureSample(backgroundTexture, backgroundTextureSampler, position);
+  let position: vec2<f32> = billboardTexture_getTextureUV(inputs.uv);
+  return textureSample(backgroundTexture, backgroundTextureSampler, position);
 }
 `;
 
@@ -43,6 +48,7 @@ uniform sampler2D backgroundTexture;
 
 layout(std140) uniform backgroundUniforms {
   vec2 scale;
+  int flipY;
 } background;
 
 in vec2 coordinate;
@@ -50,6 +56,9 @@ out vec4 fragColor;
 
 vec2 billboardTexture_getTextureUV(vec2 coord) {
   vec2 position = (coord - 0.5) / background.scale + 0.5;
+  if (background.flipY != 0) {
+    position.y = 1.0 - position.y;
+  }
   return position;
 }
 
@@ -69,6 +78,8 @@ export type BackgroundTextureModelProps = ClipSpaceProps & {
   backgroundTexture: Texture | DynamicTexture;
   /** If true, the texture is rendered into transparent areas of the screen only, i.e blended in where background alpha is small */
   blend?: boolean;
+  /** If true, flip the sampled texture vertically before drawing. */
+  flipY?: boolean;
 };
 
 /**
@@ -76,6 +87,7 @@ export type BackgroundTextureModelProps = ClipSpaceProps & {
  */
 export class BackgroundTextureModel extends ClipSpace {
   backgroundTexture: Texture = null!;
+  flipY = false;
 
   constructor(device: Device, props: BackgroundTextureModelProps) {
     super(device, {
@@ -110,6 +122,13 @@ export class BackgroundTextureModel extends ClipSpace {
   /** Update the background texture */
   setProps(props: Partial<BackgroundTextureModelProps>): void {
     const {backgroundTexture} = props;
+    if (props.flipY !== undefined) {
+      this.flipY = props.flipY;
+      if (this.backgroundTexture) {
+        this.updateScale(this.backgroundTexture);
+      }
+    }
+
     if (backgroundTexture) {
       this.setBindings({backgroundTexture});
 
@@ -137,7 +156,7 @@ export class BackgroundTextureModel extends ClipSpace {
   updateScale(texture: Texture): void {
     if (!texture) {
       // Initial scale to avoid rendering issues before texture is loaded
-      this.shaderInputs.setProps({background: {scale: [1, 1]}});
+      this.shaderInputs.setProps({background: {scale: [1, 1], flipY: 0}});
       return;
     }
     const [screenWidth, screenHeight] = this.device.getCanvasContext().getDrawingBufferSize();
@@ -156,6 +175,8 @@ export class BackgroundTextureModel extends ClipSpace {
       scaleX = textureAspect / screenAspect;
     }
 
-    this.shaderInputs.setProps({background: {scale: [scaleX, scaleY]}});
+    this.shaderInputs.setProps({
+      background: {scale: [scaleX, scaleY], flipY: this.flipY ? 1 : 0}
+    });
   }
 }
