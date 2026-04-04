@@ -5,6 +5,7 @@
 import type {CompositeShaderType} from '../shadertypes/shader-types/shader-types';
 import type {CompositeUniformValue} from '../adapter/types/uniforms';
 import type {Device} from '../adapter/device';
+import type {CommandEncoder} from '../adapter/resources/command-encoder';
 import {Buffer} from '../adapter/resources/buffer';
 import {log} from '../utils/log';
 import {
@@ -101,9 +102,13 @@ export class UniformStore<
    *
    * Makes all group properties partial and eagerly propagates changes to any
    * managed GPU buffers.
+   *
+   * @param commandEncoder - Optional encoder used to order managed uniform
+   * uploads with later GPU work in the same submission.
    */
   setUniforms(
-    uniforms: Partial<{[group in keyof TPropGroups]: Partial<TPropGroups[group]>}>
+    uniforms: Partial<{[group in keyof TPropGroups]: Partial<TPropGroups[group]>}>,
+    commandEncoder?: CommandEncoder
   ): void {
     for (const [blockName, uniformValues] of Object.entries(uniforms)) {
       const uniformBufferName = blockName as keyof TPropGroups;
@@ -116,7 +121,7 @@ export class UniformStore<
       // this.updateUniformBuffer(blockName);
     }
 
-    this.updateUniformBuffers();
+    this.updateUniformBuffers(commandEncoder);
   }
 
   /**
@@ -181,12 +186,14 @@ export class UniformStore<
   /**
    * Updates every managed uniform buffer whose source uniforms have changed.
    *
+   * @param commandEncoder - Optional encoder used to record ordered uploads for
+   * changed uniform buffers.
    * @returns The first redraw reason encountered, or `false` if nothing changed.
    */
-  updateUniformBuffers(): false | string {
+  updateUniformBuffers(commandEncoder?: CommandEncoder): false | string {
     let reason: false | string = false;
     for (const uniformBufferName of this.uniformBlocks.keys()) {
-      const bufferReason = this.updateUniformBuffer(uniformBufferName);
+      const bufferReason = this.updateUniformBuffer(uniformBufferName, commandEncoder);
       reason ||= bufferReason;
     }
     if (reason) {
@@ -198,9 +205,14 @@ export class UniformStore<
   /**
    * Updates one managed uniform buffer if its corresponding block is dirty.
    *
+   * @param commandEncoder - Optional encoder used to record the upload instead
+   * of writing the buffer immediately.
    * @returns The redraw reason for the update, or `false` if no write occurred.
    */
-  updateUniformBuffer(uniformBufferName: keyof TPropGroups): false | string {
+  updateUniformBuffer(
+    uniformBufferName: keyof TPropGroups,
+    commandEncoder?: CommandEncoder
+  ): false | string {
     const uniformBlock = this.uniformBlocks.get(uniformBufferName);
     let uniformBuffer = this.uniformBuffers.get(uniformBufferName);
 
@@ -211,7 +223,17 @@ export class UniformStore<
       const uniformBufferData = this.getUniformBufferData(uniformBufferName);
 
       uniformBuffer = this.uniformBuffers.get(uniformBufferName);
-      uniformBuffer?.write(uniformBufferData);
+      if (uniformBuffer) {
+        if (commandEncoder) {
+          this.device.writeBufferViaCommandEncoder(
+            commandEncoder,
+            uniformBuffer,
+            uniformBufferData
+          );
+        } else {
+          uniformBuffer.write(uniformBufferData);
+        }
+      }
 
       // logging - TODO - don't query the values unnecessarily
       const uniformValues = this.uniformBlocks.get(uniformBufferName)?.getAllUniforms();

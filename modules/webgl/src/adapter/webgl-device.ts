@@ -28,7 +28,7 @@ import type {
   SharedRenderPipeline,
   ComputePipeline,
   ComputePipelineProps,
-  // CommandEncoder,
+  CommandEncoder,
   CommandEncoderProps,
   TransformFeedbackProps,
   QuerySetProps,
@@ -389,6 +389,15 @@ export class WebGLDevice extends Device {
     } finally {
       commandBuffer.destroy();
     }
+  }
+
+  override writeBufferViaCommandEncoder(
+    _commandEncoder: CommandEncoder,
+    destinationBuffer: Buffer,
+    data: ArrayBufferLike | ArrayBufferView | SharedArrayBuffer,
+    byteOffset: number = 0
+  ): void {
+    destinationBuffer.write(data, byteOffset);
   }
 
   private _finalizeDefaultCommandEncoderForSubmit(): {
