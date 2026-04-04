@@ -130,13 +130,15 @@ export class ShaderPassRenderer {
     const framebuffer = this.device
       .getDefaultCanvasContext()
       .getCurrentFramebuffer({depthStencilFormat: false});
+    // Prepare fullscreen presentation bindings before opening the render pass so WebGPU
+    // uploads stay on the parent command encoder rather than the active render pass encoder.
+    this.textureModel.setProps({backgroundTexture: outputTexture});
+    this.textureModel.predraw(this.device.commandEncoder);
     const renderPass = this.device.beginRenderPass({
       id: 'shader-pass-renderer-to-screen',
       framebuffer,
       clearDepth: false
     });
-    this.textureModel.setProps({backgroundTexture: outputTexture});
-    this.textureModel.predraw(this.device.commandEncoder);
     this.textureModel.draw(renderPass);
     renderPass.end();
     return true;
@@ -164,6 +166,9 @@ export class ShaderPassRenderer {
     // Seed the first shared framebuffer with the original source. This normalizes the starting
     // point for later passes so `previous` always refers to a drawing-buffer-sized texture.
     this.textureModel.setProps({backgroundTexture: originalTexture});
+    // The seed draw updates fullscreen bind groups, so it must be prepared before the
+    // render pass begins to avoid command-encoder locking errors on WebGPU.
+    this.textureModel.predraw(this.device.commandEncoder);
 
     const sourceFramebuffer = this.swapFramebuffers.current;
     const seedRenderPass = this.device.beginRenderPass({
@@ -172,7 +177,6 @@ export class ShaderPassRenderer {
       clearColor: [0, 0, 0, 1],
       clearDepth: false
     });
-    this.textureModel.predraw(this.device.commandEncoder);
     this.textureModel.draw(seedRenderPass);
     seedRenderPass.end();
 

@@ -19,6 +19,9 @@ Import the shader module(s) you would like to use from `@luma.gl/effects`, e.g:
 import {brightnessContrast} from '@luma.gl/effects';
 ```
 
+Some effects also consume extra bindings in addition to the default `sourceTexture`. For example,
+`persistenceEffect` expects a `persistenceTexture` binding containing the previously accumulated frame.
+
 ## Shader Modules
 
 <table style={{border: 0}} align="center">
@@ -88,6 +91,16 @@ Adds black and white noise to the image.
     </tr>
   </tbody>
 </table>
+
+### persistenceEffect
+
+Blends the current frame with a caller-provided history texture to create fading trails and similar temporal feedback effects.
+
+- Extra binding: `persistenceTexture` - the previously accumulated frame.
+- Current-frame color is boosted before blending (`color * 4.0`), then clamped back into display range.
+- Alpha is rebuilt from both the current frame coverage and the faded history alpha so sparse bright samples remain visible across frames.
+
+This pass is intended for temporal workflows where the application manages history textures explicitly, for example by alternating two `ShaderPassRenderer` instances or application-owned ping-pong textures.
 
 ### sepia
 

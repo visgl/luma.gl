@@ -22,6 +22,7 @@ export type {
 export {hueSaturation} from './passes/postprocessing/image-adjust-filters/huesaturation';
 export type {NoiseProps, NoiseUniforms} from './passes/postprocessing/image-adjust-filters/noise';
 export {noise} from './passes/postprocessing/image-adjust-filters/noise';
+export {persistenceEffect} from './passes/postprocessing/image-adjust-filters/persistence';
 export type {SepiaProps, SepiaUniforms} from './passes/postprocessing/image-adjust-filters/sepia';
 export {sepia} from './passes/postprocessing/image-adjust-filters/sepia';
 export type {
