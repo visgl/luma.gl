@@ -67,6 +67,7 @@ Release Date: March 31, 2026
 **@luma.gl/effects**
 
 - **WebGPU/WGSL effects** - Effects now have WGSL shader implementations and work under WebGPU.
+- **`persistenceEffect`** - New temporal accumulation effect for fading trails and other history-based postprocessing workflows.
 
 ## Version 9.2
 

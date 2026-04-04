@@ -5,6 +5,7 @@
 import type {NumberArray, VariableShaderType} from '@luma.gl/core';
 import type {NumericArray} from '@math.gl/types';
 import {Buffer, UniformStore, Framebuffer, Texture} from '@luma.gl/core';
+import {persistenceEffect} from '@luma.gl/effects';
 import type {AnimationProps} from '@luma.gl/engine';
 import {
   AnimationLoopTemplate,
@@ -14,7 +15,7 @@ import {
   loadImageBitmap,
   DynamicTexture,
   BackgroundTextureModel,
-  ClipSpace
+  ShaderPassRenderer
 } from '@luma.gl/engine';
 import {Matrix4, Vector3, radians} from '@math.gl/core';
 
@@ -121,83 +122,6 @@ void main(void) {
 }
 `;
 
-const PERSISTENCE_WGSL = /* WGSL */ `\
-@group(0) @binding(auto) var sourceTexture : texture_2d<f32>;
-@group(0) @binding(auto) var sourceTextureSampler : sampler;
-@group(0) @binding(auto) var persistenceTexture : texture_2d<f32>;
-@group(0) @binding(auto) var persistenceTextureSampler : sampler;
-
-fn getCoverage(color: vec4f) -> f32 {
-  return max(color.a, max(color.r, max(color.g, color.b)));
-}
-
-@fragment
-fn fragmentMain(
-  @location(2) uv: vec2<f32>
-) -> @location(0) vec4f {
-  let sceneColor = textureSample(sourceTexture, sourceTextureSampler, uv);
-  let persistenceColor = textureSample(persistenceTexture, persistenceTextureSampler, uv);
-  let accumulatedColor = min(
-    mix(sceneColor.rgb * 4.0, persistenceColor.rgb, vec3f(0.9, 0.9, 0.9)),
-    vec3f(1.0, 1.0, 1.0)
-  );
-  let accumulatedAlpha = max(getCoverage(sceneColor), persistenceColor.a * 0.9);
-  return vec4f(accumulatedColor, accumulatedAlpha);
-}
-`;
-
-const PERSISTENCE_FS = /* glsl */ `\
-#version 300 es
-
-precision highp float;
-
-uniform sampler2D sourceTexture;
-uniform sampler2D persistenceTexture;
-
-in vec2 uv;
-out vec4 fragColor;
-
-float getCoverage(vec4 color) {
-  return max(color.a, max(color.r, max(color.g, color.b)));
-}
-
-void main(void) {
-  vec2 p = uv;
-  vec4 sceneColor = texture(sourceTexture, p);
-  vec4 persistenceColor = texture(persistenceTexture, p);
-  vec3 accumulatedColor = min(mix(sceneColor.rgb * 4.0, persistenceColor.rgb, vec3(0.9)), vec3(1.0));
-  float accumulatedAlpha = max(getCoverage(sceneColor), persistenceColor.a * 0.9);
-  fragColor = vec4(accumulatedColor, accumulatedAlpha);
-}
-`;
-
-const SCREEN_WGSL = /* WGSL */ `\
-@group(0) @binding(auto) var sourceTexture: texture_2d<f32>;
-@group(0) @binding(auto) var sourceTextureSampler: sampler;
-
-@fragment
-fn fragmentMain(
-  @location(2) uv: vec2<f32>
-) -> @location(0) vec4f {
-  return textureSample(sourceTexture, sourceTextureSampler, uv);
-}
-`;
-
-const SCREEN_FS = /* glsl */ `\
-#version 300 es
-
-precision highp float;
-
-uniform sampler2D sourceTexture;
-
-in vec2 uv;
-out vec4 fragColor;
-
-void main(void) {
-  fragColor = texture(sourceTexture, uv);
-}
-`;
-
 const random = makeRandomGenerator();
 const OFFSCREEN_COLOR_FORMAT = 'rgba8unorm';
 
@@ -233,11 +157,13 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   electronUniformBuffers: Buffer[];
   nucleonUniformBuffers: Buffer[];
 
-  /** Model that  */
   mainFramebuffer: Framebuffer;
-  pingpongFramebuffers: Framebuffer[];
-  screenPass: ClipSpace;
-  persistencePass: ClipSpace;
+  clearedPersistenceFramebuffer: Framebuffer;
+  accumulatedTextureModel: BackgroundTextureModel;
+  currentSceneTextureModel: BackgroundTextureModel;
+  persistenceRenderers: [ShaderPassRenderer, ShaderPassRenderer];
+  persistenceRendererIndex = 0;
+  previousPersistenceTexture: Texture | null = null;
   persistenceFramebufferSize: [number, number] | null = null;
 
   constructor({device, width, height}: AnimationProps) {
@@ -297,58 +223,25 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       depthStencilAttachment: 'depth24plus'
     });
 
-    this.pingpongFramebuffers = [
-      device.createFramebuffer({
-        width,
-        height,
-        colorAttachments: [
-          createOffscreenColorAttachment(device, 'persistence-framebuffer-0-color', width, height)
-        ]
-      }),
-      device.createFramebuffer({
-        width,
-        height,
-        colorAttachments: [
-          createOffscreenColorAttachment(device, 'persistence-framebuffer-1-color', width, height)
-        ]
-      })
+    this.clearedPersistenceFramebuffer = device.createFramebuffer({
+      width,
+      height,
+      colorAttachments: [
+        createOffscreenColorAttachment(device, 'persistence-framebuffer-reset-color', width, height)
+      ]
+    });
+    this.accumulatedTextureModel = this.createCompositeTextureModel(
+      device,
+      this.mainFramebuffer.colorAttachments[0].texture
+    );
+    this.currentSceneTextureModel = this.createCompositeTextureModel(
+      device,
+      this.mainFramebuffer.colorAttachments[0].texture
+    );
+    this.persistenceRenderers = [
+      new ShaderPassRenderer(device, {shaderPasses: [persistenceEffect]}),
+      new ShaderPassRenderer(device, {shaderPasses: [persistenceEffect]})
     ];
-
-    this.screenPass = new ClipSpace(
-      device,
-      device.info.shadingLanguage === 'wgsl'
-        ? {
-            source: SCREEN_WGSL,
-            colorAttachmentFormats: [device.preferredColorFormat],
-            parameters: {
-              blend: true,
-              blendColorOperation: 'add',
-              blendAlphaOperation: 'add',
-              blendColorSrcFactor: 'src-alpha',
-              blendColorDstFactor: 'one-minus-src-alpha',
-              blendAlphaSrcFactor: 'one',
-              blendAlphaDstFactor: 'one-minus-src-alpha'
-            }
-          }
-        : {
-            fs: SCREEN_FS,
-            parameters: {
-              blend: true,
-              blendColorOperation: 'add',
-              blendAlphaOperation: 'add',
-              blendColorSrcFactor: 'src-alpha',
-              blendColorDstFactor: 'one-minus-src-alpha',
-              blendAlphaSrcFactor: 'one',
-              blendAlphaDstFactor: 'one-minus-src-alpha'
-            }
-          }
-    );
-    this.persistencePass = new ClipSpace(
-      device,
-      device.info.shadingLanguage === 'wgsl'
-        ? {source: PERSISTENCE_WGSL, colorAttachmentFormats: [OFFSCREEN_COLOR_FORMAT]}
-        : {fs: PERSISTENCE_FS}
-    );
 
     const dt = 0.0125;
 
@@ -359,13 +252,13 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       // Push them out a bit
       const distanceFromCenter = random() + 1.0;
       pos.normalize().scale(distanceFromCenter);
-      const s = 1.25;
-      pos.scale(s);
+      const scale = 1.25;
+      pos.scale(scale);
       electronPosition.push(pos);
 
-      // Get a random vector andcross
-      const q = new Vector3(random() - 0.5, random() - 0.5, random() - 0.5);
-      const axis = pos.clone().cross(q).normalize();
+      // Get a random vector and cross
+      const randomVector = new Vector3(random() - 0.5, random() - 0.5, random() - 0.5);
+      const axis = pos.clone().cross(randomVector).normalize();
 
       const theta = (4 / distanceFromCenter) * dt;
       const rot = new Matrix4().rotateAxis(theta, axis);
@@ -393,10 +286,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     }
 
     this.mainFramebuffer.destroy();
-    this.pingpongFramebuffers[0].destroy();
-    this.pingpongFramebuffers[1].destroy();
-    this.screenPass.destroy();
-    this.persistencePass.destroy();
+    this.clearedPersistenceFramebuffer.destroy();
+    this.accumulatedTextureModel.destroy();
+    this.currentSceneTextureModel.destroy();
+    this.persistenceRenderers[0].destroy();
+    this.persistenceRenderers[1].destroy();
   }
 
   onRender({device, tick, width, height, aspect}: AnimationProps) {
@@ -410,11 +304,14 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       this.persistenceFramebufferSize[1] !== height;
 
     this.mainFramebuffer.resize({width, height});
-    this.pingpongFramebuffers[0].resize({width, height});
-    this.pingpongFramebuffers[1].resize({width, height});
+    this.clearedPersistenceFramebuffer.resize({width, height});
+    this.persistenceRenderers[0].resize([width, height]);
+    this.persistenceRenderers[1].resize([width, height]);
 
     if (needsPersistenceReset) {
-      this.clearPersistenceFramebuffers(device);
+      this.clearPersistenceFramebuffer(device);
+      this.previousPersistenceTexture = null;
+      this.persistenceRendererIndex = 0;
       this.persistenceFramebufferSize = [width, height];
     }
 
@@ -429,7 +326,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
 
     // Render electrons to framebuffer
-
     this.uniformStore.setUniforms({sphere: {colorAndLighting: [0.0, 0.5, 1.0, 0.0]}});
 
     for (let i = 0; i < ELECTRON_COUNT; i++) {
@@ -478,23 +374,34 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     mainRenderPass.end();
 
-    const ppi = tick % 2;
-    const currentFramebuffer = this.pingpongFramebuffers[ppi];
-    const nextFramebuffer = this.pingpongFramebuffers[1 - ppi];
-
-    // Accumulate in persistence buffer
-    const persistenceRenderPass = device.beginRenderPass({
-      framebuffer: currentFramebuffer,
-      clearColor: [0, 0, 0, 0],
-      clearDepth: false,
-      clearStencil: false
-    });
-    this.persistencePass.setBindings({
+    const currentPersistenceRenderer = this.persistenceRenderers[this.persistenceRendererIndex];
+    const persistenceTexture =
+      this.previousPersistenceTexture ||
+      this.clearedPersistenceFramebuffer.colorAttachments[0].texture;
+    // Alternate renderer instances so the history texture is never sampled from the same
+    // internal render target that will be written this frame.
+    const accumulatedTexture = currentPersistenceRenderer.renderToTexture({
       sourceTexture: this.mainFramebuffer.colorAttachments[0].texture,
-      persistenceTexture: nextFramebuffer.colorAttachments[0].texture
+      bindings: {
+        persistenceTexture
+      }
     });
-    this.persistencePass.draw(persistenceRenderPass);
-    persistenceRenderPass.end();
+    if (!accumulatedTexture) {
+      return;
+    }
+
+    this.previousPersistenceTexture = accumulatedTexture;
+    this.persistenceRendererIndex = 1 - this.persistenceRendererIndex;
+
+    // Stage all fullscreen texture bindings before opening the screen render pass so WebGPU
+    // does not need to update bind groups while an encoder is locked to a render pass.
+    this.backgroundTextureModel.predraw(device.commandEncoder);
+    this.accumulatedTextureModel.setProps({backgroundTexture: accumulatedTexture});
+    this.accumulatedTextureModel.predraw(device.commandEncoder);
+    this.currentSceneTextureModel.setProps({
+      backgroundTexture: this.mainFramebuffer.colorAttachments[0].texture
+    });
+    this.currentSceneTextureModel.predraw(device.commandEncoder);
 
     // Copy the current framebuffer to screen
     const screenRenderPass = device.beginRenderPass({
@@ -506,27 +413,19 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     if (this.backgroundTexture.isReady) {
       this.backgroundTextureModel.draw(screenRenderPass);
     }
-    this.screenPass.setBindings({
-      sourceTexture: currentFramebuffer.colorAttachments[0].texture
-    });
-    this.screenPass.draw(screenRenderPass);
-    this.screenPass.setBindings({
-      sourceTexture: this.mainFramebuffer.colorAttachments[0].texture
-    });
-    this.screenPass.draw(screenRenderPass);
+    this.accumulatedTextureModel.draw(screenRenderPass);
+    this.currentSceneTextureModel.draw(screenRenderPass);
     screenRenderPass.end();
   }
 
-  clearPersistenceFramebuffers(device: AnimationProps['device']) {
-    for (const framebuffer of this.pingpongFramebuffers) {
-      const renderPass = device.beginRenderPass({
-        framebuffer,
-        clearColor: [0, 0, 0, 0],
-        clearDepth: false,
-        clearStencil: false
-      });
-      renderPass.end();
-    }
+  clearPersistenceFramebuffer(device: AnimationProps['device']) {
+    const renderPass = device.beginRenderPass({
+      framebuffer: this.clearedPersistenceFramebuffer,
+      clearColor: [0, 0, 0, 0],
+      clearDepth: false,
+      clearStencil: false
+    });
+    renderPass.end();
   }
 
   createSphereUniformBuffers(device: AnimationProps['device'], count: number): Buffer[] {
@@ -537,6 +436,22 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         byteLength
       })
     );
+  }
+
+  /** Creates the alpha-blended fullscreen model used for persistence and live-scene overlays. */
+  createCompositeTextureModel(device: AnimationProps['device'], backgroundTexture: Texture) {
+    return new BackgroundTextureModel(device, {
+      backgroundTexture,
+      parameters: {
+        blend: true,
+        blendColorOperation: 'add',
+        blendAlphaOperation: 'add',
+        blendColorSrcFactor: 'src-alpha',
+        blendColorDstFactor: 'one-minus-src-alpha',
+        blendAlphaSrcFactor: 'one',
+        blendAlphaDstFactor: 'one-minus-src-alpha'
+      }
+    });
   }
 }
 
