@@ -20,6 +20,7 @@ Notes:
 - For best results, the drawing buffer should match the device pixel size. The `autoResizeDrawingBuffer` and `useDevicePixels` props will ensure this.
 - However, significant memory savings are possible by using say half resolution drawing buffers.
 - If the drawing buffer size doesn't exactly match the pixel size, undesired effects like moire patterns can result.The `CanvasContext` pixelWidth and pixelHeight members tracks the exact pixel size (called the "device pixel content box" in browser APIs) is surprisingly hard.
+- Some overlay integrations still expect legacy `Math.round(cssSize * devicePixelRatio)` sizing. Use `pixelSizeSource: 'css-dpr'` when luma.gl must match an external canvas that has not adopted exact device-pixel sizing.
 
 
 ## Canvas Monitoring
@@ -62,6 +63,8 @@ A `CanvasContext` can be associated with an existing canvas:
 const device = await luma.createDevice({createCanvasContext: {canvas: document.getElementById('canvas-id')}}); // Creates a new HTML canvas and adds it to document.body.
 const canvasContext = device.getDefaultCanvasContext()
 ```
+
+The same `createCanvasContext` options are also used when attaching to an externally created WebGL context through `luma.attachDevice()` or `webgl2Adapter.attach()`, including compatibility options such as `pixelSizeSource`.
 
 Use a device's default canvas context to render into the associated canvas
 
@@ -107,6 +110,7 @@ canvasContext.getDevicePixelResolution()
 | ---------------------- | ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | `autoResize?`          | `boolean`                                            | Whether to resize drawing buffer when canvas size changes                                                                              |
 | `useDevicePixels?`     | `boolean`                                            | Whether to auto resize drawing buffer to device or CSS pixels                                                                          |
+| `pixelSizeSource?`     | `'exact' \| 'css-dpr'`                               | How tracked device pixel size is derived for HTML canvases. Defaults to `'exact'`.                                                     |
 | `width?`               | `number`                                             | Width in pixels of the canvas (if `canvas` is not supplied)                                                                            |
 | `height?`              | `number`                                             | Height in pixels of the canvas (if `canvas` is not supplied)                                                                           |  |
 | `canvas?`              | `HTMLCanvasElement` \| `OffscreenCanvas` \| `string` | A new canvas will be created if not supplied.                                                                                          |
@@ -121,6 +125,13 @@ Whether the framebuffer backing this canvas context is auto resized using device
 
 - `false` - Framebuffer is sized according to CSS pixel size.
 - `true` - Framebuffer is sized according to the device pixel ratio reported by the browser.
+
+### `pixelSizeSource: 'exact' | 'css-dpr'`
+
+Controls how `CanvasContext` derives tracked device-pixel size for HTML canvases.
+
+- `'exact'` - Prefer `ResizeObserver.devicePixelContentBoxSize` for pixel-perfect sizing.
+- `'css-dpr'` - Use `Math.round(cssSize * devicePixelRatio)` for compatibility with external overlays that still size canvases this way.
 
 ## Fields
 
