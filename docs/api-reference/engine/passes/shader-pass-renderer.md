@@ -16,6 +16,23 @@ const renderer = new ShaderPassRenderer(device, {
 const outputTexture = renderer.renderToTexture({sourceTexture});
 ```
 
+Per-draw uniforms and extra bindings can be supplied when a pass needs frame-specific inputs:
+
+```typescript
+renderer.renderToScreen({
+  sourceTexture: sceneColorTexture,
+  bindings: {depthTexture: sceneDepthTexture},
+  uniforms: {
+    dof: {
+      depthRange: [0.1, 30],
+      focusDistance: 3,
+      blurCoefficient: 0.9,
+      pixelsPerMillimeter: 42
+    }
+  }
+});
+```
+
 ## Routing Model
 
 The renderer always provides two logical texture sources:
@@ -49,6 +66,22 @@ Each step runs an existing `ShaderPass`:
 - `step.uniforms` is merged into every subpass as a base layer.
 
 This lets the renderer orchestrate existing passes without turning `ShaderPass.passes` into nested effects.
+
+## Runtime Inputs
+
+At draw time, the renderer merges three uniform layers for each shader pass:
+
+- values already stored in `shaderInputs`
+- uniforms declared on the pass or pipeline step
+- `options.uniforms` passed to `renderToTexture()` / `renderToScreen()`
+
+Bindings follow a similar pattern:
+
+- bindings already stored in `shaderInputs`
+- `options.bindings` passed to the draw call
+
+This makes it practical to keep one renderer alive while swapping in frame-specific resources such
+as a freshly rendered depth texture.
 
 ## Example
 
@@ -138,9 +171,9 @@ Runs the pass chain and then draws the result into the device's current framebuf
 
 ```ts
 renderToScreen(options: {
-  sourceTexture: DynamicTexture;
-  uniforms?: any;
-  bindings?: any;
+  sourceTexture: DynamicTexture | Texture;
+  uniforms?: Record<string, Record<string, unknown>>;
+  bindings?: Record<string, Binding | DynamicTexture>;
 }): boolean
 ```
 
@@ -152,15 +185,17 @@ Runs the pass chain and returns the output texture.
 
 ```ts
 renderToTexture(options: {
-  sourceTexture: DynamicTexture;
-  uniforms?: any;
-  bindings?: any;
+  sourceTexture: DynamicTexture | Texture;
+  uniforms?: Record<string, Record<string, unknown>>;
+  bindings?: Record<string, Binding | DynamicTexture>;
 }): Texture | null
 ```
 
 ## Remarks
 
-- The current implementation expects `sourceTexture` to be a `DynamicTexture`.
+- `sourceTexture` may be a `DynamicTexture` or a ready `Texture`.
+- `uniforms` may supply per-draw shader module uniforms keyed by shader pass name.
+- `bindings` may supply per-draw texture bindings keyed by shader binding name.
 - Two internal framebuffers are used for ping-pong rendering through the shared `previous` sequence.
 - Named render targets are declared only on `ShaderPassPipeline`, not on `ShaderPass`.
 - Target names `original` and `previous` are reserved and may not be used as pipeline target names.

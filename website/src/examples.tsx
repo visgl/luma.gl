@@ -161,7 +161,6 @@ export const DOFExample: React.FC = props => (
     directory="showcase"
     template={DOFApp}
     config={exampleConfig}
-    showHeader={false}
     {...props}
   />
 );

@@ -34,7 +34,7 @@ const ASSET_EXTENSIONS = new Set([
   '.webp'
 ]);
 
-const SKIPPED_DIRECTORY_NAMES = new Set(['node_modules']);
+const SKIPPED_DIRECTORY_NAMES = new Set(['dist', 'node_modules']);
 
 function syncExampleAssets() {
   rmSync(path.resolve(websiteDirectory, '.generated', 'example-assets'), {

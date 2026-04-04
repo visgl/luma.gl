@@ -225,6 +225,49 @@ test('ShaderPassRenderer#renderToTexture', async t => {
   t.end();
 });
 
+test('ShaderPassRenderer applies runtime uniforms and accepts Texture inputs', async t => {
+  const devices = await getTestDevices();
+  for (const device of devices) {
+    if (device.type === 'webgpu') {
+      continue; // eslint-disable-line no-continue
+    }
+
+    const sourceTexture = new DynamicTexture(device, {
+      id: 'runtime-uniform-source-texture',
+      usage: Texture.RENDER | Texture.COPY_SRC | Texture.COPY_DST,
+      dimension: '2d',
+      data: {data: new Uint8Array([255, 0, 0, 255]), width: 1, height: 1, format: 'rgba8unorm'}
+    });
+    await sourceTexture.ready;
+
+    const renderer = new ShaderPassRenderer(device, {
+      shaderPasses: [stagedColorPass],
+      shaderInputs: new ShaderInputs({stagedColor: stagedColorPass})
+    });
+    const output = renderer.renderToTexture({
+      sourceTexture: sourceTexture.texture,
+      uniforms: {
+        stagedColor: {
+          greenScale: 0.5
+        }
+      }
+    });
+
+    t.ok(output, 'produces output texture from plain Texture input');
+
+    const pixelsOut = await readPixels(output!);
+    t.deepEqual(
+      Array.from(pixelsOut),
+      [255, 128, 0, 255],
+      'applies runtime uniforms on top of pass defaults'
+    );
+
+    renderer.destroy();
+    sourceTexture.destroy();
+  }
+  t.end();
+});
+
 async function readPixels(texture: Texture): Promise<Uint8Array> {
   const layout = texture.computeMemoryLayout({width: 1, height: 1});
   const buffer = texture.device.createBuffer({
