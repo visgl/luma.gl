@@ -427,6 +427,43 @@ test('Device.writeBufferViaCommandEncoder preserves WebGPU upload order and reti
   t.end();
 });
 
+test('Abandoned WebGPU command buffers release transient upload buffers on destroy', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const stats = device.statsManager.getStats('Resource Counts');
+  const beforeBufferCount = stats.get('Buffers Active').count;
+  const destinationBuffer = device.createBuffer({
+    byteLength: Uint32Array.BYTES_PER_ELEMENT,
+    usage: Buffer.COPY_DST | Buffer.COPY_SRC
+  });
+  const commandEncoder = device.createCommandEncoder({id: 'abandoned-upload-test'});
+
+  device.writeBufferViaCommandEncoder(commandEncoder, destinationBuffer, new Uint32Array([7]));
+  const commandBuffer = commandEncoder.finish();
+
+  t.equal(
+    stats.get('Buffers Active').count - beforeBufferCount,
+    2,
+    'webgpu abandoned command buffer retains destination and transient staging buffer'
+  );
+
+  commandBuffer.destroy();
+
+  t.equal(
+    stats.get('Buffers Active').count - beforeBufferCount,
+    1,
+    'webgpu command buffer destroy releases transient staging buffer when never submitted'
+  );
+
+  destinationBuffer.destroy();
+  t.end();
+});
+
 test('CommandBuffer#copyBufferToBuffer', async t => {
   const device = await getWebGLTestDevice();
   if (isSoftwareBackedDevice(device)) {

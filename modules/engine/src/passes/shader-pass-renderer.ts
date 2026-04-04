@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {Binding} from '@luma.gl/core';
+import type {Binding, CommandEncoder} from '@luma.gl/core';
 import {Device, Framebuffer, RenderPass, Texture} from '@luma.gl/core';
 import type {
   ShaderPass,
@@ -120,6 +120,7 @@ export class ShaderPassRenderer {
       clearDepth: false
     });
     this.textureModel.setProps({backgroundTexture: outputTexture});
+    this.textureModel.predraw(this.device.commandEncoder);
     this.textureModel.draw(renderPass);
     renderPass.end();
     return true;
@@ -154,6 +155,7 @@ export class ShaderPassRenderer {
       clearColor: [0, 0, 0, 1],
       clearDepth: false
     });
+    this.textureModel.predraw(this.device.commandEncoder);
     this.textureModel.draw(seedRenderPass);
     seedRenderPass.end();
 
@@ -175,14 +177,8 @@ export class ShaderPassRenderer {
           externalBindings: options.bindings || {}
         });
 
-        const renderPass = this.device.beginRenderPass({
-          id: 'shader-pass-renderer-run-pass',
-          framebuffer: outputFramebuffer,
-          clearColor: [0, 0, 0, 1],
-          clearDepth: 1
-        });
-        execution.subPassRenderer.render({
-          renderPass,
+        execution.subPassRenderer.prepare({
+          commandEncoder: this.device.commandEncoder,
           bindings: resolvedBindings,
           textureScale: calculateTextureScale(
             (resolvedBindings['sourceTexture'] as Texture) || previousTexture,
@@ -190,6 +186,13 @@ export class ShaderPassRenderer {
           ),
           uniforms: execution.uniforms
         });
+        const renderPass = this.device.beginRenderPass({
+          id: 'shader-pass-renderer-run-pass',
+          framebuffer: outputFramebuffer,
+          clearColor: [0, 0, 0, 1],
+          clearDepth: 1
+        });
+        execution.subPassRenderer.draw(renderPass);
         renderPass.end();
 
         if (outputName === 'previous') {
@@ -385,13 +388,13 @@ class SubPassRenderer {
     this.model.destroy();
   }
 
-  render(options: {
-    renderPass: RenderPass;
+  prepare(options: {
+    commandEncoder: CommandEncoder;
     bindings: Record<string, Binding | DynamicTexture>;
     textureScale: [number, number];
     uniforms?: Record<string, unknown>;
   }): void {
-    const {renderPass, bindings, textureScale, uniforms} = options;
+    const {commandEncoder, bindings, textureScale, uniforms} = options;
 
     this.model.shaderInputs.setProps({
       textureTransform: {scale: textureScale}
@@ -403,6 +406,10 @@ class SubPassRenderer {
       [this.shaderPass.name]: uniforms || {}
     });
     this.model.setBindings(bindings || {});
+    this.model.predraw(commandEncoder);
+  }
+
+  draw(renderPass: RenderPass): void {
     this.model.draw(renderPass);
   }
 }

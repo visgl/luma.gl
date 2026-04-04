@@ -12,7 +12,7 @@ import type {WebGPUBuffer} from './webgpu-buffer';
 export class WebGPUCommandBuffer extends CommandBuffer {
   readonly device: WebGPUDevice;
   readonly handle: GPUCommandBuffer;
-  readonly transientUploadBuffers: WebGPUBuffer[];
+  transientUploadBuffers: WebGPUBuffer[];
 
   constructor(commandEncoder: WebGPUCommandEncoder, props: CommandBufferProps) {
     super(commandEncoder.device, props);
@@ -23,5 +23,13 @@ export class WebGPUCommandBuffer extends CommandBuffer {
       commandEncoder.handle.finish({
         label: props?.id || 'unnamed-command-buffer'
       });
+  }
+
+  override destroy(): void {
+    for (const uploadBuffer of this.transientUploadBuffers) {
+      uploadBuffer.destroy();
+    }
+    this.transientUploadBuffers = [];
+    this.destroyResource();
   }
 }

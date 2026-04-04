@@ -461,16 +461,23 @@ export class Model {
 
     this._syncAttachmentFormats(renderPass);
 
-    if (this.device.type !== 'webgpu') {
-      try {
-        renderPass.pushDebugGroup(`${this}.predraw(${renderPass})`);
+    try {
+      renderPass.pushDebugGroup(`${this}.predraw(${renderPass})`);
+      if (this.device.type === 'webgpu') {
+        // WebGPU uploads cannot be encoded once the render pass is already open.
+        // Keep the implicit draw() path working for existing callers by falling
+        // back to immediate writes here; callers that need upload ordering
+        // across multiple draws/viewports must call predraw(commandEncoder)
+        // before beginRenderPass().
+        this.updateShaderInputs();
+        this.material?.updateShaderInputs();
+        this.pipeline = this._updatePipeline();
+      } else {
         this.predraw(this.device.commandEncoder);
-      } finally {
-        renderPass.popDebugGroup();
       }
+    } finally {
+      renderPass.popDebugGroup();
     }
-    // WebGPU uploads must be encoded before beginRenderPass(); implicit predraw
-    // remains only on backends that can safely perform immediate writes here.
 
     let drawSuccess: boolean;
     let pipelineErrored = this.pipeline.isErrored;
