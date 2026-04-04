@@ -1,4 +1,5 @@
 import React, {CSSProperties, FC, useEffect, useRef, useState} from 'react'; // eslint-disable-line
+import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import {Device, luma} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationLoop, makeAnimationLoop, setPathPrefix} from '@luma.gl/engine';
 import {StatsWidget} from '@probe.gl/stats-widget';
@@ -519,6 +520,8 @@ export function ReactExample<P>(props: ReactExampleProps<P>) {
 export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
   const showStats = props.showStats !== false && props.panel !== false;
   const showHeader = props.showHeader !== false && props.panel !== false;
+  const {siteConfig} = useDocusaurusContext();
+  const websiteBaseUrl = siteConfig.baseUrl.endsWith('/') ? siteConfig.baseUrl : `${siteConfig.baseUrl}/`;
 
   /** Each example maintains an animation loop */
   const canvasContainerRef = useRef<HTMLDivElement | null>(null);
@@ -535,6 +538,8 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
       return;
     }
 
+    let startupTimeoutId: number | null = null;
+    let isCancelled = false;
     let animationLoop: AnimationLoop | null = null;
     let statsWidgets: StatsWidget[] = [];
     let statsIntervalId: number | null = null;
@@ -543,6 +548,13 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
     const deviceCanvas = defaultCanvasContext.canvas;
     let frameRateController: FrameRateController | null = null;
     const asyncCreateLoop = async () => {
+      // Ensure the example can find its locally served assets before example construction starts.
+      if (props.directory) {
+        setPathPrefix(`${websiteBaseUrl}example-assets/${props.directory}/${props.id}/`);
+      } else {
+        setPathPrefix(`${websiteBaseUrl}images/`);
+      }
+
       if (!(deviceCanvas instanceof HTMLCanvasElement)) {
         throw new Error('Website examples require the shared device canvas to be an HTMLCanvasElement');
       }
@@ -624,24 +636,31 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
 
       // Start the actual example
       animationLoop?.start();
-
-      // Ensure the example can find its images
-      // TODO - this only works for examples/tutorials
-      const RAW_GITHUB = 'https://raw.githubusercontent.com/visgl/luma.gl/master';
-      if (props.directory) {
-        setPathPrefix(`${RAW_GITHUB}/examples/${props.directory}/${props.id}/`);
-      } else {
-        setPathPrefix(`${RAW_GITHUB}/website/static/images/`);
-      }
     };
 
-    currentTask.current = Promise.resolve(currentTask.current).then(() => {
-      asyncCreateLoop().catch(error => {
-        logError(`Example startup failed for ${deviceType}`, error);
+    // Delay startup one tick so React Strict Mode's development-only warmup mount
+    // can be cancelled before we create and start a duplicate animation loop.
+    startupTimeoutId = window.setTimeout(() => {
+      currentTask.current = Promise.resolve(currentTask.current).then(() => {
+        if (isCancelled) {
+          return;
+        }
+
+        asyncCreateLoop().catch(error => {
+          if (!isCancelled) {
+            logError(`Example startup failed for ${deviceType}`, error);
+          }
+        });
       });
-    });
+    }, 0);
 
     return () => {
+      isCancelled = true;
+      if (startupTimeoutId !== null) {
+        window.clearTimeout(startupTimeoutId);
+        startupTimeoutId = null;
+      }
+
       currentTask.current = Promise.resolve(currentTask.current)
         .then(() => {
           if (statsIntervalId !== null) {
@@ -677,7 +696,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
           logError(`Example cleanup failed for ${deviceType}`, error);
         });
     };
-  }, [deviceType, device, showStats, props.template, props.directory, props.id]);
+  }, [deviceType, device, showStats, props.template, props.directory, props.id, websiteBaseUrl]);
 
   // @ts-expect-error Intentionally accessing undeclared field info
   const info = props.template?.info;

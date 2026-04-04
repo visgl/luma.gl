@@ -4363,6 +4363,18 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@luma.gl/effects@npm:9.3.0-alpha.11":
+  version: 9.3.0-alpha.11
+  resolution: "@luma.gl/effects@npm:9.3.0-alpha.11"
+  dependencies:
+    "@math.gl/core": "npm:^4.1.0"
+    "@math.gl/types": "npm:^4.1.0"
+  peerDependencies:
+    "@luma.gl/shadertools": 9.3.0-alpha.6
+  checksum: 10c0/620bf7971ed9432e4678e30d774eafdab2b3af27f9ff3a7fd2658dee972fa9a024dbaecfbacdfa815e8635e19718abfbf70f250fe95dc516edea91bc7edee2c2
+  languageName: node
+  linkType: hard
+
 "@luma.gl/effects@npm:~9.3.0, @luma.gl/effects@workspace:modules/effects":
   version: 0.0.0-use.local
   resolution: "@luma.gl/effects@workspace:modules/effects"
@@ -14911,6 +14923,21 @@ __metadata:
     "@luma.gl/webgpu": "npm:~9.3.0"
     "@math.gl/core": "npm:^4.1.0"
     "@math.gl/types": "npm:^4.1.0"
+    typescript: "npm:^5.9.3"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
+"luma.gl-examples-experimental-bloom@workspace:examples/experimental/bloom":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-experimental-bloom@workspace:examples/experimental/bloom"
+  dependencies:
+    "@luma.gl/core": "npm:9.3.0-alpha.11"
+    "@luma.gl/effects": "npm:9.3.0-alpha.11"
+    "@luma.gl/engine": "npm:9.3.0-alpha.11"
+    "@luma.gl/shadertools": "npm:9.3.0-alpha.11"
+    "@luma.gl/webgl": "npm:9.3.0-alpha.11"
+    "@luma.gl/webgpu": "npm:9.3.0-alpha.11"
     typescript: "npm:^5.9.3"
     vite: "npm:^8.0.0"
   languageName: unknown
