@@ -15128,6 +15128,7 @@ __metadata:
   resolution: "luma.gl-examples-persistence@workspace:examples/showcase/persistence"
   dependencies:
     "@luma.gl/core": "npm:~9.3.0"
+    "@luma.gl/effects": "npm:~9.3.0"
     "@luma.gl/engine": "npm:~9.3.0"
     "@luma.gl/shadertools": "npm:~9.3.0"
     "@luma.gl/webgl": "npm:~9.3.0"
