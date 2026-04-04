@@ -147,63 +147,36 @@ const app: ShaderModule<AppUniforms, AppUniforms> = {
 const font = parseFont(helvetiker)
 
 const crawlText = [
-  '',
-  '',
-  '',
-  '',
-  '',
-  '',
-  '',
-  '',
-  '',
-  '',
-  '',
-  '',
   'EPISODE IV',
   'A NEW HOPE',
   '',
   'It is a period of rapid',
-  'development in visualization',
-  'technology.',
+  'advancement in GPU',
+  'visualization.',
   '',
-  'A new generation of GPU',
-  'powered frameworks has emerged.',
-  'deck.gl leads the fleet,',
-  'projecting vast geospatial',
-  'datasets into motion with',
-  'layers, lighting, and',
-  'precision interaction.',
+  'deck.gl, striking from',
+  'the vis.gl alliance, has',
+  'won its first great victory',
+  'against the forces of slow,',
+  'static rendering.',
   '',
-  'From hidden shaders inside',
-  'luma.gl, the rendering',
-  'engine supplies the power',
-  'needed to navigate dense',
-  'point clouds, global trips,',
-  'terrain, and worlds of',
-  'streaming data.',
+  'During the battle,',
+  'developers uncovered',
+  'the secret weakness of the',
+  'Empire\'s ultimate weapon:',
+  'brittle visualization',
+  'pipelines with no reusable',
+  'layers, no rapid tiling,',
+  'and no graceful path to',
+  'large-scale interaction.',
   '',
-  'Behind the scenes,',
-  'loaders.gl retrieves',
-  'tiles, textures, scenes,',
-  'and tabular formats from',
-  'distant systems, decoding',
-  'massive payloads into',
-  'forms the GPU can wield.',
-  '',
-  'Alongside it, math.gl',
-  'keeps vectors, matrices,',
-  'projections, and precision',
-  'calculations in formation,',
-  'guiding every camera move,',
-  'geospatial transform, and',
-  'animated flight path.',
-  '',
-  'Together they form a',
-  'constellation of vis.gl',
-  'tools, helping developers',
-  'build interactive worlds',
-  'from data, light, motion,',
-  'and maps at galactic scale.'
+  'Driven by aspiration,',
+  'deck.gl carries the hope',
+  'of the GPU rebellion,',
+  'bringing new promise to',
+  'interactive maps, massive',
+  'datasets, and cinematic',
+  'exploration....'
 ].join('\n')
 
 export default class TextAnimationLoopTemplate extends AnimationLoopTemplate {
@@ -215,13 +188,20 @@ export default class TextAnimationLoopTemplate extends AnimationLoopTemplate {
 
   modelMatrix = new Matrix4()
   normalMatrix = new Matrix4()
-  viewMatrix = new Matrix4().lookAt({eye: [0, 130, 980], center: [0, 110, -700]})
+  viewMatrix = new Matrix4().lookAt({eye: [0, 40, 980], center: [0, -520, -520]})
   projectionMatrix = new Matrix4()
   shaderInputs = new ShaderInputs<{app: typeof app.props}>({app})
   model: Model
   /** Horizontal translation that centers the generated text geometry. */
   geometryOffset: [number, number, number]
-  initialCrawlProgress = 0.42
+  textMinY = 0
+  textHeight = 0
+  textWidth = 0
+  leadInHeight = 420
+  leadOutHeight = 520
+  scrollSpeedWorldUnitsPerSecond = 120
+  baseDepthOffset = -320
+  baseScale: [number, number, number] = [1.08, 1.08, 1]
 
   constructor({device}: AnimationProps) {
     super()
@@ -275,9 +255,11 @@ export default class TextAnimationLoopTemplate extends AnimationLoopTemplate {
     }
 
     const centerX = Number.isFinite(minX) && Number.isFinite(maxX) ? (minX + maxX) / 2 : 0
-    const centerY = Number.isFinite(minY) && Number.isFinite(maxY) ? (minY + maxY) / 2 : 0
     const centerZ = Number.isFinite(minZ) && Number.isFinite(maxZ) ? (minZ + maxZ) / 2 : 0
-    this.geometryOffset = [-centerX, -centerY, -centerZ]
+    this.geometryOffset = [-centerX, Number.isFinite(maxY) ? -maxY : 0, -centerZ]
+    this.textMinY = Number.isFinite(minY) ? minY : 0
+    this.textWidth = Number.isFinite(minX) && Number.isFinite(maxX) ? maxX - minX : 0
+    this.textHeight = Number.isFinite(minY) && Number.isFinite(maxY) ? maxY - minY : 0
 
     this.model = new Model(device, {
       id: 'text-geometry',
@@ -301,21 +283,21 @@ export default class TextAnimationLoopTemplate extends AnimationLoopTemplate {
 
   onRender({device, tick, aspect}: AnimationProps) {
     const elapsedSeconds = tick * 0.016
-    const crawlDurationSeconds = 21
-    const crawlProgress =
-      (this.initialCrawlProgress + elapsedSeconds / crawlDurationSeconds + 1) % 1
-    const depthOffset = -560 - crawlProgress * 600
-    const verticalOffset = -980 + crawlProgress * 960
+    const totalTravel = this.leadInHeight + this.textHeight + this.leadOutHeight
+    const distanceTraveled = (elapsedSeconds * this.scrollSpeedWorldUnitsPerSecond) % totalTravel
+    const verticalOffset = -this.leadInHeight + distanceTraveled
+    const depthOffset = this.baseDepthOffset
 
     this.modelMatrix
       .identity()
-      .translate([0, verticalOffset, depthOffset])
-      .rotateX(-0.9)
-      .scale([0.72, 0.72, 1])
+      .translate([0, 0, depthOffset])
+      .rotateX(-1.24)
+      .translate([0, verticalOffset, 0])
+      .scale(this.baseScale)
       .translate(this.geometryOffset)
 
     this.normalMatrix.copy(this.modelMatrix).invert().transpose()
-    this.projectionMatrix.perspective({fovy: Math.PI / 4.5, aspect, near: 24, far: 3200})
+    this.projectionMatrix.perspective({fovy: Math.PI / 3.9, aspect, near: 24, far: 3200})
 
     this.shaderInputs.setProps({
       app: {
@@ -324,7 +306,7 @@ export default class TextAnimationLoopTemplate extends AnimationLoopTemplate {
         projectionMatrix: this.projectionMatrix,
         normalMatrix: this.normalMatrix,
         time: tick * 0.016,
-        fade: [-820, -360, 620, 1040]
+        fade: [-260, -80, 960, 1360]
       }
     })
 
