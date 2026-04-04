@@ -17,7 +17,7 @@ jobs:
       - name: Get version
         id: get_version
         run: |
-          packageFile=$(if [ -d modules ]; then ls modules/*/package.json | head -n 1; else echo package.json; fi)
+          packageFile=$(if [ -d modules ]; then ls modules/core/package.json | head -n 1; else echo package.json; fi)
           packageName=$(jq -r '.name' $packageFile)
           LATEST=$(npm show "${packageName}@latest" version | grep -o -E "^[0-9]+\.[0-9]+")
           echo "latest=${LATEST}-release" >> "$GITHUB_OUTPUT"
@@ -35,12 +35,9 @@ jobs:
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
         with:
           token: ${{ secrets.WEBSITE_DEPLOY_TOKEN }}
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: '.nvmrc'
-          cache: 'yarn'
-          cache-dependency-path: yarn.lock
+      
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Enable Corepack / Yarn 4
         run: |
@@ -48,16 +45,22 @@ jobs:
           corepack prepare yarn@4.13.0 --activate
           yarn -v
 
-      - name: Install dependencies
-        run: yarn install --immutable
+      - name: Setup Node (with Corepack)
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'yarn' # or 'pnpm', 'npm' depending on your package manager
+          cache-dependency-path: yarn.lock
 
-      - name: Build website
-        run: yarn website:build
+      - name: Install dependencies and build website
+        run: |
+          yarn install --immutable
+          yarn website:build
 
       - name: Deploy
-        uses: JamesIves/github-pages-deploy-action@132898c54c57c7cc6b80eb3a89968de8fc283505 # 3.7.1
+        uses: JamesIves/github-pages-deploy-action@d92aa235d04922e8f08b40ce78cc5442fcfbfa2f # 4.8.0
         with:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          BRANCH: gh-pages
-          FOLDER: website/build
-          CLEAN: true
+          token: ${{ secrets.WEBSITE_DEPLOY_TOKEN }}
+          branch: gh-pages
+          folder: website/build
+          clean: true

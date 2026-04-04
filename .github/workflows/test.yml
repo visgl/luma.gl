@@ -107,8 +107,7 @@ jobs:
           cache: 'yarn'
           cache-dependency-path: yarn.lock
 
-      - name: Install dependencies
-        run: yarn install --immutable
-
-      - name: Build website
-        run: yarn website:build
+      - name: Install dependencies and build website
+        run: |
+          yarn install --immutable
+          yarn website:build
