@@ -53,6 +53,12 @@ export type {
 export {bloom} from './passes/postprocessing/image-blur-filters/bloom';
 export {bloomShaderPassPipeline} from './passes/postprocessing/image-blur-filters/bloom-shader-pass-pipeline';
 export type {
+  DofProps,
+  DofUniforms
+} from './passes/postprocessing/image-blur-filters/dof';
+export {dof} from './passes/postprocessing/image-blur-filters/dof';
+export {dofShaderPassPipeline} from './passes/postprocessing/image-blur-filters/dof-shader-pass-pipeline';
+export type {
   TriangleBlurProps,
   TriangleBlurUniforms
 } from './passes/postprocessing/image-blur-filters/triangleblur';

@@ -73,6 +73,36 @@ vec4 combine_sampleColor(sampler2D sourceTexture, vec2 texSize, vec2 texCoord) {
   passes: [{sampler: true}]
 };
 
+const tintPass: ShaderPass<{tintTexture?: Texture}, {}, {tintTexture?: Texture}> = {
+  name: 'tint',
+  source: /* wgsl */ `
+@group(0) @binding(auto) var tintTexture: texture_2d<f32>;
+@group(0) @binding(auto) var tintTextureSampler: sampler;
+
+fn tint_sampleColor(
+  sourceTexture: texture_2d<f32>,
+  sourceTextureSampler: sampler,
+  texSize: vec2f,
+  texCoord: vec2f
+) -> vec4f {
+  let sourceColor = textureSample(sourceTexture, sourceTextureSampler, texCoord);
+  let tintColor = textureSample(tintTexture, tintTextureSampler, texCoord);
+  return vec4f(min(sourceColor.rgb + tintColor.rgb, vec3f(1.0)), sourceColor.a);
+}
+`,
+  fs: /* glsl */ `
+uniform sampler2D tintTexture;
+
+vec4 tint_sampleColor(sampler2D sourceTexture, vec2 texSize, vec2 texCoord) {
+  vec4 sourceColor = texture(sourceTexture, texCoord);
+  vec4 tintColor = texture(tintTexture, texCoord);
+  return vec4(min(sourceColor.rgb + tintColor.rgb, vec3(1.0)), sourceColor.a);
+}
+`,
+  bindingLayout: [{name: 'tintTexture', group: 0}],
+  passes: [{sampler: true}]
+};
+
 const stagedColorPass: ShaderPass<
   {greenScale?: number; stage?: number},
   {greenScale?: number; stage?: number}
@@ -159,6 +189,23 @@ const stagedPipeline: ShaderPassPipeline<'extract' | 'blurred'> = {
   ]
 };
 
+const tintPipeline: ShaderPassPipeline<'scratch'> = {
+  name: 'tintPipeline',
+  renderTargets: {scratch: {}},
+  steps: [
+    {
+      shaderPass: tintPass,
+      inputs: {sourceTexture: 'original'},
+      output: 'scratch'
+    },
+    {
+      shaderPass: copyPass,
+      inputs: {sourceTexture: 'scratch'},
+      output: 'previous'
+    }
+  ]
+};
+
 const invalidInputPass: ShaderPass = {
   ...invertPass,
   name: 'invalidInput',
@@ -221,6 +268,161 @@ test('ShaderPassRenderer#renderToTexture', async t => {
 
     renderer.destroy();
     sourceTexture.destroy();
+  }
+  t.end();
+});
+
+test('ShaderPassRenderer applies runtime uniforms and accepts Texture inputs', async t => {
+  const devices = await getTestDevices();
+  for (const device of devices) {
+    if (device.type === 'webgpu') {
+      continue; // eslint-disable-line no-continue
+    }
+
+    const sourceTexture = new DynamicTexture(device, {
+      id: 'runtime-uniform-source-texture',
+      usage: Texture.RENDER | Texture.COPY_SRC | Texture.COPY_DST,
+      dimension: '2d',
+      data: {data: new Uint8Array([255, 0, 0, 255]), width: 1, height: 1, format: 'rgba8unorm'}
+    });
+    await sourceTexture.ready;
+
+    const renderer = new ShaderPassRenderer(device, {
+      shaderPasses: [stagedColorPass],
+      shaderInputs: new ShaderInputs({stagedColor: stagedColorPass})
+    });
+    const output = renderer.renderToTexture({
+      sourceTexture: sourceTexture.texture,
+      uniforms: {
+        stagedColor: {
+          greenScale: 0.5
+        }
+      }
+    });
+
+    t.ok(output, 'produces output texture from plain Texture input');
+
+    const pixelsOut = await readPixels(output!);
+    t.deepEqual(
+      Array.from(pixelsOut),
+      [255, 128, 0, 255],
+      'applies runtime uniforms on top of pass defaults'
+    );
+
+    renderer.destroy();
+    sourceTexture.destroy();
+  }
+  t.end();
+});
+
+test('ShaderPassRenderer resolves module-scoped default bindings and lets draw bindings override them', async t => {
+  const devices = await getTestDevices();
+  for (const device of devices) {
+    if (device.type === 'webgpu') {
+      continue; // eslint-disable-line no-continue
+    }
+
+    const sourceTexture = new DynamicTexture(device, {
+      id: 'binding-default-source-texture',
+      usage: Texture.RENDER | Texture.COPY_SRC | Texture.COPY_DST,
+      dimension: '2d',
+      data: {data: new Uint8Array([255, 0, 0, 255]), width: 1, height: 1, format: 'rgba8unorm'}
+    });
+    const defaultTintTexture = new DynamicTexture(device, {
+      id: 'binding-default-tint-texture',
+      usage: Texture.RENDER | Texture.COPY_SRC | Texture.COPY_DST,
+      dimension: '2d',
+      data: {data: new Uint8Array([0, 255, 0, 255]), width: 1, height: 1, format: 'rgba8unorm'}
+    });
+    const overrideTintTexture = new DynamicTexture(device, {
+      id: 'binding-override-tint-texture',
+      usage: Texture.RENDER | Texture.COPY_SRC | Texture.COPY_DST,
+      dimension: '2d',
+      data: {data: new Uint8Array([0, 0, 255, 255]), width: 1, height: 1, format: 'rgba8unorm'}
+    });
+    await Promise.all([sourceTexture.ready, defaultTintTexture.ready, overrideTintTexture.ready]);
+
+    const shaderInputs = new ShaderInputs({tint: tintPass});
+    shaderInputs.setProps({
+      tint: {
+        tintTexture: defaultTintTexture.texture
+      }
+    });
+    const renderer = new ShaderPassRenderer(device, {
+      shaderPasses: [tintPass],
+      shaderInputs
+    });
+
+    const defaultOutput = renderer.renderToTexture({sourceTexture});
+    t.ok(defaultOutput, 'renders using module-scoped default bindings');
+    t.deepEqual(
+      Array.from(await readPixels(defaultOutput!)),
+      [255, 255, 0, 255],
+      'uses the default binding stored in shaderInputs'
+    );
+
+    const overrideOutput = renderer.renderToTexture({
+      sourceTexture,
+      bindings: {tintTexture: overrideTintTexture.texture}
+    });
+    t.ok(overrideOutput, 'renders using per-draw binding overrides');
+    t.deepEqual(
+      Array.from(await readPixels(overrideOutput!)),
+      [255, 0, 255, 255],
+      'per-draw bindings override the stored module default'
+    );
+
+    renderer.destroy();
+    sourceTexture.destroy();
+    defaultTintTexture.destroy();
+    overrideTintTexture.destroy();
+  }
+  t.end();
+});
+
+test('ShaderPassRenderer resolves module-scoped bindings inside ShaderPassPipeline steps', async t => {
+  const devices = await getTestDevices();
+  for (const device of devices) {
+    if (device.type === 'webgpu') {
+      continue; // eslint-disable-line no-continue
+    }
+
+    const sourceTexture = new DynamicTexture(device, {
+      id: 'pipeline-binding-source-texture',
+      usage: Texture.RENDER | Texture.COPY_SRC | Texture.COPY_DST,
+      dimension: '2d',
+      data: {data: new Uint8Array([255, 0, 0, 255]), width: 1, height: 1, format: 'rgba8unorm'}
+    });
+    const tintTexture = new DynamicTexture(device, {
+      id: 'pipeline-binding-tint-texture',
+      usage: Texture.RENDER | Texture.COPY_SRC | Texture.COPY_DST,
+      dimension: '2d',
+      data: {data: new Uint8Array([0, 255, 0, 255]), width: 1, height: 1, format: 'rgba8unorm'}
+    });
+    await Promise.all([sourceTexture.ready, tintTexture.ready]);
+
+    const shaderInputs = new ShaderInputs({tint: tintPass, copy: copyPass});
+    shaderInputs.setProps({
+      tint: {
+        tintTexture: tintTexture.texture
+      }
+    });
+    const renderer = new ShaderPassRenderer(device, {
+      shaderPasses: [tintPipeline],
+      shaderInputs
+    });
+
+    const output = renderer.renderToTexture({sourceTexture});
+    t.ok(output, 'renders a pipeline using module-scoped bindings');
+    t.deepEqual(
+      Array.from(await readPixels(output!)),
+      [255, 255, 0, 255],
+      'pipeline steps read shaderInputs bindings from the correct pass module'
+    );
+
+    renderer.destroy();
+    sourceTexture.destroy();
+    tintTexture.destroy();
   }
   t.end();
 });
