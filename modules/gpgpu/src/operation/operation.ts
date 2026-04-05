@@ -3,8 +3,8 @@
 // Copyright (c) vis.gl contributors
 
 import type {Device, Buffer} from '@luma.gl/core';
-import { GPUTable } from './gpu-table';
-import { backendRegistry } from './backend-registry';
+import {GPUTable} from './gpu-table';
+import {backendRegistry} from './backend-registry';
 import type {TypedArray} from '@math.gl/types';
 
 export type OperationHandler<InputsT extends Record<string, any> = any> = (args: {
@@ -52,5 +52,4 @@ export abstract class Operation<InputsT extends Record<string, any> = Record<str
       });
     }
   }
-
 }

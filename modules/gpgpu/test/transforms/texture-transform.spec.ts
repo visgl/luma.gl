@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {getWebGLTestDevice} from '@luma.gl/test-utils';
-import {TextureTransform} from '@luma.gl/gpgpu';
 import {Device, Texture} from '@luma.gl/core';
+import {TextureTransform} from '@luma.gl/gpgpu';
+import {getWebGLTestDevice} from '@luma.gl/test-utils';
+import {expect, test} from 'vitest';
 
 /** Creates a minimal, no-op transform. */
-test('TextureTransform#constructor', async t => {
+test('TextureTransform#constructor', async () => {
   const webglDevice = await getWebGLTestDevice();
 
   const targetTexture = webglDevice.createTexture({
@@ -25,13 +25,11 @@ test('TextureTransform#constructor', async t => {
     targetTextureVarying: 'vSrc',
     vertexCount: 1
   });
-  t.ok(transform, 'creates transform');
-
-  t.end();
+  expect(transform, 'creates transform').toBeTruthy();
 });
 
 /** Computes a sum over vertex attribute values by writing to framebuffer. */
-test('TextureTransform#attribute', async t => {
+test('TextureTransform#attribute', async () => {
   const webglDevice = await getWebGLTestDevice();
 
   const src = webglDevice.createBuffer({data: new Float32Array([10, 20, 30, 70, 80, 90])});
@@ -65,15 +63,13 @@ test('TextureTransform#attribute', async t => {
   transform.run({clearColor: [0, 0, 0, 0]});
 
   const sum = await readF32(webglDevice, source, 16);
-  t.is(sum[0], 300, 'computes sum');
+  expect(sum[0], 'computes sum').toBe(300);
 
   transform.destroy();
-
-  t.end();
 });
 
 /** Computes a sum over texture pixels by writing to framebuffer. */
-test('TextureTransform#texture', async t => {
+test('TextureTransform#texture', async () => {
   const webglDevice = await getWebGLTestDevice();
 
   const srcData = new Uint8Array([2, 10, 255, 255]);
@@ -114,18 +110,16 @@ test('TextureTransform#texture', async t => {
   // least mimic its API by accepting a RenderPass in .run().
   transform.run({clearColor: [0, 0, 0, 0]});
   let blend = await readU8(webglDevice, targetTexture, 4);
-  t.deepEqual(Array.from(blend), Array.from(dstData), 'computes blend');
+  expect(Array.from(blend), 'computes blend').toEqual(Array.from(dstData));
 
   const offset = 100 / 255;
   transform.run({clearColor: [offset, offset, offset, 1]});
   blend = await readU8(webglDevice, targetTexture, 4);
-  t.deepEqual(Array.from(blend), Array.from(dstOffsetData), 'computes blend');
+  expect(Array.from(blend), 'computes blend').toEqual(Array.from(dstOffsetData));
 
   transform.destroy();
   inputTexture.destroy();
   targetTexture.destroy();
-
-  t.end();
 });
 
 async function readF32(

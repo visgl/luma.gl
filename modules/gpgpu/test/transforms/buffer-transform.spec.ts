@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {getWebGLTestDevice} from '@luma.gl/test-utils';
-import {BufferTransform} from '@luma.gl/gpgpu';
 import {Buffer, Device} from '@luma.gl/core';
+import {BufferTransform} from '@luma.gl/gpgpu';
+import {getWebGLTestDevice} from '@luma.gl/test-utils';
+import {expect, test} from 'vitest';
 
 const VS = /* glsl */ `\
 #version 300 es
@@ -21,14 +21,13 @@ out vec4 fragColor;
 void main() { fragColor.x = dst; }
 `;
 
-test('BufferTransform#constructor', async t => {
+test('BufferTransform#constructor', async () => {
   const webglDevice = await getWebGLTestDevice();
 
-  t.ok(createBufferTransform(webglDevice), 'WebGL succeeds');
-  t.end();
+  expect(createBufferTransform(webglDevice), 'WebGL succeeds').toBeTruthy();
 });
 
-test('BufferTransform#run', async t => {
+test('BufferTransform#run', async () => {
   const webglDevice = await getWebGLTestDevice();
 
   const SRC_ARRAY = new Float32Array([0, 1, 2, 3, 4, 5]);
@@ -43,9 +42,7 @@ test('BufferTransform#run', async t => {
 
   const bytes = await transform.readAsync('dst');
   const array = new Float32Array(bytes.buffer, bytes.byteOffset, elementCount);
-  t.deepEqual(array, DST_ARRAY, 'output transformed');
-
-  t.end();
+  expect(array, 'output transformed').toEqual(DST_ARRAY);
 });
 
 function createBufferTransform(

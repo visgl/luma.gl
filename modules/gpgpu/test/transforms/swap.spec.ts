@@ -1,41 +1,37 @@
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import {expect, test} from 'vitest';
 import {Swap} from '@luma.gl/gpgpu';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
 
 // TODO - these tests could run on NullDevice
 
-test('Swap#constructor', async t => {
+test('Swap#constructor', async () => {
   const webglDevice = await getWebGLTestDevice();
 
   const current = webglDevice.createBuffer({byteLength: 1});
   const next = webglDevice.createBuffer({byteLength: 1});
   const swap = new Swap({current, next});
 
-  t.equal(swap.current, current, 'should set the current resource correctly');
-  t.equal(swap.next, next, 'should set the next resource correctly');
-
-  t.end();
+  expect(swap.current, 'should set the current resource correctly').toBe(current);
+  expect(swap.next, 'should set the next resource correctly').toBe(next);
 });
 
-test('Swap#destroy', async t => {
+test('Swap#destroy', async () => {
   const webglDevice = await getWebGLTestDevice();
 
   const current = webglDevice.createBuffer({byteLength: 1});
   const next = webglDevice.createBuffer({byteLength: 1});
   const swap = new Swap({current, next});
 
-  t.equal(swap.current.destroyed, false, 'should not yet have destroyed the current resource');
-  t.equal(swap.next.destroyed, false, 'should not yet have destroyed the next resource');
+  expect(swap.current.destroyed, 'should not yet have destroyed the current resource').toBe(false);
+  expect(swap.next.destroyed, 'should not yet have destroyed the next resource').toBe(false);
 
   swap.destroy();
 
-  t.equal(swap.current.destroyed, true, 'should destroy the current resource');
-  t.equal(swap.next.destroyed, true, 'should destroy the next resource');
-
-  t.end();
+  expect(swap.current.destroyed, 'should destroy the current resource').toBe(true);
+  expect(swap.next.destroyed, 'should destroy the next resource').toBe(true);
 });
 
-test('Swap#swap', async t => {
+test('Swap#swap', async () => {
   const webglDevice = await getWebGLTestDevice();
 
   const current = webglDevice.createBuffer({byteLength: 1});
@@ -44,8 +40,6 @@ test('Swap#swap', async t => {
 
   swap.swap();
 
-  t.equal(swap.current, next, 'should make the next resource the current resource');
-  t.equal(swap.next, current, 'should reuse the current resource as the next resource');
-
-  t.end();
+  expect(swap.current, 'should make the next resource the current resource').toBe(next);
+  expect(swap.next, 'should reuse the current resource as the next resource').toBe(current);
 });

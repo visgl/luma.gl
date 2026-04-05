@@ -2,12 +2,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type { SignedDataType } from "@luma.gl/core";
-import { GPUTable } from "../operation/gpu-table";
+import type {SignedDataType} from '@luma.gl/core';
+import {GPUTable} from '../operation/gpu-table';
 
-export function deduceOutputProps(
-  ...inputs: GPUTable[]
-): {
+export function deduceOutputProps(...inputs: GPUTable[]): {
   isConstant: boolean;
   type: SignedDataType;
   size: number;

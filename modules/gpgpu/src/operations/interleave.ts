@@ -7,21 +7,21 @@ import {GPUTable} from '../operation/gpu-table';
 import {Operation} from '../operation/operation';
 import {deduceOutputProps} from '../utils/output-props';
 
-class AddOperation extends Operation<{x: GPUTable; y: GPUTable}> {
-  name = 'add';
+class InterleaveOperation extends Operation<{x: GPUTable; y: GPUTable}> {
+  name = 'interleave';
 
   output: GPUTable;
 
   constructor(x: GPUTable, y: GPUTable) {
     super({x, y});
 
-    const {isConstant, type, size, length} = deduceOutputProps(x, y);
-    this.output = new GPUTable({isConstant, type, size, length, source: this});
+    const {isConstant, type, length} = deduceOutputProps(x, y);
+    this.output = new GPUTable({isConstant, type, size: x.size + y.size, length, source: this});
   }
 
   toString(): string {
     const {x, y} = this.inputs;
-    return `[${x} + ${y}]`;
+    return `_${x}_${y}_`;
   }
 
   executeCPU(): TypedArray | null {
@@ -31,8 +31,11 @@ class AddOperation extends Operation<{x: GPUTable; y: GPUTable}> {
     if (vx && vy && this.output.isConstant) {
       const {ValueType, size} = this.output;
       const target = new ValueType(size);
-      for (let i = 0; i < size; i++) {
-        target[i] = (vx[i] ?? 0) + (vy[i] ?? 0);
+      for (let i = 0; i < x.size; i++) {
+        target[i] = vx[i] ?? 0;
+      }
+      for (let i = 0; i < y.size; i++) {
+        target[i + x.size] = vy[i] ?? 0;
       }
       return target;
     }
@@ -40,10 +43,10 @@ class AddOperation extends Operation<{x: GPUTable; y: GPUTable}> {
   }
 }
 
-export function add(...args: GPUTable[]): GPUTable {
+export function interleave(...args: GPUTable[]): GPUTable {
   let result = args[0];
   for (let i = 1; i < args.length; i++) {
-    result = new AddOperation(result, args[i]).output;
+    result = new InterleaveOperation(result, args[i]).output;
   }
   return result;
 }
