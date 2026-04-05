@@ -110,6 +110,10 @@ jobs:
       - name: Install dependencies
         run: yarn install --immutable
 
+      - name: Build packages for example type declarations
+        run: |
+          yarn build
+
       - name: Typecheck examples
         run: |
           yarn examples:typecheck
