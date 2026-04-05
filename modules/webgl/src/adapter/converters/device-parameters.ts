@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {CompareFunction, StencilOperation} from '@luma.gl/core';
+import type {CompareFunction, StencilOperation, BlendOperation, BlendFactor} from '@luma.gl/core';
 import {Device, log, Parameters, PolygonMode, ProvokingVertex} from '@luma.gl/core';
 import {GL} from '@luma.gl/webgl/constants';
 import type {
