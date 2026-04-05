@@ -23,80 +23,20 @@ import {WEBGLBuffer} from './webgl-buffer';
 import {WEBGLTexture} from './webgl-texture';
 import {WEBGLFramebuffer} from './webgl-framebuffer';
 
-type CopyBufferToBufferCommand = {
-  name: 'copy-buffer-to-buffer';
-  options: CopyBufferToBufferOptions;
-};
-
-type CopyBufferToTextureCommand = {
-  name: 'copy-buffer-to-texture';
-  options: CopyBufferToTextureOptions;
-};
-
-type CopyTextureToBufferCommand = {
-  name: 'copy-texture-to-buffer';
-  options: CopyTextureToBufferOptions;
-};
-
-type CopyTextureToTextureCommand = {
-  name: 'copy-texture-to-texture';
-  options: CopyTextureToTextureOptions;
-};
-
-type ClearTextureCommand = {
-  name: 'clear-texture';
-  options: {}; // ClearTextureOptions;
-};
-
-type ReadTextureCommand = {
-  name: 'read-texture';
-  options: {}; // TextureReadOptions;
-};
-
-type Command =
-  | CopyBufferToBufferCommand
-  | CopyBufferToTextureCommand
-  | CopyTextureToBufferCommand
-  | CopyTextureToTextureCommand
-  | ClearTextureCommand
-  | ReadTextureCommand;
-
 export class WEBGLCommandBuffer extends CommandBuffer {
   readonly device: WebGLDevice;
   readonly handle = null;
-  commands: Command[] = [];
 
   constructor(device: WebGLDevice, props: CommandBufferProps = {}) {
     super(device, props);
     this.device = device;
   }
-
-  _executeCommands(commands: Command[] = this.commands) {
-    for (const command of commands) {
-      switch (command.name) {
-        case 'copy-buffer-to-buffer':
-          _copyBufferToBuffer(this.device, command.options);
-          break;
-        case 'copy-buffer-to-texture':
-          _copyBufferToTexture(this.device, command.options);
-          break;
-        case 'copy-texture-to-buffer':
-          _copyTextureToBuffer(this.device, command.options);
-          break;
-        case 'copy-texture-to-texture':
-          _copyTextureToTexture(this.device, command.options);
-          break;
-        // case 'clear-texture':
-        //   _clearTexture(this.device, command.options);
-        //   break;
-        default:
-          throw new Error(command.name);
-      }
-    }
-  }
 }
 
-function _copyBufferToBuffer(device: WebGLDevice, options: CopyBufferToBufferOptions): void {
+export function copyBufferToBufferImmediate(
+  device: WebGLDevice,
+  options: CopyBufferToBufferOptions
+): void {
   const source = options.sourceBuffer as WEBGLBuffer;
   const destination = options.destinationBuffer as WEBGLBuffer;
 
@@ -119,7 +59,10 @@ function _copyBufferToBuffer(device: WebGLDevice, options: CopyBufferToBufferOpt
  * Copies data from a Buffer object into a Texture object
  * NOTE: doesn't wait for copy to be complete
  */
-function _copyBufferToTexture(_device: WebGLDevice, _options: CopyBufferToTextureOptions): void {
+export function copyBufferToTextureImmediate(
+  _device: WebGLDevice,
+  _options: CopyBufferToTextureOptions
+): void {
   throw new Error('copyBufferToTexture is not supported in WebGL');
 }
 
@@ -127,7 +70,10 @@ function _copyBufferToTexture(_device: WebGLDevice, _options: CopyBufferToTextur
  * Copies data from a Texture object into a Buffer object.
  * NOTE: doesn't wait for copy to be complete
  */
-function _copyTextureToBuffer(device: WebGLDevice, options: CopyTextureToBufferOptions): void {
+export function copyTextureToBufferImmediate(
+  device: WebGLDevice,
+  options: CopyTextureToBufferOptions
+): void {
   const {
     sourceTexture,
     mipLevel = 0,
@@ -240,7 +186,10 @@ export function readPixelsToBuffer(
  * Copy a rectangle from a Framebuffer or Texture object into a texture (at an offset)
  */
 // eslint-disable-next-line complexity, max-statements
-function _copyTextureToTexture(device: WebGLDevice, options: CopyTextureToTextureOptions): void {
+export function copyTextureToTextureImmediate(
+  device: WebGLDevice,
+  options: CopyTextureToTextureOptions
+): void {
   const {
     /** Texture to copy to/from. */
     sourceTexture,

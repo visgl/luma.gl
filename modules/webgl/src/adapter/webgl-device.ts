@@ -28,7 +28,6 @@ import type {
   SharedRenderPipeline,
   ComputePipeline,
   ComputePipelineProps,
-  CommandEncoder,
   CommandEncoderProps,
   TransformFeedbackProps,
   QuerySetProps,
@@ -369,7 +368,9 @@ export class WebGLDevice extends Device {
   /**
    * Offscreen Canvas Support: Commit the frame
    * https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext/commit
-   * Chrome's offscreen canvas does not require gl.commit
+   * Chrome's offscreen canvas does not require gl.commit.
+   * WebGL command encoders execute work immediately, so submit() only finalizes
+   * frame bookkeeping and resolves timing queries for the default encoder.
    */
   submit(commandBuffer?: WEBGLCommandBuffer): void {
     let submittedCommandEncoder: WEBGLCommandEncoder | null = null;
@@ -378,8 +379,6 @@ export class WebGLDevice extends Device {
     }
 
     try {
-      commandBuffer._executeCommands();
-
       if (submittedCommandEncoder) {
         submittedCommandEncoder
           .resolveTimeProfilingQuerySet()
@@ -391,15 +390,6 @@ export class WebGLDevice extends Device {
     } finally {
       commandBuffer.destroy();
     }
-  }
-
-  override writeBufferViaCommandEncoder(
-    _commandEncoder: CommandEncoder,
-    destinationBuffer: Buffer,
-    data: ArrayBufferLike | ArrayBufferView | SharedArrayBuffer,
-    byteOffset: number = 0
-  ): void {
-    destinationBuffer.write(data, byteOffset);
   }
 
   private _finalizeDefaultCommandEncoderForSubmit(): {

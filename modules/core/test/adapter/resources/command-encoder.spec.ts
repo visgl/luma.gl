@@ -358,114 +358,6 @@ test('CommandEncoder default submit rolls over to a fresh default encoder', asyn
   t.end();
 });
 
-test.skip('Device.writeBufferViaCommandEncoder preserves WebGPU upload order and retires staging buffers', async t => {
-  const device = await getWebGPUTestDevice();
-  if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
-    return;
-  }
-
-  const stats = device.statsManager.getStats('Resource Counts');
-  const beforeBufferCount = stats.get('Buffers Active').count;
-  const sourceBuffer = device.createBuffer({
-    byteLength: Uint32Array.BYTES_PER_ELEMENT,
-    usage: Buffer.COPY_SRC | Buffer.COPY_DST
-  });
-  const destinationBuffer = device.createBuffer({
-    byteLength: 2 * Uint32Array.BYTES_PER_ELEMENT,
-    usage: Buffer.COPY_SRC | Buffer.COPY_DST
-  });
-
-  const commandEncoder = device.createCommandEncoder({id: 'ordered-upload-test'});
-  device.writeBufferViaCommandEncoder(commandEncoder, sourceBuffer, new Uint32Array([1]));
-  commandEncoder.copyBufferToBuffer({
-    sourceBuffer,
-    destinationBuffer,
-    destinationOffset: 0,
-    size: Uint32Array.BYTES_PER_ELEMENT
-  });
-  device.writeBufferViaCommandEncoder(commandEncoder, sourceBuffer, new Uint32Array([2]));
-  commandEncoder.copyBufferToBuffer({
-    sourceBuffer,
-    destinationBuffer,
-    destinationOffset: Uint32Array.BYTES_PER_ELEMENT,
-    size: Uint32Array.BYTES_PER_ELEMENT
-  });
-
-  const encodedBufferCount = stats.get('Buffers Active').count;
-  t.equal(
-    encodedBufferCount - beforeBufferCount,
-    4,
-    'webgpu encoder uploads allocate transient staging buffers before submit'
-  );
-
-  device.submit(commandEncoder.finish());
-
-  const receivedData = await destinationBuffer.readAsync();
-  t.deepEqual(
-    Array.from(
-      new Uint32Array(
-        receivedData.buffer,
-        receivedData.byteOffset,
-        receivedData.byteLength / Uint32Array.BYTES_PER_ELEMENT
-      )
-    ),
-    [1, 2],
-    'webgpu encoder uploads stay ordered with subsequent buffer copies'
-  );
-
-  const fence = device.createFence();
-  await fence.signaled;
-  fence.destroy();
-  t.equal(
-    stats.get('Buffers Active').count - beforeBufferCount,
-    2,
-    'webgpu staging buffers are released after submitted work completes'
-  );
-
-  sourceBuffer.destroy();
-  destinationBuffer.destroy();
-  t.end();
-});
-
-test('Abandoned WebGPU command buffers release transient upload buffers on destroy', async t => {
-  const device = await getWebGPUTestDevice();
-  if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
-    return;
-  }
-
-  const stats = device.statsManager.getStats('Resource Counts');
-  const beforeBufferCount = stats.get('Buffers Active').count;
-  const destinationBuffer = device.createBuffer({
-    byteLength: Uint32Array.BYTES_PER_ELEMENT,
-    usage: Buffer.COPY_DST | Buffer.COPY_SRC
-  });
-  const commandEncoder = device.createCommandEncoder({id: 'abandoned-upload-test'});
-
-  device.writeBufferViaCommandEncoder(commandEncoder, destinationBuffer, new Uint32Array([7]));
-  const commandBuffer = commandEncoder.finish();
-
-  t.equal(
-    stats.get('Buffers Active').count - beforeBufferCount,
-    2,
-    'webgpu abandoned command buffer retains destination and transient staging buffer'
-  );
-
-  commandBuffer.destroy();
-
-  t.equal(
-    stats.get('Buffers Active').count - beforeBufferCount,
-    1,
-    'webgpu command buffer destroy releases transient staging buffer when never submitted'
-  );
-
-  destinationBuffer.destroy();
-  t.end();
-});
-
 test('CommandBuffer#copyBufferToBuffer', async t => {
   const device = await getWebGLTestDevice();
   if (isSoftwareBackedDevice(device)) {
@@ -489,12 +381,13 @@ test('CommandBuffer#copyBufferToBuffer', async t => {
     destinationBuffer,
     size: 2 * Float32Array.BYTES_PER_ELEMENT
   });
-  let commandBuffer = commandEncoder.finish();
-  device.submit(commandBuffer);
-
   receivedData = await readAsyncF32(destinationBuffer);
   expectedData = new Float32Array([1, 2, 6]);
-  t.deepEqual(receivedData, expectedData, 'copyBufferToBuffer: with size successful');
+  t.deepEqual(receivedData, expectedData, 'copyBufferToBuffer: executes before finish on WebGL');
+  let commandBuffer = commandEncoder.finish();
+  device.submit(commandBuffer);
+  receivedData = await readAsyncF32(destinationBuffer);
+  t.deepEqual(receivedData, expectedData, 'copyBufferToBuffer: submit preserves written data');
 
   commandEncoder = device.createCommandEncoder();
   commandEncoder.copyBufferToBuffer({
@@ -504,12 +397,17 @@ test('CommandBuffer#copyBufferToBuffer', async t => {
     destinationOffset: 2 * Float32Array.BYTES_PER_ELEMENT,
     size: Float32Array.BYTES_PER_ELEMENT
   });
-  commandBuffer = commandEncoder.finish();
-  device.submit(commandBuffer);
-
   receivedData = await readAsyncF32(destinationBuffer);
   expectedData = new Float32Array([1, 2, 2]);
-  t.deepEqual(receivedData, expectedData, 'copyBufferToBuffer: with size and offsets successful');
+  t.deepEqual(
+    receivedData,
+    expectedData,
+    'copyBufferToBuffer: offsets execute before finish on WebGL'
+  );
+  commandBuffer = commandEncoder.finish();
+  device.submit(commandBuffer);
+  receivedData = await readAsyncF32(destinationBuffer);
+  t.deepEqual(receivedData, expectedData, 'copyBufferToBuffer: submit preserves offset copy data');
 
   t.end();
 });
@@ -1014,19 +912,18 @@ test('Unsupported command encoder operations fail explicitly', async t => {
     mipmaps: false
   });
   const webglCopyEncoder = webglDevice.createCommandEncoder();
-  webglCopyEncoder.copyBufferToTexture({
-    sourceBuffer,
-    destinationTexture,
-    byteOffset: 0,
-    bytesPerRow: 4,
-    rowsPerImage: 1,
-    size: [1, 1, 1]
-  });
-  const webglCopyCommandBuffer = webglCopyEncoder.finish();
   t.throws(
-    () => webglDevice.submit(webglCopyCommandBuffer),
+    () =>
+      webglCopyEncoder.copyBufferToTexture({
+        sourceBuffer,
+        destinationTexture,
+        byteOffset: 0,
+        bytesPerRow: 4,
+        rowsPerImage: 1,
+        size: [1, 1, 1]
+      }),
     /copyBufferToTexture is not supported in WebGL/,
-    'WebGL copyBufferToTexture fails explicitly on submit'
+    'WebGL copyBufferToTexture fails explicitly when encoded'
   );
 
   const nullDevice = await getNullTestDevice();

@@ -61,7 +61,7 @@ export class WEBGLRenderPass extends RenderPass {
       this.device.gl.drawBuffers([GL.BACK]);
     }
 
-    // Hack - for now WebGL draws in "immediate mode" (instead of queueing the operations)...
+    // WebGL render passes execute immediately when encoded.
     this.clear();
 
     if (this.props.timestampQuerySet && this.props.beginTimestampIndex !== undefined) {
@@ -79,7 +79,6 @@ export class WEBGLRenderPass extends RenderPass {
       webglQuerySet.writeTimestamp(this.props.endTimestampIndex);
     }
     this.device.popState();
-    // should add commands to CommandEncoder.
     this.destroy();
   }
 

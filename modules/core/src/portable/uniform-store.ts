@@ -103,8 +103,8 @@ export class UniformStore<
    * Makes all group properties partial and eagerly propagates changes to any
    * managed GPU buffers.
    *
-   * @param commandEncoder - Optional encoder used to order managed uniform
-   * uploads with later GPU work in the same submission.
+   * @param commandEncoder - Optional encoder parameter retained for call-site
+   * compatibility. UniformStore uploads are written directly to managed buffers.
    */
   setUniforms(
     uniforms: Partial<{[group in keyof TPropGroups]: Partial<TPropGroups[group]>}>,
@@ -186,8 +186,8 @@ export class UniformStore<
   /**
    * Updates every managed uniform buffer whose source uniforms have changed.
    *
-   * @param commandEncoder - Optional encoder used to record ordered uploads for
-   * changed uniform buffers.
+   * @param commandEncoder - Optional encoder parameter retained for call-site
+   * compatibility. Changed uniform buffers are written immediately.
    * @returns The first redraw reason encountered, or `false` if nothing changed.
    */
   updateUniformBuffers(commandEncoder?: CommandEncoder): false | string {
@@ -205,8 +205,8 @@ export class UniformStore<
   /**
    * Updates one managed uniform buffer if its corresponding block is dirty.
    *
-   * @param commandEncoder - Optional encoder used to record the upload instead
-   * of writing the buffer immediately.
+   * @param commandEncoder - Optional encoder parameter retained for call-site
+   * compatibility. Managed uniform buffers are written immediately.
    * @returns The redraw reason for the update, or `false` if no write occurred.
    */
   updateUniformBuffer(
@@ -224,15 +224,8 @@ export class UniformStore<
 
       uniformBuffer = this.uniformBuffers.get(uniformBufferName);
       if (uniformBuffer) {
-        if (commandEncoder) {
-          this.device.writeBufferViaCommandEncoder(
-            commandEncoder,
-            uniformBuffer,
-            uniformBufferData
-          );
-        } else {
-          uniformBuffer.write(uniformBufferData);
-        }
+        void commandEncoder;
+        uniformBuffer.write(uniformBufferData);
       }
 
       // logging - TODO - don't query the values unnecessarily

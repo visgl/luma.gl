@@ -4,7 +4,7 @@
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {CommandEncoder, Device, luma, PipelineFactory, ShaderFactory} from '@luma.gl/core';
-import {Model} from '@luma.gl/engine';
+import {Model, ShaderInputs} from '@luma.gl/engine';
 import {getWebGLTestDevice, getWebGPUTestDevice, getTestDevices} from '@luma.gl/test-utils';
 import {skin} from '@luma.gl/shadertools';
 import {pbrProjection} from '../../../shadertools/src/modules/lighting/pbr-material/pbr-projection';
@@ -69,6 +69,16 @@ const mockModule = {
   fs: '',
   getUniforms: (opts, context) => ({}),
   dependencies: []
+};
+
+const uniformModule = {
+  name: 'testUniforms',
+  vs: '',
+  fs: '',
+  dependencies: [],
+  defaultUniforms: {scale: 0},
+  uniformTypes: {scale: 'f32'},
+  getUniforms: (opts: {scale?: number} = {}) => ({scale: opts.scale ?? 0})
 };
 
 test('Model#construct/destruct', async t => {
@@ -266,6 +276,37 @@ test('Model#draw skips implicit predraw on WebGPU', async t => {
   framebuffer.destroy();
   model.destroy();
 
+  t.end();
+});
+
+test('Model#predraw updates WebGL uniform buffers without submit', async t => {
+  const webglDevice = await getWebGLTestDevice();
+
+  const shaderInputs = new ShaderInputs<{testUniforms: {scale: number}}>({
+    testUniforms: uniformModule
+  });
+  const model = new Model(webglDevice, {
+    id: 'webgl-predraw-uniform-test',
+    vs: DUMMY_VS,
+    fs: DUMMY_FS,
+    shaderInputs,
+    vertexCount: 1
+  });
+
+  shaderInputs.setProps({testUniforms: {scale: 2.5}});
+  model.predraw(webglDevice.commandEncoder);
+
+  const uniformBuffer = model.bindings.testUniformsUniforms;
+  const uniformData = await uniformBuffer.readAsync();
+  const uniformValues = new Float32Array(
+    uniformData.buffer,
+    uniformData.byteOffset,
+    uniformData.byteLength / Float32Array.BYTES_PER_ELEMENT
+  );
+
+  t.equal(uniformValues[0], 2.5, 'WebGL predraw writes managed uniform buffers before submit');
+
+  model.destroy();
   t.end();
 });
 

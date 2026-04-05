@@ -33,12 +33,11 @@ import type {
   QuerySetProps,
   DeviceProps,
   CommandEncoderProps,
-  CommandEncoder,
   PipelineLayoutProps,
   RenderPipeline,
   ShaderLayout
 } from '@luma.gl/core';
-import {Buffer, Device, DeviceFeatures} from '@luma.gl/core';
+import {Device, DeviceFeatures} from '@luma.gl/core';
 import {WebGPUBuffer} from './resources/webgpu-buffer';
 import {WebGPUTexture} from './resources/webgpu-texture';
 import {WebGPUExternalTexture} from './resources/webgpu-external-texture';
@@ -214,33 +213,6 @@ export class WebGPUDevice extends Device {
 
   override createCommandEncoder(props?: CommandEncoderProps): WebGPUCommandEncoder {
     return new WebGPUCommandEncoder(this, props);
-  }
-
-  override writeBufferViaCommandEncoder(
-    commandEncoder: CommandEncoder,
-    destinationBuffer: Buffer,
-    data: ArrayBufferLike | ArrayBufferView | SharedArrayBuffer,
-    byteOffset: number = 0
-  ): void {
-    const webgpuCommandEncoder = commandEncoder as WebGPUCommandEncoder;
-    const uploadData = ArrayBuffer.isView(data)
-      ? new Uint8Array(data.buffer, data.byteOffset, data.byteLength)
-      : new Uint8Array(data);
-    // WebGPU cannot encode CPU writes directly on a command encoder. Record the
-    // upload as a staging-buffer copy so it stays ordered with the draw/dispatch
-    // commands that will consume the destination buffer.
-    const uploadBuffer = this.createBuffer({
-      usage: Buffer.COPY_SRC,
-      data: uploadData
-    });
-
-    webgpuCommandEncoder.trackTransientUploadBuffer(uploadBuffer);
-    webgpuCommandEncoder.copyBufferToBuffer({
-      sourceBuffer: uploadBuffer,
-      destinationBuffer,
-      destinationOffset: byteOffset,
-      size: uploadData.byteLength
-    });
   }
 
   // WebGPU specifics

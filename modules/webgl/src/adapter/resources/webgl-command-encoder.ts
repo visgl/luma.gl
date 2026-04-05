@@ -17,7 +17,13 @@ import type {
   // TextureReadOptions,
 } from '@luma.gl/core';
 
-import {WEBGLCommandBuffer} from './webgl-command-buffer';
+import {
+  WEBGLCommandBuffer,
+  copyBufferToBufferImmediate,
+  copyBufferToTextureImmediate,
+  copyTextureToBufferImmediate,
+  copyTextureToTextureImmediate
+} from './webgl-command-buffer';
 import {WEBGLRenderPass} from './webgl-render-pass';
 import {WebGLDevice} from '../webgl-device';
 import {WEBGLQuerySet} from './webgl-query-set';
@@ -58,19 +64,19 @@ export class WEBGLCommandEncoder extends CommandEncoder {
   }
 
   copyBufferToBuffer(options: CopyBufferToBufferOptions): void {
-    this.commandBuffer.commands.push({name: 'copy-buffer-to-buffer', options});
+    copyBufferToBufferImmediate(this.device, options);
   }
 
   copyBufferToTexture(options: CopyBufferToTextureOptions) {
-    this.commandBuffer.commands.push({name: 'copy-buffer-to-texture', options});
+    copyBufferToTextureImmediate(this.device, options);
   }
 
   copyTextureToBuffer(options: CopyTextureToBufferOptions): void {
-    this.commandBuffer.commands.push({name: 'copy-texture-to-buffer', options});
+    copyTextureToBufferImmediate(this.device, options);
   }
 
   copyTextureToTexture(options: CopyTextureToTextureOptions): void {
-    this.commandBuffer.commands.push({name: 'copy-texture-to-texture', options});
+    copyTextureToTextureImmediate(this.device, options);
   }
 
   // clearTexture(options: ClearTextureOptions): void {
