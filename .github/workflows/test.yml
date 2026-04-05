@@ -74,14 +74,6 @@ jobs:
           fs.writeFileSync(coveragePath, `${records.join('\n')}\n`);
           NODE
 
-      - name: Build code
-        run: |
-          yarn build
-
-      - name: Run lint
-        run: |
-          yarn lint
-
       - name: Upload coverage to Coveralls
         uses: coverallsapp/github-action@09b709cf6a16e30b0808ba050c7a6e8a5ef13f8d # v1.2.5
         with:
@@ -113,6 +105,10 @@ jobs:
       - name: Build packages for example type declarations
         run: |
           yarn build
+
+      - name: Run lint
+        run: |
+          yarn lint
 
       - name: Typecheck examples
         run: |

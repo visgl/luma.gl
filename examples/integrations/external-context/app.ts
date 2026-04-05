@@ -266,7 +266,7 @@ export async function initializeExternalWebGLContext(
       positionsBuffer?.destroy();
       colorsBuffer?.destroy();
       model?.destroy();
-      uniformStore.destroy();
+      uniformStore?.destroy();
       device?.destroy();
     }
   };
