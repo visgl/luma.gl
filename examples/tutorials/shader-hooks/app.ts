@@ -57,17 +57,11 @@ Modifying shader behavior with shader hooks
   uniformBuffer1: Buffer;
   uniformBuffer2: Buffer;
 
-  uniformStore = new UniformStore<{
+  uniformStore: UniformStore<{
     app: {
       color: NumberArray;
     };
-  }>({
-    app: {
-      uniformTypes: {
-        color: 'vec3<f32>'
-      }
-    }
-  });
+  }>;
 
   constructor({device, animationLoop}: AnimationProps) {
     super();
@@ -78,10 +72,17 @@ Modifying shader behavior with shader hooks
 
     const shaderAssembler = ShaderAssembler.getDefaultShaderAssembler();
     shaderAssembler.addShaderHook('vs:OFFSET_POSITION(inout vec4 position)');
+    this.uniformStore = new UniformStore(device, {
+      app: {
+        uniformTypes: {
+          color: 'vec3<f32>'
+        }
+      }
+    });
 
     this.positionBuffer = device.createBuffer(new Float32Array([-0.3, -0.5, 0.3, -0.5, 0.0, 0.5]));
 
-    this.uniformBuffer1 = this.uniformStore.createUniformBuffer(device, 'app', {
+    this.uniformBuffer1 = this.uniformStore.createUniformBuffer('app', {
       app: {
         color: [1, 0, 0]
       }
@@ -90,7 +91,7 @@ Modifying shader behavior with shader hooks
     const uniformBufferData = this.uniformStore.getUniformBufferData('app');
     this.uniformBuffer1.write(uniformBufferData);
 
-    this.uniformBuffer2 = this.uniformStore.createUniformBuffer(device, 'app', {
+    this.uniformBuffer2 = this.uniformStore.createUniformBuffer('app', {
       app: {
         color: [0, 0, 1]
       }

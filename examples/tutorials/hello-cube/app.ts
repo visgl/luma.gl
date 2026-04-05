@@ -125,11 +125,11 @@ Rendered using the luma.gl <code>Model</code>, <code>CubeGeometry</code> and <co
   mvpMatrix = new Matrix4();
   viewMatrix = new Matrix4().lookAt({eye: eyePosition});
   model: Model;
-
-  uniformStore = new UniformStore<{app: AppUniforms}>({app});
+  uniformStore: UniformStore<{app: AppUniforms}>;
 
   constructor({device}: AnimationProps) {
     super();
+    this.uniformStore = new UniformStore(device, {app});
 
     const texture = new DynamicTexture(device, {
       usage: Texture.TEXTURE | Texture.RENDER_ATTACHMENT | Texture.COPY_DST,
@@ -150,7 +150,7 @@ Rendered using the luma.gl <code>Model</code>, <code>CubeGeometry</code> and <co
       fs: FS_GLSL,
       geometry: new CubeGeometry({indices: false}),
       bindings: {
-        app: this.uniformStore.getManagedUniformBuffer(device, 'app'),
+        app: this.uniformStore.getManagedUniformBuffer('app'),
         uTexture: texture
         // uTextureSampler: texture.sampler
       },
