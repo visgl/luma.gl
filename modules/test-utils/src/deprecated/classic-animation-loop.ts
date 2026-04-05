@@ -91,7 +91,10 @@ const DEFAULT_CLASSIC_ANIMATION_LOOP_PROPS: Required<ClassicAnimationLoopProps> 
   onInitialize: () => ({}),
   onRender: () => {},
   onFinalize: () => {},
-  onError: error => console.error(error), // eslint-disable-line no-console
+  onError: error => {
+    // biome-ignore lint/suspicious/noConsole: deprecated loop keeps console fallback for uncaught render errors.
+    console.error(error);
+  },
 
   device: null,
   // debug: true,

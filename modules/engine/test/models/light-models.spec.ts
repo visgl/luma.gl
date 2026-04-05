@@ -4,7 +4,7 @@
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {Matrix4} from '@math.gl/core';
-import {getTestDevices, getWebGLTestDevice} from '../../../test-utils/src';
+import {getWebGLTestDevice} from '../../../test-utils/src';
 import {
   DirectionalLightModel,
   PointLightModel,
@@ -67,6 +67,7 @@ const invalidPointLightModelProps: PointLightModelProps = {
   projectionMatrix: PROJECTION_MATRIX,
   viewMatrix: VIEW_MATRIX
 };
+void invalidPointLightModelProps;
 
 test('Light models filter mixed Light[] input', async t => {
   const device = await getWebGLTestDevice();

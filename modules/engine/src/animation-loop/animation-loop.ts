@@ -44,7 +44,10 @@ export class AnimationLoop {
     onInitialize: async () => null,
     onRender: () => {},
     onFinalize: () => {},
-    onError: error => console.error(error), // eslint-disable-line no-console
+    onError: error => {
+      // biome-ignore lint/suspicious/noConsole: default fallback error reporting for app loops.
+      console.error(error);
+    },
 
     stats: undefined!,
 

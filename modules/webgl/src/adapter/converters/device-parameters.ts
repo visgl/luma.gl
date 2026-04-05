@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {CompareFunction, StencilOperation, BlendOperation, BlendFactor} from '@luma.gl/core';
+import type {CompareFunction, StencilOperation} from '@luma.gl/core';
 import {Device, log, Parameters, PolygonMode, ProvokingVertex} from '@luma.gl/core';
 import {GL} from '@luma.gl/webgl/constants';
 import type {
@@ -447,9 +447,7 @@ function mapBoolean(parameter: string, value: boolean): boolean {
 /** Returns true if given object is empty, false otherwise. */
 function isObjectEmpty(obj: object): boolean {
   let isEmpty = true;
-  // @ts-ignore key is unused
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  for (const key in obj) {
+  for (const _key in obj) {
     isEmpty = false;
     break;
   }

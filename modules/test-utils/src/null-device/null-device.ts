@@ -69,7 +69,7 @@ export class NullDevice extends Device {
 
     const canvasContextProps = Device._getCanvasContextProps(props);
     this.canvasContext = new NullCanvasContext(this, canvasContextProps);
-    this.lost = new Promise(resolve => {});
+    this.lost = new Promise(_resolve => {});
     this.commandEncoder = new NullCommandEncoder(this, {id: 'null-command-encoder'});
   }
 

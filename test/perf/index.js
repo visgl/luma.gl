@@ -7,7 +7,7 @@ const {_enableDOMLogging} = require('@probe.gl/test-utils');
 const PERF_TEST_CASES = require('./performance-test-cases').default;
 
 _enableDOMLogging({
-  getStyle: message => ({
+  getStyle: _message => ({
     background: '#fff',
     position: 'absolute',
     top: 0
@@ -25,9 +25,14 @@ new PerformanceTestRunner({
   .run({
     timeout: 5000,
     maxFramesToRender: 120,
-    onTestStart: testCase => console.log(testCase.name),
-    onTestPass: (testCase, result) =>
+    onTestStart: testCase => {
+      // biome-ignore lint/suspicious/noConsole: perf harness streams progress to stdout.
+      console.log(testCase.name);
+    },
+    onTestPass: (_testCase, result) =>
+      // biome-ignore lint/suspicious/noConsole: perf harness streams progress to stdout.
       console.log(`perf: ${result.framesRendered} frames at ${result.fps} fps`),
-    onTestFail: (testCase, result) =>
+    onTestFail: (_testCase, result) =>
+      // biome-ignore lint/suspicious/noConsole: perf harness streams progress to stdout.
       console.log(`perf: ${result.framesRendered} frames at ${result.fps} fps`)
   });

@@ -10,17 +10,17 @@ import {Framebuffer} from '@luma.gl/core';
 const TEST_CASES = [
   {
     title: 'Default attachments',
-    getOpts: device => ({}),
+    getOpts: () => ({}),
     pass: false
   },
   {
     title: 'No attachments',
-    getOpts: device => ({attachments: {}}),
+    getOpts: () => ({attachments: {}}),
     pass: false
   },
   {
     title: 'Autocreated Depth Renderbuffer + Color Texture',
-    getOpts: device => ({
+    getOpts: () => ({
       colorAttachments: ['rgba8unorm'],
       depthStencilAttachment: 'depth16unorm'
     }),

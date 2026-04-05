@@ -127,8 +127,7 @@ export function resetGLParameters(gl: WebGL2RenderingContext): void {
 
 // Returns true if given object is empty, false otherwise.
 function isObjectEmpty(object: Record<string, unknown>): boolean {
-  // @ts-ignore dummy key variable
-  for (const key in object) {
+  for (const _key in object) {
     return false;
   }
   return true;

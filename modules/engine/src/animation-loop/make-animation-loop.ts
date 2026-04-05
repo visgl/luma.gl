@@ -43,6 +43,7 @@ export function makeAnimationLoop(
         // Any async loading can be handled here
         return await renderLoop?.onInitialize(animationProps);
       } catch (error) {
+        // biome-ignore lint/suspicious/noConsole: fallback logging before rendering the in-canvas error banner.
         console.error(error);
         setError(animationProps.animationLoop.device, error as Error);
         return null;

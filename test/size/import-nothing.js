@@ -1,3 +1,4 @@
 import {Model, AnimationLoop} from '@luma.gl/engine';
 
-console.log(Model, AnimationLoop); // eslint-disable-line
+// biome-ignore lint/suspicious/noConsole: size test verifies imports without runtime use.
+console.log(Model, AnimationLoop);
