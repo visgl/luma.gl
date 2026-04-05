@@ -2,7 +2,15 @@ import {TypedArray, TypedArrayConstructor} from '@math.gl/types';
 
 // import {DataType} from '../types/vertex-formats';
 // type Omit<DataType, 'float16'> unfortunately breaks Typescript inferance
-type DataType = 'uint8' | 'sint8' | 'uint16' | 'sint16' | 'uint32' | 'sint32' | 'float16' | 'float32';
+type DataType =
+  | 'uint8'
+  | 'sint8'
+  | 'uint16'
+  | 'sint16'
+  | 'uint32'
+  | 'sint32'
+  | 'float16'
+  | 'float32';
 type DataTypeNorm = 'unorm8' | 'snorm8' | 'unorm16' | 'snorm16';
 
 export function getDataTypeFromTypedArray(

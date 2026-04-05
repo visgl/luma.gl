@@ -4,8 +4,8 @@
 import {getDataTypeFromTypedArray, getTypedArrayFromDataType} from '../utils/vertex-data-types';
 import {Device, Buffer, SignedDataType} from '@luma.gl/core';
 import type {TypedArray, TypedArrayConstructor} from '@math.gl/types';
-import { bufferPool } from '../utils/buffer-pool';
-import type { Operation } from './operation';
+import {bufferPool} from '../utils/buffer-pool';
+import type {Operation} from './operation';
 
 export type GPUTableProps = {
   id?: string;
@@ -59,13 +59,26 @@ export class GPUTable {
   private _buffer?: Buffer;
 
   /** Construct a new GPUTable from a CPU buffer */
-  static fromArray(value: number[], props: Partial<Pick<GPUTableProps, 'type' | 'size' | 'offset' | 'stride'>>): GPUTable;
-  static fromArray(value: TypedArray, props: Partial<Pick<GPUTableProps, 'type' | 'size' | 'offset' | 'stride'>>): GPUTable;
-  static fromArray(value: TypedArray | number[], {type, size = 1, offset = 0, stride = 0}: Partial<Pick<GPUTableProps, 'type' | 'size' | 'offset' | 'stride'>>): GPUTable {
+  static fromArray(
+    value: TypedArray | number[],
+    {
+      type,
+      size = 1,
+      offset = 0,
+      stride = 0
+    }: Partial<Pick<GPUTableProps, 'type' | 'size' | 'offset' | 'stride'>>
+  ): GPUTable {
     if (Array.isArray(value)) {
       type = type || 'float32';
       const ArrayType = getTypedArrayFromDataType(type);
       value = new ArrayType(value);
+    } else if (value instanceof Float64Array) {
+      // This is not really supported by GPU buffer, treat it as 2 uints
+      type = 'uint32';
+      size *= 2;
+      offset *= 2;
+      stride *= 2;
+      value = new Uint32Array(value.buffer);
     } else {
       type = type || getDataTypeFromTypedArray(value);
     }
@@ -96,7 +109,16 @@ export class GPUTable {
   // static from(table: Table, columnName: string | number): GPUTable
 
   constructor(props: GPUTableProps) {
-    const {id, type, size = 1, offset = 0, stride, value, source = null, isConstant = false} = props;
+    const {
+      id,
+      type,
+      size = 1,
+      offset = 0,
+      stride,
+      value,
+      source = null,
+      isConstant = false
+    } = props;
     if (!source && !value) {
       throw new Error('OperationResource must have a value source');
     }
@@ -178,9 +200,10 @@ export class GPUTable {
       // @ts-expect-error TypedArrayConstructor type does not have (buffer, offset, length) signature
       return new ValueType(buffer, offset + stride * startRow, (endRow - startRow) * size);
     }
-    
+
     const bytes = new Uint8Array(width * (endRow - startRow));
-    let i0 = offset + startRow * stride, i1 = 0;
+    let i0 = offset + startRow * stride,
+      i1 = 0;
     for (let y = startRow; y < endRow; y++) {
       for (let x = 0; x < width; x++) {
         bytes[i1++] = bytes[i0 + x];

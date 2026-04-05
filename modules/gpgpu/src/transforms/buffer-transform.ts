@@ -58,7 +58,8 @@ export class BufferTransform {
       topology: props.topology || 'point-list',
       varyings: props.outputs || props.varyings,
       ...props,
-      bufferMode: props.feedbackBufferMode === 'interleaved' ? GL.INTERLEAVED_ATTRIBS : GL.SEPARATE_ATTRIBS,
+      bufferMode:
+        props.feedbackBufferMode === 'interleaved' ? GL.INTERLEAVED_ATTRIBS : GL.SEPARATE_ATTRIBS
     });
 
     this.transformFeedback = this.device.createTransformFeedback({

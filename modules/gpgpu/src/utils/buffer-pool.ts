@@ -19,7 +19,7 @@ class BufferPool {
     const i = pool ? pool.findIndex(b => b.byteLength >= byteLength) : -1;
     if (i < 0) {
       return device.createBuffer({
-        usage: Buffer.VERTEX | Buffer.STORAGE,
+        usage: Buffer.VERTEX | Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
         byteLength: byteLength * this.overAlloc
       });
     }

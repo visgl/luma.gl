@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {Buffer} from '@luma.gl/core';
 import {Computation} from '@luma.gl/gpgpu';
+import {getWebGPUTestDevice} from '@luma.gl/test-utils';
+import {expect, test} from 'vitest';
 
 const source = /* WGSL*/ `\
 @group(0) @binding(0) var<storage, read_write> data: array<i32>;
@@ -18,20 +18,23 @@ const source = /* WGSL*/ `\
 }
 `;
 
-test.skip('Computation#construct/delete', async t => {
+test.skip('Computation#construct/delete', async () => {
   const webgpuDevice = await getWebGPUTestDevice();
   if (webgpuDevice) {
     const computation = new Computation(webgpuDevice, {source});
-    t.ok(computation instanceof Computation, 'ComputePipeline construction successful');
+    expect(computation instanceof Computation, 'ComputePipeline construction successful').toBe(
+      true
+    );
     computation.destroy();
-    t.ok(computation instanceof Computation, 'ComputePipeline delete successful');
+    expect(computation instanceof Computation, 'ComputePipeline delete successful').toBe(true);
     computation.destroy();
-    t.ok(computation instanceof Computation, 'ComputePipeline repeated delete successful');
+    expect(computation instanceof Computation, 'ComputePipeline repeated delete successful').toBe(
+      true
+    );
   }
-  t.end();
 });
 
-test('Computation#compute', async t => {
+test('Computation#compute', async () => {
   const webgpuDevice = await getWebGPUTestDevice();
   if (webgpuDevice) {
     const computation = new Computation(webgpuDevice, {
@@ -49,7 +52,7 @@ test('Computation#compute', async t => {
 
     workBuffer.write(new Int32Array([2]));
     const inputData = new Int32Array(await workBuffer.readAsync());
-    t.equal(inputData[0], 2, 'Input data is correct');
+    expect(inputData[0], 'Input data is correct').toBe(2);
 
     computation.setBindings({data: workBuffer});
 
@@ -60,9 +63,8 @@ test('Computation#compute', async t => {
     webgpuDevice.submit();
 
     const computedData = new Int32Array(await workBuffer.readAsync());
-    t.equal(computedData[0], 4, 'Computed data is correct');
+    expect(computedData[0], 'Computed data is correct').toBe(4);
 
     computation.destroy();
   }
-  t.end();
 });

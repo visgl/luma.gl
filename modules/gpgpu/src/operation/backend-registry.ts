@@ -11,19 +11,22 @@ export type BackendModule = Record<string, OperationHandler>;
  * Allows for tree-shaking, bundle-splitting, etc. controlled by the client */
 class BackendRegistry {
   private _loading: Promise<BackendModule>[] = [];
-  private _modules: { [deviceType: string]: BackendModule } = {};
+  private _modules: {[deviceType: string]: BackendModule} = {};
 
   add(deviceType: string, moduleOrPromise: BackendModule | Promise<BackendModule>) {
     const loader = Promise.resolve(moduleOrPromise);
     const pendingLoaders = this._loading;
     pendingLoaders.push(loader);
-    loader.then(module => {
-      this._modules[deviceType] = module;
-    }).catch(ex => {
-      log.error(`Failed to register ${deviceType} backend: ${ex}`)();
-    }).finally(() => {
-      pendingLoaders.splice(pendingLoaders.indexOf(loader), 1);
-    });
+    loader
+      .then(module => {
+        this._modules[deviceType] = module;
+      })
+      .catch(ex => {
+        log.error(`Failed to register ${deviceType} backend: ${ex}`)();
+      })
+      .finally(() => {
+        pendingLoaders.splice(pendingLoaders.indexOf(loader), 1);
+      });
   }
 
   async get(deviceType: string, operationName: string): Promise<OperationHandler> {

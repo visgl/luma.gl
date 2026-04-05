@@ -2,56 +2,69 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import { SignedDataType, Buffer, BufferLayout } from '@luma.gl/core';
-import { BufferTransform } from '../../transforms/buffer-transform';
-import { ShaderModule } from '@luma.gl/shadertools';
-import { GPUTable } from "../../operation/gpu-table";
-import { bufferPool } from '../../utils/buffer-pool';
+import {SignedDataType, Buffer, BufferLayout} from '@luma.gl/core';
+import {BufferTransform} from '../../transforms/buffer-transform';
+import {ShaderModule} from '@luma.gl/shadertools';
+import {GPUTable} from '../../operation/gpu-table';
+import {bufferPool} from '../../utils/buffer-pool';
 
 type QualifedVectorSize = 1 | 2 | 3 | 4;
 
-export function runBufferTransform({module, elementWise = false, inputs, output, outputBuffer}: {
-  /** contains signature
-   * void execute(in float x[], in float y[], ..., inout float result[]) {}
-   */
+export function runBufferTransform({
+  module,
+  elementWise = false,
+  inputs,
+  output,
+  operationType = output.type,
+  outputBuffer
+}: {
   module: ShaderModule;
   elementWise?: boolean;
   inputs: {[name: string]: GPUTable};
   output: GPUTable;
+  /** If specified, coerce all parameters to operation to this type.
+   * Default to output's data type.
+   */
+  operationType?: SignedDataType;
   outputBuffer: Buffer;
 }): void {
   const device = outputBuffer.device;
   const outputModule = getOutputModule('result', output.type, output.size);
-  const modules: ShaderModule[] = [
-    module,
-    outputModule
-  ];
+  const modules: ShaderModule[] = [module, outputModule];
   const bufferLayout: BufferLayout[] = [];
   const inputBuffers: {[name: string]: Buffer} = {};
-  const outElementType = getAttributeType(output.type, 1);
+  const outputType = getAttributeType(output.type, 1);
+  const castToType = getAttributeType(operationType, 1);
   let inputBlock = '';
 
   let placeholderBuffer: Buffer | null = null;
 
+  const defines: Record<string, string> = {
+    TYPE: castToType,
+    RESULT_LEN: output.size.toString()
+  };
+
   for (const name in inputs) {
     const input = inputs[name];
-    modules.push(getInputModule(name, input.type, input.size, output.type));
+    modules.push(getInputModule(name, input.type, input.size, operationType));
     bufferLayout.push(getInputBufferLayout(name, input));
     if (input instanceof GPUTable) {
       inputBuffers[name] = input.buffer;
     } else {
-      placeholderBuffer = placeholderBuffer || bufferPool.createOrReuse(device, outputBuffer.byteLength);
+      placeholderBuffer =
+        placeholderBuffer || bufferPool.createOrReuse(device, outputBuffer.byteLength);
       inputBuffers[name] = placeholderBuffer;
     }
 
     inputBlock += `TYPE ${name}[${input.size}]; get_${name}(${name});\n`;
+    defines[`${name.toUpperCase()}_LEN`] = input.size.toString();
   }
 
   let computeResult = '';
 
   if (elementWise) {
     for (let i = 0; i < output.size; i++) {
-      const zero = outElementType === 'float' ? '0.' : outElementType === 'uint' ? '0u' : '0';
+      const zero = castToType === 'float' ? '0.' : castToType === 'uint' ? '0u' : '0';
       const elementInputs = Object.keys(inputs).map(name => {
         if (i < inputs[name].size) return `${name}[${i}]`;
         return zero;
@@ -67,7 +80,7 @@ export function runBufferTransform({module, elementWise = false, inputs, output,
 
 void main() {
 ${inputBlock}
-TYPE result[${output.size}];
+${outputType} result[${output.size}];
 ${computeResult}
 set_result(result);
 }
@@ -75,18 +88,18 @@ set_result(result);
 
   const transform = new BufferTransform(device, {
     vs: vertexShader,
-    defines: {
-      // @ts-expect-error defines can only be boolean?
-      TYPE: outElementType,
-    },
+    // @ts-expect-error defines can only be boolean?
+    defines,
     modules,
     bufferLayout,
     vertexCount: 1,
     instanceCount: output.length,
     attributes: inputBuffers,
-    bufferMode: 'interleaved',
+    feedbackBufferMode: 'interleaved',
     outputs: outputModule.varyings
   });
+
+  // console.log(transform.model.pipeline.vs.source);
 
   transform.run({
     inputBuffers: inputBuffers,
@@ -132,12 +145,12 @@ function getInputModule(
     const inDataType = getAttributeType(inType, size);
 
     attributeBlock += `in ${inDataType} a${name}_${i};\n`;
-    
+
     for (let j = 0; j < size; j++) {
       let element = `a${name}_${i}`;
       if (size > 1) {
         // access element
-        element = `${element}[${j}]`
+        element = `${element}[${j}]`;
       }
       if (inType !== outType) {
         // cast type
@@ -156,7 +169,7 @@ void get_${name}(out TYPE v[${inSize}]) {
 
   return {
     name,
-    vs,
+    vs
   } as ShaderModule;
 }
 
@@ -171,10 +184,15 @@ void get_${name}(out TYPE v[${inSize}]) {
   }
 */
 /** Get a shader module that writes an array into varyings */
-function getOutputModule(name: string, outType: SignedDataType, outSize: number): ShaderModule & {
+function getOutputModule(
+  name: string,
+  outType: SignedDataType,
+  outSize: number
+): ShaderModule & {
   varyings: string[];
 } {
   const varyings: string[] = [];
+  const outputType = getAttributeType(outType, 1);
   let varyingBlock = '';
   let funcBlock = '';
 
@@ -189,12 +207,12 @@ function getOutputModule(name: string, outType: SignedDataType, outSize: number)
 
   const vs = `
 ${varyingBlock}
-void set_${name}(in TYPE v[${outSize}]) {
+void set_${name}(in ${outputType} v[${outSize}]) {
   ${funcBlock}
 }
 `;
 
-return { name, vs, varyings } as ShaderModule & {varyings: string[]};
+  return {name, vs, varyings} as ShaderModule & {varyings: string[]};
 }
 
 /** Returns BufferLayout that corresponds with the shader attributes from getInputModule */
@@ -229,7 +247,7 @@ function getAttributeType(type: SignedDataType, size: QualifedVectorSize): strin
     case 'sint16':
     case 'sint32':
       return size === 1 ? 'int' : `ivec${size}`;
-    
+
     default:
       return size === 1 ? 'float' : `vec${size}`;
   }
