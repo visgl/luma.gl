@@ -4,7 +4,7 @@
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {Matrix4} from '@math.gl/core';
-import {getWebGLTestDevice} from '../../../test-utils/src';
+import {getTestDevices, getWebGLTestDevice} from '../../../test-utils/src';
 import {
   DirectionalLightModel,
   PointLightModel,
