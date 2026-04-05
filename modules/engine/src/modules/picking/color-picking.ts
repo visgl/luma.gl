@@ -180,9 +180,9 @@ vec4 picking_filterColor(vec4 color) {
 `;
 
 /**
- * Provides support for object-index based color picking and highlighting.
+ * Provides support for RGBA color-encoded picking and highlighting.
  */
-export const picking = {
+export const colorPicking = {
   ...pickingUniforms,
   name: 'picking',
   source,

@@ -79,15 +79,18 @@ This gives WebGPU applications a real command-stream abstraction. Ordering, batc
 
 ### WebGL
 
-On WebGL, luma.gl provides a best-effort compatibility layer.
+On WebGL, luma.gl provides a best-effort compatibility layer with immediate execution semantics.
 
-- copy commands are recorded and replayed when you submit the command buffer
-- render passes are still effectively immediate-mode
-- state changes and clears happen as the pass is used, not as a native deferred GPU command stream
+- render passes execute immediately as draw calls are encoded
+- copy commands execute immediately when the encoder method is called
+- `finish()` and `submit()` remain available for portable code structure, but they do not delay
+  previously encoded WebGL work
+- `submit()` mainly finalizes default-encoder bookkeeping, presentation, and timing-query handling
 
 So the portable rule is:
 
 - use `CommandEncoder` when you want a cross-backend way to express copy work and pass structure
+- assume WebGL work becomes visible during encoding, not at `submit()`
 - do not assume WebGL has the same deferred execution model as WebGPU
 
 For rendering, WebGL is still conceptually immediate even though luma.gl exposes the same surface API.
@@ -178,6 +181,7 @@ If both ends of the operation already live on the GPU, command encoding is typic
 - render + compute + copy pipelines in one ordered sequence
 
 This is especially true on WebGPU, where the encoder is the real unit of command recording.
+On WebGL, the same API preserves ordering structure but executes immediately.
 
 ### Avoid unnecessary buffer staging for texture uploads
 
@@ -201,7 +205,7 @@ On WebGL, prefer the simpler API unless you specifically need the portable comma
 
 - use resource methods for straightforward uploads and readbacks
 - use `CommandEncoder` for copy operations and portable code structure
-- do not treat WebGL command encoding as a promise of native deferred execution
+- do not treat WebGL command encoding as a promise of deferred execution at `submit()`
 
 ## Related pages
 

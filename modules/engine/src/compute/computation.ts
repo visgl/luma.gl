@@ -81,7 +81,7 @@ export class Computation {
 
     pipelineFactory: undefined!,
     shaderFactory: undefined!,
-    shaderAssembler: ShaderAssembler.getDefaultShaderAssembler(),
+    shaderAssembler: undefined!,
 
     debugShaders: undefined!
   };
@@ -123,7 +123,11 @@ export class Computation {
       throw new Error('Computation is only supported in WebGPU');
     }
 
-    this.props = {...Computation.defaultProps, ...props};
+    this.props = {
+      ...Computation.defaultProps,
+      ...props,
+      shaderAssembler: props.shaderAssembler || ShaderAssembler.getDefaultShaderAssembler('wgsl')
+    };
     props = this.props;
     this.id = props.id || uid('model');
     this.device = device;

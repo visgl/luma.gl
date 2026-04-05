@@ -272,6 +272,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     });
 
     this.renderModel.draw(renderPass);
+    renderPass.end();
 
     // if (pickPosition) {
     //   // use the center pixel location in device pixel range

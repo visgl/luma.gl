@@ -21,8 +21,8 @@ import {preprocess} from './preprocessor/preprocessor';
  * Supports setting of default modules and hooks.
  */
 export class ShaderAssembler {
-  /** Default ShaderAssembler instance */
-  static defaultShaderAssembler: ShaderAssembler;
+  /** Default ShaderAssembler instances keyed by shader language. */
+  static defaultShaderAssemblers: Partial<Record<'glsl' | 'wgsl', ShaderAssembler>> = {};
   /** Hook functions */
   private readonly _hookFunctions: any[] = [];
   /** Shader modules */
@@ -31,13 +31,14 @@ export class ShaderAssembler {
   private readonly _wgslBindingRegistry = new Map<string, number>();
 
   /**
-   * A default shader assembler instance - the natural place to register default modules and hooks
-   * @returns
+   * Returns the shared default assembler for a shader language.
+   *
+   * GLSL and WGSL maintain separate default assembler instances so language-specific hooks and
+   * default modules cannot leak across shader backends.
    */
-  static getDefaultShaderAssembler(): ShaderAssembler {
-    ShaderAssembler.defaultShaderAssembler =
-      ShaderAssembler.defaultShaderAssembler || new ShaderAssembler();
-    return ShaderAssembler.defaultShaderAssembler;
+  static getDefaultShaderAssembler(shaderLanguage: 'glsl' | 'wgsl' = 'glsl'): ShaderAssembler {
+    ShaderAssembler.defaultShaderAssemblers[shaderLanguage] ||= new ShaderAssembler();
+    return ShaderAssembler.defaultShaderAssemblers[shaderLanguage]!;
   }
 
   /**

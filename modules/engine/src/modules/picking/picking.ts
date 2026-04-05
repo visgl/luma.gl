@@ -6,8 +6,8 @@ import type {ShaderModule} from '@luma.gl/shadertools';
 
 import type {PickingBindings, PickingProps, PickingUniforms} from './picking-uniforms';
 import {pickingUniforms} from './picking-uniforms';
-import {picking as colorPicking} from './color-picking';
-import {picking as indexPicking} from './index-picking';
+import {colorPicking} from './color-picking';
+import {indexPicking} from './index-picking';
 
 /**
  * Unified object-picking shader module.

@@ -12,6 +12,10 @@ Simply create a `RenderPass` and start rendering.
   renderPass.end();
 ```
 
+Call `device.submit()` after the frame if you want portable end-of-frame behavior. On WebGPU this
+submits deferred work to the queue. On WebGL the rendering work already executed during encoding,
+so `submit()` mainly finalizes presentation/bookkeeping.
+
 `device.getDefaultCanvasContext().getDefaultFramebuffer()` returns a special framebuffer that lets you render to screen (into the swap chain). This framebuffer is used by default when a `device.beginRenderPass()` is called without providing a `framebuffer`, equivalent to: 
 
 ```typescript

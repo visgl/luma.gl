@@ -15,6 +15,10 @@ Hooks act like named callbacks within shader code. The base vertex shader calls
 By attaching different modules to each model, one triangle is nudged left while
 the other is pushed right.
 
+The default shader assembler is now maintained per shader language, so GLSL hook registrations
+should use `ShaderAssembler.getDefaultShaderAssembler('glsl')` and WGSL hook registrations should
+use `ShaderAssembler.getDefaultShaderAssembler('wgsl')`.
+
 The complete source for this example is shown below:
 
 ```typescript
@@ -90,7 +94,7 @@ class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       throw new Error('This demo is only implemented for WebGL2');
     }
 
-    const shaderAssembler = ShaderAssembler.getDefaultShaderAssembler();
+    const shaderAssembler = ShaderAssembler.getDefaultShaderAssembler('glsl');
     shaderAssembler.addShaderHook('vs:OFFSET_POSITION(inout vec4 position)');
 
     this.positionBuffer = device.createBuffer(new Float32Array([-0.3, -0.5, 0.3, -0.5, 0.0, 0.5]));

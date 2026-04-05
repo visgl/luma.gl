@@ -4,7 +4,7 @@
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {CommandEncoder, Device, luma, PipelineFactory, ShaderFactory} from '@luma.gl/core';
-import {Model, ShaderInputs} from '@luma.gl/engine';
+import {Geometry, Model, ShaderInputs} from '@luma.gl/engine';
 import {getWebGLTestDevice, getWebGPUTestDevice, getTestDevices} from '@luma.gl/test-utils';
 import {skin} from '@luma.gl/shadertools';
 import {pbrProjection} from '../../../shadertools/src/modules/lighting/pbr-material/pbr-projection';
@@ -306,6 +306,108 @@ test('Model#predraw updates WebGL uniform buffers without submit', async t => {
 
   t.equal(uniformValues[0], 2.5, 'WebGL predraw writes managed uniform buffers before submit');
 
+  model.destroy();
+  t.end();
+});
+
+test('Model#draw binds all instanced vertex buffers on WebGPU', async t => {
+  const webgpuDevice = await getWebGPUTestDevice();
+
+  if (!webgpuDevice) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const geometry = new Geometry({
+    topology: 'triangle-list',
+    attributes: {
+      positions: {
+        size: 3,
+        value: new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0])
+      },
+      normals: {
+        size: 3,
+        value: new Float32Array([0, 0, 1, 0, 0, 1, 0, 0, 1])
+      }
+    }
+  });
+
+  const model = new Model(webgpuDevice, {
+    id: 'webgpu-instanced-vertex-buffer-test',
+    source: /* WGSL */ `
+@group(0) @binding(auto) var<uniform> app : vec4<f32>;
+
+struct VertexInputs {
+  @builtin(instance_index) instanceIndex : u32,
+  @location(0) positions : vec3<f32>,
+  @location(1) normals : vec3<f32>,
+  @location(2) instanceOffsets : vec2<f32>,
+  @location(3) instanceColors : vec4<f32>,
+}
+
+struct VertexOutputs {
+  @builtin(position) position : vec4<f32>,
+  @location(0) color : vec4<f32>,
+}
+
+@vertex
+fn vertexMain(inputs: VertexInputs) -> VertexOutputs {
+  var outputs : VertexOutputs;
+  outputs.position = vec4<f32>(
+    inputs.positions.xy + inputs.instanceOffsets,
+    inputs.positions.z,
+    1.0
+  );
+  outputs.color = inputs.instanceColors;
+  return outputs;
+}
+
+@fragment
+fn fragmentMain(inputs: VertexOutputs) -> @location(0) vec4<f32> {
+  return inputs.color + vec4<f32>(app.x, 0.0, 0.0, 0.0);
+}
+    `,
+    geometry,
+    shaderInputs: new ShaderInputs({
+      app: {
+        name: 'app',
+        uniformTypes: {
+          value: 'f32'
+        },
+        getUniforms: (props: {value?: number} = {}) => ({value: props.value ?? 0})
+      }
+    }),
+    bufferLayout: [
+      {name: 'instanceOffsets', format: 'float32x2'},
+      {name: 'instanceColors', format: 'float32x4'}
+    ],
+    attributes: {
+      instanceOffsets: webgpuDevice.createBuffer(new Float32Array([0, 0, 0.5, 0.5])),
+      instanceColors: webgpuDevice.createBuffer(new Float32Array([1, 0, 0, 1, 0, 1, 0, 1]))
+    },
+    instanceCount: 2,
+    vertexCount: 3
+  });
+
+  t.ok((model.vertexArray as any).attributes[2], 'WebGPU slot 2 buffer is set');
+  t.ok((model.vertexArray as any).attributes[3], 'WebGPU slot 3 buffer is set');
+
+  const framebuffer = webgpuDevice.createFramebuffer({
+    width: 1,
+    height: 1,
+    colorAttachments: ['rgba8unorm']
+  });
+  const renderPass = webgpuDevice.beginRenderPass({
+    clearColor: [0, 0, 0, 0],
+    framebuffer
+  });
+
+  t.ok(model.draw(renderPass), 'WebGPU instanced model draws successfully');
+
+  renderPass.end();
+  webgpuDevice.submit();
+  framebuffer.destroy();
   model.destroy();
   t.end();
 });

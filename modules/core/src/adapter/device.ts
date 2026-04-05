@@ -726,7 +726,13 @@ or create a device with the 'debug: true' prop.`;
   /** Creates a presentation context for a destination canvas. WebGL requires the default canvas context to use an OffscreenCanvas. */
   abstract createPresentationContext(props?: PresentationContextProps): PresentationContext;
 
-  /** Call after rendering a frame (necessary e.g. on WebGL OffscreenCanvas) */
+  /**
+   * Submits encoded work for execution and/or finalizes a frame.
+   *
+   * On WebGPU, this submits deferred command buffers to the GPU queue. On WebGL, command encoding
+   * is immediate, so `submit()` primarily finalizes frame presentation bookkeeping and rotates the
+   * default command encoder used for profiling and convenience rendering paths.
+   */
   abstract submit(commandBuffer?: CommandBuffer): void;
 
   // Resource creation

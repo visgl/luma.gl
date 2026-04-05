@@ -126,8 +126,8 @@ export {
   resolvePickingBackend
 } from './modules/picking/picking-manager';
 export {picking} from './modules/picking/picking';
-export {picking as indexPicking} from './modules/picking/index-picking';
-export {picking as colorPicking} from './modules/picking/color-picking';
+export {indexPicking} from './modules/picking/index-picking';
+export {colorPicking} from './modules/picking/color-picking';
 
 export {
   requestAnimationFramePolyfill,

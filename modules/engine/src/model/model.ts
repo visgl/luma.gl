@@ -168,7 +168,7 @@ export class Model {
     pipelineFactory: undefined!,
     shaderFactory: undefined!,
     transformFeedback: undefined!,
-    shaderAssembler: ShaderAssembler.getDefaultShaderAssembler(),
+    shaderAssembler: undefined!,
 
     debugShaders: undefined!,
     disableWarnings: undefined!
@@ -265,7 +265,14 @@ export class Model {
   }
 
   constructor(device: Device, props: ModelProps) {
-    this.props = {...Model.defaultProps, ...props};
+    const usesWGSL = Boolean(props.source);
+    this.props = {
+      ...Model.defaultProps,
+      ...props,
+      shaderAssembler:
+        props.shaderAssembler ||
+        ShaderAssembler.getDefaultShaderAssembler(usesWGSL ? 'wgsl' : 'glsl')
+    };
     props = this.props;
     this.id = props.id || uid('model');
     this.device = device;
@@ -716,14 +723,19 @@ export class Model {
       )();
     }
 
-    // ensure bufferLayout order matches source layout so we bind
-    // the correct buffers to the correct indices in webgpu.
-    this.bufferLayout = sortedBufferLayoutByShaderSourceLocations(
+    // Keep WebGPU buffer-slot assignment aligned with the active vertex array.
+    const activeBufferLayout =
+      this.device.type === 'webgpu' && this.vertexArray
+        ? this.vertexArray.props.bufferLayout
+        : sortedBufferLayoutByShaderSourceLocations(this.pipeline.shaderLayout, this.bufferLayout);
+    if (this.device.type !== 'webgpu') {
+      this.bufferLayout = activeBufferLayout;
+    }
+    const bufferLayoutHelper = new BufferLayoutHelper(activeBufferLayout);
+    const logicalBufferSlots = getLogicalBufferSlots(
       this.pipeline.shaderLayout,
-      this.bufferLayout
+      activeBufferLayout
     );
-    const bufferLayoutHelper = new BufferLayoutHelper(this.bufferLayout);
-    const logicalBufferSlots = getLogicalBufferSlots(this.pipeline.shaderLayout, this.bufferLayout);
 
     // Check if all buffers have a layout
     for (const [bufferName, buffer] of Object.entries(buffers)) {

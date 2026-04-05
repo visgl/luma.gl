@@ -24,8 +24,11 @@ export type CommandBufferProps = ResourceProps & {};
 
 /**
  * Represents the finished contents of exactly one CommandEncoder. Backends may store native
- * command buffers or replayable command lists internally, but submission must preserve the same
- * recorded command ordering.
+ * command buffers or replayable command lists internally.
+ *
+ * On WebGPU, a `CommandBuffer` contains deferred work that becomes visible when submitted.
+ * On WebGL, command encoding is immediate, so a `CommandBuffer` mainly acts as a compatibility
+ * object for `finish()` / `submit()` call sites and default encoder lifecycle management.
  */
 export abstract class CommandBuffer extends Resource<CommandBufferProps> {
   override get [Symbol.toStringTag](): string {

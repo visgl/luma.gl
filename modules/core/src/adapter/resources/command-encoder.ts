@@ -139,8 +139,16 @@ type PassWithTimestamps = {
 
 /**
  * Records commands onto a single backend command encoder and can finish them into one command
- * buffer. Resource helpers invoked through a CommandEncoder must record onto that encoder rather
- * than allocating hidden encoders or submitting work eagerly.
+ * buffer.
+ *
+ * On WebGPU, this is a true deferred recording surface: commands are collected until
+ * {@link CommandEncoder.finish} and do not execute until {@link Device.submit}.
+ *
+ * On WebGL, this is an immediate-mode compatibility surface: commands execute as they are encoded,
+ * and {@link Device.submit} only finalizes frame bookkeeping and the default encoder lifecycle.
+ *
+ * Resource helpers invoked through a `CommandEncoder` must record onto that encoder rather than
+ * allocating hidden encoders or submitting work eagerly.
  */
 export abstract class CommandEncoder extends Resource<CommandEncoderProps> {
   override get [Symbol.toStringTag](): string {
@@ -158,25 +166,61 @@ export abstract class CommandEncoder extends Resource<CommandEncoderProps> {
     this._gpuTimeMs = undefined;
   }
 
-  /** Completes recording of the commands sequence */
+  /**
+   * Completes recording of the command sequence and returns a {@link CommandBuffer}.
+   *
+   * On WebGPU, the returned command buffer owns deferred work that will execute on
+   * {@link Device.submit}. On WebGL, the returned command buffer primarily represents already
+   * executed work and is kept for cross-backend API compatibility.
+   */
   abstract finish(props?: CommandBufferProps): CommandBuffer;
 
-  /** Create a RenderPass using the default CommandEncoder */
+  /**
+   * Creates a {@link RenderPass} on this encoder.
+   *
+   * On WebGPU, pass commands are deferred until the finished command buffer is submitted. On
+   * WebGL, the pass executes immediately as draw calls are encoded.
+   */
   abstract beginRenderPass(props?: RenderPassProps): RenderPass;
 
-  /** Create a ComputePass using the default CommandEncoder*/
+  /**
+   * Creates a {@link ComputePass} on this encoder.
+   *
+   * On WebGPU, compute commands are deferred until the finished command buffer is submitted.
+   * WebGL does not support compute passes.
+   */
   abstract beginComputePass(props?: ComputePassProps): ComputePass;
 
-  /** Add a command that that copies data from a sub-region of a Buffer to a sub-region of another Buffer. */
+  /**
+   * Copies data from a sub-region of a buffer to a sub-region of another buffer.
+   *
+   * On WebGPU, the copy is deferred until {@link Device.submit}. On WebGL, it executes
+   * immediately when encoded.
+   */
   abstract copyBufferToBuffer(options: CopyBufferToBufferOptions): void;
 
-  /** Add a command that copies data from a sub-region of a GPUBuffer to a sub-region of one or multiple continuous texture subresources. */
+  /**
+   * Copies data from a sub-region of a buffer to one or more continuous texture subresources.
+   *
+   * On WebGPU, the copy is deferred until {@link Device.submit}. On WebGL, it executes
+   * immediately when encoded.
+   */
   abstract copyBufferToTexture(options: CopyBufferToTextureOptions): void;
 
-  /** Add a command that copies data from a sub-region of one or multiple continuous texture subresources to a sub-region of a Buffer. */
+  /**
+   * Copies data from one or more continuous texture subresources into a buffer.
+   *
+   * On WebGPU, the copy is deferred until {@link Device.submit}. On WebGL, it executes
+   * immediately when encoded.
+   */
   abstract copyTextureToBuffer(options: CopyTextureToBufferOptions): void;
 
-  /** Add a command that copies data from a sub-region of one or multiple contiguous texture subresources to another sub-region of one or multiple continuous texture subresources. */
+  /**
+   * Copies data between texture subresources.
+   *
+   * On WebGPU, the copy is deferred until {@link Device.submit}. On WebGL, it executes
+   * immediately when encoded.
+   */
   abstract copyTextureToTexture(options: CopyTextureToTextureOptions): void;
 
   /** Add a command that clears a texture mip level. */

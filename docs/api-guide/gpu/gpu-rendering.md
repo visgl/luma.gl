@@ -144,6 +144,10 @@ To draw to the screen in luma.gl, simply create a `RenderPass` by calling
   device.submit(); 
 ```
 
+`device.submit()` is always safe to call after a frame. On WebGPU it submits deferred work to the
+GPU queue. On WebGL, rendering already happened during `beginRenderPass()` / draw encoding, so
+`submit()` primarily finalizes frame bookkeeping and presentation.
+
 For more detail. `device.getDefaultCanvasContext().getDefaultFramebuffer()` returns a special framebuffer that lets you render to screen (into the device's swap chain textures). This framebuffer is used by default when a `device.beginRenderPass()` is called without providing a `framebuffer`: 
 
 ```typescript
