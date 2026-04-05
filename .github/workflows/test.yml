@@ -26,14 +26,20 @@ jobs:
         uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
         with:
           node-version-file: '.nvmrc'
-          cache: 'yarn' # or 'pnpm', 'npm' depending on your package manager
-          cache-dependency-path: yarn.lock
 
       - name: Enable Corepack / Yarn 4
         run: |
           corepack enable
           corepack prepare yarn@4.13.0 --activate
           yarn -v
+
+      - name: Cache Yarn Berry artifacts
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.yarn/berry/cache
+            .yarn/install-state.gz
+          key: ${{ runner.os }}-yarn4-${{ hashFiles('yarn.lock', '.yarnrc.yml', 'package.json') }}
 
       - name: Install dependencies
         run: yarn install --immutable
@@ -66,14 +72,20 @@ jobs:
         uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
         with:
           node-version-file: '.nvmrc'
-          cache: 'yarn'
-          cache-dependency-path: yarn.lock
 
       - name: Enable Corepack / Yarn 4
         run: |
           corepack enable
           corepack prepare yarn@4.13.0 --activate
           yarn -v
+
+      - name: Cache Yarn Berry artifacts
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.yarn/berry/cache
+            .yarn/install-state.gz
+          key: ${{ runner.os }}-yarn4-${{ hashFiles('yarn.lock', '.yarnrc.yml', 'package.json') }}
 
       - name: Install dependencies
         run: yarn install --immutable
@@ -139,14 +151,20 @@ jobs:
         uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
         with:
           node-version-file: '.nvmrc'
-          cache: 'yarn'
-          cache-dependency-path: yarn.lock
 
       - name: Enable Corepack / Yarn 4
         run: |
           corepack enable
           corepack prepare yarn@4.13.0 --activate
           yarn -v
+
+      - name: Cache Yarn Berry artifacts
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.yarn/berry/cache
+            .yarn/install-state.gz
+          key: ${{ runner.os }}-yarn4-${{ hashFiles('yarn.lock', '.yarnrc.yml', 'package.json') }}
 
       - name: Install dependencies
         run: yarn install --immutable
@@ -174,14 +192,20 @@ jobs:
         uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
         with:
           node-version-file: '.nvmrc'
-          cache: 'yarn'
-          cache-dependency-path: yarn.lock
 
       - name: Enable Corepack / Yarn 4
         run: |
           corepack enable
           corepack prepare yarn@4.13.0 --activate
           yarn -v
+
+      - name: Cache Yarn Berry artifacts
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.yarn/berry/cache
+            .yarn/install-state.gz
+          key: ${{ runner.os }}-yarn4-${{ hashFiles('yarn.lock', '.yarnrc.yml', 'package.json') }}
 
       - name: Install dependencies and build website
         run: |
