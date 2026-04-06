@@ -24,22 +24,6 @@ class FroundOperation extends Operation<{x: GPUTable}> {
     const {x} = this.inputs;
     return `fround(${x})_fp64Low(${x})`;
   }
-
-  executeCPU(): TypedArray | null {
-    const {x} = this.inputs;
-    if (x.value && this.output.isConstant) {
-      const size = x.size / 2;
-      const source = new Float64Array(x.value.buffer);
-      const target = new Float32Array(size * 2);
-      for (let i = 0; i < size; i++) {
-        const v = source[i];
-        target[i] = Math.fround(v);
-        target[i + size] = v - target[i];
-      }
-      return target;
-    }
-    return null;
-  }
 }
 
 export function fround(x: GPUTable): GPUTable {

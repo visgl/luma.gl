@@ -4,6 +4,7 @@
 
 import {log} from '@luma.gl/core';
 import type {OperationHandler} from './operation';
+import {cpuBackend} from '../operations/cpu';
 
 export type BackendModule = Record<string, OperationHandler>;
 
@@ -49,3 +50,4 @@ class BackendRegistry {
 }
 
 export const backendRegistry = new BackendRegistry();
+backendRegistry.add('cpu', cpuBackend);

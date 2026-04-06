@@ -31,17 +31,19 @@ export abstract class Operation<InputsT extends Record<string, any> = Record<str
   /** Human friendly string that describes this operation */
   abstract toString(): string;
 
-  /** Sometimes it is faster to run the operation on CPU. Return the result if execution is successful. */
-  protected abstract executeCPU(): TypedArray | null;
-
   async execute(device: Device, target: Buffer): Promise<void> {
     // Resolve dependencies
     for (const dep of this.dependencies) {
       await dep.evaluate(device);
     }
-    const value = this.executeCPU();
-    if (value) {
-      target.write(value);
+    if (this.shouldExecuteOnCPU()) {
+      const handler = await backendRegistry.get('cpu', this.name);
+      handler({
+        device: target.device,
+        inputs: this.inputs,
+        output: this.output,
+        target
+      });
     } else {
       const handler = await backendRegistry.get(device.type, this.name);
       await handler({
@@ -51,5 +53,9 @@ export abstract class Operation<InputsT extends Record<string, any> = Record<str
         target
       });
     }
+  }
+
+  protected shouldExecuteOnCPU() {
+    return this.output.length <= 1 && Object.values(this.inputs).every(t => Boolean(t.value));
   }
 }
