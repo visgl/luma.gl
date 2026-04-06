@@ -68,7 +68,7 @@ ${getComputeBlock(module.name, inputs, output, elementWise)}
   write_result(rowIndex, result);
 }
 `;
-  console.log(source);
+  // console.log(source);
 
   const computation = new Computation(outputBuffer.device, {
     source,
