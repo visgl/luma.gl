@@ -23,8 +23,11 @@ export class WEBGLRenderPass extends RenderPass {
   constructor(device: WebGLDevice, props: RenderPassProps) {
     super(device, props);
     this.device = device;
-    const webglFramebuffer = this.props.framebuffer as WEBGLFramebuffer | null;
-    const isDefaultFramebuffer = !webglFramebuffer || webglFramebuffer.handle === null;
+    // The framebuffer may be a luma.gl WEBGLFramebuffer, a raw WebGLFramebuffer
+    // handle (e.g. from an external context like Google Maps), or null (default).
+    const webglFramebuffer = this.props.framebuffer as WEBGLFramebuffer | WebGLFramebuffer | null;
+    const isDefaultFramebuffer =
+      !webglFramebuffer || ('handle' in webglFramebuffer && webglFramebuffer.handle === null);
 
     if (isDefaultFramebuffer) {
       // Treat an explicit wrapper around the default framebuffer the same as the
@@ -35,7 +38,7 @@ export class WEBGLRenderPass extends RenderPass {
     // If no viewport is provided, apply reasonably defaults
     let viewport: NumberArray4 | undefined;
     if (!props?.parameters?.viewport) {
-      if (!isDefaultFramebuffer) {
+      if (!isDefaultFramebuffer && webglFramebuffer instanceof WEBGLFramebuffer) {
         // Set the viewport to the size of the framebuffer
         const {width, height} = webglFramebuffer;
         viewport = [0, 0, width, height];
@@ -51,14 +54,16 @@ export class WEBGLRenderPass extends RenderPass {
     this.setParameters({viewport, ...this.props.parameters});
 
     // Specify mapping of draw buffer locations to color attachments
-    // Default framebuffers can only be set to GL.BACK or GL.NONE
-    if (!isDefaultFramebuffer) {
-      const drawBuffers = webglFramebuffer.colorAttachments.map((_, i) => GL.COLOR_ATTACHMENT0 + i);
-      this.device.gl.drawBuffers(drawBuffers);
-    } else {
-      // Default framebuffer only supports GL.BACK/GL.NONE draw buffers, even when
-      // passed through an explicit framebuffer wrapper.
-      this.device.gl.drawBuffers([GL.BACK]);
+    if (webglFramebuffer instanceof WEBGLFramebuffer) {
+      if (!isDefaultFramebuffer) {
+        const drawBuffers = webglFramebuffer.colorAttachments.map(
+          (_, i) => GL.COLOR_ATTACHMENT0 + i
+        );
+        this.device.gl.drawBuffers(drawBuffers);
+      } else {
+        // Default framebuffer only supports GL.BACK/GL.NONE draw buffers
+        this.device.gl.drawBuffers([GL.BACK]);
+      }
     }
 
     // Hack - for now WebGL draws in "immediate mode" (instead of queueing the operations)...
