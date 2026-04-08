@@ -54,16 +54,12 @@ export class WEBGLRenderPass extends RenderPass {
     this.setParameters({viewport, ...this.props.parameters});
 
     // Specify mapping of draw buffer locations to color attachments
-    if (webglFramebuffer instanceof WEBGLFramebuffer) {
-      if (!isDefaultFramebuffer) {
-        const drawBuffers = webglFramebuffer.colorAttachments.map(
-          (_, i) => GL.COLOR_ATTACHMENT0 + i
-        );
-        this.device.gl.drawBuffers(drawBuffers);
-      } else {
-        // Default framebuffer only supports GL.BACK/GL.NONE draw buffers
-        this.device.gl.drawBuffers([GL.BACK]);
-      }
+    if (!isDefaultFramebuffer && webglFramebuffer instanceof WEBGLFramebuffer) {
+      const drawBuffers = webglFramebuffer.colorAttachments.map((_, i) => GL.COLOR_ATTACHMENT0 + i);
+      this.device.gl.drawBuffers(drawBuffers);
+    } else if (isDefaultFramebuffer) {
+      // Default framebuffer only supports GL.BACK/GL.NONE draw buffers
+      this.device.gl.drawBuffers([GL.BACK]);
     }
 
     // Hack - for now WebGL draws in "immediate mode" (instead of queueing the operations)...
