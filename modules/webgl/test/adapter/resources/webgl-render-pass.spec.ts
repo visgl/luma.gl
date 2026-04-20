@@ -79,7 +79,7 @@ test('WEBGLRenderPass#drawBuffers for explicit default framebuffer wrapper', asy
   t.end();
 });
 
-test('WEBGLRenderPass#drawBuffers for external WebGLFramebuffer', async t => {
+test('WEBGLRenderPass#drawBuffers for wrapped external WebGLFramebuffer', async t => {
   const device = await getWebGLTestDevice();
   const {gl} = device;
 
@@ -90,7 +90,7 @@ test('WEBGLRenderPass#drawBuffers for external WebGLFramebuffer', async t => {
     return originalDrawBuffers(buffers as any);
   }) as typeof gl.drawBuffers;
 
-  // Simulate an external WebGLFramebuffer (e.g. from Google Maps interleaved rendering).
+  // Simulate wrapping an external WebGLFramebuffer (e.g. from Google Maps interleaved rendering).
   // Attach a color renderbuffer so gl.clear() doesn't error on an incomplete FBO.
   const externalFbo = gl.createFramebuffer()!;
   gl.bindFramebuffer(GL.FRAMEBUFFER, externalFbo);
@@ -100,14 +100,17 @@ test('WEBGLRenderPass#drawBuffers for external WebGLFramebuffer', async t => {
   gl.framebufferRenderbuffer(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, GL.RENDERBUFFER, rb);
   gl.bindFramebuffer(GL.FRAMEBUFFER, null);
 
-  // Should not crash accessing colorAttachments.map() on external framebuffer
-  const renderPass = new WEBGLRenderPass(device, {framebuffer: externalFbo as any});
-  t.ok(renderPass, 'does not crash on external WebGLFramebuffer without colorAttachments');
+  const framebuffer = device.createFramebuffer({handle: externalFbo, width: 64, height: 64});
+
+  // Should not crash accessing colorAttachments.map() on wrapped external framebuffer
+  const renderPass = new WEBGLRenderPass(device, {framebuffer});
+  t.ok(renderPass, 'does not crash on wrapped external WebGLFramebuffer');
   renderPass.end();
 
-  t.equal(drawBufferCalls.length, 0, 'does not call drawBuffers for external WebGLFramebuffer');
+  t.equal(drawBufferCalls.length, 0, 'does not call drawBuffers for wrapped external WebGLFramebuffer');
 
   gl.drawBuffers = originalDrawBuffers;
+  framebuffer.destroy();
   gl.deleteRenderbuffer(rb);
   gl.deleteFramebuffer(externalFbo);
   device.destroy();
