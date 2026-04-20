@@ -107,7 +107,11 @@ test('WEBGLRenderPass#drawBuffers for wrapped external WebGLFramebuffer', async 
   t.ok(renderPass, 'does not crash on wrapped external WebGLFramebuffer');
   renderPass.end();
 
-  t.equal(drawBufferCalls.length, 0, 'does not call drawBuffers for wrapped external WebGLFramebuffer');
+  t.equal(
+    drawBufferCalls.length,
+    0,
+    'does not call drawBuffers for wrapped external WebGLFramebuffer'
+  );
 
   gl.drawBuffers = originalDrawBuffers;
   framebuffer.destroy();
