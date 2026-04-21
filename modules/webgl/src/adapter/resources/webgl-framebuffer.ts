@@ -36,19 +36,20 @@ export class WEBGLFramebuffer extends Framebuffer {
       // default framebuffer handle is null, so we can't set debug metadata...
       device._setWebGLDebugMetadata(this.handle, this, {spector: this.props});
 
-      // Auto create textures for attachments if needed
-      this.autoCreateAttachmentTextures();
+      if (!props.handle) {
+        // Auto create textures for attachments if needed
+        this.autoCreateAttachmentTextures();
 
-      this.updateAttachments();
+        this.updateAttachments();
+      }
     }
   }
 
   /** destroys any auto created resources etc. */
   override destroy(): void {
     super.destroy(); // destroys owned resources etc.
-    if (!this.destroyed && this.handle !== null) {
+    if (!this.destroyed && this.handle !== null && !this.props.handle) {
       this.gl.deleteFramebuffer(this.handle);
-      // this.handle = null;
     }
   }
 

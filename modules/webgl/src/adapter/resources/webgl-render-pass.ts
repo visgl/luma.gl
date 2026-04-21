@@ -35,7 +35,7 @@ export class WEBGLRenderPass extends RenderPass {
     // If no viewport is provided, apply reasonably defaults
     let viewport: NumberArray4 | undefined;
     if (!props?.parameters?.viewport) {
-      if (!isDefaultFramebuffer) {
+      if (!isDefaultFramebuffer && webglFramebuffer) {
         // Set the viewport to the size of the framebuffer
         const {width, height} = webglFramebuffer;
         viewport = [0, 0, width, height];
@@ -51,13 +51,11 @@ export class WEBGLRenderPass extends RenderPass {
     this.setParameters({viewport, ...this.props.parameters});
 
     // Specify mapping of draw buffer locations to color attachments
-    // Default framebuffers can only be set to GL.BACK or GL.NONE
-    if (!isDefaultFramebuffer) {
+    if (!isDefaultFramebuffer && webglFramebuffer?.colorAttachments.length) {
       const drawBuffers = webglFramebuffer.colorAttachments.map((_, i) => GL.COLOR_ATTACHMENT0 + i);
       this.device.gl.drawBuffers(drawBuffers);
-    } else {
-      // Default framebuffer only supports GL.BACK/GL.NONE draw buffers, even when
-      // passed through an explicit framebuffer wrapper.
+    } else if (isDefaultFramebuffer) {
+      // Default framebuffer only supports GL.BACK/GL.NONE draw buffers
       this.device.gl.drawBuffers([GL.BACK]);
     }
 
