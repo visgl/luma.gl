@@ -2,6 +2,10 @@
 
 ## v9.3
 
+### v9.3.3
+
+- fix(webgl): Do not assume luma WEBGLFramebuffer (#2597)
+
 ### v9.3.2
 
 - chore(webgl): fix CJS paths (#2582)
