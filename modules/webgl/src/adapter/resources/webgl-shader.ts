@@ -146,15 +146,19 @@ export class WEBGLShader extends Shader {
 
   protected _getCompilationErrorMessage(source: string): string {
     const shaderDescription = `${this.props.stage} shader ${this.props.id}`;
+    const shaderLog = this.device.gl.getShaderInfoLog(this.handle)?.trim();
+    const firstShaderLogLine = shaderLog
+      ?.split(/\r?\n/)
+      .find(line => line.trim())
+      ?.trim();
     const compilerMessages = this.getCompilationInfoSync();
     const firstMessage =
       compilerMessages.find(message => message.type === 'error') || compilerMessages[0];
 
     if (!firstMessage) {
-      const shaderLog = this.device.gl.getShaderInfoLog(this.handle)?.trim();
-      return shaderLog
-        ? `GLSL compilation errors in ${shaderDescription}: ${shaderLog}`
-        : `GLSL compilation errors in ${shaderDescription}`;
+      return firstShaderLogLine
+        ? `GLSL compilation errors in ${shaderDescription}: ${firstShaderLogLine}`
+        : `GLSL compilation errors in ${shaderDescription}\nShader source:\n${source}`;
     }
 
     const sourceLine = firstMessage.lineNum
@@ -162,7 +166,8 @@ export class WEBGLShader extends Shader {
       : undefined;
     const location = firstMessage.lineNum ? ` line ${firstMessage.lineNum}` : '';
     const sourceSnippet = sourceLine ? `\nSource: ${sourceLine}` : '';
-    return `GLSL compilation errors in ${shaderDescription}:${location}: ${firstMessage.message}${sourceSnippet}`;
+    const message = firstMessage.message || firstShaderLogLine || 'Unknown shader compiler error';
+    return `GLSL compilation errors in ${shaderDescription}:${location}: ${message}${sourceSnippet}`;
   }
 }
 
