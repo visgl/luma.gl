@@ -96,7 +96,7 @@ export class WEBGLShader extends Shader {
       // The `Shader` base class will determine if debug window should be opened based on this.compilationStatus
       this.debugShader();
       if (this.compilationStatus === 'error') {
-        throw new Error(`GLSL compilation errors in ${this.props.stage} shader ${this.props.id}`);
+        throw new Error(this._getCompilationErrorMessage(source));
       }
       return;
     }
@@ -142,6 +142,27 @@ export class WEBGLShader extends Shader {
     this.compilationStatus = this.device.gl.getShaderParameter(this.handle, GL.COMPILE_STATUS)
       ? 'success'
       : 'error';
+  }
+
+  protected _getCompilationErrorMessage(source: string): string {
+    const shaderDescription = `${this.props.stage} shader ${this.props.id}`;
+    const compilerMessages = this.getCompilationInfoSync();
+    const firstMessage =
+      compilerMessages.find(message => message.type === 'error') || compilerMessages[0];
+
+    if (!firstMessage) {
+      const shaderLog = this.device.gl.getShaderInfoLog(this.handle)?.trim();
+      return shaderLog
+        ? `GLSL compilation errors in ${shaderDescription}: ${shaderLog}`
+        : `GLSL compilation errors in ${shaderDescription}`;
+    }
+
+    const sourceLine = firstMessage.lineNum
+      ? source.split(/\r?\n/)[firstMessage.lineNum - 1]?.trim()
+      : undefined;
+    const location = firstMessage.lineNum ? ` line ${firstMessage.lineNum}` : '';
+    const sourceSnippet = sourceLine ? `\nSource: ${sourceLine}` : '';
+    return `GLSL compilation errors in ${shaderDescription}:${location}: ${firstMessage.message}${sourceSnippet}`;
   }
 }
 
