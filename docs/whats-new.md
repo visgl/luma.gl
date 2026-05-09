@@ -2,6 +2,38 @@
 
 _This page contains news for recent luma.gl releases. For older releases (through v8.5) refer to the [Legacy What's New](/docs/legacy/legacy-upgrade-guide) page._
 
+## Version 9.4
+
+Release Date: TBD
+
+**New Modules**
+
+- **`@luma.gl/gpgpu`** - New module for lazy `GPUTable` operations with CPU/WebGL/WebGPU backends.
+- **`@luma.gl/text`** - New module for font parsing, extrusion, and 3D text geometry.
+
+**New Examples**
+
+- **Bloom Example** - New example demonstrating bloom postprocessing.
+- **3D Text Example** - New example demonstrating generated 3D text geometry.
+- **Globe Example** - New showcase example demonstrating textured globe rendering.
+
+**@luma.gl/effects**
+
+- **`bloom`** - New bloom postprocessing effect and shader-pass pipeline.
+- **`dof`** - New depth-of-field postprocessing effect and shader-pass pipeline.
+- **`gaussianblur`** - New gaussian blur postprocessing effect.
+- **`persistenceEffect`** - Moved into `@luma.gl/effects` as a first-class postprocessing effect.
+
+**@luma.gl/engine**
+
+- **`Animator`** - New animation helper for timeline-driven animation updates.
+- **Shader pass pipelines** - `ShaderPassRenderer` now supports multi-pass effects such as bloom and depth of field.
+
+**@luma.gl/shadertools**
+
+- **`ShaderPassPipeline`** - New shader-pass pipeline type for structured multi-pass postprocessing.
+- **`waterMaterial`** - New water material shader module with GLSL and WGSL shaders.
+
 ## Version 9.3
 
 Release Date: March 31, 2026

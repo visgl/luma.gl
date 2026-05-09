@@ -5,7 +5,7 @@
 import {test, expect} from 'vitest';
 import {fround} from '@luma.gl/gpgpu';
 import {getTestDevice} from '@luma.gl/test-utils';
-import {TestData, makeTable, verifyTableValue, isSupportedByWebGPU} from './fixtures';
+import {makeTable, verifyTableValue} from './fixtures';
 
 const TEST_CASES: {
   title: string;
