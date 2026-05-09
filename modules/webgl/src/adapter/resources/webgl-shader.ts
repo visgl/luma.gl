@@ -14,6 +14,8 @@ export class WEBGLShader extends Shader {
   readonly device: WebGLDevice;
   readonly handle: WebGLShader;
 
+  private _compilationInfoLog = '';
+
   constructor(device: WebGLDevice, props: ShaderProps) {
     super(device, props);
     this.device = device;
@@ -64,7 +66,7 @@ export class WEBGLShader extends Shader {
   }
 
   override getCompilationInfoSync(): readonly CompilerMessage[] {
-    const shaderLog = this.device.gl.getShaderInfoLog(this.handle);
+    const shaderLog = this._getCompilationInfoLog();
     return shaderLog ? parseShaderCompilerLog(shaderLog) : [];
   }
 
@@ -142,23 +144,25 @@ export class WEBGLShader extends Shader {
     this.compilationStatus = this.device.gl.getShaderParameter(this.handle, GL.COMPILE_STATUS)
       ? 'success'
       : 'error';
+    if (this.compilationStatus === 'error') {
+      this._getCompilationInfoLog();
+    }
   }
 
   protected _getCompilationErrorMessage(source: string): string {
     const shaderDescription = `${this.props.stage} shader ${this.props.id}`;
-    const shaderLog = this.device.gl.getShaderInfoLog(this.handle)?.trim();
-    const firstShaderLogLine = shaderLog
-      ?.split(/\r?\n/)
-      .find(line => line.trim())
-      ?.trim();
+    const firstShaderLogLine = getFirstCompilerLogLine(this._getCompilationInfoLog());
     const compilerMessages = this.getCompilationInfoSync();
     const firstMessage =
-      compilerMessages.find(message => message.type === 'error') || compilerMessages[0];
+      compilerMessages.find(message => message.type === 'error' && message.message.trim()) ||
+      compilerMessages.find(message => message.message.trim()) ||
+      compilerMessages.find(message => message.type === 'error') ||
+      compilerMessages[0];
 
     if (!firstMessage) {
       return firstShaderLogLine
         ? `GLSL compilation errors in ${shaderDescription}: ${firstShaderLogLine}`
-        : `GLSL compilation errors in ${shaderDescription}\nShader source:\n${source}`;
+        : `GLSL compilation errors in ${shaderDescription}: WebGL did not provide a shader compiler log`;
     }
 
     const sourceLine = firstMessage.lineNum
@@ -166,9 +170,27 @@ export class WEBGLShader extends Shader {
       : undefined;
     const location = firstMessage.lineNum ? ` line ${firstMessage.lineNum}` : '';
     const sourceSnippet = sourceLine ? `\nSource: ${sourceLine}` : '';
-    const message = firstMessage.message || firstShaderLogLine || 'Unknown shader compiler error';
+    const message =
+      firstMessage.message.trim() ||
+      firstShaderLogLine ||
+      'WebGL did not provide a shader compiler log';
     return `GLSL compilation errors in ${shaderDescription}:${location}: ${message}${sourceSnippet}`;
   }
+
+  private _getCompilationInfoLog(): string {
+    const shaderLog = this.device.gl.getShaderInfoLog(this.handle)?.trim();
+    if (shaderLog) {
+      this._compilationInfoLog = shaderLog;
+    }
+    return this._compilationInfoLog;
+  }
+}
+
+function getFirstCompilerLogLine(shaderLog: string): string | undefined {
+  return shaderLog
+    .split(/\r?\n/)
+    .find(line => line.trim())
+    ?.trim();
 }
 
 // TODO - Original code from luma.gl v8 - keep until new debug functionality has matured
