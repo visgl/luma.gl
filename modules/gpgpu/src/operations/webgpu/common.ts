@@ -3,9 +3,9 @@
 // Copyright (c) vis.gl contributors
 
 import {Buffer, SignedDataType} from '@luma.gl/core';
+import {Computation} from '@luma.gl/engine';
 import {ShaderModule} from '@luma.gl/shadertools';
 import {GPUTable} from '../../operation/gpu-table';
-import {Computation} from '../../transforms/computation';
 
 const WORKGROUP_SIZE = 64;
 

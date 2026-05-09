@@ -10,6 +10,7 @@ Operations are lazy. Calling an operation such as `add()` or `interleave()` retu
 - Input tables can be constant or per-row.
 - Output evaluation is backend-driven through `backendRegistry`.
 - Operations can be chained to build larger compute graphs.
+- The CPU backend is registered by default. Register `webglBackend` or `webgpuBackend` before evaluating on those device types.
 
 ## `add`
 
@@ -69,11 +70,11 @@ const result = interleave(xyz, id);
 
 ### `fround(x: GPUTable): GPUTable`
 
-Splits float64 values into a float32 high part and a float32 low part.
+Splits float64 values into float32 high and low parts.
 
 This operation expects the input table to use `uint32` storage, which is how `GPUTable.fromArray()` represents `Float64Array` input internally.
 
-For each float64 value `d`, the output stores:
+For each float64 value `d`, the output stores all high parts first, followed by all low parts:
 
 - `high = Math.fround(d)`
 - `low = d - high`

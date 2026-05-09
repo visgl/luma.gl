@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {SignedDataType, Buffer, BufferLayout} from '@luma.gl/core';
-import {BufferTransform} from '../../transforms/buffer-transform';
+import {BufferTransform} from '@luma.gl/engine';
 import {ShaderModule} from '@luma.gl/shadertools';
 import {GPUTable} from '../../operation/gpu-table';
 import {bufferPool} from '../../utils/buffer-pool';

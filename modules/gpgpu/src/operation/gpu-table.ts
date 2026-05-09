@@ -7,43 +7,55 @@ import type {TypedArray, TypedArrayConstructor} from '@math.gl/types';
 import {bufferPool} from '../utils/buffer-pool';
 import type {Operation} from './operation';
 
+/** Properties used to construct a {@link GPUTable}. */
 export type GPUTableProps = {
+  /** Optional debug name used by {@link GPUTable.toString}. */
   id?: string;
-  /** Element type */
+  /** Scalar element type for every stored value. */
   type: SignedDataType;
-  /** Number of elements */
+  /** Number of scalar elements in each logical row. */
   size: number;
-  /** Number of bytes to skip before reading the first element, @default 0 */
+  /** Number of bytes to skip before reading the first element.
+   * @default 0
+   */
   offset?: number;
-  /** Number of bytes in each row, @default byte_per_element*size */
+  /** Number of bytes between the starts of adjacent rows.
+   * @default ValueType.BYTES_PER_ELEMENT * size
+   */
   stride?: number;
-  /** CPU buffer to fill the vector with, required unless `source` is supplied */
+  /** CPU buffer that initializes the table, required unless `source` is supplied. */
   value?: TypedArray;
-  /** Operation whose output is used to fill the vector, required unless `value` is supplied */
+  /** Lazy operation or table whose output initializes this table, required unless `value` is supplied. */
   source?: Operation | GPUTable | null;
-  /** If all rows share the same value */
+  /** Whether every row should read the same value. */
   isConstant?: boolean;
-  /** Number of rows, can be omitted if `isConstant:true` or if `value` is supplied */
+  /** Number of logical rows, inferred for constants and CPU-backed tables when omitted. */
   length?: number;
 };
 
-/** A device-agnostic, immutable 2D data table used as input/output of GPU operations */
+/**
+ * Device-agnostic, immutable 2D numeric table used as input and output for lazy GPGPU operations.
+ *
+ * A table describes row layout and a data source, but does not allocate or run GPU work until
+ * {@link GPUTable.evaluate} is called. Operation functions such as `add()` return new tables whose
+ * `source` points at the deferred operation.
+ */
 export class GPUTable {
-  /** Element type */
+  /** Scalar element type for each stored value. */
   readonly type: SignedDataType;
-  /** Number of elements */
+  /** Number of scalar elements in each logical row. */
   readonly size: number;
-  /** Number of bytes to skip before reading the first element */
+  /** Number of bytes to skip before reading the first element. */
   readonly offset: number;
-  /** Number of bytes in each row */
+  /** Number of bytes between the starts of adjacent rows. */
   readonly stride: number;
-  /** true if all rows share the same value */
+  /** Whether all rows share the same value. */
   readonly isConstant: boolean;
-  /** Number of rows */
+  /** Number of logical rows. */
   readonly length: number;
-  /** Bytes needed for storage */
+  /** Total bytes needed for the table storage. */
   readonly byteLength: number;
-  /** TypedArray constructor for CPU representation, derived from `type` */
+  /** TypedArray constructor for CPU representation, derived from {@link GPUTable.type}. */
   readonly ValueType: TypedArrayConstructor;
 
   /** User-assigned id for easy debugging */
@@ -58,7 +70,13 @@ export class GPUTable {
   /** GPU buffer */
   private _buffer?: Buffer;
 
-  /** Construct a new GPUTable from a CPU buffer */
+  /**
+   * Constructs a table from a CPU array.
+   *
+   * Plain JavaScript arrays are converted to typed arrays using `type` or `float32` by default.
+   * `Float64Array` inputs are reinterpreted as `uint32` pairs so they can be consumed by GPU
+   * operations such as {@link fround}.
+   */
   static fromArray(
     value: TypedArray | number[],
     {
@@ -91,7 +109,12 @@ export class GPUTable {
     });
   }
 
-  /** Construct a new GPUConstant from a constant of the specified type */
+  /**
+   * Constructs a constant table whose single row is broadcast across non-constant inputs.
+   *
+   * @param value - Scalar or row value.
+   * @param type - Scalar element type used for the CPU representation.
+   */
   static fromConstant(value: number | number[], type: SignedDataType = 'float32'): GPUTable {
     const ArrayType = getTypedArrayFromDataType(type);
     if (!Array.isArray(value)) {
@@ -105,9 +128,14 @@ export class GPUTable {
     });
   }
 
-  /** TODO - Construct a new GPUTable from a loaders.gl Table/BatchedTable */
+  /** TODO - Construct a new GPUTable from a loaders.gl Table/BatchedTable. */
   // static from(table: Table, columnName: string | number): GPUTable
 
+  /**
+   * Creates a table from explicit row layout and source information.
+   *
+   * Prefer {@link GPUTable.fromArray} or {@link GPUTable.fromConstant} for CPU-backed tables.
+   */
   constructor(props: GPUTableProps) {
     const {
       id,
@@ -148,11 +176,12 @@ export class GPUTable {
     this.byteLength = this.stride * length;
   }
 
+  /** CPU-side typed array, when available. */
   get value(): TypedArray | undefined {
     return this._value;
   }
 
-  /** Get the GPU Buffer. Only available after `evaluate()` is called */
+  /** GPU buffer for the table. Only available after {@link GPUTable.evaluate} resolves. */
   get buffer(): Buffer {
     if (!this._buffer) {
       throw new Error(`${this} not evaluated`);
@@ -160,7 +189,12 @@ export class GPUTable {
     return this._buffer;
   }
 
-  /** Resolve the buffer content on the given device */
+  /**
+   * Materializes the table on a device.
+   *
+   * If the table is operation-backed, dependencies are evaluated first and then the backend
+   * operation writes into a cached GPU buffer.
+   */
   async evaluate(device: Device): Promise<void> {
     if (this._destroyed) {
       throw new Error(`GPUTable ${this} already destroyed`);
@@ -183,7 +217,12 @@ export class GPUTable {
     }
   }
 
-  /** Warning: performance degrade, use for debugging only */
+  /**
+   * Reads table data back to the CPU.
+   *
+   * This is intended for debugging and validation. Tightly packed rows return a typed-array view;
+   * strided rows are copied into a compact typed array.
+   */
   async readValue(startRow: number = 0, endRow?: number): Promise<TypedArray> {
     const {ValueType} = this;
     if (!this._value) {
@@ -197,7 +236,6 @@ export class GPUTable {
 
     if (stride === width) {
       const buffer = this._value!.buffer;
-      // @ts-expect-error TypedArrayConstructor type does not have (buffer, offset, length) signature
       return new ValueType(buffer, offset + stride * startRow, (endRow - startRow) * size);
     }
 
@@ -213,10 +251,12 @@ export class GPUTable {
     return new ValueType(bytes.buffer);
   }
 
+  /** Returns the debug id, source description, or class name. */
   toString(): string {
     return this._id ?? this._source?.toString() ?? this.constructor.name;
   }
 
+  /** Releases cached GPU storage and prevents future evaluation. */
   destroy() {
     if (this._buffer) {
       bufferPool.recycle(this._buffer);

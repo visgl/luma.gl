@@ -1,5 +1,5 @@
 # @luma.gl/gpgpu
 
-Generap-purpose GPU computation module of luma.gl
+General-purpose GPU computation module for luma.gl.
 
-See [luma.gl](http://luma.gl) for documentation.
+See [luma.gl](https://luma.gl) for documentation.
