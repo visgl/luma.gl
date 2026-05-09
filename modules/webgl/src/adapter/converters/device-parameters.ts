@@ -447,9 +447,7 @@ function mapBoolean(parameter: string, value: boolean): boolean {
 /** Returns true if given object is empty, false otherwise. */
 function isObjectEmpty(obj: object): boolean {
   let isEmpty = true;
-  // @ts-ignore key is unused
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  for (const key in obj) {
+  for (const _key in obj) {
     isEmpty = false;
     break;
   }

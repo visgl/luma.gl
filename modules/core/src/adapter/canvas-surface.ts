@@ -29,6 +29,15 @@ export type CanvasContextProps = {
   visible?: boolean;
   /** Whether to size the drawing buffer to the pixel size during auto resize. If a number is provided it is used as a static pixel ratio */
   useDevicePixels?: boolean | number;
+  /**
+   * How to derive the tracked device pixel size for HTML canvases when auto-resizing.
+   *
+   * - `'exact'` uses `ResizeObserver.devicePixelContentBoxSize` when available to match the
+   *   browser's exact physical pixel coverage.
+   * - `'css-dpr'` uses `Math.round(cssSize * devicePixelRatio)` to match overlays and external
+   *   canvases that still rely on legacy CSS-size times DPR rounding.
+   */
+  pixelSizeSource?: 'exact' | 'css-dpr';
   /** Whether to track window resizes. */
   autoResize?: boolean;
   /** @see https://developer.mozilla.org/en-US/docs/Web/API/GPUCanvasContext/configure#alphamode */
@@ -66,6 +75,7 @@ export abstract class CanvasSurface {
     width: 800,
     height: 600,
     useDevicePixels: true,
+    pixelSizeSource: 'exact',
     autoResize: true,
     container: null,
     visible: true,
@@ -347,13 +357,7 @@ export abstract class CanvasSurface {
 
     const oldPixelSize = this.getDevicePixelSize();
 
-    const devicePixelWidth =
-      entry.devicePixelContentBoxSize?.[0]?.inlineSize ||
-      contentBoxSize.inlineSize * devicePixelRatio;
-
-    const devicePixelHeight =
-      entry.devicePixelContentBoxSize?.[0]?.blockSize ||
-      contentBoxSize.blockSize * devicePixelRatio;
+    const {devicePixelWidth, devicePixelHeight} = this._getDevicePixelSizeFromResizeEntry(entry);
 
     const [maxDevicePixelWidth, maxDevicePixelHeight] = this.getMaxDrawingBufferSize();
     this.devicePixelWidth = Math.max(1, Math.min(devicePixelWidth, maxDevicePixelWidth));
@@ -383,6 +387,30 @@ export abstract class CanvasSurface {
     this.isInitialized = true;
 
     this.updatePosition();
+  }
+
+  protected _getDevicePixelSizeFromResizeEntry(entry: ResizeObserverEntry): {
+    devicePixelWidth: number;
+    devicePixelHeight: number;
+  } {
+    const contentBoxSize = assertDefined(entry.contentBoxSize?.[0]);
+
+    if (this.props.pixelSizeSource === 'css-dpr') {
+      const devicePixelRatio = this.getDevicePixelRatio();
+      return {
+        devicePixelWidth: Math.round(contentBoxSize.inlineSize * devicePixelRatio),
+        devicePixelHeight: Math.round(contentBoxSize.blockSize * devicePixelRatio)
+      };
+    }
+
+    return {
+      devicePixelWidth:
+        entry.devicePixelContentBoxSize?.[0]?.inlineSize ||
+        contentBoxSize.inlineSize * devicePixelRatio,
+      devicePixelHeight:
+        entry.devicePixelContentBoxSize?.[0]?.blockSize ||
+        contentBoxSize.blockSize * devicePixelRatio
+    };
   }
 
   _resizeDrawingBufferIfNeeded() {

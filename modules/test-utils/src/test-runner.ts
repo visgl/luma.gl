@@ -52,11 +52,18 @@ const DEFAULT_TEST_PROPS: Required<TestRunnerProps> = {
   height: undefined,
 
   // test lifecycle callback
-  onTestStart: (testCase: TestRunnerTestCase) => console.log(`# ${testCase.name}`),
-  onTestPass: (testCase: TestRunnerTestCase, result?: unknown) =>
-    console.log(`ok ${testCase.name} passed`),
-  onTestFail: (testCase: TestRunnerTestCase, error?: unknown) =>
-    console.log(`not ok ${testCase.name} failed`),
+  onTestStart: (testCase: TestRunnerTestCase) => {
+    // biome-ignore lint/suspicious/noConsole: legacy test runner streams status to stdout.
+    console.log(`# ${testCase.name}`);
+  },
+  onTestPass: (testCase: TestRunnerTestCase, _result?: unknown) => {
+    // biome-ignore lint/suspicious/noConsole: legacy test runner streams status to stdout.
+    console.log(`ok ${testCase.name} passed`);
+  },
+  onTestFail: (testCase: TestRunnerTestCase, _error?: unknown) => {
+    // biome-ignore lint/suspicious/noConsole: legacy test runner streams status to stdout.
+    console.log(`not ok ${testCase.name} failed`);
+  },
 
   // milliseconds to wait for each test case before aborting
   timeout: 2000,
@@ -111,7 +118,7 @@ export class TestRunner {
   async run(options: object = {}): Promise<void> {
     this.testOptions = {...this.testOptions, ...options};
 
-    const device = await getWebGLTestDevice();
+    await getWebGLTestDevice();
 
     return new Promise<void>((resolve, reject) => {
       this._animationLoop = new AnimationLoop({

@@ -9,6 +9,7 @@ creating pipelines from shaders, binding buffers and textures, handling redraw s
 
 - [`Model`](/docs/api-reference/engine/model) is the central rendering class and the page most users are looking for when they want the main luma.gl drawing API.
 - [`Materials`](/docs/api-guide/engine/materials) explains what `Material` and `MaterialFactory` represent in the engine layer.
+- [`DynamicBuffer`](/docs/api-reference/engine/dynamic-buffer) and [`DynamicTexture`](/docs/api-reference/engine/dynamic-texture) provide stable engine-level wrappers for GPU resources that can be replaced or initialized over time.
 - [`ClipSpace`](/docs/api-reference/engine/clip-space) and [`BackgroundTextureModel`](/docs/api-reference/engine/background-texture-model) provide ready-made fullscreen rendering helpers.
 - [`AnimationLoop`](/docs/api-reference/engine/animation-loop) manages per-frame rendering and animation state.
 - [`Geometry`](/docs/api-reference/engine/geometry) and [`Geometries`](/docs/api-reference/engine/geometry/geometries) provide reusable mesh and attribute helpers.

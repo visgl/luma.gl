@@ -28,7 +28,7 @@ import type {
   SharedRenderPipeline,
   ComputePipeline,
   ComputePipelineProps,
-  // CommandEncoder,
+  CommandEncoder,
   CommandEncoderProps,
   TransformFeedbackProps,
   QuerySetProps,
@@ -192,8 +192,10 @@ export class WebGLDevice extends Device {
               reason: 'destroyed',
               message: 'Entered sleep mode, or too many apps or browser tabs are using the GPU.'
             }),
-          // eslint-disable-next-line no-console
-          onContextRestored: (event: Event) => console.log('WebGL context restored')
+          onContextRestored: (_event: Event) => {
+            // biome-ignore lint/suspicious/noConsole: debug-only context restore notification.
+            console.log('WebGL context restored');
+          }
         },
         webglContextAttributes
       );
@@ -389,6 +391,15 @@ export class WebGLDevice extends Device {
     } finally {
       commandBuffer.destroy();
     }
+  }
+
+  override writeBufferViaCommandEncoder(
+    _commandEncoder: CommandEncoder,
+    destinationBuffer: Buffer,
+    data: ArrayBufferLike | ArrayBufferView | SharedArrayBuffer,
+    byteOffset: number = 0
+  ): void {
+    destinationBuffer.write(data, byteOffset);
   }
 
   private _finalizeDefaultCommandEncoderForSubmit(): {

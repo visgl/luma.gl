@@ -30,6 +30,7 @@ function glErrorShouldBe(gl, glErrors, opt_msg) {
   // const expected = errStrs.join(' or ');
   if (ndx < 0) {
     const msg = `getError expected${glErrors.length > 1 ? ' one of: ' : ': '}`;
+    // biome-ignore lint/suspicious/noConsole: legacy GPU test helper reports failures to the console.
     console.error('FAIL ' + msg);
   }
 }

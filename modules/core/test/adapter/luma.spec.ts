@@ -14,6 +14,15 @@ test('luma#attachDevice', async t => {
   t.end();
 });
 
+test('luma#attachDevice forwards canvas context compatibility props', async t => {
+  const device = await luma.attachDevice(null, {
+    adapters: [nullAdapter],
+    createCanvasContext: {pixelSizeSource: 'css-dpr'}
+  });
+  t.equal(device.getDefaultCanvasContext().props.pixelSizeSource, 'css-dpr', 'pixelSizeSource ok');
+  t.end();
+});
+
 test('luma#createDevice', async t => {
   const device = await luma.createDevice({type: 'null', adapters: [nullAdapter]});
   t.equal(device.type, 'null', 'info.vendor ok');

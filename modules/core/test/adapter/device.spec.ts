@@ -4,12 +4,7 @@
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {Buffer, Texture, luma} from '@luma.gl/core';
-import {
-  getNullTestDevice,
-  getTestDevices,
-  getWebGPUTestDevice,
-  getWebGLTestDevice
-} from '@luma.gl/test-utils';
+import {getNullTestDevice, getTestDevices, getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {webgl2Adapter} from '@luma.gl/webgl';
 import {_getDefaultDebugValue} from '../../src/adapter/device';
 

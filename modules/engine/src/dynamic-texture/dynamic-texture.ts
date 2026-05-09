@@ -326,7 +326,7 @@ export class DynamicTexture {
     const buffer = await this.readBuffer(options);
     const data = await buffer.readAsync(0, layout.byteLength);
     buffer.destroy();
-    return data.buffer;
+    return data.buffer instanceof ArrayBuffer ? data.buffer : data.slice().buffer;
   }
 
   /**

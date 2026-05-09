@@ -2,6 +2,14 @@
 
 _This page contains news for recent luma.gl releases. For older releases (through v8.5) refer to the [Legacy What's New](/docs/legacy/legacy-upgrade-guide) page._
 
+## Version 9.4
+
+Release Date: TBD
+
+**@luma.gl/engine**
+
+- **[`DynamicBuffer`](/docs/api-reference/engine/dynamic-buffer)** - New engine-level wrapper for resizable buffers. `Model` supports dynamic buffers for attributes, index buffers, and shader bindings, and `Material` supports dynamic buffer bindings with cache invalidation when the backing buffer changes.
+
 ## Version 9.3
 
 Release Date: March 31, 2026
@@ -67,6 +75,7 @@ Release Date: March 31, 2026
 **@luma.gl/effects**
 
 - **WebGPU/WGSL effects** - Effects now have WGSL shader implementations and work under WebGPU.
+- **`persistenceEffect`** - New temporal accumulation effect for fading trails and other history-based postprocessing workflows.
 
 ## Version 9.2
 

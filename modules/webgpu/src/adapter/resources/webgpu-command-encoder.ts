@@ -22,6 +22,7 @@ import {WebGPUQuerySet} from './webgpu-query-set';
 export class WebGPUCommandEncoder extends CommandEncoder {
   readonly device: WebGPUDevice;
   readonly handle: GPUCommandEncoder;
+  private _transientUploadBuffers: WebGPUBuffer[] = [];
 
   constructor(device: WebGPUDevice, props: CommandEncoderProps = {}) {
     super(device, props);
@@ -37,6 +38,10 @@ export class WebGPUCommandEncoder extends CommandEncoder {
   }
 
   override destroy(): void {
+    for (const uploadBuffer of this._transientUploadBuffers) {
+      uploadBuffer.destroy();
+    }
+    this._transientUploadBuffers = [];
     this.destroyResource();
   }
 
@@ -52,6 +57,18 @@ export class WebGPUCommandEncoder extends CommandEncoder {
     });
     this.destroy();
     return commandBuffer;
+  }
+
+  /** Retains staging uploads until the finished command buffer has been submitted. */
+  trackTransientUploadBuffer(buffer: WebGPUBuffer): void {
+    this._transientUploadBuffers.push(buffer);
+  }
+
+  /** Transfers staging-upload ownership to the finished command buffer. */
+  takeTransientUploadBuffers(): WebGPUBuffer[] {
+    const transientUploadBuffers = this._transientUploadBuffers;
+    this._transientUploadBuffers = [];
+    return transientUploadBuffers;
   }
 
   /**

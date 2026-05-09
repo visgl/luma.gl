@@ -56,9 +56,7 @@ function getRelatedBindingNames(bindingName: string): string[] {
 }
 
 function isObjectEmpty(obj: object): boolean {
-  // @ts-ignore key is intentionally unused
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  for (const key in obj) {
+  for (const _key in obj) {
     return false;
   }
   return true;

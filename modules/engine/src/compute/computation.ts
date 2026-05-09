@@ -7,6 +7,7 @@ import {
   type ComputePipelineProps,
   type Shader,
   type Binding,
+  type CommandEncoder,
   Device,
   Buffer,
   ComputePipeline,
@@ -192,9 +193,13 @@ export class Computation {
 
   // Draw call
 
-  predraw() {
+  /**
+   * Updates compute shader inputs before opening the compute pass that will
+   * consume them.
+   */
+  predraw(commandEncoder: CommandEncoder) {
     // Update uniform buffers if needed
-    this.updateShaderInputs();
+    this.updateShaderInputs(commandEncoder);
   }
 
   dispatch(computePass: ComputePass, x: number, y?: number, z?: number): void {
@@ -271,8 +276,14 @@ export class Computation {
     }
   }
 
-  updateShaderInputs(): void {
-    this._uniformStore.setUniforms(this.shaderInputs.getUniformValues());
+  /**
+   * Flushes current shader-input values into the internal uniform store.
+   *
+   * @param commandEncoder - Optional encoder used to order uniform uploads with
+   * subsequent compute commands.
+   */
+  updateShaderInputs(commandEncoder?: CommandEncoder): void {
+    this._uniformStore.setUniforms(this.shaderInputs.getUniformValues(), commandEncoder);
   }
 
   /**

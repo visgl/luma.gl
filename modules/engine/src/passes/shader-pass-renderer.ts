@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {Binding} from '@luma.gl/core';
+import type {Binding, CommandEncoder} from '@luma.gl/core';
 import {Device, Framebuffer, RenderPass, Texture} from '@luma.gl/core';
 import type {
   ShaderPass,
@@ -41,7 +41,7 @@ type ManagedRenderTarget = {
 
 const RESERVED_RENDER_TARGET_NAMES = new Set(['original', 'previous']);
 
-/** Props for ShaderPassRenderer */
+/** Construction props for {@link ShaderPassRenderer}. */
 export type ShaderPassRendererProps = {
   /** List of ShaderPasses or ShaderPassPipelines to apply to the sourceTexture */
   shaderPasses: ShaderPassLike[];
@@ -49,7 +49,21 @@ export type ShaderPassRendererProps = {
   shaderInputs?: ShaderInputs;
 };
 
-/** A pass that renders a given texture into screen space */
+/** Source texture accepted by {@link ShaderPassRenderer}. */
+type ShaderPassSourceTexture = DynamicTexture | Texture;
+
+/**
+ * Runs one or more shader passes against a source texture.
+ *
+ * The renderer owns:
+ * - a shared ping-pong pair for the logical `previous` chain
+ * - any named render targets declared by `ShaderPassPipeline`
+ * - a fullscreen model used both to seed the chain and to present to the screen
+ *
+ * Per-draw `uniforms` and `bindings` passed to `renderToTexture()` or `renderToScreen()` are
+ * merged on top of the renderer's `shaderInputs`, which lets callers reuse one renderer instance
+ * while varying pass inputs frame to frame.
+ */
 export class ShaderPassRenderer {
   device: Device;
   shaderInputs: ShaderInputs;
@@ -81,7 +95,9 @@ export class ShaderPassRenderer {
       flipY: device.type === 'webgpu'
     });
 
-    this.passRenderers = props.shaderPasses.map(shaderPass => new PassRenderer(device, shaderPass));
+    this.passRenderers = props.shaderPasses.map(
+      shaderPass => new PassRenderer(device, shaderPass, this.shaderInputs)
+    );
   }
 
   /** Destroys resources created by this ShaderPassRenderer */
@@ -102,7 +118,7 @@ export class ShaderPassRenderer {
   }
 
   renderToScreen(options: {
-    sourceTexture: DynamicTexture;
+    sourceTexture: ShaderPassSourceTexture;
     uniforms?: any;
     bindings?: any;
   }): boolean {
@@ -114,12 +130,15 @@ export class ShaderPassRenderer {
     const framebuffer = this.device
       .getDefaultCanvasContext()
       .getCurrentFramebuffer({depthStencilFormat: false});
+    // Prepare fullscreen presentation bindings before opening the render pass so WebGPU
+    // uploads stay on the parent command encoder rather than the active render pass encoder.
+    this.textureModel.setProps({backgroundTexture: outputTexture});
+    this.textureModel.predraw(this.device.commandEncoder);
     const renderPass = this.device.beginRenderPass({
       id: 'shader-pass-renderer-to-screen',
       framebuffer,
       clearDepth: false
     });
-    this.textureModel.setProps({backgroundTexture: outputTexture});
     this.textureModel.draw(renderPass);
     renderPass.end();
     return true;
@@ -129,23 +148,27 @@ export class ShaderPassRenderer {
    * @returns null if the the sourceTexture has not yet been loaded
    */
   renderToTexture(options: {
-    sourceTexture: DynamicTexture;
+    sourceTexture: ShaderPassSourceTexture;
     uniforms?: any;
     bindings?: any;
   }): Texture | null {
     const {sourceTexture} = options;
-    if (!sourceTexture.isReady) {
+    if (sourceTexture instanceof DynamicTexture && !sourceTexture.isReady) {
       return null;
     }
+    const originalTexture =
+      sourceTexture instanceof DynamicTexture ? sourceTexture.texture : sourceTexture;
 
     if (this.passRenderers.length === 0) {
-      return sourceTexture.texture;
+      return originalTexture;
     }
 
-    // Seed the first swap framebuffer with the source image before running any subpasses.
-    // Postprocessing shaders derive texSize from sourceTexture, so the first pass must sample
-    // a drawing-buffer-sized intermediate texture rather than the original image dimensions.
-    this.textureModel.setProps({backgroundTexture: sourceTexture});
+    // Seed the first shared framebuffer with the original source. This normalizes the starting
+    // point for later passes so `previous` always refers to a drawing-buffer-sized texture.
+    this.textureModel.setProps({backgroundTexture: originalTexture});
+    // The seed draw updates fullscreen bind groups, so it must be prepared before the
+    // render pass begins to avoid command-encoder locking errors on WebGPU.
+    this.textureModel.predraw(this.device.commandEncoder);
 
     const sourceFramebuffer = this.swapFramebuffers.current;
     const seedRenderPass = this.device.beginRenderPass({
@@ -167,29 +190,39 @@ export class ShaderPassRenderer {
             ? getNextPreviousFramebuffer(this.swapFramebuffers, previousFramebuffer)
             : passRenderer.getRenderTarget(outputName).framebuffer;
         const outputTexture = getFramebufferTexture(outputFramebuffer);
+        // Pipeline routing resolves logical input names like `original`, `previous`, or a named
+        // render target into concrete textures for this draw.
         const resolvedBindings = passRenderer.resolveBindings({
           execution,
-          originalTexture: sourceTexture.texture,
+          originalTexture,
           previousTexture,
           outputTexture,
           externalBindings: options.bindings || {}
         });
+        // Runtime uniforms are layered last so callers can update a renderer-owned pass without
+        // reconstructing it every frame.
+        const resolvedUniforms = resolveExecutionUniforms(
+          this.shaderInputs,
+          execution,
+          options.uniforms || {}
+        );
 
+        execution.subPassRenderer.prepare({
+          commandEncoder: this.device.commandEncoder,
+          bindings: resolvedBindings,
+          textureScale: calculateTextureScale(
+            (resolvedBindings['sourceTexture'] as Texture) || previousTexture,
+            outputTexture
+          ),
+          uniforms: resolvedUniforms
+        });
         const renderPass = this.device.beginRenderPass({
           id: 'shader-pass-renderer-run-pass',
           framebuffer: outputFramebuffer,
           clearColor: [0, 0, 0, 1],
           clearDepth: 1
         });
-        execution.subPassRenderer.render({
-          renderPass,
-          bindings: resolvedBindings,
-          textureScale: calculateTextureScale(
-            (resolvedBindings['sourceTexture'] as Texture) || previousTexture,
-            outputTexture
-          ),
-          uniforms: execution.uniforms
-        });
+        execution.subPassRenderer.draw(renderPass);
         renderPass.end();
 
         if (outputName === 'previous') {
@@ -203,15 +236,17 @@ export class ShaderPassRenderer {
   }
 }
 
-/** renders one ShaderPass or ShaderPassPipeline */
+/** Renders one `ShaderPass` or `ShaderPassPipeline` entry in the chain. */
 class PassRenderer {
   device: Device;
+  shaderInputs: ShaderInputs;
   passDefinition: ShaderPassLike;
   renderTargets: Record<string, ManagedRenderTarget>;
   subPassExecutions: EffectiveSubPass[];
 
-  constructor(device: Device, passDefinition: ShaderPassLike) {
+  constructor(device: Device, passDefinition: ShaderPassLike, shaderInputs: ShaderInputs) {
     this.device = device;
+    this.shaderInputs = shaderInputs;
     this.passDefinition = passDefinition;
 
     if (isShaderPassPipeline(passDefinition)) {
@@ -258,7 +293,14 @@ class PassRenderer {
   }): Record<string, Binding | DynamicTexture> {
     const {execution, originalTexture, previousTexture, outputTexture, externalBindings} = options;
     const inputMap = execution.inputs || {sourceTexture: 'previous'};
-    const resolvedBindings: Record<string, Binding | DynamicTexture> = {...externalBindings};
+    const shaderInputBindings = this.shaderInputs.getModuleBindingValues(execution.shaderPass.name);
+    // Shader-pass bindings stored in `shaderInputs` act as renderer-owned defaults. Per-draw
+    // external bindings can override those defaults for frame-specific resources, while routed
+    // logical inputs such as `sourceTexture` remain authoritative below.
+    const resolvedBindings: Record<string, Binding | DynamicTexture> = {
+      ...shaderInputBindings,
+      ...externalBindings
+    };
     const outputName = execution.output || 'previous';
 
     for (const [bindingName, inputSource] of Object.entries(inputMap)) {
@@ -353,7 +395,7 @@ class PassRenderer {
   }
 }
 
-/** Renders one subpass of a ShaderPass */
+/** Renders a single subpass of a `ShaderPass`. */
 class SubPassRenderer {
   model: ClipSpace;
   shaderPass: ShaderPass;
@@ -385,13 +427,13 @@ class SubPassRenderer {
     this.model.destroy();
   }
 
-  render(options: {
-    renderPass: RenderPass;
+  prepare(options: {
+    commandEncoder: CommandEncoder;
     bindings: Record<string, Binding | DynamicTexture>;
     textureScale: [number, number];
     uniforms?: Record<string, unknown>;
   }): void {
-    const {renderPass, bindings, textureScale, uniforms} = options;
+    const {commandEncoder, bindings, textureScale, uniforms} = options;
 
     this.model.shaderInputs.setProps({
       textureTransform: {scale: textureScale}
@@ -403,6 +445,10 @@ class SubPassRenderer {
       [this.shaderPass.name]: uniforms || {}
     });
     this.model.setBindings(bindings || {});
+    this.model.predraw(commandEncoder);
+  }
+
+  draw(renderPass: RenderPass): void {
     this.model.draw(renderPass);
   }
 }
@@ -476,6 +522,28 @@ function mergeUniforms(
     ...(baseUniforms || {}),
     ...(subPassUniforms || {})
   };
+}
+
+/**
+ * Resolves the effective uniform block for one execution.
+ *
+ * Merge order is:
+ * 1. persisted renderer-level shader inputs
+ * 2. uniforms baked into the pipeline or subpass definition
+ * 3. per-draw runtime overrides
+ */
+function resolveExecutionUniforms(
+  shaderInputs: ShaderInputs,
+  execution: EffectiveSubPass,
+  runtimeUniforms: Record<string, Record<string, unknown>>
+): Record<string, unknown> | undefined {
+  return mergeUniforms(
+    mergeUniforms(
+      shaderInputs.getUniformValues()[execution.shaderPass.name] as Record<string, unknown>,
+      execution.uniforms
+    ),
+    runtimeUniforms[execution.shaderPass.name]
+  );
 }
 
 function createManagedRenderTargets(

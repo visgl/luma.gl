@@ -33,7 +33,7 @@ export function createTestDevice(): WebGLDevice | null {
     cachedWebglDevice = new WebGLDevice({createCanvasContext: DEFAULT_CANVAS_CONTEXT_PROPS});
     return cachedWebglDevice;
   } catch (error) {
-    // eslint-disable-next-line no-console
+    // biome-ignore lint/suspicious/noConsole: synchronous test-device creation reports setup failures to stderr.
     console.error(`Failed to created device: ${(error as Error).message}`);
     // biome-ignore lint/suspicious/noDebugger: explicit debug break for synchronous test-device failures.
     debugger;

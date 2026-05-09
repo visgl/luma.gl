@@ -5,6 +5,9 @@ on:
     branches:
       - '*-release'
 
+permissions:
+  contents: read
+
 jobs:
   check_branch:
     runs-on: ubuntu-22.04
@@ -12,7 +15,7 @@ jobs:
       should_deploy: ${{ endsWith(github.ref, steps.get_version.outputs.latest) }}
 
     steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Get version
         id: get_version
@@ -32,12 +35,14 @@ jobs:
     if: ${{ github.repository_owner == 'visgl' && needs.check_branch.outputs.should_deploy }}
 
     steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           token: ${{ secrets.WEBSITE_DEPLOY_TOKEN }}
-      
-      - name: Checkout code
-        uses: actions/checkout@v4
+
+      - name: Setup Node (with Corepack)
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+        with:
+          node-version-file: '.nvmrc'
 
       - name: Enable Corepack / Yarn 4
         run: |
@@ -45,12 +50,13 @@ jobs:
           corepack prepare yarn@4.13.0 --activate
           yarn -v
 
-      - name: Setup Node (with Corepack)
-        uses: actions/setup-node@v4
+      - name: Cache Yarn Berry artifacts
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
-          node-version-file: '.nvmrc'
-          cache: 'yarn' # or 'pnpm', 'npm' depending on your package manager
-          cache-dependency-path: yarn.lock
+          path: |
+            ~/.yarn/berry/cache
+            .yarn/install-state.gz
+          key: ${{ runner.os }}-yarn4-${{ hashFiles('yarn.lock', '.yarnrc.yml', 'package.json') }}
 
       - name: Install dependencies and build website
         run: |

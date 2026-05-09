@@ -98,19 +98,12 @@ export async function initializeExternalWebGLContext(
 ): Promise<ExternalWebGLContextHandle> {
   const container = options.container || document.body;
 
-  const uniformStore = new UniformStore<{app: AppUniforms}>({
-    app: {
-      uniformTypes: {
-        uModelViewProjection: 'mat4x4<f32>'
-      }
-    }
-  });
-
   let device: WebGLDevice | null = null;
   let model: Model | null = null;
   let activeWebglContext: WebGL2RenderingContext | null = null;
   let positionsBuffer: Buffer | null = null;
   let colorsBuffer: Buffer | null = null;
+  let uniformStore: UniformStore<{app: AppUniforms}> | null = null;
 
   const baseModelMatrix = new Matrix4();
   const modelViewProjectionMatrix = new Matrix4();
@@ -148,6 +141,13 @@ export async function initializeExternalWebGLContext(
       device = await webgl2Adapter.attach(maplibreWebglContext, {
         createCanvasContext: {autoResize: false}
       });
+      uniformStore = new UniformStore(device, {
+        app: {
+          uniformTypes: {
+            uModelViewProjection: 'mat4x4<f32>'
+          }
+        }
+      });
 
       resizeCanvasContext(maplibreWebglContext);
 
@@ -182,7 +182,7 @@ export async function initializeExternalWebGLContext(
         },
         vertexCount: POSITIONS.length / 3,
         bindings: {
-          app: uniformStore.getManagedUniformBuffer(device, 'app')
+          app: uniformStore.getManagedUniformBuffer('app')
         },
         parameters: {
           depthWriteEnabled: false,
@@ -200,7 +200,12 @@ export async function initializeExternalWebGLContext(
       });
     },
     render: (maplibreWebglContext, customRenderInput: CustomRenderMethodInput) => {
-      if (!(maplibreWebglContext instanceof WebGL2RenderingContext) || !device || !model) {
+      if (
+        !(maplibreWebglContext instanceof WebGL2RenderingContext) ||
+        !device ||
+        !model ||
+        !uniformStore
+      ) {
         return;
       }
 
@@ -261,7 +266,7 @@ export async function initializeExternalWebGLContext(
       positionsBuffer?.destroy();
       colorsBuffer?.destroy();
       model?.destroy();
-      uniformStore.destroy();
+      uniformStore?.destroy();
       device?.destroy();
     }
   };

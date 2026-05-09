@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Device, Texture} from '@luma.gl/core';
+import {Device, type CommandEncoder, Texture} from '@luma.gl/core';
 import type {ShaderModule} from '@luma.gl/shadertools';
 import {DynamicTexture} from '../dynamic-texture/dynamic-texture';
 import {ClipSpace, ClipSpaceProps} from './clip-space';
@@ -148,9 +148,9 @@ export class BackgroundTextureModel extends ClipSpace {
     }
   }
 
-  override predraw(): void {
+  override predraw(commandEncoder: CommandEncoder): void {
     // this.updateScale(this.backgroundTexture);
-    super.predraw();
+    super.predraw(commandEncoder);
   }
 
   updateScale(texture: Texture): void {

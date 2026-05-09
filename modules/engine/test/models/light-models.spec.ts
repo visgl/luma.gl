@@ -67,6 +67,7 @@ const invalidPointLightModelProps: PointLightModelProps = {
   projectionMatrix: PROJECTION_MATRIX,
   viewMatrix: VIEW_MATRIX
 };
+void invalidPointLightModelProps;
 
 test('Light models filter mixed Light[] input', async t => {
   const device = await getWebGLTestDevice();

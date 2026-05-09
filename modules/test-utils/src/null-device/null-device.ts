@@ -19,6 +19,8 @@ import type {
   RenderPipelineProps,
   ComputePipeline,
   ComputePipelineProps,
+  Buffer,
+  CommandEncoder,
   CommandEncoderProps,
   TransformFeedbackProps,
   QuerySetProps
@@ -67,7 +69,7 @@ export class NullDevice extends Device {
 
     const canvasContextProps = Device._getCanvasContextProps(props);
     this.canvasContext = new NullCanvasContext(this, canvasContextProps);
-    this.lost = new Promise(resolve => {});
+    this.lost = new Promise(_resolve => {});
     this.commandEncoder = new NullCommandEncoder(this, {id: 'null-command-encoder'});
   }
 
@@ -158,6 +160,15 @@ export class NullDevice extends Device {
     }
 
     commandBuffer.destroy();
+  }
+
+  override writeBufferViaCommandEncoder(
+    _commandEncoder: CommandEncoder,
+    destinationBuffer: Buffer,
+    data: ArrayBufferLike | ArrayBufferView | SharedArrayBuffer,
+    byteOffset: number = 0
+  ): void {
+    destinationBuffer.write(data, byteOffset);
   }
 
   override setParametersWebGL(parameters: any): void {}

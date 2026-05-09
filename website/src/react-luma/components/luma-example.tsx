@@ -230,6 +230,7 @@ type LumaExampleProps = React.PropsWithChildren<{
   panel?: boolean;
   showHeader?: boolean;
   showStats?: boolean;
+  headerControls?: React.ReactNode;
 }>;
 
 const defaultProps = {
@@ -716,6 +717,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
           sourcePath={props.sourcePath}
         >
           {info ? <div dangerouslySetInnerHTML={{__html: info}} /> : null}
+          {props.headerControls}
         </ExampleHeader>
       ) : null}
       <div ref={statsContainerRef} style={{minHeight: 0, position: 'absolute', inset: 0}}>
@@ -739,7 +741,6 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
         ) : null}
         <div key={deviceType} ref={canvasContainerRef} style={EXAMPLE_CANVAS_STYLE} />
       </div>
-      {props.children}
     </ExamplePage>
   );
 };
