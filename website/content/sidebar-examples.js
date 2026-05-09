@@ -12,7 +12,8 @@ const sidebars = {
         'showcase/gltf',
         'showcase/instancing',
         'showcase/postprocessing',
-        'showcase/dof'
+        'showcase/dof',
+        'showcase/globe'
       ]
     },
     {

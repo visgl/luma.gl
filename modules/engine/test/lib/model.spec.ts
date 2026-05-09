@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {Device, luma, PipelineFactory, ShaderFactory} from '@luma.gl/core';
+import {CommandEncoder, Device, luma, PipelineFactory, ShaderFactory} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
 import {getWebGLTestDevice, getWebGPUTestDevice, getTestDevices} from '@luma.gl/test-utils';
 import {skin} from '@luma.gl/shadertools';
@@ -26,7 +26,7 @@ struct AppFrameUniforms {
   scale: f32
 };
 
-@group(0) @binding(0) var<uniform> appFrame: AppFrameUniforms;
+@group(0) @binding(auto) var<uniform> appFrame: AppFrameUniforms;
 
 @vertex fn vertexMain() -> @builtin(position) vec4<f32> {
   return vec4<f32>(appFrame.scale, 0.0, 0.0, 1.0);
@@ -218,6 +218,52 @@ test('Model#draw', async t => {
 
   renderPass.destroy();
 
+  model.destroy();
+
+  t.end();
+});
+
+test('Model#draw skips implicit predraw on WebGPU', async t => {
+  const webgpuDevice = await getWebGPUTestDevice();
+
+  if (!webgpuDevice) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  class PredrawTrackingModel extends Model {
+    predrawCallCount = 0;
+
+    override predraw(commandEncoder: CommandEncoder): void {
+      this.predrawCallCount++;
+      super.predraw(commandEncoder);
+    }
+  }
+
+  const framebuffer = webgpuDevice.createFramebuffer({
+    width: 1,
+    height: 1,
+    colorAttachments: ['rgba8unorm']
+  });
+  const model = new PredrawTrackingModel(webgpuDevice, {
+    id: 'webgpu-predraw-test',
+    source: DUMMY_WGSL,
+    vertexCount: 1
+  });
+
+  const renderPass = webgpuDevice.beginRenderPass({
+    clearColor: [0, 0, 0, 0],
+    framebuffer
+  });
+
+  t.ok(model.draw(renderPass), 'WebGPU model draw succeeds');
+  t.equal(model.predrawCallCount, 0, 'WebGPU draw does not call predraw implicitly');
+
+  renderPass.end();
+  webgpuDevice.submit();
+  renderPass.destroy();
+  framebuffer.destroy();
   model.destroy();
 
   t.end();
@@ -425,7 +471,7 @@ test('Model#pipeline caching', async t => {
   t.ok(model2.draw(renderPass), 'Second model draw succeeded');
 
   model2.setBufferLayout([{name: 'a', format: 'float32x3'}]);
-  model2.predraw(); // Forces a pipeline update
+  model2.predraw(webglDevice.commandEncoder); // Forces a pipeline update
   t.ok(model1.pipeline !== model2.pipeline, 'Pipeline updated');
 
   t.ok(model2.draw(renderPass), 'Pipeline updates still draw');

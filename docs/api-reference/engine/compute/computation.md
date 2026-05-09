@@ -18,8 +18,8 @@ const computation = new Computation(device, {
   }
 });
 
+computation.predraw(device.commandEncoder);
 const computePass = device.beginComputePass();
-computation.predraw();
 computation.dispatch(computePass, 64, 1, 1);
 computePass.end();
 ```
@@ -74,9 +74,9 @@ Creates a computation wrapper for one WebGPU device. Throws on non-WebGPU device
 
 Releases the cached pipeline and shader and destroys the internal uniform store.
 
-### `predraw(): void`
+### `predraw(commandEncoder: CommandEncoder): void`
 
-Updates uniform buffers from the current `ShaderInputs` state.
+Updates uniform buffers from the current `ShaderInputs` state, encoding any managed uploads onto the supplied command encoder before the compute pass begins.
 
 ### `dispatch(computePass: ComputePass, x: number, y?: number, z?: number): void`
 
@@ -90,9 +90,9 @@ Replaces the active `ShaderInputs` instance and rebuilds the managed uniform-buf
 
 Updates module props through the shader assembler's generated module-uniform helper.
 
-### `updateShaderInputs(): void`
+### `updateShaderInputs(commandEncoder?: CommandEncoder): void`
 
-Flushes current `ShaderInputs` values into the internal uniform store.
+Flushes current `ShaderInputs` values into the internal uniform store. On WebGPU, pass the encoder that will own the subsequent compute pass when upload ordering matters.
 
 ### `setBindings(bindings: Record<string, Binding>): void`
 

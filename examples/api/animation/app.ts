@@ -160,13 +160,13 @@ Time: <input type="range" id="time" min="0" max="30000" step="1"><BR>
     model: Model;
     uniformStore: UniformStore<{app: AppUniforms}>;
   }[];
-
-  globalUniformStore = new UniformStore<{dirlight: typeof dirlight.uniforms}>({
-    dirlight
-  });
+  globalUniformStore: UniformStore<{dirlight: typeof dirlight.uniforms}>;
 
   constructor({device, aspect, animationLoop}: AnimationProps) {
     super();
+    this.globalUniformStore = new UniformStore(device, {
+      dirlight
+    });
 
     const playButton = document.getElementById('play');
     const pauseButton = document.getElementById('pause');
@@ -213,7 +213,7 @@ Time: <input type="range" id="time" min="0" max="30000" step="1"><BR>
     for (let i = 0; i < 4; ++i) {
       this.timeline.attachAnimation(keyFrames[i], channels[i]);
 
-      const cubeUniformStore = new UniformStore<{app: AppUniforms}>({app});
+      const cubeUniformStore = new UniformStore(device, {app});
 
       cubeUniformStore.setUniforms({
         app: {
@@ -244,8 +244,8 @@ Time: <input type="range" id="time" min="0" max="30000" step="1"><BR>
             depthCompare: 'less-equal'
           },
           bindings: {
-            app: cubeUniformStore.getManagedUniformBuffer(device, 'app'),
-            dirlight: this.globalUniformStore.getManagedUniformBuffer(device, 'dirlight')
+            app: cubeUniformStore.getManagedUniformBuffer('app'),
+            dirlight: this.globalUniformStore.getManagedUniformBuffer('dirlight')
           }
         })
       };

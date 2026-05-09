@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "docusaurus": "docusaurus",
-    "start": "docusaurus start",
-    "build": "docusaurus build",
+    "start": "node ./scripts/sync-example-assets.mjs && docusaurus start",
+    "build": "node ./scripts/sync-example-assets.mjs && docusaurus build",
     "build-staging": "STAGING=true yarn build",
     "lint": "npx tsc --noEmit",
     "swizzle": "docusaurus swizzle",

@@ -46,14 +46,14 @@
     "rules": {
       "recommended": false,
       "correctness": {
-        "noUnusedImports": "warn",
-        "noUnusedVariables": "warn",
+        "noUnusedImports": "error",
+        "noUnusedVariables": "error",
         "noUnreachable": "error"
       },
       "suspicious": {
         "noAssignInExpressions": "error",
         "noAsyncPromiseExecutor": "error",
-        "noConsole": "warn",
+        "noConsole": "error",
         "noDebugger": "error",
         "noDoubleEquals": "error",
         "noGlobalIsNan": "error",

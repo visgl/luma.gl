@@ -14,7 +14,16 @@ export type {ShaderBindingDebugRow} from './lib/shader-assembly/wgsl-binding-deb
 // ShaderModules
 
 export type {ShaderModule} from './lib/shader-module/shader-module';
-export type {ShaderPass} from './lib/shader-module/shader-pass';
+export type {
+  ShaderPass,
+  ShaderPassInputSource,
+  ShaderPassRenderTarget,
+  ShaderSubPass
+} from './lib/shader-module/shader-pass';
+export type {
+  ShaderPassPipeline,
+  ShaderPassPipelineStep
+} from './lib/shader-module/shader-pass-pipeline';
 export type {ShaderModuleUniformValue, UniformTypes} from './lib/utils/uniform-types';
 
 export {initializeShaderModule, initializeShaderModules} from './lib/shader-module/shader-module';
@@ -114,6 +123,11 @@ export type {GouraudMaterialProps} from './modules/lighting/gouraud-material/gou
 export {gouraudMaterial} from './modules/lighting/gouraud-material/gouraud-material';
 export type {PhongMaterialProps} from './modules/lighting/phong-material/phong-material';
 export {phongMaterial} from './modules/lighting/phong-material/phong-material';
+export type {
+  WaterMaterialProps,
+  WaterMaterialUniforms
+} from './modules/lighting/water-material/water-material';
+export {waterMaterial} from './modules/lighting/water-material/water-material';
 export type {
   PBRMaterialBindings,
   PBRMaterialProps,

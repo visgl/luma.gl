@@ -52,8 +52,7 @@ export function withGLParameters(
 
 // Returns true if given object is empty, false otherwise.
 function isObjectEmpty(object: unknown): boolean {
-  // @ts-ignore - dummy key variable
-  for (const key in object) {
+  for (const _key in object as Record<string, unknown>) {
     return false;
   }
   return true;

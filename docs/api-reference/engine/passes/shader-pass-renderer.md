@@ -1,6 +1,6 @@
 # ShaderPassRenderer
 
-`ShaderPassRenderer` applies one or more `ShaderPass` definitions to a source texture and either renders the result back to a texture or draws it to the screen.
+`ShaderPassRenderer` applies one or more `ShaderPass` or `ShaderPassPipeline` definitions to a source texture and either renders the result back to a texture or draws it to the screen.
 
 Internally it uses [`ClipSpace`](/docs/api-reference/engine/clip-space), [`BackgroundTextureModel`](/docs/api-reference/engine/background-texture-model), and [`SwapFramebuffers`](/docs/api-reference/engine/compute/swap) to manage the pass chain.
 
@@ -10,10 +10,118 @@ Internally it uses [`ClipSpace`](/docs/api-reference/engine/clip-space), [`Backg
 import {ShaderPassRenderer} from '@luma.gl/engine';
 
 const renderer = new ShaderPassRenderer(device, {
-  shaderPasses: [myShaderPass]
+  shaderPasses: [myShaderPass, myShaderPassPipeline]
 });
 
 const outputTexture = renderer.renderToTexture({sourceTexture});
+```
+
+Per-draw uniforms and extra bindings can be supplied when a pass needs frame-specific inputs:
+
+```typescript
+renderer.renderToScreen({
+  sourceTexture: sceneColorTexture,
+  bindings: {depthTexture: sceneDepthTexture},
+  uniforms: {
+    dof: {
+      depthRange: [0.1, 30],
+      focusDistance: 3,
+      blurCoefficient: 0.9,
+      pixelsPerMillimeter: 42
+    }
+  }
+});
+```
+
+## Routing Model
+
+The renderer always provides two logical texture sources:
+
+- `original`: the original input texture passed to `renderToTexture()`
+- `previous`: the current shared output of the pass chain
+
+Plain `ShaderPass` objects may route subpasses only against those logical sources.
+
+`ShaderPassPipeline` adds pipeline-global named render targets that any later step in that pipeline may read:
+
+```ts
+type ShaderPassPipeline<TargetNameT extends string = string> = {
+  name: string;
+  renderTargets?: Record<TargetNameT, ShaderPassRenderTarget>;
+  steps: ShaderPassPipelineStep<TargetNameT>[];
+};
+
+type ShaderPassPipelineStep<TargetNameT extends string = string> = {
+  shaderPass: ShaderPass;
+  inputs?: Record<string, ShaderPassInputSource<TargetNameT>>;
+  output?: 'previous' | TargetNameT;
+  uniforms?: Record<string, UniformValue>;
+};
+```
+
+Each step runs an existing `ShaderPass`:
+
+- `step.inputs` is applied to the first subpass of the referenced pass.
+- `step.output` is applied to the last subpass of the referenced pass.
+- `step.uniforms` is merged into every subpass as a base layer.
+
+This lets the renderer orchestrate existing passes without turning `ShaderPass.passes` into nested effects.
+
+## Runtime Inputs
+
+At draw time, the renderer merges three uniform layers for each shader pass:
+
+- values already stored in `shaderInputs`
+- uniforms declared on the pass or pipeline step
+- `options.uniforms` passed to `renderToTexture()` / `renderToScreen()`
+
+Bindings follow a similar pattern:
+
+- bindings already stored in `shaderInputs` for the current shader pass
+- `options.bindings` passed to the draw call
+
+This makes it practical to keep one renderer alive while swapping in frame-specific resources such
+as a freshly rendered depth texture.
+
+When you call `shaderInputs.setProps({[passName]: {...}})`, any texture bindings in that object are
+stored as defaults for that specific shader pass. `ShaderPassRenderer` resolves those defaults per
+pass, then layers `options.bindings` on top for per-frame overrides.
+
+## Example
+
+This example extracts highlights into one named target, runs an existing blur pass into another, then composites back to `previous`:
+
+```ts
+const bloomPipeline: ShaderPassPipeline<'extract' | 'blurred'> = {
+  name: 'bloom',
+  renderTargets: {
+    extract: {},
+    blurred: {scale: [0.5, 0.5]}
+  },
+  steps: [
+    {
+      shaderPass: brightExtractPass,
+      inputs: {sourceTexture: 'original'},
+      output: 'extract',
+      uniforms: {threshold: 0.8}
+    },
+    {
+      shaderPass: gaussianBlur,
+      inputs: {sourceTexture: 'extract'},
+      output: 'blurred',
+      uniforms: {radius: 12}
+    },
+    {
+      shaderPass: bloomCompositePass,
+      inputs: {
+        sourceTexture: 'previous',
+        bloomTexture: 'blurred'
+      },
+      output: 'previous',
+      uniforms: {intensity: 1.5}
+    }
+  ]
+};
 ```
 
 ## Types
@@ -22,7 +130,7 @@ const outputTexture = renderer.renderToTexture({sourceTexture});
 
 ```ts
 export type ShaderPassRendererProps = {
-  shaderPasses: ShaderPass[];
+  shaderPasses: (ShaderPass | ShaderPassPipeline)[];
   shaderInputs?: ShaderInputs;
 };
 ```
@@ -35,7 +143,11 @@ Shader-input manager used to store pass uniforms.
 
 ### `swapFramebuffers`
 
-Double-buffered framebuffer pair used while running the pass chain.
+Double-buffered framebuffer pair used while running the shared `previous` chain.
+
+### `passRenderers`
+
+Internal per-entry renderers. A renderer for a `ShaderPassPipeline` owns that pipeline's named render targets.
 
 ### `textureModel`
 
@@ -53,7 +165,9 @@ Destroys owned pass renderers, swap framebuffers, and texture model.
 
 ### `resize(size?: [number, number]): void`
 
-Resizes the internal swap framebuffers to match the provided size or the current canvas size.
+Resizes the internal swap framebuffers and all pipeline render targets to match the provided size or the current canvas size.
+
+Named targets respect their declared `scale`. For example, a target with `scale: [0.5, 0.5]` is resized to half width and half height.
 
 ### `renderToScreen(options): boolean`
 
@@ -61,9 +175,9 @@ Runs the pass chain and then draws the result into the device's current framebuf
 
 ```ts
 renderToScreen(options: {
-  sourceTexture: DynamicTexture;
-  uniforms?: any;
-  bindings?: any;
+  sourceTexture: DynamicTexture | Texture;
+  uniforms?: Record<string, Record<string, unknown>>;
+  bindings?: Record<string, Binding | DynamicTexture>;
 }): boolean
 ```
 
@@ -75,13 +189,20 @@ Runs the pass chain and returns the output texture.
 
 ```ts
 renderToTexture(options: {
-  sourceTexture: DynamicTexture;
-  uniforms?: any;
-  bindings?: any;
+  sourceTexture: DynamicTexture | Texture;
+  uniforms?: Record<string, Record<string, unknown>>;
+  bindings?: Record<string, Binding | DynamicTexture>;
 }): Texture | null
 ```
 
 ## Remarks
 
-- The current implementation expects `sourceTexture` to be a `DynamicTexture`.
-- Two internal framebuffers are used for ping-pong rendering through the pass sequence.
+- `sourceTexture` may be a `DynamicTexture` or a ready `Texture`.
+- `uniforms` may supply per-draw shader module uniforms keyed by shader pass name.
+- `bindings` may supply per-draw texture bindings keyed by shader binding name.
+- Two internal framebuffers are used for ping-pong rendering through the shared `previous` sequence.
+- Named render targets are declared only on `ShaderPassPipeline`, not on `ShaderPass`.
+- Target names `original` and `previous` are reserved and may not be used as pipeline target names.
+- A plain `ShaderPass` used outside a pipeline may only reference `original` and `previous`.
+- The renderer throws if a pass or pipeline step references an unknown input source or output target.
+- The renderer throws if a subpass tries to read from and write to the same named render target in one draw.

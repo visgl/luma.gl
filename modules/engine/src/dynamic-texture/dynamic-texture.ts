@@ -241,7 +241,7 @@ export class DynamicTexture {
       this.isReady = true;
       this.resolveReady(this.texture);
 
-      log.info(0, `${this} created`)();
+      log.info(1, `${this} created`)();
     } catch (e) {
       const err = e instanceof Error ? e : new Error(String(e));
       this.rejectReady(err);
@@ -326,7 +326,7 @@ export class DynamicTexture {
     const buffer = await this.readBuffer(options);
     const data = await buffer.readAsync(0, layout.byteLength);
     buffer.destroy();
-    return data.buffer;
+    return data.buffer instanceof ArrayBuffer ? data.buffer : data.slice().buffer;
   }
 
   /**

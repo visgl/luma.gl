@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {Binding, BindingsByGroup, Device} from '@luma.gl/core';
+import type {Binding, BindingsByGroup, CommandEncoder, Device} from '@luma.gl/core';
 import {Buffer, Sampler, Texture, TextureView, UniformStore} from '@luma.gl/core';
 import type {ShaderModule} from '@luma.gl/shadertools';
 import {DynamicTexture} from '../dynamic-texture/dynamic-texture';
@@ -133,6 +133,7 @@ export class Material<
     if (props.moduleProps) {
       material.setProps(props.moduleProps);
     }
+    material.updateShaderInputs();
     return material;
   }
 
@@ -149,12 +150,16 @@ export class Material<
   /** Updates material uniform/module props in place without changing material identity. */
   setProps(props: MaterialPropsUpdate<TModuleProps>): void {
     this.shaderInputs.setProps(props);
-    this.updateShaderInputs();
   }
 
-  /** Updates managed uniform buffers and shader-input-owned bindings. */
-  updateShaderInputs(): void {
-    this._uniformStore.setUniforms(this.shaderInputs.getUniformValues());
+  /**
+   * Updates managed uniform buffers and shader-input-owned bindings.
+   *
+   * @param commandEncoder - Optional encoder used to order material uniform
+   * uploads with subsequent draw commands.
+   */
+  updateShaderInputs(commandEncoder?: CommandEncoder): void {
+    this._uniformStore.setUniforms(this.shaderInputs.getUniformValues(), commandEncoder);
     const didChange = this._setOwnedBindings(this.shaderInputs.getBindingValues());
     if (didChange) {
       this._bindGroupCacheToken = {};

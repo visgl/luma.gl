@@ -79,6 +79,48 @@ test('WEBGLRenderPass#drawBuffers for explicit default framebuffer wrapper', asy
   t.end();
 });
 
+test('WEBGLRenderPass#drawBuffers for wrapped external WebGLFramebuffer', async t => {
+  const device = await getWebGLTestDevice();
+  const {gl} = device;
+
+  const drawBufferCalls: number[][] = [];
+  const originalDrawBuffers = gl.drawBuffers.bind(gl);
+  gl.drawBuffers = ((buffers: number[]) => {
+    drawBufferCalls.push([...buffers]);
+    return originalDrawBuffers(buffers as any);
+  }) as typeof gl.drawBuffers;
+
+  // Simulate wrapping an external WebGLFramebuffer (e.g. from Google Maps interleaved rendering).
+  // Attach a color renderbuffer so gl.clear() doesn't error on an incomplete FBO.
+  const externalFbo = gl.createFramebuffer()!;
+  gl.bindFramebuffer(GL.FRAMEBUFFER, externalFbo);
+  const rb = gl.createRenderbuffer()!;
+  gl.bindRenderbuffer(GL.RENDERBUFFER, rb);
+  gl.renderbufferStorage(GL.RENDERBUFFER, gl.RGBA8, 64, 64);
+  gl.framebufferRenderbuffer(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, GL.RENDERBUFFER, rb);
+  gl.bindFramebuffer(GL.FRAMEBUFFER, null);
+
+  const framebuffer = device.createFramebuffer({handle: externalFbo, width: 64, height: 64});
+
+  // Should not crash accessing colorAttachments.map() on wrapped external framebuffer
+  const renderPass = new WEBGLRenderPass(device, {framebuffer});
+  t.ok(renderPass, 'does not crash on wrapped external WebGLFramebuffer');
+  renderPass.end();
+
+  t.equal(
+    drawBufferCalls.length,
+    0,
+    'does not call drawBuffers for wrapped external WebGLFramebuffer'
+  );
+
+  gl.drawBuffers = originalDrawBuffers;
+  framebuffer.destroy();
+  gl.deleteRenderbuffer(rb);
+  gl.deleteFramebuffer(externalFbo);
+  device.destroy();
+  t.end();
+});
+
 test('WEBGLRenderPass flushes deferred default canvas resize', async t => {
   const device = await getWebGLTestDevice();
   const canvasContext = device.getDefaultCanvasContext();

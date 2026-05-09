@@ -150,12 +150,12 @@ Rendered using the luma.gl <code>Model</code>, <code>CubeGeometry</code> and <co
   viewMatrix = new Matrix4().lookAt({eye: eyePosition}).rotateZ(Math.PI);
   model: Model | null = null;
   device: Device;
-
-  uniformStore = new UniformStore<{app: AppUniforms}>({app});
+  uniformStore: UniformStore<{app: AppUniforms}>;
 
   constructor({device}: AnimationProps) {
     super();
     this.device = device;
+    this.uniformStore = new UniformStore(device, {app});
     this.initialize();
   }
 
@@ -200,7 +200,7 @@ Rendered using the luma.gl <code>Model</code>, <code>CubeGeometry</code> and <co
       fs: FS_GLSL,
       geometry,
       bindings: {
-        app: this.uniformStore.getManagedUniformBuffer(device, 'app'),
+        app: this.uniformStore.getManagedUniformBuffer('app'),
         uTexture: texture
       },
       parameters: {

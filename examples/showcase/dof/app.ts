@@ -10,7 +10,16 @@
 import type {NumberArray, TextureFormatColor, TextureFormatDepthStencil} from '@luma.gl/core';
 import {Buffer, Framebuffer, Texture} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
-import {AnimationLoopTemplate, ClipSpace, CubeGeometry, Model, ShaderInputs} from '@luma.gl/engine';
+import {
+  AnimationLoopTemplate,
+  CubeGeometry,
+  DynamicTexture,
+  loadImageBitmap,
+  Model,
+  ShaderInputs,
+  ShaderPassRenderer
+} from '@luma.gl/engine';
+import {dofShaderPassPipeline} from '@luma.gl/effects';
 import type {ShaderModule} from '@luma.gl/shadertools';
 import {Matrix4, radians} from '@math.gl/core';
 
@@ -21,16 +30,16 @@ const INFO_HTML = `\
 </div>
 <div style="display: grid; gap: 10px; min-width: 280px;">
   <label style="display: grid; gap: 4px;">
-    <span style="font-size: 12px; font-weight: 600;">Focal Length</span>
-    <input type="range" id="dof-focal-length" min="0.1" max="10.0" step="0.1">
-  </label>
-  <label style="display: grid; gap: 4px;">
     <span style="font-size: 12px; font-weight: 600;">Focus Distance</span>
     <input type="range" id="dof-focus-distance" min="0.1" max="10.0" step="0.1">
   </label>
   <label style="display: grid; gap: 4px;">
-    <span style="font-size: 12px; font-weight: 600;">F-Stop</span>
+    <span style="font-size: 12px; font-weight: 600;">Lens Aperture</span>
     <input type="range" id="dof-f-stop" min="0.1" max="10.0" step="0.1">
+  </label>
+  <label style="display: grid; gap: 4px;">
+    <span style="font-size: 12px; font-weight: 600;">Focal Length</span>
+    <input type="range" id="dof-focal-length" min="0.1" max="10.0" step="0.1">
   </label>
 </div>
 `;
@@ -43,7 +52,7 @@ const FAR = 30;
 const INSTANCE_MATRIX_STRIDE = 16;
 const INSTANCE_MATRIX_BUFFER_BYTE_LENGTH =
   NUM_CUBES * INSTANCE_MATRIX_STRIDE * Float32Array.BYTES_PER_ELEMENT;
-const BLUR_SAMPLE_LIMIT = 20;
+const VIS_LOGO_TEXTURE_URL = 'vis-logo.png';
 
 type AppUniforms = {
   projectionMatrix: NumberArray;
@@ -55,7 +64,6 @@ type DofUniforms = {
   focusDistance: number;
   blurCoefficient: number;
   pixelsPerMillimeter: number;
-  texelOffset: [number, number];
 };
 
 const appShaderModule: ShaderModule<AppUniforms> = {
@@ -63,17 +71,6 @@ const appShaderModule: ShaderModule<AppUniforms> = {
   uniformTypes: {
     projectionMatrix: 'mat4x4<f32>',
     viewMatrix: 'mat4x4<f32>'
-  }
-};
-
-const dofShaderModule: ShaderModule<DofUniforms> = {
-  name: 'dof',
-  uniformTypes: {
-    depthRange: 'vec2<f32>',
-    focusDistance: 'f32',
-    blurCoefficient: 'f32',
-    pixelsPerMillimeter: 'f32',
-    texelOffset: 'vec2<f32>'
   }
 };
 
@@ -87,6 +84,8 @@ struct AppUniforms {
 };
 
 @group(0) @binding(auto) var<uniform> app: AppUniforms;
+@group(0) @binding(auto) var cubeTexture: texture_2d<f32>;
+@group(0) @binding(auto) var cubeTextureSampler: sampler;
 
 struct VertexInputs {
   @location(0) positions: vec3<f32>,
@@ -128,9 +127,8 @@ fn vertexMain(inputs: VertexInputs) -> VertexOutputs {
 
 @fragment
 fn fragmentMain(inputs: VertexOutputs) -> @location(0) vec4<f32> {
-  let checkerUv = floor(inputs.uv * 6.0);
-  let checker = fract((checkerUv.x + checkerUv.y) * 0.5) * 2.0;
-  let baseColor = mix(inputs.tint * 0.8, vec3<f32>(1.0, 1.0, 1.0), checker * 0.18);
+  let textureColor = textureSample(cubeTexture, cubeTextureSampler, inputs.uv).rgb;
+  let baseColor = mix(inputs.tint * 0.55, textureColor, 0.75);
   let light = clamp(dot(normalize(inputs.normal), normalize(vec3<f32>(1.0, 1.0, 0.35))), 0.0, 1.0);
   return vec4<f32>(baseColor * (light + 0.12), 1.0);
 }
@@ -151,6 +149,8 @@ uniform appUniforms {
   mat4 projectionMatrix;
   mat4 viewMatrix;
 } app;
+
+uniform sampler2D cubeTexture;
 
 out vec3 vNormal;
 out vec2 vUv;
@@ -180,6 +180,8 @@ const SCENE_FRAGMENT_SHADER = /* glsl */ `\
 #version 300 es
 precision highp float;
 
+uniform sampler2D cubeTexture;
+
 in vec3 vNormal;
 in vec2 vUv;
 in vec3 vTint;
@@ -187,156 +189,10 @@ in vec3 vTint;
 out vec4 fragColor;
 
 void main(void) {
-  vec2 checkerUv = floor(vUv * 6.0);
-  float checker = mod(checkerUv.x + checkerUv.y, 2.0);
-  vec3 baseColor = mix(vTint * 0.8, vec3(1.0), checker * 0.18);
+  vec3 textureColor = texture(cubeTexture, vec2(vUv.x, 1.0 - vUv.y)).rgb;
+  vec3 baseColor = mix(vTint * 0.55, textureColor, 0.75);
   float light = clamp(dot(normalize(vNormal), normalize(vec3(1.0, 1.0, 0.35))), 0.0, 1.0);
   fragColor = vec4(baseColor * (light + 0.12), 1.0);
-}
-`;
-
-// Passes 2 and 3 composite a separable depth-of-field blur. We sample scene color together with
-// the offscreen depth texture, estimate a blur radius from reconstructed view depth, then blur
-// horizontally into an intermediate framebuffer and vertically into the presentation target.
-//
-// Depth reconstruction differs by backend:
-// - WebGL/GLSL reads an OpenGL-style depth texture and reconstructs depth from NDC in [-1, 1].
-// - WebGPU/WGSL reads a depth texture in a [0, 1] clip-space convention and uses the matching
-//   reconstruction formula instead.
-const DOF_FRAGMENT_SHADER = /* glsl */ `\
-#version 300 es
-precision highp float;
-
-#define MAX_BLUR ${BLUR_SAMPLE_LIMIT}.0
-
-uniform sampler2D sourceTexture;
-uniform sampler2D depthTexture;
-
-uniform dofUniforms {
-  vec2 depthRange;
-  float focusDistance;
-  float blurCoefficient;
-  float pixelsPerMillimeter;
-  vec2 texelOffset;
-} dof;
-
-in vec2 uv;
-out vec4 fragColor;
-
-void main(void) {
-  ivec2 resolution = textureSize(sourceTexture, 0);
-  ivec2 maxCoordinate = resolution - 1;
-  ivec2 fragCoord = min(ivec2(uv * vec2(resolution)), maxCoordinate);
-
-  float depthSample = texelFetch(depthTexture, fragCoord, 0).r;
-  float ndcDepth = depthSample * 2.0 - 1.0;
-  float linearDepth = -(2.0 * dof.depthRange.y * dof.depthRange.x) /
-    (ndcDepth * (dof.depthRange.y - dof.depthRange.x) - dof.depthRange.y - dof.depthRange.x);
-
-  float deltaDepth = abs(dof.focusDistance - linearDepth);
-  float foregroundCompensation =
-    linearDepth < dof.focusDistance
-      ? abs(dof.focusDistance - deltaDepth)
-      : abs(dof.focusDistance + deltaDepth);
-  float blurRadius = min(
-    floor(dof.blurCoefficient * (deltaDepth / max(foregroundCompensation, 0.0001)) * dof.pixelsPerMillimeter),
-    MAX_BLUR
-  );
-
-  vec4 color = vec4(0.0);
-
-  if (blurRadius > 1.0) {
-    float halfBlur = blurRadius * 0.5;
-    float sampleCount = 0.0;
-
-    for (float sampleIndex = 0.0; sampleIndex <= MAX_BLUR; sampleIndex++) {
-      if (sampleIndex > blurRadius) {
-        break;
-      }
-
-      ivec2 sampleCoordinate = clamp(
-        fragCoord + ivec2((sampleIndex - halfBlur) * dof.texelOffset),
-        ivec2(0),
-        maxCoordinate
-      );
-      color += texelFetch(sourceTexture, sampleCoordinate, 0);
-      sampleCount += 1.0;
-    }
-
-    color /= sampleCount;
-  } else {
-    color = texelFetch(sourceTexture, fragCoord, 0);
-  }
-
-  fragColor = color;
-}
-`;
-
-const DOF_WGSL = /* wgsl */ `\
-const MAX_BLUR: i32 = ${BLUR_SAMPLE_LIMIT};
-
-struct DofUniforms {
-  depthRange: vec2<f32>,
-  focusDistance: f32,
-  blurCoefficient: f32,
-  pixelsPerMillimeter: f32,
-  texelOffset: vec2<f32>,
-};
-
-@group(0) @binding(auto) var<uniform> dof: DofUniforms;
-@group(0) @binding(auto) var sourceTexture: texture_2d<f32>;
-@group(0) @binding(auto) var depthTexture: texture_depth_2d;
-
-@fragment
-fn fragmentMain(@location(2) uv: vec2<f32>) -> @location(0) vec4<f32> {
-  let resolution = vec2<i32>(textureDimensions(sourceTexture, 0));
-  let maxCoordinate = resolution - vec2<i32>(1, 1);
-  let fragCoord = min(vec2<i32>(vec2<f32>(resolution) * uv), maxCoordinate);
-
-  // WebGPU depth textures are already expressed in the backend's native 0..1 clip-space range.
-  let depthSample = textureLoad(depthTexture, fragCoord, 0);
-  let linearDepth =
-    (dof.depthRange.x * dof.depthRange.y) /
-    (dof.depthRange.y - depthSample * (dof.depthRange.y - dof.depthRange.x));
-
-  let deltaDepth = abs(dof.focusDistance - linearDepth);
-  let foregroundCompensation = select(
-    abs(dof.focusDistance + deltaDepth),
-    abs(dof.focusDistance - deltaDepth),
-    linearDepth < dof.focusDistance
-  );
-  let blurRadius = min(
-    floor(dof.blurCoefficient * (deltaDepth / max(foregroundCompensation, 0.0001)) * dof.pixelsPerMillimeter),
-    f32(MAX_BLUR)
-  );
-
-  var color = vec4<f32>(0.0);
-
-  if (blurRadius > 1.0) {
-    let halfBlur = blurRadius * 0.5;
-    var sampleCount = 0.0;
-
-    for (var sampleIndex: i32 = 0; sampleIndex <= MAX_BLUR; sampleIndex++) {
-      if (f32(sampleIndex) > blurRadius) {
-        break;
-      }
-
-      let sampleOffset = round((f32(sampleIndex) - halfBlur) * dof.texelOffset);
-      let sampleCoordinate = clamp(
-        fragCoord + vec2<i32>(sampleOffset),
-        vec2<i32>(0, 0),
-        maxCoordinate
-      );
-      color += textureLoad(sourceTexture, sampleCoordinate, 0);
-      sampleCount += 1.0;
-    }
-
-    color /= sampleCount;
-  } else {
-    color = textureLoad(sourceTexture, fragCoord, 0);
-  }
-
-  return color;
 }
 `;
 
@@ -401,24 +257,22 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   fStop = 2.8;
 
   appShaderInputs = new ShaderInputs<{app: AppUniforms}>({app: appShaderModule});
-  dofShaderInputs = new ShaderInputs<{dof: DofUniforms}>({dof: dofShaderModule});
 
   sceneModel: Model;
-  blurPass: ClipSpace;
+  cubeTexture: DynamicTexture;
+  shaderPassRenderer: ShaderPassRenderer;
 
   instanceMatrixBuffer: Buffer;
   instanceMatrices = new Float32Array(NUM_CUBES * INSTANCE_MATRIX_STRIDE);
   cubeTransforms: CubeTransform[] = [];
 
   sceneFramebuffer: Framebuffer;
-  blurFramebuffer: Framebuffer;
 
   controlsInitialized = false;
   controlCleanup: Array<() => void> = [];
 
   constructor({device, width, height}: AnimationProps) {
     super();
-    const isWGSL = device.info.shadingLanguage === 'wgsl';
     const offscreenColorFormat = getOffscreenColorFormat(device);
     // WebGPU uses a deeper depth format here because the blur radius is derived from depth
     // deltas, and low precision shows up as visible banding in far-field blur.
@@ -429,11 +283,21 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       usage: Buffer.VERTEX | Buffer.COPY_DST,
       byteLength: INSTANCE_MATRIX_BUFFER_BYTE_LENGTH
     });
+    this.cubeTexture = new DynamicTexture(device, {
+      usage: Texture.SAMPLE | Texture.COPY_DST,
+      data: loadImageBitmap(VIS_LOGO_TEXTURE_URL, {imageOrientation: 'flipY'}),
+      mipmaps: true,
+      sampler: device.createSampler({
+        minFilter: 'linear',
+        magFilter: 'linear',
+        mipmapFilter: 'linear'
+      })
+    });
 
     this.sceneModel = new Model(device, {
       id: 'dof-scene',
       shaderInputs: this.appShaderInputs,
-      ...(isWGSL
+      ...(device.info.shadingLanguage === 'wgsl'
         ? {
             source: SCENE_WGSL,
             colorAttachmentFormats: [offscreenColorFormat],
@@ -461,24 +325,14 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       attributes: {
         instanceMatrices: this.instanceMatrixBuffer
       },
+      bindings: {
+        cubeTexture: this.cubeTexture
+      },
       parameters: {
         depthWriteEnabled: true,
         depthCompare: 'less-equal',
         cullMode: 'back'
       }
-    });
-
-    this.blurPass = new ClipSpace(device, {
-      id: 'dof-blur-pass',
-      shaderInputs: this.dofShaderInputs,
-      ...(isWGSL
-        ? {
-            source: DOF_WGSL,
-            colorAttachmentFormats: [offscreenColorFormat]
-          }
-        : {
-            fs: DOF_FRAGMENT_SHADER
-          })
     });
 
     this.sceneFramebuffer = device.createFramebuffer({
@@ -496,14 +350,8 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       )
     });
 
-    // The intermediate framebuffer holds the horizontal blur result before the vertical pass
-    // composites into the default framebuffer.
-    this.blurFramebuffer = device.createFramebuffer({
-      width,
-      height,
-      colorAttachments: [
-        createColorTexture(device, 'dof-blur-color', offscreenColorFormat, width, height)
-      ]
+    this.shaderPassRenderer = new ShaderPassRenderer(device, {
+      shaderPasses: [dofShaderPassPipeline]
     });
 
     this.initializeCubeTransforms();
@@ -517,10 +365,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.controlCleanup = [];
 
     this.sceneModel.destroy();
-    this.blurPass.destroy();
+    this.cubeTexture.destroy();
+    this.shaderPassRenderer.destroy();
     this.instanceMatrixBuffer.destroy();
     this.sceneFramebuffer.destroy();
-    this.blurFramebuffer.destroy();
   }
 
   onRender({device, width, height, aspect}: AnimationProps): void {
@@ -529,7 +377,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     // Keep offscreen targets matched to the presentation size so blur radius stays stable in
     // texel space as the canvas resizes.
     this.sceneFramebuffer.resize({width, height});
-    this.blurFramebuffer.resize({width, height});
+    this.shaderPassRenderer.resize([width, height]);
 
     this.updateCubeTransforms();
     this.writeInstanceMatrices();
@@ -569,32 +417,17 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       return;
     }
 
-    // Compositing pass 1: blur horizontally into an intermediate texture. The shader reconstructs
-    // linear view-space depth for each fragment, computes a blur radius, and then only filters
-    // along the x axis. Splitting the filter into two 1D passes keeps the kernel cost practical.
-    this.renderBlurPass({
-      device,
-      framebuffer: this.blurFramebuffer,
+    this.shaderPassRenderer.renderToScreen({
       sourceTexture: this.sceneFramebuffer.colorAttachments[0].texture,
-      depthTexture,
-      blurCoefficient,
-      pixelsPerMillimeter,
-      texelOffset: [1, 0]
-    });
-
-    // Compositing pass 2: reuse the same shader vertically and present to the swap chain.
-    // The second pass samples the already blurred intermediate color texture but still consults
-    // the original scene depth texture so the blur radius remains tied to true scene depth.
-    this.renderBlurPass({
-      device,
-      framebuffer: device
-        .getDefaultCanvasContext()
-        .getCurrentFramebuffer({depthStencilFormat: false}),
-      sourceTexture: this.blurFramebuffer.colorAttachments[0].texture,
-      depthTexture,
-      blurCoefficient,
-      pixelsPerMillimeter,
-      texelOffset: [0, 1]
+      bindings: {depthTexture},
+      uniforms: {
+        dof: {
+          depthRange: [NEAR, FAR],
+          focusDistance: this.focusDistance,
+          blurCoefficient,
+          pixelsPerMillimeter
+        } satisfies DofUniforms
+      }
     });
   }
 
@@ -690,41 +523,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     }
 
     this.controlsInitialized = true;
-  }
-
-  renderBlurPass(options: {
-    device: AnimationProps['device'];
-    framebuffer: Framebuffer;
-    sourceTexture: Texture;
-    depthTexture: Texture;
-    blurCoefficient: number;
-    pixelsPerMillimeter: number;
-    texelOffset: [number, number];
-  }): void {
-    // Both blur passes share the same depth-driven circle-of-confusion math. The only difference
-    // between them is the texel offset, which rotates the 1D kernel from horizontal to vertical.
-    this.dofShaderInputs.setProps({
-      dof: {
-        depthRange: [NEAR, FAR],
-        focusDistance: this.focusDistance,
-        blurCoefficient: options.blurCoefficient,
-        pixelsPerMillimeter: options.pixelsPerMillimeter,
-        texelOffset: options.texelOffset
-      }
-    });
-
-    this.blurPass.setBindings({
-      sourceTexture: options.sourceTexture,
-      depthTexture: options.depthTexture
-    });
-
-    // The fullscreen model is reused for both blur directions; only the texel offset changes.
-    const renderPass = options.device.beginRenderPass({
-      framebuffer: options.framebuffer,
-      clearColor: [0, 0, 0, 1]
-    });
-    this.blurPass.draw(renderPass);
-    renderPass.end();
   }
 }
 

@@ -22,6 +22,7 @@ export type {
 export {hueSaturation} from './passes/postprocessing/image-adjust-filters/huesaturation';
 export type {NoiseProps, NoiseUniforms} from './passes/postprocessing/image-adjust-filters/noise';
 export {noise} from './passes/postprocessing/image-adjust-filters/noise';
+export {persistenceEffect} from './passes/postprocessing/image-adjust-filters/persistence';
 export type {SepiaProps, SepiaUniforms} from './passes/postprocessing/image-adjust-filters/sepia';
 export {sepia} from './passes/postprocessing/image-adjust-filters/sepia';
 export type {
@@ -37,10 +38,27 @@ export {vignette} from './passes/postprocessing/image-adjust-filters/vignette';
 
 // glfx  BLUR shader modules
 export type {
+  GaussianBlurProps,
+  GaussianBlurUniforms
+} from './passes/postprocessing/image-blur-filters/gaussianblur';
+export {gaussianBlur} from './passes/postprocessing/image-blur-filters/gaussianblur';
+export type {
   TiltShiftProps,
   TiltShiftUniforms
 } from './passes/postprocessing/image-blur-filters/tiltshift';
 export {tiltShift} from './passes/postprocessing/image-blur-filters/tiltshift';
+export type {
+  BloomProps,
+  BloomUniforms
+} from './passes/postprocessing/image-blur-filters/bloom';
+export {bloom} from './passes/postprocessing/image-blur-filters/bloom';
+export {bloomShaderPassPipeline} from './passes/postprocessing/image-blur-filters/bloom-shader-pass-pipeline';
+export type {
+  DofProps,
+  DofUniforms
+} from './passes/postprocessing/image-blur-filters/dof';
+export {dof} from './passes/postprocessing/image-blur-filters/dof';
+export {dofShaderPassPipeline} from './passes/postprocessing/image-blur-filters/dof-shader-pass-pipeline';
 export type {
   TriangleBlurProps,
   TriangleBlurUniforms

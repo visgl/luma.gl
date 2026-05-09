@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {log, type BufferLayout} from '@luma.gl/core';
+import {getBufferLayoutAttributeNames, type BufferLayout} from '@luma.gl/core';
 
 /** BufferLayoutHelper is a helper class that should not be used directly by applications */
 export class BufferLayoutHelper {
@@ -18,9 +18,7 @@ export class BufferLayoutHelper {
 
   /** Get attribute names from a BufferLayout */
   getAttributeNamesForBuffer(bufferLayout: BufferLayout): string[] {
-    return bufferLayout.attributes
-      ? bufferLayout.attributes?.map(layout => layout.attribute)
-      : [bufferLayout.name];
+    return getBufferLayoutAttributeNames(bufferLayout);
   }
 
   mergeBufferLayouts(
@@ -37,15 +35,5 @@ export class BufferLayoutHelper {
       }
     }
     return mergedLayouts;
-  }
-
-  getBufferIndex(bufferName: string): number {
-    const bufferIndex = this.bufferLayouts.findIndex(layout => layout.name === bufferName);
-
-    if (bufferIndex === -1) {
-      log.warn(`BufferLayout: Missing buffer for "${bufferName}".`)();
-    }
-
-    return bufferIndex;
   }
 }

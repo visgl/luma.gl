@@ -88,15 +88,11 @@ const eyePosition = [0, 0, 5];
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = INFO_HTML;
 
-  uniformStore = new UniformStore<{
+  uniformStore: UniformStore<{
     app: AppUniforms;
     lighting: typeof lighting.uniforms;
     phongMaterial: typeof phongMaterial.uniforms;
-  }>({
-    app,
-    lighting,
-    phongMaterial
-  });
+  }>;
 
   model: Model;
   modelMatrix = new Matrix4();
@@ -105,6 +101,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
   constructor({device}: AnimationProps) {
     super();
+    this.uniformStore = new UniformStore(device, {
+      app,
+      lighting,
+      phongMaterial
+    });
 
     // Set up static uniforms
 
@@ -156,9 +157,9 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       // },
       bindings: {
         uTexture: texture,
-        app: this.uniformStore.getManagedUniformBuffer(device, 'app'),
-        lighting: this.uniformStore.getManagedUniformBuffer(device, 'lighting'),
-        phongMaterial: this.uniformStore.getManagedUniformBuffer(device, 'phongMaterial')
+        app: this.uniformStore.getManagedUniformBuffer('app'),
+        lighting: this.uniformStore.getManagedUniformBuffer('lighting'),
+        phongMaterial: this.uniformStore.getManagedUniformBuffer('phongMaterial')
       },
       parameters: {
         depthWriteEnabled: true,

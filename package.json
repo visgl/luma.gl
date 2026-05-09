@@ -35,6 +35,7 @@
     "test-browser": "yarn workspace @luma.gl/devtools-extensions test-browser",
     "test-headless": "yarn workspace @luma.gl/devtools-extensions test-headless",
     "test-coverage": "yarn workspace @luma.gl/devtools-extensions test-coverage",
+    "examples:typecheck": "node ./scripts/examples-typecheck.mjs",
     "test-fast": "yarn lint && yarn test-node",
     "test-website": "yarn website:build",
     "website:build": "yarn workspace website-docusaurus build",
@@ -70,7 +71,7 @@
     "@docusaurus/plugin-content-docs": "^3.9.2",
     "@docusaurus/preset-classic": "^3.9.2",
     "cheerio": "1.0.0-rc.9",
-    "typescript": "5.8.3",
+    "typescript": "5.9.3",
     "tsconfig-paths": "^3.9.0",
     "ts-patch": "^3.3.0"
   },
