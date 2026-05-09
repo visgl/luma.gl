@@ -9,6 +9,8 @@ It is useful for streaming geometry, dynamic index data, uniform data, and any w
 
 `Model` and `Material` accept `DynamicBuffer` bindings directly and resolve them to the current backing buffer during draw preparation.
 
+![DynamicBuffer infographic showing a stable DynamicBuffer handle, replaceable backing Buffer, resize and write flow, and Model and Material integration](/images/docs/dynamic-buffer-infographic.png)
+
 ## Usage
 
 ```typescript

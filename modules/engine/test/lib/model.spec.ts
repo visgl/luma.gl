@@ -47,6 +47,15 @@ const DUMMY_FS = `#version 300 es
   void main() { fragColor = vec4(1.0); }
 `;
 
+const DYNAMIC_BUFFER_ATTRIBUTE_VS = `#version 300 es
+  precision highp float;
+  in vec4 positions;
+  void main() {
+    gl_Position = positions;
+    gl_PointSize = 1.0;
+  }
+`;
+
 const INVALID_PIPELINE_WGSL = /* WGSL */ `
 @vertex fn wrongVertexMain(@builtin(vertex_index) vertexIndex: u32) -> @builtin(position) vec4<f32> {
   var positions = array<vec2<f32>, 3>(
@@ -357,10 +366,7 @@ test('Model rebinds DynamicBuffer attributes during predraw', async t => {
   });
   const model = new Model(webglDevice, {
     id: 'dynamic-buffer-attribute-test',
-    vs: `#version 300 es
-  in vec4 positions;
-  void main() { gl_Position = positions; }
-`,
+    vs: DYNAMIC_BUFFER_ATTRIBUTE_VS,
     fs: DUMMY_FS,
     attributes: {
       positions: dynamicBuffer
@@ -396,10 +402,7 @@ test('Model rebinds DynamicBuffer index buffers during predraw', async t => {
   });
   const model = new Model(webglDevice, {
     id: 'dynamic-buffer-index-test',
-    vs: `#version 300 es
-  in vec4 positions;
-  void main() { gl_Position = positions; }
-`,
+    vs: DYNAMIC_BUFFER_ATTRIBUTE_VS,
     fs: DUMMY_FS,
     indexBuffer: dynamicIndexBuffer,
     attributes: {
