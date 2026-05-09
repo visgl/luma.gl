@@ -235,7 +235,7 @@ export class GPUTable {
     endRow = endRow ?? length;
 
     if (stride === width) {
-      const buffer = this._value!.buffer;
+      const buffer = this._value!.buffer as ArrayBuffer;
       return new ValueType(buffer, offset + stride * startRow, (endRow - startRow) * size);
     }
 
