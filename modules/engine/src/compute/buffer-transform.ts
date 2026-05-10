@@ -7,6 +7,9 @@ import {getPassthroughFS} from '@luma.gl/shadertools';
 import {Model} from '../model/model';
 import type {ModelProps} from '../model/model';
 
+const INTERLEAVED_ATTRIBS = 0x8c8c;
+const SEPARATE_ATTRIBS = 0x8c8d;
+
 /**
  * Properties for creating a {@link BufferTransform}
  * @note Only works under WebGL2.
@@ -14,6 +17,8 @@ import type {ModelProps} from '../model/model';
 export type BufferTransformProps = Omit<ModelProps, 'fs'> & {
   /** Optional fragment shader - normally not used in transforms */
   fs?: ModelProps['fs']; // override as optional
+  /** bufferMode when binding varyings */
+  feedbackBufferMode?: 'interleaved' | 'separate';
   /** A list of named outputs corresponding to shader declarations (varyings in WebGL) */
   outputs?: string[];
   /** @deprecated Use run({outputBuffers}) instead - Map of output buffers that the shaders will write results of computations to */
@@ -31,6 +36,7 @@ export class BufferTransform {
 
   static defaultProps: Required<BufferTransformProps> = {
     ...Model.defaultProps,
+    feedbackBufferMode: 'separate',
     outputs: undefined!,
     feedbackBuffers: undefined!
   };
@@ -51,7 +57,9 @@ export class BufferTransform {
       fs: props.fs || getPassthroughFS(),
       topology: props.topology || 'point-list',
       varyings: props.outputs || props.varyings,
-      ...props
+      ...props,
+      bufferMode:
+        props.feedbackBufferMode === 'interleaved' ? INTERLEAVED_ATTRIBS : SEPARATE_ATTRIBS
     });
 
     this.transformFeedback = this.device.createTransformFeedback({

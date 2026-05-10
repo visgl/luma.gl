@@ -6,9 +6,6 @@ The `@luma.gl/gpgpu` module performs GPU-based data transformation.
 
 - [`Operations`](/docs/api-reference/gpgpu/operations)
 - [`GPUTable`](/docs/api-reference/gpgpu/gpu-table)
-- [`BufferTransform`](/docs/api-reference/gpgpu/buffer-transform)
-- [`TextureTransform`](/docs/api-reference/gpgpu/texture-transform)
-- [`Computation`](/docs/api-reference/gpgpu/computation)
 
 ## Installing
 
@@ -59,6 +56,4 @@ backendRegistry.add('webgpu', webgpuBackend);
 
 - [`Operations`](/docs/api-reference/gpgpu/operations) documents the supported lazy compute operations such as `add()`, `interleave()`, and `fround()`.
 - [`GPUTable`](/docs/api-reference/gpgpu/gpu-table) represents structured input and output data for lazy GPGPU operations.
-- [`BufferTransform`](/docs/api-reference/gpgpu/buffer-transform) wraps WebGL2 transform feedback for buffer-to-buffer computation.
-- [`TextureTransform`](/docs/api-reference/gpgpu/texture-transform) is the older render-to-texture transform helper.
-- [`Computation`](/docs/api-reference/gpgpu/computation) wraps WebGPU compute pipelines and dispatches.
+- Engine-level transform helpers such as [`BufferTransform`](/docs/api-reference/engine/compute/buffer-transform), [`TextureTransform`](/docs/api-reference/engine/compute/texture-transform), [`Computation`](/docs/api-reference/engine/compute/computation), and [`Swap`](/docs/api-reference/engine/compute/swap) live in `@luma.gl/engine`.

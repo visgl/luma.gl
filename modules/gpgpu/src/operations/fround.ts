@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import type {TypedArray} from '@math.gl/types';
 import {GPUTable} from '../operation/gpu-table';
 import {Operation} from '../operation/operation';
 import {assert} from '@luma.gl/core';

@@ -5,7 +5,6 @@
 import type {Device, Buffer} from '@luma.gl/core';
 import {GPUTable} from './gpu-table';
 import {backendRegistry} from './backend-registry';
-import type {TypedArray} from '@math.gl/types';
 
 export type OperationHandler<InputsT extends Record<string, any> = any> = (args: {
   device: Device;
