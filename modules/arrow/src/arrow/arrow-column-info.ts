@@ -31,7 +31,7 @@ export function getInstanceColumnInfo(vector: arrow.Vector<AttributeArrowType>):
 
   let dataVector = vector as arrow.Vector<NumericArrowType>;
   if (arrow.DataType.isFixedSizeList(vector.type)) {
-    dataVector = vector.getChild(0)!;
+    dataVector = vector.getChildAt(0)!;
     if (vector.type.listSize < 1 || vector.type.listSize > 4) {
       throw new Error('Attribute column fixed list size must be between 1 and 4');
     }

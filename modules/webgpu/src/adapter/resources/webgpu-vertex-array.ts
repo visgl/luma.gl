@@ -60,6 +60,28 @@ export class WebGPUVertexArray extends VertexArray {
     this.attributes[bufferSlot] = buffer;
   }
 
+  override getBufferSlot(bufferName: string): number | null {
+    return this.logicalBufferSlots[bufferName] ?? null;
+  }
+
+  override getDrawValidationError(): string | null {
+    const missingSlots: number[] = [];
+    for (const resolvedSlot of this.resolvedBufferSlots) {
+      const logicalBufferSlot =
+        this.logicalBufferSlots[resolvedSlot.bufferName] ?? resolvedSlot.shaderSlot;
+      const webgpuBuffer = this.attributes[logicalBufferSlot] as WebGPUBuffer;
+      if (!webgpuBuffer?.handle) {
+        missingSlots.push(resolvedSlot.shaderSlot);
+      }
+    }
+
+    return missingSlots.length
+      ? `WebGPU vertex buffer slot${missingSlots.length === 1 ? '' : 's'} ${missingSlots.join(
+          ', '
+        )} not set`
+      : null;
+  }
+
   /**
    * Binds index and vertex buffers for the current draw call.
    * Repeats logical buffers across multiple WebGPU slots when the resolved layout was expanded.

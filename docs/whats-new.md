@@ -2,6 +2,24 @@
 
 _This page contains news for recent luma.gl releases. For older releases (through v8.5) refer to the [Legacy What's New](/docs/legacy/legacy-upgrade-guide) page._
 
+## Version 10.0
+
+Release Date: TBD
+
+**@luma.gl/arrow**
+
+- **Arrow shader layouts** - `getArrowBufferLayout()` maps Arrow scalar and `FixedSizeList` columns to shader attribute formats from a shader-first layout, including direct `arrow.Vector` sources and Arrow table path mappings.
+- **Arrow GPU helpers** - New `ArrowGPUVector`, `ArrowGPUTable`, and `ArrowModel` helpers create GPU buffers from compatible Arrow columns and keep Arrow-backed model attributes updatable through `setProps({arrowTable})`.
+
+**New Examples**
+
+- **[Arrow Instancing Example](/examples/showcase/arrow-instancing)** - New showcase example renders instanced cubes from Arrow `FixedSizeList` columns.
+
+**@luma.gl/engine**
+
+- **Index-based color picking** - New `indexColorPicking` module encodes integer object indexes into color-picking output without requiring application-provided picking color attributes.
+- **Model layout updates** - `Model.setBufferLayout()` is now idempotent, and explicit WGSL attribute layouts are merged with inferred bindings to support shader metadata without manually declaring uniform bindings.
+
 ## Version 9.3
 
 Release Date: March 31, 2026

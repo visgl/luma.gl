@@ -65,6 +65,16 @@ export abstract class VertexArray extends Resource<VertexArrayProps> {
   /** Clears any backend-specific bindings after a draw call. */
   abstract unbindAfterRender(renderPass: RenderPass): void;
 
+  /** Returns the backend-defined slot for a logical buffer name, if known. */
+  getBufferSlot(bufferName: string): number | null {
+    return null;
+  }
+
+  /** Returns a draw-blocking validation error, or null if this vertex array can be drawn. */
+  getDrawValidationError(): string | null {
+    return null;
+  }
+
   // DEPRECATED METHODS
 
   /** @deprecated Set constant attributes (WebGL only) */

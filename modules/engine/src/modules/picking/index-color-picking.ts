@@ -7,19 +7,13 @@ import type {ShaderModule} from '@luma.gl/shadertools';
 import type {PickingBindings, PickingProps, PickingUniforms} from './picking-uniforms';
 import {pickingUniforms, GLSL_UNIFORMS, WGSL_UNIFORMS, INVALID_INDEX} from './picking-uniforms';
 
-// SHADERS
-
 const source = /* wgsl */ `\
 ${WGSL_UNIFORMS}
 
-const INDEX_PICKING_MODE_INSTANCE = 0;
-const INDEX_PICKING_MODE_ATTRIBUTE = 1;
-const INDEX_PICKING_MODE_VERTEX = 2;
-const INDEX_PICKING_INVALID_INDEX = ${INVALID_INDEX}; // 2^32 - 1
+const COLOR_PICKING_INVALID_INDEX = ${INVALID_INDEX};
+const COLOR_PICKING_MAX_OBJECT_INDEX = 16777214;
+const COLOR_PICKING_MAX_BATCH_INDEX = 254;
 
-/**
- * WGSL shaders need to carry the returned object index through their own stage outputs.
- */
 fn picking_getInstanceObjectIndex(instanceIndex: u32) -> i32 {
   return i32(instanceIndex);
 }
@@ -59,17 +53,51 @@ fn picking_filterHighlightColor(color: vec4<f32>, objectIndex: i32) -> vec4<f32>
   return vec4<f32>(blendedRGB, blendedAlpha);
 }
 
-fn picking_filterPickingColor(color: vec4<f32>, objectIndex: i32) -> vec4<f32> {
-  if (picking.isActive != 0 && objectIndex == INDEX_PICKING_INVALID_INDEX) {
-    discard;
+fn picking_canEncodePickInfo(objectIndex: i32) -> bool {
+  return
+    objectIndex != COLOR_PICKING_INVALID_INDEX &&
+    objectIndex >= 0 &&
+    objectIndex <= COLOR_PICKING_MAX_OBJECT_INDEX &&
+    picking.batchIndex >= 0 &&
+    picking.batchIndex <= COLOR_PICKING_MAX_BATCH_INDEX;
+}
+
+fn picking_getPickingColor(objectIndex: i32) -> vec4<f32> {
+  if (!picking_canEncodePickInfo(objectIndex)) {
+    return vec4<f32>(0.0, 0.0, 0.0, 0.0);
   }
+
+  let encodedObjectIndex = objectIndex + 1;
+  let red = encodedObjectIndex % 256;
+  let green = (encodedObjectIndex / 256) % 256;
+  let blue = (encodedObjectIndex / 65536) % 256;
+  let alpha = picking.batchIndex + 1;
+
+  return vec4<f32>(
+    f32(red) / 255.0,
+    f32(green) / 255.0,
+    f32(blue) / 255.0,
+    f32(alpha) / 255.0
+  );
+}
+
+fn picking_filterPickingColor(color: vec4<f32>, objectIndex: i32) -> vec4<f32> {
+  if (picking.isActive != 0) {
+    if (!picking_canEncodePickInfo(objectIndex)) {
+      discard;
+    }
+    return picking_getPickingColor(objectIndex);
+  }
+
   return color;
 }
 
-fn picking_getPickingColor(objectIndex: i32) -> vec2<i32> {
-  return vec2<i32>(objectIndex, picking.batchIndex);
+fn picking_filterColor(color: vec4<f32>, objectIndex: i32) -> vec4<f32> {
+  var outColor = color;
+  outColor = picking_filterHighlightColor(outColor, objectIndex);
+  outColor = picking_filterPickingColor(outColor, objectIndex);
+  return outColor;
 }
-
 `;
 
 const vs = /* glsl */ `\
@@ -79,14 +107,8 @@ const int INDEX_PICKING_MODE_INSTANCE = 0;
 const int INDEX_PICKING_MODE_ATTRIBUTE = 1;
 const int INDEX_PICKING_MODE_VERTEX = 2;
 
-const int INDEX_PICKING_INVALID_INDEX = ${INVALID_INDEX}; // 2^32 - 1
-
 flat out int picking_objectIndex;
 
-/**
- * Vertex shaders should call this function to set the object index.
- * If using instance or vertex mode, the argument is ignored and 0 can be supplied.
- */
 void picking_setObjectIndex(int objectIndex) {
   switch (picking.indexMode) {
     case INDEX_PICKING_MODE_INSTANCE:
@@ -105,36 +127,29 @@ void picking_setObjectIndex(int objectIndex) {
 const fs = /* glsl */ `\
 ${GLSL_UNIFORMS}
 
-const int INDEX_PICKING_INVALID_INDEX = ${INVALID_INDEX}; // 2^32 - 1
+const int COLOR_PICKING_INVALID_INDEX = ${INVALID_INDEX};
+const int COLOR_PICKING_MAX_OBJECT_INDEX = 16777214;
+const int COLOR_PICKING_MAX_BATCH_INDEX = 254;
 
 flat in int picking_objectIndex;
 
-/**
- * Check if this vertex is highlighted (part of the selected batch and object)
- */ 
 bool picking_isFragmentHighlighted() {
-  return 
+  return
     bool(picking.isHighlightActive) &&
     picking.highlightedBatchIndex == picking.batchIndex &&
     picking.highlightedObjectIndex == picking_objectIndex
     ;
 }
 
-/**
- * Returns highlight color if this item is selected.
- */
 vec4 picking_filterHighlightColor(vec4 color) {
-  // If we are still picking, we don't highlight
   if (bool(picking.isActive)) {
     return color;
   }
 
-  // If we are not highlighted, return color as is
   if (!picking_isFragmentHighlighted()) {
     return color;
   }
-   
-  // Blend in highlight color based on its alpha value
+
   float highLightAlpha = picking.highlightColor.a;
   float blendedAlpha = highLightAlpha + color.a * (1.0 - highLightAlpha);
   float highLightRatio = highLightAlpha / blendedAlpha;
@@ -143,28 +158,40 @@ vec4 picking_filterHighlightColor(vec4 color) {
   return vec4(blendedRGB, blendedAlpha);
 }
 
-/*
- * Returns picking color if picking enabled else unmodified argument.
- */
-ivec4 picking_getPickingColor() {
-  // Assumes that colorAttachment0 is rg32int
-  // TODO? - we could render indices into a second color attachment and not mess with fragColor
-  return ivec4(picking_objectIndex, picking.batchIndex, 0, 0);
+bool picking_canEncodePickInfo(int objectIndex) {
+  return
+    objectIndex != COLOR_PICKING_INVALID_INDEX &&
+    objectIndex >= 0 &&
+    objectIndex <= COLOR_PICKING_MAX_OBJECT_INDEX &&
+    picking.batchIndex >= 0 &&
+    picking.batchIndex <= COLOR_PICKING_MAX_BATCH_INDEX;
+}
+
+vec4 picking_getPickingColor() {
+  if (!picking_canEncodePickInfo(picking_objectIndex)) {
+    return vec4(0.0);
+  }
+
+  int encodedObjectIndex = picking_objectIndex + 1;
+  int red = encodedObjectIndex % 256;
+  int green = (encodedObjectIndex / 256) % 256;
+  int blue = (encodedObjectIndex / 65536) % 256;
+  int alpha = picking.batchIndex + 1;
+
+  return vec4(float(red), float(green), float(blue), float(alpha)) / 255.0;
 }
 
 vec4 picking_filterPickingColor(vec4 color) {
   if (bool(picking.isActive)) {
-    if (picking_objectIndex == INDEX_PICKING_INVALID_INDEX) {
+    if (!picking_canEncodePickInfo(picking_objectIndex)) {
       discard;
     }
+    return picking_getPickingColor();
   }
+
   return color;
 }
 
-/*
- * Returns picking color if picking is enabled if not
- * highlight color if this item is selected, otherwise unmodified argument.
- */
 vec4 picking_filterColor(vec4 color) {
   vec4 outColor = color;
   outColor = picking_filterHighlightColor(outColor);
@@ -174,15 +201,7 @@ vec4 picking_filterColor(vec4 color) {
 `;
 
 /**
- * Provides support for color-based picking and highlighting.
- *
- * In particular, supports picking a specific instance in an instanced
- * draw call and highlighting an instance based on its picking color,
- * and correspondingly, supports picking and highlighting groups of
- * primitives with the same picking color in non-instanced draw-calls
- *
- * @note Color based picking has the significant advantage in that it can be added to any
- * existing shader without requiring any additional picking logic.
+ * Provides object-index based color picking and highlighting.
  */
 export const picking = {
   ...pickingUniforms,

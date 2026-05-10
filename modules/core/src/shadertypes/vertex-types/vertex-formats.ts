@@ -18,9 +18,11 @@ export type VertexFormat =
   // 8 bit integers, note that only 16 bit aligned formats are supported in WebGPU (x2 and x4)
   | 'uint8' // Chrome 133+
   | 'uint8x2'
+  | 'uint8x3-webgl' // Not in WebGPU
   | 'uint8x4'
   | 'sint8' // Chrome 133+
   | 'sint8x2'
+  | 'sint8x3-webgl' // Not in WebGPU
   | 'sint8x4'
   | 'unorm8' // Chrome 133+
   | 'unorm8x2'
@@ -137,8 +139,8 @@ export type VertexFormatComponentsT<T extends VertexFormat> = T extends VertexFo
 
 // Helper types for the above
 
-type VertexFormatUint8 = 'uint8' | 'uint8x2' | 'uint8x4';
-type VertexFormatSint8 = 'sint8' | 'sint8x2' | 'sint8x4';
+type VertexFormatUint8 = 'uint8' | 'uint8x2' | 'uint8x3-webgl' | 'uint8x4';
+type VertexFormatSint8 = 'sint8' | 'sint8x2' | 'sint8x3-webgl' | 'sint8x4';
 type VertexFormatUnorm8 =
   | 'unorm8'
   | 'unorm8x2'
@@ -170,6 +172,8 @@ type VertexFormat2Components =
   | 'float16x2'
   | 'float32x2';
 type VertexFormat3Components =
+  | 'uint8x3-webgl'
+  | 'sint8x3-webgl'
   | 'unorm8x3-webgl'
   | 'snorm8x3-webgl'
   | 'uint16x3-webgl'

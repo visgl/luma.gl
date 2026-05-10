@@ -4293,11 +4293,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@luma.gl/arrow@workspace:modules/arrow":
+"@luma.gl/arrow@npm:~9.3.0, @luma.gl/arrow@workspace:modules/arrow":
   version: 0.0.0-use.local
   resolution: "@luma.gl/arrow@workspace:modules/arrow"
   dependencies:
     "@luma.gl/core": "npm:9.3.0"
+    "@luma.gl/engine": "npm:9.3.0"
+    "@luma.gl/shadertools": "npm:9.3.0"
     "@math.gl/polygon": "npm:^4.1.0"
     "@math.gl/types": "npm:^4.1.0"
     apache-arrow: "npm:^17.0.0"
@@ -4386,6 +4388,20 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@luma.gl/engine@npm:9.3.0, @luma.gl/engine@npm:~9.3.0, @luma.gl/engine@workspace:modules/engine":
+  version: 0.0.0-use.local
+  resolution: "@luma.gl/engine@workspace:modules/engine"
+  dependencies:
+    "@math.gl/core": "npm:^4.1.0"
+    "@math.gl/types": "npm:^4.1.0"
+    "@probe.gl/log": "npm:^4.1.1"
+    "@probe.gl/stats": "npm:^4.1.1"
+  peerDependencies:
+    "@luma.gl/core": ~9.3.0
+    "@luma.gl/shadertools": ~9.3.0
+  languageName: unknown
+  linkType: soft
+
 "@luma.gl/engine@npm:9.3.0-alpha.11":
   version: 9.3.0-alpha.11
   resolution: "@luma.gl/engine@npm:9.3.0-alpha.11"
@@ -4400,20 +4416,6 @@ __metadata:
   checksum: 10c0/67a94acfdd5f3f45be9eedc455765304622f65953822a768f7159253fa004cff1b38fb5378b958d24bfe561c464403d70bc70c34697451a7b4c66807e5000c6d
   languageName: node
   linkType: hard
-
-"@luma.gl/engine@npm:~9.3.0, @luma.gl/engine@workspace:modules/engine":
-  version: 0.0.0-use.local
-  resolution: "@luma.gl/engine@workspace:modules/engine"
-  dependencies:
-    "@math.gl/core": "npm:^4.1.0"
-    "@math.gl/types": "npm:^4.1.0"
-    "@probe.gl/log": "npm:^4.1.1"
-    "@probe.gl/stats": "npm:^4.1.1"
-  peerDependencies:
-    "@luma.gl/core": ~9.3.0
-    "@luma.gl/shadertools": ~9.3.0
-  languageName: unknown
-  linkType: soft
 
 "@luma.gl/experimental@workspace:modules/experimental":
   version: 0.0.0-use.local
@@ -4441,6 +4443,17 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@luma.gl/shadertools@npm:9.3.0, @luma.gl/shadertools@npm:~9.3.0, @luma.gl/shadertools@workspace:modules/shadertools":
+  version: 0.0.0-use.local
+  resolution: "@luma.gl/shadertools@workspace:modules/shadertools"
+  dependencies:
+    "@math.gl/core": "npm:^4.1.0"
+    "@math.gl/types": "npm:^4.1.0"
+  peerDependencies:
+    "@luma.gl/core": ~9.3.0
+  languageName: unknown
+  linkType: soft
+
 "@luma.gl/shadertools@npm:9.3.0-alpha.11":
   version: 9.3.0-alpha.11
   resolution: "@luma.gl/shadertools@npm:9.3.0-alpha.11"
@@ -4452,17 +4465,6 @@ __metadata:
   checksum: 10c0/e19ca0d3769ea72b598dadacb8d7d759ed9420c66d7b797eb8d9a4382b03d0864895efee1aee243c1b8b5ded047c1e23f16c0c291127b8d721cf020d69f72e3a
   languageName: node
   linkType: hard
-
-"@luma.gl/shadertools@npm:~9.3.0, @luma.gl/shadertools@workspace:modules/shadertools":
-  version: 0.0.0-use.local
-  resolution: "@luma.gl/shadertools@workspace:modules/shadertools"
-  dependencies:
-    "@math.gl/core": "npm:^4.1.0"
-    "@math.gl/types": "npm:^4.1.0"
-  peerDependencies:
-    "@luma.gl/core": ~9.3.0
-  languageName: unknown
-  linkType: soft
 
 "@luma.gl/test-utils@workspace:modules/test-utils":
   version: 0.0.0-use.local
@@ -14907,6 +14909,23 @@ __metadata:
     "@luma.gl/shadertools": "npm:~9.3.0"
     "@luma.gl/webgl": "npm:~9.3.0"
     "@math.gl/core": "npm:^4.1.0"
+    typescript: "npm:^5.9.3"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
+"luma.gl-examples-arrow-instancing@workspace:examples/showcase/arrow-instancing":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-arrow-instancing@workspace:examples/showcase/arrow-instancing"
+  dependencies:
+    "@luma.gl/arrow": "npm:~9.3.0"
+    "@luma.gl/core": "npm:~9.3.0"
+    "@luma.gl/engine": "npm:~9.3.0"
+    "@luma.gl/shadertools": "npm:~9.3.0"
+    "@luma.gl/webgl": "npm:~9.3.0"
+    "@luma.gl/webgpu": "npm:~9.3.0"
+    "@math.gl/core": "npm:^4.1.0"
+    apache-arrow: "npm:^17.0.0"
     typescript: "npm:^5.9.3"
     vite: "npm:^8.0.0"
   languageName: unknown

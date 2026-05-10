@@ -46,6 +46,7 @@ const TEST_CASES_2: {
   error?: string;
 }[] = [
   {typedArray: new Uint8Array(), size: 4, result: 'uint8x4'},
+  {typedArray: new Uint8Array(), size: 1, result: 'uint8'},
   {typedArray: new Uint8ClampedArray(), size: 2, result: 'uint8x2'},
   {typedArray: new Int8Array(), size: 4, result: 'sint8x4'},
   {typedArray: new Uint16Array(), size: 4, result: 'uint16x4'},
@@ -72,7 +73,6 @@ const TEST_CASES_2: {
   {typedArray: new Float32Array(), size: 5, error: 'Invalid attribute size 5'},
   // @ts-expect-error Intentionally no size
   {typedArray: new Int32Array(), error: 'Missing attribute size'},
-  {typedArray: new Uint8Array(), size: 1, error: 'Bad 16 bit alignment'},
   {typedArray: new Float64Array(), size: 2, error: 'Unknown array format'}
 ];
 
