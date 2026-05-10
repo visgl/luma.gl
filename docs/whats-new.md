@@ -2,6 +2,25 @@
 
 _This page contains news for recent luma.gl releases. For older releases (through v8.5) refer to the [Legacy What's New](/docs/legacy/legacy-upgrade-guide) page._
 
+## Version 10.0
+
+Release Date: TBD
+
+**@luma.gl/engine**
+
+- **Geometry buffer layouts** - `Geometry` now always has a populated `bufferLayout`.
+- **Semantic attribute normalization** - `POSITION`, `NORMAL`, `TEXCOORD_0`, and `COLOR_0` are normalized to shader attribute names.
+- **Interleaved CPU geometry** - `makeInterleavedGeometry()` packs attributes into one CPU-side vertex buffer.
+- **Interleaved primitive uploads** - Built-in primitives upload as one vertex buffer plus an optional index buffer.
+
+## Version 9.4
+
+Release Date: TBD
+
+**@luma.gl/engine**
+
+- **[`DynamicBuffer`](/docs/api-reference/engine/dynamic-buffer)** - New engine-level wrapper for resizable buffers. `Model` supports dynamic buffers for attributes, index buffers, and shader bindings, and `Material` supports dynamic buffer bindings with cache invalidation when the backing buffer changes.
+
 ## Version 9.3
 
 Release Date: March 31, 2026

@@ -2,92 +2,76 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-/*
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {GPUGeometry, Geometry, GeometryProps} from '@luma.gl/engine';
-import {TypedArray} from '@luma.gl/core';
-import { getWebGLTestDevices } from '@luma.gl/test-utils';
+import {
+  ConeGeometry,
+  CubeGeometry,
+  CylinderGeometry,
+  IcoSphereGeometry,
+  PlaneGeometry,
+  SphereGeometry,
+  TruncatedConeGeometry
+} from '@luma.gl/engine';
+import {makeGPUGeometry} from '@luma.gl/engine/geometry/gpu-geometry';
+import {getWebGLTestDevice} from '@luma.gl/test-utils';
 
-const TEST_CASES: {title: string; props: GeometryProps; [key: string]: any}[] = [
-  {
-    title: 'simple positions',
-    props: {
-      topology: 'triangle-list',
-      attributes: {
-        positions: new Float32Array([0, 0, 0, 1, 0, 0, 1, 1, 0])
-      }
-    },
-    topology: 'triangle-list',
-    vertexCount: 3
-  },
-  {
-    title: 'invalid positions',
-    props: {
-      topology: 'triangle-list',
-      attributes: {
-        positions: [0, 0, 0, 1, 0, 0, 1, 1, 0] as unknown as TypedArray
-      }
-    },
-    shouldThrow: true
-  },
-  {
-    title: 'with indices',
-    props: {
-      topology: 'triangle-list',
-      attributes: {
-        indices: new Uint16Array([0, 1, 2]),
-        positions: new Float32Array([0, 0, 0, 1, 0, 0, 1, 1, 0, 1, 0, 0])
-      }
-    },
-    topology: 'triangle-list',
-    vertexCount: 3
-  },
-  {
-    title: 'with too many indices',
-    props: {
-      topology: 'triangle-list',
-      indices: new Uint16Array([0, 1, 2, 3]),
-      attributes: {
-        indices: new Uint16Array([0, 1, 2]),
-        positions: new Float32Array([0, 0, 0, 1, 0, 0, 1, 1, 0, 1, 0, 0])
-      }
-    },
-    shouldThrow: true
-  },
-  {
-    title: 'attribute descriptors',
-    props: {
-      topology: 'triangle-strip',
-      indices: {value: new Uint16Array([0, 1, 2, 3]), isIndexed: true},
-      attributes: {
-        positions: {value: new Float32Array([0, 0, 1, 0, 1, 1, 1, 0]), size: 2}
-      },
-      vertexCount: 3
-    },
-    topology: 'triangle-strip',
-    vertexCount: 3
-  }
+const BUILT_IN_GEOMETRY_TESTS = [
+  {name: 'ConeGeometry', Geometry: ConeGeometry},
+  {name: 'CubeGeometry', Geometry: CubeGeometry},
+  {name: 'CylinderGeometry', Geometry: CylinderGeometry},
+  {name: 'IcoSphereGeometry', Geometry: IcoSphereGeometry},
+  {name: 'PlaneGeometry', Geometry: PlaneGeometry},
+  {name: 'SphereGeometry', Geometry: SphereGeometry},
+  {name: 'TruncatedConeGeometry', Geometry: TruncatedConeGeometry}
 ];
 
-test('GPUGeometry#constructor', async (t) => {
-  for (const device of await getWebGLTestDevices()) {
-    for (const testCase of TEST_CASES) {
-      if (testCase.shouldThrow) {
-        t.throws(() => new Geometry(testCase.props), `${testCase.title}: should throw`);
-        const gpuGeometry = makeGPUGeometry(device, geometry)
-      } else {
-        const geometry = new Geometry(testCase.props);
+test('makeGPUGeometry interleaves built-in geometry attributes', async t => {
+  const device = await getWebGLTestDevice();
 
-        t.is(geometry.topology, testCase.topology, `${testCase.title}: topology is correct`);
-        t.is(
-          geometry.getVertexCount(),
-          testCase.vertexCount,
-          `${testCase.title}: vertexCount is correct`
-        );
-      }
-    }
+  for (const {name, Geometry} of BUILT_IN_GEOMETRY_TESTS) {
+    const gpuGeometry = makeGPUGeometry(device, new Geometry());
+    const bufferLayout = gpuGeometry.bufferLayout[0];
+
+    t.deepEqual(
+      Object.keys(gpuGeometry.attributes),
+      ['geometry'],
+      `${name}: has one vertex buffer`
+    );
+    t.is(gpuGeometry.bufferLayout.length, 1, `${name}: has one buffer layout`);
+    t.is(bufferLayout.name, 'geometry', `${name}: buffer layout is named geometry`);
+    t.ok(bufferLayout.attributes?.length, `${name}: buffer layout maps geometry attributes`);
+    t.ok(gpuGeometry.indices, `${name}: keeps index buffer`);
+
+    gpuGeometry.destroy();
   }
 
   t.end();
 });
-*/
+
+test('makeGPUGeometry interleaves cube geometry into one vertex buffer', async t => {
+  const device = await getWebGLTestDevice();
+  const gpuGeometry = makeGPUGeometry(device, new CubeGeometry({indices: true}));
+
+  t.deepEqual(gpuGeometry.bufferLayout, [
+    {
+      name: 'geometry',
+      stepMode: 'vertex',
+      byteStride: 32,
+      attributes: [
+        {attribute: 'positions', format: 'float32x3', byteOffset: 0},
+        {attribute: 'normals', format: 'float32x3', byteOffset: 12},
+        {attribute: 'texCoords', format: 'float32x2', byteOffset: 24}
+      ]
+    }
+  ]);
+  t.is(
+    gpuGeometry.attributes.geometry.byteLength,
+    24 * 32,
+    'cube has one interleaved vertex buffer'
+  );
+  t.is(gpuGeometry.vertexCount, 36, 'indexed cube draw count is preserved');
+  t.ok(gpuGeometry.indices, 'indexed cube keeps index buffer');
+
+  gpuGeometry.destroy();
+  t.end();
+});

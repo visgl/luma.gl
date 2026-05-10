@@ -73,9 +73,10 @@ export function registerGeometriesTests(test: TapeTestFunction): void {
 
         const attributes = geometry.attributes;
 
-        t.ok(checkAttribute(attributes.POSITION), `${name}: POSITION is Float32Array`);
-        t.ok(checkAttribute(attributes.NORMAL), `${name}: NORMAL is Float32Array`);
-        t.ok(checkAttribute(attributes.TEXCOORD_0), `${name}: TEXCOORD_0 is Float32Array`);
+        t.ok(checkAttribute(attributes.positions), `${name}: positions is Float32Array`);
+        t.ok(checkAttribute(attributes.normals), `${name}: normals is Float32Array`);
+        t.ok(checkAttribute(attributes.texCoords), `${name}: texCoords is Float32Array`);
+        t.ok(geometry.bufferLayout.length > 0, `${name}: bufferLayout is populated`);
         if (geometry.indices) {
           t.ok(
             checkAttribute(geometry.indices, [Uint16Array, Uint32Array]),

@@ -16,7 +16,8 @@ const TEST_CASES: {title: string; props: GeometryProps; [key: string]: any}[] = 
       }
     },
     topology: 'triangle-list',
-    vertexCount: 3
+    vertexCount: 3,
+    bufferLayout: [{name: 'positions', format: 'float32x3'}]
   },
   {
     title: 'invalid positions',
@@ -38,7 +39,8 @@ const TEST_CASES: {title: string; props: GeometryProps; [key: string]: any}[] = 
       }
     },
     topology: 'triangle-list',
-    vertexCount: 3
+    vertexCount: 3,
+    bufferLayout: [{name: 'positions', format: 'float32x3'}]
   },
   {
     title: 'with too many indices',
@@ -63,7 +65,8 @@ const TEST_CASES: {title: string; props: GeometryProps; [key: string]: any}[] = 
       vertexCount: 3
     },
     topology: 'triangle-strip',
-    vertexCount: 3
+    vertexCount: 3,
+    bufferLayout: [{name: 'positions', format: 'float32x2'}]
   }
 ];
 
@@ -80,8 +83,31 @@ test('Geometry#constructor', t => {
         testCase.vertexCount,
         `${testCase.title}: vertexCount is correct`
       );
+      t.deepEqual(
+        geometry.bufferLayout,
+        testCase.bufferLayout,
+        `${testCase.title}: bufferLayout is correct`
+      );
     }
   }
 
+  t.end();
+});
+
+test('Geometry#constructor normalizes explicit bufferLayout', t => {
+  const geometry = new Geometry({
+    topology: 'triangle-list',
+    attributes: {
+      POSITION: {value: new Float32Array([0, 0, 0]), size: 3}
+    },
+    bufferLayout: [{name: 'POSITION', format: 'float32x3'}]
+  });
+
+  t.ok(geometry.attributes.positions, 'attribute name is normalized');
+  t.deepEqual(
+    geometry.bufferLayout,
+    [{name: 'positions', format: 'float32x3'}],
+    'shorthand bufferLayout name is normalized'
+  );
   t.end();
 });

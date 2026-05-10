@@ -260,8 +260,8 @@ class InstancedCube extends Model {
       topology: 'triangle-list',
       indices: cubeGeometry.indices!,
       attributes: {
-        POSITION: cubeGeometry.attributes.POSITION,
-        NORMAL: cubeGeometry.attributes.NORMAL
+        positions: cubeGeometry.attributes.positions!,
+        normals: cubeGeometry.attributes.normals!
       }
     });
 

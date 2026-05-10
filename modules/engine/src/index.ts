@@ -54,8 +54,10 @@ export type {ModelNodeProps} from './scenegraph/model-node';
 export {ModelNode} from './scenegraph/model-node';
 
 // Geometries
-export type {GeometryProps, GeometryAttribute} from './geometry/geometry';
+export type {GeometryProps, GeometryAttribute, GeometryAttributeInput} from './geometry/geometry';
 export {Geometry} from './geometry/geometry';
+export type {MakeInterleavedGeometryOptions} from './geometry/geometry-utils';
+export {makeInterleavedGeometry} from './geometry/geometry-utils';
 export type {GPUGeometryProps} from './geometry/gpu-geometry';
 export {GPUGeometry} from './geometry/gpu-geometry';
 
