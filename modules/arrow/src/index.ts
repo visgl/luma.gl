@@ -35,6 +35,20 @@ export {analyzeArrowTable} from './arrow/analyze-arrow-table';
 
 export {getArrowListNestingLevel} from './arrow/arrow-utils';
 
+export {
+  TableBufferPlanner,
+  type AllocationGroupKind,
+  type PlannedColumn,
+  type TableBufferGroup,
+  type TableBufferMapping,
+  type TableBufferPlan,
+  type TableBufferPlannerMode,
+  type TableBufferPlannerModelInfo,
+  type TableBufferPlannerProps,
+  type TableColumnDescriptor,
+  type TableColumnPriority
+} from './arrow/table-buffer-planner';
+
 // GEOARROW
 
 export {
