@@ -4,19 +4,17 @@ _This page contains news for recent luma.gl releases. For older releases (throug
 
 ## Version 10.0
 
-Release Date: TBD
+Target Release Date: Q3, 2026
 
-**@luma.gl/arrow**
+**@luma.gl/arrow** NEW MODULE
 
 - **Arrow shader layouts** - `getArrowBufferLayout()` maps Arrow scalar and `FixedSizeList` columns to shader attribute formats from a shader-first layout, including direct `arrow.Vector` sources and Arrow table path mappings.
 - **Arrow GPU helpers** - New `ArrowGPUVector`, `ArrowGPUTable`, and `ArrowModel` helpers create GPU buffers from compatible Arrow columns and keep Arrow-backed model attributes updatable through `setProps({arrowTable})`.
-
-**New Examples**
-
-- **[Arrow Instancing Example](/examples/showcase/arrow-instancing)** - New showcase example renders instanced cubes from Arrow `FixedSizeList` columns.
+- **[Arrow Instancing Example](/examples/showcase/arrow-instancing)** - New showcase example renders instanced cubes from an Apache Arrow table.
 
 **@luma.gl/engine**
 
+- **[`DynamicBuffer`](/docs/api-reference/engine/dynamic-buffer)** - New engine-level wrapper for resizable buffers. `Model` supports dynamic buffers for attributes, index buffers, and shader bindings, and `Material` supports dynamic buffer bindings with cache invalidation when the backing buffer changes.
 - **Index-based color picking** - New `indexColorPicking` module encodes integer object indexes into color-picking output without requiring application-provided picking color attributes.
 - **Model layout updates** - `Model.setBufferLayout()` is now idempotent, and explicit WGSL attribute layouts are merged with inferred bindings to support shader metadata without manually declaring uniform bindings.
 

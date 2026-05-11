@@ -12,6 +12,7 @@ Some of the major classes that are provided by the engine module:
 
 - `AnimationLoop`
 - `Model`
+- `DynamicBuffer`
 - `DynamicTexture`
 - `PickingManager`
 - `ScenegraphNode`

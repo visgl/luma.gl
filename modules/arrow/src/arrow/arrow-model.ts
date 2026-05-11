@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Device, type Buffer, type BufferLayout, type ShaderLayout} from '@luma.gl/core';
+import {Device, type BufferLayout, type ShaderLayout} from '@luma.gl/core';
 import {Model, type ModelProps} from '@luma.gl/engine';
 import * as arrow from 'apache-arrow';
 import {type ArrowVertexFormatOptions} from './arrow-shader-layout';
@@ -23,13 +23,15 @@ type ArrowModelState = {
   arrowState: ArrowModelArrowState;
 };
 
+type ArrowModelExplicitAttributes = NonNullable<ModelProps['attributes']>;
+
 type ArrowModelArrowState = {
   shaderLayout: ShaderLayout;
   arrowPaths?: Record<string, string>;
   arrowBufferProps?: ArrowGPUVectorProps;
   arrowCount: 'instance' | 'vertex' | 'none';
   allowWebGLOnlyFormats?: boolean;
-  explicitAttributes: Record<string, Buffer>;
+  explicitAttributes: ArrowModelExplicitAttributes;
   explicitBufferLayout: BufferLayout[];
   inferInstanceCount: boolean;
   inferVertexCount: boolean;

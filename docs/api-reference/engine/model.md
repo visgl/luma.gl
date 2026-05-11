@@ -36,14 +36,14 @@ renderPass.end();
 | `modules?` | `ShaderModule[]` | Shader modules to assemble into the shader source. |
 | `defines?` | `Record<string, boolean>` | Shader module defines. |
 | `shaderInputs?` | `ShaderInputs` | Pre-created shader input manager. |
-| `bindings?` | `Record<string, Binding \| DynamicTexture>` | Textures, samplers, uniform buffers, and dynamic textures. |
+| `bindings?` | `Record<string, Binding \| DynamicBuffer \| DynamicBufferRange \| DynamicTexture>` | Textures, samplers, uniform buffers, dynamic buffers, and dynamic textures. |
 | `parameters?` | `RenderPipelineParameters` | Pipeline parameters baked into the model's pipeline. |
 | `geometry?` | `Geometry \| GPUGeometry \| null` | Geometry source for attributes and indices. |
 | `isInstanced?` | `boolean` | Optional override for instancing. |
 | `instanceCount?` | `number` | Number of instances to draw. |
 | `vertexCount?` | `number` | Number of vertices to draw. |
-| `indexBuffer?` | `Buffer \| null` | Optional index buffer. |
-| `attributes?` | `Record<string, Buffer>` | Buffer-valued attributes. |
+| `indexBuffer?` | `Buffer \| DynamicBuffer \| null` | Optional index buffer. |
+| `attributes?` | `Record<string, Buffer \| DynamicBuffer>` | Buffer-valued attributes. |
 | `constantAttributes?` | `Record<string, TypedArray>` | Constant attributes, primarily for WebGL. |
 | `disableWarnings?` | `boolean` | Suppress warnings for unused attributes and bindings. |
 | `varyings?` | `string[]` | WebGL transform-feedback varyings. |
@@ -83,7 +83,7 @@ Attribute and index data currently bound to the model.
 
 ### `bindings`
 
-Current binding map, including `DynamicTexture` instances that have not yet resolved to concrete textures.
+Current binding map, including `DynamicBuffer` instances that may replace their backing buffer and `DynamicTexture` instances that have not yet resolved to concrete textures.
 
 ### `vertexArray`
 
@@ -163,19 +163,19 @@ Replaces the current `ShaderInputs` instance.
 
 Flushes current `ShaderInputs` values into the model's internal uniform store and bindings. On WebGPU, pass the same `CommandEncoder` that will later open the render pass when uploads must be ordered with subsequent draws.
 
-### `setBindings(bindings: Record<string, Binding | DynamicTexture>): void`
+### `setBindings(bindings: Record<string, Binding | DynamicBuffer | DynamicBufferRange | DynamicTexture>): void`
 
-Sets textures, samplers, uniform buffers, and dynamic textures.
+Sets textures, samplers, uniform buffers, dynamic buffers, and dynamic textures.
 
 ### `setTransformFeedback(transformFeedback: TransformFeedback | null): void`
 
 Attaches or removes a transform-feedback object.
 
-### `setIndexBuffer(indexBuffer: Buffer | null): void`
+### `setIndexBuffer(indexBuffer: Buffer | DynamicBuffer | null): void`
 
 Replaces the index buffer.
 
-### `setAttributes(buffers: Record<string, Buffer>, options?): void`
+### `setAttributes(buffers: Record<string, Buffer | DynamicBuffer>, options?): void`
 
 Sets buffer-valued attributes.
 
@@ -186,4 +186,5 @@ Sets constant-valued attributes.
 ## Remarks
 
 - `Model` integrates with [`ShaderInputs`](/docs/api-reference/engine/shader-inputs), [`PipelineFactory`](/docs/api-reference/core/pipeline-factory), and [`ShaderFactory`](/docs/api-reference/core/shader-factory) by default.
+- `DynamicBuffer` attributes, index buffers, and bindings are resolved before drawing so resized buffers are rebound automatically.
 - `DynamicTexture` bindings are supported directly. `Model.draw()` defers rendering until those textures are ready.
