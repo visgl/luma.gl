@@ -4,7 +4,7 @@
 
 import * as arrow from 'apache-arrow';
 
-/** Count number of nested top level Arrow Lists */
+/** Returns the number of top-level nested Arrow List wrappers around a data node. */
 export function getArrowListNestingLevel(data: arrow.Data): number {
   let nestingLevel = 0;
   if (arrow.DataType.isList(data.type)) {

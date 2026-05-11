@@ -21,14 +21,19 @@ attribute without an additional conversion step.
 
 ## Shader and Buffer Layout Preliminaries
 
-luma.gl provides separate descriptions of shader attributes and the buffers that are provided to provide the data for those attributes. The key observation here is that shaders only work with four types ('f32', 'f16', 'i32' and 'u32') and there is some flexibility in what binary buffer layouts can feed these declarations.
+luma.gl provides separate descriptions of shader attributes and the buffers that
+provide data for those attributes. The key observation here is that shaders only
+work with four vertex attribute scalar types (`f32`, `f16`, `i32`, and `u32`),
+and there is some flexibility in what binary buffer layouts can feed these
+declarations.
 
 - `ShaderLayout` describes what the shader can accept, such as `vec4<f32>`.
 - `BufferLayout` describes how the current table column is stored in memory, such as
   `float32x4`, `float16x4`, or `unorm8x4`.
 
-This means the shader does not need to be written specifically for every memory representation. A shader
-attribute is declared using the type used in the shader source code:
+This means the shader does not need to be written specifically for every memory
+representation. A shader attribute is declared using the type used in the shader
+source code:
 
 ```ts
 const shaderLayout = {
@@ -37,11 +42,13 @@ const shaderLayout = {
 };
 ```
 
-Then different Arrow table schemas can use different buffer layouts. For the `vec4<f32>` described in the shader layout, the following buffer formats are all accepted by the GPU. 
+Then different Arrow table schemas can use different buffer layouts. For the
+`vec4<f32>` described in the shader layout, the following buffer formats are all
+accepted by the GPU.
 
 | Arrow column type           | Buffer layout format | Notes                                      |
 | --------------------------- | -------------------- | ------------------------------------------ |
-| `FixedSizeList<Float32, 4>` | `float32x4`          | |
+| `FixedSizeList<Float32, 4>` | `float32x4`          |                                            |
 | `FixedSizeList<Float16, 4>` | `float16x4`          | Shader sees f32                            |
 | `FixedSizeList<Int16, 4>`   | `snorm16x4`          | Shader sees f32, normalized to [-1.0, 1.0] |
 | `FixedSizeList<Uint16, 4>`  | `unorm16x4`          |
@@ -90,6 +97,34 @@ The generated layouts use shader attribute names as buffer names:
   {name: 'instanceColors', format: 'unorm8x4'}
 ]
 ```
+
+## Arrow GPU Objects
+
+`ArrowGPUVector` and `ArrowGPUTable` are GPU-side representations derived from
+Apache Arrow data. Arrow vectors and tables are construction inputs; the GPU
+objects do not retain references to those sources after extracting the buffer
+data and metadata they need.
+
+An `ArrowGPUTable` owns GPU buffers and a GPU-facing Arrow `Schema` for the
+selected shader attributes. Field names, types, nullability, and metadata live in
+`arrowGPUTable.schema.fields`. An `ArrowGPUVector` owns one GPU buffer and uses
+Arrow's type system to describe it through `type`, `length`, and `stride`.
+
+```ts
+import {ArrowGPUTable, ArrowGPUVector} from '@luma.gl/arrow';
+
+const arrowGPUTable = new ArrowGPUTable(device, table, {shaderLayout});
+
+// The schema describes the selected GPU columns, not necessarily the full table.
+const [colorField] = arrowGPUTable.schema.fields;
+
+// Each GPU vector owns a buffer and Arrow-derived type/shape metadata.
+const colorVector: ArrowGPUVector = arrowGPUTable.gpuVectors.instanceColors;
+```
+
+`ArrowModel` is the convenience wrapper that combines `ArrowGPUTable` with
+`Model`. It accepts an Arrow table as an update source and replaces the GPU
+representation when `setProps({arrowTable})` is called.
 
 ## Supported Shader Types
 

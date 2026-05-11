@@ -9,11 +9,16 @@ import {type ArrowVertexFormatOptions} from './arrow-shader-layout';
 import {ArrowGPUTable, type ArrowGPUTableProps} from './plain-gpu-table';
 import type {ArrowGPUVectorProps} from './arrow-gpu-vector';
 
+/** Props for creating a Model whose attributes are derived from an Arrow table. */
 export type ArrowModelProps = ModelProps &
   ArrowVertexFormatOptions & {
+    /** Arrow table used as the construction source for GPU attribute buffers. */
     arrowTable: arrow.Table;
+    /** Maps shader attribute names to Arrow column paths. Defaults to using attribute names. */
     arrowPaths?: Record<string, string>;
+    /** Buffer props applied to each Arrow-derived GPU vector. */
     arrowBufferProps?: ArrowGPUVectorProps;
+    /** Controls whether row count is assigned to instanceCount, vertexCount, or neither. */
     arrowCount?: 'instance' | 'vertex' | 'none';
   };
 
@@ -39,6 +44,7 @@ type ArrowModelArrowState = {
 
 /** A luma.gl Model with GPU attributes backed by Arrow table columns. */
 export class ArrowModel extends Model {
+  /** GPU representation of the currently active Arrow table attributes. */
   arrowGPUTable: ArrowGPUTable;
   private arrowState: ArrowModelArrowState;
   private arrowModelDestroyed = false;
@@ -55,6 +61,7 @@ export class ArrowModel extends Model {
     this.arrowState = arrowState;
   }
 
+  /** Updates the model when a replacement Arrow table is supplied. */
   setProps(props: Partial<ArrowModelProps>): void {
     if (props.arrowTable) {
       this.setArrowTable(props.arrowTable);
@@ -99,10 +106,10 @@ export class ArrowModel extends Model {
       });
 
       if (this.arrowState.inferInstanceCount) {
-        this.setInstanceCount(arrowTable.numRows);
+        this.setInstanceCount(nextArrowGPUTable.numRows);
       }
       if (this.arrowState.inferVertexCount) {
-        this.setVertexCount(arrowTable.numRows);
+        this.setVertexCount(nextArrowGPUTable.numRows);
       }
     } catch (error) {
       nextArrowGPUTable.destroy();
@@ -174,8 +181,8 @@ function getArrowModelState(device: Device, props: ArrowModelProps): ArrowModelS
       ...modelProps,
       bufferLayout: [...explicitBufferLayout, ...arrowGPUTable.bufferLayout],
       attributes: {...explicitAttributes, ...arrowGPUTable.attributes},
-      ...(inferInstanceCount ? {instanceCount: arrowTable.numRows} : {}),
-      ...(inferVertexCount ? {vertexCount: arrowTable.numRows} : {})
+      ...(inferInstanceCount ? {instanceCount: arrowGPUTable.numRows} : {}),
+      ...(inferVertexCount ? {vertexCount: arrowGPUTable.numRows} : {})
     }
   };
 }

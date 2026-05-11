@@ -15,11 +15,13 @@ import {getArrowPaths} from './arrow-paths';
 import {getArrowColumnInfo, getInstanceColumnInfo} from './arrow-column-info';
 import {isInstanceArrowType, type ArrowColumnInfo, type AttributeArrowType} from './arrow-types';
 
+/** Options that control Arrow column to GPU vertex format selection. */
 export type ArrowVertexFormatOptions = {
   /** Allow WebGL-only 3-component 8/16-bit integer vertex formats. */
   allowWebGLOnlyFormats?: boolean;
 };
 
+/** Source options for deriving a BufferLayout from Arrow data and a ShaderLayout. */
 export type ArrowBufferLayoutOptions = ArrowVertexFormatOptions & {
   /** Arrow vectors keyed by shader attribute name. */
   arrowVectors?: Record<string, arrow.Vector>;
@@ -40,7 +42,12 @@ type ArrowBufferLayoutSource =
     }
   | {type: 'vectors'; arrowVectors: Record<string, arrow.Vector>};
 
-/** Returns the vertex format needed to expose one Arrow column to one shader attribute. */
+/**
+ * Returns the GPU vertex format needed to expose one Arrow column to one shader attribute.
+ *
+ * The shader type describes what the shader can consume. The Arrow column info
+ * describes the memory representation that will be uploaded.
+ */
 export function getArrowVertexFormat(
   columnInfo: ArrowColumnInfo,
   shaderType: AttributeShaderType,
@@ -68,7 +75,12 @@ export function getArrowVertexFormat(
   }
 }
 
-/** Builds a BufferLayout that maps matching Arrow columns to shader attributes. */
+/**
+ * Builds a BufferLayout by matching shader attributes to Arrow table columns or vectors.
+ *
+ * The canonical overload is shader-layout first with either `arrowTable` or
+ * `arrowVectors` supplied in the options object.
+ */
 export function getArrowBufferLayout(
   shaderLayout: ShaderLayout,
   options: ArrowBufferLayoutOptions

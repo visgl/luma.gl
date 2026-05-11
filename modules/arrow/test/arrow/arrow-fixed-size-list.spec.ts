@@ -96,8 +96,23 @@ test('ArrowGPUVector creates a GPU buffer from an Arrow vector', t => {
   );
   const gpuVector = new ArrowGPUVector(device, vector);
 
-  t.equal(gpuVector.vector, vector, 'stores the Arrow vector');
+  t.notOk('vector' in gpuVector, 'does not retain the source Arrow vector');
+  t.equal(gpuVector.type, vector.type, 'exposes the Arrow vector type');
+  t.equal(gpuVector.length, 2, 'exposes the Arrow vector length');
+  t.equal(gpuVector.stride, 2, 'exposes the FixedSizeList stride');
   t.equal(gpuVector.buffer.byteLength, 16, 'creates a buffer from the vector values');
+
+  gpuVector.destroy();
+  t.end();
+});
+
+test('ArrowGPUVector exposes primitive vector length and stride', t => {
+  const device = new NullDevice({});
+  const vector = arrow.makeVector(new Float32Array([1, 2, 3]));
+  const gpuVector = new ArrowGPUVector(device, vector);
+
+  t.equal(gpuVector.length, 3, 'exposes the primitive vector length');
+  t.equal(gpuVector.stride, 1, 'exposes primitive vector stride as 1');
 
   gpuVector.destroy();
   t.end();
