@@ -126,6 +126,80 @@ const colorVector: ArrowGPUVector = arrowGPUTable.gpuVectors.instanceColors;
 `Model`. It accepts an Arrow table as an update source and replaces the GPU
 representation when `setProps({arrowTable})` is called.
 
+## Planning Table Buffer Groups
+
+`TableBufferPlanner` is a lower-level helper for applications that already have
+column descriptors and need to decide how those columns should consume GPU
+buffer bindings. It does not upload buffers, interleave data, or bind storage
+buffers. It only returns a plan that describes allocation groups, column
+mappings, and which columns should be represented by planner-owned packed or
+storage buffers.
+
+Use it when a table has more columns than the target device can expose as
+separate vertex buffers, or when row-geometry data may later be read from WebGPU
+storage buffers instead of expanded into per-vertex attributes.
+
+```ts
+import {TableBufferPlanner} from '@luma.gl/arrow';
+
+const plan = TableBufferPlanner.getAllocationPlan({
+  device,
+  modelInfo: {isInstanced: true},
+  generateConstantAttributes: device.type === 'webgpu',
+  columns: [
+    {
+      id: 'positions',
+      byteStride: 8,
+      byteLength: 8 * 4,
+      rowCount: 4,
+      stepMode: 'vertex',
+      supportsPackedBuffer: true
+    },
+    {
+      id: 'instancePositions',
+      byteStride: 12,
+      byteLength: 12 * table.numRows,
+      rowCount: table.numRows,
+      stepMode: 'instance',
+      isPosition: true,
+      supportsPackedBuffer: true,
+      priority: 'high'
+    },
+    {
+      id: 'instanceColors',
+      byteStride: 4,
+      byteLength: 4 * table.numRows,
+      rowCount: table.numRows,
+      stepMode: 'instance',
+      supportsPackedBuffer: true
+    }
+  ]
+});
+```
+
+The planner supports two modes:
+
+- `table-with-shared-geometry`: one reusable geometry is drawn once for each
+  table row. Vertex-rate columns describe the shared geometry; table columns are
+  usually instance-rate attributes.
+- `table-with-row-geometries`: each table row expands into its own generated
+  vertices, such as paths or polygons. Constants are planned as a one-row
+  instance-rate group.
+
+The returned `plan.groups` describe physical allocation groups such as
+`separate-attribute-column`, `interleaved-attribute-columns`,
+`position-attribute-columns`, and `interleaved-constant-attribute-columns`.
+`plan.mappingsByColumnId` maps each source column to shader-visible attribute
+names and group ids. `plan.packedColumnIds` identifies columns that callers may
+pack into planner-owned vertex buffers.
+
+When `useStorageBuffers` is enabled, WebGPU row-geometry data columns may be
+assigned to `separate-storage-column` or `stacked-storage-columns` groups. This
+is planner output only in the current arrow module; callers still need their own
+storage-buffer upload and shader binding path. Storage planning observes
+`maxStorageBuffersPerShaderStage`, `maxStorageBufferBindingSize`, and uses
+256-byte alignment for stacked column offsets.
+
 ## Supported Shader Types
 
 Arrow scalar numeric columns map to scalar shader attributes. Arrow
