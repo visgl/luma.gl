@@ -3,8 +3,8 @@
 // Copyright (c) vis.gl contributors
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {CommandEncoder, Device, luma, PipelineFactory, ShaderFactory} from '@luma.gl/core';
-import {Model} from '@luma.gl/engine';
+import {Buffer, CommandEncoder, Device, luma, PipelineFactory, ShaderFactory} from '@luma.gl/core';
+import {DynamicBuffer, Model} from '@luma.gl/engine';
 import {getWebGLTestDevice, getWebGPUTestDevice, getTestDevices} from '@luma.gl/test-utils';
 import {skin} from '@luma.gl/shadertools';
 import {pbrProjection} from '../../../shadertools/src/modules/lighting/pbr-material/pbr-projection';
@@ -45,6 +45,14 @@ const DUMMY_FS = `#version 300 es
   precision highp float;
   out vec4 fragColor;
   void main() { fragColor = vec4(1.0); }
+`;
+
+const DYNAMIC_BUFFER_ATTRIBUTE_VS = `#version 300 es
+  precision highp float;
+  in vec4 positions;
+  void main() {
+    gl_Position = positions;
+  }
 `;
 
 const INVALID_PIPELINE_WGSL = /* WGSL */ `
@@ -304,6 +312,122 @@ test('Model#draw skips WebGPU render pipelines that failed init', async t => {
   renderPass.end();
   renderPass.destroy();
   model.destroy();
+  t.end();
+});
+
+test('Model resolves DynamicBuffer shader bindings to the current backing buffer', async t => {
+  const webgpuDevice = await getWebGPUTestDevice();
+
+  if (!webgpuDevice) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const dynamicBuffer = new DynamicBuffer(webgpuDevice, {
+    byteLength: 16,
+    usage: Buffer.UNIFORM | Buffer.COPY_DST | Buffer.COPY_SRC
+  });
+  const model = new Model(webgpuDevice, {
+    id: 'dynamic-buffer-binding-test',
+    source: DUMMY_WGSL_WITH_BINDING,
+    vertexCount: 1,
+    bindings: {
+      appFrame: dynamicBuffer
+    }
+  });
+
+  const initialBuffer = dynamicBuffer.buffer;
+  t.equal(
+    (model as any)._getBindings().appFrame,
+    initialBuffer,
+    'initial binding resolves to the current DynamicBuffer backing buffer'
+  );
+
+  dynamicBuffer.resize({byteLength: 32});
+  t.equal(
+    (model as any)._getBindings().appFrame,
+    dynamicBuffer.buffer,
+    'binding resolution uses the resized backing buffer'
+  );
+  t.ok(dynamicBuffer.buffer !== initialBuffer, 'resize replaces the backing buffer');
+
+  model.destroy();
+  dynamicBuffer.destroy();
+  t.end();
+});
+
+// TODO - Re-enable after headless Chromium stops rejecting this valid GLSL shader with no compiler log.
+test.skip('Model rebinds DynamicBuffer attributes during predraw', async t => {
+  const webglDevice = await getWebGLTestDevice();
+  const dynamicBuffer = new DynamicBuffer(webglDevice, {
+    data: new Float32Array(16).fill(1),
+    usage: Buffer.VERTEX | Buffer.COPY_DST | Buffer.COPY_SRC
+  });
+  const model = new Model(webglDevice, {
+    id: 'dynamic-buffer-attribute-test',
+    vs: DYNAMIC_BUFFER_ATTRIBUTE_VS,
+    fs: DUMMY_FS,
+    attributes: {
+      positions: dynamicBuffer
+    },
+    bufferLayout: [{name: 'positions', format: 'float32x4'}]
+  });
+
+  const initialBuffer = dynamicBuffer.buffer;
+  t.equal(model.vertexArray.attributes[0], initialBuffer, 'initial attribute buffer is bound');
+
+  dynamicBuffer.resize({
+    byteLength: dynamicBuffer.byteLength + Float32Array.BYTES_PER_ELEMENT * 4
+  });
+  model.predraw(webglDevice.commandEncoder);
+
+  t.equal(
+    model.vertexArray.attributes[0],
+    dynamicBuffer.buffer,
+    'predraw rebinds resized DynamicBuffer attributes'
+  );
+  t.ok(dynamicBuffer.buffer !== initialBuffer, 'attribute buffer handle was replaced');
+
+  model.destroy();
+  dynamicBuffer.destroy();
+  t.end();
+});
+
+// TODO - Re-enable after headless Chromium stops rejecting this valid GLSL shader with no compiler log.
+test.skip('Model rebinds DynamicBuffer index buffers during predraw', async t => {
+  const webglDevice = await getWebGLTestDevice();
+  const dynamicIndexBuffer = new DynamicBuffer(webglDevice, {
+    data: new Uint16Array([0, 1, 2]),
+    usage: Buffer.INDEX | Buffer.COPY_DST | Buffer.COPY_SRC
+  });
+  const model = new Model(webglDevice, {
+    id: 'dynamic-buffer-index-test',
+    vs: DYNAMIC_BUFFER_ATTRIBUTE_VS,
+    fs: DUMMY_FS,
+    indexBuffer: dynamicIndexBuffer,
+    attributes: {
+      positions: webglDevice.createBuffer({data: new Float32Array(16).fill(1)})
+    },
+    bufferLayout: [{name: 'positions', format: 'float32x4'}]
+  });
+
+  const initialIndexBuffer = dynamicIndexBuffer.buffer;
+  t.equal(model.vertexArray.indexBuffer, initialIndexBuffer, 'initial index buffer is bound');
+
+  dynamicIndexBuffer.resize({byteLength: 8, preserveData: true});
+  model.predraw(webglDevice.commandEncoder);
+
+  t.equal(
+    model.vertexArray.indexBuffer,
+    dynamicIndexBuffer.buffer,
+    'predraw rebinds resized DynamicBuffer index buffers'
+  );
+  t.equal(model.vertexArray.indexBuffer?.byteLength, 8, 'index buffer uses resized byteLength');
+  t.ok(dynamicIndexBuffer.buffer !== initialIndexBuffer, 'index buffer handle was replaced');
+
+  model.destroy();
+  dynamicIndexBuffer.destroy();
   t.end();
 });
 

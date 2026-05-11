@@ -26,6 +26,7 @@ Release Date: TBD
 
 **@luma.gl/engine**
 
+- **[`DynamicBuffer`](/docs/api-reference/engine/dynamic-buffer)** - New engine-level wrapper for resizable buffers. `Model` supports dynamic buffers for attributes, index buffers, and shader bindings, and `Material` supports dynamic buffer bindings with cache invalidation when the backing buffer changes.
 - **`Animator`** - New animation helper for timeline-driven animation updates.
 - **Shader pass pipelines** - `ShaderPassRenderer` now supports multi-pass effects such as bloom and depth of field.
 

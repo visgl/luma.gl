@@ -79,7 +79,6 @@ function createImageBitmapLoadError(
       : `Could not create ImageBitmap from decoded image "${resolvedUrl}": ${reason}`;
   return new Error(message, {cause: error});
 }
-
 function isAbsoluteLoadFileUrl(url: string): boolean {
   return url.startsWith('/') || /^[a-z][a-z\d+\-.]*:/i.test(url);
 }
