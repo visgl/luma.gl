@@ -3,33 +3,61 @@
 // Copyright (c) vis.gl contributors
 
 import type {PrimitiveTopology, BufferLayout} from '@luma.gl/core';
-import {Device, Buffer, vertexFormatDecoder} from '@luma.gl/core';
+import {Device, Buffer} from '@luma.gl/core';
 import type {Geometry} from '../geometry/geometry';
+import {makeInterleavedGeometry} from './geometry-utils';
 import {uid} from '../utils/uid';
 
+/** Properties used to create a {@link GPUGeometry}. */
 export type GPUGeometryProps = {
+  /** Application-provided identifier. */
   id?: string;
-  /** Determines how vertices are read from the 'vertex' attributes */
+
+  /** Determines how vertices are assembled into primitives. */
   topology: 'point-list' | 'line-list' | 'line-strip' | 'triangle-list' | 'triangle-strip';
-  /** Auto calculated from attributes if not provided */
+
+  /** Draw vertex count. */
   vertexCount: number;
+
+  /** Buffer layout matching the supplied GPU vertex buffers. */
   bufferLayout: BufferLayout[];
+
+  /** Optional GPU index buffer. */
   indices?: Buffer | null;
+
+  /** GPU vertex buffers, keyed by buffer layout name. */
   attributes: Record<string, Buffer>;
 };
 
+/**
+ * GPU-backed geometry container.
+ *
+ * `GPUGeometry` owns already-created vertex and index buffers plus the `bufferLayout` metadata
+ * needed to bind those buffers to shader attributes.
+ */
 export class GPUGeometry {
+  /** Application-provided or generated identifier. */
   readonly id: string;
+
+  /** Application-owned metadata. */
   userData: Record<string, unknown> = {};
 
-  /** Determines how vertices are read from the 'vertex' attributes */
+  /** Determines how vertices are assembled into primitives. */
   readonly topology?: PrimitiveTopology;
+
+  /** Buffer layout matching {@link GPUGeometry.attributes}. */
   readonly bufferLayout: BufferLayout[] = [];
 
+  /** Resolved draw vertex count. */
   readonly vertexCount: number;
+
+  /** Optional GPU index buffer. */
   readonly indices?: Buffer | null;
+
+  /** GPU vertex buffers, keyed by buffer layout name. */
   readonly attributes: Record<string, Buffer>;
 
+  /** Creates GPU-backed geometry from existing buffers. */
   constructor(props: GPUGeometryProps) {
     this.id = props.id || uid('geometry');
     this.topology = props.topology;
@@ -47,6 +75,7 @@ export class GPUGeometry {
     }
   }
 
+  /** Destroys the owned index and vertex buffers. */
   destroy(): void {
     this.indices?.destroy();
     for (const attribute of Object.values(this.attributes)) {
@@ -54,14 +83,17 @@ export class GPUGeometry {
     }
   }
 
+  /** Returns the draw vertex count. */
   getVertexCount(): number {
     return this.vertexCount;
   }
 
+  /** Returns the GPU vertex buffers. */
   getAttributes(): Record<string, Buffer> {
     return this.attributes;
   }
 
+  /** Returns the GPU index buffer, or `null` for non-indexed geometry. */
   getIndexes(): Buffer | null {
     return this.indices || null;
   }
@@ -73,22 +105,30 @@ export class GPUGeometry {
   }
 }
 
+/**
+ * Converts CPU geometry into GPU geometry.
+ *
+ * CPU `Geometry` input is interleaved before upload so the resulting `GPUGeometry` has one vertex
+ * buffer plus an optional index buffer. Passing a `GPUGeometry` returns the original instance.
+ */
 export function makeGPUGeometry(device: Device, geometry: Geometry | GPUGeometry): GPUGeometry {
   if (geometry instanceof GPUGeometry) {
     return geometry;
   }
 
-  const indices = getIndexBufferFromGeometry(device, geometry);
-  const {attributes, bufferLayout} = getAttributeBuffersFromGeometry(device, geometry);
+  const sourceGeometry = makeInterleavedGeometry(geometry);
+  const indices = getIndexBufferFromGeometry(device, sourceGeometry);
+  const {attributes, bufferLayout} = getAttributeBuffersFromGeometry(device, sourceGeometry);
   return new GPUGeometry({
-    topology: geometry.topology || 'triangle-list',
+    topology: sourceGeometry.topology || 'triangle-list',
     bufferLayout,
-    vertexCount: geometry.vertexCount,
+    vertexCount: sourceGeometry.vertexCount,
     indices,
     attributes
   });
 }
 
+/** Creates a GPU index buffer from CPU geometry index data, when present. */
 export function getIndexBufferFromGeometry(device: Device, geometry: Geometry): Buffer | undefined {
   if (!geometry.indices) {
     return undefined;
@@ -97,50 +137,27 @@ export function getIndexBufferFromGeometry(device: Device, geometry: Geometry): 
   return device.createBuffer({usage: Buffer.INDEX, data});
 }
 
+/**
+ * Uploads one GPU vertex buffer for each CPU geometry attribute key and preserves its buffer
+ * layout metadata.
+ */
 export function getAttributeBuffersFromGeometry(
   device: Device,
   geometry: Geometry
 ): {attributes: Record<string, Buffer>; bufferLayout: BufferLayout[]; vertexCount: number} {
-  const bufferLayout: BufferLayout[] = [];
-
   const attributes: Record<string, Buffer> = {};
   for (const [attributeName, attribute] of Object.entries(geometry.attributes)) {
-    let name: string = attributeName;
-    // TODO Map some GLTF attribute names (is this still needed?)
-    switch (attributeName) {
-      case 'POSITION':
-        name = 'positions';
-        break;
-      case 'NORMAL':
-        name = 'normals';
-        break;
-      case 'TEXCOORD_0':
-        name = 'texCoords';
-        break;
-      case 'TEXCOORD_1':
-        name = 'texCoords1';
-        break;
-      case 'COLOR_0':
-        name = 'colors';
-        break;
-    }
     if (attribute) {
-      attributes[name] = device.createBuffer({
+      attributes[attributeName] = device.createBuffer({
         data: attribute.value,
         id: `${attributeName}-buffer`
-      });
-      const {value, size, normalized} = attribute;
-      if (size === undefined) {
-        throw new Error(`Attribute ${attributeName} is missing a size`);
-      }
-      bufferLayout.push({
-        name,
-        format: vertexFormatDecoder.getVertexFormatFromAttribute(value, size, normalized)
       });
     }
   }
 
-  const vertexCount = geometry._calculateVertexCount(geometry.attributes, geometry.indices);
-
-  return {attributes, bufferLayout, vertexCount};
+  return {
+    attributes,
+    bufferLayout: geometry.bufferLayout,
+    vertexCount: geometry.vertexCount
+  };
 }

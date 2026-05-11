@@ -5,28 +5,35 @@
 import type {SignedDataType, BigTypedArray} from '@luma.gl/core';
 import * as arrow from 'apache-arrow';
 
+/** Numeric Apache Arrow scalar types that can be represented as GPU vertex attributes. */
 export type NumericArrowType = arrow.Int | arrow.Float;
 
-/** An instance attribute-compatible column - has 1-4 (fixed) numeric values per row */
+/** Attribute-compatible Arrow column type with one to four numeric values per row. */
 export type AttributeArrowType = NumericArrowType | arrow.FixedSizeList<NumericArrowType>;
 
-/** A non-instance attribute compatible column - has a list of 1-4 (fixed) numeric values per row */
+/** Mesh-compatible Arrow column type with a list of attribute-compatible values per row. */
 export type MeshArrowType = arrow.List<NumericArrowType | arrow.FixedSizeList<NumericArrowType>>;
 
-/** Extracted information required to populate a mesh */
+/** Arrow column shape and numeric type information needed to derive a GPU vertex format. */
 export type ArrowColumnInfo = {
+  /** Whether values advance per instance or per vertex. */
   stepMode: 'instance' | 'vertex';
+  /** luma.gl signed data type for the scalar values in the column. */
   signedDataType: SignedDataType;
+  /** Number of scalar values per logical attribute. */
   components: 1 | 2 | 3 | 4;
+  /** Underlying Arrow value buffers for this column. */
   values: BigTypedArray[];
+  /** Nested list offsets for variable-length mesh columns. */
   offsets: Uint32Array[][];
 };
 
+/** Returns true when an Arrow type is an integer or floating point scalar type. */
 export function isNumericArrowType(type: arrow.DataType): type is arrow.Int | arrow.Float {
   return arrow.DataType.isFloat(type) || arrow.DataType.isInt(type);
 }
 
-/** Instance = One "vec1-vec4 value" per step */
+/** Returns true when an Arrow type can provide one scalar/vector attribute per row. */
 export function isInstanceArrowType(type: arrow.DataType): type is AttributeArrowType {
   return (
     isNumericArrowType(type) ||
@@ -35,12 +42,12 @@ export function isInstanceArrowType(type: arrow.DataType): type is AttributeArro
   );
 }
 
-/** Vertex = Multiple "vec1-vec4 values" per step */
+/** Returns true when an Arrow type can provide multiple scalar/vector attributes per row. */
 export function isVertexArrowType(type: arrow.DataType): type is MeshArrowType {
   return arrow.DataType.isList(type) && isInstanceArrowType(type.children[0].type);
 }
 
-/** Get the luma.gl signed shader type corresponding to an Apache Arrow type */
+/** Returns the luma.gl signed data type corresponding to a numeric Arrow type. */
 export function getSignedShaderType(
   arrowType: NumericArrowType,
   size: 1 | 2 | 3 | 4

@@ -1,6 +1,6 @@
 # Built-in Geometries
 
-`@luma.gl/engine` exports several ready-made geometry classes. All of them extend [`Geometry`](/docs/api-reference/engine/geometry) and populate standard attributes such as `POSITION`, `NORMAL`, and `TEXCOORD_0`.
+`@luma.gl/engine` exports several ready-made geometry classes. All of them extend [`Geometry`](/docs/api-reference/engine/geometry) and populate standard shader attributes such as `positions`, `normals`, and `texCoords`.
 
 ## Overview
 
@@ -66,4 +66,5 @@ const geometry = new SphereGeometry({radius: 2});
 ## Remarks
 
 - These classes are convenience wrappers around typed-array geometry generation.
-- When you need to upload those attributes into GPU buffers, use them directly with [`Model`](/docs/api-reference/engine/model) or convert them through [`GPUGeometry`](/docs/api-reference/engine/geometry/gpu-geometry).
+- Most built-in primitives generate indexed geometry by default. `CubeGeometry({indices: false})` and `PlaneGeometry({unpack: true})` are non-indexed variants.
+- When uploaded through [`Model`](/docs/api-reference/engine/model) or [`makeGPUGeometry()`](/docs/api-reference/engine/geometry/gpu-geometry), built-in primitives are interleaved into one vertex buffer plus an optional index buffer.

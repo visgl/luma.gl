@@ -13,6 +13,24 @@ export {getArrowPaths, getArrowDataByPath, getArrowVectorByPath} from './arrow/a
 
 export {getArrowColumnInfo} from './arrow/arrow-column-info';
 
+export {
+  makeArrowFixedSizeListVector,
+  isArrowFixedSizeListVector,
+  getArrowFixedSizeListValues,
+  getArrowVectorBufferSource
+} from './arrow/arrow-fixed-size-list';
+
+export {ArrowGPUVector, type ArrowGPUVectorProps} from './arrow/arrow-gpu-vector';
+export {ArrowGPUTable, type ArrowGPUTableProps} from './arrow/plain-gpu-table';
+export {ArrowModel, type ArrowModelProps} from './arrow/arrow-model';
+
+export {
+  getArrowVertexFormat,
+  getArrowBufferLayout,
+  type ArrowVertexFormatOptions,
+  type ArrowBufferLayoutOptions
+} from './arrow/arrow-shader-layout';
+
 export {analyzeArrowTable} from './arrow/analyze-arrow-table';
 
 export {getArrowListNestingLevel} from './arrow/arrow-utils';

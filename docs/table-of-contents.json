@@ -46,6 +46,7 @@
           "api-guide/gpu/gpu-parameters",
           "api-guide/gpu/gpu-bindings",
           "api-guide/gpu/gpu-attributes",
+          "api-guide/gpu/arrow-table-columns",
           "api-guide/gpu/gpu-uniforms",
           "api-guide/gpu/gpu-storage-buffers"
         ]

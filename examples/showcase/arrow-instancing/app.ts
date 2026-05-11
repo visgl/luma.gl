@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Buffer, Device} from '@luma.gl/core';
+import {ArrowModel, makeArrowFixedSizeListVector} from '@luma.gl/arrow';
+import {Device, type ShaderLayout} from '@luma.gl/core';
 import type {AnimationProps, ModelProps} from '@luma.gl/engine';
 import {
   AnimationLoopTemplate,
@@ -15,11 +16,12 @@ import {
   PickingManager,
   supportsIndexPicking,
   picking,
-  colorPicking,
+  indexColorPicking,
   indexPicking
 } from '@luma.gl/engine';
 import {dirlight, ShaderModule} from '@luma.gl/shadertools';
 import {Matrix4, radians} from '@math.gl/core';
+import * as arrow from 'apache-arrow';
 
 // INSTANCE CUBE
 
@@ -45,7 +47,7 @@ struct VertexInputs {
   @location(0) positions : vec4<f32>,
   @location(1) normals : vec3<f32>,
   // INSTANCED ATTRIBUTES
-  @location(2) instanceOffsets : vec2<f32>,
+  @location(2) instancePositions : vec2<f32>,
   @location(3) instanceColors : vec4<f32>,
 }
 
@@ -67,8 +69,8 @@ fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
   var outputs: FragmentInputs;
 
   // Vertex position (z coordinate undulates with time), and model rotates around center
-  let delta = length(inputs.instanceOffsets);
-  let offset = vec4<f32>(inputs.instanceOffsets, sin((app.time + delta) * 0.1) * 16.0, 0);
+  let delta = length(inputs.instancePositions);
+  let offset = vec4<f32>(inputs.instancePositions, sin((app.time + delta) * 0.1) * 16.0, 0);
   let scaledPosition = vec4<f32>(inputs.positions.xyz * app.geometryScale, inputs.positions.w);
   outputs.Position = app.projectionMatrix * app.viewMatrix * (app.modelMatrix * scaledPosition + offset);
 
@@ -106,7 +108,7 @@ precision highp int;
 in vec3 positions;
 in vec3 normals;
 
-in vec2 instanceOffsets;
+in vec2 instancePositions;
 in vec3 instanceColors;
 
 uniform appUniforms {
@@ -127,8 +129,8 @@ void main(void) {
   picking_setObjectIndex(0);
 
   // Vertex position (z coordinate undulates with time), and model rotates around center
-  float delta = length(instanceOffsets);
-  vec4 offset = vec4(instanceOffsets, sin((app.time + delta) * 0.1) * 16.0, 0);
+  float delta = length(instancePositions);
+  vec4 offset = vec4(instancePositions, sin((app.time + delta) * 0.1) * 16.0, 0);
   vec4 scaledPosition = vec4(positions * app.geometryScale, 1.0);
   gl_Position = app.projectionMatrix * app.viewMatrix * (app.modelMatrix * scaledPosition + offset);
 }
@@ -149,119 +151,93 @@ void main(void) {
 }
 `;
 
-const DEFAULT_INSTANCE_SIDE = 256;
-const MAX_INSTANCE_SIDE = 2048;
+const DEFAULT_INSTANCES_PER_SIDE = 256;
+const MAX_INSTANCES_PER_SIDE = 2048;
 const DEFAULT_INSTANCE_SPACING = 3;
-const INSTANCE_SELECTOR_ID = 'instancing-instance-count';
-const INSTANCE_SIDE_STORAGE_KEY = 'showcase-instancing-instance-side';
-const INSTANCE_SIDE_OPTIONS = [DEFAULT_INSTANCE_SIDE, MAX_INSTANCE_SIDE];
-const INSTANCE_SIDE_OPTION_SET = new Set(INSTANCE_SIDE_OPTIONS);
+const INSTANCE_SELECTOR_ID = 'arrow-instancing-instance-count';
+const INSTANCES_PER_SIDE_OPTIONS = [DEFAULT_INSTANCES_PER_SIDE, MAX_INSTANCES_PER_SIDE];
+const INSTANCES_PER_SIDE_OPTION_SET = new Set(INSTANCES_PER_SIDE_OPTIONS);
 
-function getInstanceScale(instanceSide: number): number {
-  return DEFAULT_INSTANCE_SIDE / instanceSide;
-}
+type InstanceArrowTable = arrow.Table<{
+  instancePositions: arrow.FixedSizeList<arrow.Float32>;
+  instanceColors: arrow.FixedSizeList<arrow.Uint8>;
+}>;
 
-function getInstanceSpacing(instanceSide: number): number {
-  return DEFAULT_INSTANCE_SPACING * getInstanceScale(instanceSide);
-}
+const CUBE_SHADER_LAYOUT = {
+  attributes: [
+    {name: 'positions', location: 0, type: 'vec4<f32>'},
+    {name: 'normals', location: 1, type: 'vec3<f32>'},
+    {name: 'instancePositions', location: 2, type: 'vec2<f32>', stepMode: 'instance'},
+    {name: 'instanceColors', location: 3, type: 'vec4<f32>', stepMode: 'instance'}
+  ],
+  bindings: []
+} satisfies ShaderLayout;
 
-function formatInstanceCount(instanceSide: number): string {
-  return (instanceSide * instanceSide).toLocaleString();
-}
+function makeInstanceArrowTable(instancesPerSide: number): InstanceArrowTable {
+  const instanceCount = instancesPerSide * instancesPerSide;
+  const instanceSpacing =
+    DEFAULT_INSTANCE_SPACING * (DEFAULT_INSTANCES_PER_SIDE / instancesPerSide);
 
-function loadStoredInstanceSide(): number {
-  if (typeof window === 'undefined' || !window.localStorage) {
-    return DEFAULT_INSTANCE_SIDE;
+  const offsets = new Float32Array(instanceCount * 2);
+  const halfSpan = ((-instancesPerSide + 1) * instanceSpacing) / 2;
+  let offsetIndex = 0;
+  // Center a square grid around the origin and store each instance as an [x, y] offset.
+  for (let rowIndex = 0; rowIndex < instancesPerSide; rowIndex++) {
+    const xOffset = halfSpan + rowIndex * instanceSpacing;
+    for (let columnIndex = 0; columnIndex < instancesPerSide; columnIndex++) {
+      offsets[offsetIndex++] = xOffset;
+      offsets[offsetIndex++] = halfSpan + columnIndex * instanceSpacing;
+    }
   }
 
-  const storedValue = Number(window.localStorage.getItem(INSTANCE_SIDE_STORAGE_KEY));
-  return INSTANCE_SIDE_OPTION_SET.has(storedValue) ? storedValue : DEFAULT_INSTANCE_SIDE;
-}
-
-function storeInstanceSide(instanceSide: number): void {
-  if (typeof window === 'undefined' || !window.localStorage) {
-    return;
+  const colors = new Uint8Array(instanceCount * 4);
+  for (let colorIndex = 0; colorIndex < colors.length; colorIndex += 4) {
+    colors[colorIndex] = (random() * 0.75 + 0.25) * 255;
+    colors[colorIndex + 1] = (random() * 0.75 + 0.25) * 255;
+    colors[colorIndex + 2] = (random() * 0.75 + 0.25) * 255;
+    colors[colorIndex + 3] = 255;
   }
 
-  window.localStorage.setItem(INSTANCE_SIDE_STORAGE_KEY, String(instanceSide));
+  return new arrow.Table({
+    instancePositions: makeArrowFixedSizeListVector(new arrow.Float32(), 2, offsets),
+    instanceColors: makeArrowFixedSizeListVector(new arrow.Uint8(), 4, colors)
+  });
 }
 
 // Make a cube with 65K instances and attributes to control offset and color of each instance
-class InstancedCube extends Model {
-  // uniformBuffer: Buffer;
-  instanceOffsetsBuffer: Buffer;
-  instanceColorsBuffer: Buffer;
-
-  constructor(device: Device, instanceSide: number, props?: Partial<ModelProps>) {
-    const instanceCount = instanceSide * instanceSide;
-    const instanceSpacing = getInstanceSpacing(instanceSide);
-
-    const offsets = new Float32Array(instanceCount * 2);
-    const halfSpan = ((-instanceSide + 1) * instanceSpacing) / 2;
-    let offsetIndex = 0;
-    for (let rowIndex = 0; rowIndex < instanceSide; rowIndex++) {
-      const xOffset = halfSpan + rowIndex * instanceSpacing;
-      for (let columnIndex = 0; columnIndex < instanceSide; columnIndex++) {
-        offsets[offsetIndex++] = xOffset;
-        offsets[offsetIndex++] = halfSpan + columnIndex * instanceSpacing;
-      }
-    }
-
-    const colors = new Uint8Array(instanceCount * 4);
-    for (let colorIndex = 0; colorIndex < colors.length; colorIndex += 4) {
-      colors[colorIndex] = (random() * 0.75 + 0.25) * 255;
-      colors[colorIndex + 1] = (random() * 0.75 + 0.25) * 255;
-      colors[colorIndex + 2] = (random() * 0.75 + 0.25) * 255;
-      colors[colorIndex + 3] = 255;
-    }
-
-    const offsetsBuffer = device.createBuffer(offsets);
-    const colorsBuffer = device.createBuffer(colors);
+class InstancedCube extends ArrowModel {
+  constructor(device: Device, instancesPerSide: number, props?: Partial<ModelProps>) {
+    const instanceArrowTable = makeInstanceArrowTable(instancesPerSide);
 
     // Model
     super(device, {
       ...props,
+      arrowTable: instanceArrowTable,
+      shaderLayout: CUBE_SHADER_LAYOUT,
       source: WGSL_SHADER,
       vs: VS_GLSL,
       fs: FS_GLSL,
       // @ts-expect-error Remove once npm package updated with new types
-      modules: [dirlight, device.type === 'webgpu' ? indexPicking : colorPicking],
-      instanceCount,
+      modules: [dirlight, supportsIndexPicking(device) ? indexPicking : indexColorPicking],
       geometry: new CubeGeometry({indices: true}),
-      bufferLayout: [
-        {name: 'instanceOffsets', format: 'float32x2'},
-        {name: 'instanceColors', format: 'unorm8x4'}
-      ],
-      attributes: {
-        // instanceSizes: device.createBuffer(new Float32Array([1])), // Constant attribute
-        instanceOffsets: offsetsBuffer,
-        instanceColors: colorsBuffer
-      },
       parameters: {
         depthWriteEnabled: true,
         depthCompare: 'less-equal'
       }
     });
-
-    this.instanceOffsetsBuffer = offsetsBuffer;
-    this.instanceColorsBuffer = colorsBuffer;
   }
 
   createPickingModel(props?: Partial<ModelProps>): Model {
     const instanceBufferLayout = this.bufferLayout.filter(layout =>
       layout.name.startsWith('instance')
     );
-    const instanceAttributes = {
-      instanceOffsets: this.instanceOffsetsBuffer,
-      instanceColors: this.instanceColorsBuffer
-    };
     const cubeGeometry = new CubeGeometry({indices: true});
     const pickingGeometry = new Geometry({
       topology: 'triangle-list',
       indices: cubeGeometry.indices!,
       attributes: {
-        positions: cubeGeometry.attributes.positions!,
-        normals: cubeGeometry.attributes.normals!
+        POSITION: cubeGeometry.attributes.POSITION,
+        NORMAL: cubeGeometry.attributes.NORMAL
       }
     });
 
@@ -277,7 +253,7 @@ class InstancedCube extends Model {
       bufferLayout: instanceBufferLayout,
       instanceCount: this.instanceCount,
       geometry: pickingGeometry,
-      attributes: instanceAttributes,
+      attributes: this.arrowGPUTable.attributes,
       colorAttachmentFormats: ['rgba8unorm', 'rg32sint'],
       depthStencilAttachmentFormat: 'depth24plus',
       parameters: {
@@ -310,8 +286,11 @@ const app: ShaderModule<AppUniforms> = {
 export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = `\
   <p>
-  A luma.gl <code>Cube</code>, rendering up to 4,194,304 instances in a
-  single GPU draw call using instanced vertex attributes.
+  A luma.gl <code>Cube</code>, rendering up to 4,194,304 instances from Arrow
+  <code>FixedSizeList</code> columns in a single GPU draw call.
+  The shader declares <code>vec2&lt;f32&gt;</code> positions and
+  <code>vec4&lt;f32&gt;</code> colors, while Arrow column types derive
+  <code>float32x2</code> and <code>unorm8x4</code> buffer layouts.
   </p>
   <div style="margin-top: 16px; padding: 14px 16px; border: 1px solid rgba(208, 215, 222, 0.9); border-radius: 16px; background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(246, 248, 250, 0.96) 100%); box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);">
     <label for="${INSTANCE_SELECTOR_ID}" style="display: block; margin-bottom: 8px; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #57606a;">Grid Size</label>
@@ -327,7 +306,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   device: Device;
   cube: InstancedCube;
   pickingCube: Model | null = null;
-  instanceSide = loadStoredInstanceSide();
+  instancesPerSide = DEFAULT_INSTANCES_PER_SIDE;
   timeline: Timeline;
   timelineChannels: Record<string, number>;
   picker: PickingManager;
@@ -379,7 +358,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
     this.shaderInputs.setProps({
       app: {
-        geometryScale: getInstanceScale(this.instanceSide),
+        geometryScale: DEFAULT_INSTANCES_PER_SIDE / this.instancesPerSide,
         time: this.timeline.getTime(timeChannel),
         // Basic projection matrix
         projectionMatrix: new Matrix4().perspective({
@@ -392,9 +371,10 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         viewMatrix: new Matrix4().lookAt({
           center: [0, 0, 0],
           eye: [
-            (Math.cos(this.timeline.getTime(eyeXChannel)) * DEFAULT_INSTANCE_SIDE) / 2,
-            (Math.sin(this.timeline.getTime(eyeYChannel)) * DEFAULT_INSTANCE_SIDE) / 2,
-            ((Math.sin(this.timeline.getTime(eyeZChannel)) + 1) * DEFAULT_INSTANCE_SIDE) / 4 + 32
+            (Math.cos(this.timeline.getTime(eyeXChannel)) * DEFAULT_INSTANCES_PER_SIDE) / 2,
+            (Math.sin(this.timeline.getTime(eyeYChannel)) * DEFAULT_INSTANCES_PER_SIDE) / 2,
+            ((Math.sin(this.timeline.getTime(eyeZChannel)) + 1) * DEFAULT_INSTANCES_PER_SIDE) / 4 +
+              32
           ]
         }),
         // Rotate all the individual cubes
@@ -438,7 +418,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   createCube(): InstancedCube {
-    return new InstancedCube(this.device, this.instanceSide, {
+    return new InstancedCube(this.device, this.instancesPerSide, {
       // @ts-ignore
       shaderInputs: this.shaderInputs
     });
@@ -458,29 +438,33 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   initializeSelector(): void {
     this.selector = initializeInstanceCountSelector(
       INSTANCE_SELECTOR_ID,
-      this.instanceSide,
+      this.instancesPerSide,
       this.handleInstanceCountChange
     );
   }
 
   handleInstanceCountChange = (event: Event): void => {
-    const instanceSide = Number((event.target as HTMLSelectElement).value);
-    if (!INSTANCE_SIDE_OPTION_SET.has(instanceSide) || instanceSide === this.instanceSide) {
+    const instancesPerSide = Number((event.target as HTMLSelectElement).value);
+    if (
+      !INSTANCES_PER_SIDE_OPTION_SET.has(instancesPerSide) ||
+      instancesPerSide === this.instancesPerSide
+    ) {
       return;
     }
 
-    this.instanceSide = instanceSide;
-    storeInstanceSide(instanceSide);
-    this.pickingCube?.destroy();
-    this.cube.destroy();
-    this.cube = this.createCube();
-    this.pickingCube = this.createPickingCube();
+    this.instancesPerSide = instancesPerSide;
+    this.cube.setProps({arrowTable: makeInstanceArrowTable(instancesPerSide)});
+
+    if (this.pickingCube) {
+      this.pickingCube.setAttributes(this.cube.arrowGPUTable.attributes);
+      this.pickingCube.setInstanceCount(this.cube.instanceCount);
+    }
   };
 }
 
 function initializeInstanceCountSelector(
   id: string,
-  selectedInstanceSide: number,
+  selectedInstancesPerSide: number,
   onChange: (event: Event) => void
 ): HTMLSelectElement | null {
   const selectList = document.getElementById(id) as HTMLSelectElement | null;
@@ -490,11 +474,11 @@ function initializeInstanceCountSelector(
 
   selectList.replaceChildren();
 
-  for (const instanceSide of INSTANCE_SIDE_OPTIONS) {
+  for (const instancesPerSide of INSTANCES_PER_SIDE_OPTIONS) {
     const option = document.createElement('option');
-    option.value = String(instanceSide);
-    option.text = `${instanceSide} x ${instanceSide} (${formatInstanceCount(instanceSide)} cubes)`;
-    option.selected = instanceSide === selectedInstanceSide;
+    option.value = String(instancesPerSide);
+    option.text = `${instancesPerSide} x ${instancesPerSide} (${(instancesPerSide * instancesPerSide).toLocaleString()} cubes)`;
+    option.selected = instancesPerSide === selectedInstancesPerSide;
     selectList.appendChild(option);
   }
 

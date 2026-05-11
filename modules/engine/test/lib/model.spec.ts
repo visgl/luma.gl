@@ -496,6 +496,30 @@ test('Model#getBindingDebugTable', async t => {
   t.end();
 });
 
+test('Model merges WGSL inferred bindings with explicit shader layout', async t => {
+  const webgpuDevice = await getWebGPUTestDevice();
+  if (!webgpuDevice) {
+    t.comment('WebGPU unavailable, skipping explicit WGSL shader layout merge test');
+    t.end();
+    return;
+  }
+
+  const model = new Model(webgpuDevice, {
+    id: 'wgsl-explicit-shader-layout-merge-test',
+    source: DUMMY_WGSL_WITH_BINDING,
+    shaderLayout: {attributes: [], bindings: []},
+    vertexCount: 3
+  });
+
+  t.ok(
+    model.pipeline.shaderLayout.bindings.some(binding => binding.name === 'appFrame'),
+    'pipeline layout includes bindings inferred from WGSL'
+  );
+
+  model.destroy();
+  t.end();
+});
+
 test('Model#topology', async t => {
   for (const device of await getTestDevices()) {
     const model = new Model(device, {
@@ -605,6 +629,27 @@ test('Model#pipeline caching', async t => {
   model1.destroy();
   model2.destroy();
 
+  t.end();
+});
+
+test('Model#setBufferLayout is idempotent', async t => {
+  const webglDevice = await getWebGLTestDevice();
+  const model = new Model(webglDevice, {
+    id: 'set-buffer-layout-idempotent-test',
+    topology: 'point-list',
+    vs: DUMMY_VS,
+    fs: DUMMY_FS,
+    bufferLayout: [{name: 'a', format: 'float32x3'}]
+  });
+  const pipeline = model.pipeline;
+  const vertexArray = model.vertexArray;
+
+  model.setBufferLayout([{name: 'a', format: 'float32x3'}]);
+
+  t.equal(model.pipeline, pipeline, 'same buffer layout does not recreate pipeline');
+  t.equal(model.vertexArray, vertexArray, 'same buffer layout does not recreate vertex array');
+
+  model.destroy();
   t.end();
 });
 

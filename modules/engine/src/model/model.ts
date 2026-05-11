@@ -31,7 +31,6 @@ import {
   log,
   dataTypeDecoder,
   getAttributeInfosFromLayouts,
-  getLogicalBufferSlots,
   normalizeBindingsByGroup
 } from '@luma.gl/core';
 
@@ -46,6 +45,7 @@ import {deepEqual} from '../utils/deep-equal';
 import {BufferLayoutHelper} from '../utils/buffer-layout-helper';
 import {sortedBufferLayoutByShaderSourceLocations} from '../utils/buffer-layout-order';
 import {
+  mergeInferredShaderLayout,
   mergeShaderModuleBindingsIntoLayout,
   shaderModuleHasUniforms
 } from '../utils/shader-module-utils';
@@ -262,6 +262,7 @@ export class Model {
 
   _pipelineNeedsUpdate: string | false = 'newly created';
   private _needsRedraw: string | false = 'initializing';
+  private _drawBlockedReason: string | false = false;
   private _destroyed = false;
 
   /** "Time" of last draw. Monotonically increasing timestamp */
@@ -328,11 +329,9 @@ export class Model {
       const inferredShaderLayout = (
         device as Device & {getShaderLayout?: (source: string) => any}
       ).getShaderLayout?.(this.source);
+      const shaderLayout = mergeInferredShaderLayout(this.props.shaderLayout, inferredShaderLayout);
       this.props.shaderLayout =
-        mergeShaderModuleBindingsIntoLayout(
-          this.props.shaderLayout || inferredShaderLayout || null,
-          modules
-        ) || null;
+        mergeShaderModuleBindingsIntoLayout(shaderLayout || null, modules) || null;
     } else {
       // GLSL
       const {vs, fs, getUniforms} = this.props.shaderAssembler.assembleGLSLShaderPair({
@@ -466,6 +465,11 @@ export class Model {
    * @returns `true` if the draw call was executed, `false` if resources were not ready.
    */
   draw(renderPass: RenderPass): boolean {
+    if (this._drawBlockedReason && !this._pipelineNeedsUpdate) {
+      log.info(LOG_DRAW_PRIORITY, `>>> DRAWING ABORTED ${this.id}: ${this._drawBlockedReason}`)();
+      return false;
+    }
+
     const loadingBinding = this._areBindingsLoading();
     if (loadingBinding) {
       log.info(LOG_DRAW_PRIORITY, `>>> DRAWING ABORTED ${this.id}: ${loadingBinding} not loaded`)();
@@ -512,35 +516,42 @@ export class Model {
         )();
         drawSuccess = false;
       } else {
-        const syncBindings = this._getBindings();
-        const syncBindGroups = this._getBindGroups();
+        const drawValidationError = this.vertexArray.getDrawValidationError();
+        if (drawValidationError) {
+          log.info(LOG_DRAW_PRIORITY, `>>> DRAWING ABORTED ${this.id}: ${drawValidationError}`)();
+          this._drawBlockedReason = drawValidationError;
+          drawSuccess = false;
+        } else {
+          const syncBindings = this._getBindings();
+          const syncBindGroups = this._getBindGroups();
 
-        const {indexBuffer} = this.vertexArray;
-        const indexCount = indexBuffer
-          ? indexBuffer.byteLength / (indexBuffer.indexType === 'uint32' ? 4 : 2)
-          : undefined;
+          const {indexBuffer} = this.vertexArray;
+          const indexCount = indexBuffer
+            ? indexBuffer.byteLength / (indexBuffer.indexType === 'uint32' ? 4 : 2)
+            : undefined;
 
-        drawSuccess = this.pipeline.draw({
-          renderPass,
-          vertexArray: this.vertexArray,
-          isInstanced: this.isInstanced,
-          vertexCount: this.vertexCount,
-          instanceCount: this.instanceCount,
-          indexCount,
-          transformFeedback: this.transformFeedback || undefined,
-          // Pipelines may be shared across models when caching is enabled, so bindings
-          // and WebGL uniforms must be supplied on every draw instead of being stored
-          // on the pipeline instance.
-          bindings: syncBindings,
-          bindGroups: syncBindGroups,
-          _bindGroupCacheKeys: this._getBindGroupCacheKeys(),
-          uniforms: this.props.uniforms,
-          // WebGL shares underlying cached pipelines even for models that have different parameters and topology,
-          // so we must provide our unique parameters to each draw
-          // (In WebGPU most parameters are encoded in the pipeline and cannot be changed per draw call)
-          parameters: this.parameters,
-          topology: this.topology
-        });
+          drawSuccess = this.pipeline.draw({
+            renderPass,
+            vertexArray: this.vertexArray,
+            isInstanced: this.isInstanced,
+            vertexCount: this.vertexCount,
+            instanceCount: this.instanceCount,
+            indexCount,
+            transformFeedback: this.transformFeedback || undefined,
+            // Pipelines may be shared across models when caching is enabled, so bindings
+            // and WebGL uniforms must be supplied on every draw instead of being stored
+            // on the pipeline instance.
+            bindings: syncBindings,
+            bindGroups: syncBindGroups,
+            _bindGroupCacheKeys: this._getBindGroupCacheKeys(),
+            uniforms: this.props.uniforms,
+            // WebGL shares underlying cached pipelines even for models that have different parameters and topology,
+            // so we must provide our unique parameters to each draw
+            // (In WebGPU most parameters are encoded in the pipeline and cannot be changed per draw call)
+            parameters: this.parameters,
+            topology: this.topology
+          });
+        }
       }
     } finally {
       renderPass.popDebugGroup();
@@ -554,6 +565,9 @@ export class Model {
       this._needsRedraw = false;
     } else if (pipelineErrored) {
       this._needsRedraw = PIPELINE_INITIALIZATION_FAILED;
+      this._drawBlockedReason = PIPELINE_INITIALIZATION_FAILED;
+    } else if (this._drawBlockedReason) {
+      this._needsRedraw = this._drawBlockedReason;
     } else {
       this._needsRedraw = 'waiting for resource initialization';
     }
@@ -601,9 +615,14 @@ export class Model {
    */
   setBufferLayout(bufferLayout: BufferLayout[]): void {
     const bufferLayoutHelper = new BufferLayoutHelper(this.bufferLayout);
-    this.bufferLayout = this._gpuGeometry
+    const nextBufferLayout = this._gpuGeometry
       ? bufferLayoutHelper.mergeBufferLayouts(bufferLayout, this._gpuGeometry.bufferLayout)
       : bufferLayout;
+    if (deepEqual(nextBufferLayout, this.bufferLayout, -1)) {
+      return;
+    }
+
+    this.bufferLayout = nextBufferLayout;
     this._setPipelineNeedsUpdate('bufferLayout');
 
     // Recreate the pipeline
@@ -730,6 +749,7 @@ export class Model {
    * @note Overrides any attributes previously set with the same name
    */
   setAttributes(buffers: Record<string, ModelBuffer>, options?: {disableWarnings?: boolean}): void {
+    this._drawBlockedReason = false;
     const disableWarnings = options?.disableWarnings ?? this.props.disableWarnings;
     if (buffers['indices']) {
       log.warn(
@@ -744,7 +764,6 @@ export class Model {
       this.bufferLayout
     );
     const bufferLayoutHelper = new BufferLayoutHelper(this.bufferLayout);
-    const logicalBufferSlots = getLogicalBufferSlots(this.pipeline.shaderLayout, this.bufferLayout);
 
     // Check if all buffers have a layout
     for (const [bufferName, buffer] of Object.entries(buffers)) {
@@ -764,19 +783,27 @@ export class Model {
       for (const attributeName of attributeNames) {
         const attributeInfo = this._attributeInfos[attributeName];
         if (attributeInfo) {
-          const location =
+          const bufferSlot =
             this.device.type === 'webgpu'
-              ? logicalBufferSlots[attributeInfo.bufferName]
+              ? this.vertexArray.getBufferSlot(attributeInfo.bufferName)
               : attributeInfo.location;
+          if (bufferSlot === null) {
+            if (!disableWarnings) {
+              log.warn(
+                `Model(${this.id}): Missing vertex array slot for buffer "${attributeInfo.bufferName}".`
+              )();
+            }
+            continue; // eslint-disable-line no-continue
+          }
 
-          this.vertexArray.setBuffer(location, resolvedBuffer);
+          this.vertexArray.setBuffer(bufferSlot, resolvedBuffer);
           if (buffer instanceof DynamicBuffer) {
-            this._dynamicAttributeBufferSources[location] = {
+            this._dynamicAttributeBufferSources[bufferSlot] = {
               source: buffer,
               generation: buffer.generation
             };
           } else {
-            delete this._dynamicAttributeBufferSources[location];
+            delete this._dynamicAttributeBufferSources[bufferSlot];
           }
           set = true;
         }
@@ -928,6 +955,7 @@ export class Model {
   /** Mark pipeline as needing update */
   _setPipelineNeedsUpdate(reason: string): void {
     this._pipelineNeedsUpdate ||= reason;
+    this._drawBlockedReason = false;
     this.setNeedsRedraw(reason);
   }
 

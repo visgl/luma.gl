@@ -9,7 +9,7 @@ import type {ShaderModule} from '@luma.gl/shadertools';
 const DEFAULT_HIGHLIGHT_COLOR: NumberArray4 = [0, 1, 1, 1];
 
 export const INVALID_INDEX = -1;
-export type PickingPayloadMode = 'instance' | 'attribute';
+export type PickingPayloadMode = 'instance' | 'attribute' | 'vertex';
 
 /**
  * Props for the picking module, which depending on mode renders picking colors or highlighted item.
@@ -20,7 +20,7 @@ export type PickingPayloadMode = 'instance' | 'attribute';
 export type PickingProps = {
   /** Are we picking? I.e. rendering picking colors? */
   isActive?: boolean;
-  /** Whether the payload is sourced from the builtin instance index or a custom integer attribute */
+  /** Whether the payload is sourced from a builtin index or a custom integer attribute */
   indexMode?: PickingPayloadMode;
   /** Identifier of the batch currently being rendered */
   batchIndex?: number;
@@ -44,8 +44,8 @@ export type PickingUniforms = {
    * When false, renders normal colors, with the exception of selected object which is rendered with highlight
    */
   isActive: boolean;
-  /** Whether the current payload comes from instance_index or a custom integer attribute */
-  indexMode: 0 | 1;
+  /** Whether the current payload comes from a builtin index or a custom integer attribute */
+  indexMode: 0 | 1 | 2;
   /** Identifier of the batch currently being rendered */
   batchIndex: number;
 
@@ -119,6 +119,9 @@ function getUniforms(props: PickingProps = {}, prevUniforms?: PickingUniforms): 
       break;
     case 'attribute':
       uniforms.indexMode = 1;
+      break;
+    case 'vertex':
+      uniforms.indexMode = 2;
       break;
     case undefined:
       // no change

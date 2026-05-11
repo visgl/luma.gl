@@ -70,11 +70,11 @@ export class VertexFormatDecoder {
 
       case 'uint8':
       case 'sint8':
-        // WebGPU 8 bit formats must be aligned to 16 bit boundaries.
-        if (components === 1 || components === 3) {
+        // WebGPU does not support 3-component 8 bit formats.
+        if (components === 3) {
           throw new Error(`size: ${components}`);
         }
-        return `${dataType}x${components}`;
+        return components === 1 ? dataType : `${dataType}x${components}`;
 
       case 'uint16':
         if (components === 1) {
@@ -113,11 +113,11 @@ export class VertexFormatDecoder {
         return `${dataType}x${components}`;
 
       case 'float16':
-        // WebGPU 16 bit formats must be aligned to 32 bit boundaries
-        if (components === 1 || components === 3) {
+        // WebGPU does not support 3-component float16 formats.
+        if (components === 3) {
           throw new Error(`size: ${components}`);
         }
-        return `${dataType}x${components}`;
+        return components === 1 ? dataType : `${dataType}x${components}`;
 
       default:
         return components === 1 ? dataType : `${dataType}x${components}`;

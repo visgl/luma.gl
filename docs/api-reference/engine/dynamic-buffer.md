@@ -1,7 +1,7 @@
 # DynamicBuffer
 
 <p class="badges">
-  <img src="https://img.shields.io/badge/From-v9.4-blue.svg?style=flat-square" alt="From-v9.4" />
+  <img src="https://img.shields.io/badge/From-v10-blue.svg?style=flat-square" alt="From-v10" />
 </p>
 
 `DynamicBuffer` is the engine-level wrapper for applications that need a stable buffer object whose underlying GPU [`Buffer`](/docs/api-reference/core/resources/buffer) can grow or be replaced.

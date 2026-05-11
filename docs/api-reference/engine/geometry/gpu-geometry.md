@@ -4,6 +4,8 @@
 It stores already-created luma.gl `Buffer` objects plus the corresponding `bufferLayout` metadata.
 
 Use it when geometry data is already on the GPU and should not be re-uploaded from typed arrays.
+When CPU `Geometry` is converted through `makeGPUGeometry()`, it is first interleaved so the upload uses
+one vertex buffer plus an optional index buffer.
 
 ## Usage
 
@@ -51,7 +53,7 @@ Optional index buffer.
 
 ### `attributes`
 
-Named vertex buffers.
+Named vertex buffers. Keys match `bufferLayout[].name`.
 
 ### `userData`
 
@@ -81,6 +83,6 @@ Returns the index buffer when present.
 
 ## Related Helpers
 
-- `makeGPUGeometry(device, geometry)` converts a CPU `Geometry` into `GPUGeometry`.
+- `makeGPUGeometry(device, geometry)` converts a CPU `Geometry` into `GPUGeometry`. CPU input is interleaved before upload; `GPUGeometry` input is returned unchanged.
 - `getIndexBufferFromGeometry(device, geometry)` extracts or creates an index buffer.
-- `getAttributeBuffersFromGeometry(device, geometry)` creates GPU attribute buffers and buffer layout metadata.
+- `getAttributeBuffersFromGeometry(device, geometry)` creates one GPU vertex buffer per CPU geometry attribute key and preserves the geometry's `bufferLayout`.

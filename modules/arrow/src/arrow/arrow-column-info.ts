@@ -13,7 +13,7 @@ import {
 } from './arrow-types';
 import {getArrowVectorByPath} from './arrow-paths';
 
-/** Extracts info from columns that can be used as GPU data sources */
+/** Returns GPU attribute information for an Arrow table column path, if compatible. */
 export function getArrowColumnInfo(arrowTable: arrow.Table, path: string): ArrowColumnInfo | null {
   const vector = getArrowVectorByPath(arrowTable, path);
   if (isInstanceArrowType(vector.type)) {
@@ -25,13 +25,13 @@ export function getArrowColumnInfo(arrowTable: arrow.Table, path: string): Arrow
   return null;
 }
 
-/** Extracts info from columns that can be used with GPU instanced attributes */
+/** Returns GPU attribute information for a scalar or FixedSizeList Arrow vector. */
 export function getInstanceColumnInfo(vector: arrow.Vector<AttributeArrowType>): ArrowColumnInfo {
   let components: 1 | 2 | 3 | 4 = 1;
 
   let dataVector = vector as arrow.Vector<NumericArrowType>;
   if (arrow.DataType.isFixedSizeList(vector.type)) {
-    dataVector = vector.getChild(0)!;
+    dataVector = vector.getChildAt(0)!;
     if (vector.type.listSize < 1 || vector.type.listSize > 4) {
       throw new Error('Attribute column fixed list size must be between 1 and 4');
     }
