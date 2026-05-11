@@ -40,6 +40,26 @@ export function mergeShaderModuleBindingsIntoLayout<TShaderLayout extends AnySha
   return mergedLayout;
 }
 
+export function mergeInferredShaderLayout(
+  shaderLayout: ShaderLayout | null | undefined,
+  inferredShaderLayout: ShaderLayout | null | undefined
+): ShaderLayout | null | undefined {
+  if (!shaderLayout) {
+    return inferredShaderLayout;
+  }
+  if (!inferredShaderLayout) {
+    return shaderLayout;
+  }
+
+  return {
+    ...shaderLayout,
+    attributes: shaderLayout.attributes.length
+      ? shaderLayout.attributes
+      : inferredShaderLayout.attributes,
+    bindings: mergeBindingLayouts(shaderLayout.bindings, inferredShaderLayout.bindings)
+  };
+}
+
 export function shaderModuleHasUniforms(module: ShaderModule): boolean {
   return Boolean(module.uniformTypes && !isObjectEmpty(module.uniformTypes));
 }
@@ -60,4 +80,27 @@ function isObjectEmpty(obj: object): boolean {
     return false;
   }
   return true;
+}
+
+function mergeBindingLayouts<TBindingLayout extends ShaderLayout['bindings'][number]>(
+  explicitBindings: TBindingLayout[],
+  inferredBindings: TBindingLayout[]
+): TBindingLayout[] {
+  const mergedBindings = explicitBindings.map(binding => ({...binding}));
+  const explicitBindingNames = new Set(explicitBindings.map(binding => binding.name));
+  const explicitBindingLocations = new Set(
+    explicitBindings.map(binding => `${binding.group}:${binding.location}`)
+  );
+
+  for (const inferredBinding of inferredBindings) {
+    const inferredBindingLocation = `${inferredBinding.group}:${inferredBinding.location}`;
+    if (
+      !explicitBindingNames.has(inferredBinding.name) &&
+      !explicitBindingLocations.has(inferredBindingLocation)
+    ) {
+      mergedBindings.push({...inferredBinding});
+    }
+  }
+
+  return mergedBindings;
 }

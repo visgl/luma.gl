@@ -13,14 +13,27 @@ const source = /* wgsl */ `\
 ${WGSL_UNIFORMS}
 
 const INDEX_PICKING_MODE_INSTANCE = 0;
-const INDEX_PICKING_MODE_CUSTOM = 1;
+const INDEX_PICKING_MODE_ATTRIBUTE = 1;
+const INDEX_PICKING_MODE_VERTEX = 2;
 const INDEX_PICKING_INVALID_INDEX = ${INVALID_INDEX}; // 2^32 - 1
 
 /**
  * WGSL shaders need to carry the returned object index through their own stage outputs.
  */
-fn picking_setObjectIndex(objectIndex: i32) -> i32 {
+fn picking_getInstanceObjectIndex(instanceIndex: u32) -> i32 {
+  return i32(instanceIndex);
+}
+
+fn picking_getVertexObjectIndex(vertexIndex: u32) -> i32 {
+  return i32(vertexIndex);
+}
+
+fn picking_getAttributeObjectIndex(objectIndex: i32) -> i32 {
   return objectIndex;
+}
+
+fn picking_setObjectIndex(objectIndex: i32) -> i32 {
+  return picking_getAttributeObjectIndex(objectIndex);
 }
 
 fn picking_isObjectHighlighted(objectIndex: i32) -> bool {
@@ -63,7 +76,8 @@ const vs = /* glsl */ `\
 ${GLSL_UNIFORMS}
 
 const int INDEX_PICKING_MODE_INSTANCE = 0;
-const int INDEX_PICKING_MODE_CUSTOM = 1;
+const int INDEX_PICKING_MODE_ATTRIBUTE = 1;
+const int INDEX_PICKING_MODE_VERTEX = 2;
 
 const int INDEX_PICKING_INVALID_INDEX = ${INVALID_INDEX}; // 2^32 - 1
 
@@ -71,15 +85,18 @@ flat out int picking_objectIndex;
 
 /**
  * Vertex shaders should call this function to set the object index.
- * If using instance or vertex mode, argument will be ignored, 0 can be supplied.
+ * If using instance or vertex mode, the argument is ignored and 0 can be supplied.
  */
 void picking_setObjectIndex(int objectIndex) {
   switch (picking.indexMode) {
     case INDEX_PICKING_MODE_INSTANCE:
       picking_objectIndex = gl_InstanceID;
       break;
-    case INDEX_PICKING_MODE_CUSTOM:
+    case INDEX_PICKING_MODE_ATTRIBUTE:
       picking_objectIndex = objectIndex;
+      break;
+    case INDEX_PICKING_MODE_VERTEX:
+      picking_objectIndex = gl_VertexID;
       break;
   }
 }
@@ -132,7 +149,7 @@ vec4 picking_filterHighlightColor(vec4 color) {
 ivec4 picking_getPickingColor() {
   // Assumes that colorAttachment0 is rg32int
   // TODO? - we could render indices into a second color attachment and not mess with fragColor
-  return ivec4(picking_objectIndex, picking.batchIndex, 0u, 0u);  
+  return ivec4(picking_objectIndex, picking.batchIndex, 0, 0);
 }
 
 vec4 picking_filterPickingColor(vec4 color) {

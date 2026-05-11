@@ -11,6 +11,7 @@ import './utils/buffer-layout-order.spec';
 import './lib/model.spec';
 import './lib/animation-loop.spec';
 import './lib/picking-manager.spec';
+import './lib/picking-modules.node.spec';
 
 import './dynamic-texture/dynamic-texture.spec';
 import './dynamic-texture/mip-levels.spec';

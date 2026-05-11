@@ -22,6 +22,7 @@ import DOFApp from '../../examples/showcase/dof/app';
 // import DOFApp from '../../examples/showcase/dof/app';
 // import GeospatialApp from '../../examples/showcase/geospatial/app';
 import GLTFApp from '../../examples/showcase/gltf/app';
+import ArrowInstancingApp from '../../examples/showcase/arrow-instancing/app';
 import InstancingApp from '../../examples/showcase/instancing/app';
 import Text3DApp from '../../examples/experimental/text-3d/app';
 import PersistenceApp from '../../examples/showcase/persistence/app';
@@ -106,6 +107,17 @@ export const InstancingExample: React.FC = props => (
     id="instancing"
     directory="showcase"
     template={InstancingApp}
+    config={exampleConfig}
+    {...props}
+  />
+);
+
+export const ArrowInstancingExample: React.FC = props => (
+  <LumaExample
+    id="arrow-instancing"
+    title="Arrow Instancing"
+    directory="showcase"
+    template={ArrowInstancingApp}
     config={exampleConfig}
     {...props}
   />

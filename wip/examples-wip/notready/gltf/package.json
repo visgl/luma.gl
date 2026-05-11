@@ -15,7 +15,6 @@
     "@loaders.gl/core": "~4.4.0",
     "@loaders.gl/gltf": "~4.4.0",
     "@loaders.gl/polyfills": "~4.4.0",
-    "@luma.gl/constants": "~9.3.0",
     "@luma.gl/engine": "~9.3.0",
     "@luma.gl/experimental": "~9.3.0",
     "@luma.gl/webgl": "~9.3.0",

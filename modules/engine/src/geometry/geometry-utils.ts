@@ -126,9 +126,6 @@ export function makeInterleavedGeometry(
 
     const format = vertexFormatDecoder.getVertexFormatFromAttribute(value, size, normalized);
     const vertexFormatInfo = vertexFormatDecoder.getVertexFormatInfo(format);
-    if (vertexFormatInfo.webglOnly) {
-      throw new Error(`Attribute ${sourceName} uses WebGL-only format ${format}`);
-    }
 
     byteOffset = alignTo(byteOffset, minAttributeAlignment);
     interleavedAttributes.push({

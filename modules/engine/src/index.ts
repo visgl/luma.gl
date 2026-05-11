@@ -112,6 +112,8 @@ export type {
 
 export type {DynamicTextureProps} from './dynamic-texture/dynamic-texture';
 export {DynamicTexture} from './dynamic-texture/dynamic-texture';
+export type {DynamicBufferProps, DynamicBufferRange} from './dynamic-buffer/dynamic-buffer';
+export {DynamicBuffer} from './dynamic-buffer/dynamic-buffer';
 
 export type {
   PickInfo,
@@ -129,6 +131,7 @@ export {
 } from './modules/picking/picking-manager';
 export {picking} from './modules/picking/picking';
 export {picking as indexPicking} from './modules/picking/index-picking';
+export {picking as indexColorPicking} from './modules/picking/index-color-picking';
 export {picking as colorPicking} from './modules/picking/color-picking';
 
 export {
