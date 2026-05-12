@@ -45,14 +45,29 @@ export class NullBuffer extends Buffer {
     const source = ArrayBuffer.isView(data)
       ? new Uint8Array(data.buffer, data.byteOffset, data.byteLength)
       : new Uint8Array(data);
-    const target = new Uint8Array(this._storage, byteOffset, source.byteLength);
 
     if (byteOffset + source.byteLength > this.byteLength) {
       throw new RangeError(`NullBuffer.write(): write would overflow buffer`);
     }
 
+    const target = new Uint8Array(this._storage, byteOffset, source.byteLength);
     target.set(source);
+    this.updateTimestamp = this.device.incrementTimestamp();
     this._setDebugData(data, byteOffset, source.byteLength);
+  }
+
+  copyToBuffer(
+    destinationBuffer: Buffer,
+    sourceOffset: number,
+    destinationOffset: number,
+    size: number
+  ): void {
+    if (sourceOffset + size > this.byteLength) {
+      throw new RangeError(`NullBuffer.copyToBuffer(): read would overflow source buffer`);
+    }
+
+    const source = new Uint8Array(this._storage, sourceOffset, size);
+    destinationBuffer.write(source, destinationOffset);
   }
 
   async mapAndWriteAsync(

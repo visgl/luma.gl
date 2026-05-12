@@ -15,6 +15,7 @@ import type {
   CopyTextureToTextureOptions
 } from '@luma.gl/core';
 import type {NullDevice} from '../null-device';
+import {NullBuffer} from './null-buffer';
 import {NullCommandBuffer} from './null-command-buffer';
 import {NullRenderPass} from './null-render-pass';
 
@@ -45,8 +46,17 @@ export class NullCommandEncoder extends CommandEncoder {
     throw new Error('ComputePass is not supported on NullDevice');
   }
 
-  copyBufferToBuffer(_options: CopyBufferToBufferOptions): void {
-    throw new Error('copyBufferToBuffer is not supported on NullDevice');
+  copyBufferToBuffer(options: CopyBufferToBufferOptions): void {
+    if (!(options.sourceBuffer instanceof NullBuffer)) {
+      throw new Error('NullCommandEncoder.copyBufferToBuffer requires a NullBuffer source');
+    }
+
+    options.sourceBuffer.copyToBuffer(
+      options.destinationBuffer,
+      options.sourceOffset || 0,
+      options.destinationOffset || 0,
+      options.size
+    );
   }
 
   copyBufferToTexture(_options: CopyBufferToTextureOptions) {

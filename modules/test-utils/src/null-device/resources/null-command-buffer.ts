@@ -12,6 +12,7 @@ import type {
 } from '@luma.gl/core';
 import {CommandBuffer} from '@luma.gl/core';
 import type {NullDevice} from '../null-device';
+import {NullBuffer} from './null-buffer';
 
 export class NullCommandBuffer extends CommandBuffer {
   readonly device: NullDevice;
@@ -22,8 +23,17 @@ export class NullCommandBuffer extends CommandBuffer {
     this.device = device;
   }
 
-  copyBufferToBuffer(_options: CopyBufferToBufferOptions): void {
-    throw new Error('copyBufferToBuffer is not supported on NullDevice');
+  copyBufferToBuffer(options: CopyBufferToBufferOptions): void {
+    if (!(options.sourceBuffer instanceof NullBuffer)) {
+      throw new Error('NullCommandBuffer.copyBufferToBuffer requires a NullBuffer source');
+    }
+
+    options.sourceBuffer.copyToBuffer(
+      options.destinationBuffer,
+      options.sourceOffset || 0,
+      options.destinationOffset || 0,
+      options.size
+    );
   }
 
   copyBufferToTexture(_options: CopyBufferToTextureOptions) {

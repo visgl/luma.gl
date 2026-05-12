@@ -322,10 +322,6 @@ export class DynamicBuffer {
     destinationBuffer: Buffer,
     byteLength: number
   ): void {
-    if (this.device.type === 'null') {
-      throw new Error(`${this} resize({preserveData: true}) is not supported on NullDevice`);
-    }
-
     const commandEncoder = this.device.createCommandEncoder();
     commandEncoder.copyBufferToBuffer({
       sourceBuffer,

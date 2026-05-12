@@ -6,6 +6,7 @@ import './arrow/arrow-paths.spec';
 import './arrow/arrow-column-info.spec';
 import './arrow/arrow-fixed-size-list.spec';
 import './arrow/plain-gpu-table.spec';
+import './arrow/streaming-arrow-gpu-table.spec';
 import './arrow/arrow-model.spec';
 import './arrow/arrow-shader-layout.spec';
 import './arrow/analyze-arrow-table.spec';

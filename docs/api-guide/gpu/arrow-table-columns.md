@@ -130,6 +130,41 @@ const colorVector: ArrowGPUVector = arrowGPUTable.gpuVectors.instanceColors;
 `Model`. It accepts an Arrow table as an update source and replaces the GPU
 representation when `setProps({arrowTable})` is called.
 
+`StreamingArrowGPUTable` uses the same shader attribute selection model but keeps
+`DynamicBuffer` attributes that can grow as record batches arrive. Use it when
+the table is append-only and model attribute objects should remain stable across
+buffer reallocations.
+
+```ts
+import {StreamingArrowGPUTable} from '@luma.gl/arrow';
+
+const streamingTable = new StreamingArrowGPUTable({
+  device,
+  schema,
+  shaderLayout
+});
+
+model.setBufferLayout(streamingTable.bufferLayout);
+model.setAttributes(streamingTable.attributes);
+
+streamingTable.appendRecordBatch(recordBatch);
+model.setInstanceCount(streamingTable.numRows);
+```
+
+The constructor can also consume synchronous record batch iterators immediately,
+or async record batch iterators when a schema is provided:
+
+```ts
+const streamingTable = new StreamingArrowGPUTable({
+  device,
+  schema,
+  asyncRecordBatches,
+  shaderLayout
+});
+
+await streamingTable.ready;
+```
+
 ## Planning Table Buffer Groups
 
 `TableBufferPlanner` is a lower-level helper for applications that already have

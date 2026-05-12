@@ -106,6 +106,44 @@ test('ArrowGPUVector creates a GPU buffer from an Arrow vector', t => {
   t.end();
 });
 
+test('ArrowGPUVector readAsync round-trips scalar numeric vectors', async t => {
+  const device = new NullDevice({});
+  const sourceVector = arrow.makeVector(new Int32Array([1, -2, 3]));
+  const gpuVector = new ArrowGPUVector(device, sourceVector);
+
+  const result = await gpuVector.readAsync();
+
+  t.ok(arrow.util.compareTypes(result.type, sourceVector.type), 'preserves Arrow dynamic type');
+  t.equal(result.length, sourceVector.length, 'preserves row count');
+  t.deepEqual(Array.from(result.toArray()), [1, -2, 3], 'reads scalar values from GPU buffer');
+
+  gpuVector.destroy();
+  t.end();
+});
+
+test('ArrowGPUVector readAsync round-trips FixedSizeList vectors', async t => {
+  const device = new NullDevice({});
+  const sourceVector = makeArrowFixedSizeListVector(
+    new arrow.Float32(),
+    2,
+    new Float32Array([1, 2, 3, 4])
+  );
+  const gpuVector = new ArrowGPUVector(device, sourceVector);
+
+  const result = await gpuVector.readAsync();
+
+  t.ok(arrow.util.compareTypes(result.type, sourceVector.type), 'preserves FixedSizeList type');
+  t.equal(result.length, sourceVector.length, 'preserves FixedSizeList row count');
+  t.deepEqual(
+    getArrowFixedSizeListValues(result),
+    new Float32Array([1, 2, 3, 4]),
+    'reads child values from GPU buffer'
+  );
+
+  gpuVector.destroy();
+  t.end();
+});
+
 test('ArrowGPUVector supports discriminated Arrow-vector construction', t => {
   const device = new NullDevice({});
   const vector = makeArrowFixedSizeListVector(
@@ -162,6 +200,32 @@ test('ArrowGPUVector wraps existing typed buffers', t => {
   t.end();
 });
 
+test('ArrowGPUVector readAsync respects wrapped-buffer byteOffset and padded byteStride', async t => {
+  const device = new NullDevice({});
+  const bytes = new Uint8Array(20);
+  new Float32Array(bytes.buffer, 4, 1)[0] = 1.5;
+  new Float32Array(bytes.buffer, 12, 1)[0] = 2.5;
+  const buffer = device.createBuffer({data: bytes});
+  const gpuVector = new ArrowGPUVector({
+    type: 'buffer',
+    name: 'weights',
+    buffer,
+    arrowType: new arrow.Float32(),
+    length: 2,
+    byteOffset: 4,
+    byteStride: 8,
+    ownsBuffer: false
+  });
+
+  const result = await gpuVector.readAsync();
+
+  t.deepEqual(Array.from(result.toArray()), [1.5, 2.5], 'compacts padded rows');
+
+  gpuVector.destroy();
+  buffer.destroy();
+  t.end();
+});
+
 test('ArrowGPUVector wraps interleaved buffers', t => {
   const device = new NullDevice({});
   const buffer = device.createBuffer({byteLength: 32});
@@ -194,6 +258,35 @@ test('ArrowGPUVector wraps interleaved buffers', t => {
     },
     'exposes interleaved buffer layout'
   );
+
+  gpuVector.destroy();
+  t.end();
+});
+
+test('ArrowGPUVector readAsync rejects interleaved vectors', async t => {
+  const device = new NullDevice({});
+  const gpuVector = new ArrowGPUVector({
+    type: 'interleaved',
+    name: 'instances',
+    buffer: device.createBuffer({byteLength: 32}),
+    length: 2,
+    byteStride: 16,
+    attributes: [
+      {attribute: 'positions', format: 'float32x3', byteOffset: 0},
+      {attribute: 'colors', format: 'uint8x4', byteOffset: 12}
+    ],
+    ownsBuffer: true
+  });
+
+  try {
+    await gpuVector.readAsync();
+    t.fail('readAsync should reject interleaved vectors');
+  } catch (error) {
+    t.ok(
+      error instanceof Error && /does not support interleaved vectors/.test(error.message),
+      'throws a clear unsupported error'
+    );
+  }
 
   gpuVector.destroy();
   t.end();

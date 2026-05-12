@@ -3,7 +3,12 @@
 // Copyright (c) vis.gl contributors
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {ArrowGPUTable, ArrowModel, makeArrowFixedSizeListVector} from '@luma.gl/arrow';
+import {
+  ArrowGPUTable,
+  ArrowModel,
+  makeArrowFixedSizeListVector,
+  StreamingArrowGPUTable
+} from '@luma.gl/arrow';
 import type {ShaderLayout} from '@luma.gl/core';
 import {NullDevice} from '@luma.gl/test-utils';
 import * as arrow from 'apache-arrow';
@@ -41,7 +46,7 @@ test('ArrowModel creates a Model from an Arrow table', t => {
     shaderLayout: SHADER_LAYOUT,
     arrowTable
   });
-  const positionsBuffer = model.arrowGPUTable.gpuVectors.positions.buffer;
+  const positionsBuffer = model.arrowGPUTable.gpuVectors['positions'].buffer;
 
   t.ok(model.arrowGPUTable instanceof ArrowGPUTable, 'creates an ArrowGPUTable');
   t.deepEqual(
@@ -54,7 +59,7 @@ test('ArrowModel creates a Model from an Arrow table', t => {
   );
   t.equal(
     model.vertexArray.attributes[0],
-    model.arrowGPUTable.attributes.positions,
+    model.arrowGPUTable.attributes['positions'],
     'sets Model vertex array attributes from Arrow buffers'
   );
   t.equal(model.instanceCount, arrowTable.numRows, 'defaults instanceCount to Arrow row count');
@@ -107,7 +112,7 @@ test('ArrowModel updates Arrow table props', t => {
     shaderLayout: SHADER_LAYOUT,
     arrowTable
   });
-  const previousPositionsBuffer = model.arrowGPUTable.gpuVectors.positions.buffer;
+  const previousPositionsBuffer = model.arrowGPUTable.gpuVectors['positions'].buffer;
   const previousPipeline = model.pipeline;
 
   model.setProps({arrowTable: nextArrowTable});
@@ -120,12 +125,48 @@ test('ArrowModel updates Arrow table props', t => {
   );
   t.equal(
     model.vertexArray.attributes[0],
-    model.arrowGPUTable.attributes.positions,
+    model.arrowGPUTable.attributes['positions'],
     'sets vertex array attributes from the updated Arrow buffers'
   );
   t.ok(previousPositionsBuffer.destroyed, 'destroys previous Arrow GPU vector buffers');
 
   model.destroy();
+  t.end();
+});
+
+test('ArrowModel consumes a StreamingArrowGPUTable', t => {
+  const device = new NullDevice({});
+  const firstTable = makeArrowModelTable(1);
+  const nextTable = makeArrowModelTable(3);
+  const streamingArrowGPUTable = new StreamingArrowGPUTable({
+    device,
+    schema: firstTable.schema,
+    shaderLayout: SHADER_LAYOUT
+  });
+
+  streamingArrowGPUTable.appendRecordBatch(firstTable.batches[0]);
+  const model = new ArrowModel(device, {
+    id: 'arrow-model-streaming-test',
+    vs: DUMMY_VS,
+    fs: DUMMY_FS,
+    shaderLayout: SHADER_LAYOUT,
+    streamingArrowGPUTable
+  });
+  const positionsBuffer = streamingArrowGPUTable.gpuVectors['positions'].buffer;
+  const initialNeedsRedraw = model.needsRedraw();
+
+  streamingArrowGPUTable.appendRecordBatch(nextTable.batches[0]);
+
+  t.equal(model.arrowGPUTable, streamingArrowGPUTable, 'uses the provided streaming table');
+  t.equal(model.instanceCount, 1, 'initially infers row count from streaming table');
+  t.ok(model.needsRedraw(), 'detects writes to streaming DynamicBuffer attributes');
+  t.equal(model.instanceCount, 4, 'refreshes inferred row count after streaming append');
+
+  model.destroy();
+  t.notOk(positionsBuffer.destroyed, 'does not destroy externally provided streaming table');
+  streamingArrowGPUTable.destroy();
+  t.ok(positionsBuffer.destroyed, 'external owner can destroy the streaming table');
+  t.ok(initialNeedsRedraw, 'model starts needing redraw');
   t.end();
 });
 

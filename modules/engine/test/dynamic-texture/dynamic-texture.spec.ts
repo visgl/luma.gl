@@ -25,7 +25,7 @@ test('DynamicTexture#readAsync', async t => {
   const data = new Uint8Array([1, 2, 3, 4]);
 
   const texture = new DynamicTexture(device, {
-    data,
+    data: data as any,
     width: 1,
     height: 1,
     format: 'rgba8unorm',
@@ -46,7 +46,7 @@ test('DynamicTexture accepts bare typed-array 2d payloads', async t => {
   const data = new Uint8Array([9, 8, 7, 6]);
 
   const texture = new DynamicTexture(device, {
-    data,
+    data: data as any,
     width: 1,
     height: 1,
     format: 'rgba8unorm'
@@ -55,6 +55,48 @@ test('DynamicTexture accepts bare typed-array 2d payloads', async t => {
   await texture.ready;
   t.equal(texture.texture.width, 1, 'typed-array payload initializes width');
   t.equal(texture.texture.height, 1, 'typed-array payload initializes height');
+
+  texture.destroy();
+  t.end();
+});
+
+test('DynamicTexture tracks update timestamps and resource generations', async t => {
+  const device = await getNullTestDevice();
+  const texture = new DynamicTexture(device, {
+    data: {data: new Uint8Array([1, 2, 3, 4]), width: 1, height: 1},
+    width: 1,
+    height: 1,
+    format: 'rgba8unorm'
+  });
+  const initialTimestamp = texture.updateTimestamp;
+  const initialCacheToken = texture.cacheToken;
+
+  await texture.ready;
+
+  t.equal(texture.generation, 1, 'initial texture creation increments generation');
+  t.ok(texture.updateTimestamp > initialTimestamp, 'initial texture creation updates timestamp');
+  t.notEqual(
+    texture.cacheToken,
+    initialCacheToken,
+    'initial texture creation replaces cache token'
+  );
+
+  const readyGeneration = texture.generation;
+  const readyCacheToken = texture.cacheToken;
+  const readyTimestamp = texture.updateTimestamp;
+
+  texture.setTexture2DData({data: new Uint8Array([5, 6, 7, 8]), width: 1, height: 1});
+
+  t.equal(texture.generation, readyGeneration, 'texture data upload preserves generation');
+  t.equal(texture.cacheToken, readyCacheToken, 'texture data upload preserves cache token');
+  t.ok(texture.updateTimestamp > readyTimestamp, 'texture data upload updates timestamp');
+
+  const uploadTimestamp = texture.updateTimestamp;
+  texture.resize({width: 2, height: 2});
+
+  t.equal(texture.generation, readyGeneration + 1, 'resize increments generation');
+  t.notEqual(texture.cacheToken, readyCacheToken, 'resize replaces cache token');
+  t.ok(texture.updateTimestamp > uploadTimestamp, 'resize updates timestamp');
 
   texture.destroy();
   t.end();
@@ -474,7 +516,7 @@ test('DynamicTexture WebGPU [render][rgba8unorm] throws for unsupported 3d rende
   await texture.ready;
 
   const originalGetTextureFormatCapabilities = device.getTextureFormatCapabilities.bind(device);
-  (device as any).getTextureFormatCapabilities = (format: string) => {
+  (device as any).getTextureFormatCapabilities = (format: TextureFormat) => {
     const capabilities = originalGetTextureFormatCapabilities(format);
     if (format === RENDER_MIPMAP_TEST_FORMAT) {
       return {...capabilities, render: false, filter: false};
@@ -575,7 +617,7 @@ test('DynamicTexture WebGPU [compute][rgba8unorm] throws for unsupported compute
   await texture.ready;
 
   const originalGetTextureFormatCapabilities = device.getTextureFormatCapabilities.bind(device);
-  (device as any).getTextureFormatCapabilities = (format: string) => {
+  (device as any).getTextureFormatCapabilities = (format: TextureFormat) => {
     const capabilities = originalGetTextureFormatCapabilities(format);
     if (format === COMPUTE_MIPMAP_TEST_FORMAT) {
       return {...capabilities, filter: false, store: false};
@@ -680,7 +722,7 @@ test('DynamicTexture WebGPU [render][rgba8unorm] throws when render capabilities
   await texture.ready;
 
   const originalGetTextureFormatCapabilities = device.getTextureFormatCapabilities.bind(device);
-  (device as any).getTextureFormatCapabilities = (format: string) => {
+  (device as any).getTextureFormatCapabilities = (format: TextureFormat) => {
     const capabilities = originalGetTextureFormatCapabilities(format);
     if (format === RENDER_MIPMAP_TEST_FORMAT) {
       return {...capabilities, render: false, filter: false};

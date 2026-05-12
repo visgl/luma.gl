@@ -91,6 +91,12 @@ export class DynamicTexture {
   readonly ready: Promise<Texture>;
   isReady = false;
   destroyed = false;
+  /** Monotonic version that increments whenever texture, view, or sampler identity changes. */
+  generation = 0;
+  /** Last update timestamp for texture content, readiness, or identity changes. */
+  updateTimestamp: number;
+  /** Token replaced whenever cache users need a new resource identity. */
+  cacheToken: object = {};
 
   private resolveReady: (t: Texture) => void = () => {};
   private rejectReady: (error: Error) => void = () => {};
@@ -130,6 +136,7 @@ export class DynamicTexture {
       this.resolveReady = resolve;
       this.rejectReady = reject;
     });
+    this.updateTimestamp = this.device.incrementTimestamp();
 
     this.initAsync(originalPropsWithAsyncData);
   }
@@ -224,6 +231,7 @@ export class DynamicTexture {
       this._texture = this.device.createTexture(finalTextureProps);
       this._sampler = this.texture.sampler;
       this._view = this.texture.view;
+      this._touchGeneration();
 
       // Upload data if provided
       if (textureData.subresources.length) {
@@ -261,8 +269,10 @@ export class DynamicTexture {
   generateMipmaps(): void {
     if (this.device.type === 'webgl') {
       this.texture.generateMipmapsWebGL();
+      this._touch();
     } else if (this.device.type === 'webgpu') {
       this.device.generateMipmapsWebGPU(this.texture);
+      this._touch();
     } else {
       log.warn(`${this} mipmaps not supported on ${this.device.type}`);
     }
@@ -274,6 +284,7 @@ export class DynamicTexture {
     const s = sampler instanceof Sampler ? sampler : this.device.createSampler(sampler);
     this.texture.setSampler(s);
     this._sampler = s;
+    this._touchGeneration();
   }
 
   /**
@@ -345,6 +356,7 @@ export class DynamicTexture {
     this._view = this.texture.view;
 
     prev.destroy();
+    this._touchGeneration();
     log.info(`${this} resized`);
     return true;
   }
@@ -455,6 +467,9 @@ export class DynamicTexture {
           throw new Error('Unsupported 2D mip-level payload');
       }
     }
+    if (subresources.length > 0) {
+      this._touch();
+    }
   }
 
   // ------------------ helpers ------------------
@@ -476,6 +491,16 @@ export class DynamicTexture {
     if (!this.isReady) {
       log.warn(`${this} Cannot perform this operation before ready`);
     }
+  }
+
+  private _touch(): void {
+    this.updateTimestamp = this.device.incrementTimestamp();
+  }
+
+  private _touchGeneration(): void {
+    this.generation++;
+    this.cacheToken = {};
+    this._touch();
   }
 
   static defaultProps: Required<DynamicTextureProps> = {

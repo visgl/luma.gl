@@ -84,7 +84,7 @@ export class Material<
 
   private _uniformStore: UniformStore;
   private _bindGroupCacheToken: object = {};
-  private _dynamicBufferGenerations: Record<string, number> = {};
+  private _dynamicResourceGenerations: Record<string, number> = {};
 
   constructor(device: Device, props: MaterialProps<TModuleProps, TBindings> = {}) {
     this.id = props.id || uid('material');
@@ -190,7 +190,7 @@ export class Material<
 
   /** Returns the resolved bindings, including internal uniform buffers and ready textures. */
   getBindings(): Partial<{[K in keyof TBindings]: Binding}> & Record<string, Binding> {
-    this._syncDynamicBufferCacheToken();
+    this._syncDynamicResourceCacheToken();
 
     const validBindings = {} as Partial<{[K in keyof TBindings]: Binding}> &
       Record<string, Binding>;
@@ -220,7 +220,7 @@ export class Material<
 
   /** Returns the stable bind-group cache token for the requested bind group. */
   getBindGroupCacheKey(group: number): object | null {
-    this._syncDynamicBufferCacheToken();
+    this._syncDynamicResourceCacheToken();
     return group === MATERIAL_BIND_GROUP ? this._bindGroupCacheToken : null;
   }
 
@@ -235,9 +235,7 @@ export class Material<
       } else if (binding instanceof DynamicBuffer) {
         timestamp = Math.max(timestamp, binding.updateTimestamp);
       } else if (binding instanceof DynamicTexture) {
-        timestamp = binding.texture
-          ? Math.max(timestamp, binding.texture.updateTimestamp)
-          : Infinity;
+        timestamp = binding.isReady ? Math.max(timestamp, binding.updateTimestamp) : Infinity;
       } else if (isBufferRangeBinding(binding)) {
         timestamp = Math.max(
           timestamp,
@@ -280,29 +278,37 @@ export class Material<
     return didChange;
   }
 
-  private _syncDynamicBufferCacheToken(): void {
+  private _syncDynamicResourceCacheToken(): void {
     const nextGenerations: Record<string, number> = {};
     let didChange = false;
 
     for (const [name, binding] of Object.entries(this.bindings)) {
-      const dynamicBuffer = getDynamicBufferFromBinding(binding);
-      if (dynamicBuffer) {
-        nextGenerations[name] = dynamicBuffer.generation;
-        if (this._dynamicBufferGenerations[name] !== dynamicBuffer.generation) {
+      const dynamicResourceGeneration = getDynamicResourceGeneration(binding);
+      if (dynamicResourceGeneration !== null) {
+        nextGenerations[name] = dynamicResourceGeneration;
+        if (this._dynamicResourceGenerations[name] !== dynamicResourceGeneration) {
           didChange = true;
         }
       }
     }
 
     if (
-      Object.keys(nextGenerations).length !== Object.keys(this._dynamicBufferGenerations).length
+      Object.keys(nextGenerations).length !== Object.keys(this._dynamicResourceGenerations).length
     ) {
       didChange = true;
     }
 
-    this._dynamicBufferGenerations = nextGenerations;
+    this._dynamicResourceGenerations = nextGenerations;
     if (didChange) {
       this._bindGroupCacheToken = {};
     }
   }
+}
+
+function getDynamicResourceGeneration(binding: MaterialBinding): number | null {
+  if (binding instanceof DynamicTexture) {
+    return binding.generation;
+  }
+
+  return getDynamicBufferFromBinding(binding)?.generation ?? null;
 }

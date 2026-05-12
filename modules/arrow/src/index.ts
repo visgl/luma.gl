@@ -34,7 +34,16 @@ export {
   type ArrowGPUTableFromVectorsProps,
   type ArrowGPUTableProps
 } from './arrow/plain-gpu-table';
-export {ArrowModel, type ArrowModelProps} from './arrow/arrow-model';
+export {
+  StreamingArrowGPUTable,
+  StreamingArrowGPUVector,
+  type StreamingArrowAsyncRecordBatchSource,
+  type StreamingArrowGPUTableProps,
+  type StreamingArrowGPUVectorBufferProps,
+  type StreamingArrowGPUVectorProps,
+  type StreamingArrowRecordBatchSource
+} from './arrow/streaming-arrow-gpu-table';
+export {ArrowModel, type ArrowModelGPUTable, type ArrowModelProps} from './arrow/arrow-model';
 
 export {
   getArrowVertexFormat,

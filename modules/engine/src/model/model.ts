@@ -902,6 +902,12 @@ export class Model {
   /** Get the timestamp of the latest updated bound GPU memory resource (buffer/texture). */
   _getBindingsUpdateTimestamp(): number {
     let timestamp = 0;
+    if (this._dynamicIndexBufferSource) {
+      timestamp = Math.max(timestamp, this._dynamicIndexBufferSource.source.updateTimestamp);
+    }
+    for (const entry of Object.values(this._dynamicAttributeBufferSources)) {
+      timestamp = Math.max(timestamp, entry.source.updateTimestamp);
+    }
     for (const binding of Object.values(this.bindings)) {
       if (binding instanceof TextureView) {
         timestamp = Math.max(timestamp, binding.texture.updateTimestamp);
@@ -910,8 +916,8 @@ export class Model {
       } else if (binding instanceof DynamicBuffer) {
         timestamp = Math.max(timestamp, binding.updateTimestamp);
       } else if (binding instanceof DynamicTexture) {
-        timestamp = binding.texture
-          ? Math.max(timestamp, binding.texture.updateTimestamp)
+        timestamp = binding.isReady
+          ? Math.max(timestamp, binding.updateTimestamp)
           : // The texture will become available in the future
             Infinity;
       } else if (isBufferRangeBinding(binding)) {

@@ -7,10 +7,11 @@ import {
   Device,
   type BufferAttributeLayout,
   type BufferLayout,
-  type BufferProps
+  type BufferProps,
+  type BigTypedArray
 } from '@luma.gl/core';
 import * as arrow from 'apache-arrow';
-import type {AttributeArrowType} from './arrow-types';
+import type {AttributeArrowType, NumericArrowType} from './arrow-types';
 import {getArrowVectorBufferSource} from './arrow-fixed-size-list';
 
 /** Buffer creation props forwarded when uploading Arrow vector memory to the GPU. */
@@ -89,6 +90,58 @@ export type ArrowGPUVectorCreateProps<T extends arrow.DataType = AttributeArrowT
       ? ArrowGPUVectorFromArrowProps<T> | ArrowGPUVectorFromBufferProps<T>
       : never)
   | ArrowGPUVectorFromInterleavedProps;
+
+type ArrowGPUVectorReadableBuffer = Pick<Buffer, 'readAsync'>;
+
+type ArrowGPUVectorReadProps<T extends AttributeArrowType> = {
+  type: T;
+  buffer: ArrowGPUVectorReadableBuffer;
+  length: number;
+  byteOffset: number;
+  byteStride: number;
+};
+
+type NumericTypedArrayConstructor = {
+  readonly BYTES_PER_ELEMENT: number;
+  new (buffer: ArrayBufferLike, byteOffset?: number, length?: number): BigTypedArray;
+};
+
+const makeNumericData = arrow.makeData as <T extends NumericArrowType>(props: {
+  type: T;
+  length: number;
+  data: T['TArray'];
+}) => arrow.Data<T>;
+
+const makeFixedSizeListData = arrow.makeData as <T extends NumericArrowType>(props: {
+  type: arrow.FixedSizeList<T>;
+  length: number;
+  nullCount: number;
+  nullBitmap: null;
+  child: arrow.Data<T>;
+}) => arrow.Data<arrow.FixedSizeList<T>>;
+
+/** Read GPU bytes and reconstruct one non-null Arrow vector with the supplied Arrow type. */
+export async function readArrowGPUVectorAsync<T extends AttributeArrowType>(
+  props: ArrowGPUVectorReadProps<T>
+): Promise<arrow.Vector<T>> {
+  const {buffer, type, length, byteOffset, byteStride} = props;
+  const rowByteWidth = getArrowTypeByteStride(type);
+  if (byteStride < rowByteWidth) {
+    throw new Error(
+      `ArrowGPUVector.readAsync() byteStride ${byteStride} is smaller than row byte width ${rowByteWidth}`
+    );
+  }
+
+  const readByteLength = length === 0 ? 0 : (length - 1) * byteStride + rowByteWidth;
+  const bytes =
+    readByteLength === 0 ? new Uint8Array(0) : await buffer.readAsync(byteOffset, readByteLength);
+  const packedBytes =
+    byteStride === rowByteWidth
+      ? bytes
+      : compactStridedRows(bytes, length, byteStride, rowByteWidth);
+
+  return makeArrowVectorFromPackedBytes(type, length, packedBytes);
+}
 
 /**
  * GPU memory and Arrow type metadata derived from one Arrow vector.
@@ -237,6 +290,21 @@ export class ArrowGPUVector<T extends arrow.DataType = AttributeArrowType> {
     this._ownsBuffer = false;
   }
 
+  /** Reads the GPU buffer contents back into a single non-null Arrow vector. */
+  async readAsync(): Promise<arrow.Vector<T>> {
+    if (this.bufferLayout) {
+      throw new Error('ArrowGPUVector.readAsync() does not support interleaved vectors');
+    }
+
+    return readArrowGPUVectorAsync({
+      type: this.type as unknown as AttributeArrowType,
+      buffer: this.buffer,
+      length: this.length,
+      byteOffset: this.byteOffset,
+      byteStride: this.byteStride
+    }) as unknown as Promise<arrow.Vector<T>>;
+  }
+
   destroy(): void {
     if (this._ownsBuffer) {
       this.buffer.destroy();
@@ -271,4 +339,112 @@ function getArrowTypeByteStride(type: arrow.DataType): number {
     }
   }
   throw new Error(`Cannot determine byte stride for Arrow type ${type}`);
+}
+
+function compactStridedRows(
+  bytes: Uint8Array,
+  length: number,
+  byteStride: number,
+  rowByteWidth: number
+): Uint8Array {
+  const packedBytes = new Uint8Array(length * rowByteWidth);
+  for (let rowIndex = 0; rowIndex < length; rowIndex++) {
+    const sourceOffset = rowIndex * byteStride;
+    const targetOffset = rowIndex * rowByteWidth;
+    packedBytes.set(bytes.subarray(sourceOffset, sourceOffset + rowByteWidth), targetOffset);
+  }
+  return packedBytes;
+}
+
+function makeArrowVectorFromPackedBytes<T extends AttributeArrowType>(
+  type: T,
+  length: number,
+  bytes: Uint8Array
+): arrow.Vector<T> {
+  if (arrow.DataType.isFixedSizeList(type)) {
+    const childType = type.children[0].type as NumericArrowType;
+    const values = makeNumericTypedArray(childType, bytes, length * type.listSize);
+    const childData = makeNumericData({
+      type: childType,
+      length: length * type.listSize,
+      data: values as NumericArrowType['TArray']
+    });
+    const listData = makeFixedSizeListData({
+      type: type as arrow.FixedSizeList<NumericArrowType>,
+      length,
+      nullCount: 0,
+      nullBitmap: null,
+      child: childData
+    });
+    return arrow.makeVector(listData) as arrow.Vector<T>;
+  }
+
+  const numericType = type as NumericArrowType;
+  const values = makeNumericTypedArray(numericType, bytes, length);
+  const data = makeNumericData({
+    type: numericType,
+    length,
+    data: values as NumericArrowType['TArray']
+  });
+  return arrow.makeVector(data) as arrow.Vector<T>;
+}
+
+function makeNumericTypedArray(
+  type: NumericArrowType,
+  bytes: Uint8Array,
+  length: number
+): BigTypedArray {
+  if (arrow.DataType.isInt(type)) {
+    if (type.isSigned) {
+      switch (type.bitWidth) {
+        case 8:
+          return makeTypedArrayView(Int8Array, bytes, length);
+        case 16:
+          return makeTypedArrayView(Int16Array, bytes, length);
+        case 32:
+          return makeTypedArrayView(Int32Array, bytes, length);
+        case 64:
+          return makeTypedArrayView(BigInt64Array, bytes, length);
+      }
+    }
+
+    switch (type.bitWidth) {
+      case 8:
+        return makeTypedArrayView(Uint8Array, bytes, length);
+      case 16:
+        return makeTypedArrayView(Uint16Array, bytes, length);
+      case 32:
+        return makeTypedArrayView(Uint32Array, bytes, length);
+      case 64:
+        return makeTypedArrayView(BigUint64Array, bytes, length);
+    }
+  }
+
+  if (arrow.DataType.isFloat(type)) {
+    switch (type.precision) {
+      case arrow.Precision.HALF:
+        return makeTypedArrayView(Uint16Array, bytes, length);
+      case arrow.Precision.SINGLE:
+        return makeTypedArrayView(Float32Array, bytes, length);
+      case arrow.Precision.DOUBLE:
+        return makeTypedArrayView(Float64Array, bytes, length);
+    }
+  }
+
+  throw new Error(`ArrowGPUVector.readAsync() does not support Arrow type ${type}`);
+}
+
+function makeTypedArrayView<T extends BigTypedArray>(
+  TypedArrayConstructor: NumericTypedArrayConstructor,
+  bytes: Uint8Array,
+  length: number
+): T {
+  const byteLength = length * TypedArrayConstructor.BYTES_PER_ELEMENT;
+  if (bytes.byteOffset % TypedArrayConstructor.BYTES_PER_ELEMENT === 0) {
+    return new TypedArrayConstructor(bytes.buffer, bytes.byteOffset, length) as T;
+  }
+
+  const alignedBytes = new Uint8Array(byteLength);
+  alignedBytes.set(bytes.subarray(0, byteLength));
+  return new TypedArrayConstructor(alignedBytes.buffer, 0, length) as T;
 }
