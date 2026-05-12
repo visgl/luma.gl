@@ -39,6 +39,7 @@
           "api-guide/gpu/gpu-initialization",
           "api-guide/gpu/gpu-resources",
           "api-guide/gpu/gpu-memory",
+          "api-guide/gpu/gpu-memory-layouts",
           "api-guide/gpu/gpu-commands",
           "api-guide/gpu/gpu-buffers",
           "api-guide/gpu/gpu-textures",

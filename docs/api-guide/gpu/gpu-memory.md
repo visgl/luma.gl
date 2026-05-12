@@ -4,6 +4,8 @@ Memory on GPU is managed through [Buffer](/docs/api-guide/gpu/gpu-buffers) and [
 
 This article provides some background information on how GPU memory works that can be helpful in understanding limitations and performance characteristics.
 
+For how columns and rows can be arranged inside buffers, see [GPU memory layouts](./gpu-memory-layouts).
+
 ## Memory Upload Considerations
 
 Many GPUs are separated from the main CPU and cannot directly access main memory. 

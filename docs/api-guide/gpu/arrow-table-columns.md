@@ -107,8 +107,12 @@ data and metadata they need.
 
 An `ArrowGPUTable` owns GPU buffers and a GPU-facing Arrow `Schema` for the
 selected shader attributes. Field names, types, nullability, and metadata live in
-`arrowGPUTable.schema.fields`. An `ArrowGPUVector` owns one GPU buffer and uses
-Arrow's type system to describe it through `type`, `length`, and `stride`.
+`arrowGPUTable.schema.fields`. An `ArrowGPUVector` references one GPU buffer and
+uses Arrow's type system to describe it through `type`, `length`, and `stride`.
+Vectors created from Arrow data own their generated buffers. Vectors wrapping
+existing buffers are non-owning by default unless `ownsBuffer` is supplied.
+In-place operations may transfer ownership to a new vector view over the same
+buffer, so the returned vector becomes responsible for destroying the buffer.
 
 ```ts
 import {ArrowGPUTable, ArrowGPUVector} from '@luma.gl/arrow';
@@ -118,7 +122,7 @@ const arrowGPUTable = new ArrowGPUTable(device, table, {shaderLayout});
 // The schema describes the selected GPU columns, not necessarily the full table.
 const [colorField] = arrowGPUTable.schema.fields;
 
-// Each GPU vector owns a buffer and Arrow-derived type/shape metadata.
+// Each GPU vector has a buffer plus Arrow-derived type/shape metadata.
 const colorVector: ArrowGPUVector = arrowGPUTable.gpuVectors.instanceColors;
 ```
 

@@ -20,8 +20,20 @@ export {
   getArrowVectorBufferSource
 } from './arrow/arrow-fixed-size-list';
 
-export {ArrowGPUVector, type ArrowGPUVectorProps} from './arrow/arrow-gpu-vector';
-export {ArrowGPUTable, type ArrowGPUTableProps} from './arrow/plain-gpu-table';
+export {
+  ArrowGPUVector,
+  type ArrowGPUVectorBufferProps,
+  type ArrowGPUVectorCreateProps,
+  type ArrowGPUVectorFromArrowProps,
+  type ArrowGPUVectorFromBufferProps,
+  type ArrowGPUVectorFromInterleavedProps,
+  type ArrowGPUVectorProps
+} from './arrow/arrow-gpu-vector';
+export {
+  ArrowGPUTable,
+  type ArrowGPUTableFromVectorsProps,
+  type ArrowGPUTableProps
+} from './arrow/plain-gpu-table';
 export {ArrowModel, type ArrowModelProps} from './arrow/arrow-model';
 
 export {

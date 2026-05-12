@@ -8,6 +8,7 @@
     "outDir": "dist"
   },
   "references": [
+    {"path": "../arrow"},
     {"path": "../core"},
     {"path": "../engine"},
     {"path": "../constants"},

@@ -138,6 +138,89 @@ test('ArrowGPUTable preserves nested Arrow field metadata', t => {
   t.end();
 });
 
+test('ArrowGPUTable creates metadata from existing GPU vectors', t => {
+  const device = new NullDevice({});
+  const positions = new ArrowGPUVector({
+    type: 'buffer',
+    name: 'positions',
+    buffer: device.createBuffer({byteLength: 16}),
+    arrowType: new arrow.FixedSizeList(2, new arrow.Field('value', new arrow.Float32())),
+    length: 2,
+    ownsBuffer: true
+  });
+  const weights = new ArrowGPUVector({
+    type: 'buffer',
+    name: 'weights',
+    buffer: device.createBuffer({byteLength: 8}),
+    arrowType: new arrow.Float32(),
+    length: 2,
+    ownsBuffer: true
+  });
+
+  const gpuTable = new ArrowGPUTable({vectors: {positions, weights}});
+
+  t.equal(gpuTable.numRows, 2, 'deduces row count');
+  t.equal(gpuTable.numCols, 2, 'deduces column count');
+  t.deepEqual(
+    gpuTable.schema.fields.map(field => field.name),
+    ['positions', 'weights'],
+    'deduces schema fields from vector names'
+  );
+  t.deepEqual(
+    gpuTable.bufferLayout,
+    [
+      {name: 'positions', byteStride: 8, format: 'float32x2'},
+      {name: 'weights', byteStride: 4, format: 'float32'}
+    ],
+    'synthesizes buffer layouts for regular vectors'
+  );
+  t.equal(gpuTable.attributes.positions, positions.buffer, 'maps positions attribute');
+  t.equal(gpuTable.attributes.weights, weights.buffer, 'maps weights attribute');
+
+  gpuTable.destroy();
+  t.end();
+});
+
+test('ArrowGPUTable creates metadata from interleaved GPU vectors', t => {
+  const device = new NullDevice({});
+  const instances = new ArrowGPUVector({
+    type: 'interleaved',
+    name: 'instances',
+    buffer: device.createBuffer({byteLength: 32}),
+    length: 2,
+    byteStride: 16,
+    attributes: [
+      {attribute: 'positions', format: 'float32x3', byteOffset: 0},
+      {attribute: 'colors', format: 'uint8x4', byteOffset: 12}
+    ],
+    ownsBuffer: true
+  });
+
+  const gpuTable = new ArrowGPUTable({vectors: [instances]});
+
+  t.equal(gpuTable.schema.fields[0].name, 'instances', 'uses vector name in schema');
+  t.ok(arrow.DataType.isBinary(gpuTable.schema.fields[0].type), 'uses binary schema for storage');
+  t.deepEqual(
+    gpuTable.bufferLayout,
+    [
+      {
+        name: 'instances',
+        byteStride: 16,
+        attributes: [
+          {attribute: 'positions', format: 'float32x3', byteOffset: 0},
+          {attribute: 'colors', format: 'uint8x4', byteOffset: 12}
+        ]
+      }
+    ],
+    'uses interleaved buffer layout from vector'
+  );
+  t.equal(gpuTable.attributes.positions, instances.buffer, 'maps positions to shared buffer');
+  t.equal(gpuTable.attributes.colors, instances.buffer, 'maps colors to shared buffer');
+
+  gpuTable.destroy();
+  t.end();
+});
+
 function makeGpuMetadataTable(): arrow.Table {
   const positionsData = makeFixedSizeListData(
     new arrow.Float32(),

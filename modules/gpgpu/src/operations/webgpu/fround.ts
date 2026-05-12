@@ -12,7 +12,7 @@ function isLittleEndian() {
   return bytes[0] > 0;
 }
 
-const source = /* wgsl */ `\
+export const froundShaderSource = /* wgsl */ `\
 const LE: bool = ${isLittleEndian() ? 'true' : 'false'};
 const F32_NAN: u32 = 0xffffffffu;
 const F32_INF: u32 = 0x7f800000u;
@@ -156,7 +156,7 @@ fn fround(x: array<u32, {X_LEN}>) -> array<f32, {RESULT_LEN}> {
 
 export const fround: OperationHandler<{x: GPUTable}> = async ({inputs, output, target}) => {
   runComputation({
-    module: {name: 'fround', source},
+    module: {name: 'fround', source: froundShaderSource},
     inputs,
     output,
     operationType: 'uint32',
