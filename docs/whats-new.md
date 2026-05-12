@@ -16,6 +16,7 @@ Target Release Date: Q3, 2026
 
 - **Arrow shader layouts** - `getArrowBufferLayout()` maps Arrow scalar and `FixedSizeList` columns to shader attribute formats from a shader-first layout, including direct `arrow.Vector` sources and Arrow table path mappings.
 - **Arrow GPU helpers** - New `ArrowGPUVector`, `ArrowGPUTable`, and `ArrowModel` helpers create GPU buffers from compatible Arrow columns and keep Arrow-backed model attributes updatable through `setProps({arrowTable})`.
+- **Mesh Arrow geometry** - New `ArrowGeometry` and `ArrowModel` support for loaders.gl-compatible Mesh Arrow tables, including default interleaved vertex buffers and optional index buffers.
 - **Arrow table buffer planning** - New `TableBufferPlanner` API builds deterministic GPU buffer allocation plans for table columns, including interleaved fallback groups and WebGPU storage-buffer planning output.
 - **[Arrow Instancing Example](/examples/showcase/arrow-instancing)** - New showcase example renders instanced cubes from an Apache Arrow table.
 

@@ -6,7 +6,7 @@ import {Buffer, type BufferLayout, type Device, type ShaderLayout} from '@luma.g
 import {DynamicBuffer, type DynamicBufferProps} from '@luma.gl/engine';
 import * as arrow from 'apache-arrow';
 import {readArrowGPUVectorAsync} from './arrow-gpu-vector';
-import {getArrowDataByPath, getArrowVectorByPath} from './arrow-paths';
+import {getArrowDataByPath} from './arrow-paths';
 import {getArrowVertexFormat, type ArrowVertexFormatOptions} from './arrow-shader-layout';
 import {
   getSignedShaderType,
@@ -332,17 +332,9 @@ export class StreamingArrowGPUTable {
   /** Appends all record batches from one Arrow table. */
   appendTable(table: arrow.Table): void {
     this.assertCompatibleSchema(table.schema);
-    const pendingVectors = this.selectedColumns.map(column => ({
-      column,
-      vector: getArrowVectorByPath(table, column.arrowPath) as arrow.Vector<AttributeArrowType>
-    }));
-    validateSelectedVectors(table.numRows, pendingVectors);
-
-    for (const {column, vector} of pendingVectors) {
-      this.gpuVectors[column.attributeName].appendVector(vector);
+    for (const recordBatch of table.batches) {
+      this.appendRecordBatch(recordBatch);
     }
-    this.rowCount += table.numRows;
-    this.nullableRowCount += table.nullCount;
   }
 
   /** Appends all record batches from a synchronous source. */
@@ -587,20 +579,6 @@ function validateSelectedData(
   }
 }
 
-function validateSelectedVectors(
-  expectedRows: number,
-  pendingVectors: {column: SelectedStreamingColumn; vector: arrow.Vector<AttributeArrowType>}[]
-): void {
-  for (const {column, vector} of pendingVectors) {
-    if (vector.length !== expectedRows) {
-      throw new Error(`StreamingArrowGPUTable column "${column.arrowPath}" row count mismatch`);
-    }
-    for (const data of vector.data) {
-      validateDataForDirectUpload(column.attributeName, data as arrow.Data<AttributeArrowType>);
-    }
-  }
-}
-
 function validateDataForDirectUpload(name: string, data: arrow.Data<AttributeArrowType>): void {
   if (data.nullCount > 0) {
     throw new Error(`StreamingArrowGPUVector "${name}" does not support nullable data`);
@@ -615,11 +593,19 @@ function getArrowDataValueView<T extends AttributeArrowType>(
   stride: number
 ): ArrayBufferView {
   const values = getArrowDataValues(data);
+  const elementCount = data.length * stride;
+  if (values.length < elementCount) {
+    throw new Error('Arrow data values are shorter than the logical upload length');
+  }
+  if (values.length === elementCount) {
+    return values;
+  }
+
   const childOffset = arrow.DataType.isFixedSizeList(data.type)
     ? (data.children[0]?.offset ?? 0)
     : 0;
   const startElement = childOffset + data.offset * stride;
-  const endElement = startElement + data.length * stride;
+  const endElement = startElement + elementCount;
   return values.subarray(startElement, endElement);
 }
 

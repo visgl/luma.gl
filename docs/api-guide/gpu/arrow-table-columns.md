@@ -130,6 +130,58 @@ const colorVector: ArrowGPUVector = arrowGPUTable.gpuVectors.instanceColors;
 `Model`. It accepts an Arrow table as an update source and replaces the GPU
 representation when `setProps({arrowTable})` is called.
 
+## Mesh Arrow Geometry
+
+`ArrowGeometry` converts Mesh Arrow tables into `GPUGeometry`. This is intended
+for loaders.gl-compatible mesh and point-cloud tables that use glTF-style column
+names such as `POSITION`, `NORMAL`, `COLOR_0`, and `TEXCOORD_0`.
+
+```ts
+import {ArrowGeometry, ArrowModel, type ArrowMeshTable} from '@luma.gl/arrow';
+
+const geometry = new ArrowGeometry(device, {
+  arrowMesh,
+  interleaved: true
+});
+
+const model = new ArrowModel(device, {
+  vs,
+  fs,
+  shaderLayout,
+  arrowMesh
+});
+```
+
+The local `ArrowMeshTable` type is structural and does not add a dependency on
+loaders.gl. It intentionally mirrors loaders.gl `MeshArrowTable`: a wrapper with
+`shape: 'arrow-table'`, `topology`, optional top-level `indices`, and raw
+`data: arrow.Table`.
+
+Mesh Arrow tables use one row per vertex. Vertex attributes are scalar numeric
+or `FixedSizeList<numeric, 1 | 2 | 3 | 4>` columns. `ArrowGeometry` normalizes
+common glTF semantics to luma.gl shader attribute names:
+
+| Mesh Arrow column | Shader attribute |
+| ----------------- | ---------------- |
+| `POSITION`        | `positions`      |
+| `NORMAL`          | `normals`        |
+| `COLOR_0`         | `colors`         |
+| `TEXCOORD_0`      | `texCoords`      |
+| `TEXCOORD_1`      | `texCoords1`     |
+
+Unknown column names are preserved unless `arrowPaths` maps a shader attribute
+name to a specific Arrow column name.
+
+Indexed Mesh Arrow tables follow the loaders.gl convention: a lowercase
+`indices: List<Int32>` column stores the full primitive index list in row `0`,
+and remaining vertex rows are null. `ArrowGeometry` uploads those indices as a
+separate GPU index buffer. If the wrapper has a top-level `indices` accessor and
+the Arrow table has no `indices` column, that accessor is used as a fallback.
+
+By default, `ArrowGeometry` packs all selected vertex attributes into one
+interleaved vertex buffer and keeps indices separate. Pass `interleaved: false`
+to upload one vertex buffer per attribute.
+
 `StreamingArrowGPUTable` uses the same shader attribute selection model but keeps
 `DynamicBuffer` attributes that can grow as record batches arrive. Use it when
 the table is append-only and model attribute objects should remain stable across

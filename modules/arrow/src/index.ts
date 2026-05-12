@@ -34,6 +34,8 @@ export {
   type ArrowGPUTableFromVectorsProps,
   type ArrowGPUTableProps
 } from './arrow/plain-gpu-table';
+export {ArrowGeometry, type ArrowGeometryProps} from './arrow/arrow-geometry';
+export type {ArrowMeshAttribute, ArrowMeshTable, ArrowMeshTopology} from './arrow/arrow-mesh-types';
 export {
   StreamingArrowGPUTable,
   StreamingArrowGPUVector,

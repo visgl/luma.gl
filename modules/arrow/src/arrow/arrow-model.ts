@@ -9,6 +9,8 @@ import {type ArrowVertexFormatOptions} from './arrow-shader-layout';
 import {ArrowGPUTable, type ArrowGPUTableProps} from './plain-gpu-table';
 import {StreamingArrowGPUTable} from './streaming-arrow-gpu-table';
 import type {ArrowGPUVectorProps} from './arrow-gpu-vector';
+import {ArrowGeometry, type ArrowGeometryProps} from './arrow-geometry';
+import type {ArrowMeshTable} from './arrow-mesh-types';
 
 /** GPU table source accepted by ArrowModel. */
 export type ArrowModelGPUTable = ArrowGPUTable | StreamingArrowGPUTable;
@@ -16,6 +18,15 @@ export type ArrowModelGPUTable = ArrowGPUTable | StreamingArrowGPUTable;
 /** Props for creating a Model whose attributes are derived from an Arrow table. */
 export type ArrowModelProps = ModelProps &
   ArrowVertexFormatOptions & {
+    /**
+     * Mesh Arrow table used as the construction source for GPU geometry buffers.
+     *
+     * Mesh input is converted through {@link ArrowGeometry}. It is mutually
+     * exclusive with `arrowTable`, `streamingArrowGPUTable`, and `geometry`.
+     */
+    arrowMesh?: ArrowMeshTable | arrow.Table;
+    /** Options applied when converting Mesh Arrow input into GPU geometry. */
+    arrowMeshOptions?: Omit<ArrowGeometryProps, 'arrowMesh'>;
     /** Arrow table used as the construction source for GPU attribute buffers. */
     arrowTable?: arrow.Table;
     /** Existing streaming GPU table used as the source for model attributes. */
@@ -29,8 +40,9 @@ export type ArrowModelProps = ModelProps &
   };
 
 type ArrowModelState = {
-  arrowGPUTable: ArrowModelGPUTable;
+  arrowGPUTable?: ArrowModelGPUTable;
   ownsArrowGPUTable: boolean;
+  arrowGeometry?: ArrowGeometry;
   modelProps: ModelProps;
   arrowState: ArrowModelArrowState;
 };
@@ -40,6 +52,7 @@ type ArrowModelExplicitAttributes = NonNullable<ModelProps['attributes']>;
 type ArrowModelArrowState = {
   shaderLayout: ShaderLayout;
   arrowPaths?: Record<string, string>;
+  arrowMeshOptions?: Omit<ArrowGeometryProps, 'arrowMesh'>;
   arrowBufferProps?: ArrowGPUVectorProps;
   arrowCount: 'instance' | 'vertex' | 'none';
   allowWebGLOnlyFormats?: boolean;
@@ -52,31 +65,36 @@ type ArrowModelArrowState = {
 /** A luma.gl Model with GPU attributes backed by Arrow table columns. */
 export class ArrowModel extends Model {
   /** GPU representation of the currently active Arrow table attributes. */
-  arrowGPUTable: ArrowModelGPUTable;
+  arrowGPUTable?: ArrowModelGPUTable;
+  /** GPU representation of the currently active Mesh Arrow geometry. */
+  arrowGeometry?: ArrowGeometry;
   private arrowState: ArrowModelArrowState;
   private ownsArrowGPUTable: boolean;
   private arrowModelDestroyed = false;
 
   constructor(device: Device, props: ArrowModelProps) {
-    const {arrowGPUTable, ownsArrowGPUTable, modelProps, arrowState} = getArrowModelState(
-      device,
-      props
-    );
+    const {arrowGPUTable, ownsArrowGPUTable, arrowGeometry, modelProps, arrowState} =
+      getArrowModelState(device, props);
     try {
       super(device, modelProps);
     } catch (error) {
       if (ownsArrowGPUTable) {
-        arrowGPUTable.destroy();
+        arrowGPUTable?.destroy();
       }
+      arrowGeometry?.destroy();
       throw error;
     }
     this.arrowGPUTable = arrowGPUTable;
+    this.arrowGeometry = arrowGeometry;
     this.ownsArrowGPUTable = ownsArrowGPUTable;
     this.arrowState = arrowState;
   }
 
   /** Updates the model when a replacement Arrow table is supplied. */
   setProps(props: Partial<ArrowModelProps>): void {
+    if (props.arrowMesh) {
+      this.setArrowMesh(props.arrowMesh, props.arrowMeshOptions);
+    }
     if (props.arrowTable) {
       this.setArrowTable(props.arrowTable);
     }
@@ -101,10 +119,35 @@ export class ArrowModel extends Model {
     if (!this.arrowModelDestroyed) {
       super.destroy();
       if (this.ownsArrowGPUTable) {
-        this.arrowGPUTable.destroy();
+        this.arrowGPUTable?.destroy();
       }
       this.arrowModelDestroyed = true;
     }
+  }
+
+  private setArrowMesh(
+    arrowMesh: ArrowMeshTable | arrow.Table,
+    arrowMeshOptions?: Omit<ArrowGeometryProps, 'arrowMesh'>
+  ): void {
+    const arrowGeometry = new ArrowGeometry(this.device, {
+      arrowMesh,
+      ...this.arrowState.arrowMeshOptions,
+      ...arrowMeshOptions
+    });
+
+    try {
+      this.setGeometry(arrowGeometry);
+    } catch (error) {
+      arrowGeometry.destroy();
+      throw error;
+    }
+
+    if (this.ownsArrowGPUTable) {
+      this.arrowGPUTable?.destroy();
+    }
+    this.arrowGPUTable = undefined;
+    this.arrowGeometry = arrowGeometry;
+    this.ownsArrowGPUTable = false;
   }
 
   private setArrowTable(arrowTable: arrow.Table): void {
@@ -161,11 +204,14 @@ export class ArrowModel extends Model {
     this.arrowGPUTable = nextArrowGPUTable;
     this.ownsArrowGPUTable = ownsNextArrowGPUTable;
     if (ownsPreviousArrowGPUTable) {
-      previousArrowGPUTable.destroy();
+      previousArrowGPUTable?.destroy();
     }
   }
 
   private syncArrowGPUTableCount(): void {
+    if (!this.arrowGPUTable) {
+      return;
+    }
     if (this.arrowState.inferInstanceCount && this.instanceCount !== this.arrowGPUTable.numRows) {
       this.setInstanceCount(this.arrowGPUTable.numRows);
     }
@@ -177,6 +223,8 @@ export class ArrowModel extends Model {
 
 function getArrowModelState(device: Device, props: ArrowModelProps): ArrowModelState {
   const {
+    arrowMesh,
+    arrowMeshOptions,
     arrowTable,
     streamingArrowGPUTable,
     arrowPaths,
@@ -186,14 +234,46 @@ function getArrowModelState(device: Device, props: ArrowModelProps): ArrowModelS
     ...modelProps
   } = props;
 
+  validateArrowModelSources({arrowMesh, arrowTable, streamingArrowGPUTable});
+
   if (!modelProps.shaderLayout) {
     throw new Error('ArrowModel requires shaderLayout');
+  }
+  if (arrowMesh && modelProps.geometry) {
+    throw new Error('ArrowModel requires only one of arrowMesh or geometry');
   }
 
   const explicitAttributes = modelProps.attributes || {};
   const explicitBufferLayout = modelProps.bufferLayout || [];
-  const inferInstanceCount = arrowCount === 'instance' && modelProps.instanceCount === undefined;
-  const inferVertexCount = arrowCount === 'vertex' && modelProps.vertexCount === undefined;
+  const inferInstanceCount =
+    !arrowMesh && arrowCount === 'instance' && modelProps.instanceCount === undefined;
+  const inferVertexCount =
+    !arrowMesh && arrowCount === 'vertex' && modelProps.vertexCount === undefined;
+
+  if (arrowMesh) {
+    const arrowGeometry = new ArrowGeometry(device, {arrowMesh, ...arrowMeshOptions});
+    return {
+      arrowGPUTable: undefined,
+      ownsArrowGPUTable: false,
+      arrowGeometry,
+      arrowState: {
+        shaderLayout: modelProps.shaderLayout,
+        arrowPaths,
+        arrowMeshOptions,
+        arrowBufferProps,
+        arrowCount,
+        allowWebGLOnlyFormats,
+        explicitAttributes,
+        explicitBufferLayout,
+        inferInstanceCount,
+        inferVertexCount
+      },
+      modelProps: {
+        ...modelProps,
+        geometry: arrowGeometry
+      }
+    };
+  }
 
   const {arrowGPUTable, ownsArrowGPUTable} = getInitialArrowGPUTable({
     device,
@@ -224,9 +304,11 @@ function getArrowModelState(device: Device, props: ArrowModelProps): ArrowModelS
   return {
     arrowGPUTable,
     ownsArrowGPUTable,
+    arrowGeometry: undefined,
     arrowState: {
       shaderLayout: modelProps.shaderLayout,
       arrowPaths,
+      arrowMeshOptions,
       arrowBufferProps,
       arrowCount,
       allowWebGLOnlyFormats,
@@ -254,18 +336,12 @@ function getInitialArrowGPUTable(props: {
   arrowBufferProps?: ArrowGPUVectorProps;
   allowWebGLOnlyFormats?: boolean;
 }): {arrowGPUTable: ArrowModelGPUTable; ownsArrowGPUTable: boolean} {
-  if (props.arrowTable && props.streamingArrowGPUTable) {
-    throw new Error('ArrowModel requires only one of arrowTable or streamingArrowGPUTable');
-  }
   if (props.streamingArrowGPUTable) {
     return {arrowGPUTable: props.streamingArrowGPUTable, ownsArrowGPUTable: false};
   }
-  if (!props.arrowTable) {
-    throw new Error('ArrowModel requires arrowTable or streamingArrowGPUTable');
-  }
 
   return {
-    arrowGPUTable: new ArrowGPUTable(props.device, props.arrowTable, {
+    arrowGPUTable: new ArrowGPUTable(props.device, props.arrowTable!, {
       shaderLayout: props.shaderLayout,
       arrowPaths: props.arrowPaths,
       bufferProps: props.arrowBufferProps,
@@ -273,6 +349,25 @@ function getInitialArrowGPUTable(props: {
     } satisfies ArrowGPUTableProps),
     ownsArrowGPUTable: true
   };
+}
+
+function validateArrowModelSources(props: {
+  arrowMesh?: ArrowMeshTable | arrow.Table;
+  arrowTable?: arrow.Table;
+  streamingArrowGPUTable?: StreamingArrowGPUTable;
+}): void {
+  const sourceCount =
+    Number(Boolean(props.arrowMesh)) +
+    Number(Boolean(props.arrowTable)) +
+    Number(Boolean(props.streamingArrowGPUTable));
+  if (sourceCount > 1) {
+    throw new Error(
+      'ArrowModel requires only one of arrowMesh, arrowTable, or streamingArrowGPUTable'
+    );
+  }
+  if (sourceCount === 0) {
+    throw new Error('ArrowModel requires arrowMesh, arrowTable or streamingArrowGPUTable');
+  }
 }
 
 function getBufferLayoutNames(bufferLayout: BufferLayout[]): string[] {

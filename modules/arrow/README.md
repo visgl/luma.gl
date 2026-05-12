@@ -10,6 +10,11 @@ Uploaded vectors own their generated buffers. Wrapped-buffer vectors are
 non-owning by default unless ownership is explicitly requested or transferred by
 an in-place operation.
 
+`ArrowGeometry` and `ArrowModel` can also consume loaders.gl-compatible Mesh
+Arrow tables through the local structural `ArrowMeshTable` type. Mesh Arrow
+attributes are uploaded as GPU geometry, defaulting to one interleaved vertex
+buffer plus a separate optional index buffer.
+
 For lower-level table pipelines, `TableBufferPlanner` can produce deterministic
 GPU allocation plans from column descriptors while respecting device vertex and
 storage buffer limits.

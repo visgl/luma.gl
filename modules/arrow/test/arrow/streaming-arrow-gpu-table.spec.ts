@@ -87,6 +87,53 @@ test('StreamingArrowGPUVector appends sliced Arrow Data from the correct source 
   t.end();
 });
 
+test('StreamingArrowGPUVector appends sliced Arrow Vector data without double offsetting', t => {
+  const device = new NullDevice({});
+  const sourceVector = arrow.makeVector(new Float32Array([0, 1, 2, 3])).slice(1, 3);
+  const vector = new StreamingArrowGPUVector({
+    name: 'positions',
+    device,
+    arrowType: new arrow.Float32()
+  });
+  const writes = recordDynamicBufferWrites(vector.buffer);
+
+  vector.appendVector(sourceVector);
+
+  t.equal(writes.length, 1, 'writes one sliced data chunk');
+  t.deepEqual(Array.from(writes[0].data as Float32Array), [1, 2], 'writes sliced values once');
+
+  vector.destroy();
+  t.end();
+});
+
+test('StreamingArrowGPUVector appends sliced FixedSizeList Vector data without double offsetting', t => {
+  const device = new NullDevice({});
+  const sourceData = makeFixedSizeListData(
+    new arrow.Float32(),
+    2,
+    new Float32Array([0, 1, 2, 3, 4, 5, 6, 7])
+  );
+  const sourceVector = arrow.makeVector(sourceData).slice(1, 3);
+  const vector = new StreamingArrowGPUVector({
+    name: 'positions',
+    device,
+    arrowType: sourceVector.type
+  });
+  const writes = recordDynamicBufferWrites(vector.buffer);
+
+  vector.appendVector(sourceVector);
+
+  t.equal(writes.length, 1, 'writes one sliced FixedSizeList data chunk');
+  t.deepEqual(
+    Array.from(writes[0].data as Float32Array),
+    [2, 3, 4, 5],
+    'writes sliced child values once'
+  );
+
+  vector.destroy();
+  t.end();
+});
+
 test('StreamingArrowGPUVector grows capacity without replacing the public DynamicBuffer', t => {
   const device = new NullDevice({});
   const vector = new StreamingArrowGPUVector({
@@ -272,6 +319,36 @@ test('StreamingArrowGPUTable appends record batches and tables into stable attri
     'keeps attribute object stable'
   );
   t.equal(streamingTable.numCols, 2, 'exposes selected column count');
+
+  streamingTable.destroy();
+  t.end();
+});
+
+test('StreamingArrowGPUTable appends table record batches as separate data uploads', t => {
+  const device = new NullDevice({});
+  const firstBatch = makeGpuMetadataRecordBatch([0, 0, 1, 1], [255, 0, 0, 255, 0, 255, 0, 255]);
+  const secondBatch = makeGpuMetadataRecordBatch([2, 2], [0, 0, 255, 255]);
+  const streamingTable = new StreamingArrowGPUTable({
+    device,
+    schema: firstBatch.schema,
+    shaderLayout: makePositionColorShaderLayout()
+  });
+  const positionWrites = recordDynamicBufferWrites(streamingTable.gpuVectors['positions'].buffer);
+
+  streamingTable.appendTable(new arrow.Table([firstBatch, secondBatch]));
+
+  t.equal(positionWrites.length, 2, 'writes one chunk per table record batch');
+  t.deepEqual(
+    Array.from(positionWrites[0].data as Float32Array),
+    [0, 0, 1, 1],
+    'writes first batch values'
+  );
+  t.deepEqual(
+    Array.from(positionWrites[1].data as Float32Array),
+    [2, 2],
+    'writes second batch values'
+  );
+  t.equal(streamingTable.numRows, 3, 'updates row count across table batches');
 
   streamingTable.destroy();
   t.end();
