@@ -221,6 +221,68 @@ test('ArrowGPUTable creates metadata from interleaved GPU vectors', t => {
   t.end();
 });
 
+test('ArrowGPUTable creates metadata from segmented GPU vectors', t => {
+  const device = new NullDevice({});
+  const buffer = device.createBuffer({byteLength: 512});
+  let destroyCount = 0;
+  const destroy = buffer.destroy.bind(buffer);
+  buffer.destroy = () => {
+    destroyCount++;
+    destroy();
+  };
+  const segments = new ArrowGPUVector({
+    type: 'segmented',
+    name: 'segments',
+    buffer,
+    length: 2,
+    segments: [
+      {
+        name: 'positions',
+        arrowType: new arrow.FixedSizeList(2, new arrow.Field('value', new arrow.Float32())),
+        length: 2,
+        byteOffset: 0,
+        byteLength: 16,
+        byteStride: 8
+      },
+      {
+        name: 'weights',
+        arrowType: new arrow.Float32(),
+        length: 2,
+        byteOffset: 256,
+        byteLength: 8,
+        byteStride: 4
+      }
+    ],
+    ownsBuffer: true
+  });
+
+  const gpuTable = new ArrowGPUTable({vectors: [segments]});
+
+  t.deepEqual(
+    gpuTable.schema.fields.map(field => field.name),
+    ['positions', 'weights'],
+    'expands segments into schema fields'
+  );
+  t.deepEqual(
+    gpuTable.bufferLayout,
+    [
+      {name: 'positions', byteStride: 8, format: 'float32x2'},
+      {
+        name: 'weights',
+        byteStride: 4,
+        attributes: [{attribute: 'weights', format: 'float32', byteOffset: 256}]
+      }
+    ],
+    'expands segments into buffer layouts'
+  );
+  t.equal(gpuTable.attributes.positions, segments.buffer, 'maps positions to shared buffer');
+  t.equal(gpuTable.attributes.weights, segments.buffer, 'maps weights to shared buffer');
+
+  gpuTable.destroy();
+  t.equal(destroyCount, 1, 'destroys the original segmented vector once');
+  t.end();
+});
+
 function makeGpuMetadataTable(): arrow.Table {
   const positionsData = makeFixedSizeListData(
     new arrow.Float32(),

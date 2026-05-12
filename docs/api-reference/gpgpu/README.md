@@ -6,6 +6,7 @@ The `@luma.gl/gpgpu` module performs GPU-based data transformation.
 
 - [`Operations`](/docs/api-reference/gpgpu/operations)
 - [`GPUTable`](/docs/api-reference/gpgpu/gpu-table)
+- [`evaluateGPUComputeGraph`](/docs/api-reference/gpgpu/arrow-gpu-compute-graph)
 
 ## Installing
 
@@ -55,6 +56,7 @@ backendRegistry.add('webgpu', webgpuBackend);
 
 - [`Operations`](/docs/api-reference/gpgpu/operations) documents the supported lazy compute operations such as `add()`, `interleave()`, and `fround()`.
 - [`GPUTable`](/docs/api-reference/gpgpu/gpu-table) represents structured input and output data for lazy GPGPU operations.
+- [`evaluateGPUComputeGraph`](/docs/api-reference/gpgpu/arrow-gpu-compute-graph) evaluates Arrow GPU operation trees built from `ArrowGPUVector`s.
 
 ## Related Engine APIs
 

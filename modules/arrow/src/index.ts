@@ -27,6 +27,9 @@ export {
   type ArrowGPUVectorFromArrowProps,
   type ArrowGPUVectorFromBufferProps,
   type ArrowGPUVectorFromInterleavedProps,
+  type ArrowGPUVectorFromSegmentedProps,
+  type ArrowGPUSegmentedBufferLayout,
+  type ArrowGPUSegmentedBufferSegment,
   type ArrowGPUVectorProps
 } from './arrow/arrow-gpu-vector';
 export {

@@ -199,6 +199,70 @@ test('ArrowGPUVector wraps interleaved buffers', t => {
   t.end();
 });
 
+test('ArrowGPUVector wraps segmented buffers', t => {
+  const device = new NullDevice({});
+  const buffer = device.createBuffer({byteLength: 512});
+  const gpuVector = new ArrowGPUVector({
+    type: 'segmented',
+    name: 'segments',
+    buffer,
+    length: 2,
+    segments: [
+      {
+        name: 'positions',
+        arrowType: new arrow.FixedSizeList(2, new arrow.Field('value', new arrow.Float32())),
+        length: 2,
+        byteOffset: 0,
+        byteLength: 16,
+        byteStride: 8
+      },
+      {
+        name: 'weights',
+        arrowType: new arrow.Float32(),
+        length: 2,
+        byteOffset: 256,
+        byteLength: 8,
+        byteStride: 4
+      }
+    ],
+    ownsBuffer: true
+  });
+
+  t.equal(gpuVector.name, 'segments', 'exposes vector name');
+  t.ok(arrow.DataType.isBinary(gpuVector.type), 'uses Arrow Binary for segmented storage');
+  t.equal(gpuVector.length, 2, 'exposes row count');
+  t.equal(gpuVector.ownsBuffer, true, 'tracks buffer ownership');
+  t.deepEqual(
+    gpuVector.segmentedBufferLayout,
+    {
+      alignment: 256,
+      byteLength: 512,
+      segments: [
+        {
+          name: 'positions',
+          arrowType: new arrow.FixedSizeList(2, new arrow.Field('value', new arrow.Float32())),
+          length: 2,
+          byteOffset: 0,
+          byteLength: 16,
+          byteStride: 8
+        },
+        {
+          name: 'weights',
+          arrowType: new arrow.Float32(),
+          length: 2,
+          byteOffset: 256,
+          byteLength: 8,
+          byteStride: 4
+        }
+      ]
+    },
+    'exposes segmented buffer layout'
+  );
+
+  gpuVector.destroy();
+  t.end();
+});
+
 test('ArrowGPUVector transfers buffer ownership between same-buffer views', t => {
   const device = new NullDevice({});
   const buffer = device.createBuffer({byteLength: 16});

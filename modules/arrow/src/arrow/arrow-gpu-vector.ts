@@ -83,12 +83,64 @@ export type ArrowGPUVectorFromInterleavedProps = {
   ownsBuffer?: boolean;
 };
 
+/** One packed column segment stored inside a segmented GPU buffer. */
+export type ArrowGPUSegmentedBufferSegment<T extends AttributeArrowType = AttributeArrowType> = {
+  /** Segment name used as a table column or desegment lookup key. */
+  name: string;
+  /** Arrow type that describes the values in this segment. */
+  arrowType: T;
+  /** Number of logical rows in this segment. */
+  length: number;
+  /** Byte offset of this segment inside the shared buffer. */
+  byteOffset: number;
+  /** Byte length of this segment. */
+  byteLength: number;
+  /** Bytes between adjacent logical rows in this segment. */
+  byteStride: number;
+};
+
+/** Metadata for a segmented GPU buffer containing multiple packed columns. */
+export type ArrowGPUSegmentedBufferLayout = {
+  /** Byte alignment used between segments. */
+  alignment: number;
+  /** Total byte length of the segmented allocation. */
+  byteLength: number;
+  /** Packed column segments stored in the shared buffer. */
+  segments: ArrowGPUSegmentedBufferSegment[];
+};
+
+/** Constructor props that wrap one segmented GPU buffer as opaque Arrow binary storage. */
+export type ArrowGPUVectorFromSegmentedProps = {
+  /** Discriminator for segmented-buffer construction. */
+  type: 'segmented';
+  /** Name used when this vector is added to an {@link ArrowGPUTable}. */
+  name: string;
+  /** Existing segmented GPU buffer. */
+  buffer: Buffer;
+  /** Number of logical rows shared by all segments. */
+  length: number;
+  /** Segment metadata for packed columns stored in the buffer. */
+  segments: ArrowGPUSegmentedBufferSegment[];
+  /** Byte alignment used between segments. Defaults to `256`. */
+  alignment?: number;
+  /** Total byte length of the segmented allocation. Defaults to `buffer.byteLength`. */
+  byteLength?: number;
+  /**
+   * Whether this vector should destroy the buffer.
+   *
+   * Defaults to `false` for wrapped buffers because ownership remains with the caller unless
+   * explicitly transferred or opted in.
+   */
+  ownsBuffer?: boolean;
+};
+
 /** Discriminated constructor props for {@link ArrowGPUVector}. */
 export type ArrowGPUVectorCreateProps<T extends arrow.DataType = AttributeArrowType> =
   | (T extends AttributeArrowType
       ? ArrowGPUVectorFromArrowProps<T> | ArrowGPUVectorFromBufferProps<T>
       : never)
-  | ArrowGPUVectorFromInterleavedProps;
+  | ArrowGPUVectorFromInterleavedProps
+  | ArrowGPUVectorFromSegmentedProps;
 
 /**
  * GPU memory and Arrow type metadata derived from one Arrow vector.
@@ -121,6 +173,8 @@ export class ArrowGPUVector<T extends arrow.DataType = AttributeArrowType> {
   readonly byteStride: number;
   /** Optional GPU buffer layout described by this vector. */
   readonly bufferLayout?: BufferLayout;
+  /** Optional segmented buffer layout described by this vector. */
+  readonly segmentedBufferLayout?: ArrowGPUSegmentedBufferLayout;
   /** Whether this vector is responsible for destroying {@link buffer}. */
   private _ownsBuffer: boolean;
 
@@ -205,6 +259,28 @@ export class ArrowGPUVector<T extends arrow.DataType = AttributeArrowType> {
         this.byteOffset = byteOffset;
         this.byteStride = byteStride;
         this.bufferLayout = {name, byteStride, attributes};
+        this._ownsBuffer = ownsBuffer;
+        return;
+      }
+
+      case 'segmented': {
+        const {
+          name,
+          buffer,
+          length,
+          segments,
+          alignment = 256,
+          byteLength = buffer.byteLength,
+          ownsBuffer = false
+        } = constructionProps;
+        this.name = name;
+        this.buffer = buffer;
+        this.type = new arrow.Binary() as T;
+        this.length = length;
+        this.stride = byteLength;
+        this.byteOffset = 0;
+        this.byteStride = byteLength;
+        this.segmentedBufferLayout = {alignment, byteLength, segments};
         this._ownsBuffer = ownsBuffer;
         return;
       }

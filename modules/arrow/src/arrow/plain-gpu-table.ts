@@ -13,7 +13,11 @@ import * as arrow from 'apache-arrow';
 import {getArrowFieldByPath, getArrowVectorByPath} from './arrow-paths';
 import {getArrowBufferLayout, type ArrowVertexFormatOptions} from './arrow-shader-layout';
 import type {AttributeArrowType} from './arrow-types';
-import {ArrowGPUVector, type ArrowGPUVectorProps} from './arrow-gpu-vector';
+import {
+  ArrowGPUVector,
+  type ArrowGPUSegmentedBufferSegment,
+  type ArrowGPUVectorProps
+} from './arrow-gpu-vector';
 
 /** Options for creating GPU buffers from shader-compatible Arrow table columns. */
 export type ArrowGPUTableProps = ArrowVertexFormatOptions & {
@@ -57,6 +61,8 @@ export class ArrowGPUTable {
   readonly gpuVectors: Record<string, ArrowGPUVector> = {};
   /** Model-ready attribute buffers keyed by shader attribute name. */
   readonly attributes: Record<string, Buffer> = {};
+  /** Original vectors whose owned buffers are released with this table. */
+  private readonly _vectorsToDestroy = new Set<ArrowGPUVector>();
 
   /** Creates GPU buffers and a GPU-facing schema from an Arrow table. */
   constructor(device: Device, table: arrow.Table, props: ArrowGPUTableProps);
@@ -88,18 +94,18 @@ export class ArrowGPUTable {
           );
         }
 
-        this.gpuVectors[name] = gpuVector;
-        fields.push(new arrow.Field(name, gpuVector.type, false));
-
-        const bufferLayout = getVectorBufferLayout(name, gpuVector);
-        this.bufferLayout.push(bufferLayout);
-
-        if (bufferLayout.attributes) {
-          for (const attribute of bufferLayout.attributes) {
-            this.attributes[attribute.attribute] = gpuVector.buffer;
+        this._vectorsToDestroy.add(gpuVector);
+        if (gpuVector.segmentedBufferLayout) {
+          for (const segment of gpuVector.segmentedBufferLayout.segments) {
+            if (segment.length !== this.numRows) {
+              throw new Error(
+                `ArrowGPUTable segment "${segment.name}" length ${segment.length} does not match ${this.numRows}`
+              );
+            }
+            addVectorColumn(this, fields, segment.name, getSegmentVector(gpuVector, segment));
           }
         } else {
-          this.attributes[bufferLayout.name] = gpuVector.buffer;
+          addVectorColumn(this, fields, name, gpuVector);
         }
       }
 
@@ -139,6 +145,7 @@ export class ArrowGPUTable {
       fields.push(field);
       this.gpuVectors[bufferLayout.name] = gpuVector;
       this.attributes[bufferLayout.name] = gpuVector.buffer;
+      this._vectorsToDestroy.add(gpuVector);
     }
 
     this.schema = new arrow.Schema(fields, new Map(table.schema.metadata));
@@ -146,9 +153,10 @@ export class ArrowGPUTable {
   }
 
   destroy(): void {
-    for (const gpuVector of Object.values(this.gpuVectors)) {
+    for (const gpuVector of this._vectorsToDestroy) {
       gpuVector.destroy();
     }
+    this._vectorsToDestroy.clear();
   }
 }
 
@@ -180,6 +188,43 @@ function getVectorBufferLayout(name: string, vector: ArrowGPUVector): BufferLayo
     byteStride: vector.byteStride,
     format
   };
+}
+
+function addVectorColumn(
+  table: ArrowGPUTable,
+  fields: arrow.Field[],
+  name: string,
+  gpuVector: ArrowGPUVector
+): void {
+  table.gpuVectors[name] = gpuVector;
+  fields.push(new arrow.Field(name, gpuVector.type, false));
+
+  const bufferLayout = getVectorBufferLayout(name, gpuVector);
+  table.bufferLayout.push(bufferLayout);
+
+  if (bufferLayout.attributes) {
+    for (const attribute of bufferLayout.attributes) {
+      table.attributes[attribute.attribute] = gpuVector.buffer;
+    }
+  } else {
+    table.attributes[bufferLayout.name] = gpuVector.buffer;
+  }
+}
+
+function getSegmentVector(
+  vector: ArrowGPUVector,
+  segment: ArrowGPUSegmentedBufferSegment
+): ArrowGPUVector {
+  return new ArrowGPUVector({
+    type: 'buffer',
+    name: segment.name,
+    buffer: vector.buffer,
+    arrowType: segment.arrowType,
+    length: segment.length,
+    byteOffset: segment.byteOffset,
+    byteStride: segment.byteStride,
+    ownsBuffer: false
+  } as any);
 }
 
 function getArrowTypeVertexFormat(type: arrow.DataType): VertexFormat {

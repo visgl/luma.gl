@@ -79,19 +79,25 @@ Compute pipelines use storage bindings. They read raw storage values, so normali
 | --- | --- | --- | --- |
 | `Buffer` | One buffer per column | One buffer for several columns | One buffer for several column segments |
 | `BufferLayout` | `name` plus `format` | `attributes` with offsets and shared `byteStride` | Multiple layouts or explicit segment metadata |
-| `ArrowGPUVector` | Numeric Arrow type | `Binary` plus `bufferLayout` | Numeric or `Binary` view plus segment metadata |
-| `ArrowGPUTable` | Multiple vectors | Interleaved vector contributes multiple attributes | Future table layout can map names to segments |
+| `ArrowGPUVector` | Numeric Arrow type | `Binary` plus `bufferLayout` | `Binary` plus `segmentedBufferLayout` |
+| `ArrowGPUTable` | Multiple vectors | Interleaved vector contributes multiple attributes | Segmented vector contributes one column per segment |
 
 ## Operation Patterns
+
+These rows describe useful memory-layout patterns. They are not a list of currently exported APIs.
 
 | Operation | Packed input | Interleaved input | Segmented input |
 | --- | --- | --- | --- |
 | `add` | Direct | Deinterleave or use strided shader reads | Direct by segment |
 | `interleave` | Produces an interleaved buffer | Appends or rebuilds interleaved rows | Reads segments and writes row-major output |
 | `deinterleave` | No-op or copy | Extracts one attribute to a packed buffer | Selects or copies one segment |
+| `segment` | Produces a segmented buffer | Requires attribute extraction first | Appends or rebuilds segment ranges |
+| `desegment` | No-op or copy | Requires attribute extraction first | Extracts one segment to a packed buffer |
 | `fround` | Direct for packed `Float64` | Requires attribute extraction or strided reads | Direct by segment |
 
-In-place operations require stricter ownership and aliasing rules. They are practical with WebGPU read-write storage buffers when the input and output have compatible byte layouts. They are not a good fit for WebGL transform feedback, where input and output buffers should not alias.
+The initial Arrow GPGPU API uses out-of-place operations: inputs are not mutated or destroyed, and returned vectors own generated buffers.
+
+In-place operations are future work. They require stricter ownership and aliasing rules. They are practical with WebGPU read-write storage buffers when the input and output have compatible byte layouts. They are not a good fit for WebGL transform feedback, where input and output buffers should not alias.
 
 ## Choosing a Layout
 
@@ -110,5 +116,4 @@ Arrow is naturally columnar. A normal Arrow column maps cleanly to a packed GPU 
 
 Interleaved GPU buffers do not map to a single numeric Arrow column. In luma.gl they are represented as `ArrowGPUVector<Binary>` with `bufferLayout` metadata describing the attributes inside each row.
 
-Segmented buffers are still columnar, but the columns share one GPU allocation. They need table-level segment metadata so each column name can resolve to a buffer, byte offset, row count, row stride, and Arrow type.
-
+Segmented buffers are still columnar, but the columns share one GPU allocation. In luma.gl they are represented as `ArrowGPUVector<Binary>` with `segmentedBufferLayout` metadata so each segment name can resolve to a buffer, byte offset, byte length, row count, row stride, and Arrow type. Arrow GPGPU segmented outputs use 256-byte segment alignment.

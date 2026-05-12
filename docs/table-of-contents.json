@@ -149,6 +149,16 @@
       },
       {
         "type": "category",
+        "label": "@luma.gl/gpgpu",
+        "items": [
+          "api-reference/gpgpu/README",
+          "api-reference/gpgpu/gpu-table",
+          "api-reference/gpgpu/operations",
+          "api-reference/gpgpu/arrow-gpu-compute-graph"
+        ]
+      },
+      {
+        "type": "category",
         "label": "@luma.gl/gltf",
         "items": ["api-reference/gltf/README", "api-reference/gltf/gltf-extensions"]
       },
