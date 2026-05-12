@@ -12,7 +12,7 @@ function isLittleEndian() {
   return bytes[0] > 0;
 }
 
-export const froundVertexShader = /* glsl */ `\
+const vs = /* glsl */ `\
 #define LE ${isLittleEndian() ? 1 : 0}
 const uint F32_NAN = 0xffffffffu;
 const uint F32_INF = 0x7f800000u;
@@ -191,7 +191,7 @@ void fround(in uint x[X_LEN], out float result[X_LEN]) {
 
 export const fround: OperationHandler<{x: GPUTable}> = async ({inputs, output, target}) => {
   runBufferTransform({
-    module: {name: 'fround', vs: froundVertexShader},
+    module: {name: 'fround', vs},
     inputs,
     output,
     operationType: 'uint32',
