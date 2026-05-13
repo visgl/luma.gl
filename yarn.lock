@@ -15386,6 +15386,19 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"luma.gl-examples-gpt-2@workspace:examples/experimental/gpt-2":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-gpt-2@workspace:examples/experimental/gpt-2"
+  dependencies:
+    "@luma.gl/core": "npm:~9.3.0"
+    "@luma.gl/engine": "npm:~9.3.0"
+    "@luma.gl/shadertools": "npm:~9.3.0"
+    "@luma.gl/webgpu": "npm:~9.3.0"
+    typescript: "npm:^5.9.3"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
 "luma.gl-examples-hello-cube@workspace:examples/tutorials/hello-cube":
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-hello-cube@workspace:examples/tutorials/hello-cube"

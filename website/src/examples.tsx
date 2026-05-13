@@ -5,6 +5,7 @@ import {ExampleHeader, ExamplePage, LumaExample, ReactExample, useStore} from '.
 
 import AnimationApp from '../../examples/api/animation/app';
 import CubemapApp from '../../examples/api/cubemap/app';
+import GPT2App from '../../examples/experimental/gpt-2/app';
 import BloomApp from '../../examples/experimental/bloom/app';
 import FP64App from '../../examples/experimental/fp64/app';
 import MultiCanvasApp from '../../examples/api/multi-canvas/app';
@@ -207,6 +208,21 @@ export const CubemapExample: React.FC = props => (
     title="Texture Cube"
     directory="api"
     template={CubemapApp}
+    config={exampleConfig}
+    {...props}
+  />
+);
+
+export const GPT2Example: React.FC = props => (
+  <LumaExample
+    id="gpt-2"
+    title="GPT-2 Transformer"
+    directory="experimental"
+    devices={['webgpu']}
+    showHeader={false}
+    showStats={false}
+    templateInfoPlacement="page"
+    template={GPT2App}
     config={exampleConfig}
     {...props}
   />

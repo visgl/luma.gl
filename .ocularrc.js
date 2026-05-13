@@ -40,6 +40,7 @@ const config = {
       examples: {
         animation: '/examples/api/animation',
         cubemap: '/examples/api/cubemap',
+        'gpt-2': '/examples/experimental/gpt-2',
         fp64: '/examples/experimental/fp64',
         'external-context': '/examples/integrations/external-context',
         gltf: '/examples/showcase/gltf',

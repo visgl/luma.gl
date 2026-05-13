@@ -1,4 +1,4 @@
-import React, {CSSProperties, FC, useEffect, useRef, useState} from 'react'; // eslint-disable-line
+import React, {CSSProperties, FC, useEffect, useMemo, useRef, useState} from 'react'; // eslint-disable-line
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import {Device, luma} from '@luma.gl/core';
 import {AnimationLoopTemplate, AnimationLoop, makeAnimationLoop, setPathPrefix} from '@luma.gl/engine';
@@ -12,7 +12,12 @@ import {
 import {logError} from '../utils/error-utils';
 
 // import {VRDisplay} from '@luma.gl/experimental';
-import {getCanvasContainer, useStore} from '../store/device-store';
+import {
+  getCanvasContainer,
+  getPreferredAvailableDeviceType,
+  type DeviceType,
+  useStore
+} from '../store/device-store';
 
 const GITHUB_TREE = 'https://github.com/visgl/luma.gl/tree/master';
 let isInfoBoxCollapsedByDefault = true;
@@ -222,6 +227,8 @@ type LumaExampleProps = React.PropsWithChildren<{
   title?: string;
   template: Function;
   config: unknown;
+  devices?: ('webgl2' | 'webgpu')[];
+  templateInfoPlacement?: 'header' | 'page';
   directory?: string;
   sourceDirectory?: string;
   sourcePath?: string;
@@ -532,9 +539,42 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
   /** Type type of the device (WebGL, WebGPU, ...) */
   const deviceType = useStore(store => store.deviceType);
   const device = useStore(store => store.device);
+  const setDeviceType = useStore(store => store.setDeviceType);
+  const allowedDeviceTypes = useMemo(
+    () =>
+      props.devices?.map(deviceName =>
+        deviceName === 'webgl2' ? 'webgl' : 'webgpu'
+      ) as DeviceType[] | undefined,
+    [props.devices]
+  );
 
   useEffect(() => {
-    if (!canvasContainerRef.current || !deviceType || !device) {
+    if (!allowedDeviceTypes || (deviceType && allowedDeviceTypes.includes(deviceType))) {
+      return;
+    }
+
+    let cancelled = false;
+    const selectSupportedDeviceType = async () => {
+      const preferredDeviceType = await getPreferredAvailableDeviceType(allowedDeviceTypes);
+      if (!cancelled && preferredDeviceType) {
+        await setDeviceType(preferredDeviceType);
+      }
+    };
+
+    void selectSupportedDeviceType();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [allowedDeviceTypes, deviceType, setDeviceType]);
+
+  useEffect(() => {
+    if (
+      !canvasContainerRef.current ||
+      !deviceType ||
+      !device ||
+      (allowedDeviceTypes && !allowedDeviceTypes.includes(deviceType))
+    ) {
       return;
     }
 
@@ -696,7 +736,16 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
           logError(`Example cleanup failed for ${deviceType}`, error);
         });
     };
-  }, [deviceType, device, showStats, props.template, props.directory, props.id, websiteBaseUrl]);
+  }, [
+    allowedDeviceTypes,
+    deviceType,
+    device,
+    showStats,
+    props.template,
+    props.directory,
+    props.id,
+    websiteBaseUrl
+  ]);
 
   // @ts-expect-error Intentionally accessing undeclared field info
   const info = props.template?.info;
@@ -715,10 +764,19 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
           directory={props.directory}
           sourceDirectory={props.sourceDirectory}
           sourcePath={props.sourcePath}
+          devices={props.devices}
         >
-          {info ? <div dangerouslySetInnerHTML={{__html: info}} /> : null}
+          {info && props.templateInfoPlacement !== 'page' ? (
+            <div dangerouslySetInnerHTML={{__html: info}} />
+          ) : null}
           {props.headerControls}
         </ExampleHeader>
+      ) : null}
+      {info && props.templateInfoPlacement === 'page' ? (
+        <div
+          style={{height: '100%', minHeight: 0, position: 'relative', zIndex: 1}}
+          dangerouslySetInnerHTML={{__html: info}}
+        />
       ) : null}
       <div ref={statsContainerRef} style={{minHeight: 0, position: 'absolute', inset: 0}}>
         {showStats ? (
@@ -739,7 +797,14 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
             }}
           />
         ) : null}
-        <div key={deviceType} ref={canvasContainerRef} style={EXAMPLE_CANVAS_STYLE} />
+        <div
+          key={deviceType}
+          ref={canvasContainerRef}
+          style={{
+            ...EXAMPLE_CANVAS_STYLE,
+            pointerEvents: props.templateInfoPlacement === 'page' ? 'none' : undefined
+          }}
+        />
       </div>
     </ExamplePage>
   );
