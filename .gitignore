@@ -46,6 +46,7 @@ lerna-debug.log
 *.zip
 *.rar
 TODO
+examples/experimental/gpt-2/public/*.bin
 
 .docusaurus
 

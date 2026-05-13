@@ -9,6 +9,7 @@ const examplesRoot = join(repoRoot, 'examples');
 const tscPath = join(repoRoot, 'node_modules', '.bin', 'tsc');
 const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
   'api/multi-canvas',
+  'experimental/gpt-2',
   'api/texture-compressed',
   'api/texture-tester',
   'integrations/hello-react',

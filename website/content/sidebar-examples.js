@@ -35,6 +35,11 @@ const sidebars = {
     },
     {
       type: 'category',
+      label: 'Experimental',
+      items: ['experimental/gpt-2']
+    },
+    {
+      type: 'category',
       label: 'Tutorials',
       items: [
         'tutorials/hello-triangle',
