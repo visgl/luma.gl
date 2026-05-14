@@ -51,6 +51,10 @@ const STAT_STYLES = {
 const GPU_TIME_AND_MEMORY_STATS_FORMATTERS = {
   'CPU Time': (stat: Stat) => `${stat.name}: ${stat.getSampleAverageTime().toFixed(2)}ms`,
   'GPU Time': (stat: Stat) => `${stat.name}: ${stat.getSampleAverageTime().toFixed(2)}ms`,
+  'Frame Submit CPU Time': (stat: Stat) =>
+    `${stat.name}: ${stat.getSampleAverageTime().toFixed(2)}ms`,
+  'Swap Chain Acquire CPU Time': (stat: Stat) =>
+    `${stat.name}: ${stat.getSampleAverageTime().toFixed(2)}ms`,
   'GPU Memory': 'memory',
   'Buffer Memory': 'memory',
   'Texture Memory': 'memory',

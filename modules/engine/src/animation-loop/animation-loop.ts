@@ -65,6 +65,7 @@ export class AnimationLoop {
   sharedStats: Stats;
   cpuTime: Stat;
   gpuTime: Stat;
+  frameSubmitCpuTime: Stat;
   frameRate: Stat;
 
   display: any;
@@ -98,6 +99,7 @@ export class AnimationLoop {
     this.frameRate.setSampleSize(1);
     this.cpuTime = this.stats.get('CPU Time');
     this.gpuTime = this.stats.get('GPU Time');
+    this.frameSubmitCpuTime = this.stats.get('Frame Submit CPU Time');
 
     this.setProps({autoResizeViewport: props.autoResizeViewport});
 
@@ -346,8 +348,13 @@ export class AnimationLoop {
     this.props.onRender(this._getAnimationProps());
     // end callback
 
-    // Submit commands (necessary on WebGPU)
-    this.device?.submit();
+    // Submit commands (necessary on WebGPU). This is CPU-side frame plumbing,
+    // distinct from timestamp-query GPU execution time.
+    if (this.device) {
+      this.frameSubmitCpuTime.timeStart();
+      this.device.submit();
+      this.frameSubmitCpuTime.timeEnd();
+    }
   }
 
   _clearNeedsRedraw(): void {

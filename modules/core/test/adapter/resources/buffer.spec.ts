@@ -362,7 +362,7 @@ test('Core stats use canonical resource ordering', async t => {
     );
 
     t.deepEqual(
-      getStatNames(device, 'GPU Time and Memory').slice(0, 12),
+      getStatNames(device, 'GPU Time and Memory').slice(0, 14),
       [
         'Adapter',
         'GPU',
@@ -371,6 +371,8 @@ test('Core stats use canonical resource ordering', async t => {
         'Frame Rate',
         'CPU Time',
         'GPU Time',
+        'Frame Submit CPU Time',
+        'Swap Chain Acquire CPU Time',
         'GPU Memory',
         'Buffer Memory',
         'Texture Memory',

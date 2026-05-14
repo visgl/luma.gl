@@ -7,6 +7,8 @@ import * as arrow from 'apache-arrow';
 import {
   buildArrowGlyphLayout,
   buildArrowUtf8Chunks,
+  buildGpuExpandedTextStream,
+  buildGpuUtf8TextInput,
   createArrowUtf8TextIndexAccessor,
   decodeArrowUtf8CodePoints,
   populateUtf8TextIndices,
@@ -87,5 +89,58 @@ test('decodeArrowUtf8CodePoints and buildArrowGlyphLayout preserve Unicode glyph
   t.equal(layout.glyphCount, 3, 'glyph count includes the emoji once');
   t.deepEqual(Array.from(layout.glyphOffsets), [2, 6, 7, 6, 4, 6], 'offsets use advances');
   t.ok(characterSet.has('🙂'), 'auto character collection sees Unicode');
+  t.end();
+});
+
+test('buildGpuExpandedTextStream packs glyph ids and shared definitions deterministically', t => {
+  const mapping: CharacterMapping = {
+    A: {x: 0, y: 0, width: 4, height: 6, anchorX: 2, anchorY: 3, advance: 5},
+    B: {x: 4, y: 0, width: 4, height: 6, anchorX: 2, anchorY: 3, advance: 7},
+    '🙂': {x: 8, y: 0, width: 8, height: 8, anchorX: 4, anchorY: 4, advance: 9}
+  };
+  const stream = buildGpuExpandedTextStream({
+    texts: arrow.vectorFromArray(['AB', '🙂A'], new arrow.Utf8()),
+    mapping,
+    baselineOffset: 1,
+    lineHeight: 10,
+    characterSet: new Set<string>()
+  });
+
+  t.deepEqual(stream.startIndices, [0, 2, 4], 'glyph row starts match code point counts');
+  t.deepEqual(Array.from(stream.labelGlyphRanges), [0, 2, 2, 4], 'label glyph spans are packed');
+  t.deepEqual(
+    Array.from(stream.packedGlyphIds),
+    [1 | (2 << 16), 3 | (1 << 16)],
+    'two uint16 glyph ids share each uint32 input word'
+  );
+  t.deepEqual(
+    Array.from(stream.glyphFrames),
+    [0, 0, 0, 0, 0, 0, 4, 6, 4, 0, 4, 6, 8, 0, 8, 8],
+    'frame definitions are deduplicated with a missing-glyph row at zero'
+  );
+  t.deepEqual(
+    Array.from(stream.glyphMetrics),
+    [0, 32, 2, 5, 2, 7, 4, 9],
+    'glyph metrics carry anchor and advance for compute expansion'
+  );
+  t.equal(stream.baselineOffsetY, 6, 'baseline output offset is prevalidated and stored once');
+  t.equal(stream.glyphCount, 4, 'glyph count stays CPU-known');
+  t.end();
+});
+
+test('buildGpuUtf8TextInput preserves Arrow UTF-8 bytes without glyph decoding', t => {
+  const textInput = buildGpuUtf8TextInput(arrow.vectorFromArray(['AB', '🙂'], new arrow.Utf8()));
+  const packedBytes = new Uint8Array(textInput.packedUtf8Bytes.buffer).subarray(
+    0,
+    textInput.byteLength
+  );
+
+  t.deepEqual(Array.from(textInput.rowByteRanges), [0, 2, 2, 6], 'row byte spans stay aligned');
+  t.deepEqual(
+    Array.from(packedBytes),
+    [65, 66, 240, 159, 153, 130],
+    'packed upload retains the normalized UTF-8 byte stream'
+  );
+  t.equal(textInput.byteLength, 6, 'one render slot can be reserved per source byte');
   t.end();
 });

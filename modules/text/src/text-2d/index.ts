@@ -22,6 +22,8 @@ export {
 export {
   buildArrowGlyphLayout,
   buildArrowUtf8Chunks,
+  buildGpuExpandedTextStream,
+  buildGpuUtf8TextInput,
   buildIndirectArrowGlyphLayout,
   createArrowUtf8TextIndexAccessor,
   decodeArrowUtf8CodePoints,
@@ -31,15 +33,28 @@ export {
   type ArrowUtf8Chunk,
   type ArrowUtf8TextAccessorContext,
   type ArrowUtf8TextIndexAccessor,
+  type GpuExpandedTextStream,
+  type GpuUtf8TextInput,
   type IndirectArrowGlyphLayout,
   type Utf8TextIndexTarget
 } from './arrow-text';
 export {
   ArrowTextModel,
+  GpuExpandedTextModel,
   IndirectTextModel,
+  StorageIndexedTextModel,
+  StorageTextModel,
   buildArrowTextGlyphTable,
   buildIndirectTextGlyphTable,
+  buildStorageIndexedTextGlyphTable,
+  buildStorageTextGlyphTable,
+  packStorageTextClipRects,
   type ArrowTextGlyphTable,
   type ArrowTextModelProps,
-  type IndirectTextGlyphTable
+  type GpuExpandedTextModelProps,
+  type IndirectTextGlyphTable,
+  type StorageIndexedTextGlyphTable,
+  type StorageIndexedTextModelProps,
+  type StorageTextGlyphTable,
+  type StorageTextModelProps
 } from './arrow-text-model';

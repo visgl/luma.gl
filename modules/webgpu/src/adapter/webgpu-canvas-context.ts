@@ -92,7 +92,7 @@ export class WebGPUCanvasContext extends CanvasContext {
     }
   ): WebGPUFramebuffer {
     const profiler = getCpuHotspotProfiler(this.device);
-    const startTime = profiler ? getTimestamp() : 0;
+    const startTime = getTimestamp();
     if (profiler) {
       profiler.framebufferAcquireCount = (profiler.framebufferAcquireCount || 0) + 1;
       profiler.activeDefaultFramebufferAcquireDepth =
@@ -132,11 +132,16 @@ export class WebGPUCanvasContext extends CanvasContext {
       );
       return this.framebuffer;
     } finally {
+      const acquireTimeMs = getTimestamp() - startTime;
+      this.device.statsManager
+        .getStats('GPU Time and Memory')
+        .get('Swap Chain Acquire CPU Time')
+        .addTime(acquireTimeMs);
       if (profiler) {
         profiler.activeDefaultFramebufferAcquireDepth =
           (profiler.activeDefaultFramebufferAcquireDepth || 1) - 1;
         profiler.framebufferAcquireTimeMs =
-          (profiler.framebufferAcquireTimeMs || 0) + (getTimestamp() - startTime);
+          (profiler.framebufferAcquireTimeMs || 0) + acquireTimeMs;
       }
     }
   }

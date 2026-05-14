@@ -13,6 +13,8 @@ const GPU_TIME_AND_MEMORY_STAT_ORDER = [
   'Frame Rate',
   'CPU Time',
   'GPU Time',
+  'Frame Submit CPU Time',
+  'Swap Chain Acquire CPU Time',
   'GPU Memory',
   'Buffer Memory',
   'Texture Memory',
