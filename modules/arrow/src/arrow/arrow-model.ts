@@ -19,7 +19,7 @@ import {ArrowGeometry, type ArrowGeometryProps} from './arrow-geometry';
 import type {ArrowMeshTable} from './arrow-mesh-types';
 
 /** GPU table source accepted by ArrowModel. */
-export type ArrowModelGPUTable = GPUTable | StreamingArrowGPUTable;
+export type ArrowModelGPUTable = GPUTable;
 
 /** Props for creating a Model whose attributes are derived from an Arrow table. */
 export type ArrowModelProps = ModelProps &
@@ -128,16 +128,15 @@ export class ArrowModel extends Model {
   }
 
   /**
-   * Draws each preserved static Arrow record batch through the model's existing pipeline.
+   * Draws each preserved Arrow GPU record batch through the model's existing pipeline.
    *
    * Batch drawing reuses the current buffer layout and only swaps batch attribute buffers
-   * plus inferred Arrow row counts between draw calls. Streaming tables currently expose
-   * packed append state but no per-batch draw views, so they are intentionally excluded.
+   * plus inferred Arrow row counts between draw calls.
    */
   drawBatches(renderPass: RenderPass): boolean {
     const arrowGPUTable = this.arrowGPUTable;
     if (!(arrowGPUTable instanceof GPUTable)) {
-      throw new Error('ArrowModel.drawBatches() requires a non-streaming GPUTable');
+      throw new Error('ArrowModel.drawBatches() requires a GPUTable');
     }
 
     assertMatchingBufferLayouts(

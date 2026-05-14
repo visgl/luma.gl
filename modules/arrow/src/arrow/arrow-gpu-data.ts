@@ -229,10 +229,10 @@ export function validateArrowGPUDataDirectUpload(
   data: arrow.Data<AttributeArrowType>
 ): void {
   if (data.nullCount > 0) {
-    throw new Error(`StreamingArrowGPUVector "${name}" does not support nullable data`);
+    throw new Error(`GPUVector "${name}" does not support nullable data`);
   }
   if (arrow.DataType.isFixedSizeList(data.type) && (data.children[0]?.nullCount ?? 0) > 0) {
-    throw new Error(`StreamingArrowGPUVector "${name}" does not support nullable child data`);
+    throw new Error(`GPUVector "${name}" does not support nullable child data`);
   }
 }
 

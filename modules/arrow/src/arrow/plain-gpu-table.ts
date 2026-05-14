@@ -364,6 +364,11 @@ export class GPUTable {
     if (!firstBatch) {
       return;
     }
+    if (this.batches.length === 1) {
+      Object.assign(this.gpuVectors, firstBatch.gpuVectors);
+      Object.assign(this.attributes, firstBatch.attributes);
+      return;
+    }
 
     for (const bufferLayout of this.bufferLayout) {
       const batchVectors = this.batches.map(batch => batch.gpuVectors[bufferLayout.name]);

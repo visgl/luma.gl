@@ -426,9 +426,9 @@ arrowGPUTable.addToLastBatch(recordBatch);
 model.setInstanceCount(arrowGPUTable.numRows);
 ```
 
-The existing `StreamingArrowGPUTable` wrapper still provides constructor-time
-synchronous and asynchronous record batch iterator helpers while the appendable
-regular table path is adopted more broadly:
+The existing `StreamingArrowGPUTable` wrapper now delegates to the appendable
+`GPUTable` path and only preserves constructor-time synchronous and asynchronous
+record batch iterator helpers:
 
 ```ts
 const streamingTable = new StreamingArrowGPUTable({

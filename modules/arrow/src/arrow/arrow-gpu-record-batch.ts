@@ -5,27 +5,14 @@
 import {Buffer, Device, type BufferLayout, type ShaderLayout} from '@luma.gl/core';
 import type {DynamicBuffer} from '@luma.gl/engine';
 import * as arrow from 'apache-arrow';
+import {getArrowFieldByPath, getArrowVectorByPath} from './arrow-paths';
+import {getArrowBufferLayout, type ArrowVertexFormatOptions} from './arrow-shader-layout';
+import type {AttributeArrowType} from './arrow-types';
 import {
-  findArrowFieldByPath,
-  getArrowDataByPath,
-  getArrowFieldByPath,
-  getArrowSchemaPaths,
-  getArrowVectorByPath
-} from './arrow-paths';
-import {
-  getArrowBufferLayout,
-  getArrowVertexFormat,
-  type ArrowVertexFormatOptions
-} from './arrow-shader-layout';
-import {
-  getSignedShaderType,
-  isInstanceArrowType,
-  isNumericArrowType,
-  type ArrowColumnInfo,
-  type AttributeArrowType,
-  type NumericArrowType
-} from './arrow-types';
-import {validateArrowGPUDataDirectUpload} from './arrow-gpu-data';
+  getAppendableGPUColumnData,
+  getAppendableGPUColumns,
+  type AppendableGPUColumn
+} from './arrow-gpu-appendable';
 import {
   GPUVector,
   type GPUVectorBufferProps,
@@ -78,13 +65,6 @@ export type GPURecordBatchAppendableProps = ArrowVertexFormatOptions & {
   bufferProps?: GPUVectorDynamicBufferProps;
 };
 
-type AppendableRecordBatchColumn = {
-  attributeName: string;
-  arrowPath: string;
-  field: arrow.Field;
-  bufferLayout: BufferLayout;
-};
-
 /** GPU memory and Arrow schema metadata for one selected Arrow RecordBatch. */
 export class GPURecordBatch {
   /** GPU-facing schema for the selected shader attribute columns. */
@@ -101,7 +81,7 @@ export class GPURecordBatch {
   readonly gpuVectors: Record<string, GPUVector> = {};
   /** Model-ready attribute buffers keyed by shader attribute name. */
   readonly attributes: Record<string, Buffer | DynamicBuffer> = {};
-  private readonly appendableColumns?: AppendableRecordBatchColumn[];
+  private readonly appendableColumns?: AppendableGPUColumn[];
 
   /** Creates GPU buffers and GPU-facing schema from one Arrow record batch. */
   constructor(device: Device, recordBatch: arrow.RecordBatch, props: GPURecordBatchProps);
@@ -117,7 +97,7 @@ export class GPURecordBatch {
     if (!(deviceOrProps instanceof Device)) {
       if ('type' in deviceOrProps && deviceOrProps.type === 'appendable') {
         const options = deviceOrProps;
-        const appendableColumns = getAppendableRecordBatchColumns({
+        const appendableColumns = getAppendableGPUColumns({
           schema: options.schema,
           shaderLayout: options.shaderLayout,
           arrowPaths: options.arrowPaths,
@@ -220,27 +200,13 @@ export class GPURecordBatch {
     if (!this.appendableColumns) {
       throw new Error('GPURecordBatch.addToLastBatch() requires appendable batch storage');
     }
-    for (const column of this.appendableColumns) {
-      const sourceField = findArrowFieldByPath(recordBatch.schema, column.arrowPath);
-      if (!sourceField || !arrow.util.compareTypes(sourceField.type, column.field.type)) {
-        throw new Error(
-          `GPURecordBatch.addToLastBatch() column "${column.arrowPath}" does not match the source schema`
-        );
-      }
-    }
-
-    for (const column of this.appendableColumns) {
+    const pendingData = getAppendableGPUColumnData(
+      recordBatch,
+      this.appendableColumns,
+      'GPURecordBatch.addToLastBatch()'
+    );
+    for (const {column, data} of pendingData) {
       const vector = this.gpuVectors[column.attributeName];
-      const data = getArrowDataByPath(
-        recordBatch,
-        column.arrowPath
-      ) as arrow.Data<AttributeArrowType>;
-      if (data.length !== recordBatch.numRows) {
-        throw new Error(
-          `GPURecordBatch.addToLastBatch() column "${column.arrowPath}" row count mismatch`
-        );
-      }
-      validateArrowGPUDataDirectUpload(column.attributeName, data);
       vector.addToLastData(data as any);
     }
     this.numRows += recordBatch.numRows;
@@ -266,67 +232,4 @@ export class GPURecordBatch {
       gpuVector.destroy();
     }
   }
-}
-
-function getAppendableRecordBatchColumns(props: {
-  schema: arrow.Schema;
-  shaderLayout: ShaderLayout;
-  arrowPaths?: Record<string, string>;
-  allowWebGLOnlyFormats?: boolean;
-}): AppendableRecordBatchColumn[] {
-  const schemaPaths = new Set(getArrowSchemaPaths(props.schema));
-  const columns: AppendableRecordBatchColumn[] = [];
-
-  for (const attribute of props.shaderLayout.attributes) {
-    const hasExplicitPath = Boolean(
-      props.arrowPaths && Object.prototype.hasOwnProperty.call(props.arrowPaths, attribute.name)
-    );
-    const arrowPath = props.arrowPaths?.[attribute.name] || attribute.name;
-    if (!hasExplicitPath && !schemaPaths.has(arrowPath)) {
-      continue;
-    }
-    const field = findArrowFieldByPath(props.schema, arrowPath);
-    if (!field) {
-      throw new Error(`Arrow table schema does not contain column "${arrowPath}"`);
-    }
-    if (!isInstanceArrowType(field.type)) {
-      throw new Error(`Arrow column "${arrowPath}" is not compatible with shader attributes`);
-    }
-    const format = getArrowVertexFormat(getArrowColumnInfoFromType(field.type), attribute.type, {
-      allowWebGLOnlyFormats: props.allowWebGLOnlyFormats
-    });
-    columns.push({
-      attributeName: attribute.name,
-      arrowPath,
-      field,
-      bufferLayout: {
-        name: attribute.name,
-        format,
-        ...(attribute.stepMode ? {stepMode: attribute.stepMode} : {})
-      }
-    });
-  }
-  return columns;
-}
-
-function getArrowColumnInfoFromType(type: AttributeArrowType): ArrowColumnInfo {
-  let numericType = type as NumericArrowType;
-  let components: 1 | 2 | 3 | 4 = 1;
-  if (arrow.DataType.isFixedSizeList(type)) {
-    numericType = type.children[0].type as NumericArrowType;
-    if (type.listSize < 1 || type.listSize > 4) {
-      throw new Error('Attribute column fixed list size must be between 1 and 4');
-    }
-    components = type.listSize as 1 | 2 | 3 | 4;
-  }
-  if (!isNumericArrowType(numericType)) {
-    throw new Error('Attribute column must be numeric or fixed list of numeric');
-  }
-  return {
-    signedDataType: getSignedShaderType(numericType, components),
-    components,
-    stepMode: 'instance',
-    values: [],
-    offsets: []
-  };
 }

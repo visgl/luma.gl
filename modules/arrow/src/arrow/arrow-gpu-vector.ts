@@ -11,7 +11,7 @@ import {
 } from '@luma.gl/core';
 import {DynamicBuffer, type DynamicBufferProps} from '@luma.gl/engine';
 import * as arrow from 'apache-arrow';
-import type {AttributeArrowType} from './arrow-types';
+import {isInstanceArrowType, type AttributeArrowType} from './arrow-types';
 import {
   GPUData,
   getArrowDataBufferSource,
@@ -332,8 +332,11 @@ export class GPUVector<T extends arrow.DataType = AttributeArrowType> {
           capacityGrowthFactor = 1.5,
           bufferProps
         } = constructionProps;
+        if (!isInstanceArrowType(arrowType)) {
+          throw new Error(`GPUVector does not support Arrow type ${arrowType}`);
+        }
         this.name = name;
-        this.type = arrowType as T;
+        this.type = arrowType as unknown as T;
         this.length = 0;
         this.stride = getArrowTypeStride(arrowType);
         this.byteOffset = 0;

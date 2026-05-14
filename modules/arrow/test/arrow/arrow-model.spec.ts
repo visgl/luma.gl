@@ -310,7 +310,7 @@ test('ArrowModel draws preserved Arrow table batches by rebinding batch-owned bu
   t.end();
 });
 
-test('ArrowModel rejects batch drawing for streaming Arrow tables', t => {
+test('ArrowModel draws streaming table façades through regular GPU batches', t => {
   const device = new NullDevice({});
   const arrowTable = makeArrowModelTable(1);
   const streamingArrowGPUTable = new StreamingArrowGPUTable({
@@ -318,6 +318,7 @@ test('ArrowModel rejects batch drawing for streaming Arrow tables', t => {
     schema: arrowTable.schema,
     shaderLayout: SHADER_LAYOUT
   });
+  streamingArrowGPUTable.appendRecordBatch(arrowTable.batches[0]);
   const model = new ArrowModel(device, {
     id: 'arrow-model-streaming-batched-draw-test',
     vs: DUMMY_VS,
@@ -327,10 +328,9 @@ test('ArrowModel rejects batch drawing for streaming Arrow tables', t => {
   });
   const renderPass = device.getDefaultRenderPass();
 
-  t.throws(
-    () => model.drawBatches(renderPass),
-    /requires a non-streaming GPUTable/,
-    'streaming tables do not expose static draw batch views'
+  t.ok(
+    model.drawBatches(renderPass),
+    'streaming compatibility tables draw through the appendable GPU batch path'
   );
 
   renderPass.destroy();
