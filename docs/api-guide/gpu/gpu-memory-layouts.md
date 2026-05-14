@@ -79,8 +79,8 @@ Compute pipelines use storage bindings. They read raw storage values, so normali
 | --- | --- | --- | --- |
 | `Buffer` | One buffer per column | One buffer for several columns | One buffer for several column segments |
 | `BufferLayout` | `name` plus `format` | `attributes` with offsets and shared `byteStride` | Multiple layouts or explicit segment metadata |
-| `ArrowGPUVector` | Numeric Arrow type | `Binary` plus `bufferLayout` | Numeric or `Binary` view plus segment metadata |
-| `ArrowGPUTable` | Multiple vectors | Interleaved vector contributes multiple attributes | Future table layout can map names to segments |
+| `GPUVector` | Numeric Arrow type | `Binary` plus `bufferLayout` | Numeric or `Binary` view plus segment metadata |
+| `GPUTable` | Multiple vectors | Interleaved vector contributes multiple attributes | Future table layout can map names to segments |
 
 ## Operation Patterns
 
@@ -108,7 +108,7 @@ In-place operations require stricter ownership and aliasing rules. They are prac
 
 Arrow is naturally columnar. A normal Arrow column maps cleanly to a packed GPU vector.
 
-Interleaved GPU buffers do not map to a single numeric Arrow column. In luma.gl they are represented as `ArrowGPUVector<Binary>` with `bufferLayout` metadata describing the attributes inside each row.
+Interleaved GPU buffers do not map to a single numeric Arrow column. In luma.gl they are represented as `GPUVector<Binary>` with `bufferLayout` metadata describing the attributes inside each row.
 
 Segmented buffers are still columnar, but the columns share one GPU allocation. They need table-level segment metadata so each column name can resolve to a buffer, byte offset, row count, row stride, and Arrow type.
 

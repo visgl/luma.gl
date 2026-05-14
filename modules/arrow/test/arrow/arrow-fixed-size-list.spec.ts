@@ -4,12 +4,14 @@
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {
-  ArrowGPUVector,
+  GPUData,
+  GPUVector,
   getArrowFixedSizeListValues,
   getArrowVectorBufferSource,
   isArrowFixedSizeListVector,
   makeArrowFixedSizeListVector
 } from '@luma.gl/arrow';
+import {DynamicBuffer} from '@luma.gl/engine';
 import {NullDevice} from '@luma.gl/test-utils';
 import * as arrow from 'apache-arrow';
 
@@ -87,14 +89,14 @@ test('makeArrowFixedSizeListVector validates typed array length', t => {
   t.end();
 });
 
-test('ArrowGPUVector creates a GPU buffer from an Arrow vector', t => {
+test('GPUVector creates a GPU buffer from an Arrow vector', t => {
   const device = new NullDevice({});
   const vector = makeArrowFixedSizeListVector(
     new arrow.Float32(),
     2,
     new Float32Array([1, 2, 3, 4])
   );
-  const gpuVector = new ArrowGPUVector(device, vector);
+  const gpuVector = new GPUVector(device, vector);
 
   t.notOk('vector' in gpuVector, 'does not retain the source Arrow vector');
   t.equal(gpuVector.type, vector.type, 'exposes the Arrow vector type');
@@ -106,10 +108,10 @@ test('ArrowGPUVector creates a GPU buffer from an Arrow vector', t => {
   t.end();
 });
 
-test('ArrowGPUVector readAsync round-trips scalar numeric vectors', async t => {
+test('GPUVector readAsync round-trips scalar numeric vectors', async t => {
   const device = new NullDevice({});
   const sourceVector = arrow.makeVector(new Int32Array([1, -2, 3]));
-  const gpuVector = new ArrowGPUVector(device, sourceVector);
+  const gpuVector = new GPUVector(device, sourceVector);
 
   const result = await gpuVector.readAsync();
 
@@ -121,14 +123,41 @@ test('ArrowGPUVector readAsync round-trips scalar numeric vectors', async t => {
   t.end();
 });
 
-test('ArrowGPUVector readAsync round-trips FixedSizeList vectors', async t => {
+test('GPUVector preserves Arrow Data chunk boundaries over one packed GPU buffer', async t => {
+  const device = new NullDevice({});
+  const type = new arrow.Float32();
+  const sourceVector = new arrow.Vector([
+    arrow.makeData({type, length: 2, data: new Float32Array([1, 2])}),
+    arrow.makeData({type, length: 1, data: new Float32Array([3])})
+  ]);
+  const gpuVector = new GPUVector(device, sourceVector);
+
+  const vectorResult = await gpuVector.readAsync();
+  const firstChunkResult = await gpuVector.data[0].readAsync();
+
+  t.equal(gpuVector.buffer.byteLength, 12, 'uploads every vector chunk into one GPU buffer');
+  t.equal(gpuVector.data.length, 2, 'exposes one GPUData view per source chunk');
+  t.ok(gpuVector.data[0] instanceof GPUData, 'uses GPUData chunk views');
+  t.equal(gpuVector.data[1].byteOffset, 8, 'tracks packed byte offsets across chunks');
+  t.deepEqual(Array.from(vectorResult.toArray()), [1, 2, 3], 'reads every packed row');
+  t.deepEqual(
+    Array.from(arrow.makeVector(firstChunkResult).toArray()),
+    [1, 2],
+    'reads one GPU data chunk through its view'
+  );
+
+  gpuVector.destroy();
+  t.end();
+});
+
+test('GPUVector readAsync round-trips FixedSizeList vectors', async t => {
   const device = new NullDevice({});
   const sourceVector = makeArrowFixedSizeListVector(
     new arrow.Float32(),
     2,
     new Float32Array([1, 2, 3, 4])
   );
-  const gpuVector = new ArrowGPUVector(device, sourceVector);
+  const gpuVector = new GPUVector(device, sourceVector);
 
   const result = await gpuVector.readAsync();
 
@@ -144,14 +173,14 @@ test('ArrowGPUVector readAsync round-trips FixedSizeList vectors', async t => {
   t.end();
 });
 
-test('ArrowGPUVector supports discriminated Arrow-vector construction', t => {
+test('GPUVector supports discriminated Arrow-vector construction', t => {
   const device = new NullDevice({});
   const vector = makeArrowFixedSizeListVector(
     new arrow.Float32(),
     2,
     new Float32Array([1, 2, 3, 4])
   );
-  const gpuVector = new ArrowGPUVector({
+  const gpuVector = new GPUVector({
     type: 'arrow',
     name: 'positions',
     device,
@@ -170,10 +199,10 @@ test('ArrowGPUVector supports discriminated Arrow-vector construction', t => {
   t.end();
 });
 
-test('ArrowGPUVector wraps existing typed buffers', t => {
+test('GPUVector wraps existing typed buffers', t => {
   const device = new NullDevice({});
   const buffer = device.createBuffer({byteLength: 16});
-  const gpuVector = new ArrowGPUVector({
+  const gpuVector = new GPUVector({
     type: 'buffer',
     name: 'weights',
     buffer,
@@ -193,6 +222,9 @@ test('ArrowGPUVector wraps existing typed buffers', t => {
   t.equal(gpuVector.length, 4, 'exposes supplied length');
   t.equal(gpuVector.stride, 1, 'deduces scalar stride');
   t.equal(gpuVector.byteStride, 4, 'deduces byte stride');
+  t.equal(gpuVector.data.length, 1, 'exposes one GPU data view for the wrapped buffer');
+  t.ok(gpuVector.data[0].buffer instanceof DynamicBuffer, 'data view keeps a dynamic wrapper');
+  t.equal(gpuVector.data[0].buffer.buffer, buffer, 'data view resolves to the wrapped buffer');
 
   gpuVector.destroy();
   t.equal(destroyed, false, 'does not destroy non-owned buffers');
@@ -200,13 +232,13 @@ test('ArrowGPUVector wraps existing typed buffers', t => {
   t.end();
 });
 
-test('ArrowGPUVector readAsync respects wrapped-buffer byteOffset and padded byteStride', async t => {
+test('GPUVector readAsync respects wrapped-buffer byteOffset and padded byteStride', async t => {
   const device = new NullDevice({});
   const bytes = new Uint8Array(20);
   new Float32Array(bytes.buffer, 4, 1)[0] = 1.5;
   new Float32Array(bytes.buffer, 12, 1)[0] = 2.5;
   const buffer = device.createBuffer({data: bytes});
-  const gpuVector = new ArrowGPUVector({
+  const gpuVector = new GPUVector({
     type: 'buffer',
     name: 'weights',
     buffer,
@@ -226,10 +258,10 @@ test('ArrowGPUVector readAsync respects wrapped-buffer byteOffset and padded byt
   t.end();
 });
 
-test('ArrowGPUVector wraps interleaved buffers', t => {
+test('GPUVector wraps interleaved buffers', t => {
   const device = new NullDevice({});
   const buffer = device.createBuffer({byteLength: 32});
-  const gpuVector = new ArrowGPUVector({
+  const gpuVector = new GPUVector({
     type: 'interleaved',
     name: 'instances',
     buffer,
@@ -246,6 +278,10 @@ test('ArrowGPUVector wraps interleaved buffers', t => {
   t.ok(arrow.DataType.isBinary(gpuVector.type), 'uses Arrow Binary for interleaved storage');
   t.equal(gpuVector.length, 2, 'exposes row count');
   t.equal(gpuVector.stride, 16, 'uses byte stride as opaque row stride');
+  t.equal(gpuVector.data.length, 1, 'exposes one opaque GPU data view');
+  t.ok(arrow.DataType.isBinary(gpuVector.data[0].type), 'data view uses Arrow Binary');
+  t.ok(gpuVector.data[0].buffer instanceof DynamicBuffer, 'data view keeps a dynamic wrapper');
+  t.equal(gpuVector.data[0].buffer.buffer, buffer, 'data view resolves to the interleaved buffer');
   t.deepEqual(
     gpuVector.bufferLayout,
     {
@@ -263,9 +299,9 @@ test('ArrowGPUVector wraps interleaved buffers', t => {
   t.end();
 });
 
-test('ArrowGPUVector readAsync rejects interleaved vectors', async t => {
+test('GPUVector readAsync rejects interleaved vectors', async t => {
   const device = new NullDevice({});
-  const gpuVector = new ArrowGPUVector({
+  const gpuVector = new GPUVector({
     type: 'interleaved',
     name: 'instances',
     buffer: device.createBuffer({byteLength: 32}),
@@ -292,10 +328,10 @@ test('ArrowGPUVector readAsync rejects interleaved vectors', async t => {
   t.end();
 });
 
-test('ArrowGPUVector transfers buffer ownership between same-buffer views', t => {
+test('GPUVector transfers buffer ownership between same-buffer views', t => {
   const device = new NullDevice({});
   const buffer = device.createBuffer({byteLength: 16});
-  const source = new ArrowGPUVector({
+  const source = new GPUVector({
     type: 'buffer',
     name: 'source',
     buffer,
@@ -303,7 +339,7 @@ test('ArrowGPUVector transfers buffer ownership between same-buffer views', t =>
     length: 4,
     ownsBuffer: true
   });
-  const target = new ArrowGPUVector({
+  const target = new GPUVector({
     type: 'buffer',
     name: 'target',
     buffer,
@@ -322,10 +358,76 @@ test('ArrowGPUVector transfers buffer ownership between same-buffer views', t =>
   t.end();
 });
 
-test('ArrowGPUVector exposes primitive vector length and stride', t => {
+test('GPUVector addData aggregates GPU chunks without adopting their buffers', t => {
+  const device = new NullDevice({});
+  const firstBuffer = device.createBuffer({byteLength: 8});
+  const secondBuffer = device.createBuffer({byteLength: 8});
+  const firstData = new GPUData({
+    buffer: new DynamicBuffer(device, {buffer: firstBuffer, ownsBuffer: false}),
+    arrowType: new arrow.Float32(),
+    length: 2
+  });
+  const secondData = new GPUData({
+    buffer: new DynamicBuffer(device, {buffer: secondBuffer, ownsBuffer: false}),
+    arrowType: new arrow.Float32(),
+    length: 2
+  });
+  const gpuVector = new GPUVector({
+    type: 'data',
+    name: 'values',
+    arrowType: new arrow.Float32(),
+    data: [firstData]
+  });
+
+  gpuVector.addData(secondData);
+
+  t.equal(gpuVector.length, 4, 'updates aggregate row count');
+  t.equal(gpuVector.data.length, 2, 'preserves each appended GPU data chunk');
+  t.throws(
+    () => gpuVector.buffer,
+    /multi-buffer vectors/,
+    'does not expose a misleading single direct buffer'
+  );
+
+  gpuVector.destroy();
+  t.notOk(firstBuffer.destroyed, 'does not adopt ownership of the first data buffer');
+  t.notOk(secondBuffer.destroyed, 'does not adopt ownership of the appended data buffer');
+  firstBuffer.destroy();
+  secondBuffer.destroy();
+  t.end();
+});
+
+test('GPUVector addToLastData appends Arrow data into appendable vector storage', t => {
+  const device = new NullDevice({});
+  const firstData = arrow.makeVector(new Float32Array([1, 2])).data[0];
+  const secondData = arrow.makeVector(new Float32Array([3, 4])).data[0];
+  const gpuVector = new GPUVector({
+    type: 'appendable',
+    name: 'values',
+    device,
+    arrowType: new arrow.Float32(),
+    initialCapacityRows: 1
+  });
+
+  gpuVector.addToLastData(firstData);
+  gpuVector.addToLastData(secondData);
+
+  t.ok(gpuVector.buffer instanceof DynamicBuffer, 'uses stable DynamicBuffer storage');
+  t.equal(gpuVector.length, 4, 'tracks rows appended into the final mutable batch');
+  t.equal(gpuVector.data.length, 2, 'exposes one GPU data range per appended Arrow chunk');
+  t.equal(gpuVector.data[1].byteOffset, 8, 'tracks the later append byte offset');
+  t.ok((gpuVector.capacityRows ?? 0) >= 4, 'grows appendable capacity as needed');
+
+  gpuVector.resetLastBatch();
+  t.equal(gpuVector.length, 0, 'clears logical rows without dropping the allocation');
+  gpuVector.destroy();
+  t.end();
+});
+
+test('GPUVector exposes primitive vector length and stride', t => {
   const device = new NullDevice({});
   const vector = arrow.makeVector(new Float32Array([1, 2, 3]));
-  const gpuVector = new ArrowGPUVector(device, vector);
+  const gpuVector = new GPUVector(device, vector);
 
   t.equal(gpuVector.length, 3, 'exposes the primitive vector length');
   t.equal(gpuVector.stride, 1, 'exposes primitive vector stride as 1');

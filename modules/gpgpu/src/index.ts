@@ -3,8 +3,8 @@
 // Copyright (c) vis.gl contributors
 
 // Resources
-export {GPUTable} from './operation/gpu-table';
-export type {GPUTableProps} from './operation/gpu-table';
+export {GPUTableEvaluator} from './operation/gpu-table';
+export type {GPUTableEvaluatorProps} from './operation/gpu-table';
 
 // Operations
 export {add} from './operations/add';

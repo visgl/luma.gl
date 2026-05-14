@@ -4,7 +4,7 @@
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {
-  ArrowGPUTable,
+  GPUTable,
   ArrowModel,
   makeArrowFixedSizeListVector,
   StreamingArrowGPUTable,
@@ -63,9 +63,9 @@ test('ArrowModel creates a Model from an Arrow table', t => {
     shaderLayout: SHADER_LAYOUT,
     arrowTable
   });
-  const positionsBuffer = model.arrowGPUTable!.gpuVectors['positions'].buffer;
+  const positionsBuffer = model.arrowGPUTable!.batches[0].gpuVectors['positions'].buffer;
 
-  t.ok(model.arrowGPUTable instanceof ArrowGPUTable, 'creates an ArrowGPUTable');
+  t.ok(model.arrowGPUTable instanceof GPUTable, 'creates an GPUTable');
   t.deepEqual(
     model.bufferLayout,
     [
@@ -129,7 +129,7 @@ test('ArrowModel updates Arrow table props', t => {
     shaderLayout: SHADER_LAYOUT,
     arrowTable
   });
-  const previousPositionsBuffer = model.arrowGPUTable!.gpuVectors['positions'].buffer;
+  const previousPositionsBuffer = model.arrowGPUTable!.batches[0].gpuVectors['positions'].buffer;
   const previousPipeline = model.pipeline;
 
   model.setProps({arrowTable: nextArrowTable});
@@ -187,6 +187,158 @@ test('ArrowModel consumes a StreamingArrowGPUTable', t => {
   t.end();
 });
 
+test('ArrowModel consumes an appendable GPUTable and tracks trailing batch growth', t => {
+  const device = new NullDevice({});
+  const firstTable = makeArrowModelTable(1);
+  const nextTable = makeArrowModelTable(3);
+  const arrowGPUTable = new GPUTable({
+    type: 'appendable',
+    device,
+    schema: firstTable.schema,
+    shaderLayout: SHADER_LAYOUT
+  });
+  arrowGPUTable.addToLastBatch(firstTable.batches[0]);
+  const model = new ArrowModel(device, {
+    id: 'arrow-model-appendable-table-test',
+    vs: DUMMY_VS,
+    fs: DUMMY_FS,
+    shaderLayout: SHADER_LAYOUT,
+    arrowGPUTable
+  });
+  const initialNeedsRedraw = model.needsRedraw();
+
+  arrowGPUTable.addToLastBatch(nextTable.batches[0]);
+
+  t.equal(model.arrowGPUTable, arrowGPUTable, 'uses the appendable regular GPU table');
+  t.equal(model.instanceCount, 1, 'initially infers rows from the trailing appendable batch');
+  t.ok(model.needsRedraw(), 'detects writes to appendable DynamicBuffer attributes');
+  t.equal(model.instanceCount, 4, 'refreshes inferred rows after appendable batch growth');
+
+  model.destroy();
+  arrowGPUTable.destroy();
+  t.ok(initialNeedsRedraw, 'model starts needing redraw');
+  t.end();
+});
+
+test('ArrowModel consumes an existing GPUTable without taking ownership', t => {
+  const device = new NullDevice({});
+  const arrowTable = makeArrowModelTable();
+  const arrowGPUTable = new GPUTable(device, arrowTable, {shaderLayout: SHADER_LAYOUT});
+  const positionsBuffer = arrowGPUTable.batches[0].gpuVectors['positions'].buffer;
+  const model = new ArrowModel(device, {
+    id: 'arrow-model-existing-gpu-table-test',
+    vs: DUMMY_VS,
+    fs: DUMMY_FS,
+    shaderLayout: SHADER_LAYOUT,
+    arrowGPUTable
+  });
+
+  t.equal(model.arrowGPUTable, arrowGPUTable, 'uses the provided GPU table');
+  t.equal(model.instanceCount, arrowGPUTable.numRows, 'infers rows from the provided GPU table');
+
+  model.destroy();
+  t.notOk(positionsBuffer.destroyed, 'does not destroy externally provided GPU tables');
+  arrowGPUTable.destroy();
+  t.ok(positionsBuffer.destroyed, 'external owner can destroy the GPU table');
+  t.end();
+});
+
+test('ArrowModel draws preserved Arrow table batches by rebinding batch-owned buffers', t => {
+  const device = new NullDevice({});
+  const firstBatch = makeArrowModelTable(1).batches[0];
+  const secondBatch = makeArrowModelTable(2).batches[0];
+  const arrowTable = new arrow.Table([firstBatch, secondBatch]);
+  const model = new ArrowModel(device, {
+    id: 'arrow-model-batched-draw-test',
+    vs: DUMMY_VS,
+    fs: DUMMY_FS,
+    shaderLayout: SHADER_LAYOUT,
+    arrowTable
+  });
+  const renderPass = device.getDefaultRenderPass();
+  const previousPipeline = model.pipeline;
+  const previousBufferLayout = model.bufferLayout;
+  const positionsBuffers = model.arrowGPUTable!.batches.map(
+    batch => batch.gpuVectors['positions'].buffer
+  );
+  const drawCalls: {
+    instanceCount?: number;
+    buffer?: unknown;
+  }[] = [];
+  const draw = model.pipeline.draw.bind(model.pipeline);
+
+  model.pipeline.draw = options => {
+    const positionsBinding = options.vertexArray.attributes[0];
+    drawCalls.push({
+      instanceCount: options.instanceCount,
+      buffer: positionsBinding
+    });
+    return draw(options);
+  };
+
+  t.ok(model.drawBatches(renderPass), 'draws every retained Arrow record batch');
+  t.deepEqual(
+    drawCalls.map(drawCall => drawCall.instanceCount),
+    [1, 2],
+    'uses each batch row count as the draw instance count'
+  );
+  t.deepEqual(
+    drawCalls.map(drawCall => drawCall.buffer),
+    positionsBuffers,
+    'binds each preserved batch GPU buffer directly'
+  );
+  t.equal(model.pipeline, previousPipeline, 'does not rebuild the render pipeline');
+  t.deepEqual(model.bufferLayout, previousBufferLayout, 'keeps the existing buffer layout');
+  t.equal(model.instanceCount, arrowTable.numRows, 'restores the table-level inferred row count');
+  t.equal(
+    model.vertexArray.attributes[0],
+    model.arrowGPUTable!.attributes['positions'],
+    'restores table-level model attributes after batched drawing'
+  );
+
+  drawCalls.length = 0;
+  model.arrowGPUTable!.packBatches();
+  t.ok(model.drawBatches(renderPass), 'draws the explicitly packed table');
+  t.deepEqual(
+    drawCalls.map(drawCall => drawCall.instanceCount),
+    [3],
+    'packing reduces the preserved table to one draw'
+  );
+
+  renderPass.destroy();
+  model.destroy();
+  t.end();
+});
+
+test('ArrowModel rejects batch drawing for streaming Arrow tables', t => {
+  const device = new NullDevice({});
+  const arrowTable = makeArrowModelTable(1);
+  const streamingArrowGPUTable = new StreamingArrowGPUTable({
+    device,
+    schema: arrowTable.schema,
+    shaderLayout: SHADER_LAYOUT
+  });
+  const model = new ArrowModel(device, {
+    id: 'arrow-model-streaming-batched-draw-test',
+    vs: DUMMY_VS,
+    fs: DUMMY_FS,
+    shaderLayout: SHADER_LAYOUT,
+    streamingArrowGPUTable
+  });
+  const renderPass = device.getDefaultRenderPass();
+
+  t.throws(
+    () => model.drawBatches(renderPass),
+    /requires a non-streaming GPUTable/,
+    'streaming tables do not expose static draw batch views'
+  );
+
+  renderPass.destroy();
+  model.destroy();
+  streamingArrowGPUTable.destroy();
+  t.end();
+});
+
 test('ArrowModel creates a Model from a Mesh Arrow table', t => {
   const device = new NullDevice({});
   const arrowMesh = makeArrowModelMeshTable();
@@ -199,7 +351,7 @@ test('ArrowModel creates a Model from a Mesh Arrow table', t => {
   });
 
   t.ok(model.arrowGeometry, 'creates ArrowGeometry');
-  t.equal(model.arrowGPUTable, undefined, 'does not create ArrowGPUTable for mesh input');
+  t.equal(model.arrowGPUTable, undefined, 'does not create GPUTable for mesh input');
   t.equal(model.vertexCount, 3, 'uses Mesh Arrow index count as vertex count');
   t.ok(model.vertexArray.indexBuffer, 'binds Mesh Arrow index buffer');
   t.deepEqual(
@@ -261,7 +413,7 @@ test('ArrowModel validates required shader layout and duplicate attributes', t =
         arrowMesh: makeArrowModelMeshTable(),
         arrowTable
       }),
-    /only one of arrowMesh, arrowTable, or streamingArrowGPUTable/,
+    /only one of arrowMesh, arrowTable, arrowGPUTable, or streamingArrowGPUTable/,
     'rejects duplicate Arrow sources'
   );
 

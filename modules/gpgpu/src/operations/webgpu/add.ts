@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {OperationHandler} from '../../operation/operation';
-import {GPUTable} from '../../operation/gpu-table';
+import {GPUTableEvaluator} from '../../operation/gpu-table';
 import {runComputation} from './common';
 
 const source = `\
@@ -12,7 +12,7 @@ fn add(x: {TYPE}, y: {TYPE}) -> {TYPE} {
 }
 `;
 
-export const add: OperationHandler<{x: GPUTable; y: GPUTable}> = async ({
+export const add: OperationHandler<{x: GPUTableEvaluator; y: GPUTableEvaluator}> = async ({
   inputs,
   output,
   target

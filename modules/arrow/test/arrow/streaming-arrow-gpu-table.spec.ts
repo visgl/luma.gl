@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {ArrowGPUTable, StreamingArrowGPUTable, StreamingArrowGPUVector} from '@luma.gl/arrow';
+import {GPUData, GPUTable, StreamingArrowGPUTable, StreamingArrowGPUVector} from '@luma.gl/arrow';
 import type {ShaderLayout} from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/engine';
 import {NullDevice} from '@luma.gl/test-utils';
@@ -28,6 +28,11 @@ test('StreamingArrowGPUVector appends one Arrow Data chunk without copying the s
   vector.appendData(data);
 
   t.equal(vector.length, 4, 'updates row count');
+  t.equal(vector.data.length, 1, 'adds one GPU data range');
+  t.ok(vector.data[0] instanceof GPUData, 'uses GPUData streaming ranges');
+  t.equal(vector.data[0].buffer, vector.buffer, 'data range keeps the stable DynamicBuffer');
+  t.equal(vector.data[0].byteOffset, 0, 'data range starts at the append offset');
+  t.equal(vector.data[0].length, 4, 'data range tracks appended rows');
   t.equal(writes.length, 1, 'writes one source chunk');
   t.equal(writes[0].data.buffer, values.buffer, 'writes a view over the Arrow value buffer');
   t.equal(writes[0].byteOffset, 0, 'writes at the current append offset');
@@ -53,6 +58,8 @@ test('StreamingArrowGPUVector appends chunked Arrow vectors one write per Data c
   gpuVector.appendVector(arrowVector);
 
   t.equal(gpuVector.length, 5, 'updates row count across chunks');
+  t.equal(gpuVector.data.length, 2, 'preserves appended Arrow chunk boundaries');
+  t.equal(gpuVector.data[1].byteOffset, firstValues.byteLength, 'tracks second GPU range');
   t.equal(writes.length, 2, 'writes each chunk separately');
   t.equal(writes[0].data.buffer, firstValues.buffer, 'writes first Arrow buffer directly');
   t.equal(writes[1].data.buffer, secondValues.buffer, 'writes second Arrow buffer directly');
@@ -153,6 +160,8 @@ test('StreamingArrowGPUVector grows capacity without replacing the public Dynami
   );
 
   t.equal(vector.buffer, dynamicBuffer, 'keeps the public DynamicBuffer stable');
+  t.equal(vector.data[0].buffer, dynamicBuffer, 'old ranges keep the dynamic buffer wrapper');
+  t.equal(vector.data[1].buffer, dynamicBuffer, 'new ranges share the dynamic buffer wrapper');
   t.notEqual(
     dynamicBuffer.buffer,
     initialBackingBuffer,
@@ -179,6 +188,7 @@ test('StreamingArrowGPUVector reset clears length and keeps reusable allocation'
   vector.reset();
 
   t.equal(vector.length, 0, 'clears logical rows');
+  t.equal(vector.data.length, 0, 'clears streaming GPU data ranges');
   t.equal(vector.buffer, dynamicBuffer, 'keeps DynamicBuffer allocation');
 
   vector.destroy();
@@ -262,7 +272,7 @@ test('StreamingArrowGPUVector rejects nullable and unsupported sources', t => {
   t.end();
 });
 
-test('StreamingArrowGPUTable matches ArrowGPUTable selection and arrowPaths behavior', t => {
+test('StreamingArrowGPUTable matches GPUTable selection and arrowPaths behavior', t => {
   const device = new NullDevice({});
   const table = makeGpuMetadataTable([0, 0, 1, 1], [255, 0, 0, 255, 0, 255, 0, 255]);
   const shaderLayout: ShaderLayout = {
@@ -275,7 +285,7 @@ test('StreamingArrowGPUTable matches ArrowGPUTable selection and arrowPaths beha
     shaderLayout,
     arrowPaths: {instanceColors: 'colors'}
   });
-  const staticTable = new ArrowGPUTable(device, table, {
+  const staticTable = new GPUTable(device, table, {
     shaderLayout,
     arrowPaths: {instanceColors: 'colors'}
   });

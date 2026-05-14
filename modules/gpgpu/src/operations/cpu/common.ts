@@ -3,21 +3,21 @@
 // Copyright (c) vis.gl contributors
 
 import type {Buffer, TypedArray} from '@luma.gl/core';
-import {GPUTable} from '../../operation/gpu-table';
+import {GPUTableEvaluator} from '../../operation/gpu-table';
 
 type CPUTransformProps =
   | {
       elementWise: true;
       func: (...args: number[]) => number;
-      inputs: {[name: string]: GPUTable};
-      output: GPUTable;
+      inputs: {[name: string]: GPUTableEvaluator};
+      output: GPUTableEvaluator;
       outputBuffer: Buffer;
     }
   | {
       elementWise?: false;
       func: (...args: TypedArray[]) => void;
-      inputs: {[name: string]: GPUTable};
-      output: GPUTable;
+      inputs: {[name: string]: GPUTableEvaluator};
+      output: GPUTableEvaluator;
       outputBuffer: Buffer;
     };
 
@@ -57,7 +57,7 @@ export function runCPUTransform({
   outputBuffer.write(target);
 }
 
-function getValueAtVertex(source: GPUTable, index: number): TypedArray {
+function getValueAtVertex(source: GPUTableEvaluator, index: number): TypedArray {
   const value = source.value!;
   const valueSize = source.size;
   const valueOffset = source.offset / source.ValueType.BYTES_PER_ELEMENT;

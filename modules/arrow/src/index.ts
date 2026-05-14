@@ -21,18 +21,32 @@ export {
 } from './arrow/arrow-fixed-size-list';
 
 export {
-  ArrowGPUVector,
-  type ArrowGPUVectorBufferProps,
-  type ArrowGPUVectorCreateProps,
-  type ArrowGPUVectorFromArrowProps,
-  type ArrowGPUVectorFromBufferProps,
-  type ArrowGPUVectorFromInterleavedProps,
-  type ArrowGPUVectorProps
+  GPUData,
+  GPUVector,
+  type GPUDataFromBufferProps,
+  type GPUVectorBufferProps,
+  type GPUVectorCreateProps,
+  type GPUVectorDynamicBufferProps,
+  type GPUVectorFromAppendableProps,
+  type GPUVectorFromArrowProps,
+  type GPUVectorFromBufferProps,
+  type GPUVectorFromDataProps,
+  type GPUVectorFromInterleavedProps,
+  type GPUVectorProps
 } from './arrow/arrow-gpu-vector';
 export {
-  ArrowGPUTable,
-  type ArrowGPUTableFromVectorsProps,
-  type ArrowGPUTableProps
+  GPURecordBatch,
+  type GPURecordBatchAppendableProps,
+  type GPURecordBatchFromVectorsProps,
+  type GPURecordBatchProps
+} from './arrow/arrow-gpu-record-batch';
+export {
+  GPUTable,
+  type GPUTableAppendableProps,
+  type GPUTableDetachBatchesOptions,
+  type GPUTableFromVectorsProps,
+  type GPUTablePackBatchesOptions,
+  type GPUTableProps
 } from './arrow/plain-gpu-table';
 export {ArrowGeometry, type ArrowGeometryProps} from './arrow/arrow-geometry';
 export type {ArrowMeshAttribute, ArrowMeshTable, ArrowMeshTopology} from './arrow/arrow-mesh-types';

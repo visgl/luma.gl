@@ -5,7 +5,7 @@
 import {Buffer, SignedDataType} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {ShaderModule} from '@luma.gl/shadertools';
-import {GPUTable} from '../../operation/gpu-table';
+import {GPUTableEvaluator} from '../../operation/gpu-table';
 
 const WORKGROUP_SIZE = 64;
 
@@ -19,8 +19,8 @@ export function runComputation({
 }: {
   module: ShaderModule;
   elementWise?: boolean;
-  inputs: {[name: string]: GPUTable};
-  output: GPUTable;
+  inputs: {[name: string]: GPUTableEvaluator};
+  output: GPUTableEvaluator;
   /** If specified, coerce all parameters to operation to this type.
    * Default to output's data type.
    */
@@ -98,7 +98,7 @@ ${getComputeBlock(module.name, inputs, output, elementWise)}
   computation.destroy();
 }
 
-function getInputBinding(name: string, input: GPUTable, index: number): string {
+function getInputBinding(name: string, input: GPUTableEvaluator, index: number): string {
   if (input.isConstant) {
     return '';
   }
@@ -106,7 +106,7 @@ function getInputBinding(name: string, input: GPUTable, index: number): string {
   return `@group(0) @binding(${index}) var<storage, read> ${name}: array<${inputType}>;`;
 }
 
-function getInputAccessor(name: string, input: GPUTable, asType: SignedDataType): string {
+function getInputAccessor(name: string, input: GPUTableEvaluator, asType: SignedDataType): string {
   const type = getWGSLType(asType);
   const castToType = input.type === asType ? '' : type;
   const stride = input.stride / input.ValueType.BYTES_PER_ELEMENT;
@@ -130,12 +130,12 @@ ${Array.from({length: input.size}, (_, elementIndex) =>
 }`;
 }
 
-function getOutputBinding(output: GPUTable, bindingIndex: number): string {
+function getOutputBinding(output: GPUTableEvaluator, bindingIndex: number): string {
   const type = getWGSLType(output.type);
   return `@group(0) @binding(${bindingIndex}) var<storage, read_write> result: array<${type}>;`;
 }
 
-function getOutputWriter(output: GPUTable): string {
+function getOutputWriter(output: GPUTableEvaluator): string {
   const stride = output.stride / output.ValueType.BYTES_PER_ELEMENT;
   const offset = output.offset / output.ValueType.BYTES_PER_ELEMENT;
   const type = getWGSLType(output.type);
@@ -147,8 +147,8 @@ ${Array.from({length: output.size}, (_, elementIndex) => `  result[rowOffset + $
 
 function getComputeBlock(
   operationName: string,
-  inputs: {[name: string]: GPUTable},
-  output: GPUTable,
+  inputs: {[name: string]: GPUTableEvaluator},
+  output: GPUTableEvaluator,
   elementWise: boolean
 ): string {
   let result = '';
@@ -177,7 +177,7 @@ function getComputeBlock(
   return result.trimEnd();
 }
 
-function getConstantValues(input: GPUTable, asType: string): string {
+function getConstantValues(input: GPUTableEvaluator, asType: string): string {
   const values = input.value;
   if (!values) {
     throw new Error(`Constant input ${input} is missing CPU values`);

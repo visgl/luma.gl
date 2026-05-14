@@ -3,9 +3,22 @@
 Apache Arrow utilities for luma.gl.
 
 The module can derive GPU `BufferLayout` entries from Arrow schemas and create
-GPU-side `ArrowGPUVector`, `ArrowGPUTable`, and `ArrowModel` objects from
-compatible Arrow columns. Arrow tables and vectors are construction inputs; the
-GPU objects retain GPU buffers plus Arrow-derived type and schema metadata.
+GPU-side `GPUData`, `GPUVector`, `GPURecordBatch`,
+`GPUTable`, and `ArrowModel` objects from compatible Arrow columns. Arrow
+tables and vectors are construction inputs; the GPU objects retain GPU buffers
+plus Arrow-derived type and schema metadata. `GPUTable.batches` preserves
+source record-batch boundaries as real GPU batches with batch-local buffers.
+`GPUTable.packBatches()` explicitly replaces those batches with fewer
+packed batches when callers want a coarser draw surface.
+Low-level incremental assembly can use `GPUTable.addBatch()`,
+`GPUVector.addData()`, and appendable
+`GPUVector.addToLastData()` storage without minting replacement tables.
+`GPUTable.select()` destructively narrows selected columns, while
+`detachVector()` and `detachBatches()` remove live GPU objects from the table and
+return ownership to the caller.
+Append-only uploads can use `GPUTable({type: 'appendable', ...})` plus
+`addToLastBatch()` so the trailing GPU batch grows through stable `DynamicBuffer`
+attributes without switching to a separate table abstraction.
 Uploaded vectors own their generated buffers. Wrapped-buffer vectors are
 non-owning by default unless ownership is explicitly requested or transferred by
 an in-place operation.

@@ -2,11 +2,11 @@
 
 This page is the central API reference for the operations supported by `@luma.gl/gpgpu`.
 
-Operations are lazy. Calling an operation such as `add()` or `interleave()` returns a new [`GPUTable`](/docs/api-reference/gpgpu/gpu-table) that describes the result, but no GPU work is performed until that table is evaluated.
+Operations are lazy. Calling an operation such as `add()` or `interleave()` returns a new [`GPUTableEvaluator`](/docs/api-reference/gpgpu/gpu-table) that describes the result, but no GPU work is performed until that table is evaluated.
 
 ## Common Behavior
 
-- Each operation returns a new `GPUTable`.
+- Each operation returns a new `GPUTableEvaluator`.
 - Input tables can be constant or per-row.
 - Output evaluation is backend-driven through `backendRegistry`.
 - Operations can be chained to build larger compute graphs.
@@ -14,7 +14,7 @@ Operations are lazy. Calling an operation such as `add()` or `interleave()` retu
 
 ## `add`
 
-### `add(...args: GPUTable[]): GPUTable`
+### `add(...args: GPUTableEvaluator[]): GPUTableEvaluator`
 
 Adds corresponding elements from two or more input tables.
 
@@ -28,16 +28,16 @@ The output:
 #### Example
 
 ```ts
-const a = GPUTable.fromArray(new Float32Array([1, 2, 3, 4]), {size: 2});
-const b = GPUTable.fromConstant([10, 20]);
-const c = GPUTable.fromConstant([100, 200]);
+const a = GPUTableEvaluator.fromArray(new Float32Array([1, 2, 3, 4]), {size: 2});
+const b = GPUTableEvaluator.fromConstant([10, 20]);
+const c = GPUTableEvaluator.fromConstant([100, 200]);
 
 const result = add(a, b, c);
 ```
 
 ## `interleave`
 
-### `interleave(...args: GPUTable[]): GPUTable`
+### `interleave(...args: GPUTableEvaluator[]): GPUTableEvaluator`
 
 Concatenates rows from multiple input tables in argument order.
 
@@ -56,23 +56,23 @@ The output:
 #### Example
 
 ```ts
-const xyz = GPUTable.fromArray(new Float32Array([
+const xyz = GPUTableEvaluator.fromArray(new Float32Array([
   0, 0, 0,
   1, 0, 0
 ]), {size: 3});
 
-const id = GPUTable.fromArray(new Float32Array([5, 6]), {size: 1});
+const id = GPUTableEvaluator.fromArray(new Float32Array([5, 6]), {size: 1});
 
 const result = interleave(xyz, id);
 ```
 
 ## `fround`
 
-### `fround(x: GPUTable): GPUTable`
+### `fround(x: GPUTableEvaluator): GPUTableEvaluator`
 
 Splits float64 values into float32 high and low parts.
 
-This operation expects the input table to use `uint32` storage, which is how `GPUTable.fromArray()` represents `Float64Array` input internally.
+This operation expects the input table to use `uint32` storage, which is how `GPUTableEvaluator.fromArray()` represents `Float64Array` input internally.
 
 For each float64 value `d`, the output stores all high parts first, followed by all low parts:
 
@@ -84,7 +84,7 @@ This is useful for workflows that need fp64-style precision while running on flo
 #### Example
 
 ```ts
-const source = GPUTable.fromArray(new Float64Array([Math.PI, Math.E]), {size: 1});
+const source = GPUTableEvaluator.fromArray(new Float64Array([Math.PI, Math.E]), {size: 1});
 const result = fround(source);
 ```
 

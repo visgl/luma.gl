@@ -7,9 +7,9 @@ import type {TypedArray, TypedArrayConstructor} from '@math.gl/types';
 import {bufferPool} from '../utils/buffer-pool';
 import type {Operation} from './operation';
 
-/** Properties used to construct a {@link GPUTable}. */
-export type GPUTableProps = {
-  /** Optional debug name used by {@link GPUTable.toString}. */
+/** Properties used to construct a {@link GPUTableEvaluator}. */
+export type GPUTableEvaluatorProps = {
+  /** Optional debug name used by {@link GPUTableEvaluator.toString}. */
   id?: string;
   /** Scalar element type for every stored value. */
   type: SignedDataType;
@@ -26,7 +26,7 @@ export type GPUTableProps = {
   /** CPU buffer that initializes the table, required unless `source` is supplied. */
   value?: TypedArray;
   /** Lazy operation or table whose output initializes this table, required unless `value` is supplied. */
-  source?: Operation | GPUTable | null;
+  source?: Operation | GPUTableEvaluator | null;
   /** Whether every row should read the same value. */
   isConstant?: boolean;
   /** Number of logical rows, inferred for constants and CPU-backed tables when omitted. */
@@ -37,10 +37,10 @@ export type GPUTableProps = {
  * Device-agnostic, immutable 2D numeric table used as input and output for lazy GPGPU operations.
  *
  * A table describes row layout and a data source, but does not allocate or run GPU work until
- * {@link GPUTable.evaluate} is called. Operation functions such as `add()` return new tables whose
+ * {@link GPUTableEvaluator.evaluate} is called. Operation functions such as `add()` return new tables whose
  * `source` points at the deferred operation.
  */
-export class GPUTable {
+export class GPUTableEvaluator {
   /** Scalar element type for each stored value. */
   readonly type: SignedDataType;
   /** Number of scalar elements in each logical row. */
@@ -55,7 +55,7 @@ export class GPUTable {
   readonly length: number;
   /** Total bytes needed for the table storage. */
   readonly byteLength: number;
-  /** TypedArray constructor for CPU representation, derived from {@link GPUTable.type}. */
+  /** TypedArray constructor for CPU representation, derived from {@link GPUTableEvaluator.type}. */
   readonly ValueType: TypedArrayConstructor;
 
   /** User-assigned id for easy debugging */
@@ -66,7 +66,7 @@ export class GPUTable {
   /** CPU buffer, either provided by the user or read back from the GPU */
   protected _value?: TypedArray;
   /** Operation whose output is used to fill the vector, required unless `value` is supplied */
-  protected _source: Operation | GPUTable | null = null;
+  protected _source: Operation | GPUTableEvaluator | null = null;
   /** GPU buffer */
   private _buffer?: Buffer;
 
@@ -84,8 +84,8 @@ export class GPUTable {
       size = 1,
       offset = 0,
       stride = 0
-    }: Partial<Pick<GPUTableProps, 'type' | 'size' | 'offset' | 'stride'>>
-  ): GPUTable {
+    }: Partial<Pick<GPUTableEvaluatorProps, 'type' | 'size' | 'offset' | 'stride'>>
+  ): GPUTableEvaluator {
     if (Array.isArray(value)) {
       type = type || 'float32';
       const ArrayType = getTypedArrayFromDataType(type);
@@ -100,7 +100,7 @@ export class GPUTable {
     } else {
       type = type || getDataTypeFromTypedArray(value);
     }
-    return new GPUTable({
+    return new GPUTableEvaluator({
       type,
       size,
       offset,
@@ -115,12 +115,15 @@ export class GPUTable {
    * @param value - Scalar or row value.
    * @param type - Scalar element type used for the CPU representation.
    */
-  static fromConstant(value: number | number[], type: SignedDataType = 'float32'): GPUTable {
+  static fromConstant(
+    value: number | number[],
+    type: SignedDataType = 'float32'
+  ): GPUTableEvaluator {
     const ArrayType = getTypedArrayFromDataType(type);
     if (!Array.isArray(value)) {
       value = [value];
     }
-    return new GPUTable({
+    return new GPUTableEvaluator({
       isConstant: true,
       type,
       size: value.length,
@@ -128,15 +131,15 @@ export class GPUTable {
     });
   }
 
-  /** TODO - Construct a new GPUTable from a loaders.gl Table/BatchedTable. */
-  // static from(table: Table, columnName: string | number): GPUTable
+  /** TODO - Construct a new GPUTableEvaluator from a loaders.gl Table/BatchedTable. */
+  // static from(table: Table, columnName: string | number): GPUTableEvaluator
 
   /**
    * Creates a table from explicit row layout and source information.
    *
-   * Prefer {@link GPUTable.fromArray} or {@link GPUTable.fromConstant} for CPU-backed tables.
+   * Prefer {@link GPUTableEvaluator.fromArray} or {@link GPUTableEvaluator.fromConstant} for CPU-backed tables.
    */
-  constructor(props: GPUTableProps) {
+  constructor(props: GPUTableEvaluatorProps) {
     const {
       id,
       type,
@@ -166,7 +169,7 @@ export class GPUTable {
         length = 1;
       } else {
         if (!value) {
-          throw new Error('GPUTable: length not defined');
+          throw new Error('GPUTableEvaluator: length not defined');
         }
         length = Math.ceil(value.byteLength / this.stride);
       }
@@ -181,7 +184,7 @@ export class GPUTable {
     return this._value;
   }
 
-  /** GPU buffer for the table. Only available after {@link GPUTable.evaluate} resolves. */
+  /** GPU buffer for the table. Only available after {@link GPUTableEvaluator.evaluate} resolves. */
   get buffer(): Buffer {
     if (!this._buffer) {
       throw new Error(`${this} not evaluated`);
@@ -197,11 +200,11 @@ export class GPUTable {
    */
   async evaluate(device: Device): Promise<void> {
     if (this._destroyed) {
-      throw new Error(`GPUTable ${this} already destroyed`);
+      throw new Error(`GPUTableEvaluator ${this} already destroyed`);
     }
     if (!this._buffer) {
       let buffer: Buffer;
-      if (this._source instanceof GPUTable) {
+      if (this._source instanceof GPUTableEvaluator) {
         await this._source.evaluate(device);
         buffer = this._source.buffer;
       } else {

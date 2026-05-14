@@ -3,7 +3,10 @@
 // Copyright (c) vis.gl contributors
 
 import * as arrow from 'apache-arrow';
+import {getArrowVectorBufferSource} from './arrow-gpu-data';
 import type {NumericArrowType} from './arrow-types';
+
+export {getArrowDataBufferSource, getArrowVectorBufferSource} from './arrow-gpu-data';
 
 const makeNumericData = arrow.makeData as <T extends NumericArrowType>(props: {
   type: T;
@@ -106,30 +109,5 @@ export function isArrowFixedSizeListVector<T extends NumericArrowType>(
 export function getArrowFixedSizeListValues<T extends NumericArrowType>(
   vector: arrow.Vector<arrow.FixedSizeList<T>>
 ): T['TArray'] {
-  const values = vector.getChildAt(0)?.data[0]?.values;
-  if (!values) {
-    throw new Error('Arrow FixedSizeList vector has no child values');
-  }
-  return values as T['TArray'];
-}
-
-export function getArrowVectorBufferSource<T extends NumericArrowType>(
-  vector: arrow.Vector<T>
-): T['TArray'];
-export function getArrowVectorBufferSource<T extends NumericArrowType>(
-  vector: arrow.Vector<arrow.FixedSizeList<T>>
-): T['TArray'];
-/** Return a typed array that can be passed directly to `device.createBuffer()`. */
-export function getArrowVectorBufferSource(vector: arrow.Vector): NumericArrowType['TArray'] {
-  if (arrow.DataType.isFixedSizeList(vector.type)) {
-    return getArrowFixedSizeListValues(
-      vector as arrow.Vector<arrow.FixedSizeList<NumericArrowType>>
-    );
-  }
-
-  const values = vector.data[0]?.values;
-  if (!values) {
-    throw new Error('Arrow vector has no values');
-  }
-  return values as NumericArrowType['TArray'];
+  return getArrowVectorBufferSource(vector);
 }

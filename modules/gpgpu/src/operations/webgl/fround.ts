@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {OperationHandler} from '../../operation/operation';
-import {GPUTable} from '../../operation/gpu-table';
+import {GPUTableEvaluator} from '../../operation/gpu-table';
 import {runBufferTransform} from './common';
 
 function isLittleEndian() {
@@ -189,7 +189,11 @@ void fround(in uint x[X_LEN], out float result[X_LEN]) {
 }
 `;
 
-export const fround: OperationHandler<{x: GPUTable}> = async ({inputs, output, target}) => {
+export const fround: OperationHandler<{x: GPUTableEvaluator}> = async ({
+  inputs,
+  output,
+  target
+}) => {
   runBufferTransform({
     module: {name: 'fround', vs},
     inputs,

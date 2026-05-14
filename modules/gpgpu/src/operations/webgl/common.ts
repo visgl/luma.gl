@@ -5,7 +5,7 @@
 import {SignedDataType, Buffer, BufferLayout} from '@luma.gl/core';
 import {BufferTransform} from '@luma.gl/engine';
 import {ShaderModule} from '@luma.gl/shadertools';
-import {GPUTable} from '../../operation/gpu-table';
+import {GPUTableEvaluator} from '../../operation/gpu-table';
 import {bufferPool} from '../../utils/buffer-pool';
 
 type QualifedVectorSize = 1 | 2 | 3 | 4;
@@ -20,8 +20,8 @@ export function runBufferTransform({
 }: {
   module: ShaderModule;
   elementWise?: boolean;
-  inputs: {[name: string]: GPUTable};
-  output: GPUTable;
+  inputs: {[name: string]: GPUTableEvaluator};
+  output: GPUTableEvaluator;
   /** If specified, coerce all parameters to operation to this type.
    * Default to output's data type.
    */
@@ -48,7 +48,7 @@ export function runBufferTransform({
     const input = inputs[name];
     modules.push(getInputModule(name, input.type, input.size, operationType));
     bufferLayout.push(getInputBufferLayout(name, input));
-    if (input instanceof GPUTable) {
+    if (input instanceof GPUTableEvaluator) {
       inputBuffers[name] = input.buffer;
     } else {
       placeholderBuffer =
@@ -216,7 +216,7 @@ void set_${name}(in ${outputType} v[${outSize}]) {
 }
 
 /** Returns BufferLayout that corresponds with the shader attributes from getInputModule */
-function getInputBufferLayout(name: string, source: GPUTable): BufferLayout {
+function getInputBufferLayout(name: string, source: GPUTableEvaluator): BufferLayout {
   const bufferLayout: BufferLayout = {
     name,
     stepMode: source.isConstant ? 'vertex' : 'instance',

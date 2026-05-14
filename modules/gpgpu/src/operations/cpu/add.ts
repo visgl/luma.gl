@@ -3,10 +3,10 @@
 // Copyright (c) vis.gl contributors
 
 import {OperationHandler} from '../../operation/operation';
-import {GPUTable} from '../../operation/gpu-table';
+import {GPUTableEvaluator} from '../../operation/gpu-table';
 import {runCPUTransform} from './common';
 
-export const add: OperationHandler<{x: GPUTable; y: GPUTable}> = async ({
+export const add: OperationHandler<{x: GPUTableEvaluator; y: GPUTableEvaluator}> = async ({
   inputs,
   output,
   target

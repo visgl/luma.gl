@@ -2,23 +2,29 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {GPUTable} from '../operation/gpu-table';
+import {GPUTableEvaluator} from '../operation/gpu-table';
 import {Operation} from '../operation/operation';
 import {deduceOutputProps} from '../utils/output-props';
 
 /** Deferred row interleave operation. */
-class InterleaveOperation extends Operation<{x: GPUTable; y: GPUTable}> {
+class InterleaveOperation extends Operation<{x: GPUTableEvaluator; y: GPUTableEvaluator}> {
   /** Operation name used for backend lookup. */
   name = 'interleave';
 
   /** Lazy output table for the interleaved result. */
-  output: GPUTable;
+  output: GPUTableEvaluator;
 
-  constructor(x: GPUTable, y: GPUTable) {
+  constructor(x: GPUTableEvaluator, y: GPUTableEvaluator) {
     super({x, y});
 
     const {isConstant, type, length} = deduceOutputProps(x, y);
-    this.output = new GPUTable({isConstant, type, size: x.size + y.size, length, source: this});
+    this.output = new GPUTableEvaluator({
+      isConstant,
+      type,
+      size: x.size + y.size,
+      length,
+      source: this
+    });
   }
 
   /** Returns a compact expression for debug output. */
@@ -32,9 +38,9 @@ class InterleaveOperation extends Operation<{x: GPUTable; y: GPUTable}> {
  * Concatenates each input row in argument order.
  *
  * The returned table is lazy; no CPU or GPU work is performed until
- * {@link GPUTable.evaluate} is called on the result.
+ * {@link GPUTableEvaluator.evaluate} is called on the result.
  */
-export function interleave(...args: GPUTable[]): GPUTable {
+export function interleave(...args: GPUTableEvaluator[]): GPUTableEvaluator {
   let result = args[0];
   for (let i = 1; i < args.length; i++) {
     result = new InterleaveOperation(result, args[i]).output;

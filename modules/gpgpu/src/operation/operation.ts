@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {Device, Buffer} from '@luma.gl/core';
-import {GPUTable} from './gpu-table';
+import {GPUTableEvaluator} from './gpu-table';
 import {backendRegistry} from './backend-registry';
 
 /** Backend implementation for a single lazy GPGPU operation. */
@@ -13,7 +13,7 @@ export type OperationHandler<InputsT extends Record<string, any> = any> = (args:
   /** Operation inputs. */
   inputs: InputsT;
   /** Logical output table describing the target layout. */
-  output: GPUTable;
+  output: GPUTableEvaluator;
   /** GPU buffer that receives operation output. */
   target: Buffer;
 }) => Promise<void>;
@@ -28,18 +28,18 @@ export abstract class Operation<InputsT extends Record<string, any> = Record<str
   /** Input table map for this operation. */
   inputs: InputsT;
   /** Input tables that need evaluation before this operation can run. */
-  dependencies: GPUTable[];
+  dependencies: GPUTableEvaluator[];
 
   constructor(inputs: InputsT) {
     this.inputs = inputs;
-    this.dependencies = Object.values(inputs).filter(i => i instanceof GPUTable);
+    this.dependencies = Object.values(inputs).filter(i => i instanceof GPUTableEvaluator);
   }
 
   /** Unique identifier of this operation, e.g. 'add' */
   abstract get name(): string;
 
   /** Logical output table produced by this operation. */
-  abstract get output(): GPUTable;
+  abstract get output(): GPUTableEvaluator;
 
   /** Human friendly string that describes this operation */
   abstract toString(): string;

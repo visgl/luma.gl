@@ -12,6 +12,11 @@ export function getArrowPaths(
   return getArrowPathsRecursive(data, []);
 }
 
+/** Returns all leaf field paths in an Arrow schema, using dot notation for nested structs. */
+export function getArrowSchemaPaths(schema: arrow.Schema): string[] {
+  return getArrowSchemaPathsRecursive(schema.fields, []);
+}
+
 /** Recursively returns all leaf paths below an Arrow data node. */
 export function getArrowPathsRecursive(arrowData: arrow.Data, currentPath: string[]): string[] {
   if (!arrow.DataType.isStruct(arrowData.type)) {
@@ -29,6 +34,34 @@ export function getArrowPathsRecursive(arrowData: arrow.Data, currentPath: strin
   }
 
   return nestedPaths;
+}
+
+/** Returns the schema leaf field at a dot-separated path, or `null` when it cannot resolve. */
+export function findArrowFieldByPath(
+  schemaOrTable: arrow.Schema | arrow.Table,
+  columnPath: string
+): arrow.Field | null {
+  const schema = schemaOrTable instanceof arrow.Table ? schemaOrTable.schema : schemaOrTable;
+  const path = decomposePath(columnPath);
+  let fields = schema.fields;
+  let resolvedField: arrow.Field | null = null;
+
+  for (let pathIndex = 0; pathIndex < path.length; pathIndex++) {
+    const key = path[pathIndex];
+    const isLeafField = pathIndex === path.length - 1;
+    resolvedField = fields.find(field => field.name === key) ?? null;
+    if (!resolvedField) {
+      return null;
+    }
+    if (!isLeafField) {
+      if (!arrow.DataType.isStruct(resolvedField.type)) {
+        return null;
+      }
+      fields = resolvedField.type.children;
+    }
+  }
+
+  return resolvedField && !arrow.DataType.isStruct(resolvedField.type) ? resolvedField : null;
 }
 
 /** Returns the Arrow data node at a dot-separated column path. */
@@ -150,4 +183,17 @@ export function getArrowDataArray(
 
 function decomposePath(path: string): string[] {
   return path.split('.');
+}
+
+function getArrowSchemaPathsRecursive(fields: arrow.Field[], currentPath: string[]): string[] {
+  const paths: string[] = [];
+  for (const field of fields) {
+    const fieldPath = [...currentPath, field.name];
+    if (arrow.DataType.isStruct(field.type)) {
+      paths.push(...getArrowSchemaPathsRecursive(field.type.children, fieldPath));
+    } else {
+      paths.push(fieldPath.join('.'));
+    }
+  }
+  return paths;
 }

@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 import {SignedDataType} from '@luma.gl/core';
 import {TypedArray} from '@math.gl/core';
-import {GPUTable, backendRegistry, webglBackend} from '@luma.gl/gpgpu';
+import {GPUTableEvaluator, backendRegistry, webglBackend} from '@luma.gl/gpgpu';
 import {webgpuBackend} from '../../src/operations/webgpu';
 
 backendRegistry.add('webgl', webglBackend);
@@ -22,15 +22,15 @@ export type TestData =
       type?: SignedDataType;
     };
 
-export function makeTable(source: TestData): GPUTable {
+export function makeTable(source: TestData): GPUTableEvaluator {
   if ('constant' in source) {
-    return GPUTable.fromConstant(source.constant, source.type);
+    return GPUTableEvaluator.fromConstant(source.constant, source.type);
   }
-  return GPUTable.fromArray(source.value, source);
+  return GPUTableEvaluator.fromArray(source.value, source);
 }
 
 /** Check table value against definition, returns error if any */
-export function verifyTableValue(table: GPUTable, expected: TestData): string | null {
+export function verifyTableValue(table: GPUTableEvaluator, expected: TestData): string | null {
   const size = table.size;
 
   if ('type' in expected && expected.type !== table.type) {

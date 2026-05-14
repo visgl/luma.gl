@@ -18,6 +18,10 @@ export type DynamicBufferDebugProps =
 export type DynamicBufferProps = Omit<BufferProps, 'handle' | 'onMapped'> & {
   /** Enables and optionally sizes the CPU-side debug mirror. */
   debugData?: DynamicBufferDebugProps;
+  /** Existing immutable buffer to expose through this dynamic wrapper without copying. */
+  buffer?: Buffer;
+  /** Whether this dynamic wrapper should destroy an adopted `buffer`. Defaults to `true`. */
+  ownsBuffer?: boolean;
 };
 
 /** Buffer-like source accepted by dynamic buffer range helpers. */
@@ -80,6 +84,7 @@ export class DynamicBuffer {
 
   private readonly _debugDataEnabled: boolean;
   private readonly _maxDebugDataByteLength: number;
+  private _ownsBuffer: boolean;
   private _buffer: Buffer;
 
   /** Current immutable core buffer backing this dynamic wrapper. */
@@ -104,9 +109,26 @@ export class DynamicBuffer {
 
   /** Creates a dynamic buffer and its initial backing {@link Buffer}. */
   constructor(device: Device, props: DynamicBufferProps) {
-    const {debugData: debugDataProps = false, ...bufferProps} = props;
-    const id = props.id || uid('dynamic-buffer');
-    const normalizedBufferProps: DynamicBufferProps = {...bufferProps, id};
+    const {
+      debugData: debugDataProps = false,
+      buffer: adoptedBuffer,
+      ownsBuffer = true,
+      ...bufferProps
+    } = props;
+    if (adoptedBuffer && adoptedBuffer.device !== device) {
+      throw new Error('DynamicBuffer adopted buffers must belong to the supplied device');
+    }
+    if (adoptedBuffer && (bufferProps.byteLength !== undefined || bufferProps.data !== undefined)) {
+      throw new Error('DynamicBuffer cannot combine an adopted buffer with byteLength or data');
+    }
+
+    const id = props.id || adoptedBuffer?.id || uid('dynamic-buffer');
+    const normalizedBufferProps: DynamicBufferProps = {
+      ...bufferProps,
+      id,
+      usage: bufferProps.usage ?? adoptedBuffer?.usage,
+      indexType: bufferProps.indexType ?? adoptedBuffer?.indexType
+    };
 
     if ((normalizedBufferProps.usage || 0) & Buffer.INDEX && !normalizedBufferProps.indexType) {
       if (bufferProps.data instanceof Uint32Array) {
@@ -124,14 +146,15 @@ export class DynamicBuffer {
     this.device = device;
     this.id = id;
     this.props = normalizedBufferProps;
-    this.usage = bufferProps.usage || 0;
+    this.usage = normalizedBufferProps.usage || 0;
     this._debugDataEnabled = Boolean(debugDataProps);
     this._maxDebugDataByteLength =
       typeof debugDataProps === 'object' && debugDataProps.maxByteLength !== undefined
         ? debugDataProps.maxByteLength
         : DEFAULT_MAX_DEBUG_DATA_BYTE_LENGTH;
+    this._ownsBuffer = ownsBuffer;
 
-    this._buffer = this.device.createBuffer({...bufferProps, id});
+    this._buffer = adoptedBuffer ?? this.device.createBuffer({...bufferProps, id});
     this.ready = Promise.resolve(this._buffer);
     this.updateTimestamp = this._buffer.updateTimestamp;
 
@@ -266,7 +289,10 @@ export class DynamicBuffer {
       this._writeDebugData(previousDebugData, 0);
     }
 
-    previousBuffer.destroy();
+    if (this._ownsBuffer) {
+      previousBuffer.destroy();
+    }
+    this._ownsBuffer = true;
     this.generation++;
     this.cacheToken = {};
     this._touch();
@@ -311,7 +337,9 @@ export class DynamicBuffer {
   /** Destroys the current backing buffer and clears debug data. */
   destroy(): void {
     if (!this.destroyed) {
-      this._buffer.destroy();
+      if (this._ownsBuffer) {
+        this._buffer.destroy();
+      }
       this.destroyed = true;
       this.debugData = new ArrayBuffer(0);
     }

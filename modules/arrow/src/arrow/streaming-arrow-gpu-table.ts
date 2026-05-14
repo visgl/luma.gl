@@ -5,8 +5,15 @@
 import {Buffer, type BufferLayout, type Device, type ShaderLayout} from '@luma.gl/core';
 import {DynamicBuffer, type DynamicBufferProps} from '@luma.gl/engine';
 import * as arrow from 'apache-arrow';
-import {readArrowGPUVectorAsync} from './arrow-gpu-vector';
-import {getArrowDataByPath} from './arrow-paths';
+import {
+  GPUData,
+  getArrowDataBufferSource,
+  getArrowTypeByteStride,
+  getArrowTypeStride,
+  readArrowGPUVectorAsync,
+  validateArrowGPUDataDirectUpload
+} from './arrow-gpu-data';
+import {findArrowFieldByPath, getArrowDataByPath, getArrowSchemaPaths} from './arrow-paths';
 import {getArrowVertexFormat, type ArrowVertexFormatOptions} from './arrow-shader-layout';
 import {
   getSignedShaderType,
@@ -115,6 +122,8 @@ export class StreamingArrowGPUVector<T extends AttributeArrowType = AttributeArr
   readonly byteOffset = 0;
   /** Bytes between adjacent logical rows in buffer. */
   readonly byteStride: number;
+  /** GPU data chunk views preserving appended Arrow chunk boundaries. */
+  readonly data: GPUData<T>[] = [];
   /** Number of logical rows appended into buffer. */
   length = 0;
 
@@ -167,14 +176,26 @@ export class StreamingArrowGPUVector<T extends AttributeArrowType = AttributeArr
     const requiredRows = this.length + rowCount;
     this.ensureCapacityRows(requiredRows);
 
-    const sourceView = getArrowDataValueView(data, this.stride);
-    this.buffer.write(sourceView, this.length * this.byteStride);
+    const byteOffset = this.length * this.byteStride;
+    const sourceView = getArrowDataBufferSource(data);
+    this.buffer.write(sourceView, byteOffset);
+    this.data.push(
+      new GPUData({
+        buffer: this.buffer,
+        arrowType: data.type,
+        length: rowCount,
+        byteOffset,
+        byteStride: this.byteStride,
+        ownsBuffer: false
+      }) as GPUData<T>
+    );
     this.length = requiredRows;
   }
 
   /** Clears the logical row count while retaining the reusable DynamicBuffer allocation. */
   reset(): void {
     this.length = 0;
+    this.data.length = 0;
   }
 
   /** Reads appended GPU rows back into a single non-null Arrow vector. */
@@ -199,14 +220,7 @@ export class StreamingArrowGPUVector<T extends AttributeArrowType = AttributeArr
         `StreamingArrowGPUVector "${this.name}" cannot append a different Arrow type`
       );
     }
-    if (data.nullCount > 0) {
-      throw new Error(`StreamingArrowGPUVector "${this.name}" does not support nullable data`);
-    }
-    if (arrow.DataType.isFixedSizeList(data.type) && (data.children[0]?.nullCount ?? 0) > 0) {
-      throw new Error(
-        `StreamingArrowGPUVector "${this.name}" does not support nullable child data`
-      );
-    }
+    validateArrowGPUDataDirectUpload(this.name, data);
   }
 
   private ensureCapacityRows(requiredRows: number): void {
@@ -223,7 +237,7 @@ export class StreamingArrowGPUVector<T extends AttributeArrowType = AttributeArr
 /**
  * Append-only GPU representation of selected Arrow table columns.
  *
- * StreamingArrowGPUTable mirrors ArrowGPUTable's column selection and metadata
+ * StreamingArrowGPUTable mirrors GPUTable's column selection and metadata
  * model but keeps DynamicBuffer-backed vectors that can grow as record batches
  * arrive.
  */
@@ -376,7 +390,7 @@ export class StreamingArrowGPUTable {
 
   private assertCompatibleSchema(schema: arrow.Schema): void {
     for (const column of this.selectedColumns) {
-      const field = getFieldByPath(schema, column.arrowPath);
+      const field = findArrowFieldByPath(schema, column.arrowPath);
       if (!field || !arrow.util.compareTypes(field.type, column.field.type)) {
         throw new Error(
           `StreamingArrowGPUTable column "${column.arrowPath}" does not match the source schema`
@@ -467,7 +481,7 @@ function getSelectedStreamingColumns(props: {
   arrowPaths?: Record<string, string>;
   allowWebGLOnlyFormats?: boolean;
 }): SelectedStreamingColumn[] {
-  const schemaPaths = new Set(getSchemaPaths(props.schema));
+  const schemaPaths = new Set(getArrowSchemaPaths(props.schema));
   const columns: SelectedStreamingColumn[] = [];
 
   for (const attribute of props.shaderLayout.attributes) {
@@ -479,7 +493,7 @@ function getSelectedStreamingColumns(props: {
       continue;
     }
 
-    const field = getFieldByPath(props.schema, arrowPath);
+    const field = findArrowFieldByPath(props.schema, arrowPath);
     if (!field) {
       throw new Error(`Arrow table schema does not contain column "${arrowPath}"`);
     }
@@ -503,46 +517,6 @@ function getSelectedStreamingColumns(props: {
   }
 
   return columns;
-}
-
-function getSchemaPaths(schema: arrow.Schema): string[] {
-  return getSchemaPathsRecursive(schema.fields, []);
-}
-
-function getSchemaPathsRecursive(fields: arrow.Field[], currentPath: string[]): string[] {
-  const paths: string[] = [];
-  for (const field of fields) {
-    const fieldPath = [...currentPath, field.name];
-    if (arrow.DataType.isStruct(field.type)) {
-      paths.push(...getSchemaPathsRecursive(field.type.children, fieldPath));
-    } else {
-      paths.push(fieldPath.join('.'));
-    }
-  }
-  return paths;
-}
-
-function getFieldByPath(schema: arrow.Schema, columnPath: string): arrow.Field | null {
-  const path = columnPath.split('.');
-  let fields = schema.fields;
-  let resolvedField: arrow.Field | null = null;
-
-  for (let pathIndex = 0; pathIndex < path.length; pathIndex++) {
-    const key = path[pathIndex];
-    const isLeafField = pathIndex === path.length - 1;
-    resolvedField = fields.find(field => field.name === key) ?? null;
-    if (!resolvedField) {
-      return null;
-    }
-    if (!isLeafField) {
-      if (!arrow.DataType.isStruct(resolvedField.type)) {
-        return null;
-      }
-      fields = resolvedField.type.children;
-    }
-  }
-
-  return resolvedField && !arrow.DataType.isStruct(resolvedField.type) ? resolvedField : null;
 }
 
 function getArrowColumnInfoFromType(type: AttributeArrowType): ArrowColumnInfo {
@@ -575,76 +549,6 @@ function validateSelectedData(
     if (data.length !== expectedRows) {
       throw new Error(`StreamingArrowGPUTable column "${column.arrowPath}" row count mismatch`);
     }
-    validateDataForDirectUpload(column.attributeName, data);
+    validateArrowGPUDataDirectUpload(column.attributeName, data);
   }
-}
-
-function validateDataForDirectUpload(name: string, data: arrow.Data<AttributeArrowType>): void {
-  if (data.nullCount > 0) {
-    throw new Error(`StreamingArrowGPUVector "${name}" does not support nullable data`);
-  }
-  if (arrow.DataType.isFixedSizeList(data.type) && (data.children[0]?.nullCount ?? 0) > 0) {
-    throw new Error(`StreamingArrowGPUVector "${name}" does not support nullable child data`);
-  }
-}
-
-function getArrowDataValueView<T extends AttributeArrowType>(
-  data: arrow.Data<T>,
-  stride: number
-): ArrayBufferView {
-  const values = getArrowDataValues(data);
-  const elementCount = data.length * stride;
-  if (values.length < elementCount) {
-    throw new Error('Arrow data values are shorter than the logical upload length');
-  }
-  if (values.length === elementCount) {
-    return values;
-  }
-
-  const childOffset = arrow.DataType.isFixedSizeList(data.type)
-    ? (data.children[0]?.offset ?? 0)
-    : 0;
-  const startElement = childOffset + data.offset * stride;
-  const endElement = startElement + elementCount;
-  return values.subarray(startElement, endElement);
-}
-
-function getArrowDataValues(data: arrow.Data<AttributeArrowType>): NumericArrowType['TArray'] {
-  if (arrow.DataType.isFixedSizeList(data.type)) {
-    const childValues = data.children[0]?.values;
-    if (!childValues) {
-      throw new Error('Arrow FixedSizeList data has no child values');
-    }
-    return childValues as NumericArrowType['TArray'];
-  }
-
-  const values = data.values;
-  if (!values) {
-    throw new Error('Arrow data has no values');
-  }
-  return values as NumericArrowType['TArray'];
-}
-
-function getArrowTypeStride(type: arrow.DataType): number {
-  return arrow.DataType.isFixedSizeList(type) ? type.listSize : 1;
-}
-
-function getArrowTypeByteStride(type: arrow.DataType): number {
-  if (arrow.DataType.isFixedSizeList(type)) {
-    return type.listSize * getArrowTypeByteStride(type.children[0].type);
-  }
-  if (arrow.DataType.isInt(type)) {
-    return type.bitWidth / 8;
-  }
-  if (arrow.DataType.isFloat(type)) {
-    switch (type.precision) {
-      case arrow.Precision.HALF:
-        return 2;
-      case arrow.Precision.SINGLE:
-        return 4;
-      case arrow.Precision.DOUBLE:
-        return 8;
-    }
-  }
-  throw new Error(`Cannot determine byte stride for Arrow type ${type}`);
 }

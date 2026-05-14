@@ -7,38 +7,54 @@ import {
   Device,
   type BufferAttributeLayout,
   type BufferLayout,
-  type BufferProps,
-  type BigTypedArray
+  type BufferProps
 } from '@luma.gl/core';
+import {DynamicBuffer, type DynamicBufferProps} from '@luma.gl/engine';
 import * as arrow from 'apache-arrow';
-import type {AttributeArrowType, NumericArrowType} from './arrow-types';
-import {getArrowVectorBufferSource} from './arrow-fixed-size-list';
+import type {AttributeArrowType} from './arrow-types';
+import {
+  GPUData,
+  getArrowDataBufferSource,
+  getArrowTypeByteStride,
+  getArrowTypeStride,
+  getArrowVectorBufferSource,
+  readArrowGPUVectorAsync,
+  validateArrowGPUDataDirectUpload
+} from './arrow-gpu-data';
+
+export {
+  GPUData,
+  readArrowGPUVectorAsync,
+  type GPUDataFromBufferProps
+} from './arrow-gpu-data';
 
 /** Buffer creation props forwarded when uploading Arrow vector memory to the GPU. */
-export type ArrowGPUVectorBufferProps = Omit<BufferProps, 'byteLength' | 'data'>;
+export type GPUVectorBufferProps = Omit<BufferProps, 'byteLength' | 'data'>;
+/** Dynamic buffer props forwarded when creating appendable Arrow GPU vectors. */
+export type GPUVectorDynamicBufferProps = Omit<DynamicBufferProps, 'byteLength' | 'data'>;
 
-/** @deprecated Use {@link ArrowGPUVectorBufferProps}. */
-export type ArrowGPUVectorProps = ArrowGPUVectorBufferProps;
+/** @deprecated Use {@link GPUVectorBufferProps}. */
+export type GPUVectorProps = GPUVectorBufferProps;
 
 /** Constructor props that upload an Arrow vector into a new GPU buffer. */
-export type ArrowGPUVectorFromArrowProps<T extends AttributeArrowType = AttributeArrowType> = {
+export type GPUVectorFromArrowProps<T extends AttributeArrowType = AttributeArrowType> = {
   /** Discriminator for Arrow-vector upload construction. */
   type: 'arrow';
-  /** Name used when this vector is added to an {@link ArrowGPUTable}. */
+  /** Name used when this vector is added to an {@link GPUTable}. */
   name: string;
   /** Device that creates the GPU buffer. */
   device: Device;
   /** Arrow vector whose value memory is uploaded. */
   vector: arrow.Vector<T>;
   /** Buffer creation props forwarded to the GPU buffer. */
-  bufferProps?: ArrowGPUVectorBufferProps;
+  bufferProps?: GPUVectorBufferProps;
 };
 
 /** Constructor props that wrap an existing typed GPU buffer. */
-export type ArrowGPUVectorFromBufferProps<T extends AttributeArrowType = AttributeArrowType> = {
+export type GPUVectorFromBufferProps<T extends AttributeArrowType = AttributeArrowType> = {
   /** Discriminator for existing-buffer construction. */
   type: 'buffer';
-  /** Name used when this vector is added to an {@link ArrowGPUTable}. */
+  /** Name used when this vector is added to an {@link GPUTable}. */
   name: string;
   /** Existing GPU buffer. */
   buffer: Buffer;
@@ -60,10 +76,10 @@ export type ArrowGPUVectorFromBufferProps<T extends AttributeArrowType = Attribu
 };
 
 /** Constructor props that wrap one interleaved GPU buffer as opaque Arrow binary rows. */
-export type ArrowGPUVectorFromInterleavedProps = {
+export type GPUVectorFromInterleavedProps = {
   /** Discriminator for interleaved-buffer construction. */
   type: 'interleaved';
-  /** Name used when this vector is added to an {@link ArrowGPUTable}. */
+  /** Name used when this vector is added to an {@link GPUTable}. */
   name: string;
   /** Existing interleaved GPU buffer. */
   buffer: Buffer;
@@ -84,69 +100,53 @@ export type ArrowGPUVectorFromInterleavedProps = {
   ownsBuffer?: boolean;
 };
 
-/** Discriminated constructor props for {@link ArrowGPUVector}. */
-export type ArrowGPUVectorCreateProps<T extends arrow.DataType = AttributeArrowType> =
+/** Constructor props that expose pre-existing Arrow GPU data chunks as one logical vector. */
+export type GPUVectorFromDataProps<T extends arrow.DataType = AttributeArrowType> = {
+  /** Discriminator for chunk-backed construction. */
+  type: 'data';
+  /** Name used when this vector is added to an {@link GPUTable}. */
+  name: string;
+  /** Arrow type that describes every chunk in `data`. */
+  arrowType: T;
+  /** Existing GPU data chunks to expose through this vector. */
+  data: GPUData<T>[];
+  /** Bytes between adjacent logical rows. Defaults to the first chunk stride when available. */
+  byteStride?: number;
+  /** Optional buffer layout retained for interleaved chunk collections. */
+  bufferLayout?: BufferLayout;
+};
+
+/** Constructor props for an appendable DynamicBuffer-backed Arrow vector. */
+export type GPUVectorFromAppendableProps<T extends AttributeArrowType = AttributeArrowType> = {
+  /** Discriminator for appendable DynamicBuffer-backed construction. */
+  type: 'appendable';
+  /** Name used when this vector is added to an {@link GPUTable}. */
+  name: string;
+  /** Device that creates the DynamicBuffer. */
+  device: Device;
+  /** Arrow type that describes appended Arrow data. */
+  arrowType: T;
+  /** Initial row capacity. Defaults to `0`. */
+  initialCapacityRows?: number;
+  /** Capacity growth multiplier. Defaults to `1.5`. */
+  capacityGrowthFactor?: number;
+  /** DynamicBuffer construction props. */
+  bufferProps?: GPUVectorDynamicBufferProps;
+};
+
+/** Discriminated constructor props for {@link GPUVector}. */
+export type GPUVectorCreateProps<T extends arrow.DataType = AttributeArrowType> =
   | (T extends AttributeArrowType
-      ? ArrowGPUVectorFromArrowProps<T> | ArrowGPUVectorFromBufferProps<T>
+      ? GPUVectorFromArrowProps<T> | GPUVectorFromBufferProps<T>
       : never)
-  | ArrowGPUVectorFromInterleavedProps;
-
-type ArrowGPUVectorReadableBuffer = Pick<Buffer, 'readAsync'>;
-
-type ArrowGPUVectorReadProps<T extends AttributeArrowType> = {
-  type: T;
-  buffer: ArrowGPUVectorReadableBuffer;
-  length: number;
-  byteOffset: number;
-  byteStride: number;
-};
-
-type NumericTypedArrayConstructor = {
-  readonly BYTES_PER_ELEMENT: number;
-  new (buffer: ArrayBufferLike, byteOffset?: number, length?: number): BigTypedArray;
-};
-
-const makeNumericData = arrow.makeData as <T extends NumericArrowType>(props: {
-  type: T;
-  length: number;
-  data: T['TArray'];
-}) => arrow.Data<T>;
-
-const makeFixedSizeListData = arrow.makeData as <T extends NumericArrowType>(props: {
-  type: arrow.FixedSizeList<T>;
-  length: number;
-  nullCount: number;
-  nullBitmap: null;
-  child: arrow.Data<T>;
-}) => arrow.Data<arrow.FixedSizeList<T>>;
-
-/** Read GPU bytes and reconstruct one non-null Arrow vector with the supplied Arrow type. */
-export async function readArrowGPUVectorAsync<T extends AttributeArrowType>(
-  props: ArrowGPUVectorReadProps<T>
-): Promise<arrow.Vector<T>> {
-  const {buffer, type, length, byteOffset, byteStride} = props;
-  const rowByteWidth = getArrowTypeByteStride(type);
-  if (byteStride < rowByteWidth) {
-    throw new Error(
-      `ArrowGPUVector.readAsync() byteStride ${byteStride} is smaller than row byte width ${rowByteWidth}`
-    );
-  }
-
-  const readByteLength = length === 0 ? 0 : (length - 1) * byteStride + rowByteWidth;
-  const bytes =
-    readByteLength === 0 ? new Uint8Array(0) : await buffer.readAsync(byteOffset, readByteLength);
-  const packedBytes =
-    byteStride === rowByteWidth
-      ? bytes
-      : compactStridedRows(bytes, length, byteStride, rowByteWidth);
-
-  return makeArrowVectorFromPackedBytes(type, length, packedBytes);
-}
+  | GPUVectorFromInterleavedProps
+  | GPUVectorFromDataProps<T>
+  | (T extends AttributeArrowType ? GPUVectorFromAppendableProps<T> : never);
 
 /**
  * GPU memory and Arrow type metadata derived from one Arrow vector.
  *
- * The Arrow vector is a construction input only. ArrowGPUVector does not retain
+ * The Arrow vector is a construction input only. GPUVector does not retain
  * the source vector; it keeps a GPU buffer plus the type, length, and stride that
  * describe the uploaded memory.
  *
@@ -157,15 +157,13 @@ export async function readArrowGPUVectorAsync<T extends AttributeArrowType>(
  * vector and return another view that becomes responsible for destroying the
  * shared buffer.
  */
-export class ArrowGPUVector<T extends arrow.DataType = AttributeArrowType> {
-  /** Name used when this vector is added to an {@link ArrowGPUTable}. */
+export class GPUVector<T extends arrow.DataType = AttributeArrowType> {
+  /** Name used when this vector is added to an {@link GPUTable}. */
   readonly name: string;
-  /** GPU buffer containing the Arrow vector's attribute-compatible value memory. */
-  readonly buffer: Buffer;
   /** Arrow type that describes the uploaded vector memory. */
   readonly type: T;
   /** Number of logical Arrow vector rows uploaded into the GPU buffer. */
-  readonly length: number;
+  length: number;
   /** Number of scalar values per logical vector row. */
   readonly stride: number;
   /** Byte offset of the first logical row in {@link buffer}. */
@@ -174,21 +172,29 @@ export class ArrowGPUVector<T extends arrow.DataType = AttributeArrowType> {
   readonly byteStride: number;
   /** Optional GPU buffer layout described by this vector. */
   readonly bufferLayout?: BufferLayout;
+  /** GPU data chunk views preserving the source Arrow vector's chunk boundaries. */
+  readonly data: GPUData<T>[] = [];
+  /** Single concrete GPU buffer when this vector is directly bindable as one buffer. */
+  private _buffer?: Buffer | DynamicBuffer;
   /** Whether this vector is responsible for destroying {@link buffer}. */
   private _ownsBuffer: boolean;
+  /** Detached batch-local vectors whose buffers are now owned by this aggregate view. */
+  private readonly _ownedVectors: GPUVector[] = [];
+  /** Capacity growth multiplier for appendable DynamicBuffer-backed vectors. */
+  private readonly capacityGrowthFactor?: number;
 
   /** Creates a GPU representation from an Arrow vector without retaining the source vector. */
   constructor(
     device: Device,
     vector: arrow.Vector<T & AttributeArrowType>,
-    props?: ArrowGPUVectorBufferProps
+    props?: GPUVectorBufferProps
   );
   /** Creates a GPU representation using discriminated construction props. */
-  constructor(props: ArrowGPUVectorCreateProps<T>);
+  constructor(props: GPUVectorCreateProps<T>);
   constructor(
-    deviceOrProps: Device | ArrowGPUVectorCreateProps<any>,
+    deviceOrProps: Device | GPUVectorCreateProps<any>,
     vector?: arrow.Vector<T & AttributeArrowType>,
-    props: ArrowGPUVectorBufferProps = {}
+    props: GPUVectorBufferProps = {}
   ) {
     const constructionProps =
       deviceOrProps instanceof Device
@@ -198,7 +204,7 @@ export class ArrowGPUVector<T extends arrow.DataType = AttributeArrowType> {
             device: deviceOrProps,
             vector: vector!,
             bufferProps: props
-          } satisfies ArrowGPUVectorFromArrowProps)
+          } satisfies GPUVectorFromArrowProps)
         : deviceOrProps;
 
     switch (constructionProps.type) {
@@ -210,11 +216,25 @@ export class ArrowGPUVector<T extends arrow.DataType = AttributeArrowType> {
         this.stride = getArrowVectorStride(arrowVector);
         this.byteOffset = 0;
         this.byteStride = getArrowTypeByteStride(arrowVector.type);
-        this.buffer = device.createBuffer({
+        this._buffer = device.createBuffer({
           usage: Buffer.VERTEX | Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
           ...bufferProps,
           data: getArrowVectorBufferSource(arrowVector as any)
         });
+        const dataBuffer = createArrowGPUDataBuffer(this._buffer);
+        let byteOffset = 0;
+        for (const arrowData of arrowVector.data) {
+          const gpuData = new GPUData({
+            buffer: dataBuffer,
+            arrowType: arrowData.type as AttributeArrowType,
+            length: arrowData.length,
+            byteOffset,
+            byteStride: this.byteStride,
+            ownsBuffer: false
+          }) as unknown as GPUData<T>;
+          this.data.push(gpuData);
+          byteOffset += arrowData.length * this.byteStride;
+        }
         this._ownsBuffer = true;
         return;
       }
@@ -230,12 +250,23 @@ export class ArrowGPUVector<T extends arrow.DataType = AttributeArrowType> {
           ownsBuffer = false
         } = constructionProps;
         this.name = name;
-        this.buffer = buffer;
+        this._buffer = buffer;
         this.type = arrowType;
         this.length = length;
         this.stride = getArrowTypeStride(arrowType);
         this.byteOffset = byteOffset;
         this.byteStride = byteStride;
+        const dataBuffer = createArrowGPUDataBuffer(buffer);
+        this.data.push(
+          new GPUData({
+            buffer: dataBuffer,
+            arrowType,
+            length,
+            byteOffset,
+            byteStride,
+            ownsBuffer: false
+          }) as GPUData<T>
+        );
         this._ownsBuffer = ownsBuffer;
         return;
       }
@@ -251,17 +282,86 @@ export class ArrowGPUVector<T extends arrow.DataType = AttributeArrowType> {
           ownsBuffer = false
         } = constructionProps;
         this.name = name;
-        this.buffer = buffer;
+        this._buffer = buffer;
         this.type = new arrow.Binary() as T;
         this.length = length;
         this.stride = byteStride;
         this.byteOffset = byteOffset;
         this.byteStride = byteStride;
         this.bufferLayout = {name, byteStride, attributes};
+        const dataBuffer = createArrowGPUDataBuffer(buffer);
+        this.data.push(
+          new GPUData({
+            buffer: dataBuffer,
+            arrowType: this.type,
+            length,
+            byteOffset,
+            byteStride,
+            ownsBuffer: false
+          })
+        );
         this._ownsBuffer = ownsBuffer;
         return;
       }
+
+      case 'data': {
+        const {name, arrowType, data, byteStride, bufferLayout} = constructionProps;
+        if (data.some(chunk => !arrow.util.compareTypes(chunk.type, arrowType))) {
+          throw new Error('GPUVector data chunks must share the declared Arrow type');
+        }
+
+        this.name = name;
+        this.type = arrowType;
+        this.length = data.reduce((length, chunk) => length + chunk.length, 0);
+        this.stride = data[0]?.stride ?? getArrowTypeStride(arrowType);
+        this.byteOffset = data.length === 1 ? data[0].byteOffset : 0;
+        this.byteStride = byteStride ?? data[0]?.byteStride ?? getArrowTypeByteStride(arrowType);
+        this.bufferLayout = bufferLayout;
+        this.data.push(...data);
+        this._buffer = data.length === 1 ? data[0].buffer : undefined;
+        this._ownsBuffer = false;
+        return;
+      }
+
+      case 'appendable': {
+        const {
+          name,
+          device,
+          arrowType,
+          initialCapacityRows = 0,
+          capacityGrowthFactor = 1.5,
+          bufferProps
+        } = constructionProps;
+        this.name = name;
+        this.type = arrowType as T;
+        this.length = 0;
+        this.stride = getArrowTypeStride(arrowType);
+        this.byteOffset = 0;
+        this.byteStride = getArrowTypeByteStride(arrowType);
+        this._buffer = new DynamicBuffer(device, {
+          usage: Buffer.VERTEX | Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
+          ...bufferProps,
+          id: bufferProps?.id ?? `${name}-appendable-arrow-vector`,
+          byteLength: Math.max(1, initialCapacityRows * this.byteStride)
+        });
+        this.capacityGrowthFactor = capacityGrowthFactor;
+        this._ownsBuffer = true;
+        return;
+      }
     }
+  }
+
+  /**
+   * Directly bindable GPU buffer when this vector has one concrete backing buffer.
+   *
+   * Aggregate table vectors may span multiple batch-owned buffers. Those vectors
+   * intentionally require callers to use {@link data} or batch-local vectors.
+   */
+  get buffer(): Buffer | DynamicBuffer {
+    if (!this._buffer) {
+      throw new Error('GPUVector.buffer is unavailable for multi-buffer vectors; use data[]');
+    }
+    return this._buffer;
   }
 
   /**
@@ -271,7 +371,98 @@ export class ArrowGPUVector<T extends arrow.DataType = AttributeArrowType> {
    * change when ownership is transferred to another same-buffer view.
    */
   get ownsBuffer(): boolean {
-    return this._ownsBuffer;
+    return this._ownsBuffer || this._ownedVectors.some(vector => vector.ownsBuffer);
+  }
+
+  /**
+   * Adds one already-materialized GPU data chunk to this logical vector.
+   *
+   * This preserves ownership on the supplied {@link GPUData}; the vector
+   * only aggregates metadata and never adopts or destroys that buffer through
+   * this method.
+   */
+  addData(data: GPUData<T>): this {
+    if (!arrow.util.compareTypes(data.type, this.type)) {
+      throw new Error('GPUVector.addData() requires matching Arrow data types');
+    }
+    if (data.byteStride !== this.byteStride) {
+      throw new Error('GPUVector.addData() requires matching byteStride');
+    }
+
+    this.data.push(data);
+    this.length += data.length;
+    if (this.data.length > 1) {
+      this._buffer = undefined;
+    }
+    return this;
+  }
+
+  /** Number of rows the appendable backing DynamicBuffer can hold without reallocating. */
+  get capacityRows(): number | undefined {
+    return this._buffer instanceof DynamicBuffer
+      ? Math.floor(this._buffer.byteLength / this.byteStride)
+      : undefined;
+  }
+
+  /** Appends one Arrow Data chunk into this vector's trailing DynamicBuffer-backed data storage. */
+  addToLastData(data: arrow.Data<T & AttributeArrowType>): this {
+    if (!(this._buffer instanceof DynamicBuffer)) {
+      throw new Error('GPUVector.addToLastData() requires appendable vector storage');
+    }
+    if (!arrow.util.compareTypes(data.type, this.type)) {
+      throw new Error('GPUVector.addToLastData() requires matching Arrow data types');
+    }
+    validateArrowGPUDataDirectUpload(this.name, data);
+
+    const requiredRows = this.length + data.length;
+    this.ensureAppendableCapacity(requiredRows);
+
+    const byteOffset = this.length * this.byteStride;
+    this._buffer.write(getArrowDataBufferSource(data), byteOffset);
+    this.data.push(
+      new GPUData({
+        buffer: this._buffer,
+        arrowType: data.type,
+        length: data.length,
+        byteOffset,
+        byteStride: this.byteStride,
+        ownsBuffer: false
+      }) as GPUData<T>
+    );
+    this.length = requiredRows;
+    return this;
+  }
+
+  /** @deprecated Use {@link addToLastData}. */
+  addToLastBatch(data: arrow.Data<T & AttributeArrowType>): this {
+    return this.addToLastData(data);
+  }
+
+  /** Appends every Arrow Data chunk from one Arrow vector into appendable batch storage. */
+  addVectorToLastBatch(vector: arrow.Vector<T & AttributeArrowType>): this {
+    if (!arrow.util.compareTypes(vector.type, this.type)) {
+      throw new Error('GPUVector.addVectorToLastBatch() requires matching Arrow data types');
+    }
+    for (const data of vector.data) {
+      this.addToLastData(data as arrow.Data<T & AttributeArrowType>);
+    }
+    return this;
+  }
+
+  /** Clears appendable logical rows while retaining the DynamicBuffer allocation. */
+  resetLastBatch(): this {
+    if (!(this._buffer instanceof DynamicBuffer)) {
+      throw new Error('GPUVector.resetLastBatch() requires appendable vector storage');
+    }
+    this.length = 0;
+    this.data.length = 0;
+    return this;
+  }
+
+  /** @internal Retains detached batch-local vector ownership under this aggregate vector. */
+  retainOwnedVectors(vectors: GPUVector[]): this {
+    this._ownedVectors.push(...vectors);
+    return this;
   }
 
   /**
@@ -282,9 +473,9 @@ export class ArrowGPUVector<T extends arrow.DataType = AttributeArrowType> {
    * destroying this vector will not destroy the buffer; destroying `target` will
    * destroy it if this vector previously owned it.
    */
-  transferBufferOwnership(target: ArrowGPUVector): void {
-    if (target.buffer !== this.buffer) {
-      throw new Error('ArrowGPUVector ownership can only be transferred to the same buffer');
+  transferBufferOwnership(target: GPUVector): void {
+    if (!this._buffer || !target._buffer || target._buffer !== this._buffer) {
+      throw new Error('GPUVector ownership can only be transferred to the same buffer');
     }
     target._ownsBuffer = this._ownsBuffer;
     this._ownsBuffer = false;
@@ -293,12 +484,17 @@ export class ArrowGPUVector<T extends arrow.DataType = AttributeArrowType> {
   /** Reads the GPU buffer contents back into a single non-null Arrow vector. */
   async readAsync(): Promise<arrow.Vector<T>> {
     if (this.bufferLayout) {
-      throw new Error('ArrowGPUVector.readAsync() does not support interleaved vectors');
+      throw new Error('GPUVector.readAsync() does not support interleaved vectors');
+    }
+
+    if (!this._buffer) {
+      const data = await Promise.all(this.data.map(chunk => chunk.readAsync()));
+      return new arrow.Vector(data) as arrow.Vector<T>;
     }
 
     return readArrowGPUVectorAsync({
       type: this.type as unknown as AttributeArrowType,
-      buffer: this.buffer,
+      buffer: this._buffer,
       length: this.length,
       byteOffset: this.byteOffset,
       byteStride: this.byteStride
@@ -306,145 +502,38 @@ export class ArrowGPUVector<T extends arrow.DataType = AttributeArrowType> {
   }
 
   destroy(): void {
-    if (this._ownsBuffer) {
-      this.buffer.destroy();
+    if (this._ownsBuffer && this._buffer) {
+      this._buffer.destroy();
       this._ownsBuffer = false;
     }
+    for (const vector of this._ownedVectors.splice(0)) {
+      vector.destroy();
+    }
+  }
+
+  private ensureAppendableCapacity(requiredRows: number): void {
+    if (!(this._buffer instanceof DynamicBuffer)) {
+      throw new Error('GPUVector append capacity requires DynamicBuffer storage');
+    }
+    const capacityRows = this.capacityRows ?? 0;
+    if (requiredRows <= capacityRows) {
+      return;
+    }
+    const grownRows = Math.ceil(Math.max(capacityRows, 1) * (this.capacityGrowthFactor ?? 1.5));
+    const nextCapacityRows = Math.max(requiredRows, grownRows);
+    this._buffer.ensureSize(nextCapacityRows * this.byteStride, {preserveData: true});
   }
 }
 
 function getArrowVectorStride(vector: arrow.Vector<AttributeArrowType>): number {
-  return arrow.DataType.isFixedSizeList(vector.type) ? vector.type.listSize : 1;
+  return getArrowTypeStride(vector.type);
 }
 
-function getArrowTypeStride(type: arrow.DataType): number {
-  return arrow.DataType.isFixedSizeList(type) ? type.listSize : 1;
-}
-
-function getArrowTypeByteStride(type: arrow.DataType): number {
-  if (arrow.DataType.isFixedSizeList(type)) {
-    return type.listSize * getArrowTypeByteStride(type.children[0].type);
-  }
-  if (arrow.DataType.isInt(type)) {
-    return type.bitWidth / 8;
-  }
-  if (arrow.DataType.isFloat(type)) {
-    switch (type.precision) {
-      case arrow.Precision.HALF:
-        return 2;
-      case arrow.Precision.SINGLE:
-        return 4;
-      case arrow.Precision.DOUBLE:
-        return 8;
-    }
-  }
-  throw new Error(`Cannot determine byte stride for Arrow type ${type}`);
-}
-
-function compactStridedRows(
-  bytes: Uint8Array,
-  length: number,
-  byteStride: number,
-  rowByteWidth: number
-): Uint8Array {
-  const packedBytes = new Uint8Array(length * rowByteWidth);
-  for (let rowIndex = 0; rowIndex < length; rowIndex++) {
-    const sourceOffset = rowIndex * byteStride;
-    const targetOffset = rowIndex * rowByteWidth;
-    packedBytes.set(bytes.subarray(sourceOffset, sourceOffset + rowByteWidth), targetOffset);
-  }
-  return packedBytes;
-}
-
-function makeArrowVectorFromPackedBytes<T extends AttributeArrowType>(
-  type: T,
-  length: number,
-  bytes: Uint8Array
-): arrow.Vector<T> {
-  if (arrow.DataType.isFixedSizeList(type)) {
-    const childType = type.children[0].type as NumericArrowType;
-    const values = makeNumericTypedArray(childType, bytes, length * type.listSize);
-    const childData = makeNumericData({
-      type: childType,
-      length: length * type.listSize,
-      data: values as NumericArrowType['TArray']
-    });
-    const listData = makeFixedSizeListData({
-      type: type as arrow.FixedSizeList<NumericArrowType>,
-      length,
-      nullCount: 0,
-      nullBitmap: null,
-      child: childData
-    });
-    return arrow.makeVector(listData) as arrow.Vector<T>;
-  }
-
-  const numericType = type as NumericArrowType;
-  const values = makeNumericTypedArray(numericType, bytes, length);
-  const data = makeNumericData({
-    type: numericType,
-    length,
-    data: values as NumericArrowType['TArray']
-  });
-  return arrow.makeVector(data) as arrow.Vector<T>;
-}
-
-function makeNumericTypedArray(
-  type: NumericArrowType,
-  bytes: Uint8Array,
-  length: number
-): BigTypedArray {
-  if (arrow.DataType.isInt(type)) {
-    if (type.isSigned) {
-      switch (type.bitWidth) {
-        case 8:
-          return makeTypedArrayView(Int8Array, bytes, length);
-        case 16:
-          return makeTypedArrayView(Int16Array, bytes, length);
-        case 32:
-          return makeTypedArrayView(Int32Array, bytes, length);
-        case 64:
-          return makeTypedArrayView(BigInt64Array, bytes, length);
-      }
-    }
-
-    switch (type.bitWidth) {
-      case 8:
-        return makeTypedArrayView(Uint8Array, bytes, length);
-      case 16:
-        return makeTypedArrayView(Uint16Array, bytes, length);
-      case 32:
-        return makeTypedArrayView(Uint32Array, bytes, length);
-      case 64:
-        return makeTypedArrayView(BigUint64Array, bytes, length);
-    }
-  }
-
-  if (arrow.DataType.isFloat(type)) {
-    switch (type.precision) {
-      case arrow.Precision.HALF:
-        return makeTypedArrayView(Uint16Array, bytes, length);
-      case arrow.Precision.SINGLE:
-        return makeTypedArrayView(Float32Array, bytes, length);
-      case arrow.Precision.DOUBLE:
-        return makeTypedArrayView(Float64Array, bytes, length);
-    }
-  }
-
-  throw new Error(`ArrowGPUVector.readAsync() does not support Arrow type ${type}`);
-}
-
-function makeTypedArrayView<T extends BigTypedArray>(
-  TypedArrayConstructor: NumericTypedArrayConstructor,
-  bytes: Uint8Array,
-  length: number
-): T {
-  const byteLength = length * TypedArrayConstructor.BYTES_PER_ELEMENT;
-  if (bytes.byteOffset % TypedArrayConstructor.BYTES_PER_ELEMENT === 0) {
-    return new TypedArrayConstructor(bytes.buffer, bytes.byteOffset, length) as T;
-  }
-
-  const alignedBytes = new Uint8Array(byteLength);
-  alignedBytes.set(bytes.subarray(0, byteLength));
-  return new TypedArrayConstructor(alignedBytes.buffer, 0, length) as T;
+function createArrowGPUDataBuffer(buffer: Buffer | DynamicBuffer): DynamicBuffer {
+  return buffer instanceof DynamicBuffer
+    ? buffer
+    : new DynamicBuffer(buffer.device, {
+        buffer,
+        ownsBuffer: false
+      });
 }
