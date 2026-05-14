@@ -403,8 +403,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   pickInstance(mousePosition: number[] | null | undefined) {
-    if (!mousePosition) {
-      this.picker.clearPickState();
+    if (!this.picker.shouldPick(mousePosition as [number, number] | null)) {
       return;
     }
 

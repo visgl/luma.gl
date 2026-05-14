@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {extrudeShapes, parseFont, TextGeometry} from '../src/index';
+import {extrudeShapes, parseFont, TextGeometry} from '../../src/index';
 import {simpleFont} from './data/simple-font';
 import {Vector3} from '@math.gl/core';
 

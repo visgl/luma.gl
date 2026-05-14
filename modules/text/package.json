@@ -2,7 +2,7 @@
   "name": "@luma.gl/text",
   "version": "9.3.0",
   "private": true,
-  "description": "3D text generation utilities for luma.gl",
+  "description": "3D geometry and Arrow-native 2D text utilities for luma.gl",
   "license": "MIT",
   "type": "module",
   "repository": {
@@ -37,7 +37,11 @@
     "@luma.gl/engine": "~9.3.0"
   },
   "dependencies": {
+    "@luma.gl/arrow": "~9.3.0",
+    "@luma.gl/core": "~9.3.0",
+    "@mapbox/tiny-sdf": "^2.0.7",
     "@math.gl/core": "^4.1.0",
-    "@math.gl/polygon": "^4.1.0"
+    "@math.gl/polygon": "^4.1.0",
+    "apache-arrow": "^17.0.0"
   }
 }

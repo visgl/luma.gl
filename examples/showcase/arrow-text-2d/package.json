@@ -1,0 +1,25 @@
+{
+  "name": "luma.gl-examples-arrow-text-2d",
+  "version": "9.3.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "vite",
+    "build": "tsc && vite build",
+    "serve": "vite preview"
+  },
+  "dependencies": {
+    "@luma.gl/arrow": "~9.3.0",
+    "@luma.gl/core": "~9.3.0",
+    "@luma.gl/engine": "~9.3.0",
+    "@luma.gl/shadertools": "~9.3.0",
+    "@luma.gl/text": "~9.3.0",
+    "@luma.gl/webgl": "~9.3.0",
+    "@luma.gl/webgpu": "~9.3.0",
+    "apache-arrow": "^17.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vite": "^8.0.0"
+  }
+}

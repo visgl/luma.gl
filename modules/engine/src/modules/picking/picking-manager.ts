@@ -96,6 +96,8 @@ export class PickingManager {
   pickInfo: PickInfo = {batchIndex: null, objectIndex: null};
   /** Framebuffer used for picking */
   framebuffer: Framebuffer | null = null;
+  /** Last cursor position that triggered a picking render/readback. */
+  protected lastMousePosition: [number, number] | null = null;
 
   static defaultProps: Required<PickingManagerProps> = {
     shaderInputs: undefined!,
@@ -132,7 +134,32 @@ export class PickingManager {
 
   /** Clear highlighted / picked object */
   clearPickState() {
+    this.lastMousePosition = null;
     this.setPickingProps({highlightedBatchIndex: null, highlightedObjectIndex: null});
+  }
+
+  /** Return whether callers need to render a fresh picking pass for this cursor position. */
+  shouldPick(
+    mousePosition: [number, number] | null | undefined
+  ): mousePosition is [number, number] {
+    if (!mousePosition) {
+      if (this.lastMousePosition) {
+        this.clearPickState();
+      }
+      return false;
+    }
+
+    const [mouseX, mouseY] = mousePosition;
+    if (
+      this.lastMousePosition &&
+      this.lastMousePosition[0] === mouseX &&
+      this.lastMousePosition[1] === mouseY
+    ) {
+      return false;
+    }
+
+    this.lastMousePosition = [mouseX, mouseY];
+    return true;
   }
 
   /** Prepare for rendering picking colors */

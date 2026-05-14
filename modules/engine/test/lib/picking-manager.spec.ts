@@ -5,6 +5,7 @@
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 
 import {
+  PickingManager,
   decodeColorPickInfo,
   decodeIndexPickInfo,
   resolvePickingMode,
@@ -34,6 +35,17 @@ test('PickingManager#resolvePickingMode', t => {
 test('PickingManager#supportsIndexPicking', t => {
   const device = getNullTestDevice();
   t.equal(supportsIndexPicking(device), false, 'NullDevice does not support index picking');
+  t.end();
+});
+
+test('PickingManager#shouldPick', t => {
+  const picker = new PickingManager(getNullTestDevice(), {});
+  t.equal(picker.shouldPick([12, 34]), true, 'first cursor position should pick');
+  t.equal(picker.shouldPick([12, 34]), false, 'same cursor position is suppressed');
+  t.equal(picker.shouldPick([13, 34]), true, 'cursor movement should pick');
+  t.equal(picker.shouldPick(null), false, 'missing cursor position clears without picking');
+  t.equal(picker.shouldPick([13, 34]), true, 'cursor can pick again after clearing');
+  picker.destroy();
   t.end();
 });
 

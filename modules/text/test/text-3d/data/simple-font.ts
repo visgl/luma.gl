@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 // Adapted from THREE.js font data format.
 
-import {type TypefaceFontData} from '../../src/font';
+import {type TypefaceFontData} from '../../../src/text-3d/font';
 
 /** Minimal typeface JSON used for text geometry tests. */
 export const simpleFont: TypefaceFontData = {

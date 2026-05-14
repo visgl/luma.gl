@@ -4508,8 +4508,12 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@luma.gl/text@workspace:modules/text"
   dependencies:
+    "@luma.gl/arrow": "npm:~9.3.0"
+    "@luma.gl/core": "npm:~9.3.0"
+    "@mapbox/tiny-sdf": "npm:^2.0.7"
     "@math.gl/core": "npm:^4.1.0"
     "@math.gl/polygon": "npm:^4.1.0"
+    apache-arrow: "npm:^17.0.0"
   peerDependencies:
     "@luma.gl/engine": ~9.3.0
   languageName: unknown
@@ -15297,6 +15301,23 @@ __metadata:
     "@luma.gl/webgl": "npm:~9.3.0"
     "@luma.gl/webgpu": "npm:~9.3.0"
     "@math.gl/core": "npm:^4.1.0"
+    apache-arrow: "npm:^17.0.0"
+    typescript: "npm:^5.9.3"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
+"luma.gl-examples-arrow-text-2d@workspace:examples/showcase/arrow-text-2d":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-arrow-text-2d@workspace:examples/showcase/arrow-text-2d"
+  dependencies:
+    "@luma.gl/arrow": "npm:~9.3.0"
+    "@luma.gl/core": "npm:~9.3.0"
+    "@luma.gl/engine": "npm:~9.3.0"
+    "@luma.gl/shadertools": "npm:~9.3.0"
+    "@luma.gl/text": "npm:~9.3.0"
+    "@luma.gl/webgl": "npm:~9.3.0"
+    "@luma.gl/webgpu": "npm:~9.3.0"
     apache-arrow: "npm:^17.0.0"
     typescript: "npm:^5.9.3"
     vite: "npm:^8.0.0"
