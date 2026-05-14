@@ -3,7 +3,6 @@
 // Copyright (c) vis.gl contributors
 
 import type {Device, ShaderLayout} from '@luma.gl/core';
-import type {DynamicBuffer} from '@luma.gl/engine';
 import * as arrow from 'apache-arrow';
 import type {ArrowVertexFormatOptions} from './arrow-shader-layout';
 import {
@@ -102,15 +101,6 @@ export class StreamingArrowGPUVector<
  * iterator conveniences while delegating uploads and validation to `GPUTable`.
  */
 export class StreamingArrowGPUTable extends GPUTable {
-  /** Appendable GPU vectors keyed by shader attribute name. */
-  declare readonly gpuVectors: Record<
-    string,
-    GPUVector & {
-      readonly buffer: DynamicBuffer;
-    }
-  >;
-  /** Model-ready DynamicBuffer attributes keyed by shader attribute name. */
-  declare readonly attributes: Record<string, DynamicBuffer>;
   /** Resolves after any constructor-provided async record batches have been appended. */
   readonly ready: Promise<void>;
 
