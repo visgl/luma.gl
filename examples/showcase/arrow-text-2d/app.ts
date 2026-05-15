@@ -16,10 +16,15 @@ import {
   supportsIndexPicking
 } from '@luma.gl/engine';
 import {ShaderModule} from '@luma.gl/shadertools';
-import {ArrowStorageTextModel, ArrowTextModel, type ArrowTextModelProps} from '@luma.gl/text';
+import {
+  ArrowStorageTextModel,
+  ArrowTextModel,
+  type ArrowStorageTextInputProps,
+  type ArrowTextModelProps
+} from '@luma.gl/text';
 import * as arrow from 'apache-arrow';
 
-export const title = 'Arrow 2D Text';
+export const title = 'Arrow Text';
 export const description = 'Generated Arrow UTF-8 labels expanded into GPU glyph instances.';
 
 const LABEL_COLUMN_COUNT = 400;
@@ -29,9 +34,14 @@ const LABEL_FIELD_WIDTH = LABEL_COLUMN_COUNT * LABEL_COLUMN_SPACING;
 const GLYPH_WORLD_SCALE = 0.36;
 const VIEW_HEIGHT = 820;
 const LABEL_CLIP_WIDTH = 720;
+const CAMERA_PAN_SPEED_X = 72;
+const CAMERA_PAN_SPEED_Y = 56;
 const CHARACTER_SET = ' ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/-';
 const ANIMATE_TOGGLE_ID = 'arrow-text-2d-animate';
 const CLIPPING_TOGGLE_ID = 'arrow-text-2d-clipping';
+const COLOR_TOGGLE_ID = 'arrow-text-2d-colors';
+const SIZE_TOGGLE_ID = 'arrow-text-2d-sizes';
+const ANGLE_TOGGLE_ID = 'arrow-text-2d-angles';
 const MODEL_SELECTOR_ID = 'arrow-text-2d-model';
 const DATA_SELECTOR_ID = 'arrow-text-2d-data';
 const ARROW_VECTOR_BUILD_TIME_ID = 'arrow-text-2d-arrow-vector-build-time';
@@ -39,6 +49,7 @@ const CPU_GENERATION_TIME_ID = 'arrow-text-2d-cpu-generation-time';
 const TOTAL_GPU_BYTES_ID = 'arrow-text-2d-total-gpu-bytes';
 const GPU_ATTRIBUTE_BYTES_ID = 'arrow-text-2d-gpu-attribute-bytes';
 const GPU_STORAGE_BYTES_ID = 'arrow-text-2d-gpu-storage-bytes';
+const GPU_STYLE_VECTOR_BYTES_ID = 'arrow-text-2d-gpu-style-vector-bytes';
 const GPU_COMPUTE_ROW_ID = 'arrow-text-2d-gpu-compute-row';
 const GPU_COMPUTE_BYTES_ID = 'arrow-text-2d-gpu-compute-bytes';
 const DECK_ATTRIBUTE_SIZE_ID = 'arrow-text-2d-deck-attribute-size';
@@ -53,9 +64,13 @@ type TextDataset = {
   label: string;
 };
 type ArrowTextInput = {
+  positions: GPUVector<arrow.FixedSizeList<arrow.Float32>>;
   labelVectors: Record<string, GPUVector>;
   texts: GPUVector<arrow.Utf8>;
   clipRects: GPUVector<arrow.FixedSizeList<arrow.Int16>>;
+  colors: GPUVector<arrow.FixedSizeList<arrow.Uint8>>;
+  angles: GPUVector<arrow.Float32>;
+  sizes: GPUVector<arrow.Float32>;
   arrowVectorBuildTimeMs: number;
 };
 
@@ -219,8 +234,28 @@ struct TextViewportUniforms {
 @group(0) @binding(auto) var fontAtlasTexture : texture_2d<f32>;
 @group(0) @binding(auto) var fontAtlasTextureSampler : sampler;
 @group(0) @binding(auto) var<storage, read> textRowPositions : array<vec2<f32>>;
+@group(0) @binding(auto) var<storage, read> textRowColors : array<u32>;
+@group(0) @binding(auto) var<storage, read> textRowAngles : array<f32>;
+@group(0) @binding(auto) var<storage, read> textRowSizes : array<f32>;
+@group(0) @binding(auto) var<storage, read> textRowPixelOffsets : array<vec2<f32>>;
 @group(0) @binding(auto) var<storage, read> textRowClipRects : array<vec2<u32>>;
 @group(0) @binding(auto) var<storage, read> textGlyphFrames : array<vec4<f32>>;
+
+struct TextStorageStyleConfig {
+  constantColor : vec4<f32>,
+  constantAngleDegrees : f32,
+  constantSize : f32,
+  constantPixelOffset : vec2<f32>,
+  useRowColors : u32,
+  useRowAngles : u32,
+  useRowSizes : u32,
+  useRowPixelOffsets : u32,
+  hasClipRects : u32,
+  rowBase : u32,
+  _padding : u32,
+};
+
+@group(0) @binding(auto) var<storage, read> textStorageStyleConfig : TextStorageStyleConfig;
 
 struct VertexInputs {
   @builtin(vertex_index) vertexIndex : u32,
@@ -232,7 +267,7 @@ struct VertexInputs {
 struct FragmentInputs {
   @builtin(position) Position : vec4<f32>,
   @location(0) textureCoordinate : vec2<f32>,
-  @location(1) labelTone : f32,
+  @location(1) textColor : vec4<f32>,
   @interpolate(flat)
   @location(2) objectIndex : i32,
 };
@@ -286,6 +321,26 @@ fn isGlyphVertexClipped(glyphVertexOffset : vec2<f32>, clipRect : vec4<i32>) -> 
   return false;
 }
 
+fn unpackTextColor(colorWord : u32) -> vec4<f32> {
+  return vec4<f32>(
+    f32(colorWord & 0xffu),
+    f32((colorWord >> 8u) & 0xffu),
+    f32((colorWord >> 16u) & 0xffu),
+    f32((colorWord >> 24u) & 0xffu)
+  ) / 255.0;
+}
+
+fn rotateTextOffset(offset : vec2<f32>, angleDegrees : f32) -> vec2<f32> {
+  let angleRadians = angleDegrees * 0.017453292519943295;
+  let rotation = mat2x2<f32>(
+    cos(angleRadians),
+    sin(angleRadians),
+    -sin(angleRadians),
+    cos(angleRadians)
+  );
+  return rotation * offset;
+}
+
 @vertex
 fn vertexMain(inputs : VertexInputs) -> FragmentInputs {
   var outputs : FragmentInputs;
@@ -294,23 +349,45 @@ fn vertexMain(inputs : VertexInputs) -> FragmentInputs {
   let glyphOffset = vec2<f32>(inputs.glyphOffsets);
   let glyphSize = glyphFrame.zw;
   let glyphVertexOffset = glyphOffset + corner * glyphSize;
-  let glyphWorldOffset = glyphVertexOffset * textViewport.glyphWorldScale;
-  let labelPosition = textRowPositions[inputs.rowIndices];
+  let rowIndex = inputs.rowIndices - textStorageStyleConfig.rowBase;
+  var angleDegrees = textStorageStyleConfig.constantAngleDegrees;
+  if (textStorageStyleConfig.useRowAngles != 0u) {
+    angleDegrees = textRowAngles[rowIndex];
+  }
+  var textSize = textStorageStyleConfig.constantSize;
+  if (textStorageStyleConfig.useRowSizes != 0u) {
+    textSize = textRowSizes[rowIndex];
+  }
+  let styledGlyphVertexOffset = rotateTextOffset(
+    glyphVertexOffset * (textSize / 32.0),
+    angleDegrees
+  );
+  var pixelOffset = textStorageStyleConfig.constantPixelOffset;
+  if (textStorageStyleConfig.useRowPixelOffsets != 0u) {
+    pixelOffset = textRowPixelOffsets[rowIndex];
+  }
+  let glyphWorldOffset =
+    (styledGlyphVertexOffset + pixelOffset) * textViewport.glyphWorldScale;
+  let labelPosition = textRowPositions[rowIndex];
   let worldPosition = labelPosition + glyphWorldOffset;
   let clipPosition = (worldPosition - textViewport.cameraOffset) * textViewport.viewportScale;
   let atlasSize = vec2<f32>(textureDimensions(fontAtlasTexture));
   let atlasCorner = vec2<f32>(corner.x, 1.0 - corner.y);
   let atlasPixel = glyphFrame.xy + atlasCorner * glyphSize;
-  let clipRect = unpackClipRect(textRowClipRects[inputs.rowIndices]);
+  let clipRect = unpackClipRect(textRowClipRects[rowIndex]);
 
   outputs.Position = select(
     vec4<f32>(clipPosition, 0.0, 1.0),
     vec4<f32>(0.0),
     textViewport.clippingEnabled > 0.5 &&
+    textStorageStyleConfig.hasClipRects != 0u &&
     isGlyphVertexClipped(glyphVertexOffset, clipRect)
   );
   outputs.textureCoordinate = atlasPixel / atlasSize;
-  outputs.labelTone = 0.5 + 0.5 * sin(labelPosition.y * 0.016 + textViewport.time * 0.5);
+  outputs.textColor = textStorageStyleConfig.constantColor;
+  if (textStorageStyleConfig.useRowColors != 0u) {
+    outputs.textColor = unpackTextColor(textRowColors[rowIndex]);
+  }
   outputs.objectIndex = i32(inputs.rowIndices);
   return outputs;
 }
@@ -319,10 +396,7 @@ fn vertexMain(inputs : VertexInputs) -> FragmentInputs {
 fn fragmentMain(inputs : FragmentInputs) -> @location(0) vec4<f32> {
   let sampledAlpha = textureSample(fontAtlasTexture, fontAtlasTextureSampler, inputs.textureCoordinate).a;
   let glyphAlpha = smoothstep(0.68, 0.82, sampledAlpha);
-  let coolText = vec3<f32>(0.62, 0.88, 1.0);
-  let warmText = vec3<f32>(1.0, 0.95, 0.72);
-  let textColor = mix(coolText, warmText, inputs.labelTone);
-  let fragColor = vec4<f32>(textColor, glyphAlpha);
+  let fragColor = vec4<f32>(inputs.textColor.rgb, inputs.textColor.a * glyphAlpha);
   return picking_filterHighlightColor(fragColor, inputs.objectIndex);
 }
 
@@ -480,10 +554,9 @@ function supportsTextIndexPicking(device: Device): boolean {
 export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = `\
   <p>
-  Renders generated Arrow UTF-8 labels, about 30 characters each, through selectable text-model
-  and dataset sizes.
+  Renders <code>arrow.Vector&lt;Utf8&gt;</code>, 30 characters / row.
   </p>
-  <div style="margin-top: 16px; padding: 14px 16px; border: 1px solid rgba(208, 215, 222, 0.9); border-radius: 16px; background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(246, 248, 250, 0.96) 100%); box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);">
+  <div style="min-height: 920px; max-height: calc(100vh - 72px); overflow-y: auto; margin-top: 16px; padding: 14px 16px; border: 1px solid rgba(208, 215, 222, 0.9); border-radius: 16px; background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(246, 248, 250, 0.96) 100%); box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);">
     <div style="display: grid; grid-template-columns: minmax(56px, auto) minmax(0, 1fr); align-items: center; gap: 10px 12px; margin-bottom: 12px; color: #0f172a; font-size: 15px; font-weight: 600;">
       <label for="${MODEL_SELECTOR_ID}">Model</label>
       <select id="${MODEL_SELECTOR_ID}" style="min-width: 0; min-height: 34px; border: 1px solid rgba(148, 163, 184, 0.8); border-radius: 6px; background: #ffffff; color: #0f172a; font: inherit;">
@@ -497,14 +570,28 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
         <option value="1m">${TEXT_DATASETS['1m'].label}</option>
       </select>
     </div>
-    <label for="${ANIMATE_TOGGLE_ID}" style="display: flex; align-items: center; gap: 10px; color: #0f172a; font-size: 15px; font-weight: 600; cursor: pointer;">
-      <input id="${ANIMATE_TOGGLE_ID}" type="checkbox" checked style="width: 18px; height: 18px; margin: 0; accent-color: #2563eb;" />
-      <span>Animate</span>
-    </label>
-    <label for="${CLIPPING_TOGGLE_ID}" style="display: flex; align-items: center; gap: 10px; margin-top: 10px; color: #0f172a; font-size: 15px; font-weight: 600; cursor: pointer;">
-      <input id="${CLIPPING_TOGGLE_ID}" type="checkbox" checked style="width: 18px; height: 18px; margin: 0; accent-color: #2563eb;" />
-      <span>Clip labels</span>
-    </label>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 18px; color: #0f172a; font-size: 15px; font-weight: 600;">
+      <label for="${ANIMATE_TOGGLE_ID}" style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+        <input id="${ANIMATE_TOGGLE_ID}" type="checkbox" checked style="width: 18px; height: 18px; margin: 0; accent-color: #2563eb;" />
+        <span>Animate</span>
+      </label>
+      <label for="${CLIPPING_TOGGLE_ID}" style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+        <input id="${CLIPPING_TOGGLE_ID}" type="checkbox" checked style="width: 18px; height: 18px; margin: 0; accent-color: #2563eb;" />
+        <span>Clip</span>
+      </label>
+      <label for="${COLOR_TOGGLE_ID}" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+        <input id="${COLOR_TOGGLE_ID}" type="checkbox" checked style="width: 18px; height: 18px; margin: 0; accent-color: #2563eb;" />
+        <span>Color</span>
+      </label>
+      <label for="${SIZE_TOGGLE_ID}" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+        <input id="${SIZE_TOGGLE_ID}" type="checkbox" checked style="width: 18px; height: 18px; margin: 0; accent-color: #2563eb;" />
+        <span>Size</span>
+      </label>
+      <label for="${ANGLE_TOGGLE_ID}" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+        <input id="${ANGLE_TOGGLE_ID}" type="checkbox" checked style="width: 18px; height: 18px; margin: 0; accent-color: #2563eb;" />
+        <span>Angle</span>
+      </label>
+    </div>
     <div style="display: flex; justify-content: space-between; gap: 16px; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(208, 215, 222, 0.9); color: #334155; font-size: 13px; line-height: 1.4;">
       <span>Arrow vector build time</span>
       <strong id="${ARROW_VECTOR_BUILD_TIME_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong>
@@ -518,12 +605,16 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
       <strong id="${TOTAL_GPU_BYTES_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong>
     </div>
     <div style="display: flex; justify-content: space-between; gap: 16px; margin-top: 8px; color: #334155; font-size: 13px; line-height: 1.4;">
-      <span>GPU Attribute Buffers</span>
+      <span>GPU Text Attribute Buffers</span>
       <strong id="${GPU_ATTRIBUTE_BYTES_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong>
     </div>
     <div style="display: flex; justify-content: space-between; gap: 16px; margin-top: 8px; color: #334155; font-size: 13px; line-height: 1.4;">
-      <span>GPU Storage Buffers</span>
+      <span>GPU Text Storage Buffers</span>
       <strong id="${GPU_STORAGE_BYTES_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong>
+    </div>
+    <div style="display: flex; justify-content: space-between; gap: 16px; margin-top: 8px; color: #334155; font-size: 13px; line-height: 1.4;">
+      <span>GPU Style Storage Buffers</span>
+      <strong id="${GPU_STYLE_VECTOR_BYTES_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong>
     </div>
     <div id="${GPU_COMPUTE_ROW_ID}" style="display: none; justify-content: space-between; gap: 16px; margin-top: 8px; color: #334155; font-size: 13px; line-height: 1.4;">
       <span>GPU Compute</span>
@@ -582,9 +673,13 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
   readonly device: Device;
   readonly textInputs: Partial<Record<TextDatasetKind, ArrowTextInput>> = {};
   readonly textInputPromises: Partial<Record<TextDatasetKind, Promise<ArrowTextInput>>> = {};
+  positions!: GPUVector<arrow.FixedSizeList<arrow.Float32>>;
   labelVectors!: Record<string, GPUVector>;
   texts!: GPUVector<arrow.Utf8>;
   clipRects!: GPUVector<arrow.FixedSizeList<arrow.Int16>>;
+  colors!: GPUVector<arrow.FixedSizeList<arrow.Uint8>>;
+  angles!: GPUVector<arrow.Float32>;
+  sizes!: GPUVector<arrow.Float32>;
   textModel!: ActiveTextModel;
   pickingModel: Model | null = null;
   picker: PickingManager | null = null;
@@ -592,11 +687,17 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
   textDatasetKind: TextDatasetKind = '100k';
   animate = true;
   clippingEnabled = true;
+  colorEnabled = true;
+  sizeEnabled = true;
+  angleEnabled = true;
   isFinalized = false;
   animationSeconds = 0;
   lastRenderSeconds: number | null = null;
   animateToggle: HTMLInputElement | null = null;
   clippingToggle: HTMLInputElement | null = null;
+  colorToggle: HTMLInputElement | null = null;
+  sizeToggle: HTMLInputElement | null = null;
+  angleToggle: HTMLInputElement | null = null;
   modelSelector: HTMLSelectElement | null = null;
   dataSelector: HTMLSelectElement | null = null;
   arrowVectorBuildTimeLabel: HTMLElement | null = null;
@@ -604,6 +705,7 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
   totalGpuBytesLabel: HTMLElement | null = null;
   gpuAttributeBytesLabel: HTMLElement | null = null;
   gpuStorageBytesLabel: HTMLElement | null = null;
+  gpuStyleVectorBytesLabel: HTMLElement | null = null;
   gpuComputeBytesLabel: HTMLElement | null = null;
   deckAttributeSizeLabel: HTMLElement | null = null;
   pickedLabel: HTMLElement | null = null;
@@ -618,10 +720,14 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     if (this.isFinalized) {
       return;
     }
-    const {labelVectors, texts, clipRects} = defaultTextInput;
+    const {positions, labelVectors, texts, clipRects, colors, angles, sizes} = defaultTextInput;
+    this.positions = positions;
     this.labelVectors = labelVectors;
     this.texts = texts;
     this.clipRects = clipRects;
+    this.colors = colors;
+    this.angles = angles;
+    this.sizes = sizes;
     this.textModel = this.createTextModel('direct');
     this.pickingModel = supportsTextIndexPicking(this.device)
       ? this.createPickingModel(this.textModel)
@@ -638,10 +744,12 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     this.initializeDataSelector();
     this.initializeAnimateToggle();
     this.initializeClippingToggle();
+    this.initializeStyleToggles();
     this.initializeAttributeMetricLabels();
     this.initializePickedLabel();
 
-    // Build the inactive large dataset after the first visible model is ready.
+    // Warm larger datasets after the first visible model is ready.
+    void this.getOrCreateTextInput('500k');
     void this.getOrCreateTextInput('1m');
   }
 
@@ -709,11 +817,24 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
       if (this.device.type !== 'webgpu') {
         throw new Error('ArrowStorageTextModel showcase mode requires WebGPU');
       }
-      return new ArrowStorageTextModel(this.device, {
-        ...commonProps,
+      const storageProps: ArrowStorageTextInputProps = {
+        id: commonProps.id,
+        positions: this.positions,
+        texts: this.texts,
+        clipRects: this.clipRects,
+        ...(this.colorEnabled ? {colors: this.colors} : {}),
+        ...(this.angleEnabled ? {angles: this.angles} : {}),
+        ...(this.sizeEnabled ? {sizes: this.sizes} : {}),
+        color: [210, 232, 255, 255],
+        characterSet: commonProps.characterSet,
+        fontSettings: commonProps.fontSettings,
         source: STORAGE_INDEXED_WGSL_SHADER,
-        shaderLayout: STORAGE_INDEXED_TEXT_SHADER_LAYOUT
-      });
+        shaderLayout: STORAGE_INDEXED_TEXT_SHADER_LAYOUT,
+        shaderInputs: commonProps.shaderInputs,
+        modules: commonProps.modules,
+        parameters: commonProps.parameters
+      };
+      return new ArrowStorageTextModel(this.device, storageProps);
     }
     return new ArrowTextModel(this.device, commonProps);
   }
@@ -738,12 +859,16 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     if (!this.clippingToggle) {
       this.initializeClippingToggle();
     }
+    if (!this.colorToggle || !this.sizeToggle || !this.angleToggle) {
+      this.initializeStyleToggles();
+    }
     if (
       !this.arrowVectorBuildTimeLabel ||
       !this.cpuGenerationTimeLabel ||
       !this.totalGpuBytesLabel ||
       !this.gpuAttributeBytesLabel ||
       !this.gpuStorageBytesLabel ||
+      !this.gpuStyleVectorBytesLabel ||
       !this.gpuComputeBytesLabel ||
       !this.deckAttributeSizeLabel
     ) {
@@ -764,9 +889,13 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     const textModelNeedsRedraw = this.textModel.needsRedraw();
     const shouldRenderText = this.animate || Boolean(needsRedraw) || Boolean(textModelNeedsRedraw);
     if (shouldRenderText) {
+      const cameraOffsetAmplitudeX = LABEL_FIELD_WIDTH * 0.43;
+      const cameraOffsetAmplitudeY = this.getLabelFieldHeight() * 0.38;
       const cameraOffset: [number, number] = [
-        Math.sin(this.animationSeconds * 0.004) * LABEL_FIELD_WIDTH * 0.43,
-        Math.cos(this.animationSeconds * 0.006) * this.getLabelFieldHeight() * 0.38
+        Math.sin(this.animationSeconds * (CAMERA_PAN_SPEED_X / cameraOffsetAmplitudeX)) *
+          cameraOffsetAmplitudeX,
+        Math.cos(this.animationSeconds * (CAMERA_PAN_SPEED_Y / cameraOffsetAmplitudeY)) *
+          cameraOffsetAmplitudeY
       ];
       const viewportWidth = VIEW_HEIGHT * Math.max(aspect, 0.2);
       const viewportScale: [number, number] = [2 / viewportWidth, 2 / VIEW_HEIGHT];
@@ -796,10 +925,16 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     this.isFinalized = true;
     this.animateToggle?.removeEventListener('change', this.handleAnimateToggle);
     this.clippingToggle?.removeEventListener('change', this.handleClippingToggle);
+    this.colorToggle?.removeEventListener('change', this.handleColorToggle);
+    this.sizeToggle?.removeEventListener('change', this.handleSizeToggle);
+    this.angleToggle?.removeEventListener('change', this.handleAngleToggle);
     this.modelSelector?.removeEventListener('change', this.handleModelSelection);
     this.dataSelector?.removeEventListener('change', this.handleDataSelection);
     this.animateToggle = null;
     this.clippingToggle = null;
+    this.colorToggle = null;
+    this.sizeToggle = null;
+    this.angleToggle = null;
     this.modelSelector = null;
     this.dataSelector = null;
     this.arrowVectorBuildTimeLabel = null;
@@ -807,6 +942,7 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     this.totalGpuBytesLabel = null;
     this.gpuAttributeBytesLabel = null;
     this.gpuStorageBytesLabel = null;
+    this.gpuStyleVectorBytesLabel = null;
     this.gpuComputeBytesLabel = null;
     this.deckAttributeSizeLabel = null;
     this.pickedLabel = null;
@@ -819,6 +955,9 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
       }
       textInput?.texts.destroy();
       textInput?.clipRects.destroy();
+      textInput?.colors.destroy();
+      textInput?.angles.destroy();
+      textInput?.sizes.destroy();
     }
   }
 
@@ -907,8 +1046,7 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     }
 
     for (const option of Array.from(this.dataSelector.options)) {
-      const textDatasetKind = option.value as TextDatasetKind;
-      option.disabled = !this.textInputs[textDatasetKind];
+      option.disabled = false;
     }
   }
 
@@ -923,10 +1061,14 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
       return;
     }
     this.textDatasetKind = nextDatasetKind;
-    const {labelVectors, texts, clipRects} = nextTextInput;
+    const {positions, labelVectors, texts, clipRects, colors, angles, sizes} = nextTextInput;
+    this.positions = positions;
     this.labelVectors = labelVectors;
     this.texts = texts;
     this.clipRects = clipRects;
+    this.colors = colors;
+    this.angles = angles;
+    this.sizes = sizes;
     this.replaceTextModel(this.textModelKind, 'text dataset selector changed');
   };
 
@@ -973,6 +1115,47 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     this.textModel.setNeedsRedraw('text clipping toggled');
   };
 
+  initializeStyleToggles(): void {
+    this.colorToggle = initializeCheckboxToggle(
+      COLOR_TOGGLE_ID,
+      this.colorEnabled,
+      this.handleColorToggle
+    );
+    this.sizeToggle = initializeCheckboxToggle(
+      SIZE_TOGGLE_ID,
+      this.sizeEnabled,
+      this.handleSizeToggle
+    );
+    this.angleToggle = initializeCheckboxToggle(
+      ANGLE_TOGGLE_ID,
+      this.angleEnabled,
+      this.handleAngleToggle
+    );
+  }
+
+  handleColorToggle = (event: Event): void => {
+    this.colorEnabled = (event.target as HTMLInputElement).checked;
+    this.rebuildStorageStyleModel('text row colors toggled');
+  };
+
+  handleSizeToggle = (event: Event): void => {
+    this.sizeEnabled = (event.target as HTMLInputElement).checked;
+    this.rebuildStorageStyleModel('text row sizes toggled');
+  };
+
+  handleAngleToggle = (event: Event): void => {
+    this.angleEnabled = (event.target as HTMLInputElement).checked;
+    this.rebuildStorageStyleModel('text row angles toggled');
+  };
+
+  rebuildStorageStyleModel(redrawReason: string): void {
+    if (this.textModelKind === 'storage') {
+      this.replaceTextModel(this.textModelKind, redrawReason);
+      return;
+    }
+    this.textModel.setNeedsRedraw(redrawReason);
+  }
+
   initializeAttributeMetricLabels(): void {
     const rowStorageByteLength =
       this.textModel instanceof ArrowStorageTextModel ? this.textModel.rowStorageByteLength : 0;
@@ -1010,6 +1193,10 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
       GPU_STORAGE_BYTES_ID,
       sharedStorageByteLength
     );
+    this.gpuStyleVectorBytesLabel = initializeAttributeSizeLabel(
+      GPU_STYLE_VECTOR_BYTES_ID,
+      this.getSelectedStorageStyleVectorByteLength()
+    );
     setMetricRowVisible(GPU_COMPUTE_ROW_ID, this.textModel instanceof ArrowStorageTextModel);
     this.gpuComputeBytesLabel = initializeTextLabel(
       GPU_COMPUTE_BYTES_ID,
@@ -1023,6 +1210,18 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
 
   initializePickedLabel(): void {
     this.pickedLabel = document.getElementById(PICKED_LABEL_ID);
+  }
+
+  getSelectedStorageStyleVectorByteLength(): number {
+    if (!(this.textModel instanceof ArrowStorageTextModel)) {
+      return 0;
+    }
+
+    return (
+      (this.colorEnabled ? getGpuVectorByteLength(this.colors) : 0) +
+      (this.angleEnabled ? getGpuVectorByteLength(this.angles) : 0) +
+      (this.sizeEnabled ? getGpuVectorByteLength(this.sizes) : 0)
+    );
   }
 
   handleObjectPicked = ({
@@ -1052,9 +1251,13 @@ function makeArrowTextInput(device: Device, dataset: TextDataset): ArrowTextInpu
   const centerRow = (labelRowCount - 1) / 2;
   const positions = new Float32Array(dataset.labelCount * 2);
   const clipRects = new Int16Array(dataset.labelCount * 4);
+  const colors = new Uint8Array(dataset.labelCount * 4);
+  const angles = new Float32Array(dataset.labelCount);
+  const sizes = new Float32Array(dataset.labelCount);
   const labels = new Array<string>(dataset.labelCount);
   let positionIndex = 0;
   let clipRectIndex = 0;
+  let colorIndex = 0;
 
   for (let labelIndex = 0; labelIndex < dataset.labelCount; labelIndex++) {
     const columnIndex = labelIndex % LABEL_COLUMN_COUNT;
@@ -1065,6 +1268,12 @@ function makeArrowTextInput(device: Device, dataset: TextDataset): ArrowTextInpu
     clipRects[clipRectIndex++] = 0;
     clipRects[clipRectIndex++] = LABEL_CLIP_WIDTH;
     clipRects[clipRectIndex++] = -1;
+    colors[colorIndex++] = 96 + ((labelIndex * 17) % 128);
+    colors[colorIndex++] = 172 + ((labelIndex * 11) % 72);
+    colors[colorIndex++] = 210 + ((labelIndex * 7) % 45);
+    colors[colorIndex++] = 255;
+    angles[labelIndex] = ((labelIndex % 9) - 4) * 2;
+    sizes[labelIndex] = 24 + (labelIndex % 5) * 4;
     labels[labelIndex] = `NODE ${String(labelIndex).padStart(6, '0')} / ARROW TEXT VECTOR`;
   }
 
@@ -1072,15 +1281,20 @@ function makeArrowTextInput(device: Device, dataset: TextDataset): ArrowTextInpu
   const positionVector = makeArrowFixedSizeListVector(new arrow.Float32(), 2, positions);
   const texts = arrow.vectorFromArray(labels, new arrow.Utf8());
   const clipRectVector = makeArrowFixedSizeListVector(new arrow.Int16(), 4, clipRects);
+  const colorVector = makeArrowFixedSizeListVector(new arrow.Uint8(), 4, colors);
+  const angleVector = makeFloat32ArrowVector(angles);
+  const sizeVector = makeFloat32ArrowVector(sizes);
+  const positionsGpuVector = new GPUVector({
+    type: 'arrow',
+    name: 'positions',
+    device,
+    vector: positionVector
+  });
 
   return {
+    positions: positionsGpuVector,
     labelVectors: {
-      positions: new GPUVector({
-        type: 'arrow',
-        name: 'positions',
-        device,
-        vector: positionVector
-      })
+      positions: positionsGpuVector
     },
     texts: new GPUVector({
       type: 'arrow',
@@ -1093,6 +1307,24 @@ function makeArrowTextInput(device: Device, dataset: TextDataset): ArrowTextInpu
       name: 'clipRects',
       device,
       vector: clipRectVector
+    }),
+    colors: new GPUVector({
+      type: 'arrow',
+      name: 'colors',
+      device,
+      vector: colorVector
+    }),
+    angles: new GPUVector({
+      type: 'arrow',
+      name: 'angles',
+      device,
+      vector: angleVector
+    }),
+    sizes: new GPUVector({
+      type: 'arrow',
+      name: 'sizes',
+      device,
+      vector: sizeVector
     }),
     arrowVectorBuildTimeMs: getNow() - arrowVectorBuildStartTime
   };
@@ -1134,10 +1366,27 @@ function initializeCheckboxToggle(
   return checkboxToggle;
 }
 
+function makeFloat32ArrowVector(values: Float32Array): arrow.Vector<arrow.Float32> {
+  return arrow.makeVector(
+    arrow.makeData({
+      type: new arrow.Float32(),
+      length: values.length,
+      data: values
+    })
+  ) as arrow.Vector<arrow.Float32>;
+}
+
 function getTextModelGlyphCount(textModel: ActiveTextModel): number {
   return textModel instanceof ArrowStorageTextModel
     ? textModel.glyphCount
     : textModel.glyphLayout.glyphCount;
+}
+
+function getGpuVectorByteLength(vector: GPUVector): number {
+  return vector.data.reduce(
+    (byteLength, gpuData) => byteLength + gpuData.length * gpuData.byteStride,
+    0
+  );
 }
 
 function initializeMetricTimeLabel(id: string, durationMs: number): HTMLElement | null {

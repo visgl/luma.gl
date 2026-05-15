@@ -139,7 +139,7 @@ test('ArrowTextModel expands chunked UTF-8 GPUVector data', t => {
 
 test('ArrowStorageTextModel rejects non-WebGPU devices', t => {
   const device = new NullDevice({});
-  const textProps = makeGpuTextProps(device, ['AB', 'A']);
+  const textProps = makeStorageGpuTextProps(device, ['AB', 'A']);
 
   t.throws(
     () =>
@@ -152,13 +152,13 @@ test('ArrowStorageTextModel rejects non-WebGPU devices', t => {
     /WebGPU-only/,
     'storage model reports its backend contract'
   );
-  destroyGpuTextProps(textProps);
+  destroyStorageGpuTextProps(textProps);
   t.end();
 });
 
 test('createArrowStorageTextState rejects non-WebGPU devices', t => {
   const device = new NullDevice({});
-  const textProps = makeGpuTextProps(device, ['AB', 'A']);
+  const textProps = makeStorageGpuTextProps(device, ['AB', 'A']);
 
   t.throws(
     () =>
@@ -171,7 +171,7 @@ test('createArrowStorageTextState rejects non-WebGPU devices', t => {
     /WebGPU device/,
     'storage-state builder reports its backend contract'
   );
-  destroyGpuTextProps(textProps);
+  destroyStorageGpuTextProps(textProps);
   t.end();
 });
 
@@ -206,6 +206,23 @@ function makeGpuTexts(device: NullDevice, labels: string[]): GPUVector<arrow.Utf
 
 function destroyGpuTextProps(props: ReturnType<typeof makeGpuTextProps>): void {
   props.labelVectors.positions.destroy();
+  props.texts.destroy();
+}
+
+function makeStorageGpuTextProps(device: NullDevice, labels: string[]) {
+  return {
+    positions: new GPUVector({
+      type: 'arrow',
+      name: 'positions',
+      device,
+      vector: makeArrowFixedSizeListVector(new arrow.Float32(), 2, new Float32Array([0, 0, 1, 1]))
+    }),
+    texts: makeGpuTexts(device, labels)
+  };
+}
+
+function destroyStorageGpuTextProps(props: ReturnType<typeof makeStorageGpuTextProps>): void {
+  props.positions.destroy();
   props.texts.destroy();
 }
 

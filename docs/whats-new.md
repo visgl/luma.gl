@@ -24,7 +24,7 @@ Target Release Date: Q3, 2026
 
 - **Arrow-native 2D text** - New atlas, layout, and UTF-8 glyph expansion utilities support deck.gl-style text extraction into `@luma.gl/text`.
 - **`ArrowTextModel`** - New `ArrowModel`-derived one-line label renderer expands UTF-8 `GPUVector` rows into glyph instances without row-level string materialization.
-- **`ArrowStorageTextModel`** - New WebGPU-only storage-backed text path consumes GPUVector row/text inputs, stores row state and glyph definitions once, expands render buffers with compute, and can consume reusable `ArrowStorageTextState` objects built by `createArrowStorageTextState`.
+- **`ArrowStorageTextModel`** - New WebGPU-only storage-backed text path consumes batched GPUVector row/text inputs directly, can read row color/angle/size/pixel-offset styling plus compact text-anchor and baseline enums from aligned GPUVectors with fixed shader bindings and constant fallbacks, expands render buffers with compute, and can consume reusable `ArrowStorageTextState` objects built by `createArrowStorageTextState`.
 - **GPU UTF-8 shader mapping** - Reusable text-module WGSL helpers compose sparse UTF-8 byte traversal, code point decode, and storage lookup into one-pass text compute kernels.
 - **Packed text clipping** - Arrow 2D text accepts optional `FixedSizeList<Int16>[4]` clip rectangles and expands them into 8-byte per-glyph clipping attributes only when clipping is enabled.
 
