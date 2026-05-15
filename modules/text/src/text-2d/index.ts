@@ -25,7 +25,6 @@ export {
   buildArrowUtf8Chunks,
   buildGpuExpandedTextStream,
   buildGpuUtf8TextInput,
-  buildIndirectArrowGlyphLayout,
   createArrowUtf8TextIndexAccessor,
   decodeArrowUtf8CodePoints,
   isArrowUtf8Vector,
@@ -36,26 +35,31 @@ export {
   type ArrowUtf8TextIndexAccessor,
   type GpuExpandedTextStream,
   type GpuUtf8TextInput,
-  type IndirectArrowGlyphLayout,
   type Utf8TextIndexTarget
 } from './arrow-text';
 export {
+  createGpuExpandedCompactInput,
+  createGpuExpandedGeneratedState,
+  createGpuUtf8ExpandedInput,
+  createStorageGlyphLookup,
+  createStorageGlyphMetrics,
+  dispatchGpuExpandedTextCompute,
+  dispatchGpuUtf8ExpandedTextCompute,
+  type GpuExpandedCompactInputState,
+  type GpuExpandedGeneratedState,
+  type GpuTextExpansionResourceOptions,
+  type GpuUtf8ExpandedInputState,
+  type StorageGlyphLookupState,
+  type StorageGlyphMetricState
+} from './gpu-text-expansion';
+export {
   ArrowTextModel,
-  GpuExpandedTextModel,
-  IndirectTextModel,
-  StorageIndexedTextModel,
-  StorageTextModel,
+  ArrowStorageTextModel,
   buildArrowTextGlyphTable,
-  buildIndirectTextGlyphTable,
-  buildStorageIndexedTextGlyphTable,
-  buildStorageTextGlyphTable,
+  createArrowStorageTextState,
   packStorageTextClipRects,
+  type ArrowStorageTextModelProps,
+  type ArrowStorageTextState,
   type ArrowTextGlyphTable,
-  type ArrowTextModelProps,
-  type GpuExpandedTextModelProps,
-  type IndirectTextGlyphTable,
-  type StorageIndexedTextGlyphTable,
-  type StorageIndexedTextModelProps,
-  type StorageTextGlyphTable,
-  type StorageTextModelProps
+  type ArrowTextModelProps
 } from './arrow-text-model';

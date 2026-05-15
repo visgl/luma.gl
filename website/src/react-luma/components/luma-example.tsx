@@ -51,15 +51,11 @@ const STAT_STYLES = {
 const GPU_TIME_AND_MEMORY_STATS_FORMATTERS = {
   'CPU Time': (stat: Stat) => `${stat.name}: ${stat.getSampleAverageTime().toFixed(2)}ms`,
   'GPU Time': (stat: Stat) => `${stat.name}: ${stat.getSampleAverageTime().toFixed(2)}ms`,
-  'Frame Submit CPU Time': (stat: Stat) =>
-    `${stat.name}: ${stat.getSampleAverageTime().toFixed(2)}ms`,
-  'Swap Chain Acquire CPU Time': (stat: Stat) =>
-    `${stat.name}: ${stat.getSampleAverageTime().toFixed(2)}ms`,
   'GPU Memory': 'memory',
   'Buffer Memory': 'memory',
   'Texture Memory': 'memory',
-  'Referenced Buffer Memory': 'memory',
-  'Referenced Texture Memory': 'memory',
+  'External Buffer Memory': 'memory',
+  'External Texture Memory': 'memory',
   'Swap Chain Texture': 'memory'
 } as const;
 
@@ -542,7 +538,6 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
       return;
     }
 
-    let startupTimeoutId: number | null = null;
     let isCancelled = false;
     let animationLoop: AnimationLoop | null = null;
     let statsWidgets: StatsWidget[] = [];
@@ -566,7 +561,6 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
       deviceCanvas.style.display = EXAMPLE_CANVAS_STYLE.display;
       deviceCanvas.style.width = EXAMPLE_CANVAS_STYLE.width;
       deviceCanvas.style.height = EXAMPLE_CANVAS_STYLE.height;
-      deviceCanvas.style.visibility = 'hidden';
       canvasContainerRef.current?.replaceChildren(deviceCanvas);
       setActiveCpuHotspotProfilerDevice(device);
 
@@ -639,38 +633,27 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
         statsIntervalId = window.setInterval(updateStatsWidget, 250);
       }
 
-      // Render one complete frame before revealing this reused canvas. That prevents
-      // stale pixels or an intermediate clear from flashing during heavy startup.
       if (animationLoop) {
         await animationLoop.start();
-        await animationLoop.waitForRender();
-      }
-      if (!isCancelled) {
-        deviceCanvas.style.visibility = '';
       }
     };
 
-    // Delay startup one tick so immediately cancelled mounts do not allocate GPU state.
-    startupTimeoutId = window.setTimeout(() => {
-      currentTask.current = Promise.resolve(currentTask.current).then(() => {
+    currentTask.current = Promise.resolve(currentTask.current)
+      .then(() => {
         if (isCancelled) {
           return;
         }
 
-        asyncCreateLoop().catch(error => {
-          if (!isCancelled) {
-            logError(`Example startup failed for ${deviceType}`, error);
-          }
-        });
+        return asyncCreateLoop();
+      })
+      .catch(error => {
+        if (!isCancelled) {
+          logError(`Example startup failed for ${deviceType}`, error);
+        }
       });
-    }, 0);
 
     return () => {
       isCancelled = true;
-      if (startupTimeoutId !== null) {
-        window.clearTimeout(startupTimeoutId);
-        startupTimeoutId = null;
-      }
 
       currentTask.current = Promise.resolve(currentTask.current)
         .then(() => {
@@ -701,7 +684,6 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
 
           clearActiveCpuHotspotProfilerDevice(device);
           canvasContainerRef.current?.replaceChildren();
-          deviceCanvas.style.visibility = '';
           getCanvasContainer().appendChild(deviceCanvas);
         })
         .catch(error => {

@@ -122,10 +122,6 @@ export class WebGPUPresentationContext extends PresentationContext {
       return this.framebuffer;
     } finally {
       const acquireTimeMs = getTimestamp() - startTime;
-      this.device.statsManager
-        .getStats('GPU Time and Memory')
-        .get('Swap Chain Acquire CPU Time')
-        .addTime(acquireTimeMs);
       if (profiler) {
         profiler.framebufferAcquireTimeMs =
           (profiler.framebufferAcquireTimeMs || 0) + acquireTimeMs;

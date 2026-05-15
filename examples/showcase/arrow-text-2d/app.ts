@@ -16,26 +16,16 @@ import {
   supportsIndexPicking
 } from '@luma.gl/engine';
 import {ShaderModule} from '@luma.gl/shadertools';
-import {
-  ArrowTextModel,
-  GpuExpandedTextModel,
-  StorageIndexedTextModel,
-  StorageTextModel,
-  type ArrowTextModelProps
-} from '@luma.gl/text';
+import {ArrowStorageTextModel, ArrowTextModel, type ArrowTextModelProps} from '@luma.gl/text';
 import * as arrow from 'apache-arrow';
 
 export const title = 'Arrow 2D Text';
-export const description =
-  'One million generated Arrow UTF-8 labels expanded into GPU glyph instances.';
+export const description = 'Generated Arrow UTF-8 labels expanded into GPU glyph instances.';
 
-const LABEL_COUNT = 1_000_000;
 const LABEL_COLUMN_COUNT = 400;
-const LABEL_ROW_COUNT = LABEL_COUNT / LABEL_COLUMN_COUNT;
 const LABEL_COLUMN_SPACING = 540;
 const LABEL_ROW_SPACING = 112;
 const LABEL_FIELD_WIDTH = LABEL_COLUMN_COUNT * LABEL_COLUMN_SPACING;
-const LABEL_FIELD_HEIGHT = LABEL_ROW_COUNT * LABEL_ROW_SPACING;
 const GLYPH_WORLD_SCALE = 0.36;
 const VIEW_HEIGHT = 820;
 const LABEL_CLIP_WIDTH = 720;
@@ -43,34 +33,42 @@ const CHARACTER_SET = ' ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/-';
 const ANIMATE_TOGGLE_ID = 'arrow-text-2d-animate';
 const CLIPPING_TOGGLE_ID = 'arrow-text-2d-clipping';
 const MODEL_SELECTOR_ID = 'arrow-text-2d-model';
-const ACTIVE_MODEL_ID = 'arrow-text-2d-active-model';
-const ATTRIBUTE_BUILD_TIME_ID = 'arrow-text-2d-attribute-build-time';
-const ATTRIBUTE_SIZE_ID = 'arrow-text-2d-attribute-size';
-const ATLAS_BACKEND_ID = 'arrow-text-2d-atlas-backend';
-const ATLAS_STATUS_ID = 'arrow-text-2d-atlas-status';
-const ATLAS_BUILD_TIME_ID = 'arrow-text-2d-atlas-build-time';
-const ATLAS_MAPPING_TIME_ID = 'arrow-text-2d-atlas-mapping-time';
-const ATLAS_CANVAS_TIME_ID = 'arrow-text-2d-atlas-canvas-time';
-const ATLAS_DRAW_TIME_ID = 'arrow-text-2d-atlas-draw-time';
-const COMPACT_STREAM_SIZE_ID = 'arrow-text-2d-compact-stream-size';
-const ROW_STORAGE_SIZE_ID = 'arrow-text-2d-row-storage-size';
-const FRAME_STORAGE_SIZE_ID = 'arrow-text-2d-frame-storage-size';
-const TRANSIENT_COMPUTE_INPUT_SIZE_ID = 'arrow-text-2d-transient-compute-input-size';
-const STEADY_STATE_GPU_SIZE_ID = 'arrow-text-2d-steady-state-gpu-size';
-const PEAK_TEXT_PATH_GPU_SIZE_ID = 'arrow-text-2d-peak-text-path-gpu-size';
+const DATA_SELECTOR_ID = 'arrow-text-2d-data';
+const ARROW_VECTOR_BUILD_TIME_ID = 'arrow-text-2d-arrow-vector-build-time';
+const CPU_GENERATION_TIME_ID = 'arrow-text-2d-cpu-generation-time';
+const TOTAL_GPU_BYTES_ID = 'arrow-text-2d-total-gpu-bytes';
+const GPU_ATTRIBUTE_BYTES_ID = 'arrow-text-2d-gpu-attribute-bytes';
+const GPU_STORAGE_BYTES_ID = 'arrow-text-2d-gpu-storage-bytes';
+const GPU_COMPUTE_ROW_ID = 'arrow-text-2d-gpu-compute-row';
+const GPU_COMPUTE_BYTES_ID = 'arrow-text-2d-gpu-compute-bytes';
 const DECK_ATTRIBUTE_SIZE_ID = 'arrow-text-2d-deck-attribute-size';
 const PICKED_LABEL_ID = 'arrow-text-2d-picked-label';
-const INITIAL_ANIMATION_DELTA_SECONDS = 1 / 60;
-const MAX_ANIMATION_DELTA_SECONDS = 1 / 30;
-const ANIMATION_DELTA_SMOOTHING = 0.12;
 // IconLayer + MultiIconLayer character attributes, assuming float32 positions in the active path.
 const DECK_CHARACTER_ATTRIBUTE_BYTES_PER_GLYPH = 80;
-type ActiveTextModel =
-  | ArrowTextModel
-  | StorageTextModel
-  | StorageIndexedTextModel
-  | GpuExpandedTextModel;
-type TextModelKind = 'direct' | 'storage' | 'storage-indexed' | 'gpu-expanded';
+type ActiveTextModel = ArrowTextModel | ArrowStorageTextModel;
+type TextModelKind = 'direct' | 'storage';
+type TextDatasetKind = '100k' | '1m';
+type TextDataset = {
+  labelCount: number;
+  label: string;
+};
+type ArrowTextInput = {
+  labelTable: arrow.Table;
+  texts: arrow.Vector<arrow.Utf8>;
+  clipRects: arrow.Vector<arrow.FixedSizeList<arrow.Int16>>;
+  arrowVectorBuildTimeMs: number;
+};
+
+const TEXT_DATASETS: Record<TextDatasetKind, TextDataset> = {
+  '100k': {
+    labelCount: 100_000,
+    label: '100K texts, 3M glyphs'
+  },
+  '1m': {
+    labelCount: 1_000_000,
+    label: '1M texts, 31M glyphs'
+  }
+};
 
 const TEXT_SHADER_LAYOUT = {
   attributes: [
@@ -79,15 +77,6 @@ const TEXT_SHADER_LAYOUT = {
     {name: 'glyphFrames', location: 2, type: 'vec4<u32>', stepMode: 'instance'},
     {name: 'rowIndices', location: 3, type: 'u32', stepMode: 'instance'},
     {name: 'glyphClipRects', location: 4, type: 'vec4<i32>', stepMode: 'instance'}
-  ],
-  bindings: []
-} satisfies ShaderLayout;
-
-const STORAGE_TEXT_SHADER_LAYOUT = {
-  attributes: [
-    {name: 'glyphOffsets', location: 0, type: 'vec2<i32>', stepMode: 'instance'},
-    {name: 'glyphFrames', location: 1, type: 'vec4<u32>', stepMode: 'instance'},
-    {name: 'rowIndices', location: 2, type: 'u32', stepMode: 'instance'}
   ],
   bindings: []
 } satisfies ShaderLayout;
@@ -185,138 +174,6 @@ fn vertexMain(inputs : VertexInputs) -> FragmentInputs {
   );
   outputs.textureCoordinate = atlasPixel / atlasSize;
   outputs.labelTone = 0.5 + 0.5 * sin(inputs.positions.y * 0.016 + textViewport.time * 0.5);
-  outputs.objectIndex = i32(inputs.rowIndices);
-  return outputs;
-}
-
-@fragment
-fn fragmentMain(inputs : FragmentInputs) -> @location(0) vec4<f32> {
-  let sampledAlpha = textureSample(fontAtlasTexture, fontAtlasTextureSampler, inputs.textureCoordinate).a;
-  let glyphAlpha = smoothstep(0.68, 0.82, sampledAlpha);
-  let coolText = vec3<f32>(0.62, 0.88, 1.0);
-  let warmText = vec3<f32>(1.0, 0.95, 0.72);
-  let textColor = mix(coolText, warmText, inputs.labelTone);
-  let fragColor = vec4<f32>(textColor, glyphAlpha);
-  return picking_filterHighlightColor(fragColor, inputs.objectIndex);
-}
-
-@fragment
-fn fragmentPicking(inputs : FragmentInputs) -> PickingFragmentOutputs {
-  let sampledAlpha = textureSample(fontAtlasTexture, fontAtlasTextureSampler, inputs.textureCoordinate).a;
-  if (sampledAlpha <= 0.68) {
-    discard;
-  }
-  var outputs : PickingFragmentOutputs;
-  outputs.fragColor = vec4<f32>(0.0, 0.0, 0.0, 0.0);
-  outputs.pickingColor = picking_getPickingColor(inputs.objectIndex);
-  return outputs;
-}
-`;
-
-const STORAGE_WGSL_SHADER = /* wgsl */ `\
-struct TextViewportUniforms {
-  cameraOffset : vec2<f32>,
-  viewportScale : vec2<f32>,
-  glyphWorldScale : f32,
-  time : f32,
-  clippingEnabled : f32,
-};
-
-@group(0) @binding(auto) var<uniform> textViewport : TextViewportUniforms;
-@group(0) @binding(auto) var fontAtlasTexture : texture_2d<f32>;
-@group(0) @binding(auto) var fontAtlasTextureSampler : sampler;
-@group(0) @binding(auto) var<storage, read> textRowPositions : array<vec2<f32>>;
-@group(0) @binding(auto) var<storage, read> textRowClipRects : array<vec2<u32>>;
-
-struct VertexInputs {
-  @builtin(vertex_index) vertexIndex : u32,
-  @location(0) glyphOffsets : vec2<i32>,
-  @location(1) glyphFrames : vec4<u32>,
-  @location(2) rowIndices : u32,
-};
-
-struct FragmentInputs {
-  @builtin(position) Position : vec4<f32>,
-  @location(0) textureCoordinate : vec2<f32>,
-  @location(1) labelTone : f32,
-  @interpolate(flat)
-  @location(2) objectIndex : i32,
-};
-
-struct PickingFragmentOutputs {
-  @location(0) fragColor : vec4<f32>,
-  @location(1) pickingColor : vec2<i32>,
-};
-
-fn getCorner(vertexIndex : u32) -> vec2<f32> {
-  if (vertexIndex == 0u) { return vec2<f32>(0.0, 0.0); }
-  if (vertexIndex == 1u) { return vec2<f32>(1.0, 0.0); }
-  if (vertexIndex == 2u) { return vec2<f32>(1.0, 1.0); }
-  if (vertexIndex == 3u) { return vec2<f32>(0.0, 0.0); }
-  if (vertexIndex == 4u) { return vec2<f32>(1.0, 1.0); }
-  return vec2<f32>(0.0, 1.0);
-}
-
-fn unpackLowInt16(word : u32) -> i32 {
-  return i32(word << 16u) >> 16;
-}
-
-fn unpackHighInt16(word : u32) -> i32 {
-  return i32(word) >> 16;
-}
-
-fn unpackClipRect(words : vec2<u32>) -> vec4<i32> {
-  return vec4<i32>(
-    unpackLowInt16(words.x),
-    unpackHighInt16(words.x),
-    unpackLowInt16(words.y),
-    unpackHighInt16(words.y)
-  );
-}
-
-fn isGlyphVertexClipped(glyphVertexOffset : vec2<f32>, clipRect : vec4<i32>) -> bool {
-  if (clipRect.z >= 0) {
-    let clipMinX = f32(clipRect.x);
-    let clipMaxX = clipMinX + f32(clipRect.z);
-    if (glyphVertexOffset.x < clipMinX || glyphVertexOffset.x > clipMaxX) {
-      return true;
-    }
-  }
-  if (clipRect.w >= 0) {
-    let clipMinY = f32(clipRect.y);
-    let clipMaxY = clipMinY + f32(clipRect.w);
-    if (glyphVertexOffset.y < clipMinY || glyphVertexOffset.y > clipMaxY) {
-      return true;
-    }
-  }
-  return false;
-}
-
-@vertex
-fn vertexMain(inputs : VertexInputs) -> FragmentInputs {
-  var outputs : FragmentInputs;
-  let corner = getCorner(inputs.vertexIndex % 6u);
-  let glyphFrame = vec4<f32>(inputs.glyphFrames);
-  let glyphOffset = vec2<f32>(inputs.glyphOffsets);
-  let glyphSize = glyphFrame.zw;
-  let glyphVertexOffset = glyphOffset + corner * glyphSize;
-  let glyphWorldOffset = glyphVertexOffset * textViewport.glyphWorldScale;
-  let labelPosition = textRowPositions[inputs.rowIndices];
-  let worldPosition = labelPosition + glyphWorldOffset;
-  let clipPosition = (worldPosition - textViewport.cameraOffset) * textViewport.viewportScale;
-  let atlasSize = vec2<f32>(textureDimensions(fontAtlasTexture));
-  let atlasCorner = vec2<f32>(corner.x, 1.0 - corner.y);
-  let atlasPixel = glyphFrame.xy + atlasCorner * glyphSize;
-  let clipRect = unpackClipRect(textRowClipRects[inputs.rowIndices]);
-
-  outputs.Position = select(
-    vec4<f32>(clipPosition, 0.0, 1.0),
-    vec4<f32>(0.0),
-    textViewport.clippingEnabled > 0.5 &&
-    isGlyphVertexClipped(glyphVertexOffset, clipRect)
-  );
-  outputs.textureCoordinate = atlasPixel / atlasSize;
-  outputs.labelTone = 0.5 + 0.5 * sin(labelPosition.y * 0.016 + textViewport.time * 0.5);
   outputs.objectIndex = i32(inputs.rowIndices);
   return outputs;
 }
@@ -619,24 +476,22 @@ function supportsTextIndexPicking(device: Device): boolean {
 export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = `\
   <p>
-  Renders <b>${LABEL_COUNT.toLocaleString()}</b> generated Arrow UTF-8 labels, each about
-  30 characters, through <code>ArrowTextModel</code>. The source label vector stays in
-  Arrow form while one text model expands it into roughly thirty-one million glyph instances.
-  </p>
-  <p>
-  Arrow fixed-size-list columns provide per-label placement. The camera drifts over the
-  full label field so the workload remains large while the labels stay readable.
+  Renders generated Arrow UTF-8 labels, about 30 characters each, through selectable text-model
+  and dataset sizes.
   </p>
   <div style="margin-top: 16px; padding: 14px 16px; border: 1px solid rgba(208, 215, 222, 0.9); border-radius: 16px; background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(246, 248, 250, 0.96) 100%); box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);">
-    <label for="${MODEL_SELECTOR_ID}" style="display: grid; gap: 6px; margin-bottom: 12px; color: #0f172a; font-size: 15px; font-weight: 600;">
-      <span>WebGPU text model</span>
-      <select id="${MODEL_SELECTOR_ID}" style="min-height: 34px; border: 1px solid rgba(148, 163, 184, 0.8); border-radius: 6px; background: #ffffff; color: #0f172a; font: inherit;">
-        <option value="direct">Direct ArrowTextModel</option>
-        <option value="storage">StorageTextModel</option>
-        <option value="storage-indexed">StorageIndexedTextModel</option>
-        <option value="gpu-expanded">GpuExpandedTextModel</option>
+    <div style="display: grid; grid-template-columns: minmax(56px, auto) minmax(0, 1fr); align-items: center; gap: 10px 12px; margin-bottom: 12px; color: #0f172a; font-size: 15px; font-weight: 600;">
+      <label for="${MODEL_SELECTOR_ID}">Model</label>
+      <select id="${MODEL_SELECTOR_ID}" style="min-width: 0; min-height: 34px; border: 1px solid rgba(148, 163, 184, 0.8); border-radius: 6px; background: #ffffff; color: #0f172a; font: inherit;">
+        <option value="direct">ArrowTextModel</option>
+        <option value="storage">ArrowStorageTextModel</option>
       </select>
-    </label>
+      <label for="${DATA_SELECTOR_ID}">Data</label>
+      <select id="${DATA_SELECTOR_ID}" style="min-width: 0; min-height: 34px; border: 1px solid rgba(148, 163, 184, 0.8); border-radius: 6px; background: #ffffff; color: #0f172a; font: inherit;">
+        <option value="100k">${TEXT_DATASETS['100k'].label}</option>
+        <option value="1m">${TEXT_DATASETS['1m'].label}</option>
+      </select>
+    </div>
     <label for="${ANIMATE_TOGGLE_ID}" style="display: flex; align-items: center; gap: 10px; color: #0f172a; font-size: 15px; font-weight: 600; cursor: pointer;">
       <input id="${ANIMATE_TOGGLE_ID}" type="checkbox" checked style="width: 18px; height: 18px; margin: 0; accent-color: #2563eb;" />
       <span>Animate</span>
@@ -646,74 +501,40 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
       <span>Clip labels</span>
     </label>
     <div style="display: flex; justify-content: space-between; gap: 16px; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(208, 215, 222, 0.9); color: #334155; font-size: 13px; line-height: 1.4;">
-      <span>Active text model</span>
-      <strong id="${ACTIVE_MODEL_ID}" style="color: #0f172a;">Measuring...</strong>
+      <span>Arrow vector build time</span>
+      <strong id="${ARROW_VECTOR_BUILD_TIME_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong>
     </div>
     <div style="display: flex; justify-content: space-between; gap: 16px; margin-top: 8px; color: #334155; font-size: 13px; line-height: 1.4;">
-      <span>Glyph attribute build</span>
-      <strong id="${ATTRIBUTE_BUILD_TIME_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong>
+      <span>CPU attribute/storage generation</span>
+      <strong id="${CPU_GENERATION_TIME_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong>
     </div>
     <div style="display: flex; justify-content: space-between; gap: 16px; margin-top: 8px; color: #334155; font-size: 13px; line-height: 1.4;">
-      <span>Generated attributes</span>
-      <strong id="${ATTRIBUTE_SIZE_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong>
+      <span>GPU bytes</span>
+      <strong id="${TOTAL_GPU_BYTES_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong>
     </div>
     <div style="display: flex; justify-content: space-between; gap: 16px; margin-top: 8px; color: #334155; font-size: 13px; line-height: 1.4;">
-      <span>Font atlas backend</span>
-      <strong id="${ATLAS_BACKEND_ID}" style="color: #0f172a;">Measuring...</strong>
+      <span>GPU Attribute Buffers</span>
+      <strong id="${GPU_ATTRIBUTE_BYTES_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong>
     </div>
     <div style="display: flex; justify-content: space-between; gap: 16px; margin-top: 8px; color: #334155; font-size: 13px; line-height: 1.4;">
-      <span>Font atlas update</span>
-      <strong id="${ATLAS_STATUS_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong>
+      <span>GPU Storage Buffers</span>
+      <strong id="${GPU_STORAGE_BYTES_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong>
+    </div>
+    <div id="${GPU_COMPUTE_ROW_ID}" style="display: none; justify-content: space-between; gap: 16px; margin-top: 8px; color: #334155; font-size: 13px; line-height: 1.4;">
+      <span>GPU Compute</span>
+      <strong id="${GPU_COMPUTE_BYTES_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong>
     </div>
     <div style="display: flex; justify-content: space-between; gap: 16px; margin-top: 8px; color: #334155; font-size: 13px; line-height: 1.4;">
-      <span>Font atlas build</span>
-      <strong id="${ATLAS_BUILD_TIME_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong>
-    </div>
-    <div style="display: flex; justify-content: space-between; gap: 16px; margin-top: 8px; color: #334155; font-size: 13px; line-height: 1.4;">
-      <span>Font atlas mapping</span>
-      <strong id="${ATLAS_MAPPING_TIME_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong>
-    </div>
-    <div style="display: flex; justify-content: space-between; gap: 16px; margin-top: 8px; color: #334155; font-size: 13px; line-height: 1.4;">
-      <span>Font atlas canvas prep</span>
-      <strong id="${ATLAS_CANVAS_TIME_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong>
-    </div>
-    <div style="display: flex; justify-content: space-between; gap: 16px; margin-top: 8px; color: #334155; font-size: 13px; line-height: 1.4;">
-      <span>Font atlas draw / SDF</span>
-      <strong id="${ATLAS_DRAW_TIME_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong>
-    </div>
-    <div style="display: flex; justify-content: space-between; gap: 16px; margin-top: 8px; color: #334155; font-size: 13px; line-height: 1.4;">
-      <span>Compute text input</span>
-      <strong id="${COMPACT_STREAM_SIZE_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong>
-    </div>
-    <div style="display: flex; justify-content: space-between; gap: 16px; margin-top: 8px; color: #334155; font-size: 13px; line-height: 1.4;">
-      <span>Row storage</span>
-      <strong id="${ROW_STORAGE_SIZE_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong>
-    </div>
-    <div style="display: flex; justify-content: space-between; gap: 16px; margin-top: 8px; color: #334155; font-size: 13px; line-height: 1.4;">
-      <span>Glyph definition storage</span>
-      <strong id="${FRAME_STORAGE_SIZE_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong>
-    </div>
-    <div style="display: flex; justify-content: space-between; gap: 16px; margin-top: 8px; color: #334155; font-size: 13px; line-height: 1.4;">
-      <span>Transient compute input</span>
-      <strong id="${TRANSIENT_COMPUTE_INPUT_SIZE_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong>
-    </div>
-    <div style="display: flex; justify-content: space-between; gap: 16px; margin-top: 8px; color: #334155; font-size: 13px; line-height: 1.4;">
-      <span>Steady-state text GPU bytes</span>
-      <strong id="${STEADY_STATE_GPU_SIZE_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong>
-    </div>
-    <div style="display: flex; justify-content: space-between; gap: 16px; margin-top: 8px; color: #334155; font-size: 13px; line-height: 1.4;">
-      <span>Peak text-path GPU bytes</span>
-      <strong id="${PEAK_TEXT_PATH_GPU_SIZE_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong>
-    </div>
-    <div style="display: flex; justify-content: space-between; gap: 16px; margin-top: 8px; color: #334155; font-size: 13px; line-height: 1.4;">
-      <span>deck.gl equivalent attributes</span>
+      <span>GPU attributes (deck.gl)</span>
       <strong id="${DECK_ATTRIBUTE_SIZE_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong>
     </div>
     <div style="display: flex; justify-content: space-between; gap: 16px; margin-top: 8px; color: #334155; font-size: 13px; line-height: 1.4;">
       <span>Picked Arrow row</span>
       <strong id="${PICKED_LABEL_ID}" style="max-width: 220px; overflow-wrap: anywhere; color: #0f172a; font-variant-numeric: tabular-nums;">Hover text</strong>
     </div>
-    <table style="width: 100%; margin-top: 14px; border-collapse: collapse; color: #334155; font-size: 12px; line-height: 1.4;">
+    <details style="margin-top: 14px; border-top: 1px solid rgba(208, 215, 222, 0.9); padding-top: 10px; color: #334155; font-size: 12px; line-height: 1.4;">
+      <summary style="cursor: pointer; color: #0f172a; font-weight: 700;">Scope notes</summary>
+      <table style="width: 100%; margin-top: 10px; border-collapse: collapse; color: #334155; font-size: 12px; line-height: 1.4;">
       <thead>
         <tr style="border-top: 1px solid rgba(208, 215, 222, 0.9); border-bottom: 1px solid rgba(208, 215, 222, 0.9); color: #0f172a;">
           <th style="padding: 8px 0; text-align: left; font-weight: 700;">Not implemented yet</th>
@@ -742,7 +563,8 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
           <td style="padding: 7px 0;">Atlas-backed glyph rendering only</td>
         </tr>
       </tbody>
-    </table>
+      </table>
+    </details>
   </div>
   `;
 
@@ -753,44 +575,45 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     picking: typeof picking.props;
   }>({textViewport, picking});
   readonly device: Device;
-  readonly labelTable: arrow.Table;
-  readonly texts: arrow.Vector<arrow.Utf8>;
-  readonly clipRects: arrow.Vector<arrow.FixedSizeList<arrow.Int16>>;
-  textModel: ActiveTextModel;
-  pickingModel: Model | null;
-  readonly picker: PickingManager | null;
+  readonly textInputs: Partial<Record<TextDatasetKind, ArrowTextInput>> = {};
+  readonly textInputPromises: Partial<Record<TextDatasetKind, Promise<ArrowTextInput>>> = {};
+  labelTable!: arrow.Table;
+  texts!: arrow.Vector<arrow.Utf8>;
+  clipRects!: arrow.Vector<arrow.FixedSizeList<arrow.Int16>>;
+  textModel!: ActiveTextModel;
+  pickingModel: Model | null = null;
+  picker: PickingManager | null = null;
   textModelKind: TextModelKind = 'direct';
+  textDatasetKind: TextDatasetKind = '100k';
   animate = true;
   clippingEnabled = true;
+  isFinalized = false;
   animationSeconds = 0;
   lastRenderSeconds: number | null = null;
-  smoothedAnimationDeltaSeconds = INITIAL_ANIMATION_DELTA_SECONDS;
   animateToggle: HTMLInputElement | null = null;
   clippingToggle: HTMLInputElement | null = null;
   modelSelector: HTMLSelectElement | null = null;
-  activeModelLabel: HTMLElement | null = null;
-  attributeBuildTimeLabel: HTMLElement | null = null;
-  attributeSizeLabel: HTMLElement | null = null;
-  atlasBackendLabel: HTMLElement | null = null;
-  atlasStatusLabel: HTMLElement | null = null;
-  atlasBuildTimeLabel: HTMLElement | null = null;
-  atlasMappingTimeLabel: HTMLElement | null = null;
-  atlasCanvasTimeLabel: HTMLElement | null = null;
-  atlasDrawTimeLabel: HTMLElement | null = null;
-  compactStreamSizeLabel: HTMLElement | null = null;
-  rowStorageSizeLabel: HTMLElement | null = null;
-  frameStorageSizeLabel: HTMLElement | null = null;
-  transientComputeInputSizeLabel: HTMLElement | null = null;
-  steadyStateGpuSizeLabel: HTMLElement | null = null;
-  peakTextPathGpuSizeLabel: HTMLElement | null = null;
+  dataSelector: HTMLSelectElement | null = null;
+  arrowVectorBuildTimeLabel: HTMLElement | null = null;
+  cpuGenerationTimeLabel: HTMLElement | null = null;
+  totalGpuBytesLabel: HTMLElement | null = null;
+  gpuAttributeBytesLabel: HTMLElement | null = null;
+  gpuStorageBytesLabel: HTMLElement | null = null;
+  gpuComputeBytesLabel: HTMLElement | null = null;
   deckAttributeSizeLabel: HTMLElement | null = null;
   pickedLabel: HTMLElement | null = null;
 
   constructor({device}: AnimationProps) {
     super();
     this.device = device as Device;
+  }
 
-    const {labelTable, texts, clipRects} = makeArrowTextInput();
+  override async onInitialize(): Promise<void> {
+    const defaultTextInput = await this.getOrCreateTextInput(this.textDatasetKind);
+    if (this.isFinalized) {
+      return;
+    }
+    const {labelTable, texts, clipRects} = defaultTextInput;
     this.labelTable = labelTable;
     this.texts = texts;
     this.clipRects = clipRects;
@@ -807,10 +630,40 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
       : null;
 
     this.initializeModelSelector();
+    this.initializeDataSelector();
     this.initializeAnimateToggle();
     this.initializeClippingToggle();
     this.initializeAttributeMetricLabels();
     this.initializePickedLabel();
+
+    // Build the inactive large dataset after the first visible model is ready.
+    void this.getOrCreateTextInput('1m');
+  }
+
+  async getOrCreateTextInput(textDatasetKind: TextDatasetKind): Promise<ArrowTextInput> {
+    const cachedTextInput = this.textInputs[textDatasetKind];
+    if (cachedTextInput) {
+      return cachedTextInput;
+    }
+
+    const cachedPromise = this.textInputPromises[textDatasetKind];
+    if (cachedPromise) {
+      return cachedPromise;
+    }
+
+    const textInputPromise = makeArrowTextInputAsync(TEXT_DATASETS[textDatasetKind]).then(
+      textInput => {
+        this.textInputs[textDatasetKind] = textInput;
+        delete this.textInputPromises[textDatasetKind];
+        if (!this.isFinalized) {
+          this.updateDataSelectorAvailability();
+        }
+        return textInput;
+      }
+    );
+    this.textInputPromises[textDatasetKind] = textInputPromise;
+    this.updateDataSelectorAvailability();
+    return textInputPromise;
   }
 
   createTextModel(modelKind: TextModelKind): ActiveTextModel {
@@ -848,35 +701,21 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     };
     if (modelKind === 'storage') {
       if (this.device.type !== 'webgpu') {
-        throw new Error('StorageTextModel showcase mode requires WebGPU');
+        throw new Error('ArrowStorageTextModel showcase mode requires WebGPU');
       }
-      return new StorageTextModel(this.device, {
-        ...commonProps,
-        source: STORAGE_WGSL_SHADER,
-        shaderLayout: STORAGE_TEXT_SHADER_LAYOUT
-      });
-    }
-    if (modelKind === 'storage-indexed') {
-      if (this.device.type !== 'webgpu') {
-        throw new Error('StorageIndexedTextModel showcase mode requires WebGPU');
-      }
-      return new StorageIndexedTextModel(this.device, {
-        ...commonProps,
-        source: STORAGE_INDEXED_WGSL_SHADER,
-        shaderLayout: STORAGE_INDEXED_TEXT_SHADER_LAYOUT
-      });
-    }
-    if (modelKind === 'gpu-expanded') {
-      if (this.device.type !== 'webgpu') {
-        throw new Error('GpuExpandedTextModel showcase mode requires WebGPU');
-      }
-      return new GpuExpandedTextModel(this.device, {
+      return new ArrowStorageTextModel(this.device, {
         ...commonProps,
         source: STORAGE_INDEXED_WGSL_SHADER,
         shaderLayout: STORAGE_INDEXED_TEXT_SHADER_LAYOUT
       });
     }
     return new ArrowTextModel(this.device, commonProps);
+  }
+
+  getLabelFieldHeight(): number {
+    return (
+      (TEXT_DATASETS[this.textDatasetKind].labelCount / LABEL_COLUMN_COUNT) * LABEL_ROW_SPACING
+    );
   }
 
   override onRender({device, aspect, time, needsRedraw, _mousePosition}: AnimationProps): void {
@@ -887,25 +726,19 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     if (!this.modelSelector) {
       this.initializeModelSelector();
     }
+    if (!this.dataSelector) {
+      this.initializeDataSelector();
+    }
     if (!this.clippingToggle) {
       this.initializeClippingToggle();
     }
     if (
-      !this.activeModelLabel ||
-      !this.attributeBuildTimeLabel ||
-      !this.attributeSizeLabel ||
-      !this.atlasBackendLabel ||
-      !this.atlasStatusLabel ||
-      !this.atlasBuildTimeLabel ||
-      !this.atlasMappingTimeLabel ||
-      !this.atlasCanvasTimeLabel ||
-      !this.atlasDrawTimeLabel ||
-      !this.compactStreamSizeLabel ||
-      !this.rowStorageSizeLabel ||
-      !this.frameStorageSizeLabel ||
-      !this.transientComputeInputSizeLabel ||
-      !this.steadyStateGpuSizeLabel ||
-      !this.peakTextPathGpuSizeLabel ||
+      !this.arrowVectorBuildTimeLabel ||
+      !this.cpuGenerationTimeLabel ||
+      !this.totalGpuBytesLabel ||
+      !this.gpuAttributeBytesLabel ||
+      !this.gpuStorageBytesLabel ||
+      !this.gpuComputeBytesLabel ||
       !this.deckAttributeSizeLabel
     ) {
       this.initializeAttributeMetricLabels();
@@ -919,10 +752,7 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     const elapsedSeconds = Math.max(seconds - this.lastRenderSeconds, 0);
     this.lastRenderSeconds = seconds;
     if (this.animate) {
-      const boundedElapsedSeconds = Math.min(elapsedSeconds, MAX_ANIMATION_DELTA_SECONDS);
-      this.smoothedAnimationDeltaSeconds +=
-        (boundedElapsedSeconds - this.smoothedAnimationDeltaSeconds) * ANIMATION_DELTA_SMOOTHING;
-      this.animationSeconds += this.smoothedAnimationDeltaSeconds;
+      this.animationSeconds += elapsedSeconds;
     }
 
     const textModelNeedsRedraw = this.textModel.needsRedraw();
@@ -930,7 +760,7 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     if (shouldRenderText) {
       const cameraOffset: [number, number] = [
         Math.sin(this.animationSeconds * 0.004) * LABEL_FIELD_WIDTH * 0.43,
-        Math.cos(this.animationSeconds * 0.006) * LABEL_FIELD_HEIGHT * 0.38
+        Math.cos(this.animationSeconds * 0.006) * this.getLabelFieldHeight() * 0.38
       ];
       const viewportWidth = VIEW_HEIGHT * Math.max(aspect, 0.2);
       const viewportScale: [number, number] = [2 / viewportWidth, 2 / VIEW_HEIGHT];
@@ -957,32 +787,26 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
   }
 
   override onFinalize(): void {
+    this.isFinalized = true;
     this.animateToggle?.removeEventListener('change', this.handleAnimateToggle);
     this.clippingToggle?.removeEventListener('change', this.handleClippingToggle);
     this.modelSelector?.removeEventListener('change', this.handleModelSelection);
+    this.dataSelector?.removeEventListener('change', this.handleDataSelection);
     this.animateToggle = null;
     this.clippingToggle = null;
     this.modelSelector = null;
-    this.activeModelLabel = null;
-    this.attributeBuildTimeLabel = null;
-    this.attributeSizeLabel = null;
-    this.atlasBackendLabel = null;
-    this.atlasStatusLabel = null;
-    this.atlasBuildTimeLabel = null;
-    this.atlasMappingTimeLabel = null;
-    this.atlasCanvasTimeLabel = null;
-    this.atlasDrawTimeLabel = null;
-    this.compactStreamSizeLabel = null;
-    this.rowStorageSizeLabel = null;
-    this.frameStorageSizeLabel = null;
-    this.transientComputeInputSizeLabel = null;
-    this.steadyStateGpuSizeLabel = null;
-    this.peakTextPathGpuSizeLabel = null;
+    this.dataSelector = null;
+    this.arrowVectorBuildTimeLabel = null;
+    this.cpuGenerationTimeLabel = null;
+    this.totalGpuBytesLabel = null;
+    this.gpuAttributeBytesLabel = null;
+    this.gpuStorageBytesLabel = null;
+    this.gpuComputeBytesLabel = null;
     this.deckAttributeSizeLabel = null;
     this.pickedLabel = null;
     this.picker?.destroy();
     this.pickingModel?.destroy();
-    this.textModel.destroy();
+    this.textModel?.destroy();
   }
 
   pickLabel(mousePosition: number[] | null | undefined): void {
@@ -999,29 +823,19 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
   }
 
   createPickingModel(textModel: ActiveTextModel): Model {
-    const usesStorageRows = textModel instanceof StorageTextModel;
-    const usesIndexedStorageFrames =
-      textModel instanceof StorageIndexedTextModel || textModel instanceof GpuExpandedTextModel;
+    const usesStorageState = textModel instanceof ArrowStorageTextModel;
     return new Model(this.device, {
       id: `${textModel.id || 'arrow-text-2d'}-picking`,
-      source: usesIndexedStorageFrames
-        ? STORAGE_INDEXED_WGSL_SHADER
-        : usesStorageRows
-          ? STORAGE_WGSL_SHADER
-          : WGSL_SHADER,
+      source: usesStorageState ? STORAGE_INDEXED_WGSL_SHADER : WGSL_SHADER,
       vs: VS_GLSL,
       fs: PICKING_FS_GLSL,
       fragmentEntryPoint: 'fragmentPicking',
       // @ts-expect-error Remove once npm package updated with new types
       modules: [indexPicking],
-      shaderLayout: usesIndexedStorageFrames
-        ? STORAGE_INDEXED_TEXT_SHADER_LAYOUT
-        : usesStorageRows
-          ? STORAGE_TEXT_SHADER_LAYOUT
-          : TEXT_SHADER_LAYOUT,
+      shaderLayout: usesStorageState ? STORAGE_INDEXED_TEXT_SHADER_LAYOUT : TEXT_SHADER_LAYOUT,
       bufferLayout: textModel.bufferLayout,
       attributes:
-        textModel instanceof GpuExpandedTextModel
+        textModel instanceof ArrowStorageTextModel
           ? {
               glyphOffsets: textModel.generatedGlyphOffsetsBuffer,
               glyphIndices: textModel.generatedGlyphIndicesBuffer,
@@ -1061,6 +875,49 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
       return;
     }
 
+    this.replaceTextModel(nextModelKind, 'text model selector changed');
+  };
+
+  initializeDataSelector(): void {
+    this.dataSelector = document.getElementById(DATA_SELECTOR_ID) as HTMLSelectElement | null;
+    if (!this.dataSelector) {
+      return;
+    }
+    this.dataSelector.value = this.textDatasetKind;
+    this.updateDataSelectorAvailability();
+    this.dataSelector.addEventListener('change', this.handleDataSelection);
+  }
+
+  updateDataSelectorAvailability(): void {
+    if (!this.dataSelector) {
+      return;
+    }
+
+    for (const option of Array.from(this.dataSelector.options)) {
+      const textDatasetKind = option.value as TextDatasetKind;
+      option.disabled = !this.textInputs[textDatasetKind];
+    }
+  }
+
+  handleDataSelection = async (event: Event): Promise<void> => {
+    const nextDatasetKind = (event.target as HTMLSelectElement).value as TextDatasetKind;
+    if (nextDatasetKind === this.textDatasetKind || !(nextDatasetKind in TEXT_DATASETS)) {
+      return;
+    }
+
+    const nextTextInput = await this.getOrCreateTextInput(nextDatasetKind);
+    if (this.isFinalized) {
+      return;
+    }
+    this.textDatasetKind = nextDatasetKind;
+    const {labelTable, texts, clipRects} = nextTextInput;
+    this.labelTable = labelTable;
+    this.texts = texts;
+    this.clipRects = clipRects;
+    this.replaceTextModel(this.textModelKind, 'text dataset selector changed');
+  };
+
+  replaceTextModel(nextModelKind: TextModelKind, redrawReason: string): void {
     const previousTextModel = this.textModel;
     const previousPickingModel = this.pickingModel;
     this.textModel = this.createTextModel(nextModelKind);
@@ -1071,9 +928,12 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     previousPickingModel?.destroy();
     previousTextModel.destroy();
     this.picker?.clearPickState();
-    this.textModel.setNeedsRedraw('text model selector changed');
+    this.textModel.setNeedsRedraw(redrawReason);
+    if (this.pickedLabel) {
+      this.pickedLabel.textContent = 'Hover text';
+    }
     this.initializeAttributeMetricLabels();
-  };
+  }
 
   initializeAnimateToggle(): void {
     this.animateToggle = initializeCheckboxToggle(
@@ -1101,103 +961,46 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
   };
 
   initializeAttributeMetricLabels(): void {
-    const atlasMetrics = this.textModel.fontAtlasManager?.metrics;
-    const atlasBuildMetrics = this.textModel.fontAtlasManager?.buildMetrics ?? atlasMetrics;
     const rowStorageByteLength =
-      this.textModel instanceof StorageTextModel ||
-      this.textModel instanceof StorageIndexedTextModel ||
-      this.textModel instanceof GpuExpandedTextModel
-        ? this.textModel.rowStorageByteLength
-        : 0;
+      this.textModel instanceof ArrowStorageTextModel ? this.textModel.rowStorageByteLength : 0;
     const glyphDefinitionStorageByteLength =
-      this.textModel instanceof StorageIndexedTextModel
-        ? this.textModel.glyphFrameStorageByteLength
-        : this.textModel instanceof GpuExpandedTextModel
-          ? this.textModel.glyphDefinitionStorageByteLength
-          : 0;
-    const compactStreamByteLength =
-      this.textModel instanceof GpuExpandedTextModel ? this.textModel.compactStreamByteLength : 0;
+      this.textModel instanceof ArrowStorageTextModel
+        ? this.textModel.glyphDefinitionStorageByteLength
+        : 0;
     const transientComputeInputByteLength =
-      this.textModel instanceof GpuExpandedTextModel
+      this.textModel instanceof ArrowStorageTextModel
         ? this.textModel.transientComputeInputByteLength
         : 0;
+    const sharedStorageByteLength = rowStorageByteLength + glyphDefinitionStorageByteLength;
     const steadyStateGpuByteLength =
-      this.textModel.glyphAttributeByteLength +
-      rowStorageByteLength +
-      glyphDefinitionStorageByteLength;
-    this.activeModelLabel = initializeTextLabel(
-      ACTIVE_MODEL_ID,
-      this.textModel instanceof GpuExpandedTextModel
-        ? 'GpuExpandedTextModel'
-        : this.textModel instanceof StorageIndexedTextModel
-          ? 'StorageIndexedTextModel'
-          : this.textModel instanceof StorageTextModel
-            ? 'StorageTextModel'
-            : 'ArrowTextModel'
+      this.textModel.glyphAttributeByteLength + sharedStorageByteLength;
+    const peakTextPathGpuByteLength = steadyStateGpuByteLength + transientComputeInputByteLength;
+    this.arrowVectorBuildTimeLabel = initializeMetricTimeLabel(
+      ARROW_VECTOR_BUILD_TIME_ID,
+      this.textInputs[this.textDatasetKind]?.arrowVectorBuildTimeMs ?? 0
     );
-    this.attributeBuildTimeLabel = initializeAttributeBuildTimeLabel(
-      ATTRIBUTE_BUILD_TIME_ID,
+    this.cpuGenerationTimeLabel = initializeMetricTimeLabel(
+      CPU_GENERATION_TIME_ID,
       this.textModel.glyphAttributeBuildTimeMs
     );
-    this.attributeSizeLabel = initializeAttributeSizeLabel(
-      ATTRIBUTE_SIZE_ID,
+    this.totalGpuBytesLabel = initializeTextLabel(
+      TOTAL_GPU_BYTES_ID,
+      transientComputeInputByteLength > 0
+        ? `${formatByteLength(steadyStateGpuByteLength)} steady / ${formatByteLength(peakTextPathGpuByteLength)} peak`
+        : formatByteLength(steadyStateGpuByteLength)
+    );
+    this.gpuAttributeBytesLabel = initializeAttributeSizeLabel(
+      GPU_ATTRIBUTE_BYTES_ID,
       this.textModel.glyphAttributeByteLength
     );
-    this.atlasBackendLabel = initializeTextLabel(
-      ATLAS_BACKEND_ID,
-      atlasMetrics
-        ? atlasMetrics.usedOffscreenCanvas
-          ? 'OffscreenCanvas'
-          : 'DOM canvas'
-        : 'Unavailable'
+    this.gpuStorageBytesLabel = initializeAttributeSizeLabel(
+      GPU_STORAGE_BYTES_ID,
+      sharedStorageByteLength
     );
-    this.atlasStatusLabel = initializeTextLabel(
-      ATLAS_STATUS_ID,
-      atlasMetrics
-        ? `${atlasMetrics.cacheStatus} / ${atlasMetrics.glyphCount.toLocaleString()} glyphs`
-        : 'Unavailable'
-    );
-    this.atlasBuildTimeLabel = initializeMetricTimeLabel(
-      ATLAS_BUILD_TIME_ID,
-      atlasBuildMetrics?.totalBuildTimeMs
-    );
-    this.atlasMappingTimeLabel = initializeMetricTimeLabel(
-      ATLAS_MAPPING_TIME_ID,
-      atlasBuildMetrics?.mappingBuildTimeMs
-    );
-    this.atlasCanvasTimeLabel = initializeMetricTimeLabel(
-      ATLAS_CANVAS_TIME_ID,
-      atlasBuildMetrics?.canvasPreparationTimeMs
-    );
-    this.atlasDrawTimeLabel = initializeTextLabel(
-      ATLAS_DRAW_TIME_ID,
-      atlasBuildMetrics
-        ? `${atlasBuildMetrics.bitmapDrawTimeMs.toFixed(1)} ms / ${atlasBuildMetrics.sdfGenerationTimeMs.toFixed(1)} ms`
-        : 'Unavailable'
-    );
-    this.compactStreamSizeLabel = initializeAttributeSizeLabel(
-      COMPACT_STREAM_SIZE_ID,
-      compactStreamByteLength
-    );
-    this.rowStorageSizeLabel = initializeAttributeSizeLabel(
-      ROW_STORAGE_SIZE_ID,
-      rowStorageByteLength
-    );
-    this.frameStorageSizeLabel = initializeAttributeSizeLabel(
-      FRAME_STORAGE_SIZE_ID,
-      glyphDefinitionStorageByteLength
-    );
-    this.transientComputeInputSizeLabel = initializeAttributeSizeLabel(
-      TRANSIENT_COMPUTE_INPUT_SIZE_ID,
-      transientComputeInputByteLength
-    );
-    this.steadyStateGpuSizeLabel = initializeAttributeSizeLabel(
-      STEADY_STATE_GPU_SIZE_ID,
-      steadyStateGpuByteLength
-    );
-    this.peakTextPathGpuSizeLabel = initializeAttributeSizeLabel(
-      PEAK_TEXT_PATH_GPU_SIZE_ID,
-      steadyStateGpuByteLength + transientComputeInputByteLength
+    setMetricRowVisible(GPU_COMPUTE_ROW_ID, this.textModel instanceof ArrowStorageTextModel);
+    this.gpuComputeBytesLabel = initializeTextLabel(
+      GPU_COMPUTE_BYTES_ID,
+      `${formatByteLength(transientComputeInputByteLength)} transient`
     );
     this.deckAttributeSizeLabel = initializeAttributeSizeLabel(
       DECK_ATTRIBUTE_SIZE_ID,
@@ -1230,20 +1033,17 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
   };
 }
 
-function makeArrowTextInput(): {
-  labelTable: arrow.Table;
-  texts: arrow.Vector<arrow.Utf8>;
-  clipRects: arrow.Vector<arrow.FixedSizeList<arrow.Int16>>;
-} {
+function makeArrowTextInput(dataset: TextDataset): ArrowTextInput {
+  const labelRowCount = dataset.labelCount / LABEL_COLUMN_COUNT;
   const centerColumn = (LABEL_COLUMN_COUNT - 1) / 2;
-  const centerRow = (LABEL_ROW_COUNT - 1) / 2;
-  const positions = new Float32Array(LABEL_COUNT * 2);
-  const clipRects = new Int16Array(LABEL_COUNT * 4);
-  const labels = new Array<string>(LABEL_COUNT);
+  const centerRow = (labelRowCount - 1) / 2;
+  const positions = new Float32Array(dataset.labelCount * 2);
+  const clipRects = new Int16Array(dataset.labelCount * 4);
+  const labels = new Array<string>(dataset.labelCount);
   let positionIndex = 0;
   let clipRectIndex = 0;
 
-  for (let labelIndex = 0; labelIndex < LABEL_COUNT; labelIndex++) {
+  for (let labelIndex = 0; labelIndex < dataset.labelCount; labelIndex++) {
     const columnIndex = labelIndex % LABEL_COLUMN_COUNT;
     const rowIndex = Math.floor(labelIndex / LABEL_COLUMN_COUNT);
     positions[positionIndex++] = (columnIndex - centerColumn) * LABEL_COLUMN_SPACING;
@@ -1255,13 +1055,37 @@ function makeArrowTextInput(): {
     labels[labelIndex] = `NODE ${String(labelIndex).padStart(6, '0')} / ARROW TEXT VECTOR`;
   }
 
+  const arrowVectorBuildStartTime = getNow();
+  const labelTable = new arrow.Table({
+    positions: makeArrowFixedSizeListVector(new arrow.Float32(), 2, positions)
+  });
+  const texts = arrow.vectorFromArray(labels, new arrow.Utf8());
+  const clipRectVector = makeArrowFixedSizeListVector(new arrow.Int16(), 4, clipRects);
+
   return {
-    labelTable: new arrow.Table({
-      positions: makeArrowFixedSizeListVector(new arrow.Float32(), 2, positions)
-    }),
-    texts: arrow.vectorFromArray(labels, new arrow.Utf8()),
-    clipRects: makeArrowFixedSizeListVector(new arrow.Int16(), 4, clipRects)
+    labelTable,
+    texts,
+    clipRects: clipRectVector,
+    arrowVectorBuildTimeMs: getNow() - arrowVectorBuildStartTime
   };
+}
+
+async function makeArrowTextInputAsync(dataset: TextDataset): Promise<ArrowTextInput> {
+  await waitForBrowserPaint();
+  return makeArrowTextInput(dataset);
+}
+
+async function waitForBrowserPaint(): Promise<void> {
+  if (typeof requestAnimationFrame !== 'function') {
+    await Promise.resolve();
+    return;
+  }
+
+  await new Promise<void>(resolve => {
+    requestAnimationFrame(() => {
+      setTimeout(resolve, 0);
+    });
+  });
 }
 
 function initializeCheckboxToggle(
@@ -1279,33 +1103,25 @@ function initializeCheckboxToggle(
   return checkboxToggle;
 }
 
-function initializeAttributeBuildTimeLabel(
-  id: string,
-  glyphAttributeBuildTimeMs: number
-): HTMLElement | null {
-  const buildTimeLabel = document.getElementById(id);
-  if (!buildTimeLabel) {
-    return null;
-  }
-
-  buildTimeLabel.textContent = `${glyphAttributeBuildTimeMs.toFixed(1)} ms`;
-  return buildTimeLabel;
-}
-
-function initializeMetricTimeLabel(
-  id: string,
-  metricTimeMs: number | undefined
-): HTMLElement | null {
-  return initializeTextLabel(
-    id,
-    metricTimeMs === undefined ? 'Unavailable' : `${metricTimeMs.toFixed(1)} ms`
-  );
-}
-
 function getTextModelGlyphCount(textModel: ActiveTextModel): number {
-  return textModel instanceof GpuExpandedTextModel
+  return textModel instanceof ArrowStorageTextModel
     ? textModel.glyphCount
     : textModel.glyphLayout.glyphCount;
+}
+
+function initializeMetricTimeLabel(id: string, durationMs: number): HTMLElement | null {
+  return initializeTextLabel(id, `${durationMs.toFixed(1)} ms`);
+}
+
+function getNow(): number {
+  return globalThis.performance?.now() ?? Date.now();
+}
+
+function setMetricRowVisible(id: string, visible: boolean): void {
+  const metricRow = document.getElementById(id);
+  if (metricRow) {
+    metricRow.style.display = visible ? 'flex' : 'none';
+  }
 }
 
 function initializeTextLabel(id: string, value: string): HTMLElement | null {
@@ -1332,14 +1148,14 @@ function initializeAttributeSizeLabel(
 }
 
 function formatByteLength(byteLength: number): string {
-  if (byteLength < 1024) {
+  if (byteLength < 1000) {
     return `${byteLength} B`;
   }
-  if (byteLength < 1024 ** 2) {
-    return `${(byteLength / 1024).toFixed(1)} KiB`;
+  if (byteLength < 1000 ** 2) {
+    return `${(byteLength / 1000).toFixed(1)} kB`;
   }
-  if (byteLength < 1024 ** 3) {
-    return `${(byteLength / 1024 ** 2).toFixed(1)} MiB`;
+  if (byteLength < 1000 ** 3) {
+    return `${(byteLength / 1000 ** 2).toFixed(1)} MB`;
   }
-  return `${(byteLength / 1024 ** 3).toFixed(2)} GiB`;
+  return `${(byteLength / 1000 ** 3).toFixed(2)} GB`;
 }

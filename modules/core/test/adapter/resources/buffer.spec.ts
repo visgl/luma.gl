@@ -16,13 +16,13 @@ const DEVICE_TYPES = ['webgpu', 'webgl', 'null'] as const;
 function getMemoryStats(device: Device): {
   gpuMemory: number;
   bufferMemory: number;
-  referencedBufferMemory: number;
+  externalBufferMemory: number;
 } {
   const stats = device.statsManager.getStats('GPU Time and Memory');
   return {
     gpuMemory: stats.get('GPU Memory').count,
     bufferMemory: stats.get('Buffer Memory').count,
-    referencedBufferMemory: stats.get('Referenced Buffer Memory').count
+    externalBufferMemory: stats.get('External Buffer Memory').count
   };
 }
 
@@ -184,7 +184,7 @@ test('Buffer tracks GPU memory stats', async t => {
   t.end();
 });
 
-test('Handle-backed Buffer tracks referenced memory stats', async t => {
+test('Handle-backed Buffer tracks external memory stats', async t => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     t.comment('WebGPU is not available');
@@ -215,9 +215,9 @@ test('Handle-backed Buffer tracks referenced memory stats', async t => {
     'webgpu handle-backed Buffer does not update owned Buffer Memory'
   );
   t.equal(
-    afterCreateStats.referencedBufferMemory - beforeStats.referencedBufferMemory,
+    afterCreateStats.externalBufferMemory - beforeStats.externalBufferMemory,
     12,
-    'webgpu handle-backed Buffer updates Referenced Buffer Memory'
+    'webgpu handle-backed Buffer updates External Buffer Memory'
   );
 
   buffer.destroy();
@@ -229,9 +229,9 @@ test('Handle-backed Buffer tracks referenced memory stats', async t => {
     'webgpu handle-backed Buffer destroy restores total GPU Memory'
   );
   t.equal(
-    afterDestroyStats.referencedBufferMemory,
-    beforeStats.referencedBufferMemory,
-    'webgpu handle-backed Buffer destroy restores Referenced Buffer Memory'
+    afterDestroyStats.externalBufferMemory,
+    beforeStats.externalBufferMemory,
+    'webgpu handle-backed Buffer destroy restores External Buffer Memory'
   );
 
   handle.destroy();
@@ -371,13 +371,11 @@ test('Core stats use canonical resource ordering', async t => {
         'Frame Rate',
         'CPU Time',
         'GPU Time',
-        'Frame Submit CPU Time',
-        'Swap Chain Acquire CPU Time',
         'GPU Memory',
         'Buffer Memory',
         'Texture Memory',
-        'Referenced Buffer Memory',
-        'Referenced Texture Memory'
+        'External Buffer Memory',
+        'External Texture Memory'
       ],
       'GPU Time and Memory stats use canonical ordering'
     );

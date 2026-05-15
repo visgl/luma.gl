@@ -133,10 +133,6 @@ export class WebGPUCanvasContext extends CanvasContext {
       return this.framebuffer;
     } finally {
       const acquireTimeMs = getTimestamp() - startTime;
-      this.device.statsManager
-        .getStats('GPU Time and Memory')
-        .get('Swap Chain Acquire CPU Time')
-        .addTime(acquireTimeMs);
       if (profiler) {
         profiler.activeDefaultFramebufferAcquireDepth =
           (profiler.activeDefaultFramebufferAcquireDepth || 1) - 1;

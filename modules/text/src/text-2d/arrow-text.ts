@@ -7,7 +7,6 @@ import type {Character, CharacterMapping} from './text-utils';
 
 const MISSING_CHAR_WIDTH = 32;
 const MAX_UINT16 = 65535;
-const GLYPH_FRAME_TEXTURE_ROW_WIDTH = 1024;
 
 export type Utf8TextIndexTarget = {
   startIndex: number;
@@ -42,17 +41,6 @@ export type ArrowGlyphLayout = {
   glyphCount: number;
   glyphOffsets: Int16Array;
   glyphFrames: Uint16Array;
-  characterSet?: Set<string>;
-};
-
-export type IndirectArrowGlyphLayout = {
-  startIndices: number[];
-  glyphCount: number;
-  glyphOffsets: Int16Array;
-  glyphIndices: Uint16Array;
-  glyphFrameTextureData: Float32Array;
-  glyphFrameTextureWidth: number;
-  glyphFrameTextureHeight: number;
   characterSet?: Set<string>;
 };
 
@@ -345,101 +333,6 @@ export function buildArrowGlyphLayout({
     glyphCount,
     glyphOffsets,
     glyphFrames,
-    characterSet
-  };
-}
-
-/** Build one-line glyph offsets plus uint16 glyph-frame texture references. */
-export function buildIndirectArrowGlyphLayout({
-  texts,
-  mapping,
-  baselineOffset,
-  lineHeight,
-  characterSet
-}: {
-  texts: arrow.Vector<arrow.Utf8>;
-  mapping: CharacterMapping;
-  baselineOffset: number;
-  lineHeight: number;
-  characterSet?: Set<string>;
-}): IndirectArrowGlyphLayout {
-  const chunks = buildArrowUtf8Chunks(texts);
-  const target: Utf8TextIndexTarget = {startIndex: 0, endIndex: 0};
-  const startIndices = new Array<number>(texts.length + 1);
-  startIndices[0] = 0;
-  let glyphCount = 0;
-
-  for (let rowIndex = 0; rowIndex < texts.length; rowIndex++) {
-    populateUtf8TextIndices(chunks, rowIndex, target);
-    glyphCount += countArrowUtf8CodePoints(chunks, target.startIndex, target.endIndex);
-    startIndices[rowIndex + 1] = glyphCount;
-  }
-
-  const glyphOffsets = new Int16Array(glyphCount * 2);
-  // WebGPU vertex strides must be 4-byte aligned, so keep the glyph id as uint16
-  // and reserve one uint16 lane per row for alignment.
-  const glyphIndices = new Uint16Array(glyphCount * 2);
-  const glyphDefinitionsByCodePoint = new Map<
-    number,
-    {frame: Character | undefined; glyphIndex: number}
-  >();
-  const charactersByCodePoint = characterSet ? new Map<number, string>() : null;
-  // Index zero is the missing-glyph frame.
-  const glyphFrameTextureValues = [0, 0, 0, 0];
-  let glyphOffsetIndex = 0;
-  let glyphIndex = 0;
-
-  for (let rowIndex = 0; rowIndex < texts.length; rowIndex++) {
-    populateUtf8TextIndices(chunks, rowIndex, target);
-    let width = 0;
-    decodeArrowUtf8CodePoints(chunks, target.startIndex, target.endIndex, codePoint => {
-      let definition = glyphDefinitionsByCodePoint.get(codePoint);
-      if (!definition) {
-        const character = String.fromCodePoint(codePoint);
-        const frame = mapping[character];
-        let frameGlyphIndex = 0;
-        if (frame) {
-          frameGlyphIndex = glyphFrameTextureValues.length / 4;
-          if (frameGlyphIndex > MAX_UINT16) {
-            throw new Error(
-              'Indirect text glyph frame texture exceeds the uint16 glyph index range'
-            );
-          }
-          glyphFrameTextureValues.push(frame.x, frame.y, frame.width, frame.height);
-        }
-        definition = {frame, glyphIndex: frameGlyphIndex};
-        glyphDefinitionsByCodePoint.set(codePoint, definition);
-        if (charactersByCodePoint) {
-          charactersByCodePoint.set(codePoint, character);
-          characterSet?.add(character);
-        }
-      }
-
-      const {frame} = definition;
-      glyphOffsets[glyphOffsetIndex++] = toInt16(frame ? width + frame.anchorX : width);
-      glyphOffsets[glyphOffsetIndex++] = toInt16(baselineOffset + lineHeight / 2);
-      glyphIndices[glyphIndex * 2] = definition.glyphIndex;
-      glyphIndex++;
-      width += frame?.advance ?? MISSING_CHAR_WIDTH;
-    });
-  }
-
-  const glyphFrameCount = glyphFrameTextureValues.length / 4;
-  const glyphFrameTextureWidth = Math.min(GLYPH_FRAME_TEXTURE_ROW_WIDTH, glyphFrameCount);
-  const glyphFrameTextureHeight = Math.ceil(glyphFrameCount / glyphFrameTextureWidth);
-  const glyphFrameTextureData = new Float32Array(
-    glyphFrameTextureWidth * glyphFrameTextureHeight * 4
-  );
-  glyphFrameTextureData.set(glyphFrameTextureValues);
-
-  return {
-    startIndices,
-    glyphCount,
-    glyphOffsets,
-    glyphIndices,
-    glyphFrameTextureData,
-    glyphFrameTextureWidth,
-    glyphFrameTextureHeight,
     characterSet
   };
 }
