@@ -5,5 +5,5 @@ type RootProps = {
 };
 
 export default function Root(props: RootProps) {
-  return <React.StrictMode>{props.children}</React.StrictMode>;
+  return <>{props.children}</>;
 }

@@ -29,8 +29,12 @@ export const DeviceTabsPriv = (props: DeviceTabsProps = {}) => {
     let cancelled = false;
 
     const selectAvailableDeviceType = async () => {
+      if (!deviceType) {
+        return;
+      }
+
       const currentDeviceTypeAvailable =
-        deviceType && allowedDeviceTypes.includes(deviceType)
+        allowedDeviceTypes.includes(deviceType)
           ? await canCreateDeviceType(deviceType)
           : false;
 

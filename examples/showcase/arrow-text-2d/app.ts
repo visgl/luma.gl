@@ -46,6 +46,12 @@ const MODEL_SELECTOR_ID = 'arrow-text-2d-model';
 const ACTIVE_MODEL_ID = 'arrow-text-2d-active-model';
 const ATTRIBUTE_BUILD_TIME_ID = 'arrow-text-2d-attribute-build-time';
 const ATTRIBUTE_SIZE_ID = 'arrow-text-2d-attribute-size';
+const ATLAS_BACKEND_ID = 'arrow-text-2d-atlas-backend';
+const ATLAS_STATUS_ID = 'arrow-text-2d-atlas-status';
+const ATLAS_BUILD_TIME_ID = 'arrow-text-2d-atlas-build-time';
+const ATLAS_MAPPING_TIME_ID = 'arrow-text-2d-atlas-mapping-time';
+const ATLAS_CANVAS_TIME_ID = 'arrow-text-2d-atlas-canvas-time';
+const ATLAS_DRAW_TIME_ID = 'arrow-text-2d-atlas-draw-time';
 const COMPACT_STREAM_SIZE_ID = 'arrow-text-2d-compact-stream-size';
 const ROW_STORAGE_SIZE_ID = 'arrow-text-2d-row-storage-size';
 const FRAME_STORAGE_SIZE_ID = 'arrow-text-2d-frame-storage-size';
@@ -652,6 +658,30 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
       <strong id="${ATTRIBUTE_SIZE_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong>
     </div>
     <div style="display: flex; justify-content: space-between; gap: 16px; margin-top: 8px; color: #334155; font-size: 13px; line-height: 1.4;">
+      <span>Font atlas backend</span>
+      <strong id="${ATLAS_BACKEND_ID}" style="color: #0f172a;">Measuring...</strong>
+    </div>
+    <div style="display: flex; justify-content: space-between; gap: 16px; margin-top: 8px; color: #334155; font-size: 13px; line-height: 1.4;">
+      <span>Font atlas update</span>
+      <strong id="${ATLAS_STATUS_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong>
+    </div>
+    <div style="display: flex; justify-content: space-between; gap: 16px; margin-top: 8px; color: #334155; font-size: 13px; line-height: 1.4;">
+      <span>Font atlas build</span>
+      <strong id="${ATLAS_BUILD_TIME_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong>
+    </div>
+    <div style="display: flex; justify-content: space-between; gap: 16px; margin-top: 8px; color: #334155; font-size: 13px; line-height: 1.4;">
+      <span>Font atlas mapping</span>
+      <strong id="${ATLAS_MAPPING_TIME_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong>
+    </div>
+    <div style="display: flex; justify-content: space-between; gap: 16px; margin-top: 8px; color: #334155; font-size: 13px; line-height: 1.4;">
+      <span>Font atlas canvas prep</span>
+      <strong id="${ATLAS_CANVAS_TIME_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong>
+    </div>
+    <div style="display: flex; justify-content: space-between; gap: 16px; margin-top: 8px; color: #334155; font-size: 13px; line-height: 1.4;">
+      <span>Font atlas draw / SDF</span>
+      <strong id="${ATLAS_DRAW_TIME_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong>
+    </div>
+    <div style="display: flex; justify-content: space-between; gap: 16px; margin-top: 8px; color: #334155; font-size: 13px; line-height: 1.4;">
       <span>Compute text input</span>
       <strong id="${COMPACT_STREAM_SIZE_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong>
     </div>
@@ -741,6 +771,12 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
   activeModelLabel: HTMLElement | null = null;
   attributeBuildTimeLabel: HTMLElement | null = null;
   attributeSizeLabel: HTMLElement | null = null;
+  atlasBackendLabel: HTMLElement | null = null;
+  atlasStatusLabel: HTMLElement | null = null;
+  atlasBuildTimeLabel: HTMLElement | null = null;
+  atlasMappingTimeLabel: HTMLElement | null = null;
+  atlasCanvasTimeLabel: HTMLElement | null = null;
+  atlasDrawTimeLabel: HTMLElement | null = null;
   compactStreamSizeLabel: HTMLElement | null = null;
   rowStorageSizeLabel: HTMLElement | null = null;
   frameStorageSizeLabel: HTMLElement | null = null;
@@ -858,6 +894,12 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
       !this.activeModelLabel ||
       !this.attributeBuildTimeLabel ||
       !this.attributeSizeLabel ||
+      !this.atlasBackendLabel ||
+      !this.atlasStatusLabel ||
+      !this.atlasBuildTimeLabel ||
+      !this.atlasMappingTimeLabel ||
+      !this.atlasCanvasTimeLabel ||
+      !this.atlasDrawTimeLabel ||
       !this.compactStreamSizeLabel ||
       !this.rowStorageSizeLabel ||
       !this.frameStorageSizeLabel ||
@@ -924,6 +966,12 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     this.activeModelLabel = null;
     this.attributeBuildTimeLabel = null;
     this.attributeSizeLabel = null;
+    this.atlasBackendLabel = null;
+    this.atlasStatusLabel = null;
+    this.atlasBuildTimeLabel = null;
+    this.atlasMappingTimeLabel = null;
+    this.atlasCanvasTimeLabel = null;
+    this.atlasDrawTimeLabel = null;
     this.compactStreamSizeLabel = null;
     this.rowStorageSizeLabel = null;
     this.frameStorageSizeLabel = null;
@@ -1053,6 +1101,8 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
   };
 
   initializeAttributeMetricLabels(): void {
+    const atlasMetrics = this.textModel.fontAtlasManager?.metrics;
+    const atlasBuildMetrics = this.textModel.fontAtlasManager?.buildMetrics ?? atlasMetrics;
     const rowStorageByteLength =
       this.textModel instanceof StorageTextModel ||
       this.textModel instanceof StorageIndexedTextModel ||
@@ -1092,6 +1142,38 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     this.attributeSizeLabel = initializeAttributeSizeLabel(
       ATTRIBUTE_SIZE_ID,
       this.textModel.glyphAttributeByteLength
+    );
+    this.atlasBackendLabel = initializeTextLabel(
+      ATLAS_BACKEND_ID,
+      atlasMetrics
+        ? atlasMetrics.usedOffscreenCanvas
+          ? 'OffscreenCanvas'
+          : 'DOM canvas'
+        : 'Unavailable'
+    );
+    this.atlasStatusLabel = initializeTextLabel(
+      ATLAS_STATUS_ID,
+      atlasMetrics
+        ? `${atlasMetrics.cacheStatus} / ${atlasMetrics.glyphCount.toLocaleString()} glyphs`
+        : 'Unavailable'
+    );
+    this.atlasBuildTimeLabel = initializeMetricTimeLabel(
+      ATLAS_BUILD_TIME_ID,
+      atlasBuildMetrics?.totalBuildTimeMs
+    );
+    this.atlasMappingTimeLabel = initializeMetricTimeLabel(
+      ATLAS_MAPPING_TIME_ID,
+      atlasBuildMetrics?.mappingBuildTimeMs
+    );
+    this.atlasCanvasTimeLabel = initializeMetricTimeLabel(
+      ATLAS_CANVAS_TIME_ID,
+      atlasBuildMetrics?.canvasPreparationTimeMs
+    );
+    this.atlasDrawTimeLabel = initializeTextLabel(
+      ATLAS_DRAW_TIME_ID,
+      atlasBuildMetrics
+        ? `${atlasBuildMetrics.bitmapDrawTimeMs.toFixed(1)} ms / ${atlasBuildMetrics.sdfGenerationTimeMs.toFixed(1)} ms`
+        : 'Unavailable'
     );
     this.compactStreamSizeLabel = initializeAttributeSizeLabel(
       COMPACT_STREAM_SIZE_ID,
@@ -1208,6 +1290,16 @@ function initializeAttributeBuildTimeLabel(
 
   buildTimeLabel.textContent = `${glyphAttributeBuildTimeMs.toFixed(1)} ms`;
   return buildTimeLabel;
+}
+
+function initializeMetricTimeLabel(
+  id: string,
+  metricTimeMs: number | undefined
+): HTMLElement | null {
+  return initializeTextLabel(
+    id,
+    metricTimeMs === undefined ? 'Unavailable' : `${metricTimeMs.toFixed(1)} ms`
+  );
 }
 
 function getTextModelGlyphCount(textModel: ActiveTextModel): number {

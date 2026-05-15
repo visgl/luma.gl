@@ -7,6 +7,7 @@ export {
   DEFAULT_FONT_SETTINGS,
   setFontAtlasCacheLimit,
   type FontAtlas,
+  type FontAtlasBuildMetrics,
   type FontRenderer,
   type FontSettings
 } from './font-atlas-manager';

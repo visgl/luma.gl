@@ -566,6 +566,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
       deviceCanvas.style.display = EXAMPLE_CANVAS_STYLE.display;
       deviceCanvas.style.width = EXAMPLE_CANVAS_STYLE.width;
       deviceCanvas.style.height = EXAMPLE_CANVAS_STYLE.height;
+      deviceCanvas.style.visibility = 'hidden';
       canvasContainerRef.current?.replaceChildren(deviceCanvas);
       setActiveCpuHotspotProfilerDevice(device);
 
@@ -638,12 +639,18 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
         statsIntervalId = window.setInterval(updateStatsWidget, 250);
       }
 
-      // Start the actual example
-      animationLoop?.start();
+      // Render one complete frame before revealing this reused canvas. That prevents
+      // stale pixels or an intermediate clear from flashing during heavy startup.
+      if (animationLoop) {
+        await animationLoop.start();
+        await animationLoop.waitForRender();
+      }
+      if (!isCancelled) {
+        deviceCanvas.style.visibility = '';
+      }
     };
 
-    // Delay startup one tick so React Strict Mode's development-only warmup mount
-    // can be cancelled before we create and start a duplicate animation loop.
+    // Delay startup one tick so immediately cancelled mounts do not allocate GPU state.
     startupTimeoutId = window.setTimeout(() => {
       currentTask.current = Promise.resolve(currentTask.current).then(() => {
         if (isCancelled) {
@@ -694,6 +701,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
 
           clearActiveCpuHotspotProfilerDevice(device);
           canvasContainerRef.current?.replaceChildren();
+          deviceCanvas.style.visibility = '';
           getCanvasContainer().appendChild(deviceCanvas);
         })
         .catch(error => {
