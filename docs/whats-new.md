@@ -15,7 +15,7 @@ Target Release Date: Q3, 2026
 **@luma.gl/arrow** NEW MODULE
 
 - **Arrow shader layouts** - `getArrowBufferLayout()` maps Arrow scalar and `FixedSizeList` columns to shader attribute formats from a shader-first layout, including direct `arrow.Vector` sources and Arrow table path mappings.
-- **Arrow GPU helpers** - New `GPUVector`, `GPUTable`, and `ArrowModel` helpers create GPU buffers from compatible Arrow columns and keep Arrow-backed model attributes updatable through `setProps({arrowTable})`.
+- **Arrow GPU helpers** - New `GPUVector`, `GPUTable`, and `ArrowModel` helpers create GPU buffers from compatible Arrow columns, preserve chunked UTF-8 GPU vector input for text workflows, and keep Arrow-backed model attributes updatable through `setProps({arrowTable})`.
 - **Mesh Arrow geometry** - New `ArrowGeometry` and `ArrowModel` support for loaders.gl-compatible Mesh Arrow tables, including default interleaved vertex buffers and optional index buffers.
 - **Arrow table buffer planning** - New `TableBufferPlanner` API builds deterministic GPU buffer allocation plans for table columns, including interleaved fallback groups and WebGPU storage-buffer planning output.
 - **[Arrow Instancing Example](/examples/showcase/arrow-instancing)** - New showcase example renders instanced cubes from an Apache Arrow table.
@@ -23,8 +23,9 @@ Target Release Date: Q3, 2026
 **@luma.gl/text**
 
 - **Arrow-native 2D text** - New atlas, layout, and UTF-8 glyph expansion utilities support deck.gl-style text extraction into `@luma.gl/text`.
-- **`ArrowTextModel`** - New `ArrowModel`-derived one-line label renderer expands Arrow `Utf8` rows into glyph instances without row-level string materialization.
-- **`ArrowStorageTextModel`** - New WebGPU-only storage-backed Arrow text path stores row state and glyph definitions once, expands render buffers with compute, and can consume reusable `ArrowStorageTextState` objects built by `createArrowStorageTextState`.
+- **`ArrowTextModel`** - New `ArrowModel`-derived one-line label renderer expands UTF-8 `GPUVector` rows into glyph instances without row-level string materialization.
+- **`ArrowStorageTextModel`** - New WebGPU-only storage-backed text path consumes GPUVector row/text inputs, stores row state and glyph definitions once, expands render buffers with compute, and can consume reusable `ArrowStorageTextState` objects built by `createArrowStorageTextState`.
+- **GPU UTF-8 shader mapping** - Reusable text-module WGSL helpers compose sparse UTF-8 byte traversal, code point decode, and storage lookup into one-pass text compute kernels.
 - **Packed text clipping** - Arrow 2D text accepts optional `FixedSizeList<Int16>[4]` clip rectangles and expands them into 8-byte per-glyph clipping attributes only when clipping is enabled.
 
 **@luma.gl/gpgpu** NEW MODULE

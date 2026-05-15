@@ -5,6 +5,7 @@
 import {Buffer, type Device, type ShaderLayout} from '@luma.gl/core';
 import {
   ArrowModel,
+  GPUVector,
   getArrowVectorBufferSource,
   isNumericArrowType,
   makeArrowFixedSizeListVector,
@@ -328,16 +329,16 @@ export type ArrowTextModelProps = Omit<
   ArrowModelProps,
   'arrowTable' | 'arrowGPUTable' | 'streamingArrowGPUTable' | 'arrowCount'
 > & {
-  /** One row per label. GPU-compatible numeric columns are repeated for every generated glyph. */
-  labelTable: arrow.Table;
-  /** Arrow UTF-8 labels aligned row-for-row with `labelTable`. */
-  texts: arrow.Vector<arrow.Utf8>;
+  /** One named GPU vector per label attribute. `positions` is required. */
+  labelVectors: Record<string, GPUVector>;
+  /** GPU UTF-8 labels aligned row-for-row with `labelVectors.positions`. */
+  texts: GPUVector<arrow.Utf8>;
   /**
    * Optional packed per-label clip rectangles `[x, y, width, height]`.
    * Values are signed 16-bit glyph-layout units relative to the label origin.
    * Negative width or height disables clipping on that axis.
    */
-  clipRects?: arrow.Vector<arrow.FixedSizeList<arrow.Int16>>;
+  clipRects?: GPUVector<arrow.FixedSizeList<arrow.Int16>>;
   /** Character set for atlas generation. Pass `'auto'` to derive it from Arrow labels. */
   characterSet?: FontSettings['characterSet'] | 'auto';
   /** Font atlas generation settings. */
@@ -354,7 +355,7 @@ export type ArrowTextModelProps = Omit<
 
 type ArrowStorageTextRenderProps = Omit<
   ArrowTextModelProps,
-  | 'labelTable'
+  | 'labelVectors'
   | 'texts'
   | 'clipRects'
   | 'characterSet'
@@ -420,7 +421,7 @@ export class ArrowTextModel extends ArrowModel {
   override setProps(props: Partial<ArrowTextModelProps>): void {
     const nextProps = {...this.textProps, ...props};
     const shouldRebuild =
-      props.labelTable !== undefined ||
+      props.labelVectors !== undefined ||
       props.texts !== undefined ||
       props.clipRects !== undefined ||
       props.characterSet !== undefined ||
@@ -506,7 +507,7 @@ export class ArrowStorageTextModel extends Model {
     const arrowProps = props as Partial<ArrowTextModelProps>;
     const shouldReplaceState =
       nextUsesExternalState ||
-      arrowProps.labelTable !== undefined ||
+      arrowProps.labelVectors !== undefined ||
       arrowProps.texts !== undefined ||
       arrowProps.clipRects !== undefined ||
       arrowProps.characterSet !== undefined ||
@@ -646,6 +647,54 @@ export function buildArrowTextGlyphTable(props: {
   };
 }
 
+type ResolvedArrowTextInputs = {
+  labelTable: arrow.Table;
+  texts: arrow.Vector<arrow.Utf8>;
+  clipRects?: arrow.Vector<arrow.FixedSizeList<arrow.Int16>>;
+};
+
+function resolveArrowTextInputs(props: ArrowTextModelProps): ResolvedArrowTextInputs {
+  const texts = getRetainedGPUVectorSource(props.texts, 'texts');
+  if (!(texts.type instanceof arrow.Utf8)) {
+    throw new Error('Text models require texts to be GPUVector<Utf8>');
+  }
+
+  const columns: Record<string, arrow.Vector> = {};
+  for (const [name, vector] of Object.entries(props.labelVectors)) {
+    columns[name] = getRetainedGPUVectorSource(vector, `labelVectors.${name}`);
+  }
+  const labelTable = new arrow.Table(columns);
+  const clipRects = props.clipRects
+    ? (getRetainedGPUVectorSource(props.clipRects, 'clipRects') as arrow.Vector<
+        arrow.FixedSizeList<arrow.Int16>
+      >)
+    : undefined;
+
+  return {
+    labelTable,
+    texts: texts as arrow.Vector<arrow.Utf8>,
+    clipRects
+  };
+}
+
+function getRetainedGPUVectorSource<T extends arrow.DataType>(
+  vector: GPUVector<T>,
+  vectorName: string
+): arrow.Vector<T> {
+  if (vector.data.length === 0) {
+    return new arrow.Vector([]) as arrow.Vector<T>;
+  }
+  const data = vector.data.map(chunk => {
+    if (!chunk.sourceData) {
+      throw new Error(
+        `Text models require ${vectorName} GPUData chunks to retain Arrow source data`
+      );
+    }
+    return chunk.sourceData;
+  });
+  return new arrow.Vector(data) as arrow.Vector<T>;
+}
+
 function prepareArrowTextModel(
   device: Device,
   props: ArrowTextModelProps
@@ -656,11 +705,12 @@ function prepareArrowTextModel(
   atlasTexture?: DynamicTexture;
   glyphAttributeBuildTimeMs: number;
 } {
-  const mappingState = resolveCharacterMapping(props);
+  const textInputs = resolveArrowTextInputs(props);
+  const mappingState = resolveCharacterMapping(props, textInputs.texts);
   const glyphTable = buildArrowTextGlyphTable({
-    labelTable: props.labelTable,
-    texts: props.texts,
-    clipRects: props.clipRects,
+    labelTable: textInputs.labelTable,
+    texts: textInputs.texts,
+    clipRects: textInputs.clipRects,
     mapping: mappingState.mapping,
     baselineOffset: mappingState.baselineOffset,
     lineHeight: mappingState.lineHeight,
@@ -676,11 +726,12 @@ function prepareArrowTextModel(
   return {
     modelProps: {
       ...props,
-      vs: props.vs ?? (props.clipRects ? DEFAULT_CLIPPED_ARROW_TEXT_VS : DEFAULT_ARROW_TEXT_VS),
+      vs:
+        props.vs ?? (textInputs.clipRects ? DEFAULT_CLIPPED_ARROW_TEXT_VS : DEFAULT_ARROW_TEXT_VS),
       fs: props.fs ?? DEFAULT_ARROW_TEXT_FS,
       shaderLayout:
         props.shaderLayout ??
-        (props.clipRects
+        (textInputs.clipRects
           ? DEFAULT_CLIPPED_ARROW_TEXT_SHADER_LAYOUT
           : DEFAULT_ARROW_TEXT_SHADER_LAYOUT),
       bindings: {
@@ -705,14 +756,15 @@ export function createArrowStorageTextState(
   if (device.type !== 'webgpu') {
     throw new Error('createArrowStorageTextState requires a WebGPU device');
   }
-  const mappingState = resolveCharacterMapping(props);
+  const textInputs = resolveArrowTextInputs(props);
+  const mappingState = resolveCharacterMapping(props, textInputs.texts);
   const atlasTexture = mappingState.fontAtlas
     ? new DynamicTexture(device, {
         id: `${props.id || 'arrow-storage-text-model'}-atlas`,
         data: mappingState.fontAtlas.data
       })
     : undefined;
-  const rowState = createStorageTextRowState(device, props);
+  const rowState = createStorageTextRowState(device, props, textInputs);
   const useGpuUtf8Decode = Boolean(mappingState.characterSet && props.characterSet !== 'auto');
 
   let glyphStream: GpuExpandedTextStream | undefined;
@@ -724,7 +776,7 @@ export function createArrowStorageTextState(
   let transientComputeInputByteLength: number;
 
   if (useGpuUtf8Decode) {
-    const utf8TextInput = buildGpuUtf8TextInput(props.texts);
+    const utf8TextInput = buildGpuUtf8TextInput(textInputs.texts);
     const glyphDefinitions = buildGpuUtf8GlyphDefinitions({
       mapping: mappingState.mapping,
       baselineOffset: mappingState.baselineOffset,
@@ -749,7 +801,7 @@ export function createArrowStorageTextState(
         utf8TextInput,
         baselineOffsetY: glyphDefinitions.baselineOffsetY,
         glyphLookupCount: glyphDefinitions.glyphLookup.length / 2,
-        labelCount: props.texts.length
+        labelCount: textInputs.texts.length
       }
     );
     generated = createGpuExpandedGeneratedState(device, {id: props.id}, utf8TextInput.byteLength);
@@ -762,7 +814,7 @@ export function createArrowStorageTextState(
         glyphMetrics,
         generated,
         outputSlotCount: utf8TextInput.byteLength,
-        labelCount: props.texts.length
+        labelCount: textInputs.texts.length
       }
     );
     renderInstanceCount = utf8TextInput.byteLength;
@@ -777,7 +829,7 @@ export function createArrowStorageTextState(
     utf8Input.expansionConfigBuffer.destroy();
   } else {
     glyphStream = buildGpuExpandedTextStream({
-      texts: props.texts,
+      texts: textInputs.texts,
       mapping: mappingState.mapping,
       baselineOffset: mappingState.baselineOffset,
       lineHeight: mappingState.lineHeight,
@@ -799,7 +851,7 @@ export function createArrowStorageTextState(
         glyphMetrics,
         generated,
         glyphCount: glyphStream.glyphCount,
-        labelCount: props.texts.length
+        labelCount: textInputs.texts.length
       }
     );
     renderInstanceCount = glyphStream.glyphCount;
@@ -902,7 +954,10 @@ function getNow(): number {
   return globalThis.performance?.now() ?? Date.now();
 }
 
-function resolveCharacterMapping(props: ArrowTextModelProps): {
+function resolveCharacterMapping(
+  props: ArrowTextModelProps,
+  texts: arrow.Vector<arrow.Utf8>
+): {
   mapping: CharacterMapping;
   baselineOffset: number;
   lineHeight: number;
@@ -912,7 +967,7 @@ function resolveCharacterMapping(props: ArrowTextModelProps): {
 } {
   const characterSet =
     props.characterSet === 'auto'
-      ? collectArrowCharacterSet(props.texts)
+      ? collectArrowCharacterSet(texts)
       : normalizeCharacterSet(props.characterSet);
   const lineHeightMultiplier = props.lineHeight ?? 1;
 
@@ -1010,10 +1065,13 @@ type StorageGlyphFrameState = {
 
 function createStorageTextRowState(
   device: Device,
-  props: ArrowTextModelProps
+  props: ArrowTextModelProps,
+  textInputs: ResolvedArrowTextInputs
 ): StorageTextRowState {
-  const positions = getStorageTextPositions(props.labelTable, props.texts.length);
-  const packedClipRects = props.clipRects ? packStorageTextClipRects(props.clipRects) : undefined;
+  const positions = getStorageTextPositions(textInputs.labelTable, textInputs.texts.length);
+  const packedClipRects = textInputs.clipRects
+    ? packStorageTextClipRects(textInputs.clipRects)
+    : undefined;
   const positionsBuffer = device.createBuffer({
     id: `${props.id || 'storage-text-model'}-row-positions`,
     usage: Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,

@@ -138,12 +138,40 @@ test('GPUVector preserves Arrow Data chunk boundaries over one packed GPU buffer
   t.equal(gpuVector.buffer.byteLength, 12, 'uploads every vector chunk into one GPU buffer');
   t.equal(gpuVector.data.length, 2, 'exposes one GPUData view per source chunk');
   t.ok(gpuVector.data[0] instanceof GPUData, 'uses GPUData chunk views');
+  t.ok(gpuVector.data[0].sourceData, 'retains source chunk metadata for consumers');
   t.equal(gpuVector.data[1].byteOffset, 8, 'tracks packed byte offsets across chunks');
   t.deepEqual(Array.from(vectorResult.toArray()), [1, 2, 3], 'reads every packed row');
   t.deepEqual(
     Array.from(arrow.makeVector(firstChunkResult).toArray()),
     [1, 2],
     'reads one GPU data chunk through its view'
+  );
+
+  gpuVector.destroy();
+  t.end();
+});
+
+test('GPUVector preserves UTF-8 chunk boundaries and readAsync rows', async t => {
+  const device = new NullDevice({});
+  const firstChunk = arrow.vectorFromArray(['alpha', null], new arrow.Utf8());
+  const secondChunk = arrow.vectorFromArray(['beta'], new arrow.Utf8());
+  const sourceVector = new arrow.Vector([...firstChunk.data, ...secondChunk.data]);
+  const gpuVector = new GPUVector(device, sourceVector);
+
+  const vectorResult = await gpuVector.readAsync();
+  const firstChunkResult = await gpuVector.data[0].readAsync();
+
+  t.equal(gpuVector.data.length, 2, 'keeps one GPUData object per UTF-8 source chunk');
+  t.ok(gpuVector.data[0].sourceData, 'retains UTF-8 source metadata for text consumers');
+  t.deepEqual(
+    Array.from(vectorResult.toArray()),
+    ['alpha', null, 'beta'],
+    'reads UTF-8 rows back across chunk boundaries'
+  );
+  t.deepEqual(
+    Array.from(arrow.makeVector(firstChunkResult).toArray()),
+    ['alpha', null],
+    'reads an individual UTF-8 GPUData chunk'
   );
 
   gpuVector.destroy();

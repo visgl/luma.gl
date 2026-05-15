@@ -23,6 +23,8 @@ export type GPUDataFromBufferProps<T extends arrow.DataType = AttributeArrowType
   byteStride?: number;
   /** Whether this data view should destroy the buffer. */
   ownsBuffer?: boolean;
+  /** Optional source Arrow data retained for CPU-side consumers such as text expansion. */
+  sourceData?: arrow.Data<T>;
 };
 
 type GPUVectorReadableBuffer = Pick<Buffer, 'readAsync'>;
@@ -73,22 +75,37 @@ export class GPUData<T extends arrow.DataType = AttributeArrowType> {
   readonly byteOffset: number;
   /** Bytes between adjacent logical rows in {@link buffer}. */
   readonly byteStride: number;
+  /** Optional source Arrow data retained for CPU-side consumers such as text expansion. */
+  readonly sourceData?: arrow.Data<T>;
   /** Whether this data view is responsible for destroying {@link buffer}. */
   private _ownsBuffer: boolean;
 
   /** Creates a GPU representation from one Arrow Data chunk. */
-  constructor(device: Device, data: arrow.Data<T & AttributeArrowType>, props?: GPUDataBufferProps);
+  constructor(device: Device, data: arrow.Data<T>, props?: GPUDataBufferProps);
   /** Creates a data view over an existing GPU buffer. */
   constructor(props: GPUDataFromBufferProps<T>);
   constructor(
     deviceOrProps: Device | GPUDataFromBufferProps<any>,
-    data?: arrow.Data<T & AttributeArrowType>,
+    data?: arrow.Data<T>,
     props: GPUDataBufferProps = {}
   ) {
     if (deviceOrProps instanceof Device) {
       const arrowData = data!;
       this.type = arrowData.type as T;
       this.length = arrowData.length;
+      this.sourceData = arrowData;
+      if (arrow.DataType.isUtf8(arrowData.type)) {
+        this.stride = 1;
+        this.byteOffset = 0;
+        this.byteStride = 1;
+        this.buffer = new DynamicBuffer(deviceOrProps, {
+          usage: Buffer.VERTEX | Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
+          ...props,
+          data: getArrowUtf8DataBufferSource(arrowData as arrow.Data<arrow.Utf8>)
+        });
+        this._ownsBuffer = true;
+        return;
+      }
       this.stride = getArrowTypeStride(arrowData.type);
       this.byteOffset = 0;
       this.byteStride = getArrowTypeByteStride(arrowData.type);
@@ -107,7 +124,8 @@ export class GPUData<T extends arrow.DataType = AttributeArrowType> {
       length,
       byteOffset = 0,
       byteStride = getArrowTypeByteStride(arrowType),
-      ownsBuffer = false
+      ownsBuffer = false,
+      sourceData
     } = deviceOrProps;
     this.buffer = buffer;
     this.type = arrowType as T;
@@ -115,6 +133,7 @@ export class GPUData<T extends arrow.DataType = AttributeArrowType> {
     this.stride = getArrowTypeStride(arrowType);
     this.byteOffset = byteOffset;
     this.byteStride = byteStride;
+    this.sourceData = sourceData;
     this._ownsBuffer = ownsBuffer;
   }
 
@@ -124,6 +143,25 @@ export class GPUData<T extends arrow.DataType = AttributeArrowType> {
 
   /** Reads this GPU chunk back into a single non-null Arrow Data chunk. */
   async readAsync(): Promise<arrow.Data<T>> {
+    if (arrow.DataType.isUtf8(this.type)) {
+      if (!this.sourceData) {
+        throw new Error('GPUData.readAsync() requires retained UTF-8 source offsets');
+      }
+      const sourceData = this.sourceData as unknown as arrow.Data<arrow.Utf8>;
+      const values = getArrowUtf8DataBufferSource(sourceData);
+      const bytes =
+        values.byteLength === 0
+          ? new Uint8Array(0)
+          : await this.buffer.readAsync(this.byteOffset, values.byteLength);
+      return arrow.makeData({
+        type: new arrow.Utf8(),
+        length: sourceData.length,
+        nullCount: sourceData.nullCount,
+        nullBitmap: sourceData.nullBitmap as Uint8Array | undefined,
+        valueOffsets: sourceData.valueOffsets as Int32Array,
+        data: bytes
+      }) as arrow.Data<T>;
+    }
     const vector = await readArrowGPUVectorAsync({
       type: this.type as unknown as AttributeArrowType,
       buffer: this.buffer,
@@ -166,6 +204,18 @@ export function getArrowDataBufferSource(data: arrow.Data): NumericArrowType['TA
     throw new Error('Arrow data values are shorter than the logical upload length');
   }
   return values.subarray(startElement, endElement) as NumericArrowType['TArray'];
+}
+
+/** Return the UTF-8 value bytes referenced by one Arrow Utf8 data chunk. */
+export function getArrowUtf8DataBufferSource(data: arrow.Data<arrow.Utf8>): Uint8Array {
+  const valueOffsets = data.valueOffsets as Int32Array | undefined;
+  const values = data.values as Uint8Array | undefined;
+  if (!valueOffsets || !values) {
+    return new Uint8Array(0);
+  }
+  const firstValueOffset = valueOffsets[0] ?? 0;
+  const lastValueOffset = valueOffsets[data.length] ?? firstValueOffset;
+  return values.subarray(firstValueOffset, lastValueOffset);
 }
 
 export function getArrowVectorBufferSource<T extends NumericArrowType>(

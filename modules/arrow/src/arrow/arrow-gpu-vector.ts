@@ -37,7 +37,7 @@ export type GPUVectorDynamicBufferProps = Omit<DynamicBufferProps, 'byteLength' 
 export type GPUVectorProps = GPUVectorBufferProps;
 
 /** Constructor props that upload an Arrow vector into a new GPU buffer. */
-export type GPUVectorFromArrowProps<T extends AttributeArrowType = AttributeArrowType> = {
+export type GPUVectorFromArrowProps<T extends arrow.DataType = AttributeArrowType> = {
   /** Discriminator for Arrow-vector upload construction. */
   type: 'arrow';
   /** Name used when this vector is added to an {@link GPUTable}. */
@@ -136,9 +136,8 @@ export type GPUVectorFromAppendableProps<T extends AttributeArrowType = Attribut
 
 /** Discriminated constructor props for {@link GPUVector}. */
 export type GPUVectorCreateProps<T extends arrow.DataType = AttributeArrowType> =
-  | (T extends AttributeArrowType
-      ? GPUVectorFromArrowProps<T> | GPUVectorFromBufferProps<T>
-      : never)
+  | GPUVectorFromArrowProps<T>
+  | (T extends AttributeArrowType ? GPUVectorFromBufferProps<T> : never)
   | GPUVectorFromInterleavedProps
   | GPUVectorFromDataProps<T>
   | (T extends AttributeArrowType ? GPUVectorFromAppendableProps<T> : never);
@@ -178,22 +177,20 @@ export class GPUVector<T extends arrow.DataType = AttributeArrowType> {
   private _buffer?: Buffer | DynamicBuffer;
   /** Whether this vector is responsible for destroying {@link buffer}. */
   private _ownsBuffer: boolean;
+  /** Whether this vector owns chunk-local GPU buffers rather than one aggregate buffer. */
+  private _ownsDataChunks = false;
   /** Detached batch-local vectors whose buffers are now owned by this aggregate view. */
   private readonly _ownedVectors: GPUVector[] = [];
   /** Capacity growth multiplier for appendable DynamicBuffer-backed vectors. */
   private readonly capacityGrowthFactor?: number;
 
   /** Creates a GPU representation from an Arrow vector without retaining the source vector. */
-  constructor(
-    device: Device,
-    vector: arrow.Vector<T & AttributeArrowType>,
-    props?: GPUVectorBufferProps
-  );
+  constructor(device: Device, vector: arrow.Vector<T>, props?: GPUVectorBufferProps);
   /** Creates a GPU representation using discriminated construction props. */
   constructor(props: GPUVectorCreateProps<T>);
   constructor(
     deviceOrProps: Device | GPUVectorCreateProps<any>,
-    vector?: arrow.Vector<T & AttributeArrowType>,
+    vector?: arrow.Vector<T>,
     props: GPUVectorBufferProps = {}
   ) {
     const constructionProps =
@@ -204,7 +201,7 @@ export class GPUVector<T extends arrow.DataType = AttributeArrowType> {
             device: deviceOrProps,
             vector: vector!,
             bufferProps: props
-          } satisfies GPUVectorFromArrowProps)
+          } satisfies GPUVectorFromArrowProps<T>)
         : deviceOrProps;
 
     switch (constructionProps.type) {
@@ -213,7 +210,21 @@ export class GPUVector<T extends arrow.DataType = AttributeArrowType> {
         this.name = name;
         this.type = arrowVector.type;
         this.length = arrowVector.length;
-        this.stride = getArrowVectorStride(arrowVector);
+        if (arrow.DataType.isUtf8(arrowVector.type)) {
+          this.stride = 1;
+          this.byteOffset = 0;
+          this.byteStride = 1;
+          for (const arrowData of arrowVector.data) {
+            this.data.push(new GPUData(device, arrowData as arrow.Data<T>, bufferProps));
+          }
+          this._ownsBuffer = false;
+          this._ownsDataChunks = true;
+          return;
+        }
+        if (!isInstanceArrowType(arrowVector.type)) {
+          throw new Error(`GPUVector does not support Arrow type ${arrowVector.type}`);
+        }
+        this.stride = getArrowVectorStride(arrowVector as arrow.Vector<AttributeArrowType>);
         this.byteOffset = 0;
         this.byteStride = getArrowTypeByteStride(arrowVector.type);
         this._buffer = device.createBuffer({
@@ -224,14 +235,15 @@ export class GPUVector<T extends arrow.DataType = AttributeArrowType> {
         const dataBuffer = createArrowGPUDataBuffer(this._buffer);
         let byteOffset = 0;
         for (const arrowData of arrowVector.data) {
-          const gpuData = new GPUData({
+          const gpuData = new GPUData<T>({
             buffer: dataBuffer,
-            arrowType: arrowData.type as AttributeArrowType,
+            arrowType: arrowData.type as T,
             length: arrowData.length,
             byteOffset,
             byteStride: this.byteStride,
-            ownsBuffer: false
-          }) as unknown as GPUData<T>;
+            ownsBuffer: false,
+            sourceData: arrowData as arrow.Data<T>
+          });
           this.data.push(gpuData);
           byteOffset += arrowData.length * this.byteStride;
         }
@@ -490,6 +502,11 @@ export class GPUVector<T extends arrow.DataType = AttributeArrowType> {
       throw new Error('GPUVector.readAsync() does not support interleaved vectors');
     }
 
+    if (arrow.DataType.isUtf8(this.type)) {
+      const data = await Promise.all(this.data.map(chunk => chunk.readAsync()));
+      return new arrow.Vector(data) as arrow.Vector<T>;
+    }
+
     if (!this._buffer) {
       const data = await Promise.all(this.data.map(chunk => chunk.readAsync()));
       return new arrow.Vector(data) as arrow.Vector<T>;
@@ -511,6 +528,12 @@ export class GPUVector<T extends arrow.DataType = AttributeArrowType> {
     }
     for (const vector of this._ownedVectors.splice(0)) {
       vector.destroy();
+    }
+    if (this._ownsDataChunks) {
+      for (const data of this.data) {
+        data.destroy();
+      }
+      this._ownsDataChunks = false;
     }
   }
 

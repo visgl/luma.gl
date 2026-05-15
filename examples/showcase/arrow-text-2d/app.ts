@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {makeArrowFixedSizeListVector} from '@luma.gl/arrow';
+import {GPUVector, makeArrowFixedSizeListVector} from '@luma.gl/arrow';
 import {type Device, type ShaderLayout} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {
@@ -47,15 +47,15 @@ const PICKED_LABEL_ID = 'arrow-text-2d-picked-label';
 const DECK_CHARACTER_ATTRIBUTE_BYTES_PER_GLYPH = 80;
 type ActiveTextModel = ArrowTextModel | ArrowStorageTextModel;
 type TextModelKind = 'direct' | 'storage';
-type TextDatasetKind = '100k' | '1m';
+type TextDatasetKind = '100k' | '500k' | '1m';
 type TextDataset = {
   labelCount: number;
   label: string;
 };
 type ArrowTextInput = {
-  labelTable: arrow.Table;
-  texts: arrow.Vector<arrow.Utf8>;
-  clipRects: arrow.Vector<arrow.FixedSizeList<arrow.Int16>>;
+  labelVectors: Record<string, GPUVector>;
+  texts: GPUVector<arrow.Utf8>;
+  clipRects: GPUVector<arrow.FixedSizeList<arrow.Int16>>;
   arrowVectorBuildTimeMs: number;
 };
 
@@ -63,6 +63,10 @@ const TEXT_DATASETS: Record<TextDatasetKind, TextDataset> = {
   '100k': {
     labelCount: 100_000,
     label: '100K texts, 3M glyphs'
+  },
+  '500k': {
+    labelCount: 500_000,
+    label: '500K texts, 16M glyphs'
   },
   '1m': {
     labelCount: 1_000_000,
@@ -489,6 +493,7 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
       <label for="${DATA_SELECTOR_ID}">Data</label>
       <select id="${DATA_SELECTOR_ID}" style="min-width: 0; min-height: 34px; border: 1px solid rgba(148, 163, 184, 0.8); border-radius: 6px; background: #ffffff; color: #0f172a; font: inherit;">
         <option value="100k">${TEXT_DATASETS['100k'].label}</option>
+        <option value="500k">${TEXT_DATASETS['500k'].label}</option>
         <option value="1m">${TEXT_DATASETS['1m'].label}</option>
       </select>
     </div>
@@ -577,9 +582,9 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
   readonly device: Device;
   readonly textInputs: Partial<Record<TextDatasetKind, ArrowTextInput>> = {};
   readonly textInputPromises: Partial<Record<TextDatasetKind, Promise<ArrowTextInput>>> = {};
-  labelTable!: arrow.Table;
-  texts!: arrow.Vector<arrow.Utf8>;
-  clipRects!: arrow.Vector<arrow.FixedSizeList<arrow.Int16>>;
+  labelVectors!: Record<string, GPUVector>;
+  texts!: GPUVector<arrow.Utf8>;
+  clipRects!: GPUVector<arrow.FixedSizeList<arrow.Int16>>;
   textModel!: ActiveTextModel;
   pickingModel: Model | null = null;
   picker: PickingManager | null = null;
@@ -613,8 +618,8 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     if (this.isFinalized) {
       return;
     }
-    const {labelTable, texts, clipRects} = defaultTextInput;
-    this.labelTable = labelTable;
+    const {labelVectors, texts, clipRects} = defaultTextInput;
+    this.labelVectors = labelVectors;
     this.texts = texts;
     this.clipRects = clipRects;
     this.textModel = this.createTextModel('direct');
@@ -651,16 +656,17 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
       return cachedPromise;
     }
 
-    const textInputPromise = makeArrowTextInputAsync(TEXT_DATASETS[textDatasetKind]).then(
-      textInput => {
-        this.textInputs[textDatasetKind] = textInput;
-        delete this.textInputPromises[textDatasetKind];
-        if (!this.isFinalized) {
-          this.updateDataSelectorAvailability();
-        }
-        return textInput;
+    const textInputPromise = makeArrowTextInputAsync(
+      this.device,
+      TEXT_DATASETS[textDatasetKind]
+    ).then(textInput => {
+      this.textInputs[textDatasetKind] = textInput;
+      delete this.textInputPromises[textDatasetKind];
+      if (!this.isFinalized) {
+        this.updateDataSelectorAvailability();
       }
-    );
+      return textInput;
+    });
     this.textInputPromises[textDatasetKind] = textInputPromise;
     this.updateDataSelectorAvailability();
     return textInputPromise;
@@ -669,7 +675,7 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
   createTextModel(modelKind: TextModelKind): ActiveTextModel {
     const commonProps: ArrowTextModelProps = {
       id: 'arrow-text-2d',
-      labelTable: this.labelTable,
+      labelVectors: this.labelVectors,
       texts: this.texts,
       clipRects: this.clipRects,
       characterSet: CHARACTER_SET,
@@ -807,6 +813,13 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     this.picker?.destroy();
     this.pickingModel?.destroy();
     this.textModel?.destroy();
+    for (const textInput of Object.values(this.textInputs)) {
+      for (const vector of Object.values(textInput?.labelVectors || {})) {
+        vector.destroy();
+      }
+      textInput?.texts.destroy();
+      textInput?.clipRects.destroy();
+    }
   }
 
   pickLabel(mousePosition: number[] | null | undefined): void {
@@ -910,8 +923,8 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
       return;
     }
     this.textDatasetKind = nextDatasetKind;
-    const {labelTable, texts, clipRects} = nextTextInput;
-    this.labelTable = labelTable;
+    const {labelVectors, texts, clipRects} = nextTextInput;
+    this.labelVectors = labelVectors;
     this.texts = texts;
     this.clipRects = clipRects;
     this.replaceTextModel(this.textModelKind, 'text dataset selector changed');
@@ -1033,7 +1046,7 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
   };
 }
 
-function makeArrowTextInput(dataset: TextDataset): ArrowTextInput {
+function makeArrowTextInput(device: Device, dataset: TextDataset): ArrowTextInput {
   const labelRowCount = dataset.labelCount / LABEL_COLUMN_COUNT;
   const centerColumn = (LABEL_COLUMN_COUNT - 1) / 2;
   const centerRow = (labelRowCount - 1) / 2;
@@ -1056,23 +1069,41 @@ function makeArrowTextInput(dataset: TextDataset): ArrowTextInput {
   }
 
   const arrowVectorBuildStartTime = getNow();
-  const labelTable = new arrow.Table({
-    positions: makeArrowFixedSizeListVector(new arrow.Float32(), 2, positions)
-  });
+  const positionVector = makeArrowFixedSizeListVector(new arrow.Float32(), 2, positions);
   const texts = arrow.vectorFromArray(labels, new arrow.Utf8());
   const clipRectVector = makeArrowFixedSizeListVector(new arrow.Int16(), 4, clipRects);
 
   return {
-    labelTable,
-    texts,
-    clipRects: clipRectVector,
+    labelVectors: {
+      positions: new GPUVector({
+        type: 'arrow',
+        name: 'positions',
+        device,
+        vector: positionVector
+      })
+    },
+    texts: new GPUVector({
+      type: 'arrow',
+      name: 'texts',
+      device,
+      vector: texts
+    }),
+    clipRects: new GPUVector({
+      type: 'arrow',
+      name: 'clipRects',
+      device,
+      vector: clipRectVector
+    }),
     arrowVectorBuildTimeMs: getNow() - arrowVectorBuildStartTime
   };
 }
 
-async function makeArrowTextInputAsync(dataset: TextDataset): Promise<ArrowTextInput> {
+async function makeArrowTextInputAsync(
+  device: Device,
+  dataset: TextDataset
+): Promise<ArrowTextInput> {
   await waitForBrowserPaint();
-  return makeArrowTextInput(dataset);
+  return makeArrowTextInput(device, dataset);
 }
 
 async function waitForBrowserPaint(): Promise<void> {

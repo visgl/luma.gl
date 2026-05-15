@@ -53,6 +53,14 @@ export {
   type StorageGlyphMetricState
 } from './gpu-text-expansion';
 export {
+  DEFAULT_GPU_UTF8_MAP_BINDING_NAMES,
+  getGpuUtf8MapShaderBindings,
+  getGpuUtf8MapShaderSource,
+  type GpuUtf8MapBindingNames,
+  type GpuUtf8MapBindingOptions,
+  type GpuUtf8MapShaderSourceOptions
+} from './gpu-utf8-map';
+export {
   ArrowTextModel,
   ArrowStorageTextModel,
   buildArrowTextGlyphTable,
