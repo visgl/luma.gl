@@ -19,6 +19,33 @@ export {
   getArrowFixedSizeListValues,
   getArrowVectorBufferSource
 } from './arrow/arrow-fixed-size-list';
+export {
+  getArrowMatrixVectorInfo,
+  makeArrowMatrixVector,
+  makeArrowMatrix2x2Vector,
+  makeArrowMatrix2x3Vector,
+  makeArrowMatrix3x2Vector,
+  makeArrowMatrix3x3Vector,
+  makeArrowMatrix4x3Vector,
+  makeArrowMatrix3x4Vector,
+  makeArrowMatrix4x4Vector,
+  type ArrowFloat32Matrix2x2,
+  type ArrowFloat32Matrix2x3,
+  type ArrowFloat32Matrix3x2,
+  type ArrowFloat32Matrix3x3,
+  type ArrowFloat32Matrix4x3,
+  type ArrowFloat32Matrix3x4,
+  type ArrowFloat32Matrix4x4,
+  type ArrowMatrixLayout,
+  type ArrowMatrixOrder,
+  type ArrowMatrixShape,
+  type ArrowMatrixVectorInfo,
+  type ArrowMatrixVectorOptions
+} from './arrow/arrow-matrix-vector';
+export {
+  expandArrowVector,
+  type ArrowVectorRowMapping
+} from './arrow/arrow-vector-utils';
 
 export {
   GPUData,
@@ -60,6 +87,16 @@ export {
   type StreamingArrowRecordBatchSource
 } from './arrow/streaming-arrow-gpu-table';
 export {ArrowModel, type ArrowModelGPUTable, type ArrowModelProps} from './arrow/arrow-model';
+export {
+  TableTransform,
+  type TableTransformBatchOptions,
+  type TableTransformProps
+} from './arrow/table-transform';
+export {
+  TableComputation,
+  type TableComputationBatch,
+  type TableComputationProps
+} from './arrow/table-computation';
 
 export {
   getArrowVertexFormat,

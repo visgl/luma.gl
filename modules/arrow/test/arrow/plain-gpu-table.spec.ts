@@ -112,6 +112,33 @@ test('GPUTable maps shader attributes through Arrow paths', t => {
   t.end();
 });
 
+test('GPUTable exposes storage-selected Arrow columns as bindings', t => {
+  const device = new NullDevice({});
+  const table = makeGpuMetadataTable();
+  const shaderLayout: ShaderLayout = {
+    attributes: [],
+    bindings: [{name: 'positions', type: 'read-only-storage', group: 0, location: 0}]
+  };
+
+  const gpuTable = new GPUTable(device, table, {shaderLayout});
+
+  t.deepEqual(
+    gpuTable.schema.fields.map(field => field.name),
+    ['positions'],
+    'storage-backed table columns participate in the selected GPU schema'
+  );
+  t.equal(gpuTable.numCols, 1, 'storage-backed selected columns count toward table columns');
+  t.equal(
+    gpuTable.bindings.positions,
+    gpuTable.batches[0].gpuVectors.positions.buffer,
+    'exposes the selected Arrow vector as a model-ready storage binding'
+  );
+  t.notOk(gpuTable.attributes.positions, 'does not expose storage-only columns as attributes');
+
+  gpuTable.destroy();
+  t.end();
+});
+
 test('GPUTable preserves nested Arrow field metadata', t => {
   const device = new NullDevice({});
   const table = makeNestedGpuMetadataTable();

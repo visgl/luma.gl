@@ -78,6 +78,12 @@ export type {TruncatedConeGeometryProps} from './geometries/truncated-cone-geome
 export {TruncatedConeGeometry} from './geometries/truncated-cone-geometry';
 
 export {ShaderInputs} from './shader-inputs';
+export {
+  getAttributeLayoutFromBufferSchema,
+  type AttributeLayoutFromBufferSchemaOptions,
+  type BufferField,
+  type BufferSchema
+} from './utils/buffer-schema';
 
 // Application Utilities
 export {makeRandomGenerator} from './application-utils/random';

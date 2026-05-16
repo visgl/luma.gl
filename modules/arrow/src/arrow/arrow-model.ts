@@ -56,6 +56,7 @@ type ArrowModelState = {
 };
 
 type ArrowModelExplicitAttributes = NonNullable<ModelProps['attributes']>;
+type ArrowModelExplicitBindings = NonNullable<ModelProps['bindings']>;
 
 type ArrowModelArrowState = {
   shaderLayout: ShaderLayout;
@@ -65,6 +66,7 @@ type ArrowModelArrowState = {
   arrowCount: 'instance' | 'vertex' | 'none';
   allowWebGLOnlyFormats?: boolean;
   explicitAttributes: ArrowModelExplicitAttributes;
+  explicitBindings: ArrowModelExplicitBindings;
   explicitBufferLayout: BufferLayout[];
   inferInstanceCount: boolean;
   inferVertexCount: boolean;
@@ -160,6 +162,10 @@ export class ArrowModel extends Model {
           ...this.arrowState.explicitAttributes,
           ...batch.attributes
         });
+        this.setBindings({
+          ...this.arrowState.explicitBindings,
+          ...batch.bindings
+        });
         this.setArrowRowCount(batch.numRows);
         drawSuccess = super.draw(renderPass) && drawSuccess;
       }
@@ -168,6 +174,10 @@ export class ArrowModel extends Model {
       this.setAttributes({
         ...this.arrowState.explicitAttributes,
         ...arrowGPUTable.attributes
+      });
+      this.setBindings({
+        ...this.arrowState.explicitBindings,
+        ...arrowGPUTable.bindings
       });
       this.setArrowRowCount(arrowGPUTable.numRows);
     }
@@ -236,6 +246,11 @@ export class ArrowModel extends Model {
         getBufferLayoutNames(nextArrowGPUTable.bufferLayout),
         'buffer layout'
       );
+      assertNoDuplicateNames(
+        Object.keys(this.arrowState.explicitBindings),
+        Object.keys(nextArrowGPUTable.bindings),
+        'binding'
+      );
 
       this.setBufferLayout([
         ...this.arrowState.explicitBufferLayout,
@@ -244,6 +259,10 @@ export class ArrowModel extends Model {
       this.setAttributes({
         ...this.arrowState.explicitAttributes,
         ...nextArrowGPUTable.attributes
+      });
+      this.setBindings({
+        ...this.arrowState.explicitBindings,
+        ...nextArrowGPUTable.bindings
       });
 
       if (this.arrowState.inferInstanceCount) {
@@ -319,6 +338,7 @@ function getArrowModelState(device: Device, props: ArrowModelProps): ArrowModelS
   }
 
   const explicitAttributes = modelProps.attributes || {};
+  const explicitBindings = modelProps.bindings || {};
   const explicitBufferLayout = modelProps.bufferLayout || [];
   const inferInstanceCount =
     !arrowMesh && arrowCount === 'instance' && modelProps.instanceCount === undefined;
@@ -339,6 +359,7 @@ function getArrowModelState(device: Device, props: ArrowModelProps): ArrowModelS
         arrowCount,
         allowWebGLOnlyFormats,
         explicitAttributes,
+        explicitBindings,
         explicitBufferLayout,
         inferInstanceCount,
         inferVertexCount
@@ -372,6 +393,11 @@ function getArrowModelState(device: Device, props: ArrowModelProps): ArrowModelS
       getBufferLayoutNames(arrowGPUTable.bufferLayout),
       'buffer layout'
     );
+    assertNoDuplicateNames(
+      Object.keys(explicitBindings),
+      Object.keys(arrowGPUTable.bindings),
+      'binding'
+    );
   } catch (error) {
     arrowGPUTable.destroy();
     throw error;
@@ -389,6 +415,7 @@ function getArrowModelState(device: Device, props: ArrowModelProps): ArrowModelS
       arrowCount,
       allowWebGLOnlyFormats,
       explicitAttributes,
+      explicitBindings,
       explicitBufferLayout,
       inferInstanceCount,
       inferVertexCount
@@ -397,6 +424,7 @@ function getArrowModelState(device: Device, props: ArrowModelProps): ArrowModelS
       ...modelProps,
       bufferLayout: [...explicitBufferLayout, ...arrowGPUTable.bufferLayout],
       attributes: {...explicitAttributes, ...arrowGPUTable.attributes},
+      bindings: {...explicitBindings, ...arrowGPUTable.bindings},
       ...(inferInstanceCount ? {instanceCount: arrowGPUTable.numRows} : {}),
       ...(inferVertexCount ? {vertexCount: arrowGPUTable.numRows} : {})
     }

@@ -10,10 +10,12 @@ import type {
   VertexFormat
 } from '@luma.gl/core';
 import {shaderTypeDecoder, vertexFormatDecoder} from '@luma.gl/core';
+import {getAttributeLayoutFromBufferSchema, type BufferSchema} from '@luma.gl/engine';
 import * as arrow from 'apache-arrow';
-import {getArrowPaths} from './arrow-paths';
+import {getArrowPaths, getArrowVectorByPath} from './arrow-paths';
 import {getArrowColumnInfo, getInstanceColumnInfo} from './arrow-column-info';
 import {isInstanceArrowType, type ArrowColumnInfo, type AttributeArrowType} from './arrow-types';
+import {getArrowMatrixVectorInfo} from './arrow-matrix-vector';
 
 /** Options that control Arrow column to GPU vertex format selection. */
 export type ArrowVertexFormatOptions = {
@@ -102,8 +104,17 @@ export function getArrowBufferLayout(
     thirdArgument
   );
   const bufferLayout: BufferLayout[] = [];
+  const matrixSelections = getArrowMatrixBufferLayouts(shaderLayout, source);
 
   for (const attribute of shaderLayout.attributes) {
+    const matrixSelection = matrixSelections.get(attribute.name);
+    if (matrixSelection) {
+      if (matrixSelection.firstAttributeName === attribute.name) {
+        bufferLayout.push(matrixSelection.layout);
+      }
+      continue;
+    }
+
     const columnInfo = getArrowColumnInfoFromSource(source, attribute.name);
     if (!columnInfo) {
       continue;
@@ -117,6 +128,89 @@ export function getArrowBufferLayout(
   }
 
   return bufferLayout;
+}
+
+type ArrowMatrixBufferLayoutSelection = {
+  firstAttributeName: string;
+  layout: BufferLayout;
+};
+
+function getArrowMatrixBufferLayouts(
+  shaderLayout: ShaderLayout,
+  source: ArrowBufferLayoutSource
+): Map<string, ArrowMatrixBufferLayoutSelection> {
+  const matrixSelections = new Map<string, ArrowMatrixBufferLayoutSelection>();
+  if (source.type !== 'table') {
+    return matrixSelections;
+  }
+
+  const attributesByArrowPath = new Map<string, ShaderLayout['attributes']>();
+  for (const attribute of shaderLayout.attributes) {
+    const arrowPath = source.arrowPaths?.[attribute.name] || attribute.name;
+    const pathAttributes = attributesByArrowPath.get(arrowPath) || [];
+    pathAttributes.push(attribute);
+    attributesByArrowPath.set(arrowPath, pathAttributes);
+  }
+
+  for (const [arrowPath, attributes] of attributesByArrowPath) {
+    if (attributes.length <= 1) {
+      continue;
+    }
+
+    const vector = getArrowVectorByPath(source.arrowTable, arrowPath);
+    const matrixInfo = getArrowMatrixVectorInfo(vector);
+    if (!matrixInfo) {
+      throw new Error(
+        `Arrow column "${arrowPath}" maps to multiple shader attributes but is not a recognized matrix vector`
+      );
+    }
+    if (attributes.length !== matrixInfo.columns) {
+      throw new Error(
+        `Arrow matrix column "${arrowPath}" expects ${matrixInfo.columns} shader vector attributes`
+      );
+    }
+
+    const declaredStepModes = new Set(
+      attributes.map(attribute => attribute.stepMode).filter(Boolean)
+    );
+    if (declaredStepModes.size > 1) {
+      throw new Error(`Arrow matrix column "${arrowPath}" requires matching attribute step modes`);
+    }
+
+    const format = `float32x${matrixInfo.rows}` as VertexFormat;
+    for (const attribute of attributes) {
+      const attributeInfo = shaderTypeDecoder.getAttributeShaderTypeInfo(attribute.type);
+      if (attributeInfo.primitiveType !== 'f32' || attributeInfo.components !== matrixInfo.rows) {
+        throw new Error(
+          `Arrow matrix column "${arrowPath}" requires vec${matrixInfo.rows}<f32> shader attributes`
+        );
+      }
+    }
+
+    const firstAttributeName = attributes[0].name;
+    const schema: BufferSchema = Object.fromEntries(
+      attributes.map((attribute, columnIndex) => [
+        attribute.name,
+        {
+          format,
+          elementOffset: columnIndex * matrixInfo.columnStride
+        }
+      ])
+    );
+    const layout = getAttributeLayoutFromBufferSchema({
+      name: arrowPath,
+      byteStride: matrixInfo.byteStride,
+      bytesPerElement: Float32Array.BYTES_PER_ELEMENT,
+      schema,
+      ...(attributes[0].stepMode ? {stepMode: attributes[0].stepMode} : {})
+    });
+    const selection = {firstAttributeName, layout};
+    for (const attribute of attributes) {
+      matrixSelections.set(attribute.name, selection);
+    }
+  }
+
+  return matrixSelections;
 }
 
 function normalizeArrowBufferLayoutArguments(

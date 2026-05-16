@@ -18,7 +18,9 @@ Target Release Date: Q3, 2026
 - **Arrow GPU helpers** - New `GPUVector`, `GPUTable`, and `ArrowModel` helpers create GPU buffers from compatible Arrow columns, preserve chunked UTF-8 GPU vector input for text workflows, and keep Arrow-backed model attributes updatable through `setProps({arrowTable})`.
 - **Mesh Arrow geometry** - New `ArrowGeometry` and `ArrowModel` support for loaders.gl-compatible Mesh Arrow tables, including default interleaved vertex buffers and optional index buffers.
 - **Arrow table buffer planning** - New `TableBufferPlanner` API builds deterministic GPU buffer allocation plans for table columns, including interleaved fallback groups and WebGPU storage-buffer planning output.
-- **[Arrow Instancing Example](/examples/showcase/arrow-instancing)** - New showcase example renders instanced cubes from an Apache Arrow table.
+- **[Columnar GPU tables](/docs/api-guide/gpu/arrow-table-columns)** - Matrix Arrow vectors, storage-selected table bindings, `TableTransform`, and `TableComputation`.
+- **[GPU Tables examples](/examples/gpu-tables/arrow-instancing)** - Arrow instancing, 2D text, mesh geometry, and storage particles now live in the GPU Tables section.
+- **[Arrow Instancing Example](/examples/gpu-tables/arrow-instancing)** - New showcase example renders instanced cubes from an Apache Arrow table.
 
 **@luma.gl/text**
 
@@ -38,6 +40,7 @@ Target Release Date: Q3, 2026
 - **`Animator`** - New animation helper for timeline-driven animation updates.
 - **Shader pass pipelines** - `ShaderPassRenderer` now supports multi-pass effects such as bloom and depth of field.
 - **Geometry buffer layouts** - `Geometry` now always has a populated `bufferLayout`.
+- **[`BufferSchema`](/docs/api-reference/engine/buffer-schema)** - Record-oriented GPU row descriptions lower shared layouts into vertex `BufferLayout`s.
 - **Semantic attribute normalization** - `POSITION`, `NORMAL`, `TEXCOORD_0`, and `COLOR_0` are normalized to shader attribute names.
 - **Interleaved CPU geometry** - `makeInterleavedGeometry()` packs attributes into one CPU-side vertex buffer.
 - **Interleaved primitive uploads** - Built-in primitives upload as one vertex buffer plus an optional index buffer.

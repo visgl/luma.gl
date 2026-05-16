@@ -178,9 +178,6 @@ export class Computation {
     if (props.bindings) {
       this.setBindings(props.bindings);
     }
-
-    // Catch any access to non-standard props
-    Object.seal(this);
   }
 
   destroy(): void {

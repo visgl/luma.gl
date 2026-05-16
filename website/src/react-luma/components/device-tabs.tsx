@@ -1,13 +1,8 @@
-import React, {CSSProperties, useEffect} from 'react';
+import React, {CSSProperties} from 'react';
 import BrowserOnly from '@docusaurus/BrowserOnly';
 
 import {Tabs, Tab} from './tabs';
-import {
-  canCreateDeviceType,
-  getPreferredAvailableDeviceType,
-  type DeviceType,
-  useStore
-} from '../store/device-store';
+import {useStore} from '../store/device-store';
 
 interface DeviceTabsProps {
   devices?: ('webgl2' | 'webgpu')[];
@@ -21,40 +16,6 @@ export const DeviceTabsPriv = (props: DeviceTabsProps = {}) => {
   const deviceType = useStore(state => state.deviceType);
   const deviceError = useStore(state => state.deviceError);
   const setDeviceType = useStore(state => state.setDeviceType);
-  const allowedDeviceTypes = devices
-    .map(device => (device === 'webgl2' ? 'webgl' : 'webgpu'))
-    .filter((device, index, array) => array.indexOf(device) === index) as DeviceType[];
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const selectAvailableDeviceType = async () => {
-      if (!deviceType) {
-        return;
-      }
-
-      const currentDeviceTypeAvailable =
-        allowedDeviceTypes.includes(deviceType)
-          ? await canCreateDeviceType(deviceType)
-          : false;
-
-      if (cancelled || currentDeviceTypeAvailable) {
-        return;
-      }
-
-      const preferredDeviceType = await getPreferredAvailableDeviceType(allowedDeviceTypes);
-      if (!cancelled && preferredDeviceType && preferredDeviceType !== deviceType) {
-        await setDeviceType(preferredDeviceType);
-      }
-    };
-
-    void selectAvailableDeviceType();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [allowedDeviceTypes, deviceType, setDeviceType]);
-
   return (
     <div style={props.style}>
       <Tabs selectedItem={deviceType} setSelectedItem={setDeviceType}>

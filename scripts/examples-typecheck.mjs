@@ -11,6 +11,8 @@ const SUPPORTED_EXAMPLE_WORKSPACES = new Set([
   'api/multi-canvas',
   'api/texture-compressed',
   'api/texture-tester',
+  'gpu-tables/arrow-mesh-geometry',
+  'gpu-tables/gpu-vector-storage-particles',
   'integrations/hello-react',
   'showcase/dof',
   'showcase/persistence',

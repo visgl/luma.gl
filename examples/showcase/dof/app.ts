@@ -7,21 +7,27 @@
   Original algorithm: http://www.nutty.ca/?page_id=352&link=depth_of_field
 */
 
-import type {NumberArray, TextureFormatColor, TextureFormatDepthStencil} from '@luma.gl/core';
-import {Buffer, Framebuffer, Texture} from '@luma.gl/core';
+import {ArrowModel, makeArrowMatrix4x4Vector} from '@luma.gl/arrow';
+import type {
+  NumberArray,
+  ShaderLayout,
+  TextureFormatColor,
+  TextureFormatDepthStencil
+} from '@luma.gl/core';
+import {Framebuffer, Texture} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {
   AnimationLoopTemplate,
   CubeGeometry,
   DynamicTexture,
   loadImageBitmap,
-  Model,
   ShaderInputs,
   ShaderPassRenderer
 } from '@luma.gl/engine';
 import {dofShaderPassPipeline} from '@luma.gl/effects';
 import type {ShaderModule} from '@luma.gl/shadertools';
 import {Matrix4, radians} from '@math.gl/core';
+import * as arrow from 'apache-arrow';
 
 const INFO_HTML = `\
 <div>
@@ -49,9 +55,7 @@ const CUBES_PER_ROW = 20;
 const NUM_CUBES = NUM_ROWS * CUBES_PER_ROW;
 const NEAR = 0.1;
 const FAR = 30;
-const INSTANCE_MATRIX_STRIDE = 16;
-const INSTANCE_MATRIX_BUFFER_BYTE_LENGTH =
-  NUM_CUBES * INSTANCE_MATRIX_STRIDE * Float32Array.BYTES_PER_ELEMENT;
+const INSTANCE_MODEL_MATRIX_COMPONENT_COUNT = 16;
 const VIS_LOGO_TEXTURE_URL = 'vis-logo.png';
 
 type AppUniforms = {
@@ -74,6 +78,28 @@ const appShaderModule: ShaderModule<AppUniforms> = {
   }
 };
 
+const SCENE_ATTRIBUTE_SHADER_LAYOUT = {
+  attributes: [
+    {name: 'positions', location: 0, type: 'vec3<f32>'},
+    {name: 'normals', location: 1, type: 'vec3<f32>'},
+    {name: 'texCoords', location: 2, type: 'vec2<f32>'},
+    {name: 'instanceModelMatrixCol0', location: 3, type: 'vec4<f32>', stepMode: 'instance'},
+    {name: 'instanceModelMatrixCol1', location: 4, type: 'vec4<f32>', stepMode: 'instance'},
+    {name: 'instanceModelMatrixCol2', location: 5, type: 'vec4<f32>', stepMode: 'instance'},
+    {name: 'instanceModelMatrixCol3', location: 6, type: 'vec4<f32>', stepMode: 'instance'}
+  ],
+  bindings: []
+} satisfies ShaderLayout;
+
+const SCENE_STORAGE_SHADER_LAYOUT = {
+  attributes: [
+    {name: 'positions', location: 0, type: 'vec3<f32>'},
+    {name: 'normals', location: 1, type: 'vec3<f32>'},
+    {name: 'texCoords', location: 2, type: 'vec2<f32>'}
+  ],
+  bindings: [{name: 'instanceModelMatrix', type: 'read-only-storage', group: 0, location: 3}]
+} satisfies ShaderLayout;
+
 // Pass 1 renders cubes into an offscreen color + depth framebuffer. The color target stores
 // shaded surface color while the depth attachment remains the visibility buffer used by the GPU
 // during rasterization.
@@ -86,15 +112,13 @@ struct AppUniforms {
 @group(0) @binding(auto) var<uniform> app: AppUniforms;
 @group(0) @binding(auto) var cubeTexture: texture_2d<f32>;
 @group(0) @binding(auto) var cubeTextureSampler: sampler;
+@group(0) @binding(auto) var<storage, read> instanceModelMatrix: array<mat4x4<f32>>;
 
 struct VertexInputs {
+  @builtin(instance_index) instanceIndex: u32,
   @location(0) positions: vec3<f32>,
   @location(1) normals: vec3<f32>,
   @location(2) texCoords: vec2<f32>,
-  @location(3) instanceModelMatrixCol0: vec4<f32>,
-  @location(4) instanceModelMatrixCol1: vec4<f32>,
-  @location(5) instanceModelMatrixCol2: vec4<f32>,
-  @location(6) instanceModelMatrixCol3: vec4<f32>,
 };
 
 struct VertexOutputs {
@@ -106,12 +130,7 @@ struct VertexOutputs {
 
 @vertex
 fn vertexMain(inputs: VertexInputs) -> VertexOutputs {
-  let modelMatrix = mat4x4<f32>(
-    inputs.instanceModelMatrixCol0,
-    inputs.instanceModelMatrixCol1,
-    inputs.instanceModelMatrixCol2,
-    inputs.instanceModelMatrixCol3
-  );
+  let modelMatrix = instanceModelMatrix[inputs.instanceIndex];
 
   let worldPosition = modelMatrix * vec4<f32>(inputs.positions, 1.0);
   let worldNormal = normalize((modelMatrix * vec4<f32>(inputs.normals, 0.0)).xyz);
@@ -258,12 +277,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
   appShaderInputs = new ShaderInputs<{app: AppUniforms}>({app: appShaderModule});
 
-  sceneModel: Model;
+  sceneModel: ArrowModel;
   cubeTexture: DynamicTexture;
   shaderPassRenderer: ShaderPassRenderer;
 
-  instanceMatrixBuffer: Buffer;
-  instanceMatrices = new Float32Array(NUM_CUBES * INSTANCE_MATRIX_STRIDE);
+  instanceModelMatrices = new Float32Array(NUM_CUBES * INSTANCE_MODEL_MATRIX_COMPONENT_COUNT);
   cubeTransforms: CubeTransform[] = [];
 
   sceneFramebuffer: Framebuffer;
@@ -279,10 +297,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     const depthTextureFormat: TextureFormatDepthStencil =
       device.type === 'webgpu' ? 'depth24plus' : 'depth16unorm';
 
-    this.instanceMatrixBuffer = device.createBuffer({
-      usage: Buffer.VERTEX | Buffer.COPY_DST,
-      byteLength: INSTANCE_MATRIX_BUFFER_BYTE_LENGTH
-    });
     this.cubeTexture = new DynamicTexture(device, {
       usage: Texture.SAMPLE | Texture.COPY_DST,
       data: loadImageBitmap(VIS_LOGO_TEXTURE_URL, {imageOrientation: 'flipY'}),
@@ -294,9 +308,18 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       })
     });
 
-    this.sceneModel = new Model(device, {
+    this.sceneModel = new ArrowModel(device, {
       id: 'dof-scene',
       shaderInputs: this.appShaderInputs,
+      shaderLayout:
+        device.type === 'webgpu' ? SCENE_STORAGE_SHADER_LAYOUT : SCENE_ATTRIBUTE_SHADER_LAYOUT,
+      arrowTable: makeDofInstanceTable(this.instanceModelMatrices),
+      arrowPaths: {
+        instanceModelMatrixCol0: 'instanceModelMatrix',
+        instanceModelMatrixCol1: 'instanceModelMatrix',
+        instanceModelMatrixCol2: 'instanceModelMatrix',
+        instanceModelMatrixCol3: 'instanceModelMatrix'
+      },
       ...(device.info.shadingLanguage === 'wgsl'
         ? {
             source: SCENE_WGSL,
@@ -308,23 +331,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
             fs: SCENE_FRAGMENT_SHADER
           }),
       geometry: new CubeGeometry({indices: true}),
-      instanceCount: NUM_CUBES,
-      bufferLayout: [
-        {
-          name: 'instanceMatrices',
-          stepMode: 'instance',
-          byteStride: 64,
-          attributes: [
-            {attribute: 'instanceModelMatrixCol0', format: 'float32x4', byteOffset: 0},
-            {attribute: 'instanceModelMatrixCol1', format: 'float32x4', byteOffset: 16},
-            {attribute: 'instanceModelMatrixCol2', format: 'float32x4', byteOffset: 32},
-            {attribute: 'instanceModelMatrixCol3', format: 'float32x4', byteOffset: 48}
-          ]
-        }
-      ],
-      attributes: {
-        instanceMatrices: this.instanceMatrixBuffer
-      },
       bindings: {
         cubeTexture: this.cubeTexture
       },
@@ -367,7 +373,6 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.sceneModel.destroy();
     this.cubeTexture.destroy();
     this.shaderPassRenderer.destroy();
-    this.instanceMatrixBuffer.destroy();
     this.sceneFramebuffer.destroy();
   }
 
@@ -461,7 +466,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
   }
 
   updateCubeTransforms(): void {
-    let matrixOffset = 0;
+    let cubeIndex = 0;
 
     for (const cubeTransform of this.cubeTransforms) {
       cubeTransform.rotate[0] += 0.01;
@@ -472,13 +477,23 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
         .rotateXYZ(cubeTransform.rotate)
         .scale(cubeTransform.scale);
 
-      this.instanceMatrices.set(cubeTransform.matrix, matrixOffset);
-      matrixOffset += INSTANCE_MATRIX_STRIDE;
+      const matrixOffset = cubeIndex * INSTANCE_MODEL_MATRIX_COMPONENT_COUNT;
+      for (
+        let matrixComponent = 0;
+        matrixComponent < INSTANCE_MODEL_MATRIX_COMPONENT_COUNT;
+        matrixComponent++
+      ) {
+        this.instanceModelMatrices[matrixOffset + matrixComponent] =
+          cubeTransform.matrix[matrixComponent];
+      }
+      cubeIndex++;
     }
   }
 
   writeInstanceMatrices(): void {
-    this.instanceMatrixBuffer.write(this.instanceMatrices);
+    this.sceneModel.arrowGPUTable?.gpuVectors.instanceModelMatrix?.buffer.write(
+      this.instanceModelMatrices
+    );
   }
 
   initializeControls(): void {
@@ -528,4 +543,13 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
 
 function getOffscreenColorFormat(device: AnimationProps['device']): TextureFormatColor {
   return device.type === 'webgpu' ? device.preferredColorFormat : 'rgba8unorm';
+}
+
+function makeDofInstanceTable(instanceModelMatrices: Float32Array): arrow.Table {
+  return new arrow.Table({
+    instanceModelMatrix: makeArrowMatrix4x4Vector(instanceModelMatrices, {
+      order: 'column-major',
+      layout: 'wgsl-storage'
+    })
+  });
 }
