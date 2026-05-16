@@ -30,6 +30,12 @@ Target Release Date: Q3, 2026
 - **GPU UTF-8 shader mapping** - Reusable text-module WGSL helpers compose sparse UTF-8 byte traversal, code point decode, and storage lookup into one-pass text compute kernels.
 - **Packed text clipping** - Arrow 2D text accepts optional `FixedSizeList<Int16>[4]` clip rectangles and expands them into 8-byte per-glyph clipping attributes only when clipping is enabled.
 
+**@luma.gl/text**
+
+- **Arrow-native 2D text** - New atlas, layout, and UTF-8 glyph expansion utilities support deck.gl-style text extraction into `@luma.gl/text`.
+- **`ArrowTextModel`** - New `ArrowModel`-derived one-line label renderer expands Arrow `Utf8` rows into glyph instances without row-level string materialization.
+- **Packed text clipping** - Arrow 2D text accepts optional `FixedSizeList<Int16>[4]` clip rectangles and expands them into 8-byte per-glyph clipping attributes only when clipping is enabled.
+
 **@luma.gl/gpgpu** NEW MODULE
 
 - **`GPUTableEvaluator`** lazy GPU operations with CPU/WebGL/WebGPU backends.
