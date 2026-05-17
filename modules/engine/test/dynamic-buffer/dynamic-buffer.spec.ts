@@ -105,3 +105,29 @@ test('DynamicBuffer#resize preserveData keeps bytes on WebGL and WebGPU', async 
 
   t.end();
 });
+
+test('DynamicBuffer#resize preserveData keeps unaligned byte counts on WebGL and WebGPU', async t => {
+  for (const device of await getTestDevices(['webgpu', 'webgl'])) {
+    const dynamicBuffer = new DynamicBuffer(device, {
+      data: new Uint8Array([9, 8, 7]),
+      usage: Buffer.COPY_DST | Buffer.COPY_SRC | Buffer.VERTEX,
+      debugData: true
+    });
+
+    t.ok(
+      dynamicBuffer.resize({byteLength: 7, preserveData: true}),
+      `${device.type} unaligned preserve resize reports change`
+    );
+
+    const result = await dynamicBuffer.readAsync(0, 3);
+    t.deepEqual(
+      Array.from(result),
+      [9, 8, 7],
+      `${device.type} unaligned preserve resize copies previous contents`
+    );
+
+    dynamicBuffer.destroy();
+  }
+
+  t.end();
+});

@@ -107,31 +107,37 @@ export class GPURecordBatch {
         });
         this.numRows = 0;
         this.nullCount = 0;
-        this.bufferLayout.push(...appendableColumns.map(column => column.bufferLayout));
+        this.bufferLayout.push(
+          ...appendableColumns.flatMap(column => (column.bufferLayout ? [column.bufferLayout] : []))
+        );
         this.appendableColumns = appendableColumns;
 
         const fields: arrow.Field[] = [];
         for (const column of appendableColumns) {
-          const {bufferLayout, field: sourceField} = column;
+          const {attributeName, bufferLayout, field: sourceField} = column;
           const field = new arrow.Field(
-            bufferLayout.name,
+            attributeName,
             sourceField.type,
             sourceField.nullable,
             new Map(sourceField.metadata)
           );
           const gpuVector = new GPUVector({
             type: 'appendable',
-            name: bufferLayout.name,
+            name: attributeName,
             device: options.device,
-            arrowType: sourceField.type as AttributeArrowType,
+            arrowType: sourceField.type as AttributeArrowType | arrow.Utf8,
             initialCapacityRows: options.initialCapacityRows,
             capacityGrowthFactor: options.capacityGrowthFactor,
             bufferProps: options.bufferProps
           } as any);
 
           fields.push(field);
-          this.gpuVectors[bufferLayout.name] = gpuVector;
-          this.attributes[bufferLayout.name] = gpuVector.buffer;
+          this.gpuVectors[attributeName] = gpuVector;
+          if (bufferLayout) {
+            this.attributes[attributeName] = gpuVector.buffer;
+          } else {
+            this.bindings[attributeName] = gpuVector.buffer;
+          }
         }
 
         this.schema = new arrow.Schema(fields, new Map(options.schema.metadata));
@@ -228,7 +234,10 @@ export class GPURecordBatch {
       fields.push(field);
       selectedNames.add(storageBinding.name);
       this.gpuVectors[storageBinding.name] = gpuVector;
-      this.bindings[storageBinding.name] = gpuVector.buffer;
+      this.bindings[storageBinding.name] = getSingleGPUVectorDataBuffer(
+        gpuVector,
+        storageBinding.name
+      );
     }
 
     this.schema = new arrow.Schema(fields, new Map(batch.schema.metadata));
@@ -272,6 +281,16 @@ export class GPURecordBatch {
       gpuVector.destroy();
     }
   }
+}
+
+function getSingleGPUVectorDataBuffer(vector: GPUVector, bindingName: string): DynamicBuffer {
+  const [data, ...remainingData] = vector.data;
+  if (!data || remainingData.length > 0) {
+    throw new Error(
+      `GPURecordBatch storage binding "${bindingName}" requires exactly one GPUData chunk`
+    );
+  }
+  return data.buffer;
 }
 
 function getArrowStorageBindings(shaderLayout: ShaderLayout): Array<{name: string}> {

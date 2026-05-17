@@ -12,6 +12,14 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 
 ## Upgrading to v10.0
 
+**@luma.gl/arrow**
+- `StreamingArrowGPUTable` and `StreamingArrowGPUVector` have been removed. Use regular GPU table primitives directly instead:
+  - `new GPUTable({type: 'appendable', ...})`
+  - `addToLastBatch(...)`
+  - `resetLastBatch()`
+  - `new GPURecordBatch(device, recordBatch, ...)` plus `gpuTable.addBatch(...)` when source batch boundaries should stay explicit
+- `ArrowModel` no longer accepts `streamingArrowGPUTable`; pass the appendable table through `arrowGPUTable`.
+
 **@luma.gl/text**
 - `ArrowTextModel.labelVectors` has been removed. Pass supported row vectors as top-level props instead:
   - `positions`

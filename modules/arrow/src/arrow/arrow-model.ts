@@ -13,7 +13,6 @@ import {Model, type ModelProps} from '@luma.gl/engine';
 import * as arrow from 'apache-arrow';
 import {type ArrowVertexFormatOptions} from './arrow-shader-layout';
 import {GPUTable, type GPUTableProps} from './plain-gpu-table';
-import {StreamingArrowGPUTable} from './streaming-arrow-gpu-table';
 import type {GPUVectorProps} from './arrow-gpu-vector';
 import {ArrowGeometry, type ArrowGeometryProps} from './arrow-geometry';
 import type {ArrowMeshTable} from './arrow-mesh-types';
@@ -28,7 +27,7 @@ export type ArrowModelProps = ModelProps &
      * Mesh Arrow table used as the construction source for GPU geometry buffers.
      *
      * Mesh input is converted through {@link ArrowGeometry}. It is mutually
-     * exclusive with `arrowTable`, `arrowGPUTable`, `streamingArrowGPUTable`, and `geometry`.
+     * exclusive with `arrowTable`, `arrowGPUTable`, and `geometry`.
      */
     arrowMesh?: ArrowMeshTable | arrow.Table;
     /** Options applied when converting Mesh Arrow input into GPU geometry. */
@@ -37,8 +36,6 @@ export type ArrowModelProps = ModelProps &
     arrowTable?: arrow.Table;
     /** Existing non-streaming GPU table used as the source for model attributes. */
     arrowGPUTable?: GPUTable;
-    /** Existing streaming GPU table used as the source for model attributes. */
-    streamingArrowGPUTable?: StreamingArrowGPUTable;
     /** Maps shader attribute names to Arrow column paths. Defaults to using attribute names. */
     arrowPaths?: Record<string, string>;
     /** Buffer props applied to each Arrow-derived GPU vector. */
@@ -111,9 +108,6 @@ export class ArrowModel extends Model {
     }
     if (props.arrowGPUTable) {
       this.setArrowGPUTable(props.arrowGPUTable, false);
-    }
-    if (props.streamingArrowGPUTable) {
-      this.setArrowGPUTable(props.streamingArrowGPUTable, false);
     }
   }
 
@@ -315,7 +309,6 @@ function getArrowModelState(device: Device, props: ArrowModelProps): ArrowModelS
     arrowMeshOptions,
     arrowTable,
     arrowGPUTable: explicitArrowGPUTable,
-    streamingArrowGPUTable,
     arrowPaths,
     arrowBufferProps,
     arrowCount = 'instance',
@@ -326,8 +319,7 @@ function getArrowModelState(device: Device, props: ArrowModelProps): ArrowModelS
   validateArrowModelSources({
     arrowMesh,
     arrowTable,
-    arrowGPUTable: explicitArrowGPUTable,
-    streamingArrowGPUTable
+    arrowGPUTable: explicitArrowGPUTable
   });
 
   if (!modelProps.shaderLayout) {
@@ -375,7 +367,6 @@ function getArrowModelState(device: Device, props: ArrowModelProps): ArrowModelS
     device,
     arrowTable,
     arrowGPUTable: explicitArrowGPUTable,
-    streamingArrowGPUTable,
     shaderLayout: modelProps.shaderLayout,
     arrowPaths,
     arrowBufferProps,
@@ -435,7 +426,6 @@ function getInitialArrowGPUTable(props: {
   device: Device;
   arrowTable?: arrow.Table;
   arrowGPUTable?: GPUTable;
-  streamingArrowGPUTable?: StreamingArrowGPUTable;
   shaderLayout: ShaderLayout;
   arrowPaths?: Record<string, string>;
   arrowBufferProps?: GPUVectorProps;
@@ -443,9 +433,6 @@ function getInitialArrowGPUTable(props: {
 }): {arrowGPUTable: ArrowModelGPUTable; ownsArrowGPUTable: boolean} {
   if (props.arrowGPUTable) {
     return {arrowGPUTable: props.arrowGPUTable, ownsArrowGPUTable: false};
-  }
-  if (props.streamingArrowGPUTable) {
-    return {arrowGPUTable: props.streamingArrowGPUTable, ownsArrowGPUTable: false};
   }
 
   return {
@@ -463,22 +450,16 @@ function validateArrowModelSources(props: {
   arrowMesh?: ArrowMeshTable | arrow.Table;
   arrowTable?: arrow.Table;
   arrowGPUTable?: GPUTable;
-  streamingArrowGPUTable?: StreamingArrowGPUTable;
 }): void {
   const sourceCount =
     Number(Boolean(props.arrowMesh)) +
     Number(Boolean(props.arrowTable)) +
-    Number(Boolean(props.arrowGPUTable)) +
-    Number(Boolean(props.streamingArrowGPUTable));
+    Number(Boolean(props.arrowGPUTable));
   if (sourceCount > 1) {
-    throw new Error(
-      'ArrowModel requires only one of arrowMesh, arrowTable, arrowGPUTable, or streamingArrowGPUTable'
-    );
+    throw new Error('ArrowModel requires only one of arrowMesh, arrowTable, or arrowGPUTable');
   }
   if (sourceCount === 0) {
-    throw new Error(
-      'ArrowModel requires arrowMesh, arrowTable, arrowGPUTable or streamingArrowGPUTable'
-    );
+    throw new Error('ArrowModel requires arrowMesh, arrowTable, or arrowGPUTable');
   }
 }
 

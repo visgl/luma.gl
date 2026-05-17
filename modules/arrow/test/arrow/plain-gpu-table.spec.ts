@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {GPURecordBatch, GPUVector, GPUTable} from '@luma.gl/arrow';
+import {GPURecordBatch, GPUVector, GPUTable, makeArrowFixedSizeListVector} from '@luma.gl/arrow';
 import type {ShaderLayout} from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/engine';
 import {NullDevice} from '@luma.gl/test-utils';
@@ -339,6 +339,10 @@ test('GPUTable addToLastBatch appends Arrow batches into one mutable trailing GP
   t.equal(gpuTable.batches[0].numRows, 4, 'updates trailing batch row count');
   t.equal(gpuTable.gpuVectors.positions.data.length, 2, 'restitches aggregate GPU ranges');
   t.ok(
+    gpuTable.gpuVectors.positions.data[0].sourceData,
+    'retains appended Arrow source chunks through aggregate table vectors'
+  );
+  t.ok(
     gpuTable.attributes.positions instanceof DynamicBuffer,
     'exposes DynamicBuffer attributes through the regular table API'
   );
@@ -346,6 +350,62 @@ test('GPUTable addToLastBatch appends Arrow batches into one mutable trailing GP
   gpuTable.resetLastBatch();
   t.equal(gpuTable.numRows, 0, 'resetLastBatch clears mutable rows from the table count');
   t.equal(gpuTable.batches[0].numRows, 0, 'resetLastBatch clears mutable batch rows');
+
+  gpuTable.destroy();
+  t.end();
+});
+
+test('GPUTable appendable batches expose UTF-8 storage vectors with retained sources', t => {
+  const device = new NullDevice({});
+  const positions = makeArrowFixedSizeListVector(
+    new arrow.Float32(),
+    2,
+    new Float32Array([0, 0, 1, 1])
+  );
+  const texts = arrow.vectorFromArray(['alpha', 'beta'], new arrow.Utf8());
+  const sourceTable = new arrow.Table({positions, texts});
+  const shaderLayout: ShaderLayout = {
+    attributes: [{name: 'positions', location: 0, type: 'vec2<f32>'}],
+    bindings: [{name: 'texts', type: 'read-only-storage', group: 0, location: 0}]
+  };
+  const gpuTable = new GPUTable({
+    type: 'appendable',
+    device,
+    schema: sourceTable.schema,
+    shaderLayout
+  });
+
+  gpuTable.addToLastBatch(sourceTable.batches[0]);
+
+  t.equal(gpuTable.numRows, 2, 'tracks appended table rows');
+  t.ok(gpuTable.bindings.texts, 'exposes the UTF-8 vector as a storage binding');
+  t.equal(gpuTable.gpuVectors.texts.length, 2, 'tracks UTF-8 vector rows');
+  t.ok(gpuTable.gpuVectors.texts.data[0].sourceData, 'retains UTF-8 source offsets');
+
+  gpuTable.destroy();
+  t.end();
+});
+
+test('GPUTable static batches bind UTF-8 storage through batch GPUData buffers', t => {
+  const device = new NullDevice({});
+  const positions = makeArrowFixedSizeListVector(
+    new arrow.Float32(),
+    2,
+    new Float32Array([0, 0, 1, 1])
+  );
+  const texts = arrow.vectorFromArray(['alpha', 'beta'], new arrow.Utf8());
+  const sourceTable = new arrow.Table({positions, texts});
+  const shaderLayout: ShaderLayout = {
+    attributes: [{name: 'positions', location: 0, type: 'vec2<f32>'}],
+    bindings: [{name: 'texts', type: 'read-only-storage', group: 0, location: 0}]
+  };
+  const gpuTable = new GPUTable(device, sourceTable, {shaderLayout});
+
+  t.equal(
+    gpuTable.bindings.texts,
+    gpuTable.batches[0].gpuVectors.texts.data[0].buffer,
+    'batch-local UTF-8 storage binding resolves through GPUData'
+  );
 
   gpuTable.destroy();
   t.end();

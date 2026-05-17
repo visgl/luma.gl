@@ -3,7 +3,8 @@
 // Copyright (c) vis.gl contributors
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {GPUVector, makeArrowFixedSizeListVector} from '@luma.gl/arrow';
+import {GPURecordBatch, GPUVector, GPUTable, makeArrowFixedSizeListVector} from '@luma.gl/arrow';
+import type {ShaderLayout} from '@luma.gl/core';
 import {NullDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 import * as arrow from 'apache-arrow';
 import {
@@ -19,6 +20,11 @@ const CHARACTER_MAPPING: CharacterMapping = {
   A: {x: 0, y: 0, width: 4, height: 6, anchorX: 2, anchorY: 3, advance: 5},
   B: {x: 4, y: 0, width: 4, height: 6, anchorX: 2, anchorY: 3, advance: 7}
 };
+
+const APPENDABLE_TEXT_INPUT_SHADER_LAYOUT = {
+  attributes: [{name: 'positions', location: 0, type: 'vec2<f32>', stepMode: 'instance'}],
+  bindings: [{name: 'texts', type: 'read-only-storage', group: 0, location: 0}]
+} satisfies ShaderLayout;
 
 test('buildArrowTextGlyphTable repeats Arrow label attributes for each glyph', t => {
   const labelTable = makeLabelTable();
@@ -239,6 +245,45 @@ test('ArrowTextModel expands chunked UTF-8 GPUVector data', t => {
   t.end();
 });
 
+test('ArrowTextModel appends GPUTable-backed text batches without rebuilding prior glyph buffers', t => {
+  const device = new NullDevice({});
+  const firstBatch = makeAppendableTextRecordBatch(['AB'], new Float32Array([0, 0]));
+  const secondBatch = makeAppendableTextRecordBatch(['A'], new Float32Array([1, 1]));
+  const gpuTable = new GPUTable(device, new arrow.Table([firstBatch]), {
+    shaderLayout: APPENDABLE_TEXT_INPUT_SHADER_LAYOUT
+  });
+
+  const model = new ArrowTextModel(device, {
+    id: 'arrow-text-model-appendable-gpu-table-test',
+    positions: gpuTable.gpuVectors.positions as GPUVector<arrow.FixedSizeList<arrow.Float32>>,
+    texts: gpuTable.gpuVectors.texts as GPUVector<arrow.Utf8>,
+    characterMapping: CHARACTER_MAPPING,
+    fontSettings: {fontSize: 10}
+  });
+  t.equal(model.glyphLayout.glyphCount, 2, 'starts from the first appended text batch');
+  const firstExpandedGlyphVertexData = model.renderBatches[0].expandedGlyphVertexData;
+
+  gpuTable.addBatch(
+    new GPURecordBatch(device, secondBatch, {
+      shaderLayout: APPENDABLE_TEXT_INPUT_SHADER_LAYOUT
+    })
+  );
+  model.appendTextBatches({
+    positions: gpuTable.gpuVectors.positions as GPUVector<arrow.FixedSizeList<arrow.Float32>>,
+    texts: gpuTable.gpuVectors.texts as GPUVector<arrow.Utf8>
+  });
+  t.equal(model.glyphLayout.glyphCount, 3, 'adds glyphs from the later GPU record batch');
+  t.equal(
+    model.renderBatches[0].expandedGlyphVertexData,
+    firstExpandedGlyphVertexData,
+    'retains the first generated glyph vertex buffer'
+  );
+
+  model.destroy();
+  gpuTable.destroy();
+  t.end();
+});
+
 test('ArrowStorageTextModel packs SDF alpha settings into the style config uniform', async t => {
   const device = await getWebGPUTestDevice();
   if (!device) {
@@ -329,6 +374,51 @@ test('ArrowStorageTextModel interleaves compact glyph vertex records', async t =
 
   model.destroy();
   destroyStorageGpuTextProps(textProps);
+  t.end();
+});
+
+test('ArrowStorageTextModel appends GPUTable-backed text batches without rebuilding prior glyph buffers', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+  const firstBatch = makeAppendableTextRecordBatch(['AB'], new Float32Array([0, 0]));
+  const secondBatch = makeAppendableTextRecordBatch(['A'], new Float32Array([1, 1]));
+  const gpuTable = new GPUTable(device, new arrow.Table([firstBatch]), {
+    shaderLayout: APPENDABLE_TEXT_INPUT_SHADER_LAYOUT
+  });
+
+  const model = new ArrowStorageTextModel(device, {
+    id: 'arrow-storage-text-appendable-gpu-table-test',
+    positions: gpuTable.gpuVectors.positions as GPUVector<arrow.FixedSizeList<arrow.Float32>>,
+    texts: gpuTable.gpuVectors.texts as GPUVector<arrow.Utf8>,
+    characterMapping: CHARACTER_MAPPING,
+    fontSettings: {fontSize: 10}
+  });
+  const firstCompactGlyphVertexData = model.renderBatches[0].compactGlyphVertexData;
+
+  gpuTable.addBatch(
+    new GPURecordBatch(device, secondBatch, {
+      shaderLayout: APPENDABLE_TEXT_INPUT_SHADER_LAYOUT
+    })
+  );
+  model.appendTextBatches({
+    positions: gpuTable.gpuVectors.positions as GPUVector<arrow.FixedSizeList<arrow.Float32>>,
+    texts: gpuTable.gpuVectors.texts as GPUVector<arrow.Utf8>
+  });
+
+  t.equal(model.glyphCount, 3, 'storage text expansion reads the appended UTF-8 batch');
+  t.equal(model.batches.length, 2, 'storage row bindings preserve appended chunk boundaries');
+  t.equal(
+    model.renderBatches[0].compactGlyphVertexData,
+    firstCompactGlyphVertexData,
+    'retains the first generated compact glyph vertex buffer'
+  );
+
+  model.destroy();
+  gpuTable.destroy();
   t.end();
 });
 
@@ -479,6 +569,21 @@ function makeLabelTable(): arrow.Table {
   return new arrow.Table({
     positions: makeArrowFixedSizeListVector(new arrow.Float32(), 2, new Float32Array([0, 0, 1, 1]))
   });
+}
+
+function makeAppendableTextRecordBatch(
+  labels: string[],
+  positions: Float32Array
+): arrow.RecordBatch {
+  const table = new arrow.Table({
+    positions: makeArrowFixedSizeListVector(new arrow.Float32(), 2, positions),
+    texts: arrow.vectorFromArray(labels, new arrow.Utf8())
+  });
+  const recordBatch = table.batches[0];
+  if (!recordBatch) {
+    throw new Error('Text test requires a populated Arrow record batch');
+  }
+  return recordBatch;
 }
 
 function makeGpuTextProps(device: NullDevice, labels: string[]) {

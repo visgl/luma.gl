@@ -21,13 +21,14 @@ export type AppendableGPUColumn = {
   attributeName: string;
   arrowPath: string;
   field: arrow.Field;
-  bufferLayout: BufferLayout;
+  bufferLayout?: BufferLayout;
+  storageBinding?: boolean;
 };
 
 /** Validated Arrow data selected for one appendable GPU column. */
 export type AppendableGPUColumnData = {
   column: AppendableGPUColumn;
-  data: arrow.Data<AttributeArrowType>;
+  data: arrow.Data<AttributeArrowType | arrow.Utf8>;
 };
 
 /** Resolves shader-selected Arrow columns for appendable GPU storage. */
@@ -72,6 +73,42 @@ export function getAppendableGPUColumns(props: {
     });
   }
 
+  const selectedNames = new Set(columns.map(column => column.attributeName));
+  for (const binding of props.shaderLayout.bindings) {
+    if (
+      (binding.type !== 'storage' && binding.type !== 'read-only-storage') ||
+      'format' in binding
+    ) {
+      continue;
+    }
+    if (selectedNames.has(binding.name)) {
+      throw new Error(
+        `Appendable Arrow shader input "${binding.name}" cannot be both an attribute and a storage binding`
+      );
+    }
+    const hasExplicitPath = Boolean(
+      props.arrowPaths && Object.prototype.hasOwnProperty.call(props.arrowPaths, binding.name)
+    );
+    const arrowPath = props.arrowPaths?.[binding.name] || binding.name;
+    if (!hasExplicitPath && !schemaPaths.has(arrowPath)) {
+      continue;
+    }
+    const field = findArrowFieldByPath(props.schema, arrowPath);
+    if (!field) {
+      throw new Error(`Arrow table schema does not contain column "${arrowPath}"`);
+    }
+    if (!isInstanceArrowType(field.type) && !arrow.DataType.isUtf8(field.type)) {
+      throw new Error(`Arrow column "${arrowPath}" is not compatible with appendable GPU storage`);
+    }
+    columns.push({
+      attributeName: binding.name,
+      arrowPath,
+      field,
+      storageBinding: true
+    });
+    selectedNames.add(binding.name);
+  }
+
   return columns;
 }
 
@@ -89,10 +126,9 @@ export function getAppendableGPUColumnData(
   }
 
   return columns.map(column => {
-    const data = getArrowDataByPath(
-      recordBatch,
-      column.arrowPath
-    ) as arrow.Data<AttributeArrowType>;
+    const data = getArrowDataByPath(recordBatch, column.arrowPath) as arrow.Data<
+      AttributeArrowType | arrow.Utf8
+    >;
     if (data.length !== recordBatch.numRows) {
       throw new Error(`${ownerName} column "${column.arrowPath}" row count mismatch`);
     }

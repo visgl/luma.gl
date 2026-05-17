@@ -698,20 +698,35 @@ arrowGPUTable.addToLastBatch(recordBatch);
 model.setInstanceCount(arrowGPUTable.numRows);
 ```
 
-The existing `StreamingArrowGPUTable` wrapper now delegates to the appendable
-`GPUTable` path and only preserves constructor-time synchronous and asynchronous
-record batch iterator helpers:
+Asynchronous sources stay application-owned. Append yielded record batches into
+the same appendable table as they arrive:
 
 ```ts
-const streamingTable = new StreamingArrowGPUTable({
-  device,
-  schema,
-  asyncRecordBatches,
+for await (const recordBatch of asyncRecordBatches) {
+  arrowGPUTable.addToLastBatch(recordBatch);
+  model.setInstanceCount(arrowGPUTable.numRows);
+}
+```
+
+If downstream work should preserve source batch boundaries instead of extending
+one mutable trailing batch, convert each yielded Arrow batch once and add the
+resulting GPU batch:
+
+```ts
+import {GPURecordBatch, GPUTable} from '@luma.gl/arrow';
+
+const arrowGPUTable = new GPUTable(device, new arrow.Table([firstRecordBatch]), {
   shaderLayout
 });
 
-await streamingTable.ready;
+for await (const recordBatch of remainingRecordBatches) {
+  arrowGPUTable.addBatch(new GPURecordBatch(device, recordBatch, {shaderLayout}));
+}
 ```
+
+Text and other generated-geometry paths can then expand each preserved source
+GPU batch independently, and may fan one source `GPURecordBatch` out into
+multiple generated render batches when device buffer limits require splitting.
 
 ## Planning Table Buffer Groups
 

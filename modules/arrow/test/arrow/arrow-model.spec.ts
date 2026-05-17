@@ -7,7 +7,6 @@ import {
   GPUTable,
   ArrowModel,
   makeArrowFixedSizeListVector,
-  StreamingArrowGPUTable,
   type ArrowMeshTable
 } from '@luma.gl/arrow';
 import type {ShaderLayout} from '@luma.gl/core';
@@ -184,42 +183,6 @@ test('ArrowModel updates Arrow table props', t => {
   t.end();
 });
 
-test('ArrowModel consumes a StreamingArrowGPUTable', t => {
-  const device = new NullDevice({});
-  const firstTable = makeArrowModelTable(1);
-  const nextTable = makeArrowModelTable(3);
-  const streamingArrowGPUTable = new StreamingArrowGPUTable({
-    device,
-    schema: firstTable.schema,
-    shaderLayout: SHADER_LAYOUT
-  });
-
-  streamingArrowGPUTable.appendRecordBatch(firstTable.batches[0]);
-  const model = new ArrowModel(device, {
-    id: 'arrow-model-streaming-test',
-    vs: DUMMY_VS,
-    fs: DUMMY_FS,
-    shaderLayout: SHADER_LAYOUT,
-    streamingArrowGPUTable
-  });
-  const positionsBuffer = streamingArrowGPUTable.gpuVectors['positions'].buffer;
-  const initialNeedsRedraw = model.needsRedraw();
-
-  streamingArrowGPUTable.appendRecordBatch(nextTable.batches[0]);
-
-  t.equal(model.arrowGPUTable, streamingArrowGPUTable, 'uses the provided streaming table');
-  t.equal(model.instanceCount, 1, 'initially infers row count from streaming table');
-  t.ok(model.needsRedraw(), 'detects writes to streaming DynamicBuffer attributes');
-  t.equal(model.instanceCount, 4, 'refreshes inferred row count after streaming append');
-
-  model.destroy();
-  t.notOk(positionsBuffer.destroyed, 'does not destroy externally provided streaming table');
-  streamingArrowGPUTable.destroy();
-  t.ok(positionsBuffer.destroyed, 'external owner can destroy the streaming table');
-  t.ok(initialNeedsRedraw, 'model starts needing redraw');
-  t.end();
-});
-
 test('ArrowModel consumes an appendable GPUTable and tracks trailing batch growth', t => {
   const device = new NullDevice({});
   const firstTable = makeArrowModelTable(1);
@@ -343,35 +306,6 @@ test('ArrowModel draws preserved Arrow table batches by rebinding batch-owned bu
   t.end();
 });
 
-test('ArrowModel draws streaming table façades through regular GPU batches', t => {
-  const device = new NullDevice({});
-  const arrowTable = makeArrowModelTable(1);
-  const streamingArrowGPUTable = new StreamingArrowGPUTable({
-    device,
-    schema: arrowTable.schema,
-    shaderLayout: SHADER_LAYOUT
-  });
-  streamingArrowGPUTable.appendRecordBatch(arrowTable.batches[0]);
-  const model = new ArrowModel(device, {
-    id: 'arrow-model-streaming-batched-draw-test',
-    vs: DUMMY_VS,
-    fs: DUMMY_FS,
-    shaderLayout: SHADER_LAYOUT,
-    streamingArrowGPUTable
-  });
-  const renderPass = device.getDefaultRenderPass();
-
-  t.ok(
-    model.drawBatches(renderPass),
-    'streaming compatibility tables draw through the appendable GPU batch path'
-  );
-
-  renderPass.destroy();
-  model.destroy();
-  streamingArrowGPUTable.destroy();
-  t.end();
-});
-
 test('ArrowModel creates a Model from a Mesh Arrow table', t => {
   const device = new NullDevice({});
   const arrowMesh = makeArrowModelMeshTable();
@@ -459,7 +393,7 @@ test('ArrowModel validates required shader layout and duplicate attributes', t =
         arrowMesh: makeArrowModelMeshTable(),
         arrowTable
       }),
-    /only one of arrowMesh, arrowTable, arrowGPUTable, or streamingArrowGPUTable/,
+    /only one of arrowMesh, arrowTable, or arrowGPUTable/,
     'rejects duplicate Arrow sources'
   );
 

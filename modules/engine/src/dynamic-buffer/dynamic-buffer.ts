@@ -350,11 +350,13 @@ export class DynamicBuffer {
     destinationBuffer: Buffer,
     byteLength: number
   ): void {
+    const copyByteLength =
+      this.device.type === 'webgpu' ? Math.ceil(byteLength / 4) * 4 : byteLength;
     const commandEncoder = this.device.createCommandEncoder();
     commandEncoder.copyBufferToBuffer({
       sourceBuffer,
       destinationBuffer,
-      size: byteLength
+      size: copyByteLength
     });
     this.device.submit(commandEncoder.finish());
   }
