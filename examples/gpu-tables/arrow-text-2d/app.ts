@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {GPUVector, makeArrowFixedSizeListVector} from '@luma.gl/arrow';
-import {type Device, type ShaderLayout} from '@luma.gl/core';
+import {type Device, type RenderPass, type ShaderLayout} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {
   AnimationLoopTemplate,
@@ -250,11 +250,11 @@ struct TextStorageStyleConfig {
   useRowSizes : u32,
   useRowPixelOffsets : u32,
   hasClipRects : u32,
-  rowBase : u32,
+  batchRowIndexBase : u32,
   _padding : u32,
 };
 
-@group(0) @binding(auto) var<storage, read> textStorageStyleConfig : TextStorageStyleConfig;
+@group(0) @binding(auto) var<uniform> textStorageStyleConfig : TextStorageStyleConfig;
 
 struct VertexInputs {
   @builtin(vertex_index) vertexIndex : u32,
@@ -348,7 +348,7 @@ fn vertexMain(inputs : VertexInputs) -> FragmentInputs {
   let glyphOffset = vec2<f32>(inputs.glyphOffsets);
   let glyphSize = glyphFrame.zw;
   let glyphVertexOffset = glyphOffset + corner * glyphSize;
-  let rowIndex = inputs.rowIndices - textStorageStyleConfig.rowBase;
+  let rowIndex = inputs.rowIndices - textStorageStyleConfig.batchRowIndexBase;
   var angleDegrees = textStorageStyleConfig.constantAngleDegrees;
   if (textStorageStyleConfig.useRowAngles != 0u) {
     angleDegrees = textRowAngles[rowIndex];
@@ -966,7 +966,11 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
 
     const pickingPass = this.picker.beginRenderPass();
     this.shaderInputs.setProps({picking: {batchIndex: 0}});
-    this.pickingModel?.draw(pickingPass);
+    if (this.pickingModel && this.textModel instanceof ArrowTextModel) {
+      this.drawArrowTextPickingBatches(pickingPass, this.pickingModel, this.textModel);
+    } else {
+      this.pickingModel?.draw(pickingPass);
+    }
     pickingPass.end();
     this.shaderInputs.setProps({picking: {isActive: false}});
     void this.picker.updatePickInfo(mousePosition as [number, number]);
@@ -974,25 +978,41 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
 
   createPickingModel(textModel: ActiveTextModel): Model {
     const usesStorageState = textModel instanceof ArrowStorageTextModel;
+    if (usesStorageState) {
+      return new ArrowStorageTextModel(this.device, {
+        id: `${textModel.id || 'arrow-text-2d'}-picking`,
+        storageState: textModel.storageState,
+        source: STORAGE_INDEXED_WGSL_SHADER,
+        vs: VS_GLSL,
+        fs: PICKING_FS_GLSL,
+        fragmentEntryPoint: 'fragmentPicking',
+        // @ts-expect-error Remove once npm package updated with new types
+        modules: [indexPicking],
+        shaderLayout: STORAGE_INDEXED_TEXT_SHADER_LAYOUT,
+        shaderInputs: this.shaderInputs,
+        colorAttachmentFormats: ['rgba8unorm', 'rg32sint'],
+        depthStencilAttachmentFormat: 'depth24plus',
+        parameters: {
+          depthWriteEnabled: false,
+          blend: false
+        }
+      });
+    }
+
     return new Model(this.device, {
       id: `${textModel.id || 'arrow-text-2d'}-picking`,
-      source: usesStorageState ? STORAGE_INDEXED_WGSL_SHADER : WGSL_SHADER,
+      source: WGSL_SHADER,
       vs: VS_GLSL,
       fs: PICKING_FS_GLSL,
       fragmentEntryPoint: 'fragmentPicking',
       // @ts-expect-error Remove once npm package updated with new types
       modules: [indexPicking],
-      shaderLayout: usesStorageState ? STORAGE_INDEXED_TEXT_SHADER_LAYOUT : TEXT_SHADER_LAYOUT,
+      shaderLayout: TEXT_SHADER_LAYOUT,
       bufferLayout: textModel.bufferLayout,
-      attributes:
-        textModel instanceof ArrowStorageTextModel
-          ? {
-              compactGlyphVertexData: textModel.compactGlyphVertexData
-            }
-          : {
-              ...textModel.arrowGPUTable!.attributes,
-              expandedGlyphVertexData: textModel.expandedGlyphVertexData
-            },
+      attributes: {
+        ...textModel.arrowGPUTable!.attributes,
+        expandedGlyphVertexData: textModel.expandedGlyphVertexData
+      },
       instanceCount: textModel.instanceCount,
       vertexCount: 6,
       bindings: {...textModel.bindings},
@@ -1004,6 +1024,31 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
         blend: false
       }
     });
+  }
+
+  drawArrowTextPickingBatches(
+    pickingPass: RenderPass,
+    pickingModel: Model,
+    textModel: ArrowTextModel
+  ): void {
+    const arrowBatches = textModel.arrowGPUTable?.batches || [];
+    for (const [batchIndex, renderBatch] of textModel.renderBatches.entries()) {
+      const arrowBatch = arrowBatches[batchIndex];
+      if (!arrowBatch) {
+        throw new Error('Arrow text picking requires aligned Arrow and glyph render batches');
+      }
+      pickingModel.setAttributes({
+        ...arrowBatch.attributes,
+        expandedGlyphVertexData: renderBatch.expandedGlyphVertexData
+      });
+      pickingModel.setInstanceCount(renderBatch.glyphCount);
+      pickingModel.draw(pickingPass);
+    }
+    pickingModel.setAttributes({
+      ...(textModel.arrowGPUTable?.attributes || {}),
+      expandedGlyphVertexData: textModel.expandedGlyphVertexData
+    });
+    pickingModel.setInstanceCount(textModel.glyphLayout.glyphCount);
   }
 
   initializeModelSelector(): void {

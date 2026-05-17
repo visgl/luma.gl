@@ -115,6 +115,16 @@ Use [Buffer Schemas and Columnar Records](./buffer-schemas) when one logical row
 needs several attribute views or when you want record-oriented naming that also
 makes sense next to WGSL storage structs.
 
+The GPU representation does not always stay byte-for-byte identical to the
+source Arrow representation:
+
+- attribute paths may expand one logical row into several vertex or instance
+  records so draw-time buffers match shader stepping;
+- storage paths may need type or layout conversion before data becomes
+  WGSL-compatible storage;
+- device buffer-size limits can require preserved or synthetic batching instead
+  of one monolithic GPU upload.
+
 ## Matrix Columns
 
 `@luma.gl/arrow` provides explicit matrix vector helpers for the WGSL floating

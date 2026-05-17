@@ -135,6 +135,7 @@ test('buildGpuUtf8TextInput preserves Arrow UTF-8 bytes without glyph decoding',
     textInput.byteLength
   );
 
+  t.deepEqual(textInput.startIndices, [0, 2, 6], 'row byte prefixes support limit batching');
   t.deepEqual(Array.from(textInput.rowByteRanges), [0, 2, 2, 6], 'row byte spans stay aligned');
   t.deepEqual(
     Array.from(packedBytes),

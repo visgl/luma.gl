@@ -59,6 +59,7 @@ export type GpuExpandedTextStream = {
 };
 
 export type GpuUtf8TextInput = {
+  startIndices: number[];
   rowByteRanges: Uint32Array;
   packedUtf8Bytes: Uint32Array;
   byteLength: number;
@@ -125,6 +126,8 @@ export function buildGpuUtf8TextInput(texts: arrow.Vector<arrow.Utf8>): GpuUtf8T
   const packedUtf8Bytes = new Uint32Array(Math.ceil(byteLength / Uint32Array.BYTES_PER_ELEMENT));
   const packedByteView = new Uint8Array(packedUtf8Bytes.buffer);
   const target: Utf8TextIndexTarget = {startIndex: 0, endIndex: 0};
+  const startIndices = new Array<number>(texts.length + 1);
+  startIndices[0] = 0;
 
   for (const chunk of chunks) {
     const firstValueOffset = chunk.valueOffsets[0] ?? 0;
@@ -136,9 +139,11 @@ export function buildGpuUtf8TextInput(texts: arrow.Vector<arrow.Utf8>): GpuUtf8T
     populateUtf8TextIndices(chunks, rowIndex, target);
     rowByteRanges[rowIndex * 2] = target.startIndex;
     rowByteRanges[rowIndex * 2 + 1] = target.endIndex;
+    startIndices[rowIndex + 1] = Math.max(startIndices[rowIndex] ?? 0, target.endIndex);
   }
 
   return {
+    startIndices,
     rowByteRanges,
     packedUtf8Bytes,
     byteLength,

@@ -82,6 +82,10 @@ export abstract class DeviceLimits {
   abstract maxTextureArrayLayers: number;
   /** max number of BindGroups */
   abstract maxBindGroups: number;
+  /** max total bind groups plus vertex buffers usable by one pipeline */
+  abstract maxBindGroupsPlusVertexBuffers: number;
+  /** max bindings in one bind group */
+  abstract maxBindingsPerBindGroup: number;
   /** max number of DynamicUniformBuffers per PipelineLayout */
   abstract maxDynamicUniformBuffersPerPipelineLayout: number;
   /** max number of DynamicStorageBuffers per PipelineLayout */
@@ -100,6 +104,8 @@ export abstract class DeviceLimits {
   abstract maxUniformBufferBindingSize: number;
   /** max number of StorageBufferBindingSize */
   abstract maxStorageBufferBindingSize: number;
+  /** max total byte size of one GPU buffer allocation */
+  abstract maxBufferSize: number;
   /** min UniformBufferOffsetAlignment */
   abstract minUniformBufferOffsetAlignment: number;
   /** min StorageBufferOffsetAlignment */
@@ -112,6 +118,10 @@ export abstract class DeviceLimits {
   abstract maxVertexBufferArrayStride: number;
   /** max number of InterStageShaderComponents */
   abstract maxInterStageShaderVariables: number;
+  /** max number of color attachments in one render pass */
+  abstract maxColorAttachments: number;
+  /** max attachment bytes consumed per sample */
+  abstract maxColorAttachmentBytesPerSample: number;
   /** max number of ComputeWorkgroupStorageSize */
   abstract maxComputeWorkgroupStorageSize: number;
   /** max number of ComputeInvocations per Workgroup */

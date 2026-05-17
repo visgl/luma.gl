@@ -74,19 +74,21 @@ fn packSignedInt16Pair(lowerValue: i32, upperValue: i32) -> u32 {
 }
 
 fn getTextAnchor(rowIndex: u32) -> u32 {
-  if (textExpansionConfig[4] != 0) {
-    let packedAnchorWord = textRowTextAnchors[rowIndex >> 2u];
-    return (packedAnchorWord >> ((rowIndex & 3u) * 8u)) & 0xffu;
+  let rowStorageIndex = rowIndex + u32(max(textExpansionConfig[3], 0));
+  if (textExpansionConfig[5] != 0) {
+    let packedAnchorWord = textRowTextAnchors[rowStorageIndex >> 2u];
+    return (packedAnchorWord >> ((rowStorageIndex & 3u) * 8u)) & 0xffu;
   }
-  return u32(max(textExpansionConfig[3], 0));
+  return u32(max(textExpansionConfig[4], 0));
 }
 
 fn getAlignmentBaseline(rowIndex: u32) -> u32 {
-  if (textExpansionConfig[6] != 0) {
-    let packedBaselineWord = textRowAlignmentBaselines[rowIndex >> 2u];
-    return (packedBaselineWord >> ((rowIndex & 3u) * 8u)) & 0xffu;
+  let rowStorageIndex = rowIndex + u32(max(textExpansionConfig[3], 0));
+  if (textExpansionConfig[7] != 0) {
+    let packedBaselineWord = textRowAlignmentBaselines[rowStorageIndex >> 2u];
+    return (packedBaselineWord >> ((rowStorageIndex & 3u) * 8u)) & 0xffu;
   }
-  return u32(max(textExpansionConfig[5], 0));
+  return u32(max(textExpansionConfig[6], 0));
 }
 
 fn getAnchorShift(width: i32, textAnchor: u32) -> i32 {
@@ -96,7 +98,7 @@ fn getAnchorShift(width: i32, textAnchor: u32) -> i32 {
 }
 
 fn getBaselineShift(alignmentBaseline: u32) -> i32 {
-  let halfLineHeight = textExpansionConfig[7] / 2i;
+  let halfLineHeight = textExpansionConfig[8] / 2i;
   if (alignmentBaseline == 1u) { return halfLineHeight; }
   if (alignmentBaseline == 2u) { return -halfLineHeight; }
   return 0i;
@@ -180,19 +182,21 @@ fn packSignedInt16Pair(lowerValue: i32, upperValue: i32) -> u32 {
 }
 
 fn getTextAnchor(rowIndex: u32) -> u32 {
-  if (textExpansionConfig[5] != 0) {
-    let packedAnchorWord = textRowTextAnchors[rowIndex >> 2u];
-    return (packedAnchorWord >> ((rowIndex & 3u) * 8u)) & 0xffu;
+  let rowStorageIndex = rowIndex + u32(max(textExpansionConfig[4], 0));
+  if (textExpansionConfig[6] != 0) {
+    let packedAnchorWord = textRowTextAnchors[rowStorageIndex >> 2u];
+    return (packedAnchorWord >> ((rowStorageIndex & 3u) * 8u)) & 0xffu;
   }
-  return u32(max(textExpansionConfig[4], 0));
+  return u32(max(textExpansionConfig[5], 0));
 }
 
 fn getAlignmentBaseline(rowIndex: u32) -> u32 {
-  if (textExpansionConfig[7] != 0) {
-    let packedBaselineWord = textRowAlignmentBaselines[rowIndex >> 2u];
-    return (packedBaselineWord >> ((rowIndex & 3u) * 8u)) & 0xffu;
+  let rowStorageIndex = rowIndex + u32(max(textExpansionConfig[4], 0));
+  if (textExpansionConfig[8] != 0) {
+    let packedBaselineWord = textRowAlignmentBaselines[rowStorageIndex >> 2u];
+    return (packedBaselineWord >> ((rowStorageIndex & 3u) * 8u)) & 0xffu;
   }
-  return u32(max(textExpansionConfig[6], 0));
+  return u32(max(textExpansionConfig[7], 0));
 }
 
 fn getAnchorShift(width: i32, textAnchor: u32) -> i32 {
@@ -202,7 +206,7 @@ fn getAnchorShift(width: i32, textAnchor: u32) -> i32 {
 }
 
 fn getBaselineShift(alignmentBaseline: u32) -> i32 {
-  let halfLineHeight = textExpansionConfig[8] / 2i;
+  let halfLineHeight = textExpansionConfig[9] / 2i;
   if (alignmentBaseline == 1u) { return halfLineHeight; }
   if (alignmentBaseline == 2u) { return -halfLineHeight; }
   return 0i;
@@ -301,12 +305,14 @@ export function createGpuExpandedCompactInput(
   options: GpuTextExpansionResourceOptions,
   glyphStream: GpuExpandedTextStream,
   batchRowIndexBase = 0,
-  alignment: GpuTextAlignmentExpansionOptions = {}
+  alignment: GpuTextAlignmentExpansionOptions = {},
+  rowStorageIndexBase = 0
 ): GpuExpandedCompactInputState {
   const expansionConfig = new Int32Array([
     glyphStream.baselineOffsetY,
     glyphStream.labelGlyphRanges.length / 2,
     batchRowIndexBase,
+    rowStorageIndexBase,
     alignment.textAnchor ?? 0,
     alignment.useRowTextAnchors ? 1 : 0,
     alignment.alignmentBaseline ?? 0,
@@ -349,6 +355,7 @@ export function createGpuUtf8ExpandedInput(
     glyphLookupCount,
     labelCount,
     batchRowIndexBase = 0,
+    rowStorageIndexBase = 0,
     alignment = {}
   }: {
     utf8TextInput: GpuUtf8TextInput;
@@ -356,6 +363,7 @@ export function createGpuUtf8ExpandedInput(
     glyphLookupCount: number;
     labelCount: number;
     batchRowIndexBase?: number;
+    rowStorageIndexBase?: number;
     alignment?: GpuTextAlignmentExpansionOptions;
   }
 ): GpuUtf8ExpandedInputState {
@@ -364,6 +372,7 @@ export function createGpuUtf8ExpandedInput(
     labelCount,
     glyphLookupCount,
     batchRowIndexBase,
+    rowStorageIndexBase,
     alignment.textAnchor ?? 0,
     alignment.useRowTextAnchors ? 1 : 0,
     alignment.alignmentBaseline ?? 0,
