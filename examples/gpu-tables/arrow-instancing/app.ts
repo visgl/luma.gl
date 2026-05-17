@@ -236,8 +236,8 @@ class InstancedCube extends ArrowModel {
       topology: 'triangle-list',
       indices: cubeGeometry.indices!,
       attributes: {
-        POSITION: cubeGeometry.attributes.POSITION,
-        NORMAL: cubeGeometry.attributes.NORMAL
+        positions: cubeGeometry.attributes.positions!,
+        normals: cubeGeometry.attributes.normals!
       }
     });
 
@@ -253,7 +253,7 @@ class InstancedCube extends ArrowModel {
       bufferLayout: instanceBufferLayout,
       instanceCount: this.instanceCount,
       geometry: pickingGeometry,
-      attributes: this.arrowGPUTable.attributes,
+      attributes: this.arrowGPUTable!.attributes,
       colorAttachmentFormats: ['rgba8unorm', 'rg32sint'],
       depthStencilAttachmentFormat: 'depth24plus',
       parameters: {
@@ -455,7 +455,7 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
     this.cube.setProps({arrowTable: makeInstanceArrowTable(instancesPerSide)});
 
     if (this.pickingCube) {
-      this.pickingCube.setAttributes(this.cube.arrowGPUTable.attributes);
+      this.pickingCube.setAttributes(this.cube.arrowGPUTable!.attributes);
       this.pickingCube.setInstanceCount(this.cube.instanceCount);
     }
   };

@@ -86,7 +86,7 @@ export class WebGPUPresentationContext extends PresentationContext {
     }
   ): WebGPUFramebuffer {
     const profiler = getCpuHotspotProfiler(this.device);
-    const startTime = profiler ? getTimestamp() : 0;
+    const startTime = getTimestamp();
     if (profiler) {
       profiler.framebufferAcquireCount = (profiler.framebufferAcquireCount || 0) + 1;
     }
@@ -121,9 +121,10 @@ export class WebGPUPresentationContext extends PresentationContext {
       );
       return this.framebuffer;
     } finally {
+      const acquireTimeMs = getTimestamp() - startTime;
       if (profiler) {
         profiler.framebufferAcquireTimeMs =
-          (profiler.framebufferAcquireTimeMs || 0) + (getTimestamp() - startTime);
+          (profiler.framebufferAcquireTimeMs || 0) + acquireTimeMs;
       }
     }
   }

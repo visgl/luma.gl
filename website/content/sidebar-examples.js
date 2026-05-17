@@ -11,11 +11,19 @@ const sidebars = {
       items: [
         'showcase/gltf',
         'showcase/instancing',
-        'showcase/arrow-instancing',
-        'showcase/arrow-text-2d',
         'showcase/postprocessing',
         'showcase/dof',
         'showcase/globe'
+      ]
+    },
+    {
+      type: 'category',
+      label: 'GPU Tables',
+      items: [
+        'gpu-tables/arrow-instancing',
+        'gpu-tables/arrow-text-2d',
+        'gpu-tables/arrow-mesh-geometry',
+        'gpu-tables/gpu-vector-storage-particles'
       ]
     },
     {

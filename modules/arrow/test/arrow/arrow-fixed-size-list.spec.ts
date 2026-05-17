@@ -4,11 +4,15 @@
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {
+  expandArrowVector,
   GPUData,
   GPUVector,
   getArrowFixedSizeListValues,
+  getArrowMatrixVectorInfo,
   getArrowVectorBufferSource,
   isArrowFixedSizeListVector,
+  makeArrowMatrix3x3Vector,
+  makeArrowMatrixVector,
   makeArrowFixedSizeListVector
 } from '@luma.gl/arrow';
 import {DynamicBuffer} from '@luma.gl/engine';
@@ -89,6 +93,166 @@ test('makeArrowFixedSizeListVector validates typed array length', t => {
   t.end();
 });
 
+test('makeArrowMatrix3x3Vector emits WGSL-storage column-major rows', t => {
+  const vector = makeArrowMatrix3x3Vector(new Float32Array([1, 2, 3, 4, 5, 6, 7, 8, 9]), {
+    order: 'row-major'
+  });
+
+  t.equal(vector.type.listSize, 12, 'pads each vec3 matrix column to four floats');
+  t.equal(vector.length, 1, 'creates one matrix row');
+  t.deepEqual(
+    getArrowFixedSizeListValues(vector),
+    new Float32Array([1, 4, 7, 0, 2, 5, 8, 0, 3, 6, 9, 0]),
+    'normalizes row-major logical values into WGSL-storage column-major layout'
+  );
+
+  t.end();
+});
+
+test('makeArrowMatrixVector describes every supported WGSL floating-point matrix shape', t => {
+  const matrixCases = [
+    {shape: 'mat2x2', columns: 2, rows: 2, physicalComponentCount: 4},
+    {shape: 'mat2x3', columns: 2, rows: 3, physicalComponentCount: 8},
+    {shape: 'mat3x2', columns: 3, rows: 2, physicalComponentCount: 6},
+    {shape: 'mat3x3', columns: 3, rows: 3, physicalComponentCount: 12},
+    {shape: 'mat4x3', columns: 4, rows: 3, physicalComponentCount: 16},
+    {shape: 'mat3x4', columns: 3, rows: 4, physicalComponentCount: 12},
+    {shape: 'mat4x4', columns: 4, rows: 4, physicalComponentCount: 16}
+  ] as const;
+
+  for (const matrixCase of matrixCases) {
+    const logicalComponentCount = matrixCase.columns * matrixCase.rows;
+    const vector = makeArrowMatrixVector(
+      matrixCase.shape,
+      Float32Array.from({length: logicalComponentCount}, (_, index) => index + 1)
+    );
+    const matrixInfo = getArrowMatrixVectorInfo(vector);
+
+    t.deepEqual(
+      matrixInfo,
+      {
+        shape: matrixCase.shape,
+        columns: matrixCase.columns,
+        rows: matrixCase.rows,
+        layout: 'wgsl-storage',
+        logicalComponentCount,
+        physicalComponentCount: matrixCase.physicalComponentCount,
+        columnStride: matrixCase.rows === 3 ? 4 : matrixCase.rows,
+        byteStride: matrixCase.physicalComponentCount * Float32Array.BYTES_PER_ELEMENT
+      },
+      `${matrixCase.shape} retains explicit shape and physical layout metadata`
+    );
+    t.equal(
+      vector.type.listSize,
+      matrixCase.physicalComponentCount,
+      `${matrixCase.shape} materializes the expected FixedSizeList width`
+    );
+  }
+
+  t.end();
+});
+
+test('makeArrowMatrixVector validates logical matrix lengths', t => {
+  t.throws(
+    () => makeArrowMatrixVector('mat4x4', new Float32Array(15)),
+    /must be divisible by 16/,
+    'rejects incomplete matrix rows'
+  );
+
+  t.end();
+});
+
+test('expandArrowVector gathers FixedSizeList rows from typed row mappings', t => {
+  const sourceVector = makeArrowFixedSizeListVector(
+    new arrow.Float32(),
+    4,
+    new Float32Array([1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1])
+  );
+
+  const expandedVector = expandArrowVector(sourceVector, new Uint32Array([2, 0, 2, 1]));
+
+  t.ok(
+    arrow.util.compareTypes(expandedVector.type, sourceVector.type),
+    'preserves FixedSizeList type'
+  );
+  t.equal(expandedVector.length, 4, 'creates one row per mapping entry');
+  t.deepEqual(
+    getArrowFixedSizeListValues(expandedVector),
+    new Float32Array([0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 1, 1, 0, 1, 0, 1]),
+    'repeats source rows in mapping order'
+  );
+
+  t.end();
+});
+
+test('expandArrowVector accepts Arrow integer row mappings', t => {
+  const sourceVector = makeArrowFixedSizeListVector(
+    new arrow.Uint8(),
+    2,
+    new Uint8Array([10, 11, 20, 21, 30, 31])
+  );
+  const expandedVector = expandArrowVector(
+    sourceVector,
+    arrow.makeVector(new Int32Array([1, 2, 0]))
+  );
+
+  t.deepEqual(
+    getArrowFixedSizeListValues(expandedVector),
+    new Uint8Array([20, 21, 30, 31, 10, 11]),
+    'expands rows from Arrow mapping vectors'
+  );
+
+  t.end();
+});
+
+test('expandArrowVector gathers scalar numeric vectors', t => {
+  const sourceVector = arrow.makeVector(new Int32Array([10, 20, 30]));
+  const expandedVector = expandArrowVector(sourceVector, new Uint16Array([2, 2, 0]));
+
+  t.ok(
+    arrow.util.compareTypes(expandedVector.type, sourceVector.type),
+    'preserves scalar numeric type'
+  );
+  t.deepEqual(Array.from(expandedVector.toArray()), [30, 30, 10], 'gathers scalar rows');
+
+  t.end();
+});
+
+test('expandArrowVector rejects invalid mappings and unsupported vectors', t => {
+  const sourceVector = arrow.makeVector(new Float32Array([10, 20]));
+
+  t.throws(
+    () => expandArrowVector(sourceVector, new Int32Array([-1])),
+    /cannot contain negative indices/,
+    'rejects negative row indices'
+  );
+  t.throws(
+    () => expandArrowVector(sourceVector, new Uint32Array([2])),
+    /outside vector length 2/,
+    'rejects out-of-range row indices'
+  );
+  t.throws(
+    () =>
+      expandArrowVector(
+        sourceVector,
+        arrow.makeVector(new Float32Array([0])) as unknown as arrow.Vector<arrow.Int>
+      ),
+    /row mapping must use 8, 16, or 32-bit integers/,
+    'rejects non-integer Arrow row mappings'
+  );
+  t.throws(
+    () =>
+      expandArrowVector(
+        arrow.vectorFromArray(['alpha'], new arrow.Utf8()) as never,
+        new Uint32Array([0])
+      ),
+    /does not support Arrow type/,
+    'rejects unsupported source vector types'
+  );
+
+  t.end();
+});
+
 test('GPUVector creates a GPU buffer from an Arrow vector', t => {
   const device = new NullDevice({});
   const vector = makeArrowFixedSizeListVector(
@@ -138,12 +302,40 @@ test('GPUVector preserves Arrow Data chunk boundaries over one packed GPU buffer
   t.equal(gpuVector.buffer.byteLength, 12, 'uploads every vector chunk into one GPU buffer');
   t.equal(gpuVector.data.length, 2, 'exposes one GPUData view per source chunk');
   t.ok(gpuVector.data[0] instanceof GPUData, 'uses GPUData chunk views');
+  t.ok(gpuVector.data[0].sourceData, 'retains source chunk metadata for consumers');
   t.equal(gpuVector.data[1].byteOffset, 8, 'tracks packed byte offsets across chunks');
   t.deepEqual(Array.from(vectorResult.toArray()), [1, 2, 3], 'reads every packed row');
   t.deepEqual(
     Array.from(arrow.makeVector(firstChunkResult).toArray()),
     [1, 2],
     'reads one GPU data chunk through its view'
+  );
+
+  gpuVector.destroy();
+  t.end();
+});
+
+test('GPUVector preserves UTF-8 chunk boundaries and readAsync rows', async t => {
+  const device = new NullDevice({});
+  const firstChunk = arrow.vectorFromArray(['alpha', null], new arrow.Utf8());
+  const secondChunk = arrow.vectorFromArray(['beta'], new arrow.Utf8());
+  const sourceVector = new arrow.Vector([...firstChunk.data, ...secondChunk.data]);
+  const gpuVector = new GPUVector(device, sourceVector);
+
+  const vectorResult = await gpuVector.readAsync();
+  const firstChunkResult = await gpuVector.data[0].readAsync();
+
+  t.equal(gpuVector.data.length, 2, 'keeps one GPUData object per UTF-8 source chunk');
+  t.ok(gpuVector.data[0].sourceData, 'retains UTF-8 source metadata for text consumers');
+  t.deepEqual(
+    Array.from(vectorResult.toArray()),
+    ['alpha', null, 'beta'],
+    'reads UTF-8 rows back across chunk boundaries'
+  );
+  t.deepEqual(
+    Array.from(arrow.makeVector(firstChunkResult).toArray()),
+    ['alpha', null],
+    'reads an individual UTF-8 GPUData chunk'
   );
 
   gpuVector.destroy();

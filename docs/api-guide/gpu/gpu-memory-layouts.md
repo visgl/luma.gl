@@ -2,6 +2,10 @@
 
 GPU buffers are byte ranges. A layout describes how shader-visible rows and columns are mapped onto those bytes.
 
+When one logical GPU record needs several named field views, use the
+record-oriented [`BufferSchema`](./buffer-schemas) helpers in `@luma.gl/engine`
+instead of hand-writing every shared-buffer attribute offset.
+
 This page uses three layout terms:
 
 - **Packed** - one logical column in one tightly packed buffer.
@@ -112,3 +116,7 @@ Interleaved GPU buffers do not map to a single numeric Arrow column. In luma.gl 
 
 Segmented buffers are still columnar, but the columns share one GPU allocation. They need table-level segment metadata so each column name can resolve to a buffer, byte offset, row count, row stride, and Arrow type.
 
+## Related References
+
+- [Buffer Schemas and Columnar Records](./buffer-schemas)
+- [Using Arrow Table Columns with Shaders](./arrow-table-columns)

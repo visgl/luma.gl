@@ -22,6 +22,11 @@ const SHADER_LAYOUT: ShaderLayout = {
   bindings: []
 };
 
+const STORAGE_SHADER_LAYOUT: ShaderLayout = {
+  attributes: [{name: 'positions', location: 0, type: 'vec2<f32>', stepMode: 'instance'}],
+  bindings: [{name: 'colors', type: 'read-only-storage', group: 0, location: 0}]
+};
+
 const DUMMY_VS = `#version 300 es
 in vec2 positions;
 void main() {
@@ -83,6 +88,34 @@ test('ArrowModel creates a Model from an Arrow table', t => {
 
   model.destroy();
   t.ok(positionsBuffer.destroyed, 'destroys owned Arrow GPU vector buffers');
+  t.end();
+});
+
+test('ArrowModel accepts Arrow table rows as storage bindings', t => {
+  const device = new NullDevice({});
+  const arrowTable = makeArrowModelTable();
+  const model = new ArrowModel(device, {
+    id: 'arrow-model-storage-table-test',
+    vs: DUMMY_VS,
+    fs: DUMMY_FS,
+    shaderLayout: STORAGE_SHADER_LAYOUT,
+    arrowTable
+  });
+  const colorsBuffer = model.arrowGPUTable!.batches[0].gpuVectors.colors.buffer;
+
+  t.deepEqual(
+    model.arrowGPUTable!.schema.fields.map(field => field.name),
+    ['positions', 'colors'],
+    'keeps attribute and storage columns in the selected GPU schema'
+  );
+  t.equal(
+    model.arrowGPUTable!.bindings.colors,
+    colorsBuffer,
+    'table exposes storage rows as a named binding'
+  );
+  t.equal(model.bindings.colors, colorsBuffer, 'model receives storage bindings from the table');
+
+  model.destroy();
   t.end();
 });
 
@@ -402,6 +435,19 @@ test('ArrowModel validates required shader layout and duplicate attributes', t =
       }),
     /duplicates an explicit attribute/,
     'rejects duplicate explicit attributes'
+  );
+  t.throws(
+    () =>
+      new ArrowModel(device, {
+        id: 'arrow-model-duplicate-binding-test',
+        vs: DUMMY_VS,
+        fs: DUMMY_FS,
+        shaderLayout: STORAGE_SHADER_LAYOUT,
+        arrowTable,
+        bindings: {colors: duplicateBuffer}
+      }),
+    /duplicates an explicit binding/,
+    'rejects duplicate explicit storage bindings'
   );
   t.throws(
     () =>

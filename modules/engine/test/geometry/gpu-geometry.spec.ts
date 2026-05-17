@@ -25,6 +25,29 @@ const BUILT_IN_GEOMETRY_TESTS = [
   {name: 'TruncatedConeGeometry', Geometry: TruncatedConeGeometry}
 ];
 
+test('CubeGeometry exposes stable face indices for indexed and non-indexed cubes', t => {
+  const indexedCube = new CubeGeometry({indices: true});
+  const nonIndexedCube = new CubeGeometry({indices: false});
+
+  t.ok(indexedCube.attributes.faceIndex, 'indexed cube includes faceIndex');
+  t.deepEqual(
+    indexedCube.attributes.faceIndex?.value,
+    new Uint32Array([0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5]),
+    'indexed cube stores one semantic face id per duplicated vertex'
+  );
+  t.ok(nonIndexedCube.attributes.faceIndex, 'non-indexed cube includes faceIndex');
+  t.deepEqual(
+    nonIndexedCube.attributes.faceIndex?.value,
+    new Uint32Array([
+      3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 2, 2, 2, 2, 2, 2, 5, 5, 5, 5, 5, 5, 0, 0, 0, 0, 0, 0, 1,
+      1, 1, 1, 1, 1
+    ]),
+    'non-indexed cube preserves semantic face ids across its vertex block order'
+  );
+
+  t.end();
+});
+
 test('makeGPUGeometry interleaves built-in geometry attributes', async t => {
   const device = await getWebGLTestDevice();
 
@@ -56,17 +79,18 @@ test('makeGPUGeometry interleaves cube geometry into one vertex buffer', async t
     {
       name: 'geometry',
       stepMode: 'vertex',
-      byteStride: 32,
+      byteStride: 36,
       attributes: [
         {attribute: 'positions', format: 'float32x3', byteOffset: 0},
         {attribute: 'normals', format: 'float32x3', byteOffset: 12},
-        {attribute: 'texCoords', format: 'float32x2', byteOffset: 24}
+        {attribute: 'texCoords', format: 'float32x2', byteOffset: 24},
+        {attribute: 'faceIndex', format: 'uint32', byteOffset: 32}
       ]
     }
   ]);
   t.is(
     gpuGeometry.attributes.geometry.byteLength,
-    24 * 32,
+    24 * 36,
     'cube has one interleaved vertex buffer'
   );
   t.is(gpuGeometry.vertexCount, 36, 'indexed cube draw count is preserved');

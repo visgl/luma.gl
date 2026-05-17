@@ -259,7 +259,7 @@ export abstract class Resource<Props extends ResourceProps> {
 
   /** Called by subclass to track handle-backed memory allocations separately from owned allocations */
   protected trackReferencedMemory(bytes: number, name = this.getStatsName()): void {
-    this.trackAllocatedMemory(bytes, `Referenced ${name}`);
+    this.trackAllocatedMemory(bytes, `External ${name}`);
   }
 
   /** Called by subclass to track memory deallocations */

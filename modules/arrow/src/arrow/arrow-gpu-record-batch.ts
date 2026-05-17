@@ -81,6 +81,8 @@ export class GPURecordBatch {
   readonly gpuVectors: Record<string, GPUVector> = {};
   /** Model-ready attribute buffers keyed by shader attribute name. */
   readonly attributes: Record<string, Buffer | DynamicBuffer> = {};
+  /** Model-ready storage bindings keyed by shader binding name. */
+  readonly bindings: Record<string, Buffer | DynamicBuffer> = {};
   private readonly appendableColumns?: AppendableGPUColumn[];
 
   /** Creates GPU buffers and GPU-facing schema from one Arrow record batch. */
@@ -170,6 +172,7 @@ export class GPURecordBatch {
     });
 
     const fields: arrow.Field[] = [];
+    const selectedNames = new Set<string>();
     for (const bufferLayout of this.bufferLayout) {
       const arrowPath = options.arrowPaths?.[bufferLayout.name] || bufferLayout.name;
       const vector = getArrowVectorByPath(table, arrowPath);
@@ -187,8 +190,45 @@ export class GPURecordBatch {
       );
 
       fields.push(field);
+      selectedNames.add(bufferLayout.name);
       this.gpuVectors[bufferLayout.name] = gpuVector;
-      this.attributes[bufferLayout.name] = gpuVector.buffer;
+      if (bufferLayout.attributes) {
+        for (const attribute of bufferLayout.attributes) {
+          this.attributes[attribute.attribute] = gpuVector.buffer;
+        }
+      } else {
+        this.attributes[bufferLayout.name] = gpuVector.buffer;
+      }
+    }
+
+    for (const storageBinding of getArrowStorageBindings(options.shaderLayout)) {
+      if (selectedNames.has(storageBinding.name)) {
+        throw new Error(
+          `GPURecordBatch shader input "${storageBinding.name}" cannot be both an attribute and a storage binding`
+        );
+      }
+      const arrowPath = options.arrowPaths?.[storageBinding.name] || storageBinding.name;
+      const vector = tryGetArrowVectorByPath(table, arrowPath);
+      const sourceField = tryGetArrowFieldByPath(table, arrowPath);
+      if (!vector || !sourceField) {
+        continue;
+      }
+      const gpuVector = new GPUVector(
+        device,
+        vector as arrow.Vector<AttributeArrowType>,
+        options.bufferProps as GPUVectorBufferProps
+      );
+      const field = new arrow.Field(
+        storageBinding.name,
+        vector.type,
+        sourceField.nullable,
+        new Map(sourceField.metadata)
+      );
+
+      fields.push(field);
+      selectedNames.add(storageBinding.name);
+      this.gpuVectors[storageBinding.name] = gpuVector;
+      this.bindings[storageBinding.name] = gpuVector.buffer;
     }
 
     this.schema = new arrow.Schema(fields, new Map(batch.schema.metadata));
@@ -231,5 +271,28 @@ export class GPURecordBatch {
     for (const gpuVector of Object.values(this.gpuVectors)) {
       gpuVector.destroy();
     }
+  }
+}
+
+function getArrowStorageBindings(shaderLayout: ShaderLayout): Array<{name: string}> {
+  return shaderLayout.bindings.filter(
+    binding =>
+      (binding.type === 'storage' || binding.type === 'read-only-storage') && !('format' in binding)
+  );
+}
+
+function tryGetArrowVectorByPath(table: arrow.Table, path: string): arrow.Vector | null {
+  try {
+    return getArrowVectorByPath(table, path);
+  } catch {
+    return null;
+  }
+}
+
+function tryGetArrowFieldByPath(table: arrow.Table, path: string): arrow.Field | null {
+  try {
+    return getArrowFieldByPath(table, path);
+  } catch {
+    return null;
   }
 }

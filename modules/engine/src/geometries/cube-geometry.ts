@@ -84,6 +84,16 @@ const CUBE_TEX_COORDS = new Float32Array([
   0,  0,  1,  0,  1,  1,  0,  1
 ]);
 
+// biome-ignore format: preserve layout
+const CUBE_FACE_INDICES = new Uint32Array([
+  0, 0, 0, 0,
+  1, 1, 1, 1,
+  2, 2, 2, 2,
+  3, 3, 3, 3,
+  4, 4, 4, 4,
+  5, 5, 5, 5
+]);
+
 // float4 position
 // biome-ignore format: preserve layout
 export const CUBE_NON_INDEXED_POSITIONS = new Float32Array([
@@ -222,15 +232,27 @@ export const CUBE_NON_INDEXED_COLORS = new Float32Array([
   0, 1, 0, 1,
 ]);
 
+// biome-ignore format: preserve layout
+export const CUBE_NON_INDEXED_FACE_INDICES = new Uint32Array([
+  3, 3, 3, 3, 3, 3,
+  4, 4, 4, 4, 4, 4,
+  2, 2, 2, 2, 2, 2,
+  5, 5, 5, 5, 5, 5,
+  0, 0, 0, 0, 0, 0,
+  1, 1, 1, 1, 1, 1
+]);
+
 const ATTRIBUTES = {
   POSITION: {size: 3, value: CUBE_POSITIONS},
   NORMAL: {size: 3, value: CUBE_NORMALS},
-  TEXCOORD_0: {size: 2, value: CUBE_TEX_COORDS}
+  TEXCOORD_0: {size: 2, value: CUBE_TEX_COORDS},
+  faceIndex: {size: 1, value: CUBE_FACE_INDICES}
 };
 
 const NON_INDEXED_ATTRIBUTES = {
   POSITION: {size: 3, value: CUBE_NON_INDEXED_POSITIONS},
   // NORMAL: {size: 3, value: CUBE_NON_INDEXED_NORMALS},
   TEXCOORD_0: {size: 2, value: CUBE_NON_INDEXED_TEX_COORDS},
-  COLOR_0: {size: 3, value: CUBE_NON_INDEXED_COLORS}
+  COLOR_0: {size: 3, value: CUBE_NON_INDEXED_COLORS},
+  faceIndex: {size: 1, value: CUBE_NON_INDEXED_FACE_INDICES}
 };

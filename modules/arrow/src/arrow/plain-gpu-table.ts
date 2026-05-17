@@ -75,6 +75,8 @@ export class GPUTable {
   readonly gpuVectors: Record<string, GPUVector> = {};
   /** Model-ready attribute buffers keyed by shader attribute name. */
   readonly attributes: Record<string, Buffer | DynamicBuffer> = {};
+  /** Model-ready storage buffers keyed by shader binding name. */
+  readonly bindings: Record<string, Buffer | DynamicBuffer> = {};
   /** GPU record batches preserving source Arrow table batch boundaries. */
   readonly batches: GPURecordBatch[] = [];
 
@@ -160,6 +162,13 @@ export class GPUTable {
     this.numCols = this.schema.fields.length;
     for (const recordBatch of table.batches) {
       this.batches.push(new GPURecordBatch(device, recordBatch, props));
+    }
+    const firstBatch = this.batches[0];
+    if (firstBatch) {
+      // Storage-backed table columns are selected at the batch upload layer,
+      // so adopt that complete selected schema once at least one batch exists.
+      this.schema = new arrow.Schema(firstBatch.schema.fields, new Map(table.schema.metadata));
+      this.numCols = this.schema.fields.length;
     }
     this.rebuildAggregateVectors();
   }
@@ -359,6 +368,9 @@ export class GPUTable {
     for (const name of Object.keys(this.attributes)) {
       delete this.attributes[name];
     }
+    for (const name of Object.keys(this.bindings)) {
+      delete this.bindings[name];
+    }
 
     const firstBatch = this.batches[0];
     if (!firstBatch) {
@@ -367,18 +379,19 @@ export class GPUTable {
     if (this.batches.length === 1) {
       Object.assign(this.gpuVectors, firstBatch.gpuVectors);
       Object.assign(this.attributes, firstBatch.attributes);
+      Object.assign(this.bindings, firstBatch.bindings);
       return;
     }
 
-    for (const bufferLayout of this.bufferLayout) {
-      const batchVectors = this.batches.map(batch => batch.gpuVectors[bufferLayout.name]);
+    for (const vectorName of Object.keys(firstBatch.gpuVectors)) {
+      const batchVectors = this.batches.map(batch => batch.gpuVectors[vectorName]);
       const firstVector = batchVectors[0];
       if (!firstVector) {
-        throw new Error(`GPUTable batch is missing GPU vector "${bufferLayout.name}"`);
+        throw new Error(`GPUTable batch is missing GPU vector "${vectorName}"`);
       }
       const aggregateVector = new GPUVector({
         type: 'data',
-        name: bufferLayout.name,
+        name: vectorName,
         arrowType: firstVector.type,
         data: [...firstVector.data],
         byteStride: firstVector.byteStride,
@@ -389,10 +402,11 @@ export class GPUTable {
           aggregateVector.addData(data);
         }
       }
-      this.gpuVectors[bufferLayout.name] = aggregateVector;
+      this.gpuVectors[vectorName] = aggregateVector;
     }
 
     Object.assign(this.attributes, firstBatch.attributes);
+    Object.assign(this.bindings, firstBatch.bindings);
   }
 }
 

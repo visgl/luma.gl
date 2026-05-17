@@ -72,8 +72,6 @@ export class BufferTransform {
     });
 
     this.model.setTransformFeedback(this.transformFeedback);
-
-    Object.seal(this);
   }
 
   /** Destroy owned resources. */
@@ -101,7 +99,7 @@ export class BufferTransform {
     if (options?.outputBuffers) {
       this.transformFeedback.setBuffers(options.outputBuffers);
     }
-    const renderPass = this.device.beginRenderPass(options);
+    const renderPass = this.device.beginRenderPass({discard: true, ...options});
     this.model.draw(renderPass);
     renderPass.end();
   }

@@ -5,8 +5,10 @@ import {ExampleHeader, ExamplePage, LumaExample, ReactExample, useStore} from '.
 
 import AnimationApp from '../../examples/api/animation/app';
 import CubemapApp from '../../examples/api/cubemap/app';
+import ArrowMeshGeometryApp from '../../examples/gpu-tables/arrow-mesh-geometry/app';
 import BloomApp from '../../examples/experimental/bloom/app';
 import FP64App from '../../examples/experimental/fp64/app';
+import GPUVectorStorageParticlesApp from '../../examples/gpu-tables/gpu-vector-storage-particles/app';
 import MultiCanvasApp from '../../examples/api/multi-canvas/app';
 import Texture3DApp from '../../examples/api/texture-3d/app';
 import TextureTesterApp from '../../examples/api/texture-tester/app';
@@ -22,8 +24,8 @@ import DOFApp from '../../examples/showcase/dof/app';
 // import DOFApp from '../../examples/showcase/dof/app';
 // import GeospatialApp from '../../examples/showcase/geospatial/app';
 import GLTFApp from '../../examples/showcase/gltf/app';
-import ArrowInstancingApp from '../../examples/showcase/arrow-instancing/app';
-import ArrowText2DApp from '../../examples/showcase/arrow-text-2d/app';
+import ArrowInstancingApp from '../../examples/gpu-tables/arrow-instancing/app';
+import ArrowText2DApp from '../../examples/gpu-tables/arrow-text-2d/app';
 import InstancingApp from '../../examples/showcase/instancing/app';
 import Text3DApp from '../../examples/experimental/text-3d/app';
 import PersistenceApp from '../../examples/showcase/persistence/app';
@@ -117,7 +119,7 @@ export const ArrowInstancingExample: React.FC = props => (
   <LumaExample
     id="arrow-instancing"
     title="Arrow Instancing"
-    directory="showcase"
+    directory="gpu-tables"
     template={ArrowInstancingApp}
     config={exampleConfig}
     {...props}
@@ -128,7 +130,7 @@ export const ArrowText2DExample: React.FC = props => (
   <LumaExample
     id="arrow-text-2d"
     title="Arrow 2D Text"
-    directory="showcase"
+    directory="gpu-tables"
     template={ArrowText2DApp}
     config={exampleConfig}
     showStats
@@ -197,6 +199,29 @@ export const BloomExample: React.FC = props => (
     directory="experimental"
     template={BloomApp}
     config={exampleConfig}
+    {...props}
+  />
+);
+
+export const ArrowMeshGeometryExample: React.FC = props => (
+  <LumaExample
+    id="arrow-mesh-geometry"
+    title="Arrow Mesh Geometry"
+    directory="gpu-tables"
+    template={ArrowMeshGeometryApp}
+    config={exampleConfig}
+    {...props}
+  />
+);
+
+export const GPUVectorStorageParticlesExample: React.FC = props => (
+  <LumaExample
+    id="gpu-vector-storage-particles"
+    title="GPUVector Storage Particles"
+    directory="gpu-tables"
+    template={GPUVectorStorageParticlesApp}
+    config={exampleConfig}
+    devices={['webgpu']}
     {...props}
   />
 );
@@ -517,6 +542,7 @@ export const TransformFeedbackExample: React.FC = props => (
     template={TransformFeedbackApp}
     config={exampleConfig}
     showStats={false}
+    devices={['webgl2']}
     {...props}
   />
 );
@@ -528,6 +554,7 @@ export const TransformExample: React.FC = props => (
     template={TransformApp}
     config={exampleConfig}
     showStats={false}
+    devices={['webgl2']}
     {...props}
   />
 );

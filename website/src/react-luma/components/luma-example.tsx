@@ -12,7 +12,14 @@ import {
 import {logError} from '../utils/error-utils';
 
 // import {VRDisplay} from '@luma.gl/experimental';
-import {getCanvasContainer, useStore} from '../store/device-store';
+import {
+  createDevice,
+  createPresentationDevice,
+  getCanvasContainer,
+  getPreferredAvailableDeviceType,
+  type DeviceType,
+  useStore
+} from '../store/device-store';
 
 const GITHUB_TREE = 'https://github.com/visgl/luma.gl/tree/master';
 let isInfoBoxCollapsedByDefault = true;
@@ -54,8 +61,8 @@ const GPU_TIME_AND_MEMORY_STATS_FORMATTERS = {
   'GPU Memory': 'memory',
   'Buffer Memory': 'memory',
   'Texture Memory': 'memory',
-  'Referenced Buffer Memory': 'memory',
-  'Referenced Texture Memory': 'memory',
+  'External Buffer Memory': 'memory',
+  'External Texture Memory': 'memory',
   'Swap Chain Texture': 'memory'
 } as const;
 
@@ -230,6 +237,7 @@ type LumaExampleProps = React.PropsWithChildren<{
   panel?: boolean;
   showHeader?: boolean;
   showStats?: boolean;
+  devices?: ('webgl2' | 'webgpu')[];
   headerControls?: React.ReactNode;
 }>;
 
@@ -532,19 +540,65 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
   /** Type type of the device (WebGL, WebGPU, ...) */
   const deviceType = useStore(store => store.deviceType);
   const device = useStore(store => store.device);
+  const [effectiveDeviceType, setEffectiveDeviceType] = useState<DeviceType | undefined>();
+  const [effectiveDevice, setEffectiveDevice] = useState<Device | undefined>();
 
   useEffect(() => {
-    if (!canvasContainerRef.current || !deviceType || !device) {
+    let isCancelled = false;
+    const requestedDeviceTypes = getRequestedDeviceTypes(props.devices);
+
+    const selectEffectiveDevice = async () => {
+      if (!deviceType || !device) {
+        if (!isCancelled) {
+          setEffectiveDeviceType(undefined);
+          setEffectiveDevice(undefined);
+        }
+        return;
+      }
+
+      if (!requestedDeviceTypes || requestedDeviceTypes.includes(deviceType)) {
+        if (!isCancelled) {
+          setEffectiveDeviceType(deviceType);
+          setEffectiveDevice(device);
+        }
+        return;
+      }
+
+      const fallbackDeviceType = await getPreferredAvailableDeviceType(requestedDeviceTypes);
+      if (!fallbackDeviceType) {
+        if (!isCancelled) {
+          setEffectiveDeviceType(deviceType);
+          setEffectiveDevice(device);
+        }
+        return;
+      }
+
+      const fallbackDevice = await createDevice(fallbackDeviceType);
+      await createPresentationDevice(fallbackDeviceType);
+      if (!isCancelled) {
+        setEffectiveDeviceType(fallbackDeviceType);
+        setEffectiveDevice(fallbackDevice);
+      }
+    };
+
+    void selectEffectiveDevice();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [deviceType, device, props.devices]);
+
+  useEffect(() => {
+    if (!canvasContainerRef.current || !effectiveDeviceType || !effectiveDevice) {
       return;
     }
 
-    let startupTimeoutId: number | null = null;
     let isCancelled = false;
     let animationLoop: AnimationLoop | null = null;
     let statsWidgets: StatsWidget[] = [];
     let statsIntervalId: number | null = null;
     let previousSwapChainTextureMemory = 0;
-    const defaultCanvasContext = device.getDefaultCanvasContext();
+    const defaultCanvasContext = effectiveDevice.getDefaultCanvasContext();
     const deviceCanvas = defaultCanvasContext.canvas;
     let frameRateController: FrameRateController | null = null;
     const asyncCreateLoop = async () => {
@@ -563,11 +617,11 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
       deviceCanvas.style.width = EXAMPLE_CANVAS_STYLE.width;
       deviceCanvas.style.height = EXAMPLE_CANVAS_STYLE.height;
       canvasContainerRef.current?.replaceChildren(deviceCanvas);
-      setActiveCpuHotspotProfilerDevice(device);
+      setActiveCpuHotspotProfilerDevice(effectiveDevice);
 
       animationLoop = makeAnimationLoop(props.template as unknown as typeof AnimationLoopTemplate, {
         stats: luma.stats.get('GPU Time and Memory'),
-        device,
+        device: effectiveDevice,
         autoResizeViewport: true,
         autoResizeDrawingBuffer: true
       });
@@ -594,8 +648,8 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
           previousSwapChainTextureMemory = nextSwapChainTextureMemory;
         };
 
-        if (device) {
-          updateSwapChainTextureMemory(getDefaultCanvasColorTextureByteLength(device));
+        if (effectiveDevice) {
+          updateSwapChainTextureMemory(getDefaultCanvasColorTextureByteLength(effectiveDevice));
         }
 
         statsWidgets = [
@@ -604,7 +658,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
             container: statsPanelRef.current,
             css: STAT_STYLES,
             formatters: getGpuTimeAndMemoryStatFormatters(
-              device,
+              effectiveDevice,
               frameRateController.formatFrameRate
             )
           }),
@@ -619,8 +673,8 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
         }
 
         const updateStatsWidget = () => {
-          if (device) {
-            updateSwapChainTextureMemory(getDefaultCanvasColorTextureByteLength(device));
+          if (effectiveDevice) {
+            updateSwapChainTextureMemory(getDefaultCanvasColorTextureByteLength(effectiveDevice));
           }
 
           frameRateController?.update();
@@ -634,32 +688,27 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
         statsIntervalId = window.setInterval(updateStatsWidget, 250);
       }
 
-      // Start the actual example
-      animationLoop?.start();
+      if (animationLoop) {
+        await animationLoop.start();
+      }
     };
 
-    // Delay startup one tick so React Strict Mode's development-only warmup mount
-    // can be cancelled before we create and start a duplicate animation loop.
-    startupTimeoutId = window.setTimeout(() => {
-      currentTask.current = Promise.resolve(currentTask.current).then(() => {
+    currentTask.current = Promise.resolve(currentTask.current)
+      .then(() => {
         if (isCancelled) {
           return;
         }
 
-        asyncCreateLoop().catch(error => {
-          if (!isCancelled) {
-            logError(`Example startup failed for ${deviceType}`, error);
-          }
-        });
+        return asyncCreateLoop();
+      })
+      .catch(error => {
+        if (!isCancelled) {
+          logError(`Example startup failed for ${effectiveDeviceType}`, error);
+        }
       });
-    }, 0);
 
     return () => {
       isCancelled = true;
-      if (startupTimeoutId !== null) {
-        window.clearTimeout(startupTimeoutId);
-        startupTimeoutId = null;
-      }
 
       currentTask.current = Promise.resolve(currentTask.current)
         .then(() => {
@@ -688,15 +737,23 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
             animationLoop = null;
           }
 
-          clearActiveCpuHotspotProfilerDevice(device);
+          clearActiveCpuHotspotProfilerDevice(effectiveDevice);
           canvasContainerRef.current?.replaceChildren();
           getCanvasContainer().appendChild(deviceCanvas);
         })
         .catch(error => {
-          logError(`Example cleanup failed for ${deviceType}`, error);
+          logError(`Example cleanup failed for ${effectiveDeviceType}`, error);
         });
     };
-  }, [deviceType, device, showStats, props.template, props.directory, props.id, websiteBaseUrl]);
+  }, [
+    effectiveDeviceType,
+    effectiveDevice,
+    showStats,
+    props.template,
+    props.directory,
+    props.id,
+    websiteBaseUrl
+  ]);
 
   // @ts-expect-error Intentionally accessing undeclared field info
   const info = props.template?.info;
@@ -715,6 +772,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
           directory={props.directory}
           sourceDirectory={props.sourceDirectory}
           sourcePath={props.sourcePath}
+          devices={props.devices}
         >
           {info ? <div dangerouslySetInnerHTML={{__html: info}} /> : null}
           {props.headerControls}
@@ -739,7 +797,7 @@ export const LumaExample: FC<LumaExampleProps> = (props: LumaExampleProps) => {
             }}
           />
         ) : null}
-        <div key={deviceType} ref={canvasContainerRef} style={EXAMPLE_CANVAS_STYLE} />
+        <div key={effectiveDeviceType || deviceType} ref={canvasContainerRef} style={EXAMPLE_CANVAS_STYLE} />
       </div>
     </ExamplePage>
   );
@@ -759,6 +817,18 @@ function getExampleSourceUrl(props: {
     return `${GITHUB_TREE}/examples/${sourceDirectory}/${props.id}`;
   }
   return null;
+}
+
+function getRequestedDeviceTypes(
+  devices?: ('webgl2' | 'webgpu')[]
+): DeviceType[] | undefined {
+  if (!devices) {
+    return undefined;
+  }
+
+  return devices
+    .map(device => (device === 'webgl2' ? 'webgl' : 'webgpu'))
+    .filter((device, index, array) => array.indexOf(device) === index) as DeviceType[];
 }
 
 function getExampleTitle(id?: string, title?: string): string {

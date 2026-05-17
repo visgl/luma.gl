@@ -3,14 +3,15 @@
 // Copyright (c) vis.gl contributors
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {makeArrowFixedSizeListVector} from '@luma.gl/arrow';
-import {NullDevice} from '@luma.gl/test-utils';
+import {GPUVector, makeArrowFixedSizeListVector} from '@luma.gl/arrow';
+import {NullDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 import * as arrow from 'apache-arrow';
 import {
+  ArrowStorageTextModel,
   ArrowTextModel,
-  IndirectTextModel,
   buildArrowTextGlyphTable,
-  buildIndirectTextGlyphTable,
+  createArrowStorageTextState,
+  packStorageTextClipRects,
   type CharacterMapping
 } from '../../src/index';
 
@@ -69,12 +70,25 @@ test('buildArrowTextGlyphTable expands packed clip rectangles per glyph', t => {
   t.end();
 });
 
+test('packStorageTextClipRects preserves signed Int16 clip lanes', t => {
+  const packedClipRects = packStorageTextClipRects(
+    makeArrowFixedSizeListVector(new arrow.Int16(), 4, new Int16Array([0, 1, 12, -1, -4, 8, -1, 9]))
+  );
+
+  t.deepEqual(
+    Array.from(packedClipRects).flatMap(unpackSignedInt16Pair),
+    [0, 1, 12, -1, -4, 8, -1, 9],
+    'packed storage rows decode to original signed clip lanes'
+  );
+  t.end();
+});
+
 test('ArrowTextModel derives from ArrowModel and updates glyph instance counts', t => {
   const device = new NullDevice({});
+  const textProps = makeGpuTextProps(device, ['AB', 'A']);
   const model = new ArrowTextModel(device, {
     id: 'arrow-text-model-test',
-    labelTable: makeLabelTable(),
-    texts: arrow.vectorFromArray(['AB', 'A'], new arrow.Utf8()),
+    ...textProps,
     characterMapping: CHARACTER_MAPPING,
     fontSettings: {fontSize: 10}
   });
@@ -83,84 +97,130 @@ test('ArrowTextModel derives from ArrowModel and updates glyph instance counts',
   t.deepEqual(model.glyphLayout.startIndices, [0, 2, 3], 'model exposes glyph start indices');
   t.equal(model.glyphTable.numRows, 3, 'model retains generated glyph table');
 
-  model.setProps({texts: arrow.vectorFromArray(['A', 'A'], new arrow.Utf8())});
+  const updatedTexts = makeGpuTexts(device, ['A', 'A']);
+  model.setProps({texts: updatedTexts});
   t.equal(model.instanceCount, 2, 'updates instance count when text changes');
   t.deepEqual(model.glyphLayout.startIndices, [0, 1, 2], 'updates start indices');
 
   model.destroy();
+  destroyGpuTextProps(textProps);
+  updatedTexts.destroy();
   t.end();
 });
 
-test('buildIndirectTextGlyphTable stores glyph frame references as uint16 indices', t => {
-  const clipRects = makeArrowFixedSizeListVector(
-    new arrow.Int16(),
-    4,
-    new Int16Array([0, 1, 12, -1, 3, 4, -1, 9])
-  );
-  const result = buildIndirectTextGlyphTable({
-    labelTable: makeLabelTable(),
-    texts: arrow.vectorFromArray(['AB', 'A'], new arrow.Utf8()),
-    clipRects,
-    mapping: CHARACTER_MAPPING,
-    baselineOffset: 1,
-    lineHeight: 10
+test('ArrowTextModel expands chunked UTF-8 GPUVector data', t => {
+  const device = new NullDevice({});
+  const firstChunk = arrow.vectorFromArray(['AB'], new arrow.Utf8());
+  const secondChunk = arrow.vectorFromArray(['A'], new arrow.Utf8());
+  const textProps = makeGpuTextProps(device, []);
+  textProps.texts.destroy();
+  textProps.texts = new GPUVector({
+    type: 'arrow',
+    name: 'texts',
+    device,
+    vector: new arrow.Vector([...firstChunk.data, ...secondChunk.data])
   });
 
-  t.equal(result.table.numRows, 3, 'indirect glyph table has one row per glyph');
-  t.deepEqual(
-    Array.from(result.table.getChild('glyphIndices')!.data[0]!.children[0]!.values as Uint16Array),
-    [1, 0, 2, 0, 1, 0],
-    'glyph rows point at shared frame texture entries with uint16 alignment padding'
-  );
-  t.deepEqual(
-    Array.from(result.table.getChild('rowIndices')!.data[0]!.values as Uint32Array),
-    [0, 0, 1],
-    'indirect glyph rows retain source label row indices'
-  );
-  t.deepEqual(
-    Array.from(result.table.getChild('glyphClipRects')!.data[0]!.children[0]!.values as Int16Array),
-    [0, 1, 12, -1, 0, 1, 12, -1, 3, 4, -1, 9],
-    'indirect glyph rows retain packed clip rectangles'
-  );
-  t.deepEqual(
-    Array.from(result.glyphLayout.glyphFrameTextureData),
-    [0, 0, 0, 0, 0, 0, 4, 6, 4, 0, 4, 6],
-    'frame texture stores one missing-glyph slot and unique atlas frames'
-  );
-  t.end();
-});
-
-test('IndirectTextModel derives from ArrowModel and updates glyph frame references', t => {
-  const device = new NullDevice({});
-  const model = new IndirectTextModel(device, {
-    id: 'indirect-text-model-test',
-    labelTable: makeLabelTable(),
-    texts: arrow.vectorFromArray(['AB', 'A'], new arrow.Utf8()),
+  const model = new ArrowTextModel(device, {
+    id: 'chunked-arrow-text-model-test',
+    ...textProps,
     characterMapping: CHARACTER_MAPPING,
     fontSettings: {fontSize: 10}
   });
 
-  t.equal(model.instanceCount, 3, 'instance count uses indirect glyph rows');
-  t.equal(model.glyphLayout.glyphFrameTextureWidth, 3, 'texture stores missing, A, and B slots');
-  t.deepEqual(
-    Array.from(
-      model.glyphTable.getChild('glyphIndices')!.data[0]!.children[0]!.values as Uint16Array
-    ),
-    [1, 0, 2, 0, 1, 0],
-    'model retains padded uint16 glyph frame indices'
+  t.equal(textProps.texts.data.length, 2, 'GPUVector preserves both UTF-8 GPUData chunks');
+  t.equal(model.instanceCount, 3, 'glyph expansion spans every retained UTF-8 chunk');
+  t.deepEqual(model.glyphLayout.startIndices, [0, 2, 3], 'row starts cross chunk boundaries');
+
+  model.destroy();
+  destroyGpuTextProps(textProps);
+  t.end();
+});
+
+test('ArrowStorageTextModel rejects non-WebGPU devices', t => {
+  const device = new NullDevice({});
+  const textProps = makeStorageGpuTextProps(device, ['AB', 'A']);
+
+  t.throws(
+    () =>
+      new ArrowStorageTextModel(device, {
+        id: 'arrow-storage-text-model-test',
+        ...textProps,
+        characterMapping: CHARACTER_MAPPING,
+        fontSettings: {fontSize: 10}
+      }),
+    /WebGPU-only/,
+    'storage model reports its backend contract'
+  );
+  destroyStorageGpuTextProps(textProps);
+  t.end();
+});
+
+test('createArrowStorageTextState rejects non-WebGPU devices', t => {
+  const device = new NullDevice({});
+  const textProps = makeStorageGpuTextProps(device, ['AB', 'A']);
+
+  t.throws(
+    () =>
+      createArrowStorageTextState(device, {
+        id: 'arrow-storage-text-state-test',
+        ...textProps,
+        characterMapping: CHARACTER_MAPPING,
+        fontSettings: {fontSize: 10}
+      }),
+    /WebGPU device/,
+    'storage-state builder reports its backend contract'
+  );
+  destroyStorageGpuTextProps(textProps);
+  t.end();
+});
+
+test('ArrowStorageTextModel refreshes row bindings without rebuilding glyph buffers', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const textProps = makeStorageGpuTextProps(device, ['AB', 'A']);
+  const model = new ArrowStorageTextModel(device, {
+    id: 'arrow-storage-text-row-binding-refresh-test',
+    ...textProps,
+    characterMapping: CHARACTER_MAPPING,
+    fontSettings: {fontSize: 10}
+  });
+  const storageState = model.storageState;
+  const glyphOffsetsBuffer = model.generatedGlyphOffsetsBuffer;
+  const styleConfigBuffer = model.styleConfigBuffer;
+
+  model.setProps({color: [255, 0, 0, 255]});
+
+  t.equal(model.storageState, storageState, 'row-binding updates preserve storage state');
+  t.equal(
+    model.generatedGlyphOffsetsBuffer,
+    glyphOffsetsBuffer,
+    'row-binding updates preserve generated glyph buffers'
+  );
+  t.notEqual(
+    model.styleConfigBuffer,
+    styleConfigBuffer,
+    'row-binding updates refresh owned style config buffers'
   );
 
-  model.setProps({texts: arrow.vectorFromArray(['A', 'A'], new arrow.Utf8())});
-  t.equal(model.instanceCount, 2, 'updates instance count when indirect text changes');
-  t.deepEqual(
-    Array.from(
-      model.glyphTable.getChild('glyphIndices')!.data[0]!.children[0]!.values as Uint16Array
-    ),
-    [1, 0, 1, 0],
-    'updates shared frame references after text changes'
+  const updatedTexts = makeGpuTexts(device, ['A', 'A']);
+  model.setProps({texts: updatedTexts});
+
+  t.notEqual(model.storageState, storageState, 'text updates replace storage state');
+  t.notEqual(
+    model.generatedGlyphOffsetsBuffer,
+    glyphOffsetsBuffer,
+    'text updates rebuild generated glyph buffers'
   );
 
   model.destroy();
+  destroyStorageGpuTextProps(textProps);
+  updatedTexts.destroy();
   t.end();
 });
 
@@ -168,4 +228,57 @@ function makeLabelTable(): arrow.Table {
   return new arrow.Table({
     positions: makeArrowFixedSizeListVector(new arrow.Float32(), 2, new Float32Array([0, 0, 1, 1]))
   });
+}
+
+function makeGpuTextProps(device: NullDevice, labels: string[]) {
+  return {
+    labelVectors: {
+      positions: new GPUVector({
+        type: 'arrow',
+        name: 'positions',
+        device,
+        vector: makeArrowFixedSizeListVector(new arrow.Float32(), 2, new Float32Array([0, 0, 1, 1]))
+      })
+    },
+    texts: makeGpuTexts(device, labels)
+  };
+}
+
+function makeGpuTexts(device: NullDevice, labels: string[]): GPUVector<arrow.Utf8> {
+  return new GPUVector({
+    type: 'arrow',
+    name: 'texts',
+    device,
+    vector: arrow.vectorFromArray(labels, new arrow.Utf8())
+  });
+}
+
+function destroyGpuTextProps(props: ReturnType<typeof makeGpuTextProps>): void {
+  props.labelVectors.positions.destroy();
+  props.texts.destroy();
+}
+
+function makeStorageGpuTextProps(device: NullDevice, labels: string[]) {
+  return {
+    positions: new GPUVector({
+      type: 'arrow',
+      name: 'positions',
+      device,
+      vector: makeArrowFixedSizeListVector(new arrow.Float32(), 2, new Float32Array([0, 0, 1, 1]))
+    }),
+    texts: makeGpuTexts(device, labels)
+  };
+}
+
+function destroyStorageGpuTextProps(props: ReturnType<typeof makeStorageGpuTextProps>): void {
+  props.positions.destroy();
+  props.texts.destroy();
+}
+
+function unpackSignedInt16Pair(word: number): [number, number] {
+  return [toSignedInt16(word & 0xffff), toSignedInt16((word >>> 16) & 0xffff)];
+}
+
+function toSignedInt16(value: number): number {
+  return value & 0x8000 ? value - 0x10000 : value;
 }

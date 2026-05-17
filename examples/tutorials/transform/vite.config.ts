@@ -1,6 +1,7 @@
 import {defineConfig} from 'vite';
 
 const alias = {
+  '@luma.gl/arrow': `${__dirname}/../../../modules/arrow/src`,
   '@luma.gl/core': `${__dirname}/../../../modules/core/src`,
   '@luma.gl/engine': `${__dirname}/../../../modules/engine/src`,
   '@luma.gl/experimental': `${__dirname}/../../../modules/experimental/src`,

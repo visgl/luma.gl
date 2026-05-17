@@ -7,7 +7,6 @@ import type {Character, CharacterMapping} from './text-utils';
 
 const MISSING_CHAR_WIDTH = 32;
 const MAX_UINT16 = 65535;
-const GLYPH_FRAME_TEXTURE_ROW_WIDTH = 1024;
 
 export type Utf8TextIndexTarget = {
   startIndex: number;
@@ -45,15 +44,26 @@ export type ArrowGlyphLayout = {
   characterSet?: Set<string>;
 };
 
-export type IndirectArrowGlyphLayout = {
+export type GpuExpandedTextStream = {
   startIndices: number[];
   glyphCount: number;
-  glyphOffsets: Int16Array;
-  glyphIndices: Uint16Array;
-  glyphFrameTextureData: Float32Array;
-  glyphFrameTextureWidth: number;
-  glyphFrameTextureHeight: number;
+  labelGlyphRanges: Uint32Array;
+  packedGlyphIds: Uint32Array;
+  glyphFrames: Float32Array;
+  glyphMetrics: Int32Array;
+  baselineOffsetY: number;
   characterSet?: Set<string>;
+  compactStreamByteLength: number;
+  glyphDefinitionByteLength: number;
+  glyphStreamBuildTimeMs: number;
+};
+
+export type GpuUtf8TextInput = {
+  rowByteRanges: Uint32Array;
+  packedUtf8Bytes: Uint32Array;
+  byteLength: number;
+  inputByteLength: number;
+  textInputBuildTimeMs: number;
 };
 
 /** Returns whether a runtime Arrow vector stores UTF-8 labels. */
@@ -101,6 +111,40 @@ export function buildArrowUtf8Chunks(texts: arrow.Vector<arrow.Utf8>): readonly 
   }
 
   return chunks;
+}
+
+/**
+ * Normalize Arrow UTF-8 buffers for direct WebGPU decode without examining individual bytes.
+ * One packed `uint32` stores four UTF-8 bytes in little-endian byte order.
+ */
+export function buildGpuUtf8TextInput(texts: arrow.Vector<arrow.Utf8>): GpuUtf8TextInput {
+  const textInputBuildStartTime = getNow();
+  const chunks = buildArrowUtf8Chunks(texts);
+  const byteLength = chunks[chunks.length - 1]?.byteEnd ?? 0;
+  const rowByteRanges = new Uint32Array(texts.length * 2);
+  const packedUtf8Bytes = new Uint32Array(Math.ceil(byteLength / Uint32Array.BYTES_PER_ELEMENT));
+  const packedByteView = new Uint8Array(packedUtf8Bytes.buffer);
+  const target: Utf8TextIndexTarget = {startIndex: 0, endIndex: 0};
+
+  for (const chunk of chunks) {
+    const firstValueOffset = chunk.valueOffsets[0] ?? 0;
+    const lastValueOffset = chunk.valueOffsets[chunk.rowEnd - chunk.rowStart] ?? firstValueOffset;
+    packedByteView.set(chunk.values.subarray(firstValueOffset, lastValueOffset), chunk.byteStart);
+  }
+
+  for (let rowIndex = 0; rowIndex < texts.length; rowIndex++) {
+    populateUtf8TextIndices(chunks, rowIndex, target);
+    rowByteRanges[rowIndex * 2] = target.startIndex;
+    rowByteRanges[rowIndex * 2 + 1] = target.endIndex;
+  }
+
+  return {
+    rowByteRanges,
+    packedUtf8Bytes,
+    byteLength,
+    inputByteLength: rowByteRanges.byteLength + packedUtf8Bytes.byteLength,
+    textInputBuildTimeMs: getNow() - textInputBuildStartTime
+  };
 }
 
 /** Create a mutable range accessor for row-aligned Arrow UTF-8 vectors. */
@@ -293,8 +337,8 @@ export function buildArrowGlyphLayout({
   };
 }
 
-/** Build one-line glyph offsets plus uint16 glyph-frame texture references. */
-export function buildIndirectArrowGlyphLayout({
+/** Build compact glyph IDs and shared definitions for WebGPU text expansion. */
+export function buildGpuExpandedTextStream({
   texts,
   mapping,
   baselineOffset,
@@ -306,7 +350,8 @@ export function buildIndirectArrowGlyphLayout({
   baselineOffset: number;
   lineHeight: number;
   characterSet?: Set<string>;
-}): IndirectArrowGlyphLayout {
+}): GpuExpandedTextStream {
+  const glyphStreamBuildStartTime = getNow();
   const chunks = buildArrowUtf8Chunks(texts);
   const target: Utf8TextIndexTarget = {startIndex: 0, endIndex: 0};
   const startIndices = new Array<number>(texts.length + 1);
@@ -319,21 +364,24 @@ export function buildIndirectArrowGlyphLayout({
     startIndices[rowIndex + 1] = glyphCount;
   }
 
-  const glyphOffsets = new Int16Array(glyphCount * 2);
-  // WebGPU vertex strides must be 4-byte aligned, so keep the glyph id as uint16
-  // and reserve one uint16 lane per row for alignment.
-  const glyphIndices = new Uint16Array(glyphCount * 2);
+  const baselineOffsetY = toInt16(baselineOffset + lineHeight / 2);
+  const labelGlyphRanges = new Uint32Array(texts.length * 2);
+  const packedGlyphIds = new Uint32Array(Math.ceil(glyphCount / 2));
   const glyphDefinitionsByCodePoint = new Map<
     number,
-    {frame: Character | undefined; glyphIndex: number}
+    {frame: Character | undefined; glyphId: number}
   >();
   const charactersByCodePoint = characterSet ? new Map<number, string>() : null;
-  // Index zero is the missing-glyph frame.
-  const glyphFrameTextureValues = [0, 0, 0, 0];
-  let glyphOffsetIndex = 0;
-  let glyphIndex = 0;
+  // Index zero is the missing-glyph definition.
+  const glyphFrameValues = [0, 0, 0, 0];
+  const glyphMetricValues = [0, MISSING_CHAR_WIDTH];
+  let glyphWriteIndex = 0;
 
   for (let rowIndex = 0; rowIndex < texts.length; rowIndex++) {
+    const glyphStart = startIndices[rowIndex];
+    const glyphEnd = startIndices[rowIndex + 1];
+    labelGlyphRanges[rowIndex * 2] = glyphStart;
+    labelGlyphRanges[rowIndex * 2 + 1] = glyphEnd;
     populateUtf8TextIndices(chunks, rowIndex, target);
     let width = 0;
     decodeArrowUtf8CodePoints(chunks, target.startIndex, target.endIndex, codePoint => {
@@ -341,17 +389,16 @@ export function buildIndirectArrowGlyphLayout({
       if (!definition) {
         const character = String.fromCodePoint(codePoint);
         const frame = mapping[character];
-        let frameGlyphIndex = 0;
+        let glyphId = 0;
         if (frame) {
-          frameGlyphIndex = glyphFrameTextureValues.length / 4;
-          if (frameGlyphIndex > MAX_UINT16) {
-            throw new Error(
-              'Indirect text glyph frame texture exceeds the uint16 glyph index range'
-            );
+          glyphId = glyphFrameValues.length / 4;
+          if (glyphId > MAX_UINT16) {
+            throw new Error('GPU expanded text glyph definitions exceed the uint16 glyph id range');
           }
-          glyphFrameTextureValues.push(frame.x, frame.y, frame.width, frame.height);
+          glyphFrameValues.push(frame.x, frame.y, frame.width, frame.height);
+          glyphMetricValues.push(frame.anchorX, frame.advance);
         }
-        definition = {frame, glyphIndex: frameGlyphIndex};
+        definition = {frame, glyphId};
         glyphDefinitionsByCodePoint.set(codePoint, definition);
         if (charactersByCodePoint) {
           charactersByCodePoint.set(codePoint, character);
@@ -359,33 +406,42 @@ export function buildIndirectArrowGlyphLayout({
         }
       }
 
-      const {frame} = definition;
-      glyphOffsets[glyphOffsetIndex++] = toInt16(frame ? width + frame.anchorX : width);
-      glyphOffsets[glyphOffsetIndex++] = toInt16(baselineOffset + lineHeight / 2);
-      glyphIndices[glyphIndex * 2] = definition.glyphIndex;
-      glyphIndex++;
+      const {frame, glyphId} = definition;
+      toInt16(frame ? width + frame.anchorX : width);
+      writePackedUint16(packedGlyphIds, glyphWriteIndex, glyphId);
+      glyphWriteIndex++;
       width += frame?.advance ?? MISSING_CHAR_WIDTH;
     });
   }
 
-  const glyphFrameCount = glyphFrameTextureValues.length / 4;
-  const glyphFrameTextureWidth = Math.min(GLYPH_FRAME_TEXTURE_ROW_WIDTH, glyphFrameCount);
-  const glyphFrameTextureHeight = Math.ceil(glyphFrameCount / glyphFrameTextureWidth);
-  const glyphFrameTextureData = new Float32Array(
-    glyphFrameTextureWidth * glyphFrameTextureHeight * 4
-  );
-  glyphFrameTextureData.set(glyphFrameTextureValues);
+  const glyphFrames = new Float32Array(glyphFrameValues);
+  const glyphMetrics = new Int32Array(glyphMetricValues);
+  const compactStreamByteLength = labelGlyphRanges.byteLength + packedGlyphIds.byteLength;
+  const glyphDefinitionByteLength = glyphFrames.byteLength + glyphMetrics.byteLength;
 
   return {
     startIndices,
     glyphCount,
-    glyphOffsets,
-    glyphIndices,
-    glyphFrameTextureData,
-    glyphFrameTextureWidth,
-    glyphFrameTextureHeight,
-    characterSet
+    labelGlyphRanges,
+    packedGlyphIds,
+    glyphFrames,
+    glyphMetrics,
+    baselineOffsetY,
+    characterSet,
+    compactStreamByteLength,
+    glyphDefinitionByteLength,
+    glyphStreamBuildTimeMs: getNow() - glyphStreamBuildStartTime
   };
+}
+
+function writePackedUint16(values: Uint32Array, index: number, value: number): void {
+  const wordIndex = index >> 1;
+  const word = values[wordIndex] ?? 0;
+  values[wordIndex] = index & 1 ? word | ((value & MAX_UINT16) << 16) : word | (value & MAX_UINT16);
+}
+
+function getNow(): number {
+  return globalThis.performance?.now() ?? Date.now();
 }
 
 function toInt16(value: number): number {

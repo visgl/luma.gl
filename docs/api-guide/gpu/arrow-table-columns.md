@@ -1,8 +1,10 @@
 # Using Arrow Table Columns with Shaders
 
-Apache Arrow tables store data in typed columns. luma.gl shaders consume typed vertex
-attributes. The `@luma.gl/arrow` helpers connect those two models by deriving a
-`BufferLayout` from an Arrow table and a shader `ShaderLayout`.
+Apache Arrow tables store data in typed columns. luma.gl can expose selected
+columns as typed vertex attributes, WebGPU storage bindings, or higher-level
+table-backed render and compute objects. The `@luma.gl/arrow` helpers connect
+those models by deriving a `BufferLayout`, GPU table objects, and storage-buffer
+bindings from Arrow data plus a shader `ShaderLayout`.
 
 ## Apache Arrow Preliminaries
 
@@ -97,6 +99,161 @@ The generated layouts use shader attribute names as buffer names:
   {name: 'instanceColors', format: 'unorm8x4'}
 ]
 ```
+
+## Choosing a Columnar GPU Shape
+
+The main decision is how the shader should read each selected Arrow column.
+
+| GPU-facing shape | Use when | Typical Arrow input |
+| --- | --- | --- |
+| Vertex attribute | Render or WebGL transform shaders should use fixed scalar/vector inputs | Scalar numeric columns or 2-, 3-, and 4-component fixed-size lists |
+| Storage binding | WebGPU render or compute shaders should read/write column arrays directly | Numeric vectors that map cleanly to WGSL storage values |
+| Matrix record | One logical matrix should stay one storage binding on WebGPU but split into vector attributes where needed | Arrow matrix vectors created by `makeArrowMatrix*Vector()` |
+| Expanded vector | A compact lookup table must become one row per vertex/instance for attribute paths | `expandArrowVector()` plus an integer row map |
+
+Use [Buffer Schemas and Columnar Records](./buffer-schemas) when one logical row
+needs several attribute views or when you want record-oriented naming that also
+makes sense next to WGSL storage structs.
+
+## Matrix Columns
+
+`@luma.gl/arrow` provides explicit matrix vector helpers for the WGSL floating
+point matrix shapes used by GPU table workflows:
+
+| Helper | Logical shape |
+| --- | --- |
+| `makeArrowMatrix2x2Vector()` | `mat2x2<f32>` |
+| `makeArrowMatrix2x3Vector()` | `mat2x3<f32>` |
+| `makeArrowMatrix3x2Vector()` | `mat3x2<f32>` |
+| `makeArrowMatrix3x3Vector()` | `mat3x3<f32>` |
+| `makeArrowMatrix4x3Vector()` | `mat4x3<f32>` |
+| `makeArrowMatrix3x4Vector()` | `mat3x4<f32>` |
+| `makeArrowMatrix4x4Vector()` | `mat4x4<f32>` |
+
+The generic `makeArrowMatrixVector(shape, values, options)` form is available
+when the shape is selected dynamically.
+
+```ts
+import {makeArrowMatrix4x4Vector} from '@luma.gl/arrow';
+
+const instanceModelMatrix = makeArrowMatrix4x4Vector(matrixValues, {
+  order: 'column-major',
+  layout: 'wgsl-storage'
+});
+```
+
+Matrix options:
+
+| Option | Values | Default | Meaning |
+| --- | --- | --- | --- |
+| `order` | `'column-major' \| 'row-major'` | `'column-major'` | Order of the supplied logical matrix values. GPU-facing vectors are normalized to column-major order. |
+| `layout` | `'wgsl-storage' \| 'packed'` | `'wgsl-storage'` | Physical row layout. Three-row matrix columns are padded to four floats for WGSL-compatible storage layout. |
+
+`getArrowMatrixVectorInfo(vector)` recovers the stored matrix metadata, including
+shape, row/column counts, physical component count, column stride, and byte
+stride.
+
+Public matrix types:
+
+| Type | Meaning |
+| --- | --- |
+| `ArrowMatrixShape` | Supported shape identifier such as `'mat4x4'`. |
+| `ArrowMatrixOrder` | Input value order: `'column-major'` or `'row-major'`. |
+| `ArrowMatrixLayout` | Physical vector layout: `'wgsl-storage'` or `'packed'`. |
+| `ArrowMatrixVectorOptions` | Options accepted by the matrix builders. |
+| `ArrowMatrixVectorInfo` | Metadata recovered by `getArrowMatrixVectorInfo()`. |
+| `ArrowFloat32Matrix2x2` through `ArrowFloat32Matrix4x4` | Fixed-size Arrow row types for each supported matrix shape. |
+
+### One Matrix Column, Two Consumption Paths
+
+On WebGPU, one matrix Arrow column can remain one storage binding:
+
+```ts
+const shaderLayout = {
+  attributes: [],
+  bindings: [
+    {
+      name: 'instanceModelMatrix',
+      type: 'read-only-storage',
+      group: 0,
+      location: 0
+    }
+  ]
+};
+```
+
+```wgsl
+@group(0) @binding(auto)
+var<storage, read> instanceModelMatrix: array<mat4x4<f32>>;
+```
+
+On attribute-oriented paths, map each vector attribute back to the same matrix
+column:
+
+```ts
+const shaderLayout = {
+  attributes: [
+    {name: 'instanceModelMatrixCol0', location: 0, type: 'vec4<f32>'},
+    {name: 'instanceModelMatrixCol1', location: 1, type: 'vec4<f32>'},
+    {name: 'instanceModelMatrixCol2', location: 2, type: 'vec4<f32>'},
+    {name: 'instanceModelMatrixCol3', location: 3, type: 'vec4<f32>'}
+  ],
+  bindings: []
+};
+
+const bufferLayout = getArrowBufferLayout(shaderLayout, {
+  arrowTable,
+  arrowPaths: {
+    instanceModelMatrixCol0: 'instanceModelMatrix',
+    instanceModelMatrixCol1: 'instanceModelMatrix',
+    instanceModelMatrixCol2: 'instanceModelMatrix',
+    instanceModelMatrixCol3: 'instanceModelMatrix'
+  }
+});
+```
+
+The Arrow helper recognizes the matrix metadata and lowers the matrix row through
+the engine [`BufferSchema`](/docs/api-reference/engine/buffer-schema) path into
+one shared interleaved buffer layout.
+
+## Storage-Selected Table Columns
+
+`GPURecordBatch` and `GPUTable` also select Arrow columns referenced by shader
+bindings of type `'storage'` or `'read-only-storage'`. Selected storage columns:
+
+- appear in `gpuVectors` by binding name;
+- appear in `bindings` by binding name;
+- contribute fields to the GPU-facing Arrow schema;
+- are rebound batch-by-batch by `ArrowModel.drawBatches(renderPass)`.
+
+This keeps table-backed WebGPU render paths compact. A column such as
+`instanceModelMatrix` can be uploaded once through the table machinery and bound
+directly to a WGSL storage array without four separate matrix-column bindings.
+
+Storage-selected columns and attribute-selected columns must use distinct shader
+input names. A single name cannot be both an attribute and a storage binding in
+one `GPURecordBatch`.
+
+## Expanding Compact Column Values
+
+`expandArrowVector(vector, rowMapping)` gathers rows from one numeric Arrow
+vector into a new contiguous Arrow vector. It accepts either an integer typed
+array or an integer Arrow vector as the row mapping.
+
+Use it when a compact table should become vertex- or instance-aligned data for an
+attribute path. The Arrow Mesh Geometry example uses this idea for WebGL face
+colors: a six-row face-color vector is expanded by cube `faceIndex` rows into a
+vertex-aligned color vector.
+
+Supported source vectors:
+
+- scalar numeric Arrow vectors;
+- `FixedSizeList` numeric vectors.
+
+The helper rejects unsupported vector types, non-integer row mappings, negative
+indices, and out-of-range indices.
+
+`ArrowVectorRowMapping` is the exported type name for the accepted mapping input.
 
 ## Arrow GPU Object Model
 
@@ -259,6 +416,7 @@ Public state:
 | `bufferLayout` | Layout entries for model binding |
 | `gpuVectors` | Batch-local vectors keyed by selected attribute name |
 | `attributes` | Batch-local attribute buffers keyed by shader attribute name |
+| `bindings` | Batch-local storage buffers keyed by shader binding name |
 
 Public methods:
 
@@ -297,6 +455,7 @@ Public state:
 | `bufferLayout` | Layout entries shared by compatible batches |
 | `gpuVectors` | Aggregate vectors keyed by shader attribute name |
 | `attributes` | Attribute buffers for the first directly drawable batch surface |
+| `bindings` | Storage buffers for the first directly bindable batch surface |
 | `batches[]` | Real batch-local `GPURecordBatch` objects |
 
 Public methods:
@@ -347,10 +506,89 @@ const colorVector: GPUVector = arrowGPUTable.gpuVectors.instanceColors;
 `ArrowModel` is the convenience wrapper that combines `GPUTable` with
 `Model`. It accepts an Arrow table as an update source and replaces the GPU
 representation when `setProps({arrowTable})` is called. It can also consume an
-existing `arrowGPUTable` without taking ownership of that table. Use
-`model.drawBatches(renderPass)` to draw preserved static GPU batches with one
-pipeline layout while rebinding only batch-local attribute buffers. Packed tables
-naturally reduce that to fewer draw calls.
+existing `arrowGPUTable` without taking ownership of that table.
+
+Use `model.drawBatches(renderPass)` to draw preserved static GPU batches with one
+pipeline layout while rebinding only batch-local attribute buffers and storage
+bindings. Packed tables naturally reduce that to fewer draw calls.
+
+## Table-Backed Render, Transform, and Compute Helpers
+
+The table APIs are meant to feed more than one execution style.
+
+### `ArrowModel`
+
+Use `ArrowModel` when selected table columns should drive ordinary rendering:
+
+```ts
+const model = new ArrowModel(device, {
+  source,
+  shaderLayout,
+  arrowTable,
+  arrowCount: 'instance'
+});
+```
+
+`arrowCount` chooses whether the table row count becomes `instanceCount`,
+`vertexCount`, or neither. Existing `GPUTable` instances can be supplied through
+`arrowGPUTable` when ownership should stay with the caller.
+
+### `TableTransform`
+
+`TableTransform` is the WebGL transform-feedback counterpart. It converts an
+Arrow table to a `GPUTable` when needed, merges the table attribute layouts into
+the underlying `BufferTransform`, and can run one preserved GPU batch at a time:
+
+```ts
+const transform = new TableTransform(device, {
+  vs,
+  varyings,
+  shaderLayout,
+  arrowTable,
+  tableCount: 'vertex'
+});
+
+transform.runBatches({
+  outputBuffers: (batch, batchIndex) => makeOutputBuffers(batch, batchIndex)
+});
+```
+
+Use `TableTransform` only for attribute-backed WebGL transform feedback. It is
+not a storage-buffer compute abstraction.
+
+Relevant public types:
+
+| Type | Meaning |
+| --- | --- |
+| `TableTransformProps` | Construction props, including `table`, `arrowTable`, `arrowPaths`, `arrowBufferProps`, and `tableCount`. |
+| `TableTransformBatchOptions` | `runBatches()` options, including fixed or per-batch `outputBuffers`. |
+
+### `TableComputation`
+
+`TableComputation` is the WebGPU compute helper for table vectors exposed as
+storage bindings. Supply `GPUVector` objects by binding name:
+
+```ts
+const computation = new TableComputation(device, {
+  source: computeShader,
+  shaderLayout: computeShaderLayout,
+  vectorBindings: {
+    particlePositions,
+    particleVelocities
+  }
+});
+```
+
+Direct single-buffer vectors bind once. Multi-batch aggregate vectors use
+`dispatchBatches(computePass, batch => workgroupCount)` so each batch is rebound
+with the correct storage-buffer range before dispatch.
+
+Relevant public types:
+
+| Type | Meaning |
+| --- | --- |
+| `TableComputationProps` | Construction props, including ordinary `bindings` plus `vectorBindings`. |
+| `TableComputationBatch` | Batch metadata passed to a dynamic workgroup-count callback. |
 
 ## Mesh Arrow Geometry
 
@@ -572,6 +810,9 @@ For portable WebGPU layouts, prefer `Float32` for `vec3<f32>` attributes or pad
 ## Related References
 
 - [Attributes](./gpu-attributes)
+- [Storage Buffers](./gpu-storage-buffers)
+- [Buffer Schemas and Columnar Records](./buffer-schemas)
+- [BufferSchema API Reference](/docs/api-reference/engine/buffer-schema)
 - [ShaderLayout](/docs/api-reference/core/shader-layout)
 - [BufferLayout](/docs/api-reference/core/buffer-layout)
 - [Vertex Formats](/docs/api-reference/core/vertex-formats)

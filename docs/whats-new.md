@@ -15,10 +15,20 @@ Target Release Date: Q3, 2026
 **@luma.gl/arrow** NEW MODULE
 
 - **Arrow shader layouts** - `getArrowBufferLayout()` maps Arrow scalar and `FixedSizeList` columns to shader attribute formats from a shader-first layout, including direct `arrow.Vector` sources and Arrow table path mappings.
-- **Arrow GPU helpers** - New `GPUVector`, `GPUTable`, and `ArrowModel` helpers create GPU buffers from compatible Arrow columns and keep Arrow-backed model attributes updatable through `setProps({arrowTable})`.
+- **Arrow GPU helpers** - New `GPUVector`, `GPUTable`, and `ArrowModel` helpers create GPU buffers from compatible Arrow columns, preserve chunked UTF-8 GPU vector input for text workflows, and keep Arrow-backed model attributes updatable through `setProps({arrowTable})`.
 - **Mesh Arrow geometry** - New `ArrowGeometry` and `ArrowModel` support for loaders.gl-compatible Mesh Arrow tables, including default interleaved vertex buffers and optional index buffers.
 - **Arrow table buffer planning** - New `TableBufferPlanner` API builds deterministic GPU buffer allocation plans for table columns, including interleaved fallback groups and WebGPU storage-buffer planning output.
-- **[Arrow Instancing Example](/examples/showcase/arrow-instancing)** - New showcase example renders instanced cubes from an Apache Arrow table.
+- **[Columnar GPU tables](/docs/api-guide/gpu/arrow-table-columns)** - Matrix Arrow vectors, storage-selected table bindings, `TableTransform`, and `TableComputation`.
+- **[GPU Tables examples](/examples/gpu-tables/arrow-instancing)** - Arrow instancing, 2D text, mesh geometry, and storage particles now live in the GPU Tables section.
+- **[Arrow Instancing Example](/examples/gpu-tables/arrow-instancing)** - New showcase example renders instanced cubes from an Apache Arrow table.
+
+**@luma.gl/text**
+
+- **Arrow-native 2D text** - New atlas, layout, and UTF-8 glyph expansion utilities support deck.gl-style text extraction into `@luma.gl/text`.
+- **`ArrowTextModel`** - New `ArrowModel`-derived one-line label renderer expands UTF-8 `GPUVector` rows into glyph instances without row-level string materialization.
+- **`ArrowStorageTextModel`** - New WebGPU-only storage-backed text path consumes batched GPUVector row/text inputs directly, can read row color/angle/size/pixel-offset styling plus compact text-anchor and baseline enums from aligned GPUVectors with fixed shader bindings and constant fallbacks, expands render buffers with compute, and can consume reusable `ArrowStorageTextState` objects built by `createArrowStorageTextState`.
+- **GPU UTF-8 shader mapping** - Reusable text-module WGSL helpers compose sparse UTF-8 byte traversal, code point decode, and storage lookup into one-pass text compute kernels.
+- **Packed text clipping** - Arrow 2D text accepts optional `FixedSizeList<Int16>[4]` clip rectangles and expands them into 8-byte per-glyph clipping attributes only when clipping is enabled.
 
 **@luma.gl/text**
 
@@ -36,6 +46,7 @@ Target Release Date: Q3, 2026
 - **`Animator`** - New animation helper for timeline-driven animation updates.
 - **Shader pass pipelines** - `ShaderPassRenderer` now supports multi-pass effects such as bloom and depth of field.
 - **Geometry buffer layouts** - `Geometry` now always has a populated `bufferLayout`.
+- **[`BufferSchema`](/docs/api-reference/engine/buffer-schema)** - Record-oriented GPU row descriptions lower shared layouts into vertex `BufferLayout`s.
 - **Semantic attribute normalization** - `POSITION`, `NORMAL`, `TEXCOORD_0`, and `COLOR_0` are normalized to shader attribute names.
 - **Interleaved CPU geometry** - `makeInterleavedGeometry()` packs attributes into one CPU-side vertex buffer.
 - **Interleaved primitive uploads** - Built-in primitives upload as one vertex buffer plus an optional index buffer.

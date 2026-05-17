@@ -18,4 +18,5 @@ import './text-3d/text-geometry.spec';
 import './text-3d/paths.spec';
 import './text-2d/arrow-text.spec';
 import './text-2d/text-utils.spec';
+import './text-2d/font-atlas-manager.spec';
 import './text-2d/arrow-text-model.spec';

@@ -70,13 +70,13 @@ test('Texture#clone overrides size', async t => {
 function getTextureMemoryStats(device: Device): {
   gpuMemory: number;
   textureMemory: number;
-  referencedTextureMemory: number;
+  externalTextureMemory: number;
 } {
   const stats = device.statsManager.getStats('GPU Time and Memory');
   return {
     gpuMemory: stats.get('GPU Memory').count,
     textureMemory: stats.get('Texture Memory').count,
-    referencedTextureMemory: stats.get('Referenced Texture Memory').count
+    externalTextureMemory: stats.get('External Texture Memory').count
   };
 }
 
@@ -152,7 +152,7 @@ test('Texture tracks GPU memory stats', async t => {
   t.end();
 });
 
-test('Handle-backed Texture tracks referenced memory stats', async t => {
+test('Handle-backed Texture tracks external memory stats', async t => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     t.comment('WebGPU is not available');
@@ -189,9 +189,9 @@ test('Handle-backed Texture tracks referenced memory stats', async t => {
     'webgpu handle-backed Texture does not update owned Texture Memory'
   );
   t.equal(
-    afterCreateStats.referencedTextureMemory - beforeStats.referencedTextureMemory,
+    afterCreateStats.externalTextureMemory - beforeStats.externalTextureMemory,
     expectedAllocation,
-    'webgpu handle-backed Texture updates Referenced Texture Memory'
+    'webgpu handle-backed Texture updates External Texture Memory'
   );
 
   texture.destroy();
@@ -203,16 +203,16 @@ test('Handle-backed Texture tracks referenced memory stats', async t => {
     'webgpu handle-backed Texture destroy restores total GPU Memory'
   );
   t.equal(
-    afterDestroyStats.referencedTextureMemory,
-    beforeStats.referencedTextureMemory,
-    'webgpu handle-backed Texture destroy restores Referenced Texture Memory'
+    afterDestroyStats.externalTextureMemory,
+    beforeStats.externalTextureMemory,
+    'webgpu handle-backed Texture destroy restores External Texture Memory'
   );
 
   handle.destroy();
   t.end();
 });
 
-test('WebGPU handle-backed Texture reinitialize updates referenced memory stats', async t => {
+test('WebGPU handle-backed Texture reinitialize updates external memory stats', async t => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     t.comment('WebGPU is not available');
@@ -259,14 +259,14 @@ test('WebGPU handle-backed Texture reinitialize updates referenced memory stats'
   const resizedAllocation = getExpectedTextureAllocation(texture);
 
   t.equal(
-    afterCreateStats.referencedTextureMemory - beforeStats.referencedTextureMemory,
+    afterCreateStats.externalTextureMemory - beforeStats.externalTextureMemory,
     initialAllocation,
-    'webgpu handle-backed Texture initially tracks referenced memory'
+    'webgpu handle-backed Texture initially tracks external memory'
   );
   t.equal(
-    afterReinitializeStats.referencedTextureMemory - beforeStats.referencedTextureMemory,
+    afterReinitializeStats.externalTextureMemory - beforeStats.externalTextureMemory,
     resizedAllocation,
-    'webgpu handle-backed Texture reinitialize updates referenced memory'
+    'webgpu handle-backed Texture reinitialize updates external memory'
   );
   t.equal(
     afterReinitializeResourceStats.texturesCreated,
@@ -283,9 +283,9 @@ test('WebGPU handle-backed Texture reinitialize updates referenced memory stats'
 
   const afterDestroyStats = getTextureMemoryStats(device);
   t.equal(
-    afterDestroyStats.referencedTextureMemory,
-    beforeStats.referencedTextureMemory,
-    'webgpu handle-backed Texture destroy restores referenced memory after reinitialize'
+    afterDestroyStats.externalTextureMemory,
+    beforeStats.externalTextureMemory,
+    'webgpu handle-backed Texture destroy restores external memory after reinitialize'
   );
 
   firstHandle.destroy();
