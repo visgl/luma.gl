@@ -11,6 +11,7 @@ import {
   getArrowMatrixVectorInfo,
   getArrowVectorBufferSource,
   isArrowFixedSizeListVector,
+  makeArrowVectorFromArray,
   makeArrowMatrix3x3Vector,
   makeArrowMatrixVector,
   makeArrowFixedSizeListVector
@@ -39,6 +40,29 @@ test('makeArrowFixedSizeListVector creates FixedSizeList vectors from typed arra
     new Float32Array([1, 2, 3, 4]),
     'returns a buffer source for FixedSizeList vectors'
   );
+
+  t.end();
+});
+
+test('makeArrowVectorFromArray creates flat FixedSizeList rows from JS numeric arrays', t => {
+  const vector = makeArrowVectorFromArray([1, 2, 3, 4], new arrow.Float32(), 2);
+
+  t.ok(arrow.DataType.isFixedSizeList(vector.type), 'creates a FixedSizeList vector');
+  t.equal(vector.type.listSize, 2, 'retains the requested row width');
+  t.deepEqual(
+    getArrowFixedSizeListValues(vector),
+    new Float32Array([1, 2, 3, 4]),
+    'materializes typed child values'
+  );
+
+  t.end();
+});
+
+test('makeArrowVectorFromArray mirrors scalar Apache Arrow array construction', t => {
+  const vector = makeArrowVectorFromArray(['hello', 'luma.gl'], new arrow.Utf8());
+
+  t.equal(vector.length, 2, 'creates one Arrow row per string');
+  t.equal(vector.get(0), 'hello', 'retains scalar row values');
 
   t.end();
 });
@@ -365,7 +389,7 @@ test('GPUVector readAsync round-trips FixedSizeList vectors', async t => {
   t.end();
 });
 
-test('GPUVector supports discriminated Arrow-vector construction', t => {
+test('GPUVector infers Arrow-vector object construction from vector props', t => {
   const device = new NullDevice({});
   const vector = makeArrowFixedSizeListVector(
     new arrow.Float32(),
@@ -373,7 +397,6 @@ test('GPUVector supports discriminated Arrow-vector construction', t => {
     new Float32Array([1, 2, 3, 4])
   );
   const gpuVector = new GPUVector({
-    type: 'arrow',
     name: 'positions',
     device,
     vector

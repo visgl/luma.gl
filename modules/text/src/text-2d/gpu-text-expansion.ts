@@ -32,9 +32,7 @@ export type GpuUtf8ExpandedInputState = {
 };
 
 export type GpuExpandedGeneratedState = {
-  glyphOffsetsBuffer: Buffer;
-  glyphIndicesBuffer: Buffer;
-  rowIndicesBuffer: Buffer;
+  compactGlyphVertexData: Buffer;
   byteLength: number;
 };
 
@@ -57,11 +55,14 @@ const GPU_EXPANDED_TEXT_COMPUTE_SOURCE = /* wgsl */ `
 @group(0) @binding(1) var<storage, read> textGlyphIds : array<u32>;
 @group(0) @binding(2) var<storage, read> textGlyphMetrics : array<vec2<i32>>;
 @group(0) @binding(3) var<storage, read> textExpansionConfig : array<i32>;
-@group(0) @binding(4) var<storage, read_write> generatedGlyphOffsets : array<u32>;
-@group(0) @binding(5) var<storage, read_write> generatedGlyphIndices : array<u32>;
-@group(0) @binding(6) var<storage, read_write> generatedRowIndices : array<u32>;
-@group(0) @binding(7) var<storage, read> textRowTextAnchors : array<u32>;
-@group(0) @binding(8) var<storage, read> textRowAlignmentBaselines : array<u32>;
+struct GeneratedGlyphVertex {
+  glyphOffsets : u32,
+  glyphIndices : u32,
+  rowIndex : u32,
+}
+@group(0) @binding(4) var<storage, read_write> generatedGlyphVertices : array<GeneratedGlyphVertex>;
+@group(0) @binding(5) var<storage, read> textRowTextAnchors : array<u32>;
+@group(0) @binding(6) var<storage, read> textRowAlignmentBaselines : array<u32>;
 
 fn unpackGlyphId(glyphIndex: u32) -> u32 {
   let word = textGlyphIds[glyphIndex >> 1u];
@@ -130,10 +131,11 @@ fn main(@builtin(global_invocation_id) globalInvocationId: vec3<u32>) {
     if (glyphIndex >= glyphRange.y) { break; }
     let glyphId = unpackGlyphId(glyphIndex);
     let metrics = textGlyphMetrics[glyphId];
-    generatedGlyphOffsets[glyphIndex] =
-      packSignedInt16Pair(width + metrics.x + anchorShift, baselineOffsetY + baselineShift);
-    generatedGlyphIndices[glyphIndex] = glyphId & 0xffffu;
-    generatedRowIndices[glyphIndex] = rowIndex + u32(max(textExpansionConfig[2], 0));
+    generatedGlyphVertices[glyphIndex] = GeneratedGlyphVertex(
+      packSignedInt16Pair(width + metrics.x + anchorShift, baselineOffsetY + baselineShift),
+      glyphId & 0xffffu,
+      rowIndex + u32(max(textExpansionConfig[2], 0))
+    );
     width += metrics.y;
     glyphIndex += 1u;
   }
@@ -146,11 +148,9 @@ const GPU_EXPANDED_TEXT_COMPUTE_SHADER_LAYOUT: ShaderLayout = {
     {name: 'textGlyphIds', type: 'read-only-storage', group: 0, location: 1},
     {name: 'textGlyphMetrics', type: 'read-only-storage', group: 0, location: 2},
     {name: 'textExpansionConfig', type: 'read-only-storage', group: 0, location: 3},
-    {name: 'generatedGlyphOffsets', type: 'storage', group: 0, location: 4},
-    {name: 'generatedGlyphIndices', type: 'storage', group: 0, location: 5},
-    {name: 'generatedRowIndices', type: 'storage', group: 0, location: 6},
-    {name: 'textRowTextAnchors', type: 'read-only-storage', group: 0, location: 7},
-    {name: 'textRowAlignmentBaselines', type: 'read-only-storage', group: 0, location: 8}
+    {name: 'generatedGlyphVertices', type: 'storage', group: 0, location: 4},
+    {name: 'textRowTextAnchors', type: 'read-only-storage', group: 0, location: 5},
+    {name: 'textRowAlignmentBaselines', type: 'read-only-storage', group: 0, location: 6}
   ],
   attributes: []
 };
@@ -166,11 +166,14 @@ const GPU_UTF8_EXPANDED_TEXT_COMPUTE_SOURCE = /* wgsl */ `
 ${getGpuUtf8MapShaderSource(GPU_UTF8_MAP_BINDING_OPTIONS)}
 @group(0) @binding(3) var<storage, read> textGlyphMetrics : array<vec2<i32>>;
 @group(0) @binding(4) var<storage, read> textExpansionConfig : array<i32>;
-@group(0) @binding(5) var<storage, read_write> generatedGlyphOffsets : array<u32>;
-@group(0) @binding(6) var<storage, read_write> generatedGlyphIndices : array<u32>;
-@group(0) @binding(7) var<storage, read_write> generatedRowIndices : array<u32>;
-@group(0) @binding(8) var<storage, read> textRowTextAnchors : array<u32>;
-@group(0) @binding(9) var<storage, read> textRowAlignmentBaselines : array<u32>;
+struct GeneratedGlyphVertex {
+  glyphOffsets : u32,
+  glyphIndices : u32,
+  rowIndex : u32,
+}
+@group(0) @binding(5) var<storage, read_write> generatedGlyphVertices : array<GeneratedGlyphVertex>;
+@group(0) @binding(6) var<storage, read> textRowTextAnchors : array<u32>;
+@group(0) @binding(7) var<storage, read> textRowAlignmentBaselines : array<u32>;
 
 fn packSignedInt16Pair(lowerValue: i32, upperValue: i32) -> u32 {
   return (u32(lowerValue) & 0xffffu) | ((u32(upperValue) & 0xffffu) << 16u);
@@ -239,10 +242,11 @@ fn main(@builtin(global_invocation_id) globalInvocationId: vec3<u32>) {
     if (isGpuUtf8MapCodePointStart(firstByte)) {
       let glyphId = mapGpuUtf8CodePoint(decodeGpuUtf8MapCodePoint(byteIndex));
       let metrics = textGlyphMetrics[glyphId];
-      generatedGlyphOffsets[byteIndex] =
-        packSignedInt16Pair(width + metrics.x + anchorShift, baselineOffsetY + baselineShift);
-      generatedGlyphIndices[byteIndex] = glyphId & 0xffffu;
-      generatedRowIndices[byteIndex] = rowIndex + u32(max(textExpansionConfig[3], 0));
+      generatedGlyphVertices[byteIndex] = GeneratedGlyphVertex(
+        packSignedInt16Pair(width + metrics.x + anchorShift, baselineOffsetY + baselineShift),
+        glyphId & 0xffffu,
+        rowIndex + u32(max(textExpansionConfig[3], 0))
+      );
       width += metrics.y;
     }
     byteIndex += 1u;
@@ -255,11 +259,9 @@ const GPU_UTF8_EXPANDED_TEXT_COMPUTE_SHADER_LAYOUT: ShaderLayout = {
     ...getGpuUtf8MapShaderBindings(GPU_UTF8_MAP_BINDING_OPTIONS),
     {name: 'textGlyphMetrics', type: 'read-only-storage', group: 0, location: 3},
     {name: 'textExpansionConfig', type: 'read-only-storage', group: 0, location: 4},
-    {name: 'generatedGlyphOffsets', type: 'storage', group: 0, location: 5},
-    {name: 'generatedGlyphIndices', type: 'storage', group: 0, location: 6},
-    {name: 'generatedRowIndices', type: 'storage', group: 0, location: 7},
-    {name: 'textRowTextAnchors', type: 'read-only-storage', group: 0, location: 8},
-    {name: 'textRowAlignmentBaselines', type: 'read-only-storage', group: 0, location: 9}
+    {name: 'generatedGlyphVertices', type: 'storage', group: 0, location: 5},
+    {name: 'textRowTextAnchors', type: 'read-only-storage', group: 0, location: 6},
+    {name: 'textRowAlignmentBaselines', type: 'read-only-storage', group: 0, location: 7}
   ],
   attributes: []
 };
@@ -399,23 +401,13 @@ export function createGpuExpandedGeneratedState(
   options: GpuTextExpansionResourceOptions,
   glyphCount: number
 ): GpuExpandedGeneratedState {
-  const outputWordCount = Math.max(glyphCount, 1);
+  const outputRecordCount = Math.max(glyphCount, 1);
   const byteLength = glyphCount * Uint32Array.BYTES_PER_ELEMENT * 3;
   return {
-    glyphOffsetsBuffer: device.createBuffer({
-      id: `${options.id || 'gpu-expanded-text-model'}-generated-glyph-offsets`,
+    compactGlyphVertexData: device.createBuffer({
+      id: `${options.id || 'gpu-expanded-text-model'}-generated-glyph-vertices`,
       usage: Buffer.VERTEX | Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
-      data: new Uint32Array(outputWordCount)
-    }),
-    glyphIndicesBuffer: device.createBuffer({
-      id: `${options.id || 'gpu-expanded-text-model'}-generated-glyph-indices`,
-      usage: Buffer.VERTEX | Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
-      data: new Uint32Array(outputWordCount)
-    }),
-    rowIndicesBuffer: device.createBuffer({
-      id: `${options.id || 'gpu-expanded-text-model'}-generated-row-indices`,
-      usage: Buffer.VERTEX | Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
-      data: new Uint32Array(outputWordCount)
+      data: new Uint32Array(outputRecordCount * 3)
     }),
     byteLength
   };
@@ -444,9 +436,7 @@ export function dispatchGpuExpandedTextCompute(
       textGlyphIds: state.compactInput.glyphIdsBuffer,
       textGlyphMetrics: state.glyphMetrics.buffer,
       textExpansionConfig: state.compactInput.expansionConfigBuffer,
-      generatedGlyphOffsets: state.generated.glyphOffsetsBuffer,
-      generatedGlyphIndices: state.generated.glyphIndicesBuffer,
-      generatedRowIndices: state.generated.rowIndicesBuffer,
+      generatedGlyphVertices: state.generated.compactGlyphVertexData,
       textRowTextAnchors: state.alignment.rowTextAnchorsBuffer,
       textRowAlignmentBaselines: state.alignment.rowAlignmentBaselinesBuffer
     }
@@ -485,9 +475,7 @@ export function dispatchGpuUtf8ExpandedTextCompute(
       textGlyphLookup: state.glyphLookup.buffer,
       textGlyphMetrics: state.glyphMetrics.buffer,
       textExpansionConfig: state.utf8Input.expansionConfigBuffer,
-      generatedGlyphOffsets: state.generated.glyphOffsetsBuffer,
-      generatedGlyphIndices: state.generated.glyphIndicesBuffer,
-      generatedRowIndices: state.generated.rowIndicesBuffer,
+      generatedGlyphVertices: state.generated.compactGlyphVertexData,
       textRowTextAnchors: state.alignment.rowTextAnchorsBuffer,
       textRowAlignmentBaselines: state.alignment.rowAlignmentBaselinesBuffer
     }

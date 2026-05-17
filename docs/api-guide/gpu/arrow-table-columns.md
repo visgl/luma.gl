@@ -355,7 +355,7 @@ Construction modes:
 | Mode | Use case |
 | --- | --- |
 | `new GPUVector(device, arrowVector)` | Upload an Arrow vector into owned GPU storage |
-| `{type: 'arrow', ...}` | Named upload form used by table helpers |
+| `{name, device, vector}` | Named upload form used by table helpers |
 | `{type: 'buffer', ...}` | Wrap an existing typed GPU buffer |
 | `{type: 'interleaved', ...}` | Wrap one interleaved opaque binary row buffer |
 | `{type: 'data', ...}` | Aggregate existing `GPUData[]` chunks |

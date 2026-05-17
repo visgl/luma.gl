@@ -142,9 +142,8 @@ export default class ArrowMeshGeometryAnimationLoopTemplate extends AnimationLoo
     this.faceColors =
       device.type === 'webgpu'
         ? new GPUVector({
-            type: 'arrow',
-            name: 'faceColors',
             device,
+            name: 'faceColors',
             vector: faceColors
           })
         : undefined;
