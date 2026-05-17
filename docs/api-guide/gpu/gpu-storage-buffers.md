@@ -104,7 +104,7 @@ For table vectors, use `TableComputation` when storage bindings should come from
 const computation = new TableComputation(device, {
   source: computeShader,
   shaderLayout,
-  vectorBindings: {
+  inputVectors: {
     particlePositions,
     particleVelocities
   }

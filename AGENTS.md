@@ -23,6 +23,10 @@
 ## Before committing
 - Format code: `yarn lint fix`
 - Always `yarn lint fix` after making changes to ensure that Biome formatting is maintained.
+
+## Merge preparation
+- When asked to "get ready for merge", create a copyable Markdown description of the changes versus `master`.
+- Start that Markdown description with `Goals` and `Changes` sections, then include verification, risks, follow-up notes, or other merge-relevant sections when useful.
  
 ## Code style
 - TypeScript strict mode

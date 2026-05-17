@@ -21,7 +21,7 @@ export type TableComputationProps = Omit<ComputationProps, 'bindings'> & {
   /** Ordinary non-table bindings forwarded to {@link Computation}. */
   bindings?: Record<string, Binding>;
   /** GPU vectors converted to storage-buffer bindings by name. */
-  vectorBindings?: Record<string, GPUVector>;
+  inputVectors?: Record<string, GPUVector>;
 };
 
 /**
@@ -32,17 +32,17 @@ export type TableComputationProps = Omit<ComputationProps, 'bindings'> & {
  */
 export class TableComputation extends Computation {
   /** GPU vectors supplied when the computation was created. */
-  readonly vectorBindings: Record<string, GPUVector>;
+  readonly inputVectors: Record<string, GPUVector>;
   private readonly baseBindings: Record<string, Binding>;
   private readonly batchState: TableComputationBatchState;
 
   constructor(device: Device, props: TableComputationProps) {
-    const {vectorBindings = {}, bindings = {}, ...computationProps} = props;
-    assertNoDuplicateBindingNames(vectorBindings, bindings);
+    const {inputVectors = {}, bindings = {}, ...computationProps} = props;
+    assertNoDuplicateBindingNames(inputVectors, bindings);
 
-    const batchState = getTableComputationBatchState(vectorBindings);
+    const batchState = getTableComputationBatchState(inputVectors);
     const baseBindings = {
-      ...getDirectVectorBindings(vectorBindings),
+      ...getDirectVectorBindings(inputVectors),
       ...bindings
     };
 
@@ -51,7 +51,7 @@ export class TableComputation extends Computation {
       bindings: baseBindings
     });
 
-    this.vectorBindings = {...vectorBindings};
+    this.inputVectors = {...inputVectors};
     this.baseBindings = baseBindings;
     this.batchState = batchState;
   }
@@ -70,7 +70,7 @@ export class TableComputation extends Computation {
       } satisfies TableComputationBatch;
       this.setBindings({
         ...this.baseBindings,
-        ...getBatchVectorBindings(this.vectorBindings, batchIndex)
+        ...getBatchVectorBindings(this.inputVectors, batchIndex)
       });
 
       const workgroupCount =
@@ -88,13 +88,13 @@ type TableComputationBatchState = {
 };
 
 function getTableComputationBatchState(
-  vectorBindings: Record<string, GPUVector>
+  inputVectors: Record<string, GPUVector>
 ): TableComputationBatchState {
-  const batchedVectorEntries = Object.entries(vectorBindings).filter(([, vector]) =>
+  const batchedVectorEntries = Object.entries(inputVectors).filter(([, vector]) =>
     requiresBatchBinding(vector)
   );
   if (batchedVectorEntries.length === 0) {
-    const firstVector = Object.values(vectorBindings)[0];
+    const firstVector = Object.values(inputVectors)[0];
     return {
       batchCount: 1,
       batchRowCounts: [firstVector?.length ?? 0]
@@ -132,11 +132,9 @@ function requiresBatchBinding(vector: GPUVector): boolean {
   }
 }
 
-function getDirectVectorBindings(
-  vectorBindings: Record<string, GPUVector>
-): Record<string, Binding> {
+function getDirectVectorBindings(inputVectors: Record<string, GPUVector>): Record<string, Binding> {
   const bindings: Record<string, Binding> = {};
-  for (const [name, vector] of Object.entries(vectorBindings)) {
+  for (const [name, vector] of Object.entries(inputVectors)) {
     if (!requiresBatchBinding(vector)) {
       bindings[name] = getDirectVectorBinding(vector);
     }
@@ -150,11 +148,11 @@ function getDirectVectorBinding(vector: GPUVector): Binding {
 }
 
 function getBatchVectorBindings(
-  vectorBindings: Record<string, GPUVector>,
+  inputVectors: Record<string, GPUVector>,
   batchIndex: number
 ): Record<string, Binding> {
   const bindings: Record<string, Binding> = {};
-  for (const [name, vector] of Object.entries(vectorBindings)) {
+  for (const [name, vector] of Object.entries(inputVectors)) {
     if (!requiresBatchBinding(vector)) {
       continue;
     }
@@ -176,10 +174,10 @@ function getGPUDataBinding(data: GPUData): Binding {
 }
 
 function assertNoDuplicateBindingNames(
-  vectorBindings: Record<string, GPUVector>,
+  inputVectors: Record<string, GPUVector>,
   bindings: Record<string, Binding>
 ): void {
-  for (const name of Object.keys(vectorBindings)) {
+  for (const name of Object.keys(inputVectors)) {
     if (name in bindings) {
       throw new Error(`TableComputation binding "${name}" duplicates an explicit binding`);
     }

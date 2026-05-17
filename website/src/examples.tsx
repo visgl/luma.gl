@@ -217,11 +217,10 @@ export const ArrowMeshGeometryExample: React.FC = props => (
 export const GPUVectorStorageParticlesExample: React.FC = props => (
   <LumaExample
     id="gpu-vector-storage-particles"
-    title="GPUVector Storage Particles"
+    title="Arrow Particles"
     directory="gpu-tables"
     template={GPUVectorStorageParticlesApp}
     config={exampleConfig}
-    devices={['webgpu']}
     {...props}
   />
 );

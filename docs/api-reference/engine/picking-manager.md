@@ -12,7 +12,8 @@ import {Model, PickingManager, ShaderInputs, picking} from '@luma.gl/engine';
 const shaderInputs = new ShaderInputs({picking});
 const pickingManager = new PickingManager(device, {
   shaderInputs,
-  mode: 'auto'
+  mode: 'auto',
+  getTooltip: ({objectIndex}) => (objectIndex === null ? null : `row ${objectIndex}`)
 });
 
 const pickingPass = pickingManager.beginRenderPass();
@@ -33,6 +34,12 @@ export type PickInfo = {
 };
 ```
 
+### `PickingTooltip`
+
+```ts
+export type PickingTooltip = string | null;
+```
+
 ### `PickingMode`
 
 ```ts
@@ -50,9 +57,13 @@ export type PickingMode = 'auto' | 'index' | 'color';
 export type PickingManagerProps = {
   shaderInputs?: ShaderInputs<{picking: typeof pickingUniforms.props}>;
   onObjectPicked?: (info: PickInfo) => void;
+  getTooltip?: (info: PickInfo) => PickingTooltip;
   mode?: PickingMode;
 };
 ```
+
+- `getTooltip` returns plain tooltip text for the latest picked row/object. Returning `null` hides the tooltip.
+- The tooltip is positioned beside the latest mouse position within the active canvas container.
 
 ### `supportsIndexPicking(device: Device): boolean`
 
@@ -100,7 +111,7 @@ When the backend is:
 
 ### `updatePickInfo(mousePosition: [number, number]): Promise<PickInfo | null>`
 
-Reads back one picked pixel, updates shader inputs, and calls `onObjectPicked` when the pick result changes.
+Reads back one picked pixel, updates shader inputs, calls `onObjectPicked` when the pick result changes, and refreshes the tooltip when `getTooltip` is provided.
 
 ### `getPickPosition(mousePosition: [number, number]): [number, number]`
 
@@ -109,6 +120,7 @@ Converts CSS pixel mouse coordinates into device-pixel picking coordinates.
 ## Remarks
 
 - `PickingManager` only manages the framebuffer and readback flow. Your model shaders still need to use a compatible picking module.
+- `getTooltip` is intentionally a formatting callback. Table-aware row lookup belongs with the caller so engine picking does not depend on Arrow or another columnar-data container.
 - Use `picking` when you want the engine to select the appropriate shader path for GLSL/WebGL vs WGSL/WebGPU.
 - Use `colorPicking` when you explicitly want the color-encoded path.
 - Use `indexPicking` when you explicitly want the integer render-target path.
