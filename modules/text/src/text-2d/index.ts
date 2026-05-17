@@ -70,7 +70,9 @@ export {
   type ArrowStorageTextBatchState,
   type ArrowStorageTextInputProps,
   type ArrowStorageTextModelProps,
+  type ArrowStorageTextRenderBatchState,
   type ArrowStorageTextState,
   type ArrowTextGlyphTable,
-  type ArrowTextModelProps
+  type ArrowTextModelProps,
+  type ArrowTextRenderBatchState
 } from './arrow-text-model';

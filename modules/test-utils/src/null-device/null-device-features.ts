@@ -10,6 +10,8 @@ export class NullDeviceLimits extends DeviceLimits {
   maxTextureDimension3D = 256;
   maxTextureArrayLayers = 256;
   maxBindGroups = 0;
+  maxBindGroupsPlusVertexBuffers = 16;
+  maxBindingsPerBindGroup = 0;
   maxDynamicUniformBuffersPerPipelineLayout = 0;
   maxDynamicStorageBuffersPerPipelineLayout = 0;
   maxSampledTexturesPerShaderStage = 8;
@@ -19,12 +21,15 @@ export class NullDeviceLimits extends DeviceLimits {
   maxUniformBuffersPerShaderStage = 20;
   maxUniformBufferBindingSize = 16384;
   maxStorageBufferBindingSize = 0;
+  maxBufferSize = Number.MAX_SAFE_INTEGER;
   minUniformBufferOffsetAlignment = 0;
   minStorageBufferOffsetAlignment = 0;
   maxVertexBuffers = 16;
   maxVertexAttributes = 16;
   maxVertexBufferArrayStride = 2048;
   maxInterStageShaderVariables = 60;
+  maxColorAttachments = 8;
+  maxColorAttachmentBytesPerSample = 0;
   maxComputeWorkgroupStorageSize = 0;
   maxComputeInvocationsPerWorkgroup = 0;
   maxComputeWorkgroupSizeX = 0;

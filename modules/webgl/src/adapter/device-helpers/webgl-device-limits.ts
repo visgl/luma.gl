@@ -12,6 +12,8 @@ export class WebGLDeviceLimits extends DeviceLimits {
   get maxTextureDimension3D() { return this.getParameter(GL.MAX_3D_TEXTURE_SIZE); }
   get maxTextureArrayLayers() { return this.getParameter(GL.MAX_ARRAY_TEXTURE_LAYERS); }
   get maxBindGroups() { return 0; }
+  get maxBindGroupsPlusVertexBuffers() { return 0; }
+  get maxBindingsPerBindGroup() { return 0; }
   get maxDynamicUniformBuffersPerPipelineLayout() { return 0; } // TBD
   get maxDynamicStorageBuffersPerPipelineLayout() { return 0; } // TBD
   get maxSampledTexturesPerShaderStage() { return this.getParameter(GL.MAX_VERTEX_TEXTURE_IMAGE_UNITS); } // ) TBD
@@ -21,12 +23,15 @@ export class WebGLDeviceLimits extends DeviceLimits {
   get maxUniformBuffersPerShaderStage() { return this.getParameter(GL.MAX_UNIFORM_BUFFER_BINDINGS); }
   get maxUniformBufferBindingSize() { return this.getParameter(GL.MAX_UNIFORM_BLOCK_SIZE); }
   get maxStorageBufferBindingSize() { return 0; }
+  get maxBufferSize() { return Number.MAX_SAFE_INTEGER; }
   get minUniformBufferOffsetAlignment() { return this.getParameter(GL.UNIFORM_BUFFER_OFFSET_ALIGNMENT); }
   get minStorageBufferOffsetAlignment() { return 0; } 
   get maxVertexBuffers() { return 16; } // WebGL 2 supports 16 buffers, see https://github.com/gpuweb/gpuweb/issues/4284
   get maxVertexAttributes() { return this.getParameter(GL.MAX_VERTEX_ATTRIBS); }
   get maxVertexBufferArrayStride() { return 2048; } // TBD, this is just the default value from WebGPU
   get maxInterStageShaderVariables() { return this.getParameter(GL.MAX_VARYING_COMPONENTS); }
+  get maxColorAttachments() { return this.getParameter(GL.MAX_COLOR_ATTACHMENTS); }
+  get maxColorAttachmentBytesPerSample() { return 0; }
   get maxComputeWorkgroupStorageSize() { return 0; } // WebGL does not support compute shaders
   get maxComputeInvocationsPerWorkgroup() { return 0; } // WebGL does not support compute shaders
   get maxComputeWorkgroupSizeX() { return 0; } // WebGL does not support compute shaders

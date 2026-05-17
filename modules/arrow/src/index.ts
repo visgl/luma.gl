@@ -125,6 +125,13 @@ export {
   type TableColumnPriority
 } from './arrow/table-buffer-planner';
 
+export {
+  getGeneratedBufferBatchByteLimit,
+  planGeneratedBufferBatches,
+  type GeneratedBufferBatch,
+  type GeneratedBufferBatchPlannerProps
+} from './arrow/generated-buffer-batches';
+
 // GEOARROW
 
 export {

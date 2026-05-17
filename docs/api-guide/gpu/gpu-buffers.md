@@ -2,6 +2,26 @@
 
 See also [GPU Commands](/docs/api-guide/gpu/gpu-commands) for guidance on when buffer operations should use immediate resource helpers versus explicit command encoding.
 
+## Buffer-Relevant Limits
+
+`device.limits` exposes the main caps that influence buffer sizing, GPU data
+representation, and binding pressure.
+
+| Limit | Current device value | Why it matters |
+| --- | --- | --- |
+| `maxBufferSize` | `device.limits.maxBufferSize` | Upper bound for one GPU buffer allocation. |
+| `maxUniformBufferBindingSize` | `device.limits.maxUniformBufferBindingSize` | Maximum bytes visible through one uniform-buffer binding. |
+| `maxStorageBufferBindingSize` | `device.limits.maxStorageBufferBindingSize` | Maximum bytes visible through one storage-buffer binding. |
+| `maxVertexBuffers` | `device.limits.maxVertexBuffers` | Total vertex-buffer bindings available to a render pipeline. |
+| `maxVertexAttributes` | `device.limits.maxVertexAttributes` | Total shader vertex attributes available. |
+| `maxUniformBuffersPerShaderStage` | `device.limits.maxUniformBuffersPerShaderStage` | Uniform-buffer binding pressure within one shader stage. |
+| `maxStorageBuffersPerShaderStage` | `device.limits.maxStorageBuffersPerShaderStage` | Storage-buffer binding pressure within one shader stage. |
+| `maxBindingsPerBindGroup` | `device.limits.maxBindingsPerBindGroup` | Total bindings available inside one WebGPU bind group. |
+| `maxBindGroupsPlusVertexBuffers` | `device.limits.maxBindGroupsPlusVertexBuffers` | Combined WebGPU pressure across bind groups and vertex buffers. |
+
+See [Device Limits](/docs/api-reference/core/device-limits) for the live
+platform value table and the complete portable limit surface.
+
 ## Buffer Operations
 
 The ability to copy memory between CPU, buffers and textures
