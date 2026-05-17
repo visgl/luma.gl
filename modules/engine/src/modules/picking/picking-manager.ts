@@ -409,7 +409,8 @@ export class PickingManager {
     if (
       typeof document === 'undefined' ||
       typeof window === 'undefined' ||
-      typeof HTMLCanvasElement === 'undefined'
+      typeof HTMLCanvasElement === 'undefined' ||
+      typeof this.device.getDefaultCanvasContext !== 'function'
     ) {
       return null;
     }
@@ -443,7 +444,10 @@ export class PickingManager {
   }
 
   protected positionTooltip(tooltipElement: HTMLDivElement, mousePosition: [number, number]): void {
-    if (typeof HTMLCanvasElement === 'undefined') {
+    if (
+      typeof HTMLCanvasElement === 'undefined' ||
+      typeof this.device.getDefaultCanvasContext !== 'function'
+    ) {
       return;
     }
 
