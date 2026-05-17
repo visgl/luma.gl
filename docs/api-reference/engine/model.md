@@ -35,6 +35,7 @@ renderPass.end();
 | `fs?` | `string \| null` | GLSL fragment shader source. |
 | `modules?` | `ShaderModule[]` | Shader modules to assemble into the shader source. |
 | `defines?` | `Record<string, boolean>` | Shader module defines. |
+| `extensions?` | `ShaderExtension[]` | Reusable shader assembly extensions resolved for the active GLSL or WGSL backend. |
 | `shaderInputs?` | `ShaderInputs` | Pre-created shader input manager. |
 | `bindings?` | `Record<string, Binding \| DynamicBuffer \| DynamicBufferRange \| DynamicTexture>` | Textures, samplers, uniform buffers, dynamic buffers, and dynamic textures. |
 | `parameters?` | `RenderPipelineParameters` | Pipeline parameters baked into the model's pipeline. |

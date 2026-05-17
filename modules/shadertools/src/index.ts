@@ -15,6 +15,13 @@ export type {ShaderBindingDebugRow} from './lib/shader-assembly/wgsl-binding-deb
 
 export type {ShaderModule} from './lib/shader-module/shader-module';
 export type {
+  ResolvedShaderExtensions,
+  ShaderExtension,
+  ShaderExtensionInjection,
+  ShaderExtensionInjectionTarget,
+  ShaderExtensionVariant
+} from './lib/shader-extension';
+export type {
   ShaderPass,
   ShaderPassInputSource,
   ShaderPassRenderTarget,
@@ -30,6 +37,10 @@ export {initializeShaderModule, initializeShaderModules} from './lib/shader-modu
 export {getShaderModuleUniforms} from './lib/shader-module/shader-module';
 export {getShaderModuleDependencies} from './lib/shader-module/shader-module-dependencies';
 export {checkShaderModuleDeprecations} from './lib/shader-module/shader-module';
+export {
+  mergeShaderExtensionModules,
+  resolveShaderExtensions
+} from './lib/shader-extension';
 export type {
   GLSLUniformBlockInfo,
   ShaderModuleUniformLayoutStage,

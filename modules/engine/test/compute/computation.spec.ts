@@ -73,6 +73,35 @@ test('Computation#compute', async t => {
   t.end();
 });
 
+test('Computation#extensions assemble WGSL contributions', async t => {
+  const webgpuDevice = await getWebGPUTestDevice();
+  if (webgpuDevice) {
+    const computation = new Computation(webgpuDevice, {
+      source,
+      extensions: [
+        {
+          name: 'compute-extension',
+          wgsl: {
+            modules: [
+              {
+                name: 'compute-extension-module',
+                source: 'const COMPUTE_EXTENSION_MARKER: i32 = 1;'
+              }
+            ]
+          }
+        }
+      ]
+    });
+
+    t.ok(
+      computation.source.includes('const COMPUTE_EXTENSION_MARKER: i32 = 1;'),
+      'WGSL computation extension injection is assembled'
+    );
+    computation.destroy();
+  }
+  t.end();
+});
+
 function isSoftwareBackedDevice(device: Device): boolean {
   return (
     device.info.gpu === 'software' || device.info.gpuType === 'cpu' || Boolean(device.info.fallback)

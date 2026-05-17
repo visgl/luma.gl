@@ -55,6 +55,7 @@
       "tutorials/hello-instancing",
       "tutorials/shader-modules",
       "tutorials/shader-hooks",
+      "tutorials/shader-extensions",
       "tutorials/transform-feedback",
       "tutorials/transform"
     ]

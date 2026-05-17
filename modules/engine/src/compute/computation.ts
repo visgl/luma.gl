@@ -18,7 +18,14 @@ import {
   log,
   dataTypeDecoder
 } from '@luma.gl/core';
-import {type ShaderModule, type PlatformInfo, ShaderAssembler} from '@luma.gl/shadertools';
+import {
+  type ShaderExtension,
+  type ShaderModule,
+  type PlatformInfo,
+  mergeShaderExtensionModules,
+  resolveShaderExtensions,
+  ShaderAssembler
+} from '@luma.gl/shadertools';
 import {type TypedArray, isNumericArray} from '@math.gl/types';
 import {ShaderInputs} from '../shader-inputs';
 import {
@@ -38,7 +45,8 @@ export type ComputationProps = Omit<ComputePipelineProps, 'shader'> & {
   modules?: ShaderModule[];
   /** Shadertool module defines (configures shader code)*/
   defines?: Record<string, boolean>;
-  // TODO - injections, hooks etc?
+  /** Shader extension descriptors resolved during shader assembly. */
+  extensions?: ShaderExtension[];
 
   /** Shader inputs, used to generated uniform buffers and bindings */
   shaderInputs?: ShaderInputs;
@@ -75,6 +83,7 @@ export class Computation {
     source: '',
     modules: [],
     defines: {},
+    extensions: [],
 
     bindings: undefined!,
     shaderInputs: undefined!,
@@ -130,20 +139,30 @@ export class Computation {
 
     Object.assign(this.userData, props.userData);
 
-    // Setup shader module inputs
-    const moduleMap = Object.fromEntries(
-      this.props.modules?.map(module => [module.name, module]) || []
+    const platformInfo = getPlatformInfo(device);
+    const resolvedExtensions = resolveShaderExtensions(
+      this.props.extensions,
+      platformInfo.shaderLanguage
     );
+    const shaderInputModules = mergeShaderExtensionModules(
+      this.props.modules,
+      resolvedExtensions.modules
+    );
+
+    // Setup shader module inputs
+    const moduleMap = Object.fromEntries(shaderInputModules.map(module => [module.name, module]));
     // @ts-ignore TODO - fix up typing?
     this.shaderInputs = props.shaderInputs || new ShaderInputs(moduleMap);
+    if (props.shaderInputs && resolvedExtensions.modules.length > 0) {
+      this.shaderInputs.addModules(resolvedExtensions.modules);
+    }
     this.setShaderInputs(this.shaderInputs);
 
-    // Setup shader assembler
-    const platformInfo = getPlatformInfo(device);
-
     // Extract modules from shader inputs if not supplied
-    const modules =
+    const baseModules =
       (this.props.modules?.length > 0 ? this.props.modules : this.shaderInputs?.getModules()) || [];
+    const modules = mergeShaderExtensionModules(baseModules, resolvedExtensions.modules);
+    const defines = {...resolvedExtensions.defines, ...this.props.defines};
 
     this.props.shaderLayout =
       mergeShaderModuleBindingsIntoLayout(this.props.shaderLayout, modules) || null;
@@ -155,7 +174,9 @@ export class Computation {
     const {source, getUniforms} = this.props.shaderAssembler.assembleWGSLShader({
       platformInfo,
       ...this.props,
-      modules
+      modules,
+      defines,
+      extensionInjections: resolvedExtensions.injections
     });
 
     this.source = source;

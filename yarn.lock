@@ -15600,6 +15600,20 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"luma.gl-examples-shader-extensions@workspace:examples/tutorials/shader-extensions":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-shader-extensions@workspace:examples/tutorials/shader-extensions"
+  dependencies:
+    "@luma.gl/core": "npm:~9.3.0"
+    "@luma.gl/engine": "npm:~9.3.0"
+    "@luma.gl/shadertools": "npm:~9.3.0"
+    "@luma.gl/webgl": "npm:~9.3.0"
+    "@luma.gl/webgpu": "npm:~9.3.0"
+    typescript: "npm:^5.9.3"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
 "luma.gl-examples-shader-hooks@workspace:examples/tutorials/shader-hooks":
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-shader-hooks@workspace:examples/tutorials/shader-hooks"

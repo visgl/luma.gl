@@ -13,6 +13,7 @@
       "tutorials/hello-instancing",
       "tutorials/shader-modules",
       "tutorials/shader-hooks",
+      "tutorials/shader-extensions",
       "tutorials/transform-feedback",
       "tutorials/external-webgl-context",
       "tutorials/whats-next"
@@ -179,6 +180,7 @@
           },
           "api-reference/shadertools/README",
           "api-reference/shadertools/shader-module",
+          "api-reference/shadertools/shader-extension",
           "api-reference/shadertools/shader-assembler",
           "api-reference/shadertools/shader-info"
         ]

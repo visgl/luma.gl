@@ -42,6 +42,7 @@ import HelloInstancingApp from '../../examples/tutorials/hello-instancing/app';
 import HelloGLTFApp from '../../examples/tutorials/hello-gltf/app';
 import LightingApp from '../../examples/tutorials/lighting/app';
 import ShaderHooksApp from '../../examples/tutorials/shader-hooks/app';
+import ShaderExtensionsApp from '../../examples/tutorials/shader-extensions/app';
 import ShaderModulesApp from '../../examples/tutorials/shader-modules/app';
 import TransformFeedbackApp from '../../examples/tutorials/transform-feedback/app';
 import TransformApp from '../../examples/tutorials/transform/app';
@@ -517,6 +518,17 @@ export const ShaderHooksExample: React.FC = props => (
     id="shader-hooks"
     directory="tutorials"
     template={ShaderHooksApp}
+    config={exampleConfig}
+    showStats={false}
+    {...props}
+  />
+);
+
+export const ShaderExtensionsExample: React.FC = props => (
+  <LumaExample
+    id="shader-extensions"
+    directory="tutorials"
+    template={ShaderExtensionsApp}
     config={exampleConfig}
     showStats={false}
     {...props}

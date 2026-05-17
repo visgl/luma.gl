@@ -68,6 +68,8 @@ export type AssembleShaderOptions = {
   hookFunctions?: (ShaderHook | string)[];
   /** Code injections */
   inject?: Record<string, string | ShaderInjection>;
+  /** Ordered code injections contributed by ShaderExtension descriptors. */
+  extensionInjections?: Record<string, ShaderInjection[]>;
   /** Whether to inject prologue */
   prologue?: boolean;
   /** logger object */
@@ -90,6 +92,8 @@ type AssembleStageOptions = {
   hookFunctions?: (ShaderHook | string)[];
   /** Code injections */
   inject?: Record<string, string | ShaderInjection>;
+  /** Ordered code injections contributed by ShaderExtension descriptors. */
+  extensionInjections?: Record<string, ShaderInjection[]>;
   /** Whether to inject prologue */
   prologue?: boolean;
   /** logger object */
@@ -192,6 +196,7 @@ export function assembleShaderWGSL(
     // defines = {},
     hookFunctions = [],
     inject = {},
+    extensionInjections = {},
     log
   } = options;
 
@@ -229,6 +234,8 @@ export function assembleShaderWGSL(
   const hookInjections: Record<string, ShaderInjection[]> = {};
   const declInjections: Record<string, ShaderInjection[]> = {};
   const mainInjections: Record<string, ShaderInjection[]> = {};
+
+  appendInjections(extensionInjections, hookInjections, declInjections, mainInjections);
 
   for (const key in inject) {
     const injection =
@@ -301,7 +308,13 @@ export function assembleShaderWGSL(
   // For injectShader
   assembledSource += INJECT_SHADER_DECLARATIONS;
 
-  assembledSource = injectShader(assembledSource, stage, declInjections);
+  assembledSource = injectShader(
+    assembledSource,
+    stage,
+    getWGSLDeclarationInjections(declInjections),
+    false,
+    'wgsl'
+  );
 
   assembledSource += getShaderHooks(hookFunctionMap[stage], hookInjections);
   assembledSource += formatWGSLBindingAssignmentComments(bindingAssignments);
@@ -310,7 +323,7 @@ export function assembleShaderWGSL(
   assembledSource += applicationRelocation.source;
 
   // Apply any requested shader injections
-  assembledSource = injectShader(assembledSource, stage, mainInjections);
+  assembledSource = injectShader(assembledSource, stage, mainInjections, false, 'wgsl');
 
   assertNoUnresolvedAutoBindings(assembledSource);
 
@@ -335,6 +348,7 @@ function assembleShaderGLSL(
     defines?: Record<string, boolean>;
     hookFunctions?: any[];
     inject?: Record<string, string | ShaderInjection>;
+    extensionInjections?: Record<string, ShaderInjection[]>;
     prologue?: boolean;
     log?: any;
   }
@@ -347,6 +361,7 @@ function assembleShaderGLSL(
     defines = {},
     hookFunctions = [],
     inject = {},
+    extensionInjections = {},
     prologue = true,
     log
   } = options;
@@ -403,6 +418,8 @@ ${getApplicationDefines(allDefines)}
   const hookInjections: Record<string, ShaderInjection[]> = {};
   const declInjections: Record<string, ShaderInjection[]> = {};
   const mainInjections: Record<string, ShaderInjection[]> = {};
+
+  appendInjections(extensionInjections, hookInjections, declInjections, mainInjections);
 
   for (const key in inject) {
     const injection: ShaderInjection =
@@ -494,6 +511,42 @@ export function assembleGetUniforms(modules: ShaderModule[]) {
     }
     return uniforms;
   };
+}
+
+function appendInjections(
+  injections: Record<string, ShaderInjection[]>,
+  hookInjections: Record<string, ShaderInjection[]>,
+  declInjections: Record<string, ShaderInjection[]>,
+  mainInjections: Record<string, ShaderInjection[]>
+): void {
+  for (const key in injections) {
+    const match = /^(v|f)s:(#)?([\w-]+)$/.exec(key);
+    if (match) {
+      const hash = match[2];
+      const name = match[3];
+      const injectionType = hash
+        ? name === 'decl'
+          ? declInjections
+          : mainInjections
+        : hookInjections;
+      injectionType[key] = injectionType[key] || [];
+      injectionType[key].push(...injections[key]);
+    } else {
+      mainInjections[key] = mainInjections[key] || [];
+      mainInjections[key].push(...injections[key]);
+    }
+  }
+}
+
+function getWGSLDeclarationInjections(
+  declarationInjections: Record<string, ShaderInjection[]>
+): Record<string, ShaderInjection[]> {
+  const unifiedDeclarations = [
+    ...(declarationInjections['vs:#decl'] || []),
+    ...(declarationInjections['fs:#decl'] || [])
+  ];
+
+  return unifiedDeclarations.length ? {'vs:#decl': unifiedDeclarations} : {};
 }
 
 /**

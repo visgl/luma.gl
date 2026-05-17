@@ -50,6 +50,7 @@ Target Release Date: Q3, 2026
 
 **@luma.gl/shadertools**
 
+- **`ShaderExtension`** - New cross-backend shader extension descriptor packages shared plus GLSL/WGSL-specific modules, defines, and ordered named injections for `Model` and `Computation`.
 - **`ShaderPassPipeline`** - New shader-pass pipeline type for structured multi-pass postprocessing.
 - **`waterMaterial`** - New water material shader module with GLSL and WGSL shaders.
 

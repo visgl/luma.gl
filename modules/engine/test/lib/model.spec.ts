@@ -762,6 +762,59 @@ test('Model#pipeline caching with defines and modules', async t => {
   t.end();
 });
 
+test('Model#extensions assemble backend contributions', async t => {
+  const webglDevice = await getWebGLTestDevice();
+  const extensionModule = {name: 'model-extension-module', vs: '', fs: ''};
+  const glslModel = new Model(webglDevice, {
+    id: 'glsl-model-extension-test',
+    vs: DUMMY_VS,
+    fs: DUMMY_FS,
+    extensions: [
+      {
+        name: 'glsl-model-extension',
+        modules: [extensionModule],
+        glsl: {
+          injections: [{target: 'fs:#decl', injection: 'float extensionMarker = 1.0;'}]
+        }
+      }
+    ]
+  });
+
+  t.ok(
+    glslModel.fs.includes('float extensionMarker = 1.0;'),
+    'GLSL extension injection is assembled'
+  );
+  t.ok(
+    glslModel.shaderInputs.getModules().some(module => module.name === extensionModule.name),
+    'extension modules participate in shader inputs'
+  );
+  glslModel.destroy();
+
+  const webgpuDevice = await getWebGPUTestDevice();
+  if (webgpuDevice) {
+    const wgslModel = new Model(webgpuDevice, {
+      id: 'wgsl-model-extension-test',
+      source: DUMMY_WGSL,
+      extensions: [
+        {
+          name: 'wgsl-model-extension',
+          wgsl: {
+            injections: [{target: 'fs:#decl', injection: 'const EXTENSION_MARKER: f32 = 1.0;'}]
+          }
+        }
+      ]
+    });
+
+    t.ok(
+      wgslModel.source.includes('const EXTENSION_MARKER: f32 = 1.0;'),
+      'WGSL extension injection is assembled'
+    );
+    wgslModel.destroy();
+  }
+
+  t.end();
+});
+
 function isSoftwareBackedDevice(device: Device): boolean {
   return (
     device.info.gpu === 'software' || device.info.gpuType === 'cpu' || Boolean(device.info.fallback)

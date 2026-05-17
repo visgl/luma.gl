@@ -33,6 +33,7 @@ computePass.end();
 | `source?` | `string` | WGSL source code for the compute shader. |
 | `modules?` | `ShaderModule[]` | Shader modules to assemble into the shader. |
 | `defines?` | `Record<string, boolean>` | Shader module defines passed to the assembler. |
+| `extensions?` | `ShaderExtension[]` | Reusable shader assembly extensions resolved for WGSL compute assembly. |
 | `shaderInputs?` | `ShaderInputs` | Pre-created shader input manager. |
 | `bindings?` | `Record<string, Binding>` | Bound textures, samplers, storage buffers, or uniform buffers. |
 | `pipelineFactory?` | `PipelineFactory` | Factory from `@luma.gl/core` used to create cached compute pipelines. |

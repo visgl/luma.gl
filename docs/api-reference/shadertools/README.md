@@ -22,6 +22,7 @@ Shader Modules
 Additional reference pages:
 
 - [`ShaderAssembler`](/docs/api-reference/shadertools/shader-assembler)
+- [`ShaderExtension`](/docs/api-reference/shadertools/shader-extension)
 - [`WGSL Support`](/docs/api-reference/shadertools/wgsl-support)
 - [`Shader Module Conventions`](/docs/api-reference/shadertools/shader-conventions)
 

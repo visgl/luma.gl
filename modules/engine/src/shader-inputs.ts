@@ -140,6 +140,20 @@ export class ShaderInputs<
     return Object.values(this.modules) as ShaderModule[];
   }
 
+  /** Add shader modules that should participate in subsequent uniform and binding updates. */
+  addModules(modules: ShaderInputsModule[]): void {
+    const modulesToAdd = getShaderModuleDependencies(modules);
+
+    for (const module of modulesToAdd) {
+      const moduleName = module.name as keyof ShaderPropsT;
+      if (!this.modules[moduleName]) {
+        // @ts-ignore The ShaderInputs module registry is intentionally extended at runtime.
+        this.modules[moduleName] = module;
+        this._addModule(module);
+      }
+    }
+  }
+
   /** Get all uniform values for all modules */
   getUniformValues(): Partial<
     Record<keyof ShaderPropsT, Record<string, ShaderModuleUniformValue>>
