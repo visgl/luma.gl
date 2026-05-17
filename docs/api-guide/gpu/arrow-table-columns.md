@@ -537,7 +537,8 @@ const model = new ArrowModel(device, {
 
 `TableTransform` is the WebGL transform-feedback counterpart. It converts an
 Arrow table to a `GPUTable` when needed, merges the table attribute layouts into
-the underlying `BufferTransform`, and can run one preserved GPU batch at a time:
+the underlying `BufferTransform`, accepts already-created `GPUVector` inputs,
+and can run one preserved GPU batch at a time:
 
 ```ts
 const transform = new TableTransform(device, {
@@ -553,6 +554,29 @@ transform.runBatches({
 });
 ```
 
+For a compute-like update path, pass `inputVectors` plus
+`copyOutputToInputVectors`. `outputs` is inferred from the copy map when it is
+omitted:
+
+```ts
+const transform = new TableTransform(device, {
+  vs,
+  shaderLayout,
+  inputVectors: {
+    particlePositions,
+    particleVelocities
+  },
+  copyOutputToInputVectors: {
+    nextParticlePositions: 'particlePositions',
+    nextParticleVelocities: 'particleVelocities'
+  }
+});
+```
+
+Transform feedback writes a dense output stream, so automatic copy-back targets
+tightly packed, directly bindable GPUVectors. It can not scatter-copy into
+padded or interleaved rows.
+
 Use `TableTransform` only for attribute-backed WebGL transform feedback. It is
 not a storage-buffer compute abstraction.
 
@@ -560,7 +584,7 @@ Relevant public types:
 
 | Type | Meaning |
 | --- | --- |
-| `TableTransformProps` | Construction props, including `table`, `arrowTable`, `arrowPaths`, `arrowBufferProps`, and `tableCount`. |
+| `TableTransformProps` | Construction props, including `table`, `arrowTable`, `inputVectors`, `copyOutputToInputVectors`, `arrowPaths`, `arrowBufferProps`, and `tableCount`. |
 | `TableTransformBatchOptions` | `runBatches()` options, including fixed or per-batch `outputBuffers`. |
 
 ### `TableComputation`
@@ -572,7 +596,7 @@ storage bindings. Supply `GPUVector` objects by binding name:
 const computation = new TableComputation(device, {
   source: computeShader,
   shaderLayout: computeShaderLayout,
-  vectorBindings: {
+  inputVectors: {
     particlePositions,
     particleVelocities
   }
@@ -587,7 +611,7 @@ Relevant public types:
 
 | Type | Meaning |
 | --- | --- |
-| `TableComputationProps` | Construction props, including ordinary `bindings` plus `vectorBindings`. |
+| `TableComputationProps` | Construction props, including ordinary `bindings` plus `inputVectors`. |
 | `TableComputationBatch` | Batch metadata passed to a dynamic workgroup-count callback. |
 
 ## Mesh Arrow Geometry

@@ -123,6 +123,7 @@ export {DynamicBuffer} from './dynamic-buffer/dynamic-buffer';
 
 export type {
   PickInfo,
+  PickingTooltip,
   PickingMode,
   ResolvedPickingMode,
   PickingBackend,

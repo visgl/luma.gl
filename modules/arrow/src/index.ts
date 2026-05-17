@@ -91,6 +91,7 @@ export {ArrowModel, type ArrowModelGPUTable, type ArrowModelProps} from './arrow
 export {
   TableTransform,
   type TableTransformBatchOptions,
+  type TableTransformOutputCopyMap,
   type TableTransformProps
 } from './arrow/table-transform';
 export {

@@ -12,5 +12,7 @@ import './arrow/arrow-model.spec';
 import './arrow/arrow-shader-layout.spec';
 import './arrow/analyze-arrow-table.spec';
 import './arrow/table-buffer-planner.spec';
+import './arrow/table-computation.spec';
+import './arrow/table-transform.spec';
 
 import './geoarrow/geoarrow.spec';
