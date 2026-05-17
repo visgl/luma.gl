@@ -298,13 +298,13 @@ export function createGpuExpandedCompactInput(
   device: Device,
   options: GpuTextExpansionResourceOptions,
   glyphStream: GpuExpandedTextStream,
-  rowIndexBase = 0,
+  batchRowIndexBase = 0,
   alignment: GpuTextAlignmentExpansionOptions = {}
 ): GpuExpandedCompactInputState {
   const expansionConfig = new Int32Array([
     glyphStream.baselineOffsetY,
     glyphStream.labelGlyphRanges.length / 2,
-    rowIndexBase,
+    batchRowIndexBase,
     alignment.textAnchor ?? 0,
     alignment.useRowTextAnchors ? 1 : 0,
     alignment.alignmentBaseline ?? 0,
@@ -346,14 +346,14 @@ export function createGpuUtf8ExpandedInput(
     baselineOffsetY,
     glyphLookupCount,
     labelCount,
-    rowIndexBase = 0,
+    batchRowIndexBase = 0,
     alignment = {}
   }: {
     utf8TextInput: GpuUtf8TextInput;
     baselineOffsetY: number;
     glyphLookupCount: number;
     labelCount: number;
-    rowIndexBase?: number;
+    batchRowIndexBase?: number;
     alignment?: GpuTextAlignmentExpansionOptions;
   }
 ): GpuUtf8ExpandedInputState {
@@ -361,7 +361,7 @@ export function createGpuUtf8ExpandedInput(
     baselineOffsetY,
     labelCount,
     glyphLookupCount,
-    rowIndexBase,
+    batchRowIndexBase,
     alignment.textAnchor ?? 0,
     alignment.useRowTextAnchors ? 1 : 0,
     alignment.alignmentBaseline ?? 0,

@@ -375,7 +375,8 @@ test('Core stats use canonical resource ordering', async t => {
         'Buffer Memory',
         'Texture Memory',
         'External Buffer Memory',
-        'External Texture Memory'
+        'External Texture Memory',
+        'Swap Chain Texture'
       ],
       'GPU Time and Memory stats use canonical ordering'
     );

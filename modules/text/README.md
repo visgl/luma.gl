@@ -10,7 +10,7 @@ Experimental text utilities for luma.gl. The package contains:
 ## Usage
 
 ```ts
-import {TextGeometry, parseFont} from '@luma.gl/text'
+import {TextGeometry, parseFont} from '@luma.gl/text/text-3d'
 import helvetiker from './fonts/helvetiker_regular.typeface.json'
 
 const font = parseFont(helvetiker)

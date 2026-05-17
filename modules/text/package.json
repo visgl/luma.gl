@@ -24,6 +24,11 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./text-3d": {
+      "types": "./dist/text-3d/index.d.ts",
+      "import": "./dist/text-3d/index.js",
+      "require": "./dist/text-3d/index.cjs"
     }
   },
   "files": [

@@ -4,7 +4,7 @@
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {GPUVector, makeArrowFixedSizeListVector} from '@luma.gl/arrow';
-import {NullDevice} from '@luma.gl/test-utils';
+import {NullDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 import * as arrow from 'apache-arrow';
 import {
   ArrowStorageTextModel,
@@ -172,6 +172,55 @@ test('createArrowStorageTextState rejects non-WebGPU devices', t => {
     'storage-state builder reports its backend contract'
   );
   destroyStorageGpuTextProps(textProps);
+  t.end();
+});
+
+test('ArrowStorageTextModel refreshes row bindings without rebuilding glyph buffers', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const textProps = makeStorageGpuTextProps(device, ['AB', 'A']);
+  const model = new ArrowStorageTextModel(device, {
+    id: 'arrow-storage-text-row-binding-refresh-test',
+    ...textProps,
+    characterMapping: CHARACTER_MAPPING,
+    fontSettings: {fontSize: 10}
+  });
+  const storageState = model.storageState;
+  const glyphOffsetsBuffer = model.generatedGlyphOffsetsBuffer;
+  const styleConfigBuffer = model.styleConfigBuffer;
+
+  model.setProps({color: [255, 0, 0, 255]});
+
+  t.equal(model.storageState, storageState, 'row-binding updates preserve storage state');
+  t.equal(
+    model.generatedGlyphOffsetsBuffer,
+    glyphOffsetsBuffer,
+    'row-binding updates preserve generated glyph buffers'
+  );
+  t.notEqual(
+    model.styleConfigBuffer,
+    styleConfigBuffer,
+    'row-binding updates refresh owned style config buffers'
+  );
+
+  const updatedTexts = makeGpuTexts(device, ['A', 'A']);
+  model.setProps({texts: updatedTexts});
+
+  t.notEqual(model.storageState, storageState, 'text updates replace storage state');
+  t.notEqual(
+    model.generatedGlyphOffsetsBuffer,
+    glyphOffsetsBuffer,
+    'text updates rebuild generated glyph buffers'
+  );
+
+  model.destroy();
+  destroyStorageGpuTextProps(textProps);
+  updatedTexts.destroy();
   t.end();
 });
 
