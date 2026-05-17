@@ -4,7 +4,7 @@
 
 import * as arrow from 'apache-arrow';
 import {getArrowVectorBufferSource} from './arrow-gpu-data';
-import type {NumericArrowType} from './arrow-types';
+import {isNumericArrowType, type NumericArrowType} from './arrow-types';
 
 export {getArrowDataBufferSource, getArrowVectorBufferSource} from './arrow-gpu-data';
 
@@ -21,6 +21,47 @@ const makeFixedSizeListData = arrow.makeData as <T extends NumericArrowType>(pro
   nullBitmap: null;
   child: arrow.Data<T>;
 }) => arrow.Data<arrow.FixedSizeList<T>>;
+
+/**
+ * Create Arrow vectors from JS arrays, with an optional flat FixedSizeList form for numeric rows.
+ *
+ * `makeArrowVectorFromArray(values, type)` mirrors Apache Arrow's scalar/string helper.
+ * `makeArrowVectorFromArray(values, childType, listSize)` packs flat numeric values into
+ * `FixedSizeList<childType>[listSize]` rows.
+ */
+export function makeArrowVectorFromArray<T extends NumericArrowType>(
+  values: readonly number[] | T['TArray'],
+  childType: T,
+  listSize: 1 | 2 | 3 | 4
+): arrow.Vector<arrow.FixedSizeList<T>>;
+export function makeArrowVectorFromArray<T extends arrow.DataType>(
+  values: readonly unknown[],
+  type: T
+): arrow.Vector<T>;
+export function makeArrowVectorFromArray(
+  values: readonly unknown[] | NumericArrowType['TArray'],
+  type: arrow.DataType,
+  listSize?: 1 | 2 | 3 | 4
+): arrow.Vector {
+  if (listSize === undefined) {
+    return arrow.vectorFromArray(Array.from(values as readonly unknown[]), type);
+  }
+  if (!isNumericArrowType(type)) {
+    throw new Error('FixedSizeList array vectors require a numeric Arrow child type');
+  }
+
+  const typedValues = Array.isArray(values)
+    ? getArrowVectorBufferSource(arrow.vectorFromArray(values, type))
+    : values;
+  const makeNumericFixedSizeListVector = makeArrowFixedSizeListVector as <
+    T extends NumericArrowType
+  >(
+    childType: T,
+    fixedListSize: 1 | 2 | 3 | 4,
+    childValues: T['TArray']
+  ) => arrow.Vector<arrow.FixedSizeList<T>>;
+  return makeNumericFixedSizeListVector(type, listSize, typedValues as NumericArrowType['TArray']);
+}
 
 export function makeArrowFixedSizeListVector(
   childType: arrow.Float16,

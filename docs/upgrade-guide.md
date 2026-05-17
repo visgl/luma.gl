@@ -10,6 +10,17 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 
 *For detailed commit level logs that include alpha and beta releases, see the [CHANGELOG](https://github.com/visgl/luma.gl/blob/master/CHANGELOG.md) in the github repository.*
 
+## Upgrading to v10.0
+
+**@luma.gl/text**
+- `ArrowTextModel.labelVectors` has been removed. Pass supported row vectors as top-level props instead:
+  - `positions`
+  - `colors`
+  - `angles`
+  - `sizes`
+  - `pixelOffsets`
+- Storage text keeps the same top-level input convention and continues to expose storage-only row vectors such as `textAnchors` and `alignmentBaselines`.
+
 ## Upgrading to v9.3
 
 **Potentially breaking behavior**

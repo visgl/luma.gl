@@ -108,6 +108,79 @@ test('ArrowTextModel derives from ArrowModel and updates glyph instance counts',
   t.end();
 });
 
+test('ArrowTextModel interleaves expanded glyph vertex records', async t => {
+  const device = new NullDevice({});
+  const textProps = makeGpuTextProps(device, ['AB', 'A']);
+  const model = new ArrowTextModel(device, {
+    id: 'arrow-text-model-expanded-glyph-vertices-test',
+    ...textProps,
+    characterMapping: CHARACTER_MAPPING,
+    fontSettings: {fontSize: 10}
+  });
+  const expandedGlyphBytes = await model.expandedGlyphVertexData.readAsync();
+  const expandedGlyphWords = new Uint32Array(
+    expandedGlyphBytes.buffer,
+    expandedGlyphBytes.byteOffset,
+    12
+  );
+  const expandedGlyphLayout = model.bufferLayout.find(
+    layout => layout.name === 'expandedGlyphVertexData'
+  );
+
+  t.equal(expandedGlyphLayout?.byteStride, 16, 'expanded glyph records use a 16-byte stride');
+  t.deepEqual(
+    expandedGlyphLayout?.attributes,
+    [
+      {attribute: 'glyphOffsets', format: 'sint16x2', byteOffset: 0},
+      {attribute: 'glyphFrames', format: 'uint16x4', byteOffset: 4}
+    ],
+    'default render attributes read from the expanded glyph vertex data'
+  );
+  t.deepEqual(
+    Array.from(expandedGlyphWords),
+    [
+      packSignedInt16Pair(2, 5),
+      packUint16Pair(0, 0),
+      packUint16Pair(4, 6),
+      0,
+      packSignedInt16Pair(7, 5),
+      packUint16Pair(4, 0),
+      packUint16Pair(4, 6),
+      0,
+      packSignedInt16Pair(2, 5),
+      packUint16Pair(0, 0),
+      packUint16Pair(4, 6),
+      1
+    ],
+    'expanded glyph records store generated offsets, inline frames, and source row ids'
+  );
+
+  model.destroy();
+  destroyGpuTextProps(textProps);
+  t.end();
+});
+
+test('ArrowTextModel built-in fragment shader decodes SDF atlas alpha', t => {
+  const device = new NullDevice({});
+  const textProps = makeGpuTextProps(device, ['AB', 'A']);
+  const model = new ArrowTextModel(device, {
+    id: 'arrow-text-model-sdf-shader-test',
+    ...textProps,
+    characterMapping: CHARACTER_MAPPING,
+    fontSettings: {fontSize: 10, sdf: true, cutoff: 0.25, smoothing: 0.07}
+  });
+
+  t.ok(
+    model.fs.includes('uniform float textUsesSdf;'),
+    'default shader exposes an SDF mode uniform'
+  );
+  t.ok(model.fs.includes('smoothstep('), 'default shader smooths sampled SDF alpha');
+
+  model.destroy();
+  destroyGpuTextProps(textProps);
+  t.end();
+});
+
 test('ArrowTextModel expands chunked UTF-8 GPUVector data', t => {
   const device = new NullDevice({});
   const firstChunk = arrow.vectorFromArray(['AB'], new arrow.Utf8());
@@ -134,6 +207,99 @@ test('ArrowTextModel expands chunked UTF-8 GPUVector data', t => {
 
   model.destroy();
   destroyGpuTextProps(textProps);
+  t.end();
+});
+
+test('ArrowStorageTextModel packs SDF alpha settings into the style config uniform', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const textProps = makeStorageGpuTextProps(device, ['AB', 'A']);
+  const model = new ArrowStorageTextModel(device, {
+    id: 'arrow-storage-text-sdf-style-config-test',
+    ...textProps,
+    characterMapping: CHARACTER_MAPPING,
+    fontSettings: {fontSize: 10, sdf: true, cutoff: 0.25, smoothing: 0.07}
+  });
+  const styleConfigBytes = await model.styleConfigBuffer.readAsync();
+  const styleConfigFloats = new Float32Array(
+    styleConfigBytes.buffer,
+    styleConfigBytes.byteOffset,
+    styleConfigBytes.byteLength / Float32Array.BYTES_PER_ELEMENT
+  );
+
+  t.ok(
+    Math.abs(styleConfigFloats[14] - 0.75) < 1e-6,
+    'style config stores TinySDF alpha edge threshold'
+  );
+  t.ok(
+    Math.abs(styleConfigFloats[15] - 0.07) < 1e-6,
+    'style config stores fragment smoothing width'
+  );
+
+  model.destroy();
+  destroyStorageGpuTextProps(textProps);
+  t.end();
+});
+
+test('ArrowStorageTextModel interleaves compact glyph vertex records', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const textProps = makeStorageGpuTextProps(device, ['AB', 'A']);
+  const model = new ArrowStorageTextModel(device, {
+    id: 'arrow-storage-text-generated-glyph-vertices-test',
+    ...textProps,
+    characterMapping: CHARACTER_MAPPING,
+    fontSettings: {fontSize: 10}
+  });
+  const glyphVertexBytes = await model.compactGlyphVertexData.readAsync();
+  const generatedGlyphVertexWords = new Uint32Array(
+    glyphVertexBytes.buffer,
+    glyphVertexBytes.byteOffset,
+    model.generatedRenderBufferByteLength / Uint32Array.BYTES_PER_ELEMENT
+  );
+  const generatedGlyphVertexLayout = model.bufferLayout.find(
+    layout => layout.name === 'compactGlyphVertexData'
+  );
+
+  t.equal(model.generatedRenderBufferByteLength, 36, 'three glyphs keep the 12-byte record budget');
+  t.equal(generatedGlyphVertexLayout?.byteStride, 12, 'generated records use a 12-byte stride');
+  t.deepEqual(
+    generatedGlyphVertexLayout?.attributes,
+    [
+      {attribute: 'glyphOffsets', format: 'sint16x2', byteOffset: 0},
+      {attribute: 'glyphIndices', format: 'uint16x2', byteOffset: 4},
+      {attribute: 'rowIndices', format: 'uint32', byteOffset: 8}
+    ],
+    'one interleaved buffer exposes the three logical render attributes'
+  );
+  t.deepEqual(
+    Array.from(generatedGlyphVertexWords),
+    [
+      packSignedInt16Pair(2, 5),
+      1,
+      0,
+      packSignedInt16Pair(7, 5),
+      2,
+      0,
+      packSignedInt16Pair(2, 5),
+      1,
+      1
+    ],
+    'generated records store packed offsets, glyph ids, and source row indices in order'
+  );
+
+  model.destroy();
+  destroyStorageGpuTextProps(textProps);
   t.end();
 });
 
@@ -191,16 +357,16 @@ test('ArrowStorageTextModel refreshes row bindings without rebuilding glyph buff
     fontSettings: {fontSize: 10}
   });
   const storageState = model.storageState;
-  const glyphOffsetsBuffer = model.generatedGlyphOffsetsBuffer;
+  const compactGlyphVertexData = model.compactGlyphVertexData;
   const styleConfigBuffer = model.styleConfigBuffer;
 
   model.setProps({color: [255, 0, 0, 255]});
 
   t.equal(model.storageState, storageState, 'row-binding updates preserve storage state');
   t.equal(
-    model.generatedGlyphOffsetsBuffer,
-    glyphOffsetsBuffer,
-    'row-binding updates preserve generated glyph buffers'
+    model.compactGlyphVertexData,
+    compactGlyphVertexData,
+    'row-binding updates preserve compact glyph vertex data'
   );
   t.notEqual(
     model.styleConfigBuffer,
@@ -213,9 +379,9 @@ test('ArrowStorageTextModel refreshes row bindings without rebuilding glyph buff
 
   t.notEqual(model.storageState, storageState, 'text updates replace storage state');
   t.notEqual(
-    model.generatedGlyphOffsetsBuffer,
-    glyphOffsetsBuffer,
-    'text updates rebuild generated glyph buffers'
+    model.compactGlyphVertexData,
+    compactGlyphVertexData,
+    'text updates rebuild compact glyph vertex data'
   );
 
   model.destroy();
@@ -232,14 +398,12 @@ function makeLabelTable(): arrow.Table {
 
 function makeGpuTextProps(device: NullDevice, labels: string[]) {
   return {
-    labelVectors: {
-      positions: new GPUVector({
-        type: 'arrow',
-        name: 'positions',
-        device,
-        vector: makeArrowFixedSizeListVector(new arrow.Float32(), 2, new Float32Array([0, 0, 1, 1]))
-      })
-    },
+    positions: new GPUVector({
+      type: 'arrow',
+      name: 'positions',
+      device,
+      vector: makeArrowFixedSizeListVector(new arrow.Float32(), 2, new Float32Array([0, 0, 1, 1]))
+    }),
     texts: makeGpuTexts(device, labels)
   };
 }
@@ -254,7 +418,7 @@ function makeGpuTexts(device: NullDevice, labels: string[]): GPUVector<arrow.Utf
 }
 
 function destroyGpuTextProps(props: ReturnType<typeof makeGpuTextProps>): void {
-  props.labelVectors.positions.destroy();
+  props.positions.destroy();
   props.texts.destroy();
 }
 
@@ -277,6 +441,14 @@ function destroyStorageGpuTextProps(props: ReturnType<typeof makeStorageGpuTextP
 
 function unpackSignedInt16Pair(word: number): [number, number] {
   return [toSignedInt16(word & 0xffff), toSignedInt16((word >>> 16) & 0xffff)];
+}
+
+function packSignedInt16Pair(lowerValue: number, upperValue: number): number {
+  return ((lowerValue & 0xffff) | ((upperValue & 0xffff) << 16)) >>> 0;
+}
+
+function packUint16Pair(lowerValue: number, upperValue: number): number {
+  return ((lowerValue & 0xffff) | ((upperValue & 0xffff) << 16)) >>> 0;
 }
 
 function toSignedInt16(value: number): number {

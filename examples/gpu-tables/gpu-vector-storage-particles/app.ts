@@ -201,15 +201,13 @@ function makeParticleVectors(device: AnimationProps['device']): {
 
   return {
     positions: new GPUVector({
-      type: 'arrow',
-      name: 'particlePositions',
       device,
+      name: 'particlePositions',
       vector: arrowPositions
     }),
     velocities: new GPUVector({
-      type: 'arrow',
-      name: 'particleVelocities',
       device,
+      name: 'particleVelocities',
       vector: arrowVelocities
     }),
     initialPositions: positions,

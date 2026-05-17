@@ -14,6 +14,7 @@ export {getArrowPaths, getArrowDataByPath, getArrowVectorByPath} from './arrow/a
 export {getArrowColumnInfo} from './arrow/arrow-column-info';
 
 export {
+  makeArrowVectorFromArray,
   makeArrowFixedSizeListVector,
   isArrowFixedSizeListVector,
   getArrowFixedSizeListValues,

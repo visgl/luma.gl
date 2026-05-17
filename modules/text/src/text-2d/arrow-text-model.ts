@@ -2,7 +2,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Buffer, type Device, type RenderPass, type ShaderLayout} from '@luma.gl/core';
+import {
+  Buffer,
+  type BufferLayout,
+  type Device,
+  type RenderPass,
+  type ShaderLayout
+} from '@luma.gl/core';
 import {
   ArrowModel,
   GPUVector,
@@ -46,6 +52,12 @@ const GLYPH_FRAMES_COLUMN = 'glyphFrames';
 const GLYPH_INDICES_COLUMN = 'glyphIndices';
 const GLYPH_CLIP_RECTS_COLUMN = 'glyphClipRects';
 const ROW_INDICES_COLUMN = 'rowIndices';
+const EXPANDED_GLYPH_VERTEX_DATA = 'expandedGlyphVertexData';
+const COMPACT_GLYPH_VERTEX_DATA = 'compactGlyphVertexData';
+const COMPACT_GLYPH_VERTEX_BYTE_STRIDE = Uint32Array.BYTES_PER_ELEMENT * 3;
+const EXPANDED_GLYPH_VERTEX_BYTE_STRIDE = Uint32Array.BYTES_PER_ELEMENT * 4;
+const CLIPPED_EXPANDED_GLYPH_VERTEX_BYTE_STRIDE =
+  EXPANDED_GLYPH_VERTEX_BYTE_STRIDE + Int16Array.BYTES_PER_ELEMENT * 4;
 const MISSING_CHAR_WIDTH = 32;
 const MAX_UINT16 = 65535;
 const DEFAULT_STORAGE_TEXT_COLOR: [number, number, number, number] = [0, 0, 0, 255];
@@ -54,7 +66,14 @@ const DEFAULT_STORAGE_TEXT_SIZE = 32;
 const DEFAULT_STORAGE_TEXT_PIXEL_OFFSET: [number, number] = [0, 0];
 const DEFAULT_STORAGE_TEXT_ANCHOR = 0;
 const DEFAULT_STORAGE_ALIGNMENT_BASELINE = 0;
+const BITMAP_TEXT_SDF_THRESHOLD = -1;
 type StorageTextBuffer = Buffer | DynamicBuffer;
+
+type TextSdfRenderSettings = {
+  sdf: boolean;
+  threshold: number;
+  smoothing: number;
+};
 
 const DEFAULT_ARROW_TEXT_SHADER_LAYOUT: ShaderLayout = {
   attributes: [
@@ -172,11 +191,22 @@ const DEFAULT_ARROW_TEXT_FS = `#version 300 es
 precision highp float;
 
 uniform sampler2D fontAtlasTexture;
+uniform float textUsesSdf;
+uniform float textSdfThreshold;
+uniform float textSdfSmoothing;
 in vec2 vTextureCoordinate;
 out vec4 fragColor;
 
 void main() {
-  float alpha = texture(fontAtlasTexture, vTextureCoordinate).a;
+  float sampledAlpha = texture(fontAtlasTexture, vTextureCoordinate).a;
+  float sdfAlpha = textSdfSmoothing > 0.0
+    ? smoothstep(
+        textSdfThreshold - textSdfSmoothing,
+        textSdfThreshold + textSdfSmoothing,
+        sampledAlpha
+      )
+    : step(textSdfThreshold, sampledAlpha);
+  float alpha = textUsesSdf > 0.5 ? sdfAlpha : sampledAlpha;
   fragColor = vec4(1.0, 1.0, 1.0, alpha);
 }
 `;
@@ -203,7 +233,8 @@ struct TextStorageStyleConfig {
   useRowPixelOffsets : u32,
   hasClipRects : u32,
   batchRowIndexBase : u32,
-  _padding : u32,
+  sdfThreshold : f32,
+  sdfSmoothing : f32,
 };
 
 @group(0) @binding(auto) var<uniform> textStorageStyleConfig : TextStorageStyleConfig;
@@ -332,7 +363,19 @@ fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
 
 @fragment
 fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
-  let alpha = textureSample(fontAtlasTexture, fontAtlasTextureSampler, inputs.atlasUV).a;
+  let sampledAlpha = textureSample(fontAtlasTexture, fontAtlasTextureSampler, inputs.atlasUV).a;
+  var alpha = sampledAlpha;
+  if (textStorageStyleConfig.sdfThreshold >= 0.0) {
+    if (textStorageStyleConfig.sdfSmoothing > 0.0) {
+      alpha = smoothstep(
+        textStorageStyleConfig.sdfThreshold - textStorageStyleConfig.sdfSmoothing,
+        textStorageStyleConfig.sdfThreshold + textStorageStyleConfig.sdfSmoothing,
+        sampledAlpha
+      );
+    } else {
+      alpha = select(0.0, 1.0, sampledAlpha >= textStorageStyleConfig.sdfThreshold);
+    }
+  }
   return vec4<f32>(inputs.color.rgb, inputs.color.a * alpha);
 }
 `;
@@ -349,9 +392,17 @@ export type ArrowTextModelProps = Omit<
   ArrowModelProps,
   'arrowTable' | 'arrowGPUTable' | 'streamingArrowGPUTable' | 'arrowCount'
 > & {
-  /** One named GPU vector per label attribute. `positions` is required. */
-  labelVectors: Record<string, GPUVector>;
-  /** GPU UTF-8 labels aligned row-for-row with `labelVectors.positions`. */
+  /** GPU-resident label origins aligned one-for-one with `texts`. */
+  positions: GPUVector<arrow.FixedSizeList<arrow.Float32>>;
+  /** Optional packed RGBA8 text colors, consumed as label attributes when declared by the shader. */
+  colors?: GPUVector<arrow.FixedSizeList<arrow.Uint8>>;
+  /** Optional per-row angles in degrees, consumed as label attributes when declared by the shader. */
+  angles?: GPUVector<arrow.Float32>;
+  /** Optional per-row deck-style text sizes, consumed as label attributes when declared by the shader. */
+  sizes?: GPUVector<arrow.Float32>;
+  /** Optional per-row pixel offsets, consumed as label attributes when declared by the shader. */
+  pixelOffsets?: GPUVector<arrow.FixedSizeList<arrow.Float32>>;
+  /** GPU UTF-8 labels aligned row-for-row with `positions`. */
   texts: GPUVector<arrow.Utf8>;
   /**
    * Optional packed per-label clip rectangles `[x, y, width, height]`.
@@ -373,17 +424,7 @@ export type ArrowTextModelProps = Omit<
   fontAtlas?: FontAtlas;
 };
 
-export type ArrowStorageTextInputProps = Omit<ArrowTextModelProps, 'labelVectors'> & {
-  /** GPU-resident row origins aligned one-for-one with `texts`. */
-  positions: GPUVector<arrow.FixedSizeList<arrow.Float32>>;
-  /** Optional packed RGBA8 text colors, read directly from storage. */
-  colors?: GPUVector<arrow.FixedSizeList<arrow.Uint8>>;
-  /** Optional per-row angles in degrees, read directly from storage. */
-  angles?: GPUVector<arrow.Float32>;
-  /** Optional per-row deck-style text sizes, read directly from storage. */
-  sizes?: GPUVector<arrow.Float32>;
-  /** Optional per-row pixel offsets. */
-  pixelOffsets?: GPUVector<arrow.FixedSizeList<arrow.Float32>>;
+export type ArrowStorageTextInputProps = ArrowTextModelProps & {
   /** Optional per-row text anchor enum: 0=start, 1=middle, 2=end. */
   textAnchors?: GPUVector<arrow.Uint8>;
   /** Optional per-row alignment baseline enum: 0=center, 1=top, 2=bottom. */
@@ -431,9 +472,7 @@ export type ArrowStorageTextBatchState = {
   rowAlignmentBaselinesBuffer: StorageTextBuffer;
   rowClipRectsBuffer: Buffer;
   styleConfigBuffer: DynamicBuffer;
-  generatedGlyphOffsetsBuffer: Buffer;
-  generatedGlyphIndicesBuffer: Buffer;
-  generatedRowIndicesBuffer: Buffer;
+  compactGlyphVertexData: Buffer;
 };
 
 export type ArrowStorageTextState = {
@@ -450,6 +489,7 @@ export type ArrowStorageTextState = {
   rowStorageByteLength: number;
   glyphDefinitionStorageByteLength: number;
   transientComputeInputByteLength: number;
+  sdfRenderSettings: TextSdfRenderSettings;
   glyphFramesBuffer: Buffer;
   batches: ArrowStorageTextBatchState[];
   ownedRowBindingResources: StorageTextOwnedResource[];
@@ -462,9 +502,7 @@ export type ArrowStorageTextState = {
   rowAlignmentBaselinesBuffer: StorageTextBuffer;
   rowClipRectsBuffer: Buffer;
   styleConfigBuffer: DynamicBuffer;
-  generatedGlyphOffsetsBuffer: Buffer;
-  generatedGlyphIndicesBuffer: Buffer;
-  generatedRowIndicesBuffer: Buffer;
+  compactGlyphVertexData: Buffer;
   destroy: () => void;
 };
 
@@ -483,6 +521,8 @@ export class ArrowTextModel extends ArrowModel {
   glyphTable: arrow.Table;
   glyphAttributeBuildTimeMs: number;
   glyphAttributeByteLength: number;
+  expandedGlyphVertexData: Buffer;
+  private defaultFragmentShaderUniforms?: Record<string, unknown>;
   private textProps: ArrowTextModelProps;
 
   constructor(device: Device, props: ArrowTextModelProps) {
@@ -496,13 +536,19 @@ export class ArrowTextModel extends ArrowModel {
     this.glyphTable = prepared.glyphTable.table;
     this.glyphAttributeBuildTimeMs = prepared.glyphAttributeBuildTimeMs;
     this.glyphAttributeByteLength = prepared.glyphTable.attributeByteLength;
+    this.expandedGlyphVertexData = prepared.expandedGlyphVertexData;
+    this.defaultFragmentShaderUniforms = prepared.defaultFragmentShaderUniforms;
   }
 
   /** Rebuild generated glyph attributes when label rows, text, or font layout inputs change. */
   override setProps(props: Partial<ArrowTextModelProps>): void {
     const nextProps = {...this.textProps, ...props};
     const shouldRebuild =
-      props.labelVectors !== undefined ||
+      props.positions !== undefined ||
+      props.colors !== undefined ||
+      props.angles !== undefined ||
+      props.sizes !== undefined ||
+      props.pixelOffsets !== undefined ||
       props.texts !== undefined ||
       props.clipRects !== undefined ||
       props.characterSet !== undefined ||
@@ -519,6 +565,7 @@ export class ArrowTextModel extends ArrowModel {
 
     const prepared = prepareArrowTextModel(this.device, nextProps);
     this.atlasTexture?.destroy();
+    this.expandedGlyphVertexData.destroy();
     this.fontAtlasManager = prepared.fontAtlasManager;
     this.atlasTexture = prepared.atlasTexture;
     this.glyphLayout = prepared.glyphTable.glyphLayout;
@@ -526,7 +573,15 @@ export class ArrowTextModel extends ArrowModel {
     this.glyphTable = prepared.glyphTable.table;
     this.glyphAttributeBuildTimeMs = prepared.glyphAttributeBuildTimeMs;
     this.glyphAttributeByteLength = prepared.glyphTable.attributeByteLength;
-    super.setProps({arrowTable: prepared.glyphTable.table});
+    this.expandedGlyphVertexData = prepared.expandedGlyphVertexData;
+    if (this.defaultFragmentShaderUniforms && prepared.defaultFragmentShaderUniforms) {
+      updateArrowTextDefaultFragmentShaderUniforms(
+        this.defaultFragmentShaderUniforms,
+        prepared.sdfRenderSettings
+      );
+    }
+    super.setProps({arrowTable: createArrowTextRenderTable(prepared.glyphTable.table)});
+    this.setAttributes({[EXPANDED_GLYPH_VERTEX_DATA]: prepared.expandedGlyphVertexData});
     if (prepared.atlasTexture) {
       this.setBindings({fontAtlasTexture: prepared.atlasTexture});
     }
@@ -536,6 +591,7 @@ export class ArrowTextModel extends ArrowModel {
 
   override destroy(): void {
     this.atlasTexture?.destroy();
+    this.expandedGlyphVertexData.destroy();
     super.destroy();
   }
 }
@@ -567,9 +623,7 @@ export class ArrowStorageTextModel extends Model {
   rowClipRectsBuffer!: Buffer;
   styleConfigBuffer!: DynamicBuffer;
   glyphFramesBuffer!: Buffer;
-  generatedGlyphOffsetsBuffer!: Buffer;
-  generatedGlyphIndicesBuffer!: Buffer;
-  generatedRowIndicesBuffer!: Buffer;
+  compactGlyphVertexData!: Buffer;
   batches!: ArrowStorageTextBatchState[];
   storageState: ArrowStorageTextState;
   private textProps: ArrowStorageTextModelProps;
@@ -643,9 +697,7 @@ export class ArrowStorageTextModel extends Model {
     this.applyStorageState(nextStorageState);
     const firstBatch = getFirstArrowStorageTextBatch(nextStorageState);
     this.setAttributes({
-      [GLYPH_OFFSETS_COLUMN]: firstBatch.generatedGlyphOffsetsBuffer,
-      [GLYPH_INDICES_COLUMN]: firstBatch.generatedGlyphIndicesBuffer,
-      [ROW_INDICES_COLUMN]: firstBatch.generatedRowIndicesBuffer
+      [COMPACT_GLYPH_VERTEX_DATA]: firstBatch.compactGlyphVertexData
     });
     this.setBindings(createArrowStorageTextBindings(nextProps, nextStorageState, firstBatch));
     this.setInstanceCount(firstBatch.glyphCount);
@@ -656,9 +708,7 @@ export class ArrowStorageTextModel extends Model {
     let drawSuccess = true;
     for (const batch of this.storageState.batches) {
       this.setAttributes({
-        [GLYPH_OFFSETS_COLUMN]: batch.generatedGlyphOffsetsBuffer,
-        [GLYPH_INDICES_COLUMN]: batch.generatedGlyphIndicesBuffer,
-        [ROW_INDICES_COLUMN]: batch.generatedRowIndicesBuffer
+        [COMPACT_GLYPH_VERTEX_DATA]: batch.compactGlyphVertexData
       });
       this.setBindings(createArrowStorageTextBindings(this.textProps, this.storageState, batch));
       this.setInstanceCount(batch.glyphCount);
@@ -666,9 +716,7 @@ export class ArrowStorageTextModel extends Model {
     }
     const firstBatch = getFirstArrowStorageTextBatch(this.storageState);
     this.setAttributes({
-      [GLYPH_OFFSETS_COLUMN]: firstBatch.generatedGlyphOffsetsBuffer,
-      [GLYPH_INDICES_COLUMN]: firstBatch.generatedGlyphIndicesBuffer,
-      [ROW_INDICES_COLUMN]: firstBatch.generatedRowIndicesBuffer
+      [COMPACT_GLYPH_VERTEX_DATA]: firstBatch.compactGlyphVertexData
     });
     this.setBindings(createArrowStorageTextBindings(this.textProps, this.storageState, firstBatch));
     this.setInstanceCount(this.storageState.glyphCount);
@@ -707,9 +755,7 @@ export class ArrowStorageTextModel extends Model {
     this.rowClipRectsBuffer = storageState.rowClipRectsBuffer;
     this.styleConfigBuffer = storageState.styleConfigBuffer;
     this.glyphFramesBuffer = storageState.glyphFramesBuffer;
-    this.generatedGlyphOffsetsBuffer = storageState.generatedGlyphOffsetsBuffer;
-    this.generatedGlyphIndicesBuffer = storageState.generatedGlyphIndicesBuffer;
-    this.generatedRowIndicesBuffer = storageState.generatedRowIndicesBuffer;
+    this.compactGlyphVertexData = storageState.compactGlyphVertexData;
   }
 }
 
@@ -797,14 +843,23 @@ type ResolvedArrowTextInputs = {
 };
 
 function resolveArrowTextInputs(props: ArrowTextModelProps): ResolvedArrowTextInputs {
+  assertArrowTextVectorTypes(props);
+  assertArrowTextVectorRowAlignment(props);
   const texts = getRetainedGPUVectorSource(props.texts, 'texts');
-  if (!(texts.type instanceof arrow.Utf8)) {
-    throw new Error('Text models require texts to be GPUVector<Utf8>');
+  const columns: Record<string, arrow.Vector> = {
+    positions: getRetainedGPUVectorSource(props.positions, 'positions')
+  };
+  if (props.colors) {
+    columns['colors'] = getRetainedGPUVectorSource(props.colors, 'colors');
   }
-
-  const columns: Record<string, arrow.Vector> = {};
-  for (const [name, vector] of Object.entries(props.labelVectors)) {
-    columns[name] = getRetainedGPUVectorSource(vector, `labelVectors.${name}`);
+  if (props.angles) {
+    columns['angles'] = getRetainedGPUVectorSource(props.angles, 'angles');
+  }
+  if (props.sizes) {
+    columns['sizes'] = getRetainedGPUVectorSource(props.sizes, 'sizes');
+  }
+  if (props.pixelOffsets) {
+    columns['pixelOffsets'] = getRetainedGPUVectorSource(props.pixelOffsets, 'pixelOffsets');
   }
   const labelTable = new arrow.Table(columns);
   const clipRects = props.clipRects
@@ -818,6 +873,64 @@ function resolveArrowTextInputs(props: ArrowTextModelProps): ResolvedArrowTextIn
     texts: texts as arrow.Vector<arrow.Utf8>,
     clipRects
   };
+}
+
+function assertArrowTextVectorTypes(props: ArrowTextModelProps): void {
+  if (!(props.texts.type instanceof arrow.Utf8)) {
+    throw new Error('ArrowTextModel texts must be GPUVector<Utf8>');
+  }
+  if (
+    !arrow.DataType.isFixedSizeList(props.positions.type) ||
+    props.positions.type.listSize !== 2 ||
+    !(props.positions.type.children[0]?.type instanceof arrow.Float32)
+  ) {
+    throw new Error('ArrowTextModel positions must be GPUVector<FixedSizeList<Float32>[2]>');
+  }
+  if (
+    props.colors &&
+    (!arrow.DataType.isFixedSizeList(props.colors.type) ||
+      props.colors.type.listSize !== 4 ||
+      !(props.colors.type.children[0]?.type instanceof arrow.Uint8))
+  ) {
+    throw new Error('ArrowTextModel colors must be GPUVector<FixedSizeList<Uint8>[4]>');
+  }
+  if (props.angles && !(props.angles.type instanceof arrow.Float32)) {
+    throw new Error('ArrowTextModel angles must be GPUVector<Float32>');
+  }
+  if (props.sizes && !(props.sizes.type instanceof arrow.Float32)) {
+    throw new Error('ArrowTextModel sizes must be GPUVector<Float32>');
+  }
+  if (
+    props.pixelOffsets &&
+    (!arrow.DataType.isFixedSizeList(props.pixelOffsets.type) ||
+      props.pixelOffsets.type.listSize !== 2 ||
+      !(props.pixelOffsets.type.children[0]?.type instanceof arrow.Float32))
+  ) {
+    throw new Error('ArrowTextModel pixelOffsets must be GPUVector<FixedSizeList<Float32>[2]>');
+  }
+}
+
+function assertArrowTextVectorRowAlignment(props: ArrowTextModelProps): void {
+  const rowInputs: Array<[string, GPUVector<any> | undefined]> = [
+    ['positions', props.positions],
+    ['texts', props.texts],
+    ['colors', props.colors],
+    ['angles', props.angles],
+    ['sizes', props.sizes],
+    ['pixelOffsets', props.pixelOffsets],
+    ['clipRects', props.clipRects]
+  ];
+  const suppliedInputs = rowInputs.filter(([, vector]) => vector !== undefined) as Array<
+    [string, GPUVector<any>]
+  >;
+  const [referenceName, referenceVector] = suppliedInputs[0];
+  for (const [name, vector] of suppliedInputs.slice(1)) {
+    if (vector.length !== referenceVector.length) {
+      throw new Error(
+        `ArrowTextModel ${name} rows must match ${referenceName} rows (${vector.length} !== ${referenceVector.length})`
+      );
+    }
+  }
 }
 
 type ResolvedArrowStorageTextBatchInputs = {
@@ -984,12 +1097,19 @@ function prepareArrowTextModel(
 ): {
   modelProps: ArrowModelProps;
   glyphTable: ArrowTextGlyphTable;
+  expandedGlyphVertexData: Buffer;
   fontAtlasManager?: FontAtlasManager;
   atlasTexture?: DynamicTexture;
   glyphAttributeBuildTimeMs: number;
+  sdfRenderSettings: TextSdfRenderSettings;
+  defaultFragmentShaderUniforms?: Record<string, unknown>;
 } {
   const textInputs = resolveArrowTextInputs(props);
   const mappingState = resolveCharacterMapping(props, textInputs.texts);
+  const usesDefaultFragmentShader = props.fs === undefined || props.fs === null;
+  const defaultFragmentShaderUniforms = usesDefaultFragmentShader
+    ? createArrowTextDefaultFragmentShaderUniforms(props.uniforms, mappingState.sdfRenderSettings)
+    : undefined;
   const glyphTable = buildArrowTextGlyphTable({
     labelTable: textInputs.labelTable,
     texts: textInputs.texts,
@@ -998,6 +1118,15 @@ function prepareArrowTextModel(
     baselineOffset: mappingState.baselineOffset,
     lineHeight: mappingState.lineHeight,
     characterSet: mappingState.characterSet
+  });
+  const shaderLayout =
+    props.shaderLayout ??
+    (textInputs.clipRects
+      ? DEFAULT_CLIPPED_ARROW_TEXT_SHADER_LAYOUT
+      : DEFAULT_ARROW_TEXT_SHADER_LAYOUT);
+  const expandedGlyphVertexState = createExpandedGlyphVertexData(device, props, {
+    glyphTable,
+    shaderLayout
   });
   const atlasTexture = mappingState.fontAtlas
     ? new DynamicTexture(device, {
@@ -1012,23 +1141,152 @@ function prepareArrowTextModel(
       vs:
         props.vs ?? (textInputs.clipRects ? DEFAULT_CLIPPED_ARROW_TEXT_VS : DEFAULT_ARROW_TEXT_VS),
       fs: props.fs ?? DEFAULT_ARROW_TEXT_FS,
-      shaderLayout:
-        props.shaderLayout ??
-        (textInputs.clipRects
-          ? DEFAULT_CLIPPED_ARROW_TEXT_SHADER_LAYOUT
-          : DEFAULT_ARROW_TEXT_SHADER_LAYOUT),
+      uniforms: defaultFragmentShaderUniforms ?? props.uniforms,
+      shaderLayout,
       bindings: {
         ...(props.bindings || {}),
         ...(atlasTexture ? {fontAtlasTexture: atlasTexture} : {})
       },
+      attributes: {
+        ...(props.attributes || {}),
+        [EXPANDED_GLYPH_VERTEX_DATA]: expandedGlyphVertexState.buffer
+      },
+      bufferLayout: [...(props.bufferLayout || []), expandedGlyphVertexState.bufferLayout],
       vertexCount: props.vertexCount ?? 6,
-      arrowTable: glyphTable.table,
+      arrowTable: createArrowTextRenderTable(glyphTable.table),
       arrowCount: 'instance'
     },
     glyphTable,
+    expandedGlyphVertexData: expandedGlyphVertexState.buffer,
     fontAtlasManager: mappingState.fontAtlasManager,
     atlasTexture,
-    glyphAttributeBuildTimeMs: glyphTable.glyphAttributeBuildTimeMs
+    glyphAttributeBuildTimeMs: glyphTable.glyphAttributeBuildTimeMs,
+    sdfRenderSettings: mappingState.sdfRenderSettings,
+    defaultFragmentShaderUniforms
+  };
+}
+
+function createArrowTextRenderTable(glyphTable: arrow.Table): arrow.Table {
+  const generatedGlyphColumnNames = new Set([
+    GLYPH_OFFSETS_COLUMN,
+    GLYPH_FRAMES_COLUMN,
+    GLYPH_CLIP_RECTS_COLUMN,
+    ROW_INDICES_COLUMN
+  ]);
+  const fields: arrow.Field[] = [];
+  const columns: Record<string, arrow.Vector> = {};
+
+  for (const field of glyphTable.schema.fields) {
+    if (generatedGlyphColumnNames.has(field.name)) {
+      continue;
+    }
+    const vector = glyphTable.getChild(field.name);
+    if (!vector) {
+      continue;
+    }
+    fields.push(field);
+    columns[field.name] = vector;
+  }
+
+  return new arrow.Table(new arrow.Schema(fields, new Map(glyphTable.schema.metadata)), columns);
+}
+
+function createExpandedGlyphVertexData(
+  device: Device,
+  props: ArrowTextModelProps,
+  {
+    glyphTable,
+    shaderLayout
+  }: {
+    glyphTable: ArrowTextGlyphTable;
+    shaderLayout: ShaderLayout;
+  }
+): {
+  buffer: Buffer;
+  bufferLayout: BufferLayout;
+  byteLength: number;
+} {
+  const {glyphLayout} = glyphTable;
+  const glyphCount = glyphLayout.glyphCount;
+  const glyphClipRects = glyphTable.table.getChild(GLYPH_CLIP_RECTS_COLUMN) as arrow.Vector<
+    arrow.FixedSizeList<arrow.Int16>
+  > | null;
+  const glyphClipRectValues = glyphClipRects
+    ? (getArrowVectorBufferSource(glyphClipRects) as Int16Array)
+    : undefined;
+  const byteStride = glyphClipRectValues
+    ? CLIPPED_EXPANDED_GLYPH_VERTEX_BYTE_STRIDE
+    : EXPANDED_GLYPH_VERTEX_BYTE_STRIDE;
+  const byteLength = glyphCount * byteStride;
+  const arrayBuffer = new ArrayBuffer(Math.max(byteLength, byteStride));
+  const int16Values = new Int16Array(arrayBuffer);
+  const uint16Values = new Uint16Array(arrayBuffer);
+  const uint32Values = new Uint32Array(arrayBuffer);
+  const rowIndices = makeGlyphRowIndices(glyphLayout.startIndices);
+
+  for (let glyphIndex = 0; glyphIndex < glyphCount; glyphIndex++) {
+    const recordInt16Index = (glyphIndex * byteStride) / Int16Array.BYTES_PER_ELEMENT;
+    const recordUint32Index = (glyphIndex * byteStride) / Uint32Array.BYTES_PER_ELEMENT;
+    const glyphOffsetIndex = glyphIndex * 2;
+    const glyphFrameIndex = glyphIndex * 4;
+
+    int16Values[recordInt16Index] = glyphLayout.glyphOffsets[glyphOffsetIndex];
+    int16Values[recordInt16Index + 1] = glyphLayout.glyphOffsets[glyphOffsetIndex + 1];
+    uint16Values[recordInt16Index + 2] = glyphLayout.glyphFrames[glyphFrameIndex];
+    uint16Values[recordInt16Index + 3] = glyphLayout.glyphFrames[glyphFrameIndex + 1];
+    uint16Values[recordInt16Index + 4] = glyphLayout.glyphFrames[glyphFrameIndex + 2];
+    uint16Values[recordInt16Index + 5] = glyphLayout.glyphFrames[glyphFrameIndex + 3];
+    uint32Values[recordUint32Index + 3] = rowIndices[glyphIndex];
+
+    if (glyphClipRectValues) {
+      const glyphClipRectIndex = glyphIndex * 4;
+      int16Values[recordInt16Index + 8] = glyphClipRectValues[glyphClipRectIndex];
+      int16Values[recordInt16Index + 9] = glyphClipRectValues[glyphClipRectIndex + 1];
+      int16Values[recordInt16Index + 10] = glyphClipRectValues[glyphClipRectIndex + 2];
+      int16Values[recordInt16Index + 11] = glyphClipRectValues[glyphClipRectIndex + 3];
+    }
+  }
+
+  const shaderAttributeNames = new Set(shaderLayout.attributes.map(attribute => attribute.name));
+  const attributes: NonNullable<BufferLayout['attributes']> = [];
+  if (shaderAttributeNames.has(GLYPH_OFFSETS_COLUMN)) {
+    attributes.push({attribute: GLYPH_OFFSETS_COLUMN, format: 'sint16x2', byteOffset: 0});
+  }
+  if (shaderAttributeNames.has(GLYPH_FRAMES_COLUMN)) {
+    attributes.push({
+      attribute: GLYPH_FRAMES_COLUMN,
+      format: 'uint16x4',
+      byteOffset: Int16Array.BYTES_PER_ELEMENT * 2
+    });
+  }
+  if (shaderAttributeNames.has(ROW_INDICES_COLUMN)) {
+    attributes.push({
+      attribute: ROW_INDICES_COLUMN,
+      format: 'uint32',
+      byteOffset: Int16Array.BYTES_PER_ELEMENT * 6
+    });
+  }
+  if (glyphClipRectValues && shaderAttributeNames.has(GLYPH_CLIP_RECTS_COLUMN)) {
+    attributes.push({
+      attribute: GLYPH_CLIP_RECTS_COLUMN,
+      format: 'sint16x4',
+      byteOffset: EXPANDED_GLYPH_VERTEX_BYTE_STRIDE
+    });
+  }
+
+  return {
+    buffer: device.createBuffer({
+      id: `${props.id || 'arrow-text-model'}-expanded-glyph-vertex-data`,
+      usage: Buffer.VERTEX | Buffer.COPY_DST | Buffer.COPY_SRC,
+      data: new Uint8Array(arrayBuffer)
+    }),
+    bufferLayout: {
+      name: EXPANDED_GLYPH_VERTEX_DATA,
+      stepMode: 'instance',
+      byteStride,
+      attributes
+    },
+    byteLength
   };
 }
 
@@ -1074,7 +1332,13 @@ export function createArrowStorageTextState(
     glyphFrames = createStorageGlyphFrames(device, props, glyphDefinitions.glyphFrames);
     glyphDefinitionStorageByteLength = glyphFrames.byteLength;
     for (const batchInput of textInputs.batches) {
-      const rowState = createStorageTextBatchRowState(device, props, batchInput, defaultBuffers);
+      const rowState = createStorageTextBatchRowState(
+        device,
+        props,
+        batchInput,
+        defaultBuffers,
+        mappingState.sdfRenderSettings
+      );
       const utf8TextInput = buildGpuUtf8TextInput(batchInput.texts);
       const glyphMetrics = createStorageGlyphMetrics(
         device,
@@ -1126,9 +1390,7 @@ export function createArrowStorageTextState(
         batchRowIndexBase: batchInput.batchRowIndexBase,
         rowCount: batchInput.texts.length,
         glyphCount: utf8TextInput.byteLength,
-        generatedGlyphOffsetsBuffer: generated.glyphOffsetsBuffer,
-        generatedGlyphIndicesBuffer: generated.glyphIndicesBuffer,
-        generatedRowIndicesBuffer: generated.rowIndicesBuffer
+        compactGlyphVertexData: generated.compactGlyphVertexData
       });
       glyphCount += utf8TextInput.byteLength;
       glyphAttributeBuildTimeMs += utf8TextInput.textInputBuildTimeMs;
@@ -1146,7 +1408,13 @@ export function createArrowStorageTextState(
     }
   } else {
     for (const [batchIndex, batchInput] of textInputs.batches.entries()) {
-      const rowState = createStorageTextBatchRowState(device, props, batchInput, defaultBuffers);
+      const rowState = createStorageTextBatchRowState(
+        device,
+        props,
+        batchInput,
+        defaultBuffers,
+        mappingState.sdfRenderSettings
+      );
       const batchGlyphStream = buildGpuExpandedTextStream({
         texts: batchInput.texts,
         mapping: mappingState.mapping,
@@ -1198,9 +1466,7 @@ export function createArrowStorageTextState(
         batchRowIndexBase: batchInput.batchRowIndexBase,
         rowCount: batchInput.texts.length,
         glyphCount: batchGlyphStream.glyphCount,
-        generatedGlyphOffsetsBuffer: generated.glyphOffsetsBuffer,
-        generatedGlyphIndicesBuffer: generated.glyphIndicesBuffer,
-        generatedRowIndicesBuffer: generated.rowIndicesBuffer
+        compactGlyphVertexData: generated.compactGlyphVertexData
       });
       glyphCount += batchGlyphStream.glyphCount;
       glyphAttributeBuildTimeMs += batchGlyphStream.glyphStreamBuildTimeMs;
@@ -1233,6 +1499,7 @@ export function createArrowStorageTextState(
     rowStorageByteLength,
     glyphDefinitionStorageByteLength,
     transientComputeInputByteLength,
+    sdfRenderSettings: mappingState.sdfRenderSettings,
     batches,
     ownedRowBindingResources: ownedRowStorageResources,
     rowPositionsBuffer: firstBatch.rowPositionsBuffer,
@@ -1245,9 +1512,7 @@ export function createArrowStorageTextState(
     rowClipRectsBuffer: firstBatch.rowClipRectsBuffer,
     styleConfigBuffer: firstBatch.styleConfigBuffer,
     glyphFramesBuffer: glyphFrames.buffer,
-    generatedGlyphOffsetsBuffer: firstBatch.generatedGlyphOffsetsBuffer,
-    generatedGlyphIndicesBuffer: firstBatch.generatedGlyphIndicesBuffer,
-    generatedRowIndicesBuffer: firstBatch.generatedRowIndicesBuffer,
+    compactGlyphVertexData: firstBatch.compactGlyphVertexData,
     destroy: () => {
       if (destroyed) {
         return;
@@ -1257,9 +1522,7 @@ export function createArrowStorageTextState(
       destroyStorageTextResources(ownedRowStorageResources);
       glyphFrames.buffer.destroy();
       for (const batch of batches) {
-        batch.generatedGlyphOffsetsBuffer.destroy();
-        batch.generatedGlyphIndicesBuffer.destroy();
-        batch.generatedRowIndicesBuffer.destroy();
+        batch.compactGlyphVertexData.destroy();
       }
     }
   };
@@ -1278,15 +1541,28 @@ function createArrowStorageTextModelProps(
     bindings: createArrowStorageTextBindings(props, storageState, firstBatch),
     attributes: {
       ...(props.attributes || {}),
-      [GLYPH_OFFSETS_COLUMN]: firstBatch.generatedGlyphOffsetsBuffer,
-      [GLYPH_INDICES_COLUMN]: firstBatch.generatedGlyphIndicesBuffer,
-      [ROW_INDICES_COLUMN]: firstBatch.generatedRowIndicesBuffer
+      [COMPACT_GLYPH_VERTEX_DATA]: firstBatch.compactGlyphVertexData
     },
     bufferLayout: [
       ...(props.bufferLayout || []),
-      {name: GLYPH_OFFSETS_COLUMN, format: 'sint16x2', stepMode: 'instance'},
-      {name: GLYPH_INDICES_COLUMN, format: 'uint16x2', stepMode: 'instance'},
-      {name: ROW_INDICES_COLUMN, format: 'uint32', stepMode: 'instance'}
+      {
+        name: COMPACT_GLYPH_VERTEX_DATA,
+        stepMode: 'instance',
+        byteStride: COMPACT_GLYPH_VERTEX_BYTE_STRIDE,
+        attributes: [
+          {attribute: GLYPH_OFFSETS_COLUMN, format: 'sint16x2', byteOffset: 0},
+          {
+            attribute: GLYPH_INDICES_COLUMN,
+            format: 'uint16x2',
+            byteOffset: Uint32Array.BYTES_PER_ELEMENT
+          },
+          {
+            attribute: ROW_INDICES_COLUMN,
+            format: 'uint32',
+            byteOffset: Uint32Array.BYTES_PER_ELEMENT * 2
+          }
+        ]
+      }
     ],
     vertexCount: props.vertexCount ?? 6,
     instanceCount: firstBatch.glyphCount
@@ -1332,6 +1608,7 @@ function resolveCharacterMapping(
   characterSet?: Set<string>;
   fontAtlasManager?: FontAtlasManager;
   fontAtlas?: FontAtlas;
+  sdfRenderSettings: TextSdfRenderSettings;
 } {
   const characterSet =
     props.characterSet === 'auto'
@@ -1346,7 +1623,8 @@ function resolveCharacterMapping(
       baselineOffset: props.fontAtlas?.baselineOffset ?? 0,
       lineHeight: lineHeightMultiplier * fontSize,
       characterSet,
-      fontAtlas: props.fontAtlas
+      fontAtlas: props.fontAtlas,
+      sdfRenderSettings: resolveTextSdfRenderSettings(props)
     };
   }
 
@@ -1367,7 +1645,8 @@ function resolveCharacterMapping(
     lineHeight: lineHeightMultiplier * fontAtlasManager.props.fontSize,
     characterSet,
     fontAtlasManager,
-    fontAtlas
+    fontAtlas,
+    sdfRenderSettings: resolveTextSdfRenderSettings(props, fontAtlasManager)
   };
 }
 
@@ -1393,6 +1672,39 @@ function normalizeCharacterSet(
   return typeof characterSet === 'string'
     ? new Set(Array.from(characterSet))
     : new Set(characterSet);
+}
+
+function resolveTextSdfRenderSettings(
+  props: ArrowTextModelProps | ArrowStorageTextInputProps,
+  fontAtlasManager?: FontAtlasManager
+): TextSdfRenderSettings {
+  const fontSettings = fontAtlasManager?.props ?? {
+    ...DEFAULT_FONT_SETTINGS,
+    ...(props.fontSettings || {})
+  };
+  return {
+    sdf: fontSettings.sdf,
+    threshold: 1 - fontSettings.cutoff,
+    smoothing: Math.max(0, fontSettings.smoothing)
+  };
+}
+
+function createArrowTextDefaultFragmentShaderUniforms(
+  uniforms: Record<string, unknown> | undefined,
+  sdfRenderSettings: TextSdfRenderSettings
+): Record<string, unknown> {
+  const nextUniforms = {...(uniforms || {})};
+  updateArrowTextDefaultFragmentShaderUniforms(nextUniforms, sdfRenderSettings);
+  return nextUniforms;
+}
+
+function updateArrowTextDefaultFragmentShaderUniforms(
+  uniforms: Record<string, unknown>,
+  sdfRenderSettings: TextSdfRenderSettings
+): void {
+  uniforms['textUsesSdf'] = sdfRenderSettings.sdf ? 1 : 0;
+  uniforms['textSdfThreshold'] = sdfRenderSettings.threshold;
+  uniforms['textSdfSmoothing'] = sdfRenderSettings.smoothing;
 }
 
 function assertColumnAvailable(table: arrow.Table, columnName: string): void {
@@ -1543,7 +1855,8 @@ function createStorageTextBatchRowState(
   device: Device,
   props: ArrowStorageTextInputProps,
   batchInput: ResolvedArrowStorageTextBatchInputs,
-  defaultBuffers: StorageTextDefaultBuffers
+  defaultBuffers: StorageTextDefaultBuffers,
+  sdfRenderSettings: TextSdfRenderSettings
 ): StorageTextBatchRowState {
   const packedClipRects = batchInput.clipRects
     ? packStorageTextClipRects(batchInput.clipRects)
@@ -1562,7 +1875,11 @@ function createStorageTextBatchRowState(
   const rowClipRectsBuffer = rowClipRectsVector
     ? getStorageTextGpuVectorBuffer(rowClipRectsVector)
     : defaultBuffers.clipRectsBuffer;
-  const styleConfigData = createStorageTextStyleConfigData(props, batchInput.batchRowIndexBase);
+  const styleConfigData = createStorageTextStyleConfigData(
+    props,
+    batchInput.batchRowIndexBase,
+    sdfRenderSettings
+  );
   const styleConfigBuffer = new DynamicBuffer(device, {
     id: `${props.id || 'storage-text-model'}-style-config-${batchInput.batchRowIndexBase}`,
     usage: Buffer.UNIFORM | Buffer.COPY_DST | Buffer.COPY_SRC,
@@ -1625,7 +1942,13 @@ function refreshArrowStorageTextRowBindings(
   try {
     nextBatches = textInputs.batches.map((batchInput, batchIndex) => {
       const previousBatch = storageState.batches[batchIndex];
-      const rowState = createStorageTextBatchRowState(device, props, batchInput, defaultBuffers);
+      const rowState = createStorageTextBatchRowState(
+        device,
+        props,
+        batchInput,
+        defaultBuffers,
+        storageState.sdfRenderSettings
+      );
       nextOwnedRowBindingResources.push(...rowState.ownedResources);
       rowStorageByteLength += rowState.ownedByteLength;
       return {
@@ -1633,9 +1956,7 @@ function refreshArrowStorageTextRowBindings(
         batchRowIndexBase: previousBatch.batchRowIndexBase,
         rowCount: previousBatch.rowCount,
         glyphCount: previousBatch.glyphCount,
-        generatedGlyphOffsetsBuffer: previousBatch.generatedGlyphOffsetsBuffer,
-        generatedGlyphIndicesBuffer: previousBatch.generatedGlyphIndicesBuffer,
-        generatedRowIndicesBuffer: previousBatch.generatedRowIndicesBuffer
+        compactGlyphVertexData: previousBatch.compactGlyphVertexData
       };
     });
   } catch (error) {
@@ -1682,9 +2003,7 @@ function syncArrowStorageTextStateFirstBatch(storageState: ArrowStorageTextState
   storageState.rowAlignmentBaselinesBuffer = firstBatch.rowAlignmentBaselinesBuffer;
   storageState.rowClipRectsBuffer = firstBatch.rowClipRectsBuffer;
   storageState.styleConfigBuffer = firstBatch.styleConfigBuffer;
-  storageState.generatedGlyphOffsetsBuffer = firstBatch.generatedGlyphOffsetsBuffer;
-  storageState.generatedGlyphIndicesBuffer = firstBatch.generatedGlyphIndicesBuffer;
-  storageState.generatedRowIndicesBuffer = firstBatch.generatedRowIndicesBuffer;
+  storageState.compactGlyphVertexData = firstBatch.compactGlyphVertexData;
 }
 
 function destroyStorageTextResources(resources: StorageTextOwnedResource[]): void {
@@ -1703,7 +2022,8 @@ function replaceOwnedStorageTextResources(
 
 function createStorageTextStyleConfigData(
   props: ArrowStorageTextInputProps,
-  batchRowIndexBase: number
+  batchRowIndexBase: number,
+  sdfRenderSettings: TextSdfRenderSettings
 ): Uint32Array {
   const arrayBuffer = new ArrayBuffer(64);
   const floatValues = new Float32Array(arrayBuffer);
@@ -1723,8 +2043,8 @@ function createStorageTextStyleConfigData(
   uintValues[11] = props.pixelOffsets ? 1 : 0;
   uintValues[12] = props.clipRects ? 1 : 0;
   uintValues[13] = batchRowIndexBase;
-  uintValues[14] = 0;
-  uintValues[15] = 0;
+  floatValues[14] = sdfRenderSettings.sdf ? sdfRenderSettings.threshold : BITMAP_TEXT_SDF_THRESHOLD;
+  floatValues[15] = sdfRenderSettings.smoothing;
   return uintValues;
 }
 

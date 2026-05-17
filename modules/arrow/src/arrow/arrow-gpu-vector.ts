@@ -38,8 +38,8 @@ export type GPUVectorProps = GPUVectorBufferProps;
 
 /** Constructor props that upload an Arrow vector into a new GPU buffer. */
 export type GPUVectorFromArrowProps<T extends arrow.DataType = AttributeArrowType> = {
-  /** Discriminator for Arrow-vector upload construction. */
-  type: 'arrow';
+  /** Optional discriminator for Arrow-vector upload construction. Inferred from `vector` when omitted. */
+  type?: 'arrow';
   /** Name used when this vector is added to an {@link GPUTable}. */
   name: string;
   /** Device that creates the GPU buffer. */
@@ -202,7 +202,7 @@ export class GPUVector<T extends arrow.DataType = AttributeArrowType> {
             vector: vector!,
             bufferProps: props
           } satisfies GPUVectorFromArrowProps<T>)
-        : deviceOrProps;
+        : normalizeGPUVectorCreateProps(deviceOrProps);
 
     switch (constructionProps.type) {
       case 'arrow': {
@@ -549,6 +549,22 @@ export class GPUVector<T extends arrow.DataType = AttributeArrowType> {
     const nextCapacityRows = Math.max(requiredRows, grownRows);
     this._buffer.ensureSize(nextCapacityRows * this.byteStride, {preserveData: true});
   }
+}
+
+type NormalizedGPUVectorCreateProps<T extends arrow.DataType = AttributeArrowType> =
+  | (GPUVectorFromArrowProps<T> & {type: 'arrow'})
+  | (T extends AttributeArrowType ? GPUVectorFromBufferProps<T> : never)
+  | GPUVectorFromInterleavedProps
+  | GPUVectorFromDataProps<T>
+  | (T extends AttributeArrowType ? GPUVectorFromAppendableProps<T> : never);
+
+function normalizeGPUVectorCreateProps<T extends arrow.DataType>(
+  props: GPUVectorCreateProps<T>
+): NormalizedGPUVectorCreateProps<T> {
+  if ('vector' in props && props.type === undefined) {
+    return {...props, type: 'arrow'};
+  }
+  return props as NormalizedGPUVectorCreateProps<T>;
 }
 
 function getArrowVectorStride(vector: arrow.Vector<AttributeArrowType>): number {

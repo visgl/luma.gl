@@ -65,7 +65,6 @@ type TextDataset = {
 };
 type ArrowTextInput = {
   positions: GPUVector<arrow.FixedSizeList<arrow.Float32>>;
-  labelVectors: Record<string, GPUVector>;
   texts: GPUVector<arrow.Utf8>;
   clipRects: GPUVector<arrow.FixedSizeList<arrow.Int16>>;
   colors: GPUVector<arrow.FixedSizeList<arrow.Uint8>>;
@@ -674,7 +673,6 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
   readonly textInputs: Partial<Record<TextDatasetKind, ArrowTextInput>> = {};
   readonly textInputPromises: Partial<Record<TextDatasetKind, Promise<ArrowTextInput>>> = {};
   positions!: GPUVector<arrow.FixedSizeList<arrow.Float32>>;
-  labelVectors!: Record<string, GPUVector>;
   texts!: GPUVector<arrow.Utf8>;
   clipRects!: GPUVector<arrow.FixedSizeList<arrow.Int16>>;
   colors!: GPUVector<arrow.FixedSizeList<arrow.Uint8>>;
@@ -720,9 +718,8 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     if (this.isFinalized) {
       return;
     }
-    const {positions, labelVectors, texts, clipRects, colors, angles, sizes} = defaultTextInput;
+    const {positions, texts, clipRects, colors, angles, sizes} = defaultTextInput;
     this.positions = positions;
-    this.labelVectors = labelVectors;
     this.texts = texts;
     this.clipRects = clipRects;
     this.colors = colors;
@@ -783,9 +780,12 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
   createTextModel(modelKind: TextModelKind): ActiveTextModel {
     const commonProps: ArrowTextModelProps = {
       id: 'arrow-text-2d',
-      labelVectors: this.labelVectors,
+      positions: this.positions,
       texts: this.texts,
       clipRects: this.clipRects,
+      ...(this.colorEnabled ? {colors: this.colors} : {}),
+      ...(this.angleEnabled ? {angles: this.angles} : {}),
+      ...(this.sizeEnabled ? {sizes: this.sizes} : {}),
       characterSet: CHARACTER_SET,
       fontSettings: {
         fontFamily: 'Monaco, Menlo, monospace',
@@ -950,9 +950,7 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     this.pickingModel?.destroy();
     this.textModel?.destroy();
     for (const textInput of Object.values(this.textInputs)) {
-      for (const vector of Object.values(textInput?.labelVectors || {})) {
-        vector.destroy();
-      }
+      textInput?.positions.destroy();
       textInput?.texts.destroy();
       textInput?.clipRects.destroy();
       textInput?.colors.destroy();
@@ -989,11 +987,12 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
       attributes:
         textModel instanceof ArrowStorageTextModel
           ? {
-              glyphOffsets: textModel.generatedGlyphOffsetsBuffer,
-              glyphIndices: textModel.generatedGlyphIndicesBuffer,
-              rowIndices: textModel.generatedRowIndicesBuffer
+              compactGlyphVertexData: textModel.compactGlyphVertexData
             }
-          : textModel.arrowGPUTable!.attributes,
+          : {
+              ...textModel.arrowGPUTable!.attributes,
+              expandedGlyphVertexData: textModel.expandedGlyphVertexData
+            },
       instanceCount: textModel.instanceCount,
       vertexCount: 6,
       bindings: {...textModel.bindings},
@@ -1061,9 +1060,8 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
       return;
     }
     this.textDatasetKind = nextDatasetKind;
-    const {positions, labelVectors, texts, clipRects, colors, angles, sizes} = nextTextInput;
+    const {positions, texts, clipRects, colors, angles, sizes} = nextTextInput;
     this.positions = positions;
-    this.labelVectors = labelVectors;
     this.texts = texts;
     this.clipRects = clipRects;
     this.colors = colors;
@@ -1285,45 +1283,36 @@ function makeArrowTextInput(device: Device, dataset: TextDataset): ArrowTextInpu
   const angleVector = makeFloat32ArrowVector(angles);
   const sizeVector = makeFloat32ArrowVector(sizes);
   const positionsGpuVector = new GPUVector({
-    type: 'arrow',
-    name: 'positions',
     device,
+    name: 'positions',
     vector: positionVector
   });
 
   return {
     positions: positionsGpuVector,
-    labelVectors: {
-      positions: positionsGpuVector
-    },
     texts: new GPUVector({
-      type: 'arrow',
-      name: 'texts',
       device,
+      name: 'texts',
       vector: texts
     }),
     clipRects: new GPUVector({
-      type: 'arrow',
-      name: 'clipRects',
       device,
+      name: 'clipRects',
       vector: clipRectVector
     }),
     colors: new GPUVector({
-      type: 'arrow',
-      name: 'colors',
       device,
+      name: 'colors',
       vector: colorVector
     }),
     angles: new GPUVector({
-      type: 'arrow',
-      name: 'angles',
       device,
+      name: 'angles',
       vector: angleVector
     }),
     sizes: new GPUVector({
-      type: 'arrow',
-      name: 'sizes',
       device,
+      name: 'sizes',
       vector: sizeVector
     }),
     arrowVectorBuildTimeMs: getNow() - arrowVectorBuildStartTime
