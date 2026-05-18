@@ -11,6 +11,7 @@ import {
 } from '@luma.gl/core';
 import {
   ArrowModel,
+  GPURecordBatch,
   GPUVector,
   getArrowVectorBufferSource,
   isNumericArrowType,
@@ -76,6 +77,16 @@ type TextSdfRenderSettings = {
   sdf: boolean;
   threshold: number;
   smoothing: number;
+};
+
+type ResolvedCharacterMapping = {
+  mapping: CharacterMapping;
+  baselineOffset: number;
+  lineHeight: number;
+  characterSet?: Set<string>;
+  fontAtlasManager?: FontAtlasManager;
+  fontAtlas?: FontAtlas;
+  sdfRenderSettings: TextSdfRenderSettings;
 };
 
 const DEFAULT_ARROW_TEXT_SHADER_LAYOUT: ShaderLayout = {
@@ -393,7 +404,7 @@ export type ArrowTextGlyphTable = {
 
 export type ArrowTextModelProps = Omit<
   ArrowModelProps,
-  'arrowTable' | 'arrowGPUTable' | 'streamingArrowGPUTable' | 'arrowCount'
+  'arrowTable' | 'arrowGPUTable' | 'arrowCount'
 > & {
   /** GPU-resident label origins aligned one-for-one with `texts`. */
   positions: GPUVector<arrow.FixedSizeList<arrow.Float32>>;
@@ -543,6 +554,9 @@ export class ArrowTextModel extends ArrowModel {
   renderBatches: ArrowTextRenderBatchState[];
   private defaultFragmentShaderUniforms?: Record<string, unknown>;
   private textProps: ArrowTextModelProps;
+  private mappingState: ResolvedCharacterMapping;
+  private processedTextBatchCount: number;
+  private processedTextRowCount: number;
 
   constructor(device: Device, props: ArrowTextModelProps) {
     const prepared = prepareArrowTextModel(device, props);
@@ -558,6 +572,9 @@ export class ArrowTextModel extends ArrowModel {
     this.expandedGlyphVertexData = prepared.expandedGlyphVertexData;
     this.renderBatches = prepared.renderBatches;
     this.defaultFragmentShaderUniforms = prepared.defaultFragmentShaderUniforms;
+    this.mappingState = prepared.mappingState;
+    this.processedTextBatchCount = props.texts.data.length;
+    this.processedTextRowCount = props.texts.length;
   }
 
   /** Rebuild generated glyph attributes when label rows, text, or font layout inputs change. */
@@ -595,6 +612,9 @@ export class ArrowTextModel extends ArrowModel {
     this.glyphAttributeByteLength = prepared.glyphTable.attributeByteLength;
     this.expandedGlyphVertexData = prepared.expandedGlyphVertexData;
     this.renderBatches = prepared.renderBatches;
+    this.mappingState = prepared.mappingState;
+    this.processedTextBatchCount = nextProps.texts.data.length;
+    this.processedTextRowCount = nextProps.texts.length;
     if (this.defaultFragmentShaderUniforms && prepared.defaultFragmentShaderUniforms) {
       updateArrowTextDefaultFragmentShaderUniforms(
         this.defaultFragmentShaderUniforms,
@@ -608,6 +628,94 @@ export class ArrowTextModel extends ArrowModel {
     }
     this.setInstanceCount(prepared.glyphTable.glyphLayout.glyphCount);
     this.setNeedsRedraw('Arrow text glyph table updated');
+  }
+
+  /** Converts only newly appended source GPUVector batches into retained glyph render batches. */
+  appendTextBatches(props: Partial<ArrowTextModelProps>): void {
+    const nextProps = {...this.textProps, ...props};
+    assertArrowTextAppendProps(props);
+    assertArrowTextVectorTypes(nextProps);
+    assertArrowTextVectorBatchAlignment(nextProps);
+    assertArrowTextAppendPrefixStable(this.textProps, nextProps, this.processedTextBatchCount);
+
+    const nextBatchCount = nextProps.texts.data.length;
+    if (nextBatchCount < this.processedTextBatchCount) {
+      throw new Error('ArrowTextModel appended text batches cannot remove existing batches');
+    }
+    if (nextBatchCount === this.processedTextBatchCount) {
+      this.textProps = nextProps;
+      return;
+    }
+    const arrowGPUTable = this.arrowGPUTable;
+    if (!arrowGPUTable) {
+      throw new Error('ArrowTextModel appended text batches require an Arrow GPU render table');
+    }
+
+    const shaderLayout = resolveArrowTextShaderLayout(nextProps);
+    let batchRowIndexBase = this.processedTextRowCount;
+    for (let batchIndex = this.processedTextBatchCount; batchIndex < nextBatchCount; batchIndex++) {
+      const batchInputs = resolveArrowTextBatchInputs(nextProps, batchIndex);
+      const glyphTable = buildArrowTextGlyphTable({
+        labelTable: batchInputs.labelTable,
+        texts: batchInputs.texts,
+        clipRects: batchInputs.clipRects,
+        mapping: this.mappingState.mapping,
+        baselineOffset: this.mappingState.baselineOffset,
+        lineHeight: this.mappingState.lineHeight,
+        characterSet: this.mappingState.characterSet,
+        rowIndexBase: batchRowIndexBase
+      });
+      const generatedBufferBatches = planGeneratedBufferBatches({
+        device: this.device,
+        recordOffsets: glyphTable.glyphLayout.startIndices,
+        recordByteStride: batchInputs.clipRects
+          ? CLIPPED_EXPANDED_GLYPH_VERTEX_BYTE_STRIDE
+          : EXPANDED_GLYPH_VERTEX_BYTE_STRIDE,
+        resourceLabel: 'ArrowTextModel expanded glyph vertex data'
+      });
+      const renderTable = createArrowTextRenderTable(glyphTable.table, generatedBufferBatches);
+
+      for (const recordBatch of renderTable.batches) {
+        arrowGPUTable.addBatch(
+          new GPURecordBatch(this.device, recordBatch, {
+            shaderLayout,
+            arrowPaths: nextProps.arrowPaths,
+            bufferProps: nextProps.arrowBufferProps,
+            allowWebGLOnlyFormats: nextProps.allowWebGLOnlyFormats
+          })
+        );
+      }
+
+      for (const generatedBufferBatch of generatedBufferBatches) {
+        const expandedGlyphVertexState = createExpandedGlyphVertexData(this.device, nextProps, {
+          glyphTable,
+          shaderLayout,
+          generatedBufferBatch,
+          rowIndexBase: batchRowIndexBase
+        });
+        this.renderBatches.push({
+          rowStart: batchRowIndexBase + generatedBufferBatch.rowStart,
+          rowEnd: batchRowIndexBase + generatedBufferBatch.rowEnd,
+          glyphCount: generatedBufferBatch.recordCount,
+          expandedGlyphVertexData: expandedGlyphVertexState.buffer
+        });
+      }
+
+      this.glyphLayout = appendArrowGlyphLayout(this.glyphLayout, glyphTable.glyphLayout);
+      this.glyphTable = new arrow.Table(this.glyphTable.schema, [
+        ...this.glyphTable.batches,
+        ...glyphTable.table.batches
+      ]);
+      this.glyphAttributeBuildTimeMs += glyphTable.glyphAttributeBuildTimeMs;
+      this.glyphAttributeByteLength += glyphTable.attributeByteLength;
+      batchRowIndexBase += batchInputs.texts.length;
+    }
+
+    this.textProps = nextProps;
+    this.processedTextBatchCount = nextBatchCount;
+    this.processedTextRowCount = nextProps.texts.length;
+    this.setInstanceCount(this.glyphLayout.glyphCount);
+    this.setNeedsRedraw('Arrow text glyph batches appended');
   }
 
   override draw(renderPass: RenderPass): boolean {
@@ -758,6 +866,20 @@ export class ArrowStorageTextModel extends Model {
     this.setNeedsRedraw('Arrow storage text state updated');
   }
 
+  /** Converts only newly appended source GPUVector batches into retained storage render batches. */
+  appendTextBatches(props: Partial<ArrowStorageTextInputProps>): void {
+    if (!this.ownsStorageState) {
+      throw new Error('ArrowStorageTextModel appendTextBatches() requires owned storage state');
+    }
+    const nextProps = {...this.textProps, ...props} as ArrowStorageTextInputProps;
+    assertArrowStorageTextAppendProps(props);
+    appendArrowStorageTextStateBatches(this.device, nextProps, this.storageState);
+    this.textProps = nextProps;
+    this.applyStorageState(this.storageState);
+    this.setInstanceCount(this.storageState.glyphCount);
+    this.setNeedsRedraw('Arrow storage text glyph batches appended');
+  }
+
   override draw(renderPass: RenderPass): boolean {
     let drawSuccess = true;
     for (const renderBatch of this.storageState.renderBatches) {
@@ -828,6 +950,7 @@ export function buildArrowTextGlyphTable(props: {
   baselineOffset: number;
   lineHeight: number;
   characterSet?: Set<string>;
+  rowIndexBase?: number;
 }): ArrowTextGlyphTable {
   if (props.labelTable.numRows !== props.texts.length) {
     throw new Error('ArrowTextModel requires labelTable rows to match UTF-8 text rows');
@@ -882,7 +1005,7 @@ export function buildArrowTextGlyphTable(props: {
   }
   columns[ROW_INDICES_COLUMN] = makeNumericArrowVector(
     new arrow.Uint32(),
-    makeGlyphRowIndices(glyphLayout.startIndices)
+    makeGlyphRowIndices(glyphLayout.startIndices, props.rowIndexBase)
   );
   const attributeByteLength = getGeneratedAttributeByteLength(columns);
   const glyphAttributeBuildTimeMs = getNow() - glyphAttributeBuildStartTime;
@@ -933,6 +1056,49 @@ function resolveArrowTextInputs(props: ArrowTextModelProps): ResolvedArrowTextIn
     texts: texts as arrow.Vector<arrow.Utf8>,
     clipRects
   };
+}
+
+function resolveArrowTextBatchInputs(
+  props: ArrowTextModelProps,
+  batchIndex: number
+): ResolvedArrowTextInputs {
+  const textData = props.texts.data[batchIndex];
+  const positionData = props.positions.data[batchIndex];
+  if (!textData?.sourceData || !positionData?.sourceData) {
+    throw new Error('ArrowTextModel appended batches require retained text and position sources');
+  }
+  const columns: Record<string, arrow.Vector> = {
+    positions: new arrow.Vector([positionData.sourceData])
+  };
+  appendArrowTextBatchSourceColumn(columns, 'colors', props.colors, batchIndex);
+  appendArrowTextBatchSourceColumn(columns, 'angles', props.angles, batchIndex);
+  appendArrowTextBatchSourceColumn(columns, 'sizes', props.sizes, batchIndex);
+  appendArrowTextBatchSourceColumn(columns, 'pixelOffsets', props.pixelOffsets, batchIndex);
+
+  const clipRectSourceData = props.clipRects?.data[batchIndex]?.sourceData;
+  return {
+    labelTable: new arrow.Table(columns),
+    texts: new arrow.Vector([textData.sourceData]) as arrow.Vector<arrow.Utf8>,
+    clipRects: clipRectSourceData
+      ? (new arrow.Vector([clipRectSourceData]) as arrow.Vector<arrow.FixedSizeList<arrow.Int16>>)
+      : undefined
+  };
+}
+
+function appendArrowTextBatchSourceColumn(
+  columns: Record<string, arrow.Vector>,
+  columnName: string,
+  vector: GPUVector<any> | undefined,
+  batchIndex: number
+): void {
+  if (!vector) {
+    return;
+  }
+  const sourceData = vector.data[batchIndex]?.sourceData;
+  if (!sourceData) {
+    throw new Error(`ArrowTextModel appended ${columnName} batches require retained Arrow sources`);
+  }
+  columns[columnName] = new arrow.Vector([sourceData]);
 }
 
 function assertArrowTextVectorTypes(props: ArrowTextModelProps): void {
@@ -989,6 +1155,76 @@ function assertArrowTextVectorRowAlignment(props: ArrowTextModelProps): void {
       throw new Error(
         `ArrowTextModel ${name} rows must match ${referenceName} rows (${vector.length} !== ${referenceVector.length})`
       );
+    }
+  }
+}
+
+function assertArrowTextVectorBatchAlignment(props: ArrowTextModelProps): void {
+  assertArrowTextVectorRowAlignment(props);
+  const rowInputs = getArrowTextRowInputs(props);
+  const [referenceName, referenceVector] = rowInputs[0];
+  for (const [name, vector] of rowInputs.slice(1)) {
+    if (vector.data.length !== referenceVector.data.length) {
+      throw new Error(`ArrowTextModel ${name} batch count must match ${referenceName} batch count`);
+    }
+    for (let batchIndex = 0; batchIndex < vector.data.length; batchIndex++) {
+      if (vector.data[batchIndex].length !== referenceVector.data[batchIndex].length) {
+        throw new Error(
+          `ArrowTextModel ${name} batch ${batchIndex} rows must match ${referenceName}`
+        );
+      }
+    }
+  }
+}
+
+function getArrowTextRowInputs(props: ArrowTextModelProps): Array<[string, GPUVector<any>]> {
+  return [
+    ['positions', props.positions],
+    ['texts', props.texts],
+    ['colors', props.colors],
+    ['angles', props.angles],
+    ['sizes', props.sizes],
+    ['pixelOffsets', props.pixelOffsets],
+    ['clipRects', props.clipRects]
+  ].filter(([, vector]) => vector !== undefined) as Array<[string, GPUVector<any>]>;
+}
+
+function assertArrowTextAppendProps(props: Partial<ArrowTextModelProps>): void {
+  const appendablePropNames = new Set([
+    'positions',
+    'texts',
+    'colors',
+    'angles',
+    'sizes',
+    'pixelOffsets',
+    'clipRects'
+  ]);
+  for (const propName of Object.keys(props)) {
+    if (!appendablePropNames.has(propName)) {
+      throw new Error(
+        `ArrowTextModel appendTextBatches() cannot update non-row prop "${propName}"`
+      );
+    }
+  }
+}
+
+function assertArrowTextAppendPrefixStable(
+  previousProps: ArrowTextModelProps,
+  nextProps: ArrowTextModelProps,
+  processedBatchCount: number
+): void {
+  const previousInputs = new Map(getArrowTextRowInputs(previousProps));
+  for (const [name, nextVector] of getArrowTextRowInputs(nextProps)) {
+    const previousVector = previousInputs.get(name);
+    if (!previousVector && processedBatchCount > 0) {
+      throw new Error(`ArrowTextModel appendTextBatches() cannot add prior ${name} rows`);
+    }
+    for (let batchIndex = 0; batchIndex < processedBatchCount; batchIndex++) {
+      if (previousVector?.data[batchIndex] !== nextVector.data[batchIndex]) {
+        throw new Error(
+          `ArrowTextModel appendTextBatches() requires existing ${name} batches to stay unchanged`
+        );
+      }
     }
   }
 }
@@ -1133,6 +1369,27 @@ function assertStorageVectorBatchAlignment(props: ArrowStorageTextInputProps): v
   }
 }
 
+function assertArrowStorageTextAppendProps(props: Partial<ArrowStorageTextInputProps>): void {
+  const appendablePropNames = new Set([
+    'positions',
+    'texts',
+    'colors',
+    'angles',
+    'sizes',
+    'pixelOffsets',
+    'textAnchors',
+    'alignmentBaselines',
+    'clipRects'
+  ]);
+  for (const propName of Object.keys(props)) {
+    if (!appendablePropNames.has(propName)) {
+      throw new Error(
+        `ArrowStorageTextModel appendTextBatches() cannot update non-row prop "${propName}"`
+      );
+    }
+  }
+}
+
 function getRetainedGPUVectorSource<T extends arrow.DataType>(
   vector: GPUVector<T>,
   vectorName: string
@@ -1164,6 +1421,7 @@ function prepareArrowTextModel(
   glyphAttributeBuildTimeMs: number;
   sdfRenderSettings: TextSdfRenderSettings;
   defaultFragmentShaderUniforms?: Record<string, unknown>;
+  mappingState: ResolvedCharacterMapping;
 } {
   const textInputs = resolveArrowTextInputs(props);
   const mappingState = resolveCharacterMapping(props, textInputs.texts);
@@ -1180,11 +1438,7 @@ function prepareArrowTextModel(
     lineHeight: mappingState.lineHeight,
     characterSet: mappingState.characterSet
   });
-  const shaderLayout =
-    props.shaderLayout ??
-    (textInputs.clipRects
-      ? DEFAULT_CLIPPED_ARROW_TEXT_SHADER_LAYOUT
-      : DEFAULT_ARROW_TEXT_SHADER_LAYOUT);
+  const shaderLayout = resolveArrowTextShaderLayout(props);
   const generatedBufferBatches = planGeneratedBufferBatches({
     device,
     recordOffsets: glyphTable.glyphLayout.startIndices,
@@ -1197,7 +1451,8 @@ function prepareArrowTextModel(
     createExpandedGlyphVertexData(device, props, {
       glyphTable,
       shaderLayout,
-      generatedBufferBatch
+      generatedBufferBatch,
+      rowIndexBase: 0
     })
   );
   const firstExpandedGlyphVertexState = expandedGlyphVertexStates[0];
@@ -1246,8 +1501,16 @@ function prepareArrowTextModel(
     atlasTexture,
     glyphAttributeBuildTimeMs: glyphTable.glyphAttributeBuildTimeMs,
     sdfRenderSettings: mappingState.sdfRenderSettings,
-    defaultFragmentShaderUniforms
+    defaultFragmentShaderUniforms,
+    mappingState
   };
+}
+
+function resolveArrowTextShaderLayout(props: ArrowTextModelProps): ShaderLayout {
+  return (
+    props.shaderLayout ??
+    (props.clipRects ? DEFAULT_CLIPPED_ARROW_TEXT_SHADER_LAYOUT : DEFAULT_ARROW_TEXT_SHADER_LAYOUT)
+  );
 }
 
 function createArrowTextRenderTable(
@@ -1294,11 +1557,13 @@ function createExpandedGlyphVertexData(
   {
     glyphTable,
     shaderLayout,
-    generatedBufferBatch
+    generatedBufferBatch,
+    rowIndexBase = 0
   }: {
     glyphTable: ArrowTextGlyphTable;
     shaderLayout: ShaderLayout;
     generatedBufferBatch: GeneratedBufferBatch;
+    rowIndexBase?: number;
   }
 ): {
   buffer: Buffer;
@@ -1320,7 +1585,7 @@ function createExpandedGlyphVertexData(
   const int16Values = new Int16Array(arrayBuffer);
   const uint16Values = new Uint16Array(arrayBuffer);
   const uint32Values = new Uint32Array(arrayBuffer);
-  const rowIndices = makeGlyphRowIndices(glyphLayout.startIndices);
+  const rowIndices = makeGlyphRowIndices(glyphLayout.startIndices, rowIndexBase);
 
   for (
     let glyphIndex = generatedBufferBatch.recordStart;
@@ -1414,6 +1679,7 @@ export function createArrowStorageTextState(
 
   let glyphStream: GpuExpandedTextStream | undefined;
   let glyphFrames: StorageGlyphFrameState | undefined;
+  let utf8GlyphDefinitions: ReturnType<typeof buildGpuUtf8GlyphDefinitions> | undefined;
   let glyphCount = 0;
   let glyphAttributeBuildTimeMs = 0;
   let compactStreamByteLength = 0;
@@ -1435,6 +1701,7 @@ export function createArrowStorageTextState(
       lineHeight: mappingState.lineHeight,
       characterSet: mappingState.characterSet!
     });
+    utf8GlyphDefinitions = glyphDefinitions;
     glyphFrames = createStorageGlyphFrames(device, props, glyphDefinitions.glyphFrames);
     glyphDefinitionStorageByteLength = glyphFrames.byteLength;
     for (const [rowBindingBatchIndex, batchInput] of textInputs.batches.entries()) {
@@ -1675,6 +1942,12 @@ export function createArrowStorageTextState(
       }
     }
   };
+  arrowStorageTextAppendContexts.set(storageState, {
+    defaultBuffers,
+    mappingState,
+    useGpuUtf8Decode,
+    utf8GlyphDefinitions
+  });
   return storageState;
 }
 
@@ -1751,15 +2024,7 @@ function getNow(): number {
 function resolveCharacterMapping(
   props: ArrowTextModelProps | ArrowStorageTextInputProps,
   texts: arrow.Vector<arrow.Utf8>
-): {
-  mapping: CharacterMapping;
-  baselineOffset: number;
-  lineHeight: number;
-  characterSet?: Set<string>;
-  fontAtlasManager?: FontAtlasManager;
-  fontAtlas?: FontAtlas;
-  sdfRenderSettings: TextSdfRenderSettings;
-} {
+): ResolvedCharacterMapping {
   const characterSet =
     props.characterSet === 'auto'
       ? collectArrowCharacterSet(texts)
@@ -1912,6 +2177,18 @@ type StorageGlyphFrameState = {
   buffer: Buffer;
   byteLength: number;
 };
+
+type ArrowStorageTextAppendContext = {
+  defaultBuffers: StorageTextDefaultBuffers;
+  mappingState: ResolvedCharacterMapping;
+  useGpuUtf8Decode: boolean;
+  utf8GlyphDefinitions?: ReturnType<typeof buildGpuUtf8GlyphDefinitions>;
+};
+
+const arrowStorageTextAppendContexts = new WeakMap<
+  ArrowStorageTextState,
+  ArrowStorageTextAppendContext
+>();
 
 function createStorageTextDefaultBuffers(
   device: Device,
@@ -2075,6 +2352,242 @@ function getStorageTextGpuVectorBuffer(vector: GPUVector): Buffer {
   return buffer instanceof DynamicBuffer ? buffer.buffer : buffer;
 }
 
+function appendArrowStorageTextStateBatches(
+  device: Device,
+  props: ArrowStorageTextInputProps,
+  storageState: ArrowStorageTextState
+): void {
+  const appendContext = arrowStorageTextAppendContexts.get(storageState);
+  if (!appendContext) {
+    throw new Error('ArrowStorageTextState cannot append text batches it does not own');
+  }
+  const textInputs = resolveArrowStorageTextInputs(props);
+  assertStorageTextAppendCompatible(storageState, textInputs.batches);
+  if (textInputs.batches.length === storageState.batches.length) {
+    return;
+  }
+
+  for (
+    let batchIndex = storageState.batches.length;
+    batchIndex < textInputs.batches.length;
+    batchIndex++
+  ) {
+    const batchInput = textInputs.batches[batchIndex];
+    const rowState = createStorageTextBatchRowState(
+      device,
+      props,
+      batchInput,
+      appendContext.defaultBuffers,
+      appendContext.mappingState.sdfRenderSettings
+    );
+    const rowBindingBatchIndex = storageState.batches.length;
+    storageState.ownedRowBindingResources.push(...rowState.ownedResources);
+    storageState.rowStorageByteLength += rowState.ownedByteLength;
+
+    if (appendContext.useGpuUtf8Decode) {
+      const glyphDefinitions = appendContext.utf8GlyphDefinitions;
+      if (!glyphDefinitions) {
+        throw new Error('ArrowStorageTextState is missing UTF-8 glyph definitions');
+      }
+      const utf8TextInput = buildGpuUtf8TextInput(batchInput.texts);
+      const glyphMetrics = createStorageGlyphMetrics(
+        device,
+        {id: props.id},
+        glyphDefinitions.glyphMetrics
+      );
+      const glyphLookup = createStorageGlyphLookup(
+        device,
+        {id: props.id},
+        glyphDefinitions.glyphLookup
+      );
+      const generatedBufferBatches = planGeneratedBufferBatches({
+        device,
+        recordOffsets: utf8TextInput.startIndices,
+        recordByteStride: COMPACT_GLYPH_VERTEX_BYTE_STRIDE,
+        maxBatchByteLength: device.limits.maxStorageBufferBindingSize,
+        resourceLabel: 'ArrowStorageTextModel UTF-8 generated glyph vertex data'
+      });
+      for (const generatedBufferBatch of generatedBufferBatches) {
+        const partitionedUtf8TextInput = createPartitionedGpuUtf8TextInput(
+          utf8TextInput,
+          generatedBufferBatch
+        );
+        const utf8Input = createGpuUtf8ExpandedInput(
+          device,
+          {id: props.id},
+          {
+            utf8TextInput: partitionedUtf8TextInput,
+            baselineOffsetY: glyphDefinitions.baselineOffsetY,
+            glyphLookupCount: glyphDefinitions.glyphLookup.length / 2,
+            labelCount: generatedBufferBatch.rowEnd - generatedBufferBatch.rowStart,
+            batchRowIndexBase: batchInput.batchRowIndexBase + generatedBufferBatch.rowStart,
+            rowStorageIndexBase: generatedBufferBatch.rowStart,
+            alignment: createGpuTextAlignmentOptions(
+              props,
+              rowState,
+              appendContext.mappingState.lineHeight
+            )
+          }
+        );
+        const generated = createGpuExpandedGeneratedState(
+          device,
+          {id: props.id},
+          partitionedUtf8TextInput.byteLength
+        );
+        dispatchGpuUtf8ExpandedTextCompute(
+          device,
+          {id: props.id},
+          {
+            utf8Input,
+            glyphLookup,
+            glyphMetrics,
+            generated,
+            outputSlotCount: partitionedUtf8TextInput.byteLength,
+            labelCount: generatedBufferBatch.rowEnd - generatedBufferBatch.rowStart,
+            alignment: {
+              rowTextAnchorsBuffer: getComputeStorageBuffer(rowState.rowTextAnchorsBuffer),
+              rowAlignmentBaselinesBuffer: getComputeStorageBuffer(
+                rowState.rowAlignmentBaselinesBuffer
+              )
+            }
+          }
+        );
+        storageState.renderBatches.push({
+          rowBindingBatchIndex,
+          rowStart: generatedBufferBatch.rowStart,
+          rowEnd: generatedBufferBatch.rowEnd,
+          glyphCount: partitionedUtf8TextInput.byteLength,
+          compactGlyphVertexData: generated.compactGlyphVertexData
+        });
+        storageState.generatedRenderBufferByteLength += generated.byteLength;
+        storageState.transientComputeInputByteLength += utf8Input.byteLength;
+        utf8Input.rowByteRangesBuffer.destroy();
+        utf8Input.utf8BytesBuffer.destroy();
+        utf8Input.expansionConfigBuffer.destroy();
+      }
+      storageState.batches.push({
+        ...rowState,
+        batchRowIndexBase: batchInput.batchRowIndexBase,
+        rowCount: batchInput.texts.length,
+        glyphCount: utf8TextInput.byteLength
+      });
+      storageState.glyphCount += utf8TextInput.byteLength;
+      storageState.glyphAttributeBuildTimeMs += utf8TextInput.textInputBuildTimeMs;
+      storageState.compactStreamBuildTimeMs = storageState.glyphAttributeBuildTimeMs;
+      storageState.compactStreamByteLength += utf8TextInput.inputByteLength;
+      storageState.transientComputeInputByteLength +=
+        glyphLookup.byteLength + glyphMetrics.byteLength;
+      glyphMetrics.buffer.destroy();
+      glyphLookup.buffer.destroy();
+    } else {
+      const batchGlyphStream = buildGpuExpandedTextStream({
+        texts: batchInput.texts,
+        mapping: appendContext.mappingState.mapping,
+        baselineOffset: appendContext.mappingState.baselineOffset,
+        lineHeight: appendContext.mappingState.lineHeight,
+        characterSet: appendContext.mappingState.characterSet
+      });
+      const glyphMetrics = createStorageGlyphMetrics(
+        device,
+        {id: props.id},
+        batchGlyphStream.glyphMetrics
+      );
+      const generatedBufferBatches = planGeneratedBufferBatches({
+        device,
+        recordOffsets: batchGlyphStream.startIndices,
+        recordByteStride: COMPACT_GLYPH_VERTEX_BYTE_STRIDE,
+        maxBatchByteLength: device.limits.maxStorageBufferBindingSize,
+        resourceLabel: 'ArrowStorageTextModel compact generated glyph vertex data'
+      });
+      for (const generatedBufferBatch of generatedBufferBatches) {
+        const partitionedGlyphStream = createPartitionedGpuExpandedTextStream(
+          batchGlyphStream,
+          generatedBufferBatch
+        );
+        const compactInput = createGpuExpandedCompactInput(
+          device,
+          {id: props.id},
+          partitionedGlyphStream,
+          batchInput.batchRowIndexBase + generatedBufferBatch.rowStart,
+          createGpuTextAlignmentOptions(props, rowState, appendContext.mappingState.lineHeight),
+          generatedBufferBatch.rowStart
+        );
+        const generated = createGpuExpandedGeneratedState(
+          device,
+          {id: props.id},
+          partitionedGlyphStream.glyphCount
+        );
+        dispatchGpuExpandedTextCompute(
+          device,
+          {id: props.id},
+          {
+            compactInput,
+            glyphMetrics,
+            generated,
+            glyphCount: partitionedGlyphStream.glyphCount,
+            labelCount: generatedBufferBatch.rowEnd - generatedBufferBatch.rowStart,
+            alignment: {
+              rowTextAnchorsBuffer: getComputeStorageBuffer(rowState.rowTextAnchorsBuffer),
+              rowAlignmentBaselinesBuffer: getComputeStorageBuffer(
+                rowState.rowAlignmentBaselinesBuffer
+              )
+            }
+          }
+        );
+        storageState.renderBatches.push({
+          rowBindingBatchIndex,
+          rowStart: generatedBufferBatch.rowStart,
+          rowEnd: generatedBufferBatch.rowEnd,
+          glyphCount: partitionedGlyphStream.glyphCount,
+          compactGlyphVertexData: generated.compactGlyphVertexData
+        });
+        storageState.generatedRenderBufferByteLength += generated.byteLength;
+        storageState.transientComputeInputByteLength += compactInput.byteLength;
+        compactInput.glyphRangesBuffer.destroy();
+        compactInput.glyphIdsBuffer.destroy();
+        compactInput.expansionConfigBuffer.destroy();
+      }
+      storageState.batches.push({
+        ...rowState,
+        batchRowIndexBase: batchInput.batchRowIndexBase,
+        rowCount: batchInput.texts.length,
+        glyphCount: batchGlyphStream.glyphCount
+      });
+      storageState.glyphCount += batchGlyphStream.glyphCount;
+      storageState.glyphAttributeBuildTimeMs += batchGlyphStream.glyphStreamBuildTimeMs;
+      storageState.compactStreamBuildTimeMs = storageState.glyphAttributeBuildTimeMs;
+      storageState.compactStreamByteLength += batchGlyphStream.compactStreamByteLength;
+      storageState.transientComputeInputByteLength += glyphMetrics.byteLength;
+      glyphMetrics.buffer.destroy();
+    }
+  }
+
+  storageState.glyphAttributeByteLength = storageState.generatedRenderBufferByteLength;
+  syncArrowStorageTextStateFirstBatch(storageState);
+}
+
+function assertStorageTextAppendCompatible(
+  storageState: ArrowStorageTextState,
+  batches: ResolvedArrowStorageTextBatchInputs[]
+): void {
+  if (batches.length < storageState.batches.length) {
+    throw new Error('ArrowStorageTextModel appended text batches cannot remove existing batches');
+  }
+  for (const [batchIndex, existingBatch] of storageState.batches.entries()) {
+    const batchInput = batches[batchIndex];
+    if (
+      !batchInput ||
+      batchInput.batchRowIndexBase !== existingBatch.batchRowIndexBase ||
+      batchInput.texts.length !== existingBatch.rowCount ||
+      batchInput.positionsBuffer !== existingBatch.rowPositionsBuffer
+    ) {
+      throw new Error(
+        'ArrowStorageTextModel appendTextBatches() requires existing row batches to stay unchanged'
+      );
+    }
+  }
+}
+
 function refreshArrowStorageTextRowBindings(
   device: Device,
   props: ArrowStorageTextInputProps,
@@ -2119,6 +2632,10 @@ function refreshArrowStorageTextRowBindings(
   );
   storageState.batches = nextBatches;
   storageState.rowStorageByteLength = rowStorageByteLength;
+  const appendContext = arrowStorageTextAppendContexts.get(storageState);
+  if (appendContext) {
+    appendContext.defaultBuffers = defaultBuffers;
+  }
   syncArrowStorageTextStateFirstBatch(storageState);
 }
 
@@ -2569,11 +3086,40 @@ function makeNumericArrowVector<TypeT extends NumericArrowType>(
   );
 }
 
-function makeGlyphRowIndices(startIndices: number[]): Uint32Array {
+function appendArrowGlyphLayout(
+  glyphLayout: ArrowGlyphLayout,
+  appendedGlyphLayout: ArrowGlyphLayout
+): ArrowGlyphLayout {
+  const nextStartIndices = [
+    ...glyphLayout.startIndices,
+    ...appendedGlyphLayout.startIndices
+      .slice(1)
+      .map(startIndex => startIndex + glyphLayout.glyphCount)
+  ];
+  const glyphOffsets = new Int16Array(
+    glyphLayout.glyphOffsets.length + appendedGlyphLayout.glyphOffsets.length
+  );
+  glyphOffsets.set(glyphLayout.glyphOffsets);
+  glyphOffsets.set(appendedGlyphLayout.glyphOffsets, glyphLayout.glyphOffsets.length);
+  const glyphFrames = new Uint16Array(
+    glyphLayout.glyphFrames.length + appendedGlyphLayout.glyphFrames.length
+  );
+  glyphFrames.set(glyphLayout.glyphFrames);
+  glyphFrames.set(appendedGlyphLayout.glyphFrames, glyphLayout.glyphFrames.length);
+  return {
+    startIndices: nextStartIndices,
+    glyphCount: glyphLayout.glyphCount + appendedGlyphLayout.glyphCount,
+    glyphOffsets,
+    glyphFrames,
+    characterSet: glyphLayout.characterSet
+  };
+}
+
+function makeGlyphRowIndices(startIndices: number[], rowIndexBase: number = 0): Uint32Array {
   const glyphCount = startIndices[startIndices.length - 1] ?? 0;
   const rowIndices = new Uint32Array(glyphCount);
   for (let rowIndex = 0; rowIndex < startIndices.length - 1; rowIndex++) {
-    rowIndices.fill(rowIndex, startIndices[rowIndex], startIndices[rowIndex + 1]);
+    rowIndices.fill(rowIndexBase + rowIndex, startIndices[rowIndex], startIndices[rowIndex + 1]);
   }
   return rowIndices;
 }

@@ -276,7 +276,7 @@ export function getArrowTypeByteStride(type: arrow.DataType): number {
 /** Reject nullable Arrow chunks that cannot be uploaded directly into GPU attribute buffers. */
 export function validateArrowGPUDataDirectUpload(
   name: string,
-  data: arrow.Data<AttributeArrowType>
+  data: arrow.Data<AttributeArrowType | arrow.Utf8>
 ): void {
   if (data.nullCount > 0) {
     throw new Error(`GPUVector "${name}" does not support nullable data`);

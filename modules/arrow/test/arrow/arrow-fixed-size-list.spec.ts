@@ -631,10 +631,42 @@ test('GPUVector addToLastData appends Arrow data into appendable vector storage'
   t.equal(gpuVector.length, 4, 'tracks rows appended into the final mutable batch');
   t.equal(gpuVector.data.length, 2, 'exposes one GPU data range per appended Arrow chunk');
   t.equal(gpuVector.data[1].byteOffset, 8, 'tracks the later append byte offset');
+  t.equal(gpuVector.data[0].sourceData, firstData, 'retains the first appended Arrow source');
+  t.equal(gpuVector.data[1].sourceData, secondData, 'retains the later appended Arrow source');
   t.ok((gpuVector.capacityRows ?? 0) >= 4, 'grows appendable capacity as needed');
 
   gpuVector.resetLastBatch();
   t.equal(gpuVector.length, 0, 'clears logical rows without dropping the allocation');
+  gpuVector.destroy();
+  t.end();
+});
+
+test('GPUVector addToLastData appends UTF-8 Arrow data into appendable vector storage', t => {
+  const device = new NullDevice({});
+  const firstData = arrow.vectorFromArray(['alpha'], new arrow.Utf8()).data[0];
+  const secondData = arrow.vectorFromArray(['beta', 'g'], new arrow.Utf8()).data[0];
+  const gpuVector = new GPUVector<arrow.Utf8>({
+    type: 'appendable',
+    name: 'texts',
+    device,
+    arrowType: new arrow.Utf8(),
+    initialCapacityRows: 1
+  });
+
+  gpuVector.addToLastData(firstData);
+  gpuVector.addToLastData(secondData);
+
+  t.equal(gpuVector.length, 3, 'tracks UTF-8 logical rows across appends');
+  t.equal(gpuVector.data.length, 2, 'preserves UTF-8 append chunk boundaries');
+  t.equal(gpuVector.data[0].sourceData, firstData, 'retains the first UTF-8 source chunk');
+  t.equal(gpuVector.data[1].sourceData, secondData, 'retains the later UTF-8 source chunk');
+  t.ok(gpuVector.data[1].byteOffset > 0, 'writes later UTF-8 bytes after earlier bytes');
+  t.equal(
+    gpuVector.data[1].byteOffset % 4,
+    0,
+    'aligns later UTF-8 chunk offsets for WebGPU buffer writes'
+  );
+
   gpuVector.destroy();
   t.end();
 });

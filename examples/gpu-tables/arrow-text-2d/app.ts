@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {GPUVector, makeArrowFixedSizeListVector} from '@luma.gl/arrow';
+import {GPURecordBatch, GPUVector, GPUTable, makeArrowFixedSizeListVector} from '@luma.gl/arrow';
 import {type Device, type RenderPass, type ShaderLayout} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {
@@ -29,7 +29,7 @@ export const description = 'Generated Arrow UTF-8 labels expanded into GPU glyph
 
 const LABEL_COLUMN_COUNT = 400;
 const LABEL_COLUMN_SPACING = 540;
-const LABEL_ROW_SPACING = 112;
+const LABEL_ROW_SPACING = 72;
 const LABEL_FIELD_WIDTH = LABEL_COLUMN_COUNT * LABEL_COLUMN_SPACING;
 const GLYPH_WORLD_SCALE = 0.36;
 const VIEW_HEIGHT = 820;
@@ -54,11 +54,18 @@ const GPU_COMPUTE_ROW_ID = 'arrow-text-2d-gpu-compute-row';
 const GPU_COMPUTE_BYTES_ID = 'arrow-text-2d-gpu-compute-bytes';
 const DECK_ATTRIBUTE_SIZE_ID = 'arrow-text-2d-deck-attribute-size';
 const PICKED_LABEL_ID = 'arrow-text-2d-picked-label';
+const STREAMING_BATCH_STATUS_ROW_ID = 'arrow-text-2d-streaming-batch-status-row';
+const STREAMING_BATCH_SPINNER_ID = 'arrow-text-2d-streaming-batch-spinner';
+const STREAMING_BATCH_STATUS_LABEL_ID = 'arrow-text-2d-streaming-batch-status-label';
+const STREAMING_TEXT_BATCH_COUNT = 10;
+const STREAMING_TEXT_BATCH_DELAY_MS = 1000;
 // IconLayer + MultiIconLayer character attributes, assuming float32 positions in the active path.
 const DECK_CHARACTER_ATTRIBUTE_BYTES_PER_GLYPH = 80;
 type ActiveTextModel = ArrowTextModel | ArrowStorageTextModel;
 type TextModelKind = 'direct' | 'storage';
-type TextDatasetKind = '100k' | '500k' | '1m';
+type EagerTextDatasetKind = '100k' | '500k' | '1m';
+type StreamingTextDatasetKind = `${EagerTextDatasetKind}-stream`;
+type TextDatasetKind = EagerTextDatasetKind | StreamingTextDatasetKind;
 type TextDataset = {
   labelCount: number;
   label: string;
@@ -73,7 +80,12 @@ type ArrowTextInput = {
   arrowVectorBuildTimeMs: number;
 };
 
-const TEXT_DATASETS: Record<TextDatasetKind, TextDataset> = {
+type StreamingArrowTextSource = {
+  recordBatches: arrow.RecordBatch[];
+  arrowVectorBuildTimeMs: number;
+};
+
+const TEXT_DATASETS: Record<EagerTextDatasetKind, TextDataset> = {
   '100k': {
     labelCount: 100_000,
     label: '100K texts, 3M glyphs'
@@ -87,6 +99,17 @@ const TEXT_DATASETS: Record<TextDatasetKind, TextDataset> = {
     label: '1M texts, 31M glyphs'
   }
 };
+
+const STREAMING_TEXT_INPUT_SHADER_LAYOUT = {
+  attributes: [
+    {name: 'positions', location: 0, type: 'vec2<f32>', stepMode: 'instance'},
+    {name: 'clipRects', location: 1, type: 'vec4<i32>', stepMode: 'instance'},
+    {name: 'colors', location: 2, type: 'vec4<f32>', stepMode: 'instance'},
+    {name: 'angles', location: 3, type: 'f32', stepMode: 'instance'},
+    {name: 'sizes', location: 4, type: 'f32', stepMode: 'instance'}
+  ],
+  bindings: [{name: 'texts', type: 'read-only-storage', group: 0, location: 0}]
+} satisfies ShaderLayout;
 
 const TEXT_SHADER_LAYOUT = {
   attributes: [
@@ -555,6 +578,13 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
   <p>
   Renders <code>arrow.Vector&lt;Utf8&gt;</code>, 30 characters / row.
   </p>
+  <style>
+    @keyframes arrow-text-2d-streaming-spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+  </style>
   <div style="min-height: 920px; max-height: calc(100vh - 72px); overflow-y: auto; margin-top: 16px; padding: 14px 16px; border: 1px solid rgba(208, 215, 222, 0.9); border-radius: 16px; background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(246, 248, 250, 0.96) 100%); box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);">
     <div style="display: grid; grid-template-columns: minmax(56px, auto) minmax(0, 1fr); align-items: center; gap: 10px 12px; margin-bottom: 12px; color: #0f172a; font-size: 15px; font-weight: 600;">
       <label for="${MODEL_SELECTOR_ID}">Model</label>
@@ -567,6 +597,9 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
         <option value="100k">${TEXT_DATASETS['100k'].label}</option>
         <option value="500k">${TEXT_DATASETS['500k'].label}</option>
         <option value="1m">${TEXT_DATASETS['1m'].label}</option>
+        <option value="100k-stream">${TEXT_DATASETS['100k'].label} streamed</option>
+        <option value="500k-stream">${TEXT_DATASETS['500k'].label} streamed</option>
+        <option value="1m-stream">${TEXT_DATASETS['1m'].label} streamed</option>
       </select>
     </div>
     <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 18px; color: #0f172a; font-size: 15px; font-weight: 600;">
@@ -590,6 +623,10 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
         <input id="${ANGLE_TOGGLE_ID}" type="checkbox" checked style="width: 18px; height: 18px; margin: 0; accent-color: #2563eb;" />
         <span>Angle</span>
       </label>
+    </div>
+    <div id="${STREAMING_BATCH_STATUS_ROW_ID}" style="display: none; align-items: center; gap: 10px; margin-top: 12px; color: #334155; font-size: 13px; line-height: 1.4;">
+      <span id="${STREAMING_BATCH_SPINNER_ID}" aria-hidden="true" style="width: 14px; height: 14px; flex: 0 0 14px; border: 2px solid rgba(148, 163, 184, 0.5); border-top-color: #2563eb; border-radius: 50%; animation: arrow-text-2d-streaming-spin 0.9s linear infinite;"></span>
+      <span id="${STREAMING_BATCH_STATUS_LABEL_ID}" aria-live="polite">Loaded 0 of ${STREAMING_TEXT_BATCH_COUNT} batches</span>
     </div>
     <div style="display: flex; justify-content: space-between; gap: 16px; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(208, 215, 222, 0.9); color: #334155; font-size: 13px; line-height: 1.4;">
       <span>Arrow vector build time</span>
@@ -670,8 +707,8 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     picking: typeof picking.props;
   }>({textViewport, picking});
   readonly device: Device;
-  readonly textInputs: Partial<Record<TextDatasetKind, ArrowTextInput>> = {};
-  readonly textInputPromises: Partial<Record<TextDatasetKind, Promise<ArrowTextInput>>> = {};
+  readonly textInputs: Partial<Record<EagerTextDatasetKind, ArrowTextInput>> = {};
+  readonly textInputPromises: Partial<Record<EagerTextDatasetKind, Promise<ArrowTextInput>>> = {};
   positions!: GPUVector<arrow.FixedSizeList<arrow.Float32>>;
   texts!: GPUVector<arrow.Utf8>;
   clipRects!: GPUVector<arrow.FixedSizeList<arrow.Int16>>;
@@ -683,6 +720,9 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
   picker: PickingManager | null = null;
   textModelKind: TextModelKind = 'direct';
   textDatasetKind: TextDatasetKind = '100k';
+  arrowVectorBuildTimeMs = 0;
+  activeStreamingTextTable: GPUTable | null = null;
+  streamingSessionVersion = 0;
   animate = true;
   clippingEnabled = true;
   colorEnabled = true;
@@ -707,6 +747,9 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
   gpuComputeBytesLabel: HTMLElement | null = null;
   deckAttributeSizeLabel: HTMLElement | null = null;
   pickedLabel: HTMLElement | null = null;
+  streamingBatchStatusRow: HTMLElement | null = null;
+  streamingBatchSpinner: HTMLElement | null = null;
+  streamingBatchStatusLabel: HTMLElement | null = null;
 
   constructor({device}: AnimationProps) {
     super();
@@ -725,6 +768,7 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     this.colors = colors;
     this.angles = angles;
     this.sizes = sizes;
+    this.arrowVectorBuildTimeMs = defaultTextInput.arrowVectorBuildTimeMs;
     this.textModel = this.createTextModel('direct');
     this.pickingModel = supportsTextIndexPicking(this.device)
       ? this.createPickingModel(this.textModel)
@@ -744,13 +788,14 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     this.initializeStyleToggles();
     this.initializeAttributeMetricLabels();
     this.initializePickedLabel();
+    this.initializeStreamingBatchStatus();
 
     // Warm larger datasets after the first visible model is ready.
     void this.getOrCreateTextInput('500k');
     void this.getOrCreateTextInput('1m');
   }
 
-  async getOrCreateTextInput(textDatasetKind: TextDatasetKind): Promise<ArrowTextInput> {
+  async getOrCreateTextInput(textDatasetKind: EagerTextDatasetKind): Promise<ArrowTextInput> {
     const cachedTextInput = this.textInputs[textDatasetKind];
     if (cachedTextInput) {
       return cachedTextInput;
@@ -840,9 +885,8 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
   }
 
   getLabelFieldHeight(): number {
-    return (
-      (TEXT_DATASETS[this.textDatasetKind].labelCount / LABEL_COLUMN_COUNT) * LABEL_ROW_SPACING
-    );
+    const datasetKind = getEagerTextDatasetKind(this.textDatasetKind);
+    return (TEXT_DATASETS[datasetKind].labelCount / LABEL_COLUMN_COUNT) * LABEL_ROW_SPACING;
   }
 
   override onRender({device, aspect, time, needsRedraw, _mousePosition}: AnimationProps): void {
@@ -876,6 +920,13 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     }
     if (!this.pickedLabel) {
       this.initializePickedLabel();
+    }
+    if (
+      !this.streamingBatchStatusRow ||
+      !this.streamingBatchSpinner ||
+      !this.streamingBatchStatusLabel
+    ) {
+      this.initializeStreamingBatchStatus();
     }
     if (this.lastRenderSeconds === null) {
       this.lastRenderSeconds = seconds;
@@ -923,6 +974,7 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
 
   override onFinalize(): void {
     this.isFinalized = true;
+    this.streamingSessionVersion++;
     this.animateToggle?.removeEventListener('change', this.handleAnimateToggle);
     this.clippingToggle?.removeEventListener('change', this.handleClippingToggle);
     this.colorToggle?.removeEventListener('change', this.handleColorToggle);
@@ -946,9 +998,14 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     this.gpuComputeBytesLabel = null;
     this.deckAttributeSizeLabel = null;
     this.pickedLabel = null;
+    this.streamingBatchStatusRow = null;
+    this.streamingBatchSpinner = null;
+    this.streamingBatchStatusLabel = null;
     this.picker?.destroy();
     this.pickingModel?.destroy();
     this.textModel?.destroy();
+    this.activeStreamingTextTable?.destroy();
+    this.activeStreamingTextTable = null;
     for (const textInput of Object.values(this.textInputs)) {
       textInput?.positions.destroy();
       textInput?.texts.destroy();
@@ -1096,7 +1153,18 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
 
   handleDataSelection = async (event: Event): Promise<void> => {
     const nextDatasetKind = (event.target as HTMLSelectElement).value as TextDatasetKind;
-    if (nextDatasetKind === this.textDatasetKind || !(nextDatasetKind in TEXT_DATASETS)) {
+    if (nextDatasetKind === this.textDatasetKind || !isTextDatasetKind(nextDatasetKind)) {
+      return;
+    }
+
+    const previousStreamingTable = this.activeStreamingTextTable;
+    const streamingSessionVersion = ++this.streamingSessionVersion;
+    if (isStreamingTextDatasetKind(nextDatasetKind)) {
+      await this.startStreamingTextDataset(
+        nextDatasetKind,
+        streamingSessionVersion,
+        previousStreamingTable
+      );
       return;
     }
 
@@ -1112,8 +1180,124 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     this.colors = colors;
     this.angles = angles;
     this.sizes = sizes;
+    this.arrowVectorBuildTimeMs = nextTextInput.arrowVectorBuildTimeMs;
+    this.activeStreamingTextTable = null;
+    this.updateStreamingBatchStatus(null);
     this.replaceTextModel(this.textModelKind, 'text dataset selector changed');
+    previousStreamingTable?.destroy();
   };
+
+  async startStreamingTextDataset(
+    textDatasetKind: StreamingTextDatasetKind,
+    streamingSessionVersion: number,
+    previousStreamingTable: GPUTable | null
+  ): Promise<void> {
+    const streamingSource = await makeStreamingArrowTextSourceAsync(
+      TEXT_DATASETS[getEagerTextDatasetKind(textDatasetKind)]
+    );
+    if (this.isFinalized || streamingSessionVersion !== this.streamingSessionVersion) {
+      return;
+    }
+
+    const recordBatchIterator = createStreamingRecordBatchIterator(streamingSource.recordBatches)[
+      Symbol.asyncIterator
+    ]();
+    const firstRecordBatchResult = await recordBatchIterator.next();
+    if (
+      this.isFinalized ||
+      streamingSessionVersion !== this.streamingSessionVersion ||
+      firstRecordBatchResult.done
+    ) {
+      return;
+    }
+
+    const streamingTextTable = new GPUTable(
+      this.device,
+      new arrow.Table([firstRecordBatchResult.value]),
+      {
+        shaderLayout: STREAMING_TEXT_INPUT_SHADER_LAYOUT
+      }
+    );
+
+    const streamingTextInput = makeArrowTextInputFromGpuTable(
+      streamingTextTable,
+      streamingSource.arrowVectorBuildTimeMs
+    );
+    this.textDatasetKind = textDatasetKind;
+    this.positions = streamingTextInput.positions;
+    this.texts = streamingTextInput.texts;
+    this.clipRects = streamingTextInput.clipRects;
+    this.colors = streamingTextInput.colors;
+    this.angles = streamingTextInput.angles;
+    this.sizes = streamingTextInput.sizes;
+    this.arrowVectorBuildTimeMs = streamingTextInput.arrowVectorBuildTimeMs;
+    this.activeStreamingTextTable = streamingTextTable;
+    this.updateStreamingBatchStatus(streamingTextTable.batches.length);
+    this.replaceTextModel(this.textModelKind, 'streaming text dataset started');
+    previousStreamingTable?.destroy();
+
+    void this.consumeStreamingRecordBatches(
+      recordBatchIterator,
+      streamingTextTable,
+      streamingSessionVersion
+    );
+  }
+
+  async consumeStreamingRecordBatches(
+    recordBatchIterator: AsyncIterator<arrow.RecordBatch>,
+    streamingTextTable: GPUTable,
+    streamingSessionVersion: number
+  ): Promise<void> {
+    for (
+      let recordBatchResult = await recordBatchIterator.next();
+      !recordBatchResult.done;
+      recordBatchResult = await recordBatchIterator.next()
+    ) {
+      if (
+        this.isFinalized ||
+        streamingSessionVersion !== this.streamingSessionVersion ||
+        this.activeStreamingTextTable !== streamingTextTable
+      ) {
+        return;
+      }
+      streamingTextTable.addBatch(
+        new GPURecordBatch(this.device, recordBatchResult.value, {
+          shaderLayout: STREAMING_TEXT_INPUT_SHADER_LAYOUT
+        })
+      );
+      const streamingTextInput = makeArrowTextInputFromGpuTable(
+        streamingTextTable,
+        this.arrowVectorBuildTimeMs
+      );
+      this.refreshStreamingTextModel(streamingTextInput, 'streaming Arrow record batch appended');
+      this.updateStreamingBatchStatus(streamingTextTable.batches.length);
+    }
+  }
+
+  refreshStreamingTextModel(streamingTextInput: ArrowTextInput, redrawReason: string): void {
+    this.positions = streamingTextInput.positions;
+    this.texts = streamingTextInput.texts;
+    this.clipRects = streamingTextInput.clipRects;
+    this.colors = streamingTextInput.colors;
+    this.angles = streamingTextInput.angles;
+    this.sizes = streamingTextInput.sizes;
+    const appendedTextProps = {
+      positions: this.positions,
+      texts: this.texts,
+      clipRects: this.clipRects,
+      ...(this.colorEnabled ? {colors: this.colors} : {}),
+      ...(this.angleEnabled ? {angles: this.angles} : {}),
+      ...(this.sizeEnabled ? {sizes: this.sizes} : {})
+    };
+    this.textModel.appendTextBatches(appendedTextProps);
+    this.pickingModel?.destroy();
+    this.pickingModel = supportsTextIndexPicking(this.device)
+      ? this.createPickingModel(this.textModel)
+      : null;
+    this.picker?.clearPickState();
+    this.textModel.setNeedsRedraw(redrawReason);
+    this.initializeAttributeMetricLabels();
+  }
 
   replaceTextModel(nextModelKind: TextModelKind, redrawReason: string): void {
     const previousTextModel = this.textModel;
@@ -1216,7 +1400,7 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     const peakTextPathGpuByteLength = steadyStateGpuByteLength + transientComputeInputByteLength;
     this.arrowVectorBuildTimeLabel = initializeMetricTimeLabel(
       ARROW_VECTOR_BUILD_TIME_ID,
-      this.textInputs[this.textDatasetKind]?.arrowVectorBuildTimeMs ?? 0
+      this.arrowVectorBuildTimeMs
     );
     this.cpuGenerationTimeLabel = initializeMetricTimeLabel(
       CPU_GENERATION_TIME_ID,
@@ -1253,6 +1437,50 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
 
   initializePickedLabel(): void {
     this.pickedLabel = document.getElementById(PICKED_LABEL_ID);
+  }
+
+  initializeStreamingBatchStatus(): void {
+    this.streamingBatchStatusRow = document.getElementById(STREAMING_BATCH_STATUS_ROW_ID);
+    this.streamingBatchSpinner = document.getElementById(STREAMING_BATCH_SPINNER_ID);
+    this.streamingBatchStatusLabel = document.getElementById(STREAMING_BATCH_STATUS_LABEL_ID);
+    this.applyStreamingBatchStatus(this.activeStreamingTextTable?.batches.length ?? null);
+  }
+
+  updateStreamingBatchStatus(loadedBatchCount: number | null): void {
+    if (
+      !this.streamingBatchStatusRow ||
+      !this.streamingBatchSpinner ||
+      !this.streamingBatchStatusLabel
+    ) {
+      this.initializeStreamingBatchStatus();
+    }
+    this.applyStreamingBatchStatus(loadedBatchCount);
+  }
+
+  applyStreamingBatchStatus(loadedBatchCount: number | null): void {
+    if (
+      !this.streamingBatchStatusRow ||
+      !this.streamingBatchSpinner ||
+      !this.streamingBatchStatusLabel
+    ) {
+      return;
+    }
+
+    if (loadedBatchCount === null || !isStreamingTextDatasetKind(this.textDatasetKind)) {
+      this.streamingBatchStatusRow.style.display = 'none';
+      this.streamingBatchStatusLabel.textContent = `Loaded 0 of ${STREAMING_TEXT_BATCH_COUNT} batches`;
+      this.streamingBatchSpinner.style.visibility = 'visible';
+      return;
+    }
+
+    const safeLoadedBatchCount = Math.min(
+      STREAMING_TEXT_BATCH_COUNT,
+      Math.max(0, Math.trunc(loadedBatchCount))
+    );
+    this.streamingBatchStatusRow.style.display = 'flex';
+    this.streamingBatchStatusLabel.textContent = `Loaded ${safeLoadedBatchCount} of ${STREAMING_TEXT_BATCH_COUNT} batches`;
+    this.streamingBatchSpinner.style.visibility =
+      safeLoadedBatchCount < STREAMING_TEXT_BATCH_COUNT ? 'visible' : 'hidden';
   }
 
   getSelectedStorageStyleVectorByteLength(): number {
@@ -1372,6 +1600,131 @@ async function makeArrowTextInputAsync(
   return makeArrowTextInput(device, dataset);
 }
 
+async function makeStreamingArrowTextSourceAsync(
+  dataset: TextDataset
+): Promise<StreamingArrowTextSource> {
+  await waitForBrowserPaint();
+  return makeStreamingArrowTextSource(dataset);
+}
+
+function makeStreamingArrowTextSource(dataset: TextDataset): StreamingArrowTextSource {
+  const arrowVectorBuildStartTime = getNow();
+  const recordBatches = new Array<arrow.RecordBatch>(STREAMING_TEXT_BATCH_COUNT);
+  const labelRowCount = dataset.labelCount / LABEL_COLUMN_COUNT;
+  const centerColumn = (LABEL_COLUMN_COUNT - 1) / 2;
+  const centerRow = (labelRowCount - 1) / 2;
+
+  for (let batchIndex = 0; batchIndex < STREAMING_TEXT_BATCH_COUNT; batchIndex++) {
+    const batchRowIndices = getStreamingTextBatchRowIndices(labelRowCount, batchIndex);
+    const batchLabelCount = batchRowIndices.length * LABEL_COLUMN_COUNT;
+    const positions = new Float32Array(batchLabelCount * 2);
+    const clipRects = new Int16Array(batchLabelCount * 4);
+    const colors = new Uint8Array(batchLabelCount * 4);
+    const angles = new Float32Array(batchLabelCount);
+    const sizes = new Float32Array(batchLabelCount);
+    const labels = new Array<string>(batchLabelCount);
+
+    for (let localLabelIndex = 0; localLabelIndex < batchLabelCount; localLabelIndex++) {
+      const localRowIndex = Math.floor(localLabelIndex / LABEL_COLUMN_COUNT);
+      const columnIndex = localLabelIndex % LABEL_COLUMN_COUNT;
+      const rowIndex = batchRowIndices[localRowIndex];
+      const labelIndex = rowIndex * LABEL_COLUMN_COUNT + columnIndex;
+      const positionIndex = localLabelIndex * 2;
+      const clipRectIndex = localLabelIndex * 4;
+      const colorIndex = localLabelIndex * 4;
+
+      positions[positionIndex] = (columnIndex - centerColumn) * LABEL_COLUMN_SPACING;
+      positions[positionIndex + 1] = (rowIndex - centerRow) * LABEL_ROW_SPACING;
+      clipRects[clipRectIndex] = 0;
+      clipRects[clipRectIndex + 1] = 0;
+      clipRects[clipRectIndex + 2] = LABEL_CLIP_WIDTH;
+      clipRects[clipRectIndex + 3] = -1;
+      colors[colorIndex] = 96 + ((labelIndex * 17) % 128);
+      colors[colorIndex + 1] = 172 + ((labelIndex * 11) % 72);
+      colors[colorIndex + 2] = 210 + ((labelIndex * 7) % 45);
+      colors[colorIndex + 3] = 255;
+      angles[localLabelIndex] = ((labelIndex % 9) - 4) * 2;
+      sizes[localLabelIndex] = 24 + (labelIndex % 5) * 4;
+      labels[localLabelIndex] = `NODE ${String(labelIndex).padStart(6, '0')} / ARROW TEXT VECTOR`;
+    }
+
+    const table = new arrow.Table({
+      positions: makeArrowFixedSizeListVector(new arrow.Float32(), 2, positions),
+      texts: arrow.vectorFromArray(labels, new arrow.Utf8()),
+      clipRects: makeArrowFixedSizeListVector(new arrow.Int16(), 4, clipRects),
+      colors: makeArrowFixedSizeListVector(new arrow.Uint8(), 4, colors),
+      angles: makeFloat32ArrowVector(angles),
+      sizes: makeFloat32ArrowVector(sizes)
+    });
+    const recordBatch = table.batches[0];
+    if (!recordBatch) {
+      throw new Error('Streaming Arrow text source requires non-empty record batches');
+    }
+    recordBatches[batchIndex] = recordBatch;
+  }
+
+  return {
+    recordBatches,
+    arrowVectorBuildTimeMs: getNow() - arrowVectorBuildStartTime
+  };
+}
+
+function makeArrowTextInputFromGpuTable(
+  gpuTable: GPUTable,
+  arrowVectorBuildTimeMs: number
+): ArrowTextInput {
+  return {
+    positions: getGpuTableTextVector<arrow.FixedSizeList<arrow.Float32>>(gpuTable, 'positions'),
+    texts: getGpuTableTextVector<arrow.Utf8>(gpuTable, 'texts'),
+    clipRects: getGpuTableTextVector<arrow.FixedSizeList<arrow.Int16>>(gpuTable, 'clipRects'),
+    colors: getGpuTableTextVector<arrow.FixedSizeList<arrow.Uint8>>(gpuTable, 'colors'),
+    angles: getGpuTableTextVector<arrow.Float32>(gpuTable, 'angles'),
+    sizes: getGpuTableTextVector<arrow.Float32>(gpuTable, 'sizes'),
+    arrowVectorBuildTimeMs
+  };
+}
+
+function getGpuTableTextVector<T extends arrow.DataType>(
+  gpuTable: GPUTable,
+  vectorName: string
+): GPUVector<T> {
+  const vector = gpuTable.gpuVectors[vectorName];
+  if (!vector) {
+    throw new Error(`Streaming Arrow text table is missing GPU vector "${vectorName}"`);
+  }
+  return vector as GPUVector<T>;
+}
+
+async function* createStreamingRecordBatchIterator(
+  recordBatches: arrow.RecordBatch[]
+): AsyncGenerator<arrow.RecordBatch> {
+  for (let batchIndex = 0; batchIndex < recordBatches.length; batchIndex++) {
+    if (batchIndex > 0) {
+      await waitForStreamingBatchDelay();
+    }
+    const recordBatch = recordBatches[batchIndex];
+    if (recordBatch) {
+      yield recordBatch;
+    }
+  }
+}
+
+function waitForStreamingBatchDelay(): Promise<void> {
+  return new Promise(resolve => {
+    setTimeout(resolve, STREAMING_TEXT_BATCH_DELAY_MS);
+  });
+}
+
+function getStreamingTextBatchRowIndices(rowCount: number, batchIndex: number): number[] {
+  const rowIndices: number[] = [];
+  for (let rowIndex = 0; rowIndex < rowCount; rowIndex++) {
+    if (rowIndex % STREAMING_TEXT_BATCH_COUNT === batchIndex) {
+      rowIndices.push(rowIndex);
+    }
+  }
+  return rowIndices;
+}
+
 async function waitForBrowserPaint(): Promise<void> {
   if (typeof requestAnimationFrame !== 'function') {
     await Promise.resolve();
@@ -1408,6 +1761,21 @@ function makeFloat32ArrowVector(values: Float32Array): arrow.Vector<arrow.Float3
       data: values
     })
   ) as arrow.Vector<arrow.Float32>;
+}
+
+function isStreamingTextDatasetKind(value: TextDatasetKind): value is StreamingTextDatasetKind {
+  return value.endsWith('-stream');
+}
+
+function getEagerTextDatasetKind(value: TextDatasetKind): EagerTextDatasetKind {
+  return (
+    isStreamingTextDatasetKind(value) ? value.slice(0, -'-stream'.length) : value
+  ) as EagerTextDatasetKind;
+}
+
+function isTextDatasetKind(value: string): value is TextDatasetKind {
+  const eagerDatasetKind = getEagerTextDatasetKind(value as TextDatasetKind);
+  return eagerDatasetKind in TEXT_DATASETS;
 }
 
 function getTextModelGlyphCount(textModel: ActiveTextModel): number {

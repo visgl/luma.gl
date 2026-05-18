@@ -102,6 +102,24 @@ test('DynamicTexture tracks update timestamps and resource generations', async t
   t.end();
 });
 
+test('DynamicTexture marks destroyed textures as not ready', async t => {
+  const device = await getNullTestDevice();
+  const texture = new DynamicTexture(device, {
+    data: {data: new Uint8Array([1, 2, 3, 4]), width: 1, height: 1},
+    width: 1,
+    height: 1,
+    format: 'rgba8unorm'
+  });
+
+  await texture.ready;
+  t.true(texture.isReady, 'texture reports ready after initialization');
+
+  texture.destroy();
+  t.false(texture.isReady, 'destroyed texture no longer reports ready');
+
+  t.end();
+});
+
 test('DynamicTexture WebGPU [render][rgba8unorm] 2d mipmaps', async t => {
   const device = await getWebGPUTestDevice();
   if (!device) {

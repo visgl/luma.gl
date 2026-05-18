@@ -78,15 +78,6 @@ export {
 } from './arrow/plain-gpu-table';
 export {ArrowGeometry, type ArrowGeometryProps} from './arrow/arrow-geometry';
 export type {ArrowMeshAttribute, ArrowMeshTable, ArrowMeshTopology} from './arrow/arrow-mesh-types';
-export {
-  StreamingArrowGPUTable,
-  StreamingArrowGPUVector,
-  type StreamingArrowAsyncRecordBatchSource,
-  type StreamingArrowGPUTableProps,
-  type StreamingArrowGPUVectorBufferProps,
-  type StreamingArrowGPUVectorProps,
-  type StreamingArrowRecordBatchSource
-} from './arrow/streaming-arrow-gpu-table';
 export {ArrowModel, type ArrowModelGPUTable, type ArrowModelProps} from './arrow/arrow-model';
 export {
   TableTransform,

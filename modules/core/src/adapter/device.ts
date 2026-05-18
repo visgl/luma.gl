@@ -508,6 +508,11 @@ export abstract class Device {
     return `Device(${this.id})`;
   }
 
+  /** Compact serialization for assertion diffs and structured debug logs. */
+  toJSON(): string {
+    return this.toString();
+  }
+
   /** id of this device, primarily for debugging */
   readonly id: string;
   /** type of this device */

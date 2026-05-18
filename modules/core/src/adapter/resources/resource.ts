@@ -99,6 +99,11 @@ export abstract class Resource<Props extends ResourceProps> {
     return `${this[Symbol.toStringTag] || this.constructor.name}:"${this.id}"`;
   }
 
+  /** Compact serialization for assertion diffs and structured debug logs. */
+  toJSON(): string {
+    return this.toString();
+  }
+
   /** props.id, for debugging. */
   id: string;
   /** The props that this resource was created with */

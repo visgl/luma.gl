@@ -107,6 +107,11 @@ export class DynamicBuffer {
     return `DynamicBuffer:"${this.id}":${this.byteLength}B`;
   }
 
+  /** Compact serialization for assertion diffs and structured debug logs. */
+  toJSON(): string {
+    return this.toString();
+  }
+
   /** Creates a dynamic buffer and its initial backing {@link Buffer}. */
   constructor(device: Device, props: DynamicBufferProps) {
     const {
@@ -350,11 +355,13 @@ export class DynamicBuffer {
     destinationBuffer: Buffer,
     byteLength: number
   ): void {
+    const copyByteLength =
+      this.device.type === 'webgpu' ? Math.ceil(byteLength / 4) * 4 : byteLength;
     const commandEncoder = this.device.createCommandEncoder();
     commandEncoder.copyBufferToBuffer({
       sourceBuffer,
       destinationBuffer,
-      size: byteLength
+      size: copyByteLength
     });
     this.device.submit(commandEncoder.finish());
   }
