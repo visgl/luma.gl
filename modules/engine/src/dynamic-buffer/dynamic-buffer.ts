@@ -107,6 +107,11 @@ export class DynamicBuffer {
     return `DynamicBuffer:"${this.id}":${this.byteLength}B`;
   }
 
+  /** Compact serialization for assertion diffs and structured debug logs. */
+  toJSON(): string {
+    return this.toString();
+  }
+
   /** Creates a dynamic buffer and its initial backing {@link Buffer}. */
   constructor(device: Device, props: DynamicBufferProps) {
     const {

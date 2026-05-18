@@ -130,8 +130,8 @@ test('GPUTable exposes storage-selected Arrow columns as bindings', t => {
   t.equal(gpuTable.numCols, 1, 'storage-backed selected columns count toward table columns');
   t.equal(
     gpuTable.bindings.positions,
-    gpuTable.batches[0].gpuVectors.positions.buffer,
-    'exposes the selected Arrow vector as a model-ready storage binding'
+    gpuTable.batches[0].gpuVectors.positions.data[0].buffer,
+    'exposes the batch-local GPUData buffer as a model-ready storage binding'
   );
   t.notOk(gpuTable.attributes.positions, 'does not expose storage-only columns as attributes');
 

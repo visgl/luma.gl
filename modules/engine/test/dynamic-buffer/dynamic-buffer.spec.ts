@@ -9,6 +9,26 @@ import {DynamicBuffer} from '../../src';
 
 const DEVICE_TYPES = ['webgpu', 'webgl', 'null'] as const;
 
+test('DynamicBuffer JSON debug output stays compact', async t => {
+  for (const device of await getTestDevices(['null'])) {
+    const dynamicBuffer = new DynamicBuffer(device, {
+      id: 'compact-json-dynamic-buffer',
+      byteLength: 4,
+      usage: Buffer.VERTEX
+    });
+
+    t.equal(
+      JSON.stringify(dynamicBuffer),
+      JSON.stringify(dynamicBuffer.toString()),
+      'dynamic buffer JSON uses toString()'
+    );
+
+    dynamicBuffer.destroy();
+  }
+
+  t.end();
+});
+
 test('DynamicBuffer#write/read/debugData', async t => {
   for (const device of await getTestDevices(DEVICE_TYPES)) {
     const dynamicBuffer = new DynamicBuffer(device, {

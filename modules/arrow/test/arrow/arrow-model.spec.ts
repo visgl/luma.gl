@@ -100,7 +100,7 @@ test('ArrowModel accepts Arrow table rows as storage bindings', t => {
     shaderLayout: STORAGE_SHADER_LAYOUT,
     arrowTable
   });
-  const colorsBuffer = model.arrowGPUTable!.batches[0].gpuVectors.colors.buffer;
+  const colorsBuffer = model.arrowGPUTable!.batches[0].gpuVectors.colors.data[0].buffer;
 
   t.deepEqual(
     model.arrowGPUTable!.schema.fields.map(field => field.name),

@@ -19,6 +19,25 @@ test('Device#info', async t => {
   t.end();
 });
 
+test('Device and Resource JSON debug output stays compact', async t => {
+  const device = await getNullTestDevice();
+  const buffer = device.createBuffer({
+    id: 'compact-json-buffer',
+    byteLength: 4,
+    usage: Buffer.VERTEX
+  });
+
+  t.equal(JSON.stringify(device), JSON.stringify(device.toString()), 'device JSON uses toString()');
+  t.equal(
+    JSON.stringify(buffer),
+    JSON.stringify(buffer.toString()),
+    'resource JSON uses toString()'
+  );
+
+  buffer.destroy();
+  t.end();
+});
+
 // Minimal test, extensive test in texture-formats.spec
 test('Device#isTextureFormatCompressed', async t => {
   for (const device of await getTestDevices()) {
