@@ -19,7 +19,14 @@ directly to the memory layouts used by GPU vertex attributes.
 
 Arrow also supports variable-length `List` columns. These are useful for data
 such as polygons and paths, but they do not map directly to a single vertex
-attribute without an additional conversion step.
+attribute without an additional conversion step. `ArrowPathModel` provides the
+attribute-backed conversion for Float32 XY, XYZ, and XYZM path coordinate rows,
+expanding each logical path into segment instances while keeping row-level style
+columns at the path boundary. `ArrowStoragePathModel` provides the WebGPU
+storage-backed form: compute expands GPU-resident path values into compact indexed
+segment records from copied list-offset metadata, render shaders fetch coordinates
+from the original path-value storage buffer, and per-path style rows remain storage
+bindings instead of being repeated for every generated segment.
 
 ## Shader and Buffer Layout Preliminaries
 

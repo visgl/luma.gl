@@ -22,6 +22,7 @@ const sidebars = {
       items: [
         'gpu-tables/arrow-instancing',
         'gpu-tables/arrow-text-2d',
+        'gpu-tables/arrow-path-model',
         'gpu-tables/arrow-mesh-geometry',
         'gpu-tables/gpu-vector-storage-particles'
       ]

@@ -22,6 +22,25 @@ attributes without switching to a separate table abstraction.
 Uploaded vectors own their generated buffers. Wrapped-buffer vectors are
 non-owning by default unless ownership is explicitly requested or transferred by
 an in-place operation.
+<<<<<<< Updated upstream
+=======
+`GPUVector` also supports variable-length Arrow list columns whose nested elements
+contain one to four numeric components. This covers scalar lists plus tuple-style
+data such as XY, XYZ, and XYZM coordinates, while copying only compact list-offset
+metadata needed for readback instead of retaining the uploaded Arrow value arrays.
+`ArrowPathModel` consumes Float32 XY, XYZ, or XYZM nested coordinate rows from that
+representation, expands one logical path row into packed per-segment render records,
+and repeats optional per-path color and width columns only for the attribute-backed
+render table that needs them. CPU path/style vectors used for that expansion remain
+explicit caller-owned `sourceVectors`.
+`ArrowStoragePathModel` is the WebGPU storage-backed counterpart. It expands nested
+path rows into compact indexed segment records through compute using the
+GPU-resident path values plus copied list-offset metadata. Render shaders fetch
+coordinates from the original path-value storage buffer, while per-path color and
+width rows remain storage-buffer bindings instead of being duplicated per generated
+segment. Reusable storage state can be built separately with
+`createArrowStoragePathState`.
+>>>>>>> Stashed changes
 
 `ArrowGeometry` and `ArrowModel` can also consume loaders.gl-compatible Mesh
 Arrow tables through the local structural `ArrowMeshTable` type. Mesh Arrow

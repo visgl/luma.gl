@@ -330,8 +330,8 @@ export const InfoBox: FC<InfoBoxProps> = (props: InfoBoxProps) => {
   const sourceUrl = getExampleSourceUrl(props);
   const title = getExampleTitle(props.id, props.title);
   const [isCollapsed, setIsCollapsed] = useState(() => isInfoBoxCollapsedByDefault);
-  const maxInfoHeight = 400;
-  const maxInfoContentHeight = 320;
+  const maxInfoHeight = 760;
+  const maxInfoContentHeight = 680;
   const toggleCollapsed = () => setIsCollapsed(value => !value);
 
   useEffect(() => {
