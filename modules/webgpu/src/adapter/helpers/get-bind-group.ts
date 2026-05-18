@@ -184,6 +184,16 @@ function getBindGroupEntry(
       }
     };
   }
+  if (isBufferRangeBinding(binding)) {
+    return {
+      binding: index,
+      resource: {
+        buffer: (binding.buffer as WebGPUBuffer).handle,
+        ...(binding.offset === undefined ? {} : {offset: binding.offset}),
+        ...(binding.size === undefined ? {} : {size: binding.size})
+      }
+    };
+  }
   if (binding instanceof Sampler) {
     return {
       binding: index,
@@ -210,6 +220,17 @@ function getBindGroupEntry(
   }
   log.warn(`invalid binding ${bindingName}`, binding);
   return null;
+}
+
+function isBufferRangeBinding(
+  binding: Binding
+): binding is {buffer: Buffer; offset?: number; size?: number} {
+  return (
+    binding !== null &&
+    typeof binding === 'object' &&
+    'buffer' in binding &&
+    binding.buffer instanceof Buffer
+  );
 }
 
 function getExpectedBindingsForGroup(

@@ -6,6 +6,7 @@ import {ExampleHeader, ExamplePage, LumaExample, ReactExample, useStore} from '.
 import AnimationApp from '../../examples/api/animation/app';
 import CubemapApp from '../../examples/api/cubemap/app';
 import ArrowMeshGeometryApp from '../../examples/gpu-tables/arrow-mesh-geometry/app';
+import ArrowPathModelApp from '../../examples/gpu-tables/arrow-path-model/app';
 import BloomApp from '../../examples/experimental/bloom/app';
 import FP64App from '../../examples/experimental/fp64/app';
 import GPUVectorStorageParticlesApp from '../../examples/gpu-tables/gpu-vector-storage-particles/app';
@@ -132,6 +133,18 @@ export const ArrowText2DExample: React.FC = props => (
     title="Arrow 2D Text"
     directory="gpu-tables"
     template={ArrowText2DApp}
+    config={exampleConfig}
+    showStats
+    {...props}
+  />
+);
+
+export const ArrowPathModelExample: React.FC = props => (
+  <LumaExample
+    id="arrow-path-model"
+    title="Arrow Path Model"
+    directory="gpu-tables"
+    template={ArrowPathModelApp}
     config={exampleConfig}
     showStats
     {...props}

@@ -81,6 +81,24 @@ export {ArrowGeometry, type ArrowGeometryProps} from './arrow/arrow-geometry';
 export type {ArrowMeshAttribute, ArrowMeshTable, ArrowMeshTopology} from './arrow/arrow-mesh-types';
 export {ArrowModel, type ArrowModelGPUTable, type ArrowModelProps} from './arrow/arrow-model';
 export {
+  ArrowPathModel,
+  buildArrowPathSegmentTable,
+  type ArrowPathModelProps,
+  type ArrowPathRenderBatchState,
+  type ArrowPathSegmentLayout,
+  type ArrowPathSegmentTable,
+  type ArrowPathSourceVectors
+} from './arrow/arrow-path-model';
+export {
+  ArrowStoragePathModel,
+  createArrowStoragePathState,
+  type ArrowStoragePathBatchState,
+  type ArrowStoragePathInputProps,
+  type ArrowStoragePathModelProps,
+  type ArrowStoragePathRenderBatchState,
+  type ArrowStoragePathState
+} from './arrow/arrow-storage-path-model';
+export {
   TableTransform,
   type TableTransformBatchOptions,
   type TableTransformOutputCopyMap,
