@@ -276,6 +276,7 @@ export class GPURecordBatch {
     return this;
   }
 
+  /** Destroys every owned GPU vector retained by this batch. */
   destroy(): void {
     for (const gpuVector of Object.values(this.gpuVectors)) {
       gpuVector.destroy();

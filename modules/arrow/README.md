@@ -5,8 +5,8 @@ Apache Arrow utilities for luma.gl.
 The module can derive GPU `BufferLayout` entries from Arrow schemas and create
 GPU-side `GPUData`, `GPUVector`, `GPURecordBatch`,
 `GPUTable`, and `ArrowModel` objects from compatible Arrow columns. Arrow
-tables and vectors are construction inputs; the GPU objects retain GPU buffers
-plus Arrow-derived type and schema metadata. `GPUTable.batches` preserves
+tables and vectors are construction inputs; the GPU objects retain `GPUData`
+storage owners plus Arrow-derived type and schema metadata. `GPUTable.batches` preserves
 source record-batch boundaries as real GPU batches with batch-local buffers.
 `GPUTable.packBatches()` explicitly replaces those batches with fewer
 packed batches when callers want a coarser draw surface.
@@ -19,13 +19,20 @@ return ownership to the caller.
 Append-only uploads can use `GPUTable({type: 'appendable', ...})` plus
 `addToLastBatch()` so the trailing GPU batch grows through stable `DynamicBuffer`
 attributes without switching to a separate table abstraction.
-Uploaded vectors own their generated buffers. Wrapped-buffer vectors are
-non-owning by default unless ownership is explicitly requested or transferred by
-an in-place operation.
+`GPUVector` does not own raw buffers directly. Generated and adopted storage is
+owned by `GPUData`, while vectors aggregate those chunks and expose a direct
+`buffer` convenience only when one concrete backing surface is bindable.
+Wrapped-buffer vectors are non-owning by default unless ownership is explicitly
+requested or transferred by an in-place operation.
 `GPUVector` also supports variable-length Arrow list columns whose nested elements
 contain one to four numeric components. This covers scalar lists plus tuple-style
 data such as XY, XYZ, and XYZM coordinates, while copying only compact list-offset
 metadata needed for readback instead of retaining the uploaded Arrow value arrays.
+`closeArrowPaths()` normalizes Float32 path rows before rendering or expansion:
+closed paths whose first and last vertices differ by more than an epsilon receive
+an appended copy of their first vertex, while already-closed, open, empty, and
+single-point paths remain unchanged. WebGPU uses compute classification and
+scatter passes; other devices use equivalent CPU fallback semantics.
 `ArrowPathModel` consumes Float32 XY, XYZ, or XYZM nested coordinate rows from that
 representation, expands one logical path row into packed per-segment render records,
 and repeats optional per-path color and width columns only for the attribute-backed

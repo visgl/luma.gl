@@ -57,8 +57,8 @@ export type GPUTableDetachBatchesOptions = {
  * GPU memory and Arrow schema metadata derived from selected Arrow table columns.
  *
  * The Arrow table is a construction input only. GPUTable does not retain
- * the source table; it owns GPU buffers, a BufferLayout, and a GPU-facing Arrow
- * schema that describes the selected columns.
+ * the source table; it coordinates GPU record batches, aggregate vector views,
+ * layout metadata, and a GPU-facing Arrow schema that describes selected columns.
  */
 export class GPUTable {
   /** GPU-facing schema for the selected shader attribute columns. */
@@ -355,6 +355,7 @@ export class GPUTable {
     return detachedBatches;
   }
 
+  /** Destroys retained GPU batches and follows their vector-level ownership graphs. */
   destroy(): void {
     for (const batch of this.batches) {
       batch.destroy();
