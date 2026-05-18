@@ -4,7 +4,7 @@
 
 import {OperationHandler} from '../../operation/operation';
 import {GPUTableEvaluator} from '../../operation/gpu-table';
-import {runBufferTransform} from './common';
+import {runRowTransform} from './common/row-transform';
 
 function isLittleEndian() {
   const testNumber = new Uint16Array([0x00ff]);
@@ -194,7 +194,7 @@ export const fround: OperationHandler<{x: GPUTableEvaluator}> = async ({
   output,
   target
 }) => {
-  runBufferTransform({
+  runRowTransform({
     module: {name: 'fround', vs},
     inputs,
     output,

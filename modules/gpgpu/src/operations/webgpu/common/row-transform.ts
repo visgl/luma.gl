@@ -5,11 +5,12 @@
 import {Buffer, SignedDataType} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {ShaderModule} from '@luma.gl/shadertools';
-import {GPUTableEvaluator} from '../../operation/gpu-table';
+import {GPUTableEvaluator} from '../../../operation/gpu-table';
+import {getLiteralValue, getWGSLType, getZeroValue} from './helper';
 
 const WORKGROUP_SIZE = 64;
 
-export function runComputation({
+export function runRowComputation({
   module,
   elementWise = false,
   inputs,
@@ -21,9 +22,6 @@ export function runComputation({
   elementWise?: boolean;
   inputs: {[name: string]: GPUTableEvaluator};
   output: GPUTableEvaluator;
-  /** If specified, coerce all parameters to operation to this type.
-   * Default to output's data type.
-   */
   operationType?: SignedDataType;
   outputBuffer: Buffer;
 }): void {
@@ -68,7 +66,6 @@ ${getComputeBlock(module.name, inputs, output, elementWise)}
   write_result(rowIndex, result);
 }
 `;
-  // console.log(source);
 
   const computation = new Computation(outputBuffer.device, {
     source,
@@ -185,51 +182,6 @@ function getConstantValues(input: GPUTableEvaluator, asType: string): string {
   return Array.from({length: input.size}, (_, index) =>
     getLiteralValue(asType, values[index] ?? 0)
   ).join(', ');
-}
-
-function getLiteralValue(type: string, value: number): string {
-  switch (type[0]) {
-    case 'u':
-      return `${value}u`;
-
-    case 'f':
-      return Number.isInteger(value) ? `${value}.0` : `${value}`;
-
-    default:
-      return `${value}`;
-  }
-}
-
-function getZeroValue(type: SignedDataType): string {
-  switch (type) {
-    case 'uint32':
-      return '0u';
-
-    case 'sint32':
-      return '0';
-
-    case 'float32':
-      return '0.0';
-
-    default:
-      throw new Error(`WebGPU runComputation only supports 32-bit output types, got ${type}`);
-  }
-}
-
-function getWGSLType(type: SignedDataType): string {
-  switch (type) {
-    case 'uint32':
-      return 'u32';
-
-    case 'sint32':
-      return 'i32';
-
-    case 'float32':
-      return 'f32';
-
-    default:
-      throw new Error(`WebGPU runComputation only supports 32-bit storage types, got ${type}`);
-  }
 }
 
 function preprocess(source: string, defines: Record<string, string>) {

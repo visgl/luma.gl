@@ -4,7 +4,7 @@
 
 import {OperationHandler} from '../../operation/operation';
 import {GPUTableEvaluator} from '../../operation/gpu-table';
-import {runComputation} from './common';
+import {runRowComputation} from './common/row-transform';
 
 const source = `\
 fn interleave(x: array<{TYPE}, {X_LEN}>, y: array<{TYPE}, {Y_LEN}>) -> array<{TYPE}, {RESULT_LEN}> {
@@ -25,7 +25,7 @@ export const interleave: OperationHandler<{x: GPUTableEvaluator; y: GPUTableEval
   output,
   target
 }) => {
-  runComputation({
+  runRowComputation({
     module: {name: 'interleave', source},
     inputs,
     output,

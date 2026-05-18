@@ -120,7 +120,34 @@ function _copyBufferToBuffer(device: WebGLDevice, options: CopyBufferToBufferOpt
  * NOTE: doesn't wait for copy to be complete
  */
 function _copyBufferToTexture(_device: WebGLDevice, _options: CopyBufferToTextureOptions): void {
-  throw new Error('copyBufferToTexture is not supported in WebGL');
+  const {
+    sourceBuffer,
+    byteOffset = 0,
+    destinationTexture,
+    mipLevel = 0,
+    origin = [0, 0, 0],
+    aspect = 'all',
+    bytesPerRow,
+    rowsPerImage,
+    size
+  } = _options;
+
+  if (aspect !== 'all') {
+    throw new Error('copyBufferToTexture aspect is not supported in WebGL');
+  }
+
+  destinationTexture.writeBuffer(sourceBuffer, {
+    byteOffset,
+    bytesPerRow,
+    rowsPerImage,
+    mipLevel,
+    x: origin[0] ?? 0,
+    y: origin[1] ?? 0,
+    z: origin[2] ?? 0,
+    width: size[0],
+    height: size[1],
+    depthOrArrayLayers: size[2]
+  });
 }
 
 /**

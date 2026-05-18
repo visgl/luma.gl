@@ -4,7 +4,7 @@
 
 import {OperationHandler} from '../../operation/operation';
 import {GPUTableEvaluator} from '../../operation/gpu-table';
-import {runComputation} from './common';
+import {runRowComputation} from './common/row-transform';
 
 const source = `\
 fn add(x: {TYPE}, y: {TYPE}) -> {TYPE} {
@@ -17,7 +17,7 @@ export const add: OperationHandler<{x: GPUTableEvaluator; y: GPUTableEvaluator}>
   output,
   target
 }) => {
-  runComputation({
+  runRowComputation({
     module: {name: 'add', source},
     elementWise: true,
     inputs,

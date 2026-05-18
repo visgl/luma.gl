@@ -38,7 +38,7 @@ export function runCPUTransform({
   const outputSize = output.size;
   const target = new output.ValueType(vertexCount * outputSize);
   for (let i = 0; i < vertexCount; i++) {
-    const inputVertices = Object.values(inputs).map(table => getValueAtVertex(table, i));
+    const inputVertices = Object.values(inputs).map(table => getValueAtRow(table, i));
     if (elementWise) {
       for (let j = 0; j < outputSize; j++) {
         target[i * outputSize + j] = func.apply(
@@ -57,7 +57,7 @@ export function runCPUTransform({
   outputBuffer.write(target);
 }
 
-function getValueAtVertex(source: GPUTableEvaluator, index: number): TypedArray {
+export function getValueAtRow(source: GPUTableEvaluator, index: number): TypedArray {
   const value = source.value!;
   const valueSize = source.size;
   const valueOffset = source.offset / source.ValueType.BYTES_PER_ELEMENT;

@@ -7,23 +7,19 @@ import {GPUTableEvaluator} from '../../operation/gpu-table';
 import {runRowTransform} from './common/row-transform';
 
 const vs = `\
-void interleave(in TYPE x[X_LEN], in TYPE y[Y_LEN], out TYPE result[RESULT_LEN]) {
-  for (int i = 0; i < X_LEN; i++) {
-    result[i] = x[i];
-  }
-  for (int i = 0; i < Y_LEN; i++) {
-    result[i + X_LEN] = y[i];
-  }
+TYPE divide(TYPE x, TYPE y) {
+  return x / y;
 }
 `;
 
-export const interleave: OperationHandler<{x: GPUTableEvaluator; y: GPUTableEvaluator}> = async ({
+export const divide: OperationHandler<{x: GPUTableEvaluator; y: GPUTableEvaluator}> = async ({
   inputs,
   output,
   target
 }) => {
   runRowTransform({
-    module: {name: 'interleave', vs},
+    elementWise: true,
+    module: {name: 'divide', vs},
     inputs,
     output,
     outputBuffer: target
