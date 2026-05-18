@@ -402,6 +402,23 @@ export type ArrowTextGlyphTable = {
   glyphAttributeBuildTimeMs: number;
 };
 
+/** CPU Arrow vectors used when one-line text layout expands rows into glyph attributes. */
+export type ArrowTextSourceVectors = {
+  positions: arrow.Vector<arrow.FixedSizeList<arrow.Float32>>;
+  texts: arrow.Vector<arrow.Utf8>;
+  colors?: arrow.Vector<arrow.FixedSizeList<arrow.Uint8>>;
+  angles?: arrow.Vector<arrow.Float32>;
+  sizes?: arrow.Vector<arrow.Float32>;
+  pixelOffsets?: arrow.Vector<arrow.FixedSizeList<arrow.Float32>>;
+  clipRects?: arrow.Vector<arrow.FixedSizeList<arrow.Int16>>;
+};
+
+/** CPU Arrow vectors still needed by storage-backed text expansion. */
+export type ArrowStorageTextSourceVectors = {
+  texts: arrow.Vector<arrow.Utf8>;
+  clipRects?: arrow.Vector<arrow.FixedSizeList<arrow.Int16>>;
+};
+
 export type ArrowTextModelProps = Omit<
   ArrowModelProps,
   'arrowTable' | 'arrowGPUTable' | 'arrowCount'
@@ -418,6 +435,8 @@ export type ArrowTextModelProps = Omit<
   pixelOffsets?: GPUVector<arrow.FixedSizeList<arrow.Float32>>;
   /** GPU UTF-8 labels aligned row-for-row with `positions`. */
   texts: GPUVector<arrow.Utf8>;
+  /** CPU Arrow vectors explicitly retained by the caller for glyph/layout expansion. */
+  sourceVectors: ArrowTextSourceVectors;
   /**
    * Optional packed per-label clip rectangles `[x, y, width, height]`.
    * Values are signed 16-bit glyph-layout units relative to the label origin.
@@ -438,7 +457,9 @@ export type ArrowTextModelProps = Omit<
   fontAtlas?: FontAtlas;
 };
 
-export type ArrowStorageTextInputProps = ArrowTextModelProps & {
+export type ArrowStorageTextInputProps = Omit<ArrowTextModelProps, 'sourceVectors'> & {
+  /** CPU Arrow vectors explicitly retained by the caller for storage glyph expansion. */
+  sourceVectors: ArrowStorageTextSourceVectors;
   /** Optional per-row text anchor enum: 0=start, 1=middle, 2=end. */
   textAnchors?: GPUVector<arrow.Uint8>;
   /** Optional per-row alignment baseline enum: 0=center, 1=top, 2=bottom. */
@@ -471,6 +492,7 @@ type ArrowStorageTextRenderProps = Omit<
   | 'fontAtlasManager'
   | 'characterMapping'
   | 'fontAtlas'
+  | 'sourceVectors'
 >;
 
 export type ArrowStorageTextBatchState = {
@@ -587,6 +609,7 @@ export class ArrowTextModel extends ArrowModel {
       props.sizes !== undefined ||
       props.pixelOffsets !== undefined ||
       props.texts !== undefined ||
+      props.sourceVectors !== undefined ||
       props.clipRects !== undefined ||
       props.characterSet !== undefined ||
       props.fontSettings !== undefined ||
@@ -637,6 +660,11 @@ export class ArrowTextModel extends ArrowModel {
     assertArrowTextVectorTypes(nextProps);
     assertArrowTextVectorBatchAlignment(nextProps);
     assertArrowTextAppendPrefixStable(this.textProps, nextProps, this.processedTextBatchCount);
+    assertArrowTextSourceAppendPrefixStable(
+      this.textProps,
+      nextProps,
+      this.processedTextBatchCount
+    );
 
     const nextBatchCount = nextProps.texts.data.length;
     if (nextBatchCount < this.processedTextBatchCount) {
@@ -813,6 +841,7 @@ export class ArrowStorageTextModel extends Model {
     const shouldReplaceState =
       shouldReplaceExternalState ||
       arrowProps.texts !== undefined ||
+      arrowProps.sourceVectors !== undefined ||
       arrowProps.textAnchors !== undefined ||
       arrowProps.alignmentBaselines !== undefined ||
       arrowProps.textAnchor !== undefined ||
@@ -873,6 +902,11 @@ export class ArrowStorageTextModel extends Model {
     }
     const nextProps = {...this.textProps, ...props} as ArrowStorageTextInputProps;
     assertArrowStorageTextAppendProps(props);
+    assertArrowStorageTextSourceAppendPrefixStable(
+      this.textProps as ArrowStorageTextInputProps,
+      nextProps,
+      this.storageState.batches.length
+    );
     appendArrowStorageTextStateBatches(this.device, nextProps, this.storageState);
     this.textProps = nextProps;
     this.applyStorageState(this.storageState);
@@ -1026,35 +1060,34 @@ type ResolvedArrowTextInputs = {
 };
 
 function resolveArrowTextInputs(props: ArrowTextModelProps): ResolvedArrowTextInputs {
+  if (!props.sourceVectors) {
+    throw new Error('ArrowTextModel requires explicit sourceVectors for CPU glyph expansion');
+  }
   assertArrowTextVectorTypes(props);
   assertArrowTextVectorRowAlignment(props);
-  const texts = getRetainedGPUVectorSource(props.texts, 'texts');
+  assertArrowTextSourceVectorAlignment(props);
+  const {sourceVectors} = props;
   const columns: Record<string, arrow.Vector> = {
-    positions: getRetainedGPUVectorSource(props.positions, 'positions')
+    positions: sourceVectors.positions
   };
-  if (props.colors) {
-    columns['colors'] = getRetainedGPUVectorSource(props.colors, 'colors');
+  if (sourceVectors.colors) {
+    columns['colors'] = sourceVectors.colors;
   }
-  if (props.angles) {
-    columns['angles'] = getRetainedGPUVectorSource(props.angles, 'angles');
+  if (sourceVectors.angles) {
+    columns['angles'] = sourceVectors.angles;
   }
-  if (props.sizes) {
-    columns['sizes'] = getRetainedGPUVectorSource(props.sizes, 'sizes');
+  if (sourceVectors.sizes) {
+    columns['sizes'] = sourceVectors.sizes;
   }
-  if (props.pixelOffsets) {
-    columns['pixelOffsets'] = getRetainedGPUVectorSource(props.pixelOffsets, 'pixelOffsets');
+  if (sourceVectors.pixelOffsets) {
+    columns['pixelOffsets'] = sourceVectors.pixelOffsets;
   }
   const labelTable = new arrow.Table(columns);
-  const clipRects = props.clipRects
-    ? (getRetainedGPUVectorSource(props.clipRects, 'clipRects') as arrow.Vector<
-        arrow.FixedSizeList<arrow.Int16>
-      >)
-    : undefined;
 
   return {
     labelTable,
-    texts: texts as arrow.Vector<arrow.Utf8>,
-    clipRects
+    texts: sourceVectors.texts,
+    clipRects: sourceVectors.clipRects
   };
 }
 
@@ -1062,25 +1095,22 @@ function resolveArrowTextBatchInputs(
   props: ArrowTextModelProps,
   batchIndex: number
 ): ResolvedArrowTextInputs {
-  const textData = props.texts.data[batchIndex];
-  const positionData = props.positions.data[batchIndex];
-  if (!textData?.sourceData || !positionData?.sourceData) {
-    throw new Error('ArrowTextModel appended batches require retained text and position sources');
-  }
+  const {sourceVectors} = props;
   const columns: Record<string, arrow.Vector> = {
-    positions: new arrow.Vector([positionData.sourceData])
+    positions: getArrowTextSourceBatch(sourceVectors.positions, 'positions', batchIndex)
   };
-  appendArrowTextBatchSourceColumn(columns, 'colors', props.colors, batchIndex);
-  appendArrowTextBatchSourceColumn(columns, 'angles', props.angles, batchIndex);
-  appendArrowTextBatchSourceColumn(columns, 'sizes', props.sizes, batchIndex);
-  appendArrowTextBatchSourceColumn(columns, 'pixelOffsets', props.pixelOffsets, batchIndex);
+  appendArrowTextBatchSourceColumn(columns, 'colors', sourceVectors.colors, batchIndex);
+  appendArrowTextBatchSourceColumn(columns, 'angles', sourceVectors.angles, batchIndex);
+  appendArrowTextBatchSourceColumn(columns, 'sizes', sourceVectors.sizes, batchIndex);
+  appendArrowTextBatchSourceColumn(columns, 'pixelOffsets', sourceVectors.pixelOffsets, batchIndex);
 
-  const clipRectSourceData = props.clipRects?.data[batchIndex]?.sourceData;
   return {
     labelTable: new arrow.Table(columns),
-    texts: new arrow.Vector([textData.sourceData]) as arrow.Vector<arrow.Utf8>,
-    clipRects: clipRectSourceData
-      ? (new arrow.Vector([clipRectSourceData]) as arrow.Vector<arrow.FixedSizeList<arrow.Int16>>)
+    texts: getArrowTextSourceBatch(sourceVectors.texts, 'texts', batchIndex),
+    clipRects: sourceVectors.clipRects
+      ? (getArrowTextSourceBatch(sourceVectors.clipRects, 'clipRects', batchIndex) as arrow.Vector<
+          arrow.FixedSizeList<arrow.Int16>
+        >)
       : undefined
   };
 }
@@ -1088,17 +1118,25 @@ function resolveArrowTextBatchInputs(
 function appendArrowTextBatchSourceColumn(
   columns: Record<string, arrow.Vector>,
   columnName: string,
-  vector: GPUVector<any> | undefined,
+  vector: arrow.Vector | undefined,
   batchIndex: number
 ): void {
   if (!vector) {
     return;
   }
-  const sourceData = vector.data[batchIndex]?.sourceData;
-  if (!sourceData) {
-    throw new Error(`ArrowTextModel appended ${columnName} batches require retained Arrow sources`);
+  columns[columnName] = getArrowTextSourceBatch(vector, columnName, batchIndex);
+}
+
+function getArrowTextSourceBatch<T extends arrow.DataType>(
+  vector: arrow.Vector<T>,
+  vectorName: string,
+  batchIndex: number
+): arrow.Vector<T> {
+  const data = vector.data[batchIndex];
+  if (!data) {
+    throw new Error(`Arrow text ${vectorName} source is missing batch ${batchIndex}`);
   }
-  columns[columnName] = new arrow.Vector([sourceData]);
+  return new arrow.Vector([data]) as arrow.Vector<T>;
 }
 
 function assertArrowTextVectorTypes(props: ArrowTextModelProps): void {
@@ -1177,6 +1215,31 @@ function assertArrowTextVectorBatchAlignment(props: ArrowTextModelProps): void {
   }
 }
 
+function assertArrowTextSourceVectorAlignment(props: ArrowTextModelProps): void {
+  const sourceInputs: Array<[string, GPUVector<any> | undefined, arrow.Vector | undefined]> = [
+    ['positions', props.positions, props.sourceVectors.positions],
+    ['texts', props.texts, props.sourceVectors.texts],
+    ['colors', props.colors, props.sourceVectors.colors],
+    ['angles', props.angles, props.sourceVectors.angles],
+    ['sizes', props.sizes, props.sourceVectors.sizes],
+    ['pixelOffsets', props.pixelOffsets, props.sourceVectors.pixelOffsets],
+    ['clipRects', props.clipRects, props.sourceVectors.clipRects]
+  ];
+
+  for (const [name, gpuVector, sourceVector] of sourceInputs) {
+    if (gpuVector && !sourceVector) {
+      throw new Error(`ArrowTextModel ${name} GPU rows require matching sourceVectors rows`);
+    }
+    if (!gpuVector && sourceVector) {
+      throw new Error(`ArrowTextModel sourceVectors.${name} requires matching GPU rows`);
+    }
+    if (!gpuVector || !sourceVector) {
+      continue;
+    }
+    assertSourceVectorMatchesGPUVector('ArrowTextModel', name, gpuVector, sourceVector);
+  }
+}
+
 function getArrowTextRowInputs(props: ArrowTextModelProps): Array<[string, GPUVector<any>]> {
   return [
     ['positions', props.positions],
@@ -1197,7 +1260,8 @@ function assertArrowTextAppendProps(props: Partial<ArrowTextModelProps>): void {
     'angles',
     'sizes',
     'pixelOffsets',
-    'clipRects'
+    'clipRects',
+    'sourceVectors'
   ]);
   for (const propName of Object.keys(props)) {
     if (!appendablePropNames.has(propName)) {
@@ -1229,6 +1293,90 @@ function assertArrowTextAppendPrefixStable(
   }
 }
 
+function assertArrowTextSourceAppendPrefixStable(
+  previousProps: ArrowTextModelProps,
+  nextProps: ArrowTextModelProps,
+  processedBatchCount: number
+): void {
+  const previousSourceVectors = previousProps.sourceVectors;
+  const nextSourceVectors = nextProps.sourceVectors;
+  const sourceInputs: Array<[string, arrow.Vector | undefined, arrow.Vector | undefined]> = [
+    ['positions', previousSourceVectors.positions, nextSourceVectors.positions],
+    ['texts', previousSourceVectors.texts, nextSourceVectors.texts],
+    ['colors', previousSourceVectors.colors, nextSourceVectors.colors],
+    ['angles', previousSourceVectors.angles, nextSourceVectors.angles],
+    ['sizes', previousSourceVectors.sizes, nextSourceVectors.sizes],
+    ['pixelOffsets', previousSourceVectors.pixelOffsets, nextSourceVectors.pixelOffsets],
+    ['clipRects', previousSourceVectors.clipRects, nextSourceVectors.clipRects]
+  ];
+
+  for (const [name, previousVector, nextVector] of sourceInputs) {
+    if (!previousVector && nextVector && processedBatchCount > 0) {
+      throw new Error(`ArrowTextModel appendTextBatches() cannot add prior ${name} sources`);
+    }
+    if (!previousVector || !nextVector) {
+      continue;
+    }
+    for (let batchIndex = 0; batchIndex < processedBatchCount; batchIndex++) {
+      if (previousVector.data[batchIndex] !== nextVector.data[batchIndex]) {
+        throw new Error(
+          `ArrowTextModel appendTextBatches() requires existing ${name} source batches to stay unchanged`
+        );
+      }
+    }
+  }
+}
+
+function assertArrowStorageTextSourceAppendPrefixStable(
+  previousProps: ArrowStorageTextInputProps,
+  nextProps: ArrowStorageTextInputProps,
+  processedBatchCount: number
+): void {
+  const sourceInputs: Array<[string, arrow.Vector | undefined, arrow.Vector | undefined]> = [
+    ['texts', previousProps.sourceVectors.texts, nextProps.sourceVectors.texts],
+    ['clipRects', previousProps.sourceVectors.clipRects, nextProps.sourceVectors.clipRects]
+  ];
+
+  for (const [name, previousVector, nextVector] of sourceInputs) {
+    if (!previousVector && nextVector && processedBatchCount > 0) {
+      throw new Error(`ArrowStorageTextModel appendTextBatches() cannot add prior ${name} sources`);
+    }
+    if (!previousVector || !nextVector) {
+      continue;
+    }
+    for (let batchIndex = 0; batchIndex < processedBatchCount; batchIndex++) {
+      if (previousVector.data[batchIndex] !== nextVector.data[batchIndex]) {
+        throw new Error(
+          `ArrowStorageTextModel appendTextBatches() requires existing ${name} source batches to stay unchanged`
+        );
+      }
+    }
+  }
+}
+
+function assertSourceVectorMatchesGPUVector(
+  ownerName: 'ArrowTextModel' | 'ArrowStorageTextModel',
+  vectorName: string,
+  gpuVector: GPUVector<any>,
+  sourceVector: arrow.Vector
+): void {
+  if (sourceVector.length !== gpuVector.length) {
+    throw new Error(
+      `${ownerName} sourceVectors.${vectorName} rows must match GPU rows (${sourceVector.length} !== ${gpuVector.length})`
+    );
+  }
+  if (sourceVector.data.length !== gpuVector.data.length) {
+    throw new Error(`${ownerName} sourceVectors.${vectorName} batch count must match GPU batches`);
+  }
+  for (let batchIndex = 0; batchIndex < sourceVector.data.length; batchIndex++) {
+    if (sourceVector.data[batchIndex].length !== gpuVector.data[batchIndex].length) {
+      throw new Error(
+        `${ownerName} sourceVectors.${vectorName} batch ${batchIndex} rows must match GPU rows`
+      );
+    }
+  }
+}
+
 type ResolvedArrowStorageTextBatchInputs = {
   batchRowIndexBase: number;
   texts: arrow.Vector<arrow.Utf8>;
@@ -1250,23 +1398,29 @@ type ResolvedArrowStorageTextInputs = {
 function resolveArrowStorageTextInputs(
   props: ArrowStorageTextInputProps
 ): ResolvedArrowStorageTextInputs {
+  if (!props.sourceVectors) {
+    throw new Error(
+      'ArrowStorageTextModel requires explicit sourceVectors for CPU glyph expansion'
+    );
+  }
   assertStorageVectorTypes(props);
   assertStorageVectorBatchAlignment(props);
-  const texts = getRetainedGPUVectorSource(props.texts, 'texts');
+  assertStorageSourceVectorAlignment(props);
+  const {sourceVectors} = props;
   const batches: ResolvedArrowStorageTextBatchInputs[] = [];
   let batchRowIndexBase = 0;
 
   for (let batchIndex = 0; batchIndex < props.texts.data.length; batchIndex++) {
     const textData = props.texts.data[batchIndex];
-    if (!textData.sourceData) {
-      throw new Error('Text models require texts GPUData chunks to retain Arrow source data');
-    }
-    const clipRectSourceData = props.clipRects?.data[batchIndex]?.sourceData;
     batches.push({
       batchRowIndexBase,
-      texts: new arrow.Vector([textData.sourceData]) as arrow.Vector<arrow.Utf8>,
-      clipRects: clipRectSourceData
-        ? (new arrow.Vector([clipRectSourceData]) as arrow.Vector<arrow.FixedSizeList<arrow.Int16>>)
+      texts: getArrowTextSourceBatch(sourceVectors.texts, 'texts', batchIndex),
+      clipRects: sourceVectors.clipRects
+        ? (getArrowTextSourceBatch(
+            sourceVectors.clipRects,
+            'clipRects',
+            batchIndex
+          ) as arrow.Vector<arrow.FixedSizeList<arrow.Int16>>)
         : undefined,
       positionsBuffer: props.positions.data[batchIndex].buffer,
       colorsBuffer: props.colors?.data[batchIndex].buffer,
@@ -1279,7 +1433,7 @@ function resolveArrowStorageTextInputs(
     batchRowIndexBase += textData.length;
   }
 
-  return {texts: texts as arrow.Vector<arrow.Utf8>, batches};
+  return {texts: sourceVectors.texts, batches};
 }
 
 function assertStorageVectorTypes(props: ArrowStorageTextInputProps): void {
@@ -1323,9 +1477,7 @@ function assertStorageVectorTypes(props: ArrowStorageTextInputProps): void {
   if (props.alignmentBaselines && !(props.alignmentBaselines.type instanceof arrow.Uint8)) {
     throw new Error('ArrowStorageTextModel alignmentBaselines must be GPUVector<Uint8>');
   }
-  const clipRects = props.clipRects
-    ? getRetainedGPUVectorSource(props.clipRects, 'clipRects')
-    : undefined;
+  const clipRects = props.sourceVectors.clipRects;
   assertClipRects(
     clipRects as arrow.Vector<arrow.FixedSizeList<arrow.Int16>> | undefined,
     props.texts.length
@@ -1369,6 +1521,31 @@ function assertStorageVectorBatchAlignment(props: ArrowStorageTextInputProps): v
   }
 }
 
+function assertStorageSourceVectorAlignment(props: ArrowStorageTextInputProps): void {
+  assertSourceVectorMatchesGPUVector(
+    'ArrowStorageTextModel',
+    'texts',
+    props.texts,
+    props.sourceVectors.texts
+  );
+  if (props.clipRects && !props.sourceVectors.clipRects) {
+    throw new Error('ArrowStorageTextModel clipRects GPU rows require matching sourceVectors rows');
+  }
+  if (!props.clipRects && props.sourceVectors.clipRects) {
+    throw new Error(
+      'ArrowStorageTextModel sourceVectors.clipRects requires matching GPU clipRects rows'
+    );
+  }
+  if (props.clipRects && props.sourceVectors.clipRects) {
+    assertSourceVectorMatchesGPUVector(
+      'ArrowStorageTextModel',
+      'clipRects',
+      props.clipRects,
+      props.sourceVectors.clipRects
+    );
+  }
+}
+
 function assertArrowStorageTextAppendProps(props: Partial<ArrowStorageTextInputProps>): void {
   const appendablePropNames = new Set([
     'positions',
@@ -1379,7 +1556,8 @@ function assertArrowStorageTextAppendProps(props: Partial<ArrowStorageTextInputP
     'pixelOffsets',
     'textAnchors',
     'alignmentBaselines',
-    'clipRects'
+    'clipRects',
+    'sourceVectors'
   ]);
   for (const propName of Object.keys(props)) {
     if (!appendablePropNames.has(propName)) {
@@ -1388,24 +1566,6 @@ function assertArrowStorageTextAppendProps(props: Partial<ArrowStorageTextInputP
       );
     }
   }
-}
-
-function getRetainedGPUVectorSource<T extends arrow.DataType>(
-  vector: GPUVector<T>,
-  vectorName: string
-): arrow.Vector<T> {
-  if (vector.data.length === 0) {
-    return new arrow.Vector([]) as arrow.Vector<T>;
-  }
-  const data = vector.data.map(chunk => {
-    if (!chunk.sourceData) {
-      throw new Error(
-        `Text models require ${vectorName} GPUData chunks to retain Arrow source data`
-      );
-    }
-    return chunk.sourceData;
-  });
-  return new arrow.Vector(data) as arrow.Vector<T>;
 }
 
 function prepareArrowTextModel(

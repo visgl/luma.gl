@@ -52,6 +52,7 @@ export {
   GPUData,
   GPUVector,
   type GPUDataFromBufferProps,
+  type GPUDataReadbackMetadata,
   type GPUVectorBufferProps,
   type GPUVectorCreateProps,
   type GPUVectorDynamicBufferProps,

@@ -71,8 +71,10 @@ export {
   type ArrowStorageTextInputProps,
   type ArrowStorageTextModelProps,
   type ArrowStorageTextRenderBatchState,
+  type ArrowStorageTextSourceVectors,
   type ArrowStorageTextState,
   type ArrowTextGlyphTable,
   type ArrowTextModelProps,
-  type ArrowTextRenderBatchState
+  type ArrowTextRenderBatchState,
+  type ArrowTextSourceVectors
 } from './arrow-text-model';

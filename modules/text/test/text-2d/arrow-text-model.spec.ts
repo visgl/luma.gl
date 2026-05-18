@@ -103,14 +103,65 @@ test('ArrowTextModel derives from ArrowModel and updates glyph instance counts',
   t.deepEqual(model.glyphLayout.startIndices, [0, 2, 3], 'model exposes glyph start indices');
   t.equal(model.glyphTable.numRows, 3, 'model retains generated glyph table');
 
-  const updatedTexts = makeGpuTexts(device, ['A', 'A']);
-  model.setProps({texts: updatedTexts});
+  const updatedTextSource = makeArrowTexts(['A', 'A']);
+  const updatedTexts = makeGpuTexts(device, updatedTextSource);
+  model.setProps({
+    texts: updatedTexts,
+    sourceVectors: {...textProps.sourceVectors, texts: updatedTextSource}
+  });
   t.equal(model.instanceCount, 2, 'updates instance count when text changes');
   t.deepEqual(model.glyphLayout.startIndices, [0, 1, 2], 'updates start indices');
 
   model.destroy();
   destroyGpuTextProps(textProps);
   updatedTexts.destroy();
+  t.end();
+});
+
+test('ArrowTextModel requires explicit CPU source vectors', t => {
+  const device = new NullDevice({});
+  const textProps = makeGpuTextProps(device, ['AB', 'A']);
+  const {sourceVectors, ...propsWithoutSourceVectors} = textProps;
+
+  t.throws(
+    () =>
+      new ArrowTextModel(device, {
+        id: 'arrow-text-model-missing-sources-test',
+        ...(propsWithoutSourceVectors as Omit<typeof textProps, 'sourceVectors'>),
+        characterMapping: CHARACTER_MAPPING,
+        fontSettings: {fontSize: 10}
+      } as never),
+    /requires explicit sourceVectors/,
+    'CPU source ownership is visible at the text model boundary'
+  );
+
+  destroyGpuTextProps(textProps);
+  t.end();
+});
+
+test('ArrowTextModel rejects source batch alignment mismatches', t => {
+  const device = new NullDevice({});
+  const textProps = makeGpuTextProps(device, ['AB', 'A']);
+  const firstChunk = makeArrowTexts(['AB']);
+  const secondChunk = makeArrowTexts(['A']);
+
+  t.throws(
+    () =>
+      new ArrowTextModel(device, {
+        id: 'arrow-text-model-source-batch-alignment-test',
+        ...textProps,
+        sourceVectors: {
+          ...textProps.sourceVectors,
+          texts: new arrow.Vector<arrow.Utf8>([...firstChunk.data, ...secondChunk.data])
+        },
+        characterMapping: CHARACTER_MAPPING,
+        fontSettings: {fontSize: 10}
+      }),
+    /batch count must match GPU batches/,
+    'source vector batches stay explicitly aligned with GPU vector batches'
+  );
+
+  destroyGpuTextProps(textProps);
   t.end();
 });
 
@@ -222,12 +273,14 @@ test('ArrowTextModel expands chunked UTF-8 GPUVector data', t => {
   const secondChunk = arrow.vectorFromArray(['A'], new arrow.Utf8());
   const textProps = makeGpuTextProps(device, []);
   textProps.texts.destroy();
+  const sourceTexts = new arrow.Vector<arrow.Utf8>([...firstChunk.data, ...secondChunk.data]);
   textProps.texts = new GPUVector({
     type: 'arrow',
     name: 'texts',
     device,
-    vector: new arrow.Vector([...firstChunk.data, ...secondChunk.data])
+    vector: sourceTexts
   });
+  textProps.sourceVectors = {...textProps.sourceVectors, texts: sourceTexts};
 
   const model = new ArrowTextModel(device, {
     id: 'chunked-arrow-text-model-test',
@@ -252,11 +305,13 @@ test('ArrowTextModel appends GPUTable-backed text batches without rebuilding pri
   const gpuTable = new GPUTable(device, new arrow.Table([firstBatch]), {
     shaderLayout: APPENDABLE_TEXT_INPUT_SHADER_LAYOUT
   });
+  const firstSourceVectors = makeArrowTextSourceVectorsFromBatches([firstBatch]);
 
   const model = new ArrowTextModel(device, {
     id: 'arrow-text-model-appendable-gpu-table-test',
     positions: gpuTable.gpuVectors.positions as GPUVector<arrow.FixedSizeList<arrow.Float32>>,
     texts: gpuTable.gpuVectors.texts as GPUVector<arrow.Utf8>,
+    sourceVectors: firstSourceVectors,
     characterMapping: CHARACTER_MAPPING,
     fontSettings: {fontSize: 10}
   });
@@ -270,7 +325,8 @@ test('ArrowTextModel appends GPUTable-backed text batches without rebuilding pri
   );
   model.appendTextBatches({
     positions: gpuTable.gpuVectors.positions as GPUVector<arrow.FixedSizeList<arrow.Float32>>,
-    texts: gpuTable.gpuVectors.texts as GPUVector<arrow.Utf8>
+    texts: gpuTable.gpuVectors.texts as GPUVector<arrow.Utf8>,
+    sourceVectors: makeArrowTextSourceVectorsFromBatches([firstBatch, secondBatch])
   });
   t.equal(model.glyphLayout.glyphCount, 3, 'adds glyphs from the later GPU record batch');
   t.equal(
@@ -389,11 +445,13 @@ test('ArrowStorageTextModel appends GPUTable-backed text batches without rebuild
   const gpuTable = new GPUTable(device, new arrow.Table([firstBatch]), {
     shaderLayout: APPENDABLE_TEXT_INPUT_SHADER_LAYOUT
   });
+  const firstSourceVectors = makeArrowStorageTextSourceVectorsFromBatches([firstBatch]);
 
   const model = new ArrowStorageTextModel(device, {
     id: 'arrow-storage-text-appendable-gpu-table-test',
     positions: gpuTable.gpuVectors.positions as GPUVector<arrow.FixedSizeList<arrow.Float32>>,
     texts: gpuTable.gpuVectors.texts as GPUVector<arrow.Utf8>,
+    sourceVectors: firstSourceVectors,
     characterMapping: CHARACTER_MAPPING,
     fontSettings: {fontSize: 10}
   });
@@ -406,7 +464,8 @@ test('ArrowStorageTextModel appends GPUTable-backed text batches without rebuild
   );
   model.appendTextBatches({
     positions: gpuTable.gpuVectors.positions as GPUVector<arrow.FixedSizeList<arrow.Float32>>,
-    texts: gpuTable.gpuVectors.texts as GPUVector<arrow.Utf8>
+    texts: gpuTable.gpuVectors.texts as GPUVector<arrow.Utf8>,
+    sourceVectors: makeArrowStorageTextSourceVectorsFromBatches([firstBatch, secondBatch])
   });
 
   t.equal(model.glyphCount, 3, 'storage text expansion reads the appended UTF-8 batch');
@@ -549,8 +608,12 @@ test('ArrowStorageTextModel refreshes row bindings without rebuilding glyph buff
     'row-binding updates refresh owned style config buffers'
   );
 
-  const updatedTexts = makeGpuTexts(device, ['A', 'A']);
-  model.setProps({texts: updatedTexts});
+  const updatedTextSource = makeArrowTexts(['A', 'A']);
+  const updatedTexts = makeGpuTexts(device, updatedTextSource);
+  model.setProps({
+    texts: updatedTexts,
+    sourceVectors: {...textProps.sourceVectors, texts: updatedTextSource}
+  });
 
   t.notEqual(model.storageState, storageState, 'text updates replace storage state');
   t.notEqual(
@@ -586,24 +649,57 @@ function makeAppendableTextRecordBatch(
   return recordBatch;
 }
 
+function makeArrowTextSourceVectorsFromBatches(recordBatches: arrow.RecordBatch[]) {
+  const table = new arrow.Table(recordBatches);
+  const positions = table.getChild('positions');
+  const texts = table.getChild('texts');
+  if (!positions || !texts) {
+    throw new Error('Text source vectors require positions and texts columns');
+  }
+  return {
+    positions: positions as arrow.Vector<arrow.FixedSizeList<arrow.Float32>>,
+    texts: texts as arrow.Vector<arrow.Utf8>
+  };
+}
+
+function makeArrowStorageTextSourceVectorsFromBatches(recordBatches: arrow.RecordBatch[]) {
+  const table = new arrow.Table(recordBatches);
+  const texts = table.getChild('texts');
+  if (!texts) {
+    throw new Error('Storage text source vectors require a texts column');
+  }
+  return {texts: texts as arrow.Vector<arrow.Utf8>};
+}
+
 function makeGpuTextProps(device: NullDevice, labels: string[]) {
+  const positions = makeArrowFixedSizeListVector(
+    new arrow.Float32(),
+    2,
+    new Float32Array([0, 0, 1, 1])
+  );
+  const texts = makeArrowTexts(labels);
   return {
     positions: new GPUVector({
       type: 'arrow',
       name: 'positions',
       device,
-      vector: makeArrowFixedSizeListVector(new arrow.Float32(), 2, new Float32Array([0, 0, 1, 1]))
+      vector: positions
     }),
-    texts: makeGpuTexts(device, labels)
+    texts: makeGpuTexts(device, texts),
+    sourceVectors: {positions, texts}
   };
 }
 
-function makeGpuTexts(device: NullDevice, labels: string[]): GPUVector<arrow.Utf8> {
+function makeArrowTexts(labels: string[]): arrow.Vector<arrow.Utf8> {
+  return arrow.vectorFromArray(labels, new arrow.Utf8()) as arrow.Vector<arrow.Utf8>;
+}
+
+function makeGpuTexts(device: NullDevice, vector: arrow.Vector<arrow.Utf8>): GPUVector<arrow.Utf8> {
   return new GPUVector({
     type: 'arrow',
     name: 'texts',
     device,
-    vector: arrow.vectorFromArray(labels, new arrow.Utf8())
+    vector
   });
 }
 
@@ -613,14 +709,21 @@ function destroyGpuTextProps(props: ReturnType<typeof makeGpuTextProps>): void {
 }
 
 function makeStorageGpuTextProps(device: NullDevice, labels: string[]) {
+  const positions = makeArrowFixedSizeListVector(
+    new arrow.Float32(),
+    2,
+    new Float32Array([0, 0, 1, 1])
+  );
+  const texts = makeArrowTexts(labels);
   return {
     positions: new GPUVector({
       type: 'arrow',
       name: 'positions',
       device,
-      vector: makeArrowFixedSizeListVector(new arrow.Float32(), 2, new Float32Array([0, 0, 1, 1]))
+      vector: positions
     }),
-    texts: makeGpuTexts(device, labels)
+    texts: makeGpuTexts(device, texts),
+    sourceVectors: {texts}
   };
 }
 

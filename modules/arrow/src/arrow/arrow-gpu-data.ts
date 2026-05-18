@@ -5,9 +5,31 @@
 import {Buffer, Device, type BigTypedArray} from '@luma.gl/core';
 import {DynamicBuffer, type DynamicBufferProps} from '@luma.gl/engine';
 import * as arrow from 'apache-arrow';
-import type {AttributeArrowType, NumericArrowType} from './arrow-types';
+import {
+  isVariableLengthAttributeArrowType,
+  type AttributeArrowType,
+  type NumericArrowType,
+  type VariableLengthAttributeArrowType
+} from './arrow-types';
 
 type GPUDataBufferProps = Omit<DynamicBufferProps, 'byteLength' | 'data' | 'buffer' | 'ownsBuffer'>;
+
+/** Compact CPU metadata required to reconstruct variable-width Arrow chunks after GPU readback. */
+export type GPUDataReadbackMetadata =
+  | {
+      kind: 'utf8';
+      valueOffsets: Int32Array;
+      nullCount: number;
+      nullBitmap?: Uint8Array;
+      valueByteLength: number;
+    }
+  | {
+      kind: 'variable-length-attribute';
+      valueOffsets: Int32Array;
+      nullCount: number;
+      nullBitmap?: Uint8Array;
+      valueByteLength: number;
+    };
 
 /** Constructor props that wrap one existing typed GPU data buffer. */
 export type GPUDataFromBufferProps<T extends arrow.DataType = AttributeArrowType> = {
@@ -23,8 +45,8 @@ export type GPUDataFromBufferProps<T extends arrow.DataType = AttributeArrowType
   byteStride?: number;
   /** Whether this data view should destroy the buffer. */
   ownsBuffer?: boolean;
-  /** Optional source Arrow data retained for CPU-side consumers such as text expansion. */
-  sourceData?: arrow.Data<T>;
+  /** Optional compact metadata for reconstructing variable-width Arrow chunks after GPU readback. */
+  readbackMetadata?: GPUDataReadbackMetadata;
 };
 
 type GPUVectorReadableBuffer = Pick<Buffer, 'readAsync'>;
@@ -75,8 +97,8 @@ export class GPUData<T extends arrow.DataType = AttributeArrowType> {
   readonly byteOffset: number;
   /** Bytes between adjacent logical rows in {@link buffer}. */
   readonly byteStride: number;
-  /** Optional source Arrow data retained for CPU-side consumers such as text expansion. */
-  readonly sourceData?: arrow.Data<T>;
+  /** Optional compact metadata for reconstructing variable-width Arrow chunks after GPU readback. */
+  readonly readbackMetadata?: GPUDataReadbackMetadata;
   /** Whether this data view is responsible for destroying {@link buffer}. */
   private _ownsBuffer: boolean;
 
@@ -93,7 +115,7 @@ export class GPUData<T extends arrow.DataType = AttributeArrowType> {
       const arrowData = data!;
       this.type = arrowData.type as T;
       this.length = arrowData.length;
-      this.sourceData = arrowData;
+      this.readbackMetadata = getArrowGPUDataReadbackMetadata(arrowData);
       if (arrow.DataType.isUtf8(arrowData.type)) {
         this.stride = 1;
         this.byteOffset = 0;
@@ -102,6 +124,20 @@ export class GPUData<T extends arrow.DataType = AttributeArrowType> {
           usage: Buffer.VERTEX | Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
           ...props,
           data: getArrowUtf8DataBufferSource(arrowData as arrow.Data<arrow.Utf8>)
+        });
+        this._ownsBuffer = true;
+        return;
+      }
+      if (isVariableLengthAttributeArrowType(arrowData.type)) {
+        this.stride = getArrowVariableLengthAttributeElementStride(arrowData.type);
+        this.byteOffset = 0;
+        this.byteStride = getArrowVariableLengthAttributeElementByteStride(arrowData.type);
+        this.buffer = new DynamicBuffer(deviceOrProps, {
+          usage: Buffer.VERTEX | Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
+          ...props,
+          data: getArrowVariableLengthAttributeDataBufferSource(
+            arrowData as unknown as arrow.Data<VariableLengthAttributeArrowType>
+          )
         });
         this._ownsBuffer = true;
         return;
@@ -125,7 +161,7 @@ export class GPUData<T extends arrow.DataType = AttributeArrowType> {
       byteOffset = 0,
       byteStride = getArrowTypeByteStride(arrowType),
       ownsBuffer = false,
-      sourceData
+      readbackMetadata
     } = deviceOrProps;
     this.buffer = buffer;
     this.type = arrowType as T;
@@ -133,7 +169,7 @@ export class GPUData<T extends arrow.DataType = AttributeArrowType> {
     this.stride = getArrowTypeStride(arrowType);
     this.byteOffset = byteOffset;
     this.byteStride = byteStride;
-    this.sourceData = sourceData;
+    this.readbackMetadata = readbackMetadata;
     this._ownsBuffer = ownsBuffer;
   }
 
@@ -144,23 +180,38 @@ export class GPUData<T extends arrow.DataType = AttributeArrowType> {
   /** Reads this GPU chunk back into a single non-null Arrow Data chunk. */
   async readAsync(): Promise<arrow.Data<T>> {
     if (arrow.DataType.isUtf8(this.type)) {
-      if (!this.sourceData) {
-        throw new Error('GPUData.readAsync() requires retained UTF-8 source offsets');
+      const metadata = this.readbackMetadata;
+      if (metadata?.kind !== 'utf8') {
+        throw new Error('GPUData.readAsync() requires UTF-8 readback metadata');
       }
-      const sourceData = this.sourceData as unknown as arrow.Data<arrow.Utf8>;
-      const values = getArrowUtf8DataBufferSource(sourceData);
       const bytes =
-        values.byteLength === 0
+        metadata.valueByteLength === 0
           ? new Uint8Array(0)
-          : await this.buffer.readAsync(this.byteOffset, values.byteLength);
+          : await this.buffer.readAsync(this.byteOffset, metadata.valueByteLength);
       return arrow.makeData({
         type: new arrow.Utf8(),
-        length: sourceData.length,
-        nullCount: sourceData.nullCount,
-        nullBitmap: sourceData.nullBitmap as Uint8Array | undefined,
-        valueOffsets: sourceData.valueOffsets as Int32Array,
+        length: this.length,
+        nullCount: metadata.nullCount,
+        nullBitmap: metadata.nullBitmap,
+        valueOffsets: metadata.valueOffsets,
         data: bytes
       }) as arrow.Data<T>;
+    }
+    if (isVariableLengthAttributeArrowType(this.type)) {
+      const metadata = this.readbackMetadata;
+      if (metadata?.kind !== 'variable-length-attribute') {
+        throw new Error('GPUData.readAsync() requires variable-length attribute readback metadata');
+      }
+      const bytes =
+        metadata.valueByteLength === 0
+          ? new Uint8Array(0)
+          : await this.buffer.readAsync(this.byteOffset, metadata.valueByteLength);
+      return makeArrowVariableLengthAttributeDataFromPackedBytes(
+        this.type,
+        this.length,
+        metadata,
+        bytes
+      ) as unknown as arrow.Data<T>;
     }
     const vector = await readArrowGPUVectorAsync({
       type: this.type as unknown as AttributeArrowType,
@@ -218,6 +269,75 @@ export function getArrowUtf8DataBufferSource(data: arrow.Data<arrow.Utf8>): Uint
   return values.subarray(firstValueOffset, lastValueOffset);
 }
 
+/** Return flattened numeric values referenced by one variable-length nested attribute chunk. */
+export function getArrowVariableLengthAttributeDataBufferSource(
+  data: arrow.Data<VariableLengthAttributeArrowType>
+): NumericArrowType['TArray'] {
+  const valueOffsets = data.valueOffsets as Int32Array | undefined;
+  const elementData = data.children[0] as arrow.Data | undefined;
+  if (!valueOffsets || !elementData) {
+    return new Float32Array(0);
+  }
+
+  const firstElementOffset = valueOffsets[0] ?? 0;
+  const lastElementOffset = valueOffsets[data.length] ?? firstElementOffset;
+
+  if (arrow.DataType.isFixedSizeList(elementData.type)) {
+    const numericData = elementData.children[0] as arrow.Data<NumericArrowType> | undefined;
+    const values = numericData?.values as NumericArrowType['TArray'] | undefined;
+    if (!numericData || !values) {
+      return new Float32Array(0);
+    }
+
+    const elementStride = elementData.type.listSize;
+    const numericValueOffset = numericData.offset ?? 0;
+    const firstValueOffset = numericValueOffset + firstElementOffset * elementStride;
+    const lastValueOffset = numericValueOffset + lastElementOffset * elementStride;
+    return values.subarray(firstValueOffset, lastValueOffset) as NumericArrowType['TArray'];
+  }
+
+  const values = elementData.values as NumericArrowType['TArray'] | undefined;
+  if (!values) {
+    return new Float32Array(0);
+  }
+  const numericValueOffset = elementData.offset ?? 0;
+  return values.subarray(
+    numericValueOffset + firstElementOffset,
+    numericValueOffset + lastElementOffset
+  ) as NumericArrowType['TArray'];
+}
+
+/** Copy compact variable-width reconstruction metadata without retaining Arrow value buffers. */
+export function getArrowGPUDataReadbackMetadata(
+  data: arrow.Data
+): GPUDataReadbackMetadata | undefined {
+  if (arrow.DataType.isUtf8(data.type)) {
+    const values = getArrowUtf8DataBufferSource(data as arrow.Data<arrow.Utf8>);
+    return {
+      kind: 'utf8',
+      valueOffsets: copyNormalizedArrowValueOffsets(data),
+      nullCount: data.nullCount,
+      nullBitmap: copyNormalizedArrowNullBitmap(data),
+      valueByteLength: values.byteLength
+    };
+  }
+
+  if (isVariableLengthAttributeArrowType(data.type)) {
+    const values = getArrowVariableLengthAttributeDataBufferSource(
+      data as arrow.Data<VariableLengthAttributeArrowType>
+    );
+    return {
+      kind: 'variable-length-attribute',
+      valueOffsets: copyNormalizedArrowValueOffsets(data),
+      nullCount: data.nullCount,
+      nullBitmap: copyNormalizedArrowNullBitmap(data),
+      valueByteLength: values.byteLength
+    };
+  }
+
+  return undefined;
+}
+
 export function getArrowVectorBufferSource<T extends NumericArrowType>(
   vector: arrow.Vector<T>
 ): T['TArray'];
@@ -249,11 +369,17 @@ export function getArrowVectorBufferSource(vector: arrow.Vector): NumericArrowTy
 
 /** Number of scalar values in one logical Arrow row. */
 export function getArrowTypeStride(type: arrow.DataType): number {
+  if (isVariableLengthAttributeArrowType(type)) {
+    return getArrowVariableLengthAttributeElementStride(type);
+  }
   return arrow.DataType.isFixedSizeList(type) ? type.listSize : 1;
 }
 
 /** Number of uploaded bytes in one logical Arrow row. */
 export function getArrowTypeByteStride(type: arrow.DataType): number {
+  if (isVariableLengthAttributeArrowType(type)) {
+    return getArrowVariableLengthAttributeElementByteStride(type);
+  }
   if (arrow.DataType.isFixedSizeList(type)) {
     return type.listSize * getArrowTypeByteStride(type.children[0].type);
   }
@@ -276,13 +402,22 @@ export function getArrowTypeByteStride(type: arrow.DataType): number {
 /** Reject nullable Arrow chunks that cannot be uploaded directly into GPU attribute buffers. */
 export function validateArrowGPUDataDirectUpload(
   name: string,
-  data: arrow.Data<AttributeArrowType | arrow.Utf8>
+  data: arrow.Data<AttributeArrowType | arrow.Utf8 | VariableLengthAttributeArrowType>
 ): void {
   if (data.nullCount > 0) {
     throw new Error(`GPUVector "${name}" does not support nullable data`);
   }
   if (arrow.DataType.isFixedSizeList(data.type) && (data.children[0]?.nullCount ?? 0) > 0) {
     throw new Error(`GPUVector "${name}" does not support nullable child data`);
+  }
+  if (isVariableLengthAttributeArrowType(data.type)) {
+    const elementData = data.children[0];
+    const nestedNumericData = arrow.DataType.isFixedSizeList(elementData?.type)
+      ? elementData.children[0]
+      : undefined;
+    if ((elementData?.nullCount ?? 0) > 0 || (nestedNumericData?.nullCount ?? 0) > 0) {
+      throw new Error(`GPUVector "${name}" does not support nullable nested list data`);
+    }
   }
 }
 
@@ -392,6 +527,117 @@ function makeArrowVectorFromPackedBytes<T extends AttributeArrowType>(
     data: values as NumericArrowType['TArray']
   });
   return arrow.makeVector(data) as arrow.Vector<T>;
+}
+
+function makeArrowVariableLengthAttributeDataFromPackedBytes(
+  type: VariableLengthAttributeArrowType,
+  length: number,
+  metadata: Extract<GPUDataReadbackMetadata, {kind: 'variable-length-attribute'}>,
+  bytes: Uint8Array
+): arrow.Data<VariableLengthAttributeArrowType> {
+  const elementType = type.children[0].type;
+  const elementData = arrow.DataType.isFixedSizeList(elementType)
+    ? makeArrowFixedSizeListElementDataFromPackedBytes(elementType, bytes)
+    : makeArrowNumericElementDataFromPackedBytes(elementType as NumericArrowType, bytes);
+
+  return new arrow.Data<VariableLengthAttributeArrowType>(
+    type,
+    0,
+    length,
+    metadata.nullCount,
+    {
+      [arrow.BufferType.OFFSET]: metadata.valueOffsets,
+      ...(metadata.nullBitmap ? {[arrow.BufferType.VALIDITY]: metadata.nullBitmap} : {})
+    },
+    [elementData]
+  );
+}
+
+function copyNormalizedArrowValueOffsets(data: arrow.Data): Int32Array {
+  const valueOffsets = data.valueOffsets as Int32Array | undefined;
+  const copiedOffsets = new Int32Array(data.length + 1);
+  if (!valueOffsets) {
+    return copiedOffsets;
+  }
+
+  const firstValueOffset = valueOffsets[0] ?? 0;
+  for (let offsetIndex = 0; offsetIndex <= data.length; offsetIndex++) {
+    copiedOffsets[offsetIndex] = Math.max(
+      0,
+      (valueOffsets[offsetIndex] ?? firstValueOffset) - firstValueOffset
+    );
+  }
+  return copiedOffsets;
+}
+
+function copyNormalizedArrowNullBitmap(data: arrow.Data): Uint8Array | undefined {
+  if (data.nullCount === 0 || !data.nullBitmap) {
+    return undefined;
+  }
+
+  const copiedBitmap = new Uint8Array(Math.ceil(data.length / 8));
+  const sourceBitmap = data.nullBitmap as Uint8Array;
+  const sourceRowOffset = data.offset ?? 0;
+  for (let rowIndex = 0; rowIndex < data.length; rowIndex++) {
+    const sourceBitIndex = sourceRowOffset + rowIndex;
+    const sourceByte = sourceBitmap[sourceBitIndex >> 3] ?? 0;
+    if ((sourceByte & (1 << (sourceBitIndex & 7))) !== 0) {
+      copiedBitmap[rowIndex >> 3] |= 1 << (rowIndex & 7);
+    }
+  }
+  return copiedBitmap;
+}
+
+function makeArrowFixedSizeListElementDataFromPackedBytes(
+  type: arrow.FixedSizeList<NumericArrowType>,
+  bytes: Uint8Array
+): arrow.Data<arrow.FixedSizeList<NumericArrowType>> {
+  const numericType = type.children[0].type as NumericArrowType;
+  const values = makeNumericTypedArray(
+    numericType,
+    bytes,
+    bytes.byteLength / getArrowTypeByteStride(numericType)
+  ) as NumericArrowType['TArray'];
+  const numericData = makeNumericData({
+    type: numericType,
+    length: values.length,
+    data: values
+  });
+  return makeFixedSizeListData({
+    type,
+    length: type.listSize === 0 ? 0 : values.length / type.listSize,
+    nullCount: 0,
+    nullBitmap: null,
+    child: numericData
+  });
+}
+
+function makeArrowNumericElementDataFromPackedBytes(
+  type: NumericArrowType,
+  bytes: Uint8Array
+): arrow.Data<NumericArrowType> {
+  const values = makeNumericTypedArray(
+    type,
+    bytes,
+    bytes.byteLength / getArrowTypeByteStride(type)
+  ) as NumericArrowType['TArray'];
+  return makeNumericData({
+    type,
+    length: values.length,
+    data: values
+  });
+}
+
+function getArrowVariableLengthAttributeElementStride(
+  type: VariableLengthAttributeArrowType
+): number {
+  return getArrowTypeStride(type.children[0].type);
+}
+
+function getArrowVariableLengthAttributeElementByteStride(
+  type: VariableLengthAttributeArrowType
+): number {
+  return getArrowTypeByteStride(type.children[0].type);
 }
 
 function makeNumericTypedArray(
