@@ -25,6 +25,8 @@ export type GPUTableEvaluatorProps = {
   stride?: number;
   /** CPU buffer that initializes the table, required unless `source` is supplied. */
   value?: TypedArray;
+  /** External GPU buffer that backs this table and is not owned by the evaluator. */
+  buffer?: Buffer;
   /** Lazy operation or table whose output initializes this table, required unless `value` is supplied. */
   source?: Operation | GPUTableEvaluator | null;
   /** Whether every row should read the same value. */
@@ -57,6 +59,8 @@ export class GPUTableEvaluator {
   readonly byteLength: number;
   /** TypedArray constructor for CPU representation, derived from {@link GPUTableEvaluator.type}. */
   readonly ValueType: TypedArrayConstructor;
+  /** Operation whose output is used to fill the vector, required unless `value` is supplied */
+  readonly source: Operation | GPUTableEvaluator | null = null;
 
   /** User-assigned id for easy debugging */
   protected _id?: string;
@@ -65,10 +69,10 @@ export class GPUTableEvaluator {
 
   /** CPU buffer, either provided by the user or read back from the GPU */
   protected _value?: TypedArray;
-  /** Operation whose output is used to fill the vector, required unless `value` is supplied */
-  protected _source: Operation | GPUTableEvaluator | null = null;
   /** GPU buffer */
   private _buffer?: Buffer;
+  /** Whether the GPU buffer is externally owned and must not be recycled by the evaluator. */
+  private _hasExternalBuffer: boolean = false;
 
   /**
    * Constructs a table from a CPU array.
@@ -147,10 +151,11 @@ export class GPUTableEvaluator {
       offset = 0,
       stride,
       value,
+      buffer,
       source = null,
       isConstant = false
     } = props;
-    if (!source && !value) {
+    if (!source && !value && !buffer) {
       throw new Error('OperationResource must have a value source');
     }
 
@@ -160,8 +165,10 @@ export class GPUTableEvaluator {
     this.ValueType = getTypedArrayFromDataType(this.type);
     this.offset = offset;
     this.stride = stride || this.ValueType.BYTES_PER_ELEMENT * size;
+    this.source = source;
     this._value = value;
-    this._source = source;
+    this._buffer = buffer;
+    this._hasExternalBuffer = source instanceof GPUTableEvaluator || Boolean(buffer);
 
     let {length} = props;
     if (length === undefined) {
@@ -202,17 +209,20 @@ export class GPUTableEvaluator {
     if (this._destroyed) {
       throw new Error(`GPUTableEvaluator ${this} already destroyed`);
     }
+    if (this._hasExternalBuffer) {
+      return;
+    }
     if (!this._buffer) {
       let buffer: Buffer;
-      if (this._source instanceof GPUTableEvaluator) {
-        await this._source.evaluate(device);
-        buffer = this._source.buffer;
+      if (this.source instanceof GPUTableEvaluator) {
+        await this.source.evaluate(device);
+        buffer = this.source.buffer;
       } else {
         buffer = bufferPool.createOrReuse(device, this.byteLength);
         if (this._value) {
           buffer.write(this._value);
         } else {
-          await this._source!.execute(device, buffer);
+          await this.source!.execute(device, buffer);
         }
       }
       // cache the result when successful
@@ -256,16 +266,17 @@ export class GPUTableEvaluator {
 
   /** Returns the debug id, source description, or class name. */
   toString(): string {
-    return this._id ?? this._source?.toString() ?? this.constructor.name;
+    return this._id ?? this.source?.toString() ?? this.constructor.name;
   }
 
   /** Releases cached GPU storage and prevents future evaluation. */
   destroy() {
     if (this._buffer) {
-      bufferPool.recycle(this._buffer);
+      if (!this._hasExternalBuffer) {
+        bufferPool.recycle(this._buffer);
+      }
       this._buffer = undefined;
     }
     this._destroyed = true;
-    this._source = null;
   }
 }

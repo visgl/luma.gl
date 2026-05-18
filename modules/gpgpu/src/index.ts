@@ -15,3 +15,4 @@ export {fround} from './operations/fround';
 export {backendRegistry} from './operation/backend-registry';
 export {webglBackend} from './operations/webgl/index';
 export {webgpuBackend} from './operations/webgpu/index';
+export {cleanEvaluate} from './utils/clean-evaluate';
