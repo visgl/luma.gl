@@ -22,8 +22,6 @@ attributes without switching to a separate table abstraction.
 Uploaded vectors own their generated buffers. Wrapped-buffer vectors are
 non-owning by default unless ownership is explicitly requested or transferred by
 an in-place operation.
-<<<<<<< Updated upstream
-=======
 `GPUVector` also supports variable-length Arrow list columns whose nested elements
 contain one to four numeric components. This covers scalar lists plus tuple-style
 data such as XY, XYZ, and XYZM coordinates, while copying only compact list-offset
@@ -40,7 +38,6 @@ coordinates from the original path-value storage buffer, while per-path color an
 width rows remain storage-buffer bindings instead of being duplicated per generated
 segment. Reusable storage state can be built separately with
 `createArrowStoragePathState`.
->>>>>>> Stashed changes
 
 `ArrowGeometry` and `ArrowModel` can also consume loaders.gl-compatible Mesh
 Arrow tables through the local structural `ArrowMeshTable` type. Mesh Arrow

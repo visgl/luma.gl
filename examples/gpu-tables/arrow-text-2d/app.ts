@@ -20,7 +20,8 @@ import {
   ArrowStorageTextModel,
   ArrowTextModel,
   type ArrowStorageTextInputProps,
-  type ArrowTextModelProps
+  type ArrowTextModelProps,
+  type ArrowTextSourceVectors
 } from '@luma.gl/text';
 import * as arrow from 'apache-arrow';
 
@@ -77,6 +78,7 @@ type ArrowTextInput = {
   colors: GPUVector<arrow.FixedSizeList<arrow.Uint8>>;
   angles: GPUVector<arrow.Float32>;
   sizes: GPUVector<arrow.Float32>;
+  sourceVectors: ArrowTextSourceVectors;
   arrowVectorBuildTimeMs: number;
 };
 
@@ -715,6 +717,7 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
   colors!: GPUVector<arrow.FixedSizeList<arrow.Uint8>>;
   angles!: GPUVector<arrow.Float32>;
   sizes!: GPUVector<arrow.Float32>;
+  sourceVectors!: ArrowTextSourceVectors;
   textModel!: ActiveTextModel;
   pickingModel: Model | null = null;
   picker: PickingManager | null = null;
@@ -761,13 +764,14 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     if (this.isFinalized) {
       return;
     }
-    const {positions, texts, clipRects, colors, angles, sizes} = defaultTextInput;
+    const {positions, texts, clipRects, colors, angles, sizes, sourceVectors} = defaultTextInput;
     this.positions = positions;
     this.texts = texts;
     this.clipRects = clipRects;
     this.colors = colors;
     this.angles = angles;
     this.sizes = sizes;
+    this.sourceVectors = sourceVectors;
     this.arrowVectorBuildTimeMs = defaultTextInput.arrowVectorBuildTimeMs;
     this.textModel = this.createTextModel('direct');
     this.pickingModel = supportsTextIndexPicking(this.device)
@@ -828,6 +832,7 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
       positions: this.positions,
       texts: this.texts,
       clipRects: this.clipRects,
+      sourceVectors: this.sourceVectors,
       ...(this.colorEnabled ? {colors: this.colors} : {}),
       ...(this.angleEnabled ? {angles: this.angles} : {}),
       ...(this.sizeEnabled ? {sizes: this.sizes} : {}),
@@ -867,6 +872,10 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
         positions: this.positions,
         texts: this.texts,
         clipRects: this.clipRects,
+        sourceVectors: {
+          texts: this.sourceVectors.texts,
+          clipRects: this.sourceVectors.clipRects
+        },
         ...(this.colorEnabled ? {colors: this.colors} : {}),
         ...(this.angleEnabled ? {angles: this.angles} : {}),
         ...(this.sizeEnabled ? {sizes: this.sizes} : {}),
@@ -1221,6 +1230,7 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
 
     const streamingTextInput = makeArrowTextInputFromGpuTable(
       streamingTextTable,
+      [firstRecordBatchResult.value],
       streamingSource.arrowVectorBuildTimeMs
     );
     this.textDatasetKind = textDatasetKind;
@@ -1230,6 +1240,7 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     this.colors = streamingTextInput.colors;
     this.angles = streamingTextInput.angles;
     this.sizes = streamingTextInput.sizes;
+    this.sourceVectors = streamingTextInput.sourceVectors;
     this.arrowVectorBuildTimeMs = streamingTextInput.arrowVectorBuildTimeMs;
     this.activeStreamingTextTable = streamingTextTable;
     this.updateStreamingBatchStatus(streamingTextTable.batches.length);
@@ -1239,6 +1250,7 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     void this.consumeStreamingRecordBatches(
       recordBatchIterator,
       streamingTextTable,
+      [firstRecordBatchResult.value],
       streamingSessionVersion
     );
   }
@@ -1246,6 +1258,7 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
   async consumeStreamingRecordBatches(
     recordBatchIterator: AsyncIterator<arrow.RecordBatch>,
     streamingTextTable: GPUTable,
+    sourceRecordBatches: arrow.RecordBatch[],
     streamingSessionVersion: number
   ): Promise<void> {
     for (
@@ -1265,8 +1278,10 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
           shaderLayout: STREAMING_TEXT_INPUT_SHADER_LAYOUT
         })
       );
+      sourceRecordBatches.push(recordBatchResult.value);
       const streamingTextInput = makeArrowTextInputFromGpuTable(
         streamingTextTable,
+        sourceRecordBatches,
         this.arrowVectorBuildTimeMs
       );
       this.refreshStreamingTextModel(streamingTextInput, 'streaming Arrow record batch appended');
@@ -1281,10 +1296,12 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     this.colors = streamingTextInput.colors;
     this.angles = streamingTextInput.angles;
     this.sizes = streamingTextInput.sizes;
+    this.sourceVectors = streamingTextInput.sourceVectors;
     const appendedTextProps = {
       positions: this.positions,
       texts: this.texts,
       clipRects: this.clipRects,
+      sourceVectors: this.sourceVectors,
       ...(this.colorEnabled ? {colors: this.colors} : {}),
       ...(this.angleEnabled ? {angles: this.angles} : {}),
       ...(this.sizeEnabled ? {sizes: this.sizes} : {})
@@ -1588,6 +1605,14 @@ function makeArrowTextInput(device: Device, dataset: TextDataset): ArrowTextInpu
       name: 'sizes',
       vector: sizeVector
     }),
+    sourceVectors: {
+      positions: positionVector,
+      texts: texts as arrow.Vector<arrow.Utf8>,
+      clipRects: clipRectVector,
+      colors: colorVector,
+      angles: angleVector,
+      sizes: sizeVector
+    },
     arrowVectorBuildTimeMs: getNow() - arrowVectorBuildStartTime
   };
 }
@@ -1671,8 +1696,19 @@ function makeStreamingArrowTextSource(dataset: TextDataset): StreamingArrowTextS
 
 function makeArrowTextInputFromGpuTable(
   gpuTable: GPUTable,
+  recordBatches: arrow.RecordBatch[],
   arrowVectorBuildTimeMs: number
 ): ArrowTextInput {
+  const sourceTable = new arrow.Table(recordBatches);
+  const positions = sourceTable.getChild('positions');
+  const texts = sourceTable.getChild('texts');
+  const clipRects = sourceTable.getChild('clipRects');
+  const colors = sourceTable.getChild('colors');
+  const angles = sourceTable.getChild('angles');
+  const sizes = sourceTable.getChild('sizes');
+  if (!positions || !texts || !clipRects || !colors || !angles || !sizes) {
+    throw new Error('Streaming Arrow text input requires complete CPU source vectors');
+  }
   return {
     positions: getGpuTableTextVector<arrow.FixedSizeList<arrow.Float32>>(gpuTable, 'positions'),
     texts: getGpuTableTextVector<arrow.Utf8>(gpuTable, 'texts'),
@@ -1680,6 +1716,14 @@ function makeArrowTextInputFromGpuTable(
     colors: getGpuTableTextVector<arrow.FixedSizeList<arrow.Uint8>>(gpuTable, 'colors'),
     angles: getGpuTableTextVector<arrow.Float32>(gpuTable, 'angles'),
     sizes: getGpuTableTextVector<arrow.Float32>(gpuTable, 'sizes'),
+    sourceVectors: {
+      positions: positions as arrow.Vector<arrow.FixedSizeList<arrow.Float32>>,
+      texts: texts as arrow.Vector<arrow.Utf8>,
+      clipRects: clipRects as arrow.Vector<arrow.FixedSizeList<arrow.Int16>>,
+      colors: colors as arrow.Vector<arrow.FixedSizeList<arrow.Uint8>>,
+      angles: angles as arrow.Vector<arrow.Float32>,
+      sizes: sizes as arrow.Vector<arrow.Float32>
+    },
     arrowVectorBuildTimeMs
   };
 }

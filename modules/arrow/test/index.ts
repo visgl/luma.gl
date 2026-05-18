@@ -5,11 +5,8 @@
 import './arrow/arrow-paths.spec';
 import './arrow/arrow-column-info.spec';
 import './arrow/arrow-fixed-size-list.spec';
-<<<<<<< Updated upstream
-=======
 import './arrow/arrow-variable-length-attribute-gpu-vector.spec';
 import './arrow/arrow-path-model.spec';
->>>>>>> Stashed changes
 import './arrow/arrow-geometry.spec';
 import './arrow/plain-gpu-table.spec';
 import './arrow/arrow-model.spec';

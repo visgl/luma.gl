@@ -11,8 +11,13 @@ export type NumericArrowType = arrow.Int | arrow.Float;
 /** Attribute-compatible Arrow column type with one to four numeric values per row. */
 export type AttributeArrowType = NumericArrowType | arrow.FixedSizeList<NumericArrowType>;
 
+/** Variable-length Arrow column with one to four numeric values per nested element. */
+export type VariableLengthAttributeArrowType = arrow.List<
+  NumericArrowType | arrow.FixedSizeList<NumericArrowType>
+>;
+
 /** Mesh-compatible Arrow column type with a list of attribute-compatible values per row. */
-export type MeshArrowType = arrow.List<NumericArrowType | arrow.FixedSizeList<NumericArrowType>>;
+export type MeshArrowType = VariableLengthAttributeArrowType;
 
 /** Arrow column shape and numeric type information needed to derive a GPU vertex format. */
 export type ArrowColumnInfo = {
@@ -37,13 +42,22 @@ export function isNumericArrowType(type: arrow.DataType): type is arrow.Int | ar
 export function isInstanceArrowType(type: arrow.DataType): type is AttributeArrowType {
   return (
     isNumericArrowType(type) ||
-    (arrow.DataType.isFixedSizeList(type) && isNumericArrowType(type.children[0].type))
-    // TODO - check listSize?
+    (arrow.DataType.isFixedSizeList(type) &&
+      type.listSize >= 1 &&
+      type.listSize <= 4 &&
+      isNumericArrowType(type.children[0].type))
   );
 }
 
 /** Returns true when an Arrow type can provide multiple scalar/vector attributes per row. */
 export function isVertexArrowType(type: arrow.DataType): type is MeshArrowType {
+  return isVariableLengthAttributeArrowType(type);
+}
+
+/** Returns true when an Arrow type can encode variable-length nested numeric attributes. */
+export function isVariableLengthAttributeArrowType(
+  type: arrow.DataType
+): type is VariableLengthAttributeArrowType {
   return arrow.DataType.isList(type) && isInstanceArrowType(type.children[0].type);
 }
 
