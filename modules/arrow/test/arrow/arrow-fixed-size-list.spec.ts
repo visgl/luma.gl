@@ -326,7 +326,10 @@ test('GPUVector preserves Arrow Data chunk boundaries over one packed GPU buffer
   t.equal(gpuVector.buffer.byteLength, 12, 'uploads every vector chunk into one GPU buffer');
   t.equal(gpuVector.data.length, 2, 'exposes one GPUData view per source chunk');
   t.ok(gpuVector.data[0] instanceof GPUData, 'uses GPUData chunk views');
-  t.ok(gpuVector.data[0].sourceData, 'retains source chunk metadata for consumers');
+  t.notOk(
+    gpuVector.data[0].readbackMetadata,
+    'fixed-width chunks do not retain extra readback metadata'
+  );
   t.equal(gpuVector.data[1].byteOffset, 8, 'tracks packed byte offsets across chunks');
   t.deepEqual(Array.from(vectorResult.toArray()), [1, 2, 3], 'reads every packed row');
   t.deepEqual(
@@ -350,7 +353,11 @@ test('GPUVector preserves UTF-8 chunk boundaries and readAsync rows', async t =>
   const firstChunkResult = await gpuVector.data[0].readAsync();
 
   t.equal(gpuVector.data.length, 2, 'keeps one GPUData object per UTF-8 source chunk');
-  t.ok(gpuVector.data[0].sourceData, 'retains UTF-8 source metadata for text consumers');
+  t.equal(
+    gpuVector.data[0].readbackMetadata?.kind,
+    'utf8',
+    'retains compact UTF-8 readback metadata'
+  );
   t.deepEqual(
     Array.from(vectorResult.toArray()),
     ['alpha', null, 'beta'],
@@ -360,6 +367,25 @@ test('GPUVector preserves UTF-8 chunk boundaries and readAsync rows', async t =>
     Array.from(arrow.makeVector(firstChunkResult).toArray()),
     ['alpha', null],
     'reads an individual UTF-8 GPUData chunk'
+  );
+
+  gpuVector.destroy();
+  t.end();
+});
+
+test('GPUVector UTF-8 readAsync normalizes sliced offsets without retaining source data', async t => {
+  const device = new NullDevice({});
+  const sourceVector = arrow.vectorFromArray(['skip', null, 'kept'], new arrow.Utf8());
+  const slicedVector = sourceVector.slice(1) as arrow.Vector<arrow.Utf8>;
+  const gpuVector = new GPUVector(device, slicedVector);
+
+  const result = await gpuVector.readAsync();
+
+  t.deepEqual(Array.from(result.toArray()), [null, 'kept'], 'reads sliced UTF-8 rows');
+  t.deepEqual(
+    Array.from(result.data[0].valueOffsets as Int32Array),
+    [0, 0, 4],
+    'reconstructs local compact UTF-8 offsets'
   );
 
   gpuVector.destroy();
@@ -631,8 +657,10 @@ test('GPUVector addToLastData appends Arrow data into appendable vector storage'
   t.equal(gpuVector.length, 4, 'tracks rows appended into the final mutable batch');
   t.equal(gpuVector.data.length, 2, 'exposes one GPU data range per appended Arrow chunk');
   t.equal(gpuVector.data[1].byteOffset, 8, 'tracks the later append byte offset');
-  t.equal(gpuVector.data[0].sourceData, firstData, 'retains the first appended Arrow source');
-  t.equal(gpuVector.data[1].sourceData, secondData, 'retains the later appended Arrow source');
+  t.notOk(
+    gpuVector.data[0].readbackMetadata,
+    'fixed-width append chunks do not retain reconstruction metadata'
+  );
   t.ok((gpuVector.capacityRows ?? 0) >= 4, 'grows appendable capacity as needed');
 
   gpuVector.resetLastBatch();
@@ -658,8 +686,16 @@ test('GPUVector addToLastData appends UTF-8 Arrow data into appendable vector st
 
   t.equal(gpuVector.length, 3, 'tracks UTF-8 logical rows across appends');
   t.equal(gpuVector.data.length, 2, 'preserves UTF-8 append chunk boundaries');
-  t.equal(gpuVector.data[0].sourceData, firstData, 'retains the first UTF-8 source chunk');
-  t.equal(gpuVector.data[1].sourceData, secondData, 'retains the later UTF-8 source chunk');
+  t.equal(
+    gpuVector.data[0].readbackMetadata?.kind,
+    'utf8',
+    'retains copied UTF-8 offsets for the first append chunk'
+  );
+  t.equal(
+    gpuVector.data[1].readbackMetadata?.kind,
+    'utf8',
+    'retains copied UTF-8 offsets for the later append chunk'
+  );
   t.ok(gpuVector.data[1].byteOffset > 0, 'writes later UTF-8 bytes after earlier bytes');
   t.equal(
     gpuVector.data[1].byteOffset % 4,

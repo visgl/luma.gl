@@ -338,9 +338,9 @@ test('GPUTable addToLastBatch appends Arrow batches into one mutable trailing GP
   t.equal(gpuTable.numRows, 4, 'updates table rows across append operations');
   t.equal(gpuTable.batches[0].numRows, 4, 'updates trailing batch row count');
   t.equal(gpuTable.gpuVectors.positions.data.length, 2, 'restitches aggregate GPU ranges');
-  t.ok(
-    gpuTable.gpuVectors.positions.data[0].sourceData,
-    'retains appended Arrow source chunks through aggregate table vectors'
+  t.notOk(
+    gpuTable.gpuVectors.positions.data[0].readbackMetadata,
+    'aggregate fixed-width table vectors do not retain Arrow source payload metadata'
   );
   t.ok(
     gpuTable.attributes.positions instanceof DynamicBuffer,
@@ -355,7 +355,7 @@ test('GPUTable addToLastBatch appends Arrow batches into one mutable trailing GP
   t.end();
 });
 
-test('GPUTable appendable batches expose UTF-8 storage vectors with retained sources', t => {
+test('GPUTable appendable batches expose UTF-8 storage vectors with compact metadata', t => {
   const device = new NullDevice({});
   const positions = makeArrowFixedSizeListVector(
     new arrow.Float32(),
@@ -380,7 +380,11 @@ test('GPUTable appendable batches expose UTF-8 storage vectors with retained sou
   t.equal(gpuTable.numRows, 2, 'tracks appended table rows');
   t.ok(gpuTable.bindings.texts, 'exposes the UTF-8 vector as a storage binding');
   t.equal(gpuTable.gpuVectors.texts.length, 2, 'tracks UTF-8 vector rows');
-  t.ok(gpuTable.gpuVectors.texts.data[0].sourceData, 'retains UTF-8 source offsets');
+  t.equal(
+    gpuTable.gpuVectors.texts.data[0].readbackMetadata?.kind,
+    'utf8',
+    'retains copied UTF-8 readback offsets'
+  );
 
   gpuTable.destroy();
   t.end();
