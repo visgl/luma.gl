@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {Buffer, TypedArray} from '@luma.gl/core';
-import {GPUTableEvaluator} from '../../operation/gpu-table';
+import {GPUTableEvaluator} from '../../operation/gpu-table-evaluator';
 
 type CPUTransformProps =
   | {

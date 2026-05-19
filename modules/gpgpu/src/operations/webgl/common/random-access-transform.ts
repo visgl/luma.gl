@@ -4,7 +4,7 @@
 
 import {Buffer, SignedDataType, Texture} from '@luma.gl/core';
 import {ShaderModule} from '@luma.gl/shadertools';
-import {GPUTableEvaluator} from '../../../operation/gpu-table';
+import {GPUTableEvaluator} from '../../../operation/gpu-table-evaluator';
 import {getAttributeType, getSamplerType, getTextureFormat} from './helper';
 
 export function getSourceValuesTextureModule(

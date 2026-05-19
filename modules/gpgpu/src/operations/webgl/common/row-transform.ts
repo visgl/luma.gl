@@ -5,7 +5,7 @@
 import {SignedDataType, Buffer, BufferLayout} from '@luma.gl/core';
 import {BufferTransform} from '@luma.gl/engine';
 import {ShaderModule} from '@luma.gl/shadertools';
-import {GPUTableEvaluator} from '../../../operation/gpu-table';
+import {GPUTableEvaluator} from '../../../operation/gpu-table-evaluator';
 import {bufferPool} from '../../../utils/buffer-pool';
 import {getAttributeType, getZeroLiteral, type QualifiedVectorSize} from './helper';
 

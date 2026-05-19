@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {Device, Buffer} from '@luma.gl/core';
-import {GPUTableEvaluator} from './gpu-table';
+import {GPUTableEvaluator} from './gpu-table-evaluator';
 import {backendRegistry} from './backend-registry';
 
 /** Backend implementation for a single lazy GPGPU operation. */

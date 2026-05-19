@@ -5,7 +5,7 @@
 import {Buffer, SignedDataType} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {ShaderModule} from '@luma.gl/shadertools';
-import {GPUTableEvaluator} from '../../../operation/gpu-table';
+import {GPUTableEvaluator} from '../../../operation/gpu-table-evaluator';
 import {getLiteralValue, getWGSLType, getZeroValue} from './helper';
 
 const WORKGROUP_SIZE = 64;

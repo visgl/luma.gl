@@ -5,7 +5,7 @@
 import {Texture} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
 import {OperationHandler} from '../../operation/operation';
-import {GPUTableEvaluator} from '../../operation/gpu-table';
+import {GPUTableEvaluator} from '../../operation/gpu-table-evaluator';
 import {bufferPool} from '../../utils/buffer-pool';
 import {multiply} from './multiply';
 import {getInputBufferLayout, getInputModule} from './common/row-transform';

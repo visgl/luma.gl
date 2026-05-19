@@ -3,13 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {Buffer} from '@luma.gl/core';
-import {
-  evaluateGPUVectorComputeGraph,
-  GPUVectorTransform,
-  gpuVectorAdd,
-  gpuVectorFround,
-  gpuVectorInterleave
-} from '@luma.gl/gpgpu';
+import {add, fround, GPUTableEvaluator, interleave} from '@luma.gl/gpgpu';
 import {GPUVector} from '@luma.gl/tables';
 import {getTestDevice} from '@luma.gl/test-utils';
 import * as arrow from 'apache-arrow';
@@ -26,8 +20,8 @@ for (const deviceType of ['webgl', 'webgpu'] as const) {
 
     const x = makeFloat32Vector(device, 'x', [0, 1, 2, 3, 4, 5], 2);
     const y = makeFloat32Vector(device, 'y', [10, 20, 30, 40, 50, 60], 2);
-    const transform = new GPUVectorTransform(device);
-    const result = await transform.add(x, y, {name: 'sum'});
+    const sum = add(x, y);
+    const result = await sum.evaluateToGPUVector(device, {name: 'sum'});
 
     expect(result.name).toBe('sum');
     expect(arrow.util.compareTypes(result.type, x.type)).toBe(true);
@@ -40,7 +34,7 @@ for (const deviceType of ['webgl', 'webgpu'] as const) {
     y.destroy();
   });
 
-  test(`GPUVector compute#operation tree:${deviceType}`, async t => {
+  test(`GPUVector compute#lazy evaluator chain:${deviceType}`, async t => {
     const device = await getTestDevice(deviceType);
     if (!device) {
       t.annotate(`${deviceType} not available`);
@@ -50,9 +44,17 @@ for (const deviceType of ['webgl', 'webgpu'] as const) {
     const x = makeFloat32Vector(device, 'x', [0, 1, 2, 3], 2);
     const y = makeFloat32Vector(device, 'y', [10, 20, 30, 40], 2);
     const z = makeFloat32Vector(device, 'z', [100, 200], 1);
-    const sum = gpuVectorAdd(x, y, {name: 'sum'});
-    const packed = gpuVectorInterleave([sum, z], {name: 'packed'});
-    const result = await evaluateGPUVectorComputeGraph(packed, device);
+    const sum = add(x, y);
+    const packed = interleave(sum, z);
+    const result = await packed.evaluateToGPUVector(device, {
+      name: 'packed',
+      interleaved: {
+        attributes: [
+          {attribute: 'sum', format: 'float32x2', byteOffset: 0},
+          {attribute: 'z', format: 'float32', byteOffset: 8}
+        ]
+      }
+    });
 
     expect(result.name).toBe('packed');
     expect(arrow.DataType.isBinary(result.type)).toBe(true);
@@ -81,10 +83,7 @@ for (const deviceType of ['webgl', 'webgpu'] as const) {
 
     const values = [Math.PI, -122.123456789, Math.E, 37.987654321];
     const source = makeFloat64Vector(device, 'positions64', values, 2);
-    const result = await evaluateGPUVectorComputeGraph(
-      gpuVectorFround(source, {name: 'positions32'}),
-      device
-    );
+    const result = await fround(source).evaluateToGPUVector(device, {name: 'positions32'});
 
     expect(result.name).toBe('positions32');
     expect(result.stride).toBe(4);
@@ -94,7 +93,7 @@ for (const deviceType of ['webgl', 'webgpu'] as const) {
     source.destroy();
   });
 
-  test(`GPUVector compute#evaluate materialized vector:${deviceType}`, async t => {
+  test(`GPUVector compute#fromGPUVector:${deviceType}`, async t => {
     const device = await getTestDevice(deviceType);
     if (!device) {
       t.annotate(`${deviceType} not available`);
@@ -102,9 +101,12 @@ for (const deviceType of ['webgl', 'webgpu'] as const) {
     }
 
     const vector = makeFloat32Vector(device, 'values', [1, 2, 3], 1);
-    const result = await evaluateGPUVectorComputeGraph(vector);
+    const evaluator = GPUTableEvaluator.fromGPUVector(vector);
+    const result = await evaluator.evaluateToGPUVector(device, {name: 'values-view'});
 
-    expect(result).toBe(vector);
+    expect(result.name).toBe('values-view');
+    expect(Array.from(await readFloat32Vector(result))).toEqual([1, 2, 3]);
+    result.destroy();
     vector.destroy();
   });
 }

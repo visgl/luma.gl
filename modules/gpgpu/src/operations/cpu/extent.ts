@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {OperationHandler} from '../../operation/operation';
-import {GPUTableEvaluator} from '../../operation/gpu-table';
+import {GPUTableEvaluator} from '../../operation/gpu-table-evaluator';
 import {getValueAtRow} from './common';
 
 export const extent: OperationHandler<{sourceValues: GPUTableEvaluator}> = async ({

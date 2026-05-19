@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {GPUTableEvaluator} from '../operation/gpu-table';
+import {GPUTableEvaluator} from '../operation/gpu-table-evaluator';
 import {Operation} from '../operation/operation';
 
 /** Deferred extent reduction operation. */

@@ -6,7 +6,7 @@ import {BufferLayout} from '@luma.gl/core';
 import {BufferTransform} from '@luma.gl/engine';
 import {ShaderModule} from '@luma.gl/shadertools';
 import {OperationHandler} from '../../operation/operation';
-import {GPUTableEvaluator} from '../../operation/gpu-table';
+import {GPUTableEvaluator} from '../../operation/gpu-table-evaluator';
 import {getAttributeType, getTextureDataType, getZeroLiteral} from './common/helper';
 import {getOutputModule} from './common/row-transform';
 import {createTableTexture, getSourceValuesTextureModule} from './common/random-access-transform';

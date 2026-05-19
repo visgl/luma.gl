@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {Buffer, Device} from '@luma.gl/core';
-import {GPUTableEvaluator} from '../operation/gpu-table';
+import {GPUTableEvaluator} from '../operation/gpu-table-evaluator';
 
 type EvaluatorResult = GPUTableEvaluator | GPUTableEvaluator[] | Record<string, unknown>;
 
