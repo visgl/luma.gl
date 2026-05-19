@@ -26,7 +26,9 @@ columns at the path boundary. `ArrowStoragePathModel` provides the WebGPU
 storage-backed form: compute expands GPU-resident path values into compact indexed
 segment records from copied list-offset metadata, render shaders fetch coordinates
 from the original path-value storage buffer, and per-path style rows remain storage
-bindings instead of being repeated for every generated segment.
+bindings instead of being repeated for every generated segment. `closeArrowPaths()`
+can normalize nested Float32 path rows first by appending the initial vertex only
+for paths that are flagged closed and are not already closed within an epsilon.
 
 ## Shader and Buffer Layout Preliminaries
 
@@ -313,8 +315,11 @@ were owned by the removed batches. Borrowed external buffers are not destroyed.
 - GPU objects created from Arrow data own the GPU storage they allocate.
 - GPU objects wrapping caller-supplied buffers are non-owning by default unless
   `ownsBuffer` is requested.
-- `GPUData` views are chunk metadata over `DynamicBuffer` storage. They do
-  not imply ownership unless explicitly constructed as owning views.
+- `GPUData` is the storage-owning layer. A data view may own its `DynamicBuffer`
+  or borrow an existing one, but `GPUVector` never owns raw buffers directly.
+- `GPUVector` owns or borrows ordered `GPUData[]` chunks. Its `buffer` accessor
+  is only a direct-bind convenience for vectors that resolve to one concrete
+  backing surface.
 - Detach operations transfer live objects out of the table instead of destroying
   them.
 - `destroy()` always follows the current ownership graph. It never destroys
@@ -391,7 +396,7 @@ Public state:
 | `bufferLayout` | Optional layout for interleaved vectors |
 | `data[]` | Ordered GPU data chunks |
 | `buffer` | Directly bindable buffer when the vector has exactly one concrete backing surface |
-| `ownsBuffer` | Whether the vector owns storage directly or through retained detached vectors |
+| `ownsBuffer` | Whether destruction follows any owning `GPUData` retained by this vector |
 | `capacityRows` | Current appendable storage capacity in rows, when applicable |
 
 Public methods:
@@ -403,7 +408,7 @@ Public methods:
 | `addVectorToLastBatch(arrowVector)` | Appends every Arrow data chunk from an Arrow vector into appendable storage |
 | `resetLastBatch()` | Clears appendable logical rows while retaining allocation |
 | `readAsync()` | Reads a packed vector back for supported non-interleaved layouts |
-| `transferBufferOwnership(target)` | Moves direct buffer ownership to another same-buffer vector view |
+| `transferBufferOwnership(target)` | Moves same-buffer `GPUData` ownership to another vector view |
 | `destroy()` | Releases owned vector storage |
 
 `addToLastBatch(arrowData)` remains as a deprecated alias for
@@ -519,6 +524,34 @@ const [colorField] = arrowGPUTable.schema.fields;
 // Each GPU vector exposes Arrow-derived type/shape metadata plus GPU data chunks.
 const colorVector: GPUVector = arrowGPUTable.gpuVectors.instanceColors;
 ```
+
+## Closing Nested Arrow Paths
+
+`closeArrowPaths()` turns logical closed-path flags into explicit closing
+vertices without mutating the input vector. The helper accepts GPU-resident
+`List<FixedSizeList<Float32>>` path rows with one to four components per vertex,
+an Arrow Bool vector with one closed flag per row, and a non-negative epsilon.
+
+```ts
+import {closeArrowPaths} from '@luma.gl/arrow';
+
+const normalizedPaths = await closeArrowPaths(device, {
+  paths,
+  closed,
+  epsilon: 1e-5
+});
+```
+
+The output preserves Arrow chunk boundaries. Open rows, rows already closed
+within epsilon, empty rows, and single-point rows are unchanged. Closed rows
+whose first and last vertices differ receive one appended copy of the first
+vertex.
+
+`ArrowStoragePathModel` can consume `normalizedPaths` directly. The
+attribute-backed `ArrowPathModel` can also use it as `paths`, but that model's
+caller-owned `sourceVectors.paths` must describe the same normalized rows; use
+`await normalizedPaths.readAsync()` when the CPU-side source vector should be
+derived from the helper result.
 
 `ArrowModel` is the convenience wrapper that combines `GPUTable` with
 `Model`. It accepts an Arrow table as an update source and replaces the GPU

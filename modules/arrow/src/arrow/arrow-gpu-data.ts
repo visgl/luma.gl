@@ -17,17 +17,27 @@ type GPUDataBufferProps = Omit<DynamicBufferProps, 'byteLength' | 'data' | 'buff
 /** Compact CPU metadata required to reconstruct variable-width Arrow chunks after GPU readback. */
 export type GPUDataReadbackMetadata =
   | {
+      /** Metadata variant for Arrow UTF-8 value bytes. */
       kind: 'utf8';
+      /** Chunk-local Arrow value offsets normalized to the copied GPU byte range. */
       valueOffsets: Int32Array;
+      /** Number of nullable rows in the source Arrow chunk. */
       nullCount: number;
+      /** Optional copied null bitmap required for Arrow reconstruction. */
       nullBitmap?: Uint8Array;
+      /** Number of value bytes to read back from the GPU buffer. */
       valueByteLength: number;
     }
   | {
+      /** Metadata variant for nested variable-length numeric attribute payloads. */
       kind: 'variable-length-attribute';
+      /** Chunk-local Arrow list offsets normalized to the copied GPU value range. */
       valueOffsets: Int32Array;
+      /** Number of nullable rows in the source Arrow chunk. */
       nullCount: number;
+      /** Optional copied null bitmap required for Arrow reconstruction. */
       nullBitmap?: Uint8Array;
+      /** Number of flattened numeric value bytes to read back from the GPU buffer. */
       valueByteLength: number;
     };
 
@@ -173,6 +183,7 @@ export class GPUData<T extends arrow.DataType = AttributeArrowType> {
     this._ownsBuffer = ownsBuffer;
   }
 
+  /** Whether this GPU data range is responsible for destroying its backing `DynamicBuffer`. */
   get ownsBuffer(): boolean {
     return this._ownsBuffer;
   }
@@ -223,6 +234,7 @@ export class GPUData<T extends arrow.DataType = AttributeArrowType> {
     return vector.data[0] as unknown as arrow.Data<T>;
   }
 
+  /** Releases the backing buffer when this range owns it. */
   destroy(): void {
     if (this._ownsBuffer) {
       this.buffer.destroy();
@@ -231,6 +243,7 @@ export class GPUData<T extends arrow.DataType = AttributeArrowType> {
   }
 }
 
+/** Returns the uploadable typed-array view for one Arrow Data chunk. */
 export function getArrowDataBufferSource<T extends NumericArrowType>(
   data: arrow.Data<T>
 ): T['TArray'];
@@ -240,7 +253,6 @@ export function getArrowDataBufferSource<T extends NumericArrowType>(
 export function getArrowDataBufferSource<T extends AttributeArrowType>(
   data: arrow.Data<T>
 ): NumericArrowType['TArray'];
-/** Return the uploadable typed-array view for one Arrow Data chunk. */
 export function getArrowDataBufferSource(data: arrow.Data): NumericArrowType['TArray'] {
   const {values, startElement, elementCount} = getArrowDataValueRange(data);
   if (values.length < elementCount) {
@@ -338,6 +350,7 @@ export function getArrowGPUDataReadbackMetadata(
   return undefined;
 }
 
+/** Returns a typed array that can be passed directly to `device.createBuffer()`. */
 export function getArrowVectorBufferSource<T extends NumericArrowType>(
   vector: arrow.Vector<T>
 ): T['TArray'];
@@ -347,7 +360,6 @@ export function getArrowVectorBufferSource<T extends NumericArrowType>(
 export function getArrowVectorBufferSource<T extends AttributeArrowType>(
   vector: arrow.Vector<T>
 ): NumericArrowType['TArray'];
-/** Return a typed array that can be passed directly to `device.createBuffer()`. */
 export function getArrowVectorBufferSource(vector: arrow.Vector): NumericArrowType['TArray'] {
   const dataSources = vector.data.map(data => getArrowDataBufferSource(data));
   if (dataSources.length === 0) {

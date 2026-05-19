@@ -78,7 +78,7 @@ export type GPUVectorFromBufferProps<T extends AttributeArrowType = AttributeArr
   /** Bytes between adjacent logical rows. Defaults to the byte width of `arrowType`. */
   byteStride?: number;
   /**
-   * Whether this vector should destroy the buffer.
+   * Whether this vector should adopt and eventually destroy the wrapped buffer through `GPUData`.
    *
    * Defaults to `false` for wrapped buffers because ownership remains with the caller unless
    * explicitly transferred or opted in.
@@ -103,7 +103,7 @@ export type GPUVectorFromInterleavedProps = {
   /** Attribute views stored in each interleaved row. */
   attributes: BufferAttributeLayout[];
   /**
-   * Whether this vector should destroy the buffer.
+   * Whether this vector should adopt and eventually destroy the wrapped buffer through `GPUData`.
    *
    * Defaults to `false` for wrapped buffers because ownership remains with the caller unless
    * explicitly transferred or opted in.
@@ -125,6 +125,8 @@ export type GPUVectorFromDataProps<T extends arrow.DataType = AttributeArrowType
   byteStride?: number;
   /** Optional buffer layout retained for interleaved chunk collections. */
   bufferLayout?: BufferLayout;
+  /** Whether this vector should destroy the supplied GPU data chunks. */
+  ownsData?: boolean;
 };
 
 /** Constructor props for an appendable DynamicBuffer-backed Arrow vector. */
@@ -345,7 +347,14 @@ export class GPUVector<T extends arrow.DataType = AttributeArrowType> {
       }
 
       case 'data': {
-        const {name, arrowType, data, byteStride, bufferLayout} = constructionProps;
+        const {
+          name,
+          arrowType,
+          data,
+          byteStride,
+          bufferLayout,
+          ownsData = false
+        } = constructionProps;
         if (data.some(chunk => !arrow.util.compareTypes(chunk.type, arrowType))) {
           throw new Error('GPUVector data chunks must share the declared Arrow type');
         }
@@ -360,6 +369,7 @@ export class GPUVector<T extends arrow.DataType = AttributeArrowType> {
         this.data.push(...data);
         this._buffer = data.length === 1 ? data[0].buffer : undefined;
         this._ownsBuffer = false;
+        this._ownsDataChunks = ownsData;
         return;
       }
 
@@ -412,10 +422,10 @@ export class GPUVector<T extends arrow.DataType = AttributeArrowType> {
   }
 
   /**
-   * Whether this vector is responsible for destroying {@link buffer}.
+   * Whether destruction of this vector releases any backing GPU storage.
    *
-   * `destroy()` only releases the buffer when this is `true`. This value can
-   * change when ownership is transferred to another same-buffer view.
+   * Buffer ownership lives in `GPUData`; this getter summarizes the GPUData owners retained by
+   * this vector, including detached same-buffer ownership handed over by another vector.
    */
   get ownsBuffer(): boolean {
     return this._ownsBuffer || this._ownedVectors.some(vector => vector.ownsBuffer);
@@ -535,12 +545,12 @@ export class GPUVector<T extends arrow.DataType = AttributeArrowType> {
   }
 
   /**
-   * Transfers buffer ownership to another vector that views the same GPU buffer.
+   * Transfers same-buffer `GPUData` ownership to another vector view.
    *
    * This is intended for in-place operations that consume one logical vector and
-   * return a new logical interpretation of the same bytes. After transfer,
-   * destroying this vector will not destroy the buffer; destroying `target` will
-   * destroy it if this vector previously owned it.
+   * return a new logical interpretation of the same bytes. After transfer, destroying this
+   * vector will not destroy the backing storage; destroying `target` will destroy it if this
+   * vector previously retained the owning data handle.
    */
   transferBufferOwnership(target: GPUVector): void {
     if (!this._buffer || !target._buffer || target._buffer !== this._buffer) {
@@ -575,6 +585,7 @@ export class GPUVector<T extends arrow.DataType = AttributeArrowType> {
     }) as unknown as Promise<arrow.Vector<T>>;
   }
 
+  /** Releases owned `GPUData`, detached ownership handles, and appendable storage. */
   destroy(): void {
     if (this._ownsBuffer && this._buffer) {
       this._buffer.destroy();
