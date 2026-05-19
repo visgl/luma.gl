@@ -10,7 +10,7 @@ type EvaluatorResult = GPUTableEvaluator | GPUTableEvaluator[] | Record<string, 
 export async function cleanEvaluate<ResultT extends EvaluatorResult>(
   device: Device,
   result: ResultT
-): Promise<void> {
+): Promise<ResultT> {
   const rootEvaluators = collectReferencedEvaluators(result);
 
   await Promise.all(rootEvaluators.map(evaluator => evaluator.evaluate(device)));
@@ -28,14 +28,15 @@ export async function cleanEvaluate<ResultT extends EvaluatorResult>(
       evaluator.destroy();
     }
   }
+  return result;
 }
 
 function collectReferencedEvaluators(value: EvaluatorResult): GPUTableEvaluator[] {
   const evaluators = new Set<GPUTableEvaluator>();
-  let valuesArray: unknown[];
   if (value instanceof GPUTableEvaluator) {
-    valuesArray = [value];
+    return [value];
   }
+  let valuesArray: unknown[];
   if (Array.isArray(value)) {
     valuesArray = value;
   } else {
