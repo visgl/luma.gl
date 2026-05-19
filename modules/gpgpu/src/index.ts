@@ -17,6 +17,25 @@ export {multiply} from './operations/multiply';
 export {sequence} from './operations/sequence';
 export {subtract} from './operations/subtract';
 
+// GPUVector operations
+export {
+  evaluateGPUVectorComputeGraph,
+  GPUVectorAddOperation,
+  GPUVectorFroundOperation,
+  GPUVectorInterleaveOperation,
+  GPUVectorOperationNode,
+  GPUVectorTransform,
+  gpuVectorAdd,
+  gpuVectorFround,
+  gpuVectorInterleave
+} from './gpu-vector/gpu-vector-compute';
+export type {
+  GPUVectorComputeContext,
+  GPUVectorInput,
+  GPUVectorInterleaveProps,
+  GPUVectorOperationProps
+} from './gpu-vector/gpu-vector-compute';
+
 // Backends
 export {backendRegistry} from './operation/backend-registry';
 export {webglBackend} from './operations/webgl/index';
