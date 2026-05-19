@@ -3,7 +3,8 @@
 // Copyright (c) vis.gl contributors
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {GPUVector, TableComputation} from '@luma.gl/arrow';
+import {makeArrowGPUVector, readArrowGPUVectorAsync} from '@luma.gl/arrow';
+import {TableComputation} from '@luma.gl/tables';
 import type {ComputeShaderLayout, Device} from '@luma.gl/core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import * as arrow from 'apache-arrow';
@@ -29,10 +30,8 @@ test('TableComputation binds inputVectors for storage compute', async t => {
     return;
   }
 
-  const values = new GPUVector({
-    name: 'values',
-    device,
-    vector: arrow.makeVector(new Int32Array([2, 4, 6]))
+  const values = makeArrowGPUVector(device, arrow.makeVector(new Int32Array([2, 4, 6])), {
+    name: 'values'
   });
   const computation = new TableComputation(device, {
     source: COMPUTE_SHADER,
@@ -45,7 +44,7 @@ test('TableComputation binds inputVectors for storage compute', async t => {
   computePass.end();
   device.submit();
 
-  const computedValues = await values.readAsync();
+  const computedValues = await readArrowGPUVectorAsync(values);
   t.deepEqual(
     Array.from(computedValues.toArray() as Int32Array),
     [6, 12, 18],

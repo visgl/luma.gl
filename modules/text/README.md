@@ -10,21 +10,13 @@ Experimental Arrow-native 2D text utilities for luma.gl. The package contains:
 
 ```ts
 import * as arrow from 'apache-arrow'
-import {GPUVector, makeArrowVectorFromArray} from '@luma.gl/arrow'
+import {makeArrowGPUVector, makeArrowVectorFromArray} from '@luma.gl/arrow'
 import {ArrowTextModel} from '@luma.gl/text'
 
 const positionSource = makeArrowVectorFromArray([0, 0, 0.5, 0.25], new arrow.Float32(), 2)
 const textSource = makeArrowVectorFromArray(['hello', 'luma.gl'], new arrow.Utf8())
-const positions = new GPUVector({
-  device,
-  name: 'positions',
-  vector: positionSource
-})
-const texts = new GPUVector({
-  device,
-  name: 'texts',
-  vector: textSource
-})
+const positions = makeArrowGPUVector(device, positionSource, {name: 'positions'})
+const texts = makeArrowGPUVector(device, textSource, {name: 'texts'})
 
 const model = new ArrowTextModel(device, {
   id: 'arrow-text',

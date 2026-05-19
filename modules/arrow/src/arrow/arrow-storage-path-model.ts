@@ -11,11 +11,11 @@ import {
   type ShaderLayout
 } from '@luma.gl/core';
 import {DynamicBuffer, Model} from '@luma.gl/engine';
+import {GPUVector, planGeneratedBufferBatches} from '@luma.gl/tables';
 import * as arrow from 'apache-arrow';
 import type {ArrowModelProps} from './arrow-model';
-import {GPUVector} from './arrow-gpu-vector';
 import {makeArrowFixedSizeListVector} from './arrow-fixed-size-list';
-import {planGeneratedBufferBatches} from './generated-buffer-batches';
+import {makeArrowGPUVector} from './arrow-gpu-table-adapters';
 import {
   createGpuPathExpansionInput,
   createGpuPathGeneratedState,
@@ -604,15 +604,10 @@ function createStoragePathOwnedGpuVector<T extends arrow.DataType>(
   name: string,
   vector: arrow.Vector<T>
 ): GPUVector<T> {
-  return new GPUVector({
-    type: 'arrow',
+  return makeArrowGPUVector(device, vector, {
     name,
-    device,
-    vector,
-    bufferProps: {
-      id: name,
-      usage: Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC
-    }
+    id: name,
+    usage: Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC
   });
 }
 

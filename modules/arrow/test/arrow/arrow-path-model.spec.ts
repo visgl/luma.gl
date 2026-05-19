@@ -6,11 +6,12 @@ import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {
   ArrowPathModel,
   ArrowStoragePathModel,
-  GPUVector,
   buildArrowPathSegmentTable,
   createArrowStoragePathState,
-  makeArrowFixedSizeListVector
+  makeArrowFixedSizeListVector,
+  makeArrowGPUVector
 } from '@luma.gl/arrow';
+import {GPUVector} from '@luma.gl/tables';
 import {NullDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 import * as arrow from 'apache-arrow';
 
@@ -417,12 +418,7 @@ function makeGpuArrowPathVector<TypeT extends arrow.DataType>(
   name: string,
   vector: arrow.Vector<TypeT>
 ): GPUVector<TypeT> {
-  return new GPUVector({
-    type: 'arrow',
-    name,
-    device,
-    vector
-  });
+  return makeArrowGPUVector(device, vector, {name});
 }
 
 function destroyGpuArrowPathProps(pathProps: ReturnType<typeof makeGpuArrowPathProps>): void {

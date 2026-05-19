@@ -3,9 +3,8 @@
 // Copyright (c) vis.gl contributors
 
 import {type Binding} from '@luma.gl/core';
+import {GPUVector, type GPUData} from '@luma.gl/tables';
 import * as arrow from 'apache-arrow';
-import type {GPUData} from './arrow-gpu-data';
-import {GPUVector} from './arrow-gpu-vector';
 import {isVariableLengthAttributeArrowType} from './arrow-types';
 import type {ArrowStoragePathInputProps} from './arrow-storage-path-model';
 

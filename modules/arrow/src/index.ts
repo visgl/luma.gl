@@ -49,35 +49,32 @@ export {
 } from './arrow/arrow-vector-utils';
 
 export {
-  GPUData,
-  GPUVector,
-  type GPUDataFromBufferProps,
-  type GPUDataReadbackMetadata,
-  type GPUVectorBufferProps,
-  type GPUVectorCreateProps,
-  type GPUVectorDynamicBufferProps,
-  type GPUVectorFromAppendableProps,
-  type GPUVectorFromArrowProps,
-  type GPUVectorFromBufferProps,
-  type GPUVectorFromDataProps,
-  type GPUVectorFromInterleavedProps,
-  type GPUVectorProps
-} from './arrow/arrow-gpu-vector';
+  appendArrowBatchToGPUTable,
+  appendArrowDataToGPUVector,
+  appendArrowRecordBatchToGPURecordBatch,
+  appendArrowVectorToGPUVector,
+  makeAppendableArrowGPUVector,
+  makeAppendableArrowGPURecordBatch,
+  makeAppendableArrowGPUTable,
+  makeArrowGPUData,
+  makeArrowGPURecordBatch,
+  makeArrowGPUTable,
+  makeArrowGPUVector,
+  readArrowGPUDataAsync,
+  readArrowGPUVectorAsync,
+  type AppendableArrowGPUVectorProps,
+  type AppendableArrowGPURecordBatchProps,
+  type AppendableArrowGPUTableProps,
+  type ArrowGPURecordBatchProps,
+  type ArrowGPUTableProps
+} from './arrow/arrow-gpu-table-adapters';
 export {
-  GPURecordBatch,
-  type GPURecordBatchAppendableProps,
-  type GPURecordBatchFromVectorsProps,
-  type GPURecordBatchProps
-} from './arrow/arrow-gpu-record-batch';
-export {
-  GPUTable,
-  type GPUTableAppendableProps,
-  type GPUTableDetachBatchesOptions,
-  type GPUTableFromVectorsProps,
-  type GPUTablePackBatchesOptions,
-  type GPUTableProps
-} from './arrow/plain-gpu-table';
-export {ArrowGeometry, type ArrowGeometryProps} from './arrow/arrow-geometry';
+  ArrowGeometry,
+  ArrowTableGeometry,
+  makeGPUGeometryFromArrow,
+  type ArrowGeometryProps,
+  type ArrowTableGeometryProps
+} from './arrow/arrow-geometry';
 export type {ArrowMeshAttribute, ArrowMeshTable, ArrowMeshTopology} from './arrow/arrow-mesh-types';
 export {ArrowModel, type ArrowModelGPUTable, type ArrowModelProps} from './arrow/arrow-model';
 export {
@@ -99,18 +96,6 @@ export {
   type ArrowStoragePathState
 } from './arrow/arrow-storage-path-model';
 export {
-  TableTransform,
-  type TableTransformBatchOptions,
-  type TableTransformOutputCopyMap,
-  type TableTransformProps
-} from './arrow/table-transform';
-export {
-  TableComputation,
-  type TableComputationBatch,
-  type TableComputationProps
-} from './arrow/table-computation';
-
-export {
   getArrowVertexFormat,
   getArrowBufferLayout,
   type ArrowVertexFormatOptions,
@@ -120,27 +105,6 @@ export {
 export {analyzeArrowTable} from './arrow/analyze-arrow-table';
 
 export {getArrowListNestingLevel} from './arrow/arrow-utils';
-
-export {
-  TableBufferPlanner,
-  type AllocationGroupKind,
-  type PlannedColumn,
-  type TableBufferGroup,
-  type TableBufferMapping,
-  type TableBufferPlan,
-  type TableBufferPlannerMode,
-  type TableBufferPlannerModelInfo,
-  type TableBufferPlannerProps,
-  type TableColumnDescriptor,
-  type TableColumnPriority
-} from './arrow/table-buffer-planner';
-
-export {
-  getGeneratedBufferBatchByteLimit,
-  planGeneratedBufferBatches,
-  type GeneratedBufferBatch,
-  type GeneratedBufferBatchPlannerProps
-} from './arrow/generated-buffer-batches';
 
 // GEOARROW
 

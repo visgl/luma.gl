@@ -3,7 +3,8 @@
 // Copyright (c) vis.gl contributors
 
 import {Buffer, Framebuffer, type ShaderLayout} from '@luma.gl/core';
-import {TableTransform, makeArrowFixedSizeListVector} from '@luma.gl/arrow';
+import {makeArrowFixedSizeListVector, makeArrowGPUTable} from '@luma.gl/arrow';
+import {TableTransform} from '@luma.gl/tables';
 import {
   AnimationLoopTemplate,
   AnimationProps,
@@ -242,7 +243,11 @@ export default class AppAnimationLoopTemplate extends AnimationLoopTemplate {
       vs: COMPUTE_VS,
       shaderLayout: TRANSFORM_SHADER_LAYOUT,
       shaderInputs: this.transformShaderInputs,
-      arrowTable: makeAgentTransformTable(instancePositions, instanceRotations),
+      table: makeArrowGPUTable(
+        device,
+        makeAgentTransformTable(instancePositions, instanceRotations),
+        {shaderLayout: TRANSFORM_SHADER_LAYOUT}
+      ),
       outputs: ['newOffsets', 'newRotations']
     });
 

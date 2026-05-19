@@ -9,16 +9,15 @@ import {
   type RenderPass,
   type ShaderLayout
 } from '@luma.gl/core';
+import {GPUVector, planGeneratedBufferBatches, type GeneratedBufferBatch} from '@luma.gl/tables';
 import * as arrow from 'apache-arrow';
 import {ArrowModel, type ArrowModelProps} from './arrow-model';
-import {GPUVector} from './arrow-gpu-vector';
 import {expandArrowVector} from './arrow-vector-utils';
 import {
   getArrowVariableLengthAttributeDataBufferSource,
   getArrowVectorBufferSource
 } from './arrow-gpu-data';
 import {makeArrowFixedSizeListVector} from './arrow-fixed-size-list';
-import {planGeneratedBufferBatches, type GeneratedBufferBatch} from './generated-buffer-batches';
 import {
   isInstanceArrowType,
   isVariableLengthAttributeArrowType,

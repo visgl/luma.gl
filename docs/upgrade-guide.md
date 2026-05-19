@@ -13,11 +13,20 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 ## Upgrading to v10.0
 
 **@luma.gl/arrow**
+- Generic GPU table/runtime APIs moved to `@luma.gl/tables`:
+  - `GPUData`, `GPUVector`, `GPURecordBatch`, `GPUTable`
+  - `TableTransform`, `TableComputation`
+  - `TableBufferPlanner`, `planGeneratedBufferBatches`, and `getGeneratedBufferBatchByteLimit`
+- Arrow materialization now stays in `@luma.gl/arrow` adapter helpers instead of table constructors and instance readback methods:
+  - `makeArrowGPUData(...)`, `makeArrowGPUVector(...)`, `makeArrowGPURecordBatch(...)`, and `makeArrowGPUTable(...)`
+  - `makeAppendableArrowGPUVector(...)`, `makeAppendableArrowGPURecordBatch(...)`, and `makeAppendableArrowGPUTable(...)`
+  - `appendArrowDataToGPUVector(...)`, `appendArrowVectorToGPUVector(...)`, `appendArrowRecordBatchToGPURecordBatch(...)`, and `appendArrowBatchToGPUTable(...)`
+  - `readArrowGPUDataAsync(...)` and `readArrowGPUVectorAsync(...)`
 - `StreamingArrowGPUTable` and `StreamingArrowGPUVector` have been removed. Use regular GPU table primitives directly instead:
-  - `new GPUTable({type: 'appendable', ...})`
-  - `addToLastBatch(...)`
+  - `makeAppendableArrowGPUTable(...)`
+  - `appendArrowBatchToGPUTable(...)`
   - `resetLastBatch()`
-  - `new GPURecordBatch(device, recordBatch, ...)` plus `gpuTable.addBatch(...)` when source batch boundaries should stay explicit
+  - `makeArrowGPURecordBatch(device, recordBatch, ...)` plus `gpuTable.addBatch(...)` when source batch boundaries should stay explicit
 - `ArrowModel` no longer accepts `streamingArrowGPUTable`; pass the appendable table through `arrowGPUTable`.
 
 **@luma.gl/text**

@@ -2,7 +2,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {GPURecordBatch, GPUVector, GPUTable, makeArrowFixedSizeListVector} from '@luma.gl/arrow';
+import {
+  makeArrowFixedSizeListVector,
+  makeArrowGPURecordBatch,
+  makeArrowGPUTable,
+  makeArrowGPUVector
+} from '@luma.gl/arrow';
+import {GPUVector, GPUTable} from '@luma.gl/tables';
 import {type Device, type RenderPass, type ShaderLayout} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {
@@ -1220,7 +1226,7 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
       return;
     }
 
-    const streamingTextTable = new GPUTable(
+    const streamingTextTable = makeArrowGPUTable(
       this.device,
       new arrow.Table([firstRecordBatchResult.value]),
       {
@@ -1274,7 +1280,7 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
         return;
       }
       streamingTextTable.addBatch(
-        new GPURecordBatch(this.device, recordBatchResult.value, {
+        makeArrowGPURecordBatch(this.device, recordBatchResult.value, {
           shaderLayout: STREAMING_TEXT_INPUT_SHADER_LAYOUT
         })
       );
@@ -1572,39 +1578,15 @@ function makeArrowTextInput(device: Device, dataset: TextDataset): ArrowTextInpu
   const colorVector = makeArrowFixedSizeListVector(new arrow.Uint8(), 4, colors);
   const angleVector = makeFloat32ArrowVector(angles);
   const sizeVector = makeFloat32ArrowVector(sizes);
-  const positionsGpuVector = new GPUVector({
-    device,
-    name: 'positions',
-    vector: positionVector
-  });
+  const positionsGpuVector = makeArrowGPUVector(device, positionVector, {name: 'positions'});
 
   return {
     positions: positionsGpuVector,
-    texts: new GPUVector({
-      device,
-      name: 'texts',
-      vector: texts
-    }),
-    clipRects: new GPUVector({
-      device,
-      name: 'clipRects',
-      vector: clipRectVector
-    }),
-    colors: new GPUVector({
-      device,
-      name: 'colors',
-      vector: colorVector
-    }),
-    angles: new GPUVector({
-      device,
-      name: 'angles',
-      vector: angleVector
-    }),
-    sizes: new GPUVector({
-      device,
-      name: 'sizes',
-      vector: sizeVector
-    }),
+    texts: makeArrowGPUVector(device, texts, {name: 'texts'}),
+    clipRects: makeArrowGPUVector(device, clipRectVector, {name: 'clipRects'}),
+    colors: makeArrowGPUVector(device, colorVector, {name: 'colors'}),
+    angles: makeArrowGPUVector(device, angleVector, {name: 'angles'}),
+    sizes: makeArrowGPUVector(device, sizeVector, {name: 'sizes'}),
     sourceVectors: {
       positions: positionVector,
       texts: texts as arrow.Vector<arrow.Utf8>,

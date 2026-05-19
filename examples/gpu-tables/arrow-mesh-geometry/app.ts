@@ -3,12 +3,14 @@
 // Copyright (c) vis.gl contributors
 
 import {
-  ArrowModel,
-  GPUVector,
   expandArrowVector,
+  makeArrowGPUVector,
   makeArrowFixedSizeListVector,
+  makeGPUGeometryFromArrow,
+  type ArrowTableGeometry,
   type ArrowMeshTable
 } from '@luma.gl/arrow';
+import {GPUVector} from '@luma.gl/tables';
 import type {Device, ShaderLayout} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {
@@ -27,7 +29,7 @@ import * as arrow from 'apache-arrow';
 
 export const title = 'Arrow Mesh Geometry';
 export const description =
-  'CubeGeometry face ids routed through Mesh Arrow data and rendered by ArrowModel.';
+  'CubeGeometry face ids routed through Mesh Arrow data and rendered as GPU table geometry.';
 
 const FACE_NAMES = ['Front', 'Back', 'Top', 'Bottom', 'Right', 'Left'] as const;
 
@@ -172,11 +174,12 @@ const WEBGL_MESH_SHADER_LAYOUT = {
 
 export default class ArrowMeshGeometryAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = `
-<p>Builds indexed Mesh Arrow data from <code>CubeGeometry</code> face ids and renders it through <code>ArrowModel</code>.</p>
+<p>Builds indexed Mesh Arrow data from <code>CubeGeometry</code> face ids and renders it through <code>makeGPUGeometryFromArrow()</code>.</p>
 `;
 
   readonly device: Device;
-  readonly model: ArrowModel;
+  readonly geometry: ArrowTableGeometry;
+  readonly model: Model;
   readonly pickingModel: Model | null;
   readonly picker: PickingManager;
   readonly faceColors?: GPUVector<arrow.FixedSizeList<arrow.Float32>>;
@@ -199,16 +202,13 @@ export default class ArrowMeshGeometryAnimationLoopTemplate extends AnimationLoo
     this.faceNames = faceMetadata.getChild('name') as arrow.Vector<arrow.Utf8>;
     this.faceColors =
       device.type === 'webgpu'
-        ? new GPUVector({
-            device,
-            name: 'faceColors',
-            vector: faceColors
-          })
+        ? makeArrowGPUVector(device, faceColors, {name: 'faceColors'})
         : undefined;
 
-    this.model = new ArrowModel(device, {
+    this.geometry = makeGPUGeometryFromArrow(device, {arrowMesh});
+    this.model = new Model(device, {
       id: 'arrow-mesh-geometry',
-      arrowMesh,
+      geometry: this.geometry,
       source: WGSL_SHADER,
       vs: VS_GLSL,
       fs: FS_GLSL,
@@ -280,11 +280,6 @@ export default class ArrowMeshGeometryAnimationLoopTemplate extends AnimationLoo
   }
 
   createPickingModel(): Model {
-    const arrowGeometry = this.model.arrowGeometry;
-    if (!arrowGeometry) {
-      throw new Error('Arrow Mesh Geometry picking requires mesh GPU geometry');
-    }
-
     return new Model(this.device, {
       id: `${this.model.id || 'arrow-mesh-geometry'}-picking`,
       source: WGSL_SHADER,
@@ -294,11 +289,11 @@ export default class ArrowMeshGeometryAnimationLoopTemplate extends AnimationLoo
       modules: [indexPicking] as ShaderModule[],
       shaderLayout:
         this.device.type === 'webgpu' ? WEBGPU_MESH_SHADER_LAYOUT : WEBGL_MESH_SHADER_LAYOUT,
-      bufferLayout: arrowGeometry.bufferLayout,
-      attributes: arrowGeometry.attributes,
+      bufferLayout: this.geometry.bufferLayout,
+      attributes: this.geometry.attributes,
       bindings: {...this.model.bindings},
-      vertexCount: arrowGeometry.vertexCount,
-      indexBuffer: arrowGeometry.indices || null,
+      vertexCount: this.geometry.vertexCount,
+      indexBuffer: this.geometry.indices || null,
       shaderInputs: this.shaderInputs,
       colorAttachmentFormats: ['rgba8unorm', 'rg32sint'],
       depthStencilAttachmentFormat: 'depth24plus',

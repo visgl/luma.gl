@@ -5,10 +5,11 @@
 import {
   ArrowPathModel,
   ArrowStoragePathModel,
-  GPUVector,
+  makeArrowGPUVector,
   makeArrowFixedSizeListVector,
   type ArrowPathSourceVectors
 } from '@luma.gl/arrow';
+import {GPUVector} from '@luma.gl/tables';
 import {type Device, type ShaderLayout} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate, ShaderInputs} from '@luma.gl/engine';
@@ -1201,9 +1202,9 @@ function makeArrowPathInput(device: Device, dataset: ArrowPathDataset): ArrowPat
   const sourceVectors: ArrowPathSourceVectors = {paths, colors, widths};
 
   return {
-    paths: new GPUVector({type: 'arrow', name: 'paths', device, vector: paths}),
-    colors: new GPUVector({type: 'arrow', name: 'colors', device, vector: colors}),
-    widths: new GPUVector({type: 'arrow', name: 'widths', device, vector: widths}),
+    paths: makeArrowGPUVector(device, paths, {name: 'paths'}),
+    colors: makeArrowGPUVector(device, colors, {name: 'colors'}),
+    widths: makeArrowGPUVector(device, widths, {name: 'widths'}),
     sourceVectors,
     arrowVectorBuildTimeMs
   };

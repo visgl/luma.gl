@@ -4,12 +4,15 @@
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {
-  GPUTable,
   ArrowModel,
+  appendArrowBatchToGPUTable,
+  makeAppendableArrowGPUTable,
   makeArrowFixedSizeListVector,
+  makeArrowGPUTable,
   type ArrowMeshTable
 } from '@luma.gl/arrow';
 import type {ShaderLayout} from '@luma.gl/core';
+import {GPUTable, GPUTableModel} from '@luma.gl/tables';
 import {NullDevice} from '@luma.gl/test-utils';
 import * as arrow from 'apache-arrow';
 
@@ -70,6 +73,7 @@ test('ArrowModel creates a Model from an Arrow table', t => {
   const positionsBuffer = model.arrowGPUTable!.batches[0].gpuVectors['positions'].buffer;
 
   t.ok(model.arrowGPUTable instanceof GPUTable, 'creates an GPUTable');
+  t.ok(model instanceof GPUTableModel, 'inherits the generic GPU table model behavior');
   t.deepEqual(
     model.bufferLayout,
     [
@@ -187,13 +191,12 @@ test('ArrowModel consumes an appendable GPUTable and tracks trailing batch growt
   const device = new NullDevice({});
   const firstTable = makeArrowModelTable(1);
   const nextTable = makeArrowModelTable(3);
-  const arrowGPUTable = new GPUTable({
-    type: 'appendable',
+  const arrowGPUTable = makeAppendableArrowGPUTable({
     device,
     schema: firstTable.schema,
     shaderLayout: SHADER_LAYOUT
   });
-  arrowGPUTable.addToLastBatch(firstTable.batches[0]);
+  appendArrowBatchToGPUTable(arrowGPUTable, firstTable.batches[0]);
   const model = new ArrowModel(device, {
     id: 'arrow-model-appendable-table-test',
     vs: DUMMY_VS,
@@ -203,7 +206,7 @@ test('ArrowModel consumes an appendable GPUTable and tracks trailing batch growt
   });
   const initialNeedsRedraw = model.needsRedraw();
 
-  arrowGPUTable.addToLastBatch(nextTable.batches[0]);
+  appendArrowBatchToGPUTable(arrowGPUTable, nextTable.batches[0]);
 
   t.equal(model.arrowGPUTable, arrowGPUTable, 'uses the appendable regular GPU table');
   t.equal(model.instanceCount, 1, 'initially infers rows from the trailing appendable batch');
@@ -219,7 +222,9 @@ test('ArrowModel consumes an appendable GPUTable and tracks trailing batch growt
 test('ArrowModel consumes an existing GPUTable without taking ownership', t => {
   const device = new NullDevice({});
   const arrowTable = makeArrowModelTable();
-  const arrowGPUTable = new GPUTable(device, arrowTable, {shaderLayout: SHADER_LAYOUT});
+  const arrowGPUTable = makeArrowGPUTable(device, arrowTable, {
+    shaderLayout: SHADER_LAYOUT
+  });
   const positionsBuffer = arrowGPUTable.batches[0].gpuVectors['positions'].buffer;
   const model = new ArrowModel(device, {
     id: 'arrow-model-existing-gpu-table-test',
@@ -317,7 +322,7 @@ test('ArrowModel creates a Model from a Mesh Arrow table', t => {
     arrowMesh
   });
 
-  t.ok(model.arrowGeometry, 'creates ArrowGeometry');
+  t.ok(model.arrowGeometry, 'creates Arrow table geometry');
   t.equal(model.arrowGPUTable, undefined, 'does not create GPUTable for mesh input');
   t.equal(model.vertexCount, 3, 'uses Mesh Arrow index count as vertex count');
   t.ok(model.vertexArray.indexBuffer, 'binds Mesh Arrow index buffer');

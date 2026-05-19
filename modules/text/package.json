@@ -44,6 +44,7 @@
   "dependencies": {
     "@luma.gl/arrow": "~9.3.0",
     "@luma.gl/core": "~9.3.0",
+    "@luma.gl/tables": "~9.3.0",
     "@mapbox/tiny-sdf": "^2.0.7",
     "@math.gl/core": "^4.1.0",
     "@math.gl/polygon": "^4.1.0",

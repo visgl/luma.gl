@@ -9,16 +9,15 @@ import {
   type RenderPass,
   type ShaderLayout
 } from '@luma.gl/core';
+import {GPUVector, planGeneratedBufferBatches, type GeneratedBufferBatch} from '@luma.gl/tables';
 import {
   ArrowModel,
-  GPURecordBatch,
-  GPUVector,
   getArrowVectorBufferSource,
   isNumericArrowType,
+  makeArrowGPURecordBatch,
+  makeArrowGPUVector,
   makeArrowFixedSizeListVector,
-  planGeneratedBufferBatches,
   type ArrowModelProps,
-  type GeneratedBufferBatch,
   type NumericArrowType
 } from '@luma.gl/arrow';
 import {DynamicBuffer, DynamicTexture, Model} from '@luma.gl/engine';
@@ -705,7 +704,7 @@ export class ArrowTextModel extends ArrowModel {
 
       for (const recordBatch of renderTable.batches) {
         arrowGPUTable.addBatch(
-          new GPURecordBatch(this.device, recordBatch, {
+          makeArrowGPURecordBatch(this.device, recordBatch, {
             shaderLayout,
             arrowPaths: nextProps.arrowPaths,
             bufferProps: nextProps.arrowBufferProps,
@@ -2495,15 +2494,10 @@ function createStorageTextOwnedGpuVector<T extends arrow.DataType>(
   name: string,
   vector: arrow.Vector<T>
 ): GPUVector<T> {
-  return new GPUVector({
-    type: 'arrow',
+  return makeArrowGPUVector(device, vector, {
     name,
-    device,
-    vector,
-    bufferProps: {
-      id: name,
-      usage: Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC
-    }
+    id: name,
+    usage: Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC
   });
 }
 

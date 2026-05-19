@@ -3,14 +3,20 @@
 // Copyright (c) vis.gl contributors
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {ArrowGeometry, makeArrowFixedSizeListVector, type ArrowMeshTable} from '@luma.gl/arrow';
+import {
+  ArrowGeometry,
+  ArrowTableGeometry,
+  makeArrowFixedSizeListVector,
+  makeGPUGeometryFromArrow,
+  type ArrowMeshTable
+} from '@luma.gl/arrow';
 import {NullDevice} from '@luma.gl/test-utils';
 import * as arrow from 'apache-arrow';
 
-test('ArrowGeometry creates interleaved GPU geometry from a Mesh Arrow table', t => {
+test('ArrowTableGeometry creates interleaved GPU geometry from a Mesh Arrow table', t => {
   const device = new NullDevice({});
   const arrowMesh = makeArrowMeshTable();
-  const geometry = new ArrowGeometry(device, {arrowMesh});
+  const geometry = new ArrowTableGeometry(device, {arrowMesh});
 
   t.equal(geometry.topology, 'triangle-list', 'uses mesh topology');
   t.equal(geometry.vertexCount, 3, 'uses Arrow row count for non-indexed geometry');
@@ -38,9 +44,9 @@ test('ArrowGeometry creates interleaved GPU geometry from a Mesh Arrow table', t
   t.end();
 });
 
-test('ArrowGeometry creates separate GPU buffers when interleaving is disabled', t => {
+test('ArrowTableGeometry creates separate GPU buffers when interleaving is disabled', t => {
   const device = new NullDevice({});
-  const geometry = new ArrowGeometry(device, {
+  const geometry = new ArrowTableGeometry(device, {
     arrowMesh: makeArrowMeshTable(),
     interleaved: false
   });
@@ -65,10 +71,10 @@ test('ArrowGeometry creates separate GPU buffers when interleaving is disabled',
   t.end();
 });
 
-test('ArrowGeometry reads indexed Mesh Arrow indices from row 0', t => {
+test('ArrowTableGeometry reads indexed Mesh Arrow indices from row 0', t => {
   const device = new NullDevice({});
   const arrowMesh = makeArrowMeshTable({indices: new Int32Array([0, 1, 2, 2, 1, 0])});
-  const geometry = new ArrowGeometry(device, {arrowMesh});
+  const geometry = new ArrowTableGeometry(device, {arrowMesh});
 
   t.equal(geometry.vertexCount, 6, 'uses index count for indexed geometry');
   t.ok(geometry.indices, 'creates an index buffer');
@@ -78,10 +84,10 @@ test('ArrowGeometry reads indexed Mesh Arrow indices from row 0', t => {
   t.end();
 });
 
-test('ArrowGeometry accepts raw Arrow tables and reads topology metadata', t => {
+test('ArrowTableGeometry accepts raw Arrow tables and reads topology metadata', t => {
   const device = new NullDevice({});
   const table = makeArrowMeshTable().data;
-  const geometry = new ArrowGeometry(device, {arrowMesh: table});
+  const geometry = new ArrowTableGeometry(device, {arrowMesh: table});
 
   t.equal(geometry.topology, 'triangle-list', 'uses topology from Arrow schema metadata');
   t.equal(geometry.vertexCount, 3, 'uses raw Arrow table row count');
@@ -90,7 +96,7 @@ test('ArrowGeometry accepts raw Arrow tables and reads topology metadata', t => 
   t.end();
 });
 
-test('ArrowGeometry validates Mesh Arrow input', t => {
+test('ArrowTableGeometry validates Mesh Arrow input', t => {
   const device = new NullDevice({});
   const tableWithoutPosition = new arrow.Table({
     NORMAL: makeArrowFixedSizeListVector(new arrow.Float32(), 3, new Float32Array([0, 0, 1]))
@@ -113,21 +119,35 @@ test('ArrowGeometry validates Mesh Arrow input', t => {
   });
 
   t.throws(
-    () => new ArrowGeometry(device, {arrowMesh: tableWithoutPosition}),
+    () => new ArrowTableGeometry(device, {arrowMesh: tableWithoutPosition}),
     /POSITION/,
     'requires POSITION'
   );
   t.throws(
-    () => new ArrowGeometry(device, {arrowMesh: invalidAttributeTable}),
+    () => new ArrowTableGeometry(device, {arrowMesh: invalidAttributeTable}),
     /numeric/,
     'rejects non-numeric attribute columns'
   );
   t.throws(
-    () => new ArrowGeometry(device, {arrowMesh: invalidIndicesTable}),
+    () => new ArrowTableGeometry(device, {arrowMesh: invalidIndicesTable}),
     /indices column must be a List/,
     'rejects malformed indices columns'
   );
 
+  t.end();
+});
+
+test('Arrow geometry factory and legacy alias keep the Mesh Arrow surface available', t => {
+  const device = new NullDevice({});
+  const arrowMesh = makeArrowMeshTable();
+  const geometry = makeGPUGeometryFromArrow(device, {arrowMesh});
+  const legacyGeometry = new ArrowGeometry(device, {arrowMesh});
+
+  t.ok(geometry instanceof ArrowTableGeometry, 'factory returns ArrowTableGeometry');
+  t.ok(legacyGeometry instanceof ArrowTableGeometry, 'legacy ArrowGeometry aliases the new class');
+
+  geometry.destroy();
+  legacyGeometry.destroy();
   t.end();
 });
 

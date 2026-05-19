@@ -3,7 +3,13 @@
 // Copyright (c) vis.gl contributors
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {GPURecordBatch, GPUVector, GPUTable, makeArrowFixedSizeListVector} from '@luma.gl/arrow';
+import {
+  makeArrowFixedSizeListVector,
+  makeArrowGPURecordBatch,
+  makeArrowGPUTable,
+  makeArrowGPUVector
+} from '@luma.gl/arrow';
+import {GPUVector} from '@luma.gl/tables';
 import type {ShaderLayout} from '@luma.gl/core';
 import {NullDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 import * as arrow from 'apache-arrow';
@@ -274,12 +280,7 @@ test('ArrowTextModel expands chunked UTF-8 GPUVector data', t => {
   const textProps = makeGpuTextProps(device, []);
   textProps.texts.destroy();
   const sourceTexts = new arrow.Vector<arrow.Utf8>([...firstChunk.data, ...secondChunk.data]);
-  textProps.texts = new GPUVector({
-    type: 'arrow',
-    name: 'texts',
-    device,
-    vector: sourceTexts
-  });
+  textProps.texts = makeArrowGPUVector(device, sourceTexts, {name: 'texts'});
   textProps.sourceVectors = {...textProps.sourceVectors, texts: sourceTexts};
 
   const model = new ArrowTextModel(device, {
@@ -302,7 +303,7 @@ test('ArrowTextModel appends GPUTable-backed text batches without rebuilding pri
   const device = new NullDevice({});
   const firstBatch = makeAppendableTextRecordBatch(['AB'], new Float32Array([0, 0]));
   const secondBatch = makeAppendableTextRecordBatch(['A'], new Float32Array([1, 1]));
-  const gpuTable = new GPUTable(device, new arrow.Table([firstBatch]), {
+  const gpuTable = makeArrowGPUTable(device, new arrow.Table([firstBatch]), {
     shaderLayout: APPENDABLE_TEXT_INPUT_SHADER_LAYOUT
   });
   const firstSourceVectors = makeArrowTextSourceVectorsFromBatches([firstBatch]);
@@ -319,7 +320,7 @@ test('ArrowTextModel appends GPUTable-backed text batches without rebuilding pri
   const firstExpandedGlyphVertexData = model.renderBatches[0].expandedGlyphVertexData;
 
   gpuTable.addBatch(
-    new GPURecordBatch(device, secondBatch, {
+    makeArrowGPURecordBatch(device, secondBatch, {
       shaderLayout: APPENDABLE_TEXT_INPUT_SHADER_LAYOUT
     })
   );
@@ -442,7 +443,7 @@ test('ArrowStorageTextModel appends GPUTable-backed text batches without rebuild
   }
   const firstBatch = makeAppendableTextRecordBatch(['AB'], new Float32Array([0, 0]));
   const secondBatch = makeAppendableTextRecordBatch(['A'], new Float32Array([1, 1]));
-  const gpuTable = new GPUTable(device, new arrow.Table([firstBatch]), {
+  const gpuTable = makeArrowGPUTable(device, new arrow.Table([firstBatch]), {
     shaderLayout: APPENDABLE_TEXT_INPUT_SHADER_LAYOUT
   });
   const firstSourceVectors = makeArrowStorageTextSourceVectorsFromBatches([firstBatch]);
@@ -458,7 +459,7 @@ test('ArrowStorageTextModel appends GPUTable-backed text batches without rebuild
   const firstCompactGlyphVertexData = model.renderBatches[0].compactGlyphVertexData;
 
   gpuTable.addBatch(
-    new GPURecordBatch(device, secondBatch, {
+    makeArrowGPURecordBatch(device, secondBatch, {
       shaderLayout: APPENDABLE_TEXT_INPUT_SHADER_LAYOUT
     })
   );
@@ -679,12 +680,7 @@ function makeGpuTextProps(device: NullDevice, labels: string[]) {
   );
   const texts = makeArrowTexts(labels);
   return {
-    positions: new GPUVector({
-      type: 'arrow',
-      name: 'positions',
-      device,
-      vector: positions
-    }),
+    positions: makeArrowGPUVector(device, positions, {name: 'positions'}),
     texts: makeGpuTexts(device, texts),
     sourceVectors: {positions, texts}
   };
@@ -695,12 +691,7 @@ function makeArrowTexts(labels: string[]): arrow.Vector<arrow.Utf8> {
 }
 
 function makeGpuTexts(device: NullDevice, vector: arrow.Vector<arrow.Utf8>): GPUVector<arrow.Utf8> {
-  return new GPUVector({
-    type: 'arrow',
-    name: 'texts',
-    device,
-    vector
-  });
+  return makeArrowGPUVector(device, vector, {name: 'texts'});
 }
 
 function destroyGpuTextProps(props: ReturnType<typeof makeGpuTextProps>): void {
@@ -716,12 +707,7 @@ function makeStorageGpuTextProps(device: NullDevice, labels: string[]) {
   );
   const texts = makeArrowTexts(labels);
   return {
-    positions: new GPUVector({
-      type: 'arrow',
-      name: 'positions',
-      device,
-      vector: positions
-    }),
+    positions: makeArrowGPUVector(device, positions, {name: 'positions'}),
     texts: makeGpuTexts(device, texts),
     sourceVectors: {texts}
   };

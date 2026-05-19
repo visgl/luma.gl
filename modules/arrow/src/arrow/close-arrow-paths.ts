@@ -4,13 +4,13 @@
 
 import {Buffer, type Binding, type Device, type ShaderLayout} from '@luma.gl/core';
 import {Computation, DynamicBuffer} from '@luma.gl/engine';
+import {GPUData, GPUVector} from '@luma.gl/tables';
 import * as arrow from 'apache-arrow';
 import {
-  GPUData,
   getArrowVariableLengthAttributeDataBufferSource,
   type GPUDataReadbackMetadata
 } from './arrow-gpu-data';
-import {GPUVector} from './arrow-gpu-vector';
+import {makeArrowGPUVector, readArrowGPUVectorAsync} from './arrow-gpu-table-adapters';
 import {isVariableLengthAttributeArrowType} from './arrow-types';
 
 type ArrowPathCoordinateType = arrow.List<arrow.FixedSizeList<arrow.Float32>>;
@@ -236,9 +236,11 @@ export async function closeArrowPaths(
   return new GPUVector<ArrowPathCoordinateType>({
     type: 'data',
     name: props.paths.name,
-    arrowType: props.paths.type,
+    dataType: props.paths.type,
     data: outputData,
+    stride: props.paths.stride,
     byteStride: props.paths.byteStride,
+    rowByteLength: props.paths.rowByteLength,
     ownsData: true
   });
 }
@@ -385,9 +387,11 @@ async function closeArrowPathChunkOnGPU(
     Float32Array.BYTES_PER_ELEMENT;
   return new GPUData<ArrowPathCoordinateType>({
     buffer: scatterState.outputPathValuesBuffer,
-    arrowType: props.paths.type,
+    dataType: props.paths.type,
     length: chunkState.pathData.length,
+    stride: chunkState.pathData.stride,
     byteStride: chunkState.pathData.byteStride,
+    rowByteLength: chunkState.pathData.rowByteLength,
     ownsBuffer: true,
     readbackMetadata: makeClosedPathReadbackMetadata(outputOffsets, outputValueByteLength)
   });
@@ -600,7 +604,9 @@ async function closeArrowPathsOnCPU(
   chunkStates: CloseArrowPathChunkState[],
   epsilon: number
 ): Promise<GPUVector<ArrowPathCoordinateType>> {
-  const sourcePaths = (await props.paths.readAsync()) as arrow.Vector<ArrowPathCoordinateType>;
+  const sourcePaths = (await readArrowGPUVectorAsync(
+    props.paths
+  )) as arrow.Vector<ArrowPathCoordinateType>;
   const componentCount = getPathComponentCount(props.paths.type);
   const outputData = sourcePaths.data.map((data, chunkIndex) =>
     closeArrowPathDataOnCPU(
@@ -611,12 +617,9 @@ async function closeArrowPathsOnCPU(
     )
   );
   const outputPaths = new arrow.Vector<ArrowPathCoordinateType>(outputData);
-  return new GPUVector<ArrowPathCoordinateType>({
-    type: 'arrow',
+  return makeArrowGPUVector(device, outputPaths, {
     name: props.paths.name,
-    device,
-    vector: outputPaths,
-    bufferProps: props.id ? {id: `${props.id}-cpu-closed-paths`} : undefined
+    ...(props.id ? {id: `${props.id}-cpu-closed-paths`} : {})
   });
 }
 

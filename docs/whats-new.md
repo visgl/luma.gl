@@ -8,6 +8,7 @@ Target Release Date: Q3, 2026
 
 **New Modules**
 
+- **`@luma.gl/tables`** - Generic GPU table/runtime, planning, transform, and compute helpers.
 - **`@luma.gl/arrow`** - New module for working with binary columnar data on the GPU.
 - **`@luma.gl/gpgpu`** - New module for lazy `GPUTableEvaluator` operations with CPU/WebGL/WebGPU backends.
 
@@ -15,14 +16,14 @@ Target Release Date: Q3, 2026
 **@luma.gl/arrow** NEW MODULE
 
 - **Arrow shader layouts** - `getArrowBufferLayout()` maps Arrow scalar and `FixedSizeList` columns to shader attribute formats from a shader-first layout, including direct `arrow.Vector` sources and Arrow table path mappings.
-- **Arrow GPU helpers** - New `GPUVector`, `GPUTable`, and `ArrowModel` helpers create GPU buffers from compatible Arrow columns, preserve chunked UTF-8 GPU vector input for text workflows, and keep Arrow-backed model attributes updatable through `setProps({arrowTable})`.
+- **Arrow GPU adapters** - Arrow factories, append helpers, and readback helpers bridge Apache Arrow inputs into `@luma.gl/tables` objects, preserve chunked UTF-8 GPU vector input for text workflows, and keep Arrow-backed model attributes updatable through `setProps({arrowTable})`.
 - **Variable-length Arrow attribute lists** - `GPUVector` can retain chunked nested list columns whose elements contain one to four numeric components, covering scalar streams plus tuple-style data such as XY, XYZ, and XYZM coordinates for future path-rendering workflows.
 - **Closed Arrow path normalization** - `closeArrowPaths()` appends explicit closing vertices only for closed Float32 path rows whose endpoints differ beyond an epsilon, using WebGPU compute when available with equivalent CPU fallback semantics.
 - **`ArrowPathModel`** - New attribute-backed path renderer expands Float32 XY, XYZ, and XYZM Arrow path rows into packed per-segment render records while keeping caller-retained CPU source vectors explicit and preserving per-path color and width styling.
 - **`ArrowStoragePathModel`** - New WebGPU-only storage-backed path renderer expands nested Float32 XY, XYZ, and XYZM rows through compute into indexed segment records using GPU path values plus compact list-offset metadata, keeps per-path color and width rows as storage bindings, and can consume reusable `ArrowStoragePathState` objects built by `createArrowStoragePathState`.
-- **Mesh Arrow geometry** - New `ArrowGeometry` and `ArrowModel` support for loaders.gl-compatible Mesh Arrow tables, including default interleaved vertex buffers and optional index buffers.
-- **Arrow table buffer planning** - New `TableBufferPlanner` API builds deterministic GPU buffer allocation plans for table columns, including interleaved fallback groups and WebGPU storage-buffer planning output.
-- **[Columnar GPU tables](/docs/api-guide/gpu/arrow-table-columns)** - Matrix Arrow vectors, storage-selected table bindings, `TableTransform`, and `TableComputation`.
+- **Mesh Arrow geometry** - New `ArrowTableGeometry`, `makeGPUGeometryFromArrow()`, and `ArrowModel` support loaders.gl-compatible Mesh Arrow tables, including default interleaved vertex buffers and optional index buffers. `ArrowGeometry` remains a compatibility alias.
+- **Arrow table adapters** - Arrow table/vector upload, append, and readback utilities now layer over reusable generic GPU table objects from `@luma.gl/tables`.
+- **[Columnar GPU tables](/docs/api-guide/gpu/arrow-table-columns)** - Matrix Arrow vectors, storage-selected table bindings, Arrow adapters, and the generic tables execution layer.
 - **[GPU Tables examples](/examples/gpu-tables/arrow-instancing)** - Arrow instancing, 2D text, path rendering, mesh geometry, and storage particles now live in the GPU Tables section.
 - **[Arrow Path Model Example](/examples/gpu-tables/arrow-path-model)** - New showcase expands nested Arrow XYZM path rows into styled GPU segment instances with attribute-backed and storage-backed models, with M-driven time highlighting plus square/round caps, miter/round joins, and adjustable miter limits.
 - **[Arrow Instancing Example](/examples/gpu-tables/arrow-instancing)** - New showcase example renders instanced cubes from an Apache Arrow table.
@@ -39,6 +40,12 @@ Target Release Date: Q3, 2026
 **@luma.gl/gpgpu** NEW MODULE
 
 - **`GPUTableEvaluator`** lazy GPU operations with CPU/WebGL/WebGPU backends.
+
+**@luma.gl/tables** NEW MODULE
+
+- **Generic GPU tables** - Canonical `GPUData`, `GPUVector`, `GPURecordBatch`, and `GPUTable` runtime classes for reusable non-Arrow-specific GPU table ownership and batching.
+- **Table-backed rendering** - `GPUTableModel` draws preserved table batches, and `GPUTableGeometry` exposes packed static GPU tables as renderable geometry.
+- **Execution helpers** - `TableTransform`, `TableComputation`, generated-buffer batch planning, and `TableBufferPlanner` now live beside the generic table runtime instead of the Arrow adapter module.
 
 **@luma.gl/engine**
 

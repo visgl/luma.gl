@@ -297,7 +297,7 @@ This means a multi-batch Arrow table stays multi-batch after GPU upload. If the
 application prefers fewer draw units, it packs explicitly:
 
 ```ts
-const arrowGPUTable = new GPUTable(device, table, {shaderLayout});
+const arrowGPUTable = makeArrowGPUTable(device, table, {shaderLayout});
 
 // Replace preserved batches with one packed batch.
 arrowGPUTable.packBatches();
@@ -335,12 +335,12 @@ Construction modes:
 
 ```ts
 // Upload one Arrow Data chunk into a new owned DynamicBuffer.
-const gpuData = new GPUData(device, arrowData);
+const gpuData = makeArrowGPUData(device, arrowData);
 
 // Describe an existing DynamicBuffer range.
 const gpuDataView = new GPUData({
   buffer: dynamicBuffer,
-  arrowType,
+  dataType,
   length,
   byteOffset,
   byteStride
@@ -363,7 +363,7 @@ Public methods:
 
 | Method | Behavior |
 | --- | --- |
-| `readAsync()` | Reconstructs one Arrow data chunk for supported numeric and fixed-size-list types |
+| `readArrowGPUDataAsync(gpuData)` | Reconstructs one Arrow data chunk for supported numeric and fixed-size-list types |
 | `destroy()` | Destroys the owned dynamic buffer, if any |
 
 ## GPUVector
@@ -376,12 +376,12 @@ Construction modes:
 
 | Mode | Use case |
 | --- | --- |
-| `new GPUVector(device, arrowVector)` | Upload an Arrow vector into owned GPU storage |
-| `{name, device, vector}` | Named upload form used by table helpers |
+| `makeArrowGPUVector(device, arrowVector)` | Upload an Arrow vector into owned GPU storage |
+| `makeArrowGPUVector(device, arrowVector, {name})` | Named Arrow upload form used by table helpers |
 | `{type: 'buffer', ...}` | Wrap an existing typed GPU buffer |
 | `{type: 'interleaved', ...}` | Wrap one interleaved opaque binary row buffer |
 | `{type: 'data', ...}` | Aggregate existing `GPUData[]` chunks |
-| `{type: 'appendable', ...}` | Create empty growable `DynamicBuffer` storage |
+| `makeAppendableArrowGPUVector(device, dataType, props)` | Create empty growable Arrow-backed `DynamicBuffer` storage |
 
 Public state:
 
@@ -404,15 +404,12 @@ Public methods:
 | Method | Behavior |
 | --- | --- |
 | `addData(gpuData)` | Appends an existing GPU data chunk to the logical vector without adopting its buffer |
-| `addToLastData(arrowData)` | Appends one Arrow data chunk into appendable trailing storage |
-| `addVectorToLastBatch(arrowVector)` | Appends every Arrow data chunk from an Arrow vector into appendable storage |
+| `appendArrowDataToGPUVector(gpuVector, arrowData)` | Appends one Arrow data chunk into appendable trailing storage |
+| `appendArrowVectorToGPUVector(gpuVector, arrowVector)` | Appends every Arrow data chunk from an Arrow vector into appendable storage |
 | `resetLastBatch()` | Clears appendable logical rows while retaining allocation |
-| `readAsync()` | Reads a packed vector back for supported non-interleaved layouts |
+| `readArrowGPUVectorAsync(gpuVector)` | Reads a packed vector back for supported non-interleaved layouts |
 | `transferBufferOwnership(target)` | Moves same-buffer `GPUData` ownership to another vector view |
 | `destroy()` | Releases owned vector storage |
-
-`addToLastBatch(arrowData)` remains as a deprecated alias for
-`addToLastData(arrowData)`.
 
 ## GPURecordBatch
 
@@ -423,9 +420,9 @@ Construction modes:
 
 | Mode | Use case |
 | --- | --- |
-| `new GPURecordBatch(device, recordBatch, props)` | Upload one Arrow record batch |
+| `makeArrowGPURecordBatch(device, recordBatch, props)` | Upload one Arrow record batch |
 | `{vectors, ...}` | Build a GPU batch from existing vectors |
-| `{type: 'appendable', schema, shaderLayout, ...}` | Create an empty mutable GPU batch |
+| `makeAppendableArrowGPURecordBatch({...})` | Create an empty mutable GPU batch |
 
 Public state:
 
@@ -444,7 +441,7 @@ Public methods:
 
 | Method | Behavior |
 | --- | --- |
-| `addToLastBatch(recordBatch)` | Appends Arrow rows into an appendable batch |
+| `appendArrowRecordBatchToGPURecordBatch(batch, recordBatch)` | Appends Arrow rows into an appendable batch |
 | `resetLastBatch()` | Clears appendable rows while retaining allocations |
 | `destroy()` | Destroys owned vectors and their storage |
 
@@ -458,13 +455,13 @@ Construction modes:
 
 | Mode | Use case |
 | --- | --- |
-| `new GPUTable(device, table, props)` | Upload an Arrow table and preserve source record-batch boundaries |
+| `makeArrowGPUTable(device, table, props)` | Upload an Arrow table and preserve source record-batch boundaries |
 | `{vectors, ...}` | Build one GPU table/batch from existing vectors |
-| `{type: 'appendable', schema, shaderLayout, ...}` | Create an empty table with one mutable trailing GPU batch |
+| `makeAppendableArrowGPUTable({...})` | Create an empty table with one mutable trailing GPU batch |
 
 The appendable discriminator matters because this form does not upload an
 existing Arrow table. It creates empty schema-selected vectors backed by growable
-`DynamicBuffer`s so later `addToLastBatch()` calls can append rows in place.
+`DynamicBuffer`s so later `appendArrowBatchToGPUTable()` calls can append rows in place.
 
 Public state:
 
@@ -486,7 +483,7 @@ Public methods:
 | --- | --- |
 | `packBatches(options?)` | Greedily merges adjacent batches in place; no options collapses all batches into one |
 | `addBatch(gpuRecordBatch)` | Adds an already-created GPU batch and rebuilds aggregate vectors |
-| `addToLastBatch(recordBatchOrTable)` | Appends Arrow rows into the current trailing appendable GPU batch |
+| `appendArrowBatchToGPUTable(table, recordBatchOrTable)` | Appends Arrow rows into the current trailing appendable GPU batch |
 | `resetLastBatch()` | Clears only the current trailing appendable GPU batch |
 | `select(...columnNames)` | Destructively keeps requested columns and destroys dropped batch-local vectors |
 | `detachVector(columnName)` | Removes one live column and returns an aggregate vector that owns its detached storage |
@@ -501,22 +498,22 @@ of allocating replacement tables.
 Appendable regular tables use the same table and batch classes:
 
 ```ts
-const arrowGPUTable = new GPUTable({
-  type: 'appendable',
+const arrowGPUTable = makeAppendableArrowGPUTable({
   device,
   schema,
   shaderLayout,
   initialCapacityRows: 4_096
 });
 
-arrowGPUTable.addToLastBatch(recordBatch);
-arrowGPUTable.addToLastBatch(nextArrowTable);
+appendArrowBatchToGPUTable(arrowGPUTable, recordBatch);
+appendArrowBatchToGPUTable(arrowGPUTable, nextArrowTable);
 ```
 
 ```ts
-import {GPUTable, GPUVector} from '@luma.gl/arrow';
+import {makeArrowGPUTable} from '@luma.gl/arrow';
+import {GPUVector} from '@luma.gl/tables';
 
-const arrowGPUTable = new GPUTable(device, table, {shaderLayout});
+const arrowGPUTable = makeArrowGPUTable(device, table, {shaderLayout});
 
 // The schema describes the selected GPU columns, not necessarily the full table.
 const [colorField] = arrowGPUTable.schema.fields;
@@ -550,13 +547,15 @@ vertex.
 `ArrowStoragePathModel` can consume `normalizedPaths` directly. The
 attribute-backed `ArrowPathModel` can also use it as `paths`, but that model's
 caller-owned `sourceVectors.paths` must describe the same normalized rows; use
-`await normalizedPaths.readAsync()` when the CPU-side source vector should be
-derived from the helper result.
+`await readArrowGPUVectorAsync(normalizedPaths)` when the CPU-side source
+vector should be derived from the helper result.
 
-`ArrowModel` is the convenience wrapper that combines `GPUTable` with
-`Model`. It accepts an Arrow table as an update source and replaces the GPU
-representation when `setProps({arrowTable})` is called. It can also consume an
-existing `arrowGPUTable` without taking ownership of that table.
+`GPUTableModel` is the generic tables-layer wrapper that combines `GPUTable`
+with `Model`. It draws preserved GPU batches, syncs table row counts into the
+selected draw count, and leaves table ownership with the caller. `ArrowModel`
+keeps the Arrow-facing convenience surface: it accepts an Arrow table as an
+update source, replaces the GPU representation when `setProps({arrowTable})`
+is called, and can also consume an existing `arrowGPUTable`.
 
 Use `model.drawBatches(renderPass)` to draw preserved static GPU batches with one
 pipeline layout while rebinding only batch-local attribute buffers and storage
@@ -566,9 +565,21 @@ bindings. Packed tables naturally reduce that to fewer draw calls.
 
 The table APIs are meant to feed more than one execution style.
 
-### `ArrowModel`
+### `GPUTableModel` and `ArrowModel`
 
-Use `ArrowModel` when selected table columns should drive ordinary rendering:
+Use `GPUTableModel` when a prepared GPU table should drive ordinary rendering:
+
+```ts
+const model = new GPUTableModel(device, {
+  source,
+  shaderLayout,
+  table,
+  tableCount: 'instance'
+});
+```
+
+Use `ArrowModel` when selected Arrow table columns should first be adapted into
+GPU table storage:
 
 ```ts
 const model = new ArrowModel(device, {
@@ -579,23 +590,25 @@ const model = new ArrowModel(device, {
 });
 ```
 
-`arrowCount` chooses whether the table row count becomes `instanceCount`,
-`vertexCount`, or neither. Existing `GPUTable` instances can be supplied through
-`arrowGPUTable` when ownership should stay with the caller.
+`tableCount` and Arrow's compatibility `arrowCount` choose whether table row
+counts become `instanceCount`, `vertexCount`, or neither. Existing `GPUTable`
+instances can be supplied through `arrowGPUTable` when ownership should stay
+with the caller.
 
 ### `TableTransform`
 
-`TableTransform` is the WebGL transform-feedback counterpart. It converts an
-Arrow table to a `GPUTable` when needed, merges the table attribute layouts into
-the underlying `BufferTransform`, accepts already-created `GPUVector` inputs,
-and can run one preserved GPU batch at a time:
+`TableTransform` is the WebGL transform-feedback counterpart. It consumes a
+generic `GPUTable`, merges the table attribute layouts into the underlying
+`BufferTransform`, accepts already-created `GPUVector` inputs, and can run one
+preserved GPU batch at a time. Use `makeArrowGPUTable()` before construction
+when the source data starts as an Arrow table:
 
 ```ts
 const transform = new TableTransform(device, {
   vs,
   varyings,
   shaderLayout,
-  arrowTable,
+  table: makeArrowGPUTable(device, arrowTable, {shaderLayout}),
   tableCount: 'vertex'
 });
 
@@ -634,7 +647,7 @@ Relevant public types:
 
 | Type | Meaning |
 | --- | --- |
-| `TableTransformProps` | Construction props, including `table`, `arrowTable`, `inputVectors`, `copyOutputToInputVectors`, `arrowPaths`, `arrowBufferProps`, and `tableCount`. |
+| `TableTransformProps` | Construction props, including `table`, `inputVectors`, `copyOutputToInputVectors`, and `tableCount`. |
 | `TableTransformBatchOptions` | `runBatches()` options, including fixed or per-batch `outputBuffers`. |
 
 ### `TableComputation`
@@ -666,14 +679,26 @@ Relevant public types:
 
 ## Mesh Arrow Geometry
 
-`ArrowGeometry` converts Mesh Arrow tables into `GPUGeometry`. This is intended
-for loaders.gl-compatible mesh and point-cloud tables that use glTF-style column
-names such as `POSITION`, `NORMAL`, `COLOR_0`, and `TEXCOORD_0`.
+`GPUTableGeometry` exposes one packed static `GPUTable` as `GPUGeometry`.
+`ArrowTableGeometry` and `makeGPUGeometryFromArrow()` convert loaders.gl-
+compatible Mesh Arrow tables into that generic geometry surface. These helpers
+support mesh and point-cloud tables that use glTF-style column names such as
+`POSITION`, `NORMAL`, `COLOR_0`, and `TEXCOORD_0`.
 
 ```ts
-import {ArrowGeometry, ArrowModel, type ArrowMeshTable} from '@luma.gl/arrow';
+import {
+  ArrowModel,
+  ArrowTableGeometry,
+  makeGPUGeometryFromArrow,
+  type ArrowMeshTable
+} from '@luma.gl/arrow';
 
-const geometry = new ArrowGeometry(device, {
+const geometry = new ArrowTableGeometry(device, {
+  arrowMesh,
+  interleaved: true
+});
+
+const equivalentGeometry = makeGPUGeometryFromArrow(device, {
   arrowMesh,
   interleaved: true
 });
@@ -692,8 +717,8 @@ loaders.gl. It intentionally mirrors loaders.gl `MeshArrowTable`: a wrapper with
 `data: arrow.Table`.
 
 Mesh Arrow tables use one row per vertex. Vertex attributes are scalar numeric
-or `FixedSizeList<numeric, 1 | 2 | 3 | 4>` columns. `ArrowGeometry` normalizes
-common glTF semantics to luma.gl shader attribute names:
+or `FixedSizeList<numeric, 1 | 2 | 3 | 4>` columns. `ArrowTableGeometry`
+normalizes common glTF semantics to luma.gl shader attribute names:
 
 | Mesh Arrow column | Shader attribute |
 | ----------------- | ---------------- |
@@ -708,13 +733,15 @@ name to a specific Arrow column name.
 
 Indexed Mesh Arrow tables follow the loaders.gl convention: a lowercase
 `indices: List<Int32>` column stores the full primitive index list in row `0`,
-and remaining vertex rows are null. `ArrowGeometry` uploads those indices as a
-separate GPU index buffer. If the wrapper has a top-level `indices` accessor and
-the Arrow table has no `indices` column, that accessor is used as a fallback.
+and remaining vertex rows are null. `ArrowTableGeometry` uploads those indices
+as a separate GPU index buffer. If the wrapper has a top-level `indices`
+accessor and the Arrow table has no `indices` column, that accessor is used as a
+fallback.
 
-By default, `ArrowGeometry` packs all selected vertex attributes into one
+By default, `ArrowTableGeometry` packs all selected vertex attributes into one
 interleaved vertex buffer and keeps indices separate. Pass `interleaved: false`
-to upload one vertex buffer per attribute.
+to upload one vertex buffer per attribute. `ArrowGeometry` is retained as a
+deprecated compatibility alias.
 
 Append-only tables can use the regular `GPUTable` API with one appendable
 trailing GPU batch. The trailing batch keeps `DynamicBuffer` attributes stable
@@ -722,10 +749,12 @@ across reallocations while the table still participates in ordinary batch
 packing, detaching, and `drawBatches()` workflows.
 
 ```ts
-import {GPUTable} from '@luma.gl/arrow';
+import {
+  appendArrowBatchToGPUTable,
+  makeAppendableArrowGPUTable
+} from '@luma.gl/arrow';
 
-const arrowGPUTable = new GPUTable({
-  type: 'appendable',
+const arrowGPUTable = makeAppendableArrowGPUTable({
   device,
   schema,
   shaderLayout
@@ -734,7 +763,7 @@ const arrowGPUTable = new GPUTable({
 model.setBufferLayout(arrowGPUTable.bufferLayout);
 model.setAttributes(arrowGPUTable.attributes);
 
-arrowGPUTable.addToLastBatch(recordBatch);
+appendArrowBatchToGPUTable(arrowGPUTable, recordBatch);
 model.setInstanceCount(arrowGPUTable.numRows);
 ```
 
@@ -743,7 +772,7 @@ the same appendable table as they arrive:
 
 ```ts
 for await (const recordBatch of asyncRecordBatches) {
-  arrowGPUTable.addToLastBatch(recordBatch);
+  appendArrowBatchToGPUTable(arrowGPUTable, recordBatch);
   model.setInstanceCount(arrowGPUTable.numRows);
 }
 ```
@@ -753,14 +782,14 @@ one mutable trailing batch, convert each yielded Arrow batch once and add the
 resulting GPU batch:
 
 ```ts
-import {GPURecordBatch, GPUTable} from '@luma.gl/arrow';
+import {makeArrowGPURecordBatch, makeArrowGPUTable} from '@luma.gl/arrow';
 
-const arrowGPUTable = new GPUTable(device, new arrow.Table([firstRecordBatch]), {
+const arrowGPUTable = makeArrowGPUTable(device, new arrow.Table([firstRecordBatch]), {
   shaderLayout
 });
 
 for await (const recordBatch of remainingRecordBatches) {
-  arrowGPUTable.addBatch(new GPURecordBatch(device, recordBatch, {shaderLayout}));
+  arrowGPUTable.addBatch(makeArrowGPURecordBatch(device, recordBatch, {shaderLayout}));
 }
 ```
 
@@ -782,7 +811,7 @@ separate vertex buffers, or when row-geometry data may later be read from WebGPU
 storage buffers instead of expanded into per-vertex attributes.
 
 ```ts
-import {TableBufferPlanner} from '@luma.gl/arrow';
+import {TableBufferPlanner} from '@luma.gl/tables';
 
 const plan = TableBufferPlanner.getAllocationPlan({
   device,

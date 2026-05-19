@@ -3,9 +3,16 @@
 // Copyright (c) vis.gl contributors
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {GPURecordBatch, GPUVector, GPUTable, makeArrowFixedSizeListVector} from '@luma.gl/arrow';
+import {
+  appendArrowBatchToGPUTable,
+  makeAppendableArrowGPUTable,
+  makeArrowFixedSizeListVector,
+  makeArrowGPURecordBatch,
+  makeArrowGPUTable
+} from '@luma.gl/arrow';
 import type {ShaderLayout} from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/engine';
+import {GPURecordBatch, GPUVector, GPUTable} from '@luma.gl/tables';
 import {NullDevice} from '@luma.gl/test-utils';
 import * as arrow from 'apache-arrow';
 
@@ -21,7 +28,7 @@ test('GPUTable creates GPU vectors from shader-compatible Arrow table columns', 
     bindings: []
   };
 
-  const gpuTable = new GPUTable(device, table, {shaderLayout});
+  const gpuTable = makeArrowGPUTable(device, table, {shaderLayout});
 
   t.notOk('table' in gpuTable, 'does not retain the source Arrow table');
   t.equal(gpuTable.numRows, table.numRows, 'exposes source table row count');
@@ -81,7 +88,7 @@ test('GPUTable maps shader attributes through Arrow paths', t => {
     bindings: []
   };
 
-  const gpuTable = new GPUTable(device, table, {
+  const gpuTable = makeArrowGPUTable(device, table, {
     shaderLayout,
     arrowPaths: {instanceColors: 'colors'}
   });
@@ -120,7 +127,7 @@ test('GPUTable exposes storage-selected Arrow columns as bindings', t => {
     bindings: [{name: 'positions', type: 'read-only-storage', group: 0, location: 0}]
   };
 
-  const gpuTable = new GPUTable(device, table, {shaderLayout});
+  const gpuTable = makeArrowGPUTable(device, table, {shaderLayout});
 
   t.deepEqual(
     gpuTable.schema.fields.map(field => field.name),
@@ -147,7 +154,7 @@ test('GPUTable preserves nested Arrow field metadata', t => {
     bindings: []
   };
 
-  const gpuTable = new GPUTable(device, table, {
+  const gpuTable = makeArrowGPUTable(device, table, {
     shaderLayout,
     arrowPaths: {instanceColors: 'style.colors'}
   });
@@ -179,7 +186,7 @@ test('GPUTable preserves record batch boundaries with real batch-owned GPU buffe
     bindings: []
   };
 
-  const gpuTable = new GPUTable(device, table, {shaderLayout});
+  const gpuTable = makeArrowGPUTable(device, table, {shaderLayout});
 
   t.equal(gpuTable.numRows, 4, 'keeps the full table row count');
   t.equal(gpuTable.batches.length, 2, 'exposes one GPU record batch per Arrow batch');
@@ -228,7 +235,7 @@ test('GPUTable packBatches collapses owned batches in place', t => {
     ],
     bindings: []
   };
-  const gpuTable = new GPUTable(device, table, {shaderLayout});
+  const gpuTable = makeArrowGPUTable(device, table, {shaderLayout});
   const firstPositionsBuffer = gpuTable.batches[0].gpuVectors.positions.buffer;
   const secondPositionsBuffer = gpuTable.batches[1].gpuVectors.positions.buffer;
 
@@ -264,7 +271,7 @@ test('GPUTable packBatches greedily merges adjacent batches to the requested siz
     ],
     bindings: []
   };
-  const gpuTable = new GPUTable(device, table, {shaderLayout});
+  const gpuTable = makeArrowGPUTable(device, table, {shaderLayout});
 
   gpuTable.packBatches({minBatchSize: 3});
 
@@ -290,8 +297,8 @@ test('GPUTable addBatch appends an already-owned GPU record batch in place', t =
     ],
     bindings: []
   };
-  const gpuTable = new GPUTable(device, new arrow.Table([firstBatch]), {shaderLayout});
-  const gpuRecordBatch = new GPURecordBatch(device, secondBatch, {shaderLayout});
+  const gpuTable = makeArrowGPUTable(device, new arrow.Table([firstBatch]), {shaderLayout});
+  const gpuRecordBatch = makeArrowGPURecordBatch(device, secondBatch, {shaderLayout});
   const appendedPositionsBuffer = gpuRecordBatch.gpuVectors.positions.buffer;
 
   gpuTable.addBatch(gpuRecordBatch);
@@ -323,16 +330,15 @@ test('GPUTable addToLastBatch appends Arrow batches into one mutable trailing GP
     ],
     bindings: []
   };
-  const gpuTable = new GPUTable({
-    type: 'appendable',
+  const gpuTable = makeAppendableArrowGPUTable({
     device,
     schema: sourceTable.schema,
     shaderLayout,
     initialCapacityRows: 1
   });
 
-  gpuTable.addToLastBatch(sourceTable.batches[0]);
-  gpuTable.addToLastBatch(sourceTable.batches[0]);
+  appendArrowBatchToGPUTable(gpuTable, sourceTable.batches[0]);
+  appendArrowBatchToGPUTable(gpuTable, sourceTable.batches[0]);
 
   t.equal(gpuTable.batches.length, 1, 'keeps one mutable trailing batch');
   t.equal(gpuTable.numRows, 4, 'updates table rows across append operations');
@@ -368,14 +374,13 @@ test('GPUTable appendable batches expose UTF-8 storage vectors with compact meta
     attributes: [{name: 'positions', location: 0, type: 'vec2<f32>'}],
     bindings: [{name: 'texts', type: 'read-only-storage', group: 0, location: 0}]
   };
-  const gpuTable = new GPUTable({
-    type: 'appendable',
+  const gpuTable = makeAppendableArrowGPUTable({
     device,
     schema: sourceTable.schema,
     shaderLayout
   });
 
-  gpuTable.addToLastBatch(sourceTable.batches[0]);
+  appendArrowBatchToGPUTable(gpuTable, sourceTable.batches[0]);
 
   t.equal(gpuTable.numRows, 2, 'tracks appended table rows');
   t.ok(gpuTable.bindings.texts, 'exposes the UTF-8 vector as a storage binding');
@@ -403,7 +408,7 @@ test('GPUTable static batches bind UTF-8 storage through batch GPUData buffers',
     attributes: [{name: 'positions', location: 0, type: 'vec2<f32>'}],
     bindings: [{name: 'texts', type: 'read-only-storage', group: 0, location: 0}]
   };
-  const gpuTable = new GPUTable(device, sourceTable, {shaderLayout});
+  const gpuTable = makeArrowGPUTable(device, sourceTable, {shaderLayout});
 
   t.equal(
     gpuTable.bindings.texts,
@@ -425,7 +430,7 @@ test('GPUTable select keeps requested columns and destroys dropped batch vectors
     ],
     bindings: []
   };
-  const gpuTable = new GPUTable(device, table, {shaderLayout});
+  const gpuTable = makeArrowGPUTable(device, table, {shaderLayout});
   const droppedColorsBuffer = gpuTable.batches[0].gpuVectors.colors.buffer;
 
   gpuTable.select('positions');
@@ -460,7 +465,7 @@ test('GPUTable detachVector removes one live column and transfers its ownership'
     ],
     bindings: []
   };
-  const gpuTable = new GPUTable(device, table, {shaderLayout});
+  const gpuTable = makeArrowGPUTable(device, table, {shaderLayout});
   const colorsBuffers = gpuTable.batches.map(batch => batch.gpuVectors.colors.buffer);
 
   const detachedColors = gpuTable.detachVector('colors');
@@ -497,7 +502,7 @@ test('GPUTable detachBatches removes a live batch range and restitches aggregate
     ],
     bindings: []
   };
-  const gpuTable = new GPUTable(device, table, {shaderLayout});
+  const gpuTable = makeArrowGPUTable(device, table, {shaderLayout});
   const detachedBatchBuffer = gpuTable.batches[1].gpuVectors.positions.buffer;
 
   const detachedBatches = gpuTable.detachBatches({first: 1, last: 2});
@@ -522,7 +527,7 @@ test('GPURecordBatch creates GPU vectors from one Arrow record batch', t => {
     bindings: []
   };
 
-  const gpuRecordBatch = new GPURecordBatch(device, recordBatch, {shaderLayout});
+  const gpuRecordBatch = makeArrowGPURecordBatch(device, recordBatch, {shaderLayout});
 
   t.equal(gpuRecordBatch.numRows, 2, 'exposes source batch row count');
   t.deepEqual(
@@ -542,16 +547,19 @@ test('GPUTable creates metadata from existing GPU vectors', t => {
     type: 'buffer',
     name: 'positions',
     buffer: device.createBuffer({byteLength: 16}),
-    arrowType: new arrow.FixedSizeList(2, new arrow.Field('value', new arrow.Float32())),
+    dataType: new arrow.FixedSizeList(2, new arrow.Field('value', new arrow.Float32())),
     length: 2,
+    stride: 2,
+    byteStride: 8,
     ownsBuffer: true
   });
   const weights = new GPUVector({
     type: 'buffer',
     name: 'weights',
     buffer: device.createBuffer({byteLength: 8}),
-    arrowType: new arrow.Float32(),
+    dataType: new arrow.Float32(),
     length: 2,
+    byteStride: 4,
     ownsBuffer: true
   });
 
@@ -585,6 +593,7 @@ test('GPUTable creates metadata from interleaved GPU vectors', t => {
     type: 'interleaved',
     name: 'instances',
     buffer: device.createBuffer({byteLength: 32}),
+    dataType: new arrow.Binary(),
     length: 2,
     byteStride: 16,
     attributes: [

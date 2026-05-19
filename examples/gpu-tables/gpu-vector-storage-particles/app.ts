@@ -2,12 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {
-  GPUVector,
-  TableComputation,
-  TableTransform,
-  makeArrowFixedSizeListVector
-} from '@luma.gl/arrow';
+import {makeArrowGPUVector, makeArrowFixedSizeListVector} from '@luma.gl/arrow';
+import {GPUVector, TableComputation, TableTransform} from '@luma.gl/tables';
 import type {ComputeShaderLayout, ShaderLayout} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate, Model} from '@luma.gl/engine';
@@ -321,16 +317,8 @@ function makeParticleVectors(device: AnimationProps['device']): {
   const arrowVelocities = makeArrowFixedSizeListVector(new arrow.Float32(), 2, velocities);
 
   return {
-    positions: new GPUVector({
-      device,
-      name: 'particlePositions',
-      vector: arrowPositions
-    }),
-    velocities: new GPUVector({
-      device,
-      name: 'particleVelocities',
-      vector: arrowVelocities
-    }),
+    positions: makeArrowGPUVector(device, arrowPositions, {name: 'particlePositions'}),
+    velocities: makeArrowGPUVector(device, arrowVelocities, {name: 'particleVelocities'}),
     initialPositions: positions,
     initialVelocities: velocities
   };

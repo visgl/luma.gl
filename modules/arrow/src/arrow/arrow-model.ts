@@ -2,20 +2,19 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+import {Device, type RenderPass, type ShaderLayout} from '@luma.gl/core';
+import type {ModelProps} from '@luma.gl/engine';
 import {
-  Device,
-  type BufferLayout,
-  type CommandEncoder,
-  type RenderPass,
-  type ShaderLayout
-} from '@luma.gl/core';
-import {Model, type ModelProps} from '@luma.gl/engine';
+  GPUTable,
+  GPUTableModel,
+  type GPUTableModelProps,
+  type GPUVectorProps
+} from '@luma.gl/tables';
 import * as arrow from 'apache-arrow';
 import {type ArrowVertexFormatOptions} from './arrow-shader-layout';
-import {GPUTable, type GPUTableProps} from './plain-gpu-table';
-import type {GPUVectorProps} from './arrow-gpu-vector';
-import {ArrowGeometry, type ArrowGeometryProps} from './arrow-geometry';
+import {ArrowTableGeometry, type ArrowTableGeometryProps} from './arrow-geometry';
 import type {ArrowMeshTable} from './arrow-mesh-types';
+import {makeArrowGPUTable} from './arrow-gpu-table-adapters';
 
 /** GPU table source accepted by ArrowModel. */
 export type ArrowModelGPUTable = GPUTable;
@@ -26,12 +25,12 @@ export type ArrowModelProps = ModelProps &
     /**
      * Mesh Arrow table used as the construction source for GPU geometry buffers.
      *
-     * Mesh input is converted through {@link ArrowGeometry}. It is mutually
+     * Mesh input is converted through {@link ArrowTableGeometry}. It is mutually
      * exclusive with `arrowTable`, `arrowGPUTable`, and `geometry`.
      */
     arrowMesh?: ArrowMeshTable | arrow.Table;
     /** Options applied when converting Mesh Arrow input into GPU geometry. */
-    arrowMeshOptions?: Omit<ArrowGeometryProps, 'arrowMesh'>;
+    arrowMeshOptions?: Omit<ArrowTableGeometryProps, 'arrowMesh'>;
     /** Arrow table used as the construction source for GPU attribute buffers. */
     arrowTable?: arrow.Table;
     /** Existing non-streaming GPU table used as the source for model attributes. */
@@ -47,38 +46,29 @@ export type ArrowModelProps = ModelProps &
 type ArrowModelState = {
   arrowGPUTable?: ArrowModelGPUTable;
   ownsArrowGPUTable: boolean;
-  arrowGeometry?: ArrowGeometry;
-  modelProps: ModelProps;
+  arrowGeometry?: ArrowTableGeometry;
+  modelProps: GPUTableModelProps;
   arrowState: ArrowModelArrowState;
 };
-
-type ArrowModelExplicitAttributes = NonNullable<ModelProps['attributes']>;
-type ArrowModelExplicitBindings = NonNullable<ModelProps['bindings']>;
 
 type ArrowModelArrowState = {
   shaderLayout: ShaderLayout;
   arrowPaths?: Record<string, string>;
-  arrowMeshOptions?: Omit<ArrowGeometryProps, 'arrowMesh'>;
+  arrowMeshOptions?: Omit<ArrowTableGeometryProps, 'arrowMesh'>;
   arrowBufferProps?: GPUVectorProps;
   arrowCount: 'instance' | 'vertex' | 'none';
   allowWebGLOnlyFormats?: boolean;
-  explicitAttributes: ArrowModelExplicitAttributes;
-  explicitBindings: ArrowModelExplicitBindings;
-  explicitBufferLayout: BufferLayout[];
-  inferInstanceCount: boolean;
-  inferVertexCount: boolean;
 };
 
 /** A luma.gl Model with GPU attributes backed by Arrow table columns. */
-export class ArrowModel extends Model {
+export class ArrowModel extends GPUTableModel {
   /** GPU representation of the currently active Arrow table attributes. */
   arrowGPUTable?: ArrowModelGPUTable;
   /** GPU representation of the currently active Mesh Arrow geometry. */
-  arrowGeometry?: ArrowGeometry;
+  arrowGeometry?: ArrowTableGeometry;
   private arrowState: ArrowModelArrowState;
   private ownsArrowGPUTable: boolean;
   private arrowModelDestroyed = false;
-  private drawingArrowBatches = false;
 
   constructor(device: Device, props: ArrowModelProps) {
     const {arrowGPUTable, ownsArrowGPUTable, arrowGeometry, modelProps, arrowState} =
@@ -99,7 +89,7 @@ export class ArrowModel extends Model {
   }
 
   /** Updates the model when a replacement Arrow table is supplied. */
-  setProps(props: Partial<ArrowModelProps>): void {
+  override setProps(props: Partial<ArrowModelProps>): void {
     if (props.arrowMesh) {
       this.setArrowMesh(props.arrowMesh, props.arrowMeshOptions);
     }
@@ -111,72 +101,17 @@ export class ArrowModel extends Model {
     }
   }
 
-  /** Query redraw status. Clears the status. */
-  override needsRedraw(): false | string {
-    this.syncArrowGPUTableCount();
-    return super.needsRedraw();
-  }
-
-  /** Updates uniforms, dynamic buffers, and inferred Arrow counts before opening a render pass. */
-  override predraw(commandEncoder: CommandEncoder): void {
-    this.syncArrowGPUTableCount();
-    super.predraw(commandEncoder);
-  }
-
   /**
    * Draws each preserved Arrow GPU record batch through the model's existing pipeline.
    *
    * Batch drawing reuses the current buffer layout and only swaps batch attribute buffers
    * plus inferred Arrow row counts between draw calls.
    */
-  drawBatches(renderPass: RenderPass): boolean {
-    const arrowGPUTable = this.arrowGPUTable;
-    if (!(arrowGPUTable instanceof GPUTable)) {
+  override drawBatches(renderPass: RenderPass): boolean {
+    if (!(this.arrowGPUTable instanceof GPUTable)) {
       throw new Error('ArrowModel.drawBatches() requires a GPUTable');
     }
-
-    assertMatchingBufferLayouts(
-      arrowGPUTable.bufferLayout,
-      this.arrowState.explicitBufferLayout,
-      this.bufferLayout,
-      'ArrowModel.drawBatches() model buffer layout does not match its Arrow table'
-    );
-
-    let drawSuccess = true;
-    this.drawingArrowBatches = true;
-    try {
-      for (const batch of arrowGPUTable.batches) {
-        assertMatchingBufferLayouts(
-          arrowGPUTable.bufferLayout,
-          [],
-          batch.bufferLayout,
-          'ArrowModel.drawBatches() requires every Arrow batch to use the table buffer layout'
-        );
-        this.setAttributes({
-          ...this.arrowState.explicitAttributes,
-          ...batch.attributes
-        });
-        this.setBindings({
-          ...this.arrowState.explicitBindings,
-          ...batch.bindings
-        });
-        this.setArrowRowCount(batch.numRows);
-        drawSuccess = super.draw(renderPass) && drawSuccess;
-      }
-    } finally {
-      this.drawingArrowBatches = false;
-      this.setAttributes({
-        ...this.arrowState.explicitAttributes,
-        ...arrowGPUTable.attributes
-      });
-      this.setBindings({
-        ...this.arrowState.explicitBindings,
-        ...arrowGPUTable.bindings
-      });
-      this.setArrowRowCount(arrowGPUTable.numRows);
-    }
-
-    return drawSuccess;
+    return super.drawBatches(renderPass);
   }
 
   override destroy(): void {
@@ -191,9 +126,9 @@ export class ArrowModel extends Model {
 
   private setArrowMesh(
     arrowMesh: ArrowMeshTable | arrow.Table,
-    arrowMeshOptions?: Omit<ArrowGeometryProps, 'arrowMesh'>
+    arrowMeshOptions?: Omit<ArrowTableGeometryProps, 'arrowMesh'>
   ): void {
-    const arrowGeometry = new ArrowGeometry(this.device, {
+    const arrowGeometry = new ArrowTableGeometry(this.device, {
       arrowMesh,
       ...this.arrowState.arrowMeshOptions,
       ...arrowMeshOptions
@@ -212,10 +147,11 @@ export class ArrowModel extends Model {
     this.arrowGPUTable = undefined;
     this.arrowGeometry = arrowGeometry;
     this.ownsArrowGPUTable = false;
+    this.clearTable();
   }
 
   private setArrowTable(arrowTable: arrow.Table): void {
-    const nextArrowGPUTable = new GPUTable(this.device, arrowTable, {
+    const nextArrowGPUTable = makeArrowGPUTable(this.device, arrowTable, {
       shaderLayout: this.arrowState.shaderLayout,
       arrowPaths: this.arrowState.arrowPaths,
       bufferProps: this.arrowState.arrowBufferProps,
@@ -230,41 +166,7 @@ export class ArrowModel extends Model {
     ownsNextArrowGPUTable: boolean
   ): void {
     try {
-      assertNoDuplicateNames(
-        Object.keys(this.arrowState.explicitAttributes),
-        Object.keys(nextArrowGPUTable.attributes),
-        'attribute'
-      );
-      assertNoDuplicateNames(
-        getBufferLayoutNames(this.arrowState.explicitBufferLayout),
-        getBufferLayoutNames(nextArrowGPUTable.bufferLayout),
-        'buffer layout'
-      );
-      assertNoDuplicateNames(
-        Object.keys(this.arrowState.explicitBindings),
-        Object.keys(nextArrowGPUTable.bindings),
-        'binding'
-      );
-
-      this.setBufferLayout([
-        ...this.arrowState.explicitBufferLayout,
-        ...nextArrowGPUTable.bufferLayout
-      ]);
-      this.setAttributes({
-        ...this.arrowState.explicitAttributes,
-        ...nextArrowGPUTable.attributes
-      });
-      this.setBindings({
-        ...this.arrowState.explicitBindings,
-        ...nextArrowGPUTable.bindings
-      });
-
-      if (this.arrowState.inferInstanceCount) {
-        this.setArrowRowCount(nextArrowGPUTable.numRows);
-      }
-      if (this.arrowState.inferVertexCount) {
-        this.setArrowRowCount(nextArrowGPUTable.numRows);
-      }
+      this.setTable(nextArrowGPUTable);
     } catch (error) {
       if (ownsNextArrowGPUTable) {
         nextArrowGPUTable.destroy();
@@ -278,27 +180,6 @@ export class ArrowModel extends Model {
     this.ownsArrowGPUTable = ownsNextArrowGPUTable;
     if (ownsPreviousArrowGPUTable) {
       previousArrowGPUTable?.destroy();
-    }
-  }
-
-  private syncArrowGPUTableCount(): void {
-    if (!this.arrowGPUTable || this.drawingArrowBatches) {
-      return;
-    }
-    if (this.arrowState.inferInstanceCount && this.instanceCount !== this.arrowGPUTable.numRows) {
-      this.setArrowRowCount(this.arrowGPUTable.numRows);
-    }
-    if (this.arrowState.inferVertexCount && this.vertexCount !== this.arrowGPUTable.numRows) {
-      this.setArrowRowCount(this.arrowGPUTable.numRows);
-    }
-  }
-
-  private setArrowRowCount(rowCount: number): void {
-    if (this.arrowState.inferInstanceCount) {
-      this.setInstanceCount(rowCount);
-    }
-    if (this.arrowState.inferVertexCount) {
-      this.setVertexCount(rowCount);
     }
   }
 }
@@ -329,16 +210,8 @@ function getArrowModelState(device: Device, props: ArrowModelProps): ArrowModelS
     throw new Error('ArrowModel requires only one of arrowMesh or geometry');
   }
 
-  const explicitAttributes = modelProps.attributes || {};
-  const explicitBindings = modelProps.bindings || {};
-  const explicitBufferLayout = modelProps.bufferLayout || [];
-  const inferInstanceCount =
-    !arrowMesh && arrowCount === 'instance' && modelProps.instanceCount === undefined;
-  const inferVertexCount =
-    !arrowMesh && arrowCount === 'vertex' && modelProps.vertexCount === undefined;
-
   if (arrowMesh) {
-    const arrowGeometry = new ArrowGeometry(device, {arrowMesh, ...arrowMeshOptions});
+    const arrowGeometry = new ArrowTableGeometry(device, {arrowMesh, ...arrowMeshOptions});
     return {
       arrowGPUTable: undefined,
       ownsArrowGPUTable: false,
@@ -349,12 +222,7 @@ function getArrowModelState(device: Device, props: ArrowModelProps): ArrowModelS
         arrowMeshOptions,
         arrowBufferProps,
         arrowCount,
-        allowWebGLOnlyFormats,
-        explicitAttributes,
-        explicitBindings,
-        explicitBufferLayout,
-        inferInstanceCount,
-        inferVertexCount
+        allowWebGLOnlyFormats
       },
       modelProps: {
         ...modelProps,
@@ -373,27 +241,6 @@ function getArrowModelState(device: Device, props: ArrowModelProps): ArrowModelS
     allowWebGLOnlyFormats
   });
 
-  try {
-    assertNoDuplicateNames(
-      Object.keys(explicitAttributes),
-      Object.keys(arrowGPUTable.attributes),
-      'attribute'
-    );
-    assertNoDuplicateNames(
-      getBufferLayoutNames(explicitBufferLayout),
-      getBufferLayoutNames(arrowGPUTable.bufferLayout),
-      'buffer layout'
-    );
-    assertNoDuplicateNames(
-      Object.keys(explicitBindings),
-      Object.keys(arrowGPUTable.bindings),
-      'binding'
-    );
-  } catch (error) {
-    arrowGPUTable.destroy();
-    throw error;
-  }
-
   return {
     arrowGPUTable,
     ownsArrowGPUTable,
@@ -404,20 +251,12 @@ function getArrowModelState(device: Device, props: ArrowModelProps): ArrowModelS
       arrowMeshOptions,
       arrowBufferProps,
       arrowCount,
-      allowWebGLOnlyFormats,
-      explicitAttributes,
-      explicitBindings,
-      explicitBufferLayout,
-      inferInstanceCount,
-      inferVertexCount
+      allowWebGLOnlyFormats
     },
     modelProps: {
       ...modelProps,
-      bufferLayout: [...explicitBufferLayout, ...arrowGPUTable.bufferLayout],
-      attributes: {...explicitAttributes, ...arrowGPUTable.attributes},
-      bindings: {...explicitBindings, ...arrowGPUTable.bindings},
-      ...(inferInstanceCount ? {instanceCount: arrowGPUTable.numRows} : {}),
-      ...(inferVertexCount ? {vertexCount: arrowGPUTable.numRows} : {})
+      table: arrowGPUTable,
+      tableCount: arrowCount
     }
   };
 }
@@ -436,12 +275,12 @@ function getInitialArrowGPUTable(props: {
   }
 
   return {
-    arrowGPUTable: new GPUTable(props.device, props.arrowTable!, {
+    arrowGPUTable: makeArrowGPUTable(props.device, props.arrowTable!, {
       shaderLayout: props.shaderLayout,
       arrowPaths: props.arrowPaths,
       bufferProps: props.arrowBufferProps,
       allowWebGLOnlyFormats: props.allowWebGLOnlyFormats
-    } satisfies GPUTableProps),
+    }),
     ownsArrowGPUTable: true
   };
 }
@@ -461,40 +300,4 @@ function validateArrowModelSources(props: {
   if (sourceCount === 0) {
     throw new Error('ArrowModel requires arrowMesh, arrowTable, or arrowGPUTable');
   }
-}
-
-function getBufferLayoutNames(bufferLayout: BufferLayout[]): string[] {
-  return bufferLayout.map(layout => layout.name);
-}
-
-function assertNoDuplicateNames(
-  explicitNames: string[],
-  arrowNames: string[],
-  nameType: string
-): void {
-  const explicitNameSet = new Set(explicitNames);
-  for (const arrowName of arrowNames) {
-    if (explicitNameSet.has(arrowName)) {
-      throw new Error(`ArrowModel ${nameType} "${arrowName}" duplicates an explicit ${nameType}`);
-    }
-  }
-}
-
-function assertMatchingBufferLayouts(
-  arrowBufferLayout: BufferLayout[],
-  explicitBufferLayout: BufferLayout[],
-  candidateBufferLayout: BufferLayout[],
-  errorMessage: string
-): void {
-  const expectedBufferLayout = [...explicitBufferLayout, ...arrowBufferLayout];
-  if (!deepEqualBufferLayouts(expectedBufferLayout, candidateBufferLayout)) {
-    throw new Error(errorMessage);
-  }
-}
-
-function deepEqualBufferLayouts(
-  expectedBufferLayout: BufferLayout[],
-  candidateBufferLayout: BufferLayout[]
-): boolean {
-  return JSON.stringify(expectedBufferLayout) === JSON.stringify(candidateBufferLayout);
 }

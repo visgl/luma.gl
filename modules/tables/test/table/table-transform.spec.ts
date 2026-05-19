@@ -3,7 +3,8 @@
 // Copyright (c) vis.gl contributors
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {GPUVector, TableTransform} from '@luma.gl/arrow';
+import {makeArrowGPUVector, readArrowGPUVectorAsync} from '@luma.gl/arrow';
+import {GPUVector, TableTransform} from '@luma.gl/tables';
 import type {ShaderLayout} from '@luma.gl/core';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
 import * as arrow from 'apache-arrow';
@@ -27,10 +28,8 @@ const TRANSFORM_SHADER_LAYOUT = {
 
 test('TableTransform copies dense outputs back into inputVectors', async t => {
   const device = await getWebGLTestDevice();
-  const values = new GPUVector({
-    name: 'values',
-    device,
-    vector: arrow.makeVector(new Float32Array([1, 2, 3]))
+  const values = makeArrowGPUVector(device, arrow.makeVector(new Float32Array([1, 2, 3])), {
+    name: 'values'
   });
   const transform = new TableTransform(device, {
     vs: TRANSFORM_VERTEX_SHADER,
@@ -42,7 +41,7 @@ test('TableTransform copies dense outputs back into inputVectors', async t => {
   t.ok(transform.outputVectors.nextValues, 'allocates an output vector for writeback');
   transform.run();
 
-  const transformedValues = await values.readAsync();
+  const transformedValues = await readArrowGPUVectorAsync(values);
   t.deepEqual(
     Array.from(transformedValues.toArray() as Float32Array),
     [2, 4, 6],
@@ -61,9 +60,11 @@ test('TableTransform rejects padded automatic writeback vectors', async t => {
     type: 'buffer',
     name: 'values',
     buffer,
-    arrowType: new arrow.Float32(),
+    dataType: new arrow.Float32(),
     length: 2,
+    stride: 1,
     byteStride: 8,
+    rowByteLength: Float32Array.BYTES_PER_ELEMENT,
     ownsBuffer: true
   });
 

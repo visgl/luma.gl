@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {TableBufferPlanner, type TableColumnDescriptor} from '@luma.gl/arrow';
+import {TableBufferPlanner, type TableColumnDescriptor} from '@luma.gl/tables';
 import type {Device} from '@luma.gl/core';
 import {NullDevice} from '@luma.gl/test-utils';
 

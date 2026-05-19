@@ -10,11 +10,11 @@ import {
   type VertexFormat,
   vertexFormatDecoder
 } from '@luma.gl/core';
-import {GPUGeometry} from '@luma.gl/engine';
+import {GPURecordBatch, GPUTable, GPUTableGeometry, GPUVector} from '@luma.gl/tables';
 import * as arrow from 'apache-arrow';
 import type {ArrowMeshTable, ArrowMeshTopology} from './arrow-mesh-types';
 
-export type ArrowGeometryProps = {
+export type ArrowTableGeometryProps = {
   /**
    * Mesh Arrow wrapper or raw Apache Arrow table.
    *
@@ -45,6 +45,7 @@ export type ArrowGeometryProps = {
 type ArrowMeshAttributeData = {
   sourceName: string;
   attributeName: string;
+  dataType: arrow.DataType;
   value: TypedArray;
   size: number;
   format: VertexFormat;
@@ -62,16 +63,14 @@ const MIN_ATTRIBUTE_ALIGNMENT = 4;
 const INDEX_COLUMN_NAME = 'indices';
 
 /**
- * GPU geometry derived from a loaders.gl-compatible Mesh Arrow table.
+ * GPU table geometry derived from a loaders.gl-compatible Mesh Arrow table.
  *
- * `ArrowGeometry` uploads Mesh Arrow vertex attributes into GPU buffers and
- * keeps primitive indices, when present, in a separate index buffer. By default
- * all vertex attributes are packed into one interleaved vertex buffer, matching
- * the common static mesh upload path used by luma.gl geometry.
+ * `ArrowTableGeometry` parses Mesh Arrow input, creates a static `GPUTable`,
+ * and exposes that table through the generic `GPUTableGeometry` surface.
  */
-export class ArrowGeometry extends GPUGeometry {
+export class ArrowTableGeometry extends GPUTableGeometry {
   /** Creates GPU geometry from Mesh Arrow input. */
-  constructor(device: Device, props: ArrowGeometryProps) {
+  constructor(device: Device, props: ArrowTableGeometryProps) {
     const {arrowMesh, interleaved = true, bufferName = DEFAULT_BUFFER_NAME, arrowPaths} = props;
     const table = getArrowMeshTable(arrowMesh);
     const topology = getArrowMeshTopology(arrowMesh, table);
@@ -79,18 +78,32 @@ export class ArrowGeometry extends GPUGeometry {
     const indexData = getArrowMeshIndices(arrowMesh, table);
     const indices = indexData && device.createBuffer({usage: Buffer.INDEX, data: indexData});
     const vertexCount = indexData?.length ?? table.numRows;
-    const geometryBuffers = interleaved
-      ? createInterleavedAttributes(device, attributes, bufferName, table.numRows)
-      : createSeparateAttributes(device, attributes);
+    const gpuTable = interleaved
+      ? createInterleavedGPUTable(device, attributes, bufferName, table.numRows)
+      : createSeparateGPUTable(device, attributes, table.numRows);
 
     super({
+      table: gpuTable,
       topology,
       vertexCount,
       indices,
-      attributes: geometryBuffers.attributes,
-      bufferLayout: geometryBuffers.bufferLayout
+      ownsTable: true
     });
   }
+}
+
+/** @deprecated Use {@link ArrowTableGeometry}. */
+export type ArrowGeometryProps = ArrowTableGeometryProps;
+
+/** @deprecated Use {@link ArrowTableGeometry}. */
+export class ArrowGeometry extends ArrowTableGeometry {}
+
+/** Creates GPU table geometry directly from Mesh Arrow input. */
+export function makeGPUGeometryFromArrow(
+  device: Device,
+  props: ArrowTableGeometryProps
+): ArrowTableGeometry {
+  return new ArrowTableGeometry(device, props);
 }
 
 function getArrowMeshTable(arrowMesh: ArrowMeshTable | arrow.Table): arrow.Table {
@@ -184,6 +197,7 @@ function getArrowMeshAttributeData(
   return {
     sourceName,
     attributeName,
+    dataType: vector.type,
     value,
     size,
     format,
@@ -352,12 +366,12 @@ function normalizeIndexArray(indices: number[]): Uint16Array | Uint32Array {
   return maxIndex <= 65535 ? Uint16Array.from(indices) : Uint32Array.from(indices);
 }
 
-function createInterleavedAttributes(
+function createInterleavedGPUTable(
   device: Device,
   attributes: ArrowMeshAttributeData[],
   bufferName: string,
   rowCount: number
-): {attributes: Record<string, Buffer>; bufferLayout: BufferLayout[]} {
+): GPUTable {
   const interleavedAttributes: InterleavedAttribute[] = [];
   let byteOffset = 0;
 
@@ -378,11 +392,23 @@ function createInterleavedAttributes(
     writeInterleavedAttribute(data, rowCount, byteStride, attribute);
   }
 
-  return {
-    attributes: {
-      [bufferName]: device.createBuffer({usage: Buffer.VERTEX | Buffer.COPY_SRC, data})
-    },
-    bufferLayout: [
+  const vector = new GPUVector({
+    type: 'interleaved',
+    name: bufferName,
+    buffer: device.createBuffer({usage: Buffer.VERTEX | Buffer.COPY_SRC, data}),
+    dataType: new arrow.Binary(),
+    length: rowCount,
+    byteStride,
+    attributes: interleavedAttributes.map(attribute => ({
+      attribute: attribute.attributeName,
+      format: attribute.format,
+      byteOffset: attribute.byteOffset
+    })),
+    ownsBuffer: true
+  });
+  return createGeometryGPUTable(
+    [vector],
+    [
       {
         name: bufferName,
         stepMode: 'vertex',
@@ -394,7 +420,7 @@ function createInterleavedAttributes(
         }))
       }
     ]
-  };
+  );
 }
 
 function writeInterleavedAttribute(
@@ -416,18 +442,31 @@ function writeInterleavedAttribute(
   }
 }
 
-function createSeparateAttributes(
+function createSeparateGPUTable(
   device: Device,
-  attributes: ArrowMeshAttributeData[]
-): {attributes: Record<string, Buffer>; bufferLayout: BufferLayout[]} {
-  const buffers: Record<string, Buffer> = {};
+  attributes: ArrowMeshAttributeData[],
+  rowCount: number
+): GPUTable {
+  const vectors: GPUVector[] = [];
   const bufferLayout: BufferLayout[] = [];
 
   for (const attribute of attributes) {
-    buffers[attribute.attributeName] = device.createBuffer({
-      usage: Buffer.VERTEX | Buffer.COPY_SRC,
-      data: attribute.value
-    });
+    const byteStride = vertexFormatDecoder.getVertexFormatInfo(attribute.format).byteLength;
+    vectors.push(
+      new GPUVector({
+        type: 'buffer',
+        name: attribute.attributeName,
+        buffer: device.createBuffer({
+          usage: Buffer.VERTEX | Buffer.COPY_SRC,
+          data: attribute.value
+        }),
+        dataType: attribute.dataType,
+        length: rowCount,
+        stride: attribute.size,
+        byteStride,
+        ownsBuffer: true
+      })
+    );
     bufferLayout.push({
       name: attribute.attributeName,
       stepMode: 'vertex',
@@ -435,7 +474,18 @@ function createSeparateAttributes(
     });
   }
 
-  return {attributes: buffers, bufferLayout};
+  return createGeometryGPUTable(vectors, bufferLayout);
+}
+
+function createGeometryGPUTable(vectors: GPUVector[], bufferLayout: BufferLayout[]): GPUTable {
+  const batch = new GPURecordBatch({vectors, bufferLayout});
+  return new GPUTable({
+    batches: [batch],
+    schema: batch.schema,
+    bufferLayout: batch.bufferLayout,
+    numRows: batch.numRows,
+    nullCount: batch.nullCount
+  });
 }
 
 function parseBooleanMetadata(value: string | undefined): boolean | undefined {
