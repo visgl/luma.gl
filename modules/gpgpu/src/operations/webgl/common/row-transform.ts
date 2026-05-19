@@ -5,12 +5,11 @@
 import {SignedDataType, Buffer, BufferLayout} from '@luma.gl/core';
 import {BufferTransform} from '@luma.gl/engine';
 import {ShaderModule} from '@luma.gl/shadertools';
-import {GPUTableEvaluator} from '../../operation/gpu-table';
-import {bufferPool} from '../../utils/buffer-pool';
+import {GPUTableEvaluator} from '../../../operation/gpu-table';
+import {bufferPool} from '../../../utils/buffer-pool';
+import {getAttributeType, getZeroLiteral, type QualifiedVectorSize} from './helper';
 
-type QualifedVectorSize = 1 | 2 | 3 | 4;
-
-export function runBufferTransform({
+export function runRowTransform({
   module,
   elementWise = false,
   inputs,
@@ -64,7 +63,7 @@ export function runBufferTransform({
 
   if (elementWise) {
     for (let i = 0; i < output.size; i++) {
-      const zero = castToType === 'float' ? '0.' : castToType === 'uint' ? '0u' : '0';
+      const zero = getZeroLiteral(castToType);
       const elementInputs = Object.keys(inputs).map(name => {
         if (i < inputs[name].size) return `${name}[${i}]`;
         return zero;
@@ -99,8 +98,6 @@ set_result(result);
     outputs: outputModule.varyings
   });
 
-  // console.log(transform.model.pipeline.vs.source);
-
   transform.run({
     inputBuffers: inputBuffers,
     outputBuffers: {[outputModule.varyings[0]]: outputBuffer}
@@ -108,25 +105,9 @@ set_result(result);
   if (placeholderBuffer) {
     bufferPool.recycle(placeholderBuffer);
   }
-  // transform.destroy();
 }
 
-/** Sample vs from name=x, type=float32, size=6
-
-  in vec4 ax_0;
-  in vec2 ax_4;
-
-  void get_x(out float v[6]) {
-    v[0] = ax_0[0];
-    v[1] = ax_0[1];
-    v[2] = ax_0[2];
-    v[3] = ax_0[3];
-    v[4] = ax_4[0];
-    v[5] = ax_4[1];
-  }
-*/
-/** Get a shader module that reads an array from attributes or uniforms */
-function getInputModule(
+export function getInputModule(
   name: string,
   inType: SignedDataType,
   inSize: number,
@@ -135,13 +116,8 @@ function getInputModule(
   let attributeBlock = '';
   let funcBlock = '';
 
-  // Each bound attribute pointer can be up to vec4
-  // If the input data size is 10
-  // Send them in as 3 attributes vec4 + vec4 + vec2
-  // Or 3 equivalent uniforms if constant
-  // At runtime, assemble them into float[10]
   for (let i = 0; i < inSize; i += 4) {
-    const size = Math.min(inSize - i, 4) as QualifedVectorSize;
+    const size = Math.min(inSize - i, 4) as QualifiedVectorSize;
     const inDataType = getAttributeType(inType, size);
 
     attributeBlock += `in ${inDataType} a${name}_${i};\n`;
@@ -149,11 +125,9 @@ function getInputModule(
     for (let j = 0; j < size; j++) {
       let element = `a${name}_${i}`;
       if (size > 1) {
-        // access element
         element = `${element}[${j}]`;
       }
       if (inType !== outType) {
-        // cast type
         element = `TYPE(${element})`;
       }
       funcBlock += `v[${i + j}]=${element};\n`;
@@ -173,50 +147,7 @@ void get_${name}(out TYPE v[${inSize}]) {
   } as ShaderModule;
 }
 
-/** Sample vs from name=result, type=float32, size=6
-
-  out vec4 result_0;
-  out vec2 result_4;
-
-  void set_result(in float v[6]) {
-    result_0 = vec4(v[0], v[1], v[2], v[3]);
-    result_4 = vec2(v[4], v[5]);
-  }
-*/
-/** Get a shader module that writes an array into varyings */
-function getOutputModule(
-  name: string,
-  outType: SignedDataType,
-  outSize: number
-): ShaderModule & {
-  varyings: string[];
-} {
-  const varyings: string[] = [];
-  const outputType = getAttributeType(outType, 1);
-  let varyingBlock = '';
-  let funcBlock = '';
-
-  for (let i = 0; i < outSize; i += 4) {
-    const size = Math.min(outSize - i, 4) as QualifedVectorSize;
-    const outDataType = getAttributeType(outType, size);
-    varyings.push(`${name}_${i}`);
-    varyingBlock += `flat out ${outDataType} ${name}_${i};\n`;
-    const vectorIndices = Array.from({length: size}, (_, d) => i + d);
-    funcBlock += `${name}_${i} = ${outDataType}(${vectorIndices.map(index => `v[${index}]`).join(',')});\n`;
-  }
-
-  const vs = `
-${varyingBlock}
-void set_${name}(in ${outputType} v[${outSize}]) {
-  ${funcBlock}
-}
-`;
-
-  return {name, vs, varyings} as ShaderModule & {varyings: string[]};
-}
-
-/** Returns BufferLayout that corresponds with the shader attributes from getInputModule */
-function getInputBufferLayout(name: string, source: GPUTableEvaluator): BufferLayout {
+export function getInputBufferLayout(name: string, source: GPUTableEvaluator): BufferLayout {
   const bufferLayout: BufferLayout = {
     name,
     stepMode: source.isConstant ? 'vertex' : 'instance',
@@ -224,7 +155,7 @@ function getInputBufferLayout(name: string, source: GPUTableEvaluator): BufferLa
     attributes: []
   };
   for (let i = 0; i < source.size; i += 4) {
-    const size = Math.min(source.size - i, 4) as QualifedVectorSize;
+    const size = Math.min(source.size - i, 4) as QualifiedVectorSize;
     bufferLayout.attributes!.push({
       attribute: `a${name}_${i}`,
       // @ts-ignore
@@ -235,20 +166,33 @@ function getInputBufferLayout(name: string, source: GPUTableEvaluator): BufferLa
   return bufferLayout;
 }
 
-/** Get GLSL attribute data type */
-function getAttributeType(type: SignedDataType, size: QualifedVectorSize): string {
-  switch (type) {
-    case 'uint8':
-    case 'uint16':
-    case 'uint32':
-      return size === 1 ? 'uint' : `uvec${size}`;
+export function getOutputModule(
+  name: string,
+  outType: SignedDataType,
+  outSize: number
+): ShaderModule & {varyings: string[]} {
+  const varyings: string[] = [];
+  const outputType = getAttributeType(outType, 1);
+  let varyingBlock = '';
+  let functionBlock = '';
 
-    case 'sint8':
-    case 'sint16':
-    case 'sint32':
-      return size === 1 ? 'int' : `ivec${size}`;
-
-    default:
-      return size === 1 ? 'float' : `vec${size}`;
+  for (let index = 0; index < outSize; index += 4) {
+    const size = Math.min(outSize - index, 4) as QualifiedVectorSize;
+    const outDataType = getAttributeType(outType, size);
+    varyings.push(`${name}_${index}`);
+    varyingBlock += `flat out ${outDataType} ${name}_${index};\n`;
+    const vectorIndices = Array.from({length: size}, (_, offset) => index + offset);
+    functionBlock += `${name}_${index} = ${outDataType}(${vectorIndices.map(vectorIndex => `v[${vectorIndex}]`).join(',')});\n`;
   }
+
+  return {
+    name,
+    varyings,
+    vs: `
+${varyingBlock}
+void set_${name}(in ${outputType} v[${outSize}]) {
+  ${functionBlock}
+}
+`
+  } as ShaderModule & {varyings: string[]};
 }

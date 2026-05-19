@@ -4,22 +4,16 @@
 
 import {OperationHandler} from '../../operation/operation';
 import {GPUTableEvaluator} from '../../operation/gpu-table';
-import {runRowTransform} from './common/row-transform';
+import {runCPUTransform} from './common';
 
-const vs = `\
-TYPE add(TYPE x, TYPE y) {
-  return x + y;
-}
-`;
-
-export const add: OperationHandler<{x: GPUTableEvaluator; y: GPUTableEvaluator}> = async ({
+export const subtract: OperationHandler<{x: GPUTableEvaluator; y: GPUTableEvaluator}> = async ({
   inputs,
   output,
   target
 }) => {
-  runRowTransform({
+  runCPUTransform({
     elementWise: true,
-    module: {name: 'add', vs},
+    func: (x: number, y: number) => x - y,
     inputs,
     output,
     outputBuffer: target
