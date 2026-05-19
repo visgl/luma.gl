@@ -125,6 +125,8 @@ export type GPUVectorFromDataProps<T extends arrow.DataType = AttributeArrowType
   byteStride?: number;
   /** Optional buffer layout retained for interleaved chunk collections. */
   bufferLayout?: BufferLayout;
+  /** Whether this vector should destroy the supplied GPU data chunks. */
+  ownsData?: boolean;
 };
 
 /** Constructor props for an appendable DynamicBuffer-backed Arrow vector. */
@@ -345,7 +347,14 @@ export class GPUVector<T extends arrow.DataType = AttributeArrowType> {
       }
 
       case 'data': {
-        const {name, arrowType, data, byteStride, bufferLayout} = constructionProps;
+        const {
+          name,
+          arrowType,
+          data,
+          byteStride,
+          bufferLayout,
+          ownsData = false
+        } = constructionProps;
         if (data.some(chunk => !arrow.util.compareTypes(chunk.type, arrowType))) {
           throw new Error('GPUVector data chunks must share the declared Arrow type');
         }
@@ -360,6 +369,7 @@ export class GPUVector<T extends arrow.DataType = AttributeArrowType> {
         this.data.push(...data);
         this._buffer = data.length === 1 ? data[0].buffer : undefined;
         this._ownsBuffer = false;
+        this._ownsDataChunks = ownsData;
         return;
       }
 

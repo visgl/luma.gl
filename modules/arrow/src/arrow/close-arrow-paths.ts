@@ -9,8 +9,8 @@ import {
   GPUData,
   getArrowVariableLengthAttributeDataBufferSource,
   type GPUDataReadbackMetadata
-} from './gpu-data';
-import {GPUVector} from './gpu-vector';
+} from './arrow-gpu-data';
+import {GPUVector} from './arrow-gpu-vector';
 import {isVariableLengthAttributeArrowType} from './arrow-types';
 
 type ArrowPathCoordinateType = arrow.List<arrow.FixedSizeList<arrow.Float32>>;
