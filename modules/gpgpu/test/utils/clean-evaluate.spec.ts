@@ -1,0 +1,37 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
+import {expect, test} from 'vitest';
+import {add, cleanEvaluate, GPUTableEvaluator} from '@luma.gl/gpgpu';
+import {getTestDevice} from '@luma.gl/test-utils';
+import '../operations/fixtures';
+
+test(`GPGPU#cleanEvaluate`, async t => {
+  const device = await getTestDevice('webgl');
+  if (!device) {
+    t.annotate(`webgl not available`);
+    return;
+  }
+
+  const x = GPUTableEvaluator.fromArray([1, 2, 3, 4], {type: 'sint32', size: 1});
+  const y = GPUTableEvaluator.fromArray([10, 20, 30, 40], {type: 'sint32', size: 1});
+  const z = GPUTableEvaluator.fromArray([100, 200, 300, 400], {type: 'sint32', size: 1});
+
+  const partial = add(x, y);
+  const sum = add(partial, z);
+
+  await cleanEvaluate(device, {sum, x});
+
+  expect(sum.buffer).toBeTruthy();
+  expect(x.buffer).toBeTruthy();
+
+  expect((x as any)._destroyed).toBe(false);
+  expect((y as any)._destroyed).toBe(true);
+  expect((z as any)._destroyed).toBe(true);
+  expect((partial as any)._destroyed).toBe(true);
+  expect((sum as any)._destroyed).toBe(false);
+
+  x.destroy();
+  sum.destroy();
+});

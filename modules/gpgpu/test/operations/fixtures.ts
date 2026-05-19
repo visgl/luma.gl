@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 import {SignedDataType} from '@luma.gl/core';
-import {TypedArray} from '@math.gl/core';
+import {TypedArray, equals} from '@math.gl/core';
 import {GPUTableEvaluator, backendRegistry, webglBackend} from '@luma.gl/gpgpu';
 import {webgpuBackend} from '../../src/operations/webgpu';
 
@@ -22,15 +22,12 @@ export type TestData =
       type?: SignedDataType;
     };
 
-export function makeTable(source: TestData): GPUTableEvaluator {
-  if ('constant' in source) {
-    return GPUTableEvaluator.fromConstant(source.constant, source.type);
-  }
-  return GPUTableEvaluator.fromArray(source.value, source);
-}
-
 /** Check table value against definition, returns error if any */
-export function verifyTableValue(table: GPUTableEvaluator, expected: TestData): string | null {
+export function verifyTableValue(
+  table: GPUTableEvaluator,
+  expected: TestData,
+  epsilon?: number
+): string | null {
   const size = table.size;
 
   if ('type' in expected && expected.type !== table.type) {
@@ -48,11 +45,12 @@ export function verifyTableValue(table: GPUTableEvaluator, expected: TestData): 
   if (!actual) {
     return `Unexpected empty result`;
   }
+  const equalFunc = epsilon === undefined ? exactEquals : (a: any, b: any) => equals(a, b, epsilon);
   const mismatches: {index: number; expected: number[]; actual: number[]}[] = [];
   for (let i = 0; i < target.length; i += size) {
     const actualItem = actual?.slice(i, i + size);
     const expectedItem = target.slice(i, i + size);
-    if (!equals(actualItem, expectedItem)) {
+    if (!equalFunc(actualItem, expectedItem)) {
       mismatches.push({
         index: i / size,
         expected: Array.from(expectedItem),
@@ -68,25 +66,46 @@ export function verifyTableValue(table: GPUTableEvaluator, expected: TestData): 
     .join('\n')}`;
 }
 
-export function isSupportedByWebGPU(...inputs: (TestData | undefined)[]): boolean {
-  return inputs.every(input => {
-    if (!input) {
-      return true;
-    }
-    return (
-      (input.type ?? 'float32') === 'float32' || input.type === 'uint32' || input.type === 'sint32'
-    );
-  });
+export function isSupportedByWebGPU(...inputs: (GPUTableEvaluator | undefined)[]): boolean {
+  const visitedEvaluators = new Set<GPUTableEvaluator>();
+  return inputs.every(input => isEvaluatorSupportedByWebGPU(input, visitedEvaluators));
+}
+
+function isEvaluatorSupportedByWebGPU(
+  evaluator: GPUTableEvaluator | undefined,
+  visitedEvaluators: Set<GPUTableEvaluator>
+): boolean {
+  if (!evaluator || visitedEvaluators.has(evaluator)) {
+    return true;
+  }
+  visitedEvaluators.add(evaluator);
+  if (evaluator.type !== 'float32' && evaluator.type !== 'uint32' && evaluator.type !== 'sint32') {
+    return false;
+  }
+
+  const source = evaluator.source;
+
+  if (source instanceof GPUTableEvaluator) {
+    return isEvaluatorSupportedByWebGPU(source, visitedEvaluators);
+  }
+
+  if (!source || !('dependencies' in source) || !source.dependencies) {
+    return true;
+  }
+
+  return source.dependencies.every(dependency =>
+    isEvaluatorSupportedByWebGPU(dependency, visitedEvaluators)
+  );
 }
 
 /** numeric or numeric array comparison at GPU precision (float32) */
-function equals(a: any, b: any) {
+function exactEquals(a: any, b: any) {
   if (a === b) return true;
   if (Number.isNaN(a)) return Number.isNaN(b);
 
   if (isArray(a) && isArray(b)) {
     if (a.length !== b.length) return false;
-    for (let i = 0; i < a.length; ++i) if (!equals(a[i], b[i])) return false;
+    for (let i = 0; i < a.length; ++i) if (!exactEquals(a[i], b[i])) return false;
     return true;
   }
   if (typeof a === 'number' && typeof b === 'number') {
