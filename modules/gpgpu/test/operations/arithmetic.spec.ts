@@ -121,8 +121,8 @@ for (const deviceType of ['webgl', 'webgpu', 'cpu'] as const) {
             [86.9207, 27.9882],
             [0, -84.999]
           ].flatMap(([lon, lat]) => [
-            (lon * Math.PI) / 180,
-            Math.log(Math.tan(Math.PI / 4 + ((lat * Math.PI) / 180) * 0.5))
+            (Math.fround(lon) * Math.PI) / 180,
+            Math.log(Math.tan(Math.PI / 4 + ((Math.fround(lat) * Math.PI) / 180) * 0.5))
           ]),
           type: 'float32',
           size: 2

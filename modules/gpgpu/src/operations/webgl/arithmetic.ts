@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+import {fp32} from '@luma.gl/shadertools';
 import {OperationHandler} from '../../operation/operation';
 import {compileExpression} from '../../utils/expression';
 import {ARITHMETIC_OPERATIONS, ArithmeticOperationInputs} from '../arithmetic-operation';
@@ -24,6 +25,10 @@ TYPE arithmetic_multiply(TYPE x, TYPE y) {
 TYPE arithmetic_divide(TYPE x, TYPE y) {
   return x / y;
 }
+
+float arithmetic_tan(float x) {
+  return tan_fp32(x);
+}
 `;
 
 export const arithmetic: OperationHandler<ArithmeticOperationInputs> = async ({
@@ -37,7 +42,7 @@ export const arithmetic: OperationHandler<ArithmeticOperationInputs> = async ({
   const namedInputs = inputs.namedInputs;
 
   runRowTransform({
-    module: {name: 'arithmetic', vs},
+    module: {name: 'arithmetic', dependencies: [fp32], vs},
     inputs: namedInputs,
     output,
     operationType,

@@ -24,6 +24,10 @@ fn arithmetic_multiply(x: {TYPE}, y: {TYPE}) -> {TYPE} {
 fn arithmetic_divide(x: {TYPE}, y: {TYPE}) -> {TYPE} {
   return x / y;
 }
+
+fn arithmetic_tan(x: {TYPE}) -> {TYPE} {
+  return tan(x);
+}
 `;
 
 export const arithmetic: OperationHandler<ArithmeticOperationInputs> = async ({

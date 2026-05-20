@@ -43,7 +43,7 @@ export const ARITHMETIC_OPERATIONS: ExpressionOperations<ArithmeticOp> = {
   abs: {arity: 1, symbol: 'abs'},
   sin: {arity: 1, symbol: 'sin'},
   cos: {arity: 1, symbol: 'cos'},
-  tan: {arity: 1, symbol: 'tan'},
+  tan: {arity: 1, symbol: 'arithmetic_tan'},
   exp: {arity: 1, symbol: 'exp'},
   log: {arity: 1, symbol: 'log'}
 };
@@ -227,13 +227,14 @@ function formatHumanReadableCall(symbol: string, args: string[]): string {
       return `(${args[0]} * ${args[1]})`;
     case 'arithmetic_divide':
       return `(${args[0]} / ${args[1]})`;
+    case 'arithmetic_tan':
+      return `tan(${unwrapOuterParentheses(args[0])})`;
     case 'pow':
       return `pow(${unwrapOuterParentheses(args[0])}, ${unwrapOuterParentheses(args[1])})`;
     case 'sqrt':
     case 'abs':
     case 'sin':
     case 'cos':
-    case 'tan':
     case 'exp':
     case 'log':
       return `${symbol}(${unwrapOuterParentheses(args[0])})`;
