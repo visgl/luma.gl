@@ -5,7 +5,7 @@
 import {Texture} from '@luma.gl/core';
 import {Model} from '@luma.gl/engine';
 import {OperationHandler} from '../../operation/operation';
-import {GPUTableEvaluator} from '../../operation/gpu-table-evaluator';
+import {getGPUVectorBuffer, GPUTableEvaluator} from '../../operation/gpu-table-evaluator';
 import {bufferPool} from '../../utils/buffer-pool';
 import {multiply} from './multiply';
 import {getInputBufferLayout, getInputModule} from './common/row-transform';
@@ -90,7 +90,7 @@ void main() {
       SOURCE_VALUES_LEN: sourceValues.size.toString(),
       CHANNEL_COUNT: output.length.toString()
     } as any,
-    attributes: {sourceValues: sourceValues.buffer},
+    attributes: {sourceValues: getGPUVectorBuffer(sourceValues.gpuVector)},
     bufferLayout: [getInputBufferLayout('sourceValues', sourceValues)],
     instanceCount: sourceValues.length,
     vertexCount: output.length,

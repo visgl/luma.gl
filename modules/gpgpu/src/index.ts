@@ -5,7 +5,7 @@
 // Resources
 export {getGPUTableEvaluator, GPUTableEvaluator} from './operation/gpu-table-evaluator';
 export type {
-  GPUTableEvaluatorGPUVectorOptions,
+  GPUTableEvaluatorEvaluateOptions,
   GPUTableEvaluatorInput,
   GPUTableEvaluatorProps
 } from './operation/gpu-table-evaluator';

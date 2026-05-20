@@ -35,6 +35,7 @@ const values = await translated.readValue();
 | `stride?` | `number` | Byte distance between adjacent rows. Defaults to `ValueType.BYTES_PER_ELEMENT * size`. |
 | `value?` | `TypedArray` | CPU-side data for the table. Required unless `source` is provided. |
 | `buffer?` | `Buffer` | Borrowed GPU buffer backing this evaluator. |
+| `gpuVector?` | `GPUVector` | Borrowed GPUVector resource backing this evaluator. |
 | `dataType?` | `arrow.DataType` | Optional logical schema metadata used when exposing the evaluator as a `GPUVector`. |
 | `source?` | `Operation \| GPUTableEvaluator \| null` | Lazy data source for this table. |
 | `isConstant?` | `boolean` | Whether every row shares the same value. Defaults to `false`. |
@@ -90,9 +91,9 @@ Typed-array constructor associated with `type`.
 
 CPU-side typed array, when available. This may come from construction or from a later `readValue()` call.
 
-### `buffer`
+### `gpuVector`
 
-GPU buffer for the table. Accessing this before `evaluate()` throws.
+Materialized GPUVector resource for the table. Accessing this before `evaluate()` throws.
 
 ## Methods
 
@@ -100,19 +101,15 @@ GPU buffer for the table. Accessing this before `evaluate()` throws.
 
 Creates a table from explicit layout and source information.
 
-### `evaluate(device: Device): Promise<void>`
+### `evaluate(device: Device, options?): Promise<GPUVector>`
 
-Materializes the table on the provided device. If the table was created from an operation, all dependencies are evaluated first and the operation is executed lazily at this point.
+Materializes the table on the provided device and returns the immutable `GPUVector` backing this evaluator. If the table was created from an operation, all dependencies are evaluated first and the operation is executed lazily at this point.
 
 ### `readValue(startRow?: number, endRow?: number): Promise<TypedArray>`
 
 Reads table contents back to the CPU. This is primarily for debugging or inspection and may be slower than staying on the GPU.
 
 When rows are tightly packed, the returned typed array references a contiguous slice. For strided tables, the method copies each row into a compact array before returning it.
-
-### `evaluateToGPUVector(device, options?): Promise<GPUVector>`
-
-Materializes the evaluator and returns a non-owning `GPUVector` view of the evaluator's backing buffer.
 
 ### `toString(): string`
 
@@ -127,5 +124,5 @@ Releases any cached GPU buffer and prevents future evaluation.
 - `GPUTableEvaluator` is immutable in shape. To produce a new table, create another `GPUTableEvaluator` or use an operation that returns one.
 - Evaluation is lazy. Creating operation chains does not allocate GPU resources until `evaluate()` is called on an output table.
 - Operation outputs are evaluators backed by immutable materialized buffers, not scratch buffers.
-- `GPUVector` inputs are borrowed; `GPUVector` views returned by `evaluateToGPUVector()` do not take ownership from the evaluator.
+- `GPUVector` inputs are borrowed; operation outputs own their materialized `GPUVector` backing resources.
 - Constant tables are useful for broadcasting values across every row of a non-constant input.

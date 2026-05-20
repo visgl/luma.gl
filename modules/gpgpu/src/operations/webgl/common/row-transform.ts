@@ -5,7 +5,7 @@
 import {SignedDataType, Buffer, BufferLayout} from '@luma.gl/core';
 import {BufferTransform} from '@luma.gl/engine';
 import {ShaderModule} from '@luma.gl/shadertools';
-import {GPUTableEvaluator} from '../../../operation/gpu-table-evaluator';
+import {getGPUVectorBuffer, GPUTableEvaluator} from '../../../operation/gpu-table-evaluator';
 import {bufferPool} from '../../../utils/buffer-pool';
 import {getAttributeType, getZeroLiteral, type QualifiedVectorSize} from './helper';
 
@@ -48,7 +48,7 @@ export function runRowTransform({
     modules.push(getInputModule(name, input.type, input.size, operationType));
     bufferLayout.push(getInputBufferLayout(name, input));
     if (input instanceof GPUTableEvaluator) {
-      inputBuffers[name] = input.buffer;
+      inputBuffers[name] = getGPUVectorBuffer(input.gpuVector);
     } else {
       placeholderBuffer =
         placeholderBuffer || bufferPool.createOrReuse(device, outputBuffer.byteLength);

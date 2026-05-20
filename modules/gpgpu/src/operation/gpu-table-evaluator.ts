@@ -18,13 +18,13 @@ import type {Operation} from './operation';
 
 type GPUTableEvaluatorBufferOwnership = 'owned' | 'borrowed';
 
-/** GPUVector materialization options for {@link GPUTableEvaluator.evaluateToGPUVector}. */
-export type GPUTableEvaluatorGPUVectorOptions = {
+/** Evaluation options for {@link GPUTableEvaluator.evaluate}. */
+export type GPUTableEvaluatorEvaluateOptions = {
   /** Output vector name. */
   name?: string;
-  /** Logical data type for the output vector. Defaults to the evaluator's type and size. */
+  /** Logical data type for the materialized GPUVector. Defaults to the evaluator's type and size. */
   dataType?: arrow.DataType;
-  /** Whether to wrap the output as an interleaved vector. */
+  /** Whether to materialize the GPUVector as an interleaved vector. */
   interleaved?:
     | boolean
     | {
@@ -53,6 +53,8 @@ export type GPUTableEvaluatorProps = {
   value?: TypedArray;
   /** External GPU buffer that backs this table and is not owned by the evaluator. */
   buffer?: Buffer;
+  /** External GPUVector resource that backs this evaluator and is not owned by it. */
+  gpuVector?: GPUVector;
   /** Optional logical schema/type metadata preserved for GPUVector interop. */
   dataType?: arrow.DataType;
   /** Lazy operation or table whose output initializes this table, required unless `value` is supplied. */
@@ -99,8 +101,8 @@ export class GPUTableEvaluator {
 
   /** CPU buffer, either provided by the user or read back from the GPU */
   protected _value?: TypedArray;
-  /** GPU buffer */
-  private _buffer?: Buffer;
+  /** Materialized GPU resource backing this evaluator. */
+  private _gpuVector?: GPUVector;
   /** Whether this evaluator owns its backing GPU buffer or only borrows another resource's buffer. */
   private _bufferOwnership: GPUTableEvaluatorBufferOwnership = 'owned';
 
@@ -177,7 +179,7 @@ export class GPUTableEvaluator {
       offset: vector.byteOffset,
       stride: vector.byteStride,
       length: vector.length,
-      buffer: resolveGPUVectorBuffer(vector),
+      gpuVector: vector,
       dataType: vector.type
     });
   }
@@ -199,11 +201,12 @@ export class GPUTableEvaluator {
       stride,
       value,
       buffer,
+      gpuVector,
       dataType,
       source = null,
       isConstant = false
     } = props;
-    if (!source && !value && !buffer) {
+    if (!source && !value && !buffer && !gpuVector) {
       throw new Error('OperationResource must have a value source');
     }
 
@@ -215,10 +218,6 @@ export class GPUTableEvaluator {
     this.stride = stride || this.ValueType.BYTES_PER_ELEMENT * size;
     this.source = source;
     this.dataType = dataType;
-    this._value = value;
-    this._buffer = buffer;
-    this._bufferOwnership = source instanceof GPUTableEvaluator || buffer ? 'borrowed' : 'owned';
-
     let {length} = props;
     if (length === undefined) {
       if (isConstant) {
@@ -233,6 +232,18 @@ export class GPUTableEvaluator {
     this.isConstant = isConstant;
     this.length = length;
     this.byteLength = this.stride * length;
+    this._value = value;
+    this._bufferOwnership =
+      source instanceof GPUTableEvaluator || buffer || gpuVector ? 'borrowed' : 'owned';
+    if (gpuVector) {
+      this._gpuVector = gpuVector;
+    } else if (buffer) {
+      this._gpuVector = this.createGPUVectorView({
+        buffer,
+        name: this._id,
+        dataType: this.dataType
+      });
+    }
   }
 
   /** CPU-side typed array, when available. */
@@ -245,52 +256,52 @@ export class GPUTableEvaluator {
     return this._id;
   }
 
-  /** GPU buffer for the table. Only available after {@link GPUTableEvaluator.evaluate} resolves. */
-  get buffer(): Buffer {
-    if (!this._buffer) {
+  /** Materialized GPUVector resource for the table. Only available after {@link GPUTableEvaluator.evaluate} resolves. */
+  get gpuVector(): GPUVector {
+    if (!this._gpuVector) {
       throw new Error(`${this} not evaluated`);
     }
-    return this._buffer;
+    return this._gpuVector;
   }
 
   /**
-   * Materializes the table on a device.
+   * Materializes the table on a device and returns the requested output format.
    *
    * If the table is operation-backed, dependencies are evaluated first and then the backend
    * operation writes into a cached GPU buffer.
    */
-  async evaluate(device: Device): Promise<void> {
+  async evaluate(
+    device: Device,
+    options: GPUTableEvaluatorEvaluateOptions = {}
+  ): Promise<GPUVector> {
     if (this._destroyed) {
       throw new Error(`GPUTableEvaluator ${this} already destroyed`);
     }
-    if (this._buffer && this._bufferOwnership === 'borrowed') {
-      return;
+    if (this._gpuVector) {
+      return this._gpuVector;
     }
-    if (!this._buffer) {
-      let buffer: Buffer;
-      if (this.source instanceof GPUTableEvaluator) {
-        await this.source.evaluate(device);
-        buffer = this.source.buffer;
-      } else {
-        buffer = bufferPool.createOrReuse(device, this.byteLength);
-        if (this._value) {
-          buffer.write(this._value);
-        } else {
-          await this.source!.execute(device, buffer);
-        }
-      }
-      // cache the result when successful
-      this._buffer = buffer;
+
+    let buffer: Buffer;
+    if (this.source instanceof GPUTableEvaluator) {
+      const sourceGPUVector = await this.source.evaluate(device);
+      this._gpuVector = sourceGPUVector;
+      return sourceGPUVector;
     }
+
+    buffer = bufferPool.createOrReuse(device, this.byteLength);
+    if (this._value) {
+      buffer.write(this._value);
+    } else {
+      await this.source!.execute(device, buffer);
+    }
+    this._gpuVector = this.createGPUVectorView({...options, buffer});
+    return this._gpuVector;
   }
 
-  /** Materializes this evaluator and returns a non-owning GPUVector view of its backing buffer. */
-  async evaluateToGPUVector(
-    device: Device,
-    options: GPUTableEvaluatorGPUVectorOptions = {}
-  ): Promise<GPUVector> {
-    await this.evaluate(device);
-
+  /** Creates a GPUVector view over a materialized backing buffer. */
+  private createGPUVectorView(
+    options: GPUTableEvaluatorEvaluateOptions & {buffer: Buffer}
+  ): GPUVector {
     const name = options.name ?? this._id ?? 'vector';
     const dataType = options.dataType ?? this.dataType ?? getArrowDataType(this.type, this.size);
 
@@ -299,23 +310,22 @@ export class GPUTableEvaluator {
         typeof options.interleaved === 'object' && options.interleaved.attributes
           ? options.interleaved.attributes
           : getInterleavedAttributes(this);
-      const vector = new GPUVector({
+      return new GPUVector({
         type: 'interleaved',
         name,
-        buffer: this.buffer,
+        buffer: options.buffer,
         dataType: new arrow.Binary(),
         length: this.length,
         byteStride: this.stride,
         attributes,
         ownsBuffer: false
       });
-      return vector;
     }
 
-    const vector = new GPUVector({
+    return new GPUVector({
       type: 'buffer',
       name,
-      buffer: this.buffer,
+      buffer: options.buffer,
       dataType,
       length: this.length,
       stride: this.size,
@@ -324,7 +334,6 @@ export class GPUTableEvaluator {
       rowByteLength: this.ValueType.BYTES_PER_ELEMENT * this.size,
       ownsBuffer: false
     });
-    return vector;
   }
 
   /**
@@ -336,7 +345,10 @@ export class GPUTableEvaluator {
   async readValue(startRow: number = 0, endRow?: number): Promise<TypedArray> {
     const {ValueType} = this;
     if (!this._value) {
-      const bytes = await this.buffer.readAsync(this.offset, this.byteLength);
+      const bytes = await getGPUVectorBuffer(this.gpuVector).readAsync(
+        this.offset,
+        this.byteLength
+      );
       this._value = new ValueType(bytes.buffer as ArrayBuffer);
     }
 
@@ -368,11 +380,11 @@ export class GPUTableEvaluator {
 
   /** Releases cached GPU storage and prevents future evaluation. */
   destroy() {
-    if (this._buffer) {
+    if (this._gpuVector) {
       if (this._bufferOwnership === 'owned') {
-        bufferPool.recycle(this._buffer);
+        bufferPool.recycle(getGPUVectorBuffer(this._gpuVector));
       }
-      this._buffer = undefined;
+      this._gpuVector = undefined;
     }
     this._destroyed = true;
   }
@@ -423,7 +435,8 @@ function getGPUTablePropsFromGPUVector(vector: GPUVector): {type: SignedDataType
   return {type: getSignedDataType(scalarType), size: vector.stride};
 }
 
-function resolveGPUVectorBuffer(vector: GPUVector): Buffer {
+/** Returns the concrete Buffer for a GPUVector, unwrapping DynamicBuffer when needed. */
+export function getGPUVectorBuffer(vector: GPUVector): Buffer {
   const buffer = vector.buffer;
   return buffer instanceof DynamicBuffer ? buffer.buffer : buffer;
 }
