@@ -2,13 +2,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+import type {Device} from '@luma.gl/core';
 import {OperationHandler} from '../../operation/operation';
 import {compileExpression} from '../../utils/expression';
 import {ARITHMETIC_OPERATIONS, ArithmeticOperationInputs} from '../arithmetic-operation';
 import {runRowComputation} from './common/row-transform';
 import {formatLiteralValue, getWGSLType, getZeroValue} from './common/helper';
 
-/** This is a port of @luma.gl/shadertools fp32 module */
+// Port of the shadertools fp32 tan workaround for platforms with poor built-in tan precision.
 const tanFP32WGSL = `const TWO_PI: f32 = 6.2831854820251465;
 const PI_2: f32 = 1.5707963705062866;
 const PI_16: f32 = 0.1963495463132858;
@@ -27,6 +28,8 @@ const INVERSE_FACTORIAL_3: f32 = 1.666666716337204e-01;
 const INVERSE_FACTORIAL_5: f32 = 8.333333767950535e-03;
 const INVERSE_FACTORIAL_7: f32 = 1.9841270113829523e-04;
 const INVERSE_FACTORIAL_9: f32 = 2.75573188446287533e-06;
+
+const FP32_OVERFLOW = 3.402823466e+38;
 
 fn sin_taylor_fp32(a: f32) -> f32 {
   if (a == 0.0) {
@@ -74,7 +77,7 @@ fn tan_taylor_fp32(a: f32) -> f32 {
   let j = i32(q);
 
   if (j < -2 || j > 2) {
-    return 1.0 / 0.0;
+    return FP32_OVERFLOW;
   }
 
   var t = r - PI_2 * q;
@@ -84,7 +87,7 @@ fn tan_taylor_fp32(a: f32) -> f32 {
   let abs_k = abs(k);
 
   if (abs_k > 4) {
-    return 1.0 / 0.0;
+    return FP32_OVERFLOW;
   }
 
   t = t - PI_16 * q;
@@ -167,13 +170,14 @@ fn arithmetic_tan(x: f32) -> f32 {
 }
 `;
 
-function getArithmeticSource(useFp32TanPrecisionWorkaround: boolean): string {
-  return `${
-    useFp32TanPrecisionWorkaround
-      ? `${tanFP32WGSL}
-`
-      : ''
-  }${arithmeticSource}`;
+function getArithmeticSource(device: Device): string {
+  const {gpu} = device.info;
+  // Equivalent to modules/shadertools/src/lib/shader-assembly/platform-defines.ts LUMA_FP32_TAN_PRECISION_WORKAROUND
+  const useFp32TanPrecisionWorkaround = gpu !== 'nvidia' && gpu !== 'amd';
+  if (useFp32TanPrecisionWorkaround) {
+    return `${tanFP32WGSL}\n${arithmeticSource.replace('{TAN_IMPL}', 'tan_fp32')}`;
+  }
+  return arithmeticSource.replace('{TAN_IMPL}', 'tan');
 }
 
 export const arithmetic: OperationHandler<ArithmeticOperationInputs> = async ({
@@ -186,12 +190,7 @@ export const arithmetic: OperationHandler<ArithmeticOperationInputs> = async ({
   const scalarType = getWGSLType(operationType);
   const zeroLiteral = getZeroValue(operationType);
   const namedInputs = inputs.namedInputs;
-  const useFp32TanPrecisionWorkaround =
-    device.info.gpu === 'intel' || device.info.vendor === 'intel';
-  const source = getArithmeticSource(useFp32TanPrecisionWorkaround).replace(
-    '{TAN_IMPL}',
-    useFp32TanPrecisionWorkaround ? 'tan_fp32' : 'tan'
-  );
+  const source = getArithmeticSource(device);
 
   runRowComputation({
     module: {name: 'arithmetic', source},
