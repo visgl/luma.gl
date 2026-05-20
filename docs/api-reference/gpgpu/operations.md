@@ -7,14 +7,15 @@ Operations are lazy. Calling an operation such as `add()` or `interleave()` retu
 ## Common Behavior
 
 - Each operation returns a new `GPUTableEvaluator`.
-- Input tables can be constant or per-row.
+- Inputs can be `GPUTableEvaluator` instances or packed numeric `GPUVector` instances.
 - Output evaluation is backend-driven through `backendRegistry`.
 - Operations can be chained to build larger compute graphs.
+- Operation result evaluators own their materialized immutable output buffer.
 - The CPU backend is registered by default. Register `webglBackend` or `webgpuBackend` before evaluating on those device types.
 
 ## `add`
 
-### `add(...args: GPUTableEvaluator[]): GPUTableEvaluator`
+### `add(...args: GPUTableEvaluatorInput[]): GPUTableEvaluator`
 
 Adds corresponding elements from two or more input tables.
 
@@ -37,7 +38,7 @@ const result = add(a, b, c);
 
 ## `interleave`
 
-### `interleave(...args: GPUTableEvaluator[]): GPUTableEvaluator`
+### `interleave(...args: GPUTableEvaluatorInput[]): GPUTableEvaluator`
 
 Concatenates rows from multiple input tables in argument order.
 
@@ -68,7 +69,7 @@ const result = interleave(xyz, id);
 
 ## `fround`
 
-### `fround(x: GPUTableEvaluator): GPUTableEvaluator`
+### `fround(x: GPUTableEvaluatorInput): GPUTableEvaluator`
 
 Splits float64 values into float32 high and low parts.
 
@@ -91,5 +92,6 @@ const result = fround(source);
 ## Remarks
 
 - `add()` and `interleave()` accept multiple arguments and fold from left to right.
-- `fround()` is specialized and only accepts one input table.
+- `GPUVector` inputs are adapted into evaluator views and their buffers remain externally owned.
+- `fround()` is specialized and only accepts one input.
 - As new operations are added to `@luma.gl/gpgpu`, this page should remain the top-level reference for them.

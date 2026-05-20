@@ -16,6 +16,8 @@ import * as arrow from 'apache-arrow';
 import {bufferPool} from '../utils/buffer-pool';
 import type {Operation} from './operation';
 
+type GPUTableEvaluatorBufferOwnership = 'owned' | 'borrowed';
+
 /** GPUVector materialization options for {@link GPUTableEvaluator.evaluateToGPUVector}. */
 export type GPUTableEvaluatorGPUVectorOptions = {
   /** Output vector name. */
@@ -47,7 +49,7 @@ export type GPUTableEvaluatorProps = {
    * @default ValueType.BYTES_PER_ELEMENT * size
    */
   stride?: number;
-  /** CPU buffer that initializes the table, required unless `source` is supplied. */
+  /** CPU buffer that initializes the table, required unless `source` or `buffer` is supplied. */
   value?: TypedArray;
   /** External GPU buffer that backs this table and is not owned by the evaluator. */
   buffer?: Buffer;
@@ -99,8 +101,8 @@ export class GPUTableEvaluator {
   protected _value?: TypedArray;
   /** GPU buffer */
   private _buffer?: Buffer;
-  /** Whether the GPU buffer is externally owned and must not be recycled by the evaluator. */
-  private _hasExternalBuffer: boolean = false;
+  /** Whether this evaluator owns its backing GPU buffer or only borrows another resource's buffer. */
+  private _bufferOwnership: GPUTableEvaluatorBufferOwnership = 'owned';
 
   /**
    * Constructs a table from a CPU array.
@@ -215,7 +217,7 @@ export class GPUTableEvaluator {
     this.dataType = dataType;
     this._value = value;
     this._buffer = buffer;
-    this._hasExternalBuffer = source instanceof GPUTableEvaluator || Boolean(buffer);
+    this._bufferOwnership = source instanceof GPUTableEvaluator || buffer ? 'borrowed' : 'owned';
 
     let {length} = props;
     if (length === undefined) {
@@ -261,7 +263,7 @@ export class GPUTableEvaluator {
     if (this._destroyed) {
       throw new Error(`GPUTableEvaluator ${this} already destroyed`);
     }
-    if (this._hasExternalBuffer) {
+    if (this._buffer && this._bufferOwnership === 'borrowed') {
       return;
     }
     if (!this._buffer) {
@@ -282,7 +284,7 @@ export class GPUTableEvaluator {
     }
   }
 
-  /** Materializes this evaluator and returns its GPU buffer wrapped as a GPUVector. */
+  /** Materializes this evaluator and returns a non-owning GPUVector view of its backing buffer. */
   async evaluateToGPUVector(
     device: Device,
     options: GPUTableEvaluatorGPUVectorOptions = {}
@@ -291,7 +293,6 @@ export class GPUTableEvaluator {
 
     const name = options.name ?? this._id ?? 'vector';
     const dataType = options.dataType ?? this.dataType ?? getArrowDataType(this.type, this.size);
-    const ownsBuffer = !this._hasExternalBuffer;
 
     if (options.interleaved) {
       const attributes =
@@ -306,9 +307,8 @@ export class GPUTableEvaluator {
         length: this.length,
         byteStride: this.stride,
         attributes,
-        ownsBuffer
+        ownsBuffer: false
       });
-      this._hasExternalBuffer = true;
       return vector;
     }
 
@@ -322,9 +322,8 @@ export class GPUTableEvaluator {
       byteOffset: this.offset,
       byteStride: this.stride,
       rowByteLength: this.ValueType.BYTES_PER_ELEMENT * this.size,
-      ownsBuffer
+      ownsBuffer: false
     });
-    this._hasExternalBuffer = true;
     return vector;
   }
 
@@ -370,7 +369,7 @@ export class GPUTableEvaluator {
   /** Releases cached GPU storage and prevents future evaluation. */
   destroy() {
     if (this._buffer) {
-      if (!this._hasExternalBuffer) {
+      if (this._bufferOwnership === 'owned') {
         bufferPool.recycle(this._buffer);
       }
       this._buffer = undefined;

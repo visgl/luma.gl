@@ -28,8 +28,12 @@ for (const deviceType of ['webgl', 'webgpu'] as const) {
     expect(Array.from(await readFloat32Vector(result))).toEqual([10, 21, 32, 43, 54, 65]);
 
     const xBuffer = x.buffer;
+    const sumBuffer = sum.buffer;
     result.destroy();
     expect(xBuffer.destroyed).toBe(false);
+    expect(sumBuffer.destroyed).toBe(false);
+    expect(Array.from(await sum.readValue())).toEqual([10, 21, 32, 43, 54, 65]);
+    sum.destroy();
     x.destroy();
     y.destroy();
   });
@@ -68,7 +72,11 @@ for (const deviceType of ['webgl', 'webgpu'] as const) {
     });
     expect(Array.from(await readFloat32Vector(result))).toEqual([10, 21, 100, 32, 43, 200]);
 
+    const packedBuffer = packed.buffer;
     result.destroy();
+    expect(packedBuffer.destroyed).toBe(false);
+    packed.destroy();
+    sum.destroy();
     x.destroy();
     y.destroy();
     z.destroy();
@@ -83,13 +91,17 @@ for (const deviceType of ['webgl', 'webgpu'] as const) {
 
     const values = [Math.PI, -122.123456789, Math.E, 37.987654321];
     const source = makeFloat64Vector(device, 'positions64', values, 2);
-    const result = await fround(source).evaluateToGPUVector(device, {name: 'positions32'});
+    const rounded = fround(source);
+    const result = await rounded.evaluateToGPUVector(device, {name: 'positions32'});
 
     expect(result.name).toBe('positions32');
     expect(result.stride).toBe(4);
     expect(Array.from(await readFloat32Vector(result))).toEqual(splitFloat64Rows(values, 2));
 
+    const outputBuffer = rounded.buffer;
     result.destroy();
+    expect(outputBuffer.destroyed).toBe(false);
+    rounded.destroy();
     source.destroy();
   });
 
@@ -107,6 +119,7 @@ for (const deviceType of ['webgl', 'webgpu'] as const) {
     expect(result.name).toBe('values-view');
     expect(Array.from(await readFloat32Vector(result))).toEqual([1, 2, 3]);
     result.destroy();
+    evaluator.destroy();
     vector.destroy();
   });
 }
