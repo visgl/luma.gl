@@ -12,7 +12,8 @@ import {
   isNumericArrowType,
   type ArrowColumnInfo,
   type AttributeArrowType,
-  type NumericArrowType
+  type NumericArrowType,
+  type VariableLengthAttributeArrowType
 } from './arrow-types';
 import {validateArrowGPUDataDirectUpload} from './arrow-gpu-data';
 
@@ -28,8 +29,17 @@ export type AppendableGPUColumn = {
 /** Validated Arrow data selected for one appendable GPU column. */
 export type AppendableGPUColumnData = {
   column: AppendableGPUColumn;
-  data: arrow.Data<AttributeArrowType | arrow.Utf8>;
+  data: arrow.Data<AttributeArrowType | arrow.Utf8 | ArrowUtf8Dictionary>;
 };
+
+type ArrowUtf8DictionaryIndexType =
+  | arrow.Int8
+  | arrow.Int16
+  | arrow.Int32
+  | arrow.Uint8
+  | arrow.Uint16
+  | arrow.Uint32;
+type ArrowUtf8Dictionary = arrow.Dictionary<arrow.Utf8, ArrowUtf8DictionaryIndexType>;
 
 /** Resolves shader-selected Arrow columns for appendable GPU storage. */
 export function getAppendableGPUColumns(props: {
@@ -97,7 +107,11 @@ export function getAppendableGPUColumns(props: {
     if (!field) {
       throw new Error(`Arrow table schema does not contain column "${arrowPath}"`);
     }
-    if (!isInstanceArrowType(field.type) && !arrow.DataType.isUtf8(field.type)) {
+    if (
+      !isInstanceArrowType(field.type) &&
+      !arrow.DataType.isUtf8(field.type) &&
+      !isArrowUtf8DictionaryType(field.type)
+    ) {
       throw new Error(`Arrow column "${arrowPath}" is not compatible with appendable GPU storage`);
     }
     columns.push({
@@ -127,12 +141,17 @@ export function getAppendableGPUColumnData(
 
   return columns.map(column => {
     const data = getArrowDataByPath(recordBatch, column.arrowPath) as arrow.Data<
-      AttributeArrowType | arrow.Utf8
+      AttributeArrowType | arrow.Utf8 | ArrowUtf8Dictionary
     >;
     if (data.length !== recordBatch.numRows) {
       throw new Error(`${ownerName} column "${column.arrowPath}" row count mismatch`);
     }
-    validateArrowGPUDataDirectUpload(column.attributeName, data);
+    if (!isArrowUtf8DictionaryType(data.type)) {
+      validateArrowGPUDataDirectUpload(
+        column.attributeName,
+        data as arrow.Data<AttributeArrowType | arrow.Utf8 | VariableLengthAttributeArrowType>
+      );
+    }
     return {column, data};
   });
 }
@@ -158,4 +177,13 @@ export function getArrowColumnInfoFromType(type: AttributeArrowType): ArrowColum
     values: [],
     offsets: []
   };
+}
+
+function isArrowUtf8DictionaryType(type: arrow.DataType): type is ArrowUtf8Dictionary {
+  return (
+    arrow.DataType.isDictionary(type) &&
+    type.dictionary instanceof arrow.Utf8 &&
+    arrow.DataType.isInt(type.indices) &&
+    type.indices.bitWidth <= 32
+  );
 }

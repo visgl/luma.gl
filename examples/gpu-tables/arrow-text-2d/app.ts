@@ -26,8 +26,7 @@ import {
   ArrowStorageTextModel,
   ArrowTextModel,
   type ArrowStorageTextInputProps,
-  type ArrowTextModelProps,
-  type ArrowTextSourceVectors
+  type ArrowTextModelProps
 } from '@luma.gl/text';
 import * as arrow from 'apache-arrow';
 
@@ -66,25 +65,40 @@ const STREAMING_BATCH_SPINNER_ID = 'arrow-text-2d-streaming-batch-spinner';
 const STREAMING_BATCH_STATUS_LABEL_ID = 'arrow-text-2d-streaming-batch-status-label';
 const STREAMING_TEXT_BATCH_COUNT = 10;
 const STREAMING_TEXT_BATCH_DELAY_MS = 1000;
+const DICTIONARY_TEXT_ROWS_PER_CHUNK = 100_000;
+const DICTIONARY_LABEL_COUNT_PER_CHUNK = 1_000;
 // IconLayer + MultiIconLayer character attributes, assuming float32 positions in the active path.
 const DECK_CHARACTER_ATTRIBUTE_BYTES_PER_GLYPH = 80;
 type ActiveTextModel = ArrowTextModel | ArrowStorageTextModel;
 type TextModelKind = 'direct' | 'storage';
-type EagerTextDatasetKind = '100k' | '500k' | '1m';
-type StreamingTextDatasetKind = `${EagerTextDatasetKind}-stream`;
+type ArrowUtf8DictionaryIndexType =
+  | arrow.Int8
+  | arrow.Int16
+  | arrow.Int32
+  | arrow.Uint8
+  | arrow.Uint16
+  | arrow.Uint32;
+type ArrowUtf8Dictionary = arrow.Dictionary<arrow.Utf8, ArrowUtf8DictionaryIndexType>;
+type ArrowUtf8TextType = arrow.Utf8 | ArrowUtf8Dictionary;
+type ArrowUtf8TextVector = arrow.Vector<ArrowUtf8TextType>;
+type Utf8TextDatasetKind = '100k' | '500k' | '1m';
+type DictionaryTextDatasetKind = '100k-dict' | '500k-dict' | '1m-dict';
+type EagerTextDatasetKind = Utf8TextDatasetKind | DictionaryTextDatasetKind;
+type StreamingTextDatasetKind = `${Utf8TextDatasetKind}-stream`;
 type TextDatasetKind = EagerTextDatasetKind | StreamingTextDatasetKind;
 type TextDataset = {
   labelCount: number;
   label: string;
+  textType: 'utf8' | 'dictionary';
 };
 type ArrowTextInput = {
   positions: GPUVector<arrow.FixedSizeList<arrow.Float32>>;
-  texts: GPUVector<arrow.Utf8>;
+  texts: GPUVector<ArrowUtf8TextType>;
   clipRects: GPUVector<arrow.FixedSizeList<arrow.Int16>>;
   colors: GPUVector<arrow.FixedSizeList<arrow.Uint8>>;
   angles: GPUVector<arrow.Float32>;
   sizes: GPUVector<arrow.Float32>;
-  sourceVectors: ArrowTextSourceVectors;
+  sourceVectors: ExampleArrowTextSourceVectors;
   arrowVectorBuildTimeMs: number;
 };
 
@@ -92,19 +106,46 @@ type StreamingArrowTextSource = {
   recordBatches: arrow.RecordBatch[];
   arrowVectorBuildTimeMs: number;
 };
+type ExampleArrowTextSourceVectors = {
+  positions: arrow.Vector<arrow.FixedSizeList<arrow.Float32>>;
+  texts: ArrowUtf8TextVector;
+  colors?: arrow.Vector<arrow.FixedSizeList<arrow.Uint8>>;
+  angles?: arrow.Vector<arrow.Float32>;
+  sizes?: arrow.Vector<arrow.Float32>;
+  pixelOffsets?: arrow.Vector<arrow.FixedSizeList<arrow.Float32>>;
+  clipRects?: arrow.Vector<arrow.FixedSizeList<arrow.Int16>>;
+};
 
 const TEXT_DATASETS: Record<EagerTextDatasetKind, TextDataset> = {
   '100k': {
     labelCount: 100_000,
-    label: '100K texts, 3M glyphs'
+    label: '100K Utf8 texts, 3M glyphs',
+    textType: 'utf8'
   },
   '500k': {
     labelCount: 500_000,
-    label: '500K texts, 16M glyphs'
+    label: '500K Utf8 texts, 16M glyphs',
+    textType: 'utf8'
   },
   '1m': {
     labelCount: 1_000_000,
-    label: '1M texts, 31M glyphs'
+    label: '1M Utf8 texts, 31M glyphs',
+    textType: 'utf8'
+  },
+  '100k-dict': {
+    labelCount: 100_000,
+    label: '100K Dictionary<Utf8>, 1K strings / 100K rows',
+    textType: 'dictionary'
+  },
+  '500k-dict': {
+    labelCount: 500_000,
+    label: '500K Dictionary<Utf8>, 1K strings / 100K rows',
+    textType: 'dictionary'
+  },
+  '1m-dict': {
+    labelCount: 1_000_000,
+    label: '1M Dictionary<Utf8>, 1K strings / 100K rows',
+    textType: 'dictionary'
   }
 };
 
@@ -584,7 +625,7 @@ function supportsTextIndexPicking(device: Device): boolean {
 export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = `\
   <p>
-  Renders <code>arrow.Vector&lt;Utf8&gt;</code>, 30 characters / row.
+  Renders <code>arrow.Vector&lt;Utf8&gt;</code> and <code>arrow.Vector&lt;Dictionary&lt;Utf8&gt;&gt;</code>, 30 characters / row.
   </p>
   <style>
     @keyframes arrow-text-2d-streaming-spin {
@@ -603,8 +644,11 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
       <label for="${DATA_SELECTOR_ID}">Data</label>
       <select id="${DATA_SELECTOR_ID}" style="min-width: 0; min-height: 34px; border: 1px solid rgba(148, 163, 184, 0.8); border-radius: 6px; background: #ffffff; color: #0f172a; font: inherit;">
         <option value="100k">${TEXT_DATASETS['100k'].label}</option>
+        <option value="100k-dict">${TEXT_DATASETS['100k-dict'].label}</option>
         <option value="500k">${TEXT_DATASETS['500k'].label}</option>
+        <option value="500k-dict">${TEXT_DATASETS['500k-dict'].label}</option>
         <option value="1m">${TEXT_DATASETS['1m'].label}</option>
+        <option value="1m-dict">${TEXT_DATASETS['1m-dict'].label}</option>
         <option value="100k-stream">${TEXT_DATASETS['100k'].label} streamed</option>
         <option value="500k-stream">${TEXT_DATASETS['500k'].label} streamed</option>
         <option value="1m-stream">${TEXT_DATASETS['1m'].label} streamed</option>
@@ -718,12 +762,12 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
   readonly textInputs: Partial<Record<EagerTextDatasetKind, ArrowTextInput>> = {};
   readonly textInputPromises: Partial<Record<EagerTextDatasetKind, Promise<ArrowTextInput>>> = {};
   positions!: GPUVector<arrow.FixedSizeList<arrow.Float32>>;
-  texts!: GPUVector<arrow.Utf8>;
+  texts!: GPUVector<ArrowUtf8TextType>;
   clipRects!: GPUVector<arrow.FixedSizeList<arrow.Int16>>;
   colors!: GPUVector<arrow.FixedSizeList<arrow.Uint8>>;
   angles!: GPUVector<arrow.Float32>;
   sizes!: GPUVector<arrow.Float32>;
-  sourceVectors!: ArrowTextSourceVectors;
+  sourceVectors!: ExampleArrowTextSourceVectors;
   textModel!: ActiveTextModel;
   pickingModel: Model | null = null;
   picker: PickingManager | null = null;
@@ -766,7 +810,9 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
   }
 
   override async onInitialize(): Promise<void> {
-    const defaultTextInput = await this.getOrCreateTextInput(this.textDatasetKind);
+    const defaultTextInput = await this.getOrCreateTextInput(
+      getEagerTextDatasetKind(this.textDatasetKind)
+    );
     if (this.isFinalized) {
       return;
     }
@@ -833,7 +879,7 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
   }
 
   createTextModel(modelKind: TextModelKind): ActiveTextModel {
-    const commonProps: ArrowTextModelProps = {
+    const commonProps = {
       id: 'arrow-text-2d',
       positions: this.positions,
       texts: this.texts,
@@ -856,8 +902,7 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
       fs: FS_GLSL,
       shaderLayout: TEXT_SHADER_LAYOUT,
       shaderInputs: this.shaderInputs,
-      // @ts-expect-error Remove once npm package updated with new types
-      modules: [supportsTextIndexPicking(this.device) ? indexPicking : indexColorPicking],
+      modules: [supportsTextIndexPicking(this.device) ? indexPicking : indexColorPicking] as never,
       parameters: {
         depthWriteEnabled: false,
         blend: true,
@@ -873,7 +918,7 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
       if (this.device.type !== 'webgpu') {
         throw new Error('ArrowStorageTextModel showcase mode requires WebGPU');
       }
-      const storageProps: ArrowStorageTextInputProps = {
+      const storageProps = {
         id: commonProps.id,
         positions: this.positions,
         texts: this.texts,
@@ -894,9 +939,12 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
         modules: commonProps.modules,
         parameters: commonProps.parameters
       };
-      return new ArrowStorageTextModel(this.device, storageProps);
+      return new ArrowStorageTextModel(
+        this.device,
+        storageProps as unknown as ArrowStorageTextInputProps
+      );
     }
-    return new ArrowTextModel(this.device, commonProps);
+    return new ArrowTextModel(this.device, commonProps as ArrowTextModelProps);
   }
 
   getLabelFieldHeight(): number {
@@ -1188,13 +1236,14 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
       return;
     }
     this.textDatasetKind = nextDatasetKind;
-    const {positions, texts, clipRects, colors, angles, sizes} = nextTextInput;
+    const {positions, texts, clipRects, colors, angles, sizes, sourceVectors} = nextTextInput;
     this.positions = positions;
     this.texts = texts;
     this.clipRects = clipRects;
     this.colors = colors;
     this.angles = angles;
     this.sizes = sizes;
+    this.sourceVectors = sourceVectors;
     this.arrowVectorBuildTimeMs = nextTextInput.arrowVectorBuildTimeMs;
     this.activeStreamingTextTable = null;
     this.updateStreamingBatchStatus(null);
@@ -1312,7 +1361,10 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
       ...(this.angleEnabled ? {angles: this.angles} : {}),
       ...(this.sizeEnabled ? {sizes: this.sizes} : {})
     };
-    this.textModel.appendTextBatches(appendedTextProps);
+    this.textModel.appendTextBatches(
+      appendedTextProps as unknown as Partial<ArrowTextModelProps> &
+        Partial<ArrowStorageTextInputProps>
+    );
     this.pickingModel?.destroy();
     this.pickingModel = supportsTextIndexPicking(this.device)
       ? this.createPickingModel(this.textModel)
@@ -1548,7 +1600,6 @@ function makeArrowTextInput(device: Device, dataset: TextDataset): ArrowTextInpu
   const colors = new Uint8Array(dataset.labelCount * 4);
   const angles = new Float32Array(dataset.labelCount);
   const sizes = new Float32Array(dataset.labelCount);
-  const labels = new Array<string>(dataset.labelCount);
   let positionIndex = 0;
   let clipRectIndex = 0;
   let colorIndex = 0;
@@ -1568,16 +1619,25 @@ function makeArrowTextInput(device: Device, dataset: TextDataset): ArrowTextInpu
     colors[colorIndex++] = 255;
     angles[labelIndex] = ((labelIndex % 9) - 4) * 2;
     sizes[labelIndex] = 24 + (labelIndex % 5) * 4;
-    labels[labelIndex] = `NODE ${String(labelIndex).padStart(6, '0')} / ARROW TEXT VECTOR`;
   }
 
   const arrowVectorBuildStartTime = getNow();
-  const positionVector = makeArrowFixedSizeListVector(new arrow.Float32(), 2, positions);
-  const texts = arrow.vectorFromArray(labels, new arrow.Utf8());
-  const clipRectVector = makeArrowFixedSizeListVector(new arrow.Int16(), 4, clipRects);
-  const colorVector = makeArrowFixedSizeListVector(new arrow.Uint8(), 4, colors);
-  const angleVector = makeFloat32ArrowVector(angles);
-  const sizeVector = makeFloat32ArrowVector(sizes);
+  const rowChunkSize = getArrowTextInputRowChunkSize(dataset);
+  const positionVector = splitArrowVectorByRows(
+    makeArrowFixedSizeListVector(new arrow.Float32(), 2, positions),
+    rowChunkSize
+  );
+  const texts = makeArrowTextVector(dataset, dataset.labelCount, labelIndex => labelIndex);
+  const clipRectVector = splitArrowVectorByRows(
+    makeArrowFixedSizeListVector(new arrow.Int16(), 4, clipRects),
+    rowChunkSize
+  );
+  const colorVector = splitArrowVectorByRows(
+    makeArrowFixedSizeListVector(new arrow.Uint8(), 4, colors),
+    rowChunkSize
+  );
+  const angleVector = splitArrowVectorByRows(makeFloat32ArrowVector(angles), rowChunkSize);
+  const sizeVector = splitArrowVectorByRows(makeFloat32ArrowVector(sizes), rowChunkSize);
   const positionsGpuVector = makeArrowGPUVector(device, positionVector, {name: 'positions'});
 
   return {
@@ -1589,7 +1649,7 @@ function makeArrowTextInput(device: Device, dataset: TextDataset): ArrowTextInpu
     sizes: makeArrowGPUVector(device, sizeVector, {name: 'sizes'}),
     sourceVectors: {
       positions: positionVector,
-      texts: texts as arrow.Vector<arrow.Utf8>,
+      texts,
       clipRects: clipRectVector,
       colors: colorVector,
       angles: angleVector,
@@ -1629,7 +1689,6 @@ function makeStreamingArrowTextSource(dataset: TextDataset): StreamingArrowTextS
     const colors = new Uint8Array(batchLabelCount * 4);
     const angles = new Float32Array(batchLabelCount);
     const sizes = new Float32Array(batchLabelCount);
-    const labels = new Array<string>(batchLabelCount);
 
     for (let localLabelIndex = 0; localLabelIndex < batchLabelCount; localLabelIndex++) {
       const localRowIndex = Math.floor(localLabelIndex / LABEL_COLUMN_COUNT);
@@ -1652,12 +1711,15 @@ function makeStreamingArrowTextSource(dataset: TextDataset): StreamingArrowTextS
       colors[colorIndex + 3] = 255;
       angles[localLabelIndex] = ((labelIndex % 9) - 4) * 2;
       sizes[localLabelIndex] = 24 + (labelIndex % 5) * 4;
-      labels[localLabelIndex] = `NODE ${String(labelIndex).padStart(6, '0')} / ARROW TEXT VECTOR`;
     }
 
     const table = new arrow.Table({
       positions: makeArrowFixedSizeListVector(new arrow.Float32(), 2, positions),
-      texts: arrow.vectorFromArray(labels, new arrow.Utf8()),
+      texts: makeArrowTextVector(dataset, batchLabelCount, localLabelIndex => {
+        const localRowIndex = Math.floor(localLabelIndex / LABEL_COLUMN_COUNT);
+        const columnIndex = localLabelIndex % LABEL_COLUMN_COUNT;
+        return batchRowIndices[localRowIndex] * LABEL_COLUMN_COUNT + columnIndex;
+      }),
       clipRects: makeArrowFixedSizeListVector(new arrow.Int16(), 4, clipRects),
       colors: makeArrowFixedSizeListVector(new arrow.Uint8(), 4, colors),
       angles: makeFloat32ArrowVector(angles),
@@ -1693,14 +1755,14 @@ function makeArrowTextInputFromGpuTable(
   }
   return {
     positions: getGpuTableTextVector<arrow.FixedSizeList<arrow.Float32>>(gpuTable, 'positions'),
-    texts: getGpuTableTextVector<arrow.Utf8>(gpuTable, 'texts'),
+    texts: getGpuTableTextVector<ArrowUtf8TextType>(gpuTable, 'texts'),
     clipRects: getGpuTableTextVector<arrow.FixedSizeList<arrow.Int16>>(gpuTable, 'clipRects'),
     colors: getGpuTableTextVector<arrow.FixedSizeList<arrow.Uint8>>(gpuTable, 'colors'),
     angles: getGpuTableTextVector<arrow.Float32>(gpuTable, 'angles'),
     sizes: getGpuTableTextVector<arrow.Float32>(gpuTable, 'sizes'),
     sourceVectors: {
       positions: positions as arrow.Vector<arrow.FixedSizeList<arrow.Float32>>,
-      texts: texts as arrow.Vector<arrow.Utf8>,
+      texts: texts as ArrowUtf8TextVector,
       clipRects: clipRects as arrow.Vector<arrow.FixedSizeList<arrow.Int16>>,
       colors: colors as arrow.Vector<arrow.FixedSizeList<arrow.Uint8>>,
       angles: angles as arrow.Vector<arrow.Float32>,
@@ -1777,6 +1839,119 @@ function initializeCheckboxToggle(
   checkboxToggle.checked = checked;
   checkboxToggle.addEventListener('change', onChange);
   return checkboxToggle;
+}
+
+function makeArrowTextVector(
+  dataset: TextDataset,
+  labelCount: number,
+  getGlobalLabelIndex: (localLabelIndex: number) => number
+): ArrowUtf8TextVector {
+  if (dataset.textType === 'dictionary') {
+    return makeArrowDictionaryTextVector(labelCount, getGlobalLabelIndex);
+  }
+
+  const labels = new Array<string>(labelCount);
+  for (let localLabelIndex = 0; localLabelIndex < labelCount; localLabelIndex++) {
+    labels[localLabelIndex] = makeUtf8Label(getGlobalLabelIndex(localLabelIndex));
+  }
+  return arrow.vectorFromArray(labels, new arrow.Utf8()) as arrow.Vector<arrow.Utf8>;
+}
+
+function makeArrowDictionaryTextVector(
+  labelCount: number,
+  getGlobalLabelIndex: (localLabelIndex: number) => number
+): arrow.Vector<ArrowUtf8Dictionary> {
+  const dictionaryType = new arrow.Dictionary(new arrow.Utf8(), new arrow.Int32());
+  const dataChunks: arrow.Data<ArrowUtf8Dictionary>[] = [];
+  let localStartIndex = 0;
+
+  while (localStartIndex < labelCount) {
+    const dictionaryChunkIndex = getDictionaryChunkIndex(getGlobalLabelIndex(localStartIndex));
+    let localEndIndex = localStartIndex + 1;
+    while (
+      localEndIndex < labelCount &&
+      getDictionaryChunkIndex(getGlobalLabelIndex(localEndIndex)) === dictionaryChunkIndex
+    ) {
+      localEndIndex++;
+    }
+
+    const chunkLabelCount = localEndIndex - localStartIndex;
+    const dictionary = arrow.vectorFromArray(
+      makeDictionaryLabels(dictionaryChunkIndex),
+      new arrow.Utf8()
+    ) as arrow.Vector<arrow.Utf8>;
+    const indices = new Int32Array(chunkLabelCount);
+    for (
+      let localLabelIndex = localStartIndex;
+      localLabelIndex < localEndIndex;
+      localLabelIndex++
+    ) {
+      indices[localLabelIndex - localStartIndex] = getDictionaryLabelIndex(
+        getGlobalLabelIndex(localLabelIndex)
+      );
+    }
+    dataChunks.push(
+      arrow.makeData({
+        type: dictionaryType,
+        length: chunkLabelCount,
+        data: indices,
+        dictionary
+      }) as arrow.Data<ArrowUtf8Dictionary>
+    );
+    localStartIndex = localEndIndex;
+  }
+
+  return new arrow.Vector<ArrowUtf8Dictionary>(dataChunks);
+}
+
+function makeDictionaryLabels(dictionaryChunkIndex: number): string[] {
+  const labels = new Array<string>(DICTIONARY_LABEL_COUNT_PER_CHUNK);
+  for (let dictionaryLabelIndex = 0; dictionaryLabelIndex < labels.length; dictionaryLabelIndex++) {
+    labels[dictionaryLabelIndex] = makeDictionaryLabel(dictionaryChunkIndex, dictionaryLabelIndex);
+  }
+  return labels;
+}
+
+function makeUtf8Label(labelIndex: number): string {
+  return `NODE ${String(labelIndex).padStart(6, '0')} / ARROW TEXT VECTOR`;
+}
+
+function makeDictionaryLabel(dictionaryChunkIndex: number, dictionaryLabelIndex: number): string {
+  return `DICT ${String(dictionaryChunkIndex).padStart(2, '0')} KEY ${String(
+    dictionaryLabelIndex
+  ).padStart(4, '0')} / ARROW TEXT`;
+}
+
+function getDictionaryChunkIndex(labelIndex: number): number {
+  return Math.floor(labelIndex / DICTIONARY_TEXT_ROWS_PER_CHUNK);
+}
+
+function getDictionaryLabelIndex(labelIndex: number): number {
+  return (labelIndex * 37) % DICTIONARY_LABEL_COUNT_PER_CHUNK;
+}
+
+function getArrowTextInputRowChunkSize(dataset: TextDataset): number {
+  return dataset.textType === 'dictionary' ? DICTIONARY_TEXT_ROWS_PER_CHUNK : dataset.labelCount;
+}
+
+function splitArrowVectorByRows<T extends arrow.DataType>(
+  vector: arrow.Vector<T>,
+  rowChunkSize: number
+): arrow.Vector<T> {
+  if (rowChunkSize <= 0 || rowChunkSize >= vector.length) {
+    return vector;
+  }
+
+  const dataChunks: arrow.Data<T>[] = [];
+  for (let rowStart = 0; rowStart < vector.length; rowStart += rowChunkSize) {
+    const rowEnd = Math.min(rowStart + rowChunkSize, vector.length);
+    const chunk = vector.slice(rowStart, rowEnd) as arrow.Vector<T>;
+    const data = chunk.data[0];
+    if (data) {
+      dataChunks.push(data);
+    }
+  }
+  return new arrow.Vector<T>(dataChunks);
 }
 
 function makeFloat32ArrowVector(values: Float32Array): arrow.Vector<arrow.Float32> {

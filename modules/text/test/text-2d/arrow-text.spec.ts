@@ -7,11 +7,13 @@ import * as arrow from 'apache-arrow';
 import {
   buildArrowGlyphLayout,
   buildArrowUtf8Chunks,
+  buildGpuDictionaryUtf8TextInput,
   buildGpuExpandedTextStream,
   buildGpuUtf8TextInput,
   createArrowUtf8TextIndexAccessor,
   decodeArrowUtf8CodePoints,
   populateUtf8TextIndices,
+  type ArrowUtf8Dictionary,
   type CharacterMapping
 } from '../../src/index';
 
@@ -92,6 +94,60 @@ test('decodeArrowUtf8CodePoints and buildArrowGlyphLayout preserve Unicode glyph
   t.end();
 });
 
+test('dictionary Arrow UTF-8 helpers expand repeated, chunked, sliced, and null labels', t => {
+  const dictionaryType = new arrow.Dictionary(new arrow.Utf8(), new arrow.Int32());
+  const firstChunk = makeArrowDictionaryTexts(['AB', 'A', null], dictionaryType);
+  const secondChunk = makeArrowDictionaryTexts(['AB'], dictionaryType);
+  const chunked = new arrow.Vector<ArrowUtf8Dictionary>([
+    firstChunk.data[0]!,
+    secondChunk.data[0]!
+  ]);
+  const mapping: CharacterMapping = {
+    A: {x: 0, y: 0, width: 4, height: 6, anchorX: 2, anchorY: 3, advance: 5},
+    B: {x: 4, y: 0, width: 4, height: 6, anchorX: 2, anchorY: 3, advance: 7}
+  };
+  const layout = buildArrowGlyphLayout({
+    texts: chunked,
+    mapping,
+    baselineOffset: 1,
+    lineHeight: 10,
+    characterSet: new Set<string>()
+  });
+
+  t.deepEqual(layout.startIndices, [0, 2, 3, 3, 5], 'row starts follow dictionary labels');
+  t.equal(layout.glyphCount, 5, 'repeated dictionary values still emit repeated glyphs');
+  t.deepEqual(
+    Array.from(layout.glyphOffsets),
+    [2, 6, 7, 6, 2, 6, 2, 6, 7, 6],
+    'glyph offsets are expanded per row occurrence'
+  );
+
+  const sliced = makeExplicitArrowDictionaryTexts(
+    ['skip', 'AB', 'A'],
+    new Int32Array([0, 1, 2])
+  ).slice(1) as arrow.Vector<ArrowUtf8Dictionary>;
+  const slicedTextInput = buildGpuDictionaryUtf8TextInput(sliced);
+  t.deepEqual(slicedTextInput.startIndices, [0, 2, 3], 'sliced dictionary rows stay normalized');
+  t.equal(slicedTextInput.byteLength, 3, 'sliced dictionary output reserves glyphs per row');
+
+  const nullableDictionaryValues = makeExplicitArrowDictionaryTexts(
+    ['AB', null, 'A'],
+    new Int32Array([0, 1, 2])
+  );
+  const nullableLayout = buildArrowGlyphLayout({
+    texts: nullableDictionaryValues,
+    mapping,
+    baselineOffset: 1,
+    lineHeight: 10
+  });
+  t.deepEqual(
+    nullableLayout.startIndices,
+    [0, 2, 2, 3],
+    'nullable dictionary values render as empty labels'
+  );
+  t.end();
+});
+
 test('buildGpuExpandedTextStream packs glyph ids and shared definitions deterministically', t => {
   const mapping: CharacterMapping = {
     A: {x: 0, y: 0, width: 4, height: 6, anchorX: 2, anchorY: 3, advance: 5},
@@ -128,6 +184,36 @@ test('buildGpuExpandedTextStream packs glyph ids and shared definitions determin
   t.end();
 });
 
+test('buildGpuDictionaryUtf8TextInput uploads dictionary bytes once per chunk', t => {
+  const texts = makeExplicitArrowDictionaryTexts(['AB', 'A'], new Int32Array([0, 1, 0]));
+  const textInput = buildGpuDictionaryUtf8TextInput(texts);
+  const packedBytes = new Uint8Array(textInput.packedDictionaryUtf8Bytes.buffer).subarray(
+    0,
+    textInput.dictionaryByteLength
+  );
+
+  t.deepEqual(textInput.startIndices, [0, 2, 3, 5], 'row starts reserve glyph slots per row');
+  t.deepEqual(
+    Array.from(textInput.rowDictionaryIndices),
+    [0, 1, 0],
+    'rows point at shared dictionary values'
+  );
+  t.deepEqual(
+    Array.from(textInput.rowOutputGlyphRanges),
+    [0, 2, 2, 3, 3, 5],
+    'row output ranges allocate repeated labels independently'
+  );
+  t.deepEqual(
+    Array.from(textInput.dictionaryValueByteRanges),
+    [0, 2, 2, 3],
+    'dictionary value byte ranges are unique per dictionary entry'
+  );
+  t.deepEqual(Array.from(packedBytes), [65, 66, 65], 'source UTF-8 bytes are packed once');
+  t.equal(textInput.dictionaryByteLength, 3, 'dictionary source bytes are shared');
+  t.equal(textInput.byteLength, 5, 'output glyph slots are per visible label occurrence');
+  t.end();
+});
+
 test('buildGpuUtf8TextInput preserves Arrow UTF-8 bytes without glyph decoding', t => {
   const textInput = buildGpuUtf8TextInput(arrow.vectorFromArray(['AB', '🙂'], new arrow.Utf8()));
   const packedBytes = new Uint8Array(textInput.packedUtf8Bytes.buffer).subarray(
@@ -145,3 +231,32 @@ test('buildGpuUtf8TextInput preserves Arrow UTF-8 bytes without glyph decoding',
   t.equal(textInput.byteLength, 6, 'one render slot can be reserved per source byte');
   t.end();
 });
+
+function makeArrowDictionaryTexts(
+  labels: readonly (string | null)[],
+  dictionaryType = new arrow.Dictionary(new arrow.Utf8(), new arrow.Int32())
+): arrow.Vector<ArrowUtf8Dictionary> {
+  return arrow.vectorFromArray(labels, dictionaryType) as arrow.Vector<ArrowUtf8Dictionary>;
+}
+
+function makeExplicitArrowDictionaryTexts(
+  dictionaryValues: readonly (string | null)[],
+  indices: Int32Array,
+  nullBitmap: Uint8Array | null = null,
+  nullCount = 0
+): arrow.Vector<ArrowUtf8Dictionary> {
+  const dictionaryType = new arrow.Dictionary(new arrow.Utf8(), new arrow.Int32());
+  const dictionary = arrow.vectorFromArray(
+    dictionaryValues,
+    new arrow.Utf8()
+  ) as arrow.Vector<arrow.Utf8>;
+  const data = arrow.makeData({
+    type: dictionaryType,
+    length: indices.length,
+    nullCount,
+    nullBitmap,
+    data: indices,
+    dictionary
+  });
+  return new arrow.Vector([data]) as arrow.Vector<ArrowUtf8Dictionary>;
+}
