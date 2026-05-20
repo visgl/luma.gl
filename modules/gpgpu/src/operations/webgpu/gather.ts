@@ -83,6 +83,7 @@ ${getGatherFunction(ids.type, output.type, output.size, sourceValues.length)}
   computePass.end();
   target.device.submit();
   computation.destroy();
+  return {success: true};
 };
 
 function getIdsAccessor(input: GPUTableEvaluator, type: string): string {

@@ -7,8 +7,11 @@ import {Model} from '@luma.gl/engine';
 import {OperationHandler} from '../../operation/operation';
 import {GPUTableEvaluator} from '../../operation/gpu-table';
 import {bufferPool} from '../../utils/buffer-pool';
-import {multiply} from './multiply';
+import {arithmetic} from './arithmetic';
 import {getInputBufferLayout, getInputModule} from './common/row-transform';
+
+const GPGPU_OPERATION_STATS = 'GPGPU Operation Counts';
+const TRANSFORM_RUNS = 'Transform Runs';
 
 export const extent: OperationHandler<{sourceValues: GPUTableEvaluator}> = async ({
   inputs,
@@ -18,8 +21,9 @@ export const extent: OperationHandler<{sourceValues: GPUTableEvaluator}> = async
   const {sourceValues} = inputs;
   const device = target.device;
   if (sourceValues.length === 0) {
-    target.write(new output.ValueType(output.length * output.size));
-    return;
+    const value = new output.ValueType(output.length * output.size);
+    target.write(value);
+    return {success: true, value};
   }
   if (sourceValues.isConstant) {
     const constantValue = sourceValues.value!;
@@ -30,7 +34,7 @@ export const extent: OperationHandler<{sourceValues: GPUTableEvaluator}> = async
       result[channelIndex * 2 + 1] = value;
     }
     target.write(result);
-    return;
+    return {success: true, value: result};
   }
 
   const resultTexture = device.createTexture({
@@ -84,7 +88,9 @@ void main() {
       blendAlphaDstFactor: 'one',
       blendAlphaOperation: 'max'
     },
-    modules: [getInputModule('sourceValues', sourceValues.type, sourceValues.size)],
+    modules: [
+      getInputModule('sourceValues', sourceValues.type, sourceValues.size, sourceValues.normalized)
+    ],
     defines: {
       TYPE: 'float',
       SOURCE_VALUES_LEN: sourceValues.size.toString(),
@@ -98,7 +104,6 @@ void main() {
   });
 
   const intermediateBuffer = bufferPool.createOrReuse(device, output.byteLength);
-  const scalar = GPUTableEvaluator.fromConstant([-1, 1]);
 
   try {
     const renderPass = device.beginRenderPass({
@@ -110,6 +115,7 @@ void main() {
       clearDepth: false,
       clearStencil: false
     });
+    device.statsManager.getStats(GPGPU_OPERATION_STATS).get(TRANSFORM_RUNS).incrementCount();
     reductionModel.draw(renderPass);
     renderPass.end();
     const commandEncoder = device.createCommandEncoder();
@@ -123,24 +129,31 @@ void main() {
     });
     device.submit(commandEncoder.finish());
 
-    await scalar.evaluate(device);
-    await multiply({
+    return await arithmetic({
       device,
       inputs: {
-        x: new GPUTableEvaluator({
-          buffer: intermediateBuffer,
-          size: 2,
-          type: 'float32',
-          length: output.length
-        }),
-        y: scalar
+        expression: {
+          kind: 'call',
+          op: 'multiply',
+          args: [
+            {kind: 'input', name: 'x'},
+            {kind: 'literal', value: [-1, 1]}
+          ]
+        },
+        namedInputs: {
+          x: new GPUTableEvaluator({
+            buffer: intermediateBuffer,
+            size: 2,
+            type: 'float32',
+            length: output.length
+          })
+        }
       },
       output,
       target
     });
   } finally {
     reductionModel.destroy();
-    scalar.destroy();
     bufferPool.recycle(intermediateBuffer);
     framebuffer.destroy();
     resultTexture.destroy();

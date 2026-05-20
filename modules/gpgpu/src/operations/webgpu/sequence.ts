@@ -41,4 +41,5 @@ export const sequence: OperationHandler<{start: number; step: number}> = async (
   computePass.end();
   target.device.submit();
   computation.destroy();
+  return {success: true};
 };

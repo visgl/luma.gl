@@ -23,6 +23,8 @@ export type GPUTableEvaluatorProps = {
    * @default ValueType.BYTES_PER_ELEMENT * size
    */
   stride?: number;
+  /** Whether integer values should be normalized when read as float vertex attributes. */
+  normalized?: boolean;
   /** CPU buffer that initializes the table, required unless `source` is supplied. */
   value?: TypedArray;
   /** External GPU buffer that backs this table and is not owned by the evaluator. */
@@ -51,6 +53,8 @@ export class GPUTableEvaluator {
   readonly offset: number;
   /** Number of bytes between the starts of adjacent rows. */
   readonly stride: number;
+  /** Whether integer values should be normalized when read as float vertex attributes. */
+  readonly normalized: boolean;
   /** Whether all rows share the same value. */
   readonly isConstant: boolean;
   /** Number of logical rows. */
@@ -87,8 +91,9 @@ export class GPUTableEvaluator {
       type,
       size = 1,
       offset = 0,
-      stride = 0
-    }: Partial<Pick<GPUTableEvaluatorProps, 'type' | 'size' | 'offset' | 'stride'>>
+      stride = 0,
+      normalized = false
+    }: Partial<Pick<GPUTableEvaluatorProps, 'type' | 'size' | 'offset' | 'stride' | 'normalized'>>
   ): GPUTableEvaluator {
     if (Array.isArray(value)) {
       type = type || 'float32';
@@ -104,11 +109,14 @@ export class GPUTableEvaluator {
     } else {
       type = type || getDataTypeFromTypedArray(value);
     }
+    const id = `<${type} * ${size}>`;
     return new GPUTableEvaluator({
+      id,
       type,
       size,
       offset,
       stride,
+      normalized,
       value
     });
   }
@@ -124,10 +132,15 @@ export class GPUTableEvaluator {
     type: SignedDataType = 'float32'
   ): GPUTableEvaluator {
     const ArrayType = getTypedArrayFromDataType(type);
-    if (!Array.isArray(value)) {
+    let id: string;
+    if (Array.isArray(value)) {
+      id = `[${value.join(',')}]`;
+    } else {
+      id = String(value);
       value = [value];
     }
     return new GPUTableEvaluator({
+      id,
       isConstant: true,
       type,
       size: value.length,
@@ -144,19 +157,23 @@ export class GPUTableEvaluator {
    * Prefer {@link GPUTableEvaluator.fromArray} or {@link GPUTableEvaluator.fromConstant} for CPU-backed tables.
    */
   constructor(props: GPUTableEvaluatorProps) {
-    const {
-      id,
-      type,
-      size = 1,
-      offset = 0,
-      stride,
-      value,
-      buffer,
-      source = null,
-      isConstant = false
-    } = props;
+    const {id, value, buffer, source = null, isConstant = false} = props;
     if (!source && !value && !buffer) {
       throw new Error('OperationResource must have a value source');
+    }
+    let {type, size, offset, stride, normalized, length} = props;
+    if (source instanceof GPUTableEvaluator) {
+      type = type ?? source.type;
+      size = size ?? source.size;
+      offset = offset ?? source.offset;
+      stride = stride ?? source.stride;
+      normalized = normalized ?? source.normalized;
+      length = length ?? source.length;
+    } else {
+      size = size ?? 1;
+      offset = offset ?? 0;
+      normalized = normalized ?? false;
+      length = isConstant ? 1 : length;
     }
 
     this._id = id;
@@ -165,12 +182,12 @@ export class GPUTableEvaluator {
     this.ValueType = getTypedArrayFromDataType(this.type);
     this.offset = offset;
     this.stride = stride || this.ValueType.BYTES_PER_ELEMENT * size;
+    this.normalized = normalized;
     this.source = source;
     this._value = value;
     this._buffer = buffer;
     this._hasExternalBuffer = source instanceof GPUTableEvaluator || Boolean(buffer);
 
-    let {length} = props;
     if (length === undefined) {
       if (isConstant) {
         length = 1;
@@ -188,7 +205,13 @@ export class GPUTableEvaluator {
 
   /** CPU-side typed array, when available. */
   get value(): TypedArray | undefined {
-    return this._value;
+    return (
+      this._value || (this.source instanceof GPUTableEvaluator ? this.source.value : undefined)
+    );
+  }
+
+  get evaluated(): boolean {
+    return Boolean(this._buffer);
   }
 
   /** GPU buffer for the table. Only available after {@link GPUTableEvaluator.evaluate} resolves. */
@@ -209,9 +232,6 @@ export class GPUTableEvaluator {
     if (this._destroyed) {
       throw new Error(`GPUTableEvaluator ${this} already destroyed`);
     }
-    if (this._hasExternalBuffer) {
-      return;
-    }
     if (!this._buffer) {
       let buffer: Buffer;
       if (this.source instanceof GPUTableEvaluator) {
@@ -222,7 +242,13 @@ export class GPUTableEvaluator {
         if (this._value) {
           buffer.write(this._value);
         } else {
-          await this.source!.execute(device, buffer);
+          const result = await this.source!.execute(device, buffer);
+          if (!result.success) {
+            throw result.error || new Error(`${this.source} evaluation failed`);
+          }
+          if (result.value) {
+            this._value = result.value;
+          }
         }
       }
       // cache the result when successful

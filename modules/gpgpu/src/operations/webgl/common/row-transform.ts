@@ -7,11 +7,20 @@ import {BufferTransform} from '@luma.gl/engine';
 import {ShaderModule} from '@luma.gl/shadertools';
 import {GPUTableEvaluator} from '../../../operation/gpu-table';
 import {bufferPool} from '../../../utils/buffer-pool';
-import {getAttributeType, getZeroLiteral, type QualifiedVectorSize} from './helper';
+import {
+  getAttributeType,
+  getVertexFormat,
+  getZeroLiteral,
+  type QualifiedVectorSize
+} from './helper';
+
+const GPGPU_OPERATION_STATS = 'GPGPU Operation Counts';
+const TRANSFORM_RUNS = 'Transform Runs';
 
 export function runRowTransform({
   module,
   elementWise = false,
+  expression,
   inputs,
   output,
   operationType = output.type,
@@ -19,6 +28,7 @@ export function runRowTransform({
 }: {
   module: ShaderModule;
   elementWise?: boolean;
+  expression?: (laneIndex: number) => string;
   inputs: {[name: string]: GPUTableEvaluator};
   output: GPUTableEvaluator;
   /** If specified, coerce all parameters to operation to this type.
@@ -28,12 +38,12 @@ export function runRowTransform({
   outputBuffer: Buffer;
 }): void {
   const device = outputBuffer.device;
-  const outputModule = getOutputModule('result', output.type, output.size);
+  const outputModule = getOutputModule('result', output.type, output.size, output.normalized);
   const modules: ShaderModule[] = [module, outputModule];
   const bufferLayout: BufferLayout[] = [];
   const inputBuffers: {[name: string]: Buffer} = {};
-  const outputType = getAttributeType(output.type, 1);
-  const castToType = getAttributeType(operationType, 1);
+  const outputType = getAttributeType(output.type, 1, output.normalized);
+  const castToType = getAttributeType(operationType, 1, output.normalized);
   let inputBlock = '';
 
   let placeholderBuffer: Buffer | null = null;
@@ -45,7 +55,7 @@ export function runRowTransform({
 
   for (const name in inputs) {
     const input = inputs[name];
-    modules.push(getInputModule(name, input.type, input.size, operationType));
+    modules.push(getInputModule(name, input.type, input.size, input.normalized, operationType));
     bufferLayout.push(getInputBufferLayout(name, input));
     if (input instanceof GPUTableEvaluator) {
       inputBuffers[name] = input.buffer;
@@ -61,7 +71,11 @@ export function runRowTransform({
 
   let computeResult = '';
 
-  if (elementWise) {
+  if (expression) {
+    for (let i = 0; i < output.size; i++) {
+      computeResult += `result[${i}]=${expression(i)};\n`;
+    }
+  } else if (elementWise) {
     for (let i = 0; i < output.size; i++) {
       const zero = getZeroLiteral(castToType);
       const elementInputs = Object.keys(inputs).map(name => {
@@ -98,6 +112,7 @@ set_result(result);
     outputs: outputModule.varyings
   });
 
+  device.statsManager.getStats(GPGPU_OPERATION_STATS).get(TRANSFORM_RUNS).incrementCount();
   transform.run({
     inputBuffers: inputBuffers,
     outputBuffers: {[outputModule.varyings[0]]: outputBuffer}
@@ -111,6 +126,7 @@ export function getInputModule(
   name: string,
   inType: SignedDataType,
   inSize: number,
+  normalized: boolean = false,
   outType: SignedDataType = inType
 ): ShaderModule {
   let attributeBlock = '';
@@ -118,7 +134,7 @@ export function getInputModule(
 
   for (let i = 0; i < inSize; i += 4) {
     const size = Math.min(inSize - i, 4) as QualifiedVectorSize;
-    const inDataType = getAttributeType(inType, size);
+    const inDataType = getAttributeType(inType, size, normalized);
 
     attributeBlock += `in ${inDataType} a${name}_${i};\n`;
 
@@ -127,7 +143,7 @@ export function getInputModule(
       if (size > 1) {
         element = `${element}[${j}]`;
       }
-      if (inType !== outType) {
+      if (normalized || inType !== outType) {
         element = `TYPE(${element})`;
       }
       funcBlock += `v[${i + j}]=${element};\n`;
@@ -158,8 +174,7 @@ export function getInputBufferLayout(name: string, source: GPUTableEvaluator): B
     const size = Math.min(source.size - i, 4) as QualifiedVectorSize;
     bufferLayout.attributes!.push({
       attribute: `a${name}_${i}`,
-      // @ts-ignore
-      format: size === 1 ? source.type : `${source.type}x${size}`,
+      format: getVertexFormat(source.type, size, source.normalized),
       byteOffset: source.offset + source.ValueType.BYTES_PER_ELEMENT * i
     });
   }
@@ -169,16 +184,17 @@ export function getInputBufferLayout(name: string, source: GPUTableEvaluator): B
 export function getOutputModule(
   name: string,
   outType: SignedDataType,
-  outSize: number
+  outSize: number,
+  normalized: boolean = false
 ): ShaderModule & {varyings: string[]} {
   const varyings: string[] = [];
-  const outputType = getAttributeType(outType, 1);
+  const outputType = getAttributeType(outType, 1, normalized);
   let varyingBlock = '';
   let functionBlock = '';
 
   for (let index = 0; index < outSize; index += 4) {
     const size = Math.min(outSize - index, 4) as QualifiedVectorSize;
-    const outDataType = getAttributeType(outType, size);
+    const outDataType = getAttributeType(outType, size, normalized);
     varyings.push(`${name}_${index}`);
     varyingBlock += `flat out ${outDataType} ${name}_${index};\n`;
     const vectorIndices = Array.from({length: size}, (_, offset) => index + offset);
