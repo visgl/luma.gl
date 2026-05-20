@@ -31,4 +31,5 @@ export const interleave: OperationHandler<{x: GPUTableEvaluator; y: GPUTableEval
     output,
     outputBuffer: target
   });
+  return {success: true};
 };

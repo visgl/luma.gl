@@ -12,7 +12,7 @@ export const interleave: OperationHandler<{x: GPUTableEvaluator; y: GPUTableEval
   output,
   target
 }) => {
-  runCPUTransform({
+  return runCPUTransform({
     func: (out: TypedArray, ...args: TypedArray[]) => {
       let index = 0;
       for (const arr of args) {

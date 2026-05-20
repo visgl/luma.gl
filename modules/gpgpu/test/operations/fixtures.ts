@@ -1,13 +1,21 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
-import {SignedDataType} from '@luma.gl/core';
+import {SignedDataType, Device} from '@luma.gl/core';
 import {TypedArray, equals} from '@math.gl/core';
-import {GPUTableEvaluator, backendRegistry, webglBackend} from '@luma.gl/gpgpu';
-import {webgpuBackend} from '../../src/operations/webgpu';
+import {
+  GPUTableEvaluator,
+  backendRegistry,
+  webglBackend,
+  webgpuBackend,
+  cpuBackend
+} from '@luma.gl/gpgpu';
+import {Stat} from '@probe.gl/stats';
+import {getTestDevice as _getTestDevice} from '@luma.gl/test-utils';
 
 backendRegistry.add('webgl', webglBackend);
 backendRegistry.add('webgpu', webgpuBackend);
+backendRegistry.add('null', cpuBackend);
 
 export type TestData =
   | {
@@ -115,4 +123,14 @@ function exactEquals(a: any, b: any) {
 }
 function isArray(value: any) {
   return Array.isArray(value) || (ArrayBuffer.isView(value) && !(value instanceof DataView));
+}
+
+export function getTestDevice(deviceType: 'webgl' | 'webgpu' | 'cpu'): Promise<Device | null> {
+  return _getTestDevice(deviceType === 'cpu' ? 'null' : deviceType);
+}
+
+export function getRunStats(device: Device): Stat | null {
+  if (device.type === 'null') return null;
+  const stats = device.statsManager.getStats('GPGPU Operation Counts');
+  return stats.get(device.type === 'webgl' ? 'Transform Runs' : 'Computation Runs');
 }

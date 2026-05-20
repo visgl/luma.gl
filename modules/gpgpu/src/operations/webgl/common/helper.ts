@@ -2,11 +2,19 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {SignedDataType, type TextureFormat} from '@luma.gl/core';
+import {SignedDataType, type TextureFormat, type VertexFormat} from '@luma.gl/core';
 
 export type QualifiedVectorSize = 1 | 2 | 3 | 4;
 
-export function getAttributeType(type: SignedDataType, size: QualifiedVectorSize): string {
+export function getAttributeType(
+  type: SignedDataType,
+  size: QualifiedVectorSize,
+  normalized: boolean = false
+): string {
+  if (normalized) {
+    return size === 1 ? 'float' : `vec${size}`;
+  }
+
   switch (type) {
     case 'uint8':
     case 'uint16':
@@ -23,6 +31,51 @@ export function getAttributeType(type: SignedDataType, size: QualifiedVectorSize
   }
 }
 
+export function getVertexFormat(
+  type: SignedDataType,
+  size: QualifiedVectorSize,
+  normalized: boolean = false
+): VertexFormat {
+  let baseFormat: string;
+
+  if (normalized) {
+    switch (type) {
+      case 'uint8':
+        baseFormat = 'unorm8';
+        break;
+
+      case 'sint8':
+        baseFormat = 'snorm8';
+        break;
+
+      case 'uint16':
+        baseFormat = 'unorm16';
+        break;
+
+      case 'sint16':
+        baseFormat = 'snorm16';
+        break;
+
+      case 'float32':
+        baseFormat = 'float32';
+        break;
+
+      default:
+        throw new Error(`Unsupported normalized vertex format for ${type}`);
+    }
+  } else {
+    baseFormat = type;
+  }
+
+  if (size === 1) {
+    return baseFormat as VertexFormat;
+  }
+  if (size === 3 && !baseFormat.startsWith('float32') && !baseFormat.endsWith('32')) {
+    return `${baseFormat}x3-webgl` as VertexFormat;
+  }
+  return `${baseFormat}x${size}` as VertexFormat;
+}
+
 export function getZeroLiteral(type: string): string {
   switch (type[0]) {
     case 'u':
@@ -33,6 +86,23 @@ export function getZeroLiteral(type: string): string {
 
     default:
       return '0.';
+  }
+}
+
+export function formatLiteralValue(type: SignedDataType, value: number): string {
+  switch (type) {
+    case 'uint8':
+    case 'uint16':
+    case 'uint32':
+      return `${Math.trunc(value)}u`;
+
+    case 'sint8':
+    case 'sint16':
+    case 'sint32':
+      return `${Math.trunc(value)}`;
+
+    default:
+      return Number.isInteger(value) ? `${value}.0` : `${value}`;
   }
 }
 
