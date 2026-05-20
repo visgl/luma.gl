@@ -23,6 +23,7 @@ export {
 export {
   buildArrowGlyphLayout,
   buildArrowUtf8Chunks,
+  buildGpuDictionaryCompressedTextStream,
   buildGpuDictionaryUtf8TextInput,
   buildGpuExpandedTextStream,
   buildGpuUtf8TextInput,
@@ -41,6 +42,7 @@ export {
   type ArrowUtf8TextIndexAccessor,
   type ArrowUtf8TextType,
   type ArrowUtf8TextVector,
+  type GpuDictionaryCompressedTextStream,
   type GpuDictionaryUtf8TextInput,
   type GpuExpandedTextStream,
   type GpuUtf8TextInput,
@@ -76,11 +78,19 @@ export {
   type GpuUtf8MapShaderSourceOptions
 } from './gpu-utf8-map';
 export {
+  ArrowDictionaryStorageTextModel,
   ArrowTextModel,
   ArrowStorageTextModel,
   buildArrowTextGlyphTable,
+  createArrowDictionaryStorageTextState,
   createArrowStorageTextState,
   packStorageTextClipRects,
+  type ArrowDictionaryStorageTextBatchState,
+  type ArrowDictionaryStorageTextInputProps,
+  type ArrowDictionaryStorageTextModelProps,
+  type ArrowDictionaryStorageTextRenderBatchState,
+  type ArrowDictionaryStorageTextSourceVectors,
+  type ArrowDictionaryStorageTextState,
   type ArrowStorageTextBatchState,
   type ArrowStorageTextInputProps,
   type ArrowStorageTextModelProps,

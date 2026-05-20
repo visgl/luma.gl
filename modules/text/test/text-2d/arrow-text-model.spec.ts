@@ -14,10 +14,10 @@ import type {ShaderLayout} from '@luma.gl/core';
 import {NullDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 import * as arrow from 'apache-arrow';
 import {
+  ArrowDictionaryStorageTextModel,
   ArrowStorageTextModel,
   ArrowTextModel,
   buildArrowTextGlyphTable,
-  buildGpuDictionaryUtf8TextInput,
   createArrowStorageTextState,
   packStorageTextClipRects,
   type ArrowUtf8Dictionary,
@@ -488,7 +488,7 @@ test('ArrowStorageTextModel interleaves compact glyph vertex records', async t =
   t.end();
 });
 
-test('ArrowStorageTextModel accepts dictionary UTF-8 text and shares source bytes per batch', async t => {
+test('ArrowStorageTextModel rejects dictionary UTF-8 text', async t => {
   const device = await getWebGPUTestDevice();
   if (!device) {
     t.comment('WebGPU is not available');
@@ -497,45 +497,79 @@ test('ArrowStorageTextModel accepts dictionary UTF-8 text and shares source byte
   }
 
   const textProps = makeStorageGpuDictionaryTextProps(device, ['AB', 'A', 'AB']);
-  const dictionaryTextInput = buildGpuDictionaryUtf8TextInput(
-    textProps.sourceVectors.texts as arrow.Vector<ArrowUtf8Dictionary>
+
+  t.throws(
+    () =>
+      new ArrowStorageTextModel(device, {
+        id: 'arrow-storage-text-dictionary-reject-test',
+        ...textProps,
+        characterMapping: CHARACTER_MAPPING,
+        fontSettings: {fontSize: 10}
+      }),
+    /ArrowDictionaryStorageTextModel/,
+    'plain storage model directs dictionary callers to the compressed dictionary model'
   );
-  const model = new ArrowStorageTextModel(device, {
-    id: 'arrow-storage-text-dictionary-generated-glyph-vertices-test',
+
+  destroyStorageGpuTextProps(textProps);
+  t.end();
+});
+
+test('ArrowDictionaryStorageTextModel shares dictionary glyph records per batch', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const textProps = makeStorageGpuDictionaryTextProps(device, ['AB', 'A', 'AB']);
+  const model = new ArrowDictionaryStorageTextModel(device, {
+    id: 'arrow-dictionary-storage-text-compressed-test',
     ...textProps,
     characterMapping: CHARACTER_MAPPING,
     fontSettings: {fontSize: 10}
   });
-  const glyphVertexBytes = await model.compactGlyphVertexData.readAsync();
-  const generatedGlyphVertexWords = new Uint32Array(
-    glyphVertexBytes.buffer,
-    glyphVertexBytes.byteOffset,
+  const occurrenceBytes = await model.glyphOccurrenceRecords.readAsync();
+  const occurrenceWords = new Uint32Array(
+    occurrenceBytes.buffer,
+    occurrenceBytes.byteOffset,
     model.generatedRenderBufferByteLength / Uint32Array.BYTES_PER_ELEMENT
   );
+  const dictionaryGlyphRecordBytes = await model.dictionaryGlyphRecordsBuffer.readAsync();
+  const dictionaryGlyphRecordWords = new Uint32Array(
+    dictionaryGlyphRecordBytes.buffer,
+    dictionaryGlyphRecordBytes.byteOffset,
+    model.dictionaryGlyphCount * 2
+  );
+  const rowDictionaryIndexBytes = await model.rowDictionaryIndicesBuffer.readAsync();
+  const rowDictionaryIndices = new Uint32Array(
+    rowDictionaryIndexBytes.buffer,
+    rowDictionaryIndexBytes.byteOffset,
+    3
+  );
 
-  t.equal(dictionaryTextInput.dictionaryByteLength, 3, 'dictionary source bytes upload once');
-  t.equal(dictionaryTextInput.byteLength, 5, 'glyph output reserves repeated row occurrences');
-  t.equal(model.glyphCount, 5, 'storage model expands repeated dictionary labels');
+  t.equal(model.glyphCount, 5, 'visible glyph count still expands per row occurrence');
+  t.equal(model.dictionaryValueCount, 2, 'dictionary batch keeps two unique string values');
+  t.equal(model.dictionaryGlyphCount, 3, 'shared dictionary glyph records store AB and A once');
+  t.equal(
+    model.generatedRenderBufferByteLength,
+    20,
+    'occurrence buffer stores one packed uint32 per visible glyph'
+  );
   t.deepEqual(
-    Array.from(generatedGlyphVertexWords),
-    [
-      packSignedInt16Pair(2, 5),
-      1,
-      0,
-      packSignedInt16Pair(7, 5),
-      2,
-      0,
-      packSignedInt16Pair(2, 5),
-      1,
-      1,
-      packSignedInt16Pair(2, 5),
-      1,
-      2,
-      packSignedInt16Pair(7, 5),
-      2,
-      2
-    ],
-    'dictionary GPU decode writes generated glyphs into per-row output ranges'
+    Array.from(rowDictionaryIndices),
+    [0, 1, 0],
+    'row dictionary keys stay separate from shared dictionary glyph runs'
+  );
+  t.deepEqual(
+    Array.from(dictionaryGlyphRecordWords),
+    [packSignedInt16Pair(2, 5), 1, packSignedInt16Pair(7, 5), 2, packSignedInt16Pair(2, 5), 1],
+    'glyph offsets and ids are not duplicated for repeated dictionary values'
+  );
+  t.deepEqual(
+    Array.from(occurrenceWords),
+    [0, 1 << 20, 1, 2, (1 << 20) | 2],
+    'per-row output packs row index and glyph offset within the dictionary label'
   );
 
   model.destroy();
@@ -584,63 +618,6 @@ test('ArrowStorageTextModel appends GPUTable-backed text batches without rebuild
     model.renderBatches[0].compactGlyphVertexData,
     firstCompactGlyphVertexData,
     'retains the first generated compact glyph vertex buffer'
-  );
-
-  model.destroy();
-  gpuTable.destroy();
-  t.end();
-});
-
-test('ArrowStorageTextModel appends dictionary GPUTable-backed text batches', async t => {
-  const device = await getWebGPUTestDevice();
-  if (!device) {
-    t.comment('WebGPU is not available');
-    t.end();
-    return;
-  }
-  const dictionaryType = new arrow.Dictionary(new arrow.Utf8(), new arrow.Int32());
-  const firstBatch = makeAppendableTextRecordBatch(
-    ['AB'],
-    new Float32Array([0, 0]),
-    dictionaryType
-  );
-  const secondBatch = makeAppendableTextRecordBatch(
-    ['A', 'AB'],
-    new Float32Array([1, 1, 2, 2]),
-    dictionaryType
-  );
-  const gpuTable = makeArrowGPUTable(device, new arrow.Table([firstBatch]), {
-    shaderLayout: APPENDABLE_TEXT_INPUT_SHADER_LAYOUT
-  });
-  const firstSourceVectors = makeArrowStorageTextSourceVectorsFromBatches([firstBatch]);
-
-  const model = new ArrowStorageTextModel(device, {
-    id: 'arrow-storage-text-dictionary-appendable-gpu-table-test',
-    positions: gpuTable.gpuVectors.positions as GPUVector<arrow.FixedSizeList<arrow.Float32>>,
-    texts: gpuTable.gpuVectors.texts as GPUVector<ArrowUtf8TextType>,
-    sourceVectors: firstSourceVectors,
-    characterMapping: CHARACTER_MAPPING,
-    fontSettings: {fontSize: 10}
-  });
-  const firstCompactGlyphVertexData = model.renderBatches[0].compactGlyphVertexData;
-
-  gpuTable.addBatch(
-    makeArrowGPURecordBatch(device, secondBatch, {
-      shaderLayout: APPENDABLE_TEXT_INPUT_SHADER_LAYOUT
-    })
-  );
-  model.appendTextBatches({
-    positions: gpuTable.gpuVectors.positions as GPUVector<arrow.FixedSizeList<arrow.Float32>>,
-    texts: gpuTable.gpuVectors.texts as GPUVector<ArrowUtf8TextType>,
-    sourceVectors: makeArrowStorageTextSourceVectorsFromBatches([firstBatch, secondBatch])
-  });
-
-  t.equal(model.glyphCount, 5, 'storage append expands dictionary text from new batches');
-  t.equal(model.batches.length, 2, 'dictionary row bindings retain appended chunk boundaries');
-  t.equal(
-    model.renderBatches[0].compactGlyphVertexData,
-    firstCompactGlyphVertexData,
-    'dictionary append keeps existing generated glyph buffers resident'
   );
 
   model.destroy();
@@ -836,7 +813,7 @@ function makeArrowStorageTextSourceVectorsFromBatches(recordBatches: arrow.Recor
   if (!texts) {
     throw new Error('Storage text source vectors require a texts column');
   }
-  return {texts: texts as ArrowUtf8TextVector};
+  return {texts: texts as arrow.Vector<arrow.Utf8>};
 }
 
 function makeGpuTextProps(device: NullDevice, labels: string[]) {
@@ -870,10 +847,10 @@ function makeArrowDictionaryTexts(
   return arrow.vectorFromArray(labels, dictionaryType) as arrow.Vector<ArrowUtf8Dictionary>;
 }
 
-function makeGpuTexts(
+function makeGpuTexts<TextTypeT extends ArrowUtf8TextType>(
   device: NullDevice,
-  vector: ArrowUtf8TextVector
-): GPUVector<ArrowUtf8TextType> {
+  vector: arrow.Vector<TextTypeT>
+): GPUVector<TextTypeT> {
   return makeArrowGPUVector(device, vector, {name: 'texts'});
 }
 

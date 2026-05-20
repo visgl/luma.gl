@@ -8,6 +8,10 @@ import type {Character, CharacterMapping} from './text-utils';
 const MISSING_CHAR_WIDTH = 32;
 const MAX_UINT16 = 65535;
 const INVALID_DICTIONARY_INDEX = 0xffffffff;
+const DICTIONARY_OCCURRENCE_ROW_BITS = 20;
+const DICTIONARY_OCCURRENCE_GLYPH_BITS = 32 - DICTIONARY_OCCURRENCE_ROW_BITS;
+const MAX_DICTIONARY_OCCURRENCE_ROW_INDEX = (1 << DICTIONARY_OCCURRENCE_ROW_BITS) - 1;
+const MAX_DICTIONARY_OCCURRENCE_GLYPH_OFFSET = (1 << DICTIONARY_OCCURRENCE_GLYPH_BITS) - 1;
 
 export type ArrowUtf8DictionaryIndexType =
   | arrow.Int8
@@ -101,6 +105,23 @@ export type GpuDictionaryUtf8TextInput = {
   dictionaryByteLength: number;
   inputByteLength: number;
   textInputBuildTimeMs: number;
+};
+
+export type GpuDictionaryCompressedTextStream = {
+  startIndices: number[];
+  rowGlyphRanges: Uint32Array;
+  rowDictionaryIndices: Uint32Array;
+  dictionaryGlyphRanges: Uint32Array;
+  dictionaryGlyphRecords: Uint32Array;
+  glyphOccurrenceRecords: Uint32Array;
+  glyphFrames: Float32Array;
+  glyphCount: number;
+  dictionaryGlyphCount: number;
+  dictionaryValueCount: number;
+  characterSet?: Set<string>;
+  compressedStreamByteLength: number;
+  glyphDefinitionByteLength: number;
+  glyphStreamBuildTimeMs: number;
 };
 
 /** Returns whether a runtime Arrow vector stores UTF-8 labels. */
@@ -597,10 +618,176 @@ export function buildGpuExpandedTextStream({
   };
 }
 
+/** Build shared glyph runs for dictionary values plus compact per-row glyph occurrences. */
+export function buildGpuDictionaryCompressedTextStream({
+  texts,
+  mapping,
+  baselineOffset,
+  lineHeight,
+  characterSet
+}: {
+  texts: arrow.Vector<ArrowUtf8Dictionary>;
+  mapping: CharacterMapping;
+  baselineOffset: number;
+  lineHeight: number;
+  characterSet?: Set<string>;
+}): GpuDictionaryCompressedTextStream {
+  const glyphStreamBuildStartTime = getNow();
+  const chunks = buildArrowUtf8DictionaryChunks(texts);
+  const dictionaryValueCount = chunks.reduce((count, chunk) => count + chunk.dictionaryLength, 0);
+  const baselineOffsetY = toInt16(baselineOffset + lineHeight / 2);
+  const rowGlyphRanges = new Uint32Array(texts.length * 2);
+  const rowDictionaryIndices = new Uint32Array(texts.length);
+  const dictionaryGlyphRanges = new Uint32Array(dictionaryValueCount * 2);
+  const dictionaryGlyphRecordValues: number[] = [];
+  const glyphOccurrenceRecordValues: number[] = [];
+  const startIndices = new Array<number>(texts.length + 1);
+  const glyphDefinitionsByCodePoint = new Map<
+    number,
+    {frame: Character | undefined; glyphId: number}
+  >();
+  const charactersByCodePoint = characterSet ? new Map<number, string>() : null;
+  // Index zero is the missing-glyph definition.
+  const glyphFrameValues = [0, 0, 0, 0];
+  let glyphCount = 0;
+
+  startIndices[0] = 0;
+  rowDictionaryIndices.fill(INVALID_DICTIONARY_INDEX);
+
+  for (const chunk of chunks) {
+    for (let dictionaryIndex = 0; dictionaryIndex < chunk.dictionaryLength; dictionaryIndex++) {
+      const normalizedDictionaryIndex = chunk.dictionaryValueBase + dictionaryIndex;
+      const dictionaryGlyphStart = dictionaryGlyphRecordValues.length / 2;
+      const target: Utf8TextIndexTarget = {startIndex: 0, endIndex: 0};
+      let width = 0;
+
+      populateUtf8TextIndices(chunk.dictionaryChunks, dictionaryIndex, target);
+      decodeArrowUtf8CodePoints(
+        chunk.dictionaryChunks,
+        target.startIndex,
+        target.endIndex,
+        codePoint => {
+          let definition = glyphDefinitionsByCodePoint.get(codePoint);
+          if (!definition) {
+            const character = String.fromCodePoint(codePoint);
+            const frame = mapping[character];
+            let glyphId = 0;
+            if (frame) {
+              glyphId = glyphFrameValues.length / 4;
+              if (glyphId > MAX_UINT16) {
+                throw new Error(
+                  'Dictionary compressed text glyph definitions exceed the uint16 glyph id range'
+                );
+              }
+              glyphFrameValues.push(frame.x, frame.y, frame.width, frame.height);
+            }
+            definition = {frame, glyphId};
+            glyphDefinitionsByCodePoint.set(codePoint, definition);
+            if (charactersByCodePoint) {
+              charactersByCodePoint.set(codePoint, character);
+              characterSet?.add(character);
+            }
+          }
+
+          const {frame, glyphId} = definition;
+          dictionaryGlyphRecordValues.push(
+            packSignedInt16Pair(frame ? width + frame.anchorX : width, baselineOffsetY),
+            glyphId
+          );
+          width += frame?.advance ?? MISSING_CHAR_WIDTH;
+        }
+      );
+
+      dictionaryGlyphRanges[normalizedDictionaryIndex * 2] = dictionaryGlyphStart;
+      dictionaryGlyphRanges[normalizedDictionaryIndex * 2 + 1] =
+        dictionaryGlyphRecordValues.length / 2;
+    }
+  }
+
+  for (const chunk of chunks) {
+    for (let localRowIndex = 0; localRowIndex < chunk.rowEnd - chunk.rowStart; localRowIndex++) {
+      const rowIndex = chunk.rowStart + localRowIndex;
+      const dictionaryIndex = getArrowUtf8DictionaryIndex(chunk, localRowIndex);
+      const normalizedDictionaryIndex =
+        dictionaryIndex >= 0
+          ? chunk.dictionaryValueBase + dictionaryIndex
+          : INVALID_DICTIONARY_INDEX;
+      rowDictionaryIndices[rowIndex] = normalizedDictionaryIndex;
+      rowGlyphRanges[rowIndex * 2] = glyphCount;
+
+      if (rowIndex > MAX_DICTIONARY_OCCURRENCE_ROW_INDEX) {
+        throw new Error(
+          `Dictionary compressed text batches support at most ${MAX_DICTIONARY_OCCURRENCE_ROW_INDEX + 1} rows`
+        );
+      }
+
+      if (normalizedDictionaryIndex !== INVALID_DICTIONARY_INDEX) {
+        const dictionaryGlyphStart = dictionaryGlyphRanges[normalizedDictionaryIndex * 2] ?? 0;
+        const dictionaryGlyphEnd =
+          dictionaryGlyphRanges[normalizedDictionaryIndex * 2 + 1] ?? dictionaryGlyphStart;
+        const dictionaryGlyphCount = Math.max(0, dictionaryGlyphEnd - dictionaryGlyphStart);
+        for (
+          let dictionaryGlyphOffset = 0;
+          dictionaryGlyphOffset < dictionaryGlyphCount;
+          dictionaryGlyphOffset++
+        ) {
+          if (dictionaryGlyphOffset > MAX_DICTIONARY_OCCURRENCE_GLYPH_OFFSET) {
+            throw new Error(
+              `Dictionary compressed text labels support at most ${MAX_DICTIONARY_OCCURRENCE_GLYPH_OFFSET + 1} glyphs`
+            );
+          }
+          glyphOccurrenceRecordValues.push(
+            ((dictionaryGlyphOffset << DICTIONARY_OCCURRENCE_ROW_BITS) | rowIndex) >>> 0
+          );
+        }
+        glyphCount += dictionaryGlyphCount;
+      }
+
+      rowGlyphRanges[rowIndex * 2 + 1] = glyphCount;
+      startIndices[rowIndex + 1] = glyphCount;
+    }
+  }
+
+  for (let rowIndex = 0; rowIndex < texts.length; rowIndex++) {
+    startIndices[rowIndex + 1] ??= startIndices[rowIndex] ?? 0;
+  }
+
+  const dictionaryGlyphRecords = new Uint32Array(dictionaryGlyphRecordValues);
+  const glyphOccurrenceRecords = new Uint32Array(glyphOccurrenceRecordValues);
+  const glyphFrames = new Float32Array(glyphFrameValues);
+  const compressedStreamByteLength =
+    rowGlyphRanges.byteLength +
+    rowDictionaryIndices.byteLength +
+    dictionaryGlyphRanges.byteLength +
+    dictionaryGlyphRecords.byteLength +
+    glyphOccurrenceRecords.byteLength;
+
+  return {
+    startIndices,
+    rowGlyphRanges,
+    rowDictionaryIndices,
+    dictionaryGlyphRanges,
+    dictionaryGlyphRecords,
+    glyphOccurrenceRecords,
+    glyphFrames,
+    glyphCount,
+    dictionaryGlyphCount: dictionaryGlyphRecords.length / 2,
+    dictionaryValueCount,
+    characterSet,
+    compressedStreamByteLength,
+    glyphDefinitionByteLength: glyphFrames.byteLength,
+    glyphStreamBuildTimeMs: getNow() - glyphStreamBuildStartTime
+  };
+}
+
 function writePackedUint16(values: Uint32Array, index: number, value: number): void {
   const wordIndex = index >> 1;
   const word = values[wordIndex] ?? 0;
   values[wordIndex] = index & 1 ? word | ((value & MAX_UINT16) << 16) : word | (value & MAX_UINT16);
+}
+
+function packSignedInt16Pair(lowerValue: number, upperValue: number): number {
+  return ((upperValue & 0xffff) << 16) | (lowerValue & 0xffff);
 }
 
 function isArrowUtf8DictionaryIndexType(

@@ -7,6 +7,7 @@ import * as arrow from 'apache-arrow';
 import {
   buildArrowGlyphLayout,
   buildArrowUtf8Chunks,
+  buildGpuDictionaryCompressedTextStream,
   buildGpuDictionaryUtf8TextInput,
   buildGpuExpandedTextStream,
   buildGpuUtf8TextInput,
@@ -214,6 +215,46 @@ test('buildGpuDictionaryUtf8TextInput uploads dictionary bytes once per chunk', 
   t.end();
 });
 
+test('buildGpuDictionaryCompressedTextStream shares dictionary glyph records per chunk', t => {
+  const mapping: CharacterMapping = {
+    A: {x: 0, y: 0, width: 4, height: 6, anchorX: 2, anchorY: 3, advance: 5},
+    B: {x: 4, y: 0, width: 4, height: 6, anchorX: 2, anchorY: 3, advance: 7}
+  };
+  const texts = makeExplicitArrowDictionaryTexts(['AB', 'A'], new Int32Array([0, 1, 0, 1]));
+  const stream = buildGpuDictionaryCompressedTextStream({
+    texts,
+    mapping,
+    baselineOffset: 1,
+    lineHeight: 10,
+    characterSet: new Set<string>()
+  });
+
+  t.deepEqual(stream.startIndices, [0, 2, 3, 5, 6], 'row starts remain per label occurrence');
+  t.deepEqual(
+    Array.from(stream.rowDictionaryIndices),
+    [0, 1, 0, 1],
+    'rows reference shared dictionary values'
+  );
+  t.deepEqual(
+    Array.from(stream.dictionaryGlyphRanges),
+    [0, 2, 2, 3],
+    'dictionary values own one shared glyph run each'
+  );
+  t.deepEqual(
+    Array.from(stream.dictionaryGlyphRecords),
+    [packSignedInt16Pair(2, 6), 1, packSignedInt16Pair(7, 6), 2, packSignedInt16Pair(2, 6), 1],
+    'dictionary glyph ids and offsets are stored once per dictionary value'
+  );
+  t.deepEqual(
+    Array.from(stream.glyphOccurrenceRecords),
+    [0, 1 << 20, 1, 2, (1 << 20) | 2, 3],
+    'visible glyph occurrences pack row and glyph-within-label indices into one word'
+  );
+  t.equal(stream.dictionaryGlyphCount, 3, 'shared dictionary glyph records scale with values');
+  t.equal(stream.glyphCount, 6, 'visible glyph count still scales with row occurrences');
+  t.end();
+});
+
 test('buildGpuUtf8TextInput preserves Arrow UTF-8 bytes without glyph decoding', t => {
   const textInput = buildGpuUtf8TextInput(arrow.vectorFromArray(['AB', '🙂'], new arrow.Utf8()));
   const packedBytes = new Uint8Array(textInput.packedUtf8Bytes.buffer).subarray(
@@ -259,4 +300,8 @@ function makeExplicitArrowDictionaryTexts(
     dictionary
   });
   return new arrow.Vector([data]) as arrow.Vector<ArrowUtf8Dictionary>;
+}
+
+function packSignedInt16Pair(lowerValue: number, upperValue: number): number {
+  return ((lowerValue & 0xffff) | ((upperValue & 0xffff) << 16)) >>> 0;
 }

@@ -23,8 +23,10 @@ import {
 } from '@luma.gl/engine';
 import {ShaderModule} from '@luma.gl/shadertools';
 import {
+  ArrowDictionaryStorageTextModel,
   ArrowStorageTextModel,
   ArrowTextModel,
+  type ArrowDictionaryStorageTextInputProps,
   type ArrowStorageTextInputProps,
   type ArrowTextModelProps
 } from '@luma.gl/text';
@@ -49,7 +51,8 @@ const COLOR_TOGGLE_ID = 'arrow-text-2d-colors';
 const SIZE_TOGGLE_ID = 'arrow-text-2d-sizes';
 const ANGLE_TOGGLE_ID = 'arrow-text-2d-angles';
 const MODEL_SELECTOR_ID = 'arrow-text-2d-model';
-const DATA_SELECTOR_ID = 'arrow-text-2d-data';
+const ROW_COUNT_SELECTOR_ID = 'arrow-text-2d-row-count';
+const SOURCE_SELECTOR_ID = 'arrow-text-2d-source';
 const ARROW_VECTOR_BUILD_TIME_ID = 'arrow-text-2d-arrow-vector-build-time';
 const CPU_GENERATION_TIME_ID = 'arrow-text-2d-cpu-generation-time';
 const TOTAL_GPU_BYTES_ID = 'arrow-text-2d-total-gpu-bytes';
@@ -67,10 +70,12 @@ const STREAMING_TEXT_BATCH_COUNT = 10;
 const STREAMING_TEXT_BATCH_DELAY_MS = 1000;
 const DICTIONARY_TEXT_ROWS_PER_CHUNK = 100_000;
 const DICTIONARY_LABEL_COUNT_PER_CHUNK = 1_000;
+const DICTIONARY_OCCURRENCE_ROW_BITS = 20;
+const DICTIONARY_OCCURRENCE_ROW_MASK = (1 << DICTIONARY_OCCURRENCE_ROW_BITS) - 1;
 // IconLayer + MultiIconLayer character attributes, assuming float32 positions in the active path.
 const DECK_CHARACTER_ATTRIBUTE_BYTES_PER_GLYPH = 80;
-type ActiveTextModel = ArrowTextModel | ArrowStorageTextModel;
-type TextModelKind = 'direct' | 'storage';
+type ActiveTextModel = ArrowTextModel | ArrowStorageTextModel | ArrowDictionaryStorageTextModel;
+type TextModelKind = 'direct' | 'storage' | 'dictionary-storage';
 type ArrowUtf8DictionaryIndexType =
   | arrow.Int8
   | arrow.Int16
@@ -81,7 +86,9 @@ type ArrowUtf8DictionaryIndexType =
 type ArrowUtf8Dictionary = arrow.Dictionary<arrow.Utf8, ArrowUtf8DictionaryIndexType>;
 type ArrowUtf8TextType = arrow.Utf8 | ArrowUtf8Dictionary;
 type ArrowUtf8TextVector = arrow.Vector<ArrowUtf8TextType>;
-type Utf8TextDatasetKind = '100k' | '500k' | '1m';
+type TextRowCountKind = '100k' | '500k' | '1m';
+type TextSourceKind = 'utf8' | 'dictionary' | 'stream';
+type Utf8TextDatasetKind = TextRowCountKind;
 type DictionaryTextDatasetKind = '100k-dict' | '500k-dict' | '1m-dict';
 type EagerTextDatasetKind = Utf8TextDatasetKind | DictionaryTextDatasetKind;
 type StreamingTextDatasetKind = `${Utf8TextDatasetKind}-stream`;
@@ -177,6 +184,11 @@ const STORAGE_INDEXED_TEXT_SHADER_LAYOUT = {
     {name: 'glyphIndices', location: 1, type: 'vec2<u32>', stepMode: 'instance'},
     {name: 'rowIndices', location: 2, type: 'u32', stepMode: 'instance'}
   ],
+  bindings: []
+} satisfies ShaderLayout;
+
+const DICTIONARY_STORAGE_TEXT_SHADER_LAYOUT = {
+  attributes: [{name: 'glyphOccurrenceRecords', location: 0, type: 'u32', stepMode: 'instance'}],
   bindings: []
 } satisfies ShaderLayout;
 
@@ -484,6 +496,223 @@ fn fragmentPicking(inputs : FragmentInputs) -> PickingFragmentOutputs {
 }
 `;
 
+const DICTIONARY_STORAGE_WGSL_SHADER = /* wgsl */ `\
+struct TextViewportUniforms {
+  cameraOffset : vec2<f32>,
+  viewportScale : vec2<f32>,
+  glyphWorldScale : f32,
+  time : f32,
+  clippingEnabled : f32,
+};
+
+@group(0) @binding(auto) var<uniform> textViewport : TextViewportUniforms;
+@group(0) @binding(auto) var fontAtlasTexture : texture_2d<f32>;
+@group(0) @binding(auto) var fontAtlasTextureSampler : sampler;
+@group(0) @binding(auto) var<storage, read> textRowPositions : array<vec2<f32>>;
+@group(0) @binding(auto) var<storage, read> textRowColors : array<u32>;
+@group(0) @binding(auto) var<storage, read> textRowAngles : array<f32>;
+@group(0) @binding(auto) var<storage, read> textRowSizes : array<f32>;
+@group(0) @binding(auto) var<storage, read> textRowPixelOffsets : array<vec2<f32>>;
+@group(0) @binding(auto) var<storage, read> textRowClipRects : array<vec2<u32>>;
+@group(0) @binding(auto) var<storage, read> textRowDictionaryIndices : array<u32>;
+@group(0) @binding(auto) var<storage, read> textDictionaryGlyphRanges : array<vec2<u32>>;
+@group(0) @binding(auto) var<storage, read> textDictionaryGlyphRecords : array<vec2<u32>>;
+@group(0) @binding(auto) var<storage, read> textGlyphFrames : array<vec4<f32>>;
+
+struct TextStorageStyleConfig {
+  constantColor : vec4<f32>,
+  constantAngleDegrees : f32,
+  constantSize : f32,
+  constantPixelOffset : vec2<f32>,
+  useRowColors : u32,
+  useRowAngles : u32,
+  useRowSizes : u32,
+  useRowPixelOffsets : u32,
+  hasClipRects : u32,
+  batchRowIndexBase : u32,
+  _padding : u32,
+};
+
+@group(0) @binding(auto) var<uniform> textStorageStyleConfig : TextStorageStyleConfig;
+
+struct VertexInputs {
+  @builtin(vertex_index) vertexIndex : u32,
+  @location(0) glyphOccurrenceRecord : u32,
+};
+
+struct FragmentInputs {
+  @builtin(position) Position : vec4<f32>,
+  @location(0) textureCoordinate : vec2<f32>,
+  @location(1) textColor : vec4<f32>,
+  @interpolate(flat)
+  @location(2) objectIndex : i32,
+};
+
+struct PickingFragmentOutputs {
+  @location(0) fragColor : vec4<f32>,
+  @location(1) pickingColor : vec2<i32>,
+};
+
+fn getCorner(vertexIndex : u32) -> vec2<f32> {
+  if (vertexIndex == 0u) { return vec2<f32>(0.0, 0.0); }
+  if (vertexIndex == 1u) { return vec2<f32>(1.0, 0.0); }
+  if (vertexIndex == 2u) { return vec2<f32>(1.0, 1.0); }
+  if (vertexIndex == 3u) { return vec2<f32>(0.0, 0.0); }
+  if (vertexIndex == 4u) { return vec2<f32>(1.0, 1.0); }
+  return vec2<f32>(0.0, 1.0);
+}
+
+fn unpackLowInt16(word : u32) -> i32 {
+  return i32(word << 16u) >> 16;
+}
+
+fn unpackHighInt16(word : u32) -> i32 {
+  return i32(word) >> 16;
+}
+
+fn unpackClipRect(words : vec2<u32>) -> vec4<i32> {
+  return vec4<i32>(
+    unpackLowInt16(words.x),
+    unpackHighInt16(words.x),
+    unpackLowInt16(words.y),
+    unpackHighInt16(words.y)
+  );
+}
+
+fn isGlyphVertexClipped(glyphVertexOffset : vec2<f32>, clipRect : vec4<i32>) -> bool {
+  if (clipRect.z >= 0) {
+    let clipMinX = f32(clipRect.x);
+    let clipMaxX = clipMinX + f32(clipRect.z);
+    if (glyphVertexOffset.x < clipMinX || glyphVertexOffset.x > clipMaxX) {
+      return true;
+    }
+  }
+  if (clipRect.w >= 0) {
+    let clipMinY = f32(clipRect.y);
+    let clipMaxY = clipMinY + f32(clipRect.w);
+    if (glyphVertexOffset.y < clipMinY || glyphVertexOffset.y > clipMaxY) {
+      return true;
+    }
+  }
+  return false;
+}
+
+fn unpackTextColor(colorWord : u32) -> vec4<f32> {
+  return vec4<f32>(
+    f32(colorWord & 0xffu),
+    f32((colorWord >> 8u) & 0xffu),
+    f32((colorWord >> 16u) & 0xffu),
+    f32((colorWord >> 24u) & 0xffu)
+  ) / 255.0;
+}
+
+fn rotateTextOffset(offset : vec2<f32>, angleDegrees : f32) -> vec2<f32> {
+  let angleRadians = angleDegrees * 0.017453292519943295;
+  let rotation = mat2x2<f32>(
+    cos(angleRadians),
+    sin(angleRadians),
+    -sin(angleRadians),
+    cos(angleRadians)
+  );
+  return rotation * offset;
+}
+
+fn emptyFragmentInputs() -> FragmentInputs {
+  var outputs : FragmentInputs;
+  outputs.Position = vec4<f32>(0.0);
+  outputs.textureCoordinate = vec2<f32>(0.0);
+  outputs.textColor = vec4<f32>(0.0);
+  outputs.objectIndex = -1;
+  return outputs;
+}
+
+@vertex
+fn vertexMain(inputs : VertexInputs) -> FragmentInputs {
+  let rowIndex = inputs.glyphOccurrenceRecord & ${DICTIONARY_OCCURRENCE_ROW_MASK}u;
+  let dictionaryGlyphOffset = inputs.glyphOccurrenceRecord >> ${DICTIONARY_OCCURRENCE_ROW_BITS}u;
+  let dictionaryIndex = textRowDictionaryIndices[rowIndex];
+  if (dictionaryIndex == 4294967295u) {
+    return emptyFragmentInputs();
+  }
+  let dictionaryGlyphRange = textDictionaryGlyphRanges[dictionaryIndex];
+  let dictionaryGlyphIndex = dictionaryGlyphRange.x + dictionaryGlyphOffset;
+  if (dictionaryGlyphIndex >= dictionaryGlyphRange.y) {
+    return emptyFragmentInputs();
+  }
+
+  var outputs : FragmentInputs;
+  let corner = getCorner(inputs.vertexIndex % 6u);
+  let glyphRecord = textDictionaryGlyphRecords[dictionaryGlyphIndex];
+  let glyphFrame = textGlyphFrames[glyphRecord.y];
+  let glyphOffset = vec2<f32>(
+    f32(unpackLowInt16(glyphRecord.x)),
+    f32(unpackHighInt16(glyphRecord.x))
+  );
+  let glyphSize = glyphFrame.zw;
+  let glyphVertexOffset = glyphOffset + corner * glyphSize;
+  var angleDegrees = textStorageStyleConfig.constantAngleDegrees;
+  if (textStorageStyleConfig.useRowAngles != 0u) {
+    angleDegrees = textRowAngles[rowIndex];
+  }
+  var textSize = textStorageStyleConfig.constantSize;
+  if (textStorageStyleConfig.useRowSizes != 0u) {
+    textSize = textRowSizes[rowIndex];
+  }
+  let styledGlyphVertexOffset = rotateTextOffset(
+    glyphVertexOffset * (textSize / 32.0),
+    angleDegrees
+  );
+  var pixelOffset = textStorageStyleConfig.constantPixelOffset;
+  if (textStorageStyleConfig.useRowPixelOffsets != 0u) {
+    pixelOffset = textRowPixelOffsets[rowIndex];
+  }
+  let glyphWorldOffset =
+    (styledGlyphVertexOffset + pixelOffset) * textViewport.glyphWorldScale;
+  let labelPosition = textRowPositions[rowIndex];
+  let worldPosition = labelPosition + glyphWorldOffset;
+  let clipPosition = (worldPosition - textViewport.cameraOffset) * textViewport.viewportScale;
+  let atlasSize = vec2<f32>(textureDimensions(fontAtlasTexture));
+  let atlasCorner = vec2<f32>(corner.x, 1.0 - corner.y);
+  let atlasPixel = glyphFrame.xy + atlasCorner * glyphSize;
+  let clipRect = unpackClipRect(textRowClipRects[rowIndex]);
+
+  outputs.Position = select(
+    vec4<f32>(clipPosition, 0.0, 1.0),
+    vec4<f32>(0.0),
+    textViewport.clippingEnabled > 0.5 &&
+    textStorageStyleConfig.hasClipRects != 0u &&
+    isGlyphVertexClipped(glyphVertexOffset, clipRect)
+  );
+  outputs.textureCoordinate = atlasPixel / atlasSize;
+  outputs.textColor = textStorageStyleConfig.constantColor;
+  if (textStorageStyleConfig.useRowColors != 0u) {
+    outputs.textColor = unpackTextColor(textRowColors[rowIndex]);
+  }
+  outputs.objectIndex = i32(textStorageStyleConfig.batchRowIndexBase + rowIndex);
+  return outputs;
+}
+
+@fragment
+fn fragmentMain(inputs : FragmentInputs) -> @location(0) vec4<f32> {
+  let sampledAlpha = textureSample(fontAtlasTexture, fontAtlasTextureSampler, inputs.textureCoordinate).a;
+  let glyphAlpha = smoothstep(0.68, 0.82, sampledAlpha);
+  let fragColor = vec4<f32>(inputs.textColor.rgb, inputs.textColor.a * glyphAlpha);
+  return picking_filterHighlightColor(fragColor, inputs.objectIndex);
+}
+
+@fragment
+fn fragmentPicking(inputs : FragmentInputs) -> PickingFragmentOutputs {
+  let sampledAlpha = textureSample(fontAtlasTexture, fontAtlasTextureSampler, inputs.textureCoordinate).a;
+  if (sampledAlpha <= 0.68) {
+    discard;
+  }
+  var outputs : PickingFragmentOutputs;
+  outputs.fragColor = vec4<f32>(0.0, 0.0, 0.0, 0.0);
+  outputs.pickingColor = picking_getPickingColor(inputs.objectIndex);
+  return outputs;
+}
+`;
+
 const VS_GLSL = /* glsl */ `\
 #version 300 es
 precision highp float;
@@ -635,23 +864,24 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     }
   </style>
   <div style="min-height: 920px; max-height: calc(100vh - 72px); overflow-y: auto; margin-top: 16px; padding: 14px 16px; border: 1px solid rgba(208, 215, 222, 0.9); border-radius: 16px; background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(246, 248, 250, 0.96) 100%); box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);">
-    <div style="display: grid; grid-template-columns: minmax(56px, auto) minmax(0, 1fr); align-items: center; gap: 10px 12px; margin-bottom: 12px; color: #0f172a; font-size: 15px; font-weight: 600;">
+    <div style="display: grid; grid-template-columns: minmax(56px, auto) minmax(0, 0.8fr) minmax(64px, auto) minmax(0, 1fr); align-items: center; gap: 10px 12px; margin-bottom: 12px; color: #0f172a; font-size: 15px; font-weight: 600;">
       <label for="${MODEL_SELECTOR_ID}">Model</label>
-      <select id="${MODEL_SELECTOR_ID}" style="min-width: 0; min-height: 34px; border: 1px solid rgba(148, 163, 184, 0.8); border-radius: 6px; background: #ffffff; color: #0f172a; font: inherit;">
+      <select id="${MODEL_SELECTOR_ID}" style="grid-column: 2 / 5; min-width: 0; min-height: 34px; border: 1px solid rgba(148, 163, 184, 0.8); border-radius: 6px; background: #ffffff; color: #0f172a; font: inherit;">
         <option value="direct">ArrowTextModel</option>
         <option value="storage">ArrowStorageTextModel</option>
+        <option value="dictionary-storage">ArrowDictionaryStorageTextModel</option>
       </select>
-      <label for="${DATA_SELECTOR_ID}">Data</label>
-      <select id="${DATA_SELECTOR_ID}" style="min-width: 0; min-height: 34px; border: 1px solid rgba(148, 163, 184, 0.8); border-radius: 6px; background: #ffffff; color: #0f172a; font: inherit;">
-        <option value="100k">${TEXT_DATASETS['100k'].label}</option>
-        <option value="100k-dict">${TEXT_DATASETS['100k-dict'].label}</option>
-        <option value="500k">${TEXT_DATASETS['500k'].label}</option>
-        <option value="500k-dict">${TEXT_DATASETS['500k-dict'].label}</option>
-        <option value="1m">${TEXT_DATASETS['1m'].label}</option>
-        <option value="1m-dict">${TEXT_DATASETS['1m-dict'].label}</option>
-        <option value="100k-stream">${TEXT_DATASETS['100k'].label} streamed</option>
-        <option value="500k-stream">${TEXT_DATASETS['500k'].label} streamed</option>
-        <option value="1m-stream">${TEXT_DATASETS['1m'].label} streamed</option>
+      <label for="${ROW_COUNT_SELECTOR_ID}">Rows</label>
+      <select id="${ROW_COUNT_SELECTOR_ID}" style="min-width: 0; min-height: 34px; border: 1px solid rgba(148, 163, 184, 0.8); border-radius: 6px; background: #ffffff; color: #0f172a; font: inherit;">
+        <option value="100k">100K rows</option>
+        <option value="500k">500K rows</option>
+        <option value="1m">1M rows</option>
+      </select>
+      <label for="${SOURCE_SELECTOR_ID}">Source</label>
+      <select id="${SOURCE_SELECTOR_ID}" style="min-width: 0; min-height: 34px; border: 1px solid rgba(148, 163, 184, 0.8); border-radius: 6px; background: #ffffff; color: #0f172a; font: inherit;">
+        <option value="utf8">Utf8</option>
+        <option value="dictionary">Dictionary&lt;Utf8&gt;</option>
+        <option value="stream">Utf8 streamed</option>
       </select>
     </div>
     <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 18px; color: #0f172a; font-size: 15px; font-weight: 600;">
@@ -790,7 +1020,8 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
   sizeToggle: HTMLInputElement | null = null;
   angleToggle: HTMLInputElement | null = null;
   modelSelector: HTMLSelectElement | null = null;
-  dataSelector: HTMLSelectElement | null = null;
+  rowCountSelector: HTMLSelectElement | null = null;
+  sourceSelector: HTMLSelectElement | null = null;
   arrowVectorBuildTimeLabel: HTMLElement | null = null;
   cpuGenerationTimeLabel: HTMLElement | null = null;
   totalGpuBytesLabel: HTMLElement | null = null;
@@ -914,6 +1145,36 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
         blendAlphaDstFactor: 'one-minus-src-alpha'
       }
     };
+    if (modelKind === 'dictionary-storage') {
+      if (this.device.type !== 'webgpu') {
+        throw new Error('ArrowDictionaryStorageTextModel showcase mode requires WebGPU');
+      }
+      const storageProps = {
+        id: commonProps.id,
+        positions: this.positions,
+        texts: this.texts,
+        clipRects: this.clipRects,
+        sourceVectors: {
+          texts: this.sourceVectors.texts,
+          clipRects: this.sourceVectors.clipRects
+        },
+        ...(this.colorEnabled ? {colors: this.colors} : {}),
+        ...(this.angleEnabled ? {angles: this.angles} : {}),
+        ...(this.sizeEnabled ? {sizes: this.sizes} : {}),
+        color: [210, 232, 255, 255],
+        characterSet: commonProps.characterSet,
+        fontSettings: commonProps.fontSettings,
+        source: DICTIONARY_STORAGE_WGSL_SHADER,
+        shaderLayout: DICTIONARY_STORAGE_TEXT_SHADER_LAYOUT,
+        shaderInputs: commonProps.shaderInputs,
+        modules: commonProps.modules,
+        parameters: commonProps.parameters
+      };
+      return new ArrowDictionaryStorageTextModel(
+        this.device,
+        storageProps as unknown as ArrowDictionaryStorageTextInputProps
+      );
+    }
     if (modelKind === 'storage') {
       if (this.device.type !== 'webgpu') {
         throw new Error('ArrowStorageTextModel showcase mode requires WebGPU');
@@ -960,7 +1221,7 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     if (!this.modelSelector) {
       this.initializeModelSelector();
     }
-    if (!this.dataSelector) {
+    if (!this.rowCountSelector || !this.sourceSelector) {
       this.initializeDataSelector();
     }
     if (!this.clippingToggle) {
@@ -1044,14 +1305,16 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     this.sizeToggle?.removeEventListener('change', this.handleSizeToggle);
     this.angleToggle?.removeEventListener('change', this.handleAngleToggle);
     this.modelSelector?.removeEventListener('change', this.handleModelSelection);
-    this.dataSelector?.removeEventListener('change', this.handleDataSelection);
+    this.rowCountSelector?.removeEventListener('change', this.handleDataSelection);
+    this.sourceSelector?.removeEventListener('change', this.handleDataSelection);
     this.animateToggle = null;
     this.clippingToggle = null;
     this.colorToggle = null;
     this.sizeToggle = null;
     this.angleToggle = null;
     this.modelSelector = null;
-    this.dataSelector = null;
+    this.rowCountSelector = null;
+    this.sourceSelector = null;
     this.arrowVectorBuildTimeLabel = null;
     this.cpuGenerationTimeLabel = null;
     this.totalGpuBytesLabel = null;
@@ -1097,6 +1360,26 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
   }
 
   createPickingModel(textModel: ActiveTextModel): Model {
+    if (textModel instanceof ArrowDictionaryStorageTextModel) {
+      return new ArrowDictionaryStorageTextModel(this.device, {
+        id: `${textModel.id || 'arrow-text-2d'}-picking`,
+        storageState: textModel.storageState,
+        source: DICTIONARY_STORAGE_WGSL_SHADER,
+        vs: VS_GLSL,
+        fs: PICKING_FS_GLSL,
+        fragmentEntryPoint: 'fragmentPicking',
+        // @ts-expect-error Remove once npm package updated with new types
+        modules: [indexPicking],
+        shaderLayout: DICTIONARY_STORAGE_TEXT_SHADER_LAYOUT,
+        shaderInputs: this.shaderInputs,
+        colorAttachmentFormats: ['rgba8unorm', 'rg32sint'],
+        depthStencilAttachmentFormat: 'depth24plus',
+        parameters: {
+          depthWriteEnabled: false,
+          blend: false
+        }
+      });
+    }
     const usesStorageState = textModel instanceof ArrowStorageTextModel;
     if (usesStorageState) {
       return new ArrowStorageTextModel(this.device, {
@@ -1177,45 +1460,85 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
       return;
     }
     this.modelSelector.value = this.textModelKind;
-    this.modelSelector.disabled = this.device.type !== 'webgpu';
+    this.updateModelSelectorAvailability();
     this.modelSelector.addEventListener('change', this.handleModelSelection);
   }
 
   handleModelSelection = (event: Event): void => {
     const requestedModelKind = (event.target as HTMLSelectElement).value as TextModelKind;
-    const nextModelKind =
-      requestedModelKind !== 'direct' && this.device.type === 'webgpu'
-        ? requestedModelKind
-        : 'direct';
+    const nextModelKind = this.resolveAvailableModelKind(requestedModelKind);
     if (nextModelKind === this.textModelKind) {
+      if (this.modelSelector) {
+        this.modelSelector.value = nextModelKind;
+      }
       return;
     }
 
     this.replaceTextModel(nextModelKind, 'text model selector changed');
   };
 
-  initializeDataSelector(): void {
-    this.dataSelector = document.getElementById(DATA_SELECTOR_ID) as HTMLSelectElement | null;
-    if (!this.dataSelector) {
+  updateModelSelectorAvailability(): void {
+    if (!this.modelSelector) {
       return;
     }
-    this.dataSelector.value = this.textDatasetKind;
+    const isDictionaryDataset = arrow.DataType.isDictionary(this.sourceVectors.texts.type);
+    for (const option of Array.from(this.modelSelector.options)) {
+      const modelKind = option.value as TextModelKind;
+      option.disabled =
+        (modelKind !== 'direct' && this.device.type !== 'webgpu') ||
+        (modelKind === 'storage' && isDictionaryDataset) ||
+        (modelKind === 'dictionary-storage' && !isDictionaryDataset);
+    }
+    this.modelSelector.disabled = false;
+    this.modelSelector.value = this.textModelKind;
+  }
+
+  resolveAvailableModelKind(modelKind: TextModelKind): TextModelKind {
+    if (modelKind !== 'direct' && this.device.type !== 'webgpu') {
+      return 'direct';
+    }
+    const isDictionaryDataset = arrow.DataType.isDictionary(this.sourceVectors.texts.type);
+    if (modelKind === 'storage' && isDictionaryDataset) {
+      return 'direct';
+    }
+    if (modelKind === 'dictionary-storage' && !isDictionaryDataset) {
+      return 'direct';
+    }
+    return modelKind;
+  }
+
+  initializeDataSelector(): void {
+    this.rowCountSelector = document.getElementById(
+      ROW_COUNT_SELECTOR_ID
+    ) as HTMLSelectElement | null;
+    this.sourceSelector = document.getElementById(SOURCE_SELECTOR_ID) as HTMLSelectElement | null;
+    if (!this.rowCountSelector || !this.sourceSelector) {
+      return;
+    }
+    this.rowCountSelector.value = getTextDatasetRowCountKind(this.textDatasetKind);
+    this.sourceSelector.value = getTextDatasetSourceKind(this.textDatasetKind);
     this.updateDataSelectorAvailability();
-    this.dataSelector.addEventListener('change', this.handleDataSelection);
+    this.rowCountSelector.addEventListener('change', this.handleDataSelection);
+    this.sourceSelector.addEventListener('change', this.handleDataSelection);
   }
 
   updateDataSelectorAvailability(): void {
-    if (!this.dataSelector) {
+    if (!this.rowCountSelector || !this.sourceSelector) {
       return;
     }
 
-    for (const option of Array.from(this.dataSelector.options)) {
+    for (const option of Array.from(this.rowCountSelector.options)) {
       option.disabled = false;
     }
+    for (const option of Array.from(this.sourceSelector.options)) {
+      option.disabled = false;
+    }
+    this.rowCountSelector.value = getTextDatasetRowCountKind(this.textDatasetKind);
+    this.sourceSelector.value = getTextDatasetSourceKind(this.textDatasetKind);
   }
 
-  handleDataSelection = async (event: Event): Promise<void> => {
-    const nextDatasetKind = (event.target as HTMLSelectElement).value as TextDatasetKind;
+  handleDataSelection = async (): Promise<void> => {
+    const nextDatasetKind = this.getSelectedTextDatasetKind();
     if (nextDatasetKind === this.textDatasetKind || !isTextDatasetKind(nextDatasetKind)) {
       return;
     }
@@ -1247,9 +1570,24 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     this.arrowVectorBuildTimeMs = nextTextInput.arrowVectorBuildTimeMs;
     this.activeStreamingTextTable = null;
     this.updateStreamingBatchStatus(null);
-    this.replaceTextModel(this.textModelKind, 'text dataset selector changed');
+    this.updateDataSelectorAvailability();
+    this.updateModelSelectorAvailability();
+    this.replaceTextModel(
+      this.resolveAvailableModelKind(this.textModelKind),
+      'text dataset selector changed'
+    );
     previousStreamingTable?.destroy();
   };
+
+  getSelectedTextDatasetKind(): TextDatasetKind {
+    const rowCountKind =
+      (this.rowCountSelector?.value as TextRowCountKind | undefined) ??
+      getTextDatasetRowCountKind(this.textDatasetKind);
+    const sourceKind =
+      (this.sourceSelector?.value as TextSourceKind | undefined) ??
+      getTextDatasetSourceKind(this.textDatasetKind);
+    return getTextDatasetKind(rowCountKind, sourceKind);
+  }
 
   async startStreamingTextDataset(
     textDatasetKind: StreamingTextDatasetKind,
@@ -1299,7 +1637,12 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     this.arrowVectorBuildTimeMs = streamingTextInput.arrowVectorBuildTimeMs;
     this.activeStreamingTextTable = streamingTextTable;
     this.updateStreamingBatchStatus(streamingTextTable.batches.length);
-    this.replaceTextModel(this.textModelKind, 'streaming text dataset started');
+    this.updateDataSelectorAvailability();
+    this.updateModelSelectorAvailability();
+    this.replaceTextModel(
+      this.resolveAvailableModelKind(this.textModelKind),
+      'streaming text dataset started'
+    );
     previousStreamingTable?.destroy();
 
     void this.consumeStreamingRecordBatches(
@@ -1361,10 +1704,18 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
       ...(this.angleEnabled ? {angles: this.angles} : {}),
       ...(this.sizeEnabled ? {sizes: this.sizes} : {})
     };
-    this.textModel.appendTextBatches(
-      appendedTextProps as unknown as Partial<ArrowTextModelProps> &
-        Partial<ArrowStorageTextInputProps>
-    );
+    if (
+      this.textModel instanceof ArrowTextModel ||
+      this.textModel instanceof ArrowStorageTextModel
+    ) {
+      this.textModel.appendTextBatches(
+        appendedTextProps as unknown as Partial<ArrowTextModelProps> &
+          Partial<ArrowStorageTextInputProps>
+      );
+    } else {
+      this.replaceTextModel('direct', redrawReason);
+      return;
+    }
     this.pickingModel?.destroy();
     this.pickingModel = supportsTextIndexPicking(this.device)
       ? this.createPickingModel(this.textModel)
@@ -1389,6 +1740,7 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     if (this.pickedLabel) {
       this.pickedLabel.textContent = 'Hover text';
     }
+    this.updateModelSelectorAvailability();
     this.initializeAttributeMetricLabels();
   }
 
@@ -1451,7 +1803,7 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
   };
 
   rebuildStorageStyleModel(redrawReason: string): void {
-    if (this.textModelKind === 'storage') {
+    if (this.textModelKind === 'storage' || this.textModelKind === 'dictionary-storage') {
       this.replaceTextModel(this.textModelKind, redrawReason);
       return;
     }
@@ -1460,16 +1812,28 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
 
   initializeAttributeMetricLabels(): void {
     const rowStorageByteLength =
-      this.textModel instanceof ArrowStorageTextModel ? this.textModel.rowStorageByteLength : 0;
+      this.textModel instanceof ArrowStorageTextModel ||
+      this.textModel instanceof ArrowDictionaryStorageTextModel
+        ? this.textModel.rowStorageByteLength
+        : 0;
     const glyphDefinitionStorageByteLength =
-      this.textModel instanceof ArrowStorageTextModel
+      this.textModel instanceof ArrowStorageTextModel ||
+      this.textModel instanceof ArrowDictionaryStorageTextModel
         ? this.textModel.glyphDefinitionStorageByteLength
         : 0;
     const transientComputeInputByteLength =
-      this.textModel instanceof ArrowStorageTextModel
+      this.textModel instanceof ArrowStorageTextModel ||
+      this.textModel instanceof ArrowDictionaryStorageTextModel
         ? this.textModel.transientComputeInputByteLength
         : 0;
-    const sharedStorageByteLength = rowStorageByteLength + glyphDefinitionStorageByteLength;
+    const compressedDictionaryStorageByteLength =
+      this.textModel instanceof ArrowDictionaryStorageTextModel
+        ? this.textModel.compactStreamByteLength
+        : 0;
+    const sharedStorageByteLength =
+      rowStorageByteLength +
+      glyphDefinitionStorageByteLength +
+      compressedDictionaryStorageByteLength;
     const steadyStateGpuByteLength =
       this.textModel.glyphAttributeByteLength + sharedStorageByteLength;
     const peakTextPathGpuByteLength = steadyStateGpuByteLength + transientComputeInputByteLength;
@@ -1499,7 +1863,11 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
       GPU_STYLE_VECTOR_BYTES_ID,
       this.getSelectedStorageStyleVectorByteLength()
     );
-    setMetricRowVisible(GPU_COMPUTE_ROW_ID, this.textModel instanceof ArrowStorageTextModel);
+    setMetricRowVisible(
+      GPU_COMPUTE_ROW_ID,
+      this.textModel instanceof ArrowStorageTextModel ||
+        this.textModel instanceof ArrowDictionaryStorageTextModel
+    );
     this.gpuComputeBytesLabel = initializeTextLabel(
       GPU_COMPUTE_BYTES_ID,
       `${formatByteLength(transientComputeInputByteLength)} transient`
@@ -1559,7 +1927,12 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
   }
 
   getSelectedStorageStyleVectorByteLength(): number {
-    if (!(this.textModel instanceof ArrowStorageTextModel)) {
+    if (
+      !(
+        this.textModel instanceof ArrowStorageTextModel ||
+        this.textModel instanceof ArrowDictionaryStorageTextModel
+      )
+    ) {
       return 0;
     }
 
@@ -1968,10 +2341,47 @@ function isStreamingTextDatasetKind(value: TextDatasetKind): value is StreamingT
   return value.endsWith('-stream');
 }
 
+function isDictionaryTextDatasetKind(value: TextDatasetKind): value is DictionaryTextDatasetKind {
+  return value.endsWith('-dict');
+}
+
 function getEagerTextDatasetKind(value: TextDatasetKind): EagerTextDatasetKind {
   return (
     isStreamingTextDatasetKind(value) ? value.slice(0, -'-stream'.length) : value
   ) as EagerTextDatasetKind;
+}
+
+function getTextDatasetKind(
+  rowCountKind: TextRowCountKind,
+  sourceKind: TextSourceKind
+): TextDatasetKind {
+  if (sourceKind === 'dictionary') {
+    return `${rowCountKind}-dict` as DictionaryTextDatasetKind;
+  }
+  if (sourceKind === 'stream') {
+    return `${rowCountKind}-stream` as StreamingTextDatasetKind;
+  }
+  return rowCountKind;
+}
+
+function getTextDatasetRowCountKind(value: TextDatasetKind): TextRowCountKind {
+  if (isStreamingTextDatasetKind(value)) {
+    return value.slice(0, -'-stream'.length) as TextRowCountKind;
+  }
+  if (isDictionaryTextDatasetKind(value)) {
+    return value.slice(0, -'-dict'.length) as TextRowCountKind;
+  }
+  return value;
+}
+
+function getTextDatasetSourceKind(value: TextDatasetKind): TextSourceKind {
+  if (isStreamingTextDatasetKind(value)) {
+    return 'stream';
+  }
+  if (isDictionaryTextDatasetKind(value)) {
+    return 'dictionary';
+  }
+  return 'utf8';
 }
 
 function isTextDatasetKind(value: string): value is TextDatasetKind {
@@ -1980,7 +2390,8 @@ function isTextDatasetKind(value: string): value is TextDatasetKind {
 }
 
 function getTextModelGlyphCount(textModel: ActiveTextModel): number {
-  return textModel instanceof ArrowStorageTextModel
+  return textModel instanceof ArrowStorageTextModel ||
+    textModel instanceof ArrowDictionaryStorageTextModel
     ? textModel.glyphCount
     : textModel.glyphLayout.glyphCount;
 }
