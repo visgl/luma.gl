@@ -38,6 +38,26 @@ for (const deviceType of ['webgl', 'webgpu'] as const) {
     y.destroy();
   });
 
+  test(`GPUVector compute#add synthesizes widened output type:${deviceType}`, async t => {
+    const device = await getTestDevice(deviceType);
+    if (!device) {
+      t.annotate(`${deviceType} not available`);
+      return;
+    }
+
+    const x = makeFloat32Vector(device, 'x', [1, 2, 3], 1);
+    const y = makeFloat32Vector(device, 'y', [10, 20, 30, 40, 50, 60], 2);
+    const sum = add(x, y);
+    const result = await sum.evaluate(device, {name: 'sum'});
+
+    expect(arrow.util.compareTypes(result.type, makeDataType(new arrow.Float32(), 2))).toBe(true);
+    expect(Array.from(await readFloat32Vector(result))).toEqual([11, 20, 32, 40, 53, 60]);
+
+    sum.destroy();
+    x.destroy();
+    y.destroy();
+  });
+
   test(`GPUVector compute#lazy evaluator chain:${deviceType}`, async t => {
     const device = await getTestDevice(deviceType);
     if (!device) {
@@ -77,6 +97,36 @@ for (const deviceType of ['webgl', 'webgpu'] as const) {
     expect(packedBuffer.destroyed).toBe(false);
     packed.destroy();
     sum.destroy();
+    x.destroy();
+    y.destroy();
+    z.destroy();
+  });
+
+  test(`GPUVector compute#interleave synthesizes flattened attributes:${deviceType}`, async t => {
+    const device = await getTestDevice(deviceType);
+    if (!device) {
+      t.annotate(`${deviceType} not available`);
+      return;
+    }
+
+    const x = makeFloat32Vector(device, 'x', [1, 2], 1);
+    const y = makeFloat32Vector(device, 'y', [10, 20], 1);
+    const z = makeFloat32Vector(device, 'z', [100, 200], 1);
+    const packed = interleave(x, y, z);
+    const result = await packed.evaluate(device, {name: 'packed3', interleaved: true});
+
+    expect(result.bufferLayout).toEqual({
+      name: 'packed3',
+      byteStride: 12,
+      attributes: [
+        {attribute: 'x', format: 'float32', byteOffset: 0},
+        {attribute: 'y', format: 'float32', byteOffset: 4},
+        {attribute: 'z', format: 'float32', byteOffset: 8}
+      ]
+    });
+    expect(Array.from(await readFloat32Vector(result))).toEqual([1, 10, 100, 2, 20, 200]);
+
+    packed.destroy();
     x.destroy();
     y.destroy();
     z.destroy();

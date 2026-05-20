@@ -3,6 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {
+  getCompatibleGPUTableEvaluatorDataType,
   getGPUTableEvaluator,
   GPUTableEvaluator,
   type GPUTableEvaluatorInput
@@ -27,7 +28,7 @@ class AddOperation extends Operation<{x: GPUTableEvaluator; y: GPUTableEvaluator
       type,
       size,
       length,
-      dataType: x.dataType,
+      dataType: getCompatibleGPUTableEvaluatorDataType(x, type, size),
       source: this
     });
   }

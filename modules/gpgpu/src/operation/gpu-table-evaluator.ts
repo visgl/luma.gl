@@ -398,6 +398,18 @@ export function getGPUTableEvaluator(input: GPUTableEvaluatorInput): GPUTableEva
   return input instanceof GPUTableEvaluator ? input : GPUTableEvaluator.fromGPUVector(input);
 }
 
+/** Returns source dataType only when it exactly matches the requested evaluator layout. */
+export function getCompatibleGPUTableEvaluatorDataType(
+  input: GPUTableEvaluator,
+  type: SignedDataType,
+  size: number
+): arrow.DataType | undefined {
+  const expectedDataType = getArrowDataType(type, size);
+  return input.dataType && arrow.util.compareTypes(input.dataType, expectedDataType)
+    ? input.dataType
+    : undefined;
+}
+
 function validatePackedNumericGPUVector(vector: GPUVector): void {
   if (vector.bufferLayout) {
     throw new Error(
@@ -442,31 +454,32 @@ export function getGPUVectorBuffer(vector: GPUVector): Buffer {
 }
 
 function getInterleavedAttributes(evaluator: GPUTableEvaluator): BufferAttributeLayout[] {
+  const attributes: BufferAttributeLayout[] = [];
+  collectInterleavedAttributes(evaluator, attributes, {byteOffset: 0});
+  return attributes;
+}
+
+function collectInterleavedAttributes(
+  evaluator: GPUTableEvaluator,
+  attributes: BufferAttributeLayout[],
+  state: {byteOffset: number}
+): void {
   const source = evaluator.source;
-  if (!source || source instanceof GPUTableEvaluator || !('inputs' in source)) {
-    return [
-      {
-        attribute: evaluator.toString(),
-        format: getVertexFormat(evaluator.type, evaluator.size),
-        byteOffset: 0
+  if (source && !(source instanceof GPUTableEvaluator) && source.name === 'interleave') {
+    for (const input of Object.values(source.inputs)) {
+      if (input instanceof GPUTableEvaluator) {
+        collectInterleavedAttributes(input, attributes, state);
       }
-    ];
+    }
+    return;
   }
 
-  const attributes: BufferAttributeLayout[] = [];
-  let byteOffset = 0;
-  for (const [name, input] of Object.entries(source.inputs)) {
-    if (!(input instanceof GPUTableEvaluator)) {
-      continue;
-    }
-    attributes.push({
-      attribute: input.id ?? name,
-      format: getVertexFormat(input.type, input.size),
-      byteOffset
-    });
-    byteOffset += input.ValueType.BYTES_PER_ELEMENT * input.size;
-  }
-  return attributes;
+  attributes.push({
+    attribute: evaluator.id ?? evaluator.toString(),
+    format: getVertexFormat(evaluator.type, evaluator.size),
+    byteOffset: state.byteOffset
+  });
+  state.byteOffset += evaluator.ValueType.BYTES_PER_ELEMENT * evaluator.size;
 }
 
 function getVertexFormat(type: SignedDataType, size: number): VertexFormat {
