@@ -186,7 +186,8 @@ export const arithmetic: OperationHandler<ArithmeticOperationInputs> = async ({
   const scalarType = getWGSLType(operationType);
   const zeroLiteral = getZeroValue(operationType);
   const namedInputs = inputs.namedInputs;
-  const useFp32TanPrecisionWorkaround = device.info.gpu === 'intel';
+  const useFp32TanPrecisionWorkaround =
+    device.info.gpu === 'intel' || device.info.vendor === 'intel';
   const source = getArithmeticSource(useFp32TanPrecisionWorkaround).replace(
     '{TAN_IMPL}',
     useFp32TanPrecisionWorkaround ? 'tan_fp32' : 'tan'

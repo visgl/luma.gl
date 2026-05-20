@@ -140,6 +140,7 @@ for (const deviceType of ['webgl', 'webgpu', 'cpu'] as const) {
           t.skip(`${deviceType} not available`);
           return;
         }
+        t.annotate(JSON.stringify(device.info));
         const stat = getRunStats(device);
         const beforeCount = stat?.count ?? 0;
         await cleanEvaluate(device, testCase);
