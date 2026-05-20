@@ -24,6 +24,7 @@ function runBiome(command, commandArguments) {
     [
       'exec',
       'biome',
+      '--',
       command,
       ...commandArguments,
       ...sharedArguments,
