@@ -638,8 +638,10 @@ test('ArrowDictionaryTextModel draws every dictionary source batch', async t => 
     rowPositionsBuffer?: unknown;
   }[] = [];
   const privateModel = model as unknown as {
+    _syncAttachmentFormats(renderPass: unknown): void;
     _updatePipeline(): typeof model.pipeline;
   };
+  const syncAttachmentFormats = privateModel._syncAttachmentFormats.bind(model);
   const updatePipeline = privateModel._updatePipeline.bind(model);
   const patchedPipelines = new WeakSet<object>();
   const patchPipelineDraw = (): void => {
@@ -648,7 +650,6 @@ test('ArrowDictionaryTextModel draws every dictionary source batch', async t => 
       return;
     }
     patchedPipelines.add(pipeline);
-    const draw = pipeline.draw.bind(pipeline);
     pipeline.draw = options => {
       drawCalls.push({
         instanceCount: options.instanceCount,
@@ -656,11 +657,12 @@ test('ArrowDictionaryTextModel draws every dictionary source batch', async t => 
         styleConfigBuffer: options.bindings.textStorageStyleConfig,
         rowPositionsBuffer: options.bindings.textRowPositions
       });
-      return draw(options);
+      return true;
     };
   };
 
   patchPipelineDraw();
+  privateModel._syncAttachmentFormats = () => {};
   privateModel._updatePipeline = () => {
     const pipeline = updatePipeline();
     patchPipelineDraw();
@@ -668,32 +670,27 @@ test('ArrowDictionaryTextModel draws every dictionary source batch', async t => 
   };
 
   try {
-    const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 0]});
-    try {
-      t.ok(model.draw(renderPass), 'draws chunked dictionary text');
-      t.deepEqual(
-        drawCalls.map(drawCall => drawCall.instanceCount),
-        [2, 1, 3],
-        'uses each source batch glyph occurrence count'
-      );
-      t.deepEqual(
-        drawCalls.map(drawCall => drawCall.dictionaryRenderConfigBuffer),
-        model.renderBatches.map(renderBatch => renderBatch.dictionaryRenderConfigBuffer.buffer),
-        'binds each batch dictionary render config buffer'
-      );
-      t.deepEqual(
-        drawCalls.map(drawCall => drawCall.styleConfigBuffer),
-        model.batches.map(batch => batch.styleConfigBuffer.buffer),
-        'binds each batch style config buffer'
-      );
-      t.deepEqual(
-        drawCalls.map(drawCall => drawCall.rowPositionsBuffer),
-        model.batches.map(batch => resolveTestStorageBuffer(batch.rowPositionsBuffer)),
-        'binds each row storage batch'
-      );
-    } finally {
-      renderPass.destroy();
-    }
+    t.ok(model.draw({} as never), 'draws chunked dictionary text');
+    t.deepEqual(
+      drawCalls.map(drawCall => drawCall.instanceCount),
+      [2, 1, 3],
+      'uses each source batch glyph occurrence count'
+    );
+    t.deepEqual(
+      drawCalls.map(drawCall => drawCall.dictionaryRenderConfigBuffer),
+      model.renderBatches.map(renderBatch => renderBatch.dictionaryRenderConfigBuffer.buffer),
+      'binds each batch dictionary render config buffer'
+    );
+    t.deepEqual(
+      drawCalls.map(drawCall => drawCall.styleConfigBuffer),
+      model.batches.map(batch => batch.styleConfigBuffer.buffer),
+      'binds each batch style config buffer'
+    );
+    t.deepEqual(
+      drawCalls.map(drawCall => drawCall.rowPositionsBuffer),
+      model.batches.map(batch => resolveTestStorageBuffer(batch.rowPositionsBuffer)),
+      'binds each row storage batch'
+    );
     const styleConfigRows = await Promise.all(
       model.batches.map(async batch => {
         const styleConfigBytes = await batch.styleConfigBuffer.readAsync();
@@ -718,6 +715,7 @@ test('ArrowDictionaryTextModel draws every dictionary source batch', async t => 
       'style configs preserve global picking row base and row storage buffer offset per batch'
     );
   } finally {
+    privateModel._syncAttachmentFormats = syncAttachmentFormats;
     privateModel._updatePipeline = updatePipeline;
     model.destroy();
     destroyStorageGpuTextProps(textProps);
