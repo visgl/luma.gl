@@ -450,14 +450,23 @@ fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
 const DEFAULT_DICTIONARY_STORAGE_TEXT_SOURCE = /* wgsl */ `
 @group(0) @binding(auto) var fontAtlasTexture : texture_2d<f32>;
 @group(0) @binding(auto) var fontAtlasTextureSampler : sampler;
+// Dictionary text keeps row styling in row buffers, shared glyph layout in
+// dictionary buffers, and uses instance_index for visible glyph occurrences.
+// There is deliberately no per-visible-glyph vertex/occurrence buffer.
 @group(0) @binding(auto) var<storage, read> textRowPositions : array<vec2<f32>>;
 @group(0) @binding(auto) var<storage, read> textRowColors : array<u32>;
 @group(0) @binding(auto) var<storage, read> textRowAngles : array<f32>;
 @group(0) @binding(auto) var<storage, read> textRowSizes : array<f32>;
 @group(0) @binding(auto) var<storage, read> textRowPixelOffsets : array<vec2<f32>>;
 @group(0) @binding(auto) var<storage, read> textRowClipRects : array<vec2<u32>>;
+// textRowDictionaryRecords[row] = (dictionary value index, row glyph start).
+// The extra terminal record stores rowCount/invalid and total visible glyphs.
 @group(0) @binding(auto) var<storage, read> textRowDictionaryRecords : array<vec2<u32>>;
+// textDictionaryGlyphRanges[value] is a half-open range into
+// textDictionaryGlyphRecords for one unique dictionary string.
 @group(0) @binding(auto) var<storage, read> textDictionaryGlyphRanges : array<vec2<u32>>;
+// textDictionaryGlyphRecords[glyph] = (packed i16 x/y layout offset, glyph id).
+// Repeated rows reuse these records instead of copying glyph offsets and ids.
 @group(0) @binding(auto) var<storage, read> textDictionaryGlyphRecords : array<vec2<u32>>;
 @group(0) @binding(auto) var<storage, read> textGlyphFrames : array<vec4<f32>>;
 
@@ -577,6 +586,8 @@ fn emptyFragmentInputs() -> FragmentInputs {
 }
 
 fn findRowIndex(glyphIndex: u32) -> u32 {
+  // Convert a glyph occurrence index back to its row by searching row starts.
+  // This replaces the older per-glyph row-index buffer.
   var low = textDictionaryRenderConfig.rowStart;
   var high = textDictionaryRenderConfig.rowEnd;
   loop {
@@ -596,6 +607,8 @@ fn findRowIndex(glyphIndex: u32) -> u32 {
 
 @vertex
 fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
+  // Each instance is one visible glyph occurrence. The occurrence is not stored;
+  // glyphIndex plus the row/dictionary ranges resolves the shared glyph record.
   let glyphIndex = textDictionaryRenderConfig.glyphIndexBase + inputs.instanceIndex;
   let rowIndex = findRowIndex(glyphIndex);
   if (rowIndex >= textDictionaryRenderConfig.rowEnd) {
@@ -887,9 +900,13 @@ type ArrowDictionaryStorageTextRenderProps = Omit<
 >;
 
 export type ArrowDictionaryStorageTextBatchState = ArrowStorageTextBatchState & {
+  /** Per row `(dictionary index, row glyph start)` records plus one terminal sentinel. */
   rowDictionaryRecordsBuffer: Buffer;
+  /** Per dictionary value half-open ranges into `dictionaryGlyphRecordsBuffer`. */
   dictionaryGlyphRangesBuffer: Buffer;
+  /** Shared per-glyph layout records for unique dictionary values in this Arrow batch. */
   dictionaryGlyphRecordsBuffer: Buffer;
+  /** Glyph atlas frames referenced by the shared dictionary glyph records. */
   glyphFramesBuffer: Buffer;
   dictionaryGlyphCount: number;
   dictionaryValueCount: number;
@@ -899,8 +916,10 @@ export type ArrowDictionaryStorageTextRenderBatchState = {
   rowBindingBatchIndex: number;
   rowStart: number;
   rowEnd: number;
+  /** Global visible-glyph base for this draw batch; added to `instance_index` in WGSL. */
   glyphIndexBase: number;
   glyphCount: number;
+  /** Tiny uniform that scopes row lookup to this render batch. */
   dictionaryRenderConfigBuffer: DynamicBuffer;
 };
 
@@ -915,7 +934,9 @@ export type ArrowDictionaryStorageTextState = {
   glyphAttributeBuildTimeMs: number;
   glyphAttributeByteLength: number;
   compactStreamBuildTimeMs: number;
+  /** Resident dictionary text storage: row records, dictionary ranges, glyph records, configs. */
   compactStreamByteLength: number;
+  /** Currently zero for the compressed dictionary path: instances are implicit draw instances. */
   generatedRenderBufferByteLength: number;
   rowStorageByteLength: number;
   glyphDefinitionStorageByteLength: number;
@@ -3048,6 +3069,8 @@ export function createArrowDictionaryStorageTextState(
   rowStorageByteLength += defaultBuffers.byteLength;
 
   for (const [rowBindingBatchIndex, batchInput] of textInputs.batches.entries()) {
+    // Row/style buffers stay row-aligned and are shared with the storage text path.
+    // The dictionary-specific buffers below only describe text content.
     const rowState = createStorageTextBatchRowState(
       device,
       props,
@@ -3062,6 +3085,8 @@ export function createArrowDictionaryStorageTextState(
       lineHeight: mappingState.lineHeight,
       characterSet: mappingState.characterSet
     });
+    // One record per row plus a terminal sentinel lets the shader recover the
+    // row for an instance_index by binary-searching visible glyph starts.
     const rowDictionaryRecords = createDictionaryRowRecords(batchGlyphStream);
     const rowDictionaryRecordsBuffer = createDictionaryStorageBuffer(
       device,
@@ -3070,6 +3095,8 @@ export function createArrowDictionaryStorageTextState(
       rowDictionaryRecords,
       new Uint32Array(2)
     );
+    // One range per unique dictionary value. Repeated rows reference these
+    // ranges instead of storing their own glyph ids and layout offsets.
     const dictionaryGlyphRangesBuffer = createDictionaryStorageBuffer(
       device,
       props,
@@ -3077,6 +3104,8 @@ export function createArrowDictionaryStorageTextState(
       batchGlyphStream.dictionaryGlyphRanges,
       new Uint32Array(2)
     );
+    // Shared glyph layout records for dictionary strings in this Arrow batch.
+    // This is the main compressed payload and scales with unique dictionary text.
     const dictionaryGlyphRecordsBuffer = createDictionaryStorageBuffer(
       device,
       props,
@@ -3088,6 +3117,8 @@ export function createArrowDictionaryStorageTextState(
     const generatedBufferBatches = planGeneratedBufferBatches({
       device,
       recordOffsets: batchGlyphStream.startIndices,
+      // The dictionary model does not allocate a generated vertex buffer; the
+      // planner is used only to split draw instance counts by device limits.
       recordByteStride: 1,
       maxBatchByteLength: device.limits.maxStorageBufferBindingSize,
       resourceLabel: 'ArrowDictionaryStorageTextModel glyph instances'
@@ -3201,6 +3232,8 @@ function createDictionaryRenderConfigBuffer(
   batchRowIndexBase: number,
   generatedBufferBatch: GeneratedBufferBatch
 ): DynamicBuffer {
+  // The render config is the only per-render-batch dictionary allocation. It
+  // tells WGSL which visible-glyph instance range and row range this draw owns.
   const data = new Uint32Array(
     DICTIONARY_RENDER_CONFIG_BYTE_LENGTH / Uint32Array.BYTES_PER_ELEMENT
   );
@@ -3257,6 +3290,8 @@ function createStorageRowGlyphStartsBuffer(
 function createDictionaryRowRecords(glyphStream: GpuDictionaryCompressedTextStream): Uint32Array {
   const rowCount = glyphStream.rowDictionaryIndices.length;
   const records = new Uint32Array((rowCount + 1) * 2);
+  // Pair each row's dictionary key with the first visible glyph occurrence for
+  // that row. The final sentinel makes row-end lookup a single indexed read.
   for (let rowIndex = 0; rowIndex < rowCount; rowIndex++) {
     records[rowIndex * 2] = glyphStream.rowDictionaryIndices[rowIndex] ?? INVALID_DICTIONARY_INDEX;
     records[rowIndex * 2 + 1] = glyphStream.rowGlyphRanges[rowIndex * 2] ?? 0;

@@ -11,9 +11,14 @@ export type GpuPathExpansionResourceOptions = {
 };
 
 export type GpuPathExpansionInputState = {
-  pathRangesBuffer: Buffer;
   expansionConfigBuffer: Buffer;
   byteLength: number;
+};
+
+export type GpuPathRangeState = {
+  pathRangesBuffer: Buffer;
+  byteLength: number;
+  destroy: () => void;
 };
 
 export type GpuPathGeneratedState = {
@@ -22,14 +27,14 @@ export type GpuPathGeneratedState = {
 };
 
 export type GpuPathExpansionInputProps = {
-  valueOffsets: Int32Array;
-  recordOffsets: readonly number[];
   generatedBufferBatch: GeneratedBufferBatch;
-  batchRowIndexBase: number;
   componentCount: number;
+  recordWordCount: number;
 };
 
-const INDEXED_PATH_VERTEX_WORD_COUNT = 6;
+const PATH_RANGE_WORD_COUNT = 4;
+const COMPACT_PATH_VERTEX_WORD_COUNT = 3;
+const LEGACY_PATH_VERTEX_WORD_COUNT = 6;
 
 const GPU_PATH_EXPANSION_COMPUTE_SOURCE = /* wgsl */ `
 @group(0) @binding(0) var<storage, read> pathValues : array<f32>;
@@ -40,7 +45,7 @@ const GPU_PATH_EXPANSION_COMPUTE_SOURCE = /* wgsl */ `
 const PATH_SEGMENT_FIRST : u32 = 1u;
 const PATH_SEGMENT_LAST : u32 = 2u;
 const PATH_SEGMENT_CLOSED : u32 = 4u;
-const PATH_RECORD_WORD_COUNT : u32 = 6u;
+const COMPACT_PATH_RECORD_WORD_COUNT : u32 = ${COMPACT_PATH_VERTEX_WORD_COUNT}u;
 
 fn getPathComponentCount() -> u32 {
   return pathExpansionConfig[1];
@@ -76,16 +81,19 @@ fn pathIsClosed(pathStart: u32, pointCount: u32) -> bool {
 
 @compute @workgroup_size(64)
 fn main(@builtin(global_invocation_id) globalInvocationId: vec3<u32>) {
-  let batchRowIndex = globalInvocationId.x;
+  let localRowIndex = globalInvocationId.x;
   let rowCount = pathExpansionConfig[0];
-  if (batchRowIndex >= rowCount) {
+  if (localRowIndex >= rowCount) {
     return;
   }
 
-  let pathRange = pathRanges[batchRowIndex];
+  let rowStart = pathExpansionConfig[2];
+  let generatedRecordStart = pathExpansionConfig[3];
+  let recordWordCount = pathExpansionConfig[4];
+  let pathRange = pathRanges[rowStart + localRowIndex];
   let pathStart = pathRange.x;
   let pathEnd = pathRange.y;
-  let outputStart = pathRange.z;
+  let outputStart = pathRange.z - generatedRecordStart;
   let rowIndex = pathRange.w;
   let pointCount = select(0u, pathEnd - pathStart, pathEnd >= pathStart);
   let segmentCount = select(0u, pointCount - 1u, pointCount > 0u);
@@ -112,12 +120,6 @@ fn main(@builtin(global_invocation_id) globalInvocationId: vec3<u32>) {
       }
     }
 
-    let recordWordOffset = (outputStart + segmentOffset) * PATH_RECORD_WORD_COUNT;
-    generatedPathVertices[recordWordOffset] = segmentStartPointIndex;
-    generatedPathVertices[recordWordOffset + 1u] = segmentEndPointIndex;
-    generatedPathVertices[recordWordOffset + 2u] = previousPointIndex;
-    generatedPathVertices[recordWordOffset + 3u] = nextPointIndex;
-
     var flags = select(0u, PATH_SEGMENT_CLOSED, closedPath);
     if (segmentOffset == 0u) {
       flags |= PATH_SEGMENT_FIRST;
@@ -125,8 +127,19 @@ fn main(@builtin(global_invocation_id) globalInvocationId: vec3<u32>) {
     if (segmentOffset == segmentCount - 1u) {
       flags |= PATH_SEGMENT_LAST;
     }
-    generatedPathVertices[recordWordOffset + 4u] = flags;
-    generatedPathVertices[recordWordOffset + 5u] = rowIndex;
+    let recordWordOffset = (outputStart + segmentOffset) * recordWordCount;
+    if (recordWordCount == COMPACT_PATH_RECORD_WORD_COUNT) {
+      generatedPathVertices[recordWordOffset] = segmentStartPointIndex;
+      generatedPathVertices[recordWordOffset + 1u] = flags;
+      generatedPathVertices[recordWordOffset + 2u] = rowIndex;
+    } else {
+      generatedPathVertices[recordWordOffset] = segmentStartPointIndex;
+      generatedPathVertices[recordWordOffset + 1u] = segmentEndPointIndex;
+      generatedPathVertices[recordWordOffset + 2u] = previousPointIndex;
+      generatedPathVertices[recordWordOffset + 3u] = nextPointIndex;
+      generatedPathVertices[recordWordOffset + 4u] = flags;
+      generatedPathVertices[recordWordOffset + 5u] = rowIndex;
+    }
     segmentOffset += 1u;
   }
 }
@@ -142,64 +155,99 @@ const GPU_PATH_EXPANSION_COMPUTE_SHADER_LAYOUT: ShaderLayout = {
   attributes: []
 };
 
-export function createGpuPathExpansionInput(
+export function createGpuPathRangeState(
   device: Device,
   options: GpuPathExpansionResourceOptions,
-  props: GpuPathExpansionInputProps
-): GpuPathExpansionInputState {
-  const {valueOffsets, recordOffsets, generatedBufferBatch, batchRowIndexBase, componentCount} =
-    props;
-  const rowCount = generatedBufferBatch.rowEnd - generatedBufferBatch.rowStart;
-  const pathRanges = new Uint32Array(Math.max(rowCount, 1) * 4);
+  props: {
+    valueOffsets: Int32Array;
+    recordOffsets: readonly number[];
+    batchRowIndexBase: number;
+    rowCount: number;
+  }
+): GpuPathRangeState {
+  const {valueOffsets, recordOffsets, batchRowIndexBase, rowCount} = props;
+  const pathRanges = new Uint32Array(Math.max(rowCount, 1) * PATH_RANGE_WORD_COUNT);
 
-  for (
-    let rowIndex = generatedBufferBatch.rowStart;
-    rowIndex < generatedBufferBatch.rowEnd;
-    rowIndex++
-  ) {
-    const localRowIndex = rowIndex - generatedBufferBatch.rowStart;
-    const rangeOffset = localRowIndex * 4;
+  for (let rowIndex = 0; rowIndex < rowCount; rowIndex++) {
+    const rangeOffset = rowIndex * PATH_RANGE_WORD_COUNT;
     pathRanges[rangeOffset] = Math.max(0, valueOffsets[rowIndex] ?? 0);
     pathRanges[rangeOffset + 1] = Math.max(
       pathRanges[rangeOffset],
       valueOffsets[rowIndex + 1] ?? pathRanges[rangeOffset]
     );
-    pathRanges[rangeOffset + 2] = Math.max(
-      0,
-      (recordOffsets[rowIndex] ?? generatedBufferBatch.recordStart) -
-        generatedBufferBatch.recordStart
-    );
+    pathRanges[rangeOffset + 2] = Math.max(0, recordOffsets[rowIndex] ?? 0);
     pathRanges[rangeOffset + 3] = batchRowIndexBase + rowIndex;
   }
 
-  const expansionConfig = new Uint32Array([rowCount, componentCount]);
+  const pathRangesBuffer = device.createBuffer({
+    id: `${options.id || 'gpu-expanded-path-model'}-path-ranges`,
+    usage: Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
+    data: pathRanges
+  });
+
   return {
-    pathRangesBuffer: device.createBuffer({
-      id: `${options.id || 'gpu-expanded-path-model'}-path-ranges`,
-      usage: Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
-      data: pathRanges
-    }),
+    pathRangesBuffer,
+    byteLength: pathRanges.byteLength,
+    destroy: () => pathRangesBuffer.destroy()
+  };
+}
+
+export function createGpuPathExpansionInput(
+  device: Device,
+  options: GpuPathExpansionResourceOptions,
+  props: GpuPathExpansionInputProps
+): GpuPathExpansionInputState {
+  const {generatedBufferBatch, componentCount, recordWordCount} = props;
+  const rowCount = generatedBufferBatch.rowEnd - generatedBufferBatch.rowStart;
+
+  if (
+    recordWordCount !== COMPACT_PATH_VERTEX_WORD_COUNT &&
+    recordWordCount !== LEGACY_PATH_VERTEX_WORD_COUNT
+  ) {
+    throw new Error(
+      `Unsupported GPU path record word count ${recordWordCount}; expected ${COMPACT_PATH_VERTEX_WORD_COUNT} or ${LEGACY_PATH_VERTEX_WORD_COUNT}`
+    );
+  }
+
+  const expansionConfig = new Uint32Array([
+    rowCount,
+    componentCount,
+    generatedBufferBatch.rowStart,
+    generatedBufferBatch.recordStart,
+    recordWordCount
+  ]);
+  return {
     expansionConfigBuffer: device.createBuffer({
       id: `${options.id || 'gpu-expanded-path-model'}-expansion-config`,
       usage: Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
       data: expansionConfig
     }),
-    byteLength: rowCount * Uint32Array.BYTES_PER_ELEMENT * 4 + expansionConfig.byteLength
+    byteLength: expansionConfig.byteLength
   };
 }
 
 export function createGpuPathGeneratedState(
   device: Device,
   options: GpuPathExpansionResourceOptions,
-  segmentCount: number
+  segmentCount: number,
+  recordWordCount: number
 ): GpuPathGeneratedState {
+  if (
+    recordWordCount !== COMPACT_PATH_VERTEX_WORD_COUNT &&
+    recordWordCount !== LEGACY_PATH_VERTEX_WORD_COUNT
+  ) {
+    throw new Error(
+      `Unsupported GPU path record word count ${recordWordCount}; expected ${COMPACT_PATH_VERTEX_WORD_COUNT} or ${LEGACY_PATH_VERTEX_WORD_COUNT}`
+    );
+  }
+
   const outputRecordCount = Math.max(segmentCount, 1);
-  const byteLength = segmentCount * Uint32Array.BYTES_PER_ELEMENT * INDEXED_PATH_VERTEX_WORD_COUNT;
+  const byteLength = segmentCount * Uint32Array.BYTES_PER_ELEMENT * recordWordCount;
   return {
     compactPathVertexData: device.createBuffer({
       id: `${options.id || 'gpu-expanded-path-model'}-generated-path-vertices`,
       usage: Buffer.VERTEX | Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
-      data: new Uint32Array(outputRecordCount * INDEXED_PATH_VERTEX_WORD_COUNT)
+      data: new Uint32Array(outputRecordCount * recordWordCount)
     }),
     byteLength
   };
@@ -210,6 +258,7 @@ export function dispatchGpuPathExpansionCompute(
   options: GpuPathExpansionResourceOptions,
   state: {
     pathValues: Binding;
+    pathRanges: Binding | Buffer;
     expansionInput: GpuPathExpansionInputState;
     generated: GpuPathGeneratedState;
     rowCount: number;
@@ -222,7 +271,7 @@ export function dispatchGpuPathExpansionCompute(
     shaderLayout: GPU_PATH_EXPANSION_COMPUTE_SHADER_LAYOUT,
     bindings: {
       pathValues: state.pathValues,
-      pathRanges: state.expansionInput.pathRangesBuffer,
+      pathRanges: state.pathRanges,
       pathExpansionConfig: state.expansionInput.expansionConfigBuffer,
       generatedPathVertices: state.generated.compactPathVertexData
     }

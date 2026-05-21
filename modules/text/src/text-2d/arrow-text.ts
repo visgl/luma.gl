@@ -648,6 +648,8 @@ export function buildGpuDictionaryCompressedTextStream({
   startIndices[0] = 0;
   rowDictionaryIndices.fill(INVALID_DICTIONARY_INDEX);
 
+  // Pass 1: lay out each dictionary value once. These records are the shared
+  // payload uploaded to the dictionary model and scale with unique strings.
   for (const chunk of chunks) {
     for (let dictionaryIndex = 0; dictionaryIndex < chunk.dictionaryLength; dictionaryIndex++) {
       const normalizedDictionaryIndex = chunk.dictionaryValueBase + dictionaryIndex;
@@ -698,6 +700,8 @@ export function buildGpuDictionaryCompressedTextStream({
     }
   }
 
+  // Pass 2: build row-to-dictionary and row-to-visible-glyph ranges. These
+  // records scale with rows, while repeated labels only add draw instances.
   for (const chunk of chunks) {
     for (let localRowIndex = 0; localRowIndex < chunk.rowEnd - chunk.rowStart; localRowIndex++) {
       const rowIndex = chunk.rowStart + localRowIndex;
@@ -728,6 +732,8 @@ export function buildGpuDictionaryCompressedTextStream({
 
   const dictionaryGlyphRecords = new Uint32Array(dictionaryGlyphRecordValues);
   const glyphFrames = new Float32Array(glyphFrameValues);
+  // This byte count intentionally excludes visible glyph occurrences; they are
+  // represented by draw instance count, not by an occurrence buffer.
   const compressedStreamByteLength =
     rowGlyphRanges.byteLength +
     rowDictionaryIndices.byteLength +
@@ -872,7 +878,10 @@ function getArrowUtf8DictionaryIndex(
   if (!chunk.indices || !isArrowRowValid(chunk.nullBitmap, chunk.rowOffset, localRowIndex)) {
     return -1;
   }
-  const dictionaryIndex = Number(chunk.indices[localRowIndex] ?? -1);
+  const rowCount = chunk.rowEnd - chunk.rowStart;
+  const physicalRowIndex =
+    chunk.indices.length === rowCount ? localRowIndex : chunk.rowOffset + localRowIndex;
+  const dictionaryIndex = Number(chunk.indices[physicalRowIndex] ?? -1);
   if (
     !Number.isInteger(dictionaryIndex) ||
     dictionaryIndex < 0 ||

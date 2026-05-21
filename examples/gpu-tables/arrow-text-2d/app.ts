@@ -545,8 +545,14 @@ struct TextViewportUniforms {
 @group(0) @binding(auto) var<storage, read> textRowSizes : array<f32>;
 @group(0) @binding(auto) var<storage, read> textRowPixelOffsets : array<vec2<f32>>;
 @group(0) @binding(auto) var<storage, read> textRowClipRects : array<vec2<u32>>;
+// Dictionary model memory: row buffers hold styling and row starts, dictionary
+// buffers hold shared glyph runs, and visible glyph occurrences are implicit
+// draw instances. There is no per-visible-glyph occurrence/vertex buffer.
 @group(0) @binding(auto) var<storage, read> textRowDictionaryRecords : array<vec2<u32>>;
+// textDictionaryGlyphRanges maps one dictionary value to a shared glyph range.
 @group(0) @binding(auto) var<storage, read> textDictionaryGlyphRanges : array<vec2<u32>>;
+// textDictionaryGlyphRecords stores packed layout offset + glyph id once per
+// unique dictionary glyph, then repeated rows reuse those records.
 @group(0) @binding(auto) var<storage, read> textDictionaryGlyphRecords : array<vec2<u32>>;
 @group(0) @binding(auto) var<storage, read> textGlyphFrames : array<vec4<f32>>;
 
@@ -668,6 +674,8 @@ fn emptyFragmentInputs() -> FragmentInputs {
 }
 
 fn findRowIndex(glyphIndex : u32) -> u32 {
+  // Binary-search row glyph starts to recover the row for this instance.
+  // This avoids storing a row id for every visible glyph occurrence.
   var low = textDictionaryRenderConfig.rowStart;
   var high = textDictionaryRenderConfig.rowEnd;
   loop {
@@ -687,6 +695,8 @@ fn findRowIndex(glyphIndex : u32) -> u32 {
 
 @vertex
 fn vertexMain(inputs : VertexInputs) -> FragmentInputs {
+  // instanceIndex is the visible glyph occurrence. The row record points to a
+  // dictionary value, and the dictionary range points to shared glyph layout.
   let glyphIndex = textDictionaryRenderConfig.glyphIndexBase + inputs.instanceIndex;
   let rowIndex = findRowIndex(glyphIndex);
   if (rowIndex >= textDictionaryRenderConfig.rowEnd) {
@@ -2517,10 +2527,15 @@ function getTextModelGlyphCount(textModel: ActiveTextModel): number {
 }
 
 function getGpuVectorByteLength(vector: GPUVector): number {
-  return vector.data.reduce(
-    (byteLength, gpuData) => byteLength + gpuData.length * gpuData.byteStride,
-    0
-  );
+  return vector.data.reduce((byteLength, gpuData) => {
+    const variableLengthByteLength = gpuData.readbackMetadata?.valueByteLength;
+    return (
+      byteLength +
+      (variableLengthByteLength !== undefined
+        ? variableLengthByteLength
+        : gpuData.length * gpuData.byteStride)
+    );
+  }, 0);
 }
 
 function getExpandedAttributeVectorByteLength(vector: GPUVector, glyphCount: number): number {

@@ -691,5 +691,6 @@ function getArrowDictionaryIndexBufferSource(
     subarray: (start?: number, end?: number) => ArrayBufferView;
     length: number;
   };
-  return values.subarray(0, data.length);
+  const startIndex = values.length === data.length ? 0 : (data.offset ?? 0);
+  return values.subarray(startIndex, startIndex + data.length);
 }

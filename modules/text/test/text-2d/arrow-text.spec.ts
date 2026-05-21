@@ -129,7 +129,47 @@ test('dictionary Arrow UTF-8 helpers expand repeated, chunked, sliced, and null 
   ).slice(1) as arrow.Vector<ArrowUtf8Dictionary>;
   const slicedTextInput = buildGpuDictionaryUtf8TextInput(sliced);
   t.deepEqual(slicedTextInput.startIndices, [0, 2, 3], 'sliced dictionary rows stay normalized');
+  t.deepEqual(
+    Array.from(slicedTextInput.rowDictionaryIndices),
+    [1, 2],
+    'sliced dictionary rows read dictionary keys from the logical row offset'
+  );
   t.equal(slicedTextInput.byteLength, 3, 'sliced dictionary output reserves glyphs per row');
+  const slicedStream = buildGpuDictionaryCompressedTextStream({
+    texts: sliced,
+    mapping,
+    baselineOffset: 1,
+    lineHeight: 10
+  });
+  t.deepEqual(
+    slicedStream.startIndices,
+    [0, 2, 3],
+    'compressed sliced dictionary rows use the same logical key range'
+  );
+  t.deepEqual(
+    Array.from(slicedStream.rowDictionaryIndices),
+    [1, 2],
+    'compressed sliced dictionary rows preserve shifted dictionary keys'
+  );
+  const offsetDictionaryTexts = makeExplicitArrowDictionaryTexts(
+    ['skip', 'AB', 'A'],
+    new Int32Array([0, 1, 2]),
+    null,
+    0,
+    1,
+    2
+  );
+  const offsetTextInput = buildGpuDictionaryUtf8TextInput(offsetDictionaryTexts);
+  t.deepEqual(
+    offsetTextInput.startIndices,
+    [0, 2, 3],
+    'offset dictionary data rows stay normalized'
+  );
+  t.deepEqual(
+    Array.from(offsetTextInput.rowDictionaryIndices),
+    [1, 2],
+    'offset dictionary data rows read dictionary keys from data.offset'
+  );
 
   const nullableDictionaryValues = makeExplicitArrowDictionaryTexts(
     ['AB', null, 'A'],
@@ -284,7 +324,9 @@ function makeExplicitArrowDictionaryTexts(
   dictionaryValues: readonly (string | null)[],
   indices: Int32Array,
   nullBitmap: Uint8Array | null = null,
-  nullCount = 0
+  nullCount = 0,
+  offset = 0,
+  length = indices.length - offset
 ): arrow.Vector<ArrowUtf8Dictionary> {
   const dictionaryType = new arrow.Dictionary(new arrow.Utf8(), new arrow.Int32());
   const dictionary = arrow.vectorFromArray(
@@ -293,7 +335,8 @@ function makeExplicitArrowDictionaryTexts(
   ) as arrow.Vector<arrow.Utf8>;
   const data = arrow.makeData({
     type: dictionaryType,
-    length: indices.length,
+    length,
+    offset,
     nullCount,
     nullBitmap,
     data: indices,

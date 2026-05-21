@@ -19,11 +19,20 @@ import {makeArrowGPUVector} from './arrow-gpu-table-adapters';
 import {
   createGpuPathExpansionInput,
   createGpuPathGeneratedState,
+  createGpuPathRangeState,
   dispatchGpuPathExpansionCompute
 } from './gpu-path-expansion';
 import {
+  prepareArrowStoragePathGPUVectors,
   resolveArrowStoragePathInputs,
+  type PreparedArrowStoragePathGPUVectors,
   type ResolvedArrowStoragePathBatchInputs
+} from './arrow-storage-path-gpu-vectors';
+import type {ArrowPathSourceVectors, PrepareArrowPathGPUVectorsOptions} from './arrow-path-model';
+
+export {
+  prepareArrowStoragePathGPUVectors,
+  type PreparedArrowStoragePathGPUVectors
 } from './arrow-storage-path-gpu-vectors';
 
 const SEGMENT_START_POINT_INDICES_COLUMN = 'segmentStartPointIndices';
@@ -33,34 +42,46 @@ const SEGMENT_NEXT_POINT_INDICES_COLUMN = 'segmentNextPointIndices';
 const SEGMENT_FLAGS_COLUMN = 'segmentFlags';
 const ROW_INDICES_COLUMN = 'rowIndices';
 const COMPACT_PATH_VERTEX_DATA = 'compactPathVertexData';
+const PATH_RANGES_COLUMN = 'pathRanges';
+const PATH_VIEW_ORIGINS_COLUMN = 'pathViewOrigins';
 
-const INDEXED_PATH_VERTEX_BYTE_STRIDE = Uint32Array.BYTES_PER_ELEMENT * 6;
-const SEGMENT_END_POINT_INDICES_BYTE_OFFSET = Uint32Array.BYTES_PER_ELEMENT;
-const SEGMENT_PREVIOUS_POINT_INDICES_BYTE_OFFSET = Uint32Array.BYTES_PER_ELEMENT * 2;
-const SEGMENT_NEXT_POINT_INDICES_BYTE_OFFSET = Uint32Array.BYTES_PER_ELEMENT * 3;
-const SEGMENT_FLAGS_BYTE_OFFSET = Uint32Array.BYTES_PER_ELEMENT * 4;
-const ROW_INDICES_BYTE_OFFSET = Uint32Array.BYTES_PER_ELEMENT * 5;
+const COMPACT_PATH_VERTEX_BYTE_STRIDE = Uint32Array.BYTES_PER_ELEMENT * 3;
+const LEGACY_PATH_VERTEX_BYTE_STRIDE = Uint32Array.BYTES_PER_ELEMENT * 6;
+const LEGACY_SEGMENT_END_POINT_INDICES_BYTE_OFFSET = Uint32Array.BYTES_PER_ELEMENT;
+const LEGACY_SEGMENT_PREVIOUS_POINT_INDICES_BYTE_OFFSET = Uint32Array.BYTES_PER_ELEMENT * 2;
+const LEGACY_SEGMENT_NEXT_POINT_INDICES_BYTE_OFFSET = Uint32Array.BYTES_PER_ELEMENT * 3;
+const LEGACY_SEGMENT_FLAGS_BYTE_OFFSET = Uint32Array.BYTES_PER_ELEMENT * 4;
+const LEGACY_ROW_INDICES_BYTE_OFFSET = Uint32Array.BYTES_PER_ELEMENT * 5;
+const COMPACT_SEGMENT_FLAGS_BYTE_OFFSET = Uint32Array.BYTES_PER_ELEMENT;
+const COMPACT_ROW_INDICES_BYTE_OFFSET = Uint32Array.BYTES_PER_ELEMENT * 2;
 
 const DEFAULT_STORAGE_PATH_COLOR: [number, number, number, number] = [255, 255, 255, 255];
 const DEFAULT_STORAGE_PATH_WIDTH = 1;
 
 type ArrowPathCoordinateType = arrow.List<arrow.FixedSizeList<arrow.Float32>>;
 type ArrowPathColorType = arrow.FixedSizeList<arrow.Uint8>;
-type StoragePathOwnedResource = Pick<GPUVector, 'destroy'> | Pick<DynamicBuffer, 'destroy'>;
+type ArrowPathViewOriginType = arrow.FixedSizeList<arrow.Float32>;
+type StoragePathOwnedResource =
+  | Pick<GPUVector, 'destroy'>
+  | Pick<DynamicBuffer, 'destroy'>
+  | Pick<Buffer, 'destroy'>;
+type StoragePathRecordMode = 'compact' | 'legacy';
 
 const DEFAULT_STORAGE_ARROW_PATH_SHADER_LAYOUT: ShaderLayout = {
   attributes: [
     {name: SEGMENT_START_POINT_INDICES_COLUMN, location: 0, type: 'u32', stepMode: 'instance'},
-    {name: SEGMENT_END_POINT_INDICES_COLUMN, location: 1, type: 'u32', stepMode: 'instance'},
+    {name: SEGMENT_FLAGS_COLUMN, location: 1, type: 'u32', stepMode: 'instance'},
     {name: ROW_INDICES_COLUMN, location: 2, type: 'u32', stepMode: 'instance'}
   ],
   bindings: []
 };
 
 const DEFAULT_STORAGE_ARROW_PATH_SOURCE = /* wgsl */ `
-@group(0) @binding(auto) var<storage, read> pathValues : array<f32>;
-@group(0) @binding(auto) var<storage, read> pathRowColors : array<u32>;
-@group(0) @binding(auto) var<storage, read> pathRowWidths : array<f32>;
+  @group(0) @binding(auto) var<storage, read> pathValues : array<f32>;
+  @group(0) @binding(auto) var<storage, read> pathRanges : array<vec4<u32>>;
+  @group(0) @binding(auto) var<storage, read> pathViewOrigins : array<vec4<f32>>;
+  @group(0) @binding(auto) var<storage, read> pathRowColors : array<u32>;
+  @group(0) @binding(auto) var<storage, read> pathRowWidths : array<f32>;
 
 struct PathStorageStyleConfig {
   constantColor : vec4<f32>,
@@ -69,9 +90,9 @@ struct PathStorageStyleConfig {
   useRowWidths : u32,
   batchRowIndexBase : u32,
   pathComponentCount : u32,
+  useViewOrigins : u32,
   _padding0 : u32,
   _padding1 : u32,
-  _padding2 : u32,
 };
 
 @group(0) @binding(auto) var<uniform> pathStorageStyleConfig : PathStorageStyleConfig;
@@ -79,7 +100,7 @@ struct PathStorageStyleConfig {
 struct VertexInputs {
   @builtin(vertex_index) vertexIndex : u32,
   @location(0) segmentStartPointIndices : u32,
-  @location(1) segmentEndPointIndices : u32,
+  @location(1) segmentFlags : u32,
   @location(2) rowIndices : u32,
 };
 
@@ -113,9 +134,22 @@ fn readPathPoint(pointIndex: u32) -> vec4<f32> {
   );
 }
 
+fn readPathRange(globalRowIndex: u32) -> vec4<u32> {
+  return pathRanges[globalRowIndex - pathStorageStyleConfig.batchRowIndexBase];
+}
+
+fn readPathViewOrigin(rowIndex: u32) -> vec4<f32> {
+  if (pathStorageStyleConfig.useViewOrigins == 0u) {
+    return vec4<f32>(0.0);
+  }
+  return pathViewOrigins[rowIndex];
+}
+
 @vertex
 fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
   let rowIndex = inputs.rowIndices - pathStorageStyleConfig.batchRowIndexBase;
+  let pathRange = readPathRange(inputs.rowIndices);
+  let segmentEndPointIndex = min(inputs.segmentStartPointIndices + 1u, pathRange.y - 1u);
   let pathWidth = select(
     pathStorageStyleConfig.constantWidth,
     pathRowWidths[rowIndex],
@@ -123,9 +157,9 @@ fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
   );
   let pathPosition = select(
     readPathPoint(inputs.segmentStartPointIndices),
-    readPathPoint(inputs.segmentEndPointIndices),
+    readPathPoint(segmentEndPointIndex),
     (inputs.vertexIndex & 1u) == 1u
-  );
+  ) + readPathViewOrigin(rowIndex);
   var outputs : FragmentInputs;
   outputs.position = vec4<f32>(
     pathPosition.xyz + vec3<f32>(0.0, 0.0, pathWidth * 0.0),
@@ -155,6 +189,8 @@ export type ArrowStoragePathInputProps = Omit<
   colors?: GPUVector<ArrowPathColorType>;
   /** Optional per-path widths, one Arrow row per path. */
   widths?: GPUVector<arrow.Float32>;
+  /** Optional per-path view-space origins, one Arrow row per path. */
+  viewOrigins?: GPUVector<ArrowPathViewOriginType>;
   /** Constant fallback path color used when `colors` is absent. */
   color?: [number, number, number, number];
   /** Constant fallback path width used when `widths` is absent. */
@@ -163,7 +199,7 @@ export type ArrowStoragePathInputProps = Omit<
 
 type ArrowStoragePathRenderProps = Omit<
   ArrowStoragePathInputProps,
-  'paths' | 'colors' | 'widths' | 'color' | 'width'
+  'paths' | 'colors' | 'widths' | 'viewOrigins' | 'color' | 'width'
 >;
 
 export type ArrowStoragePathBatchState = {
@@ -171,6 +207,8 @@ export type ArrowStoragePathBatchState = {
   rowCount: number;
   segmentCount: number;
   pathValuesBinding: Binding;
+  pathRangesBinding: Binding;
+  pathViewOriginsBinding: Binding;
   rowColorsBinding: Binding;
   rowWidthsBinding: Binding;
   styleConfigBuffer: DynamicBuffer;
@@ -187,6 +225,8 @@ export type ArrowStoragePathRenderBatchState = {
 export type ArrowStoragePathState = {
   segmentCount: number;
   pathRangeBuildTimeMs: number;
+  pathRangeByteLength: number;
+  pathRecordByteStride: number;
   compactPathVertexByteLength: number;
   generatedRenderBufferByteLength: number;
   rowStorageByteLength: number;
@@ -208,11 +248,13 @@ export type ArrowStoragePathModelProps =
 type StoragePathDefaultBindings = {
   colorsBinding: Binding;
   widthsBinding: Binding;
+  viewOriginsBinding: Binding;
   byteLength: number;
   ownedResources: StoragePathOwnedResource[];
 };
 
 type StoragePathBatchRowState = {
+  pathViewOriginsBinding: Binding;
   rowColorsBinding: Binding;
   rowWidthsBinding: Binding;
   styleConfigBuffer: DynamicBuffer;
@@ -225,8 +267,18 @@ type StoragePathBatchRowState = {
  * while keeping per-row style values as storage-buffer reads during rendering.
  */
 export class ArrowStoragePathModel extends Model {
+  static async prepareGPUVectors(
+    device: Device,
+    sourceVectors: ArrowPathSourceVectors,
+    options: PrepareArrowPathGPUVectorsOptions = {}
+  ): Promise<PreparedArrowStoragePathGPUVectors> {
+    return prepareArrowStoragePathGPUVectors(device, sourceVectors, options);
+  }
+
   segmentCount!: number;
   pathRangeBuildTimeMs!: number;
+  pathRangeByteLength!: number;
+  pathRecordByteStride!: number;
   compactPathVertexByteLength!: number;
   generatedRenderBufferByteLength!: number;
   rowStorageByteLength!: number;
@@ -261,11 +313,15 @@ export class ArrowStoragePathModel extends Model {
     const nextUsesExternalState = hasArrowStoragePathState(nextProps);
     const pathProps = props as Partial<ArrowStoragePathInputProps>;
     const shouldReplaceExternalState = 'storageState' in props && props.storageState !== undefined;
-    const shouldReplaceState = shouldReplaceExternalState || pathProps.paths !== undefined;
+    const shouldReplaceState =
+      shouldReplaceExternalState ||
+      pathProps.paths !== undefined ||
+      pathProps.shaderLayout !== undefined;
     const shouldRefreshRowBindings =
       !nextUsesExternalState &&
       (pathProps.colors !== undefined ||
         pathProps.widths !== undefined ||
+        pathProps.viewOrigins !== undefined ||
         pathProps.color !== undefined ||
         pathProps.width !== undefined);
 
@@ -334,6 +390,8 @@ export class ArrowStoragePathModel extends Model {
   private applyStorageState(storageState: ArrowStoragePathState): void {
     this.segmentCount = storageState.segmentCount;
     this.pathRangeBuildTimeMs = storageState.pathRangeBuildTimeMs;
+    this.pathRangeByteLength = storageState.pathRangeByteLength;
+    this.pathRecordByteStride = storageState.pathRecordByteStride;
     this.compactPathVertexByteLength = storageState.compactPathVertexByteLength;
     this.generatedRenderBufferByteLength = storageState.generatedRenderBufferByteLength;
     this.rowStorageByteLength = storageState.rowStorageByteLength;
@@ -347,6 +405,23 @@ export class ArrowStoragePathModel extends Model {
   }
 }
 
+function getStoragePathRecordMode(shaderLayout: ShaderLayout): StoragePathRecordMode {
+  const shaderAttributeNames = new Set(shaderLayout.attributes.map(attribute => attribute.name));
+  return shaderRequestsLegacySegmentAttributes(shaderAttributeNames) ? 'legacy' : 'compact';
+}
+
+function shaderRequestsLegacySegmentAttributes(shaderAttributeNames: Set<string>): boolean {
+  return (
+    shaderAttributeNames.has(SEGMENT_END_POINT_INDICES_COLUMN) ||
+    shaderAttributeNames.has(SEGMENT_PREVIOUS_POINT_INDICES_COLUMN) ||
+    shaderAttributeNames.has(SEGMENT_NEXT_POINT_INDICES_COLUMN)
+  );
+}
+
+function getStoragePathRecordByteStride(recordMode: StoragePathRecordMode): number {
+  return recordMode === 'legacy' ? LEGACY_PATH_VERTEX_BYTE_STRIDE : COMPACT_PATH_VERTEX_BYTE_STRIDE;
+}
+
 export function createArrowStoragePathState(
   device: Device,
   props: ArrowStoragePathInputProps
@@ -355,22 +430,40 @@ export function createArrowStoragePathState(
     throw new Error('createArrowStoragePathState requires a WebGPU device');
   }
   const pathRangeBuildStartTime = getNow();
+  const shaderLayout = props.shaderLayout ?? DEFAULT_STORAGE_ARROW_PATH_SHADER_LAYOUT;
+  const pathRecordMode = getStoragePathRecordMode(shaderLayout);
+  const pathRecordByteStride = getStoragePathRecordByteStride(pathRecordMode);
+  const pathRecordWordCount = pathRecordByteStride / Uint32Array.BYTES_PER_ELEMENT;
   const pathInputs = resolveArrowStoragePathInputs(props);
   const defaultBindings = createStoragePathDefaultBindings(device, props);
   const ownedRowBindingResources: StoragePathOwnedResource[] = [...defaultBindings.ownedResources];
+  const ownedPathRangeResources: StoragePathOwnedResource[] = [];
   const batches: ArrowStoragePathBatchState[] = [];
   const renderBatches: ArrowStoragePathRenderBatchState[] = [];
   let segmentCount = 0;
+  let pathRangeByteLength = 0;
   let generatedRenderBufferByteLength = 0;
   let rowStorageByteLength = defaultBindings.byteLength;
   let transientComputeInputByteLength = 0;
 
   for (const [rowBindingBatchIndex, batchInput] of pathInputs.batches.entries()) {
+    const pathRangeState = createGpuPathRangeState(
+      device,
+      {id: props.id},
+      {
+        valueOffsets: batchInput.valueOffsets,
+        recordOffsets: batchInput.recordOffsets,
+        batchRowIndexBase: batchInput.batchRowIndexBase,
+        rowCount: batchInput.rowCount
+      }
+    );
+    ownedPathRangeResources.push(pathRangeState);
+    pathRangeByteLength += pathRangeState.byteLength;
     const rowState = createStoragePathBatchRowState(device, props, batchInput, defaultBindings);
     const generatedBufferBatches = planGeneratedBufferBatches({
       device,
       recordOffsets: batchInput.recordOffsets,
-      recordByteStride: INDEXED_PATH_VERTEX_BYTE_STRIDE,
+      recordByteStride: pathRecordByteStride,
       maxBatchByteLength: device.limits.maxStorageBufferBindingSize,
       resourceLabel: 'ArrowStoragePathModel indexed generated path vertex data'
     });
@@ -380,23 +473,23 @@ export function createArrowStoragePathState(
         device,
         {id: props.id},
         {
-          valueOffsets: batchInput.valueOffsets,
-          recordOffsets: batchInput.recordOffsets,
           generatedBufferBatch,
-          batchRowIndexBase: batchInput.batchRowIndexBase,
-          componentCount: batchInput.componentCount
+          componentCount: batchInput.componentCount,
+          recordWordCount: pathRecordWordCount
         }
       );
       const generated = createGpuPathGeneratedState(
         device,
         {id: props.id},
-        generatedBufferBatch.recordCount
+        generatedBufferBatch.recordCount,
+        pathRecordWordCount
       );
       dispatchGpuPathExpansionCompute(
         device,
         {id: props.id},
         {
           pathValues: batchInput.pathValuesBinding,
+          pathRanges: pathRangeState.pathRangesBuffer,
           expansionInput,
           generated,
           rowCount: generatedBufferBatch.rowEnd - generatedBufferBatch.rowStart,
@@ -412,7 +505,6 @@ export function createArrowStoragePathState(
       });
       generatedRenderBufferByteLength += generated.byteLength;
       transientComputeInputByteLength += expansionInput.byteLength;
-      expansionInput.pathRangesBuffer.destroy();
       expansionInput.expansionConfigBuffer.destroy();
     }
 
@@ -421,7 +513,9 @@ export function createArrowStoragePathState(
       batchRowIndexBase: batchInput.batchRowIndexBase,
       rowCount: batchInput.rowCount,
       segmentCount: batchInput.segmentCount,
-      pathValuesBinding: batchInput.pathValuesBinding
+      pathValuesBinding: batchInput.pathValuesBinding,
+      pathRangesBinding: pathRangeState.pathRangesBuffer,
+      pathViewOriginsBinding: rowState.pathViewOriginsBinding
     });
     ownedRowBindingResources.push(...rowState.ownedResources);
     rowStorageByteLength += rowState.ownedByteLength;
@@ -434,6 +528,8 @@ export function createArrowStoragePathState(
   return {
     segmentCount,
     pathRangeBuildTimeMs: getNow() - pathRangeBuildStartTime,
+    pathRangeByteLength,
+    pathRecordByteStride,
     compactPathVertexByteLength: generatedRenderBufferByteLength,
     generatedRenderBufferByteLength,
     rowStorageByteLength,
@@ -451,6 +547,7 @@ export function createArrowStoragePathState(
       }
       destroyed = true;
       destroyStoragePathResources(ownedRowBindingResources);
+      destroyStoragePathResources(ownedPathRangeResources);
       for (const renderBatch of renderBatches) {
         renderBatch.compactPathVertexData.destroy();
       }
@@ -474,7 +571,10 @@ function createArrowStoragePathModelProps(
       ...(props.attributes || {}),
       [COMPACT_PATH_VERTEX_DATA]: firstRenderBatch.compactPathVertexData
     },
-    bufferLayout: [...(props.bufferLayout || []), createCompactPathBufferLayout(shaderLayout)],
+    bufferLayout: [
+      ...(props.bufferLayout || []),
+      createCompactPathBufferLayout(shaderLayout, storageState.pathRecordByteStride)
+    ],
     topology: props.topology ?? 'line-list',
     vertexCount: props.vertexCount ?? 2,
     instanceCount: firstRenderBatch.segmentCount
@@ -488,14 +588,20 @@ function createArrowStoragePathBindings(
   return {
     ...(props.bindings || {}),
     pathValues: batch.pathValuesBinding,
+    [PATH_RANGES_COLUMN]: batch.pathRangesBinding,
+    [PATH_VIEW_ORIGINS_COLUMN]: batch.pathViewOriginsBinding,
     pathRowColors: batch.rowColorsBinding,
     pathRowWidths: batch.rowWidthsBinding,
     pathStorageStyleConfig: batch.styleConfigBuffer
   };
 }
 
-function createCompactPathBufferLayout(shaderLayout: ShaderLayout): BufferLayout {
+function createCompactPathBufferLayout(
+  shaderLayout: ShaderLayout,
+  pathRecordByteStride: number
+): BufferLayout {
   const shaderAttributeNames = new Set(shaderLayout.attributes.map(attribute => attribute.name));
+  const useLegacyRecordLayout = pathRecordByteStride === LEGACY_PATH_VERTEX_BYTE_STRIDE;
   const attributes: NonNullable<BufferLayout['attributes']> = [];
   if (shaderAttributeNames.has(SEGMENT_START_POINT_INDICES_COLUMN)) {
     attributes.push({
@@ -504,45 +610,54 @@ function createCompactPathBufferLayout(shaderLayout: ShaderLayout): BufferLayout
       byteOffset: 0
     });
   }
-  if (shaderAttributeNames.has(SEGMENT_END_POINT_INDICES_COLUMN)) {
+  if (!useLegacyRecordLayout && shaderRequestsLegacySegmentAttributes(shaderAttributeNames)) {
+    throw new Error(
+      'ArrowStoragePathModel storageState uses compact path records, but the shader layout requests legacy segment neighbor attributes'
+    );
+  }
+  if (useLegacyRecordLayout && shaderAttributeNames.has(SEGMENT_END_POINT_INDICES_COLUMN)) {
     attributes.push({
       attribute: SEGMENT_END_POINT_INDICES_COLUMN,
       format: 'uint32',
-      byteOffset: SEGMENT_END_POINT_INDICES_BYTE_OFFSET
+      byteOffset: LEGACY_SEGMENT_END_POINT_INDICES_BYTE_OFFSET
     });
   }
-  if (shaderAttributeNames.has(SEGMENT_PREVIOUS_POINT_INDICES_COLUMN)) {
+  if (useLegacyRecordLayout && shaderAttributeNames.has(SEGMENT_PREVIOUS_POINT_INDICES_COLUMN)) {
     attributes.push({
       attribute: SEGMENT_PREVIOUS_POINT_INDICES_COLUMN,
       format: 'uint32',
-      byteOffset: SEGMENT_PREVIOUS_POINT_INDICES_BYTE_OFFSET
+      byteOffset: LEGACY_SEGMENT_PREVIOUS_POINT_INDICES_BYTE_OFFSET
     });
   }
-  if (shaderAttributeNames.has(SEGMENT_NEXT_POINT_INDICES_COLUMN)) {
+  if (useLegacyRecordLayout && shaderAttributeNames.has(SEGMENT_NEXT_POINT_INDICES_COLUMN)) {
     attributes.push({
       attribute: SEGMENT_NEXT_POINT_INDICES_COLUMN,
       format: 'uint32',
-      byteOffset: SEGMENT_NEXT_POINT_INDICES_BYTE_OFFSET
+      byteOffset: LEGACY_SEGMENT_NEXT_POINT_INDICES_BYTE_OFFSET
     });
   }
   if (shaderAttributeNames.has(SEGMENT_FLAGS_COLUMN)) {
     attributes.push({
       attribute: SEGMENT_FLAGS_COLUMN,
       format: 'uint32',
-      byteOffset: SEGMENT_FLAGS_BYTE_OFFSET
+      byteOffset: useLegacyRecordLayout
+        ? LEGACY_SEGMENT_FLAGS_BYTE_OFFSET
+        : COMPACT_SEGMENT_FLAGS_BYTE_OFFSET
     });
   }
   if (shaderAttributeNames.has(ROW_INDICES_COLUMN)) {
     attributes.push({
       attribute: ROW_INDICES_COLUMN,
       format: 'uint32',
-      byteOffset: ROW_INDICES_BYTE_OFFSET
+      byteOffset: useLegacyRecordLayout
+        ? LEGACY_ROW_INDICES_BYTE_OFFSET
+        : COMPACT_ROW_INDICES_BYTE_OFFSET
     });
   }
   return {
     name: COMPACT_PATH_VERTEX_DATA,
     stepMode: 'instance',
-    byteStride: INDEXED_PATH_VERTEX_BYTE_STRIDE,
+    byteStride: pathRecordByteStride,
     attributes
   };
 }
@@ -566,11 +681,20 @@ function createStoragePathDefaultBindings(
     `${id}-default-row-widths`,
     arrow.vectorFromArray([props.width ?? DEFAULT_STORAGE_PATH_WIDTH], new arrow.Float32())
   );
+  const viewOriginsVector = createStoragePathOwnedGpuVector(
+    device,
+    `${id}-default-view-origins`,
+    makeArrowFixedSizeListVector(new arrow.Float32(), 4, new Float32Array(4))
+  );
   return {
     colorsBinding: getStoragePathGpuVectorBinding(colorsVector),
     widthsBinding: getStoragePathGpuVectorBinding(widthsVector),
-    byteLength: Uint8Array.BYTES_PER_ELEMENT * 4 + Float32Array.BYTES_PER_ELEMENT,
-    ownedResources: [colorsVector, widthsVector]
+    viewOriginsBinding: getStoragePathGpuVectorBinding(viewOriginsVector),
+    byteLength:
+      Uint8Array.BYTES_PER_ELEMENT * 4 +
+      Float32Array.BYTES_PER_ELEMENT +
+      Float32Array.BYTES_PER_ELEMENT * 4,
+    ownedResources: [colorsVector, widthsVector, viewOriginsVector]
   };
 }
 
@@ -591,6 +715,7 @@ function createStoragePathBatchRowState(
     data: styleConfigData
   });
   return {
+    pathViewOriginsBinding: batchInput.viewOriginsBinding ?? defaultBindings.viewOriginsBinding,
     rowColorsBinding: batchInput.colorsBinding ?? defaultBindings.colorsBinding,
     rowWidthsBinding: batchInput.widthsBinding ?? defaultBindings.widthsBinding,
     styleConfigBuffer,
@@ -634,6 +759,7 @@ function createStoragePathStyleConfigData(
   uintValues[6] = props.widths ? 1 : 0;
   uintValues[7] = batchRowIndexBase;
   uintValues[8] = pathComponentCount;
+  uintValues[9] = props.viewOrigins ? 1 : 0;
   return uintValues;
 }
 
@@ -659,7 +785,9 @@ function refreshArrowStoragePathRowBindings(
       batchRowIndexBase: previousBatch.batchRowIndexBase,
       rowCount: previousBatch.rowCount,
       segmentCount: previousBatch.segmentCount,
-      pathValuesBinding: previousBatch.pathValuesBinding
+      pathValuesBinding: previousBatch.pathValuesBinding,
+      pathRangesBinding: previousBatch.pathRangesBinding,
+      pathViewOriginsBinding: rowState.pathViewOriginsBinding
     };
   });
 
