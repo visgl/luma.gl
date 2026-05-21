@@ -45,6 +45,7 @@ export {
 } from './arrow/arrow-matrix-vector';
 export {
   expandArrowVector,
+  getArrowVectorByteLength,
   type ArrowVectorRowMapping
 } from './arrow/arrow-vector-utils';
 
@@ -80,20 +81,28 @@ export {ArrowModel, type ArrowModelGPUTable, type ArrowModelProps} from './arrow
 export {
   ArrowPathModel,
   buildArrowPathSegmentTable,
+  createArrowPathPreparedState,
+  prepareArrowPathGPUVectors,
   type ArrowPathModelProps,
+  type ArrowPathPreparedState,
   type ArrowPathRenderBatchState,
   type ArrowPathSegmentLayout,
   type ArrowPathSegmentTable,
-  type ArrowPathSourceVectors
+  type ArrowPathSourceVectors,
+  type ArrowPathViewOriginUpdateProps,
+  type PreparedArrowPathGPUVectors,
+  type PrepareArrowPathGPUVectorsOptions
 } from './arrow/arrow-path-model';
 export {
   ArrowStoragePathModel,
   createArrowStoragePathState,
+  prepareArrowStoragePathGPUVectors,
   type ArrowStoragePathBatchState,
   type ArrowStoragePathInputProps,
   type ArrowStoragePathModelProps,
   type ArrowStoragePathRenderBatchState,
-  type ArrowStoragePathState
+  type ArrowStoragePathState,
+  type PreparedArrowStoragePathGPUVectors
 } from './arrow/arrow-storage-path-model';
 export {
   getArrowVertexFormat,

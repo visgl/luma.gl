@@ -42,6 +42,15 @@ import {
 
 const appendableColumnsByBatch = new WeakMap<GPURecordBatch, AppendableGPUColumn[]>();
 
+type ArrowUtf8DictionaryIndexType =
+  | arrow.Int8
+  | arrow.Int16
+  | arrow.Int32
+  | arrow.Uint8
+  | arrow.Uint16
+  | arrow.Uint32;
+type ArrowUtf8Dictionary = arrow.Dictionary<arrow.Utf8, ArrowUtf8DictionaryIndexType>;
+
 /** Props for uploading one Arrow record batch into a generic GPU record batch. */
 export type ArrowGPURecordBatchProps = ArrowVertexFormatOptions & {
   /** Shader layout that selects which Arrow columns should be uploaded. */
@@ -96,6 +105,25 @@ export function makeArrowGPUData<T extends arrow.DataType>(
 ): GPUData<T> {
   const arrowType = data.type as T;
   const readbackMetadata = getArrowGPUDataReadbackMetadata(data) as GPUDataReadbackMetadata;
+
+  if (isArrowUtf8DictionaryType(arrowType)) {
+    const byteStride = getArrowTypeByteStride(arrowType.indices);
+    return new GPUData({
+      buffer: new DynamicBuffer(device, {
+        usage: Buffer.VERTEX | Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
+        ...props,
+        data: getArrowDictionaryIndexBufferSource(
+          data as unknown as arrow.Data<ArrowUtf8Dictionary>
+        )
+      }),
+      dataType: arrowType,
+      length: data.length,
+      stride: 1,
+      byteStride,
+      rowByteLength: byteStride,
+      ownsBuffer: true
+    }) as GPUData<T>;
+  }
 
   if (arrow.DataType.isUtf8(arrowType)) {
     return new GPUData({
@@ -164,9 +192,20 @@ export function makeArrowGPUVector<T extends arrow.DataType>(
   const {name = 'vector', ...bufferProps} = props;
   const arrowType = vector.type as T;
 
-  if (arrow.DataType.isUtf8(arrowType) || isVariableLengthAttributeArrowType(arrowType)) {
-    const byteStride = arrow.DataType.isUtf8(arrowType) ? 1 : getArrowTypeByteStride(arrowType);
-    const stride = arrow.DataType.isUtf8(arrowType) ? 1 : getArrowTypeStride(arrowType);
+  if (
+    arrow.DataType.isUtf8(arrowType) ||
+    isArrowUtf8DictionaryType(arrowType) ||
+    isVariableLengthAttributeArrowType(arrowType)
+  ) {
+    const byteStride = arrow.DataType.isUtf8(arrowType)
+      ? 1
+      : isArrowUtf8DictionaryType(arrowType)
+        ? getArrowTypeByteStride(arrowType.indices)
+        : getArrowTypeByteStride(arrowType);
+    const stride =
+      arrow.DataType.isUtf8(arrowType) || isArrowUtf8DictionaryType(arrowType)
+        ? 1
+        : getArrowTypeStride(arrowType);
     return new GPUVector({
       type: 'data',
       name,
@@ -225,13 +264,18 @@ export function makeAppendableArrowGPUVector<T extends arrow.DataType>(
   props: AppendableArrowGPUVectorProps = {}
 ): GPUVector<T> {
   const isUtf8Type = arrow.DataType.isUtf8(dataType);
-  const byteStride = isUtf8Type ? 1 : getArrowTypeByteStride(dataType);
+  const isUtf8DictionaryType = isArrowUtf8DictionaryType(dataType);
+  const byteStride = isUtf8Type
+    ? 1
+    : isUtf8DictionaryType
+      ? getArrowTypeByteStride(dataType.indices)
+      : getArrowTypeByteStride(dataType);
   return new GPUVector({
     type: 'appendable',
     name: props.name ?? 'vector',
     device,
     dataType,
-    stride: isUtf8Type ? 1 : getArrowTypeStride(dataType),
+    stride: isUtf8Type || isUtf8DictionaryType ? 1 : getArrowTypeStride(dataType),
     byteStride,
     rowByteLength: byteStride,
     initialCapacityRows: props.initialCapacityRows,
@@ -368,13 +412,18 @@ export function makeAppendableArrowGPURecordBatch(
   for (const column of appendableColumns) {
     const {attributeName, field, bufferLayout: columnLayout} = column;
     const isUtf8Type = arrow.DataType.isUtf8(field.type);
-    const byteStride = isUtf8Type ? 1 : getArrowTypeByteStride(field.type);
+    const isUtf8DictionaryType = isArrowUtf8DictionaryType(field.type);
+    const byteStride = isUtf8Type
+      ? 1
+      : isUtf8DictionaryType
+        ? getArrowTypeByteStride(field.type.indices)
+        : getArrowTypeByteStride(field.type);
     const gpuVector = new GPUVector({
       type: 'appendable',
       name: attributeName,
       device: options.device,
       dataType: field.type,
-      stride: isUtf8Type ? 1 : getArrowTypeStride(field.type),
+      stride: isUtf8Type || isUtf8DictionaryType ? 1 : getArrowTypeStride(field.type),
       byteStride,
       rowByteLength: byteStride,
       initialCapacityRows: options.initialCapacityRows,
@@ -428,22 +477,27 @@ export function appendArrowDataToGPUVector<T extends arrow.DataType>(
   if (!arrow.util.compareTypes(data.type, vector.type)) {
     throw new Error('appendArrowDataToGPUVector() requires matching Arrow data types');
   }
-  validateArrowGPUDataDirectUpload(
-    vector.name,
-    data as unknown as arrow.Data<
-      AttributeArrowType | VariableLengthAttributeArrowType | arrow.Utf8
-    >
-  );
+  const isUtf8DictionaryData = isArrowUtf8DictionaryType(data.type);
+  if (!isUtf8DictionaryData) {
+    validateArrowGPUDataDirectUpload(
+      vector.name,
+      data as unknown as arrow.Data<
+        AttributeArrowType | VariableLengthAttributeArrowType | arrow.Utf8
+      >
+    );
+  }
 
   const isUtf8Data = arrow.DataType.isUtf8(data.type);
   const isVariableLengthData = isVariableLengthAttributeArrowType(data.type);
   const uploadData = isUtf8Data
     ? getArrowUtf8DataBufferSource(data as arrow.Data<arrow.Utf8>)
-    : isVariableLengthData
-      ? getArrowVariableLengthAttributeDataBufferSource(
-          data as unknown as arrow.Data<VariableLengthAttributeArrowType>
-        )
-      : getArrowDataBufferSource(data as unknown as arrow.Data<AttributeArrowType>);
+    : isUtf8DictionaryData
+      ? getArrowDictionaryIndexBufferSource(data as unknown as arrow.Data<ArrowUtf8Dictionary>)
+      : isVariableLengthData
+        ? getArrowVariableLengthAttributeDataBufferSource(
+            data as unknown as arrow.Data<VariableLengthAttributeArrowType>
+          )
+        : getArrowDataBufferSource(data as unknown as arrow.Data<AttributeArrowType>);
   const byteOffset = isUtf8Data
     ? alignAppendableByteLength(vector.appendedByteLength)
     : vector.appendedByteLength;
@@ -619,4 +673,24 @@ function padAppendableUtf8UploadData(uploadData: Uint8Array): Uint8Array {
   const paddedUploadData = new Uint8Array(paddedByteLength);
   paddedUploadData.set(uploadData);
   return paddedUploadData;
+}
+
+function isArrowUtf8DictionaryType(type: arrow.DataType): type is ArrowUtf8Dictionary {
+  return (
+    arrow.DataType.isDictionary(type) &&
+    type.dictionary instanceof arrow.Utf8 &&
+    arrow.DataType.isInt(type.indices) &&
+    type.indices.bitWidth <= 32
+  );
+}
+
+function getArrowDictionaryIndexBufferSource(
+  data: arrow.Data<ArrowUtf8Dictionary>
+): ArrayBufferView {
+  const values = data.values as ArrayBufferView & {
+    subarray: (start?: number, end?: number) => ArrayBufferView;
+    length: number;
+  };
+  const startIndex = values.length === data.length ? 0 : (data.offset ?? 0);
+  return values.subarray(startIndex, startIndex + data.length);
 }

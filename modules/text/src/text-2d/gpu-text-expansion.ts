@@ -4,7 +4,11 @@
 
 import {Buffer, type Device, type ShaderLayout} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
-import type {GpuExpandedTextStream, GpuUtf8TextInput} from './arrow-text';
+import type {
+  GpuDictionaryUtf8TextInput,
+  GpuExpandedTextStream,
+  GpuUtf8TextInput
+} from './arrow-text';
 import {getGpuUtf8MapShaderBindings, getGpuUtf8MapShaderSource} from './gpu-utf8-map';
 
 export type StorageGlyphMetricState = {
@@ -27,6 +31,19 @@ export type GpuExpandedCompactInputState = {
 export type GpuUtf8ExpandedInputState = {
   rowByteRangesBuffer: Buffer;
   utf8BytesBuffer: Buffer;
+  expansionConfigBuffer: Buffer;
+  byteLength: number;
+};
+
+export type GpuDictionaryUtf8ExpandedInputState = {
+  dictionaryValueByteRangesBuffer: Buffer;
+  dictionaryUtf8BytesBuffer: Buffer;
+  rowDictionaryIndicesBuffer: Buffer;
+  rowOutputGlyphRangesBuffer: Buffer;
+  byteLength: number;
+};
+
+export type GpuDictionaryUtf8ExpansionConfigState = {
   expansionConfigBuffer: Buffer;
   byteLength: number;
 };
@@ -58,7 +75,6 @@ const GPU_EXPANDED_TEXT_COMPUTE_SOURCE = /* wgsl */ `
 struct GeneratedGlyphVertex {
   glyphOffsets : u32,
   glyphIndices : u32,
-  rowIndex : u32,
 }
 @group(0) @binding(4) var<storage, read_write> generatedGlyphVertices : array<GeneratedGlyphVertex>;
 @group(0) @binding(5) var<storage, read> textRowTextAnchors : array<u32>;
@@ -135,8 +151,7 @@ fn main(@builtin(global_invocation_id) globalInvocationId: vec3<u32>) {
     let metrics = textGlyphMetrics[glyphId];
     generatedGlyphVertices[glyphIndex] = GeneratedGlyphVertex(
       packSignedInt16Pair(width + metrics.x + anchorShift, baselineOffsetY + baselineShift),
-      glyphId & 0xffffu,
-      rowIndex + u32(max(textExpansionConfig[2], 0))
+      glyphId & 0xffffu
     );
     width += metrics.y;
     glyphIndex += 1u;
@@ -171,7 +186,6 @@ ${getGpuUtf8MapShaderSource(GPU_UTF8_MAP_BINDING_OPTIONS)}
 struct GeneratedGlyphVertex {
   glyphOffsets : u32,
   glyphIndices : u32,
-  rowIndex : u32,
 }
 @group(0) @binding(5) var<storage, read_write> generatedGlyphVertices : array<GeneratedGlyphVertex>;
 @group(0) @binding(6) var<storage, read> textRowTextAnchors : array<u32>;
@@ -248,8 +262,7 @@ fn main(@builtin(global_invocation_id) globalInvocationId: vec3<u32>) {
       let metrics = textGlyphMetrics[glyphId];
       generatedGlyphVertices[byteIndex] = GeneratedGlyphVertex(
         packSignedInt16Pair(width + metrics.x + anchorShift, baselineOffsetY + baselineShift),
-        glyphId & 0xffffu,
-        rowIndex + u32(max(textExpansionConfig[3], 0))
+        glyphId & 0xffffu
       );
       width += metrics.y;
     }
@@ -266,6 +279,179 @@ const GPU_UTF8_EXPANDED_TEXT_COMPUTE_SHADER_LAYOUT: ShaderLayout = {
     {name: 'generatedGlyphVertices', type: 'storage', group: 0, location: 5},
     {name: 'textRowTextAnchors', type: 'read-only-storage', group: 0, location: 6},
     {name: 'textRowAlignmentBaselines', type: 'read-only-storage', group: 0, location: 7}
+  ],
+  attributes: []
+};
+
+const GPU_DICTIONARY_UTF8_EXPANDED_TEXT_COMPUTE_SOURCE = /* wgsl */ `
+@group(0) @binding(0) var<storage, read> textDictionaryValueByteRanges : array<vec2<u32>>;
+@group(0) @binding(1) var<storage, read> textDictionaryUtf8Bytes : array<u32>;
+@group(0) @binding(2) var<storage, read> textRowDictionaryIndices : array<u32>;
+@group(0) @binding(3) var<storage, read> textRowOutputGlyphRanges : array<vec2<u32>>;
+@group(0) @binding(4) var<storage, read> textGlyphLookup : array<vec2<u32>>;
+@group(0) @binding(5) var<storage, read> textGlyphMetrics : array<vec2<i32>>;
+@group(0) @binding(6) var<storage, read> textExpansionConfig : array<i32>;
+struct GeneratedGlyphVertex {
+  glyphOffsets : u32,
+  glyphIndices : u32,
+}
+@group(0) @binding(7) var<storage, read_write> generatedGlyphVertices : array<GeneratedGlyphVertex>;
+@group(0) @binding(8) var<storage, read> textRowTextAnchors : array<u32>;
+@group(0) @binding(9) var<storage, read> textRowAlignmentBaselines : array<u32>;
+
+fn readDictionaryUtf8Byte(byteIndex: u32) -> u32 {
+  let word = textDictionaryUtf8Bytes[byteIndex >> 2u];
+  let byteShift = (byteIndex & 3u) << 3u;
+  return (word >> byteShift) & 0xffu;
+}
+
+fn isDictionaryUtf8CodePointStart(firstByte: u32) -> bool {
+  return (firstByte & 0xc0u) != 0x80u;
+}
+
+fn decodeDictionaryUtf8CodePoint(byteIndex: u32) -> u32 {
+  let firstByte = readDictionaryUtf8Byte(byteIndex);
+  if ((firstByte & 0x80u) == 0u) {
+    return firstByte;
+  }
+  if ((firstByte & 0xe0u) == 0xc0u) {
+    return ((firstByte & 0x1fu) << 6u) | (readDictionaryUtf8Byte(byteIndex + 1u) & 0x3fu);
+  }
+  if ((firstByte & 0xf0u) == 0xe0u) {
+    return
+      ((firstByte & 0x0fu) << 12u) |
+      ((readDictionaryUtf8Byte(byteIndex + 1u) & 0x3fu) << 6u) |
+      (readDictionaryUtf8Byte(byteIndex + 2u) & 0x3fu);
+  }
+  if ((firstByte & 0xf8u) == 0xf0u) {
+    return
+      ((firstByte & 0x07u) << 18u) |
+      ((readDictionaryUtf8Byte(byteIndex + 1u) & 0x3fu) << 12u) |
+      ((readDictionaryUtf8Byte(byteIndex + 2u) & 0x3fu) << 6u) |
+      (readDictionaryUtf8Byte(byteIndex + 3u) & 0x3fu);
+  }
+  return 0xfffdu;
+}
+
+fn mapDictionaryUtf8CodePoint(codePoint: u32) -> u32 {
+  let mapEntryCount = u32(max(textExpansionConfig[2], 0));
+  var mapEntryIndex = 0u;
+  loop {
+    if (mapEntryIndex >= mapEntryCount) {
+      break;
+    }
+    let mapEntry = textGlyphLookup[mapEntryIndex];
+    if (mapEntry.x == codePoint) {
+      return mapEntry.y;
+    }
+    mapEntryIndex += 1u;
+  }
+  return 0u;
+}
+
+fn packSignedInt16Pair(lowerValue: i32, upperValue: i32) -> u32 {
+  return (u32(lowerValue) & 0xffffu) | ((u32(upperValue) & 0xffffu) << 16u);
+}
+
+fn getTextAnchor(rowIndex: u32) -> u32 {
+  let rowStorageIndex = rowIndex + u32(max(textExpansionConfig[4], 0));
+  if (textExpansionConfig[7] != 0) {
+    let packedAnchorWord = textRowTextAnchors[rowStorageIndex >> 2u];
+    return (packedAnchorWord >> ((rowStorageIndex & 3u) * 8u)) & 0xffu;
+  }
+  return u32(max(textExpansionConfig[6], 0));
+}
+
+fn getAlignmentBaseline(rowIndex: u32) -> u32 {
+  let rowStorageIndex = rowIndex + u32(max(textExpansionConfig[4], 0));
+  if (textExpansionConfig[9] != 0) {
+    let packedBaselineWord = textRowAlignmentBaselines[rowStorageIndex >> 2u];
+    return (packedBaselineWord >> ((rowStorageIndex & 3u) * 8u)) & 0xffu;
+  }
+  return u32(max(textExpansionConfig[8], 0));
+}
+
+fn getAnchorShift(width: i32, textAnchor: u32) -> i32 {
+  if (textAnchor == 1u) { return -(width / 2i); }
+  if (textAnchor == 2u) { return -width; }
+  return 0i;
+}
+
+fn getBaselineShift(alignmentBaseline: u32) -> i32 {
+  let halfLineHeight = textExpansionConfig[10] / 2i;
+  if (alignmentBaseline == 1u) { return halfLineHeight; }
+  if (alignmentBaseline == 2u) { return -halfLineHeight; }
+  return 0i;
+}
+
+@compute @workgroup_size(64)
+fn main(@builtin(global_invocation_id) globalInvocationId: vec3<u32>) {
+  let rowIndex = globalInvocationId.x;
+  let labelCount = u32(max(textExpansionConfig[1], 0));
+  if (rowIndex >= labelCount) {
+    return;
+  }
+
+  let rowStorageIndex = rowIndex + u32(max(textExpansionConfig[4], 0));
+  let dictionaryIndex = textRowDictionaryIndices[rowStorageIndex];
+  if (dictionaryIndex == 0xffffffffu) {
+    return;
+  }
+
+  let rowOutputRange = textRowOutputGlyphRanges[rowStorageIndex];
+  let outputGlyphIndexBase = u32(max(textExpansionConfig[5], 0));
+  let outputGlyphStart = select(0u, rowOutputRange.x - outputGlyphIndexBase, rowOutputRange.x >= outputGlyphIndexBase);
+  let dictionaryByteRange = textDictionaryValueByteRanges[dictionaryIndex];
+  let baselineOffsetY = textExpansionConfig[0];
+  var width = 0i;
+  var byteIndex = dictionaryByteRange.x;
+  loop {
+    if (byteIndex >= dictionaryByteRange.y) {
+      break;
+    }
+    let firstByte = readDictionaryUtf8Byte(byteIndex);
+    if (isDictionaryUtf8CodePointStart(firstByte)) {
+      let glyphId = mapDictionaryUtf8CodePoint(decodeDictionaryUtf8CodePoint(byteIndex));
+      let metrics = textGlyphMetrics[glyphId];
+      width += metrics.y;
+    }
+    byteIndex += 1u;
+  }
+  let anchorShift = getAnchorShift(width, getTextAnchor(rowIndex));
+  let baselineShift = getBaselineShift(getAlignmentBaseline(rowIndex));
+  width = 0i;
+  byteIndex = dictionaryByteRange.x;
+  var outputGlyphIndex = outputGlyphStart;
+  loop {
+    if (byteIndex >= dictionaryByteRange.y) { break; }
+    let firstByte = readDictionaryUtf8Byte(byteIndex);
+    if (isDictionaryUtf8CodePointStart(firstByte)) {
+      let glyphId = mapDictionaryUtf8CodePoint(decodeDictionaryUtf8CodePoint(byteIndex));
+      let metrics = textGlyphMetrics[glyphId];
+      generatedGlyphVertices[outputGlyphIndex] = GeneratedGlyphVertex(
+        packSignedInt16Pair(width + metrics.x + anchorShift, baselineOffsetY + baselineShift),
+        glyphId & 0xffffu
+      );
+      width += metrics.y;
+      outputGlyphIndex += 1u;
+    }
+    byteIndex += 1u;
+  }
+}
+`;
+
+const GPU_DICTIONARY_UTF8_EXPANDED_TEXT_COMPUTE_SHADER_LAYOUT: ShaderLayout = {
+  bindings: [
+    {name: 'textDictionaryValueByteRanges', type: 'read-only-storage', group: 0, location: 0},
+    {name: 'textDictionaryUtf8Bytes', type: 'read-only-storage', group: 0, location: 1},
+    {name: 'textRowDictionaryIndices', type: 'read-only-storage', group: 0, location: 2},
+    {name: 'textRowOutputGlyphRanges', type: 'read-only-storage', group: 0, location: 3},
+    {name: 'textGlyphLookup', type: 'read-only-storage', group: 0, location: 4},
+    {name: 'textGlyphMetrics', type: 'read-only-storage', group: 0, location: 5},
+    {name: 'textExpansionConfig', type: 'read-only-storage', group: 0, location: 6},
+    {name: 'generatedGlyphVertices', type: 'storage', group: 0, location: 7},
+    {name: 'textRowTextAnchors', type: 'read-only-storage', group: 0, location: 8},
+    {name: 'textRowAlignmentBaselines', type: 'read-only-storage', group: 0, location: 9}
   ],
   attributes: []
 };
@@ -405,18 +591,104 @@ export function createGpuUtf8ExpandedInput(
   };
 }
 
+export function createGpuDictionaryUtf8ExpandedInput(
+  device: Device,
+  options: GpuTextExpansionResourceOptions,
+  dictionaryTextInput: GpuDictionaryUtf8TextInput
+): GpuDictionaryUtf8ExpandedInputState {
+  return {
+    dictionaryValueByteRangesBuffer: device.createBuffer({
+      id: `${options.id || 'gpu-expanded-text-model'}-dictionary-value-byte-ranges`,
+      usage: Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
+      data:
+        dictionaryTextInput.dictionaryValueByteRanges.byteLength > 0
+          ? dictionaryTextInput.dictionaryValueByteRanges
+          : new Uint32Array(2)
+    }),
+    dictionaryUtf8BytesBuffer: device.createBuffer({
+      id: `${options.id || 'gpu-expanded-text-model'}-dictionary-utf8-bytes`,
+      usage: Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
+      data:
+        dictionaryTextInput.packedDictionaryUtf8Bytes.byteLength > 0
+          ? dictionaryTextInput.packedDictionaryUtf8Bytes
+          : new Uint32Array(1)
+    }),
+    rowDictionaryIndicesBuffer: device.createBuffer({
+      id: `${options.id || 'gpu-expanded-text-model'}-row-dictionary-indices`,
+      usage: Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
+      data:
+        dictionaryTextInput.rowDictionaryIndices.byteLength > 0
+          ? dictionaryTextInput.rowDictionaryIndices
+          : new Uint32Array(1)
+    }),
+    rowOutputGlyphRangesBuffer: device.createBuffer({
+      id: `${options.id || 'gpu-expanded-text-model'}-row-output-glyph-ranges`,
+      usage: Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
+      data:
+        dictionaryTextInput.rowOutputGlyphRanges.byteLength > 0
+          ? dictionaryTextInput.rowOutputGlyphRanges
+          : new Uint32Array(2)
+    }),
+    byteLength: dictionaryTextInput.inputByteLength
+  };
+}
+
+export function createGpuDictionaryUtf8ExpansionConfig(
+  device: Device,
+  options: GpuTextExpansionResourceOptions,
+  {
+    baselineOffsetY,
+    glyphLookupCount,
+    labelCount,
+    batchRowIndexBase = 0,
+    rowStorageIndexBase = 0,
+    outputGlyphIndexBase = 0,
+    alignment = {}
+  }: {
+    baselineOffsetY: number;
+    glyphLookupCount: number;
+    labelCount: number;
+    batchRowIndexBase?: number;
+    rowStorageIndexBase?: number;
+    outputGlyphIndexBase?: number;
+    alignment?: GpuTextAlignmentExpansionOptions;
+  }
+): GpuDictionaryUtf8ExpansionConfigState {
+  const expansionConfig = new Int32Array([
+    baselineOffsetY,
+    labelCount,
+    glyphLookupCount,
+    batchRowIndexBase,
+    rowStorageIndexBase,
+    outputGlyphIndexBase,
+    alignment.textAnchor ?? 0,
+    alignment.useRowTextAnchors ? 1 : 0,
+    alignment.alignmentBaseline ?? 0,
+    alignment.useRowAlignmentBaselines ? 1 : 0,
+    alignment.lineHeight ?? 0
+  ]);
+  return {
+    expansionConfigBuffer: device.createBuffer({
+      id: `${options.id || 'gpu-expanded-text-model'}-dictionary-utf8-expansion-config`,
+      usage: Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
+      data: expansionConfig
+    }),
+    byteLength: expansionConfig.byteLength
+  };
+}
+
 export function createGpuExpandedGeneratedState(
   device: Device,
   options: GpuTextExpansionResourceOptions,
   glyphCount: number
 ): GpuExpandedGeneratedState {
   const outputRecordCount = Math.max(glyphCount, 1);
-  const byteLength = glyphCount * Uint32Array.BYTES_PER_ELEMENT * 3;
+  const byteLength = glyphCount * Uint32Array.BYTES_PER_ELEMENT * 2;
   return {
     compactGlyphVertexData: device.createBuffer({
       id: `${options.id || 'gpu-expanded-text-model'}-generated-glyph-vertices`,
       usage: Buffer.VERTEX | Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
-      data: new Uint32Array(outputRecordCount * 3)
+      data: new Uint32Array(outputRecordCount * 2)
     }),
     byteLength
   };
@@ -490,6 +762,48 @@ export function dispatchGpuUtf8ExpandedTextCompute(
     }
   });
   if (state.outputSlotCount > 0 && state.labelCount > 0) {
+    const computePass = device.beginComputePass({});
+    computation.dispatch(computePass, Math.ceil(state.labelCount / 64));
+    computePass.end();
+    device.submit();
+  }
+  computation.destroy();
+}
+
+export function dispatchGpuDictionaryUtf8ExpandedTextCompute(
+  device: Device,
+  options: GpuTextExpansionResourceOptions,
+  state: {
+    dictionaryInput: GpuDictionaryUtf8ExpandedInputState;
+    expansionConfig: GpuDictionaryUtf8ExpansionConfigState;
+    glyphLookup: StorageGlyphLookupState;
+    glyphMetrics: StorageGlyphMetricState;
+    generated: GpuExpandedGeneratedState;
+    glyphCount: number;
+    labelCount: number;
+    alignment: Required<
+      Pick<GpuTextAlignmentExpansionOptions, 'rowTextAnchorsBuffer' | 'rowAlignmentBaselinesBuffer'>
+    >;
+  }
+): void {
+  const computation = new Computation(device, {
+    id: `${options.id || 'gpu-expanded-text-model'}-dictionary-utf8-compute`,
+    source: GPU_DICTIONARY_UTF8_EXPANDED_TEXT_COMPUTE_SOURCE,
+    shaderLayout: GPU_DICTIONARY_UTF8_EXPANDED_TEXT_COMPUTE_SHADER_LAYOUT,
+    bindings: {
+      textDictionaryValueByteRanges: state.dictionaryInput.dictionaryValueByteRangesBuffer,
+      textDictionaryUtf8Bytes: state.dictionaryInput.dictionaryUtf8BytesBuffer,
+      textRowDictionaryIndices: state.dictionaryInput.rowDictionaryIndicesBuffer,
+      textRowOutputGlyphRanges: state.dictionaryInput.rowOutputGlyphRangesBuffer,
+      textGlyphLookup: state.glyphLookup.buffer,
+      textGlyphMetrics: state.glyphMetrics.buffer,
+      textExpansionConfig: state.expansionConfig.expansionConfigBuffer,
+      generatedGlyphVertices: state.generated.compactGlyphVertexData,
+      textRowTextAnchors: state.alignment.rowTextAnchorsBuffer,
+      textRowAlignmentBaselines: state.alignment.rowAlignmentBaselinesBuffer
+    }
+  });
+  if (state.glyphCount > 0 && state.labelCount > 0) {
     const computePass = device.beginComputePass({});
     computation.dispatch(computePass, Math.ceil(state.labelCount / 64));
     computePass.end();

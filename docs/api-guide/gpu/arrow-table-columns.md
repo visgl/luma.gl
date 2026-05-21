@@ -20,15 +20,34 @@ directly to the memory layouts used by GPU vertex attributes.
 Arrow also supports variable-length `List` columns. These are useful for data
 such as polygons and paths, but they do not map directly to a single vertex
 attribute without an additional conversion step. `ArrowPathModel` provides the
-attribute-backed conversion for Float32 XY, XYZ, and XYZM path coordinate rows,
-expanding each logical path into segment instances while keeping row-level style
-columns at the path boundary. `ArrowStoragePathModel` provides the WebGPU
+attribute-backed conversion for prepared Float32 XY, XYZ, and XYZM path coordinate
+rows, expanding each logical path into segment instances while keeping row-level
+style columns at the path boundary. `ArrowStoragePathModel` provides the WebGPU
 storage-backed form: compute expands GPU-resident path values into compact indexed
 segment records from copied list-offset metadata, render shaders fetch coordinates
 from the original path-value storage buffer, and per-path style rows remain storage
-bindings instead of being repeated for every generated segment. `closeArrowPaths()`
-can normalize nested Float32 path rows first by appending the initial vertex only
-for paths that are flagged closed and are not already closed within an epsilon.
+bindings instead of being repeated for every generated segment. Use
+`ArrowPathModel.prepareGPUVectors()` or `prepareArrowPathGPUVectors()` to turn raw
+Float32 or Float64 Arrow path vectors into prepared attribute-path inputs. Use
+`ArrowStoragePathModel.prepareGPUVectors()` or `prepareArrowStoragePathGPUVectors()`
+when WebGPU storage rendering should convert Float64 path payloads into Float32
+deltas on the GPU before rendering.
+
+## Arrow Column Support
+
+Support depends on how the column is consumed. A column can be uploadable as a
+`GPUVector` without also being usable as a generic vertex attribute.
+
+| Arrow vector type | Generic GPU upload | Shader-facing use | Higher-level model support |
+| --- | --- | --- | --- |
+| `Vector<Int8 \| Uint8 \| Int16 \| Uint16 \| Int32 \| Uint32 \| Float16 \| Float32>` | Yes, as scalar `GPUVector` or selected `GPUTable` columns. | Scalar attributes or storage rows, subject to shader type and vertex format compatibility. | Numeric table workflows and scalar style rows such as text angles, text sizes, and path widths. |
+| `Vector<FixedSizeList<numeric, 1 \| 2 \| 3 \| 4>>` | Yes, as fixed-width GPU rows. | Vector attributes or storage rows; 3-component 8-bit and 16-bit integer formats are WebGL-only unless padded. | Positions, colors, pixel offsets, clip rectangles, mesh attributes, and path style rows. |
+| `arrow.Vector<List<FixedSizeList<Float32, 2 \| 3 \| 4>>>` | Yes, as flattened GPU path-coordinate values plus copied list-offset metadata. | Not a single generic vertex attribute; `ArrowPathModel` expands prepared rows into segment attributes, while `ArrowStoragePathModel` keeps prepared path values in storage and renders indexed segment records. | `ArrowPathModel.prepareGPUVectors()` uploads these rows unchanged unless closed-path normalization is requested. The resulting `pathProps` and `storagePathProps` feed `ArrowPathModel` and `ArrowStoragePathModel`. |
+| `arrow.Vector<List<FixedSizeList<Float64, 2 \| 3 \| 4>>>` | Yes, through path preparation as per-row Float32 deltas plus copied list-offset metadata. CPU Float64 per-row origins are retained separately. | Not a generic vertex attribute. Attribute paths prepare deltas on the CPU; WebGPU storage paths can prepare them once with `fp64arithmetic` `sub_fp64u32_to_f32` before rendering. | `ArrowPathModel.prepareGPUVectors()` and `prepareArrowPathGPUVectors()` prepare attribute paths. `ArrowStoragePathModel.prepareGPUVectors()` and `prepareArrowStoragePathGPUVectors()` prepare storage paths with GPU Float64 subtraction on WebGPU. |
+| `Vector<List<numeric \| FixedSizeList<numeric, 1 \| 2 \| 3 \| 4>>>` | Yes, as flattened GPU values plus copied list-offset metadata. | Not a single generic vertex attribute; consume through storage/compute code or model-specific expansion. | Generic variable-length numeric storage/readback. Model support is documented by the model-specific rows above. |
+| `Vector<Utf8>` | Yes, as UTF-8 value bytes plus readback metadata. | Not a generic vertex attribute; consume through text-specific UTF-8 and glyph expansion. | `ArrowTextModel` and `ArrowStorageTextModel`. |
+| `Vector<Dictionary<Utf8, Int8 \| Int16 \| Int32 \| Uint8 \| Uint16 \| Uint32>>` | Yes, as dictionary index rows; callers keep CPU source vectors for dictionary values when glyph layout needs them. | Not a generic vertex attribute; consume through dictionary-aware text expansion. | `ArrowTextModel`, `ArrowStorageTextModel`, and `ArrowDictionaryTextModel`/`ArrowDictionaryStorageTextModel`. |
+| Other Arrow logical types such as `Bool`, `Binary`, `Struct`, `Map`, `Date`, `Timestamp`, `Decimal`, `LargeUtf8`, and non-UTF-8 dictionaries | No generic table/vector upload path unless a helper documents a specific use. | Not supported as generic shader columns. | Adapter-specific only; for example `closeArrowPaths()` accepts `Vector<Bool>` closed-path flags as CPU row metadata. |
 
 ## Shader and Buffer Layout Preliminaries
 
@@ -528,6 +547,8 @@ const colorVector: GPUVector = arrowGPUTable.gpuVectors.instanceColors;
 vertices without mutating the input vector. The helper accepts GPU-resident
 `List<FixedSizeList<Float32>>` path rows with one to four components per vertex,
 an Arrow Bool vector with one closed flag per row, and a non-negative epsilon.
+Those Float32 rows can be absolute path coordinates or origin-relative delta
+coordinates produced from Float64 path preparation.
 
 ```ts
 import {closeArrowPaths} from '@luma.gl/arrow';
@@ -542,13 +563,71 @@ const normalizedPaths = await closeArrowPaths(device, {
 The output preserves Arrow chunk boundaries. Open rows, rows already closed
 within epsilon, empty rows, and single-point rows are unchanged. Closed rows
 whose first and last vertices differ receive one appended copy of the first
-vertex.
+vertex. For Float64 source paths, closure happens after CPU conversion to
+delta space; if the original last point equals the first, both deltas are zero,
+and injected closing vertices append the first delta, usually `[0, 0, ...]`.
 
-`ArrowStoragePathModel` can consume `normalizedPaths` directly. The
-attribute-backed `ArrowPathModel` can also use it as `paths`, but that model's
-caller-owned `sourceVectors.paths` must describe the same normalized rows; use
-`await readArrowGPUVectorAsync(normalizedPaths)` when the CPU-side source
-vector should be derived from the helper result.
+## Preparing Arrow Paths for Rendering
+
+Use `ArrowPathModel.prepareGPUVectors()` when raw Arrow vectors need to become
+attribute-renderer inputs. Float32 paths upload unchanged unless `closed` flags
+are supplied. Float64 paths are converted on the CPU into stable per-row Float32
+deltas from the first point of each path. The prepared object also owns CPU
+Float64 origins and updates view-space origin buffers when the view or model
+matrix changes.
+
+```ts
+const prepared = await ArrowPathModel.prepareGPUVectors(device, {
+  paths,
+  colors,
+  widths,
+  closed
+}, {
+  closeEpsilon: 1e-5
+});
+
+const pathModel = new ArrowPathModel(device, prepared.pathProps);
+const storagePathModel = new ArrowStoragePathModel(device, prepared.storagePathProps);
+
+prepared.updateViewOrigins({modelViewMatrix});
+
+pathModel.destroy();
+storagePathModel.destroy();
+prepared.destroy();
+```
+
+For storage-only WebGPU paths, use the storage preparation entrypoint instead:
+
+```ts
+const preparedStorage = await ArrowStoragePathModel.prepareGPUVectors(device, {
+  paths,
+  colors,
+  widths,
+  closed
+}, {
+  closeEpsilon: 1e-5
+});
+
+const storagePathModel = new ArrowStoragePathModel(device, preparedStorage.storagePathProps);
+```
+
+That path uploads raw Float64 list payloads temporarily, converts them once into
+Float32 per-row deltas with `sub_fp64u32_to_f32`, then discards the transient
+Float64 GPU upload before returning the prepared storage props.
+
+Path constructors stay `GPUVector`/prepared-state only; raw Arrow path vectors
+belong at the preparation boundary. For Float64 paths, shaders should transform
+deltas with a zero homogeneous component and add the CPU-updated view origin
+before projection.
+
+`ArrowStoragePathModel` keeps the default storage path record compact: each
+generated segment stores three `u32` words (`segmentStartPointIndex`,
+`segmentFlags`, and `globalRowIndex`) plus a persistent `vec4<u32>` path range
+per source row. The storage shader receives `pathRanges` automatically and can
+derive end, previous, and next point indices from those ranges and flags.
+Custom storage shader layouts that request `segmentEndPointIndices`,
+`segmentPreviousPointIndices`, or `segmentNextPointIndices` keep the legacy
+six-word segment record layout.
 
 `GPUTableModel` is the generic tables-layer wrapper that combines `GPUTable`
 with `Model`. It draws preserved GPU batches, syncs table row counts into the

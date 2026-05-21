@@ -9,6 +9,7 @@ import {
   getArrowFixedSizeListValues,
   getArrowMatrixVectorInfo,
   getArrowVectorBufferSource,
+  getArrowVectorByteLength,
   isArrowFixedSizeListVector,
   makeAppendableArrowGPUVector,
   makeArrowVectorFromArray,
@@ -23,6 +24,8 @@ import {DynamicBuffer} from '@luma.gl/engine';
 import {GPUData, GPUVector} from '@luma.gl/tables';
 import {NullDevice} from '@luma.gl/test-utils';
 import * as arrow from 'apache-arrow';
+
+type ArrowUtf8Dictionary = arrow.Dictionary<arrow.Utf8, arrow.Int32>;
 
 test('makeArrowFixedSizeListVector creates FixedSizeList vectors from typed arrays', t => {
   const vector = makeArrowFixedSizeListVector(
@@ -106,6 +109,39 @@ test('getArrowVectorBufferSource returns primitive vector values', t => {
     getArrowVectorBufferSource(vector),
     new Uint32Array([1, 2, 3]),
     'returns primitive vector values'
+  );
+
+  t.end();
+});
+
+test('getArrowVectorByteLength sums Arrow data buffers and dictionary values', t => {
+  const primitiveVector = arrow.makeVector(new Uint32Array([1, 2, 3]));
+  const utf8Vector = arrow.vectorFromArray(['a', 'luma.gl'], new arrow.Utf8());
+  const dictionary = arrow.vectorFromArray(['alpha', 'beta'], new arrow.Utf8());
+  const dictionaryType = new arrow.Dictionary(new arrow.Utf8(), new arrow.Int32());
+  const dictionaryVector = arrow.makeVector(
+    arrow.makeData({
+      type: dictionaryType,
+      length: 3,
+      data: new Int32Array([0, 1, 0]),
+      dictionary
+    })
+  );
+
+  t.equal(
+    getArrowVectorByteLength(primitiveVector),
+    primitiveVector.byteLength,
+    'matches Vector.byteLength for primitive vectors'
+  );
+  t.equal(
+    getArrowVectorByteLength(utf8Vector),
+    utf8Vector.byteLength,
+    'matches Vector.byteLength for plain Utf8 vectors'
+  );
+  t.equal(
+    getArrowVectorByteLength(dictionaryVector),
+    dictionaryVector.byteLength + dictionary.byteLength,
+    'includes dictionary value buffers for Dictionary vectors'
   );
 
   t.end();
@@ -390,6 +426,36 @@ test('GPUVector UTF-8 readAsync normalizes sliced offsets without retaining sour
     Array.from(result.data[0].valueOffsets as Int32Array),
     [0, 0, 4],
     'reconstructs local compact UTF-8 offsets'
+  );
+
+  gpuVector.destroy();
+  t.end();
+});
+
+test('GPUVector Dictionary<Utf8> upload uses sliced index rows', async t => {
+  const device = new NullDevice({});
+  const sourceVector = makeExplicitArrowDictionaryVector(
+    ['skip', 'alpha', 'beta'],
+    new Int32Array([0, 1, 2, 1]),
+    1,
+    2
+  );
+  const gpuVector = makeArrowGPUVector(device, sourceVector);
+
+  const indexBytes = await gpuVector.data[0].buffer.readAsync(
+    gpuVector.data[0].byteOffset,
+    gpuVector.data[0].length * gpuVector.data[0].byteStride
+  );
+  const uploadedIndices = new Int32Array(
+    indexBytes.buffer,
+    indexBytes.byteOffset,
+    sourceVector.length
+  );
+
+  t.deepEqual(
+    Array.from(uploadedIndices),
+    [1, 2],
+    'uploads the sliced logical dictionary index range'
   );
 
   gpuVector.destroy();
@@ -708,6 +774,43 @@ test('appendArrowDataToGPUVector appends UTF-8 Arrow data into appendable vector
   t.end();
 });
 
+test('appendArrowDataToGPUVector appends sliced Dictionary<Utf8> index rows', async t => {
+  const device = new NullDevice({});
+  const sourceVector = makeExplicitArrowDictionaryVector(
+    ['skip', 'alpha', 'beta'],
+    new Int32Array([0, 1, 2, 1]),
+    1,
+    2
+  );
+  const slicedData = sourceVector.data[0]!;
+  const gpuVector = makeAppendableArrowGPUVector(device, sourceVector.type, {
+    name: 'dictionary-texts',
+    initialCapacityRows: 1
+  });
+
+  appendArrowDataToGPUVector(gpuVector, slicedData);
+
+  const indexBytes = await gpuVector.data[0].buffer.readAsync(
+    gpuVector.data[0].byteOffset,
+    gpuVector.data[0].length * gpuVector.data[0].byteStride
+  );
+  const uploadedIndices = new Int32Array(
+    indexBytes.buffer,
+    indexBytes.byteOffset,
+    slicedData.length
+  );
+
+  t.equal(gpuVector.length, 2, 'tracks appended sliced dictionary rows');
+  t.deepEqual(
+    Array.from(uploadedIndices),
+    [1, 2],
+    'append writes the sliced logical dictionary index range'
+  );
+
+  gpuVector.destroy();
+  t.end();
+});
+
 test('GPUVector exposes primitive vector length and stride', t => {
   const device = new NullDevice({});
   const vector = arrow.makeVector(new Float32Array([1, 2, 3]));
@@ -719,3 +822,24 @@ test('GPUVector exposes primitive vector length and stride', t => {
   gpuVector.destroy();
   t.end();
 });
+
+function makeExplicitArrowDictionaryVector(
+  dictionaryValues: readonly string[],
+  indices: Int32Array,
+  offset = 0,
+  length = indices.length - offset
+): arrow.Vector<ArrowUtf8Dictionary> {
+  const dictionaryType = new arrow.Dictionary(new arrow.Utf8(), new arrow.Int32());
+  const dictionary = arrow.vectorFromArray(
+    dictionaryValues,
+    new arrow.Utf8()
+  ) as arrow.Vector<arrow.Utf8>;
+  const data = arrow.makeData({
+    type: dictionaryType,
+    length,
+    offset,
+    data: indices,
+    dictionary
+  });
+  return new arrow.Vector([data]) as arrow.Vector<ArrowUtf8Dictionary>;
+}
