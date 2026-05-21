@@ -3,6 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {
+  getArrowVectorByteLength,
   makeArrowFixedSizeListVector,
   makeArrowGPURecordBatch,
   makeArrowGPUTable,
@@ -23,12 +24,12 @@ import {
 } from '@luma.gl/engine';
 import {ShaderModule} from '@luma.gl/shadertools';
 import {
-  ArrowDictionaryStorageTextModel,
+  ArrowAttributeTextModel,
+  ArrowDictionaryTextModel,
   ArrowStorageTextModel,
-  ArrowTextModel,
-  type ArrowDictionaryStorageTextInputProps,
-  type ArrowStorageTextInputProps,
-  type ArrowTextModelProps
+  type ArrowAttributeTextModelProps,
+  type ArrowDictionaryTextInputProps,
+  type ArrowStorageTextInputProps
 } from '@luma.gl/text';
 import * as arrow from 'apache-arrow';
 
@@ -53,15 +54,16 @@ const ANGLE_TOGGLE_ID = 'arrow-text-2d-angles';
 const MODEL_SELECTOR_ID = 'arrow-text-2d-model';
 const ROW_COUNT_SELECTOR_ID = 'arrow-text-2d-row-count';
 const SOURCE_SELECTOR_ID = 'arrow-text-2d-source';
+const ARROW_VECTOR_BYTES_ID = 'arrow-text-2d-arrow-vector-bytes';
+const STYLE_ARROW_BYTES_ID = 'arrow-text-2d-style-arrow-bytes';
 const ARROW_VECTOR_BUILD_TIME_ID = 'arrow-text-2d-arrow-vector-build-time';
 const CPU_GENERATION_TIME_ID = 'arrow-text-2d-cpu-generation-time';
 const TOTAL_GPU_BYTES_ID = 'arrow-text-2d-total-gpu-bytes';
-const GPU_ATTRIBUTE_BYTES_ID = 'arrow-text-2d-gpu-attribute-bytes';
-const GPU_STORAGE_BYTES_ID = 'arrow-text-2d-gpu-storage-bytes';
+const TEXT_GPU_EXPANSION_ID = 'arrow-text-2d-text-gpu-expansion';
 const GPU_STYLE_VECTOR_BYTES_ID = 'arrow-text-2d-gpu-style-vector-bytes';
-const GPU_COMPUTE_ROW_ID = 'arrow-text-2d-gpu-compute-row';
-const GPU_COMPUTE_BYTES_ID = 'arrow-text-2d-gpu-compute-bytes';
+const STYLE_GPU_EXPANSION_ID = 'arrow-text-2d-style-gpu-expansion';
 const DECK_ATTRIBUTE_SIZE_ID = 'arrow-text-2d-deck-attribute-size';
+const DECK_GPU_EXPANSION_ID = 'arrow-text-2d-deck-gpu-expansion';
 const PICKED_LABEL_ID = 'arrow-text-2d-picked-label';
 const STREAMING_BATCH_STATUS_ROW_ID = 'arrow-text-2d-streaming-batch-status-row';
 const STREAMING_BATCH_SPINNER_ID = 'arrow-text-2d-streaming-batch-spinner';
@@ -70,11 +72,9 @@ const STREAMING_TEXT_BATCH_COUNT = 10;
 const STREAMING_TEXT_BATCH_DELAY_MS = 1000;
 const DICTIONARY_TEXT_ROWS_PER_CHUNK = 100_000;
 const DICTIONARY_LABEL_COUNT_PER_CHUNK = 1_000;
-const DICTIONARY_OCCURRENCE_ROW_BITS = 20;
-const DICTIONARY_OCCURRENCE_ROW_MASK = (1 << DICTIONARY_OCCURRENCE_ROW_BITS) - 1;
 // IconLayer + MultiIconLayer character attributes, assuming float32 positions in the active path.
 const DECK_CHARACTER_ATTRIBUTE_BYTES_PER_GLYPH = 80;
-type ActiveTextModel = ArrowTextModel | ArrowStorageTextModel | ArrowDictionaryStorageTextModel;
+type ActiveTextModel = ArrowAttributeTextModel | ArrowStorageTextModel | ArrowDictionaryTextModel;
 type TextModelKind = 'direct' | 'storage' | 'dictionary-storage';
 type ArrowUtf8DictionaryIndexType =
   | arrow.Int8
@@ -106,6 +106,7 @@ type ArrowTextInput = {
   angles: GPUVector<arrow.Float32>;
   sizes: GPUVector<arrow.Float32>;
   sourceVectors: ExampleArrowTextSourceVectors;
+  arrowVectorByteLength: number;
   arrowVectorBuildTimeMs: number;
 };
 
@@ -181,14 +182,13 @@ const TEXT_SHADER_LAYOUT = {
 const STORAGE_INDEXED_TEXT_SHADER_LAYOUT = {
   attributes: [
     {name: 'glyphOffsets', location: 0, type: 'vec2<i32>', stepMode: 'instance'},
-    {name: 'glyphIndices', location: 1, type: 'vec2<u32>', stepMode: 'instance'},
-    {name: 'rowIndices', location: 2, type: 'u32', stepMode: 'instance'}
+    {name: 'glyphIndices', location: 1, type: 'vec2<u32>', stepMode: 'instance'}
   ],
   bindings: []
 } satisfies ShaderLayout;
 
 const DICTIONARY_STORAGE_TEXT_SHADER_LAYOUT = {
-  attributes: [{name: 'glyphOccurrenceRecords', location: 0, type: 'u32', stepMode: 'instance'}],
+  attributes: [],
   bindings: []
 } satisfies ShaderLayout;
 
@@ -322,6 +322,7 @@ struct TextViewportUniforms {
 @group(0) @binding(auto) var<storage, read> textRowSizes : array<f32>;
 @group(0) @binding(auto) var<storage, read> textRowPixelOffsets : array<vec2<f32>>;
 @group(0) @binding(auto) var<storage, read> textRowClipRects : array<vec2<u32>>;
+@group(0) @binding(auto) var<storage, read> textRowGlyphStarts : array<u32>;
 @group(0) @binding(auto) var<storage, read> textGlyphFrames : array<vec4<f32>>;
 
 struct TextStorageStyleConfig {
@@ -335,16 +336,26 @@ struct TextStorageStyleConfig {
   useRowPixelOffsets : u32,
   hasClipRects : u32,
   batchRowIndexBase : u32,
+  rowStorageIndexBase : u32,
   _padding : u32,
 };
 
 @group(0) @binding(auto) var<uniform> textStorageStyleConfig : TextStorageStyleConfig;
 
+struct TextStorageRenderConfig {
+  glyphIndexBase : u32,
+  rowStart : u32,
+  rowEnd : u32,
+  _padding : u32,
+};
+
+@group(0) @binding(auto) var<uniform> textStorageRenderConfig : TextStorageRenderConfig;
+
 struct VertexInputs {
   @builtin(vertex_index) vertexIndex : u32,
+  @builtin(instance_index) instanceIndex : u32,
   @location(0) glyphOffsets : vec2<i32>,
   @location(1) glyphIndices : vec2<u32>,
-  @location(2) rowIndices : u32,
 };
 
 struct FragmentInputs {
@@ -424,6 +435,24 @@ fn rotateTextOffset(offset : vec2<f32>, angleDegrees : f32) -> vec2<f32> {
   return rotation * offset;
 }
 
+fn findRowIndex(glyphIndex : u32) -> u32 {
+  var low = textStorageRenderConfig.rowStart;
+  var high = textStorageRenderConfig.rowEnd;
+  loop {
+    if (low >= high) {
+      break;
+    }
+    let middle = (low + high) / 2u;
+    let nextRowGlyphStart = textRowGlyphStarts[middle + 1u];
+    if (nextRowGlyphStart <= glyphIndex) {
+      low = middle + 1u;
+    } else {
+      high = middle;
+    }
+  }
+  return low;
+}
+
 @vertex
 fn vertexMain(inputs : VertexInputs) -> FragmentInputs {
   var outputs : FragmentInputs;
@@ -432,14 +461,16 @@ fn vertexMain(inputs : VertexInputs) -> FragmentInputs {
   let glyphOffset = vec2<f32>(inputs.glyphOffsets);
   let glyphSize = glyphFrame.zw;
   let glyphVertexOffset = glyphOffset + corner * glyphSize;
-  let rowIndex = inputs.rowIndices - textStorageStyleConfig.batchRowIndexBase;
+  let glyphIndex = textStorageRenderConfig.glyphIndexBase + inputs.instanceIndex;
+  let rowIndex = findRowIndex(glyphIndex);
+  let rowStorageIndex = rowIndex + textStorageStyleConfig.rowStorageIndexBase;
   var angleDegrees = textStorageStyleConfig.constantAngleDegrees;
   if (textStorageStyleConfig.useRowAngles != 0u) {
-    angleDegrees = textRowAngles[rowIndex];
+    angleDegrees = textRowAngles[rowStorageIndex];
   }
   var textSize = textStorageStyleConfig.constantSize;
   if (textStorageStyleConfig.useRowSizes != 0u) {
-    textSize = textRowSizes[rowIndex];
+    textSize = textRowSizes[rowStorageIndex];
   }
   let styledGlyphVertexOffset = rotateTextOffset(
     glyphVertexOffset * (textSize / 32.0),
@@ -447,11 +478,11 @@ fn vertexMain(inputs : VertexInputs) -> FragmentInputs {
   );
   var pixelOffset = textStorageStyleConfig.constantPixelOffset;
   if (textStorageStyleConfig.useRowPixelOffsets != 0u) {
-    pixelOffset = textRowPixelOffsets[rowIndex];
+    pixelOffset = textRowPixelOffsets[rowStorageIndex];
   }
   let glyphWorldOffset =
     (styledGlyphVertexOffset + pixelOffset) * textViewport.glyphWorldScale;
-  let labelPosition = textRowPositions[rowIndex];
+  let labelPosition = textRowPositions[rowStorageIndex];
   let worldPosition = labelPosition + glyphWorldOffset;
   let clipPosition = (worldPosition - textViewport.cameraOffset) * textViewport.viewportScale;
   let atlasSize = vec2<f32>(textureDimensions(fontAtlasTexture));
@@ -469,9 +500,9 @@ fn vertexMain(inputs : VertexInputs) -> FragmentInputs {
   outputs.textureCoordinate = atlasPixel / atlasSize;
   outputs.textColor = textStorageStyleConfig.constantColor;
   if (textStorageStyleConfig.useRowColors != 0u) {
-    outputs.textColor = unpackTextColor(textRowColors[rowIndex]);
+    outputs.textColor = unpackTextColor(textRowColors[rowStorageIndex]);
   }
-  outputs.objectIndex = i32(inputs.rowIndices);
+  outputs.objectIndex = i32(textStorageStyleConfig.batchRowIndexBase + rowIndex);
   return outputs;
 }
 
@@ -514,7 +545,7 @@ struct TextViewportUniforms {
 @group(0) @binding(auto) var<storage, read> textRowSizes : array<f32>;
 @group(0) @binding(auto) var<storage, read> textRowPixelOffsets : array<vec2<f32>>;
 @group(0) @binding(auto) var<storage, read> textRowClipRects : array<vec2<u32>>;
-@group(0) @binding(auto) var<storage, read> textRowDictionaryIndices : array<u32>;
+@group(0) @binding(auto) var<storage, read> textRowDictionaryRecords : array<vec2<u32>>;
 @group(0) @binding(auto) var<storage, read> textDictionaryGlyphRanges : array<vec2<u32>>;
 @group(0) @binding(auto) var<storage, read> textDictionaryGlyphRecords : array<vec2<u32>>;
 @group(0) @binding(auto) var<storage, read> textGlyphFrames : array<vec4<f32>>;
@@ -530,14 +561,24 @@ struct TextStorageStyleConfig {
   useRowPixelOffsets : u32,
   hasClipRects : u32,
   batchRowIndexBase : u32,
+  rowStorageIndexBase : u32,
   _padding : u32,
 };
 
 @group(0) @binding(auto) var<uniform> textStorageStyleConfig : TextStorageStyleConfig;
 
+struct TextDictionaryRenderConfig {
+  glyphIndexBase : u32,
+  rowStart : u32,
+  rowEnd : u32,
+  _padding : u32,
+};
+
+@group(0) @binding(auto) var<uniform> textDictionaryRenderConfig : TextDictionaryRenderConfig;
+
 struct VertexInputs {
   @builtin(vertex_index) vertexIndex : u32,
-  @location(0) glyphOccurrenceRecord : u32,
+  @builtin(instance_index) instanceIndex : u32,
 };
 
 struct FragmentInputs {
@@ -626,11 +667,39 @@ fn emptyFragmentInputs() -> FragmentInputs {
   return outputs;
 }
 
+fn findRowIndex(glyphIndex : u32) -> u32 {
+  var low = textDictionaryRenderConfig.rowStart;
+  var high = textDictionaryRenderConfig.rowEnd;
+  loop {
+    if (low >= high) {
+      break;
+    }
+    let middle = (low + high) / 2u;
+    let nextRowGlyphStart = textRowDictionaryRecords[middle + 1u].y;
+    if (nextRowGlyphStart <= glyphIndex) {
+      low = middle + 1u;
+    } else {
+      high = middle;
+    }
+  }
+  return low;
+}
+
 @vertex
 fn vertexMain(inputs : VertexInputs) -> FragmentInputs {
-  let rowIndex = inputs.glyphOccurrenceRecord & ${DICTIONARY_OCCURRENCE_ROW_MASK}u;
-  let dictionaryGlyphOffset = inputs.glyphOccurrenceRecord >> ${DICTIONARY_OCCURRENCE_ROW_BITS}u;
-  let dictionaryIndex = textRowDictionaryIndices[rowIndex];
+  let glyphIndex = textDictionaryRenderConfig.glyphIndexBase + inputs.instanceIndex;
+  let rowIndex = findRowIndex(glyphIndex);
+  if (rowIndex >= textDictionaryRenderConfig.rowEnd) {
+    return emptyFragmentInputs();
+  }
+  let rowDictionaryRecord = textRowDictionaryRecords[rowIndex];
+  let rowGlyphStart = rowDictionaryRecord.y;
+  let rowGlyphEnd = textRowDictionaryRecords[rowIndex + 1u].y;
+  if (glyphIndex < rowGlyphStart || glyphIndex >= rowGlyphEnd) {
+    return emptyFragmentInputs();
+  }
+  let dictionaryGlyphOffset = glyphIndex - rowGlyphStart;
+  let dictionaryIndex = rowDictionaryRecord.x;
   if (dictionaryIndex == 4294967295u) {
     return emptyFragmentInputs();
   }
@@ -650,13 +719,14 @@ fn vertexMain(inputs : VertexInputs) -> FragmentInputs {
   );
   let glyphSize = glyphFrame.zw;
   let glyphVertexOffset = glyphOffset + corner * glyphSize;
+  let rowStorageIndex = rowIndex + textStorageStyleConfig.rowStorageIndexBase;
   var angleDegrees = textStorageStyleConfig.constantAngleDegrees;
   if (textStorageStyleConfig.useRowAngles != 0u) {
-    angleDegrees = textRowAngles[rowIndex];
+    angleDegrees = textRowAngles[rowStorageIndex];
   }
   var textSize = textStorageStyleConfig.constantSize;
   if (textStorageStyleConfig.useRowSizes != 0u) {
-    textSize = textRowSizes[rowIndex];
+    textSize = textRowSizes[rowStorageIndex];
   }
   let styledGlyphVertexOffset = rotateTextOffset(
     glyphVertexOffset * (textSize / 32.0),
@@ -664,11 +734,11 @@ fn vertexMain(inputs : VertexInputs) -> FragmentInputs {
   );
   var pixelOffset = textStorageStyleConfig.constantPixelOffset;
   if (textStorageStyleConfig.useRowPixelOffsets != 0u) {
-    pixelOffset = textRowPixelOffsets[rowIndex];
+    pixelOffset = textRowPixelOffsets[rowStorageIndex];
   }
   let glyphWorldOffset =
     (styledGlyphVertexOffset + pixelOffset) * textViewport.glyphWorldScale;
-  let labelPosition = textRowPositions[rowIndex];
+  let labelPosition = textRowPositions[rowStorageIndex];
   let worldPosition = labelPosition + glyphWorldOffset;
   let clipPosition = (worldPosition - textViewport.cameraOffset) * textViewport.viewportScale;
   let atlasSize = vec2<f32>(textureDimensions(fontAtlasTexture));
@@ -686,7 +756,7 @@ fn vertexMain(inputs : VertexInputs) -> FragmentInputs {
   outputs.textureCoordinate = atlasPixel / atlasSize;
   outputs.textColor = textStorageStyleConfig.constantColor;
   if (textStorageStyleConfig.useRowColors != 0u) {
-    outputs.textColor = unpackTextColor(textRowColors[rowIndex]);
+    outputs.textColor = unpackTextColor(textRowColors[rowStorageIndex]);
   }
   outputs.objectIndex = i32(textStorageStyleConfig.batchRowIndexBase + rowIndex);
   return outputs;
@@ -867,9 +937,9 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     <div style="display: grid; grid-template-columns: minmax(56px, auto) minmax(0, 0.8fr) minmax(64px, auto) minmax(0, 1fr); align-items: center; gap: 10px 12px; margin-bottom: 12px; color: #0f172a; font-size: 15px; font-weight: 600;">
       <label for="${MODEL_SELECTOR_ID}">Model</label>
       <select id="${MODEL_SELECTOR_ID}" style="grid-column: 2 / 5; min-width: 0; min-height: 34px; border: 1px solid rgba(148, 163, 184, 0.8); border-radius: 6px; background: #ffffff; color: #0f172a; font: inherit;">
-        <option value="direct">ArrowTextModel</option>
+        <option value="direct">ArrowAttributeTextModel</option>
         <option value="storage">ArrowStorageTextModel</option>
-        <option value="dictionary-storage">ArrowDictionaryStorageTextModel</option>
+        <option value="dictionary-storage">ArrowDictionaryTextModel</option>
       </select>
       <label for="${ROW_COUNT_SELECTOR_ID}">Rows</label>
       <select id="${ROW_COUNT_SELECTOR_ID}" style="min-width: 0; min-height: 34px; border: 1px solid rgba(148, 163, 184, 0.8); border-radius: 6px; background: #ffffff; color: #0f172a; font: inherit;">
@@ -910,38 +980,40 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
       <span id="${STREAMING_BATCH_SPINNER_ID}" aria-hidden="true" style="width: 14px; height: 14px; flex: 0 0 14px; border: 2px solid rgba(148, 163, 184, 0.5); border-top-color: #2563eb; border-radius: 50%; animation: arrow-text-2d-streaming-spin 0.9s linear infinite;"></span>
       <span id="${STREAMING_BATCH_STATUS_LABEL_ID}" aria-live="polite">Loaded 0 of ${STREAMING_TEXT_BATCH_COUNT} batches</span>
     </div>
-    <div style="display: flex; justify-content: space-between; gap: 16px; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(208, 215, 222, 0.9); color: #334155; font-size: 13px; line-height: 1.4;">
-      <span>Arrow vector build time</span>
-      <strong id="${ARROW_VECTOR_BUILD_TIME_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong>
-    </div>
-    <div style="display: flex; justify-content: space-between; gap: 16px; margin-top: 8px; color: #334155; font-size: 13px; line-height: 1.4;">
-      <span>CPU attribute/storage generation</span>
-      <strong id="${CPU_GENERATION_TIME_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong>
-    </div>
-    <div style="display: flex; justify-content: space-between; gap: 16px; margin-top: 8px; color: #334155; font-size: 13px; line-height: 1.4;">
-      <span>GPU bytes</span>
-      <strong id="${TOTAL_GPU_BYTES_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong>
-    </div>
-    <div style="display: flex; justify-content: space-between; gap: 16px; margin-top: 8px; color: #334155; font-size: 13px; line-height: 1.4;">
-      <span>GPU Text Attribute Buffers</span>
-      <strong id="${GPU_ATTRIBUTE_BYTES_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong>
-    </div>
-    <div style="display: flex; justify-content: space-between; gap: 16px; margin-top: 8px; color: #334155; font-size: 13px; line-height: 1.4;">
-      <span>GPU Text Storage Buffers</span>
-      <strong id="${GPU_STORAGE_BYTES_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong>
-    </div>
-    <div style="display: flex; justify-content: space-between; gap: 16px; margin-top: 8px; color: #334155; font-size: 13px; line-height: 1.4;">
-      <span>GPU Style Storage Buffers</span>
-      <strong id="${GPU_STYLE_VECTOR_BYTES_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong>
-    </div>
-    <div id="${GPU_COMPUTE_ROW_ID}" style="display: none; justify-content: space-between; gap: 16px; margin-top: 8px; color: #334155; font-size: 13px; line-height: 1.4;">
-      <span>GPU Compute</span>
-      <strong id="${GPU_COMPUTE_BYTES_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong>
-    </div>
-    <div style="display: flex; justify-content: space-between; gap: 16px; margin-top: 8px; color: #334155; font-size: 13px; line-height: 1.4;">
-      <span>GPU attributes (deck.gl)</span>
-      <strong id="${DECK_ATTRIBUTE_SIZE_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong>
-    </div>
+    <table style="display: table; width: 100%; min-width: 100%; table-layout: fixed; box-sizing: border-box; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(208, 215, 222, 0.9); border-collapse: collapse; color: #334155; font-size: 13px; line-height: 1.4;">
+      <thead>
+        <tr style="color: #64748b; text-transform: uppercase; letter-spacing: 0.02em; font-size: 11px;">
+          <th style="width: 20%; padding: 8px 8px 6px 0; text-align: left; font-weight: 700; white-space: nowrap;">columns</th>
+          <th style="width: 22%; padding: 8px 8px 6px; text-align: right; font-weight: 700; white-space: nowrap;">Arrow</th>
+          <th style="width: 22%; padding: 8px 8px 6px; text-align: right; font-weight: 700; white-space: nowrap;">GPU</th>
+          <th style="width: 16%; padding: 8px 8px 6px; text-align: right; font-weight: 700; white-space: nowrap;">expansion</th>
+          <th style="width: 20%; padding: 8px 0 6px 8px; text-align: right; font-weight: 700; white-space: nowrap;">prep time</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th style="padding: 6px 8px 6px 0; text-align: left; font-weight: 600;">text</th>
+          <td style="padding: 6px 8px; text-align: right;"><strong id="${ARROW_VECTOR_BYTES_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong></td>
+          <td style="padding: 6px 8px; text-align: right;"><strong id="${TOTAL_GPU_BYTES_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums; white-space: pre-line;">Measuring...</strong></td>
+          <td style="padding: 6px 8px; text-align: right;"><strong id="${TEXT_GPU_EXPANSION_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums; white-space: pre-line;">-</strong></td>
+          <td style="padding: 6px 0 6px 8px; text-align: right;"><strong id="${CPU_GENERATION_TIME_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong></td>
+        </tr>
+        <tr>
+          <th style="padding: 6px 8px 6px 0; text-align: left; font-weight: 600;">styles</th>
+          <td style="padding: 6px 8px; text-align: right;"><strong id="${STYLE_ARROW_BYTES_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong></td>
+          <td style="padding: 6px 8px; text-align: right;"><strong id="${GPU_STYLE_VECTOR_BYTES_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong></td>
+          <td style="padding: 6px 8px; text-align: right;"><strong id="${STYLE_GPU_EXPANSION_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">-</strong></td>
+          <td style="padding: 6px 0 6px 8px; text-align: right;"><strong id="${ARROW_VECTOR_BUILD_TIME_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong></td>
+        </tr>
+        <tr>
+          <th style="padding: 6px 8px 6px 0; text-align: left; font-weight: 600;">deck.gl</th>
+          <td style="padding: 6px 8px; text-align: right;">-</td>
+          <td style="padding: 6px 8px; text-align: right;"><strong id="${DECK_ATTRIBUTE_SIZE_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong></td>
+          <td style="padding: 6px 8px; text-align: right;"><strong id="${DECK_GPU_EXPANSION_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">-</strong></td>
+          <td style="padding: 6px 0 6px 8px; text-align: right;">-</td>
+        </tr>
+      </tbody>
+    </table>
     <div style="display: flex; justify-content: space-between; gap: 16px; margin-top: 8px; color: #334155; font-size: 13px; line-height: 1.4;">
       <span>Picked Arrow row</span>
       <strong id="${PICKED_LABEL_ID}" style="max-width: 220px; overflow-wrap: anywhere; color: #0f172a; font-variant-numeric: tabular-nums;">Hover text</strong>
@@ -1003,6 +1075,7 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
   picker: PickingManager | null = null;
   textModelKind: TextModelKind = 'direct';
   textDatasetKind: TextDatasetKind = '100k';
+  arrowVectorByteLength = 0;
   arrowVectorBuildTimeMs = 0;
   activeStreamingTextTable: GPUTable | null = null;
   streamingSessionVersion = 0;
@@ -1022,14 +1095,16 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
   modelSelector: HTMLSelectElement | null = null;
   rowCountSelector: HTMLSelectElement | null = null;
   sourceSelector: HTMLSelectElement | null = null;
+  arrowVectorBytesLabel: HTMLElement | null = null;
+  styleArrowBytesLabel: HTMLElement | null = null;
   arrowVectorBuildTimeLabel: HTMLElement | null = null;
   cpuGenerationTimeLabel: HTMLElement | null = null;
   totalGpuBytesLabel: HTMLElement | null = null;
-  gpuAttributeBytesLabel: HTMLElement | null = null;
-  gpuStorageBytesLabel: HTMLElement | null = null;
+  textGpuExpansionLabel: HTMLElement | null = null;
   gpuStyleVectorBytesLabel: HTMLElement | null = null;
-  gpuComputeBytesLabel: HTMLElement | null = null;
+  styleGpuExpansionLabel: HTMLElement | null = null;
   deckAttributeSizeLabel: HTMLElement | null = null;
+  deckGpuExpansionLabel: HTMLElement | null = null;
   pickedLabel: HTMLElement | null = null;
   streamingBatchStatusRow: HTMLElement | null = null;
   streamingBatchSpinner: HTMLElement | null = null;
@@ -1055,6 +1130,7 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     this.angles = angles;
     this.sizes = sizes;
     this.sourceVectors = sourceVectors;
+    this.arrowVectorByteLength = defaultTextInput.arrowVectorByteLength;
     this.arrowVectorBuildTimeMs = defaultTextInput.arrowVectorBuildTimeMs;
     this.textModel = this.createTextModel('direct');
     this.pickingModel = supportsTextIndexPicking(this.device)
@@ -1147,7 +1223,7 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     };
     if (modelKind === 'dictionary-storage') {
       if (this.device.type !== 'webgpu') {
-        throw new Error('ArrowDictionaryStorageTextModel showcase mode requires WebGPU');
+        throw new Error('ArrowDictionaryTextModel showcase mode requires WebGPU');
       }
       const storageProps = {
         id: commonProps.id,
@@ -1170,9 +1246,9 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
         modules: commonProps.modules,
         parameters: commonProps.parameters
       };
-      return new ArrowDictionaryStorageTextModel(
+      return new ArrowDictionaryTextModel(
         this.device,
-        storageProps as unknown as ArrowDictionaryStorageTextInputProps
+        storageProps as unknown as ArrowDictionaryTextInputProps
       );
     }
     if (modelKind === 'storage') {
@@ -1205,7 +1281,7 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
         storageProps as unknown as ArrowStorageTextInputProps
       );
     }
-    return new ArrowTextModel(this.device, commonProps as ArrowTextModelProps);
+    return new ArrowAttributeTextModel(this.device, commonProps as ArrowAttributeTextModelProps);
   }
 
   getLabelFieldHeight(): number {
@@ -1231,14 +1307,16 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
       this.initializeStyleToggles();
     }
     if (
+      !this.arrowVectorBytesLabel ||
+      !this.styleArrowBytesLabel ||
       !this.arrowVectorBuildTimeLabel ||
       !this.cpuGenerationTimeLabel ||
       !this.totalGpuBytesLabel ||
-      !this.gpuAttributeBytesLabel ||
-      !this.gpuStorageBytesLabel ||
+      !this.textGpuExpansionLabel ||
       !this.gpuStyleVectorBytesLabel ||
-      !this.gpuComputeBytesLabel ||
-      !this.deckAttributeSizeLabel
+      !this.styleGpuExpansionLabel ||
+      !this.deckAttributeSizeLabel ||
+      !this.deckGpuExpansionLabel
     ) {
       this.initializeAttributeMetricLabels();
     }
@@ -1285,6 +1363,7 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
         }
       });
       this.shaderInputs.setProps({picking: {isActive: false}});
+      this.textModel.predraw(device.commandEncoder);
 
       const renderPass = device.beginRenderPass({
         clearColor: [0.015, 0.035, 0.07, 1]
@@ -1315,14 +1394,16 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     this.modelSelector = null;
     this.rowCountSelector = null;
     this.sourceSelector = null;
+    this.arrowVectorBytesLabel = null;
+    this.styleArrowBytesLabel = null;
     this.arrowVectorBuildTimeLabel = null;
     this.cpuGenerationTimeLabel = null;
     this.totalGpuBytesLabel = null;
-    this.gpuAttributeBytesLabel = null;
-    this.gpuStorageBytesLabel = null;
+    this.textGpuExpansionLabel = null;
     this.gpuStyleVectorBytesLabel = null;
-    this.gpuComputeBytesLabel = null;
+    this.styleGpuExpansionLabel = null;
     this.deckAttributeSizeLabel = null;
+    this.deckGpuExpansionLabel = null;
     this.pickedLabel = null;
     this.streamingBatchStatusRow = null;
     this.streamingBatchSpinner = null;
@@ -1347,9 +1428,10 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
       return;
     }
 
-    const pickingPass = this.picker.beginRenderPass();
     this.shaderInputs.setProps({picking: {batchIndex: 0}});
-    if (this.pickingModel && this.textModel instanceof ArrowTextModel) {
+    this.pickingModel?.predraw(this.device.commandEncoder);
+    const pickingPass = this.picker.beginRenderPass();
+    if (this.pickingModel && this.textModel instanceof ArrowAttributeTextModel) {
       this.drawArrowTextPickingBatches(pickingPass, this.pickingModel, this.textModel);
     } else {
       this.pickingModel?.draw(pickingPass);
@@ -1360,8 +1442,8 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
   }
 
   createPickingModel(textModel: ActiveTextModel): Model {
-    if (textModel instanceof ArrowDictionaryStorageTextModel) {
-      return new ArrowDictionaryStorageTextModel(this.device, {
+    if (textModel instanceof ArrowDictionaryTextModel) {
+      return new ArrowDictionaryTextModel(this.device, {
         id: `${textModel.id || 'arrow-text-2d'}-picking`,
         storageState: textModel.storageState,
         source: DICTIONARY_STORAGE_WGSL_SHADER,
@@ -1432,7 +1514,7 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
   drawArrowTextPickingBatches(
     pickingPass: RenderPass,
     pickingModel: Model,
-    textModel: ArrowTextModel
+    textModel: ArrowAttributeTextModel
   ): void {
     const arrowBatches = textModel.arrowGPUTable?.batches || [];
     for (const [batchIndex, renderBatch] of textModel.renderBatches.entries()) {
@@ -1486,7 +1568,6 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
       const modelKind = option.value as TextModelKind;
       option.disabled =
         (modelKind !== 'direct' && this.device.type !== 'webgpu') ||
-        (modelKind === 'storage' && isDictionaryDataset) ||
         (modelKind === 'dictionary-storage' && !isDictionaryDataset);
     }
     this.modelSelector.disabled = false;
@@ -1498,9 +1579,6 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
       return 'direct';
     }
     const isDictionaryDataset = arrow.DataType.isDictionary(this.sourceVectors.texts.type);
-    if (modelKind === 'storage' && isDictionaryDataset) {
-      return 'direct';
-    }
     if (modelKind === 'dictionary-storage' && !isDictionaryDataset) {
       return 'direct';
     }
@@ -1567,6 +1645,7 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     this.angles = angles;
     this.sizes = sizes;
     this.sourceVectors = sourceVectors;
+    this.arrowVectorByteLength = nextTextInput.arrowVectorByteLength;
     this.arrowVectorBuildTimeMs = nextTextInput.arrowVectorBuildTimeMs;
     this.activeStreamingTextTable = null;
     this.updateStreamingBatchStatus(null);
@@ -1634,6 +1713,7 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     this.angles = streamingTextInput.angles;
     this.sizes = streamingTextInput.sizes;
     this.sourceVectors = streamingTextInput.sourceVectors;
+    this.arrowVectorByteLength = streamingTextInput.arrowVectorByteLength;
     this.arrowVectorBuildTimeMs = streamingTextInput.arrowVectorBuildTimeMs;
     this.activeStreamingTextTable = streamingTextTable;
     this.updateStreamingBatchStatus(streamingTextTable.batches.length);
@@ -1695,6 +1775,7 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     this.angles = streamingTextInput.angles;
     this.sizes = streamingTextInput.sizes;
     this.sourceVectors = streamingTextInput.sourceVectors;
+    this.arrowVectorByteLength = streamingTextInput.arrowVectorByteLength;
     const appendedTextProps = {
       positions: this.positions,
       texts: this.texts,
@@ -1705,11 +1786,11 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
       ...(this.sizeEnabled ? {sizes: this.sizes} : {})
     };
     if (
-      this.textModel instanceof ArrowTextModel ||
+      this.textModel instanceof ArrowAttributeTextModel ||
       this.textModel instanceof ArrowStorageTextModel
     ) {
       this.textModel.appendTextBatches(
-        appendedTextProps as unknown as Partial<ArrowTextModelProps> &
+        appendedTextProps as unknown as Partial<ArrowAttributeTextModelProps> &
           Partial<ArrowStorageTextInputProps>
       );
     } else {
@@ -1803,40 +1884,49 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
   };
 
   rebuildStorageStyleModel(redrawReason: string): void {
-    if (this.textModelKind === 'storage' || this.textModelKind === 'dictionary-storage') {
-      this.replaceTextModel(this.textModelKind, redrawReason);
-      return;
-    }
-    this.textModel.setNeedsRedraw(redrawReason);
+    this.replaceTextModel(this.textModelKind, redrawReason);
   }
 
   initializeAttributeMetricLabels(): void {
     const rowStorageByteLength =
       this.textModel instanceof ArrowStorageTextModel ||
-      this.textModel instanceof ArrowDictionaryStorageTextModel
+      this.textModel instanceof ArrowDictionaryTextModel
         ? this.textModel.rowStorageByteLength
         : 0;
     const glyphDefinitionStorageByteLength =
       this.textModel instanceof ArrowStorageTextModel ||
-      this.textModel instanceof ArrowDictionaryStorageTextModel
+      this.textModel instanceof ArrowDictionaryTextModel
         ? this.textModel.glyphDefinitionStorageByteLength
         : 0;
     const transientComputeInputByteLength =
       this.textModel instanceof ArrowStorageTextModel ||
-      this.textModel instanceof ArrowDictionaryStorageTextModel
+      this.textModel instanceof ArrowDictionaryTextModel
         ? this.textModel.transientComputeInputByteLength
         : 0;
     const compressedDictionaryStorageByteLength =
-      this.textModel instanceof ArrowDictionaryStorageTextModel
+      this.textModel instanceof ArrowDictionaryTextModel
         ? this.textModel.compactStreamByteLength
         : 0;
-    const sharedStorageByteLength =
-      rowStorageByteLength +
-      glyphDefinitionStorageByteLength +
-      compressedDictionaryStorageByteLength;
-    const steadyStateGpuByteLength =
-      this.textModel.glyphAttributeByteLength + sharedStorageByteLength;
-    const peakTextPathGpuByteLength = steadyStateGpuByteLength + transientComputeInputByteLength;
+    const styleArrowByteLength = this.getSelectedArrowStyleVectorByteLength();
+    const styleGpuByteLength = this.getSelectedStyleColumnGpuByteLength();
+    const textGpuByteLength =
+      this.textModel instanceof ArrowAttributeTextModel
+        ? Math.max(0, this.textModel.glyphAttributeByteLength - styleGpuByteLength)
+        : this.textModel.glyphAttributeByteLength +
+          rowStorageByteLength +
+          glyphDefinitionStorageByteLength +
+          compressedDictionaryStorageByteLength;
+    const peakTextPathGpuByteLength = textGpuByteLength + transientComputeInputByteLength;
+    const deckAttributeByteLength =
+      getTextModelGlyphCount(this.textModel) * DECK_CHARACTER_ATTRIBUTE_BYTES_PER_GLYPH;
+    this.arrowVectorBytesLabel = initializeAttributeSizeLabel(
+      ARROW_VECTOR_BYTES_ID,
+      this.arrowVectorByteLength
+    );
+    this.styleArrowBytesLabel = initializeAttributeSizeLabel(
+      STYLE_ARROW_BYTES_ID,
+      styleArrowByteLength
+    );
     this.arrowVectorBuildTimeLabel = initializeMetricTimeLabel(
       ARROW_VECTOR_BUILD_TIME_ID,
       this.arrowVectorBuildTimeMs
@@ -1848,33 +1938,36 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
     this.totalGpuBytesLabel = initializeTextLabel(
       TOTAL_GPU_BYTES_ID,
       transientComputeInputByteLength > 0
-        ? `${formatByteLength(steadyStateGpuByteLength)} steady / ${formatByteLength(peakTextPathGpuByteLength)} peak`
-        : formatByteLength(steadyStateGpuByteLength)
+        ? `${formatByteLength(textGpuByteLength)}\n${formatByteLength(peakTextPathGpuByteLength)} peak`
+        : formatByteLength(textGpuByteLength)
     );
-    this.gpuAttributeBytesLabel = initializeAttributeSizeLabel(
-      GPU_ATTRIBUTE_BYTES_ID,
-      this.textModel.glyphAttributeByteLength
+    this.textGpuExpansionLabel = initializeTextLabel(
+      TEXT_GPU_EXPANSION_ID,
+      transientComputeInputByteLength > 0
+        ? `${formatExpansionRatio(textGpuByteLength, this.arrowVectorByteLength)}\n${formatExpansionRatio(
+            peakTextPathGpuByteLength,
+            this.arrowVectorByteLength
+          )} peak`
+        : formatExpansionRatio(textGpuByteLength, this.arrowVectorByteLength)
     );
-    this.gpuStorageBytesLabel = initializeAttributeSizeLabel(
-      GPU_STORAGE_BYTES_ID,
-      sharedStorageByteLength
-    );
-    this.gpuStyleVectorBytesLabel = initializeAttributeSizeLabel(
+    this.gpuStyleVectorBytesLabel = initializeTextLabel(
       GPU_STYLE_VECTOR_BYTES_ID,
-      this.getSelectedStorageStyleVectorByteLength()
+      formatByteLength(styleGpuByteLength)
     );
-    setMetricRowVisible(
-      GPU_COMPUTE_ROW_ID,
-      this.textModel instanceof ArrowStorageTextModel ||
-        this.textModel instanceof ArrowDictionaryStorageTextModel
+    this.styleGpuExpansionLabel = initializeTextLabel(
+      STYLE_GPU_EXPANSION_ID,
+      formatExpansionRatio(styleGpuByteLength, styleArrowByteLength)
     );
-    this.gpuComputeBytesLabel = initializeTextLabel(
-      GPU_COMPUTE_BYTES_ID,
-      `${formatByteLength(transientComputeInputByteLength)} transient`
-    );
-    this.deckAttributeSizeLabel = initializeAttributeSizeLabel(
+    this.deckAttributeSizeLabel = initializeTextLabel(
       DECK_ATTRIBUTE_SIZE_ID,
-      getTextModelGlyphCount(this.textModel) * DECK_CHARACTER_ATTRIBUTE_BYTES_PER_GLYPH
+      formatByteLength(deckAttributeByteLength)
+    );
+    this.deckGpuExpansionLabel = initializeTextLabel(
+      DECK_GPU_EXPANSION_ID,
+      formatExpansionRatio(
+        deckAttributeByteLength,
+        this.arrowVectorByteLength + styleArrowByteLength
+      )
     );
   }
 
@@ -1926,11 +2019,14 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
       safeLoadedBatchCount < STREAMING_TEXT_BATCH_COUNT ? 'visible' : 'hidden';
   }
 
-  getSelectedStorageStyleVectorByteLength(): number {
+  getSelectedStyleColumnGpuByteLength(): number {
+    if (this.textModel instanceof ArrowAttributeTextModel) {
+      return this.getSelectedExpandedAttributeStyleVectorByteLength();
+    }
     if (
       !(
         this.textModel instanceof ArrowStorageTextModel ||
-        this.textModel instanceof ArrowDictionaryStorageTextModel
+        this.textModel instanceof ArrowDictionaryTextModel
       )
     ) {
       return 0;
@@ -1940,6 +2036,29 @@ export default class ArrowText2DAnimationLoopTemplate extends AnimationLoopTempl
       (this.colorEnabled ? getGpuVectorByteLength(this.colors) : 0) +
       (this.angleEnabled ? getGpuVectorByteLength(this.angles) : 0) +
       (this.sizeEnabled ? getGpuVectorByteLength(this.sizes) : 0)
+    );
+  }
+
+  getSelectedExpandedAttributeStyleVectorByteLength(): number {
+    const glyphCount = getTextModelGlyphCount(this.textModel);
+    return (
+      (this.colorEnabled ? getExpandedAttributeVectorByteLength(this.colors, glyphCount) : 0) +
+      (this.angleEnabled ? getExpandedAttributeVectorByteLength(this.angles, glyphCount) : 0) +
+      (this.sizeEnabled ? getExpandedAttributeVectorByteLength(this.sizes, glyphCount) : 0)
+    );
+  }
+
+  getSelectedArrowStyleVectorByteLength(): number {
+    return (
+      (this.colorEnabled && this.sourceVectors.colors
+        ? getArrowVectorByteLength(this.sourceVectors.colors)
+        : 0) +
+      (this.angleEnabled && this.sourceVectors.angles
+        ? getArrowVectorByteLength(this.sourceVectors.angles)
+        : 0) +
+      (this.sizeEnabled && this.sourceVectors.sizes
+        ? getArrowVectorByteLength(this.sourceVectors.sizes)
+        : 0)
     );
   }
 
@@ -2028,6 +2147,7 @@ function makeArrowTextInput(device: Device, dataset: TextDataset): ArrowTextInpu
       angles: angleVector,
       sizes: sizeVector
     },
+    arrowVectorByteLength: getArrowVectorByteLength(texts),
     arrowVectorBuildTimeMs: getNow() - arrowVectorBuildStartTime
   };
 }
@@ -2141,6 +2261,7 @@ function makeArrowTextInputFromGpuTable(
       angles: angles as arrow.Vector<arrow.Float32>,
       sizes: sizes as arrow.Vector<arrow.Float32>
     },
+    arrowVectorByteLength: getArrowVectorByteLength(texts as ArrowUtf8TextVector),
     arrowVectorBuildTimeMs
   };
 }
@@ -2390,8 +2511,7 @@ function isTextDatasetKind(value: string): value is TextDatasetKind {
 }
 
 function getTextModelGlyphCount(textModel: ActiveTextModel): number {
-  return textModel instanceof ArrowStorageTextModel ||
-    textModel instanceof ArrowDictionaryStorageTextModel
+  return textModel instanceof ArrowStorageTextModel || textModel instanceof ArrowDictionaryTextModel
     ? textModel.glyphCount
     : textModel.glyphLayout.glyphCount;
 }
@@ -2403,19 +2523,30 @@ function getGpuVectorByteLength(vector: GPUVector): number {
   );
 }
 
+function getExpandedAttributeVectorByteLength(vector: GPUVector, glyphCount: number): number {
+  return glyphCount * (vector.data[0]?.byteStride ?? 0);
+}
+
+function formatExpansionRatio(byteLength: number, arrowByteLength: number): string {
+  const expansionFactor =
+    Number.isFinite(arrowByteLength) && arrowByteLength > 0 ? byteLength / arrowByteLength : null;
+  return formatExpansionFactor(expansionFactor);
+}
+
+function formatExpansionFactor(expansionFactor: number | null): string {
+  if (expansionFactor === null || !Number.isFinite(expansionFactor)) {
+    return '-';
+  }
+  const precision = expansionFactor < 10 ? 1 : 0;
+  return `${expansionFactor.toFixed(precision).replace(/\.0$/, '')}x`;
+}
+
 function initializeMetricTimeLabel(id: string, durationMs: number): HTMLElement | null {
   return initializeTextLabel(id, `${durationMs.toFixed(1)} ms`);
 }
 
 function getNow(): number {
   return globalThis.performance?.now() ?? Date.now();
-}
-
-function setMetricRowVisible(id: string, visible: boolean): void {
-  const metricRow = document.getElementById(id);
-  if (metricRow) {
-    metricRow.style.display = visible ? 'flex' : 'none';
-  }
 }
 
 function initializeTextLabel(id: string, value: string): HTMLElement | null {

@@ -9,6 +9,7 @@ import {
   getArrowFixedSizeListValues,
   getArrowMatrixVectorInfo,
   getArrowVectorBufferSource,
+  getArrowVectorByteLength,
   isArrowFixedSizeListVector,
   makeAppendableArrowGPUVector,
   makeArrowVectorFromArray,
@@ -106,6 +107,39 @@ test('getArrowVectorBufferSource returns primitive vector values', t => {
     getArrowVectorBufferSource(vector),
     new Uint32Array([1, 2, 3]),
     'returns primitive vector values'
+  );
+
+  t.end();
+});
+
+test('getArrowVectorByteLength sums Arrow data buffers and dictionary values', t => {
+  const primitiveVector = arrow.makeVector(new Uint32Array([1, 2, 3]));
+  const utf8Vector = arrow.vectorFromArray(['a', 'luma.gl'], new arrow.Utf8());
+  const dictionary = arrow.vectorFromArray(['alpha', 'beta'], new arrow.Utf8());
+  const dictionaryType = new arrow.Dictionary(new arrow.Utf8(), new arrow.Int32());
+  const dictionaryVector = arrow.makeVector(
+    arrow.makeData({
+      type: dictionaryType,
+      length: 3,
+      data: new Int32Array([0, 1, 0]),
+      dictionary
+    })
+  );
+
+  t.equal(
+    getArrowVectorByteLength(primitiveVector),
+    primitiveVector.byteLength,
+    'matches Vector.byteLength for primitive vectors'
+  );
+  t.equal(
+    getArrowVectorByteLength(utf8Vector),
+    utf8Vector.byteLength,
+    'matches Vector.byteLength for plain Utf8 vectors'
+  );
+  t.equal(
+    getArrowVectorByteLength(dictionaryVector),
+    dictionaryVector.byteLength + dictionary.byteLength,
+    'includes dictionary value buffers for Dictionary vectors'
   );
 
   t.end();

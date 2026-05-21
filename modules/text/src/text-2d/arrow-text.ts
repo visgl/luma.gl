@@ -8,10 +8,6 @@ import type {Character, CharacterMapping} from './text-utils';
 const MISSING_CHAR_WIDTH = 32;
 const MAX_UINT16 = 65535;
 const INVALID_DICTIONARY_INDEX = 0xffffffff;
-const DICTIONARY_OCCURRENCE_ROW_BITS = 20;
-const DICTIONARY_OCCURRENCE_GLYPH_BITS = 32 - DICTIONARY_OCCURRENCE_ROW_BITS;
-const MAX_DICTIONARY_OCCURRENCE_ROW_INDEX = (1 << DICTIONARY_OCCURRENCE_ROW_BITS) - 1;
-const MAX_DICTIONARY_OCCURRENCE_GLYPH_OFFSET = (1 << DICTIONARY_OCCURRENCE_GLYPH_BITS) - 1;
 
 export type ArrowUtf8DictionaryIndexType =
   | arrow.Int8
@@ -113,7 +109,6 @@ export type GpuDictionaryCompressedTextStream = {
   rowDictionaryIndices: Uint32Array;
   dictionaryGlyphRanges: Uint32Array;
   dictionaryGlyphRecords: Uint32Array;
-  glyphOccurrenceRecords: Uint32Array;
   glyphFrames: Float32Array;
   glyphCount: number;
   dictionaryGlyphCount: number;
@@ -640,7 +635,6 @@ export function buildGpuDictionaryCompressedTextStream({
   const rowDictionaryIndices = new Uint32Array(texts.length);
   const dictionaryGlyphRanges = new Uint32Array(dictionaryValueCount * 2);
   const dictionaryGlyphRecordValues: number[] = [];
-  const glyphOccurrenceRecordValues: number[] = [];
   const startIndices = new Array<number>(texts.length + 1);
   const glyphDefinitionsByCodePoint = new Map<
     number,
@@ -715,31 +709,11 @@ export function buildGpuDictionaryCompressedTextStream({
       rowDictionaryIndices[rowIndex] = normalizedDictionaryIndex;
       rowGlyphRanges[rowIndex * 2] = glyphCount;
 
-      if (rowIndex > MAX_DICTIONARY_OCCURRENCE_ROW_INDEX) {
-        throw new Error(
-          `Dictionary compressed text batches support at most ${MAX_DICTIONARY_OCCURRENCE_ROW_INDEX + 1} rows`
-        );
-      }
-
       if (normalizedDictionaryIndex !== INVALID_DICTIONARY_INDEX) {
         const dictionaryGlyphStart = dictionaryGlyphRanges[normalizedDictionaryIndex * 2] ?? 0;
         const dictionaryGlyphEnd =
           dictionaryGlyphRanges[normalizedDictionaryIndex * 2 + 1] ?? dictionaryGlyphStart;
         const dictionaryGlyphCount = Math.max(0, dictionaryGlyphEnd - dictionaryGlyphStart);
-        for (
-          let dictionaryGlyphOffset = 0;
-          dictionaryGlyphOffset < dictionaryGlyphCount;
-          dictionaryGlyphOffset++
-        ) {
-          if (dictionaryGlyphOffset > MAX_DICTIONARY_OCCURRENCE_GLYPH_OFFSET) {
-            throw new Error(
-              `Dictionary compressed text labels support at most ${MAX_DICTIONARY_OCCURRENCE_GLYPH_OFFSET + 1} glyphs`
-            );
-          }
-          glyphOccurrenceRecordValues.push(
-            ((dictionaryGlyphOffset << DICTIONARY_OCCURRENCE_ROW_BITS) | rowIndex) >>> 0
-          );
-        }
         glyphCount += dictionaryGlyphCount;
       }
 
@@ -753,14 +727,12 @@ export function buildGpuDictionaryCompressedTextStream({
   }
 
   const dictionaryGlyphRecords = new Uint32Array(dictionaryGlyphRecordValues);
-  const glyphOccurrenceRecords = new Uint32Array(glyphOccurrenceRecordValues);
   const glyphFrames = new Float32Array(glyphFrameValues);
   const compressedStreamByteLength =
     rowGlyphRanges.byteLength +
     rowDictionaryIndices.byteLength +
     dictionaryGlyphRanges.byteLength +
-    dictionaryGlyphRecords.byteLength +
-    glyphOccurrenceRecords.byteLength;
+    dictionaryGlyphRecords.byteLength;
 
   return {
     startIndices,
@@ -768,7 +740,6 @@ export function buildGpuDictionaryCompressedTextStream({
     rowDictionaryIndices,
     dictionaryGlyphRanges,
     dictionaryGlyphRecords,
-    glyphOccurrenceRecords,
     glyphFrames,
     glyphCount,
     dictionaryGlyphCount: dictionaryGlyphRecords.length / 2,

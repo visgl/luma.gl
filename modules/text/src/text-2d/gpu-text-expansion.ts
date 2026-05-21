@@ -75,7 +75,6 @@ const GPU_EXPANDED_TEXT_COMPUTE_SOURCE = /* wgsl */ `
 struct GeneratedGlyphVertex {
   glyphOffsets : u32,
   glyphIndices : u32,
-  rowIndex : u32,
 }
 @group(0) @binding(4) var<storage, read_write> generatedGlyphVertices : array<GeneratedGlyphVertex>;
 @group(0) @binding(5) var<storage, read> textRowTextAnchors : array<u32>;
@@ -152,8 +151,7 @@ fn main(@builtin(global_invocation_id) globalInvocationId: vec3<u32>) {
     let metrics = textGlyphMetrics[glyphId];
     generatedGlyphVertices[glyphIndex] = GeneratedGlyphVertex(
       packSignedInt16Pair(width + metrics.x + anchorShift, baselineOffsetY + baselineShift),
-      glyphId & 0xffffu,
-      rowIndex + u32(max(textExpansionConfig[2], 0))
+      glyphId & 0xffffu
     );
     width += metrics.y;
     glyphIndex += 1u;
@@ -188,7 +186,6 @@ ${getGpuUtf8MapShaderSource(GPU_UTF8_MAP_BINDING_OPTIONS)}
 struct GeneratedGlyphVertex {
   glyphOffsets : u32,
   glyphIndices : u32,
-  rowIndex : u32,
 }
 @group(0) @binding(5) var<storage, read_write> generatedGlyphVertices : array<GeneratedGlyphVertex>;
 @group(0) @binding(6) var<storage, read> textRowTextAnchors : array<u32>;
@@ -265,8 +262,7 @@ fn main(@builtin(global_invocation_id) globalInvocationId: vec3<u32>) {
       let metrics = textGlyphMetrics[glyphId];
       generatedGlyphVertices[byteIndex] = GeneratedGlyphVertex(
         packSignedInt16Pair(width + metrics.x + anchorShift, baselineOffsetY + baselineShift),
-        glyphId & 0xffffu,
-        rowIndex + u32(max(textExpansionConfig[3], 0))
+        glyphId & 0xffffu
       );
       width += metrics.y;
     }
@@ -298,7 +294,6 @@ const GPU_DICTIONARY_UTF8_EXPANDED_TEXT_COMPUTE_SOURCE = /* wgsl */ `
 struct GeneratedGlyphVertex {
   glyphOffsets : u32,
   glyphIndices : u32,
-  rowIndex : u32,
 }
 @group(0) @binding(7) var<storage, read_write> generatedGlyphVertices : array<GeneratedGlyphVertex>;
 @group(0) @binding(8) var<storage, read> textRowTextAnchors : array<u32>;
@@ -435,8 +430,7 @@ fn main(@builtin(global_invocation_id) globalInvocationId: vec3<u32>) {
       let metrics = textGlyphMetrics[glyphId];
       generatedGlyphVertices[outputGlyphIndex] = GeneratedGlyphVertex(
         packSignedInt16Pair(width + metrics.x + anchorShift, baselineOffsetY + baselineShift),
-        glyphId & 0xffffu,
-        rowIndex + u32(max(textExpansionConfig[3], 0))
+        glyphId & 0xffffu
       );
       width += metrics.y;
       outputGlyphIndex += 1u;
@@ -689,12 +683,12 @@ export function createGpuExpandedGeneratedState(
   glyphCount: number
 ): GpuExpandedGeneratedState {
   const outputRecordCount = Math.max(glyphCount, 1);
-  const byteLength = glyphCount * Uint32Array.BYTES_PER_ELEMENT * 3;
+  const byteLength = glyphCount * Uint32Array.BYTES_PER_ELEMENT * 2;
   return {
     compactGlyphVertexData: device.createBuffer({
       id: `${options.id || 'gpu-expanded-text-model'}-generated-glyph-vertices`,
       usage: Buffer.VERTEX | Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
-      data: new Uint32Array(outputRecordCount * 3)
+      data: new Uint32Array(outputRecordCount * 2)
     }),
     byteLength
   };

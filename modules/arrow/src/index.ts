@@ -45,6 +45,7 @@ export {
 } from './arrow/arrow-matrix-vector';
 export {
   expandArrowVector,
+  getArrowVectorByteLength,
   type ArrowVectorRowMapping
 } from './arrow/arrow-vector-utils';
 

@@ -246,9 +246,9 @@ test('buildGpuDictionaryCompressedTextStream shares dictionary glyph records per
     'dictionary glyph ids and offsets are stored once per dictionary value'
   );
   t.deepEqual(
-    Array.from(stream.glyphOccurrenceRecords),
-    [0, 1 << 20, 1, 2, (1 << 20) | 2, 3],
-    'visible glyph occurrences pack row and glyph-within-label indices into one word'
+    Array.from(stream.rowGlyphRanges),
+    [0, 2, 2, 3, 3, 5, 5, 6],
+    'row glyph ranges map instance indices back to source rows'
   );
   t.equal(stream.dictionaryGlyphCount, 3, 'shared dictionary glyph records scale with values');
   t.equal(stream.glyphCount, 6, 'visible glyph count still scales with row occurrences');
