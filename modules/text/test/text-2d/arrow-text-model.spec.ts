@@ -667,29 +667,33 @@ test('ArrowDictionaryTextModel draws every dictionary source batch', async t => 
     return pipeline;
   };
 
-  const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 0]});
   try {
-    t.ok(model.draw(renderPass), 'draws chunked dictionary text');
-    t.deepEqual(
-      drawCalls.map(drawCall => drawCall.instanceCount),
-      [2, 1, 3],
-      'uses each source batch glyph occurrence count'
-    );
-    t.deepEqual(
-      drawCalls.map(drawCall => drawCall.dictionaryRenderConfigBuffer),
-      model.renderBatches.map(renderBatch => renderBatch.dictionaryRenderConfigBuffer.buffer),
-      'binds each batch dictionary render config buffer'
-    );
-    t.deepEqual(
-      drawCalls.map(drawCall => drawCall.styleConfigBuffer),
-      model.batches.map(batch => batch.styleConfigBuffer.buffer),
-      'binds each batch style config buffer'
-    );
-    t.deepEqual(
-      drawCalls.map(drawCall => drawCall.rowPositionsBuffer),
-      model.batches.map(batch => resolveTestStorageBuffer(batch.rowPositionsBuffer)),
-      'binds each row storage batch'
-    );
+    const renderPass = device.beginRenderPass({clearColor: [0, 0, 0, 0]});
+    try {
+      t.ok(model.draw(renderPass), 'draws chunked dictionary text');
+      t.deepEqual(
+        drawCalls.map(drawCall => drawCall.instanceCount),
+        [2, 1, 3],
+        'uses each source batch glyph occurrence count'
+      );
+      t.deepEqual(
+        drawCalls.map(drawCall => drawCall.dictionaryRenderConfigBuffer),
+        model.renderBatches.map(renderBatch => renderBatch.dictionaryRenderConfigBuffer.buffer),
+        'binds each batch dictionary render config buffer'
+      );
+      t.deepEqual(
+        drawCalls.map(drawCall => drawCall.styleConfigBuffer),
+        model.batches.map(batch => batch.styleConfigBuffer.buffer),
+        'binds each batch style config buffer'
+      );
+      t.deepEqual(
+        drawCalls.map(drawCall => drawCall.rowPositionsBuffer),
+        model.batches.map(batch => resolveTestStorageBuffer(batch.rowPositionsBuffer)),
+        'binds each row storage batch'
+      );
+    } finally {
+      renderPass.destroy();
+    }
     const styleConfigRows = await Promise.all(
       model.batches.map(async batch => {
         const styleConfigBytes = await batch.styleConfigBuffer.readAsync();
@@ -715,7 +719,6 @@ test('ArrowDictionaryTextModel draws every dictionary source batch', async t => 
     );
   } finally {
     privateModel._updatePipeline = updatePipeline;
-    renderPass.destroy();
     model.destroy();
     destroyStorageGpuTextProps(textProps);
   }
