@@ -20,6 +20,8 @@ const A5_RESOLUTION_4_REFLECTED_INDEX = 0x2628000000000000n;
 const A5_MAX_RESOLUTION_INDEX = 0x35bd75e8fee1100dn;
 const INT64_NEGATIVE = -42n;
 const INT64_POSITIVE = 17n;
+// WGSL f32 sin/cos may differ by up to 2^-11 radians, about 0.028 degrees.
+const DGGS_WGSL_FLOAT32_GEOGRAPHIC_TOLERANCE_DEGREES = 0.03;
 
 test('shadertools#dggs exports WGSL helpers', t => {
   t.equal(dggs.name, 'dggs', 'module has expected name');
@@ -142,14 +144,14 @@ test('shadertools#dggs WGSL decodes H3, S2, and A5 words', async t => {
       t,
       resultWords[33]!,
       -120.09849548339844,
-      1e-3,
+      DGGS_WGSL_FLOAT32_GEOGRAPHIC_TOLERANCE_DEGREES,
       'decodes A5 boundary longitude'
     );
     assertFloat32WordClose(
       t,
       resultWords[34]!,
       40.015132904052734,
-      1e-3,
+      DGGS_WGSL_FLOAT32_GEOGRAPHIC_TOLERANCE_DEGREES,
       'decodes A5 boundary latitude'
     );
     t.deepEqual(
@@ -161,14 +163,14 @@ test('shadertools#dggs WGSL decodes H3, S2, and A5 words', async t => {
       t,
       resultWords[41]!,
       -74.28097534179688,
-      1e-3,
+      DGGS_WGSL_FLOAT32_GEOGRAPHIC_TOLERANCE_DEGREES,
       'decodes reflected A5 boundary longitude'
     );
     assertFloat32WordClose(
       t,
       resultWords[42]!,
       44.1791877746582,
-      1e-3,
+      DGGS_WGSL_FLOAT32_GEOGRAPHIC_TOLERANCE_DEGREES,
       'decodes reflected A5 boundary latitude'
     );
   } finally {

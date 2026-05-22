@@ -25,6 +25,9 @@ import {cellToBoundary as getH3CellBoundary} from 'h3-js';
 
 type DggsCellPathCoordinateType = arrow.List<arrow.FixedSizeList<arrow.Float32>>;
 
+// WGSL f32 sin/cos may differ by up to 2^-11 radians, about 0.028 degrees.
+const DGGS_WGSL_FLOAT32_GEOGRAPHIC_TOLERANCE_DEGREES = 0.03;
+
 const STRING_KEY_TEST_CASES: Record<
   DggsCellEncoding,
   {
@@ -181,7 +184,7 @@ test('arrow#prepareDggsCellPathGPUVector extracts DGGS boundary paths on the GPU
       keys: [s2CellKey],
       pointCount: 5,
       expectedCoordinates: getS2CornerBoundary(s2CellKey),
-      tolerance: 1e-4
+      tolerance: DGGS_WGSL_FLOAT32_GEOGRAPHIC_TOLERANCE_DEGREES
     },
     {
       encoding: 'a5',
@@ -203,7 +206,7 @@ test('arrow#prepareDggsCellPathGPUVector extracts DGGS boundary paths on the GPU
         ...H3_PATH_TEST_KEYS.flatMap(cellKey => getH3BoundaryCoordinates(cellKey)),
         ...makeZeroPathCoordinates(H3_UNSUPPORTED_PATH_TEST_KEYS.length, 7)
       ],
-      tolerance: 1e-3
+      tolerance: DGGS_WGSL_FLOAT32_GEOGRAPHIC_TOLERANCE_DEGREES
     }
   ];
 
