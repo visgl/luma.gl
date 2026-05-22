@@ -14,4 +14,8 @@ export const sequence: OperationHandler<{start: number; step: number}> = async (
     result[rowIndex] = inputs.start + rowIndex * inputs.step;
   }
   target.write(result);
+  return {
+    success: true,
+    value: result
+  };
 };

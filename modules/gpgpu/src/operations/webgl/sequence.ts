@@ -37,6 +37,7 @@ void main() {
     transform.run({
       outputBuffers: {[outputModule.varyings[0]]: target}
     });
+    return {success: true};
   } finally {
     transform.destroy();
   }
