@@ -4459,6 +4459,7 @@ __metadata:
     "@math.gl/types": "npm:^4.1.0"
     "@probe.gl/log": "npm:^4.0.8"
     "@probe.gl/stats": "npm:^4.0.8"
+    apache-arrow: "npm:^17.0.0"
   peerDependencies:
     "@luma.gl/core": ~9.3.0
     "@luma.gl/engine": ~9.3.0

@@ -2,7 +2,18 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import * as arrow from 'apache-arrow';
+import {
+  DataType,
+  Dictionary,
+  Int16,
+  Int32,
+  Int8,
+  Uint16,
+  Uint32,
+  Uint8,
+  Utf8,
+  Vector
+} from 'apache-arrow';
 import type {Character, CharacterMapping} from './text-utils';
 
 const MISSING_CHAR_WIDTH = 32;
@@ -10,19 +21,13 @@ const MAX_UINT16 = 65535;
 const INVALID_DICTIONARY_INDEX = 0xffffffff;
 
 /** Integer Arrow dictionary key types accepted by UTF-8 text helpers. */
-export type ArrowUtf8DictionaryIndexType =
-  | arrow.Int8
-  | arrow.Int16
-  | arrow.Int32
-  | arrow.Uint8
-  | arrow.Uint16
-  | arrow.Uint32;
+export type ArrowUtf8DictionaryIndexType = Int8 | Int16 | Int32 | Uint8 | Uint16 | Uint32;
 /** Dictionary-encoded UTF-8 Arrow text leaf accepted by text helpers. */
-export type ArrowUtf8Dictionary = arrow.Dictionary<arrow.Utf8, ArrowUtf8DictionaryIndexType>;
+export type ArrowUtf8Dictionary = Dictionary<Utf8, ArrowUtf8DictionaryIndexType>;
 /** Plain or dictionary-encoded UTF-8 Arrow text leaf accepted by text helpers. */
-export type ArrowUtf8TextType = arrow.Utf8 | ArrowUtf8Dictionary;
+export type ArrowUtf8TextType = Utf8 | ArrowUtf8Dictionary;
 /** Plain or dictionary-encoded UTF-8 Arrow text vector accepted by text helpers. */
-export type ArrowUtf8TextVector = arrow.Vector<ArrowUtf8TextType>;
+export type ArrowUtf8TextVector = Vector<ArrowUtf8TextType>;
 
 /** Mutable virtual UTF-8 byte range for one Arrow text row. */
 export type Utf8TextIndexTarget = {
@@ -191,35 +196,33 @@ export type GpuDictionaryCompressedTextStream = {
 };
 
 /** Returns whether a runtime Arrow vector stores UTF-8 labels. */
-export function isArrowUtf8Vector(value: unknown): value is arrow.Vector<arrow.Utf8> {
+export function isArrowUtf8Vector(value: unknown): value is Vector<Utf8> {
   return (
     value != null &&
     typeof value === 'object' &&
     'type' in value &&
-    value.type instanceof arrow.Utf8 &&
+    value.type instanceof Utf8 &&
     'data' in value &&
     Array.isArray(value.data)
   );
 }
 
 /** Returns whether an Arrow type stores dictionary-encoded UTF-8 labels. */
-export function isArrowUtf8DictionaryType(type: arrow.DataType): type is ArrowUtf8Dictionary {
+export function isArrowUtf8DictionaryType(type: DataType): type is ArrowUtf8Dictionary {
   return (
-    arrow.DataType.isDictionary(type) &&
-    type.dictionary instanceof arrow.Utf8 &&
+    DataType.isDictionary(type) &&
+    type.dictionary instanceof Utf8 &&
     isArrowUtf8DictionaryIndexType(type.indices)
   );
 }
 
 /** Returns whether a runtime Arrow vector stores dictionary-encoded UTF-8 labels. */
-export function isArrowUtf8DictionaryVector(
-  value: unknown
-): value is arrow.Vector<ArrowUtf8Dictionary> {
+export function isArrowUtf8DictionaryVector(value: unknown): value is Vector<ArrowUtf8Dictionary> {
   return (
     value != null &&
     typeof value === 'object' &&
     'type' in value &&
-    isArrowUtf8DictionaryType(value.type as arrow.DataType) &&
+    isArrowUtf8DictionaryType(value.type as DataType) &&
     'data' in value &&
     Array.isArray(value.data)
   );
@@ -231,7 +234,7 @@ export function isArrowUtf8TextVector(value: unknown): value is ArrowUtf8TextVec
 }
 
 /** Normalize Arrow UTF-8 chunks into one virtual byte space. */
-export function buildArrowUtf8Chunks(texts: arrow.Vector<arrow.Utf8>): readonly ArrowUtf8Chunk[] {
+export function buildArrowUtf8Chunks(texts: Vector<Utf8>): readonly ArrowUtf8Chunk[] {
   const chunks: ArrowUtf8Chunk[] = [];
   let rowStart = 0;
   let byteStart = 0;
@@ -269,7 +272,7 @@ export function buildArrowUtf8Chunks(texts: arrow.Vector<arrow.Utf8>): readonly 
  * Normalize Arrow UTF-8 buffers for direct WebGPU decode without examining individual bytes.
  * One packed `uint32` stores four UTF-8 bytes in little-endian byte order.
  */
-export function buildGpuUtf8TextInput(texts: arrow.Vector<arrow.Utf8>): GpuUtf8TextInput {
+export function buildGpuUtf8TextInput(texts: Vector<Utf8>): GpuUtf8TextInput {
   const textInputBuildStartTime = getNow();
   const chunks = buildArrowUtf8Chunks(texts);
   const byteLength = chunks[chunks.length - 1]?.byteEnd ?? 0;
@@ -308,7 +311,7 @@ export function buildGpuUtf8TextInput(texts: arrow.Vector<arrow.Utf8>): GpuUtf8T
  * Dictionary value bytes are stored once per input chunk; rows reference values by normalized key.
  */
 export function buildGpuDictionaryUtf8TextInput(
-  texts: arrow.Vector<ArrowUtf8Dictionary>
+  texts: Vector<ArrowUtf8Dictionary>
 ): GpuDictionaryUtf8TextInput {
   const textInputBuildStartTime = getNow();
   const chunks = buildArrowUtf8DictionaryChunks(texts);
@@ -405,7 +408,7 @@ export function buildGpuDictionaryUtf8TextInput(
 
 /** Create a mutable range accessor for row-aligned Arrow UTF-8 vectors. */
 export function createArrowUtf8TextIndexAccessor<DataT>(
-  texts: arrow.Vector<arrow.Utf8>,
+  texts: Vector<Utf8>,
   getRowIndex: (datum: DataT) => number
 ): ArrowUtf8TextIndexAccessor<DataT> {
   const chunks = buildArrowUtf8Chunks(texts);
@@ -692,7 +695,7 @@ export function buildGpuDictionaryCompressedTextStream({
   lineHeight,
   characterSet
 }: {
-  texts: arrow.Vector<ArrowUtf8Dictionary>;
+  texts: Vector<ArrowUtf8Dictionary>;
   mapping: CharacterMapping;
   baselineOffset: number;
   lineHeight: number;
@@ -838,18 +841,16 @@ function packSignedInt16Pair(lowerValue: number, upperValue: number): number {
   return ((upperValue & 0xffff) << 16) | (lowerValue & 0xffff);
 }
 
-function isArrowUtf8DictionaryIndexType(
-  type: arrow.DataType
-): type is ArrowUtf8DictionaryIndexType {
-  return arrow.DataType.isInt(type) && type.bitWidth <= 32;
+function isArrowUtf8DictionaryIndexType(type: DataType): type is ArrowUtf8DictionaryIndexType {
+  return DataType.isInt(type) && type.bitWidth <= 32;
 }
 
 function createArrowTextRowDecoder(texts: ArrowUtf8TextVector): {
   countCodePoints: (rowIndex: number) => number;
   visitCodePoints: (rowIndex: number, visitCodePoint: (codePoint: number) => void) => number;
 } {
-  if (texts.type instanceof arrow.Utf8) {
-    const chunks = buildArrowUtf8Chunks(texts as arrow.Vector<arrow.Utf8>);
+  if (texts.type instanceof Utf8) {
+    const chunks = buildArrowUtf8Chunks(texts as Vector<Utf8>);
     const target: Utf8TextIndexTarget = {startIndex: 0, endIndex: 0};
     return {
       countCodePoints: rowIndex => {
@@ -872,7 +873,7 @@ function createArrowTextRowDecoder(texts: ArrowUtf8TextVector): {
     throw new Error(`Arrow text vector must be Utf8 or Dictionary<Utf8>, got ${texts.type}`);
   }
 
-  const chunks = buildArrowUtf8DictionaryChunks(texts as arrow.Vector<ArrowUtf8Dictionary>);
+  const chunks = buildArrowUtf8DictionaryChunks(texts as Vector<ArrowUtf8Dictionary>);
   return {
     countCodePoints: rowIndex => getArrowUtf8DictionaryCodePoints(chunks, rowIndex).length,
     visitCodePoints: (rowIndex, visitCodePoint) => {
@@ -886,14 +887,14 @@ function createArrowTextRowDecoder(texts: ArrowUtf8TextVector): {
 }
 
 function buildArrowUtf8DictionaryChunks(
-  texts: arrow.Vector<ArrowUtf8Dictionary>
+  texts: Vector<ArrowUtf8Dictionary>
 ): ArrowUtf8DictionaryChunk[] {
   const chunks: ArrowUtf8DictionaryChunk[] = [];
   let rowStart = 0;
   let dictionaryValueBase = 0;
 
   for (const data of texts.data) {
-    const dictionary = data.dictionary as arrow.Vector<arrow.Utf8> | undefined;
+    const dictionary = data.dictionary as Vector<Utf8> | undefined;
     const dictionaryLength = dictionary?.length ?? 0;
     const rowEnd = rowStart + data.length;
     chunks.push({

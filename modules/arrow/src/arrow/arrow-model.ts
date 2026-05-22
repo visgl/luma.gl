@@ -10,7 +10,7 @@ import {
   type GPUTableModelProps,
   type GPUVectorProps
 } from '@luma.gl/tables';
-import * as arrow from 'apache-arrow';
+import {Table} from 'apache-arrow';
 import {type ArrowVertexFormatOptions} from './arrow-shader-layout';
 import {ArrowTableGeometry, type ArrowTableGeometryProps} from './arrow-geometry';
 import type {ArrowMeshTable} from './arrow-mesh-types';
@@ -28,11 +28,11 @@ export type ArrowModelProps = ModelProps &
      * Mesh input is converted through {@link ArrowTableGeometry}. It is mutually
      * exclusive with `arrowTable`, `arrowGPUTable`, and `geometry`.
      */
-    arrowMesh?: ArrowMeshTable | arrow.Table;
+    arrowMesh?: ArrowMeshTable | Table;
     /** Options applied when converting Mesh Arrow input into GPU geometry. */
     arrowMeshOptions?: Omit<ArrowTableGeometryProps, 'arrowMesh'>;
     /** Arrow table used as the construction source for GPU attribute buffers. */
-    arrowTable?: arrow.Table;
+    arrowTable?: Table;
     /** Existing non-streaming GPU table used as the source for model attributes. */
     arrowGPUTable?: GPUTable;
     /** Maps shader attribute names to Arrow column paths. Defaults to using attribute names. */
@@ -125,7 +125,7 @@ export class ArrowModel extends GPUTableModel {
   }
 
   private setArrowMesh(
-    arrowMesh: ArrowMeshTable | arrow.Table,
+    arrowMesh: ArrowMeshTable | Table,
     arrowMeshOptions?: Omit<ArrowTableGeometryProps, 'arrowMesh'>
   ): void {
     const arrowGeometry = new ArrowTableGeometry(this.device, {
@@ -150,7 +150,7 @@ export class ArrowModel extends GPUTableModel {
     this.clearTable();
   }
 
-  private setArrowTable(arrowTable: arrow.Table): void {
+  private setArrowTable(arrowTable: Table): void {
     const nextArrowGPUTable = makeArrowGPUTable(this.device, arrowTable, {
       shaderLayout: this.arrowState.shaderLayout,
       arrowPaths: this.arrowState.arrowPaths,
@@ -263,7 +263,7 @@ function getArrowModelState(device: Device, props: ArrowModelProps): ArrowModelS
 
 function getInitialArrowGPUTable(props: {
   device: Device;
-  arrowTable?: arrow.Table;
+  arrowTable?: Table;
   arrowGPUTable?: GPUTable;
   shaderLayout: ShaderLayout;
   arrowPaths?: Record<string, string>;
@@ -286,8 +286,8 @@ function getInitialArrowGPUTable(props: {
 }
 
 function validateArrowModelSources(props: {
-  arrowMesh?: ArrowMeshTable | arrow.Table;
-  arrowTable?: arrow.Table;
+  arrowMesh?: ArrowMeshTable | Table;
+  arrowTable?: Table;
   arrowGPUTable?: GPUTable;
 }): void {
   const sourceCount =

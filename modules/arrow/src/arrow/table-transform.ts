@@ -10,7 +10,7 @@ import {
   type ShaderLayout
 } from '@luma.gl/core';
 import {BufferTransform, DynamicBuffer, type BufferTransformProps} from '@luma.gl/engine';
-import * as arrow from 'apache-arrow';
+import {Table} from 'apache-arrow';
 import type {ArrowVertexFormatOptions} from './arrow-shader-layout';
 import {GPUVector, type GPUVectorProps} from './arrow-gpu-vector';
 import {GPURecordBatch} from './arrow-gpu-record-batch';
@@ -39,7 +39,7 @@ export type TableTransformProps = BufferTransformProps &
     /** Existing GPU table used as the source for transform input buffers. */
     table?: GPUTable;
     /** Arrow table convenience input converted into a {@link GPUTable}. */
-    arrowTable?: arrow.Table;
+    arrowTable?: Table;
     /** Existing GPU vectors converted into the transform input table. */
     inputVectors?: TableTransformInputVectors;
     /** Maps shader attribute names to Arrow column paths. Defaults to using attribute names. */
@@ -321,7 +321,7 @@ function getTableTransformState(device: Device, props: TableTransformProps): Tab
 function getInitialTable(props: {
   device: Device;
   table?: GPUTable;
-  arrowTable?: arrow.Table;
+  arrowTable?: Table;
   inputVectors?: TableTransformInputVectors;
   shaderLayout: ShaderLayout;
   arrowPaths?: Record<string, string>;
@@ -348,7 +348,7 @@ function getInitialTable(props: {
 
 function validateTableTransformSources(props: {
   table?: GPUTable;
-  arrowTable?: arrow.Table;
+  arrowTable?: Table;
   inputVectors?: TableTransformInputVectors;
 }): void {
   const sourceCount =

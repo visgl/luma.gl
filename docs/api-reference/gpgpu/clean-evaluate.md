@@ -53,7 +53,7 @@ function cleanEvaluate<
 - destroys dependency evaluators whose GPU buffers are not also used by the root evaluators
 - returns the original `result` object
 
-This lets you keep a compact final result shape while avoiding manual cleanup of temporary operation nodes.
+This lets you keep a compact final result shape while avoiding manual cleanup of intermediate dependency evaluators.
 
 ## Remarks
 

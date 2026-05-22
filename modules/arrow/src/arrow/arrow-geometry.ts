@@ -11,7 +11,7 @@ import {
   vertexFormatDecoder
 } from '@luma.gl/core';
 import {GPURecordBatch, GPUTable, GPUTableGeometry, GPUVector} from '@luma.gl/tables';
-import * as arrow from 'apache-arrow';
+import {Binary, DataType, Float, Int, Precision, Table, Vector} from 'apache-arrow';
 import type {ArrowMeshTable, ArrowMeshTopology} from './arrow-mesh-types';
 
 export type ArrowTableGeometryProps = {
@@ -22,7 +22,7 @@ export type ArrowTableGeometryProps = {
    * Raw tables use schema metadata key `topology` when present and otherwise
    * default to `triangle-list`.
    */
-  arrowMesh: ArrowMeshTable | arrow.Table;
+  arrowMesh: ArrowMeshTable | Table;
   /** Name of the generated interleaved vertex buffer. Defaults to `geometry`. */
   bufferName?: string;
   /**
@@ -45,7 +45,7 @@ export type ArrowTableGeometryProps = {
 type ArrowMeshAttributeData = {
   sourceName: string;
   attributeName: string;
-  dataType: arrow.DataType;
+  dataType: DataType;
   value: TypedArray;
   size: number;
   format: VertexFormat;
@@ -106,16 +106,13 @@ export function makeGPUGeometryFromArrow(
   return new ArrowTableGeometry(device, props);
 }
 
-function getArrowMeshTable(arrowMesh: ArrowMeshTable | arrow.Table): arrow.Table {
-  return arrowMesh instanceof arrow.Table ? arrowMesh : arrowMesh.data;
+function getArrowMeshTable(arrowMesh: ArrowMeshTable | Table): Table {
+  return arrowMesh instanceof Table ? arrowMesh : arrowMesh.data;
 }
 
-function getArrowMeshTopology(
-  arrowMesh: ArrowMeshTable | arrow.Table,
-  table: arrow.Table
-): ArrowMeshTopology {
+function getArrowMeshTopology(arrowMesh: ArrowMeshTable | Table, table: Table): ArrowMeshTopology {
   const topology =
-    arrowMesh instanceof arrow.Table ? table.schema.metadata.get('topology') : arrowMesh.topology;
+    arrowMesh instanceof Table ? table.schema.metadata.get('topology') : arrowMesh.topology;
 
   switch (topology) {
     case 'point-list':
@@ -128,7 +125,7 @@ function getArrowMeshTopology(
 }
 
 function getArrowMeshAttributes(
-  table: arrow.Table,
+  table: Table,
   arrowPaths?: Record<string, string>
 ): ArrowMeshAttributeData[] {
   const attributes: ArrowMeshAttributeData[] = [];
@@ -187,7 +184,7 @@ function getMappedAttributeName(sourceName: string, arrowPaths?: Record<string, 
 function getArrowMeshAttributeData(
   sourceName: string,
   attributeName: string,
-  vector: arrow.Vector,
+  vector: Vector,
   normalized?: boolean
 ): ArrowMeshAttributeData {
   const {childType, size} = getArrowAttributeType(vector.type, sourceName);
@@ -206,23 +203,23 @@ function getArrowMeshAttributeData(
 }
 
 function getArrowAttributeType(
-  type: arrow.DataType,
+  type: DataType,
   sourceName: string
-): {childType: arrow.Int | arrow.Float; size: 1 | 2 | 3 | 4} {
-  if (arrow.DataType.isFixedSizeList(type)) {
+): {childType: Int | Float; size: 1 | 2 | 3 | 4} {
+  if (DataType.isFixedSizeList(type)) {
     const listSize = type.listSize;
     if (listSize < 1 || listSize > 4) {
       throw new Error(`ArrowGeometry column "${sourceName}" list size must be between 1 and 4`);
     }
     const childType = type.children[0].type;
-    if (!arrow.DataType.isInt(childType) && !arrow.DataType.isFloat(childType)) {
+    if (!DataType.isInt(childType) && !DataType.isFloat(childType)) {
       throw new Error(`ArrowGeometry column "${sourceName}" must contain numeric values`);
     }
     validateSupportedNumericType(sourceName, childType);
     return {childType, size: listSize as 1 | 2 | 3 | 4};
   }
 
-  if (arrow.DataType.isInt(type) || arrow.DataType.isFloat(type)) {
+  if (DataType.isInt(type) || DataType.isFloat(type)) {
     validateSupportedNumericType(sourceName, type);
     return {childType: type, size: 1};
   }
@@ -230,30 +227,22 @@ function getArrowAttributeType(
   throw new Error(`ArrowGeometry column "${sourceName}" must be numeric or FixedSizeList numeric`);
 }
 
-function validateSupportedNumericType(sourceName: string, type: arrow.Int | arrow.Float): void {
-  if (arrow.DataType.isInt(type) && type.bitWidth === 64) {
+function validateSupportedNumericType(sourceName: string, type: Int | Float): void {
+  if (DataType.isInt(type) && type.bitWidth === 64) {
     throw new Error(`ArrowGeometry column "${sourceName}" cannot use 64-bit integer values`);
   }
-  if (arrow.DataType.isFloat(type) && type.precision === arrow.Precision.DOUBLE) {
+  if (DataType.isFloat(type) && type.precision === Precision.DOUBLE) {
     throw new Error(`ArrowGeometry column "${sourceName}" cannot use float64 values`);
   }
 }
 
-function getArrowAttributeValues(
-  vector: arrow.Vector,
-  childType: arrow.Int | arrow.Float,
-  size: number
-): TypedArray {
+function getArrowAttributeValues(vector: Vector, childType: Int | Float, size: number): TypedArray {
   const values = makeTypedArray(childType, vector.length * size);
   let targetOffset = 0;
 
   for (const data of vector.data) {
-    const source = arrow.DataType.isFixedSizeList(vector.type)
-      ? data.children[0].values
-      : data.values;
-    const sourceOffset = arrow.DataType.isFixedSizeList(vector.type)
-      ? data.offset * size
-      : data.offset;
+    const source = DataType.isFixedSizeList(vector.type) ? data.children[0].values : data.values;
+    const sourceOffset = DataType.isFixedSizeList(vector.type) ? data.offset * size : data.offset;
     const sourceLength = data.length * size;
     values.set(
       source.subarray(sourceOffset, sourceOffset + sourceLength) as TypedArray,
@@ -265,8 +254,8 @@ function getArrowAttributeValues(
   return values;
 }
 
-function makeTypedArray(type: arrow.Int | arrow.Float, length: number): TypedArray {
-  if (arrow.DataType.isInt(type)) {
+function makeTypedArray(type: Int | Float, length: number): TypedArray {
+  if (DataType.isInt(type)) {
     if (type.isSigned) {
       switch (type.bitWidth) {
         case 8:
@@ -288,9 +277,9 @@ function makeTypedArray(type: arrow.Int | arrow.Float, length: number): TypedArr
     }
   } else {
     switch (type.precision) {
-      case arrow.Precision.HALF:
+      case Precision.HALF:
         return new Uint16Array(length);
-      case arrow.Precision.SINGLE:
+      case Precision.SINGLE:
         return new Float32Array(length);
     }
   }
@@ -299,20 +288,20 @@ function makeTypedArray(type: arrow.Int | arrow.Float, length: number): TypedArr
 }
 
 function getArrowAttributeVertexFormat(
-  type: arrow.Int | arrow.Float,
+  type: Int | Float,
   size: 1 | 2 | 3 | 4,
   normalized?: boolean
 ): VertexFormat {
-  if (arrow.DataType.isFloat(type)) {
+  if (DataType.isFloat(type)) {
     switch (type.precision) {
-      case arrow.Precision.HALF:
+      case Precision.HALF:
         return vertexFormatDecoder.makeVertexFormat('float16', size, false);
-      case arrow.Precision.SINGLE:
+      case Precision.SINGLE:
         return vertexFormatDecoder.makeVertexFormat('float32', size, false);
     }
   }
 
-  if (arrow.DataType.isInt(type)) {
+  if (DataType.isInt(type)) {
     const signedDataType = `${type.isSigned ? 'sint' : 'uint'}${type.bitWidth}` as
       | 'sint8'
       | 'uint8'
@@ -327,22 +316,22 @@ function getArrowAttributeVertexFormat(
 }
 
 function getArrowMeshIndices(
-  arrowMesh: ArrowMeshTable | arrow.Table,
-  table: arrow.Table
+  arrowMesh: ArrowMeshTable | Table,
+  table: Table
 ): Uint16Array | Uint32Array | null {
   const indexVector = table.getChild(INDEX_COLUMN_NAME);
-  if (!indexVector && !(arrowMesh instanceof arrow.Table) && arrowMesh.indices) {
+  if (!indexVector && !(arrowMesh instanceof Table) && arrowMesh.indices) {
     return normalizeIndexArray(Array.from(arrowMesh.indices.value, Number));
   }
   if (!indexVector) {
     return null;
   }
-  if (!arrow.DataType.isList(indexVector.type)) {
+  if (!DataType.isList(indexVector.type)) {
     throw new Error('ArrowGeometry indices column must be a List column');
   }
 
   const childType = indexVector.type.children[0].type;
-  if (!arrow.DataType.isInt(childType) || childType.bitWidth > 32) {
+  if (!DataType.isInt(childType) || childType.bitWidth > 32) {
     throw new Error('ArrowGeometry indices column must contain 32-bit integer values');
   }
 
@@ -396,7 +385,7 @@ function createInterleavedGPUTable(
     type: 'interleaved',
     name: bufferName,
     buffer: device.createBuffer({usage: Buffer.VERTEX | Buffer.COPY_SRC, data}),
-    dataType: new arrow.Binary(),
+    dataType: new Binary(),
     length: rowCount,
     byteStride,
     attributes: interleavedAttributes.map(attribute => ({

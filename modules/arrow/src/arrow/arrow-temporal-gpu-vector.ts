@@ -5,7 +5,21 @@
 import {Buffer, type Binding, type Device, type ShaderLayout} from '@luma.gl/core';
 import {Computation, DynamicBuffer} from '@luma.gl/engine';
 import {GPUData, GPUVector} from '@luma.gl/tables';
-import * as arrow from 'apache-arrow';
+import {
+  Data,
+  DataType,
+  DateUnit,
+  Date_,
+  Duration,
+  Field,
+  Float32,
+  List,
+  Time,
+  TimeUnit,
+  Timestamp,
+  Vector,
+  makeData
+} from 'apache-arrow';
 import {makeArrowGPUVector} from './arrow-gpu-table-adapters';
 
 /** Supported Arrow temporal logical kinds. */
@@ -15,11 +29,11 @@ export type ArrowTemporalUnit = 'day' | 'second' | 'millisecond' | 'microsecond'
 /** Temporal origin selection policy retained in output metadata. */
 export type ArrowTemporalOriginPolicy = 'first-valid' | 'zero';
 /** Supported non-interval Arrow temporal leaf types. */
-export type ArrowTemporalType = arrow.Date_ | arrow.Time | arrow.Timestamp | arrow.Duration;
+export type ArrowTemporalType = Date_ | Time | Timestamp | Duration;
 /** Supported scalar or variable-length Arrow temporal columns. */
-export type ArrowTemporalColumnType = ArrowTemporalType | arrow.List<ArrowTemporalType>;
+export type ArrowTemporalColumnType = ArrowTemporalType | List<ArrowTemporalType>;
 /** Prepared relative temporal output types. */
-export type ArrowRelativeTemporalType = arrow.Float32 | arrow.List<arrow.Float32>;
+export type ArrowRelativeTemporalType = Float32 | List<Float32>;
 
 /** Arrow field metadata key for the prepared temporal logical kind. */
 export const TEMPORAL_KIND_METADATA_KEY = 'luma.gl:temporal-kind';
@@ -57,7 +71,7 @@ export type PrepareArrowTemporalGPUVectorOptions = {
   /** Stable resource id prefix. Defaults to the vector name. */
   id?: string;
   /** Optional Arrow field carrying previously persisted temporal metadata. */
-  field?: arrow.Field;
+  field?: Field;
   /** Override or seed the relative-time origin in source units. */
   origin?: number | bigint | string;
   /** Prefer WebGPU compute when available. Defaults to `true` on WebGPU devices. */
@@ -77,7 +91,7 @@ export type PreparedArrowTemporalGPUVector = {
   /** Alias for callers that prefer the generic vector name. */
   vector: GPUVector<ArrowRelativeTemporalType>;
   /** Output Arrow field carrying prepared temporal metadata. */
-  field: arrow.Field;
+  field: Field;
   /** Recovered source temporal metadata and chosen origin. */
   temporalInfo: ArrowTemporalVectorInfo & {
     origin: number | bigint;
@@ -87,9 +101,7 @@ export type PreparedArrowTemporalGPUVector = {
   destroy: () => void;
 };
 
-type ArrowTemporalSource =
-  | arrow.Vector<ArrowTemporalColumnType>
-  | GPUVector<ArrowTemporalColumnType>;
+type ArrowTemporalSource = Vector<ArrowTemporalColumnType> | GPUVector<ArrowTemporalColumnType>;
 
 type TemporalListGPUReadbackMetadata = {
   kind: 'temporal-list';
@@ -97,20 +109,20 @@ type TemporalListGPUReadbackMetadata = {
   valueByteLength: number;
 };
 
-const makeFloat32Data = arrow.makeData as (props: {
-  type: arrow.Float32;
+const makeFloat32Data = makeData as (props: {
+  type: Float32;
   length: number;
   data: Float32Array;
-}) => arrow.Data<arrow.Float32>;
+}) => Data<Float32>;
 
-const makeFloat32ListData = arrow.makeData as (props: {
-  type: arrow.List<arrow.Float32>;
+const makeFloat32ListData = makeData as (props: {
+  type: List<Float32>;
   length: number;
   nullCount: number;
   nullBitmap: null;
   valueOffsets: Int32Array;
-  child: arrow.Data<arrow.Float32>;
-}) => arrow.Data<arrow.List<arrow.Float32>>;
+  child: Data<Float32>;
+}) => Data<List<Float32>>;
 
 const TEMPORAL_PREPARE_SHADER_LAYOUT: ShaderLayout = {
   bindings: [
@@ -123,8 +135,8 @@ const TEMPORAL_PREPARE_SHADER_LAYOUT: ShaderLayout = {
 
 /** Recover supported temporal metadata from one Arrow scalar or list column. */
 export function getArrowTemporalVectorInfo(
-  vector: Pick<arrow.Vector, 'type'> | Pick<GPUVector, 'type'>,
-  field?: arrow.Field
+  vector: Pick<Vector, 'type'> | Pick<GPUVector, 'type'>,
+  field?: Field
 ): ArrowTemporalVectorInfo | null {
   const leafType = getArrowTemporalLeafType(vector.type);
   if (!leafType) {
@@ -134,7 +146,7 @@ export function getArrowTemporalVectorInfo(
   const metadata = leafField?.metadata;
   return {
     ...getArrowTemporalLeafInfo(leafType),
-    variableLength: arrow.DataType.isList(vector.type),
+    variableLength: DataType.isList(vector.type),
     ...(metadata?.has(TEMPORAL_ORIGIN_METADATA_KEY)
       ? {origin: parseTemporalOrigin(metadata.get(TEMPORAL_ORIGIN_METADATA_KEY)!, leafType)}
       : {}),
@@ -238,7 +250,7 @@ function assertArrowTemporalVectorAlignment(
 
 function createPreparedArrowTemporalGPUVector(
   temporal: GPUVector<ArrowRelativeTemporalType>,
-  field: arrow.Field,
+  field: Field,
   temporalInfo: PreparedArrowTemporalGPUVector['temporalInfo'],
   ownsTemporal: boolean
 ): PreparedArrowTemporalGPUVector {
@@ -262,7 +274,7 @@ async function prepareArrowTemporalGPUVectorOnGPU(
   device: Device,
   source: GPUVector<ArrowTemporalColumnType>,
   temporalInfo: PreparedArrowTemporalGPUVector['temporalInfo'],
-  field: arrow.Field,
+  field: Field,
   options: Required<Pick<PrepareArrowTemporalGPUVectorOptions, 'name' | 'id'>>
 ): Promise<PreparedArrowTemporalGPUVector> {
   const outputType = getPreparedArrowTemporalType(field);
@@ -339,7 +351,7 @@ async function prepareArrowTemporalGPUVectorOnGPU(
 
 function makeArrowTemporalSourceGPUVector(
   device: Device,
-  source: arrow.Vector<ArrowTemporalColumnType>,
+  source: Vector<ArrowTemporalColumnType>,
   options: Required<Pick<PrepareArrowTemporalGPUVectorOptions, 'name' | 'id'>>
 ): GPUVector<ArrowTemporalColumnType> {
   const sourceInfo = getRequiredArrowTemporalVectorInfo(source);
@@ -359,13 +371,11 @@ function makeArrowTemporalSourceGPUVector(
       byteStride,
       rowByteLength: byteStride,
       ownsBuffer: true,
-      ...(arrow.DataType.isList(sourceData.type)
+      ...(DataType.isList(sourceData.type)
         ? {
             readbackMetadata: {
               kind: 'temporal-list',
-              valueOffsets: getNormalizedArrowValueOffsets(
-                sourceData as arrow.Data<arrow.List<any>>
-              ),
+              valueOffsets: getNormalizedArrowValueOffsets(sourceData as Data<List<any>>),
               valueByteLength: sourceValues.byteLength
             } satisfies TemporalListGPUReadbackMetadata
           }
@@ -385,10 +395,10 @@ function makeArrowTemporalSourceGPUVector(
 }
 
 function makePreparedArrowTemporalVector(
-  source: arrow.Vector<ArrowTemporalColumnType>,
+  source: Vector<ArrowTemporalColumnType>,
   temporalInfo: PreparedArrowTemporalGPUVector['temporalInfo'],
-  field: arrow.Field
-): arrow.Vector<ArrowRelativeTemporalType> {
+  field: Field
+): Vector<ArrowRelativeTemporalType> {
   const outputType = getPreparedArrowTemporalType(field);
   const outputData = source.data.map(sourceData => {
     validateArrowTemporalData(sourceData);
@@ -401,9 +411,9 @@ function makePreparedArrowTemporalVector(
       );
     }
 
-    if (arrow.DataType.isList(outputType)) {
+    if (DataType.isList(outputType)) {
       const childData = makeFloat32Data({
-        type: new arrow.Float32(),
+        type: new Float32(),
         length: preparedValues.length,
         data: preparedValues
       });
@@ -412,7 +422,7 @@ function makePreparedArrowTemporalVector(
         length: sourceData.length,
         nullCount: 0,
         nullBitmap: null,
-        valueOffsets: getNormalizedArrowValueOffsets(sourceData as arrow.Data<arrow.List<any>>),
+        valueOffsets: getNormalizedArrowValueOffsets(sourceData as Data<List<any>>),
         child: childData
       });
     }
@@ -423,16 +433,14 @@ function makePreparedArrowTemporalVector(
       data: preparedValues
     });
   });
-  return new arrow.Vector<ArrowRelativeTemporalType>(
-    outputData as arrow.Data<ArrowRelativeTemporalType>[]
-  );
+  return new Vector<ArrowRelativeTemporalType>(outputData as Data<ArrowRelativeTemporalType>[]);
 }
 
 function makePreparedArrowTemporalField(
   source: ArrowTemporalSource,
   temporalInfo: PreparedArrowTemporalGPUVector['temporalInfo'],
-  sourceField?: arrow.Field
-): arrow.Field {
+  sourceField?: Field
+): Field {
   const metadata = makeArrowTemporalMetadata(
     temporalInfo,
     getArrowTemporalLeafField(source.type, sourceField)?.metadata
@@ -440,22 +448,22 @@ function makePreparedArrowTemporalField(
   const sourceLeafField = getArrowTemporalLeafField(source.type, sourceField);
   const outputType = makePreparedArrowTemporalType(
     source.type,
-    new arrow.Field(sourceLeafField?.name || 'value', new arrow.Float32(), false, metadata)
+    new Field(sourceLeafField?.name || 'value', new Float32(), false, metadata)
   );
-  return new arrow.Field(sourceField?.name || 'temporal', outputType, false, metadata);
+  return new Field(sourceField?.name || 'temporal', outputType, false, metadata);
 }
 
 function makePreparedArrowTemporalType(
   sourceType: ArrowTemporalColumnType,
-  leafField: arrow.Field
+  leafField: Field
 ): ArrowRelativeTemporalType {
-  if (arrow.DataType.isList(sourceType)) {
-    return new arrow.List(leafField);
+  if (DataType.isList(sourceType)) {
+    return new List(leafField);
   }
-  return new arrow.Float32();
+  return new Float32();
 }
 
-function getPreparedArrowTemporalType(field: arrow.Field): ArrowRelativeTemporalType {
+function getPreparedArrowTemporalType(field: Field): ArrowRelativeTemporalType {
   return field.type as ArrowRelativeTemporalType;
 }
 
@@ -497,7 +505,7 @@ function resolveTemporalOrigin(
 }
 
 function getFirstArrowTemporalValue(
-  source: arrow.Vector<ArrowTemporalColumnType>
+  source: Vector<ArrowTemporalColumnType>
 ): number | bigint | undefined {
   for (const data of source.data) {
     validateArrowTemporalData(data);
@@ -510,8 +518,8 @@ function getFirstArrowTemporalValue(
 }
 
 function getRequiredArrowTemporalVectorInfo(
-  vector: Pick<arrow.Vector, 'type'> | Pick<GPUVector, 'type'>,
-  field?: arrow.Field
+  vector: Pick<Vector, 'type'> | Pick<GPUVector, 'type'>,
+  field?: Field
 ): ArrowTemporalVectorInfo {
   const temporalInfo = getArrowTemporalVectorInfo(vector, field);
   if (!temporalInfo) {
@@ -522,42 +530,39 @@ function getRequiredArrowTemporalVectorInfo(
   return temporalInfo;
 }
 
-function getArrowTemporalLeafType(type: arrow.DataType): ArrowTemporalType | null {
-  const leafType = arrow.DataType.isList(type) ? type.children[0]?.type : type;
+function getArrowTemporalLeafType(type: DataType): ArrowTemporalType | null {
+  const leafType = DataType.isList(type) ? type.children[0]?.type : type;
   return leafType &&
-    (arrow.DataType.isDate(leafType) ||
-      arrow.DataType.isTime(leafType) ||
-      arrow.DataType.isTimestamp(leafType) ||
-      arrow.DataType.isDuration(leafType))
+    (DataType.isDate(leafType) ||
+      DataType.isTime(leafType) ||
+      DataType.isTimestamp(leafType) ||
+      DataType.isDuration(leafType))
     ? (leafType as ArrowTemporalType)
     : null;
 }
 
-function getArrowTemporalLeafField(
-  type: arrow.DataType,
-  field?: arrow.Field
-): arrow.Field | undefined {
-  return arrow.DataType.isList(type) ? type.children[0] : field;
+function getArrowTemporalLeafField(type: DataType, field?: Field): Field | undefined {
+  return DataType.isList(type) ? type.children[0] : field;
 }
 
 function getArrowTemporalLeafInfo(
   type: ArrowTemporalType
 ): Omit<ArrowTemporalVectorInfo, 'variableLength'> {
-  if (arrow.DataType.isDate(type)) {
+  if (DataType.isDate(type)) {
     return {
       kind: 'date',
-      unit: type.unit === arrow.DateUnit.DAY ? 'day' : 'millisecond',
-      bitWidth: type.unit === arrow.DateUnit.DAY ? 32 : 64
+      unit: type.unit === DateUnit.DAY ? 'day' : 'millisecond',
+      bitWidth: type.unit === DateUnit.DAY ? 32 : 64
     };
   }
-  if (arrow.DataType.isTime(type)) {
+  if (DataType.isTime(type)) {
     return {
       kind: 'time',
       unit: getArrowTimeUnit(type.unit),
       bitWidth: type.bitWidth
     };
   }
-  if (arrow.DataType.isTimestamp(type)) {
+  if (DataType.isTimestamp(type)) {
     return {
       kind: 'timestamp',
       unit: getArrowTimeUnit(type.unit),
@@ -572,15 +577,15 @@ function getArrowTemporalLeafInfo(
   };
 }
 
-function getArrowTimeUnit(unit: arrow.TimeUnit): Exclude<ArrowTemporalUnit, 'day'> {
+function getArrowTimeUnit(unit: TimeUnit): Exclude<ArrowTemporalUnit, 'day'> {
   switch (unit) {
-    case arrow.TimeUnit.SECOND:
+    case TimeUnit.SECOND:
       return 'second';
-    case arrow.TimeUnit.MILLISECOND:
+    case TimeUnit.MILLISECOND:
       return 'millisecond';
-    case arrow.TimeUnit.MICROSECOND:
+    case TimeUnit.MICROSECOND:
       return 'microsecond';
-    case arrow.TimeUnit.NANOSECOND:
+    case TimeUnit.NANOSECOND:
       return 'nanosecond';
   }
 }
@@ -595,20 +600,20 @@ function getRelativeTemporalValue(value: number | bigint, origin: number | bigin
     : value - (origin as number);
 }
 
-function validateArrowTemporalData(data: arrow.Data<ArrowTemporalColumnType>): void {
+function validateArrowTemporalData(data: Data<ArrowTemporalColumnType>): void {
   if (data.nullCount > 0) {
     throw new Error('prepareArrowTemporalGPUVector does not support nullable temporal rows');
   }
-  if (arrow.DataType.isList(data.type) && (data.children[0]?.nullCount ?? 0) > 0) {
+  if (DataType.isList(data.type) && (data.children[0]?.nullCount ?? 0) > 0) {
     throw new Error('prepareArrowTemporalGPUVector does not support nullable temporal values');
   }
 }
 
 function getArrowTemporalDataBufferSource(
-  data: arrow.Data<ArrowTemporalColumnType>
+  data: Data<ArrowTemporalColumnType>
 ): Int32Array | BigInt64Array {
-  if (arrow.DataType.isList(data.type)) {
-    const childData = data.children[0] as arrow.Data<ArrowTemporalType> | undefined;
+  if (DataType.isList(data.type)) {
+    const childData = data.children[0] as Data<ArrowTemporalType> | undefined;
     if (!childData) {
       return new Int32Array(0);
     }
@@ -630,11 +635,11 @@ function getArrowTemporalDataBufferSource(
       childValueOffset + lastValueOffset
     ) as Int32Array | BigInt64Array;
   }
-  return getArrowTemporalScalarDataBufferSource(data as arrow.Data<ArrowTemporalType>);
+  return getArrowTemporalScalarDataBufferSource(data as Data<ArrowTemporalType>);
 }
 
 function getArrowTemporalScalarDataBufferSource(
-  data: arrow.Data<ArrowTemporalType>
+  data: Data<ArrowTemporalType>
 ): Int32Array | BigInt64Array {
   const values = data.values as Int32Array | BigInt64Array | undefined;
   if (!values) {
@@ -644,7 +649,7 @@ function getArrowTemporalScalarDataBufferSource(
   return values.subarray(startIndex, startIndex + data.length) as Int32Array | BigInt64Array;
 }
 
-function getNormalizedArrowValueOffsets(data: arrow.Data<arrow.List<any>>): Int32Array {
+function getNormalizedArrowValueOffsets(data: Data<List<any>>): Int32Array {
   const valueOffsets = data.valueOffsets as Int32Array | undefined;
   if (!valueOffsets) {
     throw new Error('prepareArrowTemporalGPUVector list input requires Arrow value offsets');
@@ -658,7 +663,7 @@ function getTemporalValueOffsets(
   type: ArrowTemporalColumnType,
   data: GPUData<ArrowTemporalColumnType>
 ): Int32Array | undefined {
-  if (!arrow.DataType.isList(type)) {
+  if (!DataType.isList(type)) {
     return undefined;
   }
   const metadata = data.readbackMetadata as TemporalListGPUReadbackMetadata | undefined;

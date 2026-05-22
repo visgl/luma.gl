@@ -4,7 +4,7 @@
 
 import {type Binding, type Device} from '@luma.gl/core';
 import {GPUVector, type GPUData} from '@luma.gl/tables';
-import * as arrow from 'apache-arrow';
+import {Bool, DataType, FixedSizeList, Float32, Float64, List, Uint8, Vector} from 'apache-arrow';
 import {closeArrowPaths} from './close-arrow-paths';
 import {
   makeArrowPathViewOriginVector,
@@ -19,13 +19,13 @@ import {isVariableLengthAttributeArrowType} from './arrow-types';
 import type {ArrowStoragePathInputProps} from './arrow-storage-path-model';
 import {prepareArrowTemporalGPUVector} from './arrow-temporal-gpu-vector';
 
-type ArrowPathCoordinateType = arrow.List<arrow.FixedSizeList<arrow.Float32>>;
-type ArrowPathFloat64CoordinateType = arrow.List<arrow.FixedSizeList<arrow.Float64>>;
-type ArrowPathRowColorType = arrow.FixedSizeList<arrow.Uint8>;
-type ArrowPathVertexColorType = arrow.List<arrow.FixedSizeList<arrow.Uint8>>;
+type ArrowPathCoordinateType = List<FixedSizeList<Float32>>;
+type ArrowPathFloat64CoordinateType = List<FixedSizeList<Float64>>;
+type ArrowPathRowColorType = FixedSizeList<Uint8>;
+type ArrowPathVertexColorType = List<FixedSizeList<Uint8>>;
 type ArrowPathColorType = ArrowPathRowColorType | ArrowPathVertexColorType;
-type ArrowPathViewOriginType = arrow.FixedSizeList<arrow.Float32>;
-type ArrowPathTimestampType = arrow.List<arrow.Float32>;
+type ArrowPathViewOriginType = FixedSizeList<Float32>;
+type ArrowPathTimestampType = List<Float32>;
 
 /** Prepared storage-backed path vectors plus retained row-alignment helpers. */
 export type PreparedArrowStoragePathGPUVectors = {
@@ -34,7 +34,7 @@ export type PreparedArrowStoragePathGPUVectors = {
   /** Optional packed RGBA8 path colors aligned with source path rows or vertices. */
   colors?: GPUVector<ArrowPathColorType>;
   /** Optional Float32 path widths aligned with source path rows. */
-  widths?: GPUVector<arrow.Float32>;
+  widths?: GPUVector<Float32>;
   /** Optional prepared relative Float32 temporal stream aligned with path vertices. */
   timestamps?: GPUVector<ArrowPathTimestampType>;
   /** Optional Float32 view-space origins aligned with source path rows. */
@@ -252,21 +252,21 @@ function assertArrowStoragePathVectorTypes(props: ArrowStoragePathInputProps): v
       'ArrowStoragePathModel colors must be GPUVector<FixedSizeList<Uint8>[4]> or GPUVector<List<FixedSizeList<Uint8>[4]>>'
     );
   }
-  if (props.widths && !(props.widths.type instanceof arrow.Float32)) {
+  if (props.widths && !(props.widths.type instanceof Float32)) {
     throw new Error('ArrowStoragePathModel widths must be GPUVector<Float32>');
   }
   if (
     props.timestamps &&
-    (!arrow.DataType.isList(props.timestamps.type) ||
-      !(props.timestamps.type.children[0]?.type instanceof arrow.Float32))
+    (!DataType.isList(props.timestamps.type) ||
+      !(props.timestamps.type.children[0]?.type instanceof Float32))
   ) {
     throw new Error('ArrowStoragePathModel timestamps must be GPUVector<List<Float32>>');
   }
   if (
     props.viewOrigins &&
-    (!arrow.DataType.isFixedSizeList(props.viewOrigins.type) ||
+    (!DataType.isFixedSizeList(props.viewOrigins.type) ||
       props.viewOrigins.type.listSize !== 4 ||
-      !(props.viewOrigins.type.children[0]?.type instanceof arrow.Float32))
+      !(props.viewOrigins.type.children[0]?.type instanceof Float32))
   ) {
     throw new Error(
       'ArrowStoragePathModel viewOrigins must be GPUVector<FixedSizeList<Float32>[4]>'
@@ -274,19 +274,17 @@ function assertArrowStoragePathVectorTypes(props: ArrowStoragePathInputProps): v
   }
 }
 
-function isArrowPathRowColorType(type: arrow.DataType): type is ArrowPathRowColorType {
+function isArrowPathRowColorType(type: DataType): type is ArrowPathRowColorType {
   return (
-    arrow.DataType.isFixedSizeList(type) &&
-    type.listSize === 4 &&
-    type.children[0]?.type instanceof arrow.Uint8
+    DataType.isFixedSizeList(type) && type.listSize === 4 && type.children[0]?.type instanceof Uint8
   );
 }
 
-function isArrowPathVertexColorType(type: arrow.DataType): type is ArrowPathVertexColorType {
-  return arrow.DataType.isList(type) && isArrowPathRowColorType(type.children[0]?.type);
+function isArrowPathVertexColorType(type: DataType): type is ArrowPathVertexColorType {
+  return DataType.isList(type) && isArrowPathRowColorType(type.children[0]?.type);
 }
 
-function isArrowPathColorType(type: arrow.DataType): type is ArrowPathColorType {
+function isArrowPathColorType(type: DataType): type is ArrowPathColorType {
   return isArrowPathRowColorType(type) || isArrowPathVertexColorType(type);
 }
 
@@ -297,21 +295,21 @@ function assertArrowStoragePathSourceVectorTypes(sourceVectors: ArrowPathSourceV
       'prepareArrowStoragePathGPUVectors colors must be Vector<FixedSizeList<Uint8>[4]> or Vector<List<FixedSizeList<Uint8>[4]>>'
     );
   }
-  if (sourceVectors.widths && !(sourceVectors.widths.type instanceof arrow.Float32)) {
+  if (sourceVectors.widths && !(sourceVectors.widths.type instanceof Float32)) {
     throw new Error('prepareArrowStoragePathGPUVectors widths must be Vector<Float32>');
   }
-  if (sourceVectors.closed && !(sourceVectors.closed.type instanceof arrow.Bool)) {
+  if (sourceVectors.closed && !(sourceVectors.closed.type instanceof Bool)) {
     throw new Error('prepareArrowStoragePathGPUVectors closed flags must be Vector<Bool>');
   }
   if (
     sourceVectors.timestamps &&
     !(
-      arrow.DataType.isList(sourceVectors.timestamps.type) &&
+      DataType.isList(sourceVectors.timestamps.type) &&
       sourceVectors.timestamps.type.children[0]?.type &&
-      (arrow.DataType.isDate(sourceVectors.timestamps.type.children[0].type) ||
-        arrow.DataType.isTime(sourceVectors.timestamps.type.children[0].type) ||
-        arrow.DataType.isTimestamp(sourceVectors.timestamps.type.children[0].type) ||
-        arrow.DataType.isDuration(sourceVectors.timestamps.type.children[0].type))
+      (DataType.isDate(sourceVectors.timestamps.type.children[0].type) ||
+        DataType.isTime(sourceVectors.timestamps.type.children[0].type) ||
+        DataType.isTimestamp(sourceVectors.timestamps.type.children[0].type) ||
+        DataType.isDuration(sourceVectors.timestamps.type.children[0].type))
     )
   ) {
     throw new Error(
@@ -321,7 +319,7 @@ function assertArrowStoragePathSourceVectorTypes(sourceVectors: ArrowPathSourceV
 }
 
 function assertArrowStoragePathSourceVectorRows(sourceVectors: ArrowPathSourceVectors): void {
-  const rowInputs: Array<[string, arrow.Vector | undefined]> = [
+  const rowInputs: Array<[string, Vector | undefined]> = [
     ['colors', sourceVectors.colors],
     ['widths', sourceVectors.widths],
     ['closed', sourceVectors.closed],
@@ -337,18 +335,18 @@ function assertArrowStoragePathSourceVectorRows(sourceVectors: ArrowPathSourceVe
   if (sourceVectors.colors && isArrowPathVertexColorType(sourceVectors.colors.type)) {
     assertArrowStoragePathSourceVertexColorAlignment(
       sourceVectors.paths,
-      sourceVectors.colors as arrow.Vector<ArrowPathVertexColorType>
+      sourceVectors.colors as Vector<ArrowPathVertexColorType>
     );
   }
 }
 
-function assertArrowStoragePathCoordinateType(type: arrow.DataType, name: string): void {
+function assertArrowStoragePathCoordinateType(type: DataType, name: string): void {
   if (
     !isVariableLengthAttributeArrowType(type) ||
-    !arrow.DataType.isFixedSizeList(type.children[0].type) ||
+    !DataType.isFixedSizeList(type.children[0].type) ||
     type.children[0].type.listSize < 2 ||
     type.children[0].type.listSize > 4 ||
-    !(type.children[0].type.children[0]?.type instanceof arrow.Float32)
+    !(type.children[0].type.children[0]?.type instanceof Float32)
   ) {
     throw new Error(
       `ArrowStoragePathModel ${name} must be GPUVector<List<FixedSizeList<Float32>[2..4]>>`
@@ -356,15 +354,14 @@ function assertArrowStoragePathCoordinateType(type: arrow.DataType, name: string
   }
 }
 
-function assertArrowStoragePathSourceCoordinateType(type: arrow.DataType, name: string): void {
+function assertArrowStoragePathSourceCoordinateType(type: DataType, name: string): void {
   const coordinateValueType = getArrowStoragePathCoordinateValueType(type);
   if (
     !isVariableLengthAttributeArrowType(type) ||
-    !arrow.DataType.isFixedSizeList(type.children[0].type) ||
+    !DataType.isFixedSizeList(type.children[0].type) ||
     type.children[0].type.listSize < 2 ||
     type.children[0].type.listSize > 4 ||
-    (!(coordinateValueType instanceof arrow.Float32) &&
-      !(coordinateValueType instanceof arrow.Float64))
+    (!(coordinateValueType instanceof Float32) && !(coordinateValueType instanceof Float64))
   ) {
     throw new Error(
       `prepareArrowStoragePathGPUVectors ${name} must be Vector<List<FixedSizeList<Float32|Float64>[2..4]>>`
@@ -432,7 +429,7 @@ function assertArrowStoragePathTimestampAlignment(
 
 function assertArrowStoragePathSourceVertexColorAlignment(
   paths: ArrowPathSourceVectors['paths'],
-  colors: arrow.Vector<ArrowPathVertexColorType>
+  colors: Vector<ArrowPathVertexColorType>
 ): void {
   if (paths.data.length !== colors.data.length) {
     throw new Error('prepareArrowStoragePathGPUVectors vertex color batch count must match paths');
@@ -490,19 +487,17 @@ function makeArrowStoragePathRecordOffsets(valueOffsets: Int32Array, rowCount: n
   return recordOffsets;
 }
 
-function getArrowStoragePathCoordinateComponentCount(type: arrow.DataType): number {
+function getArrowStoragePathCoordinateComponentCount(type: DataType): number {
   const pathElementType = type.children[0]?.type;
-  if (!pathElementType || !arrow.DataType.isFixedSizeList(pathElementType)) {
+  if (!pathElementType || !DataType.isFixedSizeList(pathElementType)) {
     throw new Error('ArrowStoragePathModel paths require FixedSizeList coordinate elements');
   }
   return pathElementType.listSize;
 }
 
-function getArrowStoragePathCoordinateValueType(type: arrow.DataType): arrow.DataType | undefined {
+function getArrowStoragePathCoordinateValueType(type: DataType): DataType | undefined {
   const pathElementType = type.children[0]?.type;
-  return arrow.DataType.isFixedSizeList(pathElementType)
-    ? pathElementType.children[0]?.type
-    : undefined;
+  return DataType.isFixedSizeList(pathElementType) ? pathElementType.children[0]?.type : undefined;
 }
 
 async function prepareArrowStoragePathCoordinateData(
@@ -514,20 +509,20 @@ async function prepareArrowStoragePathCoordinateData(
   sourceOrigins?: Float64Array;
 }> {
   const coordinateValueType = getArrowStoragePathCoordinateValueType(paths.type);
-  if (coordinateValueType instanceof arrow.Float32) {
+  if (coordinateValueType instanceof Float32) {
     return {
-      paths: makeArrowGPUVector(device, paths as arrow.Vector<ArrowPathCoordinateType>, {
+      paths: makeArrowGPUVector(device, paths as Vector<ArrowPathCoordinateType>, {
         name: 'paths',
         id: `${options.id || 'arrow-storage-path-model'}-paths`
       })
     };
   }
-  if (!(coordinateValueType instanceof arrow.Float64)) {
+  if (!(coordinateValueType instanceof Float64)) {
     throw new Error('prepareArrowStoragePathGPUVectors paths must contain Float32 or Float64');
   }
   return prepareGpuPathFloat64DeltaVector(
     device,
-    paths as arrow.Vector<ArrowPathFloat64CoordinateType>,
+    paths as Vector<ArrowPathFloat64CoordinateType>,
     options
   );
 }

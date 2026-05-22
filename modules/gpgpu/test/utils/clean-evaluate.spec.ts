@@ -23,8 +23,8 @@ test(`GPGPU#cleanEvaluate`, async t => {
 
   await cleanEvaluate(device, {sum, x});
 
-  expect(sum.buffer).toBeTruthy();
-  expect(x.buffer).toBeTruthy();
+  expect(sum.gpuVector).toBeTruthy();
+  expect(x.gpuVector).toBeTruthy();
 
   expect((x as any).evaluated).toBe(true);
   expect((y as any).evaluated).toBe(false);

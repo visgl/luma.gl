@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {GPUTableEvaluator} from '../operation/gpu-table';
+import {GPUTableEvaluator} from '../operation/gpu-table-evaluator';
+import {getGPUTableEvaluator} from '../operation/gpu-table-evaluator';
 import {ArithmeticArgument, ArithmeticOp, ArithmeticOperation} from './arithmetic-operation';
 
 /**
@@ -105,7 +106,8 @@ function reduceArithmetic(
   op: Extract<ArithmeticOp, 'add' | 'subtract' | 'multiply' | 'divide'>,
   args: ArithmeticArgument[]
 ): GPUTableEvaluator {
-  let result = args[0];
+  let result: GPUTableEvaluator | number | number[] =
+    typeof args[0] === 'number' || Array.isArray(args[0]) ? args[0] : getGPUTableEvaluator(args[0]);
   for (let i = 1; i < args.length; i++) {
     result = new ArithmeticOperation(op, [result, args[i]]).output;
   }

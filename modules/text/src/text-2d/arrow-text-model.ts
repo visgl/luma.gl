@@ -26,7 +26,24 @@ import {
   type NumericArrowType
 } from '@luma.gl/arrow';
 import {DynamicBuffer, DynamicTexture, Model} from '@luma.gl/engine';
-import * as arrow from 'apache-arrow';
+import {
+  Data,
+  DataType,
+  Field,
+  FixedSizeList,
+  Float32,
+  Int16,
+  Schema,
+  Table,
+  Uint16,
+  Uint32,
+  Uint8,
+  Utf8,
+  Vector,
+  makeData,
+  makeVector,
+  util
+} from 'apache-arrow';
 import FontAtlasManager, {
   DEFAULT_FONT_SETTINGS,
   type FontAtlas,
@@ -697,7 +714,7 @@ fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
 /** Expanded Arrow glyph table plus layout and allocation diagnostics. */
 export type ArrowTextGlyphTable = {
   /** Expanded Arrow table containing glyph-instance columns. */
-  table: arrow.Table;
+  table: Table;
   /** One-line glyph offsets and atlas frames expanded from source text rows. */
   glyphLayout: ArrowGlyphLayout;
   /** Optional character set accumulated while laying out glyphs. */
@@ -711,19 +728,19 @@ export type ArrowTextGlyphTable = {
 /** CPU Arrow vectors used when one-line text layout expands rows into glyph attributes. */
 export type ArrowTextSourceVectors = {
   /** CPU label origins aligned one-for-one with `texts`. */
-  positions: arrow.Vector<arrow.FixedSizeList<arrow.Float32>>;
+  positions: Vector<FixedSizeList<Float32>>;
   /** CPU plain or dictionary-encoded UTF-8 labels used for glyph expansion. */
   texts: ArrowUtf8TextVector;
   /** Optional CPU packed RGBA8 text colors aligned with label rows. */
-  colors?: arrow.Vector<arrow.FixedSizeList<arrow.Uint8>>;
+  colors?: Vector<FixedSizeList<Uint8>>;
   /** Optional CPU per-row angles in degrees. */
-  angles?: arrow.Vector<arrow.Float32>;
+  angles?: Vector<Float32>;
   /** Optional CPU per-row deck-style text sizes. */
-  sizes?: arrow.Vector<arrow.Float32>;
+  sizes?: Vector<Float32>;
   /** Optional CPU per-row pixel offsets. */
-  pixelOffsets?: arrow.Vector<arrow.FixedSizeList<arrow.Float32>>;
+  pixelOffsets?: Vector<FixedSizeList<Float32>>;
   /** Optional CPU packed clip rectangles aligned with label rows. */
-  clipRects?: arrow.Vector<arrow.FixedSizeList<arrow.Int16>>;
+  clipRects?: Vector<FixedSizeList<Int16>>;
 };
 
 /** CPU Arrow vectors still needed by storage-backed text expansion. */
@@ -731,7 +748,7 @@ export type ArrowStorageTextSourceVectors = {
   /** CPU plain or dictionary-encoded UTF-8 labels used for storage glyph expansion. */
   texts: ArrowUtf8TextVector;
   /** Optional CPU packed clip rectangles aligned with label rows. */
-  clipRects?: arrow.Vector<arrow.FixedSizeList<arrow.Int16>>;
+  clipRects?: Vector<FixedSizeList<Int16>>;
 };
 
 /** Props for the attribute-backed Arrow text renderer. */
@@ -740,15 +757,15 @@ export type ArrowTextModelProps = Omit<
   'arrowTable' | 'arrowGPUTable' | 'arrowCount'
 > & {
   /** GPU-resident label origins aligned one-for-one with `texts`. */
-  positions: GPUVector<arrow.FixedSizeList<arrow.Float32>>;
+  positions: GPUVector<FixedSizeList<Float32>>;
   /** Optional packed RGBA8 text colors, consumed as label attributes when declared by the shader. */
-  colors?: GPUVector<arrow.FixedSizeList<arrow.Uint8>>;
+  colors?: GPUVector<FixedSizeList<Uint8>>;
   /** Optional per-row angles in degrees, consumed as label attributes when declared by the shader. */
-  angles?: GPUVector<arrow.Float32>;
+  angles?: GPUVector<Float32>;
   /** Optional per-row deck-style text sizes, consumed as label attributes when declared by the shader. */
-  sizes?: GPUVector<arrow.Float32>;
+  sizes?: GPUVector<Float32>;
   /** Optional per-row pixel offsets, consumed as label attributes when declared by the shader. */
-  pixelOffsets?: GPUVector<arrow.FixedSizeList<arrow.Float32>>;
+  pixelOffsets?: GPUVector<FixedSizeList<Float32>>;
   /** GPU UTF-8 labels aligned row-for-row with `positions`. */
   texts: GPUVector<ArrowUtf8TextType>;
   /** CPU Arrow vectors explicitly retained by the caller for glyph/layout expansion. */
@@ -758,7 +775,7 @@ export type ArrowTextModelProps = Omit<
    * Values are signed 16-bit glyph-layout units relative to the label origin.
    * Negative width or height disables clipping on that axis.
    */
-  clipRects?: GPUVector<arrow.FixedSizeList<arrow.Int16>>;
+  clipRects?: GPUVector<FixedSizeList<Int16>>;
   /** Character set for atlas generation. Pass `'auto'` to derive it from Arrow labels. */
   characterSet?: FontSettings['characterSet'] | 'auto';
   /** Font atlas generation settings. */
@@ -775,9 +792,9 @@ export type ArrowTextModelProps = Omit<
 
 type ArrowStorageTextSharedInputProps = Omit<ArrowTextModelProps, 'sourceVectors' | 'texts'> & {
   /** Optional per-row text anchor enum: 0=start, 1=middle, 2=end. */
-  textAnchors?: GPUVector<arrow.Uint8>;
+  textAnchors?: GPUVector<Uint8>;
   /** Optional per-row alignment baseline enum: 0=center, 1=top, 2=bottom. */
-  alignmentBaselines?: GPUVector<arrow.Uint8>;
+  alignmentBaselines?: GPUVector<Uint8>;
   /** Constant fallback color used when `colors` is absent. */
   color?: [number, number, number, number];
   /** Constant fallback angle in degrees used when `angles` is absent. */
@@ -803,9 +820,9 @@ export type ArrowStorageTextInputProps = ArrowStorageTextSharedInputProps & {
 /** CPU Arrow vectors still needed by compressed dictionary storage text expansion. */
 export type ArrowDictionaryStorageTextSourceVectors = {
   /** CPU dictionary-encoded UTF-8 labels used for compressed glyph layout. */
-  texts: arrow.Vector<ArrowUtf8Dictionary>;
+  texts: Vector<ArrowUtf8Dictionary>;
   /** Optional CPU packed clip rectangles aligned with label rows. */
-  clipRects?: arrow.Vector<arrow.FixedSizeList<arrow.Int16>>;
+  clipRects?: Vector<FixedSizeList<Int16>>;
 };
 
 /** Props for the WebGPU compressed dictionary Arrow text renderer. */
@@ -1118,7 +1135,7 @@ export class ArrowAttributeTextModel extends ArrowModel {
   /** Optional character set accumulated while laying out glyphs. */
   characterSet?: Set<string>;
   /** Expanded Arrow table containing glyph-instance columns. */
-  glyphTable: arrow.Table;
+  glyphTable: Table;
   /** CPU time spent building generated glyph-instance Arrow attributes. */
   glyphAttributeBuildTimeMs: number;
   /** Bytes occupied by generated glyph-instance Arrow attributes. */
@@ -1198,7 +1215,7 @@ export class ArrowAttributeTextModel extends ArrowModel {
         prepared.sdfRenderSettings
       );
     }
-    super.setProps({arrowTable: prepared.modelProps.arrowTable as arrow.Table});
+    super.setProps({arrowTable: prepared.modelProps.arrowTable as Table});
     this.setAttributes({[EXPANDED_GLYPH_VERTEX_DATA]: prepared.expandedGlyphVertexData});
     if (prepared.atlasTexture) {
       this.setBindings({fontAtlasTexture: prepared.atlasTexture});
@@ -1284,7 +1301,7 @@ export class ArrowAttributeTextModel extends ArrowModel {
       }
 
       this.glyphLayout = appendArrowGlyphLayout(this.glyphLayout, glyphTable.glyphLayout);
-      this.glyphTable = new arrow.Table(this.glyphTable.schema, [
+      this.glyphTable = new Table(this.glyphTable.schema, [
         ...this.glyphTable.batches,
         ...glyphTable.table.batches
       ]);
@@ -1908,9 +1925,9 @@ function drawPreparedStorageTextModelBatch(model: Model, renderPass: RenderPass)
 
 /** Build an Arrow glyph table without creating a Model. */
 export function buildArrowTextGlyphTable(props: {
-  labelTable: arrow.Table;
+  labelTable: Table;
   texts: ArrowUtf8TextVector;
-  clipRects?: arrow.Vector<arrow.FixedSizeList<arrow.Int16>>;
+  clipRects?: Vector<FixedSizeList<Int16>>;
   mapping: CharacterMapping;
   baselineOffset: number;
   lineHeight: number;
@@ -1934,8 +1951,8 @@ export function buildArrowTextGlyphTable(props: {
     lineHeight: props.lineHeight,
     characterSet: props.characterSet
   });
-  const fields: arrow.Field[] = [];
-  const columns: Record<string, arrow.Vector> = {};
+  const fields: Field[] = [];
+  const columns: Record<string, Vector> = {};
 
   for (const field of props.labelTable.schema.fields) {
     const vector = props.labelTable.getChild(field.name);
@@ -1946,19 +1963,19 @@ export function buildArrowTextGlyphTable(props: {
     columns[field.name] = repeatArrowVectorRows(vector, glyphLayout.startIndices);
   }
 
-  fields.push(makeFixedSizeListField(GLYPH_OFFSETS_COLUMN, new arrow.Int16(), 2));
-  fields.push(makeFixedSizeListField(GLYPH_FRAMES_COLUMN, new arrow.Uint16(), 4));
+  fields.push(makeFixedSizeListField(GLYPH_OFFSETS_COLUMN, new Int16(), 2));
+  fields.push(makeFixedSizeListField(GLYPH_FRAMES_COLUMN, new Uint16(), 4));
   if (props.clipRects) {
-    fields.push(makeFixedSizeListField(GLYPH_CLIP_RECTS_COLUMN, new arrow.Int16(), 4));
+    fields.push(makeFixedSizeListField(GLYPH_CLIP_RECTS_COLUMN, new Int16(), 4));
   }
-  fields.push(new arrow.Field(ROW_INDICES_COLUMN, new arrow.Uint32(), false));
+  fields.push(new Field(ROW_INDICES_COLUMN, new Uint32(), false));
   columns[GLYPH_OFFSETS_COLUMN] = makeArrowFixedSizeListVector(
-    new arrow.Int16(),
+    new Int16(),
     2,
     glyphLayout.glyphOffsets
   );
   columns[GLYPH_FRAMES_COLUMN] = makeArrowFixedSizeListVector(
-    new arrow.Uint16(),
+    new Uint16(),
     4,
     glyphLayout.glyphFrames
   );
@@ -1969,14 +1986,14 @@ export function buildArrowTextGlyphTable(props: {
     );
   }
   columns[ROW_INDICES_COLUMN] = makeNumericArrowVector(
-    new arrow.Uint32(),
+    new Uint32(),
     makeGlyphRowIndices(glyphLayout.startIndices, props.rowIndexBase)
   );
   const attributeByteLength = getGeneratedAttributeByteLength(columns);
   const glyphAttributeBuildTimeMs = getNow() - glyphAttributeBuildStartTime;
 
   return {
-    table: new arrow.Table(new arrow.Schema(fields, props.labelTable.schema.metadata), columns),
+    table: new Table(new Schema(fields, props.labelTable.schema.metadata), columns),
     glyphLayout,
     characterSet: props.characterSet,
     attributeByteLength,
@@ -1985,9 +2002,9 @@ export function buildArrowTextGlyphTable(props: {
 }
 
 type ResolvedArrowTextInputs = {
-  labelTable: arrow.Table;
+  labelTable: Table;
   texts: ArrowUtf8TextVector;
-  clipRects?: arrow.Vector<arrow.FixedSizeList<arrow.Int16>>;
+  clipRects?: Vector<FixedSizeList<Int16>>;
 };
 
 function resolveArrowTextInputs(props: ArrowTextModelProps): ResolvedArrowTextInputs {
@@ -1998,7 +2015,7 @@ function resolveArrowTextInputs(props: ArrowTextModelProps): ResolvedArrowTextIn
   assertArrowTextVectorRowAlignment(props);
   assertArrowTextSourceVectorAlignment(props);
   const {sourceVectors} = props;
-  const columns: Record<string, arrow.Vector> = {
+  const columns: Record<string, Vector> = {
     positions: sourceVectors.positions
   };
   if (sourceVectors.colors) {
@@ -2013,7 +2030,7 @@ function resolveArrowTextInputs(props: ArrowTextModelProps): ResolvedArrowTextIn
   if (sourceVectors.pixelOffsets) {
     columns['pixelOffsets'] = sourceVectors.pixelOffsets;
   }
-  const labelTable = new arrow.Table(columns);
+  const labelTable = new Table(columns);
 
   return {
     labelTable,
@@ -2027,7 +2044,7 @@ function resolveArrowTextBatchInputs(
   batchIndex: number
 ): ResolvedArrowTextInputs {
   const {sourceVectors} = props;
-  const columns: Record<string, arrow.Vector> = {
+  const columns: Record<string, Vector> = {
     positions: getArrowTextSourceBatch(sourceVectors.positions, 'positions', batchIndex)
   };
   appendArrowTextBatchSourceColumn(columns, 'colors', sourceVectors.colors, batchIndex);
@@ -2036,20 +2053,20 @@ function resolveArrowTextBatchInputs(
   appendArrowTextBatchSourceColumn(columns, 'pixelOffsets', sourceVectors.pixelOffsets, batchIndex);
 
   return {
-    labelTable: new arrow.Table(columns),
+    labelTable: new Table(columns),
     texts: getArrowTextSourceBatch(sourceVectors.texts, 'texts', batchIndex),
     clipRects: sourceVectors.clipRects
-      ? (getArrowTextSourceBatch(sourceVectors.clipRects, 'clipRects', batchIndex) as arrow.Vector<
-          arrow.FixedSizeList<arrow.Int16>
+      ? (getArrowTextSourceBatch(sourceVectors.clipRects, 'clipRects', batchIndex) as Vector<
+          FixedSizeList<Int16>
         >)
       : undefined
   };
 }
 
 function appendArrowTextBatchSourceColumn(
-  columns: Record<string, arrow.Vector>,
+  columns: Record<string, Vector>,
   columnName: string,
-  vector: arrow.Vector | undefined,
+  vector: Vector | undefined,
   batchIndex: number
 ): void {
   if (!vector) {
@@ -2058,16 +2075,16 @@ function appendArrowTextBatchSourceColumn(
   columns[columnName] = getArrowTextSourceBatch(vector, columnName, batchIndex);
 }
 
-function getArrowTextSourceBatch<T extends arrow.DataType>(
-  vector: arrow.Vector<T>,
+function getArrowTextSourceBatch<T extends DataType>(
+  vector: Vector<T>,
   vectorName: string,
   batchIndex: number
-): arrow.Vector<T> {
+): Vector<T> {
   const data = vector.data[batchIndex];
   if (!data) {
     throw new Error(`Arrow text ${vectorName} source is missing batch ${batchIndex}`);
   }
-  return new arrow.Vector([data]) as arrow.Vector<T>;
+  return new Vector([data]) as Vector<T>;
 }
 
 function assertArrowTextVectorTypes(props: ArrowTextModelProps): void {
@@ -2077,35 +2094,35 @@ function assertArrowTextVectorTypes(props: ArrowTextModelProps): void {
   if (!isArrowUtf8TextVector(props.sourceVectors.texts)) {
     throw new Error('ArrowTextModel sourceVectors.texts must be Utf8 or Dictionary<Utf8>');
   }
-  if (!arrow.util.compareTypes(props.sourceVectors.texts.type, props.texts.type)) {
+  if (!util.compareTypes(props.sourceVectors.texts.type, props.texts.type)) {
     throw new Error('ArrowTextModel sourceVectors.texts type must match GPU texts type');
   }
   if (
-    !arrow.DataType.isFixedSizeList(props.positions.type) ||
+    !DataType.isFixedSizeList(props.positions.type) ||
     props.positions.type.listSize !== 2 ||
-    !(props.positions.type.children[0]?.type instanceof arrow.Float32)
+    !(props.positions.type.children[0]?.type instanceof Float32)
   ) {
     throw new Error('ArrowTextModel positions must be GPUVector<FixedSizeList<Float32>[2]>');
   }
   if (
     props.colors &&
-    (!arrow.DataType.isFixedSizeList(props.colors.type) ||
+    (!DataType.isFixedSizeList(props.colors.type) ||
       props.colors.type.listSize !== 4 ||
-      !(props.colors.type.children[0]?.type instanceof arrow.Uint8))
+      !(props.colors.type.children[0]?.type instanceof Uint8))
   ) {
     throw new Error('ArrowTextModel colors must be GPUVector<FixedSizeList<Uint8>[4]>');
   }
-  if (props.angles && !(props.angles.type instanceof arrow.Float32)) {
+  if (props.angles && !(props.angles.type instanceof Float32)) {
     throw new Error('ArrowTextModel angles must be GPUVector<Float32>');
   }
-  if (props.sizes && !(props.sizes.type instanceof arrow.Float32)) {
+  if (props.sizes && !(props.sizes.type instanceof Float32)) {
     throw new Error('ArrowTextModel sizes must be GPUVector<Float32>');
   }
   if (
     props.pixelOffsets &&
-    (!arrow.DataType.isFixedSizeList(props.pixelOffsets.type) ||
+    (!DataType.isFixedSizeList(props.pixelOffsets.type) ||
       props.pixelOffsets.type.listSize !== 2 ||
-      !(props.pixelOffsets.type.children[0]?.type instanceof arrow.Float32))
+      !(props.pixelOffsets.type.children[0]?.type instanceof Float32))
   ) {
     throw new Error('ArrowTextModel pixelOffsets must be GPUVector<FixedSizeList<Float32>[2]>');
   }
@@ -2153,7 +2170,7 @@ function assertArrowTextVectorBatchAlignment(props: ArrowTextModelProps): void {
 }
 
 function assertArrowTextSourceVectorAlignment(props: ArrowTextModelProps): void {
-  const sourceInputs: Array<[string, GPUVector<any> | undefined, arrow.Vector | undefined]> = [
+  const sourceInputs: Array<[string, GPUVector<any> | undefined, Vector | undefined]> = [
     ['positions', props.positions, props.sourceVectors.positions],
     ['texts', props.texts, props.sourceVectors.texts],
     ['colors', props.colors, props.sourceVectors.colors],
@@ -2237,7 +2254,7 @@ function assertArrowTextSourceAppendPrefixStable(
 ): void {
   const previousSourceVectors = previousProps.sourceVectors;
   const nextSourceVectors = nextProps.sourceVectors;
-  const sourceInputs: Array<[string, arrow.Vector | undefined, arrow.Vector | undefined]> = [
+  const sourceInputs: Array<[string, Vector | undefined, Vector | undefined]> = [
     ['positions', previousSourceVectors.positions, nextSourceVectors.positions],
     ['texts', previousSourceVectors.texts, nextSourceVectors.texts],
     ['colors', previousSourceVectors.colors, nextSourceVectors.colors],
@@ -2269,7 +2286,7 @@ function assertArrowStorageTextSourceAppendPrefixStable(
   nextProps: ArrowStorageTextInputProps,
   processedBatchCount: number
 ): void {
-  const sourceInputs: Array<[string, arrow.Vector | undefined, arrow.Vector | undefined]> = [
+  const sourceInputs: Array<[string, Vector | undefined, Vector | undefined]> = [
     ['texts', previousProps.sourceVectors.texts, nextProps.sourceVectors.texts],
     ['clipRects', previousProps.sourceVectors.clipRects, nextProps.sourceVectors.clipRects]
   ];
@@ -2295,7 +2312,7 @@ function assertSourceVectorMatchesGPUVector(
   ownerName: 'ArrowTextModel' | 'ArrowStorageTextModel' | 'ArrowDictionaryStorageTextModel',
   vectorName: string,
   gpuVector: GPUVector<any>,
-  sourceVector: arrow.Vector
+  sourceVector: Vector
 ): void {
   if (sourceVector.length !== gpuVector.length) {
     throw new Error(
@@ -2318,7 +2335,7 @@ type ResolvedArrowStorageTextBatchInputs = {
   batchRowIndexBase: number;
   rowStorageIndexBase: number;
   texts: ArrowUtf8TextVector;
-  clipRects?: arrow.Vector<arrow.FixedSizeList<arrow.Int16>>;
+  clipRects?: Vector<FixedSizeList<Int16>>;
   positionsBuffer: StorageTextBuffer;
   colorsBuffer?: StorageTextBuffer;
   anglesBuffer?: StorageTextBuffer;
@@ -2356,11 +2373,9 @@ function resolveArrowStorageTextInputs(
       rowStorageIndexBase: getGpuDataRowStorageIndexBase(positionsData, 'positions', batchIndex),
       texts: getArrowTextSourceBatch(sourceVectors.texts, 'texts', batchIndex),
       clipRects: sourceVectors.clipRects
-        ? (getArrowTextSourceBatch(
-            sourceVectors.clipRects,
-            'clipRects',
-            batchIndex
-          ) as arrow.Vector<arrow.FixedSizeList<arrow.Int16>>)
+        ? (getArrowTextSourceBatch(sourceVectors.clipRects, 'clipRects', batchIndex) as Vector<
+            FixedSizeList<Int16>
+          >)
         : undefined,
       positionsBuffer: positionsData.buffer,
       colorsBuffer: props.colors?.data[batchIndex].buffer,
@@ -2399,11 +2414,9 @@ function resolveArrowDictionaryStorageTextInputs(
       rowStorageIndexBase: getGpuDataRowStorageIndexBase(positionsData, 'positions', batchIndex),
       texts: getArrowTextSourceBatch(sourceVectors.texts, 'texts', batchIndex),
       clipRects: sourceVectors.clipRects
-        ? (getArrowTextSourceBatch(
-            sourceVectors.clipRects,
-            'clipRects',
-            batchIndex
-          ) as arrow.Vector<arrow.FixedSizeList<arrow.Int16>>)
+        ? (getArrowTextSourceBatch(sourceVectors.clipRects, 'clipRects', batchIndex) as Vector<
+            FixedSizeList<Int16>
+          >)
         : undefined,
       positionsBuffer: positionsData.buffer,
       colorsBuffer: props.colors?.data[batchIndex].buffer,
@@ -2426,51 +2439,48 @@ function assertStorageVectorTypes(props: ArrowStorageTextInputProps): void {
   if (!isArrowUtf8TextVector(props.sourceVectors.texts)) {
     throw new Error('ArrowStorageTextModel sourceVectors.texts must be Utf8 or Dictionary<Utf8>');
   }
-  if (!arrow.util.compareTypes(props.sourceVectors.texts.type, props.texts.type)) {
+  if (!util.compareTypes(props.sourceVectors.texts.type, props.texts.type)) {
     throw new Error('ArrowStorageTextModel sourceVectors.texts type must match GPU texts type');
   }
   if (
-    !arrow.DataType.isFixedSizeList(props.positions.type) ||
+    !DataType.isFixedSizeList(props.positions.type) ||
     props.positions.type.listSize !== 2 ||
-    !(props.positions.type.children[0]?.type instanceof arrow.Float32)
+    !(props.positions.type.children[0]?.type instanceof Float32)
   ) {
     throw new Error('ArrowStorageTextModel positions must be GPUVector<FixedSizeList<Float32>[2]>');
   }
   if (
     props.colors &&
-    (!arrow.DataType.isFixedSizeList(props.colors.type) ||
+    (!DataType.isFixedSizeList(props.colors.type) ||
       props.colors.type.listSize !== 4 ||
-      !(props.colors.type.children[0]?.type instanceof arrow.Uint8))
+      !(props.colors.type.children[0]?.type instanceof Uint8))
   ) {
     throw new Error('ArrowStorageTextModel colors must be GPUVector<FixedSizeList<Uint8>[4]>');
   }
-  if (props.angles && !(props.angles.type instanceof arrow.Float32)) {
+  if (props.angles && !(props.angles.type instanceof Float32)) {
     throw new Error('ArrowStorageTextModel angles must be GPUVector<Float32>');
   }
-  if (props.sizes && !(props.sizes.type instanceof arrow.Float32)) {
+  if (props.sizes && !(props.sizes.type instanceof Float32)) {
     throw new Error('ArrowStorageTextModel sizes must be GPUVector<Float32>');
   }
   if (
     props.pixelOffsets &&
-    (!arrow.DataType.isFixedSizeList(props.pixelOffsets.type) ||
+    (!DataType.isFixedSizeList(props.pixelOffsets.type) ||
       props.pixelOffsets.type.listSize !== 2 ||
-      !(props.pixelOffsets.type.children[0]?.type instanceof arrow.Float32))
+      !(props.pixelOffsets.type.children[0]?.type instanceof Float32))
   ) {
     throw new Error(
       'ArrowStorageTextModel pixelOffsets must be GPUVector<FixedSizeList<Float32>[2]>'
     );
   }
-  if (props.textAnchors && !(props.textAnchors.type instanceof arrow.Uint8)) {
+  if (props.textAnchors && !(props.textAnchors.type instanceof Uint8)) {
     throw new Error('ArrowStorageTextModel textAnchors must be GPUVector<Uint8>');
   }
-  if (props.alignmentBaselines && !(props.alignmentBaselines.type instanceof arrow.Uint8)) {
+  if (props.alignmentBaselines && !(props.alignmentBaselines.type instanceof Uint8)) {
     throw new Error('ArrowStorageTextModel alignmentBaselines must be GPUVector<Uint8>');
   }
   const clipRects = props.sourceVectors.clipRects;
-  assertClipRects(
-    clipRects as arrow.Vector<arrow.FixedSizeList<arrow.Int16>> | undefined,
-    props.texts.length
-  );
+  assertClipRects(clipRects as Vector<FixedSizeList<Int16>> | undefined, props.texts.length);
 }
 
 function assertStorageVectorBatchAlignment(
@@ -2543,15 +2553,15 @@ function assertDictionaryStorageVectorTypes(props: ArrowDictionaryStorageTextInp
   if (!isArrowUtf8DictionaryVector(props.sourceVectors.texts)) {
     throw new Error('ArrowDictionaryStorageTextModel sourceVectors.texts must be Dictionary<Utf8>');
   }
-  if (!arrow.util.compareTypes(props.sourceVectors.texts.type, props.texts.type)) {
+  if (!util.compareTypes(props.sourceVectors.texts.type, props.texts.type)) {
     throw new Error(
       'ArrowDictionaryStorageTextModel sourceVectors.texts type must match GPU texts type'
     );
   }
   if (
-    !arrow.DataType.isFixedSizeList(props.positions.type) ||
+    !DataType.isFixedSizeList(props.positions.type) ||
     props.positions.type.listSize !== 2 ||
-    !(props.positions.type.children[0]?.type instanceof arrow.Float32)
+    !(props.positions.type.children[0]?.type instanceof Float32)
   ) {
     throw new Error(
       'ArrowDictionaryStorageTextModel positions must be GPUVector<FixedSizeList<Float32>[2]>'
@@ -2559,41 +2569,38 @@ function assertDictionaryStorageVectorTypes(props: ArrowDictionaryStorageTextInp
   }
   if (
     props.colors &&
-    (!arrow.DataType.isFixedSizeList(props.colors.type) ||
+    (!DataType.isFixedSizeList(props.colors.type) ||
       props.colors.type.listSize !== 4 ||
-      !(props.colors.type.children[0]?.type instanceof arrow.Uint8))
+      !(props.colors.type.children[0]?.type instanceof Uint8))
   ) {
     throw new Error(
       'ArrowDictionaryStorageTextModel colors must be GPUVector<FixedSizeList<Uint8>[4]>'
     );
   }
-  if (props.angles && !(props.angles.type instanceof arrow.Float32)) {
+  if (props.angles && !(props.angles.type instanceof Float32)) {
     throw new Error('ArrowDictionaryStorageTextModel angles must be GPUVector<Float32>');
   }
-  if (props.sizes && !(props.sizes.type instanceof arrow.Float32)) {
+  if (props.sizes && !(props.sizes.type instanceof Float32)) {
     throw new Error('ArrowDictionaryStorageTextModel sizes must be GPUVector<Float32>');
   }
   if (
     props.pixelOffsets &&
-    (!arrow.DataType.isFixedSizeList(props.pixelOffsets.type) ||
+    (!DataType.isFixedSizeList(props.pixelOffsets.type) ||
       props.pixelOffsets.type.listSize !== 2 ||
-      !(props.pixelOffsets.type.children[0]?.type instanceof arrow.Float32))
+      !(props.pixelOffsets.type.children[0]?.type instanceof Float32))
   ) {
     throw new Error(
       'ArrowDictionaryStorageTextModel pixelOffsets must be GPUVector<FixedSizeList<Float32>[2]>'
     );
   }
-  if (props.textAnchors && !(props.textAnchors.type instanceof arrow.Uint8)) {
+  if (props.textAnchors && !(props.textAnchors.type instanceof Uint8)) {
     throw new Error('ArrowDictionaryStorageTextModel textAnchors must be GPUVector<Uint8>');
   }
-  if (props.alignmentBaselines && !(props.alignmentBaselines.type instanceof arrow.Uint8)) {
+  if (props.alignmentBaselines && !(props.alignmentBaselines.type instanceof Uint8)) {
     throw new Error('ArrowDictionaryStorageTextModel alignmentBaselines must be GPUVector<Uint8>');
   }
   const clipRects = props.sourceVectors.clipRects;
-  assertClipRects(
-    clipRects as arrow.Vector<arrow.FixedSizeList<arrow.Int16>> | undefined,
-    props.texts.length
-  );
+  assertClipRects(clipRects as Vector<FixedSizeList<Int16>> | undefined, props.texts.length);
 }
 
 function assertDictionaryStorageSourceVectorAlignment(
@@ -2772,17 +2779,17 @@ function resolveArrowTextShaderLayout(props: ArrowTextModelProps): ShaderLayout 
 }
 
 function createArrowTextRenderTable(
-  glyphTable: arrow.Table,
+  glyphTable: Table,
   generatedBufferBatches?: GeneratedBufferBatch[]
-): arrow.Table {
+): Table {
   const generatedGlyphColumnNames = new Set([
     GLYPH_OFFSETS_COLUMN,
     GLYPH_FRAMES_COLUMN,
     GLYPH_CLIP_RECTS_COLUMN,
     ROW_INDICES_COLUMN
   ]);
-  const fields: arrow.Field[] = [];
-  const columns: Record<string, arrow.Vector> = {};
+  const fields: Field[] = [];
+  const columns: Record<string, Vector> = {};
 
   for (const field of glyphTable.schema.fields) {
     if (generatedGlyphColumnNames.has(field.name)) {
@@ -2796,17 +2803,14 @@ function createArrowTextRenderTable(
     columns[field.name] = vector;
   }
 
-  const renderTable = new arrow.Table(
-    new arrow.Schema(fields, new Map(glyphTable.schema.metadata)),
-    columns
-  );
+  const renderTable = new Table(new Schema(fields, new Map(glyphTable.schema.metadata)), columns);
   if (!generatedBufferBatches || generatedBufferBatches.length <= 1) {
     return renderTable;
   }
   const recordBatches = generatedBufferBatches.flatMap(
     batch => renderTable.slice(batch.recordStart, batch.recordEnd).batches
   );
-  return new arrow.Table(renderTable.schema, recordBatches);
+  return new Table(renderTable.schema, recordBatches);
 }
 
 function createExpandedGlyphVertexData(
@@ -2829,8 +2833,8 @@ function createExpandedGlyphVertexData(
   byteLength: number;
 } {
   const {glyphLayout} = glyphTable;
-  const glyphClipRects = glyphTable.table.getChild(GLYPH_CLIP_RECTS_COLUMN) as arrow.Vector<
-    arrow.FixedSizeList<arrow.Int16>
+  const glyphClipRects = glyphTable.table.getChild(GLYPH_CLIP_RECTS_COLUMN) as Vector<
+    FixedSizeList<Int16>
   > | null;
   const glyphClipRectValues = glyphClipRects
     ? (getArrowVectorBufferSource(glyphClipRects) as Int16Array)
@@ -2977,7 +2981,7 @@ export function createArrowStorageTextState(
         defaultBuffers,
         mappingState.sdfRenderSettings
       );
-      const utf8TextInput = buildGpuUtf8TextInput(batchInput.texts as arrow.Vector<arrow.Utf8>);
+      const utf8TextInput = buildGpuUtf8TextInput(batchInput.texts as Vector<Utf8>);
       const rowGlyphStarts = createStorageRowGlyphStartsBuffer(
         device,
         props,
@@ -3304,7 +3308,7 @@ export function createArrowDictionaryStorageTextState(
       mappingState.sdfRenderSettings
     );
     const batchGlyphStream = buildGpuDictionaryCompressedTextStream({
-      texts: batchInput.texts as arrow.Vector<ArrowUtf8Dictionary>,
+      texts: batchInput.texts as Vector<ArrowUtf8Dictionary>,
       mapping: mappingState.mapping,
       baselineOffset: mappingState.baselineOffset,
       lineHeight: mappingState.lineHeight,
@@ -3708,7 +3712,7 @@ function collectArrowCharacterSet(texts: ArrowUtf8TextVector): Set<string> {
     return characterSet;
   }
 
-  const chunks = buildArrowUtf8Chunks(texts as arrow.Vector<arrow.Utf8>);
+  const chunks = buildArrowUtf8Chunks(texts as Vector<Utf8>);
   const target: Utf8TextIndexTarget = {startIndex: 0, endIndex: 0};
   for (let rowIndex = 0; rowIndex < texts.length; rowIndex++) {
     populateUtf8TextIndices(chunks, rowIndex, target);
@@ -3763,14 +3767,14 @@ function updateArrowTextDefaultFragmentShaderUniforms(
   uniforms['textSdfSmoothing'] = sdfRenderSettings.smoothing;
 }
 
-function assertColumnAvailable(table: arrow.Table, columnName: string): void {
+function assertColumnAvailable(table: Table, columnName: string): void {
   if (table.getChild(columnName)) {
     throw new Error(`ArrowTextModel labelTable column "${columnName}" is reserved`);
   }
 }
 
 function assertClipRects(
-  clipRects: arrow.Vector<arrow.FixedSizeList<arrow.Int16>> | undefined,
+  clipRects: Vector<FixedSizeList<Int16>> | undefined,
   labelCount: number
 ): void {
   if (!clipRects) {
@@ -3780,9 +3784,9 @@ function assertClipRects(
     throw new Error('ArrowTextModel clipRects rows must match UTF-8 text rows');
   }
   if (
-    !arrow.DataType.isFixedSizeList(clipRects.type) ||
+    !DataType.isFixedSizeList(clipRects.type) ||
     clipRects.type.listSize !== 4 ||
-    !(clipRects.type.children[0]?.type instanceof arrow.Int16)
+    !(clipRects.type.children[0]?.type instanceof Int16)
   ) {
     throw new Error('ArrowTextModel clipRects must be FixedSizeList<Int16>[4]');
   }
@@ -3841,7 +3845,7 @@ function createStorageTextDefaultBuffers(
     device,
     `${id}-default-row-colors`,
     makeArrowFixedSizeListVector(
-      new arrow.Uint8(),
+      new Uint8(),
       4,
       new Uint8Array(props.color ?? DEFAULT_STORAGE_TEXT_COLOR)
     )
@@ -3850,7 +3854,7 @@ function createStorageTextDefaultBuffers(
     device,
     `${id}-default-row-angles`,
     makeNumericArrowVector(
-      new arrow.Float32(),
+      new Float32(),
       new Float32Array([props.angle ?? DEFAULT_STORAGE_TEXT_ANGLE])
     )
   );
@@ -3858,7 +3862,7 @@ function createStorageTextDefaultBuffers(
     device,
     `${id}-default-row-sizes`,
     makeNumericArrowVector(
-      new arrow.Float32(),
+      new Float32(),
       new Float32Array([props.size ?? DEFAULT_STORAGE_TEXT_SIZE])
     )
   );
@@ -3866,7 +3870,7 @@ function createStorageTextDefaultBuffers(
     device,
     `${id}-default-row-pixel-offsets`,
     makeArrowFixedSizeListVector(
-      new arrow.Float32(),
+      new Float32(),
       2,
       new Float32Array(props.pixelOffset ?? DEFAULT_STORAGE_TEXT_PIXEL_OFFSET)
     )
@@ -3874,23 +3878,20 @@ function createStorageTextDefaultBuffers(
   const textAnchorsVector = createStorageTextOwnedGpuVector(
     device,
     `${id}-default-row-text-anchors`,
-    makeNumericArrowVector(
-      new arrow.Uint32(),
-      new Uint32Array([getTextAnchorEnum(props.textAnchor)])
-    )
+    makeNumericArrowVector(new Uint32(), new Uint32Array([getTextAnchorEnum(props.textAnchor)]))
   );
   const alignmentBaselinesVector = createStorageTextOwnedGpuVector(
     device,
     `${id}-default-row-alignment-baselines`,
     makeNumericArrowVector(
-      new arrow.Uint32(),
+      new Uint32(),
       new Uint32Array([getAlignmentBaselineEnum(props.alignmentBaseline)])
     )
   );
   const clipRectsVector = createStorageTextOwnedGpuVector(
     device,
     `${id}-default-row-clip-rects`,
-    makeArrowFixedSizeListVector(new arrow.Uint32(), 2, new Uint32Array(2))
+    makeArrowFixedSizeListVector(new Uint32(), 2, new Uint32Array(2))
   );
   return {
     colorsBuffer: getStorageTextGpuVectorBuffer(colorsVector),
@@ -3935,7 +3936,7 @@ function createStorageTextBatchRowState(
         device,
         `${props.id || 'storage-text-model'}-row-clip-rects-${batchInput.batchRowIndexBase}`,
         makeArrowFixedSizeListVector(
-          new arrow.Uint32(),
+          new Uint32(),
           2,
           packedClipRects.byteLength > 0 ? packedClipRects : new Uint32Array(2)
         )
@@ -3974,10 +3975,10 @@ function createStorageTextBatchRowState(
   };
 }
 
-function createStorageTextOwnedGpuVector<T extends arrow.DataType>(
+function createStorageTextOwnedGpuVector<T extends DataType>(
   device: Device,
   name: string,
-  vector: arrow.Vector<T>
+  vector: Vector<T>
 ): GPUVector<T> {
   return makeArrowGPUVector(device, vector, {
     name,
@@ -4043,7 +4044,7 @@ function appendArrowStorageTextStateBatches(
       if (!glyphDefinitions) {
         throw new Error('ArrowStorageTextState is missing UTF-8 glyph definitions');
       }
-      const utf8TextInput = buildGpuUtf8TextInput(batchInput.texts as arrow.Vector<arrow.Utf8>);
+      const utf8TextInput = buildGpuUtf8TextInput(batchInput.texts as Vector<Utf8>);
       const rowGlyphStarts = createStorageRowGlyphStartsBuffer(
         device,
         props,
@@ -4601,9 +4602,7 @@ function buildGpuUtf8GlyphDefinitions({
 }
 
 /** Pack signed `[x, y, width, height]` Int16 clip rows into two uint32 words per row. */
-export function packStorageTextClipRects(
-  clipRects: arrow.Vector<arrow.FixedSizeList<arrow.Int16>>
-): Uint32Array {
+export function packStorageTextClipRects(clipRects: Vector<FixedSizeList<Int16>>): Uint32Array {
   assertClipRects(clipRects, clipRects.length);
   const clipRectValues = getArrowVectorBufferSource(clipRects) as Int16Array;
   const packedClipRects = new Uint32Array(clipRects.length * 2);
@@ -4830,28 +4829,20 @@ function toSignedInt16(value: number): number {
   return integerValue;
 }
 
-function makeFixedSizeListField(
-  name: string,
-  childType: arrow.Int16 | arrow.Uint16,
-  listSize: 2 | 4
-): arrow.Field {
-  return new arrow.Field(
-    name,
-    new arrow.FixedSizeList(listSize, new arrow.Field('value', childType, false)),
-    false
-  );
+function makeFixedSizeListField(name: string, childType: Int16 | Uint16, listSize: 2 | 4): Field {
+  return new Field(name, new FixedSizeList(listSize, new Field('value', childType, false)), false);
 }
 
-function isInstanceCompatibleArrowType(type: arrow.DataType): boolean {
+function isInstanceCompatibleArrowType(type: DataType): boolean {
   return (
     isNumericArrowType(type) ||
-    (arrow.DataType.isFixedSizeList(type) && isNumericArrowType(type.children[0].type))
+    (DataType.isFixedSizeList(type) && isNumericArrowType(type.children[0].type))
   );
 }
 
-function repeatArrowVectorRows(vector: arrow.Vector, startIndices: number[]): arrow.Vector {
+function repeatArrowVectorRows(vector: Vector, startIndices: number[]): Vector {
   const glyphCount = startIndices[startIndices.length - 1] ?? 0;
-  if (arrow.DataType.isFixedSizeList(vector.type)) {
+  if (DataType.isFixedSizeList(vector.type)) {
     const childType = vector.type.children[0].type as NumericArrowType;
     const listSize = vector.type.listSize as 1 | 2 | 3 | 4;
     const sourceValues = getArrowVectorBufferSource(vector) as NumericArray;
@@ -4881,12 +4872,12 @@ function repeatArrowVectorRows(vector: arrow.Vector, startIndices: number[]): ar
       repeatedValues[glyphIndex] = sourceValue;
     }
   }
-  const makeNumericData = arrow.makeData as <TypeT extends NumericArrowType>(props: {
+  const makeNumericData = makeData as <TypeT extends NumericArrowType>(props: {
     type: TypeT;
     length: number;
     data: TypeT['TArray'];
-  }) => arrow.Data<TypeT>;
-  return arrow.makeVector(
+  }) => Data<TypeT>;
+  return makeVector(
     makeNumericData({
       type,
       length: glyphCount,
@@ -4898,13 +4889,13 @@ function repeatArrowVectorRows(vector: arrow.Vector, startIndices: number[]): ar
 function makeNumericArrowVector<TypeT extends NumericArrowType>(
   type: TypeT,
   data: TypeT['TArray']
-): arrow.Vector<TypeT> {
-  const makeNumericData = arrow.makeData as <NumericTypeT extends NumericArrowType>(props: {
+): Vector<TypeT> {
+  const makeNumericData = makeData as <NumericTypeT extends NumericArrowType>(props: {
     type: NumericTypeT;
     length: number;
     data: NumericTypeT['TArray'];
-  }) => arrow.Data<NumericTypeT>;
-  return arrow.makeVector(
+  }) => Data<NumericTypeT>;
+  return makeVector(
     makeNumericData({
       type,
       length: data.length,
@@ -4965,7 +4956,7 @@ function createTypedArrayLike(values: NumericArray, length: number): NumericArra
   return new ArrayType(length);
 }
 
-function getGeneratedAttributeByteLength(columns: Record<string, arrow.Vector>): number {
+function getGeneratedAttributeByteLength(columns: Record<string, Vector>): number {
   let attributeByteLength = 0;
   for (const vector of Object.values(columns)) {
     if (isInstanceCompatibleArrowType(vector.type)) {

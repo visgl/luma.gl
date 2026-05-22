@@ -481,7 +481,9 @@ function makeArrowModelIndicesVector(indices: Int32Array, vertexCount: number): 
     0,
     indices.length,
     0,
-    {[arrow.BufferType.DATA]: indices}
+    {
+      [arrow.BufferType.DATA]: indices
+    }
   );
   const indicesData = new arrow.Data<arrow.List<arrow.Int32>>(
     indicesType,

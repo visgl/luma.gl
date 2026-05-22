@@ -6,7 +6,7 @@ import {Buffer, type Binding, type Device, type ShaderLayout} from '@luma.gl/cor
 import {Computation, DynamicBuffer} from '@luma.gl/engine';
 import {fp64arithmetic, type ShaderModule} from '@luma.gl/shadertools';
 import {GPUData, GPUVector} from '@luma.gl/tables';
-import * as arrow from 'apache-arrow';
+import {FixedSizeList, Float32, Vector} from 'apache-arrow';
 import {getArrowVectorBufferSource} from './arrow-gpu-data';
 import {
   getArrowMatrixVectorInfo,
@@ -15,8 +15,8 @@ import {
   type ArrowMatrixVectorInfo
 } from './arrow-matrix-vector';
 
-type ArrowMatrixVector = arrow.Vector<arrow.FixedSizeList<ArrowMatrixValueType>>;
-type ArrowMatrixGPUVector = GPUVector<arrow.FixedSizeList<ArrowMatrixValueType>>;
+type ArrowMatrixVector = Vector<FixedSizeList<ArrowMatrixValueType>>;
+type ArrowMatrixGPUVector = GPUVector<FixedSizeList<ArrowMatrixValueType>>;
 
 /** Options used when preparing one Arrow matrix column for GPU consumption. */
 export type PrepareArrowMatrixGPUVectorOptions = {
@@ -29,9 +29,9 @@ export type PrepareArrowMatrixGPUVectorOptions = {
 /** Canonical Float32 matrix GPU vector plus recovered source/output metadata. */
 export type PreparedArrowMatrixGPUVector = {
   /** Canonical column-major WGSL-storage matrix GPU vector. */
-  matrix: GPUVector<arrow.FixedSizeList<arrow.Float32>>;
+  matrix: GPUVector<FixedSizeList<Float32>>;
   /** Alias for callers that prefer the generic vector name. */
-  vector: GPUVector<arrow.FixedSizeList<arrow.Float32>>;
+  vector: GPUVector<FixedSizeList<Float32>>;
   /** Source matrix metadata recovered before preparation. */
   sourceInfo: ArrowMatrixVectorInfo;
   /** Canonical output matrix metadata. */
@@ -61,7 +61,7 @@ export async function prepareArrowMatrixGPUVector(
 
   if (source instanceof GPUVector) {
     if (isCanonicalFloat32Matrix(sourceInfo)) {
-      const matrix = source as GPUVector<arrow.FixedSizeList<arrow.Float32>>;
+      const matrix = source as GPUVector<FixedSizeList<Float32>>;
       return createPreparedArrowMatrixGPUVector(matrix, sourceInfo, false);
     }
     if (device.type !== 'webgpu') {
@@ -71,14 +71,14 @@ export async function prepareArrowMatrixGPUVector(
   }
 
   const canonicalVector = isCanonicalFloat32Matrix(sourceInfo)
-    ? (source as arrow.Vector<arrow.FixedSizeList<arrow.Float32>>)
+    ? (source as Vector<FixedSizeList<Float32>>)
     : makeCanonicalArrowMatrixVector(source, sourceInfo);
   const matrix = makeArrowMatrixGPUVector(device, canonicalVector, {name, id});
   return createPreparedArrowMatrixGPUVector(matrix, sourceInfo, true);
 }
 
 function createPreparedArrowMatrixGPUVector(
-  matrix: GPUVector<arrow.FixedSizeList<arrow.Float32>>,
+  matrix: GPUVector<FixedSizeList<Float32>>,
   sourceInfo: ArrowMatrixVectorInfo,
   ownsMatrix: boolean
 ): PreparedArrowMatrixGPUVector {
@@ -110,7 +110,7 @@ async function prepareArrowMatrixGPUVectorOnGPU(
     new Float32Array(sourceInfo.logicalComponentCount)
   ).type;
   const outputInfo = getRequiredArrowMatrixVectorInfo({type: outputType});
-  const outputData: GPUData<arrow.FixedSizeList<arrow.Float32>>[] = [];
+  const outputData: GPUData<FixedSizeList<Float32>>[] = [];
   const transientResources: Array<{destroy: () => void}> = [];
 
   for (const [chunkIndex, sourceData] of source.data.entries()) {
@@ -271,8 +271,8 @@ fn main(@builtin(global_invocation_id) globalInvocationId : vec3<u32>) {
 function makeCanonicalArrowMatrixVector(
   source: ArrowMatrixVector,
   sourceInfo: ArrowMatrixVectorInfo
-): arrow.Vector<arrow.FixedSizeList<arrow.Float32>> {
-  const sourceValues = getArrowVectorBufferSource(source as arrow.Vector<any>) as
+): Vector<FixedSizeList<Float32>> {
+  const sourceValues = getArrowVectorBufferSource(source as Vector<any>) as
     | Float32Array
     | Float64Array;
   const canonicalValues = new Float32Array(source.length * sourceInfo.logicalComponentCount);
@@ -293,20 +293,20 @@ function makeCanonicalArrowMatrixVector(
 
 function makeArrowMatrixGPUVector(
   device: Device,
-  vector: arrow.Vector<arrow.FixedSizeList<arrow.Float32>>,
+  vector: Vector<FixedSizeList<Float32>>,
   options: Required<Pick<PrepareArrowMatrixGPUVectorOptions, 'name' | 'id'>>
-): GPUVector<arrow.FixedSizeList<arrow.Float32>> {
+): GPUVector<FixedSizeList<Float32>> {
   const matrixInfo = getRequiredArrowMatrixVectorInfo(vector);
   const buffer = new DynamicBuffer(device, {
     id: options.id,
     usage: Buffer.VERTEX | Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
-    data: getArrowVectorBufferSource(vector as arrow.Vector<any>) as Float32Array
+    data: getArrowVectorBufferSource(vector as Vector<any>) as Float32Array
   });
   let byteOffset = 0;
   const data = vector.data.map(chunk => {
     const gpuData = new GPUData({
       buffer,
-      dataType: chunk.type as arrow.FixedSizeList<arrow.Float32>,
+      dataType: chunk.type as FixedSizeList<Float32>,
       length: chunk.length,
       stride: matrixInfo.physicalComponentCount,
       byteOffset,
@@ -343,9 +343,9 @@ function getMatrixSourceScalarIndex(
 }
 
 function getRequiredArrowMatrixVectorInfo(
-  vector: Pick<arrow.Vector, 'type'> | Pick<GPUVector, 'type'>
+  vector: Pick<Vector, 'type'> | Pick<GPUVector, 'type'>
 ): ArrowMatrixVectorInfo {
-  const matrixInfo = getArrowMatrixVectorInfo(vector as Pick<arrow.Vector, 'type'>);
+  const matrixInfo = getArrowMatrixVectorInfo(vector as Pick<Vector, 'type'>);
   if (!matrixInfo) {
     throw new Error(
       'prepareArrowMatrixGPUVector requires FixedSizeList<Float32|Float64> matrix metadata'

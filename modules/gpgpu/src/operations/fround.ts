@@ -3,7 +3,11 @@
 // Copyright (c) vis.gl contributors
 
 import {assert} from '@luma.gl/core';
-import {GPUTableEvaluator} from '../operation/gpu-table';
+import {
+  getGPUTableEvaluator,
+  GPUTableEvaluator,
+  type GPUTableEvaluatorInput
+} from '../operation/gpu-table-evaluator';
 import {Operation} from '../operation/operation';
 
 /** Deferred float64 split operation. */
@@ -36,6 +40,6 @@ class FroundOperation extends Operation<{x: GPUTableEvaluator}> {
  * that representation and returns a lazy `float32` table containing high values followed by
  * residual low values.
  */
-export function fround(x: GPUTableEvaluator): GPUTableEvaluator {
-  return new FroundOperation(x).output;
+export function fround(x: GPUTableEvaluatorInput): GPUTableEvaluator {
+  return new FroundOperation(getGPUTableEvaluator(x)).output;
 }

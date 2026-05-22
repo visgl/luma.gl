@@ -2,7 +2,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {GPUTableEvaluator} from '../operation/gpu-table';
+import {
+  getGPUTableEvaluator,
+  GPUTableEvaluator,
+  type GPUTableEvaluatorInput
+} from '../operation/gpu-table-evaluator';
 import {Operation} from '../operation/operation';
 import {deduceOutputProps} from '../utils/output-props';
 
@@ -40,10 +44,10 @@ class InterleaveOperation extends Operation<{x: GPUTableEvaluator; y: GPUTableEv
  * The returned table is lazy; no CPU or GPU work is performed until
  * {@link GPUTableEvaluator.evaluate} is called on the result.
  */
-export function interleave(...args: GPUTableEvaluator[]): GPUTableEvaluator {
-  let result = args[0];
+export function interleave(...args: GPUTableEvaluatorInput[]): GPUTableEvaluator {
+  let result = getGPUTableEvaluator(args[0]);
   for (let i = 1; i < args.length; i++) {
-    result = new InterleaveOperation(result, args[i]).output;
+    result = new InterleaveOperation(result, getGPUTableEvaluator(args[i])).output;
   }
   return result;
 }

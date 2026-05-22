@@ -2,7 +2,17 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import * as arrow from 'apache-arrow';
+import {
+  Data,
+  DataType,
+  Field,
+  FixedSizeList,
+  Float32,
+  Float64,
+  Vector,
+  makeData,
+  makeVector
+} from 'apache-arrow';
 
 /** WGSL floating-point matrix shapes currently exposed through Arrow helpers. */
 export type ArrowMatrixShape =
@@ -26,7 +36,7 @@ export type ArrowMatrixOrder = 'column-major' | 'row-major';
 export type ArrowMatrixLayout = 'wgsl-storage' | 'packed';
 
 /** Floating-point Arrow child types accepted by matrix helpers. */
-export type ArrowMatrixValueType = arrow.Float32 | arrow.Float64;
+export type ArrowMatrixValueType = Float32 | Float64;
 
 /** Options for Arrow matrix vector construction. */
 export type ArrowMatrixVectorOptions = {
@@ -61,19 +71,19 @@ export type ArrowMatrixVectorInfo = {
 };
 
 /** Arrow row type used for one `mat2x2<f32>` value. */
-export type ArrowFloat32Matrix2x2 = arrow.FixedSizeList<arrow.Float32>;
+export type ArrowFloat32Matrix2x2 = FixedSizeList<Float32>;
 /** Arrow row type used for one `mat2x3<f32>` value. */
-export type ArrowFloat32Matrix2x3 = arrow.FixedSizeList<arrow.Float32>;
+export type ArrowFloat32Matrix2x3 = FixedSizeList<Float32>;
 /** Arrow row type used for one `mat3x2<f32>` value. */
-export type ArrowFloat32Matrix3x2 = arrow.FixedSizeList<arrow.Float32>;
+export type ArrowFloat32Matrix3x2 = FixedSizeList<Float32>;
 /** Arrow row type used for one `mat3x3<f32>` value. */
-export type ArrowFloat32Matrix3x3 = arrow.FixedSizeList<arrow.Float32>;
+export type ArrowFloat32Matrix3x3 = FixedSizeList<Float32>;
 /** Arrow row type used for one `mat4x3<f32>` value. */
-export type ArrowFloat32Matrix4x3 = arrow.FixedSizeList<arrow.Float32>;
+export type ArrowFloat32Matrix4x3 = FixedSizeList<Float32>;
 /** Arrow row type used for one `mat3x4<f32>` value. */
-export type ArrowFloat32Matrix3x4 = arrow.FixedSizeList<arrow.Float32>;
+export type ArrowFloat32Matrix3x4 = FixedSizeList<Float32>;
 /** Arrow row type used for one `mat4x4<f32>` value. */
-export type ArrowFloat32Matrix4x4 = arrow.FixedSizeList<arrow.Float32>;
+export type ArrowFloat32Matrix4x4 = FixedSizeList<Float32>;
 
 /** Arrow field metadata key for the logical WGSL matrix shape. */
 export const MATRIX_SHAPE_METADATA_KEY = 'luma.gl:matrix-shape';
@@ -82,39 +92,39 @@ export const MATRIX_ORDER_METADATA_KEY = 'luma.gl:matrix-order';
 /** Arrow field metadata key for the stored physical matrix row layout. */
 export const MATRIX_LAYOUT_METADATA_KEY = 'luma.gl:matrix-layout';
 
-const makeMatrixData = arrow.makeData as <T extends ArrowMatrixValueType>(props: {
+const makeMatrixData = makeData as <T extends ArrowMatrixValueType>(props: {
   type: T;
   length: number;
   data: T['TArray'];
-}) => arrow.Data<T>;
+}) => Data<T>;
 
-const makeMatrixFixedSizeListData = arrow.makeData as <T extends ArrowMatrixValueType>(props: {
-  type: arrow.FixedSizeList<T>;
+const makeMatrixFixedSizeListData = makeData as <T extends ArrowMatrixValueType>(props: {
+  type: FixedSizeList<T>;
   length: number;
   nullCount: number;
   nullBitmap: null;
-  child: arrow.Data<T>;
-}) => arrow.Data<arrow.FixedSizeList<T>>;
+  child: Data<T>;
+}) => Data<FixedSizeList<T>>;
 
 /** Create a matrix Arrow vector for one supported WGSL `matCxR<f32>` shape. */
 export function makeArrowMatrixVector(
   shape: ArrowMatrixShape,
   values: Float32Array,
   options?: ArrowMatrixVectorOptions
-): arrow.Vector<arrow.FixedSizeList<arrow.Float32>>;
+): Vector<FixedSizeList<Float32>>;
 export function makeArrowMatrixVector(
   shape: ArrowMatrixShape,
   values: Float64Array,
   options?: ArrowMatrixVectorOptions
-): arrow.Vector<arrow.FixedSizeList<arrow.Float64>>;
+): Vector<FixedSizeList<Float64>>;
 export function makeArrowMatrixVector(
   shape: ArrowMatrixShape,
   values: Float32Array | Float64Array,
   options?: ArrowMatrixVectorOptions
-): arrow.Vector<arrow.FixedSizeList<ArrowMatrixValueType>> {
+): Vector<FixedSizeList<ArrowMatrixValueType>> {
   return values instanceof Float64Array
-    ? makeArrowTypedMatrixVector(shape, values, new arrow.Float64(), options)
-    : makeArrowTypedMatrixVector(shape, values, new arrow.Float32(), options);
+    ? makeArrowTypedMatrixVector(shape, values, new Float64(), options)
+    : makeArrowTypedMatrixVector(shape, values, new Float32(), options);
 }
 
 function makeArrowTypedMatrixVector<T extends ArrowMatrixValueType>(
@@ -122,7 +132,7 @@ function makeArrowTypedMatrixVector<T extends ArrowMatrixValueType>(
   values: T['TArray'],
   childType: T,
   options?: ArrowMatrixVectorOptions
-): arrow.Vector<arrow.FixedSizeList<T>> {
+): Vector<FixedSizeList<T>> {
   const matrixInfo = getMatrixShapeInfo(shape, options?.layout || 'wgsl-storage');
   if (values.length % matrixInfo.logicalComponentCount !== 0) {
     throw new Error(
@@ -140,7 +150,7 @@ function makeArrowTypedMatrixVector<T extends ArrowMatrixValueType>(
     length: physicalValues.length,
     data: physicalValues
   });
-  const valueField = new arrow.Field(
+  const valueField = new Field(
     'value',
     childType,
     false,
@@ -150,7 +160,7 @@ function makeArrowTypedMatrixVector<T extends ArrowMatrixValueType>(
       [MATRIX_LAYOUT_METADATA_KEY, matrixInfo.layout]
     ])
   );
-  const matrixType = new arrow.FixedSizeList(matrixInfo.physicalComponentCount, valueField);
+  const matrixType = new FixedSizeList(matrixInfo.physicalComponentCount, valueField);
   const matrixData = makeMatrixFixedSizeListData({
     type: matrixType,
     length: physicalValues.length / matrixInfo.physicalComponentCount,
@@ -159,14 +169,14 @@ function makeArrowTypedMatrixVector<T extends ArrowMatrixValueType>(
     child: childData
   });
 
-  return arrow.makeVector(matrixData);
+  return makeVector(matrixData);
 }
 
 /** Create a matrix vector for `mat2x2<f32>`. */
 export function makeArrowMatrix2x2Vector(
   values: Float32Array,
   options?: ArrowMatrixVectorOptions
-): arrow.Vector<ArrowFloat32Matrix2x2> {
+): Vector<ArrowFloat32Matrix2x2> {
   return makeArrowMatrixVector('mat2x2', values, options);
 }
 
@@ -174,7 +184,7 @@ export function makeArrowMatrix2x2Vector(
 export function makeArrowMatrix2x3Vector(
   values: Float32Array,
   options?: ArrowMatrixVectorOptions
-): arrow.Vector<ArrowFloat32Matrix2x3> {
+): Vector<ArrowFloat32Matrix2x3> {
   return makeArrowMatrixVector('mat2x3', values, options);
 }
 
@@ -182,7 +192,7 @@ export function makeArrowMatrix2x3Vector(
 export function makeArrowMatrix3x2Vector(
   values: Float32Array,
   options?: ArrowMatrixVectorOptions
-): arrow.Vector<ArrowFloat32Matrix3x2> {
+): Vector<ArrowFloat32Matrix3x2> {
   return makeArrowMatrixVector('mat3x2', values, options);
 }
 
@@ -190,7 +200,7 @@ export function makeArrowMatrix3x2Vector(
 export function makeArrowMatrix3x3Vector(
   values: Float32Array,
   options?: ArrowMatrixVectorOptions
-): arrow.Vector<ArrowFloat32Matrix3x3> {
+): Vector<ArrowFloat32Matrix3x3> {
   return makeArrowMatrixVector('mat3x3', values, options);
 }
 
@@ -198,7 +208,7 @@ export function makeArrowMatrix3x3Vector(
 export function makeArrowMatrix4x3Vector(
   values: Float32Array,
   options?: ArrowMatrixVectorOptions
-): arrow.Vector<ArrowFloat32Matrix4x3> {
+): Vector<ArrowFloat32Matrix4x3> {
   return makeArrowMatrixVector('mat4x3', values, options);
 }
 
@@ -206,7 +216,7 @@ export function makeArrowMatrix4x3Vector(
 export function makeArrowMatrix3x4Vector(
   values: Float32Array,
   options?: ArrowMatrixVectorOptions
-): arrow.Vector<ArrowFloat32Matrix3x4> {
+): Vector<ArrowFloat32Matrix3x4> {
   return makeArrowMatrixVector('mat3x4', values, options);
 }
 
@@ -214,15 +224,15 @@ export function makeArrowMatrix3x4Vector(
 export function makeArrowMatrix4x4Vector(
   values: Float32Array,
   options?: ArrowMatrixVectorOptions
-): arrow.Vector<ArrowFloat32Matrix4x4> {
+): Vector<ArrowFloat32Matrix4x4> {
   return makeArrowMatrixVector('mat4x4', values, options);
 }
 
 /** Recover matrix metadata from an Arrow vector type produced by this helper. */
 export function getArrowMatrixVectorInfo(
-  vector: Pick<arrow.Vector, 'type'>
+  vector: Pick<Vector, 'type'>
 ): ArrowMatrixVectorInfo | null {
-  if (!arrow.DataType.isFixedSizeList(vector.type)) {
+  if (!DataType.isFixedSizeList(vector.type)) {
     return null;
   }
   const metadata = vector.type.children[0]?.metadata;
@@ -231,11 +241,7 @@ export function getArrowMatrixVectorInfo(
     (metadata?.get(MATRIX_ORDER_METADATA_KEY) as ArrowMatrixOrder | undefined) || 'column-major';
   const layout = metadata?.get(MATRIX_LAYOUT_METADATA_KEY) as ArrowMatrixLayout | undefined;
   const childType = vector.type.children[0]?.type;
-  if (
-    !shape ||
-    !layout ||
-    !(childType instanceof arrow.Float32 || childType instanceof arrow.Float64)
-  ) {
+  if (!shape || !layout || !(childType instanceof Float32 || childType instanceof Float64)) {
     return null;
   }
 
@@ -247,7 +253,7 @@ function getMatrixShapeInfo(
   shape: ArrowMatrixShape,
   layout: ArrowMatrixLayout,
   order: ArrowMatrixOrder = 'column-major',
-  childType: ArrowMatrixValueType = new arrow.Float32()
+  childType: ArrowMatrixValueType = new Float32()
 ): ArrowMatrixVectorInfo {
   const [columns, rows] = getMatrixDimensions(shape);
   const logicalComponentCount = columns * rows;
@@ -260,13 +266,13 @@ function getMatrixShapeInfo(
     rows,
     order,
     layout,
-    valueType: childType instanceof arrow.Float64 ? 'float64' : 'float32',
+    valueType: childType instanceof Float64 ? 'float64' : 'float32',
     logicalComponentCount,
     physicalComponentCount,
     columnStride,
     byteStride:
       physicalComponentCount *
-      (childType instanceof arrow.Float64
+      (childType instanceof Float64
         ? Float64Array.BYTES_PER_ELEMENT
         : Float32Array.BYTES_PER_ELEMENT)
   };

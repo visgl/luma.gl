@@ -5,10 +5,10 @@
 import {Buffer, type Device} from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/engine';
 import {GPUVector} from '@luma.gl/tables';
-import * as arrow from 'apache-arrow';
+import {Float32, List} from 'apache-arrow';
 import {ArrowStoragePathModel, type ArrowStoragePathModelProps} from './arrow-storage-path-model';
 
-type ArrowPathTimestampType = arrow.List<arrow.Float32>;
+type ArrowPathTimestampType = List<Float32>;
 
 /** Props for storage-backed Trips-style path rendering. */
 export type ArrowStorageTripsPathModelProps = ArrowStoragePathModelProps & {

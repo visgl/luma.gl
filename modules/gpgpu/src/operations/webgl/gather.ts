@@ -6,7 +6,7 @@ import {BufferLayout} from '@luma.gl/core';
 import {BufferTransform} from '@luma.gl/engine';
 import {ShaderModule} from '@luma.gl/shadertools';
 import {OperationHandler} from '../../operation/operation';
-import {GPUTableEvaluator} from '../../operation/gpu-table';
+import {getGPUVectorBuffer, GPUTableEvaluator} from '../../operation/gpu-table-evaluator';
 import {
   getAttributeType,
   getTextureDataType,
@@ -64,7 +64,7 @@ void main() {
 
   try {
     transform.run({
-      inputBuffers: {ids: ids.buffer},
+      inputBuffers: {ids: getGPUVectorBuffer(ids.gpuVector)},
       outputBuffers: {[outputModule.varyings[0]]: target}
     });
     return {success: true};

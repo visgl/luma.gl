@@ -34,6 +34,8 @@
 - Single quotes
 - Never abbreviate variables, always type out the full name in camelCase (variables, functions, fields), PascalCase (types), CAPITAL_CASE (constant)
 - Prefer verbNoun structure for function and method names.
+- Always import individual symbols from `'apache-arrow'` in `modules/*/src`.
+- It is preferred to use `import * as arrow from 'apache-arrow'` in tests, examples, and docs.
 
 ## Documentation
 - `docs/upgrade-guide.md` should focus on breaking changes and deprecations only.

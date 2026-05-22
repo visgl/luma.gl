@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {SignedDataType} from '@luma.gl/core';
-import {GPUTableEvaluator} from '../../../operation/gpu-table';
+import {GPUTableEvaluator} from '../../../operation/gpu-table-evaluator';
 import {getLiteralValue, getWGSLType, getZeroValue} from './helper';
 
 export const RANDOM_ACCESS_WORKGROUP_SIZE = 64;

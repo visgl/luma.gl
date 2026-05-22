@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import {expect, test} from 'vitest';
-import {GPUTableEvaluator} from '../../src/operation/gpu-table';
+import {GPUTableEvaluator} from '../../src/operation/gpu-table-evaluator';
 import {ArithmeticOperation} from '../../src/operations/arithmetic-operation';
 
 test('GPGPU#ArithmeticOperation#mergeDependenciesAndExpressions', () => {

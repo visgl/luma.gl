@@ -21,7 +21,7 @@
 //   const heightData = getArrowDataByPath(deeplyNestedTable, 'data.age');
 //   t.equal(
 //     heightData.type.typeId,
-//     new arrow.Float32().typeId,
+//     new Float32().typeId,
 //     'extracted age from deeply nested struct'
 //   );
 

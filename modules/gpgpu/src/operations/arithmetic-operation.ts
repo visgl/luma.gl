@@ -2,7 +2,12 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {GPUTableEvaluator} from '../operation/gpu-table';
+import {
+  getCompatibleGPUTableEvaluatorDataType,
+  getGPUTableEvaluator,
+  GPUTableEvaluator,
+  type GPUTableEvaluatorInput
+} from '../operation/gpu-table-evaluator';
 import {Operation} from '../operation/operation';
 import {
   compileExpression,
@@ -31,7 +36,8 @@ export type ArithmeticOperationInputs = {
   namedInputs: Record<string, GPUTableEvaluator>;
 };
 
-export type ArithmeticArgument = GPUTableEvaluator | number | number[];
+export type ArithmeticArgument = GPUTableEvaluatorInput | number | number[];
+type NormalizedArithmeticArgument = GPUTableEvaluator | number | number[];
 
 export const ARITHMETIC_OPERATIONS: ExpressionOperations<ArithmeticOp> = {
   add: {arity: 2, symbol: 'arithmetic_add'},
@@ -56,15 +62,30 @@ export class ArithmeticOperation extends Operation<ArithmeticOperationInputs> {
   output: GPUTableEvaluator;
 
   constructor(op: ArithmeticOp, args: ArithmeticArgument[]) {
-    const {expression, namedInputs, dependencies} = getMergedExpressionAndInputs(op, args);
+    const evaluatorArgs = args.map(arg =>
+      isLiteralArgument(arg) ? arg : getGPUTableEvaluator(arg)
+    );
+    const {expression, namedInputs, dependencies} = getMergedExpressionAndInputs(op, evaluatorArgs);
     super({
       expression,
       namedInputs
     });
     this.dependencies = dependencies;
 
-    const {isConstant, type, size, length} = deduceArithmeticOutputProps(op, args);
-    this.output = new GPUTableEvaluator({isConstant, type, size, length, source: this});
+    const {isConstant, type, size, length} = deduceArithmeticOutputProps(op, evaluatorArgs);
+    const firstInput = evaluatorArgs.find(
+      (arg): arg is GPUTableEvaluator => arg instanceof GPUTableEvaluator
+    );
+    this.output = new GPUTableEvaluator({
+      isConstant,
+      type,
+      size,
+      length,
+      dataType: firstInput
+        ? getCompatibleGPUTableEvaluatorDataType(firstInput, type, size)
+        : undefined,
+      source: this
+    });
   }
 
   toString(): string {
@@ -90,7 +111,7 @@ export class ArithmeticOperation extends Operation<ArithmeticOperationInputs> {
 
 function getMergedExpressionAndInputs(
   op: ArithmeticOp,
-  args: ArithmeticArgument[]
+  args: NormalizedArithmeticArgument[]
 ): {
   expression: Expression<ArithmeticOp>;
   namedInputs: Record<string, GPUTableEvaluator>;
@@ -141,7 +162,7 @@ function getMergedExpressionAndInputs(
   };
 }
 
-function deduceArithmeticOutputProps(op: ArithmeticOp, args: ArithmeticArgument[]) {
+function deduceArithmeticOutputProps(op: ArithmeticOp, args: NormalizedArithmeticArgument[]) {
   const evaluatorArgs = args.filter(
     (arg): arg is GPUTableEvaluator => arg instanceof GPUTableEvaluator
   );
@@ -171,7 +192,9 @@ function deduceArithmeticOutputProps(op: ArithmeticOp, args: ArithmeticArgument[
   };
 }
 
-function isLiteralArgument(arg: ArithmeticArgument): arg is ExpressionLiteral {
+function isLiteralArgument(
+  arg: ArithmeticArgument | NormalizedArithmeticArgument
+): arg is ExpressionLiteral {
   return typeof arg === 'number' || Array.isArray(arg);
 }
 

@@ -4,7 +4,7 @@
 
 import {Buffer, type BufferLayout, type VertexFormat} from '@luma.gl/core';
 import type {DynamicBuffer} from '@luma.gl/engine';
-import * as arrow from 'apache-arrow';
+import {DataType, Field, Precision} from 'apache-arrow';
 import {GPUVector} from './gpu-vector';
 
 type GPUVectorMap = Record<string, GPUVector>;
@@ -18,7 +18,7 @@ export type GPUVectorCollectionProps = {
   /** Optional precomputed buffer layouts keyed by layout name. */
   bufferLayout?: BufferLayout[];
   /** Optional selected schema fields keyed by field name. */
-  fields?: arrow.Field[];
+  fields?: Field[];
   /** Explicit row count for collections that intentionally have no vectors. */
   numRows?: number;
 };
@@ -32,7 +32,7 @@ export type GPUVectorCollection = {
   /** Buffer layouts preserving the normalized vector iteration order. */
   bufferLayout: BufferLayout[];
   /** Selected schema fields preserving the normalized vector iteration order. */
-  fields: arrow.Field[];
+  fields: Field[];
   /** Common row count shared by every vector. */
   numRows: number;
 };
@@ -50,7 +50,7 @@ export function createGPUVectorCollection(props: GPUVectorCollectionProps): GPUV
   const numRows = firstVector?.length ?? props.numRows ?? 0;
   const attributes: Record<string, Buffer | DynamicBuffer> = {};
   const bufferLayout: BufferLayout[] = [];
-  const fields: arrow.Field[] = [];
+  const fields: Field[] = [];
 
   for (const [name, gpuVector] of vectorEntries) {
     if (gpuVector.length !== numRows) {
@@ -60,8 +60,7 @@ export function createGPUVectorCollection(props: GPUVectorCollectionProps): GPUV
     }
 
     fields.push(
-      props.fields?.find(field => field.name === name) ??
-        new arrow.Field(name, gpuVector.type, false)
+      props.fields?.find(field => field.name === name) ?? new Field(name, gpuVector.type, false)
     );
 
     const vectorBufferLayout = props.bufferLayout
@@ -124,27 +123,25 @@ function getGPUVectorVertexFormat(
   vector: GPUVector
 ): VertexFormat {
   const arrowType = vector.type;
-  const numericType = arrow.DataType.isFixedSizeList(arrowType)
-    ? arrowType.children[0].type
-    : arrowType;
-  const components = arrow.DataType.isFixedSizeList(arrowType) ? arrowType.listSize : 1;
+  const numericType = DataType.isFixedSizeList(arrowType) ? arrowType.children[0].type : arrowType;
+  const components = DataType.isFixedSizeList(arrowType) ? arrowType.listSize : 1;
 
-  if (!arrow.DataType.isInt(numericType) && !arrow.DataType.isFloat(numericType)) {
+  if (!DataType.isInt(numericType) && !DataType.isFloat(numericType)) {
     throw new Error(`${ownerName} cannot synthesize a layout for Arrow type ${arrowType}`);
   }
 
   let componentType: string;
-  if (arrow.DataType.isInt(numericType)) {
+  if (DataType.isInt(numericType)) {
     if (numericType.bitWidth === 64) {
       throw new Error(`${ownerName} does not support 64-bit integer GPU buffers`);
     }
     componentType = `${numericType.isSigned ? 'sint' : 'uint'}${numericType.bitWidth}`;
   } else {
     switch (numericType.precision) {
-      case arrow.Precision.HALF:
+      case Precision.HALF:
         componentType = 'float16';
         break;
-      case arrow.Precision.SINGLE:
+      case Precision.SINGLE:
         componentType = 'float32';
         break;
       default:

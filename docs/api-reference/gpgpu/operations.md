@@ -6,11 +6,14 @@ Each operation returns a new [`GPUTableEvaluator`](/docs/api-reference/gpgpu/gpu
 
 ## Common Behavior
 
-- Operations are lazy and chainable.
-- Inputs can be constant tables or per-row tables.
-- Most multi-input operations deduce output `type`, `length`, and constant-ness from their inputs.
-- For WebGL and WebGPU evaluation, register the relevant backend with `backendRegistry`.
-- The CPU backend is registered by default.
+- Each operation returns a new `GPUTableEvaluator`.
+- Inputs can be `GPUTableEvaluator` instances or packed numeric `GPUVector` instances.
+- Arithmetic operations can also use scalar literals or literal row values.
+- Multi-input operations deduce output `type`, `length`, and constant-ness from their inputs.
+- Output evaluation is backend-driven through `backendRegistry`.
+- Operations can be chained to build larger compute graphs.
+- Operation result evaluators own their materialized immutable output buffer.
+- The CPU backend is registered by default. Register `webglBackend` or `webgpuBackend` before evaluating on those device types.
 
 ## Arithmetic
 
@@ -32,7 +35,7 @@ The arithmetic API is exported from `@luma.gl/gpgpu` as:
 ### Signatures
 
 ```ts
-type ArithmeticArgument = GPUTableEvaluator | number | number[];
+type ArithmeticArgument = GPUTableEvaluatorInput | number | number[];
 
 add(...args: ArithmeticArgument[]): GPUTableEvaluator
 subtract(...args: ArithmeticArgument[]): GPUTableEvaluator
@@ -73,7 +76,7 @@ const result = add(xyz, [10, 20, 30], 1);
 
 ## `interleave`
 
-### `interleave(...args: GPUTableEvaluator[]): GPUTableEvaluator`
+### `interleave(...args: GPUTableEvaluatorInput[]): GPUTableEvaluator`
 
 Concatenates each input row in argument order.
 
@@ -107,7 +110,7 @@ const result = interleave(xyz, id);
 
 ## `gather`
 
-### `gather(ids: GPUTableEvaluator, sourceValues: GPUTableEvaluator): GPUTableEvaluator`
+### `gather(ids: GPUTableEvaluatorInput, sourceValues: GPUTableEvaluatorInput): GPUTableEvaluator`
 
 Gathers rows from `sourceValues` using 0-based row indices from `ids`.
 
@@ -138,7 +141,7 @@ const result = gather(ids, values);
 
 ## `extent`
 
-### `extent(sourceValues: GPUTableEvaluator): GPUTableEvaluator`
+### `extent(sourceValues: GPUTableEvaluatorInput): GPUTableEvaluator`
 
 Computes per-channel extents across all rows in `sourceValues`.
 
@@ -197,7 +200,7 @@ const b = sequence(4, 10, 2); // 10, 12, 14, 16
 
 ## `fround`
 
-### `fround(x: GPUTableEvaluator): GPUTableEvaluator`
+### `fround(x: GPUTableEvaluatorInput): GPUTableEvaluator`
 
 Splits float64 values into float32 high and low parts for fp64-style workflows.
 
@@ -219,6 +222,10 @@ const result = fround(source);
 
 ## Remarks
 
+- `add()` and `interleave()` accept multiple arguments and fold from left to right.
+- `GPUVector` inputs are adapted into evaluator views and their buffers remain externally owned.
+- `fround()` is specialized and only accepts one input.
+- As new operations are added to `@luma.gl/gpgpu`, this page should remain the top-level reference for them.
 - Arithmetic operations can mix tables and literals in the same expression.
 - `gather()` is currently a direct row-index gather, not a key-based lookup.
 - `extent()` is a reduction operation: it collapses many input rows into one `[min, max]` row per channel.

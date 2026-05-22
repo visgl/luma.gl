@@ -5,7 +5,7 @@
 import {Buffer, type Binding, type Device, type ShaderLayout} from '@luma.gl/core';
 import {Computation, DynamicBuffer} from '@luma.gl/engine';
 import {GPUData, GPUVector} from '@luma.gl/tables';
-import * as arrow from 'apache-arrow';
+import {Bool, BufferType, Data, DataType, FixedSizeList, Float32, List, Vector} from 'apache-arrow';
 import {
   getArrowVariableLengthAttributeDataBufferSource,
   type GPUDataReadbackMetadata
@@ -13,7 +13,7 @@ import {
 import {makeArrowGPUVector, readArrowGPUVectorAsync} from './arrow-gpu-table-adapters';
 import {isVariableLengthAttributeArrowType} from './arrow-types';
 
-type ArrowPathCoordinateType = arrow.List<arrow.FixedSizeList<arrow.Float32>>;
+type ArrowPathCoordinateType = List<FixedSizeList<Float32>>;
 
 /**
  * Inputs for {@link closeArrowPaths}.
@@ -26,7 +26,7 @@ export type CloseArrowPathsProps = {
   /** Variable-length Float32 path coordinates, one GPU-resident Arrow row per path. */
   paths: GPUVector<ArrowPathCoordinateType>;
   /** Non-null closed-path flags, one Arrow Bool row per path. */
-  closed: arrow.Vector<arrow.Bool>;
+  closed: Vector<Bool>;
   /** Non-negative per-component absolute tolerance used to compare the first and last vertex. */
   epsilon: number;
   /** Optional debug id prefix for generated GPU resources. */
@@ -247,8 +247,8 @@ export async function closeArrowPaths(
 
 function assertCloseArrowPathsProps(props: CloseArrowPathsProps): number {
   assertCloseArrowPathCoordinateType(props.paths.type);
-  if (!(props.closed.type instanceof arrow.Bool)) {
-    throw new Error('closeArrowPaths closed flags must be arrow.Vector<Bool>');
+  if (!(props.closed.type instanceof Bool)) {
+    throw new Error('closeArrowPaths closed flags must be Vector<Bool>');
   }
   if (props.closed.length !== props.paths.length) {
     throw new Error(
@@ -264,13 +264,13 @@ function assertCloseArrowPathsProps(props: CloseArrowPathsProps): number {
   return Math.fround(props.epsilon);
 }
 
-function assertCloseArrowPathCoordinateType(type: arrow.DataType): void {
+function assertCloseArrowPathCoordinateType(type: DataType): void {
   if (
     !isVariableLengthAttributeArrowType(type) ||
-    !arrow.DataType.isFixedSizeList(type.children[0].type) ||
+    !DataType.isFixedSizeList(type.children[0].type) ||
     type.children[0].type.listSize < 1 ||
     type.children[0].type.listSize > 4 ||
-    !(type.children[0].type.children[0]?.type instanceof arrow.Float32)
+    !(type.children[0].type.children[0]?.type instanceof Float32)
   ) {
     throw new Error('closeArrowPaths paths must be GPUVector<List<FixedSizeList<Float32>[1..4]>>');
   }
@@ -278,7 +278,7 @@ function assertCloseArrowPathCoordinateType(type: arrow.DataType): void {
 
 function getCloseArrowPathChunkStates(
   paths: GPUVector<ArrowPathCoordinateType>,
-  closed: arrow.Vector<arrow.Bool>
+  closed: Vector<Bool>
 ): CloseArrowPathChunkState[] {
   const allClosedFlags = makeClosedFlagValues(closed);
   const chunkStates: CloseArrowPathChunkState[] = [];
@@ -303,7 +303,7 @@ function getCloseArrowPathChunkStates(
   return chunkStates;
 }
 
-function makeClosedFlagValues(closed: arrow.Vector<arrow.Bool>): Uint32Array {
+function makeClosedFlagValues(closed: Vector<Bool>): Uint32Array {
   const closedFlags = new Uint32Array(closed.length);
   for (let rowIndex = 0; rowIndex < closed.length; rowIndex++) {
     closedFlags[rowIndex] = closed.get(rowIndex) ? 1 : 0;
@@ -606,17 +606,17 @@ async function closeArrowPathsOnCPU(
 ): Promise<GPUVector<ArrowPathCoordinateType>> {
   const sourcePaths = (await readArrowGPUVectorAsync(
     props.paths
-  )) as arrow.Vector<ArrowPathCoordinateType>;
+  )) as Vector<ArrowPathCoordinateType>;
   const componentCount = getPathComponentCount(props.paths.type);
   const outputData = sourcePaths.data.map((data, chunkIndex) =>
     closeArrowPathDataOnCPU(
-      data as arrow.Data<ArrowPathCoordinateType>,
+      data as Data<ArrowPathCoordinateType>,
       chunkStates[chunkIndex],
       componentCount,
       epsilon
     )
   );
-  const outputPaths = new arrow.Vector<ArrowPathCoordinateType>(outputData);
+  const outputPaths = new Vector<ArrowPathCoordinateType>(outputData);
   return makeArrowGPUVector(device, outputPaths, {
     name: props.paths.name,
     ...(props.id ? {id: `${props.id}-cpu-closed-paths`} : {})
@@ -624,11 +624,11 @@ async function closeArrowPathsOnCPU(
 }
 
 function closeArrowPathDataOnCPU(
-  data: arrow.Data<ArrowPathCoordinateType>,
+  data: Data<ArrowPathCoordinateType>,
   chunkState: CloseArrowPathChunkState | undefined,
   componentCount: number,
   epsilon: number
-): arrow.Data<ArrowPathCoordinateType> {
+): Data<ArrowPathCoordinateType> {
   if (!chunkState) {
     throw new Error('closeArrowPaths CPU fallback requires path chunk metadata');
   }
@@ -718,12 +718,12 @@ function makeArrowPathData(
   type: ArrowPathCoordinateType,
   valueOffsets: Int32Array,
   values: Float32Array
-): arrow.Data<ArrowPathCoordinateType> {
-  const coordinateType = type.children[0].type as arrow.FixedSizeList<arrow.Float32>;
-  const coordinateValues = new arrow.Data<arrow.Float32>(new arrow.Float32(), 0, values.length, 0, {
-    [arrow.BufferType.DATA]: values
+): Data<ArrowPathCoordinateType> {
+  const coordinateType = type.children[0].type as FixedSizeList<Float32>;
+  const coordinateValues = new Data<Float32>(new Float32(), 0, values.length, 0, {
+    [BufferType.DATA]: values
   });
-  const coordinates = new arrow.Data<arrow.FixedSizeList<arrow.Float32>>(
+  const coordinates = new Data<FixedSizeList<Float32>>(
     coordinateType,
     0,
     coordinateType.listSize === 0 ? 0 : values.length / coordinateType.listSize,
@@ -731,19 +731,19 @@ function makeArrowPathData(
     {},
     [coordinateValues]
   );
-  return new arrow.Data<ArrowPathCoordinateType>(
+  return new Data<ArrowPathCoordinateType>(
     type,
     0,
     valueOffsets.length - 1,
     0,
-    {[arrow.BufferType.OFFSET]: valueOffsets},
+    {[BufferType.OFFSET]: valueOffsets},
     [coordinates]
   );
 }
 
 function getPathComponentCount(type: ArrowPathCoordinateType): number {
   const coordinateType = type.children[0]?.type;
-  if (!coordinateType || !arrow.DataType.isFixedSizeList(coordinateType)) {
+  if (!coordinateType || !DataType.isFixedSizeList(coordinateType)) {
     throw new Error('closeArrowPaths paths require FixedSizeList coordinate elements');
   }
   return coordinateType.listSize;

@@ -10,7 +10,24 @@ import {
   type ShaderLayout
 } from '@luma.gl/core';
 import {GPUVector, planGeneratedBufferBatches, type GeneratedBufferBatch} from '@luma.gl/tables';
-import * as arrow from 'apache-arrow';
+import {
+  Bool,
+  BufferType,
+  Data,
+  DataType,
+  Field,
+  FixedSizeList,
+  Float32,
+  Float64,
+  List,
+  Schema,
+  Table,
+  Uint32,
+  Uint8,
+  Vector,
+  makeData,
+  makeVector
+} from 'apache-arrow';
 import {ArrowModel, type ArrowModelProps} from './arrow-model';
 import {makeArrowGPUVector, readArrowGPUVectorAsync} from './arrow-gpu-table-adapters';
 import {expandArrowVector} from './arrow-vector-utils';
@@ -56,13 +73,13 @@ const SEGMENT_END_COLORS_BYTE_OFFSET =
   SEGMENT_START_COLORS_BYTE_OFFSET + Uint32Array.BYTES_PER_ELEMENT;
 const IDENTITY_MATRIX4 = Object.freeze([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
 
-type ArrowPathCoordinateType = arrow.List<arrow.FixedSizeList<arrow.Float32>>;
-type ArrowPathFloat64CoordinateType = arrow.List<arrow.FixedSizeList<arrow.Float64>>;
+type ArrowPathCoordinateType = List<FixedSizeList<Float32>>;
+type ArrowPathFloat64CoordinateType = List<FixedSizeList<Float64>>;
 type ArrowPathSourceCoordinateType = ArrowPathCoordinateType | ArrowPathFloat64CoordinateType;
-type ArrowPathRowColorType = arrow.FixedSizeList<arrow.Uint8>;
-type ArrowPathVertexColorType = arrow.List<arrow.FixedSizeList<arrow.Uint8>>;
+type ArrowPathRowColorType = FixedSizeList<Uint8>;
+type ArrowPathVertexColorType = List<FixedSizeList<Uint8>>;
 type ArrowPathColorType = ArrowPathRowColorType | ArrowPathVertexColorType;
-type ArrowPathViewOriginType = arrow.FixedSizeList<arrow.Float32>;
+type ArrowPathViewOriginType = FixedSizeList<Float32>;
 type ArrowPathViewOriginChunk = {
   rowStart: number;
   rowEnd: number;
@@ -131,15 +148,15 @@ void main() {
 /** CPU Arrow vectors retained explicitly while path rows expand into segment attributes. */
 export type ArrowPathSourceVectors = {
   /** Variable-length Float32 or Float64 XY, XYZ, or XYZM coordinates, one Arrow row per path. */
-  paths: arrow.Vector<ArrowPathSourceCoordinateType>;
+  paths: Vector<ArrowPathSourceCoordinateType>;
   /** Optional packed RGBA8 path colors, either one per path row or one per path vertex. */
-  colors?: arrow.Vector<ArrowPathColorType>;
+  colors?: Vector<ArrowPathColorType>;
   /** Optional per-path widths, one Arrow row per path. */
-  widths?: arrow.Vector<arrow.Float32>;
+  widths?: Vector<Float32>;
   /** Optional per-path closed flags used by path normalization. */
-  closed?: arrow.Vector<arrow.Bool>;
+  closed?: Vector<Bool>;
   /** Optional per-path temporal stream aligned with path vertices. */
-  timestamps?: arrow.Vector<ArrowTemporalColumnType>;
+  timestamps?: Vector<ArrowTemporalColumnType>;
 };
 
 /** Options used when preparing Arrow path source vectors for GPU rendering. */
@@ -163,7 +180,7 @@ export type PreparedArrowPathGPUVectors = {
   /** Optional packed RGBA8 path colors aligned with source path rows or vertices. */
   colors?: GPUVector<ArrowPathColorType>;
   /** Optional Float32 path widths aligned with source path rows. */
-  widths?: GPUVector<arrow.Float32>;
+  widths?: GPUVector<Float32>;
   /** Optional Float32 view-space origins aligned with source path rows. */
   viewOrigins?: GPUVector<ArrowPathViewOriginType>;
   /** Optional retained Float64 source origins used to refresh view-space origins. */
@@ -177,7 +194,7 @@ export type PreparedArrowPathGPUVectors = {
     /** Optional packed RGBA8 path colors aligned with source path rows or vertices. */
     colors?: GPUVector<ArrowPathColorType>;
     /** Optional Float32 path widths aligned with source path rows. */
-    widths?: GPUVector<arrow.Float32>;
+    widths?: GPUVector<Float32>;
     /** Optional Float32 view-space origins aligned with source path rows. */
     viewOrigins?: GPUVector<ArrowPathViewOriginType>;
   };
@@ -197,7 +214,7 @@ export type ArrowPathModelProps = Omit<
   /** Optional packed RGBA8 path colors, either one per path row or one per path vertex. */
   colors?: GPUVector<ArrowPathColorType>;
   /** Optional per-path widths, one Arrow row per path. */
-  widths?: GPUVector<arrow.Float32>;
+  widths?: GPUVector<Float32>;
   /** Optional per-path view-space origins, one Arrow row per path. */
   viewOrigins?: GPUVector<ArrowPathViewOriginType>;
   /** Prepared path expansion state produced by `prepareArrowPathGPUVectors()`. */
@@ -230,7 +247,7 @@ export type ArrowPathSegmentLayout = {
 
 /** Expanded Arrow table plus generated path layout diagnostics. */
 export type ArrowPathSegmentTable = {
-  table: arrow.Table;
+  table: Table;
   segmentLayout: ArrowPathSegmentLayout;
   segmentAttributeBuildTimeMs: number;
   attributeByteLength: number;
@@ -280,7 +297,7 @@ export class ArrowPathModel extends ArrowModel {
   /** Generated path segment layout diagnostics. */
   segmentLayout: ArrowPathSegmentLayout;
   /** Expanded Arrow segment table retained by the model. */
-  segmentTable: arrow.Table;
+  segmentTable: Table;
   /** CPU time spent building generated segment attributes. */
   segmentAttributeBuildTimeMs: number;
   /** Bytes occupied by generated segment Arrow attributes. */
@@ -330,7 +347,7 @@ export class ArrowPathModel extends ArrowModel {
     this.renderBatches = prepared.renderBatches;
     this.pathShaderLayout = prepared.modelProps.shaderLayout!;
 
-    super.setProps({arrowTable: prepared.modelProps.arrowTable as arrow.Table});
+    super.setProps({arrowTable: prepared.modelProps.arrowTable as Table});
     this.setAttributes(getArrowPathModelAttributes(prepared.modelProps.shaderLayout!, prepared));
     this.setInstanceCount(prepared.segmentTable.segmentLayout.segmentCount);
     this.setNeedsRedraw('Arrow path segment table updated');
@@ -377,11 +394,11 @@ export class ArrowPathModel extends ArrowModel {
 /** Expand path rows into per-segment Arrow rows without creating a GPU Model. */
 export function buildArrowPathSegmentTable(props: {
   /** Source row table whose instance-compatible columns expand with each path segment. */
-  rowTable: arrow.Table;
+  rowTable: Table;
   /** Prepared Float32 path coordinates, one Arrow row per path. */
-  paths: arrow.Vector<ArrowPathCoordinateType>;
+  paths: Vector<ArrowPathCoordinateType>;
   /** Optional Float32 view-space origins aligned with source path rows. */
-  viewOrigins?: arrow.Vector<ArrowPathViewOriginType>;
+  viewOrigins?: Vector<ArrowPathViewOriginType>;
   /** Optional global row index base stored in generated segment row indices. */
   rowIndexBase?: number;
 }): ArrowPathSegmentTable {
@@ -403,8 +420,8 @@ export function buildArrowPathSegmentTable(props: {
   const segmentLayout = buildArrowPathSegmentLayout(props.paths, props.viewOrigins, pathColors);
   const segmentRowIndices = makeArrowPathRowIndices(segmentLayout.startIndices, props.rowIndexBase);
   const localSegmentRowIndices = makeArrowPathRowIndices(segmentLayout.startIndices);
-  const fields: arrow.Field[] = [];
-  const columns: Record<string, arrow.Vector> = {};
+  const fields: Field[] = [];
+  const columns: Record<string, Vector> = {};
 
   for (const field of props.rowTable.schema.fields) {
     const vector = props.rowTable.getChild(field.name);
@@ -412,46 +429,43 @@ export function buildArrowPathSegmentTable(props: {
       continue;
     }
     fields.push(field);
-    columns[field.name] = expandArrowVector(vector as arrow.Vector<any>, localSegmentRowIndices);
+    columns[field.name] = expandArrowVector(vector as Vector<any>, localSegmentRowIndices);
   }
 
   fields.push(makeFixedSizeListFloatField(SEGMENT_START_POSITIONS_COLUMN, 4));
   fields.push(makeFixedSizeListFloatField(SEGMENT_END_POSITIONS_COLUMN, 4));
   fields.push(makeFixedSizeListFloatField(SEGMENT_PREVIOUS_POSITIONS_COLUMN, 4));
   fields.push(makeFixedSizeListFloatField(SEGMENT_NEXT_POSITIONS_COLUMN, 4));
-  fields.push(new arrow.Field(SEGMENT_FLAGS_COLUMN, new arrow.Uint32(), false));
-  fields.push(new arrow.Field(ROW_INDICES_COLUMN, new arrow.Uint32(), false));
+  fields.push(new Field(SEGMENT_FLAGS_COLUMN, new Uint32(), false));
+  fields.push(new Field(ROW_INDICES_COLUMN, new Uint32(), false));
   columns[SEGMENT_START_POSITIONS_COLUMN] = makeArrowFixedSizeListVector(
-    new arrow.Float32(),
+    new Float32(),
     4,
     segmentLayout.segmentStartPositions
   );
   columns[SEGMENT_END_POSITIONS_COLUMN] = makeArrowFixedSizeListVector(
-    new arrow.Float32(),
+    new Float32(),
     4,
     segmentLayout.segmentEndPositions
   );
   columns[SEGMENT_PREVIOUS_POSITIONS_COLUMN] = makeArrowFixedSizeListVector(
-    new arrow.Float32(),
+    new Float32(),
     4,
     segmentLayout.segmentPreviousPositions
   );
   columns[SEGMENT_NEXT_POSITIONS_COLUMN] = makeArrowFixedSizeListVector(
-    new arrow.Float32(),
+    new Float32(),
     4,
     segmentLayout.segmentNextPositions
   );
-  columns[SEGMENT_FLAGS_COLUMN] = makeNumericArrowVector(
-    new arrow.Uint32(),
-    segmentLayout.segmentFlags
-  );
-  columns[ROW_INDICES_COLUMN] = makeNumericArrowVector(new arrow.Uint32(), segmentRowIndices);
+  columns[SEGMENT_FLAGS_COLUMN] = makeNumericArrowVector(new Uint32(), segmentLayout.segmentFlags);
+  columns[ROW_INDICES_COLUMN] = makeNumericArrowVector(new Uint32(), segmentRowIndices);
 
   const segmentAttributeBuildTimeMs = getNow() - segmentAttributeBuildStartTime;
   const attributeByteLength = getGeneratedAttributeByteLength(columns);
 
   return {
-    table: new arrow.Table(new arrow.Schema(fields, props.rowTable.schema.metadata), columns),
+    table: new Table(new Schema(fields, props.rowTable.schema.metadata), columns),
     segmentLayout,
     segmentAttributeBuildTimeMs,
     attributeByteLength
@@ -465,11 +479,11 @@ export function createArrowPathPreparedState(
     /** Stable resource id prefix. */
     id?: string;
     /** Source row table whose instance-compatible columns expand with each path segment. */
-    rowTable: arrow.Table;
+    rowTable: Table;
     /** Prepared Float32 path coordinates, one Arrow row per path. */
-    paths: arrow.Vector<ArrowPathCoordinateType>;
+    paths: Vector<ArrowPathCoordinateType>;
     /** Optional Float32 view-space origins aligned with source path rows. */
-    viewOrigins?: arrow.Vector<ArrowPathViewOriginType>;
+    viewOrigins?: Vector<ArrowPathViewOriginType>;
   }
 ): ArrowPathPreparedState {
   const segmentTable = buildArrowPathSegmentTable({
@@ -575,7 +589,7 @@ export async function prepareArrowPathGPUVectors(
     viewOrigins!.buffer.write(viewOriginValues);
   }
 
-  const rowColumns: Record<string, arrow.Vector> = {};
+  const rowColumns: Record<string, Vector> = {};
   if (sourceVectors.colors) {
     rowColumns['colors'] = sourceVectors.colors;
   }
@@ -585,7 +599,7 @@ export async function prepareArrowPathGPUVectors(
 
   const pathState = createArrowPathPreparedState(device, {
     id,
-    rowTable: new arrow.Table(rowColumns),
+    rowTable: new Table(rowColumns),
     paths: pathsForSegmentTable,
     viewOrigins: sourceOriginValues ? makeArrowPathViewOriginVector(viewOriginValues) : undefined
   });
@@ -692,14 +706,14 @@ function assertArrowPathVectorTypes(props: ArrowPathModelProps): void {
       'ArrowPathModel colors must be GPUVector<FixedSizeList<Uint8>[4]> or GPUVector<List<FixedSizeList<Uint8>[4]>>'
     );
   }
-  if (props.widths && !(props.widths.type instanceof arrow.Float32)) {
+  if (props.widths && !(props.widths.type instanceof Float32)) {
     throw new Error('ArrowPathModel widths must be GPUVector<Float32>');
   }
   if (
     props.viewOrigins &&
-    (!arrow.DataType.isFixedSizeList(props.viewOrigins.type) ||
+    (!DataType.isFixedSizeList(props.viewOrigins.type) ||
       props.viewOrigins.type.listSize !== 4 ||
-      !(props.viewOrigins.type.children[0]?.type instanceof arrow.Float32))
+      !(props.viewOrigins.type.children[0]?.type instanceof Float32))
   ) {
     throw new Error('ArrowPathModel viewOrigins must be GPUVector<FixedSizeList<Float32>[4]>');
   }
@@ -712,16 +726,16 @@ function assertArrowPathSourceVectorTypes(sourceVectors: ArrowPathSourceVectors)
       'prepareArrowPathGPUVectors colors must be Vector<FixedSizeList<Uint8>[4]> or Vector<List<FixedSizeList<Uint8>[4]>>'
     );
   }
-  if (sourceVectors.widths && !(sourceVectors.widths.type instanceof arrow.Float32)) {
+  if (sourceVectors.widths && !(sourceVectors.widths.type instanceof Float32)) {
     throw new Error('prepareArrowPathGPUVectors widths must be Vector<Float32>');
   }
-  if (sourceVectors.closed && !(sourceVectors.closed.type instanceof arrow.Bool)) {
+  if (sourceVectors.closed && !(sourceVectors.closed.type instanceof Bool)) {
     throw new Error('prepareArrowPathGPUVectors closed flags must be Vector<Bool>');
   }
 }
 
 function assertArrowPathSourceVectorRows(sourceVectors: ArrowPathSourceVectors): void {
-  const rowInputs: Array<[string, arrow.Vector | undefined]> = [
+  const rowInputs: Array<[string, Vector | undefined]> = [
     ['colors', sourceVectors.colors],
     ['widths', sourceVectors.widths],
     ['closed', sourceVectors.closed],
@@ -737,32 +751,31 @@ function assertArrowPathSourceVectorRows(sourceVectors: ArrowPathSourceVectors):
   if (sourceVectors.colors && isArrowPathVertexColorType(sourceVectors.colors.type)) {
     assertArrowPathVertexColorVectorAlignment(
       sourceVectors.paths,
-      sourceVectors.colors as arrow.Vector<ArrowPathVertexColorType>
+      sourceVectors.colors as Vector<ArrowPathVertexColorType>
     );
   }
 }
 
-function assertArrowPathCoordinateType(type: arrow.DataType, name: string): void {
+function assertArrowPathCoordinateType(type: DataType, name: string): void {
   if (
     !isVariableLengthAttributeArrowType(type) ||
-    !arrow.DataType.isFixedSizeList(type.children[0].type) ||
+    !DataType.isFixedSizeList(type.children[0].type) ||
     type.children[0].type.listSize < 2 ||
     type.children[0].type.listSize > 4 ||
-    !(type.children[0].type.children[0]?.type instanceof arrow.Float32)
+    !(type.children[0].type.children[0]?.type instanceof Float32)
   ) {
     throw new Error(`ArrowPathModel ${name} must be GPUVector<List<FixedSizeList<Float32>[2..4]>>`);
   }
 }
 
-function assertArrowPathSourceCoordinateType(type: arrow.DataType, name: string): void {
+function assertArrowPathSourceCoordinateType(type: DataType, name: string): void {
   const coordinateValueType = getArrowPathCoordinateValueType(type);
   if (
     !isVariableLengthAttributeArrowType(type) ||
-    !arrow.DataType.isFixedSizeList(type.children[0].type) ||
+    !DataType.isFixedSizeList(type.children[0].type) ||
     type.children[0].type.listSize < 2 ||
     type.children[0].type.listSize > 4 ||
-    (!(coordinateValueType instanceof arrow.Float32) &&
-      !(coordinateValueType instanceof arrow.Float64))
+    (!(coordinateValueType instanceof Float32) && !(coordinateValueType instanceof Float64))
   ) {
     throw new Error(
       `prepareArrowPathGPUVectors ${name} must be Vector<List<FixedSizeList<Float32|Float64>[2..4]>>`
@@ -770,11 +783,9 @@ function assertArrowPathSourceCoordinateType(type: arrow.DataType, name: string)
   }
 }
 
-function getArrowPathCoordinateValueType(type: arrow.DataType): arrow.DataType | undefined {
+function getArrowPathCoordinateValueType(type: DataType): DataType | undefined {
   const pathElementType = type.children[0]?.type;
-  return arrow.DataType.isFixedSizeList(pathElementType)
-    ? pathElementType.children[0]?.type
-    : undefined;
+  return DataType.isFixedSizeList(pathElementType) ? pathElementType.children[0]?.type : undefined;
 }
 
 function assertArrowPathVectorRowAlignment(props: ArrowPathModelProps): void {
@@ -814,16 +825,12 @@ function getArrowPathRowInputs(props: ArrowPathModelProps): Array<[string, GPUVe
   ].filter(([, vector]) => vector !== undefined) as Array<[string, GPUVector<any>]>;
 }
 
-function getArrowPathColorVector(
-  rowTable: arrow.Table
-): arrow.Vector<ArrowPathColorType> | undefined {
+function getArrowPathColorVector(rowTable: Table): Vector<ArrowPathColorType> | undefined {
   const colors = rowTable.getChild('colors');
   if (!colors) {
     return undefined;
   }
-  return isArrowPathColorType(colors.type)
-    ? (colors as arrow.Vector<ArrowPathColorType>)
-    : undefined;
+  return isArrowPathColorType(colors.type) ? (colors as Vector<ArrowPathColorType>) : undefined;
 }
 
 function assertArrowPathPreparedStateAlignment(props: ArrowPathModelProps): void {
@@ -839,9 +846,9 @@ function assertArrowPathPreparedStateAlignment(props: ArrowPathModelProps): void
 }
 
 function buildArrowPathSegmentLayout(
-  paths: arrow.Vector<ArrowPathCoordinateType>,
-  viewOrigins?: arrow.Vector<ArrowPathViewOriginType>,
-  colors?: arrow.Vector<ArrowPathColorType>
+  paths: Vector<ArrowPathCoordinateType>,
+  viewOrigins?: Vector<ArrowPathViewOriginType>,
+  colors?: Vector<ArrowPathColorType>
 ): ArrowPathSegmentLayout {
   assertArrowPathCoordinateType(paths.type, 'paths');
   if (viewOrigins) {
@@ -887,7 +894,7 @@ function buildArrowPathSegmentLayout(
       throw new Error('ArrowPathModel source path chunks require Arrow list offsets');
     }
     const pathValues = getArrowVariableLengthAttributeDataBufferSource(
-      data as arrow.Data<ArrowPathCoordinateType>
+      data as Data<ArrowPathCoordinateType>
     ) as Float32Array;
     const firstElementOffset = valueOffsets[0] ?? 0;
 
@@ -985,25 +992,23 @@ function buildArrowPathSegmentLayout(
   };
 }
 
-function isArrowPathRowColorType(type: arrow.DataType): type is ArrowPathRowColorType {
+function isArrowPathRowColorType(type: DataType): type is ArrowPathRowColorType {
   return (
-    arrow.DataType.isFixedSizeList(type) &&
-    type.listSize === 4 &&
-    type.children[0]?.type instanceof arrow.Uint8
+    DataType.isFixedSizeList(type) && type.listSize === 4 && type.children[0]?.type instanceof Uint8
   );
 }
 
-function isArrowPathVertexColorType(type: arrow.DataType): type is ArrowPathVertexColorType {
-  return arrow.DataType.isList(type) && isArrowPathRowColorType(type.children[0]?.type);
+function isArrowPathVertexColorType(type: DataType): type is ArrowPathVertexColorType {
+  return DataType.isList(type) && isArrowPathRowColorType(type.children[0]?.type);
 }
 
-function isArrowPathColorType(type: arrow.DataType): type is ArrowPathColorType {
+function isArrowPathColorType(type: DataType): type is ArrowPathColorType {
   return isArrowPathRowColorType(type) || isArrowPathVertexColorType(type);
 }
 
 function assertArrowPathColorVector(
-  colors: arrow.Vector<ArrowPathColorType>,
-  paths: arrow.Vector<ArrowPathCoordinateType>
+  colors: Vector<ArrowPathColorType>,
+  paths: Vector<ArrowPathCoordinateType>
 ): void {
   if (!isArrowPathColorType(colors.type)) {
     throw new Error(
@@ -1016,16 +1021,13 @@ function assertArrowPathColorVector(
     );
   }
   if (isArrowPathVertexColorType(colors.type)) {
-    assertArrowPathVertexColorVectorAlignment(
-      paths,
-      colors as arrow.Vector<ArrowPathVertexColorType>
-    );
+    assertArrowPathVertexColorVectorAlignment(paths, colors as Vector<ArrowPathVertexColorType>);
   }
 }
 
 function assertArrowPathVertexColorVectorAlignment(
-  paths: arrow.Vector<ArrowPathSourceCoordinateType>,
-  colors: arrow.Vector<ArrowPathVertexColorType>
+  paths: Vector<ArrowPathSourceCoordinateType>,
+  colors: Vector<ArrowPathVertexColorType>
 ): void {
   if (paths.data.length !== colors.data.length) {
     throw new Error('ArrowPathModel vertex color batch count must match path batch count');
@@ -1061,13 +1063,13 @@ function areArrowPathOffsetsEqual(left: Int32Array, right: Int32Array): boolean 
 }
 
 function assertArrowPathViewOriginVector(
-  viewOrigins: arrow.Vector<ArrowPathViewOriginType>,
+  viewOrigins: Vector<ArrowPathViewOriginType>,
   rowCount: number
 ): void {
   if (
-    !arrow.DataType.isFixedSizeList(viewOrigins.type) ||
+    !DataType.isFixedSizeList(viewOrigins.type) ||
     viewOrigins.type.listSize !== 4 ||
-    !(viewOrigins.type.children[0]?.type instanceof arrow.Float32)
+    !(viewOrigins.type.children[0]?.type instanceof Float32)
   ) {
     throw new Error('ArrowPathModel view origins must be Vector<FixedSizeList<Float32>[4]>');
   }
@@ -1078,30 +1080,30 @@ function assertArrowPathViewOriginVector(
   }
 }
 
-function getArrowPathCoordinateComponentCount(type: arrow.DataType): number {
+function getArrowPathCoordinateComponentCount(type: DataType): number {
   const pathElementType = type.children[0]?.type;
-  if (!pathElementType || !arrow.DataType.isFixedSizeList(pathElementType)) {
+  if (!pathElementType || !DataType.isFixedSizeList(pathElementType)) {
     throw new Error('ArrowPathModel paths require FixedSizeList coordinate elements');
   }
   return pathElementType.listSize;
 }
 
-function prepareArrowPathCoordinateData(paths: arrow.Vector<ArrowPathSourceCoordinateType>): {
-  paths: arrow.Vector<ArrowPathCoordinateType>;
+function prepareArrowPathCoordinateData(paths: Vector<ArrowPathSourceCoordinateType>): {
+  paths: Vector<ArrowPathCoordinateType>;
   sourceOrigins?: Float64Array;
 } {
   const coordinateValueType = getArrowPathCoordinateValueType(paths.type);
-  if (coordinateValueType instanceof arrow.Float32) {
-    return {paths: paths as arrow.Vector<ArrowPathCoordinateType>};
+  if (coordinateValueType instanceof Float32) {
+    return {paths: paths as Vector<ArrowPathCoordinateType>};
   }
-  if (!(coordinateValueType instanceof arrow.Float64)) {
+  if (!(coordinateValueType instanceof Float64)) {
     throw new Error('prepareArrowPathGPUVectors paths must contain Float32 or Float64 coordinates');
   }
 
   const componentCount = getArrowPathCoordinateComponentCount(paths.type);
   const pathType = makeArrowPathCoordinateType(componentCount);
   const sourceOrigins = new Float64Array(paths.length * 4);
-  const outputData: arrow.Data<ArrowPathCoordinateType>[] = [];
+  const outputData: Data<ArrowPathCoordinateType>[] = [];
   let rowIndexBase = 0;
 
   for (const data of paths.data) {
@@ -1110,7 +1112,7 @@ function prepareArrowPathCoordinateData(paths: arrow.Vector<ArrowPathSourceCoord
       throw new Error('prepareArrowPathGPUVectors Float64 paths require Arrow list offsets');
     }
     const pathValues = getArrowVariableLengthAttributeDataBufferSource(
-      data as arrow.Data<ArrowPathFloat64CoordinateType>
+      data as Data<ArrowPathFloat64CoordinateType>
     ) as Float64Array;
     const firstElementOffset = valueOffsets[0] ?? 0;
     const normalizedValueOffsets = new Int32Array(valueOffsets.length);
@@ -1163,33 +1165,27 @@ function prepareArrowPathCoordinateData(paths: arrow.Vector<ArrowPathSourceCoord
     rowIndexBase += data.length;
   }
 
-  return {paths: new arrow.Vector<ArrowPathCoordinateType>(outputData), sourceOrigins};
+  return {paths: new Vector<ArrowPathCoordinateType>(outputData), sourceOrigins};
 }
 
 function makeArrowPathCoordinateType(componentCount: number): ArrowPathCoordinateType {
-  const coordinateType = new arrow.FixedSizeList(
+  const coordinateType = new FixedSizeList(
     componentCount,
-    new arrow.Field('values', new arrow.Float32(), false)
+    new Field('values', new Float32(), false)
   );
-  return new arrow.List(
-    new arrow.Field('coordinates', coordinateType, false)
-  ) as ArrowPathCoordinateType;
+  return new List(new Field('coordinates', coordinateType, false)) as ArrowPathCoordinateType;
 }
 
 function makeArrowPathData(
   type: ArrowPathCoordinateType,
   valueOffsets: Int32Array,
   values: Float32Array
-): arrow.Data<ArrowPathCoordinateType> {
-  const coordinateType = type.children[0].type as arrow.FixedSizeList<arrow.Float32>;
-  const coordinateValueData = new arrow.Data<arrow.Float32>(
-    new arrow.Float32(),
-    0,
-    values.length,
-    0,
-    {[arrow.BufferType.DATA]: values}
-  );
-  const coordinateData = new arrow.Data<arrow.FixedSizeList<arrow.Float32>>(
+): Data<ArrowPathCoordinateType> {
+  const coordinateType = type.children[0].type as FixedSizeList<Float32>;
+  const coordinateValueData = new Data<Float32>(new Float32(), 0, values.length, 0, {
+    [BufferType.DATA]: values
+  });
+  const coordinateData = new Data<FixedSizeList<Float32>>(
     coordinateType,
     0,
     coordinateType.listSize === 0 ? 0 : values.length / coordinateType.listSize,
@@ -1197,12 +1193,12 @@ function makeArrowPathData(
     {},
     [coordinateValueData]
   );
-  return new arrow.Data<ArrowPathCoordinateType>(
+  return new Data<ArrowPathCoordinateType>(
     type,
     0,
     valueOffsets.length - 1,
     0,
-    {[arrow.BufferType.OFFSET]: valueOffsets},
+    {[BufferType.OFFSET]: valueOffsets},
     [coordinateData]
   );
 }
@@ -1210,8 +1206,8 @@ function makeArrowPathData(
 /** Wraps one Float32 vec4 view origin per path row as an Arrow fixed-size list vector. */
 export function makeArrowPathViewOriginVector(
   values: Float32Array
-): arrow.Vector<ArrowPathViewOriginType> {
-  return makeArrowFixedSizeListVector(new arrow.Float32(), 4, values);
+): Vector<ArrowPathViewOriginType> {
+  return makeArrowFixedSizeListVector(new Float32(), 4, values);
 }
 
 /** Reprojects retained Float64 path source origins into Float32 model-view coordinates. */
@@ -1300,7 +1296,7 @@ function isClosedArrowPath(
 }
 
 function makeArrowPathViewOriginRows(
-  viewOrigins: arrow.Vector<ArrowPathViewOriginType> | undefined
+  viewOrigins: Vector<ArrowPathViewOriginType> | undefined
 ): ArrowPathViewOriginRows | undefined {
   if (!viewOrigins) {
     return undefined;
@@ -1312,7 +1308,7 @@ function makeArrowPathViewOriginRows(
     chunks.push({
       rowStart,
       rowEnd,
-      values: getArrowDataBufferSource(data as arrow.Data<ArrowPathViewOriginType>) as Float32Array
+      values: getArrowDataBufferSource(data as Data<ArrowPathViewOriginType>) as Float32Array
     });
     rowStart = rowEnd;
   }
@@ -1320,7 +1316,7 @@ function makeArrowPathViewOriginRows(
 }
 
 function makeArrowPathColorRows(
-  colors: arrow.Vector<ArrowPathColorType> | undefined
+  colors: Vector<ArrowPathColorType> | undefined
 ): ArrowPathColorRows | undefined {
   if (!colors) {
     return undefined;
@@ -1340,7 +1336,7 @@ function makeArrowPathColorRows(
         rowEnd,
         valueOffsets,
         values: getArrowVariableLengthAttributeDataBufferSource(
-          data as arrow.Data<ArrowPathVertexColorType>
+          data as Data<ArrowPathVertexColorType>
         ) as Uint8Array
       });
     } else {
@@ -1348,7 +1344,7 @@ function makeArrowPathColorRows(
         kind: 'row',
         rowStart,
         rowEnd,
-        values: getArrowDataBufferSource(data as arrow.Data<ArrowPathRowColorType>) as Uint8Array
+        values: getArrowDataBufferSource(data as Data<ArrowPathRowColorType>) as Uint8Array
       });
     }
     rowStart = rowEnd;
@@ -1480,9 +1476,9 @@ function copyArrowPathPoint(
 }
 
 function createArrowPathRenderTable(
-  segmentTable: arrow.Table,
+  segmentTable: Table,
   generatedBufferBatches?: GeneratedBufferBatch[]
-): arrow.Table {
+): Table {
   const generatedColumnNames = new Set([
     SEGMENT_START_POSITIONS_COLUMN,
     SEGMENT_END_POSITIONS_COLUMN,
@@ -1493,8 +1489,8 @@ function createArrowPathRenderTable(
     SEGMENT_FLAGS_COLUMN,
     ROW_INDICES_COLUMN
   ]);
-  const fields: arrow.Field[] = [];
-  const columns: Record<string, arrow.Vector> = {};
+  const fields: Field[] = [];
+  const columns: Record<string, Vector> = {};
 
   for (const field of segmentTable.schema.fields) {
     if (generatedColumnNames.has(field.name)) {
@@ -1508,17 +1504,14 @@ function createArrowPathRenderTable(
     columns[field.name] = vector;
   }
 
-  const renderTable = new arrow.Table(
-    new arrow.Schema(fields, new Map(segmentTable.schema.metadata)),
-    columns
-  );
+  const renderTable = new Table(new Schema(fields, new Map(segmentTable.schema.metadata)), columns);
   if (!generatedBufferBatches || generatedBufferBatches.length <= 1 || fields.length === 0) {
     return renderTable;
   }
   const recordBatches = generatedBufferBatches.flatMap(
     batch => renderTable.slice(batch.recordStart, batch.recordEnd).batches
   );
-  return new arrow.Table(renderTable.schema, recordBatches);
+  return new Table(renderTable.schema, recordBatches);
 }
 
 function createExpandedPathVertexData(
@@ -1732,16 +1725,16 @@ function makeArrowPathRowIndices(startIndices: number[], rowIndexBase: number = 
   return rowIndices;
 }
 
-function assertArrowPathColumnAvailable(table: arrow.Table, columnName: string): void {
+function assertArrowPathColumnAvailable(table: Table, columnName: string): void {
   if (table.getChild(columnName)) {
     throw new Error(`ArrowPathModel rowTable column "${columnName}" is reserved`);
   }
 }
 
-function makeFixedSizeListFloatField(name: string, listSize: 4): arrow.Field {
-  return new arrow.Field(
+function makeFixedSizeListFloatField(name: string, listSize: 4): Field {
+  return new Field(
     name,
-    new arrow.FixedSizeList(listSize, new arrow.Field('value', new arrow.Float32(), false)),
+    new FixedSizeList(listSize, new Field('value', new Float32(), false)),
     false
   );
 }
@@ -1749,13 +1742,13 @@ function makeFixedSizeListFloatField(name: string, listSize: 4): arrow.Field {
 function makeNumericArrowVector<TypeT extends NumericArrowType>(
   type: TypeT,
   data: TypeT['TArray']
-): arrow.Vector<TypeT> {
-  const makeNumericData = arrow.makeData as <NumericTypeT extends NumericArrowType>(props: {
+): Vector<TypeT> {
+  const makeNumericData = makeData as <NumericTypeT extends NumericArrowType>(props: {
     type: NumericTypeT;
     length: number;
     data: NumericTypeT['TArray'];
-  }) => arrow.Data<NumericTypeT>;
-  return arrow.makeVector(
+  }) => Data<NumericTypeT>;
+  return makeVector(
     makeNumericData({
       type,
       length: data.length,
@@ -1764,13 +1757,13 @@ function makeNumericArrowVector<TypeT extends NumericArrowType>(
   );
 }
 
-function getGeneratedAttributeByteLength(columns: Record<string, arrow.Vector>): number {
+function getGeneratedAttributeByteLength(columns: Record<string, Vector>): number {
   let attributeByteLength = 0;
   for (const vector of Object.values(columns)) {
     if (!isInstanceArrowType(vector.type)) {
       continue;
     }
-    attributeByteLength += getArrowVectorBufferSource(vector as arrow.Vector<any>).byteLength;
+    attributeByteLength += getArrowVectorBufferSource(vector as Vector<any>).byteLength;
   }
   return attributeByteLength;
 }

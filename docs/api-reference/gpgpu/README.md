@@ -38,7 +38,7 @@ const device = await luma.createDevice({
   adapters: [webglAdapter]
 });
 
-await output.evaluate(device);
+const outputVector = await output.evaluate(device);
 ```
 
 ## BackendRegistry

@@ -4,7 +4,7 @@
 
 import {Buffer, type BufferLayout} from '@luma.gl/core';
 import type {DynamicBuffer} from '@luma.gl/engine';
-import * as arrow from 'apache-arrow';
+import {Field, Schema} from 'apache-arrow';
 import {GPUVector} from './gpu-vector';
 import {createGPUVectorCollection} from './gpu-vector-collection';
 
@@ -18,7 +18,7 @@ export type GPURecordBatchFromVectorsProps = {
   /** Optional precomputed batch buffer layouts. */
   bufferLayout?: BufferLayout[];
   /** Optional selected schema fields. Defaults to fields synthesized from vector names and types. */
-  fields?: arrow.Field[];
+  fields?: Field[];
   /** Explicit row count for intentionally vector-less batches. */
   numRows?: number;
   /** Optional batch-level schema metadata. */
@@ -35,7 +35,7 @@ export type GPURecordBatchProps = GPURecordBatchFromVectorsProps;
 /** GPU memory and schema metadata for one selected record batch. */
 export class GPURecordBatch {
   /** GPU-facing schema for the selected columns. */
-  schema: arrow.Schema;
+  schema: Schema;
   /** Number of logical rows represented by the batch. */
   numRows: number;
   /** Number of selected GPU columns in {@link schema}. */
@@ -75,7 +75,7 @@ export class GPURecordBatch {
     Object.assign(this.attributes, vectorCollection.attributes);
     Object.assign(this.bindings, bindings);
     this.bufferLayout.push(...vectorCollection.bufferLayout);
-    this.schema = new arrow.Schema(vectorCollection.fields, metadata);
+    this.schema = new Schema(vectorCollection.fields, metadata);
     this.numCols = vectorCollection.fields.length;
   }
 

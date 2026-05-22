@@ -1,7 +1,7 @@
 // luma.gl
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
-import * as arrow from 'apache-arrow';
+import {DataType, Table, Vector} from 'apache-arrow';
 import {
   AttributeArrowType,
   NumericArrowType,
@@ -14,7 +14,7 @@ import {
 import {getArrowVectorByPath} from './arrow-paths';
 
 /** Returns GPU attribute information for an Arrow table column path, if compatible. */
-export function getArrowColumnInfo(arrowTable: arrow.Table, path: string): ArrowColumnInfo | null {
+export function getArrowColumnInfo(arrowTable: Table, path: string): ArrowColumnInfo | null {
   const vector = getArrowVectorByPath(arrowTable, path);
   if (isInstanceArrowType(vector.type)) {
     return getInstanceColumnInfo(vector);
@@ -26,11 +26,11 @@ export function getArrowColumnInfo(arrowTable: arrow.Table, path: string): Arrow
 }
 
 /** Returns GPU attribute information for a scalar or FixedSizeList Arrow vector. */
-export function getInstanceColumnInfo(vector: arrow.Vector<AttributeArrowType>): ArrowColumnInfo {
+export function getInstanceColumnInfo(vector: Vector<AttributeArrowType>): ArrowColumnInfo {
   let components: 1 | 2 | 3 | 4 = 1;
 
-  let dataVector = vector as arrow.Vector<NumericArrowType>;
-  if (arrow.DataType.isFixedSizeList(vector.type)) {
+  let dataVector = vector as Vector<NumericArrowType>;
+  if (DataType.isFixedSizeList(vector.type)) {
     dataVector = vector.getChildAt(0)!;
     if (vector.type.listSize < 1 || vector.type.listSize > 4) {
       throw new Error('Attribute column fixed list size must be between 1 and 4');
@@ -60,15 +60,15 @@ export function getInstanceColumnInfo(vector: arrow.Vector<AttributeArrowType>):
 }
 
 /** Extracts info from columns that can be used with GPU vertex attributes *
-export function getVertexColumnInfo(vector: arrow.Vector<MeshArrowType>): MeshData[] {
-  if (!arrow.DataType.isList(vector.type)) {
+export function getVertexColumnInfo(vector: Vector<MeshArrowType>): MeshData[] {
+  if (!DataType.isList(vector.type)) {
     throw new Error('mesh data must be an Arrow list');
   }
 
   for (const data of vector.data) {
     const offsets = data.valueOffsets;
 
-  if (arrow.DataType.isFixedSizeList(vector.type)) {
+  if (DataType.isFixedSizeList(vector.type)) {
     const dataVector = vector.getChild(0)!;
     const getArrowColumnInfo
     const dataVectorType = dataVector.type;

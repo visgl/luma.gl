@@ -1081,7 +1081,9 @@ function makePathVector(
     0,
     values.length,
     0,
-    {[arrow.BufferType.DATA]: values}
+    {
+      [arrow.BufferType.DATA]: values
+    }
   );
   const coordinateData = new arrow.Data<arrow.FixedSizeList<arrow.Float32>>(
     coordinateType,
@@ -1119,7 +1121,9 @@ function makeFloat64PathVector(
     0,
     values.length,
     0,
-    {[arrow.BufferType.DATA]: values}
+    {
+      [arrow.BufferType.DATA]: values
+    }
   );
   const coordinateData = new arrow.Data<arrow.FixedSizeList<arrow.Float64>>(
     coordinateType,

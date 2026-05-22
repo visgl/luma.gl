@@ -6,11 +6,11 @@ import {Buffer, type Binding, type Device, type ShaderLayout} from '@luma.gl/cor
 import {Computation, DynamicBuffer} from '@luma.gl/engine';
 import {fp64arithmetic, type ShaderModule} from '@luma.gl/shadertools';
 import {GPUData, GPUVector} from '@luma.gl/tables';
-import * as arrow from 'apache-arrow';
+import {Data, DataType, Field, FixedSizeList, Float32, Float64, List, Vector} from 'apache-arrow';
 import {getArrowVariableLengthAttributeDataBufferSource} from './arrow-gpu-data';
 
-type ArrowPathCoordinateType = arrow.List<arrow.FixedSizeList<arrow.Float32>>;
-type ArrowPathFloat64CoordinateType = arrow.List<arrow.FixedSizeList<arrow.Float64>>;
+type ArrowPathCoordinateType = List<FixedSizeList<Float32>>;
+type ArrowPathFloat64CoordinateType = List<FixedSizeList<Float64>>;
 
 /** Stable resource naming options for WebGPU Float64 path delta preparation. */
 export type GpuPathFloat64DeltaPreparationOptions = {
@@ -89,7 +89,7 @@ const GPU_PATH_FLOAT64_DELTA_SHADER_LAYOUT: ShaderLayout = {
 /** Converts Float64 Arrow path rows into per-row Float32 deltas with WebGPU compute. */
 export async function prepareGpuPathFloat64DeltaVector(
   device: Device,
-  paths: arrow.Vector<ArrowPathFloat64CoordinateType>,
+  paths: Vector<ArrowPathFloat64CoordinateType>,
   options: GpuPathFloat64DeltaPreparationOptions = {}
 ): Promise<GpuPathFloat64DeltaPreparation> {
   if (device.type !== 'webgpu') {
@@ -222,26 +222,24 @@ function dispatchGpuPathFloat64DeltaCompute(
   computation.destroy();
 }
 
-function getArrowPathCoordinateComponentCount(type: arrow.DataType): number {
+function getArrowPathCoordinateComponentCount(type: DataType): number {
   const pathElementType = type.children[0]?.type;
-  if (!pathElementType || !arrow.DataType.isFixedSizeList(pathElementType)) {
+  if (!pathElementType || !DataType.isFixedSizeList(pathElementType)) {
     throw new Error('Float64 path preparation requires FixedSizeList coordinate elements');
   }
   return pathElementType.listSize;
 }
 
 function makeArrowPathCoordinateType(componentCount: number): ArrowPathCoordinateType {
-  const coordinateType = new arrow.FixedSizeList(
+  const coordinateType = new FixedSizeList(
     componentCount,
-    new arrow.Field('values', new arrow.Float32(), false)
+    new Field('values', new Float32(), false)
   );
-  return new arrow.List(
-    new arrow.Field('coordinates', coordinateType, false)
-  ) as ArrowPathCoordinateType;
+  return new List(new Field('coordinates', coordinateType, false)) as ArrowPathCoordinateType;
 }
 
 function getNormalizedArrowPathValueOffsets(
-  data: arrow.Data<ArrowPathFloat64CoordinateType>
+  data: Data<ArrowPathFloat64CoordinateType>
 ): Int32Array {
   const valueOffsets = data.valueOffsets as Int32Array | undefined;
   if (!valueOffsets) {

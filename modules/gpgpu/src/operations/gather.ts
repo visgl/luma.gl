@@ -2,7 +2,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {GPUTableEvaluator} from '../operation/gpu-table';
+import {
+  getGPUTableEvaluator,
+  GPUTableEvaluator,
+  type GPUTableEvaluatorInput
+} from '../operation/gpu-table-evaluator';
 import {Operation} from '../operation/operation';
 
 /** Deferred row gather operation. */
@@ -39,6 +43,9 @@ class GatherOperation extends Operation<{ids: GPUTableEvaluator; sourceValues: G
  * The returned table is lazy; no CPU or GPU work is performed until
  * {@link GPUTableEvaluator.evaluate} is called on the result.
  */
-export function gather(ids: GPUTableEvaluator, sourceValues: GPUTableEvaluator): GPUTableEvaluator {
-  return new GatherOperation(ids, sourceValues).output;
+export function gather(
+  ids: GPUTableEvaluatorInput,
+  sourceValues: GPUTableEvaluatorInput
+): GPUTableEvaluator {
+  return new GatherOperation(getGPUTableEvaluator(ids), getGPUTableEvaluator(sourceValues)).output;
 }

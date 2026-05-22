@@ -4,7 +4,7 @@
 
 import type {Device, Buffer} from '@luma.gl/core';
 import type {TypedArray} from '@math.gl/types';
-import {GPUTableEvaluator} from './gpu-table';
+import {GPUTableEvaluator} from './gpu-table-evaluator';
 import {backendRegistry} from './backend-registry';
 
 /** Backend implementation for a single lazy GPGPU operation. */

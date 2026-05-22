@@ -4,7 +4,7 @@
 
 import {Buffer, Device, type BufferLayout, type ShaderLayout} from '@luma.gl/core';
 import type {DynamicBuffer} from '@luma.gl/engine';
-import * as arrow from 'apache-arrow';
+import {Field, RecordBatch, Schema, Table, Utf8, Vector} from 'apache-arrow';
 import {getArrowFieldByPath, getArrowVectorByPath} from './arrow-paths';
 import {getArrowBufferLayout, type ArrowVertexFormatOptions} from './arrow-shader-layout';
 import type {AttributeArrowType} from './arrow-types';
@@ -38,7 +38,7 @@ export type GPURecordBatchFromVectorsProps = {
   /** Optional precomputed batch buffer layouts. */
   bufferLayout?: BufferLayout[];
   /** Optional selected schema fields. Defaults to fields synthesized from vector names and types. */
-  fields?: arrow.Field[];
+  fields?: Field[];
   /** Optional batch-level schema metadata. */
   metadata?: Map<string, string>;
   /** Number of null rows in the generated GPU record batch. */
@@ -52,7 +52,7 @@ export type GPURecordBatchAppendableProps = ArrowVertexFormatOptions & {
   /** Device that creates appendable vector storage. */
   device: Device;
   /** Source schema used to select shader-compatible columns. */
-  schema: arrow.Schema;
+  schema: Schema;
   /** Shader layout that selects which Arrow columns should be uploaded. */
   shaderLayout: ShaderLayout;
   /** Maps shader attribute names to Arrow column paths. Defaults to using the attribute name. */
@@ -68,7 +68,7 @@ export type GPURecordBatchAppendableProps = ArrowVertexFormatOptions & {
 /** GPU memory and Arrow schema metadata for one selected Arrow RecordBatch. */
 export class GPURecordBatch {
   /** GPU-facing schema for the selected shader attribute columns. */
-  schema: arrow.Schema;
+  schema: Schema;
   /** Number of rows in the source Arrow record batch. */
   numRows: number;
   /** Number of selected GPU columns in {@link schema}. */
@@ -86,14 +86,14 @@ export class GPURecordBatch {
   private readonly appendableColumns?: AppendableGPUColumn[];
 
   /** Creates GPU buffers and GPU-facing schema from one Arrow record batch. */
-  constructor(device: Device, recordBatch: arrow.RecordBatch, props: GPURecordBatchProps);
+  constructor(device: Device, recordBatch: RecordBatch, props: GPURecordBatchProps);
   /** Creates a GPU-facing record batch from existing named GPU vectors. */
   constructor(props: GPURecordBatchFromVectorsProps);
   /** Creates an empty appendable GPU record batch from a selected schema. */
   constructor(props: GPURecordBatchAppendableProps);
   constructor(
     deviceOrProps: Device | GPURecordBatchFromVectorsProps | GPURecordBatchAppendableProps,
-    recordBatch?: arrow.RecordBatch,
+    recordBatch?: RecordBatch,
     props?: GPURecordBatchProps
   ) {
     if (!(deviceOrProps instanceof Device)) {
@@ -112,10 +112,10 @@ export class GPURecordBatch {
         );
         this.appendableColumns = appendableColumns;
 
-        const fields: arrow.Field[] = [];
+        const fields: Field[] = [];
         for (const column of appendableColumns) {
           const {attributeName, bufferLayout, field: sourceField} = column;
-          const field = new arrow.Field(
+          const field = new Field(
             attributeName,
             sourceField.type,
             sourceField.nullable,
@@ -125,7 +125,7 @@ export class GPURecordBatch {
             type: 'appendable',
             name: attributeName,
             device: options.device,
-            arrowType: sourceField.type as AttributeArrowType | arrow.Utf8,
+            arrowType: sourceField.type as AttributeArrowType | Utf8,
             initialCapacityRows: options.initialCapacityRows,
             capacityGrowthFactor: options.capacityGrowthFactor,
             bufferProps: options.bufferProps
@@ -140,7 +140,7 @@ export class GPURecordBatch {
           }
         }
 
-        this.schema = new arrow.Schema(fields, new Map(options.schema.metadata));
+        this.schema = new Schema(fields, new Map(options.schema.metadata));
         this.numCols = fields.length;
         return;
       }
@@ -159,7 +159,7 @@ export class GPURecordBatch {
       Object.assign(this.attributes, vectorCollection.attributes);
       this.bufferLayout.push(...vectorCollection.bufferLayout);
 
-      this.schema = new arrow.Schema(vectorCollection.fields, metadata);
+      this.schema = new Schema(vectorCollection.fields, metadata);
       this.numCols = vectorCollection.fields.length;
       return;
     }
@@ -167,7 +167,7 @@ export class GPURecordBatch {
     const device = deviceOrProps;
     const batch = recordBatch!;
     const options = props!;
-    const table = new arrow.Table([batch]);
+    const table = new Table([batch]);
 
     this.numRows = batch.numRows;
     this.nullCount = batch.nullCount;
@@ -177,13 +177,13 @@ export class GPURecordBatch {
       allowWebGLOnlyFormats: options.allowWebGLOnlyFormats
     });
 
-    const fields: arrow.Field[] = [];
+    const fields: Field[] = [];
     const selectedNames = new Set<string>();
     for (const bufferLayout of this.bufferLayout) {
       const arrowPath = options.arrowPaths?.[bufferLayout.name] || bufferLayout.name;
       const vector = getArrowVectorByPath(table, arrowPath);
       const sourceField = getArrowFieldByPath(table, arrowPath);
-      const field = new arrow.Field(
+      const field = new Field(
         bufferLayout.name,
         vector.type,
         sourceField.nullable,
@@ -191,7 +191,7 @@ export class GPURecordBatch {
       );
       const gpuVector = new GPUVector(
         device,
-        vector as arrow.Vector<AttributeArrowType>,
+        vector as Vector<AttributeArrowType>,
         options.bufferProps as GPUVectorBufferProps
       );
 
@@ -221,10 +221,10 @@ export class GPURecordBatch {
       }
       const gpuVector = new GPUVector(
         device,
-        vector as arrow.Vector<AttributeArrowType>,
+        vector as Vector<AttributeArrowType>,
         options.bufferProps as GPUVectorBufferProps
       );
-      const field = new arrow.Field(
+      const field = new Field(
         storageBinding.name,
         vector.type,
         sourceField.nullable,
@@ -240,12 +240,12 @@ export class GPURecordBatch {
       );
     }
 
-    this.schema = new arrow.Schema(fields, new Map(batch.schema.metadata));
+    this.schema = new Schema(fields, new Map(batch.schema.metadata));
     this.numCols = fields.length;
   }
 
   /** Appends one Arrow record batch into this appendable GPU record batch. */
-  addToLastBatch(recordBatch: arrow.RecordBatch): this {
+  addToLastBatch(recordBatch: RecordBatch): this {
     if (!this.appendableColumns) {
       throw new Error('GPURecordBatch.addToLastBatch() requires appendable batch storage');
     }
@@ -301,7 +301,7 @@ function getArrowStorageBindings(shaderLayout: ShaderLayout): Array<{name: strin
   );
 }
 
-function tryGetArrowVectorByPath(table: arrow.Table, path: string): arrow.Vector | null {
+function tryGetArrowVectorByPath(table: Table, path: string): Vector | null {
   try {
     return getArrowVectorByPath(table, path);
   } catch {
@@ -309,7 +309,7 @@ function tryGetArrowVectorByPath(table: arrow.Table, path: string): arrow.Vector
   }
 }
 
-function tryGetArrowFieldByPath(table: arrow.Table, path: string): arrow.Field | null {
+function tryGetArrowFieldByPath(table: Table, path: string): Field | null {
   try {
     return getArrowFieldByPath(table, path);
   } catch {

@@ -5,7 +5,7 @@
 import {Buffer} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {OperationHandler} from '../../operation/operation';
-import {GPUTableEvaluator} from '../../operation/gpu-table';
+import {getGPUVectorBuffer, GPUTableEvaluator} from '../../operation/gpu-table-evaluator';
 import {getLiteralValue, getWGSLType} from './common/helper';
 import {
   getInputBinding,
@@ -70,10 +70,10 @@ ${getGatherFunction(ids.type, output.type, output.size, sourceValues.length)}
 
   const computationBindings: Record<string, Buffer> = {};
   if (!ids.isConstant) {
-    computationBindings['ids'] = ids.buffer;
+    computationBindings['ids'] = getGPUVectorBuffer(ids.gpuVector);
   }
   if (!sourceValues.isConstant) {
-    computationBindings['sourceValues'] = sourceValues.buffer;
+    computationBindings['sourceValues'] = getGPUVectorBuffer(sourceValues.gpuVector);
   }
   computationBindings['result'] = target;
   computation.setBindings(computationBindings);

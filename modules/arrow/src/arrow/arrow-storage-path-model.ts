@@ -12,7 +12,7 @@ import {
 } from '@luma.gl/core';
 import {DynamicBuffer, Model} from '@luma.gl/engine';
 import {GPUVector, planGeneratedBufferBatches} from '@luma.gl/tables';
-import * as arrow from 'apache-arrow';
+import {DataType, FixedSizeList, Float32, List, Uint8, Vector, vectorFromArray} from 'apache-arrow';
 import type {ArrowModelProps} from './arrow-model';
 import {makeArrowFixedSizeListVector} from './arrow-fixed-size-list';
 import {makeArrowGPUVector} from './arrow-gpu-table-adapters';
@@ -59,12 +59,12 @@ const COMPACT_ROW_INDICES_BYTE_OFFSET = Uint32Array.BYTES_PER_ELEMENT * 2;
 const DEFAULT_STORAGE_PATH_COLOR: [number, number, number, number] = [255, 255, 255, 255];
 const DEFAULT_STORAGE_PATH_WIDTH = 1;
 
-type ArrowPathCoordinateType = arrow.List<arrow.FixedSizeList<arrow.Float32>>;
-type ArrowPathRowColorType = arrow.FixedSizeList<arrow.Uint8>;
-type ArrowPathVertexColorType = arrow.List<arrow.FixedSizeList<arrow.Uint8>>;
+type ArrowPathCoordinateType = List<FixedSizeList<Float32>>;
+type ArrowPathRowColorType = FixedSizeList<Uint8>;
+type ArrowPathVertexColorType = List<FixedSizeList<Uint8>>;
 type ArrowPathColorType = ArrowPathRowColorType | ArrowPathVertexColorType;
-type ArrowPathViewOriginType = arrow.FixedSizeList<arrow.Float32>;
-type ArrowPathTimestampType = arrow.List<arrow.Float32>;
+type ArrowPathViewOriginType = FixedSizeList<Float32>;
+type ArrowPathTimestampType = List<Float32>;
 type StoragePathOwnedResource =
   | Pick<GPUVector, 'destroy'>
   | Pick<DynamicBuffer, 'destroy'>
@@ -199,7 +199,7 @@ export type ArrowStoragePathInputProps = Omit<
   /** Optional packed RGBA8 path colors, either one per path row or one per path vertex. */
   colors?: GPUVector<ArrowPathColorType>;
   /** Optional per-path widths, one Arrow row per path. */
-  widths?: GPUVector<arrow.Float32>;
+  widths?: GPUVector<Float32>;
   /** Optional per-path Float32 temporal stream aligned with path vertices. */
   timestamps?: GPUVector<ArrowPathTimestampType>;
   /** Optional per-path view-space origins, one Arrow row per path. */
@@ -757,7 +757,7 @@ function createStoragePathDefaultBindings(
     device,
     `${id}-default-row-colors`,
     makeArrowFixedSizeListVector(
-      new arrow.Uint8(),
+      new Uint8(),
       4,
       new Uint8Array(props.color ?? DEFAULT_STORAGE_PATH_COLOR)
     )
@@ -765,12 +765,12 @@ function createStoragePathDefaultBindings(
   const widthsVector = createStoragePathOwnedGpuVector(
     device,
     `${id}-default-row-widths`,
-    arrow.vectorFromArray([props.width ?? DEFAULT_STORAGE_PATH_WIDTH], new arrow.Float32())
+    vectorFromArray([props.width ?? DEFAULT_STORAGE_PATH_WIDTH], new Float32())
   );
   const viewOriginsVector = createStoragePathOwnedGpuVector(
     device,
     `${id}-default-view-origins`,
-    makeArrowFixedSizeListVector(new arrow.Float32(), 4, new Float32Array(4))
+    makeArrowFixedSizeListVector(new Float32(), 4, new Float32Array(4))
   );
   return {
     colorsBinding: getStoragePathGpuVectorBinding(colorsVector),
@@ -818,10 +818,10 @@ function createStoragePathBatchRowState(
   };
 }
 
-function createStoragePathOwnedGpuVector<T extends arrow.DataType>(
+function createStoragePathOwnedGpuVector<T extends DataType>(
   device: Device,
   name: string,
-  vector: arrow.Vector<T>
+  vector: Vector<T>
 ): GPUVector<T> {
   return makeArrowGPUVector(device, vector, {
     name,
@@ -835,16 +835,14 @@ function getStoragePathGpuVectorBinding(vector: GPUVector): Binding {
   return buffer instanceof DynamicBuffer ? buffer.buffer : buffer;
 }
 
-function isArrowPathRowColorType(type: arrow.DataType): type is ArrowPathRowColorType {
+function isArrowPathRowColorType(type: DataType): type is ArrowPathRowColorType {
   return (
-    arrow.DataType.isFixedSizeList(type) &&
-    type.listSize === 4 &&
-    type.children[0]?.type instanceof arrow.Uint8
+    DataType.isFixedSizeList(type) && type.listSize === 4 && type.children[0]?.type instanceof Uint8
   );
 }
 
-function isArrowPathVertexColorType(type: arrow.DataType): type is ArrowPathVertexColorType {
-  return arrow.DataType.isList(type) && isArrowPathRowColorType(type.children[0]?.type);
+function isArrowPathVertexColorType(type: DataType): type is ArrowPathVertexColorType {
+  return DataType.isList(type) && isArrowPathRowColorType(type.children[0]?.type);
 }
 
 function createStoragePathStyleConfigData(
