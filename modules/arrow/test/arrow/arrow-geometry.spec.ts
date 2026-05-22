@@ -130,7 +130,7 @@ test('ArrowTableGeometry validates Mesh Arrow input', t => {
   );
   t.throws(
     () => new ArrowTableGeometry(device, {arrowMesh: invalidIndicesTable}),
-    /indices column must be a arrow.List/,
+    /indices column must be a List/,
     'rejects malformed indices columns'
   );
 

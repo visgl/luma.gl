@@ -564,7 +564,7 @@ test('ArrowPathModel.prepareGPUVectors rejects unsupported path inputs', async t
     t.fail('invalid path dimensions should be rejected');
   } catch (error) {
     t.ok(
-      /arrow.FixedSizeList<arrow.Float32\|arrow.Float64>\[2\.\.4\]/.test((error as Error).message),
+      /FixedSizeList<Float32\|Float64>\[2\.\.4\]/.test((error as Error).message),
       'coordinate dimensions outside 2..4 are rejected'
     );
   }
