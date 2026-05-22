@@ -12,25 +12,14 @@ import {
   TEMPORAL_UNIT_METADATA_KEY
 } from '@luma.gl/arrow';
 import {NullDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
-import {
-  Data,
-  DateDay,
-  Date_,
-  Duration,
-  DurationMillisecond,
-  Field,
-  List,
-  Time,
-  TimeMillisecond,
-  Timestamp,
-  TimestampMillisecond,
-  Vector,
-  makeData
-} from 'apache-arrow';
+import * as arrow from 'apache-arrow';
 
 test('prepareArrowTemporalGPUVector emits relative scalar timestamps with persisted origin', async t => {
   const device = new NullDevice({});
-  const source = makeTemporalVector(new TimestampMillisecond(), new BigInt64Array([1000n, 1005n]));
+  const source = makeTemporalVector(
+    new arrow.TimestampMillisecond(),
+    new BigInt64Array([1000n, 1005n])
+  );
   const prepared = await prepareArrowTemporalGPUVector(device, source, {preferGPU: false});
   const result = await readArrowGPUVectorAsync(prepared.temporal);
 
@@ -50,13 +39,19 @@ test('prepareArrowTemporalGPUVector emits relative scalar timestamps with persis
 test('prepareArrowTemporalGPUVectors preserves aligned scalar temporal rows', async t => {
   const device = new NullDevice({});
   const prepared = await prepareArrowTemporalGPUVectors(device, {
-    eventDates: makeTemporalVector(new DateDay(), new Int32Array([20, 21, 21])),
-    eventTimes: makeTemporalVector(new TimeMillisecond(), new Int32Array([8_000, 10_000, 12_000])),
+    eventDates: makeTemporalVector(new arrow.DateDay(), new Int32Array([20, 21, 21])),
+    eventTimes: makeTemporalVector(
+      new arrow.TimeMillisecond(),
+      new Int32Array([8_000, 10_000, 12_000])
+    ),
     eventStarts: makeTemporalVector(
-      new TimestampMillisecond(),
+      new arrow.TimestampMillisecond(),
       new BigInt64Array([1_000n, 2_000n, 3_000n])
     ),
-    eventDurations: makeTemporalVector(new DurationMillisecond(), new BigInt64Array([5n, 10n, 15n]))
+    eventDurations: makeTemporalVector(
+      new arrow.DurationMillisecond(),
+      new BigInt64Array([5n, 10n, 15n])
+    )
   });
   const eventDates = await readArrowGPUVectorAsync(prepared.eventDates!.temporal);
   const eventTimes = await readArrowGPUVectorAsync(prepared.eventTimes!.temporal);
@@ -93,7 +88,7 @@ test('prepareArrowTemporalGPUVectors preserves aligned scalar temporal rows', as
 test('prepareArrowTemporalGPUVector preserves temporal list offsets for Trips-style streams', async t => {
   const device = new NullDevice({});
   const source = makeTemporalListVector(
-    new TimestampMillisecond(),
+    new arrow.TimestampMillisecond(),
     new BigInt64Array([1000n, 1010n, 1025n]),
     new Int32Array([0, 2, 3])
   );
@@ -118,10 +113,10 @@ test('prepareArrowTemporalGPUVector preserves temporal list offsets for Trips-st
 test('prepareArrowTemporalGPUVector reads sliced temporal list rows', async t => {
   const device = new NullDevice({});
   const source = makeTemporalListVector(
-    new TimestampMillisecond(),
+    new arrow.TimestampMillisecond(),
     new BigInt64Array([900n, 901n, 1000n, 1010n, 1025n]),
     new Int32Array([0, 2, 4, 5])
-  ).slice(1) as Vector<List<TimestampMillisecond>>;
+  ).slice(1) as arrow.Vector<arrow.List<arrow.TimestampMillisecond>>;
   const prepared = await prepareArrowTemporalGPUVector(device, source, {preferGPU: false});
   const result = await readArrowGPUVectorAsync(prepared.temporal);
 
@@ -143,7 +138,7 @@ test('prepareArrowTemporalGPUVector reads sliced temporal list rows', async t =>
 
 test('prepareArrowTemporalGPUVector keeps durations relative to zero', async t => {
   const device = new NullDevice({});
-  const source = makeTemporalVector(new DurationMillisecond(), new BigInt64Array([5n, 10n]));
+  const source = makeTemporalVector(new arrow.DurationMillisecond(), new BigInt64Array([5n, 10n]));
   const prepared = await prepareArrowTemporalGPUVector(device, source, {preferGPU: false});
   const result = await readArrowGPUVectorAsync(prepared.temporal);
 
@@ -166,7 +161,10 @@ test('prepareArrowTemporalGPUVector WebGPU matches CPU fallback', async t => {
     t.end();
     return;
   }
-  const source = makeTemporalVector(new TimestampMillisecond(), new BigInt64Array([1000n, 1005n]));
+  const source = makeTemporalVector(
+    new arrow.TimestampMillisecond(),
+    new BigInt64Array([1000n, 1005n])
+  );
   const gpuPrepared = await prepareArrowTemporalGPUVector(device, source);
   const cpuPrepared = await prepareArrowTemporalGPUVector(device, source, {preferGPU: false});
   const gpuResult = await readArrowGPUVectorAsync(gpuPrepared.temporal);
@@ -197,48 +195,50 @@ test('prepareArrowTemporalGPUVector rejects nullable temporal payloads', async t
   t.end();
 });
 
-function makeTemporalVector<T extends Date_ | Time | Timestamp | Duration>(
+function makeTemporalVector<T extends arrow.Date_ | arrow.Time | arrow.Timestamp | arrow.Duration>(
   type: T,
   values: Int32Array | BigInt64Array
-): Vector<T> {
-  const data = makeData({
+): arrow.Vector<T> {
+  const data = arrow.makeData({
     type,
     length: values.length,
     data: values
-  }) as Data<T>;
-  return new Vector([data]);
+  }) as arrow.Data<T>;
+  return new arrow.Vector([data]);
 }
 
-function makeTemporalListVector<T extends Date_ | Time | Timestamp | Duration>(
+function makeTemporalListVector<
+  T extends arrow.Date_ | arrow.Time | arrow.Timestamp | arrow.Duration
+>(
   childType: T,
   values: Int32Array | BigInt64Array,
   valueOffsets: Int32Array
-): Vector<List<T>> {
-  const childData = makeData({
+): arrow.Vector<arrow.List<T>> {
+  const childData = arrow.makeData({
     type: childType,
     length: values.length,
     data: values
-  }) as Data<T>;
-  const listType = new List(new Field('values', childType, false));
-  const listData = makeData({
+  }) as arrow.Data<T>;
+  const listType = new arrow.List(new arrow.Field('values', childType, false));
+  const listData = arrow.makeData({
     type: listType,
     length: valueOffsets.length - 1,
     nullCount: 0,
     nullBitmap: null,
     valueOffsets,
     child: childData
-  }) as Data<List<T>>;
-  return new Vector([listData]);
+  }) as arrow.Data<arrow.List<T>>;
+  return new arrow.Vector([listData]);
 }
 
-function makeNullableTimestampVector(): Vector<TimestampMillisecond> {
+function makeNullableTimestampVector(): arrow.Vector<arrow.TimestampMillisecond> {
   const nullBitmap = new Uint8Array([0b10]);
-  const data = makeData({
-    type: new TimestampMillisecond(),
+  const data = arrow.makeData({
+    type: new arrow.TimestampMillisecond(),
     length: 2,
     nullCount: 1,
     nullBitmap,
     data: new BigInt64Array([1000n, 1005n])
-  }) as Data<TimestampMillisecond>;
-  return new Vector([data]);
+  }) as arrow.Data<arrow.TimestampMillisecond>;
+  return new arrow.Vector([data]);
 }

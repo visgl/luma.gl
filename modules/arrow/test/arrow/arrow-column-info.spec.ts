@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 // import test from '@luma.gl/devtools-extensions/tape-test-utils';
-// import {Float32} from 'apache-arrow';
+// import * as arrow from 'apache-arrow';
 // import {getArrowDataByPath} from '@luma.gl/arrow';
 // import { expandArrayToCoords } from "../src/utils.js";
 // import { arraysEqual } from "./utils.js";

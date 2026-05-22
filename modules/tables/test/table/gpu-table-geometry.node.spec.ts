@@ -6,7 +6,7 @@ import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {Buffer} from '@luma.gl/core';
 import {NullDevice} from '@luma.gl/test-utils';
 import {GPURecordBatch, GPUTable, GPUTableGeometry, GPUVector} from '@luma.gl/tables';
-import {Field, FixedSizeList, Float32} from 'apache-arrow';
+import * as arrow from 'apache-arrow';
 
 test('GPUTableGeometry exposes one static table batch as geometry', t => {
   const device = new NullDevice({});
@@ -70,7 +70,7 @@ test('GPUTableGeometry rejects appendable DynamicBuffer attributes', t => {
     type: 'appendable',
     name: 'positions',
     device,
-    dataType: new FixedSizeList(2, new Field('value', new Float32(), false)),
+    dataType: new arrow.FixedSizeList(2, new arrow.Field('value', new arrow.Float32(), false)),
     stride: 2,
     byteStride: Float32Array.BYTES_PER_ELEMENT * 2
   });
@@ -110,7 +110,7 @@ function makePositionsVector(device: NullDevice, rowCount: number): GPUVector {
     type: 'buffer',
     name: 'positions',
     buffer: device.createBuffer({data: new Float32Array(rowCount * 2)}),
-    dataType: new FixedSizeList(2, new Field('value', new Float32(), false)),
+    dataType: new arrow.FixedSizeList(2, new arrow.Field('value', new arrow.Float32(), false)),
     length: rowCount,
     stride: 2,
     byteStride: Float32Array.BYTES_PER_ELEMENT * 2,

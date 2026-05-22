@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {Dictionary, Int32, Utf8, Vector, makeData, vectorFromArray} from 'apache-arrow';
+import * as arrow from 'apache-arrow';
 import {
   buildArrowGlyphLayout,
   buildArrowUtf8Chunks,
@@ -23,7 +23,7 @@ type TextDatum = {
 };
 
 test('createArrowUtf8TextIndexAccessor mutates the caller target', t => {
-  const texts = vectorFromArray(['ASCII', 'e', '🙂', ''], new Utf8());
+  const texts = arrow.vectorFromArray(['ASCII', 'e', '🙂', ''], new arrow.Utf8());
   const accessor = createArrowUtf8TextIndexAccessor<TextDatum>(texts, datum => datum.rowIndex);
   const target = {startIndex: -1, endIndex: -1};
 
@@ -40,17 +40,17 @@ test('createArrowUtf8TextIndexAccessor mutates the caller target', t => {
 });
 
 test('Arrow UTF-8 chunks handle chunked, sliced, and null rows', t => {
-  const firstChunk = vectorFromArray(['a', 'bb'], new Utf8());
-  const secondChunk = vectorFromArray(['ccc', 'dddd'], new Utf8());
-  const chunked = new Vector<Utf8>([firstChunk.data[0]!, secondChunk.data[0]!]);
+  const firstChunk = arrow.vectorFromArray(['a', 'bb'], new arrow.Utf8());
+  const secondChunk = arrow.vectorFromArray(['ccc', 'dddd'], new arrow.Utf8());
+  const chunked = new arrow.Vector<arrow.Utf8>([firstChunk.data[0]!, secondChunk.data[0]!]);
   const chunks = buildArrowUtf8Chunks(chunked);
   const target = {startIndex: 0, endIndex: 0};
 
   populateUtf8TextIndices(chunks, 2, target);
   t.deepEqual([target.startIndex, target.endIndex], [3, 6], 'chunked row bytes are normalized');
 
-  const source = vectorFromArray(['skip', null, 'kept'], new Utf8());
-  const sliced = source.slice(1) as Vector<Utf8>;
+  const source = arrow.vectorFromArray(['skip', null, 'kept'], new arrow.Utf8());
+  const sliced = source.slice(1) as arrow.Vector<arrow.Utf8>;
   const slicedChunks = buildArrowUtf8Chunks(sliced);
   populateUtf8TextIndices(slicedChunks, 0, target);
   t.deepEqual([target.startIndex, target.endIndex], [0, 0], 'null rows are empty');
@@ -60,7 +60,7 @@ test('Arrow UTF-8 chunks handle chunked, sliced, and null rows', t => {
 });
 
 test('decodeArrowUtf8CodePoints and buildArrowGlyphLayout preserve Unicode glyph counts', t => {
-  const texts = vectorFromArray(['AB', '🙂'], new Utf8());
+  const texts = arrow.vectorFromArray(['AB', '🙂'], new arrow.Utf8());
   const chunks = buildArrowUtf8Chunks(texts);
   const target = {startIndex: 0, endIndex: 0};
   const decoded: string[] = [];
@@ -96,10 +96,13 @@ test('decodeArrowUtf8CodePoints and buildArrowGlyphLayout preserve Unicode glyph
 });
 
 test('dictionary Arrow UTF-8 helpers expand repeated, chunked, sliced, and null labels', t => {
-  const dictionaryType = new Dictionary(new Utf8(), new Int32());
+  const dictionaryType = new arrow.Dictionary(new arrow.Utf8(), new arrow.Int32());
   const firstChunk = makeArrowDictionaryTexts(['AB', 'A', null], dictionaryType);
   const secondChunk = makeArrowDictionaryTexts(['AB'], dictionaryType);
-  const chunked = new Vector<ArrowUtf8Dictionary>([firstChunk.data[0]!, secondChunk.data[0]!]);
+  const chunked = new arrow.Vector<ArrowUtf8Dictionary>([
+    firstChunk.data[0]!,
+    secondChunk.data[0]!
+  ]);
   const mapping: CharacterMapping = {
     A: {x: 0, y: 0, width: 4, height: 6, anchorX: 2, anchorY: 3, advance: 5},
     B: {x: 4, y: 0, width: 4, height: 6, anchorX: 2, anchorY: 3, advance: 7}
@@ -123,7 +126,7 @@ test('dictionary Arrow UTF-8 helpers expand repeated, chunked, sliced, and null 
   const sliced = makeExplicitArrowDictionaryTexts(
     ['skip', 'AB', 'A'],
     new Int32Array([0, 1, 2])
-  ).slice(1) as Vector<ArrowUtf8Dictionary>;
+  ).slice(1) as arrow.Vector<ArrowUtf8Dictionary>;
   const slicedTextInput = buildGpuDictionaryUtf8TextInput(sliced);
   t.deepEqual(slicedTextInput.startIndices, [0, 2, 3], 'sliced dictionary rows stay normalized');
   t.deepEqual(
@@ -193,7 +196,7 @@ test('buildGpuExpandedTextStream packs glyph ids and shared definitions determin
     '🙂': {x: 8, y: 0, width: 8, height: 8, anchorX: 4, anchorY: 4, advance: 9}
   };
   const stream = buildGpuExpandedTextStream({
-    texts: vectorFromArray(['AB', '🙂A'], new Utf8()),
+    texts: arrow.vectorFromArray(['AB', '🙂A'], new arrow.Utf8()),
     mapping,
     baselineOffset: 1,
     lineHeight: 10,
@@ -293,7 +296,7 @@ test('buildGpuDictionaryCompressedTextStream shares dictionary glyph records per
 });
 
 test('buildGpuUtf8TextInput preserves Arrow UTF-8 bytes without glyph decoding', t => {
-  const textInput = buildGpuUtf8TextInput(vectorFromArray(['AB', '🙂'], new Utf8()));
+  const textInput = buildGpuUtf8TextInput(arrow.vectorFromArray(['AB', '🙂'], new arrow.Utf8()));
   const packedBytes = new Uint8Array(textInput.packedUtf8Bytes.buffer).subarray(
     0,
     textInput.byteLength
@@ -312,9 +315,9 @@ test('buildGpuUtf8TextInput preserves Arrow UTF-8 bytes without glyph decoding',
 
 function makeArrowDictionaryTexts(
   labels: readonly (string | null)[],
-  dictionaryType = new Dictionary(new Utf8(), new Int32())
-): Vector<ArrowUtf8Dictionary> {
-  return vectorFromArray(labels, dictionaryType) as Vector<ArrowUtf8Dictionary>;
+  dictionaryType = new arrow.Dictionary(new arrow.Utf8(), new arrow.Int32())
+): arrow.Vector<ArrowUtf8Dictionary> {
+  return arrow.vectorFromArray(labels, dictionaryType) as arrow.Vector<ArrowUtf8Dictionary>;
 }
 
 function makeExplicitArrowDictionaryTexts(
@@ -324,10 +327,13 @@ function makeExplicitArrowDictionaryTexts(
   nullCount = 0,
   offset = 0,
   length = indices.length - offset
-): Vector<ArrowUtf8Dictionary> {
-  const dictionaryType = new Dictionary(new Utf8(), new Int32());
-  const dictionary = vectorFromArray(dictionaryValues, new Utf8()) as Vector<Utf8>;
-  const data = makeData({
+): arrow.Vector<ArrowUtf8Dictionary> {
+  const dictionaryType = new arrow.Dictionary(new arrow.Utf8(), new arrow.Int32());
+  const dictionary = arrow.vectorFromArray(
+    dictionaryValues,
+    new arrow.Utf8()
+  ) as arrow.Vector<arrow.Utf8>;
+  const data = arrow.makeData({
     type: dictionaryType,
     length,
     offset,
@@ -336,7 +342,7 @@ function makeExplicitArrowDictionaryTexts(
     data: indices,
     dictionary
   });
-  return new Vector([data]) as Vector<ArrowUtf8Dictionary>;
+  return new arrow.Vector([data]) as arrow.Vector<ArrowUtf8Dictionary>;
 }
 
 function packSignedInt16Pair(lowerValue: number, upperValue: number): number {

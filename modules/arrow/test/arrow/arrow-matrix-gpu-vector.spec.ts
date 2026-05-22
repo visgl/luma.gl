@@ -14,7 +14,7 @@ import {
   readArrowGPUVectorAsync
 } from '@luma.gl/arrow';
 import {NullDevice} from '@luma.gl/test-utils';
-import {Data, Field, FixedSizeList, Float32, Float64, Vector, makeData} from 'apache-arrow';
+import * as arrow from 'apache-arrow';
 
 test('prepareArrowMatrixGPUVector keeps canonical Float32 matrices GPU-ready', async t => {
   const device = new NullDevice({});
@@ -39,7 +39,7 @@ test('prepareArrowMatrixGPUVector keeps canonical Float32 matrices GPU-ready', a
     'exposes canonical Float32 WGSL-storage matrix metadata'
   );
   t.deepEqual(
-    getArrowFixedSizeListValues(result as Vector<FixedSizeList<Float32>>),
+    getArrowFixedSizeListValues(result as arrow.Vector<arrow.FixedSizeList<arrow.Float32>>),
     new Float32Array(16),
     'keeps canonical matrix values directly uploadable'
   );
@@ -51,7 +51,7 @@ test('prepareArrowMatrixGPUVector keeps canonical Float32 matrices GPU-ready', a
 test('prepareArrowMatrixGPUVector normalizes packed row-major Float64 matrices', async t => {
   const device = new NullDevice({});
   const source = makeRawMatrixVector(
-    new Float64(),
+    new arrow.Float64(),
     9,
     new Float64Array([1, 2, 3, 4, 5, 6, 7, 8, 9]),
     {
@@ -64,7 +64,7 @@ test('prepareArrowMatrixGPUVector normalizes packed row-major Float64 matrices',
   const result = await readArrowGPUVectorAsync(prepared.matrix);
 
   t.deepEqual(
-    getArrowFixedSizeListValues(result as Vector<FixedSizeList<Float32>>),
+    getArrowFixedSizeListValues(result as arrow.Vector<arrow.FixedSizeList<arrow.Float32>>),
     new Float32Array([1, 4, 7, 0, 2, 5, 8, 0, 3, 6, 9, 0]),
     'transposes, pads, and truncates Float64 values into canonical Float32 storage'
   );
@@ -75,18 +75,18 @@ test('prepareArrowMatrixGPUVector normalizes packed row-major Float64 matrices',
   t.end();
 });
 
-function makeRawMatrixVector<T extends Float32 | Float64>(
+function makeRawMatrixVector<T extends arrow.Float32 | arrow.Float64>(
   childType: T,
   listSize: number,
   values: T['TArray'],
   metadata: {shape: string; order: string; layout: string}
-): Vector<FixedSizeList<T>> {
-  const childData = makeData({
+): arrow.Vector<arrow.FixedSizeList<T>> {
+  const childData = arrow.makeData({
     type: childType,
     length: values.length,
     data: values
-  }) as Data<T>;
-  const valueField = new Field(
+  }) as arrow.Data<T>;
+  const valueField = new arrow.Field(
     'value',
     childType,
     false,
@@ -96,13 +96,13 @@ function makeRawMatrixVector<T extends Float32 | Float64>(
       [MATRIX_LAYOUT_METADATA_KEY, metadata.layout]
     ])
   );
-  const matrixType = new FixedSizeList(listSize, valueField);
-  const matrixData = makeData({
+  const matrixType = new arrow.FixedSizeList(listSize, valueField);
+  const matrixData = arrow.makeData({
     type: matrixType,
     length: values.length / listSize,
     nullCount: 0,
     nullBitmap: null,
     child: childData
-  }) as Data<FixedSizeList<T>>;
-  return new Vector([matrixData]);
+  }) as arrow.Data<arrow.FixedSizeList<T>>;
+  return new arrow.Vector([matrixData]);
 }

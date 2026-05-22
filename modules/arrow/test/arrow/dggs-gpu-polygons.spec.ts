@@ -20,20 +20,10 @@ import {getGeohashBoundary} from '@math.gl/dggs-geohash';
 import {getQuadkeyBoundary} from '@math.gl/dggs-quadkey';
 import {getS2BoundaryFlat, getS2TokenFromIndex} from '@math.gl/dggs-s2';
 import {cellToBoundary} from 'a5-js';
-import {
-  BufferType,
-  Data,
-  FixedSizeList,
-  Float32,
-  List,
-  Uint64,
-  Utf8,
-  Vector,
-  vectorFromArray
-} from 'apache-arrow';
+import * as arrow from 'apache-arrow';
 import {cellToBoundary as getH3CellBoundary} from 'h3-js';
 
-type DggsCellPathCoordinateType = List<FixedSizeList<Float32>>;
+type DggsCellPathCoordinateType = arrow.List<arrow.FixedSizeList<arrow.Float32>>;
 
 // WGSL f32 sin/cos may differ by up to 2^-11 radians, about 0.028 degrees.
 const DGGS_WGSL_FLOAT32_GEOGRAPHIC_TOLERANCE_DEGREES = 0.03;
@@ -110,7 +100,7 @@ test('arrow#prepareDggsCellKeyGPUVector parses Utf8 DGGS keys on the GPU', async
   }
 
   for (const [encoding, testCase] of Object.entries(STRING_KEY_TEST_CASES)) {
-    const strings = vectorFromArray(testCase.strings, new Utf8());
+    const strings = arrow.vectorFromArray(testCase.strings, new arrow.Utf8());
     const preparedKeys = prepareDggsCellKeyGPUVector(device, strings, {
       id: `dggs-${encoding}-string-parser-test`,
       encoding: encoding as DggsCellEncoding
@@ -139,8 +129,8 @@ test('arrow#prepareDggsCellKeyGPUVector parses sliced Utf8 DGGS keys on the GPU'
   }
 
   const strings = arrow
-    .vectorFromArray(['skip', 's', 'S0', '9q8yyk'], new Utf8())
-    .slice(1) as Vector<Utf8>;
+    .vectorFromArray(['skip', 's', 'S0', '9q8yyk'], new arrow.Utf8())
+    .slice(1) as arrow.Vector<arrow.Utf8>;
   const preparedKeys = prepareDggsCellKeyGPUVector(device, strings, {
     id: 'dggs-geohash-sliced-string-parser-test',
     encoding: 'geohash'
@@ -252,25 +242,25 @@ test('arrow#prepareDggsCellPathGPUVector extracts DGGS boundary paths on the GPU
   t.end();
 });
 
-function makeUint64Vector(values: readonly bigint[]): Vector<Uint64> {
+function makeUint64Vector(values: readonly bigint[]): arrow.Vector<arrow.Uint64> {
   const typedValues = new BigUint64Array(values.length);
   for (let valueIndex = 0; valueIndex < values.length; valueIndex++) {
     typedValues[valueIndex] = BigInt.asUintN(64, values[valueIndex] ?? 0n);
   }
-  const uint64Type = new Uint64();
-  const uint64Data = new Data(uint64Type, 0, typedValues.length, 0, {
-    [BufferType.DATA]: typedValues
+  const uint64Type = new arrow.Uint64();
+  const uint64Data = new arrow.Data(uint64Type, 0, typedValues.length, 0, {
+    [arrow.BufferType.DATA]: typedValues
   });
-  return new Vector([uint64Data]) as Vector<Uint64>;
+  return new arrow.Vector([uint64Data]) as arrow.Vector<arrow.Uint64>;
 }
 
-function getPathOffsets(vector: Vector<DggsCellPathCoordinateType>): Int32Array {
+function getPathOffsets(vector: arrow.Vector<DggsCellPathCoordinateType>): Int32Array {
   return vector.data[0]!.valueOffsets as Int32Array;
 }
 
-function getPathValues(vector: Vector<DggsCellPathCoordinateType>): Float32Array {
+function getPathValues(vector: arrow.Vector<DggsCellPathCoordinateType>): Float32Array {
   const coordinateData = vector.data[0]!.children[0]!;
-  const valueData = coordinateData.children[0] as Data<Float32>;
+  const valueData = coordinateData.children[0] as arrow.Data<arrow.Float32>;
   return valueData.values as Float32Array;
 }
 

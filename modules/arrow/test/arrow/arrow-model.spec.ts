@@ -14,19 +14,7 @@ import {
 import type {ShaderLayout} from '@luma.gl/core';
 import {GPUTable, GPUTableModel} from '@luma.gl/tables';
 import {NullDevice} from '@luma.gl/test-utils';
-import {
-  BufferType,
-  Data,
-  Field,
-  FixedSizeList,
-  Float32,
-  Int32,
-  List,
-  Schema,
-  Table,
-  Uint8,
-  Vector
-} from 'apache-arrow';
+import * as arrow from 'apache-arrow';
 
 const SHADER_LAYOUT: ShaderLayout = {
   attributes: [
@@ -260,7 +248,7 @@ test('ArrowModel draws preserved Arrow table batches by rebinding batch-owned bu
   const device = new NullDevice({});
   const firstBatch = makeArrowModelTable(1).batches[0];
   const secondBatch = makeArrowModelTable(2).batches[0];
-  const arrowTable = new Table([firstBatch, secondBatch]);
+  const arrowTable = new arrow.Table([firstBatch, secondBatch]);
   const model = new ArrowModel(device, {
     id: 'arrow-model-batched-draw-test',
     vs: DUMMY_VS,
@@ -418,7 +406,7 @@ test('ArrowModel validates required shader layout and duplicate attributes', t =
   t.end();
 });
 
-function makeArrowModelTable(rowCount = 2): Table {
+function makeArrowModelTable(rowCount = 2): arrow.Table {
   const positions = new Float32Array(rowCount * 2);
   const colors = new Uint8Array(rowCount * 4);
 
@@ -431,29 +419,37 @@ function makeArrowModelTable(rowCount = 2): Table {
     colors[rowIndex * 4 + 3] = 255;
   }
 
-  return new Table({
-    positions: makeArrowFixedSizeListVector(new Float32(), 2, positions),
-    colors: makeArrowFixedSizeListVector(new Uint8(), 4, colors)
+  return new arrow.Table({
+    positions: makeArrowFixedSizeListVector(new arrow.Float32(), 2, positions),
+    colors: makeArrowFixedSizeListVector(new arrow.Uint8(), 4, colors)
   });
 }
 
 function makeArrowModelMeshTable(): ArrowMeshTable {
   const positions = makeArrowFixedSizeListVector(
-    new Float32(),
+    new arrow.Float32(),
     3,
     new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0])
   );
   const colors = makeArrowFixedSizeListVector(
-    new Uint8(),
+    new arrow.Uint8(),
     4,
     new Uint8Array([255, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255])
   );
   const fields = [
-    new Field('POSITION', new FixedSizeList(3, new Field('value', new Float32(), false)), false),
-    new Field('indices', new List(new Field('item', new Int32(), false)), true),
-    new Field(
+    new arrow.Field(
+      'POSITION',
+      new arrow.FixedSizeList(3, new arrow.Field('value', new arrow.Float32(), false)),
+      false
+    ),
+    new arrow.Field(
+      'indices',
+      new arrow.List(new arrow.Field('item', new arrow.Int32(), false)),
+      true
+    ),
+    new arrow.Field(
       'COLOR_0',
-      new FixedSizeList(4, new Field('value', new Uint8(), false)),
+      new arrow.FixedSizeList(4, new arrow.Field('value', new arrow.Uint8(), false)),
       false,
       new Map([['normalized', 'true']])
     )
@@ -462,7 +458,7 @@ function makeArrowModelMeshTable(): ArrowMeshTable {
   return {
     shape: 'arrow-table',
     topology: 'triangle-list',
-    data: new Table(new Schema(fields), {
+    data: new arrow.Table(new arrow.Schema(fields), {
       POSITION: positions,
       indices: makeArrowModelIndicesVector(new Int32Array([0, 1, 2]), positions.length),
       COLOR_0: colors
@@ -470,8 +466,8 @@ function makeArrowModelMeshTable(): ArrowMeshTable {
   };
 }
 
-function makeArrowModelIndicesVector(indices: Int32Array, vertexCount: number): Vector {
-  const indicesType = new List(new Field('item', new Int32(), false));
+function makeArrowModelIndicesVector(indices: Int32Array, vertexCount: number): arrow.Vector {
+  const indicesType = new arrow.List(new arrow.Field('item', new arrow.Int32(), false));
   const valueOffsets = new Int32Array(vertexCount + 1);
   if (vertexCount > 0) {
     valueOffsets.fill(indices.length, 1);
@@ -480,20 +476,26 @@ function makeArrowModelIndicesVector(indices: Int32Array, vertexCount: number): 
   if (vertexCount > 0) {
     nullBitmap[0] = 1;
   }
-  const valuesData = new Data<Int32>(indicesType.children[0].type, 0, indices.length, 0, {
-    [BufferType.DATA]: indices
-  });
-  const indicesData = new Data<List<Int32>>(
+  const valuesData = new arrow.Data<arrow.Int32>(
+    indicesType.children[0].type,
+    0,
+    indices.length,
+    0,
+    {
+      [arrow.BufferType.DATA]: indices
+    }
+  );
+  const indicesData = new arrow.Data<arrow.List<arrow.Int32>>(
     indicesType,
     0,
     vertexCount,
     Math.max(0, vertexCount - 1),
     {
-      [BufferType.OFFSET]: valueOffsets,
-      [BufferType.VALIDITY]: nullBitmap
+      [arrow.BufferType.OFFSET]: valueOffsets,
+      [arrow.BufferType.VALIDITY]: nullBitmap
     },
     [valuesData]
   );
 
-  return new Vector([indicesData]);
+  return new arrow.Vector([indicesData]);
 }

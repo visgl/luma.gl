@@ -6,21 +6,7 @@ import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import type {ArrowColumnInfo} from '@luma.gl/arrow';
 import {getArrowBufferLayout, getArrowVertexFormat, makeArrowMatrix3x3Vector} from '@luma.gl/arrow';
 import type {AttributeShaderType, ShaderLayout, VertexFormat} from '@luma.gl/core';
-import {
-  Data,
-  DataType,
-  Field,
-  FixedSizeList,
-  Float32,
-  RecordBatch,
-  Schema,
-  Struct,
-  Table,
-  Uint32,
-  Uint8,
-  makeData,
-  makeVector
-} from 'apache-arrow';
+import * as arrow from 'apache-arrow';
 
 test('getArrowVertexFormat maps Arrow columns to f32 shader attributes', t => {
   const testCases: {
@@ -217,7 +203,7 @@ test('getArrowBufferLayout builds layouts from Arrow table columns', t => {
 });
 
 test('getArrowBufferLayout expands one matrix Arrow column into interleaved vector attributes', t => {
-  const arrowTable = new Table({
+  const arrowTable = new arrow.Table({
     instanceModelMatrix: makeArrowMatrix3x3Vector(new Float32Array([1, 2, 3, 4, 5, 6, 7, 8, 9]), {
       order: 'row-major'
     })
@@ -261,8 +247,8 @@ test('getArrowBufferLayout expands one matrix Arrow column into interleaved vect
 test('getArrowBufferLayout builds layouts from Arrow vectors', t => {
   const arrowTable = makeShaderAttributeArrowTable();
   const colorsVector = arrowTable.getChild('colors')!;
-  const directColorsVector = makeVector(
-    makeFixedSizeListData(new Uint8(), 4, new Uint8Array([255, 0, 0, 255]))
+  const directColorsVector = arrow.makeVector(
+    makeFixedSizeListData(new arrow.Uint8(), 4, new Uint8Array([255, 0, 0, 255]))
   );
   const shaderLayout: ShaderLayout = {
     attributes: [
@@ -370,56 +356,56 @@ function makeColumnInfo(
   };
 }
 
-function makeShaderAttributeArrowTable(): Table {
+function makeShaderAttributeArrowTable(): arrow.Table {
   const positionsData = makeFixedSizeListData(
-    new Float32(),
+    new arrow.Float32(),
     3,
     new Float32Array([0, 0, 0, 1, 1, 1])
   );
   const colorsData = makeFixedSizeListData(
-    new Uint8(),
+    new arrow.Uint8(),
     4,
     new Uint8Array([255, 0, 0, 255, 0, 255, 0, 255])
   );
-  const pickingIdsData = makeData({
-    type: new Uint32(),
+  const pickingIdsData = arrow.makeData({
+    type: new arrow.Uint32(),
     length: 2,
     nullCount: 0,
     nullBitmap: null,
     data: new Uint32Array([1, 2])
   });
 
-  const schema = new Schema([
-    new Field('positions', positionsData.type),
-    new Field('colors', colorsData.type),
-    new Field('pickingIds', pickingIdsData.type)
+  const schema = new arrow.Schema([
+    new arrow.Field('positions', positionsData.type),
+    new arrow.Field('colors', colorsData.type),
+    new arrow.Field('pickingIds', pickingIdsData.type)
   ]);
 
-  const structData = makeData({
-    type: new Struct(schema.fields),
+  const structData = arrow.makeData({
+    type: new arrow.Struct(schema.fields),
     length: 2,
     nullCount: 0,
     nullBitmap: null,
     children: [positionsData, colorsData, pickingIdsData]
   });
 
-  return new Table([new RecordBatch(schema, structData)]);
+  return new arrow.Table([new arrow.RecordBatch(schema, structData)]);
 }
 
-function makeFixedSizeListData<T extends DataType>(
+function makeFixedSizeListData<T extends arrow.DataType>(
   childType: T,
   listSize: 2 | 3 | 4,
   values: T['TArray']
-): Data<FixedSizeList<T>> {
-  const childData = makeData({
+): arrow.Data<arrow.FixedSizeList<T>> {
+  const childData = arrow.makeData({
     type: childType,
     length: values.length,
     nullCount: 0,
     nullBitmap: null,
     data: values
   });
-  const listType = new FixedSizeList(listSize, new Field('value', childType));
-  return makeData({
+  const listType = new arrow.FixedSizeList(listSize, new arrow.Field('value', childType));
+  return arrow.makeData({
     type: listType,
     length: values.length / listSize,
     nullCount: 0,

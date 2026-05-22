@@ -18,36 +18,16 @@ import {
 import type {Device, ShaderLayout} from '@luma.gl/core';
 import {GPUVector} from '@luma.gl/tables';
 import {NullDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
-import {
-  Bool,
-  BufferType,
-  Data,
-  DataType,
-  Date_,
-  Duration,
-  Field,
-  FixedSizeList,
-  Float32,
-  Float64,
-  List,
-  Table,
-  Time,
-  Timestamp,
-  TimestampMillisecond,
-  Uint8,
-  Vector,
-  makeData,
-  vectorFromArray
-} from 'apache-arrow';
+import * as arrow from 'apache-arrow';
 
-type PathArrowType = List<FixedSizeList<Float32>>;
-type Float64PathArrowType = List<FixedSizeList<Float64>>;
-type ColorListArrowType = List<FixedSizeList<Uint8>>;
+type PathArrowType = arrow.List<arrow.FixedSizeList<arrow.Float32>>;
+type Float64PathArrowType = arrow.List<arrow.FixedSizeList<arrow.Float64>>;
+type ColorListArrowType = arrow.List<arrow.FixedSizeList<arrow.Uint8>>;
 
 test('buildArrowPathSegmentTable expands path rows and repeats row styles', t => {
   const sourceVectors = makeArrowPathSourceVectors();
   const result = buildArrowPathSegmentTable({
-    rowTable: new Table({
+    rowTable: new arrow.Table({
       colors: sourceVectors.colors,
       widths: sourceVectors.widths
     }),
@@ -131,7 +111,7 @@ test('buildArrowPathSegmentTable expands path-aligned color lists', t => {
     ])
   );
   const result = buildArrowPathSegmentTable({
-    rowTable: new Table({colors, widths: sourceVectors.widths}),
+    rowTable: new arrow.Table({colors, widths: sourceVectors.widths}),
     paths: sourceVectors.paths
   });
 
@@ -169,7 +149,7 @@ test('buildArrowPathSegmentTable preserves XYZ and XYZM coordinate lanes', t => 
       dimension
     );
     const result = buildArrowPathSegmentTable({
-      rowTable: new Table({}),
+      rowTable: new arrow.Table({}),
       paths: path
     });
 
@@ -415,7 +395,7 @@ test('ArrowPathModel.prepareGPUVectors closes Float64 delta paths by appending t
     new Int32Array([0, 3]),
     new Float64Array([10_000_000, -10_000_000, 10_000_001, -10_000_000, 10_000_001, -9_999_999])
   );
-  const closed = vectorFromArray([true], new Bool());
+  const closed = arrow.vectorFromArray([true], new arrow.Bool());
   const prepared = await ArrowPathModel.prepareGPUVectors(device, {paths, closed});
   const preparedPaths = await readArrowGPUVectorAsync(prepared.paths);
 
@@ -577,14 +557,14 @@ test('ArrowPathModel.prepareGPUVectors rejects unsupported path inputs', async t
     5
   );
   const sourceVectors = makeArrowPathSourceVectors();
-  const mismatchedClosed = vectorFromArray([true], new Bool());
+  const mismatchedClosed = arrow.vectorFromArray([true], new arrow.Bool());
 
   try {
     await ArrowPathModel.prepareGPUVectors(device, {paths: invalidDimensionPaths});
     t.fail('invalid path dimensions should be rejected');
   } catch (error) {
     t.ok(
-      /FixedSizeList<Float32\|Float64>\[2\.\.4\]/.test((error as Error).message),
+      /arrow.FixedSizeList<arrow.Float32\|arrow.Float64>\[2\.\.4\]/.test((error as Error).message),
       'coordinate dimensions outside 2..4 are rejected'
     );
   }
@@ -882,7 +862,7 @@ test('ArrowStorageTripsPathModel binds prepared path-aligned timestamps', async 
   const sourceVectors = {
     ...makeArrowPathSourceVectors(),
     timestamps: makeTemporalListVector(
-      new TimestampMillisecond(),
+      new arrow.TimestampMillisecond(),
       new BigInt64Array([1000n, 1010n, 1025n, 2000n, 2010n, 2020n, 2030n]),
       new Int32Array([0, 3, 7])
     )
@@ -1001,10 +981,10 @@ function makeStorageGpuArrowPathProps(
   };
 }
 
-function makeGpuArrowPathVector<TypeT extends DataType>(
+function makeGpuArrowPathVector<TypeT extends arrow.DataType>(
   device: Device,
   name: string,
-  vector: Vector<TypeT>
+  vector: arrow.Vector<TypeT>
 ): GPUVector<TypeT> {
   return makeArrowGPUVector(device, vector, {name});
 }
@@ -1076,11 +1056,11 @@ function makeArrowPathSourceVectors() {
       new Float32Array([0, 0, 1, 0, 1, 1, 2, 0, 3, 0, 3, 1, 2, 0])
     ),
     colors: makeArrowFixedSizeListVector(
-      new Uint8(),
+      new arrow.Uint8(),
       4,
       new Uint8Array([255, 0, 0, 255, 0, 255, 0, 255])
     ),
-    widths: vectorFromArray([2, 4], new Float32())
+    widths: arrow.vectorFromArray([2, 4], new arrow.Float32())
   };
 }
 
@@ -1088,13 +1068,24 @@ function makePathVector(
   valueOffsets: Int32Array,
   values: Float32Array,
   dimension: number = 2
-): Vector<PathArrowType> {
-  const coordinateType = new FixedSizeList(dimension, new Field('values', new Float32(), false));
-  const pathType = new List(new Field('coordinates', coordinateType, false)) as PathArrowType;
-  const coordinateValueData = new Data<Float32>(new Float32(), 0, values.length, 0, {
-    [BufferType.DATA]: values
-  });
-  const coordinateData = new Data<FixedSizeList<Float32>>(
+): arrow.Vector<PathArrowType> {
+  const coordinateType = new arrow.FixedSizeList(
+    dimension,
+    new arrow.Field('values', new arrow.Float32(), false)
+  );
+  const pathType = new arrow.List(
+    new arrow.Field('coordinates', coordinateType, false)
+  ) as PathArrowType;
+  const coordinateValueData = new arrow.Data<arrow.Float32>(
+    new arrow.Float32(),
+    0,
+    values.length,
+    0,
+    {
+      [arrow.BufferType.DATA]: values
+    }
+  );
+  const coordinateData = new arrow.Data<arrow.FixedSizeList<arrow.Float32>>(
     coordinateType,
     0,
     values.length / dimension,
@@ -1102,30 +1093,39 @@ function makePathVector(
     {},
     [coordinateValueData]
   );
-  const pathData = new Data<PathArrowType>(
+  const pathData = new arrow.Data<PathArrowType>(
     pathType,
     0,
     valueOffsets.length - 1,
     0,
-    {[BufferType.OFFSET]: valueOffsets},
+    {[arrow.BufferType.OFFSET]: valueOffsets},
     [coordinateData]
   );
-  return new Vector<PathArrowType>([pathData]);
+  return new arrow.Vector<PathArrowType>([pathData]);
 }
 
 function makeFloat64PathVector(
   valueOffsets: Int32Array,
   values: Float64Array,
   dimension: number = 2
-): Vector<Float64PathArrowType> {
-  const coordinateType = new FixedSizeList(dimension, new Field('values', new Float64(), false));
-  const pathType = new List(
-    new Field('coordinates', coordinateType, false)
+): arrow.Vector<Float64PathArrowType> {
+  const coordinateType = new arrow.FixedSizeList(
+    dimension,
+    new arrow.Field('values', new arrow.Float64(), false)
+  );
+  const pathType = new arrow.List(
+    new arrow.Field('coordinates', coordinateType, false)
   ) as Float64PathArrowType;
-  const coordinateValueData = new Data<Float64>(new Float64(), 0, values.length, 0, {
-    [BufferType.DATA]: values
-  });
-  const coordinateData = new Data<FixedSizeList<Float64>>(
+  const coordinateValueData = new arrow.Data<arrow.Float64>(
+    new arrow.Float64(),
+    0,
+    values.length,
+    0,
+    {
+      [arrow.BufferType.DATA]: values
+    }
+  );
+  const coordinateData = new arrow.Data<arrow.FixedSizeList<arrow.Float64>>(
     coordinateType,
     0,
     values.length / dimension,
@@ -1133,74 +1133,83 @@ function makeFloat64PathVector(
     {},
     [coordinateValueData]
   );
-  const pathData = new Data<Float64PathArrowType>(
+  const pathData = new arrow.Data<Float64PathArrowType>(
     pathType,
     0,
     valueOffsets.length - 1,
     0,
-    {[BufferType.OFFSET]: valueOffsets},
+    {[arrow.BufferType.OFFSET]: valueOffsets},
     [coordinateData]
   );
-  return new Vector<Float64PathArrowType>([pathData]);
+  return new arrow.Vector<Float64PathArrowType>([pathData]);
 }
 
 function makeColorListVector(
   valueOffsets: Int32Array,
   values: Uint8Array
-): Vector<ColorListArrowType> {
-  const colorType = new FixedSizeList(4, new Field('values', new Uint8(), false));
-  const pathColorType = new List(new Field('colors', colorType, false)) as ColorListArrowType;
-  const colorValueData = new Data<Uint8>(new Uint8(), 0, values.length, 0, {
-    [BufferType.DATA]: values
+): arrow.Vector<ColorListArrowType> {
+  const colorType = new arrow.FixedSizeList(4, new arrow.Field('values', new arrow.Uint8(), false));
+  const pathColorType = new arrow.List(
+    new arrow.Field('colors', colorType, false)
+  ) as ColorListArrowType;
+  const colorValueData = new arrow.Data<arrow.Uint8>(new arrow.Uint8(), 0, values.length, 0, {
+    [arrow.BufferType.DATA]: values
   });
-  const colorData = new Data<FixedSizeList<Uint8>>(colorType, 0, values.length / 4, 0, {}, [
-    colorValueData
-  ]);
-  const pathColorData = new Data<ColorListArrowType>(
+  const colorData = new arrow.Data<arrow.FixedSizeList<arrow.Uint8>>(
+    colorType,
+    0,
+    values.length / 4,
+    0,
+    {},
+    [colorValueData]
+  );
+  const pathColorData = new arrow.Data<ColorListArrowType>(
     pathColorType,
     0,
     valueOffsets.length - 1,
     0,
-    {[BufferType.OFFSET]: valueOffsets},
+    {[arrow.BufferType.OFFSET]: valueOffsets},
     [colorData]
   );
-  return new Vector<ColorListArrowType>([pathColorData]);
+  return new arrow.Vector<ColorListArrowType>([pathColorData]);
 }
 
-function makeTemporalListVector<T extends Date_ | Time | Timestamp | Duration>(
+function makeTemporalListVector<
+  T extends arrow.Date_ | arrow.Time | arrow.Timestamp | arrow.Duration
+>(
   childType: T,
   values: Int32Array | BigInt64Array,
   valueOffsets: Int32Array
-): Vector<List<T>> {
-  const childData = makeData({
+): arrow.Vector<arrow.List<T>> {
+  const childData = arrow.makeData({
     type: childType,
     length: values.length,
     data: values
-  }) as Data<T>;
-  const listType = new List(new Field('values', childType, false));
-  const listData = makeData({
+  }) as arrow.Data<T>;
+  const listType = new arrow.List(new arrow.Field('values', childType, false));
+  const listData = arrow.makeData({
     type: listType,
     length: valueOffsets.length - 1,
     nullCount: 0,
     nullBitmap: null,
     valueOffsets,
     child: childData
-  }) as Data<List<T>>;
-  return new Vector([listData]);
+  }) as arrow.Data<arrow.List<T>>;
+  return new arrow.Vector([listData]);
 }
 
-function getPathOffsets(vector: Vector<PathArrowType>): Int32Array {
+function getPathOffsets(vector: arrow.Vector<PathArrowType>): Int32Array {
   return vector.data[0]!.valueOffsets as Int32Array;
 }
 
-function getPathValues(vector: Vector<PathArrowType>): Float32Array {
+function getPathValues(vector: arrow.Vector<PathArrowType>): Float32Array {
   const coordinateData = vector.data[0]!.children[0]!;
-  const valueData = coordinateData.children[0] as Data<Float32>;
+  const valueData = coordinateData.children[0] as arrow.Data<arrow.Float32>;
   return valueData.values as Float32Array;
 }
 
-function getFixedSizeListValues(vector: Vector): Uint8Array {
-  const childData = vector.data[0]!.children[0] as Data<Uint8>;
+function getFixedSizeListValues(vector: arrow.Vector): Uint8Array {
+  const childData = vector.data[0]!.children[0] as arrow.Data<arrow.Uint8>;
   return childData.values as Uint8Array;
 }
 

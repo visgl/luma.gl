@@ -2,29 +2,29 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {Field, Float32, Int32, RecordBatch, Schema, Struct, Table, makeData} from 'apache-arrow';
+import * as arrow from 'apache-arrow';
 
 export const ARROW_TABLES = {
   simpleTable: makeSimpleArrowTable(),
   nestedTable: makeNestedArrowTable('data')
-} as const satisfies Record<string, Table>;
+} as const satisfies Record<string, arrow.Table>;
 
 export function makeSimpleArrowTable() {
-  const structSchema = new Schema([
-    new Field('age', new Int32()),
-    new Field('height', new Float32())
+  const structSchema = new arrow.Schema([
+    new arrow.Field('age', new arrow.Int32()),
+    new arrow.Field('height', new arrow.Float32())
   ]);
 
-  const ageData = makeData({
-    type: new Int32(),
+  const ageData = arrow.makeData({
+    type: new arrow.Int32(),
     length: 3,
     nullCount: 0,
     nullBitmap: null,
     data: new Int32Array([25, 30, 35])
   });
 
-  const heightData = makeData({
-    type: new Float32(),
+  const heightData = arrow.makeData({
+    type: new arrow.Float32(),
     length: 3,
     nullCount: 0,
     nullBitmap: null,
@@ -32,16 +32,16 @@ export function makeSimpleArrowTable() {
   });
 
   // Step 3: Use makeData to create the Struct data
-  const structData = makeData({
-    type: new Struct(structSchema.fields),
+  const structData = arrow.makeData({
+    type: new arrow.Struct(structSchema.fields),
     length: 3,
     nullCount: 0,
     nullBitmap: null,
     children: [ageData, heightData]
   });
 
-  const recordBatch = new RecordBatch(structSchema, structData);
-  return new Table([recordBatch]);
+  const recordBatch = new arrow.RecordBatch(structSchema, structData);
+  return new arrow.Table([recordBatch]);
 }
 
 export function makeNestedArrowTable(fieldName: string) {
@@ -49,16 +49,16 @@ export function makeNestedArrowTable(fieldName: string) {
 
   const innerStructData = nestedTable.batches[0].data;
 
-  const structSchema = new Schema([new Field(fieldName, innerStructData.type)]);
+  const structSchema = new arrow.Schema([new arrow.Field(fieldName, innerStructData.type)]);
 
-  const structData = makeData({
-    type: new Struct(structSchema.fields),
+  const structData = arrow.makeData({
+    type: new arrow.Struct(structSchema.fields),
     length: 3,
     nullCount: 0,
     nullBitmap: null,
     children: [innerStructData]
   });
 
-  const recordBatch = new RecordBatch(structSchema, structData);
-  return new Table([recordBatch]);
+  const recordBatch = new arrow.RecordBatch(structSchema, structData);
+  return new arrow.Table([recordBatch]);
 }

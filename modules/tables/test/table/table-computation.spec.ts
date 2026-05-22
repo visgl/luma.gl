@@ -7,7 +7,7 @@ import {makeArrowGPUVector, readArrowGPUVectorAsync} from '@luma.gl/arrow';
 import {TableComputation} from '@luma.gl/tables';
 import type {ComputeShaderLayout, Device} from '@luma.gl/core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
-import {makeVector} from 'apache-arrow';
+import * as arrow from 'apache-arrow';
 
 const COMPUTE_SHADER = /* wgsl */ `\
 @group(0) @binding(0) var<storage, read_write> values : array<i32>;
@@ -30,7 +30,7 @@ test('TableComputation binds inputVectors for storage compute', async t => {
     return;
   }
 
-  const values = makeArrowGPUVector(device, makeVector(new Int32Array([2, 4, 6])), {
+  const values = makeArrowGPUVector(device, arrow.makeVector(new Int32Array([2, 4, 6])), {
     name: 'values'
   });
   const computation = new TableComputation(device, {

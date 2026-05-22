@@ -12,19 +12,7 @@ import {
 import {GPUVector} from '@luma.gl/tables';
 import type {ShaderLayout} from '@luma.gl/core';
 import {NullDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
-import {
-  Data,
-  Dictionary,
-  FixedSizeList,
-  Float32,
-  Int16,
-  Int32,
-  RecordBatch,
-  Table,
-  Utf8,
-  Vector,
-  vectorFromArray
-} from 'apache-arrow';
+import * as arrow from 'apache-arrow';
 import {
   ArrowDictionaryTextModel,
   ArrowStorageTextModel,
@@ -74,7 +62,7 @@ fn fragmentMain() -> @location(0) vec4<f32> {
 
 test('buildArrowTextGlyphTable repeats Arrow label attributes for each glyph', t => {
   const labelTable = makeLabelTable();
-  const texts = vectorFromArray(['AB', 'A'], new Utf8());
+  const texts = arrow.vectorFromArray(['AB', 'A'], new arrow.Utf8());
   const result = buildArrowTextGlyphTable({
     labelTable,
     texts,
@@ -101,13 +89,13 @@ test('buildArrowTextGlyphTable repeats Arrow label attributes for each glyph', t
 
 test('buildArrowTextGlyphTable expands packed clip rectangles per glyph', t => {
   const clipRects = makeArrowFixedSizeListVector(
-    new Int16(),
+    new arrow.Int16(),
     4,
     new Int16Array([0, 1, 12, -1, 3, 4, -1, 9])
   );
   const result = buildArrowTextGlyphTable({
     labelTable: makeLabelTable(),
-    texts: vectorFromArray(['AB', 'A'], new Utf8()),
+    texts: arrow.vectorFromArray(['AB', 'A'], new arrow.Utf8()),
     clipRects,
     mapping: CHARACTER_MAPPING,
     baselineOffset: 1,
@@ -124,7 +112,7 @@ test('buildArrowTextGlyphTable expands packed clip rectangles per glyph', t => {
 
 test('packStorageTextClipRects preserves signed Int16 clip lanes', t => {
   const packedClipRects = packStorageTextClipRects(
-    makeArrowFixedSizeListVector(new Int16(), 4, new Int16Array([0, 1, 12, -1, -4, 8, -1, 9]))
+    makeArrowFixedSizeListVector(new arrow.Int16(), 4, new Int16Array([0, 1, 12, -1, -4, 8, -1, 9]))
   );
 
   t.deepEqual(
@@ -248,7 +236,7 @@ test('ArrowTextModel rejects source batch alignment mismatches', t => {
         ...textProps,
         sourceVectors: {
           ...textProps.sourceVectors,
-          texts: new Vector<Utf8>([...firstChunk.data, ...secondChunk.data])
+          texts: new arrow.Vector<arrow.Utf8>([...firstChunk.data, ...secondChunk.data])
         },
         characterMapping: CHARACTER_MAPPING,
         fontSettings: {fontSize: 10}
@@ -365,11 +353,11 @@ test('ArrowTextModel built-in fragment shader decodes SDF atlas alpha', t => {
 
 test('ArrowTextModel expands chunked UTF-8 GPUVector data', t => {
   const device = new NullDevice({});
-  const firstChunk = vectorFromArray(['AB'], new Utf8());
-  const secondChunk = vectorFromArray(['A'], new Utf8());
+  const firstChunk = arrow.vectorFromArray(['AB'], new arrow.Utf8());
+  const secondChunk = arrow.vectorFromArray(['A'], new arrow.Utf8());
   const textProps = makeGpuTextProps(device, ['A', 'A']);
   textProps.texts.destroy();
-  const sourceTexts = new Vector<Utf8>([...firstChunk.data, ...secondChunk.data]);
+  const sourceTexts = new arrow.Vector<arrow.Utf8>([...firstChunk.data, ...secondChunk.data]);
   textProps.texts = makeArrowGPUVector(device, sourceTexts, {name: 'texts'});
   textProps.sourceVectors = {...textProps.sourceVectors, texts: sourceTexts};
 
@@ -393,15 +381,15 @@ test('ArrowTextModel appends GPUTable-backed text batches without rebuilding pri
   const device = new NullDevice({});
   const firstBatch = makeAppendableTextRecordBatch(['AB'], new Float32Array([0, 0]));
   const secondBatch = makeAppendableTextRecordBatch(['A'], new Float32Array([1, 1]));
-  const gpuTable = makeArrowGPUTable(device, new Table([firstBatch]), {
+  const gpuTable = makeArrowGPUTable(device, new arrow.Table([firstBatch]), {
     shaderLayout: APPENDABLE_TEXT_INPUT_SHADER_LAYOUT
   });
   const firstSourceVectors = makeArrowTextSourceVectorsFromBatches([firstBatch]);
 
   const model = new ArrowTextModel(device, {
     id: 'arrow-text-model-appendable-gpu-table-test',
-    positions: gpuTable.gpuVectors.positions as GPUVector<FixedSizeList<Float32>>,
-    texts: gpuTable.gpuVectors.texts as GPUVector<Utf8>,
+    positions: gpuTable.gpuVectors.positions as GPUVector<arrow.FixedSizeList<arrow.Float32>>,
+    texts: gpuTable.gpuVectors.texts as GPUVector<arrow.Utf8>,
     sourceVectors: firstSourceVectors,
     characterMapping: CHARACTER_MAPPING,
     fontSettings: {fontSize: 10}
@@ -415,8 +403,8 @@ test('ArrowTextModel appends GPUTable-backed text batches without rebuilding pri
     })
   );
   model.appendTextBatches({
-    positions: gpuTable.gpuVectors.positions as GPUVector<FixedSizeList<Float32>>,
-    texts: gpuTable.gpuVectors.texts as GPUVector<Utf8>,
+    positions: gpuTable.gpuVectors.positions as GPUVector<arrow.FixedSizeList<arrow.Float32>>,
+    texts: gpuTable.gpuVectors.texts as GPUVector<arrow.Utf8>,
     sourceVectors: makeArrowTextSourceVectorsFromBatches([firstBatch, secondBatch])
   });
   t.equal(model.glyphLayout.glyphCount, 3, 'adds glyphs from the later GPU record batch');
@@ -744,15 +732,15 @@ test('ArrowStorageTextModel appends GPUTable-backed text batches without rebuild
   }
   const firstBatch = makeAppendableTextRecordBatch(['AB'], new Float32Array([0, 0]));
   const secondBatch = makeAppendableTextRecordBatch(['A'], new Float32Array([1, 1]));
-  const gpuTable = makeArrowGPUTable(device, new Table([firstBatch]), {
+  const gpuTable = makeArrowGPUTable(device, new arrow.Table([firstBatch]), {
     shaderLayout: APPENDABLE_TEXT_INPUT_SHADER_LAYOUT
   });
   const firstSourceVectors = makeArrowStorageTextSourceVectorsFromBatches([firstBatch]);
 
   const model = new ArrowStorageTextModel(device, {
     id: 'arrow-storage-text-appendable-gpu-table-test',
-    positions: gpuTable.gpuVectors.positions as GPUVector<FixedSizeList<Float32>>,
-    texts: gpuTable.gpuVectors.texts as GPUVector<Utf8>,
+    positions: gpuTable.gpuVectors.positions as GPUVector<arrow.FixedSizeList<arrow.Float32>>,
+    texts: gpuTable.gpuVectors.texts as GPUVector<arrow.Utf8>,
     sourceVectors: firstSourceVectors,
     characterMapping: CHARACTER_MAPPING,
     fontSettings: {fontSize: 10}
@@ -765,8 +753,8 @@ test('ArrowStorageTextModel appends GPUTable-backed text batches without rebuild
     })
   );
   model.appendTextBatches({
-    positions: gpuTable.gpuVectors.positions as GPUVector<FixedSizeList<Float32>>,
-    texts: gpuTable.gpuVectors.texts as GPUVector<Utf8>,
+    positions: gpuTable.gpuVectors.positions as GPUVector<arrow.FixedSizeList<arrow.Float32>>,
+    texts: gpuTable.gpuVectors.texts as GPUVector<arrow.Utf8>,
     sourceVectors: makeArrowStorageTextSourceVectorsFromBatches([firstBatch, secondBatch])
   });
 
@@ -790,7 +778,7 @@ test('ArrowStorageTextModel appends dictionary GPUTable-backed text batches', as
     t.end();
     return;
   }
-  const dictionaryType = new Dictionary(new Utf8(), new Int32());
+  const dictionaryType = new arrow.Dictionary(new arrow.Utf8(), new arrow.Int32());
   const firstBatch = makeAppendableTextRecordBatch(
     ['AB'],
     new Float32Array([0, 0]),
@@ -801,14 +789,14 @@ test('ArrowStorageTextModel appends dictionary GPUTable-backed text batches', as
     new Float32Array([1, 1, 2, 2]),
     dictionaryType
   );
-  const gpuTable = makeArrowGPUTable(device, new Table([firstBatch]), {
+  const gpuTable = makeArrowGPUTable(device, new arrow.Table([firstBatch]), {
     shaderLayout: APPENDABLE_TEXT_INPUT_SHADER_LAYOUT
   });
   const firstSourceVectors = makeArrowStorageTextSourceVectorsFromBatches([firstBatch]);
 
   const model = new ArrowStorageTextModel(device, {
     id: 'arrow-storage-text-dictionary-appendable-gpu-table-test',
-    positions: gpuTable.gpuVectors.positions as GPUVector<FixedSizeList<Float32>>,
+    positions: gpuTable.gpuVectors.positions as GPUVector<arrow.FixedSizeList<arrow.Float32>>,
     texts: gpuTable.gpuVectors.texts as GPUVector<ArrowUtf8TextType>,
     sourceVectors: firstSourceVectors,
     characterMapping: CHARACTER_MAPPING,
@@ -822,7 +810,7 @@ test('ArrowStorageTextModel appends dictionary GPUTable-backed text batches', as
     })
   );
   model.appendTextBatches({
-    positions: gpuTable.gpuVectors.positions as GPUVector<FixedSizeList<Float32>>,
+    positions: gpuTable.gpuVectors.positions as GPUVector<arrow.FixedSizeList<arrow.Float32>>,
     texts: gpuTable.gpuVectors.texts as GPUVector<ArrowUtf8TextType>,
     sourceVectors: makeArrowStorageTextSourceVectorsFromBatches([firstBatch, secondBatch])
   });
@@ -987,20 +975,20 @@ test('ArrowStorageTextModel refreshes row bindings without rebuilding glyph buff
   t.end();
 });
 
-function makeLabelTable(): Table {
-  return new Table({
-    positions: makeArrowFixedSizeListVector(new Float32(), 2, new Float32Array([0, 0, 1, 1]))
+function makeLabelTable(): arrow.Table {
+  return new arrow.Table({
+    positions: makeArrowFixedSizeListVector(new arrow.Float32(), 2, new Float32Array([0, 0, 1, 1]))
   });
 }
 
 function makeAppendableTextRecordBatch(
   labels: readonly (string | null)[],
   positions: Float32Array,
-  textType: Utf8 | ArrowUtf8Dictionary = new Utf8()
-): RecordBatch {
-  const table = new Table({
-    positions: makeArrowFixedSizeListVector(new Float32(), 2, positions),
-    texts: vectorFromArray(labels, textType)
+  textType: arrow.Utf8 | ArrowUtf8Dictionary = new arrow.Utf8()
+): arrow.RecordBatch {
+  const table = new arrow.Table({
+    positions: makeArrowFixedSizeListVector(new arrow.Float32(), 2, positions),
+    texts: arrow.vectorFromArray(labels, textType)
   });
   const recordBatch = table.batches[0];
   if (!recordBatch) {
@@ -1009,21 +997,21 @@ function makeAppendableTextRecordBatch(
   return recordBatch;
 }
 
-function makeArrowTextSourceVectorsFromBatches(recordBatches: RecordBatch[]) {
-  const table = new Table(recordBatches);
+function makeArrowTextSourceVectorsFromBatches(recordBatches: arrow.RecordBatch[]) {
+  const table = new arrow.Table(recordBatches);
   const positions = table.getChild('positions');
   const texts = table.getChild('texts');
   if (!positions || !texts) {
     throw new Error('Text source vectors require positions and texts columns');
   }
   return {
-    positions: positions as Vector<FixedSizeList<Float32>>,
+    positions: positions as arrow.Vector<arrow.FixedSizeList<arrow.Float32>>,
     texts: texts as ArrowUtf8TextVector
   };
 }
 
-function makeArrowStorageTextSourceVectorsFromBatches(recordBatches: RecordBatch[]) {
-  const table = new Table(recordBatches);
+function makeArrowStorageTextSourceVectorsFromBatches(recordBatches: arrow.RecordBatch[]) {
+  const table = new arrow.Table(recordBatches);
   const texts = table.getChild('texts');
   if (!texts) {
     throw new Error('Storage text source vectors require a texts column');
@@ -1051,20 +1039,20 @@ function makeGpuDictionaryTextProps(device: NullDevice, labels: readonly (string
   };
 }
 
-function makeArrowTexts(labels: readonly (string | null)[]): Vector<Utf8> {
-  return vectorFromArray(labels, new Utf8()) as Vector<Utf8>;
+function makeArrowTexts(labels: readonly (string | null)[]): arrow.Vector<arrow.Utf8> {
+  return arrow.vectorFromArray(labels, new arrow.Utf8()) as arrow.Vector<arrow.Utf8>;
 }
 
 function makeArrowDictionaryTexts(
   labels: readonly (string | null)[],
-  dictionaryType = new Dictionary(new Utf8(), new Int32())
-): Vector<ArrowUtf8Dictionary> {
-  return vectorFromArray(labels, dictionaryType) as Vector<ArrowUtf8Dictionary>;
+  dictionaryType = new arrow.Dictionary(new arrow.Utf8(), new arrow.Int32())
+): arrow.Vector<ArrowUtf8Dictionary> {
+  return arrow.vectorFromArray(labels, dictionaryType) as arrow.Vector<ArrowUtf8Dictionary>;
 }
 
 function makeGpuTexts<TextTypeT extends ArrowUtf8TextType>(
   device: NullDevice,
-  vector: Vector<TextTypeT>
+  vector: arrow.Vector<TextTypeT>
 ): GPUVector<TextTypeT> {
   return makeArrowGPUVector(device, vector, {name: 'texts'});
 }
@@ -1098,17 +1086,17 @@ function makeChunkedStorageGpuDictionaryTextProps(
   device: NullDevice,
   labelChunks: readonly (readonly (string | null)[])[]
 ) {
-  const positionDataChunks: Data<FixedSizeList<Float32>>[] = [];
-  const textDataChunks: Data<ArrowUtf8Dictionary>[] = [];
-  const dictionaryType = new Dictionary(new Utf8(), new Int32());
+  const positionDataChunks: arrow.Data<arrow.FixedSizeList<arrow.Float32>>[] = [];
+  const textDataChunks: arrow.Data<ArrowUtf8Dictionary>[] = [];
+  const dictionaryType = new arrow.Dictionary(new arrow.Utf8(), new arrow.Int32());
   for (const labelChunk of labelChunks) {
     const positions = makeArrowPositions(labelChunk.length);
     const texts = makeArrowDictionaryTexts(labelChunk, dictionaryType);
     positionDataChunks.push(...positions.data);
     textDataChunks.push(...texts.data);
   }
-  const positions = new Vector<FixedSizeList<Float32>>(positionDataChunks);
-  const texts = new Vector<ArrowUtf8Dictionary>(textDataChunks);
+  const positions = new arrow.Vector<arrow.FixedSizeList<arrow.Float32>>(positionDataChunks);
+  const texts = new arrow.Vector<ArrowUtf8Dictionary>(textDataChunks);
   return {
     positions: makeArrowGPUVector(device, positions, {name: 'positions'}),
     texts: makeGpuTexts(device, texts),
@@ -1121,13 +1109,13 @@ function destroyStorageGpuTextProps(props: ReturnType<typeof makeStorageGpuTextP
   props.texts.destroy();
 }
 
-function makeArrowPositions(rowCount: number): Vector<FixedSizeList<Float32>> {
+function makeArrowPositions(rowCount: number): arrow.Vector<arrow.FixedSizeList<arrow.Float32>> {
   const values = new Float32Array(rowCount * 2);
   for (let rowIndex = 0; rowIndex < rowCount; rowIndex++) {
     values[rowIndex * 2] = rowIndex;
     values[rowIndex * 2 + 1] = rowIndex;
   }
-  return makeArrowFixedSizeListVector(new Float32(), 2, values);
+  return makeArrowFixedSizeListVector(new arrow.Float32(), 2, values);
 }
 
 function unpackSignedInt16Pair(word: number): [number, number] {
