@@ -117,6 +117,35 @@ test('arrow#prepareDggsCellKeyGPUVector parses Utf8 DGGS keys on the GPU', async
   t.end();
 });
 
+test('arrow#prepareDggsCellKeyGPUVector parses sliced Utf8 DGGS keys on the GPU', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const strings = arrow
+    .vectorFromArray(['skip', 's', 'S0', '9q8yyk'], new arrow.Utf8())
+    .slice(1) as arrow.Vector<arrow.Utf8>;
+  const preparedKeys = prepareDggsCellKeyGPUVector(device, strings, {
+    id: 'dggs-geohash-sliced-string-parser-test',
+    encoding: 'geohash'
+  });
+  try {
+    const keyVector = await readArrowGPUVectorAsync(preparedKeys.keys);
+    t.deepEqual(
+      Array.from(keyVector.data[0]!.values as BigUint64Array),
+      STRING_KEY_TEST_CASES.geohash.expectedKeys,
+      'parses the sliced Utf8 logical rows'
+    );
+  } finally {
+    preparedKeys.destroy();
+  }
+
+  t.end();
+});
+
 test('arrow#prepareDggsCellPathGPUVector extracts DGGS boundary paths on the GPU', async t => {
   const device = await getWebGPUTestDevice();
   if (!device) {

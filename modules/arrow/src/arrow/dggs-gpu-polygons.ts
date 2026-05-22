@@ -744,6 +744,7 @@ function getNormalizedUtf8Offsets(data: arrow.Data<arrow.Utf8>): Uint32Array {
   if (!sourceOffsets) {
     return normalizedOffsets;
   }
+  // Arrow exposes Utf8 valueOffsets as the logical row slice for data.offset.
   const firstOffset = sourceOffsets[0] ?? 0;
   for (let offsetIndex = 0; offsetIndex <= data.length; offsetIndex++) {
     normalizedOffsets[offsetIndex] = Math.max(

@@ -620,6 +620,8 @@ function getArrowTemporalDataBufferSource(
     if (!valueOffsets) {
       throw new Error('prepareArrowTemporalGPUVector list input requires Arrow value offsets');
     }
+    // Arrow exposes valueOffsets as the logical row slice for data.offset; only child values
+    // still need their physical child offset applied when copying flattened temporal leaves.
     const firstValueOffset = valueOffsets[0] ?? 0;
     const lastValueOffset = valueOffsets[data.length] ?? firstValueOffset;
     const childValueOffset = childData.offset ?? 0;
@@ -647,6 +649,7 @@ function getNormalizedArrowValueOffsets(data: arrow.Data<arrow.List<any>>): Int3
   if (!valueOffsets) {
     throw new Error('prepareArrowTemporalGPUVector list input requires Arrow value offsets');
   }
+  // Arrow exposes valueOffsets as the logical row slice for data.offset.
   const firstValueOffset = valueOffsets[0] ?? 0;
   return Int32Array.from(valueOffsets, valueOffset => valueOffset - firstValueOffset);
 }

@@ -110,6 +110,32 @@ test('prepareArrowTemporalGPUVector preserves temporal list offsets for Trips-st
   t.end();
 });
 
+test('prepareArrowTemporalGPUVector reads sliced temporal list rows', async t => {
+  const device = new NullDevice({});
+  const source = makeTemporalListVector(
+    new arrow.TimestampMillisecond(),
+    new BigInt64Array([900n, 901n, 1000n, 1010n, 1025n]),
+    new Int32Array([0, 2, 4, 5])
+  ).slice(1) as arrow.Vector<arrow.List<arrow.TimestampMillisecond>>;
+  const prepared = await prepareArrowTemporalGPUVector(device, source, {preferGPU: false});
+  const result = await readArrowGPUVectorAsync(prepared.temporal);
+
+  t.deepEqual(
+    Array.from(result.data[0]!.valueOffsets as Int32Array),
+    [0, 2, 3],
+    'normalizes sliced path-aligned temporal list offsets'
+  );
+  t.deepEqual(
+    Array.from(result.data[0]!.children[0]!.values as Float32Array),
+    [0, 10, 25],
+    'reads the sliced temporal leaf values'
+  );
+  t.equal(prepared.temporalInfo.origin, 1000n, 'uses the first sliced timestamp as origin');
+
+  prepared.destroy();
+  t.end();
+});
+
 test('prepareArrowTemporalGPUVector keeps durations relative to zero', async t => {
   const device = new NullDevice({});
   const source = makeTemporalVector(new arrow.DurationMillisecond(), new BigInt64Array([5n, 10n]));
