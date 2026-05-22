@@ -67,13 +67,14 @@ export class GPUTable {
   readonly bufferLayout: BufferLayout[] = [];
   /** GPU vectors keyed by table/shader column name. */
   readonly gpuVectors: Record<string, GPUVector> = {};
-  /** Model-ready attribute buffers keyed by shader attribute name. */
+  /** Model-ready attribute buffers keyed by buffer layout name. */
   readonly attributes: Record<string, Buffer | DynamicBuffer> = {};
   /** Model-ready storage bindings keyed by shader binding name. */
   readonly bindings: Record<string, Buffer | DynamicBuffer> = {};
   /** Preserved batch-local GPU storage. */
   readonly batches: GPURecordBatch[] = [];
 
+  /** Creates one logical GPU table from vectors or already-preserved GPU record batches. */
   constructor(props: GPUTableProps) {
     if ('batches' in props) {
       this.schema = props.schema;
@@ -508,13 +509,7 @@ function rebuildGPURecordBatchColumns(batch: GPURecordBatch, columnNames: string
     if (!vector) {
       throw new Error(`GPURecordBatch column "${layout.name}" has no GPU vector`);
     }
-    if (layout.attributes) {
-      for (const attribute of layout.attributes) {
-        batch.attributes[attribute.attribute] = vector.buffer;
-      }
-    } else {
-      batch.attributes[layout.name] = vector.buffer;
-    }
+    batch.attributes[layout.name] = vector.buffer;
   }
 
   batch.bufferLayout.splice(0, batch.bufferLayout.length, ...selectedLayouts);

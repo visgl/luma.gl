@@ -163,6 +163,7 @@
             "label": "Shader Modules",
             "items": [
               "api-reference/shadertools/shader-modules/float-colors",
+              "api-reference/shadertools/shader-modules/dggs",
               "api-reference/shadertools/shader-modules/fp32",
               "api-reference/shadertools/shader-modules/fp64",
               "api-reference/shadertools/shader-modules/pbr-material",

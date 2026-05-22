@@ -9,6 +9,7 @@ const MISSING_CHAR_WIDTH = 32;
 const MAX_UINT16 = 65535;
 const INVALID_DICTIONARY_INDEX = 0xffffffff;
 
+/** Integer Arrow dictionary key types accepted by UTF-8 text helpers. */
 export type ArrowUtf8DictionaryIndexType =
   | arrow.Int8
   | arrow.Int16
@@ -16,35 +17,56 @@ export type ArrowUtf8DictionaryIndexType =
   | arrow.Uint8
   | arrow.Uint16
   | arrow.Uint32;
+/** Dictionary-encoded UTF-8 Arrow text leaf accepted by text helpers. */
 export type ArrowUtf8Dictionary = arrow.Dictionary<arrow.Utf8, ArrowUtf8DictionaryIndexType>;
+/** Plain or dictionary-encoded UTF-8 Arrow text leaf accepted by text helpers. */
 export type ArrowUtf8TextType = arrow.Utf8 | ArrowUtf8Dictionary;
+/** Plain or dictionary-encoded UTF-8 Arrow text vector accepted by text helpers. */
 export type ArrowUtf8TextVector = arrow.Vector<ArrowUtf8TextType>;
 
+/** Mutable virtual UTF-8 byte range for one Arrow text row. */
 export type Utf8TextIndexTarget = {
+  /** Inclusive virtual byte start. */
   startIndex: number;
+  /** Exclusive virtual byte end. */
   endIndex: number;
 };
 
+/** Row accessor context reused while visiting Arrow UTF-8 text rows. */
 export type ArrowUtf8TextAccessorContext<DataT> = {
+  /** Current source row index. */
   index: number;
+  /** Mutable virtual byte range target for the current source row. */
   target: Utf8TextIndexTarget;
+  /** Optional caller-owned row data. */
   data?: readonly DataT[];
 };
 
+/** Callback that resolves one datum to a virtual Arrow UTF-8 byte range. */
 export type ArrowUtf8TextIndexAccessor<DataT> = (
   datum: DataT,
   info: ArrowUtf8TextAccessorContext<DataT>
 ) => Utf8TextIndexTarget;
 
+/** One normalized Arrow UTF-8 data chunk in a virtual concatenated byte space. */
 export type ArrowUtf8Chunk = {
+  /** Inclusive source row start for this Arrow data chunk. */
   readonly rowStart: number;
+  /** Exclusive source row end for this Arrow data chunk. */
   readonly rowEnd: number;
+  /** Inclusive virtual byte start for this Arrow data chunk. */
   readonly byteStart: number;
+  /** Exclusive virtual byte end for this Arrow data chunk. */
   readonly byteEnd: number;
+  /** Offset added to Arrow-local value offsets to reach virtual byte offsets. */
   readonly byteBase: number;
+  /** Arrow data row offset retained for null bitmap lookup. */
   readonly rowOffset: number;
+  /** Arrow UTF-8 value bytes retained by this chunk. */
   readonly values: Uint8Array;
+  /** Arrow UTF-8 value offsets retained by this chunk. */
   readonly valueOffsets: Int32Array;
+  /** Optional Arrow validity bitmap retained by this chunk. */
   readonly nullBitmap: Uint8Array | null;
 };
 
@@ -60,62 +82,111 @@ type ArrowUtf8DictionaryChunk = {
   readonly dictionaryCodePointsByIndex: Map<number, readonly number[]>;
 };
 
+/** One-line glyph offsets and atlas frames expanded from Arrow UTF-8 rows. */
 export type ArrowGlyphLayout = {
+  /** Cumulative glyph offsets, length = source text rows + 1. */
   startIndices: number[];
+  /** Expanded glyph instances across all source text rows. */
   glyphCount: number;
+  /** Packed signed XY glyph offsets, two Int16 values per glyph. */
   glyphOffsets: Int16Array;
+  /** Packed atlas XYWH glyph frames, four Uint16 values per glyph. */
   glyphFrames: Uint16Array;
+  /** Optional character set accumulated while laying out glyphs. */
   characterSet?: Set<string>;
 };
 
+/** Compact glyph id stream plus shared glyph definitions for WebGPU text expansion. */
 export type GpuExpandedTextStream = {
+  /** Cumulative glyph offsets, length = source text rows + 1. */
   startIndices: number[];
+  /** Expanded glyph instances across all source text rows. */
   glyphCount: number;
+  /** Per-row half-open glyph ranges. */
   labelGlyphRanges: Uint32Array;
+  /** Packed Uint16 glyph definition ids, two ids per Uint32 word. */
   packedGlyphIds: Uint32Array;
+  /** Shared Float32 atlas XYWH glyph frames. */
   glyphFrames: Float32Array;
+  /** Shared Int32 glyph anchor/advance pairs. */
   glyphMetrics: Int32Array;
+  /** Signed Float32-compatible baseline offset retained by generated glyph vertices. */
   baselineOffsetY: number;
+  /** Optional character set accumulated while laying out glyphs. */
   characterSet?: Set<string>;
+  /** Bytes occupied by row glyph ranges plus packed glyph ids. */
   compactStreamByteLength: number;
+  /** Bytes occupied by shared glyph frames plus glyph metrics. */
   glyphDefinitionByteLength: number;
+  /** CPU time spent building the compact glyph stream. */
   glyphStreamBuildTimeMs: number;
 };
 
+/** Packed plain UTF-8 byte ranges used by WebGPU text expansion. */
 export type GpuUtf8TextInput = {
+  /** Cumulative UTF-8 byte offsets, length = source text rows + 1. */
   startIndices: number[];
+  /** Per-row half-open virtual UTF-8 byte ranges. */
   rowByteRanges: Uint32Array;
+  /** UTF-8 bytes packed four per Uint32 word. */
   packedUtf8Bytes: Uint32Array;
+  /** Total UTF-8 bytes across source text rows. */
   byteLength: number;
+  /** Bytes occupied by row ranges plus packed UTF-8 bytes. */
   inputByteLength: number;
+  /** CPU time spent building the packed UTF-8 input. */
   textInputBuildTimeMs: number;
 };
 
+/** Packed dictionary UTF-8 byte ranges used by WebGPU text expansion. */
 export type GpuDictionaryUtf8TextInput = {
+  /** Cumulative output glyph offsets, length = source text rows + 1. */
   startIndices: number[];
+  /** Normalized dictionary value index for each source text row. */
   rowDictionaryIndices: Uint32Array;
+  /** Per-row half-open output glyph ranges. */
   rowOutputGlyphRanges: Uint32Array;
+  /** Per-dictionary-value half-open UTF-8 byte ranges. */
   dictionaryValueByteRanges: Uint32Array;
+  /** Dictionary UTF-8 bytes packed four per Uint32 word. */
   packedDictionaryUtf8Bytes: Uint32Array;
+  /** Expanded glyph instances across all source text rows. */
   byteLength: number;
+  /** Total UTF-8 bytes across unique dictionary values. */
   dictionaryByteLength: number;
+  /** Bytes occupied by dictionary row/range metadata plus packed UTF-8 bytes. */
   inputByteLength: number;
+  /** CPU time spent building the packed dictionary UTF-8 input. */
   textInputBuildTimeMs: number;
 };
 
+/** Compressed dictionary glyph runs plus per-row dictionary references. */
 export type GpuDictionaryCompressedTextStream = {
+  /** Cumulative visible glyph offsets, length = source text rows + 1. */
   startIndices: number[];
+  /** Per-row half-open visible glyph ranges. */
   rowGlyphRanges: Uint32Array;
+  /** Normalized dictionary value index for each source text row. */
   rowDictionaryIndices: Uint32Array;
+  /** Per-dictionary-value half-open ranges into `dictionaryGlyphRecords`. */
   dictionaryGlyphRanges: Uint32Array;
+  /** Shared packed dictionary glyph records, two Uint32 words per glyph. */
   dictionaryGlyphRecords: Uint32Array;
+  /** Shared Float32 atlas XYWH glyph frames. */
   glyphFrames: Float32Array;
+  /** Visible glyph instances across all source text rows. */
   glyphCount: number;
+  /** Shared glyph records across unique dictionary values. */
   dictionaryGlyphCount: number;
+  /** Normalized dictionary values retained across Arrow data chunks. */
   dictionaryValueCount: number;
+  /** Optional character set accumulated while laying out glyphs. */
   characterSet?: Set<string>;
+  /** Bytes occupied by compressed row and dictionary glyph stream metadata. */
   compressedStreamByteLength: number;
+  /** Bytes occupied by shared glyph frame definitions. */
   glyphDefinitionByteLength: number;
+  /** CPU time spent building the compressed dictionary glyph stream. */
   glyphStreamBuildTimeMs: number;
 };
 

@@ -6,29 +6,45 @@ import {Buffer, type Binding, type Device, type ShaderLayout} from '@luma.gl/cor
 import {Computation} from '@luma.gl/engine';
 import type {GeneratedBufferBatch} from './generated-buffer-batches';
 
+/** Stable resource naming options shared by GPU path expansion helpers. */
 export type GpuPathExpansionResourceOptions = {
+  /** Stable resource id prefix. */
   id?: string;
 };
 
+/** GPU path expansion config buffer retained for one generated render batch. */
 export type GpuPathExpansionInputState = {
+  /** Read-only storage buffer consumed by the path expansion compute shader. */
   expansionConfigBuffer: Buffer;
+  /** Bytes occupied by the expansion config buffer. */
   byteLength: number;
 };
 
+/** Persistent per-path value and generated-record ranges used by storage rendering. */
 export type GpuPathRangeState = {
+  /** Read-only storage buffer containing one `vec4<u32>` range per path row. */
   pathRangesBuffer: Buffer;
+  /** Bytes occupied by the path range buffer. */
   byteLength: number;
+  /** Releases the owned path range buffer. */
   destroy: () => void;
 };
 
+/** Generated indexed path segment record buffer. */
 export type GpuPathGeneratedState = {
+  /** Generated compact or legacy path segment vertex buffer. */
   compactPathVertexData: Buffer;
+  /** Logical bytes occupied by generated segment records. */
   byteLength: number;
 };
 
+/** Inputs used to build one GPU path expansion config buffer. */
 export type GpuPathExpansionInputProps = {
+  /** Planned generated render-batch row and record range. */
   generatedBufferBatch: GeneratedBufferBatch;
+  /** Float32 coordinate components in each prepared path point. */
   componentCount: number;
+  /** Uint32 words in each generated path segment record. */
   recordWordCount: number;
 };
 
@@ -155,13 +171,18 @@ const GPU_PATH_EXPANSION_COMPUTE_SHADER_LAYOUT: ShaderLayout = {
   attributes: []
 };
 
+/** Creates one persistent path range storage buffer from copied Arrow list offsets. */
 export function createGpuPathRangeState(
   device: Device,
   options: GpuPathExpansionResourceOptions,
   props: {
+    /** Flattened path point offsets copied from Arrow list metadata. */
     valueOffsets: Int32Array;
+    /** Generated segment record offsets, length = source path rows + 1. */
     recordOffsets: readonly number[];
+    /** Global source path row index assigned to local row zero. */
     batchRowIndexBase: number;
+    /** Source path rows included in this range buffer. */
     rowCount: number;
   }
 ): GpuPathRangeState {
@@ -192,6 +213,7 @@ export function createGpuPathRangeState(
   };
 }
 
+/** Creates one read-only expansion config buffer for a generated render batch. */
 export function createGpuPathExpansionInput(
   device: Device,
   options: GpuPathExpansionResourceOptions,
@@ -226,6 +248,7 @@ export function createGpuPathExpansionInput(
   };
 }
 
+/** Creates one generated path segment record buffer. */
 export function createGpuPathGeneratedState(
   device: Device,
   options: GpuPathExpansionResourceOptions,
@@ -253,15 +276,22 @@ export function createGpuPathGeneratedState(
   };
 }
 
+/** Dispatches WebGPU compute that expands path ranges into indexed segment records. */
 export function dispatchGpuPathExpansionCompute(
   device: Device,
   options: GpuPathExpansionResourceOptions,
   state: {
+    /** Read-only storage binding for flattened prepared path values. */
     pathValues: Binding;
+    /** Read-only storage binding for persistent per-path ranges. */
     pathRanges: Binding | Buffer;
+    /** Read-only storage expansion config for one generated render batch. */
     expansionInput: GpuPathExpansionInputState;
+    /** Writable generated path segment record buffer. */
     generated: GpuPathGeneratedState;
+    /** Source path rows included in this compute dispatch. */
     rowCount: number;
+    /** Generated segment records included in this compute dispatch. */
     segmentCount: number;
   }
 ): void {

@@ -6,11 +6,13 @@ import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {
   ArrowPathModel,
   ArrowStoragePathModel,
+  ArrowStorageTripsPathModel,
   buildArrowPathSegmentTable,
   createArrowStoragePathState,
   makeArrowFixedSizeListVector,
   makeArrowGPUVector,
   readArrowGPUVectorAsync,
+  type ArrowPathSourceVectors,
   type PreparedArrowPathGPUVectors
 } from '@luma.gl/arrow';
 import type {Device, ShaderLayout} from '@luma.gl/core';
@@ -20,6 +22,7 @@ import * as arrow from 'apache-arrow';
 
 type PathArrowType = arrow.List<arrow.FixedSizeList<arrow.Float32>>;
 type Float64PathArrowType = arrow.List<arrow.FixedSizeList<arrow.Float64>>;
+type ColorListArrowType = arrow.List<arrow.FixedSizeList<arrow.Uint8>>;
 
 test('buildArrowPathSegmentTable expands path rows and repeats row styles', t => {
   const sourceVectors = makeArrowPathSourceVectors();
@@ -59,6 +62,28 @@ test('buildArrowPathSegmentTable expands path rows and repeats row styles', t =>
     'segment flags identify first, last, and closed rows'
   );
   t.deepEqual(
+    Array.from(result.segmentLayout.segmentStartColors),
+    [
+      packColor([255, 0, 0, 255]),
+      packColor([255, 0, 0, 255]),
+      packColor([0, 255, 0, 255]),
+      packColor([0, 255, 0, 255]),
+      packColor([0, 255, 0, 255])
+    ],
+    'generated segment starts retain row colors'
+  );
+  t.deepEqual(
+    Array.from(result.segmentLayout.segmentEndColors),
+    [
+      packColor([255, 0, 0, 255]),
+      packColor([255, 0, 0, 255]),
+      packColor([0, 255, 0, 255]),
+      packColor([0, 255, 0, 255]),
+      packColor([0, 255, 0, 255])
+    ],
+    'generated segment ends retain row colors'
+  );
+  t.deepEqual(
     Array.from(getFixedSizeListValues(result.table.getChild('colors')!)),
     [255, 0, 0, 255, 255, 0, 0, 255, 0, 255, 0, 255, 0, 255, 0, 255, 0, 255, 0, 255],
     'RGBA row styles repeat across generated segments'
@@ -73,6 +98,46 @@ test('buildArrowPathSegmentTable expands path rows and repeats row styles', t =>
     [0, 0, 1, 1, 1],
     'generated rows retain source path row indices'
   );
+  t.end();
+});
+
+test('buildArrowPathSegmentTable expands path-aligned color lists', t => {
+  const sourceVectors = makeArrowPathSourceVectors();
+  const colors = makeColorListVector(
+    new Int32Array([0, 3, 7]),
+    new Uint8Array([
+      255, 0, 0, 255, 255, 128, 0, 255, 255, 255, 0, 255, 0, 255, 0, 255, 0, 255, 255, 255, 0, 0,
+      255, 255, 255, 0, 255, 255
+    ])
+  );
+  const result = buildArrowPathSegmentTable({
+    rowTable: new arrow.Table({colors, widths: sourceVectors.widths}),
+    paths: sourceVectors.paths
+  });
+
+  t.deepEqual(
+    Array.from(result.segmentLayout.segmentStartColors),
+    [
+      packColor([255, 0, 0, 255]),
+      packColor([255, 128, 0, 255]),
+      packColor([0, 255, 0, 255]),
+      packColor([0, 255, 255, 255]),
+      packColor([0, 0, 255, 255])
+    ],
+    'segment start colors use each segment start vertex'
+  );
+  t.deepEqual(
+    Array.from(result.segmentLayout.segmentEndColors),
+    [
+      packColor([255, 128, 0, 255]),
+      packColor([255, 255, 0, 255]),
+      packColor([0, 255, 255, 255]),
+      packColor([0, 0, 255, 255]),
+      packColor([255, 0, 255, 255])
+    ],
+    'segment end colors use each segment end vertex'
+  );
+
   t.end();
 });
 
@@ -121,6 +186,13 @@ test('ArrowPathModel derives from ArrowModel and packs generated segment records
     expandedPathBytes.byteOffset + Float32Array.BYTES_PER_ELEMENT * 16,
     2
   );
+  const firstSegmentColors = new Uint32Array(
+    expandedPathBytes.buffer,
+    expandedPathBytes.byteOffset +
+      Float32Array.BYTES_PER_ELEMENT * 16 +
+      Uint32Array.BYTES_PER_ELEMENT * 2,
+    2
+  );
   const expandedPathLayout = model.bufferLayout.find(
     layout => layout.name === 'expandedPathVertexData'
   );
@@ -130,15 +202,17 @@ test('ArrowPathModel derives from ArrowModel and packs generated segment records
 
   t.equal(model.instanceCount, 5, 'instance count uses generated segment rows');
   t.deepEqual(model.segmentLayout.startIndices, [0, 2, 5], 'model exposes segment offsets');
-  t.equal(expandedPathLayout?.byteStride, 72, 'expanded segment records use a 72-byte stride');
+  t.equal(expandedPathLayout?.byteStride, 80, 'expanded segment records use an 80-byte stride');
   t.equal(pathViewOriginLayout?.byteStride, 16, 'view-origin records use a 16-byte stride');
   t.deepEqual(
     expandedPathLayout?.attributes,
     [
       {attribute: 'segmentStartPositions', format: 'float32x4', byteOffset: 0},
-      {attribute: 'segmentEndPositions', format: 'float32x4', byteOffset: 16}
+      {attribute: 'segmentEndPositions', format: 'float32x4', byteOffset: 16},
+      {attribute: 'segmentStartColors', format: 'uint32', byteOffset: 72},
+      {attribute: 'segmentEndColors', format: 'uint32', byteOffset: 76}
     ],
-    'default generated vertex data exposes segment endpoints'
+    'default generated vertex data exposes segment endpoints and packed colors'
   );
   t.deepEqual(
     Array.from(firstSegmentPositions),
@@ -149,6 +223,11 @@ test('ArrowPathModel derives from ArrowModel and packs generated segment records
     Array.from(firstSegmentMetadata),
     [1, 0],
     'packed record stores generated flags and source row index'
+  );
+  t.deepEqual(
+    Array.from(firstSegmentColors),
+    [packColor([255, 0, 0, 255]), packColor([255, 0, 0, 255])],
+    'packed record stores generated segment endpoint colors'
   );
 
   model.destroy();
@@ -565,6 +644,46 @@ test('ArrowStoragePathModel emits indexed compute-generated segment records', as
   t.end();
 });
 
+test('ArrowStoragePathModel binds path-aligned vertex colors', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const sourceVectors = makeArrowPathSourceVectors();
+  const pathProps = makeStorageGpuArrowPathProps(device, {
+    ...sourceVectors,
+    colors: makeColorListVector(
+      new Int32Array([0, 3, 7]),
+      new Uint8Array([
+        255, 0, 0, 255, 255, 128, 0, 255, 255, 255, 0, 255, 0, 255, 0, 255, 0, 255, 255, 255, 0, 0,
+        255, 255, 255, 0, 255, 255
+      ])
+    )
+  });
+  const model = new ArrowStoragePathModel(device, {
+    id: 'arrow-storage-path-vertex-color-test',
+    ...pathProps
+  });
+  const bindings = (model as any)._getBindings();
+  const styleConfigBytes = await model.styleConfigBuffer.readAsync();
+  const styleConfigWords = new Uint32Array(
+    styleConfigBytes.buffer,
+    styleConfigBytes.byteOffset,
+    styleConfigBytes.byteLength / Uint32Array.BYTES_PER_ELEMENT
+  );
+
+  t.ok(bindings.pathVertexColors, 'binds a flattened path vertex color storage buffer');
+  t.equal(styleConfigWords[5], 0, 'row color storage is disabled for color lists');
+  t.equal(styleConfigWords[10], 1, 'vertex color storage is enabled for color lists');
+
+  model.destroy();
+  destroyStorageGpuArrowPathProps(pathProps);
+  t.end();
+});
+
 test('ArrowStoragePathModel preserves legacy segment records when requested by shader layout', async t => {
   const device = await getWebGPUTestDevice();
   if (!device) {
@@ -732,6 +851,40 @@ test('ArrowStoragePathModel refreshes row styles without rebuilding segment buff
   t.end();
 });
 
+test('ArrowStorageTripsPathModel binds prepared path-aligned timestamps', async t => {
+  const device = await getWebGPUTestDevice();
+  if (!device) {
+    t.comment('WebGPU is not available');
+    t.end();
+    return;
+  }
+
+  const sourceVectors = {
+    ...makeArrowPathSourceVectors(),
+    timestamps: makeTemporalListVector(
+      new arrow.TimestampMillisecond(),
+      new BigInt64Array([1000n, 1010n, 1025n, 2000n, 2010n, 2020n, 2030n]),
+      new Int32Array([0, 3, 7])
+    )
+  };
+  const prepared = await ArrowStoragePathModel.prepareGPUVectors(device, sourceVectors);
+  const model = new ArrowStorageTripsPathModel(device, {
+    ...prepared.storagePathProps,
+    timestamps: prepared.timestamps!,
+    currentTime: 25,
+    trailLength: 10
+  });
+  const bindings = (model as any)._getBindings();
+
+  t.ok(bindings.pathTimestamps, 'binds the prepared temporal path stream');
+  t.ok(bindings.tripPathConfig, 'binds Trips-style temporal uniforms');
+  t.equal(model.segmentCount, 5, 'reuses the storage-backed path segment layout');
+
+  model.destroy();
+  prepared.destroy();
+  t.end();
+});
+
 test('ArrowStoragePathModel splits compute-generated segment buffers by storage limits', async t => {
   const device = await getWebGPUTestDevice();
   if (!device) {
@@ -817,8 +970,10 @@ async function makeGpuArrowPathProps(device: Device): Promise<PreparedArrowPathG
   return ArrowPathModel.prepareGPUVectors(device, sourceVectors);
 }
 
-function makeStorageGpuArrowPathProps(device: Device) {
-  const sourceVectors = makeArrowPathSourceVectors();
+function makeStorageGpuArrowPathProps(
+  device: Device,
+  sourceVectors: ArrowPathSourceVectors = makeArrowPathSourceVectors()
+) {
   return {
     paths: makeGpuArrowPathVector(device, 'paths', sourceVectors.paths),
     colors: makeGpuArrowPathVector(device, 'colors', sourceVectors.colors),
@@ -985,6 +1140,60 @@ function makeFloat64PathVector(
   return new arrow.Vector<Float64PathArrowType>([pathData]);
 }
 
+function makeColorListVector(
+  valueOffsets: Int32Array,
+  values: Uint8Array
+): arrow.Vector<ColorListArrowType> {
+  const colorType = new arrow.FixedSizeList(4, new arrow.Field('values', new arrow.Uint8(), false));
+  const pathColorType = new arrow.List(
+    new arrow.Field('colors', colorType, false)
+  ) as ColorListArrowType;
+  const colorValueData = new arrow.Data<arrow.Uint8>(new arrow.Uint8(), 0, values.length, 0, {
+    [arrow.BufferType.DATA]: values
+  });
+  const colorData = new arrow.Data<arrow.FixedSizeList<arrow.Uint8>>(
+    colorType,
+    0,
+    values.length / 4,
+    0,
+    {},
+    [colorValueData]
+  );
+  const pathColorData = new arrow.Data<ColorListArrowType>(
+    pathColorType,
+    0,
+    valueOffsets.length - 1,
+    0,
+    {[arrow.BufferType.OFFSET]: valueOffsets},
+    [colorData]
+  );
+  return new arrow.Vector<ColorListArrowType>([pathColorData]);
+}
+
+function makeTemporalListVector<
+  T extends arrow.Date_ | arrow.Time | arrow.Timestamp | arrow.Duration
+>(
+  childType: T,
+  values: Int32Array | BigInt64Array,
+  valueOffsets: Int32Array
+): arrow.Vector<arrow.List<T>> {
+  const childData = arrow.makeData({
+    type: childType,
+    length: values.length,
+    data: values
+  }) as arrow.Data<T>;
+  const listType = new arrow.List(new arrow.Field('values', childType, false));
+  const listData = arrow.makeData({
+    type: listType,
+    length: valueOffsets.length - 1,
+    nullCount: 0,
+    nullBitmap: null,
+    valueOffsets,
+    child: childData
+  }) as arrow.Data<arrow.List<T>>;
+  return new arrow.Vector([listData]);
+}
+
 function getPathOffsets(vector: arrow.Vector<PathArrowType>): Int32Array {
   return vector.data[0]!.valueOffsets as Int32Array;
 }
@@ -1065,6 +1274,16 @@ function addVectors(left: readonly number[], right: readonly number[]): number[]
     (left[2] ?? 0) + (right[2] ?? 0),
     (left[3] ?? 0) + (right[3] ?? 0)
   ];
+}
+
+function packColor(color: readonly number[]): number {
+  return (
+    ((color[0] ?? 255) |
+      ((color[1] ?? 255) << 8) |
+      ((color[2] ?? 255) << 16) |
+      ((color[3] ?? 255) << 24)) >>>
+    0
+  );
 }
 
 function assertApproxArray(

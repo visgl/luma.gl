@@ -694,31 +694,47 @@ fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
 }
 `;
 
+/** Expanded Arrow glyph table plus layout and allocation diagnostics. */
 export type ArrowTextGlyphTable = {
+  /** Expanded Arrow table containing glyph-instance columns. */
   table: arrow.Table;
+  /** One-line glyph offsets and atlas frames expanded from source text rows. */
   glyphLayout: ArrowGlyphLayout;
+  /** Optional character set accumulated while laying out glyphs. */
   characterSet?: Set<string>;
+  /** Bytes occupied by generated glyph-instance Arrow attributes. */
   attributeByteLength: number;
+  /** CPU time spent building generated glyph-instance Arrow attributes. */
   glyphAttributeBuildTimeMs: number;
 };
 
 /** CPU Arrow vectors used when one-line text layout expands rows into glyph attributes. */
 export type ArrowTextSourceVectors = {
+  /** CPU label origins aligned one-for-one with `texts`. */
   positions: arrow.Vector<arrow.FixedSizeList<arrow.Float32>>;
+  /** CPU plain or dictionary-encoded UTF-8 labels used for glyph expansion. */
   texts: ArrowUtf8TextVector;
+  /** Optional CPU packed RGBA8 text colors aligned with label rows. */
   colors?: arrow.Vector<arrow.FixedSizeList<arrow.Uint8>>;
+  /** Optional CPU per-row angles in degrees. */
   angles?: arrow.Vector<arrow.Float32>;
+  /** Optional CPU per-row deck-style text sizes. */
   sizes?: arrow.Vector<arrow.Float32>;
+  /** Optional CPU per-row pixel offsets. */
   pixelOffsets?: arrow.Vector<arrow.FixedSizeList<arrow.Float32>>;
+  /** Optional CPU packed clip rectangles aligned with label rows. */
   clipRects?: arrow.Vector<arrow.FixedSizeList<arrow.Int16>>;
 };
 
 /** CPU Arrow vectors still needed by storage-backed text expansion. */
 export type ArrowStorageTextSourceVectors = {
+  /** CPU plain or dictionary-encoded UTF-8 labels used for storage glyph expansion. */
   texts: ArrowUtf8TextVector;
+  /** Optional CPU packed clip rectangles aligned with label rows. */
   clipRects?: arrow.Vector<arrow.FixedSizeList<arrow.Int16>>;
 };
 
+/** Props for the attribute-backed Arrow text renderer. */
 export type ArrowTextModelProps = Omit<
   ArrowModelProps,
   'arrowTable' | 'arrowGPUTable' | 'arrowCount'
@@ -768,11 +784,15 @@ type ArrowStorageTextSharedInputProps = Omit<ArrowTextModelProps, 'sourceVectors
   angle?: number;
   /** Constant fallback deck-style text size used when `sizes` is absent. */
   size?: number;
+  /** Constant fallback pixel offset used when `pixelOffsets` is absent. */
   pixelOffset?: [number, number];
+  /** Constant fallback text anchor used when `textAnchors` is absent. */
   textAnchor?: 'start' | 'middle' | 'end';
+  /** Constant fallback alignment baseline used when `alignmentBaselines` is absent. */
   alignmentBaseline?: 'center' | 'top' | 'bottom';
 };
 
+/** Props for the WebGPU storage-backed Arrow text renderer. */
 export type ArrowStorageTextInputProps = ArrowStorageTextSharedInputProps & {
   /** GPU UTF-8 or dictionary-encoded UTF-8 labels aligned row-for-row with `positions`. */
   texts: GPUVector<ArrowUtf8TextType>;
@@ -780,11 +800,15 @@ export type ArrowStorageTextInputProps = ArrowStorageTextSharedInputProps & {
   sourceVectors: ArrowStorageTextSourceVectors;
 };
 
+/** CPU Arrow vectors still needed by compressed dictionary storage text expansion. */
 export type ArrowDictionaryStorageTextSourceVectors = {
+  /** CPU dictionary-encoded UTF-8 labels used for compressed glyph layout. */
   texts: arrow.Vector<ArrowUtf8Dictionary>;
+  /** Optional CPU packed clip rectangles aligned with label rows. */
   clipRects?: arrow.Vector<arrow.FixedSizeList<arrow.Int16>>;
 };
 
+/** Props for the WebGPU compressed dictionary Arrow text renderer. */
 export type ArrowDictionaryStorageTextInputProps = ArrowStorageTextSharedInputProps & {
   /** GPU dictionary-encoded UTF-8 labels aligned row-for-row with `positions`. */
   texts: GPUVector<ArrowUtf8Dictionary>;
@@ -812,69 +836,127 @@ type ArrowStorageTextRenderProps = Omit<
   | 'sourceVectors'
 >;
 
+/** Per-source-batch row bindings retained by {@link ArrowStorageTextState}. */
 export type ArrowStorageTextBatchState = {
+  /** Global source text row index assigned to local row zero. */
   batchRowIndexBase: number;
+  /** Global row-storage index assigned to local row zero. */
   rowStorageIndexBase: number;
+  /** Source text rows included in this storage batch. */
   rowCount: number;
+  /** Glyph instances generated from this storage batch. */
   glyphCount: number;
+  /** Read-only storage buffer for label origins. */
   rowPositionsBuffer: StorageTextBuffer;
+  /** Read-only storage buffer for packed RGBA8 row colors. */
   rowColorsBuffer: StorageTextBuffer;
+  /** Read-only storage buffer for per-row angles. */
   rowAnglesBuffer: StorageTextBuffer;
+  /** Read-only storage buffer for per-row text sizes. */
   rowSizesBuffer: StorageTextBuffer;
+  /** Read-only storage buffer for per-row pixel offsets. */
   rowPixelOffsetsBuffer: StorageTextBuffer;
+  /** Read-only storage buffer for packed per-row text anchor enums. */
   rowTextAnchorsBuffer: StorageTextBuffer;
+  /** Read-only storage buffer for packed per-row alignment baseline enums. */
   rowAlignmentBaselinesBuffer: StorageTextBuffer;
+  /** Read-only storage buffer for packed per-row clip rectangles. */
   rowClipRectsBuffer: Buffer;
+  /** Optional read-only storage buffer for cumulative row glyph starts. */
   rowGlyphStartsBuffer?: Buffer;
+  /** Uniform buffer selecting row style binding usage and constant fallbacks. */
   styleConfigBuffer: DynamicBuffer;
 };
 
+/** Generated storage text render-batch state. */
 export type ArrowStorageTextRenderBatchState = {
+  /** Source storage batch whose row bindings feed this generated render batch. */
   rowBindingBatchIndex: number;
+  /** First source text row included in this generated render batch. */
   rowStart: number;
+  /** Source text row after the last row included in this generated render batch. */
   rowEnd: number;
+  /** Global glyph index assigned to local glyph zero. */
   glyphIndexBase: number;
+  /** Glyph instances drawn by this render batch. */
   glyphCount: number;
+  /** Generated compact glyph vertex buffer. */
   compactGlyphVertexData: Buffer;
+  /** Uniform buffer scoping row/glyph lookup to this render batch. */
   storageRenderConfigBuffer: DynamicBuffer;
 };
 
+/** Reusable WebGPU storage text expansion and row-binding state. */
 export type ArrowStorageTextState = {
+  /** Optional atlas manager retained when this state built the atlas. */
   fontAtlasManager?: FontAtlasManager;
+  /** Optional atlas texture owned by this storage state. */
   atlasTexture?: DynamicTexture;
+  /** Optional character set accumulated while laying out glyphs. */
   characterSet?: Set<string>;
+  /** Optional compact glyph stream retained for CPU-expanded storage mode. */
   glyphStream?: GpuExpandedTextStream;
+  /** Glyph instances across all preserved render batches. */
   glyphCount: number;
+  /** CPU time spent building generated glyph attributes. */
   glyphAttributeBuildTimeMs: number;
+  /** Bytes occupied by generated glyph attributes and render control buffers. */
   glyphAttributeByteLength: number;
+  /** CPU time spent building compact glyph stream inputs. */
   compactStreamBuildTimeMs: number;
+  /** Bytes occupied by compact glyph stream inputs. */
   compactStreamByteLength: number;
+  /** Bytes occupied by generated compact glyph vertex buffers. */
   generatedRenderBufferByteLength: number;
+  /** Bytes occupied by row glyph starts and per-render-batch config buffers. */
   renderControlByteLength: number;
+  /** Bytes occupied by retained row style/default binding resources. */
   rowStorageByteLength: number;
+  /** Bytes occupied by retained glyph frame/lookup definition resources. */
   glyphDefinitionStorageByteLength: number;
+  /** Bytes occupied by transient compute input buffers released after expansion. */
   transientComputeInputByteLength: number;
+  /** SDF render settings retained for built-in fragment shader uniforms. */
   sdfRenderSettings: TextSdfRenderSettings;
+  /** Read-only storage buffer for glyph atlas frames. */
   glyphFramesBuffer: Buffer;
+  /** Per-source-batch row bindings. */
   batches: ArrowStorageTextBatchState[];
+  /** Generated render batches preserved for device buffer-size limits. */
   renderBatches: ArrowStorageTextRenderBatchState[];
+  /** Row/default binding resources owned by this storage state. */
   ownedRowBindingResources: StorageTextOwnedResource[];
+  /** Glyph definition and render-control resources owned by this storage state. */
   ownedGlyphResources: StorageTextOwnedResource[];
+  /** First batch label origin buffer. */
   rowPositionsBuffer: StorageTextBuffer;
+  /** First batch packed RGBA8 row color buffer. */
   rowColorsBuffer: StorageTextBuffer;
+  /** First batch row angle buffer. */
   rowAnglesBuffer: StorageTextBuffer;
+  /** First batch row text size buffer. */
   rowSizesBuffer: StorageTextBuffer;
+  /** First batch row pixel offset buffer. */
   rowPixelOffsetsBuffer: StorageTextBuffer;
+  /** First batch packed row text anchor buffer. */
   rowTextAnchorsBuffer: StorageTextBuffer;
+  /** First batch packed row alignment baseline buffer. */
   rowAlignmentBaselinesBuffer: StorageTextBuffer;
+  /** First batch packed row clip rectangle buffer. */
   rowClipRectsBuffer: Buffer;
+  /** First batch cumulative row glyph start buffer. */
   rowGlyphStartsBuffer: Buffer;
+  /** First batch row style config uniform buffer. */
   styleConfigBuffer: DynamicBuffer;
+  /** First render batch row/glyph lookup config uniform buffer. */
   storageRenderConfigBuffer: DynamicBuffer;
+  /** First generated compact glyph vertex buffer. */
   compactGlyphVertexData: Buffer;
+  /** Releases owned atlas, row, glyph, and generated render resources. */
   destroy: () => void;
 };
 
+/** Props for constructing or rebinding a WebGPU storage-backed Arrow text model. */
 export type ArrowStorageTextModelProps =
   | (ArrowStorageTextInputProps & {storageState?: never})
   | (ArrowStorageTextRenderProps & {storageState: ArrowStorageTextState});
@@ -899,6 +981,7 @@ type ArrowDictionaryStorageTextRenderProps = Omit<
   | 'sourceVectors'
 >;
 
+/** Per-source-batch dictionary glyph storage retained by compressed dictionary text state. */
 export type ArrowDictionaryStorageTextBatchState = ArrowStorageTextBatchState & {
   /** Per row `(dictionary index, row glyph start)` records plus one terminal sentinel. */
   rowDictionaryRecordsBuffer: Buffer;
@@ -908,69 +991,116 @@ export type ArrowDictionaryStorageTextBatchState = ArrowStorageTextBatchState & 
   dictionaryGlyphRecordsBuffer: Buffer;
   /** Glyph atlas frames referenced by the shared dictionary glyph records. */
   glyphFramesBuffer: Buffer;
+  /** Shared dictionary glyph records in this Arrow batch. */
   dictionaryGlyphCount: number;
+  /** Normalized dictionary values in this Arrow batch. */
   dictionaryValueCount: number;
 };
 
+/** Generated compressed dictionary text render-batch state. */
 export type ArrowDictionaryStorageTextRenderBatchState = {
+  /** Source storage batch whose row bindings feed this generated render batch. */
   rowBindingBatchIndex: number;
+  /** First source text row included in this generated render batch. */
   rowStart: number;
+  /** Source text row after the last row included in this generated render batch. */
   rowEnd: number;
   /** Global visible-glyph base for this draw batch; added to `instance_index` in WGSL. */
   glyphIndexBase: number;
+  /** Glyph instances drawn by this render batch. */
   glyphCount: number;
   /** Tiny uniform that scopes row lookup to this render batch. */
   dictionaryRenderConfigBuffer: DynamicBuffer;
 };
 
+/** Reusable WebGPU compressed dictionary text storage and row-binding state. */
 export type ArrowDictionaryStorageTextState = {
+  /** Optional atlas manager retained when this state built the atlas. */
   fontAtlasManager?: FontAtlasManager;
+  /** Optional atlas texture owned by this dictionary storage state. */
   atlasTexture?: DynamicTexture;
+  /** Optional character set accumulated while laying out glyphs. */
   characterSet?: Set<string>;
+  /** Optional compressed dictionary glyph stream retained for diagnostics. */
   glyphStream?: GpuDictionaryCompressedTextStream;
+  /** Visible glyph instances across all source text rows. */
   glyphCount: number;
+  /** Shared glyph records across unique dictionary values. */
   dictionaryGlyphCount: number;
+  /** Normalized dictionary values retained across Arrow data chunks. */
   dictionaryValueCount: number;
+  /** CPU time spent building generated glyph attributes. */
   glyphAttributeBuildTimeMs: number;
+  /** Bytes occupied by generated glyph attributes. */
   glyphAttributeByteLength: number;
+  /** CPU time spent building compressed dictionary glyph stream inputs. */
   compactStreamBuildTimeMs: number;
   /** Resident dictionary text storage: row records, dictionary ranges, glyph records, configs. */
   compactStreamByteLength: number;
   /** Currently zero for the compressed dictionary path: instances are implicit draw instances. */
   generatedRenderBufferByteLength: number;
+  /** Bytes occupied by retained row style/default binding resources. */
   rowStorageByteLength: number;
+  /** Bytes occupied by retained glyph frame definitions. */
   glyphDefinitionStorageByteLength: number;
+  /** Bytes occupied by transient compute input buffers released after expansion. */
   transientComputeInputByteLength: number;
+  /** SDF render settings retained for built-in fragment shader uniforms. */
   sdfRenderSettings: TextSdfRenderSettings;
+  /** Read-only storage buffer for glyph atlas frames. */
   glyphFramesBuffer: Buffer;
+  /** Per-source-batch row and dictionary glyph bindings. */
   batches: ArrowDictionaryStorageTextBatchState[];
+  /** Generated render batches preserved for device buffer-size limits. */
   renderBatches: ArrowDictionaryStorageTextRenderBatchState[];
+  /** Row/default binding resources owned by this dictionary storage state. */
   ownedRowBindingResources: StorageTextOwnedResource[];
+  /** Dictionary glyph and render-control resources owned by this dictionary storage state. */
   ownedDictionaryResources: StorageTextOwnedResource[];
+  /** First batch label origin buffer. */
   rowPositionsBuffer: StorageTextBuffer;
+  /** First batch packed RGBA8 row color buffer. */
   rowColorsBuffer: StorageTextBuffer;
+  /** First batch row angle buffer. */
   rowAnglesBuffer: StorageTextBuffer;
+  /** First batch row text size buffer. */
   rowSizesBuffer: StorageTextBuffer;
+  /** First batch row pixel offset buffer. */
   rowPixelOffsetsBuffer: StorageTextBuffer;
+  /** First batch packed row text anchor buffer. */
   rowTextAnchorsBuffer: StorageTextBuffer;
+  /** First batch packed row alignment baseline buffer. */
   rowAlignmentBaselinesBuffer: StorageTextBuffer;
+  /** First batch packed row clip rectangle buffer. */
   rowClipRectsBuffer: Buffer;
+  /** First batch per-row dictionary reference buffer. */
   rowDictionaryRecordsBuffer: Buffer;
+  /** First batch per-dictionary-value glyph range buffer. */
   dictionaryGlyphRangesBuffer: Buffer;
+  /** First batch shared dictionary glyph record buffer. */
   dictionaryGlyphRecordsBuffer: Buffer;
+  /** First render batch dictionary lookup config uniform buffer. */
   dictionaryRenderConfigBuffer: DynamicBuffer;
+  /** First batch row style config uniform buffer. */
   styleConfigBuffer: DynamicBuffer;
+  /** Releases owned atlas, row, dictionary, and generated render resources. */
   destroy: () => void;
 };
 
+/** Props for constructing or rebinding a WebGPU compressed dictionary Arrow text model. */
 export type ArrowDictionaryStorageTextModelProps =
   | (ArrowDictionaryStorageTextInputProps & {storageState?: never})
   | (ArrowDictionaryStorageTextRenderProps & {storageState: ArrowDictionaryStorageTextState});
 
+/** Generated attribute text render-batch state. */
 export type ArrowTextRenderBatchState = {
+  /** First source text row included in this generated render batch. */
   rowStart: number;
+  /** Source text row after the last row included in this generated render batch. */
   rowEnd: number;
+  /** Glyph instances drawn by this render batch. */
   glyphCount: number;
+  /** Generated expanded glyph vertex attribute buffer. */
   expandedGlyphVertexData: Buffer;
 };
 
@@ -979,14 +1109,23 @@ type AnyStorageTextInputProps = ArrowStorageTextInputProps | ArrowDictionaryStor
 
 /** Arrow-backed one-line text model that expands labels into glyph attribute instances. */
 export class ArrowAttributeTextModel extends ArrowModel {
+  /** Optional atlas manager retained when this model built the atlas. */
   fontAtlasManager?: FontAtlasManager;
+  /** Optional atlas texture owned by this model. */
   atlasTexture?: DynamicTexture;
+  /** One-line glyph offsets and atlas frames expanded from source text rows. */
   glyphLayout: ArrowGlyphLayout;
+  /** Optional character set accumulated while laying out glyphs. */
   characterSet?: Set<string>;
+  /** Expanded Arrow table containing glyph-instance columns. */
   glyphTable: arrow.Table;
+  /** CPU time spent building generated glyph-instance Arrow attributes. */
   glyphAttributeBuildTimeMs: number;
+  /** Bytes occupied by generated glyph-instance Arrow attributes. */
   glyphAttributeByteLength: number;
+  /** First generated expanded glyph vertex attribute buffer. */
   expandedGlyphVertexData: Buffer;
+  /** Generated render batches preserved for device buffer-size limits. */
   renderBatches: ArrowTextRenderBatchState[];
   private defaultFragmentShaderUniforms?: Record<string, unknown>;
   private textProps: ArrowTextModelProps;
@@ -994,6 +1133,7 @@ export class ArrowAttributeTextModel extends ArrowModel {
   private processedTextBatchCount: number;
   private processedTextRowCount: number;
 
+  /** Creates an attribute-backed Arrow text model from prepared text props. */
   constructor(device: Device, props: ArrowTextModelProps) {
     const prepared = prepareArrowTextModel(device, props);
     super(device, prepared.modelProps);
@@ -1160,6 +1300,7 @@ export class ArrowAttributeTextModel extends ArrowModel {
     this.setNeedsRedraw('Arrow text glyph batches appended');
   }
 
+  /** Draws each generated glyph render batch against the supplied render pass. */
   override draw(renderPass: RenderPass): boolean {
     const arrowBatches = this.arrowGPUTable?.batches;
     if (!arrowBatches || arrowBatches.length !== this.renderBatches.length) {
@@ -1191,6 +1332,7 @@ export class ArrowAttributeTextModel extends ArrowModel {
     return drawSuccess;
   }
 
+  /** Releases owned atlas and generated glyph render buffers. */
   override destroy(): void {
     this.atlasTexture?.destroy();
     destroyArrowTextRenderBatches(this.renderBatches);
@@ -1198,45 +1340,77 @@ export class ArrowAttributeTextModel extends ArrowModel {
   }
 }
 
+/** Backward-compatible alias for {@link ArrowAttributeTextModel}. */
 export {ArrowAttributeTextModel as ArrowTextModel};
 
 /**
  * WebGPU-only Arrow text model backed by reusable storage state.
  */
 export class ArrowStorageTextModel extends Model {
+  /** Optional atlas manager retained when this model built the atlas. */
   fontAtlasManager?: FontAtlasManager;
+  /** Optional atlas texture owned by this model storage state. */
   atlasTexture?: DynamicTexture;
+  /** Optional character set accumulated while laying out glyphs. */
   characterSet?: Set<string>;
+  /** Optional compact glyph stream retained for diagnostics. */
   glyphStream?: GpuExpandedTextStream;
+  /** Glyph instances across all preserved render batches. */
   glyphCount!: number;
+  /** CPU time spent building generated glyph attributes. */
   glyphAttributeBuildTimeMs!: number;
+  /** Bytes occupied by generated glyph attributes and render control buffers. */
   glyphAttributeByteLength!: number;
+  /** CPU time spent building compact glyph stream inputs. */
   compactStreamBuildTimeMs!: number;
+  /** Bytes occupied by compact glyph stream inputs. */
   compactStreamByteLength!: number;
+  /** Bytes occupied by generated compact glyph vertex buffers. */
   generatedRenderBufferByteLength!: number;
+  /** Bytes occupied by row glyph starts and per-render-batch config buffers. */
   renderControlByteLength!: number;
+  /** Bytes occupied by retained row style/default binding resources. */
   rowStorageByteLength!: number;
+  /** Bytes occupied by retained glyph frame/lookup definition resources. */
   glyphDefinitionStorageByteLength!: number;
+  /** Bytes occupied by transient compute input buffers released after expansion. */
   transientComputeInputByteLength!: number;
+  /** First batch label origin buffer. */
   rowPositionsBuffer!: StorageTextBuffer;
+  /** First batch packed RGBA8 row color buffer. */
   rowColorsBuffer!: StorageTextBuffer;
+  /** First batch row angle buffer. */
   rowAnglesBuffer!: StorageTextBuffer;
+  /** First batch row text size buffer. */
   rowSizesBuffer!: StorageTextBuffer;
+  /** First batch row pixel offset buffer. */
   rowPixelOffsetsBuffer!: StorageTextBuffer;
+  /** First batch packed row text anchor buffer. */
   rowTextAnchorsBuffer!: StorageTextBuffer;
+  /** First batch packed row alignment baseline buffer. */
   rowAlignmentBaselinesBuffer!: StorageTextBuffer;
+  /** First batch packed row clip rectangle buffer. */
   rowClipRectsBuffer!: Buffer;
+  /** First batch cumulative row glyph start buffer. */
   rowGlyphStartsBuffer!: Buffer;
+  /** First batch row style config uniform buffer. */
   styleConfigBuffer!: DynamicBuffer;
+  /** First render batch row/glyph lookup config uniform buffer. */
   storageRenderConfigBuffer!: DynamicBuffer;
+  /** Read-only storage buffer for glyph atlas frames. */
   glyphFramesBuffer!: Buffer;
+  /** First generated compact glyph vertex buffer. */
   compactGlyphVertexData!: Buffer;
+  /** Per-source-batch row bindings. */
   batches!: ArrowStorageTextBatchState[];
+  /** Generated render batches preserved for device buffer-size limits. */
   renderBatches!: ArrowStorageTextRenderBatchState[];
+  /** Reusable storage text expansion and row-binding state currently bound by the model. */
   storageState: ArrowStorageTextState;
   private textProps: ArrowStorageTextModelProps;
   private ownsStorageState: boolean;
 
+  /** Creates a WebGPU storage-backed Arrow text model. */
   constructor(device: Device, props: ArrowStorageTextModelProps) {
     if (device.type !== 'webgpu') {
       throw new Error('ArrowStorageTextModel is WebGPU-only');
@@ -1252,6 +1426,7 @@ export class ArrowStorageTextModel extends Model {
     this.applyStorageState(storageState);
   }
 
+  /** Updates storage text props, rebuilding state only when glyph/layout inputs change. */
   setProps(props: Partial<ArrowStorageTextModelProps>): void {
     const nextProps = {...this.textProps, ...props} as ArrowStorageTextModelProps;
     const nextUsesExternalState = hasArrowStorageTextState(nextProps);
@@ -1338,6 +1513,7 @@ export class ArrowStorageTextModel extends Model {
     this.setNeedsRedraw('Arrow storage text glyph batches appended');
   }
 
+  /** Draws each generated storage text render batch against the supplied render pass. */
   override draw(renderPass: RenderPass): boolean {
     let drawSuccess = true;
     const usePreparedDraw =
@@ -1376,6 +1552,7 @@ export class ArrowStorageTextModel extends Model {
     return drawSuccess;
   }
 
+  /** Releases owned storage text state plus inherited model resources. */
   override destroy(): void {
     if (this.ownsStorageState) {
       this.storageState.destroy();
@@ -1420,41 +1597,74 @@ export class ArrowStorageTextModel extends Model {
  * WebGPU-only Arrow text model that renders dictionary-encoded labels through shared glyph runs.
  */
 export class ArrowDictionaryTextModel extends Model {
+  /** Optional atlas manager retained when this model built the atlas. */
   fontAtlasManager?: FontAtlasManager;
+  /** Optional atlas texture owned by this model dictionary storage state. */
   atlasTexture?: DynamicTexture;
+  /** Optional character set accumulated while laying out glyphs. */
   characterSet?: Set<string>;
+  /** Optional compressed dictionary glyph stream retained for diagnostics. */
   glyphStream?: GpuDictionaryCompressedTextStream;
+  /** Visible glyph instances across all source text rows. */
   glyphCount!: number;
+  /** Shared glyph records across unique dictionary values. */
   dictionaryGlyphCount!: number;
+  /** Normalized dictionary values retained across Arrow data chunks. */
   dictionaryValueCount!: number;
+  /** CPU time spent building generated glyph attributes. */
   glyphAttributeBuildTimeMs!: number;
+  /** Bytes occupied by generated glyph attributes. */
   glyphAttributeByteLength!: number;
+  /** CPU time spent building compressed dictionary glyph stream inputs. */
   compactStreamBuildTimeMs!: number;
+  /** Bytes occupied by compressed dictionary glyph stream inputs. */
   compactStreamByteLength!: number;
+  /** Bytes occupied by generated compact glyph vertex buffers. */
   generatedRenderBufferByteLength!: number;
+  /** Bytes occupied by retained row style/default binding resources. */
   rowStorageByteLength!: number;
+  /** Bytes occupied by retained glyph frame definitions. */
   glyphDefinitionStorageByteLength!: number;
+  /** Bytes occupied by transient compute input buffers released after expansion. */
   transientComputeInputByteLength!: number;
+  /** First batch label origin buffer. */
   rowPositionsBuffer!: StorageTextBuffer;
+  /** First batch packed RGBA8 row color buffer. */
   rowColorsBuffer!: StorageTextBuffer;
+  /** First batch row angle buffer. */
   rowAnglesBuffer!: StorageTextBuffer;
+  /** First batch row text size buffer. */
   rowSizesBuffer!: StorageTextBuffer;
+  /** First batch row pixel offset buffer. */
   rowPixelOffsetsBuffer!: StorageTextBuffer;
+  /** First batch packed row text anchor buffer. */
   rowTextAnchorsBuffer!: StorageTextBuffer;
+  /** First batch packed row alignment baseline buffer. */
   rowAlignmentBaselinesBuffer!: StorageTextBuffer;
+  /** First batch packed row clip rectangle buffer. */
   rowClipRectsBuffer!: Buffer;
+  /** First batch per-row dictionary reference buffer. */
   rowDictionaryRecordsBuffer!: Buffer;
+  /** First batch per-dictionary-value glyph range buffer. */
   dictionaryGlyphRangesBuffer!: Buffer;
+  /** First batch shared dictionary glyph record buffer. */
   dictionaryGlyphRecordsBuffer!: Buffer;
+  /** First batch row style config uniform buffer. */
   styleConfigBuffer!: DynamicBuffer;
+  /** Read-only storage buffer for glyph atlas frames. */
   glyphFramesBuffer!: Buffer;
+  /** First render batch dictionary lookup config uniform buffer. */
   dictionaryRenderConfigBuffer!: DynamicBuffer;
+  /** Per-source-batch row and dictionary glyph bindings. */
   batches!: ArrowDictionaryStorageTextBatchState[];
+  /** Generated render batches preserved for device buffer-size limits. */
   renderBatches!: ArrowDictionaryStorageTextRenderBatchState[];
+  /** Reusable compressed dictionary text storage state currently bound by the model. */
   storageState: ArrowDictionaryStorageTextState;
   private textProps: ArrowDictionaryStorageTextModelProps;
   private ownsStorageState: boolean;
 
+  /** Creates a WebGPU compressed dictionary Arrow text model. */
   constructor(device: Device, props: ArrowDictionaryStorageTextModelProps) {
     if (device.type !== 'webgpu') {
       throw new Error('ArrowDictionaryStorageTextModel is WebGPU-only');
@@ -1470,6 +1680,7 @@ export class ArrowDictionaryTextModel extends Model {
     this.applyStorageState(storageState);
   }
 
+  /** Updates dictionary text props, rebuilding state only when glyph/layout inputs change. */
   setProps(props: Partial<ArrowDictionaryStorageTextModelProps>): void {
     const nextProps = {...this.textProps, ...props} as ArrowDictionaryStorageTextModelProps;
     const nextUsesExternalState = hasArrowDictionaryStorageTextState(nextProps);
@@ -1544,6 +1755,7 @@ export class ArrowDictionaryTextModel extends Model {
     this.setNeedsRedraw('Arrow dictionary storage text state updated');
   }
 
+  /** Draws each compressed dictionary text render batch against the supplied render pass. */
   override draw(renderPass: RenderPass): boolean {
     let drawSuccess = true;
     const usePreparedDraw =
@@ -1583,6 +1795,7 @@ export class ArrowDictionaryTextModel extends Model {
     return drawSuccess;
   }
 
+  /** Releases owned dictionary text state plus inherited model resources. */
   override destroy(): void {
     if (this.ownsStorageState) {
       this.storageState.destroy();
@@ -1625,16 +1838,26 @@ export class ArrowDictionaryTextModel extends Model {
   }
 }
 
+/** Backward-compatible alias for {@link ArrowDictionaryTextModel}. */
 export {ArrowDictionaryTextModel as ArrowDictionaryStorageTextModel};
 
+/** Props alias matching {@link ArrowAttributeTextModel}. */
 export type ArrowAttributeTextModelProps = ArrowTextModelProps;
+/** Source vector alias matching {@link ArrowAttributeTextModel}. */
 export type ArrowAttributeTextSourceVectors = ArrowTextSourceVectors;
+/** Render batch alias matching {@link ArrowAttributeTextModel}. */
 export type ArrowAttributeTextRenderBatchState = ArrowTextRenderBatchState;
+/** Input props alias matching {@link ArrowDictionaryTextModel}. */
 export type ArrowDictionaryTextInputProps = ArrowDictionaryStorageTextInputProps;
+/** Model props alias matching {@link ArrowDictionaryTextModel}. */
 export type ArrowDictionaryTextModelProps = ArrowDictionaryStorageTextModelProps;
+/** Source vector alias matching {@link ArrowDictionaryTextModel}. */
 export type ArrowDictionaryTextSourceVectors = ArrowDictionaryStorageTextSourceVectors;
+/** Storage state alias matching {@link ArrowDictionaryTextModel}. */
 export type ArrowDictionaryTextState = ArrowDictionaryStorageTextState;
+/** Batch state alias matching {@link ArrowDictionaryTextModel}. */
 export type ArrowDictionaryTextBatchState = ArrowDictionaryStorageTextBatchState;
+/** Render batch state alias matching {@link ArrowDictionaryTextModel}. */
 export type ArrowDictionaryTextRenderBatchState = ArrowDictionaryStorageTextRenderBatchState;
 
 function drawPreparedStorageTextModelBatch(model: Model, renderPass: RenderPass): boolean {
@@ -2695,6 +2918,7 @@ function createExpandedGlyphVertexData(
   };
 }
 
+/** Builds reusable WebGPU storage text expansion and row-binding state. */
 export function createArrowStorageTextState(
   device: Device,
   props: ArrowStorageTextInputProps
@@ -3035,6 +3259,7 @@ export function createArrowStorageTextState(
   return storageState;
 }
 
+/** Builds reusable WebGPU compressed dictionary text storage state. */
 export function createArrowDictionaryStorageTextState(
   device: Device,
   props: ArrowDictionaryStorageTextInputProps

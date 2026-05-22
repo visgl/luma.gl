@@ -43,6 +43,7 @@ export class GPUTableModel extends Model {
   private readonly tableState: GPUTableModelState;
   private drawingTableBatches = false;
 
+  /** Creates a model whose table-backed attributes and bindings can be rebound by batch. */
   constructor(device: Device, props: GPUTableModelProps) {
     const {table, modelProps, state} = getGPUTableModelConstructorState(props);
     super(device, modelProps);

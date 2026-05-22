@@ -39,6 +39,7 @@ import {
   type AttributeArrowType,
   type VariableLengthAttributeArrowType
 } from './arrow-types';
+import {getArrowMatrixVectorInfo} from './arrow-matrix-vector';
 
 const appendableColumnsByBatch = new WeakMap<GPURecordBatch, AppendableGPUColumn[]>();
 
@@ -218,7 +219,18 @@ export function makeArrowGPUVector<T extends arrow.DataType>(
     });
   }
 
-  if (!isInstanceArrowType(arrowType)) {
+  const matrixInfo = getArrowMatrixVectorInfo(vector);
+  const isCanonicalFloat32Matrix =
+    matrixInfo?.valueType === 'float32' &&
+    matrixInfo.order === 'column-major' &&
+    matrixInfo.layout === 'wgsl-storage';
+  if (matrixInfo && !isCanonicalFloat32Matrix) {
+    throw new Error(
+      'GPUVector matrix columns require canonical Float32 column-major wgsl-storage values; use prepareArrowMatrixGPUVector() first'
+    );
+  }
+
+  if (!isInstanceArrowType(arrowType) && !isCanonicalFloat32Matrix) {
     throw new Error(`GPUVector does not support Arrow type ${arrowType}`);
   }
 

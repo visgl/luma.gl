@@ -1,0 +1,378 @@
+// luma.gl
+// SPDX-License-Identifier: MIT
+// Copyright (c) vis.gl contributors
+
+import {Buffer, type Binding, type Device, type ShaderLayout} from '@luma.gl/core';
+import {Computation, DynamicBuffer} from '@luma.gl/engine';
+import {fp64arithmetic, type ShaderModule} from '@luma.gl/shadertools';
+import {GPUData, GPUVector} from '@luma.gl/tables';
+import * as arrow from 'apache-arrow';
+import {getArrowVectorBufferSource} from './arrow-gpu-data';
+import {
+  getArrowMatrixVectorInfo,
+  makeArrowMatrixVector,
+  type ArrowMatrixValueType,
+  type ArrowMatrixVectorInfo
+} from './arrow-matrix-vector';
+
+type ArrowMatrixVector = arrow.Vector<arrow.FixedSizeList<ArrowMatrixValueType>>;
+type ArrowMatrixGPUVector = GPUVector<arrow.FixedSizeList<ArrowMatrixValueType>>;
+
+/** Options used when preparing one Arrow matrix column for GPU consumption. */
+export type PrepareArrowMatrixGPUVectorOptions = {
+  /** Stable GPU vector name. Defaults to `matrix`. */
+  name?: string;
+  /** Stable resource id prefix. Defaults to the vector name. */
+  id?: string;
+};
+
+/** Canonical Float32 matrix GPU vector plus recovered source/output metadata. */
+export type PreparedArrowMatrixGPUVector = {
+  /** Canonical column-major WGSL-storage matrix GPU vector. */
+  matrix: GPUVector<arrow.FixedSizeList<arrow.Float32>>;
+  /** Alias for callers that prefer the generic vector name. */
+  vector: GPUVector<arrow.FixedSizeList<arrow.Float32>>;
+  /** Source matrix metadata recovered before preparation. */
+  sourceInfo: ArrowMatrixVectorInfo;
+  /** Canonical output matrix metadata. */
+  matrixInfo: ArrowMatrixVectorInfo;
+  /** Releases owned GPU resources. */
+  destroy: () => void;
+};
+
+const MATRIX_PREPARE_SHADER_LAYOUT: ShaderLayout = {
+  bindings: [
+    {name: 'sourceMatrixValues', type: 'read-only-storage', group: 0, location: 0},
+    {name: 'matrixPrepareConfig', type: 'read-only-storage', group: 0, location: 1},
+    {name: 'preparedMatrixValues', type: 'storage', group: 0, location: 2}
+  ],
+  attributes: []
+};
+
+/** Prepare one metadata-tagged Arrow matrix column as canonical Float32 GPU storage. */
+export async function prepareArrowMatrixGPUVector(
+  device: Device,
+  source: ArrowMatrixVector | ArrowMatrixGPUVector,
+  options: PrepareArrowMatrixGPUVectorOptions = {}
+): Promise<PreparedArrowMatrixGPUVector> {
+  const sourceInfo = getRequiredArrowMatrixVectorInfo(source);
+  const name = options.name || 'matrix';
+  const id = options.id || name;
+
+  if (source instanceof GPUVector) {
+    if (isCanonicalFloat32Matrix(sourceInfo)) {
+      const matrix = source as GPUVector<arrow.FixedSizeList<arrow.Float32>>;
+      return createPreparedArrowMatrixGPUVector(matrix, sourceInfo, false);
+    }
+    if (device.type !== 'webgpu') {
+      throw new Error('prepareArrowMatrixGPUVector requires WebGPU for non-canonical GPU matrices');
+    }
+    return prepareArrowMatrixGPUVectorOnGPU(device, source, sourceInfo, {name, id});
+  }
+
+  const canonicalVector = isCanonicalFloat32Matrix(sourceInfo)
+    ? (source as arrow.Vector<arrow.FixedSizeList<arrow.Float32>>)
+    : makeCanonicalArrowMatrixVector(source, sourceInfo);
+  const matrix = makeArrowMatrixGPUVector(device, canonicalVector, {name, id});
+  return createPreparedArrowMatrixGPUVector(matrix, sourceInfo, true);
+}
+
+function createPreparedArrowMatrixGPUVector(
+  matrix: GPUVector<arrow.FixedSizeList<arrow.Float32>>,
+  sourceInfo: ArrowMatrixVectorInfo,
+  ownsMatrix: boolean
+): PreparedArrowMatrixGPUVector {
+  const matrixInfo = getRequiredArrowMatrixVectorInfo(matrix);
+  let destroyed = false;
+  return {
+    matrix,
+    vector: matrix,
+    sourceInfo,
+    matrixInfo,
+    destroy: () => {
+      if (!ownsMatrix || destroyed) {
+        return;
+      }
+      destroyed = true;
+      matrix.destroy();
+    }
+  };
+}
+
+async function prepareArrowMatrixGPUVectorOnGPU(
+  device: Device,
+  source: ArrowMatrixGPUVector,
+  sourceInfo: ArrowMatrixVectorInfo,
+  options: Required<Pick<PrepareArrowMatrixGPUVectorOptions, 'name' | 'id'>>
+): Promise<PreparedArrowMatrixGPUVector> {
+  const outputType = makeArrowMatrixVector(
+    sourceInfo.shape,
+    new Float32Array(sourceInfo.logicalComponentCount)
+  ).type;
+  const outputInfo = getRequiredArrowMatrixVectorInfo({type: outputType});
+  const outputData: GPUData<arrow.FixedSizeList<arrow.Float32>>[] = [];
+  const transientResources: Array<{destroy: () => void}> = [];
+
+  for (const [chunkIndex, sourceData] of source.data.entries()) {
+    const configBuffer = device.createBuffer({
+      id: `${options.id}-matrix-config-${chunkIndex}`,
+      usage: Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
+      data: new Uint32Array([
+        sourceData.length,
+        sourceInfo.columns,
+        sourceInfo.rows,
+        sourceInfo.physicalComponentCount,
+        sourceInfo.columnStride,
+        outputInfo.physicalComponentCount,
+        outputInfo.columnStride,
+        sourceInfo.order === 'row-major' ? 1 : 0
+      ])
+    });
+    const outputBuffer = new DynamicBuffer(device, {
+      id: `${options.id}-matrix-values-${chunkIndex}`,
+      usage: Buffer.VERTEX | Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
+      byteLength: Math.max(
+        Float32Array.BYTES_PER_ELEMENT,
+        sourceData.length * outputInfo.byteStride
+      )
+    });
+    dispatchArrowMatrixPreparation(device, sourceInfo, {
+      id: options.id,
+      chunkIndex,
+      scalarCount: sourceData.length * outputInfo.physicalComponentCount,
+      sourceMatrixValues: getGPUDataBinding(sourceData),
+      matrixPrepareConfig: configBuffer,
+      preparedMatrixValues: outputBuffer
+    });
+    outputData.push(
+      new GPUData({
+        buffer: outputBuffer,
+        dataType: outputType,
+        length: sourceData.length,
+        stride: outputInfo.physicalComponentCount,
+        byteStride: outputInfo.byteStride,
+        rowByteLength: outputInfo.byteStride,
+        ownsBuffer: true
+      })
+    );
+    transientResources.push(configBuffer);
+  }
+
+  await waitForSubmittedWork(device);
+  for (const resource of transientResources) {
+    resource.destroy();
+  }
+
+  const matrix = new GPUVector({
+    type: 'data',
+    name: options.name,
+    dataType: outputType,
+    data: outputData,
+    stride: outputInfo.physicalComponentCount,
+    byteStride: outputInfo.byteStride,
+    rowByteLength: outputInfo.byteStride,
+    ownsData: true
+  });
+  return createPreparedArrowMatrixGPUVector(matrix, sourceInfo, true);
+}
+
+function dispatchArrowMatrixPreparation(
+  device: Device,
+  sourceInfo: ArrowMatrixVectorInfo,
+  props: {
+    id: string;
+    chunkIndex: number;
+    scalarCount: number;
+    sourceMatrixValues: Binding;
+    matrixPrepareConfig: Binding;
+    preparedMatrixValues: Binding;
+  }
+): void {
+  const computation = new Computation(device, {
+    id: `${props.id}-matrix-prepare-${props.chunkIndex}`,
+    source: getArrowMatrixPrepareSource(sourceInfo),
+    ...(sourceInfo.valueType === 'float64' ? {modules: [fp64arithmetic as ShaderModule]} : {}),
+    shaderLayout: MATRIX_PREPARE_SHADER_LAYOUT,
+    bindings: {
+      sourceMatrixValues: props.sourceMatrixValues,
+      matrixPrepareConfig: props.matrixPrepareConfig,
+      preparedMatrixValues: props.preparedMatrixValues
+    }
+  });
+  if (props.scalarCount > 0) {
+    const computePass = device.beginComputePass({});
+    computation.dispatch(computePass, Math.ceil(props.scalarCount / 64));
+    computePass.end();
+    device.submit();
+  }
+  computation.destroy();
+}
+
+function getArrowMatrixPrepareSource(sourceInfo: ArrowMatrixVectorInfo): string {
+  const sourceType = sourceInfo.valueType === 'float64' ? 'array<vec2<u32>>' : 'array<f32>';
+  const readSourceScalar =
+    sourceInfo.valueType === 'float64'
+      ? `
+fn readSourceScalar(scalarIndex : u32) -> f32 {
+  return sub_fp64u32_to_f32(sourceMatrixValues[scalarIndex].yx, vec2<u32>(0u, 0u));
+}
+`
+      : `
+fn readSourceScalar(scalarIndex : u32) -> f32 {
+  return sourceMatrixValues[scalarIndex];
+}
+`;
+  return /* wgsl */ `
+@group(0) @binding(0) var<storage, read> sourceMatrixValues : ${sourceType};
+@group(0) @binding(1) var<storage, read> matrixPrepareConfig : array<u32>;
+@group(0) @binding(2) var<storage, read_write> preparedMatrixValues : array<f32>;
+
+${readSourceScalar}
+
+fn getSourceScalarIndex(matrixIndex : u32, columnIndex : u32, rowIndex : u32) -> u32 {
+  let columns = matrixPrepareConfig[1];
+  let sourcePhysicalComponentCount = matrixPrepareConfig[3];
+  let sourceColumnStride = matrixPrepareConfig[4];
+  let sourceOrder = matrixPrepareConfig[7];
+  let matrixOffset = matrixIndex * sourcePhysicalComponentCount;
+  if (sourceOrder == 0u) {
+    return matrixOffset + columnIndex * sourceColumnStride + rowIndex;
+  }
+  return matrixOffset + rowIndex * columns + columnIndex;
+}
+
+@compute @workgroup_size(64)
+fn main(@builtin(global_invocation_id) globalInvocationId : vec3<u32>) {
+  let scalarIndex = globalInvocationId.x;
+  let rowCount = matrixPrepareConfig[0];
+  let columns = matrixPrepareConfig[1];
+  let rows = matrixPrepareConfig[2];
+  let targetPhysicalComponentCount = matrixPrepareConfig[5];
+  let targetColumnStride = matrixPrepareConfig[6];
+  if (scalarIndex >= rowCount * targetPhysicalComponentCount) {
+    return;
+  }
+
+  let matrixIndex = scalarIndex / targetPhysicalComponentCount;
+  let matrixScalarIndex = scalarIndex % targetPhysicalComponentCount;
+  let columnIndex = matrixScalarIndex / targetColumnStride;
+  let rowIndex = matrixScalarIndex % targetColumnStride;
+  if (columnIndex >= columns || rowIndex >= rows) {
+    preparedMatrixValues[scalarIndex] = 0.0;
+    return;
+  }
+  preparedMatrixValues[scalarIndex] = readSourceScalar(
+    getSourceScalarIndex(matrixIndex, columnIndex, rowIndex)
+  );
+}
+`;
+}
+
+function makeCanonicalArrowMatrixVector(
+  source: ArrowMatrixVector,
+  sourceInfo: ArrowMatrixVectorInfo
+): arrow.Vector<arrow.FixedSizeList<arrow.Float32>> {
+  const sourceValues = getArrowVectorBufferSource(source as arrow.Vector<any>) as
+    | Float32Array
+    | Float64Array;
+  const canonicalValues = new Float32Array(source.length * sourceInfo.logicalComponentCount);
+
+  for (let matrixIndex = 0; matrixIndex < source.length; matrixIndex++) {
+    const targetMatrixOffset = matrixIndex * sourceInfo.logicalComponentCount;
+    for (let columnIndex = 0; columnIndex < sourceInfo.columns; columnIndex++) {
+      for (let rowIndex = 0; rowIndex < sourceInfo.rows; rowIndex++) {
+        canonicalValues[targetMatrixOffset + columnIndex * sourceInfo.rows + rowIndex] = Number(
+          sourceValues[getMatrixSourceScalarIndex(sourceInfo, matrixIndex, columnIndex, rowIndex)]
+        );
+      }
+    }
+  }
+
+  return makeArrowMatrixVector(sourceInfo.shape, canonicalValues);
+}
+
+function makeArrowMatrixGPUVector(
+  device: Device,
+  vector: arrow.Vector<arrow.FixedSizeList<arrow.Float32>>,
+  options: Required<Pick<PrepareArrowMatrixGPUVectorOptions, 'name' | 'id'>>
+): GPUVector<arrow.FixedSizeList<arrow.Float32>> {
+  const matrixInfo = getRequiredArrowMatrixVectorInfo(vector);
+  const buffer = new DynamicBuffer(device, {
+    id: options.id,
+    usage: Buffer.VERTEX | Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
+    data: getArrowVectorBufferSource(vector as arrow.Vector<any>) as Float32Array
+  });
+  let byteOffset = 0;
+  const data = vector.data.map(chunk => {
+    const gpuData = new GPUData({
+      buffer,
+      dataType: chunk.type as arrow.FixedSizeList<arrow.Float32>,
+      length: chunk.length,
+      stride: matrixInfo.physicalComponentCount,
+      byteOffset,
+      byteStride: matrixInfo.byteStride,
+      rowByteLength: matrixInfo.byteStride,
+      ownsBuffer: false
+    });
+    byteOffset += chunk.length * matrixInfo.byteStride;
+    return gpuData;
+  });
+  return new GPUVector({
+    type: 'data',
+    name: options.name,
+    dataType: vector.type,
+    data,
+    buffer,
+    stride: matrixInfo.physicalComponentCount,
+    byteStride: matrixInfo.byteStride,
+    rowByteLength: matrixInfo.byteStride,
+    ownsBuffer: true
+  });
+}
+
+function getMatrixSourceScalarIndex(
+  matrixInfo: ArrowMatrixVectorInfo,
+  matrixIndex: number,
+  columnIndex: number,
+  rowIndex: number
+): number {
+  const matrixOffset = matrixIndex * matrixInfo.physicalComponentCount;
+  return matrixInfo.order === 'column-major'
+    ? matrixOffset + columnIndex * matrixInfo.columnStride + rowIndex
+    : matrixOffset + rowIndex * matrixInfo.columns + columnIndex;
+}
+
+function getRequiredArrowMatrixVectorInfo(
+  vector: Pick<arrow.Vector, 'type'> | Pick<GPUVector, 'type'>
+): ArrowMatrixVectorInfo {
+  const matrixInfo = getArrowMatrixVectorInfo(vector as Pick<arrow.Vector, 'type'>);
+  if (!matrixInfo) {
+    throw new Error(
+      'prepareArrowMatrixGPUVector requires FixedSizeList<Float32|Float64> matrix metadata'
+    );
+  }
+  return matrixInfo;
+}
+
+function isCanonicalFloat32Matrix(matrixInfo: ArrowMatrixVectorInfo): boolean {
+  return (
+    matrixInfo.valueType === 'float32' &&
+    matrixInfo.order === 'column-major' &&
+    matrixInfo.layout === 'wgsl-storage'
+  );
+}
+
+function getGPUDataBinding(data: GPUData<any>): Binding {
+  return {
+    buffer: data.buffer.buffer,
+    offset: data.byteOffset,
+    size: data.length * data.byteStride
+  };
+}
+
+async function waitForSubmittedWork(device: Device): Promise<void> {
+  const queue = (
+    device as Device & {handle?: {queue?: {onSubmittedWorkDone?: () => Promise<void>}}}
+  ).handle?.queue;
+  await queue?.onSubmittedWorkDone?.();
+}

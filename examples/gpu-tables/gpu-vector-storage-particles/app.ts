@@ -9,7 +9,7 @@ import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate, Model} from '@luma.gl/engine';
 import * as arrow from 'apache-arrow';
 
-export const title = 'Arrow Particles';
+export const title = 'Particles: FixedSizeList<Float32, 3>';
 export const description =
   'Arrow-created GPUVectors updated through storage compute or transform feedback.';
 
@@ -196,7 +196,7 @@ export default class GPUVectorStorageParticlesAnimationLoopTemplate extends Anim
     super();
 
     if (device.type !== 'webgpu' && device.type !== 'webgl') {
-      throw new Error('Arrow Particles requires WebGPU or WebGL2');
+      throw new Error('Particles: FixedSizeList<Float32, 3> requires WebGPU or WebGL2');
     }
 
     const particleVectors = makeParticleVectors(device);

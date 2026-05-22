@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
+/** WGSL source for fp64 arithmetic helpers and raw binary64-to-Float32 subtraction. */
 export const fp64arithmeticWGSL = /* wgsl */ `\
 struct Fp64ArithmeticUniforms {
   ONE: f32,

@@ -33,7 +33,7 @@ import {
 } from '@luma.gl/text';
 import * as arrow from 'apache-arrow';
 
-export const title = 'Arrow Text';
+export const title = 'Text: Utf8/Dictionary<Utf8>';
 export const description = 'Generated Arrow UTF-8 labels expanded into GPU glyph instances.';
 
 const LABEL_COLUMN_COUNT = 400;

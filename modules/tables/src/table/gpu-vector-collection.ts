@@ -27,7 +27,7 @@ export type GPUVectorCollectionProps = {
 export type GPUVectorCollection = {
   /** Normalized vector map keyed by vector name. */
   gpuVectors: GPUVectorMap;
-  /** Model-ready attributes keyed by shader attribute name. */
+  /** Model-ready attribute buffers keyed by buffer layout name. */
   attributes: Record<string, Buffer | DynamicBuffer>;
   /** Buffer layouts preserving the normalized vector iteration order. */
   bufferLayout: BufferLayout[];
@@ -93,12 +93,6 @@ function addGPUVectorAttributes(
   bufferLayout: BufferLayout,
   buffer: Buffer | DynamicBuffer
 ): void {
-  if (bufferLayout.attributes) {
-    for (const attribute of bufferLayout.attributes) {
-      attributes[attribute.attribute] = buffer;
-    }
-    return;
-  }
   attributes[bufferLayout.name] = buffer;
 }
 
