@@ -12,12 +12,17 @@ import {getArrowVariableLengthAttributeDataBufferSource} from './arrow-gpu-data'
 type ArrowPathCoordinateType = arrow.List<arrow.FixedSizeList<arrow.Float32>>;
 type ArrowPathFloat64CoordinateType = arrow.List<arrow.FixedSizeList<arrow.Float64>>;
 
+/** Stable resource naming options for WebGPU Float64 path delta preparation. */
 export type GpuPathFloat64DeltaPreparationOptions = {
+  /** Stable resource id prefix. */
   id?: string;
 };
 
+/** Prepared Float32 path deltas plus retained Float64 source origins. */
 export type GpuPathFloat64DeltaPreparation = {
+  /** Prepared Float32 path deltas, one Arrow row per path. */
   paths: GPUVector<ArrowPathCoordinateType>;
+  /** First Float64 source point per path row, padded to four components. */
   sourceOrigins: Float64Array;
 };
 
@@ -81,6 +86,7 @@ const GPU_PATH_FLOAT64_DELTA_SHADER_LAYOUT: ShaderLayout = {
   attributes: []
 };
 
+/** Converts Float64 Arrow path rows into per-row Float32 deltas with WebGPU compute. */
 export async function prepareGpuPathFloat64DeltaVector(
   device: Device,
   paths: arrow.Vector<ArrowPathFloat64CoordinateType>,

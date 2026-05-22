@@ -24,15 +24,18 @@ Target Release Date: Q3, 2026
 - **Mesh Arrow geometry** - New `ArrowTableGeometry`, `makeGPUGeometryFromArrow()`, and `ArrowModel` support loaders.gl-compatible Mesh Arrow tables, including default interleaved vertex buffers and optional index buffers. `ArrowGeometry` remains a compatibility alias.
 - **Arrow table adapters** - Arrow table/vector upload, append, and readback utilities now layer over reusable generic GPU table objects from `@luma.gl/tables`.
 - **[Columnar GPU tables](/docs/api-guide/gpu/arrow-table-columns)** - Matrix Arrow vectors, storage-selected table bindings, Arrow adapters, and the generic tables execution layer.
-- **[GPU Tables examples](/examples/gpu-tables/arrow-instancing)** - Arrow instancing, 2D text, path rendering, mesh geometry, and storage particles now live in the GPU Tables section.
-- **[Arrow Path Model Example](/examples/gpu-tables/arrow-path-model)** - New showcase expands nested Arrow XYZM path rows into styled GPU segment instances with attribute-backed and storage-backed models, with M-driven time highlighting plus square/round caps, miter/round joins, and adjustable miter limits.
-- **[Arrow Instancing Example](/examples/gpu-tables/arrow-instancing)** - New showcase example renders instanced cubes from an Apache Arrow table.
+- **[Apache Arrow GPU Tables examples](/examples/gpu-tables/arrow-instancing)** - Instancing: `FixedSizeList<Float32, 2>`, Text: `Utf8`/`Dictionary<Utf8>`, Time: `Date`/`Time`/`Timestamp`/`Duration`, Starfield: `Timestamp`/`Duration`, Paths: `List<FixedSizeList<Float32, 4>>` + `List<Timestamp>`, Matrices: `FixedSizeList<Float32, 16>`, Particles: `FixedSizeList<Float32, 3>`, and Global Grids: `Uint64`, `Utf8` for geohash, quadkey, S2, A5, and H3 now live in the Apache Arrow GPU Tables section.
+- **[Time Columns Example](/examples/gpu-tables/arrow-time-columns)** - New showcase prepares aligned scalar `DateDay`, `TimeMillisecond`, `TimestampMillisecond`, and `DurationMillisecond` rows into relative Float32 GPU vectors, then renders the same schedule through instanced attributes or WebGPU storage bindings.
+- **[Blinking Stars Example](/examples/gpu-tables/arrow-temporal-starfield)** - New showcase prepares aligned scalar `TimestampMillisecond` and `DurationMillisecond` rows into relative Float32 GPU vectors, then uses them as per-instance visibility windows and pulse periods through instanced attributes or WebGPU storage bindings.
+- **[Paths Example](/examples/gpu-tables/arrow-path-model)** - New showcase expands nested Arrow XYZM path rows into styled GPU segment instances with attribute-backed and storage-backed models, then adds an `ArrowStorageTripsPathModel` mode that prepares aligned `List<Timestamp>` rows into relative Float32 milliseconds for storage-backed trail filtering.
+- **[Instancing Example](/examples/gpu-tables/arrow-instancing)** - New showcase example renders instanced cubes from an Apache Arrow table.
 
 **@luma.gl/text**
 
-- **Arrow-native 2D text** - New atlas, layout, and UTF-8 glyph expansion utilities support deck.gl-style text extraction into `@luma.gl/text`.
-- **`ArrowTextModel`** - New `ArrowModel`-derived one-line label renderer expands UTF-8 `GPUVector` rows into glyph instances without row-level string materialization, using explicit top-level row vectors such as `positions`, `colors`, `angles`, `sizes`, and `pixelOffsets`.
+- **Arrow-native 2D text** - New atlas, layout, and UTF-8 glyph expansion utilities support deck.gl-style text extraction into `@luma.gl/text`, including dictionary-encoded UTF-8 columns.
+- **`ArrowTextModel`** - New `ArrowModel`-derived one-line label renderer expands UTF-8 or dictionary-encoded UTF-8 `GPUVector` rows into glyph instances without row-level string materialization, using explicit top-level row vectors such as `positions`, `colors`, `angles`, `sizes`, and `pixelOffsets`.
 - **`ArrowStorageTextModel`** - New WebGPU-only storage-backed text path consumes batched GPUVector row/text inputs directly, can read row color/angle/size/pixel-offset styling plus compact text-anchor and baseline enums from aligned GPUVectors with fixed shader bindings and constant fallbacks, expands render buffers with compute, and can consume reusable `ArrowStorageTextState` objects built by `createArrowStorageTextState`.
+- **`ArrowDictionaryTextModel`** - New WebGPU-only dictionary text path keeps repeated dictionary strings compressed in shared glyph runs while rows retain compact dictionary references.
 - **Packed generated glyph vertex data** - Attribute text uses `expandedGlyphVertexData`, while storage text uses `compactGlyphVertexData`, reducing generated glyph buffer fan-out without folding caller-owned row/style vectors into generated records.
 - **GPU UTF-8 shader mapping** - Reusable text-module WGSL helpers compose sparse UTF-8 byte traversal, code point decode, and storage lookup into one-pass text compute kernels.
 - **Packed text clipping** - Arrow 2D text accepts optional `FixedSizeList<Int16>[4]` clip rectangles and expands them into 8-byte per-glyph clipping attributes only when clipping is enabled.
@@ -62,6 +65,8 @@ Target Release Date: Q3, 2026
 
 **@luma.gl/shadertools**
 
+- **[`colors`, `floatColors`, and `storageColors`](/docs/api-reference/shadertools/shader-modules/float-colors)** - Semantic color normalization now has a `colors` helper namespace, the legacy `floatColors` alias remains available, and WebGPU shaders can read packed RGBA storage rows through `storageColors`.
+- **[`dggs`](/docs/api-reference/shadertools/shader-modules/dggs)** - New WGSL helper module decodes compact Uint64 DGGS cell keys for WebGPU storage and boundary extraction workflows.
 - **`ShaderPassPipeline`** - New shader-pass pipeline type for structured multi-pass postprocessing.
 - **`waterMaterial`** - New water material shader module with GLSL and WGSL shaders.
 

@@ -11,59 +11,97 @@ import type {
 } from './arrow-text';
 import {getGpuUtf8MapShaderBindings, getGpuUtf8MapShaderSource} from './gpu-utf8-map';
 
+/** Read-only storage buffer containing shared glyph anchor/advance pairs. */
 export type StorageGlyphMetricState = {
+  /** Read-only storage buffer consumed by text expansion compute. */
   buffer: Buffer;
+  /** Logical bytes occupied by glyph metric data. */
   byteLength: number;
 };
 
+/** Read-only storage buffer containing UTF-8 code point to glyph id lookup rows. */
 export type StorageGlyphLookupState = {
+  /** Read-only storage buffer consumed by UTF-8 text expansion compute. */
   buffer: Buffer;
+  /** Logical bytes occupied by glyph lookup data. */
   byteLength: number;
 };
 
+/** Read-only compact glyph stream inputs consumed by WebGPU text expansion. */
 export type GpuExpandedCompactInputState = {
+  /** Per-row half-open glyph range buffer. */
   glyphRangesBuffer: Buffer;
+  /** Packed glyph definition id buffer. */
   glyphIdsBuffer: Buffer;
+  /** Read-only text expansion config buffer. */
   expansionConfigBuffer: Buffer;
+  /** Logical bytes occupied by compact glyph stream inputs. */
   byteLength: number;
 };
 
+/** Read-only plain UTF-8 text inputs consumed by WebGPU text expansion. */
 export type GpuUtf8ExpandedInputState = {
+  /** Per-row half-open UTF-8 byte range buffer. */
   rowByteRangesBuffer: Buffer;
+  /** Packed UTF-8 byte buffer. */
   utf8BytesBuffer: Buffer;
+  /** Read-only text expansion config buffer. */
   expansionConfigBuffer: Buffer;
+  /** Logical bytes occupied by plain UTF-8 text inputs. */
   byteLength: number;
 };
 
+/** Read-only dictionary UTF-8 text inputs consumed by WebGPU text expansion. */
 export type GpuDictionaryUtf8ExpandedInputState = {
+  /** Per-dictionary-value half-open UTF-8 byte range buffer. */
   dictionaryValueByteRangesBuffer: Buffer;
+  /** Packed dictionary UTF-8 byte buffer. */
   dictionaryUtf8BytesBuffer: Buffer;
+  /** Per-row normalized dictionary value index buffer. */
   rowDictionaryIndicesBuffer: Buffer;
+  /** Per-row half-open output glyph range buffer. */
   rowOutputGlyphRangesBuffer: Buffer;
+  /** Logical bytes occupied by dictionary UTF-8 text inputs. */
   byteLength: number;
 };
 
+/** Read-only dictionary UTF-8 text expansion config buffer. */
 export type GpuDictionaryUtf8ExpansionConfigState = {
+  /** Read-only text expansion config buffer. */
   expansionConfigBuffer: Buffer;
+  /** Logical bytes occupied by dictionary UTF-8 text expansion config. */
   byteLength: number;
 };
 
+/** Writable generated compact glyph vertex buffer. */
 export type GpuExpandedGeneratedState = {
+  /** Generated compact glyph vertex buffer. */
   compactGlyphVertexData: Buffer;
+  /** Logical bytes occupied by generated compact glyph vertices. */
   byteLength: number;
 };
 
+/** Stable resource naming options shared by GPU text expansion helpers. */
 export type GpuTextExpansionResourceOptions = {
+  /** Stable resource id prefix. */
   id?: string;
 };
 
+/** Row-level anchor and baseline inputs used by GPU text expansion compute. */
 export type GpuTextAlignmentExpansionOptions = {
+  /** Optional packed per-row text anchor buffer. */
   rowTextAnchorsBuffer?: Buffer;
+  /** Optional packed per-row alignment baseline buffer. */
   rowAlignmentBaselinesBuffer?: Buffer;
+  /** Whether compute should read `rowTextAnchorsBuffer`. */
   useRowTextAnchors?: boolean;
+  /** Whether compute should read `rowAlignmentBaselinesBuffer`. */
   useRowAlignmentBaselines?: boolean;
+  /** Constant fallback text anchor enum. */
   textAnchor?: number;
+  /** Constant fallback alignment baseline enum. */
   alignmentBaseline?: number;
+  /** Constant line height used by alignment math. */
   lineHeight?: number;
 };
 
@@ -456,6 +494,7 @@ const GPU_DICTIONARY_UTF8_EXPANDED_TEXT_COMPUTE_SHADER_LAYOUT: ShaderLayout = {
   attributes: []
 };
 
+/** Creates one read-only storage buffer for shared glyph metric rows. */
 export function createStorageGlyphMetrics(
   device: Device,
   options: GpuTextExpansionResourceOptions,
@@ -471,6 +510,7 @@ export function createStorageGlyphMetrics(
   };
 }
 
+/** Creates one read-only storage buffer for UTF-8 code point lookup rows. */
 export function createStorageGlyphLookup(
   device: Device,
   options: GpuTextExpansionResourceOptions,
@@ -486,6 +526,7 @@ export function createStorageGlyphLookup(
   };
 }
 
+/** Creates read-only storage inputs for compact glyph id expansion. */
 export function createGpuExpandedCompactInput(
   device: Device,
   options: GpuTextExpansionResourceOptions,
@@ -532,6 +573,7 @@ export function createGpuExpandedCompactInput(
   };
 }
 
+/** Creates read-only storage inputs for plain UTF-8 text expansion. */
 export function createGpuUtf8ExpandedInput(
   device: Device,
   options: GpuTextExpansionResourceOptions,
@@ -591,6 +633,7 @@ export function createGpuUtf8ExpandedInput(
   };
 }
 
+/** Creates read-only storage inputs for dictionary UTF-8 text expansion. */
 export function createGpuDictionaryUtf8ExpandedInput(
   device: Device,
   options: GpuTextExpansionResourceOptions,
@@ -633,6 +676,7 @@ export function createGpuDictionaryUtf8ExpandedInput(
   };
 }
 
+/** Creates read-only config for dictionary UTF-8 text expansion. */
 export function createGpuDictionaryUtf8ExpansionConfig(
   device: Device,
   options: GpuTextExpansionResourceOptions,
@@ -677,6 +721,7 @@ export function createGpuDictionaryUtf8ExpansionConfig(
   };
 }
 
+/** Creates one writable compact glyph vertex output buffer. */
 export function createGpuExpandedGeneratedState(
   device: Device,
   options: GpuTextExpansionResourceOptions,
@@ -694,6 +739,7 @@ export function createGpuExpandedGeneratedState(
   };
 }
 
+/** Dispatches WebGPU compute that expands compact glyph ids into glyph vertices. */
 export function dispatchGpuExpandedTextCompute(
   device: Device,
   options: GpuTextExpansionResourceOptions,
@@ -731,6 +777,7 @@ export function dispatchGpuExpandedTextCompute(
   computation.destroy();
 }
 
+/** Dispatches WebGPU compute that decodes plain UTF-8 rows into glyph vertices. */
 export function dispatchGpuUtf8ExpandedTextCompute(
   device: Device,
   options: GpuTextExpansionResourceOptions,
@@ -770,6 +817,7 @@ export function dispatchGpuUtf8ExpandedTextCompute(
   computation.destroy();
 }
 
+/** Dispatches WebGPU compute that decodes dictionary UTF-8 rows into glyph vertices. */
 export function dispatchGpuDictionaryUtf8ExpandedTextCompute(
   device: Device,
   options: GpuTextExpansionResourceOptions,

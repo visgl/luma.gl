@@ -7,7 +7,7 @@ import {getWebGLTestDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 import {luma} from '@luma.gl/core';
 import {webgpuAdapter, type WebGPUDevice} from '@luma.gl/webgpu';
 
-import {AnimationLoop} from '@luma.gl/engine';
+import {AnimationLoop, AnimationLoopTemplate, makeAnimationLoop} from '@luma.gl/engine';
 
 test('engine#AnimationLoop constructor', async t => {
   const device = await getWebGLTestDevice();
@@ -160,6 +160,43 @@ test('engine#AnimationLoop start followed immediately by stop() should stop', as
   animationLoop.stop();
   await new Promise<void>(resolve => setTimeout(resolve, 100));
   t.is(initializeCalled, 0, 'onInitialize called');
+  t.end();
+});
+
+test('engine#makeAnimationLoop stops after template initialization failure', async t => {
+  const device = await getWebGLTestDevice();
+  let renderCalled = 0;
+
+  class FailingAnimationLoopTemplate extends AnimationLoopTemplate {
+    override async onInitialize(): Promise<unknown> {
+      throw new Error('Expected initialization failure');
+    }
+
+    override onRender(): void {
+      renderCalled++;
+    }
+
+    override onFinalize(): void {}
+  }
+
+  // biome-ignore lint/suspicious/noConsole: test suppresses expected initialization failure logging.
+  const originalConsoleError = console.error;
+  // biome-ignore lint/suspicious/noConsole: test suppresses expected initialization failure logging.
+  console.error = () => {};
+  try {
+    const animationLoop = makeAnimationLoop(FailingAnimationLoopTemplate, {device});
+    const startResult = await animationLoop.start();
+    t.is(startResult, null, 'Animation loop stops after template initialization failure');
+    t.is(renderCalled, 0, 'onRender is not called after template initialization failure');
+    animationLoop.destroy();
+  } finally {
+    // biome-ignore lint/suspicious/noConsole: test restores console state after suppressing expected logging.
+    console.error = originalConsoleError;
+    if (typeof document !== 'undefined') {
+      document.getElementById('animation-loop-error')?.remove();
+    }
+  }
+
   t.end();
 });
 

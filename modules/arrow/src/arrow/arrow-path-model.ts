@@ -21,6 +21,7 @@ import {
 } from './arrow-gpu-data';
 import {makeArrowFixedSizeListVector} from './arrow-fixed-size-list';
 import {closeArrowPaths} from './close-arrow-paths';
+import type {ArrowTemporalColumnType} from './arrow-temporal-gpu-vector';
 import {
   isInstanceArrowType,
   isVariableLengthAttributeArrowType,
@@ -31,6 +32,8 @@ const SEGMENT_START_POSITIONS_COLUMN = 'segmentStartPositions';
 const SEGMENT_END_POSITIONS_COLUMN = 'segmentEndPositions';
 const SEGMENT_PREVIOUS_POSITIONS_COLUMN = 'segmentPreviousPositions';
 const SEGMENT_NEXT_POSITIONS_COLUMN = 'segmentNextPositions';
+const SEGMENT_START_COLORS_COLUMN = 'segmentStartColors';
+const SEGMENT_END_COLORS_COLUMN = 'segmentEndColors';
 const SEGMENT_FLAGS_COLUMN = 'segmentFlags';
 const ROW_INDICES_COLUMN = 'rowIndices';
 const EXPANDED_PATH_VERTEX_DATA = 'expandedPathVertexData';
@@ -42,18 +45,23 @@ const PATH_SEGMENT_LAST = 2;
 const PATH_SEGMENT_CLOSED = 4;
 
 const EXPANDED_PATH_VERTEX_BYTE_STRIDE =
-  Float32Array.BYTES_PER_ELEMENT * 16 + Uint32Array.BYTES_PER_ELEMENT * 2;
+  Float32Array.BYTES_PER_ELEMENT * 16 + Uint32Array.BYTES_PER_ELEMENT * 4;
 const SEGMENT_END_POSITIONS_BYTE_OFFSET = Float32Array.BYTES_PER_ELEMENT * 4;
 const SEGMENT_PREVIOUS_POSITIONS_BYTE_OFFSET = Float32Array.BYTES_PER_ELEMENT * 8;
 const SEGMENT_NEXT_POSITIONS_BYTE_OFFSET = Float32Array.BYTES_PER_ELEMENT * 12;
 const SEGMENT_FLAGS_BYTE_OFFSET = Float32Array.BYTES_PER_ELEMENT * 16;
 const ROW_INDICES_BYTE_OFFSET = SEGMENT_FLAGS_BYTE_OFFSET + Uint32Array.BYTES_PER_ELEMENT;
+const SEGMENT_START_COLORS_BYTE_OFFSET = ROW_INDICES_BYTE_OFFSET + Uint32Array.BYTES_PER_ELEMENT;
+const SEGMENT_END_COLORS_BYTE_OFFSET =
+  SEGMENT_START_COLORS_BYTE_OFFSET + Uint32Array.BYTES_PER_ELEMENT;
 const IDENTITY_MATRIX4 = Object.freeze([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
 
 type ArrowPathCoordinateType = arrow.List<arrow.FixedSizeList<arrow.Float32>>;
 type ArrowPathFloat64CoordinateType = arrow.List<arrow.FixedSizeList<arrow.Float64>>;
 type ArrowPathSourceCoordinateType = ArrowPathCoordinateType | ArrowPathFloat64CoordinateType;
-type ArrowPathColorType = arrow.FixedSizeList<arrow.Uint8>;
+type ArrowPathRowColorType = arrow.FixedSizeList<arrow.Uint8>;
+type ArrowPathVertexColorType = arrow.List<arrow.FixedSizeList<arrow.Uint8>>;
+type ArrowPathColorType = ArrowPathRowColorType | ArrowPathVertexColorType;
 type ArrowPathViewOriginType = arrow.FixedSizeList<arrow.Float32>;
 type ArrowPathViewOriginChunk = {
   rowStart: number;
@@ -64,12 +72,32 @@ type ArrowPathViewOriginRows = {
   chunks: ArrowPathViewOriginChunk[];
   currentChunkIndex: number;
 };
+type ArrowPathColorChunk =
+  | {
+      kind: 'row';
+      rowStart: number;
+      rowEnd: number;
+      values: Uint8Array;
+    }
+  | {
+      kind: 'vertex';
+      rowStart: number;
+      rowEnd: number;
+      valueOffsets: Int32Array;
+      values: Uint8Array;
+    };
+type ArrowPathColorRows = {
+  chunks: ArrowPathColorChunk[];
+  currentChunkIndex: number;
+};
 
 const DEFAULT_ARROW_PATH_SHADER_LAYOUT: ShaderLayout = {
   attributes: [
     {name: SEGMENT_START_POSITIONS_COLUMN, location: 0, type: 'vec4<f32>', stepMode: 'instance'},
     {name: SEGMENT_END_POSITIONS_COLUMN, location: 1, type: 'vec4<f32>', stepMode: 'instance'},
-    {name: PATH_VIEW_ORIGINS_COLUMN, location: 2, type: 'vec4<f32>', stepMode: 'instance'}
+    {name: SEGMENT_START_COLORS_COLUMN, location: 2, type: 'u32', stepMode: 'instance'},
+    {name: SEGMENT_END_COLORS_COLUMN, location: 3, type: 'u32', stepMode: 'instance'},
+    {name: PATH_VIEW_ORIGINS_COLUMN, location: 4, type: 'vec4<f32>', stepMode: 'instance'}
   ],
   bindings: []
 };
@@ -79,6 +107,8 @@ precision highp float;
 
 in vec4 segmentStartPositions;
 in vec4 segmentEndPositions;
+in uint segmentStartColors;
+in uint segmentEndColors;
 in vec4 pathViewOrigins;
 
 void main() {
@@ -100,35 +130,60 @@ void main() {
 
 /** CPU Arrow vectors retained explicitly while path rows expand into segment attributes. */
 export type ArrowPathSourceVectors = {
+  /** Variable-length Float32 or Float64 XY, XYZ, or XYZM coordinates, one Arrow row per path. */
   paths: arrow.Vector<ArrowPathSourceCoordinateType>;
+  /** Optional packed RGBA8 path colors, either one per path row or one per path vertex. */
   colors?: arrow.Vector<ArrowPathColorType>;
+  /** Optional per-path widths, one Arrow row per path. */
   widths?: arrow.Vector<arrow.Float32>;
+  /** Optional per-path closed flags used by path normalization. */
   closed?: arrow.Vector<arrow.Bool>;
+  /** Optional per-path temporal stream aligned with path vertices. */
+  timestamps?: arrow.Vector<ArrowTemporalColumnType>;
 };
 
+/** Options used when preparing Arrow path source vectors for GPU rendering. */
 export type PrepareArrowPathGPUVectorsOptions = {
+  /** Stable resource id prefix. Defaults to `arrow-path-model`. */
   id?: string;
+  /** Endpoint epsilon used when appending explicit closing vertices. Defaults to `0`. */
   closeEpsilon?: number;
 };
 
+/** View transform used to refresh Float64 path view-origin buffers. */
 export type ArrowPathViewOriginUpdateProps = {
+  /** Column-major model-view matrix applied to retained Float64 source origins. */
   modelViewMatrix: readonly number[];
 };
 
+/** Prepared attribute/storage path vectors plus retained generated path state. */
 export type PreparedArrowPathGPUVectors = {
+  /** Prepared Float32 path coordinates, one Arrow row per path. */
   paths: GPUVector<ArrowPathCoordinateType>;
+  /** Optional packed RGBA8 path colors aligned with source path rows or vertices. */
   colors?: GPUVector<ArrowPathColorType>;
+  /** Optional Float32 path widths aligned with source path rows. */
   widths?: GPUVector<arrow.Float32>;
+  /** Optional Float32 view-space origins aligned with source path rows. */
   viewOrigins?: GPUVector<ArrowPathViewOriginType>;
+  /** Optional retained Float64 source origins used to refresh view-space origins. */
   sourceOrigins?: Float64Array;
+  /** Props ready for {@link ArrowPathModel}. */
   pathProps: ArrowPathModelProps;
+  /** Props ready for storage-backed path consumers. */
   storagePathProps: {
+    /** Prepared Float32 path coordinates, one Arrow row per path. */
     paths: GPUVector<ArrowPathCoordinateType>;
+    /** Optional packed RGBA8 path colors aligned with source path rows or vertices. */
     colors?: GPUVector<ArrowPathColorType>;
+    /** Optional Float32 path widths aligned with source path rows. */
     widths?: GPUVector<arrow.Float32>;
+    /** Optional Float32 view-space origins aligned with source path rows. */
     viewOrigins?: GPUVector<ArrowPathViewOriginType>;
   };
+  /** Refreshes prepared Float32 view origins after a model-view matrix change. */
   updateViewOrigins: (props: ArrowPathViewOriginUpdateProps) => void;
+  /** Releases owned prepared vectors and generated path state. */
   destroy: () => void;
 };
 
@@ -139,7 +194,7 @@ export type ArrowPathModelProps = Omit<
 > & {
   /** Variable-length Float32 XY, XYZ, or XYZM path coordinates, one Arrow row per path. */
   paths: GPUVector<ArrowPathCoordinateType>;
-  /** Optional packed RGBA8 path colors, one Arrow row per path. */
+  /** Optional packed RGBA8 path colors, either one per path row or one per path vertex. */
   colors?: GPUVector<ArrowPathColorType>;
   /** Optional per-path widths, one Arrow row per path. */
   widths?: GPUVector<arrow.Float32>;
@@ -167,6 +222,10 @@ export type ArrowPathSegmentLayout = {
   segmentViewOrigins: Float32Array;
   /** Packed first/last/closed flags for each generated segment. */
   segmentFlags: Uint32Array;
+  /** Packed RGBA8 color at each generated segment start point. */
+  segmentStartColors: Uint32Array;
+  /** Packed RGBA8 color at each generated segment end point. */
+  segmentEndColors: Uint32Array;
 };
 
 /** Expanded Arrow table plus generated path layout diagnostics. */
@@ -179,24 +238,37 @@ export type ArrowPathSegmentTable = {
 
 /** Generated render-batch state consumed by {@link ArrowPathModel}. */
 export type ArrowPathRenderBatchState = {
+  /** First source path row included in this generated render batch. */
   rowStart: number;
+  /** Source path row after the last row included in this generated render batch. */
   rowEnd: number;
+  /** Generated segment records drawn by this render batch. */
   segmentCount: number;
+  /** Generated packed segment vertex attribute buffer. */
   expandedPathVertexData: Buffer;
+  /** Generated per-segment Float32 view-origin attribute buffer. */
   pathViewOriginData: Buffer;
 };
 
+/** Generated attribute-path buffers retained independently from model construction. */
 export type ArrowPathPreparedState = {
+  /** Expanded Arrow segment table used to build generated buffers. */
   segmentTable: ArrowPathSegmentTable;
+  /** First generated packed segment vertex attribute buffer. */
   expandedPathVertexData: Buffer;
+  /** First generated per-segment Float32 view-origin attribute buffer. */
   pathViewOriginData: Buffer;
+  /** Generated render batches preserved for device buffer-size limits. */
   renderBatches: ArrowPathRenderBatchState[];
+  /** Planning metadata for generated render batches. */
   generatedBufferBatches: GeneratedBufferBatch[];
+  /** Releases owned generated path buffers. */
   destroy: () => void;
 };
 
 /** Arrow-backed path renderer that expands one logical path row into segment instances. */
 export class ArrowPathModel extends ArrowModel {
+  /** Prepares raw Arrow path/style vectors for attribute-backed or storage-backed consumers. */
   static async prepareGPUVectors(
     device: Device,
     sourceVectors: ArrowPathSourceVectors,
@@ -205,16 +277,24 @@ export class ArrowPathModel extends ArrowModel {
     return prepareArrowPathGPUVectors(device, sourceVectors, options);
   }
 
+  /** Generated path segment layout diagnostics. */
   segmentLayout: ArrowPathSegmentLayout;
+  /** Expanded Arrow segment table retained by the model. */
   segmentTable: arrow.Table;
+  /** CPU time spent building generated segment attributes. */
   segmentAttributeBuildTimeMs: number;
+  /** Bytes occupied by generated segment Arrow attributes. */
   segmentAttributeByteLength: number;
+  /** First generated packed segment vertex attribute buffer. */
   expandedPathVertexData: Buffer;
+  /** First generated per-segment Float32 view-origin attribute buffer. */
   pathViewOriginData: Buffer;
+  /** Generated render batches preserved for device buffer-size limits. */
   renderBatches: ArrowPathRenderBatchState[];
   private pathProps: ArrowPathModelProps;
   private pathShaderLayout: ShaderLayout;
 
+  /** Creates an attribute-backed Arrow path model from prepared path props. */
   constructor(device: Device, props: ArrowPathModelProps) {
     const prepared = prepareArrowPathModel(device, props);
     super(device, prepared.modelProps);
@@ -256,6 +336,7 @@ export class ArrowPathModel extends ArrowModel {
     this.setNeedsRedraw('Arrow path segment table updated');
   }
 
+  /** Draws each generated path render batch against the supplied render pass. */
   override draw(renderPass: RenderPass): boolean {
     const arrowBatches = this.arrowGPUTable?.batches || [];
     if (arrowBatches.length > 0 && arrowBatches.length !== this.renderBatches.length) {
@@ -287,6 +368,7 @@ export class ArrowPathModel extends ArrowModel {
     return drawSuccess;
   }
 
+  /** Releases inherited model resources. Prepared path state remains caller-owned. */
   override destroy(): void {
     super.destroy();
   }
@@ -294,9 +376,13 @@ export class ArrowPathModel extends ArrowModel {
 
 /** Expand path rows into per-segment Arrow rows without creating a GPU Model. */
 export function buildArrowPathSegmentTable(props: {
+  /** Source row table whose instance-compatible columns expand with each path segment. */
   rowTable: arrow.Table;
+  /** Prepared Float32 path coordinates, one Arrow row per path. */
   paths: arrow.Vector<ArrowPathCoordinateType>;
+  /** Optional Float32 view-space origins aligned with source path rows. */
   viewOrigins?: arrow.Vector<ArrowPathViewOriginType>;
+  /** Optional global row index base stored in generated segment row indices. */
   rowIndexBase?: number;
 }): ArrowPathSegmentTable {
   if (props.rowTable.schema.fields.length > 0 && props.rowTable.numRows !== props.paths.length) {
@@ -306,12 +392,15 @@ export function buildArrowPathSegmentTable(props: {
   assertArrowPathColumnAvailable(props.rowTable, SEGMENT_END_POSITIONS_COLUMN);
   assertArrowPathColumnAvailable(props.rowTable, SEGMENT_PREVIOUS_POSITIONS_COLUMN);
   assertArrowPathColumnAvailable(props.rowTable, SEGMENT_NEXT_POSITIONS_COLUMN);
+  assertArrowPathColumnAvailable(props.rowTable, SEGMENT_START_COLORS_COLUMN);
+  assertArrowPathColumnAvailable(props.rowTable, SEGMENT_END_COLORS_COLUMN);
   assertArrowPathColumnAvailable(props.rowTable, SEGMENT_FLAGS_COLUMN);
   assertArrowPathColumnAvailable(props.rowTable, ROW_INDICES_COLUMN);
   assertArrowPathColumnAvailable(props.rowTable, PATH_VIEW_ORIGINS_COLUMN);
 
   const segmentAttributeBuildStartTime = getNow();
-  const segmentLayout = buildArrowPathSegmentLayout(props.paths, props.viewOrigins);
+  const pathColors = getArrowPathColorVector(props.rowTable);
+  const segmentLayout = buildArrowPathSegmentLayout(props.paths, props.viewOrigins, pathColors);
   const segmentRowIndices = makeArrowPathRowIndices(segmentLayout.startIndices, props.rowIndexBase);
   const localSegmentRowIndices = makeArrowPathRowIndices(segmentLayout.startIndices);
   const fields: arrow.Field[] = [];
@@ -369,12 +458,17 @@ export function buildArrowPathSegmentTable(props: {
   };
 }
 
+/** Builds generated path segment buffers without constructing an {@link ArrowPathModel}. */
 export function createArrowPathPreparedState(
   device: Device,
   props: {
+    /** Stable resource id prefix. */
     id?: string;
+    /** Source row table whose instance-compatible columns expand with each path segment. */
     rowTable: arrow.Table;
+    /** Prepared Float32 path coordinates, one Arrow row per path. */
     paths: arrow.Vector<ArrowPathCoordinateType>;
+    /** Optional Float32 view-space origins aligned with source path rows. */
     viewOrigins?: arrow.Vector<ArrowPathViewOriginType>;
   }
 ): ArrowPathPreparedState {
@@ -432,6 +526,7 @@ export function createArrowPathPreparedState(
   };
 }
 
+/** Prepares raw Arrow path/style columns for attribute-backed path rendering. */
 export async function prepareArrowPathGPUVectors(
   device: Device,
   sourceVectors: ArrowPathSourceVectors,
@@ -592,13 +687,10 @@ function prepareArrowPathModel(
 
 function assertArrowPathVectorTypes(props: ArrowPathModelProps): void {
   assertArrowPathCoordinateType(props.paths.type, 'paths');
-  if (
-    props.colors &&
-    (!arrow.DataType.isFixedSizeList(props.colors.type) ||
-      props.colors.type.listSize !== 4 ||
-      !(props.colors.type.children[0]?.type instanceof arrow.Uint8))
-  ) {
-    throw new Error('ArrowPathModel colors must be GPUVector<FixedSizeList<Uint8>[4]>');
+  if (props.colors && !isArrowPathColorType(props.colors.type)) {
+    throw new Error(
+      'ArrowPathModel colors must be GPUVector<FixedSizeList<Uint8>[4]> or GPUVector<List<FixedSizeList<Uint8>[4]>>'
+    );
   }
   if (props.widths && !(props.widths.type instanceof arrow.Float32)) {
     throw new Error('ArrowPathModel widths must be GPUVector<Float32>');
@@ -615,13 +707,10 @@ function assertArrowPathVectorTypes(props: ArrowPathModelProps): void {
 
 function assertArrowPathSourceVectorTypes(sourceVectors: ArrowPathSourceVectors): void {
   assertArrowPathSourceCoordinateType(sourceVectors.paths.type, 'paths');
-  if (
-    sourceVectors.colors &&
-    (!arrow.DataType.isFixedSizeList(sourceVectors.colors.type) ||
-      sourceVectors.colors.type.listSize !== 4 ||
-      !(sourceVectors.colors.type.children[0]?.type instanceof arrow.Uint8))
-  ) {
-    throw new Error('prepareArrowPathGPUVectors colors must be Vector<FixedSizeList<Uint8>[4]>');
+  if (sourceVectors.colors && !isArrowPathColorType(sourceVectors.colors.type)) {
+    throw new Error(
+      'prepareArrowPathGPUVectors colors must be Vector<FixedSizeList<Uint8>[4]> or Vector<List<FixedSizeList<Uint8>[4]>>'
+    );
   }
   if (sourceVectors.widths && !(sourceVectors.widths.type instanceof arrow.Float32)) {
     throw new Error('prepareArrowPathGPUVectors widths must be Vector<Float32>');
@@ -635,7 +724,8 @@ function assertArrowPathSourceVectorRows(sourceVectors: ArrowPathSourceVectors):
   const rowInputs: Array<[string, arrow.Vector | undefined]> = [
     ['colors', sourceVectors.colors],
     ['widths', sourceVectors.widths],
-    ['closed', sourceVectors.closed]
+    ['closed', sourceVectors.closed],
+    ['timestamps', sourceVectors.timestamps]
   ];
   for (const [name, vector] of rowInputs) {
     if (vector && vector.length !== sourceVectors.paths.length) {
@@ -643,6 +733,12 @@ function assertArrowPathSourceVectorRows(sourceVectors: ArrowPathSourceVectors):
         `prepareArrowPathGPUVectors ${name} rows must match paths rows (${vector.length} !== ${sourceVectors.paths.length})`
       );
     }
+  }
+  if (sourceVectors.colors && isArrowPathVertexColorType(sourceVectors.colors.type)) {
+    assertArrowPathVertexColorVectorAlignment(
+      sourceVectors.paths,
+      sourceVectors.colors as arrow.Vector<ArrowPathVertexColorType>
+    );
   }
 }
 
@@ -701,6 +797,12 @@ function assertArrowPathVectorRowAlignment(props: ArrowPathModelProps): void {
       }
     }
   }
+  if (props.colors && isArrowPathVertexColorType(props.colors.type)) {
+    assertArrowPathVertexColorGpuVectorAlignment(
+      props.paths,
+      props.colors as GPUVector<ArrowPathVertexColorType>
+    );
+  }
 }
 
 function getArrowPathRowInputs(props: ArrowPathModelProps): Array<[string, GPUVector<any>]> {
@@ -710,6 +812,18 @@ function getArrowPathRowInputs(props: ArrowPathModelProps): Array<[string, GPUVe
     ['widths', props.widths],
     ['viewOrigins', props.viewOrigins]
   ].filter(([, vector]) => vector !== undefined) as Array<[string, GPUVector<any>]>;
+}
+
+function getArrowPathColorVector(
+  rowTable: arrow.Table
+): arrow.Vector<ArrowPathColorType> | undefined {
+  const colors = rowTable.getChild('colors');
+  if (!colors) {
+    return undefined;
+  }
+  return isArrowPathColorType(colors.type)
+    ? (colors as arrow.Vector<ArrowPathColorType>)
+    : undefined;
 }
 
 function assertArrowPathPreparedStateAlignment(props: ArrowPathModelProps): void {
@@ -726,11 +840,15 @@ function assertArrowPathPreparedStateAlignment(props: ArrowPathModelProps): void
 
 function buildArrowPathSegmentLayout(
   paths: arrow.Vector<ArrowPathCoordinateType>,
-  viewOrigins?: arrow.Vector<ArrowPathViewOriginType>
+  viewOrigins?: arrow.Vector<ArrowPathViewOriginType>,
+  colors?: arrow.Vector<ArrowPathColorType>
 ): ArrowPathSegmentLayout {
   assertArrowPathCoordinateType(paths.type, 'paths');
   if (viewOrigins) {
     assertArrowPathViewOriginVector(viewOrigins, paths.length);
+  }
+  if (colors) {
+    assertArrowPathColorVector(colors, paths);
   }
   const pathComponentCount = getArrowPathCoordinateComponentCount(paths.type);
   const startIndices: number[] = [0];
@@ -754,7 +872,12 @@ function buildArrowPathSegmentLayout(
   const segmentNextPositions = new Float32Array(segmentCount * 4);
   const segmentViewOrigins = new Float32Array(segmentCount * 4);
   const segmentFlags = new Uint32Array(segmentCount);
+  const segmentStartColors = new Uint32Array(segmentCount);
+  const segmentEndColors = new Uint32Array(segmentCount);
+  segmentStartColors.fill(0xffffffff);
+  segmentEndColors.fill(0xffffffff);
   const viewOriginRows = makeArrowPathViewOriginRows(viewOrigins);
+  const colorRows = makeArrowPathColorRows(colors);
   let globalSegmentIndex = 0;
   let globalRowIndex = 0;
 
@@ -779,6 +902,14 @@ function buildArrowPathSegmentLayout(
         startIndices[globalRowIndex] ?? globalSegmentIndex,
         rowSegmentCount,
         viewOriginRows,
+        globalRowIndex
+      );
+      copyArrowPathColorRow(
+        segmentStartColors,
+        segmentEndColors,
+        startIndices[globalRowIndex] ?? globalSegmentIndex,
+        rowSegmentCount,
+        colorRows,
         globalRowIndex
       );
 
@@ -848,8 +979,85 @@ function buildArrowPathSegmentLayout(
     segmentPreviousPositions,
     segmentNextPositions,
     segmentViewOrigins,
-    segmentFlags
+    segmentFlags,
+    segmentStartColors,
+    segmentEndColors
   };
+}
+
+function isArrowPathRowColorType(type: arrow.DataType): type is ArrowPathRowColorType {
+  return (
+    arrow.DataType.isFixedSizeList(type) &&
+    type.listSize === 4 &&
+    type.children[0]?.type instanceof arrow.Uint8
+  );
+}
+
+function isArrowPathVertexColorType(type: arrow.DataType): type is ArrowPathVertexColorType {
+  return arrow.DataType.isList(type) && isArrowPathRowColorType(type.children[0]?.type);
+}
+
+function isArrowPathColorType(type: arrow.DataType): type is ArrowPathColorType {
+  return isArrowPathRowColorType(type) || isArrowPathVertexColorType(type);
+}
+
+function assertArrowPathColorVector(
+  colors: arrow.Vector<ArrowPathColorType>,
+  paths: arrow.Vector<ArrowPathCoordinateType>
+): void {
+  if (!isArrowPathColorType(colors.type)) {
+    throw new Error(
+      'ArrowPathModel colors must be Vector<FixedSizeList<Uint8>[4]> or Vector<List<FixedSizeList<Uint8>[4]>>'
+    );
+  }
+  if (colors.length !== paths.length) {
+    throw new Error(
+      `ArrowPathModel color rows must match path rows (${colors.length} !== ${paths.length})`
+    );
+  }
+  if (isArrowPathVertexColorType(colors.type)) {
+    assertArrowPathVertexColorVectorAlignment(
+      paths,
+      colors as arrow.Vector<ArrowPathVertexColorType>
+    );
+  }
+}
+
+function assertArrowPathVertexColorVectorAlignment(
+  paths: arrow.Vector<ArrowPathSourceCoordinateType>,
+  colors: arrow.Vector<ArrowPathVertexColorType>
+): void {
+  if (paths.data.length !== colors.data.length) {
+    throw new Error('ArrowPathModel vertex color batch count must match path batch count');
+  }
+  for (let batchIndex = 0; batchIndex < paths.data.length; batchIndex++) {
+    const pathOffsets = paths.data[batchIndex]?.valueOffsets as Int32Array | undefined;
+    const colorOffsets = colors.data[batchIndex]?.valueOffsets as Int32Array | undefined;
+    if (!pathOffsets || !colorOffsets || !areArrowPathOffsetsEqual(pathOffsets, colorOffsets)) {
+      throw new Error('ArrowPathModel vertex colors must align with path vertex offsets');
+    }
+  }
+}
+
+function assertArrowPathVertexColorGpuVectorAlignment(
+  paths: GPUVector<ArrowPathCoordinateType>,
+  colors: GPUVector<ArrowPathVertexColorType>
+): void {
+  for (let batchIndex = 0; batchIndex < paths.data.length; batchIndex++) {
+    const pathMetadata = paths.data[batchIndex]?.readbackMetadata;
+    const colorMetadata = colors.data[batchIndex]?.readbackMetadata;
+    if (
+      pathMetadata?.kind !== 'variable-length-attribute' ||
+      colorMetadata?.kind !== 'variable-length-attribute' ||
+      !areArrowPathOffsetsEqual(pathMetadata.valueOffsets, colorMetadata.valueOffsets)
+    ) {
+      throw new Error('ArrowPathModel vertex colors must align with path vertex offsets');
+    }
+  }
+}
+
+function areArrowPathOffsetsEqual(left: Int32Array, right: Int32Array): boolean {
+  return left.length === right.length && left.every((value, index) => value === right[index]);
 }
 
 function assertArrowPathViewOriginVector(
@@ -999,12 +1207,14 @@ function makeArrowPathData(
   );
 }
 
+/** Wraps one Float32 vec4 view origin per path row as an Arrow fixed-size list vector. */
 export function makeArrowPathViewOriginVector(
   values: Float32Array
 ): arrow.Vector<ArrowPathViewOriginType> {
   return makeArrowFixedSizeListVector(new arrow.Float32(), 4, values);
 }
 
+/** Reprojects retained Float64 path source origins into Float32 model-view coordinates. */
 export function updateViewOriginValues(
   target: Float32Array,
   sourceOrigins: Float64Array,
@@ -1109,6 +1319,43 @@ function makeArrowPathViewOriginRows(
   return {chunks, currentChunkIndex: 0};
 }
 
+function makeArrowPathColorRows(
+  colors: arrow.Vector<ArrowPathColorType> | undefined
+): ArrowPathColorRows | undefined {
+  if (!colors) {
+    return undefined;
+  }
+  const chunks: ArrowPathColorChunk[] = [];
+  let rowStart = 0;
+  for (const data of colors.data) {
+    const rowEnd = rowStart + data.length;
+    if (isArrowPathVertexColorType(data.type)) {
+      const valueOffsets = data.valueOffsets as Int32Array | undefined;
+      if (!valueOffsets) {
+        throw new Error('ArrowPathModel vertex colors require Arrow list offsets');
+      }
+      chunks.push({
+        kind: 'vertex',
+        rowStart,
+        rowEnd,
+        valueOffsets,
+        values: getArrowVariableLengthAttributeDataBufferSource(
+          data as arrow.Data<ArrowPathVertexColorType>
+        ) as Uint8Array
+      });
+    } else {
+      chunks.push({
+        kind: 'row',
+        rowStart,
+        rowEnd,
+        values: getArrowDataBufferSource(data as arrow.Data<ArrowPathRowColorType>) as Uint8Array
+      });
+    }
+    rowStart = rowEnd;
+  }
+  return {chunks, currentChunkIndex: 0};
+}
+
 function copyArrowPathViewOriginRow(
   target: Float32Array,
   targetSegmentStart: number,
@@ -1150,6 +1397,74 @@ function getArrowPathViewOriginChunk(
   throw new Error(`ArrowPathModel view origin row ${rowIndex} is missing`);
 }
 
+function copyArrowPathColorRow(
+  startTarget: Uint32Array,
+  endTarget: Uint32Array,
+  targetSegmentStart: number,
+  segmentCount: number,
+  colorRows: ArrowPathColorRows | undefined,
+  rowIndex: number
+): void {
+  if (!colorRows || segmentCount === 0) {
+    return;
+  }
+  const colorChunk = getArrowPathColorChunk(colorRows, rowIndex);
+  const localRowIndex = rowIndex - colorChunk.rowStart;
+
+  if (colorChunk.kind === 'row') {
+    const sourceOffset = localRowIndex * 4;
+    const color = packArrowPathColor(colorChunk.values, sourceOffset);
+    startTarget.fill(color, targetSegmentStart, targetSegmentStart + segmentCount);
+    endTarget.fill(color, targetSegmentStart, targetSegmentStart + segmentCount);
+    return;
+  }
+
+  const firstElementOffset = colorChunk.valueOffsets[0] ?? 0;
+  const colorStart =
+    (colorChunk.valueOffsets[localRowIndex] ?? firstElementOffset) - firstElementOffset;
+  const colorEnd = (colorChunk.valueOffsets[localRowIndex + 1] ?? colorStart) - firstElementOffset;
+  if (colorEnd - colorStart < segmentCount + 1) {
+    throw new Error('ArrowPathModel vertex colors must provide one color per path vertex');
+  }
+
+  for (let segmentOffset = 0; segmentOffset < segmentCount; segmentOffset++) {
+    const targetIndex = targetSegmentStart + segmentOffset;
+    startTarget[targetIndex] = packArrowPathColor(
+      colorChunk.values,
+      (colorStart + segmentOffset) * 4
+    );
+    endTarget[targetIndex] = packArrowPathColor(
+      colorChunk.values,
+      (colorStart + segmentOffset + 1) * 4
+    );
+  }
+}
+
+function getArrowPathColorChunk(
+  colorRows: ArrowPathColorRows,
+  rowIndex: number
+): ArrowPathColorChunk {
+  let chunk = colorRows.chunks[colorRows.currentChunkIndex];
+  while (chunk && rowIndex >= chunk.rowEnd) {
+    colorRows.currentChunkIndex++;
+    chunk = colorRows.chunks[colorRows.currentChunkIndex];
+  }
+  if (chunk && rowIndex >= chunk.rowStart && rowIndex < chunk.rowEnd) {
+    return chunk;
+  }
+  throw new Error(`ArrowPathModel color row ${rowIndex} is missing`);
+}
+
+function packArrowPathColor(values: Uint8Array, offset: number): number {
+  return (
+    ((values[offset] ?? 255) |
+      ((values[offset + 1] ?? 255) << 8) |
+      ((values[offset + 2] ?? 255) << 16) |
+      ((values[offset + 3] ?? 255) << 24)) >>>
+    0
+  );
+}
+
 function copyArrowPathPoint(
   target: Float32Array,
   targetSegmentIndex: number,
@@ -1173,6 +1488,8 @@ function createArrowPathRenderTable(
     SEGMENT_END_POSITIONS_COLUMN,
     SEGMENT_PREVIOUS_POSITIONS_COLUMN,
     SEGMENT_NEXT_POSITIONS_COLUMN,
+    SEGMENT_START_COLORS_COLUMN,
+    SEGMENT_END_COLORS_COLUMN,
     SEGMENT_FLAGS_COLUMN,
     ROW_INDICES_COLUMN
   ]);
@@ -1258,6 +1575,8 @@ function createExpandedPathVertexData(
     );
     uint32Values[recordUint32Index + 16] = segmentLayout.segmentFlags[segmentIndex];
     uint32Values[recordUint32Index + 17] = rowIndices[segmentIndex];
+    uint32Values[recordUint32Index + 18] = segmentLayout.segmentStartColors[segmentIndex];
+    uint32Values[recordUint32Index + 19] = segmentLayout.segmentEndColors[segmentIndex];
   }
 
   return {
@@ -1340,6 +1659,20 @@ function createArrowPathBufferLayouts(shaderLayout: ShaderLayout): BufferLayout[
       attribute: ROW_INDICES_COLUMN,
       format: 'uint32',
       byteOffset: ROW_INDICES_BYTE_OFFSET
+    });
+  }
+  if (shaderAttributeNames.has(SEGMENT_START_COLORS_COLUMN)) {
+    expandedAttributes.push({
+      attribute: SEGMENT_START_COLORS_COLUMN,
+      format: 'uint32',
+      byteOffset: SEGMENT_START_COLORS_BYTE_OFFSET
+    });
+  }
+  if (shaderAttributeNames.has(SEGMENT_END_COLORS_COLUMN)) {
+    expandedAttributes.push({
+      attribute: SEGMENT_END_COLORS_COLUMN,
+      format: 'uint32',
+      byteOffset: SEGMENT_END_COLORS_BYTE_OFFSET
     });
   }
 

@@ -14,6 +14,7 @@ type IntegerTypedArray =
   | Uint16Array
   | Uint32Array;
 
+/** Row indices accepted when expanding compact Arrow rows into aligned rows. */
 export type ArrowVectorRowMapping = IntegerTypedArray | arrow.Vector<arrow.Int>;
 
 const makeNumericData = arrow.makeData as <T extends NumericArrowType>(props: {

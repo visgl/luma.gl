@@ -30,6 +30,7 @@ import {
 } from './arrow-storage-path-gpu-vectors';
 import type {ArrowPathSourceVectors, PrepareArrowPathGPUVectorsOptions} from './arrow-path-model';
 
+/** Re-export storage path vector preparation helpers with the storage path model surface. */
 export {
   prepareArrowStoragePathGPUVectors,
   type PreparedArrowStoragePathGPUVectors
@@ -59,8 +60,11 @@ const DEFAULT_STORAGE_PATH_COLOR: [number, number, number, number] = [255, 255, 
 const DEFAULT_STORAGE_PATH_WIDTH = 1;
 
 type ArrowPathCoordinateType = arrow.List<arrow.FixedSizeList<arrow.Float32>>;
-type ArrowPathColorType = arrow.FixedSizeList<arrow.Uint8>;
+type ArrowPathRowColorType = arrow.FixedSizeList<arrow.Uint8>;
+type ArrowPathVertexColorType = arrow.List<arrow.FixedSizeList<arrow.Uint8>>;
+type ArrowPathColorType = ArrowPathRowColorType | ArrowPathVertexColorType;
 type ArrowPathViewOriginType = arrow.FixedSizeList<arrow.Float32>;
+type ArrowPathTimestampType = arrow.List<arrow.Float32>;
 type StoragePathOwnedResource =
   | Pick<GPUVector, 'destroy'>
   | Pick<DynamicBuffer, 'destroy'>
@@ -81,6 +85,7 @@ const DEFAULT_STORAGE_ARROW_PATH_SOURCE = /* wgsl */ `
   @group(0) @binding(auto) var<storage, read> pathRanges : array<vec4<u32>>;
   @group(0) @binding(auto) var<storage, read> pathViewOrigins : array<vec4<f32>>;
   @group(0) @binding(auto) var<storage, read> pathRowColors : array<u32>;
+  @group(0) @binding(auto) var<storage, read> pathVertexColors : array<u32>;
   @group(0) @binding(auto) var<storage, read> pathRowWidths : array<f32>;
 
 struct PathStorageStyleConfig {
@@ -91,7 +96,7 @@ struct PathStorageStyleConfig {
   batchRowIndexBase : u32,
   pathComponentCount : u32,
   useViewOrigins : u32,
-  _padding0 : u32,
+  useVertexColors : u32,
   _padding1 : u32,
 };
 
@@ -166,7 +171,13 @@ fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
     1.0
   );
   outputs.color = pathStorageStyleConfig.constantColor;
-  if (pathStorageStyleConfig.useRowColors != 0u) {
+  if (pathStorageStyleConfig.useVertexColors != 0u) {
+    outputs.color = mix(
+      unpackPathColor(pathVertexColors[inputs.segmentStartPointIndices]),
+      unpackPathColor(pathVertexColors[segmentEndPointIndex]),
+      f32(inputs.vertexIndex & 1u)
+    );
+  } else if (pathStorageStyleConfig.useRowColors != 0u) {
     outputs.color = unpackPathColor(pathRowColors[rowIndex]);
   }
   return outputs;
@@ -185,10 +196,12 @@ export type ArrowStoragePathInputProps = Omit<
 > & {
   /** Variable-length Float32 XY, XYZ, or XYZM path coordinates, one Arrow row per path. */
   paths: GPUVector<ArrowPathCoordinateType>;
-  /** Optional packed RGBA8 path colors, one Arrow row per path. */
+  /** Optional packed RGBA8 path colors, either one per path row or one per path vertex. */
   colors?: GPUVector<ArrowPathColorType>;
   /** Optional per-path widths, one Arrow row per path. */
   widths?: GPUVector<arrow.Float32>;
+  /** Optional per-path Float32 temporal stream aligned with path vertices. */
+  timestamps?: GPUVector<ArrowPathTimestampType>;
   /** Optional per-path view-space origins, one Arrow row per path. */
   viewOrigins?: GPUVector<ArrowPathViewOriginType>;
   /** Constant fallback path color used when `colors` is absent. */
@@ -202,51 +215,92 @@ type ArrowStoragePathRenderProps = Omit<
   'paths' | 'colors' | 'widths' | 'viewOrigins' | 'color' | 'width'
 >;
 
+/** Per-source-batch storage bindings retained by {@link ArrowStoragePathState}. */
 export type ArrowStoragePathBatchState = {
+  /** Global source path row index assigned to local row zero. */
   batchRowIndexBase: number;
+  /** Source path rows included in this storage batch. */
   rowCount: number;
+  /** Generated segment records drawn from this storage batch. */
   segmentCount: number;
+  /** Read-only storage binding for flattened prepared path values. */
   pathValuesBinding: Binding;
+  /** Read-only storage binding for persistent per-path ranges. */
   pathRangesBinding: Binding;
+  /** Read-only storage binding for Float32 path view origins. */
   pathViewOriginsBinding: Binding;
+  /** Read-only storage binding for packed per-row RGBA8 path colors. */
   rowColorsBinding: Binding;
+  /** Read-only storage binding for packed per-vertex RGBA8 path colors. */
+  vertexColorsBinding: Binding;
+  /** Read-only storage binding for Float32 path widths. */
   rowWidthsBinding: Binding;
+  /** Optional read-only storage binding for prepared Float32 path timestamps. */
+  pathTimestampsBinding?: Binding;
+  /** Uniform buffer selecting row style bindings and path component count. */
   styleConfigBuffer: DynamicBuffer;
 };
 
+/** Generated storage path render-batch state. */
 export type ArrowStoragePathRenderBatchState = {
+  /** Source storage batch whose row bindings feed this generated render batch. */
   rowBindingBatchIndex: number;
+  /** First source path row included in this generated render batch. */
   rowStart: number;
+  /** Source path row after the last row included in this generated render batch. */
   rowEnd: number;
+  /** Generated segment records drawn by this render batch. */
   segmentCount: number;
+  /** Generated compact or legacy path segment vertex buffer. */
   compactPathVertexData: Buffer;
 };
 
+/** Reusable WebGPU storage path expansion and row-binding state. */
 export type ArrowStoragePathState = {
+  /** Generated segment records across all preserved render batches. */
   segmentCount: number;
+  /** CPU time spent constructing persistent path range metadata. */
   pathRangeBuildTimeMs: number;
+  /** Bytes occupied by persistent per-path range buffers. */
   pathRangeByteLength: number;
+  /** Bytes occupied by one generated path segment record. */
   pathRecordByteStride: number;
+  /** Logical bytes occupied by the first generated path segment buffer. */
   compactPathVertexByteLength: number;
+  /** Logical bytes occupied by all generated path segment buffers. */
   generatedRenderBufferByteLength: number;
+  /** Bytes occupied by retained row style/default binding resources. */
   rowStorageByteLength: number;
+  /** Bytes occupied by transient compute input buffers released after expansion. */
   transientComputeInputByteLength: number;
+  /** Per-source-batch storage bindings and persistent range state. */
   batches: ArrowStoragePathBatchState[];
+  /** Generated render batches preserved for device buffer-size limits. */
   renderBatches: ArrowStoragePathRenderBatchState[];
+  /** Row/default binding resources owned by this storage state. */
   ownedRowBindingResources: StoragePathOwnedResource[];
+  /** First batch packed per-row RGBA8 color binding. */
   rowColorsBinding: Binding;
+  /** First batch packed per-vertex RGBA8 color binding. */
+  vertexColorsBinding: Binding;
+  /** First batch Float32 path width binding. */
   rowWidthsBinding: Binding;
+  /** First batch path style config uniform buffer. */
   styleConfigBuffer: DynamicBuffer;
+  /** First generated compact or legacy path segment vertex buffer. */
   compactPathVertexData: Buffer;
+  /** Releases owned generated path, range, and row-binding resources. */
   destroy: () => void;
 };
 
+/** Props for constructing or rebinding a WebGPU storage-backed Arrow path model. */
 export type ArrowStoragePathModelProps =
   | (ArrowStoragePathInputProps & {storageState?: never})
   | (ArrowStoragePathRenderProps & {storageState: ArrowStoragePathState});
 
 type StoragePathDefaultBindings = {
   colorsBinding: Binding;
+  vertexColorsBinding: Binding;
   widthsBinding: Binding;
   viewOriginsBinding: Binding;
   byteLength: number;
@@ -256,6 +310,7 @@ type StoragePathDefaultBindings = {
 type StoragePathBatchRowState = {
   pathViewOriginsBinding: Binding;
   rowColorsBinding: Binding;
+  vertexColorsBinding: Binding;
   rowWidthsBinding: Binding;
   styleConfigBuffer: DynamicBuffer;
   ownedResources: StoragePathOwnedResource[];
@@ -267,6 +322,7 @@ type StoragePathBatchRowState = {
  * while keeping per-row style values as storage-buffer reads during rendering.
  */
 export class ArrowStoragePathModel extends Model {
+  /** Prepares raw Arrow path/style vectors for storage-backed path rendering. */
   static async prepareGPUVectors(
     device: Device,
     sourceVectors: ArrowPathSourceVectors,
@@ -275,24 +331,42 @@ export class ArrowStoragePathModel extends Model {
     return prepareArrowStoragePathGPUVectors(device, sourceVectors, options);
   }
 
+  /** Generated segment records across all preserved render batches. */
   segmentCount!: number;
+  /** CPU time spent constructing persistent path range metadata. */
   pathRangeBuildTimeMs!: number;
+  /** Bytes occupied by persistent per-path range buffers. */
   pathRangeByteLength!: number;
+  /** Bytes occupied by one generated path segment record. */
   pathRecordByteStride!: number;
+  /** Logical bytes occupied by the first generated path segment buffer. */
   compactPathVertexByteLength!: number;
+  /** Logical bytes occupied by all generated path segment buffers. */
   generatedRenderBufferByteLength!: number;
+  /** Bytes occupied by retained row style/default binding resources. */
   rowStorageByteLength!: number;
+  /** Bytes occupied by transient compute input buffers released after expansion. */
   transientComputeInputByteLength!: number;
+  /** Per-source-batch storage bindings and persistent range state. */
   batches!: ArrowStoragePathBatchState[];
+  /** Generated render batches preserved for device buffer-size limits. */
   renderBatches!: ArrowStoragePathRenderBatchState[];
+  /** First batch packed per-row RGBA8 color binding. */
   rowColorsBinding!: Binding;
+  /** First batch packed per-vertex RGBA8 color binding. */
+  vertexColorsBinding!: Binding;
+  /** First batch Float32 path width binding. */
   rowWidthsBinding!: Binding;
+  /** First batch path style config uniform buffer. */
   styleConfigBuffer!: DynamicBuffer;
+  /** First generated compact or legacy path segment vertex buffer. */
   compactPathVertexData!: Buffer;
+  /** Reusable storage path expansion and row-binding state currently bound by the model. */
   storageState: ArrowStoragePathState;
   private pathProps: ArrowStoragePathModelProps;
   private ownsStorageState: boolean;
 
+  /** Creates a WebGPU storage-backed Arrow path model. */
   constructor(device: Device, props: ArrowStoragePathModelProps) {
     if (device.type !== 'webgpu') {
       throw new Error('ArrowStoragePathModel is WebGPU-only');
@@ -308,6 +382,7 @@ export class ArrowStoragePathModel extends Model {
     this.applyStorageState(storageState);
   }
 
+  /** Updates storage path props, rebuilding state only when path/layout inputs change. */
   setProps(props: Partial<ArrowStoragePathModelProps>): void {
     const nextProps = {...this.pathProps, ...props} as ArrowStoragePathModelProps;
     const nextUsesExternalState = hasArrowStoragePathState(nextProps);
@@ -321,6 +396,7 @@ export class ArrowStoragePathModel extends Model {
       !nextUsesExternalState &&
       (pathProps.colors !== undefined ||
         pathProps.widths !== undefined ||
+        pathProps.timestamps !== undefined ||
         pathProps.viewOrigins !== undefined ||
         pathProps.color !== undefined ||
         pathProps.width !== undefined);
@@ -356,6 +432,7 @@ export class ArrowStoragePathModel extends Model {
     this.setNeedsRedraw('Arrow storage path state updated');
   }
 
+  /** Draws each generated storage path render batch against the supplied render pass. */
   override draw(renderPass: RenderPass): boolean {
     let drawSuccess = true;
     for (const renderBatch of this.storageState.renderBatches) {
@@ -380,6 +457,7 @@ export class ArrowStoragePathModel extends Model {
     return drawSuccess;
   }
 
+  /** Releases owned storage path state plus inherited model resources. */
   override destroy(): void {
     if (this.ownsStorageState) {
       this.storageState.destroy();
@@ -399,6 +477,7 @@ export class ArrowStoragePathModel extends Model {
     this.batches = storageState.batches;
     this.renderBatches = storageState.renderBatches;
     this.rowColorsBinding = storageState.rowColorsBinding;
+    this.vertexColorsBinding = storageState.vertexColorsBinding;
     this.rowWidthsBinding = storageState.rowWidthsBinding;
     this.styleConfigBuffer = storageState.styleConfigBuffer;
     this.compactPathVertexData = storageState.compactPathVertexData;
@@ -422,6 +501,7 @@ function getStoragePathRecordByteStride(recordMode: StoragePathRecordMode): numb
   return recordMode === 'legacy' ? LEGACY_PATH_VERTEX_BYTE_STRIDE : COMPACT_PATH_VERTEX_BYTE_STRIDE;
 }
 
+/** Builds reusable WebGPU storage path expansion and row-binding state. */
 export function createArrowStoragePathState(
   device: Device,
   props: ArrowStoragePathInputProps
@@ -515,6 +595,9 @@ export function createArrowStoragePathState(
       segmentCount: batchInput.segmentCount,
       pathValuesBinding: batchInput.pathValuesBinding,
       pathRangesBinding: pathRangeState.pathRangesBuffer,
+      ...(batchInput.timestampsBinding
+        ? {pathTimestampsBinding: batchInput.timestampsBinding}
+        : {}),
       pathViewOriginsBinding: rowState.pathViewOriginsBinding
     });
     ownedRowBindingResources.push(...rowState.ownedResources);
@@ -538,6 +621,7 @@ export function createArrowStoragePathState(
     renderBatches,
     ownedRowBindingResources,
     rowColorsBinding: firstBatch.rowColorsBinding,
+    vertexColorsBinding: firstBatch.vertexColorsBinding,
     rowWidthsBinding: firstBatch.rowWidthsBinding,
     styleConfigBuffer: firstBatch.styleConfigBuffer,
     compactPathVertexData: firstRenderBatch.compactPathVertexData,
@@ -591,7 +675,9 @@ function createArrowStoragePathBindings(
     [PATH_RANGES_COLUMN]: batch.pathRangesBinding,
     [PATH_VIEW_ORIGINS_COLUMN]: batch.pathViewOriginsBinding,
     pathRowColors: batch.rowColorsBinding,
+    pathVertexColors: batch.vertexColorsBinding,
     pathRowWidths: batch.rowWidthsBinding,
+    ...(batch.pathTimestampsBinding ? {pathTimestamps: batch.pathTimestampsBinding} : {}),
     pathStorageStyleConfig: batch.styleConfigBuffer
   };
 }
@@ -688,6 +774,7 @@ function createStoragePathDefaultBindings(
   );
   return {
     colorsBinding: getStoragePathGpuVectorBinding(colorsVector),
+    vertexColorsBinding: getStoragePathGpuVectorBinding(colorsVector),
     widthsBinding: getStoragePathGpuVectorBinding(widthsVector),
     viewOriginsBinding: getStoragePathGpuVectorBinding(viewOriginsVector),
     byteLength:
@@ -716,7 +803,14 @@ function createStoragePathBatchRowState(
   });
   return {
     pathViewOriginsBinding: batchInput.viewOriginsBinding ?? defaultBindings.viewOriginsBinding,
-    rowColorsBinding: batchInput.colorsBinding ?? defaultBindings.colorsBinding,
+    rowColorsBinding:
+      props.colors && isArrowPathRowColorType(props.colors.type) && batchInput.colorsBinding
+        ? batchInput.colorsBinding
+        : defaultBindings.colorsBinding,
+    vertexColorsBinding:
+      props.colors && isArrowPathVertexColorType(props.colors.type) && batchInput.colorsBinding
+        ? batchInput.colorsBinding
+        : defaultBindings.vertexColorsBinding,
     rowWidthsBinding: batchInput.widthsBinding ?? defaultBindings.widthsBinding,
     styleConfigBuffer,
     ownedResources: [styleConfigBuffer],
@@ -741,6 +835,18 @@ function getStoragePathGpuVectorBinding(vector: GPUVector): Binding {
   return buffer instanceof DynamicBuffer ? buffer.buffer : buffer;
 }
 
+function isArrowPathRowColorType(type: arrow.DataType): type is ArrowPathRowColorType {
+  return (
+    arrow.DataType.isFixedSizeList(type) &&
+    type.listSize === 4 &&
+    type.children[0]?.type instanceof arrow.Uint8
+  );
+}
+
+function isArrowPathVertexColorType(type: arrow.DataType): type is ArrowPathVertexColorType {
+  return arrow.DataType.isList(type) && isArrowPathRowColorType(type.children[0]?.type);
+}
+
 function createStoragePathStyleConfigData(
   props: ArrowStoragePathInputProps,
   batchRowIndexBase: number,
@@ -755,11 +861,12 @@ function createStoragePathStyleConfigData(
   floatValues[2] = color[2] / 255;
   floatValues[3] = color[3] / 255;
   floatValues[4] = props.width ?? DEFAULT_STORAGE_PATH_WIDTH;
-  uintValues[5] = props.colors ? 1 : 0;
+  uintValues[5] = props.colors && isArrowPathRowColorType(props.colors.type) ? 1 : 0;
   uintValues[6] = props.widths ? 1 : 0;
   uintValues[7] = batchRowIndexBase;
   uintValues[8] = pathComponentCount;
   uintValues[9] = props.viewOrigins ? 1 : 0;
+  uintValues[10] = props.colors && isArrowPathVertexColorType(props.colors.type) ? 1 : 0;
   return uintValues;
 }
 
@@ -787,6 +894,9 @@ function refreshArrowStoragePathRowBindings(
       segmentCount: previousBatch.segmentCount,
       pathValuesBinding: previousBatch.pathValuesBinding,
       pathRangesBinding: previousBatch.pathRangesBinding,
+      ...(batchInput.timestampsBinding
+        ? {pathTimestampsBinding: batchInput.timestampsBinding}
+        : {}),
       pathViewOriginsBinding: rowState.pathViewOriginsBinding
     };
   });
@@ -824,6 +934,7 @@ function syncArrowStoragePathStateFirstBatch(storageState: ArrowStoragePathState
   const firstBatch = getFirstArrowStoragePathBatch(storageState);
   const firstRenderBatch = getFirstArrowStoragePathRenderBatch(storageState);
   storageState.rowColorsBinding = firstBatch.rowColorsBinding;
+  storageState.vertexColorsBinding = firstBatch.vertexColorsBinding;
   storageState.rowWidthsBinding = firstBatch.rowWidthsBinding;
   storageState.styleConfigBuffer = firstBatch.styleConfigBuffer;
   storageState.compactPathVertexData = firstRenderBatch.compactPathVertexData;

@@ -13,6 +13,7 @@ import {
   isArrowFixedSizeListVector,
   makeAppendableArrowGPUVector,
   makeArrowVectorFromArray,
+  makeArrowMatrix4x4Vector,
   makeArrowMatrix3x3Vector,
   makeArrowMatrixVector,
   makeArrowFixedSizeListVector,
@@ -198,7 +199,9 @@ test('makeArrowMatrixVector describes every supported WGSL floating-point matrix
         shape: matrixCase.shape,
         columns: matrixCase.columns,
         rows: matrixCase.rows,
+        order: 'column-major',
         layout: 'wgsl-storage',
+        valueType: 'float32',
         logicalComponentCount,
         physicalComponentCount: matrixCase.physicalComponentCount,
         columnStride: matrixCase.rows === 3 ? 4 : matrixCase.rows,
@@ -331,6 +334,26 @@ test('GPUVector creates a GPU buffer from an Arrow vector', t => {
   t.equal(gpuVector.length, 2, 'exposes the Arrow vector length');
   t.equal(gpuVector.stride, 2, 'exposes the FixedSizeList stride');
   t.equal(gpuVector.buffer.byteLength, 16, 'creates a buffer from the vector values');
+
+  gpuVector.destroy();
+  t.end();
+});
+
+test('GPUVector creates one packed GPU buffer from a canonical Arrow matrix vector', async t => {
+  const device = new NullDevice({});
+  const sourceVector = makeArrowMatrix4x4Vector(
+    new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 2, 3, 4, 1])
+  );
+  const gpuVector = makeArrowGPUVector(device, sourceVector, {name: 'matrix'});
+  const result = await readArrowGPUVectorAsync(gpuVector);
+
+  t.equal(gpuVector.stride, 16, 'preserves one mat4x4 scalar stride');
+  t.equal(gpuVector.byteStride, 64, 'preserves one mat4x4 row byte stride');
+  t.deepEqual(
+    getArrowFixedSizeListValues(result as arrow.Vector<arrow.FixedSizeList<arrow.Float32>>),
+    getArrowFixedSizeListValues(sourceVector),
+    'round-trips canonical matrix storage rows'
+  );
 
   gpuVector.destroy();
   t.end();

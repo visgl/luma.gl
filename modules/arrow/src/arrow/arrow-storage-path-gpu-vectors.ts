@@ -17,40 +17,71 @@ import {prepareGpuPathFloat64DeltaVector} from './gpu-path-float64-deltas';
 import {makeArrowGPUVector} from './arrow-gpu-table-adapters';
 import {isVariableLengthAttributeArrowType} from './arrow-types';
 import type {ArrowStoragePathInputProps} from './arrow-storage-path-model';
+import {prepareArrowTemporalGPUVector} from './arrow-temporal-gpu-vector';
 
 type ArrowPathCoordinateType = arrow.List<arrow.FixedSizeList<arrow.Float32>>;
 type ArrowPathFloat64CoordinateType = arrow.List<arrow.FixedSizeList<arrow.Float64>>;
-type ArrowPathColorType = arrow.FixedSizeList<arrow.Uint8>;
+type ArrowPathRowColorType = arrow.FixedSizeList<arrow.Uint8>;
+type ArrowPathVertexColorType = arrow.List<arrow.FixedSizeList<arrow.Uint8>>;
+type ArrowPathColorType = ArrowPathRowColorType | ArrowPathVertexColorType;
 type ArrowPathViewOriginType = arrow.FixedSizeList<arrow.Float32>;
+type ArrowPathTimestampType = arrow.List<arrow.Float32>;
 
+/** Prepared storage-backed path vectors plus retained row-alignment helpers. */
 export type PreparedArrowStoragePathGPUVectors = {
+  /** Prepared Float32 path coordinates, one Arrow row per path. */
   paths: GPUVector<ArrowPathCoordinateType>;
+  /** Optional packed RGBA8 path colors aligned with source path rows or vertices. */
   colors?: GPUVector<ArrowPathColorType>;
+  /** Optional Float32 path widths aligned with source path rows. */
   widths?: GPUVector<arrow.Float32>;
+  /** Optional prepared relative Float32 temporal stream aligned with path vertices. */
+  timestamps?: GPUVector<ArrowPathTimestampType>;
+  /** Optional Float32 view-space origins aligned with source path rows. */
   viewOrigins?: GPUVector<ArrowPathViewOriginType>;
+  /** Optional retained Float64 source origins used to refresh view-space origins. */
   sourceOrigins?: Float64Array;
+  /** Props ready for {@link ArrowStoragePathModel}. */
   storagePathProps: ArrowStoragePathInputProps;
+  /** Refreshes prepared Float32 view origins after a model-view matrix change. */
   updateViewOrigins: (props: ArrowPathViewOriginUpdateProps) => void;
+  /** Releases owned prepared vectors. */
   destroy: () => void;
 };
 
+/** Per-source-batch storage bindings and path range metadata. */
 export type ResolvedArrowStoragePathBatchInputs = {
+  /** Global source path row index assigned to local row zero. */
   batchRowIndexBase: number;
+  /** Source path rows included in this batch. */
   rowCount: number;
+  /** Float32 coordinate components in each prepared path point. */
   componentCount: number;
+  /** Flattened path point offsets copied from Arrow list metadata. */
   valueOffsets: Int32Array;
+  /** Generated segment record offsets, length = source path rows + 1. */
   recordOffsets: number[];
+  /** Generated segment records in this source batch. */
   segmentCount: number;
+  /** Read-only storage binding for flattened prepared path values. */
   pathValuesBinding: Binding;
+  /** Optional read-only storage binding for Float32 path view origins. */
   viewOriginsBinding?: Binding;
+  /** Optional read-only storage binding for packed RGBA8 path colors. */
   colorsBinding?: Binding;
+  /** Optional read-only storage binding for Float32 path widths. */
   widthsBinding?: Binding;
+  /** Optional read-only storage binding for prepared Float32 path timestamps. */
+  timestampsBinding?: Binding;
 };
 
+/** Storage path inputs resolved across preserved source GPU batches. */
 export type ResolvedArrowStoragePathInputs = {
+  /** Per-source-batch storage bindings and path range metadata. */
   batches: ResolvedArrowStoragePathBatchInputs[];
 };
 
+/** Prepares raw Arrow path/style columns for WebGPU storage-backed path rendering. */
 export async function prepareArrowStoragePathGPUVectors(
   device: Device,
   sourceVectors: ArrowPathSourceVectors,
@@ -87,6 +118,13 @@ export async function prepareArrowStoragePathGPUVectors(
   const widths = sourceVectors.widths
     ? makeArrowGPUVector(device, sourceVectors.widths, {name: 'widths', id: `${id}-widths`})
     : undefined;
+  const preparedTimestamps = sourceVectors.timestamps
+    ? await prepareArrowTemporalGPUVector(device, sourceVectors.timestamps, {
+        name: 'timestamps',
+        id: `${id}-timestamps`
+      })
+    : undefined;
+  const timestamps = preparedTimestamps?.temporal as GPUVector<ArrowPathTimestampType> | undefined;
   const sourceOrigins = preparedPathData.sourceOrigins;
   const viewOriginValues = new Float32Array(sourceVectors.paths.length * 4);
   const viewOrigins = sourceOrigins
@@ -109,6 +147,7 @@ export async function prepareArrowStoragePathGPUVectors(
     paths,
     ...(colors ? {colors} : {}),
     ...(widths ? {widths} : {}),
+    ...(timestamps ? {timestamps} : {}),
     ...(viewOrigins ? {viewOrigins} : {})
   };
   let destroyed = false;
@@ -125,6 +164,7 @@ export async function prepareArrowStoragePathGPUVectors(
     paths,
     ...(colors ? {colors} : {}),
     ...(widths ? {widths} : {}),
+    ...(timestamps ? {timestamps} : {}),
     ...(viewOrigins ? {viewOrigins} : {}),
     ...(sourceOrigins ? {sourceOrigins} : {}),
     storagePathProps,
@@ -137,6 +177,7 @@ export async function prepareArrowStoragePathGPUVectors(
       paths.destroy();
       colors?.destroy();
       widths?.destroy();
+      preparedTimestamps?.destroy();
       viewOrigins?.destroy();
     }
   };
@@ -159,6 +200,7 @@ export function resolveArrowStoragePathInputs(
     const segmentCount = recordOffsets[recordOffsets.length - 1] ?? 0;
     const colorData = props.colors?.data[batchIndex];
     const widthData = props.widths?.data[batchIndex];
+    const timestampData = props.timestamps?.data[batchIndex];
     const viewOriginData = props.viewOrigins?.data[batchIndex];
     batches.push({
       batchRowIndexBase,
@@ -180,10 +222,21 @@ export function resolveArrowStoragePathInputs(
           )
         : undefined,
       colorsBinding: colorData
-        ? getStorageGPUDataBinding(colorData, colorData.length * props.colors!.byteStride)
+        ? getStorageGPUDataBinding(
+            colorData,
+            getStorageGPUDataValueByteLength(colorData, props.colors!.byteStride)
+          )
         : undefined,
       widthsBinding: widthData
         ? getStorageGPUDataBinding(widthData, widthData.length * props.widths!.byteStride)
+        : undefined,
+      timestampsBinding: timestampData
+        ? getStorageGPUDataBinding(
+            timestampData,
+            timestampData.readbackMetadata?.kind === 'variable-length-attribute'
+              ? timestampData.readbackMetadata.valueByteLength
+              : undefined
+          )
         : undefined
     });
     batchRowIndexBase += pathData.length;
@@ -194,16 +247,20 @@ export function resolveArrowStoragePathInputs(
 
 function assertArrowStoragePathVectorTypes(props: ArrowStoragePathInputProps): void {
   assertArrowStoragePathCoordinateType(props.paths.type, 'paths');
-  if (
-    props.colors &&
-    (!arrow.DataType.isFixedSizeList(props.colors.type) ||
-      props.colors.type.listSize !== 4 ||
-      !(props.colors.type.children[0]?.type instanceof arrow.Uint8))
-  ) {
-    throw new Error('ArrowStoragePathModel colors must be GPUVector<FixedSizeList<Uint8>[4]>');
+  if (props.colors && !isArrowPathColorType(props.colors.type)) {
+    throw new Error(
+      'ArrowStoragePathModel colors must be GPUVector<FixedSizeList<Uint8>[4]> or GPUVector<List<FixedSizeList<Uint8>[4]>>'
+    );
   }
   if (props.widths && !(props.widths.type instanceof arrow.Float32)) {
     throw new Error('ArrowStoragePathModel widths must be GPUVector<Float32>');
+  }
+  if (
+    props.timestamps &&
+    (!arrow.DataType.isList(props.timestamps.type) ||
+      !(props.timestamps.type.children[0]?.type instanceof arrow.Float32))
+  ) {
+    throw new Error('ArrowStoragePathModel timestamps must be GPUVector<List<Float32>>');
   }
   if (
     props.viewOrigins &&
@@ -217,16 +274,27 @@ function assertArrowStoragePathVectorTypes(props: ArrowStoragePathInputProps): v
   }
 }
 
+function isArrowPathRowColorType(type: arrow.DataType): type is ArrowPathRowColorType {
+  return (
+    arrow.DataType.isFixedSizeList(type) &&
+    type.listSize === 4 &&
+    type.children[0]?.type instanceof arrow.Uint8
+  );
+}
+
+function isArrowPathVertexColorType(type: arrow.DataType): type is ArrowPathVertexColorType {
+  return arrow.DataType.isList(type) && isArrowPathRowColorType(type.children[0]?.type);
+}
+
+function isArrowPathColorType(type: arrow.DataType): type is ArrowPathColorType {
+  return isArrowPathRowColorType(type) || isArrowPathVertexColorType(type);
+}
+
 function assertArrowStoragePathSourceVectorTypes(sourceVectors: ArrowPathSourceVectors): void {
   assertArrowStoragePathSourceCoordinateType(sourceVectors.paths.type, 'paths');
-  if (
-    sourceVectors.colors &&
-    (!arrow.DataType.isFixedSizeList(sourceVectors.colors.type) ||
-      sourceVectors.colors.type.listSize !== 4 ||
-      !(sourceVectors.colors.type.children[0]?.type instanceof arrow.Uint8))
-  ) {
+  if (sourceVectors.colors && !isArrowPathColorType(sourceVectors.colors.type)) {
     throw new Error(
-      'prepareArrowStoragePathGPUVectors colors must be Vector<FixedSizeList<Uint8>[4]>'
+      'prepareArrowStoragePathGPUVectors colors must be Vector<FixedSizeList<Uint8>[4]> or Vector<List<FixedSizeList<Uint8>[4]>>'
     );
   }
   if (sourceVectors.widths && !(sourceVectors.widths.type instanceof arrow.Float32)) {
@@ -235,13 +303,29 @@ function assertArrowStoragePathSourceVectorTypes(sourceVectors: ArrowPathSourceV
   if (sourceVectors.closed && !(sourceVectors.closed.type instanceof arrow.Bool)) {
     throw new Error('prepareArrowStoragePathGPUVectors closed flags must be Vector<Bool>');
   }
+  if (
+    sourceVectors.timestamps &&
+    !(
+      arrow.DataType.isList(sourceVectors.timestamps.type) &&
+      sourceVectors.timestamps.type.children[0]?.type &&
+      (arrow.DataType.isDate(sourceVectors.timestamps.type.children[0].type) ||
+        arrow.DataType.isTime(sourceVectors.timestamps.type.children[0].type) ||
+        arrow.DataType.isTimestamp(sourceVectors.timestamps.type.children[0].type) ||
+        arrow.DataType.isDuration(sourceVectors.timestamps.type.children[0].type))
+    )
+  ) {
+    throw new Error(
+      'prepareArrowStoragePathGPUVectors timestamps must be Vector<List<Date|Time|Timestamp|Duration>>'
+    );
+  }
 }
 
 function assertArrowStoragePathSourceVectorRows(sourceVectors: ArrowPathSourceVectors): void {
   const rowInputs: Array<[string, arrow.Vector | undefined]> = [
     ['colors', sourceVectors.colors],
     ['widths', sourceVectors.widths],
-    ['closed', sourceVectors.closed]
+    ['closed', sourceVectors.closed],
+    ['timestamps', sourceVectors.timestamps]
   ];
   for (const [name, vector] of rowInputs) {
     if (vector && vector.length !== sourceVectors.paths.length) {
@@ -249,6 +333,12 @@ function assertArrowStoragePathSourceVectorRows(sourceVectors: ArrowPathSourceVe
         `prepareArrowStoragePathGPUVectors ${name} rows must match paths rows (${vector.length} !== ${sourceVectors.paths.length})`
       );
     }
+  }
+  if (sourceVectors.colors && isArrowPathVertexColorType(sourceVectors.colors.type)) {
+    assertArrowStoragePathSourceVertexColorAlignment(
+      sourceVectors.paths,
+      sourceVectors.colors as arrow.Vector<ArrowPathVertexColorType>
+    );
   }
 }
 
@@ -287,6 +377,7 @@ function assertArrowStoragePathVectorRowAlignment(props: ArrowStoragePathInputPr
     ['paths', props.paths],
     ['colors', props.colors],
     ['widths', props.widths],
+    ['timestamps', props.timestamps],
     ['viewOrigins', props.viewOrigins]
   ].filter(([, vector]) => vector !== undefined) as Array<[string, GPUVector<any>]>;
   const [referenceName, referenceVector] = rowInputs[0];
@@ -309,6 +400,73 @@ function assertArrowStoragePathVectorRowAlignment(props: ArrowStoragePathInputPr
       }
     }
   }
+  if (props.timestamps) {
+    assertArrowStoragePathTimestampAlignment(props.paths, props.timestamps);
+  }
+  if (props.colors && isArrowPathVertexColorType(props.colors.type)) {
+    assertArrowStoragePathVertexColorAlignment(
+      props.paths,
+      props.colors as GPUVector<ArrowPathVertexColorType>
+    );
+  }
+}
+
+function assertArrowStoragePathTimestampAlignment(
+  paths: GPUVector<ArrowPathCoordinateType>,
+  timestamps: GPUVector<ArrowPathTimestampType>
+): void {
+  for (let batchIndex = 0; batchIndex < paths.data.length; batchIndex++) {
+    const pathOffsets = getArrowStoragePathOffsets(
+      paths.data[batchIndex] as GPUData<ArrowPathCoordinateType>
+    );
+    const timestampData = timestamps.data[batchIndex];
+    const timestampMetadata = timestampData.readbackMetadata;
+    if (timestampMetadata?.kind !== 'variable-length-attribute') {
+      throw new Error('ArrowStoragePathModel timestamps require copied variable-length offsets');
+    }
+    if (!areArrowOffsetsEqual(pathOffsets, timestampMetadata.valueOffsets)) {
+      throw new Error('ArrowStoragePathModel timestamps must align with path vertex offsets');
+    }
+  }
+}
+
+function assertArrowStoragePathSourceVertexColorAlignment(
+  paths: ArrowPathSourceVectors['paths'],
+  colors: arrow.Vector<ArrowPathVertexColorType>
+): void {
+  if (paths.data.length !== colors.data.length) {
+    throw new Error('prepareArrowStoragePathGPUVectors vertex color batch count must match paths');
+  }
+  for (let batchIndex = 0; batchIndex < paths.data.length; batchIndex++) {
+    const pathOffsets = paths.data[batchIndex]?.valueOffsets as Int32Array | undefined;
+    const colorOffsets = colors.data[batchIndex]?.valueOffsets as Int32Array | undefined;
+    if (!pathOffsets || !colorOffsets || !areArrowOffsetsEqual(pathOffsets, colorOffsets)) {
+      throw new Error('prepareArrowStoragePathGPUVectors vertex colors must align with paths');
+    }
+  }
+}
+
+function assertArrowStoragePathVertexColorAlignment(
+  paths: GPUVector<ArrowPathCoordinateType>,
+  colors: GPUVector<ArrowPathVertexColorType>
+): void {
+  for (let batchIndex = 0; batchIndex < paths.data.length; batchIndex++) {
+    const pathOffsets = getArrowStoragePathOffsets(
+      paths.data[batchIndex] as GPUData<ArrowPathCoordinateType>
+    );
+    const colorData = colors.data[batchIndex];
+    const colorMetadata = colorData.readbackMetadata;
+    if (colorMetadata?.kind !== 'variable-length-attribute') {
+      throw new Error('ArrowStoragePathModel vertex colors require copied variable-length offsets');
+    }
+    if (!areArrowOffsetsEqual(pathOffsets, colorMetadata.valueOffsets)) {
+      throw new Error('ArrowStoragePathModel vertex colors must align with path vertex offsets');
+    }
+  }
+}
+
+function areArrowOffsetsEqual(left: Int32Array, right: Int32Array): boolean {
+  return left.length === right.length && left.every((value, index) => value === right[index]);
 }
 
 function getArrowStoragePathOffsets(data: GPUData<ArrowPathCoordinateType>): Int32Array {
@@ -380,4 +538,10 @@ function getStorageGPUDataBinding(data: GPUData<any>, size?: number): Binding {
     offset: data.byteOffset,
     ...(size && size > 0 ? {size} : {})
   };
+}
+
+function getStorageGPUDataValueByteLength(data: GPUData<any>, rowByteStride: number): number {
+  return data.readbackMetadata?.kind === 'variable-length-attribute'
+    ? data.readbackMetadata.valueByteLength
+    : data.length * rowByteStride;
 }

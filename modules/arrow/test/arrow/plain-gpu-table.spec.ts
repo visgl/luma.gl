@@ -621,8 +621,8 @@ test('GPUTable creates metadata from interleaved GPU vectors', t => {
     ],
     'uses interleaved buffer layout from vector'
   );
-  t.equal(gpuTable.attributes.positions, instances.buffer, 'maps positions to shared buffer');
-  t.equal(gpuTable.attributes.colors, instances.buffer, 'maps colors to shared buffer');
+  t.deepEqual(Object.keys(gpuTable.attributes), ['instances'], 'keeps shared layout buffer');
+  t.equal(gpuTable.attributes.instances, instances.buffer, 'maps layout to shared buffer');
 
   gpuTable.destroy();
   t.end();

@@ -3,9 +3,11 @@
 // Copyright (c) vis.gl contributors
 
 import {
+  ArrowModel,
   expandArrowVector,
   makeArrowGPUVector,
   makeArrowFixedSizeListVector,
+  makeArrowMatrix4x4Vector,
   makeGPUGeometryFromArrow,
   type ArrowTableGeometry,
   type ArrowMeshTable
@@ -16,7 +18,6 @@ import type {AnimationProps} from '@luma.gl/engine';
 import {
   AnimationLoopTemplate,
   CubeGeometry,
-  Model,
   PickingManager,
   ShaderInputs,
   indexColorPicking,
@@ -27,23 +28,34 @@ import type {ShaderModule} from '@luma.gl/shadertools';
 import {Matrix4, radians} from '@math.gl/core';
 import * as arrow from 'apache-arrow';
 
-export const title = 'Arrow Mesh Geometry';
+export const title = 'Matrices: FixedSizeList<Float32, 16>';
 export const description =
-  'CubeGeometry face ids routed through Mesh Arrow data and rendered as GPU table geometry.';
+  'CubeGeometry face ids routed through Mesh Arrow data and instanced through one Arrow matrix column.';
 
 const FACE_NAMES = ['Front', 'Back', 'Top', 'Bottom', 'Right', 'Left'] as const;
+const CUBE_COLUMNS = 3;
+const CUBE_ROWS = 2;
+const CUBE_COUNT = CUBE_COLUMNS * CUBE_ROWS;
+const MATRIX_COMPONENT_COUNT = 16;
+const MATRIX_ARROW_PATHS = {
+  matrixColumn0: 'matrix',
+  matrixColumn1: 'matrix',
+  matrixColumn2: 'matrix',
+  matrixColumn3: 'matrix'
+};
 
 const WGSL_SHADER = /* wgsl */ `\
 struct AppUniforms {
-  modelMatrix : mat4x4<f32>,
   viewMatrix : mat4x4<f32>,
   projectionMatrix : mat4x4<f32>,
 };
 
 @group(0) @binding(auto) var<uniform> app : AppUniforms;
 @group(0) @binding(auto) var<storage, read> faceColors : array<vec4<f32>>;
+@group(0) @binding(auto) var<storage, read> matrix : array<mat4x4<f32>>;
 
 struct VertexInputs {
+  @builtin(instance_index) instanceIndex : u32,
   @location(0) positions : vec3<f32>,
   @location(1) faceIndex : u32,
 };
@@ -62,14 +74,15 @@ struct PickingFragmentOutputs {
 
 @vertex
 fn vertexMain(inputs : VertexInputs) -> FragmentInputs {
+  let modelMatrix = matrix[inputs.instanceIndex];
   var outputs : FragmentInputs;
   outputs.Position =
     app.projectionMatrix *
     app.viewMatrix *
-    app.modelMatrix *
+    modelMatrix *
     vec4<f32>(inputs.positions, 1.0);
   outputs.color = faceColors[inputs.faceIndex];
-  outputs.objectIndex = i32(inputs.faceIndex);
+  outputs.objectIndex = i32(inputs.instanceIndex * ${FACE_NAMES.length}u + inputs.faceIndex);
   return outputs;
 }
 
@@ -92,7 +105,6 @@ const VS_GLSL = /* glsl */ `\
 precision highp float;
 
 uniform appUniforms {
-  mat4 modelMatrix;
   mat4 viewMatrix;
   mat4 projectionMatrix;
 } app;
@@ -100,17 +112,27 @@ uniform appUniforms {
 in vec3 positions;
 in vec4 colors;
 in uint faceIndices;
+in vec4 matrixColumn0;
+in vec4 matrixColumn1;
+in vec4 matrixColumn2;
+in vec4 matrixColumn3;
 
 out vec4 vColor;
 
 void main(void) {
+  mat4 modelMatrix = mat4(
+    matrixColumn0,
+    matrixColumn1,
+    matrixColumn2,
+    matrixColumn3
+  );
   gl_Position =
     app.projectionMatrix *
     app.viewMatrix *
-    app.modelMatrix *
+    modelMatrix *
     vec4(positions, 1.0);
   vColor = colors;
-  picking_setObjectIndex(int(faceIndices));
+  picking_setObjectIndex(gl_InstanceID * ${FACE_NAMES.length} + int(faceIndices));
 }
 `;
 
@@ -141,7 +163,6 @@ void main(void) {
 `;
 
 type AppUniforms = {
-  modelMatrix: Matrix4;
   viewMatrix: Matrix4;
   projectionMatrix: Matrix4;
 };
@@ -149,7 +170,6 @@ type AppUniforms = {
 const app: ShaderModule<AppUniforms> = {
   name: 'app',
   uniformTypes: {
-    modelMatrix: 'mat4x4<f32>',
     viewMatrix: 'mat4x4<f32>',
     projectionMatrix: 'mat4x4<f32>'
   }
@@ -160,30 +180,44 @@ const WEBGPU_MESH_SHADER_LAYOUT = {
     {name: 'positions', location: 0, type: 'vec3<f32>'},
     {name: 'faceIndex', location: 1, type: 'u32'}
   ],
-  bindings: []
+  bindings: [{name: 'matrix', type: 'read-only-storage', group: 0, location: 2}]
 } satisfies ShaderLayout;
 
 const WEBGL_MESH_SHADER_LAYOUT = {
   attributes: [
     {name: 'positions', location: 0, type: 'vec3<f32>'},
     {name: 'colors', location: 1, type: 'vec4<f32>'},
-    {name: 'faceIndices', location: 2, type: 'u32'}
+    {name: 'faceIndices', location: 2, type: 'u32'},
+    {name: 'matrixColumn0', location: 3, type: 'vec4<f32>', stepMode: 'instance'},
+    {name: 'matrixColumn1', location: 4, type: 'vec4<f32>', stepMode: 'instance'},
+    {name: 'matrixColumn2', location: 5, type: 'vec4<f32>', stepMode: 'instance'},
+    {name: 'matrixColumn3', location: 6, type: 'vec4<f32>', stepMode: 'instance'}
   ],
   bindings: []
 } satisfies ShaderLayout;
 
+type CubeTransform = {
+  translation: [number, number, number];
+  rotation: [number, number, number];
+  rotationRate: [number, number, number];
+  scale: [number, number, number];
+  matrix: Matrix4;
+};
+
 export default class ArrowMeshGeometryAnimationLoopTemplate extends AnimationLoopTemplate {
   static info = `
-<p>Builds indexed Mesh Arrow data from <code>CubeGeometry</code> face ids and renders it through <code>makeGPUGeometryFromArrow()</code>.</p>
+<p>Builds indexed Mesh Arrow data from <code>CubeGeometry</code> face ids, then renders ${CUBE_COUNT} transformed cube instances from one Arrow <code>matrix</code> <code>mat4x4</code> column. WebGPU reads the matrix column as <code>array&lt;mat4x4&lt;f32&gt;&gt;</code>; WebGL lowers the same Arrow column into four instanced <code>vec4</code> attributes.</p>
 `;
 
   readonly device: Device;
   readonly geometry: ArrowTableGeometry;
-  readonly model: Model;
-  readonly pickingModel: Model | null;
+  readonly model: ArrowModel;
+  readonly pickingModel: ArrowModel | null;
   readonly picker: PickingManager;
   readonly faceColors?: GPUVector<arrow.FixedSizeList<arrow.Float32>>;
   readonly faceNames: arrow.Vector<arrow.Utf8>;
+  readonly matrixValues = new Float32Array(CUBE_COUNT * MATRIX_COMPONENT_COUNT);
+  readonly cubeTransforms = makeCubeTransforms();
   readonly shaderInputs = new ShaderInputs<{
     app: typeof app.props;
     picking: typeof indexPicking.props;
@@ -205,10 +239,13 @@ export default class ArrowMeshGeometryAnimationLoopTemplate extends AnimationLoo
         ? makeArrowGPUVector(device, faceColors, {name: 'faceColors'})
         : undefined;
 
+    this.updateInstanceMatrices(0);
     this.geometry = makeGPUGeometryFromArrow(device, {arrowMesh});
-    this.model = new Model(device, {
+    this.model = new ArrowModel(device, {
       id: 'arrow-mesh-geometry',
       geometry: this.geometry,
+      arrowTable: makeInstanceArrowTable(this.matrixValues),
+      arrowPaths: MATRIX_ARROW_PATHS,
       source: WGSL_SHADER,
       vs: VS_GLSL,
       fs: FS_GLSL,
@@ -229,22 +266,24 @@ export default class ArrowMeshGeometryAnimationLoopTemplate extends AnimationLoo
         if (batchIndex === null || objectIndex === null) {
           return null;
         }
-        const faceName = this.faceNames.get(objectIndex);
-        return typeof faceName === 'string' ? `${faceName} face` : null;
+        const cubeIndex = Math.floor(objectIndex / FACE_NAMES.length);
+        const faceIndex = objectIndex % FACE_NAMES.length;
+        const faceName = this.faceNames.get(faceIndex);
+        return typeof faceName === 'string' ? `Cube ${cubeIndex + 1}, ${faceName} face` : null;
       }
     });
   }
 
   onRender({aspect, device, tick, _mousePosition}: AnimationProps): void {
+    this.updateInstanceMatrices(tick);
     this.shaderInputs.setProps({
       app: {
-        modelMatrix: new Matrix4().rotateX(tick * 0.01).rotateY(tick * 0.013),
-        viewMatrix: new Matrix4().lookAt({eye: [2.8, 2.1, 4.2], center: [0, 0, 0]}),
+        viewMatrix: new Matrix4().lookAt({eye: [6.4, 4.8, 7.4], center: [0, 0, 0]}),
         projectionMatrix: new Matrix4().perspective({
           fovy: radians(60),
           aspect,
           near: 0.1,
-          far: 20
+          far: 30
         })
       }
     });
@@ -266,6 +305,30 @@ export default class ArrowMeshGeometryAnimationLoopTemplate extends AnimationLoo
     this.faceColors?.destroy();
   }
 
+  updateInstanceMatrices(tick: number): void {
+    for (const [cubeIndex, cubeTransform] of this.cubeTransforms.entries()) {
+      cubeTransform.rotation[0] += cubeTransform.rotationRate[0];
+      cubeTransform.rotation[1] += cubeTransform.rotationRate[1];
+      cubeTransform.rotation[2] += cubeTransform.rotationRate[2];
+      cubeTransform.matrix
+        .identity()
+        .translate([
+          cubeTransform.translation[0],
+          cubeTransform.translation[1],
+          cubeTransform.translation[2] + Math.sin(tick * 0.01 + cubeIndex) * 0.3
+        ])
+        .rotateXYZ(cubeTransform.rotation)
+        .scale(cubeTransform.scale);
+
+      const matrixOffset = cubeIndex * MATRIX_COMPONENT_COUNT;
+      for (let matrixComponent = 0; matrixComponent < MATRIX_COMPONENT_COUNT; matrixComponent++) {
+        this.matrixValues[matrixOffset + matrixComponent] = cubeTransform.matrix[matrixComponent];
+      }
+    }
+
+    this.model?.arrowGPUTable?.gpuVectors.matrix?.buffer.write(this.matrixValues);
+  }
+
   pickFace(mousePosition: number[] | null | undefined): void {
     if (!this.picker.shouldPick(mousePosition as [number, number] | null)) {
       return;
@@ -279,9 +342,15 @@ export default class ArrowMeshGeometryAnimationLoopTemplate extends AnimationLoo
     void this.picker.updatePickInfo(mousePosition as [number, number]);
   }
 
-  createPickingModel(): Model {
-    return new Model(this.device, {
+  createPickingModel(): ArrowModel {
+    if (!this.model.arrowGPUTable) {
+      throw new Error('Matrices picking requires prepared instance Arrow data');
+    }
+    return new ArrowModel(this.device, {
       id: `${this.model.id || 'arrow-mesh-geometry'}-picking`,
+      geometry: this.geometry,
+      arrowGPUTable: this.model.arrowGPUTable,
+      arrowPaths: MATRIX_ARROW_PATHS,
       source: WGSL_SHADER,
       vs: VS_GLSL,
       fs: PICKING_FS_GLSL,
@@ -289,11 +358,7 @@ export default class ArrowMeshGeometryAnimationLoopTemplate extends AnimationLoo
       modules: [indexPicking] as ShaderModule[],
       shaderLayout:
         this.device.type === 'webgpu' ? WEBGPU_MESH_SHADER_LAYOUT : WEBGL_MESH_SHADER_LAYOUT,
-      bufferLayout: this.geometry.bufferLayout,
-      attributes: this.geometry.attributes,
-      bindings: {...this.model.bindings},
-      vertexCount: this.geometry.vertexCount,
-      indexBuffer: this.geometry.indices || null,
+      ...(this.faceColors ? {bindings: {faceColors: this.faceColors.buffer}} : {}),
       shaderInputs: this.shaderInputs,
       colorAttachmentFormats: ['rgba8unorm', 'rg32sint'],
       depthStencilAttachmentFormat: 'depth24plus',
@@ -315,13 +380,13 @@ function makeArrowMeshTable(
   const cubeIndices = cubeGeometry.indices?.value;
 
   if (!(cubePositions instanceof Float32Array)) {
-    throw new Error('Arrow Mesh Geometry requires CubeGeometry positions');
+    throw new Error('Matrices requires CubeGeometry positions');
   }
   if (!(cubeFaceIndices instanceof Uint32Array)) {
-    throw new Error('Arrow Mesh Geometry requires CubeGeometry faceIndex values');
+    throw new Error('Matrices requires CubeGeometry faceIndex values');
   }
   if (!(cubeIndices instanceof Uint16Array) && !(cubeIndices instanceof Uint32Array)) {
-    throw new Error('Arrow Mesh Geometry requires CubeGeometry indices');
+    throw new Error('Matrices requires CubeGeometry indices');
   }
 
   const positions = makeArrowFixedSizeListVector(new arrow.Float32(), 3, cubePositions);
@@ -388,6 +453,39 @@ function makeWebGLMeshTable(
     COLOR_0: colors,
     faceIndices: arrow.makeVector(faceIndices)
   });
+}
+
+function makeInstanceArrowTable(matrixValues: Float32Array): arrow.Table {
+  return new arrow.Table({
+    matrix: makeArrowMatrix4x4Vector(matrixValues, {
+      order: 'column-major',
+      layout: 'wgsl-storage'
+    })
+  });
+}
+
+function makeCubeTransforms(): CubeTransform[] {
+  const cubeTransforms: CubeTransform[] = [];
+
+  for (let rowIndex = 0; rowIndex < CUBE_ROWS; rowIndex++) {
+    for (let columnIndex = 0; columnIndex < CUBE_COLUMNS; columnIndex++) {
+      const cubeIndex = rowIndex * CUBE_COLUMNS + columnIndex;
+      const scale = 0.72 + (cubeIndex % 3) * 0.08;
+      cubeTransforms.push({
+        translation: [
+          (columnIndex - (CUBE_COLUMNS - 1) / 2) * 2.1,
+          (rowIndex - (CUBE_ROWS - 1) / 2) * 2.1,
+          (cubeIndex % 2 === 0 ? -1 : 1) * 0.45
+        ],
+        rotation: [cubeIndex * 0.17, cubeIndex * 0.31, cubeIndex * 0.11],
+        rotationRate: [0.004 + cubeIndex * 0.0003, 0.006 + cubeIndex * 0.0004, 0.002],
+        scale: [scale, scale, scale],
+        matrix: new Matrix4()
+      });
+    }
+  }
+
+  return cubeTransforms;
 }
 
 function makeFaceMetadataTable(): arrow.Table {

@@ -46,11 +46,12 @@ export class GPURecordBatch {
   readonly bufferLayout: BufferLayout[] = [];
   /** GPU vectors keyed by shader/table column name. */
   readonly gpuVectors: Record<string, GPUVector> = {};
-  /** Model-ready attribute buffers keyed by shader attribute name. */
+  /** Model-ready attribute buffers keyed by buffer layout name. */
   readonly attributes: Record<string, Buffer | DynamicBuffer> = {};
   /** Model-ready storage bindings keyed by shader binding name. */
   readonly bindings: Record<string, Buffer | DynamicBuffer> = {};
 
+  /** Creates one GPU record batch from named GPU vectors and optional schema metadata. */
   constructor({
     vectors,
     bufferLayout,
