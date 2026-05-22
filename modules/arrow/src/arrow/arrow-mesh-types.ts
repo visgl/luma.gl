@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {TypedArray} from '@math.gl/core';
-import type * as arrow from 'apache-arrow';
+import type {Table} from 'apache-arrow';
 
 /** Primitive topology values supported by Mesh Arrow geometry input. */
 export type ArrowMeshTopology = 'point-list' | 'triangle-list' | 'triangle-strip';
@@ -37,5 +37,5 @@ export type ArrowMeshTable = {
   /** Optional top-level primitive index accessor. The Arrow `indices` column takes precedence. */
   indices?: ArrowMeshAttribute;
   /** Raw Apache Arrow table containing vertex attribute columns and optional `indices` column. */
-  data: arrow.Table;
+  data: Table;
 };

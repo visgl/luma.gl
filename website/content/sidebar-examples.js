@@ -18,13 +18,16 @@ const sidebars = {
     },
     {
       type: 'category',
-      label: 'GPU Tables',
+      label: 'Apache Arrow GPU Tables',
       items: [
         'gpu-tables/arrow-instancing',
         'gpu-tables/arrow-text-2d',
+        'gpu-tables/arrow-time-columns',
+        'gpu-tables/arrow-temporal-starfield',
         'gpu-tables/arrow-path-model',
         'gpu-tables/arrow-mesh-geometry',
-        'gpu-tables/gpu-vector-storage-particles'
+        'gpu-tables/gpu-vector-storage-particles',
+        'gpu-tables/dggs-gpu-polygons'
       ]
     },
     {

@@ -14,7 +14,22 @@ import type {ShaderLayout} from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/engine';
 import {GPURecordBatch, GPUVector, GPUTable} from '@luma.gl/tables';
 import {NullDevice} from '@luma.gl/test-utils';
-import * as arrow from 'apache-arrow';
+import {
+  Binary,
+  Data,
+  DataType,
+  Field,
+  FixedSizeList,
+  Float32,
+  RecordBatch,
+  Schema,
+  Struct,
+  Table,
+  Uint8,
+  Utf8,
+  makeData,
+  vectorFromArray
+} from 'apache-arrow';
 
 test('GPUTable creates GPU vectors from shader-compatible Arrow table columns', t => {
   const device = new NullDevice({});
@@ -177,7 +192,7 @@ test('GPUTable preserves record batch boundaries with real batch-owned GPU buffe
   const device = new NullDevice({});
   const firstBatch = makeGpuMetadataTable().batches[0];
   const secondBatch = makeGpuMetadataTable().batches[0];
-  const table = new arrow.Table([firstBatch, secondBatch]);
+  const table = new Table([firstBatch, secondBatch]);
   const shaderLayout: ShaderLayout = {
     attributes: [
       {name: 'positions', location: 0, type: 'vec2<f32>'},
@@ -227,7 +242,7 @@ test('GPUTable packBatches collapses owned batches in place', t => {
   const device = new NullDevice({});
   const firstBatch = makeGpuMetadataTable().batches[0];
   const secondBatch = makeGpuMetadataTable().batches[0];
-  const table = new arrow.Table([firstBatch, secondBatch]);
+  const table = new Table([firstBatch, secondBatch]);
   const shaderLayout: ShaderLayout = {
     attributes: [
       {name: 'positions', location: 0, type: 'vec2<f32>'},
@@ -263,7 +278,7 @@ test('GPUTable packBatches greedily merges adjacent batches to the requested siz
     makeGpuMetadataTable().batches[0],
     makeGpuMetadataTable().batches[0]
   ];
-  const table = new arrow.Table(batches);
+  const table = new Table(batches);
   const shaderLayout: ShaderLayout = {
     attributes: [
       {name: 'positions', location: 0, type: 'vec2<f32>'},
@@ -297,7 +312,7 @@ test('GPUTable addBatch appends an already-owned GPU record batch in place', t =
     ],
     bindings: []
   };
-  const gpuTable = makeArrowGPUTable(device, new arrow.Table([firstBatch]), {shaderLayout});
+  const gpuTable = makeArrowGPUTable(device, new Table([firstBatch]), {shaderLayout});
   const gpuRecordBatch = makeArrowGPURecordBatch(device, secondBatch, {shaderLayout});
   const appendedPositionsBuffer = gpuRecordBatch.gpuVectors.positions.buffer;
 
@@ -363,13 +378,9 @@ test('GPUTable addToLastBatch appends Arrow batches into one mutable trailing GP
 
 test('GPUTable appendable batches expose UTF-8 storage vectors with compact metadata', t => {
   const device = new NullDevice({});
-  const positions = makeArrowFixedSizeListVector(
-    new arrow.Float32(),
-    2,
-    new Float32Array([0, 0, 1, 1])
-  );
-  const texts = arrow.vectorFromArray(['alpha', 'beta'], new arrow.Utf8());
-  const sourceTable = new arrow.Table({positions, texts});
+  const positions = makeArrowFixedSizeListVector(new Float32(), 2, new Float32Array([0, 0, 1, 1]));
+  const texts = vectorFromArray(['alpha', 'beta'], new Utf8());
+  const sourceTable = new Table({positions, texts});
   const shaderLayout: ShaderLayout = {
     attributes: [{name: 'positions', location: 0, type: 'vec2<f32>'}],
     bindings: [{name: 'texts', type: 'read-only-storage', group: 0, location: 0}]
@@ -397,13 +408,9 @@ test('GPUTable appendable batches expose UTF-8 storage vectors with compact meta
 
 test('GPUTable static batches bind UTF-8 storage through batch GPUData buffers', t => {
   const device = new NullDevice({});
-  const positions = makeArrowFixedSizeListVector(
-    new arrow.Float32(),
-    2,
-    new Float32Array([0, 0, 1, 1])
-  );
-  const texts = arrow.vectorFromArray(['alpha', 'beta'], new arrow.Utf8());
-  const sourceTable = new arrow.Table({positions, texts});
+  const positions = makeArrowFixedSizeListVector(new Float32(), 2, new Float32Array([0, 0, 1, 1]));
+  const texts = vectorFromArray(['alpha', 'beta'], new Utf8());
+  const sourceTable = new Table({positions, texts});
   const shaderLayout: ShaderLayout = {
     attributes: [{name: 'positions', location: 0, type: 'vec2<f32>'}],
     bindings: [{name: 'texts', type: 'read-only-storage', group: 0, location: 0}]
@@ -457,7 +464,7 @@ test('GPUTable detachVector removes one live column and transfers its ownership'
   const device = new NullDevice({});
   const firstBatch = makeGpuMetadataTable().batches[0];
   const secondBatch = makeGpuMetadataTable().batches[0];
-  const table = new arrow.Table([firstBatch, secondBatch]);
+  const table = new Table([firstBatch, secondBatch]);
   const shaderLayout: ShaderLayout = {
     attributes: [
       {name: 'positions', location: 0, type: 'vec2<f32>'},
@@ -494,7 +501,7 @@ test('GPUTable detachBatches removes a live batch range and restitches aggregate
     makeGpuMetadataTable().batches[0],
     makeGpuMetadataTable().batches[0]
   ];
-  const table = new arrow.Table(batches);
+  const table = new Table(batches);
   const shaderLayout: ShaderLayout = {
     attributes: [
       {name: 'positions', location: 0, type: 'vec2<f32>'},
@@ -547,7 +554,7 @@ test('GPUTable creates metadata from existing GPU vectors', t => {
     type: 'buffer',
     name: 'positions',
     buffer: device.createBuffer({byteLength: 16}),
-    dataType: new arrow.FixedSizeList(2, new arrow.Field('value', new arrow.Float32())),
+    dataType: new FixedSizeList(2, new Field('value', new Float32())),
     length: 2,
     stride: 2,
     byteStride: 8,
@@ -557,7 +564,7 @@ test('GPUTable creates metadata from existing GPU vectors', t => {
     type: 'buffer',
     name: 'weights',
     buffer: device.createBuffer({byteLength: 8}),
-    dataType: new arrow.Float32(),
+    dataType: new Float32(),
     length: 2,
     byteStride: 4,
     ownsBuffer: true
@@ -593,7 +600,7 @@ test('GPUTable creates metadata from interleaved GPU vectors', t => {
     type: 'interleaved',
     name: 'instances',
     buffer: device.createBuffer({byteLength: 32}),
-    dataType: new arrow.Binary(),
+    dataType: new Binary(),
     length: 2,
     byteStride: 16,
     attributes: [
@@ -606,7 +613,7 @@ test('GPUTable creates metadata from interleaved GPU vectors', t => {
   const gpuTable = new GPUTable({vectors: [instances]});
 
   t.equal(gpuTable.schema.fields[0].name, 'instances', 'uses vector name in schema');
-  t.ok(arrow.DataType.isBinary(gpuTable.schema.fields[0].type), 'uses binary schema for storage');
+  t.ok(DataType.isBinary(gpuTable.schema.fields[0].type), 'uses binary schema for storage');
   t.deepEqual(
     gpuTable.bufferLayout,
     [
@@ -621,87 +628,83 @@ test('GPUTable creates metadata from interleaved GPU vectors', t => {
     ],
     'uses interleaved buffer layout from vector'
   );
-  t.equal(gpuTable.attributes.positions, instances.buffer, 'maps positions to shared buffer');
-  t.equal(gpuTable.attributes.colors, instances.buffer, 'maps colors to shared buffer');
+  t.deepEqual(Object.keys(gpuTable.attributes), ['instances'], 'keeps shared layout buffer');
+  t.equal(gpuTable.attributes.instances, instances.buffer, 'maps layout to shared buffer');
 
   gpuTable.destroy();
   t.end();
 });
 
-function makeGpuMetadataTable(): arrow.Table {
-  const positionsData = makeFixedSizeListData(
-    new arrow.Float32(),
-    2,
-    new Float32Array([0, 0, 1, 1])
-  );
+function makeGpuMetadataTable(): Table {
+  const positionsData = makeFixedSizeListData(new Float32(), 2, new Float32Array([0, 0, 1, 1]));
   const colorsData = makeFixedSizeListData(
-    new arrow.Uint8(),
+    new Uint8(),
     4,
     new Uint8Array([255, 0, 0, 255, 0, 255, 0, 255])
   );
-  const schema = new arrow.Schema(
+  const schema = new Schema(
     [
-      new arrow.Field('positions', positionsData.type, false, new Map([['semantic', 'position']])),
-      new arrow.Field('colors', colorsData.type, false, new Map([['semantic', 'color']]))
+      new Field('positions', positionsData.type, false, new Map([['semantic', 'position']])),
+      new Field('colors', colorsData.type, false, new Map([['semantic', 'color']]))
     ],
     new Map([['table', 'source']])
   );
-  const structData = arrow.makeData({
-    type: new arrow.Struct(schema.fields),
+  const structData = makeData({
+    type: new Struct(schema.fields),
     length: 2,
     nullCount: 0,
     nullBitmap: null,
     children: [positionsData, colorsData]
   });
 
-  return new arrow.Table([new arrow.RecordBatch(schema, structData)]);
+  return new Table([new RecordBatch(schema, structData)]);
 }
 
-function makeNestedGpuMetadataTable(): arrow.Table {
+function makeNestedGpuMetadataTable(): Table {
   const colorsData = makeFixedSizeListData(
-    new arrow.Uint8(),
+    new Uint8(),
     4,
     new Uint8Array([255, 0, 0, 255, 0, 255, 0, 255])
   );
-  const nestedSchema = new arrow.Schema([
-    new arrow.Field('colors', colorsData.type, false, new Map([['semantic', 'nested-color']]))
+  const nestedSchema = new Schema([
+    new Field('colors', colorsData.type, false, new Map([['semantic', 'nested-color']]))
   ]);
-  const nestedStructData = arrow.makeData({
-    type: new arrow.Struct(nestedSchema.fields),
+  const nestedStructData = makeData({
+    type: new Struct(nestedSchema.fields),
     length: 2,
     nullCount: 0,
     nullBitmap: null,
     children: [colorsData]
   });
-  const schema = new arrow.Schema(
-    [new arrow.Field('style', nestedStructData.type)],
+  const schema = new Schema(
+    [new Field('style', nestedStructData.type)],
     new Map([['table', 'nested-source']])
   );
-  const structData = arrow.makeData({
-    type: new arrow.Struct(schema.fields),
+  const structData = makeData({
+    type: new Struct(schema.fields),
     length: 2,
     nullCount: 0,
     nullBitmap: null,
     children: [nestedStructData]
   });
 
-  return new arrow.Table([new arrow.RecordBatch(schema, structData)]);
+  return new Table([new RecordBatch(schema, structData)]);
 }
 
-function makeFixedSizeListData<T extends arrow.DataType>(
+function makeFixedSizeListData<T extends DataType>(
   childType: T,
   listSize: 2 | 3 | 4,
   values: T['TArray']
-): arrow.Data<arrow.FixedSizeList<T>> {
-  const childData = arrow.makeData({
+): Data<FixedSizeList<T>> {
+  const childData = makeData({
     type: childType,
     length: values.length,
     nullCount: 0,
     nullBitmap: null,
     data: values
   });
-  const listType = new arrow.FixedSizeList(listSize, new arrow.Field('value', childType));
-  return arrow.makeData({
+  const listType = new FixedSizeList(listSize, new Field('value', childType));
+  return makeData({
     type: listType,
     length: values.length / listSize,
     nullCount: 0,

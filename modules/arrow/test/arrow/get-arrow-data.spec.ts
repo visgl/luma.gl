@@ -3,7 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 // import test from '@luma.gl/devtools-extensions/tape-test-utils';
-// import * as arrow from 'apache-arrow';
+// import {Float32} from 'apache-arrow';
 // import {getArrowDataByPath} from '@luma.gl/arrow';
 // import { expandArrayToCoords } from "../src/utils.js";
 // import { arraysEqual } from "./utils.js";
@@ -21,7 +21,7 @@
 //   const heightData = getArrowDataByPath(deeplyNestedTable, 'data.age');
 //   t.equal(
 //     heightData.type.typeId,
-//     new arrow.Float32().typeId,
+//     new Float32().typeId,
 //     'extracted age from deeply nested struct'
 //   );
 

@@ -166,4 +166,5 @@ export const fround: OperationHandler<{x: GPUTableEvaluator}> = async ({
     operationType: 'uint32',
     outputBuffer: target
   });
+  return {success: true};
 };

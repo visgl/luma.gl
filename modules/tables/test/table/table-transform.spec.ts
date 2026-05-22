@@ -7,7 +7,7 @@ import {makeArrowGPUVector, readArrowGPUVectorAsync} from '@luma.gl/arrow';
 import {GPUVector, TableTransform} from '@luma.gl/tables';
 import type {ShaderLayout} from '@luma.gl/core';
 import {getWebGLTestDevice} from '@luma.gl/test-utils';
-import * as arrow from 'apache-arrow';
+import {Float32, makeVector} from 'apache-arrow';
 
 const TRANSFORM_VERTEX_SHADER = /* glsl */ `\
 #version 300 es
@@ -28,7 +28,7 @@ const TRANSFORM_SHADER_LAYOUT = {
 
 test('TableTransform copies dense outputs back into inputVectors', async t => {
   const device = await getWebGLTestDevice();
-  const values = makeArrowGPUVector(device, arrow.makeVector(new Float32Array([1, 2, 3])), {
+  const values = makeArrowGPUVector(device, makeVector(new Float32Array([1, 2, 3])), {
     name: 'values'
   });
   const transform = new TableTransform(device, {
@@ -60,7 +60,7 @@ test('TableTransform rejects padded automatic writeback vectors', async t => {
     type: 'buffer',
     name: 'values',
     buffer,
-    dataType: new arrow.Float32(),
+    dataType: new Float32(),
     length: 2,
     stride: 1,
     byteStride: 8,

@@ -2,13 +2,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import * as arrow from 'apache-arrow';
+import {Data} from 'apache-arrow';
 import {ArrowMultiLineString, ArrowPolygon, ArrowMultiPolygon} from './geoarrow-types';
 import {getMultiLineStringChild, getPolygonChild, getMultiPolygonChild} from './geoarrow';
 
-export function getMultiLineStringResolvedOffsets(
-  data: arrow.Data<ArrowMultiLineString>
-): Int32Array {
+export function getMultiLineStringResolvedOffsets(data: Data<ArrowMultiLineString>): Int32Array {
   const geomOffsets = data.valueOffsets;
   const lineStringData = getMultiLineStringChild(data);
   const ringOffsets = lineStringData.valueOffsets;
@@ -23,7 +21,7 @@ export function getMultiLineStringResolvedOffsets(
   return resolvedRingOffsets;
 }
 
-export function getPolygonResolvedOffsets(data: arrow.Data<ArrowPolygon>): Int32Array {
+export function getPolygonResolvedOffsets(data: Data<ArrowPolygon>): Int32Array {
   const geomOffsets = data.valueOffsets;
   const ringData = getPolygonChild(data);
   const ringOffsets = ringData.valueOffsets;
@@ -38,7 +36,7 @@ export function getPolygonResolvedOffsets(data: arrow.Data<ArrowPolygon>): Int32
   return resolvedRingOffsets;
 }
 
-export function getMultiPolygonResolvedOffsets(data: arrow.Data<ArrowMultiPolygon>): Int32Array {
+export function getMultiPolygonResolvedOffsets(data: Data<ArrowMultiPolygon>): Int32Array {
   const polygonData = getMultiPolygonChild(data);
   const ringData = getPolygonChild(polygonData);
 

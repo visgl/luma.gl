@@ -11,7 +11,7 @@ import type {
 } from '@luma.gl/core';
 import {shaderTypeDecoder, vertexFormatDecoder} from '@luma.gl/core';
 import {getAttributeLayoutFromBufferSchema, type BufferSchema} from '@luma.gl/engine';
-import * as arrow from 'apache-arrow';
+import {Table, Vector} from 'apache-arrow';
 import {getArrowPaths, getArrowVectorByPath} from './arrow-paths';
 import {getArrowColumnInfo, getInstanceColumnInfo} from './arrow-column-info';
 import {isInstanceArrowType, type ArrowColumnInfo, type AttributeArrowType} from './arrow-types';
@@ -26,9 +26,9 @@ export type ArrowVertexFormatOptions = {
 /** Source options for deriving a BufferLayout from Arrow data and a ShaderLayout. */
 export type ArrowBufferLayoutOptions = ArrowVertexFormatOptions & {
   /** Arrow vectors keyed by shader attribute name. */
-  arrowVectors?: Record<string, arrow.Vector>;
+  arrowVectors?: Record<string, Vector>;
   /** Arrow table containing columns referenced by shader attribute name or arrowPaths. */
-  arrowTable?: arrow.Table;
+  arrowTable?: Table;
   /** Maps shader attribute names to Arrow column paths. Defaults to using the attribute name. */
   arrowPaths?: Record<string, string>;
   /** @deprecated Use arrowPaths. */
@@ -38,11 +38,11 @@ export type ArrowBufferLayoutOptions = ArrowVertexFormatOptions & {
 type ArrowBufferLayoutSource =
   | {
       type: 'table';
-      arrowTable: arrow.Table;
+      arrowTable: Table;
       arrowTablePaths: Set<string>;
       arrowPaths?: Record<string, string>;
     }
-  | {type: 'vectors'; arrowVectors: Record<string, arrow.Vector>};
+  | {type: 'vectors'; arrowVectors: Record<string, Vector>};
 
 /**
  * Returns the GPU vertex format needed to expose one Arrow column to one shader attribute.
@@ -89,12 +89,12 @@ export function getArrowBufferLayout(
 ): BufferLayout[];
 /** @deprecated Use getArrowBufferLayout(shaderLayout, {arrowTable, arrowPaths}). */
 export function getArrowBufferLayout(
-  arrowTable: arrow.Table,
+  arrowTable: Table,
   shaderLayout: ShaderLayout,
   options?: ArrowBufferLayoutOptions
 ): BufferLayout[];
 export function getArrowBufferLayout(
-  firstArgument: ShaderLayout | arrow.Table,
+  firstArgument: ShaderLayout | Table,
   secondArgument: ShaderLayout | ArrowBufferLayoutOptions,
   thirdArgument?: ArrowBufferLayoutOptions
 ): BufferLayout[] {
@@ -214,7 +214,7 @@ function getArrowMatrixBufferLayouts(
 }
 
 function normalizeArrowBufferLayoutArguments(
-  firstArgument: ShaderLayout | arrow.Table,
+  firstArgument: ShaderLayout | Table,
   secondArgument: ShaderLayout | ArrowBufferLayoutOptions,
   thirdArgument?: ArrowBufferLayoutOptions
 ): {
@@ -222,7 +222,7 @@ function normalizeArrowBufferLayoutArguments(
   options: ArrowBufferLayoutOptions;
   source: ArrowBufferLayoutSource;
 } {
-  if (firstArgument instanceof arrow.Table) {
+  if (firstArgument instanceof Table) {
     const arrowTable = firstArgument;
     const shaderLayout = secondArgument as ShaderLayout;
     const options = thirdArgument || {};
@@ -300,11 +300,11 @@ function getArrowColumnInfoFromSource(
   }
 }
 
-function getArrowColumnInfoFromVector(vector: arrow.Vector): ArrowColumnInfo {
+function getArrowColumnInfoFromVector(vector: Vector): ArrowColumnInfo {
   if (!isInstanceArrowType(vector.type)) {
     throw new Error('Arrow vector is not compatible with shader attributes');
   }
-  return getInstanceColumnInfo(vector as arrow.Vector<AttributeArrowType>);
+  return getInstanceColumnInfo(vector as Vector<AttributeArrowType>);
 }
 
 function getFloatShaderVertexFormat(

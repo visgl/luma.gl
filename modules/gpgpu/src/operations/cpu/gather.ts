@@ -33,6 +33,10 @@ export const gather: OperationHandler<{
   }
 
   target.write(result);
+  return {
+    success: true,
+    value: result
+  };
 };
 
 function isValidSourceIndex(sourceIndex: number, length: number): boolean {

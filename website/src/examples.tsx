@@ -5,6 +5,7 @@ import {ExampleHeader, ExamplePage, LumaExample, ReactExample, useStore} from '.
 
 import AnimationApp from '../../examples/api/animation/app';
 import CubemapApp from '../../examples/api/cubemap/app';
+import DggsGpuPolygonsApp from '../../examples/gpu-tables/dggs-gpu-polygons/app';
 import ArrowMeshGeometryApp from '../../examples/gpu-tables/arrow-mesh-geometry/app';
 import ArrowPathModelApp from '../../examples/gpu-tables/arrow-path-model/app';
 import BloomApp from '../../examples/experimental/bloom/app';
@@ -26,6 +27,8 @@ import DOFApp from '../../examples/showcase/dof/app';
 // import GeospatialApp from '../../examples/showcase/geospatial/app';
 import GLTFApp from '../../examples/showcase/gltf/app';
 import ArrowInstancingApp from '../../examples/gpu-tables/arrow-instancing/app';
+import ArrowTemporalStarfieldApp from '../../examples/gpu-tables/arrow-temporal-starfield/app';
+import ArrowTimeColumnsApp from '../../examples/gpu-tables/arrow-time-columns/app';
 import ArrowText2DApp from '../../examples/gpu-tables/arrow-text-2d/app';
 import InstancingApp from '../../examples/showcase/instancing/app';
 import Text3DApp from '../../examples/experimental/text-3d/app';
@@ -119,7 +122,7 @@ export const InstancingExample: React.FC = props => (
 export const ArrowInstancingExample: React.FC = props => (
   <LumaExample
     id="arrow-instancing"
-    title="Arrow Instancing"
+    title="Instancing: FixedSizeList<Float32, 2>"
     directory="gpu-tables"
     template={ArrowInstancingApp}
     config={exampleConfig}
@@ -130,9 +133,33 @@ export const ArrowInstancingExample: React.FC = props => (
 export const ArrowText2DExample: React.FC = props => (
   <LumaExample
     id="arrow-text-2d"
-    title="Arrow 2D Text"
+    title="Text: Utf8/Dictionary<Utf8>"
     directory="gpu-tables"
     template={ArrowText2DApp}
+    config={exampleConfig}
+    showStats
+    {...props}
+  />
+);
+
+export const ArrowTimeColumnsExample: React.FC = props => (
+  <LumaExample
+    id="arrow-time-columns"
+    title="Time: Date/Time/Timestamp/Duration"
+    directory="gpu-tables"
+    template={ArrowTimeColumnsApp}
+    config={exampleConfig}
+    showStats
+    {...props}
+  />
+);
+
+export const ArrowTemporalStarfieldExample: React.FC = props => (
+  <LumaExample
+    id="arrow-temporal-starfield"
+    title="Time: Blinking Stars"
+    directory="gpu-tables"
+    template={ArrowTemporalStarfieldApp}
     config={exampleConfig}
     showStats
     {...props}
@@ -142,10 +169,23 @@ export const ArrowText2DExample: React.FC = props => (
 export const ArrowPathModelExample: React.FC = props => (
   <LumaExample
     id="arrow-path-model"
-    title="Arrow Path Model"
+    title="Paths: List<FixedSizeList<Float32, 4>> + List<Timestamp>"
     directory="gpu-tables"
     template={ArrowPathModelApp}
     config={exampleConfig}
+    showStats
+    {...props}
+  />
+);
+
+export const DggsGpuPolygonsExample: React.FC = props => (
+  <LumaExample
+    id="dggs-gpu-polygons"
+    title="Global Grids: Uint64, Utf8"
+    directory="gpu-tables"
+    template={DggsGpuPolygonsApp}
+    config={exampleConfig}
+    devices={['webgpu']}
     showStats
     {...props}
   />
@@ -219,7 +259,7 @@ export const BloomExample: React.FC = props => (
 export const ArrowMeshGeometryExample: React.FC = props => (
   <LumaExample
     id="arrow-mesh-geometry"
-    title="Arrow Mesh Geometry"
+    title="Matrices: FixedSizeList<Float32, 16>"
     directory="gpu-tables"
     template={ArrowMeshGeometryApp}
     config={exampleConfig}
@@ -230,7 +270,7 @@ export const ArrowMeshGeometryExample: React.FC = props => (
 export const GPUVectorStorageParticlesExample: React.FC = props => (
   <LumaExample
     id="gpu-vector-storage-particles"
-    title="Arrow Particles"
+    title="Particles: FixedSizeList<Float32, 3>"
     directory="gpu-tables"
     template={GPUVectorStorageParticlesApp}
     config={exampleConfig}

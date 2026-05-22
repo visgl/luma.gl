@@ -4,7 +4,7 @@
 
 import {Buffer, Device, type BufferLayout, type ShaderLayout} from '@luma.gl/core';
 import {DynamicBuffer} from '@luma.gl/engine';
-import * as arrow from 'apache-arrow';
+import {Field, RecordBatch, Schema, Table, util} from 'apache-arrow';
 import {getArrowFieldByPath, getArrowVectorByPath} from './arrow-paths';
 import {getArrowBufferLayout, type ArrowVertexFormatOptions} from './arrow-shader-layout';
 import type {AttributeArrowType} from './arrow-types';
@@ -62,7 +62,7 @@ export type GPUTableDetachBatchesOptions = {
  */
 export class GPUTable {
   /** GPU-facing schema for the selected shader attribute columns. */
-  schema: arrow.Schema;
+  schema: Schema;
   /** Number of rows in the source Arrow table at construction time. */
   numRows: number;
   /** Number of selected GPU columns in {@link schema}. */
@@ -81,14 +81,14 @@ export class GPUTable {
   readonly batches: GPURecordBatch[] = [];
 
   /** Creates GPU buffers and a GPU-facing schema from an Arrow table. */
-  constructor(device: Device, table: arrow.Table, props: GPUTableProps);
+  constructor(device: Device, table: Table, props: GPUTableProps);
   /** Creates a GPU-facing table from existing named GPU vectors. */
   constructor(props: GPUTableFromVectorsProps);
   /** Creates an empty table with one appendable trailing GPU batch. */
   constructor(props: GPUTableAppendableProps);
   constructor(
     deviceOrProps: Device | GPUTableFromVectorsProps | GPUTableAppendableProps,
-    table?: arrow.Table,
+    table?: Table,
     props?: GPUTableProps
   ) {
     if (!(deviceOrProps instanceof Device)) {
@@ -99,7 +99,7 @@ export class GPUTable {
         });
         this.numRows = 0;
         this.nullCount = 0;
-        this.schema = new arrow.Schema(batch.schema.fields, new Map(deviceOrProps.schema.metadata));
+        this.schema = new Schema(batch.schema.fields, new Map(deviceOrProps.schema.metadata));
         this.numCols = batch.numCols;
         this.bufferLayout.push(...batch.bufferLayout);
         this.batches.push(batch);
@@ -119,7 +119,7 @@ export class GPUTable {
       Object.assign(this.attributes, vectorCollection.attributes);
       this.bufferLayout.push(...vectorCollection.bufferLayout);
 
-      this.schema = new arrow.Schema(vectorCollection.fields, metadata);
+      this.schema = new Schema(vectorCollection.fields, metadata);
       this.numCols = vectorCollection.fields.length;
       this.batches.push(
         new GPURecordBatch({
@@ -144,12 +144,12 @@ export class GPUTable {
       allowWebGLOnlyFormats: props.allowWebGLOnlyFormats
     });
 
-    const fields: arrow.Field[] = [];
+    const fields: Field[] = [];
     for (const bufferLayout of this.bufferLayout) {
       const arrowPath = props.arrowPaths?.[bufferLayout.name] || bufferLayout.name;
       const vector = getArrowVectorByPath(table, arrowPath);
       const sourceField = getArrowFieldByPath(table, arrowPath);
-      const field = new arrow.Field(
+      const field = new Field(
         bufferLayout.name,
         vector.type,
         sourceField.nullable,
@@ -158,7 +158,7 @@ export class GPUTable {
       fields.push(field);
     }
 
-    this.schema = new arrow.Schema(fields, new Map(table.schema.metadata));
+    this.schema = new Schema(fields, new Map(table.schema.metadata));
     this.numCols = this.schema.fields.length;
     for (const recordBatch of table.batches) {
       this.batches.push(new GPURecordBatch(device, recordBatch, props));
@@ -167,7 +167,7 @@ export class GPUTable {
     if (firstBatch) {
       // Storage-backed table columns are selected at the batch upload layer,
       // so adopt that complete selected schema once at least one batch exists.
-      this.schema = new arrow.Schema(firstBatch.schema.fields, new Map(table.schema.metadata));
+      this.schema = new Schema(firstBatch.schema.fields, new Map(table.schema.metadata));
       this.numCols = this.schema.fields.length;
     }
     this.rebuildAggregateVectors();
@@ -233,8 +233,8 @@ export class GPUTable {
    * can absorb synchronous incremental table arrivals without changing table
    * ownership.
    */
-  addToLastBatch(recordBatchOrTable: arrow.RecordBatch | arrow.Table): this {
-    if (recordBatchOrTable instanceof arrow.Table) {
+  addToLastBatch(recordBatchOrTable: RecordBatch | Table): this {
+    if (recordBatchOrTable instanceof Table) {
       for (const recordBatch of recordBatchOrTable.batches) {
         this.addToLastBatch(recordBatch);
       }
@@ -445,7 +445,7 @@ function createArrowGPUPackGroups(
 function createPackedArrowGPURecordBatch(
   batchGroup: GPURecordBatch[],
   bufferLayout: BufferLayout[],
-  schema: arrow.Schema
+  schema: Schema
 ): GPURecordBatch {
   const firstBatch = batchGroup[0];
   const device = getArrowGPURecordBatchDevice(firstBatch);
@@ -545,7 +545,7 @@ function assertCompatibleArrowGPURecordBatch(table: GPUTable, batch: GPURecordBa
     if (
       !batchField ||
       tableField.name !== batchField.name ||
-      !arrow.util.compareTypes(tableField.type, batchField.type)
+      !util.compareTypes(tableField.type, batchField.type)
     ) {
       throw new Error('GPUTable.addBatch() requires matching selected schema fields');
     }
@@ -583,10 +583,10 @@ function rebuildArrowGPUTableColumns(table: GPUTable, columnNames: string[]): vo
     .filter((layout): layout is BufferLayout => Boolean(layout));
   const selectedFields = columnNames
     .map(columnName => table.schema.fields.find(field => field.name === columnName))
-    .filter((field): field is arrow.Field => Boolean(field));
+    .filter((field): field is Field => Boolean(field));
 
   table.bufferLayout.splice(0, table.bufferLayout.length, ...selectedLayouts);
-  table.schema = new arrow.Schema(selectedFields, new Map(table.schema.metadata));
+  table.schema = new Schema(selectedFields, new Map(table.schema.metadata));
   table.numCols = selectedFields.length;
 
   for (const name of Object.keys(table.gpuVectors)) {
@@ -603,7 +603,7 @@ function rebuildArrowGPURecordBatchColumns(batch: GPURecordBatch, columnNames: s
     .filter((layout): layout is BufferLayout => Boolean(layout));
   const selectedFields = columnNames
     .map(columnName => batch.schema.fields.find(field => field.name === columnName))
-    .filter((field): field is arrow.Field => Boolean(field));
+    .filter((field): field is Field => Boolean(field));
 
   for (const name of Object.keys(batch.gpuVectors)) {
     if (!selectedColumnSet.has(name)) {
@@ -628,6 +628,6 @@ function rebuildArrowGPURecordBatchColumns(batch: GPURecordBatch, columnNames: s
   }
 
   batch.bufferLayout.splice(0, batch.bufferLayout.length, ...selectedLayouts);
-  batch.schema = new arrow.Schema(selectedFields, new Map(batch.schema.metadata));
+  batch.schema = new Schema(selectedFields, new Map(batch.schema.metadata));
   batch.numCols = selectedFields.length;
 }

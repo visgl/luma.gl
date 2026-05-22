@@ -9,10 +9,13 @@ import {getGPUVectorBuffer, GPUTableEvaluator} from '../../../operation/gpu-tabl
 import {getLiteralValue, getWGSLType, getZeroValue} from './helper';
 
 const WORKGROUP_SIZE = 64;
+const GPGPU_OPERATION_STATS = 'GPGPU Operation Counts';
+const COMPUTATION_RUNS = 'Computation Runs';
 
 export function runRowComputation({
   module,
   elementWise = false,
+  expression,
   inputs,
   output,
   operationType = output.type,
@@ -20,6 +23,7 @@ export function runRowComputation({
 }: {
   module: ShaderModule;
   elementWise?: boolean;
+  expression?: (laneIndex: number) => string;
   inputs: {[name: string]: GPUTableEvaluator};
   output: GPUTableEvaluator;
   operationType?: SignedDataType;
@@ -62,7 +66,7 @@ ${getOutputWriter(output)}
 
 ${bindings.map(({name}) => `  let ${name} = read_${name}(rowIndex);`).join('\n')}
   var result: array<${outputType}, ${output.size}>;
-${getComputeBlock(module.name, inputs, output, elementWise)}
+${getComputeBlock(module.name, inputs, output, elementWise, expression)}
   write_result(rowIndex, result);
 }
 `;
@@ -89,6 +93,10 @@ ${getComputeBlock(module.name, inputs, output, elementWise)}
   computation.setBindings(computationBindings);
 
   const computePass = outputBuffer.device.beginComputePass({});
+  outputBuffer.device.statsManager
+    .getStats(GPGPU_OPERATION_STATS)
+    .get(COMPUTATION_RUNS)
+    .incrementCount();
   computation.dispatch(computePass, Math.ceil(output.length / WORKGROUP_SIZE));
   computePass.end();
   outputBuffer.device.submit();
@@ -146,11 +154,16 @@ function getComputeBlock(
   operationName: string,
   inputs: {[name: string]: GPUTableEvaluator},
   output: GPUTableEvaluator,
-  elementWise: boolean
+  elementWise: boolean,
+  expression?: (laneIndex: number) => string
 ): string {
   let result = '';
 
-  if (elementWise) {
+  if (expression) {
+    for (let elementIndex = 0; elementIndex < output.size; elementIndex++) {
+      result += `  result[${elementIndex}] = ${expression(elementIndex)};\n`;
+    }
+  } else if (elementWise) {
     const zero = getZeroValue(output.type);
     const outputType = getWGSLType(output.type);
 

@@ -17,6 +17,22 @@ export function getLiteralValue(type: string, value: number): string {
   }
 }
 
+export function formatLiteralValue(type: SignedDataType, value: number): string {
+  switch (type) {
+    case 'uint32':
+      return getLiteralValue('u32', Math.trunc(value));
+
+    case 'sint32':
+      return `${Math.trunc(value)}`;
+
+    case 'float32':
+      return getLiteralValue('f32', value);
+
+    default:
+      throw new Error(`WebGPU operations only support 32-bit output types, got ${type}`);
+  }
+}
+
 export function getZeroValue(type: SignedDataType): string {
   switch (type) {
     case 'uint32':

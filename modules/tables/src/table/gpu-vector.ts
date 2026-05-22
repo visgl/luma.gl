@@ -10,7 +10,7 @@ import {
   type BufferProps
 } from '@luma.gl/core';
 import {DynamicBuffer, type DynamicBufferProps} from '@luma.gl/engine';
-import * as arrow from 'apache-arrow';
+import {DataType, util} from 'apache-arrow';
 import {GPUData} from './gpu-data';
 
 /** Buffer creation props used by format-specific producers before wrapping storage in a GPUVector. */
@@ -21,10 +21,10 @@ export type GPUVectorDynamicBufferProps = Omit<DynamicBufferProps, 'byteLength' 
 export type GPUVectorProps = GPUVectorBufferProps;
 
 /** Arrow upload props moved to `@luma.gl/arrow`; retained only as a typed migration sentinel. */
-export type GPUVectorFromArrowProps<_T extends arrow.DataType = arrow.DataType> = never;
+export type GPUVectorFromArrowProps<_T extends DataType = DataType> = never;
 
 /** Constructor props that wrap an existing typed GPU buffer. */
-export type GPUVectorFromBufferProps<T extends arrow.DataType = arrow.DataType> = {
+export type GPUVectorFromBufferProps<T extends DataType = DataType> = {
   /** Discriminator for existing-buffer construction. */
   type: 'buffer';
   /** Stable vector name. */
@@ -48,7 +48,7 @@ export type GPUVectorFromBufferProps<T extends arrow.DataType = arrow.DataType> 
 };
 
 /** Constructor props that wrap one interleaved GPU buffer. */
-export type GPUVectorFromInterleavedProps<T extends arrow.DataType = arrow.DataType> = {
+export type GPUVectorFromInterleavedProps<T extends DataType = DataType> = {
   /** Discriminator for interleaved-buffer construction. */
   type: 'interleaved';
   /** Stable vector name. */
@@ -70,7 +70,7 @@ export type GPUVectorFromInterleavedProps<T extends arrow.DataType = arrow.DataT
 };
 
 /** Constructor props that expose existing GPU data chunks as one logical vector. */
-export type GPUVectorFromDataProps<T extends arrow.DataType = arrow.DataType> = {
+export type GPUVectorFromDataProps<T extends DataType = DataType> = {
   /** Discriminator for chunk-backed construction. */
   type: 'data';
   /** Stable vector name. */
@@ -96,7 +96,7 @@ export type GPUVectorFromDataProps<T extends arrow.DataType = arrow.DataType> = 
 };
 
 /** Constructor props for an appendable DynamicBuffer-backed vector. */
-export type GPUVectorFromAppendableProps<T extends arrow.DataType = arrow.DataType> = {
+export type GPUVectorFromAppendableProps<T extends DataType = DataType> = {
   /** Discriminator for appendable DynamicBuffer-backed construction. */
   type: 'appendable';
   /** Stable vector name. */
@@ -120,7 +120,7 @@ export type GPUVectorFromAppendableProps<T extends arrow.DataType = arrow.DataTy
 };
 
 /** Discriminated constructor props for {@link GPUVector}. */
-export type GPUVectorCreateProps<T extends arrow.DataType = arrow.DataType> =
+export type GPUVectorCreateProps<T extends DataType = DataType> =
   | GPUVectorFromBufferProps<T>
   | GPUVectorFromInterleavedProps<T>
   | GPUVectorFromDataProps<T>
@@ -132,7 +132,7 @@ export type GPUVectorCreateProps<T extends arrow.DataType = arrow.DataType> =
  * Format-specific modules upload bytes and use these vectors to expose shared
  * lifecycle, chunking, batching, and ownership semantics.
  */
-export class GPUVector<T extends arrow.DataType = arrow.DataType> {
+export class GPUVector<T extends DataType = DataType> {
   /** Stable vector name. */
   readonly name: string;
   /** Logical schema/type descriptor for the uploaded bytes. */
@@ -245,7 +245,7 @@ export class GPUVector<T extends arrow.DataType = arrow.DataType> {
           ownsData = false,
           ownsBuffer = false
         } = props;
-        if (data.some(chunk => !arrow.util.compareTypes(chunk.type, dataType))) {
+        if (data.some(chunk => !util.compareTypes(chunk.type, dataType))) {
           throw new Error('GPUVector data chunks must share the declared logical type');
         }
         this.name = name;
@@ -322,7 +322,7 @@ export class GPUVector<T extends arrow.DataType = arrow.DataType> {
 
   /** Adds one already-materialized GPU data chunk to this logical vector. */
   addData(data: GPUData<T>): this {
-    if (!arrow.util.compareTypes(data.type, this.type)) {
+    if (!util.compareTypes(data.type, this.type)) {
       throw new Error('GPUVector.addData() requires matching logical types');
     }
     if (data.byteStride !== this.byteStride) {
@@ -364,7 +364,7 @@ export class GPUVector<T extends arrow.DataType = arrow.DataType> {
     if (!(this.concreteBuffer instanceof DynamicBuffer)) {
       throw new Error('GPUVector append views require appendable DynamicBuffer storage');
     }
-    if (!arrow.util.compareTypes(data.type, this.type)) {
+    if (!util.compareTypes(data.type, this.type)) {
       throw new Error('GPUVector.appendDataChunk() requires matching logical types');
     }
     if (data.byteStride !== this.byteStride || data.rowByteLength !== this.rowByteLength) {

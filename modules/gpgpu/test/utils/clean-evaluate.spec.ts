@@ -26,11 +26,11 @@ test(`GPGPU#cleanEvaluate`, async t => {
   expect(sum.gpuVector).toBeTruthy();
   expect(x.gpuVector).toBeTruthy();
 
-  expect((x as any)._destroyed).toBe(false);
-  expect((y as any)._destroyed).toBe(true);
-  expect((z as any)._destroyed).toBe(true);
-  expect((partial as any)._destroyed).toBe(true);
-  expect((sum as any)._destroyed).toBe(false);
+  expect((x as any).evaluated).toBe(true);
+  expect((y as any).evaluated).toBe(false);
+  expect((z as any).evaluated).toBe(false);
+  expect((partial as any).evaluated).toBe(false);
+  expect((sum as any).evaluated).toBe(true);
 
   x.destroy();
   sum.destroy();

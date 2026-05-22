@@ -12,8 +12,8 @@ export const fround: OperationHandler<{x: GPUTableEvaluator}> = async ({
   output,
   target
 }) => {
-  runCPUTransform({
-    func: (x: TypedArray, out: TypedArray) => {
+  return runCPUTransform({
+    func: (out: TypedArray, x: TypedArray) => {
       const vertexSize = out.length / 2;
       const f64Arr = new Float64Array(x.buffer);
       for (let i = 0; i < vertexSize; i++) {

@@ -21,6 +21,11 @@ export {
   getArrowVectorBufferSource
 } from './arrow/arrow-fixed-size-list';
 export {
+  prepareArrowMatrixGPUVector,
+  type PreparedArrowMatrixGPUVector,
+  type PrepareArrowMatrixGPUVectorOptions
+} from './arrow/arrow-matrix-gpu-vector';
+export {
   getArrowMatrixVectorInfo,
   makeArrowMatrixVector,
   makeArrowMatrix2x2Vector,
@@ -30,6 +35,9 @@ export {
   makeArrowMatrix4x3Vector,
   makeArrowMatrix3x4Vector,
   makeArrowMatrix4x4Vector,
+  MATRIX_LAYOUT_METADATA_KEY,
+  MATRIX_ORDER_METADATA_KEY,
+  MATRIX_SHAPE_METADATA_KEY,
   type ArrowFloat32Matrix2x2,
   type ArrowFloat32Matrix2x3,
   type ArrowFloat32Matrix3x2,
@@ -40,11 +48,33 @@ export {
   type ArrowMatrixLayout,
   type ArrowMatrixOrder,
   type ArrowMatrixShape,
+  type ArrowMatrixValueType,
   type ArrowMatrixVectorInfo,
   type ArrowMatrixVectorOptions
 } from './arrow/arrow-matrix-vector';
 export {
+  getArrowTemporalVectorInfo,
+  prepareArrowTemporalGPUVector,
+  prepareArrowTemporalGPUVectors,
+  TEMPORAL_KIND_METADATA_KEY,
+  TEMPORAL_ORIGIN_METADATA_KEY,
+  TEMPORAL_ORIGIN_POLICY_METADATA_KEY,
+  TEMPORAL_TIMEZONE_METADATA_KEY,
+  TEMPORAL_UNIT_METADATA_KEY,
+  type ArrowRelativeTemporalType,
+  type ArrowTemporalColumnType,
+  type ArrowTemporalKind,
+  type ArrowTemporalOriginPolicy,
+  type ArrowTemporalType,
+  type ArrowTemporalUnit,
+  type ArrowTemporalVectorInfo,
+  type PreparedArrowTemporalGPUVector,
+  type PrepareArrowTemporalGPUVectorOptions,
+  type PrepareArrowTemporalGPUVectorsOptions
+} from './arrow/arrow-temporal-gpu-vector';
+export {
   expandArrowVector,
+  getArrowVectorByteLength,
   type ArrowVectorRowMapping
 } from './arrow/arrow-vector-utils';
 
@@ -80,21 +110,48 @@ export {ArrowModel, type ArrowModelGPUTable, type ArrowModelProps} from './arrow
 export {
   ArrowPathModel,
   buildArrowPathSegmentTable,
+  createArrowPathPreparedState,
+  prepareArrowPathGPUVectors,
   type ArrowPathModelProps,
+  type ArrowPathPreparedState,
   type ArrowPathRenderBatchState,
   type ArrowPathSegmentLayout,
   type ArrowPathSegmentTable,
-  type ArrowPathSourceVectors
+  type ArrowPathSourceVectors,
+  type ArrowPathViewOriginUpdateProps,
+  type PreparedArrowPathGPUVectors,
+  type PrepareArrowPathGPUVectorsOptions
 } from './arrow/arrow-path-model';
 export {
   ArrowStoragePathModel,
   createArrowStoragePathState,
+  prepareArrowStoragePathGPUVectors,
   type ArrowStoragePathBatchState,
   type ArrowStoragePathInputProps,
   type ArrowStoragePathModelProps,
   type ArrowStoragePathRenderBatchState,
-  type ArrowStoragePathState
+  type ArrowStoragePathState,
+  type PreparedArrowStoragePathGPUVectors
 } from './arrow/arrow-storage-path-model';
+export {
+  ArrowStorageTripsPathModel,
+  type ArrowStorageTripsPathModelProps
+} from './arrow/arrow-storage-trips-path-model';
+export {
+  getDggsUint64Words,
+  packDggsA5CellKey,
+  packDggsGeohashKey,
+  packDggsH3CellKey,
+  packDggsQuadkeyKey,
+  packDggsS2CellKey,
+  prepareDggsCellKeyGPUVector,
+  prepareDggsCellPathGPUVector,
+  type DggsCellEncoding,
+  type DggsCellKeyGPUVectorOptions,
+  type DggsCellPathGPUVectorOptions,
+  type PreparedDggsCellKeyGPUVector,
+  type PreparedDggsCellPathGPUVector
+} from './arrow/dggs-gpu-polygons';
 export {
   getArrowVertexFormat,
   getArrowBufferLayout,

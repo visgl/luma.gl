@@ -3,11 +3,11 @@
 // Copyright (c) vis.gl contributors
 
 import {earcut} from '@math.gl/polygon';
-import * as arrow from 'apache-arrow';
+import {Data} from 'apache-arrow';
 import {ArrowPolygon} from './geoarrow-types';
 import {getLineStringChild, getPointChild, getPolygonChild} from './geoarrow';
 
-export function earcutPolygonArray(data: arrow.Data<ArrowPolygon>): Uint32Array {
+export function earcutPolygonArray(data: Data<ArrowPolygon>): Uint32Array {
   const trianglesResults: number[][] = [];
   let outputSize = 0;
   for (let geometryIndex = 0; geometryIndex < data.length; geometryIndex++) {
@@ -28,7 +28,7 @@ export function earcutPolygonArray(data: arrow.Data<ArrowPolygon>): Uint32Array 
   return outputArray;
 }
 
-function earcutSinglePolygon(data: arrow.Data<ArrowPolygon>, geometryIndex: number): number[] {
+function earcutSinglePolygon(data: Data<ArrowPolygon>, geometryIndex: number): number[] {
   const geometryOffsets = data.valueOffsets;
   const rings = getPolygonChild(data);
   const ringOffsets = rings.valueOffsets;

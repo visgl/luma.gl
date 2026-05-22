@@ -7,6 +7,7 @@ import {AnimationLoopTemplate} from './animation-loop-template';
 import {AnimationLoop, AnimationLoopProps} from './animation-loop';
 import type {AnimationProps} from './animation-props';
 
+/** Props accepted while constructing an animation loop from a template. */
 export type MakeAnimationLoopProps = Omit<
   AnimationLoopProps,
   'onCreateDevice' | 'onInitialize' | 'onRedraw' | 'onFinalize'
@@ -45,7 +46,9 @@ export function makeAnimationLoop(
       } catch (error) {
         // biome-ignore lint/suspicious/noConsole: fallback logging before rendering the in-canvas error banner.
         console.error(error);
+        renderLoop = null;
         setError(animationProps.animationLoop.device, error as Error);
+        animationProps.animationLoop.stop();
         return null;
       }
     },

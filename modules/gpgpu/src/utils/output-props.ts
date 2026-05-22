@@ -11,9 +11,13 @@ export function deduceOutputProps(...inputs: GPUTableEvaluator[]): {
   size: number;
   length: number;
 } {
+  let type = joinTypes(inputs.map(x => x.type));
+  if (type[0] !== 'f' && inputs.some(x => x.normalized)) {
+    type = 'float32';
+  }
   return {
     isConstant: inputs.every(x => x.isConstant),
-    type: joinTypes(inputs.map(x => x.type)),
+    type,
     size: inputs.reduce((s, x) => Math.max(s, x.size), 0),
     length: inputs.reduce((l, x) => Math.max(l, x.length), 0)
   };

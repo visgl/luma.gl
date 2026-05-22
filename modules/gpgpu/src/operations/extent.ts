@@ -2,7 +2,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import {GPUTableEvaluator} from '../operation/gpu-table-evaluator';
+import {
+  getGPUTableEvaluator,
+  GPUTableEvaluator,
+  type GPUTableEvaluatorInput
+} from '../operation/gpu-table-evaluator';
 import {Operation} from '../operation/operation';
 
 /** Deferred extent reduction operation. */
@@ -37,6 +41,6 @@ class ExtentOperation extends Operation<{sourceValues: GPUTableEvaluator}> {
  * The returned table is lazy; no CPU or GPU work is performed until
  * {@link GPUTableEvaluator.evaluate} is called on the result.
  */
-export function extent(sourceValues: GPUTableEvaluator): GPUTableEvaluator {
-  return new ExtentOperation(sourceValues).output;
+export function extent(sourceValues: GPUTableEvaluatorInput): GPUTableEvaluator {
+  return new ExtentOperation(getGPUTableEvaluator(sourceValues)).output;
 }

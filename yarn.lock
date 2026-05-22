@@ -4712,6 +4712,27 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@math.gl/dggs-geohash@npm:^4.1.0":
+  version: 4.1.0
+  resolution: "@math.gl/dggs-geohash@npm:4.1.0"
+  checksum: 10c0/b6965289202499019ebaa35b35b1b470388cf44122afd948f71d90e2dc39ac59f2a40a82066886c81eb366427ad4c88d40b7cf88ec22719869704d0b6e9cf1bf
+  languageName: node
+  linkType: hard
+
+"@math.gl/dggs-quadkey@npm:^4.1.0":
+  version: 4.1.0
+  resolution: "@math.gl/dggs-quadkey@npm:4.1.0"
+  checksum: 10c0/a382e40d3c1457a91eafccd09e54bea163d767bfa95429063ed502720e9dd54195b63253bf0da5dc6ba5ffa83775d2d297b69bfe58762625e81c3aeb56fc817a
+  languageName: node
+  linkType: hard
+
+"@math.gl/dggs-s2@npm:^4.1.0":
+  version: 4.1.0
+  resolution: "@math.gl/dggs-s2@npm:4.1.0"
+  checksum: 10c0/ae5bb6592239b4e7f397ff335e7d120c6c1aebadb9cfc74ad7bfeb5eae775af41b34baae6cf848f9e80f6329d3b94ee578b2890e21aadcd6cfea77f3c95b7e22
+  languageName: node
+  linkType: hard
+
 "@math.gl/polygon@npm:^4.1.0":
   version: 4.1.0
   resolution: "@math.gl/polygon@npm:4.1.0"
@@ -7391,6 +7412,15 @@ __metadata:
   bin:
     JSONStream: ./bin.js
   checksum: 10c0/0f54694da32224d57b715385d4a6b668d2117379d1f3223dc758459246cca58fdc4c628b83e8a8883334e454a0a30aa198ede77c788b55537c1844f686a751f2
+  languageName: node
+  linkType: hard
+
+"a5-js@npm:^0.8.0":
+  version: 0.8.0
+  resolution: "a5-js@npm:0.8.0"
+  dependencies:
+    gl-matrix: "npm:^3.4.3"
+  checksum: 10c0/cbec6372f69f254e6540f5883916320078d768a9c41d799a72376c4d043e6a5720a44f9421e776d2aeba1b4e92e782d767a628eb4388bd56288dc40aa58aff51
   languageName: node
   linkType: hard
 
@@ -12530,7 +12560,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"gl-matrix@npm:^3.4.4":
+"gl-matrix@npm:^3.4.3, gl-matrix@npm:^3.4.4":
   version: 3.4.4
   resolution: "gl-matrix@npm:3.4.4"
   checksum: 10c0/9aa022ffac0d158212ad0cd29939864ad919ac31cd5dc5a5d35e9d66bb62679ddf152ff7b2173ded20131045e40572b87f31b26a920be2a7583a1516b13b5b4b
@@ -12744,6 +12774,13 @@ __metadata:
   dependencies:
     duplexer: "npm:^0.1.2"
   checksum: 10c0/4ccb924626c82125897a997d1c84f2377846a6ef57fbee38f7c0e6b41387fba4d00422274440747b58008b5d60114bac2349c2908e9aba55188345281af40a3f
+  languageName: node
+  linkType: hard
+
+"h3-js@npm:^4.4.0":
+  version: 4.4.0
+  resolution: "h3-js@npm:4.4.0"
+  checksum: 10c0/3a324b3a879601e1d012c2f67b2f78e9a480b0fa8e51c54b77ee281b421343ae735c3d892ab80c2cc8c47522ad0822ccb457b97b3792a040e41991016801f3ed
   languageName: node
   linkType: hard
 
@@ -15355,6 +15392,23 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"luma.gl-examples-arrow-temporal-starfield@workspace:examples/gpu-tables/arrow-temporal-starfield":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-arrow-temporal-starfield@workspace:examples/gpu-tables/arrow-temporal-starfield"
+  dependencies:
+    "@luma.gl/arrow": "npm:~9.3.0"
+    "@luma.gl/core": "npm:~9.3.0"
+    "@luma.gl/engine": "npm:~9.3.0"
+    "@luma.gl/shadertools": "npm:~9.3.0"
+    "@luma.gl/tables": "npm:~9.3.0"
+    "@luma.gl/webgl": "npm:~9.3.0"
+    "@luma.gl/webgpu": "npm:~9.3.0"
+    apache-arrow: "npm:^17.0.0"
+    typescript: "npm:^5.9.3"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
 "luma.gl-examples-arrow-text-2d@workspace:examples/gpu-tables/arrow-text-2d":
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-arrow-text-2d@workspace:examples/gpu-tables/arrow-text-2d"
@@ -15365,6 +15419,23 @@ __metadata:
     "@luma.gl/shadertools": "npm:~9.3.0"
     "@luma.gl/tables": "npm:~9.3.0"
     "@luma.gl/text": "npm:~9.3.0"
+    "@luma.gl/webgl": "npm:~9.3.0"
+    "@luma.gl/webgpu": "npm:~9.3.0"
+    apache-arrow: "npm:^17.0.0"
+    typescript: "npm:^5.9.3"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
+"luma.gl-examples-arrow-time-columns@workspace:examples/gpu-tables/arrow-time-columns":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-arrow-time-columns@workspace:examples/gpu-tables/arrow-time-columns"
+  dependencies:
+    "@luma.gl/arrow": "npm:~9.3.0"
+    "@luma.gl/core": "npm:~9.3.0"
+    "@luma.gl/engine": "npm:~9.3.0"
+    "@luma.gl/shadertools": "npm:~9.3.0"
+    "@luma.gl/tables": "npm:~9.3.0"
     "@luma.gl/webgl": "npm:~9.3.0"
     "@luma.gl/webgpu": "npm:~9.3.0"
     apache-arrow: "npm:^17.0.0"
@@ -15384,6 +15455,22 @@ __metadata:
     "@luma.gl/webgpu": "npm:~9.3.0"
     "@math.gl/core": "npm:^4.1.0"
     "@math.gl/types": "npm:^4.1.0"
+    typescript: "npm:^5.9.3"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
+"luma.gl-examples-dggs-gpu-polygons@workspace:examples/gpu-tables/dggs-gpu-polygons":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-dggs-gpu-polygons@workspace:examples/gpu-tables/dggs-gpu-polygons"
+  dependencies:
+    "@luma.gl/arrow": "npm:~9.3.0"
+    "@luma.gl/core": "npm:~9.3.0"
+    "@luma.gl/engine": "npm:~9.3.0"
+    "@luma.gl/shadertools": "npm:~9.3.0"
+    "@luma.gl/tables": "npm:~9.3.0"
+    "@luma.gl/webgpu": "npm:~9.3.0"
+    apache-arrow: "npm:^17.0.0"
     typescript: "npm:^5.9.3"
     vite: "npm:^8.0.0"
   languageName: unknown
@@ -15845,6 +15932,9 @@ __metadata:
     "@loaders.gl/gltf": "npm:~4.4.0"
     "@loaders.gl/polyfills": "npm:~4.4.0"
     "@luma.gl/devtools-extensions": "workspace:*"
+    "@math.gl/dggs-geohash": "npm:^4.1.0"
+    "@math.gl/dggs-quadkey": "npm:^4.1.0"
+    "@math.gl/dggs-s2": "npm:^4.1.0"
     "@math.gl/types": "npm:^4.1.0"
     "@probe.gl/bench": "npm:^4.1.1"
     "@probe.gl/stats": "npm:^4.1.1"
@@ -15857,6 +15947,8 @@ __metadata:
     "@vitest/browser": "npm:^4.0.18"
     "@vitest/browser-playwright": "npm:^4.0.18"
     "@vitest/coverage-v8": "npm:^4.0.18"
+    a5-js: "npm:^0.8.0"
+    h3-js: "npm:^4.4.0"
     pre-commit: "npm:^1.2.2"
     vite: "npm:^8.0.0"
     vitest: "npm:^4.0.18"

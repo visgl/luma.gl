@@ -2,7 +2,19 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) vis.gl contributors
 
-import * as arrow from 'apache-arrow';
+import {
+  Data,
+  DataType,
+  Field,
+  FixedSizeList,
+  Float,
+  Float64,
+  Schema,
+  Struct,
+  Table,
+  Vector,
+  makeData
+} from 'apache-arrow';
 import {
   ArrowPoint,
   ArrowMultiPoint,
@@ -21,7 +33,7 @@ function assert(condition: boolean, message?: string): asserts condition {
 }
 
 export function findGeometryColumnIndex(
-  schema: arrow.Schema,
+  schema: Schema,
   extensionName: string,
   geometryColumnName?: string | null
 ): number | null {
@@ -40,18 +52,14 @@ export function isColumnReference(input: any): input is string {
   return typeof input === 'string';
 }
 
-function isDataInterleavedCoords(
-  data: arrow.Data
-): data is arrow.Data<arrow.FixedSizeList<arrow.Float64>> {
+function isDataInterleavedCoords(data: Data): data is Data<FixedSizeList<Float64>> {
   // TODO: also check 2 or 3d? Float64?
-  return data.type instanceof arrow.FixedSizeList;
+  return data.type instanceof FixedSizeList;
 }
 
-function isDataSeparatedCoords(
-  data: arrow.Data
-): data is arrow.Data<arrow.Struct<{x: arrow.Float64; y: arrow.Float64}>> {
+function isDataSeparatedCoords(data: Data): data is Data<Struct<{x: Float64; y: Float64}>> {
   // TODO: also check child names? Float64?
-  return data.type instanceof arrow.Struct;
+  return data.type instanceof Struct;
 }
 
 /**
@@ -62,10 +70,8 @@ function isDataSeparatedCoords(
  */
 // TODO: this hasn't been tested yet
 export function convertStructToFixedSizeList(
-  coords:
-    | arrow.Data<arrow.FixedSizeList<arrow.Float64>>
-    | arrow.Data<arrow.Struct<{x: arrow.Float64; y: arrow.Float64}>>
-): arrow.Data<arrow.FixedSizeList<arrow.Float64>> {
+  coords: Data<FixedSizeList<Float64>> | Data<Struct<{x: Float64; y: Float64}>>
+): Data<FixedSizeList<Float64>> {
   if (isDataInterleavedCoords(coords)) {
     return coords;
   }
@@ -78,15 +84,15 @@ export function convertStructToFixedSizeList(
       interleavedCoords[i * 2 + 1] = yChild.values[i];
     }
 
-    const childDataType = new arrow.Float64();
-    const dataType = new arrow.FixedSizeList(2, new arrow.Field('coords', childDataType));
+    const childDataType = new Float64();
+    const dataType = new FixedSizeList(2, new Field('coords', childDataType));
 
-    const interleavedCoordsData = arrow.makeData({
+    const interleavedCoordsData = makeData({
       type: childDataType,
       length: interleavedCoords.length
     });
 
-    const data = arrow.makeData({
+    const data = makeData({
       type: dataType,
       length: coords.length,
       nullCount: coords.nullCount,
@@ -102,10 +108,7 @@ export function convertStructToFixedSizeList(
 /**
  * Get a geometry vector with the specified extension type name from the table.
  */
-export function getGeometryVector(
-  table: arrow.Table,
-  geoarrowTypeName: string
-): arrow.Vector | null {
+export function getGeometryVector(table: Table, geoarrowTypeName: string): Vector | null {
   const geometryColumnIdx = findGeometryColumnIndex(table.schema, geoarrowTypeName);
 
   if (geometryColumnIdx === null) {
@@ -124,7 +127,7 @@ export function getGeometryVector(
  *   relevant batch in the main table.
  *
  */
-export function validateVectorAccessors(table: arrow.Table, vectorAccessors: arrow.Vector[]) {
+export function validateVectorAccessors(table: Table, vectorAccessors: Vector[]) {
   // Check the same number of chunks as the table's batches
   for (const vectorAccessor of vectorAccessors) {
     assert(table.batches.length === vectorAccessor.data.length);
@@ -138,15 +141,15 @@ export function validateVectorAccessors(table: arrow.Table, vectorAccessors: arr
   }
 }
 
-export function validateColorVector(vector: arrow.Vector) {
+export function validateColorVector(vector: Vector) {
   // Assert the color vector is a FixedSizeList
-  assert(arrow.DataType.isFixedSizeList(vector.type));
+  assert(DataType.isFixedSizeList(vector.type));
 
   // Assert it has 3 or 4 values
   assert(vector.type.listSize === 3 || vector.type.listSize === 4);
 
   // Assert the child type is an integer
-  assert(arrow.DataType.isInt(vector.type.children[0]));
+  assert(DataType.isInt(vector.type.children[0]));
 
   // Assert the child type is a Uint8
   // @ts-ignore
@@ -154,9 +157,9 @@ export function validateColorVector(vector: arrow.Vector) {
   assert(vector.type.children[0].type.bitWidth === 8);
 }
 
-export function isPointVector(vector: arrow.Vector): vector is arrow.Vector<ArrowPoint> {
+export function isPointVector(vector: Vector): vector is Vector<ArrowPoint> {
   // Check FixedSizeList
-  if (!arrow.DataType.isFixedSizeList(vector.type)) {
+  if (!DataType.isFixedSizeList(vector.type)) {
     return false;
   }
 
@@ -166,16 +169,16 @@ export function isPointVector(vector: arrow.Vector): vector is arrow.Vector<Arro
   }
 
   // Check child of FixedSizeList is floating type
-  if (!arrow.DataType.isFloat(vector.type.children[0])) {
+  if (!DataType.isFloat(vector.type.children[0])) {
     return false;
   }
 
   return true;
 }
 
-export function isLineStringVector(vector: arrow.Vector): vector is arrow.Vector<ArrowLineString> {
+export function isLineStringVector(vector: Vector): vector is Vector<ArrowLineString> {
   // Check the outer vector is a List
-  if (!arrow.DataType.isList(vector.type)) {
+  if (!DataType.isList(vector.type)) {
     return false;
   }
 
@@ -187,9 +190,9 @@ export function isLineStringVector(vector: arrow.Vector): vector is arrow.Vector
   return true;
 }
 
-export function isPolygonVector(vector: arrow.Vector): vector is arrow.Vector<ArrowPolygon> {
+export function isPolygonVector(vector: Vector): vector is Vector<ArrowPolygon> {
   // Check the outer vector is a List
-  if (!arrow.DataType.isList(vector.type)) {
+  if (!DataType.isList(vector.type)) {
     return false;
   }
 
@@ -201,9 +204,9 @@ export function isPolygonVector(vector: arrow.Vector): vector is arrow.Vector<Ar
   return true;
 }
 
-export function isMultiPointVector(vector: arrow.Vector): vector is arrow.Vector<ArrowMultiPoint> {
+export function isMultiPointVector(vector: Vector): vector is Vector<ArrowMultiPoint> {
   // Check the outer vector is a List
-  if (!arrow.DataType.isList(vector.type)) {
+  if (!DataType.isList(vector.type)) {
     return false;
   }
 
@@ -215,11 +218,9 @@ export function isMultiPointVector(vector: arrow.Vector): vector is arrow.Vector
   return true;
 }
 
-export function isMultiLineStringVector(
-  vector: arrow.Vector
-): vector is arrow.Vector<ArrowMultiLineString> {
+export function isMultiLineStringVector(vector: Vector): vector is Vector<ArrowMultiLineString> {
   // Check the outer vector is a List
-  if (!arrow.DataType.isList(vector.type)) {
+  if (!DataType.isList(vector.type)) {
     return false;
   }
 
@@ -231,11 +232,9 @@ export function isMultiLineStringVector(
   return true;
 }
 
-export function isMultiPolygonVector(
-  vector: arrow.Vector
-): vector is arrow.Vector<ArrowMultiPolygon> {
+export function isMultiPolygonVector(vector: Vector): vector is Vector<ArrowMultiPolygon> {
   // Check the outer vector is a List
-  if (!arrow.DataType.isList(vector.type)) {
+  if (!DataType.isList(vector.type)) {
     return false;
   }
 
@@ -247,23 +246,23 @@ export function isMultiPolygonVector(
   return true;
 }
 
-export function validatePointType(type: arrow.DataType): type is ArrowPoint {
+export function validatePointType(type: DataType): type is ArrowPoint {
   // Assert the point vector is a FixedSizeList
   // TODO: support struct
-  assert(arrow.DataType.isFixedSizeList(type));
+  assert(DataType.isFixedSizeList(type));
 
   // Assert it has 2 or 3 values
   assert(type.listSize === 2 || type.listSize === 3);
 
   // Assert the child type is a float
-  assert(arrow.DataType.isFloat(type.children[0]));
+  assert(DataType.isFloat(type.children[0]));
 
   return true;
 }
 
-export function validateLineStringType(type: arrow.DataType): type is ArrowLineString {
+export function validateLineStringType(type: DataType): type is ArrowLineString {
   // Assert the outer vector is a List
-  assert(arrow.DataType.isList(type));
+  assert(DataType.isList(type));
 
   // Assert its inner vector is a point layout
   validatePointType(type.children[0].type);
@@ -271,9 +270,9 @@ export function validateLineStringType(type: arrow.DataType): type is ArrowLineS
   return true;
 }
 
-export function validatePolygonType(type: arrow.DataType): type is ArrowPolygon {
+export function validatePolygonType(type: DataType): type is ArrowPolygon {
   // Assert the outer vector is a List
-  assert(arrow.DataType.isList(type));
+  assert(DataType.isList(type));
 
   // Assert its inner vector is a linestring layout
   validateLineStringType(type.children[0].type);
@@ -282,9 +281,9 @@ export function validatePolygonType(type: arrow.DataType): type is ArrowPolygon 
 }
 
 // Note: this is the same as validateLineStringType
-export function validateMultiPointType(type: arrow.DataType): type is ArrowMultiPoint {
+export function validateMultiPointType(type: DataType): type is ArrowMultiPoint {
   // Assert the outer vector is a List
-  assert(arrow.DataType.isList(type));
+  assert(DataType.isList(type));
 
   // Assert its inner vector is a point layout
   validatePointType(type.children[0].type);
@@ -292,9 +291,9 @@ export function validateMultiPointType(type: arrow.DataType): type is ArrowMulti
   return true;
 }
 
-export function validateMultiLineStringType(type: arrow.DataType): type is ArrowPolygon {
+export function validateMultiLineStringType(type: DataType): type is ArrowPolygon {
   // Assert the outer vector is a List
-  assert(arrow.DataType.isList(type));
+  assert(DataType.isList(type));
 
   // Assert its inner vector is a linestring layout
   validateLineStringType(type.children[0].type);
@@ -302,9 +301,9 @@ export function validateMultiLineStringType(type: arrow.DataType): type is Arrow
   return true;
 }
 
-export function validateMultiPolygonType(type: arrow.DataType): type is ArrowMultiPolygon {
+export function validateMultiPolygonType(type: DataType): type is ArrowMultiPolygon {
   // Assert the outer vector is a List
-  assert(arrow.DataType.isList(type));
+  assert(DataType.isList(type));
 
   // Assert its inner vector is a linestring layout
   validatePolygonType(type.children[0].type);
@@ -312,36 +311,32 @@ export function validateMultiPolygonType(type: arrow.DataType): type is ArrowMul
   return true;
 }
 
-export function getPointChild(data: arrow.Data<ArrowPoint>): arrow.Data<arrow.Float> {
+export function getPointChild(data: Data<ArrowPoint>): Data<Float> {
   // @ts-expect-error
   return data.children[0];
 }
 
-export function getLineStringChild(data: arrow.Data<ArrowLineString>): arrow.Data<ArrowPoint> {
+export function getLineStringChild(data: Data<ArrowLineString>): Data<ArrowPoint> {
   // @ts-expect-error
   return data.children[0];
 }
 
-export function getPolygonChild(data: arrow.Data<ArrowPolygon>): arrow.Data<ArrowLineString> {
+export function getPolygonChild(data: Data<ArrowPolygon>): Data<ArrowLineString> {
   // @ts-expect-error
   return data.children[0];
 }
 
-export function getMultiPointChild(data: arrow.Data<ArrowMultiPoint>): arrow.Data<ArrowPoint> {
+export function getMultiPointChild(data: Data<ArrowMultiPoint>): Data<ArrowPoint> {
   // @ts-expect-error
   return data.children[0];
 }
 
-export function getMultiLineStringChild(
-  data: arrow.Data<ArrowMultiLineString>
-): arrow.Data<ArrowLineString> {
+export function getMultiLineStringChild(data: Data<ArrowMultiLineString>): Data<ArrowLineString> {
   // @ts-expect-error
   return data.children[0];
 }
 
-export function getMultiPolygonChild(
-  data: arrow.Data<ArrowMultiPolygon>
-): arrow.Data<ArrowPolygon> {
+export function getMultiPolygonChild(data: Data<ArrowMultiPolygon>): Data<ArrowPolygon> {
   // @ts-expect-error
   return data.children[0];
 }

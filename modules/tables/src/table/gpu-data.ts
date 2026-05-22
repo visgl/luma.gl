@@ -3,13 +3,13 @@
 // Copyright (c) vis.gl contributors
 
 import {DynamicBuffer} from '@luma.gl/engine';
-import * as arrow from 'apache-arrow';
+import {DataType} from 'apache-arrow';
 
 /** Optional caller-owned metadata retained on a GPU data range. */
 export type GPUDataReadbackMetadata = any;
 
 /** Constructor props that wrap one existing GPU data buffer. */
-export type GPUDataFromBufferProps<T extends arrow.DataType = arrow.DataType> = {
+export type GPUDataFromBufferProps<T extends DataType = DataType> = {
   /** Stable dynamic GPU buffer wrapper for this data range. */
   buffer: DynamicBuffer;
   /** Logical schema/type descriptor for the values in the data range. */
@@ -36,7 +36,7 @@ export type GPUDataFromBufferProps<T extends arrow.DataType = arrow.DataType> = 
  * `GPUData` is format-agnostic. Format-specific upload and readback adapters
  * build these ranges and retain any extra metadata they need separately.
  */
-export class GPUData<T extends arrow.DataType = arrow.DataType> {
+export class GPUData<T extends DataType = DataType> {
   /** GPU buffer containing this chunk's bytes. */
   readonly buffer: DynamicBuffer;
   /** Logical schema/type descriptor for the bytes. */

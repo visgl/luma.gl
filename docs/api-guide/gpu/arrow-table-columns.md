@@ -20,15 +20,57 @@ directly to the memory layouts used by GPU vertex attributes.
 Arrow also supports variable-length `List` columns. These are useful for data
 such as polygons and paths, but they do not map directly to a single vertex
 attribute without an additional conversion step. `ArrowPathModel` provides the
-attribute-backed conversion for Float32 XY, XYZ, and XYZM path coordinate rows,
-expanding each logical path into segment instances while keeping row-level style
-columns at the path boundary. `ArrowStoragePathModel` provides the WebGPU
+attribute-backed conversion for prepared Float32 XY, XYZ, and XYZM path coordinate
+rows, expanding each logical path into segment instances while keeping row-level
+style columns at the path boundary. `ArrowStoragePathModel` provides the WebGPU
 storage-backed form: compute expands GPU-resident path values into compact indexed
 segment records from copied list-offset metadata, render shaders fetch coordinates
 from the original path-value storage buffer, and per-path style rows remain storage
-bindings instead of being repeated for every generated segment. `closeArrowPaths()`
-can normalize nested Float32 path rows first by appending the initial vertex only
-for paths that are flagged closed and are not already closed within an epsilon.
+bindings instead of being repeated for every generated segment. Use
+`ArrowPathModel.prepareGPUVectors()` or `prepareArrowPathGPUVectors()` to turn raw
+Float32 or Float64 Arrow path vectors into prepared attribute-path inputs. Use
+`ArrowStoragePathModel.prepareGPUVectors()` or `prepareArrowStoragePathGPUVectors()`
+when WebGPU storage rendering should convert Float64 path payloads into Float32
+deltas on the GPU before rendering.
+
+## Arrow Column Support
+
+Support depends on how the column is consumed. A column can be uploadable as a
+`GPUVector` without also being usable as a generic vertex attribute.
+
+| Arrow vector type | Generic GPU upload | Shader-facing use | Higher-level model support |
+| --- | --- | --- | --- |
+| `Vector<Int8 \| Uint8 \| Int16 \| Uint16 \| Int32 \| Uint32 \| Float16 \| Float32>` | Yes, as scalar `GPUVector` or selected `GPUTable` columns. | Scalar attributes or storage rows, subject to shader type and vertex format compatibility. | Numeric table workflows and scalar style rows such as text angles, text sizes, and path widths. |
+| `Vector<Uint64>` carrying DGGS cell keys | Yes, through DGGS WebGPU helpers that retain Uint64 rows as word-pair storage. | Read through DGGS WGSL helpers or expand through `prepareDggsCellPathGPUVector()`; not a generic vertex attribute. | Global grid cell keys parsed from UTF-8 geohash, quadkey, S2, A5, or H3 IDs. |
+| `Vector<FixedSizeList<numeric, 1 \| 2 \| 3 \| 4>>` | Yes, as fixed-width GPU rows. | Vector attributes or storage rows; 3-component 8-bit and 16-bit integer formats are WebGL-only unless padded. | Positions, colors, pixel offsets, clip rectangles, mesh attributes, and path style rows. |
+| `Vector<FixedSizeList<Float32 \| Float64, 4>>` with luma `mat2x2` metadata | Yes, through `prepareArrowMatrixGPUVector()`. Canonical output is Float32 column-major `wgsl-storage`; Float64 truncates to Float32 during preparation. | `mat2x2<f32>` storage rows or two lowered matrix-column attributes. | Compact 2D linear transforms. |
+| `Vector<FixedSizeList<Float32 \| Float64, 6 packed \| 8 wgsl-storage>>` with luma `mat2x3` metadata | Yes, through `prepareArrowMatrixGPUVector()`. Packed sources normalize to eight-float Float32 WGSL-storage rows. | `mat2x3<f32>` storage rows or two lowered matrix-column attributes with WGSL three-row padding. | 2-column affine-style transforms with three row components. |
+| `Vector<FixedSizeList<Float32 \| Float64, 6>>` with luma `mat3x2` metadata | Yes, through `prepareArrowMatrixGPUVector()`. Canonical output is Float32 column-major `wgsl-storage`; Float64 truncates to Float32 during preparation. | `mat3x2<f32>` storage rows or three lowered matrix-column attributes. | Three-column transforms with two row components. |
+| `Vector<FixedSizeList<Float32 \| Float64, 9 packed \| 12 wgsl-storage>>` with luma `mat3x3` metadata | Yes, through `prepareArrowMatrixGPUVector()`. Packed sources normalize to twelve-float Float32 WGSL-storage rows. | `mat3x3<f32>` storage rows or three lowered matrix-column attributes with WGSL three-row padding. | 2D/3D linear transforms and rotation/scale bases. |
+| `Vector<FixedSizeList<Float32 \| Float64, 12 packed \| 16 wgsl-storage>>` with luma `mat4x3` metadata | Yes, through `prepareArrowMatrixGPUVector()`. Packed sources normalize to sixteen-float Float32 WGSL-storage rows. | `mat4x3<f32>` storage rows or four lowered matrix-column attributes with WGSL three-row padding. | deck.gl `SimpleMeshLayer` and `ScenegraphLayer` consume a 4x4 accessor as this affine GPU payload: three model-matrix `vec3` columns plus one translation `vec3`. |
+| `Vector<FixedSizeList<Float32 \| Float64, 12>>` with luma `mat3x4` metadata | Yes, through `prepareArrowMatrixGPUVector()`. Canonical output is Float32 column-major `wgsl-storage`; Float64 truncates to Float32 during preparation. | `mat3x4<f32>` storage rows or three lowered matrix-column attributes. | Three-column transforms with four row components. |
+| `Vector<FixedSizeList<Float32 \| Float64, 16>>` with luma `mat4x4` metadata | Yes, through `prepareArrowMatrixGPUVector()`. Canonical output is Float32 column-major `wgsl-storage`; Float64 truncates to Float32 during preparation. | `mat4x4<f32>` storage rows or four lowered matrix-column attributes. | Full homogeneous 3D transforms when the consumer retains all four rows. |
+| `Vector<Date \| Time \| Timestamp \| Duration>` | Yes, through `prepareArrowTemporalGPUVector()`, which emits relative `Float32` values plus persisted temporal origin metadata. | Scalar relative-time attributes or storage rows in the source Arrow unit. | Generic animated or filtered rows that compare one time value per source row; see the [Time Columns example](/examples/gpu-tables/arrow-time-columns) and [Blinking Stars example](/examples/gpu-tables/arrow-temporal-starfield). |
+| `Vector<List<Date \| Time \| Timestamp \| Duration>>` | Yes, through `prepareArrowTemporalGPUVector()`, which preserves list offsets while emitting relative `List<Float32>` values. | Not a single generic vertex attribute; consume through storage/compute code or model-specific expansion. | Trips-style per-path timestamp streams aligned with path vertices, including `ArrowStorageTripsPathModel`. |
+| `Vector<Interval>` | No in v1. `Interval` is a compound logical value rather than one scalar time value: Arrow interval variants carry calendar/month and day-time or month-day-nanosecond fields, so there is no single preserved source unit or origin subtraction rule for `prepareArrowTemporalGPUVector()`. | Not supported as a generic scalar temporal attribute or storage row until an explicit interval shader/storage contract exists. | Deferred; callers should lower intervals into application-defined scalar columns when that is the intended comparison model. |
+| `Vector<List<Interval>>` | No in v1. The leaf interval value has the same unresolved compound/calendar semantics, and the list form also needs a model-specific variable-length consumption path. | Not supported as generic temporal storage or Trips-style timestamps. | Deferred; Trips-style streams require scalar `Date`, `Time`, `Timestamp`, or `Duration` leaves that normalize to relative `Float32`. |
+| `arrow.Vector<List<FixedSizeList<Float32, 2 \| 3 \| 4>>>` | Yes, as flattened GPU path-coordinate values plus copied list-offset metadata. | Not a single generic vertex attribute; `ArrowPathModel` expands prepared rows into segment attributes, while `ArrowStoragePathModel` keeps prepared path values in storage and renders indexed segment records. | `ArrowPathModel.prepareGPUVectors()` uploads these rows unchanged unless closed-path normalization is requested. The resulting `pathProps` and `storagePathProps` feed `ArrowPathModel` and `ArrowStoragePathModel`. |
+| `arrow.Vector<List<FixedSizeList<Float64, 2 \| 3 \| 4>>>` | Yes, through path preparation as per-row Float32 deltas plus copied list-offset metadata. CPU Float64 per-row origins are retained separately. | Not a generic vertex attribute. Attribute paths prepare deltas on the CPU; WebGPU storage paths can prepare them once with `fp64arithmetic` `sub_fp64u32_to_f32` before rendering. | `ArrowPathModel.prepareGPUVectors()` and `prepareArrowPathGPUVectors()` prepare attribute paths. `ArrowStoragePathModel.prepareGPUVectors()` and `prepareArrowStoragePathGPUVectors()` prepare storage paths with GPU Float64 subtraction on WebGPU. |
+| `Vector<List<numeric \| FixedSizeList<numeric, 1 \| 2 \| 3 \| 4>>>` | Yes, as flattened GPU values plus copied list-offset metadata. | Not a single generic vertex attribute; consume through storage/compute code or model-specific expansion. | Generic variable-length numeric storage/readback. Model support is documented by the model-specific rows above. |
+| `Vector<Utf8>` | Yes, as UTF-8 value bytes plus readback metadata. | Not a generic vertex attribute; consume through text-specific UTF-8 and glyph expansion, or parse DGGS cell keys through `prepareDggsCellKeyGPUVector()` when the encoding is supplied. | `ArrowTextModel`, `ArrowStorageTextModel`, and DGGS key parsing. |
+| `Vector<Dictionary<Utf8, Int8 \| Int16 \| Int32 \| Uint8 \| Uint16 \| Uint32>>` | Yes, as dictionary index rows; callers keep CPU source vectors for dictionary values when glyph layout needs them. | Not a generic vertex attribute; consume through dictionary-aware text expansion. | `ArrowTextModel`, `ArrowStorageTextModel`, and `ArrowDictionaryTextModel`/`ArrowDictionaryStorageTextModel`. |
+| Other Arrow logical types such as `Bool`, `Binary`, `Struct`, `Map`, `Decimal`, `LargeUtf8`, and non-UTF-8 dictionaries | No generic table/vector upload path unless a helper documents a specific use. | Not supported as generic shader columns. | Adapter-specific only; for example `closeArrowPaths()` accepts `Vector<Bool>` closed-path flags as CPU row metadata. |
+
+The [Time Columns example](/examples/gpu-tables/arrow-time-columns) prepares aligned
+`DateDay`, `TimeMillisecond`, `TimestampMillisecond`, and
+`DurationMillisecond` event rows together with `prepareArrowTemporalGPUVectors()`,
+then renders the same relative `Float32` columns as instanced attributes or
+WebGPU storage rows. The [Blinking Stars example](/examples/gpu-tables/arrow-temporal-starfield)
+uses aligned `TimestampMillisecond` and `DurationMillisecond` rows as per-instance
+visibility windows and pulse periods through the same attribute/storage modes.
+The path example remains the separate variable-length
+`List<FixedSizeList<Float32, 4>>` plus `List<Timestamp>` Trips-style stream
+example.
 
 ## Shader and Buffer Layout Preliminaries
 
@@ -169,8 +211,17 @@ Matrix options:
 | `layout` | `'wgsl-storage' \| 'packed'` | `'wgsl-storage'` | Physical row layout. Three-row matrix columns are padded to four floats for WGSL-compatible storage layout. |
 
 `getArrowMatrixVectorInfo(vector)` recovers the stored matrix metadata, including
-shape, row/column counts, physical component count, column stride, and byte
-stride.
+shape, row/column counts, matrix order, physical component count, column stride,
+value type, and byte stride. `prepareArrowMatrixGPUVector()` accepts metadata-tagged
+`FixedSizeList<Float32>` and `FixedSizeList<Float64>` matrix columns, then emits
+canonical Float32 WGSL-storage rows for attribute or storage-buffer use.
+
+deck.gl `SimpleMeshLayer` and `ScenegraphLayer` expose `getTransformMatrix` as a
+4x4 accessor, but their attribute updater drops the final row and uploads three
+`vec3` model-matrix columns plus one `vec3` translation. Arrow callers targeting
+those layers can store that GPU-facing affine payload directly as `mat4x3`, or
+accept a 4x4 source and explicitly truncate to the affine `mat4x3` payload before
+binding it.
 
 Public matrix types:
 
@@ -235,6 +286,62 @@ The Arrow helper recognizes the matrix metadata and lowers the matrix row throug
 the engine [`BufferSchema`](/docs/api-reference/engine/buffer-schema) path into
 one shared interleaved buffer layout.
 
+## Temporal Columns
+
+`prepareArrowTemporalGPUVector()` and `prepareArrowTemporalGPUVectors()` normalize
+supported Arrow temporal logical columns into relative Float32 GPU vectors while
+retaining the original Arrow unit:
+
+```ts
+const preparedTemporalColumns = await prepareArrowTemporalGPUVectors(device, {
+  eventStarts,
+  eventDurations
+});
+
+const eventTable = new GPUTable({
+  vectors: {
+    eventStarts: preparedTemporalColumns.eventStarts.temporal,
+    eventDurations: preparedTemporalColumns.eventDurations.temporal
+  }
+});
+```
+
+Absolute `Date`, `Time`, and `Timestamp` columns choose the first valid scalar
+or flattened list value as their relative origin when prepared metadata does not
+already carry one. `Duration` columns use origin `0`. The chosen kind, unit,
+origin, origin policy, and timestamp timezone metadata are persisted on the
+prepared field so repeated transforms and append flows can reuse the same
+comparison domain.
+
+Prepared scalar temporal rows can be instanced attributes or WebGPU storage rows.
+Prepared `List<temporal>` rows preserve list offsets and are intended for
+storage/compute or model-specific expansion, such as
+`ArrowStorageTripsPathModel`. `Interval` and `List<Interval>` are intentionally
+deferred because Arrow interval leaves have compound calendar semantics rather
+than one scalar source unit that can be origin-subtracted without an explicit
+application contract.
+
+## DGGS Cell Keys
+
+DGGS helpers provide a WebGPU-only path from compact global grid IDs to Uint64 key
+storage and rendered cell boundaries:
+
+```ts
+const preparedKeys = prepareDggsCellKeyGPUVector(device, cellIds, {
+  encoding: 'geohash'
+});
+const preparedPaths = prepareDggsCellPathGPUVector(device, preparedKeys.keys, {
+  encoding: 'geohash'
+});
+```
+
+`prepareDggsCellKeyGPUVector()` accepts UTF-8 geohash, quadkey, S2, A5, or H3 IDs
+and parses them on the GPU into Uint64 rows. `prepareDggsCellPathGPUVector()`
+accepts those Uint64 rows and emits closed `List<FixedSizeList<Float32, 2>>`
+boundary paths. The `dggs` shader module exposes the matching WGSL Uint64 word
+order and cell-boundary helpers when a shader should read keys directly. See the
+[Global Grids example](/examples/gpu-tables/dggs-gpu-polygons).
+
 ## Storage-Selected Table Columns
 
 `GPURecordBatch` and `GPUTable` also select Arrow columns referenced by shader
@@ -260,9 +367,9 @@ vector into a new contiguous Arrow vector. It accepts either an integer typed
 array or an integer Arrow vector as the row mapping.
 
 Use it when a compact table should become vertex- or instance-aligned data for an
-attribute path. The Arrow Mesh Geometry example uses this idea for WebGL face
-colors: a six-row face-color vector is expanded by cube `faceIndex` rows into a
-vertex-aligned color vector.
+attribute path. The Matrices: `FixedSizeList<Float32, 16>` example uses
+this idea for WebGL face colors: a six-row face-color vector is expanded by cube
+`faceIndex` rows into a vertex-aligned color vector.
 
 Supported source vectors:
 
@@ -528,6 +635,8 @@ const colorVector: GPUVector = arrowGPUTable.gpuVectors.instanceColors;
 vertices without mutating the input vector. The helper accepts GPU-resident
 `List<FixedSizeList<Float32>>` path rows with one to four components per vertex,
 an Arrow Bool vector with one closed flag per row, and a non-negative epsilon.
+Those Float32 rows can be absolute path coordinates or origin-relative delta
+coordinates produced from Float64 path preparation.
 
 ```ts
 import {closeArrowPaths} from '@luma.gl/arrow';
@@ -542,13 +651,71 @@ const normalizedPaths = await closeArrowPaths(device, {
 The output preserves Arrow chunk boundaries. Open rows, rows already closed
 within epsilon, empty rows, and single-point rows are unchanged. Closed rows
 whose first and last vertices differ receive one appended copy of the first
-vertex.
+vertex. For Float64 source paths, closure happens after CPU conversion to
+delta space; if the original last point equals the first, both deltas are zero,
+and injected closing vertices append the first delta, usually `[0, 0, ...]`.
 
-`ArrowStoragePathModel` can consume `normalizedPaths` directly. The
-attribute-backed `ArrowPathModel` can also use it as `paths`, but that model's
-caller-owned `sourceVectors.paths` must describe the same normalized rows; use
-`await readArrowGPUVectorAsync(normalizedPaths)` when the CPU-side source
-vector should be derived from the helper result.
+## Preparing Arrow Paths for Rendering
+
+Use `ArrowPathModel.prepareGPUVectors()` when raw Arrow vectors need to become
+attribute-renderer inputs. Float32 paths upload unchanged unless `closed` flags
+are supplied. Float64 paths are converted on the CPU into stable per-row Float32
+deltas from the first point of each path. The prepared object also owns CPU
+Float64 origins and updates view-space origin buffers when the view or model
+matrix changes.
+
+```ts
+const prepared = await ArrowPathModel.prepareGPUVectors(device, {
+  paths,
+  colors,
+  widths,
+  closed
+}, {
+  closeEpsilon: 1e-5
+});
+
+const pathModel = new ArrowPathModel(device, prepared.pathProps);
+const storagePathModel = new ArrowStoragePathModel(device, prepared.storagePathProps);
+
+prepared.updateViewOrigins({modelViewMatrix});
+
+pathModel.destroy();
+storagePathModel.destroy();
+prepared.destroy();
+```
+
+For storage-only WebGPU paths, use the storage preparation entrypoint instead:
+
+```ts
+const preparedStorage = await ArrowStoragePathModel.prepareGPUVectors(device, {
+  paths,
+  colors,
+  widths,
+  closed
+}, {
+  closeEpsilon: 1e-5
+});
+
+const storagePathModel = new ArrowStoragePathModel(device, preparedStorage.storagePathProps);
+```
+
+That path uploads raw Float64 list payloads temporarily, converts them once into
+Float32 per-row deltas with `sub_fp64u32_to_f32`, then discards the transient
+Float64 GPU upload before returning the prepared storage props.
+
+Path constructors stay `GPUVector`/prepared-state only; raw Arrow path vectors
+belong at the preparation boundary. For Float64 paths, shaders should transform
+deltas with a zero homogeneous component and add the CPU-updated view origin
+before projection.
+
+`ArrowStoragePathModel` keeps the default storage path record compact: each
+generated segment stores three `u32` words (`segmentStartPointIndex`,
+`segmentFlags`, and `globalRowIndex`) plus a persistent `vec4<u32>` path range
+per source row. The storage shader receives `pathRanges` automatically and can
+derive end, previous, and next point indices from those ranges and flags.
+Custom storage shader layouts that request `segmentEndPointIndices`,
+`segmentPreviousPointIndices`, or `segmentNextPointIndices` keep the legacy
+six-word segment record layout.
 
 `GPUTableModel` is the generic tables-layer wrapper that combines `GPUTable`
 with `Model`. It draws preserved GPU batches, syncs table row counts into the

@@ -10,10 +10,10 @@ import {
   readArrowGPUVectorAsync
 } from '@luma.gl/arrow';
 import {NullDevice} from '@luma.gl/test-utils';
-import * as arrow from 'apache-arrow';
+import {BufferType, Data, Field, FixedSizeList, Float32, Int16, List, Vector} from 'apache-arrow';
 
-type ScalarNestedAttributeType = arrow.List<arrow.Int16>;
-type TupleNestedAttributeType = arrow.List<arrow.FixedSizeList<arrow.Float32>>;
+type ScalarNestedAttributeType = List<Int16>;
+type TupleNestedAttributeType = List<FixedSizeList<Float32>>;
 
 test('GPUVector uploads nested scalar attributes and round-trips Arrow offsets', async t => {
   const device = new NullDevice({});
@@ -93,9 +93,9 @@ test('GPUVector preserves chunked tuple nested attribute batches', async t => {
     new Int32Array([0, 3]),
     new Float32Array([2, 0, 0, 2, 1, 0, 2, 1, 1])
   );
-  const sourceVector = new arrow.Vector<TupleNestedAttributeType>([
-    ...(firstChunk.data as arrow.Data<TupleNestedAttributeType>[]),
-    ...(secondChunk.data as arrow.Data<TupleNestedAttributeType>[])
+  const sourceVector = new Vector<TupleNestedAttributeType>([
+    ...(firstChunk.data as Data<TupleNestedAttributeType>[]),
+    ...(secondChunk.data as Data<TupleNestedAttributeType>[])
   ]);
   const gpuVector = makeArrowGPUVector(device, sourceVector, {name: 'nestedTuples'});
   const result = await readArrowGPUVectorAsync(gpuVector);
@@ -129,7 +129,7 @@ test('GPUVector nested list readAsync normalizes sliced offsets', async t => {
     new Int32Array([0, 2, 3]),
     new Float32Array([0, 0, 1, 1, 2, 2])
   );
-  const slicedVector = sourceVector.slice(1) as arrow.Vector<TupleNestedAttributeType>;
+  const slicedVector = sourceVector.slice(1) as Vector<TupleNestedAttributeType>;
   const gpuVector = makeArrowGPUVector(device, slicedVector, {name: 'slicedNestedTuples'});
   const result = await readArrowGPUVectorAsync(gpuVector);
 
@@ -203,7 +203,7 @@ test('GPUVector rejects nullable variable-length nested attribute rows', t => {
     1,
     new Uint8Array([0])
   );
-  const vector = new arrow.Vector<TupleNestedAttributeType>([nullableData]);
+  const vector = new Vector<TupleNestedAttributeType>([nullableData]);
 
   t.throws(
     () => makeArrowGPUVector(device, vector, {name: 'nestedTuples'}),
@@ -216,31 +216,29 @@ test('GPUVector rejects nullable variable-length nested attribute rows', t => {
 function makeScalarNestedAttributeVector(
   valueOffsets: Int32Array,
   values: Int16Array
-): arrow.Vector<ScalarNestedAttributeType> {
-  const scalarType = new arrow.Int16();
-  const listType = new arrow.List(
-    new arrow.Field('values', scalarType, false)
-  ) as ScalarNestedAttributeType;
-  const scalarData = new arrow.Data<arrow.Int16>(scalarType, 0, values.length, 0, {
-    [arrow.BufferType.DATA]: values
+): Vector<ScalarNestedAttributeType> {
+  const scalarType = new Int16();
+  const listType = new List(new Field('values', scalarType, false)) as ScalarNestedAttributeType;
+  const scalarData = new Data<Int16>(scalarType, 0, values.length, 0, {
+    [BufferType.DATA]: values
   });
-  const listData = new arrow.Data<ScalarNestedAttributeType>(
+  const listData = new Data<ScalarNestedAttributeType>(
     listType,
     0,
     valueOffsets.length - 1,
     0,
-    {[arrow.BufferType.OFFSET]: valueOffsets},
+    {[BufferType.OFFSET]: valueOffsets},
     [scalarData]
   );
-  return new arrow.Vector<ScalarNestedAttributeType>([listData]);
+  return new Vector<ScalarNestedAttributeType>([listData]);
 }
 
 function makeTupleNestedAttributeVector(
   dimension: 1 | 2 | 3 | 4,
   valueOffsets: Int32Array,
   values: Float32Array
-): arrow.Vector<TupleNestedAttributeType> {
-  return new arrow.Vector<TupleNestedAttributeType>([
+): Vector<TupleNestedAttributeType> {
+  return new Vector<TupleNestedAttributeType>([
     makeTupleNestedAttributeData(dimension, valueOffsets, values)
   ]);
 }
@@ -251,18 +249,13 @@ function makeTupleNestedAttributeData(
   values: Float32Array,
   nullCount = 0,
   nullBitmap?: Uint8Array
-): arrow.Data<TupleNestedAttributeType> {
-  const tupleType = new arrow.FixedSizeList(
-    dimension,
-    new arrow.Field('values', new arrow.Float32(), false)
-  );
-  const listType = new arrow.List(
-    new arrow.Field('attributes', tupleType, false)
-  ) as TupleNestedAttributeType;
-  const numericData = new arrow.Data<arrow.Float32>(new arrow.Float32(), 0, values.length, 0, {
-    [arrow.BufferType.DATA]: values
+): Data<TupleNestedAttributeType> {
+  const tupleType = new FixedSizeList(dimension, new Field('values', new Float32(), false));
+  const listType = new List(new Field('attributes', tupleType, false)) as TupleNestedAttributeType;
+  const numericData = new Data<Float32>(new Float32(), 0, values.length, 0, {
+    [BufferType.DATA]: values
   });
-  const tupleData = new arrow.Data<arrow.FixedSizeList<arrow.Float32>>(
+  const tupleData = new Data<FixedSizeList<Float32>>(
     tupleType,
     0,
     values.length / dimension,
@@ -270,14 +263,14 @@ function makeTupleNestedAttributeData(
     {},
     [numericData]
   );
-  return new arrow.Data<TupleNestedAttributeType>(
+  return new Data<TupleNestedAttributeType>(
     listType,
     0,
     valueOffsets.length - 1,
     nullCount,
     {
-      [arrow.BufferType.OFFSET]: valueOffsets,
-      ...(nullBitmap ? {[arrow.BufferType.VALIDITY]: nullBitmap} : {})
+      [BufferType.OFFSET]: valueOffsets,
+      ...(nullBitmap ? {[BufferType.VALIDITY]: nullBitmap} : {})
     },
     [tupleData]
   );
@@ -289,24 +282,20 @@ function makeFloatValues(dimension: 1 | 2 | 3 | 4, elementCount: number): Float3
   );
 }
 
-function getScalarNestedAttributeValues(
-  vector: arrow.Vector<ScalarNestedAttributeType>
-): Int16Array {
+function getScalarNestedAttributeValues(vector: Vector<ScalarNestedAttributeType>): Int16Array {
   const values: number[] = [];
-  for (const data of vector.data as arrow.Data<ScalarNestedAttributeType>[]) {
-    const scalarData = data.children[0] as arrow.Data<arrow.Int16>;
+  for (const data of vector.data as Data<ScalarNestedAttributeType>[]) {
+    const scalarData = data.children[0] as Data<Int16>;
     values.push(...Array.from(scalarData.values as Int16Array));
   }
   return new Int16Array(values);
 }
 
-function getTupleNestedAttributeValues(
-  vector: arrow.Vector<TupleNestedAttributeType>
-): Float32Array {
+function getTupleNestedAttributeValues(vector: Vector<TupleNestedAttributeType>): Float32Array {
   const values: number[] = [];
-  for (const data of vector.data as arrow.Data<TupleNestedAttributeType>[]) {
-    const tupleData = data.children[0] as arrow.Data<arrow.FixedSizeList<arrow.Float32>>;
-    const numericData = tupleData.children[0] as arrow.Data<arrow.Float32>;
+  for (const data of vector.data as Data<TupleNestedAttributeType>[]) {
+    const tupleData = data.children[0] as Data<FixedSizeList<Float32>>;
+    const numericData = tupleData.children[0] as Data<Float32>;
     values.push(...Array.from(numericData.values as Float32Array));
   }
   return new Float32Array(values);

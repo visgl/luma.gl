@@ -19,8 +19,10 @@ export const extent: OperationHandler<{sourceValues: GPUTableEvaluator}> = async
 
   const result = new output.ValueType(output.length * output.size);
   if (sourceValues.length === 0) {
-    target.write(result);
-    return;
+    return {
+      success: false,
+      error: new Error(`${sourceValues} is empty`)
+    };
   }
 
   for (let channelIndex = 0; channelIndex < sourceValues.size; channelIndex++) {
@@ -41,4 +43,8 @@ export const extent: OperationHandler<{sourceValues: GPUTableEvaluator}> = async
   }
 
   target.write(result);
+  return {
+    success: true,
+    value: result
+  };
 };

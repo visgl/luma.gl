@@ -3,6 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import type {Device, Buffer} from '@luma.gl/core';
+import type {TypedArray} from '@math.gl/types';
 import {GPUTableEvaluator} from './gpu-table-evaluator';
 import {backendRegistry} from './backend-registry';
 
@@ -16,7 +17,12 @@ export type OperationHandler<InputsT extends Record<string, any> = any> = (args:
   output: GPUTableEvaluator;
   /** GPU buffer that receives operation output. */
   target: Buffer;
-}) => Promise<void>;
+}) => Promise<OperationHandlerResult>;
+export type OperationHandlerResult = {
+  success: boolean;
+  value?: TypedArray;
+  error?: Error;
+};
 
 /**
  * Base class for deferred GPGPU operations.
@@ -45,32 +51,23 @@ export abstract class Operation<InputsT extends Record<string, any> = Record<str
   abstract toString(): string;
 
   /** Evaluates dependencies and writes this operation's result into `target`. */
-  async execute(device: Device, target: Buffer): Promise<void> {
+  async execute(device: Device, target: Buffer): Promise<OperationHandlerResult> {
     // Resolve dependencies
     for (const dep of this.dependencies) {
       await dep.evaluate(device);
     }
-    if (this.shouldExecuteOnCPU()) {
-      const handler = await backendRegistry.get('cpu', this.name);
-      handler({
-        device: target.device,
-        inputs: this.inputs,
-        output: this.output,
-        target
-      });
-    } else {
-      const handler = await backendRegistry.get(device.type, this.name);
-      await handler({
-        device,
-        inputs: this.inputs,
-        output: this.output,
-        target
-      });
-    }
+    const handlerRegistry = this.shouldExecuteOnCPU() ? 'cpu' : device.type;
+    const handler = await backendRegistry.get(handlerRegistry, this.name);
+    return handler({
+      device: target.device,
+      inputs: this.inputs,
+      output: this.output,
+      target
+    });
   }
 
   /** Returns `true` when all inputs are CPU-backed constants small enough for CPU execution. */
   protected shouldExecuteOnCPU() {
-    return this.output.length <= 1 && Object.values(this.inputs).every(t => Boolean(t.value));
+    return this.output.length <= 1 && Array.from(this.dependencies).every(t => Boolean(t.value));
   }
 }

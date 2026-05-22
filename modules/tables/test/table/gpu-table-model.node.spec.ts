@@ -6,10 +6,18 @@ import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import type {ShaderLayout} from '@luma.gl/core';
 import {NullDevice} from '@luma.gl/test-utils';
 import {GPURecordBatch, GPUTable, GPUTableModel, GPUVector} from '@luma.gl/tables';
-import * as arrow from 'apache-arrow';
+import {Binary, Field, FixedSizeList, Float32} from 'apache-arrow';
 
 const TABLE_MODEL_SHADER_LAYOUT = {
   attributes: [{name: 'positions', location: 0, type: 'vec2<f32>', stepMode: 'instance'}],
+  bindings: []
+} satisfies ShaderLayout;
+
+const INTERLEAVED_TABLE_MODEL_SHADER_LAYOUT = {
+  attributes: [
+    {name: 'matrixColumn0', location: 0, type: 'vec4<f32>', stepMode: 'instance'},
+    {name: 'matrixColumn1', location: 1, type: 'vec4<f32>', stepMode: 'instance'}
+  ],
   bindings: []
 } satisfies ShaderLayout;
 
@@ -18,6 +26,15 @@ const TABLE_MODEL_VERTEX_SHADER = /* glsl */ `\
 in vec2 positions;
 void main() {
   gl_Position = vec4(positions, 0.0, 1.0);
+}
+`;
+
+const INTERLEAVED_TABLE_MODEL_VERTEX_SHADER = /* glsl */ `\
+#version 300 es
+in vec4 matrixColumn0;
+in vec4 matrixColumn1;
+void main() {
+  gl_Position = matrixColumn0 + matrixColumn1 * 0.0;
 }
 `;
 
@@ -96,6 +113,51 @@ test('GPUTableModel merges explicit model state and rejects duplicate table inpu
   model.destroy();
   explicitPositions.destroy();
   extraBuffer.destroy();
+  table.destroy();
+  t.end();
+});
+
+test('GPUTableModel binds interleaved table buffers by layout name', t => {
+  const device = new NullDevice({});
+  const matrixBuffer = device.createBuffer({byteLength: 64});
+  const table = new GPUTable({
+    vectors: {
+      matrices: new GPUVector({
+        type: 'interleaved',
+        name: 'matrices',
+        buffer: matrixBuffer,
+        dataType: new Binary(),
+        length: 2,
+        byteStride: 32,
+        attributes: [
+          {attribute: 'matrixColumn0', format: 'float32x4', byteOffset: 0},
+          {attribute: 'matrixColumn1', format: 'float32x4', byteOffset: 16}
+        ],
+        ownsBuffer: true
+      })
+    }
+  });
+  const model = new GPUTableModel(device, {
+    id: 'gpu-table-interleaved-model-test',
+    vs: INTERLEAVED_TABLE_MODEL_VERTEX_SHADER,
+    fs: TABLE_MODEL_FRAGMENT_SHADER,
+    shaderLayout: INTERLEAVED_TABLE_MODEL_SHADER_LAYOUT,
+    table
+  });
+
+  t.deepEqual(Object.keys(table.attributes), ['matrices'], 'keeps the layout-named buffer');
+  t.equal(
+    model.vertexArray.attributes[0],
+    matrixBuffer,
+    'binds the shared buffer to the first interleaved shader attribute'
+  );
+  t.equal(
+    model.vertexArray.attributes[1],
+    matrixBuffer,
+    'binds the shared buffer to the second interleaved shader attribute'
+  );
+
+  model.destroy();
   table.destroy();
   t.end();
 });
@@ -191,7 +253,7 @@ function makePositionsVector(device: NullDevice, rowCount: number): GPUVector {
     type: 'buffer',
     name: 'positions',
     buffer: device.createBuffer({data: new Float32Array(rowCount * 2)}),
-    dataType: new arrow.FixedSizeList(2, new arrow.Field('value', new arrow.Float32(), false)),
+    dataType: new FixedSizeList(2, new Field('value', new Float32(), false)),
     length: rowCount,
     stride: 2,
     byteStride: Float32Array.BYTES_PER_ELEMENT * 2,

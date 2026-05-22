@@ -6,7 +6,7 @@ import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {ARROW_TABLES} from '@luma.gl/arrow/test/data/arrow/make-arrow-tables';
 
 import {getArrowPaths, getArrowDataByPath} from '@luma.gl/arrow';
-import * as arrow from 'apache-arrow';
+import {Type} from 'apache-arrow';
 
 test('getArrowTablePaths', async t => {
   const {simpleTable} = ARROW_TABLES;
@@ -23,11 +23,11 @@ test('getArrowTablePaths', async t => {
 test('getArrowDataByPath', async t => {
   const {simpleTable} = ARROW_TABLES;
   const ageData = getArrowDataByPath(simpleTable, 'age');
-  t.equal(ageData.typeId, arrow.Type.Int, 'extracted age from table struct');
+  t.equal(ageData.typeId, Type.Int, 'extracted age from table struct');
 
   const {nestedTable} = ARROW_TABLES;
   const heightData = getArrowDataByPath(nestedTable, 'data.height');
-  t.equal(heightData.type.typeId, arrow.Type.Float, 'extracted age from nested table struct');
+  t.equal(heightData.type.typeId, Type.Float, 'extracted age from nested table struct');
 
   t.end();
 });

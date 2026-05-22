@@ -26,8 +26,9 @@ export const extent: OperationHandler<{sourceValues: GPUTableEvaluator}> = async
   const {sourceValues} = inputs;
 
   if (sourceValues.length === 0) {
-    target.write(new output.ValueType(output.length * output.size));
-    return;
+    const value = new output.ValueType(output.length * output.size);
+    target.write(value);
+    return {success: true, value};
   }
 
   if (sourceValues.isConstant) {
@@ -42,7 +43,7 @@ export const extent: OperationHandler<{sourceValues: GPUTableEvaluator}> = async
       result[channelIndex * 2 + 1] = value;
     }
     target.write(result);
-    return;
+    return {success: true, value: result};
   }
 
   const intermediateBuffers: Buffer[] = [];
@@ -88,6 +89,7 @@ export const extent: OperationHandler<{sourceValues: GPUTableEvaluator}> = async
       inputMode = 'partial';
       currentGroupCount = nextGroupCount;
     }
+    return {success: true};
   } finally {
     for (const buffer of intermediateBuffers) {
       bufferPool.recycle(buffer);
