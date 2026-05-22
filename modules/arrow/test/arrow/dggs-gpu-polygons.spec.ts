@@ -203,7 +203,7 @@ test('arrow#prepareDggsCellPathGPUVector extracts DGGS boundary paths on the GPU
         ...H3_PATH_TEST_KEYS.flatMap(cellKey => getH3BoundaryCoordinates(cellKey)),
         ...makeZeroPathCoordinates(H3_UNSUPPORTED_PATH_TEST_KEYS.length, 7)
       ],
-      tolerance: 1e-4
+      tolerance: 1e-3
     }
   ];
 

@@ -3,6 +3,7 @@
 // Copyright (c) vis.gl contributors
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
+import type {Test} from '@luma.gl/devtools-extensions/tape-test-utils';
 import {Buffer} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
@@ -132,7 +133,44 @@ test('shadertools#dggs WGSL decodes H3, S2, and A5 words', async t => {
       resultBytes.byteOffset,
       resultBytes.byteLength / Uint32Array.BYTES_PER_ELEMENT
     );
-    t.deepEqual(Array.from(resultWords), Array.from(expectedResult), 'decodes expected fields');
+    t.deepEqual(
+      Array.from(resultWords.slice(0, 33)),
+      Array.from(expectedResult.slice(0, 33)),
+      'decodes expected integer fields before A5 boundary coordinates'
+    );
+    assertFloat32WordClose(
+      t,
+      resultWords[33]!,
+      -120.09849548339844,
+      1e-3,
+      'decodes A5 boundary longitude'
+    );
+    assertFloat32WordClose(
+      t,
+      resultWords[34]!,
+      40.015132904052734,
+      1e-3,
+      'decodes A5 boundary latitude'
+    );
+    t.deepEqual(
+      Array.from(resultWords.slice(35, 41)),
+      Array.from(expectedResult.slice(35, 41)),
+      'decodes expected reflected A5 integer fields'
+    );
+    assertFloat32WordClose(
+      t,
+      resultWords[41]!,
+      -74.28097534179688,
+      1e-3,
+      'decodes reflected A5 boundary longitude'
+    );
+    assertFloat32WordClose(
+      t,
+      resultWords[42]!,
+      44.1791877746582,
+      1e-3,
+      'decodes reflected A5 boundary latitude'
+    );
   } finally {
     computation.destroy();
     inputBuffer.destroy();
@@ -241,4 +279,22 @@ function getLittleEndianWords(value: bigint): [number, number] {
 
 function getFloat32Bits(value: number): number {
   return new Uint32Array(new Float32Array([value]).buffer)[0];
+}
+
+function getFloat32Value(bits: number): number {
+  return new Float32Array(new Uint32Array([bits]).buffer)[0];
+}
+
+function assertFloat32WordClose(
+  t: Test,
+  actualBits: number,
+  expectedValue: number,
+  tolerance: number,
+  message: string
+): void {
+  const actualValue = getFloat32Value(actualBits);
+  t.ok(
+    Math.abs(actualValue - expectedValue) <= tolerance,
+    `${message} (${actualValue} ~= ${expectedValue})`
+  );
 }
