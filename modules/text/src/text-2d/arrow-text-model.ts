@@ -33,6 +33,7 @@ import {
   FixedSizeList,
   Float32,
   Int16,
+  List,
   Schema,
   Table,
   Uint16,
@@ -731,8 +732,8 @@ export type ArrowTextSourceVectors = {
   positions: Vector<FixedSizeList<Float32>>;
   /** CPU plain or dictionary-encoded UTF-8 labels used for glyph expansion. */
   texts: ArrowUtf8TextVector;
-  /** Optional CPU packed RGBA8 text colors aligned with label rows. */
-  colors?: Vector<FixedSizeList<Uint8>>;
+  /** Optional CPU packed RGBA8 text colors aligned with label rows or label characters. */
+  colors?: Vector<ArrowTextColorType>;
   /** Optional CPU per-row angles in degrees. */
   angles?: Vector<Float32>;
   /** Optional CPU per-row deck-style text sizes. */
@@ -758,8 +759,8 @@ export type ArrowTextModelProps = Omit<
 > & {
   /** GPU-resident label origins aligned one-for-one with `texts`. */
   positions: GPUVector<FixedSizeList<Float32>>;
-  /** Optional packed RGBA8 text colors, consumed as label attributes when declared by the shader. */
-  colors?: GPUVector<FixedSizeList<Uint8>>;
+  /** Optional packed RGBA8 text colors, consumed as label or character attributes when declared by the shader. */
+  colors?: GPUVector<ArrowTextColorType>;
   /** Optional per-row angles in degrees, consumed as label attributes when declared by the shader. */
   angles?: GPUVector<Float32>;
   /** Optional per-row deck-style text sizes, consumed as label attributes when declared by the shader. */
@@ -790,7 +791,16 @@ export type ArrowTextModelProps = Omit<
   fontAtlas?: FontAtlas;
 };
 
-type ArrowStorageTextSharedInputProps = Omit<ArrowTextModelProps, 'sourceVectors' | 'texts'> & {
+export type ArrowTextRowColorType = FixedSizeList<Uint8>;
+export type ArrowTextCharacterColorType = List<FixedSizeList<Uint8>>;
+export type ArrowTextColorType = ArrowTextRowColorType | ArrowTextCharacterColorType;
+
+type ArrowStorageTextSharedInputProps = Omit<
+  ArrowTextModelProps,
+  'sourceVectors' | 'texts' | 'colors'
+> & {
+  /** Optional packed RGBA8 text colors aligned with label rows. */
+  colors?: GPUVector<FixedSizeList<Uint8>>;
   /** Optional per-row text anchor enum: 0=start, 1=middle, 2=end. */
   textAnchors?: GPUVector<Uint8>;
   /** Optional per-row alignment baseline enum: 0=center, 1=top, 2=bottom. */
@@ -833,7 +843,55 @@ export type ArrowDictionaryStorageTextInputProps = ArrowStorageTextSharedInputPr
   sourceVectors: ArrowDictionaryStorageTextSourceVectors;
 };
 
-type ArrowStorageTextRenderProps = Omit<
+export type ArrowAttributeTextRenderProps = Omit<
+  ArrowTextModelProps,
+  | 'positions'
+  | 'texts'
+  | 'colors'
+  | 'angles'
+  | 'sizes'
+  | 'pixelOffsets'
+  | 'clipRects'
+  | 'characterSet'
+  | 'fontSettings'
+  | 'lineHeight'
+  | 'fontAtlasManager'
+  | 'characterMapping'
+  | 'fontAtlas'
+  | 'sourceVectors'
+>;
+
+export type ArrowAttributeTextState = {
+  /** Props used to build the prepared attribute state. */
+  textProps: ArrowTextModelProps;
+  /** Model props produced from the prepared glyph table. */
+  modelProps: ArrowModelProps;
+  /** Expanded glyph table and layout diagnostics. */
+  glyphTable: ArrowTextGlyphTable;
+  /** First generated expanded glyph vertex attribute buffer. */
+  expandedGlyphVertexData: Buffer;
+  /** Generated render batches preserved for device buffer-size limits. */
+  renderBatches: ArrowTextRenderBatchState[];
+  /** Optional atlas manager retained when this state built the atlas. */
+  fontAtlasManager?: FontAtlasManager;
+  /** Optional atlas texture owned by this state. */
+  atlasTexture?: DynamicTexture;
+  /** CPU time spent building generated glyph-instance Arrow attributes. */
+  glyphAttributeBuildTimeMs: number;
+  /** SDF render settings retained for built-in fragment shader uniforms. */
+  sdfRenderSettings: TextSdfRenderSettings;
+  /** Default fragment shader uniforms, when the built-in shader is used. */
+  defaultFragmentShaderUniforms?: Record<string, unknown>;
+  /** Character mapping retained for append compatibility. */
+  mappingState: ResolvedCharacterMapping;
+};
+
+export type ArrowAttributeTextModelStateProps = ArrowAttributeTextRenderProps & {
+  /** Prepared attribute text state produced by the Arrow adapter layer. */
+  attributeState: ArrowAttributeTextState;
+};
+
+export type ArrowStorageTextRenderProps = Omit<
   ArrowStorageTextInputProps,
   | 'positions'
   | 'texts'
@@ -978,7 +1036,7 @@ export type ArrowStorageTextModelProps =
   | (ArrowStorageTextInputProps & {storageState?: never})
   | (ArrowStorageTextRenderProps & {storageState: ArrowStorageTextState});
 
-type ArrowDictionaryStorageTextRenderProps = Omit<
+export type ArrowDictionaryStorageTextRenderProps = Omit<
   ArrowDictionaryStorageTextInputProps,
   | 'positions'
   | 'texts'
@@ -1151,10 +1209,12 @@ export class ArrowAttributeTextModel extends ArrowModel {
   private processedTextRowCount: number;
 
   /** Creates an attribute-backed Arrow text model from prepared text props. */
-  constructor(device: Device, props: ArrowTextModelProps) {
-    const prepared = prepareArrowTextModel(device, props);
+  constructor(device: Device, props: ArrowTextModelProps | ArrowAttributeTextModelStateProps) {
+    const prepared = hasArrowAttributeTextState(props)
+      ? props.attributeState
+      : createArrowAttributeTextState(device, props);
     super(device, prepared.modelProps);
-    this.textProps = props;
+    this.textProps = prepared.textProps;
     this.fontAtlasManager = prepared.fontAtlasManager;
     this.atlasTexture = prepared.atlasTexture;
     this.glyphLayout = prepared.glyphTable.glyphLayout;
@@ -1166,8 +1226,8 @@ export class ArrowAttributeTextModel extends ArrowModel {
     this.renderBatches = prepared.renderBatches;
     this.defaultFragmentShaderUniforms = prepared.defaultFragmentShaderUniforms;
     this.mappingState = prepared.mappingState;
-    this.processedTextBatchCount = props.texts.data.length;
-    this.processedTextRowCount = props.texts.length;
+    this.processedTextBatchCount = prepared.textProps.texts.data.length;
+    this.processedTextRowCount = prepared.textProps.texts.length;
   }
 
   /** Rebuild generated glyph attributes when label rows, text, or font layout inputs change. */
@@ -1956,7 +2016,20 @@ export function buildArrowTextGlyphTable(props: {
 
   for (const field of props.labelTable.schema.fields) {
     const vector = props.labelTable.getChild(field.name);
-    if (!vector || !isInstanceCompatibleArrowType(vector.type)) {
+    if (!vector) {
+      continue;
+    }
+    if (field.name === 'colors' && isArrowTextCharacterColorType(vector.type)) {
+      fields.push(
+        new Field(field.name, vector.type.children[0]!.type, field.nullable, field.metadata)
+      );
+      columns[field.name] = expandArrowTextCharacterColorRows(
+        vector as Vector<ArrowTextCharacterColorType>,
+        glyphLayout.startIndices
+      );
+      continue;
+    }
+    if (!isInstanceCompatibleArrowType(vector.type)) {
       continue;
     }
     fields.push(field);
@@ -2104,13 +2177,10 @@ function assertArrowTextVectorTypes(props: ArrowTextModelProps): void {
   ) {
     throw new Error('ArrowTextModel positions must be GPUVector<FixedSizeList<Float32>[2]>');
   }
-  if (
-    props.colors &&
-    (!DataType.isFixedSizeList(props.colors.type) ||
-      props.colors.type.listSize !== 4 ||
-      !(props.colors.type.children[0]?.type instanceof Uint8))
-  ) {
-    throw new Error('ArrowTextModel colors must be GPUVector<FixedSizeList<Uint8>[4]>');
+  if (props.colors && !isArrowTextColorType(props.colors.type)) {
+    throw new Error(
+      'ArrowTextModel colors must be GPUVector<FixedSizeList<Uint8>[4]> or GPUVector<List<FixedSizeList<Uint8>[4]>>'
+    );
   }
   if (props.angles && !(props.angles.type instanceof Float32)) {
     throw new Error('ArrowTextModel angles must be GPUVector<Float32>');
@@ -2671,6 +2741,17 @@ function assertArrowStorageTextAppendProps(props: Partial<ArrowStorageTextInputP
       );
     }
   }
+}
+
+/** Builds reusable attribute text state for GPU/state-only model construction. */
+export function createArrowAttributeTextState(
+  device: Device,
+  props: ArrowTextModelProps
+): ArrowAttributeTextState {
+  return {
+    ...prepareArrowTextModel(device, props),
+    textProps: props
+  };
 }
 
 function prepareArrowTextModel(
@@ -3639,6 +3720,12 @@ function hasArrowStorageTextState(
   props: ArrowStorageTextModelProps
 ): props is ArrowStorageTextRenderProps & {storageState: ArrowStorageTextState} {
   return 'storageState' in props && props.storageState !== undefined;
+}
+
+function hasArrowAttributeTextState(
+  props: ArrowTextModelProps | ArrowAttributeTextModelStateProps
+): props is ArrowAttributeTextModelStateProps {
+  return 'attributeState' in props && props.attributeState !== undefined;
 }
 
 function hasArrowDictionaryStorageTextState(
@@ -4838,6 +4925,69 @@ function isInstanceCompatibleArrowType(type: DataType): boolean {
     isNumericArrowType(type) ||
     (DataType.isFixedSizeList(type) && isNumericArrowType(type.children[0].type))
   );
+}
+
+function isArrowTextRowColorType(type: DataType | undefined): type is ArrowTextRowColorType {
+  return (
+    Boolean(type) &&
+    DataType.isFixedSizeList(type) &&
+    type.listSize === 4 &&
+    type.children[0]?.type instanceof Uint8
+  );
+}
+
+function isArrowTextCharacterColorType(
+  type: DataType | undefined
+): type is ArrowTextCharacterColorType {
+  return Boolean(type) && DataType.isList(type) && isArrowTextRowColorType(type.children[0]?.type);
+}
+
+function isArrowTextColorType(type: DataType | undefined): type is ArrowTextColorType {
+  return isArrowTextRowColorType(type) || isArrowTextCharacterColorType(type);
+}
+
+function expandArrowTextCharacterColorRows(
+  vector: Vector<ArrowTextCharacterColorType>,
+  startIndices: number[]
+): Vector<ArrowTextRowColorType> {
+  const glyphCount = startIndices[startIndices.length - 1] ?? 0;
+  const expandedValues = new Uint8Array(glyphCount * 4);
+  let rowIndexBase = 0;
+
+  for (const data of vector.data) {
+    const valueOffsets = data.valueOffsets as Int32Array | undefined;
+    const elementData = data.children[0] as Data<ArrowTextRowColorType> | undefined;
+    const valueData = elementData?.children[0] as Data<Uint8> | undefined;
+    const values = valueData?.values as Uint8Array | undefined;
+    if (!valueOffsets || !elementData || !valueData || !values) {
+      throw new Error('ArrowTextModel character colors require Arrow list offsets and values');
+    }
+
+    const firstElementOffset = valueOffsets[0] ?? 0;
+    const valueOffset = valueData.offset ?? 0;
+    for (let localRowIndex = 0; localRowIndex < data.length; localRowIndex++) {
+      const rowIndex = rowIndexBase + localRowIndex;
+      const glyphStart = startIndices[rowIndex] ?? 0;
+      const glyphEnd = startIndices[rowIndex + 1] ?? glyphStart;
+      const glyphRowLength = glyphEnd - glyphStart;
+      const colorStart = (valueOffsets[localRowIndex] ?? firstElementOffset) - firstElementOffset;
+      const colorEnd = (valueOffsets[localRowIndex + 1] ?? colorStart) - firstElementOffset;
+
+      if (colorEnd - colorStart !== glyphRowLength) {
+        throw new Error(
+          'ArrowTextModel character colors must provide one color per UTF-8 code point'
+        );
+      }
+
+      expandedValues.set(
+        values.subarray(valueOffset + colorStart * 4, valueOffset + colorEnd * 4),
+        glyphStart * 4
+      );
+    }
+    rowIndexBase += data.length;
+  }
+
+  return makeArrowFixedSizeListVector(new Uint8(), 4, expandedValues);
 }
 
 function repeatArrowVectorRows(vector: Vector, startIndices: number[]): Vector {

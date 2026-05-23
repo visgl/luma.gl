@@ -84,16 +84,21 @@ export {
   ArrowTextModel,
   ArrowStorageTextModel,
   buildArrowTextGlyphTable,
+  createArrowAttributeTextState,
   createArrowDictionaryStorageTextState,
   createArrowStorageTextState,
   packStorageTextClipRects,
+  type ArrowAttributeTextModelStateProps,
   type ArrowAttributeTextModelProps,
+  type ArrowAttributeTextRenderProps,
   type ArrowAttributeTextRenderBatchState,
   type ArrowAttributeTextSourceVectors,
+  type ArrowAttributeTextState,
   type ArrowDictionaryStorageTextBatchState,
   type ArrowDictionaryStorageTextInputProps,
   type ArrowDictionaryStorageTextModelProps,
   type ArrowDictionaryStorageTextRenderBatchState,
+  type ArrowDictionaryStorageTextRenderProps,
   type ArrowDictionaryStorageTextSourceVectors,
   type ArrowDictionaryStorageTextState,
   type ArrowDictionaryTextBatchState,
@@ -106,6 +111,7 @@ export {
   type ArrowStorageTextInputProps,
   type ArrowStorageTextModelProps,
   type ArrowStorageTextRenderBatchState,
+  type ArrowStorageTextRenderProps,
   type ArrowStorageTextSourceVectors,
   type ArrowStorageTextState,
   type ArrowTextGlyphTable,
@@ -113,3 +119,47 @@ export {
   type ArrowTextRenderBatchState,
   type ArrowTextSourceVectors
 } from './arrow-text-model';
+export {
+  AttributeTextModel,
+  createArrowAttributeTextState as createAttributeTextState,
+  type AttributeTextModelProps,
+  type AttributeTextRenderProps,
+  type AttributeTextRenderBatchState,
+  type AttributeTextState,
+  type AttributeTextSourceVectors
+} from './attribute-text-model';
+export {
+  StorageTextModel,
+  createArrowStorageTextState as createStorageTextState,
+  type StorageTextBatchState,
+  type StorageTextInputProps,
+  type StorageTextModelProps,
+  type StorageTextRenderBatchState,
+  type StorageTextSourceVectors,
+  type StorageTextState
+} from './storage-text-model';
+export {
+  DictionaryTextModel,
+  createArrowDictionaryStorageTextState as createDictionaryTextState,
+  type DictionaryTextBatchState,
+  type DictionaryTextInputProps,
+  type DictionaryTextModelProps,
+  type DictionaryTextRenderBatchState,
+  type DictionaryTextSourceVectors,
+  type DictionaryTextState
+} from './dictionary-text-model';
+export {
+  convertArrowTextToAttribute,
+  convertArrowTextToAttributeState,
+  type ArrowTextConversionColumns,
+  type ConvertedArrowTextData,
+  type ConvertArrowTextProps
+} from './convert-arrow-text-to-attribute';
+export {
+  convertArrowTextToStorage,
+  convertArrowTextToStorageState
+} from './convert-arrow-text-to-storage';
+export {
+  convertArrowTextToDictionary,
+  convertArrowTextToDictionaryState
+} from './convert-arrow-text-to-dictionary';

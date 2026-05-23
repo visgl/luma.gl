@@ -3,12 +3,12 @@
 // Copyright (c) vis.gl contributors
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
-import {TableBufferPlanner, type TableColumnDescriptor} from '@luma.gl/tables';
+import {GPUTableBufferPlanner, type GPUTableColumnDescriptor} from '@luma.gl/tables';
 import type {Device} from '@luma.gl/core';
 import {NullDevice} from '@luma.gl/test-utils';
 
-test('TableBufferPlanner builds shared-geometry allocation groups deterministically', t => {
-  const plan = TableBufferPlanner.getAllocationPlan({
+test('GPUTableBufferPlanner builds shared-geometry allocation groups deterministically', t => {
+  const plan = GPUTableBufferPlanner.getAllocationPlan({
     device: createDevice({maxVertexBuffers: 8}),
     modelInfo: {isInstanced: true},
     generateConstantAttributes: true,
@@ -58,8 +58,8 @@ test('TableBufferPlanner builds shared-geometry allocation groups deterministica
   t.end();
 });
 
-test('TableBufferPlanner builds row-geometry constants with instance step mode', t => {
-  const plan = TableBufferPlanner.getAllocationPlan({
+test('GPUTableBufferPlanner builds row-geometry constants with instance step mode', t => {
+  const plan = GPUTableBufferPlanner.getAllocationPlan({
     device: createDevice({maxVertexBuffers: 8}),
     modelInfo: {isInstanced: false},
     generateConstantAttributes: true,
@@ -93,8 +93,8 @@ test('TableBufferPlanner builds row-geometry constants with instance step mode',
   t.end();
 });
 
-test('TableBufferPlanner uses priority for separate vs interleaved data columns', t => {
-  const plan = TableBufferPlanner.getAllocationPlan({
+test('GPUTableBufferPlanner uses priority for separate vs interleaved data columns', t => {
+  const plan = GPUTableBufferPlanner.getAllocationPlan({
     device: createDevice({maxVertexBuffers: 2}),
     modelInfo: {isInstanced: true},
     columns: [
@@ -120,8 +120,8 @@ test('TableBufferPlanner uses priority for separate vs interleaved data columns'
   t.end();
 });
 
-test('TableBufferPlanner marks unsupported columns as unmanaged', t => {
-  const plan = TableBufferPlanner.getAllocationPlan({
+test('GPUTableBufferPlanner marks unsupported columns as unmanaged', t => {
+  const plan = GPUTableBufferPlanner.getAllocationPlan({
     device: createDevice({maxVertexBuffers: 16}),
     modelInfo: {isInstanced: true},
     generateConstantAttributes: true,
@@ -154,11 +154,13 @@ test('TableBufferPlanner marks unsupported columns as unmanaged', t => {
     'keeps unsafe columns unmanaged while allowing generated noAlloc CPU data'
   );
   t.notOk(
-    TableBufferPlanner.shouldSkipColumnBuffer(makeColumn('transitionValues', {isTransition: true})),
+    GPUTableBufferPlanner.shouldSkipColumnBuffer(
+      makeColumn('transitionValues', {isTransition: true})
+    ),
     'does not skip unmanaged transition columns'
   );
   t.ok(
-    TableBufferPlanner.shouldSkipColumnBuffer(
+    GPUTableBufferPlanner.shouldSkipColumnBuffer(
       makeColumn('generatedPickingColors', {noAlloc: true, allowNoAllocManaged: true})
     ),
     'can skip generated noAlloc columns that the planner can publish'
@@ -167,8 +169,8 @@ test('TableBufferPlanner marks unsupported columns as unmanaged', t => {
   t.end();
 });
 
-test('TableBufferPlanner maps fp64 position high and low components separately', t => {
-  const plan = TableBufferPlanner.getAllocationPlan({
+test('GPUTableBufferPlanner maps fp64 position high and low components separately', t => {
+  const plan = GPUTableBufferPlanner.getAllocationPlan({
     device: createDevice({maxVertexBuffers: 8}),
     modelInfo: {isInstanced: true},
     generateConstantAttributes: true,
@@ -224,8 +226,8 @@ test('TableBufferPlanner maps fp64 position high and low components separately',
   t.end();
 });
 
-test('TableBufferPlanner uses WebGPU row-geometry storage groups when enabled', t => {
-  const webgpuPlan = TableBufferPlanner.getAllocationPlan({
+test('GPUTableBufferPlanner uses WebGPU row-geometry storage groups when enabled', t => {
+  const webgpuPlan = GPUTableBufferPlanner.getAllocationPlan({
     device: createDevice({
       type: 'webgpu',
       maxStorageBuffersPerShaderStage: 4,
@@ -245,7 +247,7 @@ test('TableBufferPlanner uses WebGPU row-geometry storage groups when enabled', 
       makeColumn('elevations', {byteStride: 4, byteLength: 8})
     ]
   });
-  const webglPlan = TableBufferPlanner.getAllocationPlan({
+  const webglPlan = GPUTableBufferPlanner.getAllocationPlan({
     device: createDevice({type: 'webgl', maxStorageBuffersPerShaderStage: 4}),
     modelInfo: {isInstanced: false},
     useStorageBuffers: true,
@@ -254,7 +256,7 @@ test('TableBufferPlanner uses WebGPU row-geometry storage groups when enabled', 
       makeColumn('elevations')
     ]
   });
-  const sharedGeometryPlan = TableBufferPlanner.getAllocationPlan({
+  const sharedGeometryPlan = GPUTableBufferPlanner.getAllocationPlan({
     device: createDevice({type: 'webgpu', maxStorageBuffersPerShaderStage: 4}),
     modelInfo: {isInstanced: true},
     useStorageBuffers: true,
@@ -287,8 +289,8 @@ test('TableBufferPlanner uses WebGPU row-geometry storage groups when enabled', 
   t.end();
 });
 
-test('TableBufferPlanner stacks storage groups and falls back on size limits', t => {
-  const countLimitedPlan = TableBufferPlanner.getAllocationPlan({
+test('GPUTableBufferPlanner stacks storage groups and falls back on size limits', t => {
+  const countLimitedPlan = GPUTableBufferPlanner.getAllocationPlan({
     device: createDevice({
       type: 'webgpu',
       maxStorageBuffersPerShaderStage: 1,
@@ -302,7 +304,7 @@ test('TableBufferPlanner stacks storage groups and falls back on size limits', t
       makeColumn('elevations', {byteStride: 4, byteLength: 8})
     ]
   });
-  const sizeLimitedPlan = TableBufferPlanner.getAllocationPlan({
+  const sizeLimitedPlan = GPUTableBufferPlanner.getAllocationPlan({
     device: createDevice({
       type: 'webgpu',
       maxStorageBuffersPerShaderStage: 4,
@@ -345,10 +347,10 @@ test('TableBufferPlanner stacks storage groups and falls back on size limits', t
   t.end();
 });
 
-test('TableBufferPlanner validates vertex buffer count and array stride limits', t => {
+test('GPUTableBufferPlanner validates vertex buffer count and array stride limits', t => {
   t.throws(
     () =>
-      TableBufferPlanner.getAllocationPlan({
+      GPUTableBufferPlanner.getAllocationPlan({
         device: createDevice({maxVertexBuffers: 1}),
         modelInfo: {isInstanced: true},
         columns: [
@@ -361,7 +363,7 @@ test('TableBufferPlanner validates vertex buffer count and array stride limits',
   );
   t.throws(
     () =>
-      TableBufferPlanner.getAllocationPlan({
+      GPUTableBufferPlanner.getAllocationPlan({
         device: createDevice({maxVertexBuffers: 1, maxVertexBufferArrayStride: 16}),
         modelInfo: {isInstanced: true},
         columns: [
@@ -378,8 +380,8 @@ test('TableBufferPlanner validates vertex buffer count and array stride limits',
 
 function makeColumn(
   id: string,
-  overrides: Partial<TableColumnDescriptor> = {}
-): TableColumnDescriptor {
+  overrides: Partial<GPUTableColumnDescriptor> = {}
+): GPUTableColumnDescriptor {
   return {
     id,
     byteStride: 4,

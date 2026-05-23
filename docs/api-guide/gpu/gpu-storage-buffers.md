@@ -92,8 +92,9 @@ That supports patterns such as:
 - particle positions and velocities updated in place by compute;
 - batch-preserving compute dispatch through `TableComputation`.
 
-See [Using Arrow Table Columns with Shaders](./arrow-table-columns) for the full
-columnar workflow.
+See [Arrow Type Mapping](/docs/api-reference/arrow/arrow-type-mapping) and
+[GPUTable Object Model](/docs/api-reference/tables/gpu-table-object-model) for
+the full columnar workflow.
 
 ## Compute Pattern
 
@@ -136,4 +137,5 @@ batch-by-batch before dispatch.
 
 - [Attributes](./gpu-attributes)
 - [Buffer Schemas and Columnar Records](./buffer-schemas)
-- [Using Arrow Table Columns with Shaders](./arrow-table-columns)
+- [Arrow Type Mapping](/docs/api-reference/arrow/arrow-type-mapping)
+- [GPUTable Object Model](/docs/api-reference/tables/gpu-table-object-model)

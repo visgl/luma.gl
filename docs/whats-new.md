@@ -23,7 +23,7 @@ Target Release Date: Q3, 2026
 - **`ArrowStoragePathModel`** - New WebGPU-only storage-backed path renderer expands nested prepared Float32 XY, XYZ, and XYZM rows through compute into compact 12-byte indexed segment records using GPU path values plus persistent per-row path ranges, keeps per-path color, width, and optional view-origin rows as storage bindings, can convert Float64 source paths into Float32 deltas with one `fp64arithmetic` compute pass, and can consume reusable `ArrowStoragePathState` objects built by `createArrowStoragePathState`.
 - **Mesh Arrow geometry** - New `ArrowTableGeometry`, `makeGPUGeometryFromArrow()`, and `ArrowModel` support loaders.gl-compatible Mesh Arrow tables, including default interleaved vertex buffers and optional index buffers. `ArrowGeometry` remains a compatibility alias.
 - **Arrow table adapters** - Arrow table/vector upload, append, and readback utilities now layer over reusable generic GPU table objects from `@luma.gl/tables`.
-- **[Columnar GPU tables](/docs/api-guide/gpu/arrow-table-columns)** - Matrix Arrow vectors, storage-selected table bindings, Arrow adapters, and the generic tables execution layer.
+- **[Arrow Type Mapping](/docs/api-reference/arrow/arrow-type-mapping) and [GPUTable Object Model](/docs/api-reference/tables/gpu-table-object-model)** - Matrix Arrow vectors, storage-selected table bindings, Arrow adapters, and the generic tables execution layer.
 - **[Apache Arrow GPU Tables examples](/examples/gpu-tables/arrow-instancing)** - Instancing: `FixedSizeList<Float32, 2>`, Text: `Utf8`/`Dictionary<Utf8>`, Time: `Date`/`Time`/`Timestamp`/`Duration`, Starfield: `Timestamp`/`Duration`, Paths: `List<FixedSizeList<Float32, 4>>` + `List<Timestamp>`, Matrices: `FixedSizeList<Float32, 16>`, Particles: `FixedSizeList<Float32, 3>`, and Global Grids: `Uint64`, `Utf8` for geohash, quadkey, S2, A5, and H3 now live in the Apache Arrow GPU Tables section.
 - **[Time Columns Example](/examples/gpu-tables/arrow-time-columns)** - New showcase prepares aligned scalar `DateDay`, `TimeMillisecond`, `TimestampMillisecond`, and `DurationMillisecond` rows into relative Float32 GPU vectors, then renders the same schedule through instanced attributes or WebGPU storage bindings.
 - **[Blinking Stars Example](/examples/gpu-tables/arrow-temporal-starfield)** - New showcase prepares aligned scalar `TimestampMillisecond` and `DurationMillisecond` rows into relative Float32 GPU vectors, then uses them as per-instance visibility windows and pulse periods through instanced attributes or WebGPU storage bindings.
@@ -48,7 +48,7 @@ Target Release Date: Q3, 2026
 
 - **Generic GPU tables** - Canonical `GPUData`, `GPUVector`, `GPURecordBatch`, and `GPUTable` runtime classes for reusable non-Arrow-specific GPU table ownership and batching.
 - **Table-backed rendering** - `GPUTableModel` draws preserved table batches, and `GPUTableGeometry` exposes packed static GPU tables as renderable geometry.
-- **Execution helpers** - `TableTransform`, `TableComputation`, generated-buffer batch planning, and `TableBufferPlanner` now live beside the generic table runtime instead of the Arrow adapter module.
+- **Execution helpers** - `TableTransform`, `TableComputation`, generated-buffer batch planning, and `GPUTableBufferPlanner` now live beside the generic table runtime instead of the Arrow adapter module.
 
 **@luma.gl/engine**
 

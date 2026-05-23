@@ -5,7 +5,7 @@
 import type {Device} from '@luma.gl/core';
 
 /** Priority hint for assigning scarce dedicated vertex-buffer slots to table columns. */
-export type TableColumnPriority = 'high' | 'medium' | 'low';
+export type GPUTableColumnPriority = 'high' | 'medium' | 'low';
 
 /**
  * Physical GPU allocation shape chosen for a table column or group of columns.
@@ -15,7 +15,7 @@ export type TableColumnPriority = 'high' | 'medium' | 'low';
  * allocating buffers, packing data for interleaved groups, and binding any
  * storage-buffer groups.
  */
-export type AllocationGroupKind =
+export type GPUTableBufferGroupKind =
   /** Interleaved vertex-rate columns that describe a reusable geometry shared by all table rows. */
   | 'interleaved-shared-geometry-columns'
   /** Position columns, including multiple named position columns and fp64 high components. */
@@ -41,14 +41,14 @@ export type AllocationGroupKind =
  * Row-geometry mode models one table row as a variable number of generated
  * vertices, such as paths or polygons.
  */
-export type TableBufferPlannerMode =
+export type GPUTableBufferPlannerMode =
   /** Each source table row draws one instance of reusable shared geometry. */
   | 'table-with-shared-geometry'
   /** Each source table row expands into its own inline generated vertices. */
   | 'table-with-row-geometries';
 
-/** Model geometry hints used by {@link TableBufferPlanner}. */
-export type TableBufferPlannerModelInfo = {
+/** Model geometry hints used by {@link GPUTableBufferPlanner}. */
+export type GPUTableBufferPlannerModelInfo = {
   /** Whether the model draws one shared geometry instance per table row. */
   isInstanced?: boolean;
   /** Vertex-buffer slots already consumed by model geometry. */
@@ -56,7 +56,7 @@ export type TableBufferPlannerModelInfo = {
 };
 
 /**
- * One allocation group emitted by {@link TableBufferPlanner}.
+ * One allocation group emitted by {@link GPUTableBufferPlanner}.
  *
  * @remarks
  * A group represents one physical GPU allocation or one externally managed
@@ -64,13 +64,13 @@ export type TableBufferPlannerModelInfo = {
  * should be published from that allocation. For storage-buffer groups,
  * `byteLength` and `byteOffsets` describe whole-column storage slices.
  */
-export type TableBufferGroup = {
+export type GPUTableBufferGroup = {
   /** Stable buffer/group id used by downstream model-binding code. */
   id: string;
   /** Physical allocation shape for this group. */
-  kind: AllocationGroupKind;
+  kind: GPUTableBufferGroupKind;
   /** Vertex attribute columns or fp64 component views assigned to this group. */
-  columns: PlannedColumn[];
+  columns: GPUTablePlannedColumn[];
   /** Number of rows to materialize for small generated buffers, such as constants. */
   rowCount?: number;
   /** Vertex input step mode for groups whose row count is planner-owned. */
@@ -82,15 +82,15 @@ export type TableBufferGroup = {
 };
 
 /**
- * Source table column descriptor consumed by {@link TableBufferPlanner}.
+ * Source table column descriptor consumed by {@link GPUTableBufferPlanner}.
  *
  * @remarks
  * The planner intentionally works from abstract descriptors. It does not
  * inspect Arrow vectors, upload GPU buffers, run accessors, or pack typed
  * arrays. Callers derive these descriptors from their own table and shader
- * metadata, then consume the returned {@link TableBufferPlan}.
+ * metadata, then consume the returned {@link GPUTableBufferPlan}.
  */
-export type TableColumnDescriptor = {
+export type GPUTableColumnDescriptor = {
   /** Stable column id, usually the shader attribute id. */
   id: string;
   /** Byte stride contributed by this column to an interleaved vertex attribute buffer. */
@@ -122,18 +122,18 @@ export type TableColumnDescriptor = {
   /** Whether this generated row-geometry column must stay as a vertex attribute. */
   isGeneratedRowGeometry?: boolean;
   /** Priority for receiving a separate vertex-buffer binding. */
-  priority?: TableColumnPriority;
+  priority?: GPUTableColumnPriority;
 };
 
 /**
- * Column view assigned to a {@link TableBufferGroup}.
+ * Column view assigned to a {@link GPUTableBufferGroup}.
  *
  * @remarks
  * Double-precision position columns can produce separate `high` and `low`
  * component views so callers can publish fp64 shader attributes from different
  * physical groups.
  */
-export type PlannedColumn = {
+export type GPUTablePlannedColumn = {
   /** Source table column id. */
   id: string;
   /** Selects the fp64 high or low component view for position columns. */
@@ -148,13 +148,13 @@ export type PlannedColumn = {
  * `groups` is ordered for publication. The reverse lookups let callers update
  * or bind only the groups affected by a changed source column.
  */
-export type TableBufferPlan = {
+export type GPUTableBufferPlan = {
   /** Ordered allocation groups to publish to a Model. */
-  groups: TableBufferGroup[];
+  groups: GPUTableBufferGroup[];
   /** Reverse lookup from source column id to all groups containing that column. */
-  groupsByColumnId: Record<string, TableBufferGroup[]>;
+  groupsByColumnId: Record<string, GPUTableBufferGroup[]>;
   /** Reverse lookup from source column id to shader/model binding names and offsets. */
-  mappingsByColumnId: Record<string, TableBufferMapping[]>;
+  mappingsByColumnId: Record<string, GPUTableBufferMapping[]>;
   /** Columns represented by planner-owned vertex buffers. */
   packedColumnIds: Set<string>;
   /** Columns represented by storage-buffer groups. */
@@ -162,7 +162,7 @@ export type TableBufferPlan = {
 };
 
 /** Model-binding mapping for one planned vertex attribute or fp64 component view. */
-export type TableBufferMapping = {
+export type GPUTableBufferMapping = {
   /** Source table column id. */
   columnId: string;
   /** Shader-visible attribute name, e.g. instanceSourcePositions64Low. */
@@ -170,30 +170,30 @@ export type TableBufferMapping = {
   /** Buffer/group id that contains this attribute view. */
   bufferName: string;
   /** Physical allocation shape of the containing group. */
-  groupKind: AllocationGroupKind;
+  groupKind: GPUTableBufferGroupKind;
   /** fp64 component represented by this mapping, if any. */
   fp64Component?: 'high' | 'low';
   /** Byte offset within a storage-buffer group. */
   byteOffset?: number;
 };
 
-/** Inputs to {@link TableBufferPlanner.getAllocationPlan}. */
-export type TableBufferPlannerProps = {
+/** Inputs to {@link GPUTableBufferPlanner.getAllocationPlan}. */
+export type GPUTableBufferPlannerProps = {
   /** Device whose vertex/storage binding limits constrain the plan. */
   device: Device;
   /** Candidate table columns. */
-  columns: TableColumnDescriptor[];
+  columns: GPUTableColumnDescriptor[];
   /** Model geometry mode and reserved vertex-buffer slots. */
-  modelInfo?: TableBufferPlannerModelInfo;
+  modelInfo?: GPUTableBufferPlannerModelInfo;
   /** Optional explicit planner mode. Defaults from modelInfo.isInstanced. */
-  mode?: TableBufferPlannerMode;
+  mode?: GPUTableBufferPlannerMode;
   /** Enables planner-only storage-buffer allocation for row-geometry table columns. */
   useStorageBuffers?: boolean;
   /** Whether constant columns should be materialized into small planner-owned buffers. */
   generateConstantAttributes?: boolean;
 };
 
-const PRIORITY_RANK: Record<TableColumnPriority, number> = {
+const PRIORITY_RANK: Record<GPUTableColumnPriority, number> = {
   high: 0,
   medium: 1,
   low: 2
@@ -205,10 +205,10 @@ const STORAGE_OVERFLOW_COLUMN_ALIGNMENT = 256;
  * Builds table-first GPU buffer allocation plans from abstract column descriptors.
  *
  * @remarks
- * `TableBufferPlanner` is a pure planning utility. It does not allocate GPU
+ * `GPUTableBufferPlanner` is a pure planning utility. It does not allocate GPU
  * buffers, mutate descriptors, retain Arrow data, or bind model resources.
  */
-export class TableBufferPlanner {
+export class GPUTableBufferPlanner {
   /**
    * Classifies columns, assigns allocation groups, validates device limits, and
    * returns model mappings.
@@ -224,16 +224,16 @@ export class TableBufferPlanner {
     mode = getPlannerMode(modelInfo),
     useStorageBuffers = false,
     generateConstantAttributes = false
-  }: TableBufferPlannerProps): TableBufferPlan {
+  }: GPUTableBufferPlannerProps): GPUTableBufferPlan {
     const sortedColumns = [...columns].sort((a, b) => a.id.localeCompare(b.id));
     const columnsById = Object.fromEntries(
       sortedColumns.map(column => [column.id, column])
-    ) as Record<string, TableColumnDescriptor>;
-    const groups: TableBufferGroup[] = [];
-    const geometryColumns: PlannedColumn[] = [];
-    const constantColumns: PlannedColumn[] = [];
-    const positionColumns: PlannedColumn[] = [];
-    const dataColumns: PlannedColumn[] = [];
+    ) as Record<string, GPUTableColumnDescriptor>;
+    const groups: GPUTableBufferGroup[] = [];
+    const geometryColumns: GPUTablePlannedColumn[] = [];
+    const constantColumns: GPUTablePlannedColumn[] = [];
+    const positionColumns: GPUTablePlannedColumn[] = [];
+    const dataColumns: GPUTablePlannedColumn[] = [];
     const reservedVertexBufferCount = modelInfo?.reservedVertexBufferCount || 0;
 
     for (const column of sortedColumns) {
@@ -328,8 +328,8 @@ export class TableBufferPlanner {
     );
     validatePlan(device, groups, columnsById, reservedVertexBufferCount);
 
-    const groupsByColumnId: Record<string, TableBufferGroup[]> = {};
-    const mappingsByColumnId: Record<string, TableBufferMapping[]> = {};
+    const groupsByColumnId: Record<string, GPUTableBufferGroup[]> = {};
+    const mappingsByColumnId: Record<string, GPUTableBufferMapping[]> = {};
     const packedColumnIds = new Set<string>();
     const storageColumnIds = new Set<string>();
     for (const group of groups) {
@@ -371,7 +371,7 @@ export class TableBufferPlanner {
    * @returns `true` when the column is eligible for caller-owned publication
    * through planner-managed buffers.
    */
-  static shouldSkipColumnBuffer(column: TableColumnDescriptor): boolean {
+  static shouldSkipColumnBuffer(column: GPUTableColumnDescriptor): boolean {
     return (
       !column.isIndexed &&
       (!column.isDoublePrecision || Boolean(column.isPosition)) &&
@@ -398,19 +398,19 @@ function allocateStorageAttributes({
   columnsById
 }: {
   device: Device;
-  mode: TableBufferPlannerMode;
+  mode: GPUTableBufferPlannerMode;
   useStorageBuffers: boolean;
-  columns: PlannedColumn[];
-  columnsById: Record<string, TableColumnDescriptor>;
-}): {storageGroups: TableBufferGroup[]; vertexColumns: PlannedColumn[]} {
+  columns: GPUTablePlannedColumn[];
+  columnsById: Record<string, GPUTableColumnDescriptor>;
+}): {storageGroups: GPUTableBufferGroup[]; vertexColumns: GPUTablePlannedColumn[]} {
   if (!shouldUseStorageBuffers(device, mode, useStorageBuffers) || !columns.length) {
     return {storageGroups: [], vertexColumns: columns};
   }
 
   const maxStorageBuffers = Math.max(0, device.limits.maxStorageBuffersPerShaderStage || 0);
-  const storageGroups: TableBufferGroup[] = [];
-  const vertexColumns: PlannedColumn[] = [];
-  const storageColumns: PlannedColumn[] = [];
+  const storageGroups: GPUTableBufferGroup[] = [];
+  const vertexColumns: GPUTablePlannedColumn[] = [];
+  const storageColumns: GPUTablePlannedColumn[] = [];
 
   for (const column of sortDataAttributes(columns, columnsById)) {
     const descriptor = columnsById[column.id];
@@ -475,11 +475,11 @@ function allocateStorageAttributes({
  */
 function allocateDataAttributes(
   device: Device,
-  fixedGroups: TableBufferGroup[],
-  columns: PlannedColumn[],
-  columnsById: Record<string, TableColumnDescriptor>,
+  fixedGroups: GPUTableBufferGroup[],
+  columns: GPUTablePlannedColumn[],
+  columnsById: Record<string, GPUTableColumnDescriptor>,
   reservedVertexBufferCount: number
-): TableBufferGroup[] {
+): GPUTableBufferGroup[] {
   if (!columns.length) {
     return [];
   }
@@ -491,7 +491,7 @@ function allocateDataAttributes(
     device.limits.maxVertexBuffers - reservedVertexBufferCount - fixedVertexBufferCount;
   const dedicatedCount =
     availableSlots >= sortedColumns.length ? sortedColumns.length : Math.max(0, availableSlots - 1);
-  const groups: TableBufferGroup[] = [];
+  const groups: GPUTableBufferGroup[] = [];
 
   for (const column of sortedColumns.slice(0, dedicatedCount)) {
     groups.push({
@@ -523,8 +523,8 @@ function allocateDataAttributes(
  */
 function validatePlan(
   device: Device,
-  groups: TableBufferGroup[],
-  columnsById: Record<string, TableColumnDescriptor>,
+  groups: GPUTableBufferGroup[],
+  columnsById: Record<string, GPUTableColumnDescriptor>,
   reservedVertexBufferCount: number
 ): void {
   const vertexBufferCount =
@@ -583,8 +583,8 @@ function validatePlan(
  * @returns Number of vertex-buffer bindings consumed by the groups.
  */
 function countVertexBufferGroups(
-  groups: TableBufferGroup[],
-  columnsById: Record<string, TableColumnDescriptor>
+  groups: GPUTableBufferGroup[],
+  columnsById: Record<string, GPUTableColumnDescriptor>
 ): number {
   return groups.filter(
     group =>
@@ -602,9 +602,9 @@ function countVertexBufferGroups(
  * @returns A new sorted column array.
  */
 function sortDataAttributes(
-  columns: PlannedColumn[],
-  columnsById: Record<string, TableColumnDescriptor>
-): PlannedColumn[] {
+  columns: GPUTablePlannedColumn[],
+  columnsById: Record<string, GPUTableColumnDescriptor>
+): GPUTablePlannedColumn[] {
   return [...columns].sort((a, b) => {
     const priorityDiff = getPriorityRank(columnsById[a.id]) - getPriorityRank(columnsById[b.id]);
     return priorityDiff || a.id.localeCompare(b.id);
@@ -617,7 +617,7 @@ function sortDataAttributes(
  * @param column - Source column descriptor.
  * @returns Numeric rank where lower values receive dedicated buffers first.
  */
-function getPriorityRank(column: TableColumnDescriptor): number {
+function getPriorityRank(column: GPUTableColumnDescriptor): number {
   return PRIORITY_RANK[column.priority || 'medium'];
 }
 
@@ -627,7 +627,7 @@ function getPriorityRank(column: TableColumnDescriptor): number {
  * @param modelInfo - Optional model geometry hints.
  * @returns Row-geometry mode when `isInstanced` is exactly `false`; otherwise shared-geometry mode.
  */
-function getPlannerMode(modelInfo?: TableBufferPlannerModelInfo): TableBufferPlannerMode {
+function getPlannerMode(modelInfo?: GPUTableBufferPlannerModelInfo): GPUTableBufferPlannerMode {
   return modelInfo?.isInstanced === false
     ? 'table-with-row-geometries'
     : 'table-with-shared-geometry';
@@ -641,8 +641,8 @@ function getPlannerMode(modelInfo?: TableBufferPlannerModelInfo): TableBufferPla
  * @returns At least one row, or the maximum row count among the provided columns.
  */
 function getPackedRowCount(
-  columns: PlannedColumn[],
-  columnsById: Record<string, TableColumnDescriptor>
+  columns: GPUTablePlannedColumn[],
+  columnsById: Record<string, GPUTableColumnDescriptor>
 ): number {
   return Math.max(1, ...columns.map(({id}) => columnsById[id].rowCount));
 }
@@ -653,7 +653,7 @@ function getPackedRowCount(
  * @param column - Source column descriptor.
  * @returns `true` when planner-owned allocation can preserve column semantics.
  */
-function canUsePlannedBuffer(column: TableColumnDescriptor): boolean {
+function canUsePlannedBuffer(column: GPUTableColumnDescriptor): boolean {
   if (column.isDoublePrecision && !column.isPosition) {
     return false;
   }
@@ -670,7 +670,7 @@ function canUsePlannedBuffer(column: TableColumnDescriptor): boolean {
  */
 function shouldUseStorageBuffers(
   device: Device,
-  mode: TableBufferPlannerMode,
+  mode: GPUTableBufferPlannerMode,
   useStorageBuffers: boolean
 ): boolean {
   return useStorageBuffers && device.type === 'webgpu' && mode === 'table-with-row-geometries';
@@ -684,8 +684,8 @@ function shouldUseStorageBuffers(
  * @returns Total byte length and byte offsets for each source column.
  */
 function getStorageOverflowLayout(
-  columns: PlannedColumn[],
-  columnsById: Record<string, TableColumnDescriptor>
+  columns: GPUTablePlannedColumn[],
+  columnsById: Record<string, GPUTableColumnDescriptor>
 ): {
   byteLength: number;
   byteOffsets: Record<string, number>;
@@ -709,7 +709,10 @@ function getStorageOverflowLayout(
  * @param columnId - Source column id.
  * @returns The byte offset for storage-buffer mappings, or `undefined` for vertex-buffer groups.
  */
-function getStorageBufferByteOffset(group: TableBufferGroup, columnId: string): number | undefined {
+function getStorageBufferByteOffset(
+  group: GPUTableBufferGroup,
+  columnId: string
+): number | undefined {
   if (group.kind !== 'separate-storage-column' && group.kind !== 'stacked-storage-columns') {
     return undefined;
   }
@@ -735,8 +738,8 @@ function alignTo(value: number, alignment: number): number {
  * @returns Sum of source column byte strides in the group.
  */
 function getGroupByteStride(
-  group: TableBufferGroup,
-  columnsById: Record<string, TableColumnDescriptor>
+  group: GPUTableBufferGroup,
+  columnsById: Record<string, GPUTableColumnDescriptor>
 ): number {
   return group.columns.reduce((byteStride, {id}) => byteStride + columnsById[id].byteStride, 0);
 }

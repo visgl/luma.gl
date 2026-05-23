@@ -27,6 +27,16 @@ const config = getDocusaurusConfig({
     [
       '@docusaurus/plugin-client-redirects',
       {
+        redirects: [
+          {
+            from: [
+              '/docs/api-guide/gpu/arrow-table-columns',
+              '/docs/api-reference/arrow/arrow-table-columns',
+              '/docs/api-reference/tables/gpu-tables'
+            ],
+            to: '/docs/api-reference/arrow/arrow-type-mapping'
+          }
+        ],
         createRedirects(existingPath) {
           // docs/examples/tutorials/*/api-reference <= /docs/tutorials
           if (existingPath.includes('/docs/examples/tutorials/')) {

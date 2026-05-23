@@ -3,13 +3,10 @@
 // Copyright (c) vis.gl contributors
 
 import {
-  ArrowPathModel,
-  ArrowStoragePathModel,
-  ArrowStorageTripsPathModel,
   getArrowVectorByteLength,
   makeArrowFixedSizeListVector,
-  prepareArrowTemporalGPUVector,
-  type ArrowPathPreparedState
+  StoragePathModel,
+  StorageTripsPathModel
 } from '@luma.gl/arrow';
 import {GPUVector} from '@luma.gl/tables';
 import {type Device, type ShaderLayout} from '@luma.gl/core';
@@ -17,81 +14,67 @@ import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate, ShaderInputs} from '@luma.gl/engine';
 import {type ShaderModule} from '@luma.gl/shadertools';
 import * as arrow from 'apache-arrow';
+import {ArrowPathModelControlPanel, makeArrowPathModelControlPanelHtml} from './control-panel';
+import {
+  ArrowPathLayer,
+  type ArrowPathLayerActiveModel,
+  type ArrowPathLayerData,
+  type ArrowPathLayerModel,
+  type ArrowPathLayerTimeColumn,
+  type ArrowPathColorType,
+  type ArrowPathSourceCoordinateType,
+  type ArrowPathSourceTimestampType
+} from './arrow-path-layer';
 
 export const title = 'Paths: XYZM + List<Timestamp>';
 export const description =
   'Variable-length Arrow XYZM path rows rendered through attribute-backed and storage-backed path models, plus aligned List<Timestamp> rows for Trips-style temporal filtering.';
 
-const MODEL_SELECTOR_ID = 'arrow-path-model-model';
-const ROW_COUNT_SELECTOR_ID = 'arrow-path-model-row-count';
-const COORDINATE_SELECTOR_ID = 'arrow-path-model-coordinates';
-const MEASURE_SWEEP_TOGGLE_ID = 'arrow-path-model-measure-sweep';
-const COLOR_TOGGLE_ID = 'arrow-path-model-colors';
-const WIDTH_TOGGLE_ID = 'arrow-path-model-widths';
-const CAP_SELECTOR_ID = 'arrow-path-model-cap-style';
-const JOINT_SELECTOR_ID = 'arrow-path-model-joint-style';
-const MITER_LIMIT_INPUT_ID = 'arrow-path-model-miter-limit';
-const MITER_LIMIT_VALUE_ID = 'arrow-path-model-miter-limit-value';
-const INFO_DETAILS_ID = 'arrow-path-model-details';
-const PATH_COUNT_ID = 'arrow-path-model-path-count';
-const SEGMENT_COUNT_ID = 'arrow-path-model-segment-count';
-const PATH_ARROW_BYTES_ID = 'arrow-path-model-path-arrow-bytes';
-const PATH_GPU_BYTES_ID = 'arrow-path-model-path-gpu-bytes';
-const PATH_GPU_EXPANSION_ID = 'arrow-path-model-path-gpu-expansion';
-const PATH_PREP_TIME_ID = 'arrow-path-model-path-prep-time';
-const STYLE_ARROW_BYTES_ID = 'arrow-path-model-style-arrow-bytes';
-const STYLE_GPU_BYTES_ID = 'arrow-path-model-style-gpu-bytes';
-const STYLE_GPU_EXPANSION_ID = 'arrow-path-model-style-gpu-expansion';
-const STYLE_BUILD_TIME_ID = 'arrow-path-model-style-build-time';
-const TOTAL_ARROW_BYTES_ID = 'arrow-path-model-total-arrow-bytes';
-const TOTAL_GPU_BYTES_ID = 'arrow-path-model-total-gpu-bytes';
-const TOTAL_GPU_EXPANSION_ID = 'arrow-path-model-total-gpu-expansion';
-const DECK_GPU_BYTES_ID = 'arrow-path-model-deck-gpu-bytes';
-const DECK_GPU_EXPANSION_ID = 'arrow-path-model-deck-gpu-expansion';
 // PathLayer-style estimate: four vec3 position attributes plus width, color, picking, and type.
 const DECK_PATH_ATTRIBUTE_BYTES_PER_SEGMENT = 60;
 const TEMPORAL_EPOCH_MILLISECONDS = 1_700_000_000_000n;
 const TEMPORAL_MILLISECONDS_PER_MEASURE_UNIT = 1000;
 const MEASURE_SWEEP_DURATION = 1.48;
 const TEMPORAL_TRAIL_LENGTH_MILLISECONDS = 220;
+const STREAMING_PATH_BATCH_COUNT = 10;
+const STREAMING_PATH_BATCH_INTERVAL_MS = 1000;
+const STREAMING_PATH_ROWS_PER_CHUNK = 240;
 
-type ArrowPathCoordinateType = arrow.List<arrow.FixedSizeList<arrow.Float32>>;
-type ArrowPathFloat64CoordinateType = arrow.List<arrow.FixedSizeList<arrow.Float64>>;
-type ArrowPathSourceCoordinateType = ArrowPathCoordinateType | ArrowPathFloat64CoordinateType;
-type ArrowPathTimestampType = arrow.List<arrow.Float32>;
-type ArrowPathSourceTimestampType = arrow.List<arrow.TimestampMillisecond>;
-type ArrowPathRowColorType = arrow.FixedSizeList<arrow.Uint8>;
 type ArrowPathVertexColorType = arrow.List<arrow.FixedSizeList<arrow.Uint8>>;
-type ArrowPathColorType = ArrowPathRowColorType | ArrowPathVertexColorType;
-type ArrowPathRowCountKind = '240' | '960' | '2400';
+type ArrowPathBaseRowCountKind = '240' | '960' | '2400';
+type ArrowPathRowCountKind = ArrowPathBaseRowCountKind | '2400-stream';
 type ArrowPathCoordinateKind = 'float32' | 'float64';
-type ArrowPathColorKind = 'row-colors' | 'vertex-colors';
-type ArrowPathTableKind = `${ArrowPathRowCountKind}-${ArrowPathColorKind}`;
+type ArrowPathColorKind = 'none' | 'row-colors' | 'vertex-colors';
+type ArrowPathTimeKind = ArrowPathLayerTimeColumn;
 type ArrowPathInputKind =
-  `${ArrowPathRowCountKind}-${ArrowPathCoordinateKind}-${ArrowPathColorKind}`;
-type ArrowPathModelKind = 'attributes' | 'storage' | 'trips';
+  `${ArrowPathRowCountKind}-${ArrowPathCoordinateKind}-${ArrowPathColorKind}-${ArrowPathTimeKind}`;
 type ArrowPathCapKind = 'square' | 'round';
 type ArrowPathJointKind = 'miter' | 'round';
-type ActiveArrowPathModel = ArrowPathModel | ArrowStoragePathModel | ArrowStorageTripsPathModel;
 type ArrowPathDataset = {
   pathCount: number;
   pointCount: number;
   label: string;
 };
-type ArrowPathInput = {
-  paths: GPUVector<ArrowPathCoordinateType>;
-  colors: GPUVector<ArrowPathColorType>;
+type ArrowPathInput = ArrowPathLayerData & {
   widths: GPUVector<arrow.Float32>;
-  timestamps: GPUVector<ArrowPathTimestampType>;
-  viewOrigins?: GPUVector<arrow.FixedSizeList<arrow.Float32>>;
-  pathState: ArrowPathPreparedState;
   pathArrowByteLength: number;
   styleArrowByteLength: number;
   arrowVectorBuildTimeMs: number;
-  destroy: () => void;
+};
+type ArrowPathSourceVectors = {
+  paths: arrow.Vector<ArrowPathSourceCoordinateType>;
+  colors?: arrow.Vector<ArrowPathColorType>;
+  widths: arrow.Vector<arrow.Float32>;
+  timestamps?: arrow.Vector<ArrowPathSourceTimestampType>;
+};
+type ArrowPathSourceData = {
+  sourceVectors: ArrowPathSourceVectors;
+  pathArrowByteLength: number;
+  styleArrowByteLength: number;
+  arrowVectorBuildTimeMs: number;
 };
 
-const PATH_DATASETS: Record<ArrowPathRowCountKind, ArrowPathDataset> = {
+const PATH_DATASETS: Record<ArrowPathBaseRowCountKind, ArrowPathDataset> = {
   '240': {
     pathCount: 240,
     pointCount: 18,
@@ -987,126 +970,15 @@ const pathViewport: ShaderModule<PathViewportUniforms> = {
 };
 
 export default class ArrowPathModelAnimationLoopTemplate extends AnimationLoopTemplate {
-  static info = `\
-  <p>Renders nested Arrow coordinate lists through <code>ArrowPathModel</code>, <code>ArrowStoragePathModel</code>, or <code>ArrowStorageTripsPathModel</code>, one logical Arrow row per path.</p>
-  <style>
-    #${INFO_DETAILS_ID}[open] {
-      min-height: 196px;
-    }
-  </style>
-  <div style="min-height: 640px; max-height: calc(100vh - 72px); overflow-y: auto; margin-top: 16px; padding: 14px 16px; border: 1px solid rgba(208, 215, 222, 0.9); border-radius: 16px; background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(246, 248, 250, 0.96) 100%); box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);">
-    <div style="display: grid; grid-template-columns: minmax(48px, auto) minmax(0, 1fr); align-items: center; gap: 10px 12px; margin-bottom: 12px; color: #0f172a; font-size: 15px; font-weight: 600;">
-      <label for="${MODEL_SELECTOR_ID}">Model</label>
-      <select id="${MODEL_SELECTOR_ID}" style="min-width: 0; min-height: 34px; border: 1px solid rgba(148, 163, 184, 0.8); border-radius: 6px; background: #ffffff; color: #0f172a; font: inherit;">
-        <option value="attributes">ArrowPathModel, XYZM M</option>
-        <option value="storage">ArrowStoragePathModel, XYZM M</option>
-        <option value="trips">ArrowStorageTripsPathModel, List&lt;Timestamp&gt;</option>
-      </select>
-      <label for="${ROW_COUNT_SELECTOR_ID}">Data</label>
-      <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(112px, auto); gap: 8px;">
-        <select id="${ROW_COUNT_SELECTOR_ID}" style="min-width: 0; min-height: 34px; border: 1px solid rgba(148, 163, 184, 0.8); border-radius: 6px; background: #ffffff; color: #0f172a; font: inherit;">
-          <option value="240-vertex-colors">${PATH_DATASETS['240'].label}, vertex color list</option>
-          <option value="240-row-colors">${PATH_DATASETS['240'].label}, row color column</option>
-          <option value="960-vertex-colors">${PATH_DATASETS['960'].label}, vertex color list</option>
-          <option value="960-row-colors">${PATH_DATASETS['960'].label}, row color column</option>
-          <option value="2400-vertex-colors">${PATH_DATASETS['2400'].label}, vertex color list</option>
-          <option value="2400-row-colors">${PATH_DATASETS['2400'].label}, row color column</option>
-        </select>
-        <select id="${COORDINATE_SELECTOR_ID}" aria-label="Coordinate type" style="min-width: 0; min-height: 34px; border: 1px solid rgba(148, 163, 184, 0.8); border-radius: 6px; background: #ffffff; color: #0f172a; font: inherit;">
-          <option value="float32">Float32</option>
-          <option value="float64">Float64</option>
-        </select>
-      </div>
-    </div>
-    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 14px; color: #0f172a; font-size: 15px; font-weight: 600;">
-      <label for="${MEASURE_SWEEP_TOGGLE_ID}" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-        <input id="${MEASURE_SWEEP_TOGGLE_ID}" type="checkbox" checked style="width: 18px; height: 18px; margin: 0; accent-color: #2563eb;" />
-        <span>Sweep time</span>
-      </label>
-      <label for="${COLOR_TOGGLE_ID}" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-        <input id="${COLOR_TOGGLE_ID}" type="checkbox" checked style="width: 18px; height: 18px; margin: 0; accent-color: #2563eb;" />
-        <span>Color</span>
-      </label>
-      <label for="${WIDTH_TOGGLE_ID}" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-        <input id="${WIDTH_TOGGLE_ID}" type="checkbox" checked style="width: 18px; height: 18px; margin: 0; accent-color: #2563eb;" />
-        <span>Width</span>
-      </label>
-    </div>
-    <div style="display: grid; grid-template-columns: minmax(56px, auto) minmax(0, 1fr); align-items: center; gap: 10px 12px; margin-top: 14px; color: #0f172a; font-size: 14px; font-weight: 600;">
-      <label for="${CAP_SELECTOR_ID}">Caps</label>
-      <select id="${CAP_SELECTOR_ID}" style="min-width: 0; min-height: 32px; border: 1px solid rgba(148, 163, 184, 0.8); border-radius: 6px; background: #ffffff; color: #0f172a; font: inherit;">
-        <option value="square">Square</option>
-        <option value="round">Round</option>
-      </select>
-      <label for="${JOINT_SELECTOR_ID}">Joins</label>
-      <select id="${JOINT_SELECTOR_ID}" style="min-width: 0; min-height: 32px; border: 1px solid rgba(148, 163, 184, 0.8); border-radius: 6px; background: #ffffff; color: #0f172a; font: inherit;">
-        <option value="miter">Miter</option>
-        <option value="round">Round</option>
-      </select>
-      <label for="${MITER_LIMIT_INPUT_ID}">Miter</label>
-      <div style="display: flex; align-items: center; gap: 10px;">
-        <input id="${MITER_LIMIT_INPUT_ID}" type="range" min="1" max="8" step="0.25" value="4" style="width: 100%; accent-color: #2563eb;" />
-        <output id="${MITER_LIMIT_VALUE_ID}" for="${MITER_LIMIT_INPUT_ID}" style="min-width: 36px; color: #334155; font-variant-numeric: tabular-nums;">4.00</output>
-      </div>
-    </div>
-    ${makeMetricRow('Arrow path rows', PATH_COUNT_ID)}
-    ${makeMetricRow('Generated segment rows', SEGMENT_COUNT_ID)}
-    <table style="display: table; width: 100%; min-width: 100%; table-layout: fixed; box-sizing: border-box; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(208, 215, 222, 0.9); border-collapse: collapse; color: #334155; font-size: 13px; line-height: 1.4;">
-      <thead>
-        <tr style="color: #64748b; text-transform: uppercase; letter-spacing: 0.02em; font-size: 11px;">
-          <th style="width: 20%; padding: 8px 8px 6px 0; text-align: left; font-weight: 700; white-space: nowrap;">columns</th>
-          <th style="width: 22%; padding: 8px 8px 6px; text-align: right; font-weight: 700; white-space: nowrap;">Arrow</th>
-          <th style="width: 22%; padding: 8px 8px 6px; text-align: right; font-weight: 700; white-space: nowrap;">GPU</th>
-          <th style="width: 16%; padding: 8px 8px 6px; text-align: right; font-weight: 700; white-space: nowrap;">expansion</th>
-          <th style="width: 20%; padding: 8px 0 6px 8px; text-align: right; font-weight: 700; white-space: nowrap;">prep time</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <th style="padding: 6px 8px 6px 0; text-align: left; font-weight: 600;">paths + time</th>
-          <td style="padding: 6px 8px; text-align: right;"><strong id="${PATH_ARROW_BYTES_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong></td>
-          <td style="padding: 6px 8px; text-align: right;"><strong id="${PATH_GPU_BYTES_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums; white-space: pre-line;">Measuring...</strong></td>
-          <td style="padding: 6px 8px; text-align: right;"><strong id="${PATH_GPU_EXPANSION_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums; white-space: pre-line;">-</strong></td>
-          <td style="padding: 6px 0 6px 8px; text-align: right;"><strong id="${PATH_PREP_TIME_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong></td>
-        </tr>
-        <tr>
-          <th style="padding: 6px 8px 6px 0; text-align: left; font-weight: 600;">styles</th>
-          <td style="padding: 6px 8px; text-align: right;"><strong id="${STYLE_ARROW_BYTES_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong></td>
-          <td style="padding: 6px 8px; text-align: right;"><strong id="${STYLE_GPU_BYTES_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong></td>
-          <td style="padding: 6px 8px; text-align: right;"><strong id="${STYLE_GPU_EXPANSION_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">-</strong></td>
-          <td style="padding: 6px 0 6px 8px; text-align: right;"><strong id="${STYLE_BUILD_TIME_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong></td>
-        </tr>
-        <tr>
-          <th style="padding: 6px 8px 6px 0; text-align: left; font-weight: 600;">total</th>
-          <td style="padding: 6px 8px; text-align: right;"><strong id="${TOTAL_ARROW_BYTES_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong></td>
-          <td style="padding: 6px 8px; text-align: right;"><strong id="${TOTAL_GPU_BYTES_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums; white-space: pre-line;">Measuring...</strong></td>
-          <td style="padding: 6px 8px; text-align: right;"><strong id="${TOTAL_GPU_EXPANSION_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums; white-space: pre-line;">-</strong></td>
-          <td style="padding: 6px 0 6px 8px; text-align: right;">-</td>
-        </tr>
-        <tr>
-          <th style="padding: 6px 8px 6px 0; text-align: left; font-weight: 600;">deck.gl</th>
-          <td style="padding: 6px 8px; text-align: right;">-</td>
-          <td style="padding: 6px 8px; text-align: right;"><strong id="${DECK_GPU_BYTES_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong></td>
-          <td style="padding: 6px 8px; text-align: right;"><strong id="${DECK_GPU_EXPANSION_ID}" style="color: #0f172a; font-variant-numeric: tabular-nums;">-</strong></td>
-          <td style="padding: 6px 0 6px 8px; text-align: right;">-</td>
-        </tr>
-      </tbody>
-    </table>
-    <details id="${INFO_DETAILS_ID}" style="margin-top: 14px; border-top: 1px solid rgba(208, 215, 222, 0.9); padding-top: 10px; color: #334155; font-size: 12px; line-height: 1.4;">
-      <summary style="cursor: pointer; color: #0f172a; font-weight: 700;">What this example isolates</summary>
-      <table style="width: 100%; margin-top: 10px; border-collapse: collapse; color: #334155; font-size: 12px; line-height: 1.4;">
-        <tbody>
-          <tr style="border-bottom: 1px solid rgba(226, 232, 240, 0.9);"><td style="padding: 7px 0;">Input</td><td style="padding: 7px 0;">Nested Float32 XYZM Arrow lists or CPU-prepared Float64 lists plus selectable row color columns, path-aligned color lists, and aligned List&lt;Timestamp&gt; rows</td></tr>
-          <tr style="border-bottom: 1px solid rgba(226, 232, 240, 0.9);"><td style="padding: 7px 0;">Time</td><td style="padding: 7px 0;">ArrowPathModel and ArrowStoragePathModel read numeric M from XYZM; ArrowStorageTripsPathModel normalizes List&lt;Timestamp&gt; to relative Float32 milliseconds and filters the trail in storage</td></tr>
-          <tr style="border-bottom: 1px solid rgba(226, 232, 240, 0.9);"><td style="padding: 7px 0;">Shared drawing</td><td style="padding: 7px 0;">All modes render the same miter/round joins and square/round caps; storage modes keep generated segment records indexed</td></tr>
-          <tr style="border-bottom: 1px solid rgba(226, 232, 240, 0.9);"><td style="padding: 7px 0;">Attribute model</td><td style="padding: 7px 0;">CPU expansion builds segment records and repeats selected style rows into render attributes</td></tr>
-          <tr style="border-bottom: 1px solid rgba(226, 232, 240, 0.9);"><td style="padding: 7px 0;">deck.gl estimate</td><td style="padding: 7px 0;">Approximate PathLayer attribute storage at ${DECK_PATH_ATTRIBUTE_BYTES_PER_SEGMENT} bytes per generated segment</td></tr>
-          <tr><td style="padding: 7px 0;">Storage model</td><td style="padding: 7px 0;">WebGPU compute expands nested rows while path-aligned colors, per-path widths, and Trips timestamps remain storage-backed</td></tr>
-        </tbody>
-      </table>
-    </details>
-  </div>
-  `;
+  static info = makeArrowPathModelControlPanelHtml({
+    rowLabels: {
+      '240': PATH_DATASETS['240'].label,
+      '960': PATH_DATASETS['960'].label,
+      '2400': PATH_DATASETS['2400'].label,
+      '2400-stream': `${PATH_DATASETS['2400'].label} streamed`
+    },
+    deckPathAttributeBytesPerSegment: DECK_PATH_ATTRIBUTE_BYTES_PER_SEGMENT
+  });
 
   static props = {useDevicePixels: true};
 
@@ -1118,63 +990,40 @@ export default class ArrowPathModelAnimationLoopTemplate extends AnimationLoopTe
   activeRowCountKind: ArrowPathRowCountKind = '240';
   activeCoordinateKind: ArrowPathCoordinateKind = 'float32';
   activeColorKind: ArrowPathColorKind = 'vertex-colors';
-  activePathModelKind: ArrowPathModelKind = 'attributes';
+  activeTimeKind: ArrowPathTimeKind = 'xyzm';
+  activePathModelKind: ArrowPathLayerModel = 'auto';
   activePathInput!: ArrowPathInput;
-  pathModel!: ActiveArrowPathModel;
+  activeStreamingPathInput: ArrowPathInput | null = null;
+  pathLayer!: ArrowPathLayer;
+  streamingSessionVersion = 0;
   measureSweepEnabled = true;
-  colorsEnabled = true;
   widthsEnabled = true;
   capKind: ArrowPathCapKind = 'square';
   jointKind: ArrowPathJointKind = 'miter';
   miterLimit = 4;
   measureTime = 0;
   lastRenderSeconds: number | null = null;
-  modelSelector: HTMLSelectElement | null = null;
-  rowCountSelector: HTMLSelectElement | null = null;
-  coordinateSelector: HTMLSelectElement | null = null;
-  measureSweepToggle: HTMLInputElement | null = null;
-  colorToggle: HTMLInputElement | null = null;
-  widthToggle: HTMLInputElement | null = null;
-  capSelector: HTMLSelectElement | null = null;
-  jointSelector: HTMLSelectElement | null = null;
-  miterLimitInput: HTMLInputElement | null = null;
-  miterLimitValue: HTMLOutputElement | null = null;
-  pathCountLabel: HTMLElement | null = null;
-  segmentCountLabel: HTMLElement | null = null;
-  pathArrowBytesLabel: HTMLElement | null = null;
-  pathGpuBytesLabel: HTMLElement | null = null;
-  pathGpuExpansionLabel: HTMLElement | null = null;
-  pathPrepTimeLabel: HTMLElement | null = null;
-  styleArrowBytesLabel: HTMLElement | null = null;
-  styleGpuBytesLabel: HTMLElement | null = null;
-  styleGpuExpansionLabel: HTMLElement | null = null;
-  styleBuildTimeLabel: HTMLElement | null = null;
-  totalArrowBytesLabel: HTMLElement | null = null;
-  totalGpuBytesLabel: HTMLElement | null = null;
-  totalGpuExpansionLabel: HTMLElement | null = null;
-  deckGpuBytesLabel: HTMLElement | null = null;
-  deckGpuExpansionLabel: HTMLElement | null = null;
+  controlPanel!: ArrowPathModelControlPanel;
 
   constructor({device}: AnimationProps) {
     super();
     this.device = device as Device;
-    this.activePathModelKind = this.device.type === 'webgpu' ? 'trips' : 'attributes';
   }
 
   override async onInitialize(): Promise<void> {
     this.activePathInput = await this.getOrCreatePathInput(
       this.activeRowCountKind,
       this.activeCoordinateKind,
-      this.activeColorKind
+      this.activeColorKind,
+      this.activeTimeKind
     );
-    this.pathModel = this.createPathModel(this.activePathInput, this.activePathModelKind);
-    this.initializeControls();
-    this.initializeMetricLabels();
+    this.pathLayer = this.createPathLayer(this.activePathInput, this.activePathModelKind);
+    this.initializeControlPanel();
     this.updateMetricLabels();
   }
 
   override onRender({aspect, device, time}: AnimationProps): void {
-    if (!this.pathModel) {
+    if (!this.pathLayer) {
       return;
     }
 
@@ -1190,8 +1039,8 @@ export default class ArrowPathModelAnimationLoopTemplate extends AnimationLoopTe
         this.measureTime -= MEASURE_SWEEP_DURATION;
       }
     }
-    if (this.pathModel instanceof ArrowStorageTripsPathModel) {
-      this.pathModel.setProps({
+    if (this.pathLayer.resolvedModel === 'trips') {
+      this.pathLayer.setProps({
         currentTime: getTemporalCurrentTimeMilliseconds(this.measureTime)
       });
     }
@@ -1200,7 +1049,7 @@ export default class ArrowPathModelAnimationLoopTemplate extends AnimationLoopTe
       pathViewport: {
         viewportScale: [1 / Math.max(aspect, 0.2), 1],
         time: this.measureTime,
-        colorsEnabled: this.colorsEnabled ? 1 : 0,
+        colorsEnabled: this.activeColorKind === 'none' ? 0 : 1,
         widthsEnabled: this.widthsEnabled ? 1 : 0,
         capRounded: this.capKind === 'round' ? 1 : 0,
         jointRounded: this.jointKind === 'round' ? 1 : 0,
@@ -1211,33 +1060,26 @@ export default class ArrowPathModelAnimationLoopTemplate extends AnimationLoopTe
     const renderPass = device.beginRenderPass({
       clearColor: [0.015, 0.035, 0.07, 1]
     });
-    this.pathModel.draw(renderPass);
+    this.pathLayer.draw(renderPass);
     renderPass.end();
   }
 
   override onFinalize(): void {
-    this.modelSelector?.removeEventListener('change', this.handleModelSelection);
-    this.rowCountSelector?.removeEventListener('change', this.handleRowCountSelection);
-    this.coordinateSelector?.removeEventListener('change', this.handleCoordinateSelection);
-    this.measureSweepToggle?.removeEventListener('change', this.handleMeasureSweepToggle);
-    this.colorToggle?.removeEventListener('change', this.handleColorToggle);
-    this.widthToggle?.removeEventListener('change', this.handleWidthToggle);
-    this.capSelector?.removeEventListener('change', this.handleCapSelection);
-    this.jointSelector?.removeEventListener('change', this.handleJointSelection);
-    this.miterLimitInput?.removeEventListener('input', this.handleMiterLimitInput);
-    this.pathModel?.destroy();
+    ++this.streamingSessionVersion;
+    this.controlPanel?.destroy();
+    this.pathLayer?.destroy();
     for (const pathInput of Object.values(this.pathInputs)) {
       pathInput?.destroy();
     }
+    this.activeStreamingPathInput?.destroy();
   }
 
-  createPathModel(pathInput: ArrowPathInput, modelKind: ArrowPathModelKind): ActiveArrowPathModel {
-    const commonProps = {
+  createPathLayer(pathInput: ArrowPathInput, modelKind: ArrowPathLayerModel): ArrowPathLayer {
+    return new ArrowPathLayer(this.device, {
       id: 'arrow-path-model',
-      paths: pathInput.paths,
-      colors: pathInput.colors,
-      widths: pathInput.widths,
-      ...(pathInput.viewOrigins ? {viewOrigins: pathInput.viewOrigins} : {}),
+      data: pathInput,
+      model: modelKind,
+      timeColumn: this.activeTimeKind,
       shaderInputs: this.shaderInputs,
       topology: 'triangle-list' as const,
       vertexCount: 12,
@@ -1250,233 +1092,191 @@ export default class ArrowPathModelAnimationLoopTemplate extends AnimationLoopTe
         blendColorDstFactor: 'one-minus-src-alpha',
         blendAlphaSrcFactor: 'one',
         blendAlphaDstFactor: 'one-minus-src-alpha'
-      } as const
-    };
-    if (modelKind === 'storage') {
-      if (this.device.type !== 'webgpu') {
-        throw new Error('ArrowStoragePathModel showcase mode requires WebGPU');
-      }
-      return new ArrowStoragePathModel(this.device, {
-        ...commonProps,
-        color: [199, 219, 245, 235],
-        width: 0.0035,
-        source: STORAGE_WGSL_SHADER,
-        shaderLayout: STORAGE_PATH_SHADER_LAYOUT
-      });
-    }
-    if (modelKind === 'trips') {
-      if (this.device.type !== 'webgpu') {
-        throw new Error('ArrowStorageTripsPathModel showcase mode requires WebGPU');
-      }
-      return new ArrowStorageTripsPathModel(this.device, {
-        ...commonProps,
-        timestamps: pathInput.timestamps,
-        currentTime: getTemporalCurrentTimeMilliseconds(this.measureTime),
-        trailLength: TEMPORAL_TRAIL_LENGTH_MILLISECONDS,
-        color: [199, 219, 245, 235],
-        width: 0.0035,
-        source: TRIPS_STORAGE_WGSL_SHADER,
-        shaderLayout: STORAGE_PATH_SHADER_LAYOUT
-      });
-    }
-    return new ArrowPathModel(this.device, {
-      ...commonProps,
-      pathState: pathInput.pathState,
+      } as const,
       source: WGSL_SHADER,
       vs: VS_GLSL,
       fs: FS_GLSL,
-      shaderLayout: PATH_SHADER_LAYOUT
+      shaderLayout: PATH_SHADER_LAYOUT,
+      storageSource: STORAGE_WGSL_SHADER,
+      storageShaderLayout: STORAGE_PATH_SHADER_LAYOUT,
+      tripsSource: TRIPS_STORAGE_WGSL_SHADER,
+      tripsShaderLayout: STORAGE_PATH_SHADER_LAYOUT,
+      currentTime: getTemporalCurrentTimeMilliseconds(this.measureTime),
+      trailLength: TEMPORAL_TRAIL_LENGTH_MILLISECONDS,
+      color: [199, 219, 245, 235],
+      width: 0.0035
     });
   }
 
   async getOrCreatePathInput(
     rowCountKind: ArrowPathRowCountKind,
     coordinateKind: ArrowPathCoordinateKind,
-    colorKind: ArrowPathColorKind
+    colorKind: ArrowPathColorKind,
+    timeKind: ArrowPathTimeKind
   ): Promise<ArrowPathInput> {
-    const inputKind = getArrowPathInputKind(rowCountKind, coordinateKind, colorKind);
+    const inputKind = getArrowPathInputKind(rowCountKind, coordinateKind, colorKind, timeKind);
     const cachedPathInput = this.pathInputs[inputKind];
     if (cachedPathInput) {
       return cachedPathInput;
     }
     const pathInput = await makeArrowPathInput(
       this.device,
-      PATH_DATASETS[rowCountKind],
+      PATH_DATASETS[getBaseArrowPathRowCountKind(rowCountKind)],
       coordinateKind,
-      colorKind
+      colorKind,
+      timeKind,
+      isStreamingArrowPathRowCountKind(rowCountKind) ? STREAMING_PATH_ROWS_PER_CHUNK : null
     );
     this.pathInputs[inputKind] = pathInput;
     return pathInput;
   }
 
-  initializeControls(): void {
-    this.modelSelector = document.getElementById(MODEL_SELECTOR_ID) as HTMLSelectElement | null;
-    this.rowCountSelector = document.getElementById(
-      ROW_COUNT_SELECTOR_ID
-    ) as HTMLSelectElement | null;
-    this.coordinateSelector = document.getElementById(
-      COORDINATE_SELECTOR_ID
-    ) as HTMLSelectElement | null;
-    this.measureSweepToggle = document.getElementById(
-      MEASURE_SWEEP_TOGGLE_ID
-    ) as HTMLInputElement | null;
-    this.colorToggle = document.getElementById(COLOR_TOGGLE_ID) as HTMLInputElement | null;
-    this.widthToggle = document.getElementById(WIDTH_TOGGLE_ID) as HTMLInputElement | null;
-    this.capSelector = document.getElementById(CAP_SELECTOR_ID) as HTMLSelectElement | null;
-    this.jointSelector = document.getElementById(JOINT_SELECTOR_ID) as HTMLSelectElement | null;
-    this.miterLimitInput = document.getElementById(MITER_LIMIT_INPUT_ID) as HTMLInputElement | null;
-    this.miterLimitValue = document.getElementById(
-      MITER_LIMIT_VALUE_ID
-    ) as HTMLOutputElement | null;
-    if (this.modelSelector) {
-      this.modelSelector.value = this.activePathModelKind;
-      this.modelSelector.disabled = this.device.type !== 'webgpu';
-      this.modelSelector.addEventListener('change', this.handleModelSelection);
-    }
-    if (this.rowCountSelector) {
-      this.rowCountSelector.value = getArrowPathTableKind(
-        this.activeRowCountKind,
-        this.activeColorKind
-      );
-      this.rowCountSelector.addEventListener('change', this.handleRowCountSelection);
-    }
-    if (this.coordinateSelector) {
-      this.coordinateSelector.value = this.activeCoordinateKind;
-      this.coordinateSelector.addEventListener('change', this.handleCoordinateSelection);
-    }
-    if (this.capSelector) {
-      this.capSelector.value = this.capKind;
-      this.capSelector.addEventListener('change', this.handleCapSelection);
-    }
-    if (this.jointSelector) {
-      this.jointSelector.value = this.jointKind;
-      this.jointSelector.addEventListener('change', this.handleJointSelection);
-    }
-    if (this.miterLimitInput) {
-      this.miterLimitInput.value = this.miterLimit.toFixed(2);
-      this.miterLimitInput.addEventListener('input', this.handleMiterLimitInput);
-    }
-    this.syncMiterLimitControls();
-    this.measureSweepToggle?.addEventListener('change', this.handleMeasureSweepToggle);
-    this.colorToggle?.addEventListener('change', this.handleColorToggle);
-    this.widthToggle?.addEventListener('change', this.handleWidthToggle);
+  initializeControlPanel(): void {
+    this.controlPanel = new ArrowPathModelControlPanel({
+      device: this.device,
+      initialState: this.getControlPanelState(),
+      handlers: {
+        onRowCountChange: this.handleRowCountSelection,
+        onCoordinateChange: this.handleCoordinateSelection,
+        onColorChange: this.handleColorColumnSelection,
+        onTimeChange: this.handleTimeColumnSelection,
+        onModelChange: this.handleModelSelection,
+        onMeasureSweepChange: this.handleMeasureSweepToggle,
+        onWidthChange: this.handleWidthToggle,
+        onCapChange: this.handleCapSelection,
+        onJointChange: this.handleJointSelection,
+        onMiterLimitChange: this.handleMiterLimitInput
+      }
+    });
+    this.controlPanel.initialize();
   }
 
-  initializeMetricLabels(): void {
-    this.pathCountLabel = document.getElementById(PATH_COUNT_ID);
-    this.segmentCountLabel = document.getElementById(SEGMENT_COUNT_ID);
-    this.pathArrowBytesLabel = document.getElementById(PATH_ARROW_BYTES_ID);
-    this.pathGpuBytesLabel = document.getElementById(PATH_GPU_BYTES_ID);
-    this.pathGpuExpansionLabel = document.getElementById(PATH_GPU_EXPANSION_ID);
-    this.pathPrepTimeLabel = document.getElementById(PATH_PREP_TIME_ID);
-    this.styleArrowBytesLabel = document.getElementById(STYLE_ARROW_BYTES_ID);
-    this.styleGpuBytesLabel = document.getElementById(STYLE_GPU_BYTES_ID);
-    this.styleGpuExpansionLabel = document.getElementById(STYLE_GPU_EXPANSION_ID);
-    this.styleBuildTimeLabel = document.getElementById(STYLE_BUILD_TIME_ID);
-    this.totalArrowBytesLabel = document.getElementById(TOTAL_ARROW_BYTES_ID);
-    this.totalGpuBytesLabel = document.getElementById(TOTAL_GPU_BYTES_ID);
-    this.totalGpuExpansionLabel = document.getElementById(TOTAL_GPU_EXPANSION_ID);
-    this.deckGpuBytesLabel = document.getElementById(DECK_GPU_BYTES_ID);
-    this.deckGpuExpansionLabel = document.getElementById(DECK_GPU_EXPANSION_ID);
+  getControlPanelState() {
+    return {
+      rowCountKind: this.activeRowCountKind,
+      coordinateKind: this.activeCoordinateKind,
+      colorKind: this.activeColorKind,
+      timeKind: this.activeTimeKind,
+      modelKind: this.activePathModelKind,
+      capKind: this.capKind,
+      jointKind: this.jointKind,
+      miterLimit: this.miterLimit
+    };
   }
 
   updateMetricLabels(): void {
     const pathArrowBytes = this.activePathInput.pathArrowByteLength;
     const styleArrowBytes = this.activePathInput.styleArrowByteLength;
-    const segmentCount = getGeneratedPathSegmentCount(this.pathModel);
-    const pathGpuBytes = getPathCoordinateGpuByteLength(this.activePathInput, this.pathModel);
-    const transientPathGpuBytes = getTransientPathGpuByteLength(this.pathModel);
+    const segmentCount = getGeneratedPathSegmentCount(this.pathLayer.model);
+    const pathGpuBytes = getPathCoordinateGpuByteLength(this.activePathInput, this.pathLayer.model);
+    const transientPathGpuBytes = getTransientPathGpuByteLength(this.pathLayer.model);
     const peakPathGpuBytes = pathGpuBytes + transientPathGpuBytes;
-    const styleGpuBytes = getPathStyleGpuByteLength(this.activePathInput, this.pathModel);
+    const styleGpuBytes = getPathStyleGpuByteLength(this.activePathInput, this.pathLayer.model);
     const totalArrowBytes = pathArrowBytes + styleArrowBytes;
     const totalGpuBytes = pathGpuBytes + styleGpuBytes;
     const peakTotalGpuBytes = peakPathGpuBytes + styleGpuBytes;
     const deckGpuBytes = segmentCount * DECK_PATH_ATTRIBUTE_BYTES_PER_SEGMENT;
-    setMetricText(this.pathCountLabel, formatInteger(this.activePathInput.paths.length));
-    setMetricText(this.segmentCountLabel, formatInteger(segmentCount));
-    setMetricText(this.pathArrowBytesLabel, formatByteLength(pathArrowBytes));
-    setMetricText(
-      this.pathGpuBytesLabel,
-      transientPathGpuBytes > 0
-        ? `${formatByteLength(pathGpuBytes)}\n${formatByteLength(peakPathGpuBytes)} peak`
-        : formatByteLength(pathGpuBytes)
-    );
-    setMetricText(
-      this.pathGpuExpansionLabel,
-      transientPathGpuBytes > 0
-        ? `${formatExpansionRatio(pathGpuBytes, pathArrowBytes)}\n${formatExpansionRatio(
-            peakPathGpuBytes,
-            pathArrowBytes
-          )} peak`
-        : formatExpansionRatio(pathGpuBytes, pathArrowBytes)
-    );
-    setMetricText(
-      this.pathPrepTimeLabel,
-      `${getPathModelPrepTimeMs(this.pathModel).toFixed(1)} ms`
-    );
-    setMetricText(this.styleArrowBytesLabel, formatByteLength(styleArrowBytes));
-    setMetricText(this.styleGpuBytesLabel, formatByteLength(styleGpuBytes));
-    setMetricText(
-      this.styleGpuExpansionLabel,
-      formatExpansionRatio(styleGpuBytes, styleArrowBytes)
-    );
-    setMetricText(
-      this.styleBuildTimeLabel,
-      `${this.activePathInput.arrowVectorBuildTimeMs.toFixed(1)} ms`
-    );
-    setMetricText(this.totalArrowBytesLabel, formatByteLength(totalArrowBytes));
-    setMetricText(
-      this.totalGpuBytesLabel,
-      transientPathGpuBytes > 0
-        ? `${formatByteLength(totalGpuBytes)}\n${formatByteLength(peakTotalGpuBytes)} peak`
-        : formatByteLength(totalGpuBytes)
-    );
-    setMetricText(
-      this.totalGpuExpansionLabel,
-      transientPathGpuBytes > 0
-        ? `${formatExpansionRatio(totalGpuBytes, totalArrowBytes)}\n${formatExpansionRatio(
-            peakTotalGpuBytes,
-            totalArrowBytes
-          )} peak`
-        : formatExpansionRatio(totalGpuBytes, totalArrowBytes)
-    );
-    setMetricText(this.deckGpuBytesLabel, formatByteLength(deckGpuBytes));
-    setMetricText(this.deckGpuExpansionLabel, formatExpansionRatio(deckGpuBytes, totalArrowBytes));
+    this.controlPanel.setMetricValues({
+      pathCount: formatInteger(this.activePathInput.paths.length),
+      segmentCount: formatInteger(segmentCount),
+      pathArrowBytes: formatByteLength(pathArrowBytes),
+      pathGpuBytes:
+        transientPathGpuBytes > 0
+          ? `${formatByteLength(pathGpuBytes)}\n${formatByteLength(peakPathGpuBytes)} peak`
+          : formatByteLength(pathGpuBytes),
+      pathGpuExpansion:
+        transientPathGpuBytes > 0
+          ? `${formatExpansionRatio(pathGpuBytes, pathArrowBytes)}\n${formatExpansionRatio(
+              peakPathGpuBytes,
+              pathArrowBytes
+            )} peak`
+          : formatExpansionRatio(pathGpuBytes, pathArrowBytes),
+      pathPrepTime: `${getPathModelPrepTimeMs(this.pathLayer.model).toFixed(1)} ms`,
+      styleArrowBytes: formatByteLength(styleArrowBytes),
+      styleGpuBytes: formatByteLength(styleGpuBytes),
+      styleGpuExpansion: formatExpansionRatio(styleGpuBytes, styleArrowBytes),
+      styleBuildTime: `${this.activePathInput.arrowVectorBuildTimeMs.toFixed(1)} ms`,
+      totalArrowBytes: formatByteLength(totalArrowBytes),
+      totalGpuBytes:
+        transientPathGpuBytes > 0
+          ? `${formatByteLength(totalGpuBytes)}\n${formatByteLength(peakTotalGpuBytes)} peak`
+          : formatByteLength(totalGpuBytes),
+      totalGpuExpansion:
+        transientPathGpuBytes > 0
+          ? `${formatExpansionRatio(totalGpuBytes, totalArrowBytes)}\n${formatExpansionRatio(
+              peakTotalGpuBytes,
+              totalArrowBytes
+            )} peak`
+          : formatExpansionRatio(totalGpuBytes, totalArrowBytes),
+      deckGpuBytes: formatByteLength(deckGpuBytes),
+      deckGpuExpansion: formatExpansionRatio(deckGpuBytes, totalArrowBytes)
+    });
   }
 
-  readonly handleRowCountSelection = async (): Promise<void> => {
-    const nextTableKind = parseArrowPathTableKind(this.rowCountSelector?.value);
-    if (
-      !nextTableKind ||
-      (nextTableKind.rowCountKind === this.activeRowCountKind &&
-        nextTableKind.colorKind === this.activeColorKind)
-    ) {
+  readonly handleRowCountSelection = async (
+    nextRowCountKind: ArrowPathRowCountKind
+  ): Promise<void> => {
+    if (nextRowCountKind === this.activeRowCountKind) {
       return;
     }
     await this.replacePathInput(
-      nextTableKind.rowCountKind,
+      nextRowCountKind,
       this.activeCoordinateKind,
-      nextTableKind.colorKind
+      this.activeColorKind,
+      this.activeTimeKind
     );
   };
 
-  readonly handleCoordinateSelection = async (): Promise<void> => {
-    const nextCoordinateKind = this.coordinateSelector?.value as
-      | ArrowPathCoordinateKind
-      | undefined;
-    if (!nextCoordinateKind || nextCoordinateKind === this.activeCoordinateKind) {
+  readonly handleCoordinateSelection = async (
+    nextCoordinateKind: ArrowPathCoordinateKind
+  ): Promise<void> => {
+    if (nextCoordinateKind === this.activeCoordinateKind) {
       return;
     }
-    await this.replacePathInput(this.activeRowCountKind, nextCoordinateKind, this.activeColorKind);
+    await this.replacePathInput(
+      this.activeRowCountKind,
+      nextCoordinateKind,
+      this.activeColorKind,
+      this.activeTimeKind
+    );
   };
 
-  readonly handleModelSelection = (): void => {
-    const requestedPathModelKind = this.modelSelector?.value as ArrowPathModelKind | undefined;
-    const nextPathModelKind =
-      (requestedPathModelKind === 'storage' || requestedPathModelKind === 'trips') &&
-      this.device.type === 'webgpu'
-        ? requestedPathModelKind
-        : 'attributes';
+  readonly handleColorColumnSelection = async (
+    nextColorKind: ArrowPathColorKind
+  ): Promise<void> => {
+    if (nextColorKind === this.activeColorKind) {
+      return;
+    }
+    await this.replacePathInput(
+      this.activeRowCountKind,
+      this.activeCoordinateKind,
+      nextColorKind,
+      this.activeTimeKind
+    );
+  };
+
+  readonly handleTimeColumnSelection = async (nextTimeKind: ArrowPathTimeKind): Promise<void> => {
+    if (nextTimeKind === this.activeTimeKind) {
+      return;
+    }
+    const nextPathModelKind = getValidPathModelKindForTimeKind(
+      this.activePathModelKind,
+      nextTimeKind
+    );
+    await this.replacePathInput(
+      this.activeRowCountKind,
+      this.activeCoordinateKind,
+      this.activeColorKind,
+      nextTimeKind,
+      nextPathModelKind
+    );
+  };
+
+  readonly handleModelSelection = (requestedPathModelKind: ArrowPathLayerModel): void => {
+    const nextPathModelKind = getValidPathModelKindForTimeKind(
+      requestedPathModelKind,
+      this.activeTimeKind
+    );
     if (nextPathModelKind === this.activePathModelKind) {
       return;
     }
@@ -1484,125 +1284,180 @@ export default class ArrowPathModelAnimationLoopTemplate extends AnimationLoopTe
     this.updateMetricLabels();
   };
 
-  replacePathModel(nextPathModelKind: ArrowPathModelKind): void {
-    const previousPathModel = this.pathModel;
-    this.pathModel = this.createPathModel(this.activePathInput, nextPathModelKind);
+  replacePathModel(nextPathModelKind: ArrowPathLayerModel): void {
+    const previousPathLayer = this.pathLayer;
+    this.pathLayer = this.createPathLayer(this.activePathInput, nextPathModelKind);
     this.activePathModelKind = nextPathModelKind;
-    if (this.modelSelector) {
-      this.modelSelector.value = nextPathModelKind;
-    }
-    previousPathModel.destroy();
+    this.controlPanel.syncControls(this.getControlPanelState());
+    previousPathLayer.destroy();
   }
 
   async replacePathInput(
     nextRowCountKind: ArrowPathRowCountKind,
     nextCoordinateKind: ArrowPathCoordinateKind,
-    nextColorKind: ArrowPathColorKind
+    nextColorKind: ArrowPathColorKind,
+    nextTimeKind: ArrowPathTimeKind,
+    nextPathModelKind = this.activePathModelKind
   ): Promise<void> {
+    const streamingSessionVersion = ++this.streamingSessionVersion;
+    if (isStreamingArrowPathRowCountKind(nextRowCountKind)) {
+      this.activeRowCountKind = nextRowCountKind;
+      this.activeCoordinateKind = nextCoordinateKind;
+      this.activeColorKind = nextColorKind;
+      this.activeTimeKind = nextTimeKind;
+      this.activePathModelKind = getValidPathModelKindForTimeKind(nextPathModelKind, nextTimeKind);
+      this.controlPanel.syncControls(this.getControlPanelState());
+      void this.streamPathInputBatches(
+        nextCoordinateKind,
+        nextColorKind,
+        nextTimeKind,
+        streamingSessionVersion
+      ).catch(() => {
+        if (streamingSessionVersion === this.streamingSessionVersion) {
+          ++this.streamingSessionVersion;
+        }
+      });
+      return;
+    }
+
     const nextPathInput = await this.getOrCreatePathInput(
       nextRowCountKind,
       nextCoordinateKind,
-      nextColorKind
+      nextColorKind,
+      nextTimeKind
     );
+    if (streamingSessionVersion !== this.streamingSessionVersion) {
+      return;
+    }
+    const previousStreamingPathInput = this.activeStreamingPathInput;
+    this.activeStreamingPathInput = null;
     this.activeRowCountKind = nextRowCountKind;
     this.activeCoordinateKind = nextCoordinateKind;
     this.activeColorKind = nextColorKind;
+    this.activeTimeKind = nextTimeKind;
     this.activePathInput = nextPathInput;
-    this.replacePathModel(this.activePathModelKind);
+    this.replacePathModel(nextPathModelKind);
     this.updateMetricLabels();
+    previousStreamingPathInput?.destroy();
   }
 
-  readonly handleMeasureSweepToggle = (): void => {
-    this.measureSweepEnabled = Boolean(this.measureSweepToggle?.checked);
-  };
+  private async streamPathInputBatches(
+    coordinateKind: ArrowPathCoordinateKind,
+    colorKind: ArrowPathColorKind,
+    timeKind: ArrowPathTimeKind,
+    streamingSessionVersion: number
+  ): Promise<void> {
+    const sourceData = makeArrowPathSourceData(
+      PATH_DATASETS['2400'],
+      coordinateKind,
+      colorKind,
+      timeKind,
+      STREAMING_PATH_ROWS_PER_CHUNK
+    );
+    const batchCount = Math.min(
+      sourceData.sourceVectors.paths.data.length,
+      STREAMING_PATH_BATCH_COUNT
+    );
 
-  readonly handleColorToggle = (): void => {
-    this.colorsEnabled = Boolean(this.colorToggle?.checked);
-  };
+    for (let batchIndex = 0; batchIndex < batchCount; batchIndex++) {
+      if (batchIndex > 0) {
+        await sleep(STREAMING_PATH_BATCH_INTERVAL_MS);
+      }
+      if (streamingSessionVersion !== this.streamingSessionVersion) {
+        return;
+      }
 
-  readonly handleWidthToggle = (): void => {
-    this.widthsEnabled = Boolean(this.widthToggle?.checked);
-  };
+      const pathInput = await makeArrowPathInputFromSourceData(
+        this.device,
+        sliceArrowPathSourceData(sourceData, batchIndex + 1)
+      );
+      if (streamingSessionVersion !== this.streamingSessionVersion) {
+        pathInput.destroy();
+        return;
+      }
 
-  readonly handleCapSelection = (): void => {
-    this.capKind = this.capSelector?.value === 'round' ? 'round' : 'square';
-  };
-
-  readonly handleJointSelection = (): void => {
-    this.jointKind = this.jointSelector?.value === 'round' ? 'round' : 'miter';
-    this.syncMiterLimitControls();
-  };
-
-  readonly handleMiterLimitInput = (): void => {
-    const nextMiterLimit = Number(this.miterLimitInput?.value ?? this.miterLimit);
-    this.miterLimit = Number.isFinite(nextMiterLimit) ? nextMiterLimit : this.miterLimit;
-    this.syncMiterLimitControls();
-  };
-
-  syncMiterLimitControls(): void {
-    if (this.miterLimitInput) {
-      this.miterLimitInput.disabled = this.jointKind !== 'miter';
-    }
-    if (this.miterLimitValue) {
-      this.miterLimitValue.textContent = this.miterLimit.toFixed(2);
+      const previousStreamingPathInput = this.activeStreamingPathInput;
+      this.activeStreamingPathInput = pathInput;
+      this.activePathInput = pathInput;
+      this.replacePathModel(getValidPathModelKindForTimeKind(this.activePathModelKind, timeKind));
+      this.updateMetricLabels();
+      previousStreamingPathInput?.destroy();
     }
   }
-}
 
-function makeMetricRow(label: string, id: string): string {
-  return `<div style="display: flex; justify-content: space-between; gap: 16px; margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(226, 232, 240, 0.9); color: #334155; font-size: 13px; line-height: 1.4;"><span>${label}</span><strong id="${id}" style="color: #0f172a; font-variant-numeric: tabular-nums;">Measuring...</strong></div>`;
+  readonly handleMeasureSweepToggle = (enabled: boolean): void => {
+    this.measureSweepEnabled = enabled;
+  };
+
+  readonly handleWidthToggle = (enabled: boolean): void => {
+    this.widthsEnabled = enabled;
+  };
+
+  readonly handleCapSelection = (nextCapKind: ArrowPathCapKind): void => {
+    this.capKind = nextCapKind;
+    this.controlPanel.syncControls(this.getControlPanelState());
+  };
+
+  readonly handleJointSelection = (nextJointKind: ArrowPathJointKind): void => {
+    this.jointKind = nextJointKind;
+    this.controlPanel.syncControls(this.getControlPanelState());
+  };
+
+  readonly handleMiterLimitInput = (nextMiterLimit: number): void => {
+    this.miterLimit = nextMiterLimit;
+    this.controlPanel.syncControls(this.getControlPanelState());
+  };
 }
 
 function getArrowPathInputKind(
   rowCountKind: ArrowPathRowCountKind,
   coordinateKind: ArrowPathCoordinateKind,
-  colorKind: ArrowPathColorKind
+  colorKind: ArrowPathColorKind,
+  timeKind: ArrowPathTimeKind
 ): ArrowPathInputKind {
-  return `${rowCountKind}-${coordinateKind}-${colorKind}`;
+  return `${rowCountKind}-${coordinateKind}-${colorKind}-${timeKind}`;
 }
 
-function getArrowPathTableKind(
-  rowCountKind: ArrowPathRowCountKind,
-  colorKind: ArrowPathColorKind
-): ArrowPathTableKind {
-  return `${rowCountKind}-${colorKind}`;
+function isStreamingArrowPathRowCountKind(
+  rowCountKind: ArrowPathRowCountKind
+): rowCountKind is '2400-stream' {
+  return rowCountKind === '2400-stream';
 }
 
-function parseArrowPathTableKind(value: string | undefined): {
-  rowCountKind: ArrowPathRowCountKind;
-  colorKind: ArrowPathColorKind;
-} | null {
-  if (!value) {
-    return null;
+function getBaseArrowPathRowCountKind(
+  rowCountKind: ArrowPathRowCountKind
+): ArrowPathBaseRowCountKind {
+  return isStreamingArrowPathRowCountKind(rowCountKind) ? '2400' : rowCountKind;
+}
+
+function getValidPathModelKindForTimeKind(
+  modelKind: ArrowPathLayerModel,
+  timeKind: ArrowPathTimeKind
+): ArrowPathLayerModel {
+  if (timeKind === 'timestamps') {
+    return modelKind === 'auto' ? 'auto' : 'trips';
   }
-  const [rowCountKind, colorPrefix, colorSuffix] = value.split('-');
-  const colorKind = `${colorPrefix}-${colorSuffix}` as ArrowPathColorKind;
-  if (
-    (rowCountKind === '240' || rowCountKind === '960' || rowCountKind === '2400') &&
-    (colorKind === 'row-colors' || colorKind === 'vertex-colors')
-  ) {
-    return {rowCountKind, colorKind};
-  }
-  return null;
+  return modelKind === 'trips' ? 'auto' : modelKind;
 }
 
 function getPathCoordinateGpuByteLength(
   pathInput: ArrowPathInput,
-  pathModel: ActiveArrowPathModel
+  pathModel: ArrowPathLayerActiveModel
 ): number {
-  const storagePathRangeGpuBytes =
-    pathModel instanceof ArrowStoragePathModel ? pathModel.pathRangeByteLength : 0;
+  const storagePathRangeGpuBytes = isStoragePathModel(pathModel)
+    ? pathModel.pathRangeByteLength
+    : 0;
   return (
     getGpuVectorByteLength(pathInput.paths) +
-    getGpuVectorByteLength(pathInput.timestamps) +
+    (pathInput.timestamps ? getGpuVectorByteLength(pathInput.timestamps) : 0) +
     (pathInput.viewOrigins ? getGpuVectorByteLength(pathInput.viewOrigins) : 0) +
     storagePathRangeGpuBytes +
     getGeneratedPathGpuByteLength(pathModel)
   );
 }
 
-function getGeneratedPathGpuByteLength(pathModel: ActiveArrowPathModel): number {
-  if (pathModel instanceof ArrowStoragePathModel) {
+function getGeneratedPathGpuByteLength(pathModel: ArrowPathLayerActiveModel): number {
+  if (isStoragePathModel(pathModel)) {
     return pathModel.generatedRenderBufferByteLength;
   }
   return pathModel.renderBatches.reduce(
@@ -1614,23 +1469,24 @@ function getGeneratedPathGpuByteLength(pathModel: ActiveArrowPathModel): number 
   );
 }
 
-function getTransientPathGpuByteLength(pathModel: ActiveArrowPathModel): number {
-  return pathModel instanceof ArrowStoragePathModel ? pathModel.transientComputeInputByteLength : 0;
+function getTransientPathGpuByteLength(pathModel: ArrowPathLayerActiveModel): number {
+  return isStoragePathModel(pathModel) ? pathModel.transientComputeInputByteLength : 0;
 }
 
-function getGeneratedPathSegmentCount(pathModel: ActiveArrowPathModel): number {
-  return pathModel instanceof ArrowStoragePathModel
+function getGeneratedPathSegmentCount(pathModel: ArrowPathLayerActiveModel): number {
+  return isStoragePathModel(pathModel)
     ? pathModel.segmentCount
     : pathModel.segmentLayout.segmentCount;
 }
 
 function getPathStyleGpuByteLength(
   pathInput: ArrowPathInput,
-  pathModel: ActiveArrowPathModel
+  pathModel: ArrowPathLayerActiveModel
 ): number {
   const sourceStyleGpuBytes =
-    getGpuVectorByteLength(pathInput.colors) + getGpuVectorByteLength(pathInput.widths);
-  if (pathModel instanceof ArrowStoragePathModel) {
+    (pathInput.colors ? getGpuVectorByteLength(pathInput.colors) : 0) +
+    getGpuVectorByteLength(pathInput.widths);
+  if (isStoragePathModel(pathModel)) {
     return sourceStyleGpuBytes + pathModel.rowStorageByteLength;
   }
   const expandedStyleGpuBytes = Object.values(pathModel.arrowGPUTable?.gpuVectors || {}).reduce(
@@ -1640,155 +1496,316 @@ function getPathStyleGpuByteLength(
   return sourceStyleGpuBytes + expandedStyleGpuBytes;
 }
 
-function getPathModelPrepTimeMs(pathModel: ActiveArrowPathModel): number {
-  return pathModel instanceof ArrowStoragePathModel
+function getPathModelPrepTimeMs(pathModel: ArrowPathLayerActiveModel): number {
+  return isStoragePathModel(pathModel)
     ? pathModel.pathRangeBuildTimeMs
     : pathModel.segmentAttributeBuildTimeMs;
+}
+
+function isStoragePathModel(
+  pathModel: ArrowPathLayerActiveModel
+): pathModel is StoragePathModel | StorageTripsPathModel {
+  return pathModel instanceof StoragePathModel || pathModel instanceof StorageTripsPathModel;
 }
 
 async function makeArrowPathInput(
   device: Device,
   dataset: ArrowPathDataset,
   coordinateKind: ArrowPathCoordinateKind,
-  colorKind: ArrowPathColorKind
+  colorKind: ArrowPathColorKind,
+  timeKind: ArrowPathTimeKind,
+  rowsPerChunk: number | null = null
 ): Promise<ArrowPathInput> {
+  return makeArrowPathInputFromSourceData(
+    device,
+    makeArrowPathSourceData(dataset, coordinateKind, colorKind, timeKind, rowsPerChunk)
+  );
+}
+
+function makeArrowPathSourceData(
+  dataset: ArrowPathDataset,
+  coordinateKind: ArrowPathCoordinateKind,
+  colorKind: ArrowPathColorKind,
+  timeKind: ArrowPathTimeKind,
+  rowsPerChunk: number | null = null
+): ArrowPathSourceData {
   const buildStartTime = getNow();
-  const paths = makePathVector(dataset.pathCount, dataset.pointCount, coordinateKind);
-  const timestamps = makePathTimestampVector(dataset.pathCount, dataset.pointCount);
+  const paths = makePathVector(dataset.pathCount, dataset.pointCount, coordinateKind, rowsPerChunk);
+  const timestamps =
+    timeKind === 'timestamps'
+      ? makePathTimestampVector(dataset.pathCount, dataset.pointCount, rowsPerChunk)
+      : undefined;
   const colors =
-    colorKind === 'vertex-colors'
-      ? makePathColorListVector(dataset.pathCount, dataset.pointCount)
-      : makeArrowFixedSizeListVector(new arrow.Uint8(), 4, makePathRowColors(dataset.pathCount));
-  const widths = arrow.vectorFromArray(makePathWidths(dataset.pathCount), new arrow.Float32());
+    colorKind === 'none'
+      ? undefined
+      : colorKind === 'vertex-colors'
+        ? makePathColorListVector(dataset.pathCount, dataset.pointCount, rowsPerChunk)
+        : makePathRowColorVector(dataset.pathCount, rowsPerChunk);
+  const widths = makePathWidthVector(dataset.pathCount, rowsPerChunk);
   const arrowVectorBuildTimeMs = getNow() - buildStartTime;
   const pathArrowByteLength =
-    getArrowVectorByteLength(paths) + getArrowVectorByteLength(timestamps);
-  const styleArrowByteLength = getArrowVectorByteLength(colors) + getArrowVectorByteLength(widths);
-  const preparedTimestamps = await prepareArrowTemporalGPUVector(device, timestamps, {
-    name: 'timestamps',
-    id: 'arrow-path-model-timestamps'
-  });
-  const prepared = await ArrowPathModel.prepareGPUVectors(
-    device,
-    {
+    getArrowVectorByteLength(paths) + (timestamps ? getArrowVectorByteLength(timestamps) : 0);
+  const styleArrowByteLength =
+    (colors ? getArrowVectorByteLength(colors) : 0) + getArrowVectorByteLength(widths);
+  return {
+    sourceVectors: {
       paths,
-      colors,
-      widths
+      ...(colors ? {colors} : {}),
+      widths,
+      ...(timestamps ? {timestamps} : {})
     },
-    {
-      id: 'arrow-path-model'
-    }
-  );
-  if (!prepared.colors || !prepared.widths) {
-    throw new Error('Arrow path example expected prepared color and width GPU vectors');
+    pathArrowByteLength,
+    styleArrowByteLength,
+    arrowVectorBuildTimeMs
+  };
+}
+
+async function makeArrowPathInputFromSourceData(
+  device: Device,
+  sourceData: ArrowPathSourceData
+): Promise<ArrowPathInput> {
+  const {sourceVectors} = sourceData;
+  const prepared = await ArrowPathLayer.prepareData(device, {
+    id: 'arrow-path-model',
+    sourceVectors
+  });
+  if (!prepared.widths) {
+    throw new Error('Arrow path example expected prepared width GPU vectors');
+  }
+  if (sourceVectors.timestamps && !prepared.timestamps) {
+    throw new Error('Arrow path example expected prepared timestamp GPU vectors');
   }
 
   return {
     paths: prepared.paths,
-    colors: prepared.colors,
+    ...(prepared.colors ? {colors: prepared.colors} : {}),
     widths: prepared.widths,
-    timestamps: preparedTimestamps.temporal as GPUVector<ArrowPathTimestampType>,
+    ...(prepared.timestamps ? {timestamps: prepared.timestamps} : {}),
     ...(prepared.viewOrigins ? {viewOrigins: prepared.viewOrigins} : {}),
-    pathState: prepared.pathProps.pathState,
+    pathState: prepared.pathState,
+    pathArrowByteLength: sourceData.pathArrowByteLength,
+    styleArrowByteLength: sourceData.styleArrowByteLength,
+    arrowVectorBuildTimeMs: sourceData.arrowVectorBuildTimeMs,
+    destroy: prepared.destroy
+  };
+}
+
+function sliceArrowPathSourceData(
+  sourceData: ArrowPathSourceData,
+  chunkCount: number
+): ArrowPathSourceData {
+  const sourceVectors = {
+    paths: sliceArrowVectorChunks(sourceData.sourceVectors.paths, chunkCount),
+    ...(sourceData.sourceVectors.colors
+      ? {colors: sliceArrowVectorChunks(sourceData.sourceVectors.colors, chunkCount)}
+      : {}),
+    widths: sliceArrowVectorChunks(sourceData.sourceVectors.widths, chunkCount),
+    ...(sourceData.sourceVectors.timestamps
+      ? {timestamps: sliceArrowVectorChunks(sourceData.sourceVectors.timestamps, chunkCount)}
+      : {})
+  };
+  const pathArrowByteLength =
+    getArrowVectorByteLength(sourceVectors.paths) +
+    (sourceVectors.timestamps ? getArrowVectorByteLength(sourceVectors.timestamps) : 0);
+  const styleArrowByteLength =
+    (sourceVectors.colors ? getArrowVectorByteLength(sourceVectors.colors) : 0) +
+    getArrowVectorByteLength(sourceVectors.widths);
+
+  return {
+    sourceVectors,
     pathArrowByteLength,
     styleArrowByteLength,
-    arrowVectorBuildTimeMs,
-    destroy: () => {
-      prepared.destroy();
-      preparedTimestamps.destroy();
-    }
+    arrowVectorBuildTimeMs: sourceData.arrowVectorBuildTimeMs
   };
+}
+
+function sliceArrowVectorChunks<T extends arrow.DataType>(
+  vector: arrow.Vector<T>,
+  chunkCount: number
+): arrow.Vector<T> {
+  return new arrow.Vector(vector.data.slice(0, chunkCount)) as arrow.Vector<T>;
+}
+
+function sleep(milliseconds: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, milliseconds));
 }
 
 function makePathVector(
   pathCount: number,
   pointCount: number,
-  coordinateKind: ArrowPathCoordinateKind
+  coordinateKind: ArrowPathCoordinateKind,
+  rowsPerChunk: number | null = null
 ): arrow.Vector<ArrowPathSourceCoordinateType> {
-  const valueOffsets = new Int32Array(pathCount + 1);
   const coordinateValueType =
     coordinateKind === 'float64' ? new arrow.Float64() : new arrow.Float32();
-  const values =
-    coordinateKind === 'float64'
-      ? new Float64Array(pathCount * pointCount * 4)
-      : new Float32Array(pathCount * pointCount * 4);
-  for (let pathIndex = 0; pathIndex < pathCount; pathIndex++) {
-    valueOffsets[pathIndex] = pathIndex * pointCount;
-    const normalizedPathIndex = pathCount <= 1 ? 0 : pathIndex / (pathCount - 1);
-    const baseY = -0.92 + normalizedPathIndex * 1.84;
-    const phase = pathIndex * 0.13;
-    for (let pointIndex = 0; pointIndex < pointCount; pointIndex++) {
-      const pathProgress = pointCount <= 1 ? 0 : pointIndex / (pointCount - 1);
-      const coordinateIndex = (pathIndex * pointCount + pointIndex) * 4;
-      values[coordinateIndex] = -1.24 + pathProgress * 2.48;
-      values[coordinateIndex + 1] =
-        baseY +
-        Math.sin(pathProgress * 11.5 + phase) * 0.028 +
-        Math.cos(pathProgress * 4.2 - phase * 0.55) * 0.014;
-      values[coordinateIndex + 2] = 0;
-      values[coordinateIndex + 3] = getPathMeasure(pathIndex, pointIndex, pointCount);
-    }
-  }
-  valueOffsets[pathCount] = pathCount * pointCount;
-
   const coordinateType = new arrow.FixedSizeList(
     4,
     new arrow.Field('values', coordinateValueType, false)
   );
   const pathType = new arrow.List(new arrow.Field('coordinates', coordinateType, false));
-  const coordinateValueData = new arrow.Data(coordinateValueType, 0, values.length, 0, {
-    [arrow.BufferType.DATA]: values
+  const dataChunks: arrow.Data<ArrowPathSourceCoordinateType>[] = [];
+  forEachPathChunk(pathCount, rowsPerChunk, (pathStart, chunkPathCount) => {
+    const valueOffsets = new Int32Array(chunkPathCount + 1);
+    const values =
+      coordinateKind === 'float64'
+        ? new Float64Array(chunkPathCount * pointCount * 4)
+        : new Float32Array(chunkPathCount * pointCount * 4);
+    for (let localPathIndex = 0; localPathIndex < chunkPathCount; localPathIndex++) {
+      const pathIndex = pathStart + localPathIndex;
+      valueOffsets[localPathIndex] = localPathIndex * pointCount;
+      const normalizedPathIndex = pathCount <= 1 ? 0 : pathIndex / (pathCount - 1);
+      const baseY = -0.92 + normalizedPathIndex * 1.84;
+      const phase = pathIndex * 0.13;
+      for (let pointIndex = 0; pointIndex < pointCount; pointIndex++) {
+        const pathProgress = pointCount <= 1 ? 0 : pointIndex / (pointCount - 1);
+        const coordinateIndex = (localPathIndex * pointCount + pointIndex) * 4;
+        values[coordinateIndex] = -1.24 + pathProgress * 2.48;
+        values[coordinateIndex + 1] =
+          baseY +
+          Math.sin(pathProgress * 11.5 + phase) * 0.028 +
+          Math.cos(pathProgress * 4.2 - phase * 0.55) * 0.014;
+        values[coordinateIndex + 2] = 0;
+        values[coordinateIndex + 3] = getPathMeasure(pathIndex, pointIndex, pointCount);
+      }
+    }
+    valueOffsets[chunkPathCount] = chunkPathCount * pointCount;
+    const coordinateValueData = new arrow.Data(coordinateValueType, 0, values.length, 0, {
+      [arrow.BufferType.DATA]: values
+    });
+    const coordinateData = new arrow.Data(coordinateType, 0, values.length / 4, 0, {}, [
+      coordinateValueData
+    ]);
+    dataChunks.push(
+      new arrow.Data(pathType, 0, chunkPathCount, 0, {[arrow.BufferType.OFFSET]: valueOffsets}, [
+        coordinateData
+      ]) as arrow.Data<ArrowPathSourceCoordinateType>
+    );
   });
-  const coordinateData = new arrow.Data(coordinateType, 0, values.length / 4, 0, {}, [
-    coordinateValueData
-  ]);
-  const pathData = new arrow.Data(
-    pathType,
-    0,
-    pathCount,
-    0,
-    {[arrow.BufferType.OFFSET]: valueOffsets},
-    [coordinateData]
-  );
-  return new arrow.Vector([pathData]) as arrow.Vector<ArrowPathSourceCoordinateType>;
+  return new arrow.Vector(dataChunks) as arrow.Vector<ArrowPathSourceCoordinateType>;
 }
 
 function makePathTimestampVector(
   pathCount: number,
-  pointCount: number
+  pointCount: number,
+  rowsPerChunk: number | null = null
 ): arrow.Vector<ArrowPathSourceTimestampType> {
-  const valueOffsets = new Int32Array(pathCount + 1);
-  const timestamps = new BigInt64Array(pathCount * pointCount);
-  for (let pathIndex = 0; pathIndex < pathCount; pathIndex++) {
-    valueOffsets[pathIndex] = pathIndex * pointCount;
-    for (let pointIndex = 0; pointIndex < pointCount; pointIndex++) {
-      const timestampIndex = pathIndex * pointCount + pointIndex;
-      timestamps[timestampIndex] =
-        TEMPORAL_EPOCH_MILLISECONDS +
-        BigInt(
-          Math.round(
-            getPathMeasure(pathIndex, pointIndex, pointCount) *
-              TEMPORAL_MILLISECONDS_PER_MEASURE_UNIT
-          )
-        );
-    }
-  }
-  valueOffsets[pathCount] = pathCount * pointCount;
-
   const timestampType = new arrow.TimestampMillisecond();
   const pathTimestampType = new arrow.List(new arrow.Field('timestamps', timestampType, false));
-  const timestampData = new arrow.Data(timestampType, 0, timestamps.length, 0, {
-    [arrow.BufferType.DATA]: timestamps
+  const dataChunks: arrow.Data<ArrowPathSourceTimestampType>[] = [];
+  forEachPathChunk(pathCount, rowsPerChunk, (pathStart, chunkPathCount) => {
+    const valueOffsets = new Int32Array(chunkPathCount + 1);
+    const timestamps = new BigInt64Array(chunkPathCount * pointCount);
+    for (let localPathIndex = 0; localPathIndex < chunkPathCount; localPathIndex++) {
+      const pathIndex = pathStart + localPathIndex;
+      valueOffsets[localPathIndex] = localPathIndex * pointCount;
+      for (let pointIndex = 0; pointIndex < pointCount; pointIndex++) {
+        const timestampIndex = localPathIndex * pointCount + pointIndex;
+        timestamps[timestampIndex] =
+          TEMPORAL_EPOCH_MILLISECONDS +
+          BigInt(
+            Math.round(
+              getPathMeasure(pathIndex, pointIndex, pointCount) *
+                TEMPORAL_MILLISECONDS_PER_MEASURE_UNIT
+            )
+          );
+      }
+    }
+    valueOffsets[chunkPathCount] = chunkPathCount * pointCount;
+    const timestampData = new arrow.Data(timestampType, 0, timestamps.length, 0, {
+      [arrow.BufferType.DATA]: timestamps
+    });
+    dataChunks.push(
+      new arrow.Data(
+        pathTimestampType,
+        0,
+        chunkPathCount,
+        0,
+        {[arrow.BufferType.OFFSET]: valueOffsets},
+        [timestampData]
+      ) as arrow.Data<ArrowPathSourceTimestampType>
+    );
   });
-  const pathTimestampData = new arrow.Data(
-    pathTimestampType,
-    0,
-    pathCount,
-    0,
-    {[arrow.BufferType.OFFSET]: valueOffsets},
-    [timestampData]
-  );
-  return new arrow.Vector([pathTimestampData]) as arrow.Vector<ArrowPathSourceTimestampType>;
+  return new arrow.Vector(dataChunks) as arrow.Vector<ArrowPathSourceTimestampType>;
+}
+
+function makePathColorListVector(
+  pathCount: number,
+  pointCount: number,
+  rowsPerChunk: number | null = null
+): arrow.Vector<ArrowPathVertexColorType> {
+  const colorType = new arrow.FixedSizeList(4, new arrow.Field('values', new arrow.Uint8(), false));
+  const pathColorType = new arrow.List(new arrow.Field('colors', colorType, false));
+  const dataChunks: arrow.Data<ArrowPathVertexColorType>[] = [];
+  forEachPathChunk(pathCount, rowsPerChunk, (pathStart, chunkPathCount) => {
+    const valueOffsets = new Int32Array(chunkPathCount + 1);
+    const colors = makePathVertexColors(pathStart, chunkPathCount, pointCount);
+    for (let localPathIndex = 0; localPathIndex < chunkPathCount; localPathIndex++) {
+      valueOffsets[localPathIndex] = localPathIndex * pointCount;
+    }
+    valueOffsets[chunkPathCount] = chunkPathCount * pointCount;
+    const colorValueData = new arrow.Data(new arrow.Uint8(), 0, colors.length, 0, {
+      [arrow.BufferType.DATA]: colors
+    });
+    const colorData = new arrow.Data(colorType, 0, colors.length / 4, 0, {}, [colorValueData]);
+    dataChunks.push(
+      new arrow.Data(
+        pathColorType,
+        0,
+        chunkPathCount,
+        0,
+        {[arrow.BufferType.OFFSET]: valueOffsets},
+        [colorData]
+      ) as arrow.Data<ArrowPathVertexColorType>
+    );
+  });
+  return new arrow.Vector(dataChunks) as arrow.Vector<ArrowPathVertexColorType>;
+}
+
+function makePathRowColorVector(
+  pathCount: number,
+  rowsPerChunk: number | null = null
+): arrow.Vector<arrow.FixedSizeList<arrow.Uint8>> {
+  const dataChunks: arrow.Data<arrow.FixedSizeList<arrow.Uint8>>[] = [];
+  forEachPathChunk(pathCount, rowsPerChunk, (pathStart, chunkPathCount) => {
+    dataChunks.push(
+      makeArrowFixedSizeListVector(
+        new arrow.Uint8(),
+        4,
+        makePathRowColors(pathStart, chunkPathCount)
+      ).data[0] as arrow.Data<arrow.FixedSizeList<arrow.Uint8>>
+    );
+  });
+  return new arrow.Vector(dataChunks) as arrow.Vector<arrow.FixedSizeList<arrow.Uint8>>;
+}
+
+function makePathWidthVector(
+  pathCount: number,
+  rowsPerChunk: number | null = null
+): arrow.Vector<arrow.Float32> {
+  const dataChunks: arrow.Data<arrow.Float32>[] = [];
+  forEachPathChunk(pathCount, rowsPerChunk, (pathStart, chunkPathCount) => {
+    const values = makePathWidths(pathStart, chunkPathCount);
+    dataChunks.push(
+      arrow.makeData({
+        type: new arrow.Float32(),
+        length: values.length,
+        data: values
+      }) as arrow.Data<arrow.Float32>
+    );
+  });
+  return new arrow.Vector(dataChunks);
+}
+
+function forEachPathChunk(
+  pathCount: number,
+  rowsPerChunk: number | null,
+  visitor: (pathStart: number, chunkPathCount: number) => void
+): void {
+  const safeRowsPerChunk =
+    rowsPerChunk && rowsPerChunk > 0 && rowsPerChunk < pathCount ? rowsPerChunk : pathCount;
+  for (let pathStart = 0; pathStart < pathCount; pathStart += safeRowsPerChunk) {
+    visitor(pathStart, Math.min(safeRowsPerChunk, pathCount - pathStart));
+  }
 }
 
 function getPathMeasure(pathIndex: number, pointIndex: number, pointCount: number): number {
@@ -1803,37 +1820,14 @@ function getTemporalCurrentTimeMilliseconds(measureTime: number): number {
   return Math.round(measureTime * TEMPORAL_MILLISECONDS_PER_MEASURE_UNIT);
 }
 
-function makePathColorListVector(
+function makePathVertexColors(
+  pathStart: number,
   pathCount: number,
   pointCount: number
-): arrow.Vector<ArrowPathVertexColorType> {
-  const valueOffsets = new Int32Array(pathCount + 1);
-  const colors = makePathVertexColors(pathCount, pointCount);
-  for (let pathIndex = 0; pathIndex < pathCount; pathIndex++) {
-    valueOffsets[pathIndex] = pathIndex * pointCount;
-  }
-  valueOffsets[pathCount] = pathCount * pointCount;
-
-  const colorType = new arrow.FixedSizeList(4, new arrow.Field('values', new arrow.Uint8(), false));
-  const pathColorType = new arrow.List(new arrow.Field('colors', colorType, false));
-  const colorValueData = new arrow.Data(new arrow.Uint8(), 0, colors.length, 0, {
-    [arrow.BufferType.DATA]: colors
-  });
-  const colorData = new arrow.Data(colorType, 0, colors.length / 4, 0, {}, [colorValueData]);
-  const pathColorData = new arrow.Data(
-    pathColorType,
-    0,
-    pathCount,
-    0,
-    {[arrow.BufferType.OFFSET]: valueOffsets},
-    [colorData]
-  );
-  return new arrow.Vector([pathColorData]) as arrow.Vector<ArrowPathVertexColorType>;
-}
-
-function makePathVertexColors(pathCount: number, pointCount: number): Uint8Array {
+): Uint8Array {
   const colors = new Uint8Array(pathCount * pointCount * 4);
-  for (let pathIndex = 0; pathIndex < pathCount; pathIndex++) {
+  for (let localPathIndex = 0; localPathIndex < pathCount; localPathIndex++) {
+    const pathIndex = pathStart + localPathIndex;
     const evenColor = getPathPaletteColor(pathIndex);
     const oddColor = getPathPaletteColor(pathIndex + 2);
     const accentColor = getPathPaletteColor(pathIndex + 4);
@@ -1844,7 +1838,7 @@ function makePathVertexColors(pathCount: number, pointCount: number): Uint8Array
       const pulseColor = pointIndex % 4 === 0 ? accentColor : alternatingColor;
       const blueFade = Math.min(1, Math.max(0, (pathProgress - 0.18) / 0.72));
       const bandBoost = pointIndex % 2 === 0 ? 72 : -28;
-      const colorOffset = (pathIndex * pointCount + pointIndex) * 4;
+      const colorOffset = (localPathIndex * pointCount + pointIndex) * 4;
       colors[colorOffset] = clampColor(
         pulseColor[0] * (1 - blueFade) + blueTarget[0] * blueFade + bandBoost
       );
@@ -1860,11 +1854,12 @@ function makePathVertexColors(pathCount: number, pointCount: number): Uint8Array
   return colors;
 }
 
-function makePathRowColors(pathCount: number): Uint8Array {
+function makePathRowColors(pathStart: number, pathCount: number): Uint8Array {
   const colors = new Uint8Array(pathCount * 4);
-  for (let pathIndex = 0; pathIndex < pathCount; pathIndex++) {
+  for (let localPathIndex = 0; localPathIndex < pathCount; localPathIndex++) {
+    const pathIndex = pathStart + localPathIndex;
     const paletteColor = getPathPaletteColor(pathIndex);
-    const colorOffset = pathIndex * 4;
+    const colorOffset = localPathIndex * 4;
     colors[colorOffset] = paletteColor[0];
     colors[colorOffset + 1] = paletteColor[1];
     colors[colorOffset + 2] = paletteColor[2];
@@ -1873,8 +1868,11 @@ function makePathRowColors(pathCount: number): Uint8Array {
   return colors;
 }
 
-function makePathWidths(pathCount: number): number[] {
-  return Array.from({length: pathCount}, (_, pathIndex) => 0.0022 + (pathIndex % 7) * 0.00072);
+function makePathWidths(pathStart: number, pathCount: number): Float32Array {
+  return Float32Array.from(
+    {length: pathCount},
+    (_, localPathIndex) => 0.0022 + ((pathStart + localPathIndex) % 7) * 0.00072
+  );
 }
 
 function getPathPaletteColor(pathIndex: number): [number, number, number] {
@@ -1906,12 +1904,6 @@ function getGpuVectorByteLength(vector: GPUVector<any>): number {
         : data.length * data.byteStride)
     );
   }, 0);
-}
-
-function setMetricText(element: HTMLElement | null, value: string): void {
-  if (element) {
-    element.textContent = value;
-  }
 }
 
 function formatInteger(value: number): string {

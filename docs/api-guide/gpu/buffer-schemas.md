@@ -145,11 +145,13 @@ particular render path.
 
 For complete Arrow table workflows, including `GPUVector`, `GPUTable`,
 `ArrowModel`, storage-buffer bindings, and table-backed compute helpers, see
-[Using Arrow Table Columns with Shaders](./arrow-table-columns).
+[Arrow Type Mapping](/docs/api-reference/arrow/arrow-type-mapping) and
+[GPUTable Object Model](/docs/api-reference/tables/gpu-table-object-model).
 
 ## Related References
 
 - [BufferSchema](/docs/api-reference/engine/buffer-schema)
 - [GPU Memory Layouts](./gpu-memory-layouts)
 - [Storage Buffers](./gpu-storage-buffers)
-- [Using Arrow Table Columns with Shaders](./arrow-table-columns)
+- [Arrow Type Mapping](/docs/api-reference/arrow/arrow-type-mapping)
+- [GPUTable Object Model](/docs/api-reference/tables/gpu-table-object-model)
