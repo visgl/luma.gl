@@ -36,15 +36,15 @@ export type ArrowTemporalColumnType = ArrowTemporalType | List<ArrowTemporalType
 export type ArrowRelativeTemporalType = Float32 | List<Float32>;
 
 /** Arrow field metadata key for the prepared temporal logical kind. */
-export const TEMPORAL_KIND_METADATA_KEY = 'luma.gl:temporal-kind';
+export const TEMPORAL_KIND_METADATA_KEY = 'visgl:temporal-kind';
 /** Arrow field metadata key for the prepared temporal source unit. */
-export const TEMPORAL_UNIT_METADATA_KEY = 'luma.gl:temporal-unit';
+export const TEMPORAL_UNIT_METADATA_KEY = 'visgl:temporal-unit';
 /** Arrow field metadata key for the prepared temporal source origin. */
-export const TEMPORAL_ORIGIN_METADATA_KEY = 'luma.gl:temporal-origin';
+export const TEMPORAL_ORIGIN_METADATA_KEY = 'visgl:temporal-origin';
 /** Arrow field metadata key for the prepared temporal origin policy. */
-export const TEMPORAL_ORIGIN_POLICY_METADATA_KEY = 'luma.gl:temporal-origin-policy';
+export const TEMPORAL_ORIGIN_POLICY_METADATA_KEY = 'visgl:temporal-origin-policy';
 /** Arrow field metadata key for the prepared timestamp timezone, when present. */
-export const TEMPORAL_TIMEZONE_METADATA_KEY = 'luma.gl:temporal-timezone';
+export const TEMPORAL_TIMEZONE_METADATA_KEY = 'visgl:temporal-timezone';
 
 /** Metadata recovered from one supported Arrow temporal column. */
 export type ArrowTemporalVectorInfo = {

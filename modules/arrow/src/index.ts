@@ -96,7 +96,8 @@ export {
   type AppendableArrowGPURecordBatchProps,
   type AppendableArrowGPUTableProps,
   type ArrowGPURecordBatchProps,
-  type ArrowGPUTableProps
+  type ArrowGPUTableProps,
+  type ArrowGPUVectorProps
 } from './arrow/arrow-gpu-table-adapters';
 export {
   ArrowGeometry,
@@ -123,6 +124,23 @@ export {
   type PrepareArrowPathGPUVectorsOptions
 } from './arrow/arrow-path-model';
 export {
+  AttributePathModel,
+  buildArrowPathSegmentTable as buildAttributePathSegmentTable,
+  createArrowPathPreparedState as createAttributePathPreparedState,
+  type AttributePathModelProps,
+  type AttributePathPreparedState,
+  type AttributePathRenderBatchState,
+  type AttributePathSegmentLayout,
+  type AttributePathSegmentTable,
+  type AttributePathViewOriginUpdateProps
+} from './arrow/attribute-path-model';
+export {
+  convertArrowPathsToAttribute,
+  type ArrowPathSourceVectors as ConvertArrowPathsToAttributeSourceVectors,
+  type PreparedArrowPathGPUVectors as ConvertedArrowAttributePathData,
+  type PrepareArrowPathGPUVectorsOptions as ConvertArrowPathsToAttributeOptions
+} from './arrow/convert-arrow-paths-to-attribute';
+export {
   ArrowStoragePathModel,
   createArrowStoragePathState,
   prepareArrowStoragePathGPUVectors,
@@ -134,9 +152,34 @@ export {
   type PreparedArrowStoragePathGPUVectors
 } from './arrow/arrow-storage-path-model';
 export {
+  StoragePathModel,
+  createArrowStoragePathState as createStoragePathState,
+  type StoragePathBatchState,
+  type StoragePathInputProps,
+  type StoragePathModelProps,
+  type StoragePathRenderBatchState,
+  type StoragePathState
+} from './arrow/storage-path-model';
+export {
+  convertArrowPathsToStorage,
+  type ArrowPathSourceVectors as ConvertArrowPathsToStorageSourceVectors,
+  type PreparedArrowStoragePathGPUVectors as ConvertedArrowStoragePathData,
+  type PrepareArrowPathGPUVectorsOptions as ConvertArrowPathsToStorageOptions
+} from './arrow/convert-arrow-paths-to-storage';
+export {
   ArrowStorageTripsPathModel,
   type ArrowStorageTripsPathModelProps
 } from './arrow/arrow-storage-trips-path-model';
+export {
+  StorageTripsPathModel,
+  type StorageTripsPathModelProps
+} from './arrow/storage-trips-path-model';
+export {
+  convertArrowTripsToStorage,
+  type ArrowPathSourceVectors as ConvertArrowTripsToStorageSourceVectors,
+  type PreparedArrowStoragePathGPUVectors as ConvertedArrowStorageTripsPathData,
+  type PrepareArrowPathGPUVectorsOptions as ConvertArrowTripsToStorageOptions
+} from './arrow/convert-arrow-trips-to-storage';
 export {
   getDggsUint64Words,
   packDggsA5CellKey,

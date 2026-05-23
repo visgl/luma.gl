@@ -1,10 +1,14 @@
-# Using Arrow Table Columns with Shaders
+# Arrow Type Mapping
 
-Apache Arrow tables store data in typed columns. luma.gl can expose selected
-columns as typed vertex attributes, WebGPU storage bindings, or higher-level
-table-backed render and compute objects. The `@luma.gl/arrow` helpers connect
-those models by deriving a `BufferLayout`, GPU table objects, and storage-buffer
-bindings from Arrow data plus a shader `ShaderLayout`.
+<p class="badges">
+  <img src="https://img.shields.io/badge/From-v10-blue.svg?style=flat-square" alt="From: v10" />
+  <img src="https://img.shields.io/badge/Status-Work--In--Progress-orange.svg?style=flat-square" alt="Status: Work-In-Progress" />
+</p>
+
+This page documents how Apache Arrow columns map to luma.gl GPU upload, vertex
+attributes, WebGPU storage bindings, and model-specific preparation helpers.
+For the generic GPU table ownership model, see
+[GPUTable Object Model](/docs/api-reference/tables/gpu-table-object-model).
 
 ## Apache Arrow Preliminaries
 
@@ -38,28 +42,66 @@ deltas on the GPU before rendering.
 Support depends on how the column is consumed. A column can be uploadable as a
 `GPUVector` without also being usable as a generic vertex attribute.
 
-| Arrow vector type | Generic GPU upload | Shader-facing use | Higher-level model support |
-| --- | --- | --- | --- |
-| `Vector<Int8 \| Uint8 \| Int16 \| Uint16 \| Int32 \| Uint32 \| Float16 \| Float32>` | Yes, as scalar `GPUVector` or selected `GPUTable` columns. | Scalar attributes or storage rows, subject to shader type and vertex format compatibility. | Numeric table workflows and scalar style rows such as text angles, text sizes, and path widths. |
-| `Vector<Uint64>` carrying DGGS cell keys | Yes, through DGGS WebGPU helpers that retain Uint64 rows as word-pair storage. | Read through DGGS WGSL helpers or expand through `prepareDggsCellPathGPUVector()`; not a generic vertex attribute. | Global grid cell keys parsed from UTF-8 geohash, quadkey, S2, A5, or H3 IDs. |
-| `Vector<FixedSizeList<numeric, 1 \| 2 \| 3 \| 4>>` | Yes, as fixed-width GPU rows. | Vector attributes or storage rows; 3-component 8-bit and 16-bit integer formats are WebGL-only unless padded. | Positions, colors, pixel offsets, clip rectangles, mesh attributes, and path style rows. |
-| `Vector<FixedSizeList<Float32 \| Float64, 4>>` with luma `mat2x2` metadata | Yes, through `prepareArrowMatrixGPUVector()`. Canonical output is Float32 column-major `wgsl-storage`; Float64 truncates to Float32 during preparation. | `mat2x2<f32>` storage rows or two lowered matrix-column attributes. | Compact 2D linear transforms. |
-| `Vector<FixedSizeList<Float32 \| Float64, 6 packed \| 8 wgsl-storage>>` with luma `mat2x3` metadata | Yes, through `prepareArrowMatrixGPUVector()`. Packed sources normalize to eight-float Float32 WGSL-storage rows. | `mat2x3<f32>` storage rows or two lowered matrix-column attributes with WGSL three-row padding. | 2-column affine-style transforms with three row components. |
-| `Vector<FixedSizeList<Float32 \| Float64, 6>>` with luma `mat3x2` metadata | Yes, through `prepareArrowMatrixGPUVector()`. Canonical output is Float32 column-major `wgsl-storage`; Float64 truncates to Float32 during preparation. | `mat3x2<f32>` storage rows or three lowered matrix-column attributes. | Three-column transforms with two row components. |
-| `Vector<FixedSizeList<Float32 \| Float64, 9 packed \| 12 wgsl-storage>>` with luma `mat3x3` metadata | Yes, through `prepareArrowMatrixGPUVector()`. Packed sources normalize to twelve-float Float32 WGSL-storage rows. | `mat3x3<f32>` storage rows or three lowered matrix-column attributes with WGSL three-row padding. | 2D/3D linear transforms and rotation/scale bases. |
-| `Vector<FixedSizeList<Float32 \| Float64, 12 packed \| 16 wgsl-storage>>` with luma `mat4x3` metadata | Yes, through `prepareArrowMatrixGPUVector()`. Packed sources normalize to sixteen-float Float32 WGSL-storage rows. | `mat4x3<f32>` storage rows or four lowered matrix-column attributes with WGSL three-row padding. | deck.gl `SimpleMeshLayer` and `ScenegraphLayer` consume a 4x4 accessor as this affine GPU payload: three model-matrix `vec3` columns plus one translation `vec3`. |
-| `Vector<FixedSizeList<Float32 \| Float64, 12>>` with luma `mat3x4` metadata | Yes, through `prepareArrowMatrixGPUVector()`. Canonical output is Float32 column-major `wgsl-storage`; Float64 truncates to Float32 during preparation. | `mat3x4<f32>` storage rows or three lowered matrix-column attributes. | Three-column transforms with four row components. |
-| `Vector<FixedSizeList<Float32 \| Float64, 16>>` with luma `mat4x4` metadata | Yes, through `prepareArrowMatrixGPUVector()`. Canonical output is Float32 column-major `wgsl-storage`; Float64 truncates to Float32 during preparation. | `mat4x4<f32>` storage rows or four lowered matrix-column attributes. | Full homogeneous 3D transforms when the consumer retains all four rows. |
-| `Vector<Date \| Time \| Timestamp \| Duration>` | Yes, through `prepareArrowTemporalGPUVector()`, which emits relative `Float32` values plus persisted temporal origin metadata. | Scalar relative-time attributes or storage rows in the source Arrow unit. | Generic animated or filtered rows that compare one time value per source row; see the [Time Columns example](/examples/gpu-tables/arrow-time-columns) and [Blinking Stars example](/examples/gpu-tables/arrow-temporal-starfield). |
-| `Vector<List<Date \| Time \| Timestamp \| Duration>>` | Yes, through `prepareArrowTemporalGPUVector()`, which preserves list offsets while emitting relative `List<Float32>` values. | Not a single generic vertex attribute; consume through storage/compute code or model-specific expansion. | Trips-style per-path timestamp streams aligned with path vertices, including `ArrowStorageTripsPathModel`. |
-| `Vector<Interval>` | No in v1. `Interval` is a compound logical value rather than one scalar time value: Arrow interval variants carry calendar/month and day-time or month-day-nanosecond fields, so there is no single preserved source unit or origin subtraction rule for `prepareArrowTemporalGPUVector()`. | Not supported as a generic scalar temporal attribute or storage row until an explicit interval shader/storage contract exists. | Deferred; callers should lower intervals into application-defined scalar columns when that is the intended comparison model. |
-| `Vector<List<Interval>>` | No in v1. The leaf interval value has the same unresolved compound/calendar semantics, and the list form also needs a model-specific variable-length consumption path. | Not supported as generic temporal storage or Trips-style timestamps. | Deferred; Trips-style streams require scalar `Date`, `Time`, `Timestamp`, or `Duration` leaves that normalize to relative `Float32`. |
-| `arrow.Vector<List<FixedSizeList<Float32, 2 \| 3 \| 4>>>` | Yes, as flattened GPU path-coordinate values plus copied list-offset metadata. | Not a single generic vertex attribute; `ArrowPathModel` expands prepared rows into segment attributes, while `ArrowStoragePathModel` keeps prepared path values in storage and renders indexed segment records. | `ArrowPathModel.prepareGPUVectors()` uploads these rows unchanged unless closed-path normalization is requested. The resulting `pathProps` and `storagePathProps` feed `ArrowPathModel` and `ArrowStoragePathModel`. |
-| `arrow.Vector<List<FixedSizeList<Float64, 2 \| 3 \| 4>>>` | Yes, through path preparation as per-row Float32 deltas plus copied list-offset metadata. CPU Float64 per-row origins are retained separately. | Not a generic vertex attribute. Attribute paths prepare deltas on the CPU; WebGPU storage paths can prepare them once with `fp64arithmetic` `sub_fp64u32_to_f32` before rendering. | `ArrowPathModel.prepareGPUVectors()` and `prepareArrowPathGPUVectors()` prepare attribute paths. `ArrowStoragePathModel.prepareGPUVectors()` and `prepareArrowStoragePathGPUVectors()` prepare storage paths with GPU Float64 subtraction on WebGPU. |
-| `Vector<List<numeric \| FixedSizeList<numeric, 1 \| 2 \| 3 \| 4>>>` | Yes, as flattened GPU values plus copied list-offset metadata. | Not a single generic vertex attribute; consume through storage/compute code or model-specific expansion. | Generic variable-length numeric storage/readback. Model support is documented by the model-specific rows above. |
-| `Vector<Utf8>` | Yes, as UTF-8 value bytes plus readback metadata. | Not a generic vertex attribute; consume through text-specific UTF-8 and glyph expansion, or parse DGGS cell keys through `prepareDggsCellKeyGPUVector()` when the encoding is supplied. | `ArrowTextModel`, `ArrowStorageTextModel`, and DGGS key parsing. |
-| `Vector<Dictionary<Utf8, Int8 \| Int16 \| Int32 \| Uint8 \| Uint16 \| Uint32>>` | Yes, as dictionary index rows; callers keep CPU source vectors for dictionary values when glyph layout needs them. | Not a generic vertex attribute; consume through dictionary-aware text expansion. | `ArrowTextModel`, `ArrowStorageTextModel`, and `ArrowDictionaryTextModel`/`ArrowDictionaryStorageTextModel`. |
-| Other Arrow logical types such as `Bool`, `Binary`, `Struct`, `Map`, `Decimal`, `LargeUtf8`, and non-UTF-8 dictionaries | No generic table/vector upload path unless a helper documents a specific use. | Not supported as generic shader columns. | Adapter-specific only; for example `closeArrowPaths()` accepts `Vector<Bool>` closed-path flags as CPU row metadata. |
+Status: ✅ directly supported, 🟡 conditionally supported, ❌ not supported.
+The `nullable` column refers to columns with actual null rows, not just nullable
+schema fields with `nullCount: 0`.
+
+### Scalar-valued Columns
+
+| Arrow data type | GPU<br/>upload | nullable | Upload notes | Shader-facing<br/>use | Higher-level<br/>model support |
+| --- | :---: | :---: | --- | --- | --- |
+| `Int8 \| Uint8 \| Int16 \| Uint16 \|`<br/>`Int32 \| Uint32 \| Float16 \| Float32` | ✅ | ❌ | Scalar `GPUVector` or selected `GPUTable` columns. | Scalar attributes or storage rows, subject to shader type and vertex format compatibility. | Numeric table workflows and scalar style rows such as text angles, text sizes, and path widths. |
+| `Float64` | 🟡 | ❌ | Raw values can be copied into a `GPUVector`, but generic render paths should repack them to `Float32`, origin-relative `Float32`, or `u32` word pairs at preparation boundaries. | No generic `f64` vertex attribute or WGSL scalar path; use prepared Float32 values or custom word-pair helpers. | Matrix columns truncate to Float32; Float64 paths become per-row Float32 deltas plus retained origins. |
+| `Uint64` carrying DGGS cell keys | 🟡 | ❌ | DGGS WebGPU helpers retain Uint64 rows as word-pair storage. | Read through DGGS WGSL helpers or expand through `prepareDggsCellPathGPUVector()`; not a generic vertex attribute. | Global grid cell keys parsed from UTF-8 geohash, quadkey, S2, A5, or H3 IDs. |
+| `Bool` | ❌ | ❌ | Arrow Bool values are bit-packed, so they are not a directly uploadable scalar buffer. Repack to `Uint8` or `Uint32` when shaders need flags. | Use as integer 0/1 flags after repacking; otherwise keep on CPU as row metadata. | `closeArrowPaths()` accepts `Vector<Bool>` closed-path flags as CPU input; a future adapter could publish repacked flag columns. |
+
+### Vector-valued Columns
+
+| Arrow data type | GPU<br/>upload | nullable | Upload notes | Shader-facing<br/>use | Higher-level<br/>model support |
+| --- | :---: | :---: | --- | --- | --- |
+| `FixedSizeList<numeric,`<br/>`1 \| 2 \| 3 \| 4>` | ✅ | ❌ | Fixed-width GPU rows. | Vector attributes or storage rows; 3-component 8-bit and 16-bit integer formats are WebGL-only unless padded. | Positions, colors, pixel offsets, clip rectangles, mesh attributes, and path style rows. |
+| `List<FixedSizeList<Float32,`<br/>`2 \| 3 \| 4>>` | ✅ | ❌ | Flattened GPU path-coordinate values plus copied list-offset metadata. | Not a single generic vertex attribute.<br/>`ArrowPathModel` expands to segment attributes; `ArrowStoragePathModel` keeps values in storage. | `ArrowPathModel.prepareGPUVectors()` uploads unchanged unless closed-path normalization is requested.<br/>Outputs feed `ArrowPathModel` and `ArrowStoragePathModel`. |
+| `List<FixedSizeList<Float64,`<br/>`2 \| 3 \| 4>>` | 🟡 | ❌ | Path preparation emits per-row Float32 deltas plus copied list-offset metadata.<br/>CPU Float64 per-row origins are retained separately. | Not a generic vertex attribute.<br/>Attribute paths prepare deltas on CPU; WebGPU storage paths can prepare them on GPU before rendering. | `ArrowPathModel.prepareGPUVectors()` and `prepareArrowPathGPUVectors()` prepare attribute paths.<br/>`ArrowStoragePathModel.prepareGPUVectors()` prepares storage paths. |
+| `List<numeric \|`<br/>`FixedSizeList<numeric, 1 \| 2 \| 3 \| 4>>` | ✅ | ❌ | Flattened GPU values plus copied list-offset metadata. | Not a single generic vertex attribute; consume through storage/compute code or model-specific expansion. | Generic variable-length numeric storage/readback. Model support is documented by the model-specific rows above. |
+
+### Matrix-valued Columns
+
+| Arrow data type | GPU<br/>upload | nullable | Upload notes | Shader-facing<br/>use | Higher-level<br/>model support |
+| --- | :---: | :---: | --- | --- | --- |
+| `FixedSizeList<Float32 \| Float64, 4>`<br/>with `visgl:` `mat2x2` metadata | 🟡 | ❌ | Through `prepareArrowMatrixGPUVector()`.<br/>Canonical output is Float32 column-major `wgsl-storage`; Float64 truncates to Float32. | `mat2x2<f32>` storage rows or two lowered matrix-column attributes. | Compact 2D linear transforms. |
+| `FixedSizeList<Float32 \| Float64, 6>`<br/>with `visgl:` `mat2x3` metadata | 🟡 | ❌ | Through `prepareArrowMatrixGPUVector()`.<br/>Packed 6-value sources normalize to 8-value Float32 WGSL-storage rows. | `mat2x3<f32>` storage rows or two lowered matrix-column attributes with WGSL three-row padding. | 2-column affine-style transforms with three row components. |
+| `FixedSizeList<Float32 \| Float64, 6>`<br/>with `visgl:` `mat3x2` metadata | 🟡 | ❌ | Through `prepareArrowMatrixGPUVector()`.<br/>Canonical output is Float32 column-major `wgsl-storage`; Float64 truncates to Float32. | `mat3x2<f32>` storage rows or three lowered matrix-column attributes. | Three-column transforms with two row components. |
+| `FixedSizeList<Float32 \| Float64, 9>`<br/>with `visgl:` `mat3x3` metadata | 🟡 | ❌ | Through `prepareArrowMatrixGPUVector()`.<br/>Packed 9-value sources normalize to 12-value Float32 WGSL-storage rows. | `mat3x3<f32>` storage rows or three lowered matrix-column attributes with WGSL three-row padding. | 2D/3D linear transforms and rotation/scale bases. |
+| `FixedSizeList<Float32 \| Float64, 12>`<br/>with `visgl:` `mat4x3` metadata | 🟡 | ❌ | Through `prepareArrowMatrixGPUVector()`.<br/>Packed 12-value sources normalize to 16-value Float32 WGSL-storage rows. | `mat4x3<f32>` storage rows or four lowered matrix-column attributes with WGSL three-row padding. | deck.gl `SimpleMeshLayer` and `ScenegraphLayer` use this affine GPU payload: three model-matrix `vec3` columns plus one translation `vec3`. |
+| `FixedSizeList<Float32 \| Float64, 12>`<br/>with `visgl:` `mat3x4` metadata | 🟡 | ❌ | Through `prepareArrowMatrixGPUVector()`.<br/>Canonical output is Float32 column-major `wgsl-storage`; Float64 truncates to Float32. | `mat3x4<f32>` storage rows or three lowered matrix-column attributes. | Three-column transforms with four row components. |
+| `FixedSizeList<Float32 \| Float64, 16>`<br/>with `visgl:` `mat4x4` metadata | 🟡 | ❌ | Through `prepareArrowMatrixGPUVector()`.<br/>Canonical output is Float32 column-major `wgsl-storage`; Float64 truncates to Float32. | `mat4x4<f32>` storage rows or four lowered matrix-column attributes. | Full homogeneous 3D transforms. |
+
+### Time-valued Columns
+
+| Arrow data type | GPU<br/>upload | nullable | Upload notes | Shader-facing<br/>use | Higher-level<br/>model support |
+| --- | :---: | :---: | --- | --- | --- |
+| `Date \| Time \| Timestamp \| Duration` | 🟡 | ❌ | Through `prepareArrowTemporalGPUVector()`.<br/>Emits relative `Float32` values plus persisted temporal origin metadata. | Scalar relative-time attributes or storage rows in the source Arrow unit. | Animated or filtered rows; see [Time Columns](/examples/gpu-tables/arrow-time-columns) and [Blinking Stars](/examples/gpu-tables/arrow-temporal-starfield). |
+| `List<Date \| Time \|`<br/>`Timestamp \| Duration>` | 🟡 | ❌ | Through `prepareArrowTemporalGPUVector()`.<br/>Preserves list offsets while emitting relative `List<Float32>` values. | Not a single generic vertex attribute; consume through storage/compute code or model-specific expansion. | Trips-style per-path timestamp streams aligned with path vertices, including `ArrowStorageTripsPathModel`. |
+| `Interval` | ❌ | ❌ | `Interval` is compound calendar/time data, not one scalar time value.<br/>There is no single preserved unit or origin subtraction rule for `prepareArrowTemporalGPUVector()`. | Not supported as a generic scalar temporal attribute or storage row. | Deferred; callers should lower intervals into application-defined scalar columns. |
+| `List<Interval>` | ❌ | ❌ | The leaf interval has unresolved compound/calendar semantics, and the list form needs a model-specific variable-length consumption path. | Not supported as generic temporal storage or Trips-style timestamps. | Deferred; Trips-style streams require scalar `Date`, `Time`, `Timestamp`, or `Duration` leaves. |
+
+### Text-valued Columns
+
+| Arrow data type | GPU<br/>upload | nullable | Upload notes | Shader-facing<br/>use | Higher-level<br/>model support |
+| --- | :---: | :---: | --- | --- | --- |
+| `Utf8` | 🟡 | 🟡 | UTF-8 value bytes plus readback metadata; null bitmaps are retained for readback, not generic shader use. | Not a generic vertex attribute; consume through text-specific UTF-8 and glyph expansion, or parse DGGS cell keys through `prepareDggsCellKeyGPUVector()` when the encoding is supplied. | `ArrowTextModel`, `ArrowStorageTextModel`, and DGGS key parsing. |
+| `Dictionary<Utf8, Int8 \| Int16 \| Int32 \|`<br/>`Uint8 \| Uint16 \| Uint32>` | 🟡 | ❌ | Dictionary index rows.<br/>Callers keep CPU source vectors for dictionary values when glyph layout needs them. | Not a generic vertex attribute; consume through dictionary-aware text expansion. | `ArrowTextModel`, `ArrowStorageTextModel`, and dictionary text models. |
+
+### Other Columns
+
+| Arrow data type | GPU<br/>upload | nullable | Upload notes | Shader-facing<br/>use | Higher-level<br/>model support |
+| --- | :---: | :---: | --- | --- | --- |
+| `Binary` | ❌ | ❌ | Variable-width byte rows need both offsets and value bytes. Support would mirror UTF-8 with explicit offset and byte-buffer bindings. | Compute shaders could consume offsets and bytes; not a generic vertex attribute. | Adapter-specific payloads such as WKB geometry, compressed attributes, or binary IDs. |
+| `Struct` | ❌ | ❌ | A Struct is a container, not one value buffer. Support should flatten supported leaves by field path and preserve parent metadata. | Child fields can become separate shader columns after flattening. | Nested style/object columns; GeoArrow separated coordinates can adapt into `FixedSizeList` values. |
+| `Map` | ❌ | ❌ | Map is variable-length key/value Struct data. Support needs offsets, key/value child buffers, and app-defined lookup semantics. | Not a generic shader column; use compute lookup after an adapter lowers the map shape. | Per-row properties or sparse attributes after application-specific lowering. |
+| `Decimal` | ❌ | ❌ | Decimal stores scaled fixed-width integers with precision/scale semantics. Support likely requires conversion to `Float32`/`Float64` or packed integer words plus scale metadata. | No generic decimal arithmetic path in shaders. | Financial or exact values should be lowered by the application before upload. |
+| `LargeUtf8` | ❌ | ❌ | Uses 64-bit offsets; current text paths assume regular `Utf8` offsets. Support could downcast offsets when value buffers fit `Uint32`, or add 64-bit offset helpers. | Text shaders could consume after offset normalization; not a generic vertex attribute. | Large text columns once normalized to `Utf8`-style offset buffers. |
+| `Dictionary` non-`Utf8` | ❌ | ❌ | Uploading only dictionary indices loses value semantics. Support needs an adapter that uploads indices plus dictionary value buffers, or lowers values to numeric/text columns. | Shader use depends on the decoded value type or explicit lookup tables. | Categorical values, palettes, and enums after dictionary-specific lowering. |
 
 The [Time Columns example](/examples/gpu-tables/arrow-time-columns) prepares aligned
 `DateDay`, `TimeMillisecond`, `TimestampMillisecond`, and
@@ -162,7 +204,7 @@ The main decision is how the shader should read each selected Arrow column.
 | Matrix record | One logical matrix should stay one storage binding on WebGPU but split into vector attributes where needed | Arrow matrix vectors created by `makeArrowMatrix*Vector()` |
 | Expanded vector | A compact lookup table must become one row per vertex/instance for attribute paths | `expandArrowVector()` plus an integer row map |
 
-Use [Buffer Schemas and Columnar Records](./buffer-schemas) when one logical row
+Use [Buffer Schemas and Columnar Records](/docs/api-guide/gpu/buffer-schemas) when one logical row
 needs several attribute views or when you want record-oriented naming that also
 makes sense next to WGSL storage structs.
 
@@ -381,254 +423,6 @@ indices, and out-of-range indices.
 
 `ArrowVectorRowMapping` is the exported type name for the accepted mapping input.
 
-## Arrow GPU Object Model
-
-`GPUData`, `GPUVector`, `GPURecordBatch`, and `GPUTable`
-are GPU-side representations derived from Apache Arrow data. Arrow vectors,
-record batches, and tables are construction inputs; the GPU objects do not
-retain references to those sources after extracting the buffer data and metadata
-they need.
-
-The object model is batch-preserving by default:
-
-- `GPUTable.batches[]` contains real GPU record batches with batch-local
-  buffers.
-- Table-level `gpuVectors` aggregate those batch-local chunks through
-  `GPUVector.data[]`.
-- `GPUData` is the chunk/range primitive. It always points at a
-  `DynamicBuffer`, even when that wrapper adopts an existing static GPU buffer.
-- `ArrowModel.drawBatches(renderPass)` draws preserved GPU batches by reusing one
-  compatible layout/pipeline and rebinding only each batch's attribute buffers.
-
-This means a multi-batch Arrow table stays multi-batch after GPU upload. If the
-application prefers fewer draw units, it packs explicitly:
-
-```ts
-const arrowGPUTable = makeArrowGPUTable(device, table, {shaderLayout});
-
-// Replace preserved batches with one packed batch.
-arrowGPUTable.packBatches();
-
-// Or greedily merge adjacent batches until each emitted batch reaches the threshold.
-arrowGPUTable.packBatches({minBatchSize: 50_000});
-```
-
-Packing mutates the table in place. It rebuilds `batches[]`, table-level
-`gpuVectors`, and `attributes`, then destroys only superseded GPU buffers that
-were owned by the removed batches. Borrowed external buffers are not destroyed.
-
-### Ownership Rules
-
-- GPU objects created from Arrow data own the GPU storage they allocate.
-- GPU objects wrapping caller-supplied buffers are non-owning by default unless
-  `ownsBuffer` is requested.
-- `GPUData` is the storage-owning layer. A data view may own its `DynamicBuffer`
-  or borrow an existing one, but `GPUVector` never owns raw buffers directly.
-- `GPUVector` owns or borrows ordered `GPUData[]` chunks. Its `buffer` accessor
-  is only a direct-bind convenience for vectors that resolve to one concrete
-  backing surface.
-- Detach operations transfer live objects out of the table instead of destroying
-  them.
-- `destroy()` always follows the current ownership graph. It never destroys
-  borrowed buffers.
-
-## GPUData
-
-`GPUData` describes one Arrow-compatible GPU data range. It stores Arrow
-type metadata, logical row count, byte offset, row byte stride, and a stable
-`DynamicBuffer` handle.
-
-Construction modes:
-
-```ts
-// Upload one Arrow Data chunk into a new owned DynamicBuffer.
-const gpuData = makeArrowGPUData(device, arrowData);
-
-// Describe an existing DynamicBuffer range.
-const gpuDataView = new GPUData({
-  buffer: dynamicBuffer,
-  dataType,
-  length,
-  byteOffset,
-  byteStride
-});
-```
-
-Public state:
-
-| Member | Meaning |
-| --- | --- |
-| `buffer` | Stable `DynamicBuffer` for the uploaded or wrapped storage |
-| `type` | Arrow data type |
-| `length` | Logical row count |
-| `stride` | Scalar values per logical row |
-| `byteOffset` | First logical row in the GPU buffer |
-| `byteStride` | Bytes between logical rows |
-| `ownsBuffer` | Whether `destroy()` releases the buffer |
-
-Public methods:
-
-| Method | Behavior |
-| --- | --- |
-| `readArrowGPUDataAsync(gpuData)` | Reconstructs one Arrow data chunk for supported numeric and fixed-size-list types |
-| `destroy()` | Destroys the owned dynamic buffer, if any |
-
-## GPUVector
-
-`GPUVector` is a logical Arrow vector over one or more `GPUData`
-chunks. Its `data[]` array is the authoritative storage surface for batch-aware
-code.
-
-Construction modes:
-
-| Mode | Use case |
-| --- | --- |
-| `makeArrowGPUVector(device, arrowVector)` | Upload an Arrow vector into owned GPU storage |
-| `makeArrowGPUVector(device, arrowVector, {name})` | Named Arrow upload form used by table helpers |
-| `{type: 'buffer', ...}` | Wrap an existing typed GPU buffer |
-| `{type: 'interleaved', ...}` | Wrap one interleaved opaque binary row buffer |
-| `{type: 'data', ...}` | Aggregate existing `GPUData[]` chunks |
-| `makeAppendableArrowGPUVector(device, dataType, props)` | Create empty growable Arrow-backed `DynamicBuffer` storage |
-
-Public state:
-
-| Member | Meaning |
-| --- | --- |
-| `name` | Vector/table column name |
-| `type` | Arrow logical type |
-| `length` | Aggregate logical row count |
-| `stride` | Scalar values per logical row |
-| `byteOffset` | First row offset when the vector has one direct backing buffer |
-| `byteStride` | Bytes between logical rows |
-| `bufferLayout` | Optional layout for interleaved vectors |
-| `data[]` | Ordered GPU data chunks |
-| `buffer` | Directly bindable buffer when the vector has exactly one concrete backing surface |
-| `ownsBuffer` | Whether destruction follows any owning `GPUData` retained by this vector |
-| `capacityRows` | Current appendable storage capacity in rows, when applicable |
-
-Public methods:
-
-| Method | Behavior |
-| --- | --- |
-| `addData(gpuData)` | Appends an existing GPU data chunk to the logical vector without adopting its buffer |
-| `appendArrowDataToGPUVector(gpuVector, arrowData)` | Appends one Arrow data chunk into appendable trailing storage |
-| `appendArrowVectorToGPUVector(gpuVector, arrowVector)` | Appends every Arrow data chunk from an Arrow vector into appendable storage |
-| `resetLastBatch()` | Clears appendable logical rows while retaining allocation |
-| `readArrowGPUVectorAsync(gpuVector)` | Reads a packed vector back for supported non-interleaved layouts |
-| `transferBufferOwnership(target)` | Moves same-buffer `GPUData` ownership to another vector view |
-| `destroy()` | Releases owned vector storage |
-
-## GPURecordBatch
-
-`GPURecordBatch` is one drawable GPU batch. It owns batch-local vectors,
-schema metadata, buffer layout, and model-ready attributes.
-
-Construction modes:
-
-| Mode | Use case |
-| --- | --- |
-| `makeArrowGPURecordBatch(device, recordBatch, props)` | Upload one Arrow record batch |
-| `{vectors, ...}` | Build a GPU batch from existing vectors |
-| `makeAppendableArrowGPURecordBatch({...})` | Create an empty mutable GPU batch |
-
-Public state:
-
-| Member | Meaning |
-| --- | --- |
-| `schema` | GPU-facing Arrow schema for the selected columns |
-| `numRows` | Batch row count |
-| `numCols` | Selected GPU column count |
-| `nullCount` | Batch null count |
-| `bufferLayout` | Layout entries for model binding |
-| `gpuVectors` | Batch-local vectors keyed by selected attribute name |
-| `attributes` | Batch-local attribute buffers keyed by shader attribute name |
-| `bindings` | Batch-local storage buffers keyed by shader binding name |
-
-Public methods:
-
-| Method | Behavior |
-| --- | --- |
-| `appendArrowRecordBatchToGPURecordBatch(batch, recordBatch)` | Appends Arrow rows into an appendable batch |
-| `resetLastBatch()` | Clears appendable rows while retaining allocations |
-| `destroy()` | Destroys owned vectors and their storage |
-
-## GPUTable
-
-`GPUTable` is the table-level owner and mutation surface. It preserves real
-GPU batches, exposes aggregate vectors, and controls packing, detaching, and
-appendability.
-
-Construction modes:
-
-| Mode | Use case |
-| --- | --- |
-| `makeArrowGPUTable(device, table, props)` | Upload an Arrow table and preserve source record-batch boundaries |
-| `{vectors, ...}` | Build one GPU table/batch from existing vectors |
-| `makeAppendableArrowGPUTable({...})` | Create an empty table with one mutable trailing GPU batch |
-
-The appendable discriminator matters because this form does not upload an
-existing Arrow table. It creates empty schema-selected vectors backed by growable
-`DynamicBuffer`s so later `appendArrowBatchToGPUTable()` calls can append rows in place.
-
-Public state:
-
-| Member | Meaning |
-| --- | --- |
-| `schema` | GPU-facing Arrow schema for selected columns |
-| `numRows` | Aggregate table row count |
-| `numCols` | Selected GPU column count |
-| `nullCount` | Aggregate null count |
-| `bufferLayout` | Layout entries shared by compatible batches |
-| `gpuVectors` | Aggregate vectors keyed by shader attribute name |
-| `attributes` | Attribute buffers for the first directly drawable batch surface |
-| `bindings` | Storage buffers for the first directly bindable batch surface |
-| `batches[]` | Real batch-local `GPURecordBatch` objects |
-
-Public methods:
-
-| Method | Behavior |
-| --- | --- |
-| `packBatches(options?)` | Greedily merges adjacent batches in place; no options collapses all batches into one |
-| `addBatch(gpuRecordBatch)` | Adds an already-created GPU batch and rebuilds aggregate vectors |
-| `appendArrowBatchToGPUTable(table, recordBatchOrTable)` | Appends Arrow rows into the current trailing appendable GPU batch |
-| `resetLastBatch()` | Clears only the current trailing appendable GPU batch |
-| `select(...columnNames)` | Destructively keeps requested columns and destroys dropped batch-local vectors |
-| `detachVector(columnName)` | Removes one live column and returns an aggregate vector that owns its detached storage |
-| `detachBatches({first, last})` | Removes and returns a half-open batch range `[first, last)` |
-| `destroy()` | Destroys owned batches and their vectors |
-
-Low-level incremental assembly can stay ownership-explicit with
-`arrowGPUTable.addBatch(gpuRecordBatch)` and
-`arrowGPUVector.addData(gpuData)`, which aggregate existing GPU objects instead
-of allocating replacement tables.
-
-Appendable regular tables use the same table and batch classes:
-
-```ts
-const arrowGPUTable = makeAppendableArrowGPUTable({
-  device,
-  schema,
-  shaderLayout,
-  initialCapacityRows: 4_096
-});
-
-appendArrowBatchToGPUTable(arrowGPUTable, recordBatch);
-appendArrowBatchToGPUTable(arrowGPUTable, nextArrowTable);
-```
-
-```ts
-import {makeArrowGPUTable} from '@luma.gl/arrow';
-import {GPUVector} from '@luma.gl/tables';
-
-const arrowGPUTable = makeArrowGPUTable(device, table, {shaderLayout});
-
-// The schema describes the selected GPU columns, not necessarily the full table.
-const [colorField] = arrowGPUTable.schema.fields;
-
-// Each GPU vector exposes Arrow-derived type/shape metadata plus GPU data chunks.
-const colorVector: GPUVector = arrowGPUTable.gpuVectors.instanceColors;
-```
-
 ## Closing Nested Arrow Paths
 
 `closeArrowPaths()` turns logical closed-path flags into explicit closing
@@ -727,122 +521,6 @@ is called, and can also consume an existing `arrowGPUTable`.
 Use `model.drawBatches(renderPass)` to draw preserved static GPU batches with one
 pipeline layout while rebinding only batch-local attribute buffers and storage
 bindings. Packed tables naturally reduce that to fewer draw calls.
-
-## Table-Backed Render, Transform, and Compute Helpers
-
-The table APIs are meant to feed more than one execution style.
-
-### `GPUTableModel` and `ArrowModel`
-
-Use `GPUTableModel` when a prepared GPU table should drive ordinary rendering:
-
-```ts
-const model = new GPUTableModel(device, {
-  source,
-  shaderLayout,
-  table,
-  tableCount: 'instance'
-});
-```
-
-Use `ArrowModel` when selected Arrow table columns should first be adapted into
-GPU table storage:
-
-```ts
-const model = new ArrowModel(device, {
-  source,
-  shaderLayout,
-  arrowTable,
-  arrowCount: 'instance'
-});
-```
-
-`tableCount` and Arrow's compatibility `arrowCount` choose whether table row
-counts become `instanceCount`, `vertexCount`, or neither. Existing `GPUTable`
-instances can be supplied through `arrowGPUTable` when ownership should stay
-with the caller.
-
-### `TableTransform`
-
-`TableTransform` is the WebGL transform-feedback counterpart. It consumes a
-generic `GPUTable`, merges the table attribute layouts into the underlying
-`BufferTransform`, accepts already-created `GPUVector` inputs, and can run one
-preserved GPU batch at a time. Use `makeArrowGPUTable()` before construction
-when the source data starts as an Arrow table:
-
-```ts
-const transform = new TableTransform(device, {
-  vs,
-  varyings,
-  shaderLayout,
-  table: makeArrowGPUTable(device, arrowTable, {shaderLayout}),
-  tableCount: 'vertex'
-});
-
-transform.runBatches({
-  outputBuffers: (batch, batchIndex) => makeOutputBuffers(batch, batchIndex)
-});
-```
-
-For a compute-like update path, pass `inputVectors` plus
-`copyOutputToInputVectors`. `outputs` is inferred from the copy map when it is
-omitted:
-
-```ts
-const transform = new TableTransform(device, {
-  vs,
-  shaderLayout,
-  inputVectors: {
-    particlePositions,
-    particleVelocities
-  },
-  copyOutputToInputVectors: {
-    nextParticlePositions: 'particlePositions',
-    nextParticleVelocities: 'particleVelocities'
-  }
-});
-```
-
-Transform feedback writes a dense output stream, so automatic copy-back targets
-tightly packed, directly bindable GPUVectors. It can not scatter-copy into
-padded or interleaved rows.
-
-Use `TableTransform` only for attribute-backed WebGL transform feedback. It is
-not a storage-buffer compute abstraction.
-
-Relevant public types:
-
-| Type | Meaning |
-| --- | --- |
-| `TableTransformProps` | Construction props, including `table`, `inputVectors`, `copyOutputToInputVectors`, and `tableCount`. |
-| `TableTransformBatchOptions` | `runBatches()` options, including fixed or per-batch `outputBuffers`. |
-
-### `TableComputation`
-
-`TableComputation` is the WebGPU compute helper for table vectors exposed as
-storage bindings. Supply `GPUVector` objects by binding name:
-
-```ts
-const computation = new TableComputation(device, {
-  source: computeShader,
-  shaderLayout: computeShaderLayout,
-  inputVectors: {
-    particlePositions,
-    particleVelocities
-  }
-});
-```
-
-Direct single-buffer vectors bind once. Multi-batch aggregate vectors use
-`dispatchBatches(computePass, batch => workgroupCount)` so each batch is rebound
-with the correct storage-buffer range before dispatch.
-
-Relevant public types:
-
-| Type | Meaning |
-| --- | --- |
-| `TableComputationProps` | Construction props, including ordinary `bindings` plus `inputVectors`. |
-| `TableComputationBatch` | Batch metadata passed to a dynamic workgroup-count callback. |
 
 ## Mesh Arrow Geometry
 
@@ -964,80 +642,6 @@ Text and other generated-geometry paths can then expand each preserved source
 GPU batch independently, and may fan one source `GPURecordBatch` out into
 multiple generated render batches when device buffer limits require splitting.
 
-## Planning Table Buffer Groups
-
-`TableBufferPlanner` is a lower-level helper for applications that already have
-column descriptors and need to decide how those columns should consume GPU
-buffer bindings. It does not upload buffers, interleave data, or bind storage
-buffers. It only returns a plan that describes allocation groups, column
-mappings, and which columns should be represented by planner-owned packed or
-storage buffers.
-
-Use it when a table has more columns than the target device can expose as
-separate vertex buffers, or when row-geometry data may later be read from WebGPU
-storage buffers instead of expanded into per-vertex attributes.
-
-```ts
-import {TableBufferPlanner} from '@luma.gl/tables';
-
-const plan = TableBufferPlanner.getAllocationPlan({
-  device,
-  modelInfo: {isInstanced: true},
-  generateConstantAttributes: device.type === 'webgpu',
-  columns: [
-    {
-      id: 'positions',
-      byteStride: 8,
-      byteLength: 8 * 4,
-      rowCount: 4,
-      stepMode: 'vertex',
-      supportsPackedBuffer: true
-    },
-    {
-      id: 'instancePositions',
-      byteStride: 12,
-      byteLength: 12 * table.numRows,
-      rowCount: table.numRows,
-      stepMode: 'instance',
-      isPosition: true,
-      supportsPackedBuffer: true,
-      priority: 'high'
-    },
-    {
-      id: 'instanceColors',
-      byteStride: 4,
-      byteLength: 4 * table.numRows,
-      rowCount: table.numRows,
-      stepMode: 'instance',
-      supportsPackedBuffer: true
-    }
-  ]
-});
-```
-
-The planner supports two modes:
-
-- `table-with-shared-geometry`: one reusable geometry is drawn once for each
-  table row. Vertex-rate columns describe the shared geometry; table columns are
-  usually instance-rate attributes.
-- `table-with-row-geometries`: each table row expands into its own generated
-  vertices, such as paths or polygons. Constants are planned as a one-row
-  instance-rate group.
-
-The returned `plan.groups` describe physical allocation groups such as
-`separate-attribute-column`, `interleaved-attribute-columns`,
-`position-attribute-columns`, and `interleaved-constant-attribute-columns`.
-`plan.mappingsByColumnId` maps each source column to shader-visible attribute
-names and group ids. `plan.packedColumnIds` identifies columns that callers may
-pack into planner-owned vertex buffers.
-
-When `useStorageBuffers` is enabled, WebGPU row-geometry data columns may be
-assigned to `separate-storage-column` or `stacked-storage-columns` groups. This
-is planner output only in the current arrow module; callers still need their own
-storage-buffer upload and shader binding path. Storage planning observes
-`maxStorageBuffersPerShaderStage`, `maxStorageBufferBindingSize`, and uses
-256-byte alignment for stacked column offsets.
-
 ## Supported Shader Types
 
 Arrow scalar numeric columns map to scalar shader attributes. Arrow
@@ -1094,9 +698,10 @@ For portable WebGPU layouts, prefer `Float32` for `vec3<f32>` attributes or pad
 
 ## Related References
 
-- [Attributes](./gpu-attributes)
-- [Storage Buffers](./gpu-storage-buffers)
-- [Buffer Schemas and Columnar Records](./buffer-schemas)
+- [GPUTable Object Model](/docs/api-reference/tables/gpu-table-object-model)
+- [Attributes](/docs/api-guide/gpu/gpu-attributes)
+- [Storage Buffers](/docs/api-guide/gpu/gpu-storage-buffers)
+- [Buffer Schemas and Columnar Records](/docs/api-guide/gpu/buffer-schemas)
 - [BufferSchema API Reference](/docs/api-reference/engine/buffer-schema)
 - [ShaderLayout](/docs/api-reference/core/shader-layout)
 - [BufferLayout](/docs/api-reference/core/buffer-layout)

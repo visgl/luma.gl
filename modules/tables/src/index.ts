@@ -55,17 +55,17 @@ export {
   type TableComputationProps
 } from './table/table-computation';
 export {
-  TableBufferPlanner,
-  type AllocationGroupKind,
-  type PlannedColumn,
-  type TableBufferGroup,
-  type TableBufferMapping,
-  type TableBufferPlan,
-  type TableBufferPlannerMode,
-  type TableBufferPlannerModelInfo,
-  type TableBufferPlannerProps,
-  type TableColumnDescriptor,
-  type TableColumnPriority
+  GPUTableBufferPlanner,
+  type GPUTableBufferGroupKind,
+  type GPUTablePlannedColumn,
+  type GPUTableBufferGroup,
+  type GPUTableBufferMapping,
+  type GPUTableBufferPlan,
+  type GPUTableBufferPlannerMode,
+  type GPUTableBufferPlannerModelInfo,
+  type GPUTableBufferPlannerProps,
+  type GPUTableColumnDescriptor,
+  type GPUTableColumnPriority
 } from './table/table-buffer-planner';
 export {
   getGeneratedBufferBatchByteLimit,

@@ -27,6 +27,7 @@ const DEFAULT_ARROW_STORAGE_TRIPS_PATH_SOURCE = /* wgsl */ `
   @group(0) @binding(auto) var<storage, read> pathRanges : array<vec4<u32>>;
   @group(0) @binding(auto) var<storage, read> pathViewOrigins : array<vec4<f32>>;
   @group(0) @binding(auto) var<storage, read> pathRowColors : array<u32>;
+  @group(0) @binding(auto) var<storage, read> pathVertexColors : array<u32>;
   @group(0) @binding(auto) var<storage, read> pathRowWidths : array<f32>;
   @group(0) @binding(auto) var<storage, read> pathTimestamps : array<f32>;
 
@@ -38,7 +39,7 @@ struct PathStorageStyleConfig {
   batchRowIndexBase : u32,
   pathComponentCount : u32,
   useViewOrigins : u32,
-  _padding0 : u32,
+  useVertexColors : u32,
   _padding1 : u32,
 };
 
@@ -123,7 +124,13 @@ fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
     1.0
   );
   outputs.color = pathStorageStyleConfig.constantColor;
-  if (pathStorageStyleConfig.useRowColors != 0u) {
+  if (pathStorageStyleConfig.useVertexColors != 0u) {
+    outputs.color = select(
+      unpackPathColor(pathVertexColors[inputs.segmentStartPointIndices]),
+      unpackPathColor(pathVertexColors[segmentEndPointIndex]),
+      useSegmentEnd
+    );
+  } else if (pathStorageStyleConfig.useRowColors != 0u) {
     outputs.color = unpackPathColor(pathRowColors[rowIndex]);
   }
   outputs.time = select(

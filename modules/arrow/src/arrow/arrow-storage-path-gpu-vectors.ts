@@ -11,7 +11,8 @@ import {
   type ArrowPathSourceVectors,
   type ArrowPathViewOriginUpdateProps,
   type PrepareArrowPathGPUVectorsOptions,
-  updateViewOriginValues
+  updateViewOriginValues,
+  writeArrowPathViewOriginGPUVector
 } from './arrow-path-model';
 import {prepareGpuPathFloat64DeltaVector} from './gpu-path-float64-deltas';
 import {makeArrowGPUVector} from './arrow-gpu-table-adapters';
@@ -113,10 +114,18 @@ export async function prepareArrowStoragePathGPUVectors(
   }
 
   const colors = sourceVectors.colors
-    ? makeArrowGPUVector(device, sourceVectors.colors, {name: 'colors', id: `${id}-colors`})
+    ? makeArrowGPUVector(device, sourceVectors.colors, {
+        name: 'colors',
+        id: `${id}-colors`,
+        preserveDataChunks: true
+      })
     : undefined;
   const widths = sourceVectors.widths
-    ? makeArrowGPUVector(device, sourceVectors.widths, {name: 'widths', id: `${id}-widths`})
+    ? makeArrowGPUVector(device, sourceVectors.widths, {
+        name: 'widths',
+        id: `${id}-widths`,
+        preserveDataChunks: true
+      })
     : undefined;
   const preparedTimestamps = sourceVectors.timestamps
     ? await prepareArrowTemporalGPUVector(device, sourceVectors.timestamps, {
@@ -127,10 +136,17 @@ export async function prepareArrowStoragePathGPUVectors(
   const timestamps = preparedTimestamps?.temporal as GPUVector<ArrowPathTimestampType> | undefined;
   const sourceOrigins = preparedPathData.sourceOrigins;
   const viewOriginValues = new Float32Array(sourceVectors.paths.length * 4);
+  const viewOriginVector = sourceOrigins
+    ? makeArrowPathViewOriginVector(
+        viewOriginValues,
+        preparedPathData.paths.data.map(data => data.length)
+      )
+    : undefined;
   const viewOrigins = sourceOrigins
-    ? makeArrowGPUVector(device, makeArrowPathViewOriginVector(viewOriginValues), {
+    ? makeArrowGPUVector(device, viewOriginVector!, {
         name: 'pathViewOrigins',
-        id: `${id}-view-origins`
+        id: `${id}-view-origins`,
+        preserveDataChunks: true
       })
     : undefined;
   if (sourceOrigins && viewOrigins) {
@@ -139,7 +155,7 @@ export async function prepareArrowStoragePathGPUVectors(
       sourceOrigins,
       [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]
     );
-    viewOrigins.buffer.write(viewOriginValues);
+    writeArrowPathViewOriginGPUVector(viewOrigins, viewOriginValues);
   }
 
   const storagePathProps: ArrowStoragePathInputProps = {
@@ -157,7 +173,7 @@ export async function prepareArrowStoragePathGPUVectors(
       return;
     }
     updateViewOriginValues(viewOriginValues, sourceOrigins, modelViewMatrix);
-    viewOrigins.buffer.write(viewOriginValues);
+    writeArrowPathViewOriginGPUVector(viewOrigins, viewOriginValues);
   };
 
   return {
@@ -513,7 +529,8 @@ async function prepareArrowStoragePathCoordinateData(
     return {
       paths: makeArrowGPUVector(device, paths as Vector<ArrowPathCoordinateType>, {
         name: 'paths',
-        id: `${options.id || 'arrow-storage-path-model'}-paths`
+        id: `${options.id || 'arrow-storage-path-model'}-paths`,
+        preserveDataChunks: true
       })
     };
   }

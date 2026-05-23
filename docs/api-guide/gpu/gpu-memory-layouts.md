@@ -119,4 +119,4 @@ Segmented buffers are still columnar, but the columns share one GPU allocation. 
 ## Related References
 
 - [Buffer Schemas and Columnar Records](./buffer-schemas)
-- [Using Arrow Table Columns with Shaders](./arrow-table-columns)
+- [Arrow Type Mapping](/docs/api-reference/arrow/arrow-type-mapping)

@@ -63,6 +63,14 @@ const appendableColumnsByBatch = new WeakMap<GPURecordBatch, AppendableGPUColumn
 type ArrowUtf8DictionaryIndexType = Int8 | Int16 | Int32 | Uint8 | Uint16 | Uint32;
 type ArrowUtf8Dictionary = Dictionary<Utf8, ArrowUtf8DictionaryIndexType>;
 
+/** Props for uploading one Arrow vector into GPU storage. */
+export type ArrowGPUVectorProps = GPUVectorBufferProps & {
+  /** Stable vector name. */
+  name?: string;
+  /** Upload each Arrow Data chunk into its own GPUData buffer instead of packing one buffer. */
+  preserveDataChunks?: boolean;
+};
+
 /** Props for uploading one Arrow record batch into a generic GPU record batch. */
 export type ArrowGPURecordBatchProps = ArrowVertexFormatOptions & {
   /** Shader layout that selects which Arrow columns should be uploaded. */
@@ -197,9 +205,9 @@ export function makeArrowGPUData<T extends DataType>(
 export function makeArrowGPUVector<T extends DataType>(
   device: Device,
   vector: Vector<T>,
-  props: GPUVectorBufferProps & {name?: string} = {}
+  props: ArrowGPUVectorProps = {}
 ): GPUVector<T> {
-  const {name = 'vector', ...bufferProps} = props;
+  const {name = 'vector', preserveDataChunks = false, ...bufferProps} = props;
   const arrowType = vector.type as T;
 
   if (
@@ -244,6 +252,19 @@ export function makeArrowGPUVector<T extends DataType>(
   }
 
   const byteStride = getArrowTypeByteStride(arrowType);
+  if (preserveDataChunks && !matrixInfo) {
+    return new GPUVector({
+      type: 'data',
+      name,
+      dataType: arrowType,
+      data: vector.data.map(data => makeArrowGPUData(device, data as Data<T>, bufferProps)),
+      stride: getArrowTypeStride(arrowType),
+      byteStride,
+      rowByteLength: byteStride,
+      ownsData: true
+    });
+  }
+
   const buffer = device.createBuffer({
     usage: Buffer.VERTEX | Buffer.STORAGE | Buffer.COPY_DST | Buffer.COPY_SRC,
     ...bufferProps,

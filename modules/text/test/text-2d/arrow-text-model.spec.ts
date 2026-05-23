@@ -87,6 +87,30 @@ test('buildArrowTextGlyphTable repeats Arrow label attributes for each glyph', t
   t.end();
 });
 
+test('buildArrowTextGlyphTable expands character color lists per glyph', t => {
+  const labelTable = new arrow.Table({
+    positions: makeArrowPositions(2),
+    colors: makeTextColorListVector(
+      new Int32Array([0, 2, 3]),
+      new Uint8Array([255, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255])
+    )
+  });
+  const result = buildArrowTextGlyphTable({
+    labelTable,
+    texts: arrow.vectorFromArray(['AB', 'A'], new arrow.Utf8()),
+    mapping: CHARACTER_MAPPING,
+    baselineOffset: 1,
+    lineHeight: 10
+  });
+
+  t.deepEqual(
+    Array.from(result.table.getChild('colors')!.data[0]!.children[0]!.values as Uint8Array),
+    [255, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255],
+    'per-character color lists flatten to one FixedSizeList color per generated glyph'
+  );
+  t.end();
+});
+
 test('buildArrowTextGlyphTable expands packed clip rectangles per glyph', t => {
   const clipRects = makeArrowFixedSizeListVector(
     new arrow.Int16(),
@@ -1116,6 +1140,29 @@ function makeArrowPositions(rowCount: number): arrow.Vector<arrow.FixedSizeList<
     values[rowIndex * 2 + 1] = rowIndex;
   }
   return makeArrowFixedSizeListVector(new arrow.Float32(), 2, values);
+}
+
+function makeTextColorListVector(
+  valueOffsets: Int32Array,
+  colors: Uint8Array
+): arrow.Vector<arrow.List<arrow.FixedSizeList<arrow.Uint8>>> {
+  const colorType = new arrow.FixedSizeList(4, new arrow.Field('values', new arrow.Uint8(), false));
+  const textColorType = new arrow.List(new arrow.Field('colors', colorType, false));
+  const colorValueData = new arrow.Data(new arrow.Uint8(), 0, colors.length, 0, {
+    [arrow.BufferType.DATA]: colors
+  });
+  const colorData = new arrow.Data(colorType, 0, colors.length / 4, 0, {}, [colorValueData]);
+  const textColorData = new arrow.Data(
+    textColorType,
+    0,
+    valueOffsets.length - 1,
+    0,
+    {[arrow.BufferType.OFFSET]: valueOffsets},
+    [colorData]
+  );
+  return new arrow.Vector([textColorData]) as arrow.Vector<
+    arrow.List<arrow.FixedSizeList<arrow.Uint8>>
+  >;
 }
 
 function unpackSignedInt16Pair(word: number): [number, number] {

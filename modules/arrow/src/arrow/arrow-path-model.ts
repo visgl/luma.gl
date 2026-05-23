@@ -552,6 +552,7 @@ export async function prepareArrowPathGPUVectors(
   const id = options.id || 'arrow-path-model';
   const preparedCoordinateData = prepareArrowPathCoordinateData(sourceVectors.paths);
   const sourceOriginValues = preparedCoordinateData.sourceOrigins;
+  const pathChunkRowCounts = preparedCoordinateData.paths.data.map(data => data.length);
   let paths = makeArrowGPUVector(device, preparedCoordinateData.paths, {
     name: 'paths',
     id: `${id}-paths`
@@ -571,22 +572,34 @@ export async function prepareArrowPathGPUVectors(
   }
 
   const colors = sourceVectors.colors
-    ? makeArrowGPUVector(device, sourceVectors.colors, {name: 'colors', id: `${id}-colors`})
+    ? makeArrowGPUVector(device, sourceVectors.colors, {
+        name: 'colors',
+        id: `${id}-colors`,
+        preserveDataChunks: true
+      })
     : undefined;
   const widths = sourceVectors.widths
-    ? makeArrowGPUVector(device, sourceVectors.widths, {name: 'widths', id: `${id}-widths`})
+    ? makeArrowGPUVector(device, sourceVectors.widths, {
+        name: 'widths',
+        id: `${id}-widths`,
+        preserveDataChunks: true
+      })
     : undefined;
   const viewOriginValues = new Float32Array(sourceVectors.paths.length * 4);
+  const viewOriginVector = sourceOriginValues
+    ? makeArrowPathViewOriginVector(viewOriginValues, pathChunkRowCounts)
+    : undefined;
   const viewOrigins = sourceOriginValues
-    ? makeArrowGPUVector(device, makeArrowPathViewOriginVector(viewOriginValues), {
+    ? makeArrowGPUVector(device, viewOriginVector!, {
         name: PATH_VIEW_ORIGINS_COLUMN,
-        id: `${id}-view-origins`
+        id: `${id}-view-origins`,
+        preserveDataChunks: true
       })
     : undefined;
 
   if (sourceOriginValues) {
     updateViewOriginValues(viewOriginValues, sourceOriginValues, IDENTITY_MATRIX4);
-    viewOrigins!.buffer.write(viewOriginValues);
+    writeArrowPathViewOriginGPUVector(viewOrigins!, viewOriginValues);
   }
 
   const rowColumns: Record<string, Vector> = {};
@@ -601,7 +614,7 @@ export async function prepareArrowPathGPUVectors(
     id,
     rowTable: new Table(rowColumns),
     paths: pathsForSegmentTable,
-    viewOrigins: sourceOriginValues ? makeArrowPathViewOriginVector(viewOriginValues) : undefined
+    viewOrigins: viewOriginVector
   });
 
   const pathProps: ArrowPathModelProps = {
@@ -625,7 +638,7 @@ export async function prepareArrowPathGPUVectors(
       return;
     }
     updateViewOriginValues(viewOriginValues, sourceOriginValues, modelViewMatrix);
-    viewOrigins.buffer.write(viewOriginValues);
+    writeArrowPathViewOriginGPUVector(viewOrigins, viewOriginValues);
     updateArrowPathPreparedStateViewOrigins(pathState, viewOriginValues);
   };
 
@@ -1205,9 +1218,43 @@ function makeArrowPathData(
 
 /** Wraps one Float32 vec4 view origin per path row as an Arrow fixed-size list vector. */
 export function makeArrowPathViewOriginVector(
-  values: Float32Array
+  values: Float32Array,
+  rowCounts?: readonly number[]
 ): Vector<ArrowPathViewOriginType> {
-  return makeArrowFixedSizeListVector(new Float32(), 4, values);
+  if (!rowCounts) {
+    return makeArrowFixedSizeListVector(new Float32(), 4, values);
+  }
+
+  const dataChunks: Data<ArrowPathViewOriginType>[] = [];
+  let rowStart = 0;
+  for (const rowCount of rowCounts) {
+    const rowEnd = rowStart + rowCount;
+    dataChunks.push(
+      makeArrowFixedSizeListVector(new Float32(), 4, values.slice(rowStart * 4, rowEnd * 4))
+        .data[0] as Data<ArrowPathViewOriginType>
+    );
+    rowStart = rowEnd;
+  }
+  if (rowStart * 4 !== values.length) {
+    throw new Error('Arrow path view-origin chunk rows must cover every source row');
+  }
+  return new Vector(dataChunks);
+}
+
+/** Writes full view-origin values into a chunk-preserving GPU vector. */
+export function writeArrowPathViewOriginGPUVector(
+  viewOrigins: GPUVector<ArrowPathViewOriginType>,
+  values: Float32Array
+): void {
+  let rowStart = 0;
+  for (const data of viewOrigins.data) {
+    const rowEnd = rowStart + data.length;
+    data.buffer.write(values.subarray(rowStart * 4, rowEnd * 4), data.byteOffset);
+    rowStart = rowEnd;
+  }
+  if (rowStart * 4 !== values.length) {
+    throw new Error('Arrow path view-origin GPU chunks must cover every source row');
+  }
 }
 
 /** Reprojects retained Float64 path source origins into Float32 model-view coordinates. */

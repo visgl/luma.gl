@@ -86,11 +86,11 @@ export type ArrowFloat32Matrix3x4 = FixedSizeList<Float32>;
 export type ArrowFloat32Matrix4x4 = FixedSizeList<Float32>;
 
 /** Arrow field metadata key for the logical WGSL matrix shape. */
-export const MATRIX_SHAPE_METADATA_KEY = 'luma.gl:matrix-shape';
+export const MATRIX_SHAPE_METADATA_KEY = 'visgl:matrix-shape';
 /** Arrow field metadata key for the stored logical matrix order. */
-export const MATRIX_ORDER_METADATA_KEY = 'luma.gl:matrix-order';
+export const MATRIX_ORDER_METADATA_KEY = 'visgl:matrix-order';
 /** Arrow field metadata key for the stored physical matrix row layout. */
-export const MATRIX_LAYOUT_METADATA_KEY = 'luma.gl:matrix-layout';
+export const MATRIX_LAYOUT_METADATA_KEY = 'visgl:matrix-layout';
 
 const makeMatrixData = makeData as <T extends ArrowMatrixValueType>(props: {
   type: T;
