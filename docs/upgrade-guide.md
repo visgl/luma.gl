@@ -15,7 +15,7 @@ luma.gl largely follows [SEMVER](https://semver.org) conventions. Breaking chang
 **@luma.gl/arrow**
 - Generic GPU table/runtime APIs moved to `@luma.gl/tables`:
   - `GPUData`, `GPUVector`, `GPURecordBatch`, `GPUTable`
-  - `TableTransform`, `TableComputation`
+  - `TableTransform`, `GPUTableComputation`
   - `GPUTableBufferPlanner`, `planGeneratedBufferBatches`, and `getGeneratedBufferBatchByteLimit`
 - Arrow materialization now stays in `@luma.gl/arrow` adapter helpers instead of table constructors and instance readback methods:
   - `makeArrowGPUData(...)`, `makeArrowGPUVector(...)`, `makeArrowGPURecordBatch(...)`, and `makeArrowGPUTable(...)`

@@ -1,0 +1,279 @@
+import {ArrowDocsTabs} from '@site/src/components/docs/arrow-docs-tabs';
+
+# deck.gl v10 API Directions
+
+<ArrowDocsTabs active="deck-api" />
+
+<p class="badges">
+  <img src="https://img.shields.io/badge/From-v10-blue.svg?style=flat-square" alt="From: v10" />
+  <img src="https://img.shields.io/badge/Status-Work--In--Progress-orange.svg?style=flat-square" alt="Status: Work-In-Progress" />
+</p>
+
+:::info
+This document outlines the shape of a hypothetical deck.gl v10 API.
+It is intended to be directional during luma.gl v10 development.
+luma.gl should be designed to support this API efficiently.
+:::
+
+## Goals
+
+deck.gl v10 API is designed with the following aspirational goals:
+- Support Apache Arrow tables and vectors as input data 
+- Support a wide range of Apache Arrow column types
+- Make it easy for developers to reason about binary columnar data.
+- Take full advantage of performance and memory compactness advantages.
+- Avoid conversion to JS objects whenever possible
+- Move GPU data preparation to the GPU when possible.
+- Support high precision inputs (Float64)
+- Support HDR colors (Float16, Float32)
+- Support temporal data (XYZM coordinate, time and duration arrow columns)
+- Support picking of columnar tables
+- Support compute and transforms on Arrow source data
+- Support streaming loading, compute and rendering of Arrow data.
+
+
+## Data Inputs
+
+Arrow/GPU-table-backed deck.gl layers should accept the same data shapes that are useful for CPU-backed layers, while also accepting GPU-resident table objects when the application has already uploaded data. Both paths should preserve the columnar and batched structure needed for GPU rendering.
+
+`data` can be:
+
+- An `arrow.Table` when all rows are available up front.
+- An `Iterator<arrow.RecordBatch>` or `AsyncIterator<arrow.RecordBatch>` when rows should stream in as batches.
+- The JavaScript iterable forms `Iterable<arrow.RecordBatch>` or `AsyncIterable<arrow.RecordBatch>`, normalized internally to the same streaming path.
+- A `GPUTable` when all rows are already GPU-resident.
+- A `GPURecordBatch`, or an `Iterator<GPURecordBatch>` / `AsyncIterator<GPURecordBatch>`, when GPU-resident rows should be supplied as preserved batches.
+- A URL or other loader input. loaders.gl should use batched parsing by default so the layer receives `RecordBatch` values incrementally.
+
+Column props can reference columns by name when `data` is a table, stream, or loader input. Expert usages may also supply direct column values: `arrow.Vector` for CPU/Arrow-backed columns, or `GPUVector` for already-uploaded GPU columns. Direct vectors do not by themselves provide a table or record batch to reference from picking callbacks.
+
+Assume we have a file at `some-url`. It can be a native `.arrow` file or any file format that can be parsed by a loaders.gl 5.0 loader into Apache Arrow format.
+
+When materialized as a full table, the file would be represented by an `arrow.Table` with the following schema.
+
+```ts
+arrow.Schema([
+  arrow.Field(
+    'positions',
+    new arrow.FixedSizeList(new arrow.Field('position', new arrow.Float32(), false), 3),
+    false
+  ),
+  arrow.Field(
+    'color',
+    new arrow.FixedSizeList(new arrow.Field('color', new arrow.Uint8(), false), 4),
+    false
+  )
+]);
+```
+
+## Loading
+
+Loading by URL should prefer batched parsing. The layer can start uploading and drawing as soon as the first `RecordBatch` is available, instead of waiting for a complete `arrow.Table`.
+
+```ts
+new AnyLayer({
+  data: 'some-url',
+  loaders: [AnyLoader],
+  positions: 'positions',
+  colors: 'color'
+});
+```
+
+Applications that need a complete table can disable batched parsing with loader options and pass the materialized `arrow.Table` path instead. The exact loaders.gl option names are loader-specific.
+
+```ts
+const arrowTable = await load('some-url', AnyLoader, {
+  // Directional: loader options can request a fully materialized table
+  // instead of batched parsing.
+});
+
+new AnyLayer({
+  data: arrowTable,
+  positions: 'positions',
+  colors: 'color'
+});
+```
+
+Replacing `data` cancels or supersedes any active stream. Layer-owned GPU resources for old batches should be released once they are no longer needed for rendering or picking.
+
+## Streaming
+
+Streaming inputs should preserve `RecordBatch` boundaries from the source Arrow data.
+
+```ts
+async function* loadRecordBatches(): AsyncIterable<arrow.RecordBatch> {
+  for await (const recordBatch of parseArrowBatches('some-url')) {
+    yield recordBatch;
+  }
+}
+
+new AnyLayer({
+  data: loadRecordBatches(),
+  positions: 'positions',
+  colors: 'color'
+});
+```
+
+Each incoming `RecordBatch` should be validated, uploaded, appended to the layer state, and drawn when ready. Only batches that have been received and uploaded are renderable or pickable.
+
+Batch boundaries are significant. They let the layer release GPU resources batch-by-batch, preserve append order, and map picking results back to the original Arrow source.
+
+## Direct Vectors
+
+Columns can also be supplied directly as `arrow.Vector` or `GPUVector` values when the application already owns the table or wants explicit column selection.
+
+```ts
+const arrowTable = await load('some-url', AnyLoader, {
+  // Directional: loader options can request a fully materialized table.
+});
+
+new AnyLayer({
+  data: arrowTable,
+  positions: arrowTable.getChild('positions'),
+  colors: arrowTable.getChild('color')
+});
+```
+
+Direct vector handling:
+
+- Direct vectors should be treated as column inputs, not as a replacement for the source data object.
+- Picking callbacks can reference the supplied vectors and source row index, but a full row object is only implied when the caller supplied a table, record batch, or row resolver.
+- If vectors are batched and contain multiple `GPUData` instances, corresponding batches across all supplied vectors need the same row count so source batch and row indices remain aligned.
+
+## GPU-Resident Inputs
+
+GPU-resident inputs let applications bypass Arrow upload and avoid retained CPU copies of source data.
+
+```ts
+new AnyLayer({
+  data: gpuTable,
+  positions: 'positions',
+  colors: 'color'
+});
+
+new AnyLayer({
+  data: gpuRecordBatchStream,
+  positions: gpuPositionVector,
+  colors: gpuColorVector
+});
+```
+
+Caller-supplied `GPUTable`, `GPURecordBatch`, and `GPUVector` objects should be borrowed by default. A layer should not destroy those GPU objects unless a future API explicitly opts into ownership transfer.
+
+GPU-resident batching follows the same alignment rules as direct vectors: batch index and row count need to match across all supplied columns. A `GPUTable` or `GPURecordBatch` carries that structure directly; independent `GPUVector` props need to preserve it themselves.
+
+## Picking
+
+Picking callbacks should reference the supplied source data as far as that source can support it. Generated geometry such as text glyphs, path segments, mesh instances, or trip trail segments should map back to the source row by default.
+
+The exact callback field names are directional, but the layer should preserve enough metadata to support these cases:
+
+- For `arrow.Table`, callbacks can expose the table, a global row index, and optionally a materialized row view.
+- For streamed `RecordBatch` inputs, callbacks can expose the source `RecordBatch`, source batch index, row index within that batch, and global row index if the layer tracks one.
+- For direct `arrow.Vector` inputs, callbacks can expose the supplied vectors and row index. No source row object is implied unless the caller also provided a table or custom row resolver.
+- For `GPUTable` and `GPURecordBatch` inputs, callbacks can expose GPU provenance such as the table, batch, global row index, batch index, and batch-local row index.
+- For direct `GPUVector` inputs, callbacks can expose the supplied vectors plus source row and batch indices when the vector chunks are aligned.
+- GPU-only picking should not imply `info.object`, CPU row materialization, retained CPU source data, or GPU readback. Applications that need CPU-rich picking from GPU inputs should retain source metadata outside the layer or supply a row resolver.
+
+```ts
+new AnyLayer({
+  data: loadRecordBatches(),
+  positions: 'positions',
+  colors: 'color',
+  onClick: info => {
+    // Directional shape only. Exact PickingInfo field names are TBD.
+    const sourceRowIndex = info.arrow?.sourceRowIndex;
+    const sourceRecordBatch = info.arrow?.recordBatch;
+    const sourceTable = info.arrow?.table;
+
+    console.log({sourceTable, sourceRecordBatch, sourceRowIndex});
+  }
+});
+```
+
+## GeoArrow
+
+GeoArrow metadata can identify the geometry column, so the layer can select geometry without requiring an explicit `positions` or `paths` prop.
+
+```ts
+new GeoLayer({
+  data: 'some-url',
+  loaders: [AnyGeometryLoader],
+  // additional columns may be used for styling, but geometry column is auto-detected
+  getColor: 'color'
+});
+```
+
+## Meshes And Point Clouds
+
+loaders.gl point-cloud and mesh loaders can return standard Arrow tables with metadata. These are used as the primitive geometry table.
+
+An instance Arrow table can then additionally be supplied with transformation matrices and styles, such as blend colors, for repeated mesh rendering.
+
+```ts
+new MultiMeshLayer({
+  mesh: 'mesh-url',
+  data: 'some-url',
+  loaders: [AnyMeshLoader, AnyTableLoader],
+  getColor: 'color'
+});
+```
+
+## Time Handling
+
+Arrow-backed deck.gl layers that animate, filter, or replay data should support time as either coordinate measure data or explicit temporal columns.
+
+Time inputs can be:
+
+- The M component in XYZM positions or path vertices, when time is naturally tied to each coordinate.
+- A scalar `Date`, `Time`, `Timestamp`, or `Duration` column for one temporal value per row.
+- A `List<Date | Time | Timestamp | Duration>` column for one temporal value per path, track, or string-expanded vertex.
+
+Temporal preparation should normalize Arrow temporal values into relative GPU values while preserving enough metadata to recover the source meaning. Absolute `Date`, `Time`, and `Timestamp` values need an origin and unit; `Duration` values can use origin `0`.
+
+For streamed `RecordBatch` inputs, the temporal origin should be stable across all batches in the layer. A layer can use a caller-supplied origin, loader-supplied metadata, or the first valid temporal value from the stream, but later batches should not silently shift the animation clock for already uploaded data.
+
+Picking callbacks should report source row or source vertex information independently from the animation clock. A picked generated segment, glyph, instance, or trail sample should still map back to the supplied Arrow or GPU table, record batch, or vector row that produced it.
+
+## 64-Bit Precision
+
+Arrow inputs should be able to preserve 64-bit source data even when a layer prepares a lower-level GPU representation for rendering.
+
+Important 64-bit cases include:
+
+- `Float64` positions, path coordinates, mesh coordinates, and transformation matrices.
+- `Int64` / `Uint64` identifiers, DGGS cell ids, timestamps, and application keys.
+- 64-bit temporal columns such as timestamp microseconds or nanoseconds.
+
+Layer adapters should choose an explicit GPU preparation strategy instead of silently pretending every 64-bit value is an ordinary `Float32`. Useful strategies include direct `Float32` repacking when precision loss is acceptable, origin-relative `Float32` for local coordinates, high/low word-pair storage for high-precision positions, and bit-preserving integer storage for identifiers or DGGS cells.
+
+The original Arrow or application source should remain the source of truth for CPU-rich picking and callbacks. GPU-only inputs can expose the prepared GPU representation plus provenance metadata, but should not imply that the layer can reconstruct exact CPU-side 64-bit values unless the caller supplied the source table, source vectors, or a row resolver.
+
+## HDR Color Handling
+
+Color columns need to distinguish normalized display colors from scene-linear or HDR colors.
+
+Common color representations:
+
+- `FixedSizeList<Uint8, 4>` for compact normalized RGBA colors. Shaders normally decode this as `unorm8x4`.
+- `FixedSizeList<Float16, 4>` for compact scene-linear / HDR RGBA colors.
+- `FixedSizeList<Float32, 4>` for full scene-linear / HDR RGBA colors.
+- 3-component RGB variants can be expanded to 4 components with alpha `1.0` when the layer supports them.
+
+Layers should not guess color space from storage type alone when the distinction matters. Normalized `Uint8` colors are compact and usually suitable for display or style colors. Float16/Float32 colors can carry scene-linear values, HDR intensity, or other layer-specific color semantics, and should flow through shader code without clamping unless the layer explicitly documents a tonemapping or normalization step.
+
+Alpha should remain a coverage or opacity value by default. Alpha values outside `[0, 1]` need a documented layer-specific meaning, such as emissive intensity, and should not be interpreted as ordinary transparency without an explicit convention.
+
+## Transitions / Animations
+
+Transitions and animations should work with Arrow and GPU-resident inputs without requiring layers to materialize full JavaScript row objects.
+
+Semantic animation inputs, such as timestamps, durations, or M coordinates, are part of the source data and should follow the time handling rules above. Property transitions, such as color, width, size, position, or transform interpolation, are layer state transitions between old and new column values.
+
+For `arrow.Table` and complete `GPUTable` inputs, layers can compare old and new columns when row counts and row order are stable. If rows are reordered, appended, removed, or streamed, robust transitions need stable row identifiers or caller-provided matching rules. Without those, the default should be deterministic and conservative: preserve existing rows by batch and row index, animate appended rows with an enter transition when supported, and treat replaced unmatched rows as new data.
+
+For streamed `RecordBatch` or `GPURecordBatch` inputs, only received and uploaded batches can participate in animation. Source batch boundaries should remain part of transition state so batches can be faded in, updated, or released independently. Replacing `data` should cancel or supersede active stream transitions for old batches and release owned GPU resources once they are no longer needed.
+
+For direct `GPUVector` inputs, transitions need either aligned previous and next GPU batches or an explicit layer-owned computation path. Layers should not read GPU data back to the CPU just to run a transition. If an application needs CPU-side interpolation, it should retain CPU source columns or supply a transition resolver outside the layer.
+
+Picking during transitions should continue to resolve generated geometry back to the source row that produced it. Interpolated vertices, glyphs, segments, or instances should not lose their Arrow or GPU provenance metadata while animation state is active.

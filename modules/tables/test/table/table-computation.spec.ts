@@ -4,7 +4,7 @@
 
 import test from '@luma.gl/devtools-extensions/tape-test-utils';
 import {makeArrowGPUVector, readArrowGPUVectorAsync} from '@luma.gl/arrow';
-import {TableComputation} from '@luma.gl/tables';
+import {GPUTableComputation} from '@luma.gl/tables';
 import type {ComputeShaderLayout, Device} from '@luma.gl/core';
 import {getWebGPUTestDevice} from '@luma.gl/test-utils';
 import * as arrow from 'apache-arrow';
@@ -22,10 +22,10 @@ const COMPUTE_SHADER_LAYOUT = {
   bindings: [{name: 'values', type: 'storage', group: 0, location: 0}]
 } satisfies ComputeShaderLayout;
 
-test('TableComputation binds inputVectors for storage compute', async t => {
+test('GPUTableComputation binds inputVectors for storage compute', async t => {
   const device = await getWebGPUTestDevice();
   if (!device || isSoftwareBackedDevice(device)) {
-    t.comment('Skipping TableComputation storage test without hardware WebGPU');
+    t.comment('Skipping GPUTableComputation storage test without hardware WebGPU');
     t.end();
     return;
   }
@@ -33,7 +33,7 @@ test('TableComputation binds inputVectors for storage compute', async t => {
   const values = makeArrowGPUVector(device, arrow.makeVector(new Int32Array([2, 4, 6])), {
     name: 'values'
   });
-  const computation = new TableComputation(device, {
+  const computation = new GPUTableComputation(device, {
     source: COMPUTE_SHADER,
     shaderLayout: COMPUTE_SHADER_LAYOUT,
     inputVectors: {values}

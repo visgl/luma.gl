@@ -25,6 +25,12 @@ coordinate helpers used by `@luma.gl/arrow` DGGS preparation. Application code
 usually reaches it through `prepareDggsCellKeyGPUVector()` and
 `prepareDggsCellPathGPUVector()` rather than calling every WGSL helper directly.
 
+Boundary helpers also expose `*_fp64_split` wrappers that return
+`vec4f(longitudeHigh, latitudeHigh, longitudeLow, latitudeLow)`. These wrappers
+are layout compatibility helpers only: the DGGS decode math currently still
+computes Float32 longitude/latitude values, so the low components are zero until
+true higher-precision DGGS decode math is added.
+
 ## Remarks
 
 - `dggs` is WGSL-only.

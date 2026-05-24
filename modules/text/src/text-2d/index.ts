@@ -82,7 +82,9 @@ export {
   ArrowDictionaryStorageTextModel,
   ArrowDictionaryTextModel,
   ArrowTextModel,
-  ArrowStorageTextModel,
+  ArrowStorageTextModel
+} from './arrow-text-render-models';
+export {
   buildArrowTextGlyphTable,
   createArrowAttributeTextState,
   createArrowDictionaryStorageTextState,

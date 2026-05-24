@@ -15,7 +15,7 @@ type TableTransformInputVectors = Record<string, GPUVector> | GPUVector[];
 /** Maps transform-feedback output varying names back to the input GPU vector they should update. */
 export type TableTransformOutputCopyMap = Record<string, string>;
 
-/** Options supplied for one {@link TableTransform.runBatches} dispatch. */
+/** Options supplied for one {@link TableTransform.dispatchBatches} dispatch. */
 export type TableTransformBatchOptions = RenderPassProps & {
   /** Output transform-feedback buffers for the current batch. */
   outputBuffers?:
@@ -118,17 +118,17 @@ export class TableTransform extends BufferTransform {
   }
 
   /** Runs the transform once per preserved GPU record batch. */
-  runBatches(options: TableTransformBatchOptions = {}): void {
+  dispatchBatches(options: TableTransformBatchOptions = {}): void {
     if (this.hasAutomaticOutputWriteback() && options.outputBuffers) {
       throw new Error(
-        'TableTransform.runBatches() cannot combine outputBuffers with copyOutputToInputVectors'
+        'TableTransform.dispatchBatches() cannot combine outputBuffers with copyOutputToInputVectors'
       );
     }
     assertMatchingBufferLayouts(
       this.table.bufferLayout,
       this.explicitBufferLayout,
       this.model.bufferLayout,
-      'TableTransform.runBatches() model buffer layout does not match its GPU table'
+      'TableTransform.dispatchBatches() model buffer layout does not match its GPU table'
     );
 
     try {
@@ -137,7 +137,7 @@ export class TableTransform extends BufferTransform {
           this.table.bufferLayout,
           [],
           batch.bufferLayout,
-          'TableTransform.runBatches() requires every GPU batch to use the table buffer layout'
+          'TableTransform.dispatchBatches() requires every GPU batch to use the table buffer layout'
         );
         this.model.setAttributes({
           ...this.explicitAttributes,

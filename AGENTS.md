@@ -7,6 +7,7 @@
 - Check lint and formatting: `yarn lint`
 - Run tests: `yarn test`
 - Check website build `yarn website:build`
+- Check website package build: `(cd website && yarn build)`
 
 ## LLM-friendly test setup
 - Use the repo root scripts as the stable interface:
@@ -27,6 +28,7 @@
 ## Merge preparation
 - When asked to "get ready for merge", create a copyable Markdown description of the changes versus `master`.
 - Start that Markdown description with `Goals` and `Changes` sections, then include verification, risks, follow-up notes, or other merge-relevant sections when useful.
+- In the verification section, explicitly call out the AGENTS.md checks that were run or could not be run: `nvm use`, `yarn install`, `yarn build`, `yarn test`, `yarn lint fix`, `yarn website:build`, and `(cd website && yarn build)`.
  
 ## Code style
 - TypeScript strict mode

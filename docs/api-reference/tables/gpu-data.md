@@ -25,7 +25,7 @@ const gpuData = new GPUData({
 ```
 
 When the input starts as Apache Arrow, prefer
-[`makeArrowGPUData()`](/docs/api-reference/arrow/arrow-type-mapping) from
+[`makeArrowGPUData()`](/docs/api-reference/arrow/supported-arrow-types) from
 `@luma.gl/arrow`; it uploads Arrow buffers and fills in the required layout and
 readback metadata.
 

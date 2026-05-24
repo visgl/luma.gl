@@ -28,6 +28,10 @@ test('shadertools#dggs exports WGSL helpers', t => {
   t.ok(dggs.source?.includes('dggs_i64_less'), 'exports Int64 helper functions');
   t.ok(dggs.source?.includes('dggs_h3_get_resolution'), 'exports H3 decoder helpers');
   t.ok(dggs.source?.includes('dggs_h3_get_boundary_point'), 'exports H3 boundary helpers');
+  t.ok(
+    dggs.source?.includes('dggs_h3_get_boundary_point_fp64_split'),
+    'exports fp64-split boundary helpers'
+  );
   t.ok(dggs.source?.includes('dggs_s2_get_face'), 'exports S2 decoder helpers');
   t.ok(dggs.source?.includes('dggs_a5_get_boundary_point'), 'exports A5 boundary helpers');
   t.end();
@@ -99,7 +103,11 @@ test('shadertools#dggs WGSL decodes H3, S2, and A5 words', async t => {
     1,
     1,
     getFloat32Bits(-74.28097534179688),
-    getFloat32Bits(44.1791877746582)
+    getFloat32Bits(44.1791877746582),
+    getFloat32Bits(-120.09849548339844),
+    getFloat32Bits(40.015132904052734),
+    0,
+    0
   ]);
 
   const inputBuffer = webgpuDevice.createBuffer({
@@ -173,6 +181,22 @@ test('shadertools#dggs WGSL decodes H3, S2, and A5 words', async t => {
       DGGS_WGSL_FLOAT32_GEOGRAPHIC_TOLERANCE_DEGREES,
       'decodes reflected A5 boundary latitude'
     );
+    assertFloat32WordClose(
+      t,
+      resultWords[43]!,
+      -120.09849548339844,
+      DGGS_WGSL_FLOAT32_GEOGRAPHIC_TOLERANCE_DEGREES,
+      'decodes A5 fp64-split boundary longitude high component'
+    );
+    assertFloat32WordClose(
+      t,
+      resultWords[44]!,
+      40.015132904052734,
+      DGGS_WGSL_FLOAT32_GEOGRAPHIC_TOLERANCE_DEGREES,
+      'decodes A5 fp64-split boundary latitude high component'
+    );
+    t.equal(resultWords[45], 0, 'decodes A5 fp64-split boundary longitude low component');
+    t.equal(resultWords[46], 0, 'decodes A5 fp64-split boundary latitude low component');
   } finally {
     computation.destroy();
     inputBuffer.destroy();
@@ -271,6 +295,15 @@ fn main(@builtin(global_invocation_id) globalInvocationId: vec3u) {
   resultWords[40] = bitcast<u32>(a5ReflectedAnchor.flips.y);
   resultWords[41] = bitcast<u32>(a5ReflectedBoundaryPoint.x);
   resultWords[42] = bitcast<u32>(a5ReflectedBoundaryPoint.y);
+
+  let a5BoundaryPointFp64Split = dggs_a5_get_boundary_point_fp64_split(
+    dggs_u64_from_little_endian_words(inputWords[8]),
+    0u
+  );
+  resultWords[43] = bitcast<u32>(a5BoundaryPointFp64Split.x);
+  resultWords[44] = bitcast<u32>(a5BoundaryPointFp64Split.y);
+  resultWords[45] = bitcast<u32>(a5BoundaryPointFp64Split.z);
+  resultWords[46] = bitcast<u32>(a5BoundaryPointFp64Split.w);
 }
 `;
 

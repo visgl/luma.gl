@@ -4,10 +4,10 @@
 
 import type {Device} from '@luma.gl/core';
 import {
-  ArrowDictionaryTextModel,
   type ArrowDictionaryStorageTextRenderProps,
   type ArrowDictionaryStorageTextState
 } from './arrow-text-model';
+import {ArrowDictionaryTextModel} from './arrow-text-render-models';
 
 export {createArrowDictionaryStorageTextState} from './arrow-text-model';
 

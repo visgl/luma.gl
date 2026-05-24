@@ -191,6 +191,7 @@ export {
   prepareDggsCellPathGPUVector,
   type DggsCellEncoding,
   type DggsCellKeyGPUVectorOptions,
+  type DggsCellPathCoordinateFormat,
   type DggsCellPathGPUVectorOptions,
   type PreparedDggsCellKeyGPUVector,
   type PreparedDggsCellPathGPUVector

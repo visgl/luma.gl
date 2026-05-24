@@ -1,4 +1,8 @@
+import {ArrowDocsTabs} from '@site/src/components/docs/arrow-docs-tabs';
+
 # Overview
+
+<ArrowDocsTabs active="overview" />
 
 <p class="badges">
   <img src="https://img.shields.io/badge/From-v10-blue.svg?style=flat-square" alt="From: v10" />
@@ -10,7 +14,8 @@ Apache Arrow utilities for luma.gl.
 ## API Reference
 
 - [Arrow Utilities](/docs/api-reference/arrow/arrow-utils)
-- [Arrow Type Mapping](/docs/api-reference/arrow/arrow-type-mapping)
+- [Arrow Representations](/docs/api-reference/arrow/arrow-representations)
+- [Supported Arrow Types](/docs/api-reference/arrow/supported-arrow-types)
 - [deck.gl v10 API Directions](/docs/api-reference/arrow/deck-target-api)
 
 The module can derive GPU `BufferLayout` entries from Arrow schemas and create
@@ -81,8 +86,12 @@ GPU-resident temporal inputs use WebGPU compute.
 DGGS helpers keep compact global grid keys on the GPU. `prepareDggsCellKeyGPUVector()`
 parses UTF-8 geohash, quadkey, S2, A5, or H3 cell IDs into Uint64 GPU keys on
 WebGPU, while `prepareDggsCellPathGPUVector()` expands prepared Uint64 keys into
-closed Float32 cell boundary paths for path-style rendering. The `dggs` shader
-module provides the matching WGSL Uint64 word and DGGS boundary helpers.
+closed Float32 cell boundary paths for path-style rendering. Its optional
+`coordinateFormat: 'fp64-split'` mode emits
+`[longitudeHigh, latitudeHigh, longitudeLow, latitudeLow]` Float32 components,
+but DGGS boundary math still runs in Float32 today, so the low components are
+zero until true higher-precision decode math is added. The `dggs` shader module
+provides the matching WGSL Uint64 word and DGGS boundary helpers.
 
 `ArrowTableGeometry`, `makeGPUGeometryFromArrow()`, and `ArrowModel` can also
 consume loaders.gl-compatible Mesh Arrow tables through the local structural

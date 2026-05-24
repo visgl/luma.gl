@@ -26,7 +26,7 @@ const gpuVector = new GPUVector({
 ```
 
 When the input starts as Apache Arrow, prefer
-[`makeArrowGPUVector()`](/docs/api-reference/arrow/arrow-type-mapping) from
+[`makeArrowGPUVector()`](/docs/api-reference/arrow/supported-arrow-types) from
 `@luma.gl/arrow`.
 
 ## Constructor Modes

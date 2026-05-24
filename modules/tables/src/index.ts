@@ -50,9 +50,9 @@ export {
   type TableTransformProps
 } from './table/table-transform';
 export {
-  TableComputation,
-  type TableComputationBatch,
-  type TableComputationProps
+  GPUTableComputation,
+  type GPUTableComputationBatch,
+  type GPUTableComputationProps
 } from './table/table-computation';
 export {
   GPUTableBufferPlanner,

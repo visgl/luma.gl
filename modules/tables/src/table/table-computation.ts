@@ -8,8 +8,8 @@ import {DynamicBuffer} from '@luma.gl/engine';
 import type {GPUData} from './gpu-data';
 import type {GPUVector} from './gpu-vector';
 
-/** Metadata supplied to one table-computation batch dispatch. */
-export type TableComputationBatch = {
+/** Metadata supplied to one GPU table computation batch dispatch. */
+export type GPUTableComputationBatch = {
   /** Zero-based batch index. */
   batchIndex: number;
   /** Shared logical row count for the current batched vector slice. */
@@ -17,7 +17,7 @@ export type TableComputationBatch = {
 };
 
 /** Props for creating a WebGPU computation backed by GPU table vectors. */
-export type TableComputationProps = Omit<ComputationProps, 'bindings'> & {
+export type GPUTableComputationProps = Omit<ComputationProps, 'bindings'> & {
   /** Ordinary non-table bindings forwarded to {@link Computation}. */
   bindings?: Record<string, Binding>;
   /** GPU vectors converted to storage-buffer bindings by name. */
@@ -30,17 +30,17 @@ export type TableComputationProps = Omit<ComputationProps, 'bindings'> & {
  * Direct vectors bind once during construction. Aggregate multi-buffer vectors
  * can be dispatched batch-by-batch with {@link dispatchBatches}.
  */
-export class TableComputation extends Computation {
+export class GPUTableComputation extends Computation {
   /** GPU vectors supplied when the computation was created. */
   readonly inputVectors: Record<string, GPUVector>;
   private readonly baseBindings: Record<string, Binding>;
-  private readonly batchState: TableComputationBatchState;
+  private readonly batchState: GPUTableComputationBatchState;
 
-  constructor(device: Device, props: TableComputationProps) {
+  constructor(device: Device, props: GPUTableComputationProps) {
     const {inputVectors = {}, bindings = {}, ...computationProps} = props;
     assertNoDuplicateBindingNames(inputVectors, bindings);
 
-    const batchState = getTableComputationBatchState(inputVectors);
+    const batchState = getGPUTableComputationBatchState(inputVectors);
     const baseBindings = {
       ...getDirectVectorBindings(inputVectors),
       ...bindings
@@ -59,7 +59,7 @@ export class TableComputation extends Computation {
   /** Dispatches once per vector batch, rebinding storage ranges before each dispatch. */
   dispatchBatches(
     computePass: ComputePass,
-    getWorkgroupCount: number | ((batch: TableComputationBatch) => number),
+    getWorkgroupCount: number | ((batch: GPUTableComputationBatch) => number),
     y?: number,
     z?: number
   ): void {
@@ -67,7 +67,7 @@ export class TableComputation extends Computation {
       const batch = {
         batchIndex,
         numRows: this.batchState.batchRowCounts[batchIndex]
-      } satisfies TableComputationBatch;
+      } satisfies GPUTableComputationBatch;
       this.setBindings({
         ...this.baseBindings,
         ...getBatchVectorBindings(this.inputVectors, batchIndex)
@@ -82,14 +82,14 @@ export class TableComputation extends Computation {
   }
 }
 
-type TableComputationBatchState = {
+type GPUTableComputationBatchState = {
   batchCount: number;
   batchRowCounts: number[];
 };
 
-function getTableComputationBatchState(
+function getGPUTableComputationBatchState(
   inputVectors: Record<string, GPUVector>
-): TableComputationBatchState {
+): GPUTableComputationBatchState {
   const batchedVectorEntries = Object.entries(inputVectors).filter(([, vector]) =>
     requiresBatchBinding(vector)
   );
@@ -108,13 +108,13 @@ function getTableComputationBatchState(
   for (const [name, vector] of batchedVectorEntries.slice(1)) {
     if (vector.data.length !== batchCount) {
       throw new Error(
-        `TableComputation vector "${name}" batch count does not match "${referenceName}"`
+        `GPUTableComputation vector "${name}" batch count does not match "${referenceName}"`
       );
     }
     vector.data.forEach((data, batchIndex) => {
       if (data.length !== batchRowCounts[batchIndex]) {
         throw new Error(
-          `TableComputation vector "${name}" batch ${batchIndex} rows do not match "${referenceName}"`
+          `GPUTableComputation vector "${name}" batch ${batchIndex} rows do not match "${referenceName}"`
         );
       }
     });
@@ -158,7 +158,7 @@ function getBatchVectorBindings(
     }
     const data = vector.data[batchIndex];
     if (!data) {
-      throw new Error(`TableComputation vector "${name}" is missing batch ${batchIndex}`);
+      throw new Error(`GPUTableComputation vector "${name}" is missing batch ${batchIndex}`);
     }
     bindings[name] = getGPUDataBinding(data);
   }
@@ -179,7 +179,7 @@ function assertNoDuplicateBindingNames(
 ): void {
   for (const name of Object.keys(inputVectors)) {
     if (name in bindings) {
-      throw new Error(`TableComputation binding "${name}" duplicates an explicit binding`);
+      throw new Error(`GPUTableComputation binding "${name}" duplicates an explicit binding`);
     }
   }
 }

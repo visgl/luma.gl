@@ -6,6 +6,7 @@ import type {DggsCellEncoding} from '@luma.gl/arrow';
 import type {Device} from '@luma.gl/core';
 import type {AnimationProps} from '@luma.gl/engine';
 import {AnimationLoopTemplate} from '@luma.gl/engine';
+import {formatDggsPolygonMetrics} from './arrow-dggs-polygon-metrics';
 import {ArrowDggsPolygonLayer, type DggsSourceKind} from './arrow-dggs-polygon-layer';
 import {DggsGpuPolygonsControlPanel, makeDggsGpuPolygonsControlPanelHtml} from './control-panel';
 
@@ -63,14 +64,7 @@ export default class DggsGpuPolygonsAnimationLoopTemplate extends AnimationLoopT
     if (!this.layer) {
       return;
     }
-    const metrics = this.layer.getMetrics();
-    this.controlPanel.setMetricValues({
-      activeColumn: metrics.activeColumn,
-      rowCount: formatInteger(metrics.rowCount),
-      keyBytes: formatByteLength(metrics.keyBytes),
-      pathBytes: formatByteLength(metrics.pathBytes),
-      transientBytes: formatByteLength(metrics.transientBytes)
-    });
+    this.controlPanel.setMetricValues(formatDggsPolygonMetrics(this.layer.getMetrics()));
   }
 
   replaceInput(encoding: DggsCellEncoding, sourceKind: DggsSourceKind): void {
@@ -91,22 +85,4 @@ export default class DggsGpuPolygonsAnimationLoopTemplate extends AnimationLoopT
   readonly handleSourceSelection = (sourceKind: DggsSourceKind): void => {
     this.replaceInput(this.activeEncoding, sourceKind);
   };
-}
-
-function formatInteger(value: number): string {
-  return new Intl.NumberFormat('en-US').format(value);
-}
-
-function formatByteLength(byteLength: number): string {
-  if (byteLength < 1000) {
-    return `${formatInteger(byteLength)} B`;
-  }
-  if (byteLength < 1000 ** 2) {
-    return `${formatMetricDigits(byteLength / 1000)} kB`;
-  }
-  return `${formatMetricDigits(byteLength / 1000 ** 2)} MB`;
-}
-
-function formatMetricDigits(value: number): string {
-  return new Intl.NumberFormat('en-US', {maximumSignificantDigits: 2}).format(value);
 }

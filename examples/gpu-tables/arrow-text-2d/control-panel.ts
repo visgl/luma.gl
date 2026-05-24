@@ -26,7 +26,7 @@ const DECK_ATTRIBUTE_SIZE_ID = 'arrow-text-2d-deck-attribute-size';
 const DECK_GPU_EXPANSION_ID = 'arrow-text-2d-deck-gpu-expansion';
 const PICKED_LABEL_ID = 'arrow-text-2d-picked-label';
 const STREAMING_BATCH_STATUS_ROW_ID = 'arrow-text-2d-streaming-batch-status-row';
-const STREAMING_BATCH_SPINNER_ID = 'arrow-text-2d-streaming-batch-spinner';
+const STREAMING_BATCH_FILL_ID = 'arrow-text-2d-streaming-batch-fill';
 const STREAMING_BATCH_STATUS_LABEL_ID = 'arrow-text-2d-streaming-batch-status-label';
 
 export type ArrowText2DControlPanelRowCountKind =
@@ -112,7 +112,7 @@ export class ArrowText2DControlPanel {
   private deckGpuExpansionLabel: HTMLElement | null = null;
   private pickedLabel: HTMLElement | null = null;
   private streamingBatchStatusRow: HTMLElement | null = null;
-  private streamingBatchSpinner: HTMLElement | null = null;
+  private streamingBatchFill: HTMLElement | null = null;
   private streamingBatchStatusLabel: HTMLElement | null = null;
 
   constructor({device, initialState, handlers}: ArrowText2DControlPanelOptions) {
@@ -147,7 +147,7 @@ export class ArrowText2DControlPanel {
     this.deckGpuExpansionLabel = document.getElementById(DECK_GPU_EXPANSION_ID);
     this.pickedLabel = document.getElementById(PICKED_LABEL_ID);
     this.streamingBatchStatusRow = document.getElementById(STREAMING_BATCH_STATUS_ROW_ID);
-    this.streamingBatchSpinner = document.getElementById(STREAMING_BATCH_SPINNER_ID);
+    this.streamingBatchFill = document.getElementById(STREAMING_BATCH_FILL_ID);
     this.streamingBatchStatusLabel = document.getElementById(STREAMING_BATCH_STATUS_LABEL_ID);
 
     this.syncControls(this.state);
@@ -226,7 +226,7 @@ export class ArrowText2DControlPanel {
   setStreamingBatchStatus(loadedBatchCount: number | null, streamingBatchCount: number): void {
     if (
       !this.streamingBatchStatusRow ||
-      !this.streamingBatchSpinner ||
+      !this.streamingBatchFill ||
       !this.streamingBatchStatusLabel
     ) {
       return;
@@ -235,7 +235,8 @@ export class ArrowText2DControlPanel {
     if (loadedBatchCount === null) {
       this.streamingBatchStatusRow.style.display = 'none';
       this.streamingBatchStatusLabel.textContent = `Loaded 0 of ${streamingBatchCount} batches`;
-      this.streamingBatchSpinner.style.visibility = 'visible';
+      this.streamingBatchFill.style.width = '0%';
+      this.streamingBatchStatusRow.setAttribute('aria-valuenow', '0');
       return;
     }
 
@@ -243,10 +244,15 @@ export class ArrowText2DControlPanel {
       streamingBatchCount,
       Math.max(0, Math.trunc(loadedBatchCount))
     );
-    this.streamingBatchStatusRow.style.display = 'flex';
+    const progressPercent = getStreamingBatchProgressPercent(
+      safeLoadedBatchCount,
+      streamingBatchCount
+    );
+    this.streamingBatchStatusRow.style.display = 'block';
+    this.streamingBatchStatusRow.setAttribute('aria-valuenow', String(safeLoadedBatchCount));
+    this.streamingBatchStatusRow.setAttribute('aria-valuemax', String(streamingBatchCount));
+    this.streamingBatchFill.style.width = `${progressPercent}%`;
     this.streamingBatchStatusLabel.textContent = `Loaded ${safeLoadedBatchCount} of ${streamingBatchCount} batches`;
-    this.streamingBatchSpinner.style.visibility =
-      safeLoadedBatchCount < streamingBatchCount ? 'visible' : 'hidden';
   }
 
   private readonly handleRowCountSelection = (): void => {
@@ -336,13 +342,6 @@ export function makeArrowText2DControlPanelHtml({
   <p>
   Renders <code>arrow.Vector&lt;Utf8&gt;</code> and <code>arrow.Vector&lt;Dictionary&lt;Utf8&gt;&gt;</code>, 30 characters / row.
   </p>
-  <style>
-    @keyframes arrow-text-2d-streaming-spin {
-      to {
-        transform: rotate(360deg);
-      }
-    }
-  </style>
   <div style="min-height: 920px; max-height: calc(100vh - 72px); overflow: visible; position: relative; z-index: 2; margin-top: 16px; padding: 14px 16px; border: 1px solid rgba(208, 215, 222, 0.9); border-radius: 16px; background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(246, 248, 250, 0.96) 100%); box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);">
     <section style="overflow: visible; margin-bottom: 12px; padding: 12px; border: 1px solid rgba(203, 213, 225, 0.95); border-radius: 10px; background: rgba(255, 255, 255, 0.72);">
       <h3 style="margin: 0 0 10px; color: #0f172a; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em;">Table</h3>
@@ -399,9 +398,9 @@ export function makeArrowText2DControlPanelHtml({
           <span>Angle</span>
         </label>
       </div>
-      <div id="${STREAMING_BATCH_STATUS_ROW_ID}" style="display: none; align-items: center; gap: 10px; margin-top: 12px; color: #334155; font-size: 13px; line-height: 1.4;">
-        <span id="${STREAMING_BATCH_SPINNER_ID}" aria-hidden="true" style="width: 14px; height: 14px; flex: 0 0 14px; border: 2px solid rgba(148, 163, 184, 0.5); border-top-color: #2563eb; border-radius: 50%; animation: arrow-text-2d-streaming-spin 0.9s linear infinite;"></span>
-        <span id="${STREAMING_BATCH_STATUS_LABEL_ID}" aria-live="polite">Loaded 0 of ${streamingBatchCount} batches</span>
+      <div id="${STREAMING_BATCH_STATUS_ROW_ID}" role="progressbar" aria-valuemin="0" aria-valuemax="${streamingBatchCount}" aria-valuenow="0" style="display: none; position: relative; width: 100%; height: 28px; margin-top: 12px; overflow: hidden; border: 1px solid rgba(37, 99, 235, 0.32); border-radius: 8px; background: #dbeafe; color: #0f172a; font-size: 13px; line-height: 1.4;">
+        <span id="${STREAMING_BATCH_FILL_ID}" aria-hidden="true" style="position: absolute; inset: 0 auto 0 0; width: 0%; background: linear-gradient(90deg, #93c5fd 0%, #2563eb 100%); transition: width 220ms ease;"></span>
+        <span id="${STREAMING_BATCH_STATUS_LABEL_ID}" aria-live="polite" style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 0 8px; color: #0f172a; font-weight: 700; font-variant-numeric: tabular-nums;">Loaded 0 of ${streamingBatchCount} batches</span>
       </div>
     </section>
     <section style="overflow: visible; padding: 12px; border: 1px solid rgba(203, 213, 225, 0.95); border-radius: 10px; background: rgba(255, 255, 255, 0.72);">
@@ -519,6 +518,16 @@ function getAutoTextModelLabel(
     return 'attribute';
   }
   return state.sourceKind === 'dictionary' ? 'dictionary' : 'storage';
+}
+
+function getStreamingBatchProgressPercent(
+  loadedBatchCount: number,
+  streamingBatchCount: number
+): number {
+  if (streamingBatchCount <= 0) {
+    return 0;
+  }
+  return (loadedBatchCount / streamingBatchCount) * 100;
 }
 
 function setTextContent(element: HTMLElement | null, value: string): void {

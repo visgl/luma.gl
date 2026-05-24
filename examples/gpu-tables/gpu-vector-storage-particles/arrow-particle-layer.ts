@@ -5,17 +5,32 @@
 import {
   getArrowFixedSizeListValues,
   isArrowFixedSizeListVector,
-  makeArrowFixedSizeListVector,
-  makeArrowGPUVector
+  makeArrowGPURecordBatch
 } from '@luma.gl/arrow';
-import type {ComputeShaderLayout, Device, RenderPass, ShaderLayout} from '@luma.gl/core';
-import {Model} from '@luma.gl/engine';
-import {GPUVector, TableComputation, TableTransform} from '@luma.gl/tables';
+import {Buffer, type Device, type RenderPass} from '@luma.gl/core';
+import {DynamicBuffer, Model} from '@luma.gl/engine';
+import {
+  GPUTableComputation,
+  GPURecordBatch,
+  GPUTable,
+  type GPUVector,
+  TableTransform
+} from '@luma.gl/tables';
 import * as arrow from 'apache-arrow';
+import {makeArrowParticleTable} from './arrow-particle-data';
+import {
+  COMPUTE_SHADER_LAYOUT,
+  RENDER_SHADER_LAYOUT,
+  WEBGL_RENDER_FRAGMENT_SHADER,
+  WEBGL_RENDER_SHADER_LAYOUT,
+  WEBGL_RENDER_VERTEX_SHADER,
+  WEBGL_TRANSFORM_SHADER,
+  WEBGL_TRANSFORM_SHADER_LAYOUT,
+  WEBGPU_RENDER_SHADER,
+  WORKGROUP_SIZE,
+  makeComputeShader
+} from './arrow-particle-shaders';
 
-const DEFAULT_PARTICLE_COUNT = 4096;
-const WORKGROUP_SIZE = 64;
-const PARTICLE_SIZE = 0.014;
 const DEFAULT_RESET_INTERVAL_MILLISECONDS = 8_000;
 
 export type ArrowParticleLayerColumns = {
@@ -29,11 +44,37 @@ export type ArrowParticleLayerProps = {
   resetIntervalMilliseconds?: number;
 };
 
+export type ArrowParticleLayerStreamingSession = {
+  version: number;
+};
+
+export type ArrowParticleLayerRecordBatchStreamUpdate = {
+  loadedBatchCount: number;
+  particleCount: number;
+};
+
+export type ArrowParticleLayerRecordBatchStreamProps = {
+  recordBatchIterator: AsyncIterator<arrow.RecordBatch>;
+  streamingSession?: ArrowParticleLayerStreamingSession;
+  onBatch?: (update: ArrowParticleLayerRecordBatchStreamUpdate) => void;
+};
+
 type ArrowParticleVectorType = arrow.FixedSizeList<arrow.Float32>;
+
 type ArrowParticleLayerResolvedProps = {
   data: arrow.Table;
   columns: Required<ArrowParticleLayerColumns>;
   resetIntervalMilliseconds: number;
+};
+
+type InitialParticleBatchValues = {
+  positions: Float32Array;
+  velocities: Float32Array;
+};
+
+type ParticleTransformOutputBuffers = {
+  nextParticlePositions: Buffer;
+  nextParticleVelocities: Buffer;
 };
 
 const DEFAULT_COLUMNS: Required<ArrowParticleLayerColumns> = {
@@ -41,148 +82,22 @@ const DEFAULT_COLUMNS: Required<ArrowParticleLayerColumns> = {
   velocities: 'velocities'
 };
 
-const WEBGPU_RENDER_SHADER = /* wgsl */ `\
-@group(0) @binding(0) var<storage, read> particlePositions : array<vec2<f32>>;
-
-struct VertexInputs {
-  @builtin(vertex_index) vertexIndex : u32,
-  @builtin(instance_index) instanceIndex : u32,
-};
-
-struct FragmentInputs {
-  @builtin(position) Position : vec4<f32>,
-  @location(0) color : vec3<f32>,
-};
-
-fn getQuadCorner(vertexIndex : u32) -> vec2<f32> {
-  if (vertexIndex == 0u) { return vec2<f32>(-1.0, -1.0); }
-  if (vertexIndex == 1u) { return vec2<f32>(1.0, -1.0); }
-  if (vertexIndex == 2u) { return vec2<f32>(1.0, 1.0); }
-  if (vertexIndex == 3u) { return vec2<f32>(-1.0, -1.0); }
-  if (vertexIndex == 4u) { return vec2<f32>(1.0, 1.0); }
-  return vec2<f32>(-1.0, 1.0);
-}
-
-@vertex
-fn vertexMain(inputs : VertexInputs) -> FragmentInputs {
-  var outputs : FragmentInputs;
-  let particlePosition = particlePositions[inputs.instanceIndex];
-  let corner = getQuadCorner(inputs.vertexIndex % 6u) * ${PARTICLE_SIZE};
-  let colorPhase = f32(inputs.instanceIndex % 11u) / 10.0;
-
-  outputs.Position = vec4<f32>(particlePosition + corner, 0.0, 1.0);
-  outputs.color = vec3<f32>(0.25 + colorPhase * 0.7, 0.92 - colorPhase * 0.48, 1.0);
-  return outputs;
-}
-
-@fragment
-fn fragmentMain(inputs : FragmentInputs) -> @location(0) vec4<f32> {
-  return vec4<f32>(inputs.color, 1.0);
-}
-`;
-
-const WEBGL_TRANSFORM_SHADER = /* glsl */ `\
-#version 300 es
-precision highp float;
-
-in vec2 particlePositions;
-in vec2 particleVelocities;
-out vec2 nextParticlePositions;
-out vec2 nextParticleVelocities;
-
-void main() {
-  vec2 position = particlePositions + particleVelocities;
-  vec2 velocity = particleVelocities;
-
-  if (position.x < -0.98 || position.x > 0.98) {
-    velocity.x = -velocity.x;
-    position.x = clamp(position.x, -0.98, 0.98);
-  }
-
-  if (position.y < -0.98 || position.y > 0.98) {
-    velocity.y = -velocity.y;
-    position.y = clamp(position.y, -0.98, 0.98);
-  }
-
-  nextParticlePositions = position;
-  nextParticleVelocities = velocity;
-}
-`;
-
-const WEBGL_RENDER_VERTEX_SHADER = /* glsl */ `\
-#version 300 es
-precision highp float;
-precision highp int;
-
-in vec2 particlePositions;
-out vec3 vColor;
-
-vec2 getQuadCorner(int vertexIndex) {
-  if (vertexIndex == 0) { return vec2(-1.0, -1.0); }
-  if (vertexIndex == 1) { return vec2(1.0, -1.0); }
-  if (vertexIndex == 2) { return vec2(1.0, 1.0); }
-  if (vertexIndex == 3) { return vec2(-1.0, -1.0); }
-  if (vertexIndex == 4) { return vec2(1.0, 1.0); }
-  return vec2(-1.0, 1.0);
-}
-
-void main() {
-  vec2 corner = getQuadCorner(gl_VertexID % 6) * ${PARTICLE_SIZE};
-  float colorPhase = float(gl_InstanceID % 11) / 10.0;
-  gl_Position = vec4(particlePositions + corner, 0.0, 1.0);
-  vColor = vec3(0.25 + colorPhase * 0.7, 0.92 - colorPhase * 0.48, 1.0);
-}
-`;
-
-const WEBGL_RENDER_FRAGMENT_SHADER = /* glsl */ `\
-#version 300 es
-precision highp float;
-
-in vec3 vColor;
-out vec4 fragColor;
-
-void main() {
-  fragColor = vec4(vColor, 1.0);
-}
-`;
-
-const COMPUTE_SHADER_LAYOUT = {
-  bindings: [
-    {name: 'particlePositions', type: 'storage', group: 0, location: 0},
-    {name: 'particleVelocities', type: 'storage', group: 0, location: 1}
-  ]
-} satisfies ComputeShaderLayout;
-
-const RENDER_SHADER_LAYOUT = {
-  attributes: [],
-  bindings: [{name: 'particlePositions', type: 'read-only-storage', group: 0, location: 0}]
-} satisfies ShaderLayout;
-
-const WEBGL_TRANSFORM_SHADER_LAYOUT = {
-  attributes: [
-    {name: 'particlePositions', location: 0, type: 'vec2<f32>'},
-    {name: 'particleVelocities', location: 1, type: 'vec2<f32>'}
-  ],
-  bindings: []
-} satisfies ShaderLayout;
-
-const WEBGL_RENDER_SHADER_LAYOUT = {
-  attributes: [{name: 'particlePositions', location: 0, type: 'vec2<f32>', stepMode: 'instance'}],
-  bindings: []
-} satisfies ShaderLayout;
-
 export class ArrowParticleLayer {
   readonly device: Device;
   props: ArrowParticleLayerResolvedProps;
-  positionVector!: GPUVector<ArrowParticleVectorType>;
-  velocityVector!: GPUVector<ArrowParticleVectorType>;
-  initialPositions!: Float32Array;
-  initialVelocities!: Float32Array;
-  computation?: TableComputation;
-  transform?: TableTransform;
-  model!: Model;
+  particleTable: GPUTable | null = null;
+  computation: GPUTableComputation | null = null;
+  transform: TableTransform | null = null;
+  model: Model | null = null;
   particleCount = 0;
-  private lastResetTime = 0;
+  private readonly initialBatchValues = new Map<GPURecordBatch, InitialParticleBatchValues>();
+  private readonly transformOutputBuffers = new Map<
+    GPURecordBatch,
+    ParticleTransformOutputBuffers
+  >();
+  private lastResetTime: number | null = null;
+  private streamingSessionVersion = 0;
+  private isDestroyed = false;
 
   constructor(device: Device, props: ArrowParticleLayerProps = {}) {
     if (device.type !== 'webgpu' && device.type !== 'webgl') {
@@ -196,7 +111,7 @@ export class ArrowParticleLayer {
       resetIntervalMilliseconds:
         props.resetIntervalMilliseconds ?? DEFAULT_RESET_INTERVAL_MILLISECONDS
     };
-    this.initialize();
+    this.replaceArrowTable(this.props.data);
   }
 
   setProps(props: ArrowParticleLayerProps): void {
@@ -209,16 +124,75 @@ export class ArrowParticleLayer {
     };
 
     if (shouldRecreate) {
-      this.destroyResources();
-      this.initialize();
+      this.cancelRecordBatchStream();
+      this.replaceArrowTable(this.props.data);
     }
   }
 
-  update(time: number): void {
-    if (time - this.lastResetTime >= this.props.resetIntervalMilliseconds) {
-      this.positionVector.buffer.write(this.initialPositions);
-      this.velocityVector.buffer.write(this.initialVelocities);
+  beginRecordBatchStream(): ArrowParticleLayerStreamingSession {
+    this.streamingSessionVersion++;
+    this.destroyDeviceResources();
+    this.destroyParticleTable();
+    this.particleCount = 0;
+    this.lastResetTime = null;
+    return {version: this.streamingSessionVersion};
+  }
+
+  cancelRecordBatchStream(): void {
+    this.streamingSessionVersion++;
+  }
+
+  async streamRecordBatches({
+    recordBatchIterator,
+    streamingSession = this.beginRecordBatchStream(),
+    onBatch
+  }: ArrowParticleLayerRecordBatchStreamProps): Promise<void> {
+    let loadedBatchCount = 0;
+
+    if (!this.isRecordBatchStreamActive(streamingSession)) {
+      return;
+    }
+
+    for (
+      let recordBatchResult = await recordBatchIterator.next();
+      !recordBatchResult.done;
+      recordBatchResult = await recordBatchIterator.next()
+    ) {
+      if (!this.isRecordBatchStreamActive(streamingSession)) {
+        return;
+      }
+
+      const {gpuRecordBatch, initialValues} = this.makeParticleGPURecordBatch(
+        recordBatchResult.value
+      );
+      if (!this.isRecordBatchStreamActive(streamingSession)) {
+        gpuRecordBatch.destroy();
+        return;
+      }
+
+      this.addParticleGPURecordBatch(gpuRecordBatch, initialValues);
+      loadedBatchCount++;
+      onBatch?.({
+        loadedBatchCount,
+        particleCount: this.particleCount
+      });
+    }
+  }
+
+  update(time: number): boolean {
+    if (!this.particleTable) {
+      return false;
+    }
+
+    if (this.lastResetTime === null) {
       this.lastResetTime = time;
+    }
+
+    let didReset = false;
+    if (time - this.lastResetTime >= this.props.resetIntervalMilliseconds) {
+      this.resetParticleBatches();
+      this.lastResetTime = time;
+      didReset = true;
     }
 
     if (this.computation) {
@@ -227,18 +201,43 @@ export class ArrowParticleLayer {
         Math.ceil(batch.numRows / WORKGROUP_SIZE)
       );
       computePass.end();
-      return;
+      return didReset;
     }
 
-    this.transform?.run();
+    if (this.transform) {
+      this.transform.dispatchBatches({
+        outputBuffers: batch => this.getTransformOutputBuffers(batch)
+      });
+      this.copyTransformOutputsToInputBatches();
+    }
+    return didReset;
   }
 
   draw(renderPass: RenderPass): void {
-    this.model.draw(renderPass);
+    if (!this.model || !this.particleTable) {
+      return;
+    }
+
+    for (const batch of this.particleTable.batches) {
+      if (batch.numRows === 0) {
+        continue;
+      }
+      const positions = getRequiredBatchVector(batch, 'particlePositions');
+      if (this.device.type === 'webgpu') {
+        this.model.setBindings({particlePositions: positions.buffer});
+      } else {
+        this.model.setAttributes({particlePositions: positions.buffer});
+      }
+      this.model.setInstanceCount(batch.numRows);
+      this.model.draw(renderPass);
+    }
   }
 
   destroy(): void {
-    this.destroyResources();
+    this.isDestroyed = true;
+    this.cancelRecordBatchStream();
+    this.destroyDeviceResources();
+    this.destroyParticleTable();
   }
 
   setNeedsRedraw(_reason: string): void {}
@@ -247,33 +246,98 @@ export class ArrowParticleLayer {
     return false;
   }
 
-  private initialize(): void {
-    const sourceVectors = getArrowParticleSourceVectors(this.props.data, this.props.columns);
-    this.particleCount = sourceVectors.positions.length;
-    if (sourceVectors.velocities.length !== this.particleCount) {
+  private replaceArrowTable(data: arrow.Table): void {
+    this.destroyDeviceResources();
+    this.destroyParticleTable();
+
+    const gpuRecordBatchInputs = data.batches.map(recordBatch =>
+      this.makeParticleGPURecordBatch(recordBatch)
+    );
+    const firstRecordBatch = gpuRecordBatchInputs[0]?.gpuRecordBatch;
+    if (!firstRecordBatch) {
+      return;
+    }
+
+    this.particleTable = new GPUTable({
+      batches: gpuRecordBatchInputs.map(({gpuRecordBatch}) => gpuRecordBatch),
+      schema: firstRecordBatch.schema,
+      bufferLayout: firstRecordBatch.bufferLayout
+    });
+    for (const {gpuRecordBatch, initialValues} of gpuRecordBatchInputs) {
+      this.initialBatchValues.set(gpuRecordBatch, initialValues);
+    }
+    this.particleCount = this.particleTable.numRows;
+    this.lastResetTime = null;
+    this.createDeviceResources();
+  }
+
+  private addParticleGPURecordBatch(
+    gpuRecordBatch: GPURecordBatch,
+    initialValues: InitialParticleBatchValues
+  ): void {
+    if (this.particleTable) {
+      this.particleTable.addBatch(gpuRecordBatch);
+    } else {
+      this.particleTable = new GPUTable({
+        batches: [gpuRecordBatch],
+        schema: gpuRecordBatch.schema,
+        bufferLayout: gpuRecordBatch.bufferLayout
+      });
+    }
+    this.initialBatchValues.set(gpuRecordBatch, initialValues);
+    this.particleCount = this.particleTable.numRows;
+    this.recreateDeviceResources();
+  }
+
+  private makeParticleGPURecordBatch(recordBatch: arrow.RecordBatch): {
+    gpuRecordBatch: GPURecordBatch;
+    initialValues: InitialParticleBatchValues;
+  } {
+    const sourceTable = new arrow.Table([recordBatch]);
+    const sourceVectors = getArrowParticleSourceVectors(sourceTable, this.props.columns);
+    if (sourceVectors.velocities.length !== sourceVectors.positions.length) {
       throw new Error(
-        `ArrowParticleLayer positions and velocities rows must match (${this.particleCount} !== ${sourceVectors.velocities.length})`
+        `ArrowParticleLayer positions and velocities rows must match (${sourceVectors.positions.length} !== ${sourceVectors.velocities.length})`
       );
     }
 
-    this.initialPositions = getInitialParticleValues(sourceVectors.positions);
-    this.initialVelocities = getInitialParticleValues(sourceVectors.velocities);
-    this.positionVector = makeArrowGPUVector(this.device, sourceVectors.positions, {
-      name: 'particlePositions'
-    });
-    this.velocityVector = makeArrowGPUVector(this.device, sourceVectors.velocities, {
-      name: 'particleVelocities'
-    });
+    return {
+      gpuRecordBatch: makeArrowGPURecordBatch(this.device, recordBatch, {
+        shaderLayout: WEBGL_TRANSFORM_SHADER_LAYOUT,
+        arrowPaths: {
+          particlePositions: this.props.columns.positions,
+          particleVelocities: this.props.columns.velocities
+        }
+      }),
+      initialValues: {
+        positions: getInitialParticleValues(sourceVectors.positions),
+        velocities: getInitialParticleValues(sourceVectors.velocities)
+      }
+    };
+  }
+
+  private recreateDeviceResources(): void {
+    this.destroyDeviceResources();
+    this.createDeviceResources();
+  }
+
+  private createDeviceResources(): void {
+    if (!this.particleTable) {
+      return;
+    }
+
+    const firstBatch = this.particleTable.batches[0];
+    if (!firstBatch) {
+      return;
+    }
+    const firstPositions = getRequiredBatchVector(firstBatch, 'particlePositions');
 
     if (this.device.type === 'webgpu') {
-      this.computation = new TableComputation(this.device, {
+      this.computation = new GPUTableComputation(this.device, {
         id: 'gpu-vector-storage-particles-compute',
-        source: makeComputeShader(this.particleCount),
+        source: makeComputeShader(),
         shaderLayout: COMPUTE_SHADER_LAYOUT,
-        inputVectors: {
-          particlePositions: this.positionVector,
-          particleVelocities: this.velocityVector
-        }
+        inputVectors: this.particleTable.gpuVectors
       });
 
       this.model = new Model(this.device, {
@@ -281,11 +345,11 @@ export class ArrowParticleLayer {
         source: WEBGPU_RENDER_SHADER,
         shaderLayout: RENDER_SHADER_LAYOUT,
         bindings: {
-          particlePositions: this.positionVector.buffer
+          particlePositions: firstPositions.buffer
         },
         topology: 'triangle-list',
         vertexCount: 6,
-        instanceCount: this.particleCount
+        instanceCount: firstBatch.numRows
       });
       return;
     }
@@ -294,14 +358,8 @@ export class ArrowParticleLayer {
       id: 'gpu-vector-storage-particles-transform',
       vs: WEBGL_TRANSFORM_SHADER,
       shaderLayout: WEBGL_TRANSFORM_SHADER_LAYOUT,
-      inputVectors: {
-        particlePositions: this.positionVector,
-        particleVelocities: this.velocityVector
-      },
-      copyOutputToInputVectors: {
-        nextParticlePositions: 'particlePositions',
-        nextParticleVelocities: 'particleVelocities'
-      }
+      table: this.particleTable,
+      outputs: ['nextParticlePositions', 'nextParticleVelocities']
     });
 
     this.model = new Model(this.device, {
@@ -310,78 +368,106 @@ export class ArrowParticleLayer {
       fs: WEBGL_RENDER_FRAGMENT_SHADER,
       shaderLayout: WEBGL_RENDER_SHADER_LAYOUT,
       attributes: {
-        particlePositions: this.positionVector.buffer
+        particlePositions: firstPositions.buffer
       },
       bufferLayout: [{name: 'particlePositions', format: 'float32x2', stepMode: 'instance'}],
       topology: 'triangle-list',
       isInstanced: true,
       vertexCount: 6,
-      instanceCount: this.particleCount
+      instanceCount: firstBatch.numRows
     });
   }
 
-  private destroyResources(): void {
+  private resetParticleBatches(): void {
+    for (const batch of this.particleTable?.batches ?? []) {
+      const initialValues = this.initialBatchValues.get(batch);
+      if (!initialValues) {
+        continue;
+      }
+      getRequiredBatchVector(batch, 'particlePositions').buffer.write(initialValues.positions);
+      getRequiredBatchVector(batch, 'particleVelocities').buffer.write(initialValues.velocities);
+    }
+  }
+
+  private getTransformOutputBuffers(batch: GPURecordBatch): ParticleTransformOutputBuffers {
+    let outputBuffers = this.transformOutputBuffers.get(batch);
+    if (outputBuffers) {
+      return outputBuffers;
+    }
+
+    const positions = getRequiredBatchVector(batch, 'particlePositions');
+    const velocities = getRequiredBatchVector(batch, 'particleVelocities');
+    outputBuffers = {
+      nextParticlePositions: this.createTransformOutputBuffer(batch, positions, 'positions'),
+      nextParticleVelocities: this.createTransformOutputBuffer(batch, velocities, 'velocities')
+    };
+    this.transformOutputBuffers.set(batch, outputBuffers);
+    return outputBuffers;
+  }
+
+  private createTransformOutputBuffer(
+    batch: GPURecordBatch,
+    vector: GPUVector,
+    label: string
+  ): Buffer {
+    return this.device.createBuffer({
+      id: `gpu-vector-storage-particles-${label}-output-${this.particleTable?.batches.indexOf(batch) ?? 0}`,
+      usage: Buffer.VERTEX | Buffer.STORAGE | Buffer.COPY_SRC | Buffer.COPY_DST,
+      byteLength: Math.max(1, vector.length * vector.byteStride)
+    });
+  }
+
+  private copyTransformOutputsToInputBatches(): void {
+    const commandEncoder = this.device.createCommandEncoder();
+    let copyCount = 0;
+
+    for (const batch of this.particleTable?.batches ?? []) {
+      const outputBuffers = this.transformOutputBuffers.get(batch);
+      if (!outputBuffers) {
+        continue;
+      }
+      copyCount += copyOutputToBatchVector({
+        commandEncoder,
+        sourceBuffer: outputBuffers.nextParticlePositions,
+        targetVector: getRequiredBatchVector(batch, 'particlePositions')
+      });
+      copyCount += copyOutputToBatchVector({
+        commandEncoder,
+        sourceBuffer: outputBuffers.nextParticleVelocities,
+        targetVector: getRequiredBatchVector(batch, 'particleVelocities')
+      });
+    }
+
+    if (copyCount > 0) {
+      this.device.submit(commandEncoder.finish());
+      return;
+    }
+    commandEncoder.destroy();
+  }
+
+  private destroyDeviceResources(): void {
     this.model?.destroy();
     this.computation?.destroy();
     this.transform?.destroy();
-    this.positionVector?.destroy();
-    this.velocityVector?.destroy();
-    this.computation = undefined;
-    this.transform = undefined;
-  }
-}
-
-export function makeArrowParticleTable(particleCount = DEFAULT_PARTICLE_COUNT): arrow.Table {
-  const positions = new Float32Array(particleCount * 2);
-  const velocities = new Float32Array(particleCount * 2);
-
-  for (let particleIndex = 0; particleIndex < particleCount; particleIndex++) {
-    const angle = particleIndex * 2.399963229728653;
-    const radius = 0.12 + ((particleIndex % 257) / 256) * 0.74;
-    const velocityScale = 0.0016 + ((particleIndex % 13) / 12) * 0.0018;
-
-    positions[particleIndex * 2] = Math.cos(angle) * radius;
-    positions[particleIndex * 2 + 1] = Math.sin(angle) * radius;
-    velocities[particleIndex * 2] = Math.cos(angle + Math.PI / 2) * velocityScale;
-    velocities[particleIndex * 2 + 1] = Math.sin(angle + Math.PI / 2) * velocityScale;
+    for (const outputBuffers of this.transformOutputBuffers.values()) {
+      outputBuffers.nextParticlePositions.destroy();
+      outputBuffers.nextParticleVelocities.destroy();
+    }
+    this.model = null;
+    this.computation = null;
+    this.transform = null;
+    this.transformOutputBuffers.clear();
   }
 
-  return new arrow.Table({
-    positions: makeArrowFixedSizeListVector(new arrow.Float32(), 2, positions),
-    velocities: makeArrowFixedSizeListVector(new arrow.Float32(), 2, velocities)
-  });
-}
-
-function makeComputeShader(particleCount: number): string {
-  return /* wgsl */ `\
-@group(0) @binding(0) var<storage, read_write> particlePositions : array<vec2<f32>>;
-@group(0) @binding(1) var<storage, read_write> particleVelocities : array<vec2<f32>>;
-
-@compute @workgroup_size(${WORKGROUP_SIZE})
-fn computeMain(@builtin(global_invocation_id) globalInvocationId : vec3<u32>) {
-  let particleIndex = globalInvocationId.x;
-  if (particleIndex >= ${particleCount}u) {
-    return;
+  private destroyParticleTable(): void {
+    this.particleTable?.destroy();
+    this.particleTable = null;
+    this.initialBatchValues.clear();
   }
 
-  var position = particlePositions[particleIndex];
-  var velocity = particleVelocities[particleIndex];
-  position = position + velocity;
-
-  if (position.x < -0.98 || position.x > 0.98) {
-    velocity.x = -velocity.x;
-    position.x = clamp(position.x, -0.98, 0.98);
+  private isRecordBatchStreamActive(streamingSession: ArrowParticleLayerStreamingSession): boolean {
+    return !this.isDestroyed && streamingSession.version === this.streamingSessionVersion;
   }
-
-  if (position.y < -0.98 || position.y > 0.98) {
-    velocity.y = -velocity.y;
-    position.y = clamp(position.y, -0.98, 0.98);
-  }
-
-  particlePositions[particleIndex] = position;
-  particleVelocities[particleIndex] = velocity;
-}
-`;
 }
 
 function getArrowParticleSourceVectors(
@@ -413,4 +499,37 @@ function getRequiredParticleVector(
 
 function getInitialParticleValues(vector: arrow.Vector<ArrowParticleVectorType>): Float32Array {
   return new Float32Array(getArrowFixedSizeListValues(vector));
+}
+
+function getRequiredBatchVector(batch: GPURecordBatch, name: string): GPUVector {
+  const vector = batch.gpuVectors[name];
+  if (!vector) {
+    throw new Error(`ArrowParticleLayer GPU batch is missing vector "${name}"`);
+  }
+  return vector;
+}
+
+function copyOutputToBatchVector({
+  commandEncoder,
+  sourceBuffer,
+  targetVector
+}: {
+  commandEncoder: ReturnType<Device['createCommandEncoder']>;
+  sourceBuffer: Buffer;
+  targetVector: GPUVector;
+}): number {
+  const size = targetVector.length * targetVector.byteStride;
+  if (size === 0) {
+    return 0;
+  }
+  commandEncoder.copyBufferToBuffer({
+    sourceBuffer,
+    destinationBuffer: getConcreteBuffer(targetVector.buffer),
+    size
+  });
+  return 1;
+}
+
+function getConcreteBuffer(buffer: Buffer | DynamicBuffer): Buffer {
+  return buffer instanceof DynamicBuffer ? buffer.buffer : buffer;
 }
