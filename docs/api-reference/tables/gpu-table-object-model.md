@@ -8,7 +8,7 @@
 This page documents the generic GPU table object model in `@luma.gl/tables`:
 ownership, batching, packing, table-backed rendering, transform, compute, and
 buffer planning. For Apache Arrow column compatibility and preparation helpers,
-see [Arrow Type Mapping](/docs/api-reference/arrow/arrow-type-mapping).
+see [Supported Arrow Types](/docs/api-reference/arrow/supported-arrow-types).
 
 ## Overview
 
@@ -308,7 +308,7 @@ const transform = new TableTransform(device, {
   tableCount: 'vertex'
 });
 
-transform.runBatches({
+transform.dispatchBatches({
   outputBuffers: (batch, batchIndex) => makeOutputBuffers(batch, batchIndex)
 });
 ```
@@ -344,15 +344,15 @@ Relevant public types:
 | Type | Meaning |
 | --- | --- |
 | `TableTransformProps` | Construction props, including `table`, `inputVectors`, `copyOutputToInputVectors`, and `tableCount`. |
-| `TableTransformBatchOptions` | `runBatches()` options, including fixed or per-batch `outputBuffers`. |
+| `TableTransformBatchOptions` | `dispatchBatches()` options, including fixed or per-batch `outputBuffers`. |
 
-### `TableComputation`
+### `GPUTableComputation`
 
-`TableComputation` is the WebGPU compute helper for table vectors exposed as
+`GPUTableComputation` is the WebGPU compute helper for table vectors exposed as
 storage bindings. Supply `GPUVector` objects by binding name:
 
 ```ts
-const computation = new TableComputation(device, {
+const computation = new GPUTableComputation(device, {
   source: computeShader,
   shaderLayout: computeShaderLayout,
   inputVectors: {
@@ -370,8 +370,8 @@ Relevant public types:
 
 | Type | Meaning |
 | --- | --- |
-| `TableComputationProps` | Construction props, including ordinary `bindings` plus `inputVectors`. |
-| `TableComputationBatch` | Batch metadata passed to a dynamic workgroup-count callback. |
+| `GPUTableComputationProps` | Construction props, including ordinary `bindings` plus `inputVectors`. |
+| `GPUTableComputationBatch` | Batch metadata passed to a dynamic workgroup-count callback. |
 
 ## Planning Table Buffer Groups
 
@@ -453,7 +453,7 @@ storage-buffer upload and shader binding path. Storage planning observes
 
 ## Related References
 
-- [Arrow Type Mapping](/docs/api-reference/arrow/arrow-type-mapping)
+- [Supported Arrow Types](/docs/api-reference/arrow/supported-arrow-types)
 - [GPU Table Structure](/docs/api-reference/tables/gpu-table-structure)
 - [GPUTable](/docs/api-reference/tables/gpu-table)
 - [GPURecordBatch](/docs/api-reference/tables/gpu-record-batch)

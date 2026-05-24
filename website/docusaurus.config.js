@@ -32,9 +32,10 @@ const config = getDocusaurusConfig({
             from: [
               '/docs/api-guide/gpu/arrow-table-columns',
               '/docs/api-reference/arrow/arrow-table-columns',
+              '/docs/api-reference/arrow/arrow-type-mapping',
               '/docs/api-reference/tables/gpu-tables'
             ],
-            to: '/docs/api-reference/arrow/arrow-type-mapping'
+            to: '/docs/api-reference/arrow/supported-arrow-types'
           }
         ],
         createRedirects(existingPath) {

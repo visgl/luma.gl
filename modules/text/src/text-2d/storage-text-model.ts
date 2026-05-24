@@ -3,11 +3,8 @@
 // Copyright (c) vis.gl contributors
 
 import type {Device} from '@luma.gl/core';
-import {
-  ArrowStorageTextModel,
-  type ArrowStorageTextRenderProps,
-  type ArrowStorageTextState
-} from './arrow-text-model';
+import type {ArrowStorageTextRenderProps, ArrowStorageTextState} from './arrow-text-model';
+import {ArrowStorageTextModel} from './arrow-text-render-models';
 
 export {createArrowStorageTextState} from './arrow-text-model';
 

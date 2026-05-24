@@ -187,7 +187,8 @@
         "label": "@luma.gl/arrow",
         "items": [
           "api-reference/arrow/README",
-          "api-reference/arrow/arrow-type-mapping",
+          "api-reference/arrow/arrow-representations",
+          "api-reference/arrow/supported-arrow-types",
           "api-reference/arrow/deck-target-api",
           "api-reference/arrow/arrow-utils"
         ]

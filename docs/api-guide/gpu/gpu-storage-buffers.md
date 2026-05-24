@@ -90,19 +90,19 @@ That supports patterns such as:
 
 - one Arrow matrix column bound as `array<mat4x4<f32>>` for rendering;
 - particle positions and velocities updated in place by compute;
-- batch-preserving compute dispatch through `TableComputation`.
+- batch-preserving compute dispatch through `GPUTableComputation`.
 
-See [Arrow Type Mapping](/docs/api-reference/arrow/arrow-type-mapping) and
+See [Supported Arrow Types](/docs/api-reference/arrow/supported-arrow-types) and
 [GPUTable Object Model](/docs/api-reference/tables/gpu-table-object-model) for
 the full columnar workflow.
 
 ## Compute Pattern
 
-For table vectors, use `TableComputation` when storage bindings should come from
+For table vectors, use `GPUTableComputation` when storage bindings should come from
 `GPUVector` objects:
 
 ```ts
-const computation = new TableComputation(device, {
+const computation = new GPUTableComputation(device, {
   source: computeShader,
   shaderLayout,
   inputVectors: {
@@ -137,5 +137,5 @@ batch-by-batch before dispatch.
 
 - [Attributes](./gpu-attributes)
 - [Buffer Schemas and Columnar Records](./buffer-schemas)
-- [Arrow Type Mapping](/docs/api-reference/arrow/arrow-type-mapping)
+- [Supported Arrow Types](/docs/api-reference/arrow/supported-arrow-types)
 - [GPUTable Object Model](/docs/api-reference/tables/gpu-table-object-model)

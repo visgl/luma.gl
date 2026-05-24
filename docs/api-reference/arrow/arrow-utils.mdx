@@ -1,4 +1,8 @@
+import {ArrowDocsTabs} from '@site/src/components/docs/arrow-docs-tabs';
+
 # Arrow Utilities
+
+<ArrowDocsTabs active="utilities" />
 
 <p class="badges">
   <img src="https://img.shields.io/badge/From-v10-blue.svg?style=flat-square" alt="From: v10" />
@@ -10,7 +14,7 @@ This page documents the general-purpose Arrow inspection helpers exported by
 
 These helpers operate on Apache Arrow tables, record batches, vectors, and data
 chunks before or alongside GPU upload. For shader-facing upload and binding
-workflows, see [Arrow Type Mapping](/docs/api-reference/arrow/arrow-type-mapping).
+workflows, see [Supported Arrow Types](/docs/api-reference/arrow/supported-arrow-types).
 
 ## `getArrowPaths`
 
@@ -105,5 +109,5 @@ const nestingLevel = getArrowListNestingLevel(pathData);
 
 ## Related References
 
-- [Arrow Type Mapping](/docs/api-reference/arrow/arrow-type-mapping)
+- [Supported Arrow Types](/docs/api-reference/arrow/supported-arrow-types)
 - [Apache Arrow JavaScript API](https://arrow.apache.org/docs/js/)

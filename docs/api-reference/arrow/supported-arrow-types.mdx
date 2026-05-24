@@ -1,4 +1,8 @@
-# Arrow Type Mapping
+import {ArrowDocsTabs} from '@site/src/components/docs/arrow-docs-tabs';
+
+# Supported Arrow Types
+
+<ArrowDocsTabs active="supported-types" />
 
 <p class="badges">
   <img src="https://img.shields.io/badge/From-v10-blue.svg?style=flat-square" alt="From: v10" />
@@ -59,7 +63,7 @@ schema fields with `nullCount: 0`.
 
 | Arrow data type | GPU<br/>upload | nullable | Upload notes | Shader-facing<br/>use | Higher-level<br/>model support |
 | --- | :---: | :---: | --- | --- | --- |
-| `FixedSizeList<numeric,`<br/>`1 \| 2 \| 3 \| 4>` | ✅ | ❌ | Fixed-width GPU rows. | Vector attributes or storage rows; 3-component 8-bit and 16-bit integer formats are WebGL-only unless padded. | Positions, colors, pixel offsets, clip rectangles, mesh attributes, and path style rows. |
+| `FixedSizeList<numeric,`<br/>`1 \| 2 \| 3 \| 4>` | ✅ | ❌ | Fixed-width GPU rows.<br/>Planned color adapter support will expand three-component RGB source rows to four-component RGBA rows. `FixedSizeList<Float16, 4>` is the compact scene-linear/HDR color form. | Vector attributes or storage rows; 3-component 8-bit and 16-bit integer formats are WebGL-only unless padded. | Positions, normalized colors, scene-linear/HDR colors, pixel offsets, clip rectangles, mesh attributes, and path style rows. |
 | `List<FixedSizeList<Float32,`<br/>`2 \| 3 \| 4>>` | ✅ | ❌ | Flattened GPU path-coordinate values plus copied list-offset metadata. | Not a single generic vertex attribute.<br/>`ArrowPathModel` expands to segment attributes; `ArrowStoragePathModel` keeps values in storage. | `ArrowPathModel.prepareGPUVectors()` uploads unchanged unless closed-path normalization is requested.<br/>Outputs feed `ArrowPathModel` and `ArrowStoragePathModel`. |
 | `List<FixedSizeList<Float64,`<br/>`2 \| 3 \| 4>>` | 🟡 | ❌ | Path preparation emits per-row Float32 deltas plus copied list-offset metadata.<br/>CPU Float64 per-row origins are retained separately. | Not a generic vertex attribute.<br/>Attribute paths prepare deltas on CPU; WebGPU storage paths can prepare them on GPU before rendering. | `ArrowPathModel.prepareGPUVectors()` and `prepareArrowPathGPUVectors()` prepare attribute paths.<br/>`ArrowStoragePathModel.prepareGPUVectors()` prepares storage paths. |
 | `List<numeric \|`<br/>`FixedSizeList<numeric, 1 \| 2 \| 3 \| 4>>` | ✅ | ❌ | Flattened GPU values plus copied list-offset metadata. | Not a single generic vertex attribute; consume through storage/compute code or model-specific expansion. | Generic variable-length numeric storage/readback. Model support is documented by the model-specific rows above. |
@@ -97,8 +101,9 @@ schema fields with `nullCount: 0`.
 | Arrow data type | GPU<br/>upload | nullable | Upload notes | Shader-facing<br/>use | Higher-level<br/>model support |
 | --- | :---: | :---: | --- | --- | --- |
 | `Binary` | ❌ | ❌ | Variable-width byte rows need both offsets and value bytes. Support would mirror UTF-8 with explicit offset and byte-buffer bindings. | Compute shaders could consume offsets and bytes; not a generic vertex attribute. | Adapter-specific payloads such as WKB geometry, compressed attributes, or binary IDs. |
-| `Struct` | ❌ | ❌ | A Struct is a container, not one value buffer. Support should flatten supported leaves by field path and preserve parent metadata. | Child fields can become separate shader columns after flattening. | Nested style/object columns; GeoArrow separated coordinates can adapt into `FixedSizeList` values. |
-| `Map` | ❌ | ❌ | Map is variable-length key/value Struct data. Support needs offsets, key/value child buffers, and app-defined lookup semantics. | Not a generic shader column; use compute lookup after an adapter lowers the map shape. | Per-row properties or sparse attributes after application-specific lowering. |
+| `FixedSizeBinary` | 🟡 | ❌ | Partially supported for interleaved data columns where each row is a fixed-width byte record. | Not a generic scalar/vector attribute; consume through an explicit interleaved buffer layout or storage decoding path. | Interleaved GPU buffers and packed application-defined row records. |
+| `Struct` | 🟡 | ❌ | Supported indirectly when the application selects supported child columns by field path. | Child fields can become separate shader columns after selection or flattening. | Nested style/object columns; GeoArrow separated coordinates can adapt into `FixedSizeList` values. |
+| `Map` | ❌ | ❌ | Map is variable-length key/value Struct data. A future adapter could support maps by reading a specific key from each row. | Not a generic shader column; use application-specific key selection or compute lookup after an adapter lowers the map shape. | Per-row properties or sparse attributes after application-specific lowering. |
 | `Decimal` | ❌ | ❌ | Decimal stores scaled fixed-width integers with precision/scale semantics. Support likely requires conversion to `Float32`/`Float64` or packed integer words plus scale metadata. | No generic decimal arithmetic path in shaders. | Financial or exact values should be lowered by the application before upload. |
 | `LargeUtf8` | ❌ | ❌ | Uses 64-bit offsets; current text paths assume regular `Utf8` offsets. Support could downcast offsets when value buffers fit `Uint32`, or add 64-bit offset helpers. | Text shaders could consume after offset normalization; not a generic vertex attribute. | Large text columns once normalized to `Utf8`-style offset buffers. |
 | `Dictionary` non-`Utf8` | ❌ | ❌ | Uploading only dictionary indices loses value semantics. Support needs an adapter that uploads indices plus dictionary value buffers, or lowers values to numeric/text columns. | Shader use depends on the decoded value type or explicit lookup tables. | Categorical values, palettes, and enums after dictionary-specific lowering. |
@@ -144,11 +149,19 @@ accepted by the GPU.
 | Arrow column type           | Buffer layout format | Notes                                      |
 | --------------------------- | -------------------- | ------------------------------------------ |
 | `FixedSizeList<Float32, 4>` | `float32x4`          |                                            |
-| `FixedSizeList<Float16, 4>` | `float16x4`          | Shader sees f32                            |
+| `FixedSizeList<Float16, 4>` | `float16x4`          | Shader sees f32; compact scene-linear/HDR color |
 | `FixedSizeList<Int16, 4>`   | `snorm16x4`          | Shader sees f32, normalized to [-1.0, 1.0] |
 | `FixedSizeList<Uint16, 4>`  | `unorm16x4`          |
 | `FixedSizeList<Int8, 4>`    | `snorm8x4`           |
 | `FixedSizeList<Uint8, 4>`   | `unorm8x4`           |
+
+Semantic RGB color columns use three source components, but most luma.gl color
+shader interfaces consume RGBA. Current semantic color adapters treat RGB source
+forms as unsupported until expansion is implemented. The intended expansion is
+`FixedSizeList<Uint8, 3>` to RGBA with alpha `255`, and
+`FixedSizeList<Float16 | Float32, 3>` to RGBA with alpha `1.0`, before buffer
+layout generation. Alpha values above `1.0` have no portable meaning unless a
+layer explicitly defines application-specific semantics.
 
 ## Creating a BufferLayout
 
@@ -380,9 +393,14 @@ const preparedPaths = prepareDggsCellPathGPUVector(device, preparedKeys.keys, {
 `prepareDggsCellKeyGPUVector()` accepts UTF-8 geohash, quadkey, S2, A5, or H3 IDs
 and parses them on the GPU into Uint64 rows. `prepareDggsCellPathGPUVector()`
 accepts those Uint64 rows and emits closed `List<FixedSizeList<Float32, 2>>`
-boundary paths. The `dggs` shader module exposes the matching WGSL Uint64 word
-order and cell-boundary helpers when a shader should read keys directly. See the
-[Global Grids example](/examples/gpu-tables/dggs-gpu-polygons).
+boundary paths by default. Pass `coordinateFormat: 'fp64-split'` to emit
+`List<FixedSizeList<Float32, 4>>` paths with components ordered as
+`[longitudeHigh, latitudeHigh, longitudeLow, latitudeLow]`. This is a
+compatibility layout only: DGGS boundary math currently remains Float32, so low
+components are zero until true higher-precision decode math is added. The `dggs`
+shader module exposes the matching WGSL Uint64 word order and cell-boundary
+helpers when a shader should read keys directly. See the [Global Grids
+example](/examples/gpu-tables/dggs-gpu-polygons).
 
 ## Storage-Selected Table Columns
 

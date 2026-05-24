@@ -1,0 +1,13 @@
+<!doctype html>
+<script type="module">
+  import {makeAnimationLoop} from '@luma.gl/engine';
+  import {webgpuAdapter} from '@luma.gl/webgpu';
+  import AnimationLoopTemplate from './app.ts';
+
+  const animationLoop = makeAnimationLoop(AnimationLoopTemplate, {
+    adapters: [webgpuAdapter]
+  });
+  animationLoop.start();
+</script>
+<body>
+</body>

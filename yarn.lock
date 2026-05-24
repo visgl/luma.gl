@@ -15340,6 +15340,23 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"luma.gl-examples-arrow-column-layer@workspace:examples/gpu-tables/arrow-column-layer":
+  version: 0.0.0-use.local
+  resolution: "luma.gl-examples-arrow-column-layer@workspace:examples/gpu-tables/arrow-column-layer"
+  dependencies:
+    "@luma.gl/arrow": "npm:~9.3.0"
+    "@luma.gl/core": "npm:~9.3.0"
+    "@luma.gl/engine": "npm:~9.3.0"
+    "@luma.gl/shadertools": "npm:~9.3.0"
+    "@luma.gl/tables": "npm:~9.3.0"
+    "@luma.gl/webgpu": "npm:~9.3.0"
+    apache-arrow: "npm:^17.0.0"
+    h3-js: "npm:^4.4.0"
+    typescript: "npm:^5.9.3"
+    vite: "npm:^8.0.0"
+  languageName: unknown
+  linkType: soft
+
 "luma.gl-examples-arrow-instancing@workspace:examples/gpu-tables/arrow-instancing":
   version: 0.0.0-use.local
   resolution: "luma.gl-examples-arrow-instancing@workspace:examples/gpu-tables/arrow-instancing"

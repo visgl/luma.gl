@@ -7,6 +7,7 @@ import {
   StoragePathModel,
   StorageTripsPathModel,
   convertArrowPathsToAttribute,
+  getArrowVectorByteLength,
   prepareArrowTemporalGPUVector,
   type ArrowPathPreparedState
 } from '@luma.gl/arrow';
@@ -50,9 +51,55 @@ export type ArrowPathLayerData = {
   destroy: () => void;
 };
 
+export type ArrowPathLayerInput = ArrowPathLayerData & {
+  widths: GPUVector<arrow.Float32>;
+  pathArrowByteLength: number;
+  styleArrowByteLength: number;
+  arrowVectorBuildTimeMs: number;
+};
+
+export type ArrowPathLayerSourceData = {
+  sourceVectors: ArrowPathLayerSourceVectors & {
+    widths: arrow.Vector<arrow.Float32>;
+  };
+  pathArrowByteLength: number;
+  styleArrowByteLength: number;
+  arrowVectorBuildTimeMs: number;
+};
+
 export type ArrowPathLayerPrepareDataProps = {
   sourceVectors: ArrowPathLayerSourceVectors;
   id?: string;
+};
+
+export type ArrowPathLayerRecordBatchStreamUpdate = {
+  pathInput: ArrowPathLayerInput;
+  loadedBatchCount: number;
+  isFirstBatch: boolean;
+  setPropsResult: ArrowPathLayerSetPropsResult;
+};
+
+export type ArrowPathLayerRecordBatchStreamProps = {
+  recordBatchIterator: AsyncIterator<arrow.RecordBatch>;
+  arrowVectorBuildTimeMs: number;
+  model?: ArrowPathLayerModel;
+  timeColumn?: ArrowPathLayerTimeColumn;
+  streamingSession?: ArrowPathLayerStreamingSession;
+  startRedrawReason?: string;
+  appendRedrawReason?: string;
+  onBatch?: (update: ArrowPathLayerRecordBatchStreamUpdate) => void;
+};
+
+export type ArrowPathLayerSetPropsResult = {
+  modelChanged: boolean;
+};
+
+export type ArrowPathLayerStreamingSession = {
+  version: number;
+};
+
+type ArrowPathLayerSetPropsOptions = {
+  preserveStreaming?: boolean;
 };
 
 export type ArrowPathLayerProps = {
@@ -83,6 +130,9 @@ export class ArrowPathLayer {
   props: ArrowPathLayerProps;
   model: ArrowPathLayerActiveModel;
   resolvedModel: ArrowPathLayerResolvedModel;
+  private activeStreamingPathInput: ArrowPathLayerInput | null = null;
+  private streamingSessionVersion = 0;
+  private isDestroyed = false;
 
   constructor(device: Device, props: ArrowPathLayerProps) {
     this.device = device;
@@ -129,8 +179,20 @@ export class ArrowPathLayer {
     };
   }
 
-  setProps(props: Partial<ArrowPathLayerProps>): void {
+  setProps(
+    props: Partial<ArrowPathLayerProps>,
+    options: ArrowPathLayerSetPropsOptions = {}
+  ): ArrowPathLayerSetPropsResult {
     const nextProps = {...this.props, ...props};
+    const shouldCancelStreaming =
+      !options.preserveStreaming && props.data !== undefined && props.data !== this.props.data;
+    const streamingPathInputToDestroy = shouldCancelStreaming
+      ? this.activeStreamingPathInput
+      : null;
+    if (shouldCancelStreaming) {
+      this.streamingSessionVersion++;
+      this.activeStreamingPathInput = null;
+    }
     const nextModel = this.resolveModel(
       nextProps.model ?? this.props.model ?? 'auto',
       nextProps.timeColumn ?? this.props.timeColumn ?? 'xyzm'
@@ -141,19 +203,87 @@ export class ArrowPathLayer {
       this.model.setProps({currentTime: props.currentTime});
     }
 
-    if (
-      props.data === undefined &&
-      props.model === undefined &&
-      props.timeColumn === undefined &&
-      nextModel === this.resolvedModel
-    ) {
-      return;
+    const modelChanged =
+      props.data !== undefined ||
+      props.model !== undefined ||
+      props.timeColumn !== undefined ||
+      nextModel !== this.resolvedModel;
+
+    if (!modelChanged) {
+      streamingPathInputToDestroy?.destroy();
+      return {modelChanged};
     }
 
     const previousModel = this.model;
     this.resolvedModel = nextModel;
     this.model = this.createModel(nextModel, nextProps);
     previousModel.destroy();
+    streamingPathInputToDestroy?.destroy();
+    return {modelChanged};
+  }
+
+  beginRecordBatchStream(): ArrowPathLayerStreamingSession {
+    this.streamingSessionVersion++;
+    return {version: this.streamingSessionVersion};
+  }
+
+  cancelRecordBatchStream(): void {
+    this.streamingSessionVersion++;
+  }
+
+  async streamRecordBatches({
+    recordBatchIterator,
+    arrowVectorBuildTimeMs,
+    model,
+    timeColumn,
+    streamingSession = this.beginRecordBatchStream(),
+    onBatch
+  }: ArrowPathLayerRecordBatchStreamProps): Promise<void> {
+    const sourceRecordBatches: arrow.RecordBatch[] = [];
+
+    if (!this.isRecordBatchStreamActive(streamingSession)) {
+      return;
+    }
+
+    for (
+      let recordBatchResult = await recordBatchIterator.next();
+      !recordBatchResult.done;
+      recordBatchResult = await recordBatchIterator.next()
+    ) {
+      if (!this.isRecordBatchStreamActive(streamingSession)) {
+        return;
+      }
+
+      sourceRecordBatches.push(recordBatchResult.value);
+      const pathInput = await prepareArrowPathInputFromRecordBatches(
+        this.device,
+        sourceRecordBatches,
+        arrowVectorBuildTimeMs
+      );
+      if (!this.isRecordBatchStreamActive(streamingSession)) {
+        pathInput.destroy();
+        return;
+      }
+
+      const previousStreamingPathInput = this.activeStreamingPathInput;
+      this.activeStreamingPathInput = pathInput;
+      const isFirstBatch = sourceRecordBatches.length === 1;
+      const setPropsResult = this.setProps(
+        {
+          data: pathInput,
+          ...(isFirstBatch && model ? {model} : {}),
+          ...(isFirstBatch && timeColumn ? {timeColumn} : {})
+        },
+        {preserveStreaming: true}
+      );
+      previousStreamingPathInput?.destroy();
+      onBatch?.({
+        pathInput,
+        loadedBatchCount: sourceRecordBatches.length,
+        isFirstBatch,
+        setPropsResult
+      });
+    }
   }
 
   draw(renderPass: Parameters<ArrowPathLayerActiveModel['draw']>[0]): void {
@@ -161,7 +291,12 @@ export class ArrowPathLayer {
   }
 
   destroy(): void {
+    this.isDestroyed = true;
+    this.streamingSessionVersion++;
+    const streamingPathInput = this.activeStreamingPathInput;
+    this.activeStreamingPathInput = null;
     this.model.destroy();
+    streamingPathInput?.destroy();
   }
 
   private resolveModel(
@@ -181,6 +316,10 @@ export class ArrowPathLayer {
       return 'trips';
     }
     return modelKind;
+  }
+
+  private isRecordBatchStreamActive(streamingSession: ArrowPathLayerStreamingSession): boolean {
+    return !this.isDestroyed && streamingSession.version === this.streamingSessionVersion;
   }
 
   private createModel(
@@ -234,4 +373,82 @@ export class ArrowPathLayer {
       shaderLayout: props.shaderLayout
     });
   }
+}
+
+export async function prepareArrowPathInput(
+  device: Device,
+  sourceData: ArrowPathLayerSourceData
+): Promise<ArrowPathLayerInput> {
+  const {sourceVectors} = sourceData;
+  const prepared = await ArrowPathLayer.prepareData(device, {
+    id: 'arrow-path-model',
+    sourceVectors
+  });
+  if (!prepared.widths) {
+    throw new Error('Arrow path example expected prepared width GPU vectors');
+  }
+  if (sourceVectors.timestamps && !prepared.timestamps) {
+    throw new Error('Arrow path example expected prepared timestamp GPU vectors');
+  }
+
+  return {
+    paths: prepared.paths,
+    ...(prepared.colors ? {colors: prepared.colors} : {}),
+    widths: prepared.widths,
+    ...(prepared.timestamps ? {timestamps: prepared.timestamps} : {}),
+    ...(prepared.viewOrigins ? {viewOrigins: prepared.viewOrigins} : {}),
+    pathState: prepared.pathState,
+    pathArrowByteLength: sourceData.pathArrowByteLength,
+    styleArrowByteLength: sourceData.styleArrowByteLength,
+    arrowVectorBuildTimeMs: sourceData.arrowVectorBuildTimeMs,
+    destroy: prepared.destroy
+  };
+}
+
+export async function prepareArrowPathInputFromRecordBatches(
+  device: Device,
+  recordBatches: arrow.RecordBatch[],
+  arrowVectorBuildTimeMs: number
+): Promise<ArrowPathLayerInput> {
+  const sourceTable = new arrow.Table(recordBatches);
+  const paths = getRequiredArrowVector<ArrowPathSourceCoordinateType>(sourceTable, 'paths');
+  const colors = getOptionalArrowVector<ArrowPathColorType>(sourceTable, 'colors');
+  const widths = getRequiredArrowVector<arrow.Float32>(sourceTable, 'widths');
+  const timestamps = getOptionalArrowVector<ArrowPathSourceTimestampType>(
+    sourceTable,
+    'timestamps'
+  );
+
+  return prepareArrowPathInput(device, {
+    sourceVectors: {
+      paths,
+      ...(colors ? {colors} : {}),
+      widths,
+      ...(timestamps ? {timestamps} : {})
+    },
+    pathArrowByteLength:
+      getArrowVectorByteLength(paths) + (timestamps ? getArrowVectorByteLength(timestamps) : 0),
+    styleArrowByteLength:
+      (colors ? getArrowVectorByteLength(colors) : 0) + getArrowVectorByteLength(widths),
+    arrowVectorBuildTimeMs
+  });
+}
+
+function getRequiredArrowVector<T extends arrow.DataType>(
+  table: arrow.Table,
+  columnName: string
+): arrow.Vector<T> {
+  const vector = table.getChild(columnName);
+  if (!vector) {
+    throw new Error(`ArrowPathLayer data is missing Arrow column "${columnName}"`);
+  }
+  return vector as arrow.Vector<T>;
+}
+
+function getOptionalArrowVector<T extends arrow.DataType>(
+  table: arrow.Table,
+  columnName: string
+): arrow.Vector<T> | undefined {
+  const vector = table.getChild(columnName);
+  return vector ? (vector as arrow.Vector<T>) : undefined;
 }

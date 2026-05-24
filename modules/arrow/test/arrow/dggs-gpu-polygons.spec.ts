@@ -227,6 +227,16 @@ test('arrow#prepareDggsCellPathGPUVector extracts DGGS boundary paths on the GPU
         makeExpectedOffsets(testCase.keys.length, testCase.pointCount),
         `${testCase.encoding} path offsets use the fixed point count`
       );
+      t.equal(
+        getPathCoordinateComponentCount(pathVector),
+        2,
+        `${testCase.encoding} defaults to two Float32 coordinate components`
+      );
+      t.equal(
+        preparedPaths.pathByteLength,
+        testCase.keys.length * testCase.pointCount * 2 * Float32Array.BYTES_PER_ELEMENT,
+        `${testCase.encoding} reports Float32 path byte length`
+      );
       assertCoordinateArrayClose(
         t,
         Array.from(getPathValues(pathVector)),
@@ -236,6 +246,48 @@ test('arrow#prepareDggsCellPathGPUVector extracts DGGS boundary paths on the GPU
       );
     } finally {
       preparedPaths.destroy();
+    }
+
+    const preparedSplitPaths = prepareDggsCellPathGPUVector(
+      device,
+      makeUint64Vector(testCase.keys),
+      {
+        id: `dggs-${testCase.encoding}-path-extraction-fp64-split-test`,
+        encoding: testCase.encoding,
+        coordinateFormat: 'fp64-split'
+      }
+    );
+    try {
+      const splitPathVector = await readArrowGPUVectorAsync(preparedSplitPaths.paths);
+      t.equal(
+        preparedSplitPaths.pointCount,
+        testCase.pointCount,
+        `${testCase.encoding} fp64-split uses expected fixed path point count`
+      );
+      t.deepEqual(
+        Array.from(getPathOffsets(splitPathVector)),
+        makeExpectedOffsets(testCase.keys.length, testCase.pointCount),
+        `${testCase.encoding} fp64-split path offsets use the fixed point count`
+      );
+      t.equal(
+        getPathCoordinateComponentCount(splitPathVector),
+        4,
+        `${testCase.encoding} fp64-split emits four Float32 coordinate components`
+      );
+      t.equal(
+        preparedSplitPaths.pathByteLength,
+        testCase.keys.length * testCase.pointCount * 4 * Float32Array.BYTES_PER_ELEMENT,
+        `${testCase.encoding} fp64-split reports doubled path byte length`
+      );
+      assertFp64SplitCoordinateArrayClose(
+        t,
+        Array.from(getPathValues(splitPathVector)),
+        testCase.expectedCoordinates,
+        testCase.tolerance,
+        `${testCase.encoding} fp64-split boundary coordinates match CPU reference`
+      );
+    } finally {
+      preparedSplitPaths.destroy();
     }
   }
 
@@ -262,6 +314,13 @@ function getPathValues(vector: arrow.Vector<DggsCellPathCoordinateType>): Float3
   const coordinateData = vector.data[0]!.children[0]!;
   const valueData = coordinateData.children[0] as arrow.Data<arrow.Float32>;
   return valueData.values as Float32Array;
+}
+
+function getPathCoordinateComponentCount(vector: arrow.Vector<DggsCellPathCoordinateType>): number {
+  const coordinateType = vector.type.children[0]?.type;
+  return coordinateType && arrow.DataType.isFixedSizeList(coordinateType)
+    ? coordinateType.listSize
+    : 0;
 }
 
 function makeExpectedOffsets(rowCount: number, pointCount: number): number[] {
@@ -326,5 +385,30 @@ function assertCoordinateArrayClose(
       Math.abs(actual[coordinateIndex]! - expected[coordinateIndex]!) <= tolerance,
       `${message}: coordinate ${coordinateIndex} (${actual[coordinateIndex]} ~= ${expected[coordinateIndex]})`
     );
+  }
+}
+
+function assertFp64SplitCoordinateArrayClose(
+  t: Test,
+  actual: number[],
+  expected: number[],
+  tolerance: number,
+  message: string
+): void {
+  t.equal(actual.length, expected.length * 2, `${message}: coordinate count`);
+  for (
+    let coordinateIndex = 0;
+    coordinateIndex < Math.min(actual.length / 2, expected.length);
+    coordinateIndex++
+  ) {
+    const pointIndex = Math.floor(coordinateIndex / 2);
+    const componentIndex = coordinateIndex % 2;
+    const highComponentIndex = pointIndex * 4 + componentIndex;
+    const lowComponentIndex = pointIndex * 4 + 2 + componentIndex;
+    t.ok(
+      Math.abs(actual[highComponentIndex]! - expected[coordinateIndex]!) <= tolerance,
+      `${message}: high coordinate ${coordinateIndex} (${actual[highComponentIndex]} ~= ${expected[coordinateIndex]})`
+    );
+    t.equal(actual[lowComponentIndex], 0, `${message}: low coordinate ${coordinateIndex} is zero`);
   }
 }

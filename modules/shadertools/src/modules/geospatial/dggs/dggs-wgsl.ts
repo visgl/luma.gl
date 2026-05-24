@@ -248,6 +248,10 @@ struct DggsH3BoundaryVertex {
   valid : u32,
 };
 
+fn dggs_boundary_point_to_fp64_split(point : vec2f) -> vec4f {
+  return vec4f(point.x, point.y, 0.0, 0.0);
+}
+
 fn dggs_a5_positive_mod_i32(value : i32, modulus : i32) -> i32 {
   return ((value % modulus) + modulus) % modulus;
 }
@@ -1011,6 +1015,10 @@ fn dggs_a5_get_boundary_point(index : vec2u, vertexIndex : u32) -> vec2f {
   return lngLat;
 }
 
+fn dggs_a5_get_boundary_point_fp64_split(index : vec2u, vertexIndex : u32) -> vec4f {
+  return dggs_boundary_point_to_fp64_split(dggs_a5_get_boundary_point(index, vertexIndex));
+}
+
 fn dggs_h3_get_mode(index: vec2u) -> u32 {
   return dggs_u64_extract_bits(index, 59u, 4u);
 }
@@ -1589,6 +1597,10 @@ fn dggs_h3_get_boundary_point(index: vec2u, vertexIndex: u32) -> vec2f {
   return dggs_h3_hex2d_to_lnglat(hexPoint, vertex.face, vertex.resolution, true);
 }
 
+fn dggs_h3_get_boundary_point_fp64_split(index: vec2u, vertexIndex: u32) -> vec4f {
+  return dggs_boundary_point_to_fp64_split(dggs_h3_get_boundary_point(index, vertexIndex));
+}
+
 fn dggs_s2_get_face(index: vec2u) -> u32 {
   return dggs_u64_extract_bits(index, 61u, 3u);
 }
@@ -1697,6 +1709,10 @@ fn dggs_geohash_get_boundary_point(index: vec2u, vertexIndex: u32) -> vec2f {
   return dggs_bounds_get_boundary_point(dggs_geohash_get_bounds(index), vertexIndex);
 }
 
+fn dggs_geohash_get_boundary_point_fp64_split(index: vec2u, vertexIndex: u32) -> vec4f {
+  return dggs_boundary_point_to_fp64_split(dggs_geohash_get_boundary_point(index, vertexIndex));
+}
+
 // Packed quadkey keys store the quadkey length in bits 58..63 and right-align
 // the base4 digits in the lower 58 bits, first digit first.
 fn dggs_quadkey_get_length(index: vec2u) -> u32 {
@@ -1755,6 +1771,10 @@ fn dggs_quadkey_get_bounds(index: vec2u) -> vec4f {
 
 fn dggs_quadkey_get_boundary_point(index: vec2u, vertexIndex: u32) -> vec2f {
   return dggs_bounds_get_boundary_point(dggs_quadkey_get_bounds(index), vertexIndex);
+}
+
+fn dggs_quadkey_get_boundary_point_fp64_split(index: vec2u, vertexIndex: u32) -> vec4f {
+  return dggs_boundary_point_to_fp64_split(dggs_quadkey_get_boundary_point(index, vertexIndex));
 }
 
 fn dggs_s2_digit_to_xy(digit: u32) -> vec2u {
@@ -1864,5 +1884,9 @@ fn dggs_s2_get_boundary_point(index: vec2u, vertexIndex: u32) -> vec2f {
   let uv = dggs_s2_st_to_uv(st);
   let xyz = dggs_s2_face_uv_to_xyz(dggs_s2_get_face(index), uv);
   return dggs_s2_xyz_to_lnglat(xyz);
+}
+
+fn dggs_s2_get_boundary_point_fp64_split(index: vec2u, vertexIndex: u32) -> vec4f {
+  return dggs_boundary_point_to_fp64_split(dggs_s2_get_boundary_point(index, vertexIndex));
 }
 `;

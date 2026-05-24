@@ -4,7 +4,7 @@
 
 import {Buffer, type Binding, type Device, type ShaderLayout} from '@luma.gl/core';
 import {Computation} from '@luma.gl/engine';
-import type {GeneratedBufferBatch} from './generated-buffer-batches';
+import type {GeneratedBufferBatch} from '@luma.gl/tables';
 
 /** Stable resource naming options shared by GPU path expansion helpers. */
 export type GpuPathExpansionResourceOptions = {

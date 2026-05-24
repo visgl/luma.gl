@@ -4,6 +4,7 @@
 
 import {type CommandEncoder, type Device, type ShaderLayout} from '@luma.gl/core';
 import {type ShaderInputs} from '@luma.gl/engine';
+import {getArrowVectorByteLength, makeArrowGPURecordBatch, makeArrowGPUTable} from '@luma.gl/arrow';
 import {GPUVector, GPUTable} from '@luma.gl/tables';
 import {
   AttributeTextModel,
@@ -27,6 +28,7 @@ import {
   type FontSettings
 } from '@luma.gl/text';
 import * as arrow from 'apache-arrow';
+import {STREAMING_TEXT_INPUT_SHADER_LAYOUT} from './arrow-text-shaders';
 
 export type ArrowTextLayerModel = 'attribute' | 'storage' | 'dictionary' | 'auto';
 export type ArrowTextLayerResolvedModel = Exclude<ArrowTextLayerModel, 'auto'>;
@@ -57,6 +59,21 @@ export type ArrowTextLayerSourceVectors = {
 
 export type ArrowTextLayerData = ConvertedArrowTextData;
 
+export type ArrowTextLayerSource = {
+  sourceVectors: ArrowTextLayerSourceVectors;
+  arrowVectorByteLength: number;
+  arrowVectorBuildTimeMs: number;
+};
+
+export type ArrowTextLayerInput = ArrowTextLayerData & {
+  clipRects: GPUVector<arrow.FixedSizeList<arrow.Int16>>;
+  colors: GPUVector<ArrowTextColorType>;
+  angles: GPUVector<arrow.Float32>;
+  sizes: GPUVector<arrow.Float32>;
+  arrowVectorByteLength: number;
+  arrowVectorBuildTimeMs: number;
+};
+
 export type ArrowTextLayerPrepareDataProps = {
   sourceVectors: ArrowTextLayerSourceVectors;
   columns?: ArrowTextLayerColumns;
@@ -72,6 +89,7 @@ export type ArrowTextLayerProps = {
   id?: string;
   data: ArrowTextLayerData;
   model?: ArrowTextLayerModel;
+  clippingEnabled?: boolean;
   colorsEnabled?: boolean;
   anglesEnabled?: boolean;
   sizesEnabled?: boolean;
@@ -91,6 +109,35 @@ export type ArrowTextLayerProps = {
   dictionaryShaderLayout?: ShaderLayout;
 };
 
+export type ArrowTextLayerSetPropsResult = {
+  modelChanged: boolean;
+};
+
+export type ArrowTextLayerStreamingSession = {
+  version: number;
+};
+
+export type ArrowTextLayerRecordBatchStreamUpdate = {
+  textInput: ArrowTextLayerInput;
+  loadedBatchCount: number;
+  isFirstBatch: boolean;
+  setPropsResult: ArrowTextLayerSetPropsResult;
+};
+
+export type ArrowTextLayerRecordBatchStreamProps = {
+  recordBatchIterator: AsyncIterator<arrow.RecordBatch>;
+  arrowVectorBuildTimeMs: number;
+  model?: ArrowTextLayerModel | ((textInput: ArrowTextLayerInput) => ArrowTextLayerModel);
+  streamingSession?: ArrowTextLayerStreamingSession;
+  startRedrawReason?: string;
+  appendRedrawReason?: string;
+  onBatch?: (update: ArrowTextLayerRecordBatchStreamUpdate) => void;
+};
+
+type ArrowTextLayerSetPropsOptions = {
+  preserveStreaming?: boolean;
+};
+
 const DEFAULT_COLUMNS: Required<ArrowTextLayerColumns> = {
   positions: 'positions',
   text: 'texts',
@@ -106,12 +153,37 @@ export class ArrowTextLayer {
   props: ArrowTextLayerProps;
   model: ArrowTextLayerActiveModel;
   resolvedModel: ArrowTextLayerResolvedModel;
+  private activeStreamingTextTable: GPUTable | null = null;
+  private streamingSessionVersion = 0;
+  private isDestroyed = false;
 
   constructor(device: Device, props: ArrowTextLayerProps) {
     this.device = device;
-    this.props = props;
-    this.resolvedModel = this.resolveModel(props.model ?? 'auto', props.data);
-    this.model = this.createModel(this.resolvedModel, props);
+    this.props = {
+      clippingEnabled: true,
+      colorsEnabled: true,
+      anglesEnabled: true,
+      sizesEnabled: true,
+      ...props
+    };
+    this.resolvedModel = this.resolveModel(this.props.model ?? 'auto', this.props.data);
+    this.model = this.createModel(this.resolvedModel, this.props);
+  }
+
+  get clippingEnabled(): boolean {
+    return this.props.clippingEnabled !== false;
+  }
+
+  get colorsEnabled(): boolean {
+    return this.props.colorsEnabled !== false;
+  }
+
+  get anglesEnabled(): boolean {
+    return this.props.anglesEnabled !== false;
+  }
+
+  get sizesEnabled(): boolean {
+    return this.props.sizesEnabled !== false;
   }
 
   static prepareData(device: Device, props: ArrowTextLayerPrepareDataProps): ArrowTextLayerData {
@@ -189,35 +261,141 @@ export class ArrowTextLayer {
     };
   }
 
-  setProps(props: Partial<ArrowTextLayerProps>): void {
+  setProps(
+    props: Partial<ArrowTextLayerProps>,
+    redrawReason = 'ArrowTextLayer props changed',
+    options: ArrowTextLayerSetPropsOptions = {}
+  ): ArrowTextLayerSetPropsResult {
+    const previousProps = this.props;
     const nextProps = {...this.props, ...props};
+    const shouldCancelStreaming =
+      !options.preserveStreaming && props.data !== undefined && props.data !== previousProps.data;
+    const streamingTextTableToDestroy = shouldCancelStreaming
+      ? this.activeStreamingTextTable
+      : null;
+    if (shouldCancelStreaming) {
+      this.streamingSessionVersion++;
+      this.activeStreamingTextTable = null;
+    }
     const nextModel = this.resolveModel(
       nextProps.model ?? this.props.model ?? 'auto',
       nextProps.data
     );
-    const shouldRecreate =
-      props.data !== undefined ||
-      props.model !== undefined ||
-      props.colorsEnabled !== undefined ||
-      props.anglesEnabled !== undefined ||
-      props.sizesEnabled !== undefined ||
+    const modelChanged =
+      (props.data !== undefined && props.data !== previousProps.data) ||
+      (props.model !== undefined && props.model !== previousProps.model) ||
+      (props.colorsEnabled !== undefined && props.colorsEnabled !== previousProps.colorsEnabled) ||
+      (props.anglesEnabled !== undefined && props.anglesEnabled !== previousProps.anglesEnabled) ||
+      (props.sizesEnabled !== undefined && props.sizesEnabled !== previousProps.sizesEnabled) ||
       nextModel !== this.resolvedModel;
+    const needsRedraw =
+      modelChanged ||
+      (props.clippingEnabled !== undefined &&
+        props.clippingEnabled !== previousProps.clippingEnabled);
 
-    this.props = nextProps;
-    if (!shouldRecreate) {
-      return;
+    if (!modelChanged) {
+      this.props = nextProps;
+      if (needsRedraw) {
+        this.model.setNeedsRedraw(redrawReason);
+      }
+      streamingTextTableToDestroy?.destroy();
+      return {modelChanged};
     }
 
     const previousModel = this.model;
+    const nextTextModel = this.createModel(nextModel, nextProps);
+    this.props = nextProps;
     this.resolvedModel = nextModel;
-    this.model = this.createModel(nextModel, nextProps);
+    this.model = nextTextModel;
     previousModel.destroy();
+    streamingTextTableToDestroy?.destroy();
+    this.model.setNeedsRedraw(redrawReason);
+    return {modelChanged};
   }
 
-  appendTextBatches(data: ArrowTextLayerData, redrawReason: string): boolean {
-    this.setProps({data});
-    this.model.setNeedsRedraw(redrawReason);
-    return true;
+  appendTextBatches(data: ArrowTextLayerData, redrawReason: string): ArrowTextLayerSetPropsResult {
+    return this.setProps({data}, redrawReason);
+  }
+
+  beginRecordBatchStream(): ArrowTextLayerStreamingSession {
+    this.streamingSessionVersion++;
+    return {version: this.streamingSessionVersion};
+  }
+
+  cancelRecordBatchStream(): void {
+    this.streamingSessionVersion++;
+  }
+
+  async streamRecordBatches({
+    recordBatchIterator,
+    arrowVectorBuildTimeMs,
+    model: requestedModel,
+    streamingSession = this.beginRecordBatchStream(),
+    startRedrawReason = 'streaming text dataset started',
+    appendRedrawReason = 'streaming Arrow record batch appended',
+    onBatch
+  }: ArrowTextLayerRecordBatchStreamProps): Promise<void> {
+    const sourceRecordBatches: arrow.RecordBatch[] = [];
+    let streamingTextTable: GPUTable | null = null;
+
+    if (!this.isRecordBatchStreamActive(streamingSession)) {
+      return;
+    }
+
+    for (
+      let recordBatchResult = await recordBatchIterator.next();
+      !recordBatchResult.done;
+      recordBatchResult = await recordBatchIterator.next()
+    ) {
+      if (!this.isRecordBatchStreamActive(streamingSession)) {
+        return;
+      }
+
+      const recordBatch = recordBatchResult.value;
+      if (!streamingTextTable) {
+        const previousStreamingTextTable = this.activeStreamingTextTable;
+        streamingTextTable = createArrowTextGPUTable(this.device, recordBatch);
+        this.activeStreamingTextTable = streamingTextTable;
+        sourceRecordBatches.push(recordBatch);
+        const textInput = prepareArrowTextInputFromGPUTable(
+          streamingTextTable,
+          sourceRecordBatches,
+          arrowVectorBuildTimeMs
+        );
+        const model =
+          typeof requestedModel === 'function' ? requestedModel(textInput) : requestedModel;
+        const setPropsResult = this.setProps(
+          {data: textInput, ...(model ? {model} : {})},
+          startRedrawReason,
+          {preserveStreaming: true}
+        );
+        previousStreamingTextTable?.destroy();
+        onBatch?.({
+          textInput,
+          loadedBatchCount: streamingTextTable.batches.length,
+          isFirstBatch: true,
+          setPropsResult
+        });
+        continue;
+      }
+
+      appendArrowTextGPUTableBatch(this.device, streamingTextTable, recordBatch);
+      sourceRecordBatches.push(recordBatch);
+      const textInput = prepareArrowTextInputFromGPUTable(
+        streamingTextTable,
+        sourceRecordBatches,
+        arrowVectorBuildTimeMs
+      );
+      const setPropsResult = this.setProps({data: textInput}, appendRedrawReason, {
+        preserveStreaming: true
+      });
+      onBatch?.({
+        textInput,
+        loadedBatchCount: streamingTextTable.batches.length,
+        isFirstBatch: false,
+        setPropsResult
+      });
+    }
   }
 
   needsRedraw(): string | false {
@@ -237,7 +415,12 @@ export class ArrowTextLayer {
   }
 
   destroy(): void {
+    this.isDestroyed = true;
+    this.streamingSessionVersion++;
+    const streamingTextTable = this.activeStreamingTextTable;
+    this.activeStreamingTextTable = null;
     this.model.destroy();
+    streamingTextTable?.destroy();
   }
 
   private createModel(
@@ -259,7 +442,7 @@ export class ArrowTextLayer {
 
     if (modelKind === 'dictionary') {
       const dictionaryInputProps = {
-        ...this.getStorageInputProps(props.data),
+        ...this.getStorageInputProps(props.data, props),
         ...commonProps,
         color: props.color
       } as unknown as ArrowDictionaryStorageTextInputProps;
@@ -282,7 +465,7 @@ export class ArrowTextLayer {
 
     if (modelKind === 'storage') {
       const storageInputProps = {
-        ...this.getStorageInputProps(props.data),
+        ...this.getStorageInputProps(props.data, props),
         ...commonProps,
         color: props.color
       } as unknown as ArrowStorageTextInputProps;
@@ -303,7 +486,7 @@ export class ArrowTextLayer {
     }
 
     const attributeInputProps = {
-      ...this.getInputProps(props.data),
+      ...this.getInputProps(props.data, props),
       ...commonProps
     } as unknown as ArrowTextModelProps;
     const attributeState = convertArrowTextToAttributeState(this.device, attributeInputProps);
@@ -337,22 +520,30 @@ export class ArrowTextLayer {
     return modelKind;
   }
 
-  private getInputProps(data: ArrowTextLayerData): Partial<ArrowTextModelProps> {
+  private isRecordBatchStreamActive(streamingSession: ArrowTextLayerStreamingSession): boolean {
+    return !this.isDestroyed && streamingSession.version === this.streamingSessionVersion;
+  }
+
+  private getInputProps(
+    data: ArrowTextLayerData,
+    props: ArrowTextLayerProps
+  ): Partial<ArrowTextModelProps> {
     const inputProps = {
       positions: data.positions,
       texts: data.texts,
       sourceVectors: data.sourceVectors,
       ...(data.clipRects ? {clipRects: data.clipRects} : {}),
       ...(data.colors ? {colors: data.colors} : {}),
-      ...(this.props.anglesEnabled !== false && data.angles ? {angles: data.angles} : {}),
-      ...(this.props.sizesEnabled !== false && data.sizes ? {sizes: data.sizes} : {}),
+      ...(props.anglesEnabled !== false && data.angles ? {angles: data.angles} : {}),
+      ...(props.sizesEnabled !== false && data.sizes ? {sizes: data.sizes} : {}),
       ...(data.pixelOffsets ? {pixelOffsets: data.pixelOffsets} : {})
     };
     return inputProps as unknown as Partial<ArrowTextModelProps>;
   }
 
   private getStorageInputProps(
-    data: ArrowTextLayerData
+    data: ArrowTextLayerData,
+    props: ArrowTextLayerProps
   ): Partial<ArrowStorageTextInputProps & ArrowDictionaryStorageTextInputProps> {
     const inputProps = {
       positions: data.positions,
@@ -362,17 +553,78 @@ export class ArrowTextLayer {
         ...(data.sourceVectors.clipRects ? {clipRects: data.sourceVectors.clipRects} : {})
       },
       ...(data.clipRects ? {clipRects: data.clipRects} : {}),
-      ...(this.props.colorsEnabled !== false && data.colors
+      ...(props.colorsEnabled !== false && data.colors
         ? {colors: data.colors as GPUVector<arrow.FixedSizeList<arrow.Uint8>>}
         : {}),
-      ...(this.props.anglesEnabled !== false && data.angles ? {angles: data.angles} : {}),
-      ...(this.props.sizesEnabled !== false && data.sizes ? {sizes: data.sizes} : {}),
+      ...(props.anglesEnabled !== false && data.angles ? {angles: data.angles} : {}),
+      ...(props.sizesEnabled !== false && data.sizes ? {sizes: data.sizes} : {}),
       ...(data.pixelOffsets ? {pixelOffsets: data.pixelOffsets} : {})
     };
     return inputProps as unknown as Partial<
       ArrowStorageTextInputProps & ArrowDictionaryStorageTextInputProps
     >;
   }
+}
+
+export function prepareArrowTextInput(
+  device: Device,
+  textSource: ArrowTextLayerSource
+): ArrowTextLayerInput {
+  const prepared = ArrowTextLayer.prepareData(device, {
+    sourceVectors: textSource.sourceVectors
+  });
+  return {
+    ...prepared,
+    clipRects: prepared.clipRects!,
+    colors: prepared.colors!,
+    angles: prepared.angles!,
+    sizes: prepared.sizes!,
+    arrowVectorByteLength: textSource.arrowVectorByteLength,
+    arrowVectorBuildTimeMs: textSource.arrowVectorBuildTimeMs
+  };
+}
+
+export function createArrowTextGPUTable(device: Device, recordBatch: arrow.RecordBatch): GPUTable {
+  return makeArrowGPUTable(device, new arrow.Table([recordBatch]), {
+    shaderLayout: STREAMING_TEXT_INPUT_SHADER_LAYOUT
+  });
+}
+
+export function appendArrowTextGPUTableBatch(
+  device: Device,
+  gpuTable: GPUTable,
+  recordBatch: arrow.RecordBatch
+): void {
+  gpuTable.addBatch(
+    makeArrowGPURecordBatch(device, recordBatch, {
+      shaderLayout: STREAMING_TEXT_INPUT_SHADER_LAYOUT
+    })
+  );
+}
+
+export function prepareArrowTextInputFromGPUTable(
+  gpuTable: GPUTable,
+  recordBatches: arrow.RecordBatch[],
+  arrowVectorBuildTimeMs: number
+): ArrowTextLayerInput {
+  const sourceTable = new arrow.Table(recordBatches);
+  const texts = sourceTable.getChild('texts');
+  if (!texts) {
+    throw new Error('Streaming Arrow text input requires complete CPU source vectors');
+  }
+  const prepared = ArrowTextLayer.prepareDataFromGPUTable({
+    gpuTable,
+    recordBatches
+  });
+  return {
+    ...prepared,
+    clipRects: prepared.clipRects!,
+    colors: prepared.colors!,
+    angles: prepared.angles!,
+    sizes: prepared.sizes!,
+    arrowVectorByteLength: getArrowVectorByteLength(texts as ArrowUtf8TextVector),
+    arrowVectorBuildTimeMs
+  };
 }
 
 function getRequiredArrowVector<T extends arrow.DataType>(

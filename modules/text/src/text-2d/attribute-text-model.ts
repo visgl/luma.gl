@@ -4,10 +4,10 @@
 
 import type {Device} from '@luma.gl/core';
 import {
-  ArrowAttributeTextModel,
   createArrowAttributeTextState,
   type ArrowAttributeTextModelStateProps
 } from './arrow-text-model';
+import {ArrowAttributeTextModel} from './arrow-text-render-models';
 
 export type {
   ArrowAttributeTextModelStateProps as AttributeTextModelProps,

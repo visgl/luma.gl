@@ -6,6 +6,7 @@ import {ExampleHeader, ExamplePage, LumaExample, ReactExample, useStore} from '.
 import AnimationApp from '../../examples/api/animation/app';
 import CubemapApp from '../../examples/api/cubemap/app';
 import DggsGpuPolygonsApp from '../../examples/gpu-tables/dggs-gpu-polygons/app';
+import ArrowColumnLayerApp from '../../examples/gpu-tables/arrow-column-layer/app';
 import ArrowMeshGeometryApp from '../../examples/gpu-tables/arrow-mesh-geometry/app';
 import ArrowPathModelApp from '../../examples/gpu-tables/arrow-path-model/app';
 import BloomApp from '../../examples/experimental/bloom/app';
@@ -173,6 +174,19 @@ export const ArrowPathModelExample: React.FC = props => (
     directory="gpu-tables"
     template={ArrowPathModelApp}
     config={exampleConfig}
+    showStats
+    {...props}
+  />
+);
+
+export const ArrowColumnLayerExample: React.FC = props => (
+  <LumaExample
+    id="arrow-column-layer"
+    title="DGGS + time"
+    directory="gpu-tables"
+    template={ArrowColumnLayerApp}
+    config={exampleConfig}
+    devices={['webgpu']}
     showStats
     {...props}
   />

@@ -16,6 +16,10 @@ test('shadertools#dggs exports WGSL helpers', t => {
   t.ok(dggs.source?.includes('dggs_geohash_get_boundary_point'), 'exports geohash helpers');
   t.ok(dggs.source?.includes('dggs_quadkey_get_boundary_point'), 'exports quadkey helpers');
   t.ok(dggs.source?.includes('dggs_h3_get_resolution'), 'exports H3 decoder helpers');
+  t.ok(
+    dggs.source?.includes('dggs_h3_get_boundary_point_fp64_split'),
+    'exports fp64-split boundary helpers'
+  );
   t.ok(dggs.source?.includes('dggs_s2_get_boundary_point'), 'exports S2 decoder helpers');
   t.end();
 });
