@@ -1,4 +1,5 @@
 import {arithmetic} from './arithmetic';
+import {convertColors} from './convert-colors';
 import {extent} from './extent';
 import {fround} from './fround';
 import {gather} from './gather';
@@ -8,6 +9,7 @@ import {sequence} from './sequence';
 /** CPU fallback backend for built-in GPGPU operations. Registered by default. */
 export const cpuBackend = {
   arithmetic,
+  'convert-colors': convertColors,
   extent,
   fround,
   gather,
