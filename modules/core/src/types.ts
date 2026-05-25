@@ -3,9 +3,9 @@
 // Copyright (c) vis.gl contributors
 
 /** TypeScript type covering all typed arrays */
-import {TypedArray, NumberArray} from '@math.gl/types';
+import type {TypedArray, NumberArray} from '@math.gl/types';
 
-export {TypedArray, NumberArray};
+export type {TypedArray, NumberArray};
 
 export type BigTypedArray = TypedArray | BigIntTypedArray;
 
