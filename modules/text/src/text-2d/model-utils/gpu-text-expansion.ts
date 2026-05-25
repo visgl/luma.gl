@@ -8,7 +8,7 @@ import type {
   GpuDictionaryUtf8TextInput,
   GpuExpandedTextStream,
   GpuUtf8TextInput
-} from './arrow-text';
+} from './gpu-text-types';
 import {getGpuUtf8MapShaderBindings, getGpuUtf8MapShaderSource} from './gpu-utf8-map';
 
 /** Read-only storage buffer containing shared glyph anchor/advance pairs. */

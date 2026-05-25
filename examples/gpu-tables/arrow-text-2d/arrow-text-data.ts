@@ -39,7 +39,7 @@ export type DictionaryTextDatasetKind = '100k-dict' | '500k-dict' | '1m-dict';
 export type EagerTextDatasetKind = Utf8TextDatasetKind | DictionaryTextDatasetKind;
 export type StreamingTextDatasetKind = `${EagerTextDatasetKind}-stream`;
 export type StreamingTextTableSizeKind = `${Utf8TextDatasetKind}-stream`;
-export type TextTableSizeKind = StreamingTextTableSizeKind;
+export type TextTableSizeKind = TextRowCountKind | StreamingTextTableSizeKind;
 export type TextDatasetKind = EagerTextDatasetKind | StreamingTextDatasetKind;
 export type TextInputKind = `${EagerTextDatasetKind}-${TextColorKind}`;
 export type TextDataset = {
@@ -105,12 +105,16 @@ export function makeArrowTextSource(
   const arrowVectorBuildStartTime = getNow();
   const rowChunkSize = getArrowTextInputRowChunkSize(dataset);
   const positionVector = splitArrowVectorByRows(
-    makeArrowFixedSizeListVector(new arrow.Float32(), 2, positions),
+    makeArrowFixedSizeListVector(new arrow.Float32(), 2, positions) as arrow.Vector<
+      arrow.FixedSizeList<arrow.Float32>
+    >,
     rowChunkSize
   );
   const texts = makeArrowTextVector(dataset, dataset.labelCount, labelIndex => labelIndex);
   const clipRectVector = splitArrowVectorByRows(
-    makeArrowFixedSizeListVector(new arrow.Int16(), 4, clipRects),
+    makeArrowFixedSizeListVector(new arrow.Int16(), 4, clipRects) as arrow.Vector<
+      arrow.FixedSizeList<arrow.Int16>
+    >,
     rowChunkSize
   );
   const colorVector = makeArrowTextColorVector(dataset, textColorKind, rowChunkSize);

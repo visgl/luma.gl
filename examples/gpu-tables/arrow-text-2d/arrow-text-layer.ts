@@ -21,10 +21,7 @@ import {
   type ArrowDictionaryStorageTextInputProps,
   type ArrowStorageTextInputProps,
   type ArrowTextModelProps,
-  type AttributeTextModelProps,
   type ConvertedArrowTextData,
-  type DictionaryTextModelProps,
-  type StorageTextModelProps,
   type FontSettings
 } from '@luma.gl/text';
 import * as arrow from 'apache-arrow';
@@ -450,8 +447,6 @@ export class ArrowTextLayer {
       return new DictionaryTextModel(this.device, {
         id: props.id,
         color: props.color,
-        characterSet: props.characterSet,
-        fontSettings: props.fontSettings,
         source: props.dictionarySource ?? props.storageSource ?? props.source,
         shaderLayout:
           props.dictionaryShaderLayout ?? props.storageShaderLayout ?? props.shaderLayout,
@@ -460,7 +455,7 @@ export class ArrowTextLayer {
         parameters: props.parameters,
         storageState,
         ownsStorageState: true
-      } as unknown as DictionaryTextModelProps);
+      });
     }
 
     if (modelKind === 'storage') {
@@ -473,8 +468,6 @@ export class ArrowTextLayer {
       return new StorageTextModel(this.device, {
         id: props.id,
         color: props.color,
-        characterSet: props.characterSet,
-        fontSettings: props.fontSettings,
         source: props.storageSource ?? props.source,
         shaderLayout: props.storageShaderLayout ?? props.shaderLayout,
         shaderInputs: props.shaderInputs,
@@ -482,7 +475,7 @@ export class ArrowTextLayer {
         parameters: props.parameters,
         storageState,
         ownsStorageState: true
-      } as unknown as StorageTextModelProps);
+      });
     }
 
     const attributeInputProps = {
@@ -491,9 +484,9 @@ export class ArrowTextLayer {
     } as unknown as ArrowTextModelProps;
     const attributeState = convertArrowTextToAttributeState(this.device, attributeInputProps);
     return new AttributeTextModel(this.device, {
-      ...commonProps,
-      attributeState
-    } as unknown as AttributeTextModelProps);
+      attributeState,
+      ownsAttributeState: true
+    });
   }
 
   private resolveModel(

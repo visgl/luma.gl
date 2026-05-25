@@ -42,7 +42,7 @@ import FontAtlasManager, {
   DEFAULT_FONT_SETTINGS,
   type FontAtlas,
   type FontSettings
-} from './font-atlas-manager';
+} from '../atlas/font-atlas-manager';
 import {
   buildArrowGlyphLayout,
   buildGpuDictionaryCompressedTextStream,
@@ -72,16 +72,17 @@ import {
   createStorageGlyphMetrics,
   dispatchGpuExpandedTextCompute,
   dispatchGpuUtf8ExpandedTextCompute
-} from './gpu-text-expansion';
-import type {CharacterMapping} from './text-utils';
+} from '../model-utils/gpu-text-expansion';
+import type {CharacterMapping} from '../atlas/text-utils';
+import type {AttributeTextState} from '../models/attribute-text-model';
 import {
   DEFAULT_ARROW_TEXT_FS,
   DEFAULT_ARROW_TEXT_SHADER_LAYOUT,
   DEFAULT_ARROW_TEXT_VS,
   DEFAULT_CLIPPED_ARROW_TEXT_SHADER_LAYOUT,
-  DEFAULT_CLIPPED_ARROW_TEXT_VS,
-  createArrowTextDefaultFragmentShaderUniforms
-} from './arrow-text-render-models';
+  DEFAULT_CLIPPED_ARROW_TEXT_VS
+} from '../model-utils/text-shaders';
+import {createArrowTextDefaultFragmentShaderUniforms} from '../model-utils/text-fragment-uniforms';
 
 const GLYPH_OFFSETS_COLUMN = 'glyphOffsets';
 const GLYPH_FRAMES_COLUMN = 'glyphFrames';
@@ -268,27 +269,13 @@ export type ArrowAttributeTextRenderProps = Omit<
   | 'sourceVectors'
 >;
 
-export type ArrowAttributeTextState = {
+export type ArrowAttributeTextState = AttributeTextState & {
   /** Props used to build the prepared attribute state. */
   textProps: ArrowTextModelProps;
-  /** Model props produced from the prepared glyph table. */
-  modelProps: GPUTableModelProps;
   /** Expanded glyph table and layout diagnostics. */
   glyphTable: ArrowTextGlyphTable;
-  /** First generated expanded glyph vertex attribute buffer. */
-  expandedGlyphVertexData: Buffer;
-  /** Generated render batches preserved for device buffer-size limits. */
-  renderBatches: ArrowTextRenderBatchState[];
-  /** Optional atlas manager retained when this state built the atlas. */
-  fontAtlasManager?: FontAtlasManager;
-  /** Optional atlas texture owned by this state. */
-  atlasTexture?: DynamicTexture;
-  /** CPU time spent building generated glyph-instance Arrow attributes. */
-  glyphAttributeBuildTimeMs: number;
   /** SDF render settings retained for built-in fragment shader uniforms. */
   sdfRenderSettings: TextSdfRenderSettings;
-  /** Default fragment shader uniforms, when the built-in shader is used. */
-  defaultFragmentShaderUniforms?: Record<string, unknown>;
   /** Character mapping retained for append compatibility. */
   mappingState: ResolvedCharacterMapping;
 };
@@ -1335,12 +1322,14 @@ function prepareArrowTextModel(
   props: ArrowTextModelProps
 ): {
   modelProps: GPUTableModelProps;
+  glyphLayout: ArrowGlyphLayout;
   glyphTable: ArrowTextGlyphTable;
   expandedGlyphVertexData: Buffer;
   renderBatches: ArrowTextRenderBatchState[];
   fontAtlasManager?: FontAtlasManager;
   atlasTexture?: DynamicTexture;
   glyphAttributeBuildTimeMs: number;
+  glyphAttributeByteLength: number;
   sdfRenderSettings: TextSdfRenderSettings;
   defaultFragmentShaderUniforms?: Record<string, unknown>;
   mappingState: ResolvedCharacterMapping;
@@ -1421,12 +1410,14 @@ function prepareArrowTextModel(
       ),
       tableCount: 'none'
     },
+    glyphLayout: glyphTable.glyphLayout,
     glyphTable,
     expandedGlyphVertexData: expandedGlyphVertexState.buffer,
     renderBatches,
     fontAtlasManager: mappingState.fontAtlasManager,
     atlasTexture,
     glyphAttributeBuildTimeMs: glyphTable.glyphAttributeBuildTimeMs,
+    glyphAttributeByteLength: glyphTable.attributeByteLength,
     sdfRenderSettings: mappingState.sdfRenderSettings,
     defaultFragmentShaderUniforms,
     mappingState

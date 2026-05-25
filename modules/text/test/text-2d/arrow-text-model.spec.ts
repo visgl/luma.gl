@@ -14,9 +14,9 @@ import type {ShaderLayout} from '@luma.gl/core';
 import {NullDevice, getWebGPUTestDevice} from '@luma.gl/test-utils';
 import * as arrow from 'apache-arrow';
 import {
+  ArrowAttributeTextModel,
   ArrowDictionaryTextModel,
   ArrowStorageTextModel,
-  ArrowTextModel,
   buildArrowTextGlyphTable,
   createArrowStorageTextState,
   packStorageTextClipRects,
@@ -147,10 +147,10 @@ test('packStorageTextClipRects preserves signed Int16 clip lanes', t => {
   t.end();
 });
 
-test('ArrowTextModel derives from GPUTableModel and updates glyph instance counts', t => {
+test('ArrowAttributeTextModel derives from GPUTableModel and updates glyph instance counts', t => {
   const device = new NullDevice({});
   const textProps = makeGpuTextProps(device, ['AB', 'A']);
-  const model = new ArrowTextModel(device, {
+  const model = new ArrowAttributeTextModel(device, {
     id: 'arrow-text-model-test',
     ...textProps,
     characterMapping: CHARACTER_MAPPING,
@@ -176,10 +176,10 @@ test('ArrowTextModel derives from GPUTableModel and updates glyph instance count
   t.end();
 });
 
-test('ArrowTextModel accepts dictionary UTF-8 source vectors', async t => {
+test('ArrowAttributeTextModel accepts dictionary UTF-8 source vectors', async t => {
   const device = new NullDevice({});
   const textProps = makeGpuDictionaryTextProps(device, ['AB', 'A', 'AB', null]);
-  const model = new ArrowTextModel(device, {
+  const model = new ArrowAttributeTextModel(device, {
     id: 'arrow-text-model-dictionary-test',
     ...textProps,
     characterMapping: CHARACTER_MAPPING,
@@ -226,14 +226,14 @@ test('ArrowTextModel accepts dictionary UTF-8 source vectors', async t => {
   t.end();
 });
 
-test('ArrowTextModel requires explicit CPU source vectors', t => {
+test('ArrowAttributeTextModel requires explicit CPU source vectors', t => {
   const device = new NullDevice({});
   const textProps = makeGpuTextProps(device, ['AB', 'A']);
   const {sourceVectors, ...propsWithoutSourceVectors} = textProps;
 
   t.throws(
     () =>
-      new ArrowTextModel(device, {
+      new ArrowAttributeTextModel(device, {
         id: 'arrow-text-model-missing-sources-test',
         ...(propsWithoutSourceVectors as Omit<typeof textProps, 'sourceVectors'>),
         characterMapping: CHARACTER_MAPPING,
@@ -247,7 +247,7 @@ test('ArrowTextModel requires explicit CPU source vectors', t => {
   t.end();
 });
 
-test('ArrowTextModel rejects source batch alignment mismatches', t => {
+test('ArrowAttributeTextModel rejects source batch alignment mismatches', t => {
   const device = new NullDevice({});
   const textProps = makeGpuTextProps(device, ['AB', 'A']);
   const firstChunk = makeArrowTexts(['AB']);
@@ -255,7 +255,7 @@ test('ArrowTextModel rejects source batch alignment mismatches', t => {
 
   t.throws(
     () =>
-      new ArrowTextModel(device, {
+      new ArrowAttributeTextModel(device, {
         id: 'arrow-text-model-source-batch-alignment-test',
         ...textProps,
         sourceVectors: {
@@ -273,10 +273,10 @@ test('ArrowTextModel rejects source batch alignment mismatches', t => {
   t.end();
 });
 
-test('ArrowTextModel interleaves expanded glyph vertex records', async t => {
+test('ArrowAttributeTextModel interleaves expanded glyph vertex records', async t => {
   const device = new NullDevice({});
   const textProps = makeGpuTextProps(device, ['AB', 'A']);
-  const model = new ArrowTextModel(device, {
+  const model = new ArrowAttributeTextModel(device, {
     id: 'arrow-text-model-expanded-glyph-vertices-test',
     ...textProps,
     characterMapping: CHARACTER_MAPPING,
@@ -325,11 +325,11 @@ test('ArrowTextModel interleaves expanded glyph vertex records', async t => {
   t.end();
 });
 
-test('ArrowTextModel splits expanded glyph vertex buffers by device limits', t => {
+test('ArrowAttributeTextModel splits expanded glyph vertex buffers by device limits', t => {
   const device = new NullDevice({});
   Object.defineProperty(device.limits, 'maxBufferSize', {value: 48});
   const textProps = makeGpuTextProps(device, ['AB', 'A']);
-  const model = new ArrowTextModel(device, {
+  const model = new ArrowAttributeTextModel(device, {
     id: 'arrow-text-model-buffer-batching-test',
     ...textProps,
     characterMapping: CHARACTER_MAPPING,
@@ -350,10 +350,10 @@ test('ArrowTextModel splits expanded glyph vertex buffers by device limits', t =
   t.end();
 });
 
-test('ArrowTextModel built-in fragment shader decodes SDF atlas alpha', t => {
+test('ArrowAttributeTextModel built-in fragment shader decodes SDF atlas alpha', t => {
   const device = new NullDevice({});
   const textProps = makeGpuTextProps(device, ['AB', 'A']);
-  const model = new ArrowTextModel(device, {
+  const model = new ArrowAttributeTextModel(device, {
     id: 'arrow-text-model-sdf-shader-test',
     ...textProps,
     characterMapping: CHARACTER_MAPPING,
@@ -371,7 +371,7 @@ test('ArrowTextModel built-in fragment shader decodes SDF atlas alpha', t => {
   t.end();
 });
 
-test('ArrowTextModel expands chunked UTF-8 GPUVector data', t => {
+test('ArrowAttributeTextModel expands chunked UTF-8 GPUVector data', t => {
   const device = new NullDevice({});
   const firstChunk = arrow.vectorFromArray(['AB'], new arrow.Utf8());
   const secondChunk = arrow.vectorFromArray(['A'], new arrow.Utf8());
@@ -381,7 +381,7 @@ test('ArrowTextModel expands chunked UTF-8 GPUVector data', t => {
   textProps.texts = makeArrowGPUVector(device, sourceTexts, {name: 'texts'});
   textProps.sourceVectors = {...textProps.sourceVectors, texts: sourceTexts};
 
-  const model = new ArrowTextModel(device, {
+  const model = new ArrowAttributeTextModel(device, {
     id: 'chunked-arrow-text-model-test',
     ...textProps,
     characterMapping: CHARACTER_MAPPING,
@@ -397,7 +397,7 @@ test('ArrowTextModel expands chunked UTF-8 GPUVector data', t => {
   t.end();
 });
 
-test('ArrowTextModel appends GPUTable-backed text batches without rebuilding prior glyph buffers', t => {
+test('ArrowAttributeTextModel appends GPUTable-backed text batches without rebuilding prior glyph buffers', t => {
   const device = new NullDevice({});
   const firstBatch = makeAppendableTextRecordBatch(['AB'], new Float32Array([0, 0]));
   const secondBatch = makeAppendableTextRecordBatch(['A'], new Float32Array([1, 1]));
@@ -406,7 +406,7 @@ test('ArrowTextModel appends GPUTable-backed text batches without rebuilding pri
   });
   const firstSourceVectors = makeArrowTextSourceVectorsFromBatches([firstBatch]);
 
-  const model = new ArrowTextModel(device, {
+  const model = new ArrowAttributeTextModel(device, {
     id: 'arrow-text-model-appendable-gpu-table-test',
     positions: gpuTable.gpuVectors.positions as GPUVector<arrow.FixedSizeList<arrow.Float32>>,
     texts: gpuTable.gpuVectors.texts as GPUVector<arrow.Utf8>,

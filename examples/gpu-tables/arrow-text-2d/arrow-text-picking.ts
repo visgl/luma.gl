@@ -123,14 +123,14 @@ function drawArrowTextPickingBatches(
   pickingModel: Model,
   textModel: AttributeTextModel
 ): void {
-  const arrowBatches = textModel.table?.batches || [];
+  const gpuBatches = textModel.table?.batches || [];
   for (const [batchIndex, renderBatch] of textModel.renderBatches.entries()) {
-    const arrowBatch = arrowBatches[batchIndex];
-    if (!arrowBatch) {
-      throw new Error('Arrow text picking requires aligned Arrow and glyph render batches');
+    const gpuBatch = gpuBatches[batchIndex];
+    if (!gpuBatch) {
+      throw new Error('Arrow text picking requires aligned GPU and glyph render batches');
     }
     pickingModel.setAttributes({
-      ...arrowBatch.attributes,
+      ...gpuBatch.attributes,
       expandedGlyphVertexData: renderBatch.expandedGlyphVertexData
     });
     pickingModel.setInstanceCount(renderBatch.glyphCount);
