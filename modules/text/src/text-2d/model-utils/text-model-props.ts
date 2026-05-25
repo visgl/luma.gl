@@ -16,6 +16,7 @@ export type TextCharacterColorType = List<FixedSizeList<Uint8>>;
 /** GPU text color input accepted by the attribute-backed model. */
 export type TextColorType = TextRowColorType | TextCharacterColorType;
 
+/** Shared GPUVector row/style props accepted while preparing 2D text state. */
 export type TextStyleModelProps = Omit<ModelProps, 'instanceCount'> & {
   /** GPU-resident label origins aligned one-for-one with `texts`; each row is `[x, y]`. */
   positions: GPUVector<FixedSizeList<Float32>>;
@@ -50,6 +51,7 @@ export type AttributeTextModelProps = TextStyleModelProps & {
   colors?: GPUVector<TextColorType>;
 };
 
+/** Storage-model row-style vectors and constant fallbacks. */
 export type StorageTextAlignmentProps = {
   /** Optional GPU packed RGBA8 text colors aligned with label rows. */
   colors?: GPUVector<TextRowColorType>;

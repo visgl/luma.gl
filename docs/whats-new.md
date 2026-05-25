@@ -33,9 +33,8 @@ Target Release Date: Q3, 2026
 **@luma.gl/text**
 
 - **Arrow-native 2D text** - New atlas, layout, and UTF-8 glyph expansion utilities support deck.gl-style text extraction into `@luma.gl/text`, including dictionary-encoded UTF-8 columns.
-- **`ArrowTextModel`** - New `GPUTableModel`-derived one-line label renderer expands UTF-8 or dictionary-encoded UTF-8 `GPUVector` rows into glyph instances without row-level string materialization, using explicit top-level row vectors such as `positions`, `colors`, `angles`, `sizes`, and `pixelOffsets`.
-- **`ArrowStorageTextModel`** - New WebGPU-only storage-backed text path consumes batched GPUVector row/text inputs directly, can read row color/angle/size/pixel-offset styling plus compact text-anchor and baseline enums from aligned GPUVectors with fixed shader bindings and constant fallbacks, expands render buffers with compute, and can consume reusable `ArrowStorageTextState` objects built by `createArrowStorageTextState`.
-- **`ArrowDictionaryTextModel`** - New WebGPU-only dictionary text path keeps repeated dictionary strings compressed in shared glyph runs while rows retain compact dictionary references.
+- **Pure GPUVector text models** - New `AttributeTextModel`, `StorageTextModel`, and `DictionaryTextModel` render prepared GPUVector-backed or storage-backed text state while Arrow conversion remains layer-owned.
+- **Arrow text conversion helpers** - New helpers such as `convertArrowTextToAttribute()`, `convertArrowTextToStorage()`, `convertArrowTextToDictionary()`, `createArrowStorageTextState()`, and `createArrowDictionaryStorageTextState()` prepare glyph state from Arrow source vectors.
 - **Packed generated glyph vertex data** - Attribute text uses `expandedGlyphVertexData`, while storage text uses `compactGlyphVertexData`, reducing generated glyph buffer fan-out without folding caller-owned row/style vectors into generated records.
 - **GPU UTF-8 shader mapping** - Reusable text-module WGSL helpers compose sparse UTF-8 byte traversal, code point decode, and storage lookup into one-pass text compute kernels.
 - **Packed text clipping** - Arrow 2D text accepts optional `FixedSizeList<Int16>[4]` clip rectangles and expands them into 8-byte per-glyph clipping attributes only when clipping is enabled.

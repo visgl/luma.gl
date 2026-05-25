@@ -43,7 +43,7 @@ export {
   type ArrowUtf8TextType,
   type ArrowUtf8TextVector,
   type Utf8TextIndexTarget
-} from './arrow-attributes/arrow-text';
+} from './arrow-conversion/arrow-text';
 export {
   type GpuDictionaryCompressedTextStream,
   type GpuDictionaryUtf8TextInput,
@@ -84,9 +84,6 @@ export {
   type GpuUtf8MapBindingOptions,
   type GpuUtf8MapShaderSourceOptions
 } from './model-utils/gpu-utf8-map';
-export {ArrowAttributeTextModel} from './arrow-attributes/arrow-attribute-text-model';
-export {ArrowStorageTextModel} from './arrow-attributes/arrow-storage-text-model';
-export {ArrowDictionaryTextModel} from './arrow-attributes/arrow-dictionary-text-model';
 export {
   DEFAULT_ARROW_TEXT_FS,
   DEFAULT_ARROW_TEXT_SHADER_LAYOUT,
@@ -105,37 +102,25 @@ export {
   createArrowDictionaryStorageTextState,
   createArrowStorageTextState,
   packStorageTextClipRects,
-  type ArrowAttributeTextModelStateProps,
-  type ArrowAttributeTextModelProps,
+  type ArrowAttributeTextInputProps,
   type ArrowAttributeTextRenderProps,
-  type ArrowAttributeTextRenderBatchState,
-  type ArrowAttributeTextSourceVectors,
   type ArrowAttributeTextState,
   type ArrowDictionaryStorageTextBatchState,
   type ArrowDictionaryStorageTextInputProps,
-  type ArrowDictionaryStorageTextModelProps,
   type ArrowDictionaryStorageTextRenderBatchState,
   type ArrowDictionaryStorageTextRenderProps,
   type ArrowDictionaryStorageTextSourceVectors,
   type ArrowDictionaryStorageTextState,
-  type ArrowDictionaryTextBatchState,
-  type ArrowDictionaryTextInputProps,
-  type ArrowDictionaryTextModelProps,
-  type ArrowDictionaryTextRenderBatchState,
-  type ArrowDictionaryTextSourceVectors,
-  type ArrowDictionaryTextState,
   type ArrowStorageTextBatchState,
   type ArrowStorageTextInputProps,
-  type ArrowStorageTextModelProps,
   type ArrowStorageTextRenderBatchState,
   type ArrowStorageTextRenderProps,
   type ArrowStorageTextSourceVectors,
   type ArrowStorageTextState,
   type ArrowTextGlyphTable,
-  type ArrowTextModelProps,
   type ArrowTextRenderBatchState,
   type ArrowTextSourceVectors
-} from './arrow-attributes/arrow-text-model';
+} from './arrow-conversion/convert-arrow-text-vectors';
 export {
   AttributeTextModel,
   type AttributeTextModelProps,
@@ -145,6 +130,7 @@ export {
 } from './models/attribute-text-model';
 export {
   StorageTextModel,
+  RowIndexedStorageTextModel,
   type StorageTextBatchState,
   type StorageTextModelProps,
   type PreparedStorageTextModelProps,
@@ -174,12 +160,12 @@ export {
   type ArrowTextConversionColumns,
   type ConvertedArrowTextData,
   type ConvertArrowTextProps
-} from './arrow-attributes/convert-arrow-text-to-attribute';
+} from './arrow-conversion/convert-arrow-text-to-attribute';
 export {
   convertArrowTextToStorage,
   convertArrowTextToStorageState
-} from './arrow-attributes/convert-arrow-text-to-storage';
+} from './arrow-conversion/convert-arrow-text-to-storage';
 export {
   convertArrowTextToDictionary,
   convertArrowTextToDictionaryState
-} from './arrow-attributes/convert-arrow-text-to-dictionary';
+} from './arrow-conversion/convert-arrow-text-to-dictionary';

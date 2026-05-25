@@ -43,6 +43,14 @@ export const STORAGE_INDEXED_TEXT_SHADER_LAYOUT = {
   bindings: []
 } satisfies ShaderLayout;
 
+export const ROW_INDEXED_STORAGE_TEXT_SHADER_LAYOUT = {
+  attributes: [
+    ...STORAGE_INDEXED_TEXT_SHADER_LAYOUT.attributes,
+    {name: 'glyphRowIndices', location: 2, type: 'u32', stepMode: 'instance'}
+  ],
+  bindings: []
+} satisfies ShaderLayout;
+
 export const DICTIONARY_STORAGE_TEXT_SHADER_LAYOUT = {
   attributes: [],
   bindings: []
@@ -282,6 +290,9 @@ fn unpackTextColor(colorWord : u32) -> vec4<f32> {
 }
 
 fn rotateTextOffset(offset : vec2<f32>, angleDegrees : f32) -> vec2<f32> {
+  if (angleDegrees == 0.0) {
+    return offset;
+  }
   let angleRadians = angleDegrees * 0.017453292519943295;
   let rotation = mat2x2<f32>(
     cos(angleRadians),
@@ -345,14 +356,16 @@ fn vertexMain(inputs : VertexInputs) -> FragmentInputs {
   let atlasSize = vec2<f32>(textureDimensions(fontAtlasTexture));
   let atlasCorner = vec2<f32>(corner.x, 1.0 - corner.y);
   let atlasPixel = glyphFrame.xy + atlasCorner * glyphSize;
-  let clipRect = unpackClipRect(textRowClipRects[rowIndex]);
+  var isClipped = false;
+  if (textViewport.clippingEnabled > 0.5 && textStorageStyleConfig.hasClipRects != 0u) {
+    let clipRect = unpackClipRect(textRowClipRects[rowIndex]);
+    isClipped = isGlyphVertexClipped(glyphVertexOffset, clipRect);
+  }
 
   outputs.Position = select(
     vec4<f32>(clipPosition, 0.0, 1.0),
     vec4<f32>(0.0),
-    textViewport.clippingEnabled > 0.5 &&
-    textStorageStyleConfig.hasClipRects != 0u &&
-    isGlyphVertexClipped(glyphVertexOffset, clipRect)
+    isClipped
   );
   outputs.textureCoordinate = atlasPixel / atlasSize;
   outputs.textColor = textStorageStyleConfig.constantColor;
@@ -383,6 +396,12 @@ fn fragmentPicking(inputs : FragmentInputs) -> PickingFragmentOutputs {
   return outputs;
 }
 `;
+
+export const ROW_INDEXED_STORAGE_WGSL_SHADER = STORAGE_INDEXED_WGSL_SHADER.replace(
+  '@location(1) glyphIndices : vec2<u32>,',
+  `@location(1) glyphIndices : vec2<u32>,
+  @location(2) glyphRowIndices : u32,`
+).replace('let rowIndex = findRowIndex(glyphIndex);', 'let rowIndex = inputs.glyphRowIndices;');
 
 export const DICTIONARY_STORAGE_WGSL_SHADER = /* wgsl */ `\
 struct TextViewportUniforms {
@@ -512,6 +531,9 @@ fn unpackTextColor(colorWord : u32) -> vec4<f32> {
 }
 
 fn rotateTextOffset(offset : vec2<f32>, angleDegrees : f32) -> vec2<f32> {
+  if (angleDegrees == 0.0) {
+    return offset;
+  }
   let angleRadians = angleDegrees * 0.017453292519943295;
   let rotation = mat2x2<f32>(
     cos(angleRadians),
@@ -612,14 +634,16 @@ fn vertexMain(inputs : VertexInputs) -> FragmentInputs {
   let atlasSize = vec2<f32>(textureDimensions(fontAtlasTexture));
   let atlasCorner = vec2<f32>(corner.x, 1.0 - corner.y);
   let atlasPixel = glyphFrame.xy + atlasCorner * glyphSize;
-  let clipRect = unpackClipRect(textRowClipRects[rowIndex]);
+  var isClipped = false;
+  if (textViewport.clippingEnabled > 0.5 && textStorageStyleConfig.hasClipRects != 0u) {
+    let clipRect = unpackClipRect(textRowClipRects[rowIndex]);
+    isClipped = isGlyphVertexClipped(glyphVertexOffset, clipRect);
+  }
 
   outputs.Position = select(
     vec4<f32>(clipPosition, 0.0, 1.0),
     vec4<f32>(0.0),
-    textViewport.clippingEnabled > 0.5 &&
-    textStorageStyleConfig.hasClipRects != 0u &&
-    isGlyphVertexClipped(glyphVertexOffset, clipRect)
+    isClipped
   );
   outputs.textureCoordinate = atlasPixel / atlasSize;
   outputs.textColor = textStorageStyleConfig.constantColor;

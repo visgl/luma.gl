@@ -80,7 +80,8 @@ import {
   DEFAULT_ARROW_TEXT_SHADER_LAYOUT,
   DEFAULT_ARROW_TEXT_VS,
   DEFAULT_CLIPPED_ARROW_TEXT_SHADER_LAYOUT,
-  DEFAULT_CLIPPED_ARROW_TEXT_VS
+  DEFAULT_CLIPPED_ARROW_TEXT_VS,
+  ROW_INDEXED_COMPACT_GLYPH_VERTEX_BYTE_STRIDE
 } from '../model-utils/text-shaders';
 import {createArrowTextDefaultFragmentShaderUniforms} from '../model-utils/text-fragment-uniforms';
 
@@ -105,21 +106,34 @@ const BITMAP_TEXT_SDF_THRESHOLD = -1;
 const INVALID_DICTIONARY_INDEX = 0xffffffff;
 const STORAGE_RENDER_CONFIG_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT * 4;
 const DICTIONARY_RENDER_CONFIG_BYTE_LENGTH = Uint32Array.BYTES_PER_ELEMENT * 4;
+/** Buffer-like row binding accepted by prepared storage text states. */
 export type StorageTextBuffer = Buffer | DynamicBuffer;
 
+/** Fragment shader SDF alpha decode settings derived from font settings. */
 export type TextSdfRenderSettings = {
+  /** Whether the atlas was generated as signed-distance-field glyphs. */
   sdf: boolean;
+  /** Alpha threshold used when decoding SDF atlas samples. */
   threshold: number;
+  /** Smoothstep width used around the SDF alpha threshold. */
   smoothing: number;
 };
 
+/** Resolved atlas mapping and layout metrics shared by attribute and storage conversion. */
 export type ResolvedCharacterMapping = {
+  /** Character-to-atlas-frame mapping used while generating glyph records. */
   mapping: CharacterMapping;
+  /** Baseline offset in glyph-layout units. */
   baselineOffset: number;
+  /** Line height in glyph-layout units for one-line label layout. */
   lineHeight: number;
+  /** Optional character set accumulated from source labels. */
   characterSet?: Set<string>;
+  /** Optional atlas manager owned by the prepared state. */
   fontAtlasManager?: FontAtlasManager;
+  /** Optional resolved font atlas texture and metrics. */
   fontAtlas?: FontAtlas;
+  /** SDF rendering settings derived from the atlas/font settings. */
   sdfRenderSettings: TextSdfRenderSettings;
 };
 
@@ -163,7 +177,12 @@ export type ArrowStorageTextSourceVectors = {
   clipRects?: Vector<FixedSizeList<Int16>>;
 };
 
-/** Props for the attribute-backed Arrow text renderer. */
+/**
+ * Arrow-to-attribute conversion input consumed by layer/data-preparation code.
+ *
+ * @internal Kept for internal conversion and deprecated wrapper compatibility. Public callers
+ * should use {@link ArrowAttributeTextInputProps}.
+ */
 export type ArrowTextModelProps = Omit<GPUTableModelProps, 'table' | 'tableCount'> & {
   /** GPU-resident label origins aligned one-for-one with `texts`. */
   positions: GPUVector<FixedSizeList<Float32>>;
@@ -199,14 +218,32 @@ export type ArrowTextModelProps = Omit<GPUTableModelProps, 'table' | 'tableCount
   fontAtlas?: FontAtlas;
 };
 
+/**
+ * Arrow-to-attribute conversion input consumed by `convertArrowTextToAttributeState()`.
+ *
+ * This type describes the boundary between layer-owned Arrow adaptation and the pure
+ * {@link AttributeTextModel}. It intentionally contains GPUVectors plus retained CPU source
+ * vectors, and is not a renderer model constructor type.
+ */
+export type ArrowAttributeTextInputProps = ArrowTextModelProps;
+
+/** Packed RGBA8 Arrow row-color type accepted by text conversion helpers. */
 export type ArrowTextRowColorType = FixedSizeList<Uint8>;
+/** Nested packed RGBA8 Arrow character-color type accepted by the attribute path. */
 export type ArrowTextCharacterColorType = List<FixedSizeList<Uint8>>;
+/** Arrow text color type accepted by conversion helpers. */
 export type ArrowTextColorType = ArrowTextRowColorType | ArrowTextCharacterColorType;
 
 type ArrowStorageTextSharedInputProps = Omit<
   ArrowTextModelProps,
   'sourceVectors' | 'texts' | 'colors'
 > & {
+  /**
+   * Include a generated per-glyph row-index vertex column.
+   * This increases the compact glyph vertex record from 8 to 12 bytes, but lets the storage shader
+   * fetch the source row directly instead of binary-searching row glyph starts per glyph.
+   */
+  rowIndexColumn?: boolean;
   /** Optional packed RGBA8 text colors aligned with label rows. */
   colors?: GPUVector<FixedSizeList<Uint8>>;
   /** Optional per-row text anchor enum: 0=start, 1=middle, 2=end. */
@@ -227,7 +264,7 @@ type ArrowStorageTextSharedInputProps = Omit<
   alignmentBaseline?: 'center' | 'top' | 'bottom';
 };
 
-/** Props for the WebGPU storage-backed Arrow text renderer. */
+/** Arrow-to-storage conversion input consumed by layer/data-preparation code. */
 export type ArrowStorageTextInputProps = ArrowStorageTextSharedInputProps & {
   /** GPU UTF-8 or dictionary-encoded UTF-8 labels aligned row-for-row with `positions`. */
   texts: GPUVector<ArrowUtf8TextType>;
@@ -243,7 +280,7 @@ export type ArrowDictionaryStorageTextSourceVectors = {
   clipRects?: Vector<FixedSizeList<Int16>>;
 };
 
-/** Props for the WebGPU compressed dictionary Arrow text renderer. */
+/** Arrow-to-dictionary-storage conversion input consumed by layer/data-preparation code. */
 export type ArrowDictionaryStorageTextInputProps = ArrowStorageTextSharedInputProps & {
   /** GPU dictionary-encoded UTF-8 labels aligned row-for-row with `positions`. */
   texts: GPUVector<ArrowUtf8Dictionary>;
@@ -251,6 +288,7 @@ export type ArrowDictionaryStorageTextInputProps = ArrowStorageTextSharedInputPr
   sourceVectors: ArrowDictionaryStorageTextSourceVectors;
 };
 
+/** Render-only props left after Arrow attribute conversion has produced prepared state. */
 export type ArrowAttributeTextRenderProps = Omit<
   ArrowTextModelProps,
   | 'positions'
@@ -269,6 +307,7 @@ export type ArrowAttributeTextRenderProps = Omit<
   | 'sourceVectors'
 >;
 
+/** Prepared attribute text state plus Arrow diagnostics retained by conversion helpers. */
 export type ArrowAttributeTextState = AttributeTextState & {
   /** Props used to build the prepared attribute state. */
   textProps: ArrowTextModelProps;
@@ -280,11 +319,17 @@ export type ArrowAttributeTextState = AttributeTextState & {
   mappingState: ResolvedCharacterMapping;
 };
 
+/**
+ * Props accepted by the deprecated Arrow attribute wrapper when state is precomputed.
+ *
+ * @internal Deprecated wrapper compatibility only.
+ */
 export type ArrowAttributeTextModelStateProps = ArrowAttributeTextRenderProps & {
   /** Prepared attribute text state produced by the Arrow adapter layer. */
   attributeState: ArrowAttributeTextState;
 };
 
+/** Render-only props left after Arrow storage conversion has produced prepared state. */
 export type ArrowStorageTextRenderProps = Omit<
   ArrowStorageTextInputProps,
   | 'positions'
@@ -295,6 +340,7 @@ export type ArrowStorageTextRenderProps = Omit<
   | 'pixelOffsets'
   | 'textAnchors'
   | 'alignmentBaselines'
+  | 'rowIndexColumn'
   | 'clipRects'
   | 'characterSet'
   | 'fontSettings'
@@ -385,6 +431,8 @@ export type ArrowStorageTextState = {
   glyphDefinitionStorageByteLength: number;
   /** Bytes occupied by transient compute input buffers released after expansion. */
   transientComputeInputByteLength: number;
+  /** Whether generated glyph records include a per-glyph source-row index attribute. */
+  hasGlyphRowIndices?: boolean;
   /** SDF render settings retained for built-in fragment shader uniforms. */
   sdfRenderSettings: TextSdfRenderSettings;
   /** Read-only storage buffer for glyph atlas frames. */
@@ -425,11 +473,18 @@ export type ArrowStorageTextState = {
   destroy: () => void;
 };
 
-/** Props for constructing or rebinding a WebGPU storage-backed Arrow text model. */
+/**
+ * Props for constructing or rebinding a WebGPU storage-backed Arrow text model.
+ *
+ * @internal Kept for deprecated wrapper compatibility. Public layer code should use
+ * {@link ArrowStorageTextInputProps} with {@link createArrowStorageTextState}, then pass the
+ * prepared state to {@link StorageTextModel}.
+ */
 export type ArrowStorageTextModelProps =
   | (ArrowStorageTextInputProps & {storageState?: never})
   | (ArrowStorageTextRenderProps & {storageState: ArrowStorageTextState});
 
+/** Render-only props left after Arrow dictionary conversion has produced prepared state. */
 export type ArrowDictionaryStorageTextRenderProps = Omit<
   ArrowDictionaryStorageTextInputProps,
   | 'positions'
@@ -440,6 +495,7 @@ export type ArrowDictionaryStorageTextRenderProps = Omit<
   | 'pixelOffsets'
   | 'textAnchors'
   | 'alignmentBaselines'
+  | 'rowIndexColumn'
   | 'clipRects'
   | 'characterSet'
   | 'fontSettings'
@@ -556,7 +612,13 @@ export type ArrowDictionaryStorageTextState = {
   destroy: () => void;
 };
 
-/** Props for constructing or rebinding a WebGPU compressed dictionary Arrow text model. */
+/**
+ * Props for constructing or rebinding a WebGPU compressed dictionary Arrow text model.
+ *
+ * @internal Kept for deprecated wrapper compatibility. Public layer code should use
+ * {@link ArrowDictionaryStorageTextInputProps} with {@link createArrowDictionaryStorageTextState},
+ * then pass the prepared state to {@link DictionaryTextModel}.
+ */
 export type ArrowDictionaryStorageTextModelProps =
   | (ArrowDictionaryStorageTextInputProps & {storageState?: never})
   | (ArrowDictionaryStorageTextRenderProps & {storageState: ArrowDictionaryStorageTextState});
@@ -575,25 +637,6 @@ export type ArrowTextRenderBatchState = {
 
 type StorageTextOwnedResource = Pick<GPUVector, 'destroy'> | Pick<DynamicBuffer, 'destroy'>;
 type AnyStorageTextInputProps = ArrowStorageTextInputProps | ArrowDictionaryStorageTextInputProps;
-
-/** Props alias matching {@link ArrowAttributeTextModel}. */
-export type ArrowAttributeTextModelProps = ArrowTextModelProps;
-/** Source vector alias matching {@link ArrowAttributeTextModel}. */
-export type ArrowAttributeTextSourceVectors = ArrowTextSourceVectors;
-/** Render batch alias matching {@link ArrowAttributeTextModel}. */
-export type ArrowAttributeTextRenderBatchState = ArrowTextRenderBatchState;
-/** Input props alias matching {@link ArrowDictionaryTextModel}. */
-export type ArrowDictionaryTextInputProps = ArrowDictionaryStorageTextInputProps;
-/** Model props alias matching {@link ArrowDictionaryTextModel}. */
-export type ArrowDictionaryTextModelProps = ArrowDictionaryStorageTextModelProps;
-/** Source vector alias matching {@link ArrowDictionaryTextModel}. */
-export type ArrowDictionaryTextSourceVectors = ArrowDictionaryStorageTextSourceVectors;
-/** Storage state alias matching {@link ArrowDictionaryTextModel}. */
-export type ArrowDictionaryTextState = ArrowDictionaryStorageTextState;
-/** Batch state alias matching {@link ArrowDictionaryTextModel}. */
-export type ArrowDictionaryTextBatchState = ArrowDictionaryStorageTextBatchState;
-/** Render batch state alias matching {@link ArrowDictionaryTextModel}. */
-export type ArrowDictionaryTextRenderBatchState = ArrowDictionaryStorageTextRenderBatchState;
 
 /** Build an Arrow glyph table without creating a Model. */
 export function buildArrowTextGlyphTable(props: {
@@ -724,6 +767,7 @@ function resolveArrowTextInputs(props: ArrowTextModelProps): ResolvedArrowTextIn
   };
 }
 
+/** Resolves one aligned Arrow source-vector batch for attribute glyph expansion. */
 export function resolveArrowTextBatchInputs(
   props: ArrowTextModelProps,
   batchIndex: number
@@ -772,6 +816,7 @@ function getArrowTextSourceBatch<T extends DataType>(
   return new Vector([data]) as Vector<T>;
 }
 
+/** Validates the GPUVector Arrow types accepted by attribute text conversion. */
 export function assertArrowTextVectorTypes(props: ArrowTextModelProps): void {
   if (!isArrowUtf8TextVector(props.texts)) {
     throw new Error('ArrowTextModel texts must be GPUVector<Utf8 | Dictionary<Utf8>>');
@@ -833,6 +878,7 @@ function assertArrowTextVectorRowAlignment(props: ArrowTextModelProps): void {
   }
 }
 
+/** Validates that all attribute text GPUVectors preserve matching batch boundaries. */
 export function assertArrowTextVectorBatchAlignment(props: ArrowTextModelProps): void {
   assertArrowTextVectorRowAlignment(props);
   const rowInputs = getArrowTextRowInputs(props);
@@ -888,6 +934,7 @@ function getArrowTextRowInputs(props: ArrowTextModelProps): Array<[string, GPUVe
   ].filter(([, vector]) => vector !== undefined) as Array<[string, GPUVector<any>]>;
 }
 
+/** Validates that an attribute text append update only changes appendable row inputs. */
 export function assertArrowTextAppendProps(props: Partial<ArrowTextModelProps>): void {
   const appendablePropNames = new Set([
     'positions',
@@ -908,6 +955,7 @@ export function assertArrowTextAppendProps(props: Partial<ArrowTextModelProps>):
   }
 }
 
+/** Validates that previously processed GPUVector batches remain identical during append. */
 export function assertArrowTextAppendPrefixStable(
   previousProps: ArrowTextModelProps,
   nextProps: ArrowTextModelProps,
@@ -929,6 +977,7 @@ export function assertArrowTextAppendPrefixStable(
   }
 }
 
+/** Validates that previously processed CPU Arrow source batches remain identical during append. */
 export function assertArrowTextSourceAppendPrefixStable(
   previousProps: ArrowTextModelProps,
   nextProps: ArrowTextModelProps,
@@ -1424,6 +1473,7 @@ function prepareArrowTextModel(
   };
 }
 
+/** Resolves the attribute text shader layout, selecting the clipped layout when needed. */
 export function resolveArrowTextShaderLayout(props: ArrowTextModelProps): ShaderLayout {
   return (
     props.shaderLayout ??
@@ -1431,6 +1481,7 @@ export function resolveArrowTextShaderLayout(props: ArrowTextModelProps): Shader
   );
 }
 
+/** Builds the glyph render table and splits it to match generated buffer batches when needed. */
 export function createArrowTextRenderTable(
   glyphTable: Table,
   generatedBufferBatches?: GeneratedBufferBatch[]
@@ -1466,6 +1517,7 @@ export function createArrowTextRenderTable(
   return new Table(renderTable.schema, recordBatches);
 }
 
+/** Creates the interleaved expanded glyph vertex buffer consumed by the attribute model. */
 export function createExpandedGlyphVertexData(
   device: Device,
   props: ArrowTextModelProps,
@@ -1596,6 +1648,10 @@ export function createArrowStorageTextState(
       props.characterSet !== 'auto' &&
       isArrowUtf8Vector(textInputs.texts)
   );
+  const hasGlyphRowIndices = props.rowIndexColumn === true;
+  const compactGlyphVertexByteStride = hasGlyphRowIndices
+    ? ROW_INDEXED_COMPACT_GLYPH_VERTEX_BYTE_STRIDE
+    : COMPACT_GLYPH_VERTEX_BYTE_STRIDE;
 
   let glyphStream: GpuExpandedTextStream | undefined;
   let glyphFrames: StorageGlyphFrameState | undefined;
@@ -1656,7 +1712,7 @@ export function createArrowStorageTextState(
       const generatedBufferBatches = planGeneratedBufferBatches({
         device,
         recordOffsets: utf8TextInput.startIndices,
-        recordByteStride: COMPACT_GLYPH_VERTEX_BYTE_STRIDE,
+        recordByteStride: compactGlyphVertexByteStride,
         maxBatchByteLength: device.limits.maxStorageBufferBindingSize,
         resourceLabel: 'ArrowStorageTextModel UTF-8 generated glyph vertex data'
       });
@@ -1673,7 +1729,7 @@ export function createArrowStorageTextState(
             baselineOffsetY: glyphDefinitions.baselineOffsetY,
             glyphLookupCount: glyphDefinitions.glyphLookup.length / 2,
             labelCount: generatedBufferBatch.rowEnd - generatedBufferBatch.rowStart,
-            batchRowIndexBase: batchInput.batchRowIndexBase + generatedBufferBatch.rowStart,
+            batchRowIndexBase: generatedBufferBatch.rowStart,
             rowStorageIndexBase: batchInput.rowStorageIndexBase + generatedBufferBatch.rowStart,
             alignment: createGpuTextAlignmentOptions(props, rowState, mappingState.lineHeight)
           }
@@ -1681,7 +1737,8 @@ export function createArrowStorageTextState(
         const generated = createGpuExpandedGeneratedState(
           device,
           {id: props.id},
-          partitionedUtf8TextInput.byteLength
+          partitionedUtf8TextInput.byteLength,
+          hasGlyphRowIndices
         );
         dispatchGpuUtf8ExpandedTextCompute(
           device,
@@ -1777,7 +1834,7 @@ export function createArrowStorageTextState(
       const generatedBufferBatches = planGeneratedBufferBatches({
         device,
         recordOffsets: batchGlyphStream.startIndices,
-        recordByteStride: COMPACT_GLYPH_VERTEX_BYTE_STRIDE,
+        recordByteStride: compactGlyphVertexByteStride,
         maxBatchByteLength: device.limits.maxStorageBufferBindingSize,
         resourceLabel: 'ArrowStorageTextModel compact generated glyph vertex data'
       });
@@ -1790,14 +1847,15 @@ export function createArrowStorageTextState(
           device,
           {id: props.id},
           partitionedGlyphStream,
-          batchInput.batchRowIndexBase + generatedBufferBatch.rowStart,
+          generatedBufferBatch.rowStart,
           createGpuTextAlignmentOptions(props, rowState, mappingState.lineHeight),
           batchInput.rowStorageIndexBase + generatedBufferBatch.rowStart
         );
         const generated = createGpuExpandedGeneratedState(
           device,
           {id: props.id},
-          partitionedGlyphStream.glyphCount
+          partitionedGlyphStream.glyphCount,
+          hasGlyphRowIndices
         );
         dispatchGpuExpandedTextCompute(
           device,
@@ -1875,6 +1933,7 @@ export function createArrowStorageTextState(
     rowStorageByteLength,
     glyphDefinitionStorageByteLength,
     transientComputeInputByteLength,
+    hasGlyphRowIndices,
     sdfRenderSettings: mappingState.sdfRenderSettings,
     batches,
     renderBatches,
@@ -2523,6 +2582,7 @@ function createDictionaryStorageBuffer(
   });
 }
 
+/** Appends new source-vector batches to an owned storage text state without rebuilding old batches. */
 export function appendArrowStorageTextStateBatches(
   device: Device,
   props: ArrowStorageTextInputProps,
@@ -2537,6 +2597,10 @@ export function appendArrowStorageTextStateBatches(
   if (textInputs.batches.length === storageState.batches.length) {
     return;
   }
+  const hasGlyphRowIndices = storageState.hasGlyphRowIndices === true;
+  const compactGlyphVertexByteStride = hasGlyphRowIndices
+    ? ROW_INDEXED_COMPACT_GLYPH_VERTEX_BYTE_STRIDE
+    : COMPACT_GLYPH_VERTEX_BYTE_STRIDE;
 
   for (
     let batchIndex = storageState.batches.length;
@@ -2582,7 +2646,7 @@ export function appendArrowStorageTextStateBatches(
       const generatedBufferBatches = planGeneratedBufferBatches({
         device,
         recordOffsets: utf8TextInput.startIndices,
-        recordByteStride: COMPACT_GLYPH_VERTEX_BYTE_STRIDE,
+        recordByteStride: compactGlyphVertexByteStride,
         maxBatchByteLength: device.limits.maxStorageBufferBindingSize,
         resourceLabel: 'ArrowStorageTextModel UTF-8 generated glyph vertex data'
       });
@@ -2599,7 +2663,7 @@ export function appendArrowStorageTextStateBatches(
             baselineOffsetY: glyphDefinitions.baselineOffsetY,
             glyphLookupCount: glyphDefinitions.glyphLookup.length / 2,
             labelCount: generatedBufferBatch.rowEnd - generatedBufferBatch.rowStart,
-            batchRowIndexBase: batchInput.batchRowIndexBase + generatedBufferBatch.rowStart,
+            batchRowIndexBase: generatedBufferBatch.rowStart,
             rowStorageIndexBase: batchInput.rowStorageIndexBase + generatedBufferBatch.rowStart,
             alignment: createGpuTextAlignmentOptions(
               props,
@@ -2611,7 +2675,8 @@ export function appendArrowStorageTextStateBatches(
         const generated = createGpuExpandedGeneratedState(
           device,
           {id: props.id},
-          partitionedUtf8TextInput.byteLength
+          partitionedUtf8TextInput.byteLength,
+          hasGlyphRowIndices
         );
         dispatchGpuUtf8ExpandedTextCompute(
           device,
@@ -2693,7 +2758,7 @@ export function appendArrowStorageTextStateBatches(
       const generatedBufferBatches = planGeneratedBufferBatches({
         device,
         recordOffsets: batchGlyphStream.startIndices,
-        recordByteStride: COMPACT_GLYPH_VERTEX_BYTE_STRIDE,
+        recordByteStride: compactGlyphVertexByteStride,
         maxBatchByteLength: device.limits.maxStorageBufferBindingSize,
         resourceLabel: 'ArrowStorageTextModel compact generated glyph vertex data'
       });
@@ -2706,14 +2771,15 @@ export function appendArrowStorageTextStateBatches(
           device,
           {id: props.id},
           partitionedGlyphStream,
-          batchInput.batchRowIndexBase + generatedBufferBatch.rowStart,
+          generatedBufferBatch.rowStart,
           createGpuTextAlignmentOptions(props, rowState, appendContext.mappingState.lineHeight),
           batchInput.rowStorageIndexBase + generatedBufferBatch.rowStart
         );
         const generated = createGpuExpandedGeneratedState(
           device,
           {id: props.id},
-          partitionedGlyphStream.glyphCount
+          partitionedGlyphStream.glyphCount,
+          hasGlyphRowIndices
         );
         dispatchGpuExpandedTextCompute(
           device,
@@ -2799,6 +2865,7 @@ function assertStorageTextAppendCompatible(
   }
 }
 
+/** Rebuilds row/style binding buffers for an existing storage text state without replacing glyph buffers. */
 export function refreshArrowStorageTextRowBindings(
   device: Device,
   props: ArrowStorageTextInputProps,
@@ -2888,6 +2955,7 @@ function syncArrowStorageTextStateFirstBatch(storageState: ArrowStorageTextState
   storageState.compactGlyphVertexData = firstRenderBatch.compactGlyphVertexData;
 }
 
+/** Rebuilds row/style binding buffers for an existing dictionary text state without replacing glyph buffers. */
 export function refreshArrowDictionaryStorageTextRowBindings(
   device: Device,
   props: ArrowDictionaryStorageTextInputProps,
@@ -3166,6 +3234,7 @@ function getAlignmentBaselineEnum(
   }
 }
 
+/** Returns the first storage row-binding batch, or throws if the state is empty. */
 export function getFirstArrowStorageTextBatch(
   storageState: Pick<ArrowStorageTextState, 'batches'>
 ): ArrowStorageTextBatchState {
@@ -3176,6 +3245,7 @@ export function getFirstArrowStorageTextBatch(
   return firstBatch;
 }
 
+/** Returns the first generated storage render batch, or throws if the state is empty. */
 export function getFirstArrowStorageTextRenderBatch(
   storageState: Pick<ArrowStorageTextState, 'renderBatches'>
 ): ArrowStorageTextRenderBatchState {
@@ -3186,6 +3256,7 @@ export function getFirstArrowStorageTextRenderBatch(
   return firstRenderBatch;
 }
 
+/** Returns the row glyph-start buffer for a storage batch, or the shared empty buffer. */
 export function getStorageRowGlyphStartsBuffer(batch: ArrowStorageTextBatchState): Buffer {
   if (!batch.rowGlyphStartsBuffer) {
     throw new Error('ArrowStorageTextState batch is missing row glyph starts');
@@ -3193,6 +3264,7 @@ export function getStorageRowGlyphStartsBuffer(batch: ArrowStorageTextBatchState
   return batch.rowGlyphStartsBuffer;
 }
 
+/** Returns the first dictionary row-binding batch, or throws if the state is empty. */
 export function getFirstArrowDictionaryStorageTextBatch(
   storageState: Pick<ArrowDictionaryStorageTextState, 'batches'>
 ): ArrowDictionaryStorageTextBatchState {
@@ -3203,6 +3275,7 @@ export function getFirstArrowDictionaryStorageTextBatch(
   return firstBatch;
 }
 
+/** Returns the first generated dictionary render batch, or throws if the state is empty. */
 export function getFirstArrowDictionaryStorageTextRenderBatch(
   storageState: Pick<ArrowDictionaryStorageTextState, 'renderBatches'>
 ): ArrowDictionaryStorageTextRenderBatchState {
@@ -3477,6 +3550,7 @@ function makeNumericArrowVector<TypeT extends NumericArrowType>(
   );
 }
 
+/** Appends one glyph layout to another while preserving global row/glyph offsets. */
 export function appendArrowGlyphLayout(
   glyphLayout: ArrowGlyphLayout,
   appendedGlyphLayout: ArrowGlyphLayout

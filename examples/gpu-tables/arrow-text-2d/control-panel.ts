@@ -366,6 +366,7 @@ export function makeArrowText2DControlPanelHtml({
         <select id="${MODEL_SELECTOR_ID}" style="width: 100%; min-width: 0; min-height: 34px; border: 1px solid rgba(148, 163, 184, 0.8); border-radius: 6px; background: #ffffff; color: #0f172a; font: inherit;">
           <option value="attribute">attribute</option>
           <option value="storage">storage</option>
+          <option value="storage-row-indexed">storage row-indexed</option>
           <option value="dictionary">dictionary</option>
           <option value="auto">auto</option>
         </select>

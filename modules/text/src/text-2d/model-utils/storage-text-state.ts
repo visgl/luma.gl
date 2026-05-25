@@ -99,6 +99,8 @@ export type StorageTextState = {
   glyphDefinitionStorageByteLength: number;
   /** Bytes occupied by transient compute input buffers released after expansion. */
   transientComputeInputByteLength: number;
+  /** Whether generated glyph records include a per-glyph source-row index attribute. */
+  hasGlyphRowIndices?: boolean;
   /** SDF render settings retained for built-in fragment shader uniforms. */
   sdfRenderSettings: TextSdfRenderSettings;
   /** Read-only storage buffer for glyph atlas frames. */

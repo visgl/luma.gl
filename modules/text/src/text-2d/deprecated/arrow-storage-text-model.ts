@@ -13,9 +13,14 @@ import {
   type ArrowStorageTextModelProps,
   type ArrowStorageTextRenderProps,
   type ArrowStorageTextState
-} from './arrow-text-model';
+} from '../arrow-conversion/convert-arrow-text-vectors';
 
-/** Arrow adapter that prepares storage text state, then delegates rendering to StorageTextModel. */
+/**
+ * Deprecated Arrow-aware wrapper around {@link StorageTextModel}.
+ *
+ * @deprecated Kept only for internal transition coverage. New layer code should call Arrow
+ * conversion helpers, then construct {@link StorageTextModel} with prepared storage state.
+ */
 export class ArrowStorageTextModel extends StorageTextModel {
   private textProps: ArrowStorageTextModelProps;
 
@@ -49,6 +54,7 @@ export class ArrowStorageTextModel extends StorageTextModel {
       arrowProps.alignmentBaselines !== undefined ||
       arrowProps.textAnchor !== undefined ||
       arrowProps.alignmentBaseline !== undefined ||
+      arrowProps.rowIndexColumn !== undefined ||
       arrowProps.characterSet !== undefined ||
       arrowProps.fontSettings !== undefined ||
       arrowProps.lineHeight !== undefined ||
@@ -116,6 +122,30 @@ export class ArrowStorageTextModel extends StorageTextModel {
   }
 }
 
+/**
+ * Deprecated Arrow-aware wrapper around {@link RowIndexedStorageTextModel}.
+ *
+ * @deprecated Kept only for internal transition coverage. New layer code should call Arrow
+ * conversion helpers, then construct {@link RowIndexedStorageTextModel} with prepared storage
+ * state.
+ */
+export class ArrowRowIndexedStorageTextModel extends ArrowStorageTextModel {
+  constructor(device: Device, props: ArrowStorageTextModelProps) {
+    if ('storageState' in props && props.storageState?.hasGlyphRowIndices !== true) {
+      throw new Error('ArrowRowIndexedStorageTextModel requires row-indexed storage state');
+    }
+    super(device, {...props, rowIndexColumn: true} as ArrowStorageTextModelProps);
+  }
+
+  override setProps(props: Partial<ArrowStorageTextModelProps>): void {
+    super.setProps(
+      'rowIndexColumn' in props
+        ? ({...props, rowIndexColumn: true} as Partial<ArrowStorageTextModelProps>)
+        : props
+    );
+  }
+}
+
 function getStorageTextRenderProps(props: ArrowStorageTextModelProps): StorageTextRenderProps {
   const {
     positions: _positions,
@@ -126,6 +156,7 @@ function getStorageTextRenderProps(props: ArrowStorageTextModelProps): StorageTe
     pixelOffsets: _pixelOffsets,
     textAnchors: _textAnchors,
     alignmentBaselines: _alignmentBaselines,
+    rowIndexColumn: _rowIndexColumn,
     clipRects: _clipRects,
     characterSet: _characterSet,
     fontSettings: _fontSettings,

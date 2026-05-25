@@ -93,8 +93,8 @@ schema fields with `nullCount: 0`.
 
 | Arrow data type | GPU<br/>upload | nullable | Upload notes | Shader-facing<br/>use | Higher-level<br/>model support |
 | --- | :---: | :---: | --- | --- | --- |
-| `Utf8` | 🟡 | 🟡 | UTF-8 value bytes plus readback metadata; null bitmaps are retained for readback, not generic shader use. | Not a generic vertex attribute; consume through text-specific UTF-8 and glyph expansion, or parse DGGS cell keys through `prepareDggsCellKeyGPUVector()` when the encoding is supplied. | `ArrowTextModel`, `ArrowStorageTextModel`, and DGGS key parsing. |
-| `Dictionary<Utf8, Int8 \| Int16 \| Int32 \|`<br/>`Uint8 \| Uint16 \| Uint32>` | 🟡 | ❌ | Dictionary index rows.<br/>Callers keep CPU source vectors for dictionary values when glyph layout needs them. | Not a generic vertex attribute; consume through dictionary-aware text expansion. | `ArrowTextModel`, `ArrowStorageTextModel`, and dictionary text models. |
+| `Utf8` | 🟡 | 🟡 | UTF-8 value bytes plus readback metadata; null bitmaps are retained for readback, not generic shader use. | Not a generic vertex attribute; consume through text-specific UTF-8 and glyph expansion, or parse DGGS cell keys through `prepareDggsCellKeyGPUVector()` when the encoding is supplied. | Arrow text conversion helpers, pure text models, and DGGS key parsing. |
+| `Dictionary<Utf8, Int8 \| Int16 \| Int32 \|`<br/>`Uint8 \| Uint16 \| Uint32>` | 🟡 | ❌ | Dictionary index rows.<br/>Callers keep CPU source vectors for dictionary values when glyph layout needs them. | Not a generic vertex attribute; consume through dictionary-aware text expansion. | Arrow text conversion helpers and dictionary text models. |
 
 ### Other Columns
 

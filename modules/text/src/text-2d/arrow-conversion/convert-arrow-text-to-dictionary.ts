@@ -8,14 +8,19 @@ import {
   createArrowDictionaryStorageTextState,
   type ArrowDictionaryStorageTextInputProps,
   type ArrowDictionaryStorageTextState
-} from './arrow-text-model';
+} from './convert-arrow-text-vectors';
 import {
   convertArrowTextToStorage,
   type ConvertedArrowTextData,
   type ConvertArrowTextProps
 } from './convert-arrow-text-to-storage';
 
-/** Converts dictionary-encoded Arrow text columns into GPU inputs consumed by {@link DictionaryTextModel}. */
+/**
+ * Uploads dictionary-encoded Arrow text source vectors to GPUVectors for dictionary text state.
+ *
+ * Plain UTF-8 text is rejected. Use {@link convertArrowTextToStorage} for non-dictionary storage
+ * text, or {@link convertArrowTextToAttribute} for the attribute path.
+ */
 export function convertArrowTextToDictionary(
   device: Device,
   props: ConvertArrowTextProps
@@ -26,7 +31,12 @@ export function convertArrowTextToDictionary(
   return convertArrowTextToStorage(device, props);
 }
 
-/** Builds prepared dictionary text state from Arrow-backed GPU inputs. */
+/**
+ * Builds prepared WebGPU dictionary text state from Arrow-backed GPU inputs.
+ *
+ * The returned state stores shared glyph records per dictionary value plus per-row dictionary
+ * references. Pass it to {@link DictionaryTextModel}.
+ */
 export function convertArrowTextToDictionaryState(
   device: Device,
   props: ArrowDictionaryStorageTextInputProps

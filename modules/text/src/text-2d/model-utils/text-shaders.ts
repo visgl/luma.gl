@@ -7,10 +7,12 @@ import type {ShaderLayout} from '@luma.gl/core';
 export const GLYPH_OFFSETS_COLUMN = 'glyphOffsets';
 export const GLYPH_FRAMES_COLUMN = 'glyphFrames';
 export const GLYPH_INDICES_COLUMN = 'glyphIndices';
+export const GLYPH_ROW_INDICES_COLUMN = 'glyphRowIndices';
 export const GLYPH_CLIP_RECTS_COLUMN = 'glyphClipRects';
 export const EXPANDED_GLYPH_VERTEX_DATA = 'expandedGlyphVertexData';
 export const COMPACT_GLYPH_VERTEX_DATA = 'compactGlyphVertexData';
 export const COMPACT_GLYPH_VERTEX_BYTE_STRIDE = Uint32Array.BYTES_PER_ELEMENT * 2;
+export const ROW_INDEXED_COMPACT_GLYPH_VERTEX_BYTE_STRIDE = Uint32Array.BYTES_PER_ELEMENT * 3;
 export const EXPANDED_GLYPH_VERTEX_BYTE_STRIDE = Uint32Array.BYTES_PER_ELEMENT * 4;
 export const CLIPPED_EXPANDED_GLYPH_VERTEX_BYTE_STRIDE =
   EXPANDED_GLYPH_VERTEX_BYTE_STRIDE + Int16Array.BYTES_PER_ELEMENT * 4;
@@ -37,6 +39,14 @@ export const DEFAULT_STORAGE_INDEXED_TEXT_SHADER_LAYOUT: ShaderLayout = {
   attributes: [
     {name: GLYPH_OFFSETS_COLUMN, location: 0, type: 'vec2<i32>', stepMode: 'instance'},
     {name: GLYPH_INDICES_COLUMN, location: 1, type: 'vec2<u32>', stepMode: 'instance'}
+  ],
+  bindings: []
+};
+
+export const DEFAULT_ROW_INDEXED_STORAGE_TEXT_SHADER_LAYOUT: ShaderLayout = {
+  attributes: [
+    ...DEFAULT_STORAGE_INDEXED_TEXT_SHADER_LAYOUT.attributes,
+    {name: GLYPH_ROW_INDICES_COLUMN, location: 2, type: 'u32', stepMode: 'instance'}
   ],
   bindings: []
 };
@@ -267,6 +277,9 @@ fn unpackTextColor(colorWord: u32) -> vec4<f32> {
 }
 
 fn rotateTextOffset(offset: vec2<f32>, angleDegrees: f32) -> vec2<f32> {
+  if (angleDegrees == 0.0) {
+    return offset;
+  }
   let angleRadians = angleDegrees * 0.017453292519943295;
   let rotation = mat2x2<f32>(
     cos(angleRadians),
@@ -321,10 +334,11 @@ fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
   }
   let glyphPosition =
     textRowPositions[rowStorageIndex] + (styledGlyphVertexOffset + pixelOffset) * 0.001;
-  let clipRect = unpackClipRect(textRowClipRects[rowIndex]);
-  let isClipped =
-    textStorageStyleConfig.hasClipRects != 0u &&
-    isGlyphVertexClipped(glyphVertexOffset, clipRect);
+  var isClipped = false;
+  if (textStorageStyleConfig.hasClipRects != 0u) {
+    let clipRect = unpackClipRect(textRowClipRects[rowIndex]);
+    isClipped = isGlyphVertexClipped(glyphVertexOffset, clipRect);
+  }
   var outputs : FragmentInputs;
   outputs.position = select(
     vec4<f32>(glyphPosition, 0.0, 1.0),
@@ -357,6 +371,12 @@ fn fragmentMain(inputs: FragmentInputs) -> @location(0) vec4<f32> {
   return vec4<f32>(inputs.color.rgb, inputs.color.a * alpha);
 }
 `;
+
+export const DEFAULT_ROW_INDEXED_STORAGE_TEXT_SOURCE = DEFAULT_STORAGE_INDEXED_TEXT_SOURCE.replace(
+  '@location(1) glyphIndices : vec2<u32>,',
+  `@location(1) glyphIndices : vec2<u32>,
+  @location(2) glyphRowIndices : u32,`
+).replace('let rowIndex = findRowIndex(glyphIndex);', 'let rowIndex = inputs.glyphRowIndices;');
 
 export const DEFAULT_DICTIONARY_STORAGE_TEXT_SOURCE = /* wgsl */ `
 @group(0) @binding(auto) var fontAtlasTexture : texture_2d<f32>;
@@ -478,6 +498,9 @@ fn unpackTextColor(colorWord: u32) -> vec4<f32> {
 }
 
 fn rotateTextOffset(offset: vec2<f32>, angleDegrees: f32) -> vec2<f32> {
+  if (angleDegrees == 0.0) {
+    return offset;
+  }
   let angleRadians = angleDegrees * 0.017453292519943295;
   let rotation = mat2x2<f32>(
     cos(angleRadians),
@@ -568,10 +591,11 @@ fn vertexMain(inputs: VertexInputs) -> FragmentInputs {
   }
   let glyphPosition =
     textRowPositions[rowStorageIndex] + (styledGlyphVertexOffset + pixelOffset) * 0.001;
-  let clipRect = unpackClipRect(textRowClipRects[rowIndex]);
-  let isClipped =
-    textStorageStyleConfig.hasClipRects != 0u &&
-    isGlyphVertexClipped(glyphVertexOffset, clipRect);
+  var isClipped = false;
+  if (textStorageStyleConfig.hasClipRects != 0u) {
+    let clipRect = unpackClipRect(textRowClipRects[rowIndex]);
+    isClipped = isGlyphVertexClipped(glyphVertexOffset, clipRect);
+  }
   var outputs : FragmentInputs;
   outputs.position = select(
     vec4<f32>(glyphPosition, 0.0, 1.0),

@@ -20,14 +20,19 @@ import type {StorageTextModelProps} from '../model-utils/text-model-props';
 import {
   COMPACT_GLYPH_VERTEX_BYTE_STRIDE,
   COMPACT_GLYPH_VERTEX_DATA,
+  DEFAULT_ROW_INDEXED_STORAGE_TEXT_SHADER_LAYOUT,
+  DEFAULT_ROW_INDEXED_STORAGE_TEXT_SOURCE,
   DEFAULT_STORAGE_INDEXED_TEXT_SHADER_LAYOUT,
   DEFAULT_STORAGE_INDEXED_TEXT_SOURCE,
   GLYPH_INDICES_COLUMN,
-  GLYPH_OFFSETS_COLUMN
+  GLYPH_OFFSETS_COLUMN,
+  GLYPH_ROW_INDICES_COLUMN,
+  ROW_INDEXED_COMPACT_GLYPH_VERTEX_BYTE_STRIDE
 } from '../model-utils/text-shaders';
 
 export type {StorageTextModelProps};
 
+/** Render-only props left after storage text state has been prepared. */
 export type StorageTextRenderProps = Omit<
   StorageTextModelProps,
   | 'positions'
@@ -48,6 +53,7 @@ export type StorageTextRenderProps = Omit<
 
 export type {StorageTextBatchState, StorageTextRenderBatchState, StorageTextState};
 
+/** Constructor props for the pure storage text renderer. */
 export type PreparedStorageTextModelProps = StorageTextRenderProps & {
   /** Prepared storage text state consumed by the renderer. */
   storageState: StorageTextState;
@@ -55,7 +61,12 @@ export type PreparedStorageTextModelProps = StorageTextRenderProps & {
   ownsStorageState?: boolean;
 };
 
-/** Storage text renderer that consumes prepared GPUVector-backed state. */
+/**
+ * Storage text renderer that consumes prepared GPUVector-backed state.
+ *
+ * This WebGPU model does not accept Arrow source vectors. Layer/data-preparation code should build
+ * a {@link StorageTextState} first, then pass it here for rendering.
+ */
 export class StorageTextModel extends Model {
   /** Optional atlas manager retained when this model built the atlas. */
   fontAtlasManager?: FontAtlasManager;
@@ -133,6 +144,10 @@ export class StorageTextModel extends Model {
 
   /** Draws each generated storage text render batch against the supplied render pass. */
   override draw(renderPass: RenderPass): boolean {
+    if (this.storageState.renderBatches.length === 1) {
+      return super.draw(renderPass);
+    }
+
     let drawSuccess = true;
     const usePreparedDraw =
       this.device.type === 'webgpu' && this.storageState.renderBatches.length > 1;
@@ -237,10 +252,11 @@ function createStorageTextModelProps(
   storageState: StorageTextState
 ): ModelProps {
   const firstRenderBatch = getFirstStorageTextRenderBatch(storageState);
+  const hasGlyphRowIndices = storageState.hasGlyphRowIndices === true;
   return {
     ...props,
-    source: props.source ?? DEFAULT_STORAGE_INDEXED_TEXT_SOURCE,
-    shaderLayout: props.shaderLayout ?? DEFAULT_STORAGE_INDEXED_TEXT_SHADER_LAYOUT,
+    source: props.source ?? getDefaultStorageTextSource(storageState),
+    shaderLayout: props.shaderLayout ?? getDefaultStorageTextShaderLayout(storageState),
     bindings: createStorageTextBindings(
       props,
       storageState,
@@ -256,20 +272,58 @@ function createStorageTextModelProps(
       {
         name: COMPACT_GLYPH_VERTEX_DATA,
         stepMode: 'instance',
-        byteStride: COMPACT_GLYPH_VERTEX_BYTE_STRIDE,
+        byteStride: hasGlyphRowIndices
+          ? ROW_INDEXED_COMPACT_GLYPH_VERTEX_BYTE_STRIDE
+          : COMPACT_GLYPH_VERTEX_BYTE_STRIDE,
         attributes: [
           {attribute: GLYPH_OFFSETS_COLUMN, format: 'sint16x2', byteOffset: 0},
           {
             attribute: GLYPH_INDICES_COLUMN,
             format: 'uint16x2',
             byteOffset: Uint32Array.BYTES_PER_ELEMENT
-          }
+          },
+          ...(hasGlyphRowIndices
+            ? [
+                {
+                  attribute: GLYPH_ROW_INDICES_COLUMN,
+                  format: 'uint32' as const,
+                  byteOffset: Uint32Array.BYTES_PER_ELEMENT * 2
+                }
+              ]
+            : [])
         ]
       }
     ],
     vertexCount: props.vertexCount ?? 6,
     instanceCount: firstRenderBatch.glyphCount
   };
+}
+
+/**
+ * Storage text renderer variant that reads a generated source-row index per glyph.
+ *
+ * The extra row-index column increases generated glyph vertex storage, but lets shaders fetch row
+ * style data directly instead of binary-searching cumulative row glyph starts.
+ */
+export class RowIndexedStorageTextModel extends StorageTextModel {
+  constructor(device: Device, props: PreparedStorageTextModelProps) {
+    if (props.storageState.hasGlyphRowIndices !== true) {
+      throw new Error('RowIndexedStorageTextModel requires storageState.hasGlyphRowIndices');
+    }
+    super(device, props);
+  }
+}
+
+function getDefaultStorageTextSource(storageState: StorageTextState): string {
+  return storageState.hasGlyphRowIndices === true
+    ? DEFAULT_ROW_INDEXED_STORAGE_TEXT_SOURCE
+    : DEFAULT_STORAGE_INDEXED_TEXT_SOURCE;
+}
+
+function getDefaultStorageTextShaderLayout(storageState: StorageTextState) {
+  return storageState.hasGlyphRowIndices === true
+    ? DEFAULT_ROW_INDEXED_STORAGE_TEXT_SHADER_LAYOUT
+    : DEFAULT_STORAGE_INDEXED_TEXT_SHADER_LAYOUT;
 }
 
 function createStorageTextBindings(
